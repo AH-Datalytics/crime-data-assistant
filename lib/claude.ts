@@ -184,6 +184,42 @@ ORDER BY year, month
 LIMIT 1000
 \`\`\`
 
+### Two-agency rolling 12-month rate comparison (per 100K)
+Use this when comparing rolling trends between two agencies with per-capita rates.
+\`\`\`sql
+WITH monthly AS (
+  SELECT am.year, am.month, am.agency, am.state, am.ori, am.count, ap.population
+  FROM agency_monthly am
+  JOIN agency_population ap ON ap.ori = am.ori AND ap.year = am.year
+  WHERE ((am.agency = 'New York' AND am.state = 'NY') OR (am.agency = 'Chicago' AND am.state = 'IL'))
+    AND am.offense = 'Murder'
+),
+rolling AS (
+  SELECT year, month,
+    SUM(CASE WHEN agency = 'New York' THEN count END) as ny_count,
+    MAX(CASE WHEN agency = 'New York' THEN population END) as ny_pop,
+    SUM(CASE WHEN agency = 'Chicago' THEN count END) as chi_count,
+    MAX(CASE WHEN agency = 'Chicago' THEN population END) as chi_pop
+  FROM monthly
+  GROUP BY year, month
+),
+with_rolling AS (
+  SELECT year, month,
+    SUM(ny_count) OVER (ORDER BY year, month ROWS BETWEEN 11 PRECEDING AND CURRENT ROW) as ny_rolling,
+    ny_pop,
+    SUM(chi_count) OVER (ORDER BY year, month ROWS BETWEEN 11 PRECEDING AND CURRENT ROW) as chi_rolling,
+    chi_pop
+  FROM rolling
+)
+SELECT year, month,
+  ROUND(ny_rolling * 100000.0 / ny_pop, 1) as new_york,
+  ROUND(chi_rolling * 100000.0 / chi_pop, 1) as chicago
+FROM with_rolling
+WHERE year >= 2018
+ORDER BY year, month
+LIMIT 1000
+\`\`\`
+
 ### Year-over-year percent change (national)
 \`\`\`sql
 WITH annual AS (
@@ -267,10 +303,16 @@ If the question is not about crime data or cannot be answered with this database
 ## IMPORTANT CAVEATS TO MENTION
 - This database covers ~700 agencies, not every city in the U.S. Rankings like "top 10" are among agencies in this dataset, not all U.S. cities. Always note this in your explanation (e.g., "among the ~700 agencies in our dataset").
 - **Cross-agency comparisons disclaimer** (ALWAYS include when comparing 2+ agencies or ranking agencies): "Note: Direct comparisons between agencies should be interpreted with caution. Agencies differ in reporting practices, jurisdictional boundaries, and population coverage relative to their metro areas. An agency's jurisdiction may cover only the city proper or extend to surrounding areas, significantly affecting per-capita rates."
-- National sample = only agencies reporting all 108 months (consistent reporters). This ensures apples-to-apples comparisons. Do NOT mention internal implementation details like "national_sample = 1" or column names in your explanation — just say "agencies with complete reporting" or "consistent reporters".
+- National sample = only agencies reporting all 108 months (consistent reporters). This ensures apples-to-apples comparisons.
 - Not all agencies report all offenses. Missing data ≠ zero crime.
 - Data is preliminary and may be revised. Totals may not precisely match other published sources.
-- 2025 data may be incomplete (not all months available yet).`;
+- 2025 data may be incomplete (not all months available yet).
+
+## EXPLANATION STYLE
+- Write explanations for a general audience — NO SQL jargon, column names, table names, CTEs, window functions, or implementation details.
+- Do NOT explain how the query works internally (e.g., "The CTE fetches all data first..." or "national_sample = 1").
+- DO describe what the results show and any important caveats.
+- Keep it to 1-3 sentences.`;
 
 export interface ClaudeResponse {
   sql: string | null;
