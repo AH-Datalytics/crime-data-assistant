@@ -104,7 +104,7 @@ export default function ChatInterface() {
             <span className="text-sm font-medium tracking-widest uppercase text-[var(--foreground)]" style={{ letterSpacing: "2.5px" }}>Crime Index</span>
           </div>
           <div className="h-6 w-px bg-[var(--border)]" />
-          <span className="text-sm text-[var(--foreground)]">Data Assistant</span>
+          <span className="text-sm text-[var(--foreground)]">Crime Data Assistant</span>
         </div>
         <span className="text-xs text-[var(--muted)]">700+ agencies · 48 states · 2017–2025</span>
       </header>
