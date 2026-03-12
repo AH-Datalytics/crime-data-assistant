@@ -186,7 +186,7 @@ export default function ChatInterface() {
                   csvFilename={`${currentResponse.title || "chart"}.jpeg`}
                 />
               </div>
-              <div style={{ height: 360 }}>
+              <div style={{ height: 480 }}>
                 <ChartPanel
                   ref={chartRef}
                   config={currentResponse.chartConfig}

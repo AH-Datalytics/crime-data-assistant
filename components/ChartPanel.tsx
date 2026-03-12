@@ -133,9 +133,6 @@ const ChartPanel = forwardRef<HTMLDivElement, ChartPanelProps>(
 
     return (
       <div ref={ref} className="bg-white h-full flex flex-col">
-        <h3 className="text-sm font-semibold text-[var(--foreground)] mb-1 shrink-0" style={{ fontFamily: "neue-haas-grotesk-display, sans-serif" }}>
-          {config.title}
-        </h3>
         <ResponsiveContainer width="100%" height="100%">
           {config.type === "line" ? (
             <AreaChart data={data} margin={{ top: 5, right: 20, bottom: 25, left: 10 }}>
@@ -259,7 +256,6 @@ const ChartPanel = forwardRef<HTMLDivElement, ChartPanelProps>(
             </PieChart>
           ) : null}
         </ResponsiveContainer>
-        <div className="text-[10px] text-[var(--muted-light)] mt-1">Source: Real-Time Crime Index</div>
       </div>
     );
   }
