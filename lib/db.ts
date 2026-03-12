@@ -65,22 +65,41 @@ export function logQuery(
   ms: number,
   response: string | null = null
 ) {
+  // Local SQLite log
   const db = getWriteDb();
-  if (!db) return;
-  try {
-    db.prepare(
-      "INSERT INTO query_log (ts, question, sql, rows, error, ms, response) VALUES (?, ?, ?, ?, ?, ?, ?)"
-    ).run(
-      Date.now(),
-      (question || "").slice(0, 2000),
-      (sql || "").slice(0, 4000),
-      rowCount,
-      error ? error.slice(0, 500) : null,
-      ms,
-      response ? response.slice(0, 4000) : null
-    );
-  } catch (e) {
-    console.warn("Log write failed:", e);
+  if (db) {
+    try {
+      db.prepare(
+        "INSERT INTO query_log (ts, question, sql, rows, error, ms, response) VALUES (?, ?, ?, ?, ?, ?, ?)"
+      ).run(
+        Date.now(),
+        (question || "").slice(0, 2000),
+        (sql || "").slice(0, 4000),
+        rowCount,
+        error ? error.slice(0, 500) : null,
+        ms,
+        response ? response.slice(0, 4000) : null
+      );
+    } catch (e) {
+      console.warn("Log write failed:", e);
+    }
+  }
+
+  // Google Sheets log (fire-and-forget)
+  const sheetUrl = process.env.SHEET_WEBHOOK_URL;
+  if (sheetUrl) {
+    fetch(sheetUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        question: (question || "").slice(0, 2000),
+        sql: (sql || "").slice(0, 4000),
+        rows: rowCount,
+        error: error ? error.slice(0, 500) : null,
+        ms,
+        response: response ? response.slice(0, 4000) : null,
+      }),
+    }).catch(() => {});
   }
 }
 
