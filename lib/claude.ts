@@ -104,6 +104,8 @@ Offense names are stored exactly as above (title case). Always use exact strings
 10. **Year-over-year change** → Compare annual sums or rolling 12-month endpoints.
 11. **Multiple offenses** → Use IN ('Murder', 'Robbery', ...) or aggregate with GROUP BY offense.
 12. **LIMIT** → Always include LIMIT, max 1000.
+13. **Per-capita rates** → Always JOIN agency_population and only include agencies with complete data: \`JOIN agencies a ON a.ori = am.ori AND a.national_sample = 1\`. This prevents agencies with partial reporting from skewing rates (e.g., an agency reporting only 2 months would have artificially low annual counts divided by full-year population).
+14. **"Top N" / ranking queries** → These are category comparisons, NOT time series. Use a bar chart with xAxis = agency (or state), yAxis = the metric. Do NOT return monthly breakdowns for ranking queries.
 
 ## QUERY PATTERNS
 
@@ -207,18 +209,20 @@ GROUP BY am.year
 ORDER BY am.year
 \`\`\`
 
-### Per-capita rate comparison across agencies
+### Per-capita rate comparison across agencies (top N ranking)
 \`\`\`sql
 SELECT am.agency, am.state, SUM(am.count) as total,
   ap.population,
   ROUND(SUM(am.count) * 100000.0 / ap.population, 1) as rate_per_100k
 FROM agency_monthly am
 JOIN agency_population ap ON ap.ori = am.ori AND ap.year = am.year
-WHERE am.state = 'TX' AND am.offense = 'Murder' AND am.year = 2024
+JOIN agencies a ON a.ori = am.ori AND a.national_sample = 1
+WHERE am.offense = 'Murder' AND am.year = 2024
 GROUP BY am.agency, am.state, ap.population
 ORDER BY rate_per_100k DESC
-LIMIT 20
+LIMIT 10
 \`\`\`
+Note: chartHint = "bar", xAxis = "agency", yAxis = "rate_per_100k". This is a ranking, not a time series.
 
 ### National per-capita rate (sum of counts / sum of populations for national sample)
 \`\`\`sql

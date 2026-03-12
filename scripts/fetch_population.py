@@ -60,17 +60,21 @@ def fetch_cde_population(ori, state_abb):
         with urllib.request.urlopen(req, timeout=15) as resp:
             data = json.loads(resp.read())
         pops = data.get("populations", {}).get("population", {})
-        # Find the agency key (not the state or US key)
-        agency_key = None
-        for k in pops:
-            if k not in ("United States",) and k != state_abb and not k.startswith("United"):
-                # Check it's not a state name
-                if len(k) > 2:
-                    agency_key = k
-                    break
-        if not agency_key:
+        # Find the agency key — it's the one with the smallest population
+        # (agency < state < US). Skip "United States" entirely.
+        best_key = None
+        best_pop = float("inf")
+        for k, monthly_vals in pops.items():
+            if k == "United States":
+                continue
+            # Get a sample population value
+            sample = next((v for v in monthly_vals.values() if v is not None and v > 0), None)
+            if sample is not None and sample < best_pop:
+                best_pop = sample
+                best_key = k
+        if not best_key:
             return {}
-        monthly = pops[agency_key]
+        monthly = pops[best_key]
         # Extract unique year populations (same within year)
         year_pops = {}
         for month_key, pop in monthly.items():
