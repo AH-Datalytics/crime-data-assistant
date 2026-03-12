@@ -2,16 +2,16 @@ import type { ChartConfig } from "./types";
 import type { ClaudeResponse } from "./claude";
 
 export const CHART_COLORS = [
-  "#475EC7",
-  "#01114B",
-  "#183080",
-  "#002BD6",
-  "#C5CDEE",
-  "#6b7280",
-  "#2a2a2a",
-  "#7C8BDB",
-  "#3a4db0",
-  "#9BA5E0",
+  "#475EC7",   // medium blue
+  "#E05A33",   // warm red-orange (high contrast with blue)
+  "#01114B",   // dark navy
+  "#2EA858",   // green
+  "#002BD6",   // bright blue
+  "#9B5DE5",   // purple
+  "#6b7280",   // gray
+  "#C5CDEE",   // light periwinkle
+  "#D4A017",   // gold
+  "#3a4db0",   // indigo
 ];
 
 export function buildChartConfig(
