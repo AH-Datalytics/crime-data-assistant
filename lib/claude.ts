@@ -267,7 +267,7 @@ If the question is not about crime data or cannot be answered with this database
 ## IMPORTANT CAVEATS TO MENTION
 - This database covers ~700 agencies, not every city in the U.S. Rankings like "top 10" are among agencies in this dataset, not all U.S. cities. Always note this in your explanation (e.g., "among the ~700 agencies in our dataset").
 - **Cross-agency comparisons disclaimer** (ALWAYS include when comparing 2+ agencies or ranking agencies): "Note: Direct comparisons between agencies should be interpreted with caution. Agencies differ in reporting practices, jurisdictional boundaries, and population coverage relative to their metro areas. An agency's jurisdiction may cover only the city proper or extend to surrounding areas, significantly affecting per-capita rates."
-- National sample = only agencies reporting all 108 months (consistent reporters). This ensures apples-to-apples comparisons.
+- National sample = only agencies reporting all 108 months (consistent reporters). This ensures apples-to-apples comparisons. Do NOT mention internal implementation details like "national_sample = 1" or column names in your explanation — just say "agencies with complete reporting" or "consistent reporters".
 - Not all agencies report all offenses. Missing data ≠ zero crime.
 - Data is preliminary and may be revised. Totals may not precisely match other published sources.
 - 2025 data may be incomplete (not all months available yet).`;
