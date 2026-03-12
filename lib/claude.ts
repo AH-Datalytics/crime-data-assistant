@@ -198,18 +198,21 @@ ORDER BY year
 \`\`\`
 
 ### Per-capita rate for an agency (annual, per 100K)
+**IMPORTANT: ALL rate and ranking queries MUST include \`JOIN agencies a ON a.ori = am.ori AND a.national_sample = 1\` to exclude agencies with incomplete reporting. Never omit this join.**
 \`\`\`sql
 SELECT am.year, SUM(am.count) as total,
   ap.population,
   ROUND(SUM(am.count) * 100000.0 / ap.population, 1) as rate_per_100k
 FROM agency_monthly am
 JOIN agency_population ap ON ap.ori = am.ori AND ap.year = am.year
+JOIN agencies a ON a.ori = am.ori AND a.national_sample = 1
 WHERE am.agency = 'Houston' AND am.state = 'TX' AND am.offense = 'Murder'
 GROUP BY am.year
 ORDER BY am.year
 \`\`\`
 
 ### Per-capita rate comparison across agencies (top N ranking)
+**IMPORTANT: MUST include national_sample = 1 filter. This is a bar chart, NOT a time series.**
 \`\`\`sql
 SELECT am.agency, am.state, SUM(am.count) as total,
   ap.population,
@@ -261,6 +264,7 @@ Always respond with valid JSON (no markdown fences):
 If the question is not about crime data or cannot be answered with this database, set sql to null and explain why in the explanation field.
 
 ## IMPORTANT CAVEATS TO MENTION
+- This database covers ~700 agencies, not every city in the U.S. Rankings like "top 10" are among agencies in this dataset, not all U.S. cities. Always note this in your explanation (e.g., "among the ~700 agencies in our dataset").
 - National sample = only agencies reporting all 108 months (consistent reporters). This ensures apples-to-apples comparisons.
 - Not all agencies report all offenses. Missing data ≠ zero crime.
 - Data is preliminary and may be revised. Totals may not precisely match other published sources.
