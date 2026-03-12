@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDb } from "@/lib/db";
+import { getDb, logQuery } from "@/lib/db";
 import { translateToSql } from "@/lib/claude";
 import { validateAndSanitize } from "@/lib/sql-safety";
 import { buildChartConfig } from "@/lib/chart-config";
@@ -10,9 +10,13 @@ function jsonResp(data: unknown, status = 200) {
 }
 
 export async function POST(req: NextRequest) {
+  const totalStart = Date.now();
+  let question = "";
+  let sql: string | null = null;
+
   try {
     const body = await req.json();
-    const question = body?.question?.trim();
+    question = body?.question?.trim() || "";
 
     if (!question || typeof question !== "string") {
       return jsonResp(
@@ -30,12 +34,11 @@ export async function POST(req: NextRequest) {
 
     // Step 1: Translate to SQL via Claude
     const history = Array.isArray(body?.history) ? body.history : undefined;
-    const claudeStart = Date.now();
     const claude = await translateToSql(question, history);
-    const claudeMs = Date.now() - claudeStart;
-    console.log(`[timing] Claude API: ${claudeMs}ms`);
 
     if (!claude.sql) {
+      const ms = Date.now() - totalStart;
+      logQuery(question, null, 0, null, ms, claude.explanation);
       return jsonResp({
         success: true,
         question,
@@ -54,6 +57,8 @@ export async function POST(req: NextRequest) {
     // Step 2: Validate SQL
     const validation = validateAndSanitize(claude.sql);
     if (!validation.valid) {
+      const ms = Date.now() - totalStart;
+      logQuery(question, claude.sql, 0, `Validation: ${validation.error}`, ms);
       return jsonResp(
         {
           success: false,
@@ -64,11 +69,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const sql = validation.sanitized!;
+    sql = validation.sanitized!;
 
-    // Step 3: Execute SQL
+    // Step 3: Execute SQL (with one retry on DB error)
     const db = getDb();
-    const startTime = Date.now();
+    const dbStart = Date.now();
 
     let rows: Record<string, unknown>[];
     let columns: string[];
@@ -80,23 +85,71 @@ export async function POST(req: NextRequest) {
       rows = result;
     } catch (dbErr) {
       const msg = dbErr instanceof Error ? dbErr.message : String(dbErr);
-      return jsonResp(
-        {
-          success: false,
-          error: `Database error: ${msg}`,
-          sql,
-        } as QueryError,
-        500
+      // Retry: tell Claude about the error and ask for a corrected query
+      const retryHistory = [
+        ...(history || []),
+        { role: "user" as const, content: question },
+        { role: "assistant" as const, content: JSON.stringify(claude) },
+        { role: "user" as const, content: `That SQL failed with error: ${msg}. Please fix the query and try again.` },
+      ];
+      const retry = await translateToSql(
+        `Fix this SQL error: ${msg}`,
+        retryHistory
       );
+      if (retry.sql) {
+        const retryValidation = validateAndSanitize(retry.sql);
+        if (retryValidation.valid) {
+          try {
+            const retryStmt = db.prepare(retryValidation.sanitized!);
+            const retryResult = retryStmt.all() as Record<string, unknown>[];
+            columns = retryStmt.columns().map((c) => c.name);
+            rows = retryResult;
+            sql = retryValidation.sanitized!;
+            // Update claude response for chart config
+            claude.explanation = retry.explanation;
+            claude.chartHint = retry.chartHint;
+            claude.xAxis = retry.xAxis;
+            claude.yAxis = retry.yAxis;
+            claude.title = retry.title;
+            // Fall through to success path
+          } catch (retryErr) {
+            const retryMsg = retryErr instanceof Error ? retryErr.message : String(retryErr);
+            const ms = Date.now() - totalStart;
+            logQuery(question, sql, 0, `DB retry failed: ${retryMsg}`, ms);
+            return jsonResp(
+              { success: false, error: `I had trouble with that query. Try rephrasing your question.`, sql } as QueryError,
+              500
+            );
+          }
+        } else {
+          const ms = Date.now() - totalStart;
+          logQuery(question, sql, 0, `DB: ${msg} (retry validation failed)`, ms);
+          return jsonResp(
+            { success: false, error: `I had trouble with that query. Try rephrasing your question.`, sql } as QueryError,
+            500
+          );
+        }
+      } else {
+        const ms = Date.now() - totalStart;
+        logQuery(question, sql, 0, `DB: ${msg}`, ms);
+        return jsonResp(
+          { success: false, error: `Database error: ${msg}`, sql } as QueryError,
+          500
+        );
+      }
     }
 
-    const executionTimeMs = Date.now() - startTime;
+    const executionTimeMs = Date.now() - dbStart;
+    const totalMs = Date.now() - totalStart;
 
     // Step 4: Build chart config
     const chartConfig = buildChartConfig(claude, columns, rows);
 
     // Step 5: Truncate if needed
     const truncated = rows.length >= 1000;
+
+    // Log success
+    logQuery(question, sql, rows.length, null, totalMs, claude.explanation);
 
     return jsonResp({
       success: true,
@@ -113,6 +166,8 @@ export async function POST(req: NextRequest) {
     } as QueryResponse);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
+    const ms = Date.now() - totalStart;
+    logQuery(question, sql, 0, msg, ms);
     console.error("Query API error:", msg);
     return jsonResp(
       { success: false, error: `Server error: ${msg}` } as QueryError,

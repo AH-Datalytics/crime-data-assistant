@@ -196,15 +196,15 @@ const ChartPanel = forwardRef<HTMLDivElement, ChartPanelProps>(
                 tickLine={false}
                 axisLine={{ stroke: "#e5e7eb" }}
                 tickFormatter={
-                  daily ? (v) => formatDateTickLabel(v, singleYear)
-                  : singleYearMonthly ? (v) => formatYearMonth(v)
+                  daily ? (v: string) => formatDateTickLabel(v, singleYear)
+                  : singleYearMonthly ? (v: string) => formatYearMonth(v)
                   : ym ? formatYearMonthTick
-                  : undefined
+                  : (v: string) => String(v).length > 20 ? String(v).slice(0, 18) + "…" : String(v)
                 }
-                angle={(ym || daily) ? 0 : -45}
+                angle={(ym || daily) ? 0 : -40}
                 textAnchor={(ym || daily) ? "middle" : "end"}
                 interval={daily ? dailyTickInterval(data.length) : 0}
-                height={(ym || daily) ? 30 : 90}
+                height={(ym || daily) ? 30 : 100}
               />
               <YAxis
                 tickFormatter={formatAxisValue}

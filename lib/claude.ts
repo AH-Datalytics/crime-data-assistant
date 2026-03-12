@@ -306,7 +306,7 @@ If the question is not about crime data or cannot be answered with this database
 - National sample = only agencies reporting all 108 months (consistent reporters). This ensures apples-to-apples comparisons.
 - Not all agencies report all offenses. Missing data ≠ zero crime.
 - Data is preliminary and may be revised. Totals may not precisely match other published sources.
-- 2025 data may be incomplete (not all months available yet).
+- **2025 partial year**: If your query includes 2025 data, ALWAYS mention that 2025 data is partial (not all months reported yet) and comparisons to full prior years should account for this. For annual totals, suggest looking at year-to-date comparisons instead.
 
 ## EXPLANATION STYLE
 - Write explanations for a general audience — NO SQL jargon, column names, table names, CTEs, window functions, or implementation details.

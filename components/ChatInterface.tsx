@@ -18,6 +18,7 @@ export default function ChatInterface() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [loadingStep, setLoadingStep] = useState("");
 
   const [currentResponse, setCurrentResponse] =
     useState<QueryResponse | null>(null);
@@ -32,6 +33,7 @@ export default function ChatInterface() {
 
       setInput("");
       setLoading(true);
+      setLoadingStep("Generating query...");
 
       const userMsg: Message = {
         id: Date.now().toString(),
@@ -41,18 +43,22 @@ export default function ChatInterface() {
 
       const history = messages.map((m) => ({
         role: m.role,
-        content: m.text,
+        content: m.role === "assistant" && m.sql
+          ? `${m.text}\n[SQL: ${m.sql}]`
+          : m.text,
       }));
 
       setMessages((prev) => [...prev, userMsg]);
 
       try {
+        setLoadingStep("Analyzing your question...");
         const res = await fetch("/api/query", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ question, history }),
         });
 
+        setLoadingStep("Processing results...");
         const data = await res.json();
 
         if (data.success) {
@@ -97,22 +103,22 @@ export default function ChatInterface() {
   return (
     <div className="min-h-screen flex flex-col bg-[var(--surface)]">
       {/* Header */}
-      <header className="bg-white border-b border-[var(--border)] px-6 flex items-center justify-between shrink-0" style={{ height: 72 }}>
-        <div className="flex items-center gap-6">
-          <div className="flex items-center gap-2">
-            <CrimeIndexLogo size={28} />
-            <span className="text-sm font-medium tracking-widest uppercase text-[var(--foreground)]" style={{ letterSpacing: "2.5px" }}>Crime Index</span>
+      <header className="bg-white border-b border-[var(--border)] px-4 sm:px-6 flex items-center justify-between shrink-0" style={{ height: 56 }}>
+        <div className="flex items-center gap-3 sm:gap-6 min-w-0">
+          <div className="flex items-center gap-2 shrink-0">
+            <CrimeIndexLogo size={24} />
+            <span className="text-xs sm:text-sm font-medium tracking-widest uppercase text-[var(--foreground)]" style={{ letterSpacing: "2.5px" }}>Crime Index</span>
           </div>
-          <div className="h-6 w-px bg-[var(--border)]" />
-          <span className="text-sm text-[var(--foreground)]">Crime Data Assistant</span>
+          <div className="h-5 w-px bg-[var(--border)] hidden sm:block" />
+          <span className="text-xs sm:text-sm text-[var(--foreground)] hidden sm:block">Crime Data Assistant</span>
         </div>
-        <span className="text-xs text-[var(--muted)]">700+ agencies · 48 states · 2017–2025</span>
+        <span className="text-[10px] sm:text-xs text-[var(--muted)] shrink-0">700+ agencies · 48 states · 2017–2025</span>
       </header>
 
       {/* Search bar area */}
       <div className="bg-white border-b border-[var(--border)]">
-        <div className="max-w-5xl mx-auto px-6 py-4">
-          <form onSubmit={handleSubmit} className="flex gap-3">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
+          <form onSubmit={handleSubmit} className="flex gap-2 sm:gap-3">
             <input
               type="text"
               value={input}
@@ -131,7 +137,7 @@ export default function ChatInterface() {
             </button>
           </form>
           {messages.length === 0 && !loading && (
-            <div className="flex gap-3 mt-3 justify-center">
+            <div className="flex flex-wrap gap-2 sm:gap-3 mt-3 justify-center">
               {["National murder trend", "Robbery in Houston 2020–2024", "Compare Texas cities"].map((q) => (
                 <button
                   key={q}
@@ -148,7 +154,7 @@ export default function ChatInterface() {
 
       {/* Response area */}
       <div className="flex-1 overflow-y-auto">
-        <div className="max-w-5xl mx-auto px-6 py-6 space-y-4">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 sm:py-6 space-y-4">
           {/* Loading */}
           {loading && (
             <div className="bg-white rounded-xl border border-[var(--border)] px-5 py-4">
@@ -158,7 +164,7 @@ export default function ChatInterface() {
                   <span className="animate-bounce text-[#475EC7]" style={{ animationDelay: "0.1s" }}>·</span>
                   <span className="animate-bounce text-[#475EC7]" style={{ animationDelay: "0.2s" }}>·</span>
                 </span>
-                Analyzing your question...
+                {loadingStep}
               </div>
             </div>
           )}
@@ -186,7 +192,7 @@ export default function ChatInterface() {
                   csvFilename={`${currentResponse.title || "chart"}.jpeg`}
                 />
               </div>
-              <div style={{ height: 480 }}>
+              <div className="h-[320px] sm:h-[480px]">
                 <ChartPanel
                   ref={chartRef}
                   config={currentResponse.chartConfig}
