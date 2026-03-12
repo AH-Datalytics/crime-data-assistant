@@ -256,6 +256,7 @@ const ChartPanel = forwardRef<HTMLDivElement, ChartPanelProps>(
             </PieChart>
           ) : null}
         </ResponsiveContainer>
+        <div className="text-[10px] text-[var(--muted-light)] mt-1 shrink-0">Source: Real-Time Crime Index</div>
       </div>
     );
   }
