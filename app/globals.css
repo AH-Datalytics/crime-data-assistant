@@ -1,0 +1,77 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #2a2a2a;
+  --muted: #6b7280;
+  --muted-light: #ababab;
+  --border: #e5e7eb;
+  --surface: #f8f8f8;
+  --accent: #475EC7;
+  --accent-hover: #3a4db0;
+  --card: #ffffff;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+}
+
+body {
+  background: var(--surface);
+  color: var(--foreground);
+  font-family: "Hanken Grotesk", Helvetica, Arial, sans-serif;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: "neue-haas-grotesk-display", sans-serif;
+}
+
+/* Table styling — matches Crime Index data tables */
+.stat-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.stat-table th {
+  background: transparent;
+  color: var(--foreground);
+  padding: 0.75rem 1rem;
+  text-align: right;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  font-weight: 700;
+  font-size: 0.8125rem;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: white;
+}
+
+.stat-table th:first-child {
+  text-align: left;
+}
+
+.stat-table th:hover {
+  color: var(--accent);
+}
+
+.stat-table td {
+  padding: 0.625rem 1rem;
+  text-align: right;
+  border-bottom: 1px solid #f0f0f0;
+  white-space: nowrap;
+  font-size: 0.8125rem;
+}
+
+.stat-table td:first-child {
+  text-align: left;
+  font-weight: 600;
+}
+
+.stat-table tr:hover td {
+  background: var(--surface);
+}
