@@ -30,6 +30,13 @@ One row per agency with metadata.
 - total_months INTEGER — how many months of data this agency has (max 108)
 - national_sample INTEGER — 1 if the agency has all 108 months, 0 otherwise
 
+### agency_population (PRIMARY KEY: ori, year)
+Population for each agency by year. Use for per-capita rate calculations.
+- ori TEXT — ORI code (joins to agency_monthly.ori)
+- year INTEGER — 2017–2026
+- population INTEGER — agency jurisdiction population for that year
+Coverage: 717 agencies × 10 years = 7,170 rows. Population is constant within a year.
+
 ### national_monthly (PRIMARY KEY: year, month, offense)
 Pre-aggregated national totals using ONLY agencies in the national sample (those with all 108 months). Use this for any national-level trend question.
 - year INTEGER
@@ -186,6 +193,47 @@ SELECT year, total,
   ROUND(100.0 * (total - LAG(total) OVER (ORDER BY year)) / LAG(total) OVER (ORDER BY year), 1) as pct_change
 FROM annual
 ORDER BY year
+\`\`\`
+
+### Per-capita rate for an agency (annual, per 100K)
+\`\`\`sql
+SELECT am.year, SUM(am.count) as total,
+  ap.population,
+  ROUND(SUM(am.count) * 100000.0 / ap.population, 1) as rate_per_100k
+FROM agency_monthly am
+JOIN agency_population ap ON ap.ori = am.ori AND ap.year = am.year
+WHERE am.agency = 'Houston' AND am.state = 'TX' AND am.offense = 'Murder'
+GROUP BY am.year
+ORDER BY am.year
+\`\`\`
+
+### Per-capita rate comparison across agencies
+\`\`\`sql
+SELECT am.agency, am.state, SUM(am.count) as total,
+  ap.population,
+  ROUND(SUM(am.count) * 100000.0 / ap.population, 1) as rate_per_100k
+FROM agency_monthly am
+JOIN agency_population ap ON ap.ori = am.ori AND ap.year = am.year
+WHERE am.state = 'TX' AND am.offense = 'Murder' AND am.year = 2024
+GROUP BY am.agency, am.state, ap.population
+ORDER BY rate_per_100k DESC
+LIMIT 20
+\`\`\`
+
+### National per-capita rate (sum of counts / sum of populations for national sample)
+\`\`\`sql
+SELECT nm.year, SUM(nm.count) as total,
+  (SELECT SUM(ap.population) FROM agency_population ap
+   JOIN agencies a ON a.ori = ap.ori AND a.national_sample = 1
+   WHERE ap.year = nm.year) as sample_pop,
+  ROUND(SUM(nm.count) * 100000.0 /
+    (SELECT SUM(ap.population) FROM agency_population ap
+     JOIN agencies a ON a.ori = ap.ori AND a.national_sample = 1
+     WHERE ap.year = nm.year), 1) as rate_per_100k
+FROM national_monthly nm
+WHERE nm.offense = 'Murder'
+GROUP BY nm.year
+ORDER BY nm.year
 \`\`\`
 
 ## CHART HINTS
