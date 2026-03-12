@@ -106,6 +106,7 @@ Offense names are stored exactly as above (title case). Always use exact strings
 12. **LIMIT** → Always include LIMIT, max 1000.
 13. **Per-capita rates** → Always JOIN agency_population and only include agencies with complete data: \`JOIN agencies a ON a.ori = am.ori AND a.national_sample = 1\`. This prevents agencies with partial reporting from skewing rates (e.g., an agency reporting only 2 months would have artificially low annual counts divided by full-year population).
 14. **"Top N" / ranking queries** → These are category comparisons, NOT time series. Use a bar chart with xAxis = agency (or state), yAxis = the metric. Do NOT return monthly breakdowns for ranking queries.
+15. **Agency labels** → When listing or ranking agencies, always format the label as \`agency || ', ' || state\` (e.g., "Memphis, TN", "Santa Rosa, CA") so the chart and table show the state alongside the city name.
 
 ## QUERY PATTERNS
 
@@ -162,10 +163,10 @@ ORDER BY year
 
 ### Cross-agency comparison (all agencies in a state)
 \`\`\`sql
-SELECT agency, SUM(count) as total
+SELECT agency || ', ' || state as agency, SUM(count) as total
 FROM agency_monthly
 WHERE state = 'TX' AND offense = 'Murder' AND year = 2024
-GROUP BY agency
+GROUP BY ori, agency, state
 ORDER BY total DESC
 LIMIT 20
 \`\`\`
@@ -214,14 +215,14 @@ ORDER BY am.year
 ### Per-capita rate comparison across agencies (top N ranking)
 **IMPORTANT: MUST include national_sample = 1 filter. This is a bar chart, NOT a time series.**
 \`\`\`sql
-SELECT am.agency, am.state, SUM(am.count) as total,
+SELECT am.agency || ', ' || am.state as agency, SUM(am.count) as total,
   ap.population,
   ROUND(SUM(am.count) * 100000.0 / ap.population, 1) as rate_per_100k
 FROM agency_monthly am
 JOIN agency_population ap ON ap.ori = am.ori AND ap.year = am.year
 JOIN agencies a ON a.ori = am.ori AND a.national_sample = 1
 WHERE am.offense = 'Murder' AND am.year = 2024
-GROUP BY am.agency, am.state, ap.population
+GROUP BY am.ori, am.agency, am.state, ap.population
 ORDER BY rate_per_100k DESC
 LIMIT 10
 \`\`\`
