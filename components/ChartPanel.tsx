@@ -3,8 +3,8 @@
 import { forwardRef } from "react";
 import {
   ResponsiveContainer,
-  AreaChart,
-  Area,
+  LineChart,
+  Line,
   BarChart,
   Bar,
   PieChart,
@@ -16,36 +16,60 @@ import {
   Tooltip,
   Legend,
 } from "recharts";
-import type { ChartConfig } from "@/lib/types";
-import { CHART_COLORS } from "@/lib/chart-config";
+import type { ChartConfig, ChartMeta } from "@/lib/types";
 import { formatAxisValue } from "@/lib/utils";
 
-const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const MONTH_NAMES = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
 
-/** Convert column name like "chicago" or "motor_vehicle_theft" → "Chicago" or "Motor Vehicle Theft" */
+const NYT_COLORS = [
+  "#d03c24",
+  "#1a6b54",
+  "#4a7fb5",
+  "#e6a019",
+  "#7b5ea7",
+  "#888888",
+  "#c45a3c",
+  "#2d8f83",
+];
+
+const TICK_STYLE = {
+  fontSize: 12,
+  fill: "#999",
+  fontFamily: "Georgia, 'Times New Roman', serif",
+};
+
+const GRID_COLOR = "#eaeaea";
+
 function properCase(s: string): string {
-  return s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  const cleaned = s
+    .replace(/^rolling_\d+_?/i, "")
+    .replace(/_rate_per_\d+k?/i, "")
+    .replace(/_rate$/i, "")
+    .replace(/_per_\d+k?$/i, "")
+    .replace(/_count$/i, "")
+    .replace(/_total$/i, "")
+    .replace(/_/g, " ")
+    .trim();
+  const label = cleaned || s.replace(/_/g, " ").trim();
+  return label.replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-/** Check if xAxis values look like YYYYMM (e.g., "202401") */
 function isYearMonth(data: Record<string, unknown>[], xKey: string): boolean {
   const sample = data.slice(0, 3);
-  return sample.every((d) => {
-    const v = String(d[xKey] ?? "");
-    return /^\d{6}$/.test(v);
-  });
+  return sample.every((d) => /^\d{6}$/.test(String(d[xKey] ?? "")));
 }
 
-/** Check if xAxis values look like YYYYMMDD (e.g., "20240115") */
 function isDate(data: Record<string, unknown>[], xKey: string): boolean {
   const sample = data.slice(0, 3);
-  return sample.length > 0 && sample.every((d) => {
-    const v = String(d[xKey] ?? "");
-    return /^(19|20)\d{6}$/.test(v);
-  });
+  return (
+    sample.length > 0 &&
+    sample.every((d) => /^(19|20)\d{6}$/.test(String(d[xKey] ?? "")))
+  );
 }
 
-/** "202401" → "Jan 2024" */
 function formatYearMonth(val: string | number): string {
   const s = String(val);
   if (!/^\d{6}$/.test(s)) return s;
@@ -53,7 +77,6 @@ function formatYearMonth(val: string | number): string {
   return `${MONTH_NAMES[m - 1] || s.slice(4)} ${s.slice(0, 4)}`;
 }
 
-/** "202401" → "2024" — only show year on tick when month is January or first data point */
 function formatYearMonthTick(val: string | number, index: number): string {
   const s = String(val);
   if (!/^\d{6}$/.test(s)) return s;
@@ -62,7 +85,6 @@ function formatYearMonthTick(val: string | number, index: number): string {
   return "";
 }
 
-/** "20240115" → "Jan 15, 2024" (tooltip) */
 function formatDateFull(val: string | number): string {
   const s = String(val);
   if (!/^(19|20)\d{6}$/.test(s)) return s;
@@ -71,35 +93,37 @@ function formatDateFull(val: string | number): string {
   return `${MONTH_NAMES[m - 1] || s.slice(4, 6)} ${d}, ${s.slice(0, 4)}`;
 }
 
-/** Format a daily tick — always returns a label (used with calculated interval) */
 function formatDateTickLabel(val: string | number, singleYear: boolean): string {
   const s = String(val);
   if (!/^(19|20)\d{6}$/.test(s)) return s;
   const m = parseInt(s.slice(4, 6), 10);
   const mon = MONTH_NAMES[m - 1] || s.slice(4, 6);
-  if (singleYear) {
-    return mon;
-  }
-  return `${mon} ${s.slice(0, 4)}`;
+  return singleYear ? mon : `${mon} ${s.slice(0, 4)}`;
 }
 
-/** Calculate tick interval for daily data to show ~10-14 labels */
 function dailyTickInterval(dataLength: number): number {
   if (dataLength <= 14) return 0;
   return Math.max(1, Math.floor(dataLength / 12));
 }
 
+function formatPopulation(pop: number): string {
+  if (pop >= 1_000_000) return `${(pop / 1_000_000).toFixed(1)}M`;
+  if (pop >= 1_000) return `${(pop / 1_000).toFixed(0)}K`;
+  return String(pop);
+}
+
 interface ChartPanelProps {
   config: ChartConfig;
   rows: Record<string, unknown>[];
+  meta?: ChartMeta | null;
 }
 
 const ChartPanel = forwardRef<HTMLDivElement, ChartPanelProps>(
-  ({ config, rows }, ref) => {
+  ({ config, rows, meta }, ref) => {
     if (!config || config.type === "none" || rows.length === 0) return null;
 
-    // Detect year+month columns and synthesize a _ym key for charting
-    const hasYearMonth = rows.length > 0 && "year" in rows[0] && "month" in rows[0];
+    const hasYearMonth =
+      rows.length > 0 && "year" in rows[0] && "month" in rows[0];
 
     const data = rows.map((r) => {
       const entry: Record<string, unknown> = {};
@@ -114,120 +138,152 @@ const ChartPanel = forwardRef<HTMLDivElement, ChartPanelProps>(
       return entry;
     });
 
-    // Use synthesized _ym if we have year+month, otherwise check raw xAxis for YYYYMM
     const xKey = hasYearMonth ? "_ym" : config.xAxis;
     const ym = hasYearMonth || isYearMonth(data, config.xAxis);
     const daily = !ym && isDate(data, config.xAxis);
 
-    // Count distinct years in data
     const dataYears = new Set(
-      data.map((d) => {
-        const v = String(d[daily ? config.xAxis : xKey] ?? "");
-        return v.slice(0, 4);
-      })
+      data.map((d) => String(d[daily ? config.xAxis : xKey] ?? "").slice(0, 4))
     );
     const singleYear = dataYears.size === 1;
-
-    // Show monthly gridlines only when data spans a single year
     const singleYearMonthly = ym && data.length > 0 && singleYear;
+
+    const multiSeries = config.yAxis.length > 1;
+    const dataLen = data.length;
+
+    const xAxisDataKey = daily ? config.xAxis : ym ? xKey : config.xAxis;
+
+    const tooltipContentStyle = {
+      borderRadius: 4,
+      border: "1px solid #ddd",
+      fontSize: 12,
+      fontFamily: "Georgia, 'Times New Roman', serif",
+      boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
+    };
+    const tooltipLabelFormatter = (label: unknown) =>
+      daily
+        ? formatDateFull(String(label ?? ""))
+        : ym
+          ? formatYearMonth(String(label ?? ""))
+          : String(label ?? "");
 
     return (
       <div ref={ref} className="bg-white h-full flex flex-col">
         <ResponsiveContainer width="100%" height="100%">
           {config.type === "line" ? (
-            <AreaChart data={data} margin={{ top: 5, right: 20, bottom: 25, left: 10 }}>
-              <defs>
-                {config.yAxis.map((y, i) => (
-                  <linearGradient key={y} id={`fill_${i}`} x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={CHART_COLORS[i % CHART_COLORS.length]} stopOpacity={0.35} />
-                    <stop offset="100%" stopColor={CHART_COLORS[i % CHART_COLORS.length]} stopOpacity={0.05} />
-                  </linearGradient>
-                ))}
-              </defs>
-              <CartesianGrid horizontal={true} vertical={false} strokeDasharray="3 3" stroke="#e5e7eb" />
+            <LineChart
+              data={data}
+              margin={{ top: 10, right: 20, bottom: 20, left: 10 }}
+            >
+              <CartesianGrid horizontal vertical={false} stroke={GRID_COLOR} strokeWidth={1} />
               <XAxis
-                dataKey={daily ? config.xAxis : ym ? xKey : config.xAxis}
-                tick={{ fontSize: 11, fill: "#6b7280" }}
+                dataKey={xAxisDataKey}
+                tick={TICK_STYLE}
                 tickLine={false}
-                axisLine={{ stroke: "#e5e7eb" }}
+                axisLine={false}
                 tickFormatter={
                   daily ? (v) => formatDateTickLabel(v, singleYear)
                   : singleYearMonthly ? (v) => formatYearMonth(v)
                   : ym ? formatYearMonthTick
                   : undefined
                 }
-                interval={daily ? dailyTickInterval(data.length) : ym ? 0 : "preserveStartEnd"}
+                interval={daily ? dailyTickInterval(dataLen) : ym ? 0 : "preserveStartEnd"}
               />
               <YAxis
                 tickFormatter={formatAxisValue}
-                tick={{ fontSize: 11, fill: "#6b7280" }}
+                tick={TICK_STYLE}
                 tickLine={false}
                 axisLine={false}
+                width={50}
               />
               <Tooltip
-                labelFormatter={(label) =>
-                  daily ? formatDateFull(String(label ?? ""))
-                  : ym ? formatYearMonth(String(label ?? ""))
-                  : String(label ?? "")
-                }
+                labelFormatter={tooltipLabelFormatter}
                 formatter={(v) => Number(v).toLocaleString()}
-                contentStyle={{ borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 13 }}
+                contentStyle={tooltipContentStyle}
               />
-              {config.yAxis.length > 1 && <Legend />}
-              {config.yAxis.map((y, i) => (
-                <Area
-                  key={y}
-                  type="monotone"
-                  dataKey={y}
-                  name={properCase(y)}
-                  stroke={CHART_COLORS[i % CHART_COLORS.length]}
-                  strokeWidth={2}
-                  fill={`url(#fill_${i})`}
-                  dot={false}
+              {multiSeries && (
+                <Legend
+                  verticalAlign="top"
+                  align="left"
+                  iconType="line"
+                  iconSize={16}
+                  wrapperStyle={{
+                    fontSize: 12,
+                    fontFamily: "Georgia, 'Times New Roman', serif",
+                    paddingBottom: 8,
+                  }}
                 />
-              ))}
-            </AreaChart>
+              )}
+              {config.yAxis.map((y, i) => {
+                const color = NYT_COLORS[i % NYT_COLORS.length];
+                return (
+                  <Line
+                    key={y}
+                    type="monotone"
+                    dataKey={y}
+                    name={properCase(y)}
+                    stroke={color}
+                    strokeWidth={multiSeries ? 1.5 : 2}
+                    dot={false}
+                    activeDot={{ r: 3, strokeWidth: 0, fill: color }}
+                  />
+                );
+              })}
+            </LineChart>
           ) : config.type === "bar" || config.type === "stacked_bar" ? (
-            <BarChart data={data} margin={{ top: 5, right: 20, bottom: (ym || daily) ? 25 : 80, left: 10 }}>
-              <CartesianGrid horizontal={true} vertical={false} strokeDasharray="3 3" stroke="#e5e7eb" />
+            <BarChart
+              data={data}
+              margin={{ top: 10, right: 20, bottom: ym || daily ? 20 : 80, left: 10 }}
+            >
+              <CartesianGrid horizontal vertical={false} stroke={GRID_COLOR} strokeWidth={1} />
               <XAxis
-                dataKey={daily ? config.xAxis : ym ? xKey : config.xAxis}
-                tick={{ fontSize: 11, fill: "#6b7280" }}
+                dataKey={xAxisDataKey}
+                tick={TICK_STYLE}
                 tickLine={false}
-                axisLine={{ stroke: "#e5e7eb" }}
+                axisLine={false}
                 tickFormatter={
                   daily ? (v: string) => formatDateTickLabel(v, singleYear)
                   : singleYearMonthly ? (v: string) => formatYearMonth(v)
                   : ym ? formatYearMonthTick
                   : (v: string) => String(v).length > 20 ? String(v).slice(0, 18) + "…" : String(v)
                 }
-                angle={(ym || daily) ? 0 : -40}
-                textAnchor={(ym || daily) ? "middle" : "end"}
-                interval={daily ? dailyTickInterval(data.length) : 0}
-                height={(ym || daily) ? 30 : 100}
+                angle={ym || daily ? 0 : -40}
+                textAnchor={ym || daily ? "middle" : "end"}
+                interval={daily ? dailyTickInterval(dataLen) : 0}
+                height={ym || daily ? 30 : 100}
               />
               <YAxis
                 tickFormatter={formatAxisValue}
-                tick={{ fontSize: 11, fill: "#6b7280" }}
+                tick={TICK_STYLE}
                 tickLine={false}
                 axisLine={false}
+                width={50}
               />
               <Tooltip
-                labelFormatter={(label) =>
-                  daily ? formatDateFull(String(label ?? ""))
-                  : ym ? formatYearMonth(String(label ?? ""))
-                  : String(label ?? "")
-                }
+                labelFormatter={tooltipLabelFormatter}
                 formatter={(v) => Number(v).toLocaleString()}
-                contentStyle={{ borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 13 }}
+                contentStyle={tooltipContentStyle}
               />
-              {config.yAxis.length > 1 && <Legend />}
+              {multiSeries && (
+                <Legend
+                  verticalAlign="top"
+                  align="left"
+                  iconType="rect"
+                  iconSize={12}
+                  wrapperStyle={{
+                    fontSize: 12,
+                    fontFamily: "Georgia, 'Times New Roman', serif",
+                    paddingBottom: 8,
+                  }}
+                />
+              )}
               {config.yAxis.map((y, i) => (
                 <Bar
                   key={y}
                   dataKey={y}
                   name={properCase(y)}
-                  fill={CHART_COLORS[i % CHART_COLORS.length]}
+                  fill={NYT_COLORS[i % NYT_COLORS.length]}
+                  radius={[2, 2, 0, 0]}
                   stackId={config.type === "stacked_bar" ? "a" : undefined}
                 />
               ))}
@@ -241,22 +297,36 @@ const ChartPanel = forwardRef<HTMLDivElement, ChartPanelProps>(
                 cx="50%"
                 cy="50%"
                 outerRadius="70%"
+                strokeWidth={1}
+                stroke="#fff"
                 label={({ name, percent }) =>
                   `${name} (${((percent ?? 0) * 100).toFixed(0)}%)`
                 }
               >
                 {data.map((_, i) => (
-                  <Cell
-                    key={i}
-                    fill={CHART_COLORS[i % CHART_COLORS.length]}
-                  />
+                  <Cell key={i} fill={NYT_COLORS[i % NYT_COLORS.length]} />
                 ))}
               </Pie>
-              <Tooltip formatter={(v) => Number(v).toLocaleString()} />
+              <Tooltip
+                formatter={(v) => Number(v).toLocaleString()}
+                contentStyle={tooltipContentStyle}
+              />
             </PieChart>
           ) : null}
         </ResponsiveContainer>
-        <div className="text-[10px] text-[var(--muted-light)] mt-1 shrink-0">Source: Real-Time Crime Index</div>
+        <div
+          className="text-[10px] mt-1 shrink-0"
+          style={{ color: "#aaa", fontFamily: "Georgia, 'Times New Roman', serif" }}
+        >
+          Source: Real-Time Crime Index
+          {meta && (
+            <>
+              {" · "}
+              {meta.agencyCount.toLocaleString()} {meta.agencyCount === 1 ? "agency" : "agencies"}
+              {meta.population && ` · Pop. ${formatPopulation(meta.population)}`}
+            </>
+          )}
+        </div>
       </div>
     );
   }

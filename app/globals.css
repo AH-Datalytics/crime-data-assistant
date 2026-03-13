@@ -27,44 +27,41 @@ h1, h2, h3, h4, h5, h6 {
   font-family: "neue-haas-grotesk-display", sans-serif;
 }
 
-/* Table styling — matches Crime Index data tables */
+/* Table styling — NYT style */
 .stat-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.875rem;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 13px;
 }
 
 .stat-table th {
   background: transparent;
-  color: var(--foreground);
-  padding: 0.75rem 1rem;
+  color: #999;
+  padding: 8px 12px;
   text-align: right;
   white-space: nowrap;
   cursor: pointer;
   user-select: none;
-  font-weight: 700;
-  font-size: 0.8125rem;
-  border-bottom: 1px solid var(--border);
-  position: sticky;
-  top: 0;
-  z-index: 1;
-  background: white;
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 400;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid #ddd;
 }
 
 .stat-table th:first-child {
   text-align: left;
 }
 
-.stat-table th:hover {
-  color: var(--accent);
-}
-
 .stat-table td {
-  padding: 0.625rem 1rem;
+  padding: 7px 12px;
   text-align: right;
-  border-bottom: 1px solid #f0f0f0;
   white-space: nowrap;
-  font-size: 0.8125rem;
+  font-weight: 400;
+  color: var(--foreground);
+  border-bottom: 1px solid #eaeaea;
 }
 
 .stat-table td:first-child {
@@ -72,6 +69,6 @@ h1, h2, h3, h4, h5, h6 {
   font-weight: 600;
 }
 
-.stat-table tr:hover td {
-  background: var(--surface);
+.stat-table tbody tr:last-child td {
+  border-bottom: 1px solid #ddd;
 }

@@ -93,8 +93,7 @@ export default function DataTable({ columns, rows, truncated }: DataTableProps) 
                   onClick={() => handleSort(col)}
                   style={{ textAlign: isNumeric(col) ? "right" : "left" }}
                 >
-                  {formatHeader(col)}
-                  {sortCol === col && (sortDir === "asc" ? " ▲" : " ▼")}
+                  <span>{formatHeader(col)}</span>
                 </th>
               ))}
             </tr>
@@ -118,14 +117,14 @@ export default function DataTable({ columns, rows, truncated }: DataTableProps) 
       {rows.length > 50 && !expanded && (
         <button
           onClick={() => setExpanded(true)}
-          className="mt-2 text-sm text-blue-600 hover:underline cursor-pointer"
+          className="mt-3 text-sm text-[var(--muted)] hover:text-[var(--foreground)] cursor-pointer transition-colors"
         >
           Show all {rows.length.toLocaleString()} rows
           {truncated && " (results capped at 1,000)"}
         </button>
       )}
       {truncated && expanded && (
-        <p className="mt-2 text-xs text-gray-500">
+        <p className="mt-3 text-xs text-[var(--muted)]">
           Results capped at 1,000 rows
         </p>
       )}
