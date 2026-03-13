@@ -80,8 +80,10 @@ export default function ChatInterface({ heroData, heroAgencyCount, heroPopulatio
     if (latestUserRef.current && scrollRef.current && messages.length > 0) {
       const container = scrollRef.current;
       const target = latestUserRef.current;
-      const targetTop = target.offsetTop - container.offsetTop;
-      container.scrollTo({ top: targetTop, behavior: "smooth" });
+      const containerRect = container.getBoundingClientRect();
+      const targetRect = target.getBoundingClientRect();
+      const offset = targetRect.top - containerRect.top + container.scrollTop;
+      container.scrollTo({ top: offset, behavior: "smooth" });
     }
   }, [messages.length]);
 
