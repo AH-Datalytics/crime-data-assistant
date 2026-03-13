@@ -337,23 +337,41 @@ export async function translateToSql(
   const text =
     message.content[0].type === "text" ? message.content[0].text : "";
 
-  // Strip markdown fences if present
-  const cleaned = text
-    .replace(/^```json\s*/i, "")
-    .replace(/^```\s*/i, "")
-    .replace(/\s*```$/i, "")
-    .trim();
+  // Try to extract JSON from the response — handle markdown fences, leading text, etc.
+  let parsed: ClaudeResponse | null = null;
 
+  // 1. Try parsing the raw text directly
   try {
-    return JSON.parse(cleaned) as ClaudeResponse;
+    parsed = JSON.parse(text.trim());
   } catch {
-    return {
-      sql: null,
-      explanation: `I had trouble formatting my response. Here's what I generated:\n\n${text}`,
-      chartHint: "none",
-      xAxis: "",
-      yAxis: "",
-      title: "",
-    };
+    // 2. Try extracting from markdown code fences
+    const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if (fenceMatch) {
+      try {
+        parsed = JSON.parse(fenceMatch[1].trim());
+      } catch { /* continue */ }
+    }
+    // 3. Try finding a JSON object anywhere in the text
+    if (!parsed) {
+      const braceMatch = text.match(/\{[\s\S]*\}/);
+      if (braceMatch) {
+        try {
+          parsed = JSON.parse(braceMatch[0]);
+        } catch { /* continue */ }
+      }
+    }
   }
+
+  if (parsed && parsed.sql !== undefined) {
+    return parsed;
+  }
+
+  return {
+    sql: null,
+    explanation: `I had trouble formatting my response. Here's what I generated:\n\n${text}`,
+    chartHint: "none",
+    xAxis: "",
+    yAxis: "",
+    title: "",
+  };
 }
