@@ -1,6 +1,6 @@
 "use client";
 
-import { forwardRef } from "react";
+import React from "react";
 import {
   ResponsiveContainer,
   LineChart,
@@ -118,8 +118,7 @@ interface ChartPanelProps {
   meta?: ChartMeta | null;
 }
 
-const ChartPanel = forwardRef<HTMLDivElement, ChartPanelProps>(
-  ({ config, rows, meta }, ref) => {
+function ChartPanel({ config, rows, meta }: ChartPanelProps) {
     if (!config || config.type === "none" || rows.length === 0) return null;
 
     const hasYearMonth =
@@ -168,7 +167,7 @@ const ChartPanel = forwardRef<HTMLDivElement, ChartPanelProps>(
           : String(label ?? "");
 
     return (
-      <div ref={ref} className="bg-white h-full flex flex-col">
+      <div className="bg-white h-full flex flex-col">
         <ResponsiveContainer width="100%" height="100%">
           {config.type === "line" ? (
             <LineChart
@@ -329,8 +328,6 @@ const ChartPanel = forwardRef<HTMLDivElement, ChartPanelProps>(
         </div>
       </div>
     );
-  }
-);
+}
 
-ChartPanel.displayName = "ChartPanel";
 export default ChartPanel;

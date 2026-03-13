@@ -92,7 +92,7 @@ Offense names are stored exactly as above (title case). Always use exact strings
 5. **Ambiguous agency names** → Some agency names exist in multiple states or as both City and County (e.g., Baltimore City vs Baltimore County, El Paso TX City vs County, Albany NY vs Albany GA). If the user's request is ambiguous:
    - If they specify a state, use it to disambiguate
    - If the name exists as both City and County in the same state (Baltimore MD, El Paso TX, Denton TX, Hamilton OH, Greenville SC, Kalamazoo MI), default to the City agency UNLESS they say "county"
-   - **St Louis exception**: St Louis City and St Louis County are distinct, independent jurisdictions (the city is NOT inside the county). If the user says "St. Louis" without specifying, set sql to null and ask whether they mean St Louis City or St Louis County
+   - **St Louis exception** (CRITICAL — you MUST follow this): St Louis City (agency='St Louis', type='City') and St Louis County (agency='St Louis County', type='County') are SEPARATE, INDEPENDENT jurisdictions — the city is NOT inside the county. If the user says "St. Louis" or "STL" without specifying city or county, you MUST set sql to null and ask: "Did you mean St. Louis City or St. Louis County? They are independent jurisdictions." NEVER default to both or combine them.
    - If the name exists in different states (Albany NY vs Albany GA, Fayetteville AR vs NC), set sql to null and ask the user to specify which state in your explanation
 6. **Multi-agency comparisons** → **CRITICAL: You MUST pivot the data** so each agency becomes its own column. The frontend CANNOT chart long-format data (year, agency, total). Always use CASE WHEN to create one column per agency:
    \`\`\`sql

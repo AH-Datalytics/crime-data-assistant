@@ -325,26 +325,27 @@ export default function ChatInterface({ heroData, heroAgencyCount, heroPopulatio
 
         {/* Chart panel */}
         {hasData && response.chartConfig && (
-          <div className={`${response.rows.length > 0 ? "lg:w-1/2 lg:border-r" : "w-full"} border-[var(--border)] overflow-hidden bg-white p-4 sm:p-5`}>
-            <div className="flex items-center justify-between mb-2">
-              <h2
-                className="text-xs font-medium uppercase tracking-wider text-[var(--muted)]"
-                style={{ letterSpacing: "0.6px" }}
-              >
-                {response.title}
-              </h2>
-              <ExportButtons
-                chartRef={chartRef}
-                csvFilename={`${response.title || "chart"}.jpeg`}
-              />
-            </div>
-            <div className="h-[calc(100%-2rem)]" style={{ minHeight: 300 }}>
-              <ChartPanel
-                ref={chartRef}
-                config={response.chartConfig}
-                rows={response.rows}
-                meta={response.chartMeta}
-              />
+          <div className={`${response.rows.length > 0 ? "lg:w-1/2 lg:border-r" : "w-full"} border-[var(--border)] overflow-hidden bg-white`}>
+            <div ref={chartRef} className="h-full flex flex-col p-4 sm:p-5">
+              <div className="flex items-center justify-between mb-2 shrink-0">
+                <h2
+                  className="text-xs font-medium uppercase tracking-wider text-[var(--muted)]"
+                  style={{ letterSpacing: "0.6px" }}
+                >
+                  {response.title}
+                </h2>
+                <ExportButtons
+                  chartRef={chartRef}
+                  csvFilename={`${response.title || "chart"}.jpeg`}
+                />
+              </div>
+              <div className="flex-1 min-h-0" style={{ minHeight: 300 }}>
+                <ChartPanel
+                  config={response.chartConfig}
+                  rows={response.rows}
+                  meta={response.chartMeta}
+                />
+              </div>
             </div>
           </div>
         )}
