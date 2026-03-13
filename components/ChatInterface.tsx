@@ -85,7 +85,8 @@ export default function ChatInterface({ heroData, heroAgencyCount, heroPopulatio
       const containerRect = container.getBoundingClientRect();
       const targetRect = target.getBoundingClientRect();
       const offset = targetRect.top - containerRect.top + container.scrollTop;
-      container.scrollTo({ top: offset, behavior: "smooth" });
+      console.log("[scroll]", { targetTop: targetRect.top, containerTop: containerRect.top, scrollTop: container.scrollTop, offset, scrollHeight: container.scrollHeight });
+      container.scrollTo({ top: offset, behavior: "instant" });
     }
   }, [scrollTrigger]);
 
