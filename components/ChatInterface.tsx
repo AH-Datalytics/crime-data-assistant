@@ -76,18 +76,14 @@ export default function ChatInterface({ heroData, heroAgencyCount, heroPopulatio
   const latestUserRef = useRef<HTMLDivElement>(null);
   const [scrollTrigger, setScrollTrigger] = useState(0);
 
-  // After render, scroll the latest user message to the top of the scroll container
+  // After render, scroll the latest user message to top of visible area
   useEffect(() => {
     if (scrollTrigger === 0) return;
-    if (latestUserRef.current && scrollRef.current) {
-      const container = scrollRef.current;
-      const target = latestUserRef.current;
-      const containerRect = container.getBoundingClientRect();
-      const targetRect = target.getBoundingClientRect();
-      const offset = targetRect.top - containerRect.top + container.scrollTop;
-      console.log("[scroll]", { targetTop: targetRect.top, containerTop: containerRect.top, scrollTop: container.scrollTop, offset, scrollHeight: container.scrollHeight });
-      container.scrollTo({ top: offset, behavior: "instant" });
-    }
+    // Small delay to ensure DOM is fully laid out
+    const timer = setTimeout(() => {
+      latestUserRef.current?.scrollIntoView({ behavior: "instant", block: "start" });
+    }, 50);
+    return () => clearTimeout(timer);
   }, [scrollTrigger]);
 
   const submitQuestion = useCallback(
