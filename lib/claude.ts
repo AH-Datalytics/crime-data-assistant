@@ -69,6 +69,10 @@ Pre-aggregated state-level totals from ALL agencies in each state.
 
 Offense names are stored exactly as above (title case). Always use exact strings like 'Murder', 'Aggravated Assault', etc.
 
+**CRITICAL: EVERY query MUST include a WHERE clause filtering by offense.** If the user asks about "murders", use \`WHERE offense = 'Murder'\`. If they ask about "violent crime", use \`WHERE offense IN ('Murder', 'Rape', 'Robbery', 'Aggravated Assault')\`. NEVER omit the offense filter — without it you'll sum across all 7 crime types and return wildly inflated numbers.
+
+**CRITICAL: When the user asks for "rate" or "per capita" or "per 100K", you MUST calculate a rate by dividing by population.** Never return raw counts for a rate query. Use the formula: \`ROUND(SUM(count) * 100000.0 / population, 1)\`. Column aliases for rates should be the agency name only (e.g., \`as kansas_city\`), NOT \`as kansas_city_rate\`.
+
 ## QUERY RULES
 
 1. **National trends** → Always use \`national_monthly\`. It's pre-filtered to consistent reporters (national sample). NEVER aggregate agency_monthly for national totals.

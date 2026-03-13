@@ -96,18 +96,41 @@ function getChartMeta(
       return { agencyCount: row.cnt, population: row.pop };
     }
 
-    // Fallback for agency_monthly with state filter but no specific agency
-    if (sqlLower.includes("agency_monthly") && stateMatch) {
-      const st = stateMatch[1].toUpperCase();
-      const row = db
-        .prepare(
-          `SELECT COUNT(DISTINCT a.ori) as cnt, SUM(p.population) as pop
-           FROM agencies a
-           LEFT JOIN agency_population p ON p.ori = a.ori AND p.year = ?
-           WHERE a.state = ?`
-        )
-        .get(popYear, st) as { cnt: number; pop: number | null };
-      return { agencyCount: row.cnt, population: row.pop };
+    // Try to extract agency names without paired state (e.g., agency = 'Kansas City')
+    if (sqlLower.includes("agency_monthly")) {
+      const agencyOnlyRe = /agency\s*=\s*'([^']+)'/gi;
+      const agencies: string[] = [];
+      let am;
+      while ((am = agencyOnlyRe.exec(sql)) !== null) {
+        agencies.push(am[1]);
+      }
+      if (agencies.length > 0) {
+        const placeholders = agencies.map(() => "a.agency = ?").join(" OR ");
+        const params: (string | number)[] = [popYear, ...agencies];
+        const row = db
+          .prepare(
+            `SELECT COUNT(DISTINCT a.ori) as cnt, SUM(p.population) as pop
+             FROM agencies a
+             LEFT JOIN agency_population p ON p.ori = a.ori AND p.year = ?
+             WHERE ${placeholders}`
+          )
+          .get(...params) as { cnt: number; pop: number | null };
+        return { agencyCount: row.cnt, population: row.pop };
+      }
+
+      // State-level fallback only if no agencies found
+      if (stateMatch) {
+        const st = stateMatch[1].toUpperCase();
+        const row = db
+          .prepare(
+            `SELECT COUNT(DISTINCT a.ori) as cnt, SUM(p.population) as pop
+             FROM agencies a
+             LEFT JOIN agency_population p ON p.ori = a.ori AND p.year = ?
+             WHERE a.state = ?`
+          )
+          .get(popYear, st) as { cnt: number; pop: number | null };
+        return { agencyCount: row.cnt, population: row.pop };
+      }
     }
 
     return null;
