@@ -1,20 +1,17 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect } from "react";
-import type { QueryResponse, ChartConfig, StreamEvent } from "@/lib/types";
+import { useState, useRef, useCallback } from "react";
+import type { QueryResponse, StreamEvent } from "@/lib/types";
 import DataTable from "./DataTable";
 import ChartPanel from "./ChartPanel";
 import ExportButtons from "./ExportButtons";
 import HeroChart from "./HeroChart";
 import CrimeIndexLogo from "./CrimeIndexLogo";
 
-interface Message {
-  id: string;
+interface HistoryEntry {
   role: "user" | "assistant";
-  text: string;
+  content: string;
   sql?: string;
-  response?: QueryResponse | null;
-  loading?: boolean;
 }
 
 interface ChatInterfaceProps {
@@ -66,25 +63,21 @@ async function readSSEStream(
 }
 
 export default function ChatInterface({ heroData, heroAgencyCount, heroPopulation }: ChatInterfaceProps) {
-  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState("");
 
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const chartRef = useRef<HTMLDivElement>(null);
-  const latestUserRef = useRef<HTMLDivElement>(null);
-  const [scrollTrigger, setScrollTrigger] = useState(0);
+  // Conversation history (for Claude context only, not displayed as thread)
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
 
-  // After render, scroll the latest user message to top of visible area
-  useEffect(() => {
-    if (scrollTrigger === 0) return;
-    // Small delay to ensure DOM is fully laid out
-    const timer = setTimeout(() => {
-      latestUserRef.current?.scrollIntoView({ behavior: "instant", block: "start" });
-    }, 50);
-    return () => clearTimeout(timer);
-  }, [scrollTrigger]);
+  // Current response state
+  const [explanation, setExplanation] = useState("");
+  const [response, setResponse] = useState<QueryResponse | null>(null);
+  const [error, setError] = useState("");
+
+  const chartRef = useRef<HTMLDivElement>(null);
+
+  const showHero = !explanation && !loading && !error && !response && heroData && heroData.length > 0;
 
   const submitQuestion = useCallback(
     async (question: string) => {
@@ -93,32 +86,9 @@ export default function ChatInterface({ heroData, heroAgencyCount, heroPopulatio
       setInput("");
       setLoading(true);
       setLoadingStep("Analyzing your question...");
-
-      const userMsg: Message = {
-        id: Date.now().toString(),
-        role: "user",
-        text: question,
-      };
-
-      const assistantId = (Date.now() + 1).toString();
-      const assistantMsg: Message = {
-        id: assistantId,
-        role: "assistant",
-        text: "",
-        loading: true,
-      };
-
-      // Build conversation history for Claude context
-      const history = messages.map((m) => ({
-        role: m.role,
-        content:
-          m.role === "assistant" && m.sql
-            ? `${m.text}\n[SQL: ${m.sql}]`
-            : m.text,
-      }));
-
-      setMessages((prev) => [...prev, userMsg, assistantMsg]);
-      setScrollTrigger((n) => n + 1);
+      setExplanation("");
+      setResponse(null);
+      setError("");
 
       try {
         const res = await fetch("/api/query", {
@@ -129,16 +99,13 @@ export default function ChatInterface({ heroData, heroAgencyCount, heroPopulatio
 
         if (res.status === 429) {
           const data = await res.json();
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.id === assistantId
-                ? { ...m, text: data.error, loading: false }
-                : m
-            )
-          );
+          setError(data.error);
           setLoading(false);
           return;
         }
+
+        let finalExplanation = "";
+        let finalSql = "";
 
         await readSSEStream(res, (event) => {
           switch (event.type) {
@@ -147,79 +114,63 @@ export default function ChatInterface({ heroData, heroAgencyCount, heroPopulatio
               break;
 
             case "explanation":
-              setMessages((prev) =>
-                prev.map((m) =>
-                  m.id === assistantId
-                    ? { ...m, text: event.text, loading: true }
-                    : m
-                )
-              );
+              setExplanation(event.text);
+              finalExplanation = event.text;
               break;
 
             case "result":
-              setMessages((prev) =>
-                prev.map((m) =>
-                  m.id === assistantId
-                    ? {
-                        ...m,
-                        text: event.explanation,
-                        sql: event.sql || undefined,
-                        loading: false,
-                        response:
-                          event.rows.length > 0 || event.chartConfig
-                            ? {
-                                success: true as const,
-                                question,
-                                sql: event.sql,
-                                explanation: event.explanation,
-                                title: event.title,
-                                columns: event.columns,
-                                rows: event.rows,
-                                rowCount: event.rowCount,
-                                truncated: event.truncated,
-                                chartConfig: event.chartConfig,
-                                chartMeta: event.chartMeta,
-                                executionTimeMs: event.executionTimeMs,
-                              }
-                            : null,
-                      }
-                    : m
-                )
+              finalExplanation = event.explanation;
+              finalSql = event.sql || "";
+              setExplanation(event.explanation);
+              setResponse(
+                event.rows.length > 0 || event.chartConfig
+                  ? {
+                      success: true as const,
+                      question,
+                      sql: event.sql,
+                      explanation: event.explanation,
+                      title: event.title,
+                      columns: event.columns,
+                      rows: event.rows,
+                      rowCount: event.rowCount,
+                      truncated: event.truncated,
+                      chartConfig: event.chartConfig,
+                      chartMeta: event.chartMeta,
+                      executionTimeMs: event.executionTimeMs,
+                    }
+                  : null
               );
               setLoading(false);
               break;
 
             case "error":
-              setMessages((prev) =>
-                prev.map((m) =>
-                  m.id === assistantId
-                    ? {
-                        ...m,
-                        text: event.text,
-                        sql: event.sql || undefined,
-                        loading: false,
-                      }
-                    : m
-                )
-              );
+              setError(event.text);
+              finalSql = event.sql || "";
               setLoading(false);
               break;
           }
         });
+
+        // Add to conversation history for Claude context
+        setHistory((prev) => [
+          ...prev,
+          { role: "user", content: question },
+          {
+            role: "assistant",
+            content: finalSql
+              ? `${finalExplanation}\n[SQL: ${finalSql}]`
+              : finalExplanation,
+            sql: finalSql || undefined,
+          },
+        ]);
       } catch (err) {
         const msg = err instanceof Error ? err.message : "Network error";
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === assistantId
-              ? { ...m, text: `Connection error: ${msg}. Please try again.`, loading: false }
-              : m
-          )
-        );
+        setError(`Connection error: ${msg}. Please try again.`);
       } finally {
         setLoading(false);
       }
     },
-    [loading, messages]
+    [loading, history]
   );
 
   const handleSubmit = useCallback(
@@ -230,17 +181,7 @@ export default function ChatInterface({ heroData, heroAgencyCount, heroPopulatio
     [input, submitQuestion]
   );
 
-  const showHero = messages.length === 0 && !loading && heroData && heroData.length > 0;
-
-  // Find the latest assistant message with a response (for chart/table display)
-  const latestResponseId = (() => {
-    for (let i = messages.length - 1; i >= 0; i--) {
-      if (messages[i].role === "assistant" && messages[i].response) {
-        return messages[i].id;
-      }
-    }
-    return null;
-  })();
+  const hasData = response && (response.chartConfig || response.rows.length > 0);
 
   return (
     <div className="h-screen flex flex-col bg-[var(--surface)]">
@@ -270,8 +211,8 @@ export default function ChatInterface({ heroData, heroAgencyCount, heroPopulatio
       </header>
 
       {/* Search bar area */}
-      <div className="bg-white border-b border-[var(--border)]">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
+      <div className="bg-white border-b border-[var(--border)] shrink-0">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
           <form onSubmit={handleSubmit} className="flex gap-2 sm:gap-3">
             <input
               type="text"
@@ -290,7 +231,7 @@ export default function ChatInterface({ heroData, heroAgencyCount, heroPopulatio
               {loading ? "..." : "Ask"}
             </button>
           </form>
-          {messages.length === 0 && !loading && (
+          {!explanation && !loading && !error && (
             <div className="flex flex-wrap gap-2 sm:gap-3 mt-3 justify-center">
               {[
                 "National murder trend",
@@ -310,154 +251,112 @@ export default function ChatInterface({ heroData, heroAgencyCount, heroPopulatio
         </div>
       </div>
 
-      {/* Main content area */}
-      <div className="flex-1 min-h-0 overflow-y-auto" ref={scrollRef}>
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 sm:py-6 space-y-4">
-          {/* Hero chart when no messages */}
-          {showHero && (
-            <HeroChart
-              data={heroData}
-              agencyCount={heroAgencyCount || 0}
-              population={heroPopulation ?? null}
-            />
-          )}
-
-          {/* Conversation thread */}
-          {messages.map((msg, idx) => {
-            if (msg.role === "user") {
-              // Check if this is the last user message
-              const isLastUser = messages.slice(idx + 1).every((m) => m.role !== "user");
-              return (
-                <div key={msg.id} ref={isLastUser ? latestUserRef : undefined} className="flex justify-end">
-                  <div className="bg-[var(--foreground)] text-white rounded-2xl rounded-br-sm px-4 py-2.5 max-w-[80%]">
-                    <p className="text-sm">{msg.text}</p>
-                  </div>
+      {/* Explanation text — fixed height, scrolls internally */}
+      {(explanation || loading || error) && (
+        <div className="border-b border-[var(--border)] bg-white shrink-0">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3">
+            <div className="max-h-32 overflow-y-auto">
+              {loading && !explanation ? (
+                <div className="text-sm text-[var(--muted)] flex items-center gap-2">
+                  <span className="inline-flex gap-0.5">
+                    <span className="animate-bounce text-[#475EC7]">·</span>
+                    <span className="animate-bounce text-[#475EC7]" style={{ animationDelay: "0.1s" }}>·</span>
+                    <span className="animate-bounce text-[#475EC7]" style={{ animationDelay: "0.2s" }}>·</span>
+                  </span>
+                  {loadingStep}
                 </div>
-              );
-            }
-
-            // Assistant message
-            const resp = msg.response;
-            const isLatest = msg.id === latestResponseId;
-
-            return (
-              <div key={msg.id} className="space-y-3">
-                {/* Explanation */}
-                <div className="bg-white rounded-xl border border-[var(--border)] px-5 py-4">
-                  {msg.loading && !msg.text ? (
-                    <div className="text-sm text-[var(--muted)] flex items-center gap-2">
+              ) : error ? (
+                <p className="text-sm text-red-600">{error}</p>
+              ) : (
+                <div>
+                  <p className="text-sm text-[var(--foreground)] leading-relaxed">{explanation}</p>
+                  {loading && (
+                    <div className="text-xs text-[var(--muted)] mt-2 flex items-center gap-1">
                       <span className="inline-flex gap-0.5">
                         <span className="animate-bounce text-[#475EC7]">·</span>
-                        <span
-                          className="animate-bounce text-[#475EC7]"
-                          style={{ animationDelay: "0.1s" }}
-                        >
-                          ·
-                        </span>
-                        <span
-                          className="animate-bounce text-[#475EC7]"
-                          style={{ animationDelay: "0.2s" }}
-                        >
-                          ·
-                        </span>
+                        <span className="animate-bounce text-[#475EC7]" style={{ animationDelay: "0.1s" }}>·</span>
+                        <span className="animate-bounce text-[#475EC7]" style={{ animationDelay: "0.2s" }}>·</span>
                       </span>
                       {loadingStep}
                     </div>
-                  ) : (
-                    <div>
-                      <p className="text-sm text-[var(--foreground)] leading-relaxed">
-                        {msg.text}
-                      </p>
-                      {msg.loading && (
-                        <div className="text-xs text-[var(--muted)] mt-2 flex items-center gap-1">
-                          <span className="inline-flex gap-0.5">
-                            <span className="animate-bounce text-[#475EC7]">·</span>
-                            <span
-                              className="animate-bounce text-[#475EC7]"
-                              style={{ animationDelay: "0.1s" }}
-                            >
-                              ·
-                            </span>
-                            <span
-                              className="animate-bounce text-[#475EC7]"
-                              style={{ animationDelay: "0.2s" }}
-                            >
-                              ·
-                            </span>
-                          </span>
-                          {loadingStep}
-                        </div>
-                      )}
-                    </div>
                   )}
                 </div>
-
-                {/* Chart + Table side by side — only for the latest response */}
-                {isLatest && resp && (resp.chartConfig || resp.rows.length > 0) && (
-                  <div className="flex flex-col lg:flex-row gap-3">
-                    {/* Chart */}
-                    {resp.chartConfig && (
-                      <div className={`bg-white rounded-xl border border-[var(--border)] p-5 ${resp.rows.length > 0 ? "lg:w-1/2" : "w-full"}`}>
-                        <div className="flex items-center justify-between mb-2">
-                          <h2
-                            className="text-xs font-medium uppercase tracking-wider text-[var(--muted)]"
-                            style={{ letterSpacing: "0.6px" }}
-                          >
-                            {resp.title}
-                          </h2>
-                          <ExportButtons
-                            chartRef={chartRef}
-                            csvFilename={`${resp.title || "chart"}.jpeg`}
-                          />
-                        </div>
-                        <div className="h-[320px] sm:h-[400px]">
-                          <ChartPanel
-                            ref={chartRef}
-                            config={resp.chartConfig}
-                            rows={resp.rows}
-                            meta={resp.chartMeta}
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Table */}
-                    {resp.rows.length > 0 && (
-                      <div className={`bg-white rounded-xl border border-[var(--border)] p-5 ${resp.chartConfig ? "lg:w-1/2" : "w-full"}`}>
-                        <div className="flex items-center justify-between mb-3">
-                          <h2
-                            className="text-xs font-medium uppercase tracking-wider text-[var(--muted)]"
-                            style={{ letterSpacing: "0.6px" }}
-                          >
-                            Data{" "}
-                            <span className="normal-case tracking-normal">
-                              ({resp.rowCount.toLocaleString()} rows
-                              {resp.executionTimeMs > 0 &&
-                                ` · ${(resp.executionTimeMs / 1000).toFixed(1)}s`}
-                              )
-                            </span>
-                          </h2>
-                          <ExportButtons
-                            csvData={resp.rows}
-                            csvColumns={resp.columns}
-                            csvFilename={`${resp.title || "crime-data-export"}.csv`}
-                          />
-                        </div>
-                        <div className="max-h-[400px] overflow-y-auto">
-                          <DataTable
-                            columns={resp.columns}
-                            rows={resp.rows}
-                            truncated={resp.truncated}
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+              )}
+            </div>
+          </div>
         </div>
+      )}
+
+      {/* Main content — chart and table fill remaining space */}
+      <div className="flex-1 min-h-0 flex flex-col lg:flex-row overflow-hidden">
+        {/* Hero chart when no data */}
+        {showHero && (
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+            <div className="max-w-4xl mx-auto">
+              <HeroChart
+                data={heroData}
+                agencyCount={heroAgencyCount || 0}
+                population={heroPopulation ?? null}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Chart panel */}
+        {hasData && response.chartConfig && (
+          <div className={`${response.rows.length > 0 ? "lg:w-1/2 lg:border-r" : "w-full"} border-[var(--border)] overflow-auto bg-white p-4 sm:p-5`}>
+            <div className="flex items-center justify-between mb-2">
+              <h2
+                className="text-xs font-medium uppercase tracking-wider text-[var(--muted)]"
+                style={{ letterSpacing: "0.6px" }}
+              >
+                {response.title}
+              </h2>
+              <ExportButtons
+                chartRef={chartRef}
+                csvFilename={`${response.title || "chart"}.jpeg`}
+              />
+            </div>
+            <div className="h-[calc(100%-2rem)]" style={{ minHeight: 300 }}>
+              <ChartPanel
+                ref={chartRef}
+                config={response.chartConfig}
+                rows={response.rows}
+                meta={response.chartMeta}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Table panel */}
+        {hasData && response.rows.length > 0 && (
+          <div className={`${response.chartConfig ? "lg:w-1/2" : "w-full"} overflow-auto bg-white p-4 sm:p-5`}>
+            <div className="flex items-center justify-between mb-3">
+              <h2
+                className="text-xs font-medium uppercase tracking-wider text-[var(--muted)]"
+                style={{ letterSpacing: "0.6px" }}
+              >
+                Data{" "}
+                <span className="normal-case tracking-normal">
+                  ({response.rowCount.toLocaleString()} rows
+                  {response.executionTimeMs > 0 &&
+                    ` · ${(response.executionTimeMs / 1000).toFixed(1)}s`}
+                  )
+                </span>
+              </h2>
+              <ExportButtons
+                csvData={response.rows}
+                csvColumns={response.columns}
+                csvFilename={`${response.title || "crime-data-export"}.csv`}
+              />
+            </div>
+            <DataTable
+              columns={response.columns}
+              rows={response.rows}
+              truncated={response.truncated}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
