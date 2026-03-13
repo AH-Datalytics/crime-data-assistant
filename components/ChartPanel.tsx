@@ -223,7 +223,7 @@ const ChartPanel = forwardRef<HTMLDivElement, ChartPanelProps>(
                     dataKey={y}
                     name={properCase(y)}
                     stroke={color}
-                    strokeWidth={multiSeries ? 1.5 : 2}
+                    strokeWidth={multiSeries ? 2.5 : 3}
                     dot={false}
                     activeDot={{ r: 3, strokeWidth: 0, fill: color }}
                   />

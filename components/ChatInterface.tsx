@@ -77,6 +77,9 @@ export default function ChatInterface({ heroData, heroAgencyCount, heroPopulatio
 
   const chartRef = useRef<HTMLDivElement>(null);
 
+  // Extract past user questions from history
+  const pastQueries = history.filter((h) => h.role === "user").map((h) => h.content);
+
   const showHero = !explanation && !loading && !error && !response && heroData && heroData.length > 0;
 
   const submitQuestion = useCallback(
@@ -231,23 +234,41 @@ export default function ChatInterface({ heroData, heroAgencyCount, heroPopulatio
               {loading ? "..." : "Ask"}
             </button>
           </form>
-          {!explanation && !loading && !error && (
-            <div className="flex flex-wrap gap-2 sm:gap-3 mt-3 justify-center">
-              {[
-                "National murder trend",
-                "Robbery in Houston 2020–2024",
-                "Compare Texas cities",
-              ].map((q) => (
-                <button
-                  key={q}
-                  onClick={() => submitQuestion(q)}
-                  className="text-xs px-3 py-1.5 rounded-full border border-[var(--border)] text-[var(--muted)] hover:border-[#475EC7] hover:text-[#475EC7] cursor-pointer transition-colors"
-                >
-                  {q}
-                </button>
-              ))}
-            </div>
-          )}
+          {/* Suggestion pills or past query history */}
+          <div className="flex flex-wrap gap-2 sm:gap-3 mt-3 items-center">
+            {pastQueries.length > 0 && (
+              <span className="text-[10px] uppercase tracking-wider text-[var(--muted)] mr-1">History:</span>
+            )}
+            {pastQueries.length > 0
+              ? pastQueries.map((q, i) => (
+                  <button
+                    key={i}
+                    onClick={() => submitQuestion(q)}
+                    disabled={loading}
+                    className="text-xs px-3 py-1 rounded-full border border-[var(--border)] text-[var(--muted)] hover:border-[#475EC7] hover:text-[#475EC7] cursor-pointer transition-colors disabled:opacity-40 truncate max-w-[200px]"
+                    title={q}
+                  >
+                    {q}
+                  </button>
+                ))
+              : !explanation && !loading && !error && (
+                  <>
+                    {[
+                      "National murder trend",
+                      "Robbery in Houston 2020–2024",
+                      "Compare Texas cities",
+                    ].map((q) => (
+                      <button
+                        key={q}
+                        onClick={() => submitQuestion(q)}
+                        className="text-xs px-3 py-1.5 rounded-full border border-[var(--border)] text-[var(--muted)] hover:border-[#475EC7] hover:text-[#475EC7] cursor-pointer transition-colors"
+                      >
+                        {q}
+                      </button>
+                    ))}
+                  </>
+                )}
+          </div>
         </div>
       </div>
 
@@ -304,7 +325,7 @@ export default function ChatInterface({ heroData, heroAgencyCount, heroPopulatio
 
         {/* Chart panel */}
         {hasData && response.chartConfig && (
-          <div className={`${response.rows.length > 0 ? "lg:w-1/2 lg:border-r" : "w-full"} border-[var(--border)] overflow-auto bg-white p-4 sm:p-5`}>
+          <div className={`${response.rows.length > 0 ? "lg:w-1/2 lg:border-r" : "w-full"} border-[var(--border)] overflow-hidden bg-white p-4 sm:p-5`}>
             <div className="flex items-center justify-between mb-2">
               <h2
                 className="text-xs font-medium uppercase tracking-wider text-[var(--muted)]"
