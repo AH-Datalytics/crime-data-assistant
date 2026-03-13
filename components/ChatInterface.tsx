@@ -392,59 +392,66 @@ export default function ChatInterface({ heroData, heroAgencyCount, heroPopulatio
                   )}
                 </div>
 
-                {/* Chart — only for the latest response */}
-                {isLatest && resp?.chartConfig && (
-                  <div className="bg-white rounded-xl border border-[var(--border)] p-5">
-                    <div className="flex items-center justify-between mb-2">
-                      <h2
-                        className="text-xs font-medium uppercase tracking-wider text-[var(--muted)]"
-                        style={{ letterSpacing: "0.6px" }}
-                      >
-                        {resp.title}
-                      </h2>
-                      <ExportButtons
-                        chartRef={chartRef}
-                        csvFilename={`${resp.title || "chart"}.jpeg`}
-                      />
-                    </div>
-                    <div className="h-[320px] sm:h-[480px]">
-                      <ChartPanel
-                        ref={chartRef}
-                        config={resp.chartConfig}
-                        rows={resp.rows}
-                        meta={resp.chartMeta}
-                      />
-                    </div>
-                  </div>
-                )}
+                {/* Chart + Table side by side — only for the latest response */}
+                {isLatest && resp && (resp.chartConfig || resp.rows.length > 0) && (
+                  <div className="flex flex-col lg:flex-row gap-3">
+                    {/* Chart */}
+                    {resp.chartConfig && (
+                      <div className={`bg-white rounded-xl border border-[var(--border)] p-5 ${resp.rows.length > 0 ? "lg:w-1/2" : "w-full"}`}>
+                        <div className="flex items-center justify-between mb-2">
+                          <h2
+                            className="text-xs font-medium uppercase tracking-wider text-[var(--muted)]"
+                            style={{ letterSpacing: "0.6px" }}
+                          >
+                            {resp.title}
+                          </h2>
+                          <ExportButtons
+                            chartRef={chartRef}
+                            csvFilename={`${resp.title || "chart"}.jpeg`}
+                          />
+                        </div>
+                        <div className="h-[320px] sm:h-[400px]">
+                          <ChartPanel
+                            ref={chartRef}
+                            config={resp.chartConfig}
+                            rows={resp.rows}
+                            meta={resp.chartMeta}
+                          />
+                        </div>
+                      </div>
+                    )}
 
-                {/* Table — only for the latest response */}
-                {isLatest && resp && resp.rows.length > 0 && (
-                  <div className="bg-white rounded-xl border border-[var(--border)] p-5">
-                    <div className="flex items-center justify-between mb-3">
-                      <h2
-                        className="text-xs font-medium uppercase tracking-wider text-[var(--muted)]"
-                        style={{ letterSpacing: "0.6px" }}
-                      >
-                        Data{" "}
-                        <span className="normal-case tracking-normal">
-                          ({resp.rowCount.toLocaleString()} rows
-                          {resp.executionTimeMs > 0 &&
-                            ` · ${(resp.executionTimeMs / 1000).toFixed(1)}s`}
-                          )
-                        </span>
-                      </h2>
-                      <ExportButtons
-                        csvData={resp.rows}
-                        csvColumns={resp.columns}
-                        csvFilename={`${resp.title || "crime-data-export"}.csv`}
-                      />
-                    </div>
-                    <DataTable
-                      columns={resp.columns}
-                      rows={resp.rows}
-                      truncated={resp.truncated}
-                    />
+                    {/* Table */}
+                    {resp.rows.length > 0 && (
+                      <div className={`bg-white rounded-xl border border-[var(--border)] p-5 ${resp.chartConfig ? "lg:w-1/2" : "w-full"}`}>
+                        <div className="flex items-center justify-between mb-3">
+                          <h2
+                            className="text-xs font-medium uppercase tracking-wider text-[var(--muted)]"
+                            style={{ letterSpacing: "0.6px" }}
+                          >
+                            Data{" "}
+                            <span className="normal-case tracking-normal">
+                              ({resp.rowCount.toLocaleString()} rows
+                              {resp.executionTimeMs > 0 &&
+                                ` · ${(resp.executionTimeMs / 1000).toFixed(1)}s`}
+                              )
+                            </span>
+                          </h2>
+                          <ExportButtons
+                            csvData={resp.rows}
+                            csvColumns={resp.columns}
+                            csvFilename={`${resp.title || "crime-data-export"}.csv`}
+                          />
+                        </div>
+                        <div className="max-h-[400px] overflow-y-auto">
+                          <DataTable
+                            columns={resp.columns}
+                            rows={resp.rows}
+                            truncated={resp.truncated}
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
