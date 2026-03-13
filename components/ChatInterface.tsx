@@ -74,23 +74,20 @@ export default function ChatInterface({ heroData, heroAgencyCount, heroPopulatio
   const scrollRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<HTMLDivElement>(null);
   const latestUserRef = useRef<HTMLDivElement>(null);
+  const [scrollTrigger, setScrollTrigger] = useState(0);
 
-  // Scroll the latest user message to the top of the scroll container
-  const scrollToLatestUser = useCallback(() => {
-    // Wait two frames so React has flushed the DOM update
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        if (latestUserRef.current && scrollRef.current) {
-          const container = scrollRef.current;
-          const target = latestUserRef.current;
-          const containerRect = container.getBoundingClientRect();
-          const targetRect = target.getBoundingClientRect();
-          const offset = targetRect.top - containerRect.top + container.scrollTop;
-          container.scrollTo({ top: offset, behavior: "smooth" });
-        }
-      });
-    });
-  }, []);
+  // After render, scroll the latest user message to the top of the scroll container
+  useEffect(() => {
+    if (scrollTrigger === 0) return;
+    if (latestUserRef.current && scrollRef.current) {
+      const container = scrollRef.current;
+      const target = latestUserRef.current;
+      const containerRect = container.getBoundingClientRect();
+      const targetRect = target.getBoundingClientRect();
+      const offset = targetRect.top - containerRect.top + container.scrollTop;
+      container.scrollTo({ top: offset, behavior: "smooth" });
+    }
+  }, [scrollTrigger]);
 
   const submitQuestion = useCallback(
     async (question: string) => {
@@ -124,7 +121,7 @@ export default function ChatInterface({ heroData, heroAgencyCount, heroPopulatio
       }));
 
       setMessages((prev) => [...prev, userMsg, assistantMsg]);
-      scrollToLatestUser();
+      setScrollTrigger((n) => n + 1);
 
       try {
         const res = await fetch("/api/query", {
@@ -225,7 +222,7 @@ export default function ChatInterface({ heroData, heroAgencyCount, heroPopulatio
         setLoading(false);
       }
     },
-    [loading, messages, scrollToLatestUser]
+    [loading, messages]
   );
 
   const handleSubmit = useCallback(
