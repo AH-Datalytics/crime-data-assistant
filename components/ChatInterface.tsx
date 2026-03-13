@@ -75,17 +75,22 @@ export default function ChatInterface({ heroData, heroAgencyCount, heroPopulatio
   const chartRef = useRef<HTMLDivElement>(null);
   const latestUserRef = useRef<HTMLDivElement>(null);
 
-  // When a new user message appears, scroll it to the top of the scroll container
-  useEffect(() => {
-    if (latestUserRef.current && scrollRef.current && messages.length > 0) {
-      const container = scrollRef.current;
-      const target = latestUserRef.current;
-      const containerRect = container.getBoundingClientRect();
-      const targetRect = target.getBoundingClientRect();
-      const offset = targetRect.top - containerRect.top + container.scrollTop;
-      container.scrollTo({ top: offset, behavior: "smooth" });
-    }
-  }, [messages.length]);
+  // Scroll the latest user message to the top of the scroll container
+  const scrollToLatestUser = useCallback(() => {
+    // Wait two frames so React has flushed the DOM update
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (latestUserRef.current && scrollRef.current) {
+          const container = scrollRef.current;
+          const target = latestUserRef.current;
+          const containerRect = container.getBoundingClientRect();
+          const targetRect = target.getBoundingClientRect();
+          const offset = targetRect.top - containerRect.top + container.scrollTop;
+          container.scrollTo({ top: offset, behavior: "smooth" });
+        }
+      });
+    });
+  }, []);
 
   const submitQuestion = useCallback(
     async (question: string) => {
@@ -119,6 +124,7 @@ export default function ChatInterface({ heroData, heroAgencyCount, heroPopulatio
       }));
 
       setMessages((prev) => [...prev, userMsg, assistantMsg]);
+      scrollToLatestUser();
 
       try {
         const res = await fetch("/api/query", {
@@ -219,7 +225,7 @@ export default function ChatInterface({ heroData, heroAgencyCount, heroPopulatio
         setLoading(false);
       }
     },
-    [loading, messages]
+    [loading, messages, scrollToLatestUser]
   );
 
   const handleSubmit = useCallback(
