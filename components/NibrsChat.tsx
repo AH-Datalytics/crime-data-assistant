@@ -175,7 +175,7 @@ export default function NibrsChat({ visible }: NibrsChatProps) {
               {msg.role === "user" ? (
                 <span className="font-semibold">Q: {msg.text}</span>
               ) : (
-                msg.text
+                <span dangerouslySetInnerHTML={{ __html: msg.text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>') }} />
               )}
             </div>
           ))}

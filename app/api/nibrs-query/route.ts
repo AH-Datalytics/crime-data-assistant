@@ -190,7 +190,134 @@ export async function POST(req: NextRequest) {
     const executionTimeMs = Date.now() - startTime;
     logNibrsQuery(question, sql, rows.length, null, claudeMs + executionTimeMs);
 
-    const explanation = claude.explanation;
+    // Step 4: Server-side CDE audit check — append disclaimer if anomalous underreporting detected
+    let explanation = claude.explanation;
+    try {
+      // Extract ORI(s) from SQL — look for ori = 'XX...' or ori IN ('XX...', ...)
+      // but NOT ori IN (SELECT ...) which is a subquery, not literal values
+      const oriMatches = sql.match(/ori\s*=\s*'([A-Z0-9]+)'/gi) || [];
+      const oriInMatches = sql.match(/ori\s+IN\s*\((?!SELECT)([^)]+)\)/gi) || [];
+      const oris = new Set<string>();
+      for (const m of oriMatches) {
+        const val = m.match(/'([A-Z0-9]+)'/)?.[1];
+        if (val) oris.add(val);
+      }
+      for (const m of oriInMatches) {
+        const vals = m.match(/'([A-Z0-9]+)'/g) || [];
+        for (const v of vals) {
+          const val = v.replace(/'/g, '');
+          if (val) oris.add(val);
+        }
+      }
+
+      // Resolve ORI from subqueries or city name JOINs when no direct ORI found
+      if (oris.size === 0) {
+        try {
+          const db = getNibrsDb();
+          // Pattern 1: ori = (SELECT ori ...) or ori IN (SELECT ori ...)
+          const subqueryMatch = sql.match(/ori\s*(?:=|IN)\s*\(\s*SELECT\s+ori\s+FROM\s+agencies\s+WHERE\s+city\s*=\s*'([^']+)'/i);
+          // Pattern 2: city = 'X' (in a JOIN or WHERE on agencies table)
+          const cityMatch = sql.match(/city\s*=\s*'([A-Z][A-Z ]+)'/i);
+          const cityName = subqueryMatch?.[1] || cityMatch?.[1];
+
+          if (cityName) {
+            const stateMatch = sql.match(/state\s*=\s*'([A-Z]{2})'/i);
+            let oriQuery = `SELECT ori FROM agencies WHERE city = ? ORDER BY year DESC, pop_group LIMIT 1`;
+            const params: string[] = [cityName];
+            if (stateMatch) {
+              oriQuery = `SELECT ori FROM agencies WHERE city = ? AND state = ? ORDER BY year DESC, pop_group LIMIT 1`;
+              params.push(stateMatch[1]);
+            }
+            const oriRow = db.prepare(oriQuery).get(...params) as { ori: string } | undefined;
+            if (oriRow) oris.add(oriRow.ori);
+          }
+        } catch (e) {
+          console.log(`[nibrs][cde-check] ORI resolution failed:`, e);
+        }
+      }
+
+      // Extract offense codes from SQL
+      const offenseCodes = new Set<string>();
+      const codeMatches = sql.match(/ucr_offense_code\s*=\s*'([A-Z0-9]+)'/gi) || [];
+      for (const m of codeMatches) {
+        const val = m.match(/'([A-Z0-9]+)'/)?.[1];
+        if (val) offenseCodes.add(val);
+      }
+      const codeInMatches = sql.match(/ucr_offense_code\s+IN\s*\(([^)]+)\)/gi) || [];
+      for (const m of codeInMatches) {
+        const vals = m.match(/'([A-Z0-9]+)'/g) || [];
+        for (const v of vals) {
+          const val = v.replace(/'/g, '');
+          if (val) offenseCodes.add(val);
+        }
+      }
+
+      if (oris.size > 0 && oris.size <= 3) {
+        const db = getNibrsDb();
+        for (const ori of oris) {
+          // Build WHERE clause for offense filter
+          let cdeQuery = `SELECT year, offense_abbrev, cde_count, master_count, ratio, flagged FROM cde_agency_totals WHERE ori = ?`;
+          const cdeParams: (string | number)[] = [ori];
+          if (offenseCodes.size > 0) {
+            const placeholders = Array.from(offenseCodes).map(() => '?').join(',');
+            cdeQuery += ` AND offense_abbrev IN (${placeholders})`;
+            cdeParams.push(...offenseCodes);
+          }
+          cdeQuery += ` ORDER BY year, offense_abbrev`;
+
+          const cdeRows = db.prepare(cdeQuery).all(...cdeParams) as {
+            year: number; offense_abbrev: string; cde_count: number;
+            master_count: number; ratio: number; flagged: number;
+          }[];
+
+          if (cdeRows.length === 0) continue;
+
+          const flaggedRows = cdeRows.filter(r => r.flagged === 1);
+          if (flaggedRows.length === 0) continue;
+
+          // Get city name
+          const agencyRow = db.prepare(`SELECT city, state FROM agencies WHERE ori = ? AND year = 2024 LIMIT 1`).get(ori) as { city: string; state: string } | undefined;
+          const cityName = agencyRow ? agencyRow.city.split(' ').map(w => w.charAt(0) + w.slice(1).toLowerCase()).join(' ') : ori;
+
+          // Group by offense to check anomalous vs structural per-offense
+          const byOffense = new Map<string, { flaggedYears: number[]; totalYears: number }>();
+          for (const r of cdeRows) {
+            if (!byOffense.has(r.offense_abbrev)) byOffense.set(r.offense_abbrev, { flaggedYears: [], totalYears: 0 });
+            byOffense.get(r.offense_abbrev)!.totalYears++;
+          }
+          for (const r of flaggedRows) {
+            byOffense.get(r.offense_abbrev)?.flaggedYears.push(r.year);
+          }
+
+          // Look up offense names
+          const offenseNames = new Map<string, string>();
+          try {
+            for (const code of byOffense.keys()) {
+              const nameRow = db.prepare(`SELECT offense_name FROM nibrs_offense_codes WHERE code = ?`).get(code) as { offense_name: string } | undefined;
+              if (nameRow) offenseNames.set(code, nameRow.offense_name.toLowerCase());
+            }
+          } catch { /* table might not exist */ }
+
+          for (const [code, info] of byOffense) {
+            if (info.flaggedYears.length === 0) continue;
+
+            // If flagged in most years (>60%), it's structural — skip this offense
+            if (info.flaggedYears.length / info.totalYears > 0.6) {
+              console.log(`[nibrs][cde-check] ${ori} ${code}: structural (${info.flaggedYears.length}/${info.totalYears} years flagged), skipping`);
+              continue;
+            }
+
+            const offenseName = offenseNames.get(code) || code;
+            const yearStr = info.flaggedYears.join(', ');
+            const disclaimer = `\n\n**Note: ${cityName} has been flagged as potentially underreporting ${offenseName} data to the NIBRS master files for ${yearStr}. See the Crime Data Explorer for more complete aggregated counts (where possible).**`;
+            explanation += disclaimer;
+            console.log(`[nibrs][cde-check] Added disclaimer for ${ori} ${code} years ${yearStr}`);
+          }
+        }
+      }
+    } catch (cdeErr) {
+      console.log(`[nibrs][cde-check] Error:`, cdeErr);
+    }
 
     // Step 5: Build chart config
     const chartConfig = buildNibrsChartConfig(claude, columns, rows);

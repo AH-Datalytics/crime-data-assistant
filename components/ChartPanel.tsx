@@ -369,14 +369,15 @@ function ChartPanel({ config, rows, meta }: ChartPanelProps) {
                 }
                 angle={ym || daily || plainYears ? 0 : -40}
                 textAnchor={ym || daily || plainYears ? "middle" : "end"}
+                {...(yearTicks.length > 0 ? { ticks: yearTicks } : {})}
                 {...(ymTicks.length > 0 ? { ticks: ymTicks } : {})}
                 {...(dailyTicks.length > 0 ? { ticks: dailyTicks } : {})}
                 interval={
-                  ymTicks.length > 0 || dailyTicks.length > 0 ? 0
+                  yearTicks.length > 0 || ymTicks.length > 0 || dailyTicks.length > 0 ? 0
                   : daily ? dailyTickInterval(dataLen)
                   : 0
                 }
-                height={ym || daily ? 30 : 100}
+                height={ym || daily || plainYears ? 30 : 100}
               />
               <YAxis
                 tickFormatter={yTickFormatter}

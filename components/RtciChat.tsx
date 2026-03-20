@@ -297,7 +297,7 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
                 <p className="text-sm text-red-600">{error}</p>
               ) : (
                 <div>
-                  <p className="text-sm text-[var(--foreground)] leading-relaxed">{explanation}</p>
+                  <p className="text-sm text-[var(--foreground)] leading-relaxed" dangerouslySetInnerHTML={{ __html: explanation.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>') }} />
                   {loading && (
                     <div className="text-xs text-[var(--muted)] mt-2 flex items-center gap-1">
                       <span className="inline-flex gap-0.5">
