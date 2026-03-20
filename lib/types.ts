@@ -2,11 +2,22 @@ export interface QueryRequest {
   question: string;
 }
 
+export interface ChartAnnotation {
+  axis: "x" | "y";
+  value: string | number;
+  label?: string;
+  color?: string;
+}
+
 export interface ChartConfig {
   type: "bar" | "line" | "pie" | "stacked_bar" | "none";
   xAxis: string;
   yAxis: string[];
   title: string;
+  colors?: string[];
+  yAxisLabel?: string;
+  xAxisLabel?: string;
+  annotations?: ChartAnnotation[];
 }
 
 export interface QueryResponse {
@@ -42,6 +53,7 @@ export interface ChatMessage {
 export interface ChartMeta {
   agencyCount: number;
   population: number | null;
+  source?: string;
 }
 
 // SSE stream event types

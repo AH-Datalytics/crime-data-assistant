@@ -20,6 +20,8 @@ function isYearColumn(col: string, rows: Record<string, unknown>[]): boolean {
   });
 }
 
+
+
 interface DataTableProps {
   columns: string[];
   rows: Record<string, unknown>[];

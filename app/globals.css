@@ -10,6 +10,10 @@
   --accent: #475EC7;
   --accent-hover: #3a4db0;
   --card: #ffffff;
+  /* NIBRS accent colors */
+  --navy: #1b2a4a;
+  --navy-light: #2d4a7a;
+  --steel: #4682b4;
 }
 
 @theme inline {
@@ -27,7 +31,7 @@ h1, h2, h3, h4, h5, h6 {
   font-family: "neue-haas-grotesk-display", sans-serif;
 }
 
-/* Table styling — NYT style */
+/* Table styling — NYT style (used by RTCI tabs) */
 .stat-table {
   width: 100%;
   border-collapse: collapse;

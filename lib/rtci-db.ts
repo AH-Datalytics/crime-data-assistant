@@ -3,27 +3,27 @@ import path from "path";
 import os from "os";
 import fs from "fs";
 
-const DB_PATH = path.join(process.cwd(), "crime_data.db");
+const DB_PATH = process.env.RTCI_DB_PATH || path.join(process.cwd(), "crime_data.db");
 
 let _db: Database.Database | null = null;
 
 export function getDb(): Database.Database {
   if (!_db) {
     _db = new Database(DB_PATH, { readonly: true });
+    _db.pragma("cache_size = -64000");   // 64 MB page cache
+    _db.pragma("mmap_size = 268435456"); // 256 MB memory-mapped I/O
+    _db.pragma("temp_store = MEMORY");
   }
   return _db;
 }
 
-// --- Write DB for query logging ---
-// Uses /tmp on Vercel (ephemeral but writable) or cwd locally
+// --- Shared write DB for query logging (all tabs) ---
 let _writeDb: Database.Database | null = null;
 let _writeDisabled = false;
 
 function getLogDbPath(): string {
-  // On Vercel, cwd is read-only; use /tmp
   const tmpPath = path.join(os.tmpdir(), "crime_query_log.db");
   const localPath = path.join(process.cwd(), "query_log.db");
-  // If local path is writable, prefer it
   try {
     fs.accessSync(process.cwd(), fs.constants.W_OK);
     return localPath;
@@ -41,6 +41,7 @@ export function getWriteDb(): Database.Database | null {
       CREATE TABLE IF NOT EXISTS query_log (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         ts INTEGER,
+        tab TEXT,
         question TEXT,
         sql TEXT,
         rows INTEGER,
@@ -49,6 +50,8 @@ export function getWriteDb(): Database.Database | null {
         response TEXT
       )
     `);
+    // Add tab column if table already exists without it
+    try { _writeDb.exec(`ALTER TABLE query_log ADD COLUMN tab TEXT`); } catch { /* already exists */ }
     return _writeDb;
   } catch (e) {
     console.warn("Query logging disabled:", e);
@@ -63,16 +66,17 @@ export function logQuery(
   rowCount: number,
   error: string | null,
   ms: number,
-  response: string | null = null
+  response: string | null = null,
+  tab: string = "current"
 ) {
-  // Local SQLite log
   const db = getWriteDb();
   if (db) {
     try {
       db.prepare(
-        "INSERT INTO query_log (ts, question, sql, rows, error, ms, response) VALUES (?, ?, ?, ?, ?, ?, ?)"
+        "INSERT INTO query_log (ts, tab, question, sql, rows, error, ms, response) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
       ).run(
         Date.now(),
+        tab,
         (question || "").slice(0, 2000),
         (sql || "").slice(0, 4000),
         rowCount,
@@ -92,6 +96,7 @@ export function logQuery(
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        tab,
         question: (question || "").slice(0, 2000),
         sql: (sql || "").slice(0, 4000),
         rows: rowCount,

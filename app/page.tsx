@@ -1,4 +1,4 @@
-import { getDb } from "@/lib/db";
+import { getDb } from "@/lib/rtci-db";
 import ChatInterface from "@/components/ChatInterface";
 
 function getHeroData() {
@@ -39,13 +39,36 @@ function getHeroData() {
   }
 }
 
+function getHistoricalHeroData() {
+  try {
+    const db = getDb();
+    const rows = db
+      .prepare(
+        `SELECT hac.year, ROUND(hac.murder * 100000.0 / hap.population, 1) as murder_rate
+         FROM historical_agency_crime hac
+         JOIN historical_agency_population hap ON hap.ori = hac.ori AND hap.year = hac.year
+         WHERE hac.ori = 'NY0303000'
+           AND hac.murder > 0
+           AND hap.population > 0
+         ORDER BY hac.year`
+      )
+      .all() as { year: number; murder_rate: number }[];
+    return rows;
+  } catch (e) {
+    console.error("Historical hero data query failed:", e);
+    return [];
+  }
+}
+
 export default function Home() {
   const { rows, agencyCount, population } = getHeroData();
+  const historicalHeroData = getHistoricalHeroData();
   return (
     <ChatInterface
       heroData={rows}
       heroAgencyCount={agencyCount}
       heroPopulation={population}
+      historicalHeroData={historicalHeroData}
     />
   );
 }

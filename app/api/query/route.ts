@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
-import { getDb, logQuery } from "@/lib/db";
-import { translateToSql } from "@/lib/claude";
+import { getDb, logQuery } from "@/lib/rtci-db";
+import { translateToSql, getHistoricalSystemPrompt } from "@/lib/claude";
 import { validateAndSanitize } from "@/lib/sql-safety";
 import { buildChartConfig } from "@/lib/chart-config";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -139,15 +139,54 @@ function getChartMeta(
   }
 }
 
+/** Extract chart metadata for historical queries */
+function getHistoricalChartMeta(
+  db: ReturnType<typeof getDb>,
+  sql: string
+): ChartMeta | null {
+  try {
+    const sqlLower = sql.toLowerCase();
+
+    const src = "FBI UCR";
+
+    // National queries (state = 'United States')
+    if (sqlLower.includes("'united states'")) {
+      return { agencyCount: 0, population: null, source: src };
+    }
+
+    // State-level queries from historical_state_national
+    if (sqlLower.includes("historical_state_national")) {
+      return { agencyCount: 0, population: null, source: src };
+    }
+
+    // Agency-level queries — count distinct agencies
+    if (sqlLower.includes("historical_agency_crime")) {
+      const agencyRe = /ha\.agency\s*=\s*'([^']+)'/gi;
+      const agencies: string[] = [];
+      let m;
+      while ((m = agencyRe.exec(sql)) !== null) {
+        agencies.push(m[1]);
+      }
+      return { agencyCount: agencies.length || 1, population: null, source: src };
+    }
+
+    return { agencyCount: 0, population: null, source: src };
+  } catch {
+    return null;
+  }
+}
+
 /** Check if an agency exists in the dataset, return suggestions */
 function findSimilarAgencies(
   db: ReturnType<typeof getDb>,
-  name: string
+  name: string,
+  historical = false
 ): { agency: string; state: string }[] {
   try {
+    const table = historical ? "historical_agency" : "agencies";
     return db
       .prepare(
-        `SELECT DISTINCT agency, state FROM agencies WHERE agency LIKE ? LIMIT 5`
+        `SELECT DISTINCT agency, state FROM ${table} WHERE agency LIKE ? LIMIT 5`
       )
       .all(`%${name}%`) as { agency: string; state: string }[];
   } catch {
@@ -215,6 +254,7 @@ export async function POST(req: NextRequest) {
   const stream = new ReadableStream({
     async start(controller) {
       let sql: string | null = null;
+      const tab = body?.mode === "historical" ? "historical" : "current";
       let closed = false;
       const close = () => {
         if (!closed) {
@@ -232,14 +272,17 @@ export async function POST(req: NextRequest) {
         );
 
         const history = Array.isArray(body?.history) ? body.history : undefined;
+        const isHistorical = body?.mode === "historical";
+        const systemPrompt = isHistorical ? getHistoricalSystemPrompt() : undefined;
         const claude = await translateToSql(
           question,
-          history as { role: "user" | "assistant"; content: string }[]
+          history as { role: "user" | "assistant"; content: string }[],
+          systemPrompt
         );
 
         if (!claude.sql) {
           const ms = Date.now() - totalStart;
-          logQuery(question, null, 0, null, ms, claude.explanation);
+          logQuery(question, null, 0, null, ms, claude.explanation, tab);
           controller.enqueue(
             encoder.encode(
               sseEvent({
@@ -259,6 +302,76 @@ export async function POST(req: NextRequest) {
           );
           close();
           return;
+        }
+
+        // Step 1b: Sanity-check Claude's response against the question
+        const qLower = question.toLowerCase();
+        const sqlLower = claude.sql.toLowerCase();
+        const issues: string[] = [];
+
+        // Check: user asked for rates but SQL has no population join
+        if (/\b(rate|per capita|per 100k|per 100,000)\b/i.test(question) && !sqlLower.includes("population")) {
+          issues.push("The user asked for rates/per capita but the SQL does not join population data.");
+        }
+        // Check: multi-agency comparison not pivoted (has GROUP BY ... agency but no CASE WHEN)
+        if (/group by.*agency/i.test(claude.sql) && !/case\s+when/i.test(claude.sql) && (qLower.includes(" and ") || qLower.includes(" vs ") || qLower.includes(","))) {
+          issues.push("Multi-agency comparison appears unpivoted (no CASE WHEN). The frontend requires pivoted columns.");
+        }
+        // Check: yAxis columns missing from SELECT
+        if (claude.yAxis) {
+          const yCols = claude.yAxis.split(",").map(c => c.trim().toLowerCase());
+          for (const col of yCols) {
+            if (col && !sqlLower.includes(col) && !sqlLower.includes(`as ${col}`)) {
+              issues.push(`yAxis column "${col}" not found in SQL SELECT.`);
+              break;
+            }
+          }
+        }
+        // Check: offense mentioned in question but no offense filter in SQL
+        // Maps common crime terms to their expected SQL filter strings
+        const offenseMap: [RegExp, string[]][] = [
+          [/\bmurder|homicide\b/i, ["'murder'", "'09a'"]],
+          [/\brape\b/i, ["'rape'", "'11a'"]],
+          [/\brobbery|robberies\b/i, ["'robbery'", "'120'"]],
+          [/\bassault\b/i, ["'aggravated assault'", "'13a'"]],
+          [/\bburglary|burglaries\b/i, ["'burglary'", "'220'"]],
+          [/\btheft(?!.*auto|.*motor|.*vehicle)|larceny|larcenies\b/i, ["'theft'", "'23h'", "'larceny'"]],
+          [/\bauto theft|motor vehicle theft|car theft|vehicle theft\b/i, ["'motor vehicle theft'", "'240'"]],
+        ];
+        for (const [pattern, sqlTerms] of offenseMap) {
+          if (pattern.test(question) && !sqlTerms.some(t => sqlLower.includes(t)) && !sqlLower.includes("offense")) {
+            issues.push(`The user asked about "${question.match(pattern)?.[0]}" but the SQL has no offense filter. Add a WHERE clause filtering by the appropriate offense.`);
+            break;
+          }
+        }
+
+        // If issues found, ask Claude to fix
+        if (issues.length > 0) {
+          controller.enqueue(
+            encoder.encode(
+              sseEvent({ type: "status", text: "Refining query..." })
+            )
+          );
+          const fixPrompt = `Your SQL has these issues:\n${issues.map(i => `- ${i}`).join("\n")}\n\nPlease fix the SQL and return corrected JSON.`;
+          const fixHistory = [
+            ...(history || []),
+            { role: "user" as const, content: question },
+            { role: "assistant" as const, content: JSON.stringify(claude) },
+            { role: "user" as const, content: fixPrompt },
+          ];
+          const fixed = await translateToSql(fixPrompt, fixHistory, systemPrompt);
+          if (fixed.sql) {
+            claude.sql = fixed.sql;
+            claude.explanation = fixed.explanation;
+            claude.chartHint = fixed.chartHint;
+            claude.xAxis = fixed.xAxis;
+            claude.yAxis = fixed.yAxis;
+            claude.title = fixed.title;
+            claude.colors = fixed.colors;
+            claude.yAxisLabel = fixed.yAxisLabel;
+            claude.xAxisLabel = fixed.xAxisLabel;
+            claude.annotations = fixed.annotations;
+          }
         }
 
         // Send explanation immediately while SQL runs
@@ -287,7 +400,9 @@ export async function POST(req: NextRequest) {
             claude.sql,
             0,
             `Validation: ${validation.error}`,
-            ms
+            ms,
+            null,
+            tab
           );
           controller.enqueue(
             encoder.encode(
@@ -339,7 +454,8 @@ export async function POST(req: NextRequest) {
           ];
           const retry = await translateToSql(
             `Fix this SQL error: ${msg}`,
-            retryHistory
+            retryHistory,
+            systemPrompt
           );
           if (retry.sql) {
             const retryValidation = validateAndSanitize(retry.sql);
@@ -358,6 +474,10 @@ export async function POST(req: NextRequest) {
                 claude.xAxis = retry.xAxis;
                 claude.yAxis = retry.yAxis;
                 claude.title = retry.title;
+                claude.colors = retry.colors;
+                claude.yAxisLabel = retry.yAxisLabel;
+                claude.xAxisLabel = retry.xAxisLabel;
+                claude.annotations = retry.annotations;
               } catch (retryErr) {
                 const retryMsg =
                   retryErr instanceof Error
@@ -369,7 +489,9 @@ export async function POST(req: NextRequest) {
                   sql,
                   0,
                   `DB retry failed: ${retryMsg}`,
-                  ms
+                  ms,
+                  null,
+                  tab
                 );
                 controller.enqueue(
                   encoder.encode(
@@ -389,7 +511,9 @@ export async function POST(req: NextRequest) {
                 sql,
                 0,
                 `DB: ${msg} (retry validation failed)`,
-                ms
+                ms,
+                null,
+                tab
               );
               controller.enqueue(
                 encoder.encode(
@@ -404,7 +528,7 @@ export async function POST(req: NextRequest) {
             }
           } else {
             const ms = Date.now() - totalStart;
-            logQuery(question, sql, 0, `DB: ${msg}`, ms);
+            logQuery(question, sql, 0, `DB: ${msg}`, ms, null, tab);
             controller.enqueue(
               encoder.encode(
                 sseEvent({
@@ -427,7 +551,7 @@ export async function POST(req: NextRequest) {
           let emptyMsg: string;
 
           if (agencyName) {
-            const similar = findSimilarAgencies(db, agencyName);
+            const similar = findSimilarAgencies(db, agencyName, isHistorical);
             if (similar.length === 0) {
               emptyMsg = `"${agencyName}" is not in our dataset of ~700 agencies. Our data covers major U.S. cities and counties — not every jurisdiction is included. Try asking about a larger city or browsing national/state-level trends.`;
             } else {
@@ -449,7 +573,7 @@ export async function POST(req: NextRequest) {
               "This query returned no results. The data may not be available for the specified criteria. Try broadening your search or asking about a different topic.";
           }
 
-          logQuery(question, sql, 0, "empty_result", totalMs, emptyMsg);
+          logQuery(question, sql, 0, "empty_result", totalMs, emptyMsg, tab);
           controller.enqueue(
             encoder.encode(
               sseEvent({
@@ -533,7 +657,7 @@ export async function POST(req: NextRequest) {
 
         // Step 5: Build chart config + metadata
         const chartConfig = buildChartConfig(claude, columns, rows);
-        const chartMeta = getChartMeta(db, sql);
+        const chartMeta = isHistorical ? getHistoricalChartMeta(db, sql) : getChartMeta(db, sql);
         const truncated = rows.length >= 1000;
 
         // Log success
@@ -543,7 +667,8 @@ export async function POST(req: NextRequest) {
           rows.length,
           null,
           totalMs,
-          claude.explanation
+          claude.explanation,
+          tab
         );
 
         // Step 6: Send full result
@@ -567,7 +692,7 @@ export async function POST(req: NextRequest) {
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         const ms = Date.now() - totalStart;
-        logQuery(question, sql, 0, msg, ms);
+        logQuery(question, sql, 0, msg, ms, null, tab);
         console.error("Query API error:", msg);
         controller.enqueue(
           encoder.encode(

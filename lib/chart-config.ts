@@ -53,14 +53,6 @@ export function buildChartConfig(
   // Determine chart type
   let type = claude.chartHint as ChartConfig["type"];
 
-  // Auto-adjust: if x-axis looks like years/months, use line
-  const xValues = rows.map((r) => String(r[xAxis] ?? ""));
-  const allYears = xValues.every((v) => /^\d{4}$/.test(v));
-  const allYearMonths = xValues.every((v) => /^\d{6}$/.test(v));
-  if ((allYears || allYearMonths) && type === "bar") {
-    type = "line";
-  }
-
   // If too many categories for pie, switch to bar
   if (type === "pie" && rows.length > 10) {
     type = "bar";
@@ -71,10 +63,15 @@ export function buildChartConfig(
     return null;
   }
 
-  return {
+  const config: ChartConfig = {
     type,
     xAxis,
     yAxis,
     title: claude.title || "Results",
   };
+  if (claude.colors && claude.colors.length > 0) config.colors = claude.colors;
+  if (claude.yAxisLabel) config.yAxisLabel = claude.yAxisLabel;
+  if (claude.xAxisLabel) config.xAxisLabel = claude.xAxisLabel;
+  if (claude.annotations && claude.annotations.length > 0) config.annotations = claude.annotations;
+  return config;
 }

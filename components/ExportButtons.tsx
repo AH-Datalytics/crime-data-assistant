@@ -48,14 +48,21 @@ export default function ExportButtons({
 }: ExportButtonsProps) {
   const handleJpeg = useCallback(async () => {
     if (!chartRef?.current) return;
-    const dataUrl = await toJpeg(chartRef.current, {
-      quality: 0.95,
-      backgroundColor: "#ffffff",
-    });
-    const a = document.createElement("a");
-    a.href = dataUrl;
-    a.download = csvFilename.replace(/\.csv$/, ".jpeg");
-    a.click();
+    // Hide all export buttons inside the capture area
+    const buttons = chartRef.current.querySelectorAll("[data-export-btn]");
+    buttons.forEach((b) => ((b as HTMLElement).style.display = "none"));
+    try {
+      const dataUrl = await toJpeg(chartRef.current, {
+        quality: 0.95,
+        backgroundColor: "#ffffff",
+      });
+      const a = document.createElement("a");
+      a.href = dataUrl;
+      a.download = csvFilename.replace(/\.csv$/, ".jpeg");
+      a.click();
+    } finally {
+      buttons.forEach((b) => ((b as HTMLElement).style.display = ""));
+    }
   }, [chartRef, csvFilename]);
 
   const handleCsv = useCallback(() => {
@@ -64,7 +71,7 @@ export default function ExportButtons({
   }, [csvData, csvColumns, csvFilename]);
 
   return (
-    <div className="flex gap-2">
+    <div className="flex gap-2" data-export-btn>
       {csvData && csvColumns && (
         <button onClick={handleCsv} className={btnClass}>
           ↓ Export CSV

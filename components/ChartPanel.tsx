@@ -15,6 +15,7 @@ import {
   YAxis,
   Tooltip,
   Legend,
+  ReferenceLine,
 } from "recharts";
 import type { ChartConfig, ChartMeta } from "@/lib/types";
 import { formatAxisValue } from "@/lib/utils";
@@ -54,7 +55,9 @@ function properCase(s: string): string {
     .replace(/_/g, " ")
     .trim();
   const label = cleaned || s.replace(/_/g, " ").trim();
-  return label.replace(/\b\w/g, (c) => c.toUpperCase());
+  const titled = label.replace(/\b\w/g, (c) => c.toUpperCase());
+  // Fix known abbreviations that should stay uppercase
+  return titled.replace(/\bDc\b/g, "DC").replace(/\bNy\b/g, "NY").replace(/\bNyc\b/g, "NYC").replace(/\bLa\b/g, "LA").replace(/\bUs\b/g, "US");
 }
 
 function isYearMonth(data: Record<string, unknown>[], xKey: string): boolean {
@@ -106,6 +109,80 @@ function dailyTickInterval(dataLength: number): number {
   return Math.max(1, Math.floor(dataLength / 12));
 }
 
+/** Build evenly-spaced year ticks for multi-year YYYYMM data */
+function yearTicksForYM(data: Record<string, unknown>[], xKey: string): string[] {
+  const vals = data.map((d) => String(d[xKey] ?? "")).filter((v) => /^\d{6}$/.test(v));
+  if (vals.length === 0) return [];
+  const years = [...new Set(vals.map((v) => v.slice(0, 4)))].sort();
+  // pick January of each year that exists in the data
+  const ticks: string[] = [];
+  for (const y of years) {
+    const jan = `${y}01`;
+    if (vals.includes(jan)) ticks.push(jan);
+  }
+  // if too many ticks (>10), thin them out evenly
+  if (ticks.length > 10) {
+    const step = Math.ceil(ticks.length / 8);
+    const thinned = ticks.filter((_, i) => i % step === 0);
+    if (thinned[thinned.length - 1] !== ticks[ticks.length - 1]) thinned.push(ticks[ticks.length - 1]);
+    return thinned;
+  }
+  return ticks;
+}
+
+/** Build evenly-spaced month ticks for daily (YYYYMMDD) data */
+function monthTicksForDaily(data: Record<string, unknown>[], xKey: string): string[] {
+  const vals = data.map((d) => String(d[xKey] ?? "")).filter((v) => /^(19|20)\d{6}$/.test(v));
+  if (vals.length === 0) return [];
+  // find first-of-month entries, or closest entry to each month boundary
+  const months = new Map<string, string>(); // YYYYMM -> first YYYYMMDD in that month
+  for (const v of vals) {
+    const ym = v.slice(0, 6);
+    if (!months.has(ym)) months.set(ym, v);
+  }
+  let ticks = [...months.values()];
+  // if many months, show only January of each year
+  if (ticks.length > 14) {
+    const yearTicks: string[] = [];
+    const seen = new Set<string>();
+    for (const [ym, val] of months) {
+      const y = ym.slice(0, 4);
+      if (ym.slice(4) === "01" && !seen.has(y)) { seen.add(y); yearTicks.push(val); }
+    }
+    ticks = yearTicks;
+  }
+  // thin if still too many
+  if (ticks.length > 10) {
+    const step = Math.ceil(ticks.length / 8);
+    const thinned = ticks.filter((_, i) => i % step === 0);
+    if (thinned[thinned.length - 1] !== ticks[ticks.length - 1]) thinned.push(ticks[ticks.length - 1]);
+    return thinned;
+  }
+  return ticks;
+}
+
+/** Build decade-aligned ticks for plain-year x-axis data (e.g. 1960, 1970, ...) */
+function decadeTicksForYears(data: Record<string, unknown>[], xKey: string): number[] {
+  const years = data
+    .map((d) => Number(d[xKey]))
+    .filter((y) => !isNaN(y) && y >= 1900 && y <= 2100);
+  if (years.length === 0) return [];
+  const min = Math.min(...years);
+  const max = Math.max(...years);
+  // Start at first full decade >= min
+  const firstDecade = Math.ceil(min / 10) * 10;
+  const ticks: number[] = [];
+  for (let y = firstDecade; y <= max; y += 10) {
+    ticks.push(y);
+  }
+  return ticks;
+}
+
+function isPlainYears(data: Record<string, unknown>[], xKey: string): boolean {
+  const sample = data.slice(0, 5);
+  return sample.length > 0 && sample.every((d) => /^\d{4}$/.test(String(d[xKey] ?? "")));
+}
+
 function formatPopulation(pop: number): string {
   if (pop >= 1_000_000) return `${(pop / 1_000_000).toFixed(1)}M`;
   if (pop >= 1_000) return `${(pop / 1_000).toFixed(0)}K`;
@@ -152,6 +229,28 @@ function ChartPanel({ config, rows, meta }: ChartPanelProps) {
 
     const xAxisDataKey = daily ? config.xAxis : ym ? xKey : config.xAxis;
 
+    // Detect plain-year x-axis (historical queries)
+    const plainYears = !ym && !daily && isPlainYears(data, xAxisDataKey);
+    const yearTicks = plainYears ? decadeTicksForYears(data, xAxisDataKey) : [];
+
+    // Compute explicit tick positions for even spacing
+    const ymTicks = ym && !singleYearMonthly ? yearTicksForYM(data, xKey) : [];
+    const dailyTicks = daily ? monthTicksForDaily(data, config.xAxis) : [];
+    const dailySingleYear = daily && new Set(dailyTicks.map(t => t.slice(0, 4))).size <= 1;
+
+    // Detect clearance/percentage y-axis columns
+    const isPercent = config.yAxis.some((y) =>
+      /clearance|_clr|_rate/.test(y.toLowerCase())
+    ) && config.yAxis.every((y) =>
+      !/count|total|population|pop/.test(y.toLowerCase())
+    );
+    const yTickFormatter = isPercent
+      ? (v: number) => `${v}%`
+      : formatAxisValue;
+
+    // Use custom colors from Claude if provided, otherwise default palette
+    const colors = config.colors && config.colors.length > 0 ? config.colors : NYT_COLORS;
+
     const tooltipContentStyle = {
       borderRadius: 4,
       border: "1px solid #ddd",
@@ -180,24 +279,35 @@ function ChartPanel({ config, rows, meta }: ChartPanelProps) {
                 tick={TICK_STYLE}
                 tickLine={false}
                 axisLine={false}
+                {...(plainYears ? { type: "number" as const, domain: ["dataMin", "dataMax"] as const } : {})}
                 tickFormatter={
-                  daily ? (v) => formatDateTickLabel(v, singleYear)
+                  daily ? (v) => formatDateTickLabel(v, dailySingleYear)
                   : singleYearMonthly ? (v) => formatYearMonth(v)
-                  : ym ? formatYearMonthTick
+                  : ym ? (v: string | number) => String(v).slice(0, 4)
+                  : plainYears ? (v: number) => String(v)
                   : undefined
                 }
-                interval={daily ? dailyTickInterval(dataLen) : ym ? 0 : "preserveStartEnd"}
+                {...(yearTicks.length > 0 ? { ticks: yearTicks } : {})}
+                {...(ymTicks.length > 0 ? { ticks: ymTicks } : {})}
+                {...(dailyTicks.length > 0 ? { ticks: dailyTicks } : {})}
+                interval={
+                  yearTicks.length > 0 || ymTicks.length > 0 || dailyTicks.length > 0 ? 0
+                  : daily ? dailyTickInterval(dataLen)
+                  : ym ? 0
+                  : "preserveStartEnd"
+                }
               />
               <YAxis
-                tickFormatter={formatAxisValue}
+                tickFormatter={yTickFormatter}
                 tick={TICK_STYLE}
                 tickLine={false}
                 axisLine={false}
-                width={50}
+                width={isPercent ? 55 : 50}
+                {...(config.yAxisLabel ? { label: { value: config.yAxisLabel, angle: -90, position: "insideLeft", style: { fontSize: 11, fill: "#999", fontFamily: "Georgia, 'Times New Roman', serif" } } } : {})}
               />
               <Tooltip
                 labelFormatter={tooltipLabelFormatter}
-                formatter={(v) => Number(v).toLocaleString()}
+                formatter={(v) => isPercent ? `${Number(v)}%` : Number(v).toLocaleString()}
                 contentStyle={tooltipContentStyle}
               />
               {multiSeries && (
@@ -214,7 +324,7 @@ function ChartPanel({ config, rows, meta }: ChartPanelProps) {
                 />
               )}
               {config.yAxis.map((y, i) => {
-                const color = NYT_COLORS[i % NYT_COLORS.length];
+                const color = colors[i % colors.length];
                 return (
                   <Line
                     key={y}
@@ -228,6 +338,16 @@ function ChartPanel({ config, rows, meta }: ChartPanelProps) {
                   />
                 );
               })}
+              {config.annotations?.map((a, i) => (
+                <ReferenceLine
+                  key={`ann-${i}`}
+                  {...(a.axis === "x" ? { x: a.value } : { y: a.value })}
+                  stroke={a.color || "#999"}
+                  strokeDasharray="4 4"
+                  strokeWidth={1.5}
+                  label={a.label ? { value: a.label, position: a.axis === "x" ? "insideTopRight" : "insideRight", fill: a.color || "#999", fontSize: 11, fontFamily: "Georgia, 'Times New Roman', serif" } : undefined}
+                />
+              ))}
             </LineChart>
           ) : config.type === "bar" || config.type === "stacked_bar" ? (
             <BarChart
@@ -241,26 +361,34 @@ function ChartPanel({ config, rows, meta }: ChartPanelProps) {
                 tickLine={false}
                 axisLine={false}
                 tickFormatter={
-                  daily ? (v: string) => formatDateTickLabel(v, singleYear)
+                  daily ? (v: string) => formatDateTickLabel(v, dailySingleYear)
                   : singleYearMonthly ? (v: string) => formatYearMonth(v)
-                  : ym ? formatYearMonthTick
+                  : ym ? (v: string) => String(v).slice(0, 4)
+                  : plainYears ? (v: number) => String(v)
                   : (v: string) => String(v).length > 20 ? String(v).slice(0, 18) + "…" : String(v)
                 }
-                angle={ym || daily ? 0 : -40}
-                textAnchor={ym || daily ? "middle" : "end"}
-                interval={daily ? dailyTickInterval(dataLen) : 0}
+                angle={ym || daily || plainYears ? 0 : -40}
+                textAnchor={ym || daily || plainYears ? "middle" : "end"}
+                {...(ymTicks.length > 0 ? { ticks: ymTicks } : {})}
+                {...(dailyTicks.length > 0 ? { ticks: dailyTicks } : {})}
+                interval={
+                  ymTicks.length > 0 || dailyTicks.length > 0 ? 0
+                  : daily ? dailyTickInterval(dataLen)
+                  : 0
+                }
                 height={ym || daily ? 30 : 100}
               />
               <YAxis
-                tickFormatter={formatAxisValue}
+                tickFormatter={yTickFormatter}
                 tick={TICK_STYLE}
                 tickLine={false}
                 axisLine={false}
-                width={50}
+                width={isPercent ? 55 : 50}
+                {...(config.yAxisLabel ? { label: { value: config.yAxisLabel, angle: -90, position: "insideLeft", style: { fontSize: 11, fill: "#999", fontFamily: "Georgia, 'Times New Roman', serif" } } } : {})}
               />
               <Tooltip
                 labelFormatter={tooltipLabelFormatter}
-                formatter={(v) => Number(v).toLocaleString()}
+                formatter={(v) => isPercent ? `${Number(v)}%` : Number(v).toLocaleString()}
                 contentStyle={tooltipContentStyle}
               />
               {multiSeries && (
@@ -281,9 +409,19 @@ function ChartPanel({ config, rows, meta }: ChartPanelProps) {
                   key={y}
                   dataKey={y}
                   name={properCase(y)}
-                  fill={NYT_COLORS[i % NYT_COLORS.length]}
+                  fill={colors[i % colors.length]}
                   radius={[2, 2, 0, 0]}
                   stackId={config.type === "stacked_bar" ? "a" : undefined}
+                />
+              ))}
+              {config.annotations?.map((a, i) => (
+                <ReferenceLine
+                  key={`ann-${i}`}
+                  {...(a.axis === "x" ? { x: a.value } : { y: a.value })}
+                  stroke={a.color || "#999"}
+                  strokeDasharray="4 4"
+                  strokeWidth={1.5}
+                  label={a.label ? { value: a.label, position: a.axis === "x" ? "insideTopRight" : "insideRight", fill: a.color || "#999", fontSize: 11, fontFamily: "Georgia, 'Times New Roman', serif" } : undefined}
                 />
               ))}
             </BarChart>
@@ -303,22 +441,22 @@ function ChartPanel({ config, rows, meta }: ChartPanelProps) {
                 }
               >
                 {data.map((_, i) => (
-                  <Cell key={i} fill={NYT_COLORS[i % NYT_COLORS.length]} />
+                  <Cell key={i} fill={colors[i % colors.length]} />
                 ))}
               </Pie>
               <Tooltip
-                formatter={(v) => Number(v).toLocaleString()}
+                formatter={(v) => isPercent ? `${Number(v)}%` : Number(v).toLocaleString()}
                 contentStyle={tooltipContentStyle}
               />
             </PieChart>
           ) : null}
         </ResponsiveContainer>
         <div
-          className="text-[10px] mt-1 shrink-0"
+          className="text-[10px] -mt-2 shrink-0 pb-1"
           style={{ color: "#aaa", fontFamily: "Georgia, 'Times New Roman', serif" }}
         >
-          Source: Real-Time Crime Index
-          {meta && (
+          Source: {meta?.source || "Real-Time Crime Index"}
+          {meta && meta.agencyCount > 0 && (
             <>
               {" · "}
               {meta.agencyCount.toLocaleString()} {meta.agencyCount === 1 ? "agency" : "agencies"}
