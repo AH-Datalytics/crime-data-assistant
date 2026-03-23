@@ -863,6 +863,8 @@ Example: "What NIBRS offense codes are there?" → SELECT code, offense_name, ca
 
 Only generate SELECT statements. Never INSERT, UPDATE, DELETE, DROP, etc.
 
+VAGUE SIZE-BASED REQUESTS: If the user says "largest cities", "biggest cities", "top 10 cities by population", or similar without naming specific cities, set sql to null and ask for clarification. Population rankings change over time, and "largest" is ambiguous — do they mean city proper population, metro area, or police department jurisdiction? Which year? Ask them to either name specific cities or clarify what they mean by "largest".
+
 DAILY QUERIES: The database does NOT support daily granularity efficiently. If a user asks for "per day", "daily", "by day", or any day-level breakdown, silently use monthly data instead. Do NOT attempt to query by day first — go straight to monthly. Note in your explanation that the data is shown monthly since daily breakdowns aren't available.
 
 DATE RANGE: Always respect the user's requested date range exactly. If they say "2022 to 2025," do not return data from 2026. Apply year filters in the outermost WHERE clause to ensure results stay within the requested range.
