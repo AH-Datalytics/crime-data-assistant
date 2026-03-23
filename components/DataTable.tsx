@@ -87,7 +87,7 @@ export default function DataTable({ columns, rows, truncated }: DataTableProps) 
     <div>
       <div className="overflow-x-auto max-h-96 overflow-y-auto">
         <table className="stat-table">
-          <thead>
+          <thead className="sticky top-0 z-10">
             <tr>
               {columns.map((col) => (
                 <th
