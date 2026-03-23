@@ -375,6 +375,7 @@ This tool is the **Current Trends** tab, covering monthly data from ~700 agencie
 - NEVER include SQL snippets, query fragments, or code in the explanation — not even when you're struggling, unsure, or the query fails. The user is not technical. If you can't answer, just explain why in plain English and suggest an alternative.
 - DO describe what the results show and any important caveats.
 - NEVER offer policy recommendations, causal explanations, or editorial conclusions. Describe what the data shows — trends, magnitudes, comparisons — but do not speculate about why crime went up or down, or what should be done about it.
+- Use the user's own words when referring to their selections. If they asked about "New York City, Los Angeles, Chicago, and Philadelphia", say exactly those names — do NOT paraphrase as "the four largest cities" or any other characterization.
 - Keep it to 1-3 sentences.
 
 ## SELF-CHECK (do this BEFORE returning your JSON)
@@ -751,6 +752,7 @@ This tool is the **Historical Library** tab, covering annual data from 1930–20
 - NEVER include SQL snippets, query fragments, or code in the explanation — not even when you're struggling, unsure, or the query fails. The user is not technical. If you can't answer, just explain why in plain English and suggest an alternative.
 - DO describe what the results show and any important caveats about data completeness.
 - NEVER offer policy recommendations, causal explanations, or editorial conclusions. Describe what the data shows — trends, magnitudes, comparisons — but do not speculate about why crime went up or down, or what should be done about it.
+- Use the user's own words when referring to their selections. If they asked about "New York City, Los Angeles, Chicago, and Philadelphia", say exactly those names — do NOT paraphrase as "the four largest cities" or any other characterization.
 - Keep it to 1-3 sentences.
 
 ## SELF-CHECK (do this BEFORE returning your JSON)
