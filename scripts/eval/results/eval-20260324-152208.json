@@ -1,0 +1,22 @@
+{
+  "timestamp": "20260324-152208",
+  "base_url": "https://nibrsai.com",
+  "total": 1,
+  "passed": 0,
+  "failed": 1,
+  "errors": 0,
+  "results": [
+    {
+      "id": "nibrs-011",
+      "question": "Assault trend in Texas 2020-2023",
+      "tab": "nibrs",
+      "status": "FAIL",
+      "sql": "SELECT s.year, SUM(s.victim_count) AS aggravated_assaults FROM summary_victim_state_monthly s WHERE s.state = 'TX' AND s.ucr_offense_code = '13A' AND s.year BETWEEN 2020 AND 2023 GROUP BY s.year ORDER BY s.year LIMIT 1000",
+      "explanation": "This shows the trend in aggravated assaults (NIBRS code 13A) in Texas from 2020 to 2023. Aggravated assault involves unlawful attack by one person upon another for the purpose of inflicting severe or aggravated bodily injury, typically with a weapon or other means likely to produce death or great bodily harm. The data represents victim counts from agencies that reported to NIBRS during this period. Note that NIBRS coverage was expanding during this period: 70% of the U.S. population was covered ",
+      "elapsed_s": 7.0,
+      "failures": [
+        "expected clarification/refusal but agent generated SQL"
+      ]
+    }
+  ]
+}

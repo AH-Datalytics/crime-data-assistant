@@ -1,0 +1,22 @@
+{
+  "timestamp": "20260324-152838",
+  "base_url": "https://nibrsai.com",
+  "total": 1,
+  "passed": 0,
+  "failed": 0,
+  "errors": 1,
+  "results": [
+    {
+      "id": "nibrs-001",
+      "question": "Total murder victims nationally in 2022",
+      "tab": "nibrs",
+      "status": "ERROR",
+      "error": "HTTP 400",
+      "sql": null,
+      "elapsed_s": 4.6,
+      "failures": [
+        "HTTP 400"
+      ]
+    }
+  ]
+}

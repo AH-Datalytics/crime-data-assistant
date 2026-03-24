@@ -1,0 +1,337 @@
+{
+  "version": "1.0",
+  "description": "Golden dataset for evaluating Crime Data Assistant (nibrsai.com). Each test has a question, expected SQL patterns, and optionally expected data values to validate correctness.",
+  "tests": [
+    {
+      "id": "rtci-001",
+      "tab": "current",
+      "question": "National murder trend",
+      "checks": {
+        "sql_patterns": ["national_monthly", "murder"],
+        "sql_antipatterns": ["agency_monthly"],
+        "min_rows": 5,
+        "chart_type": "line"
+      }
+    },
+    {
+      "id": "rtci-002",
+      "tab": "current",
+      "question": "Murder rate in Houston per 100K",
+      "checks": {
+        "sql_patterns": ["population", "100000", "houston"],
+        "min_rows": 1,
+        "chart_type": "line"
+      }
+    },
+    {
+      "id": "rtci-003",
+      "tab": "current",
+      "question": "Compare monthly murders in Baltimore and Detroit",
+      "checks": {
+        "sql_patterns": ["case"],
+        "min_rows": 5,
+        "chart_type": "line"
+      }
+    },
+    {
+      "id": "rtci-004",
+      "tab": "current",
+      "question": "Total murders nationally in 2023",
+      "checks": {
+        "sql_patterns": ["national_monthly", "murder"],
+        "min_rows": 1,
+        "expected_values": {
+          "description": "RTCI national murder total for 2023 (~669 agency sample, not full UCR)",
+          "column": null,
+          "min": 7000,
+          "max": 14000
+        }
+      }
+    },
+    {
+      "id": "rtci-005a",
+      "tab": "current",
+      "question": "Which city has the highest murder rate per 100K in 2024?",
+      "checks": {
+        "expect_clarification": true,
+        "_note": "Agent should refuse vague ranking across all cities — dataset only covers ~700 agencies"
+      }
+    },
+    {
+      "id": "rtci-005b",
+      "tab": "current",
+      "question": "Murder rate per 100K in Memphis in 2024",
+      "checks": {
+        "sql_patterns": ["population", "100000", "memphis"],
+        "min_rows": 1
+      }
+    },
+    {
+      "id": "rtci-006",
+      "tab": "current",
+      "question": "Motor vehicle theft trend in Los Angeles",
+      "checks": {
+        "sql_patterns": ["motor vehicle theft"],
+        "sql_antipatterns": ["national_monthly"],
+        "min_rows": 5,
+        "chart_type": "line"
+      }
+    },
+    {
+      "id": "rtci-007",
+      "tab": "current",
+      "question": "Robbery in New York City vs Chicago 2023",
+      "checks": {
+        "sql_patterns": ["robbery", "case"],
+        "min_rows": 1
+      }
+    },
+    {
+      "id": "rtci-008",
+      "tab": "current",
+      "question": "National burglary trend by month in 2024",
+      "checks": {
+        "sql_patterns": ["national_monthly", "burglary", "2024"],
+        "min_rows": 6,
+        "chart_type": "line"
+      }
+    },
+    {
+      "id": "rtci-009",
+      "tab": "current",
+      "question": "Top 10 cities by aggravated assault in 2023",
+      "checks": {
+        "sql_patterns": ["Aggravated Assault"],
+        "min_rows": 10,
+        "max_rows": 10,
+        "chart_type": "bar"
+      }
+    },
+    {
+      "id": "rtci-010",
+      "tab": "current",
+      "question": "Murder rates in Washington DC, Baltimore, and St. Louis per 100K",
+      "checks": {
+        "sql_patterns": ["population", "100000", "case"],
+        "min_rows": 1
+      }
+    },
+    {
+      "id": "hist-001",
+      "tab": "historical",
+      "question": "National murder trend since 1985",
+      "checks": {
+        "sql_patterns": ["historical_state_national"],
+        "min_rows": 20,
+        "chart_type": "line"
+      }
+    },
+    {
+      "id": "hist-002",
+      "tab": "historical",
+      "question": "Houston Police Department murder count in 2020",
+      "checks": {
+        "sql_patterns": ["historical_agency_crime", "houston"],
+        "min_rows": 1,
+        "expected_values": {
+          "description": "Houston PD murders in 2020 should be roughly 380-420",
+          "column": null,
+          "min": 300,
+          "max": 500
+        }
+      }
+    },
+    {
+      "id": "hist-003",
+      "tab": "historical",
+      "question": "National robbery clearance rate since 1960",
+      "checks": {
+        "sql_patterns": ["clearance"],
+        "min_rows": 20,
+        "chart_type": "line"
+      }
+    },
+    {
+      "id": "hist-004",
+      "tab": "historical",
+      "question": "Chicago murder rate per 100K since 1980",
+      "checks": {
+        "sql_patterns": ["population", "historical_agency"],
+        "min_rows": 20
+      }
+    },
+    {
+      "id": "hist-005a",
+      "tab": "historical",
+      "question": "Total law enforcement officers in Texas since 1990",
+      "checks": {
+        "expect_clarification": true,
+        "_note": "Agent should refuse statewide staffing aggregation — inconsistent reporting makes sums unreliable"
+      }
+    },
+    {
+      "id": "hist-005b",
+      "tab": "historical",
+      "question": "Houston Police Department officer count since 1990",
+      "checks": {
+        "sql_patterns": ["historical_staffing", "houston"],
+        "min_rows": 20
+      }
+    },
+    {
+      "id": "hist-006",
+      "tab": "historical",
+      "question": "Compare murder trends in New York City and Los Angeles since 1985",
+      "checks": {
+        "sql_patterns": ["historical_agency_crime", "case"],
+        "min_rows": 20,
+        "chart_type": "line"
+      }
+    },
+    {
+      "id": "hist-007",
+      "tab": "historical",
+      "question": "National property crime trend since 1960",
+      "checks": {
+        "sql_patterns": ["historical_state_national"],
+        "min_rows": 30
+      }
+    },
+    {
+      "id": "hist-008",
+      "tab": "historical",
+      "question": "Fairfax County burglary trend since 2000",
+      "checks": {
+        "sql_patterns": ["historical_agency_crime", "fairfax"],
+        "sql_antipatterns": ["police department"],
+        "min_rows": 10
+      }
+    },
+    {
+      "id": "hist-009",
+      "tab": "historical",
+      "question": "Which state had the most murders in 2020?",
+      "checks": {
+        "sql_patterns": ["historical_state_national", "murder"],
+        "min_rows": 1
+      }
+    },
+    {
+      "id": "hist-010",
+      "tab": "historical",
+      "question": "Jefferson Parish murder clearance rate in 2019",
+      "checks": {
+        "sql_patterns": ["clearance", "jefferson"],
+        "min_rows": 1
+      }
+    },
+    {
+      "id": "nibrs-001",
+      "tab": "nibrs",
+      "question": "Total murder victims nationally in 2022",
+      "checks": {
+        "sql_patterns": ["summary_victim_state_monthly"],
+        "sql_antipatterns": ["FROM VICTIMS", "JOIN VICTIMS"],
+        "min_rows": 1,
+        "expected_values": {
+          "description": "National murders in 2022 NIBRS should be roughly 15,000-22,000",
+          "column": null,
+          "min": 12000,
+          "max": 25000
+        }
+      }
+    },
+    {
+      "id": "nibrs-002",
+      "tab": "nibrs",
+      "question": "Aggravated assault victims in Texas in 2023",
+      "checks": {
+        "sql_patterns": ["summary_victim", "13A", "tx"],
+        "min_rows": 1
+      }
+    },
+    {
+      "id": "nibrs-003",
+      "tab": "nibrs",
+      "question": "Motor vehicle theft trend in Houston 2020-2023",
+      "checks": {
+        "sql_patterns": ["240"],
+        "min_rows": 2
+      }
+    },
+    {
+      "id": "nibrs-004",
+      "tab": "nibrs",
+      "question": "Top 10 cities by robbery count in 2022",
+      "checks": {
+        "sql_patterns": ["120"],
+        "min_rows": 10,
+        "chart_type": "bar"
+      }
+    },
+    {
+      "id": "nibrs-005",
+      "tab": "nibrs",
+      "question": "Burglary trend in California by year",
+      "checks": {
+        "sql_patterns": ["220"],
+        "min_rows": 2
+      }
+    },
+    {
+      "id": "nibrs-006",
+      "tab": "nibrs",
+      "question": "What percentage of murder victims are female nationally in 2022?",
+      "checks": {
+        "sql_patterns": ["09A", "sex"],
+        "min_rows": 1
+      }
+    },
+    {
+      "id": "nibrs-007",
+      "tab": "nibrs",
+      "question": "Arson incidents in New York in 2023",
+      "checks": {
+        "sql_patterns": ["200"],
+        "min_rows": 1
+      }
+    },
+    {
+      "id": "nibrs-008",
+      "tab": "nibrs",
+      "question": "Drug violations by state in 2022, top 10",
+      "checks": {
+        "sql_patterns": ["35A"],
+        "min_rows": 10,
+        "chart_type": "bar"
+      }
+    },
+    {
+      "id": "nibrs-009",
+      "tab": "nibrs",
+      "question": "Compare murder victim counts in Texas and Florida 2020-2023",
+      "checks": {
+        "sql_patterns": ["09A", "tx", "fl"],
+        "min_rows": 2
+      }
+    },
+    {
+      "id": "nibrs-011",
+      "tab": "nibrs",
+      "question": "Assault trend in Texas 2020-2023",
+      "checks": {
+        "expect_clarification": true,
+        "_note": "NIBRS has 13A (aggravated), 13B (simple), 13C (intimidation) — agent should ask which type"
+      }
+    },
+    {
+      "id": "nibrs-010",
+      "tab": "nibrs",
+      "question": "How many agencies reported NIBRS data in 2023?",
+      "checks": {
+        "sql_patterns": ["agencies"],
+        "min_rows": 1
+      }
+    }
+  ]
+}

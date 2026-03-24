@@ -1,0 +1,20 @@
+{
+  "timestamp": "20260324-152450",
+  "base_url": "https://nibrsai.com",
+  "total": 1,
+  "passed": 1,
+  "failed": 0,
+  "errors": 0,
+  "results": [
+    {
+      "id": "nibrs-011",
+      "question": "Assault trend in Texas 2020-2023",
+      "tab": "nibrs",
+      "status": "PASS",
+      "explanation": "There are two main types of assault in NIBRS data: aggravated assault (with a weapon or serious injury) and simple assault (without a weapon or serious injury). Which type would you like to see the trend for in Texas from 2020-2023?",
+      "elapsed_s": 4.8,
+      "failures": [],
+      "clarification": true
+    }
+  ]
+}

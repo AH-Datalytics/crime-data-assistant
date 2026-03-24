@@ -1,0 +1,22 @@
+{
+  "timestamp": "20260324-152043",
+  "base_url": "https://nibrsai.com",
+  "total": 1,
+  "passed": 0,
+  "failed": 1,
+  "errors": 0,
+  "results": [
+    {
+      "id": "nibrs-011",
+      "question": "Assault trend in Texas 2020-2023",
+      "tab": "nibrs",
+      "status": "FAIL",
+      "sql": "SELECT year, SUM(victim_count) AS assaults FROM summary_victim_state_monthly WHERE state = 'TX' AND ucr_offense_code IN ('13A', '13B') AND year BETWEEN 2020 AND 2023 GROUP BY year ORDER BY year LIMIT 1000",
+      "explanation": "This shows the trend in assaults (both aggravated and simple assault) in Texas from 2020 to 2023. The data includes all victims of assault offenses reported by Texas law enforcement agencies to NIBRS. Note: NIBRS coverage was 84% of the U.S. population in 2020, 87% in 2021, 93% in 2022, and 94% in 2023. More Texas agencies transitioned to NIBRS reporting during this period, so part of any increase may reflect expanded reporting coverage rather than actual crime increases.",
+      "elapsed_s": 5.8,
+      "failures": [
+        "expected clarification/refusal but agent generated SQL"
+      ]
+    }
+  ]
+}

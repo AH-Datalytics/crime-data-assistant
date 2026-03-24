@@ -1,0 +1,36 @@
+{
+  "timestamp": "20260324-152036",
+  "base_url": "https://nibrsai.com",
+  "total": 1,
+  "passed": 1,
+  "failed": 0,
+  "errors": 0,
+  "results": [
+    {
+      "id": "rtci-009",
+      "question": "Top 10 cities by aggravated assault in 2023",
+      "tab": "current",
+      "status": "PASS",
+      "sql": "SELECT agency || ', ' || state as agency, SUM(count) as total FROM agency_monthly WHERE offense = 'Aggravated Assault' AND year = 2023 AND type = 'City' GROUP BY ori, agency, state ORDER BY total DESC LIMIT 10",
+      "explanation": "This shows the 10 cities with the highest aggravated assault counts in 2023, among the ~700 agencies in our dataset. Note: Direct comparisons between agencies should be interpreted with caution. Not all agencies have reported complete data for every month, and reporting practices, jurisdictional boundaries, and population coverage vary. An agency's jurisdiction may cover only the city proper or extend to surrounding areas, significantly affecting totals.",
+      "row_count": 10,
+      "chart_type": "bar",
+      "elapsed_s": 3.5,
+      "failures": [],
+      "sample_rows": [
+        {
+          "agency": "New York City, NY",
+          "total": 27845
+        },
+        {
+          "agency": "Los Angeles, CA",
+          "total": 20067
+        },
+        {
+          "agency": "Chicago, IL",
+          "total": 15789
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,808 @@
+{
+  "timestamp": "20260324-153330",
+  "base_url": "https://nibrsai.com",
+  "total": 33,
+  "passed": 33,
+  "failed": 0,
+  "errors": 0,
+  "results": [
+    {
+      "id": "rtci-001",
+      "question": "National murder trend",
+      "tab": "current",
+      "status": "PASS",
+      "sql": "SELECT year, month, count FROM national_monthly WHERE offense = 'Murder' ORDER BY year, month LIMIT 1000",
+      "explanation": "This shows the monthly count of murders across a consistent national sample of agencies that have reported every month since January 2017. Note: National figures are based on a consistent sample of agencies that have reported every month since January 2017 \u00e2\u0080\u0094 not every agency in the country. Trends are reliable but absolute numbers reflect only this sample.",
+      "row_count": 109,
+      "chart_type": "line",
+      "elapsed_s": 2.4,
+      "failures": [],
+      "sample_rows": [
+        {
+          "year": 2017,
+          "month": 1,
+          "count": 759
+        },
+        {
+          "year": 2017,
+          "month": 2,
+          "count": 598
+        },
+        {
+          "year": 2017,
+          "month": 3,
+          "count": 641
+        }
+      ]
+    },
+    {
+      "id": "rtci-002",
+      "question": "Murder rate in Houston per 100K",
+      "tab": "current",
+      "status": "PASS",
+      "sql": "SELECT am.year, am.month, ROUND(SUM(am.count) * 100000.0 / ap.population, 1) as rate_per_100k FROM agency_monthly am JOIN agency_population ap ON ap.ori = am.ori AND ap.year = am.year WHERE am.agency = 'Houston' AND am.state = 'TX' AND am.offense = 'Murder' GROUP BY am.year, am.month ORDER BY am.year, am.month LIMIT 1000",
+      "explanation": "Murder rate in Houston (per 100,000 residents) by month from 2017\u00e2\u0080\u00932025. The rate is calculated by dividing monthly murder counts by the jurisdiction's annual population estimate.",
+      "row_count": 109,
+      "chart_type": "line",
+      "elapsed_s": 2.5,
+      "failures": [],
+      "sample_rows": [
+        {
+          "year": 2017,
+          "month": 1,
+          "rate_per_100k": 0.9
+        },
+        {
+          "year": 2017,
+          "month": 2,
+          "rate_per_100k": 1.3
+        },
+        {
+          "year": 2017,
+          "month": 3,
+          "rate_per_100k": 0.8
+        }
+      ]
+    },
+    {
+      "id": "rtci-003",
+      "question": "Compare monthly murders in Baltimore and Detroit",
+      "tab": "current",
+      "status": "PASS",
+      "sql": "SELECT am.year, am.month,\n  SUM(CASE WHEN am.agency = 'Baltimore' AND am.state = 'MD' AND am.type = 'City' THEN am.count END) as baltimore,\n  SUM(CASE WHEN am.agency = 'Detroit' AND am.state = 'MI' AND am.type = 'City' THEN am.count END) as detroit\nFROM agency_monthly am\nWHERE ((am.agency = 'Baltimore' AND am.state = 'MD' AND am.type = 'City') OR (am.agency = 'Detroit' AND am.state = 'MI' AND am.type = 'City'))\n  AND am.offense = 'Murder'\nGROUP BY am.year, am.month\nORDER BY am.year, am.month\nLIMIT 1000",
+      "explanation": "Monthly murder counts for Baltimore and Detroit from 2017\u00e2\u0080\u00932025. The chart shows both cities' trends side-by-side for direct comparison. Note: Direct comparisons between agencies should be interpreted with caution. Not all agencies have reported complete data for every month, and reporting practices, jurisdictional boundaries, and population coverage vary. An agency's jurisdiction may cover only the city proper or extend to surrounding areas, significantly affecting total counts.",
+      "row_count": 109,
+      "chart_type": "line",
+      "elapsed_s": 3.8,
+      "failures": [],
+      "sample_rows": [
+        {
+          "year": 2017,
+          "month": 1,
+          "baltimore": 32,
+          "detroit": 22
+        },
+        {
+          "year": 2017,
+          "month": 2,
+          "baltimore": 22,
+          "detroit": 22
+        },
+        {
+          "year": 2017,
+          "month": 3,
+          "baltimore": 25,
+          "detroit": 26
+        }
+      ]
+    },
+    {
+      "id": "rtci-004",
+      "question": "Total murders nationally in 2023",
+      "tab": "current",
+      "status": "PASS",
+      "sql": "SELECT SUM(count) as total_murders FROM national_monthly WHERE offense = 'Murder' AND year = 2023 LIMIT 1000",
+      "explanation": "National figures are based on a consistent sample of agencies that have reported every month since January 2017 \u00e2\u0080\u0094 not every agency in the country. This total reflects murders across that sample in 2023.",
+      "row_count": 1,
+      "chart_type": null,
+      "elapsed_s": 2.6,
+      "failures": [],
+      "sample_rows": [
+        {
+          "total_murders": 9651
+        }
+      ]
+    },
+    {
+      "id": "rtci-005a",
+      "question": "Which city has the highest murder rate per 100K in 2024?",
+      "tab": "current",
+      "status": "PASS",
+      "explanation": "I need to clarify your question before I can answer it accurately.\n\n**This dataset covers ~700 law enforcement agencies across the U.S., but not every city.** When you ask for \"the highest murder rate per 100K in 2024,\" do you mean:\n\n1. **Among all cities in this dataset** \u00e2\u0080\u0094 I'll rank all ~200+ city agencies by their 2024 murder rate per 100K and show you the top one (plus context on what that means)\n2. **A specific city you have in mind** \u00e2\u0080\u0094 please name it, and I'll calculate its 2024 rate\n\n",
+      "elapsed_s": 3.1,
+      "failures": [],
+      "clarification": true
+    },
+    {
+      "id": "rtci-005b",
+      "question": "Murder rate per 100K in Memphis in 2024",
+      "tab": "current",
+      "status": "PASS",
+      "sql": "SELECT am.year, am.month, ROUND(SUM(am.count) * 100000.0 / ap.population, 1) as rate_per_100k FROM agency_monthly am JOIN agency_population ap ON ap.ori = am.ori AND ap.year = am.year WHERE am.agency = 'Memphis' AND am.state = 'TN' AND am.offense = 'Murder' AND am.year = 2024 GROUP BY am.year, am.month ORDER BY am.month LIMIT 1000",
+      "explanation": "Monthly murder rates per 100K population for Memphis, TN in 2024. Each month's rate is calculated by dividing that month's murder count by the annual population of Memphis. Note: Not all months may have complete reporting, and the rate represents the annualized per-100K equivalent for that specific month.",
+      "row_count": 12,
+      "chart_type": "line",
+      "elapsed_s": 2.8,
+      "failures": [],
+      "sample_rows": [
+        {
+          "year": 2024,
+          "month": 1,
+          "rate_per_100k": 3.8
+        },
+        {
+          "year": 2024,
+          "month": 2,
+          "rate_per_100k": 3.3
+        },
+        {
+          "year": 2024,
+          "month": 3,
+          "rate_per_100k": 3.8
+        }
+      ]
+    },
+    {
+      "id": "rtci-006",
+      "question": "Motor vehicle theft trend in Los Angeles",
+      "tab": "current",
+      "status": "PASS",
+      "sql": "SELECT year, month, count FROM agency_monthly WHERE agency = 'Los Angeles' AND state = 'CA' AND offense = 'Motor Vehicle Theft' ORDER BY year, month LIMIT 1000",
+      "explanation": "This shows monthly motor vehicle theft counts for Los Angeles from 2017 to 2025. The data is preliminary and may be subject to revision.",
+      "row_count": 218,
+      "chart_type": "line",
+      "elapsed_s": 1.8,
+      "failures": [],
+      "sample_rows": [
+        {
+          "year": 2017,
+          "month": 1,
+          "count": 1825
+        },
+        {
+          "year": 2017,
+          "month": 1,
+          "count": 1147
+        },
+        {
+          "year": 2017,
+          "month": 2,
+          "count": 1509
+        }
+      ]
+    },
+    {
+      "id": "rtci-007",
+      "question": "Robbery in New York City vs Chicago 2023",
+      "tab": "current",
+      "status": "PASS",
+      "sql": "SELECT am.year, am.month,\n  SUM(CASE WHEN am.agency = 'New York City' AND am.state = 'NY' THEN am.count END) as new_york_city,\n  SUM(CASE WHEN am.agency = 'Chicago' AND am.state = 'IL' THEN am.count END) as chicago\nFROM agency_monthly am\nWHERE ((am.agency = 'New York City' AND am.state = 'NY') OR (am.agency = 'Chicago' AND am.state = 'IL'))\n  AND am.offense = 'Robbery'\n  AND am.year = 2023\nGROUP BY am.year, am.month\nORDER BY am.month\nLIMIT 1000",
+      "explanation": "Monthly robbery counts for New York City and Chicago throughout 2023. For a direct comparison of total robberies for the year, New York City recorded 11,024 robberies while Chicago recorded 6,837. Note: Direct comparisons between agencies should be interpreted with caution. Not all agencies have reported complete data for every month, and reporting practices, jurisdictional boundaries, and population coverage vary. An agency's jurisdiction may cover only the city proper or extend to surrounding ",
+      "row_count": 12,
+      "chart_type": "line",
+      "elapsed_s": 3.9,
+      "failures": [],
+      "sample_rows": [
+        {
+          "year": 2023,
+          "month": 1,
+          "new_york_city": 1350,
+          "chicago": 890
+        },
+        {
+          "year": 2023,
+          "month": 2,
+          "new_york_city": 1163,
+          "chicago": 582
+        },
+        {
+          "year": 2023,
+          "month": 3,
+          "new_york_city": 1261,
+          "chicago": 685
+        }
+      ]
+    },
+    {
+      "id": "rtci-008",
+      "question": "National burglary trend by month in 2024",
+      "tab": "current",
+      "status": "PASS",
+      "sql": "SELECT year, month, count FROM national_monthly WHERE offense = 'Burglary' AND year = 2024 ORDER BY year, month LIMIT 1000",
+      "explanation": "This shows the monthly burglary count across a consistent national sample of agencies throughout 2024. Note: National figures are based on a consistent sample of agencies that have reported every month since January 2017 \u00e2\u0080\u0094 not every agency in the country. Trends are reliable but absolute numbers reflect only this sample.",
+      "row_count": 12,
+      "chart_type": "line",
+      "elapsed_s": 2.9,
+      "failures": [],
+      "sample_rows": [
+        {
+          "year": 2024,
+          "month": 1,
+          "count": 28414
+        },
+        {
+          "year": 2024,
+          "month": 2,
+          "count": 26394
+        },
+        {
+          "year": 2024,
+          "month": 3,
+          "count": 26564
+        }
+      ]
+    },
+    {
+      "id": "rtci-009",
+      "question": "Top 10 cities by aggravated assault in 2023",
+      "tab": "current",
+      "status": "PASS",
+      "sql": "SELECT agency || ', ' || state as agency, SUM(count) as total FROM agency_monthly WHERE offense = 'Aggravated Assault' AND year = 2023 AND type = 'City' GROUP BY ori, agency, state ORDER BY total DESC LIMIT 10",
+      "explanation": "This shows the 10 cities with the highest aggravated assault counts in 2023. Note: This ranking is among the ~700 agencies in our dataset, not all U.S. cities. Rankings by raw count reflect both crime levels and city size; larger jurisdictions typically report higher absolute numbers.",
+      "row_count": 10,
+      "chart_type": "bar",
+      "elapsed_s": 2.8,
+      "failures": [],
+      "sample_rows": [
+        {
+          "agency": "New York City, NY",
+          "total": 27845
+        },
+        {
+          "agency": "Los Angeles, CA",
+          "total": 20067
+        },
+        {
+          "agency": "Chicago, IL",
+          "total": 15789
+        }
+      ]
+    },
+    {
+      "id": "rtci-010",
+      "question": "Murder rates in Washington DC, Baltimore, and St. Louis per 100K",
+      "tab": "current",
+      "status": "PASS",
+      "sql": "SELECT am.year, am.month,\n  ROUND(SUM(CASE WHEN am.agency = 'Washington' AND am.state = 'DC' THEN am.count END) * 100000.0 / MAX(CASE WHEN am.agency = 'Washington' AND am.state = 'DC' THEN ap.population END), 1) as washington_dc,\n  ROUND(SUM(CASE WHEN am.agency = 'Baltimore' AND am.state = 'MD' AND am.type = 'City' THEN am.count END) * 100000.0 / MAX(CASE WHEN am.agency = 'Baltimore' AND am.state = 'MD' AND am.type = 'City' THEN ap.population END), 1) as baltimore,\n  ROUND(SUM(CASE WHEN am.agency = 'St Louis' AND am.state = 'MO' AND am.type = 'City' THEN am.count END) * 100000.0 / MAX(CASE WHEN am.agency = 'St Louis' AND am.state = 'MO' AND am.type = 'City' THEN ap.population END), 1) as st_louis\nFROM agency_monthly am\nJOIN agency_population ap ON ap.ori = am.ori AND ap.year = am.year\nWHERE (am.agency = 'Washington' AND am.state = 'DC') OR (am.agency = 'Baltimore' AND am.state = 'MD' AND am.type = 'City') OR (am.agency = 'St Louis' AND am.state = 'MO' AND am.type = 'City')\n  AND am.offense = 'Murder'\nGROUP BY am.year, am.month\nORDER BY am.year, am.month\nLIMIT 1000",
+      "explanation": "Murder rates per 100,000 residents for Washington DC, Baltimore, and St. Louis (city proper) from 2017\u00e2\u0080\u00932025. Each agency's monthly count is divided by its annual population to produce an annualized per-capita rate. Note: Direct comparisons between jurisdictions should be interpreted with caution, as not all agencies have reported complete data for every month, and jurisdictional boundaries and population coverage vary. Baltimore City and St. Louis City are the independent city jurisdictions (n",
+      "row_count": 109,
+      "chart_type": "line",
+      "elapsed_s": 5.3,
+      "failures": [],
+      "sample_rows": [
+        {
+          "year": 2017,
+          "month": 1,
+          "washington_dc": 405.6,
+          "baltimore": 638.6,
+          "st_louis": 5.2
+        },
+        {
+          "year": 2017,
+          "month": 2,
+          "washington_dc": 323.9,
+          "baltimore": 494.1,
+          "st_louis": 5.2
+        },
+        {
+          "year": 2017,
+          "month": 3,
+          "washington_dc": 312.8,
+          "baltimore": 487.6,
+          "st_louis": 2.3
+        }
+      ]
+    },
+    {
+      "id": "hist-001",
+      "question": "National murder trend since 1985",
+      "tab": "historical",
+      "status": "PASS",
+      "sql": "SELECT year, murder FROM historical_state_national WHERE state = 'United States' AND year >= 1985 ORDER BY year LIMIT 1000",
+      "explanation": "This shows the annual number of murders in the United States from 1985 to 2024. National figures are based on FBI UCR data.",
+      "row_count": 40,
+      "chart_type": "line",
+      "elapsed_s": 5.5,
+      "failures": [],
+      "sample_rows": [
+        {
+          "year": 1985,
+          "murder": 18976
+        },
+        {
+          "year": 1986,
+          "murder": 20613
+        },
+        {
+          "year": 1987,
+          "murder": 20096
+        }
+      ]
+    },
+    {
+      "id": "hist-002",
+      "question": "Houston Police Department murder count in 2020",
+      "tab": "historical",
+      "status": "PASS",
+      "sql": "SELECT hac.year, hac.murder\nFROM historical_agency_crime hac\nJOIN historical_agency ha ON ha.ori = hac.ori\nWHERE ha.agency = 'Houston' AND ha.state = 'tx' AND hac.year = 2020 LIMIT 1000",
+      "explanation": "This query returns the murder count reported by the Houston Police Department for 2020.",
+      "row_count": 1,
+      "chart_type": null,
+      "elapsed_s": 6.4,
+      "failures": [],
+      "sample_rows": [
+        {
+          "year": 2020,
+          "murder": 414
+        }
+      ]
+    },
+    {
+      "id": "hist-003",
+      "question": "National robbery clearance rate since 1960",
+      "tab": "historical",
+      "status": "PASS",
+      "sql": "SELECT year, robbery_rate FROM national_clearance_rate WHERE year >= 1960 ORDER BY year LIMIT 1000",
+      "explanation": "National robbery clearance rates from 1960 onwards. The clearance rate represents the percentage of reported robberies that were cleared by arrest or exceptional means. Note: National figures are based on FBI UCR data, 1958\u00e2\u0080\u00932024.",
+      "row_count": 65,
+      "chart_type": "line",
+      "elapsed_s": 5.3,
+      "failures": [],
+      "sample_rows": [
+        {
+          "year": 1960,
+          "robbery_rate": 38.5
+        },
+        {
+          "year": 1961,
+          "robbery_rate": 41.6
+        },
+        {
+          "year": 1962,
+          "robbery_rate": 38.4
+        }
+      ]
+    },
+    {
+      "id": "hist-004",
+      "question": "Chicago murder rate per 100K since 1980",
+      "tab": "historical",
+      "status": "PASS",
+      "sql": "SELECT hac.year, hac.murder, hap.population, ROUND(hac.murder * 100000.0 / hap.population, 1) AS murder_rate FROM historical_agency_crime hac JOIN historical_agency ha ON ha.ori = hac.ori JOIN historical_agency_population hap ON hap.ori = hac.ori AND hap.year = hac.year WHERE ha.agency = 'Chicago' AND ha.state = 'il' AND hac.year >= 1980 ORDER BY hac.year LIMIT 1000",
+      "explanation": "Chicago's annual murder rate per 100,000 residents from 1980 onward. The query calculates the rate using reported murders and jurisdiction population for each year.",
+      "row_count": 45,
+      "chart_type": "line",
+      "elapsed_s": 5.6,
+      "failures": [],
+      "sample_rows": [
+        {
+          "year": 1980,
+          "murder": 863,
+          "population": 2986419,
+          "murder_rate": 28.9
+        },
+        {
+          "year": 1981,
+          "murder": 877,
+          "population": 3012703,
+          "murder_rate": 29.1
+        },
+        {
+          "year": 1982,
+          "murder": 668,
+          "population": 3010862,
+          "murder_rate": 22.2
+        }
+      ]
+    },
+    {
+      "id": "hist-005a",
+      "question": "Total law enforcement officers in Texas since 1990",
+      "tab": "historical",
+      "status": "PASS",
+      "explanation": "I cannot provide a reliable total for law enforcement officers across all of Texas since 1990. The historical staffing data covers individual agencies, but summing officer counts across agencies is unreliable due to inconsistent year-to-year reporting \u00e2\u0080\u0094 not all agencies reported staffing figures in all years, and coverage varies significantly by year. A simple sum would undercount the actual total in most years and would not be comparable across years.\n\nIf you're interested in staffing trends ",
+      "elapsed_s": 3.6,
+      "failures": [],
+      "clarification": true
+    },
+    {
+      "id": "hist-005b",
+      "question": "Houston Police Department officer count since 1990",
+      "tab": "historical",
+      "status": "PASS",
+      "sql": "SELECT hs.year, hs.officer_total FROM historical_staffing hs JOIN historical_agency ha ON ha.ori = hs.ori WHERE ha.agency = 'Houston' AND ha.state = 'tx' AND hs.year >= 1990 AND hs.officer_total > 0 ORDER BY hs.year LIMIT 1000",
+      "explanation": "This query returns the number of sworn officers in the Houston Police Department each year from 1990 onward. Years with no reported data are excluded.",
+      "row_count": 34,
+      "chart_type": "bar",
+      "elapsed_s": 2.4,
+      "failures": [],
+      "sample_rows": [
+        {
+          "year": 1990,
+          "officer_total": 4104
+        },
+        {
+          "year": 1991,
+          "officer_total": 4077
+        },
+        {
+          "year": 1992,
+          "officer_total": 4201
+        }
+      ]
+    },
+    {
+      "id": "hist-006",
+      "question": "Compare murder trends in New York City and Los Angeles since 1985",
+      "tab": "historical",
+      "status": "PASS",
+      "sql": "SELECT hac.year,\n  SUM(CASE WHEN ha.agency = 'New York City' AND ha.state = 'ny' THEN hac.murder END) as new_york_city,\n  SUM(CASE WHEN ha.agency = 'Los Angeles' AND ha.state = 'ca' THEN hac.murder END) as los_angeles\nFROM historical_agency_crime hac\nJOIN historical_agency ha ON ha.ori = hac.ori\nWHERE (ha.agency = 'New York City' AND ha.state = 'ny') OR (ha.agency = 'Los Angeles' AND ha.state = 'ca')\n  AND hac.year >= 1985\nGROUP BY hac.year\nORDER BY hac.year\nLIMIT 1000",
+      "explanation": "This shows annual murder counts in New York City and Los Angeles from 1985 to present. Note: Direct comparisons between agencies should be interpreted with caution. Agencies differ in reporting practices, jurisdictional boundaries, and population coverage. These are counts, not rates, so differences partly reflect the cities' different population sizes.",
+      "row_count": 40,
+      "chart_type": "line",
+      "elapsed_s": 7.8,
+      "failures": [],
+      "sample_rows": [
+        {
+          "year": 1985,
+          "new_york_city": null,
+          "los_angeles": 777
+        },
+        {
+          "year": 1986,
+          "new_york_city": null,
+          "los_angeles": 834
+        },
+        {
+          "year": 1987,
+          "new_york_city": null,
+          "los_angeles": 811
+        }
+      ]
+    },
+    {
+      "id": "hist-007",
+      "question": "National property crime trend since 1960",
+      "tab": "historical",
+      "status": "PASS",
+      "sql": "SELECT year, theft FROM historical_state_national WHERE state = 'United States' AND year >= 1960 ORDER BY year LIMIT 1000",
+      "explanation": "This query returns the annual count of property crimes reported nationally from 1960 onward, based on FBI UCR data. Property crime includes burglary, theft, and motor vehicle theft combined.",
+      "row_count": 65,
+      "chart_type": "line",
+      "elapsed_s": 4.8,
+      "failures": [],
+      "sample_rows": [
+        {
+          "year": 1960,
+          "theft": 474911
+        },
+        {
+          "year": 1961,
+          "theft": 498117
+        },
+        {
+          "year": 1962,
+          "theft": 539893
+        }
+      ]
+    },
+    {
+      "id": "hist-008",
+      "question": "Fairfax County burglary trend since 2000",
+      "tab": "historical",
+      "status": "PASS",
+      "sql": "SELECT hac.year, hac.burglary FROM historical_agency_crime hac JOIN historical_agency ha ON ha.ori = hac.ori WHERE ha.agency = 'Fairfax County' AND ha.state = 'va' AND hac.year >= 2000 ORDER BY hac.year LIMIT 1000",
+      "explanation": "This query returns annual burglary counts for Fairfax County, Virginia from 2000 onward. The chart will show how burglaries have trended over the past two decades.",
+      "row_count": 50,
+      "chart_type": "line",
+      "elapsed_s": 8.1,
+      "failures": [],
+      "sample_rows": [
+        {
+          "year": 2000,
+          "burglary": null
+        },
+        {
+          "year": 2000,
+          "burglary": 1033
+        },
+        {
+          "year": 2001,
+          "burglary": null
+        }
+      ]
+    },
+    {
+      "id": "hist-009",
+      "question": "Which state had the most murders in 2020?",
+      "tab": "historical",
+      "status": "PASS",
+      "sql": "SELECT state, murder FROM historical_state_national WHERE year = 2020 ORDER BY murder DESC LIMIT 1",
+      "explanation": "This query returns the state with the highest murder count in 2020. Note: National figures are based on FBI UCR data, 1958\u00e2\u0080\u00932024.",
+      "row_count": 1,
+      "chart_type": null,
+      "elapsed_s": 4.6,
+      "failures": [],
+      "sample_rows": [
+        {
+          "state": "United States",
+          "murder": 21984
+        }
+      ]
+    },
+    {
+      "id": "hist-010",
+      "question": "Jefferson Parish murder clearance rate in 2019",
+      "tab": "historical",
+      "status": "PASS",
+      "sql": "SELECT hc.year, ROUND(hc.murder_clr, 1) AS murder_clearance_rate FROM historical_agency_clearance hc JOIN historical_agency ha ON ha.ori = hc.ori WHERE ha.agency = 'Jefferson Parish' AND ha.state = 'la' AND hc.year = 2019 AND hc.murder_clr IS NOT NULL LIMIT 1000",
+      "explanation": "This returns the murder clearance rate for Jefferson Parish, LA in 2019. Clearance rate is expressed as a percentage (e.g., 75.0 means 75% of murders were cleared).",
+      "row_count": 1,
+      "chart_type": null,
+      "elapsed_s": 6.7,
+      "failures": [],
+      "sample_rows": [
+        {
+          "year": 2019,
+          "murder_clearance_rate": 80
+        }
+      ]
+    },
+    {
+      "id": "nibrs-001",
+      "question": "Total murder victims nationally in 2022",
+      "tab": "nibrs",
+      "status": "PASS",
+      "sql": "SELECT SUM(victim_count) AS total_murders FROM summary_victim_state_monthly WHERE ucr_offense_code = '09A' AND year = 2022 LIMIT 1000",
+      "explanation": "This shows the total number of murder victims recorded in NIBRS-reporting agencies nationwide in 2022. The count represents individual victims of murder and nonnegligent manslaughter (NIBRS code 09A). Note that NIBRS coverage was approximately 83% of the U.S. population in 2022, so this represents raw counts from agencies that reported data via NIBRS, not the FBI's official national crime estimate. Actual murder counts nationwide are likely higher.",
+      "row_count": 1,
+      "chart_type": null,
+      "elapsed_s": 6.5,
+      "failures": [],
+      "sample_rows": [
+        {
+          "total_murders": 17442
+        }
+      ]
+    },
+    {
+      "id": "nibrs-002",
+      "question": "Aggravated assault victims in Texas in 2023",
+      "tab": "nibrs",
+      "status": "PASS",
+      "sql": "SELECT SUM(victim_count) AS aggravated_assaults FROM summary_victim_state_monthly WHERE state = 'TX' AND ucr_offense_code = '13A' AND year = 2023 LIMIT 1000",
+      "explanation": "Texas reported 88,654 aggravated assault victims in 2023. This represents all incidents where someone was attacked with the intent to cause serious bodily harm, typically involving a weapon or resulting in serious injury. The count includes all individual victims of aggravated assault incidents reported by Texas law enforcement agencies that submitted data to NIBRS. Note: 2023 data may be preliminary as not all agencies have submitted final data.",
+      "row_count": 1,
+      "chart_type": null,
+      "elapsed_s": 4.7,
+      "failures": [],
+      "sample_rows": [
+        {
+          "aggravated_assaults": 84656
+        }
+      ]
+    },
+    {
+      "id": "nibrs-003",
+      "question": "Motor vehicle theft trend in Houston 2020-2023",
+      "tab": "nibrs",
+      "status": "PASS",
+      "sql": "SELECT s.year, SUM(s.offense_count) AS motor_vehicle_thefts FROM summary_city_monthly s WHERE s.ucr_offense_code = '240' AND s.year BETWEEN 2020 AND 2023 AND s.ori IN (SELECT ori FROM agencies WHERE city = 'HOUSTON' AND state = 'TX' AND year = 2023 AND pop_group LIKE '1%') GROUP BY s.year ORDER BY s.year LIMIT 1000",
+      "explanation": "Motor vehicle theft in Houston increased significantly over this period, rising from 6,807 thefts in 2020 to 12,493 in 2023 \u2014 an 84% increase over four years. The largest year-over-year jump occurred between 2021 and 2022, when thefts increased by nearly 4,000 cases. This data is from Houston Police Department (the city's primary law enforcement agency).",
+      "row_count": 4,
+      "chart_type": "line",
+      "elapsed_s": 8.4,
+      "failures": [],
+      "sample_rows": [
+        {
+          "year": 2020,
+          "motor_vehicle_thefts": 14886
+        },
+        {
+          "year": 2021,
+          "motor_vehicle_thefts": 15577
+        },
+        {
+          "year": 2022,
+          "motor_vehicle_thefts": 17254
+        }
+      ]
+    },
+    {
+      "id": "nibrs-004",
+      "question": "Top 10 cities by robbery count in 2022",
+      "tab": "nibrs",
+      "status": "PASS",
+      "sql": "SELECT a.city, a.state, SUM(s.offense_count) AS robberies FROM summary_city_monthly s JOIN agencies a ON a.ori = s.ori AND a.year = s.year WHERE s.ucr_offense_code = '120' AND s.year = 2022 AND a.population >= 100000 GROUP BY a.city, a.state HAVING SUM(s.offense_count) >= 10 ORDER BY robberies DESC LIMIT 10",
+      "explanation": "This shows the 10 cities with the highest robbery counts in 2022, filtered to cities with populations of at least 100,000 to focus on major metropolitan areas. The data includes all reported robberies (NIBRS code 120) from agencies that submitted data to the FBI's NIBRS system. Note: 2022 data may be preliminary as not all agencies had completed their transition to NIBRS reporting at that time.",
+      "row_count": 10,
+      "chart_type": "bar",
+      "elapsed_s": 5.7,
+      "failures": [],
+      "sample_rows": [
+        {
+          "city": "CHICAGO",
+          "state": "IL",
+          "robberies": 8971
+        },
+        {
+          "city": "HOUSTON",
+          "state": "TX",
+          "robberies": 8733
+        },
+        {
+          "city": "PHILADELPHIA",
+          "state": "PA",
+          "robberies": 5841
+        }
+      ]
+    },
+    {
+      "id": "nibrs-005",
+      "question": "Burglary trend in California by year",
+      "tab": "nibrs",
+      "status": "PASS",
+      "sql": "SELECT year, SUM(offense_count) AS burglaries FROM summary_state_monthly WHERE ucr_offense_code = '220' AND state = 'CA' GROUP BY year ORDER BY year LIMIT 1000",
+      "explanation": "California burglary counts in NIBRS show a general decline from 2017-2022, followed by some fluctuation in recent years. The data shows 64,889 burglaries in 2017, dropping to around 43,000-48,000 in the 2019-2022 period, then rising to 52,773 in 2024 before declining to 42,639 in 2025. Note that NIBRS coverage varied significantly during this period - from 63% of the U.S. population in 2017 to 94% by 2025. For California specifically, more agencies transitioned to NIBRS reporting over time, whic",
+      "row_count": 7,
+      "chart_type": "line",
+      "elapsed_s": 9.5,
+      "failures": [],
+      "sample_rows": [
+        {
+          "year": 2020,
+          "burglaries": 30
+        },
+        {
+          "year": 2021,
+          "burglaries": 25892
+        },
+        {
+          "year": 2022,
+          "burglaries": 54474
+        }
+      ]
+    },
+    {
+      "id": "nibrs-006",
+      "question": "What percentage of murder victims are female nationally in 2022?",
+      "tab": "nibrs",
+      "status": "PASS",
+      "sql": "SELECT CASE d.sex WHEN 'M' THEN 'Male' WHEN 'F' THEN 'Female' ELSE 'Unknown' END AS sex, SUM(d.victim_count) AS victims, ROUND(100.0 * SUM(d.victim_count) / (SELECT SUM(victim_count) FROM summary_victim_demographics WHERE year = 2022 AND ucr_offense_code = '09A'), 1) AS percentage FROM summary_victim_demographics d WHERE d.year = 2022 AND d.ucr_offense_code = '09A' GROUP BY d.sex ORDER BY victims DESC LIMIT 1000",
+      "explanation": "In 2022, approximately 21.1% of murder victims nationally were female, while 77.4% were male. The remaining 1.5% had unknown sex recorded. This reflects the consistent pattern in homicide data where male victims significantly outnumber female victims. Note: Only 78.4% of the U.S. population was covered by NIBRS-reporting agencies in 2022. Actual victim counts are likely higher.",
+      "row_count": 3,
+      "chart_type": "pie",
+      "elapsed_s": 7.2,
+      "failures": [],
+      "sample_rows": [
+        {
+          "sex": "Male",
+          "victims": 13494,
+          "percentage": 77.4
+        },
+        {
+          "sex": "Female",
+          "victims": 3877,
+          "percentage": 22.2
+        },
+        {
+          "sex": "Unknown",
+          "victims": 73,
+          "percentage": 0.4
+        }
+      ]
+    },
+    {
+      "id": "nibrs-007",
+      "question": "Arson incidents in New York in 2023",
+      "tab": "nibrs",
+      "status": "PASS",
+      "sql": "SELECT CAST(COUNT(*) AS TEXT) AS arson_incidents FROM summary_city_monthly WHERE ucr_offense_code = '200' AND state = 'NY' AND year = 2023 LIMIT 1000",
+      "explanation": "This shows the total number of arson incidents reported by NIBRS-participating agencies in New York state during 2023. The count includes all types of arson offenses recorded in the incident-based reporting system. Note that not all law enforcement agencies in New York reported to NIBRS in 2023, so this represents incidents from participating agencies rather than a complete statewide total.",
+      "row_count": 1,
+      "chart_type": null,
+      "elapsed_s": 5.0,
+      "failures": [],
+      "sample_rows": [
+        {
+          "arson_incidents": "277"
+        }
+      ]
+    },
+    {
+      "id": "nibrs-008",
+      "question": "Drug violations by state in 2022, top 10",
+      "tab": "nibrs",
+      "status": "PASS",
+      "sql": "SELECT state, SUM(offense_count) AS drug_violations FROM summary_state_monthly WHERE ucr_offense_code IN ('35A', '35B') AND year = 2022 GROUP BY state ORDER BY drug_violations DESC LIMIT 10",
+      "explanation": "These are the top 10 states by total drug violations (possession, sale, and equipment) in 2022. The counts include both drug/narcotic violations (35A) and drug equipment violations (35B). Texas leads with the highest number of drug violations, followed by Florida and Ohio. These represent raw counts from agencies that reported NIBRS data in 2022, when national coverage was approximately 87% of the U.S. population.",
+      "row_count": 10,
+      "chart_type": "bar",
+      "elapsed_s": 5.3,
+      "failures": [],
+      "sample_rows": [
+        {
+          "state": "TX",
+          "drug_violations": 181781
+        },
+        {
+          "state": "CA",
+          "drug_violations": 120326
+        },
+        {
+          "state": "NC",
+          "drug_violations": 91551
+        }
+      ]
+    },
+    {
+      "id": "nibrs-009",
+      "question": "Compare murder victim counts in Texas and Florida 2020-2023",
+      "tab": "nibrs",
+      "status": "PASS",
+      "sql": "WITH coverage AS (SELECT year, coverage_pct FROM nibrs_national_coverage WHERE year BETWEEN 2020 AND 2023), victim_data AS (SELECT s.year, s.state, SUM(s.victim_count) AS murders FROM summary_victim_state_monthly s WHERE s.ucr_offense_code = '09A' AND s.state IN ('TX', 'FL') AND s.year BETWEEN 2020 AND 2023 GROUP BY s.year, s.state) SELECT v.year, MAX(CASE WHEN v.state = 'TX' THEN v.murders ELSE NULL END) AS texas, MAX(CASE WHEN v.state = 'FL' THEN v.murders ELSE NULL END) AS florida, c.coverage_pct FROM victim_data v JOIN coverage c ON c.year = v.year GROUP BY v.year, c.coverage_pct ORDER BY v.year LIMIT 1000",
+      "explanation": "This compares murder victim counts between Texas and Florida from 2020-2023. Texas consistently reported higher murder counts than Florida across all four years, with both states showing increases from 2020 to 2021, then relatively stable levels through 2023. Texas had approximately 2,000-2,400 murder victims per year during this period, while Florida had roughly 1,200-1,400. Note: NIBRS coverage was 79.9% in 2020, 87.2% in 2021, 89.4% in 2022, and 91.1% in 2023. These are raw counts from agenci",
+      "row_count": 4,
+      "chart_type": "line",
+      "elapsed_s": 8.3,
+      "failures": [],
+      "sample_rows": [
+        {
+          "year": 2020,
+          "texas": 1645,
+          "florida": 6,
+          "coverage_pct": 64.59
+        },
+        {
+          "year": 2021,
+          "texas": 2053,
+          "florida": 368,
+          "coverage_pct": 76.67
+        },
+        {
+          "year": 2022,
+          "texas": 2092,
+          "florida": 550,
+          "coverage_pct": 82.49
+        }
+      ]
+    },
+    {
+      "id": "nibrs-011",
+      "question": "Assault trend in Texas 2020-2023",
+      "tab": "nibrs",
+      "status": "PASS",
+      "explanation": "HTTP 400",
+      "elapsed_s": 6.3,
+      "failures": [],
+      "clarification": true
+    },
+    {
+      "id": "nibrs-010",
+      "question": "How many agencies reported NIBRS data in 2023?",
+      "tab": "nibrs",
+      "status": "PASS",
+      "sql": "SELECT COUNT(DISTINCT ori) AS agencies_reported FROM summary_city_monthly WHERE year = 2023 LIMIT 1000",
+      "explanation": "In 2023, 18,884 law enforcement agencies reported data to NIBRS. This represents a significant portion of U.S. law enforcement agencies, as NIBRS became the mandatory standard for FBI crime reporting in 2021, replacing the legacy Summary Reporting System (SRS).",
+      "row_count": 1,
+      "chart_type": null,
+      "elapsed_s": 4.4,
+      "failures": [],
+      "sample_rows": [
+        {
+          "agencies_reported": 13264
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,276 @@
+{
+  "timestamp": "20260324-150452",
+  "base_url": "https://nibrsai.com",
+  "total": 10,
+  "passed": 8,
+  "failed": 2,
+  "errors": 0,
+  "results": [
+    {
+      "id": "rtci-001",
+      "question": "National murder trend",
+      "tab": "current",
+      "status": "PASS",
+      "sql": "SELECT year, month, count FROM national_monthly WHERE offense = 'Murder' ORDER BY year, month LIMIT 1000",
+      "explanation": "This shows the monthly count of murders across a consistent sample of ~700 agencies that have reported every month since January 2017. National figures are based on this consistent sample, not every agency in the country. The sample size is stable, making trends reliable. Data through 2025 is preliminary and subject to revision.",
+      "row_count": 109,
+      "chart_type": "line",
+      "elapsed_s": 2.8,
+      "failures": [],
+      "sample_rows": [
+        {
+          "year": 2017,
+          "month": 1,
+          "count": 759
+        },
+        {
+          "year": 2017,
+          "month": 2,
+          "count": 598
+        },
+        {
+          "year": 2017,
+          "month": 3,
+          "count": 641
+        }
+      ]
+    },
+    {
+      "id": "rtci-002",
+      "question": "Murder rate in Houston per 100K",
+      "tab": "current",
+      "status": "PASS",
+      "sql": "SELECT am.year, am.month, ROUND(SUM(am.count) * 100000.0 / ap.population, 1) as rate_per_100k FROM agency_monthly am JOIN agency_population ap ON ap.ori = am.ori AND ap.year = am.year WHERE am.agency = 'Houston' AND am.state = 'TX' AND am.offense = 'Murder' GROUP BY am.year, am.month ORDER BY am.year, am.month LIMIT 1000",
+      "explanation": "Murder rate in Houston, Texas from 2017\u00e2\u0080\u00932025, expressed as murders per 100,000 residents. Monthly data is divided by annual jurisdiction population.",
+      "row_count": 109,
+      "chart_type": "line",
+      "elapsed_s": 2.4,
+      "failures": [],
+      "sample_rows": [
+        {
+          "year": 2017,
+          "month": 1,
+          "rate_per_100k": 0.9
+        },
+        {
+          "year": 2017,
+          "month": 2,
+          "rate_per_100k": 1.3
+        },
+        {
+          "year": 2017,
+          "month": 3,
+          "rate_per_100k": 0.8
+        }
+      ]
+    },
+    {
+      "id": "rtci-003",
+      "question": "Compare monthly murders in Baltimore and Detroit",
+      "tab": "current",
+      "status": "PASS",
+      "sql": "SELECT am.year, am.month,\n  SUM(CASE WHEN am.agency = 'Baltimore' AND am.state = 'MD' AND am.type = 'City' THEN am.count END) as baltimore,\n  SUM(CASE WHEN am.agency = 'Detroit' AND am.state = 'MI' AND am.type = 'City' THEN am.count END) as detroit\nFROM agency_monthly am\nWHERE (am.agency = 'Baltimore' AND am.state = 'MD' AND am.type = 'City')\n  OR (am.agency = 'Detroit' AND am.state = 'MI' AND am.type = 'City')\n  AND am.offense = 'Murder'\nGROUP BY am.year, am.month\nORDER BY am.year, am.month\nLIMIT 1000",
+      "explanation": "Monthly murder counts for Baltimore, Maryland and Detroit, Michigan from 2017\u00e2\u0080\u00932025. Note: Direct comparisons between agencies should be interpreted with caution. Not all agencies have reported complete data for every month, and reporting practices, jurisdictional boundaries, and population coverage vary. An agency's jurisdiction may cover only the city proper or extend to surrounding areas, significantly affecting absolute counts.",
+      "row_count": 109,
+      "chart_type": "line",
+      "elapsed_s": 3.6,
+      "failures": [],
+      "sample_rows": [
+        {
+          "year": 2017,
+          "month": 1,
+          "baltimore": 3916,
+          "detroit": 22
+        },
+        {
+          "year": 2017,
+          "month": 2,
+          "baltimore": 3030,
+          "detroit": 22
+        },
+        {
+          "year": 2017,
+          "month": 3,
+          "baltimore": 2990,
+          "detroit": 26
+        }
+      ]
+    },
+    {
+      "id": "rtci-004",
+      "question": "Total murders nationally in 2023",
+      "tab": "current",
+      "status": "PASS",
+      "sql": "SELECT SUM(count) as total_murders FROM national_monthly WHERE offense = 'Murder' AND year = 2023 LIMIT 1000",
+      "explanation": "National figures are based on a consistent sample of agencies that have reported every month since January 2017 \u00e2\u0080\u0094 not every agency in the country. This represents murders across all months in 2023 for those agencies.",
+      "row_count": 1,
+      "chart_type": null,
+      "elapsed_s": 2.1,
+      "failures": [],
+      "sample_rows": [
+        {
+          "total_murders": 9651
+        }
+      ]
+    },
+    {
+      "id": "rtci-005",
+      "question": "Which city has the highest murder rate per 100K in 2024?",
+      "tab": "current",
+      "status": "FAIL",
+      "sql": "",
+      "explanation": "I need to clarify which cities you'd like me to compare. This database covers ~700 law enforcement agencies across the U.S., but not every city. Would you like me to:\n\n1. **Show the top 10 cities by murder rate per 100K in 2024** (among all cities in our dataset), or\n2. **Compare specific cities you have in mind** (just name them)?\n\nPlease let me know, and I'll pull the data.",
+      "row_count": 0,
+      "chart_type": null,
+      "elapsed_s": 2.6,
+      "failures": [
+        "missing 'population' in SQL",
+        "missing '100000' in SQL",
+        "expected >= 1 rows, got 0"
+      ],
+      "sample_rows": []
+    },
+    {
+      "id": "rtci-006",
+      "question": "Motor vehicle theft trend in Los Angeles",
+      "tab": "current",
+      "status": "PASS",
+      "sql": "SELECT year, month, count\nFROM agency_monthly\nWHERE agency = 'Los Angeles' AND state = 'CA' AND offense = 'Motor Vehicle Theft'\nORDER BY year, month\nLIMIT 1000",
+      "explanation": "This query returns the monthly motor vehicle theft count for Los Angeles from 2017 to 2025. The data shows the raw count of reported motor vehicle thefts each month.",
+      "row_count": 218,
+      "chart_type": "line",
+      "elapsed_s": 1.8,
+      "failures": [],
+      "sample_rows": [
+        {
+          "year": 2017,
+          "month": 1,
+          "count": 1825
+        },
+        {
+          "year": 2017,
+          "month": 1,
+          "count": 1147
+        },
+        {
+          "year": 2017,
+          "month": 2,
+          "count": 1509
+        }
+      ]
+    },
+    {
+      "id": "rtci-007",
+      "question": "Robbery in New York City vs Chicago 2023",
+      "tab": "current",
+      "status": "PASS",
+      "sql": "SELECT am.year, am.month,\n  SUM(CASE WHEN am.agency = 'New York City' AND am.state = 'NY' THEN am.count END) as new_york_city,\n  SUM(CASE WHEN am.agency = 'Chicago' AND am.state = 'IL' THEN am.count END) as chicago\nFROM agency_monthly am\nWHERE (am.agency = 'New York City' AND am.state = 'NY' OR am.agency = 'Chicago' AND am.state = 'IL')\n  AND am.offense = 'Robbery'\n  AND am.year = 2023\nGROUP BY am.year, am.month\nORDER BY am.year, am.month\nLIMIT 1000",
+      "explanation": "Monthly robbery counts for New York City and Chicago throughout 2023. New York City consistently reports higher robbery counts than Chicago across the year.",
+      "row_count": 12,
+      "chart_type": "line",
+      "elapsed_s": 4.0,
+      "failures": [],
+      "sample_rows": [
+        {
+          "year": 2023,
+          "month": 1,
+          "new_york_city": 1350,
+          "chicago": 890
+        },
+        {
+          "year": 2023,
+          "month": 2,
+          "new_york_city": 1163,
+          "chicago": 582
+        },
+        {
+          "year": 2023,
+          "month": 3,
+          "new_york_city": 1261,
+          "chicago": 685
+        }
+      ]
+    },
+    {
+      "id": "rtci-008",
+      "question": "National burglary trend by month in 2024",
+      "tab": "current",
+      "status": "PASS",
+      "sql": "SELECT year, month, count FROM national_monthly WHERE offense = 'Burglary' AND year = 2024 ORDER BY year, month LIMIT 1000",
+      "explanation": "This shows the monthly burglary count across the national sample of agencies throughout 2024. National figures are based on a consistent sample of agencies that have reported every month since January 2017 \u00e2\u0080\u0094 not every agency in the country. Trends are reliable but absolute numbers reflect only this sample.",
+      "row_count": 12,
+      "chart_type": "line",
+      "elapsed_s": 2.3,
+      "failures": [],
+      "sample_rows": [
+        {
+          "year": 2024,
+          "month": 1,
+          "count": 28414
+        },
+        {
+          "year": 2024,
+          "month": 2,
+          "count": 26394
+        },
+        {
+          "year": 2024,
+          "month": 3,
+          "count": 26564
+        }
+      ]
+    },
+    {
+      "id": "rtci-009",
+      "question": "Top 10 cities by total assault in 2023",
+      "tab": "current",
+      "status": "FAIL",
+      "sql": "",
+      "explanation": "I need to clarify what you mean by \"assault.\" The database includes **Aggravated Assault** (a serious felony) as one of the 7 Part I UCR crimes. Is that what you're looking for, or did you mean something else?\n\nAlso, do you want:\n- **Total counts** (raw number of assaults), or\n- **Rates per 100,000 population** (assault rate)?\n\nOnce you confirm, I'll pull the top 10 cities for you.",
+      "row_count": 0,
+      "chart_type": null,
+      "elapsed_s": 1.8,
+      "failures": [
+        "missing 'assault' in SQL",
+        "expected >= 10 rows, got 0",
+        "expected chart type 'bar', got 'None'"
+      ],
+      "sample_rows": []
+    },
+    {
+      "id": "rtci-010",
+      "question": "Murder rates in Washington DC, Baltimore, and St. Louis per 100K",
+      "tab": "current",
+      "status": "PASS",
+      "sql": "SELECT am.year, am.month,\n  ROUND(SUM(CASE WHEN am.agency = 'Washington' AND am.state = 'DC' THEN am.count END) * 100000.0 / MAX(CASE WHEN am.agency = 'Washington' AND am.state = 'DC' THEN ap.population END), 1) as washington_dc,\n  ROUND(SUM(CASE WHEN am.agency = 'Baltimore' AND am.state = 'MD' AND am.type = 'City' THEN am.count END) * 100000.0 / MAX(CASE WHEN am.agency = 'Baltimore' AND am.state = 'MD' AND am.type = 'City' THEN ap.population END), 1) as baltimore,\n  ROUND(SUM(CASE WHEN am.agency = 'St Louis' AND am.state = 'MO' AND am.type = 'City' THEN am.count END) * 100000.0 / MAX(CASE WHEN am.agency = 'St Louis' AND am.state = 'MO' AND am.type = 'City' THEN ap.population END), 1) as st_louis\nFROM agency_monthly am\nJOIN agency_population ap ON ap.ori = am.ori AND ap.year = am.year\nWHERE ((am.agency = 'Washington' AND am.state = 'DC') OR (am.agency = 'Baltimore' AND am.state = 'MD' AND am.type = 'City') OR (am.agency = 'St Louis' AND am.state = 'MO' AND am.type = 'City'))\n  AND am.offense = 'Murder'\nGROUP BY am.year, am.month\nORDER BY am.year, am.month\nLIMIT 1000",
+      "explanation": "Murder rates per 100,000 residents for Washington DC, Baltimore, and St. Louis from 2017\u00e2\u0080\u00932025, shown monthly. Each city's rate is calculated by dividing monthly murder counts by annual population. Note: Direct comparisons between jurisdictions should be interpreted with caution, as reporting practices, jurisdictional boundaries, and population coverage vary.",
+      "row_count": 109,
+      "chart_type": "line",
+      "elapsed_s": 5.3,
+      "failures": [],
+      "sample_rows": [
+        {
+          "year": 2017,
+          "month": 1,
+          "washington_dc": 1.2,
+          "baltimore": 5.2,
+          "st_louis": 5.2
+        },
+        {
+          "year": 2017,
+          "month": 2,
+          "washington_dc": 0.9,
+          "baltimore": 3.6,
+          "st_louis": 5.2
+        },
+        {
+          "year": 2017,
+          "month": 3,
+          "washington_dc": 2,
+          "baltimore": 4.1,
+          "st_louis": 2.3
+        }
+      ]
+    }
+  ]
+}
