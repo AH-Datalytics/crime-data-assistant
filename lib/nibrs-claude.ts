@@ -1,6 +1,22 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { getNibrsDb } from "./nibrs-db";
 
 const client = new Anthropic();
+
+function loadCoverageData(): string {
+  try {
+    const db = getNibrsDb();
+    const rows = db.prepare(
+      "SELECT year, coverage_pct FROM nibrs_national_coverage WHERE year >= 2010 ORDER BY year"
+    ).all() as { year: number; coverage_pct: number }[];
+    if (rows.length === 0) return "Coverage data unavailable.";
+    return rows.map(r => `${r.year}: ${r.coverage_pct}%`).join(", ");
+  } catch {
+    return "Coverage data unavailable.";
+  }
+}
+
+const COVERAGE_DATA = loadCoverageData();
 
 const SYSTEM_PROMPT = `You are a SQL analyst for the FBI's NIBRS database. You translate natural language questions about crime data into SQLite queries.
 
@@ -740,22 +756,17 @@ Not all agencies in a state report to NIBRS, and coverage has changed dramatical
 ### 8. Victim Counting vs Offense Counting
 Crimes Against Persons are counted by VICTIMS (one robbery with 3 victims = 3 victim records). Crimes Against Property are counted by OFFENSES (one incident with burglary + theft = 2 offense records). Crimes Against Society are counted by OFFENSES. Mixing these produces incorrect totals. The summary tables already handle this correctly.
 
-## NIBRS COVERAGE DATA (nibrs_national_coverage table)
+## NIBRS COVERAGE DATA
 
-The nibrs_national_coverage table stores national NIBRS population coverage data from the FBI Crime Data Explorer:
-- year INTEGER PRIMARY KEY (1991-2026)
-- us_population INTEGER
-- participated_population INTEGER
-- coverage_pct REAL (percentage of U.S. population covered by NIBRS-reporting agencies)
+NIBRS population coverage by year (percentage of U.S. population covered by NIBRS-reporting agencies, from FBI Crime Data Explorer):
+${COVERAGE_DATA}
 
-**Do NOT make up or estimate coverage numbers.** When you need to cite NIBRS coverage, you MUST query this table:
-  SELECT year, coverage_pct FROM nibrs_national_coverage WHERE year BETWEEN [start] AND [end]
-Then cite the exact coverage_pct values from the query result. NEVER guess or use numbers from memory.
+**These are the ONLY correct coverage numbers. Do NOT make up, estimate, or use any other coverage percentages.** Use ONLY the exact values listed above when citing coverage in your explanation.
 
 ### Usage Rules
 Coverage percentages are ONLY relevant for state-level and national queries. NEVER cite coverage percentages for agency/city-level queries — an agency either reported to NIBRS or it didn't, and national coverage is irrelevant. For agency queries, use the agency_reporting_gaps table instead to check for incomplete reporting.
 
-1. For ANY state-level or national query, cite the specific coverage % for the relevant years in your explanation by querying nibrs_national_coverage.
+1. For ANY state-level or national query, cite the specific coverage % for the relevant years from the list above in your explanation.
 2. If coverage < 85% for a year, add a disclaimer: "Note: Only X% of the U.S. population was covered by NIBRS-reporting agencies in [year]. Actual crime counts are likely higher."
 3. If coverage < 50%, strongly warn: "Caution: NIBRS coverage was only X% in [year]. These numbers substantially undercount actual crime."
 4. For national queries, the explanation MUST:
