@@ -94,10 +94,9 @@ Offense names are stored exactly as above (title case). Always use exact strings
    - "Houston" → agency = 'Houston', state = 'TX'
    - "Phoenix" → agency = 'Phoenix', state = 'AZ'
    - "DC" or "Washington DC" or "Washington D.C." → agency = 'Washington', state = 'DC' (NOT Washington state — use state = 'DC' to disambiguate)
-   - "St. Louis" or "Saint Louis" → agency = 'St Louis', state = 'MO' (NO period — stored as "St Louis")
-   - "St. Petersburg" → agency = 'St Petersburg', state = 'FL'
-   - "St. Paul" → agency = 'St Paul', state = 'MN'
-   - All "St." prefixes are stored WITHOUT the period (St Louis, St Charles, St Joseph, St Peters, St Paul, St Petersburg)
+   - "St. Louis" or "Saint Louis" → agency = 'St Louis', state = 'MO' (NO period in agency_monthly)
+   - "St. Paul" → agency = 'St. Paul', state = 'MN' (WITH period)
+   - **"St." prefix storage varies** — St Louis has NO period, but St. Paul HAS a period. Always verify with a LIKE search if unsure.
    - If unsure which agency, query \`SELECT DISTINCT agency, state, type FROM agencies WHERE agency LIKE '%name%'\`
 5. **Ambiguous agency names** → Some agency names exist in multiple states or as both City and County (e.g., Baltimore City vs Baltimore County, El Paso TX City vs County, Albany NY vs Albany GA). If the user's request is ambiguous:
    - If they specify a state, use it to disambiguate
@@ -666,7 +665,7 @@ ${HISTORICAL.agencyClearanceRows.toLocaleString()} rows. All values are percenta
    FROM historical_agency_crime hac
    JOIN historical_agency ha ON ha.ori = hac.ori
    JOIN historical_agency_population hap ON hap.ori = hac.ori AND hap.year = hac.year
-   WHERE ha.agency = 'New York City' AND ha.state = 'ny'
+   WHERE ha.agency = 'New York' AND ha.state = 'ny'
    ORDER BY hac.year
    LIMIT 1000
    \`\`\`
@@ -675,10 +674,14 @@ ${HISTORICAL.agencyClearanceRows.toLocaleString()} rows. All values are percenta
 6. **Violent crime** = murder + rape + robbery + assault (in historical_agency_crime) or murder + rape + robbery + aggravated_assault (in historical_state_national)
 7. **Property crime** = burglary + theft + motor_vehicle_theft (in historical_agency_crime) or burglary + theft + auto_theft (in historical_state_national)
 8. **Common agency name mappings** — agency names in the historical data may differ from modern conventions:
-   - "New York" or "NYC" → agency = 'New York City', state = 'ny' (NOT 'New York' — stored as 'New York City')
+   - "New York" or "NYC" → agency = 'New York', state = 'ny' (stored as 'New York' in historical tables, NOT 'New York City')
    - "LA" or "Los Angeles" → agency = 'Los Angeles', state = 'ca'
    - "Chicago" → agency = 'Chicago', state = 'il'
    - "Houston" → agency = 'Houston', state = 'tx'
+   - "St. Louis" or "Saint Louis" → agency = 'St. Louis', state = 'mo' (WITH period in historical tables)
+   - "St. Paul" → agency = 'St. Paul', state = 'mn' (WITH period)
+   - "St. Petersburg" → agency = 'St. Petersburg', state = 'fl' (WITH period)
+   - **NOTE**: Historical tables use periods in "St." names (St. Louis, St. Paul) unlike agency_monthly which omits them for some agencies
    - **historical_agency uses 2-letter LOWERCASE state abbreviations** ('tx', 'ca', 'ny') for agency lookups
    - **historical_state_national uses full state names** ('Texas', 'California') — do NOT mix these up
    - If unsure of the exact agency name, always use a LIKE search first

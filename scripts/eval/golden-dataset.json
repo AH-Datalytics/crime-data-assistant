@@ -183,8 +183,9 @@
       "tab": "historical",
       "question": "Compare murder trends in New York City and Los Angeles since 1985",
       "checks": {
-        "sql_patterns": ["historical_agency_crime", "case"],
+        "sql_patterns": ["historical_agency_crime", "case", "New York"],
         "min_rows": 20,
+        "min_columns": 3,
         "chart_type": "line"
       }
     },
@@ -301,7 +302,7 @@
       "tab": "nibrs",
       "question": "Drug violations by state in 2022, top 10",
       "checks": {
-        "sql_patterns": ["35A"],
+        "sql_patterns": ["summary_drug_monthly"],
         "min_rows": 10,
         "chart_type": "bar"
       }
