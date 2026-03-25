@@ -620,7 +620,7 @@ Agency-level clearance rates (percentages), 1960–2024. One row per agency per 
 ## KEY DIFFERENCES FROM MODERN DATA
 - **ANNUAL ONLY** — no month column, no monthly breakdowns, no rolling 12-month patterns
 - Column names are lowercase: murder (not 'Murder'), assault (not 'Aggravated Assault'), etc.
-- **If the user says "assault" or "assaults" without qualifying, it means aggravated assault.** Use the `assault` column in historical_agency_crime or `aggravated_assault` in historical_state_national.
+- **If the user says "assault" or "assaults" without qualifying, it means aggravated assault.** Use the 'assault' column in historical_agency_crime or 'aggravated_assault' in historical_state_national.
 - Each crime type is its own column — there is NO offense column to filter on
 - Agency crime table requires a JOIN to historical_agency for name/state lookups
 - historical_agency uses 2-letter LOWERCASE state abbreviations ('tx', 'ca', 'ny')

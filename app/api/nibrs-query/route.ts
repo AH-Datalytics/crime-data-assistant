@@ -188,7 +188,6 @@ export async function POST(req: NextRequest) {
     }
 
     const executionTimeMs = Date.now() - startTime;
-    logNibrsQuery(question, sql, rows.length, null, claudeMs + executionTimeMs);
 
     // Step 4: Server-side CDE audit check — append disclaimer if anomalous underreporting detected
     let explanation = claude.explanation;
@@ -318,6 +317,9 @@ export async function POST(req: NextRequest) {
     } catch (cdeErr) {
       console.log(`[nibrs][cde-check] Error:`, cdeErr);
     }
+
+    // Log success (after CDE check so explanation includes any disclaimers)
+    logNibrsQuery(question, sql, rows.length, null, claudeMs + executionTimeMs, explanation);
 
     // Step 5: Build chart config
     const chartConfig = buildNibrsChartConfig(claude, columns, rows);

@@ -740,22 +740,22 @@ Not all agencies in a state report to NIBRS, and coverage has changed dramatical
 ### 8. Victim Counting vs Offense Counting
 Crimes Against Persons are counted by VICTIMS (one robbery with 3 victims = 3 victim records). Crimes Against Property are counted by OFFENSES (one incident with burglary + theft = 2 offense records). Crimes Against Society are counted by OFFENSES. Mixing these produces incorrect totals. The summary tables already handle this correctly.
 
-## NIBRS COVERAGE DATA (from nibrs_national_coverage table)
+## NIBRS COVERAGE DATA (nibrs_national_coverage table)
 
-The \`nibrs_national_coverage\` table stores national NIBRS population coverage data from the FBI Crime Data Explorer:
-- year INTEGER PRIMARY KEY
+The nibrs_national_coverage table stores national NIBRS population coverage data from the FBI Crime Data Explorer:
+- year INTEGER PRIMARY KEY (1991-2026)
 - us_population INTEGER
 - participated_population INTEGER
 - coverage_pct REAL (percentage of U.S. population covered by NIBRS-reporting agencies)
 
-For ANY state-level or national query, include a second query to get coverage data:
+**Do NOT make up or estimate coverage numbers.** When you need to cite NIBRS coverage, you MUST query this table:
   SELECT year, coverage_pct FROM nibrs_national_coverage WHERE year BETWEEN [start] AND [end]
-Then cite the exact coverage_pct values in your explanation. Do NOT make up or estimate coverage numbers — always query this table.
+Then cite the exact coverage_pct values from the query result. NEVER guess or use numbers from memory.
 
 ### Usage Rules
 Coverage percentages are ONLY relevant for state-level and national queries. NEVER cite coverage percentages for agency/city-level queries — an agency either reported to NIBRS or it didn't, and national coverage is irrelevant. For agency queries, use the agency_reporting_gaps table instead to check for incomplete reporting.
 
-1. For ANY state-level or national query, cite the specific coverage % for each relevant year from nibrs_national_coverage in your explanation.
+1. For ANY state-level or national query, cite the specific coverage % for the relevant years in your explanation by querying nibrs_national_coverage.
 2. If coverage < 85% for a year, add a disclaimer: "Note: Only X% of the U.S. population was covered by NIBRS-reporting agencies in [year]. Actual crime counts are likely higher."
 3. If coverage < 50%, strongly warn: "Caution: NIBRS coverage was only X% in [year]. These numbers substantially undercount actual crime."
 4. For national queries, the explanation MUST:
