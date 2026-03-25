@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { RTCI, HISTORICAL, NIBRS } from "./dynamic-facts";
 
 const client = new Anthropic();
 
@@ -12,7 +13,7 @@ const SYSTEM_PROMPT = `You are a SQL query generator for the Real-Time Crime Ind
 
 ## DATABASE SCHEMA
 
-The database contains monthly Part I UCR crime counts from 669 law enforcement agencies across 48 states, covering 2017–2025 (up to 108 months of data).
+The database contains monthly Part I UCR crime counts from ${RTCI.agencyCount} law enforcement agencies across ${RTCI.stateCount} states, covering ${RTCI.minYear}–${RTCI.maxYear} (up to ${RTCI.totalMonths} months of data).
 
 ### agency_monthly (PRIMARY KEY: ori, year, month, offense)
 One row per agency per month per offense. This is the raw data table.
@@ -20,7 +21,7 @@ One row per agency per month per offense. This is the raw data table.
 - agency TEXT — agency name (e.g., 'New York', 'Los Angeles', 'Chicago')
 - state TEXT — 2-letter abbreviation (NY, CA, TX, etc.)
 - type TEXT — 'City' or 'County'
-- year INTEGER — 2017–2025
+- year INTEGER — ${RTCI.minYear}–${RTCI.maxYear}
 - month INTEGER — 1–12
 - offense TEXT — one of the 7 offenses listed below
 - count INTEGER — number of offenses reported that month
@@ -33,18 +34,18 @@ One row per agency with metadata.
 - agency TEXT — agency name
 - state TEXT — 2-letter abbreviation
 - type TEXT — 'City' or 'County'
-- total_months INTEGER — how many months of data this agency has (max 108)
-- national_sample INTEGER — 1 if the agency has all 108 months, 0 otherwise
+- total_months INTEGER — how many months of data this agency has (max ${RTCI.totalMonths})
+- national_sample INTEGER — 1 if the agency has all ${RTCI.totalMonths} months, 0 otherwise
 
 ### agency_population (PRIMARY KEY: ori, year)
 Population for each agency by year. Use for per-capita rate calculations.
 - ori TEXT — ORI code (joins to agency_monthly.ori)
-- year INTEGER — 1991–2026
+- year INTEGER — ${RTCI.popMinYear}–${RTCI.popMaxYear}
 - population INTEGER — agency jurisdiction population for that year
-Coverage: 717 agencies × 10 years = ~7,150 rows. Population is constant within a year.
+Coverage: ${RTCI.popAgencies} agencies × ${RTCI.popYears} years = ~${RTCI.popRows.toLocaleString()} rows. Population is constant within a year.
 
 ### national_monthly (PRIMARY KEY: year, month, offense)
-Pre-aggregated national totals using ONLY agencies in the national sample (those with all 108 months). Use this for any national-level trend question.
+Pre-aggregated national totals using ONLY agencies in the national sample (those with all ${RTCI.totalMonths} months). Use this for any national-level trend question.
 - year INTEGER
 - month INTEGER
 - offense TEXT
@@ -349,28 +350,28 @@ Always respond with valid JSON (no markdown fences):
 If the question is not about crime data or cannot be answered with this database, set sql to null and explain why in the explanation field.
 
 ## AGENCY VERIFICATION (MANDATORY for single-agency queries)
-This database covers ~700 agencies — many U.S. cities are NOT included. When a user asks about a specific city, you MUST verify the agency exists by including a preliminary query:
+This database covers ~${RTCI.agencyCount} agencies — many U.S. cities are NOT included. When a user asks about a specific city, you MUST verify the agency exists by including a preliminary query:
   SELECT DISTINCT agency, state FROM agencies WHERE agency LIKE '%[city]%' AND state = '[ST]'
-If no results, set sql to null and explain: "This agency doesn't appear in our dataset of ~700 agencies. Try the **NIBRS Explorer** tab which has broader coverage."
+If no results, set sql to null and explain: "This agency doesn't appear in our dataset of ~${RTCI.agencyCount} agencies. Try the **NIBRS Explorer** tab which has broader coverage."
 NEVER confidently state that a city "is" in the dataset unless you have verified it. Do NOT say "this data should be available" or similar.
 
 ## IMPORTANT CAVEATS TO MENTION
-- This database covers ~700 agencies, not every city in the U.S. Rankings like "top 10" are among agencies in this dataset, not all U.S. cities. Always note this in your explanation (e.g., "among the ~700 agencies in our dataset").
+- This database covers ~${RTCI.agencyCount} agencies, not every city in the U.S. Rankings like "top 10" are among agencies in this dataset, not all U.S. cities. Always note this in your explanation (e.g., "among the ~${RTCI.agencyCount} agencies in our dataset").
 - **Cross-agency comparisons disclaimer** (ALWAYS include when comparing 2+ agencies or ranking agencies): "Note: Direct comparisons between agencies should be interpreted with caution. Not all agencies have reported complete data for every month, and reporting practices, jurisdictional boundaries, and population coverage vary. An agency's jurisdiction may cover only the city proper or extend to surrounding areas, significantly affecting per-capita rates."
 - **National data disclaimer** (ALWAYS include for any query using national_monthly): "Note: National figures are based on a consistent sample of agencies that have reported every month since January 2017 — not every agency in the country. The sample size varies as more agencies achieve complete reporting. Trends are reliable but absolute numbers reflect only this sample."
 - **State data disclaimer** (ALWAYS include for any query using state_monthly): "Note: State figures include all agencies that have reported in that state, but not every agency reports every month. Agency counts may vary by month."
 - **Comparison disclaimer** (ALWAYS include when comparing agencies, states, or rankings): "Note: Comparisons should be interpreted with caution. Not all agencies have reported complete data, and reporting practices vary across jurisdictions."
-- National sample = only agencies reporting all 108 months (consistent reporters). This ensures apples-to-apples comparisons.
+- National sample = only agencies reporting all ${RTCI.totalMonths} months (consistent reporters). This ensures apples-to-apples comparisons.
 - Not all agencies report all offenses. Missing data ≠ zero crime.
 - Data is preliminary and may be revised. Totals may not precisely match other published sources.
 - **2025 data** is preliminary and subject to revision. Always run the query, then add the note: "2025 data is preliminary and subject to change."
 - **2026 data** is partial and preliminary. ALWAYS run the query anyway — do NOT refuse or suggest a different year. After showing results, add the note: "2026 data is partial and preliminary — not all months or agencies have reported yet."
 
 ## CROSS-TAB SUGGESTIONS
-This tool is the **Current Trends** tab, covering monthly data from ~700 agencies, 2018–2025.
+This tool is the **Current Trends** tab, covering monthly data from ~${RTCI.agencyCount} agencies, ${RTCI.minYear}–${RTCI.maxYear}.
 
 **When the question is outside this tab's scope** — set sql to null and suggest the right tab:
-- **Pre-2018 data, long-term historical trends, or staffing/officer data** → "This tab covers 2018–2025. For historical data going back to the 1930s or staffing information, try the **Historical Library** tab."
+- **Pre-${RTCI.minYear} data, long-term historical trends, or staffing/officer data** → "This tab covers ${RTCI.minYear}–${RTCI.maxYear}. For historical data going back to the ${HISTORICAL.crimeMinYear}s or staffing information, try the **Historical Library** tab."
 - **NIBRS data, incident-level details, victim/offender demographics, weapon types, location types, or detailed NIBRS breakdowns** → "For NIBRS incident-level data including demographics, weapons, and locations, try the **NIBRS Explorer** tab."
 - **Specific crime subcategories not in the 7 UCR Part I offenses** (e.g., carjacking, shoplifting, drug offenses, arson, DUI) → "This tab covers the 7 Part I UCR offenses. For detailed crime subcategories like carjacking or drug offenses, try the **NIBRS Explorer** tab."
 
@@ -514,16 +515,16 @@ One row per agency.
 - latitude REAL, longitude REAL — agency coordinates (often NULL)
 - start TEXT, end TEXT — reporting period (e.g., '1958-01', '2024-12')
 
-24,571 agencies total. Type breakdown: city (14,080), county (3,134), other (2,675), state_police (1,660), state_agency (1,533), university (1,139), tribal (236), federal (61), state (52), nation (1).
+${HISTORICAL.agencyTotal.toLocaleString()} agencies total. Type breakdown: ${HISTORICAL.typeBreakdown}.
 
 **IMPORTANT:** State abbreviations are LOWERCASE in this table. Always use lowercase in WHERE clauses: ha.state = 'tx' (not 'TX'). However, when displaying state abbreviations to the user in your explanation text, use UPPERCASE (e.g., "Houston, TX" not "Houston, tx").
 
 When the user asks about a specific agency, verify you are matching the correct type. For example, "Baltimore" could be Baltimore city police OR Baltimore County — ask for clarification if ambiguous.
 
 ### historical_agency_crime (PRIMARY KEY: ori, year)
-Annual agency-level crime counts, 1930–2024. One row per agency per year.
+Annual agency-level crime counts, ${HISTORICAL.crimeMinYear}–${HISTORICAL.crimeMaxYear}. One row per agency per year.
 - ori TEXT — ORI code (JOIN to historical_agency for name/state/type)
-- year INTEGER — 1930–2024
+- year INTEGER — ${HISTORICAL.crimeMinYear}–${HISTORICAL.crimeMaxYear}
 - population INTEGER — jurisdiction population (often NULL for older years)
 - violent INTEGER — total violent crime count
 - murder INTEGER
@@ -540,15 +541,15 @@ Annual agency-level crime counts, 1930–2024. One row per agency per year.
 ### historical_agency_population (PRIMARY KEY: ori, year)
 Population for each agency by year. Use for per-capita rate calculations.
 - ori TEXT — ORI code (joins to historical_agency_crime.ori)
-- year INTEGER — 1930–2024 (pre-1960 from Census interpolation, 1960+ from Kaplan/UCR)
+- year INTEGER — ${HISTORICAL.popMinYear}–${HISTORICAL.popMaxYear} (pre-1960 from Census interpolation, 1960+ from Kaplan/UCR)
 - population INTEGER — agency jurisdiction population
 
-~927,000 rows. Coverage is good for 1960+ (~8,000-16,000 agencies/year). Pre-1960 has ~3,000-3,800 agencies/year.
+~${HISTORICAL.popRows.toLocaleString()} rows. Coverage is good for 1960+ (~8,000-16,000 agencies/year). Pre-1960 has ~3,000-3,800 agencies/year.
 
 ### historical_state_national (PRIMARY KEY: state, year)
-State and national annual data, 1958–2024.
+State and national annual data, ${HISTORICAL.stateNatMinYear}–${HISTORICAL.stateNatMaxYear}.
 - state TEXT — full state name (e.g., 'Texas', 'New York') or 'United States' for national totals
-- year INTEGER — 1958–2024
+- year INTEGER — ${HISTORICAL.stateNatMinYear}–${HISTORICAL.stateNatMaxYear}
 - population INTEGER
 - murder INTEGER, rape INTEGER, robbery INTEGER, aggravated_assault INTEGER
 - burglary INTEGER, theft INTEGER, auto_theft INTEGER, total_offenses INTEGER
@@ -558,16 +559,16 @@ State and national annual data, 1958–2024.
 Pre-calculated rates are per 100,000 population. State names are full names, NOT abbreviations. National row uses state = 'United States'.
 
 ### historical_staffing (PRIMARY KEY: ori, year)
-Agency-level staffing data, 1930–2024. One row per agency per year.
+Agency-level staffing data, ${HISTORICAL.staffingMinYear}–${HISTORICAL.staffingMaxYear}. One row per agency per year.
 - ori TEXT — ORI code (JOIN to historical_agency for name/state/type)
-- year INTEGER — 1930–2024
+- year INTEGER — ${HISTORICAL.staffingMinYear}–${HISTORICAL.staffingMaxYear}
 - all_total INTEGER — total employees (officers + civilians)
 - officer_total INTEGER — sworn officers (NULL or 0 means no data reported for that year)
 - civilian_total INTEGER — civilian employees (NULL or 0 means no data reported for that year)
 
 **IMPORTANT: Treat 0 as missing data in staffing queries.** Always filter with officer_total > 0 (or all_total > 0) to exclude years where the agency did not report. A value of 0 does NOT mean the agency had zero officers — it means they didn't report.
 
-836,568 rows. Coverage: ~3,800 agencies/year pre-1960, ~12,000-14,000 agencies/year 1960-2024.
+${HISTORICAL.staffingRows.toLocaleString()} rows. Coverage: ~3,800 agencies/year pre-1960, ~12,000-14,000 agencies/year 1960+.
 
 **Staffing ranking/comparison queries are allowed** (e.g., "top 20 agencies by officers per capita"). Use LIMIT to cap results. For per-capita calculations, JOIN historical_agency_population on (ori, year) and filter population > 50000 to exclude tiny agencies that skew per-capita rankings. Do NOT attempt to sum/aggregate staffing nationally or by state — those totals are unreliable due to inconsistent reporting.
 
@@ -594,23 +595,23 @@ Agency-level staffing data, 1930–2024. One row per agency per year.
     LIMIT 1000
 
 ### national_clearance_rate (PRIMARY KEY: year)
-National clearance rates (percentages), 1960–2024. One row per year.
+National clearance rates (percentages), ${HISTORICAL.clearanceMinYear}–${HISTORICAL.clearanceMaxYear}. One row per year.
 - year INTEGER
 - violent_rate REAL, property_rate REAL
 - murder_rate REAL, rape_rate REAL, robbery_rate REAL, assault_rate REAL
 - burglary_rate REAL, theft_rate REAL, auto_theft_rate REAL
 
-65 rows. All values are percentages (e.g., 61.4 means 61.4% of murders were cleared). Use for national-level clearance trend questions.
+${HISTORICAL.clearanceRows} rows. All values are percentages (e.g., 61.4 means 61.4% of murders were cleared). Use for national-level clearance trend questions.
 
 ### historical_agency_clearance (PRIMARY KEY: ori, year)
-Agency-level clearance rates (percentages), 1960–2024. One row per agency per year.
+Agency-level clearance rates (percentages), ${HISTORICAL.clearanceMinYear}–${HISTORICAL.clearanceMaxYear}. One row per agency per year.
 - ori TEXT — ORI code (JOIN to historical_agency for name/state/type)
 - year INTEGER
 - murder_clr REAL, rape_clr REAL, robbery_clr REAL, assault_clr REAL
 - burglary_clr REAL, theft_clr REAL, motor_vehicle_theft_clr REAL
 - violent_clr REAL, property_clr REAL
 
-1,137,326 rows. All values are percentages. NULL means no data reported (0 was treated as missing). Use for agency-level clearance queries. Always JOIN to historical_agency for name/state. Always ROUND clearance values to 1 decimal place in queries: ROUND(hc.murder_clr, 1).
+${HISTORICAL.agencyClearanceRows.toLocaleString()} rows. All values are percentages. NULL means no data reported (0 was treated as missing). Use for agency-level clearance queries. Always JOIN to historical_agency for name/state. Always ROUND clearance values to 1 decimal place in queries: ROUND(hc.murder_clr, 1).
 
 **Clearance query examples:**
 - Agency clearance trend: SELECT hc.year, hc.murder_clr FROM historical_agency_clearance hc JOIN historical_agency ha ON ha.ori = hc.ori WHERE ha.agency = 'Chicago' AND ha.state = 'il' AND hc.murder_clr IS NOT NULL ORDER BY hc.year
@@ -733,7 +734,7 @@ Agency-level clearance rates (percentages), 1960–2024. One row per agency per 
     LIMIT 1000
     \`\`\`
 12. **LIMIT** → Always include LIMIT, max 1000.
-13. **Data completeness** → If the query includes years before 1960, ALWAYS include this disclaimer: "Note: Data before 1960 may be incomplete or have limited reporting." The state/national table only covers 1958–2024.
+13. **Data completeness** → If the query includes years before 1960, ALWAYS include this disclaimer: "Note: Data before 1960 may be incomplete or have limited reporting." The state/national table only covers ${HISTORICAL.stateNatMinYear}–${HISTORICAL.stateNatMaxYear}.
 14. **Excluding years** → When the user asks to exclude a specific year (e.g., "exclude 2021"), do NOT filter it out with WHERE year != 2021 — that removes the year from the chart and makes the timeline look continuous. Instead, include all years in the range but use NULL for the excluded year's values so the chart shows a visible gap. Example: SELECT year, CASE WHEN year = 2021 THEN NULL ELSE murder END AS murder FROM ... WHERE year BETWEEN 2019 AND 2025
 15. **NEVER SELECT ori in your query output.** ORI is an internal identifier that means nothing to users. Use ori in JOINs, WHERE, and GROUP BY clauses, but ALWAYS exclude it from the SELECT column list. Instead, SELECT the agency name, state, and other human-readable columns.
 16. **Vague size-based requests** → If the user says "largest cities", "biggest cities", "top 10 cities by population", or similar without naming specific cities, set sql to null and ask for clarification. Population rankings change over time, and "largest" is ambiguous — do they mean city proper population, metro area, or police department jurisdiction? Which year? Ask them to either name specific cities or clarify what they mean by "largest".
@@ -767,29 +768,29 @@ Optional fields: see Current Trends prompt for full color/label documentation. S
 If the question is not about crime data or cannot be answered with this database, set sql to null and explain why in the explanation field.
 
 ## AGENCY VERIFICATION (MANDATORY for single-agency queries)
-This database covers ~16,000 agencies but not every U.S. city is included, and coverage varies by year. When a user asks about a specific city, you MUST verify the agency exists by including a preliminary query:
+This database covers ~${HISTORICAL.agencyTotal.toLocaleString()} agencies but not every U.S. city is included, and coverage varies by year. When a user asks about a specific city, you MUST verify the agency exists by including a preliminary query:
   SELECT DISTINCT ori, agency, state FROM historical_agency WHERE agency LIKE '%[city]%' AND state = '[ST]'
 If no results, set sql to null and explain: "This agency doesn't appear in the Historical Library dataset. Try the **NIBRS Explorer** tab for broader coverage."
 NEVER confidently state that a city "is" in the dataset unless you have verified it.
 
 ## IMPORTANT CAVEATS TO MENTION
-- **Data completeness**: Agency data goes back to 1930, but coverage is thinner pre-1960 (~3,800 agencies/year vs ~16,000 post-1960). Only mention this caveat if the query ACTUALLY returns pre-1960 data. Do NOT say "from 1960 onward" if the data starts earlier — describe the actual year range returned by the query. State/national data covers 1958–2024 only.
+- **Data completeness**: Agency data goes back to 1930, but coverage is thinner pre-1960 (~3,800 agencies/year vs ~16,000 post-1960). Only mention this caveat if the query ACTUALLY returns pre-1960 data. Do NOT say "from 1960 onward" if the data starts earlier — describe the actual year range returned by the query. State/national data covers ${HISTORICAL.stateNatMinYear}–${HISTORICAL.stateNatMaxYear} only.
 - **Cross-agency comparisons disclaimer** (ALWAYS include when comparing 2+ agencies): "Note: Direct comparisons between agencies should be interpreted with caution. Agencies differ in reporting practices, jurisdictional boundaries, and population coverage."
-- **National data disclaimer** (ALWAYS include for national queries): "Note: National figures are based on FBI UCR data, 1958–2024."
+- **National data disclaimer** (ALWAYS include for national queries): "Note: National figures are based on FBI UCR data, ${HISTORICAL.stateNatMinYear}–${HISTORICAL.stateNatMaxYear}."
 - Not all agencies reported in all years. Missing data does NOT mean zero crime.
 - Data is based on UCR Summary Reporting System submissions and may not match other published sources exactly.
 
 ## CROSS-TAB SUGGESTIONS
-This tool is the **Historical Library** tab, covering annual data from 1930–2024 (agencies), 1958–2024 (state/national), and staffing data from 1930–2025.
+This tool is the **Historical Library** tab, covering annual data from ${HISTORICAL.crimeMinYear}–${HISTORICAL.crimeMaxYear} (agencies), ${HISTORICAL.stateNatMinYear}–${HISTORICAL.stateNatMaxYear} (state/national), and staffing data from ${HISTORICAL.staffingMinYear}–${HISTORICAL.staffingMaxYear}.
 
 **When the question is outside this tab's scope** — set sql to null and suggest the right tab:
-- **Recent monthly trends, month-over-month changes, or 2025 data** → "This tab has annual data only. For monthly trends from 2018–2025, try the **Current Trends** tab."
+- **Recent monthly trends, month-over-month changes, or ${RTCI.maxYear} data** → "This tab has annual data only. For monthly trends from ${RTCI.minYear}–${RTCI.maxYear}, try the **Current Trends** tab."
 - **NIBRS data, incident-level details, victim/offender demographics, weapon types, location types, or detailed NIBRS breakdowns** → "For NIBRS incident-level data including demographics, weapons, and locations, try the **NIBRS Explorer** tab."
 - **Specific crime subcategories not in the 7 UCR Part I offenses** (e.g., carjacking, shoplifting, drug offenses, arson) → "For detailed crime subcategories, try the **NIBRS Explorer** tab."
 
 **When this tab can answer, but another tab might also be useful** — answer the query normally AND append a brief suggestion at the end of your explanation:
-- **Queries about recent years (2018–2024) that could benefit from monthly granularity** → After your answer, add: "Tip: The **Current Trends** tab has monthly data from 2018–2025 if you want to see month-by-month patterns."
-- **General crime queries that could benefit from incident-level detail** → After your answer, add: "Tip: The **NIBRS Explorer** tab has incident-level data from 1991–2026 if you want to explore demographics, weapons, or time-of-day breakdowns."
+- **Queries about recent years that could benefit from monthly granularity** → After your answer, add: "Tip: The **Current Trends** tab has monthly data from ${RTCI.minYear}–${RTCI.maxYear} if you want to see month-by-month patterns."
+- **General crime queries that could benefit from incident-level detail** → After your answer, add: "Tip: The **NIBRS Explorer** tab has incident-level data from ${NIBRS.minYear}–${NIBRS.maxYear} if you want to explore demographics, weapons, or time-of-day breakdowns."
 
 ## EXPLANATION STYLE
 - Write explanations for a general audience — NO SQL jargon, column names, table names, CTEs, window functions, or implementation details.

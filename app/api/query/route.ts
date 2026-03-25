@@ -4,6 +4,7 @@ import { translateToSql, getHistoricalSystemPrompt } from "@/lib/claude";
 import { validateAndSanitize } from "@/lib/sql-safety";
 import { buildChartConfig } from "@/lib/chart-config";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { RTCI } from "@/lib/dynamic-facts";
 import type { StreamEvent, ChartMeta } from "@/lib/types";
 
 function sseEvent(event: StreamEvent): string {
@@ -26,13 +27,13 @@ function getChartMeta(
 
     // Extract a year for population lookup
     const yearMatches = sql.match(/\byear\s*(?:=|>=)\s*(\d{4})/gi);
-    let popYear = 2024;
+    let popYear = RTCI.maxYear - 1;
     if (yearMatches) {
       const years = yearMatches.map((m) => parseInt(m.match(/\d{4}/)![0], 10));
       popYear = Math.max(...years);
     }
-    if (popYear > 2026) popYear = 2026;
-    if (popYear < 2017) popYear = 2017;
+    if (popYear > RTCI.popMaxYear) popYear = RTCI.popMaxYear;
+    if (popYear < RTCI.popMinYear) popYear = RTCI.popMinYear;
 
     // National queries — use agency_count from the most recent completed month
     if (sqlLower.includes("national_monthly")) {
@@ -553,7 +554,7 @@ export async function POST(req: NextRequest) {
           if (agencyName) {
             const similar = findSimilarAgencies(db, agencyName, isHistorical);
             if (similar.length === 0) {
-              emptyMsg = `"${agencyName}" is not in our dataset of ~700 agencies. Our data covers major U.S. cities and counties — not every jurisdiction is included. Try asking about a larger city or browsing national/state-level trends.`;
+              emptyMsg = `"${agencyName}" is not in our dataset of ~${RTCI.agencyCount} agencies. Our data covers major U.S. cities and counties — not every jurisdiction is included. Try asking about a larger city or browsing national/state-level trends.`;
             } else {
               const exactMatch = similar.find(
                 (s) =>
@@ -565,7 +566,7 @@ export async function POST(req: NextRequest) {
                 const suggestions = similar
                   .map((s) => `${s.agency}, ${s.state}`)
                   .join("; ");
-                emptyMsg = `"${agencyName}" wasn't found in our dataset. Did you mean: ${suggestions}? Our data covers ~700 major agencies across 48 states.`;
+                emptyMsg = `"${agencyName}" wasn't found in our dataset. Did you mean: ${suggestions}? Our data covers ~${RTCI.agencyCount} major agencies across ${RTCI.stateCount} states.`;
               }
             }
           } else {

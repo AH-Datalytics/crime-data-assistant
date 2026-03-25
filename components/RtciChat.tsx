@@ -20,6 +20,7 @@ interface RtciChatProps {
   heroAgencyCount?: number;
   heroPopulation?: number | null;
   historicalHeroData?: { year: number; murder_rate: number }[];
+  historicalMaxYear?: number;
   visible: boolean;
 }
 
@@ -65,7 +66,7 @@ async function readSSEStream(
   }
 }
 
-export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulation, historicalHeroData, visible }: RtciChatProps) {
+export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulation, historicalHeroData, historicalMaxYear, visible }: RtciChatProps) {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState("");
@@ -79,6 +80,7 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
   const [error, setError] = useState("");
 
   const chartRef = useRef<HTMLDivElement>(null);
+  const [showDatasetInfo, setShowDatasetInfo] = useState(false);
 
   // Extract past user questions from history
   const pastQueries = history.filter((h) => h.role === "user").map((h) => h.content);
@@ -202,7 +204,7 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder={mode === "historical" ? "Ask about historical crime trends (1930\u20132024)..." : "Ask a question about crime data..."}
+              placeholder={mode === "historical" ? `Ask about historical crime trends (1930–${new Date().getFullYear() - 1})...` : "Ask a question about crime data..."}
               className="flex-1 px-4 py-2.5 text-sm border border-[var(--border)] rounded-full focus:outline-none focus:border-[#475EC7] bg-[var(--surface)]"
               disabled={loading}
               autoFocus
@@ -219,6 +221,14 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
           <div className="flex flex-wrap gap-2 sm:gap-3 mt-3 items-center">
             {pastQueries.length > 0 && (
               <span className="text-[10px] uppercase tracking-wider text-[var(--muted)] mr-1">History:</span>
+            )}
+            {pastQueries.length > 0 && (
+              <button
+                onClick={() => { setHistory([]); setExplanation(""); setResponse(null); setError(""); }}
+                className="text-[10px] uppercase tracking-wider text-[var(--muted)] hover:text-red-500 cursor-pointer transition-colors ml-auto"
+              >
+                Clear
+              </button>
             )}
             {pastQueries.length > 0
               ? pastQueries.map((q, i) => (
@@ -237,11 +247,11 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
                     {(mode === "historical" ? [
                       "National murder trend, 2000\u20132020",
                       "National robbery clearance rate since 1960",
-                      "Chicago officers per year, 1930\u20132025",
+                      `Chicago officers per year, 1930–${new Date().getFullYear()}`,
                     ] : [
                       "National murder trend",
-                      "Robbery in Houston 2020\u20132024",
-                      "Top 10 auto theft rates in 2025",
+                      `Robbery in Houston 2020–${new Date().getFullYear() - 1}`,
+                      `Top 10 auto theft rates in ${new Date().getFullYear() - 1}`,
                     ]).map((q) => (
                       <button
                         key={q}
@@ -260,10 +270,36 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
       {/* Current Trends description line */}
       {showCurrentHero && (
         <div className="bg-white border-b border-[var(--border)] shrink-0">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2 text-center">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2 text-center relative">
             <span className="text-sm text-gray-400">
-              Monthly crime data with minimal lag from hundreds of agencies nationwide. View cities, states, and national trends month by month since 2017. Current data is preliminary and may not precisely match the formal annual data reported by the FBI shown in the <span className="font-semibold text-[#8B5E3C]">Historical Library</span>.
+              <span className="font-semibold text-[#475EC7]">Current Trends</span> shows monthly crime data with minimal lag from hundreds of agencies nationwide. Here you can view cities, states, and national trends month by month from 2017 to the present. Current data is preliminary and may not precisely match the formal annual data reported by the FBI shown in the <span className="font-semibold text-[#8B5E3C]">Historical Library</span>.
+              {" "}
+              <button
+                onClick={() => setShowDatasetInfo(!showDatasetInfo)}
+                className="text-[var(--accent)] hover:underline cursor-pointer font-medium"
+              >
+                What&apos;s the difference?
+              </button>
             </span>
+            {showDatasetInfo && (
+              <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 z-50 w-[90vw] max-w-lg bg-white border border-[var(--border)] rounded-lg shadow-lg p-4 text-left text-sm text-[var(--foreground)]">
+                <div className="flex justify-between items-start mb-3">
+                  <span className="font-semibold text-base">Current Trends vs. Historical Library</span>
+                  <button onClick={() => setShowDatasetInfo(false)} className="text-[var(--muted)] hover:text-[var(--foreground)] text-lg leading-none cursor-pointer">&times;</button>
+                </div>
+                <div className="space-y-3">
+                  <div>
+                    <span className="font-semibold text-[#475EC7]">Current Trends</span>
+                    <p className="text-gray-500 mt-0.5">A dataset that is updated monthly to show national trends as they develop from a sample of hundreds of agencies. Data available from 2017&ndash;present, may not precisely match official FBI data.</p>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-[#8B5E3C]">Historical Library</span>
+                    <p className="text-gray-500 mt-0.5">A dataset made up of annual data from 10,000+ agencies plus national and statewide estimates. This dataset is derived from FBI UCR official data with some data going back to 1930. Authoritative but delayed.</p>
+                  </div>
+                  <p className="text-xs text-gray-400">Numbers between the two may differ for the same city and year because of different reporting timelines, methodologies, and agency coverage.</p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -271,10 +307,36 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
       {/* Historical description line — always visible when no query active */}
       {mode === "historical" && !explanation && !loading && !error && !response && (
         <div className="bg-white border-b border-[var(--border)] shrink-0">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2 text-center">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2 text-center relative">
             <span className="text-sm text-gray-400">
-              Annual crime, clearance, and staffing data officially published by the FBI. Includes agency-level crime counts, staffing levels, and clearance rates to <span className="font-semibold text-[#8B5E3C]">1930</span>, state and national trends to <span className="font-semibold text-[#8B5E3C]">1958</span>. Ask about any U.S. city or county&apos;s crime history across nearly a century. See the <span className="font-semibold text-[#475EC7]">Current Trends</span> tab for a look at today&apos;s crime trends.
+              The <span className="font-semibold text-[#8B5E3C]">Historical Library</span> shows annual crime, clearance, and staffing data that has been officially published by the FBI. Includes agency-level crime counts, staffing levels, and clearance rates from 1930 until {historicalMaxYear || new Date().getFullYear() - 1} as well as state and national trends since 1958. See <span className="font-semibold text-[#475EC7]">Current Trends</span> for a look at today&apos;s crime trends.
+              {" "}
+              <button
+                onClick={() => setShowDatasetInfo(!showDatasetInfo)}
+                className="text-[var(--accent)] hover:underline cursor-pointer font-medium"
+              >
+                What&apos;s the difference?
+              </button>
             </span>
+            {showDatasetInfo && (
+              <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 z-50 w-[90vw] max-w-lg bg-white border border-[var(--border)] rounded-lg shadow-lg p-4 text-left text-sm text-[var(--foreground)]">
+                <div className="flex justify-between items-start mb-3">
+                  <span className="font-semibold text-base">Current Trends vs. Historical Library</span>
+                  <button onClick={() => setShowDatasetInfo(false)} className="text-[var(--muted)] hover:text-[var(--foreground)] text-lg leading-none cursor-pointer">&times;</button>
+                </div>
+                <div className="space-y-3">
+                  <div>
+                    <span className="font-semibold text-[#475EC7]">Current Trends</span>
+                    <p className="text-gray-500 mt-0.5">A dataset that is updated monthly to show national trends as they develop from a sample of hundreds of agencies. Data available from 2017&ndash;present, may not precisely match official FBI data.</p>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-[#8B5E3C]">Historical Library</span>
+                    <p className="text-gray-500 mt-0.5">A dataset made up of annual data from 10,000+ agencies plus national and statewide estimates. This dataset is derived from FBI UCR official data with some data going back to 1930. Authoritative but delayed.</p>
+                  </div>
+                  <p className="text-xs text-gray-400">Numbers between the two may differ for the same city and year because of different reporting timelines, methodologies, and agency coverage.</p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

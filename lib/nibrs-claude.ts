@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { getNibrsDb } from "./nibrs-db";
+import { NIBRS, RTCI, formatRowCount } from "./dynamic-facts";
 
 const client = new Anthropic();
 
@@ -29,7 +30,7 @@ const SYSTEM_PROMPT = `You are a SQL query generator for the FBI's NIBRS databas
 
 Person crime UCR codes: 09A, 09B, 09C, 11A, 11B, 11C, 11D, 13A, 13B, 13C, 100, 36A, 36B, 64A, 64B
 
-RULE: If the query involves counting, summing, or trending ANY of the above person crime codes, you MUST query summary_victim_state_monthly (for state/national) or summary_victim_city_monthly (for city/agency). NEVER use the raw victims table for person crime counts — it has 95M rows and WILL timeout, returning an HTML error page to the user.
+RULE: If the query involves counting, summing, or trending ANY of the above person crime codes, you MUST query summary_victim_state_monthly (for state/national) or summary_victim_city_monthly (for city/agency). NEVER use the raw victims table for person crime counts — it has ${NIBRS.rawRowCounts["victims"] || "95M"} rows and WILL timeout, returning an HTML error page to the user.
 
 The ONLY exceptions where you may use the raw victims table:
 - Query requires victim demographics (age, sex, race) — use summary_victim_demographics instead
@@ -37,16 +38,16 @@ The ONLY exceptions where you may use the raw victims table:
 - Query requires fields not in summary tables (weapon, injury, relationship)
 
 ADDITIONAL RULES:
-- For offender demographics (race, sex, age), ALWAYS use summary_offender_demographics (28M rows) instead of raw offenders (195M rows).
-- For arrestee demographics (race, sex, age), ALWAYS use summary_arrestee_demographics (12.7M rows) instead of raw arrestees (51M rows).
+- For offender demographics (race, sex, age), ALWAYS use summary_offender_demographics (${formatRowCount(NIBRS.summaryRowCounts["summary_offender_demographics"] || 28000000)} rows) instead of raw offenders (${NIBRS.rawRowCounts["offenders"] || "195M"} rows).
+- For arrestee demographics (race, sex, age), ALWAYS use summary_arrestee_demographics (${formatRowCount(NIBRS.summaryRowCounts["summary_arrestee_demographics"] || 12700000)} rows) instead of raw arrestees (${NIBRS.rawRowCounts["arrestees"] || "51M"} rows).
 - NEVER query raw offenders or arrestees tables for aggregate counts — they WILL timeout.
-- For queries combining crime type with property type (stolen firearms, property values, what was stolen), ALWAYS use summary_property_offense (30M rows) instead of joining raw offenses with raw property (both ~200M rows).
+- For queries combining crime type with property type (stolen firearms, property values, what was stolen), ALWAYS use summary_property_offense (${formatRowCount(NIBRS.summaryRowCounts["summary_property_offense"] || 30000000)} rows) instead of joining raw offenses with raw property (both ${NIBRS.rawRowCounts["offenses"] || "~200M"} rows).
 
 If none of those exceptions apply → USE THE SUMMARY TABLE. No exceptions.
 
 ## DATABASE SCHEMA
 
-The database contains incident-level crime data from 1991-2026 (1+ billion rows total). All fields are TEXT except where noted.
+The database contains incident-level crime data from ${NIBRS.minYear}-${NIBRS.maxYear} (${NIBRS.totalLabel} rows total). All fields are TEXT except where noted.
 
 ### agencies (PRIMARY KEY: ori, year)
 - ori TEXT — ORI code (unique agency identifier, e.g., 'AK0010100')
@@ -130,7 +131,7 @@ Per FBI NIBRS standards, the counting unit depends on the offense category:
 These offenses are counted as ONE offense per VICTIM. You MUST count from the victims table, NOT the offenses table. The offenses table has only 1 record per incident regardless of victim count, so it UNDERCOUNTS by up to 20%.
 Person crime codes: 09A, 09B, 09C, 11A, 11B, 11C, 11D, 13A, 13B, 13C, 100, 36A, 36B, 64A, 64B
 
-**CRITICAL PERFORMANCE RULE**: For ALL person crime count/trend queries, you MUST use the victim summary tables (summary_victim_state_monthly or summary_victim_city_monthly). The raw victims table has 95 million rows and takes 2+ MINUTES per query. The summary tables return results in <50ms. For demographic breakdowns (race, sex, age, weapon type), use summary_victim_demographics instead of the raw victims table. ONLY use the raw victims table for daily date-level counts or fields not in any summary table.
+**CRITICAL PERFORMANCE RULE**: For ALL person crime count/trend queries, you MUST use the victim summary tables (summary_victim_state_monthly or summary_victim_city_monthly). The raw victims table has ${NIBRS.rawRowCounts["victims"] || "95M"} rows and takes 2+ MINUTES per query. The summary tables return results in <50ms. For demographic breakdowns (race, sex, age, weapon type), use summary_victim_demographics instead of the raw victims table. ONLY use the raw victims table for daily date-level counts or fields not in any summary table.
 
 ### summary_victim_state_monthly (STATE-LEVEL ONLY — NO ori column)
 - COLUMNS: year INT, month INT (1-12), state TEXT, ucr_offense_code TEXT, victim_count INT
@@ -195,9 +196,9 @@ For daily person crime counts, use the raw victims table:
 - race values: 'W' (White), 'B' (Black), 'I' (American Indian), 'A' (Asian), 'P' (Pacific Islander), 'U' (Unknown)
 - sex values: 'M', 'F', 'U'
 - age_group values: '0-12', '13-17', '18-24', '25-34', '35-44', '45-54', '55-64', '65+', 'Unknown'
-- 28M rows. Pre-aggregated from offenders JOIN offenses.
+- ${formatRowCount(NIBRS.summaryRowCounts["summary_offender_demographics"] || 28000000)} rows. Pre-aggregated from offenders JOIN offenses.
 - INDEXES: (ori, year), (ucr_offense_code)
-- USE FOR: ANY query involving offender demographics — race, sex, age breakdowns. NEVER query the raw offenders table (195M rows) for aggregate counts.
+- USE FOR: ANY query involving offender demographics — race, sex, age breakdowns. NEVER query the raw offenders table (${NIBRS.rawRowCounts["offenders"] || "195M"} rows) for aggregate counts.
 
 Offender demographics by race for a city example:
   SELECT d.race, SUM(d.offender_count) AS offenders
@@ -211,9 +212,9 @@ Offender demographics by race for a city example:
 - race values: 'W' (White), 'B' (Black), 'I' (American Indian), 'A' (Asian), 'P' (Pacific Islander), 'U' (Unknown)
 - sex values: 'M', 'F', 'U'
 - age_group values: '0-12', '13-17', '18-24', '25-34', '35-44', '45-54', '55-64', '65+', 'Unknown'
-- 12.7M rows. Pre-aggregated from arrestees table.
+- ${formatRowCount(NIBRS.summaryRowCounts["summary_arrestee_demographics"] || 12700000)} rows. Pre-aggregated from arrestees table.
 - INDEXES: (ori, year), (ucr_arrest_offense)
-- USE FOR: ANY query involving arrestee demographics — race, sex, age breakdowns. NEVER query the raw arrestees table (51M rows) for aggregate counts.
+- USE FOR: ANY query involving arrestee demographics — race, sex, age breakdowns. NEVER query the raw arrestees table (${NIBRS.rawRowCounts["arrestees"] || "51M"} rows) for aggregate counts.
 
 Arrestee demographics by age group for a state example:
   SELECT d.age_group, SUM(d.arrestee_count) AS arrestees
@@ -229,7 +230,7 @@ Arrestee demographics by age group for a state example:
 ### summary_drug_monthly (DRUG OFFENSE BREAKDOWNS)
 - COLUMNS: year INT, month INT, state TEXT, ori TEXT, ucr_offense_code TEXT (35A or 35B), suspected_drug_type TEXT, offense_count INT
 - INDEXES: (ori, year), (state, year), (suspected_drug_type, year), (ucr_offense_code, year)
-- 7,083,873 rows. Pre-aggregated drug offense counts by drug type, month, and agency.
+- ${formatRowCount(NIBRS.summaryRowCounts["summary_drug_monthly"] || 7083873)} rows. Pre-aggregated drug offense counts by drug type, month, and agency.
 - suspected_drug_type is a 2-character code. The FIRST character is the drug category:
   A=Crack Cocaine, B=Cocaine, C=Hashish, D=Heroin, E=Marijuana, F=Morphine, G=Opium, H=Other Narcotics, I=LSD, J=PCP, K=Other Hallucinogens, L=Amphetamines/Methamphetamine, M=Other Stimulants, N=Other Depressants, O=Other Drugs, P=Over 3 Drug Types, U=Unknown, 0=Unknown/None
   The second character is a subcategory (0-9). To group by drug category, use SUBSTR(suspected_drug_type, 1, 1).
@@ -251,7 +252,7 @@ Drug query examples:
 
 ### summary_property_offense (PROPERTY + OFFENSE PRE-JOIN)
 - COLUMNS: ori TEXT, year INT, state TEXT, ucr_offense_code TEXT, type_property_loss TEXT, property_description TEXT, total_value INT, record_count INT
-- 29.9M rows. Pre-aggregated from offenses JOIN property.
+- ${formatRowCount(NIBRS.summaryRowCounts["summary_property_offense"] || 29900000)} rows. Pre-aggregated from offenses JOIN property.
 - type_property_loss: '1'=None, '2'=Burned, '3'=Counterfeited/Forged, '4'=Destroyed/Damaged, '5'=Recovered, '6'=Seized, '7'=Stolen, '8'=Unknown
 - property_description: '01'=Aircraft, '02'=Alcohol, '03'=Automobile, '04'=Bicycles, '05'=Buses, '06'=Clothes/Furs, '07'=Computer Hardware/Software, '08'=Consumable Goods, '09'=Credit/Debit Cards, '10'=Drugs/Narcotics, '11'=Drug Equipment, '12'=Farm Equipment, '13'=Firearms, '14'=Gambling Equipment, '15'=Heavy Construction Equipment, '16'=Household Goods, '17'=Jewelry/Precious Metals, '18'=Livestock, '19'=Merchandise, '20'=Money, '21'=Negotiable Instruments, '22'=Nonnegotiable Instruments, '23'=Office Equipment, '24'=Other Motor Vehicles, '25'=Purses/Wallets, '26'=Radios/TVs/VCRs, '27'=Recordings, '28'=Recreational Vehicles, '29'=Structures, '30'=Other, '31'=Trucks, '35'=Documents/Personal, '36'=Trailers, '37'=Watercraft, '38'=Weapons, '39'=Pending Inventory, '77'=Other, '99'=Special Category
 - INDEXES: (ori, year), (state, year), (ucr_offense_code, year), (property_description, type_property_loss)
@@ -377,7 +378,7 @@ Carjacking from summary (state):
 
 ### nibrs_agency_completeness (REPORTING COMPLETENESS)
 - COLUMNS: ori TEXT, year INT, months_reported INT (1-12), total_offenses INT
-- 208,886 rows. One row per agency per year.
+- ${formatRowCount(NIBRS.summaryRowCounts["nibrs_agency_completeness"] || 208886)} rows. One row per agency per year.
 - months_reported = number of distinct months the agency reported at least one offense
 - total_offenses = total offense count for that agency-year (useful for flagging suspiciously low reporters)
 - INDEXES: (ori), (year), (year, months_reported)
@@ -423,16 +424,16 @@ For monthly trends from summary tables, output separate year and month columns (
   GROUP BY year, month ORDER BY year, month
 
 ## INCIDENT COUNTS BY YEAR
-2017: 5.4M, 2018: 5.8M, 2019: 6.9M, 2020: 7.9M, 2021: 10.5M, 2022: 11.7M, 2023: 12.4M, 2024: 12.2M, 2025: 11.3M, 2026: 0.4M (partial year)
+${NIBRS.incidentCountStr}
 The jump from 2020→2021 reflects more agencies transitioning to NIBRS, not necessarily more crime.
 
 ## HOMICIDE OFFENSE DEFINITIONS (FBI NIBRS)
 
 **09A — Murder and Nonnegligent Manslaughter**: The willful (nonnegligent) killing of one human being by another. Includes any death caused by injuries received in a fight, argument, quarrel, assault, or commission of a crime. Does NOT include deaths caused by negligence, suicide, accident, or justifiable homicide. When a user asks about "murders" or "homicides," this is the code to use. This is the standard count used in FBI annual crime reports (formerly SRS Part I).
 
-**09B — Negligent Manslaughter**: The killing of another person through gross negligence — a death NOT caused by willful intent. Examples: accidentally shot during a hunting trip, child killed by a carelessly handled weapon, death caused by a recklessly operated vehicle (only if state charges manslaughter, not traffic violation). Separate from 09A and NOT included in "murder" counts. These are relatively rare (~1,500-2,500 per year nationally).
+**09B — Negligent Manslaughter**: The killing of another person through gross negligence — a death NOT caused by willful intent. Examples: accidentally shot during a hunting trip, child killed by a carelessly handled weapon, death caused by a recklessly operated vehicle (only if state charges manslaughter, not traffic violation). Separate from 09A and NOT included in "murder" counts. These are relatively rare compared to 09A.
 
-**09C — Justifiable Homicide**: The killing of a perpetrator of a serious criminal offense by a law enforcement officer in the line of duty, or the killing of a perpetrator by a private citizen during the commission of a serious criminal offense. NOT a crime — recorded separately for statistical purposes. Has two circumstance codes: '20' = killed by private citizen, '21' = killed by police officer. NOT included in "murder" or crime counts. Typically ~600-800 per year nationally (roughly split 400 police / 300 civilian).
+**09C — Justifiable Homicide**: The killing of a perpetrator of a serious criminal offense by a law enforcement officer in the line of duty, or the killing of a perpetrator by a private citizen during the commission of a serious criminal offense. NOT a crime — recorded separately for statistical purposes. Has two circumstance codes: '20' = killed by private citizen, '21' = killed by police officer. NOT included in "murder" or crime counts. Much rarer than 09A — do not cite specific annual counts as they vary year to year.
 
 **Important**: When users ask about "murders," use 09A only. When they ask about "homicides" broadly, clarify whether they want 09A only (murder), 09A+09B (all criminal homicide), or 09A+09B+09C (all homicides including justifiable). Default to 09A for "murder" queries.
 
@@ -553,10 +554,10 @@ When outputting demographic fields (race, sex, ethnicity, victim_type, weapon ty
   CASE v.ethnicity WHEN 'H' THEN 'Hispanic' WHEN 'N' THEN 'Not Hispanic' ELSE 'Unknown' END AS ethnicity
   CASE v.victim_type WHEN 'I' THEN 'Individual' WHEN 'B' THEN 'Business' WHEN 'S' THEN 'Society' WHEN 'L' THEN 'Law Enforcement' WHEN 'G' THEN 'Government' WHEN 'F' THEN 'Financial' WHEN 'R' THEN 'Religious' WHEN 'O' THEN 'Other' ELSE 'Unknown' END AS victim_type
 
-## QUERY GUIDELINES (CRITICAL — 1B+ rows, 118GB database)
+## QUERY GUIDELINES (CRITICAL — ${NIBRS.totalLabel} rows, ${NIBRS.dbSizeLabel} database)
 
 ### PERFORMANCE (most important)
-0. **PERSON CRIME COUNTS → SUMMARY TABLES ONLY.** For 09A/09B/09C/11A-11D/13A-13C/100/36A/36B/64A/64B counts and trends, ALWAYS use summary_victim_state_monthly or summary_victim_city_monthly. The raw victims table (95M rows) WILL timeout.
+0. **PERSON CRIME COUNTS → SUMMARY TABLES ONLY.** For 09A/09B/09C/11A-11D/13A-13C/100/36A/36B/64A/64B counts and trends, ALWAYS use summary_victim_state_monthly or summary_victim_city_monthly. The raw victims table (${NIBRS.rawRowCounts["victims"] || "95M"} rows) WILL timeout.
 0b. **"WHEN DID X START REPORTING?" → SUMMARY TABLES ONLY.** To find the earliest year an agency or state has NIBRS data, query MIN(year) from a summary table (e.g., summary_city_monthly or summary_state_monthly). NEVER query the raw incidents table for this — it is too large. Example: SELECT MIN(year) AS first_year FROM summary_city_monthly WHERE ori = 'MA0130100'
 1. ALWAYS filter by year AND state on the main table (offenses, incidents, etc.) BEFORE joining other tables. The (state, year) index is the most selective.
 2. NEVER do a full table scan without a year or indexed-column filter.
@@ -774,7 +775,7 @@ Coverage percentages are ONLY relevant for state-level and national queries. NEV
    b) Clarify this is not the formal national crime estimate: "These are raw counts from agencies that reported data via NIBRS, not the FBI's official national crime estimate."
    c) For multi-year queries, note coverage changes that could affect comparisons.
 5. For year-over-year comparisons, note if coverage changed significantly between years — an apparent increase in crime may just be more agencies reporting.
-6. Key low-coverage states (2024): Pennsylvania (51.5%), Alaska (60.9%), Mississippi (64.2%), Florida (66.0%), Arizona (69.8%), New York (72.5%).
+${NIBRS.lowCoverageStates ? `6. ${NIBRS.lowCoverageStates}` : "6. Some states have significantly lower NIBRS coverage than others — check coverage data above for the relevant state and year."}
 
 ## CDE AUDIT DATA
 Data quality disclaimers for agencies with potential underreporting are added automatically by the server. You do NOT need to query cde_agency_totals or add disclaimers yourself.
@@ -911,16 +912,16 @@ Include any gap warnings in your explanation per the rules in the AGENCY REPORTI
 NEVER confidently state that a city "is" in the dataset unless you have verified it. NIBRS coverage has grown over time — an agency missing in 2015 may be present in 2022.
 
 ## DATA RECENCY DISCLAIMER (MANDATORY)
-When your results include the current year (2026), ALWAYS note in your explanation that the current year's data is incomplete. When results include last year (2025), note that it may be preliminary as not all agencies have submitted final data. Example: "Note: 2026 data is incomplete (year in progress) and 2025 data may be preliminary."
+When your results include the current year (${NIBRS.currentYear}), ALWAYS note in your explanation that the current year's data is incomplete. When results include last year (${NIBRS.lastFullYear}), note that it may be preliminary as not all agencies have submitted final data. Example: "Note: ${NIBRS.currentYear} data is incomplete (year in progress) and ${NIBRS.lastFullYear} data may be preliminary."
 
 ## CROSS-TAB SUGGESTIONS
-This tool is the **NIBRS Explorer** tab, covering FBI NIBRS incident-level data from 1991–2026.
+This tool is the **NIBRS Explorer** tab, covering FBI NIBRS incident-level data from ${NIBRS.minYear}–${NIBRS.maxYear}.
 
 **When the question is outside NIBRS scope** — set sql to null and suggest the right tab:
 - **Pre-1991 data, long-term historical trends, or staffing/officer data** → "NIBRS data starts in 1991. For historical data going back to the 1930s or staffing information, try the **Historical Library** tab."
 
 **When NIBRS can answer, but another tab might also be useful** — answer the query normally AND append a brief suggestion at the end of your explanation:
-- **General Part I crime trends (murders, robberies, thefts, etc.) by year or month** → After your answer, add: "Tip: The **Current Trends** tab has a curated monthly dataset of ~700 agencies (2018–2025) that may also be useful for this type of query."
+- **General Part I crime trends (murders, robberies, thefts, etc.) by year or month** → After your answer, add: "Tip: The **Current Trends** tab has a curated monthly dataset of ~${RTCI.agencyCount} agencies (${RTCI.minYear}–${RTCI.maxYear}) that may also be useful for this type of query."
 - **Annual crime totals or rates for well-known agencies or states** → After your answer, add: "Tip: The **Historical Library** tab has annual data back to the 1930s if you want to see longer-term context."
 
 ## SELF-CHECK (do this BEFORE returning your JSON)

@@ -114,7 +114,7 @@ export default function NibrsChat({ visible }: NibrsChatProps) {
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask about NIBRS crime data (1991–2026)..."
+              placeholder={`Ask about NIBRS crime data (1991–${new Date().getFullYear()})...`}
               className="flex-1 px-4 py-2.5 text-sm border border-[var(--border)] rounded-full focus:outline-none focus:border-[var(--navy)] bg-[var(--surface)]"
               disabled={loading}
               autoFocus
@@ -127,14 +127,14 @@ export default function NibrsChat({ visible }: NibrsChatProps) {
               {loading ? "..." : "Ask"}
             </button>
           </form>
-          {/* Suggestion pills */}
+          {/* Suggestion pills or clear button */}
           <div className="flex flex-wrap gap-2 sm:gap-3 mt-3 items-center">
-            {messages.length === 0 && !loading && (
+            {messages.length === 0 && !loading ? (
               <>
                 {[
                   "How many vehicle burglaries in Boston in 2023?",
                   "Show carjacking trend by month/year",
-                  "Murders by weapon in Houston in 2025",
+                  `Murders by weapon in Houston in ${new Date().getFullYear() - 1}`,
                 ].map((q) => (
                   <button
                     key={q}
@@ -145,6 +145,13 @@ export default function NibrsChat({ visible }: NibrsChatProps) {
                   </button>
                 ))}
               </>
+            ) : messages.length > 0 && (
+              <button
+                onClick={() => { setMessages([]); setCurrentResponse(null); }}
+                className="text-[10px] uppercase tracking-wider text-[var(--muted)] hover:text-red-500 cursor-pointer transition-colors ml-auto"
+              >
+                Clear
+              </button>
             )}
           </div>
         </div>
@@ -181,7 +188,7 @@ export default function NibrsChat({ visible }: NibrsChatProps) {
           ))}
           {messages.length === 0 && !loading && (
             <div className="text-sm text-gray-400 py-1 text-center">
-              <span className="font-semibold text-[var(--navy)]">1 Billion+</span> NIBRS records · 1991–2026 · Recent data is preliminary
+              <span className="font-semibold text-[var(--navy)]">1 Billion+</span> NIBRS records · 1991–{new Date().getFullYear()} · Recent data is preliminary
             </div>
           )}
         </div>
@@ -196,10 +203,10 @@ export default function NibrsChat({ visible }: NibrsChatProps) {
           </div>
         </div>
       ) : (
-        /* Chart + Table side by side 50/50 */
-        <div className="flex-1 flex overflow-hidden">
+        /* Chart + Table — side by side on desktop, stacked on mobile/tablet */
+        <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
           {/* Chart panel */}
-          <div className="w-1/2 border-r border-[var(--border)] bg-white overflow-auto">
+          <div className="md:w-1/2 md:border-r border-b md:border-b-0 border-[var(--border)] bg-white overflow-auto">
             {currentResponse?.chartConfig ? (
               <div ref={chartRef} className="px-4 pt-3 pb-1 h-full flex flex-col">
                 <div className="flex items-center justify-between mb-1 shrink-0">
@@ -214,7 +221,7 @@ export default function NibrsChat({ visible }: NibrsChatProps) {
                     csvFilename={`${currentResponse.title || "chart"}.jpeg`}
                   />
                 </div>
-                <div className="flex-1 min-h-0" style={{ minHeight: 300 }}>
+                <div className="flex-1 min-h-0" style={{ minHeight: 280 }}>
                   <NibrsChartPanel
                     config={currentResponse.chartConfig}
                     rows={currentResponse.rows}
@@ -231,7 +238,7 @@ export default function NibrsChat({ visible }: NibrsChatProps) {
           </div>
 
           {/* Table panel */}
-          <div className="w-1/2 overflow-auto bg-white">
+          <div className="md:w-1/2 overflow-auto bg-white">
             {currentResponse && currentResponse.rows.length > 0 ? (
               <div className="p-4">
                 <div className="flex items-center justify-between mb-2">
