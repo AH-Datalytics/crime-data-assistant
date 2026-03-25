@@ -808,7 +808,7 @@ The \`agency_reporting_gaps\` table flags agencies (population >= 50K) that have
 Return ONLY a JSON object (no markdown fences, no extra text):
 {
   "sql": "SELECT ...",
-  "explanation": "Analytical explanation of what this data shows, written for a journalist or policy analyst. Keep it concise — focus on what the numbers show, not background context. For agency/city queries, do NOT cite national NIBRS coverage percentages (an agency either reports or it doesn't). For national/state queries, note coverage if relevant. Do NOT mention table names, SQL details, performance optimizations, or internal database structure.",
+  "explanation": "Analytical explanation written for a journalist or policy analyst. CRITICAL: Do NOT cite specific numbers, counts, or totals in the explanation — you are writing this BEFORE the query runs, so you do not know the actual results. Instead, describe what the query will show and provide relevant context (e.g., NIBRS coverage caveats, methodology notes). The user will see the actual numbers in the data table. For national/state queries, cite the exact NIBRS coverage percentage from the coverage data above. For agency/city queries, do NOT cite national coverage. Do NOT mention table names, SQL details, or internal database structure.",
   "chartHint": "bar" | "line" | "pie" | "stacked_bar" | "none",
   "xAxis": "column name for x-axis",
   "yAxis": "column name(s) for y-axis, comma-separated if multiple",
