@@ -5,6 +5,7 @@ import { validateAndSanitize } from "@/lib/sql-safety";
 import { buildChartConfig } from "@/lib/chart-config";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { RTCI } from "@/lib/dynamic-facts";
+import { generateExplanation } from "@/lib/explain";
 import type { StreamEvent, ChartMeta } from "@/lib/types";
 
 function sseEvent(event: StreamEvent): string {
@@ -375,17 +376,6 @@ export async function POST(req: NextRequest) {
           }
         }
 
-        // Send explanation immediately while SQL runs
-        controller.enqueue(
-          encoder.encode(
-            sseEvent({
-              type: "explanation",
-              text: claude.explanation,
-              title: claude.title || "",
-            })
-          )
-        );
-
         controller.enqueue(
           encoder.encode(
             sseEvent({ type: "status", text: "Running query..." })
@@ -661,13 +651,33 @@ export async function POST(req: NextRequest) {
         const chartMeta = isHistorical ? getHistoricalChartMeta(db, sql) : getChartMeta(db, sql);
         const truncated = rows.length >= 1000;
 
+        // Step 5b: Generate post-query explanation with actual results
+        controller.enqueue(
+          encoder.encode(
+            sseEvent({ type: "status", text: "Preparing results..." })
+          )
+        );
+        // Extract any "Note:" disclaimers from the pre-query explanation to preserve them
+        const disclaimerMatches = claude.explanation.match(/Note:.*$/gm) || [];
+        const postExplanation = await generateExplanation({
+          question,
+          columns,
+          rows,
+          rowCount: rows.length,
+          disclaimers: disclaimerMatches.join("\n"),
+          preQueryExplanation: claude.explanation,
+          tab: tab as "current" | "historical",
+        });
+        claude.explanation = postExplanation;
+
         // Log success
+        const totalMs2 = Date.now() - totalStart;
         logQuery(
           question,
           sql,
           rows.length,
           null,
-          totalMs,
+          totalMs2,
           claude.explanation,
           tab
         );

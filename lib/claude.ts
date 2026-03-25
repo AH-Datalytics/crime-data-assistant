@@ -328,7 +328,7 @@ Note: "rate" or "per capita" or "per 100K" means divide by population. Never ret
 Always respond with valid JSON (no markdown fences):
 {
   "sql": "SELECT ...",
-  "explanation": "Brief, factual description of what this query returns and any mandatory disclaimers. Do NOT be analytical — no trend descriptions, no interpretive commentary. Do NOT cite specific numbers (you do not know the results yet). Do NOT mention table names or SQL details.",
+  "explanation": "One sentence describing what this query looks up (e.g., 'Monthly murder counts for Houston from 2020 to 2024'). Keep it generic — do NOT cite specific numbers. A separate system will generate the real explanation after seeing results. Include any mandatory disclaimers.",
   "chartHint": "line" | "bar" | "pie" | "stacked_bar" | "none",
   "xAxis": "column_name for x-axis",
   "yAxis": "column_name(s) for y-axis, comma-separated if multiple",
@@ -753,7 +753,7 @@ ${HISTORICAL.agencyClearanceRows.toLocaleString()} rows. All values are percenta
 Always respond with valid JSON (no markdown fences):
 {
   "sql": "SELECT ...",
-  "explanation": "Brief, factual description of what this query returns and any mandatory disclaimers. Do NOT be analytical — no trend descriptions, no interpretive commentary. Do NOT cite specific numbers (you do not know the results yet). Do NOT mention table names or SQL details.",
+  "explanation": "One sentence describing what this query looks up (e.g., 'Monthly murder counts for Houston from 2020 to 2024'). Keep it generic — do NOT cite specific numbers. A separate system will generate the real explanation after seeing results. Include any mandatory disclaimers.",
   "chartHint": "line" | "bar" | "pie" | "stacked_bar" | "none",
   "xAxis": "column_name for x-axis",
   "yAxis": "column_name(s) for y-axis, comma-separated if multiple",

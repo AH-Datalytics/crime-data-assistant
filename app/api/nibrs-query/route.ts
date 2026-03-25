@@ -3,6 +3,7 @@ import { getNibrsDb, executeWithTimeout, logNibrsQuery } from "@/lib/nibrs-db";
 import { translateToSql } from "@/lib/nibrs-claude";
 import { validateAndSanitize } from "@/lib/sql-safety";
 import { buildNibrsChartConfig } from "@/lib/nibrs-chart-config";
+import { generateExplanation } from "@/lib/explain";
 import type { QueryResponse, QueryError } from "@/lib/types";
 
 const CORS_HEADERS = {
@@ -318,8 +319,29 @@ export async function POST(req: NextRequest) {
       console.log(`[nibrs][cde-check] Error:`, cdeErr);
     }
 
+    // Step 4b: Generate post-query explanation (with actual results + CDE disclaimers)
+    // Extract any CDE disclaimers that were appended after the original explanation
+    const cdeDisclaimers = explanation.slice(claude.explanation.length).trim();
+    const explainStart = Date.now();
+    const postExplanation = await generateExplanation({
+      question,
+      columns,
+      rows,
+      rowCount: rows.length,
+      disclaimers: cdeDisclaimers,
+      preQueryExplanation: explanation,
+      tab: "nibrs",
+    });
+    explanation = postExplanation;
+    // Re-append CDE disclaimers if the post-query explanation didn't include them
+    if (cdeDisclaimers && !explanation.includes("underreporting")) {
+      explanation += "\n\n" + cdeDisclaimers;
+    }
+    const explainMs = Date.now() - explainStart;
+    console.log(`[nibrs][timing] Post-query explanation: ${explainMs}ms`);
+
     // Log success (after CDE check so explanation includes any disclaimers)
-    logNibrsQuery(question, sql, rows.length, null, claudeMs + executionTimeMs, explanation);
+    logNibrsQuery(question, sql, rows.length, null, claudeMs + executionTimeMs + explainMs, explanation);
 
     // Step 5: Build chart config
     const chartConfig = buildNibrsChartConfig(claude, columns, rows);

@@ -809,7 +809,7 @@ The \`agency_reporting_gaps\` table flags agencies (population >= 50K) that have
 Return ONLY a JSON object (no markdown fences, no extra text):
 {
   "sql": "SELECT ...",
-  "explanation": "Brief, factual description of what this query returns. Do NOT be analytical — no trend descriptions, no interpretive commentary, no 'this shows that...' language. Just state what data is being returned and any mandatory disclaimers (e.g., NIBRS coverage percentage for national/state queries). CRITICAL: Do NOT cite specific numbers, counts, or totals — you are writing this BEFORE the query runs, so you do not know the actual results. The user will see the numbers in the data table. Do NOT mention table names, SQL details, or internal database structure.",
+  "explanation": "One sentence describing what this query looks up (e.g., 'Annual murder victim counts in Texas from 2020 to 2023'). Keep it generic — do NOT cite specific numbers, counts, or totals. A separate system will generate the real explanation after seeing results. Include any mandatory NIBRS coverage disclaimers for national/state queries.",
   "chartHint": "bar" | "line" | "pie" | "stacked_bar" | "none",
   "xAxis": "column name for x-axis",
   "yAxis": "column name(s) for y-axis, comma-separated if multiple",
