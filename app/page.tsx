@@ -60,15 +60,27 @@ function getHistoricalHeroData() {
   }
 }
 
+function getHistoricalMaxYear() {
+  try {
+    const db = getDb();
+    const row = db.prepare("SELECT MAX(year) as y FROM historical_agency_crime").get() as { y: number };
+    return row?.y ?? 2024;
+  } catch {
+    return 2024;
+  }
+}
+
 export default function Home() {
   const { rows, agencyCount, population } = getHeroData();
   const historicalHeroData = getHistoricalHeroData();
+  const historicalMaxYear = getHistoricalMaxYear();
   return (
     <ChatInterface
       heroData={rows}
       heroAgencyCount={agencyCount}
       heroPopulation={population}
       historicalHeroData={historicalHeroData}
+      historicalMaxYear={historicalMaxYear}
     />
   );
 }

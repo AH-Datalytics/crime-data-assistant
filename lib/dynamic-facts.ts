@@ -150,15 +150,15 @@ function loadNibrsFacts() {
     // Coverage data (already loaded separately, but also grab low-coverage states)
     let lowCoverageStates = "";
     try {
-      // Get the latest year with coverage data
-      const latestYear = (db.prepare("SELECT MAX(year) AS y FROM nibrs_national_coverage").get() as { y: number }).y;
+      // Use lastFullYear (not current partial year) for state coverage
+      const coverageYear = lastFullYear;
       // Try state-level coverage if table exists
       try {
         const states = db.prepare(
-          `SELECT state, coverage_pct FROM nibrs_state_coverage WHERE year = ? AND coverage_pct < 75 ORDER BY coverage_pct ASC LIMIT 6`
-        ).all(latestYear) as { state: string; coverage_pct: number }[];
+          `SELECT state, coverage_pct FROM nibrs_state_coverage WHERE year = ? AND coverage_pct < 75 AND state NOT IN ('PR','VI','GU','GM','FS') ORDER BY coverage_pct ASC LIMIT 6`
+        ).all(coverageYear) as { state: string; coverage_pct: number }[];
         if (states.length > 0) {
-          lowCoverageStates = `Key low-coverage states (${latestYear}): ${states.map(s => `${s.state} (${s.coverage_pct}%)`).join(", ")}.`;
+          lowCoverageStates = `Key low-coverage states (${coverageYear}): ${states.map(s => `${s.state} (${s.coverage_pct}%)`).join(", ")}.`;
         }
       } catch { /* table might not exist */ }
     } catch { /* coverage table might not exist */ }
@@ -214,4 +214,4 @@ export { formatRowCount };
 // Log loaded facts for debugging
 console.log(`[dynamic-facts] RTCI: ${RTCI.agencyCount} agencies, ${RTCI.stateCount} states, ${RTCI.minYear}-${RTCI.maxYear} (${RTCI.totalMonths} months)`);
 console.log(`[dynamic-facts] Historical: ${HISTORICAL.agencyTotal} agencies, crime ${HISTORICAL.crimeMinYear}-${HISTORICAL.crimeMaxYear}, state/nat ${HISTORICAL.stateNatMinYear}-${HISTORICAL.stateNatMaxYear}`);
-console.log(`[dynamic-facts] NIBRS: ${NIBRS.minYear}-${NIBRS.maxYear}, ${NIBRS.totalLabel} incidents, DB ${NIBRS.dbSizeLabel}`);
+console.log(`[dynamic-facts] NIBRS: ${NIBRS.minYear}-${NIBRS.maxYear}, ${NIBRS.totalLabel} incidents, DB ${NIBRS.dbSizeLabel}${NIBRS.lowCoverageStates ? `, coverage: ${NIBRS.lowCoverageStates}` : ""}`);

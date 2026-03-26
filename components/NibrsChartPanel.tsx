@@ -81,11 +81,18 @@ function dailyTickInterval(dataLength: number): number {
   return Math.max(1, Math.floor(dataLength / 12));
 }
 
-/** Build evenly-spaced year ticks for multi-year YYYYMM data */
+/** Build evenly-spaced ticks for multi-year YYYYMM data.
+ *  ≤2 years → every month, otherwise January of each year (thinned if >10). */
 function yearTicksForYM(data: Record<string, unknown>[], xKey: string): string[] {
   const vals = data.map((d) => String(d[xKey] ?? "")).filter((v) => /^\d{6}$/.test(v));
   if (vals.length === 0) return [];
   const years = [...new Set(vals.map((v) => v.slice(0, 4)))].sort();
+
+  // ≤2 years of data → show every month
+  if (years.length <= 2) {
+    return vals;
+  }
+
   const ticks: string[] = [];
   for (const y of years) {
     const jan = `${y}01`;
@@ -128,7 +135,8 @@ function monthTicksForDaily(data: Record<string, unknown>[], xKey: string): stri
   return ticks;
 }
 
-/** Build decade-aligned ticks for plain-year x-axis data */
+/** Build evenly-spaced ticks for plain-year x-axis data.
+ *  ≤20 years → every year, ≤50 → every 5, otherwise every 10 (decade). */
 function decadeTicksForYears(data: Record<string, unknown>[], xKey: string): number[] {
   const years = data
     .map((d) => Number(d[xKey]))
@@ -136,9 +144,11 @@ function decadeTicksForYears(data: Record<string, unknown>[], xKey: string): num
   if (years.length === 0) return [];
   const min = Math.min(...years);
   const max = Math.max(...years);
-  const firstDecade = Math.ceil(min / 10) * 10;
+  const span = max - min;
+  const step = span <= 20 ? 1 : span <= 50 ? 5 : 10;
+  const first = step === 1 ? min : Math.ceil(min / step) * step;
   const ticks: number[] = [];
-  for (let y = firstDecade; y <= max; y += 10) {
+  for (let y = first; y <= max; y += step) {
     ticks.push(y);
   }
   return ticks;
@@ -181,6 +191,7 @@ export default function NibrsChartPanel({ config, rows }: NibrsChartPanelProps) 
   );
   const singleYear = dataYears.size === 1;
   const singleYearMonthly = ym && data.length > 0 && singleYear;
+  const fewYearsMonthly = ym && !singleYearMonthly && dataYears.size <= 2;
 
   const multiSeries = config.yAxis.length > 1;
   const dataLen = data.length;
@@ -195,11 +206,13 @@ export default function NibrsChartPanel({ config, rows }: NibrsChartPanelProps) 
   const dailyTicks = daily ? monthTicksForDaily(data, config.xAxis) : [];
   const dailySingleYear = daily && new Set(dailyTicks.map(t => t.slice(0, 4))).size <= 1;
 
-  // Detect clearance/percentage y-axis columns
+  // Detect clearance/percentage y-axis columns (NOT per-100K rates)
+  // Only column names with clearance/_clr/_pct/percent trigger % formatting.
+  // _rate columns are NOT treated as percentages — they are per-100K rates.
   const isPercent = config.yAxis.some((y) =>
-    /clearance|_clr|_rate/.test(y.toLowerCase())
+    /clearance|_clr|_pct|percent/i.test(y)
   ) && config.yAxis.every((y) =>
-    !/count|total|population|pop/.test(y.toLowerCase())
+    !/count|total|population|pop/i.test(y)
   );
   const yTickFormatter = isPercent
     ? (v: number) => `${v}%`
@@ -237,6 +250,7 @@ export default function NibrsChartPanel({ config, rows }: NibrsChartPanelProps) 
               tickFormatter={
                 daily ? (v) => formatDateTickLabel(v, dailySingleYear)
                 : singleYearMonthly ? (v) => formatYearMonth(v)
+                : fewYearsMonthly ? (v) => formatYearMonth(v)
                 : ym ? (v: string | number) => String(v).slice(0, 4)
                 : plainYears ? (v: number) => String(v)
                 : undefined
@@ -250,13 +264,16 @@ export default function NibrsChartPanel({ config, rows }: NibrsChartPanelProps) 
                 : ym ? 0
                 : "preserveStartEnd"
               }
+              angle={fewYearsMonthly ? -40 : 0}
+              textAnchor={fewYearsMonthly ? "end" : "middle"}
+              height={fewYearsMonthly ? 60 : undefined}
             />
             <YAxis tickFormatter={yTickFormatter} tick={TICK_STYLE} tickLine={false} axisLine={false} width={isPercent ? 55 : 50}
               {...(config.yAxisLabel ? { label: { value: config.yAxisLabel, angle: -90, position: "insideLeft", style: { fontSize: 11, fill: "#999", fontFamily: "Georgia, 'Times New Roman', serif" } } } : {})}
             />
             <Tooltip
               labelFormatter={tooltipLabelFormatter}
-              formatter={(v) => isPercent ? `${Number(v)}%` : Number(v).toLocaleString()}
+              formatter={(v) => { const n = Number(v); if (isPercent) return `${Number.isInteger(n) ? n : n.toFixed(1)}%`; return Number.isInteger(n) ? n.toLocaleString() : n.toFixed(1); }}
               contentStyle={tooltipContentStyle}
             />
             {multiSeries && (
@@ -268,7 +285,7 @@ export default function NibrsChartPanel({ config, rows }: NibrsChartPanelProps) 
               const color = chartColors[i % chartColors.length];
               return (
                 <Line key={y} type="monotone" dataKey={y} name={properCase(y)}
-                  stroke={color} strokeWidth={multiSeries ? 2.5 : 3}
+                  stroke={color} strokeWidth={3}
                   dot={false} activeDot={{ r: 3, strokeWidth: 0, fill: color }}
                 />
               );
@@ -295,12 +312,13 @@ export default function NibrsChartPanel({ config, rows }: NibrsChartPanelProps) 
               tickFormatter={
                 daily ? (v: string) => formatDateTickLabel(v, dailySingleYear)
                 : singleYearMonthly ? (v: string) => formatYearMonth(v)
+                : fewYearsMonthly ? (v: string) => formatYearMonth(v)
                 : ym ? (v: string) => String(v).slice(0, 4)
                 : plainYears ? (v: number) => String(v)
                 : (v: string) => String(v).length > 20 ? String(v).slice(0, 18) + "\u2026" : String(v)
               }
-              angle={ym || daily || plainYears ? 0 : -40}
-              textAnchor={ym || daily || plainYears ? "middle" : "end"}
+              angle={fewYearsMonthly ? -40 : (ym || daily || plainYears) ? 0 : -40}
+              textAnchor={fewYearsMonthly ? "end" : (ym || daily || plainYears) ? "middle" : "end"}
               {...(yearTicks.length > 0 ? { ticks: yearTicks } : {})}
               {...(ymTicks.length > 0 ? { ticks: ymTicks } : {})}
               {...(dailyTicks.length > 0 ? { ticks: dailyTicks } : {})}
@@ -309,14 +327,14 @@ export default function NibrsChartPanel({ config, rows }: NibrsChartPanelProps) 
                 : daily ? dailyTickInterval(dataLen)
                 : 0
               }
-              height={ym || daily || plainYears ? 30 : 100}
+              height={fewYearsMonthly ? 60 : (ym || daily || plainYears) ? 30 : 100}
             />
             <YAxis tickFormatter={yTickFormatter} tick={TICK_STYLE} tickLine={false} axisLine={false} width={isPercent ? 55 : 50}
               {...(config.yAxisLabel ? { label: { value: config.yAxisLabel, angle: -90, position: "insideLeft", style: { fontSize: 11, fill: "#999", fontFamily: "Georgia, 'Times New Roman', serif" } } } : {})}
             />
             <Tooltip
               labelFormatter={tooltipLabelFormatter}
-              formatter={(v) => isPercent ? `${Number(v)}%` : Number(v).toLocaleString()}
+              formatter={(v) => { const n = Number(v); if (isPercent) return `${Number.isInteger(n) ? n : n.toFixed(1)}%`; return Number.isInteger(n) ? n.toLocaleString() : n.toFixed(1); }}
               contentStyle={tooltipContentStyle}
             />
             {multiSeries && (
@@ -352,7 +370,7 @@ export default function NibrsChartPanel({ config, rows }: NibrsChartPanelProps) 
                 <Cell key={i} fill={NIBRS_CHART_COLORS[i % NIBRS_CHART_COLORS.length]} />
               ))}
             </Pie>
-            <Tooltip formatter={(v) => isPercent ? `${Number(v)}%` : Number(v).toLocaleString()} contentStyle={tooltipContentStyle} />
+            <Tooltip formatter={(v) => { const n = Number(v); if (isPercent) return `${Number.isInteger(n) ? n : n.toFixed(1)}%`; return Number.isInteger(n) ? n.toLocaleString() : n.toFixed(1); }} contentStyle={tooltipContentStyle} />
           </PieChart>
         ) : null}
       </ResponsiveContainer>

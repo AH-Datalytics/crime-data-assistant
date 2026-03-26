@@ -99,7 +99,7 @@ export default function HeroChart({ data, agencyCount, population }: HeroChartPr
               dataKey="rolling_12"
               name="Murders"
               stroke="#d03c24"
-              strokeWidth={2}
+              strokeWidth={3}
               dot={false}
               activeDot={{ r: 3, strokeWidth: 0, fill: "#d03c24" }}
             />

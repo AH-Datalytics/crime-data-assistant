@@ -290,11 +290,11 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
                 <div className="space-y-3">
                   <div>
                     <span className="font-semibold text-[#475EC7]">Current Trends</span>
-                    <p className="text-gray-500 mt-0.5">A dataset that is updated monthly to show national trends as they develop from a sample of hundreds of agencies. Data available from 2017&ndash;present, may not precisely match official FBI data.</p>
+                    <p className="text-gray-500 mt-0.5">A dataset that is updated monthly to show national trends as they develop from a sample of hundreds of agencies. Data available from 2017&ndash;present, but recent data is preliminary, subject to change, and may not precisely match official FBI data.</p>
                   </div>
                   <div>
                     <span className="font-semibold text-[#8B5E3C]">Historical Library</span>
-                    <p className="text-gray-500 mt-0.5">A dataset made up of annual data from 10,000+ agencies plus national and statewide estimates. This dataset is derived from FBI UCR official data with some data going back to 1930. Authoritative but delayed.</p>
+                    <p className="text-gray-500 mt-0.5">A dataset made up of officially reported annual data from 10,000+ agencies &mdash; since 1930 for some agencies &mdash; plus data on national and statewide trends since 1960. Derived from official FBI data, this dataset is authoritative but may not convey today&apos;s trends.</p>
                   </div>
                   <p className="text-xs text-gray-400">Numbers between the two may differ for the same city and year because of different reporting timelines, methodologies, and agency coverage.</p>
                 </div>
@@ -327,11 +327,11 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
                 <div className="space-y-3">
                   <div>
                     <span className="font-semibold text-[#475EC7]">Current Trends</span>
-                    <p className="text-gray-500 mt-0.5">A dataset that is updated monthly to show national trends as they develop from a sample of hundreds of agencies. Data available from 2017&ndash;present, may not precisely match official FBI data.</p>
+                    <p className="text-gray-500 mt-0.5">A dataset that is updated monthly to show national trends as they develop from a sample of hundreds of agencies. Data available from 2017&ndash;present, but recent data is preliminary, subject to change, and may not precisely match official FBI data.</p>
                   </div>
                   <div>
                     <span className="font-semibold text-[#8B5E3C]">Historical Library</span>
-                    <p className="text-gray-500 mt-0.5">A dataset made up of annual data from 10,000+ agencies plus national and statewide estimates. This dataset is derived from FBI UCR official data with some data going back to 1930. Authoritative but delayed.</p>
+                    <p className="text-gray-500 mt-0.5">A dataset made up of officially reported annual data from 10,000+ agencies &mdash; since 1930 for some agencies &mdash; plus data on national and statewide trends since 1960. Derived from official FBI data, this dataset is authoritative but may not convey today&apos;s trends.</p>
                   </div>
                   <p className="text-xs text-gray-400">Numbers between the two may differ for the same city and year because of different reporting timelines, methodologies, and agency coverage.</p>
                 </div>

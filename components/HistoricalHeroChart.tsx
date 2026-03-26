@@ -82,7 +82,7 @@ export default function HistoricalHeroChart({ data }: HistoricalHeroChartProps) 
               dataKey="murder_rate"
               name="Murder Rate"
               stroke="#8B5E3C"
-              strokeWidth={2}
+              strokeWidth={3}
               dot={false}
               activeDot={{ r: 3, strokeWidth: 0, fill: "#8B5E3C" }}
             />

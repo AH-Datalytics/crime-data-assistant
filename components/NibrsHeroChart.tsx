@@ -113,7 +113,7 @@ export default function NibrsHeroChart() {
               dataKey="coverage"
               name="Coverage"
               stroke="#1b2a4a"
-              strokeWidth={2.5}
+              strokeWidth={3}
               fill="url(#coverageGrad)"
               dot={false}
               activeDot={{ r: 3, strokeWidth: 0, fill: "#1b2a4a" }}

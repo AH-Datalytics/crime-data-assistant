@@ -252,7 +252,7 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      if (oris.size > 0 && oris.size <= 3) {
+      if (oris.size > 0 && oris.size <= 3 && offenseCodes.size > 0) {
         const db = getNibrsDb();
         for (const ori of oris) {
           // Build WHERE clause for offense filter
@@ -339,6 +339,12 @@ export async function POST(req: NextRequest) {
     }
     const explainMs = Date.now() - explainStart;
     console.log(`[nibrs][timing] Post-query explanation: ${explainMs}ms`);
+
+    // Append standard NIBRS disclaimer
+    const nibrsDisclaimer = "Note: This data comes from the FBI's NIBRS program. Not all agencies report to this system, and some may have incomplete data — especially in their first year of NIBRS reporting. Always verify that reported offenses are not impacted by incomplete coverage.";
+    if (!explanation.includes("FBI's NIBRS program")) {
+      explanation += "\n\n" + nibrsDisclaimer;
+    }
 
     // Log success (after CDE check so explanation includes any disclaimers)
     logNibrsQuery(question, sql, rows.length, null, claudeMs + executionTimeMs + explainMs, explanation);

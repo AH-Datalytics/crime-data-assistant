@@ -20,6 +20,12 @@ from collections import defaultdict
 
 CDE_BASE = "https://cde.ucr.cjis.gov/LATEST/nibrs/agency"
 
+# Person crime codes — CDE counts these by victim, not by offense
+PERSON_CRIME_CODES = {
+    "09A", "09B", "09C", "11A", "11B", "11C", "11D",
+    "13A", "13B", "13C", "100", "36A", "36B", "64A", "64B",
+}
+
 
 def fetch_cde_counts(ori, offense, from_year, to_year, retries=3):
     """Fetch CDE counts for a date range. Returns {year: {cde_count, cde_clearances}}."""
@@ -107,12 +113,20 @@ def main():
     ).fetchall()]
 
     # Preload master counts for the date range
+    # Person crimes use victim counts, property/society use offense counts
     master_data = {}
     for row in conn.execute(
         "SELECT ori, ucr_offense_code, year, SUM(offense_count) FROM summary_city_monthly WHERE year >= ? GROUP BY ori, ucr_offense_code, year",
         (from_year,)
     ).fetchall():
-        master_data[(row[0], row[1], row[2])] = row[3]
+        if row[1] not in PERSON_CRIME_CODES:
+            master_data[(row[0], row[1], row[2])] = row[3]
+    for row in conn.execute(
+        "SELECT ori, ucr_offense_code, year, SUM(victim_count) FROM summary_victim_city_monthly WHERE year >= ? GROUP BY ori, ucr_offense_code, year",
+        (from_year,)
+    ).fetchall():
+        if row[1] in PERSON_CRIME_CODES:
+            master_data[(row[0], row[1], row[2])] = row[3]
 
     print(f"{len(agencies)} agencies, {len(offenses)} offenses, {len(master_data):,} master entries", flush=True)
 

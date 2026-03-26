@@ -2,22 +2,84 @@ import Link from "next/link";
 import CrimeIndexLogo from "@/components/CrimeIndexLogo";
 
 export const metadata = {
-  title: "About — Crime Data Assistant | The Crime Index",
+  title: "Explainer — Crime Data Assistant | The Crime Index",
 };
 
 export default function AboutPage() {
   return (
     <div className="min-h-screen flex flex-col bg-[var(--surface)]">
-      <header className="bg-white border-b border-[var(--border)] px-6 py-3 flex items-center justify-between shrink-0" style={{ height: 56 }}>
-        <Link href="/" className="flex items-center gap-2 hover:opacity-80">
-          <CrimeIndexLogo size={24} />
-          <span className="text-sm font-medium tracking-widest uppercase text-[var(--foreground)]" style={{ letterSpacing: "2.5px" }}>Crime Index</span>
-        </Link>
-        <span className="text-xs text-[var(--muted)]">About &amp; Disclaimers</span>
+      <header className="bg-white border-b border-[var(--border)] shrink-0">
+        {/* Top row: logo + desktop pills */}
+        <div className="px-4 md:px-6 flex items-center justify-between" style={{ height: 56 }}>
+          <div className="flex items-center gap-3 md:gap-6 min-w-0">
+            <Link href="/" className="flex items-center gap-2 shrink-0 hover:opacity-80">
+              <CrimeIndexLogo size={24} />
+              <span
+                className="text-xs md:text-sm font-medium tracking-widest uppercase text-[var(--foreground)]"
+                style={{ letterSpacing: "2.5px" }}
+              >
+                Crime Index
+              </span>
+            </Link>
+            <div className="h-5 w-px bg-[var(--border)] hidden md:block" />
+            <span className="text-xs sm:text-sm text-[var(--foreground)] hidden md:block">
+              Crime Data Assistant
+            </span>
+          </div>
+
+          {/* Desktop tab pills */}
+          <div className="hidden md:flex items-center gap-3 shrink-0">
+            <div className="flex items-center gap-0 rounded-lg overflow-hidden border border-[var(--border)]">
+              <Link
+                href="/"
+                className="text-sm font-medium px-4 py-1.5 bg-white text-[#666] hover:bg-[#f0f0f0] transition-colors"
+              >
+                Current Trends
+              </Link>
+              <Link
+                href="/#historical"
+                className="text-sm font-medium px-4 py-1.5 border-l border-[var(--border)] bg-white text-[#666] hover:bg-[#f0f0f0] transition-colors"
+              >
+                Historical Library
+              </Link>
+              <Link
+                href="/#nibrs"
+                className="text-sm font-medium px-4 py-1.5 border-l border-[var(--border)] bg-white text-[#666] hover:bg-[#f0f0f0] transition-colors"
+              >
+                NIBRS Explorer
+              </Link>
+              <span
+                className="text-sm font-medium px-4 py-1.5 border-l border-[var(--border)] text-white flex items-center"
+                style={{ backgroundColor: "#333" }}
+              >
+                Explainer
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile tab row */}
+        <div className="md:hidden flex border-t border-[var(--border)]">
+          <Link href="/" className="flex-1 text-xs font-medium py-2.5 text-center bg-white text-[#666]">
+            Current
+          </Link>
+          <Link href="/#historical" className="flex-1 text-xs font-medium py-2.5 text-center border-l border-[var(--border)] bg-white text-[#666]">
+            Historical
+          </Link>
+          <Link href="/#nibrs" className="flex-1 text-xs font-medium py-2.5 text-center border-l border-[var(--border)] bg-white text-[#666]">
+            NIBRS
+          </Link>
+          <span
+            className="flex-1 text-xs font-medium py-2.5 border-l border-[var(--border)] text-white text-center"
+            style={{ backgroundColor: "#333" }}
+          >
+            Explainer
+          </span>
+        </div>
       </header>
 
       <main className="flex-1 max-w-3xl mx-auto px-6 py-8 text-sm leading-relaxed text-[var(--foreground)]">
-        <h2 className="text-2xl font-bold mb-6">About This Tool</h2>
+        <h2 className="text-2xl font-bold mb-6">Crime Data Assistant — Explainer</h2>
 
         <p className="mb-4">
           The Crime Data Assistant is an AI-powered research tool that provides natural language access to three major crime data sources spanning nearly a century of American crime statistics. Ask questions in plain English and get interactive charts, sortable tables, and contextual analysis &mdash; all generated in real time by AI.

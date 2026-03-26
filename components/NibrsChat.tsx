@@ -188,7 +188,7 @@ export default function NibrsChat({ visible }: NibrsChatProps) {
           ))}
           {messages.length === 0 && !loading && (
             <div className="text-sm text-gray-400 py-1 text-center">
-              <span className="font-semibold text-[var(--navy)]">1 Billion+</span> NIBRS records · 1991–{new Date().getFullYear()} · Recent data is preliminary
+              Review more than <span className="font-semibold text-[var(--navy)]">1 Billion</span> NIBRS records relating to offenses, victims, arrestees, weapons, property, clearances, and more! Data available since 1991, recent data is preliminary and subject to change.
             </div>
           )}
         </div>

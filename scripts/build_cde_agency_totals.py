@@ -49,6 +49,12 @@ OFFENSE_CODES = [
 
 KEY_OFFENSES = None  # Will be populated from DB at runtime (all offense codes)
 
+# Person crime codes — CDE counts these by victim, not by offense
+PERSON_CRIME_CODES = {
+    "09A", "09B", "09C", "11A", "11B", "11C", "11D",
+    "13A", "13B", "13C", "100", "36A", "36B", "64A", "64B",
+}
+
 
 def fetch_cde_counts(ori: str, offense: str, retries: int = 3) -> dict:
     """Fetch CDE aggregated counts for an agency/offense combo.
@@ -131,11 +137,17 @@ def fetch_cde_counts(ori: str, offense: str, retries: int = 3) -> dict:
 
 
 def get_master_counts(conn: sqlite3.Connection, ori: str, offense: str) -> dict:
-    """Get annual offense counts from summary_city_monthly (much faster than raw offenses table)."""
-    rows = conn.execute(
-        "SELECT year, SUM(offense_count) FROM summary_city_monthly WHERE ori = ? AND ucr_offense_code = ? GROUP BY year",
-        (ori, offense)
-    ).fetchall()
+    """Get annual counts — victim counts for person crimes, offense counts for property/society."""
+    if offense in PERSON_CRIME_CODES:
+        rows = conn.execute(
+            "SELECT year, SUM(victim_count) FROM summary_victim_city_monthly WHERE ori = ? AND ucr_offense_code = ? GROUP BY year",
+            (ori, offense)
+        ).fetchall()
+    else:
+        rows = conn.execute(
+            "SELECT year, SUM(offense_count) FROM summary_city_monthly WHERE ori = ? AND ucr_offense_code = ? GROUP BY year",
+            (ori, offense)
+        ).fetchall()
     return {r[0]: r[1] for r in rows}
 
 
@@ -184,14 +196,26 @@ def main():
     print(f"Total API calls: {total_calls:,}", flush=True)
 
     # Preload all master counts into memory (one big query, avoids per-agency DB hits)
-    print("Preloading master file counts from summary table...", flush=True)
+    # Person crimes use victim counts (CDE counts by victim for crimes against persons)
+    # Property/society crimes use offense counts
+    print("Preloading master file counts from summary tables...", flush=True)
     ori_set = {a[0] for a in agencies}
     master_data = {}  # {(ori, offense, year): count}
+
+    # Load offense counts for property/society crimes
     for row in conn.execute(
         "SELECT ori, ucr_offense_code, year, SUM(offense_count) FROM summary_city_monthly GROUP BY ori, ucr_offense_code, year"
     ).fetchall():
-        if row[0] in ori_set:
+        if row[0] in ori_set and row[1] not in PERSON_CRIME_CODES:
             master_data[(row[0], row[1], row[2])] = row[3]
+
+    # Load victim counts for person crimes
+    for row in conn.execute(
+        "SELECT ori, ucr_offense_code, year, SUM(victim_count) FROM summary_victim_city_monthly GROUP BY ori, ucr_offense_code, year"
+    ).fetchall():
+        if row[0] in ori_set and row[1] in PERSON_CRIME_CODES:
+            master_data[(row[0], row[1], row[2])] = row[3]
+
     print(f"Loaded {len(master_data):,} master count entries", flush=True)
 
     # Track which ORIs are already done (for resume)
