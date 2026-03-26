@@ -1,0 +1,221 @@
+{
+  "timestamp": "20260325-105028",
+  "base_url": "https://nibrsai.com",
+  "total": 11,
+  "passed": 7,
+  "failed": 0,
+  "errors": 4,
+  "results": [
+    {
+      "id": "nibrs-001",
+      "question": "Total murder victims nationally in 2022",
+      "tab": "nibrs",
+      "status": "ERROR",
+      "error": "HTTP 500",
+      "sql": null,
+      "elapsed_s": 3.3,
+      "failures": [
+        "HTTP 500"
+      ]
+    },
+    {
+      "id": "nibrs-002",
+      "question": "Aggravated assault victims in Texas in 2023",
+      "tab": "nibrs",
+      "status": "ERROR",
+      "error": "HTTP 500",
+      "sql": null,
+      "elapsed_s": 3.2,
+      "failures": [
+        "HTTP 500"
+      ]
+    },
+    {
+      "id": "nibrs-003",
+      "question": "Motor vehicle theft trend in Houston 2020-2023",
+      "tab": "nibrs",
+      "status": "PASS",
+      "sql": "SELECT year, SUM(offense_count) AS motor_vehicle_thefts FROM summary_city_monthly WHERE ucr_offense_code = '240' AND year BETWEEN 2020 AND 2023 AND ori IN (SELECT ori FROM agencies WHERE city = 'HOUSTON' AND state = 'TX' AND year = 2023 AND pop_group LIKE '1%') GROUP BY year ORDER BY year LIMIT 1000",
+      "explanation": "Motor vehicle thefts in Houston increased from 14,886 in 2020 to 19,769 in 2023. The data comes from FBI NIBRS records, and coverage may vary by year.",
+      "row_count": 4,
+      "chart_type": "line",
+      "elapsed_s": 5.2,
+      "failures": [],
+      "sample_rows": [
+        {
+          "year": 2020,
+          "motor_vehicle_thefts": 14886
+        },
+        {
+          "year": 2021,
+          "motor_vehicle_thefts": 15577
+        },
+        {
+          "year": 2022,
+          "motor_vehicle_thefts": 17254
+        }
+      ]
+    },
+    {
+      "id": "nibrs-004",
+      "question": "Top 10 cities by robbery count in 2022",
+      "tab": "nibrs",
+      "status": "ERROR",
+      "error": "HTTP 500",
+      "sql": null,
+      "elapsed_s": 2.9,
+      "failures": [
+        "HTTP 500"
+      ]
+    },
+    {
+      "id": "nibrs-005",
+      "question": "Burglary trend in California by year",
+      "tab": "nibrs",
+      "status": "PASS",
+      "sql": "SELECT year, SUM(offense_count) AS burglaries FROM summary_state_monthly WHERE ucr_offense_code = '220' AND state = 'CA' AND year BETWEEN 1991 AND 2026 GROUP BY year ORDER BY year LIMIT 1000",
+      "explanation": "In California, NIBRS reported 30 burglaries in 2020, 25,892 in 2021, 54,474 in 2022, 73,166 in 2023, and 77,145 in 2024. Please note that not all agencies report to NIBRS, and coverage varies by year, so these figures may not represent all burglaries occurring in the state.",
+      "row_count": 7,
+      "chart_type": "line",
+      "elapsed_s": 4.8,
+      "failures": [],
+      "sample_rows": [
+        {
+          "year": 2020,
+          "burglaries": 30
+        },
+        {
+          "year": 2021,
+          "burglaries": 25892
+        },
+        {
+          "year": 2022,
+          "burglaries": 54474
+        }
+      ]
+    },
+    {
+      "id": "nibrs-006",
+      "question": "What percentage of murder victims are female nationally in 2022?",
+      "tab": "nibrs",
+      "status": "PASS",
+      "sql": "SELECT CASE d.sex WHEN 'M' THEN 'Male' WHEN 'F' THEN 'Female' ELSE 'Unknown' END AS sex, SUM(d.victim_count) AS victims, ROUND(100.0 * SUM(d.victim_count) / (SELECT SUM(victim_count) FROM summary_victim_demographics WHERE year = 2022 AND ucr_offense_code = '09A'), 1) AS percentage FROM summary_victim_demographics d WHERE d.year = 2022 AND d.ucr_offense_code = '09A' GROUP BY d.sex ORDER BY victims DESC LIMIT 1000",
+      "explanation": "In 2022, 22.2% of murder victims nationally were female, according to FBI NIBRS data. This represents 3,877 victims out of 13,944 murders with recorded sex information. Please note that NIBRS coverage varies by year and not all agencies report to this system.",
+      "row_count": 3,
+      "chart_type": "pie",
+      "elapsed_s": 6.8,
+      "failures": [],
+      "sample_rows": [
+        {
+          "sex": "Male",
+          "victims": 13494,
+          "percentage": 77.4
+        },
+        {
+          "sex": "Female",
+          "victims": 3877,
+          "percentage": 22.2
+        },
+        {
+          "sex": "Unknown",
+          "victims": 73,
+          "percentage": 0.4
+        }
+      ]
+    },
+    {
+      "id": "nibrs-007",
+      "question": "Arson incidents in New York in 2023",
+      "tab": "nibrs",
+      "status": "ERROR",
+      "error": "HTTP 500",
+      "sql": null,
+      "elapsed_s": 2.8,
+      "failures": [
+        "HTTP 500"
+      ]
+    },
+    {
+      "id": "nibrs-008",
+      "question": "Drug violations by state in 2022, top 10",
+      "tab": "nibrs",
+      "status": "PASS",
+      "sql": "SELECT a.state, SUM(d.offense_count) AS drug_violations FROM summary_drug_monthly d JOIN agencies a ON a.ori = d.ori AND a.year = d.year WHERE d.year = 2022 GROUP BY a.state ORDER BY drug_violations DESC LIMIT 10",
+      "explanation": "In 2022, Texas reported the highest number of drug violations with 436,383 incidents, followed by North Carolina (245,652), California (236,589), Tennessee (225,126), and Missouri (140,442). NIBRS coverage varies by state and year, so these figures represent reported data from participating agencies rather than complete national totals.",
+      "row_count": 10,
+      "chart_type": "bar",
+      "elapsed_s": 13.7,
+      "failures": [],
+      "sample_rows": [
+        {
+          "state": "TX",
+          "drug_violations": 436383
+        },
+        {
+          "state": "NC",
+          "drug_violations": 245652
+        },
+        {
+          "state": "CA",
+          "drug_violations": 236589
+        }
+      ]
+    },
+    {
+      "id": "nibrs-009",
+      "question": "Compare murder victim counts in Texas and Florida 2020-2023",
+      "tab": "nibrs",
+      "status": "PASS",
+      "sql": "SELECT s.year, SUM(CASE WHEN s.state = 'TX' THEN s.victim_count ELSE 0 END) AS texas, SUM(CASE WHEN s.state = 'FL' THEN s.victim_count ELSE 0 END) AS florida FROM summary_victim_state_monthly s WHERE s.ucr_offense_code = '09A' AND s.state IN ('TX','FL') AND s.year BETWEEN 2020 AND 2023 GROUP BY s.year ORDER BY s.year LIMIT 1000",
+      "explanation": "From 2020 to 2023, Texas had 1,645 to 2,092 murder victims per year, while Florida had 6 to 550 murder victims per year. Please note that this FBI NIBRS data does not include reports from all agencies, and coverage varies by year.",
+      "row_count": 4,
+      "chart_type": "line",
+      "elapsed_s": 8.5,
+      "failures": [],
+      "sample_rows": [
+        {
+          "year": 2020,
+          "texas": 1645,
+          "florida": 6
+        },
+        {
+          "year": 2021,
+          "texas": 2053,
+          "florida": 368
+        },
+        {
+          "year": 2022,
+          "texas": 2092,
+          "florida": 550
+        }
+      ]
+    },
+    {
+      "id": "nibrs-011",
+      "question": "Assault trend in Texas 2020-2023",
+      "tab": "nibrs",
+      "status": "PASS",
+      "explanation": "NIBRS tracks three types of assault: **Aggravated Assault (13A)** \u2014 attacks with weapons or causing serious injury (this is the traditional FBI/UCR category), **Simple Assault (13B)** \u2014 minor physical attacks, and **Intimidation (13C)** \u2014 threats without physical contact. Which type would you like? Or I can include all three.",
+      "elapsed_s": 5.1,
+      "failures": [],
+      "clarification": true
+    },
+    {
+      "id": "nibrs-010",
+      "question": "How many agencies reported NIBRS data in 2023?",
+      "tab": "nibrs",
+      "status": "PASS",
+      "sql": "SELECT COUNT(DISTINCT ori) AS agencies_reporting FROM summary_city_monthly WHERE year = 2023 LIMIT 1000",
+      "explanation": "In 2023, 13,264 agencies reported NIBRS data to the FBI. It's important to note that not all agencies participate in NIBRS reporting, and coverage varies by year and state.",
+      "row_count": 1,
+      "chart_type": null,
+      "elapsed_s": 7.1,
+      "failures": [],
+      "sample_rows": [
+        {
+          "agencies_reporting": 13264
+        }
+      ]
+    }
+  ]
+}

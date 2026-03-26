@@ -1,0 +1,240 @@
+{
+  "timestamp": "20260325-105831",
+  "base_url": "https://nibrsai.com",
+  "total": 11,
+  "passed": 10,
+  "failed": 0,
+  "errors": 1,
+  "results": [
+    {
+      "id": "nibrs-001",
+      "question": "Total murder victims nationally in 2022",
+      "tab": "nibrs",
+      "status": "PASS",
+      "sql": "SELECT SUM(victim_count) AS total_victims FROM summary_victim_state_monthly WHERE ucr_offense_code = '09A' AND year = 2022 LIMIT 1000",
+      "explanation": "In 2022, there were 17,442 murder victims recorded in the FBI NIBRS data. Please note that not all law enforcement agencies report to NIBRS, and coverage varies by year, so this figure does not represent every murder victim nationwide.",
+      "row_count": 1,
+      "chart_type": null,
+      "elapsed_s": 7.5,
+      "failures": [],
+      "sample_rows": [
+        {
+          "total_victims": 17442
+        }
+      ]
+    },
+    {
+      "id": "nibrs-002",
+      "question": "Aggravated assault victims in Texas in 2023",
+      "tab": "nibrs",
+      "status": "PASS",
+      "sql": "SELECT SUM(victim_count) AS aggravated_assaults FROM summary_victim_state_monthly WHERE state = 'TX' AND ucr_offense_code = '13A' AND year = 2023 LIMIT 1000",
+      "explanation": "There were 84,656 aggravated assault victims reported in Texas in 2023 according to FBI NIBRS data. Please note that not all law enforcement agencies report to NIBRS, so this figure may not represent all aggravated assaults that occurred in the state.",
+      "row_count": 1,
+      "chart_type": null,
+      "elapsed_s": 7.7,
+      "failures": [],
+      "sample_rows": [
+        {
+          "aggravated_assaults": 84656
+        }
+      ]
+    },
+    {
+      "id": "nibrs-003",
+      "question": "Motor vehicle theft trend in Houston 2020-2023",
+      "tab": "nibrs",
+      "status": "PASS",
+      "sql": "SELECT year, SUM(offense_count) AS motor_vehicle_thefts FROM summary_city_monthly WHERE ucr_offense_code = '240' AND year BETWEEN 2020 AND 2023 AND ori IN (SELECT ori FROM agencies WHERE city = 'HOUSTON' AND state = 'TX' AND year = 2023 AND pop_group LIKE '1%') GROUP BY year ORDER BY year LIMIT 1000",
+      "explanation": "Motor vehicle thefts in Houston increased from 14,886 in 2020 to 19,769 in 2023, with counts rising each year in that period. This data comes from FBI NIBRS reporting.",
+      "row_count": 4,
+      "chart_type": "line",
+      "elapsed_s": 6.2,
+      "failures": [],
+      "sample_rows": [
+        {
+          "year": 2020,
+          "motor_vehicle_thefts": 14886
+        },
+        {
+          "year": 2021,
+          "motor_vehicle_thefts": 15577
+        },
+        {
+          "year": 2022,
+          "motor_vehicle_thefts": 17254
+        }
+      ]
+    },
+    {
+      "id": "nibrs-004",
+      "question": "Top 10 cities by robbery count in 2022",
+      "tab": "nibrs",
+      "status": "PASS",
+      "sql": "SELECT a.city, a.state, SUM(s.offense_count) AS robberies FROM summary_city_monthly s JOIN agencies a ON a.ori = s.ori AND a.year = s.year WHERE s.ucr_offense_code = '120' AND s.year = 2022 AND a.population >= 100000 GROUP BY a.city, a.state HAVING SUM(s.offense_count) >= 10 ORDER BY robberies DESC LIMIT 10",
+      "explanation": "In 2022, Chicago, Illinois had the highest robbery count at 8,971 incidents, followed by Houston, Texas with 8,733 robberies. Philadelphia, Pennsylvania, Baltimore, Maryland, and Memphis, Tennessee rounded out the top five with 5,841, 3,243, and 2,374 robberies respectively. Note that not all law enforcement agencies report to the FBI's NIBRS program, so these figures may not represent complete national coverage.",
+      "row_count": 10,
+      "chart_type": "bar",
+      "elapsed_s": 7.7,
+      "failures": [],
+      "sample_rows": [
+        {
+          "city": "CHICAGO",
+          "state": "IL",
+          "robberies": 8971
+        },
+        {
+          "city": "HOUSTON",
+          "state": "TX",
+          "robberies": 8733
+        },
+        {
+          "city": "PHILADELPHIA",
+          "state": "PA",
+          "robberies": 5841
+        }
+      ]
+    },
+    {
+      "id": "nibrs-005",
+      "question": "Burglary trend in California by year",
+      "tab": "nibrs",
+      "status": "PASS",
+      "sql": "SELECT year, SUM(offense_count) AS burglaries FROM summary_state_monthly WHERE ucr_offense_code = '220' AND state = 'CA' AND year BETWEEN 1991 AND 2025 GROUP BY year ORDER BY year LIMIT 1000",
+      "explanation": "California recorded 30 burglaries in 2020, 25,892 in 2021, 54,474 in 2022, 73,166 in 2023, and 77,145 in 2024 according to FBI NIBRS data. Please note that not all agencies report to NIBRS, and coverage varies by year, which may affect the comparability of these figures across years.",
+      "row_count": 6,
+      "chart_type": "line",
+      "elapsed_s": 6.8,
+      "failures": [],
+      "sample_rows": [
+        {
+          "year": 2020,
+          "burglaries": 30
+        },
+        {
+          "year": 2021,
+          "burglaries": 25892
+        },
+        {
+          "year": 2022,
+          "burglaries": 54474
+        }
+      ]
+    },
+    {
+      "id": "nibrs-006",
+      "question": "What percentage of murder victims are female nationally in 2022?",
+      "tab": "nibrs",
+      "status": "PASS",
+      "sql": "SELECT CASE v.sex WHEN 'M' THEN 'Male' WHEN 'F' THEN 'Female' ELSE 'Unknown' END AS sex, SUM(v.victim_count) AS victims, ROUND(100.0 * SUM(v.victim_count) / (SELECT SUM(victim_count) FROM summary_victim_demographics WHERE year = 2022 AND ucr_offense_code = '09A'), 1) AS percentage FROM summary_victim_demographics v WHERE v.year = 2022 AND v.ucr_offense_code = '09A' GROUP BY v.sex ORDER BY victims DESC LIMIT 1000",
+      "explanation": "In 2022, 22.2% of murder victims nationally were female, while 77.4% were male and 0.4% had unknown sex. Please note that these figures are based on FBI NIBRS data, and not all agencies report to NIBRS, so coverage varies.",
+      "row_count": 3,
+      "chart_type": "pie",
+      "elapsed_s": 8.7,
+      "failures": [],
+      "sample_rows": [
+        {
+          "sex": "Male",
+          "victims": 13494,
+          "percentage": 77.4
+        },
+        {
+          "sex": "Female",
+          "victims": 3877,
+          "percentage": 22.2
+        },
+        {
+          "sex": "Unknown",
+          "victims": 73,
+          "percentage": 0.4
+        }
+      ]
+    },
+    {
+      "id": "nibrs-007",
+      "question": "Arson incidents in New York in 2023",
+      "tab": "nibrs",
+      "status": "PASS",
+      "sql": "SELECT s.year, SUM(s.offense_count) AS arson_incidents FROM summary_state_monthly s WHERE s.ucr_offense_code = '200' AND s.state = 'NY' AND s.year = 2023 GROUP BY s.year LIMIT 1000",
+      "explanation": "There were 1,507 arson incidents reported in New York in 2023. Please note that this data comes from agencies reporting to the FBI's NIBRS program, and not all agencies participate in this reporting system.",
+      "row_count": 1,
+      "chart_type": null,
+      "elapsed_s": 6.0,
+      "failures": [],
+      "sample_rows": [
+        {
+          "year": 2023,
+          "arson_incidents": 1507
+        }
+      ]
+    },
+    {
+      "id": "nibrs-008",
+      "question": "Drug violations by state in 2022, top 10",
+      "tab": "nibrs",
+      "status": "ERROR",
+      "error": "HTTP 500",
+      "sql": null,
+      "elapsed_s": 3.1,
+      "failures": [
+        "HTTP 500"
+      ]
+    },
+    {
+      "id": "nibrs-009",
+      "question": "Compare murder victim counts in Texas and Florida 2020-2023",
+      "tab": "nibrs",
+      "status": "PASS",
+      "sql": "SELECT year, SUM(CASE WHEN state = 'TX' THEN victim_count ELSE 0 END) AS texas, SUM(CASE WHEN state = 'FL' THEN victim_count ELSE 0 END) AS florida FROM summary_victim_state_monthly WHERE ucr_offense_code = '09A' AND state IN ('TX', 'FL') AND year BETWEEN 2020 AND 2023 GROUP BY year ORDER BY year LIMIT 1000",
+      "explanation": "In 2020-2023, Texas had significantly higher murder victim counts than Florida, ranging from 1,645 to 2,092 victims compared to Florida's 6 to 550 victims across the same period. Please note that these figures are based on FBI NIBRS data, and not all agencies report to NIBRS, so coverage varies by year and may not represent complete state totals.",
+      "row_count": 4,
+      "chart_type": "line",
+      "elapsed_s": 10.4,
+      "failures": [],
+      "sample_rows": [
+        {
+          "year": 2020,
+          "texas": 1645,
+          "florida": 6
+        },
+        {
+          "year": 2021,
+          "texas": 2053,
+          "florida": 368
+        },
+        {
+          "year": 2022,
+          "texas": 2092,
+          "florida": 550
+        }
+      ]
+    },
+    {
+      "id": "nibrs-011",
+      "question": "Assault trend in Texas 2020-2023",
+      "tab": "nibrs",
+      "status": "PASS",
+      "explanation": "NIBRS tracks three types of assault: **Aggravated Assault (13A)** \u2014 attacks with weapons or causing serious injury (this is the traditional FBI/UCR category), **Simple Assault (13B)** \u2014 minor physical attacks, and **Intimidation (13C)** \u2014 threats without physical contact. Which type would you like? Or I can include all three.",
+      "elapsed_s": 9.1,
+      "failures": [],
+      "clarification": true
+    },
+    {
+      "id": "nibrs-010",
+      "question": "How many agencies reported NIBRS data in 2023?",
+      "tab": "nibrs",
+      "status": "PASS",
+      "sql": "SELECT COUNT(DISTINCT ori) AS agencies FROM summary_city_monthly WHERE year = 2023 LIMIT 1000",
+      "explanation": "In 2023, 13,264 agencies reported NIBRS data to the FBI. It's important to note that not all agencies report to NIBRS, and coverage varies by year and state.",
+      "row_count": 1,
+      "chart_type": null,
+      "elapsed_s": 8.7,
+      "failures": [],
+      "sample_rows": [
+        {
+          "agencies": 13264
+        }
+      ]
+    }
+  ]
+}

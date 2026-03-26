@@ -1,0 +1,27 @@
+{
+  "timestamp": "20260325-084411",
+  "base_url": "https://nibrsai.com",
+  "total": 1,
+  "passed": 1,
+  "failed": 0,
+  "errors": 0,
+  "results": [
+    {
+      "id": "nibrs-001",
+      "question": "Total murder victims nationally in 2022",
+      "tab": "nibrs",
+      "status": "PASS",
+      "sql": "SELECT SUM(victim_count) AS total_victims FROM summary_victim_state_monthly WHERE ucr_offense_code = '09A' AND year = 2022 LIMIT 1000",
+      "explanation": "This shows the total number of murder victims (NIBRS code 09A) reported by law enforcement agencies that submitted data to NIBRS in 2022. NIBRS covered 82.49% of the U.S. population in 2022. These are raw counts from agencies that reported data via NIBRS, not the FBI's official national crime estimate. Actual murder counts are likely higher since not all agencies reported to NIBRS.",
+      "row_count": 1,
+      "chart_type": null,
+      "elapsed_s": 5.1,
+      "failures": [],
+      "sample_rows": [
+        {
+          "total_victims": 17442
+        }
+      ]
+    }
+  ]
+}

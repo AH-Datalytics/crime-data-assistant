@@ -1,0 +1,307 @@
+{
+  "timestamp": "20260325-105019",
+  "base_url": "https://nibrsai.com",
+  "total": 11,
+  "passed": 11,
+  "failed": 0,
+  "errors": 0,
+  "results": [
+    {
+      "id": "rtci-001",
+      "question": "National murder trend",
+      "tab": "current",
+      "status": "PASS",
+      "sql": "SELECT year, month, count FROM national_monthly WHERE offense = 'Murder' ORDER BY year, month LIMIT 1000",
+      "explanation": "The data shows monthly murder counts from January 2017 through the sample period, with values ranging from 598 to 759 murders per month in the months shown. Note: National figures are based on a consistent sample of agencies that have reported every month since January 2017 \u00e2\u0080\u0094 not every agency in the country. Trends are reliable but absolute numbers reflect only this sample.",
+      "row_count": 109,
+      "chart_type": "line",
+      "elapsed_s": 3.9,
+      "failures": [],
+      "sample_rows": [
+        {
+          "year": 2017,
+          "month": 1,
+          "count": 759
+        },
+        {
+          "year": 2017,
+          "month": 2,
+          "count": 598
+        },
+        {
+          "year": 2017,
+          "month": 3,
+          "count": 641
+        }
+      ]
+    },
+    {
+      "id": "rtci-002",
+      "question": "Murder rate in Houston per 100K",
+      "tab": "current",
+      "status": "PASS",
+      "sql": "SELECT am.year, am.month, ROUND(SUM(am.count) * 100000.0 / ap.population, 1) as rate_per_100k FROM agency_monthly am JOIN agency_population ap ON ap.ori = am.ori AND ap.year = am.year WHERE am.agency = 'Houston' AND am.state = 'TX' AND am.offense = 'Murder' GROUP BY am.year, am.month ORDER BY am.year, am.month LIMIT 1000",
+      "explanation": "The murder rate in Houston from January 2017 through September 2018 ranged from 0.7 to 1.3 per 100,000 residents on a monthly basis. This data comes from a sample of agencies and reflects consistent reporters only, not all U.S. cities.",
+      "row_count": 109,
+      "chart_type": "line",
+      "elapsed_s": 4.0,
+      "failures": [],
+      "sample_rows": [
+        {
+          "year": 2017,
+          "month": 1,
+          "rate_per_100k": 0.9
+        },
+        {
+          "year": 2017,
+          "month": 2,
+          "rate_per_100k": 1.3
+        },
+        {
+          "year": 2017,
+          "month": 3,
+          "rate_per_100k": 0.8
+        }
+      ]
+    },
+    {
+      "id": "rtci-003",
+      "question": "Compare monthly murders in Baltimore and Detroit",
+      "tab": "current",
+      "status": "PASS",
+      "sql": "SELECT am.year, am.month,\n  SUM(CASE WHEN am.agency = 'Baltimore' AND am.state = 'MD' AND am.type = 'City' THEN am.count END) as baltimore,\n  SUM(CASE WHEN am.agency = 'Detroit' AND am.state = 'MI' AND am.type = 'City' THEN am.count END) as detroit\nFROM agency_monthly am\nWHERE (am.agency = 'Baltimore' AND am.state = 'MD' AND am.type = 'City')\n  OR (am.agency = 'Detroit' AND am.state = 'MI' AND am.type = 'City')\n  AND am.offense = 'Murder'\nGROUP BY am.year, am.month\nORDER BY am.year, am.month\nLIMIT 1000",
+      "explanation": "The data shows monthly murders reported in Baltimore and Detroit from 2017 onward, with Baltimore reporting substantially higher numbers (ranging in the thousands per month) compared to Detroit (ranging in the low 20s per month). Note: Direct comparisons between agencies should be interpreted with caution. Not all agencies have reported complete data for every month, and reporting practices, jurisdictional boundaries, and population coverage vary.",
+      "row_count": 109,
+      "chart_type": "line",
+      "elapsed_s": 4.0,
+      "failures": [],
+      "sample_rows": [
+        {
+          "year": 2017,
+          "month": 1,
+          "baltimore": 3916,
+          "detroit": 22
+        },
+        {
+          "year": 2017,
+          "month": 2,
+          "baltimore": 3030,
+          "detroit": 22
+        },
+        {
+          "year": 2017,
+          "month": 3,
+          "baltimore": 2990,
+          "detroit": 26
+        }
+      ]
+    },
+    {
+      "id": "rtci-004",
+      "question": "Total murders nationally in 2023",
+      "tab": "current",
+      "status": "PASS",
+      "sql": "SELECT SUM(count) as total_murders FROM national_monthly WHERE offense = 'Murder' AND year = 2023 LIMIT 1000",
+      "explanation": "There were 9,651 murders recorded nationally in 2023 in this sample. Note: National figures are based on a consistent sample of agencies that have reported every month since January 2017 \u00e2\u0080\u0094 not every agency in the country. The sample size varies as more agencies achieve complete reporting. Trends are reliable but absolute numbers reflect only this sample.",
+      "row_count": 1,
+      "chart_type": null,
+      "elapsed_s": 3.3,
+      "failures": [],
+      "sample_rows": [
+        {
+          "total_murders": 9651
+        }
+      ]
+    },
+    {
+      "id": "rtci-005a",
+      "question": "Which city has the highest murder rate per 100K in 2024?",
+      "tab": "current",
+      "status": "PASS",
+      "explanation": "I need to clarify your question before I can answer it.\n\n\"Highest murder rate per 100K in 2024\" could mean:\n1. **Annual rate** \u00e2\u0080\u0094 the murder rate for the full year 2024 (total murders \u00c3\u00b7 2024 population \u00c3\u0097 100,000)\n2. **Any single month in 2024** \u00e2\u0080\u0094 which month had the highest annualized monthly rate\n\nAlso, this dataset covers ~716 agencies across the U.S. \u00e2\u0080\u0094 not every city is included. Would you like me to find the city with the highest rate among **all agencies in the dataset**, or do you h",
+      "elapsed_s": 2.4,
+      "failures": [],
+      "clarification": true
+    },
+    {
+      "id": "rtci-005b",
+      "question": "Murder rate per 100K in Memphis in 2024",
+      "tab": "current",
+      "status": "PASS",
+      "sql": "SELECT am.year, am.month, ROUND(SUM(am.count) * 100000.0 / ap.population, 1) as rate_per_100k FROM agency_monthly am JOIN agency_population ap ON ap.ori = am.ori AND ap.year = am.year WHERE am.agency = 'Memphis' AND am.state = 'TN' AND am.offense = 'Murder' AND am.year = 2024 GROUP BY am.year, am.month ORDER BY am.month LIMIT 1000",
+      "explanation": "In 2024, Memphis's murder rate per 100,000 residents ranged from 3.3 to 4.2 across the months shown, with January, March, April, and May each recording rates between 3.8 and 4.2 per 100K. This data is based on a sample of reporting agencies and may not represent all crimes in the jurisdiction.",
+      "row_count": 12,
+      "chart_type": "line",
+      "elapsed_s": 3.6,
+      "failures": [],
+      "sample_rows": [
+        {
+          "year": 2024,
+          "month": 1,
+          "rate_per_100k": 3.8
+        },
+        {
+          "year": 2024,
+          "month": 2,
+          "rate_per_100k": 3.3
+        },
+        {
+          "year": 2024,
+          "month": 3,
+          "rate_per_100k": 3.8
+        }
+      ]
+    },
+    {
+      "id": "rtci-006",
+      "question": "Motor vehicle theft trend in Los Angeles",
+      "tab": "current",
+      "status": "PASS",
+      "sql": "SELECT year, month, count FROM agency_monthly WHERE agency = 'Los Angeles' AND state = 'CA' AND offense = 'Motor Vehicle Theft' ORDER BY year, month LIMIT 1000",
+      "explanation": "Motor vehicle theft counts in Los Angeles are shown by month and year, with data ranging from January 2017 forward. The results show monthly theft counts varying between approximately 1,147 and 1,824 incidents across the reported periods. Note: Los Angeles may not have reported data for every month in this period \u00e2\u0080\u0094 gaps indicate no report was filed.",
+      "row_count": 218,
+      "chart_type": "line",
+      "elapsed_s": 3.9,
+      "failures": [],
+      "sample_rows": [
+        {
+          "year": 2017,
+          "month": 1,
+          "count": 1825
+        },
+        {
+          "year": 2017,
+          "month": 1,
+          "count": 1147
+        },
+        {
+          "year": 2017,
+          "month": 2,
+          "count": 1509
+        }
+      ]
+    },
+    {
+      "id": "rtci-007",
+      "question": "Robbery in New York City vs Chicago 2023",
+      "tab": "current",
+      "status": "PASS",
+      "sql": "SELECT am.year, am.month,\n  SUM(CASE WHEN am.agency = 'New York City' AND am.state = 'NY' THEN am.count END) as new_york_city,\n  SUM(CASE WHEN am.agency = 'Chicago' AND am.state = 'IL' THEN am.count END) as chicago\nFROM agency_monthly am\nWHERE ((am.agency = 'New York City' AND am.state = 'NY') OR (am.agency = 'Chicago' AND am.state = 'IL'))\n  AND am.offense = 'Robbery'\n  AND am.year = 2023\nGROUP BY am.year, am.month\nORDER BY am.year, am.month\nLIMIT 1000",
+      "explanation": "In 2023, New York City recorded between 1,163 and 1,369 robberies per month, while Chicago recorded between 582 and 890 robberies per month across the months shown. New York City had higher robbery counts than Chicago in each of these months.",
+      "row_count": 12,
+      "chart_type": "line",
+      "elapsed_s": 4.6,
+      "failures": [],
+      "sample_rows": [
+        {
+          "year": 2023,
+          "month": 1,
+          "new_york_city": 1350,
+          "chicago": 890
+        },
+        {
+          "year": 2023,
+          "month": 2,
+          "new_york_city": 1163,
+          "chicago": 582
+        },
+        {
+          "year": 2023,
+          "month": 3,
+          "new_york_city": 1261,
+          "chicago": 685
+        }
+      ]
+    },
+    {
+      "id": "rtci-008",
+      "question": "National burglary trend by month in 2024",
+      "tab": "current",
+      "status": "PASS",
+      "sql": "SELECT year, month, count FROM national_monthly WHERE offense = 'Burglary' AND year = 2024 ORDER BY year, month LIMIT 1000",
+      "explanation": "In 2024, monthly burglary counts ranged from approximately 26,400 to 28,400 incidents across the national sample. January recorded 28,414 burglaries, February dropped to 26,394, and subsequent months remained between 26,500 and 28,400. Note: National figures are based on a consistent sample of agencies that have reported every month since January 2017 \u00e2\u0080\u0094 not every agency in the country. The sample size varies as more agencies achieve complete reporting. Trends are reliable but absolute numbers ",
+      "row_count": 12,
+      "chart_type": "line",
+      "elapsed_s": 3.8,
+      "failures": [],
+      "sample_rows": [
+        {
+          "year": 2024,
+          "month": 1,
+          "count": 28414
+        },
+        {
+          "year": 2024,
+          "month": 2,
+          "count": 26394
+        },
+        {
+          "year": 2024,
+          "month": 3,
+          "count": 26564
+        }
+      ]
+    },
+    {
+      "id": "rtci-009",
+      "question": "Top 10 cities by aggravated assault in 2023",
+      "tab": "current",
+      "status": "PASS",
+      "sql": "SELECT agency || ', ' || state as agency, SUM(count) as total FROM agency_monthly WHERE offense = 'Aggravated Assault' AND year = 2023 AND type = 'City' GROUP BY ori, agency, state ORDER BY total DESC LIMIT 10",
+      "explanation": "In 2023, New York City reported the highest number of aggravated assaults among the cities in this data with 27,845 incidents, followed by Los Angeles with 20,067 and Chicago with 15,789. Note: Direct comparisons between agencies should be interpreted with caution. Not all agencies have reported complete data for every month, and reporting practices, jurisdictional boundaries, and population coverage vary. An agency's jurisdiction may cover only the city proper or extend to surrounding areas, si",
+      "row_count": 10,
+      "chart_type": "bar",
+      "elapsed_s": 3.9,
+      "failures": [],
+      "sample_rows": [
+        {
+          "agency": "New York City, NY",
+          "total": 27845
+        },
+        {
+          "agency": "Los Angeles, CA",
+          "total": 20067
+        },
+        {
+          "agency": "Chicago, IL",
+          "total": 15789
+        }
+      ]
+    },
+    {
+      "id": "rtci-010",
+      "question": "Murder rates in Washington DC, Baltimore, and St. Louis per 100K",
+      "tab": "current",
+      "status": "PASS",
+      "sql": "SELECT am.year, am.month,\n  ROUND(SUM(CASE WHEN am.agency = 'Washington' AND am.state = 'DC' THEN am.count END) * 100000.0 / MAX(CASE WHEN am.agency = 'Washington' AND am.state = 'DC' THEN ap.population END), 1) as washington_dc,\n  ROUND(SUM(CASE WHEN am.agency = 'Baltimore' AND am.state = 'MD' THEN am.count END) * 100000.0 / MAX(CASE WHEN am.agency = 'Baltimore' AND am.state = 'MD' THEN ap.population END), 1) as baltimore,\n  ROUND(SUM(CASE WHEN am.agency = 'St Louis' AND am.state = 'MO' AND am.type = 'City' THEN am.count END) * 100000.0 / MAX(CASE WHEN am.agency = 'St Louis' AND am.state = 'MO' AND am.type = 'City' THEN ap.population END), 1) as st_louis\nFROM agency_monthly am\nJOIN agency_population ap ON ap.ori = am.ori AND ap.year = am.year\nWHERE (am.agency = 'Washington' AND am.state = 'DC') OR (am.agency = 'Baltimore' AND am.state = 'MD') OR (am.agency = 'St Louis' AND am.state = 'MO' AND am.type = 'City')\n  AND am.offense = 'Murder'\nGROUP BY am.year, am.month\nORDER BY am.year, am.month\nLIMIT 1000",
+      "explanation": "The data shows monthly murder rates per 100,000 residents for Washington DC, Baltimore, and St. Louis from 2017 onward. Baltimore consistently shows the highest rates among the three cities, ranging from around 595 to 761 per 100,000, while Washington DC rates range from approximately 313 to 416 per 100,000, and St. Louis rates are substantially lower at 2 to 6 per 100,000. Note: Direct comparisons between jurisdictions should be interpreted with caution, as reporting practices, data completenes",
+      "row_count": 109,
+      "chart_type": "line",
+      "elapsed_s": 6.8,
+      "failures": [],
+      "sample_rows": [
+        {
+          "year": 2017,
+          "month": 1,
+          "washington_dc": 405.6,
+          "baltimore": 761.3,
+          "st_louis": 5.2
+        },
+        {
+          "year": 2017,
+          "month": 2,
+          "washington_dc": 323.9,
+          "baltimore": 611.3,
+          "st_louis": 5.2
+        },
+        {
+          "year": 2017,
+          "month": 3,
+          "washington_dc": 312.8,
+          "baltimore": 595,
+          "st_louis": 2.3
+        }
+      ]
+    }
+  ]
+}
