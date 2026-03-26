@@ -158,7 +158,7 @@ City-level person crime example (agg assaults in Houston PD by month):
   GROUP BY year, month ORDER BY year, month
 
 ### summary_victim_demographics (DEMOGRAPHIC BREAKDOWNS — weapon, race, sex, age)
-- COLUMNS: ori TEXT, year INT, ucr_offense_code TEXT, weapon_category TEXT, race TEXT, sex TEXT, age_group TEXT, victim_count INT
+- COLUMNS: ori TEXT, year INT, ucr_offense_code TEXT, weapon_category TEXT, race TEXT, sex TEXT, age_group TEXT, victim_count INT — ⚠️ NO state column. For state-level queries, use ORI subquery: AND d.ori IN (SELECT ori FROM agencies WHERE state = 'TX' AND year = 2024)
 - weapon_category values: 'Firearm', 'Knife', 'Blunt Object', 'Other', 'Unknown'
 - race values: 'W' (White), 'B' (Black), 'I' (American Indian), 'A' (Asian), 'P' (Pacific Islander), 'U' (Unknown)
 - sex values: 'M', 'F', 'U'
@@ -192,7 +192,7 @@ For daily person crime counts, use the raw victims table:
   GROUP BY v.incident_date ORDER BY v.incident_date
 
 ### summary_offender_demographics (OFFENDER DEMOGRAPHIC BREAKDOWNS — race, sex, age)
-- COLUMNS: ori TEXT, year INT, ucr_offense_code TEXT, race TEXT, sex TEXT, age_group TEXT, offender_count INT
+- COLUMNS: ori TEXT, year INT, ucr_offense_code TEXT, race TEXT, sex TEXT, age_group TEXT, offender_count INT — ⚠️ NO state column. For state-level queries, use ORI subquery: AND d.ori IN (SELECT ori FROM agencies WHERE state = 'TX' AND year = 2024)
 - race values: 'W' (White), 'B' (Black), 'I' (American Indian), 'A' (Asian), 'P' (Pacific Islander), 'U' (Unknown)
 - sex values: 'M', 'F', 'U'
 - age_group values: '0-12', '13-17', '18-24', '25-34', '35-44', '45-54', '55-64', '65+', 'Unknown'
@@ -208,7 +208,7 @@ Offender demographics by race for a city example:
   GROUP BY d.race ORDER BY offenders DESC
 
 ### summary_arrestee_demographics (ARRESTEE DEMOGRAPHIC BREAKDOWNS — race, sex, age)
-- COLUMNS: ori TEXT, year INT, ucr_arrest_offense TEXT, race TEXT, sex TEXT, age_group TEXT, arrestee_count INT
+- COLUMNS: ori TEXT, year INT, ucr_arrest_offense TEXT, race TEXT, sex TEXT, age_group TEXT, arrestee_count INT — ⚠️ NO state column. For state-level queries, use ORI subquery: AND d.ori IN (SELECT ori FROM agencies WHERE state = 'OH' AND year = 2024)
 - race values: 'W' (White), 'B' (Black), 'I' (American Indian), 'A' (Asian), 'P' (Pacific Islander), 'U' (Unknown)
 - sex values: 'M', 'F', 'U'
 - age_group values: '0-12', '13-17', '18-24', '25-34', '35-44', '45-54', '55-64', '65+', 'Unknown'
@@ -216,11 +216,11 @@ Offender demographics by race for a city example:
 - INDEXES: (ori, year), (ucr_arrest_offense)
 - USE FOR: ANY query involving arrestee demographics — race, sex, age breakdowns. NEVER query the raw arrestees table (${NIBRS.rawRowCounts["arrestees"] || "51M"} rows) for aggregate counts.
 
-Arrestee demographics by age group for a state example:
+Arrestee demographics by age group for a state example (use ORI subquery, NOT a JOIN):
   SELECT d.age_group, SUM(d.arrestee_count) AS arrestees
   FROM summary_arrestee_demographics d
-  JOIN agencies a ON a.ori = d.ori AND a.year = d.year
-  WHERE d.year = 2024 AND d.ucr_arrest_offense = '35A' AND a.state = 'OH'
+  WHERE d.year = 2024 AND d.ucr_arrest_offense = '35A'
+    AND d.ori IN (SELECT ori FROM agencies WHERE state = 'OH' AND year = 2024)
   GROUP BY d.age_group ORDER BY arrestees DESC
 
 ### Crimes Against Property — COUNT OFFENSES (one per distinct operation)
@@ -410,6 +410,9 @@ IMPORTANT: For any multi-year **national** trend query, ALWAYS filter to consist
 - CARJACKING SUMMARY (summary_carjacking_monthly): ALL carjacking counts
 - RAW VICTIMS TABLE: ONLY for person crime queries needing demographics (age, sex, race), daily breakdowns, weapon/injury details, or other fields not in the victim summary tables. NEVER for simple counts/trends.
 - RAW OFFENSES: queries needing location types, weapon types, property details, individual incidents, daily property crime counts
+
+### AVOIDING UNNECESSARY JOINS
+Many summary tables already have a `state` column — check the table's COLUMNS definition before JOINing agencies just to get state. Tables WITH state: summary_state_monthly, summary_city_monthly, summary_victim_state_monthly, summary_victim_city_monthly, summary_drug_monthly, summary_property_offense, summary_clearance_type, summary_clearance_detail, summary_carjacking_monthly. Tables WITHOUT state: summary_victim_demographics, summary_offender_demographics, summary_arrestee_demographics — for these, use an ORI subquery (NOT a JOIN) to filter by state: `AND d.ori IN (SELECT ori FROM agencies WHERE state = 'TX' AND year = 2024)`. Only JOIN agencies when you need columns like city name or population in the SELECT output.
 
 ### SUMMARY TABLE QUERY PATTERNS
 For city queries, use ORI subquery:
