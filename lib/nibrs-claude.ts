@@ -250,6 +250,13 @@ Drug query examples:
            SUM(CASE WHEN SUBSTR(suspected_drug_type,1,1) = 'B' THEN offense_count ELSE 0 END) AS cocaine
     FROM summary_drug_monthly GROUP BY year ORDER BY year
 
+  Top 10 states by drug violations in a year (use the state column directly — do NOT join agencies):
+    SELECT state, SUM(offense_count) AS total
+    FROM summary_drug_monthly WHERE year = 2022
+    GROUP BY state ORDER BY total DESC LIMIT 10
+
+  IMPORTANT: summary_drug_monthly already has a state column. NEVER join the agencies table for state-level drug queries — it adds millions of unnecessary rows and causes 20+ second queries.
+
 ### summary_property_offense (PROPERTY + OFFENSE PRE-JOIN)
 - COLUMNS: ori TEXT, year INT, state TEXT, ucr_offense_code TEXT, type_property_loss TEXT, property_description TEXT, total_value INT, record_count INT
 - ${formatRowCount(NIBRS.summaryRowCounts["summary_property_offense"] || 29900000)} rows. Pre-aggregated from offenses JOIN property.
@@ -391,7 +398,11 @@ Consistent reporters for a year range (reported all 12 months every year):
     GROUP BY ori HAVING COUNT(*) = 6
   )
 
-IMPORTANT: For any multi-year national or state trend query, ALWAYS filter to consistent reporters using nibrs_agency_completeness unless the user explicitly says otherwise. This prevents coverage expansion from being mistaken for crime increases.
+IMPORTANT: For any multi-year **national** trend query, ALWAYS filter to consistent reporters using nibrs_agency_completeness unless the user explicitly says otherwise. This prevents coverage expansion from being mistaken for crime increases.
+
+**STATE-LEVEL trends**: Use summary_state_monthly (or summary_victim_state_monthly for person crimes) — these are pre-aggregated by state and do NOT need a completeness filter. Do NOT use summary_city_monthly with a completeness subquery for state-level queries — many states transitioned to NIBRS recently and have zero agencies with long reporting histories, which causes empty results. The summary_state_monthly table already contains the correct state totals.
+
+**Completeness filter year range**: When the user does not specify a year range, do NOT guess a wide range like 2010-2025. Instead, omit the year filter entirely (return all available years) or use a recent range like the last 5 years. A completeness filter spanning many years will exclude late-transition states/agencies that only have a few years of data.
 
 ### WHEN TO USE SUMMARY TABLES vs RAW TABLES
 - VICTIM SUMMARY TABLES (summary_victim_state_monthly, summary_victim_city_monthly): ALL person crime counts/trends (murder, rape, assault, intimidation, kidnapping, sex offenses, human trafficking). These are pre-aggregated from victims+connected_offense fields. Use these ALWAYS for person crime counts.
@@ -408,10 +419,11 @@ For city queries, use ORI subquery:
     AND ori IN (SELECT ori FROM agencies WHERE city = 'HOUSTON' AND state = 'TX' AND year = 2025)
   GROUP BY year, month ORDER BY year, month
 
-For state queries (property/society crimes only):
+For state queries (property/society crimes only) — ALWAYS use summary_state_monthly, NOT summary_city_monthly:
   SELECT year, SUM(offense_count) AS total FROM summary_state_monthly
   WHERE ucr_offense_code = '220' AND state = 'TX'
   GROUP BY year ORDER BY year
+  -- No completeness filter needed — summary_state_monthly is already the correct state total
 
 For national queries (property/society crimes only):
   SELECT year, state, SUM(offense_count) AS total FROM summary_state_monthly
