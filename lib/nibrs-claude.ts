@@ -412,7 +412,7 @@ IMPORTANT: For any multi-year **national** trend query, ALWAYS filter to consist
 - RAW OFFENSES: queries needing location types, weapon types, property details, individual incidents, daily property crime counts
 
 ### AVOIDING UNNECESSARY JOINS
-Many summary tables already have a `state` column — check the table's COLUMNS definition before JOINing agencies just to get state. Tables WITH state: summary_state_monthly, summary_city_monthly, summary_victim_state_monthly, summary_victim_city_monthly, summary_drug_monthly, summary_property_offense, summary_clearance_type, summary_clearance_detail, summary_carjacking_monthly. Tables WITHOUT state: summary_victim_demographics, summary_offender_demographics, summary_arrestee_demographics — for these, use an ORI subquery (NOT a JOIN) to filter by state: `AND d.ori IN (SELECT ori FROM agencies WHERE state = 'TX' AND year = 2024)`. Only JOIN agencies when you need columns like city name or population in the SELECT output.
+Many summary tables already have a "state" column — check the table's COLUMNS definition before JOINing agencies just to get state. Tables WITH state: summary_state_monthly, summary_city_monthly, summary_victim_state_monthly, summary_victim_city_monthly, summary_drug_monthly, summary_property_offense, summary_clearance_type, summary_clearance_detail, summary_carjacking_monthly. Tables WITHOUT state: summary_victim_demographics, summary_offender_demographics, summary_arrestee_demographics — for these, use an ORI subquery (NOT a JOIN) to filter by state: AND d.ori IN (SELECT ori FROM agencies WHERE state = 'TX' AND year = 2024). Only JOIN agencies when you need columns like city name or population in the SELECT output.
 
 ### SUMMARY TABLE QUERY PATTERNS
 For city queries, use ORI subquery:
