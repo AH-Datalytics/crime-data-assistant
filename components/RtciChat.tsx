@@ -284,19 +284,12 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
             {showDatasetInfo && (
               <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 z-50 w-[90vw] max-w-lg bg-white border border-[var(--border)] rounded-lg shadow-lg p-4 text-left text-sm text-[var(--foreground)]">
                 <div className="flex justify-between items-start mb-3">
-                  <span className="font-semibold text-base">Current Trends vs. Historical Library</span>
+                  <span className="font-semibold text-base">What&apos;s The Difference?</span>
                   <button onClick={() => setShowDatasetInfo(false)} className="text-[var(--muted)] hover:text-[var(--foreground)] text-lg leading-none cursor-pointer">&times;</button>
                 </div>
                 <div className="space-y-3">
-                  <div>
-                    <span className="font-semibold text-[#475EC7]">Current Trends</span>
-                    <p className="text-gray-500 mt-0.5">A dataset that is updated monthly to show national trends as they develop from a sample of hundreds of agencies. Data available from 2017&ndash;present, but recent data is preliminary, subject to change, and may not precisely match official FBI data.</p>
-                  </div>
-                  <div>
-                    <span className="font-semibold text-[#8B5E3C]">Historical Library</span>
-                    <p className="text-gray-500 mt-0.5">A dataset made up of officially reported annual data from 10,000+ agencies &mdash; since 1930 for some agencies &mdash; plus data on national and statewide trends since 1960. Derived from official FBI data, this dataset is authoritative but may not convey today&apos;s trends.</p>
-                  </div>
-                  <p className="text-xs text-gray-400">Numbers between the two may differ for the same city and year because of different reporting timelines, methodologies, and agency coverage.</p>
+                  <p className="text-gray-500">The <span className="font-semibold text-[#475EC7]">Current Trends</span> and <span className="font-semibold text-[#8B5E3C]">Historical Library</span> are explored separately because they aren&apos;t exactly apples-to-apples. The Current Trends dataset is updated monthly to show national trends as they develop from a sample of hundreds of agencies. Current Trends has data from 2017 to present though recent data is preliminary, subject to change, and may not precisely match official FBI data.</p>
+                  <p className="text-gray-500">The <span className="font-semibold text-[#8B5E3C]">Historical Library</span>, by contrast, contains officially reported annual data from 10,000+ agencies &mdash; since 1930 for some agencies &mdash; plus data on national and statewide trends since 1960. This dataset is derived from official FBI data. The Historical Library is authoritative but may not convey today&apos;s trends.</p>
                 </div>
               </div>
             )}
@@ -321,19 +314,12 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
             {showDatasetInfo && (
               <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 z-50 w-[90vw] max-w-lg bg-white border border-[var(--border)] rounded-lg shadow-lg p-4 text-left text-sm text-[var(--foreground)]">
                 <div className="flex justify-between items-start mb-3">
-                  <span className="font-semibold text-base">Current Trends vs. Historical Library</span>
+                  <span className="font-semibold text-base">What&apos;s The Difference?</span>
                   <button onClick={() => setShowDatasetInfo(false)} className="text-[var(--muted)] hover:text-[var(--foreground)] text-lg leading-none cursor-pointer">&times;</button>
                 </div>
                 <div className="space-y-3">
-                  <div>
-                    <span className="font-semibold text-[#475EC7]">Current Trends</span>
-                    <p className="text-gray-500 mt-0.5">A dataset that is updated monthly to show national trends as they develop from a sample of hundreds of agencies. Data available from 2017&ndash;present, but recent data is preliminary, subject to change, and may not precisely match official FBI data.</p>
-                  </div>
-                  <div>
-                    <span className="font-semibold text-[#8B5E3C]">Historical Library</span>
-                    <p className="text-gray-500 mt-0.5">A dataset made up of officially reported annual data from 10,000+ agencies &mdash; since 1930 for some agencies &mdash; plus data on national and statewide trends since 1960. Derived from official FBI data, this dataset is authoritative but may not convey today&apos;s trends.</p>
-                  </div>
-                  <p className="text-xs text-gray-400">Numbers between the two may differ for the same city and year because of different reporting timelines, methodologies, and agency coverage.</p>
+                  <p className="text-gray-500">The <span className="font-semibold text-[#475EC7]">Current Trends</span> and <span className="font-semibold text-[#8B5E3C]">Historical Library</span> are explored separately because they aren&apos;t exactly apples-to-apples. The Current Trends dataset is updated monthly to show national trends as they develop from a sample of hundreds of agencies. Current Trends has data from 2017 to present though recent data is preliminary, subject to change, and may not precisely match official FBI data.</p>
+                  <p className="text-gray-500">The <span className="font-semibold text-[#8B5E3C]">Historical Library</span>, by contrast, contains officially reported annual data from 10,000+ agencies &mdash; since 1930 for some agencies &mdash; plus data on national and statewide trends since 1960. This dataset is derived from official FBI data. The Historical Library is authoritative but may not convey today&apos;s trends.</p>
                 </div>
               </div>
             )}
