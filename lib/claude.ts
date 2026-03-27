@@ -578,6 +578,14 @@ ${HISTORICAL.staffingRows.toLocaleString()} rows. Coverage: ~3,800 agencies/year
 
 **IMPORTANT: Only return the columns the user asked about.** If they ask about officers, only SELECT officer_total — do NOT also include civilian_total or all_total unless specifically requested. Match the query to what was asked.
 
+**CHART TYPE: Always use bar charts (not line charts) for staffing queries.** Many agencies have gaps in reporting (missing years).
+
+**IMPORTANT — FILL GAPS FOR STAFFING CHARTS:** To make missing years visible in bar charts, use a recursive CTE to produce all years in the range, then LEFT JOIN staffing data. Missing years will have NULL values and appear as gaps. Example:
+WITH years AS (SELECT 2006 AS year UNION ALL SELECT year + 1 FROM years WHERE year < 2024)
+SELECT y.year, hs.officer_total FROM years y LEFT JOIN historical_staffing hs ON hs.ori = 'LANPD0000' AND hs.year = y.year AND hs.officer_total > 0 ORDER BY y.year
+
+**MISSING DATA DISCLOSURE:** After reviewing the query results, if any rows have NULL values for the data column (indicating the agency did not report that year), you MUST note this in your explanation. Use the format: "[Agency name] may not have reported [data type] in [list the missing years]." For example: "New Orleans may not have reported staffing data in 2009, 2014, 2015, 2020, and 2021." This applies to ALL historical queries (staffing, crime, clearance) where gaps exist — not just staffing.
+
 **Staffing query examples:**
 - Officers for a specific agency: SELECT hs.year, hs.officer_total FROM historical_staffing hs JOIN historical_agency ha ON ha.ori = hs.ori WHERE ha.agency = 'Houston' AND ha.state = 'tx' AND hs.officer_total > 0 ORDER BY hs.year
 - Officers per capita for an agency: JOIN historical_agency_population hap ON hap.ori = hs.ori AND hap.year = hs.year, then ROUND(hs.officer_total * 1000.0 / hap.population, 1) AS officers_per_1k
@@ -635,6 +643,8 @@ ${HISTORICAL.agencyClearanceRows.toLocaleString()} rows. All values are percenta
 - The historical_agency_crime table has "assault" (not "aggravated_assault") and "motor_vehicle_theft" (not "auto_theft"), while historical_state_national uses "aggravated_assault" and "auto_theft" — column names differ between tables
 
 ## QUERY RULES
+
+⚠️ **BEFORE WRITING ANY SQL** — Check if the user's city is ambiguous. These cities have BOTH City and County agencies with DIFFERENT data: Baltimore, St. Louis, El Paso, Nashville, Jacksonville, Richmond, Denver, Las Vegas, Louisville, Memphis, Kansas City. If the user says just the city name without specifying City or County, set sql to null and ask which jurisdiction they mean. NEVER silently pick one.
 
 1. **Agency queries** → Always JOIN historical_agency_crime with historical_agency:
    \`\`\`sql
@@ -746,10 +756,32 @@ ${HISTORICAL.agencyClearanceRows.toLocaleString()} rows. All values are percenta
     LIMIT 1000
     \`\`\`
 12. **LIMIT** → Always include LIMIT, max 1000.
-13. **Data completeness** → If the query includes years before 1960, ALWAYS include this disclaimer: "Note: Data before 1960 may be incomplete or have limited reporting." The state/national table only covers ${HISTORICAL.stateNatMinYear}–${HISTORICAL.stateNatMaxYear}.
+13. **Data completeness** → If the query includes years before 1960, ALWAYS include this disclaimer VERBATIM: "Data before 1960 may reflect incomplete or limited reporting." The state/national table only covers ${HISTORICAL.stateNatMinYear}–${HISTORICAL.stateNatMaxYear}.
 14. **Excluding years** → When the user asks to exclude a specific year (e.g., "exclude 2021"), do NOT filter it out with WHERE year != 2021 — that removes the year from the chart and makes the timeline look continuous. Instead, include all years in the range but use NULL for the excluded year's values so the chart shows a visible gap. Example: SELECT year, CASE WHEN year = 2021 THEN NULL ELSE murder END AS murder FROM ... WHERE year BETWEEN 2019 AND 2025
 15. **NEVER SELECT ori in your query output.** ORI is an internal identifier that means nothing to users. Use ori in JOINs, WHERE, and GROUP BY clauses, but ALWAYS exclude it from the SELECT column list. Instead, SELECT the agency name, state, and other human-readable columns.
-16. **Vague size-based requests** → If the user says "largest cities", "biggest cities", "top 10 cities by population", or similar without naming specific cities, set sql to null and ask for clarification. Population rankings change over time, and "largest" is ambiguous — do they mean city proper population, metro area, or police department jurisdiction? Which year? Ask them to either name specific cities or clarify what they mean by "largest".
+16. **FILL GAPS FOR AGENCY TIME SERIES:** When querying a single agency's crime, staffing, or clearance data over a year range, use a recursive CTE to generate all years in the range and LEFT JOIN the data. This ensures missing years appear as NULL/gaps in charts instead of being silently skipped. Applies to historical_agency_crime, historical_staffing, AND historical_agency_clearance.
+    Crime example:
+    \`\`\`sql
+    WITH years AS (SELECT 1990 AS year UNION ALL SELECT year + 1 FROM years WHERE year < 2024)
+    SELECT y.year, hac.murder
+    FROM years y
+    LEFT JOIN historical_agency ha ON ha.agency = 'Baltimore City' AND ha.state = 'md'
+    LEFT JOIN historical_agency_crime hac ON hac.ori = ha.ori AND hac.year = y.year
+    ORDER BY y.year
+    LIMIT 1000
+    \`\`\`
+    Clearance example:
+    \`\`\`sql
+    WITH years AS (SELECT 1960 AS year UNION ALL SELECT year + 1 FROM years WHERE year < 2024)
+    SELECT y.year, ROUND(hc.murder_clr, 1) AS murder_clr
+    FROM years y
+    LEFT JOIN historical_agency ha ON ha.agency = 'Chicago' AND ha.state = 'il'
+    LEFT JOIN historical_agency_clearance hc ON hc.ori = ha.ori AND hc.year = y.year
+    ORDER BY y.year
+    LIMIT 1000
+    \`\`\`
+    This is CRITICAL for agencies like Baltimore (missing crime 1999), New Orleans (missing staffing years), etc. Without gap-fill, the chart misleadingly connects data across missing years.
+17. **Vague size-based requests** → If the user says "largest cities", "biggest cities", "top 10 cities by population", or similar without naming specific cities, set sql to null and ask for clarification. Population rankings change over time, and "largest" is ambiguous — do they mean city proper population, metro area, or police department jurisdiction? Which year? Ask them to either name specific cities or clarify what they mean by "largest".
 
 ## CHART HINTS
 - Single trend over time (one agency/state/nation, yearly) → "line" with xAxis = "year"

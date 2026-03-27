@@ -57,7 +57,7 @@ export default function ChatInterface({ heroData, heroAgencyCount, heroPopulatio
 
           {/* Center: title */}
           <span
-            className="absolute left-1/2 -translate-x-1/2 text-sm md:text-base font-bold uppercase text-[var(--foreground)]"
+            className="absolute left-1/2 -translate-x-1/2 text-[11px] md:text-base font-bold uppercase text-[var(--foreground)] whitespace-nowrap"
             style={{ letterSpacing: "4px" }}
           >
             Crime Data Assistant

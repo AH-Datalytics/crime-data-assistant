@@ -366,7 +366,7 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
       )}
 
       {/* Main content — chart and table fill remaining space */}
-      <div className="flex-1 min-h-0 flex flex-col lg:flex-row overflow-hidden">
+      <div className="flex-1 min-h-0 flex flex-col lg:flex-row overflow-auto lg:overflow-hidden">
         {/* Hero chart when no data */}
         {showCurrentHero && (
           <div className="flex-1 overflow-y-auto p-4 sm:p-6">
@@ -395,7 +395,7 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
 
         {/* Chart panel */}
         {hasData && response.chartConfig && (
-          <div className={`${response.rows.length > 0 ? "lg:w-1/2 lg:border-r" : "w-full"} border-[var(--border)] overflow-hidden bg-white`}>
+          <div className={`${response.rows.length > 0 ? "lg:w-1/2 lg:border-r" : "w-full"} border-[var(--border)] shrink-0 lg:shrink lg:overflow-hidden bg-white`} style={{ minHeight: 320 }}>
             <div ref={chartRef} className="h-full flex flex-col p-4 sm:p-5">
               <div className="flex items-center justify-between mb-2 shrink-0">
                 <h2
@@ -422,7 +422,7 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
 
         {/* Table panel */}
         {hasData && response.rows.length > 0 && (
-          <div className={`${response.chartConfig ? "lg:w-1/2" : "w-full"} overflow-auto bg-white p-4 sm:p-5`}>
+          <div className={`${response.chartConfig ? "lg:w-1/2" : "w-full"} shrink-0 lg:shrink lg:overflow-auto bg-white p-4 sm:p-5`}>
             <div className="flex items-center justify-between mb-3">
               <h2
                 className="text-xs font-medium uppercase tracking-wider text-[var(--muted)]"

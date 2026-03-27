@@ -219,9 +219,9 @@ export default function NibrsChat({ visible }: NibrsChatProps) {
         </div>
       ) : (
         /* Chart + Table — side by side on desktop, stacked on mobile/tablet */
-        <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+        <div className="flex-1 flex flex-col md:flex-row overflow-auto md:overflow-hidden">
           {/* Chart panel */}
-          <div className="md:w-1/2 md:border-r border-b md:border-b-0 border-[var(--border)] bg-white overflow-auto">
+          <div className="md:w-1/2 md:border-r border-b md:border-b-0 border-[var(--border)] bg-white shrink-0 md:shrink md:overflow-auto" style={{ minHeight: 320 }}>
             {currentResponse?.chartConfig ? (
               <div ref={chartRef} className="px-4 pt-3 pb-1 h-full flex flex-col">
                 <div className="flex items-center justify-between mb-1 shrink-0">
@@ -253,7 +253,7 @@ export default function NibrsChat({ visible }: NibrsChatProps) {
           </div>
 
           {/* Table panel */}
-          <div className="md:w-1/2 overflow-auto bg-white">
+          <div className="md:w-1/2 shrink-0 md:shrink md:overflow-auto bg-white">
             {currentResponse && currentResponse.rows.length > 0 ? (
               <div className="p-4">
                 <div className="flex items-center justify-between mb-2">

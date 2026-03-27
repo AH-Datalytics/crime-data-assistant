@@ -143,7 +143,7 @@ export default function ExplainerContent({ visible }: ExplainerContentProps) {
           <a href="https://ahdatalytics.com" target="_blank" rel="noopener noreferrer" className="underline">
             AH Datalytics
           </a>
-          . Data provided by the FBI Criminal Justice Information Services (CJIS) Division. This tool is not affiliated with or endorsed by the FBI.
+          . This tool is not affiliated with or endorsed by the FBI.
         </p>
       </div>
     </div>

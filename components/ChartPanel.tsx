@@ -37,7 +37,7 @@ const NYT_COLORS = [
 ];
 
 const TICK_STYLE = {
-  fontSize: 12,
+  fontSize: 11,
   fill: "#999",
   fontFamily: "Georgia, 'Times New Roman', serif",
 };
@@ -57,7 +57,18 @@ function properCase(s: string): string {
   const label = cleaned || s.replace(/_/g, " ").trim();
   const titled = label.replace(/\b\w/g, (c) => c.toUpperCase());
   // Fix known abbreviations that should stay uppercase
-  return titled.replace(/\bDc\b/g, "DC").replace(/\bNy\b/g, "NY").replace(/\bNyc\b/g, "NYC").replace(/\bLa\b/g, "LA").replace(/\bUs\b/g, "US");
+  const fixed = titled.replace(/\bDc\b/g, "DC").replace(/\bNy\b/g, "NY").replace(/\bNyc\b/g, "NYC").replace(/\bLa\b/g, "LA").replace(/\bUs\b/g, "US");
+  // Fix common singular labels that should be plural
+  return fixed
+    .replace(/\bOfficer\b$/g, "Officers")
+    .replace(/\bIncident\b$/g, "Incidents")
+    .replace(/\bArrest\b$/g, "Arrests")
+    .replace(/\bVictim\b$/g, "Victims")
+    .replace(/\bOffense\b$/g, "Offenses")
+    .replace(/\bMurder\b$/g, "Murders")
+    .replace(/\bRobbery\b$/g, "Robberies")
+    .replace(/\bAssault\b$/g, "Assaults")
+    .replace(/\bBurglary\b$/g, "Burglaries");
 }
 
 function isYearMonth(data: Record<string, unknown>[], xKey: string): boolean {
@@ -169,7 +180,8 @@ function monthTicksForDaily(data: Record<string, unknown>[], xKey: string): stri
 }
 
 /** Build evenly-spaced ticks for plain-year x-axis data.
- *  ≤20 years → every year, ≤50 → every 5, otherwise every 10 (decade). */
+ *  ≤20 years → every year, ≤50 → every 5, otherwise every 10 (decade).
+ *  Caps at 7 ticks for mobile-friendliness. */
 function decadeTicksForYears(data: Record<string, unknown>[], xKey: string): number[] {
   const years = data
     .map((d) => Number(d[xKey]))
@@ -180,9 +192,16 @@ function decadeTicksForYears(data: Record<string, unknown>[], xKey: string): num
   const span = max - min;
   const step = span <= 20 ? 1 : span <= 50 ? 5 : 10;
   const first = step === 1 ? min : Math.ceil(min / step) * step;
-  const ticks: number[] = [];
+  let ticks: number[] = [];
   for (let y = first; y <= max; y += step) {
     ticks.push(y);
+  }
+  // Thin to max 7 ticks for mobile friendliness
+  if (ticks.length > 7) {
+    const thinStep = Math.ceil(ticks.length / 6);
+    const thinned = ticks.filter((_, i) => i % thinStep === 0);
+    if (thinned[thinned.length - 1] !== ticks[ticks.length - 1]) thinned.push(ticks[ticks.length - 1]);
+    ticks = thinned;
   }
   return ticks;
 }
@@ -319,7 +338,7 @@ function ChartPanel({ config, rows, meta }: ChartPanelProps) {
                 tickLine={false}
                 axisLine={false}
                 width={isPercent ? 55 : 50}
-                {...(config.yAxisLabel ? { label: { value: config.yAxisLabel, angle: -90, position: "insideLeft", style: { fontSize: 11, fill: "#999", fontFamily: "Georgia, 'Times New Roman', serif" } } } : {})}
+                {...(config.yAxisLabel ? { label: { value: config.yAxisLabel, angle: -90, position: "insideLeft", offset: 0, dy: -10, style: { fontSize: 10, fill: "#999", fontFamily: "Georgia, 'Times New Roman', serif", textAnchor: "middle" } } } : {})}
               />
               <Tooltip
                 labelFormatter={tooltipLabelFormatter}
@@ -368,7 +387,7 @@ function ChartPanel({ config, rows, meta }: ChartPanelProps) {
           ) : config.type === "bar" || config.type === "stacked_bar" ? (
             <BarChart
               data={data}
-              margin={{ top: 10, right: 20, bottom: ym || daily ? 20 : 80, left: 10 }}
+              margin={{ top: 10, right: 20, bottom: (ym || daily || plainYears) ? 20 : 80, left: 10 }}
             >
               <CartesianGrid horizontal vertical={false} stroke={GRID_COLOR} strokeWidth={1} />
               <XAxis
@@ -394,7 +413,7 @@ function ChartPanel({ config, rows, meta }: ChartPanelProps) {
                   : daily ? dailyTickInterval(dataLen)
                   : 0
                 }
-                height={fewYearsMonthly ? 60 : (ym || daily || plainYears) ? 30 : 100}
+                height={fewYearsMonthly ? 60 : (ym || daily || plainYears) ? 30 : 80}
               />
               <YAxis
                 tickFormatter={yTickFormatter}
@@ -402,7 +421,7 @@ function ChartPanel({ config, rows, meta }: ChartPanelProps) {
                 tickLine={false}
                 axisLine={false}
                 width={isPercent ? 55 : 50}
-                {...(config.yAxisLabel ? { label: { value: config.yAxisLabel, angle: -90, position: "insideLeft", style: { fontSize: 11, fill: "#999", fontFamily: "Georgia, 'Times New Roman', serif" } } } : {})}
+                {...(config.yAxisLabel ? { label: { value: config.yAxisLabel, angle: -90, position: "insideLeft", offset: 0, dy: -10, style: { fontSize: 10, fill: "#999", fontFamily: "Georgia, 'Times New Roman', serif", textAnchor: "middle" } } } : {})}
               />
               <Tooltip
                 labelFormatter={tooltipLabelFormatter}
@@ -470,7 +489,7 @@ function ChartPanel({ config, rows, meta }: ChartPanelProps) {
           ) : null}
         </ResponsiveContainer>
         <div
-          className="text-[10px] -mt-2 shrink-0 pb-1"
+          className="text-[10px] -mt-4 shrink-0 pb-1"
           style={{ color: "#aaa", fontFamily: "Georgia, 'Times New Roman', serif" }}
         >
           Source: {meta?.source || "Real-Time Crime Index"}
