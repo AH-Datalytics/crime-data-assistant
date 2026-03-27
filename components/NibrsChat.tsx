@@ -22,6 +22,8 @@ export default function NibrsChat({ visible }: NibrsChatProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const [currentResponse, setCurrentResponse] =
     useState<QueryResponse | null>(null);
@@ -34,6 +36,8 @@ export default function NibrsChat({ visible }: NibrsChatProps) {
 
       setInput("");
       setLoading(true);
+      setElapsed(0);
+      timerRef.current = setInterval(() => setElapsed((s) => s + 1), 1000);
 
       const userMsg: Message = {
         id: Date.now().toString(),
@@ -49,11 +53,15 @@ export default function NibrsChat({ visible }: NibrsChatProps) {
       setMessages((prev) => [...prev, userMsg]);
 
       try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 90000);
         const res = await fetch("/api/nibrs-query", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ question, history }),
+          signal: controller.signal,
         });
+        clearTimeout(timeout);
 
         const data = await res.json();
 
@@ -79,17 +87,21 @@ export default function NibrsChat({ visible }: NibrsChatProps) {
           setCurrentResponse(null);
         }
       } catch (err) {
-        const msg = err instanceof Error ? err.message : "Network error";
+        const isAbort = err instanceof DOMException && err.name === "AbortError";
+        const msg = isAbort
+          ? "That request took too long. Try a simpler question — a specific city, state, or shorter time range."
+          : err instanceof Error ? err.message : "Network error";
         setMessages((prev) => [
           ...prev,
           {
             id: (Date.now() + 1).toString(),
             role: "assistant",
-            text: `Error: ${msg}`,
+            text: isAbort ? msg : `Error: ${msg}`,
           },
         ]);
         setCurrentResponse(null);
       } finally {
+        if (timerRef.current) clearInterval(timerRef.current);
         setLoading(false);
       }
     },
@@ -167,7 +179,7 @@ export default function NibrsChat({ visible }: NibrsChatProps) {
                 <span className="animate-bounce text-[var(--navy)]" style={{ animationDelay: "0.1s" }}>·</span>
                 <span className="animate-bounce text-[var(--navy)]" style={{ animationDelay: "0.2s" }}>·</span>
               </span>{" "}
-              Thinking...
+              Thinking...{elapsed > 3 && ` (${elapsed}s)`}
             </div>
           )}
           {[...messages].reverse().map((msg) => (
@@ -200,6 +212,9 @@ export default function NibrsChat({ visible }: NibrsChatProps) {
         <div className="flex-1 overflow-auto bg-[var(--surface)]">
           <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6">
             <NibrsHeroChart />
+            <p className="text-xs text-center text-gray-400 mt-4">
+              I am a bot and sometimes may make mistakes. When in doubt, verify these findings with official sources.
+            </p>
           </div>
         </div>
       ) : (
@@ -272,6 +287,11 @@ export default function NibrsChat({ visible }: NibrsChatProps) {
             )}
           </div>
         </div>
+      )}
+      {currentResponse && (
+        <p className="text-xs text-center text-gray-400 py-1 border-t border-[var(--border)] bg-white shrink-0">
+          I am a bot and sometimes may make mistakes. When in doubt, verify these findings with official sources.
+        </p>
       )}
     </div>
   );

@@ -376,6 +376,9 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
                 agencyCount={heroAgencyCount || 0}
                 population={heroPopulation ?? null}
               />
+              <p className="text-xs text-center text-gray-400 mt-4">
+                I am a bot and sometimes may make mistakes. When in doubt, verify these findings with official sources.
+              </p>
             </div>
           </div>
         )}
@@ -383,6 +386,9 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
           <div className="flex-1 overflow-y-auto p-4 sm:p-6">
             <div className="max-w-4xl mx-auto">
               <HistoricalHeroChart data={historicalHeroData!} />
+              <p className="text-xs text-center text-gray-400 mt-4">
+                I am a bot and sometimes may make mistakes. When in doubt, verify these findings with official sources.
+              </p>
             </div>
           </div>
         )}
@@ -444,6 +450,11 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
           </div>
         )}
       </div>
+      {response && (
+        <p className="text-xs text-center text-gray-400 py-1 border-t border-[var(--border)] bg-white shrink-0">
+          I am a bot and sometimes may make mistakes. When in doubt, verify these findings with official sources.
+        </p>
+      )}
     </div>
   );
 }

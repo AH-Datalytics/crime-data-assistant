@@ -1,0 +1,206 @@
+[
+  {
+    "question": "What's the racial breakdown of gun murder victims in Chicago for 2024?",
+    "category": "DEMOGRAPHIC BREAKDOWNS"
+  },
+  {
+    "question": "Show me offender age demographics for robberies nationwide in 2023",
+    "category": "DEMOGRAPHIC BREAKDOWNS"
+  },
+  {
+    "question": "What are the arrestee demographics by race and sex for drug offenses in Ohio?",
+    "category": "DEMOGRAPHIC BREAKDOWNS"
+  },
+  {
+    "question": "Break down homicide victims by age group in Detroit for the last 5 years",
+    "category": "DEMOGRAPHIC BREAKDOWNS"
+  },
+  {
+    "question": "How many murders involved handguns versus rifles nationally in 2024?",
+    "category": "WEAPON QUERIES"
+  },
+  {
+    "question": "What weapons are most commonly used in aggravated assaults in Houston?",
+    "category": "WEAPON QUERIES"
+  },
+  {
+    "question": "Show me murder victims killed by shotgun by year from 2020-2024",
+    "category": "WEAPON QUERIES"
+  },
+  {
+    "question": "What percentage of robberies involve knives versus firearms in New York?",
+    "category": "WEAPON QUERIES"
+  },
+  {
+    "question": "Where do most robberies occur - residences, streets, or commercial buildings?",
+    "category": "LOCATION QUERIES"
+  },
+  {
+    "question": "Compare murders at schools versus residences in 2024",
+    "category": "LOCATION QUERIES"
+  },
+  {
+    "question": "How many burglaries happened at convenience stores in Texas last year?",
+    "category": "LOCATION QUERIES"
+  },
+  {
+    "question": "What's the breakdown of aggravated assaults by location type in California?",
+    "category": "LOCATION QUERIES"
+  },
+  {
+    "question": "Show me anti-Jewish hate crimes by year from 2019 to 2024",
+    "category": "HATE CRIME"
+  },
+  {
+    "question": "What hate crimes were reported in California in 2023?",
+    "category": "HATE CRIME"
+  },
+  {
+    "question": "What types of bias motivations are most common in hate crimes nationally?",
+    "category": "HATE CRIME"
+  },
+  {
+    "question": "How many anti-Black hate crimes occurred in New York versus Texas in 2024?",
+    "category": "HATE CRIME"
+  },
+  {
+    "question": "What percentage of murders are domestic violence related nationally?",
+    "category": "CIRCUMSTANCE QUERIES"
+  },
+  {
+    "question": "Show me gang-related murders in Chicago by year since 2020",
+    "category": "CIRCUMSTANCE QUERIES"
+  },
+  {
+    "question": "How many murders stem from arguments versus other circumstances?",
+    "category": "CIRCUMSTANCE QUERIES"
+  },
+  {
+    "question": "What's the trend in domestic violence homicides in Texas over the past decade?",
+    "category": "CIRCUMSTANCE QUERIES"
+  },
+  {
+    "question": "What's the murder clearance rate in Detroit for 2024?",
+    "category": "CLEARANCE RATES"
+  },
+  {
+    "question": "Compare clearance rates by arrest versus exceptional means for rape cases in Houston",
+    "category": "CLEARANCE RATES"
+  },
+  {
+    "question": "Which cities have the highest murder clearance rates nationally?",
+    "category": "CLEARANCE RATES"
+  },
+  {
+    "question": "How do robbery clearance rates compare between Chicago and Los Angeles?",
+    "category": "CLEARANCE RATES"
+  },
+  {
+    "question": "Compare methamphetamine versus cocaine offense arrests in Texas",
+    "category": "DRUG OFFENSES"
+  },
+  {
+    "question": "What are the top drugs seized nationally in 2024?",
+    "category": "DRUG OFFENSES"
+  },
+  {
+    "question": "Show me drug offense trends in Ohio from 2020 to 2024",
+    "category": "DRUG OFFENSES"
+  },
+  {
+    "question": "How many fentanyl-related arrests occurred in California last year?",
+    "category": "DRUG OFFENSES"
+  },
+  {
+    "question": "How many firearms were stolen by state in 2024?",
+    "category": "PROPERTY CRIMES"
+  },
+  {
+    "question": "What's the total value of property stolen in burglaries in New York?",
+    "category": "PROPERTY CRIMES"
+  },
+  {
+    "question": "Show me the carjacking trend in Chicago by month for 2024",
+    "category": "PROPERTY CRIMES"
+  },
+  {
+    "question": "Which state has the highest motor vehicle theft rate?",
+    "category": "PROPERTY CRIMES"
+  },
+  {
+    "question": "What's the national murder trend from 2015 to 2024?",
+    "category": "MULTI-YEAR TRENDS"
+  },
+  {
+    "question": "How has the robbery rate changed in Houston from 2020 to 2024?",
+    "category": "MULTI-YEAR TRENDS"
+  },
+  {
+    "question": "Show me how rape offenses have changed in Texas over the past 10 years",
+    "category": "MULTI-YEAR TRENDS"
+  },
+  {
+    "question": "What's the trend in aggravated assault nationally since 2018?",
+    "category": "MULTI-YEAR TRENDS"
+  },
+  {
+    "question": "What are the murder rates per 100,000 for the top 10 largest cities?",
+    "category": "RATE CALCULATIONS"
+  },
+  {
+    "question": "Compare aggravated assault rates by state for 2024",
+    "category": "RATE CALCULATIONS"
+  },
+  {
+    "question": "How do murder rates compare between Chicago, Houston, and Detroit?",
+    "category": "RATE CALCULATIONS"
+  },
+  {
+    "question": "What's the violent crime rate in Philadelphia versus Phoenix?",
+    "category": "RATE CALCULATIONS"
+  },
+  {
+    "question": "Show me firearm murder victims under 25 by race nationally in 2024",
+    "category": "CROSS-DIMENSIONAL"
+  },
+  {
+    "question": "How many domestic violence murders involved firearms in Texas?",
+    "category": "CROSS-DIMENSIONAL"
+  },
+  {
+    "question": "What types of hate crimes occur at schools and universities?",
+    "category": "CROSS-DIMENSIONAL"
+  },
+  {
+    "question": "Break down gang-related homicides by weapon type in California",
+    "category": "CROSS-DIMENSIONAL"
+  },
+  {
+    "question": "What's the assault trend in New York over the past 5 years?",
+    "category": "EDGE CASES / TRICKY"
+  },
+  {
+    "question": "How much violent crime occurred in Houston in 2024?",
+    "category": "EDGE CASES / TRICKY"
+  },
+  {
+    "question": "Show me crime statistics for Springfield in 2023",
+    "category": "EDGE CASES / TRICKY"
+  },
+  {
+    "question": "What's the murder rate in San Francisco?",
+    "category": "EDGE CASES / TRICKY"
+  },
+  {
+    "question": "How many police officers are employed in Houston?",
+    "category": "EDGE CASES / TRICKY"
+  },
+  {
+    "question": "Compare justifiable homicides by police versus civilians nationally",
+    "category": "EDGE CASES / TRICKY"
+  },
+  {
+    "question": "What's the trend in negligent manslaughter cases over the past decade?",
+    "category": "EDGE CASES / TRICKY"
+  }
+]

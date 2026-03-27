@@ -5,6 +5,7 @@ import CrimeIndexLogo from "./CrimeIndexLogo";
 import RtciChat from "./RtciChat";
 import NibrsChat from "./NibrsChat";
 import ExplainerContent from "./ExplainerContent";
+import WelcomeModal from "./WelcomeModal";
 
 type TabId = "current" | "historical" | "nibrs" | "explainer";
 
@@ -28,12 +29,22 @@ export default function ChatInterface({ heroData, heroAgencyCount, heroPopulatio
 
   return (
     <div className="h-screen flex flex-col bg-[var(--surface)]">
+      <WelcomeModal />
       {/* Header */}
       <header className="bg-white border-b border-[var(--border)] shrink-0">
         {/* Top row: logo + tab pills (desktop) */}
-        <div className="px-4 md:px-6 flex items-center justify-between" style={{ height: 56 }}>
-          <div className="flex items-center gap-3 md:gap-6 min-w-0">
-            <div className="flex items-center gap-2 shrink-0">
+        <div className="px-4 md:px-6 flex items-center justify-between relative" style={{ height: 56 }}>
+          {/* Left: back arrow + logo (desktop only) + Crime Index (desktop only) */}
+          <div className="flex items-center gap-3 md:gap-4 min-w-0 shrink-0">
+            <a
+              href="https://crimeindex.org"
+              className="flex items-center gap-1 text-xs font-bold text-[var(--muted)] hover:text-[var(--foreground)] transition-colors shrink-0"
+            >
+              <span>&larr;</span>
+              <span>Back</span>
+            </a>
+            <div className="h-5 w-px bg-[var(--border)] hidden md:block" />
+            <div className="hidden md:flex items-center gap-2 shrink-0">
               <CrimeIndexLogo size={24} />
               <span
                 className="text-xs md:text-sm font-medium tracking-widest uppercase text-[var(--foreground)]"
@@ -42,15 +53,22 @@ export default function ChatInterface({ heroData, heroAgencyCount, heroPopulatio
                 Crime Index
               </span>
             </div>
-            <div className="h-5 w-px bg-[var(--border)] hidden md:block" />
-            <span className="text-xs md:text-sm text-[var(--foreground)] hidden md:block">
-              Crime Data Assistant
-            </span>
           </div>
 
-          {/* Desktop tab pills — visible at md (768px+) */}
-          <div className="hidden md:flex items-center gap-3 shrink-0">
-            <div className="flex items-center gap-0 rounded-lg overflow-hidden border border-[var(--border)]">
+          {/* Center: title */}
+          <span
+            className="absolute left-1/2 -translate-x-1/2 text-sm md:text-base font-bold uppercase text-[var(--foreground)]"
+            style={{ letterSpacing: "4px" }}
+          >
+            Crime Data Assistant
+          </span>
+
+          {/* Right: logo on mobile, tab pills on desktop */}
+          <div className="flex items-center gap-3 shrink-0">
+            <a href="https://crimeindex.org" className="md:hidden flex items-center shrink-0">
+              <CrimeIndexLogo size={24} />
+            </a>
+            <div className="hidden md:flex items-center gap-0 rounded-lg overflow-hidden border border-[var(--border)]">
               {TABS.map((tab, i) => (
                 <button
                   key={tab.id}
