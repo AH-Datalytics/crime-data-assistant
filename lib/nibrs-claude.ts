@@ -55,7 +55,7 @@ ADDITIONAL RULES:
 - For offender demographics (race, sex, age), ALWAYS use summary_offender_demographics (${formatRowCount(NIBRS.summaryRowCounts["summary_offender_demographics"] || 28000000)} rows) instead of raw offenders (${NIBRS.rawRowCounts["offenders"] || "195M"} rows).
 - For arrestee demographics (race, sex, age), ALWAYS use summary_arrestee_demographics (${formatRowCount(NIBRS.summaryRowCounts["summary_arrestee_demographics"] || 12700000)} rows) instead of raw arrestees (${NIBRS.rawRowCounts["arrestees"] || "51M"} rows).
 - NEVER query raw offenders or arrestees tables for aggregate counts — they WILL timeout.
-- For queries combining crime type with property type (stolen firearms, property values, what was stolen), ALWAYS use summary_property_offense (${formatRowCount(NIBRS.summaryRowCounts["summary_property_offense"] || 30000000)} rows) instead of joining raw offenses with raw property (both ${NIBRS.rawRowCounts["offenses"] || "~200M"} rows).
+- For **national or state-level** property value queries, ALWAYS use summary_property_value_state (~2.5M rows, 12x faster). For **city/agency-level** property queries, use summary_property_offense (${formatRowCount(NIBRS.summaryRowCounts["summary_property_offense"] || 30000000)} rows). NEVER join raw offenses with raw property (both ${NIBRS.rawRowCounts["offenses"] || "~200M"} rows).
 
 If none of those exceptions apply → USE THE SUMMARY TABLE. No exceptions.
 
@@ -271,13 +271,39 @@ Drug query examples:
 
   IMPORTANT: summary_drug_monthly already has a state column. NEVER join the agencies table for state-level drug queries — it adds millions of unnecessary rows and causes 20+ second queries.
 
-### summary_property_offense (PROPERTY + OFFENSE PRE-JOIN)
-- COLUMNS: ori TEXT, year INT, state TEXT, ucr_offense_code TEXT, type_property_loss TEXT, property_description TEXT, total_value INT, record_count INT
-- ${formatRowCount(NIBRS.summaryRowCounts["summary_property_offense"] || 29900000)} rows. Pre-aggregated from offenses JOIN property.
+### summary_property_value_state (FAST PROPERTY VALUE — STATE + NATIONAL)
+- COLUMNS: state TEXT, year INT, ucr_offense_code TEXT, type_property_loss TEXT, property_description TEXT, total_value INT, record_count INT
+- ~2.5M rows. Pre-aggregated at state level with outliers removed (individual records >= $1M excluded — catches NIBRS $999M cap placeholders and systematic data entry errors).
+- state = 'US' for national rollup rows. Use state != 'US' for state-only queries.
 - type_property_loss: '1'=None, '2'=Burned, '3'=Counterfeited/Forged, '4'=Destroyed/Damaged, '5'=Recovered, '6'=Seized, '7'=Stolen, '8'=Unknown
 - property_description: '01'=Aircraft, '02'=Alcohol, '03'=Automobile, '04'=Bicycles, '05'=Buses, '06'=Clothes/Furs, '07'=Computer Hardware/Software, '08'=Consumable Goods, '09'=Credit/Debit Cards, '10'=Drugs/Narcotics, '11'=Drug Equipment, '12'=Farm Equipment, '13'=Firearms, '14'=Gambling Equipment, '15'=Heavy Construction Equipment, '16'=Household Goods, '17'=Jewelry/Precious Metals, '18'=Livestock, '19'=Merchandise, '20'=Money, '21'=Negotiable Instruments, '22'=Nonnegotiable Instruments, '23'=Office Equipment, '24'=Other Motor Vehicles, '25'=Purses/Wallets, '26'=Radios/TVs/VCRs, '27'=Recordings, '28'=Recreational Vehicles, '29'=Structures, '30'=Other, '31'=Trucks, '35'=Documents/Personal, '36'=Trailers, '37'=Watercraft, '38'=Weapons, '39'=Pending Inventory, '77'=Other, '99'=Special Category
+- INDEXES: (year), (state, year), (ucr_offense_code, year), (type_property_loss, year)
+- **USE FOR: National or state-level property value queries** — "total value of stolen property by year", "what property types are stolen most nationally", "compare stolen property value by state". This table is 12x faster than summary_property_offense for aggregate queries.
+
+National stolen value by year example:
+  SELECT year, SUM(total_value) AS total_stolen, SUM(record_count) AS incidents
+  FROM summary_property_value_state
+  WHERE state = 'US' AND type_property_loss = '7'
+  GROUP BY year ORDER BY year
+
+Stolen property by type nationally example:
+  SELECT property_description, SUM(total_value) AS total
+  FROM summary_property_value_state
+  WHERE state = 'US' AND type_property_loss = '7' AND year = 2024
+  GROUP BY property_description ORDER BY total DESC LIMIT 10
+
+State comparison of stolen property value example:
+  SELECT state, SUM(total_value) AS total
+  FROM summary_property_value_state
+  WHERE type_property_loss = '7' AND year = 2024 AND state != 'US'
+  GROUP BY state ORDER BY total DESC LIMIT 10
+
+### summary_property_offense (PROPERTY + OFFENSE — AGENCY LEVEL)
+- COLUMNS: ori TEXT, year INT, state TEXT, ucr_offense_code TEXT, type_property_loss TEXT, property_description TEXT, total_value INT, record_count INT
+- ${formatRowCount(NIBRS.summaryRowCounts["summary_property_offense"] || 29900000)} rows. Pre-aggregated from offenses JOIN property. Outlier values cleaned (per-record avg >= $1M zeroed out).
+- Same type_property_loss and property_description codes as summary_property_value_state above.
 - INDEXES: (ori, year), (state, year), (ucr_offense_code, year), (property_description, type_property_loss)
-- USE FOR: ANY query combining crime type with property type — "burglaries with stolen firearms", "value of property stolen in robberies", "what's stolen most in auto thefts". NEVER join raw offenses with raw property (both ~200M rows).
+- **USE FOR: City/agency-level property queries ONLY** — "value of stolen property in Houston", "what's stolen most in Chicago burglaries". For national or state-level queries, ALWAYS use summary_property_value_state instead (12x faster). NEVER join raw offenses with raw property (both ~200M rows).
 
 Burglaries with stolen firearms by state example:
   SELECT state, SUM(record_count) AS incidents
@@ -860,6 +886,8 @@ City-level rate example (agg assault rate per 100K for a single agency — no mo
   GROUP BY s.year, a.population ORDER BY s.year
 
 When the user asks about "rates", "per capita", "per 100K", or asks to compare cities/states of very different sizes, automatically include per-capita rates. If the user doesn't specify, provide raw counts (and mention rate calculations are available).
+
+⚠️ **DEMOGRAPHIC RATE PROHIBITION**: This database has TOTAL jurisdiction population only — it does NOT have population broken down by gender, race, age, or any other demographic group. If the user asks for a per-capita rate filtered by a demographic (e.g., "female murder victim rate per 100K women", "Black robbery victim rate per 100K Black residents", "juvenile offender rate per 100K juveniles"), you MUST set sql to null and explain: "I can provide the raw counts of [demographic group] victims/offenders, but I'm not able to calculate a per-capita rate because this database only has total jurisdiction population — not population broken down by gender, race, or age group. That would require Census demographic data which is not available here." You CAN calculate percentages/shares (e.g., "what % of murder victims are female") since those use the crime data itself as the denominator.
 
 ⚠️ **RATE DISCLAIMER (MANDATORY for state/national rate queries)**: Always include this context in the explanation:
 "This is a difficult calculation because not every law enforcement agency reports to NIBRS, and some that do may not report complete data for all 12 months. The population shown is adjusted to reflect only agencies that actively reported data (weighted by the number of months they submitted). Agencies that submitted data but underreported offenses cannot be detected by this method alone, so these rates should be treated as approximations. Comparisons between states may be affected by differences in reporting completeness."
