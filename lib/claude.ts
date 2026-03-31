@@ -107,13 +107,13 @@ Offense names are stored exactly as above (title case). Always use exact strings
    - If the name exists as both City and County in the same state (Baltimore MD, El Paso TX, Denton TX, Hamilton OH, Greenville SC, Kalamazoo MI, and others), default to the City agency UNLESS they say "county". You MUST add \`AND type = 'City'\` to the WHERE clause to exclude the County agency. Without this filter, you'll get duplicate rows from both jurisdictions. **Always include \`AND type = 'City'\` when querying a single city** — many city names have a matching County agency in the dataset.
    - **St Louis exception** (CRITICAL — you MUST follow this): St Louis City (agency='St Louis', type='City') and St Louis County (agency='St Louis County', type='County') are SEPARATE, INDEPENDENT jurisdictions — the city is NOT inside the county. If the user says "St. Louis" or "STL" without specifying city or county, you MUST set sql to null and ask: "Did you mean St. Louis City or St. Louis County? They are independent jurisdictions." NEVER default to both or combine them.
    - If the name exists in different states (Albany NY vs Albany GA, Fayetteville AR vs NC), set sql to null and ask the user to specify which state in your explanation
-6. **Multi-agency comparisons** → **CRITICAL: You MUST pivot the data** so each agency becomes its own column. The frontend CANNOT chart long-format data (year, agency, total). Always use CASE WHEN to create one column per agency:
+6. **Multi-agency comparisons** → **CRITICAL: You MUST pivot the data** so each agency becomes its own column. The frontend CANNOT chart long-format data (year, agency, total). Always use CASE WHEN to create one column per agency. **Include \`AND type = 'City'\` (or 'County') in every CASE WHEN branch and WHERE condition** to prevent mixing jurisdictions:
    \`\`\`sql
    SELECT year,
-     SUM(CASE WHEN agency = 'Houston' AND state = 'TX' THEN count END) as houston,
-     SUM(CASE WHEN agency = 'Dallas' AND state = 'TX' THEN count END) as dallas
+     SUM(CASE WHEN agency = 'Houston' AND state = 'TX' AND type = 'City' THEN count END) as houston,
+     SUM(CASE WHEN agency = 'Dallas' AND state = 'TX' AND type = 'City' THEN count END) as dallas
    FROM agency_monthly
-   WHERE (agency = 'Houston' OR agency = 'Dallas') AND state = 'TX'
+   WHERE ((agency = 'Houston' AND state = 'TX' AND type = 'City') OR (agency = 'Dallas' AND state = 'TX' AND type = 'City'))
      AND offense = 'Murder'
    GROUP BY year
    ORDER BY year
@@ -217,25 +217,26 @@ LIMIT 20
 ### Two-agency time series comparison (pivoted for multi-line chart)
 \`\`\`sql
 SELECT year, month,
-  SUM(CASE WHEN agency = 'New York City' AND state = 'NY' THEN count END) as new_york_city,
-  SUM(CASE WHEN agency = 'Chicago' AND state = 'IL' THEN count END) as chicago
+  SUM(CASE WHEN agency = 'New York City' AND state = 'NY' AND type = 'City' THEN count END) as new_york_city,
+  SUM(CASE WHEN agency = 'Los Angeles' AND state = 'CA' AND type = 'City' THEN count END) as los_angeles
 FROM agency_monthly
-WHERE ((agency = 'New York City' AND state = 'NY') OR (agency = 'Chicago' AND state = 'IL'))
+WHERE ((agency = 'New York City' AND state = 'NY' AND type = 'City') OR (agency = 'Los Angeles' AND state = 'CA' AND type = 'City'))
   AND offense = 'Murder'
 GROUP BY year, month
 ORDER BY year, month
 LIMIT 1000
 \`\`\`
+**CRITICAL: Always include the type filter (\`AND type = 'City'\` or \`AND type = 'County'\`) inside EACH CASE WHEN branch AND in the corresponding WHERE clause condition.** Many city names (Los Angeles, Baltimore, El Paso, Sacramento, San Diego, St Louis, etc.) have both City and County agencies — without the type filter, you'll mix jurisdictions and produce wrong numbers. Default to \`type = 'City'\` unless the user explicitly says "county". Each branch can have a different type — e.g., comparing NYC (City) vs Los Angeles County (County) is valid.
 
 ### Multi-city RATE comparison (per 100K, pivoted — use when user says "rates")
 \`\`\`sql
 SELECT am.year, am.month,
-  ROUND(SUM(CASE WHEN am.agency = 'Baltimore' AND am.state = 'MD' THEN am.count END) * 100000.0 / MAX(CASE WHEN am.agency = 'Baltimore' AND am.state = 'MD' THEN ap.population END), 1) as baltimore,
-  ROUND(SUM(CASE WHEN am.agency = 'Washington' AND am.state = 'DC' THEN am.count END) * 100000.0 / MAX(CASE WHEN am.agency = 'Washington' AND am.state = 'DC' THEN ap.population END), 1) as washington_dc,
-  ROUND(SUM(CASE WHEN am.agency = 'Detroit' AND am.state = 'MI' THEN am.count END) * 100000.0 / MAX(CASE WHEN am.agency = 'Detroit' AND am.state = 'MI' THEN ap.population END), 1) as detroit
+  ROUND(SUM(CASE WHEN am.agency = 'Baltimore' AND am.state = 'MD' AND am.type = 'City' THEN am.count END) * 100000.0 / MAX(CASE WHEN am.agency = 'Baltimore' AND am.state = 'MD' AND am.type = 'City' THEN ap.population END), 1) as baltimore,
+  ROUND(SUM(CASE WHEN am.agency = 'Washington' AND am.state = 'DC' AND am.type = 'City' THEN am.count END) * 100000.0 / MAX(CASE WHEN am.agency = 'Washington' AND am.state = 'DC' AND am.type = 'City' THEN ap.population END), 1) as washington_dc,
+  ROUND(SUM(CASE WHEN am.agency = 'Detroit' AND am.state = 'MI' AND am.type = 'City' THEN am.count END) * 100000.0 / MAX(CASE WHEN am.agency = 'Detroit' AND am.state = 'MI' AND am.type = 'City' THEN ap.population END), 1) as detroit
 FROM agency_monthly am
 JOIN agency_population ap ON ap.ori = am.ori AND ap.year = am.year
-WHERE ((am.agency = 'Baltimore' AND am.state = 'MD') OR (am.agency = 'Washington' AND am.state = 'DC') OR (am.agency = 'Detroit' AND am.state = 'MI'))
+WHERE ((am.agency = 'Baltimore' AND am.state = 'MD' AND am.type = 'City') OR (am.agency = 'Washington' AND am.state = 'DC' AND am.type = 'City') OR (am.agency = 'Detroit' AND am.state = 'MI' AND am.type = 'City'))
   AND am.offense = 'Murder'
 GROUP BY am.year, am.month
 ORDER BY am.year, am.month
@@ -274,10 +275,10 @@ ORDER BY am.year
 \`\`\`sql
 WITH monthly AS (
   SELECT year, month,
-    SUM(CASE WHEN agency = 'Kansas City' AND state = 'MO' THEN count END) as kansas_city,
+    SUM(CASE WHEN agency = 'Kansas City' AND state = 'MO' AND type = 'City' THEN count END) as kansas_city,
     SUM(CASE WHEN agency = 'St Louis' AND state = 'MO' AND type = 'City' THEN count END) as st_louis
   FROM agency_monthly
-  WHERE ((agency = 'Kansas City' AND state = 'MO') OR (agency = 'St Louis' AND state = 'MO' AND type = 'City'))
+  WHERE ((agency = 'Kansas City' AND state = 'MO' AND type = 'City') OR (agency = 'St Louis' AND state = 'MO' AND type = 'City'))
     AND offense = 'Murder'
   GROUP BY year, month
 ),
@@ -397,7 +398,8 @@ This tool is the **Current Trends** tab, covering monthly data from ~${RTCI.agen
 3. Does your chartHint match the data? Multi-city monthly = "line", single-period ranking = "bar", 4+ groups by year = "bar".
 4. Does every yAxis column alias actually appear in the SELECT? If not, fix the yAxis.
 5. Is the offense filter present in the WHERE clause? If not, add it.
-6. Does your SELECT contain ONLY what the user asked for? If they said "murders", do NOT also return rates or population. Remove any unrequested columns.`;
+6. Does your SELECT contain ONLY what the user asked for? If they said "murders", do NOT also return rates or population. Remove any unrequested columns.
+7. If querying agency_monthly → does EVERY CASE WHEN branch and WHERE condition include \`AND type = 'City'\` (or 'County')? Cities like Los Angeles, Baltimore, El Paso, Sacramento, San Diego, and St Louis have BOTH City and County agencies — omitting the type filter mixes jurisdictions and produces wrong data.`;
 
 export interface ClaudeResponse {
   sql: string | null;
@@ -693,7 +695,7 @@ ${HISTORICAL.agencyClearanceRows.toLocaleString()} rows. All values are percenta
    - "LA" or "Los Angeles" → agency = 'Los Angeles', state = 'ca'
    - "Chicago" → agency = 'Chicago', state = 'il'
    - "Houston" → agency = 'Houston', state = 'tx'
-   - "St. Louis" or "Saint Louis" → agency = 'St. Louis', state = 'mo' (WITH period in historical tables)
+   - "St. Louis" or "Saint Louis" → agency = 'St. Louis', state = 'mo' (WITH period in historical tables). **IMPORTANT: St. Louis City has TWO ORIs in the database — MOSPD0000 (primary, data from 1932) and MO0956800 (secondary, mostly null crime data). You MUST filter to the primary ORI by adding \`AND hac.ori = 'MOSPD0000'\` in your WHERE clause to avoid duplicate/null rows from the secondary ORI.**
    - "St. Paul" → agency = 'St. Paul', state = 'mn' (WITH period)
    - "St. Petersburg" → agency = 'St. Petersburg', state = 'fl' (WITH period)
    - **NOTE**: Historical tables use periods in "St." names (St. Louis, St. Paul) unlike agency_monthly which omits them for some agencies

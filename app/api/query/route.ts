@@ -346,6 +346,15 @@ export async function POST(req: NextRequest) {
             break;
           }
         }
+        // Check: multi-agency query on agency_monthly missing type filter
+        // Cities like Los Angeles, Baltimore, El Paso, etc. have both City and County entries
+        if (sqlLower.includes("agency_monthly") && /case\s+when/i.test(claude.sql) && !sqlLower.includes("type")) {
+          const ambiguousCities = ["los angeles", "baltimore", "el paso", "sacramento", "san diego", "san mateo", "santa cruz", "st louis", "alameda", "denton", "greenville", "hamilton", "kalamazoo", "st charles", "tulare"];
+          const mentionedAmbiguous = ambiguousCities.filter(c => sqlLower.includes(`'${c}'`));
+          if (mentionedAmbiguous.length > 0) {
+            issues.push(`Multi-agency query includes ${mentionedAmbiguous.join(", ")} which have both City and County agencies, but no type filter was found. Add AND type = 'City' (or 'County') in each CASE WHEN branch and WHERE condition to avoid mixing jurisdictions.`);
+          }
+        }
 
         // If issues found, ask Claude to fix
         if (issues.length > 0) {
