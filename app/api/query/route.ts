@@ -610,7 +610,11 @@ export async function POST(req: NextRequest) {
         );
         const hasYear = columns.includes("year");
 
-        if (agencyCol && valueCol && hasYear && rows.length > 1) {
+        // Skip auto-pivot for ranking queries (ORDER BY ... DESC LIMIT)
+        // Those are intentionally long-format listings, not comparisons
+        const isRankingQuery = /ORDER\s+BY\s+\S+\s+DESC[\s\S]*?LIMIT/i.test(sql);
+
+        if (agencyCol && valueCol && hasYear && rows.length > 1 && !isRankingQuery) {
           const agencies = [
             ...new Set(rows.map((r) => String(r[agencyCol] ?? ""))),
           ];

@@ -79,6 +79,11 @@ export async function POST(req: NextRequest) {
 
     let sql = validation.sanitized!;
 
+    // Step 2a: Fix non-standard state abbreviations in NIBRS data
+    // Nebraska is stored as 'NB' (not standard 'NE'), Guam as 'GM' (not 'GU')
+    sql = sql.replace(/state\s*=\s*'NE'/gi, "state = 'NB'");
+    sql = sql.replace(/state\s*=\s*'GU'/gi, "state = 'GM'");
+
     // Step 2b: Detect person crime queries hitting raw victims table → retry with summary tables
     const PERSON_CODES = ['09A','09B','09C','11A','11B','11C','11D','13A','13B','13C','100','36A','36B','64A','64B'];
     const hitsRawVictims = /\bFROM\s+VICTIMS\b/i.test(sql) && !(/\bSUMMARY_VICTIM/i.test(sql));

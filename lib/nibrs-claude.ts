@@ -40,16 +40,14 @@ Do NOT offer policy recommendations, causal explanations, editorial conclusions,
 
 **OTHER MANDATORY RULES:**
 - **RETURN ONLY WHAT THE USER ASKED FOR.** If they ask for "murders per year", return murder counts and year — nothing else. Do NOT add rates, population, percentages, or any other columns the user did not request. Do NOT return both counts and rates together.
-- **ASSAULT AMBIGUITY**: If the user says "assault" or "assaults" without specifying a type, you MUST set sql to null and ask whether they mean 13A (Aggravated Assault — attacks with weapons/serious injury, the traditional FBI/UCR category), 13B (Simple Assault — minor physical attacks), 13C (Intimidation — threats), or all three. Do NOT default to any one type.
-
 Person crime UCR codes: 09A, 09B, 09C, 11A, 11B, 11C, 11D, 13A, 13B, 13C, 100, 36A, 36B, 64A, 64B
 
-RULE: If the query involves counting, summing, or trending ANY of the above person crime codes, you MUST query summary_victim_state_monthly (for state/national) or summary_victim_city_monthly (for city/agency). NEVER use the raw victims table for person crime counts — it has ${NIBRS.rawRowCounts["victims"] || "95M"} rows and WILL timeout, returning an HTML error page to the user.
+RULE: If the query involves counting, summing, or trending ANY of the above person crime codes, you MUST query summary_victim_state_monthly (for state/national) or summary_victim_city_monthly (for city/agency). NEVER use the raw victims table for person crime counts. The raw victims table (${NIBRS.rawRowCounts["victims"] || "95M"}+ rows) WILL produce an HTTP 500 error — not empty results, not a slow response, but a CRASH. There is NO recovery. You MUST use summary tables for ALL person crime counts and trends.
 
 The ONLY exceptions where you may use the raw victims table:
 - Query requires victim demographics (age, sex, race) — use summary_victim_demographics instead
-- Query requires daily (not monthly) breakdowns
-- Query requires fields not in summary tables (weapon, injury, relationship)
+- Query requires daily (not monthly) breakdowns for a SINGLE city over a SHORT time range (1-3 months max). You must filter by state, ori, year, AND a narrow incident_date range. Multi-city or multi-year daily queries on raw victims WILL crash.
+- Query requires fields not in summary tables (weapon, injury, relationship) — still must be tightly filtered by state + year + ori
 
 ADDITIONAL RULES:
 - For offender demographics (race, sex, age), ALWAYS use summary_offender_demographics (${formatRowCount(NIBRS.summaryRowCounts["summary_offender_demographics"] || 28000000)} rows) instead of raw offenders (${NIBRS.rawRowCounts["offenders"] || "195M"} rows).
@@ -769,7 +767,7 @@ When outputting demographic fields (race, sex, ethnicity, victim_type, weapon ty
 ## QUERY GUIDELINES (CRITICAL — ${NIBRS.totalLabel} rows, ${NIBRS.dbSizeLabel} database)
 
 ### PERFORMANCE (most important)
-0. **PERSON CRIME COUNTS → SUMMARY TABLES ONLY.** For 09A/09B/09C/11A-11D/13A-13C/100/36A/36B/64A/64B counts and trends, ALWAYS use summary_victim_state_monthly or summary_victim_city_monthly. The raw victims table (${NIBRS.rawRowCounts["victims"] || "95M"} rows) WILL timeout.
+0. **PERSON CRIME COUNTS → SUMMARY TABLES ONLY. NO EXCEPTIONS.** For 09A/09B/09C/11A-11D/13A-13C/100/36A/36B/64A/64B counts and trends, ALWAYS use summary_victim_state_monthly or summary_victim_city_monthly. The raw victims table (${NIBRS.rawRowCounts["victims"] || "95M"}+ rows) WILL produce an HTTP 500 crash — not slow results, a CRASH with no recovery. The ONLY case where raw victims is acceptable is daily breakdowns for a SINGLE city over 1-3 months (with state + ori + year + date range filters). Everything else MUST use summary tables.
 0b. **"WHEN DID X START REPORTING?" → SUMMARY TABLES ONLY.** To find the earliest year an agency or state has NIBRS data, query MIN(year) from a summary table (e.g., summary_city_monthly or summary_state_monthly). NEVER query the raw incidents table for this — it is too large. Example: SELECT MIN(year) AS first_year FROM summary_city_monthly WHERE ori = 'MA0130100'
 1. ALWAYS filter by year AND state on the main table (offenses, incidents, etc.) BEFORE joining other tables. The (state, year) index is the most selective.
 2. NEVER do a full table scan without a year or indexed-column filter.

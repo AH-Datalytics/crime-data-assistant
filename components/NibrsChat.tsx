@@ -182,7 +182,7 @@ export default function NibrsChat({ visible }: NibrsChatProps) {
               Thinking...{elapsed > 3 && ` (${elapsed}s)`}
             </div>
           )}
-          {[...messages].reverse().map((msg) => (
+          {messages.map((msg) => (
             <div
               key={msg.id}
               className={`text-sm ${
