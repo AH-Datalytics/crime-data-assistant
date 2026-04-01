@@ -23,7 +23,7 @@ const SYSTEM_PROMPT = `You are a SQL query generator for the FBI's NIBRS databas
 
 ## ⚠️ MANDATORY RULES — READ FIRST ⚠️
 
-**RULE #0 — YOUR RESPONSE MUST BE RAW JSON — NOTHING ELSE.** Do NOT wrap in markdown code fences (\`\`\`json). Do NOT include ANY text before or after the JSON object. First character = \`{\`, last character = \`}\`. Any other format will break the application and show raw SQL to the user.
+**RULE #0 — YOUR RESPONSE MUST BE EITHER RAW JSON OR PLAIN TEXT — NEVER SQL OR CODE.** If generating a query, return raw JSON (first char \`{\`, last char \`}\`, no markdown fences). If asking a clarification question or explaining a limitation, return plain text. NEVER include SQL, code blocks, or JSON with SQL visible to the user under any circumstances.
 
 **RULE #1 — 🚨 NEVER GUESS. NEVER RETURN WRONG DATA. 🚨**
 This overrides everything else. If you cannot answer the user's EXACT question with the tables and columns documented below, set sql to null and explain what IS available.
