@@ -1,0 +1,411 @@
+#!/usr/bin/env node
+/**
+ * Daily Query Analysis for Crime Data Assistant
+ * Scans the query_log for the past 24 hours and emails a digest of
+ * common failures, issues, and usage patterns.
+ *
+ * Run via cron: 0 12 * * * cd /opt/nibrs/app && node scripts/daily-query-analysis.js
+ */
+
+const Database = require("better-sqlite3");
+const { Resend } = require("resend");
+const path = require("path");
+
+const RESEND_API_KEY = process.env.RESEND_API_KEY;
+const TO_EMAIL = "jasher@ahdatalytics.com";
+const FROM_EMAIL = "Crime Data Assistant <onboarding@resend.dev>";
+
+if (!RESEND_API_KEY) {
+  console.error("RESEND_API_KEY environment variable is required");
+  process.exit(1);
+}
+
+const resend = new Resend(RESEND_API_KEY);
+const db = new Database(path.join(__dirname, "..", "query_log.db"), {
+  readonly: true,
+});
+
+// Look back 24 hours
+const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+
+function getQueries() {
+  return db
+    .prepare("SELECT * FROM query_log WHERE ts >= ? ORDER BY ts ASC")
+    .all(cutoff);
+}
+
+function analyze(queries) {
+  const issues = [];
+  const stats = {
+    total: queries.length,
+    byTab: {},
+    errors: 0,
+    zeroRows: 0,
+    slowQueries: 0,
+    jsonParseFailures: 0,
+    yearHallucinations: 0,
+    sqlLeaks: 0,
+    avgMs: 0,
+    medianMs: 0,
+    unknownAgencies: [],
+  };
+
+  const msTimes = [];
+
+  for (const q of queries) {
+    // Tab counts
+    const tab = q.tab || "unknown";
+    stats.byTab[tab] = (stats.byTab[tab] || 0) + 1;
+
+    // Response time
+    if (q.ms) msTimes.push(q.ms);
+
+    // Errors
+    if (q.error) {
+      stats.errors++;
+      issues.push({
+        type: "error",
+        severity: "high",
+        question: q.question,
+        detail: q.error.substring(0, 200),
+        tab,
+        id: q.id,
+      });
+    }
+
+    // Zero rows (has SQL but returned nothing)
+    if (q.sql && q.rows === 0 && !q.error) {
+      stats.zeroRows++;
+      issues.push({
+        type: "zero_rows",
+        severity: "medium",
+        question: q.question,
+        detail: "Query returned 0 rows",
+        tab,
+        id: q.id,
+      });
+    }
+
+    // Slow queries (>10s)
+    if (q.ms > 10000) {
+      stats.slowQueries++;
+      issues.push({
+        type: "slow",
+        severity: "medium",
+        question: q.question,
+        detail: `${(q.ms / 1000).toFixed(1)}s response time`,
+        tab,
+        id: q.id,
+      });
+    }
+
+    // JSON parse failure — response contains SQL/JSON code
+    if (
+      q.response &&
+      (q.response.includes("```json") ||
+        q.response.includes('"sql"') ||
+        q.response.includes("SELECT "))
+    ) {
+      stats.jsonParseFailures++;
+      issues.push({
+        type: "json_parse_failure",
+        severity: "high",
+        question: q.question,
+        detail: "Response contains raw SQL/JSON — user saw code",
+        tab,
+        id: q.id,
+      });
+    }
+
+    // SQL leak in explanation (response contains SQL keywords but not the above)
+    if (
+      q.response &&
+      !q.response.includes("```") &&
+      /\b(SELECT|FROM|WHERE|JOIN|GROUP BY|ORDER BY)\b/.test(q.response)
+    ) {
+      stats.sqlLeaks++;
+      issues.push({
+        type: "sql_leak",
+        severity: "medium",
+        question: q.question,
+        detail:
+          "Explanation contains SQL keywords: " +
+          q.response.substring(0, 150),
+        tab,
+        id: q.id,
+      });
+    }
+
+    // Year hallucination — response mentions specific year ranges the user didn't ask about
+    if (q.response && q.question) {
+      const responseYears = q.response.match(/\b(19|20)\d{2}\b/g) || [];
+      const questionYears = q.question.match(/\b(19|20)\d{2}\b/g) || [];
+      const questionYearSet = new Set(questionYears);
+      const hallucinatedYears = responseYears.filter(
+        (y) => !questionYearSet.has(y)
+      );
+      // Flag if response introduces 2+ years not in the question
+      if (hallucinatedYears.length >= 2 && questionYears.length === 0) {
+        stats.yearHallucinations++;
+        issues.push({
+          type: "year_hallucination",
+          severity: "low",
+          question: q.question,
+          detail: `Response mentions years [${[...new Set(hallucinatedYears)].join(", ")}] but user didn't specify any`,
+          tab,
+          id: q.id,
+        });
+      }
+    }
+
+    // Unknown agency detection — response says "not found" or "isn't in"
+    if (
+      q.response &&
+      (/wasn.t found|not in our dataset|doesn.t appear/i.test(q.response))
+    ) {
+      const agencyMatch = q.question.match(
+        /(?:in |for |about )([A-Z][a-zA-Z\s.'-]+?)(?:\s+(?:since|from|over|in|,|\?))/
+      );
+      if (agencyMatch) {
+        stats.unknownAgencies.push(agencyMatch[1].trim());
+      }
+    }
+  }
+
+  // Compute avg/median ms
+  if (msTimes.length > 0) {
+    stats.avgMs = Math.round(
+      msTimes.reduce((a, b) => a + b, 0) / msTimes.length
+    );
+    msTimes.sort((a, b) => a - b);
+    stats.medianMs = msTimes[Math.floor(msTimes.length / 2)];
+  }
+
+  return { stats, issues };
+}
+
+function buildEmail(stats, issues) {
+  const date = new Date().toLocaleDateString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+
+  const highIssues = issues.filter((i) => i.severity === "high");
+  const mediumIssues = issues.filter((i) => i.severity === "medium");
+  const lowIssues = issues.filter((i) => i.severity === "low");
+
+  // Deduplicate unknown agencies
+  const uniqueAgencies = [...new Set(stats.unknownAgencies)];
+
+  let html = `
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #333; max-width: 700px; margin: 0 auto; padding: 20px; }
+  h1 { font-size: 22px; margin-bottom: 5px; }
+  h2 { font-size: 17px; color: #555; margin-top: 28px; border-bottom: 1px solid #ddd; padding-bottom: 6px; }
+  .subtitle { color: #888; font-size: 14px; margin-bottom: 24px; }
+  .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 16px 0; }
+  .stat-box { background: #f8f8f8; border-radius: 8px; padding: 14px; text-align: center; }
+  .stat-num { font-size: 28px; font-weight: 700; }
+  .stat-label { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
+  .tab-row { display: flex; gap: 8px; margin: 12px 0; }
+  .tab-pill { padding: 4px 12px; border-radius: 12px; font-size: 13px; font-weight: 600; color: white; }
+  .issue-card { background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 12px 14px; margin: 8px 0; }
+  .issue-card.high { border-left: 4px solid #d32f2f; }
+  .issue-card.medium { border-left: 4px solid #f57c00; }
+  .issue-card.low { border-left: 4px solid #fbc02d; }
+  .issue-type { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+  .issue-type.high { color: #d32f2f; }
+  .issue-type.medium { color: #f57c00; }
+  .issue-type.low { color: #9e9e00; }
+  .issue-question { font-size: 14px; font-weight: 600; margin-bottom: 3px; }
+  .issue-detail { font-size: 12px; color: #666; }
+  .issue-meta { font-size: 11px; color: #aaa; margin-top: 4px; }
+  .no-issues { color: #4caf50; font-weight: 600; font-size: 15px; padding: 20px; text-align: center; background: #f1f8e9; border-radius: 8px; }
+  .agency-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .agency-chip { background: #e3f2fd; color: #1565c0; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 500; }
+  .footer { margin-top: 30px; padding-top: 16px; border-top: 1px solid #eee; font-size: 11px; color: #aaa; }
+</style>
+</head>
+<body>
+<h1>Crime Data Assistant</h1>
+<div class="subtitle">${date}</div>
+
+<h2>Overview</h2>
+<div class="stat-grid">
+  <div class="stat-box">
+    <div class="stat-num">${stats.total}</div>
+    <div class="stat-label">Total Queries</div>
+  </div>
+  <div class="stat-box">
+    <div class="stat-num">${stats.avgMs ? (stats.avgMs / 1000).toFixed(1) + "s" : "—"}</div>
+    <div class="stat-label">Avg Response</div>
+  </div>
+  <div class="stat-box">
+    <div class="stat-num">${stats.medianMs ? (stats.medianMs / 1000).toFixed(1) + "s" : "—"}</div>
+    <div class="stat-label">Median Response</div>
+  </div>
+</div>
+
+<div class="tab-row">`;
+
+  const tabColors = {
+    current: "#475EC7",
+    historical: "#8B5E3C",
+    nibrs: "#2d8659",
+  };
+
+  for (const [tab, count] of Object.entries(stats.byTab).sort(
+    (a, b) => b[1] - a[1]
+  )) {
+    const color = tabColors[tab] || "#666";
+    html += `<span class="tab-pill" style="background:${color}">${tab}: ${count}</span>`;
+  }
+
+  html += `</div>
+
+<div class="stat-grid">
+  <div class="stat-box">
+    <div class="stat-num" style="color:${stats.errors > 0 ? "#d32f2f" : "#4caf50"}">${stats.errors}</div>
+    <div class="stat-label">Errors</div>
+  </div>
+  <div class="stat-box">
+    <div class="stat-num" style="color:${stats.zeroRows > 0 ? "#f57c00" : "#4caf50"}">${stats.zeroRows}</div>
+    <div class="stat-label">Zero-Row Results</div>
+  </div>
+  <div class="stat-box">
+    <div class="stat-num" style="color:${stats.slowQueries > 0 ? "#f57c00" : "#4caf50"}">${stats.slowQueries}</div>
+    <div class="stat-label">Slow (&gt;10s)</div>
+  </div>
+</div>
+
+<div class="stat-grid">
+  <div class="stat-box">
+    <div class="stat-num" style="color:${stats.jsonParseFailures > 0 ? "#d32f2f" : "#4caf50"}">${stats.jsonParseFailures}</div>
+    <div class="stat-label">JSON Parse Failures</div>
+  </div>
+  <div class="stat-box">
+    <div class="stat-num" style="color:${stats.yearHallucinations > 0 ? "#f57c00" : "#4caf50"}">${stats.yearHallucinations}</div>
+    <div class="stat-label">Year Hallucinations</div>
+  </div>
+  <div class="stat-box">
+    <div class="stat-num" style="color:${stats.sqlLeaks > 0 ? "#d32f2f" : "#4caf50"}">${stats.sqlLeaks}</div>
+    <div class="stat-label">SQL Leaks</div>
+  </div>
+</div>`;
+
+  // Issues section
+  if (highIssues.length > 0 || mediumIssues.length > 0) {
+    html += `<h2>Issues Requiring Attention</h2>`;
+
+    for (const issue of [...highIssues, ...mediumIssues].slice(0, 20)) {
+      const typeLabels = {
+        error: "Error",
+        zero_rows: "No Results",
+        slow: "Slow Query",
+        json_parse_failure: "Code Leaked to User",
+        sql_leak: "SQL in Explanation",
+        year_hallucination: "Year Hallucination",
+      };
+      html += `
+      <div class="issue-card ${issue.severity}">
+        <div class="issue-type ${issue.severity}">${typeLabels[issue.type] || issue.type}</div>
+        <div class="issue-question">&ldquo;${escapeHtml(issue.question)}&rdquo;</div>
+        <div class="issue-detail">${escapeHtml(issue.detail)}</div>
+        <div class="issue-meta">ID: ${issue.id} &middot; Tab: ${issue.tab}</div>
+      </div>`;
+    }
+  }
+
+  if (lowIssues.length > 0) {
+    html += `<h2>Minor Issues (${lowIssues.length})</h2>`;
+    for (const issue of lowIssues.slice(0, 10)) {
+      html += `
+      <div class="issue-card ${issue.severity}">
+        <div class="issue-type ${issue.severity}">Year Hallucination</div>
+        <div class="issue-question">&ldquo;${escapeHtml(issue.question)}&rdquo;</div>
+        <div class="issue-detail">${escapeHtml(issue.detail)}</div>
+        <div class="issue-meta">ID: ${issue.id} &middot; Tab: ${issue.tab}</div>
+      </div>`;
+    }
+  }
+
+  if (issues.length === 0) {
+    html += `<h2>Issues</h2><div class="no-issues">No issues detected in the past 24 hours.</div>`;
+  }
+
+  // Unknown agencies
+  if (uniqueAgencies.length > 0) {
+    html += `<h2>Agencies Users Asked About (Not in Dataset)</h2>
+    <p style="font-size:13px;color:#666;">These agencies were requested but not found. Consider adding them if they appear frequently.</p>
+    <div class="agency-list">`;
+    for (const a of uniqueAgencies) {
+      html += `<span class="agency-chip">${escapeHtml(a)}</span>`;
+    }
+    html += `</div>`;
+  }
+
+  html += `
+<div class="footer">
+  Generated by Crime Data Assistant Query Analyzer<br>
+  ${stats.total} queries analyzed from the past 24 hours
+</div>
+</body>
+</html>`;
+
+  return html;
+}
+
+function escapeHtml(str) {
+  if (!str) return "";
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+async function main() {
+  console.log(
+    `Analyzing queries since ${new Date(cutoff).toISOString()}...`
+  );
+  const queries = getQueries();
+  console.log(`Found ${queries.length} queries`);
+
+  if (queries.length === 0) {
+    console.log("No queries in the past 24 hours, skipping email");
+    return;
+  }
+
+  const { stats, issues } = analyze(queries);
+  console.log(
+    `Stats: ${stats.total} queries, ${stats.errors} errors, ${issues.length} issues`
+  );
+
+  const html = buildEmail(stats, issues);
+
+  const today = new Date().toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+
+  try {
+    const result = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: TO_EMAIL,
+      subject: `Crime Data Assistant Daily Analysis - ${today}`,
+      html,
+    });
+    console.log("Email sent:", result);
+  } catch (err) {
+    console.error("Failed to send email:", err);
+    process.exit(1);
+  }
+}
+
+main();
