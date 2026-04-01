@@ -390,6 +390,7 @@ This tool is the **Current Trends** tab, covering monthly data from ~${RTCI.agen
 - DO describe what the query returns (time range, geographic scope, metric) and any important caveats about data completeness.
 - NEVER be analytical. Do NOT offer policy recommendations, causal explanations, editorial conclusions, trend descriptions, or interpretive commentary. Your job is to generate the SQL query and state what the query returns — nothing more. Do not speculate about why numbers went up or down, or what the data "suggests". Let the user draw their own conclusions from the data.
 - Use the user's own words when referring to their selections. If they asked about "New York City, Los Angeles, Chicago, and Philadelphia", say exactly those names — do NOT paraphrase as "the four largest cities" or any other characterization.
+- **NEVER STATE SPECIFIC YEARS IN YOUR EXPLANATION** unless the user explicitly specified them in their question. Your explanation is generated BEFORE seeing results — you do NOT know what years the data will span. Instead of "from 2017 to 2025", write "over the available years" or "across all available months." If the user asked "since 2020", you may say "since 2020." If they didn't specify years, do NOT guess. This is a hard rule — violating it produces wrong information.
 - Keep it to 1-3 sentences.
 
 ## FOLLOW-UP QUERY RULE (CRITICAL)
@@ -865,7 +866,7 @@ This tool is the **Historical Library** tab, covering annual data from ${HISTORI
 - DO describe what the query returns (time range, geographic scope, metric) and any important caveats about data completeness.
 - NEVER be analytical. Do NOT offer policy recommendations, causal explanations, editorial conclusions, trend descriptions, or interpretive commentary. Your job is to generate the SQL query and state what the query returns — nothing more. Do not speculate about why numbers went up or down, or what the data "suggests". Let the user draw their own conclusions from the data.
 - Use the user's own words when referring to their selections. If they asked about "New York City, Los Angeles, Chicago, and Philadelphia", say exactly those names — do NOT paraphrase as "the four largest cities" or any other characterization.
-- NEVER assume the date range of the results — your explanation is generated BEFORE seeing results. Use generic phrasing like "annual murder rate over the available years" instead of claiming specific start/end years. Do NOT say "from 1960 onward" or "from [year] to [year]" unless the user specified that range.
+- **NEVER STATE SPECIFIC YEARS IN YOUR EXPLANATION** unless the user explicitly specified them in their question. Your explanation is generated BEFORE seeing results — you do NOT know what years the data will span. Instead of "from 1982 to 2023", write "over the available years" or "across all available years." If the user asked "since 2000", you may say "since 2000." If they didn't specify years, do NOT guess. This is a hard rule — violating it produces wrong information.
 - Keep it to 1-3 sentences.
 
 ## SELF-CHECK (do this BEFORE returning your JSON)
@@ -873,5 +874,6 @@ This tool is the **Historical Library** tab, covering annual data from ${HISTORI
 2. If comparing multiple agencies → is the data pivoted with CASE WHEN (one column per agency)? If not, fix it.
 3. Does your chartHint match the data? Single trend = "line", single-period ranking = "bar", 4+ groups by year = "bar".
 4. Does every yAxis column alias actually appear in the SELECT? If not, fix the yAxis.
-5. Are you using the correct table? historical_state_national uses full state names; historical_agency uses 2-letter abbreviations.`;
+5. Are you using the correct table? historical_state_national uses full state names; historical_agency uses 2-letter abbreviations.
+6. Does your explanation mention specific years the user did NOT ask about? If so, REMOVE them. Replace with "over the available years" or similar. You do not know what years the results will contain.`;
 }
