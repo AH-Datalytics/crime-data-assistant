@@ -6,6 +6,7 @@ const client = new Anthropic();
 const SYSTEM_PROMPT = `You are a SQL query generator for the Real-Time Crime Index (RTCI) database. You translate natural language questions about crime data into SQLite queries.
 
 ## ⚠️ MANDATORY RULES — READ FIRST ⚠️
+- **YOUR RESPONSE MUST BE RAW JSON — NOTHING ELSE.** Do NOT wrap in markdown code fences (\`\`\`json). Do NOT include ANY text before or after the JSON object. First character = \`{\`, last character = \`}\`. Any other format will break the application and show raw SQL to the user.
 - **RETURN ONLY WHAT THE USER ASKED FOR.** If they ask for "murders per year", return murder counts and year — nothing else. Do NOT add rates, population, percentages, or any other columns the user did not request. Do NOT return both counts and rates together. This is the #1 rule.
 - NEVER be analytical. Do NOT offer policy recommendations, causal explanations, editorial conclusions, trend descriptions, or interpretive commentary. Your job is to generate the SQL query and state what the query returns — nothing more. Do not speculate about why numbers went up or down, or what the data "suggests". Let the user draw their own conclusions from the data.
 - BANNED PHRASES: Never use "may reflect", "likely due to", "could be attributed to", "suggests that", "driven by", "as a result of", "because of", or any other causal/speculative language. Do not describe trends, patterns, or changes in the data. Let the user draw conclusions.
@@ -477,9 +478,18 @@ export async function translateToSql(
   }
 
   // If Claude returned plain text (e.g. a clarification question) instead of JSON,
-  // wrap it as an explanation so the user sees it
-  const plainText = text.trim();
+  // wrap it as an explanation so the user sees it.
+  // Strip any SQL/JSON/code that leaked through to avoid showing technical content.
+  let plainText = text.trim();
   if (plainText.length > 10 && !plainText.startsWith("{")) {
+    // Remove markdown code fences and their contents
+    plainText = plainText.replace(/```[\s\S]*?```/g, "").trim();
+    // Remove any remaining JSON-like blocks
+    plainText = plainText.replace(/\{[\s\S]*"sql"[\s\S]*\}/g, "").trim();
+    // If nothing meaningful remains, show a generic message
+    if (plainText.length < 10) {
+      plainText = "Sorry, I wasn\u2019t able to process that request. Please try rephrasing your question.";
+    }
     return {
       sql: null,
       explanation: plainText,
@@ -504,6 +514,7 @@ export function getHistoricalSystemPrompt(): string {
   return `You are a SQL query generator for a historical U.S. crime database. You translate natural language questions about crime data into SQLite queries.
 
 ## ⚠️ MANDATORY RULES — READ FIRST ⚠️
+- **YOUR RESPONSE MUST BE RAW JSON — NOTHING ELSE.** Do NOT wrap in markdown code fences (\`\`\`json). Do NOT include ANY text before or after the JSON object. First character = \`{\`, last character = \`}\`. Any other format will break the application and show raw SQL to the user.
 - **RETURN ONLY WHAT THE USER ASKED FOR.** If they ask for "murders per year", return murder counts and year — nothing else. Do NOT add rates, population, percentages, or any other columns the user did not request. Do NOT return both counts and rates together. This is the #1 rule.
 - NEVER be analytical. Do NOT offer policy recommendations, causal explanations, editorial conclusions, trend descriptions, or interpretive commentary. Your job is to generate the SQL query and state what the query returns — nothing more. Do not speculate about why numbers went up or down, or what the data "suggests". Let the user draw their own conclusions from the data.
 - BANNED PHRASES: Never use "may reflect", "likely due to", "could be attributed to", "suggests that", "driven by", "as a result of", "because of", or any other causal/speculative language. Do not describe trends, patterns, or changes in the data. Let the user draw conclusions.
