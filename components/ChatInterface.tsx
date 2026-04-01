@@ -5,7 +5,7 @@ import CrimeIndexLogo from "./CrimeIndexLogo";
 import RtciChat from "./RtciChat";
 import NibrsChat from "./NibrsChat";
 import ExplainerContent from "./ExplainerContent";
-import WelcomeModal from "./WelcomeModal";
+import GettingStarted from "./GettingStarted";
 
 type TabId = "current" | "historical" | "nibrs" | "explainer";
 
@@ -25,11 +25,10 @@ interface ChatInterfaceProps {
 }
 
 export default function ChatInterface({ heroData, heroAgencyCount, heroPopulation, historicalHeroData, historicalMaxYear }: ChatInterfaceProps) {
-  const [activeTab, setActiveTab] = useState<TabId>("current");
+  const [activeTab, setActiveTab] = useState<TabId | null>(null);
 
   return (
     <div className="h-screen flex flex-col bg-[var(--surface)]">
-      <WelcomeModal />
       {/* Header */}
       <header className="bg-white border-b border-[var(--border)] shrink-0">
         {/* Top row: logo + tab pills (desktop) */}
@@ -44,7 +43,10 @@ export default function ChatInterface({ heroData, heroAgencyCount, heroPopulatio
               <span>Back</span>
             </a>
             <div className="h-5 w-px bg-[var(--border)] hidden md:block" />
-            <div className="hidden md:flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => setActiveTab(null)}
+              className="hidden md:flex items-center gap-2 shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
+            >
               <CrimeIndexLogo size={24} />
               <span
                 className="text-xs md:text-sm font-medium tracking-widest uppercase text-[var(--foreground)]"
@@ -52,22 +54,23 @@ export default function ChatInterface({ heroData, heroAgencyCount, heroPopulatio
               >
                 Crime Index
               </span>
-            </div>
+            </button>
           </div>
 
           {/* Center: title */}
-          <span
-            className="absolute left-1/2 -translate-x-1/2 text-[11px] md:text-base font-bold uppercase text-[var(--foreground)] whitespace-nowrap"
+          <button
+            onClick={() => setActiveTab(null)}
+            className="absolute left-1/2 -translate-x-1/2 text-[11px] md:text-base font-bold uppercase text-[var(--foreground)] whitespace-nowrap cursor-pointer hover:opacity-80 transition-opacity"
             style={{ letterSpacing: "4px" }}
           >
             Crime Data Assistant
-          </span>
+          </button>
 
           {/* Right: logo on mobile, tab pills on desktop */}
           <div className="flex items-center gap-3 shrink-0">
-            <a href="https://crimeindex.org" className="md:hidden flex items-center shrink-0">
+            <button onClick={() => setActiveTab(null)} className="md:hidden flex items-center shrink-0 cursor-pointer">
               <CrimeIndexLogo size={24} />
-            </a>
+            </button>
             <div className="hidden md:flex items-center gap-0 rounded-lg overflow-hidden border border-[var(--border)]">
               {TABS.map((tab, i) => (
                 <button
@@ -90,25 +93,32 @@ export default function ChatInterface({ heroData, heroAgencyCount, heroPopulatio
         </div>
 
         {/* Mobile/tablet tab row — visible below md (768px) */}
-        <div className="md:hidden flex border-t border-[var(--border)]">
-          {TABS.map((tab, i) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 text-xs font-medium py-2.5 transition-colors cursor-pointer ${
-                i > 0 ? "border-l border-[var(--border)]" : ""
-              } ${
-                activeTab === tab.id
-                  ? "text-white"
-                  : "bg-white text-[#666]"
-              }`}
-              style={activeTab === tab.id ? { backgroundColor: tab.color } : undefined}
-            >
-              {tab.shortLabel}
-            </button>
-          ))}
-        </div>
+        {activeTab !== null && (
+          <div className="md:hidden flex border-t border-[var(--border)]">
+            {TABS.map((tab, i) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex-1 text-xs font-medium py-2.5 transition-colors cursor-pointer ${
+                  i > 0 ? "border-l border-[var(--border)]" : ""
+                } ${
+                  activeTab === tab.id
+                    ? "text-white"
+                    : "bg-white text-[#666]"
+                }`}
+                style={activeTab === tab.id ? { backgroundColor: tab.color } : undefined}
+              >
+                {tab.shortLabel}
+              </button>
+            ))}
+          </div>
+        )}
       </header>
+
+      {/* Getting Started — shown when no tab is selected */}
+      {activeTab === null && (
+        <GettingStarted onSelectTab={(tab) => setActiveTab(tab)} />
+      )}
 
       {/* Tab content — all stay mounted, CSS show/hide preserves state */}
       <RtciChat
