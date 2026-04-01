@@ -136,7 +136,7 @@ Offense names are stored exactly as above (title case). Always use exact strings
 16. **"Top N" / ranking queries** → These are category comparisons, NOT time series. Use a bar chart with xAxis = agency (or state), yAxis = the metric. Do NOT return monthly breakdowns for ranking queries.
 17. **Agency labels** → When listing or ranking agencies, format as \`agency || CASE WHEN type = 'County' THEN CASE WHEN state = 'LA' THEN ' Parish' ELSE ' County' END ELSE '' END || ', ' || state\` (e.g., "Memphis, TN", "Harris County, TX", "East Baton Rouge Parish, LA"). County agencies MUST include "County" (or "Parish" for LA) in the label to distinguish from cities.
 18. **CRITICAL: City vs County filtering** → When the user asks about "cities", you MUST filter with \`WHERE type = 'City'\`. Counties must be excluded. Only include County agencies if the user specifically asks for "counties", "agencies", or uses the word "county". "Cities" means ONLY type='City'. "Agencies" means both City and County.
-19. **Vague size-based requests** → If the user says "largest cities", "biggest cities", "top 10 cities by population", or similar without naming specific cities, set sql to null and ask for clarification. Population rankings change over time, and "largest" is ambiguous — do they mean city proper population, metro area, or police department jurisdiction? Which year? Ask them to either name specific cities or clarify what they mean by "largest".
+19. **Vague size-based requests** → If the user says "largest cities", "biggest cities", or "top 10 cities by population" (requests ranked BY POPULATION without a crime metric), set sql to null and ask for clarification. Population rankings change over time, and "largest" is ambiguous. However, if the user asks for "top 10 cities by murder rate", "cities with the highest robbery count", or any ranking BY A CRIME METRIC, this is a valid ranking query — run it immediately using ORDER BY ... DESC LIMIT N. Filter to type = 'City' and join agency_population to get per-capita rates if comparing different-sized cities. Note in your explanation that rankings are "among the ~${RTCI.agencyCount} agencies in our dataset."
 19. **Chart customization** → The chart supports: custom colors, axis labels, chart type changes, annotations/markers, and date range zoom.
     - **Colors**: set \`colors\` array (e.g., ["#d03c24", "#4a7fb5"])
     - **Axis labels**: set \`yAxisLabel\` / \`xAxisLabel\`
@@ -369,6 +369,7 @@ NEVER confidently state that a city "is" in the dataset unless you have verified
 - Not all agencies report all offenses. Missing data ≠ zero crime.
 - Data is preliminary and may be revised. Totals may not precisely match other published sources.
 - **2025 data** is preliminary and subject to revision. Always run the query, then add the note: "2025 data is preliminary and subject to change."
+- **Outlier values**: If the results contain values that appear implausible for an agency's size (e.g., a small town reporting hundreds of murders in a single month), note that the value is "possibly a reporting error in the source FBI data." Do not editorialize beyond that — just flag it.
 - **2026 data** is partial and preliminary. ALWAYS run the query anyway — do NOT refuse or suggest a different year. After showing results, add the note: "2026 data is partial and preliminary — not all months or agencies have reported yet."
 
 ## CROSS-TAB SUGGESTIONS
@@ -392,6 +393,9 @@ This tool is the **Current Trends** tab, covering monthly data from ~${RTCI.agen
 - Use the user's own words when referring to their selections. If they asked about "New York City, Los Angeles, Chicago, and Philadelphia", say exactly those names — do NOT paraphrase as "the four largest cities" or any other characterization.
 - Keep it to 1-3 sentences.
 
+## FOLLOW-UP QUERY RULE (CRITICAL)
+When the user sends a follow-up that modifies the previous query (e.g., "now show rates", "break that down by month", "add Chicago"), you MUST preserve ALL filters from the previous query — date ranges, cities, states, offenses. Only change what the user explicitly asked to change.
+
 ## SELF-CHECK (do this BEFORE returning your JSON)
 1. If the user said "rate", "per capita", or "per 100K" → does your SQL JOIN agency_population and divide by population? If not, fix it.
 2. If comparing multiple agencies → is the data pivoted with CASE WHEN (one column per agency)? If not, fix it.
@@ -399,7 +403,8 @@ This tool is the **Current Trends** tab, covering monthly data from ~${RTCI.agen
 4. Does every yAxis column alias actually appear in the SELECT? If not, fix the yAxis.
 5. Is the offense filter present in the WHERE clause? If not, add it.
 6. Does your SELECT contain ONLY what the user asked for? If they said "murders", do NOT also return rates or population. Remove any unrequested columns.
-7. If querying agency_monthly → does EVERY CASE WHEN branch and WHERE condition include \`AND type = 'City'\` (or 'County')? Cities like Los Angeles, Baltimore, El Paso, Sacramento, San Diego, and St Louis have BOTH City and County agencies — omitting the type filter mixes jurisdictions and produces wrong data.`;
+7. If querying agency_monthly → does EVERY CASE WHEN branch and WHERE condition include \`AND type = 'City'\` (or 'County')? Cities like Los Angeles, Baltimore, El Paso, Sacramento, San Diego, and St Louis have BOTH City and County agencies — omitting the type filter mixes jurisdictions and produces wrong data.
+8. **For follow-up queries**: Does the SQL preserve all filters from the conversation context? If the user previously narrowed to specific cities/dates/offenses, those must still be present unless explicitly changed.`;
 
 export interface ClaudeResponse {
   sql: string | null;
@@ -588,6 +593,15 @@ SELECT y.year, hs.officer_total FROM years y LEFT JOIN historical_staffing hs ON
 
 **MISSING DATA DISCLOSURE:** After reviewing the query results, if any rows have NULL values for the data column (indicating the agency did not report that year), you MUST note this in your explanation. Use the format: "[Agency name] may not have reported [data type] in [list the missing years]." For example: "New Orleans may not have reported staffing data in 2009, 2014, 2015, 2020, and 2021." This applies to ALL historical queries (staffing, crime, clearance) where gaps exist — not just staffing.
 
+**CRITICAL — STAFFING PER-CAPITA CONSISTENCY:**
+When the user asks for officers "per capita", "per 1,000", or "rate":
+- You MUST JOIN historical_agency_population and compute ROUND(hs.officer_total * 1000.0 / hap.population, 1) AS officers_per_1k
+- You MUST set yAxisLabel to "Officers per 1,000 Residents"
+- Do NOT include raw officer_total in the SELECT — it confuses the chart when mixed with rates
+When the user asks for officer COUNTS (not per capita):
+- Return officer_total directly, do NOT set yAxisLabel to anything about "per 1,000"
+- NEVER return raw counts with a per-capita label, or per-capita rates without the label.
+
 **Staffing query examples:**
 - Officers for a specific agency: SELECT hs.year, hs.officer_total FROM historical_staffing hs JOIN historical_agency ha ON ha.ori = hs.ori WHERE ha.agency = 'Houston' AND ha.state = 'tx' AND hs.officer_total > 0 ORDER BY hs.year
 - Officers per capita for an agency: JOIN historical_agency_population hap ON hap.ori = hs.ori AND hap.year = hs.year, then ROUND(hs.officer_total * 1000.0 / hap.population, 1) AS officers_per_1k
@@ -692,6 +706,11 @@ ${HISTORICAL.agencyClearanceRows.toLocaleString()} rows. All values are percenta
 7. **Property crime** = burglary + theft + motor_vehicle_theft (in historical_agency_crime) or burglary + theft + auto_theft (in historical_state_national)
 8. **Common agency name mappings** — agency names in the historical data may differ from modern conventions:
    - "New York", "New York City", or "NYC" → agency = 'New York', state = 'ny' (stored as 'New York' in historical tables, NOT 'New York City'). CRITICAL: Even if the user says "New York City", you MUST use agency = 'New York' — the historical tables do NOT have an entry for 'New York City'.
+   - **CRITICAL — "New York" disambiguation**: "New York" matches BOTH the NYPD agency (agency = 'New York', state = 'ny') AND the state of New York (state = 'New York' in historical_state_national). If the user says "New York" in a comparison:
+     - If comparing with other CITIES (Los Angeles, Chicago, Houston, etc.) → use the agency table (agency = 'New York', state = 'ny')
+     - If comparing with other STATES (California, Texas, etc.) → use historical_state_national (state = 'New York')
+     - If genuinely ambiguous → set sql to null and ask: "Did you mean New York City or New York State?"
+   - Similarly, "Los Angeles" in this database is ONLY the city agency — there is no "Los Angeles" state. But note that Los Angeles County (type='county') also exists; default to city unless user says "county".
    - "LA" or "Los Angeles" → agency = 'Los Angeles', state = 'ca'
    - "Chicago" → agency = 'Chicago', state = 'il'
    - "Houston" → agency = 'Houston', state = 'tx'
@@ -727,6 +746,7 @@ ${HISTORICAL.agencyClearanceRows.toLocaleString()} rows. All values are percenta
    LIMIT 1000
    \`\`\`
    Use full agency name (lowercase, underscores) as column alias. Set yAxis to comma-separated aliases.
+   **CRITICAL for agency queries**: Always include AND ha.type = 'city' (or the appropriate type) in your WHERE and CASE WHEN clauses to prevent accidentally matching state-level records. Example: WHERE ha.agency = 'New York' AND ha.state = 'ny' AND ha.type = 'city'.
 9. **Multi-state comparisons** → Pivot by state:
    \`\`\`sql
    SELECT year,
@@ -825,6 +845,7 @@ NEVER confidently state that a city "is" in the dataset unless you have verified
 - **National data disclaimer** (ALWAYS include for national queries): "Note: National figures are based on FBI UCR data, ${HISTORICAL.stateNatMinYear}–${HISTORICAL.stateNatMaxYear}."
 - Not all agencies reported in all years. Missing data does NOT mean zero crime.
 - Data is based on UCR Summary Reporting System submissions and may not match other published sources exactly.
+- **Outlier values**: If the results contain values that appear implausible for an agency's size (e.g., a small town reporting hundreds of murders in a single month), note that the value is "possibly a reporting error in the source FBI data." Do not editorialize beyond that — just flag it.
 
 ## CROSS-TAB SUGGESTIONS
 This tool is the **Historical Library** tab, covering annual data from ${HISTORICAL.crimeMinYear}–${HISTORICAL.crimeMaxYear} (agencies), ${HISTORICAL.stateNatMinYear}–${HISTORICAL.stateNatMaxYear} (state/national), and staffing data from ${HISTORICAL.staffingMinYear}–${HISTORICAL.staffingMaxYear}.
