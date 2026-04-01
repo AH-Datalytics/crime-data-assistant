@@ -356,6 +356,11 @@ export async function POST(req: NextRequest) {
           }
         }
 
+        // Check: yAxisLabel says per-capita but SQL has no population join
+        if (claude.yAxisLabel && /per (1,000|capita|100k|100,000)/i.test(claude.yAxisLabel) && !sqlLower.includes("population")) {
+          issues.push("The yAxisLabel mentions per-capita rates but the SQL does not join population data. Either add a population JOIN for rate calculation, or remove the per-capita label.");
+        }
+
         // If issues found, ask Claude to fix
         if (issues.length > 0) {
           controller.enqueue(
@@ -560,10 +565,10 @@ export async function POST(req: NextRequest) {
                   s.agency.toLowerCase() === agencyName.toLowerCase()
               );
               if (exactMatch) {
-                emptyMsg = `${exactMatch.agency}, ${exactMatch.state} is in our dataset, but no data was found for that specific query. The agency may not report this offense, or the date range may not have data. Try a different offense or broader date range.`;
+                emptyMsg = `${exactMatch.agency}, ${exactMatch.state.toUpperCase()} is in our dataset, but no data was found for that specific query. The agency may not report this offense, or the date range may not have data. Try a different offense or broader date range.`;
               } else {
                 const suggestions = similar
-                  .map((s) => `${s.agency}, ${s.state}`)
+                  .map((s) => `${s.agency}, ${s.state.toUpperCase()}`)
                   .join("; ");
                 emptyMsg = `"${agencyName}" wasn't found in our dataset. Did you mean: ${suggestions}? Our data covers ~${RTCI.agencyCount} major agencies across ${RTCI.stateCount} states.`;
               }
@@ -656,6 +661,31 @@ export async function POST(req: NextRequest) {
             claude.yAxis = yCols.join(",");
             claude.xAxis = "year";
             claude.chartHint = "line";
+          }
+        }
+
+        // Step 4c: Detect columns that are ALL null in pivoted comparison data
+        // Catches agencies that don't exist in the dataset but appear as null columns
+        if (rows.length > 0 && columns.length >= 3) {
+          const dataCols = columns.filter(c => c !== 'year' && c !== 'month');
+          const nullCols: string[] = [];
+          for (const col of dataCols) {
+            const allNull = rows.every(r => r[col] === null || r[col] === undefined);
+            if (allNull) nullCols.push(col);
+          }
+          if (nullCols.length > 0 && nullCols.length < dataCols.length) {
+            const names = nullCols.map(c => c.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())).join(', ');
+            claude.explanation += `\n\nNote: ${names} returned no data for this query. This agency may not be in our dataset, may not report this offense, or may not have data for the requested time period.`;
+            // Remove all-null columns so chart doesn't show misleading zero lines
+            rows = rows.map(r => {
+              const cleaned = { ...r };
+              for (const col of nullCols) delete cleaned[col];
+              return cleaned;
+            });
+            columns = columns.filter(c => !nullCols.includes(c));
+            if (claude.yAxis) {
+              claude.yAxis = claude.yAxis.split(',').map(y => y.trim()).filter(y => !nullCols.includes(y)).join(',');
+            }
           }
         }
 
