@@ -12,8 +12,8 @@ const { Resend } = require("resend");
 const path = require("path");
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
-const TO_EMAIL = "jasher@ahdatalytics.com";
-const FROM_EMAIL = "Crime Data Assistant <onboarding@resend.dev>";
+const TO_EMAIL = "RTCI@AHDatalytics.com";
+const FROM_EMAIL = "Crime Data Assistant <alerts@crimeindex.org>";
 
 if (!RESEND_API_KEY) {
   console.error("RESEND_API_KEY environment variable is required");
@@ -32,6 +32,91 @@ function getQueries() {
   return db
     .prepare("SELECT * FROM query_log WHERE ts >= ? ORDER BY ts ASC")
     .all(cutoff);
+}
+
+function getVisitors() {
+  try {
+    // Check if visitor_log table exists
+    const tableExists = db
+      .prepare(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='visitor_log'"
+      )
+      .get();
+    if (!tableExists) return null;
+
+    const pageviews = db
+      .prepare(
+        "SELECT COUNT(*) as n FROM visitor_log WHERE ts >= ? AND event = 'pageview'"
+      )
+      .get(cutoff);
+
+    const uniqueSessions = db
+      .prepare(
+        "SELECT COUNT(DISTINCT session_id) as n FROM visitor_log WHERE ts >= ? AND event = 'pageview'"
+      )
+      .get(cutoff);
+
+    // Top referrer domains
+    const topDomains = db
+      .prepare(
+        `SELECT referrer_domain, COUNT(*) as visits
+         FROM visitor_log
+         WHERE ts >= ? AND event = 'pageview' AND referrer_domain != '' AND referrer_domain != 'assistant.crimeindex.org' AND referrer_domain != 'nibrsai.com'
+         GROUP BY referrer_domain ORDER BY visits DESC LIMIT 15`
+      )
+      .all(cutoff);
+
+    // Top specific referrer URLs (the actual articles/pages)
+    const topReferrers = db
+      .prepare(
+        `SELECT referrer, referrer_domain, COUNT(*) as visits
+         FROM visitor_log
+         WHERE ts >= ? AND event = 'pageview' AND referrer != '' AND referrer_domain != 'assistant.crimeindex.org' AND referrer_domain != 'nibrsai.com'
+         GROUP BY referrer ORDER BY visits DESC LIMIT 20`
+      )
+      .all(cutoff);
+
+    // UTM campaign breakdown
+    const utmCampaigns = db
+      .prepare(
+        `SELECT utm_source, utm_medium, utm_campaign, COUNT(*) as visits
+         FROM visitor_log
+         WHERE ts >= ? AND event = 'pageview' AND utm_source != ''
+         GROUP BY utm_source, utm_medium, utm_campaign ORDER BY visits DESC LIMIT 10`
+      )
+      .all(cutoff);
+
+    // Tab breakdown from pageviews
+    const tabViews = db
+      .prepare(
+        `SELECT tab, COUNT(*) as views
+         FROM visitor_log
+         WHERE ts >= ? AND event IN ('pageview', 'tab_switch')
+         GROUP BY tab ORDER BY views DESC`
+      )
+      .all(cutoff);
+
+    // Direct vs referred
+    const directCount = db
+      .prepare(
+        `SELECT COUNT(*) as n FROM visitor_log WHERE ts >= ? AND event = 'pageview' AND (referrer = '' OR referrer IS NULL)`
+      )
+      .get(cutoff);
+
+    return {
+      pageviews: pageviews.n,
+      uniqueSessions: uniqueSessions.n,
+      topDomains,
+      topReferrers,
+      utmCampaigns,
+      tabViews,
+      directVisits: directCount.n,
+      referredVisits: pageviews.n - directCount.n,
+    };
+  } catch (err) {
+    console.error("Error reading visitor_log:", err.message);
+    return null;
+  }
 }
 
 function analyze(queries) {
@@ -184,7 +269,7 @@ function analyze(queries) {
   return { stats, issues };
 }
 
-function buildEmail(stats, issues) {
+function buildEmail(stats, issues, visitors) {
   const date = new Date().toLocaleDateString("en-US", {
     weekday: "long",
     year: "numeric",
@@ -349,6 +434,90 @@ function buildEmail(stats, issues) {
     html += `</div>`;
   }
 
+  // Traffic sources section
+  if (visitors) {
+    html += `<h2>Traffic</h2>
+    <div class="stat-grid">
+      <div class="stat-box">
+        <div class="stat-num">${visitors.pageviews}</div>
+        <div class="stat-label">Page Views</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-num">${visitors.uniqueSessions}</div>
+        <div class="stat-label">Unique Sessions</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-num">${visitors.directVisits} / ${visitors.referredVisits}</div>
+        <div class="stat-label">Direct / Referred</div>
+      </div>
+    </div>`;
+
+    if (visitors.topDomains.length > 0) {
+      html += `<h2>Top Referrer Domains</h2>
+      <table style="width:100%;border-collapse:collapse;font-size:13px;margin:12px 0;">
+        <thead>
+          <tr style="border-bottom:2px solid #ddd;">
+            <th style="text-align:left;padding:8px 6px;font-weight:600;color:#555;">Domain</th>
+            <th style="text-align:right;padding:8px 6px;font-weight:600;color:#555;">Visits</th>
+          </tr>
+        </thead>
+        <tbody>`;
+      for (const d of visitors.topDomains) {
+        html += `<tr style="border-bottom:1px solid #eee;">
+          <td style="padding:6px;">${escapeHtml(d.referrer_domain)}</td>
+          <td style="padding:6px;text-align:right;font-weight:600;">${d.visits}</td>
+        </tr>`;
+      }
+      html += `</tbody></table>`;
+    }
+
+    if (visitors.topReferrers.length > 0) {
+      html += `<h2>Top Referring Pages</h2>
+      <p style="font-size:12px;color:#888;margin-bottom:8px;">Specific URLs that sent visitors to the site.</p>
+      <table style="width:100%;border-collapse:collapse;font-size:12px;margin:12px 0;">
+        <thead>
+          <tr style="border-bottom:2px solid #ddd;">
+            <th style="text-align:left;padding:8px 6px;font-weight:600;color:#555;">Page</th>
+            <th style="text-align:right;padding:8px 6px;font-weight:600;color:#555;">Visits</th>
+          </tr>
+        </thead>
+        <tbody>`;
+      for (const r of visitors.topReferrers) {
+        const displayUrl = r.referrer.length > 80 ? r.referrer.substring(0, 80) + "..." : r.referrer;
+        html += `<tr style="border-bottom:1px solid #eee;">
+          <td style="padding:6px;word-break:break-all;">
+            <a href="${escapeHtml(r.referrer)}" style="color:#475EC7;text-decoration:none;">${escapeHtml(displayUrl)}</a>
+          </td>
+          <td style="padding:6px;text-align:right;font-weight:600;">${r.visits}</td>
+        </tr>`;
+      }
+      html += `</tbody></table>`;
+    }
+
+    if (visitors.utmCampaigns.length > 0) {
+      html += `<h2>UTM Campaigns</h2>
+      <table style="width:100%;border-collapse:collapse;font-size:13px;margin:12px 0;">
+        <thead>
+          <tr style="border-bottom:2px solid #ddd;">
+            <th style="text-align:left;padding:8px 6px;font-weight:600;color:#555;">Source</th>
+            <th style="text-align:left;padding:8px 6px;font-weight:600;color:#555;">Medium</th>
+            <th style="text-align:left;padding:8px 6px;font-weight:600;color:#555;">Campaign</th>
+            <th style="text-align:right;padding:8px 6px;font-weight:600;color:#555;">Visits</th>
+          </tr>
+        </thead>
+        <tbody>`;
+      for (const u of visitors.utmCampaigns) {
+        html += `<tr style="border-bottom:1px solid #eee;">
+          <td style="padding:6px;">${escapeHtml(u.utm_source)}</td>
+          <td style="padding:6px;">${escapeHtml(u.utm_medium || "—")}</td>
+          <td style="padding:6px;">${escapeHtml(u.utm_campaign || "—")}</td>
+          <td style="padding:6px;text-align:right;font-weight:600;">${u.visits}</td>
+        </tr>`;
+      }
+      html += `</tbody></table>`;
+    }
+  }
+
   html += `
 <div class="footer">
   Generated by Crime Data Assistant Query Analyzer<br>
@@ -382,11 +551,12 @@ async function main() {
   }
 
   const { stats, issues } = analyze(queries);
+  const visitors = getVisitors();
   console.log(
-    `Stats: ${stats.total} queries, ${stats.errors} errors, ${issues.length} issues`
+    `Stats: ${stats.total} queries, ${stats.errors} errors, ${issues.length} issues, ${visitors ? visitors.pageviews + " pageviews" : "no visitor data yet"}`
   );
 
-  const html = buildEmail(stats, issues);
+  const html = buildEmail(stats, issues, visitors);
 
   const today = new Date().toLocaleDateString("en-US", {
     year: "numeric",

@@ -6,6 +6,7 @@ import RtciChat from "./RtciChat";
 import NibrsChat from "./NibrsChat";
 import ExplainerContent from "./ExplainerContent";
 import GettingStarted from "./GettingStarted";
+import Tracker from "./Tracker";
 
 type TabId = "current" | "historical" | "nibrs" | "explainer";
 
@@ -13,7 +14,7 @@ const TABS: { id: TabId; label: string; shortLabel: string; color: string }[] = 
   { id: "current", label: "Current Trends", shortLabel: "Current", color: "#475EC7" },
   { id: "historical", label: "Historical Library", shortLabel: "Historical", color: "#8B5E3C" },
   { id: "nibrs", label: "NIBRS Explorer", shortLabel: "NIBRS", color: "#2d8659" },
-  { id: "explainer", label: "Explainer", shortLabel: "Explainer", color: "#333" },
+  { id: "explainer", label: "Tutorial", shortLabel: "Tutorial", color: "#333" },
 ];
 
 interface ChatInterfaceProps {
@@ -60,8 +61,8 @@ export default function ChatInterface({ heroData, heroAgencyCount, heroPopulatio
           {/* Center: title */}
           <button
             onClick={() => setActiveTab(null)}
-            className="absolute left-1/2 -translate-x-1/2 text-[11px] md:text-base font-bold uppercase text-[var(--foreground)] whitespace-nowrap cursor-pointer hover:opacity-80 transition-opacity"
-            style={{ letterSpacing: "4px" }}
+            className="absolute left-1/2 -translate-x-1/2 text-[11px] md:text-[13px] lg:text-base font-bold uppercase text-[var(--foreground)] whitespace-nowrap cursor-pointer hover:opacity-80 transition-opacity"
+            style={{ letterSpacing: "2.5px" }}
           >
             Crime Data Assistant
           </button>
@@ -71,12 +72,12 @@ export default function ChatInterface({ heroData, heroAgencyCount, heroPopulatio
             <button onClick={() => setActiveTab(null)} className="md:hidden flex items-center shrink-0 cursor-pointer">
               <CrimeIndexLogo size={24} />
             </button>
-            <div className="hidden md:flex items-center gap-0 rounded-lg overflow-hidden border border-[var(--border)]">
+            <div className={`${activeTab === null ? "hidden" : "hidden md:flex"} items-center gap-0 rounded-lg overflow-hidden border border-[var(--border)]`}>
               {TABS.map((tab, i) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`text-sm font-medium px-4 py-1.5 transition-colors cursor-pointer ${
+                  className={`text-xs lg:text-sm font-medium px-2.5 lg:px-4 py-1.5 transition-colors cursor-pointer whitespace-nowrap ${
                     i > 0 ? "border-l border-[var(--border)]" : ""
                   } ${
                     activeTab === tab.id
@@ -85,7 +86,8 @@ export default function ChatInterface({ heroData, heroAgencyCount, heroPopulatio
                   }`}
                   style={activeTab === tab.id ? { backgroundColor: tab.color } : undefined}
                 >
-                  {tab.label}
+                  <span className="hidden lg:inline">{tab.label}</span>
+                  <span className="lg:hidden">{tab.shortLabel}</span>
                 </button>
               ))}
             </div>
@@ -138,6 +140,7 @@ export default function ChatInterface({ heroData, heroAgencyCount, heroPopulatio
         visible={activeTab === "nibrs"}
       />
       <ExplainerContent visible={activeTab === "explainer"} />
+      <Tracker activeTab={activeTab} />
     </div>
   );
 }
