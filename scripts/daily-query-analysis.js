@@ -25,13 +25,29 @@ const db = new Database(path.join(__dirname, "..", "query_log.db"), {
   readonly: true,
 });
 
-// Look back 24 hours
-const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+// Previous calendar day (midnight to midnight CT)
+function getYesterdayRange() {
+  // Build "yesterday" in Central Time
+  const now = new Date();
+  const ct = new Date(now.toLocaleString("en-US", { timeZone: "America/Chicago" }));
+  // Start of today CT
+  const todayStart = new Date(ct.getFullYear(), ct.getMonth(), ct.getDate());
+  const yesterdayStart = new Date(todayStart);
+  yesterdayStart.setDate(yesterdayStart.getDate() - 1);
+  // Convert back to UTC timestamps
+  const offsetMs = now.getTime() - ct.getTime();
+  return {
+    start: yesterdayStart.getTime() + offsetMs,
+    end: todayStart.getTime() + offsetMs,
+  };
+}
+
+const { start: cutoff, end: cutoffEnd } = getYesterdayRange();
 
 function getQueries() {
   return db
-    .prepare("SELECT * FROM query_log WHERE ts >= ? ORDER BY ts ASC")
-    .all(cutoff);
+    .prepare("SELECT * FROM query_log WHERE ts >= ? AND ts < ? ORDER BY ts ASC")
+    .all(cutoff, cutoffEnd);
 }
 
 function getVisitors() {
@@ -46,62 +62,77 @@ function getVisitors() {
 
     const pageviews = db
       .prepare(
-        "SELECT COUNT(*) as n FROM visitor_log WHERE ts >= ? AND event = 'pageview'"
+        "SELECT COUNT(*) as n FROM visitor_log WHERE ts >= ? AND ts < ? AND event = 'pageview'"
       )
-      .get(cutoff);
+      .get(cutoff, cutoffEnd);
 
     const uniqueSessions = db
       .prepare(
-        "SELECT COUNT(DISTINCT session_id) as n FROM visitor_log WHERE ts >= ? AND event = 'pageview'"
+        "SELECT COUNT(DISTINCT session_id) as n FROM visitor_log WHERE ts >= ? AND ts < ? AND event = 'pageview'"
       )
-      .get(cutoff);
+      .get(cutoff, cutoffEnd);
+
+    // Monthly totals by calendar month (up to 6 months)
+    const monthlyTotals = db
+      .prepare(
+        `SELECT
+           strftime('%Y-%m', ts / 1000, 'unixepoch') as month,
+           COUNT(*) as pageviews,
+           COUNT(DISTINCT session_id) as unique_visitors
+         FROM visitor_log
+         WHERE event = 'pageview'
+         GROUP BY month
+         ORDER BY month DESC
+         LIMIT 6`
+      )
+      .all();
 
     // Top referrer domains
     const topDomains = db
       .prepare(
         `SELECT referrer_domain, COUNT(*) as visits
          FROM visitor_log
-         WHERE ts >= ? AND event = 'pageview' AND referrer_domain != '' AND referrer_domain != 'assistant.crimeindex.org' AND referrer_domain != 'nibrsai.com'
+         WHERE ts >= ? AND ts < ? AND event = 'pageview' AND referrer_domain != '' AND referrer_domain != 'assistant.crimeindex.org' AND referrer_domain != 'nibrsai.com'
          GROUP BY referrer_domain ORDER BY visits DESC LIMIT 15`
       )
-      .all(cutoff);
+      .all(cutoff, cutoffEnd);
 
     // Top specific referrer URLs (the actual articles/pages)
     const topReferrers = db
       .prepare(
         `SELECT referrer, referrer_domain, COUNT(*) as visits
          FROM visitor_log
-         WHERE ts >= ? AND event = 'pageview' AND referrer != '' AND referrer_domain != 'assistant.crimeindex.org' AND referrer_domain != 'nibrsai.com'
+         WHERE ts >= ? AND ts < ? AND event = 'pageview' AND referrer != '' AND referrer_domain != 'assistant.crimeindex.org' AND referrer_domain != 'nibrsai.com'
          GROUP BY referrer ORDER BY visits DESC LIMIT 20`
       )
-      .all(cutoff);
+      .all(cutoff, cutoffEnd);
 
     // UTM campaign breakdown
     const utmCampaigns = db
       .prepare(
         `SELECT utm_source, utm_medium, utm_campaign, COUNT(*) as visits
          FROM visitor_log
-         WHERE ts >= ? AND event = 'pageview' AND utm_source != ''
+         WHERE ts >= ? AND ts < ? AND event = 'pageview' AND utm_source != ''
          GROUP BY utm_source, utm_medium, utm_campaign ORDER BY visits DESC LIMIT 10`
       )
-      .all(cutoff);
+      .all(cutoff, cutoffEnd);
 
     // Tab breakdown from pageviews
     const tabViews = db
       .prepare(
         `SELECT tab, COUNT(*) as views
          FROM visitor_log
-         WHERE ts >= ? AND event IN ('pageview', 'tab_switch')
+         WHERE ts >= ? AND ts < ? AND event IN ('pageview', 'tab_switch')
          GROUP BY tab ORDER BY views DESC`
       )
-      .all(cutoff);
+      .all(cutoff, cutoffEnd);
 
     // Direct vs referred
     const directCount = db
       .prepare(
-        `SELECT COUNT(*) as n FROM visitor_log WHERE ts >= ? AND event = 'pageview' AND (referrer = '' OR referrer IS NULL)`
+        `SELECT COUNT(*) as n FROM visitor_log WHERE ts >= ? AND ts < ? AND event = 'pageview' AND (referrer = '' OR referrer IS NULL)`
       )
-      .get(cutoff);
+      .get(cutoff, cutoffEnd);
 
     return {
       pageviews: pageviews.n,
@@ -110,6 +141,7 @@ function getVisitors() {
       topReferrers,
       utmCampaigns,
       tabViews,
+      monthlyTotals,
       directVisits: directCount.n,
       referredVisits: pageviews.n - directCount.n,
     };
@@ -436,7 +468,10 @@ function buildEmail(stats, issues, visitors) {
 
   // Traffic sources section
   if (visitors) {
-    html += `<h2>Traffic</h2>
+    const yesterdayLabel = new Date(cutoff).toLocaleDateString("en-US", {
+      weekday: "long", month: "long", day: "numeric", timeZone: "America/Chicago",
+    });
+    html += `<h2>Traffic — ${yesterdayLabel}</h2>
     <div class="stat-grid">
       <div class="stat-box">
         <div class="stat-num">${visitors.pageviews}</div>
@@ -444,13 +479,39 @@ function buildEmail(stats, issues, visitors) {
       </div>
       <div class="stat-box">
         <div class="stat-num">${visitors.uniqueSessions}</div>
-        <div class="stat-label">Unique Sessions</div>
+        <div class="stat-label">Unique Visitors</div>
       </div>
       <div class="stat-box">
         <div class="stat-num">${visitors.directVisits} / ${visitors.referredVisits}</div>
         <div class="stat-label">Direct / Referred</div>
       </div>
-    </div>`;
+    </div>
+
+`;
+
+    if (visitors.monthlyTotals.length > 0) {
+      html += `<h2>Monthly Totals</h2>
+      <table style="width:100%;border-collapse:collapse;font-size:13px;margin:12px 0;">
+        <thead>
+          <tr style="border-bottom:2px solid #ddd;">
+            <th style="text-align:left;padding:8px 6px;font-weight:600;color:#555;">Month</th>
+            <th style="text-align:right;padding:8px 6px;font-weight:600;color:#555;">Page Views</th>
+            <th style="text-align:right;padding:8px 6px;font-weight:600;color:#555;">Unique Visitors</th>
+            <th style="text-align:right;padding:8px 6px;font-weight:600;color:#555;">Pages / Visitor</th>
+          </tr>
+        </thead>
+        <tbody>`;
+      for (const m of visitors.monthlyTotals) {
+        const ppv = m.unique_visitors > 0 ? (m.pageviews / m.unique_visitors).toFixed(1) : "—";
+        html += `<tr style="border-bottom:1px solid #eee;">
+          <td style="padding:6px;font-weight:600;">${m.month}</td>
+          <td style="padding:6px;text-align:right;">${m.pageviews}</td>
+          <td style="padding:6px;text-align:right;">${m.unique_visitors}</td>
+          <td style="padding:6px;text-align:right;">${ppv}</td>
+        </tr>`;
+      }
+      html += `</tbody></table>`;
+    }`;
 
     if (visitors.topDomains.length > 0) {
       html += `<h2>Top Referrer Domains</h2>

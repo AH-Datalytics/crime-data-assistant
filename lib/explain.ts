@@ -74,13 +74,32 @@ export async function generateExplanation(opts: {
     tabContext = "This is FBI NIBRS data. Do NOT add any disclaimers about NIBRS coverage, reporting, or data completeness — a standard disclaimer is appended automatically by the server.";
   }
 
+  // Date range gap detection: warn if actual data starts much later than requested
+  let dateGapDisclaimer = "";
+  if (tab === "nibrs" && rows.length > 0) {
+    const startYearMatch = question.match(/(?:since|from|starting|beginning)\s+(\d{4})/i)
+      || question.match(/(\d{4})\s*(?:to|through|-)\s*\d{4}/i);
+    if (startYearMatch) {
+      const requestedYear = parseInt(startYearMatch[1]);
+      // Find earliest year in results
+      const firstRow = rows[0] as Record<string, unknown>;
+      const actualYearRaw = firstRow.year ?? firstRow.data_year ?? firstRow.Year;
+      const actualYear = typeof actualYearRaw === 'number' ? actualYearRaw : typeof actualYearRaw === 'string' ? parseInt(actualYearRaw) : NaN;
+      if (!isNaN(actualYear) && actualYear > requestedYear + 1) {
+        dateGapDisclaimer = `The user requested data from ${requestedYear} but the earliest data returned is from ${actualYear}. You MUST mention this gap.`;
+      }
+    }
+  }
+
+  const allDisclaimers = [disclaimers, dateGapDisclaimer].filter(Boolean).join("\n");
+
   const userPrompt = `User question: "${question}"
 
 Query returned ${rowCount} row${rowCount !== 1 ? "s" : ""}.
 ${resultsSummary}
 
 Tab context: ${tabContext}
-${disclaimers ? `Mandatory disclaimers to include:\n${disclaimers}` : ""}
+${allDisclaimers ? `Mandatory disclaimers to include:\n${allDisclaimers}` : ""}
 
 Write a brief explanation describing what these results contain (time range, geography, metric). Do not describe what the data shows.`;
 

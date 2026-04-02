@@ -112,6 +112,30 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Step 2b2: Detect cross-level JOIN that multiplies rows (e.g., city-level summary JOINed with state-level summary)
+    // This produces wildly inflated numbers (e.g., NYC murders × 50 states = 22x actual)
+    const usesCitySummary = /\bsummary_victim_city_monthly\b/i.test(sql) || /\bsummary_city_monthly\b/i.test(sql);
+    const usesStateSummaryAny = /\bsummary_victim_state_monthly\b/i.test(sql) || /\bsummary_state_monthly\b/i.test(sql);
+    if (usesCitySummary && usesStateSummaryAny && /\bJOIN\b/i.test(sql)) {
+      console.log(`[nibrs][safeguard] Cross-level JOIN detected (city + state summary tables). Retrying with separated queries.`);
+      const retryResult = await translateToSql(
+        question + "\n\n[SYSTEM: Your previous query JOINed city-level and state-level summary tables, which produces incorrect results due to row multiplication. For comparisons between a city and a state/national average, use separate subqueries or CTEs — one for the city data and one for the state/national data — then combine them. NEVER JOIN summary_victim_city_monthly with summary_victim_state_monthly directly.]",
+        history
+      );
+      if (retryResult.sql) {
+        const retryValidation = validateAndSanitize(retryResult.sql);
+        if (retryValidation.valid) {
+          sql = retryValidation.sanitized!;
+          claude.explanation = retryResult.explanation;
+          claude.chartHint = retryResult.chartHint;
+          claude.xAxis = retryResult.xAxis;
+          claude.yAxis = retryResult.yAxis;
+          claude.title = retryResult.title;
+          console.log(`[nibrs][safeguard] Cross-level JOIN retry succeeded`);
+        }
+      }
+    }
+
     // Step 2c: Detect state-level summary table used with ori filter → fix to city-level table
     const usesStateSummary = /\bsummary_victim_state_monthly\b/i.test(sql);
     const hasOriFilter = /\bori\b/i.test(sql);
@@ -172,8 +196,13 @@ export async function POST(req: NextRequest) {
           } catch (retryErr) {
             const retryMsg = retryErr instanceof Error ? retryErr.message : String(retryErr);
             logNibrsQuery(question, sql, 0, `DB retry failed: ${retryMsg}`, Date.now() - claudeStart);
+            const userError = isTimeout
+              ? `This query is too complex for the database. Try narrowing your request — for example, ask about a specific city, state, or shorter time range instead of a broad national query.`
+              : msg.includes("no such column") || msg.includes("ambiguous")
+                ? `I had trouble building that query — the data may not support that exact breakdown. Try simplifying your question or asking about a broader category.`
+                : `I had trouble with that query. Try rephrasing your question or asking about a different aspect of the data.`;
             return jsonResp(
-              { success: false, error: isTimeout ? `This query is too complex for the database. Try asking about a specific city, state, or shorter time range.` : `I had trouble with that query. Try rephrasing your question.`, sql } as QueryError,
+              { success: false, error: userError, sql } as QueryError,
               500
             );
           }
@@ -197,12 +226,12 @@ export async function POST(req: NextRequest) {
 
     // Step 4: Server-side CDE audit check — append disclaimer if anomalous underreporting detected
     let explanation = claude.explanation;
+    const oris = new Set<string>();
     try {
       // Extract ORI(s) from SQL — look for ori = 'XX...' or ori IN ('XX...', ...)
       // but NOT ori IN (SELECT ...) which is a subquery, not literal values
       const oriMatches = sql.match(/ori\s*=\s*'([A-Z0-9]+)'/gi) || [];
       const oriInMatches = sql.match(/ori\s+IN\s*\((?!SELECT)([^)]+)\)/gi) || [];
-      const oris = new Set<string>();
       for (const m of oriMatches) {
         const val = m.match(/'([A-Z0-9]+)'/)?.[1];
         if (val) oris.add(val);
@@ -322,6 +351,53 @@ export async function POST(req: NextRequest) {
       }
     } catch (cdeErr) {
       console.log(`[nibrs][cde-check] Error:`, cdeErr);
+    }
+
+    // Step 4a2: Check agency_reporting_gaps for NIBRS transition years
+    try {
+      if (oris.size > 0 && oris.size <= 10) {
+        const db = getNibrsDb();
+
+        // Extract year range from SQL
+        const yearMatches = sql.match(/\b(20\d{2}|19\d{2})\b/g) || [];
+        const sqlYears = yearMatches.map(Number);
+        // Also extract years from result rows
+        const rowYears = rows
+          .map((r: Record<string, unknown>) => {
+            const y = r.year ?? r.data_year ?? r.Year;
+            return typeof y === 'number' ? y : typeof y === 'string' ? parseInt(y) : NaN;
+          })
+          .filter((y: number) => !isNaN(y));
+        const allYears = new Set([...sqlYears, ...rowYears]);
+
+        for (const ori of oris) {
+          const gapRows = db.prepare(
+            `SELECT year, gap_type, severity, months_reported, expected_months
+             FROM agency_reporting_gaps
+             WHERE ori = ? AND (gap_type IN ('ramp_up', 'transition') OR severity = 'transition')
+             ORDER BY year`
+          ).all(ori) as { year: number; gap_type: string; severity: string; months_reported: number; expected_months: number }[];
+
+          if (gapRows.length === 0) continue;
+
+          // Check overlap with query years
+          const overlappingYears = gapRows
+            .filter(r => allYears.size === 0 || allYears.has(r.year))
+            .map(r => r.year);
+
+          if (overlappingYears.length === 0) continue;
+
+          // Get city name
+          const agencyRow = db.prepare(`SELECT city, state FROM agencies WHERE ori = ? AND year = 2024 LIMIT 1`).get(ori) as { city: string; state: string } | undefined;
+          const cityName = agencyRow ? agencyRow.city.split(' ').map(w => w.charAt(0) + w.slice(1).toLowerCase()).join(' ') : ori;
+
+          const yearStr = overlappingYears.join(', ');
+          explanation += `\n\n**Note: ${cityName} was transitioning to NIBRS reporting in ${yearStr} and data for those years is incomplete. Counts are significantly lower than actual crime levels.**`;
+          console.log(`[nibrs][transition-check] Added transition warning for ${ori} years ${yearStr}`);
+        }
+      }
+    } catch (transErr) {
+      console.log(`[nibrs][transition-check] Error:`, transErr);
     }
 
     // Step 4b: Generate post-query explanation (with actual results + CDE disclaimers)

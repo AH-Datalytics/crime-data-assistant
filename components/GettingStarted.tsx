@@ -1,7 +1,5 @@
 "use client";
 
-import { useState } from "react";
-
 type TabId = "current" | "historical" | "nibrs";
 
 interface GettingStartedProps {
@@ -27,11 +25,11 @@ const TAB_CARDS: {
     lightBg: "#eef1fb",
     borderColor: "#c5cdf0",
     icon: "M3 12l2-2 3 3 5-6 4 4",
-    stat: "~700",
+    stat: "500+",
     statLabel: "agencies reporting monthly",
     subtitle: "Monthly \u00b7 2017\u2013present",
     description:
-      "Track what\u2019s happening now. Monthly crime counts from hundreds of police departments across 48 states, updated on a rolling basis.",
+      "Track what\u2019s happening now. Monthly crime counts from hundreds of police departments, updated on a rolling basis. Recent data is preliminary.",
   },
   {
     id: "historical",
@@ -40,11 +38,11 @@ const TAB_CARDS: {
     lightBg: "#f5f0eb",
     borderColor: "#ddd0c2",
     icon: "M4 14h3v3H4zm5-4h3v7H9zm5-6h3v13h-3z",
-    stat: "94 yrs",
+    stat: "~100 yrs",
     statLabel: "of annual FBI crime data",
-    subtitle: "Annual \u00b7 1930\u2013present",
+    subtitle: "Annual \u00b7 1930\u20132024",
     description:
-      "Explore nearly a century of crime data. The longest-running standardized crime data in the U.S., from 14,000+ agencies.",
+      "Explore nearly 100 years of crime data. The longest-running standardized crime data in the U.S., from more than 10,000 agencies.",
   },
   {
     id: "nibrs",
@@ -53,11 +51,11 @@ const TAB_CARDS: {
     lightBg: "#ecf5f0",
     borderColor: "#b8dcc8",
     icon: "M9 3a6 6 0 1 0 0 12A6 6 0 0 0 9 3zM13.5 13.5L17 17",
-    stat: "1B+",
+    stat: "1 Billion+",
     statLabel: "incident-level records",
     subtitle: "Incident-level \u00b7 1991\u2013present",
     description:
-      "The deepest dive available. Every reported incident with victim, offender, weapon, drug, and property details.",
+      "The deepest dive available. Every reported incident with details of offense, victim, offender, weapon, and more. Not all agencies have reported every year to NIBRS.",
   },
 ];
 
@@ -92,9 +90,9 @@ const PITFALLS: Record<TabId, string[]> = {
   current: [
     "Data is preliminary and collected directly from police departments \u2014 it has not been validated by the FBI and is subject to revision.",
     "Not every city reports every month. Gaps in reporting can cause misleading dips in charts.",
-    "National figures use a fixed \u201cnational sample\u201d of ~600 agencies. This tracks trends but does not represent a national total.",
+    "National figures use a fixed \u201cnational sample\u201d of several hundred agencies. This tracks trends but does not represent a national total.",
     "A city not appearing in rankings may simply not be in the sample \u2014 it doesn\u2019t mean they have zero crime.",
-    "Crime categories follow the traditional UCR Part I structure (murder, rape, robbery, aggravated assault, burglary, larceny, motor vehicle theft, arson).",
+    "Crime categories follow the traditional UCR Part I structure (murder, rape, robbery, aggravated assault, burglary, theft, and motor vehicle theft).",
   ],
   historical: [
     "Reporting is voluntary \u2014 not all agencies reported in all years, especially before 1960.",
@@ -114,12 +112,11 @@ const PITFALLS: Record<TabId, string[]> = {
 };
 
 export default function GettingStarted({ onSelectTab }: GettingStartedProps) {
-  const [showTutorial, setShowTutorial] = useState(false);
-  const [expandedTab, setExpandedTab] = useState<TabId | null>(null);
+  const showTutorial = true;
 
   return (
     <div className="flex-1 overflow-y-auto" style={{ background: "linear-gradient(180deg, #ffffff 0%, var(--surface) 300px)" }}>
-      <div className="max-w-4xl mx-auto px-4 md:px-8 pt-10 md:pt-16 pb-12">
+      <div className="max-w-5xl mx-auto px-4 md:px-8 pt-10 md:pt-16 pb-12">
 
         {/* Hero */}
         <div className="text-center mb-12">
@@ -128,9 +125,8 @@ export default function GettingStarted({ onSelectTab }: GettingStartedProps) {
           >
             Ask a question about<br />crime in the United States
           </h1>
-          <p className="text-[15px] text-[var(--muted)] max-w-xl mx-auto leading-relaxed">
-            Three databases. Over a billion records. Nearly a century of history.
-            Choose a data source to start, or read the guide below.
+          <p className="text-[15px] text-[var(--muted)] max-w-2xl mx-auto leading-relaxed">
+            Nearly a century of crime data history. Choose a data source to start or read the guide below.
           </p>
         </div>
 
@@ -175,7 +171,7 @@ export default function GettingStarted({ onSelectTab }: GettingStartedProps) {
                 {/* Big stat */}
                 <div className="mb-3">
                   <span
-                    className="text-[28px] font-extrabold leading-none"
+                    className={`${card.stat.length > 6 ? "text-[22px]" : "text-[28px]"} font-extrabold leading-none`}
                     style={{ color: card.color }}
                   >
                     {card.stat}
@@ -203,28 +199,8 @@ export default function GettingStarted({ onSelectTab }: GettingStartedProps) {
           ))}
         </div>
 
-        {/* Divider with tutorial toggle */}
-        <div className="flex items-center gap-4 mb-8">
-          <div className="flex-1 h-px bg-[var(--border)]" />
-          <button
-            onClick={() => setShowTutorial(!showTutorial)}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-[var(--border)] bg-white text-sm font-semibold text-[var(--foreground)] hover:bg-[#fafafa] hover:border-[#ccc] transition-all cursor-pointer shadow-sm"
-          >
-            <svg
-              width="15"
-              height="15"
-              viewBox="0 0 16 16"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className={`transition-transform duration-200 ${showTutorial ? "rotate-180" : ""}`}
-            >
-              <path d="M4 6l4 4 4-4" />
-            </svg>
-            {showTutorial ? "Hide Guide" : "Beginner\u2019s Guide & Tutorial"}
-          </button>
+        {/* Divider */}
+        <div className="flex items-center mb-8">
           <div className="flex-1 h-px bg-[var(--border)]" />
         </div>
 
@@ -246,12 +222,11 @@ export default function GettingStarted({ onSelectTab }: GettingStartedProps) {
             {/* How to read results */}
             <section className="bg-white rounded-2xl border border-[var(--border)] p-6 md:p-8 shadow-sm">
               <h2 className="text-xl font-bold mb-5 text-[var(--foreground)]">How to Read Results</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
                 {[
                   { num: "1", title: "Explanation", desc: "A plain-English summary of what the data shows, generated by AI with context about limitations.", color: "#475EC7" },
                   { num: "2", title: "Chart", desc: "An interactive line, bar, or area chart. Hover over data points for exact values.", color: "#8B5E3C" },
                   { num: "3", title: "Data Table", desc: "Sortable raw numbers. Click column headers to sort. Export as CSV.", color: "#2d8659" },
-                  { num: "4", title: "SQL Query", desc: "The exact database query, shown for transparency. Check it if results look off.", color: "#6b7280" },
                 ].map((item) => (
                   <div key={item.num} className="flex gap-3">
                     <div
@@ -287,12 +262,12 @@ export default function GettingStarted({ onSelectTab }: GettingStartedProps) {
                   </thead>
                   <tbody className="text-[var(--muted)]">
                     {[
-                      ["Source", "AH Datalytics (police dept. open data)", "FBI Uniform Crime Reports", "FBI NIBRS Master Files"],
-                      ["Time Range", "2017\u2013present", "1930\u2013present", "1991\u2013present"],
+                      ["Source", "Agency Data Collected by AH Datalytics", "FBI Uniform Crime Reports", "FBI NIBRS Master Files"],
+                      ["Time Range", "2017\u2013present", "1930\u20132024", "1991\u2013present"],
                       ["Granularity", "Monthly", "Annual", "Per-incident"],
-                      ["Coverage", "~700 agencies (curated sample)", "~14,000 agencies", "Varies by year (90%+ pop. by 2021)"],
-                      ["Crime Types", "Part I UCR (8 offenses)", "Part I UCR + staffing", "52+ NIBRS offense codes"],
-                      ["Detail Level", "Crime counts + clearance rates", "Crime counts + rates + staffing", "Demographics, weapons, drugs, property"],
+                      ["Coverage", "Hundreds of agencies (curated sample)", "10,000+ agencies", "Varies by year but growing (~87% of U.S. pop. by 2024)"],
+                      ["Crime Types", "Part I UCR (7 offenses)", "Part I UCR + staffing", "52+ NIBRS offense codes"],
+                      ["Detail Level", "Crime counts + clearance rates", "Crime counts + clearance rates + staffing", "Demographics, weapons, drugs, property"],
                       ["Best For", "Recent trends, what\u2019s happening now", "Long-term trends, historical context", "Deep analysis, demographics, specific offenses"],
                     ].map(([label, ...cells], i) => (
                       <tr key={i} className="border-b border-[var(--border)]">
@@ -316,18 +291,18 @@ export default function GettingStarted({ onSelectTab }: GettingStartedProps) {
                 <div className="flex items-center gap-2 mb-3">
                   <div className="w-1 h-5 rounded-full" style={{ backgroundColor: "#475EC7" }} />
                   <h3 className="text-base font-bold text-[var(--foreground)]">
-                    Current Trends (Real-Time Crime Index)
+                    Current Trends
                   </h3>
                 </div>
                 <div className="pl-3.5 text-sm text-[var(--muted)] leading-relaxed space-y-2.5">
                   <p>
-                    This data comes from the <strong className="text-[var(--foreground)]">Real-Time Crime Index</strong>, a project by AH Datalytics that collects monthly crime data directly from police department open data portals, CompStat reports, and public records requests. It covers the 8 traditional Part I UCR crime categories: murder, rape, robbery, aggravated assault, burglary, larceny-theft, motor vehicle theft, and arson.
+                    This data comes from what was originally the <strong className="text-[var(--foreground)]">Real-Time Crime Index</strong>, a project by AH Datalytics that collects monthly crime data directly from police department websites, the FBI&apos;s Crime Data Explorer, and public records requests. It covers the 7 traditional Part I UCR crime categories: violent crimes (murder, rape, robbery, and aggravated assault) and property crimes (burglary, theft, and motor vehicle theft). Note that some reported data may be preliminary, subject to change, and may not precisely match figures that will eventually be formally reported to the FBI.
                   </p>
                   <p>
-                    <strong className="text-[var(--foreground)]">Why it exists:</strong> The FBI publishes annual crime data, but with a 1&ndash;2 year delay. This dataset fills the gap by providing near real-time monthly data from hundreds of the largest police departments. It&apos;s the best source for answering &ldquo;what&apos;s happening right now?&rdquo;
+                    <strong className="text-[var(--foreground)]">Why it exists:</strong> The FBI publishes annual crime estimates with a delay. This dataset fills the gap by providing near real-time monthly data from hundreds of the largest police departments to establish local, statewide, and national crime trends. It&apos;s the best source for answering &ldquo;what&apos;s happening right now?&rdquo;
                   </p>
                   <p>
-                    <strong className="text-[var(--foreground)]">What &ldquo;national sample&rdquo; means:</strong> About 600 agencies report consistently every month. When you ask for &ldquo;national&rdquo; trends, the assistant uses only this consistent sample so that month-to-month changes reflect actual crime changes, not agencies dropping in and out of the data.
+                    <strong className="text-[var(--foreground)]">What &ldquo;national sample&rdquo; means:</strong> Several hundred agencies report consistently every month. When you ask for &ldquo;national&rdquo; trends, the assistant uses only this consistent sample so that month-to-month changes reflect actual crime changes, not agencies dropping in and out of the data.
                   </p>
                 </div>
               </div>
@@ -348,7 +323,7 @@ export default function GettingStarted({ onSelectTab }: GettingStartedProps) {
                     <strong className="text-[var(--foreground)]">Why it exists:</strong> This is the gold standard for historical crime analysis. If you want to know how crime has changed over decades &mdash; or compare a city&apos;s crime rate in 1990 vs. 2020 &mdash; this is the dataset to use.
                   </p>
                   <p>
-                    <strong className="text-[var(--foreground)]">Key caveat:</strong> Reporting is voluntary. Not all agencies reported in all years, especially before 1960. The data you see here reflects what agencies actually submitted to the FBI, without the estimation adjustments the FBI applies for published national figures.
+                    <strong className="text-[var(--foreground)]">Key caveat:</strong> The data you see here reflects what agencies submitted to the FBI though not all agencies have reported in all years, especially before 1960. Additionally, not every crime is reported to law enforcement every year.
                   </p>
                 </div>
               </div>
@@ -366,10 +341,10 @@ export default function GettingStarted({ onSelectTab }: GettingStartedProps) {
                     NIBRS is the FBI&apos;s modern, incident-level crime reporting system. Instead of just reporting annual totals, agencies submit detailed records for every individual crime incident &mdash; including information about victims, offenders, weapons, drugs, property, injuries, and how the case was resolved.
                   </p>
                   <p>
-                    <strong className="text-[var(--foreground)]">Why it exists:</strong> The older UCR system only captured aggregate counts. NIBRS captures the full story of each incident. This makes it possible to answer questions like &ldquo;what weapons are most commonly used in aggravated assault in Texas?&rdquo; or &ldquo;what percentage of robbery victims are male?&rdquo;
+                    <strong className="text-[var(--foreground)]">Why it exists:</strong> The older Summary Reporting System only captured aggregate offense counts. NIBRS captures a fuller story of each incident. This makes it easy to answer questions like &ldquo;how many vehicle burglaries were there in Texas last year?&rdquo; or &ldquo;what percentage of carjacking victims are male?&rdquo;
                   </p>
                   <p>
-                    <strong className="text-[var(--foreground)]">Key caveat:</strong> NIBRS participation grew slowly. In the early 1990s, only a handful of states reported. By 2021, the FBI required all agencies to switch to NIBRS, and coverage now exceeds 90% of the U.S. population. When looking at trends over time, always consider whether an increase reflects more crime or simply more agencies reporting.
+                    <strong className="text-[var(--foreground)]">Key caveat:</strong> NIBRS participation has grown slowly. In the early 1990s, only a handful of states reported. By 2021, the FBI required all agencies to switch to NIBRS, and coverage is nearly 90% of the U.S. population. When looking at trends over time, always consider whether an increase reflects more crime or simply more agencies reporting. An agency reporting an increase in crimes from one year to the next may have simply started reporting via NIBRS in the middle of a year.
                   </p>
                   <p>
                     <strong className="text-[var(--foreground)]">What it can&apos;t do:</strong> The database has total jurisdiction population but <strong>not</strong> population broken down by race, gender, or age. This means you can calculate per-capita crime rates for a city or state, but you cannot calculate rates like &ldquo;murders per 100K females&rdquo; because the female population isn&apos;t available.
@@ -382,79 +357,60 @@ export default function GettingStarted({ onSelectTab }: GettingStartedProps) {
             <section className="bg-white rounded-2xl border border-[var(--border)] p-6 md:p-8 shadow-sm">
               <h2 className="text-xl font-bold mb-2 text-[var(--foreground)]">Sample Queries</h2>
               <p className="text-sm text-[var(--muted)] mb-5">
-                Expand any tab below to see example questions you can copy and paste.
+                Example questions you can copy and paste.
               </p>
 
-              <div className="space-y-3">
+              <div className="space-y-5">
                 {(["current", "historical", "nibrs"] as TabId[]).map((tabId) => {
                   const card = TAB_CARDS.find((c) => c.id === tabId)!;
-                  const isExpanded = expandedTab === tabId;
                   return (
                     <div key={tabId}>
-                      <button
-                        onClick={() => setExpandedTab(isExpanded ? null : tabId)}
-                        className="w-full flex items-center justify-between py-3 px-4 rounded-xl transition-all cursor-pointer"
+                      <div
+                        className="flex items-center gap-2.5 py-3 px-4 rounded-xl"
                         style={{
-                          backgroundColor: isExpanded ? card.lightBg : "#fafafa",
-                          border: `1.5px solid ${isExpanded ? card.borderColor : "var(--border)"}`,
+                          backgroundColor: card.lightBg,
+                          border: `1.5px solid ${card.borderColor}`,
                         }}
                       >
-                        <div className="flex items-center gap-2.5">
+                        <div
+                          className="w-2 h-2 rounded-full shrink-0"
+                          style={{ backgroundColor: card.color }}
+                        />
+                        <span className="text-sm font-semibold text-[var(--foreground)]">
+                          {card.title}
+                        </span>
+                        <span className="text-[11px] text-[var(--muted)]">
+                          {SAMPLE_QUERIES[tabId].length} examples
+                        </span>
+                      </div>
+                      <div className="mt-2 space-y-2 pl-2">
+                        {SAMPLE_QUERIES[tabId].map((sq, i) => (
                           <div
-                            className="w-2 h-2 rounded-full shrink-0"
-                            style={{ backgroundColor: card.color }}
-                          />
-                          <span className="text-sm font-semibold text-[var(--foreground)]">
-                            {card.title}
-                          </span>
-                          <span className="text-[11px] text-[var(--muted)]">
-                            {SAMPLE_QUERIES[tabId].length} examples
-                          </span>
-                        </div>
-                        <svg
-                          width="14"
-                          height="14"
-                          viewBox="0 0 16 16"
-                          fill="none"
-                          stroke={card.color}
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          className={`transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`}
-                        >
-                          <path d="M4 6l4 4 4-4" />
-                        </svg>
-                      </button>
-                      {isExpanded && (
-                        <div className="mt-2 space-y-2 pl-2">
-                          {SAMPLE_QUERIES[tabId].map((sq, i) => (
-                            <div
-                              key={i}
-                              className="flex items-start gap-3 py-2.5 px-3 rounded-lg bg-[#fafafa]"
-                            >
-                              <span
-                                className="text-[11px] font-bold mt-0.5 shrink-0 w-5 h-5 rounded flex items-center justify-center"
-                                style={{ backgroundColor: card.lightBg, color: card.color }}
-                              >
-                                {i + 1}
-                              </span>
-                              <div>
-                                <p className="text-sm font-medium text-[var(--foreground)] mb-0.5">
-                                  &ldquo;{sq.q}&rdquo;
-                                </p>
-                                <p className="text-xs text-[var(--muted)]">{sq.why}</p>
-                              </div>
-                            </div>
-                          ))}
-                          <button
-                            onClick={() => onSelectTab(tabId)}
-                            className="text-xs font-semibold mt-1 ml-3 cursor-pointer hover:underline"
-                            style={{ color: card.color }}
+                            key={i}
+                            className="flex items-start gap-3 py-2.5 px-3 rounded-lg bg-[#fafafa]"
                           >
-                            Try these in {card.title} &rarr;
-                          </button>
-                        </div>
-                      )}
+                            <span
+                              className="text-[11px] font-bold mt-0.5 shrink-0 w-5 h-5 rounded flex items-center justify-center"
+                              style={{ backgroundColor: card.lightBg, color: card.color }}
+                            >
+                              {i + 1}
+                            </span>
+                            <div>
+                              <p className="text-sm font-medium text-[var(--foreground)] mb-0.5">
+                                &ldquo;{sq.q}&rdquo;
+                              </p>
+                              <p className="text-xs text-[var(--muted)]">{sq.why}</p>
+                            </div>
+                          </div>
+                        ))}
+                        <button
+                          onClick={() => onSelectTab(tabId)}
+                          className="text-xs font-semibold mt-1 ml-3 cursor-pointer hover:underline"
+                          style={{ color: card.color }}
+                        >
+                          Try these in {card.title} &rarr;
+                        </button>
+                      </div>
                     </div>
                   );
                 })}
@@ -465,30 +421,28 @@ export default function GettingStarted({ onSelectTab }: GettingStartedProps) {
             <section className="bg-white rounded-2xl border border-[var(--border)] p-6 md:p-8 shadow-sm">
               <h2 className="text-xl font-bold mb-2 text-[var(--foreground)]">Common Pitfalls</h2>
               <p className="text-sm text-[var(--muted)] mb-5">
-                Crime data is nuanced. Keep these in mind when interpreting results.
+                Crime data is nuanced. Additionally, I am a bot and may sometimes make mistakes. Keep these in mind when interpreting results and always verify findings with official sources if you&apos;re uncertain.
               </p>
 
-              {(["current", "historical", "nibrs"] as TabId[]).map((tabId, idx) => {
-                const card = TAB_CARDS.find((c) => c.id === tabId)!;
-                return (
-                  <div key={tabId} className={idx < 2 ? "mb-5 pb-5 border-b border-[var(--border)]" : ""}>
-                    <div className="flex items-center gap-2 mb-2.5">
-                      <div className="w-1 h-4 rounded-full" style={{ backgroundColor: card.color }} />
-                      <h4 className="text-sm font-bold text-[var(--foreground)]">
-                        {card.title}
-                      </h4>
-                    </div>
-                    <ul className="space-y-1.5 pl-3.5">
-                      {PITFALLS[tabId].map((p, i) => (
-                        <li key={i} className="flex items-start gap-2 text-[13px] text-[var(--muted)] leading-relaxed">
-                          <span className="text-[var(--border)] mt-1.5 shrink-0">&bull;</span>
-                          <span>{p}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                );
-              })}
+              <ul className="space-y-1.5 pl-3.5">
+                {[
+                  "Data is preliminary and collected directly from police departments \u2014 it has not been validated by the FBI and is subject to revision.",
+                  "National figures use a fixed \u201cnational sample\u201d of several hundred agencies. This tracks trends but does not represent a national total.",
+                  "An agency not appearing in the data may simply not be in the sample \u2014 it doesn\u2019t mean they have zero crime.",
+                  "Crime categories follow the traditional UCR Part I structure (murder, rape, robbery, aggravated assault, burglary, larceny, and motor vehicle theft).",
+                  "Reporting is voluntary \u2014 not all agencies reported in all years, especially before 1960.",
+                  "The FBI changed the definition of rape in 2013 (from \u201cforcible\u201d to a broader definition). Comparing rape rates across that break requires caution.",
+                  "Data reflects only crimes reported to police. Unreported crimes are not captured.",
+                  "NIBRS participation varied wildly by state and year, especially before 2021. An increase in crime counts may reflect more agencies reporting, not more crime.",
+                  "The database has total jurisdiction population only \u2014 not population by race, gender, or age. Per-capita rates by demographic group cannot be calculated.",
+                  "Queries on raw tables (100M+ rows) can be slow. The assistant uses pre-built summary tables when possible, but very specific queries may take longer or time out completely.",
+                ].map((p, i) => (
+                  <li key={i} className="flex items-start gap-2 text-[13px] text-[var(--muted)] leading-relaxed">
+                    <span className="text-[var(--border)] mt-1.5 shrink-0">&bull;</span>
+                    <span>{p}</span>
+                  </li>
+                ))}
+              </ul>
             </section>
 
             {/* Tips */}
@@ -497,11 +451,9 @@ export default function GettingStarted({ onSelectTab }: GettingStartedProps) {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
                 {[
                   { title: "Be specific", desc: "\u201CMurder rate in Houston 2020\u20132024\u201D beats \u201Ccrime in Texas.\u201D" },
-                  { title: "Name the crime type", desc: "Instead of \u201Cviolent crime,\u201D say murder, robbery, aggravated assault, or rape." },
+                  { title: "Try different tabs", desc: "Each tab draws from a different database. If one can\u2019t answer your question, another might." },
                   { title: "Specify a time range", desc: "Say \u201C2019 to 2024\u201D instead of \u201Crecently\u201D for more relevant results." },
                   { title: "Ask follow-ups", desc: "The assistant remembers context. Try \u201Cnow show that as a rate per 100K.\u201D" },
-                  { title: "Check the SQL", desc: "If results look off, expand the SQL query to verify interpretation." },
-                  { title: "Compare cities", desc: "Ask \u201CCompare X and Y\u201D to get side-by-side charts automatically." },
                 ].map((tip, i) => (
                   <div key={i} className="flex items-start gap-3">
                     <div className="w-6 h-6 rounded-md bg-[var(--surface)] border border-[var(--border)] flex items-center justify-center shrink-0">
