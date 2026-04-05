@@ -33,10 +33,10 @@ export function buildNibrsChartConfig(
     : columns[0];
 
   // Parse and validate yAxis
-  const yAxisCandidates = claude.yAxis
+  const yAxisCandidates = (claude.yAxis || "")
     .split(",")
     .map((s) => s.trim())
-    .filter((s) => columns.includes(s));
+    .filter((s) => s && columns.includes(s));
 
   // If no valid y columns, try to find numeric columns
   const yAxis =
