@@ -704,38 +704,7 @@ export async function POST(req: NextRequest) {
         const chartMeta = isHistorical ? getHistoricalChartMeta(db, sql) : getChartMeta(db, sql);
         const truncated = rows.length >= 1000;
 
-        // Step 5b: Generate post-query explanation with actual results
-        controller.enqueue(
-          encoder.encode(
-            sseEvent({ type: "status", text: "Preparing results..." })
-          )
-        );
-        // Extract any "Note:" disclaimers from the pre-query explanation to preserve them
-        const disclaimerMatches = claude.explanation.match(/Note:.*$/gm) || [];
-        const postExplanation = await generateExplanation({
-          question,
-          columns,
-          rows,
-          rowCount: rows.length,
-          disclaimers: disclaimerMatches.join("\n"),
-          preQueryExplanation: claude.explanation,
-          tab: tab as "current" | "historical",
-        });
-        claude.explanation = postExplanation;
-
-        // Log success
-        const totalMs2 = Date.now() - totalStart;
-        logQuery(
-          question,
-          sql,
-          rows.length,
-          null,
-          totalMs2,
-          claude.explanation,
-          tab
-        );
-
-        // Step 6: Send full result
+        // Step 5b: Send result immediately with pre-query explanation (no waiting)
         controller.enqueue(
           encoder.encode(
             sseEvent({
@@ -753,6 +722,33 @@ export async function POST(req: NextRequest) {
             })
           )
         );
+
+        // Step 6: Generate refined explanation in background, send as update
+        try {
+          const disclaimerMatches = claude.explanation.match(/Note:.*$/gm) || [];
+          const postExplanation = await generateExplanation({
+            question,
+            columns,
+            rows,
+            rowCount: rows.length,
+            disclaimers: disclaimerMatches.join("\n"),
+            preQueryExplanation: claude.explanation,
+            tab: tab as "current" | "historical",
+          });
+          if (postExplanation !== claude.explanation) {
+            controller.enqueue(
+              encoder.encode(
+                sseEvent({ type: "explanation", text: postExplanation, title: claude.title || "Results" })
+              )
+            );
+          }
+          const totalMs2 = Date.now() - totalStart;
+          logQuery(question, sql, rows.length, null, totalMs2, postExplanation, tab);
+        } catch {
+          // If explanation fails, pre-query explanation is already shown — just log
+          const totalMs2 = Date.now() - totalStart;
+          logQuery(question, sql, rows.length, null, totalMs2, claude.explanation, tab);
+        }
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         const ms = Date.now() - totalStart;

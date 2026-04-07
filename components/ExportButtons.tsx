@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, type RefObject } from "react";
-import { toJpeg } from "html-to-image";
 
 interface ExportButtonsProps {
   chartRef?: RefObject<HTMLDivElement | null>;
@@ -52,6 +51,7 @@ export default function ExportButtons({
     const buttons = chartRef.current.querySelectorAll("[data-export-btn]");
     buttons.forEach((b) => ((b as HTMLElement).style.display = "none"));
     try {
+      const { toJpeg } = await import("html-to-image");
       const dataUrl = await toJpeg(chartRef.current, {
         quality: 0.95,
         backgroundColor: "#ffffff",

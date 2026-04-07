@@ -3,7 +3,7 @@ import { RTCI, HISTORICAL, NIBRS } from "./dynamic-facts";
 
 const client = new Anthropic();
 
-const SYSTEM_PROMPT = `You are a SQL query generator for the Real-Time Crime Index (RTCI) database. You translate natural language questions about crime data into SQLite queries.
+const SYSTEM_PROMPT = `You are a SQL query generator for the Crime Index Current Trends database. You translate natural language questions about crime data into SQLite queries.
 
 ## ⚠️ MANDATORY RULES — READ FIRST ⚠️
 - **The explanation field is shown directly to the user. It must ONLY contain plain English.** NEVER include SQL, JSON, code, column names, table names, or technical syntax in the explanation — not even as examples. The user is not technical. If you cannot answer, explain in plain English why.
@@ -129,7 +129,7 @@ Offense names are stored exactly as above (title case). Always use exact strings
 7. **Empty counts** = agency doesn't report that offense. Don't treat as zero.
 8. **Excluding years** → When the user asks to exclude a specific year (e.g., "exclude 2021"), do NOT filter it out with WHERE year != 2021 — that removes the year from the chart and makes the timeline look continuous. Instead, include all years in the range but use NULL for the excluded year's values so the chart shows a visible gap. Example: SELECT year, month, CASE WHEN year = 2021 THEN NULL ELSE SUM(count) END AS total FROM ... GROUP BY year, month
 9. **Time series x-axis** → Just SELECT year and month columns. The frontend automatically combines them for charting. Do NOT synthesize year_month.
-10. **Rolling sums** → Use a CTE that fetches ALL available data (no date filter), apply the window function, THEN filter to the requested date range in the outer query. The rolling window needs lead-in data before the first requested month. NEVER put date filters inside the CTE or subquery that computes the rolling sum — that truncates the window. Adapt the window size to what the user asks: rolling 3-month = ROWS BETWEEN 2 PRECEDING AND CURRENT ROW, rolling 6-month = ROWS BETWEEN 5 PRECEDING AND CURRENT ROW, rolling 12-month = ROWS BETWEEN 11 PRECEDING AND CURRENT ROW.
+10. **Rolling sums** → Use a CTE that fetches ALL available data (no date filter), apply the window function, THEN filter to the requested date range in the outer query. The rolling window needs lead-in data before the first requested month. NEVER put date filters inside the CTE or subquery that computes the rolling sum — that truncates the window. Adapt the window size to what the user asks: rolling 3-month = ROWS BETWEEN 2 PRECEDING AND CURRENT ROW, rolling 6-month = ROWS BETWEEN 5 PRECEDING AND CURRENT ROW, rolling 12-month = ROWS BETWEEN 11 PRECEDING AND CURRENT ROW. **IMPORTANT: The outer query must start displaying from the Nth month of data** (e.g., for rolling 12-month, start at year >= minYear + 1, so the first visible data point has a full 12-month window behind it). Data starts in 2017, so rolling 12-month should display from 2018 onward. The 2017 data is used for the lead-in calculation only.
 11. **Percent change on rolling sums** → First compute the rolling sum in a CTE (no date filter), then use LAG to compare. Two variants:
    - **Month-over-month % change**: LAG(rolling, 1) — compares to the previous month's rolling sum.
    - **Year-over-year % change** (same period prior year): LAG(rolling, 12) — compares to the same month one year ago. Use this when the user says "relative to prior year", "vs last year", "same period", or "YoY".
@@ -185,7 +185,7 @@ ORDER BY total DESC
 LIMIT 20
 \`\`\`
 
-### Rolling 12-month sum (national, filtered to 2020+)
+### Rolling 12-month sum (national)
 \`\`\`sql
 WITH all_months AS (
   SELECT year, month, count,
@@ -195,10 +195,10 @@ WITH all_months AS (
 )
 SELECT year, month, rolling_12
 FROM all_months
-WHERE year >= 2020
+WHERE year >= 2018
 ORDER BY year, month
 \`\`\`
-Note: The CTE has NO date filter so the rolling window has full lead-in data. The outer WHERE filters to the requested range.
+Note: The CTE has NO date filter so the rolling window has full lead-in data. The outer WHERE starts at 2018 (not 2017) because the first 11 months of 2017 don't have a full rolling window.
 
 ### Violent crime total for an agency
 \`\`\`sql

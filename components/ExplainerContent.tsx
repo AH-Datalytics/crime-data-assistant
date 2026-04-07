@@ -27,7 +27,7 @@ export default function ExplainerContent({ visible }: ExplainerContentProps) {
               The Crime Data Assistant is an AI-powered research tool that lets you ask questions about crime in the United States using plain English. Instead of downloading spreadsheets or navigating government websites, you type a question like <em>&ldquo;How have murders trended in Chicago since 2020?&rdquo;</em> and get back an interactive chart, a data table, and an explanation &mdash; all generated in real time.
             </p>
             <p className="text-sm text-[var(--muted)] leading-relaxed">
-              Under the hood, an AI model translates your question into a database query, runs it against real crime data, and formats the results. The SQL query is always shown so you can verify exactly how the data was retrieved.
+              Under the hood, an AI model translates your question into a database query, runs it against real crime data, and formats the results. Always remember &ndash; I am a bot and may make mistakes from time to time. Verify findings with official sources such as the <a href="https://cde.ucr.cjis.gov/LATEST/webapp/#" target="_blank" rel="noopener noreferrer" className="underline text-[var(--foreground)]">Crime Data Explorer</a>.
             </p>
           </section>
 
@@ -105,7 +105,7 @@ export default function ExplainerContent({ visible }: ExplainerContentProps) {
               </div>
               <div className="pl-3.5 text-sm text-[var(--muted)] leading-relaxed space-y-2.5">
                 <p>
-                  This data comes from what was originally the <strong className="text-[var(--foreground)]">Real-Time Crime Index</strong>, a project by AH Datalytics that collects monthly crime data directly from police department websites, the FBI&apos;s Crime Data Explorer, and public records requests. It covers the 7 traditional Part I UCR crime categories: violent crimes (murder, rape, robbery, and aggravated assault) and property crimes (burglary, theft, and motor vehicle theft). Note that some reported data may be preliminary, subject to change, and may not precisely match figures that will eventually be formally reported to the FBI.
+                  This data comes from <strong className="text-[var(--foreground)]">The Crime Index</strong>, a project by AH Datalytics that collects monthly crime data directly from police department websites, the FBI&apos;s Crime Data Explorer, and public records requests. It covers the 7 traditional Part I UCR crime categories: violent crimes (murder, rape, robbery, and aggravated assault) and property crimes (burglary, theft, and motor vehicle theft). Note that some reported data may be preliminary, subject to change, and may not precisely match figures that will eventually be formally reported to the FBI.
                 </p>
                 <p>
                   <strong className="text-[var(--foreground)]">Why it exists:</strong> The FBI publishes annual crime estimates with a delay. This dataset fills the gap by providing near real-time monthly data from hundreds of the largest police departments to establish local, statewide, and national crime trends. It&apos;s the best source for answering &ldquo;what&apos;s happening right now?&rdquo;

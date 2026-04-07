@@ -85,6 +85,7 @@ export async function POST(req: NextRequest) {
     sql = sql.replace(/state\s*=\s*'GU'/gi, "state = 'GM'");
 
     // Step 2b: Detect person crime queries hitting raw victims table → retry with summary tables
+    let sqlRewritten = false; // Track if a guardrail already rewrote the SQL (skip redundant retries)
     const PERSON_CODES = ['09A','09B','09C','11A','11B','11C','11D','13A','13B','13C','100','36A','36B','64A','64B'];
     const hitsRawVictims = /\bFROM\s+VICTIMS\b/i.test(sql) && !(/\bSUMMARY_VICTIM/i.test(sql));
     const hasPersonCode = PERSON_CODES.some(code => sql.includes(`'${code}'`));
@@ -108,15 +109,17 @@ export async function POST(req: NextRequest) {
           claude.yAxis = retryResult.yAxis;
           claude.title = retryResult.title;
           console.log(`[nibrs][safeguard] Retry succeeded, using summary table`);
+          sqlRewritten = true;
         }
       }
     }
 
     // Step 2b2: Detect cross-level JOIN that multiplies rows (e.g., city-level summary JOINed with state-level summary)
     // This produces wildly inflated numbers (e.g., NYC murders × 50 states = 22x actual)
+    // Skip if a previous guardrail already rewrote the SQL
     const usesCitySummary = /\bsummary_victim_city_monthly\b/i.test(sql) || /\bsummary_city_monthly\b/i.test(sql);
     const usesStateSummaryAny = /\bsummary_victim_state_monthly\b/i.test(sql) || /\bsummary_state_monthly\b/i.test(sql);
-    if (usesCitySummary && usesStateSummaryAny && /\bJOIN\b/i.test(sql)) {
+    if (!sqlRewritten && usesCitySummary && usesStateSummaryAny && /\bJOIN\b/i.test(sql)) {
       console.log(`[nibrs][safeguard] Cross-level JOIN detected (city + state summary tables). Retrying with separated queries.`);
       const retryResult = await translateToSql(
         question + "\n\n[SYSTEM: Your previous query JOINed city-level and state-level summary tables, which produces incorrect results due to row multiplication. For comparisons between a city and a state/national average, use separate subqueries or CTEs — one for the city data and one for the state/national data — then combine them. NEVER JOIN summary_victim_city_monthly with summary_victim_state_monthly directly.]",
@@ -132,6 +135,7 @@ export async function POST(req: NextRequest) {
           claude.yAxis = retryResult.yAxis;
           claude.title = retryResult.title;
           console.log(`[nibrs][safeguard] Cross-level JOIN retry succeeded`);
+          sqlRewritten = true;
         }
       }
     }
@@ -151,8 +155,11 @@ export async function POST(req: NextRequest) {
 
     // Step 2d: Detect "USA" or "United States" used as agency/city lookup for national data
     // Claude sometimes tries to look up national data as if "USA" is an agency name — retry with correct approach
-    const looksUpUSA = /\b(city|agency_name)\s*=\s*'(USA|United States|US|National)'/i.test(sql) ||
-      /agencies\s+WHERE.*'(USA|United States|UNITED STATES|National|NATIONAL)'/i.test(sql);
+    // Skip if a previous guardrail already rewrote the SQL
+    const looksUpUSA = !sqlRewritten && (
+      /\b(city|agency_name)\s*=\s*'(USA|United States|US|National)'/i.test(sql) ||
+      /agencies\s+WHERE.*'(USA|United States|UNITED STATES|National|NATIONAL)'/i.test(sql)
+    );
     if (looksUpUSA) {
       console.log(`[nibrs][safeguard] National data looked up as agency name, retrying with correct approach`);
       const retryResult = await translateToSql(
@@ -161,7 +168,7 @@ export async function POST(req: NextRequest) {
       );
       if (retryResult.sql) {
         const retryValidation = validateAndSanitize(retryResult.sql);
-        if (retryValidation.valid && !/city\s*=\s*'(USA|United States)'/i.test(retryValidation.sanitized!)) {
+        if (retryValidation.valid && !/\b(city|agency_name)\s*=\s*'(USA|United States|US|National)'/i.test(retryValidation.sanitized!)) {
           sql = retryValidation.sanitized!;
           claude.explanation = retryResult.explanation;
           claude.chartHint = retryResult.chartHint;

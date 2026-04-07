@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import CrimeIndexLogo from "./CrimeIndexLogo";
 import RtciChat from "./RtciChat";
 import NibrsChat from "./NibrsChat";
@@ -27,6 +27,9 @@ interface ChatInterfaceProps {
 
 export default function ChatInterface({ heroData, heroAgencyCount, heroPopulation, historicalHeroData, historicalMaxYear }: ChatInterfaceProps) {
   const [activeTab, setActiveTab] = useState<TabId | null>(null);
+  // Track which tabs have been visited — lazy-mount on first visit, keep mounted after
+  const mountedTabs = useRef(new Set<TabId>());
+  if (activeTab) mountedTabs.current.add(activeTab);
 
   return (
     <div className="h-screen flex flex-col bg-[var(--surface)]">
@@ -122,24 +125,32 @@ export default function ChatInterface({ heroData, heroAgencyCount, heroPopulatio
         <GettingStarted onSelectTab={(tab) => setActiveTab(tab)} />
       )}
 
-      {/* Tab content — all stay mounted, CSS show/hide preserves state */}
-      <RtciChat
-        mode="current"
-        heroData={heroData}
-        heroAgencyCount={heroAgencyCount}
-        heroPopulation={heroPopulation}
-        visible={activeTab === "current"}
-      />
-      <RtciChat
-        mode="historical"
-        historicalHeroData={historicalHeroData}
-        historicalMaxYear={historicalMaxYear}
-        visible={activeTab === "historical"}
-      />
-      <NibrsChat
-        visible={activeTab === "nibrs"}
-      />
-      <ExplainerContent visible={activeTab === "explainer"} />
+      {/* Tab content — lazy-mounted on first visit, then kept mounted to preserve state */}
+      {mountedTabs.current.has("current") && (
+        <RtciChat
+          mode="current"
+          heroData={heroData}
+          heroAgencyCount={heroAgencyCount}
+          heroPopulation={heroPopulation}
+          visible={activeTab === "current"}
+        />
+      )}
+      {mountedTabs.current.has("historical") && (
+        <RtciChat
+          mode="historical"
+          historicalHeroData={historicalHeroData}
+          historicalMaxYear={historicalMaxYear}
+          visible={activeTab === "historical"}
+        />
+      )}
+      {mountedTabs.current.has("nibrs") && (
+        <NibrsChat
+          visible={activeTab === "nibrs"}
+        />
+      )}
+      {mountedTabs.current.has("explainer") && (
+        <ExplainerContent visible={activeTab === "explainer"} />
+      )}
       <Tracker activeTab={activeTab} />
     </div>
   );

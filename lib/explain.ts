@@ -67,7 +67,7 @@ export async function generateExplanation(opts: {
   // Tab-specific context for disclaimers
   let tabContext = "";
   if (tab === "current") {
-    tabContext = "This is RTCI (Real-Time Crime Index) data from a sample of agencies — not every U.S. city. If the query uses the national sample, note it reflects consistent reporters only.";
+    tabContext = "This is Crime Index Current Trends data from a sample of agencies — not every U.S. city. If the query uses the national sample, note it reflects consistent reporters only.";
   } else if (tab === "historical") {
     tabContext = "This is FBI UCR historical data. If pre-1960, note limited agency coverage.";
   } else if (tab === "nibrs") {

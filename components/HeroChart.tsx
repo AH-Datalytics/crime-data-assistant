@@ -110,7 +110,7 @@ export default function HeroChart({ data, agencyCount, population }: HeroChartPr
         className="text-[10px] mt-1"
         style={{ color: "#aaa", fontFamily: "Georgia, 'Times New Roman', serif" }}
       >
-        Source: Real-Time Crime Index · {agencyCount} agencies
+        Source: The Crime Index · {agencyCount} agencies
         {population && ` · Pop. ${formatPop(population)}`}
       </div>
     </div>

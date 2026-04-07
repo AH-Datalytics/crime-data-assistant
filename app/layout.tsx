@@ -14,6 +14,8 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
+        <link rel="preconnect" href="https://use.typekit.net" crossOrigin="" />
+        <link rel="preconnect" href="https://p.typekit.net" crossOrigin="" />
         <link rel="stylesheet" href="https://use.typekit.net/gqy0ylh.css" />
       </head>
       <body className="antialiased">

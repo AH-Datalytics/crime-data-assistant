@@ -492,7 +492,7 @@ function ChartPanel({ config, rows, meta }: ChartPanelProps) {
           className="text-[10px] -mt-4 shrink-0 pb-1"
           style={{ color: "#aaa", fontFamily: "Georgia, 'Times New Roman', serif" }}
         >
-          Source: {meta?.source || "Real-Time Crime Index"}
+          Source: {meta?.source || "The Crime Index"}
           {meta && meta.agencyCount > 0 && (
             <>
               {" · "}
