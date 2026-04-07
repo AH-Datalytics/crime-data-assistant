@@ -12,8 +12,8 @@ const { Resend } = require("resend");
 const path = require("path");
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
-const TO_EMAIL = "RTCI@AHDatalytics.com";
-const FROM_EMAIL = "Crime Data Assistant <alerts@crimeindex.org>";
+const TO_EMAIL = "jasher@ahdatalytics.com";
+const FROM_EMAIL = "Crime Data Assistant <onboarding@resend.dev>";
 
 if (!RESEND_API_KEY) {
   console.error("RESEND_API_KEY environment variable is required");
@@ -253,22 +253,34 @@ function analyze(queries) {
       });
     }
 
-    // Year hallucination — response mentions specific year ranges the user didn't ask about
+    // Year hallucination — response mentions specific years outside the tab's data range
     if (q.response && q.question) {
       const responseYears = q.response.match(/\b(19|20)\d{2}\b/g) || [];
       const questionYears = q.question.match(/\b(19|20)\d{2}\b/g) || [];
       const questionYearSet = new Set(questionYears);
-      const hallucinatedYears = responseYears.filter(
-        (y) => !questionYearSet.has(y)
-      );
-      // Flag if response introduces 2+ years not in the question
+
+      // Each tab has an expected data range — years within range are not hallucinations
+      const dataRanges = {
+        current: [2017, 2026],
+        historical: [1930, 2024],
+        nibrs: [2020, 2026],
+      };
+      const [rangeStart, rangeEnd] = dataRanges[tab] || [1900, 2030];
+
+      const hallucinatedYears = responseYears.filter((y) => {
+        const yr = parseInt(y, 10);
+        // Skip years the user mentioned or years within the tab's data range
+        return !questionYearSet.has(y) && (yr < rangeStart || yr > rangeEnd);
+      });
+
+      // Flag if response introduces 2+ years outside the data range
       if (hallucinatedYears.length >= 2 && questionYears.length === 0) {
         stats.yearHallucinations++;
         issues.push({
           type: "year_hallucination",
           severity: "low",
           question: q.question,
-          detail: `Response mentions years [${[...new Set(hallucinatedYears)].join(", ")}] but user didn't specify any`,
+          detail: `Response mentions years [${[...new Set(hallucinatedYears)].join(", ")}] outside ${tab} range ${rangeStart}–${rangeEnd}`,
           tab,
           id: q.id,
         });
@@ -350,8 +362,120 @@ function buildEmail(stats, issues, visitors) {
 </head>
 <body>
 <h1>Crime Data Assistant</h1>
-<div class="subtitle">${date}</div>
+<div class="subtitle">${date}</div>`;
 
+  // Traffic sources section (top of email)
+  if (visitors) {
+    const yesterdayLabel = new Date(cutoff).toLocaleDateString("en-US", {
+      weekday: "long", month: "long", day: "numeric", timeZone: "America/Chicago",
+    });
+    html += `<h2>Traffic — ${yesterdayLabel}</h2>
+    <div class="stat-grid">
+      <div class="stat-box">
+        <div class="stat-num">${visitors.pageviews}</div>
+        <div class="stat-label">Page Views</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-num">${visitors.uniqueSessions}</div>
+        <div class="stat-label">Unique Visitors</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-num">${visitors.directVisits} / ${visitors.referredVisits}</div>
+        <div class="stat-label">Direct / Referred</div>
+      </div>
+    </div>`;
+
+    if (visitors.monthlyTotals.length > 0) {
+      html += `<h2>Monthly Totals</h2>
+      <table style="width:100%;border-collapse:collapse;font-size:13px;margin:12px 0;">
+        <thead>
+          <tr style="border-bottom:2px solid #ddd;">
+            <th style="text-align:left;padding:8px 6px;font-weight:600;color:#555;">Month</th>
+            <th style="text-align:right;padding:8px 6px;font-weight:600;color:#555;">Page Views</th>
+            <th style="text-align:right;padding:8px 6px;font-weight:600;color:#555;">Unique Visitors</th>
+            <th style="text-align:right;padding:8px 6px;font-weight:600;color:#555;">Pages / Visitor</th>
+          </tr>
+        </thead>
+        <tbody>`;
+      for (const m of visitors.monthlyTotals) {
+        const ppv = m.unique_visitors > 0 ? (m.pageviews / m.unique_visitors).toFixed(1) : "—";
+        html += `<tr style="border-bottom:1px solid #eee;">
+          <td style="padding:6px;font-weight:600;">${m.month}</td>
+          <td style="padding:6px;text-align:right;">${m.pageviews}</td>
+          <td style="padding:6px;text-align:right;">${m.unique_visitors}</td>
+          <td style="padding:6px;text-align:right;">${ppv}</td>
+        </tr>`;
+      }
+      html += `</tbody></table>`;
+    }
+
+    if (visitors.topDomains.length > 0) {
+      html += `<h2>Top Referrer Domains</h2>
+      <table style="width:100%;border-collapse:collapse;font-size:13px;margin:12px 0;">
+        <thead>
+          <tr style="border-bottom:2px solid #ddd;">
+            <th style="text-align:left;padding:8px 6px;font-weight:600;color:#555;">Domain</th>
+            <th style="text-align:right;padding:8px 6px;font-weight:600;color:#555;">Visits</th>
+          </tr>
+        </thead>
+        <tbody>`;
+      for (const d of visitors.topDomains) {
+        html += `<tr style="border-bottom:1px solid #eee;">
+          <td style="padding:6px;">${escapeHtml(d.referrer_domain)}</td>
+          <td style="padding:6px;text-align:right;font-weight:600;">${d.visits}</td>
+        </tr>`;
+      }
+      html += `</tbody></table>`;
+    }
+
+    if (visitors.topReferrers.length > 0) {
+      html += `<h2>Top Referring Pages</h2>
+      <p style="font-size:12px;color:#888;margin-bottom:8px;">Specific URLs that sent visitors to the site.</p>
+      <table style="width:100%;border-collapse:collapse;font-size:12px;margin:12px 0;">
+        <thead>
+          <tr style="border-bottom:2px solid #ddd;">
+            <th style="text-align:left;padding:8px 6px;font-weight:600;color:#555;">Page</th>
+            <th style="text-align:right;padding:8px 6px;font-weight:600;color:#555;">Visits</th>
+          </tr>
+        </thead>
+        <tbody>`;
+      for (const r of visitors.topReferrers) {
+        const displayUrl = r.referrer.length > 80 ? r.referrer.substring(0, 80) + "..." : r.referrer;
+        html += `<tr style="border-bottom:1px solid #eee;">
+          <td style="padding:6px;word-break:break-all;">
+            <a href="${escapeHtml(r.referrer)}" style="color:#475EC7;text-decoration:none;">${escapeHtml(displayUrl)}</a>
+          </td>
+          <td style="padding:6px;text-align:right;font-weight:600;">${r.visits}</td>
+        </tr>`;
+      }
+      html += `</tbody></table>`;
+    }
+
+    if (visitors.utmCampaigns.length > 0) {
+      html += `<h2>UTM Campaigns</h2>
+      <table style="width:100%;border-collapse:collapse;font-size:13px;margin:12px 0;">
+        <thead>
+          <tr style="border-bottom:2px solid #ddd;">
+            <th style="text-align:left;padding:8px 6px;font-weight:600;color:#555;">Source</th>
+            <th style="text-align:left;padding:8px 6px;font-weight:600;color:#555;">Medium</th>
+            <th style="text-align:left;padding:8px 6px;font-weight:600;color:#555;">Campaign</th>
+            <th style="text-align:right;padding:8px 6px;font-weight:600;color:#555;">Visits</th>
+          </tr>
+        </thead>
+        <tbody>`;
+      for (const u of visitors.utmCampaigns) {
+        html += `<tr style="border-bottom:1px solid #eee;">
+          <td style="padding:6px;">${escapeHtml(u.utm_source)}</td>
+          <td style="padding:6px;">${escapeHtml(u.utm_medium || "—")}</td>
+          <td style="padding:6px;">${escapeHtml(u.utm_campaign || "—")}</td>
+          <td style="padding:6px;text-align:right;font-weight:600;">${u.visits}</td>
+        </tr>`;
+      }
+      html += `</tbody></table>`;
+    }
+  }
+
+  html += `
 <h2>Overview</h2>
 <div class="stat-grid">
   <div class="stat-box">
@@ -464,119 +588,6 @@ function buildEmail(stats, issues, visitors) {
       html += `<span class="agency-chip">${escapeHtml(a)}</span>`;
     }
     html += `</div>`;
-  }
-
-  // Traffic sources section
-  if (visitors) {
-    const yesterdayLabel = new Date(cutoff).toLocaleDateString("en-US", {
-      weekday: "long", month: "long", day: "numeric", timeZone: "America/Chicago",
-    });
-    html += `<h2>Traffic — ${yesterdayLabel}</h2>
-    <div class="stat-grid">
-      <div class="stat-box">
-        <div class="stat-num">${visitors.pageviews}</div>
-        <div class="stat-label">Page Views</div>
-      </div>
-      <div class="stat-box">
-        <div class="stat-num">${visitors.uniqueSessions}</div>
-        <div class="stat-label">Unique Visitors</div>
-      </div>
-      <div class="stat-box">
-        <div class="stat-num">${visitors.directVisits} / ${visitors.referredVisits}</div>
-        <div class="stat-label">Direct / Referred</div>
-      </div>
-    </div>
-
-`;
-
-    if (visitors.monthlyTotals.length > 0) {
-      html += `<h2>Monthly Totals</h2>
-      <table style="width:100%;border-collapse:collapse;font-size:13px;margin:12px 0;">
-        <thead>
-          <tr style="border-bottom:2px solid #ddd;">
-            <th style="text-align:left;padding:8px 6px;font-weight:600;color:#555;">Month</th>
-            <th style="text-align:right;padding:8px 6px;font-weight:600;color:#555;">Page Views</th>
-            <th style="text-align:right;padding:8px 6px;font-weight:600;color:#555;">Unique Visitors</th>
-            <th style="text-align:right;padding:8px 6px;font-weight:600;color:#555;">Pages / Visitor</th>
-          </tr>
-        </thead>
-        <tbody>`;
-      for (const m of visitors.monthlyTotals) {
-        const ppv = m.unique_visitors > 0 ? (m.pageviews / m.unique_visitors).toFixed(1) : "—";
-        html += `<tr style="border-bottom:1px solid #eee;">
-          <td style="padding:6px;font-weight:600;">${m.month}</td>
-          <td style="padding:6px;text-align:right;">${m.pageviews}</td>
-          <td style="padding:6px;text-align:right;">${m.unique_visitors}</td>
-          <td style="padding:6px;text-align:right;">${ppv}</td>
-        </tr>`;
-      }
-      html += `</tbody></table>`;
-    }`;
-
-    if (visitors.topDomains.length > 0) {
-      html += `<h2>Top Referrer Domains</h2>
-      <table style="width:100%;border-collapse:collapse;font-size:13px;margin:12px 0;">
-        <thead>
-          <tr style="border-bottom:2px solid #ddd;">
-            <th style="text-align:left;padding:8px 6px;font-weight:600;color:#555;">Domain</th>
-            <th style="text-align:right;padding:8px 6px;font-weight:600;color:#555;">Visits</th>
-          </tr>
-        </thead>
-        <tbody>`;
-      for (const d of visitors.topDomains) {
-        html += `<tr style="border-bottom:1px solid #eee;">
-          <td style="padding:6px;">${escapeHtml(d.referrer_domain)}</td>
-          <td style="padding:6px;text-align:right;font-weight:600;">${d.visits}</td>
-        </tr>`;
-      }
-      html += `</tbody></table>`;
-    }
-
-    if (visitors.topReferrers.length > 0) {
-      html += `<h2>Top Referring Pages</h2>
-      <p style="font-size:12px;color:#888;margin-bottom:8px;">Specific URLs that sent visitors to the site.</p>
-      <table style="width:100%;border-collapse:collapse;font-size:12px;margin:12px 0;">
-        <thead>
-          <tr style="border-bottom:2px solid #ddd;">
-            <th style="text-align:left;padding:8px 6px;font-weight:600;color:#555;">Page</th>
-            <th style="text-align:right;padding:8px 6px;font-weight:600;color:#555;">Visits</th>
-          </tr>
-        </thead>
-        <tbody>`;
-      for (const r of visitors.topReferrers) {
-        const displayUrl = r.referrer.length > 80 ? r.referrer.substring(0, 80) + "..." : r.referrer;
-        html += `<tr style="border-bottom:1px solid #eee;">
-          <td style="padding:6px;word-break:break-all;">
-            <a href="${escapeHtml(r.referrer)}" style="color:#475EC7;text-decoration:none;">${escapeHtml(displayUrl)}</a>
-          </td>
-          <td style="padding:6px;text-align:right;font-weight:600;">${r.visits}</td>
-        </tr>`;
-      }
-      html += `</tbody></table>`;
-    }
-
-    if (visitors.utmCampaigns.length > 0) {
-      html += `<h2>UTM Campaigns</h2>
-      <table style="width:100%;border-collapse:collapse;font-size:13px;margin:12px 0;">
-        <thead>
-          <tr style="border-bottom:2px solid #ddd;">
-            <th style="text-align:left;padding:8px 6px;font-weight:600;color:#555;">Source</th>
-            <th style="text-align:left;padding:8px 6px;font-weight:600;color:#555;">Medium</th>
-            <th style="text-align:left;padding:8px 6px;font-weight:600;color:#555;">Campaign</th>
-            <th style="text-align:right;padding:8px 6px;font-weight:600;color:#555;">Visits</th>
-          </tr>
-        </thead>
-        <tbody>`;
-      for (const u of visitors.utmCampaigns) {
-        html += `<tr style="border-bottom:1px solid #eee;">
-          <td style="padding:6px;">${escapeHtml(u.utm_source)}</td>
-          <td style="padding:6px;">${escapeHtml(u.utm_medium || "—")}</td>
-          <td style="padding:6px;">${escapeHtml(u.utm_campaign || "—")}</td>
-          <td style="padding:6px;text-align:right;font-weight:600;">${u.visits}</td>
-        </tr>`;
-      }
-      html += `</tbody></table>`;
-    }
   }
 
   html += `

@@ -149,6 +149,30 @@ export async function POST(req: NextRequest) {
       sql = sql.replace(/\bsummary_state_monthly\b/gi, 'summary_city_monthly');
     }
 
+    // Step 2d: Detect "USA" or "United States" used as agency/city lookup for national data
+    // Claude sometimes tries to look up national data as if "USA" is an agency name — retry with correct approach
+    const looksUpUSA = /\b(city|agency_name)\s*=\s*'(USA|United States|US|National)'/i.test(sql) ||
+      /agencies\s+WHERE.*'(USA|United States|UNITED STATES|National|NATIONAL)'/i.test(sql);
+    if (looksUpUSA) {
+      console.log(`[nibrs][safeguard] National data looked up as agency name, retrying with correct approach`);
+      const retryResult = await translateToSql(
+        question + "\n\n[SYSTEM: Do NOT look up 'USA' or 'United States' as a city or agency. For national totals, SUM across all states from the state-level summary table (summary_victim_state_monthly for person crimes, summary_state_monthly for property/society crimes). Do not filter by ori or city for national data.]",
+        history
+      );
+      if (retryResult.sql) {
+        const retryValidation = validateAndSanitize(retryResult.sql);
+        if (retryValidation.valid && !/city\s*=\s*'(USA|United States)'/i.test(retryValidation.sanitized!)) {
+          sql = retryValidation.sanitized!;
+          claude.explanation = retryResult.explanation;
+          claude.chartHint = retryResult.chartHint;
+          claude.xAxis = retryResult.xAxis;
+          claude.yAxis = retryResult.yAxis;
+          claude.title = retryResult.title;
+          console.log(`[nibrs][safeguard] USA agency lookup retry succeeded`);
+        }
+      }
+    }
+
     // Step 3: Execute SQL (in worker thread with 15s timeout)
     const startTime = Date.now();
 

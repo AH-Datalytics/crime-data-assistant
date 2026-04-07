@@ -57,7 +57,7 @@ function properCase(s: string): string {
   const label = cleaned || s.replace(/_/g, " ").trim();
   const titled = label.replace(/\b\w/g, (c) => c.toUpperCase());
   // Fix known abbreviations that should stay uppercase
-  const fixed = titled.replace(/\bDc\b/g, "DC").replace(/\bNy\b/g, "NY").replace(/\bNyc\b/g, "NYC").replace(/\bLa\b/g, "LA").replace(/\bUs\b/g, "US");
+  const fixed = titled.replace(/\bDc\b/g, "DC").replace(/\bNy\b/g, "NY").replace(/\bNyc\b/g, "NYC").replace(/\bLa\b/g, "LA").replace(/\bUsa\b/g, "USA").replace(/\bUs\b/g, "US");
   // Fix common singular labels that should be plural
   return fixed
     .replace(/\bOfficer\b$/g, "Officers")

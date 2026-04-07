@@ -360,6 +360,16 @@ export async function POST(req: NextRequest) {
         if (claude.yAxisLabel && /per (1,000|capita|100k|100,000)/i.test(claude.yAxisLabel) && !sqlLower.includes("population")) {
           issues.push("The yAxisLabel mentions per-capita rates but the SQL does not join population data. Either add a population JOIN for rate calculation, or remove the per-capita label.");
         }
+        // Check: SQL looks up national data as an agency name instead of using the correct table
+        const nationalAsAgency = /agency\s*=\s*'(USA|United States|US|National|Nationwide)'/i.test(claude.sql) ||
+          /agency\s*(?:LIKE|IN)\s*[^)]*'(USA|United States|National)'/i.test(claude.sql);
+        if (nationalAsAgency) {
+          if (isHistorical) {
+            issues.push("You looked up national data as an agency name. National data is in historical_state_national with state = 'United States'. Use that table for the national comparison instead of looking up 'USA' or 'United States' as an agency.");
+          } else {
+            issues.push("You looked up national data as an agency name. National data is in the national_monthly table. Use national_monthly for the national comparison instead of looking up 'USA' or 'National' as an agency in agency_monthly.");
+          }
+        }
 
         // If issues found, ask Claude to fix
         if (issues.length > 0) {

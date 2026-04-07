@@ -32,7 +32,7 @@ const GRID_COLOR = "#eaeaea";
 
 function properCase(s: string): string {
   const titled = s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-  return titled.replace(/\bDc\b/g, "DC").replace(/\bNy\b/g, "NY").replace(/\bNyc\b/g, "NYC").replace(/\bLa\b/g, "LA").replace(/\bUs\b/g, "US");
+  return titled.replace(/\bDc\b/g, "DC").replace(/\bNy\b/g, "NY").replace(/\bNyc\b/g, "NYC").replace(/\bLa\b/g, "LA").replace(/\bUsa\b/g, "USA").replace(/\bUs\b/g, "US");
 }
 
 function isYearMonth(data: Record<string, unknown>[], xKey: string): boolean {
