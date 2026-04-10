@@ -78,6 +78,8 @@ export default function DataTable({ columns, rows, truncated }: DataTableProps) 
     }
     const s = String(val);
     if (/^(19|20)\d{6}$/.test(s)) return formatDate(s);
+    // Uppercase 2-letter state abbreviations
+    if (/^(state|state_abbr)$/i.test(col) && /^[a-zA-Z]{2}$/.test(s)) return s.toUpperCase();
     return s;
   };
 

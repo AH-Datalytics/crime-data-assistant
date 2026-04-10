@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getWriteDb } from "@/lib/rtci-db";
 
-const LOG_KEY = process.env.QUERY_LOG_KEY || "nibrslog";
+const LOG_KEY = process.env.QUERY_LOG_KEY;
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
   const url = new URL(req.url);
 
   const key = url.searchParams.get("key") || "";
-  if (key !== LOG_KEY) {
+  if (!LOG_KEY || key !== LOG_KEY) {
     return NextResponse.json(
       { error: "Unauthorized" },
       { status: 401, headers: { "Access-Control-Allow-Origin": "*" } }

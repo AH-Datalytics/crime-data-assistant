@@ -6,6 +6,8 @@ import { buildChartConfig } from "@/lib/chart-config";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { RTCI } from "@/lib/dynamic-facts";
 import { generateExplanation } from "@/lib/explain";
+import { extractQueryContext } from "@/lib/query-context";
+import { runGuardrails } from "@/lib/guardrails";
 import type { StreamEvent, ChartMeta } from "@/lib/types";
 
 function sseEvent(event: StreamEvent): string {
@@ -169,7 +171,8 @@ function getHistoricalChartMeta(
       while ((m = agencyRe.exec(sql)) !== null) {
         agencies.push(m[1]);
       }
-      return { agencyCount: agencies.length || 1, population: null, source: src };
+      // If no specific agency names matched (e.g., state-wide query), show 0 (omits agency count)
+      return { agencyCount: agencies.length, population: null, source: src };
     }
 
     return { agencyCount: 0, population: null, source: src };
@@ -306,20 +309,13 @@ export async function POST(req: NextRequest) {
           return;
         }
 
-        // Step 1b: Sanity-check Claude's response against the question
-        const qLower = question.toLowerCase();
-        const sqlLower = claude.sql.toLowerCase();
-        const issues: string[] = [];
+        // Step 1b: Extract context and run guardrails
+        const ctx = extractQueryContext(claude.sql, question, tab as "current" | "historical");
+        const guardrailResult = runGuardrails(ctx);
 
-        // Check: user asked for rates but SQL has no population join
-        if (/\b(rate|per capita|per 100k|per 100,000)\b/i.test(question) && !sqlLower.includes("population")) {
-          issues.push("The user asked for rates/per capita but the SQL does not join population data.");
-        }
-        // Check: multi-agency comparison not pivoted (has GROUP BY ... agency but no CASE WHEN)
-        if (/group by.*agency/i.test(claude.sql) && !/case\s+when/i.test(claude.sql) && (qLower.includes(" and ") || qLower.includes(" vs ") || qLower.includes(","))) {
-          issues.push("Multi-agency comparison appears unpivoted (no CASE WHEN). The frontend requires pivoted columns.");
-        }
-        // Check: yAxis columns missing from SELECT
+        // Also check yAxis/yAxisLabel issues that need ClaudeResponse fields
+        const sqlLower = claude.sql.toLowerCase();
+        const issues = [...guardrailResult.issues];
         if (claude.yAxis) {
           const yCols = claude.yAxis.split(",").map(c => c.trim().toLowerCase());
           for (const col of yCols) {
@@ -329,46 +325,17 @@ export async function POST(req: NextRequest) {
             }
           }
         }
-        // Check: offense mentioned in question but no offense filter in SQL
-        // Maps common crime terms to their expected SQL filter strings
-        const offenseMap: [RegExp, string[]][] = [
-          [/\bmurder|homicide\b/i, ["'murder'", "'09a'"]],
-          [/\brape\b/i, ["'rape'", "'11a'"]],
-          [/\brobbery|robberies\b/i, ["'robbery'", "'120'"]],
-          [/\bassault\b/i, ["'aggravated assault'", "'13a'"]],
-          [/\bburglary|burglaries\b/i, ["'burglary'", "'220'"]],
-          [/\btheft(?!.*auto|.*motor|.*vehicle)|larceny|larcenies\b/i, ["'theft'", "'23h'", "'larceny'"]],
-          [/\bauto theft|motor vehicle theft|car theft|vehicle theft\b/i, ["'motor vehicle theft'", "'240'"]],
-        ];
-        for (const [pattern, sqlTerms] of offenseMap) {
-          if (pattern.test(question) && !sqlTerms.some(t => sqlLower.includes(t)) && !sqlLower.includes("offense")) {
-            issues.push(`The user asked about "${question.match(pattern)?.[0]}" but the SQL has no offense filter. Add a WHERE clause filtering by the appropriate offense.`);
-            break;
-          }
-        }
-        // Check: multi-agency query on agency_monthly missing type filter
-        // Cities like Los Angeles, Baltimore, El Paso, etc. have both City and County entries
-        if (sqlLower.includes("agency_monthly") && /case\s+when/i.test(claude.sql) && !sqlLower.includes("type")) {
-          const ambiguousCities = ["los angeles", "baltimore", "el paso", "sacramento", "san diego", "san mateo", "santa cruz", "st louis", "alameda", "denton", "greenville", "hamilton", "kalamazoo", "st charles", "tulare"];
-          const mentionedAmbiguous = ambiguousCities.filter(c => sqlLower.includes(`'${c}'`));
-          if (mentionedAmbiguous.length > 0) {
-            issues.push(`Multi-agency query includes ${mentionedAmbiguous.join(", ")} which have both City and County agencies, but no type filter was found. Add AND type = 'City' (or 'County') in each CASE WHEN branch and WHERE condition to avoid mixing jurisdictions.`);
-          }
-        }
-
-        // Check: yAxisLabel says per-capita but SQL has no population join
         if (claude.yAxisLabel && /per (1,000|capita|100k|100,000)/i.test(claude.yAxisLabel) && !sqlLower.includes("population")) {
           issues.push("The yAxisLabel mentions per-capita rates but the SQL does not join population data. Either add a population JOIN for rate calculation, or remove the per-capita label.");
         }
-        // Check: SQL looks up national data as an agency name instead of using the correct table
-        const nationalAsAgency = /agency\s*=\s*'(USA|United States|US|National|Nationwide)'/i.test(claude.sql) ||
-          /agency\s*(?:LIKE|IN)\s*[^)]*'(USA|United States|National)'/i.test(claude.sql);
-        if (nationalAsAgency) {
-          if (isHistorical) {
-            issues.push("You looked up national data as an agency name. National data is in historical_state_national with state = 'United States'. Use that table for the national comparison instead of looking up 'USA' or 'United States' as an agency.");
-          } else {
-            issues.push("You looked up national data as an agency name. National data is in the national_monthly table. Use national_monthly for the national comparison instead of looking up 'USA' or 'National' as an agency in agency_monthly.");
-          }
+
+        // Apply auto-rewrites from guardrails
+        if (guardrailResult.sql !== claude.sql) {
+          claude.sql = guardrailResult.sql;
+        }
+
+        if (guardrailResult.fired.length > 0) {
+          console.log(`[guardrails] Fired: ${guardrailResult.fired.join(", ")}`);
         }
 
         // If issues found, ask Claude to fix
@@ -724,16 +691,16 @@ export async function POST(req: NextRequest) {
         );
 
         // Step 6: Generate refined explanation in background, send as update
+        // Re-extract context from final SQL (may have been fixed by guardrails/retry)
+        const finalCtx = extractQueryContext(sql, question, tab as "current" | "historical");
         try {
-          const disclaimerMatches = claude.explanation.match(/Note:.*$/gm) || [];
           const postExplanation = await generateExplanation({
-            question,
+            ctx: finalCtx,
             columns,
             rows,
             rowCount: rows.length,
-            disclaimers: disclaimerMatches.join("\n"),
+            disclaimers: "",  // let buildDisclaimers handle all disclaimers deterministically
             preQueryExplanation: claude.explanation,
-            tab: tab as "current" | "historical",
           });
           if (postExplanation !== claude.explanation) {
             controller.enqueue(

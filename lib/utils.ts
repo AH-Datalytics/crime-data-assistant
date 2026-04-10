@@ -4,8 +4,14 @@ export function formatNumber(n: number | null | undefined): string {
 }
 
 export function formatAxisValue(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(0)}K`;
+  if (n >= 1_000_000) {
+    const v = n / 1_000_000;
+    return v === Math.floor(v) ? `${v}M` : `${v.toFixed(1)}M`;
+  }
+  if (n >= 1_000) {
+    const v = n / 1_000;
+    return v === Math.floor(v) ? `${v}K` : `${v.toFixed(1)}K`;
+  }
   return String(n);
 }
 

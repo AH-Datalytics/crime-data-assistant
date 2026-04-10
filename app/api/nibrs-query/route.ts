@@ -4,6 +4,8 @@ import { translateToSql } from "@/lib/nibrs-claude";
 import { validateAndSanitize } from "@/lib/sql-safety";
 import { buildNibrsChartConfig } from "@/lib/nibrs-chart-config";
 import { generateExplanation } from "@/lib/explain";
+import { extractQueryContext } from "@/lib/query-context";
+import { runGuardrails } from "@/lib/guardrails";
 import type { QueryResponse, QueryError } from "@/lib/types";
 
 const CORS_HEADERS = {
@@ -79,50 +81,27 @@ export async function POST(req: NextRequest) {
 
     let sql = validation.sanitized!;
 
-    // Step 2a: Fix non-standard state abbreviations in NIBRS data
-    // Nebraska is stored as 'NB' (not standard 'NE'), Guam as 'GM' (not 'GU')
-    sql = sql.replace(/state\s*=\s*'NE'/gi, "state = 'NB'");
-    sql = sql.replace(/state\s*=\s*'GU'/gi, "state = 'GM'");
+    // Step 2a: Run shared guardrail pipeline
+    const ctx = extractQueryContext(sql, question, "nibrs");
+    const guardrailResult = runGuardrails(ctx);
 
-    // Step 2b: Detect person crime queries hitting raw victims table → retry with summary tables
-    let sqlRewritten = false; // Track if a guardrail already rewrote the SQL (skip redundant retries)
-    const PERSON_CODES = ['09A','09B','09C','11A','11B','11C','11D','13A','13B','13C','100','36A','36B','64A','64B'];
-    const hitsRawVictims = /\bFROM\s+VICTIMS\b/i.test(sql) && !(/\bSUMMARY_VICTIM/i.test(sql));
-    const hasPersonCode = PERSON_CODES.some(code => sql.includes(`'${code}'`));
-    const isCountQuery = /\bCOUNT\s*\(|\bSUM\s*\(/i.test(sql);
-    const selectClause = sql.match(/SELECT\s+([\s\S]*?)\s+FROM/i)?.[1] || '';
-    const needsDemographics = /\b(\.age|\.sex|\.race|\.ethnicity|\.injury_type|\.relationship)/i.test(selectClause);
-
-    if (hitsRawVictims && hasPersonCode && isCountQuery && !needsDemographics) {
-      console.log(`[nibrs][safeguard] Person crime count on raw victims detected, retrying with summary table instruction`);
-      const retryResult = await translateToSql(
-        question + "\n\n[SYSTEM: You MUST use summary_victim_state_monthly or summary_victim_city_monthly for this query. Do NOT use the raw victims table.]",
-        history
-      );
-      if (retryResult.sql) {
-        const retryValidation = validateAndSanitize(retryResult.sql);
-        if (retryValidation.valid && /\bsummary_victim/i.test(retryValidation.sanitized!)) {
-          sql = retryValidation.sanitized!;
-          claude.explanation = retryResult.explanation;
-          claude.chartHint = retryResult.chartHint;
-          claude.xAxis = retryResult.xAxis;
-          claude.yAxis = retryResult.yAxis;
-          claude.title = retryResult.title;
-          console.log(`[nibrs][safeguard] Retry succeeded, using summary table`);
-          sqlRewritten = true;
-        }
-      }
+    // Apply auto-rewrites (e.g., NE→NB state codes, state→city table fixes)
+    if (guardrailResult.sql !== sql) {
+      sql = guardrailResult.sql;
     }
 
-    // Step 2b2: Detect cross-level JOIN that multiplies rows (e.g., city-level summary JOINed with state-level summary)
-    // This produces wildly inflated numbers (e.g., NYC murders × 50 states = 22x actual)
-    // Skip if a previous guardrail already rewrote the SQL
-    const usesCitySummary = /\bsummary_victim_city_monthly\b/i.test(sql) || /\bsummary_city_monthly\b/i.test(sql);
-    const usesStateSummaryAny = /\bsummary_victim_state_monthly\b/i.test(sql) || /\bsummary_state_monthly\b/i.test(sql);
-    if (!sqlRewritten && usesCitySummary && usesStateSummaryAny && /\bJOIN\b/i.test(sql)) {
-      console.log(`[nibrs][safeguard] Cross-level JOIN detected (city + state summary tables). Retrying with separated queries.`);
+    if (guardrailResult.fired.length > 0) {
+      console.log(`[nibrs][guardrails] Fired: ${guardrailResult.fired.join(", ")}`);
+    }
+
+    // For NIBRS guardrails that need Claude retry, process them sequentially
+    // (each retry may fix the SQL, which affects subsequent checks)
+    let sqlRewritten = false;
+    for (const issue of guardrailResult.issues) {
+      if (sqlRewritten) break; // Only one retry per request to avoid cascading
+      console.log(`[nibrs][guardrail-retry] Retrying with instruction: ${issue.slice(0, 80)}...`);
       const retryResult = await translateToSql(
-        question + "\n\n[SYSTEM: Your previous query JOINed city-level and state-level summary tables, which produces incorrect results due to row multiplication. For comparisons between a city and a state/national average, use separate subqueries or CTEs — one for the city data and one for the state/national data — then combine them. NEVER JOIN summary_victim_city_monthly with summary_victim_state_monthly directly.]",
+        question + "\n\n" + issue,
         history
       );
       if (retryResult.sql) {
@@ -134,48 +113,8 @@ export async function POST(req: NextRequest) {
           claude.xAxis = retryResult.xAxis;
           claude.yAxis = retryResult.yAxis;
           claude.title = retryResult.title;
-          console.log(`[nibrs][safeguard] Cross-level JOIN retry succeeded`);
+          console.log(`[nibrs][guardrail-retry] Succeeded`);
           sqlRewritten = true;
-        }
-      }
-    }
-
-    // Step 2c: Detect state-level summary table used with ori filter → fix to city-level table
-    const usesStateSummary = /\bsummary_victim_state_monthly\b/i.test(sql);
-    const hasOriFilter = /\bori\b/i.test(sql);
-    if (usesStateSummary && hasOriFilter) {
-      console.log(`[nibrs][safeguard] State summary table used with ori filter, switching to city table`);
-      sql = sql.replace(/\bsummary_victim_state_monthly\b/gi, 'summary_victim_city_monthly');
-    }
-    const usesStateSummaryProp = /\bsummary_state_monthly\b/i.test(sql) && !/\bsummary_victim/i.test(sql);
-    if (usesStateSummaryProp && hasOriFilter) {
-      console.log(`[nibrs][safeguard] State property summary used with ori filter, switching to city table`);
-      sql = sql.replace(/\bsummary_state_monthly\b/gi, 'summary_city_monthly');
-    }
-
-    // Step 2d: Detect "USA" or "United States" used as agency/city lookup for national data
-    // Claude sometimes tries to look up national data as if "USA" is an agency name — retry with correct approach
-    // Skip if a previous guardrail already rewrote the SQL
-    const looksUpUSA = !sqlRewritten && (
-      /\b(city|agency_name)\s*=\s*'(USA|United States|US|National)'/i.test(sql) ||
-      /agencies\s+WHERE.*'(USA|United States|UNITED STATES|National|NATIONAL)'/i.test(sql)
-    );
-    if (looksUpUSA) {
-      console.log(`[nibrs][safeguard] National data looked up as agency name, retrying with correct approach`);
-      const retryResult = await translateToSql(
-        question + "\n\n[SYSTEM: Do NOT look up 'USA' or 'United States' as a city or agency. For national totals, SUM across all states from the state-level summary table (summary_victim_state_monthly for person crimes, summary_state_monthly for property/society crimes). Do not filter by ori or city for national data.]",
-        history
-      );
-      if (retryResult.sql) {
-        const retryValidation = validateAndSanitize(retryResult.sql);
-        if (retryValidation.valid && !/\b(city|agency_name)\s*=\s*'(USA|United States|US|National)'/i.test(retryValidation.sanitized!)) {
-          sql = retryValidation.sanitized!;
-          claude.explanation = retryResult.explanation;
-          claude.chartHint = retryResult.chartHint;
-          claude.xAxis = retryResult.xAxis;
-          claude.yAxis = retryResult.yAxis;
-          claude.title = retryResult.title;
-          console.log(`[nibrs][safeguard] USA agency lookup retry succeeded`);
         }
       }
     }
@@ -435,18 +374,19 @@ export async function POST(req: NextRequest) {
     // Extract any CDE disclaimers that were appended after the original explanation
     const cdeDisclaimers = explanation.slice(claude.explanation.length).trim();
     const explainStart = Date.now();
+    // Re-extract context from final SQL (may have been fixed by guardrails/retry)
+    const finalCtx = extractQueryContext(sql, question, "nibrs");
     const postExplanation = await generateExplanation({
-      question,
+      ctx: finalCtx,
       columns,
       rows,
       rowCount: rows.length,
       disclaimers: cdeDisclaimers,
       preQueryExplanation: explanation,
-      tab: "nibrs",
     });
     explanation = postExplanation;
     // Re-append CDE disclaimers if the post-query explanation didn't include them
-    if (cdeDisclaimers && !explanation.includes("underreporting")) {
+    if (cdeDisclaimers && !explanation.includes("transitioning") && !explanation.includes("underreporting") && !explanation.includes("incomplete")) {
       explanation += "\n\n" + cdeDisclaimers;
     }
     const explainMs = Date.now() - explainStart;

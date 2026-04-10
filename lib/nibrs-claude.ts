@@ -249,6 +249,7 @@ Arrestee demographics by age group for a state example (use state column directl
 ### Crimes Against Property — COUNT OFFENSES (one per distinct operation)
 120 Robbery, 200 Arson, 210 Extortion, 220 Burglary, 23A-23H Larceny/Theft, 240 Motor Vehicle Theft (1 per stolen vehicle), 250 Counterfeiting, 26A-26G Fraud, 270 Embezzlement, 280 Stolen Property, 290 Vandalism, 510 Bribery
 → Count from summary_city_monthly or summary_state_monthly. For robbery counts/trends, ALWAYS use these offense summary tables (NOT victim summary tables). Robbery is a property crime in NIBRS. The summary_victim_demographics table includes robbery only for demographic breakdowns (race/sex/age/weapon).
+→ **If the user asks about "victims" of a property crime** (e.g., "carjacking victims", "burglary victims", "auto theft victims"): NIBRS does not count property crimes per victim — they are counted per offense. Use the offense summary tables (summary_city_monthly / summary_state_monthly) and mention in your explanation that property crimes in NIBRS are counted by offense, not by victim.
 
 ### summary_drug_monthly (DRUG OFFENSE BREAKDOWNS)
 - COLUMNS: year INT, month INT, state TEXT, ori TEXT, ucr_offense_code TEXT (35A or 35B), suspected_drug_type TEXT, offense_count INT
@@ -829,7 +830,13 @@ Examples:
    - "Winston-Salem" or "Winston Salem" → city = 'WINSTON SALEM', state = 'NC' (no hyphen)
    - "Washington" or "DC" → city = 'WASHINGTON', state = 'DC' (always assume DC unless user specifies another state)
    - "Kansas City" → AMBIGUOUS: exists in MO (MOKPD0000, pop 314K) and KS (KS1050200, pop 153K). Ask the user to specify Missouri or Kansas.
-   - "Charlotte" or "Charlotte-Mecklenburg" → city = 'CHARLOTTE', state = 'NC' (Charlotte-Mecklenburg PD is stored as just CHARLOTTE)
+   - "Charlotte", "Charlotte-Mecklenburg", or "CMPD" → city = 'CHARLOTTE', state = 'NC' (Charlotte-Mecklenburg PD is stored as just CHARLOTTE)
+   - "Nashville", "Metro Nashville", or "MNPD" → city = 'NASHVILLE', state = 'TN'
+   - "Las Vegas", "LVMPD", or "Las Vegas Metro" → city = 'LAS VEGAS', state = 'NV' (see note above about pre-2017 name)
+   - "Baton Rouge" or "East Baton Rouge" → city = 'BATON ROUGE', state = 'LA'
+   - "Bensalem" → city = 'BENSALEM', state = 'PA'
+   - "Upper Darby" → city = 'UPPER DARBY', state = 'PA'
+   - "West Valley" or "West Valley City" → city = 'WEST VALLEY CITY', state = 'UT'
    - State abbreviations: Nebraska = 'NB' (not 'NE') in the agencies table. Always use state = 'NB' for Nebraska queries.
    - **WARNING**: "Saint" vs "St" vs "St." is inconsistent in this table. When unsure, use LIKE '%SAINT%' or LIKE '%ST%' to find the exact stored name.
 

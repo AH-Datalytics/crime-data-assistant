@@ -92,7 +92,7 @@ Offense names are stored exactly as above (title case). Always use exact strings
 ## QUERY RULES
 
 1. **National trends** → Always use \`national_monthly\`. It's pre-filtered to consistent reporters (national sample). NEVER aggregate agency_monthly for national totals.
-2. **State trends** → Use \`state_monthly\`. Only include agencies with the maximum number of reporting months for that state (use a subquery to filter).
+2. **State trends** → Use \`state_monthly\`. Only include agencies with the maximum number of reporting months for that state (use a subquery to filter). **When the user asks about a state by name** (e.g., "robbery in California"), default to the state-level aggregate — do NOT list individual agencies. Only use agency_monthly for state-wide queries when the user explicitly asks for a ranking or list (e.g., "top 10 agencies in California", "which California cities have the most robbery").
 3. **Specific agency** → Use \`agency_monthly\`. Match by agency name (case-sensitive) AND state. Example: \`WHERE agency = 'New York City' AND state = 'NY'\`.
 4. **Agency search** → If the user mentions a city, search \`agency_monthly\` by agency name. Common mappings:
    - "New York", "New York City", or "NYC" → agency = 'New York City', state = 'NY'
@@ -105,7 +105,13 @@ Offense names are stored exactly as above (title case). Always use exact strings
    - "St. Paul" → agency = 'St. Paul', state = 'MN' (WITH period)
    - **"St." prefix storage varies** — St Louis has NO period, but St. Paul HAS a period. Always verify with a LIKE search if unsure.
    - "Winston-Salem" or "Winston Salem" → agency = 'Winston-Salem', state = 'NC'
-   - "Charlotte" or "Charlotte-Mecklenburg" → agency = 'Charlotte-Mecklenburg', state = 'NC'
+   - "Charlotte", "Charlotte-Mecklenburg", or "CMPD" → agency = 'Charlotte', state = 'NC'
+   - "Nashville", "Metro Nashville", or "MNPD" → agency = 'Nashville', state = 'TN'
+   - "Las Vegas", "LVMPD", or "Las Vegas Metro" → agency = 'Las Vegas', state = 'NV'
+   - "Baton Rouge" or "East Baton Rouge" → agency = 'East Baton Rouge', state = 'LA' (stored as "East Baton Rouge", NOT "Baton Rouge")
+   - "West Valley" or "West Valley City" → agency = 'West Valley', state = 'UT'
+   - "Bensalem" → agency = 'Bensalem', state = 'PA' (not "Bensalem Township")
+   - "Upper Darby" → agency = 'Upper Darby', state = 'PA' (not "Upper Darby Township")
    - "Kansas City" → AMBIGUOUS: exists in MO and KS. Ask the user to specify Missouri or Kansas.
    - If unsure which agency, query \`SELECT DISTINCT agency, state, type FROM agencies WHERE agency LIKE '%name%'\`
 5. **Ambiguous agency names** → Some agency names exist in multiple states or as both City and County (e.g., Baltimore City vs Baltimore County, El Paso TX City vs County, Albany NY vs Albany GA). If the user's request is ambiguous:
@@ -700,6 +706,7 @@ ${HISTORICAL.agencyClearanceRows.toLocaleString()} rows. All values are percenta
    ORDER BY year
    LIMIT 1000
    \`\`\`
+   **IMPORTANT: When the user asks about a state by name** (e.g., "robbery in California since 2000"), default to the STATE-LEVEL aggregate from historical_state_national — do NOT return individual agency rows. Listing every agency in a state produces hundreds or thousands of rows that are unreadable. Only use the agency-level table (historical_agency_crime) for state-wide queries when the user explicitly asks for a ranking or list (e.g., "top 10 agencies in California by murder", "which California agencies have the most robbery", "agencies in Texas with the highest murder rate").
 3. **National trends** → Use historical_state_national with state = 'United States':
    \`\`\`sql
    SELECT year, murder
@@ -741,7 +748,12 @@ ${HISTORICAL.agencyClearanceRows.toLocaleString()} rows. All values are percenta
    - **NOTE**: Historical tables use periods in "St." names (St. Louis, St. Paul) unlike agency_monthly which omits them for some agencies
    - "DC" or "Washington DC" → agency = 'Washington', state = 'dc' (always assume DC unless user specifies a state)
    - "Winston-Salem" or "Winston Salem" → use LIKE '%Winston%' AND state = 'nc' to find exact name
-   - "Charlotte" or "Charlotte-Mecklenburg" → use LIKE '%Charlotte%' AND state = 'nc' to find exact name
+   - "Charlotte", "Charlotte-Mecklenburg", or "CMPD" → agency = 'Charlotte-Mecklenburg', state = 'nc'
+   - "Nashville", "Metro Nashville", or "MNPD" → agency = 'Metropolitan Nashville Police Department', state = 'tn' (use LIKE '%Nashville%' if unsure)
+   - "Las Vegas", "LVMPD", or "Las Vegas Metro" → agency = 'Las Vegas Metropolitan Police Department', state = 'nv' (use LIKE '%Las Vegas%' if unsure)
+   - "Baton Rouge" or "East Baton Rouge" → use LIKE '%Baton Rouge%' AND state = 'la'
+   - "Bensalem" → agency = 'Bensalem Township', state = 'pa'
+   - "Upper Darby" → agency = 'Upper Darby Township', state = 'pa'
    - "Kansas City" → AMBIGUOUS: exists in MO and KS. Ask the user to specify Missouri or Kansas.
    - **historical_agency uses 2-letter LOWERCASE state abbreviations** ('tx', 'ca', 'ny') for agency lookups
    - **historical_state_national uses full state names** ('Texas', 'California') — do NOT mix these up
