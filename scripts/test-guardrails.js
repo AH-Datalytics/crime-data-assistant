@@ -398,6 +398,92 @@ console.log("\n═══ Guardrail edge cases ═══\n");
   assert("stacked: rate + national both fire", rateIssue && nationalIssue);
 }
 
+// --- single-city-no-type: fires for ambiguous single-city without type ---
+{
+  const ambiguous = [
+    "los angeles", "baltimore", "el paso", "sacramento", "san diego",
+    "san mateo", "santa cruz", "st louis", "alameda", "denton",
+    "greenville", "hamilton", "kalamazoo", "st charles", "tulare",
+    "jacksonville", "richmond", "kansas city",
+  ];
+  const matchSingle = (sql) => {
+    const sqlLower = sql.toLowerCase();
+    if (!sqlLower.includes("agency_monthly")) return false;
+    if (/\btype\s*=/i.test(sql)) return false;
+    if (/case\s+when/i.test(sql)) return false;
+    return ambiguous.some(c => sqlLower.includes(`agency = '${c}'`) || sqlLower.includes(`agency='${c}'`));
+  };
+
+  assert("single-city-no-type: LA without type fires",
+    matchSingle("SELECT * FROM agency_monthly WHERE agency = 'Los Angeles' AND state = 'CA'"));
+  assert("single-city-no-type: Baltimore without type fires",
+    matchSingle("SELECT * FROM agency_monthly WHERE agency = 'Baltimore' AND state = 'MD'"));
+  assert("single-city-no-type: with type = no fire",
+    !matchSingle("SELECT * FROM agency_monthly WHERE agency = 'Los Angeles' AND state = 'CA' AND type = 'City'"));
+  assert("single-city-no-type: CASE WHEN = no fire (multi-city guardrail handles it)",
+    !matchSingle("SELECT CASE WHEN agency = 'Los Angeles' THEN count END FROM agency_monthly"));
+  assert("single-city-no-type: Houston (not ambiguous) = no fire",
+    !matchSingle("SELECT * FROM agency_monthly WHERE agency = 'Houston' AND state = 'TX'"));
+  assert("single-city-no-type: Kansas City fires",
+    matchSingle("SELECT * FROM agency_monthly WHERE agency = 'Kansas City' AND state = 'MO'"));
+}
+
+// --- state-monthly-for-trend: fires when state_monthly used in time series ---
+{
+  const matchStateTrend = (sql) => {
+    const sqlLower = sql.toLowerCase();
+    return sqlLower.includes("state_monthly") &&
+      /group\s+by.*\byear\b/i.test(sql) &&
+      !sqlLower.includes("agency_monthly");
+  };
+
+  assert("state-monthly-trend: time series fires",
+    matchStateTrend("SELECT year, month, SUM(count) FROM state_monthly WHERE state = 'CA' GROUP BY year, month"));
+  assert("state-monthly-trend: ranking (no GROUP BY year) = no fire",
+    !matchStateTrend("SELECT state, SUM(count) FROM state_monthly GROUP BY state ORDER BY SUM(count) DESC"));
+  assert("state-monthly-trend: agency_monthly present = no fire",
+    !matchStateTrend("SELECT year FROM state_monthly JOIN agency_monthly GROUP BY year"));
+}
+
+// --- nibrs-person-crime-offense-table: fires for person crimes on non-victim table ---
+{
+  const PERSON_CODES = ["09A","09B","09C","11A","11B","11C","11D","13A","13B","13C","100","36A","36B","64A","64B"];
+  const matchPersonOffense = (sql) => {
+    const usesOffenseSummary = /\bsummary_(?:city|state)_monthly\b/i.test(sql) && !/\bsummary_victim/i.test(sql);
+    if (!usesOffenseSummary) return false;
+    return PERSON_CODES.some(code => sql.includes(`'${code}'`));
+  };
+
+  assert("nibrs-person-offense: murder on summary_state_monthly fires",
+    matchPersonOffense("SELECT * FROM summary_state_monthly WHERE offense_code = '09A'"));
+  assert("nibrs-person-offense: assault on summary_city_monthly fires",
+    matchPersonOffense("SELECT * FROM summary_city_monthly WHERE offense_code = '13A'"));
+  assert("nibrs-person-offense: murder on summary_victim_state_monthly = no fire",
+    !matchPersonOffense("SELECT * FROM summary_victim_state_monthly WHERE offense_code = '09A'"));
+  assert("nibrs-person-offense: property crime 220 on summary_state_monthly = no fire",
+    !matchPersonOffense("SELECT * FROM summary_state_monthly WHERE offense_code = '220'"));
+  assert("nibrs-person-offense: carjacking 64A fires",
+    matchPersonOffense("SELECT * FROM summary_city_monthly WHERE offense_code = '64A'"));
+}
+
+// --- historical-state-via-agency: fires for aggregated agency queries ---
+{
+  const matchHistState = (sql) => {
+    const usesAgencyTable = /\bhistorical_agency_crime\b/i.test(sql);
+    const hasStateFilter = /\bha\.state\s*=\s*'[a-z]{2}'/i.test(sql);
+    const groupsByYear = /GROUP\s+BY\s+(?:hac\.)?year/i.test(sql);
+    const selectsAgency = /SELECT\s+[\s\S]*?\b(?:ha\.)?agency\b[\s\S]*?FROM/i.test(sql);
+    return usesAgencyTable && hasStateFilter && groupsByYear && !selectsAgency;
+  };
+
+  assert("hist-state-via-agency: aggregated NC fires",
+    matchHistState("SELECT hac.year, SUM(hac.assault) FROM historical_agency_crime hac JOIN historical_agency ha ON ha.ori = hac.ori WHERE ha.state = 'nc' GROUP BY hac.year"));
+  assert("hist-state-via-agency: with agency SELECT = no fire (ranking query)",
+    !matchHistState("SELECT ha.agency, hac.year, hac.murder FROM historical_agency_crime hac JOIN historical_agency ha ON ha.ori = hac.ori WHERE ha.state = 'tx' GROUP BY year"));
+  assert("hist-state-via-agency: no state filter = no fire",
+    !matchHistState("SELECT hac.year, SUM(hac.murder) FROM historical_agency_crime hac GROUP BY hac.year"));
+}
+
 // ══════════════════════════════════════════════════════════════════════
 //  4. Disclaimer logic — edge cases
 // ══════════════════════════════════════════════════════════════════════

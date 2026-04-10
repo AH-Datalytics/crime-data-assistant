@@ -58,16 +58,20 @@ function getChartMeta(
       return { agencyCount: row?.cnt ?? 0, population: popRow?.pop ?? null };
     }
 
-    // State queries (state_monthly table)
-    const stateMatch = sql.match(/state\s*=\s*'([A-Z]{2})'/i);
-    if (sqlLower.includes("state_monthly") && stateMatch) {
+    // State queries — count only complete reporters (national_sample = 1)
+    const stateMatch = sql.match(/(?:a\.)?state\s*=\s*'([A-Z]{2})'/i);
+    const isStateLevelQuery = stateMatch && (
+      sqlLower.includes("state_monthly") ||
+      (sqlLower.includes("national_sample") && !sqlLower.includes("agency ="))
+    );
+    if (isStateLevelQuery && stateMatch) {
       const st = stateMatch[1].toUpperCase();
       const row = db
         .prepare(
           `SELECT COUNT(DISTINCT a.ori) as cnt, SUM(p.population) as pop
            FROM agencies a
            LEFT JOIN agency_population p ON p.ori = a.ori AND p.year = ?
-           WHERE a.state = ?`
+           WHERE a.state = ? AND a.national_sample = 1`
         )
         .get(popYear, st) as { cnt: number; pop: number | null };
       return { agencyCount: row.cnt, population: row.pop };
@@ -662,6 +666,58 @@ export async function POST(req: NextRequest) {
             columns = columns.filter(c => !nullCols.includes(c));
             if (claude.yAxis) {
               claude.yAxis = claude.yAxis.split(',').map(y => y.trim()).filter(y => !nullCols.includes(y)).join(',');
+            }
+          }
+        }
+
+        // Step 4d: Detect sparse monthly city data (sawtooth pattern)
+        // If monthly data for a specific city/agency has many zeros, retry with rolling 12-month
+        const hasMonth = columns.includes("month");
+        const isAgencyQuery = sql.toLowerCase().includes("agency_monthly") && /agency\s*=\s*'/i.test(sql);
+        if (hasMonth && isAgencyQuery && rows.length > 12) {
+          const dataCols = columns.filter(c => c !== "year" && c !== "month");
+          for (const col of dataCols) {
+            const vals = rows.map(r => Number(r[col] ?? 0));
+            const zeroCount = vals.filter(v => v === 0).length;
+            const zeroPct = zeroCount / vals.length;
+            if (zeroPct > 0.15) {
+              // Retry with rolling 12-month
+              console.log(`[sparse-monthly] ${col}: ${zeroCount}/${vals.length} zeros (${(zeroPct*100).toFixed(0)}%), retrying with rolling 12-month`);
+              controller.enqueue(
+                encoder.encode(
+                  sseEvent({ type: "status", text: "Switching to rolling 12-month view..." })
+                )
+              );
+              const rollingPrompt = `Rewrite this query to use a rolling 12-month sum instead of raw monthly counts. The raw monthly data has many zero-count months which creates a misleading chart. Use SUM(...) OVER (ORDER BY year, month ROWS BETWEEN 11 PRECEDING AND CURRENT ROW) as the rolling window. Keep all other filters the same.`;
+              const rollingHistory = [
+                ...(history || []),
+                { role: "user" as const, content: question },
+                { role: "assistant" as const, content: JSON.stringify(claude) },
+                { role: "user" as const, content: rollingPrompt },
+              ];
+              const rollingFixed = await translateToSql(rollingPrompt, rollingHistory, systemPrompt);
+              if (rollingFixed.sql) {
+                const rv = validateAndSanitize(rollingFixed.sql);
+                if (rv.valid) {
+                  try {
+                    const stmt2 = db.prepare(rv.sanitized!);
+                    const result2 = stmt2.all() as Record<string, unknown>[];
+                    rows = result2;
+                    columns = stmt2.columns().map(c => c.name);
+                    sql = rv.sanitized!;
+                    claude.explanation = rollingFixed.explanation;
+                    claude.chartHint = rollingFixed.chartHint;
+                    claude.xAxis = rollingFixed.xAxis;
+                    claude.yAxis = rollingFixed.yAxis;
+                    claude.title = rollingFixed.title;
+                    claude.yAxisLabel = rollingFixed.yAxisLabel;
+                    console.log(`[sparse-monthly] Rolling 12-month retry succeeded, ${rows.length} rows`);
+                  } catch (e) {
+                    console.log(`[sparse-monthly] Rolling retry SQL failed:`, e);
+                  }
+                }
+              }
+              break; // Only retry once
             }
           }
         }

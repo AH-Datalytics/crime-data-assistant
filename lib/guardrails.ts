@@ -155,6 +155,71 @@ const GUARDRAILS: Guardrail[] = [
     },
   },
 
+  // --- Current: single-city query on ambiguous city without type filter ---
+  {
+    name: "single-city-no-type",
+    tabs: ["current"],
+    match: (ctx) => {
+      const sqlLower = ctx.sql.toLowerCase();
+      if (!sqlLower.includes("agency_monthly")) return false;
+      // Already has type filter
+      if (/\btype\s*=/i.test(ctx.sql)) return false;
+      // Only fire for single-city queries (no CASE WHEN = multi-city, already covered)
+      if (/case\s+when/i.test(ctx.sql)) return false;
+      const ambiguous = [
+        "los angeles", "baltimore", "el paso", "sacramento", "san diego",
+        "san mateo", "santa cruz", "st louis", "alameda", "denton",
+        "greenville", "hamilton", "kalamazoo", "st charles", "tulare",
+        "jacksonville", "richmond", "kansas city",
+      ];
+      return ambiguous.some((c) => sqlLower.includes(`agency = '${c}'`) || sqlLower.includes(`agency='${c}'`));
+    },
+    message: (ctx) => {
+      const sqlLower = ctx.sql.toLowerCase();
+      const ambiguous = [
+        "los angeles", "baltimore", "el paso", "sacramento", "san diego",
+        "san mateo", "santa cruz", "st louis", "alameda", "denton",
+        "greenville", "hamilton", "kalamazoo", "st charles", "tulare",
+        "jacksonville", "richmond", "kansas city",
+      ];
+      const mentioned = ambiguous.filter((c) => sqlLower.includes(`'${c}'`));
+      return `The query filters by ${mentioned.join(", ")} without a type filter. This city has both City and County agencies with different data. Add AND type = 'City' to the WHERE clause (or set sql to null and ask the user which jurisdiction they mean).`;
+    },
+  },
+
+  // --- Current: state_monthly used for state trend ---
+  {
+    name: "state-monthly-for-trend",
+    tabs: ["current"],
+    match: (ctx) => {
+      const sqlLower = ctx.sql.toLowerCase();
+      // state_monthly used with time-series grouping (year, month) = trend query
+      return sqlLower.includes("state_monthly") &&
+        /group\s+by.*\byear\b/i.test(ctx.sql) &&
+        !sqlLower.includes("agency_monthly");
+    },
+    message: () =>
+      "You used state_monthly for a state trend query. state_monthly includes partial reporters and produces inconsistent counts. Use agency_monthly JOIN agencies WHERE national_sample = 1 AND state = '[XX]' instead, which only includes agencies with complete reporting histories.",
+  },
+
+  // --- Historical: state query using agency table instead of state_national ---
+  {
+    name: "historical-state-via-agency",
+    tabs: ["historical"],
+    match: (ctx) => {
+      const sql = ctx.sql;
+      // Detects: aggregating historical_agency_crime grouped by year with a state filter
+      // but NOT selecting individual agencies (no agency column in SELECT)
+      const usesAgencyTable = /\bhistorical_agency_crime\b/i.test(sql);
+      const hasStateFilter = /\bha\.state\s*=\s*'[a-z]{2}'/i.test(sql);
+      const groupsByYear = /GROUP\s+BY\s+(?:hac\.)?year/i.test(sql);
+      const selectsAgency = /SELECT\s+[\s\S]*?\b(?:ha\.)?agency\b[\s\S]*?FROM/i.test(sql);
+      return usesAgencyTable && hasStateFilter && groupsByYear && !selectsAgency;
+    },
+    message: () =>
+      "You aggregated historical_agency_crime by state, which only includes agencies that reported — it dramatically undercounts. Use historical_state_national instead, which has FBI statewide estimates. Column names are compatible: assault, motor_vehicle_theft, murder, rape, robbery, burglary, theft all work in both tables. Use the full state name (e.g., 'North Carolina' not 'nc').",
+  },
+
   // --- NIBRS ---
   {
     name: "nibrs-raw-victims",
@@ -170,6 +235,21 @@ const GUARDRAILS: Guardrail[] = [
     },
     message: () =>
       "[SYSTEM: You MUST use summary_victim_state_monthly or summary_victim_city_monthly for this query. Do NOT use the raw victims table.]",
+  },
+  {
+    name: "nibrs-person-crime-offense-table",
+    tabs: ["nibrs"],
+    match: (ctx) => {
+      // Person crime codes that MUST use victim tables, not offense tables
+      const PERSON_CODES = ["09A","09B","09C","11A","11B","11C","11D","13A","13B","13C","100","36A","36B","64A","64B"];
+      const sql = ctx.sql;
+      // Using offense summary tables (not victim summary tables) with person crime codes
+      const usesOffenseSummary = /\bsummary_(?:city|state)_monthly\b/i.test(sql) && !/\bsummary_victim/i.test(sql);
+      if (!usesOffenseSummary) return false;
+      return PERSON_CODES.some(code => sql.includes(`'${code}'`));
+    },
+    message: () =>
+      "[SYSTEM: Person crimes (murder, rape, assault, kidnapping, sex offenses, carjacking) must be counted from VICTIM summary tables, not offense summary tables. Use summary_victim_state_monthly or summary_victim_city_monthly instead of summary_state_monthly or summary_city_monthly. Offense tables undercount person crimes by ~20%.]",
   },
   {
     name: "nibrs-cross-level-join",

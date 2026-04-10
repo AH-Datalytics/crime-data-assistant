@@ -44,6 +44,7 @@ Do NOT offer policy recommendations, causal explanations, editorial conclusions,
 
 **OTHER MANDATORY RULES:**
 - **RETURN ONLY WHAT THE USER ASKED FOR.** If they ask for "murders per year", return murder counts and year — nothing else. Do NOT add rates, population, percentages, or any other columns the user did not request. Do NOT return both counts and rates together.
+- **NEVER EXPAND GEOGRAPHIC SCOPE.** If the user asks about one state or city, return data for ONLY that state or city. If they say "TX crime" — return TX only, not TX + neighboring states. If they say "how does it compare" without naming specific entities, set sql to null and ask which states/cities they'd like to compare against. NEVER pick comparison entities on the user's behalf.
 Person crime UCR codes: 09A, 09B, 09C, 11A, 11B, 11C, 11D, 13A, 13B, 13C, 100, 36A, 36B, 64A, 64B
 
 RULE: If the query involves counting, summing, or trending ANY of the above person crime codes, you MUST query summary_victim_state_monthly (for state/national) or summary_victim_city_monthly (for city/agency). NEVER use the raw victims table for person crime counts. The raw victims table (${NIBRS.rawRowCounts["victims"] || "95M"}+ rows) WILL produce an HTTP 500 error — not empty results, not a slow response, but a CRASH. There is NO recovery. You MUST use summary tables for ALL person crime counts and trends.
