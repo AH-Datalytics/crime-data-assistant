@@ -357,6 +357,86 @@ const GUARDRAILS: Guardrail[] = [
       "[SYSTEM: Your JOIN to the agencies table is missing a year condition. The agencies table has one row per (ori, year) — without matching on year, you will get row multiplication (each summary row repeated for every year the agency exists). Add AND a.year = s.year (or the appropriate year column) to the JOIN ON clause.]",
   },
   {
+    name: "nibrs-city-case-sensitivity",
+    tabs: ["nibrs"],
+    match: (ctx) => {
+      // NIBRS cities are ALL CAPS. Detect mixed-case city filters that would return 0 rows.
+      // Match city = 'Houston' (mixed case) but NOT city = 'HOUSTON' (correct)
+      const cityFilters = ctx.sql.match(/city\s*=\s*'([^']+)'/gi);
+      if (!cityFilters) return false;
+      return cityFilters.some(f => {
+        const val = f.match(/city\s*=\s*'([^']+)'/i)?.[1];
+        return val && val !== val.toUpperCase();
+      });
+    },
+    rewrite: (sql) => {
+      // Auto-fix: uppercase all city = 'xxx' values
+      const fixed = sql.replace(/city\s*=\s*'([^']+)'/gi, (match, city) => {
+        return match.replace(city, city.toUpperCase());
+      });
+      return fixed !== sql ? fixed : null;
+    },
+  },
+  {
+    name: "nibrs-offense-code-confusion",
+    tabs: ["nibrs"],
+    match: (ctx) => {
+      const q = ctx.question.toLowerCase();
+      const sql = ctx.sql;
+
+      // "theft" should use 23A-23H range, not just one code
+      if (/\b(?:theft|larceny|larcenies)\b/i.test(q) && !/auto|motor|vehicle|car\b/i.test(q)) {
+        // Check if only one 23x code is used when the user asked for "theft" generally
+        const theftCodes = sql.match(/'23[A-H]'/gi) || [];
+        const uniqueCodes = [...new Set(theftCodes.map(c => c.toUpperCase()))];
+        if (uniqueCodes.length === 1 && uniqueCodes[0] !== "'23H'") return true; // single subcode, not the catch-all
+        if (uniqueCodes.length === 0 && !/23/i.test(sql)) return false; // no theft codes at all (different issue)
+      }
+
+      // "carjacking" should use summary_carjacking_monthly, NOT offense code 240
+      if (/\bcarjack/i.test(q) && sql.includes("'240'")) return true;
+
+      // "auto theft" / "motor vehicle theft" should be 240, NOT 23F
+      if (/\b(auto|motor vehicle|car)\s*theft\b/i.test(q) && sql.includes("'23F'") && !sql.includes("'240'")) return true;
+
+      // "vehicle burglary" / "theft from vehicle" should be 23F, NOT 240
+      if (/\b(vehicle burglary|theft from (motor )?vehicle|TFMV)\b/i.test(q) && sql.includes("'240'") && !sql.includes("'23F'")) return true;
+
+      return false;
+    },
+    message: (ctx) => {
+      const q = ctx.question.toLowerCase();
+      if (/\bcarjack/i.test(q)) {
+        return "[SYSTEM: Carjacking is NOT offense code 240 (that's motor vehicle theft). Use summary_carjacking_monthly for carjacking counts.]";
+      }
+      if (/\b(auto|motor vehicle|car)\s*theft\b/i.test(q)) {
+        return "[SYSTEM: Auto/motor vehicle theft is offense code 240, NOT 23F. Code 23F is 'Theft From Motor Vehicle' (vehicle burglary), which is different from stealing the vehicle itself.]";
+      }
+      if (/\b(vehicle burglary|theft from (motor )?vehicle|TFMV)\b/i.test(q)) {
+        return "[SYSTEM: Vehicle burglary / theft from motor vehicle is offense code 23F, NOT 240. Code 240 is motor vehicle theft (stealing the whole vehicle).]";
+      }
+      return "[SYSTEM: 'Theft' or 'larceny' in NIBRS spans codes 23A through 23H. Use the full range IN ('23A','23B','23C','23D','23E','23F','23G','23H') or use '23H' as the catch-all if only shoplifting. Do not use a single subcode when the user asked about theft generally.]";
+    },
+  },
+  {
+    name: "historical-ranking-no-type",
+    tabs: ["historical"],
+    match: (ctx) => {
+      const sql = ctx.sql;
+      // Detects: ranking/listing queries on historical_agency that don't filter by type
+      // Pattern: ORDER BY ... DESC/ASC with LIMIT, using historical_agency_crime, no type filter
+      const usesAgencyTable = /\bhistorical_agency(?:_crime)?\b/i.test(sql);
+      const hasRanking = /ORDER\s+BY\b/i.test(sql) && /\bLIMIT\b/i.test(sql);
+      const hasTypeFilter = /\bha\.type\s*=/i.test(sql) || /\btype\s*=\s*'/i.test(sql);
+      // Only fire for ranking queries (ORDER BY + LIMIT) without type filter
+      // and where the SELECT returns agency names (it's a listing)
+      const selectsAgency = /SELECT[\s\S]*?\bagency\b[\s\S]*?FROM/i.test(sql);
+      return usesAgencyTable && hasRanking && selectsAgency && !hasTypeFilter;
+    },
+    message: () =>
+      "Your ranking query on historical_agency doesn't include a type filter. Without AND ha.type = 'city', the results may include state police, university police, and county agencies mixed in with cities. Add AND ha.type = 'city' to the WHERE clause (or 'county' if the user asked about counties).",
+  },
+  {
     name: "nibrs-ne-gu-state-codes",
     tabs: ["nibrs"],
     match: (ctx) => /state\s*=\s*'(NE|GU)'/i.test(ctx.sql),

@@ -546,6 +546,66 @@ console.log("\n═══ Guardrail edge cases ═══\n");
     !matchAgenciesNoYear("SELECT * FROM summary_victim_state_monthly WHERE state = 'TX'"));
 }
 
+// --- nibrs-city-case-sensitivity: auto-uppercases city names ---
+{
+  const matchCityCase = (sql) => {
+    const cityFilters = sql.match(/city\s*=\s*'([^']+)'/gi);
+    if (!cityFilters) return false;
+    return cityFilters.some(f => {
+      const val = f.match(/city\s*=\s*'([^']+)'/i)?.[1];
+      return val && val !== val.toUpperCase();
+    });
+  };
+  const rewriteCity = (sql) => {
+    return sql.replace(/city\s*=\s*'([^']+)'/gi, (match, city) => {
+      return match.replace(city, city.toUpperCase());
+    });
+  };
+
+  assert("nibrs-city-case: mixed case fires", matchCityCase("WHERE city = 'Houston'"));
+  assert("nibrs-city-case: uppercase = no fire", !matchCityCase("WHERE city = 'HOUSTON'"));
+  assert("nibrs-city-case: rewrite to uppercase", rewriteCity("WHERE city = 'Houston'") === "WHERE city = 'HOUSTON'");
+  assert("nibrs-city-case: multi-word city", rewriteCity("WHERE city = 'New York'") === "WHERE city = 'NEW YORK'");
+  assert("nibrs-city-case: no city filter = no fire", !matchCityCase("WHERE state = 'TX'"));
+}
+
+// --- nibrs-offense-code-confusion: catches wrong offense codes ---
+{
+  // carjacking should NOT use 240
+  const matchCarjack240 = (q, sql) => /\bcarjack/i.test(q) && sql.includes("'240'");
+  assert("nibrs-offense: carjacking + 240 fires", matchCarjack240("carjacking in Texas", "WHERE ucr_offense_code = '240'"));
+  assert("nibrs-offense: carjacking + summary table = no fire", !matchCarjack240("carjacking in Texas", "FROM summary_carjacking_monthly"));
+
+  // auto theft should be 240 not 23F
+  const matchAutoTheft23F = (q, sql) => /\b(auto|motor vehicle|car)\s*theft\b/i.test(q) && sql.includes("'23F'") && !sql.includes("'240'");
+  assert("nibrs-offense: auto theft + 23F fires", matchAutoTheft23F("auto theft in Chicago", "WHERE ucr_offense_code = '23F'"));
+  assert("nibrs-offense: auto theft + 240 = no fire", !matchAutoTheft23F("auto theft in Chicago", "WHERE ucr_offense_code = '240'"));
+
+  // vehicle burglary should be 23F not 240
+  const matchVehBurg240 = (q, sql) => /\b(vehicle burglary|theft from (motor )?vehicle|TFMV)\b/i.test(q) && sql.includes("'240'") && !sql.includes("'23F'");
+  assert("nibrs-offense: vehicle burglary + 240 fires", matchVehBurg240("vehicle burglary in Houston", "WHERE ucr_offense_code = '240'"));
+  assert("nibrs-offense: vehicle burglary + 23F = no fire", !matchVehBurg240("vehicle burglary in Houston", "WHERE ucr_offense_code = '23F'"));
+  assert("nibrs-offense: TFMV + 240 fires", matchVehBurg240("TFMV trend in Dallas", "WHERE ucr_offense_code = '240'"));
+}
+
+// --- historical-ranking-no-type: catches rankings without type filter ---
+{
+  const matchRankNoType = (sql) => {
+    const usesAgencyTable = /\bhistorical_agency(?:_crime)?\b/i.test(sql);
+    const hasRanking = /ORDER\s+BY\b/i.test(sql) && /\bLIMIT\b/i.test(sql);
+    const hasTypeFilter = /\bha\.type\s*=/i.test(sql) || /\btype\s*=\s*'/i.test(sql);
+    const selectsAgency = /SELECT[\s\S]*?\bagency\b[\s\S]*?FROM/i.test(sql);
+    return usesAgencyTable && hasRanking && selectsAgency && !hasTypeFilter;
+  };
+
+  assert("hist-ranking-no-type: ranking without type fires",
+    matchRankNoType("SELECT ha.agency, SUM(hac.murder) as total FROM historical_agency_crime hac JOIN historical_agency ha ON ha.ori = hac.ori WHERE ha.state = 'tx' GROUP BY ha.agency ORDER BY total DESC LIMIT 10"));
+  assert("hist-ranking-no-type: with type = no fire",
+    !matchRankNoType("SELECT ha.agency, SUM(hac.murder) as total FROM historical_agency_crime hac JOIN historical_agency ha ON ha.ori = hac.ori WHERE ha.state = 'tx' AND ha.type = 'city' GROUP BY ha.agency ORDER BY total DESC LIMIT 10"));
+  assert("hist-ranking-no-type: non-ranking query = no fire",
+    !matchRankNoType("SELECT ha.agency, hac.year, hac.murder FROM historical_agency_crime hac JOIN historical_agency ha ON ha.ori = hac.ori WHERE ha.agency = 'Houston'"));
+}
+
 // ══════════════════════════════════════════════════════════════════════
 //  4. Disclaimer logic — edge cases
 // ══════════════════════════════════════════════════════════════════════
