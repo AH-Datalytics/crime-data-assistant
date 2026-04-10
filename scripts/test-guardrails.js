@@ -484,6 +484,68 @@ console.log("\n═══ Guardrail edge cases ═══\n");
     !matchHistState("SELECT hac.year, SUM(hac.murder) FROM historical_agency_crime hac GROUP BY hac.year"));
 }
 
+// --- city-abbreviation-to-national: catches abbreviations the original misses ---
+{
+  // Simulates the guardrail logic
+  const ABBREVS = /\b(LA|NYC|STL|ATL|NOLA|PHX|PHILLY|DFW|DMV|CHI|BMORE|MPLS|MSP|OKC|SLC|NYPD|LAPD|CPD|HPD|DPD|BPD|MPD)\b/i;
+
+  const matchAbbrev = (q, sql) => {
+    const sqlLower = sql.toLowerCase();
+    const usesNational = sqlLower.includes("national_monthly") || sqlLower.includes("state_monthly") ||
+      sqlLower.includes("historical_state_national");
+    const usesAgency = /agency\s*=/i.test(sql) || sqlLower.includes("agency_monthly");
+    if (!usesNational || usesAgency) return false;
+    return ABBREVS.test(q);
+  };
+
+  assert("city-abbrev-national: 'LA murder' on national_monthly fires",
+    matchAbbrev("LA murder trend", "SELECT * FROM national_monthly WHERE offense = 'Murder'"));
+  assert("city-abbrev-national: 'NYC robbery' on national fires",
+    matchAbbrev("NYC robbery", "SELECT * FROM national_monthly WHERE offense = 'Robbery'"));
+  assert("city-abbrev-national: 'NYPD murders' on agency_monthly = no fire",
+    !matchAbbrev("NYPD murders", "SELECT * FROM agency_monthly WHERE agency = 'New York City'"));
+  assert("city-abbrev-national: no abbreviation = no fire",
+    !matchAbbrev("murder nationally", "SELECT * FROM national_monthly WHERE offense = 'Murder'"));
+}
+
+// --- population-join-no-year: catches missing year in population JOIN ---
+{
+  const matchPopNoYear = (sql) => {
+    const hasPopJoin = /JOIN\s+agency_population\b/i.test(sql) || /JOIN\s+historical_agency_population\b/i.test(sql);
+    if (!hasPopJoin) return false;
+    const joinClause = sql.match(/JOIN\s+(?:agency_population|historical_agency_population)\s+\w+\s+ON\s+([^)]+?)(?:\s+WHERE|\s+GROUP|\s+ORDER|\s+LIMIT|$)/i);
+    if (!joinClause) return false;
+    return !/\byear\b/i.test(joinClause[1]);
+  };
+
+  assert("pop-no-year: missing year fires",
+    matchPopNoYear("JOIN agency_population ap ON ap.ori = am.ori WHERE offense = 'Murder' GROUP BY year"));
+  assert("pop-no-year: with year = no fire",
+    !matchPopNoYear("JOIN agency_population ap ON ap.ori = am.ori AND ap.year = am.year WHERE offense = 'Murder'"));
+  assert("pop-no-year: historical variant fires",
+    matchPopNoYear("JOIN historical_agency_population ap ON ap.ori = hac.ori WHERE year >= 2000 GROUP BY year"));
+  assert("pop-no-year: historical with year = no fire",
+    !matchPopNoYear("JOIN historical_agency_population ap ON ap.ori = hac.ori AND ap.year = hac.year GROUP BY year"));
+}
+
+// --- nibrs-agencies-join-no-year: catches missing year in NIBRS agencies JOIN ---
+{
+  const matchAgenciesNoYear = (sql) => {
+    const hasAgenciesJoin = /JOIN\s+agencies\s+(\w+)\s+ON\s+/i.test(sql);
+    if (!hasAgenciesJoin) return false;
+    const joinMatch = sql.match(/JOIN\s+agencies\s+\w+\s+ON\s+([^)]*?)(?:\s+(?:WHERE|GROUP|ORDER|LIMIT|LEFT|RIGHT|INNER|JOIN)|\s*$)/i);
+    if (!joinMatch) return false;
+    return !/\byear\b/i.test(joinMatch[1]);
+  };
+
+  assert("nibrs-agencies-no-year: missing year fires",
+    matchAgenciesNoYear("SELECT s.*, a.city FROM summary_victim_city_monthly s JOIN agencies a ON a.ori = s.ori WHERE s.state = 'TX' GROUP BY s.year"));
+  assert("nibrs-agencies-no-year: with year = no fire",
+    !matchAgenciesNoYear("SELECT s.*, a.city FROM summary_victim_city_monthly s JOIN agencies a ON a.ori = s.ori AND a.year = s.year WHERE s.state = 'TX'"));
+  assert("nibrs-agencies-no-year: no agencies JOIN = no fire",
+    !matchAgenciesNoYear("SELECT * FROM summary_victim_state_monthly WHERE state = 'TX'"));
+}
+
 // ══════════════════════════════════════════════════════════════════════
 //  4. Disclaimer logic — edge cases
 // ══════════════════════════════════════════════════════════════════════

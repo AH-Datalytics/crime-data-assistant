@@ -202,6 +202,59 @@ const GUARDRAILS: Guardrail[] = [
       "You used state_monthly for a state trend query. state_monthly includes partial reporters and produces inconsistent counts. Use agency_monthly JOIN agencies WHERE national_sample = 1 AND state = '[XX]' instead, which only includes agencies with complete reporting histories.",
   },
 
+  // --- Current: city-to-national fallback (widened) ---
+  // Catches abbreviations (LA, NYC, STL) and leading city patterns
+  // that the existing city-to-national-fallback misses
+  {
+    name: "city-abbreviation-to-national",
+    tabs: ["current", "historical"],
+    match: (ctx) => {
+      // Only fire if question mentions a city via abbreviation or leading pattern
+      // but SQL uses national/state tables with no agency filter
+      const sqlLower = ctx.sql.toLowerCase();
+      const usesNational = sqlLower.includes("national_monthly") || sqlLower.includes("state_monthly") ||
+        sqlLower.includes("historical_state_national");
+      const usesAgency = /agency\s*=/i.test(ctx.sql) || sqlLower.includes("agency_monthly");
+      if (!usesNational || usesAgency) return false;
+
+      // Check for abbreviations the existing guardrail misses
+      const abbrevs = /\b(LA|NYC|STL|ATL|NOLA|PHX|PHILLY|DFW|DMV|CHI|BMORE|MPLS|MSP|OKC|SLC|NYPD|LAPD|CPD|HPD|DPD|BPD|MPD)\b/i;
+      if (abbrevs.test(ctx.question)) return true;
+
+      // Check for geos extracted from question (leading city pattern)
+      // but SQL has no agency filter
+      if (ctx.geos.length > 0 && !sqlLower.includes("agency")) return true;
+
+      return false;
+    },
+    message: (ctx) => {
+      const city = ctx.geos[0] || ctx.question.match(/\b(LA|NYC|STL|ATL|NOLA|PHX|PHILLY|CHI|BMORE|NYPD|LAPD|CPD)\b/i)?.[1] || "that city";
+      return `The user asked about "${city}" but your SQL queries national/state-level data instead of agency-level data. Look up the correct agency name in agency_monthly (or historical_agency_crime for Historical). If the city is not in the dataset, set sql to null and tell the user. Do NOT silently fall back to national data.`;
+    },
+  },
+
+  // --- Current/Historical: population JOIN without year (rate queries) ---
+  {
+    name: "population-join-no-year",
+    tabs: ["current", "historical"],
+    match: (ctx) => {
+      const sql = ctx.sql;
+      // Only relevant for rate queries that join population
+      if (!ctx.isPerCapita) return false;
+      const hasPopJoin = /JOIN\s+agency_population\b/i.test(sql) || /JOIN\s+historical_agency_population\b/i.test(sql);
+      if (!hasPopJoin) return false;
+      // Check if the JOIN condition includes year matching
+      // Good: ON ap.ori = am.ori AND ap.year = am.year
+      // Bad:  ON ap.ori = am.ori (missing year)
+      const joinClause = sql.match(/JOIN\s+(?:agency_population|historical_agency_population)\s+\w+\s+ON\s+([^)]+?)(?:\s+WHERE|\s+GROUP|\s+ORDER|\s+LIMIT|$)/i);
+      if (!joinClause) return false;
+      const onClause = joinClause[1];
+      return !/\byear\b/i.test(onClause);
+    },
+    message: () =>
+      "Your population JOIN is missing a year condition (e.g., AND ap.year = am.year). Without it, each row gets multiplied by every year of population data, producing wildly inflated results. Add the year match to the JOIN ON clause.",
+  },
+
   // --- Historical: state query using agency table instead of state_national ---
   {
     name: "historical-state-via-agency",
@@ -286,6 +339,22 @@ const GUARDRAILS: Guardrail[] = [
     },
     message: () =>
       "[SYSTEM: Do NOT look up 'USA' or 'United States' as a city or agency. For national totals, SUM across all states from the state-level summary table (summary_victim_state_monthly for person crimes, summary_state_monthly for property/society crimes). Do not filter by ori or city for national data.]",
+  },
+  {
+    name: "nibrs-agencies-join-no-year",
+    tabs: ["nibrs"],
+    match: (ctx) => {
+      const sql = ctx.sql;
+      // Detects JOIN agencies without year condition
+      const hasAgenciesJoin = /JOIN\s+agencies\s+(\w+)\s+ON\s+/i.test(sql);
+      if (!hasAgenciesJoin) return false;
+      // Extract the ON clause for the agencies JOIN
+      const joinMatch = sql.match(/JOIN\s+agencies\s+\w+\s+ON\s+([^)]*?)(?:\s+(?:WHERE|GROUP|ORDER|LIMIT|LEFT|RIGHT|INNER|JOIN)|\s*$)/i);
+      if (!joinMatch) return false;
+      return !/\byear\b/i.test(joinMatch[1]);
+    },
+    message: () =>
+      "[SYSTEM: Your JOIN to the agencies table is missing a year condition. The agencies table has one row per (ori, year) — without matching on year, you will get row multiplication (each summary row repeated for every year the agency exists). Add AND a.year = s.year (or the appropriate year column) to the JOIN ON clause.]",
   },
   {
     name: "nibrs-ne-gu-state-codes",
