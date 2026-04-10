@@ -94,14 +94,13 @@ export async function POST(req: NextRequest) {
       console.log(`[nibrs][guardrails] Fired: ${guardrailResult.fired.join(", ")}`);
     }
 
-    // For NIBRS guardrails that need Claude retry, process them sequentially
-    // (each retry may fix the SQL, which affects subsequent checks)
-    let sqlRewritten = false;
-    for (const issue of guardrailResult.issues) {
-      if (sqlRewritten) break; // Only one retry per request to avoid cascading
-      console.log(`[nibrs][guardrail-retry] Retrying with instruction: ${issue.slice(0, 80)}...`);
+    // For NIBRS guardrails that need Claude retry, send all issues at once
+    // so a single retry fixes everything (avoids cascading retries)
+    if (guardrailResult.issues.length > 0) {
+      const combinedIssues = guardrailResult.issues.join("\n\n");
+      console.log(`[nibrs][guardrail-retry] Retrying with ${guardrailResult.issues.length} issue(s)`);
       const retryResult = await translateToSql(
-        question + "\n\n" + issue,
+        question + "\n\n" + combinedIssues,
         history
       );
       if (retryResult.sql) {
@@ -113,8 +112,11 @@ export async function POST(req: NextRequest) {
           claude.xAxis = retryResult.xAxis;
           claude.yAxis = retryResult.yAxis;
           claude.title = retryResult.title;
+          claude.colors = retryResult.colors;
+          claude.yAxisLabel = retryResult.yAxisLabel;
+          claude.xAxisLabel = retryResult.xAxisLabel;
+          claude.annotations = retryResult.annotations;
           console.log(`[nibrs][guardrail-retry] Succeeded`);
-          sqlRewritten = true;
         }
       }
     }
@@ -162,6 +164,10 @@ export async function POST(req: NextRequest) {
             claude.xAxis = retry.xAxis;
             claude.yAxis = retry.yAxis;
             claude.title = retry.title;
+            claude.colors = retry.colors;
+            claude.yAxisLabel = retry.yAxisLabel;
+            claude.xAxisLabel = retry.xAxisLabel;
+            claude.annotations = retry.annotations;
             console.log(`[nibrs][error-recovery] Retry succeeded`);
           } catch (retryErr) {
             const retryMsg = retryErr instanceof Error ? retryErr.message : String(retryErr);

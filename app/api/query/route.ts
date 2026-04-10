@@ -710,7 +710,10 @@ export async function POST(req: NextRequest) {
                     claude.xAxis = rollingFixed.xAxis;
                     claude.yAxis = rollingFixed.yAxis;
                     claude.title = rollingFixed.title;
+                    claude.colors = rollingFixed.colors;
                     claude.yAxisLabel = rollingFixed.yAxisLabel;
+                    claude.xAxisLabel = rollingFixed.xAxisLabel;
+                    claude.annotations = rollingFixed.annotations;
                     console.log(`[sparse-monthly] Rolling 12-month retry succeeded, ${rows.length} rows`);
                   } catch (e) {
                     console.log(`[sparse-monthly] Rolling retry SQL failed:`, e);
