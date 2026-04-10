@@ -546,6 +546,25 @@ console.log("\n═══ Guardrail edge cases ═══\n");
     !matchAgenciesNoYear("SELECT * FROM summary_victim_state_monthly WHERE state = 'TX'"));
 }
 
+// --- historical-state-agency-listing: catches un-chartable agency dumps ---
+{
+  const matchAgencyListing = (sql) => {
+    const usesAgencyTable = /\bhistorical_agency_crime\b/i.test(sql);
+    const hasStateFilter = /\bha\.state\s*=\s*'[a-z]{2}'/i.test(sql);
+    const selectsAgency = /SELECT[\s\S]*?\b(?:ha\.)?agency\b[\s\S]*?FROM/i.test(sql);
+    const isRanking = /ORDER\s+BY\s+(?:total|sum|count|murder|robbery|assault|burglary|theft|rape|violent|property)\b/i.test(sql) ||
+      /ORDER\s+BY\s+\w+\s+DESC/i.test(sql);
+    return usesAgencyTable && hasStateFilter && selectsAgency && !isRanking;
+  };
+
+  assert("hist-agency-listing: all CA agencies fires",
+    matchAgencyListing("SELECT ha.agency, hac.year, hac.robbery FROM historical_agency_crime hac JOIN historical_agency ha ON ha.ori = hac.ori WHERE ha.state = 'ca' ORDER BY ha.agency, hac.year LIMIT 1000"));
+  assert("hist-agency-listing: ranking by metric DESC = no fire",
+    !matchAgencyListing("SELECT ha.agency, SUM(hac.murder) as total FROM historical_agency_crime hac JOIN historical_agency ha ON ha.ori = hac.ori WHERE ha.state = 'ca' GROUP BY ha.agency ORDER BY total DESC LIMIT 10"));
+  assert("hist-agency-listing: specific agency = no fire",
+    !matchAgencyListing("SELECT ha.agency, hac.year, hac.murder FROM historical_agency_crime hac JOIN historical_agency ha ON ha.ori = hac.ori WHERE ha.agency = 'Houston'"));
+}
+
 // --- nibrs-city-case-sensitivity: auto-uppercases city names ---
 {
   const matchCityCase = (sql) => {

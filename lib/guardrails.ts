@@ -273,6 +273,27 @@ const GUARDRAILS: Guardrail[] = [
       "You aggregated historical_agency_crime by state, which only includes agencies that reported — it dramatically undercounts. Use historical_state_national instead, which has FBI statewide estimates. Column names are compatible: assault, motor_vehicle_theft, murder, rape, robbery, burglary, theft all work in both tables. Use the full state name (e.g., 'North Carolina' not 'nc').",
   },
 
+  // --- Historical: listing every agency in a state (un-chartable) ---
+  {
+    name: "historical-state-agency-listing",
+    tabs: ["historical"],
+    match: (ctx) => {
+      const sql = ctx.sql;
+      // Detects: SELECT agency, year, crime FROM historical_agency_crime
+      // with state filter but ordered by agency (not ranked by metric)
+      // This produces hundreds/thousands of rows that can't be charted
+      const usesAgencyTable = /\bhistorical_agency_crime\b/i.test(sql);
+      const hasStateFilter = /\bha\.state\s*=\s*'[a-z]{2}'/i.test(sql);
+      const selectsAgency = /SELECT[\s\S]*?\b(?:ha\.)?agency\b[\s\S]*?FROM/i.test(sql);
+      // Not a ranking — ordered by agency name, not by a metric DESC
+      const isRanking = /ORDER\s+BY\s+(?:total|sum|count|murder|robbery|assault|burglary|theft|rape|violent|property)\b/i.test(sql) ||
+        /ORDER\s+BY\s+\w+\s+DESC/i.test(sql);
+      return usesAgencyTable && hasStateFilter && selectsAgency && !isRanking;
+    },
+    message: () =>
+      "Your query lists every agency in a state, which produces hundreds or thousands of rows that cannot be charted. Use historical_state_national for the state aggregate instead (e.g., SELECT year, robbery FROM historical_state_national WHERE state = 'California'). Only use the agency table when the user explicitly asks for a ranking (top 10, highest, etc.) or names specific agencies.",
+  },
+
   // --- NIBRS ---
   {
     name: "nibrs-raw-victims",
