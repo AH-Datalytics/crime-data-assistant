@@ -85,32 +85,6 @@ const SAMPLE_QUERIES: Record<TabId, { q: string; why: string }[]> = {
   ],
 };
 
-/* ── pitfalls per tab ───────────────────────────────────────────── */
-const PITFALLS: Record<TabId, string[]> = {
-  current: [
-    "Data is preliminary and collected directly from police departments \u2014 it has not been validated by the FBI and is subject to revision.",
-    "Not every city reports every month. Gaps in reporting can cause misleading dips in charts.",
-    "National figures use a fixed \u201cnational sample\u201d of several hundred agencies. This tracks trends but does not represent a national total.",
-    "A city not appearing in rankings may simply not be in the sample \u2014 it doesn\u2019t mean they have zero crime.",
-    "Crime categories follow the traditional UCR Part I structure (murder, rape, robbery, aggravated assault, burglary, theft, and motor vehicle theft).",
-  ],
-  historical: [
-    "Reporting is voluntary \u2014 not all agencies reported in all years, especially before 1960.",
-    "The FBI changed the definition of rape in 2013 (from \u201cforcible\u201d to a broader definition). Comparing rape rates across that break requires caution.",
-    "These are annual totals. If you need monthly granularity, use Current Trends instead.",
-    "Data reflects only crimes reported to police. Unreported crimes (the \u201cdark figure\u201d) are not captured.",
-    "Some agencies have multiple records (e.g., St. Louis has two ORIs) \u2014 the assistant knows which to use, but double-check unusual results.",
-  ],
-  nibrs: [
-    "NIBRS participation varied wildly by state and year, especially before 2021. An increase in crime counts may reflect more agencies reporting, not more crime.",
-    "Not all agencies report to NIBRS. Totals will be lower than published FBI figures, which include estimates for non-reporting agencies.",
-    "NIBRS classifies robbery as a property crime, not a violent crime. This differs from the traditional UCR violent crime definition.",
-    "The database has total jurisdiction population only \u2014 not population by race, gender, or age. Per-capita rates by demographic group cannot be calculated.",
-    "Queries on raw tables (100M+ rows) can be slow. The assistant uses pre-built summary tables when possible, but very specific queries may take longer.",
-    "2025\u20132026 data is preliminary and will be revised as agencies continue submitting records.",
-  ],
-};
-
 export default function GettingStarted({ onSelectTab }: GettingStartedProps) {
   const showTutorial = true;
 

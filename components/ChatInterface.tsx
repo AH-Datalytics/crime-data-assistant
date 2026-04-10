@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState } from "react";
 import CrimeIndexLogo from "./CrimeIndexLogo";
 import RtciChat from "./RtciChat";
 import NibrsChat from "./NibrsChat";
@@ -28,8 +28,12 @@ interface ChatInterfaceProps {
 export default function ChatInterface({ heroData, heroAgencyCount, heroPopulation, historicalHeroData, historicalMaxYear }: ChatInterfaceProps) {
   const [activeTab, setActiveTab] = useState<TabId | null>(null);
   // Track which tabs have been visited — lazy-mount on first visit, keep mounted after
-  const mountedTabs = useRef(new Set<TabId>());
-  if (activeTab) mountedTabs.current.add(activeTab);
+  const [mountedTabs, setMountedTabs] = useState<Set<TabId>>(new Set());
+
+  const selectTab = (tab: TabId | null) => {
+    if (tab) setMountedTabs((prev) => prev.has(tab) ? prev : new Set(prev).add(tab));
+    setActiveTab(tab);
+  };
 
   return (
     <div className="h-screen flex flex-col bg-[var(--surface)]">
@@ -48,7 +52,7 @@ export default function ChatInterface({ heroData, heroAgencyCount, heroPopulatio
             </a>
             <div className="h-5 w-px bg-[var(--border)] hidden md:block" />
             <button
-              onClick={() => setActiveTab(null)}
+              onClick={() => selectTab(null)}
               className="hidden md:flex items-center gap-2 shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
             >
               <CrimeIndexLogo size={24} />
@@ -63,7 +67,7 @@ export default function ChatInterface({ heroData, heroAgencyCount, heroPopulatio
 
           {/* Center: title */}
           <button
-            onClick={() => setActiveTab(null)}
+            onClick={() => selectTab(null)}
             className="absolute left-1/2 -translate-x-1/2 text-[11px] md:text-[13px] lg:text-base font-bold uppercase text-[var(--foreground)] whitespace-nowrap cursor-pointer hover:opacity-80 transition-opacity"
             style={{ letterSpacing: "2.5px" }}
           >
@@ -72,14 +76,14 @@ export default function ChatInterface({ heroData, heroAgencyCount, heroPopulatio
 
           {/* Right: logo on mobile, tab pills on desktop */}
           <div className="flex items-center gap-3 shrink-0">
-            <button onClick={() => setActiveTab(null)} className="md:hidden flex items-center shrink-0 cursor-pointer">
+            <button onClick={() => selectTab(null)} className="md:hidden flex items-center shrink-0 cursor-pointer">
               <CrimeIndexLogo size={24} />
             </button>
             <div className={`${activeTab === null ? "hidden" : "hidden md:flex"} items-center gap-0 rounded-lg overflow-hidden border border-[var(--border)]`}>
               {TABS.map((tab, i) => (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
+                  onClick={() => selectTab(tab.id)}
                   className={`text-xs lg:text-sm font-medium px-2.5 lg:px-4 py-1.5 transition-colors cursor-pointer whitespace-nowrap ${
                     i > 0 ? "border-l border-[var(--border)]" : ""
                   } ${
@@ -103,7 +107,7 @@ export default function ChatInterface({ heroData, heroAgencyCount, heroPopulatio
             {TABS.map((tab, i) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => selectTab(tab.id)}
                 className={`flex-1 text-xs font-medium py-2.5 transition-colors cursor-pointer ${
                   i > 0 ? "border-l border-[var(--border)]" : ""
                 } ${
@@ -122,11 +126,11 @@ export default function ChatInterface({ heroData, heroAgencyCount, heroPopulatio
 
       {/* Getting Started — shown when no tab is selected */}
       {activeTab === null && (
-        <GettingStarted onSelectTab={(tab) => setActiveTab(tab)} />
+        <GettingStarted onSelectTab={(tab) => selectTab(tab)} />
       )}
 
       {/* Tab content — lazy-mounted on first visit, then kept mounted to preserve state */}
-      {mountedTabs.current.has("current") && (
+      {mountedTabs.has("current") && (
         <RtciChat
           mode="current"
           heroData={heroData}
@@ -135,7 +139,7 @@ export default function ChatInterface({ heroData, heroAgencyCount, heroPopulatio
           visible={activeTab === "current"}
         />
       )}
-      {mountedTabs.current.has("historical") && (
+      {mountedTabs.has("historical") && (
         <RtciChat
           mode="historical"
           historicalHeroData={historicalHeroData}
@@ -143,12 +147,12 @@ export default function ChatInterface({ heroData, heroAgencyCount, heroPopulatio
           visible={activeTab === "historical"}
         />
       )}
-      {mountedTabs.current.has("nibrs") && (
+      {mountedTabs.has("nibrs") && (
         <NibrsChat
           visible={activeTab === "nibrs"}
         />
       )}
-      {mountedTabs.current.has("explainer") && (
+      {mountedTabs.has("explainer") && (
         <ExplainerContent visible={activeTab === "explainer"} />
       )}
       <Tracker activeTab={activeTab} />

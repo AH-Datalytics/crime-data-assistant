@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
     // Step 1: Translate to SQL via Claude (with conversation history for context)
     const history = Array.isArray(body?.history) ? body.history : undefined;
     const claudeStart = Date.now();
-    let claude = await translateToSql(question, history);
+    const claude = await translateToSql(question, history);
     const claudeMs = Date.now() - claudeStart;
     console.log(`[nibrs][timing] Claude API: ${claudeMs}ms`);
 

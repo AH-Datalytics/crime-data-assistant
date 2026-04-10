@@ -1,5 +1,5 @@
 import Database from "better-sqlite3";
-import { execFile } from "child_process";
+import { execFile } from "node:child_process";
 import path from "path";
 import fs from "fs";
 
@@ -44,7 +44,7 @@ export function executeWithTimeout(
       return;
     }
 
-    const child = execFile(
+    execFile(
       process.execPath,
       [WORKER_SCRIPT, DB_PATH, sql],
       { timeout: timeoutMs, maxBuffer: 50 * 1024 * 1024 },
@@ -81,6 +81,7 @@ export function logNibrsQuery(
   response: string | null = null
 ) {
   // Write to shared query_log.db via rtci-db's getWriteDb
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { getWriteDb } = require("@/lib/rtci-db");
   const db = getWriteDb();
   if (db) {

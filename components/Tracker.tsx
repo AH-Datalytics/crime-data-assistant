@@ -69,7 +69,7 @@ export default function Tracker({ activeTab }: TrackerProps) {
       event: "pageview",
       screenWidth: window.innerWidth,
     });
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- mount-only, reads initial activeTab
 
   // Send tab_switch events
   useEffect(() => {

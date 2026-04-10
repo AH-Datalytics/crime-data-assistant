@@ -52,14 +52,6 @@ function formatYearMonth(val: string | number): string {
   return `${MONTH_NAMES[m - 1] || s.slice(4)} ${s.slice(0, 4)}`;
 }
 
-function formatYearMonthTick(val: string | number, index: number): string {
-  const s = String(val);
-  if (!/^\d{6}$/.test(s)) return s;
-  const mm = s.slice(4, 6);
-  if (mm === "01" || index === 0) return s.slice(0, 4);
-  return "";
-}
-
 function formatDateFull(val: string | number): string {
   const s = String(val);
   if (!/^(19|20)\d{6}$/.test(s)) return s;

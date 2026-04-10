@@ -105,7 +105,7 @@ export default function NibrsChat({ visible }: NibrsChatProps) {
         setLoading(false);
       }
     },
-    [input, loading, messages]
+    [loading, messages]
   );
 
   const handleSubmit = useCallback(

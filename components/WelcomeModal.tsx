@@ -1,15 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 const STORAGE_KEY = "cda-welcome-dismissed";
 
 export default function WelcomeModal() {
-  const [show, setShow] = useState(false);
-
-  useEffect(() => {
-    if (!localStorage.getItem(STORAGE_KEY)) setShow(true);
-  }, []);
+  const [show, setShow] = useState(() =>
+    typeof window !== "undefined" ? !localStorage.getItem(STORAGE_KEY) : false
+  );
 
   function dismiss() {
     localStorage.setItem(STORAGE_KEY, "1");
