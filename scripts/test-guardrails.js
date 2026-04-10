@@ -778,6 +778,51 @@ console.log("\n═══ Regex edge cases ═══\n");
 }
 
 // ══════════════════════════════════════════════════════════════════════
+//  6. applyRetryMeta — regression tests
+// ══════════════════════════════════════════════════════════════════════
+
+console.log("\n═══ applyRetryMeta ═══\n");
+
+{
+  // Simulate the helper inline (same logic as lib/types.ts)
+  function applyRetryMeta(target, source) {
+    const KEYS = ["explanation","chartHint","xAxis","yAxis","title","colors","yAxisLabel","xAxisLabel","annotations"];
+    for (const k of KEYS) target[k] = source[k];
+  }
+
+  // All fields copied
+  const target = { explanation: "old", chartHint: "bar", xAxis: "x", yAxis: "y", title: "t" };
+  const source = {
+    explanation: "new", chartHint: "line", xAxis: "year", yAxis: "total", title: "New Title",
+    colors: ["#ff0000"], yAxisLabel: "Rate per 100K", xAxisLabel: "Year", annotations: [{ axis: "x", value: 2020 }]
+  };
+  applyRetryMeta(target, source);
+  assert("applyRetry: explanation copied", target.explanation === "new");
+  assert("applyRetry: chartHint copied", target.chartHint === "line");
+  assert("applyRetry: xAxis copied", target.xAxis === "year");
+  assert("applyRetry: yAxis copied", target.yAxis === "total");
+  assert("applyRetry: title copied", target.title === "New Title");
+  assert("applyRetry: colors copied", JSON.stringify(target.colors) === '["#ff0000"]');
+  assert("applyRetry: yAxisLabel copied", target.yAxisLabel === "Rate per 100K");
+  assert("applyRetry: xAxisLabel copied", target.xAxisLabel === "Year");
+  assert("applyRetry: annotations copied", target.annotations.length === 1);
+
+  // Undefined source fields clear target (no stale data from prior response)
+  const target2 = { explanation: "x", colors: ["#00f"], yAxisLabel: "old", annotations: [{ axis: "y", value: 5 }] };
+  const source2 = { explanation: "y", chartHint: "bar", xAxis: "x", yAxis: "y", title: "T" };
+  applyRetryMeta(target2, source2);
+  assert("applyRetry: missing colors → undefined", target2.colors === undefined);
+  assert("applyRetry: missing yAxisLabel → undefined", target2.yAxisLabel === undefined);
+  assert("applyRetry: missing annotations → undefined", target2.annotations === undefined);
+
+  // Non-meta fields on target preserved
+  const target3 = { sql: "SELECT 1", explanation: "old", customField: 42 };
+  applyRetryMeta(target3, { explanation: "new", chartHint: "line", xAxis: "x", yAxis: "y", title: "T" });
+  assert("applyRetry: sql preserved", target3.sql === "SELECT 1");
+  assert("applyRetry: customField preserved", target3.customField === 42);
+}
+
+// ══════════════════════════════════════════════════════════════════════
 //  Summary
 // ══════════════════════════════════════════════════════════════════════
 

@@ -25,12 +25,24 @@ const QUERIES = [
   { tab: "historical", q: "Compare murder counts in Chicago and Philadelphia 1985 to 2024" },
   { tab: "historical", q: "Robbery in California agencies since 2000" },
 
+  // Guardrail stress tests — Current
+  { tab: "current", q: "Murder trend in California", sqlCheck: (sql) => /agency_monthly/i.test(sql) && /national_sample\s*=\s*1/i.test(sql), sqlDesc: "uses agency_monthly + national_sample=1" },
+  { tab: "current", q: "Murder in Baltimore since 2020", sqlCheck: (sql) => /type\s*=/i.test(sql) || !sql, sqlDesc: "has type filter or asks for clarification" },
+
+  // Guardrail stress tests — Historical
+  { tab: "historical", q: "Assault in North Carolina", sqlCheck: (sql) => /historical_state_national/i.test(sql), sqlDesc: "uses historical_state_national (not agency table)" },
+  { tab: "historical", q: "Top 10 California agencies by murder 2020", sqlCheck: (sql) => /type\s*=/i.test(sql), sqlDesc: "has type filter for ranking" },
+
   // NIBRS tab
   { tab: "nibrs", q: "Annual murders in the US" },
   { tab: "nibrs", q: "Aggravated assault victims by weapon type in Texas 2022-2024" },
   { tab: "nibrs", q: "Vehicle burglary trend in New York City since 2020" },
   { tab: "nibrs", q: "Carjacking victims by state in 2024" },
   { tab: "nibrs", q: "Drug offenses involving methamphetamine nationally 2022-2024" },
+
+  // Guardrail stress tests — NIBRS
+  { tab: "nibrs", q: "Murders by state 2024", sqlCheck: (sql) => /summary_victim/i.test(sql), sqlDesc: "uses victim table for person crime" },
+  { tab: "nibrs", q: "Auto theft in Texas 2024", sqlCheck: (sql) => sql.includes("'240'"), sqlDesc: "uses offense code 240" },
 ];
 
 // ── Grading rules ─────────────────────────────────────────────────────
@@ -215,10 +227,11 @@ async function main() {
         console.log(`  WARNING: 0 rows returned\n`);
       }
 
-      // Determine scope for grading context: city if question mentions a specific city
+      // Determine scope for grading context
       const looksLikeCity = /\bin\s+(?:New York|Los Angeles|Chicago|Houston|Dallas|Charlotte|Nashville|Memphis|Baltimore|Philadelphia|San Francisco|Las Vegas)/i.test(q) ||
-        /\b(compare|vs)\b/i.test(q) && /\b[A-Z][a-z]+\b/.test(q);
-      const scope = looksLikeCity ? "city" : "national";
+        (/\b(compare|vs)\b/i.test(q) && /\bin\s+[A-Z][a-z]+\s+and\s+/i.test(q));
+      const looksLikeState = /\bin\s+(?:Alabama|Alaska|Arizona|Arkansas|California|Colorado|Connecticut|Delaware|Florida|Georgia|Hawaii|Idaho|Illinois|Indiana|Iowa|Kansas|Kentucky|Louisiana|Maine|Maryland|Massachusetts|Michigan|Minnesota|Mississippi|Missouri|Montana|Nebraska|Nevada|New Hampshire|New Jersey|New Mexico|North Carolina|North Dakota|Ohio|Oklahoma|Oregon|Pennsylvania|Rhode Island|South Carolina|South Dakota|Tennessee|Texas|Utah|Vermont|Virginia|Washington|West Virginia|Wisconsin|Wyoming)\b/i.test(q);
+      const scope = looksLikeCity ? "city" : looksLikeState ? "state" : "national";
       const grades = gradeExplanation(result.explanation, { tab, scope });
       const passed = grades.filter((g) => g.pass).length;
       const failed = grades.filter((g) => !g.pass);
@@ -233,6 +246,20 @@ async function main() {
         }
       }
 
+      // SQL-level guardrail checks
+      const sqlCheck = QUERIES[i].sqlCheck;
+      if (sqlCheck) {
+        const sqlPass = sqlCheck(result.sql);
+        if (sqlPass) {
+          console.log(`  SQL CHECK: PASS — ${QUERIES[i].sqlDesc}`);
+          totalPass++;
+        } else {
+          console.log(`  SQL CHECK: FAIL — expected ${QUERIES[i].sqlDesc}`);
+          console.log(`  SQL: ${(result.sql || "null").substring(0, 200)}`);
+        }
+        totalChecks++;
+      }
+
       // Show first 200 chars of explanation
       const preview = result.explanation.replace(/\n/g, " ").slice(0, 200);
       console.log(`  Explanation: "${preview}${result.explanation.length > 200 ? "..." : ""}"`);
@@ -245,6 +272,7 @@ async function main() {
         explanation: result.explanation,
         grades,
         sql: result.sql,
+        sqlCheckPass: sqlCheck ? sqlCheck(result.sql) : null,
       });
     } catch (err) {
       console.log(`  EXCEPTION: ${err.message}\n`);
@@ -285,8 +313,16 @@ async function main() {
     }
   }
 
+  const sqlCheckFailures = results.filter((r) => r.sqlCheckPass === false);
+  if (sqlCheckFailures.length > 0) {
+    console.log(`\nSQL check failures:`);
+    for (const r of sqlCheckFailures) {
+      console.log(`  [${r.tab}] "${r.question}"`);
+    }
+  }
+
   // Exit code based on results
-  const hasFailures = errors.length > 0 || zeroRows.length > 0 || failedRules.length > 0;
+  const hasFailures = errors.length > 0 || zeroRows.length > 0 || failedRules.length > 0 || sqlCheckFailures.length > 0;
   process.exit(hasFailures ? 1 : 0);
 }
 
