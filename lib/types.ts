@@ -56,6 +56,22 @@ export interface ChartMeta {
   source?: string;
 }
 
+/**
+ * Copy all chart/presentation metadata from a retry response onto the
+ * working Claude response object.  Centralised here so every retry path
+ * stays in sync — adding a new field to ClaudeResponse only needs one edit.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function applyRetryMeta(target: any, source: any): void {
+  const KEYS = [
+    "explanation", "chartHint", "xAxis", "yAxis", "title",
+    "colors", "yAxisLabel", "xAxisLabel", "annotations",
+  ];
+  for (const k of KEYS) {
+    target[k] = source[k];
+  }
+}
+
 // SSE stream event types
 export type StreamEvent =
   | { type: "status"; text: string }

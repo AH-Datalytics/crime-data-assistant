@@ -8,6 +8,7 @@ import { RTCI } from "@/lib/dynamic-facts";
 import { generateExplanation } from "@/lib/explain";
 import { extractQueryContext } from "@/lib/query-context";
 import { runGuardrails } from "@/lib/guardrails";
+import { applyRetryMeta } from "@/lib/types";
 import type { StreamEvent, ChartMeta } from "@/lib/types";
 
 function sseEvent(event: StreamEvent): string {
@@ -359,15 +360,7 @@ export async function POST(req: NextRequest) {
           const fixed = await translateToSql(fixPrompt, fixHistory, systemPrompt);
           if (fixed.sql) {
             claude.sql = fixed.sql;
-            claude.explanation = fixed.explanation;
-            claude.chartHint = fixed.chartHint;
-            claude.xAxis = fixed.xAxis;
-            claude.yAxis = fixed.yAxis;
-            claude.title = fixed.title;
-            claude.colors = fixed.colors;
-            claude.yAxisLabel = fixed.yAxisLabel;
-            claude.xAxisLabel = fixed.xAxisLabel;
-            claude.annotations = fixed.annotations;
+            applyRetryMeta(claude, fixed);
           }
         }
 
@@ -455,15 +448,7 @@ export async function POST(req: NextRequest) {
                 columns = retryStmt.columns().map((c) => c.name);
                 rows = retryResult;
                 sql = retryValidation.sanitized!;
-                claude.explanation = retry.explanation;
-                claude.chartHint = retry.chartHint;
-                claude.xAxis = retry.xAxis;
-                claude.yAxis = retry.yAxis;
-                claude.title = retry.title;
-                claude.colors = retry.colors;
-                claude.yAxisLabel = retry.yAxisLabel;
-                claude.xAxisLabel = retry.xAxisLabel;
-                claude.annotations = retry.annotations;
+                applyRetryMeta(claude, retry);
               } catch (retryErr) {
                 const retryMsg =
                   retryErr instanceof Error
@@ -705,15 +690,7 @@ export async function POST(req: NextRequest) {
                     rows = result2;
                     columns = stmt2.columns().map(c => c.name);
                     sql = rv.sanitized!;
-                    claude.explanation = rollingFixed.explanation;
-                    claude.chartHint = rollingFixed.chartHint;
-                    claude.xAxis = rollingFixed.xAxis;
-                    claude.yAxis = rollingFixed.yAxis;
-                    claude.title = rollingFixed.title;
-                    claude.colors = rollingFixed.colors;
-                    claude.yAxisLabel = rollingFixed.yAxisLabel;
-                    claude.xAxisLabel = rollingFixed.xAxisLabel;
-                    claude.annotations = rollingFixed.annotations;
+                    applyRetryMeta(claude, rollingFixed);
                     console.log(`[sparse-monthly] Rolling 12-month retry succeeded, ${rows.length} rows`);
                   } catch (e) {
                     console.log(`[sparse-monthly] Rolling retry SQL failed:`, e);

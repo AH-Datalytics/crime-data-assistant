@@ -6,6 +6,7 @@ import { buildNibrsChartConfig } from "@/lib/nibrs-chart-config";
 import { generateExplanation } from "@/lib/explain";
 import { extractQueryContext } from "@/lib/query-context";
 import { runGuardrails } from "@/lib/guardrails";
+import { applyRetryMeta } from "@/lib/types";
 import type { QueryResponse, QueryError } from "@/lib/types";
 
 const CORS_HEADERS = {
@@ -107,15 +108,7 @@ export async function POST(req: NextRequest) {
         const retryValidation = validateAndSanitize(retryResult.sql);
         if (retryValidation.valid) {
           sql = retryValidation.sanitized!;
-          claude.explanation = retryResult.explanation;
-          claude.chartHint = retryResult.chartHint;
-          claude.xAxis = retryResult.xAxis;
-          claude.yAxis = retryResult.yAxis;
-          claude.title = retryResult.title;
-          claude.colors = retryResult.colors;
-          claude.yAxisLabel = retryResult.yAxisLabel;
-          claude.xAxisLabel = retryResult.xAxisLabel;
-          claude.annotations = retryResult.annotations;
+          applyRetryMeta(claude, retryResult);
           console.log(`[nibrs][guardrail-retry] Succeeded`);
         }
       }
@@ -159,15 +152,7 @@ export async function POST(req: NextRequest) {
             rows = retryResult.rows;
             columns = retryResult.columns;
             sql = retryValidation.sanitized!;
-            claude.explanation = retry.explanation;
-            claude.chartHint = retry.chartHint;
-            claude.xAxis = retry.xAxis;
-            claude.yAxis = retry.yAxis;
-            claude.title = retry.title;
-            claude.colors = retry.colors;
-            claude.yAxisLabel = retry.yAxisLabel;
-            claude.xAxisLabel = retry.xAxisLabel;
-            claude.annotations = retry.annotations;
+            applyRetryMeta(claude, retry);
             console.log(`[nibrs][error-recovery] Retry succeeded`);
           } catch (retryErr) {
             const retryMsg = retryErr instanceof Error ? retryErr.message : String(retryErr);
