@@ -489,6 +489,69 @@ console.log("\n═══ Guardrail edge cases ═══\n");
     matchPropertyVictim("SELECT * FROM summary_victim_state_monthly WHERE ucr_offense_code = '26A'"));
 }
 
+// --- nibrs-national-as-agency: catches state='US' for national queries ---
+{
+  const matchNational = (sql) => {
+    return /\b(city|agency_name)\s*=\s*'(USA|United States|US|National)'/i.test(sql) ||
+      /agencies\s+WHERE.*'(USA|United States|UNITED STATES|National|NATIONAL)'/i.test(sql) ||
+      /\bstate\s*=\s*'(US|USA)'/i.test(sql);
+  };
+
+  assert("nibrs-national: state='US' fires",
+    matchNational("SELECT year, SUM(victim_count) FROM summary_victim_state_monthly WHERE ucr_offense_code = '09A' AND state = 'US' GROUP BY year"));
+  assert("nibrs-national: state='USA' fires",
+    matchNational("SELECT year, SUM(offense_count) FROM summary_state_monthly WHERE state = 'USA' GROUP BY year"));
+  assert("nibrs-national: city='United States' fires",
+    matchNational("SELECT * FROM agencies WHERE city = 'United States'"));
+  assert("nibrs-national: state='TX' = no fire",
+    !matchNational("SELECT year, SUM(victim_count) FROM summary_victim_state_monthly WHERE state = 'TX' GROUP BY year"));
+  assert("nibrs-national: no state filter = no fire",
+    !matchNational("SELECT year, SUM(victim_count) FROM summary_victim_state_monthly WHERE ucr_offense_code = '09A' GROUP BY year"));
+}
+
+// --- nibrs-carjacking: must use summary_carjacking_monthly ---
+{
+  const matchCarjack = (q, sql) => {
+    if (!/\bcarjack/i.test(q)) return false;
+    return !/summary_carjacking_monthly/i.test(sql);
+  };
+
+  assert("nibrs-carjack: carjacking with code 120 fires",
+    matchCarjack("Carjacking victims by state", "SELECT * FROM summary_victim_city_monthly WHERE ucr_offense_code = '120'"));
+  assert("nibrs-carjack: carjacking with code 240 fires",
+    matchCarjack("carjacking trend", "SELECT * FROM summary_city_monthly WHERE ucr_offense_code = '240'"));
+  assert("nibrs-carjack: carjacking with correct table = no fire",
+    !matchCarjack("carjacking by state 2024", "SELECT state, SUM(offense_count) FROM summary_carjacking_monthly GROUP BY state"));
+  assert("nibrs-carjack: non-carjacking question = no fire",
+    !matchCarjack("robbery trend in Texas", "SELECT * FROM summary_victim_state_monthly WHERE ucr_offense_code = '120'"));
+}
+
+// --- nibrs-raw-table-for-counts: catches aggregate queries on raw tables ---
+{
+  const matchRawCount = (sql) => {
+    const RAW_TABLES = ["offenses", "property", "arrestees", "offense_weapons"];
+    const usesRawTable = RAW_TABLES.some(t =>
+      new RegExp(`\\bFROM\\s+${t}\\b`, "i").test(sql) ||
+      new RegExp(`\\bJOIN\\s+${t}\\b`, "i").test(sql)
+    );
+    if (!usesRawTable) return false;
+    return /\bCOUNT\s*\(|\bSUM\s*\(|\bGROUP\s+BY\b/i.test(sql);
+  };
+
+  assert("nibrs-raw-count: COUNT on property table fires",
+    matchRawCount("SELECT year, COUNT(*) FROM property WHERE property_description = '19' GROUP BY year"));
+  assert("nibrs-raw-count: SUM on offenses table fires",
+    matchRawCount("SELECT SUM(1) FROM offenses WHERE ucr_offense_code = '23F'"));
+  assert("nibrs-raw-count: GROUP BY on arrestees fires",
+    matchRawCount("SELECT sex, COUNT(*) FROM arrestees GROUP BY sex"));
+  assert("nibrs-raw-count: JOIN property with GROUP BY fires",
+    matchRawCount("SELECT year, COUNT(*) FROM offenses o JOIN property p ON p.ori = o.ori GROUP BY year"));
+  assert("nibrs-raw-count: SELECT * on property (detail query) = no fire",
+    !matchRawCount("SELECT * FROM property WHERE ori = 'CA0190100' AND year = 2024 LIMIT 10"));
+  assert("nibrs-raw-count: summary table = no fire",
+    !matchRawCount("SELECT year, SUM(offense_count) FROM summary_city_monthly GROUP BY year"));
+}
+
 // --- historical-state-via-agency: fires for aggregated agency queries ---
 {
   const matchHistState = (sql) => {

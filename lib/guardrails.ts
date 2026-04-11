@@ -311,6 +311,24 @@ const GUARDRAILS: Guardrail[] = [
       "[SYSTEM: You MUST use summary_victim_state_monthly or summary_victim_city_monthly for this query. Do NOT use the raw victims table.]",
   },
   {
+    name: "nibrs-raw-table-for-counts",
+    tabs: ["nibrs"],
+    match: (ctx) => {
+      const sql = ctx.sql;
+      // Detect raw tables used for aggregate counts/sums/trends
+      const RAW_TABLES = ["offenses", "property", "arrestees", "offense_weapons"];
+      const usesRawTable = RAW_TABLES.some(t =>
+        new RegExp(`\\bFROM\\s+${t}\\b`, "i").test(sql) ||
+        new RegExp(`\\bJOIN\\s+${t}\\b`, "i").test(sql)
+      );
+      if (!usesRawTable) return false;
+      // Only fire if it's an aggregate query (COUNT/SUM/GROUP BY) — detail queries on raw tables are OK
+      return /\bCOUNT\s*\(|\bSUM\s*\(|\bGROUP\s+BY\b/i.test(sql);
+    },
+    message: () =>
+      "[SYSTEM: Do NOT query raw tables (offenses, property, arrestees) for counts, sums, or trends — they have 100M+ rows and will time out. Use the appropriate summary table instead: summary_city_monthly or summary_state_monthly for offense counts, summary_victim_city_monthly or summary_victim_state_monthly for person crime victim counts, summary_drug_monthly for drug offenses, summary_carjacking_monthly for carjackings, summary_property_offense for property loss data, summary_arrestee_demographics for arrestee data, summary_offender_demographics for offender data, summary_offense_weapon for weapon data.]",
+  },
+  {
     name: "nibrs-person-crime-offense-table",
     tabs: ["nibrs"],
     match: (ctx) => {
@@ -379,10 +397,11 @@ const GUARDRAILS: Guardrail[] = [
     tabs: ["nibrs"],
     match: (ctx) => {
       return /\b(city|agency_name)\s*=\s*'(USA|United States|US|National)'/i.test(ctx.sql) ||
-        /agencies\s+WHERE.*'(USA|United States|UNITED STATES|National|NATIONAL)'/i.test(ctx.sql);
+        /agencies\s+WHERE.*'(USA|United States|UNITED STATES|National|NATIONAL)'/i.test(ctx.sql) ||
+        /\bstate\s*=\s*'(US|USA)'/i.test(ctx.sql);
     },
     message: () =>
-      "[SYSTEM: Do NOT look up 'USA' or 'United States' as a city or agency. For national totals, SUM across all states from the state-level summary table (summary_victim_state_monthly for person crimes, summary_state_monthly for property/society crimes). Do not filter by ori or city for national data.]",
+      "[SYSTEM: Do NOT look up 'USA', 'United States', or state='US' as a filter. There is no state code 'US'. For national totals, SUM across all states from the state-level summary table (summary_victim_state_monthly for person crimes, summary_state_monthly for property/society crimes) WITHOUT any state filter. Do not filter by ori, city, or state for national data.]",
   },
   {
     name: "nibrs-agencies-join-no-year",
@@ -437,8 +456,8 @@ const GUARDRAILS: Guardrail[] = [
         if (uniqueCodes.length === 0 && !/23/i.test(sql)) return false; // no theft codes at all (different issue)
       }
 
-      // "carjacking" should use summary_carjacking_monthly, NOT offense code 240
-      if (/\bcarjack/i.test(q) && sql.includes("'240'")) return true;
+      // "carjacking" should use summary_carjacking_monthly — any other table/code is wrong
+      if (/\bcarjack/i.test(q) && !/summary_carjacking_monthly/i.test(sql)) return true;
 
       // "auto theft" / "motor vehicle theft" should be 240, NOT 23F
       if (/\b(auto|motor vehicle|car)\s*theft\b/i.test(q) && sql.includes("'23F'") && !sql.includes("'240'")) return true;
