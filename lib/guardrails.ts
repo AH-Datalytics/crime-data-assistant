@@ -326,6 +326,29 @@ const GUARDRAILS: Guardrail[] = [
       "[SYSTEM: Person crimes (murder, rape, assault, kidnapping, sex offenses, carjacking) must be counted from VICTIM summary tables, not offense summary tables. Use summary_victim_state_monthly or summary_victim_city_monthly instead of summary_state_monthly or summary_city_monthly. Offense tables undercount person crimes by ~20%.]",
   },
   {
+    name: "nibrs-property-crime-victim-table",
+    tabs: ["nibrs"],
+    match: (ctx) => {
+      // Property crime codes that must NOT use victim tables
+      const PROPERTY_CODES = [
+        "23A","23B","23C","23D","23E","23F","23G","23H",  // theft subcodes
+        "220",                                             // burglary
+        "240",                                             // motor vehicle theft
+        "250",                                             // counterfeiting/forgery
+        "26A","26B","26C","26D","26E",                     // fraud
+        "270",                                             // embezzlement
+        "280",                                             // stolen property
+        "290",                                             // destruction/vandalism
+      ];
+      const sql = ctx.sql;
+      const usesVictimTable = /\bsummary_victim_(?:city|state)_monthly\b/i.test(sql);
+      if (!usesVictimTable) return false;
+      return PROPERTY_CODES.some(code => sql.includes(`'${code}'`));
+    },
+    message: () =>
+      "[SYSTEM: Property crimes (theft, burglary, motor vehicle theft, fraud, vandalism, etc.) must use offense summary tables, NOT victim summary tables. Use summary_state_monthly or summary_city_monthly instead of summary_victim_state_monthly or summary_victim_city_monthly. Victim tables only contain person crimes and will return 0 rows for property offenses.]",
+  },
+  {
     name: "nibrs-cross-level-join",
     tabs: ["nibrs"],
     match: (ctx) => {

@@ -466,6 +466,29 @@ console.log("\n═══ Guardrail edge cases ═══\n");
     matchPersonOffense("SELECT * FROM summary_city_monthly WHERE offense_code = '64A'"));
 }
 
+// --- nibrs-property-crime-victim-table: fires for property crimes on victim tables ---
+{
+  const PROPERTY_CODES = ["23A","23B","23C","23D","23E","23F","23G","23H","220","240","250","26A","26B","26C","26D","26E","270","280","290"];
+  const matchPropertyVictim = (sql) => {
+    const usesVictimTable = /\bsummary_victim_(?:city|state)_monthly\b/i.test(sql);
+    if (!usesVictimTable) return false;
+    return PROPERTY_CODES.some(code => sql.includes(`'${code}'`));
+  };
+
+  assert("nibrs-property-victim: theft 23F on summary_victim_city_monthly fires",
+    matchPropertyVictim("SELECT * FROM summary_victim_city_monthly WHERE ucr_offense_code = '23F'"));
+  assert("nibrs-property-victim: burglary 220 on summary_victim_state_monthly fires",
+    matchPropertyVictim("SELECT * FROM summary_victim_state_monthly WHERE ucr_offense_code = '220'"));
+  assert("nibrs-property-victim: MVT 240 on summary_victim_city_monthly fires",
+    matchPropertyVictim("SELECT * FROM summary_victim_city_monthly WHERE ucr_offense_code = '240'"));
+  assert("nibrs-property-victim: theft 23F on summary_city_monthly = no fire (correct table)",
+    !matchPropertyVictim("SELECT * FROM summary_city_monthly WHERE ucr_offense_code = '23F'"));
+  assert("nibrs-property-victim: person crime 09A on summary_victim_city_monthly = no fire",
+    !matchPropertyVictim("SELECT * FROM summary_victim_city_monthly WHERE ucr_offense_code = '09A'"));
+  assert("nibrs-property-victim: fraud 26A on victim table fires",
+    matchPropertyVictim("SELECT * FROM summary_victim_state_monthly WHERE ucr_offense_code = '26A'"));
+}
+
 // --- historical-state-via-agency: fires for aggregated agency queries ---
 {
   const matchHistState = (sql) => {
