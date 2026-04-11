@@ -7,6 +7,7 @@ import { generateExplanation } from "@/lib/explain";
 import { extractQueryContext } from "@/lib/query-context";
 import { runGuardrails } from "@/lib/guardrails";
 import { applyRetryMeta } from "@/lib/types";
+import { checkRateLimit } from "@/lib/rate-limit";
 import type { QueryResponse, QueryError } from "@/lib/types";
 
 const CORS_HEADERS = {
@@ -24,6 +25,20 @@ function jsonResp(data: unknown, status = 200) {
 }
 
 export async function POST(req: NextRequest) {
+  // Rate limiting
+  const ip =
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    req.headers.get("x-real-ip") ||
+    "unknown";
+  const rateCheck = checkRateLimit(ip);
+  if (!rateCheck.allowed) {
+    const retryAfter = Math.ceil((rateCheck.retryAfterMs || 60000) / 1000);
+    return jsonResp(
+      { success: false, error: `Too many requests. Please wait ${retryAfter} seconds and try again.` } as QueryError,
+      429
+    );
+  }
+
   try {
     const body = await req.json();
     const question = body?.question?.trim();

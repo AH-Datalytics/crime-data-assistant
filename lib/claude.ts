@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { RTCI, HISTORICAL, NIBRS } from "./dynamic-facts";
+import { validateClaudeResponse } from "./claude-schema";
 
 const client = new Anthropic();
 
@@ -475,26 +476,46 @@ export async function translateToSql(
 
   // Try to extract JSON from the response — handle markdown fences, leading text, etc.
   let parsed: ClaudeResponse | null = null;
+  let raw: unknown = null;
 
   // 1. Try parsing the raw text directly
   try {
-    parsed = JSON.parse(text.trim());
+    raw = JSON.parse(text.trim());
   } catch {
     // 2. Try extracting from markdown code fences
     const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
     if (fenceMatch) {
       try {
-        parsed = JSON.parse(fenceMatch[1].trim());
+        raw = JSON.parse(fenceMatch[1].trim());
       } catch { /* continue */ }
     }
     // 3. Try finding a JSON object anywhere in the text
-    if (!parsed) {
+    if (!raw) {
       const braceMatch = text.match(/\{[\s\S]*\}/);
       if (braceMatch) {
         try {
-          parsed = JSON.parse(braceMatch[0]);
+          raw = JSON.parse(braceMatch[0]);
         } catch { /* continue */ }
       }
+    }
+  }
+
+  // Validate with zod schema
+  if (raw && typeof raw === "object" && "sql" in (raw as Record<string, unknown>)) {
+    const validated = validateClaudeResponse(raw);
+    if (validated) {
+      parsed = validated as ClaudeResponse;
+    } else {
+      // Schema validation failed but we have a SQL field — use raw with defaults
+      const r = raw as Record<string, unknown>;
+      parsed = {
+        sql: typeof r.sql === "string" ? r.sql.slice(0, 4000) : null,
+        explanation: typeof r.explanation === "string" ? r.explanation.slice(0, 4000) : "",
+        chartHint: "none",
+        xAxis: "",
+        yAxis: "",
+        title: "",
+      };
     }
   }
 

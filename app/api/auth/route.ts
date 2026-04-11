@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import crypto from "crypto";
+import { checkAuthRateLimit } from "@/lib/rate-limit";
 
 const AUTH_PASSWORD = process.env.AUTH_PASSWORD || "";
 const TOKEN_SECRET = process.env.AUTH_PASSWORD || "nibrs-dev-secret";
@@ -13,6 +14,20 @@ function makeToken(): string {
 }
 
 export async function POST(req: NextRequest) {
+  // Rate limit auth attempts
+  const ip =
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    req.headers.get("x-real-ip") ||
+    "unknown";
+  const rateCheck = checkAuthRateLimit(ip);
+  if (!rateCheck.allowed) {
+    const retryAfter = Math.ceil((rateCheck.retryAfterMs || 60000) / 1000);
+    return NextResponse.json(
+      { success: false, error: `Too many attempts. Please wait ${retryAfter} seconds.` },
+      { status: 429, headers: { "Retry-After": String(retryAfter) } }
+    );
+  }
+
   const body = await req.json();
   const password = body?.password?.trim();
 

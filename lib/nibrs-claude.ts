@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { getNibrsDb } from "./nibrs-db";
 import { NIBRS, RTCI, formatRowCount } from "./dynamic-facts";
+import { validateClaudeResponse } from "./claude-schema";
 
 const client = new Anthropic();
 
@@ -1255,36 +1256,53 @@ export async function translateToSql(
     .replace(/\s*```$/i, "")
     .trim();
 
+  let raw: unknown = null;
   try {
-    return JSON.parse(cleaned) as ClaudeResponse;
+    raw = JSON.parse(cleaned);
   } catch {
     // Try extracting JSON from within the text
     const braceMatch = cleaned.match(/\{[\s\S]*\}/);
     if (braceMatch) {
       try {
-        return JSON.parse(braceMatch[0]) as ClaudeResponse;
+        raw = JSON.parse(braceMatch[0]);
       } catch { /* continue */ }
     }
+  }
 
-    // If Claude returned plain text (e.g. a clarification question), show it
-    if (cleaned.length > 10 && !cleaned.startsWith("{")) {
-      return {
-        sql: null,
-        explanation: cleaned,
-        chartHint: "none",
-        xAxis: "",
-        yAxis: "",
-        title: "",
-      };
-    }
-
+  // Validate with zod schema
+  if (raw && typeof raw === "object" && "sql" in (raw as Record<string, unknown>)) {
+    const validated = validateClaudeResponse(raw);
+    if (validated) return validated as ClaudeResponse;
+    // Schema validation failed but we have a SQL field — use raw with defaults
+    const r = raw as Record<string, unknown>;
     return {
-      sql: null,
-      explanation: "Sorry, I wasn't able to process that request. Try rephrasing your question or asking something more specific.",
+      sql: typeof r.sql === "string" ? r.sql.slice(0, 4000) : null,
+      explanation: typeof r.explanation === "string" ? r.explanation.slice(0, 4000) : "",
       chartHint: "none",
       xAxis: "",
       yAxis: "",
       title: "",
     };
   }
+
+  // If Claude returned plain text (e.g. a clarification question), show it
+  if (cleaned.length > 10 && !cleaned.startsWith("{")) {
+    return {
+      sql: null,
+      explanation: cleaned,
+      chartHint: "none",
+      xAxis: "",
+      yAxis: "",
+      title: "",
+    };
+  }
+
+  return {
+    sql: null,
+    explanation: "Sorry, I wasn't able to process that request. Try rephrasing your question or asking something more specific.",
+    chartHint: "none",
+    xAxis: "",
+    yAxis: "",
+    title: "",
+  };
 }

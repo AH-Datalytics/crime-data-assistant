@@ -16,11 +16,12 @@ export function OPTIONS() {
 export async function GET(req: NextRequest) {
   const url = new URL(req.url);
 
+  // Require explicit QUERY_LOG_KEY env var — no default fallback
   const key = url.searchParams.get("key") || "";
   if (!LOG_KEY || key !== LOG_KEY) {
     return NextResponse.json(
       { error: "Unauthorized" },
-      { status: 401, headers: { "Access-Control-Allow-Origin": "*" } }
+      { status: 401, headers: CORS_HEADERS }
     );
   }
 
@@ -32,7 +33,7 @@ export async function GET(req: NextRequest) {
   if (!db) {
     return NextResponse.json(
       { rows: [], stats: { total: 0, ok: 0, errors: 0, avgMs: null, recentAvgMs: null, recentMedianMs: null } },
-      { headers: { "Access-Control-Allow-Origin": "*" } }
+      { headers: CORS_HEADERS }
     );
   }
 
@@ -86,19 +87,16 @@ export async function GET(req: NextRequest) {
     )
     .all();
 
-  return NextResponse.json(
-    {
-      rows,
-      stats: {
-        total: statsRow.total,
-        ok: statsRow.ok,
-        errors: statsRow.errors,
-        avgMs: statsRow.avg_ms ? Math.round(statsRow.avg_ms) : null,
-        recentAvgMs,
-        recentMedianMs,
-        tabBreakdown: tabStats,
-      },
+  return NextResponse.json({
+    rows,
+    stats: {
+      total: statsRow.total,
+      ok: statsRow.ok,
+      errors: statsRow.errors,
+      avgMs: statsRow.avg_ms ? Math.round(statsRow.avg_ms) : null,
+      recentAvgMs,
+      recentMedianMs,
+      tabBreakdown: tabStats,
     },
-    { headers: { "Access-Control-Allow-Origin": "*" } }
-  );
+  }, { headers: CORS_HEADERS });
 }
