@@ -171,7 +171,7 @@ export async function POST(req: NextRequest) {
             console.log(`[nibrs][error-recovery] Retry succeeded`);
           } catch (retryErr) {
             const retryMsg = retryErr instanceof Error ? retryErr.message : String(retryErr);
-            logNibrsQuery(question, sql, 0, `DB retry failed: ${retryMsg}`, Date.now() - claudeStart);
+            logNibrsQuery(question, sql, 0, `DB retry failed: ${retryMsg}`, Date.now() - claudeStart, null, guardrailResult.fired);
             const userError = isTimeout
               ? `This query is too complex for the database. Try narrowing your request — for example, ask about a specific city, state, or shorter time range instead of a broad national query.`
               : msg.includes("no such column") || msg.includes("ambiguous")
@@ -183,14 +183,14 @@ export async function POST(req: NextRequest) {
             );
           }
         } else {
-          logNibrsQuery(question, sql, 0, `DB: ${msg} (retry validation failed)`, Date.now() - claudeStart);
+          logNibrsQuery(question, sql, 0, `DB: ${msg} (retry validation failed)`, Date.now() - claudeStart, null, guardrailResult.fired);
           return jsonResp(
             { success: false, error: `I had trouble with that query. Try rephrasing your question.`, sql } as QueryError,
             500
           );
         }
       } else {
-        logNibrsQuery(question, sql, 0, `DB: ${msg}`, Date.now() - claudeStart);
+        logNibrsQuery(question, sql, 0, `DB: ${msg}`, Date.now() - claudeStart, null, guardrailResult.fired);
         return jsonResp(
           { success: false, error: isTimeout ? `This query is too complex for the database. Try asking about a specific city, state, or shorter time range.` : `Database error: ${msg}`, sql } as QueryError,
           500
@@ -405,7 +405,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Log success (after CDE check so explanation includes any disclaimers)
-    logNibrsQuery(question, sql, rows.length, null, claudeMs + executionTimeMs + explainMs, explanation);
+    logNibrsQuery(question, sql, rows.length, null, claudeMs + executionTimeMs + explainMs, explanation, guardrailResult.fired);
 
     // Step 5: Build chart config
     const chartConfig = buildNibrsChartConfig(claude, columns, rows);

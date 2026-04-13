@@ -67,13 +67,14 @@ export function logQuery(
   error: string | null,
   ms: number,
   response: string | null = null,
-  tab: string = "current"
+  tab: string = "current",
+  guardrails: string[] = []
 ) {
   const db = getWriteDb();
   if (db) {
     try {
       db.prepare(
-        "INSERT INTO query_log (ts, tab, question, sql, rows, error, ms, response) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+        "INSERT INTO query_log (ts, tab, question, sql, rows, error, ms, response, guardrails) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
       ).run(
         Date.now(),
         tab,
@@ -82,7 +83,8 @@ export function logQuery(
         rowCount,
         error ? error.slice(0, 500) : null,
         ms,
-        response ? response.slice(0, 4000) : null
+        response ? response.slice(0, 4000) : null,
+        guardrails.length > 0 ? guardrails.join(",") : null
       );
     } catch (e) {
       console.warn("Log write failed:", e);

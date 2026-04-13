@@ -165,6 +165,8 @@ function analyze(queries) {
     avgMs: 0,
     medianMs: 0,
     unknownAgencies: [],
+    guardrailFires: {},  // { guardrailName: count }
+    guardrailTotal: 0,   // queries where at least 1 guardrail fired
   };
 
   const msTimes = [];
@@ -297,6 +299,15 @@ function analyze(queries) {
       );
       if (agencyMatch) {
         stats.unknownAgencies.push(agencyMatch[1].trim());
+      }
+    }
+
+    // Guardrail fires
+    if (q.guardrails) {
+      stats.guardrailTotal++;
+      for (const g of q.guardrails.split(",")) {
+        const name = g.trim();
+        if (name) stats.guardrailFires[name] = (stats.guardrailFires[name] || 0) + 1;
       }
     }
   }
@@ -538,6 +549,35 @@ function buildEmail(stats, issues, visitors) {
     <div class="stat-label">SQL Leaks</div>
   </div>
 </div>`;
+
+  // Guardrails section
+  const guardrailEntries = Object.entries(stats.guardrailFires).sort((a, b) => b[1] - a[1]);
+  if (guardrailEntries.length > 0) {
+    const pct = stats.total > 0 ? ((stats.guardrailTotal / stats.total) * 100).toFixed(1) : "0";
+    html += `<h2>Guardrails</h2>
+    <p style="font-size:13px;color:#666;margin-bottom:12px;">${stats.guardrailTotal} of ${stats.total} queries triggered a guardrail (${pct}%). Each guardrail fire means Claude's initial SQL was wrong and was caught server-side.</p>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;margin:12px 0;">
+      <thead>
+        <tr style="border-bottom:2px solid #ddd;">
+          <th style="text-align:left;padding:8px 6px;font-weight:600;color:#555;">Guardrail</th>
+          <th style="text-align:right;padding:8px 6px;font-weight:600;color:#555;">Fires</th>
+          <th style="text-align:right;padding:8px 6px;font-weight:600;color:#555;">% of Queries</th>
+        </tr>
+      </thead>
+      <tbody>`;
+    for (const [name, count] of guardrailEntries) {
+      const firePct = stats.total > 0 ? ((count / stats.total) * 100).toFixed(1) : "0";
+      const color = count >= 5 ? "#d32f2f" : count >= 2 ? "#f57c00" : "#333";
+      html += `<tr style="border-bottom:1px solid #eee;">
+        <td style="padding:6px;font-family:monospace;font-size:12px;">${escapeHtml(name)}</td>
+        <td style="padding:6px;text-align:right;font-weight:600;color:${color};">${count}</td>
+        <td style="padding:6px;text-align:right;color:#888;">${firePct}%</td>
+      </tr>`;
+    }
+    html += `</tbody></table>`;
+  } else {
+    html += `<h2>Guardrails</h2><p style="font-size:13px;color:#4caf50;">No guardrails fired in the past 24 hours.</p>`;
+  }
 
   // Issues section
   if (highIssues.length > 0 || mediumIssues.length > 0) {

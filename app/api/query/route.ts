@@ -265,6 +265,7 @@ export async function POST(req: NextRequest) {
     async start(controller) {
       let sql: string | null = null;
       const tab = body?.mode === "historical" ? "historical" : "current";
+      let firedGuardrails: string[] = [];
       let closed = false;
       const close = () => {
         if (!closed) {
@@ -339,8 +340,9 @@ export async function POST(req: NextRequest) {
           claude.sql = guardrailResult.sql;
         }
 
-        if (guardrailResult.fired.length > 0) {
-          console.log(`[guardrails] Fired: ${guardrailResult.fired.join(", ")}`);
+        firedGuardrails = guardrailResult.fired;
+        if (firedGuardrails.length > 0) {
+          console.log(`[guardrails] Fired: ${firedGuardrails.join(", ")}`);
         }
 
         // If issues found, ask Claude to fix
@@ -381,7 +383,8 @@ export async function POST(req: NextRequest) {
             `Validation: ${validation.error}`,
             ms,
             null,
-            tab
+            tab,
+            firedGuardrails
           );
           controller.enqueue(
             encoder.encode(
@@ -462,7 +465,8 @@ export async function POST(req: NextRequest) {
                   `DB retry failed: ${retryMsg}`,
                   ms,
                   null,
-                  tab
+                  tab,
+                  firedGuardrails
                 );
                 controller.enqueue(
                   encoder.encode(
@@ -484,7 +488,8 @@ export async function POST(req: NextRequest) {
                 `DB: ${msg} (retry validation failed)`,
                 ms,
                 null,
-                tab
+                tab,
+                firedGuardrails
               );
               controller.enqueue(
                 encoder.encode(
@@ -499,7 +504,7 @@ export async function POST(req: NextRequest) {
             }
           } else {
             const ms = Date.now() - totalStart;
-            logQuery(question, sql, 0, `DB: ${msg}`, ms, null, tab);
+            logQuery(question, sql, 0, `DB: ${msg}`, ms, null, tab, firedGuardrails);
             controller.enqueue(
               encoder.encode(
                 sseEvent({
@@ -544,7 +549,7 @@ export async function POST(req: NextRequest) {
               "This query returned no results. The data may not be available for the specified criteria. Try broadening your search or asking about a different topic.";
           }
 
-          logQuery(question, sql, 0, "empty_result", totalMs, emptyMsg, tab);
+          logQuery(question, sql, 0, "empty_result", totalMs, emptyMsg, tab, firedGuardrails);
           controller.enqueue(
             encoder.encode(
               sseEvent({
@@ -746,16 +751,16 @@ export async function POST(req: NextRequest) {
             );
           }
           const totalMs2 = Date.now() - totalStart;
-          logQuery(question, sql, rows.length, null, totalMs2, postExplanation, tab);
+          logQuery(question, sql, rows.length, null, totalMs2, postExplanation, tab, firedGuardrails);
         } catch {
           // If explanation fails, pre-query explanation is already shown — just log
           const totalMs2 = Date.now() - totalStart;
-          logQuery(question, sql, rows.length, null, totalMs2, claude.explanation, tab);
+          logQuery(question, sql, rows.length, null, totalMs2, claude.explanation, tab, firedGuardrails);
         }
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         const ms = Date.now() - totalStart;
-        logQuery(question, sql, 0, msg, ms, null, tab);
+        logQuery(question, sql, 0, msg, ms, null, tab, firedGuardrails);
         console.error("Query API error:", msg);
         controller.enqueue(
           encoder.encode(
