@@ -79,7 +79,8 @@ export function logNibrsQuery(
   error: string | null,
   ms: number,
   response: string | null = null,
-  guardrails: string[] = []
+  guardrails: string[] = [],
+  model: string | null = null
 ) {
   // Write to shared query_log.db via rtci-db's getWriteDb
   // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -88,7 +89,7 @@ export function logNibrsQuery(
   if (db) {
     try {
       db.prepare(
-        "INSERT INTO query_log (ts, tab, question, sql, rows, error, ms, response, guardrails) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        "INSERT INTO query_log (ts, tab, question, sql, rows, error, ms, response, guardrails, model) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
       ).run(
         Date.now(),
         "nibrs",
@@ -98,7 +99,8 @@ export function logNibrsQuery(
         error ? error.slice(0, 500) : null,
         ms,
         response ? response.slice(0, 4000) : null,
-        guardrails.length > 0 ? guardrails.join(",") : null
+        guardrails.length > 0 ? guardrails.join(",") : null,
+        model
       );
     } catch (e) {
       console.error("[logNibrsQuery] Failed:", e);

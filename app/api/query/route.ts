@@ -293,7 +293,7 @@ export async function POST(req: NextRequest) {
 
         if (!claude.sql) {
           const ms = Date.now() - totalStart;
-          logQuery(question, null, 0, null, ms, claude.explanation, tab);
+          logQuery(question, null, 0, null, ms, claude.explanation, tab, [], "haiku-4.5");
           controller.enqueue(
             encoder.encode(
               sseEvent({
@@ -384,7 +384,8 @@ export async function POST(req: NextRequest) {
             ms,
             null,
             tab,
-            firedGuardrails
+            firedGuardrails,
+            "haiku-4.5"
           );
           controller.enqueue(
             encoder.encode(
@@ -466,7 +467,8 @@ export async function POST(req: NextRequest) {
                   ms,
                   null,
                   tab,
-                  firedGuardrails
+                  firedGuardrails,
+                  "haiku-4.5"
                 );
                 controller.enqueue(
                   encoder.encode(
@@ -489,7 +491,8 @@ export async function POST(req: NextRequest) {
                 ms,
                 null,
                 tab,
-                firedGuardrails
+                firedGuardrails,
+                "haiku-4.5"
               );
               controller.enqueue(
                 encoder.encode(
@@ -504,7 +507,7 @@ export async function POST(req: NextRequest) {
             }
           } else {
             const ms = Date.now() - totalStart;
-            logQuery(question, sql, 0, `DB: ${msg}`, ms, null, tab, firedGuardrails);
+            logQuery(question, sql, 0, `DB: ${msg}`, ms, null, tab, firedGuardrails, "haiku-4.5");
             controller.enqueue(
               encoder.encode(
                 sseEvent({
@@ -549,7 +552,7 @@ export async function POST(req: NextRequest) {
               "This query returned no results. The data may not be available for the specified criteria. Try broadening your search or asking about a different topic.";
           }
 
-          logQuery(question, sql, 0, "empty_result", totalMs, emptyMsg, tab, firedGuardrails);
+          logQuery(question, sql, 0, "empty_result", totalMs, emptyMsg, tab, firedGuardrails, "haiku-4.5");
           controller.enqueue(
             encoder.encode(
               sseEvent({
@@ -751,16 +754,16 @@ export async function POST(req: NextRequest) {
             );
           }
           const totalMs2 = Date.now() - totalStart;
-          logQuery(question, sql, rows.length, null, totalMs2, postExplanation, tab, firedGuardrails);
+          logQuery(question, sql, rows.length, null, totalMs2, postExplanation, tab, firedGuardrails, "haiku-4.5");
         } catch {
           // If explanation fails, pre-query explanation is already shown — just log
           const totalMs2 = Date.now() - totalStart;
-          logQuery(question, sql, rows.length, null, totalMs2, claude.explanation, tab, firedGuardrails);
+          logQuery(question, sql, rows.length, null, totalMs2, claude.explanation, tab, firedGuardrails, "haiku-4.5");
         }
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         const ms = Date.now() - totalStart;
-        logQuery(question, sql, 0, msg, ms, null, tab, firedGuardrails);
+        logQuery(question, sql, 0, msg, ms, null, tab, firedGuardrails, "haiku-4.5");
         console.error("Query API error:", msg);
         controller.enqueue(
           encoder.encode(

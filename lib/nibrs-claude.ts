@@ -1240,7 +1240,7 @@ export async function translateToSql(
   messages.push({ role: "user", content: question });
 
   const message = await client.messages.create({
-    model: "claude-sonnet-4-20250514",
+    model: "claude-haiku-4-5-20251001",
     max_tokens: 1024,
     system: [{ type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
     messages,
