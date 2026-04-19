@@ -233,7 +233,7 @@ export default function ShrChat({ visible, heroData }: ShrChatProps) {
               {msg.role === "user" ? (
                 <span className="font-semibold">Q: {msg.text}</span>
               ) : (
-                <span dangerouslySetInnerHTML={{ __html: msg.text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>') }} />
+                <span className="whitespace-pre-line">{msg.text}</span>
               )}
             </div>
           ))}

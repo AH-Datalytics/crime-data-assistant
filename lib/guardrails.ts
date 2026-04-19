@@ -555,6 +555,79 @@ const GUARDRAILS: Guardrail[] = [
       return fixed !== sql ? fixed : null;
     },
   },
+
+  // ── SHR Guardrails ──────────────────────────────────────────────────
+
+  {
+    name: "shr-victim-count-default",
+    tabs: ["shr"],
+    match: (ctx) => {
+      const sql = ctx.sql;
+      // Fires if counting from incidents without joining victims
+      const countsIncidents = /COUNT\s*\(\s*\*\s*\)\s/i.test(sql) || /COUNT\s*\(\s*i\./i.test(sql);
+      const joinsVictims = /JOIN\s+victims\b/i.test(sql);
+      const asksForIncidents = /\bincident/i.test(ctx.question);
+      return countsIncidents && !joinsVictims && !asksForIncidents;
+    },
+    message: () =>
+      "[SYSTEM: SHR queries should count VICTIMS by default, not incidents. JOIN the victims table: FROM incidents i JOIN victims v ON v.incident_id = i.id, then COUNT(*) counts victims. Only count incidents if the user specifically asked for incidents.]",
+  },
+  {
+    name: "shr-homicide-type-missing",
+    tabs: ["shr"],
+    match: (ctx) => {
+      const sql = ctx.sql;
+      const q = ctx.question.toLowerCase();
+      // If asking about murder but SQL doesn't filter homicide_type
+      const asksMurder = /\b(murder|homicide|killing)\b/i.test(q) && !/\bmanslaughter\b/i.test(q);
+      const hasTypeFilter = /homicide_type\s*=\s*'Murder'/i.test(sql);
+      const hasCircFilter = /circumstance_group/i.test(sql);
+      return asksMurder && !hasTypeFilter && !hasCircFilter;
+    },
+    message: () =>
+      "[SYSTEM: When the user asks about murders/homicides, filter with WHERE homicide_type = 'Murder'. The SHR database also contains manslaughter records. Without this filter, results mix murder and manslaughter.]",
+  },
+  {
+    name: "shr-offender-null-filter",
+    tabs: ["shr"],
+    match: (ctx) => {
+      const sql = ctx.sql;
+      // If querying offender demographics without null filter
+      const usesOffender = /\boff_race\b|\boff_sex\b|\boff_age/i.test(sql);
+      const hasNullFilter = /off_\w+\s+IS\s+NOT\s+NULL/i.test(sql) || /off_race\s*!=\s*'Unknown'/i.test(sql);
+      return usesOffender && !hasNullFilter;
+    },
+    message: () =>
+      "[SYSTEM: You're querying offender demographics but haven't filtered out NULL/Unknown offenders. About 40% of SHR incidents have unknown offender data. Add WHERE off_race IS NOT NULL (or off_sex IS NOT NULL) to exclude cases where offender information was not recorded. IMPORTANT: Having offender demographics recorded does NOT mean the case was solved or cleared — this dataset does not measure clearances. Note that results reflect cases where offender information was recorded, not necessarily solved cases.]",
+  },
+  {
+    name: "shr-group-column-required",
+    tabs: ["shr"],
+    match: (ctx) => {
+      const sql = ctx.sql;
+      const q = ctx.question.toLowerCase();
+      // If using detailed columns when group columns should be used
+      const usesDetailWeapon = /\bi\.weapon\b/i.test(sql) && !/weapon_group/i.test(sql) && !/specific|detail|exact/i.test(q);
+      const usesDetailRelation = /\bi\.relationship\b/i.test(sql) && !/relationship_group/i.test(sql) && !/specific|detail|exact/i.test(q);
+      const usesDetailCirc = /\bi\.circumstance\b/i.test(sql) && !/circumstance_group/i.test(sql) && !/specific|detail|exact/i.test(q);
+      return usesDetailWeapon || usesDetailRelation || usesDetailCirc;
+    },
+    message: () =>
+      "[SYSTEM: Use the _group columns (weapon_group, relationship_group, circumstance_group) instead of the detailed columns. The detailed columns have hundreds of values and produce messy results. Only use the detailed columns if the user explicitly asks for specific/detailed breakdowns.]",
+  },
+  {
+    name: "shr-aggregate-in-where",
+    tabs: ["shr"],
+    match: (ctx) => {
+      const sql = ctx.sql;
+      // Detect COUNT/SUM in WHERE clause (should be in HAVING)
+      const whereMatch = sql.match(/WHERE[\s\S]+?(?:GROUP\s+BY|ORDER\s+BY|LIMIT|$)/i);
+      if (!whereMatch) return false;
+      return /\b(COUNT|SUM|AVG|MIN|MAX)\s*\(/i.test(whereMatch[0]) && !/HAVING/i.test(whereMatch[0]);
+    },
+    message: () =>
+      "[SYSTEM: You used an aggregate function (COUNT, SUM, etc.) in a WHERE clause. Aggregate functions cannot be used in WHERE — use HAVING instead. WHERE filters rows before grouping, HAVING filters after.]",
+  },
 ];
 
 /* ------------------------------------------------------------------ */

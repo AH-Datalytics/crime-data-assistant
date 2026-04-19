@@ -4,6 +4,8 @@ import { validatePageToken } from "@/lib/page-token";
 import { validateAndSanitize } from "@/lib/sql-safety";
 import { logQuery } from "@/lib/rtci-db";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { extractQueryContext } from "@/lib/query-context";
+import { runGuardrails } from "@/lib/guardrails";
 import type { QueryError } from "@/lib/types";
 import Anthropic from "@anthropic-ai/sdk";
 import { getShrSystemPrompt } from "@/lib/shr-claude";
@@ -128,7 +130,51 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const sql = validation.sanitized!;
+    let sql = validation.sanitized!;
+
+    // Step 2b: Run guardrails
+    const ctx = extractQueryContext(sql, question, "shr");
+    const guardrailResult = runGuardrails(ctx);
+    if (guardrailResult.sql !== sql) {
+      sql = guardrailResult.sql;
+    }
+    if (guardrailResult.needsFix && guardrailResult.issues.length > 0) {
+      // Retry with Claude — send guardrail fix instructions
+      try {
+        const retryMessages: Anthropic.MessageParam[] = [
+          ...messages,
+          { role: "assistant", content: text },
+          { role: "user", content: guardrailResult.issues.join("\n") },
+        ];
+        const retryResp = await client.messages.create({
+          model: "claude-haiku-4-5-20251001",
+          max_tokens: 2000,
+          system: getShrSystemPrompt(),
+          messages: retryMessages,
+        });
+        const retryText = retryResp.content
+          .filter((b): b is Anthropic.TextBlock => b.type === "text")
+          .map((b) => b.text)
+          .join("");
+        const retryJson = retryText.match(/\{[\s\S]*\}/);
+        if (retryJson) {
+          const retryClaude = JSON.parse(retryJson[0]);
+          if (retryClaude.sql) {
+            const retryValidation = validateAndSanitize(retryClaude.sql);
+            if (retryValidation.valid) {
+              sql = retryValidation.sanitized!;
+              claude.explanation = retryClaude.explanation || claude.explanation;
+              claude.title = retryClaude.title || claude.title;
+              claude.chartType = retryClaude.chartType || claude.chartType;
+              claude.xAxis = retryClaude.xAxis || claude.xAxis;
+              claude.yAxis = retryClaude.yAxis || claude.yAxis;
+            }
+          }
+        }
+      } catch {
+        // Retry failed, proceed with original (possibly rewritten) SQL
+      }
+    }
 
     // Step 3: Execute
     const db = getShrDb();
@@ -176,13 +222,47 @@ export async function POST(req: NextRequest) {
     };
 
     const totalMs = Date.now() - start;
-    logQuery(question, sql, rows.length, null, totalMs, claude.explanation, "shr", [], "haiku-4.5", sessionId);
+
+    // Deterministic disclaimers based on query content
+    const disclaimers: string[] = [];
+    const sqlLower = sql.toLowerCase();
+
+    // National/state scope disclaimer
+    if (ctx.scope === "national" || ctx.scope === "state") {
+      disclaimers.push("Note: This data comes from the FBI's Supplementary Homicide Reports. Not all agencies report SHR data every year, so these counts underrepresent total homicides.");
+    }
+
+    // Florida gap
+    if (/state\s*=\s*'FL'/i.test(sql) || (ctx.scope === "national" && !sqlLower.includes("state !="))) {
+      disclaimers.push("Florida did not submit SHR data for most years between 1997 and 2020.");
+    }
+
+    // Offender demographics warning
+    if (/\boff_race\b|\boff_sex\b|\boff_age/i.test(sql)) {
+      disclaimers.push("Approximately 40% of homicide incidents have no recorded offender information. These results reflect only cases where offender demographics were recorded. This does not indicate whether a case was solved or cleared.");
+    }
+
+    // Multi-year comparison
+    const yearMatches = sql.match(/\b(19|20)\d{2}\b/g);
+    if (yearMatches) {
+      const years = [...new Set(yearMatches.map(Number))];
+      if (years.length >= 2 && Math.max(...years) - Math.min(...years) > 5) {
+        disclaimers.push("SHR reporting has changed over time. Changes in counts across years may partly reflect changes in agency reporting, not just changes in homicides.");
+      }
+    }
+
+    let explanation = claude.explanation || "";
+    if (disclaimers.length > 0) {
+      explanation = explanation + "\n\n" + disclaimers.join(" ");
+    }
+
+    logQuery(question, sql, rows.length, null, totalMs, explanation, "shr", guardrailResult.fired, "haiku-4.5", sessionId);
 
     return jsonResp({
       success: true,
       question,
       sql,
-      explanation: claude.explanation,
+      explanation,
       title: claude.title || "",
       columns,
       rows,

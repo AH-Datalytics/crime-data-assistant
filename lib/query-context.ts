@@ -6,7 +6,7 @@
  * source of truth instead of each re-deriving context independently.
  */
 
-export type Tab = "current" | "historical" | "nibrs";
+export type Tab = "current" | "historical" | "nibrs" | "shr";
 export type Scope = "national" | "state" | "city" | "agency";
 
 export interface QueryContext {
