@@ -18,7 +18,7 @@ import {
   ReferenceLine,
 } from "recharts";
 import type { ChartConfig, ChartMeta } from "@/lib/types";
-import { formatAxisValue } from "@/lib/utils";
+import { formatAxisValue, fmtVal } from "@/lib/utils";
 
 const MONTH_NAMES = [
   "Jan", "Feb", "Mar", "Apr", "May", "Jun",
@@ -26,23 +26,23 @@ const MONTH_NAMES = [
 ];
 
 const NYT_COLORS = [
-  "#d03c24",
-  "#1a6b54",
-  "#4a7fb5",
-  "#e6a019",
-  "#7b5ea7",
-  "#888888",
-  "#c45a3c",
-  "#2d8f83",
+  "#c23b22",   // brick red — strong lead color
+  "#2a6496",   // deep steel blue
+  "#3a7d44",   // forest green
+  "#d4882c",   // amber
+  "#7b5ea7",   // muted purple
+  "#5a8a8a",   // teal
+  "#b85842",   // terracotta
+  "#4a6fa5",   // slate blue
 ];
 
 const TICK_STYLE = {
   fontSize: 11,
-  fill: "#999",
+  fill: "#8c8c8c",
   fontFamily: "Georgia, 'Times New Roman', serif",
 };
 
-const GRID_COLOR = "#eaeaea";
+const GRID_COLOR = "#e8e4df";
 
 function properCase(s: string): string {
   const cleaned = s
@@ -182,18 +182,19 @@ function decadeTicksForYears(data: Record<string, unknown>[], xKey: string): num
   const min = Math.min(...years);
   const max = Math.max(...years);
   const span = max - min;
-  const step = span <= 20 ? 1 : span <= 50 ? 5 : 10;
+  const step = span <= 10 ? 1 : span <= 25 ? 2 : span <= 50 ? 5 : span <= 80 ? 10 : 20;
   const first = step === 1 ? min : Math.ceil(min / step) * step;
   let ticks: number[] = [];
   for (let y = first; y <= max; y += step) {
     ticks.push(y);
   }
-  // Thin to max 7 ticks for mobile friendliness
-  if (ticks.length > 7) {
-    const thinStep = Math.ceil(ticks.length / 6);
-    const thinned = ticks.filter((_, i) => i % thinStep === 0);
-    if (thinned[thinned.length - 1] !== ticks[ticks.length - 1]) thinned.push(ticks[ticks.length - 1]);
-    ticks = thinned;
+  // Always include the last data year if not already a tick
+  if (ticks[ticks.length - 1] !== max) {
+    // Drop last tick if it's close to max (within half a step)
+    if (max - ticks[ticks.length - 1] < step * 0.75) {
+      ticks.pop();
+    }
+    ticks.push(max);
   }
   return ticks;
 }
@@ -247,6 +248,13 @@ function ChartPanel({ config, rows, meta }: ChartPanelProps) {
     const multiSeries = config.yAxis.length > 1;
     const dataLen = data.length;
 
+    // Detect employees-only years (staffing data where officer breakdown unavailable)
+    const employeesYears = data
+      .filter((d) => d.data_type === "Employees*")
+      .map((d) => String(d.year ?? d[config.xAxis] ?? ""))
+      .filter(Boolean);
+    const hasEmployeesDisclaimer = employeesYears.length > 0;
+
     const xAxisDataKey = daily ? config.xAxis : ym ? xKey : config.xAxis;
 
     // Detect plain-year x-axis (historical queries)
@@ -276,10 +284,14 @@ function ChartPanel({ config, rows, meta }: ChartPanelProps) {
 
     const tooltipContentStyle = {
       borderRadius: 4,
-      border: "1px solid #ddd",
+      border: "1px solid #eee",
+      borderLeft: `3px solid ${colors[0]}`,
       fontSize: 12,
-      fontFamily: "Georgia, 'Times New Roman', serif",
-      boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
+      fontFamily: "'Hanken Grotesk', Helvetica, sans-serif",
+      boxShadow: "0 4px 16px rgba(0,0,0,0.1)",
+      background: "rgba(255,255,255,0.98)",
+      padding: "8px 12px",
+      lineHeight: "1.5",
     };
     const tooltipLabelFormatter = (label: unknown) =>
       daily
@@ -294,7 +306,7 @@ function ChartPanel({ config, rows, meta }: ChartPanelProps) {
           {config.type === "line" ? (
             <LineChart
               data={data}
-              margin={{ top: 10, right: 20, bottom: 20, left: 10 }}
+              margin={{ top: 20, right: 24, bottom: 8, left: 8 }}
             >
               <CartesianGrid horizontal vertical={false} stroke={GRID_COLOR} strokeWidth={1} />
               <XAxis
@@ -330,11 +342,11 @@ function ChartPanel({ config, rows, meta }: ChartPanelProps) {
                 tickLine={false}
                 axisLine={false}
                 width={isPercent ? 55 : 50}
-                {...(config.yAxisLabel ? { label: { value: config.yAxisLabel, angle: -90, position: "insideLeft", offset: 0, dy: -10, style: { fontSize: 10, fill: "#999", fontFamily: "Georgia, 'Times New Roman', serif", textAnchor: "middle" } } } : {})}
+                {...(config.yAxisLabel ? { label: { value: config.yAxisLabel, angle: -90, position: "insideLeft", offset: 15, style: { fontSize: 10, fill: "#8c8c8c", fontFamily: "Georgia, 'Times New Roman', serif", textAnchor: "middle" } } } : {})}
               />
               <Tooltip
                 labelFormatter={tooltipLabelFormatter}
-                formatter={(v) => { const n = Number(v); if (isPercent) return `${Number.isInteger(n) ? n : n.toFixed(1)}%`; return Number.isInteger(n) ? n.toLocaleString() : n.toFixed(1); }}
+                formatter={(v) => fmtVal(v as number, isPercent)}
                 contentStyle={tooltipContentStyle}
               />
               {multiSeries && (
@@ -359,9 +371,9 @@ function ChartPanel({ config, rows, meta }: ChartPanelProps) {
                     dataKey={y}
                     name={properCase(y)}
                     stroke={color}
-                    strokeWidth={3}
+                    strokeWidth={2.5}
                     dot={false}
-                    activeDot={{ r: 3, strokeWidth: 0, fill: color }}
+                    activeDot={{ r: 4, strokeWidth: 2, stroke: "#fff", fill: color }}
                   />
                 );
               })}
@@ -379,7 +391,7 @@ function ChartPanel({ config, rows, meta }: ChartPanelProps) {
           ) : config.type === "bar" || config.type === "stacked_bar" ? (
             <BarChart
               data={data}
-              margin={{ top: 10, right: 20, bottom: (ym || daily || plainYears) ? 20 : 80, left: 10 }}
+              margin={{ top: 20, right: 24, bottom: (ym || daily || plainYears) ? 8 : 4, left: 8 }}
             >
               <CartesianGrid horizontal vertical={false} stroke={GRID_COLOR} strokeWidth={1} />
               <XAxis
@@ -393,9 +405,9 @@ function ChartPanel({ config, rows, meta }: ChartPanelProps) {
                   : fewYearsMonthly ? (v: string) => formatYearMonth(v)
                   : ym ? (v: string) => String(v).slice(0, 4)
                   : plainYears ? (v: number) => String(v)
-                  : (v: string) => String(v).length > 20 ? String(v).slice(0, 18) + "…" : String(v)
+                  : (v: string) => String(v).length > 30 ? String(v).slice(0, 28) + "…" : String(v)
                 }
-                angle={fewYearsMonthly ? -40 : (ym || daily || plainYears) ? 0 : -40}
+                angle={fewYearsMonthly ? -40 : (ym || daily || plainYears) ? 0 : -45}
                 textAnchor={fewYearsMonthly ? "end" : (ym || daily || plainYears) ? "middle" : "end"}
                 {...(yearTicks.length > 0 ? { ticks: yearTicks } : {})}
                 {...(ymTicks.length > 0 ? { ticks: ymTicks } : {})}
@@ -405,7 +417,7 @@ function ChartPanel({ config, rows, meta }: ChartPanelProps) {
                   : daily ? dailyTickInterval(dataLen)
                   : 0
                 }
-                height={fewYearsMonthly ? 60 : (ym || daily || plainYears) ? 30 : 80}
+                height={fewYearsMonthly ? 60 : (ym || daily || plainYears) ? 30 : 120}
               />
               <YAxis
                 tickFormatter={yTickFormatter}
@@ -413,11 +425,11 @@ function ChartPanel({ config, rows, meta }: ChartPanelProps) {
                 tickLine={false}
                 axisLine={false}
                 width={isPercent ? 55 : 50}
-                {...(config.yAxisLabel ? { label: { value: config.yAxisLabel, angle: -90, position: "insideLeft", offset: 0, dy: -10, style: { fontSize: 10, fill: "#999", fontFamily: "Georgia, 'Times New Roman', serif", textAnchor: "middle" } } } : {})}
+                {...(config.yAxisLabel ? { label: { value: config.yAxisLabel, angle: -90, position: "insideLeft", offset: 15, style: { fontSize: 10, fill: "#8c8c8c", fontFamily: "Georgia, 'Times New Roman', serif", textAnchor: "middle" } } } : {})}
               />
               <Tooltip
                 labelFormatter={tooltipLabelFormatter}
-                formatter={(v) => { const n = Number(v); if (isPercent) return `${Number.isInteger(n) ? n : n.toFixed(1)}%`; return Number.isInteger(n) ? n.toLocaleString() : n.toFixed(1); }}
+                formatter={(v) => fmtVal(v as number, isPercent)}
                 contentStyle={tooltipContentStyle}
               />
               {multiSeries && (
@@ -439,7 +451,7 @@ function ChartPanel({ config, rows, meta }: ChartPanelProps) {
                   dataKey={y}
                   name={properCase(y)}
                   fill={colors[i % colors.length]}
-                  radius={[2, 2, 0, 0]}
+                  radius={[3, 3, 0, 0]}
                   stackId={config.type === "stacked_bar" ? "a" : undefined}
                 />
               ))}
@@ -463,33 +475,59 @@ function ChartPanel({ config, rows, meta }: ChartPanelProps) {
                 cx="50%"
                 cy="50%"
                 outerRadius="70%"
-                strokeWidth={1}
+                innerRadius="20%"
+                strokeWidth={2}
                 stroke="#fff"
                 label={({ name, percent }) =>
                   `${name} (${((percent ?? 0) * 100).toFixed(0)}%)`
                 }
+                labelLine={{ stroke: "#b0a99f", strokeWidth: 1 }}
               >
                 {data.map((_, i) => (
                   <Cell key={i} fill={colors[i % colors.length]} />
                 ))}
               </Pie>
               <Tooltip
-                formatter={(v) => { const n = Number(v); if (isPercent) return `${Number.isInteger(n) ? n : n.toFixed(1)}%`; return Number.isInteger(n) ? n.toLocaleString() : n.toFixed(1); }}
+                formatter={(v) => fmtVal(v as number, isPercent)}
                 contentStyle={tooltipContentStyle}
               />
             </PieChart>
           ) : null}
         </ResponsiveContainer>
+        {hasEmployeesDisclaimer && (
+          <div
+            style={{
+              color: "#9a9590",
+              fontFamily: "Georgia, 'Times New Roman', serif",
+              fontSize: "9.5px",
+              fontStyle: "italic",
+              padding: "2px 0 0",
+            }}
+          >
+            * Employees shown for {employeesYears.join(", ")} — FBI did not report officer/civilian breakdown those years
+          </div>
+        )}
         <div
-          className="text-[10px] -mt-4 shrink-0 pb-1"
-          style={{ color: "#aaa", fontFamily: "Georgia, 'Times New Roman', serif" }}
+          className="shrink-0 pb-1 pt-1"
+          style={{
+            color: "#9a9590",
+            fontFamily: "Georgia, 'Times New Roman', serif",
+            fontSize: "10px",
+            letterSpacing: "0.2px",
+            marginTop: "2px",
+          }}
         >
-          Source: {meta?.source || "The Crime Index"}
+          Source: {meta?.source || "Crime Index"}
           {meta && meta.agencyCount > 0 && (
             <>
-              {" · "}
+              <span style={{ color: "#c5bfb8", margin: "0 5px" }}>|</span>
               {meta.agencyCount.toLocaleString()} {meta.agencyCount === 1 ? "agency" : "agencies"}
-              {meta.population && ` · Pop. ${formatPopulation(meta.population)}`}
+              {meta.population && (
+                <>
+                  <span style={{ color: "#c5bfb8", margin: "0 5px" }}>|</span>
+                  Pop. {formatPopulation(meta.population)}
+                </>
+              )}
             </>
           )}
         </div>

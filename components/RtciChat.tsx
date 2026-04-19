@@ -1,12 +1,28 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import type { QueryResponse, StreamEvent } from "@/lib/types";
 import DataTable from "./DataTable";
 import ChartPanel from "./ChartPanel";
 import ExportButtons from "./ExportButtons";
 import HeroChart from "./HeroChart";
 import HistoricalHeroChart from "./HistoricalHeroChart";
+import { useAnimatedPlaceholder } from "./useAnimatedPlaceholder";
+import QuerySkeleton from "./QuerySkeleton";
+import ErrorCard from "./ErrorCard";
+import { getPageToken } from "./Tracker";
+
+const CURRENT_PROMPTS = [
+  "Show me robbery per month in the national sample",
+  "Top 10 cities by aggravated assault rate in 2022",
+];
+const CURRENT_DEFAULT = "Ask a question about crime data...";
+
+const HISTORICAL_PROMPTS = [
+  "Chicago police staffing per year",
+  "National murder rate since 1960",
+];
+const HISTORICAL_DEFAULT = "Ask about historical crime trends...";
 
 interface HistoryEntry {
   role: "user" | "assistant";
@@ -48,8 +64,8 @@ async function readSSEStream(
         try {
           const event = JSON.parse(line.slice(6)) as StreamEvent;
           onEvent(event);
-        } catch {
-          // Ignore malformed events
+        } catch (e) {
+          console.warn("[SSE] Failed to parse event:", line, e);
         }
       }
     }
@@ -60,27 +76,48 @@ async function readSSEStream(
     try {
       const event = JSON.parse(buffer.trim().slice(6)) as StreamEvent;
       onEvent(event);
-    } catch {
-      // Ignore
+    } catch (e) {
+      console.warn("[SSE] Failed to parse trailing event:", buffer, e);
     }
   }
 }
 
 export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulation, historicalHeroData, historicalMaxYear, visible }: RtciChatProps) {
   const [input, setInput] = useState("");
+  const [inputFocused, setInputFocused] = useState(false);
+  const [hasInteracted, setHasInteracted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const animated = useAnimatedPlaceholder(
+    mode === "historical" ? HISTORICAL_PROMPTS : CURRENT_PROMPTS,
+    mode === "historical" ? HISTORICAL_DEFAULT : CURRENT_DEFAULT,
+  );
   const [loadingStep, setLoadingStep] = useState("");
 
   // Conversation history (for Claude context only, not displayed as thread)
-  const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [history, setHistory] = useState<HistoryEntry[]>(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const saved = localStorage.getItem(`cda-history-${mode}`);
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
+
+  // Persist query history to localStorage
+  useEffect(() => {
+    try { localStorage.setItem(`cda-history-${mode}`, JSON.stringify(history)); } catch {}
+  }, [history, mode]);
 
   // Current response state
   const [explanation, setExplanation] = useState("");
   const [response, setResponse] = useState<QueryResponse | null>(null);
   const [error, setError] = useState("");
+  const [lastQuestion, setLastQuestion] = useState("");
 
   const chartRef = useRef<HTMLDivElement>(null);
   const [showDatasetInfo, setShowDatasetInfo] = useState(false);
+  const [showAllHistory, setShowAllHistory] = useState(false);
 
   // Extract past user questions from history
   const pastQueries = history.filter((h) => h.role === "user").map((h) => h.content);
@@ -95,23 +132,28 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
       if (!question || loading) return;
 
       setInput("");
+      setHasInteracted(true);
+      animated.pause();
       setLoading(true);
+      setElapsed(0);
+      timerRef.current = setInterval(() => setElapsed((s) => s + 1), 1000);
       setLoadingStep("Analyzing your question...");
       setExplanation("");
       setResponse(null);
       setError("");
+      setLastQuestion(question);
 
       try {
         const res = await fetch("/api/query", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ question, history, mode }),
+          body: JSON.stringify({ question, history, mode, sessionId: (() => { try { return sessionStorage.getItem("cda-session") || ""; } catch { return ""; } })(), pageToken: getPageToken() }),
         });
 
         if (res.status === 429) {
           const data = await res.json();
           setError(data.error);
-          setLoading(false);
+          if (timerRef.current) clearInterval(timerRef.current); setLoading(false);
           return;
         }
 
@@ -151,29 +193,32 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
                     }
                   : null
               );
-              setLoading(false);
+              if (timerRef.current) clearInterval(timerRef.current); setLoading(false);
               break;
 
             case "error":
               setError(event.text);
               finalSql = event.sql || "";
-              setLoading(false);
+              if (timerRef.current) clearInterval(timerRef.current); setLoading(false);
               break;
           }
         });
 
-        // Add to conversation history for Claude context
-        setHistory((prev) => [
-          ...prev,
-          { role: "user", content: question },
-          {
-            role: "assistant",
-            content: finalSql
-              ? `${finalExplanation}\n[SQL: ${finalSql}]`
-              : finalExplanation,
-            sql: finalSql || undefined,
-          },
-        ]);
+        // Add to conversation history for Claude context (keep last 5 exchanges)
+        setHistory((prev) => {
+          const updated = [
+            ...prev,
+            { role: "user" as const, content: question },
+            {
+              role: "assistant" as const,
+              content: finalSql
+                ? `${finalExplanation}\n[SQL: ${finalSql}]`
+                : finalExplanation,
+              sql: finalSql || undefined,
+            },
+          ];
+          return updated.slice(-10); // 5 exchanges = 10 messages
+        });
       } catch (err) {
         const msg = err instanceof Error ? err.message : "Network error";
         setError(`Connection error: ${msg}. Please try again.`);
@@ -195,7 +240,7 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
   const hasData = response && (response.chartConfig || response.rows.length > 0);
 
   return (
-    <div className="flex-1 flex flex-col min-h-0" style={{ display: visible ? "flex" : "none" }}>
+    <div className={`flex-1 flex flex-col min-h-0 ${visible ? "tab-fade-in" : ""}`} style={{ display: visible ? "flex" : "none" }}>
       {/* Search bar area */}
       <div className="bg-white border-b border-[var(--border)] shrink-0">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
@@ -203,11 +248,12 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
             <input
               type="text"
               value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder={mode === "historical" ? `Ask about historical crime trends (1930–${new Date().getFullYear() - 1})...` : "Ask a question about crime data..."}
+              onChange={(e) => { setInput(e.target.value); if (!hasInteracted && e.target.value) { setHasInteracted(true); animated.pause(); } }}
+              onFocus={() => setInputFocused(true)}
+              onBlur={() => setInputFocused(false)}
+              placeholder={!hasInteracted ? animated.placeholder : (mode === "historical" ? HISTORICAL_DEFAULT : CURRENT_DEFAULT)}
               className="flex-1 px-4 py-2.5 text-sm border border-[var(--border)] rounded-full focus:outline-none focus:border-[#475EC7] bg-[var(--surface)]"
               disabled={loading}
-              autoFocus
             />
             <button
               type="submit"
@@ -218,32 +264,52 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
             </button>
           </form>
           {/* Suggestion pills or past query history */}
-          <div className="flex flex-wrap gap-2 sm:gap-3 mt-3 items-center">
+          <div className="flex flex-nowrap sm:flex-wrap gap-2 sm:gap-3 mt-3 items-center overflow-x-auto scrollbar-hide">
             {pastQueries.length > 0 && (
               <span className="text-[10px] uppercase tracking-wider text-[var(--muted)] mr-1">History:</span>
             )}
             {pastQueries.length > 0 && (
               <button
-                onClick={() => { setHistory([]); setExplanation(""); setResponse(null); setError(""); }}
+                onClick={() => { setHistory([]); setExplanation(""); setResponse(null); setError(""); try { localStorage.removeItem(`cda-history-${mode}`); } catch {} }}
                 className="text-[10px] uppercase tracking-wider text-[var(--muted)] hover:text-red-500 cursor-pointer transition-colors ml-auto"
               >
                 Clear
               </button>
             )}
             {pastQueries.length > 0
-              ? pastQueries.map((q, i) => (
-                  <button
-                    key={i}
-                    onClick={() => submitQuestion(q)}
-                    disabled={loading}
-                    className="text-xs px-3 py-1 rounded-full border border-[var(--border)] text-[var(--muted)] hover:border-[#475EC7] hover:text-[#475EC7] cursor-pointer transition-colors disabled:opacity-40 truncate max-w-[200px]"
-                    title={q}
-                  >
-                    {q}
-                  </button>
-                ))
+              ? (<>
+                  {(showAllHistory ? pastQueries : pastQueries.slice(-5)).map((q, i) => (
+                    <button
+                      key={i}
+                      onClick={() => submitQuestion(q)}
+                      disabled={loading}
+                      className="group relative text-[11px] pl-3 pr-7 py-1.5 rounded-lg bg-white border border-[var(--border)] text-[var(--muted)] hover:shadow-md hover:border-transparent hover:text-[var(--foreground)] cursor-pointer transition-all duration-200 disabled:opacity-40 truncate max-w-[240px]"
+                      title={q}
+                    >
+                      {q}
+                      <svg className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-60 transition-opacity" width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M2 14L14 2M14 2H5M14 2v9"/></svg>
+                    </button>
+                  ))}
+                  {pastQueries.length > 5 && !showAllHistory && (
+                    <button
+                      onClick={() => setShowAllHistory(true)}
+                      className="text-[10px] px-2 py-1 rounded-md text-[var(--accent)] hover:bg-[var(--accent)] hover:text-white cursor-pointer transition-all duration-200"
+                    >
+                      +{pastQueries.length - 5} more
+                    </button>
+                  )}
+                  {showAllHistory && pastQueries.length > 5 && (
+                    <button
+                      onClick={() => setShowAllHistory(false)}
+                      className="text-[10px] px-2 py-1 rounded-md text-[var(--muted)] hover:text-[var(--foreground)] cursor-pointer transition-colors"
+                    >
+                      Show less
+                    </button>
+                  )}
+                </>)
               : !explanation && !loading && !error && (
                   <>
+                    <span className="text-[10px] uppercase tracking-wider text-[var(--muted)] mr-1">Sample Questions:</span>
                     {(mode === "historical" ? [
                       "National murder trend, 2000\u20132020",
                       "National robbery clearance rate since 1960",
@@ -256,9 +322,10 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
                       <button
                         key={q}
                         onClick={() => submitQuestion(q)}
-                        className="text-xs px-3 py-1.5 rounded-full border border-[var(--border)] text-[var(--muted)] hover:border-[#475EC7] hover:text-[#475EC7] cursor-pointer transition-colors"
+                        className="group relative text-[11px] pl-3 pr-7 py-1.5 rounded-lg bg-white border border-[var(--border)] text-[var(--muted)] hover:shadow-md hover:border-transparent hover:text-[var(--foreground)] cursor-pointer transition-all duration-200"
                       >
                         {q}
+                        <svg className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-60 transition-opacity" width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M2 14L14 2M14 2H5M14 2v9"/></svg>
                       </button>
                     ))}
                   </>
@@ -329,39 +396,37 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
         </div>
       )}
 
-      {/* Explanation text */}
-      {(explanation || loading || error) && (
+      {/* Explanation text — only show when we have text or are loading with text */}
+      {(explanation || (loading && explanation)) && (
         <div className="border-b border-[var(--border)] bg-white shrink-0">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3">
             <div className="max-h-32 overflow-y-auto">
-              {loading && !explanation ? (
-                <div className="text-sm text-[var(--muted)] flex items-center gap-2">
-                  <span className="inline-flex gap-0.5">
-                    <span className="animate-bounce" style={{ color: accentColor }}>·</span>
-                    <span className="animate-bounce" style={{ color: accentColor, animationDelay: "0.1s" }}>·</span>
-                    <span className="animate-bounce" style={{ color: accentColor, animationDelay: "0.2s" }}>·</span>
-                  </span>
-                  {loadingStep}
-                </div>
-              ) : error ? (
-                <p className="text-sm text-red-600">{error}</p>
-              ) : (
-                <div>
-                  <p className="text-sm text-[var(--foreground)] leading-relaxed" dangerouslySetInnerHTML={{ __html: explanation.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>') }} />
-                  {loading && (
-                    <div className="text-xs text-[var(--muted)] mt-2 flex items-center gap-1">
-                      <span className="inline-flex gap-0.5">
-                        <span className="animate-bounce" style={{ color: accentColor }}>·</span>
-                        <span className="animate-bounce" style={{ color: accentColor, animationDelay: "0.1s" }}>·</span>
-                        <span className="animate-bounce" style={{ color: accentColor, animationDelay: "0.2s" }}>·</span>
-                      </span>
-                      {loadingStep}
-                    </div>
-                  )}
-                </div>
-              )}
+              <div>
+                <p className="text-sm text-[var(--foreground)] leading-relaxed" dangerouslySetInnerHTML={{ __html: explanation.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>') }} />
+                {loading && (
+                  <div className="text-xs text-[var(--muted)] mt-2 flex items-center gap-1">
+                    <span className="inline-flex gap-0.5">
+                      <span className="w-1 h-1 rounded-full animate-pulse" style={{ backgroundColor: accentColor }} />
+                      <span className="w-1 h-1 rounded-full animate-pulse" style={{ backgroundColor: accentColor, animationDelay: "0.3s" }} />
+                      <span className="w-1 h-1 rounded-full animate-pulse" style={{ backgroundColor: accentColor, animationDelay: "0.6s" }} />
+                    </span>
+                    {loadingStep}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Error state */}
+      {error && !loading && (
+        <div className="border-b border-[var(--border)] bg-white shrink-0">
+          <ErrorCard
+            message={error}
+            accentColor={accentColor}
+            onRetry={lastQuestion ? () => submitQuestion(lastQuestion) : undefined}
+          />
         </div>
       )}
 
@@ -369,8 +434,8 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
       <div className="flex-1 min-h-0 flex flex-col lg:flex-row overflow-auto lg:overflow-hidden">
         {/* Hero chart when no data */}
         {showCurrentHero && (
-          <div className="flex-1 overflow-y-auto p-4 sm:p-6">
-            <div className="max-w-4xl mx-auto">
+          <div className="flex-1 overflow-y-auto flex items-center justify-center p-4 sm:p-6">
+            <div className="max-w-4xl w-full">
               <HeroChart
                 data={heroData}
                 agencyCount={heroAgencyCount || 0}
@@ -383,8 +448,8 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
           </div>
         )}
         {showHistoricalHero && (
-          <div className="flex-1 overflow-y-auto p-4 sm:p-6">
-            <div className="max-w-4xl mx-auto">
+          <div className="flex-1 overflow-y-auto flex items-center justify-center p-4 sm:p-6">
+            <div className="max-w-4xl w-full">
               <HistoricalHeroChart data={historicalHeroData!} />
               <p className="text-xs text-center text-gray-400 mt-4">
                 I am a bot and sometimes may make mistakes. When in doubt, verify these findings with official sources.
@@ -393,13 +458,18 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
           </div>
         )}
 
+        {/* Loading skeleton — show when loading and no result yet */}
+        {loading && !hasData && !showCurrentHero && !showHistoricalHero && (
+          <QuerySkeleton accentColor={accentColor} step={loadingStep} elapsed={elapsed} />
+        )}
+
         {/* Chart panel */}
         {hasData && response.chartConfig && (
-          <div className={`${response.rows.length > 0 ? "lg:w-1/2 lg:border-r" : "w-full"} border-[var(--border)] shrink-0 lg:shrink lg:overflow-hidden bg-white`} style={{ minHeight: 320 }}>
+          <div className={`${response.rows.length > 0 ? "lg:w-1/2 lg:border-r" : "w-full"} border-[var(--border)] shrink-0 lg:shrink lg:overflow-hidden bg-white`} style={{ minHeight: response.rows.length >= 8 ? 440 : 320 }}>
             <div ref={chartRef} className="h-full flex flex-col p-4 sm:p-5">
-              <div className="flex items-center justify-between mb-2 shrink-0">
+              <div className="flex items-start justify-between gap-3 mb-2 shrink-0">
                 <h2
-                  className="text-xs font-medium uppercase tracking-wider text-[var(--muted)]"
+                  className="text-xs font-medium uppercase tracking-wider text-[var(--muted)] flex-1 min-w-0"
                   style={{ letterSpacing: "0.6px" }}
                 >
                   {response.title}
@@ -409,7 +479,7 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
                   csvFilename={`${response.title || "chart"}.jpeg`}
                 />
               </div>
-              <div className="flex-1 min-h-0" style={{ minHeight: 300 }}>
+              <div className="flex-1 min-h-0" style={{ minHeight: response.rows.length >= 8 ? 420 : 300 }}>
                 <ChartPanel
                   config={response.chartConfig}
                   rows={response.rows}
@@ -432,7 +502,7 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
                 <span className="normal-case tracking-normal">
                   ({response.rowCount.toLocaleString()} rows
                   {response.executionTimeMs > 0 &&
-                    ` · ${(response.executionTimeMs / 1000).toFixed(1)}s`}
+                    ` · ${(response.executionTimeMs / 1000) < 0.1 ? '<0.1' : (response.executionTimeMs / 1000).toFixed(1)}s`}
                   )
                 </span>
               </h2>

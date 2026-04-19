@@ -61,6 +61,13 @@ Pre-aggregated national totals using ONLY agencies in the national sample (those
 - count INTEGER — total across all national sample agencies
 - agency_count INTEGER — number of agencies that contributed
 
+### sample_agencies (PRIMARY KEY: ori)
+The 445 agencies in the national sample — those with complete monthly reporting from January 2018 through the most recent month. Use this table to filter agency_monthly for state-level and national queries.
+- ori TEXT — agency ORI code
+- agency TEXT — agency name
+- state TEXT — 2-letter state abbreviation
+- type TEXT — 'City' or 'County'
+
 ### state_monthly (PRIMARY KEY: state, year, month, offense)
 Pre-aggregated state-level totals from ALL agencies in each state (including partial reporters).
 - state TEXT
@@ -70,7 +77,14 @@ Pre-aggregated state-level totals from ALL agencies in each state (including par
 - count INTEGER
 - agency_count INTEGER
 
-**⚠️ DO NOT USE state_monthly for state trend queries.** It includes partial reporters, producing inconsistent month-to-month counts. For state trends, aggregate from agency_monthly filtered to national_sample = 1 (complete reporters only), same as national data. state_monthly may ONLY be used for state comparison rankings (e.g., "top states by murder") where relative ordering matters more than absolute counts.
+**⚠️ DO NOT USE state_monthly for state trend queries.** It includes partial reporters, producing inconsistent month-to-month counts. For state trends, aggregate from agency_monthly JOINed to sample_agencies (complete reporters only). state_monthly may ONLY be used for state comparison rankings (e.g., "top states by murder") where relative ordering matters more than absolute counts.
+
+**STATE QUERIES:** When a user asks about a state's crime trends, JOIN agency_monthly to sample_agencies to use only complete-reporting agencies. In your explanation, note: "These figures represent [N] agencies in [State] that are part of the national sample with complete reporting. They do not represent the full state's crime count." Example:
+SELECT am.year, am.month, SUM(am.count) as total
+FROM agency_monthly am
+JOIN sample_agencies sa ON sa.ori = am.ori
+WHERE sa.state = 'TX' AND am.offense = 'Murder'
+GROUP BY am.year, am.month ORDER BY am.year, am.month
 
 ## THE 7 OFFENSES
 - Murder
@@ -147,9 +161,9 @@ Offense names are stored exactly as above (title case). Always use exact strings
    where N = 1 for month-over-month, N = 12 for year-over-year. Default to YoY (N=12) if the user says "% change" without specifying.
 12. **Year-over-year change** → Compare annual sums or rolling 12-month endpoints.
 13. **Multiple offenses** → Use IN ('Murder', 'Robbery', ...) or aggregate with GROUP BY offense.
-14. **LIMIT** → Always include LIMIT, max 1000.
+14. **LIMIT** → Always include LIMIT, max 5000.
 15. **Per-capita rates** → When the user says "rate", "rates", "per capita", or "per 100K", you MUST calculate rates by joining agency_population. Formula: \`ROUND(SUM(count) * 100000.0 / population, 1)\`. For multi-city rate comparisons, see the "Multi-city RATE comparison" query pattern below — use MAX(CASE WHEN ... THEN ap.population END) inside each pivoted column. Column aliases for rates should be the city name only (e.g., \`as baltimore\`), NOT \`as baltimore_rate\`.
-16. **"Top N" / ranking queries** → These are category comparisons, NOT time series. Use a bar chart with xAxis = agency (or state), yAxis = the metric. Do NOT return monthly breakdowns for ranking queries.
+16. **"Top N" / ranking queries** → These are category comparisons, NOT time series. Use a bar chart with xAxis = agency (or state), yAxis = the metric. Do NOT return monthly breakdowns for ranking queries. Default to LIMIT 20 when listing or ranking cities/agencies unless the user specifies a different number.
 17. **Agency labels** → When listing or ranking agencies, format as \`agency || CASE WHEN type = 'County' THEN CASE WHEN state = 'LA' THEN ' Parish' ELSE ' County' END ELSE '' END || ', ' || state\` (e.g., "Memphis, TN", "Harris County, TX", "East Baton Rouge Parish, LA"). County agencies MUST include "County" (or "Parish" for LA) in the label to distinguish from cities.
 18. **CRITICAL: City vs County filtering** → When the user asks about "cities", you MUST filter with \`WHERE type = 'City'\`. Counties must be excluded. Only include County agencies if the user specifically asks for "counties", "agencies", or uses the word "county". "Cities" means ONLY type='City'. "Agencies" means both City and County.
 19. **Vague size-based requests** → If the user says "largest cities", "biggest cities", or "top 10 cities by population" (requests ranked BY POPULATION without a crime metric), set sql to null and ask for clarification. Population rankings change over time, and "largest" is ambiguous. However, if the user asks for "top 10 cities by murder rate", "cities with the highest robbery count", or any ranking BY A CRIME METRIC, this is a valid ranking query — run it immediately using ORDER BY ... DESC LIMIT N. Filter to type = 'City' and join agency_population to get per-capita rates if comparing different-sized cities. Note in your explanation that rankings are "among the ~${RTCI.agencyCount} agencies in our dataset."
@@ -363,7 +377,7 @@ Always respond with valid JSON (no markdown fences):
   "chartHint": "line" | "bar" | "pie" | "stacked_bar" | "none",
   "xAxis": "column_name for x-axis",
   "yAxis": "column_name(s) for y-axis, comma-separated if multiple",
-  "title": "Short chart/result title",
+  "title": "Short chart title — use '[Agency/Place] [Metric] Per [Period]' format (e.g., 'LAPD Officers Per Year', 'Houston Murders Per Month'). Never use vague words like 'Over Time' or 'Trend'. Keep under 6 words.",
   "colors": ["#hex1", "#hex2"],  // OPTIONAL — only if user requests colors
   "yAxisLabel": "Label text",     // OPTIONAL — for rate/clearance queries or on request
   "xAxisLabel": "Label text",     // OPTIONAL — only on request
@@ -470,6 +484,10 @@ export async function translateToSql(
     system: [{ type: "text", text: systemPrompt || SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
     messages,
   });
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const u = message.usage as any;
+  console.log(`[claude][cache] input=${u.input_tokens} cache_read=${u.cache_read_input_tokens ?? 0} cache_create=${u.cache_creation_input_tokens ?? 0}`);
 
   const text =
     message.content[0].type === "text" ? message.content[0].text : "";
@@ -641,7 +659,15 @@ Agency-level staffing data, ${HISTORICAL.staffingMinYear}–${HISTORICAL.staffin
 - officer_total INTEGER — sworn officers (NULL or 0 means no data reported for that year)
 - civilian_total INTEGER — civilian employees (NULL or 0 means no data reported for that year)
 
-**IMPORTANT: Treat 0 as missing data in staffing queries.** Always filter with officer_total > 0 (or all_total > 0) to exclude years where the agency did not report. A value of 0 does NOT mean the agency had zero officers — it means they didn't report.
+**IMPORTANT: Treat 0 as missing data in staffing queries.** Always filter with all_total > 0 to exclude years where the agency did not report. A value of 0 does NOT mean the agency had zero officers — it means they didn't report.
+**IMPORTANT: Use INNER JOIN, not LEFT JOIN, for staffing queries.** Do NOT generate a years CTE and LEFT JOIN historical_staffing — this creates NULL rows for years with no data that plot as zeros. Use a direct SELECT from historical_staffing with WHERE all_total > 0 so only years with actual data appear.
+
+**CRITICAL — EMPLOYEES-ONLY FALLBACK:** Some years (especially pre-1960, but not exclusively) only have all_total without the officer/civilian breakdown — officer_total is NULL for those rows. For ALL staffing queries, you MUST:
+1. Use COALESCE(hs.officer_total, hs.all_total) as the data column, aliased as "staffing"
+2. Add an annotation column: CASE WHEN hs.all_total > 0 AND (hs.officer_total IS NULL OR hs.officer_total = 0) THEN 'Employees*' ELSE 'Officers' END AS data_type
+   IMPORTANT: The condition must check all_total > 0 first — otherwise LEFT JOIN NULL rows (years with NO data at all) get incorrectly marked as 'Employees*'.
+3. Filter with all_total > 0 (NOT officer_total > 0, which would drop employees-only rows)
+4. If any rows in the result have data_type = 'Employees*', note in your explanation: "Years marked 'Employees*' reflect total department employees — the FBI did not separate sworn officers from civilians for those years."
 
 ${HISTORICAL.staffingRows.toLocaleString()} rows. Coverage: ~3,800 agencies/year pre-1960, ~12,000-14,000 agencies/year 1960+.
 
@@ -651,9 +677,9 @@ ${HISTORICAL.staffingRows.toLocaleString()} rows. Coverage: ~3,800 agencies/year
 
 **CHART TYPE: Always use bar charts (not line charts) for staffing queries.** Many agencies have gaps in reporting (missing years).
 
-**IMPORTANT — FILL GAPS FOR STAFFING CHARTS:** To make missing years visible in bar charts, use a recursive CTE to produce all years in the range, then LEFT JOIN staffing data. Missing years will have NULL values and appear as gaps. Example:
-WITH years AS (SELECT 2006 AS year UNION ALL SELECT year + 1 FROM years WHERE year < 2024)
-SELECT y.year, hs.officer_total FROM years y LEFT JOIN historical_staffing hs ON hs.ori = 'LANPD0000' AND hs.year = y.year AND hs.officer_total > 0 ORDER BY y.year
+**IMPORTANT — FILL GAPS FOR STAFFING CHARTS:** To make missing years visible in bar charts, use a recursive CTE to produce all years in the range, then LEFT JOIN staffing data. Missing years will have NULL values and appear as gaps. The CTE range must match the actual data range for the agency — do NOT extend beyond the last year with data. Always JOIN through historical_agency by name — NEVER guess an ORI code. Always use the COALESCE pattern:
+WITH agency AS (SELECT ori FROM historical_agency WHERE agency = 'Chicago' AND state = 'il' AND type = 'city'), years AS (SELECT MIN(hs.year) AS year FROM historical_staffing hs JOIN agency a ON a.ori = hs.ori WHERE hs.all_total > 0 UNION ALL SELECT year + 1 FROM years WHERE year < (SELECT MAX(hs.year) FROM historical_staffing hs JOIN agency a ON a.ori = hs.ori WHERE hs.all_total > 0))
+SELECT y.year, COALESCE(hs.officer_total, hs.all_total) AS staffing, CASE WHEN hs.all_total > 0 AND (hs.officer_total IS NULL OR hs.officer_total = 0) THEN 'Employees*' ELSE 'Officers' END AS data_type FROM years y LEFT JOIN agency a ON 1=1 LEFT JOIN historical_staffing hs ON hs.ori = a.ori AND hs.year = y.year AND hs.all_total > 0 ORDER BY y.year
 
 **MISSING DATA DISCLOSURE:** After reviewing the query results, if any rows have NULL values for the data column (indicating the agency did not report that year), you MUST note this in your explanation. Use the format: "[Agency name] may not have reported [data type] in [list the missing years]." For example: "New Orleans may not have reported staffing data in 2009, 2014, 2015, 2020, and 2021." This applies to ALL historical queries (staffing, crime, clearance) where gaps exist — not just staffing.
 
@@ -667,7 +693,7 @@ When the user asks for officer COUNTS (not per capita):
 - NEVER return raw counts with a per-capita label, or per-capita rates without the label.
 
 **Staffing query examples:**
-- Officers for a specific agency: SELECT hs.year, hs.officer_total FROM historical_staffing hs JOIN historical_agency ha ON ha.ori = hs.ori WHERE ha.agency = 'Houston' AND ha.state = 'tx' AND hs.officer_total > 0 ORDER BY hs.year
+- Officers for a specific agency: SELECT hs.year, COALESCE(hs.officer_total, hs.all_total) AS staffing, CASE WHEN hs.all_total > 0 AND (hs.officer_total IS NULL OR hs.officer_total = 0) THEN 'Employees*' ELSE 'Officers' END AS data_type FROM historical_staffing hs JOIN historical_agency ha ON ha.ori = hs.ori WHERE ha.agency = 'Chicago' AND ha.state = 'il' AND hs.all_total > 0 ORDER BY hs.year
 - Officers per capita for an agency: JOIN historical_agency_population hap ON hap.ori = hs.ori AND hap.year = hs.year, then ROUND(hs.officer_total * 1000.0 / hap.population, 1) AS officers_per_1k
 - Top agencies by officers per capita: SELECT ha.agency, ha.state, hs.officer_total, hap.population, ROUND(hs.officer_total * 1000.0 / hap.population, 1) AS officers_per_1k FROM historical_staffing hs JOIN historical_agency ha ON ha.ori = hs.ori JOIN historical_agency_population hap ON hap.ori = hs.ori AND hap.year = hs.year WHERE hs.year = 2023 AND hs.officer_total > 0 AND hap.population > 50000 ORDER BY officers_per_1k DESC LIMIT 20
 - Compare staffing between specific agencies: pivot by agency name with CASE WHEN
@@ -847,11 +873,21 @@ ${HISTORICAL.agencyClearanceRows.toLocaleString()} rows. All values are percenta
     ORDER BY year
     LIMIT 1000
     \`\`\`
-12. **LIMIT** → Always include LIMIT, max 1000.
-13. **Data completeness** → If the query includes years before 1960, ALWAYS include this disclaimer VERBATIM: "Data before 1960 may reflect incomplete or limited reporting." The state/national table only covers ${HISTORICAL.stateNatMinYear}–${HISTORICAL.stateNatMaxYear}.
-14. **Excluding years** → When the user asks to exclude a specific year (e.g., "exclude 2021"), do NOT filter it out with WHERE year != 2021 — that removes the year from the chart and makes the timeline look continuous. Instead, include all years in the range but use NULL for the excluded year's values so the chart shows a visible gap. Example: SELECT year, CASE WHEN year = 2021 THEN NULL ELSE murder END AS murder FROM ... WHERE year BETWEEN 2019 AND 2025
-15. **NEVER SELECT ori in your query output.** ORI is an internal identifier that means nothing to users. Use ori in JOINs, WHERE, and GROUP BY clauses, but ALWAYS exclude it from the SELECT column list. Instead, SELECT the agency name, state, and other human-readable columns.
-16. **FILL GAPS FOR AGENCY TIME SERIES:** When querying a single agency's crime, staffing, or clearance data over a year range, use a recursive CTE to generate all years in the range and LEFT JOIN the data. This ensures missing years appear as NULL/gaps in charts instead of being silently skipped. Applies to historical_agency_crime, historical_staffing, AND historical_agency_clearance.
+12. **LIMIT** → Always include LIMIT. Max 5000 for historical queries (needed for all-states breakdowns: 50 states × 65 years = 3,250 rows).
+13. **All-states queries** → When the user asks for data "by state", "all 50 states", or "broken down by state", return long-format data (year, state, value) — do NOT pivot into 50 columns. Use \`chartHint: "none"\` since the frontend cannot chart 50 series. The user can export the table to the Chart Builder for small multiples. Example:
+   \`\`\`sql
+   SELECT year, state, murder_rate
+   FROM historical_state_national
+   WHERE state != 'United States'
+     AND year BETWEEN 1960 AND 2024
+   ORDER BY state, year
+   LIMIT 5000
+   \`\`\`
+   Set xAxis to "year", yAxis to "murder_rate". This returns ~3,250 rows which fits within the 5,000 limit.
+14. **Data completeness** → If the query includes years before 1960, ALWAYS include this disclaimer VERBATIM: "Data before 1960 may reflect incomplete or limited reporting." The state/national table only covers ${HISTORICAL.stateNatMinYear}–${HISTORICAL.stateNatMaxYear}.
+15. **Excluding years** → When the user asks to exclude a specific year (e.g., "exclude 2021"), do NOT filter it out with WHERE year != 2021 — that removes the year from the chart and makes the timeline look continuous. Instead, include all years in the range but use NULL for the excluded year's values so the chart shows a visible gap. Example: SELECT year, CASE WHEN year = 2021 THEN NULL ELSE murder END AS murder FROM ... WHERE year BETWEEN 2019 AND 2025
+16. **NEVER SELECT ori in your query output.** ORI is an internal identifier that means nothing to users. Use ori in JOINs, WHERE, and GROUP BY clauses, but ALWAYS exclude it from the SELECT column list. Instead, SELECT the agency name, state, and other human-readable columns.
+17. **FILL GAPS FOR AGENCY TIME SERIES:** When querying a single agency's crime, staffing, or clearance data over a year range, use a recursive CTE to generate all years in the range and LEFT JOIN the data. This ensures missing years appear as NULL/gaps in charts instead of being silently skipped. Applies to historical_agency_crime, historical_staffing, AND historical_agency_clearance.
     Crime example:
     \`\`\`sql
     WITH years AS (SELECT 1990 AS year UNION ALL SELECT year + 1 FROM years WHERE year < 2024)
@@ -873,7 +909,7 @@ ${HISTORICAL.agencyClearanceRows.toLocaleString()} rows. All values are percenta
     LIMIT 1000
     \`\`\`
     This is CRITICAL for agencies like Baltimore (missing crime 1999), New Orleans (missing staffing years), etc. Without gap-fill, the chart misleadingly connects data across missing years.
-17. **Size-based requests** → If the user specifies a population threshold (e.g., "cities over 250K", "cities with 500K+ population"), filter by population >= that number using the most recent available population year. If they say "largest cities" or "biggest cities" without a threshold, use a reasonable default like the top 50 by population. Do NOT ask for clarification unless the request is genuinely ambiguous.
+18. **Size-based requests** → If the user specifies a population threshold (e.g., "cities over 250K", "cities with 500K+ population"), filter by population >= that number using the most recent available population year. If they say "largest cities" or "biggest cities" without a threshold, use a reasonable default like the top 50 by population. Do NOT ask for clarification unless the request is genuinely ambiguous.
 
 ## CHART HINTS
 - Single trend over time (one agency/state/nation, yearly) → "line" with xAxis = "year"
@@ -893,7 +929,7 @@ Always respond with valid JSON (no markdown fences):
   "chartHint": "line" | "bar" | "pie" | "stacked_bar" | "none",
   "xAxis": "column_name for x-axis",
   "yAxis": "column_name(s) for y-axis, comma-separated if multiple",
-  "title": "Short chart/result title",
+  "title": "Short chart title — use '[Agency/Place] [Metric] Per [Period]' format (e.g., 'LAPD Officers Per Year', 'Houston Murders Per Month'). Never use vague words like 'Over Time' or 'Trend'. Keep under 6 words.",
   "colors": ["#hex1", "#hex2"],  // OPTIONAL — only if user requests colors
   "yAxisLabel": "Label text",     // OPTIONAL — for rate/clearance queries or on request
   "xAxisLabel": "Label text"      // OPTIONAL — only on request

@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { getDb, logQuery } from "@/lib/rtci-db";
+import { validatePageToken } from "@/lib/page-token";
 import { translateToSql, getHistoricalSystemPrompt } from "@/lib/claude";
 import { validateAndSanitize } from "@/lib/sql-safety";
 import { buildChartConfig } from "@/lib/chart-config";
@@ -156,7 +157,7 @@ function getHistoricalChartMeta(
   try {
     const sqlLower = sql.toLowerCase();
 
-    const src = "FBI UCR";
+    const src = "FBI Uniform Crime Reports";
 
     // National queries (state = 'United States')
     if (sqlLower.includes("'united states'")) {
@@ -232,11 +233,21 @@ export async function POST(req: NextRequest) {
   }
 
   let question = "";
+  let sessionId: string | null = null;
   let body: Record<string, unknown>;
 
   try {
     body = await req.json();
     question = (body?.question as string)?.trim() || "";
+    sessionId = ((body?.sessionId as string) || "").slice(0, 64) || null;
+    // Page token validation — block bots that hit the API directly
+    const pageToken = body?.pageToken as string | undefined;
+    if (!validatePageToken(pageToken)) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Please refresh the page and try again." }),
+        { status: 403, headers: { "Content-Type": "application/json" } }
+      );
+    }
   } catch {
     return new Response(
       JSON.stringify({ success: false, error: "Invalid request" }),
@@ -293,7 +304,7 @@ export async function POST(req: NextRequest) {
 
         if (!claude.sql) {
           const ms = Date.now() - totalStart;
-          logQuery(question, null, 0, null, ms, claude.explanation, tab, [], "haiku-4.5");
+          logQuery(question, null, 0, null, ms, claude.explanation, tab, [], "haiku-4.5", sessionId);
           controller.enqueue(
             encoder.encode(
               sseEvent({
@@ -373,7 +384,8 @@ export async function POST(req: NextRequest) {
         );
 
         // Step 2: Validate SQL
-        const validation = validateAndSanitize(claude.sql);
+        const maxLimit = 5000;
+        const validation = validateAndSanitize(claude.sql, { maxLimit });
         if (!validation.valid) {
           const ms = Date.now() - totalStart;
           logQuery(
@@ -385,7 +397,8 @@ export async function POST(req: NextRequest) {
             null,
             tab,
             firedGuardrails,
-            "haiku-4.5"
+            "haiku-4.5",
+            sessionId
           );
           controller.enqueue(
             encoder.encode(
@@ -441,7 +454,7 @@ export async function POST(req: NextRequest) {
             systemPrompt
           );
           if (retry.sql) {
-            const retryValidation = validateAndSanitize(retry.sql);
+            const retryValidation = validateAndSanitize(retry.sql, { maxLimit });
             if (retryValidation.valid) {
               try {
                 const retryStmt = db.prepare(retryValidation.sanitized!);
@@ -468,7 +481,8 @@ export async function POST(req: NextRequest) {
                   null,
                   tab,
                   firedGuardrails,
-                  "haiku-4.5"
+                  "haiku-4.5",
+                  sessionId
                 );
                 controller.enqueue(
                   encoder.encode(
@@ -492,7 +506,8 @@ export async function POST(req: NextRequest) {
                 null,
                 tab,
                 firedGuardrails,
-                "haiku-4.5"
+                "haiku-4.5",
+                sessionId
               );
               controller.enqueue(
                 encoder.encode(
@@ -507,7 +522,7 @@ export async function POST(req: NextRequest) {
             }
           } else {
             const ms = Date.now() - totalStart;
-            logQuery(question, sql, 0, `DB: ${msg}`, ms, null, tab, firedGuardrails, "haiku-4.5");
+            logQuery(question, sql, 0, `DB: ${msg}`, ms, null, tab, firedGuardrails, "haiku-4.5", sessionId);
             controller.enqueue(
               encoder.encode(
                 sseEvent({
@@ -521,8 +536,8 @@ export async function POST(req: NextRequest) {
           }
         }
 
-        const executionTimeMs = Date.now() - dbStart;
         const totalMs = Date.now() - totalStart;
+        const executionTimeMs = totalMs;  // show total wall time (includes Claude API + DB)
 
         // Step 4: Handle empty results
         if (rows.length === 0) {
@@ -552,7 +567,7 @@ export async function POST(req: NextRequest) {
               "This query returned no results. The data may not be available for the specified criteria. Try broadening your search or asking about a different topic.";
           }
 
-          logQuery(question, sql, 0, "empty_result", totalMs, emptyMsg, tab, firedGuardrails, "haiku-4.5");
+          logQuery(question, sql, 0, "empty_result", totalMs, emptyMsg, tab, firedGuardrails, "haiku-4.5", sessionId);
           controller.enqueue(
             encoder.encode(
               sseEvent({
@@ -690,7 +705,7 @@ export async function POST(req: NextRequest) {
               ];
               const rollingFixed = await translateToSql(rollingPrompt, rollingHistory, systemPrompt);
               if (rollingFixed.sql) {
-                const rv = validateAndSanitize(rollingFixed.sql);
+                const rv = validateAndSanitize(rollingFixed.sql, { maxLimit });
                 if (rv.valid) {
                   try {
                     const stmt2 = db.prepare(rv.sanitized!);
@@ -699,6 +714,7 @@ export async function POST(req: NextRequest) {
                     columns = stmt2.columns().map(c => c.name);
                     sql = rv.sanitized!;
                     applyRetryMeta(claude, rollingFixed);
+                    claude.explanation = (claude.explanation || "") + "\n\nNote: Raw monthly data had many zero-count months, so results were converted to a rolling 12-month sum for a clearer trend.";
                     console.log(`[sparse-monthly] Rolling 12-month retry succeeded, ${rows.length} rows`);
                   } catch (e) {
                     console.log(`[sparse-monthly] Rolling retry SQL failed:`, e);
@@ -713,7 +729,7 @@ export async function POST(req: NextRequest) {
         // Step 5: Build chart config + metadata
         const chartConfig = buildChartConfig(claude, columns, rows);
         const chartMeta = isHistorical ? getHistoricalChartMeta(db, sql) : getChartMeta(db, sql);
-        const truncated = rows.length >= 1000;
+        const truncated = rows.length >= maxLimit;
 
         // Step 5b: Send result immediately with pre-query explanation (no waiting)
         controller.enqueue(
@@ -754,16 +770,16 @@ export async function POST(req: NextRequest) {
             );
           }
           const totalMs2 = Date.now() - totalStart;
-          logQuery(question, sql, rows.length, null, totalMs2, postExplanation, tab, firedGuardrails, "haiku-4.5");
+          logQuery(question, sql, rows.length, null, totalMs2, postExplanation, tab, firedGuardrails, "haiku-4.5", sessionId);
         } catch {
           // If explanation fails, pre-query explanation is already shown — just log
           const totalMs2 = Date.now() - totalStart;
-          logQuery(question, sql, rows.length, null, totalMs2, claude.explanation, tab, firedGuardrails, "haiku-4.5");
+          logQuery(question, sql, rows.length, null, totalMs2, claude.explanation, tab, firedGuardrails, "haiku-4.5", sessionId);
         }
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         const ms = Date.now() - totalStart;
-        logQuery(question, sql, 0, msg, ms, null, tab, firedGuardrails, "haiku-4.5");
+        logQuery(question, sql, 0, msg, ms, null, tab, firedGuardrails, "haiku-4.5", sessionId);
         console.error("Query API error:", msg);
         controller.enqueue(
           encoder.encode(

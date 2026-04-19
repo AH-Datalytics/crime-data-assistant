@@ -124,12 +124,12 @@ export default function DataTable({ columns, rows, truncated }: DataTableProps) 
           className="mt-3 text-sm text-[var(--muted)] hover:text-[var(--foreground)] cursor-pointer transition-colors"
         >
           Show all {rows.length.toLocaleString()} rows
-          {truncated && " (results capped at 1,000)"}
+          {truncated && " (results truncated)"}
         </button>
       )}
       {truncated && expanded && (
         <p className="mt-3 text-xs text-[var(--muted)]">
-          Results capped at 1,000 rows
+          Results truncated
         </p>
       )}
     </div>

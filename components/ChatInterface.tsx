@@ -4,16 +4,18 @@ import { useState } from "react";
 import CrimeIndexLogo from "./CrimeIndexLogo";
 import RtciChat from "./RtciChat";
 import NibrsChat from "./NibrsChat";
+import ShrChat from "./ShrChat";
 import ExplainerContent from "./ExplainerContent";
 import GettingStarted from "./GettingStarted";
 import Tracker from "./Tracker";
 
-type TabId = "current" | "historical" | "nibrs" | "explainer";
+type TabId = "current" | "historical" | "nibrs" | "shr" | "explainer";
 
 const TABS: { id: TabId; label: string; shortLabel: string; color: string }[] = [
   { id: "current", label: "Current Trends", shortLabel: "Current", color: "#475EC7" },
   { id: "historical", label: "Historical Library", shortLabel: "Historical", color: "#8B5E3C" },
   { id: "nibrs", label: "NIBRS Explorer", shortLabel: "NIBRS", color: "#2d8659" },
+  { id: "shr", label: "Homicide Reports", shortLabel: "SHR", color: "#8B6914" },
   { id: "explainer", label: "Tutorial", shortLabel: "Tutorial", color: "#333" },
 ];
 
@@ -23,9 +25,10 @@ interface ChatInterfaceProps {
   heroPopulation?: number | null;
   historicalHeroData?: { year: number; murder_rate: number }[];
   historicalMaxYear?: number;
+  shrHeroData?: { year: number; pct_firearm: number }[];
 }
 
-export default function ChatInterface({ heroData, heroAgencyCount, heroPopulation, historicalHeroData, historicalMaxYear }: ChatInterfaceProps) {
+export default function ChatInterface({ heroData, heroAgencyCount, heroPopulation, historicalHeroData, historicalMaxYear, shrHeroData }: ChatInterfaceProps) {
   const [activeTab, setActiveTab] = useState<TabId | null>(null);
   // Track which tabs have been visited — lazy-mount on first visit, keep mounted after
   const [mountedTabs, setMountedTabs] = useState<Set<TabId>>(new Set());
@@ -40,7 +43,7 @@ export default function ChatInterface({ heroData, heroAgencyCount, heroPopulatio
       {/* Header */}
       <header className="bg-white border-b border-[var(--border)] shrink-0">
         {/* Top row: logo + tab pills (desktop) */}
-        <div className="px-4 md:px-6 flex items-center justify-between relative" style={{ height: 56 }}>
+        <div className="px-4 md:px-6 flex items-center justify-between relative" style={{ height: 62 }}>
           {/* Left: back arrow + logo (desktop only) + Crime Index (desktop only) */}
           <div className="flex items-center gap-3 md:gap-4 min-w-0 shrink-0">
             <a
@@ -68,8 +71,8 @@ export default function ChatInterface({ heroData, heroAgencyCount, heroPopulatio
           {/* Center: title */}
           <button
             onClick={() => selectTab(null)}
-            className="absolute left-1/2 -translate-x-1/2 text-[11px] md:text-[13px] lg:text-base font-bold uppercase text-[var(--foreground)] whitespace-nowrap cursor-pointer hover:opacity-80 transition-opacity"
-            style={{ letterSpacing: "2.5px" }}
+            className="absolute left-1/2 -translate-x-1/2 font-bold uppercase text-[var(--foreground)] cursor-pointer hover:opacity-80 transition-opacity text-[10px] sm:text-[11px] md:text-xs whitespace-nowrap"
+            style={{ letterSpacing: "1.5px" }}
           >
             Crime Data Assistant
           </button>
@@ -79,22 +82,28 @@ export default function ChatInterface({ heroData, heroAgencyCount, heroPopulatio
             <button onClick={() => selectTab(null)} className="md:hidden flex items-center shrink-0 cursor-pointer">
               <CrimeIndexLogo size={24} />
             </button>
-            <div className={`${activeTab === null ? "hidden" : "hidden md:flex"} items-center gap-0 rounded-lg overflow-hidden border border-[var(--border)]`}>
-              {TABS.map((tab, i) => (
+            <div className={`${activeTab === null ? "hidden" : "hidden md:flex"} items-center gap-0.5`}>
+              {TABS.map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => selectTab(tab.id)}
-                  className={`text-xs lg:text-sm font-medium px-2.5 lg:px-4 py-1.5 transition-colors cursor-pointer whitespace-nowrap ${
-                    i > 0 ? "border-l border-[var(--border)]" : ""
-                  } ${
+                  className={`relative text-[11px] lg:text-xs px-2 lg:px-3 py-2 rounded-md cursor-pointer whitespace-nowrap transition-all duration-200 ${
                     activeTab === tab.id
-                      ? "text-white"
-                      : "bg-white text-[#666] hover:bg-[#f0f0f0]"
+                      ? "font-semibold"
+                      : "font-medium text-[#888] hover:text-[var(--foreground)] hover:bg-[#f4f4f4]"
                   }`}
-                  style={activeTab === tab.id ? { backgroundColor: tab.color } : undefined}
+                  style={activeTab === tab.id ? { color: tab.color, backgroundColor: tab.color + '0d' } : undefined}
                 >
                   <span className="hidden lg:inline">{tab.label}</span>
                   <span className="lg:hidden">{tab.shortLabel}</span>
+                  <span
+                    className="absolute bottom-0 left-3 right-3 h-[2px] rounded-full transition-all duration-300"
+                    style={{
+                      backgroundColor: tab.color,
+                      opacity: activeTab === tab.id ? 1 : 0,
+                      transform: activeTab === tab.id ? 'scaleX(1)' : 'scaleX(0)',
+                    }}
+                  />
                 </button>
               ))}
             </div>
@@ -103,21 +112,27 @@ export default function ChatInterface({ heroData, heroAgencyCount, heroPopulatio
 
         {/* Mobile/tablet tab row — visible below md (768px) */}
         {activeTab !== null && (
-          <div className="md:hidden flex border-t border-[var(--border)]">
-            {TABS.map((tab, i) => (
+          <div className="md:hidden flex border-t border-[var(--border)] bg-white">
+            {TABS.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => selectTab(tab.id)}
-                className={`flex-1 text-xs font-medium py-2.5 transition-colors cursor-pointer ${
-                  i > 0 ? "border-l border-[var(--border)]" : ""
-                } ${
+                className={`relative flex-1 text-[11px] font-medium py-2.5 transition-all cursor-pointer ${
                   activeTab === tab.id
-                    ? "text-white"
-                    : "bg-white text-[#666]"
+                    ? "font-semibold"
+                    : "text-[#999]"
                 }`}
-                style={activeTab === tab.id ? { backgroundColor: tab.color } : undefined}
+                style={activeTab === tab.id ? { color: tab.color } : undefined}
               >
                 {tab.shortLabel}
+                <span
+                  className="absolute bottom-0 left-2 right-2 h-[2px] rounded-full transition-all duration-300"
+                  style={{
+                    backgroundColor: tab.color,
+                    opacity: activeTab === tab.id ? 1 : 0,
+                    transform: activeTab === tab.id ? 'scaleX(1)' : 'scaleX(0)',
+                  }}
+                />
               </button>
             ))}
           </div>
@@ -150,6 +165,12 @@ export default function ChatInterface({ heroData, heroAgencyCount, heroPopulatio
       {mountedTabs.has("nibrs") && (
         <NibrsChat
           visible={activeTab === "nibrs"}
+        />
+      )}
+      {mountedTabs.has("shr") && (
+        <ShrChat
+          visible={activeTab === "shr"}
+          heroData={shrHeroData}
         />
       )}
       {mountedTabs.has("explainer") && (

@@ -1,6 +1,11 @@
 export function formatNumber(n: number | null | undefined): string {
   if (n == null) return "";
-  return n.toLocaleString("en-US");
+  // Cap at 1 decimal place everywhere (table, chart, export)
+  const rounded = Number.isInteger(n) ? n : Math.round(n * 10) / 10;
+  return rounded.toLocaleString("en-US", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 1,
+  });
 }
 
 export function formatAxisValue(n: number): string {
@@ -13,6 +18,14 @@ export function formatAxisValue(n: number): string {
     return v === Math.floor(v) ? `${v}K` : `${v.toFixed(1)}K`;
   }
   return String(n);
+}
+
+/** Format a chart tooltip / axis value: max 1 decimal, with commas */
+export function fmtVal(v: number | string, isPercent = false): string {
+  const n = Number(v);
+  if (isNaN(n)) return String(v);
+  const s = n.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 1 });
+  return isPercent ? `${s}%` : s;
 }
 
 export function formatDate(yyyymmdd: string): string {

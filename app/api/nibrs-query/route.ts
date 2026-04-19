@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getNibrsDb, executeWithTimeout, logNibrsQuery } from "@/lib/nibrs-db";
+import { validatePageToken } from "@/lib/page-token";
 import { translateToSql } from "@/lib/nibrs-claude";
 import { validateAndSanitize } from "@/lib/sql-safety";
 import { buildNibrsChartConfig } from "@/lib/nibrs-chart-config";
@@ -42,6 +43,16 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const question = body?.question?.trim();
+    const sessionId: string | null = ((body?.sessionId as string) || "").slice(0, 64) || null;
+
+    // Page token validation
+    const pageToken = body?.pageToken as string | undefined;
+    if (!validatePageToken(pageToken)) {
+      return jsonResp(
+        { success: false, error: "Please refresh the page and try again." } as QueryError,
+        403
+      );
+    }
 
     if (!question || typeof question !== "string") {
       return jsonResp(
@@ -65,7 +76,7 @@ export async function POST(req: NextRequest) {
     console.log(`[nibrs][timing] Claude API: ${claudeMs}ms`);
 
     if (!claude.sql) {
-      logNibrsQuery(question, null, 0, null, claudeMs, claude.explanation, [], "haiku-4.5");
+      logNibrsQuery(question, null, 0, null, claudeMs, claude.explanation, [], "haiku-4.5", sessionId);
       return jsonResp({
         success: true,
         question,
@@ -171,7 +182,7 @@ export async function POST(req: NextRequest) {
             console.log(`[nibrs][error-recovery] Retry succeeded`);
           } catch (retryErr) {
             const retryMsg = retryErr instanceof Error ? retryErr.message : String(retryErr);
-            logNibrsQuery(question, sql, 0, `DB retry failed: ${retryMsg}`, Date.now() - claudeStart, null, guardrailResult.fired, "haiku-4.5");
+            logNibrsQuery(question, sql, 0, `DB retry failed: ${retryMsg}`, Date.now() - claudeStart, null, guardrailResult.fired, "haiku-4.5", sessionId);
             const userError = isTimeout
               ? `This query is too complex for the database. Try narrowing your request — for example, ask about a specific city, state, or shorter time range instead of a broad national query.`
               : msg.includes("no such column") || msg.includes("ambiguous")
@@ -183,14 +194,14 @@ export async function POST(req: NextRequest) {
             );
           }
         } else {
-          logNibrsQuery(question, sql, 0, `DB: ${msg} (retry validation failed)`, Date.now() - claudeStart, null, guardrailResult.fired, "haiku-4.5");
+          logNibrsQuery(question, sql, 0, `DB: ${msg} (retry validation failed)`, Date.now() - claudeStart, null, guardrailResult.fired, "haiku-4.5", sessionId);
           return jsonResp(
             { success: false, error: `I had trouble with that query. Try rephrasing your question.`, sql } as QueryError,
             500
           );
         }
       } else {
-        logNibrsQuery(question, sql, 0, `DB: ${msg}`, Date.now() - claudeStart, null, guardrailResult.fired, "haiku-4.5");
+        logNibrsQuery(question, sql, 0, `DB: ${msg}`, Date.now() - claudeStart, null, guardrailResult.fired, "haiku-4.5", sessionId);
         return jsonResp(
           { success: false, error: isTimeout ? `This query is too complex for the database. Try asking about a specific city, state, or shorter time range.` : `Database error: ${msg}`, sql } as QueryError,
           500
@@ -398,14 +409,15 @@ export async function POST(req: NextRequest) {
     const explainMs = Date.now() - explainStart;
     console.log(`[nibrs][timing] Post-query explanation: ${explainMs}ms`);
 
-    // Append standard NIBRS disclaimer
+    // Append standard NIBRS disclaimer — skip if explanation already has a coverage/completeness note
     const nibrsDisclaimer = "Note: This data comes from the FBI's NIBRS program. Not all agencies report to this system, and some may have incomplete data — especially in their first year of NIBRS reporting. Always verify that reported offenses are not impacted by incomplete coverage.";
-    if (!explanation.includes("FBI's NIBRS program")) {
+    const alreadyHasCoverageNote = /transitioning|underreporting|incomplete|not all agencies|coverage|did not report/i.test(explanation);
+    if (!explanation.includes("FBI's NIBRS program") && !alreadyHasCoverageNote) {
       explanation += "\n\n" + nibrsDisclaimer;
     }
 
     // Log success (after CDE check so explanation includes any disclaimers)
-    logNibrsQuery(question, sql, rows.length, null, claudeMs + executionTimeMs + explainMs, explanation, guardrailResult.fired, "haiku-4.5");
+    logNibrsQuery(question, sql, rows.length, null, claudeMs + executionTimeMs + explainMs, explanation, guardrailResult.fired, "haiku-4.5", sessionId);
 
     // Step 5: Build chart config
     const chartConfig = buildNibrsChartConfig(claude, columns, rows);

@@ -50,8 +50,9 @@ export function getWriteDb(): Database.Database | null {
         response TEXT
       )
     `);
-    // Add tab column if table already exists without it
+    // Add columns if table already exists without them
     try { _writeDb.exec(`ALTER TABLE query_log ADD COLUMN tab TEXT`); } catch { /* already exists */ }
+    try { _writeDb.exec(`ALTER TABLE query_log ADD COLUMN session_id TEXT`); } catch { /* already exists */ }
     return _writeDb;
   } catch (e) {
     console.warn("Query logging disabled:", e);
@@ -69,13 +70,14 @@ export function logQuery(
   response: string | null = null,
   tab: string = "current",
   guardrails: string[] = [],
-  model: string | null = null
+  model: string | null = null,
+  sessionId: string | null = null
 ) {
   const db = getWriteDb();
   if (db) {
     try {
       db.prepare(
-        "INSERT INTO query_log (ts, tab, question, sql, rows, error, ms, response, guardrails, model) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        "INSERT INTO query_log (ts, tab, question, sql, rows, error, ms, response, guardrails, model, session_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
       ).run(
         Date.now(),
         tab,
@@ -86,7 +88,8 @@ export function logQuery(
         ms,
         response ? response.slice(0, 4000) : null,
         guardrails.length > 0 ? guardrails.join(",") : null,
-        model
+        model,
+        sessionId ? sessionId.slice(0, 64) : null
       );
     } catch (e) {
       console.warn("Log write failed:", e);

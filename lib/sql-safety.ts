@@ -15,14 +15,15 @@ const FORBIDDEN_KEYWORDS = [
 ];
 
 function stripStringLiterals(sql: string): string {
-  return sql.replace(/'[^']*'/g, "''");
+  return sql.replace(/'(?:''|[^'])*'/g, "''");
 }
 
-export function validateAndSanitize(sql: string): {
+export function validateAndSanitize(sql: string, opts?: { maxLimit?: number }): {
   valid: boolean;
   sanitized?: string;
   error?: string;
 } {
+  const maxLimit = opts?.maxLimit ?? 1000;
   if (!sql || !sql.trim()) {
     return { valid: false, error: "Empty SQL" };
   }
@@ -60,14 +61,14 @@ export function validateAndSanitize(sql: string): {
   const limitMatch = sanitized.match(/\bLIMIT\s+(\d+)/i);
   if (limitMatch) {
     const limitVal = parseInt(limitMatch[1], 10);
-    if (limitVal > 1000) {
+    if (limitVal > maxLimit) {
       sanitized = sanitized.replace(
         /\bLIMIT\s+\d+/i,
-        "LIMIT 1000"
+        `LIMIT ${maxLimit}`
       );
     }
   } else {
-    sanitized = sanitized.replace(/;?\s*$/, "") + " LIMIT 1000";
+    sanitized = sanitized.replace(/;?\s*$/, "") + ` LIMIT ${maxLimit}`;
   }
 
   return { valid: true, sanitized };

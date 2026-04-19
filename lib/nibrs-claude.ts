@@ -362,7 +362,7 @@ Hate crimes by bias type example:
 
 ### summary_offense_weapon (SPECIFIC WEAPON TYPE PER OFFENSE)
 - COLUMNS: ori TEXT, year INT, ucr_offense_code TEXT, weapon_type TEXT, offense_count INT, state TEXT — has state column. For state queries use WHERE state = 'TX'. For city queries use ORI subquery.
-- weapon_type: specific weapon codes (same as type_weapon_1 in raw offenses) — '11'=Firearm (unspecified), '12'=Handgun, '13'=Rifle, '14'=Shotgun, '15'=Other Firearm, '20'=Knife, '30'=Blunt Object, '35'=Motor Vehicle, '40'=Personal Weapons, '50'=Poison, '60'=Explosives, '65'=Fire, '70'=Drugs, '85'=Asphyxiation, '90'=Other, '95'=Unknown, '99'=None
+- weapon_type: specific weapon codes — '11'=Firearm (unspecified), '11A'=Firearm automatic, '12'=Handgun, '12A'=Handgun automatic, '13'=Rifle, '13A'=Rifle automatic, '14'=Shotgun, '14A'=Shotgun automatic, '15'=Other Firearm, '20'=Knife, '30'=Blunt Object, '35'=Motor Vehicle, '40'=Personal Weapons, '50'=Poison, '60'=Explosives, '65'=Fire, '70'=Drugs, '85'=Asphyxiation, '90'=Other, '95'=Unknown, '99'=None. IMPORTANT: The 'A' suffix codes (11A, 12A, 13A, 14A) mean automatic variants — always merge them with their base code in CASE statements (e.g., WHEN weapon_type IN ('12','12A') THEN 'Handgun'). Always GROUP BY the CASE alias, not by weapon_type.
 - INDEXES: (ori, year), (ucr_offense_code, year), (weapon_type, year)
 - USE FOR: Specific weapon breakdowns at the OFFENSE level — "handgun vs rifle in murders", "weapon types in aggravated assaults". For victim-level weapon breakdowns, use summary_victim_weapon instead.
 
@@ -376,11 +376,12 @@ IMPORTANT: Always map weapon codes to readable names with CASE WHEN expressions.
 - USE FOR: Specific weapon breakdowns at the VICTIM level — "murder victims killed by handgun vs rifle", "how many rape victims involved a knife". Pre-joined from victims + offenses. NEVER join raw victims with raw offenses for weapon queries.
 
 Murder victims by specific weapon example:
-  SELECT CASE s.weapon_type WHEN '12' THEN 'Handgun' WHEN '13' THEN 'Rifle' WHEN '14' THEN 'Shotgun' WHEN '11' THEN 'Firearm (type unknown)' WHEN '15' THEN 'Other Firearm' WHEN '20' THEN 'Knife' WHEN '40' THEN 'Personal Weapons' WHEN '30' THEN 'Blunt Object' ELSE 'Other' END AS weapon,
+  SELECT CASE WHEN s.weapon_type IN ('11','11A') THEN 'Firearm (type unknown)' WHEN s.weapon_type IN ('12','12A') THEN 'Handgun' WHEN s.weapon_type IN ('13','13A') THEN 'Rifle' WHEN s.weapon_type IN ('14','14A') THEN 'Shotgun' WHEN s.weapon_type = '15' THEN 'Other Firearm' WHEN s.weapon_type = '20' THEN 'Knife' WHEN s.weapon_type = '30' THEN 'Blunt Object' WHEN s.weapon_type = '35' THEN 'Motor Vehicle' WHEN s.weapon_type = '40' THEN 'Personal Weapons' WHEN s.weapon_type = '50' THEN 'Poison' WHEN s.weapon_type = '60' THEN 'Explosives' WHEN s.weapon_type = '65' THEN 'Fire' WHEN s.weapon_type = '70' THEN 'Drugs' WHEN s.weapon_type = '85' THEN 'Asphyxiation' WHEN s.weapon_type = '90' THEN 'Other' WHEN s.weapon_type = '95' THEN 'Unknown' WHEN s.weapon_type = '99' THEN 'None' ELSE s.weapon_type END AS weapon,
     SUM(s.victim_count) AS victims
   FROM summary_victim_weapon s
   WHERE s.ucr_offense_code = '09A' AND s.year = 2025
-  GROUP BY s.weapon_type ORDER BY victims DESC
+  GROUP BY weapon ORDER BY victims DESC
+IMPORTANT: Always GROUP BY the CASE expression alias (weapon), NOT by s.weapon_type — otherwise codes like '11' and '11A' produce duplicate rows.
 
 ### summary_victim_circumstance (MURDER/ASSAULT CIRCUMSTANCES)
 - COLUMNS: ori TEXT, year INT, ucr_offense_code TEXT, circumstance_code TEXT, victim_count INT, state TEXT — has state column. For state queries use WHERE state = 'TX'. For city queries use ORI subquery.
@@ -419,11 +420,11 @@ DV murders with firearms in Texas example:
     AND weapon_type IN ('11','12','13','14','15') AND state = 'TX'
 
 Gang homicides by weapon type in California example:
-  SELECT CASE weapon_type WHEN '12' THEN 'Handgun' WHEN '13' THEN 'Rifle' WHEN '14' THEN 'Shotgun' WHEN '11' THEN 'Firearm (unknown)' WHEN '15' THEN 'Other Firearm' WHEN '20' THEN 'Knife' WHEN '40' THEN 'Personal Weapons' ELSE 'Other' END AS weapon,
+  SELECT CASE WHEN weapon_type IN ('11','11A') THEN 'Firearm (type unknown)' WHEN weapon_type IN ('12','12A') THEN 'Handgun' WHEN weapon_type IN ('13','13A') THEN 'Rifle' WHEN weapon_type IN ('14','14A') THEN 'Shotgun' WHEN weapon_type = '15' THEN 'Other Firearm' WHEN weapon_type = '20' THEN 'Knife' WHEN weapon_type = '40' THEN 'Personal Weapons' ELSE 'Other' END AS weapon,
     SUM(victim_count) AS victims
   FROM summary_victim_weapon_circumstance
   WHERE ucr_offense_code = '09A' AND circumstance_code IN ('04','05') AND state = 'CA'
-  GROUP BY weapon_type ORDER BY victims DESC
+  GROUP BY weapon ORDER BY victims DESC
 
 ### summary_hate_crime_location (CROSS-DIMENSIONAL: hate crime + location per offense)
 - COLUMNS: state TEXT, ori TEXT, year INT, ucr_offense_code TEXT, bias_motivation TEXT, location_type TEXT, offense_count INT
@@ -570,6 +571,95 @@ Carjacking from summary (state):
   FROM summary_carjacking_monthly WHERE state = 'IL'
   GROUP BY year ORDER BY year
 
+### summary_carjacking_victim_demographics (CARJACKING VICTIM DEMOGRAPHICS)
+- COLUMNS: ori TEXT, year INT, weapon_category TEXT, race TEXT, sex TEXT, age_group TEXT, victim_count INT, state TEXT
+- weapon_category values: 'Firearm', 'Knife', 'Blunt Object', 'Other', 'Unknown'
+- race/sex/age_group values: same as summary_victim_demographics
+- INDEXES: (ori, year), (state, year), (year)
+- USE FOR: ANY query about carjacking victim demographics — race, sex, age, weapon breakdowns. Pre-aggregated from victims joined to carjacking incidents (robbery code 120 + stolen vehicle property).
+
+Carjacking victims by race (city):
+  SELECT d.race, SUM(d.victim_count) AS victims
+  FROM summary_carjacking_victim_demographics d
+  WHERE d.year = 2024
+    AND d.ori IN (SELECT ori FROM agencies WHERE city = 'HOUSTON' AND state = 'TX' AND year = 2024 AND pop_group LIKE '1%')
+  GROUP BY d.race ORDER BY victims DESC
+
+### summary_carjacking_offender_demographics (CARJACKING OFFENDER DEMOGRAPHICS)
+- COLUMNS: ori TEXT, year INT, weapon_category TEXT, race TEXT, sex TEXT, age_group TEXT, offender_count INT, state TEXT
+- weapon_category/race/sex/age_group values: same as summary_offender_demographics
+- INDEXES: (ori, year), (state, year), (year)
+- USE FOR: ANY query about carjacking offender demographics — race, sex, age, weapon breakdowns.
+
+Carjacking offenders by age group (state):
+  SELECT d.age_group, SUM(d.offender_count) AS offenders
+  FROM summary_carjacking_offender_demographics d
+  WHERE d.year = 2024 AND d.state = 'TX'
+  GROUP BY d.age_group ORDER BY offenders DESC
+
+### summary_carjacking_arrestee_demographics (CARJACKING ARRESTEE DEMOGRAPHICS)
+- COLUMNS: ori TEXT, year INT, weapon_category TEXT, race TEXT, sex TEXT, age_group TEXT, arrestee_count INT, state TEXT
+- weapon_category/race/sex/age_group values: same as summary_arrestee_demographics
+- INDEXES: (ori, year), (state, year), (year)
+- USE FOR: ANY query about carjacking arrestee demographics — race, sex, age, weapon breakdowns.
+
+Carjacking arrestees by race per year (city):
+  SELECT d.year, d.race, SUM(d.arrestee_count) AS arrestees
+  FROM summary_carjacking_arrestee_demographics d
+  WHERE d.year BETWEEN 2022 AND 2025
+    AND d.ori IN (SELECT ori FROM agencies WHERE city = 'HOUSTON' AND state = 'TX' AND year = 2025 AND pop_group LIKE '1%')
+  GROUP BY d.year, d.race ORDER BY d.year, arrestees DESC
+
+⚠️ CRITICAL: The carjacking demographic tables are aggregated at the YEAR level (no month column). Do NOT JOIN them to summary_carjacking_monthly — that table has one row per month per ORI, which would multiply demographic counts by 12x. Query the demographic tables directly with GROUP BY year. For monthly carjacking counts, use summary_carjacking_monthly separately. Never combine them in a single query.
+
+### summary_homicide_victim (HOMICIDE VICTIM DEMOGRAPHICS)
+- COLUMNS: year INT, victim_race TEXT, victim_sex TEXT, victim_age_group TEXT, victim_count INT
+- victim_race values: 'White', 'Black', 'Asian', 'American Indian', 'Pacific Islander', 'Unknown'
+- victim_sex values: 'Male', 'Female', 'Unknown'
+- victim_age_group values: 'Under 18', '18-24', '25-34', '35-44', '45-54', '55-64', '65+', 'Unknown'
+- INDEX: (year)
+- USE FOR: ANY query about homicide/murder victim demographics — race, sex, age breakdowns. National-level only (no ORI/state column).
+
+Homicide victims by race per year:
+  SELECT year, victim_race, SUM(victim_count) AS victims
+  FROM summary_homicide_victim
+  WHERE year BETWEEN 2020 AND 2024
+  GROUP BY year, victim_race ORDER BY year, victims DESC
+
+### summary_homicide_offender (HOMICIDE OFFENDER DEMOGRAPHICS)
+- COLUMNS: year INT, offender_race TEXT, offender_sex TEXT, offender_age_group TEXT, weapon_category TEXT, offender_count INT
+- offender_race/sex/age_group: same values as victim table
+- weapon_category values: 'Firearm', 'Knife/Cutting', 'Blunt Object', 'Personal Weapons', 'Other', 'Unknown'
+- INDEX: (year)
+- USE FOR: ANY query about homicide/murder offender demographics — race, sex, age, weapon breakdowns. National-level only.
+
+Homicide offenders by weapon type:
+  SELECT weapon_category, SUM(offender_count) AS offenders
+  FROM summary_homicide_offender WHERE year = 2024
+  GROUP BY weapon_category ORDER BY offenders DESC
+
+### summary_homicide_victim_offender (HOMICIDE VICTIM-OFFENDER RACE CROSS-TAB)
+- COLUMNS: year INT, victim_race TEXT, offender_race TEXT, pair_count INT
+- USE FOR: Intraracial/interracial homicide analysis, victim race × offender race breakdowns. National-level only.
+- INDEX: (year)
+
+Intraracial homicide percentage:
+  SELECT year,
+    SUM(CASE WHEN victim_race = offender_race THEN pair_count ELSE 0 END) AS intraracial,
+    SUM(pair_count) AS total,
+    ROUND(100.0 * SUM(CASE WHEN victim_race = offender_race THEN pair_count ELSE 0 END) / SUM(pair_count), 1) AS pct_intraracial
+  FROM summary_homicide_victim_offender
+  WHERE victim_race != 'Unknown' AND offender_race != 'Unknown'
+  GROUP BY year ORDER BY year
+
+Victim race by offender race for a specific year:
+  SELECT victim_race, offender_race, SUM(pair_count) AS count
+  FROM summary_homicide_victim_offender
+  WHERE year = 2024
+  GROUP BY victim_race, offender_race ORDER BY count DESC
+
+⚠️ These homicide demographic tables are NATIONAL aggregates (no ORI/state column). They cannot be filtered by city or state. For city/state-level murder counts, use the existing summary_victim tables. For demographic breakdowns at city/state level, explain that NIBRS demographic detail is only available at the national level in these summary tables.
+
 ### nibrs_agency_completeness (REPORTING COMPLETENESS)
 - COLUMNS: ori TEXT, year INT, months_reported INT (1-12), total_offenses INT
 - ${formatRowCount(NIBRS.summaryRowCounts["nibrs_agency_completeness"] || 208886)} rows. One row per agency per year.
@@ -596,7 +686,7 @@ IMPORTANT: The completeness filter ONLY applies to queries on **city-level table
 ### WHEN TO USE SUMMARY TABLES vs RAW TABLES
 - VICTIM SUMMARY TABLES (summary_victim_state_monthly, summary_victim_city_monthly): ALL person crime counts/trends (murder, rape, assault, intimidation, kidnapping, sex offenses, human trafficking). These are pre-aggregated from victims+connected_offense fields. Use these ALWAYS for person crime counts.
 - OFFENSE SUMMARY TABLES (summary_state_monthly, summary_city_monthly): property/society crime counts, trends, monthly/yearly totals, comparisons between cities/states, top-N by count
-- CARJACKING SUMMARY (summary_carjacking_monthly): ALL carjacking counts
+- CARJACKING SUMMARY (summary_carjacking_monthly): ALL carjacking counts. For carjacking demographics (victim/offender/arrestee race, sex, age, weapon), use summary_carjacking_victim_demographics, summary_carjacking_offender_demographics, or summary_carjacking_arrestee_demographics
 - LOCATION SUMMARY (summary_offense_location): ALL "where did crimes happen" queries by location type
 - HATE CRIME SUMMARY (summary_hate_crime): ALL bias-motivated crime queries
 - WEAPON SUMMARIES (summary_offense_weapon, summary_victim_weapon): specific weapon type breakdowns (handgun vs rifle vs knife etc.) — offense-level or victim-level
@@ -681,7 +771,7 @@ CRITICAL: If the user said "property crime" and you decide to use the SRS defini
   **DRUG SPECIFICITY LIMITATION**: NIBRS drug records use broad categories (Heroin, Cocaine, Marijuana, Opium, Synthetic Narcotics, Other Narcotics, etc.) — there is NO specific code for fentanyl, methamphetamine, or other individual substances. Fentanyl seizures are typically recorded under "Synthetic Narcotics" or "Other Narcotics" but cannot be isolated. If a user asks about fentanyl specifically, set sql to null and explain: "NIBRS drug data uses broad categories (e.g., Synthetic Narcotics, Other Narcotics) and cannot isolate specific substances like fentanyl. I can show you Synthetic Narcotics trends, which include fentanyl along with other synthetic opioids."
 - Auto theft: 240
 - Vehicle burglary (theft from motor vehicle): 23F
-- Carjacking: 120 (Robbery) with property type_property_loss='7' AND property_description IN ('03','05','24','28','37'). Use summary_carjacking_monthly for aggregate counts.
+- Carjacking: 120 (Robbery) with property type_property_loss='7' AND property_description IN ('03','05','24','28','37'). Use summary_carjacking_monthly for counts/trends, summary_carjacking_*_demographics for victim/offender/arrestee breakdowns.
 
 ## DERIVED/COMPOUND CRIME TYPES (no dedicated NIBRS code)
 These are commonly queried crime types that must be derived by combining multiple data elements:
@@ -792,7 +882,7 @@ Examples:
 1. ALWAYS filter by year AND state on the main table (offenses, incidents, etc.) BEFORE joining other tables. The (state, year) index is the most selective.
 2. NEVER do a full table scan without a year or indexed-column filter.
 3. When filtering by city: ALWAYS add the state filter (e.g., o.state = 'IL') on the main query table first, THEN use a subquery for city: AND o.ori IN (SELECT ori FROM agencies WHERE city = 'CHICAGO' AND state = 'IL' AND year = 2025). This lets SQLite use the (state, year) index to narrow rows BEFORE the join. NEVER use a direct JOIN to agencies for city filtering — it causes 57GB full scans.
-4. For carjacking queries, ALWAYS use summary_carjacking_monthly (not raw offenses+property).
+4. For carjacking queries, ALWAYS use summary_carjacking_* tables (not raw offenses+property). Use summary_carjacking_monthly for counts/trends, summary_carjacking_victim/offender/arrestee_demographics for demographic breakdowns.
 5. For other multi-table queries, use EXISTS subqueries instead of JOINs: AND EXISTS (SELECT 1 FROM property p WHERE p.ori = o.ori AND p.incident_num = o.incident_num AND p.year = o.year AND ...). This is dramatically faster.
 6. Join tables on (ori, incident_num, year) — this is the composite key.
 
@@ -801,7 +891,7 @@ Examples:
 8. Use COUNT(*) for totals, not SELECT *.
 9. Prefer GROUP BY with aggregates over subqueries.
 10. Add LIMIT 1000 for tabular results, LIMIT 50 for grouped aggregates.
-11. For "top N" queries, use ORDER BY ... DESC LIMIT N.
+11. For "top N" queries, use ORDER BY ... DESC LIMIT N. Default to LIMIT 20 when listing or ranking cities/agencies unless the user specifies a different number.
 12. Filter by ucr_offense_code (indexed) rather than scanning text descriptions.
 13. For date ranges: WHERE incident_date BETWEEN '20230101' AND '20231231'
 14. LITERAL COUNTS: When the user asks for "daily count", "per day", "by day", etc., give the LITERAL count per calendar date using GROUP BY incident_date — do NOT compute averages. For daily data, output columns: date (formatted as incident_date), count. Only use averages if the user explicitly says "average".
@@ -851,7 +941,7 @@ GROUP BY s.year ORDER BY s.year
 
 ⚠️ NEVER use summary_victim_STATE_monthly for city queries — it has NO ori column and will error.
 
-### EXAMPLE: Carjacking in a city (USE summary_carjacking_monthly!)
+### EXAMPLE: Carjacking counts in a city (USE summary_carjacking_monthly!)
 SELECT year, month, SUM(offense_count) AS carjackings
 FROM summary_carjacking_monthly
 WHERE year = 2025
@@ -859,6 +949,13 @@ AND ori IN (SELECT ori FROM agencies WHERE city = 'CHICAGO' AND state = 'IL' AND
 GROUP BY year, month ORDER BY year, month
 
 NOTE: summary_carjacking_monthly has columns (year, month, state, ori, offense_count) — it does NOT have incident_date or ucr_offense_code. Do NOT reference those columns on this table.
+
+### EXAMPLE: Carjacking arrestee demographics in a city
+SELECT d.age_group, d.race, SUM(d.arrestee_count) AS arrestees
+FROM summary_carjacking_arrestee_demographics d
+WHERE d.year BETWEEN 2022 AND 2025
+AND d.ori IN (SELECT ori FROM agencies WHERE city = 'HOUSTON' AND state = 'TX' AND year = 2025 AND pop_group LIKE '1%')
+GROUP BY d.age_group, d.race ORDER BY arrestees DESC
 
 ## TERMINOLOGY RULE
 In all explanations and titles, refer to offense codes as "NIBRS codes" (not "UCR codes"). The database column is named ucr_offense_code but the user-facing term is "NIBRS code". Example: "NIBRS code 09A (Murder)" not "UCR code 09A".
@@ -1027,12 +1124,12 @@ ${COVERAGE_DATA}
 Coverage percentages are ONLY relevant for state-level and national queries. NEVER cite coverage percentages for agency/city-level queries — an agency either reported to NIBRS or it didn't, and national coverage is irrelevant. For agency queries, use the agency_reporting_gaps table instead to check for incomplete reporting.
 
 1. For ANY state-level or national query, cite the specific coverage % for the relevant years from the list above in your explanation.
-2. If coverage < 85% for a year, add a disclaimer: "Note: Only X% of the U.S. population was covered by NIBRS-reporting agencies in [year]. Actual crime counts are likely higher."
-3. If coverage < 50%, strongly warn: "Caution: NIBRS coverage was only X% in [year]. These numbers substantially undercount actual crime."
-4. For national queries, the explanation MUST:
-   a) State the specific coverage % for EACH year queried
-   b) Clarify this is not the formal national crime estimate: "These are raw counts from agencies that reported data via NIBRS, not the FBI's official national crime estimate."
-   c) For multi-year queries, note coverage changes that could affect comparisons.
+2. If coverage < 85% for a year, add a disclaimer: "Note: This data comes from the FBI's NIBRS program. NIBRS participation has increased dramatically in recent years — only X% of the U.S. population was covered by NIBRS-reporting agencies in [year], so actual crime counts were likely higher than what appears here."
+3. If coverage < 50%, strongly warn: "Caution: This data comes from the FBI's NIBRS program. NIBRS participation was only X% in [year], meaning these numbers substantially undercount actual crime. NIBRS participation has increased dramatically in recent years."
+4. For national queries or any multi-year query spanning years with different coverage, the explanation MUST:
+   a) Lead with: "Note: This data comes from the FBI's NIBRS program. NIBRS participation has increased dramatically in recent years, which affects comparisons over time."
+   b) State the specific coverage % for the first and last year queried (e.g., "Coverage grew from X% in [first year] to Y% in [last year].")
+   c) Clarify: "These are raw counts from agencies that reported data via NIBRS, not the FBI's official national crime estimate. Increases in counts over time may partly reflect more agencies reporting, not necessarily more crime."
 5. For year-over-year comparisons, note if coverage changed significantly between years — changes in reported totals may reflect changes in coverage rather than changes in crime.
 ${NIBRS.lowCoverageStates ? `6. ${NIBRS.lowCoverageStates}` : "6. Some states have significantly lower NIBRS coverage than others — check coverage data above for the relevant state and year."}
 
@@ -1245,6 +1342,10 @@ export async function translateToSql(
     system: [{ type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
     messages,
   });
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const u = message.usage as any;
+  console.log(`[nibrs][cache] input=${u.input_tokens} cache_read=${u.cache_read_input_tokens ?? 0} cache_create=${u.cache_creation_input_tokens ?? 0}`);
 
   const text =
     message.content[0].type === "text" ? message.content[0].text : "";

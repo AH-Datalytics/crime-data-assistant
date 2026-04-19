@@ -26,7 +26,7 @@ export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   // Always allow auth endpoint, query-log (has its own key), and static assets
-  if (pathname === "/api/auth" || pathname === "/api/query-log" || pathname.startsWith("/_next") || pathname === "/favicon.ico") {
+  if (pathname === "/api/auth" || pathname === "/api/query-log" || pathname === "/api/session-analytics" || pathname === "/api/page-token" || pathname.startsWith("/_next") || pathname === "/favicon.ico" || pathname === "/icon.svg") {
     return NextResponse.next();
   }
 

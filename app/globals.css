@@ -31,28 +31,31 @@ h1, h2, h3, h4, h5, h6 {
   font-family: "neue-haas-grotesk-display", sans-serif;
 }
 
-/* Table styling — NYT style (used by RTCI tabs) */
+/* Table styling */
 .stat-table {
   width: 100%;
   border-collapse: collapse;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: "Hanken Grotesk", Helvetica, Arial, sans-serif;
   font-size: 13px;
+  font-variant-numeric: tabular-nums;
 }
 
 .stat-table th {
   background: #fff;
-  color: #999;
-  padding: 8px 12px;
+  color: #333;
+  padding: 6px 12px 8px;
   text-align: right;
   white-space: nowrap;
   cursor: pointer;
   user-select: none;
-  font-family: Georgia, "Times New Roman", serif;
-  font-weight: 400;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  border-bottom: 1px solid #ddd;
+  font-weight: 600;
+  font-size: 12.5px;
+  border: none;
+  border-bottom: 2px solid #333;
+}
+
+.stat-table th:hover {
+  color: #000;
 }
 
 .stat-table th:first-child {
@@ -60,24 +63,58 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .stat-table td {
-  padding: 7px 12px;
+  padding: 5px 12px;
   text-align: right;
   white-space: nowrap;
   font-weight: 400;
-  color: var(--foreground);
-  border-bottom: 1px solid #eaeaea;
+  color: #333;
+  border: none;
 }
 
 .stat-table td:first-child {
   text-align: left;
-  font-weight: 600;
+  font-weight: 500;
+}
+
+.stat-table tbody tr:nth-child(even) {
+  background: #f8f8f6;
+}
+
+.stat-table tbody tr:hover {
+  background: #f0efeb;
 }
 
 .stat-table tbody tr:last-child td {
-  border-bottom: 1px solid #ddd;
+  border-bottom: 1px solid #ccc;
 }
 
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+/* Tab content fade-in */
+.tab-fade-in {
+  animation: tabFadeIn 0.25s ease-out;
+}
+@keyframes tabFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Hide scrollbar but keep scroll functionality */
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Skeleton shimmer for loading states */
+.skeleton-shimmer {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: 4px;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }

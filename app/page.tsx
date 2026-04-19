@@ -1,5 +1,6 @@
 import { getDb } from "@/lib/rtci-db";
 import ChatInterface from "@/components/ChatInterface";
+import { getShrDb } from "@/lib/shr-db";
 
 function getHeroData() {
   try {
@@ -27,7 +28,7 @@ function getHeroData() {
     const popRow = db
       .prepare(
         `SELECT SUM(p.population) as pop FROM agency_population p
-         JOIN agencies a ON a.ori = p.ori AND a.national_sample = 1
+         JOIN sample_agencies sa ON sa.ori = p.ori
          WHERE p.year = 2024`
       )
       .get() as { pop: number | null };
@@ -70,10 +71,27 @@ function getHistoricalMaxYear() {
   }
 }
 
+function getShrHeroData() {
+  try {
+    const db = getShrDb();
+    return db.prepare(`
+      SELECT year,
+        ROUND(100.0 * SUM(CASE WHEN weapon_group = 'Firearm' THEN 1 ELSE 0 END) / COUNT(*), 1) as pct_firearm
+      FROM incidents
+      WHERE homicide_type = 'Murder' AND circumstance_group != 'Justifiable Homicide'
+      GROUP BY year ORDER BY year
+    `).all() as { year: number; pct_firearm: number }[];
+  } catch (e) {
+    console.error("SHR hero data query failed:", e);
+    return [];
+  }
+}
+
 export default function Home() {
   const { rows, agencyCount, population } = getHeroData();
   const historicalHeroData = getHistoricalHeroData();
   const historicalMaxYear = getHistoricalMaxYear();
+  const shrHeroData = getShrHeroData();
   return (
     <ChatInterface
       heroData={rows}
@@ -81,6 +99,7 @@ export default function Home() {
       heroPopulation={population}
       historicalHeroData={historicalHeroData}
       historicalMaxYear={historicalMaxYear}
+      shrHeroData={shrHeroData}
     />
   );
 }

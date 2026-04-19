@@ -7,7 +7,25 @@ import { useEffect, useRef } from "react";
  * Fires once on page load, then on each tab change.
  */
 
-function getSessionId(): string {
+let _pageToken: string | null = null;
+
+export function getPageToken(): string | null {
+  return _pageToken;
+}
+
+async function fetchPageToken() {
+  try {
+    const res = await fetch("/api/page-token");
+    if (res.ok) {
+      const data = await res.json();
+      _pageToken = data.token || null;
+    }
+  } catch {
+    // Silently fail — token is defense-in-depth, not required for functionality
+  }
+}
+
+export function getSessionId(): string {
   const key = "cda-session";
   let id = sessionStorage.getItem(key);
   if (!id) {
@@ -58,6 +76,7 @@ export default function Tracker({ activeTab }: TrackerProps) {
   useEffect(() => {
     if (hasSentPageview.current) return;
     hasSentPageview.current = true;
+    fetchPageToken();
 
     const utm = getUtmParams();
     send({

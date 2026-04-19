@@ -456,8 +456,8 @@ const GUARDRAILS: Guardrail[] = [
         if (uniqueCodes.length === 0 && !/23/i.test(sql)) return false; // no theft codes at all (different issue)
       }
 
-      // "carjacking" should use summary_carjacking_monthly — any other table/code is wrong
-      if (/\bcarjack/i.test(q) && !/summary_carjacking_monthly/i.test(sql)) return true;
+      // "carjacking" should use a summary_carjacking_* table — raw offenses+property is wrong (except daily queries)
+      if (/\bcarjack/i.test(q) && !/summary_carjacking_/i.test(sql)) return true;
 
       // "auto theft" / "motor vehicle theft" should be 240, NOT 23F
       if (/\b(auto|motor vehicle|car)\s*theft\b/i.test(q) && sql.includes("'23F'") && !sql.includes("'240'")) return true;
@@ -470,7 +470,7 @@ const GUARDRAILS: Guardrail[] = [
     message: (ctx) => {
       const q = ctx.question.toLowerCase();
       if (/\bcarjack/i.test(q)) {
-        return "[SYSTEM: Carjacking is NOT offense code 240 (that's motor vehicle theft). Use summary_carjacking_monthly for carjacking counts.]";
+        return "[SYSTEM: Carjacking is NOT offense code 240 (that's motor vehicle theft). Use summary_carjacking_monthly for carjacking counts/trends. For demographic breakdowns (race, sex, age, weapon), use summary_carjacking_victim_demographics, summary_carjacking_offender_demographics, or summary_carjacking_arrestee_demographics.]";
       }
       if (/\b(auto|motor vehicle|car)\s*theft\b/i.test(q)) {
         return "[SYSTEM: Auto/motor vehicle theft is offense code 240, NOT 23F. Code 23F is 'Theft From Motor Vehicle' (vehicle burglary), which is different from stealing the vehicle itself.]";
@@ -498,6 +498,52 @@ const GUARDRAILS: Guardrail[] = [
     },
     message: () =>
       "Your ranking query on historical_agency doesn't include a type filter. Without AND ha.type = 'city', the results may include state police, university police, and county agencies mixed in with cities. Add AND ha.type = 'city' to the WHERE clause (or 'county' if the user asked about counties).",
+  },
+  {
+    name: "nibrs-weapon-group-by-code",
+    tabs: ["nibrs"],
+    match: (ctx) => {
+      const sql = ctx.sql;
+      // Detect: CASE on weapon_type with GROUP BY weapon_type (should group by alias)
+      const hasCaseWeapon = /CASE[\s\S]+weapon_type[\s\S]+END\s+AS\s+(\w+)/i.test(sql);
+      const groupsByRawCode = /GROUP\s+BY[\s\S]*?\bweapon_type\b/i.test(sql);
+      return hasCaseWeapon && groupsByRawCode;
+    },
+    rewrite: (sql) => {
+      // Extract the alias from CASE...END AS <alias>
+      const aliasMatch = sql.match(/CASE[\s\S]+weapon_type[\s\S]+END\s+AS\s+(\w+)/i);
+      if (!aliasMatch) return null;
+      const alias = aliasMatch[1];
+      // Replace GROUP BY ...weapon_type... with the alias
+      const fixed = sql.replace(
+        /(GROUP\s+BY\s+(?:[\s\S]*?,\s*)?)(?:\w+\.)?weapon_type\b/i,
+        `$1${alias}`
+      );
+      return fixed !== sql ? fixed : null;
+    },
+  },
+  // --- Historical: staffing query without zero filter or with future years ---
+  {
+    name: "historical-staffing-no-filter",
+    tabs: ["historical"],
+    match: (ctx) => {
+      const sql = ctx.sql;
+      const usesStaffing = /\bhistorical_staffing\b/i.test(sql);
+      if (!usesStaffing) return false;
+      return !/all_total\s*>\s*0/i.test(sql) && !/officer_total\s*>\s*0/i.test(sql);
+    },
+    message: () =>
+      "Your staffing query does not filter out years with no data. In historical_staffing, a value of 0 means the agency did not report — NOT that they had zero officers. Add WHERE all_total > 0 (or AND all_total > 0) to exclude non-reporting years.",
+  },
+  {
+    name: "historical-staffing-left-join-nulls",
+    tabs: ["historical"],
+    match: (ctx) => {
+      const sql = ctx.sql;
+      return /\bhistorical_staffing\b/i.test(sql) && /LEFT\s+JOIN\s+historical_staffing/i.test(sql);
+    },
+    message: () =>
+      "Your staffing query uses LEFT JOIN which creates NULL rows for years with no data — these plot as zeroes on the chart. Either (1) use INNER JOIN instead of LEFT JOIN so only years with actual data appear, or (2) add WHERE officers IS NOT NULL (or WHERE hs.all_total > 0) after the JOIN to drop empty rows. Do NOT use a years CTE with LEFT JOIN — use INNER JOIN so only years the agency actually reported appear in the results.",
   },
   {
     name: "nibrs-ne-gu-state-codes",

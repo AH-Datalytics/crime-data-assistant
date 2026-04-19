@@ -1,6 +1,6 @@
 "use client";
 
-type TabId = "current" | "historical" | "nibrs";
+type TabId = "current" | "historical" | "nibrs" | "shr";
 
 interface GettingStartedProps {
   onSelectTab: (tab: TabId) => void;
@@ -57,6 +57,19 @@ const TAB_CARDS: {
     description:
       "The deepest dive available. Every reported incident with details of offense, victim, offender, weapon, and more. Not all agencies have reported every year to NIBRS.",
   },
+  {
+    id: "shr",
+    title: "Homicide Reports",
+    color: "#8B6914",
+    lightBg: "#fdf8e8",
+    borderColor: "#e8d48b",
+    icon: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z",
+    stat: "890K+",
+    statLabel: "homicide victims since 1976",
+    subtitle: "Incident-level \u00b7 1976\u2013present",
+    description:
+      "890K+ homicide victims from the FBI's Supplementary Homicide Reports. Includes victim/offender demographics, weapon, circumstance, and relationship data since 1976.",
+  },
 ];
 
 /* ── sample queries per tab ─────────────────────────────────────── */
@@ -83,6 +96,13 @@ const SAMPLE_QUERIES: Record<TabId, { q: string; why: string }[]> = {
     { q: "What is the clearance rate for rape in Florida by year?", why: "Combines offense counts with arrest/clearance data." },
     { q: "Compare murder offender demographics in Chicago vs. Houston in 2023", why: "Uses offender demographics for a cross-city comparison." },
   ],
+  shr: [
+    { q: "What percentage of murders involved a firearm by year since 1990?", why: "Long-term weapon trend using SHR's 50-year dataset." },
+    { q: "Break down homicide circumstances in Texas in 2023", why: "SHR-specific field showing felony vs argument vs other motives." },
+    { q: "What share of homicides are intraracial since 2000?", why: "Cross-tabulates victim and offender race." },
+    { q: "Show domestic homicide trends nationally since 1990", why: "Uses relationship_group to isolate family-related killings." },
+    { q: "Victim age and sex breakdown for murders in California in 2022", why: "Demographic breakdown using victim table." },
+  ],
 };
 
 export default function GettingStarted({ onSelectTab }: GettingStartedProps) {
@@ -105,7 +125,7 @@ export default function GettingStarted({ onSelectTab }: GettingStartedProps) {
         </div>
 
         {/* Tab cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
           {TAB_CARDS.map((card) => (
             <button
               key={card.id}
@@ -122,24 +142,14 @@ export default function GettingStarted({ onSelectTab }: GettingStartedProps) {
                 style={{ backgroundColor: card.color }}
               />
               <div className="p-5 pb-5 flex flex-col flex-1">
-                {/* Icon + title row */}
-                <div className="flex items-center gap-3 mb-3">
-                  <div
-                    className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
-                    style={{ backgroundColor: card.color }}
-                  >
-                    <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d={card.icon} />
-                    </svg>
-                  </div>
-                  <div>
-                    <h3 className="text-[15px] font-bold text-[var(--foreground)] leading-tight">
-                      {card.title}
-                    </h3>
-                    <p className="text-[11px] text-[var(--muted)] tracking-wide">
-                      {card.subtitle}
-                    </p>
-                  </div>
+                {/* Title row */}
+                <div className="mb-3">
+                  <h3 className="text-[15px] font-bold text-[var(--foreground)] leading-tight">
+                    {card.title}
+                  </h3>
+                  <p className="text-[11px] text-[var(--muted)] tracking-wide mt-0.5">
+                    {card.subtitle}
+                  </p>
                 </div>
 
                 {/* Big stat */}

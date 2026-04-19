@@ -127,6 +127,9 @@ function loadNibrsFacts() {
       "summary_offender_demographics", "summary_arrestee_demographics",
       "summary_drug_monthly", "summary_property_offense",
       "nibrs_agency_completeness",
+      "summary_carjacking_victim_demographics",
+      "summary_carjacking_offender_demographics",
+      "summary_carjacking_arrestee_demographics",
     ];
     for (const table of summaryTables) {
       try {
