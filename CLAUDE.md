@@ -1,12 +1,12 @@
 # Crime Data Assistant
 
 ## Overview
-AI chatbot for exploring U.S. crime data across three tabs: Current Trends (RTCI), Historical Library (FBI UCR), and NIBRS Explorer. Deployed at nibrsai.com on a Hetzner VPS.
+AI chatbot for exploring U.S. crime data across four tabs: Current Trends (RTCI), Historical Library (FBI UCR), NIBRS Explorer, and Homicide Reports (SHR). Deployed at nibrsai.com on a Hetzner VPS.
 
 ## Tech Stack
 - Next.js 16, React 19, TypeScript, Tailwind CSS v4, Recharts
-- better-sqlite3 (readonly) for three databases: `crime_data.db` (RTCI + Historical), `nibrs.db` (NIBRS), `query_log.db`
-- Anthropic API: Haiku 4.5 for Current Trends/Historical, Sonnet 4 for NIBRS Explorer
+- better-sqlite3 (readonly) for four databases: `crime_data.db` (RTCI + Historical), `nibrs.db` (NIBRS), `shr.db` (SHR), `query_log.db`
+- Anthropic API: Haiku 4.5 for all four tabs (benchmarked against Sonnet — same quality, 2.4x faster, 4.1x cheaper)
 - Auth: HMAC-SHA256 cookie-based (middleware.ts)
 
 ## Build & Deploy
