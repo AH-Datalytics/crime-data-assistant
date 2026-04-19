@@ -239,7 +239,7 @@ export async function POST(req: NextRequest) {
 
     // Offender demographics warning
     if (/\boff_race\b|\boff_sex\b|\boff_age/i.test(sql)) {
-      disclaimers.push("Approximately 40% of homicide incidents have no recorded offender information. These results reflect only cases where offender demographics were recorded. This does not indicate whether a case was solved or cleared.");
+      disclaimers.push("Approximately 40% of homicide incidents have no recorded offender information. These results reflect only cases where offender demographics were recorded at the time of reporting.");
     }
 
     // Multi-year comparison
@@ -249,6 +249,12 @@ export async function POST(req: NextRequest) {
       if (years.length >= 2 && Math.max(...years) - Math.min(...years) > 5) {
         disclaimers.push("SHR reporting has changed over time. Changes in counts across years may partly reflect changes in agency reporting, not just changes in homicides.");
       }
+    }
+
+    // Partial year warning
+    const currentYear = new Date().getFullYear();
+    if (rows.some((r: Record<string, unknown>) => Number(r.year) >= currentYear - 1)) {
+      disclaimers.push(`Data for ${currentYear - 1} and ${currentYear} may be incomplete as not all agencies have submitted their reports.`);
     }
 
     let explanation = claude.explanation || "";
