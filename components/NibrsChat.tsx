@@ -30,6 +30,7 @@ interface NibrsChatProps {
 
 export default function NibrsChat({ visible }: NibrsChatProps) {
   const [messages, setMessages] = useState<Message[]>([]);
+  const [chatCollapsed, setChatCollapsed] = useState(false);
   const [input, setInput] = useState("");
   const [inputFocused, setInputFocused] = useState(false);
   const [hasInteracted, setHasInteracted] = useState(false);
@@ -220,7 +221,18 @@ export default function NibrsChat({ visible }: NibrsChatProps) {
               Thinking...{elapsed > 3 && <span className="text-xs opacity-60 ml-1">({elapsed}s)</span>}
             </div>
           )}
-          {messages.map((msg) => (
+          {messages.length > 0 && (
+            <button
+              onClick={() => setChatCollapsed(c => !c)}
+              className="text-[10px] uppercase tracking-wider text-[var(--muted)] hover:text-[var(--foreground)] cursor-pointer transition-colors flex items-center gap-1 mb-1"
+            >
+              <svg className={`w-3 h-3 transition-transform ${chatCollapsed ? "" : "rotate-90"}`} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+              {chatCollapsed ? "Show conversation" : "Hide conversation"}
+            </button>
+          )}
+          {!chatCollapsed && messages.map((msg) => (
             <div
               key={msg.id}
               className={`text-sm ${
@@ -232,10 +244,15 @@ export default function NibrsChat({ visible }: NibrsChatProps) {
               {msg.role === "user" ? (
                 <span className="font-semibold">Q: {msg.text}</span>
               ) : (
-                <span dangerouslySetInnerHTML={{ __html: msg.text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>') }} />
+                <span className="whitespace-pre-line">{msg.text}</span>
               )}
             </div>
           ))}
+          {chatCollapsed && messages.length > 0 && (
+            <div className="text-xs text-[var(--muted)] italic">
+              {messages.filter(m => m.role === "user").slice(-1)[0]?.text}
+            </div>
+          )}
           {messages.length === 0 && !loading && (
             <div className="text-sm text-gray-400 py-1 text-center">
               Review more than <span className="font-semibold text-[var(--navy)]">1 Billion</span> NIBRS records relating to offenses, victims, arrestees, weapons, property, clearances, and more! Data available since 1991, recent data is preliminary and subject to change.

@@ -111,6 +111,7 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
 
   // Current response state
   const [explanation, setExplanation] = useState("");
+  const [chatCollapsed, setChatCollapsed] = useState(false);
   const [response, setResponse] = useState<QueryResponse | null>(null);
   const [error, setError] = useState("");
   const [lastQuestion, setLastQuestion] = useState("");
@@ -396,13 +397,22 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
         </div>
       )}
 
-      {/* Explanation text — only show when we have text or are loading with text */}
+      {/* Explanation text — collapsible */}
       {(explanation || (loading && explanation)) && (
         <div className="border-b border-[var(--border)] bg-white shrink-0">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3">
-            <div className="max-h-32 overflow-y-auto">
+            <button
+              onClick={() => setChatCollapsed(c => !c)}
+              className="text-[10px] uppercase tracking-wider text-[var(--muted)] hover:text-[var(--foreground)] cursor-pointer transition-colors flex items-center gap-1 mb-1"
+            >
+              <svg className={`w-3 h-3 transition-transform ${chatCollapsed ? "" : "rotate-90"}`} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+              {chatCollapsed ? "Show explanation" : "Hide explanation"}
+            </button>
+            {!chatCollapsed && <div className="max-h-32 overflow-y-auto">
               <div>
-                <p className="text-sm text-[var(--foreground)] leading-relaxed" dangerouslySetInnerHTML={{ __html: explanation.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>') }} />
+                <p className="text-sm text-[var(--foreground)] leading-relaxed whitespace-pre-line">{explanation}</p>
                 {loading && (
                   <div className="text-xs text-[var(--muted)] mt-2 flex items-center gap-1">
                     <span className="inline-flex gap-0.5">
@@ -414,7 +424,7 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
                   </div>
                 )}
               </div>
-            </div>
+            </div>}
           </div>
         </div>
       )}

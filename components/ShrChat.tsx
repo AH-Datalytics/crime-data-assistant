@@ -31,6 +31,7 @@ interface ShrChatProps {
 
 export default function ShrChat({ visible, heroData }: ShrChatProps) {
   const [messages, setMessages] = useState<Message[]>([]);
+  const [chatCollapsed, setChatCollapsed] = useState(false);
   const [input, setInput] = useState("");
   const [inputFocused, setInputFocused] = useState(false);
   const [hasInteracted, setHasInteracted] = useState(false);
@@ -221,7 +222,18 @@ export default function ShrChat({ visible, heroData }: ShrChatProps) {
               Thinking...{elapsed > 3 && <span className="text-xs opacity-60 ml-1">({elapsed}s)</span>}
             </div>
           )}
-          {messages.map((msg) => (
+          {messages.length > 0 && (
+            <button
+              onClick={() => setChatCollapsed(c => !c)}
+              className="text-[10px] uppercase tracking-wider text-[var(--muted)] hover:text-[var(--foreground)] cursor-pointer transition-colors flex items-center gap-1 mb-1"
+            >
+              <svg className={`w-3 h-3 transition-transform ${chatCollapsed ? "" : "rotate-90"}`} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+              {chatCollapsed ? "Show conversation" : "Hide conversation"}
+            </button>
+          )}
+          {!chatCollapsed && messages.map((msg) => (
             <div
               key={msg.id}
               className={`text-sm ${
@@ -237,6 +249,11 @@ export default function ShrChat({ visible, heroData }: ShrChatProps) {
               )}
             </div>
           ))}
+          {chatCollapsed && messages.length > 0 && (
+            <div className="text-xs text-[var(--muted)] italic">
+              {messages.filter(m => m.role === "user").slice(-1)[0]?.text}
+            </div>
+          )}
           {messages.length === 0 && !loading && (
             <div className="text-sm text-gray-400 py-1 text-center">
               Explore <span className="font-semibold text-[var(--navy)]">890,000+</span> homicide victims from the FBI&apos;s Supplementary Homicide Reports, 1976&ndash;present. Includes victim/offender demographics, weapon, circumstance, and relationship data. Coverage varies by state and year.

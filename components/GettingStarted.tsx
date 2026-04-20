@@ -249,8 +249,8 @@ export default function GettingStarted({ onSelectTab }: GettingStartedProps) {
                     {[
                       ["Source", "Agency Data Collected by AH Datalytics", "FBI Uniform Crime Reports", "FBI NIBRS Master Files", "FBI Supplementary Homicide Reports"],
                       ["Time Range", "2017\u2013present", "1930\u20132024", "1991\u2013present", "1976\u2013present"],
-                      ["Granularity", "Monthly", "Annual", "Per-incident", "Per-incident"],
-                      ["Coverage", "Hundreds of agencies (curated sample)", "10,000+ agencies", "Varies by year (~87% by 2024)", "Varies; FL gap 1997\u20132020"],
+                      ["Granularity", "Monthly Aggregated", "Annual Aggregated", "Incident-level", "Incident-level"],
+                      ["Coverage", "Hundreds of agencies (curated sample)", "10,000+ agencies", "Varies by year", "Varies by year"],
                       ["Crime Types", "Part I UCR (7 offenses)", "Part I UCR + staffing", "52+ NIBRS offense codes", "Homicides only"],
                       ["Detail Level", "Crime counts + clearance rates", "Crime counts + clearance rates + staffing", "Demographics, weapons, drugs, property", "Victim/offender demographics, weapon, circumstance, relationship"],
                       ["Best For", "Recent trends, what\u2019s happening now", "Long-term trends, historical context", "Deep analysis, demographics, specific offenses", "Homicide-specific analysis since 1976"],
