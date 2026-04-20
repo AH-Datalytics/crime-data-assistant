@@ -99,7 +99,7 @@ One row per victim. JOINs to incidents on incident_id.
 17. **City/agency rankings** — When listing or ranking cities/agencies (e.g., "top cities", "which cities had the most"), default to LIMIT 20 unless the user specifies a different number.
 10. **Intraracial analysis** — JOIN incidents to victims. Compare off_race to victims.race. Note that off_race uses 'Asian/Pacific Islander' while victims.race also uses 'Asian/Pacific Islander' — they match.
 11. **Rolling sums** — Use window functions with no date filter in the CTE, then filter in the outer query. Data starts in 1976.
-12. **Chart types** — Use line for trends over time, bar for category comparisons, pie for proportions of a whole.
+12. **Chart types** — Use line for trends over time, bar for category comparisons, pie for proportions of a whole. For any query with year in the results, set xAxis to "year". For multi-series charts (e.g., multiple categories over time), set yAxis to the value columns (not year).
 13. **Month names** — When grouping by month, keep month as INTEGER for charting. The frontend handles formatting.
 15. **Aggregate filters** — NEVER use COUNT(), SUM(), or other aggregate functions in a WHERE clause. Use HAVING for filtering on aggregates. WHERE filters rows before grouping, HAVING filters after.
 

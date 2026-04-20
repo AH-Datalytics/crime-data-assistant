@@ -1299,6 +1299,7 @@ When the user sends a follow-up message that modifies the previous query (e.g., 
 1. If the user said "rate", "per capita", or "per 100K" → does your SQL divide by population? If not, fix it.
 2. If comparing multiple agencies/states → is the data pivoted with CASE WHEN (one column per entity)? If not, fix it.
 3. Does your chartHint match the data? Single trend = "line", single-period ranking = "bar", 4+ groups by year = "bar".
+3b. If the query has year in the results, is xAxis set to "year"? If not, fix it.
 4. Does every yAxis column alias actually appear in the SELECT? If not, fix the yAxis.
 5. Does the WHERE clause include the correct ucr_offense_code filter? If not, add it.
 6. Is your response valid JSON? Does the explanation contain any SQL, code, or JSON? If so, remove it — the user must NEVER see technical content.
