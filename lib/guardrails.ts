@@ -535,16 +535,27 @@ const GUARDRAILS: Guardrail[] = [
     message: () =>
       "Your staffing query does not filter out years with no data. In historical_staffing, a value of 0 means the agency did not report — NOT that they had zero officers. Add WHERE all_total > 0 (or AND all_total > 0) to exclude non-reporting years.",
   },
+  // Detect single-agency historical time series without gap-fill CTE
   {
-    name: "historical-staffing-left-join-nulls",
+    name: "historical-missing-gap-fill",
     tabs: ["historical"],
     match: (ctx) => {
       const sql = ctx.sql;
-      return /\bhistorical_staffing\b/i.test(sql) && /LEFT\s+JOIN\s+historical_staffing/i.test(sql);
+      // Only fire for single-agency queries over a year range
+      const usesAgencyData = /\bhistorical_agency_crime\b|\bhistorical_staffing\b|\bhistorical_agency_clearance\b/i.test(sql);
+      const hasYearRange = /year\s*(>=|BETWEEN)/i.test(sql) || /ORDER\s+BY.*year/i.test(sql);
+      const hasGapFill = /WITH\s+(years|all_years|yr)/i.test(sql) || /UNION\s+ALL\s+SELECT\s+year\s*\+\s*1/i.test(sql);
+      const isSingleAgency = /agency\s*=\s*'/i.test(sql) && !/GROUP\s+BY.*agency/i.test(sql);
+      return usesAgencyData && hasYearRange && isSingleAgency && !hasGapFill;
     },
     message: () =>
-      "Your staffing query uses LEFT JOIN which creates NULL rows for years with no data — these plot as zeroes on the chart. Either (1) use INNER JOIN instead of LEFT JOIN so only years with actual data appear, or (2) add WHERE officers IS NOT NULL (or WHERE hs.all_total > 0) after the JOIN to drop empty rows. Do NOT use a years CTE with LEFT JOIN — use INNER JOIN so only years the agency actually reported appear in the results.",
+      "Your query retrieves historical data for a single agency over a year range but does not use a recursive CTE to fill missing years. Many agencies have gaps in reporting — without gap-fill, the chart will misleadingly connect data across missing years. Use: WITH years AS (SELECT <start> AS year UNION ALL SELECT year + 1 FROM years WHERE year < <end>) SELECT y.year, ... FROM years y LEFT JOIN ... This ensures missing years appear as NULL/gaps in the chart.",
   },
+  // NOTE: historical-staffing-left-join-nulls guardrail REMOVED.
+  // LEFT JOIN with a years CTE is the CORRECT pattern for staffing queries —
+  // it produces NULL values for missing years, which the chart renders as gaps.
+  // The old guardrail was incorrectly telling the model to use INNER JOIN,
+  // which silently skips missing years instead of showing gaps.
   {
     name: "nibrs-ne-gu-state-codes",
     tabs: ["nibrs"],
