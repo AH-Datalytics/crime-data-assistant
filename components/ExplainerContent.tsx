@@ -56,9 +56,9 @@ export default function ExplainerContent({ visible }: ExplainerContentProps) {
             </div>
           </section>
 
-          {/* Three data sources comparison */}
+          {/* Four data sources comparison */}
           <section className="bg-white rounded-2xl border border-[var(--border)] p-6 md:p-8 shadow-sm">
-            <h2 className="text-xl font-bold mb-2 text-[var(--foreground)]">The Three Data Sources</h2>
+            <h2 className="text-xl font-bold mb-2 text-[var(--foreground)]">The Four Data Sources</h2>
             <p className="text-sm text-[var(--muted)] mb-6">
               Each database covers different time periods, detail levels, and collection methods. Choosing the right one depends on your question.
             </p>
@@ -70,17 +70,18 @@ export default function ExplainerContent({ visible }: ExplainerContentProps) {
                     <th className="text-left py-2.5 px-3 font-bold text-[11px] uppercase tracking-wider border-b-2" style={{ color: "#475EC7", borderColor: "#475EC7" }}>Current Trends</th>
                     <th className="text-left py-2.5 px-3 font-bold text-[11px] uppercase tracking-wider border-b-2" style={{ color: "#8B5E3C", borderColor: "#8B5E3C" }}>Historical Library</th>
                     <th className="text-left py-2.5 px-3 font-bold text-[11px] uppercase tracking-wider border-b-2" style={{ color: "#2d8659", borderColor: "#2d8659" }}>NIBRS Explorer</th>
+                    <th className="text-left py-2.5 px-3 font-bold text-[11px] uppercase tracking-wider border-b-2" style={{ color: "#8B6914", borderColor: "#8B6914" }}>Homicide Reports</th>
                   </tr>
                 </thead>
                 <tbody className="text-[var(--muted)]">
                   {[
-                    ["Source", "Agency Data Collected by AH Datalytics", "FBI Uniform Crime Reports", "FBI NIBRS Master Files"],
-                    ["Time Range", "2017\u2013present", "1930\u20132024", "1991\u2013present"],
-                    ["Granularity", "Monthly", "Annual", "Per-incident"],
-                    ["Coverage", "500+ agencies (curated sample)", "10,000+ agencies", "Varies by year but growing (~87% of U.S. pop. by 2024)"],
-                    ["Crime Types", "Part I UCR (7 offenses)", "Part I UCR + staffing", "52+ NIBRS offense codes"],
-                    ["Detail Level", "Crime counts + clearance rates", "Crime counts + clearance rates + staffing", "Demographics, weapons, drugs, property"],
-                    ["Best For", "Recent trends, what\u2019s happening now", "Long-term trends, historical context", "Deep analysis, demographics, specific offenses"],
+                    ["Source", "Agency Data Collected by AH Datalytics", "FBI Uniform Crime Reports", "FBI NIBRS Master Files", "FBI Supplementary Homicide Reports"],
+                    ["Time Range", "2017\u2013present", "1930\u20132024", "1991\u2013present", "1976\u2013present"],
+                    ["Granularity", "Monthly Aggregated", "Annual Aggregated", "Incident-level", "Incident-level"],
+                    ["Coverage", "Hundreds of agencies (curated sample)", "10,000+ agencies", "Varies by year", "Varies by year"],
+                    ["Crime Types", "Part I UCR (7 offenses)", "Part I UCR + staffing", "52+ NIBRS offense codes", "Homicides only"],
+                    ["Detail Level", "Crime counts + clearance rates", "Crime counts + clearance rates + staffing", "Demographics, weapons, drugs, property", "Victim/offender demographics, weapon, circumstance, relationship"],
+                    ["Best For", "Recent trends, what\u2019s happening now", "Long-term trends, historical context", "Deep analysis, demographics, specific offenses", "Homicide-specific analysis since 1976"],
                   ].map(([label, ...cells], i) => (
                     <tr key={i} className="border-b border-[var(--border)]">
                       <td className="py-2.5 px-3 font-semibold text-[var(--foreground)] whitespace-nowrap">{label}</td>
@@ -134,7 +135,7 @@ export default function ExplainerContent({ visible }: ExplainerContentProps) {
               </div>
             </div>
 
-            <div>
+            <div className="mb-6 pb-6 border-b border-[var(--border)]">
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-1 h-5 rounded-full" style={{ backgroundColor: "#2d8659" }} />
                 <h3 className="text-base font-bold text-[var(--foreground)]">NIBRS Explorer (National Incident-Based Reporting System)</h3>
@@ -151,6 +152,27 @@ export default function ExplainerContent({ visible }: ExplainerContentProps) {
                 </p>
                 <p>
                   <strong className="text-[var(--foreground)]">What it can&apos;t do:</strong> The database has total jurisdiction population but <strong>not</strong> population broken down by race, gender, or age. This means you can calculate per-capita crime rates for a city or state, but you cannot calculate rates like &ldquo;murders per 100K females&rdquo; because the female population isn&apos;t available.
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-1 h-5 rounded-full" style={{ backgroundColor: "#8B6914" }} />
+                <h3 className="text-base font-bold text-[var(--foreground)]">Homicide Reports (FBI Supplementary Homicide Reports)</h3>
+              </div>
+              <div className="pl-3.5 text-sm text-[var(--muted)] leading-relaxed space-y-2.5">
+                <p>
+                  The Supplementary Homicide Reports (SHR) are a specialized FBI data collection focused exclusively on homicides. Since 1976, agencies have submitted detailed records for each murder and manslaughter &mdash; including victim and offender demographics, weapon used, victim-offender relationship, and the circumstance of the killing.
+                </p>
+                <p>
+                  <strong className="text-[var(--foreground)]">Why it exists:</strong> While NIBRS and UCR count homicides, the SHR provides richer detail about each killing. You can answer questions like &ldquo;what share of murders involved a firearm?&rdquo;, &ldquo;how has domestic homicide trended since 1990?&rdquo;, or &ldquo;what is the age breakdown of murder victims in Texas?&rdquo;
+                </p>
+                <p>
+                  <strong className="text-[var(--foreground)]">Key caveats:</strong> Not all agencies report SHR data every year. Most notably, <strong>Florida did not submit SHR data for most years between 1997 and 2020</strong>. Alabama and some other states have inconsistent reporting. National counts from SHR will undercount actual homicides.
+                </p>
+                <p>
+                  <strong className="text-[var(--foreground)]">About offender data:</strong> Approximately 40% of homicide incidents have no recorded offender information. Having offender demographics recorded does <strong>not</strong> mean the case was solved or cleared &mdash; this dataset does not measure clearances. When viewing offender breakdowns, results reflect only cases where offender demographics were recorded at the time of reporting.
                 </p>
               </div>
             </div>

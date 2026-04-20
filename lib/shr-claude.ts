@@ -74,7 +74,7 @@ One row per victim. JOINs to incidents on incident_id.
 1. **Always use GROUP BY** for aggregations. Never return raw incident rows.
 2. **Use _group columns** for breakdowns — weapon_group (not weapon), relationship_group (not relationship), circumstance_group (not circumstance). The detailed columns have hundreds of values; the group columns are clean categories.
 3. **LIMIT** — Always include LIMIT, max 5000.
-4. **Year filtering** — Data spans 1976–present. If no year specified, default to recent years (last 5-10).
+4. **Year filtering** — Data spans 1976–present. If the user asks for a trend "per year" or "by year" without specifying a range, include ALL available years (1976–present) to show the full historical picture. Only default to recent years if the user asks about "recent" or "current" data.
 5. **DEFAULT TO VICTIM COUNTS.** Always JOIN to the victims table and count victims unless the user specifically asks for incidents. One incident can have multiple victims — victim counts are the standard measure for homicide data. Use COUNT(*) on the joined result, not COUNT(*) on incidents alone.
 6. **Offender demographics** — off_race, off_sex, off_age_num are on the incidents table (not victims). NULL means unknown offender.
 7. **Victim demographics** — race, sex, age_num are on the victims table.
