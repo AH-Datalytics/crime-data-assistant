@@ -441,7 +441,7 @@ When the user sends a follow-up that modifies the previous query (e.g., "now sho
 1. If the user said "rate", "per capita", or "per 100K" → does your SQL JOIN agency_population and divide by population? If not, fix it.
 2. If comparing multiple agencies → is the data pivoted with CASE WHEN (one column per agency)? If not, fix it.
 3. Does your chartHint match the data? Multi-city monthly = "line", single-period ranking = "bar", 4+ groups by year = "bar".
-3b. If the query has year in the results, is xAxis set to "year"? If not, fix it.
+3b. If the query groups by year and returns multiple years, is xAxis set to "year"? If not, fix it. (For single-year queries like rankings, xAxis should be the category column, not year.)
 4. Does every yAxis column alias actually appear in the SELECT? If not, fix the yAxis.
 5. Is the offense filter present in the WHERE clause? If not, add it.
 6. Does your SELECT contain ONLY what the user asked for? If they said "murders", do NOT also return rates or population. Remove any unrequested columns.
