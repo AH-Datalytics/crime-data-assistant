@@ -148,10 +148,23 @@ export async function generateExplanation(opts: {
       ? `\nAppend these disclaimers verbatim:\n${autoDisclaimers.map((d, i) => `${i + 1}. ${d}`).join("\n")}`
       : "";
 
-  // Geography display
+  // Geography display — detect regions from state lists
+  const REGIONS: Record<string, string[]> = {
+    "the Northeast": ["CT","ME","MA","NH","RI","VT","NJ","NY","PA"],
+    "the South": ["AL","AR","DE","DC","FL","GA","KY","LA","MD","MS","NC","OK","SC","TN","TX","VA","WV"],
+    "the Midwest": ["IL","IN","IA","KS","MI","MN","MO","NE","ND","OH","SD","WI"],
+    "the West": ["AK","AZ","CA","CO","HI","ID","MT","NV","NM","OR","UT","WA","WY"],
+  };
   let geoDisplay: string;
   if (geos.length > 0) {
     geoDisplay = geos.join(", ");
+  } else if (ctx.states.length >= 5) {
+    // Check if states match a region
+    const sortedStates = [...ctx.states].sort();
+    const regionMatch = Object.entries(REGIONS).find(([, states]) =>
+      sortedStates.length === states.length && sortedStates.every(s => states.includes(s))
+    );
+    geoDisplay = regionMatch ? regionMatch[0] : `${ctx.states.length} states (${ctx.states.slice(0, 5).join(", ")}...)`;
   } else if (ctx.scope === "state" && ctx.states.length > 0) {
     geoDisplay = ctx.states.join(", ");
   } else if (ctx.scope === "national") {

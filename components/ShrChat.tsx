@@ -254,6 +254,23 @@ export default function ShrChat({ visible, heroData }: ShrChatProps) {
               {messages.filter(m => m.role === "user").slice(-1)[0]?.text}
             </div>
           )}
+          {!loading && messages.length > 0 && !currentResponse && messages[messages.length - 1]?.role === "assistant" && (
+            <form
+              onSubmit={(e) => { e.preventDefault(); const val = (e.currentTarget.elements.namedItem("reply") as HTMLInputElement)?.value?.trim(); if (val) { submitQuestion(val); (e.currentTarget.elements.namedItem("reply") as HTMLInputElement).value = ""; } }}
+              className="flex gap-2 mt-2"
+            >
+              <input
+                name="reply"
+                type="text"
+                placeholder="Reply..."
+                className="flex-1 px-3 py-1.5 text-sm border border-[var(--border)] rounded-full focus:outline-none focus:border-[var(--accent)] bg-[var(--surface)]"
+                autoFocus
+              />
+              <button type="submit" className="px-4 py-1.5 text-xs font-medium text-white bg-[var(--foreground)] rounded-full hover:bg-[var(--accent-hover)] cursor-pointer">
+                Send
+              </button>
+            </form>
+          )}
           {messages.length === 0 && !loading && (
             <div className="text-sm text-gray-400 py-1 text-center">
               Explore <span className="font-semibold text-[var(--navy)]">890,000+</span> homicide victims from the FBI&apos;s Supplementary Homicide Reports, 1976&ndash;present. Includes victim/offender demographics, weapon, circumstance, and relationship data. Coverage varies by state and year.

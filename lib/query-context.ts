@@ -139,6 +139,17 @@ export function extractQueryContext(
     const s = sm[1].toUpperCase();
     if (!states.includes(s)) states.push(s);
   }
+  // Also extract from IN clauses: state IN ('CT', 'ME', 'MA', ...)
+  const inMatch = sql.match(/state\s+IN\s*\(([^)]+)\)/i);
+  if (inMatch) {
+    const inStates = inMatch[1].match(/'([A-Z]{2})'/gi);
+    if (inStates) {
+      inStates.forEach(s => {
+        const clean = s.replace(/'/g, '').toUpperCase();
+        if (!states.includes(clean)) states.push(clean);
+      });
+    }
+  }
 
   // --- Scope ---
   let scope: Scope;
@@ -163,9 +174,9 @@ export function extractQueryContext(
     } else if (sqlLower.includes("state_monthly") || sqlLower.includes("historical_state_national")) {
       scope = geos.length > 0 ? "city" : "state";
     } else if (sqlLower.includes("agency_monthly") || sqlLower.includes("historical_agency")) {
-      scope = geos.length > 0 ? "city" : "agency";
+      scope = geos.length > 0 ? "city" : states.length > 0 ? "state" : "agency";
     } else {
-      scope = geos.length > 0 ? "city" : "national";
+      scope = geos.length > 0 ? "city" : states.length > 0 ? "state" : "national";
     }
   }
 

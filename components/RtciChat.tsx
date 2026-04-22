@@ -413,6 +413,23 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
             {!chatCollapsed && <div className="max-h-32 overflow-y-auto">
               <div>
                 <p className="text-sm text-[var(--foreground)] leading-relaxed whitespace-pre-line">{explanation}</p>
+                {!loading && !hasData && explanation && (
+                  <form
+                    onSubmit={(e) => { e.preventDefault(); const val = (e.currentTarget.elements.namedItem("reply") as HTMLInputElement)?.value?.trim(); if (val) { submitQuestion(val); (e.currentTarget.elements.namedItem("reply") as HTMLInputElement).value = ""; } }}
+                    className="flex gap-2 mt-3"
+                  >
+                    <input
+                      name="reply"
+                      type="text"
+                      placeholder="Reply..."
+                      className="flex-1 px-3 py-1.5 text-sm border border-[var(--border)] rounded-full focus:outline-none focus:border-[#475EC7] bg-[var(--surface)]"
+                      autoFocus
+                    />
+                    <button type="submit" className="px-4 py-1.5 text-xs font-medium text-white bg-[var(--foreground)] rounded-full hover:bg-[var(--accent-hover)] cursor-pointer">
+                      Send
+                    </button>
+                  </form>
+                )}
                 {loading && (
                   <div className="text-xs text-[var(--muted)] mt-2 flex items-center gap-1">
                     <span className="inline-flex gap-0.5">

@@ -253,6 +253,23 @@ export default function NibrsChat({ visible }: NibrsChatProps) {
               {messages.filter(m => m.role === "user").slice(-1)[0]?.text}
             </div>
           )}
+          {!loading && messages.length > 0 && !currentResponse && messages[messages.length - 1]?.role === "assistant" && (
+            <form
+              onSubmit={(e) => { e.preventDefault(); const val = (e.currentTarget.elements.namedItem("reply") as HTMLInputElement)?.value?.trim(); if (val) { submitQuestion(val); (e.currentTarget.elements.namedItem("reply") as HTMLInputElement).value = ""; } }}
+              className="flex gap-2 mt-2"
+            >
+              <input
+                name="reply"
+                type="text"
+                placeholder="Reply..."
+                className="flex-1 px-3 py-1.5 text-sm border border-[var(--border)] rounded-full focus:outline-none focus:border-[var(--accent)] bg-[var(--surface)]"
+                autoFocus
+              />
+              <button type="submit" className="px-4 py-1.5 text-xs font-medium text-white bg-[var(--foreground)] rounded-full hover:bg-[var(--accent-hover)] cursor-pointer">
+                Send
+              </button>
+            </form>
+          )}
           {messages.length === 0 && !loading && (
             <div className="text-sm text-gray-400 py-1 text-center">
               Review more than <span className="font-semibold text-[var(--navy)]">1 Billion</span> NIBRS records relating to offenses, victims, arrestees, weapons, property, clearances, and more! Data available since 1991, recent data is preliminary and subject to change.
