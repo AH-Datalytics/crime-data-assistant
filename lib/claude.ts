@@ -47,11 +47,11 @@ One row per agency with metadata.
 - national_sample INTEGER — 1 if the agency has all ${RTCI.totalMonths} months, 0 otherwise
 
 ### agency_population (PRIMARY KEY: ori, year)
-Population for each agency. **Currently only has year = 2024 data.** Always JOIN with ap.year = 2024 regardless of what year the crime data is from.
+Population for each agency by year (2017–2026). Use for per-capita rate calculations.
 - ori TEXT — ORI code (joins to agency_monthly.ori)
-- year INTEGER — currently only 2024
-- population INTEGER — agency jurisdiction population
-Coverage: ${RTCI.popAgencies} agencies. **IMPORTANT: Always use ap.year = 2024 in the JOIN, never ap.year = 2024.**
+- year INTEGER — 2017–2026
+- population INTEGER — agency jurisdiction population for that year
+Coverage: ~17,000 agencies × 10 years = ~170,000 rows. JOIN on both ori AND year: ap.ori = am.ori AND ap.year = am.year.
 
 ### national_monthly (PRIMARY KEY: year, month, offense)
 Pre-aggregated national totals using ONLY agencies in the national sample (those with all ${RTCI.totalMonths} months). Use this for any national-level trend question.
@@ -285,7 +285,7 @@ SELECT am.year, am.month,
   ROUND(SUM(CASE WHEN am.agency = 'Washington' AND am.state = 'DC' AND am.type = 'City' THEN am.count END) * 100000.0 / MAX(CASE WHEN am.agency = 'Washington' AND am.state = 'DC' AND am.type = 'City' THEN ap.population END), 1) as washington_dc,
   ROUND(SUM(CASE WHEN am.agency = 'Detroit' AND am.state = 'MI' AND am.type = 'City' THEN am.count END) * 100000.0 / MAX(CASE WHEN am.agency = 'Detroit' AND am.state = 'MI' AND am.type = 'City' THEN ap.population END), 1) as detroit
 FROM agency_monthly am
-JOIN agency_population ap ON ap.ori = am.ori AND ap.year = 2024
+JOIN agency_population ap ON ap.ori = am.ori AND ap.year = am.year
 WHERE ((am.agency = 'Baltimore' AND am.state = 'MD' AND am.type = 'City') OR (am.agency = 'Washington' AND am.state = 'DC' AND am.type = 'City') OR (am.agency = 'Detroit' AND am.state = 'MI' AND am.type = 'City'))
   AND am.offense = 'Murder'
 GROUP BY am.year, am.month
@@ -314,7 +314,7 @@ SELECT am.year, SUM(am.count) as total,
   ap.population,
   ROUND(SUM(am.count) * 100000.0 / ap.population, 1) as rate_per_100k
 FROM agency_monthly am
-JOIN agency_population ap ON ap.ori = am.ori AND ap.year = 2024
+JOIN agency_population ap ON ap.ori = am.ori AND ap.year = am.year
 JOIN agencies a ON a.ori = am.ori AND a.national_sample = 1
 WHERE am.agency = 'Houston' AND am.state = 'TX' AND am.offense = 'Murder'
 GROUP BY am.year
