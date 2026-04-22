@@ -296,7 +296,7 @@ export async function POST(req: NextRequest) {
         const history = Array.isArray(body?.history) ? body.history : undefined;
         const isHistorical = body?.mode === "historical";
         const systemPrompt = isHistorical ? getHistoricalSystemPrompt() : undefined;
-        const claude = await translateToSql(
+        let claude = await translateToSql(
           question,
           history as { role: "user" | "assistant"; content: string }[],
           systemPrompt
