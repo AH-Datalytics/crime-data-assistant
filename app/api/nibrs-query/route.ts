@@ -76,6 +76,23 @@ export async function POST(req: NextRequest) {
     console.log(`[nibrs][timing] Claude API: ${claudeMs}ms`);
 
     if (!claude.sql) {
+      // Retry if model incorrectly claims data isn't available
+      const refusalPatterns = /not (appear to be |be )?represented|not (in|included in) (this|the|our) (dataset|data|sample)|no data (for|available|found)|does not (have|include|cover)|not available in this/i;
+      if (refusalPatterns.test(claude.explanation || "")) {
+        try {
+          const retryResult = await translateToSql(question, [
+            ...history,
+            { role: "assistant", content: claude.explanation },
+            { role: "user", content: "[SYSTEM: Your previous response claimed the data was not available, but this may be incorrect. Please try generating a SQL query — search for the data rather than assuming it doesn't exist.]" },
+          ]);
+          if (retryResult.sql) {
+            Object.assign(claude, retryResult);
+          }
+        } catch { /* use original */ }
+      }
+    }
+
+    if (!claude.sql) {
       logNibrsQuery(question, null, 0, null, claudeMs, claude.explanation, [], "haiku-4.5", sessionId);
       return jsonResp({
         success: true,

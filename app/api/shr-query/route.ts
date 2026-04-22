@@ -101,7 +101,32 @@ export async function POST(req: NextRequest) {
 
     const claudeMs = Date.now() - start;
 
-    // Text-only response
+    // Text-only response — retry if model incorrectly claims data isn't available
+    if (!claude.sql) {
+      const refusalPatterns = /not (appear to be |be )?represented|not (in|included in) (this|the|our) (dataset|data|sample)|no data (for|available|found)|does not (have|include|cover)|not available in this/i;
+      if (refusalPatterns.test(claude.explanation || "")) {
+        try {
+          const retryMessages: Anthropic.MessageParam[] = [
+            ...messages,
+            { role: "assistant", content: claude.explanation },
+            { role: "user", content: "[SYSTEM: Your previous response claimed the data was not available, but this may be incorrect. Please try generating a SQL query — search for the data rather than assuming it doesn't exist.]" },
+          ];
+          const retryResp = await client.messages.create({
+            model: "claude-haiku-4-5-20251001",
+            max_tokens: 2000,
+            system: getShrSystemPrompt(),
+            messages: retryMessages,
+          });
+          const retryText = retryResp.content.filter((b): b is Anthropic.TextBlock => b.type === "text").map(b => b.text).join("");
+          const retryJson = retryText.match(/\{[\s\S]*\}/);
+          if (retryJson) {
+            const retryClaude = JSON.parse(retryJson[0]);
+            if (retryClaude.sql) Object.assign(claude, retryClaude);
+          }
+        } catch { /* use original */ }
+      }
+    }
+
     if (!claude.sql) {
       logQuery(question, null, 0, null, claudeMs, claude.explanation, "shr", [], "haiku-4.5", sessionId);
       return jsonResp({
