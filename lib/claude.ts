@@ -86,6 +86,13 @@ JOIN sample_agencies sa ON sa.ori = am.ori
 WHERE sa.state = 'TX' AND am.offense = 'Murder'
 GROUP BY am.year, am.month ORDER BY am.year, am.month
 
+**REGION QUERIES:** When the user asks about a region (Northeast, South, Midwest, West), use the Census Bureau regions:
+- **Northeast**: CT, ME, MA, NH, RI, VT, NJ, NY, PA
+- **South**: AL, AR, DE, DC, FL, GA, KY, LA, MD, MS, NC, OK, SC, TN, TX, VA, WV
+- **Midwest**: IL, IN, IA, KS, MI, MN, MO, NE, ND, OH, SD, WI
+- **West**: AK, AZ, CA, CO, HI, ID, MT, NV, NM, OR, UT, WA, WY
+Use the same pattern as state queries — JOIN sample_agencies, filter by sa.state IN (...). Note in the explanation which states are included and that only sample agencies are counted.
+
 ## THE 7 OFFENSES
 - Murder
 - Rape
