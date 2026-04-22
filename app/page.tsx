@@ -29,7 +29,7 @@ function getHeroData() {
       .prepare(
         `SELECT SUM(p.population) as pop FROM agency_population p
          JOIN sample_agencies sa ON sa.ori = p.ori
-         WHERE p.year = 2024`
+         WHERE p.year = (SELECT MAX(year) FROM agency_population)`
       )
       .get() as { pop: number | null };
 

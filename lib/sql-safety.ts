@@ -43,8 +43,15 @@ export function validateAndSanitize(sql: string, opts?: { maxLimit?: number }): 
   }
 
   // Check forbidden keywords (word-boundary, outside string literals)
+  // Special handling for DROP — only flag if followed by TABLE/INDEX/VIEW/TRIGGER
+  // (not when used as a column alias like "as drop" or "drop DESC")
   for (const kw of FORBIDDEN_KEYWORDS) {
-    const re = new RegExp(`\\b${kw}\\b`, "i");
+    let re: RegExp;
+    if (kw === "DROP") {
+      re = /\bDROP\s+(TABLE|INDEX|VIEW|TRIGGER)\b/i;
+    } else {
+      re = new RegExp(`\\b${kw}\\b`, "i");
+    }
     if (re.test(withoutStrings)) {
       return { valid: false, error: `Forbidden keyword: ${kw}` };
     }
