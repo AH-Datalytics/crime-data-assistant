@@ -303,6 +303,29 @@ export async function POST(req: NextRequest) {
         );
 
         if (!claude.sql) {
+          // Retry if model incorrectly claims data isn't available
+          const refusalPatterns = /not (appear to be |be )?represented|not (in|included in) (this|the|our) (dataset|data|sample)|no data (for|available|found)|does not (have|include|cover)|not available in this/i;
+          if (refusalPatterns.test(claude.explanation || "")) {
+            try {
+              const retryResult = await translateToSql(
+                question,
+                [
+                  ...(history as { role: "user" | "assistant"; content: string }[]),
+                  { role: "assistant", content: claude.explanation },
+                  { role: "user", content: "[SYSTEM: Your previous response claimed the data was not available, but this may be incorrect. The database contains agencies from many states. Please try generating a SQL query — search for the agency/state in the data rather than assuming it doesn't exist. Use sample_agencies or agency_monthly to check.]" },
+                ],
+                systemPrompt
+              );
+              if (retryResult.sql) {
+                claude = retryResult;
+              }
+            } catch {
+              // Retry failed, use original response
+            }
+          }
+        }
+
+        if (!claude.sql) {
           const ms = Date.now() - totalStart;
           logQuery(question, null, 0, null, ms, claude.explanation, tab, [], "haiku-4.5", sessionId);
           controller.enqueue(
