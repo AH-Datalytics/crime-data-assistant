@@ -11,6 +11,8 @@ import { useAnimatedPlaceholder } from "./useAnimatedPlaceholder";
 import QuerySkeleton from "./QuerySkeleton";
 import ErrorCard from "./ErrorCard";
 import { getPageToken } from "./Tracker";
+import { useCaptcha } from "./useCaptcha";
+import TurnstileModal from "./TurnstileModal";
 
 const CURRENT_PROMPTS = [
   "Show me robbery per month in the national sample",
@@ -119,6 +121,7 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
   const chartRef = useRef<HTMLDivElement>(null);
   const [showDatasetInfo, setShowDatasetInfo] = useState(false);
   const [showAllHistory, setShowAllHistory] = useState(false);
+  const { captchaNeeded, requestCaptcha, onVerified, onClose } = useCaptcha();
 
   // Extract past user questions from history
   const pastQueries = history.filter((h) => h.role === "user").map((h) => h.content);
@@ -156,6 +159,20 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
           setError(data.error);
           if (timerRef.current) clearInterval(timerRef.current); setLoading(false);
           return;
+        }
+
+        if (res.status === 202) {
+          const data = await res.json();
+          if (data.captchaRequired) {
+            setExplanation("");
+            setResponse(null);
+            setError("");
+            setLastQuestion("");
+            if (timerRef.current) clearInterval(timerRef.current);
+            setLoading(false);
+            requestCaptcha(() => submitQuestion(question));
+            return;
+          }
         }
 
         let finalExplanation = "";
@@ -218,7 +235,7 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
               sql: finalSql || undefined,
             },
           ];
-          return updated.slice(-10); // 5 exchanges = 10 messages
+          return updated.slice(-6); // 3 exchanges = 6 messages
         });
       } catch (err) {
         const msg = err instanceof Error ? err.message : "Network error";
@@ -242,6 +259,7 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
 
   return (
     <div className={`flex-1 flex flex-col min-h-0 ${visible ? "tab-fade-in" : ""}`} style={{ display: visible ? "flex" : "none" }}>
+      {captchaNeeded && <TurnstileModal onVerified={onVerified} onClose={onClose} />}
       {/* Search bar area */}
       <div className="bg-white border-b border-[var(--border)] shrink-0">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4">

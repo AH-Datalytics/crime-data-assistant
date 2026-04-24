@@ -44,28 +44,8 @@ export default function ChatInterface({ heroData, heroAgencyCount, heroPopulatio
       <header className="bg-white border-b border-[var(--border)] shrink-0">
         {/* Top row: logo + tab pills (desktop) */}
         <div className="px-4 md:px-6 flex items-center justify-between relative" style={{ height: 62 }}>
-          {/* Left: back arrow + logo (desktop only) + Crime Index (desktop only) */}
+          {/* Left: spacer */}
           <div className="flex items-center gap-3 md:gap-4 min-w-0 shrink-0">
-            <a
-              href="https://crimeindex.org"
-              className="flex items-center gap-1 text-xs font-bold text-[var(--muted)] hover:text-[var(--foreground)] transition-colors shrink-0"
-            >
-              <span>&larr;</span>
-              <span>Back</span>
-            </a>
-            <div className="h-5 w-px bg-[var(--border)] hidden md:block" />
-            <button
-              onClick={() => selectTab(null)}
-              className="hidden md:flex items-center gap-2 shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
-            >
-              <CrimeIndexLogo size={24} />
-              <span
-                className="text-xs md:text-sm font-medium tracking-widest uppercase text-[var(--foreground)]"
-                style={{ letterSpacing: "2.5px" }}
-              >
-                Crime Index
-              </span>
-            </button>
           </div>
 
           {/* Center: title */}

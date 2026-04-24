@@ -2,7 +2,7 @@
 // Resets on server restart (fine for Vercel cold starts)
 const hits = new Map<string, number[]>();
 
-const QUERY_LIMIT = 20;
+const QUERY_LIMIT = 5;
 const QUERY_WINDOW_MS = 60_000; // 1 minute
 
 const AUTH_LIMIT = 5;

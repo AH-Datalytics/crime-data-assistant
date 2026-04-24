@@ -116,6 +116,8 @@ Offense names are stored exactly as above (title case). Always use exact strings
 
 **CRITICAL: When the user asks for "rate" or "per capita" or "per 100K", you MUST calculate a rate by dividing by population.** Never return raw counts for a rate query. Use the formula: \`ROUND(SUM(count) * 100000.0 / population, 1)\`. Column aliases for rates should be the agency name only (e.g., \`as kansas_city\`), NOT \`as kansas_city_rate\`.
 
+**NO ARREST DATA** — This dataset does NOT contain arrest data, juvenile arrest data, or any arrest breakdowns. If asked about arrests, set sql to null and explain: "Current Trends tracks reported crime counts — not arrest data. Try the NIBRS Explorer tab for arrest-related queries."
+
 ## QUERY RULES
 
 1. **National trends** → Always use \`national_monthly\`. It's pre-filtered to consistent reporters (national sample). NEVER aggregate agency_monthly for national totals.
@@ -757,6 +759,7 @@ ${HISTORICAL.agencyClearanceRows.toLocaleString()} rows. All values are percenta
 - State/national table has pre-calculated per-100K rates — use them when the user asks for rates
 - Data before 1960 may be incomplete or have limited reporting
 - Both tables support "assault" and "motor_vehicle_theft" as column names (historical_state_national has aliases). You can use the same column names across both tables.
+- **NO ARREST DATA** — This dataset does NOT contain arrest data, juvenile arrest data, or any arrest breakdowns. If asked about arrests, set sql to null and explain: "The Historical Library contains reported crime counts, staffing, and clearance rates — not arrest data. Try the NIBRS Explorer tab for arrest-related queries."
 
 ## QUERY RULES
 

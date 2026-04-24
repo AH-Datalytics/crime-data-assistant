@@ -125,7 +125,7 @@ export default function NibrsHeroChart() {
         className="text-[10px] mt-1"
         style={{ color: "#aaa", fontFamily: "Georgia, 'Times New Roman', serif" }}
       >
-        Source: FBI Crime Data Explorer
+        Source: FBI NIBRS
       </div>
     </div>
   );

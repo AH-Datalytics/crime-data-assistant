@@ -9,7 +9,9 @@ import { extractQueryContext } from "@/lib/query-context";
 import { runGuardrails } from "@/lib/guardrails";
 import { applyRetryMeta } from "@/lib/types";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { checkSessionLimit, maybeCleanup } from "@/lib/captcha";
 import type { QueryResponse, QueryError } from "@/lib/types";
+import { getCached, setCache } from "@/lib/response-cache";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -54,6 +56,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Session-based CAPTCHA throttle
+    maybeCleanup();
+    const captchaCheck = checkSessionLimit(sessionId);
+    if (!captchaCheck.allowed) {
+      if (captchaCheck.dailyLimitReached) {
+        return jsonResp({ success: false, error: "You've reached the daily query limit. Please come back tomorrow." } as QueryError, 429);
+      }
+      return NextResponse.json({ success: false, captchaRequired: true }, { status: 202 });
+    }
+
     if (!question || typeof question !== "string") {
       return jsonResp(
         { success: false, error: "Please provide a question" } as QueryError,
@@ -69,49 +81,59 @@ export async function POST(req: NextRequest) {
     }
 
     // Step 1: Translate to SQL via Claude (with conversation history for context)
-    const history = Array.isArray(body?.history) ? body.history : undefined;
+    const history = Array.isArray(body?.history) ? body.history.slice(-6) : undefined;
     const claudeStart = Date.now();
-    const claude = await translateToSql(question, history);
-    const claudeMs = Date.now() - claudeStart;
-    console.log(`[nibrs][timing] Claude API: ${claudeMs}ms`);
 
-    if (!claude.sql) {
-      // Retry if model incorrectly claims data isn't available
-      const refusalPatterns = /not (appear to be |be )?represented|not (in|included in) (this|the|our) (dataset|data|sample)|no data (for|available|found)|does not (have|include|cover)|not available in this/i;
-      if (refusalPatterns.test(claude.explanation || "")) {
-        try {
-          const retryResult = await translateToSql(question, [
-            ...history,
-            { role: "assistant", content: claude.explanation },
-            { role: "user", content: "[SYSTEM: Your previous response claimed the data was not available, but this may be incorrect. Please try generating a SQL query — search for the data rather than assuming it doesn't exist.]" },
-          ]);
-          if (retryResult.sql) {
-            Object.assign(claude, retryResult);
-          }
-        } catch { /* use original */ }
+    // Check response cache (only standalone questions)
+    const cached = (!history || history.length === 0) ? getCached(question, "nibrs") : null;
+
+    let claude: Awaited<ReturnType<typeof translateToSql>>;
+
+    if (cached) {
+      claude = { sql: cached.sql, explanation: cached.explanation, title: cached.title || "", chartHint: (cached.chartType as "bar" | "line" | "pie" | "stacked_bar" | "none") || "none", xAxis: cached.xAxis || "", yAxis: cached.yAxis?.[0] || "", colors: cached.colors as string[] | undefined, yAxisLabel: cached.yAxisLabel, xAxisLabel: cached.xAxisLabel, annotations: cached.annotations as typeof claude.annotations };
+    } else {
+      claude = await translateToSql(question, history);
+      const claudeMs = Date.now() - claudeStart;
+      console.log(`[nibrs][timing] Claude API: ${claudeMs}ms`);
+
+      if (!claude.sql) {
+        // Retry if model incorrectly claims data isn't available
+        const refusalPatterns = /not (appear to be |be )?represented|not (in|included in) (this|the|our) (dataset|data|sample)|no data (for|available|found)|does not (have|include|cover)|not available in this/i;
+        if (refusalPatterns.test(claude.explanation || "")) {
+          try {
+            const retryResult = await translateToSql(question, [
+              ...(history || []),
+              { role: "assistant", content: claude.explanation },
+              { role: "user", content: "[SYSTEM: Your previous response claimed the data was not available, but this may be incorrect. Please try generating a SQL query — search for the data rather than assuming it doesn't exist.]" },
+            ]);
+            if (retryResult.sql) {
+              Object.assign(claude, retryResult);
+            }
+          } catch { /* use original */ }
+        }
+      }
+
+      if (!claude.sql) {
+        logNibrsQuery(question, null, 0, null, Date.now() - claudeStart, claude.explanation, [], "haiku-4.5", sessionId);
+        return jsonResp({
+          success: true,
+          question,
+          sql: "",
+          explanation: claude.explanation,
+          title: claude.title || "Response",
+          columns: [],
+          rows: [],
+          rowCount: 0,
+          truncated: false,
+          chartConfig: null,
+          chartMeta: null,
+          executionTimeMs: 0,
+        } as QueryResponse);
       }
     }
 
-    if (!claude.sql) {
-      logNibrsQuery(question, null, 0, null, claudeMs, claude.explanation, [], "haiku-4.5", sessionId);
-      return jsonResp({
-        success: true,
-        question,
-        sql: "",
-        explanation: claude.explanation,
-        title: claude.title || "Response",
-        columns: [],
-        rows: [],
-        rowCount: 0,
-        truncated: false,
-        chartConfig: null,
-        chartMeta: null,
-        executionTimeMs: 0,
-      } as QueryResponse);
-    }
-
     // Step 2: Validate SQL
-    const validation = validateAndSanitize(claude.sql);
+    const validation = validateAndSanitize(claude.sql!);
     if (!validation.valid) {
       return jsonResp(
         {
@@ -434,7 +456,13 @@ export async function POST(req: NextRequest) {
     }
 
     // Log success (after CDE check so explanation includes any disclaimers)
-    logNibrsQuery(question, sql, rows.length, null, claudeMs + executionTimeMs + explainMs, explanation, guardrailResult.fired, "haiku-4.5", sessionId);
+    const totalMs = Date.now() - claudeStart;
+    logNibrsQuery(question, sql, rows.length, null, totalMs, explanation, guardrailResult.fired, "haiku-4.5", sessionId);
+
+    // Cache successful responses (only standalone questions)
+    if (!cached && (!history || history.length === 0)) {
+      setCache(question, "nibrs", { sql, explanation: claude.explanation, title: claude.title, chartType: claude.chartHint, xAxis: claude.xAxis, yAxis: claude.yAxis ? [claude.yAxis] : undefined, yAxisLabel: claude.yAxisLabel, xAxisLabel: claude.xAxisLabel, colors: claude.colors, annotations: claude.annotations });
+    }
 
     // Step 5: Build chart config
     const chartConfig = buildNibrsChartConfig(claude, columns, rows);

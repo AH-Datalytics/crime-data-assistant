@@ -4,11 +4,13 @@ import { validatePageToken } from "@/lib/page-token";
 import { validateAndSanitize } from "@/lib/sql-safety";
 import { logQuery } from "@/lib/rtci-db";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { checkSessionLimit, maybeCleanup } from "@/lib/captcha";
 import { extractQueryContext } from "@/lib/query-context";
 import { runGuardrails } from "@/lib/guardrails";
 import type { QueryError } from "@/lib/types";
 import Anthropic from "@anthropic-ai/sdk";
 import { getShrSystemPrompt } from "@/lib/shr-claude";
+import { getCached, setCache } from "@/lib/response-cache";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function jsonResp(data: Record<string, any> | QueryError, status = 200) {
@@ -43,6 +45,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Session-based CAPTCHA throttle
+    maybeCleanup();
+    const captchaCheck = checkSessionLimit(sessionId);
+    if (!captchaCheck.allowed) {
+      if (captchaCheck.dailyLimitReached) {
+        return jsonResp({ success: false, error: "You've reached the daily query limit. Please come back tomorrow." } as QueryError, 429);
+      }
+      return NextResponse.json({ success: false, captchaRequired: true }, { status: 202 });
+    }
+
     if (!question || typeof question !== "string") {
       return jsonResp(
         { success: false, error: "Please provide a question" } as QueryError,
@@ -57,32 +69,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const history = Array.isArray(body?.history) ? body.history.slice(-10) : [];
+    const history = Array.isArray(body?.history) ? body.history.slice(-6) : [];
     const start = Date.now();
 
-    // Step 1: Translate to SQL via Claude
-    const client = new Anthropic();
-    const messages: Anthropic.MessageParam[] = [
-      ...history.map((h: { role: string; content: string }) => ({
-        role: h.role as "user" | "assistant",
-        content: h.content,
-      })),
-      { role: "user", content: question },
-    ];
+    // Check response cache (only for standalone questions, not follow-ups)
+    const cached = history.length === 0 ? getCached(question, "shr") : null;
 
-    const response = await client.messages.create({
-      model: "claude-haiku-4-5-20251001",
-      max_tokens: 2000,
-      system: getShrSystemPrompt(),
-      messages,
-    });
-
-    const text = response.content
-      .filter((b): b is Anthropic.TextBlock => b.type === "text")
-      .map((b) => b.text)
-      .join("");
-
-    // Parse JSON response
     let claude: {
       sql: string | null;
       explanation: string;
@@ -92,63 +84,92 @@ export async function POST(req: NextRequest) {
       yAxis?: string[];
       yAxisLabel?: string;
     };
-    try {
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      claude = jsonMatch ? JSON.parse(jsonMatch[0]) : { sql: null, explanation: text };
-    } catch {
-      claude = { sql: null, explanation: text };
-    }
+    let text = "";
 
-    const claudeMs = Date.now() - start;
+    const client = new Anthropic();
+    const messages: Anthropic.MessageParam[] = [
+      ...history.map((h: { role: string; content: string }) => ({
+        role: h.role as "user" | "assistant",
+        content: h.content,
+      })),
+      { role: "user", content: question },
+    ];
 
-    // Text-only response — retry if model incorrectly claims data isn't available
-    if (!claude.sql) {
-      const refusalPatterns = /not (appear to be |be )?represented|not (in|included in) (this|the|our) (dataset|data|sample)|no data (for|available|found)|does not (have|include|cover)|not available in this/i;
-      if (refusalPatterns.test(claude.explanation || "")) {
-        try {
-          const retryMessages: Anthropic.MessageParam[] = [
-            ...messages,
-            { role: "assistant", content: claude.explanation },
-            { role: "user", content: "[SYSTEM: Your previous response claimed the data was not available, but this may be incorrect. Please try generating a SQL query — search for the data rather than assuming it doesn't exist.]" },
-          ];
-          const retryResp = await client.messages.create({
-            model: "claude-haiku-4-5-20251001",
-            max_tokens: 2000,
-            system: getShrSystemPrompt(),
-            messages: retryMessages,
-          });
-          const retryText = retryResp.content.filter((b): b is Anthropic.TextBlock => b.type === "text").map(b => b.text).join("");
-          const retryJson = retryText.match(/\{[\s\S]*\}/);
-          if (retryJson) {
-            const retryClaude = JSON.parse(retryJson[0]);
-            if (retryClaude.sql) Object.assign(claude, retryClaude);
-          }
-        } catch { /* use original */ }
+    if (cached) {
+      claude = { sql: cached.sql, explanation: cached.explanation, title: cached.title, chartType: cached.chartType, xAxis: cached.xAxis, yAxis: cached.yAxis, yAxisLabel: cached.yAxisLabel };
+    } else {
+      // Step 1: Translate to SQL via Claude
+
+      const response = await client.messages.create({
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 2000,
+        system: [{ type: "text", text: getShrSystemPrompt(), cache_control: { type: "ephemeral" } }],
+        messages,
+      });
+
+      text = response.content
+        .filter((b): b is Anthropic.TextBlock => b.type === "text")
+        .map((b) => b.text)
+        .join("");
+
+      try {
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        claude = jsonMatch ? JSON.parse(jsonMatch[0]) : { sql: null, explanation: text };
+      } catch {
+        claude = { sql: null, explanation: text };
+      }
+
+      const claudeMs = Date.now() - start;
+
+      // Text-only response — retry if model incorrectly claims data isn't available
+      if (!claude.sql) {
+        const refusalPatterns = /not (appear to be |be )?represented|not (in|included in) (this|the|our) (dataset|data|sample)|no data (for|available|found)|does not (have|include|cover)|not available in this/i;
+        if (refusalPatterns.test(claude.explanation || "")) {
+          try {
+            const retryMessages: Anthropic.MessageParam[] = [
+              ...messages,
+              { role: "assistant", content: claude.explanation },
+              { role: "user", content: "[SYSTEM: Your previous response claimed the data was not available, but this may be incorrect. Please try generating a SQL query — search for the data rather than assuming it doesn't exist.]" },
+            ];
+            const retryResp = await client.messages.create({
+              model: "claude-haiku-4-5-20251001",
+              max_tokens: 2000,
+              system: [{ type: "text", text: getShrSystemPrompt(), cache_control: { type: "ephemeral" } }],
+              messages: retryMessages,
+            });
+            const retryText = retryResp.content.filter((b): b is Anthropic.TextBlock => b.type === "text").map(b => b.text).join("");
+            const retryJson = retryText.match(/\{[\s\S]*\}/);
+            if (retryJson) {
+              const retryClaude = JSON.parse(retryJson[0]);
+              if (retryClaude.sql) Object.assign(claude, retryClaude);
+            }
+          } catch { /* use original */ }
+        }
+      }
+
+      if (!claude.sql) {
+        logQuery(question, null, 0, null, claudeMs, claude.explanation, "shr", [], "haiku-4.5", sessionId);
+        return jsonResp({
+          success: true,
+          question,
+          sql: null,
+          explanation: claude.explanation,
+          title: "",
+          columns: [],
+          rows: [],
+          rowCount: 0,
+          truncated: false,
+          chartConfig: null,
+          chartMeta: null,
+          executionTimeMs: claudeMs,
+        });
       }
     }
 
-    if (!claude.sql) {
-      logQuery(question, null, 0, null, claudeMs, claude.explanation, "shr", [], "haiku-4.5", sessionId);
-      return jsonResp({
-        success: true,
-        question,
-        sql: null,
-        explanation: claude.explanation,
-        title: "",
-        columns: [],
-        rows: [],
-        rowCount: 0,
-        truncated: false,
-        chartConfig: null,
-        chartMeta: null,
-        executionTimeMs: claudeMs,
-      });
-    }
-
     // Step 2: Validate SQL
-    const validation = validateAndSanitize(claude.sql);
+    const validation = validateAndSanitize(claude.sql!);
     if (!validation.valid) {
-      logQuery(question, claude.sql, 0, `Validation: ${validation.error}`, claudeMs, null, "shr", [], "haiku-4.5", sessionId);
+      logQuery(question, claude.sql, 0, `Validation: ${validation.error}`, Date.now() - start, null, "shr", [], "haiku-4.5", sessionId);
       return jsonResp(
         { success: false, error: "I generated an invalid query. Please try rephrasing your question.", sql: claude.sql } as QueryError,
         400
@@ -288,6 +309,11 @@ export async function POST(req: NextRequest) {
     }
 
     logQuery(question, sql, rows.length, null, totalMs, explanation, "shr", guardrailResult.fired, "haiku-4.5", sessionId);
+
+    // Cache successful responses (only standalone questions)
+    if (!cached && history.length === 0) {
+      setCache(question, "shr", { sql, explanation: claude.explanation || "", title: claude.title, chartType: claude.chartType, xAxis: claude.xAxis, yAxis: claude.yAxis, yAxisLabel: claude.yAxisLabel });
+    }
 
     return jsonResp({
       success: true,

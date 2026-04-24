@@ -10,6 +10,8 @@ import QuerySkeleton from "./QuerySkeleton";
 import ErrorCard from "./ErrorCard";
 import { getPageToken } from "./Tracker";
 import ShrHeroChart from "./ShrHeroChart";
+import { useCaptcha } from "./useCaptcha";
+import TurnstileModal from "./TurnstileModal";
 
 const SHR_PROMPTS = [
   "Domestic homicides by weapon type since 2000",
@@ -40,6 +42,7 @@ export default function ShrChat({ visible, heroData }: ShrChatProps) {
   const [elapsed, setElapsed] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   useEffect(() => () => { if (timerRef.current) clearInterval(timerRef.current); }, []);
+  const { captchaNeeded, requestCaptcha, onVerified, onClose } = useCaptcha();
 
   const [currentResponse, setCurrentResponse] =
     useState<QueryResponse | null>(null);
@@ -64,7 +67,7 @@ export default function ShrChat({ visible, heroData }: ShrChatProps) {
         text: question,
       };
 
-      const history = messages.slice(-10).map((m) => ({  // last 5 exchanges
+      const history = messages.slice(-6).map((m) => ({  // last 3 exchanges
         role: m.role,
         content: m.text,
       }));
@@ -83,6 +86,15 @@ export default function ShrChat({ visible, heroData }: ShrChatProps) {
         clearTimeout(timeout);
 
         const data = await res.json();
+
+        if (data.captchaRequired) {
+          // Remove the user message we just added — will re-add on retry
+          setMessages((prev) => prev.slice(0, -1));
+          if (timerRef.current) clearInterval(timerRef.current);
+          setLoading(false);
+          requestCaptcha(() => submitQuestion(question));
+          return;
+        }
 
         if (data.success) {
           const resp = data as QueryResponse;
@@ -137,6 +149,7 @@ export default function ShrChat({ visible, heroData }: ShrChatProps) {
 
   return (
     <div className={`flex-1 flex flex-col min-h-0 ${visible ? "tab-fade-in" : ""}`} style={{ display: visible ? "flex" : "none" }}>
+      {captchaNeeded && <TurnstileModal onVerified={onVerified} onClose={onClose} />}
       {/* Search bar */}
       <div className="bg-white border-b border-[var(--border)] shrink-0">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4">

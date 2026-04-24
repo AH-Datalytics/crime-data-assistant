@@ -93,7 +93,7 @@ export default function HistoricalHeroChart({ data }: HistoricalHeroChartProps) 
         className="text-[10px] mt-1"
         style={{ color: "#aaa", fontFamily: "Georgia, 'Times New Roman', serif" }}
       >
-        Source: FBI UCR · New York City Police Department
+        Source: FBI Uniform Crime Reports · New York City Police Department
       </div>
     </div>
   );

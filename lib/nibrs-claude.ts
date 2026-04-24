@@ -690,7 +690,9 @@ IMPORTANT: The completeness filter ONLY applies to queries on **city-level table
 - LOCATION SUMMARY (summary_offense_location): ALL "where did crimes happen" queries by location type
 - HATE CRIME SUMMARY (summary_hate_crime): ALL bias-motivated crime queries
 - WEAPON SUMMARIES (summary_offense_weapon, summary_victim_weapon): specific weapon type breakdowns (handgun vs rifle vs knife etc.) — offense-level or victim-level
-- CIRCUMSTANCE SUMMARY (summary_victim_circumstance): DV, gang, argument breakdowns for murders/assaults
+- DOMESTIC VIOLENCE SUMMARY (summary_domestic_violence): DV incident counts, victim demographics, relationship breakdowns. "DV" ALWAYS means Domestic Violence, NEVER "Drug and Vice".
+- DV ARRESTS (summary_dv_arrests): DV-related arrests with arrestee demographics (sex, race, age_group, offense, dv_category).
+- CIRCUMSTANCE SUMMARY (summary_victim_circumstance): DV murders/assaults by circumstance code, gang, argument breakdowns
 - WEAPON+CIRCUMSTANCE CROSS (summary_victim_weapon_circumstance): queries combining weapon AND circumstance — "DV murders with firearms", "gang homicides by weapon". NEVER cross summary_victim_weapon with summary_victim_circumstance via ORI joins.
 - HATE CRIME+LOCATION CROSS (summary_hate_crime_location): queries combining bias AND location — "hate crimes at schools", "where do anti-Black hate crimes happen". NEVER cross summary_hate_crime with summary_offense_location via ORI joins.
 - CITY CLEARANCE (summary_clearance_city_annual): city clearance rate comparisons — already has city name and population, no agencies JOIN needed.
@@ -782,13 +784,34 @@ For hate crime + location queries (e.g., "hate crimes at schools", "where do ant
 Bias codes: 11=Anti-White, 12=Anti-Black, 13=Anti-American Indian, 14=Anti-Asian, 15=Anti-Multiple Races, 16=Anti-Pacific Islander, 21=Anti-Jewish, 22=Anti-Catholic, 23=Anti-Protestant, 24=Anti-Islamic, 25=Anti-Other Religion, 26=Anti-Multiple Religions, 31=Anti-Arab, 32=Anti-Hispanic, 33=Anti-Other Ethnicity, 41=Anti-Gay, 42=Anti-Lesbian, 43=Anti-LGBT Mixed, 44=Anti-Heterosexual, 45=Anti-Bisexual, 51=Anti-Physical Disability, 52=Anti-Mental Disability, 61=Anti-Male, 62=Anti-Female, 71=Anti-Transgender, 72=Anti-Gender Non-Conforming
 Use CASE expressions to display bias codes as readable names.
 
-### Domestic Violence — USE summary_victim_circumstance (counts) or summary_victim_weapon_circumstance (with weapon breakdown)
-For DV counts/trends:
+### Domestic Violence — "DV" ALWAYS means Domestic Violence, NEVER "Drug and Vice"
+Three table options depending on what's needed:
+
+**summary_domestic_violence** — incident-level DV data with victim demographics, relationship, and offense detail. Best for: DV incident counts, DV by offense type, DV victim demographics, DV by relationship type (intimate partner vs family).
+- COLUMNS: data_year INT, state TEXT, ori TEXT, incident_num TEXT, incident_date TEXT, victim_sequence TEXT, offense_code TEXT, relationship_code TEXT, dv_category TEXT, victim_sex TEXT, victim_age TEXT, victim_race TEXT
+- dv_category: 'intimate_partner' or 'family'
+- relationship_code: SE=Spouse, CS=Common-law Spouse, BG=Boyfriend/Girlfriend, XS=Ex-Spouse, SC=Stepchild, CH=Child, PA=Parent, SB=Sibling, etc.
+- INDEXES: (state, data_year), (data_year), (dv_category), (offense_code)
+- For DV incidents in a state: SELECT data_year, COUNT(DISTINCT incident_num) AS incidents FROM summary_domestic_violence WHERE state = 'ID' AND data_year >= 2015 GROUP BY data_year ORDER BY data_year
+- For DV by category: SELECT dv_category, COUNT(DISTINCT incident_num) AS incidents FROM summary_domestic_violence WHERE state = 'TX' AND data_year = 2024 GROUP BY dv_category
+- NOTE: This table has victim/incident data, not arrests. For DV arrests, use summary_dv_arrests instead.
+
+**summary_dv_arrests** — DV-related arrests with demographics. Best for: DV arrest counts, DV arrests by offense type, DV arrestee demographics.
+- COLUMNS: year INT, state TEXT, ori TEXT, ucr_arrest_offense TEXT, dv_category TEXT, sex TEXT, race TEXT, age_group TEXT, arrest_count INT
+- dv_category: 'intimate_partner' or 'family'
+- age_group: 'Under 18', '18-24', '25-34', '35-44', '45-54', '55-64', '65+', 'Unknown'
+- INDEXES: (state, year), (ori, year), (dv_category, year), (ucr_arrest_offense, year)
+- DV arrests in Idaho since 2015: SELECT year, SUM(arrest_count) AS arrests FROM summary_dv_arrests WHERE state = 'ID' AND year >= 2015 GROUP BY year ORDER BY year
+- DV arrests by category: SELECT dv_category, SUM(arrest_count) AS arrests FROM summary_dv_arrests WHERE state = 'TX' AND year = 2024 GROUP BY dv_category
+- DV arrests by race: SELECT race, SUM(arrest_count) AS arrests FROM summary_dv_arrests WHERE state = 'CA' AND year >= 2020 GROUP BY race ORDER BY arrests DESC
+
+**summary_victim_circumstance** — for DV murder/assault counts using circumstance_code = '06':
   SELECT year, SUM(victim_count) AS dv_murders
   FROM summary_victim_circumstance
   WHERE ucr_offense_code = '09A' AND circumstance_code = '06' AND state = 'TX'
   GROUP BY year ORDER BY year
-For DV with weapon breakdown (e.g., "DV murders with firearms"):
+
+**summary_victim_weapon_circumstance** — for DV with weapon breakdown:
   SELECT SUM(victim_count) FROM summary_victim_weapon_circumstance
   WHERE ucr_offense_code = '09A' AND circumstance_code = '06' AND weapon_type IN ('11','12','13','14','15') AND state = 'TX'
 

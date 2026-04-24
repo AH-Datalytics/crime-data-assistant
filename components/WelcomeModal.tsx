@@ -64,7 +64,7 @@ export default function WelcomeModal() {
               <h3 className="text-sm font-bold text-[var(--foreground)]">Historical Library</h3>
             </div>
             <p className="text-sm text-[var(--muted)] leading-relaxed pl-[18px]">
-              Annual crime and police staffing data going back to the 1930s. Clearance rate and national crime data going back to 1960. Look up long-term trends, compare decades, and explore how crime has changed over time across the country.
+              Explore nearly 100 years of crime data from the FBI&apos;s Summary Reporting System.
             </p>
           </div>
 

@@ -5,12 +5,14 @@ import { translateToSql, getHistoricalSystemPrompt } from "@/lib/claude";
 import { validateAndSanitize } from "@/lib/sql-safety";
 import { buildChartConfig } from "@/lib/chart-config";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { checkSessionLimit, maybeCleanup } from "@/lib/captcha";
 import { RTCI } from "@/lib/dynamic-facts";
 import { generateExplanation } from "@/lib/explain";
 import { extractQueryContext } from "@/lib/query-context";
 import { runGuardrails } from "@/lib/guardrails";
 import { applyRetryMeta } from "@/lib/types";
 import type { StreamEvent, ChartMeta } from "@/lib/types";
+import { getCached, setCache } from "@/lib/response-cache";
 
 function sseEvent(event: StreamEvent): string {
   return `data: ${JSON.stringify(event)}\n\n`;
@@ -248,6 +250,22 @@ export async function POST(req: NextRequest) {
         { status: 403, headers: { "Content-Type": "application/json" } }
       );
     }
+
+    // Session-based CAPTCHA throttle
+    maybeCleanup();
+    const captchaCheck = checkSessionLimit(sessionId);
+    if (!captchaCheck.allowed) {
+      if (captchaCheck.dailyLimitReached) {
+        return new Response(
+          JSON.stringify({ success: false, error: "You've reached the daily query limit. Please come back tomorrow." }),
+          { status: 429, headers: { "Content-Type": "application/json" } }
+        );
+      }
+      return new Response(
+        JSON.stringify({ success: false, captchaRequired: true }),
+        { status: 202, headers: { "Content-Type": "application/json" } }
+      );
+    }
   } catch {
     return new Response(
       JSON.stringify({ success: false, error: "Invalid request" }),
@@ -293,34 +311,46 @@ export async function POST(req: NextRequest) {
           )
         );
 
-        const history = Array.isArray(body?.history) ? body.history : undefined;
+        const history = Array.isArray(body?.history) ? body.history?.slice(-6) : undefined;
         const isHistorical = body?.mode === "historical";
         const systemPrompt = isHistorical ? getHistoricalSystemPrompt() : undefined;
-        let claude = await translateToSql(
-          question,
-          history as { role: "user" | "assistant"; content: string }[],
-          systemPrompt
-        );
 
-        if (!claude.sql) {
-          // Retry if model incorrectly claims data isn't available
-          const refusalPatterns = /not (appear to be |be )?represented|not (in|included in) (this|the|our) (dataset|data|sample)|no data (for|available|found)|does not (have|include|cover)|not available in this/i;
-          if (refusalPatterns.test(claude.explanation || "")) {
-            try {
-              const retryResult = await translateToSql(
-                question,
-                [
-                  ...(history as { role: "user" | "assistant"; content: string }[]),
-                  { role: "assistant", content: claude.explanation },
-                  { role: "user", content: "[SYSTEM: Your previous response claimed the data was not available, but this may be incorrect. The database contains agencies from many states. Please try generating a SQL query — search for the agency/state in the data rather than assuming it doesn't exist. Use sample_agencies or agency_monthly to check.]" },
-                ],
-                systemPrompt
-              );
-              if (retryResult.sql) {
-                claude = retryResult;
+        // Check response cache (only standalone questions)
+        const cached = (!history || history.length === 0) ? getCached(question, tab) : null;
+        let fromCache = false;
+
+        let claude: Awaited<ReturnType<typeof translateToSql>>;
+
+        if (cached) {
+          claude = { sql: cached.sql, explanation: cached.explanation, title: cached.title || "", chartHint: (cached.chartType as "bar" | "line" | "pie" | "stacked_bar" | "none") || "none", xAxis: cached.xAxis || "", yAxis: cached.yAxis?.join(",") || "", colors: cached.colors as string[] | undefined, yAxisLabel: cached.yAxisLabel, xAxisLabel: cached.xAxisLabel, annotations: cached.annotations as typeof claude.annotations };
+          fromCache = true;
+        } else {
+          claude = await translateToSql(
+            question,
+            history as { role: "user" | "assistant"; content: string }[],
+            systemPrompt
+          );
+
+          if (!claude.sql) {
+            // Retry if model incorrectly claims data isn't available
+            const refusalPatterns = /not (appear to be |be )?represented|not (in|included in) (this|the|our) (dataset|data|sample)|no data (for|available|found)|does not (have|include|cover)|not available in this/i;
+            if (refusalPatterns.test(claude.explanation || "")) {
+              try {
+                const retryResult = await translateToSql(
+                  question,
+                  [
+                    ...((history || []) as { role: "user" | "assistant"; content: string }[]),
+                    { role: "assistant", content: claude.explanation },
+                    { role: "user", content: "[SYSTEM: Your previous response claimed the data was not available, but this may be incorrect. The database contains agencies from many states. Please try generating a SQL query — search for the agency/state in the data rather than assuming it doesn't exist. Use sample_agencies or agency_monthly to check.]" },
+                  ],
+                  systemPrompt
+                );
+                if (retryResult.sql) {
+                  claude = retryResult;
+                }
+              } catch {
+                // Retry failed, use original response
               }
-            } catch {
-              // Retry failed, use original response
             }
           }
         }
@@ -794,10 +824,17 @@ export async function POST(req: NextRequest) {
           }
           const totalMs2 = Date.now() - totalStart;
           logQuery(question, sql, rows.length, null, totalMs2, postExplanation, tab, firedGuardrails, "haiku-4.5", sessionId);
+          // Cache successful responses (only standalone questions)
+          if (!fromCache && (!history || history.length === 0) && sql) {
+            setCache(question, tab, { sql, explanation: claude.explanation, title: claude.title, chartType: claude.chartHint, xAxis: claude.xAxis, yAxis: claude.yAxis ? claude.yAxis.split(",").map(s => s.trim()) : undefined, yAxisLabel: claude.yAxisLabel, xAxisLabel: claude.xAxisLabel, colors: claude.colors, annotations: claude.annotations });
+          }
         } catch {
           // If explanation fails, pre-query explanation is already shown — just log
           const totalMs2 = Date.now() - totalStart;
           logQuery(question, sql, rows.length, null, totalMs2, claude.explanation, tab, firedGuardrails, "haiku-4.5", sessionId);
+          if (!fromCache && (!history || history.length === 0) && sql) {
+            setCache(question, tab, { sql, explanation: claude.explanation, title: claude.title, chartType: claude.chartHint, xAxis: claude.xAxis, yAxis: claude.yAxis ? claude.yAxis.split(",").map(s => s.trim()) : undefined, yAxisLabel: claude.yAxisLabel, xAxisLabel: claude.xAxisLabel, colors: claude.colors, annotations: claude.annotations });
+          }
         }
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
