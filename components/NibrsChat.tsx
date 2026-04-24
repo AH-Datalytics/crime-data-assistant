@@ -145,80 +145,86 @@ export default function NibrsChat({ visible }: NibrsChatProps) {
     [input, submitQuestion]
   );
 
+  const hasActiveQuery = messages.length > 0 || loading;
+
+  const searchBar = (
+    <div className={`bg-white ${hasActiveQuery ? "border-t" : "border-b"} border-[var(--border)] shrink-0`}>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
+        <form onSubmit={handleSubmit} className="flex gap-2 sm:gap-3">
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => { setInput(e.target.value); if (!hasInteracted && e.target.value) { setHasInteracted(true); animated.pause(); } }}
+            onFocus={() => setInputFocused(true)}
+            onBlur={() => setInputFocused(false)}
+            placeholder={!hasInteracted ? animated.placeholder : NIBRS_DEFAULT}
+            className="flex-1 px-4 py-2.5 text-sm border border-[var(--border)] rounded-full focus:outline-none focus:border-[var(--navy)] bg-[var(--surface)]"
+            disabled={loading}
+          />
+          <button
+            type="submit"
+            disabled={loading || !input.trim()}
+            className="px-6 py-2.5 text-sm font-medium text-white bg-[var(--navy)] rounded-full hover:bg-[var(--navy-light)] disabled:opacity-40 cursor-pointer"
+          >
+            {loading ? "..." : "Ask"}
+          </button>
+        </form>
+        {/* History pills or sample questions */}
+        <div className="flex flex-nowrap sm:flex-wrap gap-2 sm:gap-3 mt-3 items-center overflow-x-auto scrollbar-hide">
+          {pastQueries.length > 0 && (
+            <span className="text-[10px] uppercase tracking-wider text-[var(--muted)] mr-1">History:</span>
+          )}
+          {pastQueries.length > 0 && (
+            <button
+              onClick={() => { setMessages([]); setCurrentResponse(null); }}
+              className="text-[10px] uppercase tracking-wider text-[var(--muted)] hover:text-red-500 cursor-pointer transition-colors ml-auto"
+            >
+              Clear
+            </button>
+          )}
+          {pastQueries.length > 0
+            ? (<>
+                {pastQueries.slice(-5).map((q, i) => (
+                  <button
+                    key={i}
+                    onClick={() => submitQuestion(q)}
+                    className="group relative text-[11px] pl-3 pr-7 py-1.5 rounded-lg bg-white border border-[var(--border)] text-[var(--muted)] hover:shadow-md hover:border-transparent hover:text-[var(--foreground)] cursor-pointer transition-all duration-200"
+                  >
+                    {q}
+                    <svg className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-60 transition-opacity" width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M2 14L14 2M14 2H5M14 2v9"/></svg>
+                  </button>
+                ))}
+              </>)
+            : !loading && (
+              <>
+                <span className="text-[10px] uppercase tracking-wider text-[var(--muted)] mr-1">Sample Questions:</span>
+                {[
+                  "How many vehicle burglaries per month in Boston in 2023?",
+                  "Show carjacking trend by month/year",
+                  `Murders by weapon in Houston in ${new Date().getFullYear() - 1}`,
+                ].map((q) => (
+                  <button
+                    key={q}
+                    onClick={() => submitQuestion(q)}
+                    className="group relative text-[11px] pl-3 pr-7 py-1.5 rounded-lg bg-white border border-[var(--border)] text-[var(--muted)] hover:shadow-md hover:border-transparent hover:text-[var(--foreground)] cursor-pointer transition-all duration-200"
+                  >
+                    {q}
+                    <svg className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-60 transition-opacity" width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M2 14L14 2M14 2H5M14 2v9"/></svg>
+                  </button>
+                ))}
+              </>
+            )
+          }
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className={`flex-1 flex flex-col min-h-0 ${visible ? "tab-fade-in" : ""}`} style={{ display: visible ? "flex" : "none" }}>
       {captchaNeeded && <TurnstileModal onVerified={onVerified} onClose={onClose} />}
-      {/* Search bar */}
-      <div className="bg-white border-b border-[var(--border)] shrink-0">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
-          <form onSubmit={handleSubmit} className="flex gap-2 sm:gap-3">
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => { setInput(e.target.value); if (!hasInteracted && e.target.value) { setHasInteracted(true); animated.pause(); } }}
-              onFocus={() => setInputFocused(true)}
-              onBlur={() => setInputFocused(false)}
-              placeholder={!hasInteracted ? animated.placeholder : NIBRS_DEFAULT}
-              className="flex-1 px-4 py-2.5 text-sm border border-[var(--border)] rounded-full focus:outline-none focus:border-[var(--navy)] bg-[var(--surface)]"
-              disabled={loading}
-            />
-            <button
-              type="submit"
-              disabled={loading || !input.trim()}
-              className="px-6 py-2.5 text-sm font-medium text-white bg-[var(--navy)] rounded-full hover:bg-[var(--navy-light)] disabled:opacity-40 cursor-pointer"
-            >
-              {loading ? "..." : "Ask"}
-            </button>
-          </form>
-          {/* History pills or sample questions */}
-          <div className="flex flex-nowrap sm:flex-wrap gap-2 sm:gap-3 mt-3 items-center overflow-x-auto scrollbar-hide">
-            {pastQueries.length > 0 && (
-              <span className="text-[10px] uppercase tracking-wider text-[var(--muted)] mr-1">History:</span>
-            )}
-            {pastQueries.length > 0 && (
-              <button
-                onClick={() => { setMessages([]); setCurrentResponse(null); }}
-                className="text-[10px] uppercase tracking-wider text-[var(--muted)] hover:text-red-500 cursor-pointer transition-colors ml-auto"
-              >
-                Clear
-              </button>
-            )}
-            {pastQueries.length > 0
-              ? (<>
-                  {pastQueries.slice(-5).map((q, i) => (
-                    <button
-                      key={i}
-                      onClick={() => submitQuestion(q)}
-                      className="group relative text-[11px] pl-3 pr-7 py-1.5 rounded-lg bg-white border border-[var(--border)] text-[var(--muted)] hover:shadow-md hover:border-transparent hover:text-[var(--foreground)] cursor-pointer transition-all duration-200"
-                    >
-                      {q}
-                      <svg className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-60 transition-opacity" width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M2 14L14 2M14 2H5M14 2v9"/></svg>
-                    </button>
-                  ))}
-                </>)
-              : !loading && (
-                <>
-                  <span className="text-[10px] uppercase tracking-wider text-[var(--muted)] mr-1">Sample Questions:</span>
-                  {[
-                    "How many vehicle burglaries per month in Boston in 2023?",
-                    "Show carjacking trend by month/year",
-                    `Murders by weapon in Houston in ${new Date().getFullYear() - 1}`,
-                  ].map((q) => (
-                    <button
-                      key={q}
-                      onClick={() => submitQuestion(q)}
-                      className="group relative text-[11px] pl-3 pr-7 py-1.5 rounded-lg bg-white border border-[var(--border)] text-[var(--muted)] hover:shadow-md hover:border-transparent hover:text-[var(--foreground)] cursor-pointer transition-all duration-200"
-                    >
-                      {q}
-                      <svg className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-60 transition-opacity" width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M2 14L14 2M14 2H5M14 2v9"/></svg>
-                    </button>
-                  ))}
-                </>
-              )
-            }
-          </div>
-        </div>
-      </div>
+      {/* Search bar at top only before first query */}
+      {!hasActiveQuery && searchBar}
 
       {/* Response text + message history */}
       <div className="border-b border-[var(--border)] bg-white shrink-0">
@@ -236,9 +242,9 @@ export default function NibrsChat({ visible }: NibrsChatProps) {
           {messages.length > 0 && (
             <button
               onClick={() => setChatCollapsed(c => !c)}
-              className="text-[10px] uppercase tracking-wider text-[var(--muted)] hover:text-[var(--foreground)] cursor-pointer transition-colors flex items-center gap-1 mb-1"
+              className="text-[11px] font-semibold uppercase tracking-wider text-[var(--accent)] hover:text-[var(--foreground)] cursor-pointer transition-colors flex items-center gap-1.5 mb-1 px-2 py-1 rounded-md hover:bg-[var(--surface)]"
             >
-              <svg className={`w-3 h-3 transition-transform ${chatCollapsed ? "" : "rotate-90"}`} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <svg className={`w-3.5 h-3.5 transition-transform ${chatCollapsed ? "" : "rotate-90"}`} fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
               </svg>
               {chatCollapsed ? "Show conversation" : "Hide conversation"}
@@ -265,7 +271,8 @@ export default function NibrsChat({ visible }: NibrsChatProps) {
               {messages.filter(m => m.role === "user").slice(-1)[0]?.text}
             </div>
           )}
-          {!loading && messages.length > 0 && !currentResponse && messages[messages.length - 1]?.role === "assistant" && (
+          {!loading && messages.length > 0 && (
+            <>
             <form
               onSubmit={(e) => { e.preventDefault(); const val = (e.currentTarget.elements.namedItem("reply") as HTMLInputElement)?.value?.trim(); if (val) { submitQuestion(val); (e.currentTarget.elements.namedItem("reply") as HTMLInputElement).value = ""; } }}
               className="flex gap-2 mt-2"
@@ -273,14 +280,29 @@ export default function NibrsChat({ visible }: NibrsChatProps) {
               <input
                 name="reply"
                 type="text"
-                placeholder="Reply..."
+                placeholder="Ask a follow-up..."
                 className="flex-1 px-3 py-1.5 text-sm border border-[var(--border)] rounded-full focus:outline-none focus:border-[var(--accent)] bg-[var(--surface)]"
-                autoFocus
               />
               <button type="submit" className="px-4 py-1.5 text-xs font-medium text-white bg-[var(--foreground)] rounded-full hover:bg-[var(--accent-hover)] cursor-pointer">
-                Send
+                Ask
               </button>
             </form>
+            {pastQueries.length > 1 && (
+              <div className="flex flex-nowrap gap-2 mt-2 items-center overflow-x-auto scrollbar-hide">
+                <span className="text-[10px] uppercase tracking-wider text-[var(--muted)] mr-1 shrink-0">History:</span>
+                {pastQueries.slice(-5).map((q, i) => (
+                  <button
+                    key={i}
+                    onClick={() => submitQuestion(q)}
+                    className="text-[10px] px-2 py-1 rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--muted)] hover:text-[var(--foreground)] hover:border-transparent hover:shadow-sm cursor-pointer transition-all truncate max-w-[200px] shrink-0"
+                    title={q}
+                  >
+                    {q}
+                  </button>
+                ))}
+              </div>
+            )}
+            </>
           )}
           {messages.length === 0 && !loading && (
             <div className="text-sm text-gray-400 py-1 text-center">

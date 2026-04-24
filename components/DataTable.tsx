@@ -50,7 +50,7 @@ export default function DataTable({ columns, rows, truncated }: DataTableProps) 
     });
   }, [rows, sortCol, sortDir]);
 
-  const displayRows = expanded ? sortedRows : sortedRows.slice(0, 50);
+  const displayRows = expanded ? sortedRows : sortedRows.slice(0, 100);
 
   const handleSort = (col: string) => {
     if (sortCol === col) {

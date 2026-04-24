@@ -224,6 +224,9 @@ export async function POST(req: NextRequest) {
 
     // Step 3: Execute
     const db = getShrDb();
+    if (!db) {
+      return jsonResp({ success: false, error: "SHR database not available." } as QueryError, 500);
+    }
     let rows: Record<string, unknown>[];
     try {
       rows = db.prepare(sql).all() as Record<string, unknown>[];

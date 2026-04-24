@@ -74,6 +74,7 @@ function getHistoricalMaxYear() {
 function getShrHeroData() {
   try {
     const db = getShrDb();
+    if (!db) return [];
     return db.prepare(`
       SELECT year,
         ROUND(100.0 * SUM(CASE WHEN weapon_group = 'Firearm' THEN 1 ELSE 0 END) / COUNT(*), 1) as pct_firearm
