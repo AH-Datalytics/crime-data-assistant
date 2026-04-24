@@ -182,8 +182,8 @@ export async function POST(req: NextRequest) {
     // Step 3: Execute SQL (in worker thread with 15s timeout)
     const startTime = Date.now();
 
-    let rows: Record<string, unknown>[];
-    let columns: string[];
+    let rows: Record<string, unknown>[] = undefined!;
+    let columns: string[] = undefined!;
 
     try {
       const result = await executeWithTimeout(sql);
@@ -192,59 +192,77 @@ export async function POST(req: NextRequest) {
     } catch (dbErr) {
       const msg = dbErr instanceof Error ? dbErr.message : String(dbErr);
       const isTimeout = msg.includes("timed out");
-      console.log(`[nibrs][error-recovery] DB error: ${msg}, retrying with Claude`);
 
-      // For timeouts, ask Claude to use a summary table instead
-      const errorInstruction = isTimeout
-        ? `That SQL timed out after 30 seconds. The query is too slow — you MUST rewrite it to use a summary table (summary_state_monthly, summary_city_monthly, summary_victim_state_monthly, summary_victim_city_monthly, summary_victim_demographics, summary_offender_demographics, summary_arrestee_demographics, summary_property_offense, summary_drug_monthly, summary_carjacking_monthly, or summary_flash_mob_monthly). If no summary table fits, use a narrower WHERE clause.`
-        : `That SQL failed with error: ${msg}. Please fix the query and try again.`;
+      // Timeouts are often transient (contention, cold cache) — retry same SQL once before asking Claude to rewrite
+      if (isTimeout) {
+        console.log(`[nibrs][timeout-retry] First attempt timed out, retrying same SQL`);
+        try {
+          const retryResult = await executeWithTimeout(sql);
+          rows = retryResult.rows;
+          columns = retryResult.columns;
+          console.log(`[nibrs][timeout-retry] Second attempt succeeded`);
+        } catch (retryErr) {
+          const retryMsg = retryErr instanceof Error ? retryErr.message : String(retryErr);
+          console.log(`[nibrs][timeout-retry] Second attempt also failed: ${retryMsg}`);
+        }
+      }
 
-      const retryHistory = [
-        ...(history || []),
-        { role: "user" as const, content: question },
-        { role: "assistant" as const, content: JSON.stringify(claude) },
-        { role: "user" as const, content: errorInstruction },
-      ];
-      const retry = await translateToSql(
-        isTimeout ? `Rewrite using summary tables: ${question}` : `Fix this SQL error: ${msg}`,
-        retryHistory
-      );
-      if (retry.sql) {
-        const retryValidation = validateAndSanitize(retry.sql);
-        if (retryValidation.valid) {
-          try {
-            const retryResult = await executeWithTimeout(retryValidation.sanitized!);
-            rows = retryResult.rows;
-            columns = retryResult.columns;
-            sql = retryValidation.sanitized!;
-            applyRetryMeta(claude, retry);
-            console.log(`[nibrs][error-recovery] Retry succeeded`);
-          } catch (retryErr) {
-            const retryMsg = retryErr instanceof Error ? retryErr.message : String(retryErr);
-            logNibrsQuery(question, sql, 0, `DB retry failed: ${retryMsg}`, Date.now() - claudeStart, null, guardrailResult.fired, "haiku-4.5", sessionId);
-            const userError = isTimeout
-              ? `This query is too complex for the database. Try narrowing your request — for example, ask about a specific city, state, or shorter time range instead of a broad national query.`
-              : msg.includes("no such column") || msg.includes("ambiguous")
-                ? `I had trouble building that query — the data may not support that exact breakdown. Try simplifying your question or asking about a broader category.`
-                : `I had trouble with that query. Try rephrasing your question or asking about a different aspect of the data.`;
+      // If the same-SQL retry succeeded, skip Claude rewrite and continue to response
+      if (!rows!) {
+        console.log(`[nibrs][error-recovery] DB error: ${msg}, retrying with Claude`);
+
+        // For timeouts, ask Claude to use a summary table instead
+        const errorInstruction = isTimeout
+          ? `That SQL timed out after 30 seconds. The query is too slow — you MUST rewrite it to use a summary table (summary_state_monthly, summary_city_monthly, summary_victim_state_monthly, summary_victim_city_monthly, summary_victim_demographics, summary_offender_demographics, summary_arrestee_demographics, summary_property_offense, summary_drug_monthly, summary_carjacking_monthly, or summary_flash_mob_monthly). If no summary table fits, use a narrower WHERE clause.`
+          : `That SQL failed with error: ${msg}. Please fix the query and try again.`;
+
+        const retryHistory = [
+          ...(history || []),
+          { role: "user" as const, content: question },
+          { role: "assistant" as const, content: JSON.stringify(claude) },
+          { role: "user" as const, content: errorInstruction },
+        ];
+        const retry = await translateToSql(
+          isTimeout ? `Rewrite using summary tables: ${question}` : `Fix this SQL error: ${msg}`,
+          retryHistory
+        );
+        if (retry.sql) {
+          const retryValidation = validateAndSanitize(retry.sql);
+          if (retryValidation.valid) {
+            try {
+              const retryResult = await executeWithTimeout(retryValidation.sanitized!);
+              rows = retryResult.rows;
+              columns = retryResult.columns;
+              sql = retryValidation.sanitized!;
+              applyRetryMeta(claude, retry);
+              console.log(`[nibrs][error-recovery] Retry succeeded`);
+            } catch (retryErr) {
+              const retryMsg = retryErr instanceof Error ? retryErr.message : String(retryErr);
+              logNibrsQuery(question, sql, 0, `DB retry failed: ${retryMsg}`, Date.now() - claudeStart, null, guardrailResult.fired, "haiku-4.5", sessionId);
+              const userError = isTimeout
+                ? `This query is too complex for the database. Try narrowing your request — for example, ask about a specific city, state, or shorter time range instead of a broad national query.`
+                : msg.includes("no such column") || msg.includes("ambiguous")
+                  ? `I had trouble building that query — the data may not support that exact breakdown. Try simplifying your question or asking about a broader category.`
+                  : `I had trouble with that query. Try rephrasing your question or asking about a different aspect of the data.`;
+              return jsonResp(
+                { success: false, error: userError, sql } as QueryError,
+                500
+              );
+            }
+          } else {
+            logNibrsQuery(question, sql, 0, `DB: ${msg} (retry validation failed)`, Date.now() - claudeStart, null, guardrailResult.fired, "haiku-4.5", sessionId);
             return jsonResp(
-              { success: false, error: userError, sql } as QueryError,
+              { success: false, error: `I had trouble with that query. Try rephrasing your question.`, sql } as QueryError,
               500
             );
           }
         } else {
-          logNibrsQuery(question, sql, 0, `DB: ${msg} (retry validation failed)`, Date.now() - claudeStart, null, guardrailResult.fired, "haiku-4.5", sessionId);
+          logNibrsQuery(question, sql, 0, `DB: ${msg}`, Date.now() - claudeStart, null, guardrailResult.fired, "haiku-4.5", sessionId);
           return jsonResp(
-            { success: false, error: `I had trouble with that query. Try rephrasing your question.`, sql } as QueryError,
+            { success: false, error: isTimeout ? `This query is too complex for the database. Try asking about a specific city, state, or shorter time range.` : `Database error: ${msg}`, sql } as QueryError,
             500
           );
         }
-      } else {
-        logNibrsQuery(question, sql, 0, `DB: ${msg}`, Date.now() - claudeStart, null, guardrailResult.fired, "haiku-4.5", sessionId);
-        return jsonResp(
-          { success: false, error: isTimeout ? `This query is too complex for the database. Try asking about a specific city, state, or shorter time range.` : `Database error: ${msg}`, sql } as QueryError,
-          500
-        );
       }
     }
 
