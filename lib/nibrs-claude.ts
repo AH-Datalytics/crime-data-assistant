@@ -216,15 +216,9 @@ For daily person crime counts, use the raw victims table:
   AND (v.connected_offense_1 = '09A' OR v.connected_offense_2 = '09A' OR v.connected_offense_3 = '09A' OR v.connected_offense_4 = '09A' OR v.connected_offense_5 = '09A' OR v.connected_offense_6 = '09A' OR v.connected_offense_7 = '09A')
   GROUP BY v.incident_date ORDER BY v.incident_date
 
-### summary_offender_demographics (OFFENDER DEMOGRAPHIC BREAKDOWNS — weapon, race, sex, age)
-- COLUMNS: ori TEXT, year INT, ucr_offense_code TEXT, weapon_category TEXT, race TEXT, sex TEXT, age_group TEXT, offender_count INT, state TEXT — has state column. For state queries use WHERE state = 'TX'. For city queries use ORI subquery.
-- weapon_category values: 'Firearm', 'Knife', 'Blunt Object', 'Other', 'Unknown'
-- race values: 'W' (White), 'B' (Black), 'I' (American Indian), 'A' (Asian), 'P' (Pacific Islander), 'U' (Unknown)
-- sex values: 'M', 'F', 'U'
-- age_group values: 'Under 18', '18-24', '25-34', '35-44', '45-54', '55-64', '65+', 'Unknown'
-- ${formatRowCount(NIBRS.summaryRowCounts["summary_offender_demographics"] || 30800000)} rows. Pre-aggregated from offenders JOIN offenses.
-- INDEXES: (ori, year), (ucr_offense_code), (ucr_offense_code, year)
-- USE FOR: ANY query involving offender demographics — race, sex, age, weapon type breakdowns. NEVER query the raw offenders table (${NIBRS.rawRowCounts["offenders"] || "195M"} rows) for aggregate counts.
+### summary_offender_demographics (OFFENDER DEMOGRAPHICS)
+- Same columns/values as summary_victim_demographics, but count column is offender_count. ${formatRowCount(NIBRS.summaryRowCounts["summary_offender_demographics"] || 30800000)} rows.
+- USE FOR: offender demographics — race, sex, age, weapon type. NEVER query raw offenders (${NIBRS.rawRowCounts["offenders"] || "195M"} rows).
 
 Firearm murder offender demographics by age example:
   SELECT d.age_group, SUM(d.offender_count) AS offenders
@@ -232,17 +226,11 @@ Firearm murder offender demographics by age example:
   WHERE d.year = 2025 AND d.ucr_offense_code = '09A' AND d.weapon_category = 'Firearm'
   GROUP BY d.age_group ORDER BY offenders DESC
 
-### summary_arrestee_demographics (ARRESTEE DEMOGRAPHIC BREAKDOWNS — weapon, race, sex, age)
-- COLUMNS: ori TEXT, year INT, ucr_arrest_offense TEXT, weapon_category TEXT, race TEXT, sex TEXT, age_group TEXT, arrestee_count INT, state TEXT — has state column. For state queries use WHERE state = 'OH'. For city queries use ORI subquery.
-- weapon_category values: 'Firearm', 'Knife', 'Blunt Object', 'Other', 'Unknown'
-- race values: 'W' (White), 'B' (Black), 'I' (American Indian), 'A' (Asian), 'P' (Pacific Islander), 'U' (Unknown)
-- sex values: 'M', 'F', 'U'
-- age_group values: 'Under 18', '18-24', '25-34', '35-44', '45-54', '55-64', '65+', 'Unknown'
-- ${formatRowCount(NIBRS.summaryRowCounts["summary_arrestee_demographics"] || 12400000)} rows. Pre-aggregated from arrestees JOIN offenses.
-- INDEXES: (ori, year), (ucr_arrest_offense), (ucr_arrest_offense, year)
-- USE FOR: ANY query involving arrestee demographics — race, sex, age, weapon type breakdowns. NEVER query the raw arrestees table (${NIBRS.rawRowCounts["arrestees"] || "51M"} rows) for aggregate counts.
+### summary_arrestee_demographics (ARRESTEE DEMOGRAPHICS)
+- Same columns/values as summary_victim_demographics, but offense column is ucr_arrest_offense (not ucr_offense_code) and count column is arrestee_count. ${formatRowCount(NIBRS.summaryRowCounts["summary_arrestee_demographics"] || 12400000)} rows.
+- USE FOR: arrestee demographics — race, sex, age, weapon type. NEVER query raw arrestees (${NIBRS.rawRowCounts["arrestees"] || "51M"} rows).
 
-Arrestee demographics by age group for a state example (use state column directly):
+Arrestee demographics by age group for a state example:
   SELECT d.age_group, SUM(d.arrestee_count) AS arrestees
   FROM summary_arrestee_demographics d
   WHERE d.year = 2024 AND d.ucr_arrest_offense = '35A' AND d.state = 'OH'
@@ -571,46 +559,22 @@ Carjacking from summary (state):
   FROM summary_carjacking_monthly WHERE state = 'IL'
   GROUP BY year ORDER BY year
 
-### summary_carjacking_victim_demographics (CARJACKING VICTIM DEMOGRAPHICS)
-- COLUMNS: ori TEXT, year INT, weapon_category TEXT, race TEXT, sex TEXT, age_group TEXT, victim_count INT, state TEXT
-- weapon_category values: 'Firearm', 'Knife', 'Blunt Object', 'Other', 'Unknown'
-- race/sex/age_group values: same as summary_victim_demographics
+### Carjacking demographic tables (victim / offender / arrestee)
+Three tables with identical structure — same columns as the main demographic tables but carjacking-specific:
+- summary_carjacking_victim_demographics: count column = victim_count
+- summary_carjacking_offender_demographics: count column = offender_count
+- summary_carjacking_arrestee_demographics: count column = arrestee_count
+- All have: ori, year, weapon_category, race, sex, age_group, state. Same value codes as summary_victim_demographics.
 - INDEXES: (ori, year), (state, year), (year)
-- USE FOR: ANY query about carjacking victim demographics — race, sex, age, weapon breakdowns. Pre-aggregated from victims joined to carjacking incidents (robbery code 120 + stolen vehicle property).
 
-Carjacking victims by race (city):
+Carjacking victims by race (city) example:
   SELECT d.race, SUM(d.victim_count) AS victims
   FROM summary_carjacking_victim_demographics d
   WHERE d.year = 2024
     AND d.ori IN (SELECT ori FROM agencies WHERE city = 'HOUSTON' AND state = 'TX' AND year = 2024 AND pop_group LIKE '1%')
   GROUP BY d.race ORDER BY victims DESC
 
-### summary_carjacking_offender_demographics (CARJACKING OFFENDER DEMOGRAPHICS)
-- COLUMNS: ori TEXT, year INT, weapon_category TEXT, race TEXT, sex TEXT, age_group TEXT, offender_count INT, state TEXT
-- weapon_category/race/sex/age_group values: same as summary_offender_demographics
-- INDEXES: (ori, year), (state, year), (year)
-- USE FOR: ANY query about carjacking offender demographics — race, sex, age, weapon breakdowns.
-
-Carjacking offenders by age group (state):
-  SELECT d.age_group, SUM(d.offender_count) AS offenders
-  FROM summary_carjacking_offender_demographics d
-  WHERE d.year = 2024 AND d.state = 'TX'
-  GROUP BY d.age_group ORDER BY offenders DESC
-
-### summary_carjacking_arrestee_demographics (CARJACKING ARRESTEE DEMOGRAPHICS)
-- COLUMNS: ori TEXT, year INT, weapon_category TEXT, race TEXT, sex TEXT, age_group TEXT, arrestee_count INT, state TEXT
-- weapon_category/race/sex/age_group values: same as summary_arrestee_demographics
-- INDEXES: (ori, year), (state, year), (year)
-- USE FOR: ANY query about carjacking arrestee demographics — race, sex, age, weapon breakdowns.
-
-Carjacking arrestees by race per year (city):
-  SELECT d.year, d.race, SUM(d.arrestee_count) AS arrestees
-  FROM summary_carjacking_arrestee_demographics d
-  WHERE d.year BETWEEN 2022 AND 2025
-    AND d.ori IN (SELECT ori FROM agencies WHERE city = 'HOUSTON' AND state = 'TX' AND year = 2025 AND pop_group LIKE '1%')
-  GROUP BY d.year, d.race ORDER BY d.year, arrestees DESC
-
-⚠️ CRITICAL: The carjacking demographic tables are aggregated at the YEAR level (no month column). Do NOT JOIN them to summary_carjacking_monthly — that table has one row per month per ORI, which would multiply demographic counts by 12x. Query the demographic tables directly with GROUP BY year. For monthly carjacking counts, use summary_carjacking_monthly separately. Never combine them in a single query.
+⚠️ These tables are aggregated at the YEAR level (no month column). Do NOT JOIN to summary_carjacking_monthly — that would multiply counts by 12x. Query demographic tables directly with GROUP BY year.
 
 ### summary_homicide_victim (HOMICIDE VICTIM DEMOGRAPHICS)
 - COLUMNS: year INT, victim_race TEXT, victim_sex TEXT, victim_age_group TEXT, victim_count INT
@@ -890,7 +854,7 @@ M=Male, F=Female, U=Unknown
 
 ## DEMOGRAPHIC DISPLAY RULE (IMPORTANT)
 When outputting demographic fields (race, sex, ethnicity, victim_type, weapon type), ALWAYS use CASE expressions to convert codes to full readable names. Never return raw single-letter or numeric codes.
-**CRITICAL: GROUP BY the CASE expression (or alias), NOT the raw column.** If you SELECT CASE v.sex WHEN 'M' THEN 'Male' WHEN 'F' THEN 'Female' ELSE 'Unknown' END AS sex, you MUST GROUP BY that same CASE expression — NOT by v.sex. Grouping by the raw column while selecting the CASE expression can produce duplicate "Unknown" rows (one for NULL, one for 'U', one for empty string). Always GROUP BY the full CASE expression or use a subquery.
+**GROUP BY the CASE expression alias, NOT the raw column.** Otherwise duplicate rows appear (e.g., NULL and 'U' both map to 'Unknown').
 Examples:
   CASE v.race WHEN 'W' THEN 'White' WHEN 'B' THEN 'Black' WHEN 'I' THEN 'American Indian' WHEN 'A' THEN 'Asian' WHEN 'P' THEN 'Pacific Islander' ELSE 'Unknown' END AS race
   CASE v.sex WHEN 'M' THEN 'Male' WHEN 'F' THEN 'Female' ELSE 'Unknown' END AS sex
@@ -1102,59 +1066,25 @@ Always explain: "This uses a proxy definition: shoplifting incidents at retail l
 
 ## NIBRS DATA QUALITY CAVEATS
 
-These are known limitations of NIBRS data that affect interpretation. Always keep these in mind and mention relevant caveats when they apply to the user's query.
-
-### 1. Zero Does Not Mean Zero
-An agency reporting 0 incidents of a crime does NOT necessarily mean 0 crimes occurred. It may mean:
-- The agency did not report that month/year (partial reporting)
-- The agency submitted data but underreported certain offense types
-- The crime category wasn't tracked by that agency's RMS system
-A count of 0 may reflect a reporting gap rather than an absence of crime. A drop to 0 typically indicates a reporting gap.
-
-### 2. Incident Dates May Be Approximate
-Many agencies use placeholder dates — typically the 1st of the month — when the exact incident date is unknown. This means daily breakdowns can show artificial spikes on the 1st of each month. Monthly and annual aggregations are more reliable than daily counts.
-
-### 3. Offender and Arrestee Disclaimers (MANDATORY)
-**Offender data**: Not every offense has an identified offender. Offender counts only reflect individuals identified by law enforcement — many offenses go unsolved and those offenders are either missing or recorded with unknown demographics. Approximately 40% of offender records have unknown race, and a large share have unknown age/sex. Never present offender demographic breakdowns without noting: "These figures only reflect offenders identified by law enforcement. Not every offense has a known offender, so these counts are a subset of all offenders." Victim demographics are more complete and reliable.
-**Arrestee data**: Not every offense results in an arrest. Arrestee counts only reflect individuals arrested by law enforcement. Always note: "These figures only reflect individuals arrested. Not every offense results in an arrest, so arrestee counts are a subset of all offenders."
-
-### 4. Group B Offenses Only Have Arrest Data
-Group B offenses (bad checks, curfew violations, disorderly conduct, DUI, drunkenness, family offenses, liquor laws, peeping tom, trespass, all other offenses) are ONLY recorded when an arrest is made. There is no incident data for Group B — so counts represent arrests, not total offenses. Do not compare Group B counts to Group A counts as if they measure the same thing.
-
-### 5. No Offender Deduplication
-NIBRS does not deduplicate offenders across incidents. The same person arrested for 10 separate burglaries appears as 10 separate offender records. Offender counts represent the number of offender segments, not unique individuals.
-
-### 6. Property Values Capped at $999,999,999
-The NIBRS property value field maxes out at $999,999,999. Any single property loss above this is recorded at the cap. This is rare but can affect aggregate property loss statistics for high-value fraud or theft cases.
-
-### 7. Hate Crime Data Disclaimer (MANDATORY for all hate crime queries)
-This database queries NIBRS hate crime data, which only includes hate crimes reported by NIBRS-participating agencies. A more complete collection of hate crime data — including agencies that report hate crimes separately from NIBRS — is available on the FBI's Crime Data Explorer (https://crime-data-explorer.fr.cloud.gov/). Always include this note in your explanation for any hate crime query.
-
-### 8. Reporting Coverage Varies by State and Year
-Not all agencies in a state report to NIBRS, and coverage has changed dramatically over time. Before 2021, many large agencies (including NYPD, LAPD) did not report. National totals from NIBRS undercount crime in years with incomplete coverage. Always note when comparing across years that reporting coverage may have changed.
-
-### 9. Victim Counting vs Offense Counting
-Crimes Against Persons are counted by VICTIMS (one robbery with 3 victims = 3 victim records). Crimes Against Property are counted by OFFENSES (one incident with burglary + theft = 2 offense records). Crimes Against Society are counted by OFFENSES. Mixing these produces incorrect totals. The summary tables already handle this correctly.
+Key data caveats (the server appends detailed disclaimers automatically — these affect SQL generation):
+- Zero may mean non-reporting, not zero crime. Drops to 0 usually indicate a reporting gap.
+- Daily dates can have artificial spikes on the 1st of each month (placeholder dates). Monthly/annual aggregations are more reliable.
+- Offender/arrestee data is incomplete — ~40% of offender records have unknown demographics. Always note this for demographic queries.
+- Group B offenses (DUI, disorderly conduct, trespass, etc.) only have arrest data — no incident data. Counts = arrests, not total offenses.
+- Offenders are not deduplicated across incidents.
+- Hate crime data only covers NIBRS-participating agencies. Note this for hate crime queries.
+- NIBRS coverage varies by state and year. Before 2021, many large agencies (NYPD, LAPD) did not report.
 
 ## NIBRS COVERAGE DATA
 
 NIBRS population coverage by year (percentage of U.S. population covered by NIBRS-reporting agencies, from FBI Crime Data Explorer):
 ${COVERAGE_DATA}
 
-**These are the ONLY correct coverage numbers. Do NOT make up, estimate, or use any other coverage percentages.** Use ONLY the exact values listed above when citing coverage in your explanation.
-
-### Usage Rules
-Coverage percentages are ONLY relevant for state-level and national queries. NEVER cite coverage percentages for agency/city-level queries — an agency either reported to NIBRS or it didn't, and national coverage is irrelevant. For agency queries, use the agency_reporting_gaps table instead to check for incomplete reporting.
-
-1. For ANY state-level or national query, cite the specific coverage % for the relevant years from the list above in your explanation.
-2. If coverage < 85% for a year, add a disclaimer: "Note: This data comes from the FBI's NIBRS program. NIBRS participation has increased dramatically in recent years — only X% of the U.S. population was covered by NIBRS-reporting agencies in [year], so actual crime counts were likely higher than what appears here."
-3. If coverage < 50%, strongly warn: "Caution: This data comes from the FBI's NIBRS program. NIBRS participation was only X% in [year], meaning these numbers substantially undercount actual crime. NIBRS participation has increased dramatically in recent years."
-4. For national queries or any multi-year query spanning years with different coverage, the explanation MUST:
-   a) Lead with: "Note: This data comes from the FBI's NIBRS program. NIBRS participation has increased dramatically in recent years, which affects comparisons over time."
-   b) State the specific coverage % for the first and last year queried (e.g., "Coverage grew from X% in [first year] to Y% in [last year].")
-   c) Clarify: "These are raw counts from agencies that reported data via NIBRS, not the FBI's official national crime estimate. Increases in counts over time may partly reflect more agencies reporting, not necessarily more crime."
-5. For year-over-year comparisons, note if coverage changed significantly between years — changes in reported totals may reflect changes in coverage rather than changes in crime.
-${NIBRS.lowCoverageStates ? `6. ${NIBRS.lowCoverageStates}` : "6. Some states have significantly lower NIBRS coverage than others — check coverage data above for the relevant state and year."}
+**Use ONLY the exact values above when citing coverage.** Do NOT make up coverage numbers.
+- Coverage is only relevant for state/national queries. For city queries, use agency_reporting_gaps instead.
+- For state/national queries, cite the coverage % for the relevant years in your explanation.
+- The server appends detailed coverage disclaimers automatically — keep your explanation brief.
+${NIBRS.lowCoverageStates ? `- ${NIBRS.lowCoverageStates}` : ""}
 
 ## CDE AUDIT DATA
 Data quality disclaimers for agencies with potential underreporting are added automatically by the server. You do NOT need to query cde_agency_totals or add disclaimers yourself.
@@ -1173,24 +1103,8 @@ The \`agency_reporting_gaps\` table flags agencies (population >= 50K) that have
 - gap_type TEXT — 'missing_months', 'yoy_drop', 'ramp_up', or 'both'
 - severity TEXT — 'partial' (< 75% of expected months), 'minor' (75-91%), 'yoy_only', 'transition' (agency was ramping up NIBRS reporting)
 
-### Usage Rules
-1. When querying a SPECIFIC agency for a SPECIFIC year, check for gaps:
-   SELECT months_reported, expected_months, gap_type, severity FROM agency_reporting_gaps WHERE ori = ? AND year = ?
-2. If a gap exists with severity = 'partial': "Note: [City] only reported [X] of [Y] months of data in [year]. Counts are incomplete and likely undercount actual crime."
-3. If gap_type = 'yoy_drop' (but full months): "Note: [City]'s reported offenses dropped to [ratio]x of the prior year's monthly average, which may indicate a reporting issue rather than an actual crime decrease."
-4. If gap_type = 'ramp_up' or severity = 'transition': "Note: [City] was transitioning to NIBRS reporting in [year] and data for that year is incomplete. Data from [year+1] onward is more reliable."
-5. If gap_type = 'both': combine both warnings.
-5. ALWAYS check this table when filtering to a specific agency — do not wait until results look suspicious.
-6. For years 2025+ with expected_months < 12, gaps are often just data not yet submitted. Only flag if months_reported < expected_months - 2.
-
-### DATE RANGE GAP WARNING (MANDATORY)
-When the user requests a date range (e.g., "since 2015", "from 2010 to 2024") and you know or suspect the agency didn't report NIBRS data for the early years in that range, you MUST note this in your explanation. Many large agencies only started NIBRS reporting recently:
-- New York City: NIBRS data starts ~2021 (very incomplete in 2021-2022)
-- Los Angeles: NIBRS data starts ~2024
-- San Francisco: limited NIBRS data
-- Chicago: NIBRS data starts ~2021
-
-If the user asks for data before an agency's NIBRS start date, include in your explanation: "Note: [City] only began reporting to NIBRS around [year]. Earlier years were requested but no data exists before then." Do NOT silently return a narrower range than requested.
+The server automatically checks this table and appends reporting-gap warnings to the explanation. You do NOT need to query it yourself or add gap disclaimers manually.
+Key large-agency NIBRS start dates (mention if user requests earlier data): NYC ~2021, LA ~2024, Chicago ~2021, San Francisco limited.
 
 ## RESPONSE FORMAT
 
