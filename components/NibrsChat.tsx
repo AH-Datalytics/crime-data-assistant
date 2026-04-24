@@ -306,6 +306,12 @@ export default function NibrsChat({ visible }: NibrsChatProps) {
                     {q}
                   </button>
                 ))}
+                <button
+                  onClick={() => { setMessages([]); setCurrentResponse(null); }}
+                  className="text-[10px] uppercase tracking-wider text-[var(--muted)] hover:text-red-500 cursor-pointer transition-colors shrink-0 ml-auto"
+                >
+                  Clear
+                </button>
               </div>
             )}
             </>

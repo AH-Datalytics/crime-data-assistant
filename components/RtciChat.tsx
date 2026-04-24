@@ -480,6 +480,12 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
                         {q}
                       </button>
                     ))}
+                    <button
+                      onClick={() => { setHistory([]); setExplanation(""); setResponse(null); setError(""); try { localStorage.removeItem(`cda-history-${mode}`); } catch {} }}
+                      className="text-[10px] uppercase tracking-wider text-[var(--muted)] hover:text-red-500 cursor-pointer transition-colors shrink-0 ml-auto"
+                    >
+                      Clear
+                    </button>
                   </div>
                 )}
               </>
