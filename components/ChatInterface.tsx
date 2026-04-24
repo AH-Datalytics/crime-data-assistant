@@ -43,9 +43,12 @@ export default function ChatInterface({ heroData, heroAgencyCount, heroPopulatio
       {/* Header */}
       <header className="bg-white border-b border-[var(--border)] shrink-0">
         {/* Top row: logo + tab pills (desktop) */}
-        <div className="px-4 md:px-6 flex items-center justify-between relative" style={{ height: 62 }}>
-          {/* Left: spacer */}
-          <div className="flex items-center gap-3 md:gap-4 min-w-0 shrink-0">
+        <div className="px-3 sm:px-4 md:px-6 flex items-center justify-between relative" style={{ height: 52 }}>
+          {/* Left: logo on mobile */}
+          <div className="flex items-center shrink-0">
+            <button onClick={() => selectTab(null)} className="md:hidden flex items-center shrink-0 cursor-pointer">
+              <CrimeIndexLogo size={22} />
+            </button>
           </div>
 
           {/* Center: title */}
@@ -57,11 +60,8 @@ export default function ChatInterface({ heroData, heroAgencyCount, heroPopulatio
             Crime Data Assistant
           </button>
 
-          {/* Right: logo on mobile, tab pills on desktop */}
+          {/* Right: tab pills on desktop */}
           <div className="flex items-center gap-3 shrink-0">
-            <button onClick={() => selectTab(null)} className="md:hidden flex items-center shrink-0 cursor-pointer">
-              <CrimeIndexLogo size={24} />
-            </button>
             <div className={`${activeTab === null ? "hidden" : "hidden md:flex"} items-center gap-0.5`}>
               {TABS.map((tab) => (
                 <button
@@ -97,7 +97,7 @@ export default function ChatInterface({ heroData, heroAgencyCount, heroPopulatio
               <button
                 key={tab.id}
                 onClick={() => selectTab(tab.id)}
-                className={`relative flex-1 text-[11px] font-medium py-2.5 transition-all cursor-pointer ${
+                className={`relative flex-1 text-[10px] sm:text-[11px] font-medium py-2 transition-all cursor-pointer ${
                   activeTab === tab.id
                     ? "font-semibold"
                     : "text-[#999]"
@@ -106,7 +106,7 @@ export default function ChatInterface({ heroData, heroAgencyCount, heroPopulatio
               >
                 {tab.shortLabel}
                 <span
-                  className="absolute bottom-0 left-2 right-2 h-[2px] rounded-full transition-all duration-300"
+                  className="absolute bottom-0 left-1.5 right-1.5 h-[2px] rounded-full transition-all duration-300"
                   style={{
                     backgroundColor: tab.color,
                     opacity: activeTab === tab.id ? 1 : 0,

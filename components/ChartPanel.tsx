@@ -172,8 +172,7 @@ function monthTicksForDaily(data: Record<string, unknown>[], xKey: string): stri
 }
 
 /** Build evenly-spaced ticks for plain-year x-axis data.
- *  ≤20 years → every year, ≤50 → every 5, otherwise every 10 (decade).
- *  Caps at 7 ticks for mobile-friendliness. */
+ *  Caps at 6 ticks so labels don't overlap on narrow screens. */
 function decadeTicksForYears(data: Record<string, unknown>[], xKey: string): number[] {
   const years = data
     .map((d) => Number(d[xKey]))
@@ -182,7 +181,7 @@ function decadeTicksForYears(data: Record<string, unknown>[], xKey: string): num
   const min = Math.min(...years);
   const max = Math.max(...years);
   const span = max - min;
-  const step = span <= 10 ? 1 : span <= 25 ? 2 : span <= 50 ? 5 : span <= 80 ? 10 : 20;
+  const step = span <= 6 ? 1 : span <= 15 ? 2 : span <= 30 ? 5 : span <= 80 ? 10 : 20;
   const first = step === 1 ? min : Math.ceil(min / step) * step;
   let ticks: number[] = [];
   for (let y = first; y <= max; y += step) {
@@ -190,11 +189,17 @@ function decadeTicksForYears(data: Record<string, unknown>[], xKey: string): num
   }
   // Always include the last data year if not already a tick
   if (ticks[ticks.length - 1] !== max) {
-    // Drop last tick if it's close to max (within half a step)
     if (max - ticks[ticks.length - 1] < step * 0.75) {
       ticks.pop();
     }
     ticks.push(max);
+  }
+  // Hard cap: if still too many, thin evenly
+  if (ticks.length > 6) {
+    const thin = Math.ceil(ticks.length / 5);
+    const thinned = ticks.filter((_, i) => i % thin === 0);
+    if (thinned[thinned.length - 1] !== ticks[ticks.length - 1]) thinned.push(ticks[ticks.length - 1]);
+    return thinned;
   }
   return ticks;
 }

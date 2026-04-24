@@ -110,22 +110,22 @@ export default function GettingStarted({ onSelectTab }: GettingStartedProps) {
 
   return (
     <div className="flex-1 overflow-y-auto" style={{ background: "linear-gradient(180deg, #ffffff 0%, var(--surface) 300px)" }}>
-      <div className="max-w-5xl mx-auto px-4 md:px-8 pt-10 md:pt-16 pb-12">
+      <div className="max-w-5xl mx-auto px-3 sm:px-4 md:px-8 pt-6 sm:pt-10 md:pt-16 pb-8 sm:pb-12">
 
         {/* Hero */}
-        <div className="text-center mb-12">
+        <div className="text-center mb-8 sm:mb-12">
           <h1
-            className="text-3xl md:text-[42px] font-bold text-[var(--foreground)] mb-4 leading-tight"
+            className="text-2xl sm:text-3xl md:text-[42px] font-bold text-[var(--foreground)] mb-3 sm:mb-4 leading-tight"
           >
             Ask a question about<br />crime in the United States
           </h1>
-          <p className="text-[15px] text-[var(--muted)] max-w-2xl mx-auto leading-relaxed">
+          <p className="text-[13px] sm:text-[15px] text-[var(--muted)] max-w-2xl mx-auto leading-relaxed">
             Nearly a century of crime data history. Choose a data source to start or read the guide below.
           </p>
         </div>
 
         {/* Tab cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 mb-8 sm:mb-10">
           {TAB_CARDS.map((card) => (
             <button
               key={card.id}
@@ -138,42 +138,43 @@ export default function GettingStarted({ onSelectTab }: GettingStartedProps) {
             >
               {/* Colored top accent bar */}
               <div
-                className="h-1.5 w-full"
+                className="h-1 sm:h-1.5 w-full"
                 style={{ backgroundColor: card.color }}
               />
-              <div className="p-5 pb-5 flex flex-col flex-1">
+              <div className="p-3 sm:p-5 flex flex-col flex-1">
                 {/* Title row */}
-                <div className="mb-3">
-                  <h3 className="text-[15px] font-bold text-[var(--foreground)] leading-tight">
+                <div className="mb-2 sm:mb-3">
+                  <h3 className="text-[13px] sm:text-[15px] font-bold text-[var(--foreground)] leading-tight">
                     {card.title}
                   </h3>
-                  <p className="text-[11px] text-[var(--muted)] tracking-wide mt-0.5">
+                  <p className="text-[10px] sm:text-[11px] text-[var(--muted)] tracking-wide mt-0.5">
                     {card.subtitle}
                   </p>
                 </div>
 
                 {/* Big stat */}
-                <div className="mb-3">
+                <div className="mb-2 sm:mb-3">
                   <span
-                    className={`${card.stat.length > 6 ? "text-[22px]" : "text-[28px]"} font-extrabold leading-none`}
+                    className={`${card.stat.length > 6 ? "text-[17px] sm:text-[22px]" : "text-[22px] sm:text-[28px]"} font-extrabold leading-none`}
                     style={{ color: card.color }}
                   >
                     {card.stat}
                   </span>
-                  <span className="text-xs text-[var(--muted)] ml-1.5">{card.statLabel}</span>
+                  <span className="text-[10px] sm:text-xs text-[var(--muted)] ml-1 sm:ml-1.5">{card.statLabel}</span>
                 </div>
 
-                {/* Description */}
-                <p className="text-[13px] text-[var(--muted)] leading-relaxed mb-4 flex-1">
+                {/* Description — hidden on small mobile, visible sm+ */}
+                <p className="hidden sm:block text-[13px] text-[var(--muted)] leading-relaxed mb-4 flex-1">
                   {card.description}
                 </p>
 
                 {/* CTA */}
                 <div
-                  className="inline-flex items-center gap-1.5 text-[13px] font-semibold transition-all group-hover:gap-2.5"
+                  className="inline-flex items-center gap-1 sm:gap-1.5 text-[11px] sm:text-[13px] font-semibold transition-all group-hover:gap-2.5 mt-auto"
                   style={{ color: card.color }}
                 >
-                  Start asking questions
+                  <span className="hidden sm:inline">Start asking questions</span>
+                  <span className="sm:hidden">Explore</span>
                   <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M5 3l5 5-5 5" />
                   </svg>
@@ -184,17 +185,17 @@ export default function GettingStarted({ onSelectTab }: GettingStartedProps) {
         </div>
 
         {/* Divider */}
-        <div className="flex items-center mb-8">
+        <div className="flex items-center mb-6 sm:mb-8">
           <div className="flex-1 h-px bg-[var(--border)]" />
         </div>
 
         {/* Tutorial content */}
         {showTutorial && (
-          <div className="space-y-8 animate-[fadeIn_0.3s_ease]">
+          <div className="space-y-5 sm:space-y-8 animate-[fadeIn_0.3s_ease]">
 
             {/* What is this — feature card */}
-            <section className="bg-white rounded-2xl border border-[var(--border)] p-6 md:p-8 shadow-sm">
-              <h2 className="text-xl font-bold mb-4 text-[var(--foreground)]">What is the Crime Data Assistant?</h2>
+            <section className="bg-white rounded-xl sm:rounded-2xl border border-[var(--border)] p-4 sm:p-6 md:p-8 shadow-sm">
+              <h2 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4 text-[var(--foreground)]">What is the Crime Data Assistant?</h2>
               <p className="text-sm text-[var(--muted)] leading-relaxed mb-3">
                 The Crime Data Assistant is an AI-powered research tool that lets you ask questions about crime in the United States using plain English. Instead of downloading spreadsheets or navigating government websites, you type a question like <em>&ldquo;How have murders trended in Chicago since 2020?&rdquo;</em> and get back an interactive chart, a data table, and an explanation &mdash; all generated in real time.
               </p>
@@ -204,8 +205,8 @@ export default function GettingStarted({ onSelectTab }: GettingStartedProps) {
             </section>
 
             {/* How to read results */}
-            <section className="bg-white rounded-2xl border border-[var(--border)] p-6 md:p-8 shadow-sm">
-              <h2 className="text-xl font-bold mb-5 text-[var(--foreground)]">How to Read Results</h2>
+            <section className="bg-white rounded-xl sm:rounded-2xl border border-[var(--border)] p-4 sm:p-6 md:p-8 shadow-sm">
+              <h2 className="text-lg sm:text-xl font-bold mb-4 sm:mb-5 text-[var(--foreground)]">How to Read Results</h2>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
                 {[
                   { num: "1", title: "Explanation", desc: "A plain-English summary of what the data shows, generated by AI with context about limitations.", color: "#475EC7" },
@@ -229,8 +230,8 @@ export default function GettingStarted({ onSelectTab }: GettingStartedProps) {
             </section>
 
             {/* Three data sources comparison */}
-            <section className="bg-white rounded-2xl border border-[var(--border)] p-6 md:p-8 shadow-sm">
-              <h2 className="text-xl font-bold mb-2 text-[var(--foreground)]">The Four Data Sources</h2>
+            <section className="bg-white rounded-xl sm:rounded-2xl border border-[var(--border)] p-4 sm:p-6 md:p-8 shadow-sm">
+              <h2 className="text-lg sm:text-xl font-bold mb-2 text-[var(--foreground)]">The Four Data Sources</h2>
               <p className="text-sm text-[var(--muted)] mb-6">
                 Each database covers different time periods, detail levels, and collection methods. Choosing the right one depends on your question.
               </p>
@@ -268,8 +269,8 @@ export default function GettingStarted({ onSelectTab }: GettingStartedProps) {
             </section>
 
             {/* Detailed source explanations */}
-            <section className="bg-white rounded-2xl border border-[var(--border)] p-6 md:p-8 shadow-sm">
-              <h2 className="text-xl font-bold mb-5 text-[var(--foreground)]">Understanding Each Data Source</h2>
+            <section className="bg-white rounded-xl sm:rounded-2xl border border-[var(--border)] p-4 sm:p-6 md:p-8 shadow-sm">
+              <h2 className="text-lg sm:text-xl font-bold mb-4 sm:mb-5 text-[var(--foreground)]">Understanding Each Data Source</h2>
 
               {/* Current Trends */}
               <div className="mb-6 pb-6 border-b border-[var(--border)]">
@@ -363,8 +364,8 @@ export default function GettingStarted({ onSelectTab }: GettingStartedProps) {
             </section>
 
             {/* Sample queries */}
-            <section className="bg-white rounded-2xl border border-[var(--border)] p-6 md:p-8 shadow-sm">
-              <h2 className="text-xl font-bold mb-2 text-[var(--foreground)]">Sample Queries</h2>
+            <section className="bg-white rounded-xl sm:rounded-2xl border border-[var(--border)] p-4 sm:p-6 md:p-8 shadow-sm">
+              <h2 className="text-lg sm:text-xl font-bold mb-2 text-[var(--foreground)]">Sample Queries</h2>
               <p className="text-sm text-[var(--muted)] mb-5">
                 Example questions you can copy and paste.
               </p>
@@ -427,8 +428,8 @@ export default function GettingStarted({ onSelectTab }: GettingStartedProps) {
             </section>
 
             {/* Pitfalls */}
-            <section className="bg-white rounded-2xl border border-[var(--border)] p-6 md:p-8 shadow-sm">
-              <h2 className="text-xl font-bold mb-2 text-[var(--foreground)]">Common Pitfalls</h2>
+            <section className="bg-white rounded-xl sm:rounded-2xl border border-[var(--border)] p-4 sm:p-6 md:p-8 shadow-sm">
+              <h2 className="text-lg sm:text-xl font-bold mb-2 text-[var(--foreground)]">Common Pitfalls</h2>
               <p className="text-sm text-[var(--muted)] mb-5">
                 Crime data is nuanced. Additionally, I am a bot and may sometimes make mistakes. Keep these in mind when interpreting results and always verify findings with official sources if you&apos;re uncertain.
               </p>
@@ -455,8 +456,8 @@ export default function GettingStarted({ onSelectTab }: GettingStartedProps) {
             </section>
 
             {/* Tips */}
-            <section className="bg-white rounded-2xl border border-[var(--border)] p-6 md:p-8 shadow-sm">
-              <h2 className="text-xl font-bold mb-5 text-[var(--foreground)]">Tips for Better Results</h2>
+            <section className="bg-white rounded-xl sm:rounded-2xl border border-[var(--border)] p-4 sm:p-6 md:p-8 shadow-sm">
+              <h2 className="text-lg sm:text-xl font-bold mb-4 sm:mb-5 text-[var(--foreground)]">Tips for Better Results</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
                 {[
                   { title: "Be specific", desc: "\u201CMurder rate in Houston 2020\u20132024\u201D beats \u201Ccrime in Texas.\u201D" },

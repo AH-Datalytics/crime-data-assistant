@@ -261,7 +261,7 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
 
   const searchBar = (
     <div className={`bg-white ${hasActiveQuery ? "border-t" : "border-b"} border-[var(--border)] shrink-0`}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2.5 sm:py-4">
         <form onSubmit={handleSubmit} className="flex gap-2 sm:gap-3">
           <input
             type="text"
@@ -270,26 +270,26 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
             onFocus={() => setInputFocused(true)}
             onBlur={() => setInputFocused(false)}
             placeholder={!hasInteracted ? animated.placeholder : (mode === "historical" ? HISTORICAL_DEFAULT : CURRENT_DEFAULT)}
-            className="flex-1 px-4 py-2.5 text-sm border border-[var(--border)] rounded-full focus:outline-none focus:border-[#475EC7] bg-[var(--surface)]"
+            className="flex-1 min-w-0 px-3 sm:px-4 py-2 sm:py-2.5 text-sm border border-[var(--border)] rounded-full focus:outline-none focus:border-[#475EC7] bg-[var(--surface)]"
             disabled={loading}
           />
           <button
             type="submit"
             disabled={loading || !input.trim()}
-            className="px-6 py-2.5 text-sm font-medium text-white bg-[var(--foreground)] rounded-full hover:bg-[var(--accent-hover)] disabled:opacity-40 cursor-pointer"
+            className="px-4 sm:px-6 py-2 sm:py-2.5 text-sm font-medium text-white bg-[var(--foreground)] rounded-full hover:bg-[var(--accent-hover)] disabled:opacity-40 cursor-pointer shrink-0"
           >
             {loading ? "..." : "Ask"}
           </button>
         </form>
         {/* Suggestion pills or past query history */}
-        <div className="flex flex-nowrap sm:flex-wrap gap-2 sm:gap-3 mt-3 items-center overflow-x-auto scrollbar-hide">
+        <div className="flex flex-nowrap sm:flex-wrap gap-1.5 sm:gap-3 mt-2 sm:mt-3 items-center overflow-x-auto scrollbar-hide">
           {pastQueries.length > 0 && (
-            <span className="text-[10px] uppercase tracking-wider text-[var(--muted)] mr-1">History:</span>
+            <span className="text-[10px] uppercase tracking-wider text-[var(--muted)] mr-1 shrink-0">History:</span>
           )}
           {pastQueries.length > 0 && (
             <button
               onClick={() => { setHistory([]); setExplanation(""); setResponse(null); setError(""); try { localStorage.removeItem(`cda-history-${mode}`); } catch {} }}
-              className="text-[10px] uppercase tracking-wider text-[var(--muted)] hover:text-red-500 cursor-pointer transition-colors ml-auto"
+              className="text-[10px] uppercase tracking-wider text-[var(--muted)] hover:text-red-500 cursor-pointer transition-colors ml-auto shrink-0"
             >
               Clear
             </button>
@@ -301,17 +301,17 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
                     key={i}
                     onClick={() => submitQuestion(q)}
                     disabled={loading}
-                    className="group relative text-[11px] pl-3 pr-7 py-1.5 rounded-lg bg-white border border-[var(--border)] text-[var(--muted)] hover:shadow-md hover:border-transparent hover:text-[var(--foreground)] cursor-pointer transition-all duration-200 disabled:opacity-40 truncate max-w-[240px]"
+                    className="group relative text-[11px] pl-2.5 sm:pl-3 pr-6 sm:pr-7 py-1 sm:py-1.5 rounded-lg bg-white border border-[var(--border)] text-[var(--muted)] hover:shadow-md hover:border-transparent hover:text-[var(--foreground)] cursor-pointer transition-all duration-200 disabled:opacity-40 truncate max-w-[200px] sm:max-w-[240px] shrink-0"
                     title={q}
                   >
                     {q}
-                    <svg className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-60 transition-opacity" width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M2 14L14 2M14 2H5M14 2v9"/></svg>
+                    <svg className="absolute right-1.5 sm:right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-60 transition-opacity" width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M2 14L14 2M14 2H5M14 2v9"/></svg>
                   </button>
                 ))}
                 {pastQueries.length > 5 && !showAllHistory && (
                   <button
                     onClick={() => setShowAllHistory(true)}
-                    className="text-[10px] px-2 py-1 rounded-md text-[var(--accent)] hover:bg-[var(--accent)] hover:text-white cursor-pointer transition-all duration-200"
+                    className="text-[10px] px-2 py-1 rounded-md text-[var(--accent)] hover:bg-[var(--accent)] hover:text-white cursor-pointer transition-all duration-200 shrink-0"
                   >
                     +{pastQueries.length - 5} more
                   </button>
@@ -319,7 +319,7 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
                 {showAllHistory && pastQueries.length > 5 && (
                   <button
                     onClick={() => setShowAllHistory(false)}
-                    className="text-[10px] px-2 py-1 rounded-md text-[var(--muted)] hover:text-[var(--foreground)] cursor-pointer transition-colors"
+                    className="text-[10px] px-2 py-1 rounded-md text-[var(--muted)] hover:text-[var(--foreground)] cursor-pointer transition-colors shrink-0"
                   >
                     Show less
                   </button>
@@ -327,7 +327,7 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
               </>)
             : !explanation && !loading && !error && (
                 <>
-                  <span className="text-[10px] uppercase tracking-wider text-[var(--muted)] mr-1">Sample Questions:</span>
+                  <span className="text-[10px] uppercase tracking-wider text-[var(--muted)] mr-1 shrink-0">Sample Questions:</span>
                   {(mode === "historical" ? [
                     "National murder trend, 2000\u20132020",
                     "National robbery clearance rate since 1960",
@@ -340,10 +340,10 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
                     <button
                       key={q}
                       onClick={() => submitQuestion(q)}
-                      className="group relative text-[11px] pl-3 pr-7 py-1.5 rounded-lg bg-white border border-[var(--border)] text-[var(--muted)] hover:shadow-md hover:border-transparent hover:text-[var(--foreground)] cursor-pointer transition-all duration-200"
+                      className="group relative text-[11px] pl-2.5 sm:pl-3 pr-6 sm:pr-7 py-1 sm:py-1.5 rounded-lg bg-white border border-[var(--border)] text-[var(--muted)] hover:shadow-md hover:border-transparent hover:text-[var(--foreground)] cursor-pointer transition-all duration-200 shrink-0"
                     >
                       {q}
-                      <svg className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-60 transition-opacity" width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M2 14L14 2M14 2H5M14 2v9"/></svg>
+                      <svg className="absolute right-1.5 sm:right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-60 transition-opacity" width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M2 14L14 2M14 2H5M14 2v9"/></svg>
                     </button>
                   ))}
                 </>
@@ -362,8 +362,8 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
       {/* Current Trends description line */}
       {showCurrentHero && (
         <div className="bg-white border-b border-[var(--border)] shrink-0">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2 text-center relative">
-            <span className="text-sm text-gray-400">
+          <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2 text-center relative">
+            <span className="text-[13px] sm:text-sm text-gray-400">
               <span className="font-semibold text-[#475EC7]">Current Trends</span> shows monthly crime data with minimal lag from hundreds of agencies nationwide. Here you can view cities, states, and national trends month by month from 2017 to the present. Current data is preliminary and may not precisely match the formal annual data reported by the FBI shown in the <span className="font-semibold text-[#8B5E3C]">Historical Library</span>.
               {" "}
               <button
@@ -393,8 +393,8 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
       {/* Historical description line — always visible when no query active */}
       {mode === "historical" && !explanation && !loading && !error && !response && (
         <div className="bg-white border-b border-[var(--border)] shrink-0">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2 text-center relative">
-            <span className="text-sm text-gray-400">
+          <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2 text-center relative">
+            <span className="text-[13px] sm:text-sm text-gray-400">
               The <span className="font-semibold text-[#8B5E3C]">Historical Library</span> shows annual crime, clearance, and staffing data that has been officially published by the FBI. Includes agency-level crime counts, staffing levels, and clearance rates from 1930 until {historicalMaxYear || new Date().getFullYear() - 1} as well as state and national trends since 1958. See <span className="font-semibold text-[#475EC7]">Current Trends</span> for a look at today&apos;s crime trends.
               {" "}
               <button
@@ -424,52 +424,21 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
       {/* Explanation text — collapsible */}
       {(explanation || (loading && explanation)) && (
         <div className="border-b border-[var(--border)] bg-white shrink-0">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3">
+          <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2 sm:py-3">
             <button
               onClick={() => setChatCollapsed(c => !c)}
-              className="text-[11px] font-semibold uppercase tracking-wider text-[var(--accent)] hover:text-[var(--foreground)] cursor-pointer transition-colors flex items-center gap-1.5 mb-1 px-2 py-1 rounded-md hover:bg-[var(--surface)]"
+              className="text-[11px] font-semibold uppercase tracking-wider text-[var(--accent)] hover:text-[var(--foreground)] cursor-pointer transition-colors flex items-center gap-1.5 mb-1 px-1.5 sm:px-2 py-1 rounded-md hover:bg-[var(--surface)]"
             >
               <svg className={`w-3.5 h-3.5 transition-transform ${chatCollapsed ? "" : "rotate-90"}`} fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
               </svg>
               {chatCollapsed ? "Show explanation" : "Hide explanation"}
             </button>
-            {!chatCollapsed && <div className="max-h-32 overflow-y-auto">
-              <div>
-                <p className="text-sm text-[var(--foreground)] leading-relaxed whitespace-pre-line">{explanation}</p>
-                {!loading && explanation && (
-                  <>
-                    <form
-                      onSubmit={(e) => { e.preventDefault(); const val = (e.currentTarget.elements.namedItem("reply") as HTMLInputElement)?.value?.trim(); if (val) { submitQuestion(val); (e.currentTarget.elements.namedItem("reply") as HTMLInputElement).value = ""; } }}
-                      className="flex gap-2 mt-3"
-                    >
-                      <input
-                        name="reply"
-                        type="text"
-                        placeholder="Ask a follow-up..."
-                        className="flex-1 px-3 py-1.5 text-sm border border-[var(--border)] rounded-full focus:outline-none focus:border-[#475EC7] bg-[var(--surface)]"
-                      />
-                      <button type="submit" className="px-4 py-1.5 text-xs font-medium text-white bg-[var(--foreground)] rounded-full hover:bg-[var(--accent-hover)] cursor-pointer">
-                        Ask
-                      </button>
-                    </form>
-                    {pastQueries.length > 1 && (
-                      <div className="flex flex-nowrap gap-2 mt-2 items-center overflow-x-auto scrollbar-hide">
-                        <span className="text-[10px] uppercase tracking-wider text-[var(--muted)] mr-1 shrink-0">History:</span>
-                        {pastQueries.slice(-5).map((q, i) => (
-                          <button
-                            key={i}
-                            onClick={() => submitQuestion(q)}
-                            className="text-[10px] px-2 py-1 rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--muted)] hover:text-[var(--foreground)] hover:border-transparent hover:shadow-sm cursor-pointer transition-all truncate max-w-[200px] shrink-0"
-                            title={q}
-                          >
-                            {q}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </>
-                )}
+            {!chatCollapsed && (
+              <>
+                <div className="max-h-24 sm:max-h-32 overflow-y-auto">
+                  <p className="text-[13px] sm:text-sm text-[var(--foreground)] leading-relaxed whitespace-pre-line">{explanation}</p>
+                </div>
                 {loading && (
                   <div className="text-xs text-[var(--muted)] mt-2 flex items-center gap-1">
                     <span className="inline-flex gap-0.5">
@@ -480,8 +449,41 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
                     {loadingStep}
                   </div>
                 )}
-              </div>
-            </div>}
+              </>
+            )}
+            {!loading && explanation && (
+              <>
+                <form
+                  onSubmit={(e) => { e.preventDefault(); const val = (e.currentTarget.elements.namedItem("reply") as HTMLInputElement)?.value?.trim(); if (val) { submitQuestion(val); (e.currentTarget.elements.namedItem("reply") as HTMLInputElement).value = ""; } }}
+                  className="flex gap-2 mt-2 sm:mt-3"
+                >
+                  <input
+                    name="reply"
+                    type="text"
+                    placeholder="Ask a follow-up..."
+                    className="flex-1 min-w-0 px-3 py-1.5 text-sm border border-[var(--border)] rounded-full focus:outline-none focus:border-[#475EC7] bg-[var(--surface)]"
+                  />
+                  <button type="submit" className="px-3 sm:px-4 py-1.5 text-xs font-medium text-white bg-[var(--foreground)] rounded-full hover:bg-[var(--accent-hover)] cursor-pointer shrink-0">
+                    Ask
+                  </button>
+                </form>
+                {pastQueries.length > 1 && (
+                  <div className="flex flex-nowrap gap-1.5 sm:gap-2 mt-2 items-center overflow-x-auto scrollbar-hide">
+                    <span className="text-[10px] uppercase tracking-wider text-[var(--muted)] mr-1 shrink-0">History:</span>
+                    {pastQueries.slice(-5).map((q, i) => (
+                      <button
+                        key={i}
+                        onClick={() => submitQuestion(q)}
+                        className="text-[10px] px-2 py-1 rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--muted)] hover:text-[var(--foreground)] hover:border-transparent hover:shadow-sm cursor-pointer transition-all truncate max-w-[160px] sm:max-w-[200px] shrink-0"
+                        title={q}
+                      >
+                        {q}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </div>
       )}
@@ -498,10 +500,10 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
       )}
 
       {/* Main content — chart and table fill remaining space */}
-      <div className="flex-1 min-h-0 flex flex-col lg:flex-row overflow-auto lg:overflow-hidden">
+      <div className="flex-1 min-h-0 flex flex-col md:flex-row overflow-auto md:overflow-hidden">
         {/* Hero chart when no data */}
         {showCurrentHero && (
-          <div className="flex-1 overflow-y-auto flex items-center justify-center p-4 sm:p-6">
+          <div className="flex-1 overflow-y-auto flex items-center justify-center p-3 sm:p-6">
             <div className="max-w-4xl w-full">
               <HeroChart
                 data={heroData}
@@ -515,7 +517,7 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
           </div>
         )}
         {showHistoricalHero && (
-          <div className="flex-1 overflow-y-auto flex items-center justify-center p-4 sm:p-6">
+          <div className="flex-1 overflow-y-auto flex items-center justify-center p-3 sm:p-6">
             <div className="max-w-4xl w-full">
               <HistoricalHeroChart data={historicalHeroData!} />
               <p className="text-xs text-center text-gray-400 mt-4">
@@ -532,11 +534,11 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
 
         {/* Chart panel */}
         {hasData && response.chartConfig && (
-          <div className={`${response.rows.length > 0 ? "lg:w-1/2 lg:border-r" : "w-full"} border-[var(--border)] shrink-0 lg:shrink lg:overflow-hidden bg-white`} style={{ minHeight: response.rows.length >= 8 ? 440 : 320 }}>
-            <div ref={chartRef} className="h-full flex flex-col p-4 sm:p-5">
-              <div className="flex items-start justify-between gap-3 mb-2 shrink-0">
+          <div className={`${response.rows.length > 0 ? "md:w-1/2 md:border-r" : "w-full"} border-[var(--border)] shrink-0 md:shrink md:overflow-hidden bg-white`} style={{ minHeight: response.rows.length >= 8 ? 340 : 280 }}>
+            <div ref={chartRef} className="h-full flex flex-col p-3 sm:p-5">
+              <div className="flex items-start justify-between gap-2 sm:gap-3 mb-2 shrink-0">
                 <h2
-                  className="text-xs font-medium uppercase tracking-wider text-[var(--muted)] flex-1 min-w-0"
+                  className="text-[11px] sm:text-xs font-medium uppercase tracking-wider text-[var(--muted)] flex-1 min-w-0"
                   style={{ letterSpacing: "0.6px" }}
                 >
                   {response.title}
@@ -546,7 +548,7 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
                   csvFilename={`${response.title || "chart"}.jpeg`}
                 />
               </div>
-              <div className="flex-1 min-h-0" style={{ minHeight: response.rows.length >= 8 ? 420 : 300 }}>
+              <div className="flex-1 min-h-0" style={{ minHeight: response.rows.length >= 8 ? 320 : 260 }}>
                 <ChartPanel
                   config={response.chartConfig}
                   rows={response.rows}
@@ -559,10 +561,10 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
 
         {/* Table panel */}
         {hasData && response.rows.length > 0 && (
-          <div className={`${response.chartConfig ? "lg:w-1/2" : "w-full"} shrink-0 lg:shrink lg:overflow-auto bg-white p-4 sm:p-5`}>
-            <div className="flex items-center justify-between mb-3">
+          <div className={`${response.chartConfig ? "md:w-1/2" : "w-full"} shrink-0 md:shrink md:overflow-auto bg-white p-3 sm:p-5`}>
+            <div className="flex items-center justify-between mb-2 sm:mb-3">
               <h2
-                className="text-xs font-medium uppercase tracking-wider text-[var(--muted)]"
+                className="text-[11px] sm:text-xs font-medium uppercase tracking-wider text-[var(--muted)]"
                 style={{ letterSpacing: "0.6px" }}
               >
                 Data{" "}
