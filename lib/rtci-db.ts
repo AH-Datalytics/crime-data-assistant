@@ -47,12 +47,16 @@ export function getWriteDb(): Database.Database | null {
         rows INTEGER,
         error TEXT,
         ms INTEGER,
-        response TEXT
+        response TEXT,
+        guardrails TEXT,
+        model TEXT,
+        session_id TEXT
       )
     `);
     // Add columns if table already exists without them
-    try { _writeDb.exec(`ALTER TABLE query_log ADD COLUMN tab TEXT`); } catch { /* already exists */ }
-    try { _writeDb.exec(`ALTER TABLE query_log ADD COLUMN session_id TEXT`); } catch { /* already exists */ }
+    for (const col of ["tab TEXT", "session_id TEXT", "guardrails TEXT", "model TEXT"]) {
+      try { _writeDb.exec(`ALTER TABLE query_log ADD COLUMN ${col}`); } catch { /* already exists */ }
+    }
     return _writeDb;
   } catch (e) {
     console.warn("Query logging disabled:", e);

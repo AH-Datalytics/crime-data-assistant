@@ -50,16 +50,17 @@ function ensureTable() {
   tableReady = true;
 }
 
-/** Lookup city/region/country from IP via ip-api.com (free, 45 req/min) */
+/** Lookup city/region/country from IP via ip-api.com over HTTPS (pro endpoint).
+ *  Falls back to ipapi.co (free HTTPS) if ip-api fails. */
 async function geoLookup(ip: string): Promise<{ city: string; region: string; country: string } | null> {
   if (!ip || ip === "unknown" || ip === "127.0.0.1" || ip === "::1") return null;
   try {
-    const res = await fetch(`http://ip-api.com/json/${ip}?fields=status,city,regionName,country`, {
+    const res = await fetch(`https://ipapi.co/${ip}/json/`, {
       signal: AbortSignal.timeout(3000),
     });
-    const data = await res.json() as { status: string; city?: string; regionName?: string; country?: string };
-    if (data.status === "success") {
-      return { city: data.city || "", region: data.regionName || "", country: data.country || "" };
+    const data = await res.json() as { city?: string; region?: string; country_name?: string; error?: boolean };
+    if (!data.error && data.city) {
+      return { city: data.city || "", region: data.region || "", country: data.country_name || "" };
     }
   } catch { /* timeout or network error — skip silently */ }
   return null;
@@ -110,8 +111,8 @@ export async function POST(req: NextRequest) {
     }
 
     db.prepare(
-      `INSERT INTO visitor_log (ts, session_id, referrer, referrer_domain, utm_source, utm_medium, utm_campaign, utm_content, landing_page, tab, event, screen_width, user_agent, ip, city, region, country)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO visitor_log (ts, session_id, referrer, referrer_domain, utm_source, utm_medium, utm_campaign, utm_content, landing_page, tab, event, screen_width, user_agent, city, region, country)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).run(
       Date.now(),
       (body.sessionId || "").substring(0, 64),
@@ -126,7 +127,6 @@ export async function POST(req: NextRequest) {
       event,
       body.screenWidth || null,
       (req.headers.get("user-agent") || "").substring(0, 500),
-      ip,
       geo?.city || null,
       geo?.region || null,
       geo?.country || null
