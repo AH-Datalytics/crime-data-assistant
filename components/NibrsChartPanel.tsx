@@ -18,7 +18,7 @@ import {
 } from "recharts";
 import type { ChartConfig } from "@/lib/types";
 import { NIBRS_CHART_COLORS } from "@/lib/nibrs-chart-config";
-import { formatAxisValue, fmtVal } from "@/lib/utils";
+import { formatAxisValue, fmtVal, decadeTicksForYears } from "@/lib/utils";
 
 const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
@@ -121,37 +121,6 @@ function monthTicksForDaily(data: Record<string, unknown>[], xKey: string): stri
   if (ticks.length > 10) {
     const step = Math.ceil(ticks.length / 8);
     const thinned = ticks.filter((_, i) => i % step === 0);
-    if (thinned[thinned.length - 1] !== ticks[ticks.length - 1]) thinned.push(ticks[ticks.length - 1]);
-    return thinned;
-  }
-  return ticks;
-}
-
-/** Build evenly-spaced ticks for plain-year x-axis data.
- *  Caps at 6 ticks so labels don't overlap on narrow screens. */
-function decadeTicksForYears(data: Record<string, unknown>[], xKey: string): number[] {
-  const years = data
-    .map((d) => Number(d[xKey]))
-    .filter((y) => !isNaN(y) && y >= 1900 && y <= 2100);
-  if (years.length === 0) return [];
-  const min = Math.min(...years);
-  const max = Math.max(...years);
-  const span = max - min;
-  const step = span <= 6 ? 1 : span <= 15 ? 2 : span <= 30 ? 5 : span <= 80 ? 10 : 20;
-  const first = step === 1 ? min : Math.ceil(min / step) * step;
-  let ticks: number[] = [];
-  for (let y = first; y <= max; y += step) {
-    ticks.push(y);
-  }
-  if (ticks[ticks.length - 1] !== max) {
-    if (max - ticks[ticks.length - 1] < step * 0.75) {
-      ticks.pop();
-    }
-    ticks.push(max);
-  }
-  if (ticks.length > 6) {
-    const thin = Math.ceil(ticks.length / 5);
-    const thinned = ticks.filter((_, i) => i % thin === 0);
     if (thinned[thinned.length - 1] !== ticks[ticks.length - 1]) thinned.push(ticks[ticks.length - 1]);
     return thinned;
   }
