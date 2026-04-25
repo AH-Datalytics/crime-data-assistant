@@ -19,6 +19,8 @@ type ManagedDb = {
   mtimeMs: number | null;
 };
 
+const warnedLabels = new Set<string>();
+
 function fileMtimeMs(filePath: string): number | null {
   try {
     return fs.statSync(filePath).mtimeMs;
@@ -41,8 +43,32 @@ export function resolveDbPath(envVar: string | undefined, candidates: string[]):
   return ordered.length > 0 ? path.resolve(ordered[0]) : null;
 }
 
+export function findExistingPaths(envVar: string | undefined, candidates: string[]): string[] {
+  const ordered = [
+    envVar,
+    ...candidates,
+  ].filter((value): value is string => Boolean(value));
+
+  const seen = new Set<string>();
+  const existing: string[] = [];
+  for (const candidate of ordered) {
+    const resolved = path.resolve(candidate);
+    if (seen.has(resolved)) continue;
+    seen.add(resolved);
+    if (fs.existsSync(resolved)) existing.push(resolved);
+  }
+  return existing;
+}
+
 export function getManagedDb(state: ManagedDb, opts: OpenOptions): Database.Database | null {
-  const resolvedPath = resolveDbPath(process.env[opts.envVar || ""], opts.candidates);
+  const envValue = opts.envVar ? process.env[opts.envVar] : undefined;
+  const existingPaths = findExistingPaths(envValue, opts.candidates);
+  if (existingPaths.length > 1 && !warnedLabels.has(opts.label)) {
+    warnedLabels.add(opts.label);
+    console.warn(`[db] Multiple ${opts.label} candidates exist: ${existingPaths.join(", ")}`);
+  }
+
+  const resolvedPath = resolveDbPath(envValue, opts.candidates);
   if (!resolvedPath) {
     state.failed = true;
     return null;
