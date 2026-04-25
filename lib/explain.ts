@@ -167,10 +167,12 @@ export async function generateExplanation(opts: {
     geoDisplay = regionMatch ? regionMatch[0] : `${ctx.states.length} states (${ctx.states.slice(0, 5).join(", ")}...)`;
   } else if (ctx.scope === "state" && ctx.states.length > 0) {
     geoDisplay = ctx.states.join(", ");
-  } else if (ctx.scope === "national") {
+  } else if (ctx.scope === "national" && !ctx.question.match(/\b(?:in|for)\s+[A-Z]/i)) {
     geoDisplay = "national level";
   } else {
-    geoDisplay = "national / not specified";
+    // Extract place name from user's question rather than defaulting to "national"
+    const placeMatch = ctx.question.match(/\b(?:in|for)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/i);
+    geoDisplay = placeMatch ? placeMatch[1] : "as requested";
   }
 
   const userPrompt = `User question: "${ctx.question}"
