@@ -50,17 +50,16 @@ function ensureTable() {
   tableReady = true;
 }
 
-/** Lookup city/region/country from IP via ip-api.com over HTTPS (pro endpoint).
- *  Falls back to ipapi.co (free HTTPS) if ip-api fails. */
+/** Lookup city/region/country from IP via ipwho.is (free HTTPS, 10K/month) */
 async function geoLookup(ip: string): Promise<{ city: string; region: string; country: string } | null> {
   if (!ip || ip === "unknown" || ip === "127.0.0.1" || ip === "::1") return null;
   try {
-    const res = await fetch(`https://ipapi.co/${ip}/json/`, {
+    const res = await fetch(`https://ipwho.is/${ip}`, {
       signal: AbortSignal.timeout(3000),
     });
-    const data = await res.json() as { city?: string; region?: string; country_name?: string; error?: boolean };
-    if (!data.error && data.city) {
-      return { city: data.city || "", region: data.region || "", country: data.country_name || "" };
+    const data = await res.json() as { success?: boolean; city?: string; region?: string; country?: string };
+    if (data.success && data.city) {
+      return { city: data.city || "", region: data.region || "", country: data.country || "" };
     }
   } catch { /* timeout or network error — skip silently */ }
   return null;
