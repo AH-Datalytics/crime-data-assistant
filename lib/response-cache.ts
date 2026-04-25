@@ -11,7 +11,7 @@ const MAX_ENTRIES = 500;
 
 interface CachedResponse {
   sql: string;
-  explanation: string;
+  explanation: string; // pre-query explanation only — post-query is always regenerated
   title?: string;
   chartType?: string;
   chartHint?: string;

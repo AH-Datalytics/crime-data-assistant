@@ -829,9 +829,30 @@ export async function POST(req: NextRequest) {
             setCache(question, tab, { sql, explanation: claude.explanation, title: claude.title, chartType: claude.chartHint, xAxis: claude.xAxis, yAxis: claude.yAxis ? claude.yAxis.split(",").map(s => s.trim()) : undefined, yAxisLabel: claude.yAxisLabel, xAxisLabel: claude.xAxisLabel, colors: claude.colors, annotations: claude.annotations });
           }
         } catch {
-          // If explanation fails, pre-query explanation is already shown — just log
-          const totalMs2 = Date.now() - totalStart;
-          logQuery(question, sql, rows.length, null, totalMs2, claude.explanation, tab, firedGuardrails, "haiku-4.5", sessionId);
+          // Retry post-query explanation once before falling back
+          try {
+            const retryExplanation = await generateExplanation({
+              ctx: finalCtx,
+              columns,
+              rows,
+              rowCount: rows.length,
+              disclaimers: "",
+              preQueryExplanation: claude.explanation,
+            });
+            if (retryExplanation !== claude.explanation) {
+              controller.enqueue(
+                encoder.encode(
+                  sseEvent({ type: "explanation", text: retryExplanation, title: claude.title || "Results" })
+                )
+              );
+            }
+            const totalMs2 = Date.now() - totalStart;
+            logQuery(question, sql, rows.length, null, totalMs2, retryExplanation, tab, firedGuardrails, "haiku-4.5", sessionId);
+          } catch {
+            // Both attempts failed — pre-query explanation stays
+            const totalMs2 = Date.now() - totalStart;
+            logQuery(question, sql, rows.length, null, totalMs2, claude.explanation, tab, firedGuardrails, "haiku-4.5", sessionId);
+          }
           if (!fromCache && (!history || history.length === 0) && sql) {
             setCache(question, tab, { sql, explanation: claude.explanation, title: claude.title, chartType: claude.chartHint, xAxis: claude.xAxis, yAxis: claude.yAxis ? claude.yAxis.split(",").map(s => s.trim()) : undefined, yAxisLabel: claude.yAxisLabel, xAxisLabel: claude.xAxisLabel, colors: claude.colors, annotations: claude.annotations });
           }
