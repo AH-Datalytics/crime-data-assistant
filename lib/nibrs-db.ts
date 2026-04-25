@@ -2,18 +2,32 @@ import Database from "better-sqlite3";
 import { execFile } from "node:child_process";
 import path from "path";
 import fs from "fs";
+import { getManagedDb, resolveDbPath } from "./sqlite-db";
 
-const DB_PATH = process.env.NIBRS_DB_PATH || "/opt/nibrs/nibrs.db";
-
-let _db: Database.Database | null = null;
+const state = {
+  db: null as Database.Database | null,
+  failed: false,
+  path: null as string | null,
+  mtimeMs: null as number | null,
+};
 
 export function getNibrsDb(): Database.Database {
-  if (!_db) {
-    _db = new Database(DB_PATH, { readonly: true });
-    _db.pragma("journal_mode = WAL");
-    _db.pragma("busy_timeout = 5000");
+  const db = getManagedDb(state, {
+    envVar: "NIBRS_DB_PATH",
+    label: "nibrs.db",
+    candidates: [
+      "/opt/nibrs/nibrs.db",
+      path.join(process.cwd(), "nibrs.db"),
+    ],
+    pragmas: [
+      ["journal_mode", "WAL"],
+      ["busy_timeout", 5000],
+    ],
+  });
+  if (!db) {
+    throw new Error("Could not open nibrs.db");
   }
-  return _db;
+  return db;
 }
 
 const QUERY_TIMEOUT_MS = 30_000;
@@ -29,6 +43,15 @@ export function executeWithTimeout(
   timeoutMs: number = QUERY_TIMEOUT_MS
 ): Promise<{ rows: Record<string, unknown>[]; columns: string[] }> {
   return new Promise((resolve, reject) => {
+    const dbPath = resolveDbPath(process.env.NIBRS_DB_PATH, [
+      "/opt/nibrs/nibrs.db",
+      path.join(process.cwd(), "nibrs.db"),
+    ]);
+    if (!dbPath) {
+      reject(new Error("Could not resolve nibrs.db path"));
+      return;
+    }
+
     // Fall back to sync if worker script missing
     if (!fs.existsSync(WORKER_SCRIPT)) {
       console.warn("[nibrs] Worker script not found, falling back to sync execution");
@@ -46,7 +69,7 @@ export function executeWithTimeout(
 
     execFile(
       process.execPath,
-      [WORKER_SCRIPT, DB_PATH, sql],
+      [WORKER_SCRIPT, dbPath, sql],
       { timeout: timeoutMs, maxBuffer: 50 * 1024 * 1024 },
       (err, stdout, stderr) => {
         if (err) {

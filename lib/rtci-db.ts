@@ -2,19 +2,33 @@ import Database from "better-sqlite3";
 import path from "path";
 import os from "os";
 import fs from "fs";
+import { getManagedDb } from "./sqlite-db";
 
-const DB_PATH = process.env.RTCI_DB_PATH || path.join(process.cwd(), "crime_data.db");
-
-let _db: Database.Database | null = null;
+const state = {
+  db: null as Database.Database | null,
+  failed: false,
+  path: null as string | null,
+  mtimeMs: null as number | null,
+};
 
 export function getDb(): Database.Database {
-  if (!_db) {
-    _db = new Database(DB_PATH, { readonly: true });
-    _db.pragma("cache_size = -64000");   // 64 MB page cache
-    _db.pragma("mmap_size = 268435456"); // 256 MB memory-mapped I/O
-    _db.pragma("temp_store = MEMORY");
+  const db = getManagedDb(state, {
+    envVar: "RTCI_DB_PATH",
+    label: "crime_data.db",
+    candidates: [
+      "/opt/nibrs/crime_data.db",
+      path.join(process.cwd(), "crime_data.db"),
+    ],
+    pragmas: [
+      ["cache_size", -64000],
+      ["mmap_size", 268435456],
+      ["temp_store", "MEMORY"],
+    ],
+  });
+  if (!db) {
+    throw new Error("Could not open crime_data.db");
   }
-  return _db;
+  return db;
 }
 
 // --- Shared write DB for query logging (all tabs) ---

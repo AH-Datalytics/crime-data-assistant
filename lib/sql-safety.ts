@@ -63,7 +63,6 @@ export function validateAndSanitize(sql: string, opts?: { maxLimit?: number }): 
     return { valid: false, error: "Dangerous function detected" };
   }
 
-  // Enforce LIMIT
   let sanitized = trimmed;
   const limitMatch = sanitized.match(/\bLIMIT\s+(\d+)/i);
   if (limitMatch) {

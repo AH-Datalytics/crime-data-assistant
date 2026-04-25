@@ -1,20 +1,27 @@
 import Database from "better-sqlite3";
 import path from "path";
-import fs from "fs";
+import { getManagedDb } from "./sqlite-db";
 
-const SHR_DB_PATH = process.env.SHR_DB_PATH || path.join(process.cwd(), "..", "shr.db");
-
-let _db: Database.Database | null = null;
-let _dbFailed = false;
+const state = {
+  db: null as Database.Database | null,
+  failed: false,
+  path: null as string | null,
+  mtimeMs: null as number | null,
+};
 
 export function getShrDb(): Database.Database | null {
-  if (_dbFailed) return null;
-  if (!_db) {
-    if (!fs.existsSync(SHR_DB_PATH)) { _dbFailed = true; return null; }
-    _db = new Database(SHR_DB_PATH, { readonly: true });
-    _db.pragma("cache_size = -32000");   // 32 MB
-    _db.pragma("mmap_size = 134217728"); // 128 MB
-    _db.pragma("temp_store = MEMORY");
-  }
-  return _db;
+  return getManagedDb(state, {
+    envVar: "SHR_DB_PATH",
+    label: "shr.db",
+    candidates: [
+      "/opt/nibrs/shr.db",
+      path.join(process.cwd(), "..", "shr.db"),
+      path.join(process.cwd(), "shr.db"),
+    ],
+    pragmas: [
+      ["cache_size", -32000],
+      ["mmap_size", 134217728],
+      ["temp_store", "MEMORY"],
+    ],
+  });
 }
