@@ -16,7 +16,6 @@ export function getNibrsDb(): Database.Database {
     envVar: "NIBRS_DB_PATH",
     label: "nibrs.db",
     candidates: [
-      "/opt/nibrs/nibrs.db",
       path.join(process.cwd(), "nibrs.db"),
     ],
     pragmas: [
@@ -31,7 +30,17 @@ export function getNibrsDb(): Database.Database {
 }
 
 const QUERY_TIMEOUT_MS = 30_000;
-const WORKER_SCRIPT = path.join(process.cwd(), "lib", "nibrs-query-worker.js");
+
+function resolveWorkerScriptPath(): string | null {
+  const candidates = [
+    path.join(process.cwd(), "lib", "nibrs-query-worker.js"),
+    path.join(__dirname, "nibrs-query-worker.js"),
+  ];
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) return candidate;
+  }
+  return null;
+}
 
 /**
  * Execute a SQL query in a child process with a hard timeout.
@@ -43,8 +52,8 @@ export function executeWithTimeout(
   timeoutMs: number = QUERY_TIMEOUT_MS
 ): Promise<{ rows: Record<string, unknown>[]; columns: string[] }> {
   return new Promise((resolve, reject) => {
+    const workerScript = resolveWorkerScriptPath();
     const dbPath = resolveDbPath(process.env.NIBRS_DB_PATH, [
-      "/opt/nibrs/nibrs.db",
       path.join(process.cwd(), "nibrs.db"),
     ]);
     if (!dbPath) {
@@ -53,7 +62,7 @@ export function executeWithTimeout(
     }
 
     // Fall back to sync if worker script missing
-    if (!fs.existsSync(WORKER_SCRIPT)) {
+    if (!workerScript) {
       console.warn("[nibrs] Worker script not found, falling back to sync execution");
       try {
         const db = getNibrsDb();
@@ -69,7 +78,7 @@ export function executeWithTimeout(
 
     execFile(
       process.execPath,
-      [WORKER_SCRIPT, dbPath, sql],
+      [workerScript, dbPath, sql],
       { timeout: timeoutMs, maxBuffer: 50 * 1024 * 1024 },
       (err, stdout, stderr) => {
         if (err) {

@@ -2,7 +2,7 @@ import Database from "better-sqlite3";
 import path from "path";
 import os from "os";
 import fs from "fs";
-import { getManagedDb } from "./sqlite-db";
+import { findExistingPaths, getManagedDb, resolveDbPath } from "./sqlite-db";
 
 const state = {
   db: null as Database.Database | null,
@@ -16,7 +16,6 @@ export function getDb(): Database.Database {
     envVar: "RTCI_DB_PATH",
     label: "crime_data.db",
     candidates: [
-      "/opt/nibrs/crime_data.db",
       path.join(process.cwd(), "crime_data.db"),
     ],
     pragmas: [
@@ -34,15 +33,32 @@ export function getDb(): Database.Database {
 // --- Shared write DB for query logging (all tabs) ---
 let _writeDb: Database.Database | null = null;
 let _writeDisabled = false;
+let _logPath: string | null = null;
 
 function getLogDbPath(): string {
+  if (_logPath) return _logPath;
+
   const tmpPath = path.join(os.tmpdir(), "crime_query_log.db");
-  const localPath = path.join(process.cwd(), "query_log.db");
+  const candidates = [
+    path.join(process.cwd(), "query_log.db"),
+  ];
+  const envValue = process.env.QUERY_LOG_DB_PATH;
+  const existing = findExistingPaths(envValue, candidates);
+  if (existing.length > 1) {
+    console.warn(`[db] Multiple query_log.db candidates exist: ${existing.join(", ")}`);
+  }
+
+  const preferred = resolveDbPath(envValue, candidates) || tmpPath;
+  const dir = path.dirname(preferred);
   try {
-    fs.accessSync(process.cwd(), fs.constants.W_OK);
-    return localPath;
+    fs.accessSync(dir, fs.constants.W_OK);
+    _logPath = preferred;
+    console.log(`[db] Using query_log.db: ${_logPath}`);
+    return _logPath;
   } catch {
-    return tmpPath;
+    _logPath = tmpPath;
+    console.warn(`[db] Falling back to temp query log DB: ${_logPath}`);
+    return _logPath;
   }
 }
 

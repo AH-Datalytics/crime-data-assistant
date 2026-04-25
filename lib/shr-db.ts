@@ -14,7 +14,6 @@ export function getShrDb(): Database.Database | null {
     envVar: "SHR_DB_PATH",
     label: "shr.db",
     candidates: [
-      "/opt/nibrs/shr.db",
       path.join(process.cwd(), "..", "shr.db"),
       path.join(process.cwd(), "shr.db"),
     ],
