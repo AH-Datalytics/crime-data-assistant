@@ -359,6 +359,27 @@ Hate crimes by bias type example:
 
 IMPORTANT: Always map weapon codes to readable names with CASE WHEN expressions.
 
+### summary_offense_hour (TIME OF DAY BREAKDOWNS)
+- COLUMNS: year INT, state TEXT, ucr_offense_code TEXT, incident_hour TEXT, offense_count INT
+- incident_hour: '00' through '23' (24-hour format, string). '00' = midnight. Note: midnight is often over-represented because some agencies default to '00' when the actual time is unknown.
+- INDEXES: (ucr_offense_code, year), (state, year)
+- ~930K rows. No ORI column — state-level and national only, not city-level.
+- USE FOR: "What time do robberies happen?", "Peak hours for burglary", "Time of day breakdown for assaults in Texas"
+
+Example — robbery by hour of day nationally in 2024:
+  SELECT incident_hour, SUM(offense_count) AS total
+  FROM summary_offense_hour
+  WHERE ucr_offense_code = '120' AND year = 2024
+  GROUP BY incident_hour ORDER BY incident_hour
+
+Example — aggravated assault by hour in California:
+  SELECT incident_hour, SUM(offense_count) AS total
+  FROM summary_offense_hour
+  WHERE ucr_offense_code = '13A' AND state = 'CA' AND year = 2024
+  GROUP BY incident_hour ORDER BY incident_hour
+
+IMPORTANT: For city-level time-of-day queries, this table CANNOT help — it has no ORI column. Set sql to null and explain that time-of-day data is only available at the state and national level.
+
 ### summary_victim_weapon (SPECIFIC WEAPON TYPE PER VICTIM)
 - COLUMNS: ori TEXT, year INT, ucr_offense_code TEXT, weapon_type TEXT, victim_count INT, state TEXT — has state column. For state queries use WHERE state = 'TX'. For city queries use ORI subquery.
 - weapon_type: same weapon codes as summary_offense_weapon
