@@ -41,6 +41,12 @@ export interface GuardrailResult {
 const GUARDRAILS: Guardrail[] = [
   // --- Current / Historical ---
   {
+    name: "current-crime-count-column",
+    tabs: ["current"],
+    match: (ctx) => /\bcrime_count\b/i.test(ctx.sql),
+    rewrite: (sql) => sql.replace(/\bcrime_count\b/gi, "count"),
+  },
+  {
     name: "rate-no-population",
     tabs: ["current", "historical"],
     match: (ctx) =>
@@ -294,6 +300,86 @@ const GUARDRAILS: Guardrail[] = [
       "Your query lists every agency in a state, which produces hundreds or thousands of rows that cannot be charted. Use historical_state_national for the state aggregate instead (e.g., SELECT year, robbery FROM historical_state_national WHERE state = 'California'). Only use the agency table when the user explicitly asks for a ranking (top 10, highest, etc.) or names specific agencies.",
   },
 
+  // --- Contract checks: question intent vs SQL structure ---
+  {
+    name: "contract-geography-missing",
+    tabs: ["current", "historical"],
+    match: (ctx) => {
+      const q = ctx.question.toLowerCase();
+      const sql = ctx.sql.toLowerCase();
+      // User mentions a specific city but SQL has no agency filter and no CASE WHEN
+      const cityPatterns = [
+        /\b(houston|dallas|phoenix|philadelphia|san antonio|san diego|austin|jacksonville|columbus|charlotte|indianapolis|san francisco|seattle|denver|nashville|oklahoma city|el paso|boston|portland|memphis|louisville|baltimore|milwaukee|albuquerque|tucson|fresno|sacramento|atlanta|kansas city|omaha|raleigh|miami|oakland|minneapolis|tampa|detroit|new orleans|cleveland|pittsburgh|cincinnati|orlando|st\.?\s*louis|baton rouge|richmond|birmingham|spokane|norfolk|durham|stockton|anchorage|honolulu|arlington|lubbock|garland|madison|reno|glendale|hialeah|chesapeake)\b/i,
+        /\bin\s+(los angeles|new york|chicago)\b/i,
+        /\b(la|nyc|chi|philly|nola|stl|atl|bmore|indy|mpls)\b/i,
+      ];
+      const mentionsCity = cityPatterns.some(p => p.test(q));
+      if (!mentionsCity) return false;
+      // SQL should have an agency filter or city-level CASE WHEN
+      const hasAgencyFilter = /agency\s*=|agency\s+like|agency\s+in\s*\(/i.test(sql);
+      const hasCaseWhen = /case\s+when.*agency/i.test(sql);
+      const usesNational = sql.includes("national_monthly") || sql.includes("historical_state_national");
+      return !hasAgencyFilter && !hasCaseWhen && usesNational;
+    },
+    message: (ctx) => {
+      const cityMatch = ctx.question.match(/\b(?:in\s+)?([A-Z][a-z]+(?:[\s-][A-Z][a-z]+)*)/);
+      return `The user asked about "${cityMatch?.[1] || "a specific city"}" but the SQL queries national/state-level data with no agency filter. Query the agency-level table instead, filtering by the requested city.`;
+    },
+  },
+  {
+    name: "contract-year-range-missing",
+    tabs: ["current", "historical"],
+    match: (ctx) => {
+      const q = ctx.question.toLowerCase();
+      const sql = ctx.sql.toLowerCase();
+      // User specifies a year range like "since 2020" or "from 1990 to 2024"
+      const yearMatch = q.match(/\b(?:since|from|starting|after)\s+(19|20)\d{2}\b/i) ||
+        q.match(/\b(19|20)\d{2}\s*(?:to|through|-)\s*(19|20)\d{2}\b/i);
+      if (!yearMatch) return false;
+      // SQL should have a year filter
+      const hasYearFilter = /\byear\s*(?:>=|>|=|BETWEEN)/i.test(sql) || /\byear\s+IN\s*\(/i.test(sql);
+      return !hasYearFilter;
+    },
+    message: (ctx) => {
+      const yearMatch = ctx.question.match(/\b(?:since|from|starting|after)\s+((19|20)\d{2})\b/i) ||
+        ctx.question.match(/\b((19|20)\d{2})\s*(?:to|through|-)/i);
+      return `The user specified a year range starting at ${yearMatch?.[1] || "a specific year"} but the SQL has no year filter. Add a WHERE clause filtering by the requested year range.`;
+    },
+  },
+  {
+    name: "contract-rate-no-population",
+    tabs: ["current", "historical"],
+    match: (ctx) => {
+      const q = ctx.question.toLowerCase();
+      // User asks for rate/per capita but SQL doesn't join population
+      const wantsRate = /\b(rate|per\s*capita|per\s*100k|per\s*100,000|per\s*hundred\s*thousand)\b/i.test(q);
+      if (!wantsRate) return false;
+      return !ctx.sql.toLowerCase().includes("population");
+    },
+    message: () =>
+      "The user asked for rates/per capita but the SQL does not reference population data. JOIN agency_population (Current Trends) or use the population column (Historical) and divide by population to calculate the rate.",
+  },
+
+  // --- Historical: recursive CTE without ORI deduplication ---
+  {
+    name: "historical-multi-ori-cte",
+    tabs: ["historical"],
+    match: (ctx) => {
+      const sql = ctx.sql;
+      // Detect recursive CTE gap-fill pattern that selects ORI without LIMIT 1
+      const hasRecursiveCTE = /WITH\s+\w+\s+AS\s*\([\s\S]*?UNION\s+ALL/i.test(sql);
+      const hasAgencyOri = /SELECT\s+(?:ha\.)?ori\s+FROM\s+historical_agency\b/i.test(sql);
+      const hasLimit1 = /FROM\s+historical_agency\b[^)]*LIMIT\s+1/i.test(sql);
+      const joinsDataTable = /FROM\s+historical_agency\s+\w+\s+JOIN\s+historical_agency_crime/i.test(sql) ||
+        /FROM\s+historical_agency\s+\w+\s+JOIN\s+historical_agency_clearance/i.test(sql) ||
+        /FROM\s+historical_agency\s+\w+\s+JOIN\s+historical_staffing/i.test(sql);
+      // Fire if: recursive CTE + selects ORI from historical_agency + no LIMIT 1 + doesn't join data table
+      return hasRecursiveCTE && hasAgencyOri && !hasLimit1 && !joinsDataTable;
+    },
+    message: () =>
+      "Your recursive CTE selects ORI from historical_agency without deduplication. Some agencies have multiple ORI codes — this will produce duplicate rows. Add GROUP BY ha.ori ORDER BY COUNT(*) DESC LIMIT 1 to the agency CTE, and JOIN the data table (historical_agency_crime, historical_staffing, etc.) to ensure you pick the ORI with actual data.",
+  },
+
   // --- NIBRS ---
   {
     name: "nibrs-raw-victims",
@@ -325,8 +411,21 @@ const GUARDRAILS: Guardrail[] = [
       // Only fire if it's an aggregate query (COUNT/SUM/GROUP BY) — detail queries on raw tables are OK
       return /\bCOUNT\s*\(|\bSUM\s*\(|\bGROUP\s+BY\b/i.test(sql);
     },
-    message: () =>
-      "[SYSTEM: Do NOT query raw tables (offenses, property, arrestees) for counts, sums, or trends — they have 100M+ rows and will time out. Use the appropriate summary table instead: summary_city_monthly or summary_state_monthly for offense counts, summary_victim_city_monthly or summary_victim_state_monthly for person crime victim counts, summary_drug_monthly for drug offenses, summary_carjacking_monthly for carjackings, summary_property_offense for property loss data, summary_arrestee_demographics for arrestee data, summary_offender_demographics for offender data, summary_offense_weapon for weapon data.]",
+    message: (ctx) => {
+      const sql = ctx.sql;
+      // Suggest the specific summary table based on which raw table was used
+      let suggestion = "";
+      if (/\bFROM\s+offenses\b|\bJOIN\s+offenses\b/i.test(sql)) {
+        suggestion = " Use summary_state_monthly (state-level) or summary_city_monthly (city-level) for offense counts. For person crimes (murder, rape, assault), use summary_victim_state_monthly or summary_victim_city_monthly instead.";
+      } else if (/\bFROM\s+property\b|\bJOIN\s+property\b/i.test(sql)) {
+        suggestion = " Use summary_property_offense for property loss data.";
+      } else if (/\bFROM\s+arrestees\b|\bJOIN\s+arrestees\b/i.test(sql)) {
+        suggestion = " Use summary_arrestee_demographics for arrestee data.";
+      } else if (/\bFROM\s+offense_weapons\b|\bJOIN\s+offense_weapons\b/i.test(sql)) {
+        suggestion = " Use summary_offense_weapon for weapon data.";
+      }
+      return `[SYSTEM: CRITICAL — Your query uses a raw table that has 100M+ rows and WILL time out. You must rewrite it completely using a summary table.${suggestion} Generate a NEW query from scratch using the correct summary table — do not just replace the table name, as the column names and structure are different.]`;
+    },
   },
   {
     name: "nibrs-person-crime-offense-table",
@@ -418,6 +517,42 @@ const GUARDRAILS: Guardrail[] = [
     },
     message: () =>
       "[SYSTEM: Your JOIN to the agencies table is missing a year condition. The agencies table has one row per (ori, year) — without matching on year, you will get row multiplication (each summary row repeated for every year the agency exists). Add AND a.year = s.year (or the appropriate year column) to the JOIN ON clause.]",
+  },
+  {
+    name: "nibrs-ranking-by-population",
+    tabs: ["nibrs"],
+    match: (ctx) => {
+      const sql = ctx.sql;
+      const q = ctx.question.toLowerCase();
+      // Detect: user asks for "top N" or "highest/most" by a crime metric, but the query pre-filters by population
+      const asksTopN = (/\btop\s+\d+\b/i.test(q) || /\b(highest|most|greatest|leading)\b/i.test(q)) && /\b(murder|crime|robbery|assault|theft|rape|burglary|offense|victim|homicide|shooting|carjack)\b/i.test(q);
+      if (!asksTopN) return false;
+      // Check for a subquery or CTE that pre-filters agencies by population instead of ranking by crime count
+      // Handles: SELECT ori FROM agencies ... ORDER BY population, SELECT a.ori FROM agencies AS a ... ORDER BY a.population, etc.
+      const preFiltersByPop = /SELECT\s+[\w.]*ori\s+FROM\s+agencies[\s\S]*?ORDER\s+BY\s+[\w.]*population\s+DESC\s+LIMIT/i.test(sql);
+      return preFiltersByPop;
+    },
+    message: () =>
+      "[SYSTEM: The user asked for the top agencies ranked by a crime metric, but your query pre-filters to the largest agencies by population. This gives 'crime in the N biggest cities', NOT 'cities with the most crime'. Instead, aggregate the crime count for ALL agencies, then ORDER BY the crime metric DESC LIMIT N. Use summary_clearance_city_annual (which has city name pre-joined) or summary_victim_city_monthly with JOIN agencies ON ori+year. Do NOT pre-select agencies by population.]",
+  },
+  {
+    name: "nibrs-agencies-join-no-ori",
+    tabs: ["nibrs"],
+    match: (ctx) => {
+      const sql = ctx.sql;
+      // Detect: JOIN agencies on state+year without ori — creates cartesian product
+      const usesCityTable = /\bsummary_(?:victim_)?city_monthly\b/i.test(sql);
+      // Match: JOIN agencies a, JOIN agencies AS a, LEFT JOIN agencies a, etc.
+      const hasAgenciesJoin = /JOIN\s+agencies\b/i.test(sql);
+      if (!usesCityTable || !hasAgenciesJoin) return false;
+      // Extract ON clause — handle aliases with/without AS, multiline SQL
+      // Matches: JOIN agencies a ON ..., JOIN agencies AS a ON ..., JOIN agencies ON ...
+      const joinClause = sql.match(/JOIN\s+agencies(?:\s+AS)?\s+\w*\s*ON\s+([\s\S]*?)(?=\s+(?:WHERE|GROUP|ORDER|LIMIT|LEFT|RIGHT|INNER|CROSS|JOIN|HAVING)\b|\s*$)/i);
+      if (!joinClause) return false;
+      return !/\bori\b/i.test(joinClause[1]);
+    },
+    message: () =>
+      "[SYSTEM: Your JOIN between a city-level summary table and the agencies table matches on state+year but NOT ori. This creates a cartesian product — every summary row gets multiplied by every agency in that state/year, producing wildly inflated and incorrect results. You MUST match on ori: JOIN agencies a ON a.ori = s.ori AND a.year = s.year. Alternatively, for ranking cities by crime counts, you don't need the agencies JOIN at all — use summary_clearance_city_annual which already has city name and population, or use an ORI subquery to get city names.]",
   },
   {
     name: "nibrs-city-case-sensitivity",

@@ -201,6 +201,32 @@ function loadNibrsFacts() {
   }
 }
 
+// ─── SHR facts ───
+
+function loadShrFacts() {
+  try {
+    // Lazy import to avoid circular deps
+    const { getShrDb } = require("./shr-db");
+    const db = getShrDb();
+    if (!db) throw new Error("SHR DB not available");
+    const dateRange = db.prepare("SELECT MIN(year) AS min_year, MAX(year) AS max_year FROM incidents").get() as { min_year: number; max_year: number };
+    const totalRows = (db.prepare("SELECT COUNT(*) AS n FROM incidents").get() as { n: number }).n;
+    const recentYears = db.prepare(
+      "SELECT year, COUNT(*) AS cnt FROM incidents WHERE year >= ? GROUP BY year ORDER BY year"
+    ).all(dateRange.max_year - 3) as { year: number; cnt: number }[];
+
+    return {
+      minYear: dateRange.min_year,
+      maxYear: dateRange.max_year,
+      totalRows,
+      recentYears: recentYears.map(r => `${r.year}: ${(r.cnt / 1000).toFixed(1)}K`).join(", "),
+    };
+  } catch (e) {
+    console.warn("[dynamic-facts] Failed to load SHR facts:", e);
+    return { minYear: 1976, maxYear: 2025, totalRows: 849000, recentYears: "" };
+  }
+}
+
 function formatRowCount(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
   if (n >= 1_000) return `${Math.round(n / 1000).toLocaleString()}K`;
@@ -212,9 +238,11 @@ function formatRowCount(n: number): string {
 export const RTCI = loadRtciFacts();
 export const HISTORICAL = loadHistoricalFacts();
 export const NIBRS = loadNibrsFacts();
+export const SHR = loadShrFacts();
 export { formatRowCount };
 
 // Log loaded facts for debugging
 console.log(`[dynamic-facts] RTCI: ${RTCI.agencyCount} agencies, ${RTCI.stateCount} states, ${RTCI.minYear}-${RTCI.maxYear} (${RTCI.totalMonths} months)`);
 console.log(`[dynamic-facts] Historical: ${HISTORICAL.agencyTotal} agencies, crime ${HISTORICAL.crimeMinYear}-${HISTORICAL.crimeMaxYear}, state/nat ${HISTORICAL.stateNatMinYear}-${HISTORICAL.stateNatMaxYear}`);
 console.log(`[dynamic-facts] NIBRS: ${NIBRS.minYear}-${NIBRS.maxYear}, ${NIBRS.totalLabel} incidents, DB ${NIBRS.dbSizeLabel}${NIBRS.lowCoverageStates ? `, coverage: ${NIBRS.lowCoverageStates}` : ""}`);
+console.log(`[dynamic-facts] SHR: ${SHR.minYear}-${SHR.maxYear}, ${Math.round(SHR.totalRows / 1000)}K incidents${SHR.recentYears ? `, recent: ${SHR.recentYears}` : ""}`);

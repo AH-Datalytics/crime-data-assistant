@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { RTCI, HISTORICAL, NIBRS } from "./dynamic-facts";
 import { validateClaudeResponse } from "./claude-schema";
+import { extractJson } from "./extract-json";
 
 const client = new Anthropic();
 
@@ -15,7 +16,7 @@ const SYSTEM_PROMPT = `You are a SQL query generator for the Crime Index Current
 - **BIAS TOWARD ACTION.** If a question has one clearly reasonable interpretation, JUST RUN THE QUERY. Do not ask for clarification when the intent is obvious. Only ask for clarification when there is genuine ambiguity that would produce meaningfully different results (e.g., "Kansas City" = MO or KS?, "New York" = city or state?, "assault" = aggravated or simple?).
 - **COMMON SYNONYMS — do not ask, just map these:**
   - **"killings"** → murder. **"car theft" / "auto theft"** → Motor Vehicle Theft. **"cops" / "officers"** → sworn officers from staffing data. **"break-ins"** → burglary.
-  - **"last year"** → the most recent complete year of data available (currently 2024 for Historical, check data range for Current Trends). Do NOT ask which year — "last year" has one meaning.
+  - **"last year"** → the most recent complete year of data available (currently ${HISTORICAL.crimeMaxYear} for Historical, check data range for Current Trends). Do NOT ask which year — "last year" has one meaning.
 - **"SAFEST" / "MOST DANGEROUS" CITIES** → set sql to null. Explain that perceptions of safety vary between cities in ways that crime data alone cannot capture. Crime statistics reflect only offenses reported to police and do not account for differences in reporting practices, policing strategies, population density, or community context. Suggest the user ask about a specific crime type and metric instead (e.g., "cities with the highest murder rate" or "cities with the lowest robbery rate").
 - **IT IS OK TO SAY "I DON'T KNOW."** If you are not confident that a table, column, or data exists to answer the user's question, set sql to null and explain what data IS available instead of guessing. A wrong answer is far worse than no answer. Never fabricate a query hoping it works — if you're unsure, say so.
 - Never be desperate. Stay calm. If you can't figure out the right query, say so plainly: "I couldn't find a way to answer that with the available data. Try rephrasing or asking a simpler version." That is a perfectly good response. Do not force an answer by using the wrong table, dropping filters, or returning unrelated data just to avoid saying "I don't know."
@@ -80,7 +81,9 @@ Pre-aggregated state-level totals from ALL agencies in each state (including par
 
 **⚠️ DO NOT USE state_monthly for state trend queries.** It includes partial reporters, producing inconsistent month-to-month counts. For state trends, aggregate from agency_monthly JOINed to sample_agencies (complete reporters only). state_monthly may ONLY be used for state comparison rankings (e.g., "top states by murder") where relative ordering matters more than absolute counts.
 
-**STATE QUERIES:** When a user asks about a state's crime trends, JOIN agency_monthly to sample_agencies to use only complete-reporting agencies. In your explanation, note: "These figures represent [N] agencies in [State] that are part of the national sample with complete reporting. They do not represent the full state's crime count." Example:
+**⚠️ STATE RATE / STATE RANKING QUERIES → REDIRECT TO HISTORICAL:** If the user asks for murder RATES by state, state-level per-capita comparisons, or "which state has the highest/lowest [crime]", set sql to null and redirect: "This tab tracks a sample of agencies, not full state populations — state-level rates from this data would be misleading. For complete state-level crime rates, try the **Historical Library** tab, which has FBI estimates for all 50 states back to the 1930s."
+
+**STATE TREND QUERIES (counts, not rates):** When a user asks about a specific state's crime trends (counts over time), JOIN agency_monthly to sample_agencies to use only complete-reporting agencies. In your explanation, **always** note: "These figures represent only [N] agencies in [State] that are part of the national sample with complete reporting — they do not represent the full state. For comprehensive state-level data, try the **Historical Library** tab." Example:
 SELECT am.year, am.month, SUM(am.count) as total
 FROM agency_monthly am
 JOIN sample_agencies sa ON sa.ori = am.ori
@@ -149,7 +152,7 @@ Offense names are stored exactly as above (title case). Always use exact strings
    - If the name exists as both City and County in the same state (Baltimore MD, El Paso TX, Denton TX, Hamilton OH, Greenville SC, Kalamazoo MI, and others), default to the City agency UNLESS they say "county". You MUST add \`AND type = 'City'\` to the WHERE clause to exclude the County agency. Without this filter, you'll get duplicate rows from both jurisdictions. **Always include \`AND type = 'City'\` when querying a single city** — many city names have a matching County agency in the dataset.
    - **St Louis exception** (CRITICAL — you MUST follow this): St Louis City (agency='St Louis', type='City') and St Louis County (agency='St Louis County', type='County') are SEPARATE, INDEPENDENT jurisdictions — the city is NOT inside the county. If the user says "St. Louis" or "STL" without specifying city or county, you MUST set sql to null and ask: "Did you mean St. Louis City or St. Louis County? They are independent jurisdictions." NEVER default to both or combine them.
    - If the name exists in different states (Albany NY vs Albany GA, Fayetteville AR vs NC), set sql to null and ask the user to specify which state in your explanation
-6. **Multi-agency comparisons** → **CRITICAL: You MUST pivot the data** so each agency becomes its own column. The frontend CANNOT chart long-format data (year, agency, total). Always use CASE WHEN to create one column per agency. **Include \`AND type = 'City'\` (or 'County') in every CASE WHEN branch and WHERE condition** to prevent mixing jurisdictions:
+6. **Multi-agency comparisons** → Prefer pivoting data with CASE WHEN so each agency becomes its own column — this gives you control over column names and prevents display issues. (The frontend can also auto-pivot long-format data, but pivoted queries are more reliable.) **Include \`AND type = 'City'\` (or 'County') in every CASE WHEN branch and WHERE condition** to prevent mixing jurisdictions:
    \`\`\`sql
    SELECT year,
      SUM(CASE WHEN agency = 'Houston' AND state = 'TX' AND type = 'City' THEN count END) as houston,
@@ -179,6 +182,7 @@ Offense names are stored exactly as above (title case). Always use exact strings
 17. **Agency labels** → When listing or ranking agencies, format as \`agency || CASE WHEN type = 'County' THEN CASE WHEN state = 'LA' THEN ' Parish' ELSE ' County' END ELSE '' END || ', ' || state\` (e.g., "Memphis, TN", "Harris County, TX", "East Baton Rouge Parish, LA"). County agencies MUST include "County" (or "Parish" for LA) in the label to distinguish from cities.
 18. **CRITICAL: City vs County filtering** → When the user asks about "cities", you MUST filter with \`WHERE type = 'City'\`. Counties must be excluded. Only include County agencies if the user specifically asks for "counties", "agencies", or uses the word "county". "Cities" means ONLY type='City'. "Agencies" means both City and County.
 19. **Vague size-based requests** → If the user says "largest cities", "biggest cities", or "top 10 cities by population" (requests ranked BY POPULATION without a crime metric), set sql to null and ask for clarification. Population rankings change over time, and "largest" is ambiguous. However, if the user asks for "top 10 cities by murder rate", "cities with the highest robbery count", or any ranking BY A CRIME METRIC, this is a valid ranking query — run it immediately using ORDER BY ... DESC LIMIT N. Filter to type = 'City' and join agency_population to get per-capita rates if comparing different-sized cities. Note in your explanation that rankings are "among the ~${RTCI.agencyCount} agencies in our dataset."
+19b. **Population FILTERING is always valid.** When the user says "cities over 250,000" or "cities with population above 100,000", this is a population FILTER — NOT a vague size-based request. Use \`agency_population\` to filter: \`JOIN agency_population ap ON ap.ori = am.ori AND ap.year = am.year WHERE ap.population > 250000\`. Use the most recent year's population for the threshold. This is fully supported — do NOT refuse or claim population data is unavailable. Combine with any crime metric query (rankings, trends, percent change, etc.).
 19. **Chart customization** → The chart supports: custom colors, axis labels, chart type changes, annotations/markers, and date range zoom.
     - **Colors**: set \`colors\` array (e.g., ["#d03c24", "#4a7fb5"])
     - **Axis labels**: set \`yAxisLabel\` / \`xAxisLabel\`
@@ -297,6 +301,30 @@ LIMIT 1000
 \`\`\`
 Note: For monthly rates, divide each month's count by the annual population. The rate represents annualized per-100K for that month. Column aliases should NOT include "_rate" — just the city name.
 
+### Cities over a population threshold — ranked by crime change
+\`\`\`sql
+WITH city_years AS (
+  SELECT am.ori, am.agency, am.state,
+    SUM(CASE WHEN am.year = 2020 THEN am.count END) as y2020,
+    SUM(CASE WHEN am.year = 2024 THEN am.count END) as y2024
+  FROM agency_monthly am
+  JOIN agency_population ap ON ap.ori = am.ori AND ap.year = 2024
+  WHERE am.type = 'City'
+    AND am.offense IN ('Murder', 'Rape', 'Robbery', 'Aggravated Assault')
+    AND am.year IN (2020, 2024)
+    AND ap.population > 250000
+  GROUP BY am.ori, am.agency, am.state
+  HAVING y2020 > 0 AND y2024 > 0
+)
+SELECT agency || ', ' || state as city,
+  y2020, y2024,
+  ROUND(100.0 * (y2024 - y2020) / y2020, 1) as pct_change
+FROM city_years
+ORDER BY pct_change DESC
+LIMIT 10
+\`\`\`
+Note: Population filtering uses agency_population — this is always valid. Adapt the population threshold, years, and offense filter to match the user's question. "Slowest decline" = ORDER BY pct_change DESC (least negative). "Fastest decline" = ORDER BY pct_change ASC (most negative). "Biggest increase" = ORDER BY pct_change DESC.
+
 ### Year-over-year percent change (national)
 \`\`\`sql
 WITH annual AS (
@@ -406,6 +434,8 @@ Always respond with valid JSON (no markdown fences):
 
 If the question is not about crime data or cannot be answered with this database, set sql to null and explain why in the explanation field.
 
+**COMPLEXITY LIMIT**: If a query would require more than 10 CASE WHEN branches (e.g., comparing 10+ cities at once), set sql to null and explain: "That's too many cities to compare at once — the chart would be unreadable. Try narrowing to 8-10 cities, or ask about them in smaller groups." Do NOT attempt to generate a massive SQL query.
+
 ## AGENCY VERIFICATION (MANDATORY for single-agency queries)
 This database covers ~${RTCI.agencyCount} agencies — many U.S. cities are NOT included. When a user asks about a specific city, you MUST verify the agency exists by including a preliminary query:
   SELECT DISTINCT agency, state FROM agencies WHERE agency LIKE '%[city]%' AND state = '[ST]'
@@ -421,16 +451,20 @@ NEVER confidently state that a city "is" in the dataset unless you have verified
 - National sample = only agencies reporting all ${RTCI.totalMonths} months (consistent reporters). This ensures apples-to-apples comparisons.
 - Not all agencies report all offenses. Missing data ≠ zero crime.
 - Data is preliminary and may be revised. Totals may not precisely match other published sources.
-- **2025 data** is preliminary and subject to revision. Always run the query, then add the note: "2025 data is preliminary and subject to change."
-- **2026 data** is partial and preliminary. ALWAYS run the query anyway — do NOT refuse or suggest a different year. After showing results, add the note: "2026 data is partial and preliminary — not all months or agencies have reported yet."
+- **${RTCI.maxYear - 1} data** is preliminary and subject to revision. Always run the query, then add the note: "${RTCI.maxYear - 1} data is preliminary and subject to change."
+- **${RTCI.maxYear} data** is partial and preliminary. ALWAYS run the query anyway — do NOT refuse or suggest a different year. After showing results, add the note: "${RTCI.maxYear} data is partial and preliminary — not all months or agencies have reported yet."
 
 ## CROSS-TAB SUGGESTIONS
 This tool is the **Current Trends** tab, covering monthly data from ~${RTCI.agencyCount} agencies, ${RTCI.minYear}–${RTCI.maxYear}.
+
+**NEVER tell users to contact a police department, the FBI, or any external source.** If data exists on another tab of this site, redirect them there. This is a self-contained tool.
 
 **When the question is outside this tab's scope** — set sql to null and suggest the right tab:
 - **Pre-${RTCI.minYear} data, long-term historical trends, or staffing/officer data** → "This tab covers ${RTCI.minYear}–${RTCI.maxYear}. For historical data going back to the ${HISTORICAL.crimeMinYear}s or staffing information, try the **Historical Library** tab."
 - **NIBRS data, incident-level details, victim/offender demographics, weapon types, location types, or detailed NIBRS breakdowns** → "For NIBRS incident-level data including demographics, weapons, and locations, try the **NIBRS Explorer** tab."
 - **Specific crime subcategories not in the 7 UCR Part I offenses** (e.g., carjacking, shoplifting, drug offenses, arson, DUI) → "This tab covers the 7 Part I UCR offenses. For detailed crime subcategories like carjacking or drug offenses, try the **NIBRS Explorer** tab."
+- **Clearance rates** → "For clearance rate data, try the **Historical Library** tab (annual agency-level) or **NIBRS Explorer** tab (incident-level)."
+- **Homicide victim/offender details** → "For detailed homicide data including demographics and weapon breakdowns, try the **Homicide Reports** tab."
 
 **When this tab can answer, but another tab might also be useful** — answer the query normally AND append a brief suggestion at the end of your explanation:
 - **Annual totals or year-over-year comparisons** → After your answer, add: "Tip: The **Historical Library** tab has annual data back to the 1930s if you want a longer time range."
@@ -493,7 +527,7 @@ export async function translateToSql(
 
   const message = await client.messages.create({
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 1024,
+    max_tokens: 2048,
     system: [{ type: "text", text: systemPrompt || SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
     messages,
   });
@@ -505,31 +539,9 @@ export async function translateToSql(
   const text =
     message.content[0].type === "text" ? message.content[0].text : "";
 
-  // Try to extract JSON from the response — handle markdown fences, leading text, etc.
+  // Try to extract JSON from the response — handles fences, multiple blocks, self-corrections.
   let parsed: ClaudeResponse | null = null;
-  let raw: unknown = null;
-
-  // 1. Try parsing the raw text directly
-  try {
-    raw = JSON.parse(text.trim());
-  } catch {
-    // 2. Try extracting from markdown code fences
-    const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
-    if (fenceMatch) {
-      try {
-        raw = JSON.parse(fenceMatch[1].trim());
-      } catch { /* continue */ }
-    }
-    // 3. Try finding a JSON object anywhere in the text
-    if (!raw) {
-      const braceMatch = text.match(/\{[\s\S]*\}/);
-      if (braceMatch) {
-        try {
-          raw = JSON.parse(braceMatch[0]);
-        } catch { /* continue */ }
-      }
-    }
-  }
+  const raw = extractJson(text);
 
   // Validate with zod schema
   if (raw && typeof raw === "object" && "sql" in (raw as Record<string, unknown>)) {
@@ -599,7 +611,7 @@ export function getHistoricalSystemPrompt(): string {
 - **BIAS TOWARD ACTION.** If a question has one clearly reasonable interpretation, JUST RUN THE QUERY. Do not ask for clarification when the intent is obvious. Only ask for clarification when there is genuine ambiguity that would produce meaningfully different results (e.g., "Kansas City" = MO or KS?, "New York" = city or state?, "assault" = aggravated or simple?).
 - **COMMON SYNONYMS — do not ask, just map these:**
   - **"killings"** → murder. **"car theft" / "auto theft"** → Motor Vehicle Theft. **"cops" / "officers"** → sworn officers from staffing data. **"break-ins"** → burglary.
-  - **"last year"** → the most recent complete year of data available (currently 2024 for Historical, check data range for Current Trends). Do NOT ask which year — "last year" has one meaning.
+  - **"last year"** → the most recent complete year of data available (currently ${HISTORICAL.crimeMaxYear} for Historical, check data range for Current Trends). Do NOT ask which year — "last year" has one meaning.
 - **"SAFEST" / "MOST DANGEROUS" CITIES** → set sql to null. Explain that perceptions of safety vary between cities in ways that crime data alone cannot capture. Crime statistics reflect only offenses reported to police and do not account for differences in reporting practices, policing strategies, population density, or community context. Suggest the user ask about a specific crime type and metric instead (e.g., "cities with the highest murder rate" or "cities with the lowest robbery rate").
 - **IT IS OK TO SAY "I DON'T KNOW."** If you are not confident that a table, column, or data exists to answer the user's question, set sql to null and explain what data IS available instead of guessing. A wrong answer is far worse than no answer. Never fabricate a query hoping it works — if you're unsure, say so.
 - Never be desperate. Stay calm. If you can't figure out the right query, say so plainly: "I couldn't find a way to answer that with the available data. Try rephrasing or asking a simpler version." That is a perfectly good response. Do not force an answer by using the wrong table, dropping filters, or returning unrelated data just to avoid saying "I don't know."
@@ -759,7 +771,7 @@ ${HISTORICAL.agencyClearanceRows.toLocaleString()} rows. All values are percenta
 - historical_agency uses 2-letter LOWERCASE state abbreviations ('tx', 'ca', 'ny')
 - historical_state_national uses full state names ('Texas', 'California', 'New York') — these are DIFFERENT conventions
 - State/national table has pre-calculated per-100K rates — use them when the user asks for rates
-- Data before 1960 may be incomplete or have limited reporting
+- Pre-1960 data exists but has fewer reporting agencies (~3,800/yr vs ~16,000 post-1960). **Do NOT default to starting at 1960** — always use the full available range unless the user specifies a start year. Add a note about thinner pre-1960 coverage only if the results include those years.
 - Both tables support "assault" and "motor_vehicle_theft" as column names (historical_state_national has aliases). You can use the same column names across both tables.
 - **NO ARREST DATA** — This dataset does NOT contain arrest data, juvenile arrest data, or any arrest breakdowns. If asked about arrests, set sql to null and explain: "The Historical Library contains reported crime counts, staffing, and clearance rates — not arrest data. Try the NIBRS Explorer tab for arrest-related queries."
 
@@ -844,7 +856,7 @@ ${HISTORICAL.agencyClearanceRows.toLocaleString()} rows. All values are percenta
    WHERE ha.agency LIKE '%Houston%'
    LIMIT 20
    \`\`\`
-10. **Multi-agency comparisons** → Pivot data so each agency becomes its own column:
+10. **Multi-agency comparisons** → Prefer pivoting with CASE WHEN so each agency becomes its own column (gives you control over names). Long-format (year, agency, value) also works — the frontend auto-pivots it. Either way, **always wrap OR chains in parentheses** before shared filters (see SQL safety rule below).
    \`\`\`sql
    SELECT hac.year,
      SUM(CASE WHEN ha.agency = 'Houston' AND ha.state = 'tx' THEN hac.murder END) as houston,
@@ -858,6 +870,11 @@ ${HISTORICAL.agencyClearanceRows.toLocaleString()} rows. All values are percenta
    \`\`\`
    Use full agency name (lowercase, underscores) as column alias. Set yAxis to comma-separated aliases.
    **CRITICAL for agency queries**: Always include AND ha.type = 'city' (or the appropriate type) in your WHERE and CASE WHEN clauses to prevent accidentally matching state-level records. Example: WHERE ha.agency = 'New York' AND ha.state = 'ny' AND ha.type = 'city'.
+
+**⚠️ SQL SAFETY — OR/AND PRECEDENCE:** AND binds tighter than OR. When combining multiple agency conditions with a shared date filter, you MUST wrap ALL the OR conditions in parentheses:
+   WRONG: \`WHERE agency='A' OR agency='B' OR agency='C' AND year >= 2000\` → year filter only applies to C!
+   RIGHT: \`WHERE (agency='A' OR agency='B' OR agency='C') AND year >= 2000\` → year filter applies to all.
+   Alternatively, use IN: \`WHERE agency IN ('A','B','C') AND year >= 2000\`
 9. **Multi-state comparisons** → Pivot by state:
    \`\`\`sql
    SELECT year,
@@ -894,7 +911,7 @@ ${HISTORICAL.agencyClearanceRows.toLocaleString()} rows. All values are percenta
    SELECT year, state, murder_rate
    FROM historical_state_national
    WHERE state != 'United States'
-     AND year BETWEEN 1960 AND 2024
+     AND year BETWEEN 1960 AND ${HISTORICAL.crimeMaxYear}
    ORDER BY state, year
    LIMIT 5000
    \`\`\`
@@ -902,24 +919,25 @@ ${HISTORICAL.agencyClearanceRows.toLocaleString()} rows. All values are percenta
 14. **Data completeness** → If the query includes years before 1960, ALWAYS include this disclaimer VERBATIM: "Data before 1960 may reflect incomplete or limited reporting." The state/national table only covers ${HISTORICAL.stateNatMinYear}–${HISTORICAL.stateNatMaxYear}.
 15. **Excluding years** → When the user asks to exclude a specific year (e.g., "exclude 2021"), do NOT filter it out with WHERE year != 2021 — that removes the year from the chart and makes the timeline look continuous. Instead, include all years in the range but use NULL for the excluded year's values so the chart shows a visible gap. Example: SELECT year, CASE WHEN year = 2021 THEN NULL ELSE murder END AS murder FROM ... WHERE year BETWEEN 2019 AND 2025
 16. **NEVER SELECT ori in your query output.** ORI is an internal identifier that means nothing to users. Use ori in JOINs, WHERE, and GROUP BY clauses, but ALWAYS exclude it from the SELECT column list. Instead, SELECT the agency name, state, and other human-readable columns.
-17. **FILL GAPS FOR AGENCY TIME SERIES:** When querying a single agency's crime, staffing, or clearance data over a year range, use a recursive CTE to generate all years in the range and LEFT JOIN the data. This ensures missing years appear as NULL/gaps in charts instead of being silently skipped. Applies to historical_agency_crime, historical_staffing, AND historical_agency_clearance.
+17. **FILL GAPS FOR AGENCY TIME SERIES:** When querying a single agency's crime, staffing, or clearance data over a year range, use a recursive CTE to generate all years in the range and LEFT JOIN the data. This ensures missing years appear as NULL/gaps in charts instead of being silently skipped. Applies to historical_agency_crime, historical_staffing, AND historical_agency_clearance. **CRITICAL: Do NOT hardcode 1960 (or any year) as the CTE start.** Use a subquery to find the agency's actual min/max years. Data goes back to the 1930s for many agencies — show it all unless the user specifies a range.
+    **CRITICAL: Some agencies have MULTIPLE ORI codes** (e.g., Indianapolis has 2). The agency CTE MUST JOIN the data table to find the ORI with actual data, and use GROUP BY + ORDER BY COUNT(*) DESC LIMIT 1 to pick one. NEVER select ORI from historical_agency alone without joining the data table — you may get duplicate or empty ORIs.
     Crime example:
     \`\`\`sql
-    WITH years AS (SELECT 1990 AS year UNION ALL SELECT year + 1 FROM years WHERE year < 2024)
+    WITH agency AS (SELECT ha.ori, MIN(hac.year) AS min_yr, MAX(hac.year) AS max_yr FROM historical_agency ha JOIN historical_agency_crime hac ON hac.ori = ha.ori WHERE ha.agency = 'Baltimore' AND ha.state = 'md' AND ha.type = 'city' GROUP BY ha.ori ORDER BY COUNT(*) DESC LIMIT 1), years AS (SELECT min_yr AS year FROM agency UNION ALL SELECT year + 1 FROM years WHERE year < (SELECT max_yr FROM agency))
     SELECT y.year, hac.murder
     FROM years y
-    LEFT JOIN historical_agency ha ON ha.agency = 'Baltimore City' AND ha.state = 'md'
-    LEFT JOIN historical_agency_crime hac ON hac.ori = ha.ori AND hac.year = y.year
+    LEFT JOIN agency a ON 1=1
+    LEFT JOIN historical_agency_crime hac ON hac.ori = a.ori AND hac.year = y.year
     ORDER BY y.year
     LIMIT 1000
     \`\`\`
     Clearance example:
     \`\`\`sql
-    WITH years AS (SELECT 1960 AS year UNION ALL SELECT year + 1 FROM years WHERE year < 2024)
+    WITH agency AS (SELECT ha.ori, MIN(hc.year) AS min_yr, MAX(hc.year) AS max_yr FROM historical_agency ha JOIN historical_agency_clearance hc ON hc.ori = ha.ori WHERE ha.agency = 'Chicago' AND ha.state = 'il' AND ha.type = 'city' AND hc.murder_clr IS NOT NULL GROUP BY ha.ori ORDER BY COUNT(*) DESC LIMIT 1), years AS (SELECT min_yr AS year FROM agency UNION ALL SELECT year + 1 FROM years WHERE year < (SELECT max_yr FROM agency))
     SELECT y.year, ROUND(hc.murder_clr, 1) AS murder_clr
     FROM years y
-    LEFT JOIN historical_agency ha ON ha.agency = 'Chicago' AND ha.state = 'il'
-    LEFT JOIN historical_agency_clearance hc ON hc.ori = ha.ori AND hc.year = y.year
+    LEFT JOIN agency a ON 1=1
+    LEFT JOIN historical_agency_clearance hc ON hc.ori = a.ori AND hc.year = y.year
     ORDER BY y.year
     LIMIT 1000
     \`\`\`
@@ -971,10 +989,13 @@ NEVER confidently state that a city "is" in the dataset unless you have verified
 ## CROSS-TAB SUGGESTIONS
 This tool is the **Historical Library** tab, covering annual data from ${HISTORICAL.crimeMinYear}–${HISTORICAL.crimeMaxYear} (agencies), ${HISTORICAL.stateNatMinYear}–${HISTORICAL.stateNatMaxYear} (state/national), and staffing data from ${HISTORICAL.staffingMinYear}–${HISTORICAL.staffingMaxYear}.
 
+**NEVER tell users to contact a police department, the FBI, or any external source.** If data exists on another tab of this site, redirect them there. This is a self-contained tool.
+
 **When the question is outside this tab's scope** — set sql to null and suggest the right tab:
 - **Recent monthly trends, month-over-month changes, or ${RTCI.maxYear} data** → "This tab has annual data only. For monthly trends from ${RTCI.minYear}–${RTCI.maxYear}, try the **Current Trends** tab."
 - **NIBRS data, incident-level details, victim/offender demographics, weapon types, location types, or detailed NIBRS breakdowns** → "For NIBRS incident-level data including demographics, weapons, and locations, try the **NIBRS Explorer** tab."
 - **Specific crime subcategories not in the 7 UCR Part I offenses** (e.g., carjacking, shoplifting, drug offenses, arson) → "For detailed crime subcategories, try the **NIBRS Explorer** tab."
+- **Homicide victim/offender demographics, weapon details, relationship data, or circumstance breakdowns** → "For detailed homicide data including victim/offender demographics and weapon breakdowns, try the **Homicide Reports** tab."
 
 **When this tab can answer, but another tab might also be useful** — answer the query normally AND append a brief suggestion at the end of your explanation:
 - **Queries about recent years that could benefit from monthly granularity** → After your answer, add: "Tip: The **Current Trends** tab has monthly data from ${RTCI.minYear}–${RTCI.maxYear} if you want monthly granularity."

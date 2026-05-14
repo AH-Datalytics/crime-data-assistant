@@ -11,6 +11,7 @@ import type { QueryError } from "@/lib/types";
 import Anthropic from "@anthropic-ai/sdk";
 import { getShrSystemPrompt } from "@/lib/shr-claude";
 import { getCached, setCache } from "@/lib/response-cache";
+import { extractJson } from "@/lib/extract-json";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function jsonResp(data: Record<string, any> | QueryError, status = 200) {
@@ -112,18 +113,16 @@ export async function POST(req: NextRequest) {
         .map((b) => b.text)
         .join("");
 
-      try {
-        const jsonMatch = text.match(/\{[\s\S]*\}/);
-        claude = jsonMatch ? JSON.parse(jsonMatch[0]) : { sql: null, explanation: text };
-      } catch {
-        claude = { sql: null, explanation: text };
-      }
+      const jsonRaw = extractJson(text);
+      claude = (jsonRaw && typeof jsonRaw === "object" && "sql" in (jsonRaw as object))
+        ? jsonRaw as typeof claude
+        : { sql: null, explanation: text };
 
       const claudeMs = Date.now() - start;
 
       // Text-only response — retry if model incorrectly claims data isn't available
       if (!claude.sql) {
-        const refusalPatterns = /not (appear to be |be )?represented|not (in|included in) (this|the|our) (dataset|data|sample)|no data (for|available|found)|does not (have|include|cover)|not available in this/i;
+        const refusalPatterns = /not (appear to be |be )?represented|not (in|included in) (this|the|our) (dataset|data|sample)|no data (for|available|found)|does not (yet )?(have|include|cover)|not available|not yet (include|available|have)|latest available data/i;
         if (refusalPatterns.test(claude.explanation || "")) {
           try {
             const retryMessages: Anthropic.MessageParam[] = [
@@ -138,10 +137,9 @@ export async function POST(req: NextRequest) {
               messages: retryMessages,
             });
             const retryText = retryResp.content.filter((b): b is Anthropic.TextBlock => b.type === "text").map(b => b.text).join("");
-            const retryJson = retryText.match(/\{[\s\S]*\}/);
-            if (retryJson) {
-              const retryClaude = JSON.parse(retryJson[0]);
-              if (retryClaude.sql) Object.assign(claude, retryClaude);
+            const retryClaude = extractJson(retryText);
+            if (retryClaude && typeof retryClaude === "object" && (retryClaude as Record<string, unknown>).sql) {
+              Object.assign(claude, retryClaude);
             }
           } catch { /* use original */ }
         }
@@ -202,19 +200,16 @@ export async function POST(req: NextRequest) {
           .filter((b): b is Anthropic.TextBlock => b.type === "text")
           .map((b) => b.text)
           .join("");
-        const retryJson = retryText.match(/\{[\s\S]*\}/);
-        if (retryJson) {
-          const retryClaude = JSON.parse(retryJson[0]);
-          if (retryClaude.sql) {
-            const retryValidation = validateAndSanitize(retryClaude.sql);
-            if (retryValidation.valid) {
-              sql = retryValidation.sanitized!;
-              claude.explanation = retryClaude.explanation || claude.explanation;
-              claude.title = retryClaude.title || claude.title;
-              claude.chartType = retryClaude.chartType || claude.chartType;
-              claude.xAxis = retryClaude.xAxis || claude.xAxis;
-              claude.yAxis = retryClaude.yAxis || claude.yAxis;
-            }
+        const retryClaude = extractJson(retryText) as Record<string, unknown> | null;
+        if (retryClaude?.sql) {
+          const retryValidation = validateAndSanitize(retryClaude.sql as string);
+          if (retryValidation.valid) {
+            sql = retryValidation.sanitized!;
+            claude.explanation = (retryClaude.explanation as string) || claude.explanation;
+            claude.title = (retryClaude.title as string) || claude.title;
+            claude.chartType = (retryClaude.chartType as string) || claude.chartType;
+            claude.xAxis = (retryClaude.xAxis as string) || claude.xAxis;
+            claude.yAxis = (retryClaude.yAxis as string[]) || claude.yAxis;
           }
         }
       } catch {

@@ -185,8 +185,12 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
               break;
 
             case "explanation":
-              // Don't show early explanation — wait for final result to avoid flash
+              // Post-query explanation replaces the pre-query one after result is shown
               finalExplanation = event.text;
+              setExplanation(event.text);
+              if (response) {
+                setResponse(prev => prev ? { ...prev, explanation: event.text } : prev);
+              }
               break;
 
             case "result":
@@ -276,7 +280,7 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
           <button
             type="submit"
             disabled={loading || !input.trim()}
-            className="px-4 sm:px-6 py-2 sm:py-2.5 text-sm font-medium text-white bg-[var(--foreground)] rounded-full hover:bg-[var(--accent-hover)] disabled:opacity-40 cursor-pointer shrink-0"
+            className="px-4 sm:px-6 py-2 sm:py-2.5 text-sm font-medium text-white bg-[var(--accent)] rounded-full hover:bg-[var(--accent-hover)] disabled:opacity-40 cursor-pointer shrink-0"
           >
             {loading ? "..." : "Ask"}
           </button>
@@ -331,7 +335,7 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
                   {(mode === "historical" ? [
                     "National murder trend, 2000\u20132020",
                     "National robbery clearance rate since 1960",
-                    `Chicago officers per year, 1930–${new Date().getFullYear()}`,
+                    "Chicago officers per year",
                   ] : [
                     "National murder trend",
                     `Robbery in Houston 2020–${new Date().getFullYear() - 1}`,
@@ -463,7 +467,7 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
                     placeholder="Ask a follow-up..."
                     className="flex-1 min-w-0 px-3 py-1.5 text-sm border border-[var(--border)] rounded-full focus:outline-none focus:border-[#475EC7] bg-[var(--surface)]"
                   />
-                  <button type="submit" className="px-3 sm:px-4 py-1.5 text-xs font-medium text-white bg-[var(--foreground)] rounded-full hover:bg-[var(--accent-hover)] cursor-pointer shrink-0">
+                  <button type="submit" className="px-3 sm:px-4 py-1.5 text-xs font-medium text-white bg-[var(--accent)] rounded-full hover:bg-[var(--accent-hover)] cursor-pointer shrink-0">
                     Ask
                   </button>
                 </form>

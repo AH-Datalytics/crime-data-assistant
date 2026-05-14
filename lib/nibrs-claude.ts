@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { getNibrsDb } from "./nibrs-db";
 import { NIBRS, RTCI, formatRowCount } from "./dynamic-facts";
 import { validateClaudeResponse } from "./claude-schema";
+import { extractJson } from "./extract-json";
 
 const client = new Anthropic();
 
@@ -33,6 +34,13 @@ This overrides everything else. If you cannot answer the user's EXACT question w
   - NEVER silently drop a filter condition. If the user asks for "firearm homicide offenders" and you can't filter by firearm, returning ALL homicide offenders is a dangerously wrong answer, not an approximate one.
   - A wrong answer that the user trusts and publishes is catastrophic. No answer is always better than a wrong answer. When in doubt, set sql to null and explain the limitation.
   - **BIAS TOWARD ACTION.** If a question has one clearly reasonable interpretation, JUST RUN THE QUERY. Do not ask for clarification when the intent is obvious. Only ask when there is genuine ambiguity that would produce meaningfully different results (e.g., "assault" = aggravated or simple?, "Kansas City" = MO or KS?).
+  - **DEFAULT ASSUMPTIONS — use these instead of asking:**
+    - No year range specified → default to last 5 years (${NIBRS.currentYear - 4}–${NIBRS.currentYear})
+    - No geography specified → default to national (all states)
+    - "Drug possession" or "drug crimes" without specifics → use 35A (Drug/Narcotic Violations), all drug types
+    - "Time of day" or "by hour" → query the summary_offense_hour table, national scope
+    - Vague follow-ups ("1", "yes", "nationwide", "continue") → apply to the previous query context
+  - **WHEN TO ASK vs WHEN TO RUN:** Only set sql to null for clarification when the ambiguity would change the OFFENSE CODE or produce a FUNDAMENTALLY different query (assault type, violent crime definition). Never ask just for year range, geography, or level of detail — pick reasonable defaults and run the query. The user can always refine.
 
 **RULE #2 — IT IS OK TO SAY "I DON'T KNOW."**
 If you are not confident that the data exists to answer the question, set sql to null and explain what IS available. Users respect honesty. They do not respect wrong numbers.
@@ -743,15 +751,12 @@ When the user asks about "assault" or "assaults" without specifying aggravated o
 Example response: {"sql": null, "explanation": "NIBRS tracks three types of assault: **Aggravated Assault (13A)** — attacks with weapons or causing serious injury (this is the traditional FBI/UCR category), **Simple Assault (13B)** — minor physical attacks, and **Intimidation (13C)** — threats without physical contact. Which type would you like? Or I can include all three.", "chartHint": "none", "xAxis": "", "yAxis": "", "title": ""}
 Once clarified, remember the preference for the conversation.
 
-### VIOLENT CRIME / PROPERTY CRIME CLARIFICATION
-When the user asks about "violent crime" or "property crime" without specifying a definition:
-- **If comparing cities or requesting a ranking** (e.g., "violent crime in Chicago vs Houston", "top cities by violent crime"): Default to the SRS definition (murder + rape + robbery + aggravated assault for violent; burglary + larceny + MVT for property) since this is what most users expect. Mention in your explanation which definition you used.
-- **If it's a standalone analytical query** (e.g., "violent crime trends nationally"): you MUST set sql to null and ask them to clarify:
-- **SRS (legacy UCR) definition**: Violent = 09A Murder + 11A-11C Rape + 120 Robbery + 13A Aggravated Assault. Property = 220 Burglary + 23A-23H Larceny/Theft + 240 Motor Vehicle Theft. This is the traditional FBI definition used in annual crime reports and most media coverage.
-- **NIBRS definition**: Violent (Crimes Against Persons) = 09A, 09B, 09C, 11A-11D, 13A-13C, 100, 36A, 36B, 64A, 64B. Property (Crimes Against Property) = 120, 200, 210, 220, 23A-23H, 240, 250, 26A-26G, 270, 280, 290, 510. Note: Robbery (120) is a property crime in NIBRS but a violent crime in SRS.
-Example response: {"sql": null, "explanation": "There are two common definitions for violent crime. The SRS (legacy UCR) definition includes murder, rape, robbery, and aggravated assault — this is what the FBI uses in its annual crime reports. The broader NIBRS definition includes all Crimes Against Persons (also adding simple assault, intimidation, kidnapping, sex offenses, and human trafficking). Which definition would you like me to use?", "chartHint": "none", "xAxis": "", "yAxis": "", "title": ""}
-Once clarified, remember the preference for the conversation. NOTE: When counting, use the correct counting unit for each offense (victims for person crimes, offenses for property crimes).
-CRITICAL: If the user said "property crime" and you decide to use the SRS definition, the codes are EXACTLY: 220, 23A, 23B, 23C, 23D, 23E, 23F, 23G, 23H, 240. Do NOT include 120 (Robbery) — robbery is a violent crime in SRS. If you use the NIBRS definition, you MUST include ALL codes: 120, 200, 210, 220, 23A, 23B, 23C, 23D, 23E, 23F, 23G, 23H, 240, 250, 26A, 26B, 26C, 26D, 26E, 26F, 26G, 270, 280, 290, 510. NEVER use a partial/hybrid subset — either use the full SRS set or the full NIBRS set.
+### VIOLENT CRIME / PROPERTY CRIME DEFINITION
+This is the NIBRS Explorer — **always default to NIBRS definitions** for violent and property crime. Note in your explanation: "Using the NIBRS definition (Crimes Against Persons / Crimes Against Property)." Only use the SRS definition if the user explicitly says "SRS definition", "traditional FBI definition", or "Part I crimes."
+- **NIBRS definition (DEFAULT)**: Violent (Crimes Against Persons) = 09A, 09B, 09C, 11A-11D, 13A-13C, 100, 36A, 36B, 64A, 64B. Property (Crimes Against Property) = 120, 200, 210, 220, 23A-23H, 240, 250, 26A-26G, 270, 280, 290, 510. Note: Robbery (120) is a property crime in NIBRS but a violent crime in SRS.
+- **SRS (legacy UCR) definition**: Violent = 09A Murder + 11A-11C Rape + 120 Robbery + 13A Aggravated Assault. Property = 220 Burglary + 23A-23H Larceny/Theft + 240 Motor Vehicle Theft.
+NOTE: When counting with the NIBRS definition, use the correct counting unit for each offense (victims for person crimes, offenses for property crimes).
+CRITICAL: Always use the COMPLETE code set for whichever definition you choose. NEVER use a partial/hybrid subset.
 
 - Violent crime (SRS): 09A, 11A, 11B, 11C, 120, 13A
 - Violent crime (NIBRS/Persons): 09A, 09B, 09C, 11A-11D, 13A-13C, 100, 36A, 36B, 64A, 64B
@@ -1218,7 +1223,7 @@ Example: "What NIBRS offense codes are there?" → SELECT code, offense_name, ca
 
 Only generate SELECT statements. Never INSERT, UPDATE, DELETE, DROP, etc.
 
-VAGUE SIZE-BASED REQUESTS: If the user says "largest cities", "biggest cities", or "top 10 cities by population" (ranked BY POPULATION with no crime metric), set sql to null and ask for clarification. However, if the user asks for "top 10 cities by murder rate", "cities with the highest robbery count", or any ranking BY A CRIME METRIC, this is a valid ranking query — run it immediately. Use summary tables with agency population JOIN, ORDER BY ... DESC LIMIT N, and filter to the primary PD per city (population > 0, ORDER BY pop_group LIMIT 1). For rate comparisons, always compute per-100K rates. Note that rankings cover NIBRS-reporting agencies only.
+VAGUE SIZE-BASED REQUESTS: If the user says "largest cities", "biggest cities", or "top 10 cities by population" (ranked BY POPULATION with no crime metric), set sql to null and ask for clarification. However, if the user asks for "top 10 cities by murder rate", "cities with the highest robbery count", "top 10 agencies for murders", or any ranking BY A CRIME METRIC, this is a valid ranking query — run it immediately. **Rank by the crime metric itself** (ORDER BY murders DESC LIMIT N), NOT by population. Do NOT pre-filter to the N largest agencies by population — that gives "crime in the biggest cities", not "cities with the most crime". For person crimes (murder, assault, rape, etc.), use summary_victim_city_monthly with an agencies JOIN (ON a.ori = s.ori AND a.year = s.year) to get city names. For property/society crimes, use summary_city_monthly with the same JOIN pattern. For clearance rate rankings specifically, use summary_clearance_city_annual (which already has city name and population pre-joined). For rate comparisons, always compute per-100K rates. Note that rankings cover NIBRS-reporting agencies only.
 
 DAILY QUERIES: The database does NOT support daily granularity efficiently. If a user asks for "per day", "daily", "by day", or any day-level breakdown, silently use monthly data instead. Do NOT attempt to query by day first — go straight to monthly. Note in your explanation that the data is shown monthly since daily breakdowns aren't available.
 
@@ -1300,7 +1305,7 @@ export async function translateToSql(
 
   const message = await client.messages.create({
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 1024,
+    max_tokens: 2048,
     system: [{ type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
     messages,
   });
@@ -1312,25 +1317,8 @@ export async function translateToSql(
   const text =
     message.content[0].type === "text" ? message.content[0].text : "";
 
-  // Strip markdown fences if present
-  const cleaned = text
-    .replace(/^```json\s*/i, "")
-    .replace(/^```\s*/i, "")
-    .replace(/\s*```$/i, "")
-    .trim();
-
-  let raw: unknown = null;
-  try {
-    raw = JSON.parse(cleaned);
-  } catch {
-    // Try extracting JSON from within the text
-    const braceMatch = cleaned.match(/\{[\s\S]*\}/);
-    if (braceMatch) {
-      try {
-        raw = JSON.parse(braceMatch[0]);
-      } catch { /* continue */ }
-    }
-  }
+  // Extract JSON — handles fences, multiple blocks, self-corrections.
+  const raw = extractJson(text);
 
   // Validate with zod schema
   if (raw && typeof raw === "object" && "sql" in (raw as Record<string, unknown>)) {
@@ -1349,10 +1337,10 @@ export async function translateToSql(
   }
 
   // If Claude returned plain text (e.g. a clarification question), show it
-  if (cleaned.length > 10 && !cleaned.startsWith("{")) {
+  if (text.length > 10 && !text.trimStart().startsWith("{")) {
     return {
       sql: null,
-      explanation: cleaned,
+      explanation: text,
       chartHint: "none",
       xAxis: "",
       yAxis: "",
