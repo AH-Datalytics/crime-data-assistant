@@ -466,6 +466,32 @@ const GUARDRAILS: Guardrail[] = [
       "[SYSTEM: Property crimes (theft, burglary, motor vehicle theft, fraud, vandalism, etc.) must use offense summary tables, NOT victim summary tables. Use summary_state_monthly or summary_city_monthly instead of summary_victim_state_monthly or summary_victim_city_monthly. Victim tables only contain person crimes and will return 0 rows for property offenses.]",
   },
   {
+    name: "nibrs-sex-filter-missing-table",
+    tabs: ["nibrs"],
+    match: (ctx) => {
+      const q = ctx.question.toLowerCase();
+      const sql = ctx.sql.toLowerCase();
+      // User asks about male/female/sex/gender
+      const wantsSex = /\b(male|female|men|women|sex|gender|by sex|by gender)\b/i.test(q);
+      if (!wantsSex) return false;
+      // SQL uses summary_victim_weapon_circumstance (no sex) instead of the _demo version (has sex)
+      const usesOldTable = sql.includes("summary_victim_weapon_circumstance") && !sql.includes("summary_victim_weapon_circumstance_demo");
+      if (usesOldTable) return true;
+      // Also catch other no-sex tables
+      const noSexTables = ["summary_victim_circumstance", "summary_offense_weapon", "summary_offense_location", "summary_offense_hour"];
+      const usesNoSexTable = noSexTables.some(t => sql.includes(t));
+      const hasSexFilter = /\bsex\b.*=|victim_sex/i.test(sql);
+      return usesNoSexTable && !hasSexFilter;
+    },
+    message: (ctx) => {
+      const sql = ctx.sql.toLowerCase();
+      if (sql.includes("summary_victim_weapon_circumstance") && !sql.includes("_demo")) {
+        return "[SYSTEM: The user asked for a sex/gender breakdown but you used summary_victim_weapon_circumstance which has NO sex column. Use summary_victim_weapon_circumstance_demo instead — it has the same columns PLUS sex, race, and age_group. Add a WHERE sex = 'F' or sex = 'M' filter, or GROUP BY sex for a breakdown.]";
+      }
+      return "[SYSTEM: The user asked for a male/female breakdown, but the table you chose has NO sex column. The query will return identical numbers regardless of which sex was requested. For weapon+circumstance+sex queries, use summary_victim_weapon_circumstance_demo. For other demographic queries, use summary_victim_demographics. Do NOT silently drop the sex filter.]";
+    },
+  },
+  {
     name: "nibrs-cross-level-join",
     tabs: ["nibrs"],
     match: (ctx) => {
@@ -753,13 +779,71 @@ const GUARDRAILS: Guardrail[] = [
       const sql = ctx.sql;
       const q = ctx.question.toLowerCase();
       // If using detailed columns when group columns should be used
+      // NOTE: relationship is EXCLUDED — relationship_group is broken (Girlfriend/Boyfriend = 'Known' not 'Family')
+      // The prompt instructs the model to ALWAYS use CASE WHEN on detailed relationship column
       const usesDetailWeapon = /\bi\.weapon\b/i.test(sql) && !/weapon_group/i.test(sql) && !/specific|detail|exact/i.test(q);
-      const usesDetailRelation = /\bi\.relationship\b/i.test(sql) && !/relationship_group/i.test(sql) && !/specific|detail|exact/i.test(q);
       const usesDetailCirc = /\bi\.circumstance\b/i.test(sql) && !/circumstance_group/i.test(sql) && !/specific|detail|exact/i.test(q);
-      return usesDetailWeapon || usesDetailRelation || usesDetailCirc;
+      return usesDetailWeapon || usesDetailCirc;
     },
     message: () =>
-      "[SYSTEM: Use the _group columns (weapon_group, relationship_group, circumstance_group) instead of the detailed columns. The detailed columns have hundreds of values and produce messy results. Only use the detailed columns if the user explicitly asks for specific/detailed breakdowns.]",
+      "[SYSTEM: Use the _group columns (weapon_group, circumstance_group) instead of the detailed columns. The detailed columns have hundreds of values and produce messy results. Only use the detailed columns if the user explicitly asks for specific/detailed breakdowns. NOTE: For relationship, ALWAYS use CASE WHEN on the detailed relationship column to build custom groups (Intimate Partner, Other Family, etc.) — do NOT use relationship_group.]",
+  },
+  {
+    name: "shr-relationship-group-used",
+    tabs: ["shr"],
+    match: (ctx) => {
+      // Catch any use of relationship_group and redirect to CASE WHEN on detailed relationship
+      return /relationship_group/i.test(ctx.sql);
+    },
+    message: () =>
+      "[SYSTEM: Do NOT use relationship_group — it misclassifies Girlfriend/Boyfriend as 'Known' instead of intimate partners. Use a CASE WHEN on the detailed relationship column instead: CASE WHEN i.relationship IN ('Wife','Husband','Common-Law Wife','Common-Law Husband','Girlfriend','Boyfriend','Ex-Wife','Ex-Husband','Homosexual Relationship') THEN 'Intimate Partner' WHEN i.relationship IN ('Mother','Father','Son','Daughter','Brother','Sister','In-Law','Stepfather','Stepmother','Stepson','Stepdaughter','Other Family') THEN 'Other Family' WHEN i.relationship IN ('Acquaintance','Friend','Neighbor','Other Known','Employer','Employee') THEN 'Other Known' WHEN i.relationship = 'Stranger' THEN 'Stranger' ELSE 'Unknown' END AS relationship_category. NOTE: The relationship column stores the VICTIM's role — include BOTH gendered forms (Wife AND Husband, Girlfriend AND Boyfriend, etc.) in the Intimate Partner group.]",
+  },
+  {
+    name: "nibrs-county-in-city-query",
+    tabs: ["nibrs"],
+    match: (ctx) => {
+      const sql = ctx.sql;
+      const q = ctx.question.toLowerCase();
+      // Detect city-level queries that join agencies but don't filter agency_type = 'City'
+      const joinAgencies = /\bagencies\b/i.test(sql) && /\bcity\b/i.test(sql);
+      const hasGroupBy = /GROUP\s+BY.*\bcity\b/i.test(sql);
+      const filtersAgencyType = /agency_type\s*=\s*'City'/i.test(sql);
+      const excludesCounty = filtersAgencyType ||
+                              /pop_group\s+NOT\s+LIKE\s+'[89]%'/i.test(sql) ||
+                              /pop_group\s+LIKE\s+'[1-7]%'/i.test(sql) ||
+                              /pop_group\s+LIKE\s+'1%'/i.test(sql);
+      const isCityQuery = /\bcit(y|ies)\b/i.test(q);
+      return joinAgencies && hasGroupBy && !excludesCounty && isCityQuery;
+    },
+    message: () =>
+      "[SYSTEM: County sheriff agencies share the same city name as city PDs in the agencies table (e.g., Harris County SO has city='HOUSTON'). Add: AND a.agency_type = 'City' to exclude county agencies from city rankings. Also add AND a.population > 0 to exclude sub-agencies.]",
+  },
+  {
+    name: "nibrs-ambiguous-city-no-state",
+    tabs: ["nibrs"],
+    match: (ctx) => {
+      const sql = ctx.sql;
+      // Detect city filter in agencies subquery without state filter
+      const cityMatch = sql.match(/city\s*=\s*'([A-Z][A-Z ]+)'/i);
+      if (!cityMatch) return false;
+      const city = cityMatch[1].toUpperCase();
+      const ambiguous = [
+        "SPRINGFIELD", "PORTLAND", "COLUMBIA", "JACKSON", "COLUMBUS",
+        "CLEVELAND", "RICHMOND", "MEMPHIS", "ARLINGTON", "ALBANY",
+        "FAYETTEVILLE", "KANSAS CITY", "GREENVILLE", "HAMILTON",
+        "JACKSONVILLE", "FRANKLIN", "CLINTON", "MARION", "CHESTER",
+        "BURLINGTON", "BRISTOL",
+      ];
+      if (!ambiguous.includes(city)) return false;
+      // Check if state is already filtered nearby
+      const hasState = /state\s*=\s*'[A-Z]{2}'/i.test(sql);
+      return !hasState;
+    },
+    message: (ctx) => {
+      const cityMatch = ctx.sql.match(/city\s*=\s*'([A-Z][A-Z ]+)'/i);
+      const city = cityMatch ? cityMatch[1] : "this city";
+      return `[SYSTEM: "${city}" exists in multiple states. You MUST set sql to null and ask the user which state they mean. Do NOT assume a state — different Richmonds, Springfields, etc. have very different crime data. Return: {"sql": null, "explanation": "Which ${city} did you mean? Please specify the state (e.g., ${city}, VA).", "chartHint": "none", "xAxis": "", "yAxis": "", "title": ""}]`;
+    },
   },
   {
     name: "shr-aggregate-in-where",
