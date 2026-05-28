@@ -139,7 +139,7 @@ One row per victim. JOINs to incidents on incident_id.
       SELECT year, month, SUM(cnt) OVER (ORDER BY year, month ROWS BETWEEN 11 PRECEDING AND CURRENT ROW) as rolling_12m FROM monthly
     )
     SELECT year, month, rolling_12m FROM rolling WHERE year >= 2018 AND (year < ${DATA_CUTOFF.year} OR (year = ${DATA_CUTOFF.year} AND month <= ${DATA_CUTOFF.month})) ORDER BY year, month
-    Multi-city rolling comparisons: use PARTITION BY city in the window, then pivot with CASE WHEN in the outer query.
+    Multi-city rolling comparisons (named cities): use PARTITION BY city in the window, then pivot with CASE WHEN in the outer query. For dynamic top-N, return long format per the ENTITY SELECTION RULE.
 15. **Chart types** — Use line for trends over time, bar for category comparisons, pie for proportions of a whole. For any query with year in the results, set xAxis to "year". For multi-series charts (e.g., multiple categories over time), set yAxis to the value columns (not year). For single-year queries like rankings, xAxis should be the category column, not year.
 16. **Month names** — When grouping by month, keep month as INTEGER for charting. The frontend handles formatting.
 17. **Aggregate filters** — NEVER use COUNT(), SUM(), or other aggregate functions in a WHERE clause. Use HAVING for filtering on aggregates. WHERE filters rows before grouping, HAVING filters after.

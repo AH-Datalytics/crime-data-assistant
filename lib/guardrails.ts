@@ -59,15 +59,20 @@ const GUARDRAILS: Guardrail[] = [
     tabs: ["current", "historical"],
     match: (ctx) => {
       const sql = ctx.sql;
+      const q = ctx.question.toLowerCase();
       // Catch GROUP BY agency or JOINed long-format with city/agency as a column value
       const isLongFormat = (
         /group by.*agency/i.test(sql) ||
         /as\s+city\b/i.test(sql) ||
         /\.agency\s*\|\|/i.test(sql)
       );
-      // Exempt dynamic top-N queries — they use CTE discovery with WHERE ori IN (SELECT ...)
+      // Exempt dynamic top-N queries — by SQL shape OR question intent
       const isDynamicTopN = /\bWHERE\b[\s\S]*?\bori\s+IN\s*\(\s*SELECT\b/i.test(sql) ||
-        /\bWITH\b[\s\S]*?\bORDER\s+BY\s+SUM\b/i.test(sql);
+        /\bWITH\b[\s\S]*?\bORDER\s+BY\s+(?:SUM|total|count)\b/i.test(sql) ||
+        /\btop\s+\d+/i.test(q) ||
+        /\btop\s+(cities|agencies|counties|states|departments)\b/i.test(q) ||
+        /\b(which|what)\s+(cities|agencies|counties|states|departments)\s+(had|have|had the|with the)\s+(most|highest|lowest|greatest|least)\b/i.test(q) ||
+        (/\b(highest|most|greatest|lowest|least)\b/i.test(q) && /\b(per month|by year|over time|trend|monthly|annual)\b/i.test(q));
       return (
         isLongFormat &&
         !isDynamicTopN &&
@@ -103,6 +108,7 @@ const GUARDRAILS: Guardrail[] = [
       // Normalize user text with common aliases before comparing
       const ALIASES: Record<string, string[]> = {
         "new york city": ["nyc", "new york", "nypd"],
+        "new york": ["nyc", "new york city", "nypd"],
         "los angeles": ["la", "lapd"],
         "washington": ["dc", "washington dc", "washington d.c."],
         "chicago": ["chi", "cpd"],
@@ -112,6 +118,8 @@ const GUARDRAILS: Guardrail[] = [
         "philadelphia": ["philly"],
         "new orleans": ["nola"],
         "st louis": ["stl", "saint louis", "st. louis"],
+        "saint louis": ["stl", "st louis", "st. louis"],
+        "st. louis": ["stl", "st louis", "saint louis"],
         "atlanta": ["atl"],
         "phoenix": ["phx"],
         "minneapolis": ["mpls"],
