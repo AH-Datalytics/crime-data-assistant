@@ -52,6 +52,20 @@ const tests = [
   { tab: "shr", q: "which 10 cities had the highest share of 2025 murders come via firearm (min 30 murders)", expect: { hasSQL: true, minRows: 5, noGuessedCities: true } },
   { tab: "shr", q: "North Carolina firearm homicides rolling over 12 months since 2018", expect: { hasSQL: true, minRows: 20 } },
   { tab: "shr", q: "csv of share of murders committed with a firearm and the total number of murders", expect: { hasSQL: true, minRows: 20 } },
+
+  // --- Structural regression tests ---
+  // Dynamic top-N over time: must use CTE discovery, no hardcoded CASE WHEN
+  { tab: "current", q: "Top 5 cities for motor vehicle theft per month", expect: { hasSQL: true, minRows: 20, noGuessedCities: true, hasDiscoveryCTE: true, label: "dynamic top-N over time" } },
+  { tab: "current", q: "Top cities with the most murders by year", expect: { hasSQL: true, minRows: 5, noGuessedCities: true, label: "dynamic top-N broad phrasing" } },
+  { tab: "historical", q: "which 5 cities had the highest murder rate in 2020 and show their trend since 2010", expect: { hasSQL: true, minRows: 5, noGuessedCities: true, label: "historical dynamic top-N" } },
+  // Named comparison: only user-named entities in CASE WHEN
+  { tab: "current", q: "Compare NYC and LA murders per month", expect: { hasSQL: true, minRows: 20, label: "named comparison NYC/LA" } },
+  // Small/obscure city: must query, not refuse
+  { tab: "historical", q: "Brighton, AL crime per year since 2010", expect: { hasSQL: true, minRows: 3, label: "small city must not refuse" } },
+  // Rate query: must include population
+  { tab: "current", q: "murder rate per 100K in Houston vs Dallas", expect: { hasSQL: true, minRows: 1, hasPopulation: true, label: "rate must join population" } },
+  // City query: must exclude counties
+  { tab: "current", q: "top 10 cities by robbery in 2024", expect: { hasSQL: true, minRows: 5, hasTypeFilter: true, noGuessedCities: true, label: "city query must filter type" } },
 ];
 
 async function queryAPI(tab, question) {
@@ -180,6 +194,22 @@ async function run() {
       const guessed = checkGuessedCities(result.sql, t.q);
       if (guessed.length > 0) {
         issues.push(`GUESSED city names in CASE WHEN: ${guessed.join(", ")}`);
+      }
+    }
+    if (t.expect.hasDiscoveryCTE && result.sql) {
+      const hasSubquery = /\bori\s+IN\s*\(\s*SELECT\b/i.test(result.sql) || /\bWITH\b[\s\S]*?\bORDER\s+BY\s+SUM\b/i.test(result.sql);
+      if (!hasSubquery) {
+        issues.push(`Missing discovery CTE/subquery for dynamic top-N`);
+      }
+    }
+    if (t.expect.hasPopulation && result.sql) {
+      if (!/population/i.test(result.sql)) {
+        issues.push(`Rate query missing population JOIN`);
+      }
+    }
+    if (t.expect.hasTypeFilter && result.sql) {
+      if (!/type\s*=\s*'City'/i.test(result.sql) && !/type\s*=\s*'city'/i.test(result.sql)) {
+        issues.push(`City ranking missing type = 'City' filter`);
       }
     }
     if (result.error && !result.sql) {

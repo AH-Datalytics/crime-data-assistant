@@ -65,8 +65,12 @@ const GUARDRAILS: Guardrail[] = [
         /as\s+city\b/i.test(sql) ||
         /\.agency\s*\|\|/i.test(sql)
       );
+      // Exempt dynamic top-N queries — they use CTE discovery with WHERE ori IN (SELECT ...)
+      const isDynamicTopN = /\bWHERE\b[\s\S]*?\bori\s+IN\s*\(\s*SELECT\b/i.test(sql) ||
+        /\bWITH\b[\s\S]*?\bORDER\s+BY\s+SUM\b/i.test(sql);
       return (
         isLongFormat &&
+        !isDynamicTopN &&
         !/case\s+when/i.test(sql) &&
         /\byear\b/i.test(sql) && /\bmonth\b/i.test(sql) &&
         /LIMIT\s+(\d+)/i.test(sql) && parseInt(sql.match(/LIMIT\s+(\d+)/i)?.[1] || "0") > 500
@@ -82,8 +86,12 @@ const GUARDRAILS: Guardrail[] = [
     match: (ctx) => {
       const sql = ctx.sql;
       const q = ctx.question.toLowerCase();
-      // Only fire if user asked for "top N" pattern
-      if (!/\btop\s+\d+/i.test(q)) return false;
+      // Fire if user asked for dynamic discovery: "top N", "highest", "most", "which cities had the most", etc.
+      const isDynamicRequest = /\btop\s+\d+/i.test(q) ||
+        /\btop\s+(cities|agencies|counties|states|departments)\b/i.test(q) ||
+        /\b(which|what)\s+(cities|agencies|counties|states|departments)\s+(had|have|had the|with the)\s+(most|highest|lowest|greatest|least)\b/i.test(q) ||
+        (/\b(highest|most|greatest|lowest|least)\b/i.test(q) && /\b(per month|by year|over time|trend|monthly|annual)\b/i.test(q));
+      if (!isDynamicRequest) return false;
       // Check if SQL has CASE WHEN with hardcoded city/agency names
       const caseNames: string[] = [];
       const caseRe = /CASE\s+WHEN\s+[^)]*(?:agency|city)\s*=\s*'([^']+)'/gi;
@@ -92,9 +100,33 @@ const GUARDRAILS: Guardrail[] = [
         caseNames.push(m[1].toLowerCase());
       }
       if (caseNames.length === 0) return false;
-      // Check if those names appear in the user's question
-      const qWords = q.replace(/[^a-z\s]/g, " ");
-      const guessed = caseNames.filter(name => !qWords.includes(name.toLowerCase()));
+      // Normalize user text with common aliases before comparing
+      const ALIASES: Record<string, string[]> = {
+        "new york city": ["nyc", "new york", "nypd"],
+        "los angeles": ["la", "lapd"],
+        "washington": ["dc", "washington dc", "washington d.c."],
+        "chicago": ["chi", "cpd"],
+        "houston": ["hpd"],
+        "dallas": ["dpd"],
+        "baltimore": ["bmore", "bpd"],
+        "philadelphia": ["philly"],
+        "new orleans": ["nola"],
+        "st louis": ["stl", "saint louis", "st. louis"],
+        "atlanta": ["atl"],
+        "phoenix": ["phx"],
+        "minneapolis": ["mpls"],
+        "detroit": ["detroit pd"],
+        "memphis": ["mpd"],
+        "nashville": ["mnpd"],
+        "indianapolis": ["indy"],
+      };
+      const qNorm = q.replace(/[^a-z\s]/g, " ");
+      const guessed = caseNames.filter(name => {
+        if (qNorm.includes(name)) return false;
+        // Check if user used an alias for this canonical name
+        const aliases = ALIASES[name] || [];
+        return !aliases.some(alias => qNorm.includes(alias));
+      });
       return guessed.length > 0;
     },
     message: (ctx) => {
@@ -104,7 +136,7 @@ const GUARDRAILS: Guardrail[] = [
       while ((m = caseRe.exec(ctx.sql)) !== null) {
         caseNames.push(m[1]);
       }
-      return `[SYSTEM: You hardcoded city names (${caseNames.join(", ")}) in CASE WHEN branches, but the user asked for "top N" — you cannot know which cities will be in the top N. Use long format instead: SELECT year, month, city_label, count with a CTE that discovers the top cities, and let the frontend auto-pivot. Do NOT guess city names.]`;
+      return `[SYSTEM: You hardcoded city names (${caseNames.join(", ")}) in CASE WHEN branches, but the user asked for a dynamic discovery query — you cannot know which cities will qualify. Use long format instead: return the requested time columns, an entity label, and the metric value, with a CTE that discovers the top entities. Let the frontend auto-pivot. Do NOT guess city names.]`;
     },
   },
   {

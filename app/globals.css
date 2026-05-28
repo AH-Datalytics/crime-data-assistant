@@ -131,6 +131,27 @@ h1, h2, h3, h4, h5, h6 {
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
 
+/* Mobile rail slide-in */
+@keyframes slideInLeft {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+.animate-slide-in-left { animation: slideInLeft 0.2s ease-out; }
+
+/* Scroll gradient hints for horizontal pill containers */
+.scroll-gradient {
+  position: relative;
+}
+.scroll-gradient::after {
+  content: "";
+  position: absolute;
+  top: 0; right: 0; bottom: 0;
+  width: 36px;
+  background: linear-gradient(to right, transparent, var(--bg-gradient-end, #fff));
+  pointer-events: none;
+  z-index: 2;
+}
+
 /* Workspace layout: Crime Index table style */
 .workspace-table .stat-table { font-size: 14px; border-collapse: collapse; }
 .workspace-table .stat-table th {

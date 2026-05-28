@@ -622,7 +622,57 @@ export async function POST(req: NextRequest) {
                   s.agency.toLowerCase() === agencyName.toLowerCase()
               );
               if (exactMatch) {
-                emptyMsg = `${exactMatch.agency}, ${exactMatch.state.toUpperCase()} is in our dataset, but no data was found for that specific query. The agency may not report this offense, or the date range may not have data. Try a different offense or broader date range.`;
+                // Query which offenses this agency actually reports
+                try {
+                  let offenseList = "";
+                  if (isHistorical) {
+                    // Historical uses separate columns per offense in historical_agency_crime
+                    const row = db
+                      .prepare(
+                        `SELECT
+                           MAX(CASE WHEN murder > 0 THEN 1 ELSE 0 END) as has_murder,
+                           MAX(CASE WHEN rape > 0 THEN 1 ELSE 0 END) as has_rape,
+                           MAX(CASE WHEN robbery > 0 THEN 1 ELSE 0 END) as has_robbery,
+                           MAX(CASE WHEN assault > 0 THEN 1 ELSE 0 END) as has_assault,
+                           MAX(CASE WHEN burglary > 0 THEN 1 ELSE 0 END) as has_burglary,
+                           MAX(CASE WHEN theft > 0 THEN 1 ELSE 0 END) as has_theft,
+                           MAX(CASE WHEN motor_vehicle_theft > 0 THEN 1 ELSE 0 END) as has_mvt
+                         FROM historical_agency_crime hac
+                         JOIN historical_agency ha ON ha.ori = hac.ori
+                         WHERE ha.agency = ? AND ha.state = ?`
+                      )
+                      .get(exactMatch.agency, exactMatch.state.toLowerCase()) as Record<string, number> | undefined;
+                    if (row) {
+                      const names: string[] = [];
+                      if (row.has_murder) names.push("Murder");
+                      if (row.has_rape) names.push("Rape");
+                      if (row.has_robbery) names.push("Robbery");
+                      if (row.has_assault) names.push("Aggravated Assault");
+                      if (row.has_burglary) names.push("Burglary");
+                      if (row.has_theft) names.push("Theft");
+                      if (row.has_mvt) names.push("Motor Vehicle Theft");
+                      if (names.length > 0) offenseList = names.join(", ");
+                    }
+                  } else {
+                    const availableOffenses = db
+                      .prepare(
+                        `SELECT DISTINCT offense FROM agency_monthly
+                         WHERE agency = ? AND state = ? AND count > 0
+                         ORDER BY offense`
+                      )
+                      .all(exactMatch.agency, exactMatch.state) as { offense: string }[];
+                    if (availableOffenses.length > 0) {
+                      offenseList = availableOffenses.map((o) => o.offense).join(", ");
+                    }
+                  }
+                  if (offenseList) {
+                    emptyMsg = `${exactMatch.agency}, ${exactMatch.state.toUpperCase()} is in our dataset, but no data was found for that specific query. This agency reports the following offenses: ${offenseList}. Try one of those instead, or adjust the date range.`;
+                  } else {
+                    emptyMsg = `${exactMatch.agency}, ${exactMatch.state.toUpperCase()} is in our dataset, but no data was found for that specific query. The agency may not report this offense, or the date range may not have data. Try a different offense or broader date range.`;
+                  }
+                } catch {
+                  emptyMsg = `${exactMatch.agency}, ${exactMatch.state.toUpperCase()} is in our dataset, but no data was found for that specific query. The agency may not report this offense, or the date range may not have data. Try a different offense or broader date range.`;
+                }
               } else {
                 const suggestions = similar
                   .map((s) => `${s.agency}, ${s.state.toUpperCase()}`)
@@ -660,12 +710,13 @@ export async function POST(req: NextRequest) {
         // Step 4b: Auto-pivot long-format multi-agency data for charting
         // Detects rows like (year, [month,] agency, total) and pivots to (year, [month,] city1, city2, ...)
         const agencyCol = columns.find(
-          (c) => c === "agency" || c === "agency_name"
+          (c) => c === "agency" || c === "agency_name" || c === "city"
         );
         const valueCol = columns.find(
           (c) =>
             c !== "agency" &&
             c !== "agency_name" &&
+            c !== "city" &&
             c !== "year" &&
             c !== "month" &&
             typeof rows[0]?.[c] === "number"
@@ -674,7 +725,11 @@ export async function POST(req: NextRequest) {
 
         // Skip auto-pivot for ranking queries (ORDER BY ... DESC LIMIT)
         // Those are intentionally long-format listings, not comparisons
-        const isRankingQuery = /ORDER\s+BY\s+\S+\s+DESC[\s\S]*?LIMIT/i.test(sql);
+        // Only check the LAST ORDER BY to avoid matching inside CTEs/subqueries
+        const lastOrderBy = sql.lastIndexOf("ORDER BY") !== -1
+          ? sql.slice(sql.lastIndexOf("ORDER BY"))
+          : "";
+        const isRankingQuery = /ORDER\s+BY\s+\S+\s+DESC[\s\S]*?LIMIT/i.test(lastOrderBy);
 
         if (agencyCol && valueCol && hasYear && rows.length > 1 && !isRankingQuery) {
           const agencies = [

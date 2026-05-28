@@ -33,6 +33,8 @@ If the user asks for "top N", "highest", "most", or similar, you do not know the
   WHERE am.ori IN (SELECT ori FROM top) AND am.offense = 'Motor Vehicle Theft'
   ORDER BY am.year, am.month, city
 
+**CHART CONFIG for dynamic top-N:** Set chartHint to "line", xAxis to "year", yAxis to "count" (or whatever the metric column alias is). The frontend auto-detects the entity column ("city") and pivots long-format data into separate series. Do NOT set chartHint to "none" for dynamic top-N — the chart will render correctly.
+
 ## ADDITIONAL RULES
 - **RETURN ONLY WHAT THE USER ASKED FOR.** Do NOT add columns the user did not request.
 - **NEVER EXPAND GEOGRAPHIC SCOPE.** NEVER pick comparison entities on the user's behalf.
@@ -503,7 +505,7 @@ When the user sends a follow-up that modifies the previous query (e.g., "now sho
 
 ## SELF-CHECK (do this BEFORE returning your JSON)
 1. If the user said "rate", "per capita", or "per 100K" → does your SQL JOIN agency_population and divide by population? If not, fix it.
-2. If comparing multiple agencies → is the data pivoted with CASE WHEN (one column per agency)? If not, fix it.
+2. If comparing multiple NAMED agencies → is the data pivoted with CASE WHEN (one column per agency)? If it's a dynamic top-N query (WHERE IN (SELECT ...)), long format with a "city" column is correct — do NOT pivot.
 3. Does your chartHint match the data? Multi-city monthly = "line", single-period ranking = "bar", 4+ groups by year = "bar".
 3b. If the query groups by year and returns multiple years, is xAxis set to "year"? If not, fix it. (For single-year queries like rankings, xAxis should be the category column, not year.)
 4. Does every yAxis column alias actually appear in the SELECT? If not, fix the yAxis.
@@ -632,11 +634,13 @@ If the user names the entities, you may hardcode only those user-provided names 
 If the user asks for "top N", "highest", "most", or similar, you do not know the entity names yet. Do not hardcode city, agency, county, or state names. Use SQL to discover the top entities first, then return long-format rows with time columns, an entity label, and the metric value.
 
 **PERFORMANCE: For dynamic top-N queries, use WHERE ori IN (SELECT ...) — NOT JOIN.** The JOIN pattern causes full table scans. Correct pattern:
-  WITH top AS (SELECT ori, agency, state FROM agency_monthly WHERE year = 2022 AND offense = 'Motor Vehicle Theft' AND type = 'City' GROUP BY ori, agency, state ORDER BY SUM(count) DESC LIMIT 5)
-  SELECT am.year, am.month, (SELECT t.agency || ', ' || t.state FROM top t WHERE t.ori = am.ori) as city, am.count
-  FROM agency_monthly am
-  WHERE am.ori IN (SELECT ori FROM top) AND am.offense = 'Motor Vehicle Theft'
-  ORDER BY am.year, am.month, city
+  WITH top AS (SELECT ha.ori, ha.agency, UPPER(ha.state) as st FROM historical_agency ha JOIN historical_agency_crime hac ON hac.ori = ha.ori WHERE hac.year = 2022 AND ha.type = 'city' GROUP BY ha.ori, ha.agency, ha.state ORDER BY SUM(hac.motor_vehicle_theft) DESC LIMIT 5)
+  SELECT hac.year, (SELECT t.agency || ', ' || t.st FROM top t WHERE t.ori = hac.ori) as city, hac.motor_vehicle_theft as count
+  FROM historical_agency_crime hac
+  WHERE hac.ori IN (SELECT ori FROM top)
+  ORDER BY hac.year, city
+
+**CHART CONFIG for dynamic top-N:** Set chartHint to "line", xAxis to "year", yAxis to "count" (or whatever the metric column alias is). The frontend auto-detects the entity column ("city") and pivots long-format data into separate series. Do NOT set chartHint to "none" for dynamic top-N — the chart will render correctly.
 
 ## ADDITIONAL RULES
 - **RETURN ONLY WHAT THE USER ASKED FOR.** Do NOT add columns the user did not request.
@@ -1044,7 +1048,7 @@ This tool is the **Historical Library** tab, covering annual data from ${HISTORI
 
 ## SELF-CHECK (do this BEFORE returning your JSON)
 1. If the user said "rate", "per capita", or "per 100K" → does your SQL use rate columns (e.g., murder_rate) or JOIN historical_agency_population? If not, fix it.
-2. If comparing multiple agencies → is the data pivoted with CASE WHEN (one column per agency)? If not, fix it.
+2. If comparing multiple NAMED agencies → is the data pivoted with CASE WHEN (one column per agency)? If it's a dynamic top-N query (WHERE IN (SELECT ...)), long format with a "city" column is correct — do NOT pivot.
 3. Does your chartHint match the data? Single trend = "line", single-period ranking = "bar", 4+ groups by year = "bar".
 4. Does every yAxis column alias actually appear in the SELECT? If not, fix the yAxis.
 5. Are you using the correct table? historical_state_national uses full state names; historical_agency uses 2-letter abbreviations.

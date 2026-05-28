@@ -165,6 +165,7 @@ export default function WorkspaceChat({ heroData, heroAgencyCount, heroPopulatio
   const [activeExchangeIdx, setActiveExchangeIdx] = useState<number>(-1);
   const [expandedRailIdx, setExpandedRailIdx] = useState<number>(-1);
   const [animateIdx, setAnimateIdx] = useState<number>(-1);
+  const [showMobileRail, setShowMobileRail] = useState(false);
 
   // Exchanges live in memory only — reset on page refresh or tab switch
 
@@ -399,13 +400,25 @@ export default function WorkspaceChat({ heroData, heroAgencyCount, heroPopulatio
       <header className="bg-white border-b border-[var(--border)] shrink-0">
         {/* Top row: title + tab pills (desktop) */}
         <div className="px-3 sm:px-4 md:px-6 flex items-center justify-between relative" style={{ height: 52 }}>
-          <div className="flex items-center shrink-0">
+          <div className="flex items-center shrink-0 gap-2">
             <button
               onClick={() => setActiveTab(null)}
               className="flex items-center shrink-0 cursor-pointer hover:opacity-70 transition-opacity"
             >
               <HomeIcon size={22} />
             </button>
+            {/* Mobile history toggle — only shown when there are exchanges */}
+            {exchanges.length > 0 && activeTab !== null && (
+              <button
+                onClick={() => setShowMobileRail(true)}
+                className="md:hidden flex items-center cursor-pointer hover:opacity-70 transition-opacity"
+                aria-label="Show conversation history"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--muted)]">
+                  <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
+                </svg>
+              </button>
+            )}
           </div>
           <button
             onClick={() => setActiveTab(null)}
@@ -464,6 +477,71 @@ export default function WorkspaceChat({ heroData, heroAgencyCount, heroPopulatio
           ))}
         </div>
       </header>
+
+      {/* Mobile slide-out rail overlay */}
+      {showMobileRail && (
+        <div className="md:hidden fixed inset-0 z-50 flex">
+          <div
+            className="absolute inset-0 bg-black/30"
+            onClick={() => setShowMobileRail(false)}
+          />
+          <div className="relative w-[280px] max-w-[80vw] bg-white flex flex-col shadow-xl animate-slide-in-left">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)]">
+              <span className="text-[12px] font-semibold uppercase tracking-wider text-[var(--muted)]" style={{ letterSpacing: "1px" }}>History</span>
+              <button
+                onClick={() => setShowMobileRail(false)}
+                className="text-[var(--muted)] hover:text-[var(--foreground)] cursor-pointer p-1"
+                aria-label="Close history"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-3 space-y-2">
+              {exchanges.map((ex, i) => {
+                const isActive = i === activeExchangeIdx;
+                return (
+                  <button
+                    key={i}
+                    onClick={() => { selectExchange(i); setShowMobileRail(false); }}
+                    className={`w-full text-left rounded-md px-3 py-2.5 transition-all cursor-pointer ${
+                      isActive
+                        ? "bg-[color-mix(in_srgb,var(--accent)_8%,white)] border-l-[3px]"
+                        : "opacity-60 hover:opacity-80"
+                    }`}
+                    style={isActive ? { borderLeftColor: accentColor } : undefined}
+                  >
+                    <div className={`text-[12px] leading-snug ${isActive ? "font-bold text-[var(--navy)]" : "font-semibold text-[var(--foreground-strong)]"}`}>
+                      {ex.question}
+                    </div>
+                    <div className="text-[11px] text-[var(--muted)] leading-relaxed line-clamp-2 mt-0.5">
+                      {ex.summary}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+            {exchanges.length > 0 && (
+              <div className="p-3 border-t border-[var(--border)]">
+                <button
+                  onClick={() => {
+                    setExchanges([]);
+                    setActiveExchangeIdx(-1);
+                    setExpandedRailIdx(-1);
+                    setResponse(null);
+                    setExplanation("");
+                    setError("");
+                    try { localStorage.removeItem(`cda-ws-history-${activeTab}`); } catch {}
+                    setShowMobileRail(false);
+                  }}
+                  className="w-full text-[11px] text-[var(--muted)] hover:text-red-600 py-2 cursor-pointer transition-colors"
+                >
+                  Clear history
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Main body: conversation rail + result stage */}
       <div className={`flex-1 flex min-h-0 ${activeTab === null ? "hidden" : ""}`}>
@@ -682,35 +760,39 @@ export default function WorkspaceChat({ heroData, heroAgencyCount, heroPopulatio
             )}
             {/* Mobile: sample questions or history pills */}
             {exchanges.length === 0 && !loading && (
-              <div className="px-3 pb-2 flex flex-nowrap gap-1.5 overflow-x-auto scrollbar-hide">
-                <span className="text-[10px] uppercase tracking-wider text-[var(--muted)] shrink-0 self-center mr-0.5">Try:</span>
-                {(SAMPLE_QUESTIONS[activeTab || "current"] || SAMPLE_QUESTIONS.current).slice(0, 2).map((q) => (
-                  <button
-                    key={q}
-                    onClick={() => submitQuestion(q)}
-                    className="text-[10px] px-2 py-1 rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--muted)] hover:text-[var(--foreground)] cursor-pointer transition-colors shrink-0 truncate max-w-[200px]"
-                  >
-                    {q}
-                  </button>
-                ))}
+              <div className="scroll-gradient px-3 pb-2" style={{ "--bg-gradient-end": "#fff" } as React.CSSProperties}>
+                <div className="flex flex-nowrap gap-1.5 overflow-x-auto scrollbar-hide pr-6">
+                  <span className="text-[10px] uppercase tracking-wider text-[var(--muted)] shrink-0 self-center mr-0.5">Try:</span>
+                  {(SAMPLE_QUESTIONS[activeTab || "current"] || SAMPLE_QUESTIONS.current).map((q) => (
+                    <button
+                      key={q}
+                      onClick={() => submitQuestion(q)}
+                      className="text-[10px] px-2 py-1 rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--muted)] hover:text-[var(--foreground)] cursor-pointer transition-colors shrink-0 truncate max-w-[200px]"
+                    >
+                      {q}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
             {exchanges.length > 0 && (
-              <div className="px-3 pb-2 flex flex-nowrap gap-1.5 overflow-x-auto scrollbar-hide">
-                {exchanges.map((ex, i) => (
-                  <button
-                    key={i}
-                    onClick={() => selectExchange(i)}
-                    className={`text-[10px] px-2 py-1 rounded-md shrink-0 truncate max-w-[180px] cursor-pointer transition-colors ${
-                      i === activeExchangeIdx
-                        ? "font-semibold text-white"
-                        : "bg-[var(--surface)] border border-[var(--border)] text-[var(--muted)]"
-                    }`}
-                    style={i === activeExchangeIdx ? { backgroundColor: accentColor } : undefined}
-                  >
-                    {ex.question}
-                  </button>
-                ))}
+              <div className="scroll-gradient px-3 pb-2" style={{ "--bg-gradient-end": "#fff" } as React.CSSProperties}>
+                <div className="flex flex-nowrap gap-1.5 overflow-x-auto scrollbar-hide pr-6">
+                  {exchanges.map((ex, i) => (
+                    <button
+                      key={i}
+                      onClick={() => selectExchange(i)}
+                      className={`text-[10px] px-2 py-1 rounded-md shrink-0 truncate max-w-[180px] cursor-pointer transition-colors ${
+                        i === activeExchangeIdx
+                          ? "font-semibold text-white"
+                          : "bg-[var(--surface)] border border-[var(--border)] text-[var(--muted)]"
+                      }`}
+                      style={i === activeExchangeIdx ? { backgroundColor: accentColor } : undefined}
+                    >
+                      {ex.question}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
           </div>
