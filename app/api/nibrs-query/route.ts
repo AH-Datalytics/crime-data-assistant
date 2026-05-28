@@ -99,12 +99,19 @@ export async function POST(req: NextRequest) {
       if (!claude.sql) {
         // Retry if model incorrectly claims data isn't available
         const refusalPatterns = /not (appear|be represented)|doesn't appear|not (in|included in) (this|the|our) (dataset|data|sample|library)|no data (for|available|found)|does not (have|include|cover)|not available in this|isn't (in|included)|not found in/i;
-        if (refusalPatterns.test(claude.explanation || "")) {
+        // Retry if model asks for year range instead of defaulting
+        const yearAskPattern = /\b(time (range|period)|year range|which year|what year|how many year|specify.*year|interested in)\b/i;
+        const retryPrompt = refusalPatterns.test(claude.explanation || "")
+          ? "[SYSTEM: Your previous response claimed the data was not available, but this may be incorrect. NEVER assume an agency is missing. Always generate a SQL query and let the database answer. Try the query now.]"
+          : yearAskPattern.test(claude.explanation || "")
+          ? `[SYSTEM: The user did not specify a year range. NIBRS policy is to default to the last 5 years, not ask for clarification. Generate SQL using year BETWEEN ${new Date().getFullYear() - 4} AND ${new Date().getFullYear()}. Do not ask which years — just run the query.]`
+          : null;
+        if (retryPrompt) {
           try {
             const retryResult = await translateToSql(question, [
               ...(history || []),
               { role: "assistant", content: claude.explanation },
-              { role: "user", content: "[SYSTEM: Your previous response claimed the data was not available, but this may be incorrect. NEVER assume an agency is missing. Always generate a SQL query and let the database answer. Try the query now.]" },
+              { role: "user", content: retryPrompt },
             ]);
             if (retryResult.sql) {
               Object.assign(claude, retryResult);
