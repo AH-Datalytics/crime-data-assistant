@@ -26,25 +26,30 @@ const MONTH_NAMES = [
 ];
 
 const NYT_COLORS = [
-  "#c23b22",   // brick red — strong lead color
-  "#2a6496",   // deep steel blue
-  "#3a7d44",   // forest green
-  "#d4882c",   // amber
-  "#7b5ea7",   // muted purple
-  "#5a8a8a",   // teal
-  "#b85842",   // terracotta
-  "#4a6fa5",   // slate blue
+  "#2d5f8a",   // steel blue
+  "#c4652a",   // copper
+  "#2a8a5a",   // forest green
+  "#8040a0",   // purple
+  "#b8960a",   // gold
+  "#c43838",   // crimson
+  "#1a8a8a",   // teal
+  "#6050b0",   // indigo
 ];
 
 const TICK_STYLE = {
-  fontSize: 11,
-  fill: "#8c8c8c",
-  fontFamily: "Georgia, 'Times New Roman', serif",
+  fontSize: 13,
+  fill: "#1e2a35",
+  fontFamily: "'DM Sans', 'Segoe UI', Arial, sans-serif",
 };
 
-const GRID_COLOR = "#e8e4df";
+const GRID_COLOR = "#ddd8ce";
 
 function properCase(s: string): string {
+  // Handle rolling_12m, rolling_12, rolling_12_month etc. → "Rolling 12-Month"
+  if (/^rolling_\d+m?$/i.test(s) || /^rolling_\d+_month$/i.test(s)) {
+    const n = s.match(/\d+/)?.[0] || "12";
+    return `Rolling ${n}-Month`;
+  }
   const cleaned = s
     .replace(/^rolling_\d+_?/i, "")
     .replace(/_rate_per_\d+k?/i, "")
@@ -176,6 +181,38 @@ function isPlainYears(data: Record<string, unknown>[], xKey: string): boolean {
   return sample.length > 0 && sample.every((d) => /^\d{4}$/.test(String(d[xKey] ?? "")));
 }
 
+function detectAndPivot(
+  data: Record<string, unknown>[],
+  xKey: string,
+  yKeys: string[]
+): { data: Record<string, unknown>[]; effectiveYKeys: string[] } {
+  if (yKeys.length !== 1 || data.length === 0) return { data, effectiveYKeys: yKeys };
+  const allKeys = Object.keys(data[0]).filter((k) => k !== "_ym" && k !== xKey);
+  const valueKey = yKeys[0];
+  const otherKeys = allKeys.filter((k) => k !== valueKey);
+  if (otherKeys.length < 1) return { data, effectiveYKeys: yKeys };
+  // Find the best categorical (string) column among the others
+  // Prefer columns with 2-8 distinct string values
+  let categoryKey: string | null = null;
+  for (const key of otherKeys) {
+    if (data.some((d) => typeof d[key] === "number")) continue;
+    const vals = [...new Set(data.map((d) => String(d[key] ?? "")))];
+    if (vals.length >= 2 && vals.length <= 8) { categoryKey = key; break; }
+  }
+  if (!categoryKey) return { data, effectiveYKeys: yKeys };
+  const xVals = data.map((d) => d[xKey]);
+  if (new Set(xVals).size === xVals.length) return { data, effectiveYKeys: yKeys };
+  const categories = [...new Set(data.map((d) => String(d[categoryKey!] ?? "")))];
+  const pivotMap = new Map<unknown, Record<string, unknown>>();
+  for (const row of data) {
+    const x = row[xKey];
+    if (!pivotMap.has(x)) pivotMap.set(x, { [xKey]: x });
+    const cat = String(row[categoryKey!] ?? "");
+    (pivotMap.get(x) as Record<string, unknown>)[cat] = row[valueKey];
+  }
+  return { data: [...pivotMap.values()], effectiveYKeys: categories };
+}
+
 function formatPopulation(pop: number): string {
   if (pop >= 1_000_000) return `${(pop / 1_000_000).toFixed(1)}M`;
   if (pop >= 1_000) return `${(pop / 1_000).toFixed(0)}K`;
@@ -211,14 +248,17 @@ function ChartPanel({ config, rows, meta }: ChartPanelProps) {
     const ym = hasYearMonth || isYearMonth(data, config.xAxis);
     const daily = !ym && isDate(data, config.xAxis);
 
+    // Auto-pivot long-format data (e.g. year × category → grouped series)
+    const { data: chartData, effectiveYKeys } = detectAndPivot(data, xKey, config.yAxis);
+
     const dataYears = new Set(
-      data.map((d) => String(d[daily ? config.xAxis : xKey] ?? "").slice(0, 4))
+      chartData.map((d) => String(d[daily ? config.xAxis : xKey] ?? "").slice(0, 4))
     );
     const singleYear = dataYears.size === 1;
-    const singleYearMonthly = ym && data.length > 0 && singleYear;
+    const singleYearMonthly = ym && chartData.length > 0 && singleYear;
 
-    const multiSeries = config.yAxis.length > 1;
-    const dataLen = data.length;
+    const multiSeries = effectiveYKeys.length > 1;
+    const dataLen = chartData.length;
 
     // Detect employees-only years (staffing data where officer breakdown unavailable)
     const employeesYears = data
@@ -230,21 +270,23 @@ function ChartPanel({ config, rows, meta }: ChartPanelProps) {
     const xAxisDataKey = daily ? config.xAxis : ym ? xKey : config.xAxis;
 
     // Detect plain-year x-axis (historical queries)
-    const plainYears = !ym && !daily && isPlainYears(data, xAxisDataKey);
-    const yearTicks = plainYears ? decadeTicksForYears(data, xAxisDataKey) : [];
+    const plainYears = !ym && !daily && isPlainYears(chartData, xAxisDataKey);
+    const yearTicks = plainYears ? decadeTicksForYears(chartData, xAxisDataKey) : [];
 
     // Compute explicit tick positions for even spacing
     const fewYearsMonthly = ym && !singleYearMonthly && dataYears.size <= 2;
-    const ymTicks = ym && !singleYearMonthly ? yearTicksForYM(data, xKey) : [];
-    const dailyTicks = daily ? monthTicksForDaily(data, config.xAxis) : [];
+    const ymTicks = ym && !singleYearMonthly ? yearTicksForYM(chartData, xKey) : [];
+    const dailyTicks = daily ? monthTicksForDaily(chartData, config.xAxis) : [];
     const dailySingleYear = daily && new Set(dailyTicks.map(t => t.slice(0, 4))).size <= 1;
 
     // Detect clearance/percentage y-axis columns (NOT per-100K rates)
-    // Only column names with clearance/_clr/_pct/percent trigger % formatting.
+    // Column names with clearance/_clr/_pct/percent/share trigger % formatting.
+    // Also check the chart title for "percent", "share", or "%" hints.
     // _rate columns are NOT treated as percentages — they are per-100K rates.
-    const isPercent = config.yAxis.some((y) =>
-      /clearance|_clr|_pct|percent/i.test(y)
-    ) && config.yAxis.every((y) =>
+    const titleHintPercent = /percent|share|%/i.test(config.title || "");
+    const isPercent = (effectiveYKeys.some((y) =>
+      /clearance|_clr|_pct|percent|share/i.test(y)
+    ) || titleHintPercent) && effectiveYKeys.every((y) =>
       !/count|total|population|pop/i.test(y)
     );
     const yTickFormatter = isPercent
@@ -256,12 +298,12 @@ function ChartPanel({ config, rows, meta }: ChartPanelProps) {
 
     const tooltipContentStyle = {
       borderRadius: 4,
-      border: "1px solid #eee",
-      borderLeft: `3px solid ${colors[0]}`,
+      border: "none",
       fontSize: 12,
-      fontFamily: "'Hanken Grotesk', Helvetica, sans-serif",
-      boxShadow: "0 4px 16px rgba(0,0,0,0.1)",
-      background: "rgba(255,255,255,0.98)",
+      fontFamily: "'DM Sans', 'Segoe UI', Arial, sans-serif",
+      boxShadow: "0 4px 16px rgba(0,0,0,0.15)",
+      background: "#1e3a5f",
+      color: "#ffffff",
       padding: "8px 12px",
       lineHeight: "1.5",
     };
@@ -273,11 +315,27 @@ function ChartPanel({ config, rows, meta }: ChartPanelProps) {
           : String(label ?? "");
 
     return (
-      <div className="bg-white h-full flex flex-col">
+      <div className="h-full flex flex-col" style={{ background: "#F5F0E8" }}>
+        {config.title && (
+          <div
+            className="text-[16px] sm:text-[20px]"
+            style={{
+              textAlign: "center",
+              fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif",
+              fontWeight: 800,
+              color: "#1e2a35",
+              padding: "8px 12px 0",
+              overflowWrap: "break-word",
+              wordBreak: "break-word",
+            }}
+          >
+            {config.title}
+          </div>
+        )}
         <ResponsiveContainer width="100%" height="100%">
           {config.type === "line" ? (
             <LineChart
-              data={data}
+              data={chartData}
               margin={{ top: 20, right: 24, bottom: 8, left: 8 }}
             >
               <CartesianGrid horizontal vertical={false} stroke={GRID_COLOR} strokeWidth={1} />
@@ -314,27 +372,35 @@ function ChartPanel({ config, rows, meta }: ChartPanelProps) {
                 tickLine={false}
                 axisLine={false}
                 width={isPercent ? 55 : 50}
-                {...(config.yAxisLabel ? { label: { value: config.yAxisLabel, angle: -90, position: "insideLeft", offset: 15, style: { fontSize: 10, fill: "#8c8c8c", fontFamily: "Georgia, 'Times New Roman', serif", textAnchor: "middle" } } } : {})}
+                {...(config.yAxisLabel ? { label: { value: config.yAxisLabel, angle: -90, position: "insideLeft", offset: 0, dy: -10, style: { fontSize: 10, fill: "#1e2a35", fontFamily: "'DM Sans', 'Segoe UI', Arial, sans-serif", textAnchor: "middle" } } } : {})}
               />
               <Tooltip
                 labelFormatter={tooltipLabelFormatter}
-                formatter={(v) => fmtVal(v as number, isPercent)}
+                formatter={(v, name, props) => {
+                  const label = props?.payload?.data_type
+                    ? String(props.payload.data_type).replace(/\*$/, "")
+                    : name;
+                  return [fmtVal(v as number, isPercent), label];
+                }}
                 contentStyle={tooltipContentStyle}
+                labelStyle={{ color: "#ffffff" }}
+                itemStyle={{ color: "#ffffff" }}
               />
               {multiSeries && (
                 <Legend
                   verticalAlign="top"
                   align="left"
-                  iconType="line"
+                  iconType="plainline"
                   iconSize={16}
                   wrapperStyle={{
                     fontSize: 12,
-                    fontFamily: "Georgia, 'Times New Roman', serif",
+                    fontFamily: "'DM Sans', 'Segoe UI', Arial, sans-serif",
+                    color: "#1e2a35",
                     paddingBottom: 8,
                   }}
                 />
               )}
-              {config.yAxis.map((y, i) => {
+              {effectiveYKeys.map((y, i) => {
                 const color = colors[i % colors.length];
                 return (
                   <Line
@@ -356,13 +422,13 @@ function ChartPanel({ config, rows, meta }: ChartPanelProps) {
                   stroke={a.color || "#999"}
                   strokeDasharray="4 4"
                   strokeWidth={1.5}
-                  label={a.label ? { value: a.label, position: a.axis === "x" ? "insideTopRight" : "insideRight", fill: a.color || "#999", fontSize: 11, fontFamily: "Georgia, 'Times New Roman', serif" } : undefined}
+                  label={a.label ? { value: a.label, position: a.axis === "x" ? "insideTopRight" : "insideRight", fill: a.color || "#999", fontSize: 11, fontFamily: "'DM Sans', 'Segoe UI', Arial, sans-serif" } : undefined}
                 />
               ))}
             </LineChart>
           ) : config.type === "bar" || config.type === "stacked_bar" ? (
             <BarChart
-              data={data}
+              data={chartData}
               margin={{ top: 20, right: 24, bottom: (ym || daily || plainYears) ? 8 : 4, left: 8 }}
             >
               <CartesianGrid horizontal vertical={false} stroke={GRID_COLOR} strokeWidth={1} />
@@ -397,12 +463,19 @@ function ChartPanel({ config, rows, meta }: ChartPanelProps) {
                 tickLine={false}
                 axisLine={false}
                 width={isPercent ? 55 : 50}
-                {...(config.yAxisLabel ? { label: { value: config.yAxisLabel, angle: -90, position: "insideLeft", offset: 15, style: { fontSize: 10, fill: "#8c8c8c", fontFamily: "Georgia, 'Times New Roman', serif", textAnchor: "middle" } } } : {})}
+                {...(config.yAxisLabel ? { label: { value: config.yAxisLabel, angle: -90, position: "insideLeft", offset: 0, dy: -10, style: { fontSize: 10, fill: "#1e2a35", fontFamily: "'DM Sans', 'Segoe UI', Arial, sans-serif", textAnchor: "middle" } } } : {})}
               />
               <Tooltip
                 labelFormatter={tooltipLabelFormatter}
-                formatter={(v) => fmtVal(v as number, isPercent)}
+                formatter={(v, name, props) => {
+                  const label = props?.payload?.data_type
+                    ? String(props.payload.data_type).replace(/\*$/, "")
+                    : name;
+                  return [fmtVal(v as number, isPercent), label];
+                }}
                 contentStyle={tooltipContentStyle}
+                labelStyle={{ color: "#ffffff" }}
+                itemStyle={{ color: "#ffffff" }}
               />
               {multiSeries && (
                 <Legend
@@ -412,12 +485,13 @@ function ChartPanel({ config, rows, meta }: ChartPanelProps) {
                   iconSize={12}
                   wrapperStyle={{
                     fontSize: 12,
-                    fontFamily: "Georgia, 'Times New Roman', serif",
+                    fontFamily: "'DM Sans', 'Segoe UI', Arial, sans-serif",
+                    color: "#1e2a35",
                     paddingBottom: 8,
                   }}
                 />
               )}
-              {config.yAxis.map((y, i) => (
+              {effectiveYKeys.map((y, i) => (
                 <Bar
                   key={y}
                   dataKey={y}
@@ -434,15 +508,15 @@ function ChartPanel({ config, rows, meta }: ChartPanelProps) {
                   stroke={a.color || "#999"}
                   strokeDasharray="4 4"
                   strokeWidth={1.5}
-                  label={a.label ? { value: a.label, position: a.axis === "x" ? "insideTopRight" : "insideRight", fill: a.color || "#999", fontSize: 11, fontFamily: "Georgia, 'Times New Roman', serif" } : undefined}
+                  label={a.label ? { value: a.label, position: a.axis === "x" ? "insideTopRight" : "insideRight", fill: a.color || "#999", fontSize: 11, fontFamily: "'DM Sans', 'Segoe UI', Arial, sans-serif" } : undefined}
                 />
               ))}
             </BarChart>
           ) : config.type === "pie" ? (
             <PieChart>
               <Pie
-                data={data}
-                dataKey={config.yAxis[0]}
+                data={chartData}
+                dataKey={effectiveYKeys[0]}
                 nameKey={config.xAxis}
                 cx="50%"
                 cy="50%"
@@ -455,13 +529,15 @@ function ChartPanel({ config, rows, meta }: ChartPanelProps) {
                 }
                 labelLine={{ stroke: "#b0a99f", strokeWidth: 1 }}
               >
-                {data.map((_, i) => (
+                {chartData.map((_, i) => (
                   <Cell key={i} fill={colors[i % colors.length]} />
                 ))}
               </Pie>
               <Tooltip
                 formatter={(v) => fmtVal(v as number, isPercent)}
                 contentStyle={tooltipContentStyle}
+                labelStyle={{ color: "#ffffff" }}
+                itemStyle={{ color: "#ffffff" }}
               />
             </PieChart>
           ) : null}
@@ -469,8 +545,8 @@ function ChartPanel({ config, rows, meta }: ChartPanelProps) {
         {hasEmployeesDisclaimer && (
           <div
             style={{
-              color: "#9a9590",
-              fontFamily: "Georgia, 'Times New Roman', serif",
+              color: "#5a6a7a",
+              fontFamily: "'DM Sans', 'Segoe UI', Arial, sans-serif",
               fontSize: "9.5px",
               fontStyle: "italic",
               padding: "2px 0 0",
@@ -481,27 +557,31 @@ function ChartPanel({ config, rows, meta }: ChartPanelProps) {
         )}
         <div
           className="shrink-0 pb-1 pt-1"
-          style={{
-            color: "#9a9590",
-            fontFamily: "Georgia, 'Times New Roman', serif",
-            fontSize: "10px",
-            letterSpacing: "0.2px",
-            marginTop: "2px",
-          }}
+          style={{ marginTop: "2px" }}
         >
-          Source: {meta?.source || "Crime Index"}
-          {meta && meta.agencyCount > 0 && (
-            <>
-              <span style={{ color: "#c5bfb8", margin: "0 5px" }}>|</span>
-              {meta.agencyCount.toLocaleString()} {meta.agencyCount === 1 ? "agency" : "agencies"}
-              {meta.population && (
-                <>
-                  <span style={{ color: "#c5bfb8", margin: "0 5px" }}>|</span>
-                  Pop. {formatPopulation(meta.population)}
-                </>
-              )}
-            </>
-          )}
+          <div
+            style={{
+              color: "#5a6a7a",
+              fontFamily: "'DM Sans', 'Segoe UI', Arial, sans-serif",
+              fontSize: "11px",
+              fontVariant: "small-caps",
+              letterSpacing: "0.2px",
+            }}
+          >
+            Source: {meta?.source || "Crime Index"}
+            {meta && meta.agencyCount > 0 && (
+              <>
+                <span style={{ color: "#c5bfb8", margin: "0 5px" }}>|</span>
+                {meta.agencyCount.toLocaleString()} {meta.agencyCount === 1 ? "agency" : "agencies"}
+                {meta.population && (
+                  <>
+                    <span style={{ color: "#c5bfb8", margin: "0 5px" }}>|</span>
+                    Pop. {formatPopulation(meta.population)}
+                  </>
+                )}
+              </>
+            )}
+          </div>
         </div>
       </div>
     );

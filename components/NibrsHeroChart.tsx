@@ -12,9 +12,9 @@ import {
 import { formatAxisValue } from "@/lib/utils";
 
 const TICK_STYLE = {
-  fontSize: 12,
-  fill: "#999",
-  fontFamily: "Georgia, 'Times New Roman', serif",
+  fontSize: 13,
+  fill: "#1e2a35",
+  fontFamily: "'DM Sans', 'Segoe UI', Arial, sans-serif",
 };
 
 // Source: FBI CDE API — Percent of Population Coverage for 23F (Theft From Motor Vehicle)
@@ -60,7 +60,7 @@ const COVERAGE_DATA = [
 
 export default function NibrsHeroChart() {
   return (
-    <div className="bg-white rounded-xl border border-[var(--border)] p-5">
+    <div className="rounded-xl border border-[var(--border)] p-5" style={{ background: "#F5F0E8" }}>
       <h2
         className="text-xs font-medium uppercase tracking-wider text-[var(--muted)] mb-1"
         style={{ letterSpacing: "0.6px" }}
@@ -78,11 +78,11 @@ export default function NibrsHeroChart() {
           >
             <defs>
               <linearGradient id="coverageGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#1b2a4a" stopOpacity={0.2} />
-                <stop offset="95%" stopColor="#1b2a4a" stopOpacity={0.02} />
+                <stop offset="5%" stopColor="#2d5f8a" stopOpacity={0.2} />
+                <stop offset="95%" stopColor="#2d5f8a" stopOpacity={0.02} />
               </linearGradient>
             </defs>
-            <CartesianGrid horizontal vertical={false} stroke="#eaeaea" strokeWidth={1} />
+            <CartesianGrid horizontal vertical={false} stroke="#ddd8ce" strokeWidth={1} />
             <XAxis
               dataKey="year"
               tick={TICK_STYLE}
@@ -102,28 +102,32 @@ export default function NibrsHeroChart() {
               formatter={(v) => [`${Number(v).toFixed(1)}%`, "Coverage"]}
               contentStyle={{
                 borderRadius: 4,
-                border: "1px solid #ddd",
+                border: "none",
                 fontSize: 12,
-                fontFamily: "Georgia, 'Times New Roman', serif",
-                boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
+                fontFamily: "'DM Sans', 'Segoe UI', Arial, sans-serif",
+                boxShadow: "0 4px 16px rgba(0,0,0,0.15)",
+                background: "#1e3a5f",
+                color: "#ffffff",
               }}
+              labelStyle={{ color: "#ffffff" }}
+              itemStyle={{ color: "#ffffff" }}
             />
             <Area
               type="monotone"
               dataKey="coverage"
               name="Coverage"
-              stroke="#1b2a4a"
+              stroke="#2d5f8a"
               strokeWidth={3}
               fill="url(#coverageGrad)"
               dot={false}
-              activeDot={{ r: 3, strokeWidth: 0, fill: "#1b2a4a" }}
+              activeDot={{ r: 3, strokeWidth: 0, fill: "#2d5f8a" }}
             />
           </AreaChart>
         </ResponsiveContainer>
       </div>
       <div
         className="text-[10px] mt-1"
-        style={{ color: "#aaa", fontFamily: "Georgia, 'Times New Roman', serif" }}
+        style={{ color: "#5a6a7a", fontFamily: "'DM Sans', 'Segoe UI', Arial, sans-serif", fontVariant: "small-caps" }}
       >
         Source: FBI NIBRS
       </div>

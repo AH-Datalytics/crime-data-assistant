@@ -83,6 +83,17 @@ export function getWriteDb(): Database.Database | null {
         session_id TEXT
       )
     `);
+    _writeDb.exec(`
+      CREATE TABLE IF NOT EXISTS shared_charts (
+        id TEXT PRIMARY KEY,
+        tab TEXT NOT NULL,
+        title TEXT,
+        sql TEXT NOT NULL,
+        chart_config TEXT,
+        chart_meta TEXT,
+        created_at INTEGER NOT NULL
+      )
+    `);
     // Add columns if table already exists without them
     for (const col of ["tab TEXT", "session_id TEXT", "guardrails TEXT", "model TEXT"]) {
       try { _writeDb.exec(`ALTER TABLE query_log ADD COLUMN ${col}`); } catch { /* already exists */ }

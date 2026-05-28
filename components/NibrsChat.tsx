@@ -164,7 +164,7 @@ export default function NibrsChat({ visible }: NibrsChatProps) {
           <button
             type="submit"
             disabled={loading || !input.trim()}
-            className="px-4 sm:px-6 py-2 sm:py-2.5 text-sm font-medium text-white bg-[var(--navy)] rounded-full hover:bg-[var(--navy-light)] disabled:opacity-40 cursor-pointer shrink-0"
+            className="px-4 sm:px-6 py-2 sm:py-2.5 text-sm font-medium text-white bg-[var(--accent)] rounded-full hover:bg-[var(--accent-hover)] disabled:opacity-40 cursor-pointer shrink-0"
           >
             {loading ? "..." : "Ask"}
           </button>
@@ -289,7 +289,7 @@ export default function NibrsChat({ visible }: NibrsChatProps) {
                 placeholder="Ask a follow-up..."
                 className="flex-1 min-w-0 px-3 py-1.5 text-sm border border-[var(--border)] rounded-full focus:outline-none focus:border-[var(--accent)] bg-[var(--surface)]"
               />
-              <button type="submit" className="px-3 sm:px-4 py-1.5 text-xs font-medium text-white bg-[var(--foreground)] rounded-full hover:bg-[var(--accent-hover)] cursor-pointer shrink-0">
+              <button type="submit" className="px-3 sm:px-4 py-1.5 text-xs font-medium text-white bg-[var(--accent)] rounded-full hover:bg-[var(--accent-hover)] cursor-pointer shrink-0">
                 Ask
               </button>
             </form>
@@ -347,16 +347,17 @@ export default function NibrsChat({ visible }: NibrsChatProps) {
           <div className="md:w-1/2 md:border-r border-b md:border-b-0 border-[var(--border)] bg-white shrink-0 md:shrink md:overflow-auto" style={{ minHeight: 280 }}>
             {currentResponse?.chartConfig ? (
               <div ref={chartRef} className="px-3 sm:px-4 pt-3 pb-1 h-full flex flex-col">
-                <div className="flex items-start justify-between gap-2 sm:gap-3 mb-1 shrink-0">
-                  <h2
-                    className="text-[11px] sm:text-xs font-medium uppercase tracking-wider text-[var(--muted)] flex-1 min-w-0"
-                    style={{ letterSpacing: "0.6px" }}
-                  >
-                    {currentResponse.title}
-                  </h2>
+                <div className="flex items-end justify-end gap-2 sm:gap-3 mb-1 shrink-0">
                   <ExportButtons
                     chartRef={chartRef}
                     csvFilename={`${currentResponse.title || "chart"}.jpeg`}
+                    embedData={currentResponse.sql ? {
+                      tab: "nibrs",
+                      title: currentResponse.title,
+                      sql: currentResponse.sql,
+                      chartConfig: currentResponse.chartConfig,
+                      chartMeta: currentResponse.chartMeta,
+                    } : undefined}
                   />
                 </div>
                 <div className="flex-1 min-h-0" style={{ minHeight: 260 }}>

@@ -84,10 +84,10 @@ function loadHistoricalFacts() {
     console.warn("[dynamic-facts] Failed to load Historical facts:", e);
     return {
       agencyTotal: 24571, typeBreakdown: "city (14,080), county (3,134), other (2,675), state_police (1,660), state_agency (1,533), university (1,139), tribal (236), federal (61), state (52), nation (1)",
-      crimeMinYear: 1930, crimeMaxYear: 2024, stateNatMinYear: 1958, stateNatMaxYear: 2024,
-      staffingMinYear: 1930, staffingMaxYear: 2025, popRows: 927000, popMinYear: 1930, popMaxYear: 2024,
-      staffingRows: 836568, clearanceRows: 65, agencyClearanceRows: 1137326,
-      clearanceMinYear: 1960, clearanceMaxYear: 2024,
+      crimeMinYear: 1930, crimeMaxYear: 2025, stateNatMinYear: 1958, stateNatMaxYear: 2024,
+      staffingMinYear: 1930, staffingMaxYear: 2025, popRows: 940000, popMinYear: 1930, popMaxYear: 2025,
+      staffingRows: 851000, clearanceRows: 65, agencyClearanceRows: 1151000,
+      clearanceMinYear: 1960, clearanceMaxYear: 2025,
     };
   }
 }
@@ -240,6 +240,17 @@ export const HISTORICAL = loadHistoricalFacts();
 export const NIBRS = loadNibrsFacts();
 export const SHR = loadShrFacts();
 export { formatRowCount };
+
+/** Default data cutoff: 2 months before current date (avoids incomplete recent months) */
+function computeDataCutoff(): { year: number; month: number; label: string } {
+  const now = new Date();
+  let y = now.getFullYear();
+  let m = now.getMonth() + 1 - 2; // 2 months back
+  if (m <= 0) { m += 12; y -= 1; }
+  const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  return { year: y, month: m, label: `${monthNames[m - 1]} ${y}` };
+}
+export const DATA_CUTOFF = computeDataCutoff();
 
 // Log loaded facts for debugging
 console.log(`[dynamic-facts] RTCI: ${RTCI.agencyCount} agencies, ${RTCI.stateCount} states, ${RTCI.minYear}-${RTCI.maxYear} (${RTCI.totalMonths} months)`);

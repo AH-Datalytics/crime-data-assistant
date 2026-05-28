@@ -11,9 +11,9 @@ import {
 } from "recharts";
 
 const TICK_STYLE = {
-  fontSize: 12,
-  fill: "#999",
-  fontFamily: "Georgia, 'Times New Roman', serif",
+  fontSize: 13,
+  fill: "#1e2a35",
+  fontFamily: "'DM Sans', 'Segoe UI', Arial, sans-serif",
 };
 
 interface ShrHeroChartProps {
@@ -24,7 +24,7 @@ export default function ShrHeroChart({ data }: ShrHeroChartProps) {
   if (!data || data.length === 0) return null;
 
   return (
-    <div className="bg-white rounded-xl border border-[var(--border)] p-5">
+    <div className="rounded-xl border border-[var(--border)] p-5" style={{ background: "#F5F0E8" }}>
       <h2
         className="text-xs font-medium uppercase tracking-wider text-[var(--muted)] mb-1"
         style={{ letterSpacing: "0.6px" }}
@@ -40,7 +40,7 @@ export default function ShrHeroChart({ data }: ShrHeroChartProps) {
             data={data}
             margin={{ top: 10, right: 20, bottom: 20, left: 10 }}
           >
-            <CartesianGrid horizontal vertical={false} stroke="#eaeaea" strokeWidth={1} />
+            <CartesianGrid horizontal vertical={false} stroke="#ddd8ce" strokeWidth={1} />
             <XAxis
               dataKey="year"
               tick={TICK_STYLE}
@@ -63,11 +63,15 @@ export default function ShrHeroChart({ data }: ShrHeroChartProps) {
               formatter={(v) => [`${v}%`, "Firearm %"]}
               contentStyle={{
                 borderRadius: 4,
-                border: "1px solid #ddd",
+                border: "none",
                 fontSize: 12,
-                fontFamily: "Georgia, 'Times New Roman', serif",
-                boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
+                fontFamily: "'DM Sans', 'Segoe UI', Arial, sans-serif",
+                boxShadow: "0 4px 16px rgba(0,0,0,0.15)",
+                background: "#1e3a5f",
+                color: "#ffffff",
               }}
+              labelStyle={{ color: "#ffffff" }}
+              itemStyle={{ color: "#ffffff" }}
             />
             <Line
               type="monotone"
@@ -83,9 +87,9 @@ export default function ShrHeroChart({ data }: ShrHeroChartProps) {
       </div>
       <div
         className="text-[10px] mt-1"
-        style={{ color: "#aaa", fontFamily: "Georgia, 'Times New Roman', serif" }}
+        style={{ color: "#5a6a7a", fontFamily: "'DM Sans', 'Segoe UI', Arial, sans-serif", fontVariant: "small-caps" }}
       >
-        Source: FBI Supplementary Homicide Reports · Excludes justifiable homicides and manslaughter
+        Source: FBI SHR · Excludes justifiable homicides and manslaughter
       </div>
     </div>
   );

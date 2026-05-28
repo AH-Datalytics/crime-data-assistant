@@ -23,14 +23,18 @@ import { formatAxisValue, fmtVal, decadeTicksForYears } from "@/lib/utils";
 const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
 const TICK_STYLE = {
-  fontSize: 11,
-  fill: "#8c8c8c",
-  fontFamily: "Georgia, 'Times New Roman', serif",
+  fontSize: 13,
+  fill: "#1e2a35",
+  fontFamily: "'DM Sans', 'Segoe UI', Arial, sans-serif",
 };
 
-const GRID_COLOR = "#e8e4df";
+const GRID_COLOR = "#ddd8ce";
 
 function properCase(s: string): string {
+  if (/^rolling_\d+m?$/i.test(s) || /^rolling_\d+_month$/i.test(s)) {
+    const n = s.match(/\d+/)?.[0] || "12";
+    return `Rolling ${n}-Month`;
+  }
   const titled = s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
   return titled.replace(/\bDc\b/g, "DC").replace(/\bNy\b/g, "NY").replace(/\bNyc\b/g, "NYC").replace(/\bLa\b/g, "LA").replace(/\bUsa\b/g, "USA").replace(/\bUs\b/g, "US");
 }
@@ -132,6 +136,57 @@ function isPlainYears(data: Record<string, unknown>[], xKey: string): boolean {
   return sample.length > 0 && sample.every((d) => /^\d{4}$/.test(String(d[xKey] ?? "")));
 }
 
+/**
+ * Auto-pivot long-format data to wide format for multi-series charts.
+ *
+ * Triggers when: single yAxis column, one categorical column alongside it,
+ * and duplicate x values (e.g. year × city_area → City, Non-City columns).
+ *
+ * Input:  [{year:2022, city_area:"City", count:462}, {year:2022, city_area:"Non-City", count:985}, ...]
+ * Output: [{year:2022, City:462, "Non-City":985}, ...]
+ */
+function detectAndPivot(
+  data: Record<string, unknown>[],
+  xKey: string,
+  yKeys: string[]
+): { data: Record<string, unknown>[]; effectiveYKeys: string[] } {
+  if (yKeys.length !== 1 || data.length === 0) return { data, effectiveYKeys: yKeys };
+
+  // Columns in data excluding the x key and the _ym helper
+  const allKeys = Object.keys(data[0]).filter((k) => k !== "_ym" && k !== xKey);
+  const valueKey = yKeys[0];
+  const otherKeys = allKeys.filter((k) => k !== valueKey);
+
+  if (otherKeys.length < 1) return { data, effectiveYKeys: yKeys };
+
+  // Find the best categorical (string) column among the others
+  // Prefer columns with 2-8 distinct string values
+  let categoryKey: string | null = null;
+  for (const key of otherKeys) {
+    if (data.some((d) => typeof d[key] === "number")) continue;
+    const vals = [...new Set(data.map((d) => String(d[key] ?? "")))];
+    if (vals.length >= 2 && vals.length <= 8) { categoryKey = key; break; }
+  }
+  if (!categoryKey) return { data, effectiveYKeys: yKeys };
+
+  // Must have duplicate x values (otherwise nothing to pivot)
+  const xVals = data.map((d) => d[xKey]);
+  if (new Set(xVals).size === xVals.length) return { data, effectiveYKeys: yKeys };
+
+  const categories = [...new Set(data.map((d) => String(d[categoryKey!] ?? "")))];
+
+  // Pivot: one row per unique x value
+  const pivotMap = new Map<unknown, Record<string, unknown>>();
+  for (const row of data) {
+    const x = row[xKey];
+    if (!pivotMap.has(x)) pivotMap.set(x, { [xKey]: x });
+    const cat = String(row[categoryKey!] ?? "");
+    (pivotMap.get(x) as Record<string, unknown>)[cat] = row[valueKey];
+  }
+
+  return { data: [...pivotMap.values()], effectiveYKeys: categories };
+}
+
 interface NibrsChartPanelProps {
   config: ChartConfig;
   rows: Record<string, unknown>[];
@@ -159,15 +214,18 @@ export default function NibrsChartPanel({ config, rows }: NibrsChartPanelProps) 
   const ym = hasYearMonth || isYearMonth(data, config.xAxis);
   const daily = !ym && isDate(data, config.xAxis);
 
+  // Auto-pivot long-format data (e.g. year × category → grouped series)
+  const { data: chartData, effectiveYKeys } = detectAndPivot(data, xKey, config.yAxis);
+
   const dataYears = new Set(
-    data.map((d) => String(d[daily ? config.xAxis : xKey] ?? "").slice(0, 4))
+    chartData.map((d) => String(d[daily ? config.xAxis : xKey] ?? "").slice(0, 4))
   );
   const singleYear = dataYears.size === 1;
-  const singleYearMonthly = ym && data.length > 0 && singleYear;
+  const singleYearMonthly = ym && chartData.length > 0 && singleYear;
   const fewYearsMonthly = ym && !singleYearMonthly && dataYears.size <= 2;
 
-  const multiSeries = config.yAxis.length > 1;
-  const dataLen = data.length;
+  const multiSeries = effectiveYKeys.length > 1;
+  const dataLen = chartData.length;
   const xAxisDataKey = daily ? config.xAxis : ym ? xKey : config.xAxis;
 
   // Detect plain-year x-axis (multi-year queries)
@@ -196,12 +254,12 @@ export default function NibrsChartPanel({ config, rows }: NibrsChartPanelProps) 
 
   const tooltipContentStyle = {
     borderRadius: 4,
-    border: "1px solid #eee",
-    borderLeft: `3px solid ${chartColors[0]}`,
+    border: "none",
     fontSize: 12,
-    fontFamily: "'Hanken Grotesk', Helvetica, sans-serif",
-    boxShadow: "0 4px 16px rgba(0,0,0,0.1)",
-    background: "rgba(255,255,255,0.98)",
+    fontFamily: "'DM Sans', 'Segoe UI', Arial, sans-serif",
+    boxShadow: "0 4px 16px rgba(0,0,0,0.15)",
+    background: "#1e3a5f",
+    color: "#ffffff",
     padding: "8px 12px",
     lineHeight: "1.5",
   };
@@ -213,10 +271,26 @@ export default function NibrsChartPanel({ config, rows }: NibrsChartPanelProps) 
         : String(label ?? "");
 
   return (
-    <div className="bg-white h-full flex flex-col">
+    <div className="h-full flex flex-col" style={{ background: "#F5F0E8" }}>
+      {config.title && (
+        <div
+          className="text-[16px] sm:text-[20px]"
+          style={{
+            textAlign: "center",
+            fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif",
+            fontWeight: 800,
+            color: "#1e2a35",
+            padding: "8px 12px 0",
+            overflowWrap: "break-word",
+            wordBreak: "break-word",
+          }}
+        >
+          {config.title}
+        </div>
+      )}
       <ResponsiveContainer width="100%" height="100%">
         {config.type === "line" ? (
-          <LineChart data={data} margin={{ top: 20, right: 24, bottom: 8, left: 8 }}>
+          <LineChart data={chartData} margin={{ top: 20, right: 24, bottom: 8, left: 8 }}>
             <CartesianGrid horizontal vertical={false} stroke={GRID_COLOR} strokeWidth={1} />
             <XAxis
               dataKey={xAxisDataKey}
@@ -246,19 +320,21 @@ export default function NibrsChartPanel({ config, rows }: NibrsChartPanelProps) 
               height={fewYearsMonthly ? 60 : undefined}
             />
             <YAxis tickFormatter={yTickFormatter} tick={TICK_STYLE} tickLine={false} axisLine={false} width={isPercent ? 55 : 50}
-              {...(config.yAxisLabel ? { label: { value: config.yAxisLabel, angle: -90, position: "insideLeft", offset: 15, style: { fontSize: 10, fill: "#8c8c8c", fontFamily: "Georgia, 'Times New Roman', serif", textAnchor: "middle" } } } : {})}
+              {...(config.yAxisLabel ? { label: { value: config.yAxisLabel, angle: -90, position: "insideLeft", offset: 0, dy: -10, style: { fontSize: 10, fill: "#1e2a35", fontFamily: "'DM Sans', 'Segoe UI', Arial, sans-serif", textAnchor: "middle" } } } : {})}
             />
             <Tooltip
               labelFormatter={tooltipLabelFormatter}
               formatter={(v) => fmtVal(v as number, isPercent)}
               contentStyle={tooltipContentStyle}
+              labelStyle={{ color: "#ffffff" }}
+              itemStyle={{ color: "#ffffff" }}
             />
             {multiSeries && (
-              <Legend verticalAlign="top" align="left" iconType="line" iconSize={16}
-                wrapperStyle={{ fontSize: 12, fontFamily: "Georgia, 'Times New Roman', serif", paddingBottom: 8 }}
+              <Legend verticalAlign="top" align="left" iconType="plainline" iconSize={16}
+                wrapperStyle={{ fontSize: 12, fontFamily: "'DM Sans', 'Segoe UI', Arial, sans-serif", color: "#1e2a35", paddingBottom: 8 }}
               />
             )}
-            {config.yAxis.map((y, i) => {
+            {effectiveYKeys.map((y, i) => {
               const color = chartColors[i % chartColors.length];
               return (
                 <Line key={y} type="monotone" dataKey={y} name={properCase(y)}
@@ -274,12 +350,12 @@ export default function NibrsChartPanel({ config, rows }: NibrsChartPanelProps) 
                 stroke={a.color || "#999"}
                 strokeDasharray="4 4"
                 strokeWidth={1.5}
-                label={a.label ? { value: a.label, position: a.axis === "x" ? "insideTopRight" : "insideRight", fill: a.color || "#999", fontSize: 11, fontFamily: "Georgia, 'Times New Roman', serif" } : undefined}
+                label={a.label ? { value: a.label, position: a.axis === "x" ? "insideTopRight" : "insideRight", fill: a.color || "#999", fontSize: 11, fontFamily: "'DM Sans', 'Segoe UI', Arial, sans-serif" } : undefined}
               />
             ))}
           </LineChart>
         ) : config.type === "bar" || config.type === "stacked_bar" ? (
-          <BarChart data={data} margin={{ top: 20, right: 24, bottom: ym || daily ? 8 : 4, left: 8 }}>
+          <BarChart data={chartData} margin={{ top: 20, right: 24, bottom: ym || daily ? 8 : 4, left: 8 }}>
             <CartesianGrid horizontal vertical={false} stroke={GRID_COLOR} strokeWidth={1} />
             <XAxis
               dataKey={xAxisDataKey}
@@ -307,19 +383,21 @@ export default function NibrsChartPanel({ config, rows }: NibrsChartPanelProps) 
               height={fewYearsMonthly ? 60 : (ym || daily || plainYears) ? 30 : 120}
             />
             <YAxis tickFormatter={yTickFormatter} tick={TICK_STYLE} tickLine={false} axisLine={false} width={isPercent ? 55 : 50}
-              {...(config.yAxisLabel ? { label: { value: config.yAxisLabel, angle: -90, position: "insideLeft", offset: 15, style: { fontSize: 10, fill: "#8c8c8c", fontFamily: "Georgia, 'Times New Roman', serif", textAnchor: "middle" } } } : {})}
+              {...(config.yAxisLabel ? { label: { value: config.yAxisLabel, angle: -90, position: "insideLeft", offset: 0, dy: -10, style: { fontSize: 10, fill: "#1e2a35", fontFamily: "'DM Sans', 'Segoe UI', Arial, sans-serif", textAnchor: "middle" } } } : {})}
             />
             <Tooltip
               labelFormatter={tooltipLabelFormatter}
               formatter={(v) => fmtVal(v as number, isPercent)}
               contentStyle={tooltipContentStyle}
+              labelStyle={{ color: "#ffffff" }}
+              itemStyle={{ color: "#ffffff" }}
             />
             {multiSeries && (
               <Legend verticalAlign="top" align="left" iconType="rect" iconSize={12}
-                wrapperStyle={{ fontSize: 12, fontFamily: "Georgia, 'Times New Roman', serif", paddingBottom: 8 }}
+                wrapperStyle={{ fontSize: 12, fontFamily: "'DM Sans', 'Segoe UI', Arial, sans-serif", color: "#1e2a35", paddingBottom: 8 }}
               />
             )}
-            {config.yAxis.map((y, i) => (
+            {effectiveYKeys.map((y, i) => (
               <Bar key={y} dataKey={y} name={properCase(y)}
                 fill={chartColors[i % chartColors.length]}
                 radius={[3, 3, 0, 0]}
@@ -333,13 +411,13 @@ export default function NibrsChartPanel({ config, rows }: NibrsChartPanelProps) 
                 stroke={a.color || "#999"}
                 strokeDasharray="4 4"
                 strokeWidth={1.5}
-                label={a.label ? { value: a.label, position: a.axis === "x" ? "insideTopRight" : "insideRight", fill: a.color || "#999", fontSize: 11, fontFamily: "Georgia, 'Times New Roman', serif" } : undefined}
+                label={a.label ? { value: a.label, position: a.axis === "x" ? "insideTopRight" : "insideRight", fill: a.color || "#999", fontSize: 11, fontFamily: "'DM Sans', 'Segoe UI', Arial, sans-serif" } : undefined}
               />
             ))}
           </BarChart>
         ) : config.type === "pie" ? (
           <PieChart>
-            <Pie data={data} dataKey={config.yAxis[0]} nameKey={config.xAxis}
+            <Pie data={chartData} dataKey={effectiveYKeys[0]} nameKey={config.xAxis}
               cx="50%" cy="50%" outerRadius="70%" innerRadius="20%" strokeWidth={2} stroke="#fff"
               label={({ name, percent }) => `${name} (${((percent ?? 0) * 100).toFixed(0)}%)`}
               labelLine={{ stroke: "#b0a99f", strokeWidth: 1 }}
@@ -348,21 +426,25 @@ export default function NibrsChartPanel({ config, rows }: NibrsChartPanelProps) 
                 <Cell key={i} fill={NIBRS_CHART_COLORS[i % NIBRS_CHART_COLORS.length]} />
               ))}
             </Pie>
-            <Tooltip formatter={(v) => fmtVal(v as number, isPercent)} contentStyle={tooltipContentStyle} />
+            <Tooltip formatter={(v) => fmtVal(v as number, isPercent)} contentStyle={tooltipContentStyle} labelStyle={{ color: "#ffffff" }} itemStyle={{ color: "#ffffff" }} />
           </PieChart>
         ) : null}
       </ResponsiveContainer>
       <div
         className="shrink-0 pb-1 pt-1"
-        style={{
-          color: "#9a9590",
-          fontFamily: "Georgia, 'Times New Roman', serif",
-          fontSize: "10px",
-          letterSpacing: "0.2px",
-          marginTop: "2px",
-        }}
+        style={{ marginTop: "2px" }}
       >
-        Source: FBI NIBRS
+        <div
+          style={{
+            color: "#5a6a7a",
+            fontFamily: "'DM Sans', 'Segoe UI', Arial, sans-serif",
+            fontSize: "11px",
+            fontVariant: "small-caps",
+            letterSpacing: "0.2px",
+          }}
+        >
+          Source: FBI NIBRS
+        </div>
       </div>
     </div>
   );

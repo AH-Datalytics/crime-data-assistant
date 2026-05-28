@@ -25,8 +25,13 @@ async function verifyToken(token: string): Promise<boolean> {
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Always allow auth endpoint, query-log (has its own key), and static assets
-  if (pathname === "/api/auth" || pathname === "/api/query-log" || pathname === "/api/session-analytics" || pathname === "/api/page-token" || pathname.startsWith("/_next") || pathname === "/favicon.ico" || pathname === "/icon.svg") {
+  // Always allow auth endpoint, query-log (has its own key), embed views, and static assets
+  if (pathname === "/api/auth" || pathname === "/api/query-log" || pathname === "/api/session-analytics" || pathname === "/api/page-token" || pathname === "/embed" || pathname.startsWith("/_next") || pathname === "/favicon.ico" || pathname === "/icon.svg") {
+    return NextResponse.next();
+  }
+
+  // Embed API: GET is public (viewing), POST requires auth (creating)
+  if (pathname === "/api/embed" && req.method === "GET") {
     return NextResponse.next();
   }
 

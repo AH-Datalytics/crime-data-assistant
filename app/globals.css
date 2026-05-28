@@ -2,18 +2,25 @@
 
 :root {
   --background: #ffffff;
-  --foreground: #2a2a2a;
-  --muted: #6b7280;
+  --foreground: #575757;
+  --foreground-strong: #2a2a2a;
+  --muted: #696969;
   --muted-light: #ababab;
-  --border: #e5e7eb;
+  --border: #e1e1d8;
   --surface: #f8f8f8;
   --accent: #475EC7;
-  --accent-hover: #3a4db0;
+  --accent-hover: #183080;
+  --accent-deep: #01114B;
+  --accent-light: #C5CDEE;
   --card: #ffffff;
-  /* NIBRS accent colors */
-  --navy: #1b2a4a;
-  --navy-light: #2d4a7a;
-  --steel: #4682b4;
+  /* Crime Index navy gradient palette */
+  --navy: #01114B;
+  --navy-mid: #183080;
+  --navy-bright: #002BD6;
+  --navy-light: #475EC7;
+  /* Data change indicators */
+  --positive: #0C6E4E;
+  --negative: #BC4704;
 }
 
 @theme inline {
@@ -35,29 +42,30 @@ h1, h2, h3, h4, h5, h6 {
 .stat-table {
   width: 100%;
   border-collapse: collapse;
-  font-family: "Hanken Grotesk", Helvetica, Arial, sans-serif;
-  font-size: 13px;
+  font-family: "DM Sans", "Segoe UI", Arial, sans-serif;
+  font-size: 12px;
   font-variant-numeric: tabular-nums;
+  color: #1e2a35;
 }
 
 .stat-table th {
-  background: #fff;
-  color: #333;
+  background: #F5F0E8;
+  color: #1e2a35;
   padding: 5px 8px 6px;
-  text-align: right;
+  text-align: center;
   white-space: nowrap;
   cursor: pointer;
   user-select: none;
-  font-weight: 600;
-  font-size: 11.5px;
+  font-weight: 700;
+  font-size: 12px;
   border: none;
-  border-bottom: 2px solid #333;
+  border-bottom: 2px solid #2d3d4a;
 }
 
 @media (min-width: 640px) {
   .stat-table th {
-    padding: 6px 12px 8px;
-    font-size: 12.5px;
+    padding: 8px 14px 10px;
+    font-size: 15px;
   }
 }
 
@@ -70,19 +78,21 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .stat-table td {
-  padding: 4px 8px;
-  text-align: right;
+  padding: 3px 8px;
+  text-align: center;
   white-space: nowrap;
   font-weight: 400;
-  color: #333;
+  color: #1e2a35;
   border: none;
+  border-bottom: 1px solid #ddd8ce;
   font-size: 12px;
+  background: #F5F0E8;
 }
 
 @media (min-width: 640px) {
   .stat-table td {
-    padding: 5px 12px;
-    font-size: 13px;
+    padding: 4px 14px;
+    font-size: 15px;
   }
 }
 
@@ -91,16 +101,16 @@ h1, h2, h3, h4, h5, h6 {
   font-weight: 500;
 }
 
-.stat-table tbody tr:nth-child(even) {
-  background: #f8f8f6;
+.stat-table tbody tr:nth-child(even) td {
+  background: #F5F0E8;
 }
 
-.stat-table tbody tr:hover {
-  background: #f0efeb;
+.stat-table tbody tr:hover td {
+  background: #e8e2d6;
 }
 
 .stat-table tbody tr:last-child td {
-  border-bottom: 1px solid #ccc;
+  border-bottom: none;
 }
 
 @keyframes fadeIn {
@@ -120,6 +130,29 @@ h1, h2, h3, h4, h5, h6 {
 /* Hide scrollbar but keep scroll functionality */
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Workspace layout: Crime Index table style */
+.workspace-table .stat-table { font-size: 14px; border-collapse: collapse; }
+.workspace-table .stat-table th {
+  font-size: 13px; padding: 8px 14px 8px; text-align: center;
+  font-weight: 700; color: #1e2a35; border-bottom: 2px solid #2d3d4a;
+  font-family: "DM Sans", "Segoe UI", Arial, sans-serif;
+  letter-spacing: 0;
+  background: #F5F0E8;
+}
+.workspace-table .stat-table th:first-child { text-align: left; }
+.workspace-table .stat-table td {
+  font-size: 14px; padding: 4px 14px; text-align: center; color: #1e2a35;
+  border-bottom: 1px solid #ddd8ce; background: #F5F0E8;
+}
+.workspace-table .stat-table td:first-child { text-align: left; font-weight: 500; color: #1e2a35; }
+.workspace-table .stat-table thead { border-bottom: none; }
+.workspace-table .stat-table thead tr { border-bottom: 2px solid #2d3d4a; }
+.workspace-table .stat-table tbody tr { border-bottom: none; }
+.workspace-table .stat-table tbody tr:nth-child(even) td { background: #F5F0E8; }
+.workspace-table .stat-table tbody tr:nth-child(odd) td { background: #F5F0E8; }
+.workspace-table .stat-table tbody tr:hover td { background: #e8e2d6; }
+.workspace-table .stat-table tbody tr:last-child td { border-bottom: none; }
 
 /* Skeleton shimmer for loading states */
 .skeleton-shimmer {

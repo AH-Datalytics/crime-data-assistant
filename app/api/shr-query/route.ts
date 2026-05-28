@@ -122,13 +122,13 @@ export async function POST(req: NextRequest) {
 
       // Text-only response — retry if model incorrectly claims data isn't available
       if (!claude.sql) {
-        const refusalPatterns = /not (appear to be |be )?represented|not (in|included in) (this|the|our) (dataset|data|sample)|no data (for|available|found)|does not (yet )?(have|include|cover)|not available|not yet (include|available|have)|latest available data/i;
+        const refusalPatterns = /not (appear|be represented)|doesn't appear|not (in|included in) (this|the|our) (dataset|data|sample|library)|no data (for|available|found)|does not (yet )?(have|include|cover)|not available|not yet (include|available|have)|latest available data|isn't (in|included)|not found in/i;
         if (refusalPatterns.test(claude.explanation || "")) {
           try {
             const retryMessages: Anthropic.MessageParam[] = [
               ...messages,
               { role: "assistant", content: claude.explanation },
-              { role: "user", content: "[SYSTEM: Your previous response claimed the data was not available, but this may be incorrect. Please try generating a SQL query — search for the data rather than assuming it doesn't exist.]" },
+              { role: "user", content: "[SYSTEM: Your previous response claimed the data was not available, but this may be incorrect. NEVER assume an agency is missing. Always generate a SQL query and let the database answer. Try the query now.]" },
             ];
             const retryResp = await client.messages.create({
               model: "claude-haiku-4-5-20251001",
@@ -273,12 +273,7 @@ export async function POST(req: NextRequest) {
 
     // National/state scope disclaimer
     if (ctx.scope === "national" || ctx.scope === "state") {
-      disclaimers.push("Note: This data comes from the FBI's Supplementary Homicide Reports. Not all agencies report SHR data every year, so these counts underrepresent total homicides.");
-    }
-
-    // Florida gap
-    if (/state\s*=\s*'FL'/i.test(sql) || (ctx.scope === "national" && !sqlLower.includes("state !="))) {
-      disclaimers.push("Florida did not submit SHR data for most years between 1997 and 2020.");
+      disclaimers.push("Not all agencies and states report SHR data every year, so these counts underrepresent total homicides.");
     }
 
     // Offender demographics warning
@@ -324,7 +319,7 @@ export async function POST(req: NextRequest) {
       rowCount: rows.length,
       truncated: false,
       chartConfig,
-      chartMeta: { source: "FBI Supplementary Homicide Reports", agencyCount: 0, population: null },
+      chartMeta: { source: "FBI SHR", agencyCount: 0, population: null },
       executionTimeMs: totalMs,
     });
   } catch (err) {

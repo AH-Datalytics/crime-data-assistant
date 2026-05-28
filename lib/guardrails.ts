@@ -59,16 +59,53 @@ const GUARDRAILS: Guardrail[] = [
     tabs: ["current", "historical"],
     match: (ctx) => {
       const sql = ctx.sql;
+      // Catch GROUP BY agency or JOINed long-format with city/agency as a column value
+      const isLongFormat = (
+        /group by.*agency/i.test(sql) ||
+        /as\s+city\b/i.test(sql) ||
+        /\.agency\s*\|\|/i.test(sql)
+      );
       return (
-        /group by.*agency/i.test(sql) &&
+        isLongFormat &&
         !/case\s+when/i.test(sql) &&
-        (ctx.question.toLowerCase().includes(" and ") ||
-          ctx.question.toLowerCase().includes(" vs ") ||
-          ctx.question.includes(","))
+        /\byear\b/i.test(sql) && /\bmonth\b/i.test(sql) &&
+        /LIMIT\s+(\d+)/i.test(sql) && parseInt(sql.match(/LIMIT\s+(\d+)/i)?.[1] || "0") > 500
       );
     },
     message: () =>
-      "Multi-agency comparison appears unpivoted (no CASE WHEN). The frontend requires pivoted columns.",
+      "Multi-agency monthly comparison returns too many rows in long format. For monthly time series, limit to 5 cities max and use CASE WHEN pivoting (one column per city). Long-format with 6+ cities produces unreadable charts.",
+  },
+  // --- Dynamic top-N: hardcoded city names the user didn't ask for ---
+  {
+    name: "dynamic-topn-guessed-names",
+    tabs: ["current", "historical", "nibrs", "shr"],
+    match: (ctx) => {
+      const sql = ctx.sql;
+      const q = ctx.question.toLowerCase();
+      // Only fire if user asked for "top N" pattern
+      if (!/\btop\s+\d+/i.test(q)) return false;
+      // Check if SQL has CASE WHEN with hardcoded city/agency names
+      const caseNames: string[] = [];
+      const caseRe = /CASE\s+WHEN\s+[^)]*(?:agency|city)\s*=\s*'([^']+)'/gi;
+      let m;
+      while ((m = caseRe.exec(sql)) !== null) {
+        caseNames.push(m[1].toLowerCase());
+      }
+      if (caseNames.length === 0) return false;
+      // Check if those names appear in the user's question
+      const qWords = q.replace(/[^a-z\s]/g, " ");
+      const guessed = caseNames.filter(name => !qWords.includes(name.toLowerCase()));
+      return guessed.length > 0;
+    },
+    message: (ctx) => {
+      const caseNames: string[] = [];
+      const caseRe = /CASE\s+WHEN\s+[^)]*(?:agency|city)\s*=\s*'([^']+)'/gi;
+      let m;
+      while ((m = caseRe.exec(ctx.sql)) !== null) {
+        caseNames.push(m[1]);
+      }
+      return `[SYSTEM: You hardcoded city names (${caseNames.join(", ")}) in CASE WHEN branches, but the user asked for "top N" — you cannot know which cities will be in the top N. Use long format instead: SELECT year, month, city_label, count with a CTE that discovers the top cities, and let the frontend auto-pivot. Do NOT guess city names.]`;
+    },
   },
   {
     name: "yaxis-missing",
@@ -697,6 +734,20 @@ const GUARDRAILS: Guardrail[] = [
       "Your staffing query does not filter out years with no data. In historical_staffing, a value of 0 means the agency did not report — NOT that they had zero officers. Add WHERE all_total > 0 (or AND all_total > 0) to exclude non-reporting years.",
   },
   // Detect single-agency historical time series without gap-fill CTE
+  // --- Historical: hardcoded ORI code instead of name lookup ---
+  {
+    name: "historical-hardcoded-ori",
+    tabs: ["historical"],
+    match: (ctx) => {
+      const sql = ctx.sql;
+      // Detect ori = 'XX...' without joining historical_agency by name
+      const hasHardcodedOri = /\bori\s*=\s*'[A-Z]{2}\d+'/i.test(sql);
+      const joinsAgencyByName = /historical_agency\s+\w+[\s\S]*?\.agency\s*=/i.test(sql);
+      return hasHardcodedOri && !joinsAgencyByName;
+    },
+    message: () =>
+      "[SYSTEM: You hardcoded an ORI code in the SQL. NEVER guess ORI codes — they are often wrong. Always look up agencies by name: JOIN historical_agency ha ... WHERE ha.agency = '[name]' AND ha.state = '[st]'. Then use the ORI from the join.]",
+  },
   {
     name: "historical-missing-gap-fill",
     tabs: ["historical"],
@@ -857,6 +908,53 @@ const GUARDRAILS: Guardrail[] = [
     },
     message: () =>
       "[SYSTEM: You used an aggregate function (COUNT, SUM, etc.) in a WHERE clause. Aggregate functions cannot be used in WHERE — use HAVING instead. WHERE filters rows before grouping, HAVING filters after.]",
+  },
+  // --- SHR: OR-precedence bug in multi-agency queries ---
+  {
+    name: "shr-or-precedence",
+    tabs: ["shr"],
+    match: (ctx) => {
+      const sql = ctx.sql;
+      // Detect pattern: (agency=X AND state=Y) OR (agency=X AND state=Y) AND homicide_type/year
+      // without outer parentheses around the OR group
+      const whereMatch = sql.match(/WHERE\s+([\s\S]+?)(?:GROUP\s+BY|ORDER\s+BY|LIMIT|$)/i);
+      if (!whereMatch) return false;
+      const whereClause = whereMatch[1];
+      // Has multiple OR branches AND a trailing AND that isn't inside the last OR branch
+      const orCount = (whereClause.match(/\)\s*OR\s*\(/gi) || []).length;
+      if (orCount < 1) return false;
+      // Check if the last AND clause (homicide_type, year) is outside parentheses
+      // Pattern: `) AND i.homicide_type` or `) AND i.year` without outer wrapping parens
+      return /\)\s+AND\s+i\.(homicide_type|year)\b/i.test(whereClause) &&
+        !/\(\s*\([\s\S]*\)\s*OR\s*\([\s\S]*\)\s*\)\s+AND/i.test(whereClause);
+    },
+    message: () =>
+      "[SYSTEM: SQL has OR-precedence bug. When combining multiple agency conditions with OR, you MUST wrap ALL OR branches in outer parentheses before AND-ing with other filters. Wrong: `WHERE (a=1) OR (a=2) AND b=3` — the AND only applies to the last branch. Right: `WHERE ((a=1) OR (a=2)) AND b=3`.]",
+  },
+  // --- SHR: city query without agency_type filter for ambiguous names ---
+  {
+    name: "shr-city-no-type",
+    tabs: ["shr"],
+    match: (ctx) => {
+      const sqlLower = ctx.sql.toLowerCase();
+      if (sqlLower.includes("agency_type")) return false;
+      const ambiguous = [
+        "los angeles", "jacksonville", "nashville", "indianapolis",
+        "baltimore", "houston", "san diego", "sacramento",
+        "kansas city", "richmond", "el paso",
+      ];
+      return ambiguous.some((c) => sqlLower.includes(`'${c}'`));
+    },
+    message: (ctx) => {
+      const sqlLower = ctx.sql.toLowerCase();
+      const ambiguous = [
+        "los angeles", "jacksonville", "nashville", "indianapolis",
+        "baltimore", "houston", "san diego", "sacramento",
+        "kansas city", "richmond", "el paso",
+      ];
+      const mentioned = ambiguous.filter((c) => sqlLower.includes(`'${c}'`));
+      return `[SYSTEM: Query includes ${mentioned.join(", ")} which have both City police and County sheriff agencies with the same name. Add AND agency_type = 'City' to filter to the city police department only.]`;
+    },
   },
 ];
 

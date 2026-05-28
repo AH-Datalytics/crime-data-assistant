@@ -2,16 +2,14 @@ import type { ChartConfig } from "./types";
 import type { ClaudeResponse } from "./nibrs-claude";
 
 export const NIBRS_CHART_COLORS = [
-  "#2d5f8a",   // deep blue — authoritative lead
-  "#c23b22",   // brick red
-  "#3a7d44",   // forest
-  "#d4882c",   // amber
-  "#7b5ea7",   // muted purple
-  "#5a8a8a",   // teal
-  "#b85842",   // terracotta
-  "#4a6fa5",   // slate blue
-  "#8b6e4e",   // warm brown
-  "#6b7b3a",   // olive
+  "#2d5f8a",   // steel blue
+  "#c4652a",   // copper
+  "#2a8a5a",   // forest green
+  "#8040a0",   // purple
+  "#b8960a",   // gold
+  "#c43838",   // crimson
+  "#1a8a8a",   // teal
+  "#6050b0",   // indigo
 ];
 
 export function buildNibrsChartConfig(

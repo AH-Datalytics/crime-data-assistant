@@ -431,6 +431,7 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
           <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2 sm:py-3">
             <button
               onClick={() => setChatCollapsed(c => !c)}
+              aria-expanded={!chatCollapsed}
               className="text-[11px] font-semibold uppercase tracking-wider text-[var(--accent)] hover:text-[var(--foreground)] cursor-pointer transition-colors flex items-center gap-1.5 mb-1 px-1.5 sm:px-2 py-1 rounded-md hover:bg-[var(--surface)]"
             >
               <svg className={`w-3.5 h-3.5 transition-transform ${chatCollapsed ? "" : "rotate-90"}`} fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
@@ -546,16 +547,17 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
         {hasData && response.chartConfig && (
           <div className={`${response.rows.length > 0 ? "md:w-1/2 md:border-r" : "w-full"} border-[var(--border)] shrink-0 md:shrink md:overflow-hidden bg-white`} style={{ minHeight: response.rows.length >= 8 ? 340 : 280 }}>
             <div ref={chartRef} className="h-full flex flex-col p-3 sm:p-5">
-              <div className="flex items-start justify-between gap-2 sm:gap-3 mb-2 shrink-0">
-                <h2
-                  className="text-[11px] sm:text-xs font-medium uppercase tracking-wider text-[var(--muted)] flex-1 min-w-0"
-                  style={{ letterSpacing: "0.6px" }}
-                >
-                  {response.title}
-                </h2>
+              <div className="flex items-end justify-end gap-2 sm:gap-3 mb-2 shrink-0">
                 <ExportButtons
                   chartRef={chartRef}
                   csvFilename={`${response.title || "chart"}.jpeg`}
+                  embedData={response.sql ? {
+                    tab: mode,
+                    title: response.title,
+                    sql: response.sql,
+                    chartConfig: response.chartConfig,
+                    chartMeta: response.chartMeta,
+                  } : undefined}
                 />
               </div>
               <div className="flex-1 min-h-0" style={{ minHeight: response.rows.length >= 8 ? 320 : 260 }}>

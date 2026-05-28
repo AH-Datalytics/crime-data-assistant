@@ -4,7 +4,7 @@ module.exports = {
     script: 'npm',
     args: 'start',
     cwd: '/opt/nibrs/app',
-    instances: 1,
+    instances: 4,
     exec_mode: 'cluster',
     env: {
       RTCI_DB_PATH: '/opt/nibrs/app/crime_data.db',

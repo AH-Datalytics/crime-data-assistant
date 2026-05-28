@@ -26,9 +26,10 @@ interface DataTableProps {
   columns: string[];
   rows: Record<string, unknown>[];
   truncated?: boolean;
+  fillHeight?: boolean;
 }
 
-export default function DataTable({ columns, rows, truncated }: DataTableProps) {
+export default function DataTable({ columns, rows, truncated, fillHeight }: DataTableProps) {
   const [sortCol, setSortCol] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [expanded, setExpanded] = useState(false);
@@ -86,8 +87,8 @@ export default function DataTable({ columns, rows, truncated }: DataTableProps) 
   if (columns.length === 0 || rows.length === 0) return null;
 
   return (
-    <div>
-      <div className="overflow-x-auto max-h-96 overflow-y-auto">
+    <div className={fillHeight ? "flex flex-col flex-1 min-h-0" : ""}>
+      <div className={`overflow-x-auto overflow-y-auto ${fillHeight ? "flex-1" : "max-h-96"}`}>
         <table className="stat-table">
           <thead className="sticky top-0 z-10">
             <tr>
@@ -95,7 +96,6 @@ export default function DataTable({ columns, rows, truncated }: DataTableProps) 
                 <th
                   key={col}
                   onClick={() => handleSort(col)}
-                  style={{ textAlign: isNumeric(col) ? "right" : "left" }}
                 >
                   <span>{formatHeader(col)}</span>
                 </th>
@@ -108,7 +108,6 @@ export default function DataTable({ columns, rows, truncated }: DataTableProps) 
                 {columns.map((col) => (
                   <td
                     key={col}
-                    style={{ textAlign: isNumeric(col) ? "right" : "left" }}
                   >
                     {formatCell(row[col], col)}
                   </td>

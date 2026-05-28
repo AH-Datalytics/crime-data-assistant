@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import {
   ResponsiveContainer,
   LineChart,
@@ -17,9 +18,9 @@ const MONTH_NAMES = [
 ];
 
 const TICK_STYLE = {
-  fontSize: 12,
-  fill: "#999",
-  fontFamily: "Georgia, 'Times New Roman', serif",
+  fontSize: 13,
+  fill: "#1e2a35",
+  fontFamily: "'DM Sans', 'Segoe UI', Arial, sans-serif",
 };
 
 interface HeroChartProps {
@@ -40,8 +41,17 @@ export default function HeroChart({ data, agencyCount, population }: HeroChartPr
     _ym: `${d.year}${String(d.month).padStart(2, "0")}`,
   }));
 
+  // On narrow screens, show every other year to avoid label overlap
+  const [isNarrow, setIsNarrow] = useState(false);
+  useEffect(() => {
+    const check = () => setIsNarrow(window.innerWidth < 640);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+
   return (
-    <div className="bg-white rounded-xl border border-[var(--border)] p-5">
+    <div className="rounded-xl border border-[var(--border)] p-5" style={{ background: "#F5F0E8" }}>
       <h2
         className="text-xs font-medium uppercase tracking-wider text-[var(--muted)] mb-1"
         style={{ letterSpacing: "0.6px" }}
@@ -51,13 +61,13 @@ export default function HeroChart({ data, agencyCount, population }: HeroChartPr
       <p className="text-[11px] text-[var(--muted-light)] mb-4">
         National sample with complete reporting, 2018–present
       </p>
-      <div className="h-[280px] sm:h-[380px]">
+      <div className="h-[220px] sm:h-[380px]">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart
             data={chartData}
             margin={{ top: 10, right: 20, bottom: 20, left: 10 }}
           >
-            <CartesianGrid horizontal vertical={false} stroke="#eaeaea" strokeWidth={1} />
+            <CartesianGrid horizontal vertical={false} stroke="#ddd8ce" strokeWidth={1} />
             <XAxis
               dataKey="_ym"
               tick={TICK_STYLE}
@@ -66,8 +76,10 @@ export default function HeroChart({ data, agencyCount, population }: HeroChartPr
               tickFormatter={(v: string) => {
                 if (!/^\d{6}$/.test(v)) return v;
                 const mm = v.slice(4, 6);
-                if (mm === "01") return v.slice(0, 4);
-                return "";
+                if (mm !== "01") return "";
+                const yr = parseInt(v.slice(0, 4), 10);
+                if (isNarrow && yr % 2 !== 0) return "";
+                return v.slice(0, 4);
               }}
               interval={0}
             />
@@ -77,6 +89,12 @@ export default function HeroChart({ data, agencyCount, population }: HeroChartPr
               tickLine={false}
               axisLine={false}
               width={50}
+              domain={[0, (max: number) => {
+                const step = max <= 100 ? 10 : max <= 500 ? 50 : max <= 1000 ? 100 : max <= 5000 ? 500 : max <= 20000 ? 2500 : max <= 100000 ? 10000 : 50000;
+                return Math.ceil(max / step) * step;
+              }]}
+              allowDecimals={false}
+              tickCount={6}
             />
             <Tooltip
               labelFormatter={(label) => {
@@ -88,11 +106,15 @@ export default function HeroChart({ data, agencyCount, population }: HeroChartPr
               formatter={(v) => [Number(v).toLocaleString(), "Murders"]}
               contentStyle={{
                 borderRadius: 4,
-                border: "1px solid #ddd",
+                border: "none",
                 fontSize: 12,
-                fontFamily: "Georgia, 'Times New Roman', serif",
-                boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
+                fontFamily: "'DM Sans', 'Segoe UI', Arial, sans-serif",
+                boxShadow: "0 4px 16px rgba(0,0,0,0.15)",
+                background: "#1e3a5f",
+                color: "#ffffff",
               }}
+              labelStyle={{ color: "#ffffff" }}
+              itemStyle={{ color: "#ffffff" }}
             />
             <Line
               type="monotone"
@@ -108,7 +130,7 @@ export default function HeroChart({ data, agencyCount, population }: HeroChartPr
       </div>
       <div
         className="text-[10px] mt-1"
-        style={{ color: "#aaa", fontFamily: "Georgia, 'Times New Roman', serif" }}
+        style={{ color: "#5a6a7a", fontFamily: "'DM Sans', 'Segoe UI', Arial, sans-serif", fontVariant: "small-caps" }}
       >
         Source: Crime Index · {agencyCount} agencies
         {population && ` · Pop. ${formatPop(population)}`}

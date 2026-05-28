@@ -2,11 +2,20 @@
 
 import { useCallback, useState, type RefObject } from "react";
 
+interface EmbedData {
+  tab: string;
+  title: string;
+  sql: string;
+  chartConfig: unknown;
+  chartMeta: unknown;
+}
+
 interface ExportButtonsProps {
   chartRef?: RefObject<HTMLDivElement | null>;
   csvData?: Record<string, unknown>[];
   csvColumns?: string[];
   csvFilename?: string;
+  embedData?: EmbedData;
 }
 
 function fmtCsvVal(val: unknown): string {
@@ -73,42 +82,45 @@ async function addBrandedFooter(sourceDataUrl: string): Promise<string> {
     canvas.height = chartImg.height;
     const ctx = canvas.getContext("2d")!;
 
-    // Draw chart image
+    // Draw chart image with extra footer space
+    const footerHeight = 44;
+    canvas.height = chartImg.height + footerHeight;
+    ctx.fillStyle = "#F5F0E8";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(chartImg, 0, 0);
 
-    // Draw Crime Index logo + text in bottom-right, large and prominent
-    const logoSize = 48;
+    // Draw Crime Index logo + text in footer area below chart
+    const logoSize = 24;
     const text = "Crime Index";
-    ctx.font = "600 20px 'Hanken Grotesk', Helvetica, sans-serif";
+    ctx.font = "600 14px 'DM Sans', 'Segoe UI', Arial, sans-serif";
     const textWidth = ctx.measureText(text).width;
-    const totalWidth = logoSize + 10 + textWidth;
-    const x = canvas.width - totalWidth - 24;
-    const y = canvas.height - 36;
-
-    // White background patch for legibility
-    ctx.fillStyle = "rgba(255,255,255,0.9)";
-    ctx.fillRect(x - 10, y - logoSize - 6, totalWidth + 20, logoSize + 16);
+    const totalWidth = logoSize + 8 + textWidth;
+    const x = canvas.width - totalWidth - 16;
+    const y = chartImg.height + (footerHeight + logoSize) / 2;
 
     ctx.drawImage(logoImg, x, y - logoSize, logoSize, logoSize);
-    ctx.fillStyle = "#555";
-    ctx.textBaseline = "bottom";
-    ctx.font = "600 20px 'Hanken Grotesk', Helvetica, sans-serif";
-    ctx.fillText(text, x + logoSize + 10, y - 10);
+    ctx.fillStyle = "#999";
+    ctx.textBaseline = "middle";
+    ctx.font = "600 14px 'DM Sans', 'Segoe UI', Arial, sans-serif";
+    ctx.fillText(text, x + logoSize + 8, y - logoSize / 2);
 
     resolve(canvas.toDataURL("image/png"));
   });
 }
 
 const btnClass =
-  "group inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider rounded-md bg-[var(--surface)] text-[var(--muted)] hover:bg-[var(--foreground)] hover:text-white cursor-pointer transition-all duration-200";
+  "group inline-flex items-center justify-center gap-1.5 px-3 py-2.5 min-h-[44px] text-[11px] font-semibold uppercase tracking-wider rounded-md bg-[var(--surface)] text-[var(--muted)] hover:bg-[var(--foreground)] hover:text-white cursor-pointer transition-all duration-200";
 
 export default function ExportButtons({
   chartRef,
   csvData,
   csvColumns,
   csvFilename = "crime-data-export.csv",
+  embedData,
 }: ExportButtonsProps) {
   const [copied, setCopied] = useState(false);
+  const [embedCopied, setEmbedCopied] = useState(false);
+  const [embedLoading, setEmbedLoading] = useState(false);
 
   const captureChart = useCallback(async (): Promise<string | null> => {
     if (!chartRef?.current) return null;
@@ -118,7 +130,7 @@ export default function ExportButtons({
       const { toPng } = await import("html-to-image");
       const dataUrl = await toPng(chartRef.current, {
         pixelRatio: 2,
-        backgroundColor: "#ffffff",
+        backgroundColor: "#F5F0E8",
       });
       return await addBrandedFooter(dataUrl);
     } finally {
@@ -157,24 +169,53 @@ export default function ExportButtons({
     downloadCsv(csvData, csvColumns, csvFilename);
   }, [csvData, csvColumns, csvFilename]);
 
+  const handleEmbed = useCallback(async () => {
+    if (!embedData) return;
+    setEmbedLoading(true);
+    try {
+      const res = await fetch("/api/embed", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(embedData),
+      });
+      if (!res.ok) throw new Error("Failed");
+      const { id } = await res.json();
+      const baseUrl = window.location.origin;
+      const embedUrl = `${baseUrl}/embed?id=${id}`;
+      await navigator.clipboard.writeText(embedUrl);
+      setEmbedCopied(true);
+      setTimeout(() => setEmbedCopied(false), 2000);
+    } catch {
+      console.error("Failed to create embed link");
+    } finally {
+      setEmbedLoading(false);
+    }
+  }, [embedData]);
+
   return (
     <div className="flex gap-2" data-export-btn>
       {chartRef && (
-        <button onClick={handleCopy} className={btnClass}>
-          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="5" width="8" height="8" rx="1.5"/><path d="M5 11H4a1.5 1.5 0 01-1.5-1.5v-7A1.5 1.5 0 014 1h7a1.5 1.5 0 011.5 1.5V4"/></svg>
-          {copied ? "Copied" : "Copy"}
+        <button onClick={handleCopy} className={btnClass} aria-label="Copy chart image to clipboard">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="5" y="5" width="8" height="8" rx="1.5"/><path d="M5 11H4a1.5 1.5 0 01-1.5-1.5v-7A1.5 1.5 0 014 1h7a1.5 1.5 0 011.5 1.5V4"/></svg>
+          <span aria-live="polite">{copied ? "Copied" : "Copy Image"}</span>
         </button>
       )}
       {chartRef && (
-        <button onClick={handleJpeg} className={btnClass}>
-          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M8 2v9m0 0l-3-3m3 3l3-3M3 14h10"/></svg>
-          Download
+        <button onClick={handleJpeg} className={btnClass} aria-label="Download chart as image">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M8 2v9m0 0l-3-3m3 3l3-3M3 14h10"/></svg>
+          Save Image
         </button>
       )}
       {csvData && csvColumns && (
-        <button onClick={handleCsv} className={btnClass}>
-          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M4 2h6l3 3v9H4V2z"/><path d="M10 2v3h3"/></svg>
+        <button onClick={handleCsv} className={btnClass} aria-label="Download data as CSV">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M4 2h6l3 3v9H4V2z"/><path d="M10 2v3h3"/></svg>
           CSV
+        </button>
+      )}
+      {embedData && (
+        <button onClick={handleEmbed} disabled={embedLoading} className={btnClass} aria-label="Copy embeddable link">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M10 2h4v4"/><path d="M14 2L8 8"/><path d="M14 9v4a1 1 0 01-1 1H3a1 1 0 01-1-1V3a1 1 0 011-1h4"/></svg>
+          <span aria-live="polite">{embedCopied ? "Copied!" : embedLoading ? "..." : "Embed"}</span>
         </button>
       )}
     </div>

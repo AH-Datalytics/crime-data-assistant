@@ -4,7 +4,7 @@ import { validatePageToken } from "@/lib/page-token";
 import { translateToSql } from "@/lib/nibrs-claude";
 import { validateAndSanitize } from "@/lib/sql-safety";
 import { buildNibrsChartConfig } from "@/lib/nibrs-chart-config";
-import { generateExplanation } from "@/lib/explain";
+import { generateExplanation, sanitizeExplanation } from "@/lib/explain";
 import { extractQueryContext } from "@/lib/query-context";
 import { runGuardrails } from "@/lib/guardrails";
 import { applyRetryMeta } from "@/lib/types";
@@ -98,13 +98,13 @@ export async function POST(req: NextRequest) {
 
       if (!claude.sql) {
         // Retry if model incorrectly claims data isn't available
-        const refusalPatterns = /not (appear to be |be )?represented|not (in|included in) (this|the|our) (dataset|data|sample)|no data (for|available|found)|does not (have|include|cover)|not available in this/i;
+        const refusalPatterns = /not (appear|be represented)|doesn't appear|not (in|included in) (this|the|our) (dataset|data|sample|library)|no data (for|available|found)|does not (have|include|cover)|not available in this|isn't (in|included)|not found in/i;
         if (refusalPatterns.test(claude.explanation || "")) {
           try {
             const retryResult = await translateToSql(question, [
               ...(history || []),
               { role: "assistant", content: claude.explanation },
-              { role: "user", content: "[SYSTEM: Your previous response claimed the data was not available, but this may be incorrect. Please try generating a SQL query — search for the data rather than assuming it doesn't exist.]" },
+              { role: "user", content: "[SYSTEM: Your previous response claimed the data was not available, but this may be incorrect. NEVER assume an agency is missing. Always generate a SQL query and let the database answer. Try the query now.]" },
             ]);
             if (retryResult.sql) {
               Object.assign(claude, retryResult);
@@ -112,6 +112,9 @@ export async function POST(req: NextRequest) {
           } catch { /* use original */ }
         }
       }
+
+      // Sanitize explanation to strip any JSON/SQL that leaked through
+      claude.explanation = sanitizeExplanation(claude.explanation);
 
       if (!claude.sql) {
         logNibrsQuery(question, null, 0, null, Date.now() - claudeStart, claude.explanation, [], "haiku-4.5", sessionId);
@@ -467,7 +470,7 @@ export async function POST(req: NextRequest) {
     console.log(`[nibrs][timing] Post-query explanation: ${explainMs}ms`);
 
     // Append standard NIBRS disclaimer — skip if explanation already has a coverage/completeness note
-    const nibrsDisclaimer = "Note: This data comes from the FBI's NIBRS program. Not all agencies report to this system, and some may have incomplete data — especially in their first year of NIBRS reporting. Always verify that reported offenses are not impacted by incomplete coverage.";
+    const nibrsDisclaimer = "Note: This data comes from the FBI's NIBRS program. Not all agencies report to this system, and some may have incomplete data — especially in their first year of NIBRS reporting or for recent months of data. Always verify that reported offenses are not impacted by incomplete coverage.";
     const alreadyHasCoverageNote = /transitioning|underreporting|incomplete|not all agencies|coverage|did not report/i.test(explanation);
     if (!explanation.includes("FBI's NIBRS program") && !alreadyHasCoverageNote) {
       explanation += "\n\n" + nibrsDisclaimer;

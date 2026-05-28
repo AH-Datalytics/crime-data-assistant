@@ -3,11 +3,12 @@ import { getDb, logQuery } from "@/lib/rtci-db";
 import { validatePageToken } from "@/lib/page-token";
 import { translateToSql, getHistoricalSystemPrompt } from "@/lib/claude";
 import { validateAndSanitize } from "@/lib/sql-safety";
+import { executeWithTimeoutSync } from "@/lib/query-timeout";
 import { buildChartConfig } from "@/lib/chart-config";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { checkSessionLimit, maybeCleanup } from "@/lib/captcha";
 import { RTCI } from "@/lib/dynamic-facts";
-import { generateExplanation } from "@/lib/explain";
+import { generateExplanation, sanitizeExplanation } from "@/lib/explain";
 import { extractQueryContext } from "@/lib/query-context";
 import { runGuardrails } from "@/lib/guardrails";
 import { applyRetryMeta } from "@/lib/types";
@@ -55,7 +56,7 @@ function getChartMeta(
       const popRow = db
         .prepare(
           `SELECT SUM(p.population) as pop FROM agency_population p
-           JOIN agencies a ON a.ori = p.ori AND a.national_sample = 1
+           JOIN sample_agencies sa ON sa.ori = p.ori
            WHERE p.year = ?`
         )
         .get(popYear) as { pop: number | null } | undefined;
@@ -117,6 +118,9 @@ function getChartMeta(
         agencies.push(am[1]);
       }
       if (agencies.length > 0) {
+        // Detect if the query filters by type (City/County) and mirror it in the meta query
+        const typeMatch = sql.match(/type\s*=\s*'(City|County)'/i);
+        const typeFilter = typeMatch ? `AND a.type = '${typeMatch[1]}'` : "";
         const placeholders = agencies.map(() => "a.agency = ?").join(" OR ");
         const params: (string | number)[] = [popYear, ...agencies];
         const row = db
@@ -124,7 +128,7 @@ function getChartMeta(
             `SELECT COUNT(DISTINCT a.ori) as cnt, SUM(p.population) as pop
              FROM agencies a
              LEFT JOIN agency_population p ON p.ori = a.ori AND p.year = ?
-             WHERE ${placeholders}`
+             WHERE (${placeholders}) ${typeFilter}`
           )
           .get(...params) as { cnt: number; pop: number | null };
         return { agencyCount: row.cnt, population: row.pop };
@@ -159,7 +163,7 @@ function getHistoricalChartMeta(
   try {
     const sqlLower = sql.toLowerCase();
 
-    const src = "FBI Uniform Crime Reports";
+    const src = "FBI SRS";
 
     // National queries (state = 'United States')
     if (sqlLower.includes("'united states'")) {
@@ -210,6 +214,8 @@ function findSimilarAgencies(
 export async function POST(req: NextRequest) {
   const encoder = new TextEncoder();
   const totalStart = Date.now();
+  const MAX_REQUEST_MS = 60000; // 60s total budget — no retries after this
+  const isOverBudget = () => Date.now() - totalStart > MAX_REQUEST_MS;
 
   // Rate limiting
   const ip =
@@ -331,9 +337,9 @@ export async function POST(req: NextRequest) {
             systemPrompt
           );
 
-          if (!claude.sql) {
+          if (!claude.sql && !isOverBudget()) {
             // Retry if model incorrectly claims data isn't available
-            const refusalPatterns = /not (appear to be |be )?represented|not (in|included in) (this|the|our) (dataset|data|sample)|no data (for|available|found)|does not (have|include|cover)|not available in this/i;
+            const refusalPatterns = /not (appear|be represented)|doesn't appear|not (in|included in) (this|the|our) (dataset|data|sample|library)|no data (for|available|found)|does not (have|include|cover)|not available in this|isn't (in|included)|not found in/i;
             if (refusalPatterns.test(claude.explanation || "")) {
               try {
                 const retryResult = await translateToSql(
@@ -341,7 +347,9 @@ export async function POST(req: NextRequest) {
                   [
                     ...((history || []) as { role: "user" | "assistant"; content: string }[]),
                     { role: "assistant", content: claude.explanation },
-                    { role: "user", content: "[SYSTEM: Your previous response claimed the data was not available, but this may be incorrect. The database contains agencies from many states. Please try generating a SQL query — search for the agency/state in the data rather than assuming it doesn't exist. Use sample_agencies or agency_monthly to check.]" },
+                    { role: "user", content: tab === "historical"
+                      ? "[SYSTEM: Your previous response claimed the data was not available, but this may be incorrect. The Historical Library contains ~24,937 agencies including many small towns. NEVER assume an agency is missing — always generate a SQL query. Try: SELECT DISTINCT ori, agency, state FROM historical_agency WHERE agency LIKE '%[city]%' AND state = '[st]'. Then generate the main query.]"
+                      : "[SYSTEM: Your previous response claimed the data was not available, but this may be incorrect. The database contains agencies from many states. Please try generating a SQL query — search for the agency/state in the data rather than assuming it doesn't exist. Use sample_agencies or agency_monthly to check.]" },
                   ],
                   systemPrompt
                 );
@@ -354,6 +362,9 @@ export async function POST(req: NextRequest) {
             }
           }
         }
+
+        // Sanitize explanation to strip any JSON/SQL that leaked through
+        claude.explanation = sanitizeExplanation(claude.explanation);
 
         if (!claude.sql) {
           const ms = Date.now() - totalStart;
@@ -409,8 +420,8 @@ export async function POST(req: NextRequest) {
           console.log(`[guardrails] Fired: ${firedGuardrails.join(", ")}`);
         }
 
-        // If issues found, ask Claude to fix
-        if (issues.length > 0) {
+        // If issues found, ask Claude to fix (if budget allows)
+        if (issues.length > 0 && !isOverBudget()) {
           controller.enqueue(
             encoder.encode(
               sseEvent({ type: "status", text: "Refining query..." })
@@ -477,13 +488,20 @@ export async function POST(req: NextRequest) {
 
         try {
           const stmt = db.prepare(sql);
-          const result = stmt.all() as Record<string, unknown>[];
+          const result = executeWithTimeoutSync<Record<string, unknown>>(db, stmt, 30000);
           columns = stmt.columns().map((c) => c.name);
           rows = result;
         } catch (dbErr) {
           const msg =
             dbErr instanceof Error ? dbErr.message : String(dbErr);
-          // Retry: tell Claude about the error and ask for a corrected query
+          // Retry: tell Claude about the error and ask for a corrected query (if budget allows)
+          if (isOverBudget()) {
+            const ms = Date.now() - totalStart;
+            logQuery(question, sql, 0, `DB: ${msg} (over budget)`, ms, null, tab, firedGuardrails, "haiku-4.5", sessionId);
+            controller.enqueue(encoder.encode(sseEvent({ type: "error", text: "That query took too long. Try simplifying your question." })));
+            close();
+            return;
+          }
           controller.enqueue(
             encoder.encode(
               sseEvent({ type: "status", text: "Retrying with corrected query..." })
@@ -511,10 +529,7 @@ export async function POST(req: NextRequest) {
             if (retryValidation.valid) {
               try {
                 const retryStmt = db.prepare(retryValidation.sanitized!);
-                const retryResult = retryStmt.all() as Record<
-                  string,
-                  unknown
-                >[];
+                const retryResult = executeWithTimeoutSync<Record<string, unknown>>(db, retryStmt, 30000);
                 columns = retryStmt.columns().map((c) => c.name);
                 rows = retryResult;
                 sql = retryValidation.sanitized!;
@@ -742,7 +757,8 @@ export async function POST(req: NextRequest) {
             const zeroCount = vals.filter(v => v === 0).length;
             const zeroPct = zeroCount / vals.length;
             if (zeroPct > 0.15) {
-              // Retry with rolling 12-month
+              // Retry with rolling 12-month (skip if over budget)
+              if (isOverBudget()) break;
               console.log(`[sparse-monthly] ${col}: ${zeroCount}/${vals.length} zeros (${(zeroPct*100).toFixed(0)}%), retrying with rolling 12-month`);
               controller.enqueue(
                 encoder.encode(
@@ -784,6 +800,14 @@ export async function POST(req: NextRequest) {
         const chartMeta = isHistorical ? getHistoricalChartMeta(db, sql) : getChartMeta(db, sql);
         const truncated = rows.length >= maxLimit;
 
+        // Step 5c: Append deterministic RTCI sample disclaimer (server-enforced, model can't skip)
+        if (!isHistorical && claude.explanation) {
+          const sampleNote = "Note: Current Trends data comes from a sample of agencies with consistent reporting — it does not represent complete state or national totals. For comprehensive state-level estimates, try the Historical Library tab.";
+          if (!claude.explanation.includes("sample")) {
+            claude.explanation = claude.explanation + "\n\n" + sampleNote;
+          }
+        }
+
         // Step 5b: Send result immediately with pre-query explanation (no waiting)
         controller.enqueue(
           encoder.encode(
@@ -807,7 +831,7 @@ export async function POST(req: NextRequest) {
         // Re-extract context from final SQL (may have been fixed by guardrails/retry)
         const finalCtx = extractQueryContext(sql, question, tab as "current" | "historical");
         try {
-          const postExplanation = await generateExplanation({
+          let postExplanation = await generateExplanation({
             ctx: finalCtx,
             columns,
             rows,
@@ -815,6 +839,10 @@ export async function POST(req: NextRequest) {
             disclaimers: "",  // let buildDisclaimers handle all disclaimers deterministically
             preQueryExplanation: claude.explanation,
           });
+          // Append RTCI sample disclaimer to post-query explanation too
+          if (!isHistorical && postExplanation && !postExplanation.includes("sample")) {
+            postExplanation += "\n\nNote: Current Trends data comes from a sample of agencies with consistent reporting — it does not represent complete state or national totals. For comprehensive state-level estimates, try the Historical Library tab.";
+          }
           if (postExplanation !== claude.explanation) {
             controller.enqueue(
               encoder.encode(
@@ -831,7 +859,7 @@ export async function POST(req: NextRequest) {
         } catch {
           // Retry post-query explanation once before falling back
           try {
-            const retryExplanation = await generateExplanation({
+            let retryExplanation = await generateExplanation({
               ctx: finalCtx,
               columns,
               rows,
@@ -839,6 +867,9 @@ export async function POST(req: NextRequest) {
               disclaimers: "",
               preQueryExplanation: claude.explanation,
             });
+            if (!isHistorical && retryExplanation && !retryExplanation.includes("sample")) {
+              retryExplanation += "\n\nNote: Current Trends data comes from a sample of agencies with consistent reporting — it does not represent complete state or national totals. For comprehensive state-level estimates, try the Historical Library tab.";
+            }
             if (retryExplanation !== claude.explanation) {
               controller.enqueue(
                 encoder.encode(
