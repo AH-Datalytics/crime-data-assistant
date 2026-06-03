@@ -14,6 +14,8 @@ import { runGuardrails } from "@/lib/guardrails";
 import { applyRetryMeta } from "@/lib/types";
 import type { StreamEvent, ChartMeta } from "@/lib/types";
 import { getCached, setCache } from "@/lib/response-cache";
+import { detectAllNullData } from "@/lib/all-null-detection";
+import { checkSingleRowTrend } from "@/lib/single-row-trend";
 
 function sseEvent(event: StreamEvent): string {
   return `data: ${JSON.stringify(event)}\n\n`;
@@ -420,6 +422,31 @@ export async function POST(req: NextRequest) {
           console.log(`[guardrails] Fired: ${firedGuardrails.join(", ")}`);
         }
 
+        // Hard override — skip retry, return deterministic response
+        if (guardrailResult.overrideResponse) {
+          const overrideExplanation = guardrailResult.overrideResponse;
+          logQuery(question, sql, 0, `guardrail_override:${guardrailResult.overrideGuardrail}`, Date.now() - totalStart, overrideExplanation, tab, firedGuardrails, "haiku-4.5", sessionId);
+          controller.enqueue(
+            encoder.encode(
+              sseEvent({
+                type: "result",
+                sql: null as unknown as string,
+                explanation: overrideExplanation,
+                title: "",
+                columns: [],
+                rows: [],
+                rowCount: 0,
+                truncated: false,
+                chartConfig: null,
+                chartMeta: null,
+                executionTimeMs: Date.now() - totalStart,
+              })
+            )
+          );
+          close();
+          return;
+        }
+
         // If issues found, ask Claude to fix (if budget allows)
         if (issues.length > 0 && !isOverBudget()) {
           controller.enqueue(
@@ -439,6 +466,25 @@ export async function POST(req: NextRequest) {
             claude.sql = fixed.sql;
             applyRetryMeta(claude, fixed);
           }
+        }
+
+        // Post-retry guardrail re-check
+        {
+          const postRetryCtx = extractQueryContext(claude.sql, question, tab as "current" | "historical");
+          const postRetryResult = runGuardrails(postRetryCtx);
+          if (postRetryResult.overrideResponse) {
+            logQuery(question, claude.sql, 0, `guardrail_override:${postRetryResult.overrideGuardrail}`, Date.now() - totalStart, postRetryResult.overrideResponse, tab, postRetryResult.fired, "haiku-4.5", sessionId);
+            controller.enqueue(encoder.encode(sseEvent({ type: "result", sql: null as unknown as string, explanation: postRetryResult.overrideResponse, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - totalStart })));
+            close(); return;
+          }
+          const rateStillBad = postRetryResult.fired.some(f => f.includes("rate-no-population"));
+          if (rateStillBad && /\b(rates?|per\s*capita|per\s*100)/i.test(question) && !/\b(not rates?|raw|counts?\s+not\s+rates?)\b/i.test(question)) {
+            const msg = "I wasn't able to calculate a valid per-capita rate for this query. Try asking for raw counts, or use the [Historical Library](/test?tab=historical) tab for state/national rates.";
+            logQuery(question, claude.sql, 0, "rate_second_failure", Date.now() - totalStart, msg, tab, postRetryResult.fired, "haiku-4.5", sessionId);
+            controller.enqueue(encoder.encode(sseEvent({ type: "result", sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - totalStart })));
+            close(); return;
+          }
+          if (postRetryResult.sql !== claude.sql) claude.sql = postRetryResult.sql;
         }
 
         controller.enqueue(
@@ -615,7 +661,9 @@ export async function POST(req: NextRequest) {
           if (agencyName) {
             const similar = findSimilarAgencies(db, agencyName, isHistorical);
             if (similar.length === 0) {
-              emptyMsg = `"${agencyName}" is not in our dataset of ~${RTCI.agencyCount} agencies. Our data covers major U.S. cities and counties — not every jurisdiction is included. Try asking about a larger city or browsing national/state-level trends.`;
+              emptyMsg = isHistorical
+                ? `"${agencyName}" is not in our dataset. Try the [NIBRS Explorer](/test?tab=nibrs) tab, which has incident-level data from agencies nationwide, or the [Current Trends](/test?tab=current) tab for monthly data from ~${RTCI.agencyCount} major agencies.`
+                : `"${agencyName}" is not in our dataset of ~${RTCI.agencyCount} agencies. Try the [Historical Library](/test?tab=historical) tab for annual data covering more agencies back to the 1930s, or the [NIBRS Explorer](/test?tab=nibrs) tab for incident-level data from agencies nationwide.`;
             } else {
               const exactMatch = similar.find(
                 (s) =>
@@ -778,34 +826,57 @@ export async function POST(req: NextRequest) {
 
         // Step 4c: Detect columns that are ALL null in pivoted comparison data
         // Catches agencies that don't exist in the dataset but appear as null columns
-        if (rows.length > 0 && columns.length >= 3) {
-          const dataCols = columns.filter(c => c !== 'year' && c !== 'month');
-          const nullCols: string[] = [];
-          for (const col of dataCols) {
-            const allNull = rows.every(r => r[col] === null || r[col] === undefined);
-            if (allNull) nullCols.push(col);
+        {
+          const { allNull: everyColNull, dataCols } = detectAllNullData(columns, rows);
+          if (everyColNull) {
+            const emptyMsg = "I ran that query but all the values came back empty — the math likely broke somewhere (like dividing by zero). Could you try asking that a different way?";
+            logQuery(question, sql, 0, "all_null_columns", totalMs, emptyMsg, tab, firedGuardrails, "haiku-4.5", sessionId);
+            controller.enqueue(
+              encoder.encode(
+                sseEvent({
+                  type: "result",
+                  sql,
+                  explanation: emptyMsg,
+                  title: claude.title || "No Results",
+                  columns,
+                  rows: [],
+                  rowCount: 0,
+                  truncated: false,
+                  chartConfig: null,
+                  chartMeta: null,
+                  executionTimeMs,
+                })
+              )
+            );
+            close();
+            return;
           }
-          if (nullCols.length > 0 && nullCols.length < dataCols.length) {
-            const names = nullCols.map(c => c.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())).join(', ');
-            claude.explanation += `\n\nNote: ${names} returned no data for this query. This agency may not be in our dataset, may not report this offense, or may not have data for the requested time period.`;
-            // Remove all-null columns so chart doesn't show misleading zero lines
-            rows = rows.map(r => {
-              const cleaned = { ...r };
-              for (const col of nullCols) delete cleaned[col];
-              return cleaned;
-            });
-            columns = columns.filter(c => !nullCols.includes(c));
-            if (claude.yAxis) {
-              claude.yAxis = claude.yAxis.split(',').map(y => y.trim()).filter(y => !nullCols.includes(y)).join(',');
+          // Check for partial null columns (some null, some not)
+          if (dataCols.length > 0 && rows.length > 0) {
+            const nullCols = dataCols.filter(col => rows.every(r => r[col] === null || r[col] === undefined));
+            if (nullCols.length > 0 && nullCols.length < dataCols.length) {
+              const names = nullCols.map(c => c.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())).join(', ');
+              claude.explanation += `\n\nNote: ${names} returned no data for this query. This agency may not be in our dataset, may not report this offense, or may not have data for the requested time period.`;
+              rows = rows.map(r => {
+                const cleaned = { ...r };
+                for (const col of nullCols) delete cleaned[col];
+                return cleaned;
+              });
+              columns = columns.filter(c => !nullCols.includes(c));
+              if (claude.yAxis) {
+                claude.yAxis = claude.yAxis.split(',').map(y => y.trim()).filter(y => !nullCols.includes(y)).join(',');
+              }
             }
           }
         }
 
         // Step 4d: Detect sparse monthly city data (sawtooth pattern)
         // If monthly data for a specific city/agency has many zeros, retry with rolling 12-month
+        // SKIP if user explicitly asked for raw/non-rolling values
+        const userWantsRaw = /\b(raw counts?|raw numbers?|not rolling|no rolling|don'?t want rolling|just monthly|just raw)\b/i.test(question);
         const hasMonth = columns.includes("month");
         const isAgencyQuery = sql.toLowerCase().includes("agency_monthly") && /agency\s*=\s*'/i.test(sql);
-        if (hasMonth && isAgencyQuery && rows.length > 12) {
+        if (hasMonth && isAgencyQuery && rows.length > 12 && !userWantsRaw) {
           const dataCols = columns.filter(c => c !== "year" && c !== "month");
           for (const col of dataCols) {
             const vals = rows.map(r => Number(r[col] ?? 0));
@@ -855,6 +926,12 @@ export async function POST(req: NextRequest) {
         const chartMeta = isHistorical ? getHistoricalChartMeta(db, sql) : getChartMeta(db, sql);
         const truncated = rows.length >= maxLimit;
 
+        // Step 5b2: Single-row trend warning
+        const singleRowWarning = checkSingleRowTrend(question, rows.length);
+        if (singleRowWarning) {
+          claude.explanation = (claude.explanation || "") + "\n\n" + singleRowWarning;
+        }
+
         // Step 5c: Append deterministic RTCI sample disclaimer (server-enforced, model can't skip)
         if (!isHistorical && claude.explanation) {
           const sampleNote = "Note: Current Trends data comes from a sample of agencies with consistent reporting — it does not represent complete state or national totals. For comprehensive state-level estimates, try the Historical Library tab.";
@@ -894,6 +971,13 @@ export async function POST(req: NextRequest) {
             disclaimers: "",  // let buildDisclaimers handle all disclaimers deterministically
             preQueryExplanation: claude.explanation,
           });
+          // Fix national vs cities wording mismatch (e.g., national_clearance_rate described as "across cities")
+          if (/\bnational_/i.test(sql) && !/\bagency\s*=/i.test(sql)) {
+            postExplanation = postExplanation
+              .replace(/\bacross cities\b/gi, "nationally")
+              .replace(/\bfor cities\b/gi, "nationally")
+              .replace(/\bin cities\b/gi, "nationally");
+          }
           // Append RTCI sample disclaimer to post-query explanation too
           if (!isHistorical && postExplanation && !postExplanation.includes("sample")) {
             postExplanation += "\n\nNote: Current Trends data comes from a sample of agencies with consistent reporting — it does not represent complete state or national totals. For comprehensive state-level estimates, try the Historical Library tab.";
@@ -922,6 +1006,13 @@ export async function POST(req: NextRequest) {
               disclaimers: "",
               preQueryExplanation: claude.explanation,
             });
+            // Fix national vs cities wording mismatch
+            if (/\bnational_/i.test(sql) && !/\bagency\s*=/i.test(sql)) {
+              retryExplanation = retryExplanation
+                .replace(/\bacross cities\b/gi, "nationally")
+                .replace(/\bfor cities\b/gi, "nationally")
+                .replace(/\bin cities\b/gi, "nationally");
+            }
             if (!isHistorical && retryExplanation && !retryExplanation.includes("sample")) {
               retryExplanation += "\n\nNote: Current Trends data comes from a sample of agencies with consistent reporting — it does not represent complete state or national totals. For comprehensive state-level estimates, try the Historical Library tab.";
             }

@@ -24,6 +24,7 @@ RULES:
 - NEVER use: "higher", "lower", "peaked", "declined", "ranging from", "compared to", "shows", "suggests", "may reflect", "driven by".
 - Do NOT mention SQL, table names, or technical details.
 - Use the user's own words for their question.
+- NEVER mention a city, agency, or entity name unless it appears in the "Entities in results" list. If no entities are listed, describe the data generically (e.g., "cities ranked by..."). Making up entity names is the worst possible error.
 - Append any disclaimer provided VERBATIM — do not rephrase it.
 - Return ONLY the explanation text.`;
 
@@ -53,6 +54,44 @@ function extractMetrics(columns: string[]): string[] {
     "agency", "state_name", "population", "Year", "Month",
   ]);
   return columns.filter((c) => !skip.has(c));
+}
+
+/**
+ * Extract actual entity names (cities, agencies, states) from result rows.
+ * This grounds the explanation in real data, preventing hallucination.
+ */
+function extractEntitiesFromResults(
+  rows: Record<string, unknown>[],
+  columns: string[]
+): string[] {
+  // Look for entity columns in priority order
+  const entityCols = ["city", "agency", "agency_name", "state_name", "state"];
+  const entityCol = entityCols.find((c) => columns.includes(c));
+  if (entityCol) {
+    const entities = rows
+      .map((r) => String(r[entityCol] ?? ""))
+      .filter((v) => v.length > 0);
+    // Deduplicate while preserving order
+    return [...new Set(entities)].slice(0, 15);
+  }
+  // Check for formatted columns like "city || ', ' || state" aliased as something custom
+  // These show up as non-metric, non-year columns with string values
+  const metricCols = new Set([
+    "year", "data_year", "month", "population", "Year", "Month",
+    "count", "total", "rate", "rate_per_100k", "pct_change",
+    "count_2020", "count_2024", "count_2024_plus", "y2020", "y2024",
+  ]);
+  for (const col of columns) {
+    if (metricCols.has(col)) continue;
+    const firstVal = rows[0]?.[col];
+    if (typeof firstVal === "string" && firstVal.length > 1 && isNaN(Number(firstVal))) {
+      const entities = rows
+        .map((r) => String(r[col] ?? ""))
+        .filter((v) => v.length > 0);
+      return [...new Set(entities)].slice(0, 15);
+    }
+  }
+  return [];
 }
 
 /* ------------------------------------------------------------------ */
@@ -98,7 +137,7 @@ function buildDisclaimers(
         const actual = Number(rows[0][yearCol]);
         if (!isNaN(actual) && actual > requested + 1) {
           parts.push(
-            `Data begins in ${actual} although ${requested} was requested — earlier years are not available in this dataset.`
+            `Data begins in ${actual} although ${requested} was requested — earlier years are not available in this dataset. For data going back further, try the [Historical Library](/test?tab=historical) tab (annual data from the 1930s) or the [Current Trends](/test?tab=current) tab.`
           );
         }
       }
@@ -175,6 +214,12 @@ export async function generateExplanation(opts: {
     geoDisplay = placeMatch ? placeMatch[1] : "as requested";
   }
 
+  // Extract actual entity names from result rows to ground the explanation
+  const resultEntities = extractEntitiesFromResults(rows, columns);
+  const entitiesLine = resultEntities.length > 0
+    ? `\n- Entities in results: ${resultEntities.join(", ")}`
+    : "";
+
   const userPrompt = `User question: "${ctx.question}"
 
 Results metadata:
@@ -182,9 +227,9 @@ Results metadata:
 - Metrics: ${metrics.join(", ") || "various"}
 - Year range: ${yearRange || "unknown"}
 - Geographies: ${geoDisplay}
-- Scope: ${ctx.scope}
+- Scope: ${ctx.scope}${entitiesLine}
 
-Describe what these results contain in one sentence (metric, geography, time range).${disclaimerBlock}`;
+Describe what these results contain in one sentence (metric, geography, time range). ONLY mention cities/agencies/entities that appear in the "Entities in results" list above. Do NOT mention any entity not in the results.${disclaimerBlock}`;
 
   try {
     const message = await client.messages.create({
@@ -195,11 +240,225 @@ Describe what these results contain in one sentence (metric, geography, time ran
     });
 
     const text = message.content[0].type === "text" ? message.content[0].text.trim() : "";
-    if (text.length > 10) return text;
+    if (text.length > 10) {
+      // Validate: check for hallucinated entity names
+      let validated = validateExplanationEntities(text, resultEntities, ctx.geos);
+      // Validate: fix hallucinated row/entity counts
+      validated = validateExplanationCount(validated, rows, columns);
+      return validated;
+    }
   } catch (e) {
     console.warn(`[explain] Post-query explanation failed, using pre-query:`, e);
   }
 
-  // Fallback to pre-query explanation
-  return preQueryExplanation;
+  // Fallback to pre-query explanation (sanitized)
+  return sanitizeExplanation(preQueryExplanation);
+}
+
+/**
+ * Validate that entity names in the explanation actually appear in the results.
+ * If a hallucinated entity is detected, strip it or replace with generic text.
+ */
+function validateExplanationEntities(
+  explanation: string,
+  resultEntities: string[],
+  sqlGeos: string[]
+): string {
+  // Build a set of known-valid entity names (from results + SQL WHERE clauses)
+  const validNames = new Set<string>();
+  for (const e of resultEntities) {
+    validNames.add(e.toLowerCase());
+    // Also add the city part if format is "City, ST"
+    const commaIdx = e.indexOf(",");
+    if (commaIdx > 0) validNames.add(e.slice(0, commaIdx).trim().toLowerCase());
+    // Also add parts of hyphenated names (e.g., "Charlotte-Mecklenburg" → "Charlotte", "Mecklenburg")
+    if (e.includes("-")) {
+      for (const part of e.split("-")) {
+        const trimmed = part.trim().toLowerCase();
+        if (trimmed.length > 2) validNames.add(trimmed);
+      }
+    }
+  }
+  for (const g of sqlGeos) validNames.add(g.toLowerCase());
+
+  // Common US city names that might be hallucinated
+  const CITY_NAMES = [
+    "Los Angeles", "New York", "Chicago", "Houston", "Phoenix", "Philadelphia",
+    "San Antonio", "San Diego", "Dallas", "San Jose", "Austin", "Jacksonville",
+    "Fort Worth", "Columbus", "Charlotte", "Indianapolis", "San Francisco",
+    "Seattle", "Denver", "Washington", "Nashville", "Oklahoma City", "El Paso",
+    "Boston", "Portland", "Las Vegas", "Memphis", "Louisville", "Baltimore",
+    "Milwaukee", "Albuquerque", "Tucson", "Fresno", "Mesa", "Sacramento",
+    "Atlanta", "Kansas City", "Omaha", "Colorado Springs", "Raleigh", "Long Beach",
+    "Virginia Beach", "Miami", "Oakland", "Minneapolis", "Tampa", "Tulsa",
+    "Arlington", "New Orleans", "Detroit", "St Louis", "St. Louis",
+  ];
+
+  let cleaned = explanation;
+  let hadHallucination = false;
+
+  for (const city of CITY_NAMES) {
+    // Check if city is mentioned in explanation but NOT in valid names
+    const cityRegex = new RegExp(`\\b${city.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "gi");
+    if (cityRegex.test(cleaned) && !validNames.has(city.toLowerCase())) {
+      hadHallucination = true;
+      // Replace the hallucinated city name with generic text
+      cleaned = cleaned.replace(cityRegex, "cities in the dataset");
+      console.warn(`[explain] Hallucination detected: "${city}" not in results, stripped from explanation`);
+    }
+  }
+
+  // Deduplicate "cities in the dataset" if it was inserted multiple times
+  if (hadHallucination) {
+    cleaned = cleaned.replace(/cities in the dataset(?:,?\s*(?:and\s+)?cities in the dataset)+/gi, "cities in the dataset");
+  }
+
+  return cleaned;
+}
+
+/**
+ * Compute the actual count for a noun like "agencies", "cities", "years" from result data.
+ * Returns null if we can't determine the count.
+ */
+function getActualCountForNoun(
+  noun: string,
+  rows: Record<string, unknown>[],
+  columns: string[]
+): number | null {
+  if (rows.length === 0) return null;
+  const nounLower = noun.toLowerCase();
+
+  if (/agencies|departments|police departments/.test(nounLower)) {
+    // Distinct ORI if present, else distinct agency+state, else distinct agency
+    if (columns.includes("ori")) {
+      return new Set(rows.map(r => r.ori)).size;
+    }
+    const agencyCol = columns.find(c => /^(agency|city|department|agency_name)$/i.test(c));
+    const stateCol = columns.find(c => /^state$/i.test(c));
+    if (agencyCol && stateCol) {
+      return new Set(rows.map(r => `${r[agencyCol]}|${r[stateCol]}`)).size;
+    }
+    if (agencyCol) {
+      return new Set(rows.map(r => r[agencyCol])).size;
+    }
+    return null;
+  }
+
+  if (/cities|jurisdictions/.test(nounLower)) {
+    const cityCol = columns.find(c => /^(city|agency|agency_name)$/i.test(c));
+    const stateCol = columns.find(c => /^state$/i.test(c));
+    if (cityCol && stateCol) {
+      return new Set(rows.map(r => `${r[cityCol]}|${r[stateCol]}`)).size;
+    }
+    if (cityCol) {
+      return new Set(rows.map(r => r[cityCol])).size;
+    }
+    return null;
+  }
+
+  if (/rows|results|records/.test(nounLower)) {
+    return rows.length;
+  }
+
+  if (/years/.test(nounLower)) {
+    const yearCol = columns.find(c => /^(year|data_year)$/i.test(c));
+    if (yearCol) {
+      return new Set(rows.map(r => r[yearCol])).size;
+    }
+    return null;
+  }
+
+  if (/months/.test(nounLower)) {
+    const yearCol = columns.find(c => /^(year|data_year)$/i.test(c));
+    const monthCol = columns.find(c => /^month$/i.test(c));
+    if (yearCol && monthCol) {
+      return new Set(rows.map(r => `${r[yearCol]}-${r[monthCol]}`)).size;
+    }
+    if (monthCol) {
+      return new Set(rows.map(r => r[monthCol])).size;
+    }
+    return null;
+  }
+
+  return null;
+}
+
+/**
+ * Fix hallucinated counts in the explanation by checking against actual result data.
+ * Uses distinct entity counts, not raw row count.
+ */
+export function validateExplanationCount(
+  explanation: string,
+  rows: Record<string, unknown>[],
+  columns: string[]
+): string {
+  return explanation.replace(
+    /\b(\d{1,4})\s+(agencies|departments|police departments|cities|jurisdictions|rows|results|records|years|months)\b/gi,
+    (match, rawNum, noun) => {
+      const stated = Number(rawNum);
+      const actual = getActualCountForNoun(noun, rows, columns);
+
+      if (actual == null) {
+        // Can't determine actual count — use soft phrasing for entity nouns
+        if (/agencies|departments|cities|jurisdictions/.test(noun.toLowerCase())) {
+          return `the returned ${noun}`;
+        }
+        return match;
+      }
+
+      if (stated === actual) return match;
+
+      console.warn(`[explain] Count fix: "${stated} ${noun}" → "${actual} ${noun}" (actual from data)`);
+      return `${actual} ${noun}`;
+    }
+  );
+}
+
+/**
+ * Strip JSON, SQL, code blocks, and technical syntax from explanation text.
+ * Defense-in-depth: even if the model ignores prompt instructions, the user
+ * never sees raw SQL/JSON.
+ */
+export function sanitizeExplanation(text: string): string {
+  if (!text) return text;
+
+  // If the entire text is a JSON object (model returned its response as explanation), extract just the explanation field
+  const trimmed = text.trim();
+  if (trimmed.startsWith("{") && trimmed.includes('"sql"')) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (parsed.explanation && typeof parsed.explanation === "string") {
+        return sanitizeExplanation(parsed.explanation);
+      }
+    } catch {
+      // Not valid JSON, continue with other cleanup
+    }
+  }
+
+  let cleaned = text;
+
+  // Remove markdown code fences and their contents
+  cleaned = cleaned.replace(/```[\s\S]*?```/g, "");
+
+  // Remove inline code containing SQL keywords
+  cleaned = cleaned.replace(/`[^`]*(?:SELECT|FROM|WHERE|JOIN|GROUP|ORDER|INSERT|UPDATE|DELETE)[^`]*`/gi, "");
+
+  // Remove any JSON-like blocks with sql field
+  cleaned = cleaned.replace(/\{[\s\S]*?"sql"[\s\S]*?\}/g, "");
+
+  // Remove standalone SQL statements (SELECT ... FROM ...)
+  cleaned = cleaned.replace(/\bSELECT\s+[\s\S]*?\bFROM\s+\w+[\s\S]*?(?:;|\n\n|$)/gi, "");
+
+  // Remove table/column name references (e.g., "agency_monthly.count", "am.year")
+  cleaned = cleaned.replace(/\b\w+_(?:monthly|daily|annual|state|city|national)\b/gi, "");
+
+  // Clean up excess whitespace
+  cleaned = cleaned.replace(/\n{3,}/g, "\n\n").trim();
+
+  // If nothing meaningful remains after cleanup, return a generic message
+  if (cleaned.length < 10) {
+    return "I wasn't able to generate a clear explanation for this query. The data is shown in the chart and table below.";
+  }
+
+  return cleaned;
 }

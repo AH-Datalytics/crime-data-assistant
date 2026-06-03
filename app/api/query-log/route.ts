@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getWriteDb } from "@/lib/rtci-db";
+import { getDb, getWriteDb } from "@/lib/rtci-db";
+import { getNibrsDb } from "@/lib/nibrs-db";
+import { getShrDb } from "@/lib/shr-db";
 
 const LOG_KEY = process.env.QUERY_LOG_KEY;
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, OPTIONS",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   "Access-Control-Allow-Headers": "*",
 };
 
@@ -99,4 +101,48 @@ export async function GET(req: NextRequest) {
       tabBreakdown: tabStats,
     },
   }, { headers: CORS_HEADERS });
+}
+
+/** Re-run a logged SQL query against the appropriate database */
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const key = body?.key || "";
+    if (!LOG_KEY || key !== LOG_KEY) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: CORS_HEADERS });
+    }
+
+    const sql = body?.sql as string;
+    const tab = body?.tab as string;
+    if (!sql || !tab) {
+      return NextResponse.json({ error: "Missing sql or tab" }, { status: 400, headers: CORS_HEADERS });
+    }
+
+    // Only allow SELECT queries
+    const firstWord = sql.trim().split(/\s+/)[0].toUpperCase();
+    if (firstWord !== "SELECT" && firstWord !== "WITH") {
+      return NextResponse.json({ error: "Only SELECT queries allowed" }, { status: 400, headers: CORS_HEADERS });
+    }
+
+    let db;
+    if (tab === "nibrs") {
+      db = getNibrsDb();
+    } else if (tab === "shr") {
+      db = getShrDb();
+    } else {
+      db = getDb();
+    }
+
+    if (!db) {
+      return NextResponse.json({ error: "Database not available" }, { status: 500, headers: CORS_HEADERS });
+    }
+
+    const rows = db.prepare(sql).all() as Record<string, unknown>[];
+    const columns = rows.length > 0 ? Object.keys(rows[0]) : [];
+
+    return NextResponse.json({ columns, rows: rows.slice(0, 500) }, { headers: CORS_HEADERS });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ error: msg }, { status: 500, headers: CORS_HEADERS });
+  }
 }

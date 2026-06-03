@@ -1,9 +1,12 @@
 "use client";
 
+import { useState, useCallback, useRef, useEffect } from "react";
+import { recommendTabs, TAB_DISPLAY_NAMES, TAB_COLORS, type TabRecommendation } from "@/lib/tab-suggest";
+
 type TabId = "current" | "historical" | "nibrs" | "shr";
 
 interface GettingStartedProps {
-  onSelectTab: (tab: TabId) => void;
+  onSelectTab: (tab: TabId, question?: string) => void;
 }
 
 const TAB_CARDS: {
@@ -40,7 +43,7 @@ const TAB_CARDS: {
     icon: "M4 14h3v3H4zm5-4h3v7H9zm5-6h3v13h-3z",
     stat: "~100 yrs",
     statLabel: "of annual FBI crime data",
-    subtitle: "Annual \u00b7 1930\u20132024",
+    subtitle: "Annual \u00b7 1930\u20132025",
     description:
       "Explore nearly 100 years of crime data. The longest-running standardized crime data in the U.S., from more than 10,000 agencies.",
   },
@@ -107,24 +110,150 @@ const SAMPLE_QUERIES: Record<TabId, { q: string; why: string }[]> = {
 
 export default function GettingStarted({ onSelectTab }: GettingStartedProps) {
   const showTutorial = true;
+  const [question, setQuestion] = useState("");
+  const [submittedQuestion, setSubmittedQuestion] = useState("");
+  const [recommendations, setRecommendations] = useState<TabRecommendation[]>([]);
+  const responseRef = useRef<HTMLDivElement>(null);
+
+  const handleSubmit = useCallback((e?: React.FormEvent) => {
+    e?.preventDefault();
+    const q = question.trim();
+    if (!q) return;
+    setSubmittedQuestion(q);
+    const recs = recommendTabs(q);
+    setRecommendations(recs);
+  }, [question]);
+
+  // Scroll to response when it appears
+  useEffect(() => {
+    if (recommendations.length > 0 && responseRef.current) {
+      responseRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }, [recommendations.length]);
 
   return (
     <div className="flex-1 overflow-y-auto" style={{ background: "linear-gradient(180deg, #ffffff 0%, var(--surface) 300px)" }}>
       <div className="max-w-5xl mx-auto px-3 sm:px-4 md:px-8 pt-6 sm:pt-10 md:pt-16 pb-8 sm:pb-12">
 
-        {/* Hero */}
-        <div className="text-center mb-8 sm:mb-12">
+        {/* Hero with input */}
+        <div className="text-center mb-6 sm:mb-10">
           <h1
             className="text-2xl sm:text-3xl md:text-[42px] font-bold text-[var(--foreground)] mb-3 sm:mb-4 leading-tight"
           >
             Ask a question about<br />crime in the United States
           </h1>
-          <p className="text-[13px] sm:text-[15px] text-[var(--muted)] max-w-2xl mx-auto leading-relaxed">
-            Nearly a century of crime data history. Choose a data source to start or read the guide below.
+          <p className="text-[13px] sm:text-[15px] text-[var(--muted)] max-w-2xl mx-auto leading-relaxed mb-6 sm:mb-8">
+            Describe what you&apos;re looking for and I&apos;ll point you to the right data.
           </p>
+
+          {/* Chat input */}
+          <div className="max-w-2xl mx-auto">
+            <form onSubmit={handleSubmit}>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={question}
+                  onChange={(e) => setQuestion(e.target.value)}
+                  placeholder="e.g. Houston murders since 2015"
+                  className="flex-1 min-w-0 px-4 py-3 text-[15px] border-2 border-[var(--border)] rounded-xl focus:outline-none focus:border-[#475EC7] focus:ring-2 focus:ring-[#475EC7]/20 bg-white shadow-sm"
+                />
+                <button
+                  type="submit"
+                  disabled={!question.trim()}
+                  className="px-5 py-3 text-[14px] font-semibold text-white rounded-xl disabled:opacity-40 cursor-pointer shrink-0 shadow-sm hover:opacity-90"
+                  style={{ backgroundColor: "#475EC7" }}
+                >
+                  Ask
+                </button>
+              </div>
+            </form>
+
+            {/* Conversational response */}
+            {submittedQuestion && (
+              <div ref={responseRef} className="mt-5 text-left animate-[fadeIn_0.2s_ease]">
+                {/* User question bubble */}
+                <div className="flex justify-end mb-3">
+                  <div className="bg-[#475EC7] text-white text-[14px] px-4 py-2.5 rounded-2xl rounded-br-md max-w-[85%]">
+                    {submittedQuestion}
+                  </div>
+                </div>
+
+                {/* Assistant response */}
+                <div className="flex justify-start">
+                  <div className="bg-white border border-[var(--border)] rounded-2xl rounded-bl-md px-5 py-4 max-w-[95%] shadow-sm">
+                    {recommendations.length > 0 ? (
+                      <>
+                        <p className="text-[14px] text-[var(--foreground)] mb-4">
+                          {recommendations.length === 1
+                            ? "I\u2019d recommend this data source for that question:"
+                            : "Here are your best options for that question:"}
+                        </p>
+                        <div className="space-y-2.5">
+                          {recommendations.map((rec) => (
+                            <button
+                              key={rec.tab}
+                              onClick={() => onSelectTab(rec.tab, submittedQuestion)}
+                              className="w-full text-left rounded-xl border-2 px-4 py-3 cursor-pointer transition-all hover:shadow-md hover:-translate-y-0.5 group"
+                              style={{
+                                borderColor: TAB_COLORS[rec.tab] + (rec.primary ? "80" : "30"),
+                                backgroundColor: TAB_COLORS[rec.tab] + (rec.primary ? "0c" : "05"),
+                              }}
+                            >
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-2 mb-0.5">
+                                    <span className="text-[14px] font-bold" style={{ color: TAB_COLORS[rec.tab] }}>
+                                      {TAB_DISPLAY_NAMES[rec.tab]}
+                                    </span>
+                                    {rec.primary && (
+                                      <span className="text-[10px] font-semibold uppercase tracking-wider text-white px-1.5 py-0.5 rounded" style={{ backgroundColor: TAB_COLORS[rec.tab] }}>
+                                        Best match
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="text-[13px] text-[var(--muted)]">{rec.why}</p>
+                                </div>
+                                <span className="text-[12px] font-semibold shrink-0 mt-1 group-hover:translate-x-0.5 transition-transform" style={{ color: TAB_COLORS[rec.tab] }}>
+                                  Ask &rarr;
+                                </span>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-[14px] text-[var(--foreground)] mb-4">
+                          I&apos;m not sure which dataset fits best. Here are all four &mdash; pick the one that matches your needs:
+                        </p>
+                        <div className="grid grid-cols-2 gap-2">
+                          {(["current", "historical", "nibrs", "shr"] as TabId[]).map((tab) => (
+                            <button
+                              key={tab}
+                              onClick={() => onSelectTab(tab, submittedQuestion)}
+                              className="text-left rounded-xl border px-3 py-2.5 cursor-pointer transition-all hover:shadow-md hover:-translate-y-0.5"
+                              style={{ borderColor: TAB_COLORS[tab] + "40", backgroundColor: TAB_COLORS[tab] + "06" }}
+                            >
+                              <div className="text-[13px] font-bold" style={{ color: TAB_COLORS[tab] }}>{TAB_DISPLAY_NAMES[tab]}</div>
+                              <div className="text-[11px] text-[var(--muted)]">
+                                {tab === "current" && "Monthly, ~700 agencies, 2017\u2013now"}
+                                {tab === "historical" && "Annual, all agencies, 1930s\u2013now"}
+                                {tab === "nibrs" && "Incident detail, demographics, 1991\u2013now"}
+                                {tab === "shr" && "Homicide detail, 1976\u2013now"}
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Tab cards */}
+        {/* Tab cards — browse directly */}
         <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 mb-8 sm:mb-10">
           {TAB_CARDS.map((card) => (
             <button
@@ -200,7 +329,7 @@ export default function GettingStarted({ onSelectTab }: GettingStartedProps) {
                 The Crime Data Assistant is an AI-powered research tool that lets you ask questions about crime in the United States using plain English. Instead of downloading spreadsheets or navigating government websites, you type a question like <em>&ldquo;How have murders trended in Chicago since 2020?&rdquo;</em> and get back an interactive chart, a data table, and an explanation &mdash; all generated in real time.
               </p>
               <p className="text-sm text-[var(--muted)] leading-relaxed">
-                Under the hood, an AI model translates your question into a database query, runs it against real crime data, and formats the results. Always remember &ndash; I am a bot and may make mistakes from time to time. Verify findings with official sources such as the <a href="https://cde.ucr.cjis.gov/LATEST/webapp/#" target="_blank" rel="noopener noreferrer" className="underline text-[var(--foreground)]">Crime Data Explorer</a>.
+                Under the hood, an AI model translates your question into a database query, runs it against real crime data, and formats the results. This tool is actively improving &mdash; we regularly refine how questions are interpreted and how results are presented. That said, it is an AI and may occasionally misinterpret a question or return incomplete results. Always verify findings with official sources such as the FBI&apos;s Crime Data Explorer. If you see something that doesn&apos;t add up, please <a href="mailto:RTCI@ahdatalytics.com" className="underline text-[var(--foreground)]">send us an email</a>.
               </p>
             </section>
 
@@ -249,7 +378,7 @@ export default function GettingStarted({ onSelectTab }: GettingStartedProps) {
                   <tbody className="text-[var(--muted)]">
                     {[
                       ["Source", "Agency Data Collected by AH Datalytics", "FBI Uniform Crime Reports", "FBI NIBRS Master Files", "FBI Supplementary Homicide Reports"],
-                      ["Time Range", "2017\u2013present", "1930\u20132024", "1991\u2013present", "1976\u2013present"],
+                      ["Time Range", "2017\u2013present", "1930\u20132025", "1991\u2013present", "1976\u2013present"],
                       ["Granularity", "Monthly Aggregated", "Annual Aggregated", "Incident-level", "Incident-level"],
                       ["Coverage", "Hundreds of agencies (curated sample)", "10,000+ agencies", "Varies by year", "Varies by year"],
                       ["Crime Types", "Part I UCR (7 offenses)", "Part I UCR + staffing", "52+ NIBRS offense codes", "Homicides only"],

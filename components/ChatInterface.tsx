@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import CrimeIndexLogo from "./CrimeIndexLogo";
+import { useState, useEffect } from "react";
+import HomeIcon from "./HomeIcon";
 import RtciChat from "./RtciChat";
 import NibrsChat from "./NibrsChat";
 import ShrChat from "./ShrChat";
@@ -30,8 +30,16 @@ interface ChatInterfaceProps {
 
 export default function ChatInterface({ heroData, heroAgencyCount, heroPopulation, historicalHeroData, historicalMaxYear, shrHeroData }: ChatInterfaceProps) {
   const [activeTab, setActiveTab] = useState<TabId | null>(null);
+  const [isEmbed, setIsEmbed] = useState(false);
   // Track which tabs have been visited — lazy-mount on first visit, keep mounted after
   const [mountedTabs, setMountedTabs] = useState<Set<TabId>>(new Set());
+
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("embed") === "1") {
+      setIsEmbed(true);
+      document.documentElement.classList.add("in-iframe");
+    }
+  }, []);
 
   const selectTab = (tab: TabId | null) => {
     if (tab) setMountedTabs((prev) => prev.has(tab) ? prev : new Set(prev).add(tab));
@@ -47,18 +55,20 @@ export default function ChatInterface({ heroData, heroAgencyCount, heroPopulatio
           {/* Left: logo on mobile */}
           <div className="flex items-center shrink-0">
             <button onClick={() => selectTab(null)} className="md:hidden flex items-center shrink-0 cursor-pointer">
-              <CrimeIndexLogo size={22} />
+              <HomeIcon size={22} />
             </button>
           </div>
 
-          {/* Center: title */}
-          <button
-            onClick={() => selectTab(null)}
-            className="absolute left-1/2 -translate-x-1/2 font-bold uppercase text-[var(--foreground)] cursor-pointer hover:opacity-80 transition-opacity text-[10px] sm:text-[11px] md:text-xs whitespace-nowrap"
-            style={{ letterSpacing: "1.5px" }}
-          >
-            Crime Data Assistant
-          </button>
+          {/* Center: title (hidden in embed mode — portal header already shows app name) */}
+          {!isEmbed && (
+            <button
+              onClick={() => selectTab(null)}
+              className="absolute left-1/2 -translate-x-1/2 font-bold uppercase text-[var(--foreground)] cursor-pointer hover:opacity-80 transition-opacity text-[10px] sm:text-[11px] md:text-xs whitespace-nowrap"
+              style={{ letterSpacing: "1.5px" }}
+            >
+              Crime Data Assistant
+            </button>
+          )}
 
           {/* Right: tab pills on desktop */}
           <div className="flex items-center gap-3 shrink-0">

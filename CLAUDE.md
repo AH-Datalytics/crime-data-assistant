@@ -17,6 +17,16 @@ scp <files> root@178.156.243.51:/opt/nibrs/app/
 ssh root@178.156.243.51 "cd /opt/nibrs/app && npm run build && pm2 restart nibrs"
 ```
 
+## Runtime Paths
+- Set explicit env vars in production. Do not rely on fallback path detection.
+- Recommended:
+  - `RTCI_DB_PATH=/opt/nibrs/app/crime_data.db`
+  - `NIBRS_DB_PATH=/opt/nibrs/nibrs.db`
+  - `SHR_DB_PATH=/opt/nibrs/shr.db`
+  - `QUERY_LOG_DB_PATH=/opt/nibrs/app/query_log.db`
+  - `APP_DIR=/opt/nibrs/app`
+- Avoid keeping duplicate DB copies in both `/opt/nibrs` and `/opt/nibrs/app` unless they are intentionally different and the service env vars reflect that.
+
 ## Architecture
 - `lib/claude.ts` — System prompt for Current Trends + Historical tabs
 - `lib/nibrs-claude.ts` — System prompt for NIBRS Explorer tab (~1200 lines)

@@ -27,7 +27,7 @@ export default function ExplainerContent({ visible }: ExplainerContentProps) {
               The Crime Data Assistant is an AI-powered research tool that lets you ask questions about crime in the United States using plain English. Instead of downloading spreadsheets or navigating government websites, you type a question like <em>&ldquo;How have murders trended in Chicago since 2020?&rdquo;</em> and get back an interactive chart, a data table, and an explanation &mdash; all generated in real time.
             </p>
             <p className="text-sm text-[var(--muted)] leading-relaxed">
-              Under the hood, an AI model translates your question into a database query, runs it against real crime data, and formats the results. Always remember &ndash; I am a bot and may make mistakes from time to time. Verify findings with official sources such as the <a href="https://cde.ucr.cjis.gov/LATEST/webapp/#" target="_blank" rel="noopener noreferrer" className="underline text-[var(--foreground)]">Crime Data Explorer</a>.
+              Under the hood, an AI model translates your question into a database query, runs it against real crime data, and formats the results. This tool is actively improving &mdash; we regularly refine how questions are interpreted and how results are presented. That said, it is an AI and may occasionally misinterpret a question or return incomplete results. Always verify findings with official sources such as the FBI&apos;s Crime Data Explorer. If you see something that doesn&apos;t add up, please <a href="mailto:RTCI@ahdatalytics.com" className="underline text-[var(--foreground)]">send us an email</a>.
             </p>
           </section>
 
@@ -76,7 +76,7 @@ export default function ExplainerContent({ visible }: ExplainerContentProps) {
                 <tbody className="text-[var(--muted)]">
                   {[
                     ["Source", "Agency Data Collected by AH Datalytics", "FBI Uniform Crime Reports", "FBI NIBRS Master Files", "FBI Supplementary Homicide Reports"],
-                    ["Time Range", "2017\u2013present", "1930\u20132024", "1991\u2013present", "1976\u2013present"],
+                    ["Time Range", "2017\u2013present", "1930\u20132025", "1991\u2013present", "1976\u2013present"],
                     ["Granularity", "Monthly Aggregated", "Annual Aggregated", "Incident-level", "Incident-level"],
                     ["Coverage", "Hundreds of agencies (curated sample)", "10,000+ agencies", "Varies by year", "Varies by year"],
                     ["Crime Types", "Part I UCR (7 offenses)", "Part I UCR + staffing", "52+ NIBRS offense codes", "Homicides only"],

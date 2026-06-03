@@ -8,10 +8,13 @@ import { checkSessionLimit, maybeCleanup } from "@/lib/captcha";
 import { extractQueryContext } from "@/lib/query-context";
 import { runGuardrails } from "@/lib/guardrails";
 import type { QueryError } from "@/lib/types";
+import { sanitizeExplanation, validateExplanationCount } from "@/lib/explain";
 import Anthropic from "@anthropic-ai/sdk";
 import { getShrSystemPrompt } from "@/lib/shr-claude";
 import { getCached, setCache } from "@/lib/response-cache";
 import { extractJson } from "@/lib/extract-json";
+import { detectAllNullData } from "@/lib/all-null-detection";
+import { checkSingleRowTrend } from "@/lib/single-row-trend";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function jsonResp(data: Record<string, any> | QueryError, status = 200) {
@@ -120,10 +123,14 @@ export async function POST(req: NextRequest) {
 
       const claudeMs = Date.now() - start;
 
-      // Text-only response — retry if model incorrectly claims data isn't available
+      // Text-only response — retry if model incorrectly claims an AGENCY isn't available
+      // Do NOT retry when model correctly refuses non-homicide queries (theft, assault, etc.)
       if (!claude.sql) {
         const refusalPatterns = /not (appear|be represented)|doesn't appear|not (in|included in) (this|the|our) (dataset|data|sample|library)|no data (for|available|found)|does not (yet )?(have|include|cover)|not available|not yet (include|available|have)|latest available data|isn't (in|included)|not found in/i;
-        if (refusalPatterns.test(claude.explanation || "")) {
+        // Skip retry if the refusal is about SHR's scope (non-homicide data) — these are correct refusals
+        const scopeRefusal = /only (homicides?|murders?|manslaughter)|does(?:n't| not)\s+(?:include|contain|track|cover|have)\s+.*?\b(theft|robbery|assault|burglary|property|arrests?|drugs?|clearance|staffing|officers?|sworn|personnel|employment|auto theft|motor vehicle|violent crime|property crime|non-homicide|shootings?|rape)\b|homicides only|murder and manslaughter only/i;
+        const isCorrectScopeRefusal = scopeRefusal.test(claude.explanation || "");
+        if (refusalPatterns.test(claude.explanation || "") && !isCorrectScopeRefusal) {
           try {
             const retryMessages: Anthropic.MessageParam[] = [
               ...messages,
@@ -182,6 +189,26 @@ export async function POST(req: NextRequest) {
     if (guardrailResult.sql !== sql) {
       sql = guardrailResult.sql;
     }
+    // Hard override — skip retry, return deterministic response
+    if (guardrailResult.overrideResponse) {
+      const overrideExplanation = guardrailResult.overrideResponse;
+      logQuery(question, sql, 0, `guardrail_override:${guardrailResult.overrideGuardrail}`, Date.now() - start, overrideExplanation, "shr", guardrailResult.fired, "haiku-4.5", sessionId);
+      return jsonResp({
+        success: true,
+        question,
+        sql: null,
+        explanation: overrideExplanation,
+        title: "",
+        columns: [],
+        rows: [],
+        rowCount: 0,
+        truncated: false,
+        chartConfig: null,
+        chartMeta: null,
+        executionTimeMs: Date.now() - start,
+      });
+    }
+
     if (guardrailResult.needsFix && guardrailResult.issues.length > 0) {
       // Retry with Claude — send guardrail fix instructions
       try {
@@ -215,6 +242,24 @@ export async function POST(req: NextRequest) {
       } catch {
         // Retry failed, proceed with original (possibly rewritten) SQL
       }
+    }
+
+    // Step 2c: Post-retry guardrail re-check
+    {
+      const postRetryCtx = extractQueryContext(sql, question, "shr");
+      const postRetryResult = runGuardrails(postRetryCtx);
+      if (postRetryResult.overrideResponse) {
+        const msg = postRetryResult.overrideResponse;
+        logQuery(question, sql, 0, `guardrail_override:${postRetryResult.overrideGuardrail}`, Date.now() - start, msg, "shr", postRetryResult.fired, "haiku-4.5", sessionId);
+        return jsonResp({ success: true, question, sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - start });
+      }
+      const rateStillBad = postRetryResult.fired.some(f => f.includes("rate-no-population"));
+      if (rateStillBad && /\b(rates?|per\s*capita|per\s*100)/i.test(question)) {
+        const msg = "I wasn't able to calculate a valid per-capita rate for this query. For murder rates, try the [Historical Library](/test?tab=historical) tab which has FBI statewide estimates.";
+        logQuery(question, sql, 0, "rate_second_failure", Date.now() - start, msg, "shr", postRetryResult.fired, "haiku-4.5", sessionId);
+        return jsonResp({ success: true, question, sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - start });
+      }
+      if (postRetryResult.sql !== sql) sql = postRetryResult.sql;
     }
 
     // Step 3: Execute
@@ -256,6 +301,29 @@ export async function POST(req: NextRequest) {
 
     const columns = Object.keys(rows[0]);
 
+    // Detect all-null data columns (query returned rows but no usable values)
+    {
+      const { allNull } = detectAllNullData(columns, rows);
+      if (allNull) {
+        const emptyMsg = "I ran that query but all the values came back empty — the math likely broke somewhere (like dividing by zero). Could you try asking that a different way?";
+        logQuery(question, sql, 0, "all_null_columns", executionMs, emptyMsg, "shr", guardrailResult.fired, "haiku-4.5", sessionId);
+        return jsonResp({
+          success: true,
+          question,
+          sql,
+          explanation: emptyMsg,
+          title: "",
+          columns: [],
+          rows: [],
+          rowCount: 0,
+          truncated: false,
+          chartConfig: null,
+          chartMeta: null,
+          executionTimeMs: executionMs,
+        });
+      }
+    }
+
     // Build chart config (match QueryResponse shape)
     const chartConfig = {
       type: claude.chartType || "none",
@@ -290,6 +358,35 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Known SHR reporting gaps — hardcoded major agencies with documented gaps
+    const KNOWN_GAPS: Record<string, { agency: string; state: string; years: number[] }> = {
+      "New York_NY": { agency: "New York", state: "NY", years: [2021] },
+      "Los Angeles_CA": { agency: "Los Angeles", state: "CA", years: [2021] },
+    };
+    const sqlLowerGap = sql.toLowerCase();
+    for (const [, gap] of Object.entries(KNOWN_GAPS)) {
+      const agencyInSql = sqlLowerGap.includes(gap.agency.toLowerCase()) && sqlLowerGap.includes(`'${gap.state}'`.toLowerCase());
+      if (!agencyInSql) continue;
+      const gapYearsInResults = gap.years.filter(y =>
+        rows.some((r: Record<string, unknown>) => Number(r.year) === y)
+      );
+      if (gapYearsInResults.length > 0) {
+        // Check if the gap year has 0 or very low count
+        for (const gapYear of gapYearsInResults) {
+          const yearRows = rows.filter((r: Record<string, unknown>) => Number(r.year) === gapYear);
+          const valueCols = columns.filter(c => c !== "year" && c !== "month" && c !== "state" && c !== "agency");
+          const allZero = yearRows.every(r => valueCols.every(c => Number(r[c]) === 0 || r[c] === null));
+          if (allZero) {
+            disclaimers.push(`${gap.agency} did not submit SHR data in ${gapYear} — the zero shown for that year reflects missing reporting, not an absence of homicides.`);
+          }
+        }
+      }
+    }
+
+    // Single-row trend warning
+    const singleRowWarning = checkSingleRowTrend(question, rows.length);
+    if (singleRowWarning) disclaimers.push(singleRowWarning);
+
     // Partial year warning
     const currentYear = new Date().getFullYear();
     if (rows.some((r: Record<string, unknown>) => Number(r.year) >= currentYear - 1)) {
@@ -300,6 +397,22 @@ export async function POST(req: NextRequest) {
     if (disclaimers.length > 0) {
       explanation = explanation + "\n\n" + disclaimers.join(" ");
     }
+
+    // Fix SHR offender wording — off_age/off_sex/off_race are per-incident (primary offender only)
+    if (/\boff_age_num\b/i.test(sql) || /\boff_age\b/i.test(sql) || /\boff_sex\b/i.test(sql) || /\boff_race\b/i.test(sql)) {
+      // "homicides involving a juvenile offender" → "murder victims where the recorded offender was under 18"
+      explanation = explanation
+        .replace(/\bhomicides (?:involving|with) (?:a |an )?(?:juvenile|young|under.?18|minor)\s*offender/gi, "murder victims where the recorded offender was under 18")
+        .replace(/\bcrimes (?:involving|with) (?:a |an )?(?:juvenile|young|under.?18|minor)\s*offender/gi, "murder victims where the recorded offender was under 18")
+        .replace(/\bhomicides (?:involving|with) (?:any )?offender/gi, "murder victims where the recorded offender was")
+        .replace(/\bshare of (?:homicides|murders|incidents) (?:involving|with)\b/gi, "share of murder victims where the recorded offender was");
+    }
+
+    // Fix hallucinated counts using distinct entity detection
+    explanation = validateExplanationCount(explanation, rows as Record<string, unknown>[], columns);
+
+    // Sanitize any leaked SQL/JSON
+    explanation = sanitizeExplanation(explanation);
 
     logQuery(question, sql, rows.length, null, totalMs, explanation, "shr", guardrailResult.fired, "haiku-4.5", sessionId);
 

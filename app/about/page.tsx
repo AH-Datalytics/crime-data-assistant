@@ -1,5 +1,5 @@
 import Link from "next/link";
-import CrimeIndexLogo from "@/components/CrimeIndexLogo";
+import HomeIcon from "@/components/HomeIcon";
 
 export const metadata = {
   title: "Explainer — Crime Data Assistant | The Crime Index",
@@ -13,7 +13,7 @@ export default function AboutPage() {
         <div className="px-4 md:px-6 flex items-center justify-between" style={{ height: 56 }}>
           <div className="flex items-center gap-3 md:gap-6 min-w-0">
             <Link href="/" className="flex items-center gap-2 shrink-0 hover:opacity-80">
-              <CrimeIndexLogo size={24} />
+              <HomeIcon size={24} />
               <span
                 className="text-xs md:text-sm font-medium tracking-widest uppercase text-[var(--foreground)]"
                 style={{ letterSpacing: "2.5px" }}
@@ -117,7 +117,7 @@ export default function AboutPage() {
         {/* Historical Library */}
         <h3 className="text-lg font-semibold mb-3">Historical Library (FBI Uniform Crime Reports)</h3>
         <p className="mb-3">
-          Annual crime data from the FBI&apos;s Uniform Crime Reporting program, <strong>1930&ndash;2024</strong>. This is the longest-running standardized crime data collection in the United States.
+          Annual crime data from the FBI&apos;s Uniform Crime Reporting program, <strong>1930&ndash;2025</strong>. This is the longest-running standardized crime data collection in the United States.
         </p>
         <ul className="list-disc pl-6 space-y-2 mb-6">
           <li>

@@ -44,12 +44,7 @@ export function decadeTicksForYears(data: Record<string, unknown>[], xKey: strin
   for (let y = first; y <= max; y += step) {
     ticks.push(y);
   }
-  if (ticks[ticks.length - 1] !== max) {
-    if (max - ticks[ticks.length - 1] < step * 0.75) {
-      ticks.pop();
-    }
-    ticks.push(max);
-  }
+  // Don't append max — keep clean evenly-spaced ticks
   if (ticks.length > 6) {
     const thin = Math.ceil(ticks.length / 5);
     const thinned = ticks.filter((_, i) => i % thin === 0);

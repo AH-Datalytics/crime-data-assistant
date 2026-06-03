@@ -12,6 +12,8 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { checkSessionLimit, maybeCleanup } from "@/lib/captcha";
 import type { QueryResponse, QueryError } from "@/lib/types";
 import { getCached, setCache } from "@/lib/response-cache";
+import { detectAllNullData } from "@/lib/all-null-detection";
+import { checkSingleRowTrend } from "@/lib/single-row-trend";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -170,6 +172,26 @@ export async function POST(req: NextRequest) {
       console.log(`[nibrs][guardrails] Fired: ${guardrailResult.fired.join(", ")}`);
     }
 
+    // Hard override — skip retry, return deterministic response
+    if (guardrailResult.overrideResponse) {
+      const overrideExplanation = guardrailResult.overrideResponse;
+      logNibrsQuery(question, sql, 0, `guardrail_override:${guardrailResult.overrideGuardrail}`, Date.now() - claudeStart, overrideExplanation, guardrailResult.fired, "haiku-4.5", sessionId);
+      return jsonResp({
+        success: true,
+        question,
+        sql: null as unknown as string,
+        explanation: overrideExplanation,
+        title: "",
+        columns: [],
+        rows: [],
+        rowCount: 0,
+        truncated: false,
+        chartConfig: null,
+        chartMeta: null,
+        executionTimeMs: Date.now() - claudeStart,
+      } as QueryResponse);
+    }
+
     // For NIBRS guardrails that need Claude retry, send all issues at once
     // so a single retry fixes everything (avoids cascading retries)
     if (guardrailResult.issues.length > 0) {
@@ -187,6 +209,27 @@ export async function POST(req: NextRequest) {
           console.log(`[nibrs][guardrail-retry] Succeeded`);
         }
       }
+    }
+
+    // Step 2b: Post-retry guardrail re-check — block if critical guardrails still fire
+    {
+      const postRetryCtx = extractQueryContext(sql, question, "nibrs");
+      const postRetryResult = runGuardrails(postRetryCtx);
+      // Hard override on second failure
+      if (postRetryResult.overrideResponse) {
+        const msg = postRetryResult.overrideResponse;
+        logNibrsQuery(question, sql, 0, `guardrail_override:${postRetryResult.overrideGuardrail}`, Date.now() - claudeStart, msg, postRetryResult.fired, "haiku-4.5", sessionId);
+        return jsonResp({ success: true, question, sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - claudeStart } as QueryResponse);
+      }
+      // Rate second-failure block
+      const rateStillBad = postRetryResult.fired.some(f => f.includes("rate-no-population"));
+      if (rateStillBad && /\b(rates?|per\s*capita|per\s*100)/i.test(question)) {
+        const msg = "I wasn't able to calculate a valid per-capita rate for this query. Try asking for raw counts instead, or use the [Historical Library](/test?tab=historical) tab for state/national rates.";
+        logNibrsQuery(question, sql, 0, "rate_second_failure", Date.now() - claudeStart, msg, postRetryResult.fired, "haiku-4.5", sessionId);
+        return jsonResp({ success: true, question, sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - claudeStart } as QueryResponse);
+      }
+      // Apply any post-retry rewrites
+      if (postRetryResult.sql !== sql) sql = postRetryResult.sql;
     }
 
     // Step 3: Execute SQL (in worker thread with 15s timeout)
@@ -277,6 +320,29 @@ export async function POST(req: NextRequest) {
     }
 
     const executionTimeMs = Date.now() - startTime;
+
+    // Step 3b: Detect all-null data columns (query returned rows but no usable values)
+    {
+      const { allNull } = detectAllNullData(columns, rows);
+      if (allNull) {
+        const emptyMsg = "I ran that query but all the values came back empty — the math likely broke somewhere (like dividing by zero). Could you try asking that a different way?";
+        logNibrsQuery(question, sql, 0, "all_null_columns", Date.now() - claudeStart, emptyMsg, guardrailResult.fired, "haiku-4.5", sessionId);
+        return jsonResp({
+          success: true,
+          question,
+          sql,
+          explanation: emptyMsg,
+          title: claude.title || "No Results",
+          columns,
+          rows: [],
+          rowCount: 0,
+          truncated: false,
+          chartConfig: null,
+          chartMeta: null,
+          executionTimeMs,
+        } as QueryResponse);
+      }
+    }
 
     // Step 4: Server-side CDE audit check — append disclaimer if anomalous underreporting detected
     let explanation = claude.explanation;
@@ -454,6 +520,12 @@ export async function POST(req: NextRequest) {
       console.log(`[nibrs][transition-check] Error:`, transErr);
     }
 
+    // Single-row trend warning
+    const singleRowWarning = checkSingleRowTrend(question, rows.length);
+    if (singleRowWarning) {
+      explanation = (explanation || "") + "\n\n" + singleRowWarning;
+    }
+
     // Step 4b: Generate post-query explanation (with actual results + CDE disclaimers)
     // Extract any CDE disclaimers that were appended after the original explanation
     const cdeDisclaimers = explanation.slice(claude.explanation.length).trim();
@@ -475,6 +547,53 @@ export async function POST(req: NextRequest) {
     }
     const explainMs = Date.now() - explainStart;
     console.log(`[nibrs][timing] Post-query explanation: ${explainMs}ms`);
+
+    // Step 4c: Fix offender/arrestee demographics wording
+    // summary_offender_demographics counts offenders, not crimes/incidents.
+    // If the explanation says "share of crimes/offenses" but the SQL uses offender tables, fix it.
+    if (/summary_offender_demographics/i.test(sql)) {
+      explanation = explanation
+        .replace(/\bshare of (?:crimes|offenses|incidents)\b/gi, "share of known/suspected offenders")
+        .replace(/\bpercent(?:age)? of (?:crimes|offenses|incidents)\b/gi, "percentage of known/suspected offenders")
+        .replace(/\bproportion of (?:crimes|offenses|incidents)\b/gi, "proportion of known/suspected offenders")
+        .replace(/\b(?:crimes|offenses) involving\b/gi, "offenders who were");
+    }
+    if (/summary_arrestee_demographics/i.test(sql)) {
+      explanation = explanation
+        .replace(/\bshare of (?:crimes|offenses|incidents)\b/gi, "share of arrestees")
+        .replace(/\bpercent(?:age)? of (?:crimes|offenses|incidents)\b/gi, "percentage of arrestees")
+        .replace(/\bproportion of (?:crimes|offenses|incidents)\b/gi, "proportion of arrestees");
+    }
+
+    // Step 4c2: Drug-specific arrest mislabeling (safety net — guardrail should catch this first)
+    // If SQL uses summary_arrestee_demographics with 35A/35B but user asked about a specific drug,
+    // the guardrail should have redirected to summary_drug_arrests. If it didn't, fix the explanation.
+    if (/summary_arrestee_demographics/i.test(sql) && /\b3[5][AB]\b/.test(sql) && !/summary_drug_arrests/i.test(sql)) {
+      const specificDrug = question.match(/\b(marijuana|cannabis|weed|meth|methamphetamine|cocaine|crack|heroin|fentanyl|opioid|lsd|pcp|ecstasy|mdma)\b/i);
+      if (specificDrug) {
+        const drug = specificDrug[1];
+        explanation = explanation.replace(
+          new RegExp(`\\b${drug}\\b`, 'gi'),
+          'drug'
+        );
+        explanation += `\n\nNote: These results show ALL drug ${/35A/.test(sql) ? 'possession' : 'sales'} arrests, not ${drug} specifically. Try asking "${drug} drug offenses" for drug-type-specific data.`;
+      }
+    }
+
+    // Step 4d: Fix national vs cities wording mismatch
+    // If SQL uses national-level tables (no city/ori filter), explanation should not say "across cities"
+    if (/summary_(?:victim_)?state_monthly/i.test(sql) && !/\bori\b/i.test(sql) && !/\bcity\b/i.test(sql)) {
+      explanation = explanation
+        .replace(/\bacross cities\b/gi, "nationally")
+        .replace(/\bfor cities\b/gi, "nationally")
+        .replace(/\bin cities\b/gi, "nationally");
+    }
+    if (/\bnational_clearance_rate\b/i.test(sql) || /\bnational_/i.test(sql)) {
+      explanation = explanation
+        .replace(/\bacross cities\b/gi, "nationally")
+        .replace(/\bfor cities\b/gi, "nationally")
+        .replace(/\bin cities across\b/gi, "nationally across");
+    }
 
     // Append standard NIBRS disclaimer — skip if explanation already has a coverage/completeness note
     const nibrsDisclaimer = "Note: This data comes from the FBI's NIBRS program. Not all agencies report to this system, and some may have incomplete data — especially in their first year of NIBRS reporting or for recent months of data. Always verify that reported offenses are not impacted by incomplete coverage.";

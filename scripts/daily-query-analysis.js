@@ -10,6 +10,7 @@
 const Database = require("better-sqlite3");
 const { Resend } = require("resend");
 const path = require("path");
+const fs = require("fs");
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const TO_EMAIL = "jasher@ahdatalytics.com";
@@ -21,9 +22,36 @@ if (!RESEND_API_KEY) {
 }
 
 const resend = new Resend(RESEND_API_KEY);
-const db = new Database(path.join(__dirname, "..", "query_log.db"), {
-  readonly: true,
-});
+
+function resolveQueryLogPath() {
+  const envPath = process.env.QUERY_LOG_DB_PATH;
+  const candidates = [
+    envPath,
+    path.join(__dirname, "..", "query_log.db"),
+    "/opt/nibrs/app/query_log.db",
+  ].filter(Boolean);
+
+  const seen = new Set();
+  const existing = [];
+  for (const candidate of candidates) {
+    const resolved = path.resolve(candidate);
+    if (seen.has(resolved)) continue;
+    seen.add(resolved);
+    if (fs.existsSync(resolved)) existing.push(resolved);
+  }
+
+  if (existing.length > 1) {
+    console.warn(`Multiple query_log.db candidates exist: ${existing.join(", ")}`);
+  }
+  if (existing.length === 0) {
+    throw new Error(`No query_log.db found. Checked: ${candidates.join(", ")}`);
+  }
+  return existing[0];
+}
+
+const QUERY_LOG_DB_PATH = resolveQueryLogPath();
+console.log(`Using query_log.db: ${QUERY_LOG_DB_PATH}`);
+const db = new Database(QUERY_LOG_DB_PATH, { readonly: true });
 
 // Previous calendar day (midnight to midnight CT)
 function getYesterdayRange() {
@@ -161,6 +189,8 @@ function analyze(queries) {
     slowQueries: 0,
     jsonParseFailures: 0,
     yearHallucinations: 0,
+    entityHallucinations: 0,
+    unnecessaryRefusals: 0,
     sqlLeaks: 0,
     avgMs: 0,
     medianMs: 0,
@@ -289,6 +319,60 @@ function analyze(queries) {
       }
     }
 
+    // Entity hallucination — response mentions a city not in the SQL
+    // Only flag when SQL targets specific entities (agency=/city= filters).
+    // Ranking queries (ORDER BY ... LIMIT, no agency filter) legitimately
+    // return city names not present in the SQL text.
+    if (q.response && q.sql) {
+      const sqlLower = q.sql.toLowerCase();
+      const targetsSpecificEntity = /agency\s*=\s*'/i.test(q.sql) || /city\s*=\s*'/i.test(q.sql);
+      if (targetsSpecificEntity) {
+        const MAJOR_CITIES = [
+          "Los Angeles", "New York", "Chicago", "Houston", "Phoenix", "Philadelphia",
+          "San Antonio", "San Diego", "Dallas", "Austin", "Jacksonville", "Fort Worth",
+          "Columbus", "Charlotte", "Indianapolis", "San Francisco", "Seattle", "Denver",
+          "Washington", "Nashville", "Oklahoma City", "El Paso", "Boston", "Portland",
+          "Las Vegas", "Memphis", "Louisville", "Baltimore", "Milwaukee", "Albuquerque",
+          "Tucson", "Fresno", "Sacramento", "Atlanta", "Kansas City", "Omaha",
+          "Raleigh", "Miami", "Oakland", "Minneapolis", "Tampa", "Detroit",
+          "St Louis", "St. Louis", "New Orleans", "Cleveland", "Pittsburgh",
+        ];
+        for (const city of MAJOR_CITIES) {
+          const cityRegex = new RegExp("\\b" + city.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b", "i");
+          if (cityRegex.test(q.response) && !sqlLower.includes(city.toLowerCase())) {
+            stats.entityHallucinations++;
+            issues.push({
+              type: "entity_hallucination",
+              severity: "high",
+              question: q.question,
+              detail: `Response mentions "${city}" but SQL targets a different entity`,
+              tab,
+              id: q.id,
+            });
+            break; // One flag per query is enough
+          }
+        }
+      }
+    }
+
+    // Unnecessary refusal — sql is null but question looks like a valid data query
+    if (!q.sql && q.response && q.rows === 0) {
+      const looksLikeDataQuery = /\b(top|rank|highest|lowest|most|least|cities|states|murder|crime|robbery|assault|theft|burglary|rape|violent|property)\b/i.test(q.question);
+      const looksLikeFollowUp = /^\d+$|^option\s*\d|please/i.test(q.question.trim());
+      const isRefusal = /can't|cannot|unable|not available|don't have|doesn't|doesn't appear/i.test(q.response);
+      if (looksLikeDataQuery && isRefusal && !looksLikeFollowUp) {
+        stats.unnecessaryRefusals++;
+        issues.push({
+          type: "potential_refusal",
+          severity: "medium",
+          question: q.question,
+          detail: "Model refused a data query — may be answerable. Response: " + q.response.substring(0, 150),
+          tab,
+          id: q.id,
+        });
+      }
+    }
+
     // Unknown agency detection — response says "not found" or "isn't in"
     if (
       q.response &&
@@ -321,10 +405,138 @@ function analyze(queries) {
     stats.medianMs = msTimes[Math.floor(msTimes.length / 2)];
   }
 
-  return { stats, issues };
+  // --- Pattern detection: cluster issues into actionable suggestions ---
+  const suggestions = [];
+
+  // 1. Repeated "no such column" errors → missing feature / schema gap
+  const columnErrors = {};
+  for (const q of queries) {
+    if (q.error) {
+      const colMatch = q.error.match(/no such column:\s*(\S+)/i);
+      if (colMatch) {
+        const col = colMatch[1].replace(/^[a-z]\./, ""); // strip table alias
+        if (!columnErrors[col]) columnErrors[col] = [];
+        columnErrors[col].push(q);
+      }
+    }
+  }
+  for (const [col, qs] of Object.entries(columnErrors)) {
+    if (qs.length >= 2) {
+      suggestions.push({
+        type: "missing_column",
+        priority: "high",
+        summary: `"${col}" column requested ${qs.length}× but doesn't exist in summary tables`,
+        detail: `Users asked: ${qs.map(q => `"${q.question}"`).slice(0, 3).join(", ")}${qs.length > 3 ? ` (+${qs.length - 3} more)` : ""}`,
+        action: `Consider adding "${col}" to the relevant summary tables, or add a prompt rule explaining it's unavailable.`,
+        ids: qs.map(q => q.id),
+      });
+    }
+  }
+
+  // 2. Repeated DB timeouts → query pattern needs guardrail or summary table
+  const timeouts = queries.filter(q => q.error && /timed? ?out/i.test(q.error));
+  if (timeouts.length >= 2) {
+    // Group by tab
+    const byTab = {};
+    for (const q of timeouts) { byTab[q.tab] = (byTab[q.tab] || 0) + 1; }
+    const tabSummary = Object.entries(byTab).map(([t, n]) => `${t}: ${n}`).join(", ");
+    suggestions.push({
+      type: "repeated_timeouts",
+      priority: "high",
+      summary: `${timeouts.length} queries timed out (${tabSummary})`,
+      detail: timeouts.map(q => `"${q.question}"`).slice(0, 3).join(", "),
+      action: "Check if raw tables are being hit instead of summary tables. May need a new guardrail or summary table.",
+      ids: timeouts.map(q => q.id),
+    });
+  }
+
+  // 3. Same user hitting same wall repeatedly (same session, 3+ errors/refusals in a row)
+  const bySession = {};
+  for (const q of queries) {
+    if (q.session_id) {
+      if (!bySession[q.session_id]) bySession[q.session_id] = [];
+      bySession[q.session_id].push(q);
+    }
+  }
+  for (const [sid, sessionQueries] of Object.entries(bySession)) {
+    let consecutiveFailures = 0;
+    let failStreak = [];
+    for (const q of sessionQueries) {
+      if (q.error || (q.rows === 0 && q.sql)) {
+        consecutiveFailures++;
+        failStreak.push(q);
+      } else {
+        if (consecutiveFailures >= 3) {
+          suggestions.push({
+            type: "user_stuck",
+            priority: "medium",
+            summary: `User hit ${consecutiveFailures} consecutive failures in one session`,
+            detail: failStreak.map(q => `"${q.question}" → ${q.error || "0 rows"}`).slice(0, 4).join("; "),
+            action: "Review session — user may have been trying to get data the system can't provide. Consider adding better guidance or redirects.",
+            ids: failStreak.map(q => q.id),
+          });
+        }
+        consecutiveFailures = 0;
+        failStreak = [];
+      }
+    }
+    // Check trailing streak
+    if (consecutiveFailures >= 3) {
+      suggestions.push({
+        type: "user_stuck",
+        priority: "medium",
+        summary: `User hit ${consecutiveFailures} consecutive failures in one session`,
+        detail: failStreak.map(q => `"${q.question}" → ${q.error || "0 rows"}`).slice(0, 4).join("; "),
+        action: "Review session — user may have been trying to get data the system can't provide.",
+        ids: failStreak.map(q => q.id),
+      });
+    }
+  }
+
+  // 4. All-null results (new error type from today's fix)
+  const allNullQueries = queries.filter(q => q.error === "all_null_columns");
+  if (allNullQueries.length > 0) {
+    suggestions.push({
+      type: "all_null_results",
+      priority: "medium",
+      summary: `${allNullQueries.length} queries returned rows with all NULL data columns`,
+      detail: allNullQueries.map(q => `"${q.question}"`).slice(0, 3).join(", "),
+      action: "LLM generated SQL that computed NULL values (e.g., division by zero). Review the SQL patterns for prompt improvements.",
+      ids: allNullQueries.map(q => q.id),
+    });
+  }
+
+  // 5. Frequently requested topics that get refusals → feature gap
+  const refusalKeywords = {};
+  for (const q of queries) {
+    if (!q.sql && q.response && q.rows === 0) {
+      // Extract key topic words from questions that got refusals
+      const words = q.question.toLowerCase().match(/\b[a-z]{4,}\b/g) || [];
+      for (const w of words) {
+        if (["what", "show", "give", "tell", "please", "about", "from", "this", "that", "have", "does", "with", "more", "also", "than", "just", "like", "would", "could", "into", "over", "last", "year", "years", "data", "crime", "trend", "rate"].includes(w)) continue;
+        refusalKeywords[w] = (refusalKeywords[w] || 0) + 1;
+      }
+    }
+  }
+  const hotTopics = Object.entries(refusalKeywords)
+    .filter(([, n]) => n >= 3)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5);
+  if (hotTopics.length > 0) {
+    suggestions.push({
+      type: "feature_gap",
+      priority: "medium",
+      summary: `Frequently refused topics: ${hotTopics.map(([w, n]) => `"${w}" (${n}×)`).join(", ")}`,
+      detail: "These keywords appear in 3+ questions that got refusals. May indicate data users expect but the system can't provide.",
+      action: "Review whether these topics can be addressed with existing data or need new data sources.",
+      ids: [],
+    });
+  }
+
+  return { stats, issues, suggestions };
 }
 
-function buildEmail(stats, issues, visitors) {
+function buildEmail(stats, issues, visitors, suggestions, weeklyTrends) {
   const date = new Date().toLocaleDateString("en-US", {
     weekday: "long",
     year: "numeric",
@@ -548,6 +760,21 @@ function buildEmail(stats, issues, visitors) {
     <div class="stat-num" style="color:${stats.sqlLeaks > 0 ? "#d32f2f" : "#4caf50"}">${stats.sqlLeaks}</div>
     <div class="stat-label">SQL Leaks</div>
   </div>
+</div>
+
+<div class="stat-grid">
+  <div class="stat-box">
+    <div class="stat-num" style="color:${stats.entityHallucinations > 0 ? "#d32f2f" : "#4caf50"}">${stats.entityHallucinations}</div>
+    <div class="stat-label">Entity Hallucinations</div>
+  </div>
+  <div class="stat-box">
+    <div class="stat-num" style="color:${stats.unnecessaryRefusals > 0 ? "#f57c00" : "#4caf50"}">${stats.unnecessaryRefusals}</div>
+    <div class="stat-label">Potential Refusals</div>
+  </div>
+  <div class="stat-box">
+    <div class="stat-num" style="color:#4caf50">&nbsp;</div>
+    <div class="stat-label">&nbsp;</div>
+  </div>
 </div>`;
 
   // Guardrails section
@@ -591,6 +818,8 @@ function buildEmail(stats, issues, visitors) {
         json_parse_failure: "Code Leaked to User",
         sql_leak: "SQL in Explanation",
         year_hallucination: "Year Hallucination",
+        entity_hallucination: "Entity Hallucination",
+        potential_refusal: "Potential Unnecessary Refusal",
       };
       html += `
       <div class="issue-card ${issue.severity}">
@@ -630,6 +859,109 @@ function buildEmail(stats, issues, visitors) {
     html += `</div>`;
   }
 
+  // Suggestions section
+  if (suggestions && suggestions.length > 0) {
+    html += `<h2>Suggestions</h2>
+    <p style="font-size:13px;color:#666;margin-bottom:12px;">Patterns detected across today's queries that may warrant action.</p>`;
+    for (const s of suggestions) {
+      const priorityColor = s.priority === "high" ? "#d32f2f" : s.priority === "medium" ? "#f57c00" : "#888";
+      html += `
+      <div style="background:#fff;border:1px solid #e0e0e0;border-left:4px solid ${priorityColor};border-radius:8px;padding:12px 14px;margin:8px 0;">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:${priorityColor};margin-bottom:4px;">${escapeHtml(s.type.replace(/_/g, " "))}</div>
+        <div style="font-size:14px;font-weight:600;margin-bottom:4px;">${escapeHtml(s.summary)}</div>
+        <div style="font-size:12px;color:#666;margin-bottom:4px;">${escapeHtml(s.detail)}</div>
+        <div style="font-size:12px;color:#1565c0;font-weight:500;">→ ${escapeHtml(s.action)}</div>
+        ${s.ids.length > 0 ? `<div style="font-size:11px;color:#aaa;margin-top:4px;">Query IDs: ${s.ids.join(", ")}</div>` : ""}
+      </div>`;
+    }
+  }
+
+  // Weekly trends section
+  if (weeklyTrends) {
+    html += `<h2>7-Day Trends</h2>`;
+
+    // Daily volume bar
+    if (weeklyTrends.dailyVolume) {
+      const maxQ = Math.max(...weeklyTrends.dailyVolume.map(d => d.queries));
+      html += `<table style="width:100%;border-collapse:collapse;font-size:12px;margin:12px 0;">
+        <thead><tr style="border-bottom:2px solid #ddd;">
+          <th style="text-align:left;padding:6px;font-weight:600;color:#555;">Day</th>
+          <th style="text-align:right;padding:6px;font-weight:600;color:#555;">Queries</th>
+          <th style="text-align:right;padding:6px;font-weight:600;color:#555;">Errors</th>
+          <th style="text-align:left;padding:6px;font-weight:600;color:#555;width:40%;">Volume</th>
+        </tr></thead><tbody>`;
+      for (const d of weeklyTrends.dailyVolume) {
+        const pct = maxQ > 0 ? Math.round((d.queries / maxQ) * 100) : 0;
+        const dayLabel = d.day.slice(5); // MM-DD
+        html += `<tr style="border-bottom:1px solid #eee;">
+          <td style="padding:4px 6px;font-family:monospace;">${dayLabel}</td>
+          <td style="padding:4px 6px;text-align:right;font-weight:600;">${d.queries}</td>
+          <td style="padding:4px 6px;text-align:right;color:${d.errors > 0 ? "#d32f2f" : "#4caf50"};">${d.errors}</td>
+          <td style="padding:4px 6px;"><div style="background:#475EC7;height:14px;width:${pct}%;border-radius:3px;"></div></td>
+        </tr>`;
+      }
+      html += `</tbody></table>`;
+    }
+
+    // Repeated column errors across the week
+    if (weeklyTrends.repeatedColumnErrors) {
+      html += `<h3 style="font-size:14px;color:#555;margin-top:20px;">Repeated Missing Columns (7 days)</h3>`;
+      for (const r of weeklyTrends.repeatedColumnErrors) {
+        html += `<div style="background:#fff3e0;border-radius:6px;padding:10px 12px;margin:6px 0;font-size:13px;">
+          <strong style="color:#e65100;">"${escapeHtml(r.column)}"</strong> — requested ${r.count}× this week
+          <div style="font-size:11px;color:#888;margin-top:3px;">e.g., ${r.questions.map(q => `"${escapeHtml(q.substring(0, 60))}"`).join(", ")}</div>
+        </div>`;
+      }
+    }
+
+    // Weekly timeouts
+    if (weeklyTrends.weeklyTimeouts) {
+      const t = weeklyTrends.weeklyTimeouts;
+      html += `<div style="background:#ffebee;border-radius:6px;padding:10px 12px;margin:6px 0;font-size:13px;">
+        <strong style="color:#c62828;">${t.total} timeouts this week</strong>
+        (${t.byTab.map(b => `${b.tab}: ${b.cnt}`).join(", ")})
+      </div>`;
+    }
+
+    // Top recurring errors
+    if (weeklyTrends.topErrors) {
+      html += `<h3 style="font-size:14px;color:#555;margin-top:20px;">Top Recurring Errors (7 days)</h3>
+      <table style="width:100%;border-collapse:collapse;font-size:12px;margin:8px 0;">
+        <tbody>`;
+      for (const e of weeklyTrends.topErrors) {
+        html += `<tr style="border-bottom:1px solid #eee;">
+          <td style="padding:4px 6px;font-weight:600;color:#d32f2f;width:40px;">${e.cnt}×</td>
+          <td style="padding:4px 6px;">${escapeHtml(e.error.substring(0, 120))}</td>
+        </tr>`;
+      }
+      html += `</tbody></table>`;
+    }
+
+    // Refusal hot keywords
+    if (weeklyTrends.refusalHotKeywords) {
+      html += `<h3 style="font-size:14px;color:#555;margin-top:20px;">Most Refused Topics (7 days)</h3>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin:8px 0;">`;
+      for (const [kw, n] of weeklyTrends.refusalHotKeywords) {
+        html += `<span style="background:#e3f2fd;color:#1565c0;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:500;">${escapeHtml(kw)} (${n}×)</span>`;
+      }
+      html += `</div>`;
+    }
+
+    // Weekly guardrail trends
+    if (weeklyTrends.weeklyGuardrails) {
+      html += `<h3 style="font-size:14px;color:#555;margin-top:20px;">Top Guardrails (7 days)</h3>
+      <table style="width:100%;border-collapse:collapse;font-size:12px;margin:8px 0;">
+        <tbody>`;
+      for (const [name, cnt] of weeklyTrends.weeklyGuardrails) {
+        html += `<tr style="border-bottom:1px solid #eee;">
+          <td style="padding:4px 6px;font-family:monospace;">${escapeHtml(name)}</td>
+          <td style="padding:4px 6px;text-align:right;font-weight:600;">${cnt}</td>
+        </tr>`;
+      }
+      html += `</tbody></table>`;
+    }
+  }
+
   html += `
 <div class="footer">
   Generated by Crime Data Assistant Query Analyzer<br>
@@ -641,6 +973,137 @@ function buildEmail(stats, issues, visitors) {
   return html;
 }
 
+function getWeeklyTrends() {
+  const trends = {};
+  const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+
+  try {
+    // 1. Repeated column errors across the week
+    const colErrors = db
+      .prepare(
+        `SELECT error, COUNT(*) as cnt, GROUP_CONCAT(DISTINCT question) as questions
+         FROM query_log
+         WHERE ts >= ? AND error LIKE '%no such column%'
+         GROUP BY error
+         HAVING cnt >= 3
+         ORDER BY cnt DESC
+         LIMIT 10`
+      )
+      .all(sevenDaysAgo);
+
+    if (colErrors.length > 0) {
+      trends.repeatedColumnErrors = colErrors.map((r) => {
+        const col = (r.error.match(/no such column:\s*(\S+)/i) || [])[1] || r.error;
+        const sampleQuestions = r.questions.split(",").slice(0, 3);
+        return { column: col.replace(/^[a-z]\./, ""), count: r.cnt, questions: sampleQuestions };
+      });
+    }
+
+    // 2. Repeated timeout patterns
+    const timeoutCount = db
+      .prepare(
+        `SELECT COUNT(*) as cnt FROM query_log WHERE ts >= ? AND error LIKE '%timed out%'`
+      )
+      .get(sevenDaysAgo);
+    if (timeoutCount.cnt >= 3) {
+      const timeoutsByTab = db
+        .prepare(
+          `SELECT tab, COUNT(*) as cnt FROM query_log WHERE ts >= ? AND error LIKE '%timed out%' GROUP BY tab ORDER BY cnt DESC`
+        )
+        .all(sevenDaysAgo);
+      trends.weeklyTimeouts = { total: timeoutCount.cnt, byTab: timeoutsByTab };
+    }
+
+    // 3. Most common error messages this week
+    const topErrors = db
+      .prepare(
+        `SELECT error, COUNT(*) as cnt
+         FROM query_log
+         WHERE ts >= ? AND error IS NOT NULL AND error != ''
+           AND error != 'empty_result' AND error != 'all_null_columns'
+         GROUP BY error
+         HAVING cnt >= 3
+         ORDER BY cnt DESC
+         LIMIT 5`
+      )
+      .all(sevenDaysAgo);
+    if (topErrors.length > 0) {
+      trends.topErrors = topErrors;
+    }
+
+    // 4. Frequently requested but unavailable — questions with refusals (sql IS NULL) that share keywords
+    const refusals = db
+      .prepare(
+        `SELECT question FROM query_log WHERE ts >= ? AND sql IS NULL AND rows = 0`
+      )
+      .all(sevenDaysAgo);
+    if (refusals.length >= 5) {
+      const kwCounts = {};
+      for (const r of refusals) {
+        const words = r.question.toLowerCase().match(/\b[a-z]{5,}\b/g) || [];
+        const seen = new Set();
+        for (const w of words) {
+          if (seen.has(w)) continue;
+          seen.add(w);
+          if (["about", "their", "there", "these", "those", "which", "would", "could", "should", "where", "since", "years", "trend", "crime", "other", "current", "historical", "please", "provide", "cities", "states"].includes(w)) continue;
+          kwCounts[w] = (kwCounts[w] || 0) + 1;
+        }
+      }
+      const hotKeywords = Object.entries(kwCounts)
+        .filter(([, n]) => n >= 3)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 8);
+      if (hotKeywords.length > 0) {
+        trends.refusalHotKeywords = hotKeywords;
+      }
+    }
+
+    // 5. Daily query volume for the week (for sparkline context)
+    const dailyVolume = db
+      .prepare(
+        `SELECT
+           strftime('%Y-%m-%d', ts / 1000, 'unixepoch', 'localtime') as day,
+           COUNT(*) as queries,
+           SUM(CASE WHEN error IS NOT NULL AND error != '' THEN 1 ELSE 0 END) as errors
+         FROM query_log
+         WHERE ts >= ?
+         GROUP BY day
+         ORDER BY day`
+      )
+      .all(sevenDaysAgo);
+    if (dailyVolume.length > 0) {
+      trends.dailyVolume = dailyVolume;
+    }
+
+    // 6. Guardrails trending — which guardrails fired most this week
+    const weeklyGuardrails = db
+      .prepare(
+        `SELECT guardrails FROM query_log WHERE ts >= ? AND guardrails IS NOT NULL AND guardrails != ''`
+      )
+      .all(sevenDaysAgo);
+    if (weeklyGuardrails.length > 0) {
+      const gCounts = {};
+      for (const r of weeklyGuardrails) {
+        for (const g of r.guardrails.split(",")) {
+          const name = g.trim();
+          if (name) gCounts[name] = (gCounts[name] || 0) + 1;
+        }
+      }
+      const topGuardrails = Object.entries(gCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10);
+      if (topGuardrails.length > 0) {
+        trends.weeklyGuardrails = topGuardrails;
+      }
+    }
+
+  } catch (err) {
+    console.warn("Error computing weekly trends:", err.message);
+  }
+
+  return Object.keys(trends).length > 0 ? trends : null;
+}
+
 function escapeHtml(str) {
   if (!str) return "";
   return str
@@ -648,6 +1111,43 @@ function escapeHtml(str) {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
+}
+
+function persistFindings(issues) {
+  if (issues.length === 0) return;
+  try {
+    const writeDb = new Database(QUERY_LOG_DB_PATH);
+    writeDb.exec(`
+      CREATE TABLE IF NOT EXISTS audit_findings (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        query_log_id INTEGER NOT NULL,
+        ts INTEGER NOT NULL,
+        severity TEXT NOT NULL,
+        category TEXT NOT NULL,
+        finding TEXT NOT NULL,
+        proposed_fix TEXT,
+        status TEXT DEFAULT 'open'
+      )
+    `);
+    // Create unique index to prevent duplicate findings on rerun
+    writeDb.exec(`
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_audit_findings_unique
+      ON audit_findings (query_log_id, category)
+    `);
+    const insert = writeDb.prepare(
+      "INSERT OR IGNORE INTO audit_findings (query_log_id, ts, severity, category, finding) VALUES (?, ?, ?, ?, ?)"
+    );
+    const now = Date.now();
+    let count = 0;
+    for (const issue of issues) {
+      insert.run(issue.id, now, issue.severity, issue.type, issue.detail);
+      count++;
+    }
+    writeDb.close();
+    console.log(`Persisted ${count} findings to audit_findings`);
+  } catch (err) {
+    console.warn("Failed to persist findings:", err.message);
+  }
 }
 
 async function main() {
@@ -662,13 +1162,17 @@ async function main() {
     return;
   }
 
-  const { stats, issues } = analyze(queries);
+  const { stats, issues, suggestions } = analyze(queries);
   const visitors = getVisitors();
+  const weeklyTrends = getWeeklyTrends();
   console.log(
-    `Stats: ${stats.total} queries, ${stats.errors} errors, ${issues.length} issues, ${visitors ? visitors.pageviews + " pageviews" : "no visitor data yet"}`
+    `Stats: ${stats.total} queries, ${stats.errors} errors, ${issues.length} issues, ${suggestions.length} suggestions, ${visitors ? visitors.pageviews + " pageviews" : "no visitor data yet"}`
   );
 
-  const html = buildEmail(stats, issues, visitors);
+  // Persist findings to audit_findings table
+  persistFindings(issues);
+
+  const html = buildEmail(stats, issues, visitors, suggestions, weeklyTrends);
 
   const today = new Date().toLocaleDateString("en-US", {
     year: "numeric",

@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import type { QueryResponse, StreamEvent } from "@/lib/types";
+import { suggestTab, TAB_DISPLAY_NAMES, TAB_COLORS, type TabSuggestion } from "@/lib/tab-suggest";
 import DataTable from "./DataTable";
 import ChartPanel from "./ChartPanel";
 import ExportButtons from "./ExportButtons";
@@ -16,6 +17,30 @@ import ExplainerContent from "./ExplainerContent";
 import HomeIcon from "./HomeIcon";
 import GettingStarted from "./GettingStarted";
 
+
+/** Render inline markdown: **bold** and [text](url) links */
+function renderInlineMarkdown(text: string) {
+  const parts: (string | React.ReactElement)[] = [];
+  let remaining = text;
+  let key = 0;
+  const pattern = /(\*\*(.+?)\*\*)|(\[([^\]]+)\]\(([^)]+)\))/g;
+  let lastIndex = 0;
+  let match;
+  while ((match = pattern.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(text.slice(lastIndex, match.index));
+    }
+    if (match[1]) {
+      parts.push(<strong key={key++}>{match[2]}</strong>);
+    } else if (match[3]) {
+      parts.push(<a key={key++} href={match[5]} className="underline" style={{ color: "inherit", fontWeight: 600 }}>{match[4]}</a>);
+    }
+    lastIndex = match.index + match[0].length;
+  }
+  if (lastIndex < text.length) parts.push(text.slice(lastIndex));
+  remaining; // suppress unused warning
+  return parts.length > 0 ? parts : text;
+}
 
 /** Reveals text character-by-character on first render, then static. */
 function TypewriterText({ text, animate }: { text: string; animate: boolean }) {
@@ -35,7 +60,7 @@ function TypewriterText({ text, animate }: { text: string; animate: boolean }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  return <>{displayed}</>;
+  return <>{renderInlineMarkdown(displayed)}</>;
 }
 
 interface HistoryEntry {

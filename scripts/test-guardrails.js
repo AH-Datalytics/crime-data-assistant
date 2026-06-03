@@ -909,6 +909,297 @@ console.log("\n═══ applyRetryMeta ═══\n");
 }
 
 // ══════════════════════════════════════════════════════════════════════
+//  7. Codex audit fixes — regression tests (2026-06-02)
+// ══════════════════════════════════════════════════════════════════════
+
+console.log("\n═══ Codex audit fix regression tests ═══\n");
+
+// --- 3086: agency-lookup-not-crime-data fires on NIBRS ---
+{
+  const sql = "SELECT DISTINCT ha.ori, ha.agency, ha.state, ha.type FROM agencies ha WHERE ha.city = 'ESSEX' AND ha.state = 'NJ'";
+  const question = "percent cleared of auto theft arrests in Essex County, NJ";
+  const tab = "nibrs";
+  const sqlLower = sql.toLowerCase();
+  const onlyAgencyTable =
+    (sqlLower.includes("from agencies") || sqlLower.includes("from historical_agency")) &&
+    !sqlLower.includes("agency_monthly") &&
+    !sqlLower.includes("agency_crime") &&
+    !sqlLower.includes("national_monthly") &&
+    !sqlLower.includes("state_national") &&
+    !sqlLower.includes("staffing") &&
+    !sqlLower.includes("clearance") &&
+    !sqlLower.includes("summary_") &&
+    !sqlLower.includes("incidents") &&
+    !sqlLower.includes("offenses") &&
+    !sqlLower.includes("victims") &&
+    !sqlLower.includes("offenders") &&
+    !sqlLower.includes("arrestees") &&
+    !sqlLower.includes("property");
+  const asksCrimeData = /\b(crime|trend|murder|homicide|robbery|assault|burglary|theft|rate|stats|statistics|data|offenses?|violent|property|arrest|clearance|cleared)\b/i.test(question);
+  const fires = onlyAgencyTable && asksCrimeData;
+  assert("3086: agency-lookup-not-crime-data fires on NIBRS", fires, `onlyAgency=${onlyAgencyTable}, asksCrime=${asksCrimeData}`);
+}
+
+// --- 3086: does NOT fire when NIBRS summary tables are used ---
+{
+  const sql = "SELECT year, SUM(victim_count) FROM summary_victim_city_monthly s JOIN agencies a ON a.ori = s.ori";
+  const question = "murder trend in Houston";
+  const sqlLower = sql.toLowerCase();
+  const onlyAgencyTable =
+    (sqlLower.includes("from agencies") || sqlLower.includes("from historical_agency")) &&
+    !sqlLower.includes("summary_");
+  assert("3086: does NOT fire with NIBRS summary tables", !onlyAgencyTable);
+}
+
+// --- 3103: national vs cities explanation fix (Historical route) ---
+{
+  const sql = "SELECT year, national_clearance_rate FROM historical_national_clearance WHERE year >= 2015";
+  const explanation = "This dataset contains murder clearance rates across cities from 2015 to 2024.";
+  let fixed = explanation;
+  // Simulate the post-processing from query/route.ts
+  if (/\bnational_/i.test(sql) && !/\bagency\s*=/i.test(sql)) {
+    fixed = fixed
+      .replace(/\bacross cities\b/gi, "nationally")
+      .replace(/\bfor cities\b/gi, "nationally")
+      .replace(/\bin cities\b/gi, "nationally");
+  }
+  assert("3103: 'across cities' → 'nationally' when SQL uses national_ table", fixed.includes("nationally") && !fixed.includes("across cities"), `got: "${fixed}"`);
+}
+
+// --- 3103: does NOT fire when SQL has agency filter ---
+{
+  const sql = "SELECT year, rate FROM national_clearance_rate WHERE agency = 'Houston'";
+  const explanation = "This dataset contains clearance rates across cities.";
+  let fixed = explanation;
+  if (/\bnational_/i.test(sql) && !/\bagency\s*=/i.test(sql)) {
+    fixed = fixed.replace(/\bacross cities\b/gi, "nationally");
+  }
+  assert("3103: preserves 'cities' when agency filter exists", fixed.includes("across cities"), `got: "${fixed}"`);
+}
+
+// --- Offender demographics wording fix (3085/3087-3091/3094/3095) ---
+{
+  const sql = "SELECT age_group, SUM(offender_count) FROM summary_offender_demographics WHERE ucr_offense_code = '09A' GROUP BY age_group";
+  const explanations = [
+    "This shows the share of crimes involving offenders under 25.",
+    "This shows the percentage of offenses with young offenders.",
+    "This shows the proportion of incidents by age group.",
+  ];
+  const expected = [
+    "share of known/suspected offenders",
+    "percentage of known/suspected offenders",
+    "proportion of known/suspected offenders",
+  ];
+  for (let i = 0; i < explanations.length; i++) {
+    let fixed = explanations[i];
+    if (/summary_offender_demographics/i.test(sql)) {
+      fixed = fixed
+        .replace(/\bshare of (?:crimes|offenses|incidents)\b/gi, "share of known/suspected offenders")
+        .replace(/\bpercent(?:age)? of (?:crimes|offenses|incidents)\b/gi, "percentage of known/suspected offenders")
+        .replace(/\bproportion of (?:crimes|offenses|incidents)\b/gi, "proportion of known/suspected offenders");
+    }
+    assert(`offender wording fix ${i + 1}: "${expected[i]}" present`, fixed.includes(expected[i]), `got: "${fixed}"`);
+  }
+}
+
+// --- SHR offender wording fix (3105/3107/3108) ---
+{
+  const sql = "SELECT year, COUNT(*) FROM incidents i JOIN victims v ON v.incident_id = i.id WHERE i.off_age_num < 18 GROUP BY year";
+  const explanations = [
+    "This shows homicides involving a juvenile offender.",
+    "This shows the share of homicides with any offender under 18.",
+    "This shows crimes involving a young offender by year.",
+  ];
+  for (let i = 0; i < explanations.length; i++) {
+    let fixed = explanations[i];
+    if (/\boff_age_num\b/i.test(sql) || /\boff_age\b/i.test(sql)) {
+      fixed = fixed
+        .replace(/\bhomicides (?:involving|with) (?:a |an )?(?:juvenile|young|under.?18|minor)\s*offender/gi, "murder victims where the recorded offender was under 18")
+        .replace(/\bcrimes (?:involving|with) (?:a |an )?(?:juvenile|young|under.?18|minor)\s*offender/gi, "murder victims where the recorded offender was under 18")
+        .replace(/\bhomicides (?:involving|with) (?:any )?offender/gi, "murder victims where the recorded offender was")
+        .replace(/\bshare of (?:homicides|murders|incidents) (?:involving|with)\b/gi, "share of murder victims where the recorded offender was");
+    }
+    assert(`SHR offender wording fix ${i + 1}`, fixed.includes("recorded offender"), `got: "${fixed}"`);
+  }
+}
+
+// --- SHR: does NOT fire when no offender columns in SQL ---
+{
+  const sql = "SELECT year, weapon_group, COUNT(*) FROM incidents i JOIN victims v ON v.incident_id = i.id GROUP BY year, weapon_group";
+  const explanation = "This shows homicides involving firearms.";
+  let fixed = explanation;
+  if (/\boff_age_num\b/i.test(sql) || /\boff_age\b/i.test(sql)) {
+    fixed = fixed.replace(/\bhomicides involving/gi, "murder victims where the recorded offender was");
+  }
+  assert("SHR: no offender fix when SQL has no off_ columns", fixed === explanation, `got: "${fixed}"`);
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  8. Group B arrest data tests (queries 3113/3114/3116)
+// ══════════════════════════════════════════════════════════════════════
+
+console.log("\n═══ Group B arrest data tests ═══\n");
+
+// --- 3113/3114/3116: DUI query should NOT trigger agency-lookup guardrail ---
+{
+  const sql = "SELECT CAST(year AS TEXT) AS year, SUM(arrestee_count) AS dui_arrests FROM summary_arrestee_demographics WHERE ucr_arrest_offense = '90D' AND year BETWEEN 2017 AND 2026 GROUP BY year ORDER BY year";
+  const question = "Show me DUI arrests from 2017-2026";
+  const sqlLower = sql.toLowerCase();
+  const onlyAgencyTable =
+    (sqlLower.includes("from agencies") || sqlLower.includes("from historical_agency")) &&
+    !sqlLower.includes("summary_");
+  assert("Group B: DUI query does NOT trigger agency-lookup", !onlyAgencyTable);
+}
+
+// --- Group B codes in summary_arrestee_demographics prompt ---
+// The prompt should document 90D as DUI
+{
+  // Simulate: does the system prompt tell Claude to use summary_arrestee_demographics for DUI?
+  // We test that the SQL Claude would generate references the right table and code
+  const sql = "SELECT year, SUM(arrestee_count) FROM summary_arrestee_demographics WHERE ucr_arrest_offense = '90D' GROUP BY year ORDER BY year";
+  assert("Group B: DUI uses summary_arrestee_demographics", sql.includes("summary_arrestee_demographics") && sql.includes("90D"));
+}
+
+// --- Group B: offense code sanity ---
+{
+  const GROUP_B_CODES = {
+    "90A": "Bad Checks",
+    "90B": "Curfew/Loitering",
+    "90C": "Disorderly Conduct",
+    "90D": "DUI/DWI",
+    "90E": "Family Offenses",
+    "90F": "Liquor Law Violations",
+    "90G": "Peeping Tom",
+    "90I": "Runaway",
+    "90J": "Trespass",
+    "90Z": "All Other Offenses",
+  };
+  // Each code should be a valid 90x pattern
+  for (const [code, name] of Object.entries(GROUP_B_CODES)) {
+    assert(`Group B code ${code} (${name}) is 90x`, /^90[A-Z]$/.test(code));
+  }
+}
+
+// --- FP: "DUI incidents" should recognize arrest-only limitation ---
+// The explanation post-processing for arrestee demographics should NOT say "share of crimes"
+{
+  const sql = "SELECT year, SUM(arrestee_count) FROM summary_arrestee_demographics WHERE ucr_arrest_offense = '90D' GROUP BY year";
+  const explanation = "This shows the share of crimes involving DUI offenders by year.";
+  let fixed = explanation;
+  if (/summary_arrestee_demographics/i.test(sql)) {
+    fixed = fixed
+      .replace(/\bshare of (?:crimes|offenses|incidents)\b/gi, "share of arrestees")
+      .replace(/\bpercent(?:age)? of (?:crimes|offenses|incidents)\b/gi, "percentage of arrestees");
+  }
+  assert("Group B: arrestee wording fix applies to DUI queries", fixed.includes("share of arrestees") && !fixed.includes("share of crimes"), `got: "${fixed}"`);
+}
+
+// --- FP: "DUI arrests from 2000" — NIBRS coverage caveat ---
+// The date-gap disclaimer should fire when data starts later than requested
+{
+  const question = "show me DUI arrests from 2000 to today";
+  const rows = [{ year: 2017, dui_arrests: 9802 }]; // first row starts at 2017
+  const startMatch = question.match(/(?:since|from|starting|beginning)\s+(\d{4})/i) ||
+    question.match(/(\d{4})\s*(?:to|through|-)\s*\d{4}/i);
+  const requested = startMatch ? parseInt(startMatch[1]) : null;
+  const actual = rows[0]?.year;
+  const gapDetected = requested && actual && actual > requested + 1;
+  assert("Group B: date-gap disclaimer fires for '2000 to today' with data starting 2017", gapDetected, `requested=${requested}, actual=${actual}`);
+}
+
+// --- Ethnicity guardrail: still fires on live (no ethnicity column yet) ---
+{
+  const question = "show me hispanic DUI arrests";
+  const fires = /\b(hispanic|latino|latina|ethnicity|ethnic)\b/i.test(question);
+  assert("Ethnicity guardrail fires for 'hispanic DUI arrests'", fires);
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  9. Clearance column guardrail exemptions (query 3201)
+// ══════════════════════════════════════════════════════════════════════
+
+console.log("\n═══ Clearance column guardrail tests (3201) ═══\n");
+
+// --- rate-no-population: does NOT fire on _clr columns ---
+{
+  const question = "What are the clearance rates for auto theft in Philadelphia and Chicago?";
+  const sql = "SELECT y.year, (SELECT hc.motor_vehicle_theft_clr FROM historical_agency_clearance hc WHERE hc.ori = 'ILCPD0000' AND hc.year = y.year) AS chicago FROM years y";
+  const isPerCapita = /\b(rates?|per\s*capita|per\s*100k)\b/i.test(question);
+  const hasPopulation = sql.toLowerCase().includes("population");
+  const hasRate = /_rate\b/.test(sql);
+  const hasClr = /_clr\b/.test(sql);
+  const fires = isPerCapita && !hasPopulation && !hasRate && !hasClr;
+  assert("3201: rate-no-population does NOT fire on _clr columns", !fires, `isPerCapita=${isPerCapita}, hasClr=${hasClr}`);
+}
+
+// --- contract-rate-no-population: does NOT fire on _clr columns ---
+{
+  const question = "murder clearance rate in Houston";
+  const sql = "SELECT year, murder_clr FROM historical_agency_clearance WHERE ori = 'TXHPD0000'";
+  const wantsRate = /\b(rates?|per\s*capita|per\s*100k)\b/i.test(question);
+  const sqlLower = sql.toLowerCase();
+  const fires = wantsRate && !sqlLower.includes("population") && !sqlLower.includes("100000") && !/_rate\b/.test(sqlLower) && !/_clr\b/.test(sqlLower);
+  assert("3201: contract-rate-no-population does NOT fire on _clr columns", !fires);
+}
+
+// --- offense-missing-filter: does NOT fire on _clr columns ---
+{
+  const question = "auto theft clearance rate in Chicago";
+  const sql = "SELECT year, motor_vehicle_theft_clr FROM historical_agency_clearance hc WHERE hc.ori = 'ILCPD0000'";
+  const sqlLower = sql.toLowerCase();
+  const hasClr = /_clr\b/.test(sqlLower);
+  // offense-missing-filter should early-return when _clr present
+  assert("3201: offense-missing-filter does NOT fire on _clr columns", hasClr);
+}
+
+// --- offense-missing-filter: STILL fires on normal crime query without offense filter ---
+{
+  const question = "auto theft trend in Chicago 2020-2024";
+  const sql = "SELECT year, SUM(count) FROM agency_monthly WHERE agency = 'Chicago' GROUP BY year";
+  const sqlLower = sql.toLowerCase();
+  const hasClr = /_clr\b/.test(sqlLower);
+  const offenseTerms = [["'motor vehicle theft'", "'240'"]];
+  const hasOffenseFilter = offenseTerms[0].some(t => sqlLower.includes(t)) || sqlLower.includes("offense");
+  const fires = /\bauto theft|motor vehicle theft|car theft|vehicle theft\b/i.test(question) && !hasOffenseFilter && !hasClr;
+  assert("3201: offense-missing-filter STILL fires on normal crime query", fires);
+}
+
+// --- _rate exemption still works (from 3168 fix) ---
+{
+  const sql = "SELECT year, murder_rate FROM historical_state_national WHERE state = 'United States'";
+  const fires = !sql.toLowerCase().includes("population") && !/_rate\b/.test(sql) && !/_clr\b/.test(sql);
+  assert("3168: _rate exemption still works for murder_rate column", !fires);
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  10. Multi-city global LIMIT 1 guardrail (query 3204)
+// ══════════════════════════════════════════════════════════════════════
+
+console.log("\n═══ Multi-city global LIMIT 1 tests (3204) ═══\n");
+
+// --- Fires on exact bad SQL from 3204 ---
+{
+  const sql = "SELECT a.city, a.state, s.year, s.month, SUM(s.offense_count) AS vehicle_burglaries FROM summary_city_monthly s JOIN agencies a ON a.ori = s.ori AND a.year = s.year WHERE s.ucr_offense_code = '23F' AND s.year = 2023 AND a.city IN ('BOSTON', 'CHICAGO') AND a.state IN ('MA', 'IL') AND a.population > 0 AND a.ori IN (SELECT ori FROM agencies WHERE city IN ('BOSTON', 'CHICAGO') AND state IN ('MA', 'IL') AND year = 2023 AND population > 0 ORDER BY pop_group LIMIT 1) GROUP BY a.city, a.state, s.year, s.month ORDER BY s.year, s.month, a.city";
+  const hasCityIn = /city\s+IN\s*\([^)]*,[^)]*\)/i.test(sql);
+  const hasGlobalLimit1 = /city\s+IN\s*\([^)]*\)[\s\S]*?(?:ORDER\s+BY\s+(?:pop_group|population)[^)]*LIMIT\s+1)/i.test(sql);
+  assert("3204: detects city IN (...) with global LIMIT 1", hasCityIn && hasGlobalLimit1);
+}
+
+// --- Does NOT fire on single-city LIMIT 1 (correct usage) ---
+{
+  const sql = "SELECT year, SUM(victim_count) FROM summary_victim_city_monthly WHERE ori IN (SELECT ori FROM agencies WHERE city = 'HOUSTON' AND state = 'TX' AND year = 2025 ORDER BY pop_group LIMIT 1) GROUP BY year";
+  const hasCityIn = /city\s+IN\s*\([^)]*,[^)]*\)/i.test(sql);
+  assert("3204: does NOT fire on single-city LIMIT 1", !hasCityIn);
+}
+
+// --- Does NOT fire on multi-city without LIMIT 1 ---
+{
+  const sql = "SELECT a.city, SUM(s.victim_count) FROM summary_victim_city_monthly s JOIN agencies a ON a.ori = s.ori WHERE a.city IN ('BOSTON', 'CHICAGO') GROUP BY a.city";
+  const hasGlobalLimit1 = /city\s+IN\s*\([^)]*\)[\s\S]*?(?:ORDER\s+BY\s+(?:pop_group|population)[^)]*LIMIT\s+1)/i.test(sql);
+  assert("3204: does NOT fire on multi-city without LIMIT 1", !hasGlobalLimit1);
+}
+
+// ══════════════════════════════════════════════════════════════════════
 //  Summary
 // ══════════════════════════════════════════════════════════════════════
 

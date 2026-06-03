@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import CrimeIndexLogo from "@/components/CrimeIndexLogo";
+import HomeIcon from "@/components/HomeIcon";
 
 export default function LoginPage() {
   const [password, setPassword] = useState("");
@@ -40,7 +40,7 @@ export default function LoginPage() {
       <div className="w-full max-w-sm">
         <div className="bg-white rounded-xl shadow-lg p-8">
           <div className="flex items-center justify-center gap-2 mb-1">
-            <CrimeIndexLogo size={28} />
+            <HomeIcon size={28} />
             <h1 className="text-xl font-bold text-[var(--foreground)] text-center">
               Crime Index
             </h1>

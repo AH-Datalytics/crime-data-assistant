@@ -96,6 +96,13 @@ function formatYearMonth(val: string | number): string {
   return `${MONTH_NAMES[m - 1] || s.slice(4)} ${s.slice(0, 4)}`;
 }
 
+function formatMonthOnly(val: string | number): string {
+  const s = String(val);
+  if (!/^\d{6}$/.test(s)) return s;
+  const m = parseInt(s.slice(4, 6), 10);
+  return MONTH_NAMES[m - 1] || s.slice(4);
+}
+
 function formatDateFull(val: string | number): string {
   const s = String(val);
   if (!/^(19|20)\d{6}$/.test(s)) return s;
@@ -347,7 +354,7 @@ function ChartPanel({ config, rows, meta }: ChartPanelProps) {
                 {...(plainYears ? { type: "number" as const, domain: ["dataMin", "dataMax"] as const } : {})}
                 tickFormatter={
                   daily ? (v) => formatDateTickLabel(v, dailySingleYear)
-                  : singleYearMonthly ? (v) => formatYearMonth(v)
+                  : singleYearMonthly ? (v) => formatMonthOnly(v)
                   : fewYearsMonthly ? (v) => formatYearMonth(v)
                   : ym ? (v: string | number) => String(v).slice(0, 4)
                   : plainYears ? (v: number) => String(v)
@@ -439,7 +446,7 @@ function ChartPanel({ config, rows, meta }: ChartPanelProps) {
                 axisLine={false}
                 tickFormatter={
                   daily ? (v: string) => formatDateTickLabel(v, dailySingleYear)
-                  : singleYearMonthly ? (v: string) => formatYearMonth(v)
+                  : singleYearMonthly ? (v: string) => formatMonthOnly(v)
                   : fewYearsMonthly ? (v: string) => formatYearMonth(v)
                   : ym ? (v: string) => String(v).slice(0, 4)
                   : plainYears ? (v: number) => String(v)

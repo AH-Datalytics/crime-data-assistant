@@ -21,6 +21,9 @@ export interface Guardrail {
   message?: (ctx: QueryContext) => string;
   /** Direct SQL rewrite (applied before Claude retry). Return null for no change. */
   rewrite?: (sql: string, ctx: QueryContext) => string | null;
+  /** Hard override — skip retry entirely, return this as user-facing explanation.
+   *  Use for known-impossible requests where the model can't fix the SQL. */
+  override?: (ctx: QueryContext) => string | null;
 }
 
 export interface GuardrailResult {
@@ -32,6 +35,10 @@ export interface GuardrailResult {
   sql: string;
   /** Whether any guardrail fired */
   needsFix: boolean;
+  /** Hard override explanation — if set, skip retry and return this to user */
+  overrideResponse: string | null;
+  /** Name of the guardrail that produced the override */
+  overrideGuardrail: string | null;
 }
 
 /* ------------------------------------------------------------------ */
@@ -50,7 +57,7 @@ const GUARDRAILS: Guardrail[] = [
     name: "rate-no-population",
     tabs: ["current", "historical"],
     match: (ctx) =>
-      ctx.isPerCapita && !ctx.sql.toLowerCase().includes("population"),
+      ctx.isPerCapita && !ctx.sql.toLowerCase().includes("population") && !/_rate\b/.test(ctx.sql) && !/_clr\b/.test(ctx.sql),
     message: () =>
       "The user asked for rates/per capita but the SQL does not join population data.",
   },
@@ -147,6 +154,38 @@ const GUARDRAILS: Guardrail[] = [
       return `[SYSTEM: You hardcoded city names (${caseNames.join(", ")}) in CASE WHEN branches, but the user asked for a dynamic discovery query — you cannot know which cities will qualify. Use long format instead: return the requested time columns, an entity label, and the metric value, with a CTE that discovers the top entities. Let the frontend auto-pivot. Do NOT guess city names.]`;
     },
   },
+  // --- Dynamic top-N: user asked for "top N" but SQL doesn't limit to N entities ---
+  {
+    name: "topn-no-entity-limit",
+    tabs: ["current", "historical", "nibrs", "shr"],
+    match: (ctx) => {
+      const q = ctx.question.toLowerCase();
+      const sql = ctx.sql;
+      // Does the user ask for top N?
+      const topNMatch = q.match(/\btop\s+(\d+)/i);
+      if (!topNMatch) return false;
+      const n = parseInt(topNMatch[1]);
+      if (n < 2 || n > 50) return false;
+      // Does the SQL have a subquery or CTE that limits to N entities?
+      // Look for: LIMIT N in a subquery, or IN (SELECT ... LIMIT N), or WITH ... LIMIT N
+      const hasEntityLimit =
+        /\bIN\s*\(\s*SELECT\b[\s\S]*?\bLIMIT\s+\d+/i.test(sql) ||
+        /\bWITH\b[\s\S]*?\bLIMIT\s+\d+/i.test(sql) ||
+        /\bORDER\s+BY\b[\s\S]*?\bLIMIT\s+\d+\b[\s\S]*?\)\s/i.test(sql);
+      if (hasEntityLimit) return false;
+      // Check if the outer LIMIT alone is sufficient (single-row-per-entity)
+      // If SQL has no GROUP BY with entity columns, outer LIMIT is fine
+      const hasEntityGroup = /GROUP\s+BY\b[\s\S]*?\b(agency|city|ori|state)\b/i.test(sql);
+      if (!hasEntityGroup) return false;
+      // SQL groups by entity but has no inner limit — likely returns all entities
+      return true;
+    },
+    message: (ctx) => {
+      const topNMatch = ctx.question.toLowerCase().match(/\btop\s+(\d+)/i);
+      const n = topNMatch ? topNMatch[1] : "N";
+      return `The user asked for the top ${n} but your SQL returns all entities without limiting to ${n}. Use a CTE or subquery to first identify the top ${n} entities (e.g., by total count), then filter the main query to only those ${n} ORIs/agencies. Example: WITH top_agencies AS (SELECT ori FROM ... GROUP BY ori ORDER BY SUM(count) DESC LIMIT ${n}) SELECT ... WHERE ori IN (SELECT ori FROM top_agencies).`;
+    },
+  },
   {
     name: "yaxis-missing",
     tabs: ["current", "historical"],
@@ -166,6 +205,8 @@ const GUARDRAILS: Guardrail[] = [
         [/\btheft(?!.*auto|.*motor|.*vehicle)|larceny|larcenies\b/i, ["'theft'", "'23h'", "'larceny'"]],
         [/\bauto theft|motor vehicle theft|car theft|vehicle theft\b/i, ["'motor vehicle theft'", "'240'"]],
       ];
+      // Skip if SQL uses clearance columns (offense is encoded in column name, e.g. murder_clr, motor_vehicle_theft_clr)
+      if (/_clr\b/.test(sqlLower)) return false;
       for (const [pattern, sqlTerms] of offenseTerms) {
         if (
           pattern.test(ctx.question) &&
@@ -424,17 +465,27 @@ const GUARDRAILS: Guardrail[] = [
     },
   },
   {
+    // TODO: Rate-contract second-failure override — deferred.
+    // Plan: after retry, run runGuardrails() again in the route. If this fires twice
+    // on the same query, convert to hard override ("I couldn't calculate a rate").
+    // Keep this as a retry guardrail for now; route-level second-failure logic is not yet implemented.
     name: "contract-rate-no-population",
-    tabs: ["current", "historical"],
+    tabs: ["current", "historical", "nibrs", "shr"],
     match: (ctx) => {
       const q = ctx.question.toLowerCase();
       // User asks for rate/per capita but SQL doesn't join population
-      const wantsRate = /\b(rate|per\s*capita|per\s*100k|per\s*100,000|per\s*hundred\s*thousand)\b/i.test(q);
+      // Skip if user explicitly rejected rates
+      if (/\b(not rates?|raw numbers?|raw counts?|counts?\s*(?:,\s*)?not rates?)\b/i.test(q)) return false;
+      const wantsRate = /\b(rates?|per\s*capita|per\s*100k|per\s*100,000|per\s*hundred\s*thousand)\b/i.test(q);
       if (!wantsRate) return false;
-      return !ctx.sql.toLowerCase().includes("population");
+      const sqlLower = ctx.sql.toLowerCase();
+      return !sqlLower.includes("population") && !sqlLower.includes("100000") && !/_rate\b/.test(sqlLower) && !/_clr\b/.test(sqlLower);
     },
-    message: () =>
-      "The user asked for rates/per capita but the SQL does not reference population data. JOIN agency_population (Current Trends) or use the population column (Historical) and divide by population to calculate the rate.",
+    message: (ctx) => {
+      if (ctx.tab === "shr") return "The user asked for rates but the SQL does not calculate a per-capita rate. Use ROUND(COUNT(*) * 100000.0 / NULLIF(AVG(i.population), 0), 1) for single-agency SHR rates. For state/national aggregate rates, set sql to null and redirect to the Historical Library tab.";
+      if (ctx.tab === "nibrs") return "The user asked for rates but the SQL does not calculate a per-capita rate. JOIN the agencies table to get population, then use ROUND(SUM(count) * 100000.0 / population, 1). For state-level rates, redirect to the Historical Library tab.";
+      return "The user asked for rates/per capita but the SQL does not reference population data. JOIN agency_population (Current Trends) or use the population column (Historical) and divide by population to calculate the rate.";
+    },
   },
 
   // --- Historical: recursive CTE without ORI deduplication ---
@@ -594,6 +645,31 @@ const GUARDRAILS: Guardrail[] = [
       return fixed !== sql ? fixed : null;
     },
   },
+  // --- NIBRS: city question answered with state-level data (no ORI) ---
+  {
+    name: "nibrs-city-got-state",
+    tabs: ["nibrs"],
+    match: (ctx) => {
+      const sql = ctx.sql.toLowerCase();
+      // SQL uses state-level summary tables without any ORI or city filter
+      const usesStateTable = /\bsummary_victim_state_monthly\b/i.test(sql) || /\bsummary_state_monthly\b/i.test(sql);
+      if (!usesStateTable) return false;
+      const hasOriOrCity = /\bori\b/i.test(sql) || /\bcity\b/i.test(sql);
+      if (hasOriOrCity) return false; // Already has city-level filter — nibrs-state-table-with-ori handles this
+      // State names that should NOT trigger this guardrail
+      const STATE_NAMES_NIBRS = /\b(alabama|alaska|arizona|arkansas|california|colorado|connecticut|delaware|florida|georgia|hawaii|idaho|illinois|indiana|iowa|kansas|kentucky|louisiana|maine|maryland|massachusetts|michigan|minnesota|mississippi|missouri|montana|nebraska|nevada|new hampshire|new jersey|new mexico|new york|north carolina|north dakota|ohio|oklahoma|oregon|pennsylvania|rhode island|south carolina|south dakota|tennessee|texas|utah|vermont|virginia|washington state|west virginia|wisconsin|wyoming|district of columbia|united states)\b/i;
+      const cityGeos = ctx.geos.filter(g => !STATE_NAMES_NIBRS.test(g));
+      // User asked about a specific city/agency (not a state)
+      const q = ctx.question.toLowerCase();
+      const mentionsCity = cityGeos.length > 0 ||
+        /\b(police|department|pd|sheriff|agency)\b/i.test(q);
+      return mentionsCity;
+    },
+    message: (ctx) => {
+      const city = ctx.geos[0] || "the requested city";
+      return `[SYSTEM: The user asked about "${city}" but the SQL queries a state-level summary table with no ORI or city filter — this returns statewide data, not city data. Use the city-level table instead: summary_victim_city_monthly (for person crimes) or summary_city_monthly (for property crimes), filtered by ORI: WHERE ori IN (SELECT ori FROM agencies WHERE city = '${city.toUpperCase()}' AND state = '...' AND population > 0). Do NOT return state-level data when the user asked about a specific city or agency.]`;
+    },
+  },
   {
     name: "nibrs-national-as-agency",
     tabs: ["nibrs"],
@@ -676,6 +752,98 @@ const GUARDRAILS: Guardrail[] = [
         return match.replace(city, city.toUpperCase());
       });
       return fixed !== sql ? fixed : null;
+    },
+  },
+  // --- NIBRS: specific drug arrest query using wrong table ---
+  // Once summary_drug_arrests exists, the prompt directs Claude there and this won't fire.
+  // This is the safety net: hard override blocks execution of the wrong data.
+  {
+    name: "nibrs-drug-arrest-wrong-table",
+    tabs: ["nibrs"],
+    match: (ctx) => {
+      const q = ctx.question.toLowerCase();
+      const sql = ctx.sql.toLowerCase();
+      const specificDrug = /\b(marijuana|cannabis|weed|meth|methamphetamine|cocaine|crack|heroin|fentanyl|opioid|lsd|pcp|ecstasy|mdma|opium|hashish|amphetamine)\b/i.test(q);
+      const wantsArrests = /\b(arrest|arrested|arrestee)\b/i.test(q);
+      const usesArresteeDemographics = sql.includes("summary_arrestee_demographics");
+      const hasDrugOffense = /\b3[5][AB]\b/.test(ctx.sql);
+      const usesDrugArrests = sql.includes("summary_drug_arrests");
+      return specificDrug && wantsArrests && usesArresteeDemographics && hasDrugOffense && !usesDrugArrests;
+    },
+    override: (ctx) => {
+      const drug = ctx.question.match(/\b(marijuana|cannabis|weed|meth|methamphetamine|cocaine|crack|heroin|fentanyl|opioid|lsd|pcp|ecstasy|mdma|opium|hashish|amphetamine)\b/i)?.[1] || "that drug";
+      const drugCap = drug.charAt(0).toUpperCase() + drug.slice(1);
+      const offenseType = /35B/.test(ctx.sql) ? "sales" : "possession";
+      return `I can't isolate ${drug} arrests specifically — the arrest data groups all drug arrests under a single code (35A for possession, 35B for sales) without distinguishing the drug type. I can show you:\n\n- **Total drug ${offenseType} arrests** (all drugs combined) — ask "drug ${offenseType} arrests"\n- **${drugCap} drug offense counts** broken down by drug type (these are offenses reported to NIBRS, not arrest counts) — ask "${drug} drug offenses"\n\nWould either of those work?`;
+    },
+  },
+  // --- Multi-city ORI subquery with global LIMIT 1 ---
+  {
+    name: "multi-city-global-limit-ori",
+    tabs: ["nibrs", "current", "historical", "shr"],
+    match: (ctx) => {
+      const sql = ctx.sql;
+      // Detect: city IN ('A', 'B') inside a subquery with ORDER BY pop_group/population LIMIT 1
+      // This picks one ORI total instead of one per city
+      const hasMultiCityIn = /city\s+IN\s*\([^)]*,[^)]*\)/i.test(sql);
+      if (!hasMultiCityIn) return false;
+      // Check for LIMIT 1 in the same subquery as the multi-city IN clause
+      const hasGlobalLimit = /city\s+IN\s*\([^)]*\)[\s\S]*?(?:ORDER\s+BY\s+(?:pop_group|population)[^)]*LIMIT\s+1)/i.test(sql);
+      return hasGlobalLimit;
+    },
+    message: () =>
+      "[SYSTEM: You used a single ORI subquery with city IN (...) ... LIMIT 1, which selects only one agency across all requested cities. For multi-city comparisons, select one ORI per city. Use separate ORI subqueries per city in CASE WHEN branches, or use a CTE: WITH city_oris AS (SELECT ori, city, state FROM (SELECT ori, city, state, ROW_NUMBER() OVER (PARTITION BY city, state ORDER BY pop_group) AS rn FROM agencies WHERE (city = 'X' AND state = 'XX') OR (city = 'Y' AND state = 'YY') AND year = 2025 AND population > 0) WHERE rn = 1) ... WHERE s.ori IN (SELECT ori FROM city_oris)]",
+  },
+  {
+    name: "city-like-no-state",
+    tabs: ["nibrs", "shr"],
+    match: (ctx) => {
+      const sql = ctx.sql;
+      // Detect: city LIKE 'X%' or agency LIKE 'X%' without a state filter in the SAME clause
+      const likeMatch = sql.match(/(?:city|agency)\s+LIKE\s+'([^']+)'/gi);
+      if (!likeMatch) return false;
+      // Only fire if the LIKE is a prefix match (ends with %)
+      const hasPrefixLike = likeMatch.some(m => {
+        const val = m.match(/LIKE\s+'([^']+)'/i)?.[1];
+        return val && !val.startsWith('%') && val.endsWith('%');
+      });
+      if (!hasPrefixLike) return false;
+      // Check for state filter in the SAME subquery as the LIKE, not globally
+      // Extract the subquery or clause containing the LIKE
+      for (const m of likeMatch) {
+        const val = m.match(/LIKE\s+'([^']+)'/i)?.[1];
+        if (!val || val.startsWith('%') || !val.endsWith('%')) continue;
+        // Find the innermost parenthesized clause containing this LIKE
+        const likeIdx = sql.indexOf(m);
+        // Walk backward to find the opening paren of this subquery
+        let depth = 0;
+        let clauseStart = 0;
+        for (let i = likeIdx; i >= 0; i--) {
+          if (sql[i] === ')') depth++;
+          if (sql[i] === '(') {
+            if (depth === 0) { clauseStart = i; break; }
+            depth--;
+          }
+        }
+        // Walk forward to find the closing paren
+        depth = 0;
+        let clauseEnd = sql.length;
+        for (let i = likeIdx; i < sql.length; i++) {
+          if (sql[i] === '(') depth++;
+          if (sql[i] === ')') {
+            if (depth === 0) { clauseEnd = i; break; }
+            depth--;
+          }
+        }
+        const clause = sql.slice(clauseStart, clauseEnd);
+        // Check if this clause has a state filter
+        if (!/\bstate\s*=\s*'[A-Z]{2}'/i.test(clause)) return true;
+      }
+      return false;
+    },
+    message: (ctx) => {
+      const likeVal = ctx.sql.match(/(?:city|agency)\s+LIKE\s+'([^'%]+)/i)?.[1] || "the search term";
+      return `[SYSTEM: Your query uses a LIKE prefix search ('${likeVal}%') without a state filter. This can match the wrong city/agency entirely (e.g., 'KINGS%' matches Kingsport, TN instead of Kings County, NY). Either add AND state = '[XX]' to narrow the search, or set sql to null and ask the user which state they mean.]`;
     },
   },
   {
@@ -819,8 +987,83 @@ const GUARDRAILS: Guardrail[] = [
     },
   },
 
+  // --- Agency lookup instead of crime data ---
+  {
+    name: "agency-lookup-not-crime-data",
+    tabs: ["current", "historical", "nibrs"],
+    match: (ctx) => {
+      const sql = ctx.sql.toLowerCase();
+      // SQL only queries the agencies/lookup table, never actual crime data
+      const onlyAgencyTable =
+        (sql.includes("from agencies") || sql.includes("from historical_agency")) &&
+        !sql.includes("agency_monthly") &&
+        !sql.includes("agency_crime") &&
+        !sql.includes("national_monthly") &&
+        !sql.includes("state_national") &&
+        !sql.includes("staffing") &&
+        !sql.includes("clearance") &&
+        // NIBRS summary/data tables
+        !sql.includes("summary_") &&
+        !sql.includes("incidents") &&
+        !sql.includes("offenses") &&
+        !sql.includes("victims") &&
+        !sql.includes("offenders") &&
+        !sql.includes("arrestees") &&
+        !sql.includes("property");
+      if (!onlyAgencyTable) return false;
+      // Only fire if the user asked about crime data, not just "what agencies do you have"
+      const asksCrimeData = /\b(crime|trend|murder|homicide|robbery|assault|burglary|theft|rate|stats|statistics|data|offenses?|violent|property|arrest|clearance|cleared)\b/i.test(ctx.question);
+      return asksCrimeData;
+    },
+    message: (ctx) => {
+      const geo = ctx.geos[0] || "the requested agency";
+      if (ctx.tab === "nibrs") {
+        return `[SYSTEM: You ran an agency lookup query but the user asked for actual crime data. Query a summary table instead — use summary_victim_city_monthly (person crimes) or summary_city_monthly (property crimes) filtered by ORI: WHERE ori IN (SELECT ori FROM agencies WHERE city = '${geo.toUpperCase()}' AND state = '...'). Do NOT return agency metadata when the user wants crime statistics.]`;
+      }
+      return `You ran an agency lookup query but the user asked for actual crime data. Query the crime data table directly — for Current Trends use agency_monthly WHERE agency = '${geo}'. For Historical use historical_agency_crime hac JOIN historical_agency ha ON ha.ori = hac.ori WHERE ha.agency = '${geo}' AND ha.type = 'city'. Do NOT return agency metadata when the user wants crime statistics.`;
+    },
+  },
+
+  // --- Historical: city question answered with state-level data ---
+  {
+    name: "historical-city-got-state",
+    tabs: ["historical"],
+    match: (ctx) => {
+      const sql = ctx.sql.toLowerCase();
+      // SQL uses the state_national table (not agency-level)
+      const usesStateTable = sql.includes("historical_state_national");
+      if (!usesStateTable) return false;
+      // State names that should NOT trigger this guardrail
+      const STATE_NAMES = /\b(alabama|alaska|arizona|arkansas|california|colorado|connecticut|delaware|florida|georgia|hawaii|idaho|illinois|indiana|iowa|kansas|kentucky|louisiana|maine|maryland|massachusetts|michigan|minnesota|mississippi|missouri|montana|nebraska|nevada|new hampshire|new jersey|new mexico|new york|north carolina|north dakota|ohio|oklahoma|oregon|pennsylvania|rhode island|south carolina|south dakota|tennessee|texas|utah|vermont|virginia|washington state|west virginia|wisconsin|wyoming|district of columbia|united states)\b/i;
+      // Filter geos to exclude state names
+      const cityGeos = ctx.geos.filter(g => !STATE_NAMES.test(g));
+      // Explicit city name allowlist (not states)
+      const q = ctx.question.toLowerCase();
+      const CITY_NAMES = /\b(denver|houston|chicago|dallas|phoenix|seattle|portland|miami|atlanta|boston|detroit|memphis|nashville|austin|charlotte|columbus|cleveland|pittsburgh|cincinnati|orlando|tampa|minneapolis|milwaukee|new orleans|omaha|raleigh|oakland|sacramento|fresno|tucson|albuquerque|el paso|san antonio|san diego|san francisco|los angeles|philadelphia|baltimore|richmond|norfolk|durham|stockton|anchorage|honolulu|arlington|lubbock|garland|madison|reno|glendale|hialeah|chesapeake|south bend|springfield|jacksonville|kansas city|st\.?\s*louis|baton rouge)\b/i;
+      const asksCityByName = cityGeos.length > 0 || CITY_NAMES.test(q);
+      return asksCityByName;
+    },
+    message: (ctx) => {
+      const STATE_NAMES = /\b(alabama|alaska|arizona|arkansas|california|colorado|connecticut|delaware|florida|georgia|hawaii|idaho|illinois|indiana|iowa|kansas|kentucky|louisiana|maine|maryland|massachusetts|michigan|minnesota|mississippi|missouri|montana|nebraska|nevada|new hampshire|new jersey|new mexico|new york|north carolina|north dakota|ohio|oklahoma|oregon|pennsylvania|rhode island|south carolina|south dakota|tennessee|texas|utah|vermont|virginia|washington state|west virginia|wisconsin|wyoming|district of columbia|united states)\b/i;
+      const cityGeos = ctx.geos.filter(g => !STATE_NAMES.test(g));
+      const city = cityGeos[0] || "the requested city";
+      return `The user asked about "${city}" but the SQL queries historical_state_national which has state-level data, not city-level. Use historical_agency_crime hac JOIN historical_agency ha ON ha.ori = hac.ori WHERE ha.agency = '${city}' AND ha.type = 'city' to get city-level data. Only fall back to state-level if the user explicitly asks for a state.`;
+    },
+  },
+
   // ── SHR Guardrails ──────────────────────────────────────────────────
 
+  {
+    // --- Historical: Parish question but SQL uses type = 'city' ---
+    name: "historical-parish-type-city",
+    tabs: ["historical"],
+    match: (ctx) => {
+      return /\bparish\b/i.test(ctx.question) && /type\s*=\s*'city'/i.test(ctx.sql);
+    },
+    rewrite: (sql) => sql.replace(/type\s*=\s*'city'/gi, "type = 'county'"),
+    message: () =>
+      "[SYSTEM: The user asked about a Louisiana Parish, which is a county-type agency. Your SQL uses type = 'city' — change it to type = 'county'.]",
+  },
   {
     name: "shr-victim-count-default",
     tabs: ["shr"],
@@ -909,6 +1152,31 @@ const GUARDRAILS: Guardrail[] = [
     message: () =>
       "[SYSTEM: County sheriff agencies share the same city name as city PDs in the agencies table (e.g., Harris County SO has city='HOUSTON'). Add: AND a.agency_type = 'City' to exclude county agencies from city rankings. Also add AND a.population > 0 to exclude sub-agencies.]",
   },
+  // --- NIBRS: any city filter in agencies subquery without agency_type (auto-fix) ---
+  {
+    name: "nibrs-city-no-agency-type",
+    tabs: ["nibrs"],
+    match: (ctx) => {
+      const sql = ctx.sql;
+      // Detect: any reference to agencies table with a city = 'X' filter but no agency_type or pop_group
+      const hasCityOnAgencies = /\bagencies\b/i.test(sql) && /\bcity\s*=\s*'[A-Z]/i.test(sql);
+      if (!hasCityOnAgencies) return false;
+      if (/agency_type\s*=/i.test(sql)) return false;
+      if (/pop_group\s+LIKE\s+'[1-7]%'/i.test(sql)) return false;
+      if (/ORDER\s+BY\s+pop(?:ulation|_group).*LIMIT\s+1/i.test(sql)) return false;
+      if (/\bcounty\b|\bsheriff\b|\bparish\b/i.test(ctx.question)) return false;
+      return true;
+    },
+    message: (ctx) => {
+      const cityMatch = ctx.sql.match(/city\s*=\s*'([A-Z][A-Z ]+)'/i);
+      const city = cityMatch ? cityMatch[1] : "the city";
+      const stateMatch = ctx.sql.match(/state\s*=\s*'([A-Z]{2})'/i);
+      const state = stateMatch ? stateMatch[1] : "??";
+      const yearMatch = ctx.sql.match(/\byear\s*(?:=|>=|BETWEEN\s+)\s*(20\d{2})\b/);
+      const year = yearMatch ? yearMatch[1] : String(new Date().getFullYear());
+      return `[SYSTEM: Your query filters by city = '${city}' but does not isolate the primary city police department. Multiple agencies share the same city name (city PD, county sheriff, campus police, etc.). Unless the user asked for a specific non-city agency (university police, transit, airport, sheriff), select the primary city PD: ori = (SELECT ori FROM agencies WHERE city = '${city}' AND state = '${state}' AND agency_type = 'City' AND year = ${year} AND population > 0 ORDER BY population DESC LIMIT 1). If the user named a specific agency (e.g., "Portland Community College police"), look it up by name instead.]`;
+    },
+  },
   {
     name: "nibrs-ambiguous-city-no-state",
     tabs: ["nibrs"],
@@ -996,6 +1264,223 @@ const GUARDRAILS: Guardrail[] = [
       return `[SYSTEM: Query includes ${mentioned.join(", ")} which have both City police and County sheriff agencies with the same name. Add AND agency_type = 'City' to filter to the city police department only.]`;
     },
   },
+  // ── Hard Override Guardrails (2026-06-02) ────────────────────────────
+  // These return deterministic responses — no model retry.
+
+  // #1: Gang → Felony Type mislabel (retry/rewrite, not override)
+  {
+    name: "shr-gang-felony-mislabel",
+    tabs: ["shr"],
+    match: (ctx) => /\bgang/i.test(ctx.question) && /circumstance_group\s*=\s*'Felony Type'/i.test(ctx.sql),
+    message: () =>
+      "[SYSTEM: You used circumstance_group = 'Felony Type' for a gang query. Felony Type means homicides during felonies (robbery, burglary, narcotics) — NOT gang activity. Use circumstance IN ('Gangland Killings', 'Juvenile Gang Killings') instead. Note in your explanation that these are narrowly defined FBI categories and likely undercount gang-related violence.]",
+    rewrite: (sql) => {
+      return sql.replace(
+        /circumstance_group\s*=\s*'Felony Type'/gi,
+        "i.circumstance IN ('Gangland Killings', 'Juvenile Gang Killings')"
+      );
+    },
+  },
+
+  // #2: SHR SUM(population) bad denominator
+  {
+    name: "shr-sum-population",
+    tabs: ["shr"],
+    match: (ctx) => /SUM\s*\(\s*(?:COALESCE\s*\(\s*)?(?:\w+\.)?population/i.test(ctx.sql),
+    // Single-agency: auto-fix to AVG
+    rewrite: (sql) => {
+      // Single-agency = has agency = 'X' filter, GROUP BY may include year but not multiple agencies
+      const hasAgencyFilter = /agency\s*=\s*'[^']+'/i.test(sql);
+      const groupsByMultipleAgencies = /GROUP\s+BY\s+[^)]*\b(agency|state_name|i\.state)\b/i.test(sql) &&
+        !/GROUP\s+BY\s+[^)]*\bagency\b[^,)]*$/i.test(sql); // GROUP BY agency alone is single-agency per-year
+      const isSingleAgency = hasAgencyFilter && !groupsByMultipleAgencies;
+      if (isSingleAgency) {
+        return sql
+          .replace(/SUM\s*\(\s*COALESCE\s*\(\s*((?:\w+\.)?population)\s*,\s*\d+\s*\)\s*\)/gi, "AVG($1)")
+          .replace(/SUM\s*\(\s*((?:\w+\.)?population)\s*\)/gi, "AVG($1)");
+      }
+      return null;
+    },
+    // Multi-agency: hard override
+    override: (ctx) => {
+      const hasAgencyFilter = /agency\s*=\s*'[^']+'/i.test(ctx.sql);
+      const groupsByMultipleAgencies = /GROUP\s+BY\s+[^)]*\b(agency|state_name|i\.state)\b/i.test(ctx.sql) &&
+        !/GROUP\s+BY\s+[^)]*\bagency\b[^,)]*$/i.test(ctx.sql);
+      const isSingleAgency = hasAgencyFilter && !groupsByMultipleAgencies;
+      if (isSingleAgency) return null; // rewrite handles it
+      return "SHR population data is per-agency and per-incident — summing it across multiple agencies produces unreliable rates. For aggregate murder rates, try the [Historical Library](/test?tab=historical) tab which has FBI statewide estimates. I can provide raw victim counts from SHR instead.";
+    },
+  },
+
+  // #3: SHR non-homicide topic substitution
+  {
+    name: "shr-non-homicide-topic",
+    tabs: ["shr"],
+    match: (ctx) => {
+      const q = ctx.question.toLowerCase();
+      const sql = ctx.sql.toLowerCase();
+      const nonHomicide = /\b(robber(?:y|ies)|thefts?|larcen(?:y|ies)|burglar(?:y|ies)|assaults?|rapes?|sexual assault|auto theft|motor vehicle theft|drugs?|arrests?|staffing|officers?|sworn|personnel|shootings?|property crimes?|violent crimes?)\b/i.test(q);
+      if (!nonHomicide) return false;
+      const exempt = /\b(homicides?|murders?|kill|circumstance|felony murder|robbery-homicide|homicide during|victims of.*homicide)/i.test(q);
+      if (exempt) return false;
+      return sql.includes("incidents") || sql.includes("victims");
+    },
+    override: (ctx) => {
+      const match = ctx.question.match(/\b(robber(?:y|ies)|thefts?|larcen(?:y|ies)|burglar(?:y|ies)|assaults?|rapes?|sexual assault|auto theft|motor vehicle theft|drugs?|arrests?|staffing|officers?|sworn|personnel|shootings?|property crimes?|violent crimes?)\b/i);
+      const topic = match ? match[1] : "that topic";
+      return `The Homicide Reports dataset contains only homicide data. For ${topic} data, try the [Current Trends](/test?tab=current) or [Historical Library](/test?tab=historical) tab.`;
+    },
+  },
+
+  // #4: Drug type silent filter drop
+  {
+    name: "nibrs-drug-type-unavailable",
+    tabs: ["nibrs"],
+    match: (ctx) => {
+      const q = ctx.question.toLowerCase();
+      const sql = ctx.sql.toLowerCase();
+      const namesDrug = /\b(marijuana|cannabis|weed|cocaine|crack|heroin|meth|methamphetamine|fentanyl|opioids?|opiates?)\b/i.test(q);
+      if (!namesDrug) return false;
+      const usesSummary = sql.includes("summary_arrestee_demographics") || sql.includes("summary_drug_monthly");
+      if (!usesSummary) return false;
+      return !sql.includes("suspected_drug");
+    },
+    override: (ctx) => {
+      const match = ctx.question.match(/\b(marijuana|cannabis|weed|cocaine|crack|heroin|meth|methamphetamine|fentanyl|opioids?|opiates?)\b/i);
+      const drug = match ? match[1] : "that substance";
+      return `NIBRS summary tables group all drug offenses under code 35A (Drug/Narcotic Violations) — they cannot isolate ${drug} specifically. I can provide total drug possession or drug violation counts, but not broken down by substance type.`;
+    },
+  },
+
+  // #5: NIBRS shooting override
+  {
+    name: "nibrs-shooting-override",
+    tabs: ["nibrs"],
+    match: (ctx) => {
+      if (!ctx.sql) return false;
+      const q = ctx.question.toLowerCase();
+      const asksShooting = /\b(shooting|shootings|nonfatal shooting|non-fatal shooting|shot\b)/i.test(q);
+      if (!asksShooting) return false;
+      // Exempt: user explicitly asks for firearm homicide/murder, proxy, or agg assault with firearm
+      const exempt = /\b(firearm (murder|homicide)|gun (murder|homicide)|(murder|homicide).{0,15}firearm|closest proxy|approximate|aggravated assault.{0,10}firearm)\b/i.test(q);
+      return !exempt;
+    },
+    override: () =>
+      "NIBRS does not track 'shootings' as a category. The closest available data is aggravated assault victims involving a firearm, but this includes brandishing, pistol-whipping, and threats — not just victims who were shot. For dedicated shooting data, sources like the Gun Violence Archive may be more appropriate. If you'd like the firearm assault proxy, ask for 'aggravated assault victims involving a firearm.'",
+  },
+
+  // #7: SHR clearance hard override
+  {
+    name: "shr-clearance-override",
+    tabs: ["shr"],
+    match: (ctx) => /\b(clearance|cleared|solve[ds]?|unsolved|closure|close rate|cold case)\b/i.test(ctx.question),
+    override: () =>
+      "The Homicide Reports dataset does not track whether cases were solved or cleared. A **clearance** in FBI terminology means the case was resolved by arrest (suspect arrested, charged, and turned over for prosecution) or by exceptional means (offender identified but arrest prevented by circumstances outside law enforcement's control, such as the offender's death or victim's refusal to cooperate). A clearance does not necessarily mean a conviction. For clearance rate data, try the [Historical Library](/test?tab=historical) (agency-level clearance rates back to the 1960s) or the [NIBRS Explorer](/test?tab=nibrs) (incident-level clearance data from 1991).",
+  },
+
+  // User said "raw counts" / "no rolling" but SQL has rolling window
+  {
+    name: "rolling-window-user-said-raw",
+    tabs: ["current", "historical", "nibrs", "shr"],
+    match: (ctx) => {
+      const q = ctx.question.toLowerCase();
+      const wantsRaw = /\b(raw counts?|raw numbers?|not rolling|no rolling|don'?t want rolling|not 12.?month|just monthly|just raw)\b/i.test(q);
+      if (!wantsRaw) return false;
+      return /ROWS\s+BETWEEN|PRECEDING\s+AND\s+CURRENT/i.test(ctx.sql);
+    },
+    message: () =>
+      "[SYSTEM: The user explicitly asked for raw/non-rolling values, but your SQL contains a rolling window (ROWS BETWEEN ... PRECEDING). Remove the rolling window and return raw monthly or annual counts.]",
+  },
+
+  // Window LAG/LEAD filter-before-window bug
+  {
+    name: "window-lag-filter-before-window",
+    tabs: ["current", "historical", "nibrs", "shr"],
+    match: (ctx) => {
+      const sql = ctx.sql;
+      if (!/\bLAG\s*\(|\bLEAD\s*\(/i.test(sql)) return false;
+      // Check if a year filter and a LAG/LEAD appear in the same SELECT block
+      // Bad: SELECT ... LAG(...) ... FROM ... WHERE year >= 2020
+      // Good: WITH cte AS (SELECT ... LAG(...) FROM ...) SELECT * FROM cte WHERE year >= 2020
+      // Heuristic: if the outermost query has both LAG and WHERE year, it's bad
+      // Check for LAG/LEAD in the final SELECT (not inside a CTE)
+      const ctePattern = /\bWITH\b[\s\S]*?\)\s*SELECT/i;
+      if (ctePattern.test(sql)) {
+        // Has CTEs — check if the final SELECT (after last `)` before `SELECT`) has LAG
+        const lastSelect = sql.match(/\)\s*SELECT\s+([\s\S]*)$/i)?.[1] || "";
+        if (/\bLAG\s*\(|\bLEAD\s*\(/i.test(lastSelect) && /\bWHERE\s+.*\byear\s*(?:>=|BETWEEN)\s*\d{4}/i.test(lastSelect)) {
+          return true;
+        }
+        return false;
+      }
+      // No CTEs — simple query with LAG and WHERE year in same block
+      return /\bWHERE\s+.*\byear\s*(?:>=|BETWEEN)\s*\d{4}/i.test(sql);
+    },
+    message: () =>
+      "[SYSTEM: SQLite evaluates WHERE before window functions. Your LAG/LEAD window function is in the same SELECT block as a year filter — the prior-year rows are removed BEFORE LAG can look back, producing NULL. Use a 3-layer pattern: CTE 1 (raw data, no year filter) → CTE 2 (compute LAG/LEAD) → outer SELECT (WHERE year >= display start).]",
+  },
+
+  // #9: SQLite dialect guardrail
+  {
+    name: "sqlite-dialect-error",
+    tabs: ["current", "historical", "nibrs", "shr"],
+    match: (ctx) => /\b(SUBSTRING_INDEX|DATEDIFF|DATE_TRUNC|ILIKE|DATE_FORMAT|NOW\(\)|CURDATE|INTERVAL\s+\d|CONVERT\s*\(|TOP\s+\d+\b(?!\s*\())/i.test(ctx.sql),
+    message: () =>
+      "[SYSTEM: Your SQL uses a function or syntax not supported by SQLite. SQLite does NOT support SUBSTRING_INDEX, DATEDIFF, DATE_TRUNC, ILIKE, DATE_FORMAT, NOW(), CURDATE, INTERVAL, CONVERT, or TOP N. Use SQLite equivalents: SUBSTR/INSTR for strings, strftime for dates, LIKE (case-insensitive by default) instead of ILIKE, LIMIT instead of TOP.]",
+  },
+
+  // #10: NIBRS ethnicity — guardrail REMOVED 2026-06-02, ethnicity column now live in all three
+  // summary demographics tables (offender, arrestee, victim). Ethnicity values: H, N, U.
+
+  // #11: Sub-city geography override
+  {
+    name: "sub-city-geography-override",
+    tabs: ["current", "historical", "nibrs", "shr"],
+    match: (ctx) => /\b(zip\s*code|zip\s*\d|neighborhoods?|precincts?|police district|census tract|block group|ward\b|borough|communit(?:y|ies)|community area|apartment|complex)\b/i.test(ctx.question),
+    override: (ctx) => {
+      const match = ctx.question.match(/\b(zip\s*code|neighborhoods?|precincts?|police district|census tract|block group|ward|borough|communit(?:y|ies)|community area|apartment complex)\b/i);
+      const geo = match ? match[1] : "that geographic level";
+      return `This database is organized by law enforcement agency (city police departments and county sheriffs), not by ${geo}. Crime data is reported at the agency level, not broken down by sub-city geography. For neighborhood-level data, check the local police department's open data portal or CompStat reports.`;
+    },
+  },
+
+  // #12: Juvenile/raw-table age query protection
+  {
+    name: "nibrs-age-raw-table",
+    tabs: ["nibrs"],
+    match: (ctx) => {
+      const q = ctx.question.toLowerCase();
+      const sql = ctx.sql;
+      const asksAge = /\b(juveniles?|minors?|under\s*18|teens?|youth|by age|age group|elderly|seniors?|child|children)\b/i.test(q);
+      if (!asksAge) return false;
+      // Check if hitting raw tables
+      const RAW = ["offenders", "victims", "arrestees", "offenses"];
+      return RAW.some(t => new RegExp(`\\bFROM\\s+${t}\\b`, "i").test(sql) || new RegExp(`\\bJOIN\\s+${t}\\b`, "i").test(sql));
+    },
+    message: () =>
+      "[SYSTEM: Your query uses raw tables (100M+ rows) for an age-based query. Use summary demographic tables instead: summary_victim_demographics, summary_offender_demographics, or summary_arrestee_demographics. These have an age_group column (0-12, 13-17, 18-24, 25-34, 35-44, 45-54, 55-64, 65+, Unknown). For juveniles, filter age_group IN ('0-12', '13-17'). Generate a NEW query using the appropriate summary table.]",
+  },
+
+  // #15: ORDER BY compound-query error
+  {
+    name: "order-by-column-mismatch",
+    tabs: ["current", "historical", "nibrs", "shr"],
+    match: () => false, // Checked externally from DB error — see route.ts
+    message: () =>
+      "[SYSTEM: Your SQL has an ORDER BY column that doesn't exist in the result set. In SQLite compound queries (UNION, etc.), ORDER BY must reference output column names or positions, not table-qualified names. Use the column alias from the SELECT clause.]",
+  },
+
+  // #16: Court outcomes, immigration, policy covariates — out of scope
+  {
+    name: "out-of-scope-override",
+    tabs: ["current", "historical", "nibrs", "shr"],
+    match: (ctx) => /\b(prosecution|convicted|conviction|sentence[ds]?|incarcerat|prison population|jail population|fine[ds]?\b|fee[ds]?\b|bail|immigration status|illegal immigrant|undocumented|GARS|GVRS|gun violence restraining|red flag law|defendants?)\b/i.test(ctx.question),
+    override: (ctx) => {
+      const match = ctx.question.match(/\b(prosecution|conviction|sentence|incarceration|prison population|jail population|fines|fees|bail|immigration status|GARS|GVRS|gun violence restraining|red flag law|defendants?)\b/i);
+      const topic = match ? match[1] : "that topic";
+      return `This database tracks reported crime incidents, not court outcomes or policy data. It does not contain information about ${topic}. The data covers crime reports filed by law enforcement agencies — not what happens after arrest (prosecutions, convictions, sentences, or incarceration).`;
+    },
+  },
 ];
 
 /* ------------------------------------------------------------------ */
@@ -1010,25 +1495,44 @@ export function runGuardrails(ctx: QueryContext): GuardrailResult {
   let sql = ctx.sql;
   const fired: string[] = [];
   const issues: string[] = [];
+  let overrideResponse: string | null = null;
+  let overrideGuardrail: string | null = null;
 
+  // Pass 1: rewrites — update sql, build effective context
   for (const g of GUARDRAILS) {
     if (!g.tabs.includes(ctx.tab)) continue;
-    if (!g.match(ctx)) continue;
+    const effectiveCtx = { ...ctx, sql };
+    if (!g.match(effectiveCtx)) continue;
 
     fired.push(g.name);
 
-    // Apply auto-rewrite if available
     if (g.rewrite) {
-      const rewritten = g.rewrite(sql, ctx);
+      const rewritten = g.rewrite(sql, effectiveCtx);
       if (rewritten) {
         sql = rewritten;
         console.log(`[guardrail][${g.name}] Auto-rewrote SQL`);
       }
     }
 
-    // Collect issue message for Claude retry
     if (g.message) {
-      issues.push(g.message(ctx));
+      issues.push(g.message(effectiveCtx));
+    }
+  }
+
+  // Pass 2: overrides — evaluated against post-rewrite SQL
+  const postRewriteCtx = { ...ctx, sql };
+  for (const g of GUARDRAILS) {
+    if (!g.tabs.includes(ctx.tab)) continue;
+    if (!g.override) continue;
+    if (!g.match(postRewriteCtx)) continue;
+
+    const resp = g.override(postRewriteCtx);
+    if (resp) {
+      overrideResponse = resp;
+      overrideGuardrail = g.name;
+      if (!fired.includes(g.name)) fired.push(g.name);
+      console.log(`[guardrail][${g.name}] Hard override — skipping retry`);
+      break; // first override wins
     }
   }
 
@@ -1037,5 +1541,7 @@ export function runGuardrails(ctx: QueryContext): GuardrailResult {
     issues,
     sql,
     needsFix: issues.length > 0,
+    overrideResponse,
+    overrideGuardrail,
   };
 }

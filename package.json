@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node scripts/test-guardrails.js"
+    "test": "node scripts/test-guardrails.js && npx tsx scripts/test-new-guardrails.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",
