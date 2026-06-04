@@ -10,6 +10,7 @@ import QuerySkeleton from "./QuerySkeleton";
 import ErrorCard from "./ErrorCard";
 import Tracker, { getPageToken } from "./Tracker";
 import HomeIcon from "./HomeIcon";
+import GettingStarted from "./GettingStarted";
 
 /** Render inline markdown: **bold** and [text](url) links */
 function renderInlineMarkdown(text: string) {
@@ -61,23 +62,13 @@ interface Exchange {
 type SourceId = "auto" | "current" | "historical" | "nibrs" | "shr";
 
 const SOURCE_OPTIONS: { id: SourceId; label: string; color: string }[] = [
-  { id: "auto", label: "Auto", color: "#475EC7" },
-  { id: "current", label: "Current", color: "#475EC7" },
-  { id: "historical", label: "Historical", color: "#8B5E3C" },
-  { id: "nibrs", label: "NIBRS", color: "#2d8659" },
-  { id: "shr", label: "Homicide", color: "#8B6914" },
+  { id: "auto", label: "Auto source", color: "#475EC7" },
+  { id: "current", label: "Current Trends", color: "#475EC7" },
+  { id: "historical", label: "Historical Library", color: "#8B5E3C" },
+  { id: "nibrs", label: "NIBRS Explorer", color: "#2d8659" },
+  { id: "shr", label: "SHR (Homicide)", color: "#B8860B" },
 ];
 
-const EXAMPLES: string[] = [
-  "Murder rate in California since 1960",
-  "DUI arrests by race in Texas",
-  "Monthly robbery trend in Chicago",
-  "Domestic homicide trends since 1990",
-  "Which cities have the most officers per capita?",
-  "Aggravated assault by location type nationwide",
-  "Homicide victims by weapon since 2000",
-  "Current violent crime trend in DC",
-];
 
 async function readSSEStream(response: Response, onEvent: (event: StreamEvent) => void) {
   const reader = response.body?.getReader();
@@ -276,92 +267,69 @@ export default function WorkspaceChat({}: WorkspaceChatProps) {
             <HomeIcon size={20} />
           </button>
 
-          {/* Input bar in header */}
-          <form onSubmit={(e) => { e.preventDefault(); handleAsk(input); }} className="flex-1 flex gap-2 min-w-0">
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => { setInput(e.target.value); setShowDisambiguation(false); }}
-              placeholder="Ask about crime data..."
-              className="flex-1 min-w-0 px-3 py-2 text-[13px] border border-[var(--border)] rounded-lg focus:outline-none focus:border-[#475EC7] focus:ring-1 focus:ring-[#475EC7]/20 bg-[var(--surface)]"
-              disabled={loading}
-            />
-            <button
-              type="submit"
-              disabled={!input.trim() || loading}
-              className="px-4 py-2 text-[12px] font-semibold text-white rounded-lg disabled:opacity-40 cursor-pointer shrink-0 hover:opacity-90"
-              style={{ backgroundColor: "#475EC7" }}
-            >
-              Ask
-            </button>
-          </form>
-
-          {/* Source selector */}
-          <div className="hidden sm:flex items-center gap-0.5 bg-[var(--surface)] rounded-md p-0.5 border border-[var(--border)] shrink-0">
-            {SOURCE_OPTIONS.map(opt => (
+          {/* Input bar — hidden on landing, shown after first query */}
+          {hasStarted && (<>
+            <form onSubmit={(e) => { e.preventDefault(); handleAsk(input); }} className="flex-1 flex gap-2 min-w-0">
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => { setInput(e.target.value); setShowDisambiguation(false); }}
+                placeholder="Ask about crime data..."
+                className="flex-1 min-w-0 px-3 py-2 text-[13px] border border-[var(--border)] rounded-lg focus:outline-none focus:border-[#475EC7] focus:ring-1 focus:ring-[#475EC7]/20 bg-[var(--surface)]"
+                disabled={loading}
+              />
               <button
-                key={opt.id}
-                onClick={() => { setSource(opt.id); setShowDisambiguation(false); }}
-                className={`px-2 py-1 text-[10px] font-medium rounded transition-all whitespace-nowrap cursor-pointer ${
-                  source === opt.id ? "bg-white shadow-sm font-semibold" : "text-[var(--muted)] hover:text-[var(--foreground)]"
-                }`}
-                style={source === opt.id ? { color: opt.id === "auto" ? "var(--foreground)" : opt.color } : undefined}
+                type="submit"
+                disabled={!input.trim() || loading}
+                className="px-4 py-2 text-[12px] font-semibold text-white rounded-lg disabled:opacity-40 cursor-pointer shrink-0 hover:opacity-90"
+                style={{ backgroundColor: "#475EC7" }}
               >
-                {opt.label}
+                Ask
               </button>
-            ))}
-          </div>
+            </form>
+            <div className="hidden sm:block shrink-0 relative">
+              <select
+                value={source}
+                onChange={(e) => { setSource(e.target.value as SourceId); setShowDisambiguation(false); }}
+                className="appearance-none pl-2.5 pr-7 py-1.5 text-[11px] font-medium rounded-md border border-[var(--border)] bg-[var(--surface)] cursor-pointer focus:outline-none focus:border-[#475EC7] focus:ring-1 focus:ring-[#475EC7]/20"
+                style={{ color: SOURCE_OPTIONS.find(o => o.id === source)?.color || "var(--foreground)" }}
+              >
+                {SOURCE_OPTIONS.map(opt => (
+                  <option key={opt.id} value={opt.id}>{opt.label}</option>
+                ))}
+              </select>
+              <svg className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="var(--muted)" strokeWidth="1.5" strokeLinecap="round"><path d="M2 3.5l3 3 3-3"/></svg>
+            </div>
+          </>)}
         </div>
       </header>
 
-      {/* Landing screen — when no queries yet */}
+      {/* Landing screen — the full production Getting Started page */}
       {!hasStarted && (
-        <div className="flex-1 overflow-y-auto">
-          <div className="max-w-2xl mx-auto px-4 pt-16 pb-12 text-center">
-            <h1 className="text-2xl sm:text-3xl font-bold text-[var(--foreground)] mb-3 leading-tight">
-              Ask about crime in the United States
-            </h1>
-            <p className="text-[13px] text-[var(--muted)] mb-8 max-w-md mx-auto">
-              Type a question above. We&apos;ll find the right data source automatically.
-            </p>
-            <div className="text-left">
-              <p className="text-[10px] text-[var(--muted-light)] uppercase tracking-wider mb-2" style={{ letterSpacing: "1px" }}>Examples</p>
-              <div className="flex flex-wrap gap-1.5">
-                {EXAMPLES.map(q => (
-                  <button key={q} onClick={() => { setInput(q); handleAsk(q); }}
-                    className="text-[12px] px-3 py-1.5 rounded-lg bg-white border border-[var(--border)] text-[var(--muted)] hover:text-[var(--foreground)] hover:border-[var(--foreground)]/20 cursor-pointer transition-all hover:-translate-y-0.5"
-                  >{q}</button>
-                ))}
-              </div>
-            </div>
-            <details className="mt-10 text-left group">
-              <summary className="text-[12px] font-semibold text-[var(--muted)] cursor-pointer hover:text-[var(--foreground)] flex items-center gap-1.5 select-none list-none [&::-webkit-details-marker]:hidden">
-                <svg className="w-3 h-3 transition-transform group-open:rotate-90" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M4 2l4 4-4 4"/></svg>
-                About the data sources
-              </summary>
-              <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                {[
-                  { label: "Current Trends", desc: "Monthly data from ~700 agencies, 2017\u2013present.", color: "#475EC7" },
-                  { label: "Historical Library", desc: "Annual FBI data, 1930\u20132025. Clearance + staffing.", color: "#8B5E3C" },
-                  { label: "NIBRS Explorer", desc: "1B+ incidents with demographics, weapons, drugs.", color: "#2d8659" },
-                  { label: "Homicide Reports", desc: "890K+ victims with relationship and circumstance.", color: "#8B6914" },
-                ].map(ds => (
-                  <div key={ds.label} className="rounded-xl border border-[var(--border)] p-3 bg-white">
-                    <div className="flex items-center gap-2 mb-1">
-                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: ds.color }} />
-                      <span className="text-[12px] font-semibold">{ds.label}</span>
-                    </div>
-                    <p className="text-[11px] text-[var(--muted)]">{ds.desc}</p>
-                  </div>
-                ))}
-              </div>
-            </details>
-            <p className="text-[11px] text-[var(--muted)] mt-8">
-              Built by <a href="https://ahdatalytics.com" target="_blank" rel="noopener noreferrer" className="underline">AH Datalytics</a>.
-              Verify against the <a href="https://cde.ucr.cjis.gov/" target="_blank" rel="noopener noreferrer" className="underline">FBI Crime Data Explorer</a>.
-            </p>
-          </div>
-        </div>
+        <GettingStarted
+          onSelectTab={(tab) => { setSource(tab); }}
+          onAsk={(q) => { setInput(q); handleAsk(q); }}
+          renderInputBar={() => (
+            <form onSubmit={(e) => { e.preventDefault(); handleAsk(input); }} className="flex gap-2">
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => { setInput(e.target.value); setShowDisambiguation(false); }}
+                placeholder="Ask about crime data..."
+                className="flex-1 min-w-0 px-4 py-2.5 text-[14px] border border-[var(--border)] rounded-xl focus:outline-none focus:border-[#475EC7] focus:ring-2 focus:ring-[#475EC7]/20 bg-white shadow-sm"
+                disabled={loading}
+              />
+              <button
+                type="submit"
+                disabled={!input.trim() || loading}
+                className="px-5 py-2.5 text-[13px] font-semibold text-white rounded-xl disabled:opacity-40 cursor-pointer shrink-0 hover:opacity-90 shadow-sm"
+                style={{ backgroundColor: "#475EC7" }}
+              >
+                Ask
+              </button>
+            </form>
+          )}
+        />
       )}
 
       {/* Disambiguation overlay */}

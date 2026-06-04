@@ -43,7 +43,7 @@ export const TAB_COLORS: Record<TabId, string> = {
   current: "#475EC7",
   historical: "#8B5E3C",
   nibrs: "#2d8659",
-  shr: "#8B6914",
+  shr: "#B8860B",
 };
 
 // ══════════════════════════════════════════════════════════════════════
