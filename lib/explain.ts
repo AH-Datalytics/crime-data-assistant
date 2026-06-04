@@ -25,6 +25,10 @@ RULES:
 - Do NOT mention SQL, table names, or technical details.
 - Use the user's own words for their question.
 - NEVER mention a city, agency, or entity name unless it appears in the "Entities in results" list. If no entities are listed, describe the data generically (e.g., "cities ranked by..."). Making up entity names is the worst possible error.
+- Geography accuracy is critical:
+  - If Scope says "state" or "statewide", say "statewide" — NEVER say "cities in [state]" or "[state] cities".
+  - If Scope says "county", say "the [County Name] county agency record" — NEVER say "cities in [county]" or "cities within [county]".
+  - If Scope says "city", use the city name.
 - Append any disclaimer provided VERBATIM — do not rephrase it.
 - Return ONLY the explanation text.`;
 
@@ -120,6 +124,13 @@ function buildDisclaimers(
         "FBI agency coverage before 1960 was limited; interpret early years with caution."
       );
     }
+    // County agency record caveat
+    const sqlLower = ctx.sql.toLowerCase();
+    if (sqlLower.includes("type = 'county'") || sqlLower.includes("type='county'")) {
+      parts.push(
+        "This is the county agency record (typically the sheriff's office), not a rollup of every municipal agency within the county."
+      );
+    }
   }
   // NIBRS: no disclaimer here — the server appends a standard one automatically
 
@@ -195,7 +206,13 @@ export async function generateExplanation(opts: {
     "the West": ["AK","AZ","CA","CO","HI","ID","MT","NV","NM","OR","UT","WA","WY"],
   };
   let geoDisplay: string;
-  if (geos.length > 0) {
+  if (ctx.scope === "county" && geos.length > 0) {
+    geoDisplay = `${geos[0]} (county agency record)`;
+  } else if (ctx.scope === "state" && ctx.tables.includes("historical_state_national")) {
+    // Explicit statewide label — prevents Haiku from saying "cities in [state]"
+    const stateName = ctx.question.match(/\b(Alabama|Alaska|Arizona|Arkansas|California|Colorado|Connecticut|Delaware|Florida|Georgia|Hawaii|Idaho|Illinois|Indiana|Iowa|Kansas|Kentucky|Louisiana|Maine|Maryland|Massachusetts|Michigan|Minnesota|Mississippi|Missouri|Montana|Nebraska|Nevada|New\s+Hampshire|New\s+Jersey|New\s+Mexico|New\s+York|North\s+Carolina|North\s+Dakota|Ohio|Oklahoma|Oregon|Pennsylvania|Rhode\s+Island|South\s+Carolina|South\s+Dakota|Tennessee|Texas|Utah|Vermont|Virginia|Washington|West\s+Virginia|Wisconsin|Wyoming|District\s+of\s+Columbia)\b/i);
+    geoDisplay = stateName ? `${stateName[1]} (statewide)` : "statewide";
+  } else if (geos.length > 0) {
     geoDisplay = geos.join(", ");
   } else if (ctx.states.length >= 5) {
     // Check if states match a region

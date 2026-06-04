@@ -484,6 +484,16 @@ export async function POST(req: NextRequest) {
             controller.enqueue(encoder.encode(sseEvent({ type: "result", sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - totalStart })));
             close(); return;
           }
+          // Geography contract: block if city/county-got-state or geography-missing still fires after retry
+          const geoContractViolation = postRetryResult.fired.some(f =>
+            f === "historical-city-got-state" || f === "historical-county-got-state" || f === "contract-geography-missing"
+          );
+          if (geoContractViolation) {
+            const msg = "I couldn't build a reliable query for that specific geography. The data may be available under a different agency name — try searching for the county sheriff or a specific city within the county.";
+            logQuery(question, claude.sql, 0, "geography_second_failure", Date.now() - totalStart, msg, tab, postRetryResult.fired, "haiku-4.5", sessionId);
+            controller.enqueue(encoder.encode(sseEvent({ type: "result", sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - totalStart })));
+            close(); return;
+          }
           if (postRetryResult.sql !== claude.sql) claude.sql = postRetryResult.sql;
         }
 
@@ -829,7 +839,12 @@ export async function POST(req: NextRequest) {
         {
           const { allNull: everyColNull, dataCols } = detectAllNullData(columns, rows);
           if (everyColNull) {
-            const emptyMsg = "I ran that query but all the values came back empty — the math likely broke somewhere (like dividing by zero). Could you try asking that a different way?";
+            // Detect if the issue is a failed agency/CTE lookup vs bad math
+            const hasAgencyCte = /WITH\s+agency\s+AS/i.test(sql) || /historical_agency\s+ha/i.test(sql);
+            const hasCountyOrCity = /\b(county|parish|agency\s*=)\b/i.test(question);
+            const emptyMsg = hasAgencyCte && hasCountyOrCity
+              ? "I couldn't find a matching agency or county record for that query. The name may be stored differently in the database — try the exact agency name (e.g., 'Alameda County' not just 'Alameda'), or check the Historical Library tab which has county-level records."
+              : "I ran that query but all the values came back empty — the math likely broke somewhere (like dividing by zero). Could you try asking that a different way?";
             logQuery(question, sql, 0, "all_null_columns", totalMs, emptyMsg, tab, firedGuardrails, "haiku-4.5", sessionId);
             controller.enqueue(
               encoder.encode(

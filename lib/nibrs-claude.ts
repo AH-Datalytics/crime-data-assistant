@@ -606,7 +606,7 @@ Clearance rate examples:
     HAVING SUM(s.offense_count) >= 10
     ORDER BY clearance_rate DESC LIMIT 20
 
-When charting clearance rates, auto-set yAxisLabel to "Clearance Rate (%)". Use chartHint "line" for single-metric trends, "bar" for rankings, and "stacked_bar" for arrest vs exceptional breakdowns. Always CAST year AS TEXT for bar/stacked_bar charts so years display as categories.
+When charting clearance rates, auto-set yAxisLabel to "Clearance Rate (%)". Use chartHint "line" for single-metric trends, "bar" for rankings, and "stacked_bar" for arrest vs exceptional breakdowns. For bar/stacked_bar charts, use CAST(year AS TEXT) AS year — do NOT include both a raw year column and a cast year_label column. Only one year column in the SELECT.
 
 ### summary_clearance_type (CLEARANCE BREAKDOWN — arrest vs exceptional, monthly)
 - COLUMNS: year INT, month INT, state TEXT, ori TEXT, ucr_offense_code TEXT, total_offenses INT, cleared_by_arrest INT, cleared_exceptional INT
@@ -882,7 +882,7 @@ CRITICAL: Always use the COMPLETE code set for whichever definition you choose. 
 - Drug offenses: 35A, 35B
   **DRUG SPECIFICITY LIMITATION**: NIBRS drug records use broad categories (Heroin, Cocaine, Marijuana, Opium, Synthetic Narcotics, Other Narcotics, etc.) — there is NO specific code for fentanyl, methamphetamine, or other individual substances. Fentanyl seizures are typically recorded under "Synthetic Narcotics" or "Other Narcotics" but cannot be isolated. If a user asks about fentanyl specifically, set sql to null and explain: "NIBRS drug data uses broad categories (e.g., Synthetic Narcotics, Other Narcotics) and cannot isolate specific substances like fentanyl. I can show you Synthetic Narcotics trends, which include fentanyl along with other synthetic opioids."
 - Auto theft: 240
-- Vehicle burglary (theft from motor vehicle): 23F
+- Vehicle burglary (theft from motor vehicle): 23F. Also known as: car break-ins, smash-and-grab, TFMV, vehicle break-ins.
 - Carjacking: 120 (Robbery) with property type_property_loss='7' AND property_description IN ('03','05','24','28','37'). Use summary_carjacking_monthly for counts/trends, summary_carjacking_*_demographics for victim/offender/arrestee breakdowns.
 
 ## DERIVED/COMPOUND CRIME TYPES (no dedicated NIBRS code)
@@ -1239,7 +1239,7 @@ National clearance rate trend:
   GROUP BY year ORDER BY year
   → chartHint: "bar", xAxis: "year", yAxis: "clearance_rate", yAxisLabel: "Clearance Rate (%)"
 
-IMPORTANT for clearance type charts: When showing arrest vs exceptional breakdown, use chartHint "stacked_bar" (not "bar") so the two rates stack on each other. Always CAST year AS TEXT so it displays as a category (e.g., "2022") not a number (e.g., 2022.75).
+IMPORTANT for clearance type charts: When showing arrest vs exceptional breakdown, use chartHint "stacked_bar" (not "bar") so the two rates stack on each other. Use CAST(year AS TEXT) AS year — only one year column, not both raw and cast.
 
 ## QUERIES NIBRS CANNOT ANSWER DIRECTLY — BUT STILL TRY
 

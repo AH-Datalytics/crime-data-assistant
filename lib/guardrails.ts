@@ -196,25 +196,27 @@ const GUARDRAILS: Guardrail[] = [
     tabs: ["current", "historical"],
     match: (ctx) => {
       const sqlLower = ctx.sql.toLowerCase();
-      const offenseTerms: [RegExp, string[]][] = [
-        [/\bmurder|homicide\b/i, ["'murder'", "'09a'"]],
-        [/\brape\b/i, ["'rape'", "'11a'"]],
-        [/\brobbery|robberies\b/i, ["'robbery'", "'120'"]],
-        [/\bassault\b/i, ["'aggravated assault'", "'13a'"]],
-        [/\bburglary|burglaries\b/i, ["'burglary'", "'220'"]],
-        [/\btheft(?!.*auto|.*motor|.*vehicle)|larceny|larcenies\b/i, ["'theft'", "'23h'", "'larceny'"]],
-        [/\bauto theft|motor vehicle theft|car theft|vehicle theft\b/i, ["'motor vehicle theft'", "'240'"]],
+      const offenseTerms: [RegExp, string[], string[]][] = [
+        // [question pattern, SQL WHERE terms, SQL column names that encode this offense]
+        [/\bmurder|homicide\b/i, ["'murder'", "'09a'"], ["murder", ".murder", "hsn.murder", "hac.murder", "hc.murder"]],
+        [/\brape\b/i, ["'rape'", "'11a'"], ["rape", ".rape", "hsn.rape", "hac.rape"]],
+        [/\brobbery|robberies\b/i, ["'robbery'", "'120'"], ["robbery", ".robbery", "hsn.robbery", "hac.robbery"]],
+        [/\bassault\b/i, ["'aggravated assault'", "'13a'"], ["assault", ".assault", "aggravated_assault", "hsn.aggravated_assault", "hac.assault"]],
+        [/\bburglary|burglaries\b/i, ["'burglary'", "'220'"], ["burglary", ".burglary", "hsn.burglary", "hac.burglary"]],
+        [/\btheft(?!.*auto|.*motor|.*vehicle)|larceny|larcenies\b/i, ["'theft'", "'23h'", "'larceny'"], ["theft", ".theft", "hsn.theft", "hac.theft"]],
+        [/\bauto theft|motor vehicle theft|car theft|vehicle theft\b/i, ["'motor vehicle theft'", "'240'"], ["motor_vehicle_theft", ".motor_vehicle_theft", "hsn.motor_vehicle_theft", "hac.motor_vehicle_theft"]],
       ];
-      // Skip if SQL uses clearance columns (offense is encoded in column name, e.g. murder_clr, motor_vehicle_theft_clr)
+      // Skip if SQL uses clearance columns (offense is encoded in column name)
       if (/_clr\b/.test(sqlLower)) return false;
-      for (const [pattern, sqlTerms] of offenseTerms) {
-        if (
-          pattern.test(ctx.question) &&
-          !sqlTerms.some((t) => sqlLower.includes(t)) &&
-          !sqlLower.includes("offense")
-        ) {
-          return true;
-        }
+      for (const [pattern, sqlTerms, columnNames] of offenseTerms) {
+        if (!pattern.test(ctx.question)) continue;
+        // Check if offense is in a WHERE filter
+        const hasWhereFilter = sqlTerms.some((t) => sqlLower.includes(t)) || sqlLower.includes("offense");
+        if (hasWhereFilter) continue;
+        // Check if offense is encoded as a selected column (Historical tables use column-per-offense)
+        const hasColumnSelect = columnNames.some((c) => sqlLower.includes(c));
+        if (hasColumnSelect) continue;
+        return true;
       }
       return false;
     },
@@ -341,13 +343,18 @@ const GUARDRAILS: Guardrail[] = [
       const usesAgency = /agency\s*=/i.test(ctx.sql) || sqlLower.includes("agency_monthly");
       if (!usesNational || usesAgency) return false;
 
+      // State names/abbreviations that should NOT trigger this guardrail
+      const STATE_NAMES = /\b(alabama|alaska|arizona|arkansas|california|colorado|connecticut|delaware|florida|georgia|hawaii|idaho|illinois|indiana|iowa|kansas|kentucky|louisiana|maine|maryland|massachusetts|michigan|minnesota|mississippi|missouri|montana|nebraska|nevada|new hampshire|new jersey|new mexico|new york|north carolina|north dakota|ohio|oklahoma|oregon|pennsylvania|rhode island|south carolina|south dakota|tennessee|texas|utah|vermont|virginia|washington state|west virginia|wisconsin|wyoming|district of columbia)\b/i;
+
       // Check for abbreviations the existing guardrail misses
       const abbrevs = /\b(LA|NYC|STL|ATL|NOLA|PHX|PHILLY|DFW|DMV|CHI|BMORE|MPLS|MSP|OKC|SLC|NYPD|LAPD|CPD|HPD|DPD|BPD|MPD)\b/i;
       if (abbrevs.test(ctx.question)) return true;
 
-      // Check for geos extracted from question (leading city pattern)
-      // but SQL has no agency filter
-      if (ctx.geos.length > 0 && !sqlLower.includes("agency")) return true;
+      // Check for geos extracted from question — but exclude state names
+      if (ctx.geos.length > 0 && !sqlLower.includes("agency")) {
+        const nonStateGeos = ctx.geos.filter(g => !STATE_NAMES.test(g));
+        if (nonStateGeos.length > 0) return true;
+      }
 
       return false;
     },
@@ -385,12 +392,17 @@ const GUARDRAILS: Guardrail[] = [
     tabs: ["historical"],
     match: (ctx) => {
       const sql = ctx.sql;
+      const q = ctx.question.toLowerCase();
       // Detects: aggregating historical_agency_crime grouped by year with a state filter
       // but NOT selecting individual agencies (no agency column in SELECT)
       const usesAgencyTable = /\bhistorical_agency_crime\b/i.test(sql);
       const hasStateFilter = /\bha\.state\s*=\s*'[a-z]{2}'/i.test(sql);
       const groupsByYear = /GROUP\s+BY\s+(?:hac\.)?year/i.test(sql);
       const selectsAgency = /SELECT\s+[\s\S]*?\b(?:ha\.)?agency\b[\s\S]*?FROM/i.test(sql);
+      // Do NOT fire for county/parish/city/agency queries — those NEED the agency table
+      const asksSubState = /\b(county|parish|borough|sheriff|agency)\b/i.test(q) ||
+        /\bin\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?\s*,/i.test(ctx.question); // "in Alameda, California"
+      if (asksSubState) return false;
       return usesAgencyTable && hasStateFilter && groupsByYear && !selectsAgency;
     },
     message: () =>
@@ -478,6 +490,10 @@ const GUARDRAILS: Guardrail[] = [
       if (/\b(not rates?|raw numbers?|raw counts?|counts?\s*(?:,\s*)?not rates?)\b/i.test(q)) return false;
       const wantsRate = /\b(rates?|per\s*capita|per\s*100k|per\s*100,000|per\s*hundred\s*thousand)\b/i.test(q);
       if (!wantsRate) return false;
+      // Skip if user is comparing demographic groups — "rates" is colloquial, not per-capita
+      const isComparison = /\b(compare|comparison|vs|versus|breakdown|share|percent|proportion)\b/i.test(q);
+      const groupsByDemographic = /GROUP\s+BY[\s\S]*?\b(age_group|race|sex|weapon|ethnicity)\b/i.test(ctx.sql);
+      if (isComparison && groupsByDemographic) return false;
       const sqlLower = ctx.sql.toLowerCase();
       return !sqlLower.includes("population") && !sqlLower.includes("100000") && !/_rate\b/.test(sqlLower) && !/_clr\b/.test(sqlLower);
     },
@@ -659,14 +675,14 @@ const GUARDRAILS: Guardrail[] = [
       // State names that should NOT trigger this guardrail
       const STATE_NAMES_NIBRS = /\b(alabama|alaska|arizona|arkansas|california|colorado|connecticut|delaware|florida|georgia|hawaii|idaho|illinois|indiana|iowa|kansas|kentucky|louisiana|maine|maryland|massachusetts|michigan|minnesota|mississippi|missouri|montana|nebraska|nevada|new hampshire|new jersey|new mexico|new york|north carolina|north dakota|ohio|oklahoma|oregon|pennsylvania|rhode island|south carolina|south dakota|tennessee|texas|utah|vermont|virginia|washington state|west virginia|wisconsin|wyoming|district of columbia|united states)\b/i;
       const cityGeos = ctx.geos.filter(g => !STATE_NAMES_NIBRS.test(g));
-      // User asked about a specific city/agency (not a state)
+      // User asked about a specific city/agency/county (not a state)
       const q = ctx.question.toLowerCase();
       const mentionsCity = cityGeos.length > 0 ||
-        /\b(police|department|pd|sheriff|agency)\b/i.test(q);
+        /\b(police|department|pd|sheriff|agency|county|parish)\b/i.test(q);
       return mentionsCity;
     },
     message: (ctx) => {
-      const city = ctx.geos[0] || "the requested city";
+      const city = ctx.geos[0] || "the requested city/county";
       return `[SYSTEM: The user asked about "${city}" but the SQL queries a state-level summary table with no ORI or city filter — this returns statewide data, not city data. Use the city-level table instead: summary_victim_city_monthly (for person crimes) or summary_city_monthly (for property crimes), filtered by ORI: WHERE ori IN (SELECT ori FROM agencies WHERE city = '${city.toUpperCase()}' AND state = '...' AND population > 0). Do NOT return state-level data when the user asked about a specific city or agency.]`;
     },
   },
@@ -1024,6 +1040,26 @@ const GUARDRAILS: Guardrail[] = [
     },
   },
 
+  // --- Bare "Washington" ambiguity — must not silently assume DC or state ---
+  {
+    name: "washington-ambiguity",
+    tabs: ["current", "historical", "nibrs", "shr"],
+    match: (ctx) => {
+      const q = ctx.question;
+      // Bare "Washington" without DC/state/district qualifier
+      const hasWashington = /\bWashington\b/i.test(q);
+      if (!hasWashington) return false;
+      // Explicit DC: "Washington, DC", "Washington DC", "DC", "District of Columbia"
+      const isExplicitDC = /\bWashington\s*,?\s*D\.?C\.?|Washington\s+DC\b|\bD\.?C\.?\b|District\s+of\s+Columbia/i.test(q);
+      // Explicit state: "Washington state", "Washington State"
+      const isExplicitState = /\bWashington\s+[Ss]tate\b/i.test(q);
+      // If neither explicit, it's ambiguous
+      return !isExplicitDC && !isExplicitState;
+    },
+    override: (ctx) =>
+      `"Washington" is ambiguous — did you mean **Washington, D.C.** (the city) or **Washington state**? Please clarify so I can query the right geography.`,
+  },
+
   // --- Historical: city question answered with state-level data ---
   {
     name: "historical-city-got-state",
@@ -1051,8 +1087,62 @@ const GUARDRAILS: Guardrail[] = [
     },
   },
 
+  // --- Historical: county/parish question answered with state-level data ---
+  {
+    name: "historical-county-got-state",
+    tabs: ["historical"],
+    match: (ctx) => {
+      const sql = ctx.sql.toLowerCase();
+      const q = ctx.question;
+      // SQL uses the state_national table
+      if (!sql.includes("historical_state_national")) return false;
+      // User asked about a specific county or parish
+      const countyMatch = q.match(/\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2})\s+(County|Parish|Borough)\b/i);
+      return !!countyMatch;
+    },
+    message: (ctx) => {
+      const countyMatch = ctx.question.match(/\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2})\s+(County|Parish|Borough)\b/i);
+      const countyName = countyMatch ? `${countyMatch[1]} ${countyMatch[2]}` : "the requested county";
+      return `The user asked about "${countyName}" but the SQL queries historical_state_national which has state-level data, not county-level. Use historical_agency_crime hac JOIN historical_agency ha ON ha.ori = hac.ori WHERE ha.agency = '${countyName}' AND ha.type = 'county' to get county-level data. Only fall back to state-level if the user explicitly asks for a state.`;
+    },
+  },
+
   // ── SHR Guardrails ──────────────────────────────────────────────────
 
+  {
+    // --- Historical: county/parish name stripped from agency filter ---
+    name: "historical-county-name-stripped",
+    tabs: ["historical"],
+    match: (ctx) => {
+      const q = ctx.question.toLowerCase();
+      const sql = ctx.sql.toLowerCase();
+      // User said "X County" or "X Parish" but SQL has agency = 'X' without "County"/"Parish"
+      // Match 1-3 capitalized words before County/Parish: "Alameda County", "Anne Arundel County", "East Baton Rouge Parish"
+      const countyMatch = ctx.question.match(/\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2})\s+(County|Parish)\b/);
+      if (!countyMatch) return false;
+      const placeName = countyMatch[1].trim();
+      const suffix = countyMatch[2]; // "County" or "Parish"
+      // Check if SQL has agency = 'PlaceName' without the suffix
+      const hasStripped = new RegExp(`agency\\s*=\\s*'${placeName}'`, "i").test(sql) &&
+        !new RegExp(`agency\\s*=\\s*'${placeName}\\s+${suffix}'`, "i").test(sql);
+      return hasStripped;
+    },
+    rewrite: (sql, ctx) => {
+      const countyMatch = ctx.question.match(/\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2})\s+(County|Parish)\b/);
+      if (!countyMatch) return null;
+      const placeName = countyMatch[1].trim();
+      const suffix = countyMatch[2];
+      // Replace agency = 'PlaceName' with agency = 'PlaceName County/Parish'
+      const pattern = new RegExp(`(agency\\s*=\\s*')${placeName}'`, "gi");
+      const fixed = sql.replace(pattern, `$1${placeName} ${suffix.charAt(0).toUpperCase() + suffix.slice(1).toLowerCase()}'`);
+      return fixed !== sql ? fixed : null;
+    },
+    message: (ctx) => {
+      const countyMatch = ctx.question.match(/\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2})\s+(County|Parish)\b/);
+      const fullName = countyMatch ? `${countyMatch[1].trim()} ${countyMatch[2]}` : "the county/parish";
+      return `[SYSTEM: The user asked about "${fullName}" but the SQL searches for the place name without "County"/"Parish". In the Historical database, county agencies are stored with the full name (e.g., 'Alameda County', 'Jefferson Parish'). Use agency = '${fullName}' AND type = 'county'.]`;
+    },
+  },
   {
     // --- Historical: Parish question but SQL uses type = 'city' ---
     name: "historical-parish-type-city",
@@ -1478,7 +1568,108 @@ const GUARDRAILS: Guardrail[] = [
     override: (ctx) => {
       const match = ctx.question.match(/\b(prosecution|conviction|sentence|incarceration|prison population|jail population|fines|fees|bail|immigration status|GARS|GVRS|gun violence restraining|red flag law|defendants?)\b/i);
       const topic = match ? match[1] : "that topic";
-      return `This database tracks reported crime incidents, not court outcomes or policy data. It does not contain information about ${topic}. The data covers crime reports filed by law enforcement agencies — not what happens after arrest (prosecutions, convictions, sentences, or incarceration).`;
+      return `This database tracks reported crime incidents, not court outcomes or policy data. It does not contain information about ${topic}. The data covers crime reports filed by law enforcement agencies — not what happens after arrest. I can provide clearance rates (whether a case was resolved by arrest or exceptional means), but not convictions, sentences, or other court outcomes.`;
+    },
+  },
+
+  // --- Clearance evidence type queries (unsupported) ---
+  {
+    name: "nibrs-clearance-evidence-unavailable",
+    tabs: ["nibrs"],
+    match: (ctx) => {
+      const q = ctx.question.toLowerCase();
+      const hasClearance = /\b(clearances?|cleared|solve[ds]?|unsolved)\b/i.test(q);
+      const hasEvidence = /\b(evidence|video|camera|surveillance|dna|fingerprint|forensic|witness|footage|bodycam|body cam|cctv)\b/i.test(q);
+      return hasClearance && hasEvidence;
+    },
+    override: () =>
+      "NIBRS clearance data does not track what evidence was used to clear a case — video, surveillance footage, DNA, fingerprints, or witness testimony are not recorded. I can show clearance rates by offense type, or break clearances down by arrest vs. exceptional clearance, but not by evidence type.",
+  },
+
+  // --- Ranking query returned as time series ---
+  {
+    name: "ranking-as-time-series",
+    tabs: ["current", "historical", "nibrs", "shr"],
+    match: (ctx) => {
+      const q = ctx.question.toLowerCase();
+      const sql = ctx.sql;
+      // Question asks for a ranking
+      const isRanking = /\b(top\s+\d+|highest|most|greatest|lowest|least|which\s+(cities|agencies|states|departments)\s+(have|had|has))\b/i.test(q);
+      if (!isRanking) return false;
+      // SQL groups by time columns (year, month) — producing a time series not a ranking
+      const groupsByTime = /GROUP\s+BY[\s\S]*?\b(year|month)\b/i.test(sql);
+      if (!groupsByTime) return false;
+      // SQL does NOT have a ranking CTE/window or a reasonable LIMIT for a ranking
+      // A ranking should have a small LIMIT (<=50) and NOT group by year+month
+      const groupsByYearAndMonth = /GROUP\s+BY[\s\S]*?\byear\b[\s\S]*?\bmonth\b/i.test(sql);
+      // If grouping by year AND month, it's a time series, not a ranking
+      if (groupsByYearAndMonth) return true;
+      // If grouping by year but also by city/agency/state, it's a per-entity time series — still wrong for a ranking
+      const groupsByEntity = /GROUP\s+BY[\s\S]*?\b(city|agency|ori|state_name)\b/i.test(sql);
+      if (groupsByEntity && /\byear\b/i.test(sql.match(/GROUP\s+BY([\s\S]*?)(?:ORDER|LIMIT|HAVING|$)/i)?.[1] || "")) return true;
+      return false;
+    },
+    message: () =>
+      "[SYSTEM: The user asked for a ranking (top N, highest, most, etc.) but your SQL returns a time series grouped by year/month. Rankings should return ONE ROW PER ENTITY with the aggregate metric. Remove year/month from GROUP BY, aggregate across the full time range, and ORDER BY the metric DESC with an appropriate LIMIT. Do NOT return monthly breakdowns for ranking queries.]",
+  },
+
+  // --- Raw race/sex codes without CASE mapping ---
+  {
+    name: "nibrs-unmapped-race-codes",
+    tabs: ["nibrs"],
+    match: (ctx) => {
+      const sql = ctx.sql;
+      // SELECT has a raw race or sex column (d.race, a.race, v.race, etc.) without CASE WHEN mapping
+      const selectClause = sql.match(/SELECT\s+([\s\S]*?)\s+FROM/i)?.[1] || "";
+      const hasRawRace = /\b\w+\.race\b/i.test(selectClause) && !/CASE/i.test(selectClause);
+      const hasRawSex = /\b\w+\.sex\b/i.test(selectClause) && !/CASE/i.test(selectClause);
+      return hasRawRace || hasRawSex;
+    },
+    message: () =>
+      "[SYSTEM: Your SQL returns raw race codes (W, B, I, A, P, U) or sex codes (M, F, U) without mapping to readable names. ALWAYS use CASE WHEN: CASE race WHEN 'W' THEN 'White' WHEN 'B' THEN 'Black' WHEN 'I' THEN 'American Indian' WHEN 'A' THEN 'Asian' WHEN 'P' THEN 'Pacific Islander' ELSE 'Unknown' END AS race. For sex: CASE sex WHEN 'M' THEN 'Male' WHEN 'F' THEN 'Female' ELSE 'Unknown' END AS sex. Also GROUP BY the CASE expression or its alias, not the raw column.]",
+  },
+
+  // --- #1: Missing GROUP BY year on aggregate + year SELECT ---
+  {
+    name: "missing-group-by-year",
+    tabs: ["current", "historical", "nibrs", "shr"],
+    match: (ctx) => {
+      const sql = ctx.sql;
+      const sqlLower = sql.toLowerCase();
+      // SELECT includes year
+      const selectsYear = /SELECT[\s\S]*?\byear\b[\s\S]*?FROM/i.test(sql);
+      if (!selectsYear) return false;
+      // Has aggregate function
+      const hasAggregate = /\b(SUM|COUNT|AVG|MIN|MAX)\s*\(/i.test(sql);
+      if (!hasAggregate) return false;
+      // No GROUP BY at all, or GROUP BY without year
+      const hasGroupByYear = /GROUP\s+BY[\s\S]*?\byear\b/i.test(sql);
+      if (hasGroupByYear) return false;
+      // Exclude window functions (SUM(...) OVER (...))
+      if (/\bOVER\s*\(/i.test(sql)) return false;
+      // Exclude subqueries that intentionally return scalar aggregates
+      // Only fire on the outermost query — if the main FROM is a CTE/subquery, skip
+      if (/\bFROM\s*\(/i.test(sqlLower)) return false;
+      return true;
+    },
+    rewrite: (sql) => {
+      // Insert GROUP BY year before ORDER BY or LIMIT or end of query
+      const insertPoint = sql.match(/\b(ORDER\s+BY|LIMIT)\b/i);
+      if (insertPoint && insertPoint.index) {
+        return sql.slice(0, insertPoint.index) + "GROUP BY year " + sql.slice(insertPoint.index);
+      }
+      return sql + " GROUP BY year";
+    },
+  },
+
+  // --- #2: Double table-alias dot (i.i.column → i.column) ---
+  {
+    name: "double-alias-dot",
+    tabs: ["current", "historical", "nibrs", "shr"],
+    match: (ctx) => /\b([a-zA-Z_]\w*)\.\1\./g.test(ctx.sql),
+    rewrite: (sql) => {
+      const fixed = sql.replace(/\b([a-zA-Z_]\w*)\.\1\./g, "$1.");
+      return fixed !== sql ? fixed : null;
     },
   },
 ];

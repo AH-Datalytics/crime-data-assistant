@@ -128,9 +128,9 @@ One row per victim. JOINs to incidents on incident_id.
    - Agency names are stored in Title Case (e.g., 'Houston', 'New York', 'Los Angeles').
    - If unsure about the exact name, use LIKE: WHERE agency LIKE '%Houston%' AND state = 'TX'
    - **Multi-city comparisons**: See ENTITY SELECTION RULE above. When the user names specific cities, use CASE WHEN to pivot each into its own column (e.g., SUM(CASE WHEN i.agency = 'Nashville' AND i.state = 'TN' THEN 1 END) as nashville). Do NOT use i.agency as a GROUP BY column in the output — raw agency names can be inconsistent.
-   - **CRITICAL: City vs County disambiguation** — Many cities share agency names with their county sheriff (e.g., 'Los Angeles' has both City and County, so does 'Jacksonville', 'Nashville', etc.). When the user asks about a city (e.g., "LAPD", "Los Angeles murders"), ALWAYS include AND agency_type = 'City' to exclude the county sheriff. Only omit this filter if the user specifically asks for "all agencies" or names a county.
+   - **City vs County disambiguation** — Many cities share agency names with their county sheriff (e.g., 'Los Angeles' has both City and County, so does 'Jacksonville', 'Nashville', etc.). When the user asks about a city, use AND (agency_type = 'City' OR agency_type IS NULL OR agency_type = '') to include the city police while excluding county sheriffs. Some agencies (especially older records) have NULL agency_type — using agency_type = 'City' alone would silently drop them. Only use agency_type = 'County' when the user specifically asks about a county sheriff.
 10. **CRITICAL: This is AGENCY-level data, NOT county-geographic data.** The agency_type column indicates whether the reporting agency is a city police department ('City') or county sheriff's office ('County'). Each row represents a homicide reported by a **specific law enforcement agency**, NOT a geographic area. A "County" agency is a single sheriff's office — it does NOT represent all homicides in that county (other city PDs within the county report separately). When the user asks for data "by county", "county-level", or asks to "break down by county" (meaning geographic county totals), set sql to null and explain: "This dataset contains agency-level data (individual police departments and sheriff's offices), not county-wide geographic totals. A county typically has multiple law enforcement agencies (city police departments plus the county sheriff), and not all agencies report every year. I can show data for specific agencies — would you like me to look up agencies in that area?" When the user asks about "cities" in rankings, filter with WHERE agency_type = 'City'. When they ask about a specific named county sheriff's office (e.g., "Harris County Sheriff"), that's a valid single-agency query — use WHERE agency LIKE '%Harris%' AND agency_type = 'County' AND state = 'TX'.
-11. **Big cities** — When the user says "big cities" or "large cities", filter to agencies with population >= 250000 AND agency_type = 'City'.
+11. **Big cities** — When the user says "big cities" or "large cities", filter to agencies with population >= 250000 AND (agency_type = 'City' OR agency_type IS NULL OR agency_type = '').
 11b. **Murder rates (per capita)** — The incidents table has a population column. Do NOT refuse rate queries — the data supports them.
     - **Single agency by year** (e.g., "DC murder rate"): \`ROUND(COUNT(*) * 100000.0 / NULLIF(AVG(i.population), 0), 1) as rate_per_100k\`. AVG(population) works here because population is the same across all incidents for one agency/year.
     - **Multi-agency rankings** (e.g., "cities with highest murder rate"): GROUP BY agency, then compute rate per agency: \`ROUND(COUNT(*) * 100000.0 / NULLIF(AVG(i.population), 0), 1)\` within each GROUP BY agency, state, year group.
@@ -142,14 +142,27 @@ One row per victim. JOINs to incidents on incident_id.
     WITH monthly AS (
       SELECT i.year, i.month, COUNT(*) as cnt
       FROM incidents i JOIN victims v ON v.incident_id = i.id
-      WHERE i.agency = 'Houston' AND i.state = 'TX' AND i.agency_type = 'City' AND i.homicide_type = 'Murder' AND i.weapon_group = 'Firearm'
+      WHERE i.agency = 'Houston' AND i.state = 'TX' AND (i.agency_type = 'City' OR i.agency_type IS NULL OR i.agency_type = '') AND i.homicide_type = 'Murder' AND i.weapon_group = 'Firearm'
       GROUP BY i.year, i.month ORDER BY i.year, i.month
     ), rolling AS (
       SELECT year, month, SUM(cnt) OVER (ORDER BY year, month ROWS BETWEEN 11 PRECEDING AND CURRENT ROW) as rolling_12m FROM monthly
     )
     SELECT year, month, rolling_12m FROM rolling WHERE year >= 2018 AND (year < ${DATA_CUTOFF.year} OR (year = ${DATA_CUTOFF.year} AND month <= ${DATA_CUTOFF.month})) ORDER BY year, month
     Multi-city rolling comparisons (named cities): use PARTITION BY city in the window, then pivot with CASE WHEN in the outer query. For dynamic top-N, return long format per the ENTITY SELECTION RULE.
-15. **Chart types** — Use line for trends over time, bar for category comparisons, pie for proportions of a whole. For any query with year in the results, set xAxis to "year". For multi-series charts (e.g., multiple categories over time), set yAxis to the value columns (not year). For single-year queries like rankings, xAxis should be the category column, not year.
+15. **Chart types** — Use line for trends over time, bar for category comparisons, pie for proportions of a whole. For any query with year in the results, set xAxis to "year". For single-year queries like rankings, xAxis should be the category column, not year.
+    - **Multi-category time series** (e.g., victims by weapon type over time, victims by race over time): use \`stacked_bar\` and PIVOT the data using CASE WHEN — one column per category, not long-format rows. Example for weapon breakdown:
+      \`\`\`sql
+      SELECT i.year,
+        SUM(CASE WHEN i.weapon_group = 'Firearm' THEN 1 ELSE 0 END) as Firearm,
+        SUM(CASE WHEN i.weapon_group = 'Knife/Cutting' THEN 1 ELSE 0 END) as Knife,
+        SUM(CASE WHEN i.weapon_group = 'Blunt Object' THEN 1 ELSE 0 END) as Blunt_Object,
+        SUM(CASE WHEN i.weapon_group = 'Personal Weapons' THEN 1 ELSE 0 END) as Personal_Weapons,
+        SUM(CASE WHEN i.weapon_group NOT IN ('Firearm','Knife/Cutting','Blunt Object','Personal Weapons') THEN 1 ELSE 0 END) as Other
+      FROM incidents i JOIN victims v ON v.incident_id = i.id
+      WHERE i.homicide_type = 'Murder' AND i.year >= 2000
+      GROUP BY i.year ORDER BY i.year
+      \`\`\`
+      Set chartType to \`stacked_bar\`, xAxis to \`year\`, yAxis to the category columns. Do NOT return long-format (year, category, count) rows — the chart cannot auto-detect the category column.
 16. **Month names** — When grouping by month, keep month as INTEGER for charting. The frontend handles formatting.
 17. **Aggregate filters** — NEVER use COUNT(), SUM(), or other aggregate functions in a WHERE clause. Use HAVING for filtering on aggregates. WHERE filters rows before grouping, HAVING filters after.
 18. **OR precedence** — When combining multiple agency/city conditions with OR, ALWAYS wrap ALL the OR conditions in parentheses, then AND with the remaining filters. Wrong: WHERE (a=1 AND b=2) OR (a=3 AND b=4) AND c=5 — the AND c=5 only applies to the last OR branch. Right: WHERE ((a=1 AND b=2) OR (a=3 AND b=4)) AND c=5. This is critical for multi-city queries.

@@ -228,6 +228,22 @@ export async function POST(req: NextRequest) {
         logNibrsQuery(question, sql, 0, "rate_second_failure", Date.now() - claudeStart, msg, postRetryResult.fired, "haiku-4.5", sessionId);
         return jsonResp({ success: true, question, sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - claudeStart } as QueryResponse);
       }
+      // Raw table second-failure block — if retry still uses raw tables, block execution
+      const rawStillBad = postRetryResult.fired.some(f => f === "nibrs-raw-table-for-counts" || f === "nibrs-raw-victims");
+      if (rawStillBad) {
+        const msg = "I wasn't able to build a valid query for this question using the available summary tables. The data needed may not be available in a pre-aggregated form. Try rephrasing your question or asking about a specific offense type, city, or time period.";
+        logNibrsQuery(question, sql, 0, "raw_table_second_failure", Date.now() - claudeStart, msg, postRetryResult.fired, "haiku-4.5", sessionId);
+        return jsonResp({ success: true, question, sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - claudeStart } as QueryResponse);
+      }
+      // Geography contract block — city/county-got-state still fires after retry
+      const geoContractBad = postRetryResult.fired.some(f =>
+        f === "nibrs-city-got-state" || f === "contract-geography-missing"
+      );
+      if (geoContractBad) {
+        const msg = "I couldn't build a reliable query for that specific geography. Try asking for a specific city or state instead.";
+        logNibrsQuery(question, sql, 0, "geography_second_failure", Date.now() - claudeStart, msg, postRetryResult.fired, "haiku-4.5", sessionId);
+        return jsonResp({ success: true, question, sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - claudeStart } as QueryResponse);
+      }
       // Apply any post-retry rewrites
       if (postRetryResult.sql !== sql) sql = postRetryResult.sql;
     }

@@ -203,7 +203,7 @@ Offense names are stored exactly as above (title case). Always use exact strings
 13. **Multiple offenses** → Use IN ('Murder', 'Robbery', ...) or aggregate with GROUP BY offense.
 14. **LIMIT** → Always include LIMIT, max 5000.
 15. **Per-capita rates** → When the user says "rate", "rates", "per capita", or "per 100K", you MUST calculate rates by joining agency_population. Formula: \`ROUND(SUM(count) * 100000.0 / population, 1)\`. For multi-city rate comparisons, see the "Multi-city RATE comparison" query pattern below — use MAX(CASE WHEN ... THEN ap.population END) inside each pivoted column. Column aliases for rates should be the city name only (e.g., \`as baltimore\`), NOT \`as baltimore_rate\`.
-16. **"Top N" / ranking queries** → These are category comparisons, NOT time series. Use a bar chart with xAxis = agency (or state), yAxis = the metric. Do NOT return monthly breakdowns for ranking queries. Default to LIMIT 20 when listing or ranking cities/agencies unless the user specifies a different number.
+16. **"Top N" / ranking queries** → These are category comparisons, NOT time series. Return ONE ROW PER ENTITY with the aggregate metric. Use a bar chart with xAxis = agency (or state), yAxis = the metric. Do NOT return monthly or yearly breakdowns for ranking queries. Default to LIMIT 20 when listing or ranking cities/agencies unless the user specifies a different number. If no year is specified, default to the latest year with data — do NOT ask for clarification. For per-capita rankings, filter population >= 100000 unless the user specifies otherwise to avoid tiny-agency noise.
 17. **Agency labels** → When listing or ranking agencies, use this expression to produce clean city labels:
 \`CASE
   WHEN agency = 'Metropolitan Nashville Police Department' THEN 'Nashville'
@@ -541,7 +541,7 @@ This tool is the [Current Trends](/test?tab=current) tab, covering monthly data 
 **When the question is outside this tab's scope** — set sql to null and suggest the right tab:
 - **Pre-${RTCI.minYear} data, long-term historical trends, or staffing/officer data** → "This tab covers ${RTCI.minYear}–${RTCI.maxYear}. For historical data going back to the ${HISTORICAL.crimeMinYear}s or staffing information, try the [Historical Library](/test?tab=historical) tab."
 - **NIBRS data, incident-level details, victim/offender demographics, weapon types, location types, or detailed NIBRS breakdowns** → "For NIBRS incident-level data including demographics, weapons, and locations, try the [NIBRS Explorer](/test?tab=nibrs) tab."
-- **Specific crime subcategories not in the 7 UCR Part I offenses** (e.g., carjacking, shoplifting, drug offenses, arson, DUI) → "This tab covers the 7 Part I UCR offenses. For detailed crime subcategories like carjacking or drug offenses, try the [NIBRS Explorer](/test?tab=nibrs) tab."
+- **Specific crime subcategories not in the 7 UCR Part I offenses** (e.g., carjacking, shoplifting, drug offenses, arson, DUI, car break-ins, vehicle burglary, theft from vehicle) → "This tab covers the 7 Part I UCR offenses. For detailed crime subcategories, try the [NIBRS Explorer](/test?tab=nibrs) tab which has incident-level data including specific offense types like theft from motor vehicle (car break-ins), carjacking, shoplifting, and drug offenses."
 - **Clearance rates** → "For clearance rate data, try the [Historical Library](/test?tab=historical) tab (annual agency-level) or [NIBRS Explorer](/test?tab=nibrs) tab (incident-level). A clearance means the case was resolved by arrest (suspect arrested, charged, and turned over for prosecution) or by exceptional means (offender identified but arrest prevented by circumstances outside law enforcement's control, such as the offender's death or victim's refusal to cooperate). A clearance does not necessarily mean a conviction."
 - **Homicide victim/offender details** → "For detailed homicide data including demographics and weapon breakdowns, try the [Homicide Reports](/test?tab=shr) tab."
 
@@ -686,7 +686,7 @@ export function getHistoricalSystemPrompt(): string {
 1. **NEVER GUESS.** If a value is not explicitly provided by the user and cannot be known from the prompt, do not invent it. Write SQL that discovers it from the database, or return sql: null if the database cannot answer.
 2. **IT IS OKAY TO SAY "I DON'T KNOW."** A null SQL response with a clear limitation is better than a wrong query. Use sql: null only when the documented tables cannot answer the question or the user must clarify a genuinely ambiguous choice.
 3. **BIAS TOWARD ACTION.** If the database can resolve the uncertainty, generate the query instead of refusing. Do not assume an agency is missing, too small, or unavailable. Try the query and let the database return rows or no rows.
-3b. **DEFAULT TO BROAD QUERIES OVER CLARIFICATION.** When the user gives a place and a general topic (e.g., "crime in DC", "Jefferson County WV", "Nashville crime"), DO NOT ask what crime type or time period — run a broad query immediately. Defaults for Historical: total_offenses (violent + property combined) over all available years. Only ask for clarification when the ambiguity is geographic (which Kansas City? which Springfield?) or the request genuinely cannot be answered.
+3b. **DEFAULT TO BROAD QUERIES OVER CLARIFICATION.** When the user gives a place and a general topic (e.g., "crime in DC", "Jefferson County WV", "Nashville crime"), DO NOT ask what crime type or time period — run a broad query immediately. Defaults for Historical: total_offenses (violent + property combined) over all available years. For ranking queries ("which cities have the most", "top 10", "highest"), default to the latest year with data and LIMIT 20 — do NOT ask which year or how many. Only ask for clarification when the ambiguity is geographic (which Kansas City? which Springfield?) or the request genuinely cannot be answered.
 4. **DO NOT SUBSTITUTE.** If the exact requested filter is unavailable, do not silently broaden, approximate, or drop it. Either use a clearly valid broader category with a plain-English note, or return sql: null if that would change the meaning.
 5. **OUTPUT ONLY THE CONTRACT.** Return only valid JSON. The explanation must be plain English for the user and must not include SQL, table names, column names, code, or technical syntax.
 
@@ -819,7 +819,15 @@ When the user asks for officer COUNTS (not per capita):
 - Officers for a specific agency: SELECT hs.year, COALESCE(hs.officer_total, hs.all_total) AS staffing, CASE WHEN hs.all_total > 0 AND (hs.officer_total IS NULL OR hs.officer_total = 0) THEN 'Employees*' ELSE 'Officers' END AS data_type FROM historical_staffing hs JOIN historical_agency ha ON ha.ori = hs.ori WHERE ha.agency = 'Chicago' AND ha.state = 'il' AND hs.all_total > 0 ORDER BY hs.year
 - Officers per capita for an agency: JOIN historical_agency_population hap ON hap.ori = hs.ori AND hap.year = hs.year, then ROUND(hs.officer_total * 1000.0 / hap.population, 1) AS officers_per_1k
 - Top agencies by officers per capita: SELECT ha.agency, ha.state, hs.officer_total, hap.population, ROUND(hs.officer_total * 1000.0 / hap.population, 1) AS officers_per_1k FROM historical_staffing hs JOIN historical_agency ha ON ha.ori = hs.ori JOIN historical_agency_population hap ON hap.ori = hs.ori AND hap.year = hs.year WHERE hs.year = 2023 AND hs.officer_total > 0 AND hap.population > 50000 ORDER BY officers_per_1k DESC LIMIT 20
-- Compare staffing between specific agencies: pivot by agency name with CASE WHEN
+- Compare staffing between two specific agencies over time (e.g., "Chicago vs NYPD officers per year"):
+    WITH years AS (SELECT DISTINCT year FROM historical_staffing WHERE all_total > 0)
+    SELECT y.year,
+      (SELECT COALESCE(officer_total, all_total) FROM historical_staffing hs JOIN historical_agency ha ON ha.ori = hs.ori WHERE ha.agency = 'Chicago' AND ha.state = 'il' AND ha.type = 'city' AND hs.year = y.year AND hs.all_total > 0 LIMIT 1) AS chicago,
+      (SELECT COALESCE(officer_total, all_total) FROM historical_staffing hs JOIN historical_agency ha ON ha.ori = hs.ori WHERE ha.agency = 'New York' AND ha.state = 'ny' AND ha.type = 'city' AND hs.year = y.year AND hs.all_total > 0 LIMIT 1) AS nypd
+    FROM years y
+    WHERE y.year >= 1960
+    ORDER BY y.year
+    Use correlated subqueries per agency — do NOT use complex cross-join MIN/MAX CTEs which are fragile and often collapse to 1 row.
 - Multi-year staffing list (e.g., "agencies with 500+ officers in 2019, show 2019-2025"):
     SELECT ha.agency || ', ' || ha.state as agency,
       MAX(CASE WHEN hs.year = 2019 THEN hs.officer_total END) as officers_2019,
@@ -931,6 +939,7 @@ ${HISTORICAL.agencyClearanceRows.toLocaleString()} rows. All values are percenta
      - If genuinely ambiguous → set sql to null and ask: "Did you mean New York City or New York State?"
    - Similarly, "Los Angeles" in this database is ONLY the city agency — there is no "Los Angeles" state. But note that Los Angeles County (type='county') also exists; default to city unless user says "county".
    - **Louisiana Parishes are counties.** "Jefferson Parish", "East Baton Rouge Parish", "Orleans Parish" → use type = 'county'. Parish = sheriff/county agency. "New Orleans" = NOPD (type = 'city'). Do NOT ask for clarification when the user explicitly says "Parish."
+   - **County agency record caveat** (CRITICAL): When querying a county record (type='county'), this is the county/sheriff agency record — typically the sheriff's office or county-level law enforcement. It is NOT a complete rollup of every city police department within the county. If the user asks whether it is countywide or just the sheriff, say: "This is the county agency record (typically the sheriff's office). It covers county-level law enforcement but should not be treated as a complete rollup of every municipal police department in the county."
    - "LA" or "Los Angeles" → agency = 'Los Angeles', state = 'ca'
    - "Chicago" → agency = 'Chicago', state = 'il'
    - "Houston" → agency = 'Houston', state = 'tx'

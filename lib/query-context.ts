@@ -7,7 +7,7 @@
  */
 
 export type Tab = "current" | "historical" | "nibrs" | "shr";
-export type Scope = "national" | "state" | "city" | "agency";
+export type Scope = "national" | "state" | "city" | "county" | "agency";
 
 export interface QueryContext {
   tab: Tab;
@@ -169,12 +169,16 @@ export function extractQueryContext(
     }
   } else {
     // Current/Historical scope detection
+    const isCountyQuery = /type\s*=\s*'county'/i.test(sql) ||
+      /\b(county|parish|borough)\b/i.test(question);
     if (sqlLower.includes("national_monthly") || sqlLower.includes("'united states'")) {
       scope = "national";
-    } else if (sqlLower.includes("state_monthly") || sqlLower.includes("historical_state_national")) {
-      scope = geos.length > 0 ? "city" : "state";
+    } else if (sqlLower.includes("historical_state_national")) {
+      scope = "state"; // Always state scope — never "city" even if geos extracted
     } else if (sqlLower.includes("agency_monthly") || sqlLower.includes("historical_agency")) {
-      scope = geos.length > 0 ? "city" : states.length > 0 ? "state" : "agency";
+      scope = isCountyQuery ? "county" as Scope : geos.length > 0 ? "city" : states.length > 0 ? "state" : "agency";
+    } else if (sqlLower.includes("state_monthly")) {
+      scope = "state";
     } else {
       scope = geos.length > 0 ? "city" : states.length > 0 ? "state" : "national";
     }
