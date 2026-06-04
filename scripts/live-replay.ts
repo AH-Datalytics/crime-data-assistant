@@ -26,7 +26,7 @@ import { autoRoute, isFollowUp } from "../lib/tab-suggest";
 //  Types
 // ══════════════════════════════════════════════════════════════════════
 
-type TabId = "current" | "historical" | "nibrs" | "shr";
+type TabId = "current" | "historical" | "nibrs" | "shr" | "hate_crime";
 type ResultStatus = "pass" | "fail" | "inconclusive";
 
 interface TestCase {
@@ -76,7 +76,7 @@ const ALL_TESTS: TestCase[] = [
   { id: "R05", question: "clearance rate for murder since 1960", tab: "auto", expectedTab: "historical", quick: true, category: "routing", expect: "rows" },
   { id: "R06", question: "cleared by arrest vs exceptional means for robbery in Chicago", tab: "auto", expectedTab: "nibrs", quick: true, category: "routing", expect: "rows" },
   { id: "R07", question: "police staffing in Chicago since 1980", tab: "auto", expectedTab: "historical", quick: true, category: "routing", sqlIncludes: ["staffing"], expect: "rows" },
-  { id: "R08", question: "hate crimes in Texas since 2010", tab: "auto", expectedTab: "nibrs", category: "routing", expect: "rows" },
+  { id: "R08", question: "hate crimes in Texas since 2010", tab: "auto", expectedTab: "hate_crime", quick: true, category: "routing", expect: "rows", responseIncludes: ["voluntary"] },
   { id: "R09", question: "domestic homicides in California since 1980", tab: "auto", expectedTab: "shr", quick: true, category: "routing", expect: "rows" },
   { id: "R10", question: "carjacking clearance rates in Chicago", tab: "auto", expectedTab: "nibrs", category: "routing", expect: "rows" },
   { id: "R11", question: "US murders per year", tab: "auto", expectedTab: "historical", category: "routing", expect: "rows" },
@@ -130,7 +130,7 @@ const ALL_TESTS: TestCase[] = [
   // ── NIBRS drug/arrest/hate/carjacking ──
   { id: "N01", question: "marijuana drug offenses nationally", tab: "nibrs", category: "nibrs", expect: "rows" },
   { id: "N02", question: "DUI arrests by age group nationally", tab: "nibrs", category: "nibrs", expect: "rows" },
-  { id: "N03", question: "anti-Asian hate crimes since 2019", tab: "nibrs", category: "nibrs", expect: "rows" },
+  { id: "N03", question: "anti-Asian hate crimes since 2019", tab: "hate_crime", category: "hate_crime", expect: "rows", responseIncludes: ["voluntary"] },
   { id: "N04", question: "carjacking trend in Washington DC", tab: "nibrs", category: "nibrs", expect: "rows" },
   { id: "N05", question: "robbery by weapon type in Philadelphia", tab: "nibrs", category: "nibrs", expect: "rows" },
   { id: "N06", question: "how many aggravated assault incidents involve multiple victims?", tab: "nibrs", category: "nibrs", expect: "rows" },
@@ -140,6 +140,23 @@ const ALL_TESTS: TestCase[] = [
   { id: "N10", question: "robberies by time of day nationally", tab: "nibrs", category: "nibrs", expect: "rows" },
   { id: "N11", question: "exceptional clearance rate for robbery in Texas", tab: "nibrs", category: "nibrs", expect: "rows" },
   { id: "N12", question: "What percentage of murders are cleared by arrest vs exceptional nationally?", tab: "nibrs", category: "nibrs", expect: "rows" },
+
+  // ── Hate crime ──
+  { id: "HC01", question: "How have hate crimes trended nationally since 2000?", tab: "hate_crime", quick: true, category: "hate_crime", expect: "rows", responseIncludes: ["voluntary"] },
+  { id: "HC02", question: "Show anti-Jewish hate crime incidents by year", tab: "hate_crime", category: "hate_crime", expect: "rows", sqlIncludes: ["Anti-Jewish"], responseIncludes: ["voluntary"] },
+  { id: "HC03", question: "Which states reported the most hate crimes in 2023?", tab: "hate_crime", category: "hate_crime", expect: "rows" },
+  { id: "HC04", question: "Break down hate crimes by bias category in 2023", tab: "hate_crime", category: "hate_crime", expect: "rows" },
+  { id: "HC05", question: "anti-Black hate crime offenses by year since 2015", tab: "hate_crime", category: "hate_crime", expect: "rows", sqlIncludes: ["Anti-Black"] },
+  { id: "HC06", question: "How many agencies report hate crimes in each state?", tab: "hate_crime", category: "hate_crime", expect: "rows", sqlIncludes: ["hate_crime_participation"] },
+  { id: "HC07", question: "What are the most common offenses in hate crimes?", tab: "hate_crime", category: "hate_crime", expect: "rows" },
+  { id: "HC08", question: "Compare anti-Islamic and anti-Jewish hate crimes over time", tab: "hate_crime", category: "hate_crime", expect: "rows" },
+  { id: "HC09", question: "hate crimes at schools by year", tab: "hate_crime", category: "hate_crime", expect: "rows_or_text", sqlIncludes: ["location"], note: "Location values are 'School/College', 'School-Elementary/Secondary', 'School-College/University' — model may use exact or LIKE match" },
+  { id: "HC10", question: "anti-LGBTQ hate crimes nationally", tab: "hate_crime", quick: true, category: "hate_crime", expect: "rows", responseIncludes: ["voluntary"] },
+
+  // ── Hate crime routing ──
+  { id: "HR01", question: "antisemitic incidents in New York since 2015", tab: "auto", expectedTab: "hate_crime", category: "routing", expect: "rows" },
+  { id: "HR02", question: "bias-motivated crimes by state", tab: "auto", expectedTab: "hate_crime", category: "routing", expect: "rows" },
+  { id: "HR03", question: "anti-Hispanic hate crime trend", tab: "auto", expectedTab: "hate_crime", category: "routing", expect: "rows" },
 
   // ── Current monthly ──
   { id: "T01", question: "Show me theft in Omaha rolling over 12 months", tab: "current", category: "current", expect: "rows" },
@@ -152,7 +169,15 @@ const ALL_TESTS: TestCase[] = [
   // ── Unsupported concepts / refusals ──
   { id: "U01", question: "conviction rates for murders in Houston", tab: "historical", quick: true, category: "refusal", expect: "override", responseIncludes: ["clearance rates"], responseExcludes: ["case outcomes"], note: "Must not imply we have conviction data" },
   { id: "U02", question: "how many offenders were sentenced to prison", tab: "historical", category: "refusal", expect: "override", responseIncludes: ["clearance rates"] },
-  { id: "U03", question: "shootings in Chicago since 2015", tab: "historical", quick: true, category: "refusal", expect: "rows", note: "Should still return data with proxy explanation" },
+  { id: "U03", question: "shootings in Chicago since 2015", tab: "auto", expectedTab: "shr", quick: true, category: "shooting", expect: "rows", responseIncludes: ["fatal", "nonfatal"], note: "Bare shootings → SHR fatal shootings with nonfatal caveat" },
+  // ── Shooting contract tests ──
+  { id: "SH01", question: "fatal shootings in Chicago since 2015", tab: "auto", expectedTab: "shr", category: "shooting", expect: "rows", responseIncludes: ["fatal"], note: "Explicit fatal → SHR" },
+  { id: "SH02", question: "nonfatal shootings in Chicago since 2015", tab: "auto", expectedTab: "shr", category: "shooting", expect: "rows_or_text", responseIncludes: ["nonfatal"], note: "Nonfatal → deterministic refusal" },
+  { id: "SH03", question: "shooting incidents in Houston", tab: "auto", expectedTab: "shr", category: "shooting", expect: "rows_or_text", responseIncludes: ["nonfatal"], note: "Broad shooting incidents → refusal" },
+  { id: "SH04", question: "people shot in Dallas", tab: "auto", expectedTab: "shr", category: "shooting", expect: "rows_or_text", responseIncludes: ["nonfatal"], note: "People shot → refusal" },
+  { id: "SH05", question: "aggravated assault with firearm in Dallas", tab: "nibrs", category: "shooting", expect: "rows", note: "Explicit agg assault w/ firearm → NIBRS allowed" },
+  { id: "SH06", question: "firearm murders in Houston since 2010", tab: "auto", expectedTab: "shr", category: "shooting", expect: "rows", note: "Firearm murders → SHR" },
+
   { id: "U04", question: "crime by ZIP code in Chicago", tab: "nibrs", category: "refusal", expect: "override", note: "Sub-city geography not available" },
   { id: "U05", question: "show me data for the new orleans msa by census tract", tab: "nibrs", category: "refusal", expect: "override" },
   { id: "U06", question: "how many cases used DNA evidence", tab: "nibrs", quick: true, category: "refusal", expect: "override", responseIncludes: ["evidence"] },
@@ -174,7 +199,7 @@ const ALL_TESTS: TestCase[] = [
   // ── Regression: production failures ──
   { id: "P01", question: "rate of violent crime in Washington DC from 2014 to today", tab: "historical", category: "production-regression", expect: "rows" },
   { id: "P02", question: "national trend in DWI/DUI from 2000 to today", tab: "nibrs", category: "production-regression", expect: "rows" },
-  { id: "P03", question: "Show me trends in hate crime", tab: "nibrs", category: "production-regression", expect: "rows" },
+  { id: "P03", question: "Show me trends in hate crime", tab: "hate_crime", category: "hate_crime", expect: "rows", responseIncludes: ["voluntary"] },
   { id: "P04", question: "How do juvenile crime rates compare to criminal rates", tab: "nibrs", category: "production-regression", expect: "rows" },
   { id: "P05", question: "Carjackings in boston since 2025", tab: "nibrs", category: "production-regression", expect: "rows" },
   { id: "P06", question: "Examine trends in gang homicides in Chicago IL over time", tab: "shr", category: "production-regression", expect: "rows" },
@@ -268,10 +293,10 @@ const SESSIONS: SessionDef[] = [
     id: "MS03",
     name: "Hate crimes → bias breakdown → anti-Asian → participation",
     steps: [
-      { question: "hate crimes in California since 2010", tab: "nibrs", expect: "rows" },
-      { question: "break it down by bias type", tab: "nibrs", expect: "rows", note: "Follow-up: drill down" },
-      { question: "just anti-Asian incidents", tab: "nibrs", expect: "rows" },
-      { question: "show participation over time", tab: "nibrs", expect: "rows", note: "Follow-up: keeps NIBRS" },
+      { question: "hate crimes in California since 2010", tab: "hate_crime", expect: "rows" },
+      { question: "break it down by bias type", tab: "hate_crime", expect: "rows", note: "Follow-up: drill down" },
+      { question: "just anti-Asian incidents", tab: "hate_crime", expect: "rows" },
+      { question: "show participation over time", tab: "hate_crime", expect: "rows", note: "Follow-up: keeps hate_crime" },
     ],
   },
 ];
@@ -331,6 +356,7 @@ function apiRoute(tab: TabId): string {
     case "current": case "historical": return "/api/query";
     case "nibrs": return "/api/nibrs-query";
     case "shr": return "/api/shr-query";
+    case "hate_crime": return "/api/hc-query";
   }
 }
 

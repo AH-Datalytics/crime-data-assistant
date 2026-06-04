@@ -55,11 +55,11 @@ interface Exchange {
   response: QueryResponse | null;
   explanation: string;
   error?: string;
-  source: "current" | "historical" | "nibrs" | "shr";
+  source: "current" | "historical" | "nibrs" | "shr" | "hate_crime";
   routingReason?: string;
 }
 
-type SourceId = "auto" | "current" | "historical" | "nibrs" | "shr";
+type SourceId = "auto" | "current" | "historical" | "nibrs" | "shr" | "hate_crime";
 
 const SOURCE_OPTIONS: { id: SourceId; label: string; color: string }[] = [
   { id: "auto", label: "Auto source", color: "#475EC7" },
@@ -67,6 +67,7 @@ const SOURCE_OPTIONS: { id: SourceId; label: string; color: string }[] = [
   { id: "historical", label: "Historical Library", color: "#8B5E3C" },
   { id: "nibrs", label: "NIBRS Explorer", color: "#2d8659" },
   { id: "shr", label: "SHR (Homicide)", color: "#B8860B" },
+  { id: "hate_crime", label: "Hate Crime", color: "#4A4A4A" },
 ];
 
 
@@ -111,7 +112,7 @@ export default function WorkspaceChat({}: WorkspaceChatProps) {
   const [pendingQuestion, setPendingQuestion] = useState("");
 
   // Active source for current query
-  const [activeSource, setActiveSource] = useState<"current" | "historical" | "nibrs" | "shr" | null>(null);
+  const [activeSource, setActiveSource] = useState<"current" | "historical" | "nibrs" | "shr" | "hate_crime" | null>(null);
 
   // Conversation
   const [history, setHistory] = useState<HistoryEntry[]>([]);
@@ -139,7 +140,7 @@ export default function WorkspaceChat({}: WorkspaceChatProps) {
   const accentColor = activeSource ? TAB_COLORS[activeSource] : "#475EC7";
 
   const submitQuestion = useCallback(
-    async (question: string, tab: "current" | "historical" | "nibrs" | "shr", reason?: string) => {
+    async (question: string, tab: "current" | "historical" | "nibrs" | "shr" | "hate_crime", reason?: string) => {
       if (!question || loading) return;
       setActiveSource(tab);
       setInput("");
@@ -153,7 +154,7 @@ export default function WorkspaceChat({}: WorkspaceChatProps) {
       setLastQuestion(question);
       setShowDisambiguation(false);
 
-      const route = tab === "nibrs" ? "/api/nibrs-query" : tab === "shr" ? "/api/shr-query" : "/api/query";
+      const route = tab === "nibrs" ? "/api/nibrs-query" : tab === "shr" ? "/api/shr-query" : tab === "hate_crime" ? "/api/hc-query" : "/api/query";
       const mode = tab === "historical" ? "historical" : "current";
 
       try {
@@ -168,7 +169,7 @@ export default function WorkspaceChat({}: WorkspaceChatProps) {
         let finalExplanation = "", finalSql = "";
         let finalResponse: QueryResponse | null = null;
 
-        if (tab === "nibrs" || tab === "shr") {
+        if (tab === "nibrs" || tab === "shr" || tab === "hate_crime") {
           const data = await res.json();
           if (data.success) { finalExplanation = data.explanation || ""; finalSql = data.sql || ""; finalResponse = data; setExplanation(finalExplanation); setResponse(data); }
           else { setError(data.error || "Query failed"); }
@@ -235,12 +236,12 @@ export default function WorkspaceChat({}: WorkspaceChatProps) {
       const r = autoRoute(q);
       if (!r || r.confidence !== "high") {
         const recs = r ? [{ tab: r.source, why: r.reason, primary: true, score: 10 }, ...r.alternatives] : recommendTabs(q);
-        setPendingQuestion(q); setDisambiguationRecs(recs.length > 0 ? recs : []); setShowDisambiguation(true);
+        setPendingQuestion(q); setDisambiguationRecs(recs.length > 0 ? recs : []); setShowDisambiguation(true); setAnimateIdx(-1);
         return;
       }
       submitQuestion(q, r.source, r.reason);
     } else {
-      submitQuestion(q, source as "current" | "historical" | "nibrs" | "shr");
+      submitQuestion(q, source as "current" | "historical" | "nibrs" | "shr" | "hate_crime");
     }
   }, [source, activeSource, submitQuestion]);
 
@@ -287,7 +288,7 @@ export default function WorkspaceChat({}: WorkspaceChatProps) {
                 Ask
               </button>
             </form>
-            <div className="hidden sm:block shrink-0 relative">
+            <div className="shrink-0 relative">
               <select
                 value={source}
                 onChange={(e) => { setSource(e.target.value as SourceId); setShowDisambiguation(false); }}
@@ -310,7 +311,7 @@ export default function WorkspaceChat({}: WorkspaceChatProps) {
           onSelectTab={(tab) => { setSource(tab); }}
           onAsk={(q) => { setInput(q); handleAsk(q); }}
           renderInputBar={() => (
-            <form onSubmit={(e) => { e.preventDefault(); handleAsk(input); }} className="flex gap-2">
+            <form onSubmit={(e) => { e.preventDefault(); handleAsk(input); }} className="flex flex-col sm:flex-row gap-2">
               <input
                 type="text"
                 value={input}

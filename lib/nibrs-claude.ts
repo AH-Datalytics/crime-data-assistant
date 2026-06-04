@@ -643,6 +643,17 @@ Exceptional clearance type breakdown example:
     AND scd.year BETWEEN 2022 AND 2025
   GROUP BY scd.year ORDER BY scd.year
 
+### summary_victim_circumstance_clearance_demo (CIRCUMSTANCE + CLEARANCE + DEMOGRAPHICS)
+- COLUMNS: state TEXT, ori TEXT, year INT, ucr_offense_code TEXT, circumstance_code TEXT, clearance_status TEXT, sex TEXT, race TEXT, age_group TEXT, victim_count INT
+- circumstance_code: '01'=Argument, '02'=Assault on LEO, '03'=Drug Dealing, '04'=Gangland, '05'=Juvenile Gang, '06'=Domestic Violence, '07'=Mercy Killing, '08'=Other Felony, '09'=Other, '10'=Unknown; for 09C: '20'=Killed by Private Citizen, '21'=Killed by Police
+- clearance_status: 'arrest' (has arrestee, not exceptionally cleared), 'exceptional' (exceptionally cleared A-E), 'not_cleared'
+- sex, race, age_group: same codes as summary_victim_demographics
+- Covers: 09A, 09B, 09C, 13A
+- INDEXES: (state, year, ucr_offense_code), (ori, year), (circumstance_code, year), (clearance_status, year), (sex, year), (race, year)
+- USE FOR: ANY query combining circumstance (DV, gang, argument) with clearance status (cleared/uncleared) and/or victim demographics
+- Examples: "female DV murder victims cleared by arrest", "clearance rate for gang murders by race", "cleared vs uncleared domestic homicides"
+- **PREFER over separate summary_victim_circumstance + summary_clearance_type joins** -- those cannot be joined correctly
+
 ### summary_carjacking_monthly
 - COLUMNS: year INT, month INT (1-12), state TEXT, ori TEXT, offense_count INT
 - ⚠️ This table does NOT have: incident_date, ucr_offense_code, incident_num, or any other columns. ONLY the 5 columns listed above.
@@ -806,7 +817,13 @@ Known gaps where you MUST refuse and explain:
 - **Victim demographics + location type**: No table combines victim sex/race with location (ATM, parking lot, etc.)
 - **Weapon + time of day**: No table combines specific weapon codes with hour of day
 - **Hate crime bias + victim demographics**: No table combines bias motivation with victim sex/race
-Note: Victim sex/race/age + weapon + circumstance IS available via summary_victim_weapon_circumstance_demo.
+
+**AVAILABLE combined tables — use these instead of joining separate summaries:**
+- Victim sex/race/age + weapon + circumstance → summary_victim_weapon_circumstance_demo
+- Victim sex/race/age + circumstance + clearance status → summary_victim_circumstance_clearance_demo
+- Victim sex/race/age + relationship → summary_victim_relationship
+
+**NEVER JOIN two separate summary tables to infer a combination.** E.g., do NOT join summary_victim_demographics with summary_victim_circumstance on ori+year to get sex+circumstance — this produces Cartesian row multiplication and WRONG data. If a combined table exists, use it. If not, refuse.
 - **Nonfatal shootings / shooting victims**: NIBRS does NOT have a "nonfatal shooting" or "shooting" category. The closest proxy (aggravated assault + firearm weapon) includes cases where a gun was brandished or used as a blunt weapon, not just people who were shot. Set sql to null and explain: "NIBRS does not track nonfatal shootings as a separate category. The closest available data is aggravated assault victims involving a firearm, but this includes all firearm-involved assaults (brandishing, pistol-whipping, etc.), not just victims who were shot. For dedicated shooting data, sources like the Gun Violence Archive or local police shooting databases may be more appropriate."
 
 ### AVOIDING UNNECESSARY JOINS

@@ -32,6 +32,7 @@ const DATASET_LIMITS: Record<TabId, {
   historical: { yearRange: "1930–2024", agencies: "10,000+", offenses: "Part I UCR", demographics: false, monthly: false, county: true, stateRates: true },
   nibrs: { yearRange: "1991–present", agencies: "10,000+", offenses: "All 52+ NIBRS", demographics: true, monthly: true, county: false, stateRates: false },
   shr: { yearRange: "1976–2024", agencies: "10,000+", offenses: "Homicide only", demographics: true, monthly: true, county: false, stateRates: false },
+  hate_crime: { yearRange: "1991–present", agencies: "~15,000", offenses: "Bias-motivated", demographics: true, monthly: false, county: false, stateRates: false },
 };
 
 type AnswerQuality = "full" | "partial" | "unsuitable";
@@ -73,7 +74,7 @@ function evaluateAnswerQuality(question: string, tab: TabId): { quality: AnswerQ
   }
 
   // Check time range coverage
-  const yearStart: Record<TabId, number> = { current: 2017, historical: 1930, nibrs: 1991, shr: 1976 };
+  const yearStart: Record<TabId, number> = { current: 2017, historical: 1930, nibrs: 1991, shr: 1976, hate_crime: 1991 };
   if (intent.timeRange.start !== null && intent.timeRange.start < yearStart[tab]) {
     const gap = yearStart[tab] - intent.timeRange.start;
     if (gap > 10) {

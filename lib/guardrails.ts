@@ -646,6 +646,24 @@ const GUARDRAILS: Guardrail[] = [
     message: () =>
       "[SYSTEM: Your previous query JOINed city-level and state-level summary tables, which produces incorrect results due to row multiplication. For comparisons between a city and a state/national average, use separate subqueries or CTEs — one for the city data and one for the state/national data — then combine them. NEVER JOIN summary_victim_city_monthly with summary_victim_state_monthly directly.]",
   },
+  // --- NIBRS: cross-summary-table join to infer missing dimensions ---
+  {
+    name: "nibrs-cross-summary-join",
+    tabs: ["nibrs"],
+    match: (ctx) => {
+      if (!ctx.sql || !/\bJOIN\b/i.test(ctx.sql)) return false;
+      const summaryTables = (ctx.sql.match(/\bsummary_\w+/gi) || [])
+        .map(t => t.toLowerCase())
+        .filter((t, i, a) => a.indexOf(t) === i);
+      if (summaryTables.length < 2) return false;
+      // Exempt: city + state level of same dimension (handled by cross-level-join)
+      const isCityState = summaryTables.every(t => /monthly/.test(t));
+      if (isCityState) return false;
+      return true;
+    },
+    override: () =>
+      "I can't reliably combine data from two different summary tables — joining them would produce incorrect results due to different aggregation grains. I can answer each part separately: for example, I can show victim demographics OR clearance rates, but not both in a single query unless a pre-built combined table exists. Try asking about one dimension at a time, or ask if a specific combination is available.",
+  },
   {
     name: "nibrs-state-table-with-ori",
     tabs: ["nibrs"],
@@ -1449,14 +1467,14 @@ const GUARDRAILS: Guardrail[] = [
     match: (ctx) => {
       if (!ctx.sql) return false;
       const q = ctx.question.toLowerCase();
-      const asksShooting = /\b(shooting|shootings|nonfatal shooting|non-fatal shooting|shot\b)/i.test(q);
+      const asksShooting = /\b(shootings?|shot\b|gunshot|people\s+shot|gun\s+violence)\b/i.test(q);
       if (!asksShooting) return false;
       // Exempt: user explicitly asks for firearm homicide/murder, proxy, or agg assault with firearm
       const exempt = /\b(firearm (murder|homicide)|gun (murder|homicide)|(murder|homicide).{0,15}firearm|closest proxy|approximate|aggravated assault.{0,10}firearm)\b/i.test(q);
       return !exempt;
     },
     override: () =>
-      "NIBRS does not track 'shootings' as a category. The closest available data is aggravated assault victims involving a firearm, but this includes brandishing, pistol-whipping, and threats — not just victims who were shot. For dedicated shooting data, sources like the Gun Violence Archive may be more appropriate. If you'd like the firearm assault proxy, ask for 'aggravated assault victims involving a firearm.'",
+      "NIBRS does not track 'shootings' as a category. For fatal shootings, use the [Homicide Reports](/test?tab=shr) tab which has firearm homicide data since 1976. The closest NIBRS proxy is aggravated assault with a firearm, but that includes brandishing, pistol-whipping, and threats - not just people who were shot. If you want that proxy, ask for 'aggravated assault victims involving a firearm.'",
   },
 
   // #7: SHR clearance hard override

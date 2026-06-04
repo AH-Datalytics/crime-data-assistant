@@ -1552,10 +1552,10 @@ console.log(JSON.stringify(results));
       assert("route: staffing → Historical primary", t.primary === "historical", `got: ${t.primary}`);
     }
 
-    // 10. "hate crimes in Texas" → NIBRS primary
+    // 10. "hate crimes in Texas" → Hate Crime tab primary
     {
       const t = r("hate crimes in Texas");
-      assert("route: hate crimes → NIBRS primary", t.primary === "nibrs", `got: ${t.primary}`);
+      assert("route: hate crimes → hate_crime primary", t.primary === "hate_crime", `got: ${t.primary}`);
     }
 
     // 11. "domestic homicides since 1980" → SHR primary

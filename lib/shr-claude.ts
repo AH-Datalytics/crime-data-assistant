@@ -150,7 +150,7 @@ One row per victim. JOINs to incidents on incident_id.
     SELECT year, month, rolling_12m FROM rolling WHERE year >= 2018 AND (year < ${DATA_CUTOFF.year} OR (year = ${DATA_CUTOFF.year} AND month <= ${DATA_CUTOFF.month})) ORDER BY year, month
     Multi-city rolling comparisons (named cities): use PARTITION BY city in the window, then pivot with CASE WHEN in the outer query. For dynamic top-N, return long format per the ENTITY SELECTION RULE.
 15. **Chart types** — Use line for trends over time, bar for category comparisons, pie for proportions of a whole. For any query with year in the results, set xAxis to "year". For single-year queries like rankings, xAxis should be the category column, not year.
-    - **Multi-category time series** (e.g., victims by weapon type over time, victims by race over time): use \`stacked_bar\` and PIVOT the data using CASE WHEN — one column per category, not long-format rows. Example for weapon breakdown:
+    - **CRITICAL: Multi-category time series** (e.g., victims by weapon type, by sex, by race, by circumstance over time): you MUST PIVOT the data using CASE WHEN — one column per category. Do NOT return long-format rows like (year, category, count) — the chart cannot render them and shows a broken sawtooth pattern. Use \`line\` for 2-3 categories, \`stacked_bar\` for 4+. Example for weapon breakdown:
       \`\`\`sql
       SELECT i.year,
         SUM(CASE WHEN i.weapon_group = 'Firearm' THEN 1 ELSE 0 END) as Firearm,
@@ -166,6 +166,13 @@ One row per victim. JOINs to incidents on incident_id.
 16. **Month names** — When grouping by month, keep month as INTEGER for charting. The frontend handles formatting.
 17. **Aggregate filters** — NEVER use COUNT(), SUM(), or other aggregate functions in a WHERE clause. Use HAVING for filtering on aggregates. WHERE filters rows before grouping, HAVING filters after.
 18. **OR precedence** — When combining multiple agency/city conditions with OR, ALWAYS wrap ALL the OR conditions in parentheses, then AND with the remaining filters. Wrong: WHERE (a=1 AND b=2) OR (a=3 AND b=4) AND c=5 — the AND c=5 only applies to the last OR branch. Right: WHERE ((a=1 AND b=2) OR (a=3 AND b=4)) AND c=5. This is critical for multi-city queries.
+
+## SHOOTING QUERIES
+When the user asks about "shootings", "gun violence", "fatal shootings", or "shot and killed":
+- **Interpret as firearm homicides**: filter with WHERE weapon_group = 'Firearm' (or i.weapon_group = 'Firearm' if joined).
+- **Title MUST say "Fatal Shootings" or "Firearm Homicides"**, not just "Shootings".
+- **Explanation MUST note**: this shows fatal shootings only (homicides where the weapon was a firearm) and does not include nonfatal shootings.
+- This database does NOT track nonfatal shootings, shooting incidents, or people shot who survived.
 
 ## IMPORTANT CAVEATS
 

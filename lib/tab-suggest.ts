@@ -6,7 +6,7 @@
  * No AI calls — pure regex + scoring logic.
  */
 
-export type TabId = "current" | "historical" | "nibrs" | "shr";
+export type TabId = "current" | "historical" | "nibrs" | "shr" | "hate_crime";
 
 export interface TabRecommendation {
   tab: TabId;
@@ -36,6 +36,7 @@ export const TAB_DISPLAY_NAMES: Record<TabId, string> = {
   historical: "Historical Library",
   nibrs: "NIBRS Explorer",
   shr: "Homicide Reports",
+  hate_crime: "Hate Crime",
 };
 
 /** Tab colors */
@@ -44,6 +45,7 @@ export const TAB_COLORS: Record<TabId, string> = {
   historical: "#8B5E3C",
   nibrs: "#2d8659",
   shr: "#B8860B",
+  hate_crime: "#4A4A4A",
 };
 
 // ══════════════════════════════════════════════════════════════════════
@@ -77,7 +79,7 @@ interface DatasetCapabilities {
   /** Supported temporal granularity */
   granularity: ("monthly" | "annual")[];
   /** Supported offenses — null = all Part I UCR, "all_nibrs" = all 52+ codes, "homicide_only" = murder/manslaughter */
-  offenseScope: "part1_ucr" | "all_nibrs" | "homicide_only";
+  offenseScope: "part1_ucr" | "all_nibrs" | "homicide_only" | "hate_crime_only";
   /** Attributes this dataset provides */
   attributes: Set<string>;
   /** Approximate number of agencies */
@@ -149,6 +151,21 @@ const DATASET_REGISTRY: Record<TabId, DatasetCapabilities> = {
     hasCounty: false,
     hasStateRates: false,
   },
+  hate_crime: {
+    id: "hate_crime",
+    displayName: "Hate Crime",
+    description: "FBI hate crime statistics with bias motivation detail, 1991–present",
+    yearRange: { start: 1991, end: 2025 },
+    granularity: ["annual"],
+    offenseScope: "hate_crime_only",
+    attributes: new Set([
+      "bias", "hate_crime", "location_type",
+      "offender_race", "offender_demographics",
+    ]),
+    agencyCount: 15000,
+    hasCounty: false,
+    hasStateRates: false,
+  },
 };
 
 // ══════════════════════════════════════════════════════════════════════
@@ -211,6 +228,9 @@ function detectOffense(q: string): string | null {
     [/\bliquor\s*law/i, "liquor_law"],
     [/\bdrug\s*(offense|violation|crime)/i, "drug_offense"],
     [/\bhate\s*crime/i, "hate_crime"],
+    [/\banti-(jewish|semit|black|white|asian|hispanic|latino|muslim|islamic|arab|sikh|hindu|gay|lesbian|lgbtq|transgender|bisexual)\b/i, "hate_crime"],
+    [/\b(antisemit|islamophob|xenophob)\w*/i, "hate_crime"],
+    [/\bbias[- ]motivated/i, "hate_crime"],
     [/\bviolent\s*crime/i, "violent_crime"],
     [/\bproperty\s*crime/i, "property_crime"],
     [/\bidentity\s*theft/i, "identity_theft"],
@@ -409,8 +429,10 @@ function detectRequiredAttributes(q: string): string[] {
 
   // Bias / hate crime
   if (/\b(bias|hate)\s*(motivation|crime|incident|motivated)/i.test(q) ||
-      /\bhate\s*crime/i.test(q) || /\banti-\w+\s*(hate|crime|bias)/i.test(q) ||
-      /\bbias.motivated/i.test(q)) {
+      /\bhate\s*crime/i.test(q) || /\banti-\w+\s*(hate|crime|bias|incident|offense)/i.test(q) ||
+      /\bbias.motivated/i.test(q) ||
+      /\banti-(jewish|semit|black|white|asian|hispanic|latino|muslim|islamic|arab|sikh|hindu|gay|lesbian|lgbtq|transgender|bisexual)/i.test(q) ||
+      /\b(antisemit|islamophob|xenophob)/i.test(q)) {
     attrs.push("bias");
   }
 
@@ -605,7 +627,8 @@ interface RouteScore {
 }
 
 function canDatasetHandleOffense(ds: DatasetCapabilities, offense: string | null): boolean {
-  if (!offense) return true; // generic crime — all datasets can handle
+  if (ds.offenseScope === "hate_crime_only") return offense === "hate_crime"; // hate_crime only for hate crime queries
+  if (!offense) return true; // generic crime — all other datasets can handle
   if (ds.offenseScope === "all_nibrs") return true; // NIBRS handles everything
   if (ds.offenseScope === "homicide_only") return HOMICIDE_OFFENSES.has(offense);
   if (ds.offenseScope === "part1_ucr") return PART1_OFFENSES.has(offense);
@@ -631,12 +654,18 @@ function scoreDataset(ds: DatasetCapabilities, intent: QueryIntent): RouteScore 
   // ── Hard exclusions ──
 
   // 1. Offense not supported
-  if (intent.offense && !canDatasetHandleOffense(ds, intent.offense)) {
+  // Special case: hate_crime dataset is included when bias/hate_crime attributes are present,
+  // even if the detected offense is null or not "hate_crime"
+  const hasBiasAttr = intent.requiredAttributes.includes("bias") || intent.requiredAttributes.includes("hate_crime");
+  const hcOverride = ds.id === "hate_crime" && hasBiasAttr;
+  if (!hcOverride && !canDatasetHandleOffense(ds, intent.offense)) {
     excluded = true;
     if (ds.offenseScope === "homicide_only") {
       excludeReason = "Only has homicide data — cannot answer questions about other offenses";
+    } else if (ds.offenseScope === "hate_crime_only") {
+      excludeReason = "Only has hate crime / bias motivation data";
     } else {
-      excludeReason = `Does not track ${intent.offense.replace(/_/g, " ")}`;
+      excludeReason = `Does not track ${(intent.offense || "").replace(/_/g, " ")}`;
     }
     return { tab: ds.id, score: 0, why, excluded, excludeReason };
   }
@@ -741,9 +770,11 @@ function scoreDataset(ds: DatasetCapabilities, intent: QueryIntent): RouteScore 
     }
   }
   if (intent.requiredAttributes.includes("bias") || intent.requiredAttributes.includes("hate_crime")) {
-    if (ds.id === "nibrs") {
-      score += 3;
-      why = "Has bias motivation data for hate crime analysis";
+    if (ds.id === "hate_crime") {
+      score += 5;
+      why = "Dedicated hate crime database with bias motivation, offender, and participation data (1991–present)";
+    } else if (ds.id === "nibrs") {
+      score -= 2; // Penalize NIBRS when hate_crime tab is available
     }
   }
   if (intent.requiredAttributes.includes("drug_type")) {
@@ -881,6 +912,30 @@ export function autoRoute(question: string): AutoRouteResult | null {
   // Follow-ups should not produce a routing decision at all.
   // The UI keeps the user on their current tab.
   if (isFollowUp(question)) return null;
+
+  // ── Deterministic shooting handling ──
+  // Shooting queries are intercepted before general scoring.
+  const q = question.toLowerCase();
+  const asksShooting = /\b(shootings?|shot\b|gunshot|people\s+shot|gun\s+violence)\b/i.test(q);
+  if (asksShooting) {
+    // Explicit proxy request → let NIBRS handle
+    const wantsProxy = /\b(closest proxy|approximate|aggravated assault.{0,15}firearm)\b/i.test(q);
+    if (wantsProxy) {
+      return { source: "nibrs", reason: "Aggravated assault with firearm as requested proxy for shootings", confidence: "high", alternatives: [] };
+    }
+    // Nonfatal / broad incident request → deterministic refusal (route to SHR with null response)
+    const wantsNonfatal = /\b(nonfatal|non-fatal|non fatal|shooting incidents?|shooting victims?|people\s+shot|gunshot (wound|victim)|shot and (survived|wounded|injured))\b/i.test(q);
+    if (wantsNonfatal) {
+      return { source: "shr", reason: "Shooting query — nonfatal data not available, routing to SHR for fatal shootings caveat", confidence: "high", alternatives: [] };
+    }
+    // Fatal context → SHR
+    const fatalContext = /\b(fatal|deadly|killed|murder|homicide|death|died)\b/i.test(q);
+    if (fatalContext) {
+      return { source: "shr", reason: "Fatal shootings via SHR firearm homicide data", confidence: "high", alternatives: [] };
+    }
+    // Ambiguous bare "shootings" → default to SHR fatal shootings
+    return { source: "shr", reason: "Interpreting as fatal shootings (firearm homicides) — nonfatal shooting data not available", confidence: "high", alternatives: [] };
+  }
 
   const recs = recommendTabs(question);
   if (recs.length === 0) return null;

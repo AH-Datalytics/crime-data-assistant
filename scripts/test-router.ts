@@ -89,9 +89,9 @@ test({ question: "cleared by arrest vs exceptional means", expectedPrimary: "nib
 test({ question: "marijuana arrests", expectedPrimary: "nibrs", unsupported: ["specific_drug_arrests"] });
 test({ question: "marijuana drug offenses", expectedPrimary: "nibrs" });
 test({ question: "police staffing in Chicago since 1980", expectedPrimary: "historical" });
-test({ question: "hate crimes in Texas", expectedPrimary: "nibrs" });
+test({ question: "hate crimes in Texas", expectedPrimary: "hate_crime" });
 test({ question: "domestic homicides since 1980", expectedPrimary: "shr" });
-test({ question: "shootings in Chicago", expectedPrimary: ["historical", "nibrs"], unsupported: ["shootings_category"] });
+test({ question: "shootings in Chicago", expectedPrimary: "shr" });
 test({ question: "crime in Alameda County since 2008", expectedPrimary: "historical" });
 test({ question: "violent crime in DC from 2014", expectedPrimary: "historical" });
 test({ question: "carjacking clearance rates", expectedPrimary: "nibrs" });
@@ -106,8 +106,8 @@ console.log("═══ Production failure cases ═══");
 test({ question: "rate of violent crime in Washington DC from 2014 to today", expectedPrimary: "historical" });
 // 3113: DUI → Group B
 test({ question: "national trend in DWI/DUI from 2000 to today", expectedPrimary: "nibrs" });
-// 3132: hate crime on Current → should redirect to NIBRS
-test({ question: "Show me trends in hate crime", expectedPrimary: "nibrs" });
+// 3132: hate crime on Current → should redirect to Hate Crime tab
+test({ question: "Show me trends in hate crime", expectedPrimary: "hate_crime" });
 // 3143/3144: Macon not in RTCI sample → should still route to Current or Historical
 test({ question: "homicide rate in Macon Georgia over 5 years", expectedPrimary: ["historical", "current"] });
 // 3164: juvenile crime → needs demographics
@@ -196,9 +196,9 @@ test({ question: "DUI arrests by age group", expectedPrimary: "nibrs", mustExclu
 test({ question: "heroin offenses by state", expectedPrimary: "nibrs", mustExclude: ["current", "historical", "shr"] });
 test({ question: "meth vs cocaine drug violations trend", expectedPrimary: "nibrs" });
 
-// Hate crime / bias
-test({ question: "anti-Asian hate crimes since 2019", expectedPrimary: "nibrs", mustExclude: ["current", "historical", "shr"] });
-test({ question: "bias-motivated offenses by type", expectedPrimary: "nibrs" });
+// Hate crime / bias → dedicated Hate Crime tab
+test({ question: "anti-Asian hate crimes since 2019", expectedPrimary: "hate_crime", mustExclude: ["current", "historical", "shr"] });
+test({ question: "bias-motivated offenses by type", expectedPrimary: "hate_crime" });
 
 // Clearance rate (basic)
 test({ question: "robbery clearance rate in New York since 1990", expectedPrimary: "historical" });
@@ -242,9 +242,13 @@ test({ question: "robberies by time of day", expectedPrimary: "nibrs", mustExclu
 test({ question: "how many cases used DNA evidence", expectedPrimary: ["nibrs", "historical"], unsupported: ["evidence_type"] });
 test({ question: "clearances with surveillance camera footage", expectedPrimary: ["nibrs", "historical"], unsupported: ["evidence_type"] });
 
-// Unsupported: shootings category
-test({ question: "mass shootings in the US", expectedPrimary: ["historical", "nibrs"], unsupported: ["shootings_category"] });
-test({ question: "shooting victims in Philadelphia", expectedPrimary: ["historical", "nibrs", "shr"], unsupported: ["shootings_category"] });
+// Shooting contract: bare shootings → SHR, nonfatal → SHR (refusal), fatal → SHR, proxy → NIBRS
+test({ question: "mass shootings in the US", expectedPrimary: "shr" });
+test({ question: "shooting victims in Philadelphia", expectedPrimary: "shr" });
+test({ question: "fatal shootings in Houston since 2015", expectedPrimary: "shr" });
+test({ question: "nonfatal shootings in Dallas", expectedPrimary: "shr" });
+test({ question: "people shot in Chicago", expectedPrimary: "shr" });
+test({ question: "aggravated assault with firearm in Dallas", expectedPrimary: "nibrs" });
 
 // Unsupported: convictions/prosecution
 test({ question: "conviction rates for murder", expectedPrimary: ["historical", "nibrs"], unsupported: ["convictions"] });
@@ -333,7 +337,7 @@ test({ question: "now show firearm murders instead", expectedPrimary: "historica
 // NOT follow-ups — these have clear standalone intent
 test({ question: "Murder rate in Houston per 100K", expectedPrimary: ["historical", "current"], expectFollowUp: false });
 test({ question: "firearm murders in Houston since 2010", expectedPrimary: "shr", expectFollowUp: false });
-test({ question: "Show me hate crimes in Texas", expectedPrimary: "nibrs", expectFollowUp: false });
+test({ question: "Show me hate crimes in Texas", expectedPrimary: "hate_crime", expectFollowUp: false });
 test({ question: "carjacking trend in Washington DC", expectedPrimary: "nibrs", expectFollowUp: false });
 test({ question: "national murder clearance rate trend", expectedPrimary: "historical", expectFollowUp: false });
 test({ question: "domestic homicides since 1980", expectedPrimary: "shr", expectFollowUp: false });

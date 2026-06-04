@@ -76,6 +76,78 @@ export async function POST(req: NextRequest) {
     const history = Array.isArray(body?.history) ? body.history.slice(-6) : [];
     const start = Date.now();
 
+    // Deterministic nonfatal shooting refusal
+    const asksShooting = /\b(shootings?|shot\b|gunshot|people\s+shot|gun\s+violence)\b/i.test(question);
+    const wantsNonfatal = /\b(nonfatal|non-fatal|non fatal|shooting incidents?|people\s+shot|gunshot (wound|victim)|shot and (survived|wounded|injured))\b/i.test(question);
+    if (asksShooting && wantsNonfatal) {
+      const refusal = "This database does not track nonfatal shootings. The SHR (Supplementary Homicide Reports) only covers fatal outcomes - murders and manslaughters. For nonfatal shooting data, sources like the Gun Violence Archive or CDC WISQARS may be more appropriate. I can show you fatal shootings (firearm homicides) if that would be helpful.";
+      logQuery(question, null, 0, "nonfatal_shooting_refusal", Date.now() - start, refusal, "shr", [], "haiku-4.5", sessionId);
+      return jsonResp({
+        success: true, question, sql: null, explanation: refusal,
+        title: "", columns: [], rows: [], rowCount: 0, truncated: false,
+        chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - start,
+      });
+    }
+
+    // Deterministic fatal shooting handling — bypass Claude entirely
+    // Route bare/ambiguous shooting queries directly to firearm homicide data
+    if (asksShooting && !wantsNonfatal) {
+      const cityMatch = question.match(/\bin\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\b/);
+      const stateMatch = question.match(/\b([A-Z]{2})\b/) || question.match(/\bin\s+(\w+)\b/i);
+      const yearMatch = question.match(/\bsince\s+(\d{4})\b/i) || question.match(/\bfrom\s+(\d{4})\b/i);
+      const startYear = yearMatch ? parseInt(yearMatch[1]) : 2000;
+
+      let whereClauses = ["i.homicide_type = 'Murder'", "i.weapon_group = 'Firearm'", `i.year >= ${startYear}`];
+      let titlePlace = "Nationally";
+
+      if (cityMatch) {
+        const city = cityMatch[1];
+        titlePlace = city;
+        whereClauses.push(`i.agency = '${city.replace(/'/g, "''")}'`);
+        whereClauses.push("(i.agency_type = 'City' OR i.agency_type IS NULL OR i.agency_type = '')");
+        // Add state if detected
+        const stateAbbr = question.match(/\b([A-Z]{2})\b/);
+        if (stateAbbr && stateAbbr[1] !== city.toUpperCase().slice(0, 2)) {
+          whereClauses.push(`i.state = '${stateAbbr[1]}'`);
+        }
+      } else if (stateMatch && /^[A-Z]{2}$/.test(stateMatch[1])) {
+        titlePlace = stateMatch[1];
+        whereClauses.push(`i.state = '${stateMatch[1]}'`);
+      }
+
+      const sql = `SELECT i.year, COUNT(*) AS fatal_shootings FROM incidents i JOIN victims v ON v.incident_id = i.id WHERE ${whereClauses.join(" AND ")} GROUP BY i.year ORDER BY i.year LIMIT 1000`;
+      const title = `Fatal Shootings (Firearm Homicides), ${titlePlace}, ${startYear}-Present`;
+      const explanation = `Fatal shootings (firearm homicides) by year${titlePlace !== "Nationally" ? ` in ${titlePlace}` : ""} since ${startYear}. This shows only homicides where the weapon was a firearm - nonfatal shootings are not tracked in this database.`;
+
+      // Execute the deterministic SQL
+      const db = getShrDb();
+      if (!db) {
+        return jsonResp({ success: false, error: "SHR database not available." } as QueryError, 500);
+      }
+      try {
+        const rows = db.prepare(sql).all() as Record<string, unknown>[];
+        const columns = rows.length > 0 ? Object.keys(rows[0]) : ["year", "fatal_shootings"];
+
+        // Add caveats
+        const caveats = [explanation];
+        caveats.push("Not all agencies and states report SHR data every year, so these counts underrepresent total fatal shootings.");
+        const totalExplanation = caveats.join("\n\n");
+
+        logQuery(question, sql, rows.length, null, Date.now() - start, totalExplanation, "shr", ["deterministic-shooting"], "deterministic", sessionId);
+        return jsonResp({
+          success: true, question, sql, explanation: totalExplanation,
+          title, columns, rows, rowCount: rows.length, truncated: false,
+          chartConfig: { type: "line", xAxis: "year", yAxis: ["fatal_shootings"], yAxisLabel: "Fatal Shootings", title: "" },
+          chartMeta: { source: "FBI SHR", agencyCount: 0, population: null },
+          executionTimeMs: Date.now() - start,
+        });
+      } catch (dbErr) {
+        const msg = dbErr instanceof Error ? dbErr.message : String(dbErr);
+        logQuery(question, sql, 0, `DB: ${msg}`, Date.now() - start, null, "shr", ["deterministic-shooting"], "deterministic", sessionId);
+        return jsonResp({ success: false, error: `Database error: ${msg}` } as QueryError, 500);
+      }
+    }
+
     // Check response cache (only for standalone questions, not follow-ups)
     const cached = history.length === 0 ? getCached(question, "shr") : null;
 
@@ -91,12 +163,26 @@ export async function POST(req: NextRequest) {
     let text = "";
 
     const client = new Anthropic();
+    // Rewrite shooting queries to use firearm homicide language the model understands
+    let queryForModel = question;
+    if (asksShooting && !wantsNonfatal) {
+      queryForModel = question
+        .replace(/\bshootings?\b/gi, "firearm homicides")
+        .replace(/\bshot and killed\b/gi, "killed with a firearm")
+        .replace(/\bgun violence\b/gi, "firearm homicides")
+        .replace(/\bgunshot\b/gi, "firearm homicide");
+      if (queryForModel === question) {
+        // Fallback: append instruction
+        queryForModel = question + " [Interpret as firearm homicides: filter weapon_group = 'Firearm'. Title must say 'Fatal Shootings' or 'Firearm Homicides'.]";
+      }
+      console.log(`[shr][shooting-rewrite] Original: "${question}" → Rewritten: "${queryForModel}"`);
+    }
     const messages: Anthropic.MessageParam[] = [
       ...history.map((h: { role: string; content: string }) => ({
         role: h.role as "user" | "assistant",
         content: h.content,
       })),
-      { role: "user", content: question },
+      { role: "user", content: queryForModel },
     ];
 
     if (cached) {
@@ -128,7 +214,7 @@ export async function POST(req: NextRequest) {
       if (!claude.sql) {
         const refusalPatterns = /not (appear|be represented)|doesn't appear|not (in|included in) (this|the|our) (dataset|data|sample|library)|no data (for|available|found)|does not (yet )?(have|include|cover)|not available|not yet (include|available|have)|latest available data|isn't (in|included)|not found in/i;
         // Skip retry if the refusal is about SHR's scope (non-homicide data) — these are correct refusals
-        const scopeRefusal = /only (homicides?|murders?|manslaughter)|does(?:n't| not)\s+(?:include|contain|track|cover|have)\s+.*?\b(theft|robbery|assault|burglary|property|arrests?|drugs?|clearance|staffing|officers?|sworn|personnel|employment|auto theft|motor vehicle|violent crime|property crime|non-homicide|shootings?|rape)\b|homicides only|murder and manslaughter only/i;
+        const scopeRefusal = /only (homicides?|murders?|manslaughter)|does(?:n't| not)\s+(?:include|contain|track|cover|have)\s+.*?\b(theft|robbery|assault|burglary|property|arrests?|drugs?|clearance|staffing|officers?|sworn|personnel|employment|auto theft|motor vehicle|violent crime|property crime|non-homicide|rape)\b|homicides only|murder and manslaughter only/i;
         const isCorrectScopeRefusal = scopeRefusal.test(claude.explanation || "");
         if (refusalPatterns.test(claude.explanation || "") && !isCorrectScopeRefusal) {
           try {
@@ -299,7 +385,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const columns = Object.keys(rows[0]);
+    let columns = Object.keys(rows[0]);
 
     // Detect all-null data columns (query returned rows but no usable values)
     {
@@ -325,6 +411,48 @@ export async function POST(req: NextRequest) {
     }
 
     // Build chart config (match QueryResponse shape)
+    // Auto-pivot long-format category data for charting
+    // Detects (year, category_col, value_col) and pivots to (year, cat1, cat2, ...)
+    const CATEGORY_COLS = ["sex", "race", "weapon_group", "circumstance_group", "off_race", "off_sex", "relationship", "relationship_group", "ethnicity", "off_ethnicity", "weapon", "agency", "state", "state_name"];
+    const categorCol = columns.find(c => CATEGORY_COLS.includes(c));
+    const numericCol = columns.find(c => c !== "year" && c !== "month" && !CATEGORY_COLS.includes(c) && typeof rows[0]?.[c] === "number");
+    const hasYear = columns.includes("year");
+
+    if (categorCol && numericCol && hasYear && rows.length > 1) {
+      const categories = [...new Set(rows.map(r => String(r[categorCol] ?? "Unknown")))];
+      // Only pivot if 2-15 categories (not rankings with 20+ values)
+      if (categories.length >= 2 && categories.length <= 15) {
+        const hasMonth = columns.includes("month");
+        const keyFn = (r: Record<string, unknown>) => hasMonth ? `${r.year}_${r.month}` : `${r.year}`;
+        const grouped = new Map<string, Record<string, unknown>>();
+
+        for (const r of rows) {
+          const key = keyFn(r);
+          if (!grouped.has(key)) {
+            const base: Record<string, unknown> = { year: r.year };
+            if (hasMonth) base.month = r.month;
+            grouped.set(key, base);
+          }
+          const catName = String(r[categorCol] ?? "Unknown").replace(/[^a-zA-Z0-9 ]/g, "").replace(/\s+/g, "_");
+          grouped.get(key)![catName] = r[numericCol];
+        }
+
+        const pivotedRows = [...grouped.values()];
+        if (pivotedRows.length > 0) {
+          rows = pivotedRows as Record<string, unknown>[];
+          columns = Object.keys(pivotedRows[0]);
+          // Update chart config
+          const yCols = columns.filter(c => c !== "year" && c !== "month");
+          claude.yAxis = yCols;
+          claude.xAxis = "year";
+          if (!claude.chartType || claude.chartType === "none") {
+            claude.chartType = yCols.length <= 3 ? "line" : "stacked_bar";
+          }
+          console.log(`[shr] Auto-pivoted: ${categories.length} categories → ${pivotedRows.length} rows`);
+        }
+      }
+    }
+
     const chartConfig = {
       type: claude.chartType || "none",
       xAxis: claude.xAxis || columns[0],
@@ -386,6 +514,17 @@ export async function POST(req: NextRequest) {
     // Single-row trend warning
     const singleRowWarning = checkSingleRowTrend(question, rows.length);
     if (singleRowWarning) disclaimers.push(singleRowWarning);
+
+    // Shooting caveat — if user asked about shootings, label as fatal and note nonfatal exclusion
+    if (asksShooting && !wantsNonfatal) {
+      const hasFirearmFilter = /\bweapon_group\s*=\s*'Firearm'|weapon\s+LIKE\s+'%Firearm%'|weapon_group.*Firearm/i.test(sql);
+      if (hasFirearmFilter) {
+        disclaimers.push("These results show fatal shootings only (homicides where the weapon was a firearm). Nonfatal shootings are not included in this database.");
+      } else {
+        // Model may not have added firearm filter for bare "shootings" — add caveat anyway
+        disclaimers.push("Interpreting 'shootings' as firearm homicides. This data covers fatal outcomes only - nonfatal shootings are not tracked in the SHR database.");
+      }
+    }
 
     // Partial year warning
     const currentYear = new Date().getFullYear();
