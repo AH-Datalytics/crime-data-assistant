@@ -190,16 +190,9 @@ if [[ "$HC_FLAG" == "false" ]]; then
   log "  Preflight: /api/hc-query → 404 (correct)"
 
 elif [[ "$HC_FLAG" == "true" ]]; then
-  # Enabled: Hate Crime text must appear on /test, API must not 404
-  if ! echo "$TEST_HTML" | grep -iqE 'Hate Crime'; then
-    kill "$PREFLIGHT_PID" 2>/dev/null || true
-    wait "$PREFLIGHT_PID" 2>/dev/null || true
-    log "FATAL: /test missing 'Hate Crime' text but ENABLE_HATE_CRIME=true"
-    cleanup_on_failure
-  fi
-  log "  Preflight: /test contains Hate Crime text (flag=true)"
-
-  # API may return 403 (page-token required) or 400 etc — only 404 is wrong
+  # Enabled: API must not be disabled. The landing guide may intentionally omit
+  # Hate Crime even while the source remains available through routing/picker.
+  # API may return 403 (page-token required) or 400 etc — only 404 is wrong.
   if [[ "$HC_API_STATUS" == "404" ]]; then
     kill "$PREFLIGHT_PID" 2>/dev/null || true
     wait "$PREFLIGHT_PID" 2>/dev/null || true
