@@ -136,6 +136,7 @@ export default function GettingStarted({ onSelectTab, onAsk, renderInputBar }: G
   const askMode = !!onAsk;
   const enabled = enabledSourceIds();
   const showInGuide = (id: SourceId) => id !== "hate_crime" && enabled.has(id);
+  const showHateCrimeExamples = enabled.has("hate_crime");
   const guideSourceCount = TAB_CARDS.filter((card) => showInGuide(card.id)).length;
   const sourceCountWord = guideSourceCount === 4 ? "four" : String(guideSourceCount);
 
@@ -172,6 +173,7 @@ export default function GettingStarted({ onSelectTab, onAsk, renderInputBar }: G
             {([
               { label: "See Trends", color: "#475EC7", bg: "#eef1fb", border: "#c5cdf0", queries: [
                 "Can I see murders rolling over 12 months nationally, 2018 to present?",
+                ...(showHateCrimeExamples ? ["How have reported hate crimes trended since 2015?"] : []),
                 "How has police staffing changed in Chicago since 1980?",
               ]},
               { label: "Measure Outcomes", color: "#B8860B", bg: "#fdf8e8", border: "#e8d48b", queries: [
