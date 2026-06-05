@@ -21,7 +21,7 @@ PM2_APP="nibrs"
 KEEP_RELEASES=5
 HEALTH_URL="http://localhost:3000"
 HEALTH_TIMEOUT=15                   # seconds to wait for health check
-BRANCH="${1:-main}"
+BRANCH="${1:-dev}"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 RELEASE_DIR="$RELEASES_DIR/$TIMESTAMP"
 
