@@ -9,23 +9,60 @@ AI chatbot for exploring U.S. crime data across four tabs: Current Trends (RTCI)
 - Anthropic API: Haiku 4.5 for all four tabs (benchmarked against Sonnet — same quality, 2.4x faster, 4.1x cheaper)
 - Auth: HMAC-SHA256 cookie-based (middleware.ts)
 
-## Build & Deploy
-```bash
-npm run build          # local build check
-# Deploy to VPS:
-scp <files> root@178.156.243.51:/opt/nibrs/app/
-ssh root@178.156.243.51 "cd /opt/nibrs/app && npm run build && pm2 restart nibrs"
+## Build & Deploy (Zero-Downtime)
+
+The app uses symlink-based atomic deploys. Builds happen in an isolated release
+directory. If the build fails, the live app is never touched.
+
 ```
+/opt/nibrs/
+├── current -> releases/20260604_143000   # symlink, atomically swapped
+├── releases/
+│   ├── 20260604_143000/                  # immutable app release
+│   └── 20260603_120000/                  # previous (kept for rollback)
+├── shared/                               # persistent across releases
+│   ├── .env
+│   ├── .env.local
+│   ├── crime_data.db
+│   └── query_log.db
+├── repo/                                 # git clone (build source)
+├── nibrs.db                              # too large to move (118 GB)
+└── shr.db
+```
+
+**Normal deploy:**
+```bash
+ssh root@178.156.243.51
+cd /opt/nibrs/repo
+bash scripts/deploy-zero-downtime.sh          # deploys HEAD of main
+bash scripts/deploy-zero-downtime.sh <branch> # deploys a specific branch
+```
+
+**Rollback:**
+```bash
+bash scripts/rollback.sh              # revert to previous release
+bash scripts/rollback.sh --list       # show available releases
+bash scripts/rollback.sh 20260603_120000  # revert to specific release
+```
+
+**Why not build in the live directory:** If `npm run build` fails mid-way, the
+`.next` directory is left in a broken state and the running app goes down.
+Isolated builds guarantee the live app is unaffected by build failures.
+
+**Do not run heavy SQLite summary builders on the web VPS.** Rebuilding summary
+tables (100M+ row aggregations) consumes all CPU/RAM and will crash the app.
+Run those on a separate machine and SCP the updated DB files to `/opt/nibrs/shared/`.
 
 ## Runtime Paths
 - Set explicit env vars in production. Do not rely on fallback path detection.
-- Recommended:
-  - `RTCI_DB_PATH=/opt/nibrs/app/crime_data.db`
+- Production env vars (set in `ecosystem.config.js`):
+  - `RTCI_DB_PATH=/opt/nibrs/shared/crime_data.db`
   - `NIBRS_DB_PATH=/opt/nibrs/nibrs.db`
   - `SHR_DB_PATH=/opt/nibrs/shr.db`
-  - `QUERY_LOG_DB_PATH=/opt/nibrs/app/query_log.db`
-  - `APP_DIR=/opt/nibrs/app`
-- Avoid keeping duplicate DB copies in both `/opt/nibrs` and `/opt/nibrs/app` unless they are intentionally different and the service env vars reflect that.
+  - `QUERY_LOG_DB_PATH=/opt/nibrs/shared/query_log.db`
+  - `APP_DIR=/opt/nibrs/current`
+- `crime_data.db` and `query_log.db` live in `/opt/nibrs/shared/` (symlinked into each release).
+- `nibrs.db` and `shr.db` stay at `/opt/nibrs/` (too large to move; referenced by absolute path).
 
 ## Architecture
 - `lib/claude.ts` — System prompt for Current Trends + Historical tabs

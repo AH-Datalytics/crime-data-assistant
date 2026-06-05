@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import type { QueryResponse, StreamEvent } from "@/lib/types";
 import { autoRoute, isFollowUp, parseIntent, recommendTabs, TAB_DISPLAY_NAMES, TAB_COLORS, type TabRecommendation } from "@/lib/tab-suggest";
+import { pickerOptions, type SourceId as RegistrySourceId, type PickerSourceId } from "@/lib/sources";
 import DataTable from "./DataTable";
 import ChartPanel from "./ChartPanel";
 import ExportButtons from "./ExportButtons";
@@ -55,20 +56,13 @@ interface Exchange {
   response: QueryResponse | null;
   explanation: string;
   error?: string;
-  source: "current" | "historical" | "nibrs" | "shr" | "hate_crime";
+  source: RegistrySourceId;
   routingReason?: string;
 }
 
-type SourceId = "auto" | "current" | "historical" | "nibrs" | "shr" | "hate_crime";
+type SourceId = PickerSourceId;
 
-const SOURCE_OPTIONS: { id: SourceId; label: string; color: string }[] = [
-  { id: "auto", label: "Auto source", color: "#475EC7" },
-  { id: "current", label: "Current Trends", color: "#475EC7" },
-  { id: "historical", label: "Historical Library", color: "#8B5E3C" },
-  { id: "nibrs", label: "NIBRS Explorer", color: "#2d8659" },
-  { id: "shr", label: "SHR (Homicide)", color: "#B8860B" },
-  { id: "hate_crime", label: "Hate Crime", color: "#4A4A4A" },
-];
+const SOURCE_OPTIONS = pickerOptions();
 
 
 async function readSSEStream(response: Response, onEvent: (event: StreamEvent) => void) {

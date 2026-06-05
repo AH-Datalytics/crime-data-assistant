@@ -12,6 +12,7 @@ import { getHateCrimeSystemPrompt } from "@/lib/hc-claude";
 import { getCached, setCache } from "@/lib/response-cache";
 import { extractJson } from "@/lib/extract-json";
 import { detectAllNullData } from "@/lib/all-null-detection";
+import { isSourceEnabled } from "@/lib/sources";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function jsonResp(data: Record<string, any> | QueryError, status = 200) {
@@ -77,6 +78,13 @@ function hateCrimeCaveats(sql: string, explanation: string): string {
 }
 
 export async function POST(req: NextRequest) {
+  if (!isSourceEnabled("hate_crime")) {
+    return NextResponse.json(
+      { success: false, error: "Hate Crime source is not available." },
+      { status: 404 },
+    );
+  }
+
   const ip =
     req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
     req.headers.get("x-real-ip") ||

@@ -4,9 +4,14 @@
  * Parses questions into structured intent, then matches against
  * each dataset's declared capabilities to route to the best source.
  * No AI calls — pure regex + scoring logic.
+ *
+ * Disabled sources (via lib/sources.ts feature flags) are excluded
+ * from scoring, recommendations, and auto-routing.
  */
 
-export type TabId = "current" | "historical" | "nibrs" | "shr" | "hate_crime";
+import { type SourceId, isSourceEnabled, enabledSourceIds } from "./sources";
+
+export type TabId = SourceId;
 
 export interface TabRecommendation {
   tab: TabId;
@@ -863,8 +868,10 @@ export function recommendTabs(question: string): TabRecommendation[] {
 
   const intent = parseIntent(q);
 
-  // Score all datasets
+  // Score only enabled datasets
+  const enabled = enabledSourceIds();
   const scores = (Object.values(DATASET_REGISTRY) as DatasetCapabilities[])
+    .filter(ds => enabled.has(ds.id))
     .map(ds => scoreDataset(ds, intent));
 
   // Separate included from excluded

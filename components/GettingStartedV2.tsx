@@ -1,8 +1,9 @@
 "use client";
 
 import { ReactNode } from "react";
+import { enabledSourceIds, type SourceId } from "@/lib/sources";
 
-type TabId = "current" | "historical" | "nibrs" | "shr" | "hate_crime";
+type TabId = SourceId;
 
 interface GettingStartedProps {
   onSelectTab: (tab: TabId) => void;
@@ -94,7 +95,7 @@ const SAMPLE_QUERIES: Record<TabId, { q: string; why: string }[]> = {
   current: [
     { q: "How have murders trended nationally since 2020?", why: "Uses the national sample to show a rolling monthly trend." },
     { q: "Compare robbery in Chicago and Houston, 2022 to 2024", why: "Side-by-side city comparison with a chart." },
-    { q: "Which cities had the highest murder rate per 100K in 2024?", why: "Ranking query using population-adjusted rates." },
+    { q: "Which big cities in Texas had the highest rate of carjackings in 2025?", why: "Ranking query using population-adjusted rates." },
     { q: "Show me aggravated assault trends in Phoenix over the last 3 years", why: "Single-city monthly time series." },
     { q: "What is the national clearance rate for motor vehicle theft by year?", why: "Uses clearance data to show how often cases are solved." },
   ],
@@ -121,7 +122,7 @@ const SAMPLE_QUERIES: Record<TabId, { q: string; why: string }[]> = {
     { q: "Victim age and sex breakdown for murders in California in 2022", why: "Demographic breakdown using victim table." },
   ],
   hate_crime: [
-    { q: "How have hate crimes trended nationally since 2000?", why: "National trend using distinct incident counts." },
+    { q: "How have reported hate crimes trended since 2015?", why: "National trend using distinct incident counts." },
     { q: "Show anti-Jewish hate crime incidents by year", why: "Filters by bias_desc for a specific bias category." },
     { q: "Which states reported the most hate crimes in 2023?", why: "State-level ranking using summary tables." },
     { q: "Break down hate crimes by bias category in 2023", why: "Uses the bias_category grouping for an overview." },
@@ -130,6 +131,7 @@ const SAMPLE_QUERIES: Record<TabId, { q: string; why: string }[]> = {
 };
 
 export default function GettingStarted({ onSelectTab, onAsk, renderInputBar }: GettingStartedProps) {
+  const enabled = enabledSourceIds();
   return (
     <div className="flex-1 overflow-y-auto" style={{ background: "linear-gradient(180deg, #ffffff 0%, var(--surface) 300px)" }}>
       <div className="max-w-5xl mx-auto px-3 sm:px-4 md:px-8 pt-6 sm:pt-10 md:pt-16 pb-8 sm:pb-12">
@@ -142,7 +144,7 @@ export default function GettingStarted({ onSelectTab, onAsk, renderInputBar }: G
             Crime Data Assistant
           </h1>
           <p className="text-[13px] sm:text-[15px] text-[var(--muted)] max-w-2xl mx-auto leading-relaxed">
-            Ask questions about U.S. crime data across five sources spanning nearly a century. Results are auto-routed to the best database.
+            Ask questions about U.S. crime data across {enabled.size} sources spanning nearly a century. Results are auto-routed to the best database.
           </p>
         </div>
 
@@ -155,7 +157,7 @@ export default function GettingStarted({ onSelectTab, onAsk, renderInputBar }: G
 
         {/* Tab cards — single column on mobile, 2 on sm, 5 on lg */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5 sm:gap-3 mb-8 sm:mb-10">
-          {TAB_CARDS.map((card) => (
+          {TAB_CARDS.filter(c => enabled.has(c.id)).map((card) => (
             <button
               key={card.id}
               onClick={() => onSelectTab(card.id)}
@@ -223,8 +225,10 @@ export default function GettingStarted({ onSelectTab, onAsk, renderInputBar }: G
                 { q: "What was the murder rate in NYC from 1960 to 2024?", color: "#8B5E3C" },
                 { q: "What percentage of murder victims in Texas were female in 2023?", color: "#2d8659" },
                 { q: "What share of homicides involved a firearm since 1990?", color: "#B8860B" },
-                { q: "Show anti-Jewish hate crime incidents by year", color: "#4A4A4A" },
-                { q: "Which states reported the most hate crimes in 2023?", color: "#4A4A4A" },
+                ...(enabled.has("hate_crime") ? [
+                  { q: "Show anti-Jewish hate crime incidents by year", color: "#4A4A4A" },
+                  { q: "Which states reported the most hate crimes in 2023?", color: "#4A4A4A" },
+                ] : []),
               ].map((ex, i) => (
                 <button
                   key={i}
@@ -286,41 +290,52 @@ export default function GettingStarted({ onSelectTab, onAsk, renderInputBar }: G
 
           {/* Five data sources comparison */}
           <section className="bg-white rounded-xl sm:rounded-2xl border border-[var(--border)] p-4 sm:p-6 md:p-8 shadow-sm">
-            <h2 className="text-lg sm:text-xl font-bold mb-2 text-[var(--foreground)]">The Five Data Sources</h2>
+            <h2 className="text-lg sm:text-xl font-bold mb-2 text-[var(--foreground)]">The Data Sources</h2>
             <p className="text-sm text-[var(--muted)] mb-6">
               Each database covers different time periods, detail levels, and collection methods. Your question is automatically routed to the best source.
             </p>
-            <div className="overflow-x-auto -mx-2">
-              <table className="w-full text-[13px] border-collapse min-w-[700px]">
-                <thead>
-                  <tr>
-                    <th className="text-left py-2.5 px-3 font-semibold text-[var(--muted)] text-[11px] uppercase tracking-wider border-b-2 border-[var(--border)]"></th>
-                    <th className="text-left py-2.5 px-3 font-bold text-[11px] uppercase tracking-wider border-b-2" style={{ color: "#475EC7", borderColor: "#475EC7" }}>Current Trends</th>
-                    <th className="text-left py-2.5 px-3 font-bold text-[11px] uppercase tracking-wider border-b-2" style={{ color: "#8B5E3C", borderColor: "#8B5E3C" }}>Historical</th>
-                    <th className="text-left py-2.5 px-3 font-bold text-[11px] uppercase tracking-wider border-b-2" style={{ color: "#2d8659", borderColor: "#2d8659" }}>NIBRS</th>
-                    <th className="text-left py-2.5 px-3 font-bold text-[11px] uppercase tracking-wider border-b-2" style={{ color: "#B8860B", borderColor: "#B8860B" }}>Homicide</th>
-                    <th className="text-left py-2.5 px-3 font-bold text-[11px] uppercase tracking-wider border-b-2" style={{ color: "#4A4A4A", borderColor: "#4A4A4A" }}>Hate Crime</th>
-                  </tr>
-                </thead>
-                <tbody className="text-[var(--muted)]">
-                  {[
-                    ["Source", "AH Datalytics Agency Data", "FBI UCR", "FBI NIBRS Master Files", "FBI SHR", "FBI Hate Crime Statistics"],
-                    ["Time Range", "2017\u2013present", "1930\u20132024", "1991\u2013present", "1976\u2013present", "1991\u2013present"],
-                    ["Granularity", "Monthly", "Annual", "Incident-level", "Incident-level", "Incident-level"],
-                    ["Coverage", "Hundreds of agencies", "10,000+ agencies", "Varies by year", "Varies by year", "~15,000 agencies (voluntary)"],
-                    ["Crime Types", "Part I UCR (7 offenses)", "Part I UCR + staffing", "52+ NIBRS offenses", "Homicides only", "Bias-motivated crimes"],
-                    ["Best For", "Recent trends", "Long-term trends", "Deep analysis", "Homicide analysis", "Hate crime / bias trends"],
-                  ].map(([label, ...cells], i) => (
-                    <tr key={i} className="border-b border-[var(--border)]">
-                      <td className="py-2.5 px-3 font-semibold text-[var(--foreground)] whitespace-nowrap">{label}</td>
-                      {cells.map((cell, j) => (
-                        <td key={j} className="py-2.5 px-3">{cell}</td>
+            {(() => {
+              const colDefs: { label: string; color: string; id: TabId }[] = [
+                { label: "Current Trends", color: "#475EC7", id: "current" },
+                { label: "Historical", color: "#8B5E3C", id: "historical" },
+                { label: "NIBRS", color: "#2d8659", id: "nibrs" },
+                { label: "Homicide", color: "#B8860B", id: "shr" },
+                { label: "Hate Crime", color: "#4A4A4A", id: "hate_crime" },
+              ];
+              const activeCols = colDefs.filter(c => enabled.has(c.id));
+              const rowDataFull: Record<TabId, string[]> = {
+                current:    ["Agency Data",                    "2017\u2013present", "Monthly",        "Hundreds of agencies",          "Part I UCR (7 offenses)", "Recent trends"],
+                historical: ["FBI Uniform Crime Report",       "1930\u20132024",    "Annual",         "10,000+ agencies",              "Part I UCR + staffing",   "Long-term trends"],
+                nibrs:      ["FBI NIBRS Master Files",         "1991\u2013present", "Incident-level", "Varies by year",                "52+ NIBRS offenses",      "Deep analysis"],
+                shr:        ["FBI Supplementary Homicide Report","1976\u2013present","Incident-level", "Varies by year",                "Homicides only",          "Homicide analysis"],
+                hate_crime: ["FBI Hate Crime Statistics",      "1991\u2013present", "Incident-level", "~15,000 agencies (voluntary)",  "Bias-motivated crimes",   "Hate crime / bias trends"],
+              };
+              const rowLabels = ["Source", "Time Range", "Granularity", "Coverage", "Crime Types", "Best For"];
+              return (
+              <div className="overflow-x-auto -mx-2">
+                <table className="w-full text-[13px] border-collapse min-w-[700px]">
+                  <thead>
+                    <tr>
+                      <th className="text-left py-2.5 px-3 font-semibold text-[var(--muted)] text-[11px] uppercase tracking-wider border-b-2 border-[var(--border)]"></th>
+                      {activeCols.map(c => (
+                        <th key={c.id} className="text-left py-2.5 px-3 font-bold text-[11px] uppercase tracking-wider border-b-2" style={{ color: c.color, borderColor: c.color }}>{c.label}</th>
                       ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="text-[var(--muted)]">
+                    {rowLabels.map((label, ri) => (
+                      <tr key={ri} className="border-b border-[var(--border)]">
+                        <td className="py-2.5 px-3 font-semibold text-[var(--foreground)] whitespace-nowrap">{label}</td>
+                        {activeCols.map(c => (
+                          <td key={c.id} className="py-2.5 px-3">{rowDataFull[c.id][ri]}</td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              );
+            })()}
           </section>
 
           {/* Detailed source explanations */}
@@ -375,8 +390,8 @@ export default function GettingStarted({ onSelectTab, onAsk, renderInputBar }: G
               </div>
             </div>
 
-            {/* Hate Crime */}
-            <div>
+            {/* Hate Crime — only if enabled */}
+            {enabled.has("hate_crime") && <div>
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-1 h-5 rounded-full" style={{ backgroundColor: "#4A4A4A" }} />
                 <h3 className="text-base font-bold text-[var(--foreground)]">Hate Crime (FBI Hate Crime Statistics)</h3>
@@ -385,7 +400,7 @@ export default function GettingStarted({ onSelectTab, onAsk, renderInputBar }: G
                 <p>FBI hate crime statistics from 1991 to present. Each incident includes the bias motivation (race, religion, sexual orientation, disability, gender, gender identity), offense type, location, offender demographics, and victim counts.</p>
                 <p><strong className="text-[var(--foreground)]">Key caveats:</strong> Reporting is <strong>voluntary</strong> — zero does not mean zero hate crimes. The BJS estimates actual hate crime victimization is 2\u20134x higher than reported. The number of participating agencies has grown from ~2,700 in 1991 to 15,000+ today, so increases partly reflect expanded reporting. New bias categories (gender identity in 2013, Arab/Hindu/Sikh in 2015) create breaks in trend data.</p>
               </div>
-            </div>
+            </div>}
           </section>
 
           {/* Sample queries */}
@@ -396,7 +411,7 @@ export default function GettingStarted({ onSelectTab, onAsk, renderInputBar }: G
             </p>
 
             <div className="space-y-5">
-              {(["current", "historical", "nibrs", "shr", "hate_crime"] as TabId[]).map((tabId) => {
+              {(["current", "historical", "nibrs", "shr", "hate_crime"] as TabId[]).filter(id => enabled.has(id)).map((tabId) => {
                 const card = TAB_CARDS.find((c) => c.id === tabId)!;
                 return (
                   <div key={tabId}>
