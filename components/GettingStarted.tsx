@@ -176,7 +176,7 @@ export default function GettingStarted({ onSelectTab, onAsk, renderInputBar }: G
               ]},
               { label: "Measure Outcomes", color: "#B8860B", bg: "#fdf8e8", border: "#e8d48b", queries: [
                 "National murder clearance rate since 1960",
-                "What percentage of robberies were cleared by arrest vs exceptional means between 2022 and 2025?",
+                "What percent of robberies were cleared by arrest vs exception from 2022 to 2025?",
                 "What is the auto theft clearance rate in Omaha by year?",
               ]},
               { label: "Dig into Details", color: "#2d8659", bg: "#ecf5f0", border: "#b8dcc8", queries: [
