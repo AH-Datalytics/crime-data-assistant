@@ -78,7 +78,7 @@ interface Exchange {
   error?: string;
 }
 
-type TabId = "current" | "historical" | "nibrs" | "shr" | "explainer";
+type TabId = "current" | "historical" | "nibrs" | "shr" | "hate_crime" | "explainer";
 type ActiveTab = TabId | null;
 
 const TABS: { id: TabId; label: string; shortLabel: string; color: string }[] = [

@@ -9,7 +9,7 @@ import ExplainerContent from "./ExplainerContent";
 import GettingStarted from "./GettingStarted";
 import Tracker from "./Tracker";
 
-type TabId = "current" | "historical" | "nibrs" | "shr" | "explainer";
+type TabId = "current" | "historical" | "nibrs" | "shr" | "hate_crime" | "explainer";
 
 const TABS: { id: TabId; label: string; shortLabel: string; color: string }[] = [
   { id: "current", label: "Current Trends", shortLabel: "Current", color: "#475EC7" },

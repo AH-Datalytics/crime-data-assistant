@@ -170,20 +170,14 @@ fi
 # ── Step 8: Update crontab ────────────────────────────────────────────
 log "Step 8: Updating crontab..."
 
-# Dump current crontab, strip old nibrs/app entries, add new ones
+# Dump current crontab and rewrite old app paths to the new symlink.
 CRON_BEFORE=$(crontab -l 2>/dev/null || true)
 
-# Remove any lines referencing /opt/nibrs/app (old paths)
-CRON_CLEANED=$(echo "$CRON_BEFORE" | grep -v '/opt/nibrs/app' || true)
-
-# Remove any existing daily-query-analysis or update-hate-crime lines
-# (in case this script runs twice)
-CRON_CLEANED=$(echo "$CRON_CLEANED" | grep -v 'daily-query-analysis' | grep -v 'update-hate-crime' || true)
-
-# Append new entries
-CRON_NEW="$CRON_CLEANED
-0 12 * * * cd /opt/nibrs/current && node scripts/daily-query-analysis.js
-0 17 15 * * bash /opt/nibrs/current/scripts/update-hate-crime.sh >> /var/log/hate-crime-update.log 2>&1"
+# Preserve all existing jobs, including NIBRS coverage and SHR updates.
+# Only switch app-relative paths to the release symlink and avoid hard restarts.
+CRON_NEW=$(echo "$CRON_BEFORE" \
+  | sed 's#/opt/nibrs/app#/opt/nibrs/current#g' \
+  | sed 's#pm2 restart nibrs#pm2 reload nibrs --update-env#g')
 
 # Remove blank lines and install
 echo "$CRON_NEW" | sed '/^$/d' | crontab -

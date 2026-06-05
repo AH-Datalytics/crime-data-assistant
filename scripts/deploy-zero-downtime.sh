@@ -30,6 +30,7 @@ BRANCH="${1:-dev}"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 RELEASE_DIR="$RELEASES_DIR/$TIMESTAMP"
 BOOTSTRAP="${BOOTSTRAP:-0}"
+SKIP_GIT="${SKIP_GIT:-0}"
 
 # ── Helpers ────────────────────────────────────────────────────────────
 log()  { echo "[deploy] $(date +%H:%M:%S) $*"; }
@@ -61,11 +62,15 @@ for db in crime_data.db query_log.db; do
 done
 
 # ── Step 1: Update repo and create release directory ───────────────────
-log "Fetching latest from origin..."
 cd "$REPO_DIR"
-git fetch origin
-git checkout "$BRANCH"
-git reset --hard "origin/$BRANCH"
+if [[ "$SKIP_GIT" == "1" ]]; then
+  log "SKIP_GIT=1 — using existing repo working tree without fetch/reset"
+else
+  log "Fetching latest from origin..."
+  git fetch origin
+  git checkout "$BRANCH"
+  git reset --hard "origin/$BRANCH"
+fi
 
 log "Creating release directory: $RELEASE_DIR"
 mkdir -p "$RELEASE_DIR"
