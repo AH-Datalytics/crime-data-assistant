@@ -4,8 +4,13 @@
 # If the build fails the live app is never touched.
 #
 # Usage:
-#   bash scripts/deploy-zero-downtime.sh          # deploy from current git HEAD
+#   bash scripts/deploy-zero-downtime.sh          # deploy HEAD of dev
 #   bash scripts/deploy-zero-downtime.sh <branch>  # deploy a specific branch/tag
+#
+# Bootstrap mode (first migration only — PM2 not yet registered):
+#   BOOTSTRAP=1 bash scripts/deploy-zero-downtime.sh dev
+#   Builds and preflight-tests the release, switches the symlink,
+#   but skips pm2 reload and post-deploy health checks.
 #
 # Run this ON THE VPS (ssh root@178.156.243.51).
 
@@ -16,7 +21,7 @@ BASE_DIR="/opt/nibrs"
 RELEASES_DIR="$BASE_DIR/releases"
 SHARED_DIR="$BASE_DIR/shared"
 CURRENT_LINK="$BASE_DIR/current"
-REPO_DIR="$BASE_DIR/repo"          # bare or full clone of the app repo
+REPO_DIR="$BASE_DIR/repo"          # full clone of the app repo
 PM2_APP="nibrs"
 KEEP_RELEASES=5
 HEALTH_URL="http://localhost:3000"
@@ -24,6 +29,7 @@ HEALTH_TIMEOUT=15                   # seconds to wait for health check
 BRANCH="${1:-dev}"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 RELEASE_DIR="$RELEASES_DIR/$TIMESTAMP"
+BOOTSTRAP="${BOOTSTRAP:-0}"
 
 # ── Helpers ────────────────────────────────────────────────────────────
 log()  { echo "[deploy] $(date +%H:%M:%S) $*"; }
@@ -37,6 +43,9 @@ cleanup_on_failure() {
 }
 
 # ── Pre-flight checks ─────────────────────────────────────────────────
+if [[ "$BOOTSTRAP" == "1" ]]; then
+  log "BOOTSTRAP mode — will skip pm2 reload and post-deploy health checks"
+fi
 log "Starting zero-downtime deploy  branch=$BRANCH  release=$TIMESTAMP"
 
 [[ -d "$SHARED_DIR" ]]  || die "$SHARED_DIR does not exist. Run the one-time migration first."
@@ -103,7 +112,6 @@ if [[ -n "$PREV_RELEASE" && -d "$PREV_RELEASE/node_modules" ]]; then
   if diff -q "$PREV_RELEASE/package-lock.json" "$RELEASE_DIR/package-lock.json" >/dev/null 2>&1; then
     log "package-lock.json unchanged — copying node_modules from previous release"
     cp -al "$PREV_RELEASE/node_modules" "$RELEASE_DIR/node_modules"
-    # Still run npm ci to verify integrity, but it will be near-instant
   fi
 fi
 
@@ -191,32 +199,37 @@ mv -Tf "${CURRENT_LINK}.tmp" "$CURRENT_LINK"
 
 log "Symlink updated."
 
-# ── Step 6: Reload PM2 ────────────────────────────────────────────────
-log "Reloading PM2 app '$PM2_APP'..."
-pm2 reload "$PM2_APP" --update-env
+# ── Step 6: Reload PM2 (skip in bootstrap mode) ──────────────────────
+if [[ "$BOOTSTRAP" == "1" ]]; then
+  log "BOOTSTRAP mode — skipping pm2 reload."
+  log "Next step: pm2 delete nibrs && cd /opt/nibrs/current && pm2 start ecosystem.config.js && pm2 save"
+else
+  log "Reloading PM2 app '$PM2_APP'..."
+  pm2 reload "$PM2_APP" --update-env
 
-# Give workers time to restart
-sleep 3
+  # Give workers time to restart
+  sleep 3
 
-# ── Step 7: Health check ──────────────────────────────────────────────
-log "Running health checks..."
-HEALTHY=true
+  # ── Step 7: Health check ──────────────────────────────────────────────
+  log "Running health checks..."
+  HEALTHY=true
 
-for path in "/" "/test"; do
-  STATUS=$(curl -s -o /dev/null -w '%{http_code}' --max-time "$HEALTH_TIMEOUT" "${HEALTH_URL}${path}" 2>/dev/null || echo "000")
-  if [[ "$STATUS" =~ ^(200|304)$ ]]; then
-    log "  ${path} → $STATUS ✓"
-  else
-    log "  ${path} → $STATUS ✗"
-    HEALTHY=false
+  for path in "/" "/test"; do
+    STATUS=$(curl -s -o /dev/null -w '%{http_code}' --max-time "$HEALTH_TIMEOUT" "${HEALTH_URL}${path}" 2>/dev/null || echo "000")
+    if [[ "$STATUS" =~ ^(200|304)$ ]]; then
+      log "  ${path} → $STATUS ✓"
+    else
+      log "  ${path} → $STATUS ✗"
+      HEALTHY=false
+    fi
+  done
+
+  if [[ "$HEALTHY" != "true" ]]; then
+    log ""
+    log "WARNING: Health check failed. The new release is live but may not be serving correctly."
+    log "To rollback:  bash scripts/rollback.sh"
+    log ""
   fi
-done
-
-if [[ "$HEALTHY" != "true" ]]; then
-  log ""
-  log "WARNING: Health check failed. The new release is live but may not be serving correctly."
-  log "To rollback:  bash scripts/rollback.sh"
-  log ""
 fi
 
 # ── Step 8: Cleanup old releases ──────────────────────────────────────
@@ -238,8 +251,18 @@ fi
 
 # ── Done ───────────────────────────────────────────────────────────────
 log ""
-log "Deploy complete."
-log "  Release:  $RELEASE_DIR"
-log "  Symlink:  $CURRENT_LINK -> $(readlink -f "$CURRENT_LINK")"
-log "  PM2:      $(pm2 show "$PM2_APP" 2>/dev/null | grep status | head -1 || echo 'check pm2 status')"
+if [[ "$BOOTSTRAP" == "1" ]]; then
+  log "Bootstrap deploy complete."
+  log "  Release:  $RELEASE_DIR"
+  log "  Symlink:  $CURRENT_LINK -> $(readlink -f "$CURRENT_LINK")"
+  log ""
+  log "PM2 was NOT reloaded. To finish migration:"
+  log "  pm2 delete nibrs"
+  log "  cd /opt/nibrs/current && pm2 start ecosystem.config.js && pm2 save"
+else
+  log "Deploy complete."
+  log "  Release:  $RELEASE_DIR"
+  log "  Symlink:  $CURRENT_LINK -> $(readlink -f "$CURRENT_LINK")"
+  log "  PM2:      $(pm2 show "$PM2_APP" 2>/dev/null | grep status | head -1 || echo 'check pm2 status')"
+fi
 log ""
