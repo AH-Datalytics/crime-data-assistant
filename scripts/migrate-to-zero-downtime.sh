@@ -130,19 +130,42 @@ else
   PASS=false
 fi
 
-if [[ "$PASS" == "true" ]]; then
-  log ""
-  log "Migration complete. All checks passed."
-  log ""
-  log "Next steps:"
-  log "  1. Update crontab: change /opt/nibrs/app → /opt/nibrs/current"
-  log "     Daily digest:  0 12 * * * cd /opt/nibrs/current && node scripts/daily-query-analysis.js"
-  log "     HC update:     0 17 15 * * bash /opt/nibrs/current/scripts/update-hate-crime.sh >> /var/log/hate-crime-update.log 2>&1"
-  log "  2. Leave /opt/nibrs/app alone for now. Archive it in a few days."
-  log "  3. Future deploys:  cd /opt/nibrs/repo && bash scripts/deploy-zero-downtime.sh"
-else
+if [[ "$PASS" != "true" ]]; then
   log ""
   log "WARNING: Some checks failed. Investigate before proceeding."
   log "The old app at /opt/nibrs/app is still intact if you need to revert manually."
+  log ""
+  exit 1
 fi
+
+# ── Step 8: Update crontab ────────────────────────────────────────────
+log "Step 8: Updating crontab..."
+
+# Dump current crontab, strip old nibrs/app entries, add new ones
+CRON_BEFORE=$(crontab -l 2>/dev/null || true)
+
+# Remove any lines referencing /opt/nibrs/app (old paths)
+CRON_CLEANED=$(echo "$CRON_BEFORE" | grep -v '/opt/nibrs/app' || true)
+
+# Remove any existing daily-query-analysis or update-hate-crime lines
+# (in case this script runs twice)
+CRON_CLEANED=$(echo "$CRON_CLEANED" | grep -v 'daily-query-analysis' | grep -v 'update-hate-crime' || true)
+
+# Append new entries
+CRON_NEW="$CRON_CLEANED
+0 12 * * * cd /opt/nibrs/current && node scripts/daily-query-analysis.js
+0 17 15 * * bash /opt/nibrs/current/scripts/update-hate-crime.sh >> /var/log/hate-crime-update.log 2>&1"
+
+# Remove blank lines and install
+echo "$CRON_NEW" | sed '/^$/d' | crontab -
+
+log "  Crontab updated. Current entries:"
+crontab -l 2>/dev/null | while IFS= read -r line; do log "    $line"; done
+
+# ── Done ──────────────────────────────────────────────────────────────
+log ""
+log "Migration complete. All checks passed."
+log ""
+log "  /opt/nibrs/app is untouched — archive it in a few days."
+log "  Future deploys:  cd /opt/nibrs/repo && bash scripts/deploy-zero-downtime.sh"
 log ""
