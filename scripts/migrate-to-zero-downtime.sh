@@ -136,8 +136,8 @@ if [[ "$PASS" == "true" ]]; then
   log ""
   log "Next steps:"
   log "  1. Update crontab: change /opt/nibrs/app → /opt/nibrs/current"
-  log "     Keep only:  0 12 * * * cd /opt/nibrs/current && node scripts/daily-query-analysis.js"
-  log "     Remove the hate crime update cron (source is disabled)."
+  log "     Daily digest:  0 12 * * * cd /opt/nibrs/current && node scripts/daily-query-analysis.js"
+  log "     HC update:     0 17 15 * * bash /opt/nibrs/current/scripts/update-hate-crime.sh >> /var/log/hate-crime-update.log 2>&1"
   log "  2. Leave /opt/nibrs/app alone for now. Archive it in a few days."
   log "  3. Future deploys:  cd /opt/nibrs/repo && bash scripts/deploy-zero-downtime.sh"
 else

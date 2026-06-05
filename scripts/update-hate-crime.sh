@@ -3,12 +3,12 @@
 # FBI CDE publishes annual hate crime master files (typically in fall).
 # This script checks for new data for the current year and rebuilds if found.
 #
-# Usage: bash /opt/nibrs/app/scripts/update-hate-crime.sh
-# Cron:  0 6 1 * * bash /opt/nibrs/app/scripts/update-hate-crime.sh >> /var/log/hate-crime-update.log 2>&1
+# Usage: bash /opt/nibrs/current/scripts/update-hate-crime.sh
+# Cron:  0 17 15 * * bash /opt/nibrs/current/scripts/update-hate-crime.sh >> /var/log/hate-crime-update.log 2>&1
 #
 set -e
 
-APP_DIR="/opt/nibrs/app"
+APP_DIR="/opt/nibrs/current"
 DB_PATH="/opt/nibrs/hate_crime.db"
 SCRIPT="$APP_DIR/scripts/import-hate-crime.py"
 CURRENT_YEAR=$(date +%Y)
