@@ -50,12 +50,26 @@ for db in query_log.db crime_data.db; do
   fi
 done
 
-# ── Step 3: Verify feature flag ────────────────────────────────────────
-log "Step 3: Checking feature flag..."
-if grep -q '^NEXT_PUBLIC_ENABLE_HATE_CRIME=false' "$SHARED_DIR/.env.local" 2>/dev/null; then
-  log "  NEXT_PUBLIC_ENABLE_HATE_CRIME=false confirmed"
-else
-  die "NEXT_PUBLIC_ENABLE_HATE_CRIME=false not found in $SHARED_DIR/.env.local. Add it before continuing."
+# ── Step 3: Verify feature flags ───────────────────────────────────────
+log "Step 3: Checking feature flags..."
+HC_FLAG=$(grep -oP '^NEXT_PUBLIC_ENABLE_HATE_CRIME=\K.*' "$SHARED_DIR/.env.local" 2>/dev/null || echo "")
+if [[ -z "$HC_FLAG" ]]; then
+  die "NEXT_PUBLIC_ENABLE_HATE_CRIME not found in $SHARED_DIR/.env.local. Set it to 'true' or 'false'."
+fi
+if [[ "$HC_FLAG" != "true" && "$HC_FLAG" != "false" ]]; then
+  die "NEXT_PUBLIC_ENABLE_HATE_CRIME='$HC_FLAG' — must be 'true' or 'false'."
+fi
+log "  NEXT_PUBLIC_ENABLE_HATE_CRIME=$HC_FLAG"
+
+if [[ "$HC_FLAG" == "true" ]]; then
+  if ! grep -q '^HATE_CRIME_DB_PATH=' "$SHARED_DIR/.env.local" 2>/dev/null; then
+    die "Hate Crime enabled but HATE_CRIME_DB_PATH not set in $SHARED_DIR/.env.local."
+  fi
+  HC_DB=$(grep -oP '^HATE_CRIME_DB_PATH=\K.*' "$SHARED_DIR/.env.local")
+  if [[ ! -f "$HC_DB" ]]; then
+    die "HATE_CRIME_DB_PATH=$HC_DB but file does not exist."
+  fi
+  log "  HATE_CRIME_DB_PATH=$HC_DB (exists)"
 fi
 
 # ── Step 4: Clone or update repo ───────────────────────────────────────
@@ -111,23 +125,38 @@ for path in "/" "/test"; do
   fi
 done
 
-# Hate Crime hidden on /test
-if curl -s http://localhost:3000/test 2>/dev/null | grep -iqE 'Hate Crime|hate_crime'; then
-  log "  /test contains Hate Crime text  ← LEAK"
-  PASS=false
-else
-  log "  /test: no Hate Crime text"
-fi
-
-# API guard
-HC_STATUS=$(curl -s -o /dev/null -w '%{http_code}' -X POST \
+# Hate Crime checks — direction depends on the flag
+TEST_HTML=$(curl -s http://localhost:3000/test 2>/dev/null)
+HC_API=$(curl -s -o /dev/null -w '%{http_code}' -X POST \
   -H "Content-Type: application/json" -d '{"question":"test"}' \
   http://localhost:3000/api/hc-query 2>/dev/null || echo "000")
-if [[ "$HC_STATUS" == "404" ]]; then
-  log "  /api/hc-query → 404"
-else
-  log "  /api/hc-query → $HC_STATUS  ← expected 404"
-  PASS=false
+
+if [[ "$HC_FLAG" == "false" ]]; then
+  if echo "$TEST_HTML" | grep -iqE 'Hate Crime|hate_crime'; then
+    log "  /test contains Hate Crime text  ← LEAK"
+    PASS=false
+  else
+    log "  /test: no Hate Crime text (correct for flag=false)"
+  fi
+  if [[ "$HC_API" == "404" ]]; then
+    log "  /api/hc-query → 404 (correct for flag=false)"
+  else
+    log "  /api/hc-query → $HC_API  ← expected 404"
+    PASS=false
+  fi
+elif [[ "$HC_FLAG" == "true" ]]; then
+  if echo "$TEST_HTML" | grep -iqE 'Hate Crime'; then
+    log "  /test: Hate Crime text present (correct for flag=true)"
+  else
+    log "  /test: missing Hate Crime text  ← expected present"
+    PASS=false
+  fi
+  if [[ "$HC_API" == "404" ]]; then
+    log "  /api/hc-query → 404  ← should not be 404 when enabled"
+    PASS=false
+  else
+    log "  /api/hc-query → $HC_API (not 404, correct for flag=true)"
+  fi
 fi
 
 if [[ "$PASS" != "true" ]]; then

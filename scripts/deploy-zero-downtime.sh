@@ -97,9 +97,20 @@ done
 # ── Step 2b: Verify feature flags ──────────────────────────────────────
 # NEXT_PUBLIC_ vars are baked into the client bundle at build time.
 # If a flag is missing, the build will silently produce wrong behavior.
-if ! grep -q 'NEXT_PUBLIC_ENABLE_HATE_CRIME=false' "$RELEASE_DIR/.env.local" 2>/dev/null && \
-   ! grep -q 'NEXT_PUBLIC_ENABLE_HATE_CRIME=false' "$RELEASE_DIR/.env" 2>/dev/null; then
-  die "NEXT_PUBLIC_ENABLE_HATE_CRIME=false not found in .env.local or .env. Set it in $SHARED_DIR/.env.local before deploying."
+HC_FLAG=$(grep -oP 'NEXT_PUBLIC_ENABLE_HATE_CRIME=\K.*' "$RELEASE_DIR/.env.local" 2>/dev/null || \
+          grep -oP 'NEXT_PUBLIC_ENABLE_HATE_CRIME=\K.*' "$RELEASE_DIR/.env" 2>/dev/null || echo "")
+if [[ -z "$HC_FLAG" ]]; then
+  die "NEXT_PUBLIC_ENABLE_HATE_CRIME not found in .env.local or .env. Set it in $SHARED_DIR/.env.local before deploying."
+fi
+if [[ "$HC_FLAG" != "true" && "$HC_FLAG" != "false" ]]; then
+  die "NEXT_PUBLIC_ENABLE_HATE_CRIME='$HC_FLAG' — must be 'true' or 'false'."
+fi
+log "  NEXT_PUBLIC_ENABLE_HATE_CRIME=$HC_FLAG"
+if [[ "$HC_FLAG" == "true" ]]; then
+  if ! grep -q 'HATE_CRIME_DB_PATH=' "$RELEASE_DIR/.env.local" 2>/dev/null && \
+     ! grep -q 'HATE_CRIME_DB_PATH=' "$RELEASE_DIR/.env" 2>/dev/null; then
+    die "Hate Crime enabled but HATE_CRIME_DB_PATH not set. Add it to $SHARED_DIR/.env.local."
+  fi
 fi
 
 # ── Step 3: Install dependencies ───────────────────────────────────────
@@ -149,30 +160,48 @@ if [[ "$PREFLIGHT_READY" != "true" ]]; then
   cleanup_on_failure
 fi
 
-# Check that /test renders and contains no Hate Crime text when the flag is off
-HC_FLAG=$(grep -oP 'NEXT_PUBLIC_ENABLE_HATE_CRIME=\K.*' "$RELEASE_DIR/.env.local" 2>/dev/null || \
-          grep -oP 'NEXT_PUBLIC_ENABLE_HATE_CRIME=\K.*' "$RELEASE_DIR/.env" 2>/dev/null || echo "")
-if [[ "$HC_FLAG" == "false" || "$HC_FLAG" == "0" ]]; then
-  TEST_HTML=$(curl -s "http://localhost:$PREFLIGHT_PORT/test" 2>/dev/null)
+# Hate Crime preflight — verify /test content and API match the flag
+TEST_HTML=$(curl -s "http://localhost:$PREFLIGHT_PORT/test" 2>/dev/null)
+HC_API_STATUS=$(curl -s -o /dev/null -w '%{http_code}' -X POST \
+  -H "Content-Type: application/json" -d '{"question":"test"}' \
+  "http://localhost:$PREFLIGHT_PORT/api/hc-query" 2>/dev/null || echo "000")
+
+if [[ "$HC_FLAG" == "false" ]]; then
+  # Disabled: no Hate Crime text on /test, API returns 404
   if echo "$TEST_HTML" | grep -iqE 'Hate Crime|hate_crime'; then
     kill "$PREFLIGHT_PID" 2>/dev/null || true
     wait "$PREFLIGHT_PID" 2>/dev/null || true
-    log "FATAL: /test page contains 'Hate Crime' text but ENABLE_HATE_CRIME=false"
+    log "FATAL: /test contains 'Hate Crime' text but ENABLE_HATE_CRIME=false"
     cleanup_on_failure
   fi
   log "  Preflight: /test contains no Hate Crime text (flag=false)"
 
-  # Verify API returns 404
-  HC_STATUS=$(curl -s -o /dev/null -w '%{http_code}' -X POST \
-    -H "Content-Type: application/json" -d '{"question":"test"}' \
-    "http://localhost:$PREFLIGHT_PORT/api/hc-query" 2>/dev/null || echo "000")
-  if [[ "$HC_STATUS" != "404" ]]; then
+  if [[ "$HC_API_STATUS" != "404" ]]; then
     kill "$PREFLIGHT_PID" 2>/dev/null || true
     wait "$PREFLIGHT_PID" 2>/dev/null || true
-    log "FATAL: /api/hc-query returned $HC_STATUS, expected 404 when Hate Crime disabled"
+    log "FATAL: /api/hc-query returned $HC_API_STATUS, expected 404 when disabled"
     cleanup_on_failure
   fi
   log "  Preflight: /api/hc-query → 404 (correct)"
+
+elif [[ "$HC_FLAG" == "true" ]]; then
+  # Enabled: Hate Crime text must appear on /test, API must not 404
+  if ! echo "$TEST_HTML" | grep -iqE 'Hate Crime'; then
+    kill "$PREFLIGHT_PID" 2>/dev/null || true
+    wait "$PREFLIGHT_PID" 2>/dev/null || true
+    log "FATAL: /test missing 'Hate Crime' text but ENABLE_HATE_CRIME=true"
+    cleanup_on_failure
+  fi
+  log "  Preflight: /test contains Hate Crime text (flag=true)"
+
+  # API may return 403 (page-token required) or 400 etc — only 404 is wrong
+  if [[ "$HC_API_STATUS" == "404" ]]; then
+    kill "$PREFLIGHT_PID" 2>/dev/null || true
+    wait "$PREFLIGHT_PID" 2>/dev/null || true
+    log "FATAL: /api/hc-query returned 404 but ENABLE_HATE_CRIME=true"
+    cleanup_on_failure
+  fi
+  log "  Preflight: /api/hc-query → $HC_API_STATUS (not 404, correct)"
 fi
 
 # Verify / returns 200
