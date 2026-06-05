@@ -75,7 +75,7 @@ fi
 # ── Step 4: Clone or update repo ───────────────────────────────────────
 log "Step 4: Setting up repo..."
 if [[ ! -d "$REPO_DIR/.git" ]]; then
-  git clone https://github.com/AH-Datalytics/crime-data-assistant.git "$REPO_DIR"
+  git clone git@github.com:AH-Datalytics/crime-data-assistant.git "$REPO_DIR"
   log "  Cloned repo"
 else
   log "  Repo already exists"
