@@ -1,6 +1,6 @@
 "use client";
 
-import { enabledSourceIds, enabledSourceCount, type SourceId } from "@/lib/sources";
+import { enabledSourceIds, type SourceId } from "@/lib/sources";
 
 type TabId = SourceId;
 
@@ -135,8 +135,9 @@ export default function GettingStarted({ onSelectTab, onAsk, renderInputBar }: G
   const showTutorial = true;
   const askMode = !!onAsk;
   const enabled = enabledSourceIds();
-  const hcEnabled = enabled.has("hate_crime");
-  const sourceCountWord = enabledSourceCount() === 4 ? "four" : enabledSourceCount() === 5 ? "five" : String(enabledSourceCount());
+  const showInGuide = (id: SourceId) => id !== "hate_crime" && enabled.has(id);
+  const guideSourceCount = TAB_CARDS.filter((card) => showInGuide(card.id)).length;
+  const sourceCountWord = guideSourceCount === 4 ? "four" : String(guideSourceCount);
 
   return (
     <div className="flex-1 overflow-y-auto" style={{ background: "linear-gradient(180deg, #ffffff 0%, var(--surface) 300px)" }}>
@@ -171,7 +172,6 @@ export default function GettingStarted({ onSelectTab, onAsk, renderInputBar }: G
             {([
               { label: "See Trends", color: "#475EC7", bg: "#eef1fb", border: "#c5cdf0", queries: [
                 "Can I see murders rolling over 12 months nationally, 2018 to present?",
-                ...(hcEnabled ? ["How have reported hate crimes trended since 2015?"] : []),
                 "How has police staffing changed in Chicago since 1980?",
               ]},
               { label: "Measure Outcomes", color: "#B8860B", bg: "#fdf8e8", border: "#e8d48b", queries: [
@@ -213,7 +213,7 @@ export default function GettingStarted({ onSelectTab, onAsk, renderInputBar }: G
 
         {/* Tab cards — only in production mode */}
         {!askMode && <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 mb-8 sm:mb-10">
-          {TAB_CARDS.filter(c => enabledSourceIds().has(c.id)).map((card) => (
+          {TAB_CARDS.filter(c => showInGuide(c.id)).map((card) => (
             <button
               key={card.id}
               onClick={() => onSelectTab(card.id)}
@@ -331,7 +331,7 @@ export default function GettingStarted({ onSelectTab, onAsk, renderInputBar }: G
                   { label: "Homicide", color: "#B8860B", id: "shr" },
                   { label: "Hate Crime", color: "#4A4A4A", id: "hate_crime" },
                 ];
-                const activeCols = colDefs.filter(c => enabled.has(c.id));
+                const activeCols = colDefs.filter(c => showInGuide(c.id));
                 const rowDataFull: Record<TabId, string[]> = {
                   current:    ["Agency Data",                    "2017\u2013present", "Monthly",        "Hundreds of agencies",          "Part I UCR (7 offenses)", "Recent trends"],
                   historical: ["FBI Uniform Crime Report",       "1930\u20132024",    "Annual",         "10,000+ agencies",              "Part I UCR + staffing",   "Long-term trends"],
@@ -461,26 +461,6 @@ export default function GettingStarted({ onSelectTab, onAsk, renderInputBar }: G
                 </div>
               </div>
 
-              {/* Hate Crime — only if enabled */}
-              {hcEnabled && <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-1 h-5 rounded-full" style={{ backgroundColor: "#4A4A4A" }} />
-                  <h3 className="text-base font-bold text-[var(--foreground)]">
-                    Hate Crime (FBI Hate Crime Statistics)
-                  </h3>
-                </div>
-                <div className="pl-3.5 text-sm text-[var(--muted)] leading-relaxed space-y-2.5">
-                  <p>
-                    FBI hate crime statistics from 1991 to present. Each incident includes the bias motivation (race, religion, sexual orientation, disability, gender, gender identity), offense type, location, offender demographics, and victim counts.
-                  </p>
-                  <p>
-                    <strong className="text-[var(--foreground)]">Why it exists:</strong> Hate crime data tracks bias-motivated offenses separately from general crime counts. It answers questions like &ldquo;how have anti-Jewish hate crimes trended over time?&rdquo;, &ldquo;which states report the most hate crimes?&rdquo;, and &ldquo;what are the most common offenses in hate crimes?&rdquo;
-                  </p>
-                  <p>
-                    <strong className="text-[var(--foreground)]">Key caveats:</strong> Reporting is <strong>voluntary</strong> &mdash; zero does not mean zero hate crimes. The BJS estimates actual hate crime victimization is 2&ndash;4x higher than reported. The number of participating agencies has grown from ~2,700 in 1991 to 15,000+ today, so increases partly reflect expanded reporting. New bias categories (gender identity in 2013, Arab/Hindu/Sikh in 2015) create breaks in trend data.
-                  </p>
-                </div>
-              </div>}
             </section>
 
             {/* Sample queries — hidden in ask mode (shown above the fold instead) */}
@@ -491,7 +471,7 @@ export default function GettingStarted({ onSelectTab, onAsk, renderInputBar }: G
               </p>
 
               <div className="space-y-5">
-                {(["current", "historical", "nibrs", "shr", "hate_crime"] as TabId[]).filter(id => enabled.has(id)).map((tabId) => {
+                {(["current", "historical", "nibrs", "shr", "hate_crime"] as TabId[]).filter(showInGuide).map((tabId) => {
                   const card = TAB_CARDS.find((c) => c.id === tabId)!;
                   return (
                     <div key={tabId}>
