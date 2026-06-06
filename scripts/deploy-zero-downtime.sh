@@ -226,6 +226,18 @@ mv -Tf "${CURRENT_LINK}.tmp" "$CURRENT_LINK"
 
 log "Symlink updated."
 
+# Keep VPS utility scripts versioned with the active release. Cron calls
+# /opt/nibrs/scripts/nibrs-auto-update.py; point that path at /opt/nibrs/current
+# so rollback automatically rolls the script back too.
+log "Linking VPS utility scripts..."
+mkdir -p "$BASE_DIR/scripts"
+if [[ ! -f "$CURRENT_LINK/scripts/nibrs-auto-update.py" ]]; then
+  die "Missing scripts/nibrs-auto-update.py in current release."
+fi
+chmod +x "$CURRENT_LINK/scripts/nibrs-auto-update.py"
+ln -sfn "$CURRENT_LINK/scripts/nibrs-auto-update.py" "$BASE_DIR/scripts/nibrs-auto-update.py"
+log "  $BASE_DIR/scripts/nibrs-auto-update.py -> $CURRENT_LINK/scripts/nibrs-auto-update.py"
+
 # ── Step 6: Reload PM2 (skip in bootstrap mode) ──────────────────────
 if [[ "$BOOTSTRAP" == "1" ]]; then
   log "BOOTSTRAP mode — skipping pm2 reload."
