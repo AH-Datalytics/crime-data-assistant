@@ -607,8 +607,8 @@ const GUARDRAILS: Guardrail[] = [
           /\bMEDIAN\b|\bPERCENTILE\b|\bNTILE\b|\bROW_NUMBER\b|\bRANK\b|\bDENSE_RANK\b/i.test(sql) ||
           // Sorting by value (for median-via-OFFSET or value ranking)
           /\bORDER\s+BY\b.*\bvalue\b/i.test(sql) ||
-          // AVG(value)
-          /\bAVG\s*\(\s*(?:\w+\.)?value\s*\)/i.test(sql) ||
+          // Any aggregate on value: AVG(value), AVG(CAST(value...)), SUM(value), MIN(value), MAX(value)
+          /\b(AVG|SUM|MIN|MAX)\s*\([^)]*\b(?:\w+\.)?value\b/i.test(sql) ||
           // Distribution/histogram: GROUP BY value (with optional table alias)
           /\bGROUP\s+BY\b[^)]*\b(?:\w+\.)?value\b/i.test(sql)
         );

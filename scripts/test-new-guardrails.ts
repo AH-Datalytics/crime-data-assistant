@@ -975,6 +975,26 @@ console.log("\n═══ nibrs-raw-table-for-counts property value carveout ═�
 }
 
 {
+  // FP: 3762 replay — AVG(CAST(p.value AS FLOAT)) with tight filters
+  const sql = `SELECT AVG(CAST(p.value AS FLOAT)) AS avg_value, COUNT(*) AS incidents, MIN(p.value) AS min_value, MAX(p.value) AS max_value FROM property p JOIN offenses o ON o.year = p.year AND o.state = p.state AND o.ori = p.ori AND o.incident_num = p.incident_num WHERE p.state = 'CA' AND p.year = 2024 AND o.ucr_offense_code = '23C' AND p.type_property_loss = '7' AND p.value > 0 AND p.value < 1000000`;
+  const ctx = extractQueryContext(sql, "typical dollar value of shoplifting offenses in california", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("FP: 3762 AVG(CAST(value)) does NOT fire raw-table guardrail",
+    !r.fired.includes("nibrs-raw-table-for-counts"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  // FP: 3764 replay — SUM(p.value)/SUM(...) manual average with tight filters
+  const sql = `SELECT o.ucr_offense_code, ROUND(SUM(p.value) / SUM(CASE WHEN p.value > 0 THEN 1 ELSE 0 END), 2) AS avg_value, COUNT(*) AS incidents FROM offenses o JOIN property p ON p.ori = o.ori AND p.incident_num = o.incident_num AND p.year = o.year WHERE o.state = 'CA' AND o.year BETWEEN 2022 AND 2026 AND o.ucr_offense_code IN ('23A','23B','23C','23D','23E','23F','23G','23H') AND o.location_type IN ('05','08','12','24','41','55') AND p.type_property_loss = '7' AND p.value > 0 AND p.value < 1000000 GROUP BY o.ucr_offense_code ORDER BY avg_value DESC`;
+  const ctx = extractQueryContext(sql, "typical dollar value of theft offenses with business location in california", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("FP: 3764 SUM(p.value) manual average does NOT fire raw-table guardrail",
+    !r.fired.includes("nibrs-raw-table-for-counts"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
   // FP: 3764-shaped — distribution/histogram with GROUP BY value, tight filters
   const sql = `SELECT p.value, COUNT(*) AS incidents FROM property p JOIN offenses o ON o.year = p.year AND o.state = p.state AND o.ori = p.ori AND o.incident_num = p.incident_num WHERE p.state = 'CA' AND o.year BETWEEN 2022 AND 2025 AND o.ucr_offense_code IN ('23A','23B','23C','23D','23E','23F','23G','23H') AND o.location_type IN ('07','08','09','19') AND p.type_property_loss = '7' AND p.value > 0 AND p.value < 1000000 GROUP BY p.value ORDER BY incidents DESC LIMIT 50`;
   const ctx = extractQueryContext(sql, "theft offenses with location type is a type of business in California", "nibrs");
