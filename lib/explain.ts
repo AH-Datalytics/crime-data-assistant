@@ -460,11 +460,11 @@ export function sanitizeExplanation(text: string): string {
   // Remove inline code containing SQL keywords
   cleaned = cleaned.replace(/`[^`]*(?:SELECT|FROM|WHERE|JOIN|GROUP|ORDER|INSERT|UPDATE|DELETE)[^`]*`/gi, "");
 
-  // Remove any JSON-like blocks with sql field
-  cleaned = cleaned.replace(/\{[\s\S]*?"sql"[\s\S]*?\}/g, "");
+  // Remove any JSON-like blocks with sql field (use [^}] to avoid backtracking)
+  cleaned = cleaned.replace(/\{[^}]*"sql"[^}]*\}/g, "");
 
-  // Remove standalone SQL statements (SELECT ... FROM ...)
-  cleaned = cleaned.replace(/\bSELECT\s+[\s\S]*?\bFROM\s+\w+[\s\S]*?(?:;|\n\n|$)/gi, "");
+  // Remove standalone SQL statements (SELECT ... FROM ... up to semicolon or double newline)
+  cleaned = cleaned.replace(/\bSELECT\b[^;]*?\bFROM\s+\w+[^;]*?(?:;|\n\n|$)/gi, "");
 
   // Remove table/column name references (e.g., "agency_monthly.count", "am.year")
   cleaned = cleaned.replace(/\b\w+_(?:monthly|daily|annual|state|city|national)\b/gi, "");
