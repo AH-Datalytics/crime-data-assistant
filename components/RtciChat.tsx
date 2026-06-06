@@ -517,7 +517,7 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
               {/* Source badge + description */}
               <div className="mb-2 shrink-0 flex items-center gap-2">
                 <span className="text-[10px] font-semibold px-2 py-0.5 rounded text-white uppercase tracking-wider" style={{ backgroundColor: accentColor }}>{mode === "current" ? "Current Trends" : "Historical Library"}</span>
-                <span className="text-[11px] text-[var(--muted)]">{mode === "current" ? "Monthly crime data from hundreds of agencies" : "Has annual clearance rates by agency going back decades"}</span>
+                <span className="text-[11px] text-[var(--muted)]">{mode === "current" ? "Monthly crime data from hundreds of agencies" : "Crime, clearance and staffing data back to 1930"}</span>
               </div>
 
               {/* Toolbar */}
