@@ -14,10 +14,28 @@ function stripSqlStrings(sql: string): string {
 
 // ─── Duplicate GROUP BY ─────────────────────────────────────────────
 // Detects two GROUP BY clauses within a single SELECT scope.
-// The regex stops at clause-boundary keywords that would indicate
-// a new SELECT block (SELECT, FROM, UNION, etc.)
-const DUPLICATE_GROUP_BY_RE =
-  /\bGROUP\s+BY\b(?:(?!\b(?:SELECT|FROM|WHERE|HAVING|ORDER\s+BY|LIMIT|UNION(?:\s+ALL)?)\b)[\s\S])+\bGROUP\s+BY\b/i;
+// Uses a linear scan instead of a tempered greedy regex to avoid
+// catastrophic backtracking / stack overflow on long SQL strings.
+function hasDuplicateGroupBy(sql: string): boolean {
+  const upper = sql.toUpperCase();
+  const groupByRe = /\bGROUP\s+BY\b/g;
+  // A scope boundary: SELECT starts a new query block; a closing paren
+  // ends a CTE/subquery scope. Either means the two GROUP BYs are in
+  // different SELECT statements.
+  const boundaryRe = /\bSELECT\b|\)/g;
+  const positions: number[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = groupByRe.exec(upper)) !== null) positions.push(m.index);
+  if (positions.length < 2) return false;
+  for (let i = 0; i < positions.length - 1; i++) {
+    const start = positions[i];
+    const end = positions[i + 1];
+    const between = upper.slice(start + 8, end);
+    boundaryRe.lastIndex = 0;
+    if (!boundaryRe.test(between)) return true;
+  }
+  return false;
+}
 
 // ─── ORDER BY before UNION ALL (depth-aware) ────────────────────────
 // Walks the SQL character by character, tracking parenthesis depth.
@@ -143,7 +161,7 @@ export function findNibrsSqlIssues(sql: string): {
   const fired: string[] = [];
 
   // 1. Duplicate GROUP BY
-  if (DUPLICATE_GROUP_BY_RE.test(cleaned)) {
+  if (hasDuplicateGroupBy(cleaned)) {
     fired.push("nibrs-duplicate-group-by");
     issues.push(
       "Your SQL has two GROUP BY clauses in the same SELECT statement. Use only one GROUP BY clause per SELECT."
