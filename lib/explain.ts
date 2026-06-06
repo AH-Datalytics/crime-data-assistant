@@ -12,6 +12,7 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 import type { QueryContext } from "./query-context";
+import { removeCodeFences, removeJsonWithSqlKey } from "./text-sanitize";
 
 const client = new Anthropic();
 
@@ -454,14 +455,14 @@ export function sanitizeExplanation(text: string): string {
 
   let cleaned = text;
 
-  // Remove markdown code fences and their contents
-  cleaned = cleaned.replace(/```[\s\S]*?```/g, "");
+  // Remove markdown code fences and their contents (linear scan, no backtracking)
+  cleaned = removeCodeFences(cleaned);
 
   // Remove inline code containing SQL keywords
   cleaned = cleaned.replace(/`[^`]*(?:SELECT|FROM|WHERE|JOIN|GROUP|ORDER|INSERT|UPDATE|DELETE)[^`]*`/gi, "");
 
-  // Remove any JSON-like blocks with sql field (use [^}] to avoid backtracking)
-  cleaned = cleaned.replace(/\{[^}]*"sql"[^}]*\}/g, "");
+  // Remove any JSON-like blocks with sql field (bounded char class, no backtracking)
+  cleaned = removeJsonWithSqlKey(cleaned);
 
   // Remove standalone SQL statements (SELECT ... FROM ... up to semicolon or double newline)
   cleaned = cleaned.replace(/\bSELECT\b[^;]*?\bFROM\s+\w+[^;]*?(?:;|\n\n|$)/gi, "");

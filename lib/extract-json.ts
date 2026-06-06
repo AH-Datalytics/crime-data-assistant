@@ -1,3 +1,5 @@
+import { extractCodeFenceCandidates } from "./text-sanitize";
+
 /**
  * Robustly extract a JSON object from Claude's text response.
  *
@@ -15,11 +17,8 @@
 export function extractJson(text: string): unknown | null {
   const candidates: string[] = [];
 
-  // 1. Collect all ```json ... ``` or ``` ... ``` fenced blocks
-  const fenceRe = /```(?:json)?\s*([\s\S]*?)```/gi;
-  let m: RegExpExecArray | null;
-  while ((m = fenceRe.exec(text)) !== null) {
-    const inner = m[1].trim();
+  // 1. Collect all ```json ... ``` or ``` ... ``` fenced blocks (linear scan, no backtracking)
+  for (const inner of extractCodeFenceCandidates(text)) {
     if (inner.startsWith("{")) candidates.push(inner);
   }
 

@@ -10,6 +10,7 @@ const _monthNames = ["January","February","March","April","May","June","July","A
 const DATA_CUTOFF = { year: _cutY, month: _cutM, label: `${_monthNames[_cutM - 1]} ${_cutY}` };
 import { validateClaudeResponse } from "./claude-schema";
 import { extractJson } from "./extract-json";
+import { removeCodeFences, removeJsonWithSqlKey } from "./text-sanitize";
 
 const client = new Anthropic();
 
@@ -652,10 +653,10 @@ export async function translateToSql(
   // Strip any SQL/JSON/code that leaked through to avoid showing technical content.
   let plainText = text.trim();
   if (plainText.length > 10 && !plainText.startsWith("{")) {
-    // Remove markdown code fences and their contents
-    plainText = plainText.replace(/```[\s\S]*?```/g, "").trim();
-    // Remove any remaining JSON-like blocks
-    plainText = plainText.replace(/\{[\s\S]*"sql"[\s\S]*\}/g, "").trim();
+    // Remove markdown code fences and their contents (linear scan, no backtracking)
+    plainText = removeCodeFences(plainText).trim();
+    // Remove any remaining JSON-like blocks with sql key (bounded, no backtracking)
+    plainText = removeJsonWithSqlKey(plainText).trim();
     // If nothing meaningful remains, show a generic message
     if (plainText.length < 10) {
       plainText = "Sorry, I wasn\u2019t able to process that request. Please try rephrasing your question.";
