@@ -64,6 +64,9 @@ ADDITIONAL RULES:
 - For arrestee demographics (race, sex, age), ALWAYS use summary_arrestee_demographics (${formatRowCount(NIBRS.summaryRowCounts["summary_arrestee_demographics"] || 12700000)} rows) instead of raw arrestees (${NIBRS.rawRowCounts["arrestees"] || "51M"} rows).
 - NEVER query raw offenders or arrestees tables for aggregate counts — they WILL timeout.
 - For **national or state-level** property value queries, ALWAYS use summary_property_value_state (~2.5M rows, 12x faster). For **city/agency-level** property queries, use summary_property_offense (${formatRowCount(NIBRS.summaryRowCounts["summary_property_offense"] || 30000000)} rows). NEVER join raw offenses with raw property (both ${NIBRS.rawRowCounts["offenses"] || "~200M"} rows).
+- **PROPERTY VALUE ANALYSIS (median/percentile/distribution):** Summary tables store total_value and record_count (for averages: SUM(total_value)/SUM(record_count)), but they CANNOT calculate medians, percentiles, or value distributions. For these queries, you MAY use the raw property table joined with offenses, but ONLY with tight filters: WHERE state = 'XX' AND year = YYYY AND ucr_offense_code = 'XXX' AND value > 0 AND value < 1000000. Always filter out zero and million-dollar-plus values (data quality). Example median shoplifting value:
+  SELECT value FROM property p JOIN offenses o ON o.year = p.year AND o.state = p.state AND o.ori = p.ori AND o.incident_num = p.incident_num WHERE p.state = 'CA' AND p.year = 2024 AND o.ucr_offense_code = '23C' AND p.type_property_loss = '7' AND p.value > 0 AND p.value < 1000000 ORDER BY p.value LIMIT 1 OFFSET (SELECT COUNT(*)/2 FROM property p2 JOIN offenses o2 ON o2.year = p2.year AND o2.state = p2.state AND o2.ori = p2.ori AND o2.incident_num = p2.incident_num WHERE p2.state = 'CA' AND p2.year = 2024 AND o2.ucr_offense_code = '23C' AND p2.type_property_loss = '7' AND p2.value > 0 AND p2.value < 1000000)
+- **"Typical" property value:** If the user asks for "typical" value, default to average using summary tables (SUM(total_value)/SUM(record_count)) and label it "average." If the user explicitly asks for median, percentile, or distribution, use the raw-table approach above. NIBRS property.value is populated for theft/shoplifting/burglary/robbery — do NOT refuse these queries by claiming values are unavailable. The correct caveat is: "Values reflect what agencies reported; some records have missing or zero values which are excluded."
 
 If none of those exceptions apply → USE THE SUMMARY TABLE. No exceptions.
 
@@ -819,7 +822,7 @@ IMPORTANT: The completeness filter ONLY applies to queries on **city-level table
 - HATE CRIME+LOCATION CROSS (summary_hate_crime_location): queries combining bias AND location — "hate crimes at schools", "where do anti-Black hate crimes happen". NEVER cross summary_hate_crime with summary_offense_location via ORI joins.
 - CITY CLEARANCE (summary_clearance_city_annual): city clearance rate comparisons — already has city name and population, no agencies JOIN needed.
 - RAW VICTIMS TABLE: ONLY for queries needing fields not in ANY summary table (injury type, relationship, daily breakdowns). NEVER for counts, demographics, weapons, or circumstances.
-- RAW OFFENSES: ONLY for queries needing fields not in ANY summary table (individual incidents, daily property crime counts). NEVER for location, weapon, or hate crime breakdowns.
+- RAW OFFENSES + RAW PROPERTY: ONLY for queries needing individual record values not in ANY summary table. Allowed uses: median/percentile/distribution of property.value (requires tight filters: state + year + offense code + value > 0 + value < 1M). NEVER for broad incident counts, location breakdowns, weapon breakdowns, or hate crime breakdowns — use summary tables for those.
 
 **⚠️ CROSS-DIMENSIONAL LIMITS — DO NOT SILENTLY DROP FILTERS:**
 Each summary table covers specific dimensions. If a question requires dimensions from DIFFERENT tables that cannot be combined, SET SQL TO NULL and explain which breakdowns are available separately. Returning data with a silently dropped filter (e.g., returning all victims when the user asked for female victims) is the WORST possible error — it looks correct but is wrong.
@@ -933,8 +936,10 @@ Three table options depending on what's needed:
 - dv_category: 'intimate_partner' or 'family'
 - relationship_code: SE=Spouse, CS=Common-law Spouse, BG=Boyfriend/Girlfriend, XS=Ex-Spouse, SC=Stepchild, CH=Child, PA=Parent, SB=Sibling, etc.
 - INDEXES: (state, data_year), (data_year), (dv_category), (offense_code)
-- For DV incidents in a state: SELECT data_year, COUNT(DISTINCT incident_num) AS incidents FROM summary_domestic_violence WHERE state = 'ID' AND data_year >= 2015 GROUP BY data_year ORDER BY data_year
-- For DV by category: SELECT dv_category, COUNT(DISTINCT incident_num) AS incidents FROM summary_domestic_violence WHERE state = 'TX' AND data_year = 2024 GROUP BY dv_category
+- **COUNTING INCIDENTS**: incident_num is only unique within an ORI+year, NOT globally. For correct incident counts you MUST use: COUNT(DISTINCT dv.ori || ':' || dv.data_year || ':' || dv.incident_num). Using COUNT(DISTINCT incident_num) alone will undercount when aggregating across agencies.
+- For DV incidents in a state: SELECT data_year, COUNT(DISTINCT dv.ori || ':' || dv.data_year || ':' || dv.incident_num) AS incidents FROM summary_domestic_violence dv WHERE dv.state = 'ID' AND dv.data_year >= 2015 GROUP BY dv.data_year ORDER BY dv.data_year
+- For DV by category: SELECT dv_category, COUNT(DISTINCT dv.ori || ':' || dv.data_year || ':' || dv.incident_num) AS incidents FROM summary_domestic_violence dv WHERE dv.state = 'TX' AND dv.data_year = 2024 GROUP BY dv.dv_category
+- For DV by city: SELECT a.city, a.state, COUNT(DISTINCT dv.ori || ':' || dv.data_year || ':' || dv.incident_num) AS dv_incidents FROM summary_domestic_violence dv JOIN agencies a ON a.ori = dv.ori AND a.year = dv.data_year WHERE a.state = 'WA' AND a.agency_type = 'City' AND a.population > 0 GROUP BY a.city, a.state ORDER BY dv_incidents DESC LIMIT 50
 - NOTE: This table has victim/incident data, not arrests. For DV arrests, use summary_dv_arrests instead.
 
 **summary_dv_arrests** — DV-related arrests with demographics. Best for: DV arrest counts, DV arrests by offense type, DV arrestee demographics.

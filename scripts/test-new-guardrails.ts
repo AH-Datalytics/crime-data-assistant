@@ -706,6 +706,329 @@ console.log("\n═══ Hard override guardrails ═══\n");
 }
 
 // ══════════════════════════════════════════════════════════════════════
+//  washington-ambiguity guardrail (2026-06-06 regression)
+// ══════════════════════════════════════════════════════════════════════
+
+console.log("\n═══ washington-ambiguity ═══\n");
+
+{
+  // TP: bare "Washington" — should fire
+  const ctx = extractQueryContext(
+    "SELECT year, SUM(victim_count) FROM summary_victim_state_monthly WHERE state = 'WA' GROUP BY year",
+    "domestic violence by city in Washington",
+    "nibrs"
+  );
+  const r = runGuardrails(ctx);
+  assert("TP: bare 'Washington' fires",
+    r.fired.includes("washington-ambiguity"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  // FP: "Washington state" — should NOT fire
+  const ctx = extractQueryContext(
+    "SELECT year, SUM(victim_count) FROM summary_victim_state_monthly WHERE state = 'WA' GROUP BY year",
+    "domestic violence in Washington state",
+    "nibrs"
+  );
+  const r = runGuardrails(ctx);
+  assert("FP: 'Washington state' does NOT fire",
+    !r.fired.includes("washington-ambiguity"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  // FP: "state of Washington" — should NOT fire
+  const ctx = extractQueryContext(
+    "SELECT year, SUM(victim_count) FROM summary_victim_state_monthly WHERE state = 'WA' GROUP BY year",
+    "domestic violence by city in the state of Washington",
+    "nibrs"
+  );
+  const r = runGuardrails(ctx);
+  assert("FP: 'state of Washington' does NOT fire",
+    !r.fired.includes("washington-ambiguity"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  // FP: "in the state of Washington" — should NOT fire
+  const ctx = extractQueryContext(
+    "SELECT year, SUM(victim_count) FROM summary_victim_state_monthly WHERE state = 'WA' GROUP BY year",
+    "show me crime in the state of Washington",
+    "nibrs"
+  );
+  const r = runGuardrails(ctx);
+  assert("FP: 'in the state of Washington' does NOT fire",
+    !r.fired.includes("washington-ambiguity"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  // FP: "WA" state abbreviation — should NOT fire
+  const ctx = extractQueryContext(
+    "SELECT year, SUM(victim_count) FROM summary_victim_state_monthly WHERE state = 'WA' GROUP BY year",
+    "murder rate in WA",
+    "nibrs"
+  );
+  const r = runGuardrails(ctx);
+  assert("FP: 'WA' state abbreviation does NOT fire",
+    !r.fired.includes("washington-ambiguity"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  // FP: "Washington, DC" — should NOT fire
+  const ctx = extractQueryContext(
+    "SELECT year, SUM(victim_count) FROM summary_victim_state_monthly WHERE state = 'DC' GROUP BY year",
+    "crime in Washington, DC",
+    "nibrs"
+  );
+  const r = runGuardrails(ctx);
+  assert("FP: 'Washington, DC' does NOT fire",
+    !r.fired.includes("washington-ambiguity"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  // FP: "by city in the state of Washington" — combined geography + state phrase
+  const ctx = extractQueryContext(
+    "SELECT d.data_year, a.city, a.state, COUNT(DISTINCT d.incident_num) AS dv_incidents FROM summary_domestic_violence d JOIN agencies a ON a.ori = d.ori WHERE a.state = 'WA' GROUP BY a.city, a.state ORDER BY dv_incidents DESC LIMIT 50",
+    "domestic violence by city in the state of Washington",
+    "nibrs"
+  );
+  const r = runGuardrails(ctx);
+  assert("FP: 'by city in the state of Washington' does NOT fire",
+    !r.fired.includes("washington-ambiguity"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  // TP: still fires for genuinely ambiguous "Washington" with no context
+  const ctx = extractQueryContext(
+    "SELECT year, SUM(victim_count) FROM summary_victim_state_monthly WHERE state = 'WA' GROUP BY year",
+    "crime in Washington",
+    "nibrs"
+  );
+  const r = runGuardrails(ctx);
+  assert("TP: bare 'crime in Washington' still fires",
+    r.fired.includes("washington-ambiguity"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  nibrs-dv-wrong-table guardrail (2026-06-06)
+// ══════════════════════════════════════════════════════════════════════
+
+console.log("\n═══ nibrs-dv-wrong-table ═══\n");
+
+{
+  // TP: user asks DV, model uses summary_city_monthly with 13A/13B/13C
+  const ctx = extractQueryContext(
+    "SELECT s.year, SUM(s.offense_count) AS assaults FROM summary_city_monthly s WHERE s.ucr_offense_code IN ('13A','13B','13C') AND s.state = 'WA' GROUP BY s.year",
+    "domestic violence by city in Washington state",
+    "nibrs"
+  );
+  const r = runGuardrails(ctx);
+  assert("TP: DV question + summary_city_monthly fires dv-wrong-table",
+    r.fired.includes("nibrs-dv-wrong-table"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  // TP: user says "DV" and model uses summary_state_monthly
+  const ctx = extractQueryContext(
+    "SELECT s.year, SUM(s.offense_count) FROM summary_state_monthly s WHERE s.ucr_offense_code = '13A' AND s.state = 'TX' GROUP BY s.year",
+    "DV trends in Texas",
+    "nibrs"
+  );
+  const r = runGuardrails(ctx);
+  assert("TP: 'DV' question + summary_state_monthly fires",
+    r.fired.includes("nibrs-dv-wrong-table"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  // FP: DV question using summary_domestic_violence — correct table
+  const ctx = extractQueryContext(
+    "SELECT data_year, COUNT(DISTINCT incident_num) AS dv_incidents FROM summary_domestic_violence WHERE state = 'WA' GROUP BY data_year ORDER BY data_year",
+    "domestic violence trends in Washington state",
+    "nibrs"
+  );
+  const r = runGuardrails(ctx);
+  assert("FP: DV question + summary_domestic_violence does NOT fire",
+    !r.fired.includes("nibrs-dv-wrong-table"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  // FP: DV question using summary_dv_arrests — correct table
+  const ctx = extractQueryContext(
+    "SELECT year, SUM(arrest_count) AS arrests FROM summary_dv_arrests WHERE state = 'TX' GROUP BY year",
+    "DV arrests in Texas",
+    "nibrs"
+  );
+  const r = runGuardrails(ctx);
+  assert("FP: DV question + summary_dv_arrests does NOT fire",
+    !r.fired.includes("nibrs-dv-wrong-table"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  // FP: non-DV assault question — should NOT fire even with summary_city_monthly
+  const ctx = extractQueryContext(
+    "SELECT s.year, SUM(s.offense_count) FROM summary_city_monthly s WHERE s.ucr_offense_code = '13A' GROUP BY s.year",
+    "aggravated assault trends in Houston",
+    "nibrs"
+  );
+  const r = runGuardrails(ctx);
+  assert("FP: assault question (not DV) does NOT fire",
+    !r.fired.includes("nibrs-dv-wrong-table"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  nibrs-raw-table-for-counts property value carveout (2026-06-06)
+// ══════════════════════════════════════════════════════════════════════
+
+console.log("\n═══ nibrs-raw-table-for-counts property value carveout ═══\n");
+
+{
+  // FP: median shoplifting value — should NOT fire (legitimate raw-table use)
+  const sql = `SELECT value FROM property p JOIN offenses o ON o.year = p.year AND o.state = p.state AND o.ori = p.ori AND o.incident_num = p.incident_num WHERE p.state = 'CA' AND p.year = 2024 AND o.ucr_offense_code = '23C' AND p.type_property_loss = '7' AND p.value > 0 AND p.value < 1000000 ORDER BY p.value LIMIT 1 OFFSET 50000`;
+  const ctx = extractQueryContext(sql, "typical dollar value of shoplifting offenses in California", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("FP: median shoplifting value does NOT fire raw-table guardrail",
+    !r.fired.includes("nibrs-raw-table-for-counts"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  // FP: AVG(value) with tight filters — should NOT fire
+  const sql = `SELECT AVG(p.value) AS avg_value FROM property p JOIN offenses o ON o.year = p.year AND o.state = p.state AND o.ori = p.ori AND o.incident_num = p.incident_num WHERE p.state = 'CA' AND p.year = 2024 AND o.ucr_offense_code = '23C' AND p.value > 0 GROUP BY o.location_type`;
+  const ctx = extractQueryContext(sql, "average shoplifting value by location in California", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("FP: AVG(value) with tight filters does NOT fire",
+    !r.fired.includes("nibrs-raw-table-for-counts"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  // TP: raw property table for broad counts (no value analysis) — should still fire
+  const sql = `SELECT p.property_description, COUNT(*) AS cnt FROM property p WHERE p.state = 'CA' AND p.year = 2024 GROUP BY p.property_description ORDER BY cnt DESC`;
+  const ctx = extractQueryContext(sql, "what property is stolen most in California", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("TP: raw property for COUNT still fires",
+    r.fired.includes("nibrs-raw-table-for-counts"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  // TP: raw offenses table for counts — should still fire
+  const sql = `SELECT o.ucr_offense_code, COUNT(*) FROM offenses o WHERE o.state = 'TX' AND o.year = 2024 GROUP BY o.ucr_offense_code`;
+  const ctx = extractQueryContext(sql, "offense counts in Texas", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("TP: raw offenses for COUNT still fires",
+    r.fired.includes("nibrs-raw-table-for-counts"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  // TP: property value query without state filter — too broad, should fire
+  const sql = `SELECT AVG(p.value) FROM property p JOIN offenses o ON o.year = p.year AND o.state = p.state AND o.ori = p.ori AND o.incident_num = p.incident_num WHERE o.ucr_offense_code = '23C' AND p.year = 2024 AND p.value > 0 GROUP BY o.location_type`;
+  const ctx = extractQueryContext(sql, "shoplifting value by location nationally", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("TP: property value without state filter still fires",
+    r.fired.includes("nibrs-raw-table-for-counts"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  // TP: raw arrestees still fires
+  const sql = `SELECT age, COUNT(*) FROM arrestees WHERE state = 'CA' AND year = 2024 GROUP BY age`;
+  const ctx = extractQueryContext(sql, "arrests by age in California", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("TP: raw arrestees for COUNT still fires",
+    r.fired.includes("nibrs-raw-table-for-counts"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  // FP: 3764-shaped — distribution/histogram with GROUP BY value, tight filters
+  const sql = `SELECT p.value, COUNT(*) AS incidents FROM property p JOIN offenses o ON o.year = p.year AND o.state = p.state AND o.ori = p.ori AND o.incident_num = p.incident_num WHERE p.state = 'CA' AND o.year BETWEEN 2022 AND 2025 AND o.ucr_offense_code IN ('23A','23B','23C','23D','23E','23F','23G','23H') AND o.location_type IN ('07','08','09','19') AND p.type_property_loss = '7' AND p.value > 0 AND p.value < 1000000 GROUP BY p.value ORDER BY incidents DESC LIMIT 50`;
+  const ctx = extractQueryContext(sql, "theft offenses with location type is a type of business in California", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("FP: 3764-shaped distribution (GROUP BY value, BETWEEN year) does NOT fire",
+    !r.fired.includes("nibrs-raw-table-for-counts"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  // FP: year IN (...) filter recognized
+  const sql = `SELECT p.value, COUNT(*) AS cnt FROM property p JOIN offenses o ON o.year = p.year AND o.state = p.state AND o.ori = p.ori AND o.incident_num = p.incident_num WHERE p.state = 'TX' AND o.year IN (2023, 2024) AND o.ucr_offense_code = '23C' AND p.type_property_loss = '7' AND p.value > 0 GROUP BY p.value ORDER BY cnt DESC`;
+  const ctx = extractQueryContext(sql, "shoplifting value distribution in Texas", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("FP: year IN (...) filter recognized in property carveout",
+    !r.fired.includes("nibrs-raw-table-for-counts"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  nibrs-dv-city-schema guardrail (2026-06-06)
+// ══════════════════════════════════════════════════════════════════════
+
+console.log("\n═══ nibrs-dv-city-schema ═══\n");
+
+{
+  // TP: DV by city without agencies join
+  const sql = `SELECT ori, COUNT(DISTINCT incident_num) AS dv_incidents FROM summary_domestic_violence WHERE state = 'WA' GROUP BY ori ORDER BY dv_incidents DESC LIMIT 50`;
+  const ctx = extractQueryContext(sql, "domestic violence by city in Washington state", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("TP: DV by city without agencies join fires dv-city-schema",
+    r.fired.includes("nibrs-dv-city-schema"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  // TP: DV by city with COUNT(DISTINCT incident_num) — wrong counting method
+  const sql = `SELECT a.city, a.state, COUNT(DISTINCT dv.incident_num) AS dv_incidents FROM summary_domestic_violence dv JOIN agencies a ON a.ori = dv.ori AND a.year = dv.data_year WHERE a.state = 'WA' AND a.agency_type = 'City' AND a.population > 0 GROUP BY a.city, a.state ORDER BY dv_incidents DESC LIMIT 50`;
+  const ctx = extractQueryContext(sql, "top cities for domestic violence in Washington state", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("TP: COUNT(DISTINCT incident_num) without ori composite fires",
+    r.fired.includes("nibrs-dv-city-schema"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  // FP: correct DV by city query — all checks pass
+  const sql = `SELECT a.city, a.state, COUNT(DISTINCT dv.ori || ':' || dv.data_year || ':' || dv.incident_num) AS dv_incidents FROM summary_domestic_violence dv JOIN agencies a ON a.ori = dv.ori AND a.year = dv.data_year WHERE a.state = 'WA' AND a.agency_type = 'City' AND a.population > 0 GROUP BY a.city, a.state ORDER BY dv_incidents DESC LIMIT 50`;
+  const ctx = extractQueryContext(sql, "top cities for domestic violence in Washington state", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("FP: correct DV by city query does NOT fire",
+    !r.fired.includes("nibrs-dv-city-schema"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  // FP: DV state-level query — no city mention, should not fire
+  const sql = `SELECT data_year, COUNT(DISTINCT dv.ori || ':' || dv.data_year || ':' || dv.incident_num) AS incidents FROM summary_domestic_violence dv WHERE dv.state = 'WA' GROUP BY dv.data_year ORDER BY dv.data_year`;
+  const ctx = extractQueryContext(sql, "domestic violence trends in Washington state", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("FP: state-level DV query does NOT fire dv-city-schema",
+    !r.fired.includes("nibrs-dv-city-schema"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  // TP: DV by city, GROUP BY city only (missing state)
+  const sql = `SELECT a.city, COUNT(DISTINCT dv.ori || ':' || dv.data_year || ':' || dv.incident_num) AS dv_incidents FROM summary_domestic_violence dv JOIN agencies a ON a.ori = dv.ori AND a.year = dv.data_year WHERE a.agency_type = 'City' GROUP BY a.city ORDER BY dv_incidents DESC LIMIT 50`;
+  const ctx = extractQueryContext(sql, "top cities for domestic violence nationwide", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("TP: GROUP BY city without state fires",
+    r.fired.includes("nibrs-dv-city-schema"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+// ══════════════════════════════════════════════════════════════════════
 //  Summary
 // ══════════════════════════════════════════════════════════════════════
 

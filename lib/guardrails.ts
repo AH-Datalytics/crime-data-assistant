@@ -553,7 +553,37 @@ const GUARDRAILS: Guardrail[] = [
       );
       if (!usesRawTable) return false;
       // Only fire if it's an aggregate query (COUNT/SUM/GROUP BY) — detail queries on raw tables are OK
-      return /\bCOUNT\s*\(|\bSUM\s*\(|\bGROUP\s+BY\b/i.test(sql);
+      if (!/\bCOUNT\s*\(|\bSUM\s*\(|\bGROUP\s+BY\b/i.test(sql)) return false;
+
+      // CARVEOUT: Allow raw property table for value analysis (median, percentile, distribution)
+      // These queries need individual record values and can't use pre-aggregated summaries.
+      // Must be tightly filtered (state + year + offense code).
+      const usesPropertyTable = (
+        new RegExp(`\\bFROM\\s+property\\b`, "i").test(sql) ||
+        new RegExp(`\\bJOIN\\s+property\\b`, "i").test(sql)
+      );
+      if (usesPropertyTable) {
+        const hasValueRef = /\bvalue\b/i.test(sql);
+        const isValueAnalysis = hasValueRef && (
+          // Statistical functions: MEDIAN, PERCENTILE, window functions
+          /\bMEDIAN\b|\bPERCENTILE\b|\bNTILE\b|\bROW_NUMBER\b|\bRANK\b|\bDENSE_RANK\b/i.test(sql) ||
+          // Sorting by value (for median-via-OFFSET or value ranking)
+          /\bORDER\s+BY\b.*\bvalue\b/i.test(sql) ||
+          // AVG(value)
+          /\bAVG\s*\(\s*(?:\w+\.)?value\s*\)/i.test(sql) ||
+          // Distribution/histogram: GROUP BY value (with optional table alias)
+          /\bGROUP\s+BY\b[^)]*\b(?:\w+\.)?value\b/i.test(sql)
+        );
+        const hasStateFilter = /\bstate\s*=\s*'/i.test(sql);
+        const hasYearFilter =
+          /\b(?:data_)?year\s*[=><!]/i.test(sql) ||
+          /\b(?:data_)?year\s+BETWEEN\b/i.test(sql) ||
+          /\b(?:data_)?year\s+IN\s*\(/i.test(sql);
+        const hasOffenseFilter = /\bucr_offense_code\b/i.test(sql);
+        if (isValueAnalysis && hasStateFilter && hasYearFilter && hasOffenseFilter) return false;
+      }
+
+      return true;
     },
     message: (ctx) => {
       const sql = ctx.sql;
@@ -1069,8 +1099,11 @@ const GUARDRAILS: Guardrail[] = [
       if (!hasWashington) return false;
       // Explicit DC: "Washington, DC", "Washington DC", "DC", "District of Columbia"
       const isExplicitDC = /\bWashington\s*,?\s*D\.?C\.?|Washington\s+DC\b|\bD\.?C\.?\b|District\s+of\s+Columbia/i.test(q);
-      // Explicit state: "Washington state", "Washington State"
-      const isExplicitState = /\bWashington\s+[Ss]tate\b/i.test(q);
+      // Explicit state: "Washington state", "state of Washington", "WA" as state abbrev
+      const isExplicitState =
+        /\bWashington\s+[Ss]tate\b/i.test(q) ||
+        /\bstate\s+of\s+Washington\b/i.test(q) ||
+        /\bWA\b/.test(q); // uppercase-only WA = state abbreviation
       // If neither explicit, it's ambiguous
       return !isExplicitDC && !isExplicitState;
     },
@@ -1688,6 +1721,73 @@ const GUARDRAILS: Guardrail[] = [
     rewrite: (sql) => {
       const fixed = sql.replace(/\b([a-zA-Z_]\w*)\.\1\./g, "$1.");
       return fixed !== sql ? fixed : null;
+    },
+  },
+
+  // --- DV semantic guardrail: user asks about domestic violence but SQL uses assault tables ---
+  {
+    name: "nibrs-dv-wrong-table",
+    tabs: ["nibrs"],
+    match: (ctx) => {
+      const q = ctx.question.toLowerCase();
+      const isDvQuestion = /\bdomestic\s+violence\b|\b(?<![a-z])dv(?![a-z])\b/i.test(ctx.question);
+      if (!isDvQuestion) return false;
+      const sql = ctx.sql.toLowerCase();
+      // OK if already using DV tables
+      if (sql.includes("summary_domestic_violence") || sql.includes("summary_dv_arrests")) return false;
+      // Fire if using non-DV summary tables (city_monthly, state_monthly, victim tables with assault codes)
+      const usesNonDvTable =
+        sql.includes("summary_city_monthly") ||
+        sql.includes("summary_state_monthly") ||
+        sql.includes("summary_victim_state_monthly") ||
+        sql.includes("summary_victim_city_monthly");
+      return usesNonDvTable;
+    },
+    message: () =>
+      `[SYSTEM: CRITICAL — The user asked about domestic violence but your query uses a general offense summary table. Domestic violence is NOT the same as assault (13A/13B/13C). NIBRS has dedicated DV tables:\n- summary_domestic_violence: DV incident counts, victim demographics, relationship breakdowns (columns: data_year, state, ori, incident_num, offense_code, relationship_code, dv_category, victim_sex, victim_age, victim_race)\n- summary_dv_arrests: DV arrest counts with demographics (columns: year, state, ori, ucr_arrest_offense, dv_category, sex, race, age_group, arrest_count)\nRewrite the query using the appropriate DV table. For city-level DV queries, join summary_domestic_violence with agencies using ori.]`,
+  },
+
+  // --- DV schema guardrail: city-level DV queries using summary_domestic_violence ---
+  // Checks structural issues only. agency_type='City' is handled by nibrs-county-in-city-query.
+  {
+    name: "nibrs-dv-city-schema",
+    tabs: ["nibrs"],
+    match: (ctx) => {
+      const sql = ctx.sql;
+      const sqlLower = sql.toLowerCase();
+      if (!sqlLower.includes("summary_domestic_violence")) return false;
+      const q = ctx.question.toLowerCase();
+      // Only fire for "by city" ranking queries
+      const isCityQuery = /\bby\s+city\b|\bcit(y|ies)\b/i.test(q);
+      if (!isCityQuery) return false;
+
+      const issues: string[] = [];
+
+      // Must join agencies to get city names
+      if (!/\bagencies\b/i.test(sqlLower)) {
+        issues.push("missing agencies JOIN — need JOIN agencies a ON a.ori = dv.ori AND a.year = dv.data_year to get city names");
+      }
+      // Must GROUP BY city, state (not just city)
+      if (/\bGROUP\s+BY\b/i.test(sqlLower) && !/GROUP\s+BY[^)]*\bcity\b[^)]*\bstate\b/i.test(sqlLower)) {
+        issues.push("GROUP BY must include both a.city AND a.state to distinguish same-named cities across states");
+      }
+      // Must have LIMIT for ranking queries
+      if (/\btop\b|\bmost\b|\bhighest\b|\branking\b/i.test(q) && !/\bLIMIT\b/i.test(sqlLower)) {
+        issues.push("add LIMIT 50 for ranking queries");
+      }
+      // Must use correct COUNT(DISTINCT) — incident_num alone is NOT unique across agencies
+      if (/COUNT\s*\(\s*DISTINCT\s+(?:\w+\.)?incident_num\s*\)/i.test(sql) &&
+          !/COUNT\s*\(\s*DISTINCT\s+\w+\.ori\s*\|\|\s*':'\s*\|\|/i.test(sql)) {
+        issues.push("COUNT(DISTINCT incident_num) is WRONG — incident_num is only unique within an ORI. Use COUNT(DISTINCT dv.ori || ':' || dv.data_year || ':' || dv.incident_num)");
+      }
+
+      // Store issues for message
+      (ctx as any)._dvCityIssues = issues;
+      return issues.length > 0;
+    },
+    message: (ctx) => {
+      const issues = (ctx as any)._dvCityIssues as string[] || [];
+      return `[SYSTEM: City-level DV query issues:\n${issues.map(i => `- ${i}`).join("\n")}\nCorrect pattern: SELECT a.city, a.state, COUNT(DISTINCT dv.ori || ':' || dv.data_year || ':' || dv.incident_num) AS dv_incidents FROM summary_domestic_violence dv JOIN agencies a ON a.ori = dv.ori AND a.year = dv.data_year WHERE a.state = '...' AND a.agency_type = 'City' AND a.population > 0 GROUP BY a.city, a.state ORDER BY dv_incidents DESC LIMIT 50]`;
     },
   },
 ];
