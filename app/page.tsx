@@ -1,5 +1,5 @@
 import { getDb } from "@/lib/rtci-db";
-import WorkspaceChatV2 from "@/components/WorkspaceChatV2";
+import ChatInterface from "@/components/ChatInterface";
 import { getShrDb } from "@/lib/shr-db";
 
 function getHeroData() {
@@ -82,12 +82,14 @@ export default function Home() {
   const { rows, agencyCount, population } = getHeroData();
   const historicalHeroData = getHistoricalHeroData();
   const shrHeroData = getShrHeroData();
+  const historicalMaxYear = (() => { try { const db = getDb(); const row = db.prepare("SELECT MAX(year) as y FROM historical_agency_crime").get() as { y: number }; return row?.y ?? 2024; } catch { return 2024; } })();
   return (
-    <WorkspaceChatV2
+    <ChatInterface
       heroData={rows}
       heroAgencyCount={agencyCount}
       heroPopulation={population}
       historicalHeroData={historicalHeroData}
+      historicalMaxYear={historicalMaxYear}
       shrHeroData={shrHeroData}
     />
   );

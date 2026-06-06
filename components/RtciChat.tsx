@@ -425,93 +425,77 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
         </div>
       )}
 
-      {/* Explanation text — collapsible */}
-      {(explanation || (loading && explanation)) && (
-        <div className="border-b border-[var(--border)] bg-white shrink-0">
-          <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2 sm:py-3">
-            <button
-              onClick={() => setChatCollapsed(c => !c)}
-              aria-expanded={!chatCollapsed}
-              className="text-[11px] font-semibold uppercase tracking-wider text-[var(--accent)] hover:text-[var(--foreground)] cursor-pointer transition-colors flex items-center gap-1.5 mb-1 px-1.5 sm:px-2 py-1 rounded-md hover:bg-[var(--surface)]"
-            >
-              <svg className={`w-3.5 h-3.5 transition-transform ${chatCollapsed ? "" : "rotate-90"}`} fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-              </svg>
-              {chatCollapsed ? "Show explanation" : "Hide explanation"}
-            </button>
-            {!chatCollapsed && (
-              <>
-                <div className="max-h-24 sm:max-h-32 overflow-y-auto">
-                  <p className="text-[13px] sm:text-sm text-[var(--foreground)] leading-relaxed whitespace-pre-line">{explanation}</p>
-                </div>
-                {loading && (
-                  <div className="text-xs text-[var(--muted)] mt-2 flex items-center gap-1">
-                    <span className="inline-flex gap-0.5">
-                      <span className="w-1 h-1 rounded-full animate-pulse" style={{ backgroundColor: accentColor }} />
-                      <span className="w-1 h-1 rounded-full animate-pulse" style={{ backgroundColor: accentColor, animationDelay: "0.3s" }} />
-                      <span className="w-1 h-1 rounded-full animate-pulse" style={{ backgroundColor: accentColor, animationDelay: "0.6s" }} />
-                    </span>
-                    {loadingStep}
-                  </div>
-                )}
-              </>
+      {/* Side panel layout: conversation sidebar (left) + results (right) */}
+      <div className="flex-1 min-h-0 flex flex-col md:flex-row overflow-auto md:overflow-hidden">
+
+        {/* Left sidebar — conversation, follow-up, history */}
+        {(explanation || error || loading) && (
+          <div className="md:w-[280px] lg:w-[320px] border-b md:border-b-0 md:border-r border-[var(--border)] bg-white shrink-0 md:overflow-y-auto p-3 sm:p-4 flex flex-col">
+            {/* Tab badge */}
+            <span className="inline-block text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded mb-2 w-fit" style={{ backgroundColor: accentColor + '15', color: accentColor }}>
+              {mode === "current" ? "Current" : "Historical"}
+            </span>
+
+            {/* Query title */}
+            {response?.title && (
+              <h3 className="text-sm font-semibold text-[var(--foreground)] mb-2 leading-snug">{response.title}</h3>
             )}
+
+            {/* Explanation text */}
+            {explanation && (
+              <p className="text-[13px] text-[var(--foreground)] leading-relaxed whitespace-pre-line mb-3">{explanation}</p>
+            )}
+
+            {/* Loading indicator */}
+            {loading && (
+              <div className="text-xs text-[var(--muted)] flex items-center gap-1 mb-3">
+                <span className="inline-flex gap-0.5">
+                  <span className="w-1 h-1 rounded-full animate-pulse" style={{ backgroundColor: accentColor }} />
+                  <span className="w-1 h-1 rounded-full animate-pulse" style={{ backgroundColor: accentColor, animationDelay: "0.3s" }} />
+                  <span className="w-1 h-1 rounded-full animate-pulse" style={{ backgroundColor: accentColor, animationDelay: "0.6s" }} />
+                </span>
+                {loadingStep}
+              </div>
+            )}
+
+            {/* Error */}
+            {error && !loading && (
+              <ErrorCard
+                message={error}
+                accentColor={accentColor}
+                onRetry={lastQuestion ? () => submitQuestion(lastQuestion) : undefined}
+              />
+            )}
+
+            {/* Follow-up input */}
             {!loading && explanation && (
-              <>
+              <div className="mt-auto pt-3">
                 <form
                   onSubmit={(e) => { e.preventDefault(); const val = (e.currentTarget.elements.namedItem("reply") as HTMLInputElement)?.value?.trim(); if (val) { submitQuestion(val); (e.currentTarget.elements.namedItem("reply") as HTMLInputElement).value = ""; } }}
-                  className="flex gap-2 mt-2 sm:mt-3"
+                  className="flex gap-2"
                 >
                   <input
                     name="reply"
                     type="text"
-                    placeholder="Ask a follow-up..."
-                    className="flex-1 min-w-0 px-3 py-1.5 text-sm border border-[var(--border)] rounded-full focus:outline-none focus:border-[#475EC7] bg-[var(--surface)]"
+                    placeholder="Follow up..."
+                    className="flex-1 min-w-0 px-3 py-1.5 text-sm border border-[var(--border)] rounded-lg focus:outline-none focus:border-[var(--accent)] bg-[var(--surface)]"
                   />
-                  <button type="submit" className="px-3 sm:px-4 py-1.5 text-xs font-medium text-white bg-[var(--accent)] rounded-full hover:bg-[var(--accent-hover)] cursor-pointer shrink-0">
+                  <button type="submit" className="px-3 py-1.5 text-xs font-medium text-white rounded-lg cursor-pointer shrink-0" style={{ backgroundColor: accentColor }}>
                     Ask
                   </button>
                 </form>
-                {pastQueries.length > 1 && (
-                  <div className="flex flex-nowrap gap-1.5 sm:gap-2 mt-2 items-center overflow-x-auto scrollbar-hide">
-                    <span className="text-[10px] uppercase tracking-wider text-[var(--muted)] mr-1 shrink-0">History:</span>
-                    {pastQueries.slice(-5).map((q, i) => (
-                      <button
-                        key={i}
-                        onClick={() => submitQuestion(q)}
-                        className="text-[10px] px-2 py-1 rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--muted)] hover:text-[var(--foreground)] hover:border-transparent hover:shadow-sm cursor-pointer transition-all truncate max-w-[160px] sm:max-w-[200px] shrink-0"
-                        title={q}
-                      >
-                        {q}
-                      </button>
-                    ))}
-                    <button
-                      onClick={() => { setHistory([]); setExplanation(""); setResponse(null); setError(""); try { localStorage.removeItem(`cda-history-${mode}`); } catch {} }}
-                      className="text-[10px] uppercase tracking-wider text-[var(--muted)] hover:text-red-500 cursor-pointer transition-colors shrink-0"
-                    >
-                      Clear
-                    </button>
-                  </div>
-                )}
-              </>
+                <button
+                  onClick={() => { setHistory([]); setExplanation(""); setResponse(null); setError(""); try { localStorage.removeItem(`cda-history-${mode}`); } catch {} }}
+                  className="text-[10px] uppercase tracking-wider text-[var(--muted)] hover:text-red-500 cursor-pointer transition-colors mt-3"
+                >
+                  Clear History
+                </button>
+              </div>
             )}
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Error state */}
-      {error && !loading && (
-        <div className="border-b border-[var(--border)] bg-white shrink-0">
-          <ErrorCard
-            message={error}
-            accentColor={accentColor}
-            onRetry={lastQuestion ? () => submitQuestion(lastQuestion) : undefined}
-          />
-        </div>
-      )}
-
-      {/* Main content — chart and table fill remaining space */}
-      <div className="flex-1 min-h-0 flex flex-col md:flex-row overflow-auto md:overflow-hidden">
+        {/* Right panel — hero, chart, table */}
         {/* Hero chart when no data */}
         {showCurrentHero && (
           <div className="flex-1 overflow-y-auto flex items-center justify-center p-3 sm:p-6">
@@ -538,66 +522,71 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
           </div>
         )}
 
-        {/* Loading skeleton — show when loading and no result yet */}
+        {/* Loading skeleton */}
         {loading && !hasData && !showCurrentHero && !showHistoricalHero && (
           <QuerySkeleton accentColor={accentColor} step={loadingStep} elapsed={elapsed} />
         )}
 
-        {/* Chart panel */}
-        {hasData && response.chartConfig && (
-          <div className={`${response.rows.length > 0 ? "md:w-1/2 md:border-r" : "w-full"} border-[var(--border)] shrink-0 md:shrink md:overflow-hidden bg-white`} style={{ minHeight: response.rows.length >= 8 ? 340 : 280 }}>
-            <div ref={chartRef} className="h-full flex flex-col p-3 sm:p-5">
-              <div className="flex items-end justify-end gap-2 sm:gap-3 mb-2 shrink-0">
-                <ExportButtons
-                  chartRef={chartRef}
-                  csvFilename={`${response.title || "chart"}.jpeg`}
-                  embedData={response.sql ? {
-                    tab: mode,
-                    title: response.title,
-                    sql: response.sql,
-                    chartConfig: response.chartConfig,
-                    chartMeta: response.chartMeta,
-                  } : undefined}
-                />
+        {/* Results: chart + table side by side */}
+        {hasData && (
+          <div className="flex-1 flex flex-col md:flex-row overflow-auto md:overflow-hidden">
+            {/* Chart panel */}
+            {response.chartConfig && (
+              <div className={`${response.rows.length > 0 ? "md:w-1/2 md:border-r" : "w-full"} border-[var(--border)] shrink-0 md:shrink md:overflow-hidden bg-white`} style={{ minHeight: response.rows.length >= 8 ? 340 : 280 }}>
+                <div ref={chartRef} className="h-full flex flex-col p-3 sm:p-5">
+                  <div className="flex items-end justify-end gap-2 sm:gap-3 mb-2 shrink-0">
+                    <ExportButtons
+                      chartRef={chartRef}
+                      csvFilename={`${response.title || "chart"}.jpeg`}
+                      embedData={response.sql ? {
+                        tab: mode,
+                        title: response.title,
+                        sql: response.sql,
+                        chartConfig: response.chartConfig,
+                        chartMeta: response.chartMeta,
+                      } : undefined}
+                    />
+                  </div>
+                  <div className="flex-1 min-h-0" style={{ minHeight: response.rows.length >= 8 ? 320 : 260 }}>
+                    <ChartPanel
+                      config={response.chartConfig}
+                      rows={response.rows}
+                      meta={response.chartMeta}
+                    />
+                  </div>
+                </div>
               </div>
-              <div className="flex-1 min-h-0" style={{ minHeight: response.rows.length >= 8 ? 320 : 260 }}>
-                <ChartPanel
-                  config={response.chartConfig}
-                  rows={response.rows}
-                  meta={response.chartMeta}
-                />
-              </div>
-            </div>
-          </div>
-        )}
+            )}
 
-        {/* Table panel */}
-        {hasData && response.rows.length > 0 && (
-          <div className={`${response.chartConfig ? "md:w-1/2" : "w-full"} shrink-0 md:shrink md:overflow-auto bg-white p-3 sm:p-5`}>
-            <div className="flex items-center justify-between mb-2 sm:mb-3">
-              <h2
-                className="text-[11px] sm:text-xs font-medium uppercase tracking-wider text-[var(--muted)]"
-                style={{ letterSpacing: "0.6px" }}
-              >
-                Data{" "}
-                <span className="normal-case tracking-normal">
-                  ({response.rowCount.toLocaleString()} rows
-                  {response.executionTimeMs > 0 &&
-                    ` · ${(response.executionTimeMs / 1000) < 0.1 ? '<0.1' : (response.executionTimeMs / 1000).toFixed(1)}s`}
-                  )
-                </span>
-              </h2>
-              <ExportButtons
-                csvData={response.rows}
-                csvColumns={response.columns}
-                csvFilename={`${response.title || "crime-data-export"}.csv`}
-              />
-            </div>
-            <DataTable
-              columns={response.columns}
-              rows={response.rows}
-              truncated={response.truncated}
-            />
+            {/* Table panel */}
+            {response.rows.length > 0 && (
+              <div className={`${response.chartConfig ? "md:w-1/2" : "w-full"} shrink-0 md:shrink md:overflow-auto bg-white p-3 sm:p-5`}>
+                <div className="flex items-center justify-between mb-2 sm:mb-3">
+                  <h2
+                    className="text-[11px] sm:text-xs font-medium uppercase tracking-wider text-[var(--muted)]"
+                    style={{ letterSpacing: "0.6px" }}
+                  >
+                    Data{" "}
+                    <span className="normal-case tracking-normal">
+                      ({response.rowCount.toLocaleString()} rows
+                      {response.executionTimeMs > 0 &&
+                        ` · ${(response.executionTimeMs / 1000) < 0.1 ? '<0.1' : (response.executionTimeMs / 1000).toFixed(1)}s`}
+                      )
+                    </span>
+                  </h2>
+                  <ExportButtons
+                    csvData={response.rows}
+                    csvColumns={response.columns}
+                    csvFilename={`${response.title || "crime-data-export"}.csv`}
+                  />
+                </div>
+                <DataTable
+                  columns={response.columns}
+                  rows={response.rows}
+                  truncated={response.truncated}
+                />
+              </div>
+            )}
           </div>
         )}
       </div>
