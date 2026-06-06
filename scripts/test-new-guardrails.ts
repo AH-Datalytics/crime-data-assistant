@@ -1029,6 +1029,92 @@ console.log("\n═══ nibrs-dv-city-schema ═══\n");
 }
 
 // ══════════════════════════════════════════════════════════════════════
+//  missing-group-by-year guardrail (2026-06-06)
+// ══════════════════════════════════════════════════════════════════════
+
+console.log("\n═══ missing-group-by-year ═══\n");
+
+{
+  // FP: 3791 shape — year only in WHERE + agency subquery, not in SELECT
+  const sql = `SELECT CASE WHEN s.weapon_type IN ('11','11A') THEN 'Firearm' WHEN s.weapon_type = '12' THEN 'Handgun' ELSE s.weapon_type END AS weapon, SUM(s.victim_count) AS victims FROM summary_victim_weapon s WHERE s.ucr_offense_code = '09A' AND s.year = 2025 AND s.ori IN (SELECT ori FROM agencies WHERE city = 'HOUSTON' AND state = 'TX' AND year = 2025) GROUP BY weapon ORDER BY victims DESC`;
+  const ctx = extractQueryContext(sql, "murders by weapon in Houston in 2025", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("FP: 3791 — year in WHERE not SELECT does NOT fire",
+    !r.fired.includes("missing-group-by-year"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  // TP: year in SELECT, GROUP BY weapon but not year → should fire and rewrite
+  const sql = `SELECT year, weapon_category, SUM(victim_count) AS victims FROM summary_victim_weapon WHERE ucr_offense_code = '09A' GROUP BY weapon_category ORDER BY victims DESC`;
+  const ctx = extractQueryContext(sql, "murders by weapon and year", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("TP: year in SELECT, GROUP BY weapon without year fires",
+    r.fired.includes("missing-group-by-year"),
+    `fired: ${JSON.stringify(r.fired)}`);
+  // Rewrite should append ", year" to existing GROUP BY, not create a second one
+  assert("TP: rewrite appends year to existing GROUP BY",
+    /GROUP\s+BY\s+weapon_category\s*,\s*year\b/i.test(r.sql) && !/GROUP\s+BY[\s\S]*GROUP\s+BY/i.test(r.sql),
+    `rewritten: ${r.sql}`);
+}
+
+{
+  // TP: year in SELECT, no GROUP BY at all → should insert GROUP BY year
+  const sql = `SELECT year, SUM(victim_count) AS victims FROM summary_victim_state_monthly WHERE ucr_offense_code = '09A' AND state = 'TX' ORDER BY year`;
+  const ctx = extractQueryContext(sql, "murders in Texas by year", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("TP: year in SELECT, no GROUP BY fires",
+    r.fired.includes("missing-group-by-year"),
+    `fired: ${JSON.stringify(r.fired)}`);
+  assert("TP: rewrite inserts GROUP BY year before ORDER BY",
+    /GROUP BY year\s+ORDER BY/i.test(r.sql),
+    `rewritten: ${r.sql}`);
+}
+
+{
+  // FP: scalar subquery with year in SELECT — should NOT fire
+  const sql = `SELECT (SELECT MAX(year) FROM agencies) AS max_year, SUM(victim_count) AS total FROM summary_victim_state_monthly WHERE state = 'TX' AND year = 2024`;
+  const ctx = extractQueryContext(sql, "total murders in Texas with max year", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("FP: scalar subquery containing year does NOT fire",
+    !r.fired.includes("missing-group-by-year"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  // FP: CTE with year — should skip (too risky to auto-fix)
+  const sql = `WITH cte AS (SELECT year, state, SUM(victim_count) AS cnt FROM summary_victim_state_monthly WHERE ucr_offense_code = '09A' GROUP BY year, state) SELECT year, SUM(cnt) FROM cte GROUP BY year`;
+  const ctx = extractQueryContext(sql, "murders by year nationally", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("FP: CTE query does NOT fire (skipped)",
+    !r.fired.includes("missing-group-by-year"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  // FP: year already in GROUP BY — should not fire
+  const sql = `SELECT year, SUM(victim_count) AS victims FROM summary_victim_state_monthly WHERE state = 'TX' GROUP BY year ORDER BY year`;
+  const ctx = extractQueryContext(sql, "murders in Texas by year", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("FP: year already in GROUP BY does NOT fire",
+    !r.fired.includes("missing-group-by-year"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  // TP: GROUP BY weapon ORDER BY year — year in ORDER BY not GROUP BY
+  const sql = `SELECT year, weapon_category, SUM(victim_count) AS victims FROM summary_victim_weapon WHERE ucr_offense_code = '09A' GROUP BY weapon_category ORDER BY year`;
+  const ctx = extractQueryContext(sql, "murders by weapon by year", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("TP: year in ORDER BY but not GROUP BY fires",
+    r.fired.includes("missing-group-by-year"),
+    `fired: ${JSON.stringify(r.fired)}`);
+  assert("TP: rewrite becomes GROUP BY weapon_category, year ORDER BY year",
+    /GROUP BY weapon_category, year\s+ORDER BY year/i.test(r.sql),
+    `rewritten: ${r.sql}`);
+}
+
+// ══════════════════════════════════════════════════════════════════════
 //  Summary
 // ══════════════════════════════════════════════════════════════════════
 

@@ -1686,25 +1686,102 @@ const GUARDRAILS: Guardrail[] = [
     tabs: ["current", "historical", "nibrs", "shr"],
     match: (ctx) => {
       const sql = ctx.sql;
-      const sqlLower = sql.toLowerCase();
-      // SELECT includes year
-      const selectsYear = /SELECT[\s\S]*?\byear\b[\s\S]*?FROM/i.test(sql);
-      if (!selectsYear) return false;
+
+      // --- Depth-aware keyword finder ---
+      // Scans sql and finds the position+length of `keyword` at paren depth 0.
+      // Returns { pos, len } or null. Skips keywords inside subqueries.
+      function findOuterKeyword(s: string, keyword: RegExp): { pos: number; len: number } | null {
+        let d = 0;
+        for (let i = 0; i < s.length; i++) {
+          if (s[i] === "(") d++;
+          else if (s[i] === ")") d--;
+          else if (d === 0) {
+            const slice = s.slice(i);
+            const m = slice.match(keyword);
+            if (m && m.index === 0) {
+              // Word boundary check
+              const before = i > 0 ? s[i - 1] : " ";
+              const after = s[i + m[0].length] || " ";
+              if (/[\s,;(]/.test(before) || i === 0) {
+                if (/[\s,;(]/.test(after) || i + m[0].length >= s.length) {
+                  return { pos: i, len: m[0].length };
+                }
+              }
+            }
+          }
+        }
+        return null;
+      }
+
+      // --- Extract outer SELECT clause up to first FROM at depth 0 ---
+      const selectMatch = findOuterKeyword(sql, /^SELECT\b/i);
+      if (!selectMatch) return false;
+      const fromMatch = findOuterKeyword(sql.slice(selectMatch.pos + selectMatch.len), /^FROM\b/i);
+      if (!fromMatch) return false;
+      const selectClause = sql.slice(selectMatch.pos + selectMatch.len, selectMatch.pos + selectMatch.len + fromMatch.pos);
+
+      // Strip parenthesized expressions so scalar subqueries don't contribute "year"
+      let flat = selectClause;
+      let prevLen = -1;
+      while (flat.length !== prevLen) {
+        prevLen = flat.length;
+        flat = flat.replace(/\([^()]*\)/g, "()");
+      }
+      if (!/\byear\b/i.test(flat)) return false;
+
       // Has aggregate function
-      const hasAggregate = /\b(SUM|COUNT|AVG|MIN|MAX)\s*\(/i.test(sql);
-      if (!hasAggregate) return false;
-      // No GROUP BY at all, or GROUP BY without year
-      const hasGroupByYear = /GROUP\s+BY[\s\S]*?\byear\b/i.test(sql);
-      if (hasGroupByYear) return false;
+      if (!/\b(SUM|COUNT|AVG|MIN|MAX)\s*\(/i.test(sql)) return false;
+
+      // --- Extract outer GROUP BY clause (up to HAVING/ORDER BY/LIMIT/end) ---
+      const groupByKw = findOuterKeyword(sql, /^GROUP\s+BY\b/i);
+      if (groupByKw) {
+        const afterGB = sql.slice(groupByKw.pos + groupByKw.len);
+        const terminator = afterGB.match(/\b(HAVING|ORDER\s+BY|LIMIT)\b/i);
+        const gbClause = terminator && terminator.index != null
+          ? afterGB.slice(0, terminator.index)
+          : afterGB;
+        if (/\byear\b/i.test(gbClause)) return false; // year already grouped
+      }
+
       // Exclude window functions (SUM(...) OVER (...))
       if (/\bOVER\s*\(/i.test(sql)) return false;
-      // Exclude subqueries that intentionally return scalar aggregates
-      // Only fire on the outermost query — if the main FROM is a CTE/subquery, skip
-      if (/\bFROM\s*\(/i.test(sqlLower)) return false;
+      // Skip CTEs and subquery-FROM — too risky to auto-fix
+      if (/^\s*WITH\b/i.test(sql)) return false;
+      if (/\bFROM\s*\(/i.test(sql.toLowerCase())) return false;
       return true;
     },
     rewrite: (sql) => {
-      // Insert GROUP BY year before ORDER BY or LIMIT or end of query
+      // Depth-aware: find the outermost GROUP BY
+      let d = 0;
+      let gbPos = -1;
+      let gbLen = 0;
+      for (let i = 0; i < sql.length; i++) {
+        if (sql[i] === "(") d++;
+        else if (sql[i] === ")") d--;
+        else if (d === 0) {
+          const m = sql.slice(i).match(/^GROUP\s+BY\b/i);
+          if (m) {
+            const before = i > 0 ? sql[i - 1] : " ";
+            if (/[\s;]/.test(before) || i === 0) {
+              gbPos = i;
+              gbLen = m[0].length;
+              break;
+            }
+          }
+        }
+      }
+
+      if (gbPos >= 0) {
+        // Existing GROUP BY — append ", year" before the next clause terminator
+        const afterGB = sql.slice(gbPos + gbLen);
+        const terminator = afterGB.match(/\b(HAVING|ORDER\s+BY|LIMIT)\b/i);
+        if (terminator && terminator.index != null) {
+          const insertPos = gbPos + gbLen + terminator.index;
+          return sql.slice(0, insertPos).trimEnd() + ", year " + sql.slice(insertPos);
+        }
+        return sql.trimEnd() + ", year";
+      }
+      // No GROUP BY — insert before ORDER BY/LIMIT/end
       const insertPoint = sql.match(/\b(ORDER\s+BY|LIMIT)\b/i);
       if (insertPoint && insertPoint.index) {
         return sql.slice(0, insertPoint.index) + "GROUP BY year " + sql.slice(insertPoint.index);
