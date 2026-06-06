@@ -1291,7 +1291,7 @@ const GUARDRAILS: Guardrail[] = [
       return joinAgencies && hasGroupBy && !excludesCounty && isCityQuery;
     },
     message: () =>
-      "[SYSTEM: County sheriff agencies share the same city name as city PDs in the agencies table (e.g., Harris County SO has city='HOUSTON'). Add: AND a.agency_type = 'City' to exclude county agencies from city rankings. Also add AND a.population > 0 to exclude sub-agencies.]",
+      "[SYSTEM: County sheriff agencies share the same city name as city PDs in the agencies table (e.g., Harris County SO has city='HOUSTON'). Add: AND a.agency_type = 'City' AND a.population > 0 AND a.city != '' to exclude county agencies, sub-agencies, and agencies with blank city names from city rankings.]",
   },
   // --- NIBRS: any city filter in agencies subquery without agency_type (auto-fix) ---
   {
@@ -1787,7 +1787,7 @@ const GUARDRAILS: Guardrail[] = [
     },
     message: (ctx) => {
       const issues = (ctx as any)._dvCityIssues as string[] || [];
-      return `[SYSTEM: City-level DV query issues:\n${issues.map(i => `- ${i}`).join("\n")}\nCorrect pattern: SELECT a.city, a.state, COUNT(DISTINCT dv.ori || ':' || dv.data_year || ':' || dv.incident_num) AS dv_incidents FROM summary_domestic_violence dv JOIN agencies a ON a.ori = dv.ori AND a.year = dv.data_year WHERE a.state = '...' AND a.agency_type = 'City' AND a.population > 0 GROUP BY a.city, a.state ORDER BY dv_incidents DESC LIMIT 50]`;
+      return `[SYSTEM: City-level DV query issues:\n${issues.map(i => `- ${i}`).join("\n")}\nCorrect pattern: SELECT a.city, a.state, COUNT(DISTINCT dv.ori || ':' || dv.data_year || ':' || dv.incident_num) AS dv_incidents FROM summary_domestic_violence dv JOIN agencies a ON a.ori = dv.ori AND a.year = dv.data_year WHERE a.state = '...' AND a.agency_type = 'City' AND a.population > 0 AND a.city != '' GROUP BY a.city, a.state ORDER BY dv_incidents DESC LIMIT 50]`;
     },
   },
 ];
