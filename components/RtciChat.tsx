@@ -125,6 +125,9 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
   const [showTable, setShowTable] = useState(true);
   const [expandedExplanation, setExpandedExplanation] = useState(false);
   const { captchaNeeded, requestCaptcha, onVerified, onClose } = useCaptcha();
+  const [exchanges, setExchanges] = useState<{ question: string; explanation: string; response: QueryResponse | null }[]>([]);
+  const [activeExchangeIdx, setActiveExchangeIdx] = useState(-1);
+  const [expandedRailIdx, setExpandedRailIdx] = useState(-1);
 
   // Extract past user questions from history
   const pastQueries = history.filter((h) => h.role === "user").map((h) => h.content);
@@ -180,6 +183,7 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
 
         let finalExplanation = "";
         let finalSql = "";
+        let finalResponse: QueryResponse | null = null;
 
         await readSSEStream(res, (event) => {
           switch (event.type) {
@@ -200,24 +204,23 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
               finalExplanation = event.explanation;
               finalSql = event.sql || "";
               setExplanation(event.explanation);
-              setResponse(
-                event.rows.length > 0 || event.chartConfig
-                  ? {
-                      success: true as const,
-                      question,
-                      sql: event.sql,
-                      explanation: event.explanation,
-                      title: event.title,
-                      columns: event.columns,
-                      rows: event.rows,
-                      rowCount: event.rowCount,
-                      truncated: event.truncated,
-                      chartConfig: event.chartConfig,
-                      chartMeta: event.chartMeta,
-                      executionTimeMs: event.executionTimeMs,
-                    }
-                  : null
-              );
+              finalResponse = event.rows.length > 0 || event.chartConfig
+                ? {
+                    success: true as const,
+                    question,
+                    sql: event.sql,
+                    explanation: event.explanation,
+                    title: event.title,
+                    columns: event.columns,
+                    rows: event.rows,
+                    rowCount: event.rowCount,
+                    truncated: event.truncated,
+                    chartConfig: event.chartConfig,
+                    chartMeta: event.chartMeta,
+                    executionTimeMs: event.executionTimeMs,
+                  }
+                : null;
+              setResponse(finalResponse);
               if (timerRef.current) clearInterval(timerRef.current); setLoading(false);
               break;
 
@@ -244,9 +247,15 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
           ];
           return updated.slice(-6); // 3 exchanges = 6 messages
         });
+
+        // Push to exchange stack for the side rail
+        setExchanges((prev) => [...prev, { question, explanation: finalExplanation, response: finalResponse }]);
+        setActiveExchangeIdx(-1);
+        setExpandedRailIdx(-1);
       } catch (err) {
         const msg = err instanceof Error ? err.message : "Network error";
         setError(`Connection error: ${msg}. Please try again.`);
+        setExchanges((prev) => [...prev, { question, explanation: `Error: ${msg}`, response: null }]);
       } finally {
         setLoading(false);
       }
@@ -436,39 +445,37 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
               {/* New question bar */}
               {!loading && (
-                <form onSubmit={(e) => { e.preventDefault(); const el = e.currentTarget.elements.namedItem("railask") as HTMLTextAreaElement; const val = el?.value?.trim(); if (val) { setHistory([]); submitQuestion(val); el.value = ""; } }} className="flex flex-col gap-1.5">
+                <form onSubmit={(e) => { e.preventDefault(); const el = e.currentTarget.elements.namedItem("railask") as HTMLTextAreaElement; const val = el?.value?.trim(); if (val) { setHistory([]); setExchanges([]); setActiveExchangeIdx(-1); submitQuestion(val); el.value = ""; } }} className="flex flex-col gap-1.5">
                   <textarea name="railask" rows={2} placeholder="Ask a new question..." onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); e.currentTarget.form?.requestSubmit(); } }} className="w-full min-w-0 px-3 py-2 text-[12px] border border-[var(--border)] rounded-md focus:outline-none focus:border-[var(--accent)] bg-[var(--surface)] resize-none" />
                   <button type="submit" className="self-end px-3 py-1.5 text-[11px] font-semibold text-white rounded-md hover:opacity-90 cursor-pointer" style={{ backgroundColor: accentColor }}>Ask</button>
                 </form>
               )}
-
-              <div className="bg-[color-mix(in_srgb,var(--accent)_6%,white)] border-l-[3px] pl-[9px] pr-3 py-2.5 rounded-md" style={{ borderLeftColor: accentColor }}>
-                <div className="flex items-center gap-1.5 mb-1">
-                  <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded text-white" style={{ backgroundColor: accentColor }}>{mode === "current" ? "Current" : "Historical"}</span>
-                  <span className="text-[12px] leading-snug font-bold text-[var(--navy)]">{response?.title || lastQuestion}</span>
-                </div>
-                <div className={`text-[11.5px] text-[var(--muted)] leading-relaxed whitespace-pre-line ${expandedExplanation ? "" : "line-clamp-4"}`}>{explanation}</div>
-                {explanation && explanation.length > 80 && (
-                  <button onClick={() => setExpandedExplanation(v => !v)} className="text-[10px] mt-1 cursor-pointer" style={{ color: accentColor }}>{expandedExplanation ? "Show less" : "Show more"}</button>
-                )}
-                {!loading && explanation && (
-                  <form onSubmit={(e) => { e.preventDefault(); const el = e.currentTarget.elements.namedItem("followup") as HTMLInputElement; const val = el?.value?.trim(); if (val) { submitQuestion(val); el.value = ""; } }} className="flex gap-1 mt-2">
-                    <input name="followup" type="text" placeholder="Follow up..." className="flex-1 min-w-0 px-2 py-1.5 text-[11px] border border-[var(--border)] rounded focus:outline-none focus:border-[var(--accent)] bg-[var(--surface)]" />
-                    <button type="submit" className="px-2 py-1.5 text-[10px] font-semibold text-white rounded hover:opacity-90 cursor-pointer shrink-0" style={{ backgroundColor: accentColor }}>Ask</button>
-                  </form>
-                )}
-                {loading && explanation && (
-                  <div className="flex items-center gap-1.5 text-[11px] text-[var(--muted)] mt-2">
-                    <span className="inline-flex gap-0.5">
-                      <span className="w-1 h-1 rounded-full animate-pulse" style={{ backgroundColor: accentColor }} />
-                      <span className="w-1 h-1 rounded-full animate-pulse" style={{ backgroundColor: accentColor, animationDelay: "0.3s" }} />
-                      <span className="w-1 h-1 rounded-full animate-pulse" style={{ backgroundColor: accentColor, animationDelay: "0.6s" }} />
-                    </span>
-                    Thinking...{elapsed > 3 && <span className="opacity-60 ml-1">({elapsed}s)</span>}
+              {/* Exchange stack */}
+              {exchanges.map((ex, i) => {
+                const isActive = activeExchangeIdx === -1 ? i === exchanges.length - 1 : i === activeExchangeIdx;
+                const isExpanded = expandedRailIdx === i;
+                return (
+                  <div key={i} className={`rounded-md transition-all ${isActive ? "bg-[color-mix(in_srgb,var(--accent)_6%,white)] border-l-[3px] pl-[9px] pr-3 py-2.5" : `${i === exchanges.length - 1 ? "opacity-60" : "opacity-45"} hover:opacity-80 pl-3 pr-3 py-2`}`} style={isActive ? { borderLeftColor: accentColor } : undefined}>
+                    <button onClick={() => { setActiveExchangeIdx(i); if (ex.response) { setResponse(ex.response); setExplanation(ex.explanation); } }} className="w-full text-left cursor-pointer">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded text-white" style={{ backgroundColor: accentColor }}>{mode === "current" ? "Current" : "Historical"}</span>
+                        <span className={`text-[12px] leading-snug ${isActive ? "font-bold text-[var(--navy)]" : "font-semibold text-[var(--foreground-strong)]"}`}>{ex.question}</span>
+                      </div>
+                    </button>
+                    <div className={`text-[11.5px] text-[var(--muted)] leading-relaxed whitespace-pre-line ${isExpanded ? "" : "line-clamp-4"}`}>{ex.explanation}</div>
+                    {ex.explanation.length > 80 && (
+                      <button onClick={() => setExpandedRailIdx(isExpanded ? -1 : i)} className="text-[10px] mt-1 cursor-pointer" style={{ color: accentColor }}>{isExpanded ? "Show less" : "Show more"}</button>
+                    )}
+                    {isActive && !loading && (
+                      <form onSubmit={(e) => { e.preventDefault(); const el = e.currentTarget.elements.namedItem(`followup-${i}`) as HTMLInputElement; const val = el?.value?.trim(); if (val) { submitQuestion(val); el.value = ""; } }} className="flex gap-1 mt-2">
+                        <input name={`followup-${i}`} type="text" placeholder="Follow up..." className="flex-1 min-w-0 px-2 py-1.5 text-[11px] border border-[var(--border)] rounded focus:outline-none focus:border-[var(--accent)] bg-[var(--surface)]" />
+                        <button type="submit" className="px-2 py-1.5 text-[10px] font-semibold text-white rounded hover:opacity-90 cursor-pointer shrink-0" style={{ backgroundColor: accentColor }}>Ask</button>
+                      </form>
+                    )}
                   </div>
-                )}
-              </div>
-              {loading && !explanation && (
+                );
+              })}
+              {loading && (
                 <div className="pl-3 pr-3 py-2.5">
                   <div className="text-[12px] font-bold text-[var(--navy)] mb-1">{lastQuestion}</div>
                   <div className="flex items-center gap-1.5 text-[11px] text-[var(--muted)]">
@@ -481,9 +488,9 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
                   </div>
                 </div>
               )}
-              {explanation && (
+              {exchanges.length > 0 && (
                 <div className="text-center pt-2">
-                  <button onClick={() => { setHistory([]); setExplanation(""); setResponse(null); setError(""); try { localStorage.removeItem(`cda-history-${mode}`); } catch {} }} className="text-[10px] uppercase tracking-wider text-[var(--muted)] hover:text-red-500 cursor-pointer">Clear history</button>
+                  <button onClick={() => { setHistory([]); setExplanation(""); setResponse(null); setError(""); setExchanges([]); setActiveExchangeIdx(-1); try { localStorage.removeItem(`cda-history-${mode}`); } catch {} }} className="text-[10px] uppercase tracking-wider text-[var(--muted)] hover:text-red-500 cursor-pointer">Clear history</button>
                 </div>
               )}
             </div>
