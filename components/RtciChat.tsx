@@ -457,6 +457,16 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
                     <button type="submit" className="px-2 py-1.5 text-[10px] font-semibold text-white rounded hover:opacity-90 cursor-pointer shrink-0" style={{ backgroundColor: accentColor }}>Ask</button>
                   </form>
                 )}
+                {loading && explanation && (
+                  <div className="flex items-center gap-1.5 text-[11px] text-[var(--muted)] mt-2">
+                    <span className="inline-flex gap-0.5">
+                      <span className="w-1 h-1 rounded-full animate-pulse" style={{ backgroundColor: accentColor }} />
+                      <span className="w-1 h-1 rounded-full animate-pulse" style={{ backgroundColor: accentColor, animationDelay: "0.3s" }} />
+                      <span className="w-1 h-1 rounded-full animate-pulse" style={{ backgroundColor: accentColor, animationDelay: "0.6s" }} />
+                    </span>
+                    Thinking...{elapsed > 3 && <span className="opacity-60 ml-1">({elapsed}s)</span>}
+                  </div>
+                )}
               </div>
               {loading && !explanation && (
                 <div className="pl-3 pr-3 py-2.5">
