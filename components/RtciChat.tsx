@@ -121,6 +121,9 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
   const chartRef = useRef<HTMLDivElement>(null);
   const [showDatasetInfo, setShowDatasetInfo] = useState(false);
   const [showAllHistory, setShowAllHistory] = useState(false);
+  const [showChart, setShowChart] = useState(true);
+  const [showTable, setShowTable] = useState(true);
+  const [expandedExplanation, setExpandedExplanation] = useState(false);
   const { captchaNeeded, requestCaptcha, onVerified, onClose } = useCaptcha();
 
   // Extract past user questions from history
@@ -425,176 +428,146 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
         </div>
       )}
 
-      {/* Side panel layout: conversation sidebar (left) + results (right) */}
-      <div className="flex-1 min-h-0 flex flex-col md:flex-row overflow-auto md:overflow-hidden">
-
-        {/* Left sidebar — conversation, follow-up, history */}
-        {(explanation || error || loading) && (
-          <div className="md:w-[280px] lg:w-[320px] border-b md:border-b-0 md:border-r border-[var(--border)] bg-white shrink-0 md:overflow-y-auto p-3 sm:p-4 flex flex-col">
-            {/* Tab badge */}
-            <span className="inline-block text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded mb-2 w-fit" style={{ backgroundColor: accentColor + '15', color: accentColor }}>
-              {mode === "current" ? "Current" : "Historical"}
-            </span>
-
-            {/* Query title */}
-            {response?.title && (
-              <h3 className="text-sm font-semibold text-[var(--foreground)] mb-2 leading-snug">{response.title}</h3>
-            )}
-
-            {/* Explanation text */}
-            {explanation && (
-              <p className="text-[13px] text-[var(--foreground)] leading-relaxed whitespace-pre-line mb-3">{explanation}</p>
-            )}
-
-            {/* Loading indicator */}
-            {loading && (
-              <div className="text-xs text-[var(--muted)] flex items-center gap-1 mb-3">
-                <span className="inline-flex gap-0.5">
-                  <span className="w-1 h-1 rounded-full animate-pulse" style={{ backgroundColor: accentColor }} />
-                  <span className="w-1 h-1 rounded-full animate-pulse" style={{ backgroundColor: accentColor, animationDelay: "0.3s" }} />
-                  <span className="w-1 h-1 rounded-full animate-pulse" style={{ backgroundColor: accentColor, animationDelay: "0.6s" }} />
-                </span>
-                {loadingStep}
-              </div>
-            )}
-
-            {/* Error */}
-            {error && !loading && (
-              <ErrorCard
-                message={error}
-                accentColor={accentColor}
-                onRetry={lastQuestion ? () => submitQuestion(lastQuestion) : undefined}
-              />
-            )}
-
-            {/* Follow-up input */}
-            {!loading && explanation && (
-              <div className="mt-auto pt-3">
-                <form
-                  onSubmit={(e) => { e.preventDefault(); const val = (e.currentTarget.elements.namedItem("reply") as HTMLInputElement)?.value?.trim(); if (val) { submitQuestion(val); (e.currentTarget.elements.namedItem("reply") as HTMLInputElement).value = ""; } }}
-                  className="flex gap-2"
-                >
-                  <input
-                    name="reply"
-                    type="text"
-                    placeholder="Follow up..."
-                    className="flex-1 min-w-0 px-3 py-1.5 text-sm border border-[var(--border)] rounded-lg focus:outline-none focus:border-[var(--accent)] bg-[var(--surface)]"
-                  />
-                  <button type="submit" className="px-3 py-1.5 text-xs font-medium text-white rounded-lg cursor-pointer shrink-0" style={{ backgroundColor: accentColor }}>
-                    Ask
-                  </button>
+      {/* Side panel layout: left rail + right stage */}
+      <div className="flex-1 min-h-0 flex">
+        {/* LEFT RAIL */}
+        {hasActiveQuery && (
+          <div className="w-[260px] lg:w-[320px] xl:w-[340px] border-r border-[var(--border)] flex flex-col bg-white shrink-0 hidden md:flex">
+            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+              {/* New question bar */}
+              {!loading && (
+                <form onSubmit={(e) => { e.preventDefault(); const el = e.currentTarget.elements.namedItem("railask") as HTMLTextAreaElement; const val = el?.value?.trim(); if (val) { setHistory([]); submitQuestion(val); el.value = ""; } }} className="flex flex-col gap-1.5">
+                  <textarea name="railask" rows={2} placeholder="Ask a new question..." onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); e.currentTarget.form?.requestSubmit(); } }} className="w-full min-w-0 px-3 py-2 text-[12px] border border-[var(--border)] rounded-md focus:outline-none focus:border-[var(--accent)] bg-[var(--surface)] resize-none" />
+                  <button type="submit" className="self-end px-3 py-1.5 text-[11px] font-semibold text-white rounded-md hover:opacity-90 cursor-pointer" style={{ backgroundColor: accentColor }}>Ask</button>
                 </form>
-                <button
-                  onClick={() => { setHistory([]); setExplanation(""); setResponse(null); setError(""); try { localStorage.removeItem(`cda-history-${mode}`); } catch {} }}
-                  className="text-[10px] uppercase tracking-wider text-[var(--muted)] hover:text-red-500 cursor-pointer transition-colors mt-3"
-                >
-                  Clear History
-                </button>
-              </div>
-            )}
-          </div>
-        )}
+              )}
 
-        {/* Right panel — hero, chart, table */}
-        {/* Hero chart when no data */}
-        {showCurrentHero && (
-          <div className="flex-1 overflow-y-auto flex items-center justify-center p-3 sm:p-6">
-            <div className="max-w-4xl w-full">
-              <HeroChart
-                data={heroData}
-                agencyCount={heroAgencyCount || 0}
-                population={heroPopulation ?? null}
-              />
-              <p className="text-xs text-center text-gray-400 mt-4">
-                I am a bot and sometimes may make mistakes. When in doubt, verify these findings with official sources.
-              </p>
-            </div>
-          </div>
-        )}
-        {showHistoricalHero && (
-          <div className="flex-1 overflow-y-auto flex items-center justify-center p-3 sm:p-6">
-            <div className="max-w-4xl w-full">
-              <HistoricalHeroChart data={historicalHeroData!} />
-              <p className="text-xs text-center text-gray-400 mt-4">
-                I am a bot and sometimes may make mistakes. When in doubt, verify these findings with official sources.
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* Loading skeleton */}
-        {loading && !hasData && !showCurrentHero && !showHistoricalHero && (
-          <QuerySkeleton accentColor={accentColor} step={loadingStep} elapsed={elapsed} />
-        )}
-
-        {/* Results: chart + table side by side */}
-        {hasData && (
-          <div className="flex-1 flex flex-col md:flex-row overflow-auto md:overflow-hidden">
-            {/* Chart panel */}
-            {response.chartConfig && (
-              <div className={`${response.rows.length > 0 ? "md:w-1/2 md:border-r" : "w-full"} border-[var(--border)] shrink-0 md:shrink md:overflow-hidden bg-white`} style={{ minHeight: response.rows.length >= 8 ? 340 : 280 }}>
-                <div ref={chartRef} className="h-full flex flex-col p-3 sm:p-5">
-                  <div className="flex items-end justify-end gap-2 sm:gap-3 mb-2 shrink-0">
-                    <ExportButtons
-                      chartRef={chartRef}
-                      csvFilename={`${response.title || "chart"}.jpeg`}
-                      embedData={response.sql ? {
-                        tab: mode,
-                        title: response.title,
-                        sql: response.sql,
-                        chartConfig: response.chartConfig,
-                        chartMeta: response.chartMeta,
-                      } : undefined}
-                    />
-                  </div>
-                  <div className="flex-1 min-h-0" style={{ minHeight: response.rows.length >= 8 ? 320 : 260 }}>
-                    <ChartPanel
-                      config={response.chartConfig}
-                      rows={response.rows}
-                      meta={response.chartMeta}
-                    />
-                  </div>
+              <div className="bg-[color-mix(in_srgb,var(--accent)_6%,white)] border-l-[3px] pl-[9px] pr-3 py-2.5 rounded-md" style={{ borderLeftColor: accentColor }}>
+                <div className="flex items-center gap-1.5 mb-1">
+                  <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded text-white" style={{ backgroundColor: accentColor }}>{mode === "current" ? "Current" : "Historical"}</span>
+                  <span className="text-[12px] leading-snug font-bold text-[var(--navy)]">{response?.title || lastQuestion}</span>
                 </div>
+                <div className={`text-[11.5px] text-[var(--muted)] leading-relaxed whitespace-pre-line ${expandedExplanation ? "" : "line-clamp-4"}`}>{explanation}</div>
+                {explanation && explanation.length > 80 && (
+                  <button onClick={() => setExpandedExplanation(v => !v)} className="text-[10px] mt-1 cursor-pointer" style={{ color: accentColor }}>{expandedExplanation ? "Show less" : "Show more"}</button>
+                )}
+                {!loading && explanation && (
+                  <form onSubmit={(e) => { e.preventDefault(); const el = e.currentTarget.elements.namedItem("followup") as HTMLInputElement; const val = el?.value?.trim(); if (val) { submitQuestion(val); el.value = ""; } }} className="flex gap-1 mt-2">
+                    <input name="followup" type="text" placeholder="Follow up..." className="flex-1 min-w-0 px-2 py-1.5 text-[11px] border border-[var(--border)] rounded focus:outline-none focus:border-[var(--accent)] bg-[var(--surface)]" />
+                    <button type="submit" className="px-2 py-1.5 text-[10px] font-semibold text-white rounded hover:opacity-90 cursor-pointer shrink-0" style={{ backgroundColor: accentColor }}>Ask</button>
+                  </form>
+                )}
               </div>
-            )}
-
-            {/* Table panel */}
-            {response.rows.length > 0 && (
-              <div className={`${response.chartConfig ? "md:w-1/2" : "w-full"} shrink-0 md:shrink md:overflow-auto bg-white p-3 sm:p-5`}>
-                <div className="flex items-center justify-between mb-2 sm:mb-3">
-                  <h2
-                    className="text-[11px] sm:text-xs font-medium uppercase tracking-wider text-[var(--muted)]"
-                    style={{ letterSpacing: "0.6px" }}
-                  >
-                    Data{" "}
-                    <span className="normal-case tracking-normal">
-                      ({response.rowCount.toLocaleString()} rows
-                      {response.executionTimeMs > 0 &&
-                        ` · ${(response.executionTimeMs / 1000) < 0.1 ? '<0.1' : (response.executionTimeMs / 1000).toFixed(1)}s`}
-                      )
+              {loading && !explanation && (
+                <div className="pl-3 pr-3 py-2.5">
+                  <div className="text-[12px] font-bold text-[var(--navy)] mb-1">{lastQuestion}</div>
+                  <div className="flex items-center gap-1.5 text-[11px] text-[var(--muted)]">
+                    <span className="inline-flex gap-0.5">
+                      <span className="w-1 h-1 rounded-full animate-pulse" style={{ backgroundColor: accentColor }} />
+                      <span className="w-1 h-1 rounded-full animate-pulse" style={{ backgroundColor: accentColor, animationDelay: "0.3s" }} />
+                      <span className="w-1 h-1 rounded-full animate-pulse" style={{ backgroundColor: accentColor, animationDelay: "0.6s" }} />
                     </span>
-                  </h2>
-                  <ExportButtons
-                    csvData={response.rows}
-                    csvColumns={response.columns}
-                    csvFilename={`${response.title || "crime-data-export"}.csv`}
-                  />
+                    {loadingStep}
+                  </div>
                 </div>
-                <DataTable
-                  columns={response.columns}
-                  rows={response.rows}
-                  truncated={response.truncated}
-                />
-              </div>
-            )}
+              )}
+              {explanation && (
+                <div className="text-center pt-2">
+                  <button onClick={() => { setHistory([]); setExplanation(""); setResponse(null); setError(""); try { localStorage.removeItem(`cda-history-${mode}`); } catch {} }} className="text-[10px] uppercase tracking-wider text-[var(--muted)] hover:text-red-500 cursor-pointer">Clear history</button>
+                </div>
+              )}
+            </div>
           </div>
         )}
+
+        {/* RIGHT STAGE */}
+        <div className={`flex-1 flex flex-col min-h-0 overflow-x-hidden bg-[var(--surface)] ${hasData ? "" : "overflow-y-auto"}`}>
+          {/* Error */}
+          {error && !loading && (
+            <div className="shrink-0">
+              <ErrorCard message={error} accentColor={accentColor} onRetry={lastQuestion ? () => submitQuestion(lastQuestion) : undefined} />
+            </div>
+          )}
+          {/* Hero charts */}
+          {showCurrentHero && (
+            <div className="flex-1 overflow-y-auto flex items-center justify-center p-3 sm:p-6">
+              <div className="max-w-4xl w-full">
+                <HeroChart data={heroData} agencyCount={heroAgencyCount || 0} population={heroPopulation ?? null} />
+                <p className="text-xs text-center text-gray-400 mt-4">I am a bot and sometimes may make mistakes. When in doubt, verify these findings with official sources.</p>
+              </div>
+            </div>
+          )}
+          {showHistoricalHero && (
+            <div className="flex-1 overflow-y-auto flex items-center justify-center p-3 sm:p-6">
+              <div className="max-w-4xl w-full">
+                <HistoricalHeroChart data={historicalHeroData!} />
+                <p className="text-xs text-center text-gray-400 mt-4">I am a bot and sometimes may make mistakes. When in doubt, verify these findings with official sources.</p>
+              </div>
+            </div>
+          )}
+
+          {/* Loading skeleton */}
+          {loading && !hasData && !showCurrentHero && !showHistoricalHero && (
+            <QuerySkeleton accentColor={accentColor} step={loadingStep} elapsed={elapsed} />
+          )}
+
+          {/* Results */}
+          {hasData && (
+            <div className="flex-1 flex flex-col p-3 sm:p-5 lg:p-6 min-h-0">
+              {/* Source badge + description */}
+              <div className="mb-2 shrink-0 flex items-center gap-2">
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded text-white uppercase tracking-wider" style={{ backgroundColor: accentColor }}>{mode === "current" ? "Current Trends" : "Historical Library"}</span>
+                <span className="text-[11px] text-[var(--muted)]">{mode === "current" ? "Monthly crime data from hundreds of agencies" : "Has annual clearance rates by agency going back decades"}</span>
+              </div>
+
+              {/* Toolbar */}
+              <div className="flex items-center justify-between mb-2 sm:mb-3 shrink-0 flex-wrap gap-1">
+                <div className="flex border border-[var(--border)] rounded-md overflow-hidden">
+                  {response.chartConfig && (
+                    <button onClick={() => setShowChart(v => !v)} className={`flex items-center gap-1.5 px-2.5 py-1.5 text-[10px] font-medium cursor-pointer transition-colors ${showChart ? "bg-white text-[var(--foreground)]" : "bg-[var(--surface)] text-[var(--muted-light)]"}`}>
+                      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="2 12 5 6 8 9 11 3 14 7"/></svg>
+                      <span className="hidden sm:inline">Chart</span>
+                    </button>
+                  )}
+                  {response.chartConfig && response.rows.length > 0 && <div className="w-px bg-[var(--border)]" />}
+                  {response.rows.length > 0 && (
+                    <button onClick={() => setShowTable(v => !v)} className={`flex items-center gap-1.5 px-2.5 py-1.5 text-[10px] font-medium cursor-pointer transition-colors ${showTable ? "bg-white text-[var(--foreground)]" : "bg-[var(--surface)] text-[var(--muted-light)]"}`}>
+                      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="12" height="12" rx="1.5"/><line x1="2" y1="6" x2="14" y2="6"/><line x1="2" y1="10" x2="14" y2="10"/><line x1="6" y1="2" x2="6" y2="14"/></svg>
+                      <span className="hidden sm:inline">Table</span>
+                    </button>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  {response.chartConfig && showChart && (
+                    <ExportButtons chartRef={chartRef} csvFilename={`${response.title || "chart"}.jpeg`} embedData={response.sql ? { tab: mode, title: response.title, sql: response.sql, chartConfig: response.chartConfig, chartMeta: response.chartMeta } : undefined} />
+                  )}
+                  {response.rows.length > 0 && <ExportButtons csvData={response.rows} csvColumns={response.columns} csvFilename={`${response.title || "crime-data-export"}.csv`} />}
+                </div>
+              </div>
+
+              {/* Chart + Table side by side */}
+              <div className={`flex-1 flex flex-col ${showChart && response.chartConfig && showTable && response.rows.length > 0 ? "md:flex-row" : ""} gap-3 sm:gap-6 min-h-0`}>
+                {response.chartConfig && showChart && (
+                  <div ref={chartRef} className={`bg-white flex flex-col ${showTable && response.rows.length > 0 ? "md:flex-[1.15] md:min-w-0" : "w-full flex-1"}`}>
+                    <div className="flex-1 min-h-0" style={{ minHeight: 280 }}>
+                      <ChartPanel config={response.chartConfig} rows={response.rows} meta={response.chartMeta} />
+                    </div>
+                  </div>
+                )}
+                {response.rows.length > 0 && showTable && (
+                  <div className={`bg-white overflow-hidden flex flex-col ${showChart && response.chartConfig ? "md:flex-[0.85] md:min-w-0" : "w-full flex-1"}`}>
+                    <DataTable columns={response.columns} rows={response.rows} truncated={response.truncated} fillHeight />
+                  </div>
+                )}
+              </div>
+
+              <p className="text-[10px] text-center text-[var(--muted-light)] mt-3 shrink-0">
+                I am a bot and sometimes may make mistakes. Verify findings with official sources. Your questions are logged to improve accuracy. No personally identifying information is collected.
+              </p>
+            </div>
+          )}
+        </div>
       </div>
-      {response && (
-        <p className="text-xs text-center text-gray-400 py-1 border-t border-[var(--border)] bg-white shrink-0">
-          I am a bot and sometimes may make mistakes. When in doubt, verify these findings with official sources.
-        </p>
-      )}
     </div>
   );
 }

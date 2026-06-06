@@ -228,151 +228,192 @@ export default function ShrChat({ visible, heroData }: ShrChatProps) {
       {/* Search bar at top only before first query */}
       {!hasActiveQuery && searchBar}
 
-      {/* Side panel layout: conversation sidebar (left) + results (right) */}
-      <div className="flex-1 min-h-0 flex flex-col md:flex-row overflow-auto md:overflow-hidden">
-
-        {/* Left sidebar — conversation, follow-up, history */}
-        {(messages.length > 0 || loading) && (
-          <div className="md:w-[280px] lg:w-[320px] border-b md:border-b-0 md:border-r border-[var(--border)] bg-white shrink-0 md:overflow-y-auto p-3 sm:p-4 flex flex-col">
-            {/* Tab badge */}
-            <span className="inline-block text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded mb-2 w-fit" style={{ backgroundColor: '#8B691415', color: '#8B6914' }}>
-              SHR
-            </span>
-
-            {/* Title */}
-            {currentResponse?.title && (
-              <h3 className="text-sm font-semibold text-[var(--foreground)] mb-2 leading-snug">{currentResponse.title}</h3>
-            )}
-
-            {/* Messages */}
-            {messages.length > 0 && (
-              <div className="space-y-2 mb-3">
-                {messages.filter(m => m.role === "assistant").slice(-1).map((msg) => (
-                  <p key={msg.id} className="text-[13px] text-[var(--foreground)] leading-relaxed whitespace-pre-line">{msg.text}</p>
-                ))}
-              </div>
-            )}
-
-            {/* Loading indicator */}
-            {loading && (
-              <div className="text-xs text-[var(--muted)] flex items-center gap-1 mb-3">
-                <span className="inline-flex gap-0.5">
-                  <span className="w-1 h-1 rounded-full animate-pulse bg-[var(--navy)]" />
-                  <span className="w-1 h-1 rounded-full animate-pulse bg-[var(--navy)]" style={{ animationDelay: "0.3s" }} />
-                  <span className="w-1 h-1 rounded-full animate-pulse bg-[var(--navy)]" style={{ animationDelay: "0.6s" }} />
-                </span>
-                Thinking...{elapsed > 3 && <span className="opacity-60 ml-1">({elapsed}s)</span>}
-              </div>
-            )}
-
-            {/* Follow-up input */}
-            {!loading && messages.length > 0 && (
-              <div className="mt-auto pt-3">
-                <form
-                  onSubmit={(e) => { e.preventDefault(); const val = (e.currentTarget.elements.namedItem("reply") as HTMLInputElement)?.value?.trim(); if (val) { submitQuestion(val); (e.currentTarget.elements.namedItem("reply") as HTMLInputElement).value = ""; } }}
-                  className="flex gap-2"
+      {/* Response text + message history */}
+      <div className="border-b border-[var(--border)] bg-white shrink-0">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2">
+          {loading && currentResponse && (
+            <div className="text-sm text-[var(--muted)] flex items-center gap-2">
+              <span className="inline-flex gap-1">
+                <span className="w-1.5 h-1.5 rounded-full animate-pulse bg-[var(--navy)]" />
+                <span className="w-1.5 h-1.5 rounded-full animate-pulse bg-[var(--navy)]" style={{ animationDelay: "0.3s" }} />
+                <span className="w-1.5 h-1.5 rounded-full animate-pulse bg-[var(--navy)]" style={{ animationDelay: "0.6s" }} />
+              </span>
+              Thinking...{elapsed > 3 && <span className="text-xs opacity-60 ml-1">({elapsed}s)</span>}
+            </div>
+          )}
+          {messages.length > 0 && (
+            <button
+              onClick={() => setChatCollapsed(c => !c)}
+              className="text-[11px] font-semibold uppercase tracking-wider text-[var(--accent)] hover:text-[var(--foreground)] cursor-pointer transition-colors flex items-center gap-1.5 mb-1 px-1.5 sm:px-2 py-1 rounded-md hover:bg-[var(--surface)]"
+            >
+              <svg className={`w-3.5 h-3.5 transition-transform ${chatCollapsed ? "" : "rotate-90"}`} fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+              {chatCollapsed ? "Show conversation" : "Hide conversation"}
+            </button>
+          )}
+          {/* Scrollable message area */}
+          {!chatCollapsed && messages.length > 0 && (
+            <div className="overflow-y-auto max-h-24 sm:max-h-32 space-y-2">
+              {messages.map((msg) => (
+                <div
+                  key={msg.id}
+                  className={`text-[13px] sm:text-sm ${
+                    msg.role === "user"
+                      ? "text-[var(--muted)]"
+                      : "text-[var(--foreground)]"
+                  }`}
                 >
-                  <input
-                    name="reply"
-                    type="text"
-                    placeholder="Follow up..."
-                    className="flex-1 min-w-0 px-3 py-1.5 text-sm border border-[var(--border)] rounded-lg focus:outline-none focus:border-[var(--accent)] bg-[var(--surface)]"
-                  />
-                  <button type="submit" className="px-3 py-1.5 text-xs font-medium text-white bg-[#8B6914] rounded-lg cursor-pointer shrink-0">
-                    Ask
+                  {msg.role === "user" ? (
+                    <span className="font-semibold">Q: {msg.text}</span>
+                  ) : (
+                    <span className="whitespace-pre-line">{msg.text}</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+          {chatCollapsed && messages.length > 0 && (
+            <div className="text-xs text-[var(--muted)] italic">
+              {messages.filter(m => m.role === "user").slice(-1)[0]?.text}
+            </div>
+          )}
+          {/* Follow-up input + history — always visible outside scroll area */}
+          {!loading && messages.length > 0 && (
+            <>
+            <form
+              onSubmit={(e) => { e.preventDefault(); const val = (e.currentTarget.elements.namedItem("reply") as HTMLInputElement)?.value?.trim(); if (val) { submitQuestion(val); (e.currentTarget.elements.namedItem("reply") as HTMLInputElement).value = ""; } }}
+              className="flex gap-2 mt-2"
+            >
+              <input
+                name="reply"
+                type="text"
+                placeholder="Ask a follow-up..."
+                className="flex-1 min-w-0 px-3 py-1.5 text-sm border border-[var(--border)] rounded-full focus:outline-none focus:border-[var(--accent)] bg-[var(--surface)]"
+              />
+              <button type="submit" className="px-3 sm:px-4 py-1.5 text-xs font-medium text-white bg-[var(--accent)] rounded-full hover:bg-[var(--accent-hover)] cursor-pointer shrink-0">
+                Ask
+              </button>
+            </form>
+            {pastQueries.length > 1 && (
+              <div className="flex flex-nowrap gap-1.5 sm:gap-2 mt-2 items-center overflow-x-auto scrollbar-hide">
+                <span className="text-[10px] uppercase tracking-wider text-[var(--muted)] mr-1 shrink-0">History:</span>
+                {pastQueries.slice(-5).map((q, i) => (
+                  <button
+                    key={i}
+                    onClick={() => submitQuestion(q)}
+                    className="text-[10px] px-2 py-1 rounded-md bg-[var(--surface)] border border-[var(--border)] text-[var(--muted)] hover:text-[var(--foreground)] hover:border-transparent hover:shadow-sm cursor-pointer transition-all truncate max-w-[160px] sm:max-w-[200px] shrink-0"
+                    title={q}
+                  >
+                    {q}
                   </button>
-                </form>
+                ))}
                 <button
                   onClick={() => { setMessages([]); setCurrentResponse(null); }}
-                  className="text-[10px] uppercase tracking-wider text-[var(--muted)] hover:text-red-500 cursor-pointer transition-colors mt-3"
+                  className="text-[10px] uppercase tracking-wider text-[var(--muted)] hover:text-red-500 cursor-pointer transition-colors shrink-0"
                 >
-                  Clear History
+                  Clear
                 </button>
               </div>
             )}
-          </div>
-        )}
+            </>
+          )}
+          {messages.length === 0 && !loading && (
+            <div className="text-[13px] sm:text-sm text-gray-400 py-1 text-center">
+              Explore <span className="font-semibold text-[var(--navy)]">890,000+</span> homicide victims from the FBI&apos;s Supplementary Homicide Reports, 1976&ndash;present. Includes victim/offender demographics, weapon, circumstance, and relationship data. Coverage varies by state and year.
+            </div>
+          )}
+        </div>
+      </div>
 
-        {/* Right panel — hero, chart, table */}
-        {messages.length === 0 && !currentResponse ? (
-          <div className="flex-1 overflow-auto flex flex-col">
-            <div className="bg-white border-b border-[var(--border)] shrink-0">
-              <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2 text-center">
-                <span className="text-[13px] sm:text-sm text-gray-400">
-                  Explore <span className="font-semibold text-[var(--navy)]">890,000+</span> homicide victims from the FBI&apos;s Supplementary Homicide Reports, 1976&ndash;present. Includes victim/offender demographics, weapon, circumstance, and relationship data. Coverage varies by state and year.
-                </span>
-              </div>
-            </div>
-            <div className="flex-1 flex items-center justify-center bg-[var(--surface)]">
-              <div className="max-w-3xl w-full px-4 sm:px-6 py-6">
-                {heroData && heroData.length > 0 && <ShrHeroChart data={heroData} />}
-                <p className="text-xs text-center text-gray-400 mt-4">
-                  I am a bot and sometimes may make mistakes. When in doubt, verify these findings with official sources.
-                </p>
-              </div>
-            </div>
+      {/* Content area */}
+      {messages.length === 0 && !currentResponse ? (
+        /* Hero chart when idle */
+        <div className="flex-1 overflow-auto flex items-center justify-center bg-[var(--surface)]">
+          <div className="max-w-3xl w-full px-4 sm:px-6 py-6">
+            {heroData && heroData.length > 0 && <ShrHeroChart data={heroData} />}
+            <p className="text-xs text-center text-gray-400 mt-4">
+              I am a bot and sometimes may make mistakes. When in doubt, verify these findings with official sources.
+            </p>
           </div>
-        ) : loading && !currentResponse ? (
-          <div className="flex-1 relative">
-            <QuerySkeleton accentColor="var(--navy)" step="Thinking..." elapsed={elapsed} />
-          </div>
-        ) : currentResponse ? (
-          <div className="flex-1 flex flex-col md:flex-row overflow-auto md:overflow-hidden">
-            {/* Chart panel */}
-            <div className={`${currentResponse.rows.length > 0 ? "md:w-1/2 md:border-r" : "w-full"} border-b md:border-b-0 border-[var(--border)] bg-white shrink-0 md:shrink md:overflow-auto`} style={{ minHeight: 280 }}>
-              {currentResponse.chartConfig ? (
-                <div ref={chartRef} className="px-3 sm:px-4 pt-3 pb-1 h-full flex flex-col">
-                  <div className="flex items-end justify-end gap-2 sm:gap-3 mb-1 shrink-0">
-                    <ExportButtons
-                      chartRef={chartRef}
-                      csvFilename={`${currentResponse.title || "chart"}.jpeg`}
-                      embedData={currentResponse.sql ? {
-                        tab: "shr",
-                        title: currentResponse.title,
-                        sql: currentResponse.sql,
-                        chartConfig: currentResponse.chartConfig,
-                        chartMeta: currentResponse.chartMeta,
-                      } : undefined}
-                    />
-                  </div>
-                  <div className="flex-1 min-h-0" style={{ minHeight: 260 }}>
-                    <NibrsChartPanel
-                      config={currentResponse.chartConfig}
-                      rows={currentResponse.rows}
-                    />
-                  </div>
+        </div>
+      ) : loading && !currentResponse ? (
+        /* Skeleton while loading */
+        <div className="flex-1 relative">
+          <QuerySkeleton accentColor="var(--navy)" step="Thinking..." elapsed={elapsed} />
+        </div>
+      ) : (
+        /* Chart + Table — side by side on desktop, stacked on mobile/tablet */
+        <div className="flex-1 flex flex-col md:flex-row overflow-auto md:overflow-hidden">
+          {/* Chart panel */}
+          <div className="md:w-1/2 md:border-r border-b md:border-b-0 border-[var(--border)] bg-white shrink-0 md:shrink md:overflow-auto" style={{ minHeight: 280 }}>
+            {currentResponse?.chartConfig ? (
+              <div ref={chartRef} className="px-3 sm:px-4 pt-3 pb-1 h-full flex flex-col">
+                <div className="flex items-end justify-end gap-2 sm:gap-3 mb-1 shrink-0">
+                  <ExportButtons
+                    chartRef={chartRef}
+                    csvFilename={`${currentResponse.title || "chart"}.jpeg`}
+                    embedData={currentResponse.sql ? {
+                      tab: "shr",
+                      title: currentResponse.title,
+                      sql: currentResponse.sql,
+                      chartConfig: currentResponse.chartConfig,
+                      chartMeta: currentResponse.chartMeta,
+                    } : undefined}
+                  />
                 </div>
-              ) : (
-                <div className="p-4 text-sm text-gray-400">No chart for this query</div>
-              )}
-            </div>
-
-            {/* Table panel */}
-            {currentResponse.rows.length > 0 && (
-              <div className="md:w-1/2 shrink-0 md:shrink md:overflow-auto bg-white">
-                <div className="p-3 sm:p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <h2 className="text-[11px] sm:text-xs font-medium uppercase tracking-wider text-[var(--muted)]" style={{ letterSpacing: "0.6px" }}>
-                      Data ({currentResponse.rowCount.toLocaleString()} rows
-                      {currentResponse.executionTimeMs > 0 && ` · ${(currentResponse.executionTimeMs / 1000) < 0.1 ? '<0.1' : (currentResponse.executionTimeMs / 1000).toFixed(1)}s`})
-                    </h2>
-                    <ExportButtons
-                      csvData={currentResponse.rows}
-                      csvColumns={currentResponse.columns}
-                      csvFilename={`${currentResponse.title || "shr-export"}.csv`}
-                    />
-                  </div>
-                  <DataTable
-                    columns={currentResponse.columns}
+                <div className="flex-1 min-h-0" style={{ minHeight: 260 }}>
+                  <NibrsChartPanel
+                    config={currentResponse.chartConfig}
                     rows={currentResponse.rows}
-                    truncated={currentResponse.truncated}
                   />
                 </div>
               </div>
+            ) : (
+              <div className="p-4 text-sm text-gray-400">
+                {currentResponse
+                  ? "No chart for this query"
+                  : "Chart will appear here"}
+              </div>
             )}
           </div>
-        ) : null}
-      </div>
+
+          {/* Table panel */}
+          <div className="md:w-1/2 shrink-0 md:shrink md:overflow-auto bg-white">
+            {currentResponse && currentResponse.rows.length > 0 ? (
+              <div className="p-3 sm:p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h2
+                    className="text-[11px] sm:text-xs font-medium uppercase tracking-wider text-[var(--muted)]"
+                    style={{ letterSpacing: "0.6px" }}
+                  >
+                    Data ({currentResponse.rowCount.toLocaleString()} rows
+                    {currentResponse.executionTimeMs > 0 &&
+                      ` · ${(currentResponse.executionTimeMs / 1000) < 0.1 ? '<0.1' : (currentResponse.executionTimeMs / 1000).toFixed(1)}s`}
+                    )
+                  </h2>
+                  <ExportButtons
+                    csvData={currentResponse.rows}
+                    csvColumns={currentResponse.columns}
+                    csvFilename={`${currentResponse.title || "nibrs-export"}.csv`}
+                  />
+                </div>
+                <DataTable
+                  columns={currentResponse.columns}
+                  rows={currentResponse.rows}
+                  truncated={currentResponse.truncated}
+                />
+              </div>
+            ) : (
+              <div className="p-3 sm:p-4 text-sm text-gray-400">
+                {currentResponse
+                  ? "No data for this query"
+                  : "Data table will appear here"}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
       {currentResponse && (
         <p className="text-xs text-center text-gray-400 py-1 border-t border-[var(--border)] bg-white shrink-0">
           I am a bot and sometimes may make mistakes. When in doubt, verify these findings with official sources.
