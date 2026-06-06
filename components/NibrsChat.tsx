@@ -48,6 +48,10 @@ export default function NibrsChat({ visible }: NibrsChatProps) {
 
   const [currentResponse, setCurrentResponse] =
     useState<QueryResponse | null>(null);
+  // Stack of past exchanges for the side rail
+  const [exchanges, setExchanges] = useState<{ question: string; explanation: string; response: QueryResponse | null }[]>([]);
+  const [activeExchangeIdx, setActiveExchangeIdx] = useState(-1);
+  const [expandedRailIdx, setExpandedRailIdx] = useState(-1);
 
   const chartRef = useRef<HTMLDivElement>(null);
   const pastQueries = messages.filter((m) => m.role === "user").map((m) => m.text);
@@ -107,6 +111,9 @@ export default function NibrsChat({ visible }: NibrsChatProps) {
           };
           setMessages((prev) => [...prev, assistantMsg]);
           setCurrentResponse(resp);
+          setExchanges((prev) => [...prev, { question, explanation: resp.explanation, response: resp }]);
+          setActiveExchangeIdx(-1); // -1 means "latest"
+          setExpandedRailIdx(-1);
         } else {
           const err = data as QueryError;
           const assistantMsg: Message = {
@@ -117,21 +124,25 @@ export default function NibrsChat({ visible }: NibrsChatProps) {
           };
           setMessages((prev) => [...prev, assistantMsg]);
           setCurrentResponse(null);
+          setExchanges((prev) => [...prev, { question, explanation: `Error: ${err.error}`, response: null }]);
+          setActiveExchangeIdx(-1);
         }
       } catch (err) {
         const isAbort = err instanceof DOMException && err.name === "AbortError";
         const msg = isAbort
           ? "That request took too long. Try a simpler question — a specific city, state, or shorter time range."
           : err instanceof Error ? err.message : "Network error";
+        const errText = isAbort ? msg : `Error: ${msg}`;
         setMessages((prev) => [
           ...prev,
           {
             id: (Date.now() + 1).toString(),
             role: "assistant",
-            text: isAbort ? msg : `Error: ${msg}`,
+            text: errText,
           },
         ]);
         setCurrentResponse(null);
+        setExchanges((prev) => [...prev, { question, explanation: errText, response: null }]);
       } finally {
         if (timerRef.current) clearInterval(timerRef.current);
         setLoading(false);
@@ -237,40 +248,39 @@ export default function NibrsChat({ visible }: NibrsChatProps) {
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
               {/* New question bar */}
               {!loading && (
-                <form onSubmit={(e) => { e.preventDefault(); const el = e.currentTarget.elements.namedItem("railask") as HTMLTextAreaElement; const val = el?.value?.trim(); if (val) { setMessages([]); setCurrentResponse(null); submitQuestion(val); el.value = ""; } }} className="flex flex-col gap-1.5">
+                <form onSubmit={(e) => { e.preventDefault(); const el = e.currentTarget.elements.namedItem("railask") as HTMLTextAreaElement; const val = el?.value?.trim(); if (val) { setMessages([]); setCurrentResponse(null); setExchanges([]); setActiveExchangeIdx(-1); submitQuestion(val); el.value = ""; } }} className="flex flex-col gap-1.5">
                   <textarea name="railask" rows={2} placeholder="Ask a new question..." onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); e.currentTarget.form?.requestSubmit(); } }} className="w-full min-w-0 px-3 py-2 text-[12px] border border-[var(--border)] rounded-md focus:outline-none focus:border-[var(--accent)] bg-[var(--surface)] resize-none" />
                   <button type="submit" className="self-end px-3 py-1.5 text-[11px] font-semibold text-white rounded-md hover:opacity-90 cursor-pointer" style={{ backgroundColor: '#2d8659' }}>Ask</button>
                 </form>
               )}
-              <div className="bg-[color-mix(in_srgb,#2d8659_6%,white)] border-l-[3px] pl-[9px] pr-3 py-2.5 rounded-md" style={{ borderLeftColor: '#2d8659' }}>
-                <div className="flex items-center gap-1.5 mb-1">
-                  <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded text-white" style={{ backgroundColor: '#2d8659' }}>NIBRS</span>
-                  <span className="text-[12px] leading-snug font-bold text-[var(--navy)]">{currentResponse?.title || messages.filter(m => m.role === "user").slice(-1)[0]?.text || ""}</span>
-                </div>
-                <div className={`text-[11.5px] text-[var(--muted)] leading-relaxed whitespace-pre-line ${expandedExplanation ? "" : "line-clamp-4"}`}>
-                  {messages.filter(m => m.role === "assistant").slice(-1)[0]?.text || ""}
-                </div>
-                {messages.filter(m => m.role === "assistant").slice(-1)[0]?.text && messages.filter(m => m.role === "assistant").slice(-1)[0]!.text.length > 80 && (
-                  <button onClick={() => setExpandedExplanation(v => !v)} className="text-[10px] mt-1 cursor-pointer" style={{ color: '#2d8659' }}>{expandedExplanation ? "Show less" : "Show more"}</button>
-                )}
-                {!loading && messages.length > 0 && (
-                  <form onSubmit={(e) => { e.preventDefault(); const el = e.currentTarget.elements.namedItem("followup") as HTMLInputElement; const val = el?.value?.trim(); if (val) { submitQuestion(val); el.value = ""; } }} className="flex gap-1 mt-2">
-                    <input name="followup" type="text" placeholder="Follow up..." className="flex-1 min-w-0 px-2 py-1.5 text-[11px] border border-[var(--border)] rounded focus:outline-none focus:border-[var(--accent)] bg-[var(--surface)]" />
-                    <button type="submit" className="px-2 py-1.5 text-[10px] font-semibold text-white rounded hover:opacity-90 cursor-pointer shrink-0" style={{ backgroundColor: '#2d8659' }}>Ask</button>
-                  </form>
-                )}
-                {loading && messages.length > 0 && (
-                  <div className="flex items-center gap-1.5 text-[11px] text-[var(--muted)] mt-2">
-                    <span className="inline-flex gap-0.5">
-                      <span className="w-1 h-1 rounded-full animate-pulse" style={{ backgroundColor: '#2d8659' }} />
-                      <span className="w-1 h-1 rounded-full animate-pulse" style={{ backgroundColor: '#2d8659', animationDelay: "0.3s" }} />
-                      <span className="w-1 h-1 rounded-full animate-pulse" style={{ backgroundColor: '#2d8659', animationDelay: "0.6s" }} />
-                    </span>
-                    Thinking...{elapsed > 3 && <span className="opacity-60 ml-1">({elapsed}s)</span>}
+              {/* Exchange stack */}
+              {exchanges.map((ex, i) => {
+                const isActive = activeExchangeIdx === -1 ? i === exchanges.length - 1 : i === activeExchangeIdx;
+                const isExpanded = expandedRailIdx === i;
+                return (
+                  <div key={i} className={`rounded-md transition-all ${isActive ? "bg-[color-mix(in_srgb,#2d8659_6%,white)] border-l-[3px] pl-[9px] pr-3 py-2.5" : `${i === exchanges.length - 1 ? "opacity-60" : "opacity-45"} hover:opacity-80 pl-3 pr-3 py-2`}`} style={isActive ? { borderLeftColor: '#2d8659' } : undefined}>
+                    <button onClick={() => { setActiveExchangeIdx(i); if (ex.response) setCurrentResponse(ex.response); }} className="w-full text-left cursor-pointer">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded text-white" style={{ backgroundColor: '#2d8659' }}>NIBRS</span>
+                        <span className={`text-[12px] leading-snug ${isActive ? "font-bold text-[var(--navy)]" : "font-semibold text-[var(--foreground-strong)]"}`}>{ex.question}</span>
+                      </div>
+                    </button>
+                    <div className={`text-[11.5px] text-[var(--muted)] leading-relaxed whitespace-pre-line ${isExpanded ? "" : "line-clamp-4"}`}>
+                      {ex.explanation}
+                    </div>
+                    {ex.explanation.length > 80 && (
+                      <button onClick={() => setExpandedRailIdx(isExpanded ? -1 : i)} className="text-[10px] mt-1 cursor-pointer" style={{ color: '#2d8659' }}>{isExpanded ? "Show less" : "Show more"}</button>
+                    )}
+                    {isActive && !loading && (
+                      <form onSubmit={(e) => { e.preventDefault(); const el = e.currentTarget.elements.namedItem(`followup-${i}`) as HTMLInputElement; const val = el?.value?.trim(); if (val) { submitQuestion(val); el.value = ""; } }} className="flex gap-1 mt-2">
+                        <input name={`followup-${i}`} type="text" placeholder="Follow up..." className="flex-1 min-w-0 px-2 py-1.5 text-[11px] border border-[var(--border)] rounded focus:outline-none focus:border-[var(--accent)] bg-[var(--surface)]" />
+                        <button type="submit" className="px-2 py-1.5 text-[10px] font-semibold text-white rounded hover:opacity-90 cursor-pointer shrink-0" style={{ backgroundColor: '#2d8659' }}>Ask</button>
+                      </form>
+                    )}
                   </div>
-                )}
-              </div>
-              {loading && messages.length === 0 && (
+                );
+              })}
+              {loading && (
                 <div className="pl-3 pr-3 py-2.5">
                   <div className="flex items-center gap-1.5 text-[11px] text-[var(--muted)]">
                     <span className="inline-flex gap-0.5">
@@ -282,9 +292,9 @@ export default function NibrsChat({ visible }: NibrsChatProps) {
                   </div>
                 </div>
               )}
-              {messages.length > 0 && (
+              {exchanges.length > 0 && (
                 <div className="text-center pt-2">
-                  <button onClick={() => { setMessages([]); setCurrentResponse(null); }} className="text-[10px] uppercase tracking-wider text-[var(--muted)] hover:text-red-500 cursor-pointer">Clear history</button>
+                  <button onClick={() => { setMessages([]); setCurrentResponse(null); setExchanges([]); setActiveExchangeIdx(-1); }} className="text-[10px] uppercase tracking-wider text-[var(--muted)] hover:text-red-500 cursor-pointer">Clear history</button>
                 </div>
               )}
             </div>
