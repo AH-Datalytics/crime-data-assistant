@@ -1137,6 +1137,169 @@ console.log("\n═══ missing-group-by-year ═══\n");
 }
 
 // ══════════════════════════════════════════════════════════════════════
+//  current-county-name-suffix guardrail (2026-06-06)
+// ══════════════════════════════════════════════════════════════════════
+
+console.log("\n═══ current-county-name-suffix ═══\n");
+
+{
+  // TP: Fairfax County VA — strip suffix, add type='County'
+  const sql = `SELECT am.year, am.month, am.offense, am.count FROM agency_monthly am WHERE am.agency = 'Fairfax County' AND am.state = 'VA' ORDER BY am.year`;
+  const ctx = extractQueryContext(sql, "crime in Fairfax County VA", "current");
+  const r = runGuardrails(ctx);
+  assert("TP: Fairfax County fires current-county-name-suffix",
+    r.fired.includes("current-county-name-suffix"),
+    `fired: ${JSON.stringify(r.fired)}`);
+  assert("TP: rewrite strips County, adds type='County'",
+    /am\.agency\s*=\s*'Fairfax'/i.test(r.sql) && /am\.type\s*=\s*'County'/i.test(r.sql) && !/Fairfax County/i.test(r.sql),
+    `rewritten: ${r.sql}`);
+}
+
+{
+  // TP: Jefferson Parish LA — Parish also maps to type='County'
+  const sql = `SELECT am.year, am.offense, am.count FROM agency_monthly am WHERE am.agency = 'Jefferson Parish' AND am.state = 'LA' ORDER BY am.year`;
+  const ctx = extractQueryContext(sql, "crime in Jefferson Parish LA", "current");
+  const r = runGuardrails(ctx);
+  assert("TP: Jefferson Parish fires and rewrites",
+    r.fired.includes("current-county-name-suffix"),
+    `fired: ${JSON.stringify(r.fired)}`);
+  assert("TP: Parish stripped, type='County'",
+    /am\.agency\s*=\s*'Jefferson'/i.test(r.sql) && /am\.type\s*=\s*'County'/i.test(r.sql),
+    `rewritten: ${r.sql}`);
+}
+
+{
+  // TP: bare agency (no alias) — agency = 'Baltimore County'
+  const sql = `SELECT year, offense, count FROM agency_monthly WHERE agency = 'Baltimore County' AND state = 'MD'`;
+  const ctx = extractQueryContext(sql, "crime in Baltimore County MD", "current");
+  const r = runGuardrails(ctx);
+  assert("TP: bare agency='Baltimore County' fires",
+    r.fired.includes("current-county-name-suffix"),
+    `fired: ${JSON.stringify(r.fired)}`);
+  assert("TP: bare agency rewrite strips suffix",
+    /agency\s*=\s*'Baltimore'/i.test(r.sql) && /type\s*=\s*'County'/i.test(r.sql) && !/Baltimore County/i.test(r.sql),
+    `rewritten: ${r.sql}`);
+}
+
+{
+  // TP: conflicting type='City' should be replaced with 'County'
+  const sql = `SELECT * FROM agency_monthly WHERE agency = 'Baltimore County' AND type = 'City' AND state = 'MD'`;
+  const ctx = extractQueryContext(sql, "crime in Baltimore County MD", "current");
+  const r = runGuardrails(ctx);
+  assert("TP: conflicting type='City' replaced with 'County'",
+    r.fired.includes("current-county-name-suffix"),
+    `fired: ${JSON.stringify(r.fired)}`);
+  assert("TP: type='City' becomes type='County'",
+    /type\s*=\s*'County'/i.test(r.sql) && !/type\s*=\s*'City'/i.test(r.sql),
+    `rewritten: ${r.sql}`);
+}
+
+{
+  // FP: Historical query with 'Alameda County' — should NOT fire (historical keeps suffix)
+  const sql = `SELECT year, murder FROM historical_agency_crime hac JOIN historical_agency ha ON ha.ori = hac.ori WHERE ha.agency = 'Alameda County' AND ha.type = 'county'`;
+  const ctx = extractQueryContext(sql, "crime in Alameda County", "historical");
+  const r = runGuardrails(ctx);
+  assert("FP: historical 'Alameda County' does NOT fire current-county-name-suffix",
+    !r.fired.includes("current-county-name-suffix"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  // FP: Current query without county suffix — should NOT fire
+  const sql = `SELECT am.year, am.offense, am.count FROM agency_monthly am WHERE am.agency = 'Houston' AND am.state = 'TX'`;
+  const ctx = extractQueryContext(sql, "crime in Houston", "current");
+  const r = runGuardrails(ctx);
+  assert("FP: plain city name does NOT fire",
+    !r.fired.includes("current-county-name-suffix"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  shr-county-agency-name guardrail (2026-06-06)
+// ══════════════════════════════════════════════════════════════════════
+
+console.log("\n═══ shr-county-agency-name ═══\n");
+
+{
+  // TP: Fairfax County exact match on SHR — should fire retry
+  const sql = `SELECT i.year, COUNT(*) AS victims FROM incidents i JOIN victims v ON v.incident_id = i.id WHERE i.agency = 'Fairfax County' AND i.state = 'VA' GROUP BY i.year`;
+  const ctx = extractQueryContext(sql, "Fairfax County murders in Virginia", "shr");
+  const r = runGuardrails(ctx);
+  assert("TP: SHR Fairfax County fires shr-county-agency-name",
+    r.fired.includes("shr-county-agency-name"),
+    `fired: ${JSON.stringify(r.fired)}`);
+  assert("TP: retry message has LIKE and agency_type guidance",
+    r.issues.some(i => /LIKE/i.test(i) && /agency_type/i.test(i)),
+    `issues: ${r.issues.map(i => i.substring(0, 80))}`);
+}
+
+{
+  // FP: city question on SHR — should NOT fire
+  const sql = `SELECT i.year, COUNT(*) FROM incidents i JOIN victims v ON v.incident_id = i.id WHERE i.agency = 'Houston' AND i.state = 'TX' GROUP BY i.year`;
+  const ctx = extractQueryContext(sql, "Houston murders", "shr");
+  const r = runGuardrails(ctx);
+  assert("FP: SHR city query does NOT fire shr-county-agency-name",
+    !r.fired.includes("shr-county-agency-name"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  // FP: SHR query already using LIKE — should NOT fire
+  const sql = `SELECT i.year, COUNT(*) FROM incidents i JOIN victims v ON v.incident_id = i.id WHERE i.agency LIKE '%Fairfax%' AND i.state = 'VA' AND i.agency_type = 'County' GROUP BY i.year`;
+  const ctx = extractQueryContext(sql, "Fairfax County murders in Virginia", "shr");
+  const r = runGuardrails(ctx);
+  assert("FP: SHR LIKE query does NOT fire shr-county-agency-name",
+    !r.fired.includes("shr-county-agency-name"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  city-like-no-state expansion (2026-06-06)
+// ══════════════════════════════════════════════════════════════════════
+
+console.log("\n═══ city-like-no-state (expanded) ═══\n");
+
+{
+  // TP: Current — agency LIKE 'KINGS%' without state
+  const sql = `SELECT * FROM agency_monthly WHERE agency LIKE 'KINGS%' ORDER BY year`;
+  const ctx = extractQueryContext(sql, "crime in Kings County", "current");
+  const r = runGuardrails(ctx);
+  assert("TP: Current LIKE without state fires",
+    r.fired.includes("city-like-no-state"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  // TP: Historical — agency LIKE 'KINGS%' without state
+  const sql = `SELECT * FROM historical_agency_crime hac JOIN historical_agency ha ON ha.ori = hac.ori WHERE ha.agency LIKE 'KINGS%' ORDER BY hac.year`;
+  const ctx = extractQueryContext(sql, "crime in Kings County", "historical");
+  const r = runGuardrails(ctx);
+  assert("TP: Historical LIKE without state fires",
+    r.fired.includes("city-like-no-state"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  // FP: Current — LIKE with uppercase state
+  const sql = `SELECT * FROM agency_monthly WHERE agency LIKE 'KINGS%' AND state = 'NY'`;
+  const ctx = extractQueryContext(sql, "crime in Kings County NY", "current");
+  const r = runGuardrails(ctx);
+  assert("FP: Current LIKE with state='NY' does NOT fire",
+    !r.fired.includes("city-like-no-state"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  // FP: Historical — LIKE with lowercase state
+  const sql = `SELECT * FROM historical_agency_crime hac JOIN historical_agency ha ON ha.ori = hac.ori WHERE ha.agency LIKE 'KINGS%' AND ha.state = 'ny'`;
+  const ctx = extractQueryContext(sql, "crime in Kings County NY", "historical");
+  const r = runGuardrails(ctx);
+  assert("FP: Historical LIKE with state='ny' (lowercase) does NOT fire",
+    !r.fired.includes("city-like-no-state"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+// ══════════════════════════════════════════════════════════════════════
 //  Summary
 // ══════════════════════════════════════════════════════════════════════
 

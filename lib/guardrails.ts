@@ -328,6 +328,44 @@ const GUARDRAILS: Guardrail[] = [
       "You used state_monthly for a state trend query. state_monthly includes partial reporters and produces inconsistent counts. Use agency_monthly JOIN agencies WHERE national_sample = 1 AND state = '[XX]' instead, which only includes agencies with complete reporting histories.",
   },
 
+  // --- Current: county/parish suffix in agency name ---
+  // RTCI stores county agencies as agency='Fairfax' + type='County', NOT 'Fairfax County'.
+  // Claude often generates agency='Fairfax County' which matches nothing.
+  {
+    name: "current-county-name-suffix",
+    tabs: ["current"],
+    match: (ctx) => {
+      // Detect agency = 'X County' or agency = 'X Parish' (with optional table alias)
+      return /(?:\w+\.)?agency\s*=\s*'[^']+\s+(?:County|Parish)'/i.test(ctx.sql);
+    },
+    rewrite: (sql) => {
+      // Replace agency = 'X County/Parish' with agency = 'X' AND type = 'County'
+      // Preserve table alias if present (e.g., am.agency → am.type)
+      let fixed = sql.replace(
+        /(\b(\w+)\.agency\s*=\s*')([^']+?)\s+(?:County|Parish)(')/gi,
+        (_, pre, alias, name, post) => {
+          // Check if type='City' exists nearby and replace it
+          return `${pre}${name}${post} AND ${alias}.type = 'County'`;
+        }
+      );
+      // Handle bare agency (no alias)
+      fixed = fixed.replace(
+        /(\bagency\s*=\s*')([^']+?)\s+(?:County|Parish)(')/gi,
+        (_, pre, name, post) => {
+          return `${pre}${name}${post} AND type = 'County'`;
+        }
+      );
+      // If type = 'City' was already in the SQL, replace it with 'County'
+      // (don't create contradictory type='City' AND type='County')
+      if (/type\s*=\s*'County'/i.test(fixed) && /type\s*=\s*'City'/i.test(fixed)) {
+        fixed = fixed.replace(/\btype\s*=\s*'City'/gi, "type = 'County'");
+      }
+      return fixed !== sql ? fixed : null;
+    },
+    message: () =>
+      "[SYSTEM: Current Trends stores county/parish agencies WITHOUT the suffix in the agency name. Use agency = 'Fairfax' AND type = 'County', NOT agency = 'Fairfax County'. Parish agencies also use type = 'County'.]",
+  },
+
   // --- Current: city-to-national fallback (widened) ---
   // Catches abbreviations (LA, NYC, STL) and leading city patterns
   // that the existing city-to-national-fallback misses
@@ -860,7 +898,7 @@ const GUARDRAILS: Guardrail[] = [
   },
   {
     name: "city-like-no-state",
-    tabs: ["nibrs", "shr"],
+    tabs: ["current", "historical", "nibrs", "shr"],
     match: (ctx) => {
       const sql = ctx.sql;
       // Detect: city LIKE 'X%' or agency LIKE 'X%' without a state filter in the SAME clause
@@ -901,7 +939,7 @@ const GUARDRAILS: Guardrail[] = [
         }
         const clause = sql.slice(clauseStart, clauseEnd);
         // Check if this clause has a state filter
-        if (!/\bstate\s*=\s*'[A-Z]{2}'/i.test(clause)) return true;
+        if (!/\bstate\s*=\s*'[A-Za-z]{2}'/i.test(clause)) return true;
       }
       return false;
     },
@@ -1403,6 +1441,24 @@ const GUARDRAILS: Guardrail[] = [
       ];
       const mentioned = ambiguous.filter((c) => sqlLower.includes(`'${c}'`));
       return `[SYSTEM: Query includes ${mentioned.join(", ")} which have both City police and County sheriff agencies with the same name. Add AND agency_type = 'City' to filter to the city police department only.]`;
+    },
+  },
+  // --- SHR: county/parish agency exact match (inconsistent naming) ---
+  {
+    name: "shr-county-agency-name",
+    tabs: ["shr"],
+    match: (ctx) => {
+      const q = ctx.question.toLowerCase();
+      // User asks about a county/parish/sheriff agency
+      const isCountyQuestion = /\b(county|parish|sheriff)\b/i.test(ctx.question);
+      if (!isCountyQuestion) return false;
+      // SQL uses exact agency match with County/Parish/Sheriff suffix
+      return /agency\s*=\s*'[^']*\b(County|Parish|Sheriff)\b[^']*'/i.test(ctx.sql);
+    },
+    message: (ctx) => {
+      const nameMatch = ctx.sql.match(/agency\s*=\s*'([^']*)\b(County|Parish|Sheriff)\b[^']*'/i);
+      const place = nameMatch ? nameMatch[1].trim() : "the agency";
+      return `[SYSTEM: SHR agency names are inconsistent across years — the same agency may appear as "${place}", "${place} County", "${place} County Sp", "UPPER CASE" variants, etc. Use LIKE matching instead: agency LIKE '%${place}%' AND state = '...' AND agency_type = 'County'. Note: This returns agency-level data (what that specific agency reported), not countywide geographic totals.]`;
     },
   },
   // ── Hard Override Guardrails (2026-06-02) ────────────────────────────
