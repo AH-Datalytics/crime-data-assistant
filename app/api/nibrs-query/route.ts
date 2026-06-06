@@ -37,7 +37,7 @@ import { findNibrsSqlIssues } from "@/lib/sql-guardrails";
 
 function getNibrsModelLabel(): string {
   const m = process.env.NIBRS_MODEL || "claude-haiku-4-5-20251001";
-  if (m.includes("sonnet")) return getNibrsModelLabel();
+  if (m.includes("sonnet")) return "sonnet-4.5";
   if (m.includes("haiku")) return "haiku-4.5";
   return m;
 }
@@ -615,7 +615,6 @@ export async function POST(req: NextRequest) {
     }
     const explainMs = Date.now() - explainStart;
     console.log(`[nibrs][timing] Post-query explanation: ${explainMs}ms`);
-    console.log(`[nibrs][debug] explanation=${explanation.length}chars, rows=${rows.length}, cols=${columns.length}`);
 
     // Step 4c: Fix offender/arrestee demographics wording
     // summary_offender_demographics counts offenders, not crimes/incidents.
@@ -671,13 +670,9 @@ export async function POST(req: NextRequest) {
       explanation += "\n\n" + nibrsDisclaimer;
     }
 
-    console.log(`[nibrs][debug] post-wording-fix done`);
-
     // Log success (after CDE check so explanation includes any disclaimers)
     const totalMs = Date.now() - claudeStart;
-    console.log(`[nibrs][debug] pre-log`);
     logNibrsQuery(question, sql, rows.length, null, totalMs, explanation, guardrailResult.fired, getNibrsModelLabel(), sessionId);
-    console.log(`[nibrs][debug] post-log`);
 
     // Cache successful responses (only standalone questions)
     if (!cached && (!history || history.length === 0)) {
@@ -685,10 +680,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Step 5: Build chart config
-    console.log(`[nibrs][debug] pre-chart`);
     const chartConfig = buildNibrsChartConfig(claude, columns, rows);
-    console.log(`[nibrs][debug] post-chart`);
-    console.log(`[nibrs][debug] pre-jsonResp`);
 
     // Step 6: Truncate if needed
     const truncated = rows.length >= 1000;
