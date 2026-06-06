@@ -1511,7 +1511,8 @@ export interface HistoryMessage {
 
 export async function translateToSql(
   question: string,
-  history?: HistoryMessage[]
+  history?: HistoryMessage[],
+  modelOverride?: string
 ): Promise<ClaudeResponse> {
   // Build messages: include conversation history for context, then the new question
   const messages: { role: "user" | "assistant"; content: string }[] = [];
@@ -1522,7 +1523,7 @@ export async function translateToSql(
   }
   messages.push({ role: "user", content: question });
 
-  const nibrsModel = process.env.NIBRS_MODEL || "claude-haiku-4-5-20251001";
+  const nibrsModel = modelOverride || process.env.NIBRS_MODEL || "claude-haiku-4-5-20251001";
 
   const message = await client.messages.create({
     model: nibrsModel,

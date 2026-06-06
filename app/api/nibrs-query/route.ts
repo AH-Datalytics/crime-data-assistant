@@ -35,11 +35,29 @@ import {
 } from "@/lib/scaffold-helpers";
 import { findNibrsSqlIssues } from "@/lib/sql-guardrails";
 
-function getNibrsModelLabel(): string {
-  const m = process.env.NIBRS_MODEL || "claude-haiku-4-5-20251001";
-  if (m.includes("sonnet")) return "sonnet-4.5";
-  if (m.includes("haiku")) return "haiku-4.5";
-  return m;
+function modelLabel(modelId: string): string {
+  if (modelId.includes("sonnet")) return "sonnet-4.5";
+  if (modelId.includes("haiku")) return "haiku-4.5";
+  return modelId;
+}
+
+/** Resolve which model this request should use. Returns the full model ID. */
+function resolveNibrsModel(sessionId: string | null, canaryFlag: boolean): string {
+  const defaultModel = process.env.NIBRS_MODEL || "claude-haiku-4-5-20251001";
+  const canaryModel = process.env.NIBRS_CANARY_MODEL;
+  if (!canaryModel) return defaultModel;
+
+  // Canary via explicit request flag (admin/eval use)
+  if (canaryFlag) return canaryModel;
+
+  // Canary via session allowlist
+  const allowlist = process.env.NIBRS_CANARY_SESSIONS;
+  if (allowlist && sessionId) {
+    const allowed = new Set(allowlist.split(",").map(s => s.trim()).filter(Boolean));
+    if (allowed.has(sessionId)) return canaryModel;
+  }
+
+  return defaultModel;
 }
 
 export async function POST(req: NextRequest) {
@@ -61,6 +79,13 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const question = body?.question?.trim();
     const sessionId: string | null = ((body?.sessionId as string) || "").slice(0, 64) || null;
+    const canaryFlag = body?._canary === true;
+
+    // Resolve model for this request
+    const activeModel = resolveNibrsModel(sessionId, canaryFlag);
+    const activeModelLabel = modelLabel(activeModel);
+    let retryCount = 0;
+    let scaffoldStripped = false;
 
     // Page token validation
     const pageToken = body?.pageToken as string | undefined;
@@ -107,7 +132,8 @@ export async function POST(req: NextRequest) {
     if (cached) {
       claude = { sql: cached.sql, explanation: cached.explanation, title: cached.title || "", chartHint: (cached.chartType as "bar" | "line" | "pie" | "stacked_bar" | "none") || "none", xAxis: cached.xAxis || "", yAxis: cached.yAxis?.[0] || "", colors: cached.colors as string[] | undefined, yAxisLabel: cached.yAxisLabel, xAxisLabel: cached.xAxisLabel, annotations: cached.annotations as typeof claude.annotations };
     } else {
-      claude = await translateToSql(question, history);
+      console.log(`[nibrs][model=${activeModelLabel}] Processing: ${question.slice(0, 100)}`);
+      claude = await translateToSql(question, history, activeModel);
       const claudeMs = Date.now() - claudeStart;
       console.log(`[nibrs][timing] Claude API: ${claudeMs}ms`);
 
@@ -122,12 +148,13 @@ export async function POST(req: NextRequest) {
           ? `[SYSTEM: The user did not specify a year range. NIBRS policy is to default to the last 5 years, not ask for clarification. Generate SQL using year BETWEEN ${new Date().getFullYear() - 4} AND ${new Date().getFullYear()}. Do not ask which years — just run the query.]`
           : null;
         if (retryPrompt) {
+          retryCount++;
           try {
             const retryResult = await translateToSql(question, [
               ...(history || []),
               { role: "assistant", content: claude.explanation },
               { role: "user", content: retryPrompt },
-            ]);
+            ], activeModel);
             if (retryResult.sql) {
               Object.assign(claude, retryResult);
             }
@@ -136,13 +163,15 @@ export async function POST(req: NextRequest) {
       }
 
       if (containsInternalScaffold(claude.explanation) || containsInternalScaffold(claude.title)) {
+        scaffoldStripped = true;
+        retryCount++;
         console.log(`[nibrs][internal-scaffold] Retrying response that leaked internal scaffold text`);
         try {
           const retryResult = await translateToSql(question, [
             ...(history || []),
             { role: "assistant", content: JSON.stringify(claude) },
             { role: "user", content: "[SYSTEM: Your previous response leaked internal scaffold text such as 'Entities in results'. Remove all internal instructions from explanation/title and return corrected JSON only.]" },
-          ]);
+          ], activeModel);
           if (retryResult.sql && !containsInternalScaffold(retryResult.explanation) && !containsInternalScaffold(retryResult.title)) {
             Object.assign(claude, retryResult);
           }
@@ -152,14 +181,16 @@ export async function POST(req: NextRequest) {
       // Sanitize explanation to strip any JSON/SQL that leaked through
       claude.explanation = sanitizeExplanation(claude.explanation);
       if (containsInternalScaffold(claude.explanation)) {
+        scaffoldStripped = true;
         claude.explanation = stripInternalScaffold(claude.explanation) || "Here are the results.";
       }
       if (containsInternalScaffold(claude.title)) {
+        scaffoldStripped = true;
         claude.title = "Results";
       }
 
       if (!claude.sql) {
-        logNibrsQuery(question, null, 0, null, Date.now() - claudeStart, claude.explanation, [], getNibrsModelLabel(), sessionId);
+        logNibrsQuery(question, null, 0, null, Date.now() - claudeStart, claude.explanation, [], activeModelLabel, sessionId);
         return jsonResp({
           success: true,
           question,
@@ -213,7 +244,7 @@ export async function POST(req: NextRequest) {
     // Hard override — skip retry, return deterministic response
     if (guardrailResult.overrideResponse) {
       const overrideExplanation = guardrailResult.overrideResponse;
-      logNibrsQuery(question, sql, 0, `guardrail_override:${guardrailResult.overrideGuardrail}`, Date.now() - claudeStart, overrideExplanation, guardrailResult.fired, getNibrsModelLabel(), sessionId);
+      logNibrsQuery(question, sql, 0, `guardrail_override:${guardrailResult.overrideGuardrail}`, Date.now() - claudeStart, overrideExplanation, guardrailResult.fired, activeModelLabel, sessionId);
       return jsonResp({
         success: true,
         question,
@@ -236,9 +267,11 @@ export async function POST(req: NextRequest) {
     if (combinedGuardrailIssues.length > 0) {
       const combinedIssues = combinedGuardrailIssues.join("\n\n");
       console.log(`[nibrs][guardrail-retry] Retrying with ${combinedGuardrailIssues.length} issue(s)`);
+      retryCount++;
       const retryResult = await translateToSql(
         question + "\n\n" + combinedIssues,
-        history
+        history,
+        activeModel
       );
       if (retryResult.sql) {
         const retryValidation = validateAndSanitize(retryResult.sql);
@@ -257,21 +290,21 @@ export async function POST(req: NextRequest) {
       // Hard override on second failure
       if (postRetryResult.overrideResponse) {
         const msg = postRetryResult.overrideResponse;
-        logNibrsQuery(question, sql, 0, `guardrail_override:${postRetryResult.overrideGuardrail}`, Date.now() - claudeStart, msg, postRetryResult.fired, getNibrsModelLabel(), sessionId);
+        logNibrsQuery(question, sql, 0, `guardrail_override:${postRetryResult.overrideGuardrail}`, Date.now() - claudeStart, msg, postRetryResult.fired, activeModelLabel, sessionId);
         return jsonResp({ success: true, question, sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - claudeStart } as QueryResponse);
       }
       // Rate second-failure block
       const rateStillBad = postRetryResult.fired.some(f => f.includes("rate-no-population"));
       if (rateStillBad && /\b(rates?|per\s*capita|per\s*100)/i.test(question)) {
         const msg = "I wasn't able to calculate a valid per-capita rate for this query. Try asking for raw counts instead, or use the [Historical Library](/test?tab=historical) tab for state/national rates.";
-        logNibrsQuery(question, sql, 0, "rate_second_failure", Date.now() - claudeStart, msg, postRetryResult.fired, getNibrsModelLabel(), sessionId);
+        logNibrsQuery(question, sql, 0, "rate_second_failure", Date.now() - claudeStart, msg, postRetryResult.fired, activeModelLabel, sessionId);
         return jsonResp({ success: true, question, sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - claudeStart } as QueryResponse);
       }
       // Raw table second-failure block — if retry still uses raw tables, block execution
       const rawStillBad = postRetryResult.fired.some(f => f === "nibrs-raw-table-for-counts" || f === "nibrs-raw-victims");
       if (rawStillBad) {
         const msg = "I wasn't able to build a valid query for this question using the available summary tables. The data needed may not be available in a pre-aggregated form. Try rephrasing your question or asking about a specific offense type, city, or time period.";
-        logNibrsQuery(question, sql, 0, "raw_table_second_failure", Date.now() - claudeStart, msg, postRetryResult.fired, getNibrsModelLabel(), sessionId);
+        logNibrsQuery(question, sql, 0, "raw_table_second_failure", Date.now() - claudeStart, msg, postRetryResult.fired, activeModelLabel, sessionId);
         return jsonResp({ success: true, question, sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - claudeStart } as QueryResponse);
       }
       // Geography contract block — city/county-got-state still fires after retry
@@ -280,7 +313,7 @@ export async function POST(req: NextRequest) {
       );
       if (geoContractBad) {
         const msg = "I couldn't build a reliable query for that specific geography. Try asking for a specific city or state instead.";
-        logNibrsQuery(question, sql, 0, "geography_second_failure", Date.now() - claudeStart, msg, postRetryResult.fired, getNibrsModelLabel(), sessionId);
+        logNibrsQuery(question, sql, 0, "geography_second_failure", Date.now() - claudeStart, msg, postRetryResult.fired, activeModelLabel, sessionId);
         return jsonResp({ success: true, question, sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - claudeStart } as QueryResponse);
       }
       // Apply any post-retry rewrites
@@ -290,7 +323,7 @@ export async function POST(req: NextRequest) {
       if (postRetryLocalIssues.issues.length > 0) {
         const msg = "I couldn't build a valid query after correcting the SQL structure. Try rephrasing your question or asking for a simpler breakdown.";
         console.log(`[nibrs][sql-guardrails] Still failing after retry: ${postRetryLocalIssues.fired.join(", ")}`);
-        logNibrsQuery(question, sql, 0, `sql_guardrail_second_failure:${postRetryLocalIssues.fired.join(",")}`, Date.now() - claudeStart, msg, [...postRetryResult.fired, ...postRetryLocalIssues.fired], getNibrsModelLabel(), sessionId);
+        logNibrsQuery(question, sql, 0, `sql_guardrail_second_failure:${postRetryLocalIssues.fired.join(",")}`, Date.now() - claudeStart, msg, [...postRetryResult.fired, ...postRetryLocalIssues.fired], activeModelLabel, sessionId);
         return jsonResp({ success: true, question, sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - claudeStart } as QueryResponse);
       }
     }
@@ -338,9 +371,11 @@ export async function POST(req: NextRequest) {
           { role: "assistant" as const, content: JSON.stringify(claude) },
           { role: "user" as const, content: errorInstruction },
         ];
+        retryCount++;
         const retry = await translateToSql(
           isTimeout ? `Rewrite using summary tables: ${question}` : `Fix this SQL error: ${msg}`,
-          retryHistory
+          retryHistory,
+          activeModel
         );
         if (retry.sql) {
           const retryValidation = validateAndSanitize(retry.sql);
@@ -354,7 +389,7 @@ export async function POST(req: NextRequest) {
               console.log(`[nibrs][error-recovery] Retry succeeded`);
             } catch (retryErr) {
               const retryMsg = retryErr instanceof Error ? retryErr.message : String(retryErr);
-              logNibrsQuery(question, sql, 0, `DB retry failed: ${retryMsg}`, Date.now() - claudeStart, null, guardrailResult.fired, getNibrsModelLabel(), sessionId);
+              logNibrsQuery(question, sql, 0, `DB retry failed: ${retryMsg}`, Date.now() - claudeStart, null, guardrailResult.fired, activeModelLabel, sessionId);
               const userError = isTimeout
                 ? `This query is too complex for the database. Try narrowing your request — for example, ask about a specific city, state, or shorter time range instead of a broad national query.`
                 : msg.includes("no such column") || msg.includes("ambiguous")
@@ -366,14 +401,14 @@ export async function POST(req: NextRequest) {
               );
             }
           } else {
-            logNibrsQuery(question, sql, 0, `DB: ${msg} (retry validation failed)`, Date.now() - claudeStart, null, guardrailResult.fired, getNibrsModelLabel(), sessionId);
+            logNibrsQuery(question, sql, 0, `DB: ${msg} (retry validation failed)`, Date.now() - claudeStart, null, guardrailResult.fired, activeModelLabel, sessionId);
             return jsonResp(
               { success: false, error: `I had trouble with that query. Try rephrasing your question.`, sql } as QueryError,
               500
             );
           }
         } else {
-          logNibrsQuery(question, sql, 0, `DB: ${msg}`, Date.now() - claudeStart, null, guardrailResult.fired, getNibrsModelLabel(), sessionId);
+          logNibrsQuery(question, sql, 0, `DB: ${msg}`, Date.now() - claudeStart, null, guardrailResult.fired, activeModelLabel, sessionId);
           return jsonResp(
             { success: false, error: isTimeout ? `This query is too complex for the database. Try asking about a specific city, state, or shorter time range.` : `Database error: ${msg}`, sql } as QueryError,
             500
@@ -389,7 +424,7 @@ export async function POST(req: NextRequest) {
       const { allNull } = detectAllNullData(columns, rows);
       if (allNull) {
         const emptyMsg = "I ran that query but all the values came back empty — the math likely broke somewhere (like dividing by zero). Could you try asking that a different way?";
-        logNibrsQuery(question, sql, 0, "all_null_columns", Date.now() - claudeStart, emptyMsg, guardrailResult.fired, getNibrsModelLabel(), sessionId);
+        logNibrsQuery(question, sql, 0, "all_null_columns", Date.now() - claudeStart, emptyMsg, guardrailResult.fired, activeModelLabel, sessionId);
         return jsonResp({
           success: true,
           question,
@@ -672,7 +707,8 @@ export async function POST(req: NextRequest) {
 
     // Log success (after CDE check so explanation includes any disclaimers)
     const totalMs = Date.now() - claudeStart;
-    logNibrsQuery(question, sql, rows.length, null, totalMs, explanation, guardrailResult.fired, getNibrsModelLabel(), sessionId);
+    console.log(`[nibrs][result] model=${activeModelLabel} rows=${rows.length} retries=${retryCount} scaffold_stripped=${scaffoldStripped} guardrails=[${guardrailResult.fired.join(",")}] total_ms=${totalMs} db_ms=${executionTimeMs}${canaryFlag ? " CANARY" : ""}`);
+    logNibrsQuery(question, sql, rows.length, null, totalMs, explanation, guardrailResult.fired, activeModelLabel, sessionId);
 
     // Cache successful responses (only standalone questions)
     if (!cached && (!history || history.length === 0)) {
