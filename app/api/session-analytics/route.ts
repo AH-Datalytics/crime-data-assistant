@@ -100,31 +100,10 @@ export async function GET(req: NextRequest) {
     // visitor_log may not exist yet
   }
 
-  // Join geo data from visitor_log onto sessions
-  let sessionGeo: Record<string, { city: string; region: string; country: string }> = {};
-  try {
-    const geoRows = db.prepare(`
-      SELECT session_id, city, region, country FROM visitor_log
-      WHERE ts > ? AND session_id IS NOT NULL AND session_id != '' AND city IS NOT NULL AND city != ''
-      GROUP BY session_id
-    `).all(since) as { session_id: string; city: string; region: string; country: string }[];
-    for (const r of geoRows) {
-      sessionGeo[r.session_id] = { city: r.city, region: r.region, country: r.country };
-    }
-  } catch { /* visitor_log may not have geo columns yet */ }
-
-  // Attach geo to session details
-  const sessionDetailsWithGeo = (sessionDetails as { session_id: string }[]).map(s => ({
-    ...s,
-    city: sessionGeo[s.session_id]?.city || null,
-    region: sessionGeo[s.session_id]?.region || null,
-    country: sessionGeo[s.session_id]?.country || null,
-  }));
-
   return NextResponse.json({
     queriesPerDay,
     tabBreakdown,
-    sessionDetails: sessionDetailsWithGeo,
+    sessionDetails,
     sessionDistribution,
     errorRate,
     topQuestions,

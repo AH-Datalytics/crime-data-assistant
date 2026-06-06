@@ -372,7 +372,7 @@ export default function NibrsChartPanel({ config, rows }: NibrsChartPanelProps) 
               }
               angle={fewYearsMonthly ? -40 : (ym || daily || plainYears) ? 0 : -45}
               textAnchor={fewYearsMonthly ? "end" : (ym || daily || plainYears) ? "middle" : "end"}
-              {...(yearTicks.length > 0 ? { ticks: yearTicks } : {})}
+              {...(yearTicks.length > 0 ? { ticks: yearTicks.map(String) } : {})}
               {...(ymTicks.length > 0 ? { ticks: ymTicks } : {})}
               {...(dailyTicks.length > 0 ? { ticks: dailyTicks } : {})}
               interval={

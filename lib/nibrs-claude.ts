@@ -223,8 +223,11 @@ For daily person crime counts, use the raw victims table:
   GROUP BY v.incident_date ORDER BY v.incident_date
 
 ### summary_offender_demographics (OFFENDER DEMOGRAPHICS)
-- Same columns/values as summary_victim_demographics, but count column is offender_count. ${formatRowCount(NIBRS.summaryRowCounts["summary_offender_demographics"] || 30800000)} rows.
+- COLUMNS: ori TEXT, year INT, ucr_offense_code TEXT, weapon_category TEXT, race TEXT, sex TEXT, age_group TEXT, offender_count INT, state TEXT.
+- Supports filtering by any combination of ori, ucr_offense_code, age_group, sex, and race. Use exactly these column names — do not use offense_code, sex_code, or race_code (those do not exist). If the requested filters are among these columns, refusing the query is wrong — generate SQL.
+- Same values as summary_victim_demographics, but count column is offender_count. ${formatRowCount(NIBRS.summaryRowCounts["summary_offender_demographics"] || 30800000)} rows.
 - USE FOR: offender demographics — race, sex, age, weapon type. NEVER query raw offenders (${NIBRS.rawRowCounts["offenders"] || "195M"} rows).
+- Never claim a column is missing without verifying against these schema docs first.
 - **CRITICAL WORDING**: This table counts OFFENDERS (people), NOT incidents or crimes. When reporting results from this table:
   - SAY: "X% of known/suspected offenders were in [age group/race/sex]"
   - DO NOT SAY: "X% of crimes/offenses involved an offender in [age group/race/sex]"
@@ -783,6 +786,15 @@ Consistent reporters for a year range (reported all 12 months every year):
     GROUP BY ori HAVING COUNT(*) = 6
   )
 
+Correct pattern for any consistent-reporter subquery:
+  SELECT ori
+  FROM nibrs_agency_completeness
+  WHERE year BETWEEN [start_year] AND [end_year]
+  GROUP BY ori
+  HAVING COUNT(*) = [number_of_years]
+
+Wrong empty pattern: WHERE year = [single_year] followed by HAVING COUNT(DISTINCT year) = [number_greater_than_1] is always empty because the WHERE clause allows only one year.
+
 IMPORTANT: The completeness filter ONLY applies to queries on **city-level tables** (summary_city_monthly, summary_victim_city_monthly). For any multi-year national trend on a city-level table, ALWAYS filter to consistent reporters. This prevents coverage expansion from being mistaken for crime increases.
 
 **STATE-LEVEL and NATIONAL trends using state tables**: Use summary_state_monthly (or summary_victim_state_monthly for person crimes) — these are pre-aggregated by state and do NOT need a completeness filter. For national totals, SUM across all states from the state-level table. Do NOT use summary_city_monthly with a completeness subquery for state-level or national queries — many states transitioned to NIBRS recently and have zero agencies with long reporting histories, which causes empty results. The summary_state_monthly / summary_victim_state_monthly tables already contain the correct totals.
@@ -870,7 +882,9 @@ The jump from 2020→2021 reflects more agencies transitioning to NIBRS, not nec
 **Rape**: When users ask about "rape" or "sexual assault," use 11A + 11B + 11C (Forcible Rape, Forcible Sodomy, Sexual Assault With Object). Do NOT include 11D (Forcible Fondling) — that is a separate sex offense, not rape.
 
 ## NIBRS OFFENSE CODES
-09A=Murder, 09B=Negligent Manslaughter, 09C=Justifiable Homicide, 100=Kidnapping, 11A=Forcible Rape, 11B=Forcible Sodomy, 11C=Sexual Assault With Object, 11D=Forcible Fondling, 120=Robbery, 13A=Aggravated Assault, 13B=Simple Assault, 13C=Intimidation, 200=Arson, 220=Burglary, 23A=Pocket-picking, 23B=Purse-snatching, 23C=Shoplifting, 23D=Theft From Building, 23E=Theft From Coin Machine, 23F=Theft From Motor Vehicle, 23G=Theft of Motor Vehicle Parts, 23H=All Other Larceny, 240=Motor Vehicle Theft, 250=Counterfeiting/Forgery, 26A=False Pretenses/Swindle, 26B=Credit Card/ATM Fraud, 26C=Impersonation, 26D=Welfare Fraud, 26E=Wire Fraud, 26F=Identity Theft, 26G=Hacking, 270=Embezzlement, 280=Stolen Property, 290=Vandalism, 35A=Drug/Narcotic Violations, 35B=Drug Equipment, 36A=Incest, 36B=Statutory Rape, 370=Pornography, 39A-D=Gambling, 40A-C=Prostitution, 510=Bribery, 520=Weapon Violations, 64A=Human Trafficking (Commercial Sex), 64B=Human Trafficking (Involuntary Servitude), 720=Animal Cruelty, 90A=Bad Checks, 90B=Curfew, 90C=Disorderly Conduct, 90D=DUI, 90E=Drunkenness, 90F=Family Offenses, 90G=Liquor Violations, 90H=Peeping Tom, 90I=Runaway, 90J=Trespass, 90Z=All Other
+Use these exact labels. Never guess a label from a code. If you need a label that is not listed here, query nibrs_offense_codes instead of inventing one.
+
+09A=Murder, 09B=Negligent Manslaughter, 09C=Justifiable Homicide, 100=Kidnapping/Abduction, 11A=Forcible Rape, 11B=Forcible Sodomy, 11C=Sexual Assault With Object, 11D=Forcible Fondling, 120=Robbery, 13A=Aggravated Assault, 13B=Simple Assault, 13C=Intimidation, 200=Arson, 210=Extortion/Blackmail, 220=Burglary/Breaking & Entering, 23A=Pocket-picking, 23B=Purse-snatching, 23C=Shoplifting, 23D=Theft From Building, 23E=Theft From Coin-Operated Machine, 23F=Theft From Motor Vehicle, 23G=Theft of Motor Vehicle Parts/Accessories, 23H=All Other Larceny, 240=Motor Vehicle Theft, 250=Counterfeiting/Forgery, 26A=False Pretenses/Swindle/Confidence Game, 26B=Credit Card/ATM Fraud, 26C=Impersonation, 26D=Welfare Fraud, 26E=Wire Fraud, 26F=Identity Theft, 26G=Hacking/Computer Invasion, 26H=Money Laundering, 270=Embezzlement, 280=Stolen Property Offenses, 290=Destruction/Damage/Vandalism of Property, 30A=Non-Forcible Incest (Historical), 30B=Non-Forcible Fondling (Historical), 30C=Non-Forcible Sodomy (Historical), 30D=Non-Forcible Rape (Historical), 35A=Drug/Narcotic Violations, 35B=Drug Equipment Violations, 360=Sex Offenses (Historical), 36A=Incest, 36B=Statutory Rape, 370=Pornography/Obscene Material, 39A=Betting/Wagering, 39B=Operating/Promoting/Assisting Gambling, 39C=Gambling Equipment Violations, 39D=Sports Tampering, 40A=Prostitution, 40B=Assisting or Promoting Prostitution, 40C=Purchasing Prostitution, 49A=Failure to Register as Sex Offender, 49B=Failure to Register as Violent Offender, 49C=Failure to Register Other, 510=Bribery, 520=Weapon Law Violations, 521=Violation of No Contact Order, 522=Violation of Protection Order, 526=Treason, 58B=Espionage, 61A=Federal Liquor Offenses, 61B=Immigration Violations, 620=Import Violations, 64A=Human Trafficking - Commercial Sex, 64B=Human Trafficking - Involuntary Servitude, 720=Animal Cruelty, 90A=Bad Checks, 90B=Curfew/Loitering/Vagrancy, 90C=Disorderly Conduct, 90D=Driving Under the Influence, 90E=Drunkenness, 90F=Family Offenses, Nonviolent, 90G=Liquor Law Violations, 90H=Peeping Tom, 90I=Runaway, 90J=Trespass of Real Property, 90Z=All Other Offenses
 
 ## CRIME CATEGORIES
 
@@ -1055,6 +1069,7 @@ Examples:
 
 ### GEOGRAPHY
 16. The state field uses 2-letter abbreviations (TX, CA, NY, etc.). When the user says a state name, convert to the abbreviation. **WARNING: Nebraska is stored as 'NB' (not 'NE') and Guam as 'GM' (not 'GU').** These are the NIBRS legacy codes — you MUST use NB for Nebraska and GM for Guam.
+16b. Always repeat the exact state the user specified. Never substitute a different state based on geographic assumptions, nearby cities, media markets, metro areas, or your own knowledge.
 17. City names in the agencies table are UPPERCASE (e.g., 'DETROIT', 'NEW YORK', 'LOS ANGELES', 'CHICAGO'). Always use uppercase string literals when filtering by city.
 18. **ORI LOOKUPS**: The agencies table has columns (ori, year, state_code, state, city, pop_group, country_division, covered_flag, agency_indicator, population). There is NO agency_name column. To find an agency's ORI, query by city and state. **If the user provides an ORI code**, do NOT trust it blindly — validate it first: SELECT ori, city, state FROM agencies WHERE ori LIKE '[user_ori]%' AND year = 2024 LIMIT 1. User-provided ORIs may be the wrong length (7 vs 9 chars), mistyped, or wrong. In your explanation, confirm what the ORI resolved to (e.g., "ORI MA013 matches Boston, MA") so the user can verify. If no match, tell the user the ORI wasn't found and ask for the agency name instead. For large cities (250K+), the main PD has pop_group starting with '1' (1A/1B/1C). For smaller cities, the main PD may have pop_group '2' through '9'. To find the primary PD for ANY city, use the ORI with the LOWEST pop_group number: SELECT ori, city, state, pop_group FROM agencies WHERE city = 'LIVERMORE' AND state = 'CA' AND year = 2024 ORDER BY pop_group LIMIT 1. For large cities you can still use pop_group LIKE '1%' as a shortcut.
 15. NEVER SELECT ori unless the user explicitly asks for ORI codes. ORI is an internal identifier — exclude it from SELECT output. Use ori only in JOINs, WHERE, and subqueries.
@@ -1063,6 +1078,7 @@ Examples:
       AND ori = (SELECT ori FROM agencies WHERE city = 'DETROIT' AND state = 'MI' AND year = 2024 AND population > 0 ORDER BY pop_group LIMIT 1)
     For large cities (250K+) you can use: AND ori IN (SELECT ori FROM agencies WHERE city = 'HOUSTON' AND state = 'TX' AND year = 2025 AND pop_group LIKE '1%')
     Mention in your explanation that this is the primary PD. If the user later asks for "all agencies", use all ORIs with that city name.
+    **CITY COUNT AGGREGATION**: City queries can match multiple ORIs. When using ori IN (...) for a city trend, always SUM across all matching ORIs and GROUP BY year (or year, month for monthly output). Do not return one row per ORI unless the user explicitly asks for agency-level rows.
     **COUNTY SHERIFF CONTAMINATION**: The FBI labels county sheriff agencies with the same city name as the city PD (e.g., Harris County SO has city='HOUSTON'). **For ANY query about "cities" — whether single-city or multi-city rankings — ALWAYS filter with agency_type = 'City'** to exclude county agencies. Without this filter, cities like Houston, Jacksonville, Nashville, and Indianapolis will appear twice (once for the city PD, once for the county SO).
     **COUNTY / PARISH QUERIES**: The agencies table stores county sheriffs by HEADQUARTERS CITY, not county name (\`city = 'KING COUNTY'\` will NOT work). Use the **county_lookup** table to find the ORI:
     \`\`\`sql
@@ -1347,6 +1363,8 @@ Return ONLY a JSON object (no markdown fences, no extra text):
 
 Optional fields: colors (array of hex strings — only when user asks for specific colors; common: red=#d03c24, blue=#4a7fb5, green=#1a6b54, orange=#e6a019, purple=#7b5ea7, navy=#01114B), yAxisLabel (auto-set for rate queries: "Rate per 100K"), xAxisLabel (rarely needed). If the user asks to zoom in on a date range, add WHERE filters. If they ask for a different chart type, honor it.
 
+Internal scaffold instructions such as "Entities in results" must never appear in explanation, title, or any user-facing output.
+
 Chart hint rules:
 - "line" for single trend over time (one entity, year/month trends)
 - "line" for 2-3 series comparison over time (multi-city, multi-state)
@@ -1403,7 +1421,7 @@ Then set yAxis to "chicago,houston". This applies to any named multi-series comp
 If the question cannot be answered with this data, return:
 { "sql": null, "explanation": "Why it can't be answered", "chartHint": "none", "xAxis": "", "yAxis": "", "title": "" }
 
-EXPLANATION STYLE: Write for a general audience. NEVER include SQL snippets, query fragments, column names, table names, JSON, or code in the explanation — not even when you're struggling, unsure, or the query fails. The user is not technical. If you can't answer, just explain why in plain English and suggest an alternative. If your response is getting long or complex, NEVER dump raw JSON or SQL as a fallback — always return properly structured JSON. If you hit formatting issues, simplify the query rather than showing code to the user. NEVER offer policy recommendations, causal explanations, or editorial conclusions. NEVER be analytical. Describe what the query returns — the time range, geographic scope, crime type, and metric. Do NOT describe what the data shows (trends, magnitudes, comparisons, highs, lows). Do not speculate about why crime went up or down, or what should be done about it. Let the user draw their own conclusions from the data. Use the user's own words when referring to their selections — do NOT paraphrase or characterize (e.g., don't call a list of cities "the four largest cities"). **NEVER STATE SPECIFIC YEARS IN YOUR EXPLANATION** unless the user explicitly specified them in their question. Your explanation is generated BEFORE seeing results — you do NOT know what years the data will span. Instead of "from 2019 to 2025", write "over the available years." If the user asked "since 2022", you may say "since 2022." If they didn't specify years, do NOT guess. This is a hard rule — violating it produces wrong information.
+EXPLANATION STYLE: Write for a general audience. NEVER include SQL snippets, query fragments, column names, table names, JSON, or code in the explanation — not even when you're struggling, unsure, or the query fails. The user is not technical. If you can't answer, just explain why in plain English and suggest an alternative. If your response is getting long or complex, NEVER dump raw JSON or SQL as a fallback — always return properly structured JSON. If you hit formatting issues, simplify the query rather than showing code to the user. NEVER offer policy recommendations, causal explanations, or editorial conclusions. NEVER be analytical. Describe what the query returns — the time range, geographic scope, crime type, and metric. Do NOT describe what the data shows (trends, magnitudes, comparisons, highs, lows). Do not speculate about why crime went up or down, or what should be done about it. Let the user draw their own conclusions from the data. Use the user's own words when referring to their selections — do NOT paraphrase or characterize (e.g., don't call a list of cities "the four largest cities"). Internal scaffold instructions such as "Entities in results" must never appear in explanation, title, or any user-facing output. **NEVER STATE SPECIFIC YEARS IN YOUR EXPLANATION** unless the user explicitly specified them in their question. Your explanation is generated BEFORE seeing results — you do NOT know what years the data will span. Instead of "from 2019 to 2025", write "over the available years." If the user asked "since 2022", you may say "since 2022." If they didn't specify years, do NOT guess. This is a hard rule — violating it produces wrong information.
 
 REFERENCE TABLES: When a user asks "what are the codes for X" or "list all Y", query the appropriate reference table. Set chartHint to "none".
   - nibrs_offense_codes (code, offense_name, category) — all NIBRS offense codes
@@ -1417,6 +1435,9 @@ REFERENCE TABLES: When a user asks "what are the codes for X" or "list all Y", q
 Example: "What NIBRS offense codes are there?" → SELECT code, offense_name, category FROM nibrs_offense_codes ORDER BY code
 
 Only generate SELECT statements. Never INSERT, UPDATE, DELETE, DROP, etc.
+Never emit two GROUP BY clauses in the same SELECT statement.
+When using UNION ALL, ORDER BY must appear only after the final UNION ALL branch, never before a UNION ALL.
+Never self-join a CTE to itself. If you need multiple metrics from the same CTE, aggregate or pivot within one SELECT instead of joining the CTE back to itself.
 
 VAGUE SIZE-BASED REQUESTS: If the user says "largest cities", "biggest cities", or "top 10 cities by population" (ranked BY POPULATION with no crime metric), set sql to null and ask for clarification. However, if the user asks for "top 10 cities by murder rate", "cities with the highest robbery count", "top 10 agencies for murders", or any ranking BY A CRIME METRIC, this is a valid ranking query — run it immediately. **Rank by the crime metric itself** (ORDER BY murders DESC LIMIT N), NOT by population. Do NOT pre-filter to the N largest agencies by population — that gives "crime in the biggest cities", not "cities with the most crime". For person crimes (murder, assault, rape, etc.), use summary_victim_city_monthly with an agencies JOIN (ON a.ori = s.ori AND a.year = s.year) to get city names. For property/society crimes, use summary_city_monthly with the same JOIN pattern. For clearance rate rankings specifically, use summary_clearance_city_annual (which already has city name and population pre-joined). For rate comparisons, always compute per-100K rates. Note that rankings cover NIBRS-reporting agencies only.
 
@@ -1501,8 +1522,10 @@ export async function translateToSql(
   }
   messages.push({ role: "user", content: question });
 
+  const nibrsModel = process.env.NIBRS_MODEL || "claude-haiku-4-5-20251001";
+
   const message = await client.messages.create({
-    model: "claude-haiku-4-5-20251001",
+    model: nibrsModel,
     max_tokens: 2048,
     system: [{ type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
     messages,
@@ -1510,7 +1533,8 @@ export async function translateToSql(
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const u = message.usage as any;
-  console.log(`[nibrs][cache] input=${u.input_tokens} cache_read=${u.cache_read_input_tokens ?? 0} cache_create=${u.cache_creation_input_tokens ?? 0}`);
+  const modelShort = nibrsModel.includes("sonnet") ? "sonnet-4.5" : nibrsModel.includes("haiku") ? "haiku-4.5" : nibrsModel;
+  console.log(`[nibrs][model=${modelShort}][cache] input=${u.input_tokens} output=${u.output_tokens} cache_read=${u.cache_read_input_tokens ?? 0} cache_create=${u.cache_creation_input_tokens ?? 0}`);
 
   const text =
     message.content[0].type === "text" ? message.content[0].text : "";

@@ -21,6 +21,11 @@ function sseEvent(event: StreamEvent): string {
   return `data: ${JSON.stringify(event)}\n\n`;
 }
 
+import {
+  containsInternalScaffold,
+  stripInternalScaffold,
+} from "@/lib/scaffold-helpers";
+
 /** Try to extract agency name from SQL WHERE clause */
 function extractAgencyName(sql: string): string | null {
   const match = sql.match(/agency\s*=\s*'([^']+)'/i);
@@ -365,8 +370,34 @@ export async function POST(req: NextRequest) {
           }
         }
 
+        if (!fromCache && (containsInternalScaffold(claude.explanation) || containsInternalScaffold(claude.title)) && !isOverBudget()) {
+          console.log(`[query][internal-scaffold] Retrying response that leaked internal scaffold text`);
+          try {
+            const retryResult = await translateToSql(
+              question,
+              [
+                ...((history || []) as { role: "user" | "assistant"; content: string }[]),
+                { role: "assistant", content: JSON.stringify(claude) },
+                { role: "user", content: "[SYSTEM: Your previous response leaked internal scaffold text such as 'Entities in results'. Remove all internal instructions from explanation/title and return corrected JSON only.]" },
+              ],
+              systemPrompt
+            );
+            if (retryResult.sql && !containsInternalScaffold(retryResult.explanation) && !containsInternalScaffold(retryResult.title)) {
+              claude = retryResult;
+            }
+          } catch {
+            // Use sanitized original response
+          }
+        }
+
         // Sanitize explanation to strip any JSON/SQL that leaked through
         claude.explanation = sanitizeExplanation(claude.explanation);
+        if (containsInternalScaffold(claude.explanation)) {
+          claude.explanation = stripInternalScaffold(claude.explanation) || "Here are the results.";
+        }
+        if (containsInternalScaffold(claude.title)) {
+          claude.title = "Results";
+        }
 
         if (!claude.sql) {
           const ms = Date.now() - totalStart;
@@ -997,6 +1028,10 @@ export async function POST(req: NextRequest) {
           if (!isHistorical && postExplanation && !postExplanation.includes("sample")) {
             postExplanation += "\n\nNote: Current Trends data comes from a sample of agencies with consistent reporting — it does not represent complete state or national totals. For comprehensive state-level estimates, try the Historical Library tab.";
           }
+          if (containsInternalScaffold(postExplanation)) {
+            console.log(`[query][internal-scaffold] Stripping scaffold text from post-query explanation`);
+            postExplanation = stripInternalScaffold(postExplanation) || claude.explanation;
+          }
           if (postExplanation !== claude.explanation) {
             controller.enqueue(
               encoder.encode(
@@ -1030,6 +1065,10 @@ export async function POST(req: NextRequest) {
             }
             if (!isHistorical && retryExplanation && !retryExplanation.includes("sample")) {
               retryExplanation += "\n\nNote: Current Trends data comes from a sample of agencies with consistent reporting — it does not represent complete state or national totals. For comprehensive state-level estimates, try the Historical Library tab.";
+            }
+            if (containsInternalScaffold(retryExplanation)) {
+              console.log(`[query][internal-scaffold] Stripping scaffold text from retry explanation`);
+              retryExplanation = stripInternalScaffold(retryExplanation) || claude.explanation;
             }
             if (retryExplanation !== claude.explanation) {
               controller.enqueue(

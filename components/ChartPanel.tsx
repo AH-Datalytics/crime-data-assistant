@@ -119,6 +119,44 @@ function formatDateTickLabel(val: string | number, singleYear: boolean): string 
   return singleYear ? mon : `${mon} ${s.slice(0, 4)}`;
 }
 
+/** Compute clean Y-axis ticks (multiples of 1, 2, 5, 10, 25, 50, 100, etc.)
+ *  Always starts at 0 for count/rate data. Targets 4-6 ticks. */
+function niceYTicks(data: Record<string, unknown>[], yKeys: string[]): { ticks: number[]; domain: [number, number] } | null {
+  if (data.length === 0 || yKeys.length === 0) return null;
+  let maxVal = 0;
+  for (const row of data) {
+    for (const key of yKeys) {
+      const v = Number(row[key]);
+      if (!isNaN(v) && v > maxVal) maxVal = v;
+    }
+  }
+  if (maxVal <= 0) return null;
+
+  // Find a nice interval that gives 4-6 ticks
+  const candidates = [1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000, 2000, 2500, 5000, 10000, 20000, 25000, 50000, 100000, 200000, 250000, 500000, 1000000];
+  let interval = 1;
+  for (const c of candidates) {
+    if (Math.ceil(maxVal / c) >= 3 && Math.ceil(maxVal / c) <= 7) {
+      interval = c;
+      break;
+    }
+  }
+  // If no candidate fit, compute one
+  if (Math.ceil(maxVal / interval) < 3 || Math.ceil(maxVal / interval) > 7) {
+    const rawInterval = maxVal / 5;
+    const magnitude = Math.pow(10, Math.floor(Math.log10(rawInterval)));
+    const normalized = rawInterval / magnitude;
+    interval = magnitude * (normalized <= 1.5 ? 1 : normalized <= 3.5 ? 2.5 : normalized <= 7.5 ? 5 : 10);
+  }
+
+  const top = Math.ceil(maxVal / interval) * interval;
+  const ticks: number[] = [];
+  for (let v = 0; v <= top; v += interval) {
+    ticks.push(Math.round(v * 100) / 100); // avoid floating point
+  }
+  return { ticks, domain: [0, top] };
+}
+
 function dailyTickInterval(dataLength: number): number {
   if (dataLength <= 14) return 0;
   return Math.max(1, Math.floor(dataLength / 12));
@@ -300,6 +338,9 @@ function ChartPanel({ config, rows, meta }: ChartPanelProps) {
       ? (v: number) => `${v}%`
       : formatAxisValue;
 
+    // Compute clean Y-axis ticks (round intervals starting at 0)
+    const yTickInfo = niceYTicks(chartData, effectiveYKeys);
+
     // Use custom colors from Claude if provided, otherwise default palette
     const colors = config.colors && config.colors.length > 0 ? config.colors : NYT_COLORS;
 
@@ -379,6 +420,7 @@ function ChartPanel({ config, rows, meta }: ChartPanelProps) {
                 tickLine={false}
                 axisLine={false}
                 width={isPercent ? 55 : 50}
+                {...(yTickInfo ? { ticks: yTickInfo.ticks, domain: yTickInfo.domain } : {})}
                 {...(config.yAxisLabel ? { label: { value: config.yAxisLabel, angle: -90, position: "insideLeft", offset: 0, dy: -10, style: { fontSize: 10, fill: "#1e2a35", fontFamily: "'DM Sans', 'Segoe UI', Arial, sans-serif", textAnchor: "middle" } } } : {})}
               />
               <Tooltip
@@ -454,7 +496,7 @@ function ChartPanel({ config, rows, meta }: ChartPanelProps) {
                 }
                 angle={fewYearsMonthly ? -40 : (ym || daily || plainYears) ? 0 : -45}
                 textAnchor={fewYearsMonthly ? "end" : (ym || daily || plainYears) ? "middle" : "end"}
-                {...(yearTicks.length > 0 ? { ticks: yearTicks } : {})}
+                {...(yearTicks.length > 0 ? { ticks: yearTicks.map(String) } : {})}
                 {...(ymTicks.length > 0 ? { ticks: ymTicks } : {})}
                 {...(dailyTicks.length > 0 ? { ticks: dailyTicks } : {})}
                 interval={
@@ -470,6 +512,7 @@ function ChartPanel({ config, rows, meta }: ChartPanelProps) {
                 tickLine={false}
                 axisLine={false}
                 width={isPercent ? 55 : 50}
+                {...(yTickInfo ? { ticks: yTickInfo.ticks, domain: yTickInfo.domain } : {})}
                 {...(config.yAxisLabel ? { label: { value: config.yAxisLabel, angle: -90, position: "insideLeft", offset: 0, dy: -10, style: { fontSize: 10, fill: "#1e2a35", fontFamily: "'DM Sans', 'Segoe UI', Arial, sans-serif", textAnchor: "middle" } } } : {})}
               />
               <Tooltip

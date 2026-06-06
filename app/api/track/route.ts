@@ -3,7 +3,8 @@ import { getWriteDb } from "@/lib/rtci-db";
 
 /**
  * Lightweight visitor tracking endpoint.
- * Logs page views with referrer, UTM params, session info, and geo data.
+ * Logs page views with referrer, UTM params, and session info.
+ * No IP addresses or geo data collected.
  */
 
 // Create table on first request
@@ -28,20 +29,9 @@ function ensureTable() {
       tab TEXT,
       event TEXT DEFAULT 'pageview',
       screen_width INTEGER,
-      user_agent TEXT,
-      ip TEXT,
-      city TEXT,
-      region TEXT,
-      country TEXT
+      user_agent TEXT
     )
   `);
-  // Add geo columns if table already existed without them
-  const cols = db.prepare("PRAGMA table_info(visitor_log)").all() as { name: string }[];
-  const colNames = new Set(cols.map(c => c.name));
-  if (!colNames.has("ip")) db.exec("ALTER TABLE visitor_log ADD COLUMN ip TEXT");
-  if (!colNames.has("city")) db.exec("ALTER TABLE visitor_log ADD COLUMN city TEXT");
-  if (!colNames.has("region")) db.exec("ALTER TABLE visitor_log ADD COLUMN region TEXT");
-  if (!colNames.has("country")) db.exec("ALTER TABLE visitor_log ADD COLUMN country TEXT");
 
   db.exec(`CREATE INDEX IF NOT EXISTS idx_visitor_ts ON visitor_log(ts)`);
   db.exec(
@@ -49,24 +39,6 @@ function ensureTable() {
   );
   tableReady = true;
 }
-
-/** Lookup city/region/country from IP via ipwho.is (free HTTPS, 10K/month) */
-async function geoLookup(ip: string): Promise<{ city: string; region: string; country: string } | null> {
-  if (!ip || ip === "unknown" || ip === "127.0.0.1" || ip === "::1") return null;
-  try {
-    const res = await fetch(`https://ipwho.is/${ip}`, {
-      signal: AbortSignal.timeout(3000),
-    });
-    const data = await res.json() as { success?: boolean; city?: string; region?: string; country?: string };
-    if (data.success && data.city) {
-      return { city: data.city || "", region: data.region || "", country: data.country || "" };
-    }
-  } catch { /* timeout or network error — skip silently */ }
-  return null;
-}
-
-// Cache geo results per IP to avoid redundant lookups
-const geoCache = new Map<string, { city: string; region: string; country: string } | null>();
 
 export async function POST(req: NextRequest) {
   try {
@@ -77,10 +49,6 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const ip =
-      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-      req.headers.get("x-real-ip") ||
-      "unknown";
 
     const referrer = (body.referrer || "").substring(0, 2000);
     let referrerDomain = "";
@@ -92,26 +60,9 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Geo lookup — only on pageview, async with cache
-    let geo: { city: string; region: string; country: string } | null = null;
-    const event = (body.event || "pageview").substring(0, 50);
-    if (event === "pageview" && ip !== "unknown") {
-      if (geoCache.has(ip)) {
-        geo = geoCache.get(ip) || null;
-      } else {
-        geo = await geoLookup(ip);
-        geoCache.set(ip, geo);
-        // Keep cache from growing unbounded
-        if (geoCache.size > 5000) {
-          const first = geoCache.keys().next().value;
-          if (first) geoCache.delete(first);
-        }
-      }
-    }
-
     db.prepare(
-      `INSERT INTO visitor_log (ts, session_id, referrer, referrer_domain, utm_source, utm_medium, utm_campaign, utm_content, landing_page, tab, event, screen_width, user_agent, city, region, country)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO visitor_log (ts, session_id, referrer, referrer_domain, utm_source, utm_medium, utm_campaign, utm_content, landing_page, tab, event, screen_width, user_agent)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).run(
       Date.now(),
       (body.sessionId || "").substring(0, 64),
@@ -123,17 +74,14 @@ export async function POST(req: NextRequest) {
       (body.utm_content || "").substring(0, 200),
       (body.landingPage || "").substring(0, 500),
       (body.tab || "").substring(0, 50),
-      event,
-      body.screenWidth || null,
-      (req.headers.get("user-agent") || "").substring(0, 500),
-      geo?.city || null,
-      geo?.region || null,
-      geo?.country || null
+      (body.event || "pageview").substring(0, 50),
+      typeof body.screenWidth === "number" ? body.screenWidth : null,
+      (body.userAgent || "").substring(0, 500)
     );
 
     return NextResponse.json({ ok: true });
-  } catch {
-    // Never fail — tracking should be invisible
+  } catch (e) {
+    console.error("[track] Error:", e);
     return NextResponse.json({ ok: true });
   }
 }

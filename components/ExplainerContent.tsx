@@ -197,6 +197,7 @@ export default function ExplainerContent({ visible }: ExplainerContentProps) {
                 "NIBRS participation varied wildly by state and year, especially before 2021. An increase in crime counts may reflect more agencies reporting, not more crime.",
                 "The database has total jurisdiction population only \u2014 not population by race, gender, or age. Per-capita rates by demographic group cannot be calculated.",
                 "Queries on raw tables (100M+ rows) can be slow. The assistant uses pre-built summary tables when possible, but very specific queries may take longer or time out completely.",
+                "Your questions are logged to help improve query accuracy. No personally identifying information is collected or stored.",
               ].map((p, i) => (
                 <li key={i} className="flex items-start gap-2 text-[13px] text-[var(--muted)] leading-relaxed">
                   <span className="text-[var(--border)] mt-1.5 shrink-0">&bull;</span>
