@@ -191,12 +191,13 @@ City-level person crime example (agg assaults in Houston PD by month):
   AND ori IN (SELECT ori FROM agencies WHERE city = 'HOUSTON' AND state = 'TX' AND year = 2025 AND pop_group LIKE '1%')
   GROUP BY year, month ORDER BY year, month
 
-### summary_victim_demographics (DEMOGRAPHIC BREAKDOWNS — weapon, race, sex, age)
-- COLUMNS: ori TEXT, year INT, ucr_offense_code TEXT, weapon_category TEXT, race TEXT, sex TEXT, age_group TEXT, victim_count INT, state TEXT — has state column. For state queries use WHERE state = 'TX'. For city queries use ORI subquery.
+### summary_victim_demographics (DEMOGRAPHIC BREAKDOWNS — weapon, race, sex, age, ethnicity)
+- COLUMNS: ori TEXT, year INT, ucr_offense_code TEXT, weapon_category TEXT, race TEXT, sex TEXT, age_group TEXT, ethnicity TEXT, victim_count INT, state TEXT — has state column. For state queries use WHERE state = 'TX'. For city queries use ORI subquery.
 - weapon_category values: 'Firearm', 'Knife', 'Blunt Object', 'Other', 'Unknown'
 - race values: 'W' (White), 'B' (Black), 'I' (American Indian), 'A' (Asian), 'P' (Pacific Islander), 'U' (Unknown)
 - sex values: 'M', 'F', 'U'
 - age_group values: 'Under 18', '18-24', '25-34', '35-44', '45-54', '55-64', '65+', 'Unknown'
+- ethnicity values: 'H' (Hispanic or Latino), 'N' (Not Hispanic or Latino), 'U' (Unknown), '' (blank/not reported). Filter out '' and 'U' when computing Hispanic percentages. Use CASE WHEN ethnicity = 'H' THEN 'Hispanic' WHEN ethnicity = 'N' THEN 'Not Hispanic' ELSE 'Unknown' END.
 - ucr_offense_code coverage: 09A, 09B, 11A, 11B, 11C, 13A, 13B, 120 (person crimes + robbery)
 - INDEXES: (ori, year), (ucr_offense_code, year)
 - USE FOR: ANY query involving victim demographics — race, sex, age, weapon type breakdowns. City rankings by weapon type. This table is pre-aggregated and returns in <1s vs 2+ minutes on raw victims.
@@ -227,9 +228,9 @@ For daily person crime counts, use the raw victims table:
   GROUP BY v.incident_date ORDER BY v.incident_date
 
 ### summary_offender_demographics (OFFENDER DEMOGRAPHICS)
-- COLUMNS: ori TEXT, year INT, ucr_offense_code TEXT, weapon_category TEXT, race TEXT, sex TEXT, age_group TEXT, offender_count INT, state TEXT.
-- Supports filtering by any combination of ori, ucr_offense_code, age_group, sex, and race. Use exactly these column names — do not use offense_code, sex_code, or race_code (those do not exist). If the requested filters are among these columns, refusing the query is wrong — generate SQL.
-- Same values as summary_victim_demographics, but count column is offender_count. ${formatRowCount(NIBRS.summaryRowCounts["summary_offender_demographics"] || 30800000)} rows.
+- COLUMNS: ori TEXT, year INT, ucr_offense_code TEXT, weapon_category TEXT, race TEXT, sex TEXT, age_group TEXT, ethnicity TEXT, offender_count INT, state TEXT.
+- Supports filtering by any combination of ori, ucr_offense_code, age_group, sex, race, and ethnicity. Use exactly these column names — do not use offense_code, sex_code, or race_code (those do not exist). If the requested filters are among these columns, refusing the query is wrong — generate SQL.
+- Same values as summary_victim_demographics (including ethnicity: H/N/U/''), but count column is offender_count. ${formatRowCount(NIBRS.summaryRowCounts["summary_offender_demographics"] || 30800000)} rows.
 - USE FOR: offender demographics — race, sex, age, weapon type. NEVER query raw offenders (${NIBRS.rawRowCounts["offenders"] || "195M"} rows).
 - Never claim a column is missing without verifying against these schema docs first.
 - **CRITICAL WORDING**: This table counts OFFENDERS (people), NOT incidents or crimes. When reporting results from this table:
@@ -245,7 +246,7 @@ Firearm murder offender demographics by age example:
   GROUP BY d.age_group ORDER BY offenders DESC
 
 ### summary_arrestee_demographics (ARRESTEE DEMOGRAPHICS)
-- Same columns/values as summary_victim_demographics, but offense column is ucr_arrest_offense (not ucr_offense_code) and count column is arrestee_count. ${formatRowCount(NIBRS.summaryRowCounts["summary_arrestee_demographics"] || 13400000)} rows.
+- Same columns/values as summary_victim_demographics (including ethnicity: H/N/U/''), but offense column is ucr_arrest_offense (not ucr_offense_code) and count column is arrestee_count. ${formatRowCount(NIBRS.summaryRowCounts["summary_arrestee_demographics"] || 13400000)} rows.
 - USE FOR: arrestee demographics — race, sex, age, weapon type. NEVER query raw arrestees (${NIBRS.rawRowCounts["arrestees"] || "51M"} rows).
 - **INCLUDES GROUP B OFFENSES**: This table contains both Group A and Group B arrest data. Group B offense codes (90x) are arrest-only — there is no linked incident, offense, or victim data for these. Group B codes:
   90A=Bad Checks, 90B=Curfew/Loitering, 90C=Disorderly Conduct, 90D=DUI/DWI, 90E=Family Offenses (nonviolent), 90F=Liquor Law Violations, 90G=Peeping Tom, 90I=Runaway, 90J=Trespass, 90Z=All Other Offenses
@@ -1042,9 +1043,10 @@ When outputting demographic fields (race, sex, victim_type, weapon type), ALWAYS
 Examples:
   CASE v.race WHEN 'W' THEN 'White' WHEN 'B' THEN 'Black' WHEN 'I' THEN 'American Indian' WHEN 'A' THEN 'Asian' WHEN 'P' THEN 'Pacific Islander' ELSE 'Unknown' END AS race
   CASE v.sex WHEN 'M' THEN 'Male' WHEN 'F' THEN 'Female' ELSE 'Unknown' END AS sex
+  CASE WHEN d.ethnicity = 'H' THEN 'Hispanic' WHEN d.ethnicity = 'N' THEN 'Not Hispanic' ELSE 'Unknown' END AS ethnicity
   CASE v.victim_type WHEN 'I' THEN 'Individual' WHEN 'B' THEN 'Business' WHEN 'S' THEN 'Society' WHEN 'L' THEN 'Law Enforcement' WHEN 'G' THEN 'Government' WHEN 'F' THEN 'Financial' WHEN 'R' THEN 'Religious' WHEN 'O' THEN 'Other' ELSE 'Unknown' END AS victim_type
 
-**⚠️ ETHNICITY / HISPANIC DATA IS NOT AVAILABLE.** No summary table has an ethnicity column. The raw NIBRS tables (victims, offenders, arrestees) have ethnicity (H=Hispanic, N=Not Hispanic) but are too large to query. If the user asks about Hispanic/Latino breakdowns, ethnicity, or Hispanic percentages, set sql to null and explain: "Ethnicity (Hispanic/Not Hispanic) is recorded in raw NIBRS data but is not available in our pre-aggregated summary tables. The available demographic breakdowns are race (White, Black, American Indian, Asian, Pacific Islander), sex, and age group. The FBI's race categories do not distinguish Hispanic ethnicity — a Hispanic person may be recorded as any race."
+**ETHNICITY / HISPANIC DATA:** All three demographics summary tables (summary_victim_demographics, summary_offender_demographics, summary_arrestee_demographics) have an ethnicity column: H=Hispanic, N=Not Hispanic, U=Unknown, ''=blank/not reported. Use CASE WHEN ethnicity = 'H' THEN 'Hispanic' WHEN ethnicity = 'N' THEN 'Not Hispanic' ELSE 'Unknown' END. When computing Hispanic percentages, filter WHERE ethnicity IN ('H', 'N') to exclude unknown/blank. Always note: "The FBI's race and ethnicity fields are separate — a Hispanic person may be recorded as any race (White, Black, etc.). Ethnicity reporting varies by agency."
 
 ## QUERY GUIDELINES (CRITICAL — ${NIBRS.totalLabel} rows, ${NIBRS.dbSizeLabel} database)
 

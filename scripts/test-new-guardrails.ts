@@ -664,14 +664,36 @@ console.log("\n═══ Hard override guardrails ═══\n");
   assert("#9 sqlite-dialect: fires for SUBSTRING_INDEX", r.fired.includes("sqlite-dialect-error"));
 }
 
-// #10: Ethnicity override
+// #10: Ethnicity — guardrail REMOVED, ethnicity now live in all 3 demographics tables.
+// Positive tests: ethnicity queries should use summary tables, not raw tables.
 {
-  const sql = `SELECT year, ethnicity, SUM(arrestee_count) FROM summary_arrestee_demographics GROUP BY year, ethnicity`;
-  const ctx = extractQueryContext(sql, "What percentage of white people are hispanic?", "nibrs");
+  // Ethnicity query using summary_arrestee_demographics — should NOT fire raw-table guardrail
+  const sql = `SELECT CASE WHEN d.ethnicity = 'H' THEN 'Hispanic' WHEN d.ethnicity = 'N' THEN 'Not Hispanic' ELSE 'Unknown' END AS ethnicity, SUM(d.arrestee_count) AS arrests FROM summary_arrestee_demographics d WHERE d.ucr_arrest_offense = '35A' AND d.year >= 2022 GROUP BY ethnicity ORDER BY arrests DESC`;
+  const ctx = extractQueryContext(sql, "drug arrests by ethnicity", "nibrs");
   const r = runGuardrails(ctx);
-  assert("#10 ethnicity: fires", r.fired.includes("nibrs-ethnicity-unavailable"));
-  // Override should fire since ethnicity isn't in the deployed summary tables yet
-  assert("#10 ethnicity: override", r.overrideResponse !== null);
+  assert("#10a ethnicity: summary_arrestee_demographics does NOT fire raw-table",
+    !r.fired.includes("nibrs-raw-table-for-counts"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  // Ethnicity query using summary_victim_demographics — should NOT fire raw-table guardrail
+  const sql = `SELECT CASE WHEN d.ethnicity = 'H' THEN 'Hispanic' WHEN d.ethnicity = 'N' THEN 'Not Hispanic' ELSE 'Unknown' END AS ethnicity, SUM(d.victim_count) AS victims FROM summary_victim_demographics d WHERE d.ucr_offense_code = '09A' AND d.state = 'TX' AND d.year >= 2022 GROUP BY ethnicity`;
+  const ctx = extractQueryContext(sql, "Hispanic murder victims in Texas", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("#10b ethnicity: summary_victim_demographics does NOT fire raw-table",
+    !r.fired.includes("nibrs-raw-table-for-counts"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  // Ethnicity query using summary_offender_demographics — should NOT fire raw-table guardrail
+  const sql = `SELECT CASE WHEN d.ethnicity = 'H' THEN 'Hispanic' WHEN d.ethnicity = 'N' THEN 'Not Hispanic' ELSE 'Unknown' END AS ethnicity, SUM(d.offender_count) AS offenders FROM summary_offender_demographics d WHERE d.ucr_offense_code = '09A' AND d.state = 'CA' AND d.year >= 2022 AND d.ethnicity IN ('H','N') GROUP BY ethnicity`;
+  const ctx = extractQueryContext(sql, "Hispanic murder offenders in California", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("#10c ethnicity: summary_offender_demographics does NOT fire raw-table",
+    !r.fired.includes("nibrs-raw-table-for-counts"),
+    `fired: ${JSON.stringify(r.fired)}`);
 }
 
 // #11: Sub-city geography
