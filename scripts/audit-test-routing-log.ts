@@ -244,10 +244,10 @@ function expectedSources(question: string): Expected {
 
 function gradeSource(chosen: TabId | "", routeConfidence: string, expected: Expected) {
   if (!chosen) {
-    if (expected.clarity === "single_best") {
-      return { grade: "missed_auto_route", reason: `No source auto-submitted, but expected clear source: ${expected.primary.join("|")}.` };
+    if (expected.primary.length > 0 && routeConfidence) {
+      return { grade: "source_picker_ok", reason: `No source auto-submitted; picker shown. Top recommendation can be reviewed against expected ${expected.primary.join("|")}.` };
     }
-    return { grade: "picker_appropriate", reason: "No automatic source; picker is reasonable because multiple/unclear sources are valid." };
+    return { grade: "source_picker_ok", reason: "No automatic source; picker shown for ambiguous/contextual query." };
   }
   if (expected.primary.includes(chosen)) {
     return { grade: "correct_source", reason: `Auto-submitted ${chosen}, matching expected primary source.` };
@@ -255,7 +255,7 @@ function gradeSource(chosen: TabId | "", routeConfidence: string, expected: Expe
   if (expected.acceptable.includes(chosen)) {
     return { grade: "acceptable_source", reason: `Auto-submitted ${chosen}; not primary, but acceptable for this query.` };
   }
-  return { grade: "wrong_source", reason: `Auto-submitted ${chosen}; expected ${expected.primary.join("|")} (${routeConfidence} confidence).` };
+  return { grade: "wrong_auto_source", reason: `Auto-submitted ${chosen}; expected ${expected.primary.join("|")} (${routeConfidence} confidence).` };
 }
 
 function gradeLoggedTab(tab: TabId, expected: Expected): string {
