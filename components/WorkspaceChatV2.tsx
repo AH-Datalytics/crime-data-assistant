@@ -63,6 +63,7 @@ interface Exchange {
 type SourceId = PickerSourceId;
 
 const SOURCE_OPTIONS = pickerOptions();
+const RERUN_SOURCE_OPTIONS = SOURCE_OPTIONS.filter((opt): opt is { id: RegistrySourceId; label: string; color: string } => opt.id !== "auto");
 
 
 async function readSSEStream(response: Response, onEvent: (event: StreamEvent) => void) {
@@ -247,6 +248,27 @@ export default function WorkspaceChat({}: WorkspaceChatProps) {
 
   const hasData = response && (response.chartConfig || response.rows.length > 0);
   const hasStarted = exchanges.length > 0 || loading || error || showDisambiguation;
+  const rerunQuestion = exchanges[activeExchangeIdx]?.question || lastQuestion;
+  const rerunSourceOptions = activeSource ? RERUN_SOURCE_OPTIONS.filter(opt => opt.id !== activeSource) : RERUN_SOURCE_OPTIONS;
+  const rerunControl = rerunQuestion && !loading && rerunSourceOptions.length > 0 ? (
+    <div className="relative shrink-0">
+      <select
+        value=""
+        onChange={(e) => {
+          const tab = e.target.value as RegistrySourceId;
+          if (!tab) return;
+          submitQuestion(rerunQuestion, tab, `Rerun in ${TAB_DISPLAY_NAMES[tab]}`);
+        }}
+        className="appearance-none pl-2.5 pr-7 py-1.5 text-[11px] font-medium rounded-md border border-[var(--border)] bg-white text-[var(--foreground)] cursor-pointer focus:outline-none focus:border-[#475EC7] focus:ring-1 focus:ring-[#475EC7]/20"
+      >
+        <option value="">Run in another source...</option>
+        {rerunSourceOptions.map(opt => (
+          <option key={opt.id} value={opt.id}>{opt.label}</option>
+        ))}
+      </select>
+      <svg className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="var(--muted)" strokeWidth="1.5" strokeLinecap="round"><path d="M2 3.5l3 3 3-3"/></svg>
+    </div>
+  ) : null;
 
   return (
     <div className="h-screen flex flex-col bg-[var(--surface)]">
@@ -440,8 +462,9 @@ export default function WorkspaceChat({}: WorkspaceChatProps) {
             {!loading && !hasData && !error && explanation && (
               <div className="p-3 sm:p-5 lg:p-6">
                 {activeSource && (
-                  <div className="mb-2 flex items-center gap-2">
+                  <div className="mb-2 flex items-center gap-2 flex-wrap">
                     <span className="text-[10px] font-semibold px-2 py-0.5 rounded text-white uppercase tracking-wider" style={{ backgroundColor: accentColor }}>{TAB_DISPLAY_NAMES[activeSource]}</span>
+                    {rerunControl}
                   </div>
                 )}
                 <div className="text-[13px] sm:text-[14px] text-[var(--foreground)] leading-relaxed">
@@ -467,9 +490,10 @@ export default function WorkspaceChat({}: WorkspaceChatProps) {
               <div className="flex-1 flex flex-col p-3 sm:p-5 lg:p-6 min-h-0">
                 {/* Source badge */}
                 {activeSource && (
-                  <div className="mb-2 shrink-0 flex items-center gap-2">
+                  <div className="mb-2 shrink-0 flex items-center gap-2 flex-wrap">
                     <span className="text-[10px] font-semibold px-2 py-0.5 rounded text-white uppercase tracking-wider" style={{ backgroundColor: accentColor }}>{TAB_DISPLAY_NAMES[activeSource]}</span>
                     {exchanges[activeExchangeIdx]?.routingReason && <span className="text-[11px] text-[var(--muted)]">{exchanges[activeExchangeIdx].routingReason}</span>}
+                    {rerunControl}
                   </div>
                 )}
 
