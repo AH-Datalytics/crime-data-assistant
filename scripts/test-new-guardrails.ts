@@ -1362,6 +1362,50 @@ console.log("\n═══ city-like-no-state (expanded) ═══\n");
 //  Summary
 // ══════════════════════════════════════════════════════════════════════
 
+// topn-no-entity-limit
+console.log("\n═══ topn-no-entity-limit ═══\n");
+
+{
+  // FP: one-row-per-entity ranking with outer LIMIT is correct
+  const sql = `SELECT state, SUM(offense_count) AS drug_violations FROM summary_drug_monthly WHERE year = 2022 GROUP BY state ORDER BY drug_violations DESC LIMIT 10`;
+  const ctx = extractQueryContext(sql, "Drug violations by state in 2022, top 10", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("FP: top 10 one-row-per-state ranking does NOT fire",
+    !r.fired.includes("topn-no-entity-limit"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  // TP: entity + time grouping needs a CTE/subquery to limit entities first
+  const sql = `SELECT a.city, s.year, SUM(s.victim_count) AS murders FROM summary_victim_city_monthly s JOIN agencies a ON a.ori = s.ori AND a.year = s.year WHERE s.ucr_offense_code = '09A' AND s.year BETWEEN 2020 AND 2024 GROUP BY a.city, s.year ORDER BY murders DESC LIMIT 10`;
+  const ctx = extractQueryContext(sql, "top 10 cities by murder trend from 2020 to 2024", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("TP: top 10 grouped by city and year fires",
+    r.fired.includes("topn-no-entity-limit"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+// nibrs city/state summary joins
+console.log("\n═══ nibrs city/state summary joins ═══\n");
+
+{
+  // FP: separate city/state CTEs joined by year are the correct pattern
+  const sql = `WITH city_data AS (SELECT year, SUM(offense_count) AS city_count FROM summary_city_monthly WHERE ucr_offense_code = '240' AND ori IN (SELECT ori FROM agencies WHERE city = 'EVERETT' AND state = 'WA' AND agency_type = 'City') GROUP BY year), state_data AS (SELECT year, SUM(offense_count) AS state_count FROM summary_state_monthly WHERE ucr_offense_code = '240' AND state = 'WA' GROUP BY year) SELECT c.year, c.city_count, s.state_count FROM city_data c JOIN state_data s ON s.year = c.year ORDER BY c.year`;
+  const ctx = extractQueryContext(sql, "motor vehicle theft in Everett WA vs statewide", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("FP: separate city/state CTE join does NOT fire cross-level guardrails",
+    !r.fired.includes("nibrs-cross-level-join") && !r.fired.includes("nibrs-state-table-with-ori"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  // TP: direct city summary to state summary join multiplies rows
+  const sql = `SELECT c.year, SUM(c.offense_count) AS city_count, SUM(s.offense_count) AS state_count FROM summary_city_monthly c JOIN summary_state_monthly s ON s.year = c.year WHERE c.ucr_offense_code = '240' AND s.ucr_offense_code = '240' GROUP BY c.year`;
+  const ctx = extractQueryContext(sql, "motor vehicle theft in Everett WA vs statewide", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("TP: direct city/state summary join fires",
+    r.fired.includes("nibrs-cross-level-join"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
 console.log("\n" + "═".repeat(60));
 console.log(`SUMMARY: ${pass} passed, ${fail} failed out of ${pass + fail} tests`);
 console.log("═".repeat(60));

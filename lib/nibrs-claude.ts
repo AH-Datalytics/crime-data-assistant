@@ -404,6 +404,7 @@ Typical shoplifting dollar value in California example:
 - ${formatRowCount(NIBRS.summaryRowCounts["summary_property_offense"] || 29900000)} rows. Pre-aggregated from offenses JOIN property. Outlier values cleaned (per-record avg >= $1M zeroed out).
 - Same type_property_loss and property_description codes as summary_property_value_state above.
 - INDEXES: (ori, year), (state, year), (ucr_offense_code, year), (property_description, type_property_loss)
+- **DO NOT USE FOR LOCATION-TYPE VALUE QUERIES**: summary_property_offense does NOT have location_type. If the user asks for property value by/with a location type (business, residence, street, parking lot, etc.), use raw offenses JOIN property with tight state/year/offense/value filters.
 - **USE FOR: City/agency-level property queries ONLY** — "value of stolen property in Houston", "what's stolen most in Chicago burglaries". For national or state-level queries, ALWAYS use summary_property_value_state instead (12x faster). NEVER join raw offenses with raw property (both ~200M rows).
 
 Burglaries with stolen firearms by state example:
@@ -417,7 +418,7 @@ Total value stolen in robberies for a city example:
   SELECT year, SUM(total_value) AS total_stolen
   FROM summary_property_offense
   WHERE ucr_offense_code = '120' AND type_property_loss = '7'
-    AND ori IN (SELECT ori FROM agencies WHERE city = 'HOUSTON' AND state = 'TX' AND year = 2024)
+    AND ori IN (SELECT ori FROM agencies WHERE city = 'HOUSTON' AND state = 'TX' AND agency_type = 'City' AND year = 2024)
   GROUP BY year ORDER BY year
 
 ### summary_offense_location (CRIME LOCATION BREAKDOWNS)
@@ -805,7 +806,7 @@ Juvenile DV murder victims not cleared example:
 Carjacking from summary (city):
   SELECT year, month, SUM(offense_count) AS carjackings
   FROM summary_carjacking_monthly
-  WHERE ori IN (SELECT ori FROM agencies WHERE city = 'CHICAGO' AND state = 'IL' AND year = 2025)
+  WHERE ori IN (SELECT ori FROM agencies WHERE city = 'CHICAGO' AND state = 'IL' AND agency_type = 'City' AND year = 2025)
   GROUP BY year, month ORDER BY year, month
 
 Carjacking from summary (state):
@@ -844,6 +845,7 @@ Three tables with identical structure — same columns as the main demographic t
 - summary_carjacking_arrestee_demographics: count column = arrestee_count
 - All have: ori, year, weapon_category, race, sex, age_group, state. Same value codes as summary_victim_demographics.
 - INDEXES: (ori, year), (state, year), (year)
+- **VICTIM/OFFENDER/ARRESTEE QUERIES**: Query the matching demographic table directly. Do NOT JOIN to summary_carjacking_monthly for state, year, or count context; the demographic tables already have state and year, and joining monthly counts multiplies rows.
 
 Carjacking victims by race (city) example:
   SELECT d.race, SUM(d.victim_count) AS victims
@@ -1189,7 +1191,7 @@ Examples:
 0b. **"WHEN DID X START REPORTING?" → SUMMARY TABLES ONLY.** To find the earliest year an agency or state has NIBRS data, query MIN(year) from a summary table (e.g., summary_city_monthly or summary_state_monthly). NEVER query the raw incidents table for this — it is too large. Example: SELECT MIN(year) AS first_year FROM summary_city_monthly WHERE ori = (SELECT ori FROM agencies WHERE city = 'BOSTON' AND state = 'MA' AND population > 0 ORDER BY pop_group LIMIT 1)
 1. ALWAYS filter by year AND state on the main table (offenses, incidents, etc.) BEFORE joining other tables. The (state, year) index is the most selective.
 2. NEVER do a full table scan without a year or indexed-column filter.
-3. When filtering by city: ALWAYS add the state filter (e.g., o.state = 'IL') on the main query table first, THEN use a subquery for city: AND o.ori IN (SELECT ori FROM agencies WHERE city = 'CHICAGO' AND state = 'IL' AND year = 2025). This lets SQLite use the (state, year) index to narrow rows BEFORE the join. NEVER use a direct JOIN to agencies for city filtering — it causes 57GB full scans.
+3. When filtering by city: ALWAYS add the state filter (e.g., o.state = 'IL') on the main query table first, THEN use a subquery for city: AND o.ori IN (SELECT ori FROM agencies WHERE city = 'CHICAGO' AND state = 'IL' AND agency_type = 'City' AND year = 2025). This lets SQLite use the (state, year) index to narrow rows BEFORE the join. NEVER use a direct JOIN to agencies for city filtering — it causes 57GB full scans.
 4. For carjacking queries, ALWAYS use summary_carjacking_* tables (not raw offenses+property). Use summary_carjacking_monthly for counts/trends, summary_carjacking_victim/offender/arrestee_demographics for demographic breakdowns.
 5. For other multi-table queries, use EXISTS subqueries instead of JOINs: AND EXISTS (SELECT 1 FROM property p WHERE p.ori = o.ori AND p.incident_num = o.incident_num AND p.year = o.year AND ...). This is dramatically faster.
 6. Join tables on (ori, incident_num, year) — this is the composite key.
@@ -1253,7 +1255,7 @@ Examples:
 SELECT s.year, SUM(s.victim_count) AS murders
 FROM summary_victim_city_monthly s
 WHERE s.ucr_offense_code = '09A' AND s.year BETWEEN 2022 AND 2025
-AND s.ori = (SELECT ori FROM agencies WHERE city = 'BOSTON' AND state = 'MA' AND year = 2024 ORDER BY pop_group LIMIT 1)
+AND s.ori = (SELECT ori FROM agencies WHERE city = 'BOSTON' AND state = 'MA' AND agency_type = 'City' AND year = 2024 ORDER BY pop_group LIMIT 1)
 GROUP BY s.year ORDER BY s.year
 
 ⚠️ NEVER use summary_victim_STATE_monthly for city queries — it has NO ori column and will error.
@@ -1262,7 +1264,7 @@ GROUP BY s.year ORDER BY s.year
 SELECT year, month, SUM(offense_count) AS carjackings
 FROM summary_carjacking_monthly
 WHERE year = 2025
-AND ori IN (SELECT ori FROM agencies WHERE city = 'CHICAGO' AND state = 'IL' AND year = 2025)
+AND ori IN (SELECT ori FROM agencies WHERE city = 'CHICAGO' AND state = 'IL' AND agency_type = 'City' AND year = 2025)
 GROUP BY year, month ORDER BY year, month
 
 NOTE: summary_carjacking_monthly has columns (year, month, state, ori, offense_count) — it does NOT have incident_date or ucr_offense_code. Do NOT reference those columns on this table.

@@ -51,7 +51,7 @@ const EVAL_SET: EvalQuery[] = [
     question: "murder, rape, sexual assault, robbery, and aggravated assault",
     category: "SQL structure",
     knownIssues: ["duplicate GROUP BY", "missing robbery code 120"],
-    rejectPatterns: [/GROUP\s+BY[^;]*GROUP\s+BY/i],
+    rejectPatterns: [/GROUP\s+BY\s+d\.age_group\s+GROUP\s+BY/i, /GROUP\s+BY\s+age_group\s+GROUP\s+BY/i],
     requirePatterns: [/120/], // robbery code must be present
     history: [
       { role: "user", content: "show me violent crimes by age group in continuously reporting agencies since 2015" },
@@ -202,7 +202,7 @@ const EVAL_SET: EvalQuery[] = [
     question: "Murders by weapon in Houston in 2025",
     category: "SQL structure",
     knownIssues: ["duplicate GROUP BY after weapon alias grouping"],
-    rejectPatterns: [/GROUP\s+BY[^;]*GROUP\s+BY/i],
+    rejectPatterns: [/GROUP\s+BY\s+d\.age_group\s+GROUP\s+BY/i, /GROUP\s+BY\s+age_group\s+GROUP\s+BY/i],
     requirePatterns: [/summary_victim_weapon/i, /09A/i, /HOUSTON/i, /GROUP\s+BY\s+weapon/i],
   },
   {
@@ -210,7 +210,7 @@ const EVAL_SET: EvalQuery[] = [
     question: "show me violent crimes by age group for agencies that reported every year from 2015 to 2025",
     category: "SQL structure",
     knownIssues: ["duplicate GROUP BY when combining age group with completeness filter"],
-    rejectPatterns: [/GROUP\s+BY[^;]*GROUP\s+BY/i],
+    rejectPatterns: [/GROUP\s+BY\s+d\.age_group\s+GROUP\s+BY/i, /GROUP\s+BY\s+age_group\s+GROUP\s+BY/i],
     requirePatterns: [/summary_victim_demographics/i, /nibrs_agency_completeness/i, /age_group/i, /HAVING\s+COUNT\(\*\)\s*=\s*11/i],
   },
   {

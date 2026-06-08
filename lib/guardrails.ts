@@ -177,6 +177,10 @@ const GUARDRAILS: Guardrail[] = [
       // If SQL has no GROUP BY with entity columns, outer LIMIT is fine
       const hasEntityGroup = /GROUP\s+BY\b[\s\S]*?\b(agency|city|ori|state)\b/i.test(sql);
       if (!hasEntityGroup) return false;
+      const groupByClause = sql.match(/GROUP\s+BY\s+([\s\S]*?)(?:\bHAVING\b|\bORDER\s+BY\b|\bLIMIT\b|$)/i)?.[1] || "";
+      const groupsByTime = /\b(?:year|month)\b/i.test(groupByClause);
+      const hasOuterTopLimit = new RegExp(`\\bORDER\\s+BY\\b[\\s\\S]*?\\bLIMIT\\s+${n}\\b`, "i").test(sql);
+      if (!groupsByTime && hasOuterTopLimit) return false;
       // SQL groups by entity but has no inner limit — likely returns all entities
       return true;
     },
@@ -707,9 +711,11 @@ const GUARDRAILS: Guardrail[] = [
     name: "nibrs-cross-level-join",
     tabs: ["nibrs"],
     match: (ctx) => {
-      const usesCitySummary = /\bsummary_victim_city_monthly\b/i.test(ctx.sql) || /\bsummary_city_monthly\b/i.test(ctx.sql);
-      const usesStateSummary = /\bsummary_victim_state_monthly\b/i.test(ctx.sql) || /\bsummary_state_monthly\b/i.test(ctx.sql);
-      return usesCitySummary && usesStateSummary && /\bJOIN\b/i.test(ctx.sql);
+      const citySummary = "(?:summary_victim_city_monthly|summary_city_monthly)";
+      const stateSummary = "(?:summary_victim_state_monthly|summary_state_monthly)";
+      const cityToState = new RegExp(`\\bFROM\\s+${citySummary}\\b(?:\\s+\\w+)?[\\s\\S]*?\\bJOIN\\s+${stateSummary}\\b`, "i");
+      const stateToCity = new RegExp(`\\bFROM\\s+${stateSummary}\\b(?:\\s+\\w+)?[\\s\\S]*?\\bJOIN\\s+${citySummary}\\b`, "i");
+      return cityToState.test(ctx.sql) || stateToCity.test(ctx.sql);
     },
     message: () =>
       "[SYSTEM: Your previous query JOINed city-level and state-level summary tables, which produces incorrect results due to row multiplication. For comparisons between a city and a state/national average, use separate subqueries or CTEs — one for the city data and one for the state/national data — then combine them. NEVER JOIN summary_victim_city_monthly with summary_victim_state_monthly directly.]",
@@ -736,10 +742,8 @@ const GUARDRAILS: Guardrail[] = [
     name: "nibrs-state-table-with-ori",
     tabs: ["nibrs"],
     match: (ctx) => {
-      const usesStateSummary = /\bsummary_victim_state_monthly\b/i.test(ctx.sql);
-      const usesStateProp = /\bsummary_state_monthly\b/i.test(ctx.sql) && !/\bsummary_victim/i.test(ctx.sql);
-      const hasOri = /\bori\b/i.test(ctx.sql);
-      return (usesStateSummary || usesStateProp) && hasOri;
+      const stateTableWithOri = /\b(?:FROM|JOIN)\s+(?:summary_victim_state_monthly|summary_state_monthly)\b(?:\s+\w+)?[\s\S]{0,300}\bori\b/i;
+      return stateTableWithOri.test(ctx.sql);
     },
     rewrite: (sql) => {
       let fixed = sql.replace(/\bsummary_victim_state_monthly\b/gi, 'summary_victim_city_monthly');
