@@ -17,12 +17,20 @@ export function buildChartConfig(
   columns: string[],
   rows: Record<string, unknown>[]
 ): ChartConfig | null {
-  if (
-    claude.chartHint === "none" ||
-    !claude.sql ||
-    rows.length === 0
-  ) {
+  if (!claude.sql || rows.length === 0) {
     return null;
+  }
+
+  // Auto-detect chart type if Claude said "none" but data is chartable
+  if (claude.chartHint === "none") {
+    const hasYear = columns.includes("year");
+    const numericCols = columns.filter(c => c !== "year" && c !== "month" && typeof rows[0]?.[c] === "number");
+    if (hasYear && numericCols.length > 0 && rows.length > 1) {
+      // Override: data has year + numeric columns → line chart
+      claude = { ...claude, chartHint: numericCols.length <= 3 ? "line" : "bar", xAxis: "year", yAxis: numericCols.join(",") };
+    } else {
+      return null;
+    }
   }
 
   // Validate xAxis exists

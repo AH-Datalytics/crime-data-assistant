@@ -453,10 +453,24 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Auto-detect chart type if Claude said "none" but data is chartable
+    let autoChartType = claude.chartType || "none";
+    let autoXAxis = claude.xAxis || columns[0];
+    let autoYAxis = claude.yAxis || (columns.length > 1 ? [columns[columns.length - 1]] : []);
+    if (autoChartType === "none" && rows.length > 1) {
+      const hasYear = columns.includes("year");
+      const numericCols = columns.filter(c => c !== "year" && c !== "month" && typeof rows[0]?.[c] === "number");
+      if (hasYear && numericCols.length > 0) {
+        autoChartType = numericCols.length <= 3 ? "line" : "bar";
+        autoXAxis = "year";
+        autoYAxis = numericCols;
+      }
+    }
+
     const chartConfig = {
-      type: claude.chartType || "none",
-      xAxis: claude.xAxis || columns[0],
-      yAxis: claude.yAxis || (columns.length > 1 ? [columns[columns.length - 1]] : []),
+      type: autoChartType,
+      xAxis: autoXAxis,
+      yAxis: autoYAxis,
       yAxisLabel: claude.yAxisLabel || undefined,
       title: "",
     };
