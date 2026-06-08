@@ -345,6 +345,45 @@ console.log("\n═══ city-like-no-state ═══\n");
 }
 
 {
+  // TP: contains LIKE without state (the BART/Bartlett bug)
+  const ctx = extractQueryContext(
+    "SELECT year, SUM(offenses) FROM agency_monthly WHERE agency LIKE '%BART%' GROUP BY year",
+    "crime reported by BART",
+    "current"
+  );
+  const r = runGuardrails(ctx);
+  assert("TP: LIKE '%BART%' without state fires",
+    r.fired.includes("city-like-no-state"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  // TP: suffix LIKE without state is also ambiguous
+  const ctx = extractQueryContext(
+    "SELECT year, SUM(offenses) FROM historical_agency_crime hac JOIN historical_agency ha ON ha.ori = hac.ori WHERE ha.agency LIKE '%MTA' GROUP BY year",
+    "crime reported by MTA",
+    "historical"
+  );
+  const r = runGuardrails(ctx);
+  assert("TP: LIKE '%MTA' without state fires",
+    r.fired.includes("city-like-no-state"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  // FP: contains LIKE with state filter is fine
+  const ctx = extractQueryContext(
+    "SELECT year, SUM(offenses) FROM agency_monthly WHERE agency LIKE '%BART%' AND state = 'CA' GROUP BY year",
+    "crime reported by BART in California",
+    "current"
+  );
+  const r = runGuardrails(ctx);
+  assert("FP: LIKE '%BART%' with state does NOT fire",
+    !r.fired.includes("city-like-no-state"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
   // FP: LIKE with state filter is fine
   const ctx = extractQueryContext(
     "SELECT i.year, COUNT(*) FROM incidents i WHERE i.agency LIKE '%Maplewood%' AND i.state = 'NJ' GROUP BY i.year",

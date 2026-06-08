@@ -901,20 +901,21 @@ const GUARDRAILS: Guardrail[] = [
     tabs: ["current", "historical", "nibrs", "shr"],
     match: (ctx) => {
       const sql = ctx.sql;
-      // Detect: city LIKE 'X%' or agency LIKE 'X%' without a state filter in the SAME clause
+      // Detect: city/agency LIKE pattern without a state filter in the SAME clause.
+      // Catches prefix ('X%'), contains ('%X%'), and suffix ('%X') patterns.
       const likeMatch = sql.match(/(?:city|agency)\s+LIKE\s+'([^']+)'/gi);
       if (!likeMatch) return false;
-      // Only fire if the LIKE is a prefix match (ends with %)
-      const hasPrefixLike = likeMatch.some(m => {
+      // Must have at least one wildcard LIKE (not just LIKE 'exact')
+      const hasWildcardLike = likeMatch.some(m => {
         const val = m.match(/LIKE\s+'([^']+)'/i)?.[1];
-        return val && !val.startsWith('%') && val.endsWith('%');
+        return val && val.includes('%');
       });
-      if (!hasPrefixLike) return false;
+      if (!hasWildcardLike) return false;
       // Check for state filter in the SAME subquery as the LIKE, not globally
       // Extract the subquery or clause containing the LIKE
       for (const m of likeMatch) {
         const val = m.match(/LIKE\s+'([^']+)'/i)?.[1];
-        if (!val || val.startsWith('%') || !val.endsWith('%')) continue;
+        if (!val || !val.includes('%')) continue;
         // Find the innermost parenthesized clause containing this LIKE
         const likeIdx = sql.indexOf(m);
         // Walk backward to find the opening paren of this subquery
@@ -944,8 +945,8 @@ const GUARDRAILS: Guardrail[] = [
       return false;
     },
     message: (ctx) => {
-      const likeVal = ctx.sql.match(/(?:city|agency)\s+LIKE\s+'([^'%]+)/i)?.[1] || "the search term";
-      return `[SYSTEM: Your query uses a LIKE prefix search ('${likeVal}%') without a state filter. This can match the wrong city/agency entirely (e.g., 'KINGS%' matches Kingsport, TN instead of Kings County, NY). Either add AND state = '[XX]' to narrow the search, or set sql to null and ask the user which state they mean.]`;
+      const likePattern = ctx.sql.match(/(?:city|agency)\s+LIKE\s+'([^']+)'/i)?.[1] || "the search term";
+      return `[SYSTEM: Your query uses a wildcard city/agency LIKE search ('${likePattern}') without a state filter. This can match the wrong city/agency entirely (e.g., 'KINGS%' matches Kingsport, TN instead of Kings County, NY; '%BART%' can match Bartlett, TN instead of Bay Area Rapid Transit in CA). Either add AND state = '[XX]' to narrow the search, or set sql to null and ask the user which state they mean.]`;
     },
   },
   {
