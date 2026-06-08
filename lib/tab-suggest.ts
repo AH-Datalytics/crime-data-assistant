@@ -39,7 +39,7 @@ export interface TabSuggestion {
 export const TAB_DISPLAY_NAMES: Record<TabId, string> = {
   current: "Current Trends",
   historical: "Historical Library",
-  nibrs: "NIBRS Explorer",
+  nibrs: "NIBRS",
   shr: "Homicide Reports",
   hate_crime: "Hate Crime",
 };
@@ -111,7 +111,7 @@ const DATASET_REGISTRY: Record<TabId, DatasetCapabilities> = {
   historical: {
     id: "historical",
     displayName: "Historical Library",
-    description: "Annual FBI data from 10,000+ agencies, 1930s–present",
+    description: "Annual agency, state, and nationwide data going back decades",
     yearRange: { start: 1930, end: 2024 },
     granularity: ["annual"],
     offenseScope: "part1_ucr",
@@ -122,8 +122,8 @@ const DATASET_REGISTRY: Record<TabId, DatasetCapabilities> = {
   },
   nibrs: {
     id: "nibrs",
-    displayName: "NIBRS Explorer",
-    description: "Incident-level detail: demographics, weapons, drugs, 1991–present",
+    displayName: "NIBRS",
+    description: "Incident-level detail, 1991 - present",
     yearRange: { start: 1991, end: 2025 },
     granularity: ["monthly", "annual"],
     offenseScope: "all_nibrs",

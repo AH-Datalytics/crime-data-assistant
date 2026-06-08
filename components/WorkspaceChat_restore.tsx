@@ -91,7 +91,7 @@ type ActiveTab = TabId | null;
 const TABS: { id: TabId; label: string; shortLabel: string; color: string }[] = [
   { id: "current", label: "Current Trends", shortLabel: "Current", color: "#475EC7" },
   { id: "historical", label: "Historical Library", shortLabel: "Historical", color: "#8B5E3C" },
-  { id: "nibrs", label: "NIBRS Explorer", shortLabel: "NIBRS", color: "#2d8659" },
+  { id: "nibrs", label: "NIBRS", shortLabel: "NIBRS", color: "#2d8659" },
   { id: "shr", label: "Homicide Reports", shortLabel: "SHR", color: "#8B6914" },
   { id: "explainer", label: "Tutorial", shortLabel: "Tutorial", color: "#333" },
 ];
@@ -924,8 +924,8 @@ export default function WorkspaceChat({ heroData, heroAgencyCount, heroPopulatio
                 const badgeColor = TAB_COLORS[exSource] || "#475EC7";
                 const sourceDesc: Record<string, string> = {
                   current: "Monthly crime data collected by AH Datalytics from ~700 police departments, 2017\u2013present. Covers Part I UCR offenses. Preliminary data, not yet validated by the FBI.",
-                  historical: "Annual FBI Uniform Crime Reports from 10,000+ agencies, 1930\u20132025. Includes crime counts, clearance rates, and staffing levels. The longest-running standardized crime data in the U.S.",
-                  nibrs: "FBI National Incident-Based Reporting System, 1991\u2013present. 1B+ incident-level records with victim/offender demographics, weapons, drugs, and location detail. Coverage varies by state and year.",
+                  historical: "Annual agency, state, and nationwide data going back decades",
+                  nibrs: "Incident-level detail, 1991 - present",
                   shr: "FBI Supplementary Homicide Reports, 1976\u2013present. 890K+ homicide victims with victim/offender demographics, weapon, circumstance, and relationship data. Not all agencies report every year.",
                 };
                 return (
@@ -1266,8 +1266,8 @@ export default function WorkspaceChat({ heroData, heroAgencyCount, heroPopulatio
               <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {[
                   { label: "Current Trends", desc: "Monthly crime data from ~700 agencies, 2017\u2013present. Best for recent trends.", color: "#475EC7" },
-                  { label: "Historical Library", desc: "Annual FBI UCR data from 10,000+ agencies, 1930\u20132025. Best for long-term trends, clearance, staffing.", color: "#8B5E3C" },
-                  { label: "NIBRS Explorer", desc: "1B+ incident records with demographics, weapons, drugs, 1991\u2013present. Best for deep analysis.", color: "#2d8659" },
+                  { label: "Historical Library", desc: "Annual agency, state, and nationwide data going back decades", color: "#8B5E3C" },
+                  { label: "NIBRS", desc: "Incident-level detail, 1991 - present", color: "#2d8659" },
                   { label: "Homicide Reports", desc: "890K+ homicide victims with victim/offender detail, 1976\u2013present. Best for homicide analysis.", color: "#8B6914" },
                 ].map(ds => (
                   <div key={ds.label} className="rounded-xl border border-[var(--border)] p-3 bg-white">

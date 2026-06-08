@@ -1577,7 +1577,7 @@ const GUARDRAILS: Guardrail[] = [
     tabs: ["shr"],
     match: (ctx) => /\b(clearance|cleared|solve[ds]?|unsolved|closure|close rate|cold case)\b/i.test(ctx.question),
     override: () =>
-      "The Homicide Reports dataset does not track whether cases were solved or cleared. A **clearance** in FBI terminology means the case was resolved by arrest (suspect arrested, charged, and turned over for prosecution) or by exceptional means (offender identified but arrest prevented by circumstances outside law enforcement's control, such as the offender's death or victim's refusal to cooperate). A clearance does not necessarily mean a conviction. For clearance rate data, try the [Historical Library](/test?tab=historical) (agency-level clearance rates back to the 1960s) or the [NIBRS Explorer](/test?tab=nibrs) (incident-level clearance data from 1991).",
+      "The Homicide Reports dataset does not track whether cases were solved or cleared. A **clearance** in FBI terminology means the case was resolved by arrest (suspect arrested, charged, and turned over for prosecution) or by exceptional means (offender identified but arrest prevented by circumstances outside law enforcement's control, such as the offender's death or victim's refusal to cooperate). A clearance does not necessarily mean a conviction. For clearance rate data, try the [Historical Library](/test?tab=historical) (agency-level clearance rates back to the 1960s) or the [NIBRS](/test?tab=nibrs) (incident-level clearance data from 1991).",
   },
 
   // User said "raw counts" / "no rolling" but SQL has rolling window

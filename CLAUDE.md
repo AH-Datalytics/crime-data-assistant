@@ -1,7 +1,7 @@
 # Crime Data Assistant
 
 ## Overview
-AI chatbot for exploring U.S. crime data across four tabs: Current Trends (RTCI), Historical Library (FBI UCR), NIBRS Explorer, and Homicide Reports (SHR). Deployed at nibrsai.com on a Hetzner VPS.
+AI chatbot for exploring U.S. crime data across four tabs: Current Trends (RTCI), Historical Library (FBI UCR), NIBRS, and Homicide Reports (SHR). Deployed at nibrsai.com on a Hetzner VPS.
 
 ## Tech Stack
 - Next.js 16, React 19, TypeScript, Tailwind CSS v4, Recharts
@@ -66,9 +66,9 @@ Run those on a separate machine and SCP the updated DB files to `/opt/nibrs/shar
 
 ## Architecture
 - `lib/claude.ts` — System prompt for Current Trends + Historical tabs
-- `lib/nibrs-claude.ts` — System prompt for NIBRS Explorer tab (~1200 lines)
+- `lib/nibrs-claude.ts` — System prompt for NIBRS tab (~1200 lines)
 - `app/api/query/route.ts` — API route for Current Trends/Historical (SSE streaming)
-- `app/api/nibrs-query/route.ts` — API route for NIBRS Explorer (JSON response)
+- `app/api/nibrs-query/route.ts` — API route for NIBRS (JSON response)
 - `lib/sql-safety.ts` — SQL validation/sanitization
 - `lib/dynamic-facts.ts` — Runtime DB introspection for prompt context
 - `scripts/daily-query-analysis.js` — Daily email digest via Resend (cron noon)

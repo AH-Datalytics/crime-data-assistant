@@ -703,8 +703,8 @@ export async function POST(req: NextRequest) {
             const similar = findSimilarAgencies(db, agencyName, isHistorical);
             if (similar.length === 0) {
               emptyMsg = isHistorical
-                ? `"${agencyName}" is not in our dataset. Try the [NIBRS Explorer](/test?tab=nibrs) tab, which has incident-level data from agencies nationwide, or the [Current Trends](/test?tab=current) tab for monthly data from ~${RTCI.agencyCount} major agencies.`
-                : `"${agencyName}" is not in our dataset of ~${RTCI.agencyCount} agencies. Try the [Historical Library](/test?tab=historical) tab for annual data covering more agencies back to the 1930s, or the [NIBRS Explorer](/test?tab=nibrs) tab for incident-level data from agencies nationwide.`;
+                ? `"${agencyName}" is not in our dataset. Try the [NIBRS](/test?tab=nibrs) tab, which has incident-level data from agencies nationwide, or the [Current Trends](/test?tab=current) tab for monthly data from ~${RTCI.agencyCount} major agencies.`
+                : `"${agencyName}" is not in our dataset of ~${RTCI.agencyCount} agencies. Try the [Historical Library](/test?tab=historical) tab for annual data covering more agencies back to the 1930s, or the [NIBRS](/test?tab=nibrs) tab for incident-level data from agencies nationwide.`;
             } else {
               const exactMatch = similar.find(
                 (s) =>

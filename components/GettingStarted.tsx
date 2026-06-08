@@ -48,11 +48,11 @@ const TAB_CARDS: {
     statLabel: "of annual FBI crime data",
     subtitle: "Annual \u00b7 1930\u20132024",
     description:
-      "Explore nearly 100 years of crime data. The longest-running standardized crime data in the U.S., from more than 10,000 agencies.",
+      "Annual agency, state, and nationwide data going back decades",
   },
   {
     id: "nibrs",
-    title: "NIBRS Explorer",
+    title: "NIBRS",
     color: "#2d8659",
     lightBg: "#ecf5f0",
     borderColor: "#b8dcc8",
@@ -61,7 +61,7 @@ const TAB_CARDS: {
     statLabel: "incident-level records",
     subtitle: "Incident-level \u00b7 1991\u2013present",
     description:
-      "The deepest dive available. Every reported incident with details of offense, victim, offender, weapon, and more. Not all agencies have reported every year to NIBRS.",
+      "Incident-level detail, 1991 - present",
   },
   {
     id: "shr",
@@ -420,7 +420,7 @@ export default function GettingStarted({ onSelectTab, onAsk, renderInputBar }: G
                 <div className="flex items-center gap-2 mb-3">
                   <div className="w-1 h-5 rounded-full" style={{ backgroundColor: "#2d8659" }} />
                   <h3 className="text-base font-bold text-[var(--foreground)]">
-                    NIBRS Explorer (National Incident-Based Reporting System)
+                    NIBRS (National Incident-Based Reporting System)
                   </h3>
                 </div>
                 <div className="pl-3.5 text-sm text-[var(--muted)] leading-relaxed space-y-2.5">

@@ -84,7 +84,7 @@ type ActiveTab = TabId | null;
 const TABS: { id: TabId; label: string; shortLabel: string; color: string }[] = [
   { id: "current", label: "Current Trends", shortLabel: "Current", color: "#475EC7" },
   { id: "historical", label: "Historical Library", shortLabel: "Historical", color: "#8B5E3C" },
-  { id: "nibrs", label: "NIBRS Explorer", shortLabel: "NIBRS", color: "#2d8659" },
+  { id: "nibrs", label: "NIBRS", shortLabel: "NIBRS", color: "#2d8659" },
   { id: "shr", label: "Homicide Reports", shortLabel: "SHR", color: "#8B6914" },
   { id: "explainer", label: "Tutorial", shortLabel: "Tutorial", color: "#333" },
 ];

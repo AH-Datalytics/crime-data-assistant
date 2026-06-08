@@ -331,7 +331,7 @@ export default function NibrsChat({ visible }: NibrsChatProps) {
           {currentResponse && (
             <div className="flex-1 flex flex-col p-3 sm:p-5 lg:p-6 min-h-0">
               <div className="mb-2 shrink-0 flex items-center gap-2">
-                <span className="text-[10px] font-semibold px-2 py-0.5 rounded text-white uppercase tracking-wider" style={{ backgroundColor: '#2d8659' }}>NIBRS Explorer</span>
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded text-white uppercase tracking-wider" style={{ backgroundColor: '#2d8659' }}>NIBRS</span>
                 <span className="text-[11px] text-[var(--muted)]">Incident-level crime data from the FBI</span>
               </div>
               <div className="flex items-center justify-between mb-2 sm:mb-3 shrink-0 flex-wrap gap-1">

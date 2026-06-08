@@ -69,7 +69,7 @@ export default function ExplainerContent({ visible }: ExplainerContentProps) {
                     <th className="text-left py-2.5 px-3 font-semibold text-[var(--muted)] text-[11px] uppercase tracking-wider border-b-2 border-[var(--border)]"></th>
                     <th className="text-left py-2.5 px-3 font-bold text-[11px] uppercase tracking-wider border-b-2" style={{ color: "#475EC7", borderColor: "#475EC7" }}>Current Trends</th>
                     <th className="text-left py-2.5 px-3 font-bold text-[11px] uppercase tracking-wider border-b-2" style={{ color: "#8B5E3C", borderColor: "#8B5E3C" }}>Historical Library</th>
-                    <th className="text-left py-2.5 px-3 font-bold text-[11px] uppercase tracking-wider border-b-2" style={{ color: "#2d8659", borderColor: "#2d8659" }}>NIBRS Explorer</th>
+                    <th className="text-left py-2.5 px-3 font-bold text-[11px] uppercase tracking-wider border-b-2" style={{ color: "#2d8659", borderColor: "#2d8659" }}>NIBRS</th>
                     <th className="text-left py-2.5 px-3 font-bold text-[11px] uppercase tracking-wider border-b-2" style={{ color: "#8B6914", borderColor: "#8B6914" }}>Supplementary Homicide</th>
                     <th className="text-left py-2.5 px-3 font-bold text-[11px] uppercase tracking-wider border-b-2" style={{ color: "#4A4A4A", borderColor: "#4A4A4A" }}>Hate Crime</th>
                   </tr>
@@ -139,7 +139,7 @@ export default function ExplainerContent({ visible }: ExplainerContentProps) {
             <div className="mb-6 pb-6 border-b border-[var(--border)]">
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-1 h-5 rounded-full" style={{ backgroundColor: "#2d8659" }} />
-                <h3 className="text-base font-bold text-[var(--foreground)]">NIBRS Explorer (National Incident-Based Reporting System)</h3>
+                <h3 className="text-base font-bold text-[var(--foreground)]">NIBRS (National Incident-Based Reporting System)</h3>
               </div>
               <div className="pl-3.5 text-sm text-[var(--muted)] leading-relaxed space-y-2.5">
                 <p>

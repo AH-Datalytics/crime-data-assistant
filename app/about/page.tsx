@@ -46,7 +46,7 @@ export default function AboutPage() {
                 href="/#nibrs"
                 className="text-sm font-medium px-4 py-1.5 border-l border-[var(--border)] bg-white text-[#666] hover:bg-[#f0f0f0] transition-colors"
               >
-                NIBRS Explorer
+                NIBRS
               </Link>
               <span
                 className="text-sm font-medium px-4 py-1.5 border-l border-[var(--border)] text-white flex items-center"
@@ -134,8 +134,8 @@ export default function AboutPage() {
           </li>
         </ul>
 
-        {/* NIBRS Explorer */}
-        <h3 className="text-lg font-semibold mb-3">NIBRS Explorer (National Incident-Based Reporting System)</h3>
+        {/* NIBRS */}
+        <h3 className="text-lg font-semibold mb-3">NIBRS (National Incident-Based Reporting System)</h3>
         <p className="mb-3">
           The most detailed data source: incident-level records from the FBI&apos;s NIBRS bulk master files, <strong>1991&ndash;2026</strong>. This dataset contains <strong>over 1 billion records</strong> across 35 years of data, including every reported incident, offense, victim, offender, arrestee, and property record submitted by participating agencies.
         </p>

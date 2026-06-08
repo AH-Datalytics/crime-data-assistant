@@ -27,7 +27,7 @@ export interface SourceMeta {
 const ALL_SOURCES: SourceMeta[] = [
   { id: "current",    label: "Current Trends",    color: "#475EC7", lightBg: "#eef1fb", borderColor: "#c5cdf0" },
   { id: "historical", label: "Historical Library", color: "#8B5E3C", lightBg: "#f5f0eb", borderColor: "#ddd0c2" },
-  { id: "nibrs",      label: "NIBRS Explorer",     color: "#2d8659", lightBg: "#ecf5f0", borderColor: "#b8dcc8" },
+  { id: "nibrs",      label: "NIBRS",              color: "#2d8659", lightBg: "#ecf5f0", borderColor: "#b8dcc8" },
   { id: "shr",        label: "SHR (Homicide)",     color: "#B8860B", lightBg: "#fdf8e8", borderColor: "#e8d48b" },
   { id: "hate_crime", label: "Hate Crime",         color: "#4A4A4A", lightBg: "#f2f2f2", borderColor: "#d0d0d0" },
 ];

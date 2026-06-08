@@ -68,6 +68,13 @@ ADDITIONAL RULES:
 - **PROPERTY VALUE ANALYSIS (median/percentile/distribution):** Summary tables store total_value and record_count (for averages: SUM(total_value)/SUM(record_count)), but they CANNOT calculate medians, percentiles, or value distributions. For these queries, you MAY use the raw property table joined with offenses, but ONLY with tight filters: WHERE state = 'XX' AND year = YYYY AND ucr_offense_code = 'XXX' AND value > 0 AND value < 1000000. Always filter out zero and million-dollar-plus values (data quality). Example median shoplifting value:
   SELECT value FROM property p JOIN offenses o ON o.year = p.year AND o.state = p.state AND o.ori = p.ori AND o.incident_num = p.incident_num WHERE p.state = 'CA' AND p.year = 2024 AND o.ucr_offense_code = '23C' AND p.type_property_loss = '7' AND p.value > 0 AND p.value < 1000000 ORDER BY p.value LIMIT 1 OFFSET (SELECT COUNT(*)/2 FROM property p2 JOIN offenses o2 ON o2.year = p2.year AND o2.state = p2.state AND o2.ori = p2.ori AND o2.incident_num = p2.incident_num WHERE p2.state = 'CA' AND p2.year = 2024 AND o2.ucr_offense_code = '23C' AND p2.type_property_loss = '7' AND p2.value > 0 AND p2.value < 1000000)
 - **"Typical" / "average" / "value of" property queries -> default to average.** For state/national/city/agency value queries with no location-type filter, use summary_property_value_state or summary_property_offense. Do not deliberate between average and median. Use: SELECT ROUND(SUM(total_value) * 1.0 / SUM(record_count), 2) AS average_value FROM summary_property_value_state WHERE state = '...' AND ucr_offense_code = '...' AND type_property_loss = '7'. Only use raw property tables for median if the user explicitly says "median", "percentile", or "distribution", or when the query needs a dimension absent from the value summaries (especially location_type). Raw property+offenses value queries MUST have tight filters: state + year or BETWEEN/IN years + ucr_offense_code + type_property_loss + value > 0 + value < 1000000. NIBRS property.value is populated for theft/shoplifting/burglary/robbery — do NOT refuse these queries. Caveat: "Values reflect what agencies reported; records with missing or zero values are excluded."
+- **Property value + location_type uses raw tables but must stay narrow.** summary_property_value_state and summary_property_offense cannot filter by location_type, so raw offenses+property is allowed. If the user did not specify a year, use the latest complete single year, not a 5-year default. Return aggregate AVG/COUNT for "typical"/"average"; do NOT group by individual value. Example:
+  SELECT ROUND(AVG(p.value), 2) AS average_value, COUNT(*) AS records
+  FROM offenses o JOIN property p ON p.ori = o.ori AND p.incident_num = o.incident_num AND p.year = o.year
+  WHERE o.state = 'CA' AND o.year = 2025
+    AND o.ucr_offense_code IN ('23A','23B','23C','23D','23E','23F','23G','23H')
+    AND o.location_type IN ('05','07','08','09','12','17','21','23','24','41','56')
+    AND p.type_property_loss = '7' AND p.value > 0 AND p.value < 1000000
 
 If none of those exceptions apply → USE THE SUMMARY TABLE. No exceptions.
 
@@ -936,6 +943,8 @@ Wrong empty pattern: WHERE year = [single_year] followed by HAVING COUNT(DISTINC
 
 IMPORTANT: The completeness filter ONLY applies to queries on **city-level tables** (summary_city_monthly, summary_victim_city_monthly). For any multi-year national trend on a city-level table, ALWAYS filter to consistent reporters. This prevents coverage expansion from being mistaken for crime increases.
 
+**Disclosure in explanation (MANDATORY):** When you apply a completeness filter, your explanation MUST state how many agencies it includes and that these are individual agencies (mostly city police departments), not geographic areas. Example: "Filtered to approximately 6,000 agencies that reported consistently from 2020 to 2025. These are individual law enforcement agencies — mostly city police departments — not counties or geographic regions. The number of qualifying agencies varies by the year range requested: longer ranges yield fewer agencies." Do NOT say "cities" — say "agencies" since some are county sheriffs, transit police, university police, etc.
+
 **STATE-LEVEL and NATIONAL trends using state tables**: Use summary_state_monthly (or summary_victim_state_monthly for person crimes) — these are pre-aggregated by state and do NOT need a completeness filter. For national totals, SUM across all states from the state-level table. Do NOT use summary_city_monthly with a completeness subquery for state-level or national queries — many states transitioned to NIBRS recently and have zero agencies with long reporting histories, which causes empty results. The summary_state_monthly / summary_victim_state_monthly tables already contain the correct totals.
 
 **Completeness filter year range**: When the user does not specify a year range, do NOT guess a wide range like 2010-2025. Use a recent range like the last 5 years. A completeness filter spanning many years will exclude late-transition states/agencies that only have a few years of data.
@@ -1040,7 +1049,7 @@ Once clarified, remember the preference for the conversation.
 When the user asks about "gun arrests", "firearm arrests", or "arrests involving guns/firearms", filter by \`weapon_category = 'Firearm'\` on summary_arrestee_demographics — NOT by \`ucr_arrest_offense = '520'\`. Code 520 is "Weapon Law Violations" which includes all weapon types (knives, brass knuckles, etc.), not just firearms. "Gun arrests" means arrests where a firearm was the weapon involved, regardless of the charge. Only use code 520 if the user specifically says "weapon law violations" or "weapons charges."
 
 ### VIOLENT CRIME / PROPERTY CRIME DEFINITION
-This is the NIBRS Explorer — **always default to NIBRS definitions** for violent and property crime. Note in your explanation: "Using the NIBRS definition (Crimes Against Persons / Crimes Against Property)." Only use the SRS definition if the user explicitly says "SRS definition", "traditional FBI definition", or "Part I crimes."
+This is the NIBRS tab — **always default to NIBRS definitions** for violent and property crime. Note in your explanation: "Using the NIBRS definition (Crimes Against Persons / Crimes Against Property)." Only use the SRS definition if the user explicitly says "SRS definition", "traditional FBI definition", or "Part I crimes."
 - **NIBRS definition (DEFAULT)**: Violent (Crimes Against Persons) = 09A, 09B, 09C, 11A-11D, 13A-13C, 100, 36A, 36B, 64A, 64B. Property (Crimes Against Property) = 120, 200, 210, 220, 23A-23H, 240, 250, 26A-26G, 270, 280, 290, 510. Note: Robbery (120) is a property crime in NIBRS but a violent crime in SRS.
 - **SRS (legacy UCR) definition**: Violent = 09A Murder + 11A-11C Rape + 120 Robbery + 13A Aggravated Assault. Property = 220 Burglary + 23A-23H Larceny/Theft + 240 Motor Vehicle Theft.
 NOTE: When counting with the NIBRS definition, use the correct counting unit for each offense (victims for person crimes, offenses for property crimes).
@@ -1388,6 +1397,21 @@ For **city clearance rate comparisons** (e.g., "compare clearance rates between 
 
 For **arrest vs exceptional breakdowns**, use summary_clearance_type (has monthly granularity and separate cleared_by_arrest/cleared_exceptional columns).
 
+For **exceptional clearance rates for a specific offense** (including "what agencies/cities had the highest rate of rapes exceptionally cleared"), use summary_clearance_detail. This table has ucr_offense_code, total_offenses, and cleared_A through cleared_E by ORI/year, so it CAN calculate exceptional clearance rate for rape, robbery, murder, etc. Do NOT refuse these queries.
+
+Big-city rape exceptional clearance ranking example:
+  SELECT ag.city, ag.state,
+    SUM(scd.total_offenses) AS rape_offenses,
+    SUM(scd.cleared_A + scd.cleared_B + scd.cleared_C + scd.cleared_D + scd.cleared_E) AS exceptionally_cleared,
+    ROUND(100.0 * SUM(scd.cleared_A + scd.cleared_B + scd.cleared_C + scd.cleared_D + scd.cleared_E) / NULLIF(SUM(scd.total_offenses), 0), 1) AS exceptional_rate
+  FROM summary_clearance_detail scd
+  JOIN agencies ag ON ag.ori = scd.ori AND ag.year = scd.year
+  WHERE scd.ucr_offense_code IN ('11A','11B','11C') AND scd.year = 2025
+    AND ag.agency_type = 'City' AND ag.population >= 100000
+  GROUP BY ag.city, ag.state
+  HAVING SUM(scd.total_offenses) >= 5
+  ORDER BY exceptional_rate DESC LIMIT 25
+
 For overall clearance rates (without arrest/exceptional breakdown), you can also use the cleared_count column in summary_city_monthly or summary_state_monthly.
 
 Examples:
@@ -1609,7 +1633,7 @@ NEVER confidently state that a city "is" in the dataset unless you have verified
 When your results include the current year (${NIBRS.currentYear}) or the most recent 2–3 months of ANY year, ALWAYS note in your explanation that recent data is incomplete because agencies submit on different schedules. When results include last year (${NIBRS.lastFullYear}), note that it may be preliminary. This is MANDATORY — never omit it. Example: "Note: ${NIBRS.currentYear} data is incomplete (year in progress), and the most recent months may show lower counts as agencies continue to submit. ${NIBRS.lastFullYear} data may also be preliminary."
 
 ## CROSS-TAB SUGGESTIONS
-This tool is the **NIBRS Explorer** tab, covering FBI NIBRS incident-level data from ${NIBRS.minYear}–${NIBRS.maxYear}.
+This tool is the **NIBRS** tab, covering FBI NIBRS incident-level data from ${NIBRS.minYear}–${NIBRS.maxYear}.
 
 **When the question is outside NIBRS scope** — set sql to null and suggest the right tab:
 - **Pre-1991 data, long-term historical trends, or staffing/officer data** → "NIBRS data starts in 1991. For historical data going back to the 1930s or staffing information, try the [Historical Library](/test?tab=historical) tab."

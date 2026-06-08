@@ -64,18 +64,18 @@ export default function WelcomeModal() {
               <h3 className="text-sm font-bold text-[var(--foreground)]">Historical Library</h3>
             </div>
             <p className="text-sm text-[var(--muted)] leading-relaxed pl-[18px]">
-              Explore nearly 100 years of crime data from the FBI&apos;s Summary Reporting System.
+              Annual agency, state, and nationwide data going back decades.
             </p>
           </div>
 
-          {/* NIBRS Explorer */}
+          {/* NIBRS */}
           <div className="mb-6">
             <div className="flex items-center gap-2 mb-1.5">
               <span
                 className="inline-block w-2.5 h-2.5 rounded-full shrink-0"
                 style={{ backgroundColor: "#2d8659" }}
               />
-              <h3 className="text-sm font-bold text-[var(--foreground)]">NIBRS Explorer</h3>
+              <h3 className="text-sm font-bold text-[var(--foreground)]">NIBRS</h3>
             </div>
             <p className="text-sm text-[var(--muted)] leading-relaxed pl-[18px]">
               The FBI&apos;s incident-level crime database with more than 1 billion records. Dig into victim and offender demographics, weapon types, clearance rates and types, drug offenses, property crimes, and more. The most detailed crime data available.
