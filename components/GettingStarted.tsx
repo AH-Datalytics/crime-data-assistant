@@ -161,7 +161,7 @@ export default function GettingStarted({ onSelectTab, onAsk, renderInputBar }: G
 
           <p className="text-[13px] sm:text-[15px] text-[var(--muted)] max-w-3xl mx-auto leading-loose">
             {askMode
-              ? `Crime statistics come from multiple datasets covering different time periods, detail levels, and offense types. These sources approach crime data differently and can sometimes provide different answers to the same question. The assistant will automatically pick the best source. More information on sourcing is provided below.`
+              ? `Crime statistics come from multiple datasets covering different time periods, detail levels, and offense types. These sources approach crime data differently and can sometimes provide different answers to the same question. The assistant will now automatically pick the best source. More information on sourcing is provided below.`
               : "Nearly a century of crime data history. Choose a data source to start or read the guide below."}
           </p>
         </div>
