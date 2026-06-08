@@ -1,6 +1,6 @@
 import { getDb } from "@/lib/rtci-db";
-import ChatInterface from "@/components/ChatInterface";
 import { getShrDb } from "@/lib/shr-db";
+import WorkspaceChatV2 from "@/components/WorkspaceChatV2";
 
 function getHeroData() {
   try {
@@ -20,11 +20,9 @@ function getHeroData() {
       )
       .all() as { year: number; month: number; rolling_12: number; agency_count: number }[];
 
-    // Use agency_count from the most recent completed month
     const lastRow = rows[rows.length - 1];
     const agencyCount = lastRow?.agency_count ?? 0;
 
-    // Get population for the national sample
     const popRow = db
       .prepare(
         `SELECT SUM(p.population) as pop FROM agency_population p
@@ -43,7 +41,7 @@ function getHeroData() {
 function getHistoricalHeroData() {
   try {
     const db = getDb();
-    const rows = db
+    return db
       .prepare(
         `SELECT hac.year, ROUND(hac.murder * 100000.0 / hap.population, 1) as murder_rate
          FROM historical_agency_crime hac
@@ -54,7 +52,6 @@ function getHistoricalHeroData() {
          ORDER BY hac.year`
       )
       .all() as { year: number; murder_rate: number }[];
-    return rows;
   } catch (e) {
     console.error("Historical hero data query failed:", e);
     return [];
@@ -82,14 +79,12 @@ export default function Home() {
   const { rows, agencyCount, population } = getHeroData();
   const historicalHeroData = getHistoricalHeroData();
   const shrHeroData = getShrHeroData();
-  const historicalMaxYear = (() => { try { const db = getDb(); const row = db.prepare("SELECT MAX(year) as y FROM historical_agency_crime").get() as { y: number }; return row?.y ?? 2024; } catch { return 2024; } })();
   return (
-    <ChatInterface
+    <WorkspaceChatV2
       heroData={rows}
       heroAgencyCount={agencyCount}
       heroPopulation={population}
       historicalHeroData={historicalHeroData}
-      historicalMaxYear={historicalMaxYear}
       shrHeroData={shrHeroData}
     />
   );
