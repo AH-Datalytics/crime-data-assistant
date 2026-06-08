@@ -651,6 +651,17 @@ Exceptional clearance type breakdown example:
     AND scd.year BETWEEN 2022 AND 2025
   GROUP BY scd.year ORDER BY scd.year
 
+Agencies with highest exceptional clearance rate for an offense example:
+  SELECT a.city, a.state, scd.total_offenses,
+    (scd.cleared_A + scd.cleared_B + scd.cleared_C + scd.cleared_D + scd.cleared_E) AS exceptionally_cleared,
+    ROUND((scd.cleared_A + scd.cleared_B + scd.cleared_C + scd.cleared_D + scd.cleared_E) * 100.0 / scd.total_offenses, 1) AS exceptional_rate
+  FROM summary_clearance_detail scd
+  JOIN agencies a ON a.ori = scd.ori AND a.year = scd.year
+  WHERE scd.ucr_offense_code = '11A' AND scd.year = 2025 AND scd.total_offenses >= 10
+    AND a.agency_type = 'City' AND a.population > 0 AND a.city != ''
+  ORDER BY exceptional_rate DESC LIMIT 20
+NOTE: This table CAN answer "exceptional clearance rate for [specific offense]" — it has both ucr_offense_code and the cleared_A through cleared_E breakdown. Do NOT refuse these queries.
+
 ### summary_victim_circumstance_clearance_demo (CIRCUMSTANCE + CLEARANCE + DEMOGRAPHICS)
 - COLUMNS: state TEXT, ori TEXT, year INT, ucr_offense_code TEXT, circumstance_code TEXT, clearance_status TEXT, sex TEXT, race TEXT, age_group TEXT, victim_count INT
 - circumstance_code: '01'=Argument, '02'=Assault on LEO, '03'=Drug Dealing, '04'=Gangland, '05'=Juvenile Gang, '06'=Domestic Violence, '07'=Mercy Killing, '08'=Other Felony, '09'=Other, '10'=Unknown; for 09C: '20'=Killed by Private Citizen, '21'=Killed by Police
