@@ -283,8 +283,11 @@ test({ question: "Break down homicide circumstances in Texas in 2023", expectedP
 test({ question: "What share of homicides are intraracial since 2000?", expectedPrimary: "shr" });
 test({ question: "Victim age and sex breakdown for murders in California in 2022", expectedPrimary: ["shr", "nibrs"], mustExclude: ["current", "historical"] });
 test({ question: "What New Orleans violent crime data do you have for the past 3 years?", expectedPrimary: ["current", "historical"] });
+test({ question: "what are the crime trends for Fairfax County Virginia Police Department for the past three years?", expectedPrimary: "current" });
+test({ question: "can you tell me the current crime in Fairfax County Virginia?", expectedPrimary: "current" });
 test({ question: "Which cities had the most officers per capita?", expectedPrimary: "historical" });
 test({ question: "counties with most reported data in 2025", expectedPrimary: ["current", "historical"] });
+test({ question: "Show me the homicide levels for Dallas, Texas between 2021 to June 2026.", expectedPrimary: "current" });
 test({ question: "compare crime in the top 10 cities in texas", expectedPrimary: ["current", "historical"] });
 
 // ══════════════════════════════════════════════════════════════════════

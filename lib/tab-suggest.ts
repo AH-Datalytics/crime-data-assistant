@@ -338,9 +338,39 @@ function detectGeography(q: string): QueryIntent["geography"] {
 }
 
 function detectTimeRange(q: string): QueryIntent["timeRange"] {
+  const currentYear = new Date().getFullYear();
   // "from YYYY to YYYY" or "YYYY-YYYY" or "YYYY to YYYY"
   const rangeMatch = q.match(/\b(19\d{2}|20\d{2})\s*(?:to|through|-|–)\s*(19\d{2}|20\d{2})\b/i);
   if (rangeMatch) return { start: parseInt(rangeMatch[1]), end: parseInt(rangeMatch[2]) };
+
+  // "past/last N years"
+  const relativeYears = q.match(/\b(?:past|last)\s+(\d{1,2})\s+years?\b/i);
+  if (relativeYears) {
+    const years = Number(relativeYears[1]);
+    return { start: currentYear - years, end: currentYear };
+  }
+  const relativeYearWords = q.match(/\b(?:past|last)\s+(one|two|three|four|five|six|seven|eight|nine|ten)\s+years?\b/i);
+  if (relativeYearWords) {
+    const wordToNumber: Record<string, number> = {
+      one: 1,
+      two: 2,
+      three: 3,
+      four: 4,
+      five: 5,
+      six: 6,
+      seven: 7,
+      eight: 8,
+      nine: 9,
+      ten: 10,
+    };
+    const years = wordToNumber[relativeYearWords[1].toLowerCase()];
+    return { start: currentYear - years, end: currentYear };
+  }
+
+  // Recent/current/latest language should prefer current data when otherwise ambiguous.
+  if (/\b(current|currently|recent|latest|present|right\s+now)\b/i.test(q)) {
+    return { start: currentYear, end: currentYear };
+  }
 
   // "since YYYY" or "from YYYY"
   const sinceMatch = q.match(/\b(?:since|from|starting|beginning|after)\s+(19\d{2}|20\d{2})\b/i);
@@ -655,6 +685,11 @@ function scoreDataset(ds: DatasetCapabilities, intent: QueryIntent): RouteScore 
   let why = ds.description;
   let excluded = false;
   let excludeReason: string | undefined;
+  const currentYear = new Date().getFullYear();
+  const recentCurrentRange = intent.timeRange.start !== null &&
+    intent.timeRange.end !== null &&
+    intent.timeRange.end >= currentYear &&
+    intent.timeRange.start >= currentYear - 5;
 
   // ── Hard exclusions ──
 
@@ -698,6 +733,13 @@ function scoreDataset(ds: DatasetCapabilities, intent: QueryIntent): RouteScore 
     }
     score -= Math.min(3, gap / 5); // small penalty for minor gaps
   }
+  if (intent.timeRange.end !== null && intent.timeRange.end > ds.yearRange.end) {
+    const gap = intent.timeRange.end - ds.yearRange.end;
+    score -= Math.min(3, gap);
+  }
+  if (recentCurrentRange && ds.id === "historical") {
+    score -= 2;
+  }
 
   // 4. Granularity mismatch — Current only has monthly, Historical only has annual
   if (intent.granularity === "monthly" && !ds.granularity.includes("monthly")) {
@@ -710,7 +752,8 @@ function scoreDataset(ds: DatasetCapabilities, intent: QueryIntent): RouteScore 
   // 5. County-level query — only Historical has county
   if (intent.geography.type === "county" && !ds.hasCounty) {
     if (ds.id !== "historical") {
-      score -= 4; // Heavy penalty, but NIBRS might still have county data via state
+      const recentQuery = intent.timeRange.start !== null && intent.timeRange.start >= 2017;
+      score -= recentQuery ? 1 : 4; // Current may have county-named agencies in recent monthly data.
     }
   }
 
@@ -827,7 +870,8 @@ function scoreDataset(ds: DatasetCapabilities, intent: QueryIntent): RouteScore 
     why = "Has monthly granularity for tracking recent trends";
   }
   if (ds.id === "current" && intent.timeRange.start !== null && intent.timeRange.start >= 2017) {
-    score += 1;
+    score += recentCurrentRange ? 4 : 2;
+    if (!why.includes("monthly")) why = "Recent monthly data from the Current Trends sample";
   }
   // Current as default for simple recent queries — no time range, no special attributes, Part I offense
   if (ds.id === "current" && intent.timeRange.start === null && intent.requiredAttributes.length === 0 &&

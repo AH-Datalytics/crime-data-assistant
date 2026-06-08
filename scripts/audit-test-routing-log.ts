@@ -163,6 +163,12 @@ function expectedSources(question: string): Expected {
   const intent = parseIntent(question);
   const attrs = new Set(intent.requiredAttributes);
   const offense = intent.offense;
+  const currentYear = new Date().getFullYear();
+  const recentCurrentQuery = (
+    /\b(current|currently|recent|latest|present|right\s+now)\b/i.test(q) ||
+    /\b(?:past|last)\s+(?:\d{1,2}|one|two|three|four|five|six|seven|eight|nine|ten)\s+years?\b/i.test(q) ||
+    (intent.timeRange.end !== null && intent.timeRange.end >= currentYear && intent.timeRange.start !== null && intent.timeRange.start >= currentYear - 5)
+  );
 
   if (intent.unsupportedConcepts.length > 0 && /\b(conviction|sentenc|prison|dna|evidence|video|camera)\b/i.test(q)) {
     return {
@@ -188,10 +194,6 @@ function expectedSources(question: string): Expected {
     return { primary: ["historical"], acceptable: ["historical"], clarity: "single_best", reason: "Staffing/officer counts are Historical Library data." };
   }
 
-  if (intent.geography.type === "county") {
-    return { primary: ["historical"], acceptable: ["historical"], clarity: "single_best", reason: "County-level UCR geography is Historical Library." };
-  }
-
   if (attrs.has("bias") || attrs.has("hate_crime")) {
     return { primary: ["hate_crime"], acceptable: ["hate_crime", "nibrs"], clarity: "single_best", reason: "Bias motivation is best handled by the Hate Crime source." };
   }
@@ -214,6 +216,14 @@ function expectedSources(question: string): Expected {
 
   if ([...attrs].some(a => DETAIL_ATTRS.has(a))) {
     return { primary: ["nibrs"], acceptable: ["nibrs"], clarity: "single_best", reason: "Non-homicide detail/demographics require NIBRS." };
+  }
+
+  if (recentCurrentQuery) {
+    return { primary: ["current"], acceptable: ["current", "historical"], clarity: "single_best", reason: "Current/recent or current-year Part I queries should prefer Current Trends." };
+  }
+
+  if (intent.geography.type === "county") {
+    return { primary: ["historical"], acceptable: ["historical"], clarity: "single_best", reason: "County-level UCR geography is Historical Library." };
   }
 
   if (intent.measure === "clearance_rate") {
