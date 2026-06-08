@@ -26,6 +26,8 @@ PM2_APP="nibrs"
 KEEP_RELEASES=5
 HEALTH_URL="http://localhost:3000"
 HEALTH_TIMEOUT=15                   # seconds to wait for health check
+HEALTH_RETRIES="${HEALTH_RETRIES:-8}" # post-reload attempts; app can need ~45s to warm
+HEALTH_RETRY_SLEEP="${HEALTH_RETRY_SLEEP:-8}"
 BRANCH="${1:-dev}"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 RELEASE_DIR="$RELEASES_DIR/$TIMESTAMP"
@@ -35,6 +37,11 @@ SKIP_GIT="${SKIP_GIT:-0}"
 # ── Helpers ────────────────────────────────────────────────────────────
 log()  { echo "[deploy] $(date +%H:%M:%S) $*"; }
 die()  { log "FATAL: $*"; exit 1; }
+
+check_http_status() {
+  local path="$1"
+  curl -s -o /dev/null -w '%{http_code}' --max-time "$HEALTH_TIMEOUT" "${HEALTH_URL}${path}" 2>/dev/null || echo "000"
+}
 
 cleanup_on_failure() {
   log "Build failed — removing incomplete release $RELEASE_DIR"
@@ -250,16 +257,26 @@ else
   sleep 3
 
   # ── Step 7: Health check ──────────────────────────────────────────────
-  log "Running health checks..."
-  HEALTHY=true
+  log "Running health checks (up to $HEALTH_RETRIES attempts; timeout=${HEALTH_TIMEOUT}s, sleep=${HEALTH_RETRY_SLEEP}s)..."
+  HEALTHY=false
 
-  for path in "/" "/test"; do
-    STATUS=$(curl -s -o /dev/null -w '%{http_code}' --max-time "$HEALTH_TIMEOUT" "${HEALTH_URL}${path}" 2>/dev/null || echo "000")
-    if [[ "$STATUS" =~ ^(200|304)$ ]]; then
-      log "  ${path} → $STATUS ✓"
-    else
-      log "  ${path} → $STATUS ✗"
-      HEALTHY=false
+  for attempt in $(seq 1 "$HEALTH_RETRIES"); do
+    ATTEMPT_OK=true
+    for path in "/" "/test"; do
+      STATUS=$(check_http_status "$path")
+      if [[ "$STATUS" =~ ^(200|304)$ ]]; then
+        log "  attempt ${attempt}/${HEALTH_RETRIES}: ${path} -> $STATUS ok"
+      else
+        log "  attempt ${attempt}/${HEALTH_RETRIES}: ${path} -> $STATUS"
+        ATTEMPT_OK=false
+      fi
+    done
+    if [[ "$ATTEMPT_OK" == "true" ]]; then
+      HEALTHY=true
+      break
+    fi
+    if (( attempt < HEALTH_RETRIES )); then
+      sleep "$HEALTH_RETRY_SLEEP"
     fi
   done
 
