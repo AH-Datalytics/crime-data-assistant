@@ -3,6 +3,7 @@ import path from "path";
 import os from "os";
 import fs from "fs";
 import { findExistingPaths, getManagedDb, resolveDbPath } from "./sqlite-db";
+import type { RoutingLogMeta } from "./routing-log-meta";
 
 const state = {
   db: null as Database.Database | null,
@@ -80,7 +81,10 @@ export function getWriteDb(): Database.Database | null {
         response TEXT,
         guardrails TEXT,
         model TEXT,
-        session_id TEXT
+        session_id TEXT,
+        routing_confidence TEXT,
+        routing_mode TEXT,
+        routing_reason TEXT
       )
     `);
     _writeDb.exec(`
@@ -95,7 +99,7 @@ export function getWriteDb(): Database.Database | null {
       )
     `);
     // Add columns if table already exists without them
-    for (const col of ["tab TEXT", "session_id TEXT", "guardrails TEXT", "model TEXT"]) {
+    for (const col of ["tab TEXT", "session_id TEXT", "guardrails TEXT", "model TEXT", "routing_confidence TEXT", "routing_mode TEXT", "routing_reason TEXT"]) {
       try { _writeDb.exec(`ALTER TABLE query_log ADD COLUMN ${col}`); } catch { /* already exists */ }
     }
     return _writeDb;
@@ -116,13 +120,14 @@ export function logQuery(
   tab: string = "current",
   guardrails: string[] = [],
   model: string | null = null,
-  sessionId: string | null = null
+  sessionId: string | null = null,
+  routingMeta: RoutingLogMeta | null = null
 ) {
   const db = getWriteDb();
   if (db) {
     try {
       db.prepare(
-        "INSERT INTO query_log (ts, tab, question, sql, rows, error, ms, response, guardrails, model, session_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        "INSERT INTO query_log (ts, tab, question, sql, rows, error, ms, response, guardrails, model, session_id, routing_confidence, routing_mode, routing_reason) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
       ).run(
         Date.now(),
         tab,
@@ -134,7 +139,10 @@ export function logQuery(
         response ? response.slice(0, 4000) : null,
         guardrails.length > 0 ? guardrails.join(",") : null,
         model,
-        sessionId ? sessionId.slice(0, 64) : null
+        sessionId ? sessionId.slice(0, 64) : null,
+        routingMeta?.confidence ?? null,
+        routingMeta?.mode ?? null,
+        routingMeta?.reason ?? null
       );
     } catch (e) {
       console.warn("Log write failed:", e);
@@ -155,6 +163,9 @@ export function logQuery(
         error: error ? error.slice(0, 500) : null,
         ms,
         response: response ? response.slice(0, 4000) : null,
+        routingConfidence: routingMeta?.confidence ?? null,
+        routingMode: routingMeta?.mode ?? null,
+        routingReason: routingMeta?.reason ?? null,
       }),
     }).catch(() => {});
   }

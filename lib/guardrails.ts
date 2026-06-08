@@ -11,6 +11,24 @@
 
 import type { QueryContext, Tab } from "./query-context";
 
+const STATE_NAMES_RE = /\b(alabama|alaska|arizona|arkansas|california|colorado|connecticut|delaware|florida|georgia|hawaii|idaho|illinois|indiana|iowa|kansas|kentucky|louisiana|maine|maryland|massachusetts|michigan|minnesota|mississippi|missouri|montana|nebraska|nevada|new hampshire|new jersey|new mexico|new york|north carolina|north dakota|ohio|oklahoma|oregon|pennsylvania|rhode island|south carolina|south dakota|tennessee|texas|utah|vermont|virginia|washington state|west virginia|wisconsin|wyoming|district of columbia|united states)\b/i;
+
+const NOISE_WORDS_RE = /\b(murder|homicide|crime|crimes|rate|rates|trend|trends|data|show|what|how|many|the|in|of|for|is|are|me|since|from|over|time|last|years?|months?|per\s+capita|give|can|you|please|compare|between|and|vs|versus|by|with|to|at|on|has|have|had|been|were|was|do|does|did|tell|about|all|total|count|number|violent|property|offense|offenses?)\b/gi;
+
+/** Extract the likely city/place name from a question when ctx.geos is empty.
+ *  Strips state names, common crime/query terms, and returns the leftover. */
+function extractPlaceFromQuestion(ctx: QueryContext): string {
+  const sqlGeos = ctx.geos.filter(g => !STATE_NAMES_RE.test(g));
+  if (sqlGeos.length > 0) return sqlGeos[0];
+  const cleaned = ctx.question
+    .replace(STATE_NAMES_RE, " ")
+    .replace(NOISE_WORDS_RE, " ")
+    .replace(/[,?.!]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return cleaned || "the requested city";
+}
+
 export interface Guardrail {
   name: string;
   /** Which tabs this guardrail applies to */
@@ -772,7 +790,7 @@ const GUARDRAILS: Guardrail[] = [
       return mentionsCity;
     },
     message: (ctx) => {
-      const city = ctx.geos[0] || "the requested city/county";
+      const city = extractPlaceFromQuestion(ctx);
       return `[SYSTEM: The user asked about "${city}" but the SQL queries a state-level summary table with no ORI or city filter — this returns statewide data, not city data. Use the city-level table instead: summary_victim_city_monthly (for person crimes) or summary_city_monthly (for property crimes), filtered by ORI: WHERE ori IN (SELECT ori FROM agencies WHERE city = '${city.toUpperCase()}' AND state = '...' AND population > 0). Do NOT return state-level data when the user asked about a specific city or agency.]`;
     },
   },
@@ -1123,7 +1141,7 @@ const GUARDRAILS: Guardrail[] = [
       return asksCrimeData;
     },
     message: (ctx) => {
-      const geo = ctx.geos[0] || "the requested agency";
+      const geo = extractPlaceFromQuestion(ctx);
       if (ctx.tab === "nibrs") {
         return `[SYSTEM: You ran an agency lookup query but the user asked for actual crime data. Query a summary table instead — use summary_victim_city_monthly (person crimes) or summary_city_monthly (property crimes) filtered by ORI: WHERE ori IN (SELECT ori FROM agencies WHERE city = '${geo.toUpperCase()}' AND state = '...'). Do NOT return agency metadata when the user wants crime statistics.]`;
       }
@@ -1174,9 +1192,7 @@ const GUARDRAILS: Guardrail[] = [
       return asksCityByName;
     },
     message: (ctx) => {
-      const STATE_NAMES = /\b(alabama|alaska|arizona|arkansas|california|colorado|connecticut|delaware|florida|georgia|hawaii|idaho|illinois|indiana|iowa|kansas|kentucky|louisiana|maine|maryland|massachusetts|michigan|minnesota|mississippi|missouri|montana|nebraska|nevada|new hampshire|new jersey|new mexico|new york|north carolina|north dakota|ohio|oklahoma|oregon|pennsylvania|rhode island|south carolina|south dakota|tennessee|texas|utah|vermont|virginia|washington state|west virginia|wisconsin|wyoming|district of columbia|united states)\b/i;
-      const cityGeos = ctx.geos.filter(g => !STATE_NAMES.test(g));
-      const city = cityGeos[0] || "the requested city";
+      const city = extractPlaceFromQuestion(ctx);
       return `The user asked about "${city}" but the SQL queries historical_state_national which has state-level data, not city-level. Use historical_agency_crime hac JOIN historical_agency ha ON ha.ori = hac.ori WHERE ha.agency = '${city}' AND ha.type = 'city' to get city-level data. Only fall back to state-level if the user explicitly asks for a state.`;
     },
   },
@@ -1510,7 +1526,7 @@ const GUARDRAILS: Guardrail[] = [
         !/GROUP\s+BY\s+[^)]*\bagency\b[^,)]*$/i.test(ctx.sql);
       const isSingleAgency = hasAgencyFilter && !groupsByMultipleAgencies;
       if (isSingleAgency) return null; // rewrite handles it
-      return "SHR population data is per-agency and per-incident — summing it across multiple agencies produces unreliable rates. For aggregate murder rates, try the [Historical Library](/test?tab=historical) tab which has FBI statewide estimates. I can provide raw victim counts from SHR instead.";
+      return "SHR population data is per-agency and per-incident — summing it across multiple agencies produces unreliable rates. For aggregate murder rates, try the [Historical Library](/?tab=historical) tab which has FBI statewide estimates. I can provide raw victim counts from SHR instead.";
     },
   },
 
@@ -1530,7 +1546,7 @@ const GUARDRAILS: Guardrail[] = [
     override: (ctx) => {
       const match = ctx.question.match(/\b(robber(?:y|ies)|thefts?|larcen(?:y|ies)|burglar(?:y|ies)|assaults?|rapes?|sexual assault|auto theft|motor vehicle theft|drugs?|arrests?|staffing|officers?|sworn|personnel|shootings?|property crimes?|violent crimes?)\b/i);
       const topic = match ? match[1] : "that topic";
-      return `The Homicide Reports dataset contains only homicide data. For ${topic} data, try the [Current Trends](/test?tab=current) or [Historical Library](/test?tab=historical) tab.`;
+      return `The Homicide Reports dataset contains only homicide data. For ${topic} data, try the [Current Trends](/?tab=current) or [Historical Library](/?tab=historical) tab.`;
     },
   },
 
@@ -1568,7 +1584,7 @@ const GUARDRAILS: Guardrail[] = [
       return !exempt;
     },
     override: () =>
-      "NIBRS does not track 'shootings' as a category. For fatal shootings, use the [Homicide Reports](/test?tab=shr) tab which has firearm homicide data since 1976. The closest NIBRS proxy is aggravated assault with a firearm, but that includes brandishing, pistol-whipping, and threats - not just people who were shot. If you want that proxy, ask for 'aggravated assault victims involving a firearm.'",
+      "NIBRS does not track 'shootings' as a category. For fatal shootings, use the [Homicide Reports](/?tab=shr) tab which has firearm homicide data since 1976. The closest NIBRS proxy is aggravated assault with a firearm, but that includes brandishing, pistol-whipping, and threats - not just people who were shot. If you want that proxy, ask for 'aggravated assault victims involving a firearm.'",
   },
 
   // #7: SHR clearance hard override
@@ -1577,7 +1593,7 @@ const GUARDRAILS: Guardrail[] = [
     tabs: ["shr"],
     match: (ctx) => /\b(clearance|cleared|solve[ds]?|unsolved|closure|close rate|cold case)\b/i.test(ctx.question),
     override: () =>
-      "The Homicide Reports dataset does not track whether cases were solved or cleared. A **clearance** in FBI terminology means the case was resolved by arrest (suspect arrested, charged, and turned over for prosecution) or by exceptional means (offender identified but arrest prevented by circumstances outside law enforcement's control, such as the offender's death or victim's refusal to cooperate). A clearance does not necessarily mean a conviction. For clearance rate data, try the [Historical Library](/test?tab=historical) (agency-level clearance rates back to the 1960s) or the [NIBRS](/test?tab=nibrs) (incident-level clearance data from 1991).",
+      "The Homicide Reports dataset does not track whether cases were solved or cleared. A **clearance** in FBI terminology means the case was resolved by arrest (suspect arrested, charged, and turned over for prosecution) or by exceptional means (offender identified but arrest prevented by circumstances outside law enforcement's control, such as the offender's death or victim's refusal to cooperate). A clearance does not necessarily mean a conviction. For clearance rate data, try the [Historical Library](/?tab=historical) (agency-level clearance rates back to the 1960s) or the [NIBRS](/?tab=nibrs) (incident-level clearance data from 1991).",
   },
 
   // User said "raw counts" / "no rolling" but SQL has rolling window

@@ -16,11 +16,11 @@ import type { StreamEvent, ChartMeta } from "@/lib/types";
 import { getCached, setCache } from "@/lib/response-cache";
 import { detectAllNullData } from "@/lib/all-null-detection";
 import { checkSingleRowTrend } from "@/lib/single-row-trend";
+import { parseRoutingLogMeta } from "@/lib/routing-log-meta";
 
 function sseEvent(event: StreamEvent): string {
   return `data: ${JSON.stringify(event)}\n\n`;
 }
-
 import {
   containsInternalScaffold,
   stripInternalScaffold,
@@ -161,7 +161,6 @@ function getChartMeta(
     return null;
   }
 }
-
 /** Extract chart metadata for historical queries */
 function getHistoricalChartMeta(
   db: ReturnType<typeof getDb>,
@@ -303,6 +302,20 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const routingMeta = parseRoutingLogMeta(body);
+  const writeLog = (
+    q: string,
+    sqlText: string | null,
+    rowCount: number,
+    logError: string | null,
+    ms: number,
+    logResponse: string | null = null,
+    tabName: string = "current",
+    guardrails: string[] = [],
+    model: string | null = null,
+    sid: string | null = null
+  ) => logQuery(q, sqlText, rowCount, logError, ms, logResponse, tabName, guardrails, model, sid, routingMeta);
+
   const stream = new ReadableStream({
     async start(controller) {
       let sql: string | null = null;
@@ -401,7 +414,7 @@ export async function POST(req: NextRequest) {
 
         if (!claude.sql) {
           const ms = Date.now() - totalStart;
-          logQuery(question, null, 0, null, ms, claude.explanation, tab, [], "haiku-4.5", sessionId);
+          writeLog(question, null, 0, null, ms, claude.explanation, tab, [], "haiku-4.5", sessionId);
           controller.enqueue(
             encoder.encode(
               sseEvent({
@@ -456,7 +469,7 @@ export async function POST(req: NextRequest) {
         // Hard override — skip retry, return deterministic response
         if (guardrailResult.overrideResponse) {
           const overrideExplanation = guardrailResult.overrideResponse;
-          logQuery(question, sql, 0, `guardrail_override:${guardrailResult.overrideGuardrail}`, Date.now() - totalStart, overrideExplanation, tab, firedGuardrails, "haiku-4.5", sessionId);
+          writeLog(question, sql, 0, `guardrail_override:${guardrailResult.overrideGuardrail}`, Date.now() - totalStart, overrideExplanation, tab, firedGuardrails, "haiku-4.5", sessionId);
           controller.enqueue(
             encoder.encode(
               sseEvent({
@@ -504,14 +517,14 @@ export async function POST(req: NextRequest) {
           const postRetryCtx = extractQueryContext(claude.sql, question, tab as "current" | "historical");
           const postRetryResult = runGuardrails(postRetryCtx);
           if (postRetryResult.overrideResponse) {
-            logQuery(question, claude.sql, 0, `guardrail_override:${postRetryResult.overrideGuardrail}`, Date.now() - totalStart, postRetryResult.overrideResponse, tab, postRetryResult.fired, "haiku-4.5", sessionId);
+            writeLog(question, claude.sql, 0, `guardrail_override:${postRetryResult.overrideGuardrail}`, Date.now() - totalStart, postRetryResult.overrideResponse, tab, postRetryResult.fired, "haiku-4.5", sessionId);
             controller.enqueue(encoder.encode(sseEvent({ type: "result", sql: null as unknown as string, explanation: postRetryResult.overrideResponse, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - totalStart })));
             close(); return;
           }
           const rateStillBad = postRetryResult.fired.some(f => f.includes("rate-no-population"));
           if (rateStillBad && /\b(rates?|per\s*capita|per\s*100)/i.test(question) && !/\b(not rates?|raw|counts?\s+not\s+rates?)\b/i.test(question)) {
             const msg = "I wasn't able to calculate a valid per-capita rate for this query. Try asking for raw counts, or use the [Historical Library](/test?tab=historical) tab for state/national rates.";
-            logQuery(question, claude.sql, 0, "rate_second_failure", Date.now() - totalStart, msg, tab, postRetryResult.fired, "haiku-4.5", sessionId);
+            writeLog(question, claude.sql, 0, "rate_second_failure", Date.now() - totalStart, msg, tab, postRetryResult.fired, "haiku-4.5", sessionId);
             controller.enqueue(encoder.encode(sseEvent({ type: "result", sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - totalStart })));
             close(); return;
           }
@@ -521,7 +534,7 @@ export async function POST(req: NextRequest) {
           );
           if (geoContractViolation) {
             const msg = "I couldn't build a reliable query for that specific geography. The data may be available under a different agency name — try searching for the county sheriff or a specific city within the county.";
-            logQuery(question, claude.sql, 0, "geography_second_failure", Date.now() - totalStart, msg, tab, postRetryResult.fired, "haiku-4.5", sessionId);
+            writeLog(question, claude.sql, 0, "geography_second_failure", Date.now() - totalStart, msg, tab, postRetryResult.fired, "haiku-4.5", sessionId);
             controller.enqueue(encoder.encode(sseEvent({ type: "result", sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - totalStart })));
             close(); return;
           }
@@ -539,7 +552,7 @@ export async function POST(req: NextRequest) {
         const validation = validateAndSanitize(claude.sql, { maxLimit });
         if (!validation.valid) {
           const ms = Date.now() - totalStart;
-          logQuery(
+          writeLog(
             question,
             claude.sql,
             0,
@@ -584,7 +597,7 @@ export async function POST(req: NextRequest) {
           // Retry: tell Claude about the error and ask for a corrected query (if budget allows)
           if (isOverBudget()) {
             const ms = Date.now() - totalStart;
-            logQuery(question, sql, 0, `DB: ${msg} (over budget)`, ms, null, tab, firedGuardrails, "haiku-4.5", sessionId);
+            writeLog(question, sql, 0, `DB: ${msg} (over budget)`, ms, null, tab, firedGuardrails, "haiku-4.5", sessionId);
             controller.enqueue(encoder.encode(sseEvent({ type: "error", text: "That query took too long. Try simplifying your question." })));
             close();
             return;
@@ -627,7 +640,7 @@ export async function POST(req: NextRequest) {
                     ? retryErr.message
                     : String(retryErr);
                 const ms = Date.now() - totalStart;
-                logQuery(
+                writeLog(
                   question,
                   sql,
                   0,
@@ -652,7 +665,7 @@ export async function POST(req: NextRequest) {
               }
             } else {
               const ms = Date.now() - totalStart;
-              logQuery(
+              writeLog(
                 question,
                 sql,
                 0,
@@ -677,7 +690,7 @@ export async function POST(req: NextRequest) {
             }
           } else {
             const ms = Date.now() - totalStart;
-            logQuery(question, sql, 0, `DB: ${msg}`, ms, null, tab, firedGuardrails, "haiku-4.5", sessionId);
+            writeLog(question, sql, 0, `DB: ${msg}`, ms, null, tab, firedGuardrails, "haiku-4.5", sessionId);
             controller.enqueue(
               encoder.encode(
                 sseEvent({
@@ -774,7 +787,7 @@ export async function POST(req: NextRequest) {
               "This query returned no results. The data may not be available for the specified criteria. Try broadening your search or asking about a different topic.";
           }
 
-          logQuery(question, sql, 0, "empty_result", totalMs, emptyMsg, tab, firedGuardrails, "haiku-4.5", sessionId);
+          writeLog(question, sql, 0, "empty_result", totalMs, emptyMsg, tab, firedGuardrails, "haiku-4.5", sessionId);
           controller.enqueue(
             encoder.encode(
               sseEvent({
@@ -876,7 +889,7 @@ export async function POST(req: NextRequest) {
             const emptyMsg = hasAgencyCte && hasCountyOrCity
               ? "I couldn't find a matching agency or county record for that query. The name may be stored differently in the database — try the exact agency name (e.g., 'Alameda County' not just 'Alameda'), or check the Historical Library tab which has county-level records."
               : "I ran that query but all the values came back empty — the math likely broke somewhere (like dividing by zero). Could you try asking that a different way?";
-            logQuery(question, sql, 0, "all_null_columns", totalMs, emptyMsg, tab, firedGuardrails, "haiku-4.5", sessionId);
+            writeLog(question, sql, 0, "all_null_columns", totalMs, emptyMsg, tab, firedGuardrails, "haiku-4.5", sessionId);
             controller.enqueue(
               encoder.encode(
                 sseEvent({
@@ -1040,7 +1053,7 @@ export async function POST(req: NextRequest) {
             );
           }
           const totalMs2 = Date.now() - totalStart;
-          logQuery(question, sql, rows.length, null, totalMs2, postExplanation, tab, firedGuardrails, "haiku-4.5", sessionId);
+          writeLog(question, sql, rows.length, null, totalMs2, postExplanation, tab, firedGuardrails, "haiku-4.5", sessionId);
           // Cache successful responses (only standalone questions)
           if (!fromCache && (!history || history.length === 0) && sql) {
             setCache(question, tab, { sql, explanation: claude.explanation, title: claude.title, chartType: claude.chartHint, xAxis: claude.xAxis, yAxis: claude.yAxis ? claude.yAxis.split(",").map(s => s.trim()) : undefined, yAxisLabel: claude.yAxisLabel, xAxisLabel: claude.xAxisLabel, colors: claude.colors, annotations: claude.annotations });
@@ -1078,11 +1091,11 @@ export async function POST(req: NextRequest) {
               );
             }
             const totalMs2 = Date.now() - totalStart;
-            logQuery(question, sql, rows.length, null, totalMs2, retryExplanation, tab, firedGuardrails, "haiku-4.5", sessionId);
+            writeLog(question, sql, rows.length, null, totalMs2, retryExplanation, tab, firedGuardrails, "haiku-4.5", sessionId);
           } catch {
             // Both attempts failed — pre-query explanation stays
             const totalMs2 = Date.now() - totalStart;
-            logQuery(question, sql, rows.length, null, totalMs2, claude.explanation, tab, firedGuardrails, "haiku-4.5", sessionId);
+            writeLog(question, sql, rows.length, null, totalMs2, claude.explanation, tab, firedGuardrails, "haiku-4.5", sessionId);
           }
           if (!fromCache && (!history || history.length === 0) && sql) {
             setCache(question, tab, { sql, explanation: claude.explanation, title: claude.title, chartType: claude.chartHint, xAxis: claude.xAxis, yAxis: claude.yAxis ? claude.yAxis.split(",").map(s => s.trim()) : undefined, yAxisLabel: claude.yAxisLabel, xAxisLabel: claude.xAxisLabel, colors: claude.colors, annotations: claude.annotations });
@@ -1091,7 +1104,7 @@ export async function POST(req: NextRequest) {
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         const ms = Date.now() - totalStart;
-        logQuery(question, sql, 0, msg, ms, null, tab, firedGuardrails, "haiku-4.5", sessionId);
+        writeLog(question, sql, 0, msg, ms, null, tab, firedGuardrails, "haiku-4.5", sessionId);
         console.error("Query API error:", msg);
         controller.enqueue(
           encoder.encode(

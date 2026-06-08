@@ -62,6 +62,8 @@ interface Exchange {
 }
 
 type SourceId = PickerSourceId;
+type RoutingConfidence = "high" | "medium" | "low";
+type RoutingMode = "auto" | "picker" | "manual" | "follow_up" | "rerun";
 
 const SOURCE_OPTIONS = pickerOptions();
 const RERUN_SOURCE_OPTIONS = SOURCE_OPTIONS.filter((opt): opt is { id: RegistrySourceId; label: string; color: string } => opt.id !== "auto");
@@ -105,6 +107,7 @@ export default function WorkspaceChat({}: WorkspaceChatProps) {
   // Disambiguation
   const [showDisambiguation, setShowDisambiguation] = useState(false);
   const [disambiguationRecs, setDisambiguationRecs] = useState<TabRecommendation[]>([]);
+  const [disambiguationConfidence, setDisambiguationConfidence] = useState<RoutingConfidence | null>(null);
   const [pendingQuestion, setPendingQuestion] = useState("");
 
   // Active source for current query
@@ -137,7 +140,13 @@ export default function WorkspaceChat({}: WorkspaceChatProps) {
   const accentColor = activeSource ? TAB_COLORS[activeSource] : "#475EC7";
 
   const submitQuestion = useCallback(
-    async (question: string, tab: "current" | "historical" | "nibrs" | "shr" | "hate_crime", reason?: string) => {
+    async (
+      question: string,
+      tab: "current" | "historical" | "nibrs" | "shr" | "hate_crime",
+      reason?: string,
+      routingConfidence: RoutingConfidence | null = null,
+      routingMode: RoutingMode = "manual"
+    ) => {
       if (!question || loading) return;
       setActiveSource(tab);
       setInput("");
@@ -155,7 +164,9 @@ export default function WorkspaceChat({}: WorkspaceChatProps) {
       const mode = tab === "historical" ? "historical" : "current";
 
       try {
-        const body: Record<string, unknown> = { question, history, pageToken: getPageToken() };
+        const body: Record<string, unknown> = { question, history, pageToken: getPageToken(), routingMode };
+        if (reason) body.routingReason = reason;
+        if (routingConfidence) body.routingConfidence = routingConfidence;
         if (tab === "current" || tab === "historical") { body.mode = mode; body.sessionId = null; }
 
         const res = await fetch(route, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
@@ -221,11 +232,11 @@ export default function WorkspaceChat({}: WorkspaceChatProps) {
         // Follow-up adds a requirement the current tab can't handle — reroute
         const r = autoRoute(q);
         if (r) {
-          submitQuestion(q, r.source, `Rerouted — ${r.reason}`);
+          submitQuestion(q, r.source, `Rerouted — ${r.reason}`, r.confidence, "follow_up");
           return;
         }
       }
-      submitQuestion(q, activeSource, "Follow-up — keeping current source");
+      submitQuestion(q, activeSource, "Follow-up — keeping current source", null, "follow_up");
       return;
     }
 
@@ -233,12 +244,12 @@ export default function WorkspaceChat({}: WorkspaceChatProps) {
       const r = autoRoute(q);
       if (!r || r.confidence !== "high") {
         const recs = r ? [{ tab: r.source, why: r.reason, primary: true, score: 10 }, ...r.alternatives] : recommendTabs(q);
-        setPendingQuestion(q); setDisambiguationRecs(recs.length > 0 ? recs : []); setShowDisambiguation(true); setAnimateIdx(-1);
+        setPendingQuestion(q); setDisambiguationRecs(recs.length > 0 ? recs : []); setDisambiguationConfidence(r?.confidence ?? null); setShowDisambiguation(true); setAnimateIdx(-1);
         return;
       }
-      submitQuestion(q, r.source, r.reason);
+      submitQuestion(q, r.source, r.reason, r.confidence, "auto");
     } else {
-      submitQuestion(q, source as "current" | "historical" | "nibrs" | "shr" | "hate_crime");
+      submitQuestion(q, source as "current" | "historical" | "nibrs" | "shr" | "hate_crime", undefined, null, "manual");
     }
   }, [source, activeSource, submitQuestion]);
 
@@ -259,7 +270,7 @@ export default function WorkspaceChat({}: WorkspaceChatProps) {
         onChange={(e) => {
           const tab = e.target.value as RegistrySourceId;
           if (!tab) return;
-          submitQuestion(rerunQuestion, tab, `Rerun in ${TAB_DISPLAY_NAMES[tab]}`);
+          submitQuestion(rerunQuestion, tab, `Rerun in ${TAB_DISPLAY_NAMES[tab]}`, null, "rerun");
         }}
         className="appearance-none pl-2.5 pr-7 py-1.5 text-[11px] font-medium rounded-md border border-[var(--border)] bg-white text-[var(--foreground)] cursor-pointer focus:outline-none focus:border-[#475EC7] focus:ring-1 focus:ring-[#475EC7]/20"
       >
@@ -402,7 +413,7 @@ export default function WorkspaceChat({}: WorkspaceChatProps) {
               </p>
               <div className={disambiguationRecs.length > 0 ? "space-y-2" : "grid grid-cols-2 gap-2"}>
                 {(disambiguationRecs.length > 0 ? disambiguationRecs : (["current","historical","nibrs","shr"] as const).map(t => ({ tab: t, why: "", primary: false, score: 0 }))).map(rec => (
-                  <button key={rec.tab} onClick={() => { setShowDisambiguation(false); submitQuestion(pendingQuestion, rec.tab, rec.why || undefined); }}
+                  <button key={rec.tab} onClick={() => { setShowDisambiguation(false); submitQuestion(pendingQuestion, rec.tab, rec.why || undefined, disambiguationConfidence, "picker"); }}
                     className="w-full text-left rounded-xl border-2 px-4 py-3 cursor-pointer transition-all hover:shadow-md hover:-translate-y-0.5 group"
                     style={{ borderColor: TAB_COLORS[rec.tab] + (rec.primary ? "80" : "30"), backgroundColor: TAB_COLORS[rec.tab] + (rec.primary ? "0c" : "05") }}>
                     <div className="flex items-center justify-between gap-3">
@@ -447,7 +458,7 @@ export default function WorkspaceChat({}: WorkspaceChatProps) {
                       <button onClick={(e) => { e.stopPropagation(); setExpandedRailIdx(isExpanded ? -1 : i); }} className="text-[10px] mt-1 cursor-pointer" style={{ color: accentColor }}>{isExpanded ? "Show less" : "Show more"}</button>
                     )}
                     {isActive && !loading && (
-                      <form onSubmit={(e) => { e.preventDefault(); const el = e.currentTarget.elements.namedItem("followup") as HTMLInputElement; const val = el?.value?.trim(); if (val && activeSource) { submitQuestion(val, activeSource); el.value = ""; } }} className="flex gap-1 mt-2">
+                      <form onSubmit={(e) => { e.preventDefault(); const el = e.currentTarget.elements.namedItem("followup") as HTMLInputElement; const val = el?.value?.trim(); if (val && activeSource) { submitQuestion(val, activeSource, undefined, null, "follow_up"); el.value = ""; } }} className="flex gap-1 mt-2">
                         <input name="followup" type="text" placeholder="Follow up..." className="flex-1 min-w-0 px-2 py-1.5 text-[11px] border border-[var(--border)] rounded focus:outline-none focus:border-[var(--accent)] bg-[var(--surface)]" />
                         <button type="submit" className="px-2 py-1.5 text-[10px] font-semibold text-white rounded hover:opacity-90 cursor-pointer shrink-0" style={{ backgroundColor: accentColor }}>Ask</button>
                       </form>
@@ -524,7 +535,7 @@ export default function WorkspaceChat({}: WorkspaceChatProps) {
             {/* Error */}
             {error && !loading && (
               <div className="shrink-0">
-                <ErrorCard message={error} accentColor={accentColor} onRetry={lastQuestion && activeSource ? () => submitQuestion(lastQuestion, activeSource) : undefined} />
+                <ErrorCard message={error} accentColor={accentColor} onRetry={lastQuestion && activeSource ? () => submitQuestion(lastQuestion, activeSource, undefined, null, "rerun") : undefined} />
               </div>
             )}
 

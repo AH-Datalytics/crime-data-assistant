@@ -3,6 +3,7 @@ import { execFile } from "node:child_process";
 import path from "path";
 import fs from "fs";
 import { getManagedDb, resolveDbPath } from "./sqlite-db";
+import type { RoutingLogMeta } from "./routing-log-meta";
 
 const state = {
   db: null as Database.Database | null,
@@ -113,7 +114,8 @@ export function logNibrsQuery(
   response: string | null = null,
   guardrails: string[] = [],
   model: string | null = null,
-  sessionId: string | null = null
+  sessionId: string | null = null,
+  routingMeta: RoutingLogMeta | null = null
 ) {
   // Write to shared query_log.db via rtci-db's getWriteDb
   // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -122,7 +124,7 @@ export function logNibrsQuery(
   if (db) {
     try {
       db.prepare(
-        "INSERT INTO query_log (ts, tab, question, sql, rows, error, ms, response, guardrails, model, session_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        "INSERT INTO query_log (ts, tab, question, sql, rows, error, ms, response, guardrails, model, session_id, routing_confidence, routing_mode, routing_reason) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
       ).run(
         Date.now(),
         "nibrs",
@@ -134,7 +136,10 @@ export function logNibrsQuery(
         response ? response.slice(0, 4000) : null,
         guardrails.length > 0 ? guardrails.join(",") : null,
         model,
-        sessionId ? sessionId.slice(0, 64) : null
+        sessionId ? sessionId.slice(0, 64) : null,
+        routingMeta?.confidence ?? null,
+        routingMeta?.mode ?? null,
+        routingMeta?.reason ?? null
       );
     } catch (e) {
       console.error("[logNibrsQuery] Failed:", e);

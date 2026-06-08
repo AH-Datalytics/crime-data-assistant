@@ -51,7 +51,7 @@ export async function GET(req: NextRequest) {
 
   const rows = db
     .prepare(
-      `SELECT id, ts, tab, question, sql, rows, error, ms, response, guardrails FROM query_log ${where} ORDER BY id DESC ${limitClause}`
+      `SELECT id, ts, tab, question, sql, rows, error, ms, response, guardrails, routing_confidence, routing_mode, routing_reason FROM query_log ${where} ORDER BY id DESC ${limitClause}`
     )
     .all();
 

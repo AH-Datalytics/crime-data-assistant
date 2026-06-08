@@ -149,7 +149,7 @@ function buildDisclaimers(
         const actual = Number(rows[0][yearCol]);
         if (!isNaN(actual) && actual > requested + 1) {
           parts.push(
-            `Data begins in ${actual} although ${requested} was requested — earlier years are not available in this dataset. For data going back further, try the [Historical Library](/test?tab=historical) tab (annual data from the 1930s) or the [Current Trends](/test?tab=current) tab.`
+            `Data begins in ${actual} although ${requested} was requested — earlier years are not available in this dataset. For data going back further, try the [Historical Library](/?tab=historical) tab (annual data from the 1930s) or the [Current Trends](/?tab=current) tab.`
           );
         }
       }

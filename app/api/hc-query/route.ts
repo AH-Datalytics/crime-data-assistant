@@ -13,6 +13,7 @@ import { getCached, setCache } from "@/lib/response-cache";
 import { extractJson } from "@/lib/extract-json";
 import { detectAllNullData } from "@/lib/all-null-detection";
 import { isSourceEnabled } from "@/lib/sources";
+import { parseRoutingLogMeta } from "@/lib/routing-log-meta";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function jsonResp(data: Record<string, any> | QueryError, status = 200) {
@@ -131,6 +132,19 @@ export async function POST(req: NextRequest) {
 
     const history = Array.isArray(body?.history) ? body.history.slice(-6) : [];
     const start = Date.now();
+    const routingMeta = parseRoutingLogMeta(body);
+    const writeLog = (
+      q: string,
+      sqlText: string | null,
+      rowCount: number,
+      logError: string | null,
+      ms: number,
+      logResponse: string | null = null,
+      tabName: string = "hate_crime",
+      guardrails: string[] = [],
+      model: string | null = null,
+      sid: string | null = null
+    ) => logQuery(q, sqlText, rowCount, logError, ms, logResponse, tabName, guardrails, model, sid, routingMeta);
 
     // Check response cache (only for standalone questions)
     const cached = history.length === 0 ? getCached(question, "hate_crime") : null;
@@ -204,7 +218,7 @@ export async function POST(req: NextRequest) {
 
       if (!claude.sql) {
         const textExplanation = hateCrimeCaveats("", claude.explanation);
-        logQuery(question, null, 0, null, claudeMs, textExplanation, "hate_crime", [], "haiku-4.5", sessionId);
+        writeLog(question, null, 0, null, claudeMs, textExplanation, "hate_crime", [], "haiku-4.5", sessionId);
         return jsonResp({
           success: true, question, sql: null, explanation: textExplanation,
           title: "", columns: [], rows: [], rowCount: 0, truncated: false,
@@ -216,7 +230,7 @@ export async function POST(req: NextRequest) {
     // Step 2: Validate SQL
     const validation = validateAndSanitize(claude.sql!);
     if (!validation.valid) {
-      logQuery(question, claude.sql, 0, `Validation: ${validation.error}`, Date.now() - start, null, "hate_crime", [], "haiku-4.5", sessionId);
+      writeLog(question, claude.sql, 0, `Validation: ${validation.error}`, Date.now() - start, null, "hate_crime", [], "haiku-4.5", sessionId);
       return jsonResp(
         { success: false, error: "I generated an invalid query. Please try rephrasing your question.", sql: claude.sql } as QueryError,
         400
@@ -304,7 +318,7 @@ export async function POST(req: NextRequest) {
       } catch { /* retry also failed */ }
 
       if (!rows!) {
-        logQuery(question, sql, 0, `DB: ${msg}`, Date.now() - start, null, "hate_crime", [], "haiku-4.5", sessionId);
+        writeLog(question, sql, 0, `DB: ${msg}`, Date.now() - start, null, "hate_crime", [], "haiku-4.5", sessionId);
         return jsonResp(
           { success: false, error: `Database error: ${msg}`, sql } as QueryError, 500
         );
@@ -315,7 +329,7 @@ export async function POST(req: NextRequest) {
 
     if (rows.length === 0) {
       const emptyExplanation = hateCrimeCaveats(sql, claude.explanation || "The query returned no results.");
-      logQuery(question, sql, 0, "empty_result", executionMs, emptyExplanation, "hate_crime", [], "haiku-4.5", sessionId);
+      writeLog(question, sql, 0, "empty_result", executionMs, emptyExplanation, "hate_crime", [], "haiku-4.5", sessionId);
       return jsonResp({
         success: true, question, sql, explanation: emptyExplanation,
         title: "", columns: [], rows: [], rowCount: 0, truncated: false,
@@ -330,7 +344,7 @@ export async function POST(req: NextRequest) {
       const { allNull } = detectAllNullData(columns, rows);
       if (allNull) {
         const emptyMsg = "I ran that query but all the values came back empty - the math likely broke somewhere. Could you try asking that a different way?";
-        logQuery(question, sql, 0, "all_null_columns", executionMs, emptyMsg, "hate_crime", [], "haiku-4.5", sessionId);
+        writeLog(question, sql, 0, "all_null_columns", executionMs, emptyMsg, "hate_crime", [], "haiku-4.5", sessionId);
         return jsonResp({
           success: true, question, sql, explanation: emptyMsg, title: "",
           columns: [], rows: [], rowCount: 0, truncated: false,
@@ -354,7 +368,7 @@ export async function POST(req: NextRequest) {
     let explanation = sanitizeExplanation(claude.explanation || "");
     explanation = hateCrimeCaveats(sql, explanation);
 
-    logQuery(question, sql, rows.length, null, totalMs, explanation, "hate_crime", [], "haiku-4.5", sessionId);
+    writeLog(question, sql, rows.length, null, totalMs, explanation, "hate_crime", [], "haiku-4.5", sessionId);
 
     // Cache successful responses (only standalone questions)
     if (!cached && history.length === 0) {

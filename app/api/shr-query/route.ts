@@ -16,6 +16,7 @@ import { extractJson } from "@/lib/extract-json";
 import { detectAllNullData } from "@/lib/all-null-detection";
 import { checkSingleRowTrend } from "@/lib/single-row-trend";
 import { detectYearSeriesChart } from "@/lib/chart-auto-detect";
+import { parseRoutingLogMeta } from "@/lib/routing-log-meta";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function jsonResp(data: Record<string, any> | QueryError, status = 200) {
@@ -76,13 +77,26 @@ export async function POST(req: NextRequest) {
 
     const history = Array.isArray(body?.history) ? body.history.slice(-6) : [];
     const start = Date.now();
+    const routingMeta = parseRoutingLogMeta(body);
+    const writeLog = (
+      q: string,
+      sqlText: string | null,
+      rowCount: number,
+      logError: string | null,
+      ms: number,
+      logResponse: string | null = null,
+      tabName: string = "shr",
+      guardrails: string[] = [],
+      model: string | null = null,
+      sid: string | null = null
+    ) => logQuery(q, sqlText, rowCount, logError, ms, logResponse, tabName, guardrails, model, sid, routingMeta);
 
     // Deterministic nonfatal shooting refusal
     const asksShooting = /\b(shootings?|shot\b|gunshot|people\s+shot|gun\s+violence)\b/i.test(question);
     const wantsNonfatal = /\b(nonfatal|non-fatal|non fatal|shooting incidents?|people\s+shot|gunshot (wound|victim)|shot and (survived|wounded|injured))\b/i.test(question);
     if (asksShooting && wantsNonfatal) {
       const refusal = "This database does not track nonfatal shootings. The SHR (Supplementary Homicide Reports) only covers fatal outcomes - murders and manslaughters. For nonfatal shooting data, sources like the Gun Violence Archive or CDC WISQARS may be more appropriate. I can show you fatal shootings (firearm homicides) if that would be helpful.";
-      logQuery(question, null, 0, "nonfatal_shooting_refusal", Date.now() - start, refusal, "shr", [], "haiku-4.5", sessionId);
+      writeLog(question, null, 0, "nonfatal_shooting_refusal", Date.now() - start, refusal, "shr", [], "haiku-4.5", sessionId);
       return jsonResp({
         success: true, question, sql: null, explanation: refusal,
         title: "", columns: [], rows: [], rowCount: 0, truncated: false,
@@ -134,7 +148,7 @@ export async function POST(req: NextRequest) {
         caveats.push("Not all agencies and states report SHR data every year, so these counts underrepresent total fatal shootings.");
         const totalExplanation = caveats.join("\n\n");
 
-        logQuery(question, sql, rows.length, null, Date.now() - start, totalExplanation, "shr", ["deterministic-shooting"], "deterministic", sessionId);
+        writeLog(question, sql, rows.length, null, Date.now() - start, totalExplanation, "shr", ["deterministic-shooting"], "deterministic", sessionId);
         return jsonResp({
           success: true, question, sql, explanation: totalExplanation,
           title, columns, rows, rowCount: rows.length, truncated: false,
@@ -144,7 +158,7 @@ export async function POST(req: NextRequest) {
         });
       } catch (dbErr) {
         const msg = dbErr instanceof Error ? dbErr.message : String(dbErr);
-        logQuery(question, sql, 0, `DB: ${msg}`, Date.now() - start, null, "shr", ["deterministic-shooting"], "deterministic", sessionId);
+        writeLog(question, sql, 0, `DB: ${msg}`, Date.now() - start, null, "shr", ["deterministic-shooting"], "deterministic", sessionId);
         return jsonResp({ success: false, error: `Database error: ${msg}` } as QueryError, 500);
       }
     }
@@ -240,7 +254,7 @@ export async function POST(req: NextRequest) {
       }
 
       if (!claude.sql) {
-        logQuery(question, null, 0, null, claudeMs, claude.explanation, "shr", [], "haiku-4.5", sessionId);
+        writeLog(question, null, 0, null, claudeMs, claude.explanation, "shr", [], "haiku-4.5", sessionId);
         return jsonResp({
           success: true,
           question,
@@ -261,7 +275,7 @@ export async function POST(req: NextRequest) {
     // Step 2: Validate SQL
     const validation = validateAndSanitize(claude.sql!);
     if (!validation.valid) {
-      logQuery(question, claude.sql, 0, `Validation: ${validation.error}`, Date.now() - start, null, "shr", [], "haiku-4.5", sessionId);
+      writeLog(question, claude.sql, 0, `Validation: ${validation.error}`, Date.now() - start, null, "shr", [], "haiku-4.5", sessionId);
       return jsonResp(
         { success: false, error: "I generated an invalid query. Please try rephrasing your question.", sql: claude.sql } as QueryError,
         400
@@ -279,7 +293,7 @@ export async function POST(req: NextRequest) {
     // Hard override — skip retry, return deterministic response
     if (guardrailResult.overrideResponse) {
       const overrideExplanation = guardrailResult.overrideResponse;
-      logQuery(question, sql, 0, `guardrail_override:${guardrailResult.overrideGuardrail}`, Date.now() - start, overrideExplanation, "shr", guardrailResult.fired, "haiku-4.5", sessionId);
+      writeLog(question, sql, 0, `guardrail_override:${guardrailResult.overrideGuardrail}`, Date.now() - start, overrideExplanation, "shr", guardrailResult.fired, "haiku-4.5", sessionId);
       return jsonResp({
         success: true,
         question,
@@ -337,13 +351,13 @@ export async function POST(req: NextRequest) {
       const postRetryResult = runGuardrails(postRetryCtx);
       if (postRetryResult.overrideResponse) {
         const msg = postRetryResult.overrideResponse;
-        logQuery(question, sql, 0, `guardrail_override:${postRetryResult.overrideGuardrail}`, Date.now() - start, msg, "shr", postRetryResult.fired, "haiku-4.5", sessionId);
+        writeLog(question, sql, 0, `guardrail_override:${postRetryResult.overrideGuardrail}`, Date.now() - start, msg, "shr", postRetryResult.fired, "haiku-4.5", sessionId);
         return jsonResp({ success: true, question, sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - start });
       }
       const rateStillBad = postRetryResult.fired.some(f => f.includes("rate-no-population"));
       if (rateStillBad && /\b(rates?|per\s*capita|per\s*100)/i.test(question)) {
         const msg = "I wasn't able to calculate a valid per-capita rate for this query. For murder rates, try the [Historical Library](/test?tab=historical) tab which has FBI statewide estimates.";
-        logQuery(question, sql, 0, "rate_second_failure", Date.now() - start, msg, "shr", postRetryResult.fired, "haiku-4.5", sessionId);
+        writeLog(question, sql, 0, "rate_second_failure", Date.now() - start, msg, "shr", postRetryResult.fired, "haiku-4.5", sessionId);
         return jsonResp({ success: true, question, sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - start });
       }
       if (postRetryResult.sql !== sql) sql = postRetryResult.sql;
@@ -359,7 +373,7 @@ export async function POST(req: NextRequest) {
       rows = db.prepare(sql).all() as Record<string, unknown>[];
     } catch (dbErr) {
       const msg = dbErr instanceof Error ? dbErr.message : String(dbErr);
-      logQuery(question, sql, 0, `DB: ${msg}`, Date.now() - start, null, "shr", [], "haiku-4.5", sessionId);
+      writeLog(question, sql, 0, `DB: ${msg}`, Date.now() - start, null, "shr", [], "haiku-4.5", sessionId);
       return jsonResp(
         { success: false, error: `Database error: ${msg}`, sql } as QueryError,
         500
@@ -369,7 +383,7 @@ export async function POST(req: NextRequest) {
     const executionMs = Date.now() - start;
 
     if (rows.length === 0) {
-      logQuery(question, sql, 0, "empty_result", executionMs, claude.explanation, "shr", [], "haiku-4.5", sessionId);
+      writeLog(question, sql, 0, "empty_result", executionMs, claude.explanation, "shr", [], "haiku-4.5", sessionId);
       return jsonResp({
         success: true,
         question,
@@ -393,7 +407,7 @@ export async function POST(req: NextRequest) {
       const { allNull } = detectAllNullData(columns, rows);
       if (allNull) {
         const emptyMsg = "I ran that query but all the values came back empty — the math likely broke somewhere (like dividing by zero). Could you try asking that a different way?";
-        logQuery(question, sql, 0, "all_null_columns", executionMs, emptyMsg, "shr", guardrailResult.fired, "haiku-4.5", sessionId);
+        writeLog(question, sql, 0, "all_null_columns", executionMs, emptyMsg, "shr", guardrailResult.fired, "haiku-4.5", sessionId);
         return jsonResp({
           success: true,
           question,
@@ -567,7 +581,7 @@ export async function POST(req: NextRequest) {
     // Sanitize any leaked SQL/JSON
     explanation = sanitizeExplanation(explanation);
 
-    logQuery(question, sql, rows.length, null, totalMs, explanation, "shr", guardrailResult.fired, "haiku-4.5", sessionId);
+    writeLog(question, sql, rows.length, null, totalMs, explanation, "shr", guardrailResult.fired, "haiku-4.5", sessionId);
 
     // Cache successful responses (only standalone questions)
     if (!cached && history.length === 0) {
