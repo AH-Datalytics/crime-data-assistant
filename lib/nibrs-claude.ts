@@ -254,6 +254,13 @@ Firearm murder offender demographics by age example:
   WHERE d.year = 2025 AND d.ucr_offense_code = '09A' AND d.weapon_category = 'Firearm'
   GROUP BY d.age_group ORDER BY offenders DESC
 
+Juvenile robbery offenders by race and year example:
+  SELECT d.year, d.race, SUM(d.offender_count) AS juvenile_offenders
+  FROM summary_offender_demographics d
+  WHERE d.ucr_offense_code = '120' AND d.age_group = 'Under 18'
+    AND d.year BETWEEN 2020 AND 2025
+  GROUP BY d.year, d.race ORDER BY d.year, juvenile_offenders DESC
+
 ### summary_arrestee_demographics (ARRESTEE DEMOGRAPHICS)
 - Same columns/values as summary_victim_demographics (including ethnicity: H/N/U/''), but offense column is ucr_arrest_offense (not ucr_offense_code) and count column is arrestee_count. ${formatRowCount(NIBRS.summaryRowCounts["summary_arrestee_demographics"] || 13400000)} rows.
 - USE FOR: arrestee demographics — race, sex, age, weapon type. NEVER query raw arrestees (${NIBRS.rawRowCounts["arrestees"] || "51M"} rows).
@@ -274,10 +281,24 @@ DUI arrests nationally by year example:
   WHERE d.ucr_arrest_offense = '90D' AND d.year BETWEEN 2017 AND ${NIBRS.currentYear}
   GROUP BY d.year ORDER BY d.year
 
+Firearm-involved arrestees under 18 by arrest offense example:
+  SELECT d.ucr_arrest_offense, SUM(d.arrestee_count) AS arrestees
+  FROM summary_arrestee_demographics d
+  WHERE d.weapon_category = 'Firearm' AND d.age_group = 'Under 18' AND d.year = 2025
+  GROUP BY d.ucr_arrest_offense ORDER BY arrestees DESC LIMIT 20
+
 ### Crimes Against Property — COUNT OFFENSES (one per distinct operation)
 120 Robbery, 200 Arson, 210 Extortion, 220 Burglary, 23A-23H Larceny/Theft, 240 Motor Vehicle Theft (1 per stolen vehicle), 250 Counterfeiting, 26A-26G Fraud, 270 Embezzlement, 280 Stolen Property, 290 Vandalism, 510 Bribery
 → Count from summary_city_monthly or summary_state_monthly. For robbery counts/trends, ALWAYS use these offense summary tables (NOT victim summary tables). Robbery is a property crime in NIBRS. The summary_victim_demographics table includes robbery only for demographic breakdowns (race/sex/age/weapon).
-→ **If the user asks about "victims" of a property crime** (e.g., "carjacking victims", "burglary victims", "auto theft victims"): NIBRS does not count property crimes per victim — they are counted per offense. Use the offense summary tables (summary_city_monthly / summary_state_monthly) and mention in your explanation that property crimes in NIBRS are counted by offense, not by victim.
+→ **If the user asks about "victims" of a property crime** (e.g., "burglary victims", "auto theft victims"): NIBRS generally counts property crimes per offense, not per victim. Use the offense summary tables (summary_city_monthly / summary_state_monthly) and mention in your explanation that property crimes in NIBRS are counted by offense, not by victim. **Exception: carjacking has dedicated victim/offender/arrestee demographic summaries — use those when the user asks specifically about carjacking victims/offenders/arrestees.**
+
+Vehicle burglaries per month in a city example:
+  SELECT s.year, s.month, SUM(s.offense_count) AS vehicle_burglaries
+  FROM summary_city_monthly s
+  WHERE s.ucr_offense_code = '23F' AND s.year = 2023
+    AND s.ori IN (SELECT ori FROM agencies WHERE city = 'BOSTON' AND state = 'MA' AND year = 2023 AND pop_group LIKE '1%')
+  GROUP BY s.year, s.month ORDER BY s.year, s.month
+NOTE: Vehicle burglary (23F Theft From Motor Vehicle) is a property offense count. Do NOT use summary_victim_city_monthly or summary_victim_state_monthly for vehicle burglary counts/trends.
 
 ### summary_drug_monthly (DRUG OFFENSE BREAKDOWNS)
 - COLUMNS: year INT, month INT, state TEXT, ori TEXT, ucr_offense_code TEXT (35A or 35B), suspected_drug_type TEXT, offense_count INT
@@ -516,6 +537,20 @@ DV murders by sex and weapon type in Texas example:
   WHERE ucr_offense_code = '09A' AND circumstance_code = '06' AND state = 'TX'
   GROUP BY year, weapon, sex ORDER BY year, sex, weapon
 
+Juvenile firearm DV murders by year example:
+  SELECT year, SUM(victim_count) AS victims
+  FROM summary_victim_weapon_circumstance_demo
+  WHERE ucr_offense_code = '09A' AND circumstance_code = '06'
+    AND weapon_type IN ('11','12','13','14','15') AND age_group = 'Under 18'
+  GROUP BY year ORDER BY year
+
+Female gang homicide victims involving firearms by race example:
+  SELECT race, SUM(victim_count) AS victims
+  FROM summary_victim_weapon_circumstance_demo
+  WHERE ucr_offense_code = '09A' AND circumstance_code IN ('04','05')
+    AND weapon_type IN ('11','12','13','14','15') AND sex = 'F' AND year = 2025
+  GROUP BY race ORDER BY victims DESC
+
 ### summary_victim_relationship (CROSS-DIMENSIONAL: relationship + demographics per victim)
 - COLUMNS: state TEXT, ori TEXT, year INT, ucr_offense_code TEXT, relationship_code TEXT, sex TEXT, race TEXT, age_group TEXT, victim_count INT
 - Coverage: all person crimes — 09A (Murder), 09B, 09C, 11A-11D (Sex Offenses), 13A-13C (Assault), 120 (Robbery), 64A/64B (Human Trafficking)
@@ -692,6 +727,26 @@ NOTE: This table CAN answer "exceptional clearance rate for [specific offense]" 
 - Examples: "female DV murder victims cleared by arrest", "clearance rate for gang murders by race", "cleared vs uncleared domestic homicides"
 - **PREFER over separate summary_victim_circumstance + summary_clearance_type joins** -- those cannot be joined correctly
 
+Female DV murder victims cleared by arrest example:
+  SELECT year, SUM(victim_count) AS victims
+  FROM summary_victim_circumstance_clearance_demo
+  WHERE ucr_offense_code = '09A' AND circumstance_code = '06'
+    AND clearance_status = 'arrest' AND sex = 'F'
+  GROUP BY year ORDER BY year
+
+Gang murders by clearance status and race example:
+  SELECT race, clearance_status, SUM(victim_count) AS victims
+  FROM summary_victim_circumstance_clearance_demo
+  WHERE ucr_offense_code = '09A' AND circumstance_code IN ('04','05') AND year = 2025
+  GROUP BY race, clearance_status ORDER BY race, clearance_status
+
+Juvenile DV murder victims not cleared example:
+  SELECT year, SUM(victim_count) AS victims
+  FROM summary_victim_circumstance_clearance_demo
+  WHERE ucr_offense_code = '09A' AND circumstance_code = '06'
+    AND age_group = 'Under 18' AND clearance_status = 'not_cleared'
+  GROUP BY year ORDER BY year
+
 ### summary_carjacking_monthly
 - COLUMNS: year INT, month INT (1-12), state TEXT, ori TEXT, offense_count INT
 - ⚠️ This table does NOT have: incident_date, ucr_offense_code, incident_num, or any other columns. ONLY the 5 columns listed above.
@@ -755,6 +810,12 @@ Carjacking victims by race (city) example:
   WHERE d.year = 2024
     AND d.ori IN (SELECT ori FROM agencies WHERE city = 'HOUSTON' AND state = 'TX' AND year = 2024 AND pop_group LIKE '1%')
   GROUP BY d.race ORDER BY victims DESC
+
+Carjacking victims by state example:
+  SELECT state, SUM(victim_count) AS victims
+  FROM summary_carjacking_victim_demographics
+  WHERE year = 2024
+  GROUP BY state ORDER BY victims DESC LIMIT 25
 
 ⚠️ These tables are aggregated at the YEAR level (no month column). Do NOT JOIN to summary_carjacking_monthly — that would multiply counts by 12x. Query demographic tables directly with GROUP BY year.
 
