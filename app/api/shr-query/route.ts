@@ -15,6 +15,7 @@ import { getCached, setCache } from "@/lib/response-cache";
 import { extractJson } from "@/lib/extract-json";
 import { detectAllNullData } from "@/lib/all-null-detection";
 import { checkSingleRowTrend } from "@/lib/single-row-trend";
+import { detectYearSeriesChart } from "@/lib/chart-auto-detect";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function jsonResp(data: Record<string, any> | QueryError, status = 200) {
@@ -458,12 +459,11 @@ export async function POST(req: NextRequest) {
     let autoXAxis = claude.xAxis || columns[0];
     let autoYAxis = claude.yAxis || (columns.length > 1 ? [columns[columns.length - 1]] : []);
     if (autoChartType === "none" && rows.length > 1) {
-      const hasYear = columns.includes("year");
-      const numericCols = columns.filter(c => c !== "year" && c !== "month" && typeof rows[0]?.[c] === "number");
-      if (hasYear && numericCols.length > 0) {
-        autoChartType = numericCols.length <= 3 ? "line" : "bar";
-        autoXAxis = "year";
-        autoYAxis = numericCols;
+      const autoChart = detectYearSeriesChart(columns, rows);
+      if (autoChart) {
+        autoChartType = autoChart.type;
+        autoXAxis = autoChart.xAxis;
+        autoYAxis = autoChart.yAxis;
       }
     }
 

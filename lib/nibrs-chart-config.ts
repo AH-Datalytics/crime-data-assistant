@@ -1,5 +1,6 @@
 import type { ChartConfig } from "./types";
 import type { ClaudeResponse } from "./nibrs-claude";
+import { detectYearSeriesChart } from "./chart-auto-detect";
 
 export const NIBRS_CHART_COLORS = [
   "#2d5f8a",   // steel blue
@@ -21,49 +22,43 @@ export function buildNibrsChartConfig(
     return null;
   }
 
-  // Auto-detect chart type if Claude said "none" but data is chartable
-  if (claude.chartHint === "none") {
-    const hasYear = columns.includes("year");
-    const numericCols = columns.filter(c => c !== "year" && c !== "month" && typeof rows[0]?.[c] === "number");
-    if (hasYear && numericCols.length > 0 && rows.length > 1) {
-      claude = { ...claude, chartHint: numericCols.length <= 3 ? "line" : "bar", xAxis: "year", yAxis: numericCols.join(",") };
-    } else {
-      return null;
-    }
+  // Auto-detect chart type if Claude omitted chart fields or said "none".
+  if (!claude.chartHint || claude.chartHint === "none") {
+    const autoChart = detectYearSeriesChart(columns, rows);
+    if (!autoChart) return null;
+    claude = {
+      ...claude,
+      chartHint: autoChart.type,
+      xAxis: autoChart.xAxis,
+      yAxis: autoChart.yAxis.join(","),
+    };
   }
 
-  // Validate xAxis exists
   const xAxis = columns.includes(claude.xAxis)
     ? claude.xAxis
     : columns[0];
 
-  // Parse and validate yAxis
   const yAxisCandidates = (claude.yAxis || "")
     .split(",")
     .map((s) => s.trim())
     .filter((s) => s && columns.includes(s));
 
-  // If no valid y columns, try to find numeric columns
   const yAxis =
     yAxisCandidates.length > 0
       ? yAxisCandidates
-      : columns.filter((c) => {
-          if (c === xAxis) return false;
-          const val = rows[0]?.[c];
-          return typeof val === "number";
+      : columns.filter((column) => {
+          if (column === xAxis) return false;
+          return typeof rows[0]?.[column] === "number";
         });
 
   if (yAxis.length === 0) return null;
 
-  // Determine chart type
   let type = claude.chartHint as ChartConfig["type"];
 
-  // If too many categories for pie, switch to bar
   if (type === "pie" && rows.length > 10) {
     type = "bar";
   }
 
-  // Single row = no chart
   if (rows.length <= 1 && type !== "pie") {
     return null;
   }
