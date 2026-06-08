@@ -221,6 +221,15 @@ Murder victims by race/sex for a city example:
     AND d.ori IN (SELECT ori FROM agencies WHERE city = 'DETROIT' AND state = 'MI' AND year = 2024 AND pop_group LIKE '1%')
   GROUP BY d.race, d.sex ORDER BY victims DESC
 
+Juvenile firearm homicides in a city by year example:
+  SELECT d.year, SUM(d.victim_count) AS victims
+  FROM summary_victim_demographics d
+  WHERE d.ucr_offense_code = '09A' AND d.weapon_category = 'Firearm' AND d.age_group = 'Under 18'
+    AND d.ori IN (SELECT ori FROM agencies WHERE city = 'NEW HAVEN' AND state = 'CT' AND year = 2025 AND population > 0 ORDER BY pop_group LIMIT 1)
+    AND d.year >= 2016
+  GROUP BY d.year ORDER BY d.year
+NOTE: summary_victim_demographics supports ANY combination of age_group + weapon_category + race + sex + ethnicity + ucr_offense_code per ORI. Use it for ALL demographic-filtered queries — do NOT claim you need the raw victims table when this summary table has the needed columns.
+
 For daily person crime counts, use the raw victims table:
   SELECT v.incident_date AS date, COUNT(*) AS murders FROM victims v
   WHERE v.state = 'TX' AND v.year = 2024 AND v.victim_type = 'I'
@@ -572,6 +581,16 @@ Top murder clearance rates nationally example:
   GROUP BY city, state HAVING SUM(total_offenses) >= 10
   ORDER BY clearance_rate DESC LIMIT 25
 
+Rape clearance rates with a minimum offense threshold example:
+  SELECT city, state, ori,
+    SUM(total_offenses) AS rape_offenses, SUM(total_cleared) AS cleared,
+    ROUND(100.0 * SUM(total_cleared) / SUM(total_offenses), 1) AS clearance_rate
+  FROM summary_clearance_city_annual
+  WHERE ucr_offense_code IN ('11A','11B','11C') AND year = 2025
+  GROUP BY city, state, ori HAVING SUM(total_offenses) >= 200
+  ORDER BY clearance_rate DESC LIMIT 25
+NOTE: summary_clearance_city_annual already has city, ori, population, total_offenses, and total_cleared per offense code. For "min N offenses" clearance queries, apply the threshold with HAVING SUM(total_offenses) >= N on this table. Do NOT join to summary_victim_city_monthly just to get offense counts — that cross-summary join is wrong and will be blocked.
+
 ### Crimes Against Society — COUNT OFFENSES (one per distinct operation)
 35A-35B Drug offenses, 39A-39D Gambling, 40A-40C Prostitution, 370 Pornography, 520 Weapon Violations, 720 Animal Cruelty
 → For drug queries, ALWAYS use summary_drug_monthly. For other society crimes, count from the offenses table or summary tables.
@@ -820,6 +839,7 @@ IMPORTANT: The completeness filter ONLY applies to queries on **city-level table
 **DEFAULT YEAR FILTER (MANDATORY)**: When the user does NOT specify a year or year range, ALWAYS default to the last 5 years (year >= ${NIBRS.currentYear - 4}). NEVER omit the year filter entirely — summary tables have millions of rows and scanning all years causes timeouts. If the user explicitly asks for "all time" or "all years", then omit the filter, but the default must always include a year constraint. When you apply this default, your explanation MUST state the exact years — e.g., "Since no year range was specified, showing data from ${NIBRS.currentYear - 4} to ${NIBRS.currentYear}." For ranking/aggregate queries without GROUP BY year, this is the ONLY way the user knows which years are included — omitting it makes the result uninterpretable.
 
 ### WHEN TO USE SUMMARY TABLES vs RAW TABLES
+**SINGLE SUMMARY TABLE FIRST**: Before using raw tables or joining summaries, check whether one summary table already has every requested dimension and measure. If it does, use that table directly. Examples: summary_victim_demographics has offense + weapon + age/race/sex/ethnicity; summary_clearance_city_annual has offense + city/ORI + total_offenses + total_cleared; summary_clearance_detail has offense + ORI + exceptional clearance type counts. Do NOT refuse or cross-join summaries when a single summary table contains the requested filters and denominator.
 - VICTIM SUMMARY TABLES (summary_victim_state_monthly, summary_victim_city_monthly): ALL person crime counts/trends (murder, rape, assault, intimidation, kidnapping, sex offenses, human trafficking). These are pre-aggregated from victims+connected_offense fields. Use these ALWAYS for person crime counts.
 - OFFENSE SUMMARY TABLES (summary_state_monthly, summary_city_monthly): property/society crime counts, trends, monthly/yearly totals, comparisons between cities/states, top-N by count
 - CARJACKING SUMMARY (summary_carjacking_monthly): ALL carjacking counts. For carjacking demographics (victim/offender/arrestee race, sex, age, weapon), use summary_carjacking_victim_demographics, summary_carjacking_offender_demographics, or summary_carjacking_arrestee_demographics
