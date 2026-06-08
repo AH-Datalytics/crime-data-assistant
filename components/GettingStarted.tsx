@@ -65,7 +65,7 @@ const TAB_CARDS: {
   },
   {
     id: "shr",
-    title: "Homicide Reports",
+    title: "Supplementary Homicide",
     color: "#B8860B",
     lightBg: "#fdf8e8",
     borderColor: "#e8d48b",
@@ -135,10 +135,10 @@ export default function GettingStarted({ onSelectTab, onAsk, renderInputBar }: G
   const showTutorial = true;
   const askMode = !!onAsk;
   const enabled = enabledSourceIds();
-  const showInGuide = (id: SourceId) => id !== "hate_crime" && enabled.has(id);
+  const showInGuide = (id: SourceId) => enabled.has(id);
   const showHateCrimeExamples = enabled.has("hate_crime");
   const guideSourceCount = TAB_CARDS.filter((card) => showInGuide(card.id)).length;
-  const sourceCountWord = guideSourceCount === 4 ? "four" : String(guideSourceCount);
+  const sourceCountWord = guideSourceCount === 5 ? "five" : guideSourceCount === 4 ? "four" : String(guideSourceCount);
 
   return (
     <div className="flex-1 overflow-y-auto" style={{ background: "linear-gradient(180deg, #ffffff 0%, var(--surface) 300px)" }}>
@@ -214,7 +214,7 @@ export default function GettingStarted({ onSelectTab, onAsk, renderInputBar }: G
         </>)}
 
         {/* Tab cards — only in production mode */}
-        {!askMode && <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 mb-8 sm:mb-10">
+        {!askMode && <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-4 mb-8 sm:mb-10">
           {TAB_CARDS.filter(c => showInGuide(c.id)).map((card) => (
             <button
               key={card.id}
@@ -330,7 +330,7 @@ export default function GettingStarted({ onSelectTab, onAsk, renderInputBar }: G
                   { label: "Current Trends", color: "#475EC7", id: "current" },
                   { label: "Historical", color: "#8B5E3C", id: "historical" },
                   { label: "NIBRS", color: "#2d8659", id: "nibrs" },
-                  { label: "Homicide", color: "#B8860B", id: "shr" },
+                  { label: "Supplementary Homicide", color: "#B8860B", id: "shr" },
                   { label: "Hate Crime", color: "#4A4A4A", id: "hate_crime" },
                 ];
                 const activeCols = colDefs.filter(c => showInGuide(c.id));
@@ -338,7 +338,7 @@ export default function GettingStarted({ onSelectTab, onAsk, renderInputBar }: G
                   current:    ["Agency Data",                    "2017\u2013present", "Monthly",        "Hundreds of agencies",          "Part I UCR (7 offenses)", "Recent trends"],
                   historical: ["FBI Uniform Crime Report",       "1930\u20132024",    "Annual",         "10,000+ agencies",              "Part I UCR + staffing",   "Long-term trends"],
                   nibrs:      ["FBI NIBRS Master Files",         "1991\u2013present", "Incident-level", "Varies by year",                "52+ NIBRS offenses",      "Deep analysis"],
-                  shr:        ["FBI Supplementary Homicide Report","1976\u2013present","Incident-level", "Varies by year",                "Homicides only",          "Homicide analysis"],
+                  shr:        ["FBI Supplementary Homicide Reports","1976\u2013present","Incident-level", "Varies by year",                "Homicides only",          "Homicide analysis"],
                   hate_crime: ["FBI Hate Crime Statistics",      "1991\u2013present", "Incident-level", "~15,000 agencies (voluntary)",  "Bias-motivated crimes",   "Hate crime / bias trends"],
                 };
                 const rowLabels = ["Source", "Time Range", "Granularity", "Coverage", "Crime Types", "Best For"];
@@ -444,7 +444,7 @@ export default function GettingStarted({ onSelectTab, onAsk, renderInputBar }: G
                 <div className="flex items-center gap-2 mb-3">
                   <div className="w-1 h-5 rounded-full" style={{ backgroundColor: "#B8860B" }} />
                   <h3 className="text-base font-bold text-[var(--foreground)]">
-                    Homicide Reports (FBI Supplementary Homicide Reports)
+                    Supplementary Homicide Reports (SHR)
                   </h3>
                 </div>
                 <div className="pl-3.5 text-sm text-[var(--muted)] leading-relaxed space-y-2.5">

@@ -82,7 +82,7 @@ export default function AboutPage() {
         <h2 className="text-2xl font-bold mb-6">Crime Data Assistant — Explainer</h2>
 
         <p className="mb-4">
-          The Crime Data Assistant is an AI-powered research tool that provides natural language access to three major crime data sources spanning nearly a century of American crime statistics. Ask questions in plain English and get interactive charts, sortable tables, and contextual analysis &mdash; all generated in real time by AI.
+          The Crime Data Assistant is an AI-powered research tool that provides natural language access to five major crime data sources spanning nearly a century of American crime statistics. Ask questions in plain English and get interactive charts, sortable tables, and contextual analysis &mdash; all generated in real time by AI.
         </p>
 
         <p className="mb-4">
@@ -157,6 +157,40 @@ export default function AboutPage() {
           </li>
         </ul>
 
+        {/* Supplementary Homicide Reports */}
+        <h3 className="text-lg font-semibold mb-3">Supplementary Homicide Reports (SHR)</h3>
+        <p className="mb-3">
+          Incident-level homicide records from the FBI&apos;s Supplementary Homicide Reports, <strong>1976&ndash;present</strong>. SHR focuses exclusively on murder and non-negligent manslaughter, with victim/offender demographics, weapon, circumstance, and victim-offender relationship details.
+        </p>
+        <ul className="list-disc pl-6 space-y-2 mb-6">
+          <li>
+            Best for homicide-specific questions that need detail beyond annual offense counts, such as firearm involvement, domestic homicide, relationship categories, victim demographics, and offender demographics.
+          </li>
+          <li>
+            SHR is not a clearance dataset. Recorded offender information does not necessarily mean the case was solved or cleared.
+          </li>
+          <li>
+            Reporting is incomplete in some states and years. Florida, for example, did not submit SHR data for most years between 1997 and 2020.
+          </li>
+        </ul>
+
+        {/* Hate Crime */}
+        <h3 className="text-lg font-semibold mb-3">Hate Crime Statistics</h3>
+        <p className="mb-3">
+          FBI hate crime records, <strong>1991&ndash;present</strong>, covering reported incidents with one or more identified bias motivations. This source includes bias category, offense type, location type, victim counts, offender demographics, and agency participation details.
+        </p>
+        <ul className="list-disc pl-6 space-y-2 mb-6">
+          <li>
+            Best for questions about hate crime trends, specific bias motivations, offense mix, geography, and reporting participation.
+          </li>
+          <li>
+            Hate crime reporting is voluntary and depends on local identification and classification practices. Counts reflect reported hate crime incidents, not all bias-motivated victimization.
+          </li>
+          <li>
+            Low or missing counts can reflect non-reporting or classification differences, not necessarily the absence of hate crimes.
+          </li>
+        </ul>
+
         <hr className="my-6 border-[var(--border)]" />
 
         {/* =============== HOW IT WORKS =============== */}
@@ -173,6 +207,12 @@ export default function AboutPage() {
           </li>
           <li>
             <strong>NIBRS data</strong> lives in a 100+ GB SQLite database with 8 raw tables (agencies, incidents, offenses, property, victims, offenders, arrestees, group B arrests) plus 7 pre-aggregated summary tables for fast lookups.
+          </li>
+          <li>
+            <strong>Supplementary Homicide data</strong> lives in a dedicated SHR database optimized for homicide-specific victim, offender, weapon, relationship, and circumstance queries.
+          </li>
+          <li>
+            <strong>Hate Crime data</strong> lives in a dedicated database with incident, offense, victim, offender, bias, and agency participation summaries.
           </li>
           <li>
             The NIBRS database is indexed on all major query patterns (agency ORI + year, offense codes, incident dates, state + year) to ensure responsive query times even on billion-row tables.

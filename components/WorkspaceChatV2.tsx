@@ -12,6 +12,7 @@ import ErrorCard from "./ErrorCard";
 import Tracker, { getPageToken } from "./Tracker";
 import HomeIcon from "./HomeIcon";
 import GettingStarted from "./GettingStarted";
+import ExplainerContent from "./ExplainerContent";
 
 /** Render inline markdown: **bold** and [text](url) links */
 function renderInlineMarkdown(text: string) {
@@ -116,6 +117,7 @@ export default function WorkspaceChat({}: WorkspaceChatProps) {
   const [expandedRailIdx, setExpandedRailIdx] = useState(-1);
   const [animateIdx, setAnimateIdx] = useState(-1);
   const [showMobileRail, setShowMobileRail] = useState(false);
+  const [showTutorial, setShowTutorial] = useState(false);
 
   // Result state
   const [explanation, setExplanation] = useState("");
@@ -278,7 +280,7 @@ export default function WorkspaceChat({}: WorkspaceChatProps) {
       <header className="bg-white border-b border-[var(--border)] shrink-0">
         <div className="px-3 sm:px-4 md:px-6 flex items-center gap-3" style={{ height: 56 }}>
           <button
-            onClick={() => { setResponse(null); setExplanation(""); setError(""); setActiveSource(null); setShowDisambiguation(false); setExchanges([]); setHistory([]); setActiveExchangeIdx(-1); }}
+            onClick={() => { setResponse(null); setExplanation(""); setError(""); setActiveSource(null); setShowDisambiguation(false); setExchanges([]); setHistory([]); setActiveExchangeIdx(-1); setShowTutorial(false); }}
             className="shrink-0 cursor-pointer hover:opacity-70 transition-opacity"
           >
             <HomeIcon size={20} />
@@ -286,7 +288,7 @@ export default function WorkspaceChat({}: WorkspaceChatProps) {
 
           {/* Input bar — hidden on landing, shown after first query */}
           {hasStarted && (<>
-            <form onSubmit={(e) => { e.preventDefault(); handleAsk(input); }} className="flex-1 flex gap-2 min-w-0">
+            <form onSubmit={(e) => { e.preventDefault(); handleAsk(input); }} className="flex-1 flex gap-2 min-w-0 max-w-[760px]">
               <input
                 type="text"
                 value={input}
@@ -304,6 +306,17 @@ export default function WorkspaceChat({}: WorkspaceChatProps) {
                 Ask
               </button>
             </form>
+            <button
+              type="button"
+              onClick={() => setShowTutorial(true)}
+              className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] hover:bg-white cursor-pointer focus:outline-none focus:border-[#475EC7] focus:ring-1 focus:ring-[#475EC7]/20"
+            >
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M3 2.5h4.5A2.5 2.5 0 0 1 10 5v10a2.5 2.5 0 0 0-2.5-2.5H3z" />
+                <path d="M10 5a2.5 2.5 0 0 1 2.5-2.5H14v10h-1.5A2.5 2.5 0 0 0 10 15z" />
+              </svg>
+              <span className="hidden sm:inline">Tutorial</span>
+            </button>
             <div className="shrink-0 relative">
               <select
                 value={source}
@@ -320,6 +333,36 @@ export default function WorkspaceChat({}: WorkspaceChatProps) {
           </>)}
         </div>
       </header>
+
+      {showTutorial && (
+        <div
+          className="fixed inset-0 z-50 bg-black/35 p-3 sm:p-6"
+          onClick={() => setShowTutorial(false)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Tutorial"
+            className="h-full max-w-5xl mx-auto bg-white rounded-xl shadow-2xl overflow-hidden flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="h-12 px-4 sm:px-5 border-b border-[var(--border)] flex items-center justify-between shrink-0 bg-white">
+              <div className="text-sm font-semibold text-[var(--foreground)]">Tutorial</div>
+              <button
+                type="button"
+                onClick={() => setShowTutorial(false)}
+                className="w-8 h-8 inline-flex items-center justify-center rounded-md border border-[var(--border)] text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface)] cursor-pointer"
+                aria-label="Close tutorial"
+              >
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <path d="M4 4l8 8M12 4l-8 8" />
+                </svg>
+              </button>
+            </div>
+            <ExplainerContent visible />
+          </div>
+        </div>
+      )}
 
       {/* Landing screen — the full production Getting Started page */}
       {!hasStarted && (
@@ -397,7 +440,7 @@ export default function WorkspaceChat({}: WorkspaceChatProps) {
                         <span className={`text-[12px] leading-snug ${isActive ? "font-bold text-[var(--navy)]" : "font-semibold text-[var(--foreground-strong)]"}`}>{ex.question}</span>
                       </div>
                     </button>
-                    <div className={`text-[11.5px] text-[var(--muted)] leading-relaxed ${isExpanded ? "" : "line-clamp-4"}`}>
+                    <div className={`text-[11.5px] text-[var(--muted)] leading-relaxed ${isExpanded ? "" : "line-clamp-6"}`}>
                       <TypewriterText text={ex.explanation} animate={i === animateIdx && isActive} />
                     </div>
                     {ex.explanation && ex.explanation.length > 80 && (
