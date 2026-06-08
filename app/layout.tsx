@@ -3,8 +3,31 @@ import Script from "next/script";
 import "./globals.css";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://nibrsai.com"),
   title: "Crime Data Assistant | The Crime Index",
   description: "Ask questions about crime data from 700+ agencies across the U.S. Powered by AI.",
+  openGraph: {
+    title: "Crime Data Assistant",
+    description: "Ask plain-English questions across current, historical, NIBRS, SHR, and hate crime data.",
+    url: "https://nibrsai.com",
+    siteName: "The Crime Index",
+    images: [
+      {
+        url: "/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: "Crime Data Assistant by The Crime Index",
+      },
+    ],
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Crime Data Assistant",
+    description: "Ask plain-English questions across current, historical, NIBRS, SHR, and hate crime data.",
+    images: ["/opengraph-image"],
+  },
 };
 
 export default function RootLayout({

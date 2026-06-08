@@ -820,7 +820,7 @@ function scoreDataset(ds: DatasetCapabilities, intent: QueryIntent): RouteScore 
   if (intent.requiredAttributes.includes("bias") || intent.requiredAttributes.includes("hate_crime")) {
     if (ds.id === "hate_crime") {
       score += 5;
-      why = "Dedicated hate crime database with bias motivation, offender, and participation data (1991–present)";
+      why = "Dedicated reported hate crime database with bias motivation, offender, and participation data (1991–present)";
     } else if (ds.id === "nibrs") {
       score -= 2; // Penalize NIBRS when hate_crime tab is available
     }
