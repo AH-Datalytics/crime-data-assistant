@@ -181,6 +181,46 @@ const EVAL_SET: EvalQuery[] = [
     rejectPatterns: [/summary_carjacking_monthly/i],
     requirePatterns: [/summary_carjacking_victim_demographics/i, /victim_count/i, /GROUP\s+BY\s+(?:\w+\.)?state/i],
   },
+  {
+    id: "table-selection-property-value-shoplifting-summary",
+    question: "what is the typical dollar value of shoplifting offenses in California",
+    category: "table selection",
+    knownIssues: ["used raw property+offenses instead of state property-value summary"],
+    rejectPatterns: [/\bFROM\s+property\b/i, /\bJOIN\s+property\b/i, /\bJOIN\s+offenses\b/i],
+    requirePatterns: [/summary_property_value_state/i, /23C/i, /type_property_loss/i, /total_value/i, /record_count/i],
+  },
+  {
+    id: "table-selection-property-value-business-location",
+    question: "typical dollar value of theft offenses with the location type is a type of business in California",
+    category: "table selection",
+    knownIssues: ["either refused or tried to use a value summary that cannot filter by location_type"],
+    rejectPatterns: [/summary_property_value_state/i, /summary_property_offense/i, /summary_offense_location/i],
+    requirePatterns: [/\bFROM\s+offenses\b/i, /\bJOIN\s+property\b/i, /location_type/i, /\bvalue\s*>\s*0/i, /\bvalue\s*<\s*1000000/i],
+  },
+  {
+    id: "sql-shape-houston-murder-weapon",
+    question: "Murders by weapon in Houston in 2025",
+    category: "SQL structure",
+    knownIssues: ["duplicate GROUP BY after weapon alias grouping"],
+    rejectPatterns: [/GROUP\s+BY[^;]*GROUP\s+BY/i],
+    requirePatterns: [/summary_victim_weapon/i, /09A/i, /HOUSTON/i, /GROUP\s+BY\s+weapon/i],
+  },
+  {
+    id: "sql-shape-violent-age-consistent-exact",
+    question: "show me violent crimes by age group for agencies that reported every year from 2015 to 2025",
+    category: "SQL structure",
+    knownIssues: ["duplicate GROUP BY when combining age group with completeness filter"],
+    rejectPatterns: [/GROUP\s+BY[^;]*GROUP\s+BY/i],
+    requirePatterns: [/summary_victim_demographics/i, /nibrs_agency_completeness/i, /age_group/i, /HAVING\s+COUNT\(\*\)\s*=\s*11/i],
+  },
+  {
+    id: "table-selection-dv-city-no-victim-count",
+    question: "domestic violence by city in the state of Washington",
+    category: "table selection",
+    knownIssues: ["invented summary_domestic_violence.victim_count instead of counting distinct incidents"],
+    rejectPatterns: [/victim_count/i, /SUM\s*\(/i],
+    requirePatterns: [/summary_domestic_violence/i, /\bJOIN\s+agencies\b/i, /COUNT\s*\(\s*DISTINCT/i, /WA/i],
+  },
 
   // --- Geography preservation ---
   {

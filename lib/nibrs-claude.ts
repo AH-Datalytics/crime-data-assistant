@@ -67,7 +67,7 @@ ADDITIONAL RULES:
 - For **national or state-level** property value queries, ALWAYS use summary_property_value_state (~2.5M rows, 12x faster). For **city/agency-level** property queries, use summary_property_offense (${formatRowCount(NIBRS.summaryRowCounts["summary_property_offense"] || 30000000)} rows). NEVER join raw offenses with raw property (both ${NIBRS.rawRowCounts["offenses"] || "~200M"} rows).
 - **PROPERTY VALUE ANALYSIS (median/percentile/distribution):** Summary tables store total_value and record_count (for averages: SUM(total_value)/SUM(record_count)), but they CANNOT calculate medians, percentiles, or value distributions. For these queries, you MAY use the raw property table joined with offenses, but ONLY with tight filters: WHERE state = 'XX' AND year = YYYY AND ucr_offense_code = 'XXX' AND value > 0 AND value < 1000000. Always filter out zero and million-dollar-plus values (data quality). Example median shoplifting value:
   SELECT value FROM property p JOIN offenses o ON o.year = p.year AND o.state = p.state AND o.ori = p.ori AND o.incident_num = p.incident_num WHERE p.state = 'CA' AND p.year = 2024 AND o.ucr_offense_code = '23C' AND p.type_property_loss = '7' AND p.value > 0 AND p.value < 1000000 ORDER BY p.value LIMIT 1 OFFSET (SELECT COUNT(*)/2 FROM property p2 JOIN offenses o2 ON o2.year = p2.year AND o2.state = p2.state AND o2.ori = p2.ori AND o2.incident_num = p2.incident_num WHERE p2.state = 'CA' AND p2.year = 2024 AND o2.ucr_offense_code = '23C' AND p2.type_property_loss = '7' AND p2.value > 0 AND p2.value < 1000000)
-- **"Typical" / "average" / "value of" property queries → ALWAYS default to average using summary tables.** Do not deliberate between average and median. Use: SELECT ROUND(SUM(total_value) * 1.0 / SUM(record_count), 2) AS average_value FROM summary_property_value_state WHERE state = '...' AND ucr_offense_code = '...' AND type_property_loss = '7'. Only use raw property tables for median if the user explicitly says "median", "percentile", or "distribution". NIBRS property.value is populated for theft/shoplifting/burglary/robbery — do NOT refuse these queries. Caveat: "Values reflect what agencies reported; records with missing or zero values are excluded."
+- **"Typical" / "average" / "value of" property queries -> default to average.** For state/national/city/agency value queries with no location-type filter, use summary_property_value_state or summary_property_offense. Do not deliberate between average and median. Use: SELECT ROUND(SUM(total_value) * 1.0 / SUM(record_count), 2) AS average_value FROM summary_property_value_state WHERE state = '...' AND ucr_offense_code = '...' AND type_property_loss = '7'. Only use raw property tables for median if the user explicitly says "median", "percentile", or "distribution", or when the query needs a dimension absent from the value summaries (especially location_type). Raw property+offenses value queries MUST have tight filters: state + year or BETWEEN/IN years + ucr_offense_code + type_property_loss + value > 0 + value < 1000000. NIBRS property.value is populated for theft/shoplifting/burglary/robbery — do NOT refuse these queries. Caveat: "Values reflect what agencies reported; records with missing or zero values are excluded."
 
 If none of those exceptions apply → USE THE SUMMARY TABLE. No exceptions.
 
@@ -230,6 +230,19 @@ Juvenile firearm homicides in a city by year example:
   GROUP BY d.year ORDER BY d.year
 NOTE: summary_victim_demographics supports ANY combination of age_group + weapon_category + race + sex + ethnicity + ucr_offense_code per ORI. Use it for ALL demographic-filtered queries — do NOT claim you need the raw victims table when this summary table has the needed columns.
 
+Violent crimes by victim age group for agencies that reported every year from 2015 to 2025:
+  SELECT d.age_group, SUM(d.victim_count) AS victims
+  FROM summary_victim_demographics d
+  WHERE d.ucr_offense_code IN ('09A','09B','09C','11A','11B','11C','11D','13A','13B','13C','100','36A','36B','64A','64B')
+    AND d.year BETWEEN 2015 AND 2025
+    AND d.ori IN (
+      SELECT ori FROM nibrs_agency_completeness
+      WHERE year BETWEEN 2015 AND 2025 AND months_reported = 12
+      GROUP BY ori HAVING COUNT(*) = 11
+    )
+  GROUP BY d.age_group ORDER BY victims DESC
+NOTE: If the user asks for "by year" too, use GROUP BY d.year, d.age_group. Never write GROUP BY d.age_group GROUP BY year.
+
 For daily person crime counts, use the raw victims table:
   SELECT v.incident_date AS date, COUNT(*) AS murders FROM victims v
   WHERE v.state = 'TX' AND v.year = 2024 AND v.victim_type = 'I'
@@ -380,6 +393,12 @@ State comparison of stolen property value example:
   WHERE type_property_loss = '7' AND year = 2024 AND state != 'US'
   GROUP BY state ORDER BY total DESC LIMIT 10
 
+Typical shoplifting dollar value in California example:
+  SELECT ROUND(SUM(total_value) * 1.0 / NULLIF(SUM(record_count), 0), 2) AS average_value,
+    SUM(record_count) AS records_used
+  FROM summary_property_value_state
+  WHERE state = 'CA' AND year = 2024 AND ucr_offense_code = '23C' AND type_property_loss = '7'
+
 ### summary_property_offense (PROPERTY + OFFENSE — AGENCY LEVEL)
 - COLUMNS: ori TEXT, year INT, state TEXT, ucr_offense_code TEXT, type_property_loss TEXT, property_description TEXT, total_value INT, record_count INT
 - ${formatRowCount(NIBRS.summaryRowCounts["summary_property_offense"] || 29900000)} rows. Pre-aggregated from offenses JOIN property. Outlier values cleaned (per-record avg >= $1M zeroed out).
@@ -413,6 +432,19 @@ Where do murders happen example:
   FROM summary_offense_location s
   WHERE s.ucr_offense_code = '09A' AND s.year = 2025
   GROUP BY s.location_type ORDER BY offenses DESC LIMIT 10
+
+Property value with a location-type filter example (raw allowed because value summaries have no location_type):
+  SELECT o.ucr_offense_code,
+    ROUND(SUM(p.value) * 1.0 / NULLIF(COUNT(*), 0), 2) AS average_value,
+    COUNT(*) AS records_used
+  FROM offenses o
+  JOIN property p ON p.ori = o.ori AND p.incident_num = o.incident_num AND p.year = o.year
+  WHERE o.state = 'CA' AND o.year BETWEEN 2022 AND 2025
+    AND o.ucr_offense_code IN ('23A','23B','23C','23D','23E','23F','23G','23H')
+    AND o.location_type IN ('05','07','08','09','12','17','21','23','24','41','56')
+    AND p.type_property_loss = '7' AND p.value > 0 AND p.value < 1000000
+  GROUP BY o.ucr_offense_code ORDER BY average_value DESC
+NOTE: Do NOT use raw property+offenses for broad counts or for property-value queries that summary_property_value_state can answer. Use raw here only because the requested value analysis also needs location_type.
 
 ### summary_hate_crime (BIAS-MOTIVATED CRIME)
 - COLUMNS: ori TEXT, year INT, ucr_offense_code TEXT, bias_motivation TEXT, offense_count INT, state TEXT — has state column. For state queries use WHERE state = 'NY'. For city queries use ORI subquery.
@@ -473,6 +505,15 @@ Murder victims by specific weapon example:
   WHERE s.ucr_offense_code = '09A' AND s.year = 2025
   GROUP BY weapon ORDER BY victims DESC
 IMPORTANT: Always GROUP BY the CASE expression alias (weapon), NOT by s.weapon_type — otherwise codes like '11' and '11A' produce duplicate rows.
+
+Murders by weapon in Houston in 2025 example:
+  SELECT CASE WHEN s.weapon_type IN ('11','11A') THEN 'Firearm (type unknown)' WHEN s.weapon_type IN ('12','12A') THEN 'Handgun' WHEN s.weapon_type IN ('13','13A') THEN 'Rifle' WHEN s.weapon_type IN ('14','14A') THEN 'Shotgun' WHEN s.weapon_type = '15' THEN 'Other Firearm' WHEN s.weapon_type = '20' THEN 'Knife' WHEN s.weapon_type = '30' THEN 'Blunt Object' WHEN s.weapon_type = '35' THEN 'Motor Vehicle' WHEN s.weapon_type = '40' THEN 'Personal Weapons' WHEN s.weapon_type = '50' THEN 'Poison' WHEN s.weapon_type = '60' THEN 'Explosives' WHEN s.weapon_type = '65' THEN 'Fire' WHEN s.weapon_type = '70' THEN 'Drugs' WHEN s.weapon_type = '85' THEN 'Asphyxiation' WHEN s.weapon_type = '90' THEN 'Other' WHEN s.weapon_type = '95' THEN 'Unknown' WHEN s.weapon_type = '99' THEN 'None' ELSE s.weapon_type END AS weapon,
+    SUM(s.victim_count) AS victims
+  FROM summary_victim_weapon s
+  WHERE s.ucr_offense_code = '09A' AND s.year = 2025
+    AND s.ori IN (SELECT ori FROM agencies WHERE city = 'HOUSTON' AND state = 'TX' AND year = 2025 AND population > 0)
+  GROUP BY weapon ORDER BY victims DESC
+NOTE: This query has exactly one GROUP BY clause. Do not add GROUP BY year when the user asked for one year's weapon breakdown.
 
 ### summary_victim_circumstance (MURDER/ASSAULT CIRCUMSTANCES)
 - COLUMNS: ori TEXT, year INT, ucr_offense_code TEXT, circumstance_code TEXT, victim_count INT, state TEXT — has state column. For state queries use WHERE state = 'TX'. For city queries use ORI subquery.
@@ -1035,6 +1076,7 @@ Three table options depending on what's needed:
 - For DV by category: SELECT dv_category, COUNT(DISTINCT dv.ori || ':' || dv.data_year || ':' || dv.incident_num) AS incidents FROM summary_domestic_violence dv WHERE dv.state = 'TX' AND dv.data_year = 2024 GROUP BY dv.dv_category
 - For DV by city: SELECT a.city, a.state, COUNT(DISTINCT dv.ori || ':' || dv.data_year || ':' || dv.incident_num) AS dv_incidents FROM summary_domestic_violence dv JOIN agencies a ON a.ori = dv.ori AND a.year = dv.data_year WHERE a.state = 'WA' AND a.agency_type = 'City' AND a.population > 0 AND a.city != '' GROUP BY a.city, a.state ORDER BY dv_incidents DESC LIMIT 50
 - NOTE: This table has victim/incident data, not arrests. For DV arrests, use summary_dv_arrests instead.
+- NOTE: summary_domestic_violence has NO victim_count column. Never write SUM(dv.victim_count) or SUM(s.victim_count). Count distinct ORI+year+incident_num for incidents.
 
 **summary_dv_arrests** — DV-related arrests with demographics. Best for: DV arrest counts, DV arrests by offense type, DV arrestee demographics.
 - COLUMNS: year INT, state TEXT, ori TEXT, ucr_arrest_offense TEXT, dv_category TEXT, sex TEXT, race TEXT, age_group TEXT, arrest_count INT
