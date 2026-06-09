@@ -17,6 +17,7 @@ import { detectAllNullData } from "@/lib/all-null-detection";
 import { checkSingleRowTrend } from "@/lib/single-row-trend";
 import { detectYearSeriesChart } from "@/lib/chart-auto-detect";
 import { parseRoutingLogMeta } from "@/lib/routing-log-meta";
+import { answerMetadataQuestion } from "@/lib/metadata-coverage";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function jsonResp(data: Record<string, any> | QueryError, status = 200) {
@@ -90,6 +91,26 @@ export async function POST(req: NextRequest) {
       model: string | null = null,
       sid: string | null = null
     ) => logQuery(q, sqlText, rowCount, logError, ms, logResponse, tabName, guardrails, model, sid, routingMeta);
+
+    const metadata = answerMetadataQuestion("shr", question, getShrDb());
+    if (metadata) {
+      const executionMs = Date.now() - start;
+      writeLog(question, metadata.sql, metadata.rowCount, null, executionMs, metadata.explanation, "shr", ["deterministic-metadata"], "deterministic", sessionId);
+      return jsonResp({
+        success: true,
+        question,
+        sql: metadata.sql,
+        explanation: metadata.explanation,
+        title: metadata.title,
+        columns: metadata.columns,
+        rows: metadata.rows,
+        rowCount: metadata.rowCount,
+        truncated: metadata.truncated,
+        chartConfig: metadata.chartConfig,
+        chartMeta: metadata.chartMeta,
+        executionTimeMs: executionMs,
+      });
+    }
 
     // Deterministic nonfatal shooting refusal
     const asksShooting = /\b(shootings?|shot\b|gunshot|people\s+shot|gun\s+violence)\b/i.test(question);

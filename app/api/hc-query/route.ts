@@ -14,6 +14,7 @@ import { extractJson } from "@/lib/extract-json";
 import { detectAllNullData } from "@/lib/all-null-detection";
 import { isSourceEnabled } from "@/lib/sources";
 import { parseRoutingLogMeta } from "@/lib/routing-log-meta";
+import { answerMetadataQuestion } from "@/lib/metadata-coverage";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function jsonResp(data: Record<string, any> | QueryError, status = 200) {
@@ -145,6 +146,26 @@ export async function POST(req: NextRequest) {
       model: string | null = null,
       sid: string | null = null
     ) => logQuery(q, sqlText, rowCount, logError, ms, logResponse, tabName, guardrails, model, sid, routingMeta);
+
+    const metadata = answerMetadataQuestion("hate_crime", question, getHateCrimeDb());
+    if (metadata) {
+      const executionMs = Date.now() - start;
+      writeLog(question, metadata.sql, metadata.rowCount, null, executionMs, metadata.explanation, "hate_crime", ["deterministic-metadata"], "deterministic", sessionId);
+      return jsonResp({
+        success: true,
+        question,
+        sql: metadata.sql,
+        explanation: metadata.explanation,
+        title: metadata.title,
+        columns: metadata.columns,
+        rows: metadata.rows,
+        rowCount: metadata.rowCount,
+        truncated: metadata.truncated,
+        chartConfig: metadata.chartConfig,
+        chartMeta: metadata.chartMeta,
+        executionTimeMs: executionMs,
+      });
+    }
 
     // Check response cache (only for standalone questions)
     const cached = history.length === 0 ? getCached(question, "hate_crime") : null;

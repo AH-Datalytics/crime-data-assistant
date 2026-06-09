@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node scripts/test-guardrails.js && npx tsx scripts/test-new-guardrails.ts && npx tsx scripts/test-sql-guardrails.ts && npx tsx scripts/test-chart-config.ts && npx tsx scripts/validate-nibrs-prompt-sql.ts"
+    "test": "node scripts/test-guardrails.js && npx tsx scripts/test-new-guardrails.ts && npx tsx scripts/test-sql-guardrails.ts && npx tsx scripts/test-chart-config.ts && npx tsx scripts/test-metadata-coverage.ts && npx tsx scripts/validate-nibrs-prompt-sql.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",

@@ -17,6 +17,7 @@ import { getCached, setCache } from "@/lib/response-cache";
 import { detectAllNullData } from "@/lib/all-null-detection";
 import { checkSingleRowTrend } from "@/lib/single-row-trend";
 import { parseRoutingLogMeta } from "@/lib/routing-log-meta";
+import { answerMetadataQuestion } from "@/lib/metadata-coverage";
 
 function sseEvent(event: StreamEvent): string {
   return `data: ${JSON.stringify(event)}\n\n`;
@@ -316,10 +317,48 @@ export async function POST(req: NextRequest) {
     sid: string | null = null
   ) => logQuery(q, sqlText, rowCount, logError, ms, logResponse, tabName, guardrails, model, sid, routingMeta);
 
+  const tab = body?.mode === "historical" ? "historical" : "current";
+  const metadata = answerMetadataQuestion(tab, question, getDb());
+  if (metadata) {
+    const ms = Date.now() - totalStart;
+    writeLog(question, metadata.sql, metadata.rowCount, null, ms, metadata.explanation, tab, ["deterministic-metadata"], "deterministic", sessionId);
+
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(
+          encoder.encode(
+            sseEvent({
+              type: "result",
+              sql: metadata.sql,
+              explanation: metadata.explanation,
+              title: metadata.title,
+              columns: metadata.columns,
+              rows: metadata.rows,
+              rowCount: metadata.rowCount,
+              truncated: metadata.truncated,
+              chartConfig: metadata.chartConfig,
+              chartMeta: metadata.chartMeta,
+              executionTimeMs: ms,
+            })
+          )
+        );
+        controller.close();
+      },
+    });
+
+    return new Response(stream, {
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive",
+        "X-RateLimit-Remaining": String(rateCheck.remaining),
+      },
+    });
+  }
+
   const stream = new ReadableStream({
     async start(controller) {
       let sql: string | null = null;
-      const tab = body?.mode === "historical" ? "historical" : "current";
       let firedGuardrails: string[] = [];
       let closed = false;
       const close = () => {

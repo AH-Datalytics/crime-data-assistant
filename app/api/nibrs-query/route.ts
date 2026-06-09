@@ -15,6 +15,7 @@ import { getCached, setCache } from "@/lib/response-cache";
 import { detectAllNullData } from "@/lib/all-null-detection";
 import { checkSingleRowTrend } from "@/lib/single-row-trend";
 import { parseRoutingLogMeta } from "@/lib/routing-log-meta";
+import { answerMetadataQuestion } from "@/lib/metadata-coverage";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -131,6 +132,27 @@ export async function POST(req: NextRequest) {
         { success: false, error: "Question too long (max 2000 characters)" } as QueryError,
         400
       );
+    }
+
+    const metadataStart = Date.now();
+    const metadata = answerMetadataQuestion("nibrs", question, getNibrsDb());
+    if (metadata) {
+      const executionMs = Date.now() - metadataStart;
+      writeNibrsLog(question, metadata.sql, metadata.rowCount, null, executionMs, metadata.explanation, ["deterministic-metadata"], "deterministic", sessionId);
+      return jsonResp({
+        success: true,
+        question,
+        sql: metadata.sql,
+        explanation: metadata.explanation,
+        title: metadata.title,
+        columns: metadata.columns,
+        rows: metadata.rows,
+        rowCount: metadata.rowCount,
+        truncated: metadata.truncated,
+        chartConfig: metadata.chartConfig,
+        chartMeta: metadata.chartMeta,
+        executionTimeMs: executionMs,
+      } as QueryResponse);
     }
 
     // Step 1: Translate to SQL via Claude (with conversation history for context)
