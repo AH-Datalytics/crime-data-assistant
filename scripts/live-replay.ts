@@ -252,6 +252,11 @@ const ALL_TESTS: TestCase[] = [
   { id: "F5-02", question: "what states are not represented?", tab: "current", category: "f5-refusal-replay", expect: "rows_or_text", responseIncludes: ["missing"], note: "Log #4055 — was a false refusal; metadata-coverage must answer with missing states" },
   { id: "F5-03", question: "which states aren't in the data?", tab: "current", category: "f5-refusal-replay", expect: "rows_or_text", responseIncludes: ["missing"], note: "Broader phrasing of F5-02" },
   { id: "F5-04", question: "can i download this by state?", tab: "historical", category: "f5-refusal-replay", expect: "rows_or_text", responseIncludes: ["download"], note: "Log #4105 — must answer the download question, not mislabel scope" },
+
+  // ── June 9 audit post-deploy probes (#4121, #4114, #4095) ──
+  { id: "AUD-01", question: "What is the total number of gun homicides in St. Louis County 2026 year-to-date?", tab: "shr", category: "audit-probe", expect: "rows", allowZeroRows: true, sqlIncludes: ["shr_agency_alias"], note: "Log #4121 — must resolve agency via alias tables; a zero count is correct (lone 2026 incident is manslaughter) but must come from a matched agency" },
+  { id: "AUD-02", question: "what is the homicide rate by firearm in Pennsylvania from 2015-2024", tab: "shr", category: "audit-probe", expect: "rows", minRows: 8, sqlIncludes: ["state_population"], note: "Log #4114 — state rate must use state_population, not AVG(agency population)" },
+  { id: "AUD-03", question: "show crime in Pennsylvania", tab: "nibrs", category: "audit-probe", expect: "rows_or_text", responseExcludes: ["no such table"], note: "Log #4095 — cross-tab contamination must not surface a raw DB error" },
 ];
 
 // ══════════════════════════════════════════════════════════════════════
