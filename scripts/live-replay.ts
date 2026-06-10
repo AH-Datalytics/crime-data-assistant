@@ -257,6 +257,8 @@ const ALL_TESTS: TestCase[] = [
   { id: "AUD-01", question: "What is the total number of gun homicides in St. Louis County 2026 year-to-date?", tab: "shr", category: "audit-probe", expect: "rows", allowZeroRows: true, sqlIncludes: ["shr_agency_alias"], note: "Log #4121 — must resolve agency via alias tables; a zero count is correct (lone 2026 incident is manslaughter) but must come from a matched agency" },
   { id: "AUD-02", question: "what is the homicide rate by firearm in Pennsylvania from 2015-2024", tab: "shr", category: "audit-probe", expect: "rows", minRows: 8, sqlIncludes: ["state_population"], note: "Log #4114 — state rate must use state_population, not AVG(agency population)" },
   { id: "AUD-03", question: "show crime in Pennsylvania", tab: "nibrs", category: "audit-probe", expect: "rows_or_text", responseExcludes: ["no such table"], note: "Log #4095 — cross-tab contamination must not surface a raw DB error" },
+  { id: "AUD-04", question: "Show me the trends in misdemeanor arrests in the ten largest cities", tab: "nibrs", category: "audit-probe", expect: "override", responseIncludes: ["misdemeanor"], note: "Log #4145 (F17) — must hard-stop with charge-severity limitation, never invent severity labels" },
+  { id: "AUD-05", question: "DUI arrests by age group nationally", tab: "nibrs", category: "audit-probe", expect: "rows", note: "F17 carve-out — ordinary arrest queries must still work" },
 ];
 
 // ══════════════════════════════════════════════════════════════════════
