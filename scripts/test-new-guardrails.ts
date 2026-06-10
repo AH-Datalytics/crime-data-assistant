@@ -791,6 +791,25 @@ console.log("\n═══ Hard override guardrails ═══\n");
   assert("#16 out-of-scope: 'arrest' does NOT fire", !r.fired.includes("out-of-scope-override"));
 }
 
+{
+  const ctx = extractQueryContext("SELECT year, SUM(arrestee_count) AS arrests FROM summary_arrestee_demographics GROUP BY year", "misdemeanor arrests in Pennsylvania", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("charge severity: misdemeanor arrests hard-stop", r.fired.includes("charge-severity-unavailable"));
+  assert("charge severity: misdemeanor arrests override", r.overrideResponse !== null && r.overrideResponse.includes("misdemeanors versus felonies"));
+}
+
+{
+  const ctx = extractQueryContext("SELECT year, SUM(arrestee_count) AS arrests FROM summary_arrestee_demographics GROUP BY year", "felony arrests by race", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("charge severity: felony arrests hard-stop", r.fired.includes("charge-severity-unavailable"));
+}
+
+{
+  const ctx = extractQueryContext("SELECT * FROM incidents WHERE circumstance_group = 'Felony Type'", "felony murder vs argument murder trend", "shr");
+  const r = runGuardrails(ctx);
+  assert("charge severity: felony murder not hard-stopped", !r.fired.includes("charge-severity-unavailable"));
+}
+
 // ══════════════════════════════════════════════════════════════════════
 //  washington-ambiguity guardrail (2026-06-06 regression)
 // ══════════════════════════════════════════════════════════════════════

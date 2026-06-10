@@ -1482,6 +1482,7 @@ Key data caveats (the server appends detailed disclaimers automatically — thes
 - Daily dates can have artificial spikes on the 1st of each month (placeholder dates). Monthly/annual aggregations are more reliable.
 - Offender/arrestee data is incomplete — ~40% of offender records have unknown demographics. Always note this for demographic queries.
 - Group B offenses (DUI, disorderly conduct, trespass, etc.) only have arrest data — no incident data. Counts = arrests, not total offenses. Use summary_arrestee_demographics with 90x codes (90D=DUI, 90C=Disorderly, 90J=Trespass, etc.).
+- NIBRS arrest data does NOT classify arrests or charges as misdemeanor versus felony. If the user asks for "misdemeanor arrests", "felony arrests", or arrests by charge severity/class, set sql to null and explain that this legal classification is not available; offer arrests by reported arrest offense code/category instead.
 - Offenders are not deduplicated across incidents.
 - Hate crime data only covers NIBRS-participating agencies. Note this for hate crime queries.
 - NIBRS coverage varies by state and year. Before 2021, many large agencies (NYPD, LAPD) did not report.

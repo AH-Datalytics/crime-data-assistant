@@ -334,6 +334,17 @@ with no named entity/offense). The interim patterns added to the Daily Impact me
 `no such table` errors; verify explanations state periods; re-test the F1 St. Louis County question
 (still expected to fail until F1 lands).
 
+### F17 (P1, new — caught in June 10 production traffic, first post-deploy finding)
+
+Queries #4138/#4144/#4145: model correctly refused "misdemeanor arrests" twice (NIBRS has no
+charge-severity classification), then **caved on the third rephrasing** and returned 65 rows
+labeled "Misdemeanor arrests data for [10 cities]" — an invented taxonomy. Persistence defeats
+prompt-level discipline. **Fixed same day:** `charge-severity-unavailable` hard override in
+`lib/guardrails.ts` (cross-tab), `charge_severity` unsupported-concept flag in `lib/tab-suggest.ts`,
+NIBRS prompt note. Carve-outs verified: ordinary arrest queries and SHR "felony murder" circumstance
+still work. Tests: guardrails 181/181, router 191/191. **Status: on `dev`, not yet deployed** —
+production remains vulnerable to this pattern until the next deploy.
+
 ## F5 live refusal replay (2026-06-10, local dev server, live model path)
 
 Replay cases added permanently to `scripts/live-replay.ts` (`F5-01`–`F5-04`, session `MS04`; run via

@@ -1974,6 +1974,19 @@ const GUARDRAILS: Guardrail[] = [
 
   // #16: Court outcomes, immigration, policy covariates — out of scope
   {
+    name: "charge-severity-unavailable",
+    tabs: ["current", "historical", "nibrs", "shr"],
+    match: (ctx) => {
+      const q = ctx.question.toLowerCase();
+      return /\b(misdemeanou?r|felon(?:y|ies))\b/i.test(q) &&
+        /\b(arrests?|arrested|arrestees?|charges?|charged|offenses?)\b/i.test(q) &&
+        !/\b(felony\s+murder|felony\s+type)\b/i.test(q);
+    },
+    override: () =>
+      "None of the available datasets classify arrests or charges as misdemeanors versus felonies. NIBRS can show arrests by reported arrest offense code and demographics, but it does not record the legal charge level or court filing classification. I can show arrest counts by offense category instead.",
+  },
+
+  {
     name: "out-of-scope-override",
     tabs: ["current", "historical", "nibrs", "shr"],
     match: (ctx) => /\b(prosecution|convicted|conviction|sentence[ds]?|incarcerat|prison population|jail population|fine[ds]?\b|fee[ds]?\b|bail|immigration status|illegal immigrant|undocumented|GARS|GVRS|gun violence restraining|red flag law|defendants?)\b/i.test(ctx.question),

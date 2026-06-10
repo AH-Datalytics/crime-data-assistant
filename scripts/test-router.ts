@@ -415,6 +415,7 @@ test({ question: "homicide offender race in Texas", expectedPrimary: ["shr", "ni
 // "arrests" → NIBRS (demographics), "juvenile arrests" → NIBRS (arrest_demographics)
 test({ question: "total arrests nationally", expectedPrimary: ["historical", "nibrs"], note: "Generic arrests" });
 test({ question: "juvenile arrests by race", expectedPrimary: "nibrs", mustExclude: ["current", "historical", "shr"], note: "Juvenile + race → arrest demographics → NIBRS" });
+test({ question: "misdemeanor arrests in Pennsylvania", expectedPrimary: ["historical", "nibrs"], unsupported: ["charge_severity"], note: "No source has misdemeanor/felony charge class; durable behavior is unsupported detection plus guardrail override" });
 
 console.log("═══ Manual source nudges ═══");
 

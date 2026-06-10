@@ -566,6 +566,14 @@ function detectUnsupportedConcepts(q: string): string[] {
     concepts.push("convictions");
   }
 
+  // Legal charge severity/classification. NIBRS has arrest offense codes, but not
+  // whether a charge was filed/prosecuted as a misdemeanor or felony.
+  if (/\b(misdemeanou?r|felon(?:y|ies))\b/i.test(q) &&
+      /\b(arrests?|arrested|arrestees?|charges?|charged|offenses?)\b/i.test(q) &&
+      !/\b(felony\s+murder|felony\s+type)\b/i.test(q)) {
+    concepts.push("charge_severity");
+  }
+
   // Neighborhood-level
   if (/\b(neighborhood|block|census\s*tract|zip\s*code|precinct\s*level)\b/i.test(q)) {
     concepts.push("neighborhood");
