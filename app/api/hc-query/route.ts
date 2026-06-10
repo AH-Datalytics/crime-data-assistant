@@ -15,6 +15,10 @@ import { detectAllNullData } from "@/lib/all-null-detection";
 import { isSourceEnabled } from "@/lib/sources";
 import { parseRoutingLogMeta } from "@/lib/routing-log-meta";
 import { answerMetadataQuestion } from "@/lib/metadata-coverage";
+import { validateTablesForTab } from "@/lib/table-allowlist";
+import { applyResultDisclosures } from "@/lib/result-disclosure";
+import { normalizeHistoryForTab } from "@/lib/chat-history";
+import { detectFollowupTransform } from "@/lib/followup-transform";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function jsonResp(data: Record<string, any> | QueryError, status = 200) {
@@ -131,7 +135,11 @@ export async function POST(req: NextRequest) {
       return jsonResp({ success: false, error: "Question too long (max 2000 characters)" } as QueryError, 400);
     }
 
-    const history = Array.isArray(body?.history) ? body.history.slice(-6) : [];
+    const history = normalizeHistoryForTab(body?.history, "hate_crime");
+    const followupTransform = detectFollowupTransform(question, history);
+    const promptHistory = followupTransform
+      ? [...history, { role: "user" as const, content: followupTransform.instruction }]
+      : history;
     const start = Date.now();
     const routingMeta = parseRoutingLogMeta(body);
     const writeLog = (
@@ -168,7 +176,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Check response cache (only for standalone questions)
-    const cached = history.length === 0 ? getCached(question, "hate_crime") : null;
+    const cached = promptHistory.length === 0 ? getCached(question, "hate_crime") : null;
 
     let claude: {
       sql: string | null;
@@ -183,7 +191,7 @@ export async function POST(req: NextRequest) {
 
     const client = new Anthropic();
     const messages: Anthropic.MessageParam[] = [
-      ...history.map((h: { role: string; content: string }) => ({
+      ...promptHistory.map((h: { role: string; content: string }) => ({
         role: h.role as "user" | "assistant",
         content: h.content,
       })),
@@ -259,6 +267,53 @@ export async function POST(req: NextRequest) {
     }
 
     let sql = validation.sanitized!;
+
+    {
+      const tableDb = getHateCrimeDb();
+      if (tableDb) {
+        const tableCheck = validateTablesForTab(sql, "hate_crime", tableDb);
+        if (!tableCheck.ok) {
+          try {
+            const retryMessages: Anthropic.MessageParam[] = [
+              ...messages,
+              { role: "assistant", content: text || JSON.stringify(claude) },
+              { role: "user", content: `[SYSTEM: ${tableCheck.message}]` },
+            ];
+            const retryResp = await client.messages.create({
+              model: "claude-haiku-4-5-20251001",
+              max_tokens: 2000,
+              system: [{ type: "text", text: getHateCrimeSystemPrompt(), cache_control: { type: "ephemeral" } }],
+              messages: retryMessages,
+            });
+            const retryText = retryResp.content.filter((b): b is Anthropic.TextBlock => b.type === "text").map(b => b.text).join("");
+            const retryClaude = extractJson(retryText) as Record<string, unknown> | null;
+            if (retryClaude?.sql) {
+              const retryValidation = validateAndSanitize(retryClaude.sql as string);
+              if (retryValidation.valid) {
+                const retrySql = retryValidation.sanitized!;
+                const retryTableCheck = validateTablesForTab(retrySql, "hate_crime", tableDb);
+                if (retryTableCheck.ok) {
+                  sql = retrySql;
+                  claude.explanation = (retryClaude.explanation as string) || claude.explanation;
+                  claude.title = (retryClaude.title as string) || claude.title;
+                  claude.chartType = (retryClaude.chartType as string) || claude.chartType;
+                  claude.xAxis = (retryClaude.xAxis as string) || claude.xAxis;
+                  claude.yAxis = (retryClaude.yAxis as string[]) || claude.yAxis;
+                } else {
+                  const msg = "I couldn't build a valid query for the Hate Crime database. Try rephrasing for hate-crime-specific data or switching tabs for general crime totals.";
+                  writeLog(question, retrySql, 0, `table_allowlist_second_failure:${retryTableCheck.unknown.join(",")}`, Date.now() - start, msg, "hate_crime", [...tableCheck.fired, ...retryTableCheck.fired], "haiku-4.5", sessionId);
+                  return jsonResp({ success: true, question, sql: null, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - start });
+                }
+              }
+            }
+          } catch { /* fall through to friendly failure */ }
+
+          const msg = "I couldn't build a valid query for the Hate Crime database. Try rephrasing for hate-crime-specific data or switching tabs for general crime totals.";
+          writeLog(question, sql, 0, `table_allowlist:${tableCheck.unknown.join(",")}`, Date.now() - start, msg, "hate_crime", tableCheck.fired, "haiku-4.5", sessionId);
+          return jsonResp({ success: true, question, sql: null, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - start });
+        }
+      }
+    }
 
     // Step 2b: Incident count guardrail
     // If question asks for "hate crimes" / "incidents" and SQL uses COUNT(*) on raw
@@ -388,11 +443,12 @@ export async function POST(req: NextRequest) {
     // Apply mandatory caveats
     let explanation = sanitizeExplanation(claude.explanation || "");
     explanation = hateCrimeCaveats(sql, explanation);
+    explanation = applyResultDisclosures({ explanation, question, sql, rows, tab: "hate_crime" });
 
     writeLog(question, sql, rows.length, null, totalMs, explanation, "hate_crime", [], "haiku-4.5", sessionId);
 
     // Cache successful responses (only standalone questions)
-    if (!cached && history.length === 0) {
+    if (!cached && promptHistory.length === 0) {
       setCache(question, "hate_crime", { sql, explanation: claude.explanation || "", title: claude.title, chartType: claude.chartType, xAxis: claude.xAxis, yAxis: claude.yAxis, yAxisLabel: claude.yAxisLabel });
     }
 

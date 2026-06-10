@@ -246,6 +246,12 @@ const ALL_TESTS: TestCase[] = [
   { id: "M01", question: "Compare the total annual number of homicides in Baltimore and Chicago over the past 10 years", tab: "historical", category: "comparison", expect: "rows" },
   { id: "M02", question: "Compare auto thefts between Philadelphia and Chicago", tab: "auto", expectedTab: ["current", "historical"], category: "comparison", expect: "rows" },
   { id: "M03", question: "Compare murder offender demographics in Chicago vs Houston in 2023", tab: "auto", expectedTab: ["nibrs", "shr"], category: "comparison", expect: "rows" },
+
+  // ── F5 audit replay (June 9 false refusals — query log #4053/#4055/#4105) ──
+  { id: "F5-01", question: "which states do you have data for?", tab: "current", category: "f5-refusal-replay", expect: "rows", minRows: 40, note: "Log #4053 — deterministic state coverage list" },
+  { id: "F5-02", question: "what states are not represented?", tab: "current", category: "f5-refusal-replay", expect: "rows_or_text", responseIncludes: ["missing"], note: "Log #4055 — was a false refusal; metadata-coverage must answer with missing states" },
+  { id: "F5-03", question: "which states aren't in the data?", tab: "current", category: "f5-refusal-replay", expect: "rows_or_text", responseIncludes: ["missing"], note: "Broader phrasing of F5-02" },
+  { id: "F5-04", question: "can i download this by state?", tab: "historical", category: "f5-refusal-replay", expect: "rows_or_text", responseIncludes: ["download"], note: "Log #4105 — must answer the download question, not mislabel scope" },
 ];
 
 // ══════════════════════════════════════════════════════════════════════
@@ -297,6 +303,14 @@ const SESSIONS: SessionDef[] = [
       { question: "break it down by bias type", tab: "hate_crime", expect: "rows", note: "Follow-up: drill down" },
       { question: "just anti-Asian incidents", tab: "hate_crime", expect: "rows" },
       { question: "show participation over time", tab: "hate_crime", expect: "rows", note: "Follow-up: keeps hate_crime" },
+    ],
+  },
+  {
+    id: "MS04",
+    name: "F5 replay: national rolling murders → split by state (log #4051→#4052)",
+    steps: [
+      { question: "Can I see murders rolling over 12 months nationally, 2018 to present?", tab: "current", expect: "rows", sqlIncludes: ["national_monthly"] },
+      { question: "split it out by state", tab: "current", expect: "rows", sqlIncludes: ["partition by state"], note: "Log #4052 — was a false refusal; followup-transform must produce per-state rolling windows" },
     ],
   },
 ];
@@ -680,9 +694,11 @@ async function run() {
   }
 
   // ── Multi-turn sessions ──
-  if (isSessions || (!isQuick && !rerunIds)) {
+  // --sessions runs all; --sessions --rerun MS04 runs a subset by session id
+  const sessionsToRun = rerunIds ? SESSIONS.filter(s => rerunIds.includes(s.id)) : SESSIONS;
+  if ((isSessions && sessionsToRun.length > 0) || (!isQuick && !rerunIds)) {
     console.log(`\n═══ Multi-turn Sessions ═══\n`);
-    for (const session of SESSIONS) {
+    for (const session of sessionsToRun) {
       console.log(`Session ${session.id}: ${session.name}`);
       const sessionSid = `${SESSION_ID}-${session.id}`;
       const history: unknown[] = [];

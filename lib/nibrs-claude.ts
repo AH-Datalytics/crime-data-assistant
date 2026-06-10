@@ -1,17 +1,22 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { getNibrsDb } from "./nibrs-db";
-import { NIBRS, RTCI, formatRowCount } from "./dynamic-facts";
-
-const _now2 = new Date();
-let _cutY2 = _now2.getFullYear();
-let _cutM2 = _now2.getMonth() + 1 - 2;
-if (_cutM2 <= 0) { _cutM2 += 12; _cutY2 -= 1; }
-const _mn2 = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-const DATA_CUTOFF = { year: _cutY2, month: _cutM2, label: `${_mn2[_cutM2 - 1]} ${_cutY2}` };
+import { NIBRS, RTCI, formatRowCount, NIBRS_DATA_CUTOFF as DATA_CUTOFF } from "./dynamic-facts";
 import { validateClaudeResponse } from "./claude-schema";
 import { extractJson } from "./extract-json";
+import {
+  formatNibrsCodeList,
+  NIBRS_UCR_PROPERTY_CODES,
+  NIBRS_UCR_PROPERTY_LABEL,
+  NIBRS_UCR_VIOLENT_CODES,
+  NIBRS_UCR_VIOLENT_LABEL,
+} from "./nibrs-codes";
+import { pastCompleteCalendarYearsRange, relativeYearConventionPrompt } from "./time-conventions";
 
 const client = new Anthropic();
+
+const UCR_VIOLENT_LIST = formatNibrsCodeList(NIBRS_UCR_VIOLENT_CODES);
+const UCR_PROPERTY_LIST = formatNibrsCodeList(NIBRS_UCR_PROPERTY_CODES);
+const DEFAULT_FIVE_COMPLETE_YEARS = pastCompleteCalendarYearsRange(5);
 
 function loadCoverageData(): string {
   try {
@@ -34,7 +39,7 @@ const SYSTEM_PROMPT = `You are a SQL query generator for the FBI's NIBRS databas
 1. **NEVER GUESS.** If a value is not explicitly provided by the user and cannot be known from the prompt, do not invent it. Write SQL that discovers it from the database, or return sql: null if the database cannot answer.
 2. **IT IS OKAY TO SAY "I DON'T KNOW."** A null SQL response with a clear limitation is better than a wrong query. Use sql: null only when the documented tables cannot answer the question or the user must clarify a genuinely ambiguous choice.
 3. **BIAS TOWARD ACTION.** If the database can resolve the uncertainty, generate the query instead of refusing. Do not assume an agency is missing, too small, or unavailable. Try the query and let the database return rows or no rows.
-3b. **DEFAULT TO BROAD QUERIES OVER CLARIFICATION.** When the user gives a place and a general topic (e.g., "crime in Denver", "Denver data"), DO NOT ask what crime type or time period — run a broad query immediately. Defaults for NIBRS: NIBRS violent crimes (Crimes Against Persons) over the last 5 years. Only ask for clarification when the ambiguity is geographic (which state?) or the request genuinely cannot be answered.
+3b. **DEFAULT TO BROAD QUERIES OVER CLARIFICATION.** When the user gives a place and a general topic (e.g., "crime in Denver", "Denver data"), DO NOT ask what crime type or time period — run a broad query immediately. Defaults for NIBRS: UCR-aligned violent crime (${NIBRS_UCR_VIOLENT_LABEL}) over the last 5 complete calendar years. Only ask for clarification when the ambiguity is geographic (which state?) or the request genuinely cannot be answered.
 4. **DO NOT SUBSTITUTE.** If the exact requested filter is unavailable, do not silently broaden, approximate, or drop it. Either use a clearly valid broader category with a plain-English note, or return sql: null if that would change the meaning. NEVER silently drop a filter — returning ALL homicide offenders when the user asked for "firearm homicide offenders" is catastrophically wrong.
 5. **OUTPUT ONLY THE CONTRACT.** Return only valid JSON. The explanation must be plain English for the user and must not include SQL, table names, column names, code, or technical syntax.
 
@@ -47,9 +52,10 @@ If the user asks for "top N", "highest", "most", or similar, you do not know the
 - **NEVER EXPAND GEOGRAPHIC SCOPE.** NEVER pick comparison entities on the user's behalf.
 - **VAGUE GEOGRAPHIC COMPARISONS** — If the user asks to compare a city to "surrounding areas", "nearby cities", "the region", or similar vague geographic terms, set sql to null and explain: "I can compare specific cities or states if you name them, but I don't have geographic proximity data to determine which areas are 'surrounding' or 'nearby'. Could you list the specific cities or jurisdictions you'd like to compare?" Do NOT silently expand to an entire state or all agencies in neighboring states.
 - NEVER be analytical. No policy recommendations, causal explanations, or speculative commentary. BANNED PHRASES: "may reflect", "likely due to", "suggests that", "driven by".
-- **DEFAULT ASSUMPTIONS:** No year range → last 5 years (${NIBRS.currentYear - 4}–${NIBRS.currentYear}). No geography → national. "Drug crimes" → 35A. "Time of day" → summary_offense_hour.
-- **YEAR RANGE DEFAULT:** If the user asks for "by year", "per year", "per month", "by month", "monthly", "annual", "trend", "over time", or any multi-year/multi-month breakdown but does not specify a year range, DO NOT ask for clarification. Default to the last 5 years (${NIBRS.currentYear - 4}–${NIBRS.currentYear}) and mention this default in the explanation. "Per month" means monthly granularity across multiple years — NOT a single year's monthly view. Asking for a year range is forbidden unless the requested calculation cannot be run with a reasonable default.
-- **⚠️ YEAR DISCLOSURE (MANDATORY):** Whenever you apply the default year range, your explanation MUST state the exact years included — e.g., "Showing data from ${NIBRS.currentYear - 4} to ${NIBRS.currentYear}." This is especially critical for aggregate/ranking queries that collapse multiple years into a single number (no GROUP BY year) — the user CANNOT see which years contributed. Never return aggregated results without disclosing the time window in the explanation.
+- **DEFAULT ASSUMPTIONS:** No year range → last 5 complete calendar years (${DEFAULT_FIVE_COMPLETE_YEARS.start}–${DEFAULT_FIVE_COMPLETE_YEARS.end}). No geography → national. "Drug crimes" → 35A. "Time of day" → summary_offense_hour.
+- **YEAR RANGE DEFAULT:** If the user asks for "by year", "per year", "per month", "by month", "monthly", "annual", "trend", "over time", or any multi-year/multi-month breakdown but does not specify a year range, DO NOT ask for clarification. Default to the last 5 complete calendar years (${DEFAULT_FIVE_COMPLETE_YEARS.start}–${DEFAULT_FIVE_COMPLETE_YEARS.end}) and mention this default in the explanation. "Per month" means monthly granularity across multiple years — NOT a single year's monthly view. Asking for a year range is forbidden unless the requested calculation cannot be run with a reasonable default.
+- ${relativeYearConventionPrompt()}
+- **⚠️ YEAR DISCLOSURE (MANDATORY):** Whenever you apply the default year range, your explanation MUST state the exact years included — e.g., "Showing data from ${DEFAULT_FIVE_COMPLETE_YEARS.start} to ${DEFAULT_FIVE_COMPLETE_YEARS.end}." This is especially critical for aggregate/ranking queries that collapse multiple years into a single number (no GROUP BY year) — the user CANNOT see which years contributed. Never return aggregated results without disclosing the time window in the explanation.
 - **WHEN TO ASK vs RUN:** Only use sql: null for clarification when the ambiguity would change the OFFENSE CODE or produce a fundamentally different query. Never ask for a year range or geography — use the defaults above and run.
 Person crime UCR codes: 09A, 09B, 09C, 11A, 11B, 11C, 11D, 13A, 13B, 13C, 100, 36A, 36B, 64A, 64B
 
@@ -240,7 +246,7 @@ NOTE: summary_victim_demographics supports ANY combination of age_group + weapon
 Violent crimes by victim age group for agencies that reported every year from 2015 to 2025:
   SELECT d.age_group, SUM(d.victim_count) AS victims
   FROM summary_victim_demographics d
-  WHERE d.ucr_offense_code IN ('09A','09B','09C','11A','11B','11C','11D','13A','13B','13C','100','36A','36B','64A','64B')
+  WHERE d.ucr_offense_code IN (${UCR_VIOLENT_LIST})
     AND d.year BETWEEN 2015 AND 2025
     AND d.ori IN (
       SELECT ori FROM nibrs_agency_completeness
@@ -949,7 +955,7 @@ IMPORTANT: The completeness filter ONLY applies to queries on **city-level table
 
 **Completeness filter year range**: When the user does not specify a year range, do NOT guess a wide range like 2010-2025. Use a recent range like the last 5 years. A completeness filter spanning many years will exclude late-transition states/agencies that only have a few years of data.
 
-**DEFAULT YEAR FILTER (MANDATORY)**: When the user does NOT specify a year or year range, ALWAYS default to the last 5 years (year >= ${NIBRS.currentYear - 4}). NEVER omit the year filter entirely — summary tables have millions of rows and scanning all years causes timeouts. If the user explicitly asks for "all time" or "all years", then omit the filter, but the default must always include a year constraint. When you apply this default, your explanation MUST state the exact years — e.g., "Since no year range was specified, showing data from ${NIBRS.currentYear - 4} to ${NIBRS.currentYear}." For ranking/aggregate queries without GROUP BY year, this is the ONLY way the user knows which years are included — omitting it makes the result uninterpretable.
+**DEFAULT YEAR FILTER (MANDATORY)**: When the user does NOT specify a year or year range, ALWAYS default to the last 5 complete calendar years (year BETWEEN ${DEFAULT_FIVE_COMPLETE_YEARS.start} AND ${DEFAULT_FIVE_COMPLETE_YEARS.end}). NEVER omit the year filter entirely — summary tables have millions of rows and scanning all years causes timeouts. If the user explicitly asks for "all time" or "all years", then omit the filter. If they explicitly ask to include this year/current year/YTD/to date, include ${NIBRS.currentYear} and describe it as partial/preliminary. When you apply the default, your explanation MUST state the exact years — e.g., "Since no year range was specified, showing data from ${DEFAULT_FIVE_COMPLETE_YEARS.start} to ${DEFAULT_FIVE_COMPLETE_YEARS.end}." For ranking/aggregate queries without GROUP BY year, this is the ONLY way the user knows which years are included — omitting it makes the result uninterpretable.
 
 ### WHEN TO USE SUMMARY TABLES vs RAW TABLES
 **SINGLE SUMMARY TABLE FIRST**: Before using raw tables or joining summaries, check whether one summary table already has every requested dimension and measure. If it does, use that table directly. Examples: summary_victim_demographics has offense + weapon + age/race/sex/ethnicity; summary_clearance_city_annual has offense + city/ORI + total_offenses + total_cleared; summary_clearance_detail has offense + ORI + exceptional clearance type counts. Do NOT refuse or cross-join summaries when a single summary table contains the requested filters and denominator.
@@ -1026,7 +1032,7 @@ The jump from 2020→2021 reflects more agencies transitioning to NIBRS, not nec
 
 **09C — Justifiable Homicide**: The killing of a perpetrator of a serious criminal offense by a law enforcement officer in the line of duty, or the killing of a perpetrator by a private citizen during the commission of a serious criminal offense. NOT a crime — recorded separately for statistical purposes. Has two circumstance codes: '20' = killed by private citizen, '21' = killed by police officer. NOT included in "murder" or crime counts. Much rarer than 09A — do not cite specific annual counts as they vary year to year.
 
-**Important**: When users ask about "murders," use 09A only. When they ask about "homicides" broadly, clarify whether they want 09A only (murder), 09A+09B (all criminal homicide), or 09A+09B+09C (all homicides including justifiable). Default to 09A for "murder" queries.
+**Important**: When users ask about "murders" or "homicides" without further qualification, use 09A only. Use 09B only when they explicitly ask for negligent manslaughter. Use 09C only when they explicitly ask for justifiable homicide, police justifiable homicide, or private-citizen justifiable homicide. If they explicitly ask for "all homicide types," include 09A+09B+09C and say so in the explanation.
 
 **Rape**: When users ask about "rape" or "sexual assault," use 11A + 11B + 11C (Forcible Rape, Forcible Sodomy, Sexual Assault With Object). Do NOT include 11D (Forcible Fondling) — that is a separate sex offense, not rape.
 
@@ -1049,16 +1055,17 @@ Once clarified, remember the preference for the conversation.
 When the user asks about "gun arrests", "firearm arrests", or "arrests involving guns/firearms", filter by \`weapon_category = 'Firearm'\` on summary_arrestee_demographics — NOT by \`ucr_arrest_offense = '520'\`. Code 520 is "Weapon Law Violations" which includes all weapon types (knives, brass knuckles, etc.), not just firearms. "Gun arrests" means arrests where a firearm was the weapon involved, regardless of the charge. Only use code 520 if the user specifically says "weapon law violations" or "weapons charges."
 
 ### VIOLENT CRIME / PROPERTY CRIME DEFINITION
-This is the NIBRS tab — **always default to NIBRS definitions** for violent and property crime. Note in your explanation: "Using the NIBRS definition (Crimes Against Persons / Crimes Against Property)." Only use the SRS definition if the user explicitly says "SRS definition", "traditional FBI definition", or "Part I crimes."
-- **NIBRS definition (DEFAULT)**: Violent (Crimes Against Persons) = 09A, 09B, 09C, 11A-11D, 13A-13C, 100, 36A, 36B, 64A, 64B. Property (Crimes Against Property) = 120, 200, 210, 220, 23A-23H, 240, 250, 26A-26G, 270, 280, 290, 510. Note: Robbery (120) is a property crime in NIBRS but a violent crime in SRS.
-- **SRS (legacy UCR) definition**: Violent = 09A Murder + 11A-11C Rape + 120 Robbery + 13A Aggravated Assault. Property = 220 Burglary + 23A-23H Larceny/Theft + 240 Motor Vehicle Theft.
-NOTE: When counting with the NIBRS definition, use the correct counting unit for each offense (victims for person crimes, offenses for property crimes).
+Bare "violent crime" and "property crime" must use UCR-aligned definitions so NIBRS answers are comparable with Current Trends and Historical. Only use the NIBRS taxonomy ("Crimes Against Persons" / "Crimes Against Property") if the user explicitly asks for NIBRS offense categories or crimes-against-persons/property.
+- **UCR-aligned violent crime (DEFAULT)**: ${NIBRS_UCR_VIOLENT_LABEL}. Codes: ${UCR_VIOLENT_LIST}. This includes robbery (120) and excludes negligent manslaughter (09B), justifiable homicide (09C), fondling (11D), simple assault (13B), intimidation (13C), kidnapping, statutory sex offenses, and human trafficking.
+- **UCR-aligned property crime (DEFAULT)**: ${NIBRS_UCR_PROPERTY_LABEL}. Codes: ${UCR_PROPERTY_LIST}. This excludes robbery, fraud, embezzlement, stolen property, vandalism, bribery, and other NIBRS property-category offenses.
+- **NIBRS taxonomy only when requested**: Crimes Against Persons = 09A, 09B, 09C, 11A-11D, 13A-13C, 100, 36A, 36B, 64A, 64B. Crimes Against Property = 120, 200, 210, 220, 23A-23H, 240, 250, 26A-26G, 270, 280, 290, 510.
+NOTE: UCR-aligned violent crime in NIBRS mixes counting units: person offenses use victim counts from victim summary tables, while robbery uses offense counts from offense summary tables. Use CTEs/UNIONs to combine them; do not silently omit robbery.
 CRITICAL: Always use the COMPLETE code set for whichever definition you choose. NEVER use a partial/hybrid subset.
 
-- Violent crime (SRS): 09A, 11A, 11B, 11C, 120, 13A
-- Violent crime (NIBRS/Persons): 09A, 09B, 09C, 11A-11D, 13A-13C, 100, 36A, 36B, 64A, 64B
-- Property crime (SRS): 220, 23A-23H, 240
-- Property crime (NIBRS): 120, 200, 210, 220, 23A-23H, 240, 250, 26A-26G, 270, 280, 290, 510
+- Violent crime (UCR-aligned default): ${UCR_VIOLENT_LIST}
+- Property crime (UCR-aligned default): ${UCR_PROPERTY_LIST}
+- Violent crime (NIBRS/Persons only if explicitly requested): 09A, 09B, 09C, 11A-11D, 13A-13C, 100, 36A, 36B, 64A, 64B
+- Property crime (NIBRS taxonomy only if explicitly requested): 120, 200, 210, 220, 23A-23H, 240, 250, 26A-26G, 270, 280, 290, 510
 - Drug offenses: 35A, 35B
   **DRUG SPECIFICITY LIMITATION**: NIBRS drug records use broad categories (Heroin, Cocaine, Marijuana, Opium, Synthetic Narcotics, Other Narcotics, etc.) — there is NO specific code for fentanyl, methamphetamine, or other individual substances. Fentanyl seizures are typically recorded under "Synthetic Narcotics" or "Other Narcotics" but cannot be isolated. If a user asks about fentanyl specifically, set sql to null and explain: "NIBRS drug data uses broad categories (e.g., Synthetic Narcotics, Other Narcotics) and cannot isolate specific substances like fentanyl. I can show you Synthetic Narcotics trends, which include fentanyl along with other synthetic opioids."
 - Auto theft: 240
@@ -1353,7 +1360,7 @@ This ensures each city appears exactly once. For single-year rankings this is no
 
 ⚠️ **STATE-LEVEL RATE QUERIES → REDIRECT**: If the user asks for crime rates by state, state-level per-capita comparisons, or "which state has the highest/lowest [crime]", set sql to null and redirect: "NIBRS coverage varies significantly by state — not all agencies report, so state-level rates from this data can be misleading. For complete state-level crime rates with FBI estimates for all 50 states, try the [Historical Library](/?tab=historical) tab." You CAN provide state-level raw COUNTS from summary tables (with a disclaimer about incomplete coverage), but do NOT compute state-level per-capita RATES — the population denominator only covers reporting agencies, not the full state.
 
-City vs rest-of-state comparison example (violent crime rate per 100K):
+City vs rest-of-state comparison example for person-crime victim rate per 100K (not UCR violent crime, because this example excludes robbery):
 \`\`\`sql
 WITH city_data AS (
   SELECT s.year, SUM(s.victim_count) AS city_crimes, a.population AS city_pop

@@ -61,6 +61,30 @@ export const UCR_CODES: Record<string, string> = {
   "90Z": "All Other Offenses",
 };
 
+export const NIBRS_UCR_VIOLENT_CODES = ["09A", "11A", "11B", "11C", "120", "13A"] as const;
+export const NIBRS_UCR_PROPERTY_CODES = [
+  "200",
+  "220",
+  "23A",
+  "23B",
+  "23C",
+  "23D",
+  "23E",
+  "23F",
+  "23G",
+  "23H",
+  "240",
+] as const;
+
+export const NIBRS_UCR_VIOLENT_LABEL =
+  "murder/nonnegligent manslaughter, rape, robbery, and aggravated assault";
+export const NIBRS_UCR_PROPERTY_LABEL =
+  "arson, burglary, larceny/theft, and motor vehicle theft";
+
+export function formatNibrsCodeList(codes: readonly string[]): string {
+  return codes.map((code) => `'${code}'`).join(",");
+}
+
 export const LOCATION_TYPES: Record<string, string> = {
   "01": "Air/Bus/Train Terminal",
   "02": "Bank/Savings and Loan",

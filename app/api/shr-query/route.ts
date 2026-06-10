@@ -18,6 +18,11 @@ import { checkSingleRowTrend } from "@/lib/single-row-trend";
 import { detectYearSeriesChart } from "@/lib/chart-auto-detect";
 import { parseRoutingLogMeta } from "@/lib/routing-log-meta";
 import { answerMetadataQuestion } from "@/lib/metadata-coverage";
+import { validateTablesForTab } from "@/lib/table-allowlist";
+import { applyResultDisclosures } from "@/lib/result-disclosure";
+import { appendShrAgencyProbeCaveat, isZeroResult, runShrAgencyProbe } from "@/lib/shr-agency-probe";
+import { normalizeHistoryForTab } from "@/lib/chat-history";
+import { detectFollowupTransform } from "@/lib/followup-transform";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function jsonResp(data: Record<string, any> | QueryError, status = 200) {
@@ -76,7 +81,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const history = Array.isArray(body?.history) ? body.history.slice(-6) : [];
+    const history = normalizeHistoryForTab(body?.history, "shr");
+    const followupTransform = detectFollowupTransform(question, history);
+    const promptHistory = followupTransform
+      ? [...history, { role: "user" as const, content: followupTransform.instruction }]
+      : history;
     const start = Date.now();
     const routingMeta = parseRoutingLogMeta(body);
     const writeLog = (
@@ -185,7 +194,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Check response cache (only for standalone questions, not follow-ups)
-    const cached = history.length === 0 ? getCached(question, "shr") : null;
+    const cached = promptHistory.length === 0 ? getCached(question, "shr") : null;
 
     let claude: {
       sql: string | null;
@@ -214,7 +223,7 @@ export async function POST(req: NextRequest) {
       console.log(`[shr][shooting-rewrite] Original: "${question}" → Rewritten: "${queryForModel}"`);
     }
     const messages: Anthropic.MessageParam[] = [
-      ...history.map((h: { role: string; content: string }) => ({
+      ...promptHistory.map((h: { role: string; content: string }) => ({
         role: h.role as "user" | "assistant",
         content: h.content,
       })),
@@ -304,6 +313,56 @@ export async function POST(req: NextRequest) {
     }
 
     let sql = validation.sanitized!;
+
+    {
+      const tableDb = getShrDb();
+      if (tableDb) {
+        const tableCheck = validateTablesForTab(sql, "shr", tableDb);
+        if (!tableCheck.ok) {
+          try {
+            const retryMessages: Anthropic.MessageParam[] = [
+              ...messages,
+              { role: "assistant", content: text || JSON.stringify(claude) },
+              { role: "user", content: `[SYSTEM: ${tableCheck.message}]` },
+            ];
+            const retryResp = await client.messages.create({
+              model: "claude-haiku-4-5-20251001",
+              max_tokens: 2000,
+              system: getShrSystemPrompt(),
+              messages: retryMessages,
+            });
+            const retryText = retryResp.content
+              .filter((b): b is Anthropic.TextBlock => b.type === "text")
+              .map((b) => b.text)
+              .join("");
+            const retryClaude = extractJson(retryText) as Record<string, unknown> | null;
+            if (retryClaude?.sql) {
+              const retryValidation = validateAndSanitize(retryClaude.sql as string);
+              if (retryValidation.valid) {
+                const retrySql = retryValidation.sanitized!;
+                const retryTableCheck = validateTablesForTab(retrySql, "shr", tableDb);
+                if (retryTableCheck.ok) {
+                  sql = retrySql;
+                  claude.explanation = (retryClaude.explanation as string) || claude.explanation;
+                  claude.title = (retryClaude.title as string) || claude.title;
+                  claude.chartType = (retryClaude.chartType as string) || claude.chartType;
+                  claude.xAxis = (retryClaude.xAxis as string) || claude.xAxis;
+                  claude.yAxis = (retryClaude.yAxis as string[]) || claude.yAxis;
+                } else {
+                  const msg = "I couldn't build a valid query for the SHR database. Try rephrasing for homicide-specific data or switching to a different tab for broader crime totals.";
+                  writeLog(question, retrySql, 0, `table_allowlist_second_failure:${retryTableCheck.unknown.join(",")}`, Date.now() - start, msg, "shr", [...tableCheck.fired, ...retryTableCheck.fired], "haiku-4.5", sessionId);
+                  return jsonResp({ success: true, question, sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - start });
+                }
+              }
+            }
+          } catch { /* fall through to friendly failure */ }
+
+          const msg = "I couldn't build a valid query for the SHR database. Try rephrasing for homicide-specific data or switching to a different tab for broader crime totals.";
+          writeLog(question, sql, 0, `table_allowlist:${tableCheck.unknown.join(",")}`, Date.now() - start, msg, "shr", tableCheck.fired, "haiku-4.5", sessionId);
+          return jsonResp({ success: true, question, sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - start });
+        }
+      }
+    }
 
     // Step 2b: Run guardrails
     const ctx = extractQueryContext(sql, question, "shr");
@@ -404,12 +463,19 @@ export async function POST(req: NextRequest) {
     const executionMs = Date.now() - start;
 
     if (rows.length === 0) {
-      writeLog(question, sql, 0, "empty_result", executionMs, claude.explanation, "shr", [], "haiku-4.5", sessionId);
+      let explanation = claude.explanation || "The query returned no results.";
+      const probeResult = runShrAgencyProbe(db, sql);
+      const guardrails = [...guardrailResult.fired];
+      if (probeResult && probeResult.count > 0) {
+        explanation = appendShrAgencyProbeCaveat(explanation, probeResult.probe.agency);
+        guardrails.push("shr-agency-zero-probe");
+      }
+      writeLog(question, sql, 0, "empty_result", executionMs, explanation, "shr", guardrails, "haiku-4.5", sessionId);
       return jsonResp({
         success: true,
         question,
         sql,
-        explanation: claude.explanation || "The query returned no results.",
+        explanation,
         title: "",
         columns: [],
         rows: [],
@@ -422,6 +488,7 @@ export async function POST(req: NextRequest) {
     }
 
     let columns = Object.keys(rows[0]);
+    const zeroProbeResult = isZeroResult(rows, columns) ? runShrAgencyProbe(db, sql) : null;
 
     // Detect all-null data columns (query returned rows but no usable values)
     {
@@ -563,6 +630,10 @@ export async function POST(req: NextRequest) {
     // Single-row trend warning
     const singleRowWarning = checkSingleRowTrend(question, rows.length);
     if (singleRowWarning) disclaimers.push(singleRowWarning);
+    if (zeroProbeResult && zeroProbeResult.count > 0) {
+      disclaimers.push(`Note: SHR contains records under similar agency names for ${zeroProbeResult.probe.agency}, so a zero result may reflect an agency-name or agency-type mismatch rather than no homicides.`);
+      guardrailResult.fired.push("shr-agency-zero-probe");
+    }
 
     // Shooting caveat — if user asked about shootings, label as fatal and note nonfatal exclusion
     if (asksShooting && !wantsNonfatal) {
@@ -598,6 +669,7 @@ export async function POST(req: NextRequest) {
 
     // Fix hallucinated counts using distinct entity detection
     explanation = validateExplanationCount(explanation, rows as Record<string, unknown>[], columns);
+    explanation = applyResultDisclosures({ explanation, question, sql, rows, tab: "shr" });
 
     // Sanitize any leaked SQL/JSON
     explanation = sanitizeExplanation(explanation);
@@ -605,7 +677,7 @@ export async function POST(req: NextRequest) {
     writeLog(question, sql, rows.length, null, totalMs, explanation, "shr", guardrailResult.fired, "haiku-4.5", sessionId);
 
     // Cache successful responses (only standalone questions)
-    if (!cached && history.length === 0) {
+    if (!cached && promptHistory.length === 0) {
       setCache(question, "shr", { sql, explanation: claude.explanation || "", title: claude.title, chartType: claude.chartType, xAxis: claude.xAxis, yAxis: claude.yAxis, yAxisLabel: claude.yAxisLabel });
     }
 

@@ -1,16 +1,9 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { RTCI, HISTORICAL, NIBRS } from "./dynamic-facts";
-
-// Compute data cutoff inline (2 months before current date)
-const _now = new Date();
-let _cutY = _now.getFullYear();
-let _cutM = _now.getMonth() + 1 - 2;
-if (_cutM <= 0) { _cutM += 12; _cutY -= 1; }
-const _monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-const DATA_CUTOFF = { year: _cutY, month: _cutM, label: `${_monthNames[_cutM - 1]} ${_cutY}` };
+import { RTCI, HISTORICAL, NIBRS, RTCI_DATA_CUTOFF as DATA_CUTOFF } from "./dynamic-facts";
 import { validateClaudeResponse } from "./claude-schema";
 import { extractJson } from "./extract-json";
 import { removeCodeFences, removeJsonWithSqlKey } from "./text-sanitize";
+import { relativeYearConventionPrompt } from "./time-conventions";
 
 const client = new Anthropic();
 
@@ -42,6 +35,7 @@ If the user asks for "top N", "highest", "most", or similar, you do not know the
 - **NEVER EXPAND GEOGRAPHIC SCOPE.** NEVER pick comparison entities on the user's behalf. If the user asks to compare a city to "surrounding areas", "nearby cities", or similar vague geographic terms, set sql to null and ask which specific cities or jurisdictions they want to compare.
 - NEVER be analytical. No policy recommendations, causal explanations, or speculative commentary. BANNED PHRASES: "may reflect", "likely due to", "could be attributed to", "suggests that", "driven by".
 - **COMMON SYNONYMS — do not ask, just map:** "killings" → murder, "car theft" → Motor Vehicle Theft, "cops" → sworn officers, "break-ins" → burglary. **"last year"** → ${RTCI.maxYear - 1} for Current Trends, ${HISTORICAL.crimeMaxYear} for Historical. Do NOT ask which year — just use it.
+- ${relativeYearConventionPrompt()}
 - **"SAFEST" / "MOST DANGEROUS"** → set sql to null. Suggest a specific crime type and metric instead.
 
 ## DATABASE SCHEMA
@@ -286,6 +280,28 @@ ORDER BY year, month
 \`\`\`
 Note: The CTE has NO date filter so the rolling window has full lead-in data. The outer WHERE starts at 2018 (not 2017) because the first 11 months of 2017 don't have a full rolling window.
 **IMPORTANT**: When the user says "rolling 12-month since X" or "rolling since X", X is the **chart/display start year**, NOT the data start. The CTE must always have NO date filter. The outer WHERE should use year >= X. For example, "rolling 12-month murders since 2020" means: CTE fetches all data, outer query uses WHERE year >= 2020.
+
+### Per-state rolling 12-month trend
+Use this when a user asks to split a national rolling trend out by state. Keep the same complete-reporter methodology by joining \`agency_monthly\` to \`sample_agencies\`, and partition the rolling window by state.
+\`\`\`sql
+WITH monthly AS (
+  SELECT sa.state, am.year, am.month, SUM(am.count) AS murders
+  FROM agency_monthly am
+  JOIN sample_agencies sa ON sa.ori = am.ori
+  WHERE am.offense = 'Murder'
+  GROUP BY sa.state, am.year, am.month
+),
+rolling AS (
+  SELECT state, year, month,
+    SUM(murders) OVER (PARTITION BY state ORDER BY year, month ROWS BETWEEN 11 PRECEDING AND CURRENT ROW) AS rolling_12
+  FROM monthly
+)
+SELECT state, year, month, rolling_12
+FROM rolling
+WHERE year >= 2018
+ORDER BY state, year, month
+LIMIT 5000
+\`\`\`
 
 ### Violent crime total for an agency
 \`\`\`sql
@@ -714,6 +730,7 @@ If the user asks for "top N", "highest", "most", or similar, you do not know the
 - **NEVER EXPAND GEOGRAPHIC SCOPE.** NEVER pick comparison entities on the user's behalf. If the user asks to compare a city to "surrounding areas", "nearby cities", or similar vague geographic terms, set sql to null and ask which specific cities or jurisdictions they want to compare.
 - NEVER be analytical. No policy recommendations, causal explanations, or speculative commentary. BANNED PHRASES: "may reflect", "likely due to", "could be attributed to", "suggests that", "driven by".
 - **COMMON SYNONYMS — do not ask, just map:** "killings" → murder, "car theft" → Motor Vehicle Theft, "cops" → sworn officers, "break-ins" → burglary. **"last year"** → ${RTCI.maxYear - 1} for Current Trends, ${HISTORICAL.crimeMaxYear} for Historical. Do NOT ask which year — just use it.
+- ${relativeYearConventionPrompt()}
 - **"SAFEST" / "MOST DANGEROUS"** → set sql to null. Suggest a specific crime type and metric instead.
 
 ## DATABASE SCHEMA

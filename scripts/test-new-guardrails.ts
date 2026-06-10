@@ -10,6 +10,7 @@
 import { extractQueryContext } from "../lib/query-context.js";
 import { runGuardrails } from "../lib/guardrails.js";
 import { detectAllNullData } from "../lib/all-null-detection.js";
+import { currentCalendarYear, pastCompleteCalendarYearsRange, pastYearsIncludingCurrentRange } from "../lib/time-conventions.js";
 
 let pass = 0;
 let fail = 0;
@@ -622,6 +623,30 @@ console.log("\n═══ Hard override guardrails ═══\n");
   const r = runGuardrails(ctx);
   assert("#2 sum-pop multi: fires", r.fired.includes("shr-sum-population"));
   assert("#2 sum-pop multi: override (not just rewrite)", r.overrideResponse !== null);
+}
+
+{
+  const sql = `SELECT i.year, ROUND(COUNT(*) * 100000.0 / NULLIF(AVG(i.population), 0), 1) as rate_per_100k FROM incidents i JOIN victims v ON v.incident_id = i.id WHERE i.state = 'PA' AND i.homicide_type = 'Murder' GROUP BY i.year`;
+  const ctx = extractQueryContext(sql, "firearm homicide rate in PA", "shr");
+  const r = runGuardrails(ctx);
+  assert("#2 avg-pop state rate: fires", r.fired.includes("shr-rate-bad-denominator"));
+  assert("#2 avg-pop state rate: override", r.overrideResponse !== null && r.overrideResponse.includes("state_population"));
+}
+
+{
+  const sql = `SELECT i.year, ROUND(COUNT(*) * 100000.0 / NULLIF(sp.population, 0), 1) as rate_per_100k FROM incidents i JOIN victims v ON v.incident_id = i.id JOIN state_population sp ON sp.state = i.state AND sp.year = i.year WHERE i.state = 'PA' AND i.homicide_type = 'Murder' GROUP BY i.year, sp.population`;
+  const ctx = extractQueryContext(sql, "firearm homicide rate in PA", "shr");
+  const r = runGuardrails(ctx);
+  assert("#2 state-pop state rate: no bad denominator", !r.fired.includes("shr-rate-bad-denominator"));
+  assert("#2 state-pop state rate: no sum-pop", !r.fired.includes("shr-sum-population"));
+}
+
+{
+  const sql = `WITH counts AS (SELECT i.year, COUNT(*) as victims FROM incidents i JOIN victims v ON v.incident_id = i.id WHERE i.homicide_type = 'Murder' GROUP BY i.year) SELECT counts.year, ROUND(counts.victims * 100000.0 / NULLIF(sp.population, 0), 1) as rate_per_100k FROM counts JOIN state_population sp ON sp.state = 'US' AND sp.year = counts.year`;
+  const ctx = extractQueryContext(sql, "national murder rate", "shr");
+  const r = runGuardrails(ctx);
+  assert("#2 state-pop national rate: no bad denominator", !r.fired.includes("shr-rate-bad-denominator"));
+  assert("#2 state-pop national rate: no sum-pop", !r.fired.includes("shr-sum-population"));
 }
 
 // #2: SHR SUM(population) — single-agency rewrite (no override)
@@ -1404,6 +1429,190 @@ console.log("\n═══ nibrs city/state summary joins ═══\n");
   const r = runGuardrails(ctx);
   assert("TP: direct city/state summary join fires",
     r.fired.includes("nibrs-cross-level-join"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+// Wave 1: OR/AND precedence, lower-bound years, SHR homicide type, theft subtype labels
+console.log("\n=== wave-1 query-contract guardrails ===\n");
+
+{
+  const sql = `SELECT year, SUM(count) AS murders FROM agency_monthly WHERE agency = 'Houston' OR agency = 'Dallas' AND offense = 'Murder' GROUP BY year`;
+  const ctx = extractQueryContext(sql, "Compare Houston and Dallas murders", "current");
+  const r = runGuardrails(ctx);
+  assert("TP: unparenthesized top-level OR/AND fires",
+    r.fired.includes("or-and-precedence"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  const sql = `SELECT year, SUM(count) AS murders FROM agency_monthly WHERE (agency = 'Houston' OR agency = 'Dallas') AND offense = 'Murder' GROUP BY year`;
+  const ctx = extractQueryContext(sql, "Compare Houston and Dallas murders", "current");
+  const r = runGuardrails(ctx);
+  assert("FP: parenthesized OR group does not fire",
+    !r.fired.includes("or-and-precedence"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  const sql = `SELECT year, SUM(count) AS thefts FROM agency_monthly WHERE agency = 'Chicago' AND offense = 'Motor Vehicle Theft' GROUP BY year ORDER BY year`;
+  const ctx = extractQueryContext(sql, "Chicago auto thefts from 2019 to present", "current");
+  const r = runGuardrails(ctx);
+  assert("TP: requested start year without SQL lower bound fires",
+    r.fired.includes("contract-year-lower-bound-missing"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  const sql = `SELECT year, SUM(count) AS thefts FROM agency_monthly WHERE agency = 'Chicago' AND offense = 'Motor Vehicle Theft' AND year >= 2019 GROUP BY year ORDER BY year`;
+  const ctx = extractQueryContext(sql, "Chicago auto thefts from 2019 to present", "current");
+  const r = runGuardrails(ctx);
+  assert("FP: requested start year with SQL lower bound does not fire",
+    !r.fired.includes("contract-year-lower-bound-missing"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  const range = pastCompleteCalendarYearsRange(5);
+  const current = currentCalendarYear();
+  const sql = `SELECT year, SUM(count) AS murders FROM agency_monthly WHERE offense = 'Murder' AND year BETWEEN ${current - 4} AND ${current} GROUP BY year ORDER BY year`;
+  const ctx = extractQueryContext(sql, "murder trend over the past 5 years", "current");
+  const r = runGuardrails(ctx);
+  assert("TP: past N years including current year fires",
+    r.fired.includes("relative-past-years-complete-calendar"),
+    `expected ${range.start}-${range.end}; fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  const range = pastCompleteCalendarYearsRange(5);
+  const sql = `SELECT year, SUM(count) AS murders FROM agency_monthly WHERE offense = 'Murder' AND year BETWEEN ${range.start} AND ${range.end} GROUP BY year ORDER BY year`;
+  const ctx = extractQueryContext(sql, "murder trend over the past 5 years", "current");
+  const r = runGuardrails(ctx);
+  assert("FP: past N complete-year range does not fire",
+    !r.fired.includes("relative-past-years-complete-calendar"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  const range = pastYearsIncludingCurrentRange(5);
+  const sql = `SELECT year, SUM(count) AS murders FROM agency_monthly WHERE offense = 'Murder' AND year BETWEEN ${range.start} AND ${range.end} GROUP BY year ORDER BY year`;
+  const ctx = extractQueryContext(sql, "murder trend over the past 5 years including this year", "current");
+  const r = runGuardrails(ctx);
+  assert("FP: past N including this year is allowed",
+    !r.fired.includes("relative-past-years-complete-calendar"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  const sql = `SELECT i.year, COUNT(*) AS victims FROM incidents i JOIN victims v ON v.incident_id = i.id WHERE i.state = 'PA' AND i.year = 2023 GROUP BY i.year`;
+  const ctx = extractQueryContext(sql, "How many homicides in Pennsylvania in 2023?", "shr");
+  const r = runGuardrails(ctx);
+  assert("TP: SHR homicide question without homicide_type fires",
+    r.fired.includes("shr-homicide-type-missing"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  const sql = `SELECT i.year, COUNT(*) AS victims FROM incidents i JOIN victims v ON v.incident_id = i.id WHERE i.state = 'PA' AND i.year = 2023 AND i.homicide_type = 'Murder' GROUP BY i.year`;
+  const ctx = extractQueryContext(sql, "How many homicides in Pennsylvania in 2023?", "shr");
+  const r = runGuardrails(ctx);
+  assert("FP: SHR homicide question with homicide_type does not fire",
+    !r.fired.includes("shr-homicide-type-missing"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  const sql = `SELECT year, SUM(count) AS thefts FROM agency_monthly WHERE agency = 'Edmond' AND offense = 'Theft' GROUP BY year`;
+  const ctx = extractQueryContext(sql, "larceny from auto in Edmond", "current");
+  const r = runGuardrails(ctx);
+  assert("TP: Current parent Theft for subtype request fires",
+    r.fired.includes("current-historical-theft-subtype-parent"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  const sql = `SELECT year, SUM(offense_count) AS larceny_from_auto FROM summary_city_monthly WHERE ucr_offense_code = '23F' GROUP BY year`;
+  const ctx = extractQueryContext(sql, "larceny from auto in Edmond", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("FP: NIBRS subtype code does not fire Current/Historical Theft caveat guardrail",
+    !r.fired.includes("current-historical-theft-subtype-parent"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+// Wave 2: NIBRS canonical offense categories and homicide semantics
+console.log("\n=== wave-2 nibrs category guardrails ===\n");
+
+{
+  const sql = `SELECT year, SUM(victim_count) AS violent_crime FROM summary_victim_state_monthly WHERE ucr_offense_code IN ('09A','09B','09C','11A','11B','11C','11D','13A','13B','13C','100','36A','36B','64A','64B') GROUP BY year`;
+  const ctx = extractQueryContext(sql, "violent crime in Texas since 2020", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("TP: NIBRS broad persons taxonomy for bare violent crime fires",
+    r.fired.includes("nibrs-offense-category-drift"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  const sql = `WITH person AS (SELECT year, SUM(victim_count) AS cnt FROM summary_victim_state_monthly WHERE ucr_offense_code IN ('09A','11A','11B','11C','13A') GROUP BY year), robbery AS (SELECT year, SUM(offense_count) AS cnt FROM summary_state_monthly WHERE ucr_offense_code = '120' GROUP BY year) SELECT person.year, person.cnt + robbery.cnt AS violent_crime FROM person JOIN robbery ON robbery.year = person.year`;
+  const ctx = extractQueryContext(sql, "violent crime in Texas since 2020", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("FP: UCR-aligned violent code set does not fire",
+    !r.fired.includes("nibrs-offense-category-drift"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  const sql = `SELECT year, SUM(offense_count) AS property_crime FROM summary_state_monthly WHERE ucr_offense_code IN ('120','200','210','220','23A','23B','23C','23D','23E','23F','23G','23H','240','250','26A','26B','26C','26D','26E','26F','26G','270','280','290','510') GROUP BY year`;
+  const ctx = extractQueryContext(sql, "property crime in Texas since 2020", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("TP: NIBRS property taxonomy for bare property crime fires",
+    r.fired.includes("nibrs-offense-category-drift"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  const sql = `SELECT year, SUM(offense_count) AS property_crime FROM summary_state_monthly WHERE ucr_offense_code IN ('200','220','23A','23B','23C','23D','23E','23F','23G','23H','240') GROUP BY year`;
+  const ctx = extractQueryContext(sql, "property crime in Texas since 2020", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("FP: UCR-aligned property code set does not fire",
+    !r.fired.includes("nibrs-offense-category-drift"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  const sql = `SELECT year, SUM(victim_count) AS homicides FROM summary_victim_state_monthly WHERE ucr_offense_code IN ('09A','09B','09C') GROUP BY year`;
+  const ctx = extractQueryContext(sql, "homicides in Pennsylvania", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("TP: NIBRS ordinary homicide with 09B/09C fires",
+    r.fired.includes("nibrs-homicide-code-drift"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  const sql = `SELECT year, SUM(victim_count) AS homicides FROM summary_victim_state_monthly WHERE ucr_offense_code IN ('09A','09B','09C') GROUP BY year`;
+  const ctx = extractQueryContext(sql, "all homicide types in Pennsylvania", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("FP: explicit all homicide types does not fire",
+    !r.fired.includes("nibrs-homicide-code-drift"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  const sql = `SELECT dv.data_year, COUNT(DISTINCT dv.ori || ':' || dv.data_year || ':' || dv.incident_num) AS dv_incidents FROM summary_domestic_violence dv JOIN agencies a ON a.ori = dv.ori AND a.year = dv.data_year WHERE a.city = 'Chicago' AND dv.data_year = 2024 GROUP BY dv.data_year`;
+  const ctx = extractQueryContext(sql, "police involved domestic violence incidents in Chicago 2024", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("TP: NIBRS police-involved DV hard-stops",
+    r.fired.includes("nibrs-officer-involved-unsupported"),
+    `fired: ${JSON.stringify(r.fired)}`);
+  assert("TP: NIBRS police-involved DV override",
+    r.overrideResponse !== null && r.overrideResponse.includes("does not identify whether a police officer"),
+    r.overrideResponse || "no override");
+}
+
+{
+  const sql = `SELECT year, SUM(victim_count) AS victims FROM summary_victim_circumstance WHERE ucr_offense_code = '09C' AND circumstance_code = '21' GROUP BY year`;
+  const ctx = extractQueryContext(sql, "justifiable homicides where criminals were killed by police", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("FP: NIBRS killed-by-police justifiable homicide remains answerable",
+    !r.fired.includes("nibrs-officer-involved-unsupported"),
     `fired: ${JSON.stringify(r.fired)}`);
 }
 console.log("\n" + "═".repeat(60));

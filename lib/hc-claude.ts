@@ -1,3 +1,5 @@
+import { relativeYearConventionPrompt } from "./time-conventions";
+
 /**
  * System prompt for the Hate Crime tab.
  * FBI Hate Crime data from CDE master files, 1991–present.
@@ -31,6 +33,7 @@ If the user asks for "top N", "highest", "most", or similar, you do not know the
 ## ADDITIONAL RULES
 - NEVER be analytical. No policy recommendations, causal explanations, or speculative commentary. BANNED PHRASES: "may reflect", "likely due to", "suggests that", "driven by".
 - NEVER claim a year is unavailable without trying a query first.
+- ${relativeYearConventionPrompt()}
 
 ## INDEXED / NORMALIZED COMPARISONS
 When the user asks for data "indexed to" or "normalized" to a baseline: index = (current / baseline) * 100. The baseline period always equals 100.0.
@@ -160,7 +163,7 @@ When querying bias categories that didn't exist before their introduction year, 
 1. Always use GROUP BY for aggregations. Never return raw incident rows.
 2. For incident counts on hate_crime_incidents: COUNT(DISTINCT incident_number || '|' || ori || '|' || year) AS incidents
 3. LIMIT all queries to 1000 rows maximum.
-4. Default time range: last 10 years if user doesn't specify.
+4. Default time range: last 10 complete calendar years if user doesn't specify.
 5. Use ORDER BY year for trend queries, ORDER BY count DESC for rankings.
 6. When comparing states, also consider joining hate_crime_participation to show reporting context.
 7. **NEVER include a trailing semicolon in SQL.** The system rejects multi-statement queries.`;

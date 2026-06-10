@@ -7,6 +7,47 @@
 import { getDb } from "./rtci-db";
 import { getNibrsDb } from "./nibrs-db";
 
+export type DataCutoff = { year: number; month: number; label: string };
+
+const MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+function monthLabel(year: number, month: number): DataCutoff {
+  const safeMonth = Math.min(12, Math.max(1, month || 1));
+  return { year, month: safeMonth, label: `${MONTH_NAMES[safeMonth - 1]} ${year}` };
+}
+
+/** Fallback data cutoff: 2 months before current date. Used only if DB probing fails. */
+function heuristicDataCutoff(): DataCutoff {
+  const now = new Date();
+  let y = now.getFullYear();
+  let m = now.getMonth() + 1 - 2;
+  if (m <= 0) { m += 12; y -= 1; }
+  return monthLabel(y, m);
+}
+
+function queryLatestMonth(
+  db: { prepare: (sql: string) => { get: () => unknown } },
+  table: string,
+  yearCol = "year",
+  monthCol = "month"
+): DataCutoff {
+  const ident = /^[A-Za-z_][\w]*$/;
+  if (!ident.test(table) || !ident.test(yearCol) || !ident.test(monthCol)) {
+    throw new Error("Invalid identifier for cutoff query");
+  }
+  const row = db.prepare(`
+    SELECT ${yearCol} AS year, MAX(${monthCol}) AS month
+    FROM ${table}
+    WHERE ${yearCol} = (SELECT MAX(${yearCol}) FROM ${table})
+    GROUP BY ${yearCol}
+  `).get() as { year?: number | null; month?: number | null } | undefined;
+  if (!row?.year || !row?.month) throw new Error(`No monthly cutoff rows in ${table}`);
+  return monthLabel(Number(row.year), Number(row.month));
+}
+
 // ─── RTCI (Current Trends) facts ───
 
 function loadRtciFacts() {
@@ -241,19 +282,51 @@ export const NIBRS = loadNibrsFacts();
 export const SHR = loadShrFacts();
 export { formatRowCount };
 
-/** Default data cutoff: 2 months before current date (avoids incomplete recent months) */
-function computeDataCutoff(): { year: number; month: number; label: string } {
-  const now = new Date();
-  let y = now.getFullYear();
-  let m = now.getMonth() + 1 - 2; // 2 months back
-  if (m <= 0) { m += 12; y -= 1; }
-  const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-  return { year: y, month: m, label: `${monthNames[m - 1]} ${y}` };
+function loadRtciCutoff(): DataCutoff {
+  try {
+    return queryLatestMonth(getDb(), "agency_monthly");
+  } catch (e) {
+    console.warn("[dynamic-facts] Failed to load RTCI cutoff:", e);
+    return heuristicDataCutoff();
+  }
 }
-export const DATA_CUTOFF = computeDataCutoff();
+
+function loadNibrsCutoff(): DataCutoff {
+  try {
+    const db = getNibrsDb();
+    for (const table of ["summary_state_monthly", "summary_victim_state_monthly", "incidents"]) {
+      try {
+        return queryLatestMonth(db, table);
+      } catch { /* try next table */ }
+    }
+    throw new Error("No NIBRS monthly tables available for cutoff");
+  } catch (e) {
+    console.warn("[dynamic-facts] Failed to load NIBRS cutoff:", e);
+    return heuristicDataCutoff();
+  }
+}
+
+function loadShrCutoff(): DataCutoff {
+  try {
+    // Lazy import to avoid circular deps
+    const { getShrDb } = require("./shr-db");
+    const db = getShrDb();
+    if (!db) throw new Error("SHR DB not available");
+    return queryLatestMonth(db, "incidents");
+  } catch (e) {
+    console.warn("[dynamic-facts] Failed to load SHR cutoff:", e);
+    return heuristicDataCutoff();
+  }
+}
+
+export const RTCI_DATA_CUTOFF = loadRtciCutoff();
+export const NIBRS_DATA_CUTOFF = loadNibrsCutoff();
+export const SHR_DATA_CUTOFF = loadShrCutoff();
+export const DATA_CUTOFF = RTCI_DATA_CUTOFF;
 
 // Log loaded facts for debugging
 console.log(`[dynamic-facts] RTCI: ${RTCI.agencyCount} agencies, ${RTCI.stateCount} states, ${RTCI.minYear}-${RTCI.maxYear} (${RTCI.totalMonths} months)`);
 console.log(`[dynamic-facts] Historical: ${HISTORICAL.agencyTotal} agencies, crime ${HISTORICAL.crimeMinYear}-${HISTORICAL.crimeMaxYear}, state/nat ${HISTORICAL.stateNatMinYear}-${HISTORICAL.stateNatMaxYear}`);
 console.log(`[dynamic-facts] NIBRS: ${NIBRS.minYear}-${NIBRS.maxYear}, ${NIBRS.totalLabel} incidents, DB ${NIBRS.dbSizeLabel}${NIBRS.lowCoverageStates ? `, coverage: ${NIBRS.lowCoverageStates}` : ""}`);
 console.log(`[dynamic-facts] SHR: ${SHR.minYear}-${SHR.maxYear}, ${Math.round(SHR.totalRows / 1000)}K incidents${SHR.recentYears ? `, recent: ${SHR.recentYears}` : ""}`);
+console.log(`[dynamic-facts] Cutoffs: RTCI ${RTCI_DATA_CUTOFF.label}, NIBRS ${NIBRS_DATA_CUTOFF.label}, SHR ${SHR_DATA_CUTOFF.label}`);

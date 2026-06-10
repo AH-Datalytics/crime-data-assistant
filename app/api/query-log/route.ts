@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb, getWriteDb } from "@/lib/rtci-db";
 import { getNibrsDb } from "@/lib/nibrs-db";
 import { getShrDb } from "@/lib/shr-db";
+import { recommendTabs, isFollowUp } from "@/lib/tab-suggest";
 
 const LOG_KEY = process.env.QUERY_LOG_KEY;
 
@@ -15,6 +16,111 @@ export function OPTIONS() {
   return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
 }
 
+interface DailyImpactRow {
+  ts: number;
+  tab: string | null;
+  question: string | null;
+  has_sql: number;
+  rows: number | null;
+  has_error: number;
+  has_guardrails: number;
+  response_len: number;
+  ms: number | null;
+}
+
+/**
+ * Per-day impact metrics. Definitions:
+ * - properly routed: capability router (lib/tab-suggest autoRoute) agrees the
+ *   query's tab is the primary recommendation or a listed alternative.
+ *   Follow-ups and questions the router has no opinion on are "unassessed"
+ *   and excluded from the routed %.
+ * - likely correct: no error AND (returned data rows, OR a substantive text
+ *   answer ≥60 chars for no-SQL meta/clarification responses). Zero-row SQL
+ *   results and empty responses are excluded — heuristic, not ground truth.
+ */
+function computeDailyImpact(db: ReturnType<typeof getWriteDb>, days: number, tzMin: number) {
+  if (!db) return [];
+  const cutoffMs = Date.now() - days * 86400_000;
+  const rows = db
+    .prepare(
+      `SELECT ts, tab, question,
+              CASE WHEN sql IS NOT NULL THEN 1 ELSE 0 END AS has_sql,
+              rows,
+              CASE WHEN error IS NOT NULL THEN 1 ELSE 0 END AS has_error,
+              CASE WHEN guardrails IS NOT NULL AND guardrails != '' THEN 1 ELSE 0 END AS has_guardrails,
+              COALESCE(LENGTH(response), 0) AS response_len,
+              ms
+       FROM query_log WHERE ts >= ? ORDER BY ts`
+    )
+    .all(cutoffMs) as DailyImpactRow[];
+
+  type DayAgg = {
+    day: string;
+    total: number;
+    errors: number;
+    zeroData: number;
+    withData: number;
+    textAnswer: number;
+    noAnswer: number;
+    guardrails: number;
+    routedOk: number;
+    routedMismatch: number;
+    routedUnassessed: number;
+    likelyCorrect: number;
+    msSum: number;
+    msCount: number;
+  };
+  const byDay = new Map<string, DayAgg>();
+
+  for (const r of rows) {
+    const day = new Date(r.ts - tzMin * 60_000).toISOString().slice(0, 10);
+    let agg = byDay.get(day);
+    if (!agg) {
+      agg = {
+        day, total: 0, errors: 0, zeroData: 0, withData: 0, textAnswer: 0,
+        noAnswer: 0, guardrails: 0, routedOk: 0, routedMismatch: 0,
+        routedUnassessed: 0, likelyCorrect: 0, msSum: 0, msCount: 0,
+      };
+      byDay.set(day, agg);
+    }
+    agg.total++;
+    if (r.has_guardrails) agg.guardrails++;
+    if (r.ms != null) { agg.msSum += r.ms; agg.msCount++; }
+
+    // Outcome classification
+    if (r.has_error) agg.errors++;
+    else if (r.has_sql && (r.rows ?? 0) > 0) { agg.withData++; agg.likelyCorrect++; }
+    else if (r.has_sql) agg.zeroData++;
+    else if (r.response_len >= 60) { agg.textAnswer++; agg.likelyCorrect++; }
+    else agg.noAnswer++;
+
+    // Routing assessment: tab counts as properly routed when it is the
+    // capability router's top recommendation or within 2 points of it
+    // (a genuine near-tie). Follow-ups and weak router opinions (top
+    // score < 6) are unassessed.
+    const q = r.question || "";
+    // Anaphoric short questions ("show this with LA", "can you show the rate")
+    // and tab-scoped availability questions ("do you have data for NYC?") are
+    // context-dependent — the router can't judge them.
+    const anaphoric = /\b(this|these|those)\b/i.test(q) && q.length < 90;
+    const availability = /\b(do you have|is there (any )?data|what data do you)\b/i.test(q);
+    if (!q || !r.tab || isFollowUp(q) || anaphoric || availability) { agg.routedUnassessed++; continue; }
+    let recs: ReturnType<typeof recommendTabs> = [];
+    try { recs = recommendTabs(q); } catch { /* router error → unassessed */ }
+    const top = recs[0];
+    if (!top || top.score < 6) agg.routedUnassessed++;
+    else if (recs.some((rec) => rec.tab === r.tab && rec.score >= top.score - 2)) agg.routedOk++;
+    else agg.routedMismatch++;
+  }
+
+  return [...byDay.values()]
+    .sort((a, b) => b.day.localeCompare(a.day))
+    .map(({ msSum, msCount, ...d }) => ({
+      ...d,
+      avgMs: msCount > 0 ? Math.round(msSum / msCount) : null,
+    }));
+}
+
 export async function GET(req: NextRequest) {
   const url = new URL(req.url);
 
@@ -25,6 +131,13 @@ export async function GET(req: NextRequest) {
       { error: "Unauthorized" },
       { status: 401, headers: CORS_HEADERS }
     );
+  }
+
+  if (url.searchParams.get("daily") === "1") {
+    const days = Math.min(parseInt(url.searchParams.get("days") || "30", 10) || 30, 365);
+    const tzMin = parseInt(url.searchParams.get("tzMin") || "0", 10) || 0;
+    const daily = computeDailyImpact(getWriteDb(), days, tzMin);
+    return NextResponse.json({ daily }, { headers: CORS_HEADERS });
   }
 
   const limit = parseInt(url.searchParams.get("limit") || "100", 10);

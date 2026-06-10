@@ -10,6 +10,11 @@
  */
 
 import { type SourceId, isSourceEnabled, enabledSourceIds } from "./sources";
+import {
+  asksToIncludeCurrentYear,
+  pastCompleteCalendarYearsRange,
+  pastYearsIncludingCurrentRange,
+} from "./time-conventions";
 
 export type TabId = SourceId;
 
@@ -28,6 +33,13 @@ export interface AutoRouteResult {
   reason: string;
   confidence: "high" | "medium" | "low";
   alternatives: TabRecommendation[];
+}
+
+export interface ManualSourceNudge {
+  source: TabId;
+  reason: string;
+  confidence: "high";
+  message: string;
 }
 
 export interface TabSuggestion {
@@ -347,7 +359,9 @@ function detectTimeRange(q: string): QueryIntent["timeRange"] {
   const relativeYears = q.match(/\b(?:past|last)\s+(\d{1,2})\s+years?\b/i);
   if (relativeYears) {
     const years = Number(relativeYears[1]);
-    return { start: currentYear - years, end: currentYear };
+    return asksToIncludeCurrentYear(q)
+      ? pastYearsIncludingCurrentRange(years)
+      : pastCompleteCalendarYearsRange(years);
   }
   const relativeYearWords = q.match(/\b(?:past|last)\s+(one|two|three|four|five|six|seven|eight|nine|ten)\s+years?\b/i);
   if (relativeYearWords) {
@@ -364,7 +378,9 @@ function detectTimeRange(q: string): QueryIntent["timeRange"] {
       ten: 10,
     };
     const years = wordToNumber[relativeYearWords[1].toLowerCase()];
-    return { start: currentYear - years, end: currentYear };
+    return asksToIncludeCurrentYear(q)
+      ? pastYearsIncludingCurrentRange(years)
+      : pastCompleteCalendarYearsRange(years);
   }
 
   // Recent/current/latest language should prefer current data when otherwise ambiguous.
@@ -622,6 +638,24 @@ const FOLLOWUP_PATTERNS: RegExp[] = [
   /^show\s+participation\b/i,
 ];
 
+function isAnaphoricFollowUp(q: string): boolean {
+  const hasReference = /\b(this|that|these|those|it|same)\b/i.test(q);
+  const startsWithContinuation =
+    /^(show|give|display|plot|chart|graph|add|include|remove|break|compare|switch|change|make|do|use|can you|could you|can we|could we)\b/i.test(q);
+  if (hasReference && startsWithContinuation) return true;
+
+  const shortDefiniteMetric =
+    q.length <= 80 &&
+    /^(can you|could you|can we|could we|show|give|display|plot|chart|graph)\b/i.test(q) &&
+    /\bthe\s+(rate|rates|count|counts|total|totals|trend|chart|table|breakdown|same)\b/i.test(q);
+  if (shortDefiniteMetric) {
+    const intent = parseIntent(q);
+    return intent.geography.type === "ambiguous" && !intent.offense;
+  }
+
+  return false;
+}
+
 /**
  * Detect whether a query is a session follow-up with no standalone routing intent.
  * Follow-ups are things like "normalize that", "make it yellow", "what about 2024?"
@@ -641,6 +675,8 @@ export function isFollowUp(question: string): boolean {
   for (const pat of FOLLOWUP_PATTERNS) {
     if (pat.test(q)) return true;
   }
+
+  if (isAnaphoricFollowUp(q)) return true;
 
   // Pasted data (mostly numbers, tabs, commas) — a follow-up providing context
   const alphaRatio = (q.replace(/[^a-zA-Z]/g, "").length) / q.length;
@@ -686,9 +722,11 @@ function scoreDataset(ds: DatasetCapabilities, intent: QueryIntent): RouteScore 
   let excluded = false;
   let excludeReason: string | undefined;
   const currentYear = new Date().getFullYear();
+  // "past N years" resolves to complete calendar years (lib/time-conventions),
+  // so a range ending at last year is still a recency signal for routing.
   const recentCurrentRange = intent.timeRange.start !== null &&
     intent.timeRange.end !== null &&
-    intent.timeRange.end >= currentYear &&
+    intent.timeRange.end >= currentYear - 1 &&
     intent.timeRange.start >= currentYear - 5;
 
   // ── Hard exclusions ──
@@ -1023,5 +1061,22 @@ export function autoRoute(question: string): AutoRouteResult | null {
     reason: primary.why,
     confidence,
     alternatives: recs.slice(1),
+  };
+}
+
+/**
+ * Deterministic hint for questions manually run in a weaker source.
+ * This is intentionally conservative: only high-confidence routes to a
+ * different enabled source produce a nudge.
+ */
+export function manualSourceNudge(question: string, activeSource: TabId): ManualSourceNudge | null {
+  const route = autoRoute(question);
+  if (!route || route.source === activeSource || route.confidence !== "high") return null;
+
+  return {
+    source: route.source,
+    reason: route.reason,
+    confidence: "high",
+    message: `This question may be better answered in ${TAB_DISPLAY_NAMES[route.source]} - ${route.reason.charAt(0).toLowerCase()}${route.reason.slice(1)}.`,
   };
 }

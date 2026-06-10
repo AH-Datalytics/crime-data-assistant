@@ -10,6 +10,18 @@
  */
 
 import type { QueryContext, Tab } from "./query-context";
+import {
+  formatNibrsCodeList,
+  NIBRS_UCR_PROPERTY_CODES,
+  NIBRS_UCR_PROPERTY_LABEL,
+  NIBRS_UCR_VIOLENT_CODES,
+  NIBRS_UCR_VIOLENT_LABEL,
+} from "./nibrs-codes";
+import {
+  asksToIncludeCurrentYear,
+  currentCalendarYear,
+  relativeYearRangeForQuestion,
+} from "./time-conventions";
 
 const STATE_NAMES_RE = /\b(alabama|alaska|arizona|arkansas|california|colorado|connecticut|delaware|florida|georgia|hawaii|idaho|illinois|indiana|iowa|kansas|kentucky|louisiana|maine|maryland|massachusetts|michigan|minnesota|mississippi|missouri|montana|nebraska|nevada|new hampshire|new jersey|new mexico|new york|north carolina|north dakota|ohio|oklahoma|oregon|pennsylvania|rhode island|south carolina|south dakota|tennessee|texas|utah|vermont|virginia|washington state|west virginia|wisconsin|wyoming|district of columbia|united states)\b/i;
 
@@ -27,6 +39,165 @@ function extractPlaceFromQuestion(ctx: QueryContext): string {
     .replace(/\s+/g, " ")
     .trim();
   return cleaned || "the requested city";
+}
+
+function stripSqlStrings(sql: string): string {
+  return sql.replace(/'([^']|'')*'/g, "''");
+}
+
+function findTopLevelKeyword(sql: string, keyword: string, start = 0): number {
+  const lower = stripSqlStrings(sql).toLowerCase();
+  const target = keyword.toLowerCase();
+  let depth = 0;
+  for (let i = start; i < lower.length; i++) {
+    const ch = lower[i];
+    if (ch === "(") depth++;
+    else if (ch === ")") depth = Math.max(0, depth - 1);
+    else if (
+      depth === 0 &&
+      lower.startsWith(target, i) &&
+      (i === 0 || !/[a-z0-9_]/i.test(lower[i - 1])) &&
+      (i + target.length >= lower.length || !/[a-z0-9_]/i.test(lower[i + target.length]))
+    ) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+function outerWhereClause(sql: string): string | null {
+  const whereIdx = findTopLevelKeyword(sql, "where");
+  if (whereIdx < 0) return null;
+  const start = whereIdx + "where".length;
+  const stops = ["group by", "having", "order by", "limit", "union"]
+    .map((kw) => findTopLevelKeyword(sql, kw, start))
+    .filter((idx) => idx >= 0);
+  const end = stops.length > 0 ? Math.min(...stops) : sql.length;
+  const where = sql.slice(start, end).trim();
+  return where || null;
+}
+
+function hasTopLevelBoolean(whereClause: string, op: "and" | "or"): boolean {
+  const sql = stripSqlStrings(whereClause).toLowerCase();
+  let depth = 0;
+  for (let i = 0; i < sql.length; i++) {
+    const ch = sql[i];
+    if (ch === "(") depth++;
+    else if (ch === ")") depth = Math.max(0, depth - 1);
+    else if (
+      depth === 0 &&
+      sql.startsWith(op, i) &&
+      (i === 0 || !/[a-z0-9_]/i.test(sql[i - 1])) &&
+      (i + op.length >= sql.length || !/[a-z0-9_]/i.test(sql[i + op.length]))
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function hasUnparenthesizedOrAnd(sql: string): boolean {
+  const where = outerWhereClause(sql);
+  return !!where && hasTopLevelBoolean(where, "or") && hasTopLevelBoolean(where, "and");
+}
+
+function requestedStartYear(question: string): number | null {
+  const patterns = [
+    /\b(?:from|since|starting(?:\s+in)?|beginning(?:\s+in)?|after)\s+((?:19|20)\d{2})\b/i,
+    /\bbetween\s+((?:19|20)\d{2})\s+(?:and|to|through|-)\s+(?:19|20)\d{2}\b/i,
+    /\b((?:19|20)\d{2})\s*(?:-|to|through)\s*(?:present|now|today|date|(?:19|20)\d{2})\b/i,
+  ];
+  for (const pattern of patterns) {
+    const match = question.match(pattern);
+    if (match) return Number(match[1]);
+  }
+  return null;
+}
+
+function sqlHasRequestedLowerYearBound(sql: string, startYear: number): boolean {
+  const stripped = stripSqlStrings(sql);
+  const yearRef = String.raw`(?:\b\w+\.)?\byear\b`;
+  const eqRe = new RegExp(`${yearRef}\\s*=\\s*${startYear}\\b`, "i");
+  const geRe = new RegExp(`${yearRef}\\s*>=\\s*${startYear}\\b`, "i");
+  const gtRe = new RegExp(`${yearRef}\\s*>\\s*${startYear - 1}\\b`, "i");
+  const betweenRe = new RegExp(`${yearRef}\\s+BETWEEN\\s+${startYear}\\s+AND\\s+(?:19|20)\\d{2}\\b`, "i");
+  const inRe = new RegExp(`${yearRef}\\s+IN\\s*\\([^)]*\\b${startYear}\\b[^)]*\\)`, "i");
+  return eqRe.test(stripped) || geRe.test(stripped) || gtRe.test(stripped) || betweenRe.test(stripped) || inRe.test(stripped);
+}
+
+function sqlHasYearUpperBound(sql: string, endYear: number): boolean {
+  const stripped = stripSqlStrings(sql);
+  const yearRef = String.raw`(?:\b\w+\.)?\byear\b`;
+  const leRe = new RegExp(`${yearRef}\\s*<=\\s*${endYear}\\b`, "i");
+  const ltRe = new RegExp(`${yearRef}\\s*<\\s*${endYear + 1}\\b`, "i");
+  const eqRe = new RegExp(`${yearRef}\\s*=\\s*${endYear}\\b`, "i");
+  const betweenRe = new RegExp(`${yearRef}\\s+BETWEEN\\s+(?:19|20)\\d{2}\\s+AND\\s+${endYear}\\b`, "i");
+  return leRe.test(stripped) || ltRe.test(stripped) || eqRe.test(stripped) || betweenRe.test(stripped);
+}
+
+function sqlIncludesCurrentCalendarYear(sql: string): boolean {
+  const current = currentCalendarYear();
+  const stripped = stripSqlStrings(sql);
+  const yearRef = String.raw`(?:\b\w+\.)?\byear\b`;
+  const eqRe = new RegExp(`${yearRef}\\s*=\\s*${current}\\b`, "i");
+  const leCurrentRe = new RegExp(`${yearRef}\\s*<=\\s*${current}\\b`, "i");
+  const geCurrentRe = new RegExp(`${yearRef}\\s*>=\\s*${current}\\b`, "i");
+  const betweenRe = new RegExp(`${yearRef}\\s+BETWEEN\\s+(?:19|20)\\d{2}\\s+AND\\s+${current}\\b`, "i");
+  return eqRe.test(stripped) || leCurrentRe.test(stripped) || geCurrentRe.test(stripped) || betweenRe.test(stripped);
+}
+
+function violatesPastYearsConvention(ctx: QueryContext): boolean {
+  if (asksToIncludeCurrentYear(ctx.question)) return false;
+  const range = relativeYearRangeForQuestion(ctx.question);
+  if (!range) return false;
+  return !sqlHasRequestedLowerYearBound(ctx.sql, range.start) ||
+    !sqlHasYearUpperBound(ctx.sql, range.end) ||
+    sqlIncludesCurrentCalendarYear(ctx.sql);
+}
+
+function asksForTheftSubtype(question: string): boolean {
+  return /\b(?:larceny from auto|theft from (?:motor )?vehicle|vehicle burglary|shoplifting|pickpocket(?:ing)?|pocket-picking|purse snatching|theft from building|theft of motor vehicle parts|auto parts)\b/i.test(question);
+}
+
+function usesParentTheftSql(sql: string): boolean {
+  return /\boffense\s*(?:=|IN)\s*(?:\([^)]*)?'Theft'\b/i.test(sql) || /\b(?:hac|hsn)?\.?theft\b/i.test(sql);
+}
+
+function sqlQuotedCodes(sql: string): Set<string> {
+  const codes = new Set<string>();
+  const re = /'([0-9A-Z]{3})'/gi;
+  let match;
+  while ((match = re.exec(sql)) !== null) {
+    codes.add(match[1].toUpperCase());
+  }
+  return codes;
+}
+
+function asksBareViolentCrime(question: string): boolean {
+  return /\bviolent crime\b/i.test(question) &&
+    !/\b(crimes against persons|nibrs definition|nibrs taxonomy|simple assault|intimidation|kidnapping|human trafficking|all person crimes|persons crimes)\b/i.test(question);
+}
+
+function asksBarePropertyCrime(question: string): boolean {
+  return /\bproperty crime\b/i.test(question) &&
+    !/\b(crimes against property|nibrs definition|nibrs taxonomy|fraud|vandalism|bribery|embezzlement|stolen property)\b/i.test(question);
+}
+
+function asksUnsupportedOfficerInvolved(question: string): boolean {
+  const asksOfficerInvolved =
+    /\b(?:police|officer|officers|law enforcement|leo|cops?)\s*[- ]?involved\b/i.test(question) ||
+    /\binvolving\s+(?:police|officers|law enforcement|leo|cops?)\b/i.test(question);
+  if (!asksOfficerInvolved) return false;
+
+  return !/\b(?:justifiable homicide|justifiable homicides|09C|criminals? killed by police|killed by police)\b/i.test(question);
+}
+
+function missingAny(codes: Set<string>, expected: readonly string[]): boolean {
+  return expected.some((code) => !codes.has(code));
+}
+
+function hasAny(codes: Set<string>, candidates: readonly string[]): boolean {
+  return candidates.some((code) => codes.has(code));
 }
 
 export interface Guardrail {
@@ -212,6 +383,41 @@ const GUARDRAILS: Guardrail[] = [
     name: "yaxis-missing",
     tabs: ["current", "historical"],
     match: () => false, // Checked externally with yAxis from ClaudeResponse — see route.ts
+  },
+  {
+    name: "or-and-precedence",
+    tabs: ["current", "historical", "nibrs", "shr"],
+    match: (ctx) => hasUnparenthesizedOrAnd(ctx.sql),
+    message: () =>
+      "[SYSTEM: The WHERE clause mixes top-level OR and AND without parentheses. Wrap all OR alternatives in parentheses before applying shared filters. Correct shape: WHERE ((entity_a_filters) OR (entity_b_filters)) AND shared_year_or_offense_filters.]",
+  },
+  {
+    name: "contract-year-lower-bound-missing",
+    tabs: ["current", "historical", "nibrs", "shr"],
+    match: (ctx) => {
+      const start = requestedStartYear(ctx.question);
+      return start !== null && !sqlHasRequestedLowerYearBound(ctx.sql, start);
+    },
+    message: (ctx) => {
+      const start = requestedStartYear(ctx.question) ?? "requested start year";
+      return `[SYSTEM: The user requested results starting from ${start}, but the SQL does not enforce a lower year bound. Add year >= ${start} or an equivalent aliased predicate such as table_alias.year >= ${start}. Do not return earlier years.]`;
+    },
+  },
+  {
+    name: "relative-past-years-complete-calendar",
+    tabs: ["current", "historical", "nibrs", "shr"],
+    match: (ctx) => violatesPastYearsConvention(ctx),
+    message: (ctx) => {
+      const range = relativeYearRangeForQuestion(ctx.question);
+      return `[SYSTEM: The user asked for "past/last N years" without asking to include the current partial year. Use the last N complete calendar years only: year BETWEEN ${range?.start} AND ${range?.end}. Do not include ${currentCalendarYear()} unless the user explicitly says "including this year", "this year", "YTD", "to date", or "to present".]`;
+    },
+  },
+  {
+    name: "current-historical-theft-subtype-parent",
+    tabs: ["current", "historical"],
+    match: (ctx) => asksForTheftSubtype(ctx.question) && usesParentTheftSql(ctx.sql),
+    message: () =>
+      "[SYSTEM: This tab only has the parent Theft category, not theft subtypes such as larceny-from-auto or shoplifting. If you use the parent Theft field, label the result as total Theft and explicitly state that subtype-specific counts require the NIBRS tab.]",
   },
   {
     name: "offense-missing-filter",
@@ -558,7 +764,7 @@ const GUARDRAILS: Guardrail[] = [
       return !sqlLower.includes("population") && !sqlLower.includes("100000") && !/_rate\b/.test(sqlLower) && !/_clr\b/.test(sqlLower);
     },
     message: (ctx) => {
-      if (ctx.tab === "shr") return "The user asked for rates but the SQL does not calculate a per-capita rate. Use ROUND(COUNT(*) * 100000.0 / NULLIF(AVG(i.population), 0), 1) for single-agency SHR rates. For state/national aggregate rates, set sql to null and redirect to the Historical Library tab.";
+      if (ctx.tab === "shr") return "The user asked for rates but the SQL does not calculate a per-capita rate. Use ROUND(COUNT(*) * 100000.0 / NULLIF(AVG(i.population), 0), 1) for single-agency SHR rates. For state/national aggregate rates, join state_population by state/year or use state = 'US' for national denominators.";
       if (ctx.tab === "nibrs") return "The user asked for rates but the SQL does not calculate a per-capita rate. JOIN the agencies table to get population, then use ROUND(SUM(count) * 100000.0 / population, 1). For state-level rates, redirect to the Historical Library tab.";
       return "The user asked for rates/per capita but the SQL does not reference population data. JOIN agency_population (Current Trends) or use the population column (Historical) and divide by population to calculate the rate.";
     },
@@ -585,6 +791,62 @@ const GUARDRAILS: Guardrail[] = [
   },
 
   // --- NIBRS ---
+  {
+    name: "nibrs-offense-category-drift",
+    tabs: ["nibrs"],
+    match: (ctx) => {
+      const codes = sqlQuotedCodes(ctx.sql);
+      const hasCodeFilter = /\bucr_offense_code\b/i.test(ctx.sql);
+      const usesNibrsPersonsCategory = /Crimes Against Persons/i.test(ctx.sql);
+      const usesNibrsPropertyCategory = /Crimes Against Property/i.test(ctx.sql);
+
+      if (asksBareViolentCrime(ctx.question)) {
+        const nibrsPersonOnlyCodes = ["09B", "09C", "11D", "13B", "13C", "100", "36A", "36B", "64A", "64B"];
+        return usesNibrsPersonsCategory ||
+          hasAny(codes, nibrsPersonOnlyCodes) ||
+          (hasCodeFilter && missingAny(codes, NIBRS_UCR_VIOLENT_CODES));
+      }
+
+      if (asksBarePropertyCrime(ctx.question)) {
+        const nibrsPropertyOnlyCodes = [
+          "120", "210", "250", "26A", "26B", "26C", "26D", "26E", "26F", "26G",
+          "270", "280", "290", "510",
+        ];
+        return usesNibrsPropertyCategory ||
+          hasAny(codes, nibrsPropertyOnlyCodes) ||
+          (hasCodeFilter && missingAny(codes, NIBRS_UCR_PROPERTY_CODES));
+      }
+
+      return false;
+    },
+    message: (ctx) => {
+      if (asksBareViolentCrime(ctx.question)) {
+        return `[SYSTEM: For bare "violent crime" on the NIBRS tab, use the UCR-aligned definition, not the broad NIBRS Crimes Against Persons taxonomy. Include exactly these codes: ${formatNibrsCodeList(NIBRS_UCR_VIOLENT_CODES)} (${NIBRS_UCR_VIOLENT_LABEL}). This includes robbery (120) and excludes 09B, 09C, 11D, 13B, 13C, kidnapping, statutory sex offenses, and human trafficking. If needed, combine victim-summary counts for person offenses with offense-summary counts for robbery. State the included offenses in the explanation.]`;
+      }
+      return `[SYSTEM: For bare "property crime" on the NIBRS tab, use the UCR-aligned definition, not the broad NIBRS Crimes Against Property taxonomy. Include exactly these codes: ${formatNibrsCodeList(NIBRS_UCR_PROPERTY_CODES)} (${NIBRS_UCR_PROPERTY_LABEL}). Exclude robbery, fraud, embezzlement, stolen property, vandalism, bribery, and other NIBRS-only property-category offenses. State the included offenses in the explanation.]`;
+    },
+  },
+  {
+    name: "nibrs-homicide-code-drift",
+    tabs: ["nibrs"],
+    match: (ctx) => {
+      const q = ctx.question.toLowerCase();
+      const asksMurder = /\b(murder|murders|homicide|homicides|killing|killings)\b/i.test(q) &&
+        !/\b(manslaughter|negligent|justifiable|all homicide|all homicides|all homicide types)\b/i.test(q);
+      if (!asksMurder) return false;
+      const codes = sqlQuotedCodes(ctx.sql);
+      return codes.has("09B") || codes.has("09C") || /Crimes Against Persons/i.test(ctx.sql);
+    },
+    message: () =>
+      "[SYSTEM: For ordinary NIBRS murder/homicide wording, use offense code 09A only. Do not include 09B negligent manslaughter or 09C justifiable homicide unless the user explicitly asks for those categories or for all homicide types. State that the result is murder/nonnegligent manslaughter.]",
+  },
+  {
+    name: "nibrs-officer-involved-unsupported",
+    tabs: ["nibrs"],
+    match: (ctx) => asksUnsupportedOfficerInvolved(ctx.question),
+    override: () =>
+      "NIBRS does not identify whether a police officer or law enforcement employee was involved as an offender or participant in general incidents, including domestic violence. I can show the overall incident category, but it would not be police-involved. The only narrow law-enforcement-specific homicide category available here is justifiable homicide where a criminal was killed by a police officer.",
+  },
   {
     name: "nibrs-raw-victims",
     tabs: ["nibrs"],
@@ -1284,14 +1546,14 @@ const GUARDRAILS: Guardrail[] = [
     match: (ctx) => {
       const sql = ctx.sql;
       const q = ctx.question.toLowerCase();
-      // If asking about murder but SQL doesn't filter homicide_type
-      const asksMurder = /\b(murder|homicide|killing)\b/i.test(q) && !/\bmanslaughter\b/i.test(q);
-      const hasTypeFilter = /homicide_type\s*=\s*'Murder'/i.test(sql);
-      const hasCircFilter = /circumstance_group/i.test(sql);
-      return asksMurder && !hasTypeFilter && !hasCircFilter;
+      const asksMurder = /\b(murder|homicide|homicides|killing|killings)\b/i.test(q) &&
+        !/\b(manslaughter|negligent|justifiable|all homicides|all homicide types)\b/i.test(q);
+      const touchesIncidents = /\bFROM\s+incidents\b/i.test(sql) || /\bJOIN\s+incidents\b/i.test(sql);
+      const hasTypeFilter = /\b(?:\w+\.)?homicide_type\s*(?:=|IN)\s*(?:\([^)]*)?'Murder'/i.test(sql);
+      return asksMurder && touchesIncidents && !hasTypeFilter;
     },
     message: () =>
-      "[SYSTEM: When the user asks about murders/homicides, filter with WHERE homicide_type = 'Murder'. The SHR database also contains manslaughter records. Without this filter, results mix murder and manslaughter.]",
+      "[SYSTEM: When the user asks about murders/homicides in SHR, filter incidents with homicide_type = 'Murder' unless they explicitly ask for manslaughter or all homicide types. SHR also contains manslaughter records; without the filter the result mixes categories. The explanation should state that the count is murder/nonnegligent manslaughter only.]",
   },
   {
     name: "shr-offender-null-filter",
@@ -1504,7 +1766,10 @@ const GUARDRAILS: Guardrail[] = [
   {
     name: "shr-sum-population",
     tabs: ["shr"],
-    match: (ctx) => /SUM\s*\(\s*(?:COALESCE\s*\(\s*)?(?:\w+\.)?population/i.test(ctx.sql),
+    match: (ctx) => {
+      if (/\bstate_population\b/i.test(ctx.sql)) return false;
+      return /SUM\s*\(\s*(?:COALESCE\s*\(\s*)?(?:\w+\.)?population/i.test(ctx.sql);
+    },
     // Single-agency: auto-fix to AVG
     rewrite: (sql) => {
       // Single-agency = has agency = 'X' filter, GROUP BY may include year but not multiple agencies
@@ -1528,6 +1793,25 @@ const GUARDRAILS: Guardrail[] = [
       if (isSingleAgency) return null; // rewrite handles it
       return "SHR population data is per-agency and per-incident — summing it across multiple agencies produces unreliable rates. For aggregate murder rates, try the [Historical Library](/?tab=historical) tab which has FBI statewide estimates. I can provide raw victim counts from SHR instead.";
     },
+  },
+  {
+    name: "shr-rate-bad-denominator",
+    tabs: ["shr"],
+    match: (ctx) => {
+      const sql = ctx.sql;
+      if (/\bstate_population\b/i.test(sql)) return false;
+      const usesAvgPopulation = /AVG\s*\(\s*(?:\w+\.)?population\s*\)/i.test(sql);
+      if (!usesAvgPopulation) return false;
+      const calculatesRate = /\b100000(?:\.0)?\b|\brate\b|per_?100k|per\s+capita/i.test(sql);
+      if (!calculatesRate) return false;
+      const hasSingleAgencyFilter = /\bagency\s*=\s*'[^']+'/i.test(sql);
+      if (hasSingleAgencyFilter) return false;
+      const groupsByAggregateGeo = /GROUP\s+BY[\s\S]*\b(?:state|state_name|division|year)\b/i.test(sql);
+      const asksAggregateRate = /\b(state|statewide|national|nationwide|division|overall|rate|per\s+capita|per\s+100k)\b/i.test(ctx.question);
+      return groupsByAggregateGeo || asksAggregateRate;
+    },
+    override: () =>
+      "SHR incidents.population is per-agency, not a statewide or national denominator. Averaging agency populations across incident rows produces invalid aggregate rates. Use the SHR state_population table for state or national rate denominators, or provide raw victim counts instead.",
   },
 
   // #3: SHR non-homicide topic substitution

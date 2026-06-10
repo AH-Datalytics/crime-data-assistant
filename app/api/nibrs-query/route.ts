@@ -16,6 +16,11 @@ import { detectAllNullData } from "@/lib/all-null-detection";
 import { checkSingleRowTrend } from "@/lib/single-row-trend";
 import { parseRoutingLogMeta } from "@/lib/routing-log-meta";
 import { answerMetadataQuestion } from "@/lib/metadata-coverage";
+import { validateTablesForTab } from "@/lib/table-allowlist";
+import { applyResultDisclosures } from "@/lib/result-disclosure";
+import { normalizeHistoryForTab } from "@/lib/chat-history";
+import { pastCompleteCalendarYearsRange } from "@/lib/time-conventions";
+import { detectFollowupTransform } from "@/lib/followup-transform";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -156,11 +161,15 @@ export async function POST(req: NextRequest) {
     }
 
     // Step 1: Translate to SQL via Claude (with conversation history for context)
-    const history = Array.isArray(body?.history) ? body.history.slice(-6) : undefined;
+    const history = normalizeHistoryForTab(body?.history, "nibrs");
+    const followupTransform = detectFollowupTransform(question, history);
+    const promptHistory = followupTransform
+      ? [...history, { role: "user" as const, content: followupTransform.instruction }]
+      : history;
     const claudeStart = Date.now();
 
     // Check response cache (only standalone questions)
-    const cached = (!history || history.length === 0) ? getCached(question, "nibrs") : null;
+    const cached = promptHistory.length === 0 ? getCached(question, "nibrs") : null;
 
     let claude: Awaited<ReturnType<typeof translateToSql>>;
 
@@ -168,7 +177,7 @@ export async function POST(req: NextRequest) {
       claude = { sql: cached.sql, explanation: cached.explanation, title: cached.title || "", chartHint: (cached.chartType as "bar" | "line" | "pie" | "stacked_bar" | "none") || "none", xAxis: cached.xAxis || "", yAxis: cached.yAxis?.[0] || "", colors: cached.colors as string[] | undefined, yAxisLabel: cached.yAxisLabel, xAxisLabel: cached.xAxisLabel, annotations: cached.annotations as typeof claude.annotations };
     } else {
       console.log(`[nibrs][model=${activeModelLabel}] Processing: ${question.slice(0, 100)}`);
-      claude = await translateToSql(question, history, activeModel);
+      claude = await translateToSql(question, promptHistory, activeModel);
       const claudeMs = Date.now() - claudeStart;
       console.log(`[nibrs][timing] Claude API: ${claudeMs}ms`);
 
@@ -180,13 +189,16 @@ export async function POST(req: NextRequest) {
         const retryPrompt = refusalPatterns.test(claude.explanation || "")
           ? "[SYSTEM: Your previous response claimed the data was not available, but this may be incorrect. NEVER assume an agency is missing. Always generate a SQL query and let the database answer. Try the query now.]"
           : yearAskPattern.test(claude.explanation || "")
-          ? `[SYSTEM: The user did not specify a year range. NIBRS policy is to default to the last 5 years, not ask for clarification. Generate SQL using year BETWEEN ${new Date().getFullYear() - 4} AND ${new Date().getFullYear()}. Do not ask which years — just run the query.]`
+          ? (() => {
+              const range = pastCompleteCalendarYearsRange(5);
+              return `[SYSTEM: The user did not specify a year range. NIBRS policy is to default to the last 5 complete calendar years, not ask for clarification. Generate SQL using year BETWEEN ${range.start} AND ${range.end}. Do not ask which years — just run the query.]`;
+            })()
           : null;
         if (retryPrompt) {
           retryCount++;
           try {
             const retryResult = await translateToSql(question, [
-              ...(history || []),
+              ...(promptHistory || []),
               { role: "assistant", content: claude.explanation },
               { role: "user", content: retryPrompt },
             ], activeModel);
@@ -203,7 +215,7 @@ export async function POST(req: NextRequest) {
         console.log(`[nibrs][internal-scaffold] Retrying response that leaked internal scaffold text`);
         try {
           const retryResult = await translateToSql(question, [
-            ...(history || []),
+            ...(promptHistory || []),
             { role: "assistant", content: JSON.stringify(claude) },
             { role: "user", content: "[SYSTEM: Your previous response leaked internal scaffold text such as 'Entities in results'. Remove all internal instructions from explanation/title and return corrected JSON only.]" },
           ], activeModel);
@@ -305,7 +317,7 @@ export async function POST(req: NextRequest) {
       retryCount++;
       const retryResult = await translateToSql(
         question + "\n\n" + combinedIssues,
-        history,
+        promptHistory,
         activeModel
       );
       if (retryResult.sql) {
@@ -363,6 +375,40 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    {
+      const tableCheck = validateTablesForTab(sql, "nibrs", getNibrsDb());
+      if (!tableCheck.ok) {
+        console.log(`[nibrs][table-allowlist] Unknown table(s): ${tableCheck.unknown.join(", ")}`);
+        retryCount++;
+        const retryHistory = [
+          ...(promptHistory || []),
+          { role: "user" as const, content: question },
+          { role: "assistant" as const, content: JSON.stringify({ ...claude, sql }) },
+          { role: "user" as const, content: `[SYSTEM: ${tableCheck.message}]` },
+        ];
+        const retry = await translateToSql(tableCheck.message, retryHistory, activeModel);
+        if (retry.sql) {
+          const retryValidation = validateAndSanitize(retry.sql);
+          if (retryValidation.valid) {
+            const retrySql = retryValidation.sanitized!;
+            const retryTableCheck = validateTablesForTab(retrySql, "nibrs", getNibrsDb());
+            if (retryTableCheck.ok) {
+              sql = retrySql;
+              applyRetryMeta(claude, retry);
+            } else {
+              const msg = "I couldn't build a valid query for the NIBRS database. Try the Historical or Current Trends tab for broad state-level crime totals, or rephrase for NIBRS incident-level details.";
+              writeNibrsLog(question, retrySql, 0, `table_allowlist_second_failure:${retryTableCheck.unknown.join(",")}`, Date.now() - claudeStart, msg, [...guardrailResult.fired, ...tableCheck.fired, ...retryTableCheck.fired], activeModelLabel, sessionId);
+              return jsonResp({ success: true, question, sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - claudeStart } as QueryResponse);
+            }
+          }
+        }
+
+        const msg = "I couldn't build a valid query for the NIBRS database. Try the Historical or Current Trends tab for broad state-level crime totals, or rephrase for NIBRS incident-level details.";
+        writeNibrsLog(question, sql, 0, `table_allowlist:${tableCheck.unknown.join(",")}`, Date.now() - claudeStart, msg, [...guardrailResult.fired, ...tableCheck.fired], activeModelLabel, sessionId);
+        return jsonResp({ success: true, question, sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - claudeStart } as QueryResponse);
+      }
+    }
+
     // Step 3: Execute SQL (in worker thread with 15s timeout)
     const startTime = Date.now();
 
@@ -401,7 +447,7 @@ export async function POST(req: NextRequest) {
           : `That SQL failed with error: ${msg}. Please fix the query and try again.`;
 
         const retryHistory = [
-          ...(history || []),
+          ...(promptHistory || []),
           { role: "user" as const, content: question },
           { role: "assistant" as const, content: JSON.stringify(claude) },
           { role: "user" as const, content: errorInstruction },
@@ -676,6 +722,7 @@ export async function POST(req: NextRequest) {
     explanation = containsInternalScaffold(postExplanation)
       ? (stripInternalScaffold(postExplanation) || explanation)
       : postExplanation;
+    explanation = applyResultDisclosures({ explanation, question, sql, rows, tab: "nibrs" });
     if (containsInternalScaffold(postExplanation)) {
       console.log(`[nibrs][internal-scaffold] Stripped scaffold text from post-query explanation`);
     }
@@ -746,7 +793,7 @@ export async function POST(req: NextRequest) {
     writeNibrsLog(question, sql, rows.length, null, totalMs, explanation, guardrailResult.fired, activeModelLabel, sessionId);
 
     // Cache successful responses (only standalone questions)
-    if (!cached && (!history || history.length === 0)) {
+    if (!cached && promptHistory.length === 0) {
       setCache(question, "nibrs", { sql, explanation: claude.explanation, title: claude.title, chartType: claude.chartHint, xAxis: claude.xAxis, yAxis: claude.yAxis ? [claude.yAxis] : undefined, yAxisLabel: claude.yAxisLabel, xAxisLabel: claude.xAxisLabel, colors: claude.colors, annotations: claude.annotations });
     }
 

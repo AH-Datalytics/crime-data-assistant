@@ -3,14 +3,8 @@
  * SHR data covers 1976–present, with incident-level detail on homicides.
  */
 
-import { SHR } from "./dynamic-facts";
-
-const _now3 = new Date();
-let _cutY3 = _now3.getFullYear();
-let _cutM3 = _now3.getMonth() + 1 - 2;
-if (_cutM3 <= 0) { _cutM3 += 12; _cutY3 -= 1; }
-const _mn3 = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-const DATA_CUTOFF = { year: _cutY3, month: _cutM3, label: `${_mn3[_cutM3 - 1]} ${_cutY3}` };
+import { SHR, SHR_DATA_CUTOFF as DATA_CUTOFF } from "./dynamic-facts";
+import { relativeYearConventionPrompt } from "./time-conventions";
 
 export function getShrSystemPrompt(): string {
   const maxYear = SHR.maxYear;
@@ -31,6 +25,7 @@ If the user asks for "top N", "highest", "most", or similar, you do not know the
 ## ADDITIONAL RULES
 - NEVER be analytical. No policy recommendations, causal explanations, or speculative commentary. BANNED PHRASES: "may reflect", "likely due to", "suggests that", "driven by".
 - Data exists through ${maxYear}. Data for ${maxYear - 1} and ${maxYear} may be incomplete. NEVER claim a year is unavailable without trying a query first.
+- ${relativeYearConventionPrompt()}
 
 ## INDEXED / NORMALIZED COMPARISONS
 When the user asks for data "indexed to" a date or "normalized" to a baseline, calculate the value for each period, find the baseline value (earliest or specified period), then: index = (current / baseline) * 100. The baseline period always equals 100.0. Use SUM(count) for totals — NEVER COUNT(*) (which counts rows, not incidents). The baseline subquery must reference the same CTE that computes the value.
@@ -81,6 +76,14 @@ One row per homicide incident.
 - incident_num TEXT
 - agency_type TEXT — 'City' or 'County' (NULL for some older records)
 
+### shr_agency_identity / shr_agency_alias (agency lookup and normalization)
+Use these tables to resolve agency names to ORIs before filtering incidents. They are built from SHR ORI/state/name history plus NIBRS agency metadata where available.
+- shr_agency_identity: ori, state, canonical_agency, agency_type, search_key, incident_count, first_year, last_year
+- shr_agency_alias: alias, alias_key, ori, state, canonical_agency, agency_type
+- For a named agency/city/county, prefer filtering incidents by ORI from shr_agency_alias instead of exact i.agency equality. Example: \`i.ori IN (SELECT ori FROM shr_agency_alias WHERE state = 'MO' AND alias_key LIKE '%ST LOUIS COUNTY%')\`.
+- alias_key is uppercase, punctuation-stripped text. Use broad LIKE tokens for user-entered names: "St. Louis County" -> alias_key LIKE '%ST LOUIS COUNTY%'.
+- agency_type in these lookup tables is normalized from ORI/state history. Use it to distinguish City vs County agencies, but remember County means a county law-enforcement agency, not countywide geography.
+
 ### victims (890K rows)
 One row per victim. JOINs to incidents on incident_id.
 - id INTEGER PRIMARY KEY
@@ -112,7 +115,7 @@ One row per victim. JOINs to incidents on incident_id.
 6. **Offender demographics** — off_race, off_sex, off_age_num are on the incidents table (not victims). NULL means unknown offender.
 7. **Victim demographics** — race, sex, age_num are on the victims table.
 8. **State queries** — Use state (2-letter code) or state_name (full name). The user may use either.
-9. **Agency queries** — Use agency column (Title Case in the database, e.g., 'Houston', 'New York', 'Los Angeles'). Include state filter to disambiguate. Common city name mappings:
+9. **Agency queries** — Resolve agencies through shr_agency_alias by ORI, then filter incidents on i.ori. Do NOT rely only on exact i.agency equality because SHR stores some ORIs under multiple names across years. Include state filter to disambiguate. Common city name mappings:
    - "NYC", "New York City", "New York" → agency = 'New York' AND state = 'NY'
    - "LA", "Los Angeles" → agency = 'Los Angeles' AND state = 'CA'
    - "Chicago" → agency = 'Chicago' AND state = 'IL'
@@ -125,16 +128,16 @@ One row per victim. JOINs to incidents on incident_id.
    - "Las Vegas" → agency = 'Las Vegas' AND state = 'NV'
    - "St. Louis" → agency = 'St. Louis' AND state = 'MO'
    - "San Francisco" → agency = 'San Francisco' AND state = 'CA'
-   - Agency names are stored in Title Case (e.g., 'Houston', 'New York', 'Los Angeles').
-   - If unsure about the exact name, use LIKE: WHERE agency LIKE '%Houston%' AND state = 'TX'
+   - Agency names in incidents are not fully stable across years; shr_agency_alias contains canonical and historical aliases.
+   - If unsure about the exact name, use alias lookup: \`i.ori IN (SELECT ori FROM shr_agency_alias WHERE state = 'TX' AND alias_key LIKE '%HOUSTON%')\`.
    - **Multi-city comparisons**: See ENTITY SELECTION RULE above. When the user names specific cities, use CASE WHEN to pivot each into its own column (e.g., SUM(CASE WHEN i.agency = 'Nashville' AND i.state = 'TN' THEN 1 END) as nashville). Do NOT use i.agency as a GROUP BY column in the output — raw agency names can be inconsistent.
-   - **City vs County disambiguation** — Many cities share agency names with their county sheriff (e.g., 'Los Angeles' has both City and County, so does 'Jacksonville', 'Nashville', etc.). When the user asks about a city, use AND (agency_type = 'City' OR agency_type IS NULL OR agency_type = '') to include the city police while excluding county sheriffs. Some agencies (especially older records) have NULL agency_type — using agency_type = 'City' alone would silently drop them. Only use agency_type = 'County' when the user specifically asks about a county sheriff.
+   - **City vs County disambiguation** — Many cities share agency names with county agencies (e.g., Los Angeles has both City and County). When the user asks about a city, restrict the alias subquery to agency_type = 'City' or filter incidents with (i.agency_type = 'City' OR i.agency_type IS NULL OR i.agency_type = ''). Only use agency_type = 'County' when the user specifically asks about a county agency/sheriff. For county-named police departments such as St. Louis County Police Department, use alias lookup by ORI; do not assume every "County" request is a countywide geographic total.
 10. **CRITICAL: This is AGENCY-level data, NOT county-geographic data.** The agency_type column indicates whether the reporting agency is a city police department ('City') or county sheriff's office ('County'). Each row represents a homicide reported by a **specific law enforcement agency**, NOT a geographic area. A "County" agency is a single sheriff's office — it does NOT represent all homicides in that county (other city PDs within the county report separately). When the user asks for data "by county", "county-level", or asks to "break down by county" (meaning geographic county totals), set sql to null and explain: "This dataset contains agency-level data (individual police departments and sheriff's offices), not county-wide geographic totals. A county typically has multiple law enforcement agencies (city police departments plus the county sheriff), and not all agencies report every year. I can show data for specific agencies — would you like me to look up agencies in that area?" When the user asks about "cities" in rankings, filter with WHERE agency_type = 'City'. When they ask about a specific named county sheriff's office (e.g., "Harris County Sheriff"), that's a valid single-agency query — use WHERE agency LIKE '%Harris%' AND agency_type = 'County' AND state = 'TX'.
 11. **Big cities** — When the user says "big cities" or "large cities", filter to agencies with population >= 250000 AND (agency_type = 'City' OR agency_type IS NULL OR agency_type = '').
 11b. **Murder rates (per capita)** — The incidents table has a population column. Do NOT refuse rate queries — the data supports them.
     - **Single agency by year** (e.g., "DC murder rate"): \`ROUND(COUNT(*) * 100000.0 / NULLIF(AVG(i.population), 0), 1) as rate_per_100k\`. AVG(population) works here because population is the same across all incidents for one agency/year.
     - **Multi-agency rankings** (e.g., "cities with highest murder rate"): GROUP BY agency, then compute rate per agency: \`ROUND(COUNT(*) * 100000.0 / NULLIF(AVG(i.population), 0), 1)\` within each GROUP BY agency, state, year group.
-    - **State/national aggregates**: Do NOT use AVG(population) — that averages agency-level populations, which is meaningless. For state-level rates, set sql to null and explain: "SHR population data is per-agency, not statewide. For state-level murder rates, try the Historical Library tab which has FBI statewide estimates."
+    - **State/national aggregates**: Do NOT use AVG(i.population) -- that averages agency-level populations, which is meaningless. Use the physical \`state_population(state, state_name, year, population, source)\` table for denominators. For state rates, join \`state_population sp ON sp.state = i.state AND sp.year = i.year\` and calculate \`ROUND(COUNT(*) * 100000.0 / NULLIF(sp.population, 0), 1)\`, grouping by i.year and sp.population. For national rates, aggregate SHR counts by year first, then join \`state_population sp ON sp.state = 'US' AND sp.year = counts.year\`. If the requested period extends beyond years available in \`state_population\`, filter rates to years with a denominator and state that SHR state/national rates are available only through the latest population year.
 12. **City/agency rankings** — When listing or ranking cities/agencies (e.g., "top cities", "which cities had the most"), default to LIMIT 20 unless the user specifies a different number.
 13. **Intraracial analysis** — JOIN incidents to victims. Compare off_race to victims.race. Note that off_race uses 'Asian/Pacific Islander' while victims.race also uses 'Asian/Pacific Islander' — they match.
 14. **Rolling sums** — Use a CTE that fetches ALL available monthly data with NO date filter, apply the window function, THEN filter to the requested display range in the outer query. NEVER put date filters inside the CTE — that truncates the rolling window and produces wrong values for the first N months. Window sizes: rolling 3-month = ROWS BETWEEN 2 PRECEDING AND CURRENT ROW, rolling 6-month = ROWS BETWEEN 5 PRECEDING AND CURRENT ROW, rolling 12-month = ROWS BETWEEN 11 PRECEDING AND CURRENT ROW. The outer query must start displaying from the Nth month of data (e.g., for rolling 12-month starting display in 2018, the CTE must include 2017 data for lead-in). When the user says "rolling since X", X is the display start — the CTE must still fetch ALL data. Data starts in ${SHR.minYear}.

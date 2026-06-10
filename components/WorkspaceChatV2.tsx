@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import type { QueryResponse, StreamEvent } from "@/lib/types";
-import { autoRoute, isFollowUp, parseIntent, recommendTabs, TAB_DISPLAY_NAMES, TAB_COLORS, type TabRecommendation } from "@/lib/tab-suggest";
+import { autoRoute, isFollowUp, manualSourceNudge, parseIntent, recommendTabs, TAB_DISPLAY_NAMES, TAB_COLORS, type TabRecommendation } from "@/lib/tab-suggest";
 import { pickerOptions, type SourceId as RegistrySourceId, type PickerSourceId } from "@/lib/sources";
 import DataTable from "./DataTable";
 import ChartPanel from "./ChartPanel";
@@ -49,7 +49,7 @@ function TypewriterText({ text, animate }: { text: string; animate: boolean }) {
   return <>{renderInlineMarkdown(displayed)}</>;
 }
 
-interface HistoryEntry { role: "user" | "assistant"; content: string; sql?: string; }
+interface HistoryEntry { role: "user" | "assistant"; content: string; sql?: string; source?: RegistrySourceId; }
 
 interface Exchange {
   question: string;
@@ -205,7 +205,11 @@ export default function WorkspaceChat({}: WorkspaceChatProps) {
         const summary = finalExplanation ? finalExplanation.split(/[.!?]\s/)[0] + "." : error || "No results.";
         const newExchange: Exchange = { question, summary, response: finalResponse, explanation: finalExplanation, error: error || undefined, source: tab, routingReason: reason };
         setExchanges(prev => { const u = [...prev, newExchange]; setActiveExchangeIdx(u.length - 1); setAnimateIdx(u.length - 1); return u; });
-        setHistory(prev => [...prev, { role: "user" as const, content: question }, { role: "assistant" as const, content: finalSql ? `${finalExplanation}\n[SQL: ${finalSql}]` : finalExplanation, sql: finalSql || undefined }].slice(-6));
+        setHistory(prev => [
+          ...prev,
+          { role: "user" as const, content: question, source: tab },
+          { role: "assistant" as const, content: finalSql ? `${finalExplanation}\n[SQL: ${finalSql}]` : finalExplanation, sql: finalSql || undefined, source: tab },
+        ].slice(-12));
       } catch (err) {
         setError(`Connection error: ${err instanceof Error ? err.message : "Network error"}`);
       } finally { if (timerRef.current) clearInterval(timerRef.current); setLoading(false); }
@@ -261,8 +265,32 @@ export default function WorkspaceChat({}: WorkspaceChatProps) {
 
   const hasData = response && (response.chartConfig || response.rows.length > 0);
   const hasStarted = exchanges.length > 0 || loading || error || showDisambiguation;
+  const activeExchange = exchanges[activeExchangeIdx];
   const rerunQuestion = exchanges[activeExchangeIdx]?.question || lastQuestion;
   const rerunSourceOptions = activeSource ? RERUN_SOURCE_OPTIONS.filter(opt => opt.id !== activeSource) : RERUN_SOURCE_OPTIONS;
+  const sourceNudge =
+    activeExchange &&
+    activeExchangeIdx === exchanges.length - 1 &&
+    !activeExchange.routingReason
+      ? manualSourceNudge(activeExchange.question, activeExchange.source)
+      : null;
+  const sourceNudgeBanner = sourceNudge && activeExchange ? (
+    <div
+      className="flex items-center gap-2 mb-2 shrink-0 text-[11px] rounded-md border px-3 py-2 flex-wrap"
+      style={{ borderColor: TAB_COLORS[sourceNudge.source] + "40", backgroundColor: TAB_COLORS[sourceNudge.source] + "08" }}
+    >
+      <span className="text-[var(--foreground)]">
+        This question may be better answered in <strong style={{ color: TAB_COLORS[sourceNudge.source] }}>{TAB_DISPLAY_NAMES[sourceNudge.source]}</strong> - {sourceNudge.reason.charAt(0).toLowerCase() + sourceNudge.reason.slice(1)}.
+      </span>
+      <button
+        onClick={() => submitQuestion(activeExchange.question, sourceNudge.source, sourceNudge.reason, sourceNudge.confidence, "rerun")}
+        className="px-2.5 py-1 text-[10px] font-semibold text-white rounded cursor-pointer hover:opacity-90 shrink-0"
+        style={{ backgroundColor: TAB_COLORS[sourceNudge.source] }}
+      >
+        Run in {TAB_DISPLAY_NAMES[sourceNudge.source]}
+      </button>
+    </div>
+  ) : null;
   const rerunControl = rerunQuestion && !loading && rerunSourceOptions.length > 0 ? (
     <div className="relative shrink-0">
       <select
@@ -521,6 +549,7 @@ export default function WorkspaceChat({}: WorkspaceChatProps) {
                     {rerunControl}
                   </div>
                 )}
+                {sourceNudgeBanner}
                 <div className="text-[13px] sm:text-[14px] text-[var(--foreground)] leading-relaxed">
                   {renderInlineMarkdown(explanation)}
                 </div>
@@ -550,6 +579,7 @@ export default function WorkspaceChat({}: WorkspaceChatProps) {
                     {rerunControl}
                   </div>
                 )}
+                {sourceNudgeBanner}
 
                 {/* Toolbar */}
                 <div className="flex items-center justify-between mb-2 sm:mb-3 shrink-0 flex-wrap gap-1">

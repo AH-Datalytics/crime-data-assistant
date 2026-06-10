@@ -4,7 +4,7 @@
  * Run: npx tsx scripts/test-router.ts
  */
 
-import { autoRoute, isFollowUp, parseIntent, type TabId } from "../lib/tab-suggest";
+import { autoRoute, isFollowUp, manualSourceNudge, parseIntent, type TabId } from "../lib/tab-suggest";
 
 interface TestCase {
   question: string;
@@ -71,6 +71,17 @@ function test(tc: TestCase) {
     }
   }
 
+  pass++;
+}
+
+function testNudge(question: string, activeSource: TabId, expectedSource: TabId | null) {
+  const nudge = manualSourceNudge(question, activeSource);
+  const actual = nudge?.source || null;
+  if (actual !== expectedSource) {
+    fail++;
+    failures.push({ question, issue: `Manual source nudge from ${activeSource}: got ${actual}, expected ${expectedSource}` });
+    return;
+  }
   pass++;
 }
 
@@ -333,6 +344,11 @@ test({ question: "show rates instead of counts", expectedPrimary: "historical", 
 test({ question: "break it down by bias type", expectedPrimary: "historical", expectFollowUp: true });
 test({ question: "show participation over time", expectedPrimary: "historical", expectFollowUp: true });
 
+// Anaphoric follow-ups from the 2026-06-09 audit
+test({ question: "show this from 2019 to present", expectedPrimary: "historical", expectFollowUp: true });
+test({ question: "show this with Los Angeles, Houston and New York", expectedPrimary: "historical", expectFollowUp: true });
+test({ question: "can you show me the rate", expectedPrimary: "historical", expectFollowUp: true });
+
 // Follow-up that adds hard requirement — should NOT be treated as pure follow-up
 // (V2 component handles the reroute, but isFollowUp still returns true — the UI reroutes)
 test({ question: "now show firearm murders instead", expectedPrimary: "historical", expectFollowUp: true, note: "isFollowUp=true but V2 detects weapon attr and reroutes" });
@@ -399,6 +415,14 @@ test({ question: "homicide offender race in Texas", expectedPrimary: ["shr", "ni
 // "arrests" → NIBRS (demographics), "juvenile arrests" → NIBRS (arrest_demographics)
 test({ question: "total arrests nationally", expectedPrimary: ["historical", "nibrs"], note: "Generic arrests" });
 test({ question: "juvenile arrests by race", expectedPrimary: "nibrs", mustExclude: ["current", "historical", "shr"], note: "Juvenile + race → arrest demographics → NIBRS" });
+
+console.log("═══ Manual source nudges ═══");
+
+testNudge("carjacking trend in Washington DC", "current", "nibrs");
+testNudge("Show me hate crimes in Texas", "current", "hate_crime");
+testNudge("domestic homicides since 1980", "historical", "shr");
+testNudge("carjacking trend in Washington DC", "nibrs", null);
+testNudge("Make the graph green", "current", null);
 
 // ══════════════════════════════════════════════════════════════════════
 //  Summary

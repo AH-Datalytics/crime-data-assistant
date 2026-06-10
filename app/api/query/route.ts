@@ -18,6 +18,10 @@ import { detectAllNullData } from "@/lib/all-null-detection";
 import { checkSingleRowTrend } from "@/lib/single-row-trend";
 import { parseRoutingLogMeta } from "@/lib/routing-log-meta";
 import { answerMetadataQuestion } from "@/lib/metadata-coverage";
+import { validateTablesForTab } from "@/lib/table-allowlist";
+import { applyResultDisclosures } from "@/lib/result-disclosure";
+import { normalizeHistoryForTab } from "@/lib/chat-history";
+import { detectFollowupTransform } from "@/lib/followup-transform";
 
 function sseEvent(event: StreamEvent): string {
   return `data: ${JSON.stringify(event)}\n\n`;
@@ -376,12 +380,16 @@ export async function POST(req: NextRequest) {
           )
         );
 
-        const history = Array.isArray(body?.history) ? body.history?.slice(-6) : undefined;
         const isHistorical = body?.mode === "historical";
+        const history = normalizeHistoryForTab(body?.history, isHistorical ? "historical" : "current");
+        const followupTransform = detectFollowupTransform(question, history);
+        const promptHistory = followupTransform
+          ? [...history, { role: "user" as const, content: followupTransform.instruction }]
+          : history;
         const systemPrompt = isHistorical ? getHistoricalSystemPrompt() : undefined;
 
         // Check response cache (only standalone questions)
-        const cached = (!history || history.length === 0) ? getCached(question, tab) : null;
+        const cached = promptHistory.length === 0 ? getCached(question, tab) : null;
         let fromCache = false;
 
         let claude: Awaited<ReturnType<typeof translateToSql>>;
@@ -392,7 +400,7 @@ export async function POST(req: NextRequest) {
         } else {
           claude = await translateToSql(
             question,
-            history as { role: "user" | "assistant"; content: string }[],
+            promptHistory as { role: "user" | "assistant"; content: string }[],
             systemPrompt
           );
 
@@ -404,7 +412,7 @@ export async function POST(req: NextRequest) {
                 const retryResult = await translateToSql(
                   question,
                   [
-                    ...((history || []) as { role: "user" | "assistant"; content: string }[]),
+                    ...((promptHistory || []) as { role: "user" | "assistant"; content: string }[]),
                     { role: "assistant", content: claude.explanation },
                     { role: "user", content: tab === "historical"
                       ? "[SYSTEM: Your previous response claimed the data was not available, but this may be incorrect. The Historical Library contains ~24,937 agencies including many small towns. NEVER assume an agency is missing — always generate a SQL query. Try: SELECT DISTINCT ori, agency, state FROM historical_agency WHERE agency LIKE '%[city]%' AND state = '[st]'. Then generate the main query.]"
@@ -428,7 +436,7 @@ export async function POST(req: NextRequest) {
             const retryResult = await translateToSql(
               question,
               [
-                ...((history || []) as { role: "user" | "assistant"; content: string }[]),
+                ...((promptHistory || []) as { role: "user" | "assistant"; content: string }[]),
                 { role: "assistant", content: JSON.stringify(claude) },
                 { role: "user", content: "[SYSTEM: Your previous response leaked internal scaffold text such as 'Entities in results'. Remove all internal instructions from explanation/title and return corrected JSON only.]" },
               ],
@@ -539,7 +547,7 @@ export async function POST(req: NextRequest) {
           );
           const fixPrompt = `Your SQL has these issues:\n${issues.map(i => `- ${i}`).join("\n")}\n\nPlease fix the SQL and return corrected JSON.`;
           const fixHistory = [
-            ...(history || []),
+            ...(promptHistory || []),
             { role: "user" as const, content: question },
             { role: "assistant" as const, content: JSON.stringify(claude) },
             { role: "user" as const, content: fixPrompt },
@@ -618,6 +626,50 @@ export async function POST(req: NextRequest) {
 
         sql = validation.sanitized!;
 
+        {
+          const tableCheck = validateTablesForTab(sql, tab, getDb());
+          if (!tableCheck.ok) {
+            firedGuardrails = [...firedGuardrails, ...tableCheck.fired];
+            if (!isOverBudget()) {
+              controller.enqueue(
+                encoder.encode(
+                  sseEvent({ type: "status", text: "Switching to the right tables..." })
+                )
+              );
+              const retryHistory = [
+                ...(promptHistory || []),
+                { role: "user" as const, content: question },
+                { role: "assistant" as const, content: JSON.stringify({ ...claude, sql }) },
+                { role: "user" as const, content: `[SYSTEM: ${tableCheck.message}]` },
+              ];
+              const retry = await translateToSql(tableCheck.message, retryHistory, systemPrompt);
+              if (retry.sql) {
+                const retryValidation = validateAndSanitize(retry.sql, { maxLimit });
+                if (retryValidation.valid) {
+                  const retrySql = retryValidation.sanitized!;
+                  const retryTableCheck = validateTablesForTab(retrySql, tab, getDb());
+                  if (retryTableCheck.ok) {
+                    sql = retrySql;
+                    applyRetryMeta(claude, retry);
+                  } else {
+                    const msg = "I couldn't build a valid query for this data source. Try switching tabs or rephrasing the question for the active dataset.";
+                    writeLog(question, retrySql, 0, `table_allowlist_second_failure:${retryTableCheck.unknown.join(",")}`, Date.now() - totalStart, msg, tab, [...firedGuardrails, ...retryTableCheck.fired], "haiku-4.5", sessionId);
+                    controller.enqueue(encoder.encode(sseEvent({ type: "result", sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - totalStart })));
+                    close();
+                    return;
+                  }
+                }
+              }
+            }
+
+            const msg = "I couldn't build a valid query for this data source. Try switching tabs or rephrasing the question for the active dataset.";
+            writeLog(question, sql, 0, `table_allowlist:${tableCheck.unknown.join(",")}`, Date.now() - totalStart, msg, tab, firedGuardrails, "haiku-4.5", sessionId);
+            controller.enqueue(encoder.encode(sseEvent({ type: "result", sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - totalStart })));
+            close();
+            return;
+          }
+        }
+
         // Step 3: Execute SQL (with one retry on DB error)
         const db = getDb();
         const dbStart = Date.now();
@@ -647,7 +699,7 @@ export async function POST(req: NextRequest) {
             )
           );
           const retryHistory = [
-            ...(history || []),
+            ...(promptHistory || []),
             { role: "user" as const, content: question },
             {
               role: "assistant" as const,
@@ -991,7 +1043,7 @@ export async function POST(req: NextRequest) {
               );
               const rollingPrompt = `Rewrite this query to use a rolling 12-month sum instead of raw monthly counts. The raw monthly data has many zero-count months which creates a misleading chart. Use SUM(...) OVER (ORDER BY year, month ROWS BETWEEN 11 PRECEDING AND CURRENT ROW) as the rolling window. Keep all other filters the same.`;
               const rollingHistory = [
-                ...(history || []),
+                ...(promptHistory || []),
                 { role: "user" as const, content: question },
                 { role: "assistant" as const, content: JSON.stringify(claude) },
                 { role: "user" as const, content: rollingPrompt },
@@ -1080,6 +1132,7 @@ export async function POST(req: NextRequest) {
           if (!isHistorical && postExplanation && !postExplanation.includes("sample")) {
             postExplanation += "\n\nNote: Current Trends data comes from a sample of agencies with consistent reporting — it does not represent complete state or national totals. For comprehensive state-level estimates, try the Historical Library tab.";
           }
+          postExplanation = applyResultDisclosures({ explanation: postExplanation, question, sql, rows, tab });
           if (containsInternalScaffold(postExplanation)) {
             console.log(`[query][internal-scaffold] Stripping scaffold text from post-query explanation`);
             postExplanation = stripInternalScaffold(postExplanation) || claude.explanation;
@@ -1094,7 +1147,7 @@ export async function POST(req: NextRequest) {
           const totalMs2 = Date.now() - totalStart;
           writeLog(question, sql, rows.length, null, totalMs2, postExplanation, tab, firedGuardrails, "haiku-4.5", sessionId);
           // Cache successful responses (only standalone questions)
-          if (!fromCache && (!history || history.length === 0) && sql) {
+          if (!fromCache && promptHistory.length === 0 && sql) {
             setCache(question, tab, { sql, explanation: claude.explanation, title: claude.title, chartType: claude.chartHint, xAxis: claude.xAxis, yAxis: claude.yAxis ? claude.yAxis.split(",").map(s => s.trim()) : undefined, yAxisLabel: claude.yAxisLabel, xAxisLabel: claude.xAxisLabel, colors: claude.colors, annotations: claude.annotations });
           }
         } catch {
@@ -1118,6 +1171,7 @@ export async function POST(req: NextRequest) {
             if (!isHistorical && retryExplanation && !retryExplanation.includes("sample")) {
               retryExplanation += "\n\nNote: Current Trends data comes from a sample of agencies with consistent reporting — it does not represent complete state or national totals. For comprehensive state-level estimates, try the Historical Library tab.";
             }
+            retryExplanation = applyResultDisclosures({ explanation: retryExplanation, question, sql, rows, tab });
             if (containsInternalScaffold(retryExplanation)) {
               console.log(`[query][internal-scaffold] Stripping scaffold text from retry explanation`);
               retryExplanation = stripInternalScaffold(retryExplanation) || claude.explanation;
@@ -1136,7 +1190,7 @@ export async function POST(req: NextRequest) {
             const totalMs2 = Date.now() - totalStart;
             writeLog(question, sql, rows.length, null, totalMs2, claude.explanation, tab, firedGuardrails, "haiku-4.5", sessionId);
           }
-          if (!fromCache && (!history || history.length === 0) && sql) {
+          if (!fromCache && promptHistory.length === 0 && sql) {
             setCache(question, tab, { sql, explanation: claude.explanation, title: claude.title, chartType: claude.chartHint, xAxis: claude.xAxis, yAxis: claude.yAxis ? claude.yAxis.split(",").map(s => s.trim()) : undefined, yAxisLabel: claude.yAxisLabel, xAxisLabel: claude.xAxisLabel, colors: claude.colors, annotations: claude.annotations });
           }
         }

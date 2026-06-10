@@ -10,7 +10,7 @@ export interface MetadataCoverageResult {
   columns: string[];
   rows: Record<string, unknown>[];
   rowCount: number;
-  truncated: false;
+  truncated: boolean;
   chartConfig: null;
   chartMeta: ChartMeta;
 }
@@ -36,7 +36,16 @@ const US_STATE_NAMES_DC = [
   "Virginia", "Washington", "West Virginia", "Wisconsin", "Wyoming",
 ];
 
-type Intent = "available_states" | "missing_states" | "state_count" | "year_range";
+type Intent =
+  | "download_help"
+  | "available_states"
+  | "missing_states"
+  | "state_count"
+  | "year_range"
+  | "agency_count"
+  | "available_agencies"
+  | "city_count"
+  | "available_cities";
 
 function norm(question: string): string {
   return question.toLowerCase().replace(/[^\w\s']/g, " ").replace(/\s+/g, " ").trim();
@@ -44,9 +53,29 @@ function norm(question: string): string {
 
 function detectMetadataIntent(question: string): Intent | null {
   const q = norm(question);
+  if (/\b(download|export|csv)\b/.test(q) && /\b(this|these|result|results|table|data|chart|it)\b/.test(q)) {
+    return "download_help";
+  }
+
+  const mentionsAgency = /\bagenc(?:y|ies)\b|\bdepartments?\b|\bpolice departments?\b/.test(q);
+  const mentionsCity = /\bcit(?:y|ies)\b/.test(q);
+  const asksCount = /\b(how many|number of|count)\b/.test(q);
+  const asksAvailable = /\b(which|what|list|available|represented|covered|coverage|have data|data for|reporting|included)\b/.test(q);
+
+  if (mentionsAgency) {
+    if (asksCount) return "agency_count";
+    if (asksAvailable) return "available_agencies";
+  }
+
+  if (mentionsCity) {
+    if (asksCount) return "city_count";
+    if (asksAvailable) return "available_cities";
+  }
+
   const mentionsState = /\bstates?\b/.test(q);
   if (mentionsState) {
-    if (/\b(missing|not represented|not available|not covered|without data|no data|don't have|do not have|cant tell|can't tell)\b/.test(q)) {
+    if (/\b(missing|not represented|not available|not covered|not included|not in|without data|no data|don't have|do not have|cant tell|can't tell)\b/.test(q) ||
+        /\b(?:aren't|are not|isn't|is not)\s+(?:represented|available|covered|included|in)\b/.test(q)) {
       return "missing_states";
     }
     if (/\b(how many|number of|count)\b/.test(q)) {
@@ -77,9 +106,19 @@ function runRows(db: Database.Database, sql: string): Record<string, unknown>[] 
   return db.prepare(sql).all() as Record<string, unknown>[];
 }
 
+function tableExists(db: Database.Database, table: string): boolean {
+  const row = db.prepare("SELECT name FROM sqlite_master WHERE type IN ('table','view') AND name = ?").get(table);
+  return Boolean(row);
+}
+
 function columnsFor(intent: Intent): string[] {
+  if (intent === "download_help") return ["answer"];
   if (intent === "state_count") return ["state_count"];
   if (intent === "year_range") return ["source", "first_year", "latest_year"];
+  if (intent === "agency_count") return ["agency_count"];
+  if (intent === "city_count") return ["city_count"];
+  if (intent === "available_agencies") return ["agency", "state"];
+  if (intent === "available_cities") return ["city", "state"];
   return ["state"];
 }
 
@@ -109,6 +148,7 @@ function result(
   sql: string,
   rows: Record<string, unknown>[],
   explanation: string,
+  truncated = false,
 ): MetadataCoverageResult {
   return {
     sql,
@@ -117,7 +157,7 @@ function result(
     columns: columnsFor(intent),
     rows,
     rowCount: rows.length,
-    truncated: false,
+    truncated,
     chartConfig: null,
     chartMeta: { source: chartSource(source), agencyCount: 0, population: null },
   };
@@ -125,6 +165,17 @@ function result(
 
 function summarizeStates(rows: Record<string, unknown>[]): string {
   return rows.map((r) => String(r.state)).join(", ");
+}
+
+function downloadResult(source: MetadataSource): MetadataCoverageResult {
+  const explanation = "Yes. Use the Download CSV button above the result table to export the returned rows. If a chart is shown, use the chart toolbar to download the chart image.";
+  return result(
+    source,
+    "download_help",
+    "SELECT 'Download CSV is available from the results toolbar' AS answer",
+    [{ answer: explanation }],
+    explanation,
+  );
 }
 
 function stateSql(source: MetadataSource, intent: Intent): string | null {
@@ -169,6 +220,65 @@ function stateSql(source: MetadataSource, intent: Intent): string | null {
   }
 }
 
+function entitySql(source: MetadataSource, intent: Intent, db: Database.Database): string | null {
+  const isCity = intent === "city_count" || intent === "available_cities";
+  const isCount = intent === "agency_count" || intent === "city_count";
+
+  switch (source) {
+    case "current": {
+      if (!tableExists(db, "agencies")) return null;
+      if (isCity) {
+        return isCount
+          ? "SELECT COUNT(DISTINCT agency || '|' || state) AS city_count FROM agencies WHERE national_sample = 1 AND type = 'City' AND agency IS NOT NULL"
+          : "SELECT agency AS city, state FROM agencies WHERE national_sample = 1 AND type = 'City' AND agency IS NOT NULL ORDER BY state, agency LIMIT 50";
+      }
+      return isCount
+        ? "SELECT COUNT(DISTINCT ori) AS agency_count FROM agencies WHERE national_sample = 1 AND agency IS NOT NULL"
+        : "SELECT agency, state FROM agencies WHERE national_sample = 1 AND agency IS NOT NULL ORDER BY state, agency LIMIT 50";
+    }
+    case "historical": {
+      if (!tableExists(db, "historical_agency")) return null;
+      if (isCity) {
+        return isCount
+          ? "SELECT COUNT(DISTINCT ori) AS city_count FROM historical_agency WHERE type = 'city' AND agency IS NOT NULL"
+          : "SELECT agency AS city, UPPER(state) AS state FROM historical_agency WHERE type = 'city' AND agency IS NOT NULL ORDER BY state, agency LIMIT 50";
+      }
+      return isCount
+        ? "SELECT COUNT(DISTINCT ori) AS agency_count FROM historical_agency WHERE agency IS NOT NULL"
+        : "SELECT agency, UPPER(state) AS state FROM historical_agency WHERE agency IS NOT NULL ORDER BY state, agency LIMIT 50";
+    }
+    case "nibrs": {
+      if (!tableExists(db, "agencies")) return null;
+      if (isCity) {
+        return isCount
+          ? "SELECT COUNT(DISTINCT city || '|' || state) AS city_count FROM agencies WHERE city IS NOT NULL AND city <> '' AND state IS NOT NULL"
+          : "SELECT DISTINCT city, state FROM agencies WHERE city IS NOT NULL AND city <> '' AND state IS NOT NULL ORDER BY state, city LIMIT 50";
+      }
+      return isCount
+        ? "SELECT COUNT(DISTINCT ori) AS agency_count FROM agencies WHERE ori IS NOT NULL"
+        : "SELECT DISTINCT ori AS agency, state FROM agencies WHERE ori IS NOT NULL ORDER BY state, ori LIMIT 50";
+    }
+    case "shr": {
+      if (!tableExists(db, "incidents")) return null;
+      if (isCity) {
+        return isCount
+          ? "SELECT COUNT(DISTINCT agency || '|' || state) AS city_count FROM incidents WHERE agency_type = 'City' AND agency IS NOT NULL"
+          : "SELECT DISTINCT agency AS city, state FROM incidents WHERE agency_type = 'City' AND agency IS NOT NULL ORDER BY state, agency LIMIT 50";
+      }
+      return isCount
+        ? "SELECT COUNT(DISTINCT ori) AS agency_count FROM incidents WHERE ori IS NOT NULL"
+        : "SELECT DISTINCT agency, state FROM incidents WHERE agency IS NOT NULL ORDER BY state, agency LIMIT 50";
+    }
+    case "hate_crime": {
+      if (!tableExists(db, "hate_crime_incidents")) return null;
+      if (isCity) return null;
+      return isCount
+        ? "SELECT COUNT(DISTINCT ori) AS agency_count FROM hate_crime_incidents WHERE ori IS NOT NULL"
+        : "SELECT DISTINCT agency_name AS agency, state FROM hate_crime_incidents WHERE agency_name IS NOT NULL ORDER BY state, agency_name LIMIT 50";
+    }
+  }
+}
+
 function yearSql(source: MetadataSource): string {
   switch (source) {
     case "current":
@@ -185,6 +295,23 @@ function yearSql(source: MetadataSource): string {
     case "hate_crime":
       return "SELECT 'hate crime participation' AS source, MIN(year) AS first_year, MAX(year) AS latest_year FROM hate_crime_participation";
   }
+}
+
+function entityExplanation(source: MetadataSource, intent: Intent, rows: Record<string, unknown>[], truncated: boolean): string {
+  const label = sourceLabel(source);
+  const noun = intent === "city_count" || intent === "available_cities" ? "cities" : "agencies";
+  const countColumn = intent === "city_count" ? "city_count" : "agency_count";
+  if (intent === "city_count" || intent === "agency_count") {
+    const count = rows[0]?.[countColumn] ?? 0;
+    return `${label} has ${count} ${noun} represented in this source.`;
+  }
+
+  const listed = rows
+    .map((r) => String(r[noun === "cities" ? "city" : "agency"] || "").trim() + (r.state ? `, ${r.state}` : ""))
+    .filter(Boolean)
+    .join("; ");
+  const prefix = truncated ? `Showing the first ${rows.length} ${noun} alphabetically` : `${label} has these ${noun}`;
+  return `${prefix}: ${listed}.`;
 }
 
 function stateExplanation(source: MetadataSource, intent: Intent, rows: Record<string, unknown>[]): string {
@@ -228,16 +355,29 @@ export function answerMetadataQuestion(
   question: string,
   db: Database.Database | null,
 ): MetadataCoverageResult | null {
-  if (!db) return null;
-
   const intent = detectMetadataIntent(question);
   if (!intent) return null;
+  if (intent === "download_help") return downloadResult(source);
+  if (!db) return null;
 
   try {
     if (intent === "year_range") {
       const sql = yearSql(source);
       const rows = runRows(db, sql);
       return result(source, intent, sql, rows, yearExplanation(source, rows));
+    }
+
+    if (
+      intent === "agency_count" ||
+      intent === "available_agencies" ||
+      intent === "city_count" ||
+      intent === "available_cities"
+    ) {
+      const sql = entitySql(source, intent, db);
+      if (!sql) return null;
+      const rows = runRows(db, sql);
+      const truncated = intent === "available_agencies" || intent === "available_cities";
+      return result(source, intent, sql, rows, entityExplanation(source, intent, rows, truncated), truncated);
     }
 
     const sql = stateSql(source, intent);
