@@ -294,7 +294,7 @@ export async function POST(req: NextRequest) {
         return jsonResp({
           success: true, question, sql, explanation: totalExplanation,
           title, columns, rows, rowCount: rows.length, truncated: false,
-          chartConfig: { type: "line", xAxis: "year", yAxis: ["fatal_shootings"], yAxisLabel: "Fatal Shootings", title: "" },
+          chartConfig: { type: "line", xAxis: "year", yAxis: ["fatal_shootings"], yAxisLabel: "Fatal Shootings", title },
           chartMeta: { source: "FBI SHR", agencyCount: 0, population: null },
           executionTimeMs: Date.now() - start,
         });
@@ -686,7 +686,9 @@ export async function POST(req: NextRequest) {
       xAxis: autoXAxis,
       yAxis: autoYAxis,
       yAxisLabel: claude.yAxisLabel || undefined,
-      title: "",
+      // ChartPanel renders config.title (not the top-level response title) —
+      // matches buildChartConfig in chart-config.ts / nibrs-chart-config.ts.
+      title: claude.title || "Results",
     };
 
     const totalMs = Date.now() - start;
