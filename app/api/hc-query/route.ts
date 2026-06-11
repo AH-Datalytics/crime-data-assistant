@@ -435,7 +435,8 @@ export async function POST(req: NextRequest) {
       xAxis: claude.xAxis || columns[0],
       yAxis: claude.yAxis || (columns.length > 1 ? [columns[columns.length - 1]] : []),
       yAxisLabel: claude.yAxisLabel || undefined,
-      title: "",
+      // ChartPanel renders config.title — matches chart-config.ts / nibrs-chart-config.ts.
+      title: claude.title || "Results",
     };
 
     const totalMs = Date.now() - start;
