@@ -49,6 +49,11 @@ type Intent =
   | "available_cities"
   | "county_membership_unavailable";
 
+interface CountyScope {
+  key: string;
+  display: string;
+}
+
 function norm(question: string): string {
   return question.toLowerCase().replace(/[^\w\s']/g, " ").replace(/\s+/g, " ").trim();
 }
@@ -67,7 +72,12 @@ function detectMetadataIntent(question: string): Intent | null {
     (mentionsAgency || mentionsCity) &&
     (asksCount || asksAvailable || /\b(?:in|within|inside|cover(?:ing)?)\b/.test(q));
 
-  if (asksCountyMembership) return "county_membership_unavailable";
+  if (asksCountyMembership && mentionsCity) {
+    return asksCount ? "city_count" : "available_cities";
+  }
+  if (asksCountyMembership && mentionsAgency) {
+    return asksCount ? "agency_count" : "available_agencies";
+  }
 
   if (mentionsAgency) {
     if (asksCount) return "agency_count";
@@ -103,6 +113,14 @@ function detectMetadataIntent(question: string): Intent | null {
 
 function quote(value: string): string {
   return `'${value.replace(/'/g, "''")}'`;
+}
+
+function countyKey(value: string): string {
+  return value
+    .replace(/\b(county|parish|borough)\b/ig, " ")
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, " ")
+    .trim();
 }
 
 function valuesCte(values: string[], column = "state"): string {
@@ -198,6 +216,28 @@ function countyMembershipUnavailableResult(source: MetadataSource): MetadataCove
   );
 }
 
+function countyAmbiguousResult(source: MetadataSource, county: CountyScope, states: string[]): MetadataCoverageResult {
+  const explanation = `${county.display} County matches multiple states in the agency county crosswalk: ${states.join(", ")}. Please specify a state.`;
+  return result(
+    source,
+    "county_membership_unavailable",
+    "SELECT 'County name is ambiguous; specify a state' AS answer",
+    [{ answer: explanation }],
+    explanation,
+  );
+}
+
+function countyNotFoundResult(source: MetadataSource, county: CountyScope): MetadataCoverageResult {
+  const explanation = `I could not find ${county.display} County in the agency county crosswalk for ${sourceLabel(source)}.`;
+  return result(
+    source,
+    "county_membership_unavailable",
+    "SELECT 'County not found in agency county crosswalk' AS answer",
+    [{ answer: explanation }],
+    explanation,
+  );
+}
+
 function stateScope(question: string): string | null {
   const q = question.replace(/\bwhich\s+states?\b/ig, "");
 
@@ -215,6 +255,33 @@ function stateScope(question: string): string | null {
   }
 
   return null;
+}
+
+function countyScope(question: string): CountyScope | null {
+  const prepositionPattern = /\b(?:in|within|inside|for|from|across|covering)\s+([A-Za-z][A-Za-z.' -]{1,80}?)\s+(County|Parish|Borough)\b/i;
+  const fallbackPattern = /\b([A-Za-z][A-Za-z.' -]{1,80}?)\s+(County|Parish|Borough)\b/i;
+  const match = prepositionPattern.exec(question) || fallbackPattern.exec(question);
+  if (!match) return null;
+  const name = match[1].replace(/^\b(the|a|an)\b\s+/i, "").trim();
+  const key = countyKey(name);
+  if (!key) return null;
+  const display = name
+    .split(/\s+/)
+    .map((part) => /^(of|and|the)$/i.test(part) ? part.toLowerCase() : part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join(" ");
+  return { key, display };
+}
+
+function countyStates(db: Database.Database, county: CountyScope, stateFilter: string | null): string[] {
+  const stateWhere = stateFilter ? " AND state = ?" : "";
+  const params = stateFilter ? [county.key, stateFilter] : [county.key];
+  const rows = db.prepare(`
+    SELECT DISTINCT state
+    FROM agency_county_crosswalk
+    WHERE county_key = ? AND county_fips IS NOT NULL AND state IS NOT NULL${stateWhere}
+    ORDER BY state
+  `).all(...params) as { state: string }[];
+  return rows.map((row) => row.state);
 }
 
 function stateSql(source: MetadataSource, intent: Intent): string | null {
@@ -259,11 +326,89 @@ function stateSql(source: MetadataSource, intent: Intent): string | null {
   }
 }
 
-function entitySql(source: MetadataSource, intent: Intent, db: Database.Database, stateFilter: string | null): string | null {
+function countyTargetCte(county: CountyScope, stateFilter: string | null): string {
+  const stateWhere = stateFilter ? ` AND state = ${quote(stateFilter)}` : "";
+  return `WITH target_counties AS (
+    SELECT DISTINCT state, county_fips
+    FROM agency_county_crosswalk
+    WHERE county_key = ${quote(county.key)} AND county_fips IS NOT NULL${stateWhere}
+  ),
+  county_crosswalk AS (
+    SELECT x.*
+    FROM agency_county_crosswalk x
+    JOIN target_counties tc ON tc.state = x.state AND tc.county_fips = x.county_fips
+  )`;
+}
+
+function countyEntitySql(source: MetadataSource, intent: Intent, county: CountyScope, stateFilter: string | null): string | null {
+  const isCity = intent === "city_count" || intent === "available_cities";
+  const isCount = intent === "agency_count" || intent === "city_count";
+  const cte = countyTargetCte(county, stateFilter);
+  const currentJoin = "JOIN county_crosswalk x ON a.ori = x.ori9 OR substr(a.ori, 1, 7) = x.ori";
+  const shrJoin = "JOIN county_crosswalk x ON i.ori = x.ori OR substr(i.ori, 1, 7) = x.ori";
+
+  switch (source) {
+    case "current": {
+      if (isCity) {
+        return isCount
+          ? `${cte} SELECT COUNT(DISTINCT a.ori) AS city_count FROM agencies a ${currentJoin} WHERE a.national_sample = 1 AND a.type = 'City' AND a.agency IS NOT NULL`
+          : `${cte} SELECT DISTINCT a.agency AS city, a.state FROM agencies a ${currentJoin} WHERE a.national_sample = 1 AND a.type = 'City' AND a.agency IS NOT NULL ORDER BY a.state, a.agency LIMIT 50`;
+      }
+      return isCount
+        ? `${cte} SELECT COUNT(DISTINCT a.ori) AS agency_count FROM agencies a ${currentJoin} WHERE a.national_sample = 1 AND a.agency IS NOT NULL`
+        : `${cte} SELECT DISTINCT a.agency, a.state FROM agencies a ${currentJoin} WHERE a.national_sample = 1 AND a.agency IS NOT NULL ORDER BY a.state, a.agency LIMIT 50`;
+    }
+    case "historical": {
+      const historicalJoin = "JOIN county_crosswalk x ON h.ori = x.ori9 OR substr(h.ori, 1, 7) = x.ori";
+      if (isCity) {
+        return isCount
+          ? `${cte} SELECT COUNT(DISTINCT h.ori) AS city_count FROM historical_agency h ${historicalJoin} WHERE h.type = 'city' AND h.agency IS NOT NULL`
+          : `${cte} SELECT DISTINCT h.agency AS city, UPPER(h.state) AS state FROM historical_agency h ${historicalJoin} WHERE h.type = 'city' AND h.agency IS NOT NULL ORDER BY state, h.agency LIMIT 50`;
+      }
+      return isCount
+        ? `${cte} SELECT COUNT(DISTINCT h.ori) AS agency_count FROM historical_agency h ${historicalJoin} WHERE h.agency IS NOT NULL`
+        : `${cte} SELECT DISTINCT h.agency, UPPER(h.state) AS state FROM historical_agency h ${historicalJoin} WHERE h.agency IS NOT NULL ORDER BY state, h.agency LIMIT 50`;
+    }
+    case "nibrs": {
+      if (isCity) {
+        return isCount
+          ? `${cte} SELECT COUNT(DISTINCT a.city || '|' || a.state) AS city_count FROM agencies a ${currentJoin} WHERE a.city IS NOT NULL AND a.city <> '' AND a.state IS NOT NULL`
+          : `${cte} SELECT DISTINCT a.city, a.state FROM agencies a ${currentJoin} WHERE a.city IS NOT NULL AND a.city <> '' AND a.state IS NOT NULL ORDER BY a.state, a.city LIMIT 50`;
+      }
+      return isCount
+        ? `${cte} SELECT COUNT(DISTINCT a.ori) AS agency_count FROM agencies a ${currentJoin} WHERE a.ori IS NOT NULL`
+        : `${cte} SELECT DISTINCT COALESCE(x.agency_name, a.ori) AS agency, a.state FROM agencies a ${currentJoin} WHERE a.ori IS NOT NULL ORDER BY a.state, agency LIMIT 50`;
+    }
+    case "shr": {
+      if (isCity) {
+        return isCount
+          ? `${cte} SELECT COUNT(DISTINCT i.ori) AS city_count FROM incidents i ${shrJoin} WHERE i.agency_type = 'City' AND i.agency IS NOT NULL`
+          : `${cte} SELECT DISTINCT i.agency AS city, i.state FROM incidents i ${shrJoin} WHERE i.agency_type = 'City' AND i.agency IS NOT NULL ORDER BY i.state, i.agency LIMIT 50`;
+      }
+      return isCount
+        ? `${cte} SELECT COUNT(DISTINCT i.ori) AS agency_count FROM incidents i ${shrJoin} WHERE i.ori IS NOT NULL`
+        : `${cte} SELECT DISTINCT i.agency, i.state FROM incidents i ${shrJoin} WHERE i.agency IS NOT NULL ORDER BY i.state, i.agency LIMIT 50`;
+    }
+    case "hate_crime": {
+      const hateJoin = "JOIN county_crosswalk x ON h.ori = x.ori9 OR substr(h.ori, 1, 7) = x.ori";
+      if (isCity) return null;
+      return isCount
+        ? `${cte} SELECT COUNT(DISTINCT h.ori) AS agency_count FROM hate_crime_incidents h ${hateJoin} WHERE h.ori IS NOT NULL`
+        : `${cte} SELECT DISTINCT h.agency_name AS agency, h.state FROM hate_crime_incidents h ${hateJoin} WHERE h.agency_name IS NOT NULL ORDER BY h.state, h.agency_name LIMIT 50`;
+    }
+  }
+}
+
+function entitySql(source: MetadataSource, intent: Intent, db: Database.Database, stateFilter: string | null, county: CountyScope | null): string | null {
   const isCity = intent === "city_count" || intent === "available_cities";
   const isCount = intent === "agency_count" || intent === "city_count";
   const stateWhere = stateFilter ? ` AND state = ${quote(stateFilter)}` : "";
   const historicalStateWhere = stateFilter ? ` AND UPPER(state) = ${quote(stateFilter)}` : "";
+
+  if (county) {
+    if (!tableExists(db, "agency_county_crosswalk")) return null;
+    return countyEntitySql(source, intent, county, stateFilter);
+  }
 
   switch (source) {
     case "current": {
@@ -355,6 +500,31 @@ function entityExplanation(source: MetadataSource, intent: Intent, rows: Record<
   return `${prefix}: ${listed}.`;
 }
 
+function countyEntityExplanation(
+  source: MetadataSource,
+  intent: Intent,
+  rows: Record<string, unknown>[],
+  truncated: boolean,
+  county: CountyScope,
+  stateFilter: string | null,
+): string {
+  const label = sourceLabel(source);
+  const noun = intent === "city_count" || intent === "available_cities" ? "cities" : "agencies";
+  const place = stateFilter ? `${county.display} County, ${stateFilter}` : `${county.display} County`;
+  const countColumn = intent === "city_count" ? "city_count" : "agency_count";
+  if (intent === "city_count" || intent === "agency_count") {
+    const count = rows[0]?.[countColumn] ?? 0;
+    return `${label} has ${count} ${noun} represented in ${place} based on agency_county_crosswalk.`;
+  }
+
+  const listed = rows
+    .map((r) => String(r[noun === "cities" ? "city" : "agency"] || "").trim() + (r.state ? `, ${r.state}` : ""))
+    .filter(Boolean)
+    .join("; ");
+  const prefix = truncated ? `Showing the first ${rows.length} ${noun} alphabetically in ${place}` : `${label} has these ${noun} represented in ${place}`;
+  return `${prefix}: ${listed}.`;
+}
+
 function stateExplanation(source: MetadataSource, intent: Intent, rows: Record<string, unknown>[]): string {
   const label = sourceLabel(source);
   const basis =
@@ -415,11 +585,19 @@ export function answerMetadataQuestion(
       intent === "city_count" ||
       intent === "available_cities"
     ) {
-      const sql = entitySql(source, intent, db, stateScope(question));
+      const state = stateScope(question);
+      const county = countyScope(question);
+      if (county) {
+        if (!tableExists(db, "agency_county_crosswalk")) return countyMembershipUnavailableResult(source);
+        const states = countyStates(db, county, state);
+        if (states.length === 0) return countyNotFoundResult(source, county);
+        if (!state && states.length > 1) return countyAmbiguousResult(source, county, states);
+      }
+      const sql = entitySql(source, intent, db, state, county);
       if (!sql) return null;
       const rows = runRows(db, sql);
       const truncated = intent === "available_agencies" || intent === "available_cities";
-      return result(source, intent, sql, rows, entityExplanation(source, intent, rows, truncated), truncated);
+      return result(source, intent, sql, rows, county ? countyEntityExplanation(source, intent, rows, truncated, county, state) : entityExplanation(source, intent, rows, truncated), truncated);
     }
 
     const sql = stateSql(source, intent);

@@ -73,6 +73,7 @@ const MANUAL_SCHEMA: Record<string, string[]> = {
   nibrs_national_coverage: ["year", "coverage_pct"],
   cde_agency_totals: ["ori", "year", "state", "city", "total_offenses"],
   state_population: ["state", "state_name", "year", "population", "source"],
+  agency_county_crosswalk: ["ori", "ori9", "agency_name", "state", "county_fips", "county_name", "county_key", "source"],
 };
 
 const SAME_AS_SCHEMA: Record<string, string[]> = {

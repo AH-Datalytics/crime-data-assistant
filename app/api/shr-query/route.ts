@@ -24,10 +24,51 @@ import { applyResultDisclosures } from "@/lib/result-disclosure";
 import { appendShrAgencyProbeCaveat, isZeroResult, runShrAgencyProbe } from "@/lib/shr-agency-probe";
 import { normalizeHistoryForTab } from "@/lib/chat-history";
 import { detectFollowupTransform } from "@/lib/followup-transform";
+import { STATE_NAME_TO_ABBR } from "@/lib/state-population";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function jsonResp(data: Record<string, any> | QueryError, status = 200) {
   return NextResponse.json(data, { status });
+}
+
+function countyKey(value: string): string {
+  return value
+    .replace(/\b(county|parish|borough)\b/ig, " ")
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, " ")
+    .trim();
+}
+
+function displayPlace(value: string): string {
+  return value
+    .trim()
+    .split(/\s+/)
+    .map((part) => /^(of|and|the)$/i.test(part) ? part.toLowerCase() : part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join(" ");
+}
+
+function countyIntent(question: string): { key: string; display: string } | null {
+  const match = /\b(?:in|within|inside|for|from|across|covering)\s+([A-Za-z][A-Za-z.' -]{1,80}?)\s+(County|Parish|Borough)\b/i.exec(question) ||
+    /\b([A-Za-z][A-Za-z.' -]{1,80}?)\s+(County|Parish|Borough)\b/i.exec(question);
+  if (!match) return null;
+  const name = match[1].replace(/^\b(the|a|an)\b\s+/i, "").trim();
+  const key = countyKey(name);
+  return key ? { key, display: displayPlace(name) } : null;
+}
+
+function stateMention(question: string): string | null {
+  const explicit = explicitStateIntent(question);
+  if (explicit) return explicit.state;
+
+  const abbr = question.match(/\b([A-Z]{2})\b/);
+  if (abbr) return abbr[1];
+
+  for (const [name, state] of Object.entries(STATE_NAME_TO_ABBR)) {
+    if (state === "US") continue;
+    const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    if (new RegExp(`\\b${escaped}\\b`, "i").test(question)) return state;
+  }
+  return null;
 }
 
 export async function POST(req: NextRequest) {
@@ -144,15 +185,65 @@ export async function POST(req: NextRequest) {
       const startYear = yearMatch ? parseInt(yearMatch[1]) : 2000;
 
       let whereClauses = ["i.homicide_type = 'Murder'", "i.weapon_group = 'Firearm'", `i.year >= ${startYear}`];
+      let joinClauses = "JOIN victims v ON v.incident_id = i.id";
+      let withClause = "";
       let titlePlace = "Nationally";
+      const county = countyIntent(question);
+      const mentionedState = stateMention(question);
 
       // Explicit state-level wording ("New York State", "statewide in Washington")
       // must resolve to a state filter, never a same-named city agency (F18 / #4155).
-      // COUNTY CROSSWALK (#4): county questions ("gun violence in Cook County") still
-      // fall through to cityMatch below and filter agency = '<County Name>' — wire in
-      // county intent here when the shared agency_county crosswalk lands.
       const stateIntent = explicitStateIntent(question);
-      if (stateIntent) {
+      if (county) {
+        const db = getShrDb();
+        if (!db) {
+          return jsonResp({ success: false, error: "SHR database not available." } as QueryError, 500);
+        }
+        const hasCrosswalk = Boolean(db.prepare("SELECT name FROM sqlite_master WHERE type IN ('table','view') AND name = 'agency_county_crosswalk'").get());
+        if (!hasCrosswalk) {
+          const explanation = "I do not currently have the agency-by-county crosswalk needed to answer countywide SHR geography questions. I should not infer county membership from agency names.";
+          writeLog(question, null, 0, "missing_agency_county_crosswalk", Date.now() - start, explanation, "shr", ["deterministic-shooting"], "deterministic", sessionId);
+          return jsonResp({
+            success: true, question, sql: null, explanation,
+            title: "", columns: [], rows: [], rowCount: 0, truncated: false,
+            chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - start,
+          });
+        }
+
+        const stateWhere = mentionedState ? " AND state = ?" : "";
+        const params = mentionedState ? [county.key, mentionedState] : [county.key];
+        const countyStates = db.prepare(`
+          SELECT DISTINCT state
+          FROM agency_county_crosswalk
+          WHERE county_key = ? AND county_fips IS NOT NULL AND state IS NOT NULL${stateWhere}
+          ORDER BY state
+        `).all(...params) as { state: string }[];
+
+        if (countyStates.length === 0) {
+          const explanation = `I could not find ${county.display} County in the SHR agency county crosswalk${mentionedState ? ` for ${mentionedState}` : ""}.`;
+          writeLog(question, null, 0, "county_not_found", Date.now() - start, explanation, "shr", ["deterministic-shooting"], "deterministic", sessionId);
+          return jsonResp({
+            success: true, question, sql: null, explanation,
+            title: "", columns: [], rows: [], rowCount: 0, truncated: false,
+            chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - start,
+          });
+        }
+
+        if (!mentionedState && countyStates.length > 1) {
+          const explanation = `${county.display} County matches multiple states in the agency county crosswalk: ${countyStates.map((row) => row.state).join(", ")}. Please specify a state.`;
+          writeLog(question, null, 0, "ambiguous_county", Date.now() - start, explanation, "shr", ["deterministic-shooting"], "deterministic", sessionId);
+          return jsonResp({
+            success: true, question, sql: null, explanation,
+            title: "", columns: [], rows: [], rowCount: 0, truncated: false,
+            chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - start,
+          });
+        }
+
+        const countyStateWhere = mentionedState ? ` AND state = '${mentionedState.replace(/'/g, "''")}'` : "";
+        withClause = `WITH target_counties AS (SELECT DISTINCT state, county_fips FROM agency_county_crosswalk WHERE county_key = '${county.key.replace(/'/g, "''")}' AND county_fips IS NOT NULL${countyStateWhere}), county_oris AS (SELECT DISTINCT ac.ori FROM agency_county_crosswalk ac JOIN target_counties tc ON tc.state = ac.state AND tc.county_fips = ac.county_fips) `;
+        joinClauses += " JOIN county_oris co ON i.ori = co.ori OR substr(i.ori, 1, 7) = co.ori";
+        titlePlace = `${county.display} County${mentionedState ? `, ${mentionedState}` : ""}`;
+      } else if (stateIntent) {
         titlePlace = `${stateIntent.stateName} (statewide)`;
         whereClauses.push(`i.state = '${stateIntent.state}'`);
       } else if (cityMatch) {
@@ -170,7 +261,7 @@ export async function POST(req: NextRequest) {
         whereClauses.push(`i.state = '${stateMatch[1]}'`);
       }
 
-      const sql = `SELECT i.year, COUNT(*) AS fatal_shootings FROM incidents i JOIN victims v ON v.incident_id = i.id WHERE ${whereClauses.join(" AND ")} GROUP BY i.year ORDER BY i.year LIMIT 1000`;
+      const sql = `${withClause}SELECT i.year, COUNT(*) AS fatal_shootings FROM incidents i ${joinClauses} WHERE ${whereClauses.join(" AND ")} GROUP BY i.year ORDER BY i.year LIMIT 1000`;
       const title = `Fatal Shootings (Firearm Homicides), ${titlePlace}, ${startYear}-Present`;
       const explanation = `Fatal shootings (firearm homicides) by year${titlePlace !== "Nationally" ? ` in ${titlePlace}` : ""} since ${startYear}. This shows only homicides where the weapon was a firearm - nonfatal shootings are not tracked in this database.`;
 

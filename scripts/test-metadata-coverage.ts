@@ -48,6 +48,15 @@ function makeDb() {
       state TEXT,
       year INTEGER
     );
+    CREATE TABLE agency_county_crosswalk (
+      ori TEXT PRIMARY KEY,
+      ori9 TEXT,
+      agency_name TEXT,
+      state TEXT,
+      county_fips TEXT,
+      county_name TEXT,
+      county_key TEXT
+    );
   `);
 
   db.exec(`
@@ -56,7 +65,11 @@ function makeDb() {
       ('L1', 'New Orleans', 'LA', 'City', 'NEW ORLEANS', 1),
       ('X1', 'Houston', 'TX', 'City', 'HOUSTON', 0),
       ('P1', 'Philadelphia', 'PA', 'City', 'PHILADELPHIA', 1),
-      ('N1', 'Omaha', 'NB', 'City', 'OMAHA', NULL);
+      ('N1', 'Omaha', 'NB', 'City', 'OMAHA', NULL),
+      ('IN0494900', 'Indianapolis', 'IN', 'City', 'INDIANAPOLIS', 0),
+      ('IN0490100', 'Beech Grove', 'IN', 'City', 'BEECH GROVE', 0),
+      ('CA0431300', 'San Jose', 'CA', 'City', 'San Jose', 0),
+      ('CA0431600', 'Sunnyvale', 'CA', 'City', 'Sunnyvale', 0);
     INSERT INTO agency_monthly VALUES (2023), (2024), (2025);
     INSERT INTO historical_state_national VALUES
       ('Alabama', 1960),
@@ -80,6 +93,14 @@ function makeDb() {
     INSERT INTO hate_crime_incidents VALUES
       ('H1', 'Birmingham Police Department', 'AL', 2024),
       ('H2', 'New Orleans Police Department', 'LA', 2024);
+    INSERT INTO agency_county_crosswalk VALUES
+      ('P1LEG', 'P1', 'Philadelphia', 'PA', '42101', 'Philadelphia', 'PHILADELPHIA'),
+      ('CA04313', 'CA0431300', 'San Jose', 'CA', '06085', 'Santa Clara', 'SANTA CLARA'),
+      ('CA04316', 'CA0431600', 'Sunnyvale', 'CA', '06085', 'Santa Clara', 'SANTA CLARA'),
+      ('INIPD00', 'IN0494900', 'Indianapolis', 'IN', '18097', 'Marion', 'MARION'),
+      ('IN04901', 'IN0490100', 'Beech Grove', 'IN', '18097', 'Marion', 'MARION'),
+      ('OR00101', 'OR0010100', 'Albany', 'OR', '41043', 'Linn', 'LINN'),
+      ('IA00101', 'IA0010100', 'Algona', 'IA', '19109', 'Linn', 'LINN');
   `);
 
   return db;
@@ -202,9 +223,23 @@ const db = makeDb();
 {
   const result = answerMetadataQuestion("nibrs", "which cities are in Santa Clara County?", db);
   assert(result);
+  assert.deepEqual(result.rows.map((r) => r.city), ["San Jose", "Sunnyvale"]);
+  assert.match(result.sql, /agency_county_crosswalk/);
+  assert.match(result.explanation, /Santa Clara County/);
+}
+
+{
+  const result = answerMetadataQuestion("nibrs", "which cities are in Marion County Indiana?", db);
+  assert(result);
+  assert.deepEqual(result.rows.map((r) => r.city), ["BEECH GROVE", "INDIANAPOLIS"]);
+  assert.match(result.sql, /a\.ori = x\.ori9/);
+}
+
+{
+  const result = answerMetadataQuestion("current", "which agencies are in Linn County?", db);
+  assert(result);
   assert.deepEqual(result.columns, ["answer"]);
-  assert.match(result.explanation, /complete city\/agency-to-county membership crosswalk/i);
-  assert.match(result.explanation, /does not list every city agency/i);
+  assert.match(result.explanation, /matches multiple states/i);
 }
 
 {

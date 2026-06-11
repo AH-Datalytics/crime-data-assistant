@@ -1253,12 +1253,15 @@ Examples:
     Mention in your explanation that this is the primary PD. If the user later asks for "all agencies", use all ORIs with that city name.
     **CITY COUNT AGGREGATION**: City queries can match multiple ORIs. When using ori IN (...) for a city trend, always SUM across all matching ORIs and GROUP BY year (or year, month for monthly output). Do not return one row per ORI unless the user explicitly asks for agency-level rows.
     **COUNTY SHERIFF CONTAMINATION**: The FBI labels county sheriff agencies with the same city name as the city PD (e.g., Harris County SO has city='HOUSTON'). **For ANY query about "cities" — whether single-city or multi-city rankings — ALWAYS filter with agency_type = 'City'** to exclude county agencies. Without this filter, cities like Houston, Jacksonville, Nashville, and Indianapolis will appear twice (once for the city PD, once for the county SO).
-    **COUNTY / PARISH QUERIES**: The agencies table stores county sheriffs by HEADQUARTERS CITY, not county name (\`city = 'KING COUNTY'\` will NOT work). Use the **county_lookup** table to find the ORI:
+    **COUNTY / PARISH GEOGRAPHY QUERIES**: The agencies table stores county sheriffs by HEADQUARTERS CITY, not county name (\`city = 'KING COUNTY'\` will NOT work). For countywide geography (all city/county/special agencies located in a county), use **agency_county_crosswalk**, not county_lookup. agency_county_crosswalk columns: ori (7-char legacy ORI), ori9 (9-char ORI when available), agency_name, state, county_fips, county_name, county_key. county_key is uppercase bare county/parish name without suffix (e.g., 'KING', 'JEFFERSON', 'SANTA CLARA'). Join NIBRS agency/offense rows by 9-char ORI or 7-char prefix:
     \`\`\`sql
-    WHERE ori IN (SELECT ori FROM county_lookup WHERE county_name = 'King County' AND state = 'WA')
+    SELECT COUNT(DISTINCT a.ori) AS mapped_agencies
+    FROM agencies a
+    JOIN agency_county_crosswalk ac ON a.ori = ac.ori9 OR substr(a.ori, 1, 7) = ac.ori
+    WHERE ac.county_key = 'KING' AND ac.state = 'WA'
     \`\`\`
-    The county_lookup table has columns: ori TEXT, county_name TEXT, state TEXT (2-letter). It maps ~3,200 county/parish agencies to their proper names. Use exact match on county_name (title case, e.g., 'King County', 'Jefferson Parish', 'Anne Arundel County'). If the county name is ambiguous across states and the user didn't specify a state, set sql to null and ask which state. **NEVER use \`city LIKE\` prefix searches to find a county.**
-    Louisiana parishes are county-type agencies stored the same way (e.g., county_name = 'Jefferson Parish').
+    If the user asks for a single county sheriff/agency, that is a single-agency query; otherwise county/parish wording means countywide geography across all mapped ORIs. If the county name is ambiguous across states and the user did not specify a state, set sql to null and ask which state. **NEVER use \`city LIKE\` prefix searches to find a county.**
+    Louisiana parishes use county_key the same way (e.g., Jefferson Parish -> county_key = 'JEFFERSON', state = 'LA').
     **BOSTON**: There are ~20 small sub-agencies listed under city='BOSTON' with pop_group 7/9 and population 0 — these have NO crime data. For Boston queries, use the pop_group filter to pick the main PD: AND ori = (SELECT ori FROM agencies WHERE city = 'BOSTON' AND state = 'MA' AND year = 2024 AND population > 0 ORDER BY pop_group LIMIT 1)
 17. **Common city name mappings** — the agencies table stores city names in UPPERCASE. Watch for "Saint" vs "St" inconsistencies:
    - "New York", "New York City", or "NYC" → city = 'NEW YORK', state = 'NY' (NOT 'NEW YORK CITY')
