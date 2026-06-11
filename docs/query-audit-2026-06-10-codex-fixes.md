@@ -80,3 +80,24 @@ Inventory of every path that builds or executes SQL outside `runGuardrails()`:
 Rule going forward: **any new intent rule (state/county/geography/category) must be wired into
 `deterministic-shooting` (and any future deterministic SQL path) explicitly — these paths never
 see guardrails, and unit tests on the pipeline cannot detect the gap. Live-replay probes can.**
+
+## RTCI import durability for agency_county_crosswalk (2026-06-11)
+
+`scripts/update-rtci-db.py` (the local script whose `--deploy` wholesale-replaces the VPS
+crime_data.db) now rebuilds and verifies `agency_county_crosswalk` in the local DB after every
+update, BEFORE any deploy, and aborts the run if verification fails:
+
+- Expected: ~25,764 rows (hard floor 25,000); `INIPD00 -> IN0494900 / 18097`; Santa Clara CA >= 20
+  mapped agencies (currently 28).
+- Sources default to the OneDrive Documents copies of `Participation Crosswalk.xlsx` and
+  `CDE Participation 2000-2023.csv` (override: `--crosswalk-source` / `--crosswalk-cde`).
+
+Two latent deploy bugs fixed in the same pass:
+- `VPS_DB` pointed at the stale `/opt/nibrs/app/crime_data.db` — production reads
+  `/opt/nibrs/shared/crime_data.db` under the release-based layout. The old path meant a monthly
+  deploy would have silently updated a file nothing reads.
+- The deploy step built inside the live app directory (`npm run build` in `/opt/nibrs/app`); it
+  now runs `scripts/deploy-zero-downtime.sh dev` so a failed build can never take down the site.
+
+Manual rebuild command (e.g. after restoring a backup):
+`python scripts/build-agency-county-crosswalk.py --source "<xlsx>" --cde "<csv>" --target <db> --apply`
