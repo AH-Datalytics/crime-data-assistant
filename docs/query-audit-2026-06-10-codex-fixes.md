@@ -60,3 +60,20 @@ Durable summary of fixes landed from the 2026-06-09 query audit review.
 - `npm run build`
 
 `npm run build` passed. It still prints DB availability warnings during static collection when large/local DBs are unavailable in some worker contexts; those warnings did not fail the build.
+
+## Deterministic-handler sweep (2026-06-11, pre-#4 safety pass)
+
+Inventory of every path that builds or executes SQL outside `runGuardrails()`:
+
+| Path | Where | Geography-sensitive? | Status |
+|---|---|---|---|
+| `deterministic-metadata` | all 4 routes via `lib/metadata-coverage.ts` | No — fixed dataset-level templates, no user text interpolated into SQL | Safe |
+| `deterministic-shooting` | `app/api/shr-query/route.ts` | **Yes** — regex geography extraction | State intent wired (79b5bd4); **zero-result agency probe now wired too** (this sweep); county questions still fall through to agency-name match — marked with a `COUNTY CROSSWALK (#4)` comment for the crosswalk work |
+| Agency-name suggestion lookup | `app/api/query/route.ts` (`LIKE ?`) | Parameterized, suggestion-only | Safe |
+| `lib/shr-agency-probe.ts` | shr route (caveat support) | Parameterized, caveat-only | Safe |
+| `lib/dynamic-facts.ts` | startup introspection | Internal constants only | Safe |
+| `lib/followup-transform.ts` | all routes | Emits prompt instruction; output goes through guardrails | Safe |
+
+Rule going forward: **any new intent rule (state/county/geography/category) must be wired into
+`deterministic-shooting` (and any future deterministic SQL path) explicitly — these paths never
+see guardrails, and unit tests on the pipeline cannot detect the gap. Live-replay probes can.**

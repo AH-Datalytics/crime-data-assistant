@@ -148,6 +148,9 @@ export async function POST(req: NextRequest) {
 
       // Explicit state-level wording ("New York State", "statewide in Washington")
       // must resolve to a state filter, never a same-named city agency (F18 / #4155).
+      // COUNTY CROSSWALK (#4): county questions ("gun violence in Cook County") still
+      // fall through to cityMatch below and filter agency = '<County Name>' — wire in
+      // county intent here when the shared agency_county crosswalk lands.
       const stateIntent = explicitStateIntent(question);
       if (stateIntent) {
         titlePlace = `${stateIntent.stateName} (statewide)`;
@@ -183,9 +186,20 @@ export async function POST(req: NextRequest) {
         // Add caveats
         const caveats = [explanation];
         caveats.push("Not all agencies and states report SHR data every year, so these counts underrepresent total fatal shootings.");
-        const totalExplanation = caveats.join("\n\n");
+        let totalExplanation = caveats.join("\n\n");
 
-        writeLog(question, sql, rows.length, null, Date.now() - start, totalExplanation, "shr", ["deterministic-shooting"], "deterministic", sessionId);
+        // Deterministic paths bypass runGuardrails, so the zero-result agency
+        // probe must be applied here too (same blind spot as F18 / #4155).
+        const detGuardrails = ["deterministic-shooting"];
+        if (isZeroResult(rows, columns)) {
+          const probeResult = runShrAgencyProbe(db, sql);
+          if (probeResult && probeResult.count > 0) {
+            totalExplanation = appendShrAgencyProbeCaveat(totalExplanation, probeResult.probe.agency);
+            detGuardrails.push("shr-agency-zero-probe");
+          }
+        }
+
+        writeLog(question, sql, rows.length, null, Date.now() - start, totalExplanation, "shr", detGuardrails, "deterministic", sessionId);
         return jsonResp({
           success: true, question, sql, explanation: totalExplanation,
           title, columns, rows, rowCount: rows.length, truncated: false,
