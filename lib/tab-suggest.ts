@@ -14,6 +14,7 @@ import {
   asksToIncludeCurrentYear,
   pastCompleteCalendarYearsRange,
   pastYearsIncludingCurrentRange,
+  relativeYearRangeForQuestion,
 } from "./time-conventions";
 
 export type TabId = SourceId;
@@ -351,6 +352,9 @@ function detectGeography(q: string): QueryIntent["geography"] {
 
 function detectTimeRange(q: string): QueryIntent["timeRange"] {
   const currentYear = new Date().getFullYear();
+  const relativeRange = relativeYearRangeForQuestion(q);
+  if (relativeRange) return relativeRange;
+
   // "from YYYY to YYYY" or "YYYY-YYYY" or "YYYY to YYYY"
   const rangeMatch = q.match(/\b(19\d{2}|20\d{2})\s*(?:to|through|-|–)\s*(19\d{2}|20\d{2})\b/i);
   if (rangeMatch) return { start: parseInt(rangeMatch[1]), end: parseInt(rangeMatch[2]) };

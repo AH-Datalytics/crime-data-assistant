@@ -295,6 +295,19 @@ Juvenile robbery offenders by race and year example:
 - When the user asks about DUI/DWI, disorderly conduct, trespass, curfew violations, or other Group B offenses, use this table with the appropriate 90x code. These represent ARRESTS only — there is no incident count data for Group B offenses in NIBRS.
 - In your explanation, always note: "Group B offenses like DUI are arrest-only data — NIBRS does not track incident counts for these offenses, only arrests."
 
+For "top/most populous states" arrest queries, choose states from state_population for one reference year, then filter summary_arrestee_demographics by state. Do NOT use SUM(agencies.population) for state rankings; agencies can include non-state pseudo-codes. Preferred shape:
+  WITH top_states AS (
+    SELECT state
+    FROM state_population
+    WHERE year = (SELECT MAX(year) FROM state_population) AND state <> 'US'
+    ORDER BY population DESC
+    LIMIT 10
+  )
+  SELECT d.year, d.state, SUM(d.arrestee_count) AS arrests
+  FROM summary_arrestee_demographics d
+  WHERE d.ucr_arrest_offense = '90C' AND d.state IN (SELECT state FROM top_states) AND d.year BETWEEN 2021 AND ${NIBRS.currentYear}
+  GROUP BY d.year, d.state ORDER BY d.state, d.year
+
 Arrestee demographics by age group for a state example:
   SELECT d.age_group, SUM(d.arrestee_count) AS arrestees
   FROM summary_arrestee_demographics d

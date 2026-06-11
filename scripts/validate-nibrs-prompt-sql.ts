@@ -72,6 +72,7 @@ const MANUAL_SCHEMA: Record<string, string[]> = {
   agency_reporting_gaps: ["ori", "year", "city", "state", "population", "months_reported", "expected_months", "gap_type", "severity"],
   nibrs_national_coverage: ["year", "coverage_pct"],
   cde_agency_totals: ["ori", "year", "state", "city", "total_offenses"],
+  state_population: ["state", "state_name", "year", "population", "source"],
 };
 
 const SAME_AS_SCHEMA: Record<string, string[]> = {

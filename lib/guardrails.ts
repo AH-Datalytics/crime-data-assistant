@@ -22,6 +22,7 @@ import {
   currentCalendarYear,
   relativeYearRangeForQuestion,
 } from "./time-conventions";
+import { explicitStateSubstateMismatch } from "./explicit-state-intent";
 
 const STATE_NAMES_RE = /\b(alabama|alaska|arizona|arkansas|california|colorado|connecticut|delaware|florida|georgia|hawaii|idaho|illinois|indiana|iowa|kansas|kentucky|louisiana|maine|maryland|massachusetts|michigan|minnesota|mississippi|missouri|montana|nebraska|nevada|new hampshire|new jersey|new mexico|new york|north carolina|north dakota|ohio|oklahoma|oregon|pennsylvania|rhode island|south carolina|south dakota|tennessee|texas|utah|vermont|virginia|washington state|west virginia|wisconsin|wyoming|district of columbia|united states)\b/i;
 
@@ -742,6 +743,17 @@ const GUARDRAILS: Guardrail[] = [
       return `The user specified a year range starting at ${yearMatch?.[1] || "a specific year"} but the SQL has no year filter. Add a WHERE clause filtering by the requested year range.`;
     },
   },
+  {
+    name: "explicit-state-not-agency",
+    tabs: ["current", "historical", "nibrs", "shr"],
+    match: (ctx) => explicitStateSubstateMismatch(ctx.question, ctx.sql) !== null,
+    message: (ctx) => {
+      const intent = explicitStateSubstateMismatch(ctx.question, ctx.sql);
+      const state = intent ? `${intent.stateName} (${intent.state})` : "the requested state";
+      return `[SYSTEM: The user explicitly asked for statewide data for ${state}, but the SQL narrows the result to a specific city, agency, county, ORI, or agency type. Remove agency/city/ORI filters and aggregate all records for state = '${intent?.state || "XX"}'. Do not use agency = 'New York' or city = 'NEW YORK' for a "New York State" question unless the user explicitly asks for New York City/NYPD or a state agency such as State Police.]`;
+    },
+  },
+
   {
     // TODO: Rate-contract second-failure override — deferred.
     // Plan: after retry, run runGuardrails() again in the route. If this fires twice
@@ -1926,9 +1938,9 @@ const GUARDRAILS: Guardrail[] = [
   {
     name: "sqlite-dialect-error",
     tabs: ["current", "historical", "nibrs", "shr"],
-    match: (ctx) => /\b(SUBSTRING_INDEX|DATEDIFF|DATE_TRUNC|ILIKE|DATE_FORMAT|NOW\(\)|CURDATE|INTERVAL\s+\d|CONVERT\s*\(|TOP\s+\d+\b(?!\s*\())/i.test(ctx.sql),
+    match: (ctx) => /\b(SUBSTRING_INDEX|DATEDIFF|DATE_TRUNC|ILIKE|DATE_FORMAT|NOW\(\)|CURDATE|INTERVAL\s+\d|CONVERT\s*\(|TOP\s+\d+\b(?!\s*\())|::\s*[A-Za-z_][A-Za-z0-9_]*/i.test(ctx.sql),
     message: () =>
-      "[SYSTEM: Your SQL uses a function or syntax not supported by SQLite. SQLite does NOT support SUBSTRING_INDEX, DATEDIFF, DATE_TRUNC, ILIKE, DATE_FORMAT, NOW(), CURDATE, INTERVAL, CONVERT, or TOP N. Use SQLite equivalents: SUBSTR/INSTR for strings, strftime for dates, LIKE (case-insensitive by default) instead of ILIKE, LIMIT instead of TOP.]",
+      "[SYSTEM: Your SQL uses a function or syntax not supported by SQLite. SQLite does NOT support SUBSTRING_INDEX, DATEDIFF, DATE_TRUNC, ILIKE, DATE_FORMAT, NOW(), CURDATE, INTERVAL, CONVERT, TOP N, or PostgreSQL casts like value::numeric. Use SQLite equivalents: SUBSTR/INSTR for strings, strftime for dates, LIKE (case-insensitive by default) instead of ILIKE, LIMIT instead of TOP, and CAST(value AS REAL) or 1.0 * numerator / denominator for numeric division.]",
   },
 
   // #10: NIBRS ethnicity — guardrail REMOVED 2026-06-02, ethnicity column now live in all three

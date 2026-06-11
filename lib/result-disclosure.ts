@@ -2,6 +2,10 @@ import {
   NIBRS_UCR_PROPERTY_LABEL,
   NIBRS_UCR_VIOLENT_LABEL,
 } from "./nibrs-codes";
+import {
+  explicitStateSubstateMismatch,
+  filteredEntityLabel,
+} from "./explicit-state-intent";
 
 const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
@@ -271,6 +275,15 @@ export function applyResultDisclosures(opts: {
   const setCorrection = setOperationCorrection(opts.sql, opts.rows);
   if (setCorrection) {
     explanation = appendSentence(explanation, setCorrection);
+  }
+
+  const stateMismatch = explicitStateSubstateMismatch(opts.question, opts.sql);
+  if (stateMismatch) {
+    const entity = filteredEntityLabel(opts.sql) || "a specific agency or city";
+    explanation = appendSentence(
+      explanation,
+      `Geography warning: This result filters ${entity}; it is not statewide data for ${stateMismatch.stateName}.`
+    );
   }
 
   const ytd = ytdRange(opts.question, opts.sql, opts.rows);

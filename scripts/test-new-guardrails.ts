@@ -591,6 +591,63 @@ console.log("\n═══ Explanation entity validation ═══\n");
 
 console.log("\n═══ Hard override guardrails ═══\n");
 
+// Explicit state questions must not silently narrow to a city/agency with the same name.
+{
+  const sql = `SELECT i.year, COUNT(*) AS fatal_shootings FROM incidents i JOIN victims v ON v.incident_id = i.id WHERE i.agency = 'New York' AND i.state = 'NY' AND i.homicide_type = 'Murder' AND i.weapon_group = 'Firearm' AND i.year >= 2022 GROUP BY i.year`;
+  const ctx = extractQueryContext(sql, "how has gun violence changed in New York State since 2022?", "shr");
+  const r = runGuardrails(ctx);
+  assert("state-vs-agency: SHR New York State agency filter fires", r.fired.includes("explicit-state-not-agency"));
+}
+
+{
+  const sql = `SELECT i.year, COUNT(*) AS fatal_shootings FROM incidents i JOIN victims v ON v.incident_id = i.id WHERE i.state = 'NY' AND i.homicide_type = 'Murder' AND i.weapon_group = 'Firearm' AND i.year >= 2022 GROUP BY i.year`;
+  const ctx = extractQueryContext(sql, "how has gun violence changed in New York State since 2022?", "shr");
+  const r = runGuardrails(ctx);
+  assert("state-vs-agency: SHR New York State state filter does not fire", !r.fired.includes("explicit-state-not-agency"));
+}
+
+{
+  const sql = `SELECT year, SUM(offense_count) AS assaults FROM summary_city_monthly WHERE ori IN (SELECT ori FROM agencies WHERE city = 'NEW YORK' AND state = 'NY') GROUP BY year`;
+  const ctx = extractQueryContext(sql, "aggravated assault in New York State since 2022", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("state-vs-agency: NIBRS New York State city/ORI filter fires", r.fired.includes("explicit-state-not-agency"));
+}
+
+{
+  const sql = `SELECT year, SUM(count) AS murders FROM agency_monthly WHERE agency = 'Washington' AND state = 'DC' AND offense = 'Murder' GROUP BY year`;
+  const ctx = extractQueryContext(sql, "murders in Washington State since 2022", "current");
+  const r = runGuardrails(ctx);
+  assert("state-vs-agency: Current Washington State agency filter fires", r.fired.includes("explicit-state-not-agency"));
+}
+
+{
+  const sql = `SELECT hac.year, SUM(hac.murder) AS murders FROM historical_agency_crime hac JOIN historical_agency ha ON ha.ori = hac.ori WHERE ha.agency = 'New York' AND ha.state = 'ny' GROUP BY hac.year`;
+  const ctx = extractQueryContext(sql, "murder in New York State since 2022", "historical");
+  const r = runGuardrails(ctx);
+  assert("state-vs-agency: Historical New York State agency filter fires", r.fired.includes("explicit-state-not-agency"));
+}
+
+{
+  const sql = `SELECT i.year, COUNT(*) AS fatal_shootings FROM incidents i JOIN victims v ON v.incident_id = i.id WHERE i.agency = 'New York' AND i.state = 'NY' AND i.homicide_type = 'Murder' AND i.weapon_group = 'Firearm' GROUP BY i.year`;
+  const ctx = extractQueryContext(sql, "how has gun violence changed in New York City since 2022?", "shr");
+  const r = runGuardrails(ctx);
+  assert("state-vs-agency: New York City does not fire", !r.fired.includes("explicit-state-not-agency"));
+}
+
+{
+  const sql = `SELECT i.year, COUNT(*) AS homicides FROM incidents i WHERE i.agency LIKE '%State Police%' AND i.state = 'NY' GROUP BY i.year`;
+  const ctx = extractQueryContext(sql, "New York State Police homicides since 2022", "shr");
+  const r = runGuardrails(ctx);
+  assert("state-vs-agency: New York State Police does not fire", !r.fired.includes("explicit-state-not-agency"));
+}
+
+{
+  const sql = `SELECT a.city, SUM(s.offense_count) AS assaults FROM summary_city_monthly s JOIN agencies a ON a.ori = s.ori AND a.year = s.year WHERE a.state = 'WA' AND a.agency_type = 'City' GROUP BY a.city ORDER BY assaults DESC LIMIT 10`;
+  const ctx = extractQueryContext(sql, "top cities for aggravated assault in Washington state", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("state-vs-agency: top cities in Washington state does not fire", !r.fired.includes("explicit-state-not-agency"));
+}
+
 // Post-rewrite override evaluation test
 {
   // shr-gang-felony-mislabel rewrites circumstance_group='Felony Type' → circumstance IN ('Gangland Killings', ...)
@@ -731,6 +788,11 @@ console.log("\n═══ Hard override guardrails ═══\n");
 // #10: Ethnicity — guardrail REMOVED, ethnicity now live in all 3 demographics tables.
 // Positive tests: ethnicity queries should use summary tables, not raw tables.
 {
+  const ratioSql = `SELECT i.year, ROUND(SUM(CASE WHEN v.sex = 'Male' THEN 1 ELSE 0 END)::numeric / NULLIF(SUM(CASE WHEN v.sex = 'Female' THEN 1 ELSE 0 END), 0), 2) AS male_to_female_ratio FROM incidents i JOIN victims v ON v.incident_id = i.id GROUP BY i.year`;
+  const ratioCtx = extractQueryContext(ratioSql, "ratio of male to female homicide victims", "shr");
+  const ratioResult = runGuardrails(ratioCtx);
+  assert("#9 sqlite-dialect: fires for PostgreSQL cast", ratioResult.fired.includes("sqlite-dialect-error"));
+
   // Ethnicity query using summary_arrestee_demographics — should NOT fire raw-table guardrail
   const sql = `SELECT CASE WHEN d.ethnicity = 'H' THEN 'Hispanic' WHEN d.ethnicity = 'N' THEN 'Not Hispanic' ELSE 'Unknown' END AS ethnicity, SUM(d.arrestee_count) AS arrests FROM summary_arrestee_demographics d WHERE d.ucr_arrest_offense = '35A' AND d.year >= 2022 GROUP BY ethnicity ORDER BY arrests DESC`;
   const ctx = extractQueryContext(sql, "drug arrests by ethnicity", "nibrs");

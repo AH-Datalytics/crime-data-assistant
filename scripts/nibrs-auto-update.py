@@ -35,6 +35,7 @@ def retry(fn, *args, max_retries=3, delay=30, label="operation", **kwargs):
 
 
 DB_PATH = "/mnt/HC_Volume_105124811/nibrs/nibrs.db"
+HISTORICAL_DB_PATH = os.environ.get("RTCI_DB_PATH", "/opt/nibrs/shared/crime_data.db")
 DATA_DIR = "/opt/nibrs/data"
 CHECKSUM_FILE = "/opt/nibrs/checksums.json"
 TMP_DIR = "/mnt/HC_Volume_105124811/tmp"
@@ -53,6 +54,23 @@ STATE_MAP = {
     '38': 'RI', '39': 'SC', '40': 'SD', '41': 'TN', '42': 'TX', '43': 'UT',
     '45': 'VA', '62': 'VI', '44': 'VT', '46': 'WA', '48': 'WI', '47': 'WV',
     '49': 'WY'
+}
+
+STATE_NAME_TO_ABBR = {
+    'Alabama': 'AL', 'Alaska': 'AK', 'Arizona': 'AZ', 'Arkansas': 'AR',
+    'California': 'CA', 'Colorado': 'CO', 'Connecticut': 'CT', 'Delaware': 'DE',
+    'District of Columbia': 'DC', 'Florida': 'FL', 'Georgia': 'GA', 'Hawaii': 'HI',
+    'Idaho': 'ID', 'Illinois': 'IL', 'Indiana': 'IN', 'Iowa': 'IA', 'Kansas': 'KS',
+    'Kentucky': 'KY', 'Louisiana': 'LA', 'Maine': 'ME', 'Maryland': 'MD',
+    'Massachusetts': 'MA', 'Michigan': 'MI', 'Minnesota': 'MN', 'Mississippi': 'MS',
+    'Missouri': 'MO', 'Montana': 'MT', 'Nebraska': 'NE', 'Nevada': 'NV',
+    'New Hampshire': 'NH', 'New Jersey': 'NJ', 'New Mexico': 'NM', 'New York': 'NY',
+    'North Carolina': 'NC', 'North Dakota': 'ND', 'Ohio': 'OH', 'Oklahoma': 'OK',
+    'Oregon': 'OR', 'Pennsylvania': 'PA', 'Rhode Island': 'RI',
+    'South Carolina': 'SC', 'South Dakota': 'SD', 'Tennessee': 'TN', 'Texas': 'TX',
+    'Utah': 'UT', 'Vermont': 'VT', 'Virginia': 'VA', 'Washington': 'WA',
+    'West Virginia': 'WV', 'Wisconsin': 'WI', 'Wyoming': 'WY',
+    'United States': 'US',
 }
 
 RAW_TABLES = ['agencies', 'incidents', 'offenses', 'property', 'victims',
@@ -605,6 +623,90 @@ def rebuild_summaries(conn, years):
     log(f"  Summary rebuild complete ({elapsed:.0f}s / {elapsed/60:.1f} min)")
 
 
+def ensure_performance_indexes(conn):
+    """Create idempotent indexes used by live query paths."""
+    log("Ensuring performance indexes...")
+    t = time.time()
+    conn.execute("""
+        CREATE INDEX IF NOT EXISTS idx_sad_offense_state_year
+        ON summary_arrestee_demographics(ucr_arrest_offense, state, year)
+    """)
+    conn.execute("""
+        CREATE INDEX IF NOT EXISTS idx_agencies_year_state_population
+        ON agencies(year, state, population)
+    """)
+    if conn.execute("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'state_population'").fetchone():
+        conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_state_population_year
+            ON state_population(year, state)
+        """)
+    conn.commit()
+    log(f"  Performance indexes ready ({time.time()-t:.0f}s)")
+
+
+def ensure_state_population(conn):
+    """Materialize canonical state/national population denominators in NIBRS."""
+    log("Ensuring state_population...")
+    t = time.time()
+    if not os.path.exists(HISTORICAL_DB_PATH):
+        log(f"  WARNING: historical DB not found at {HISTORICAL_DB_PATH}; leaving existing state_population unchanged")
+        return
+
+    historical = sqlite3.connect(HISTORICAL_DB_PATH)
+    try:
+        source_rows = historical.execute("""
+            SELECT state, year, population
+            FROM historical_state_national
+            WHERE population IS NOT NULL AND population > 0
+            ORDER BY state, year
+        """).fetchall()
+    finally:
+        historical.close()
+
+    rows = []
+    for state_name, year, population in source_rows:
+        normalized = " ".join(str(state_name).strip().split())
+        abbr = STATE_NAME_TO_ABBR.get(normalized)
+        if not abbr:
+            continue
+        rows.append((
+            abbr,
+            normalized,
+            int(year),
+            int(population),
+            "Historical Library historical_state_national population",
+        ))
+
+    if not rows:
+        raise RuntimeError("No mappable state population rows found")
+
+    conn.execute("DROP TABLE IF EXISTS state_population")
+    conn.execute("""
+        CREATE TABLE state_population (
+            state TEXT NOT NULL,
+            state_name TEXT NOT NULL,
+            year INTEGER NOT NULL,
+            population INTEGER NOT NULL,
+            source TEXT NOT NULL,
+            PRIMARY KEY (state, year)
+        )
+    """)
+    conn.executemany("""
+        INSERT INTO state_population (state, state_name, year, population, source)
+        VALUES (?, ?, ?, ?, ?)
+    """, rows)
+    conn.execute("""
+        CREATE INDEX IF NOT EXISTS idx_state_population_year
+        ON state_population(year, state)
+    """)
+    conn.commit()
+
+    first_year = min(row[2] for row in rows)
+    last_year = max(row[2] for row in rows)
+    states = len({row[0] for row in rows})
+    log(f"  state_population ready: {len(rows):,} rows, {states} entities, {first_year}-{last_year} ({time.time()-t:.0f}s)")
+
+
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
@@ -722,6 +824,8 @@ def main():
 
     # Rebuild summary tables for affected years only
     retry(rebuild_summaries, conn, affected_years, label="rebuild summaries")
+    retry(ensure_state_population, conn, label="state population")
+    retry(ensure_performance_indexes, conn, label="performance indexes")
 
     # Save checksums
     save_checksums(checksums)

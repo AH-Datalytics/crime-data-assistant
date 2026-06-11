@@ -35,6 +35,8 @@ export function pastYearsIncludingCurrentRange(years: number, now = new Date()):
 }
 
 export function parsePastYearsCount(question: string): number | null {
+  if (/\b(?:past|last)\s+decade\b/i.test(question)) return 10;
+
   const numeric = question.match(/\b(?:past|last)\s+(\d{1,2})\s+years?\b/i);
   if (numeric) return Number(numeric[1]);
 
@@ -63,6 +65,7 @@ export function relativeYearConventionPrompt(now = new Date()): string {
   const lastComplete = lastCompleteCalendarYear(now);
   const fiveComplete = pastCompleteCalendarYearsRange(5, now);
   const fiveIncludingCurrent = pastYearsIncludingCurrentRange(5, now);
+  const decadeComplete = pastCompleteCalendarYearsRange(10, now);
 
-  return `**Shared relative-year convention:** "past N years" and "last N years" mean the last N complete calendar years unless the user explicitly says "including this year", "this year", "YTD", "to date", or "to present". For example, in ${current}, "past 5 years" means ${fiveComplete.start}-${fiveComplete.end}; "past 5 years including this year" means ${fiveIncludingCurrent.start}-${fiveIncludingCurrent.end} and ${current} must be described as partial/preliminary. "Last year" means ${lastComplete}.`;
+  return `**Shared relative-year convention:** "past N years" and "last N years" mean the last N complete calendar years unless the user explicitly says "including this year", "this year", "YTD", "to date", or "to present". "Past decade" and "last decade" mean the last 10 complete calendar years, not 11 years and not the named calendar decade unless the user says something like "the 2010s". For example, in ${current}, "past 5 years" means ${fiveComplete.start}-${fiveComplete.end}; "past decade" means ${decadeComplete.start}-${decadeComplete.end}; "past 5 years including this year" means ${fiveIncludingCurrent.start}-${fiveIncludingCurrent.end} and ${current} must be described as partial/preliminary. "Last year" means ${lastComplete}.`;
 }

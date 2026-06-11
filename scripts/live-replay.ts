@@ -259,6 +259,11 @@ const ALL_TESTS: TestCase[] = [
   { id: "AUD-03", question: "show crime in Pennsylvania", tab: "nibrs", category: "audit-probe", expect: "rows_or_text", responseExcludes: ["no such table"], note: "Log #4095 — cross-tab contamination must not surface a raw DB error" },
   { id: "AUD-04", question: "Show me the trends in misdemeanor arrests in the ten largest cities", tab: "nibrs", category: "audit-probe", expect: "override", responseIncludes: ["misdemeanor"], note: "Log #4145 (F17) — must hard-stop with charge-severity limitation, never invent severity labels" },
   { id: "AUD-05", question: "DUI arrests by age group nationally", tab: "nibrs", category: "audit-probe", expect: "rows", note: "F17 carve-out — ordinary arrest queries must still work" },
+  { id: "AUD-06", question: "how has gun violence changed in New York State since 2022?", tab: "shr", category: "audit-probe", expect: "rows", minRows: 4, sqlIncludes: ["state = 'NY'"], sqlExcludes: ["agency = 'New York'"], note: "Log #4155 (F18) — state-level question must aggregate statewide, not NYPD" },
+  { id: "AUD-07", question: "gun murders in New York City since 2022", tab: "shr", category: "audit-probe", expect: "rows", note: "F18 carve-out — explicit city question must still resolve to the city agency" },
+  { id: "AUD-08", question: "what percentage of homicides in Texas involved a firearm since 2020?", tab: "shr", category: "audit-probe", expect: "rows", sqlExcludes: ["::numeric", "::float"], note: "June 11 — ratio queries must use SQLite-compatible casts, never Postgres :: syntax" },
+  { id: "AUD-09", question: "disorderly conduct arrests in the 10 most populous states", tab: "nibrs", category: "audit-probe", expect: "rows", sqlIncludes: ["state_population"], note: "June 11 (#4146 timeout class) — must rank states from state_population, not SUM(agencies.population)" },
+  { id: "AUD-10", question: "murders in Chicago over the last decade", tab: "historical", category: "audit-probe", expect: "rows", sqlIncludes: ["2016"], note: "June 11 — 'last decade' = last 10 complete calendar years (2016-2025 as of June 2026)" },
 ];
 
 // ══════════════════════════════════════════════════════════════════════

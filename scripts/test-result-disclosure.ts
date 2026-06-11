@@ -139,4 +139,15 @@ import { applyResultDisclosures } from "../lib/result-disclosure";
   assert.match(explanation, /Set interpretation: These rows are missing from the compared set/);
 }
 
+{
+  const explanation = applyResultDisclosures({
+    explanation: "Fatal firearm homicides in New York since 2022.",
+    question: "how has gun violence changed in New York State since 2022?",
+    sql: "SELECT year, COUNT(*) AS fatal_shootings FROM incidents WHERE agency = 'New York' AND state = 'NY' AND weapon_group = 'Firearm' GROUP BY year",
+    rows: [{ year: 2022, fatal_shootings: 273 }],
+    tab: "shr",
+  });
+  assert.match(explanation, /Geography warning: This result filters agency New York; it is not statewide data for New York\./);
+}
+
 console.log("result disclosure tests passed");
