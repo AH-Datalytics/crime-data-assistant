@@ -340,8 +340,8 @@ function ChartPanel({ config, rows, meta }: ChartPanelProps) {
 
     // Compute clean Y-axis ticks (round intervals starting at 0)
     const yTickInfo = niceYTicks(chartData, effectiveYKeys);
-    const yAxisScaleProps = config.yAxisMin !== undefined
-      ? { domain: [config.yAxisMin, "dataMax"] as [number, string] }
+    const yAxisScaleProps = config.yAxisMin !== undefined || config.yAxisMax !== undefined
+      ? { domain: [config.yAxisMin ?? "dataMin", config.yAxisMax ?? "dataMax"] as [number | string, number | string] }
       : yTickInfo
         ? { ticks: yTickInfo.ticks, domain: yTickInfo.domain }
         : {};

@@ -248,8 +248,8 @@ export default function NibrsChartPanel({ config, rows }: NibrsChartPanelProps) 
   const yTickFormatter = isPercent
     ? (v: number) => `${v}%`
     : formatAxisValue;
-  const yAxisScaleProps = config.yAxisMin !== undefined
-    ? { domain: [config.yAxisMin, "dataMax"] as [number, string] }
+  const yAxisScaleProps = config.yAxisMin !== undefined || config.yAxisMax !== undefined
+    ? { domain: [config.yAxisMin ?? "dataMin", config.yAxisMax ?? "dataMax"] as [number | string, number | string] }
     : {};
 
   // Use custom colors from Claude if provided, otherwise default palette
