@@ -814,8 +814,8 @@ export async function POST(req: NextRequest) {
       rowCount: rows.length,
       truncated,
       chartConfig,
-      chartMeta: null,
-      executionTimeMs,
+      chartMeta: { source: "FBI NIBRS", agencyCount: 0, population: null },
+      executionTimeMs: totalMs,
     } as QueryResponse);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);

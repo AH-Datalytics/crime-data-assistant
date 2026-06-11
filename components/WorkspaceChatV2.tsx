@@ -437,11 +437,11 @@ export default function WorkspaceChat({}: WorkspaceChatProps) {
           <div className="max-w-2xl mx-auto px-4 pt-8 pb-12">
             <div className="bg-white border border-[var(--border)] rounded-2xl px-5 py-4 shadow-sm">
               <p className="text-[14px] text-[var(--foreground)] mb-3">
-                {disambiguationRecs.length > 0 ? "This question could be answered by multiple sources:" : "Pick a data source:"}
+                {disambiguationRecs.length > 1 ? "This question could be answered by multiple sources:" : disambiguationRecs.length === 1 ? "Recommended source:" : "Pick a data source:"}
               </p>
               <div className={disambiguationRecs.length > 0 ? "space-y-2" : "grid grid-cols-2 gap-2"}>
                 {(disambiguationRecs.length > 0 ? disambiguationRecs : (["current","historical","nibrs","shr"] as const).map(t => ({ tab: t, why: "", primary: false, score: 0 }))).map(rec => (
-                  <button key={rec.tab} onClick={() => { setShowDisambiguation(false); submitQuestion(pendingQuestion, rec.tab, rec.why || undefined, disambiguationConfidence, "picker"); }}
+                  <button key={rec.tab} onClick={() => { setShowDisambiguation(false); submitQuestion(pendingQuestion, rec.tab, rec.why || undefined, disambiguationConfidence, disambiguationRecs.length === 1 ? "auto" : "picker"); }}
                     className="w-full text-left rounded-xl border-2 px-4 py-3 cursor-pointer transition-all hover:shadow-md hover:-translate-y-0.5 group"
                     style={{ borderColor: TAB_COLORS[rec.tab] + (rec.primary ? "80" : "30"), backgroundColor: TAB_COLORS[rec.tab] + (rec.primary ? "0c" : "05") }}>
                     <div className="flex items-center justify-between gap-3">
@@ -452,7 +452,7 @@ export default function WorkspaceChat({}: WorkspaceChatProps) {
                         </div>
                         {rec.why && <p className="text-[12px] text-[var(--muted)]">{rec.why}</p>}
                       </div>
-                      <span className="text-[11px] font-semibold shrink-0" style={{ color: TAB_COLORS[rec.tab] }}>Ask &rarr;</span>
+                      <span className="text-[11px] font-semibold shrink-0" style={{ color: TAB_COLORS[rec.tab] }}>{disambiguationRecs.length === 1 ? "Continue" : "Ask"} &rarr;</span>
                     </div>
                   </button>
                 ))}
