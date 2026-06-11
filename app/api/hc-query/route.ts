@@ -19,6 +19,7 @@ import { validateTablesForTab } from "@/lib/table-allowlist";
 import { applyResultDisclosures } from "@/lib/result-disclosure";
 import { normalizeHistoryForTab } from "@/lib/chat-history";
 import { detectFollowupTransform } from "@/lib/followup-transform";
+import { applyChartCustomizations } from "@/lib/chart-customization";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function jsonResp(data: Record<string, any> | QueryError, status = 200) {
@@ -430,14 +431,14 @@ export async function POST(req: NextRequest) {
     }
 
     // Build chart config
-    const chartConfig = {
-      type: claude.chartType || "none",
+    const chartConfig = applyChartCustomizations({
+      type: (claude.chartType || "none") as "bar" | "line" | "pie" | "stacked_bar" | "none",
       xAxis: claude.xAxis || columns[0],
       yAxis: claude.yAxis || (columns.length > 1 ? [columns[columns.length - 1]] : []),
       yAxisLabel: claude.yAxisLabel || undefined,
       // ChartPanel renders config.title — matches chart-config.ts / nibrs-chart-config.ts.
       title: claude.title || "Results",
-    };
+    }, question);
 
     const totalMs = Date.now() - start;
 

@@ -4,6 +4,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import type { QueryResponse, StreamEvent } from "@/lib/types";
 import { autoRoute, isFollowUp, manualSourceNudge, parseIntent, recommendTabs, TAB_DISPLAY_NAMES, TAB_COLORS, type TabRecommendation } from "@/lib/tab-suggest";
 import { pickerOptions, type SourceId as RegistrySourceId, type PickerSourceId } from "@/lib/sources";
+import { applyChartOnlyCustomization } from "@/lib/chart-customization";
 import DataTable from "./DataTable";
 import ChartPanel from "./ChartPanel";
 import ExportButtons from "./ExportButtons";
@@ -222,6 +223,36 @@ export default function WorkspaceChat({}: WorkspaceChatProps) {
     if (!q) return;
     setShowDisambiguation(false);
 
+    const chartOnlyResponse = applyChartOnlyCustomization(q, response);
+    if (chartOnlyResponse && activeSource) {
+      const min = chartOnlyResponse.chartConfig?.yAxisMin;
+      const summary = min !== undefined ? `Updated the chart Y-axis to start at ${min}.` : "Updated the chart.";
+      setResponse(chartOnlyResponse);
+      setExplanation(chartOnlyResponse.explanation);
+      setLastQuestion(q);
+      setError("");
+      const newExchange: Exchange = {
+        question: q,
+        summary,
+        response: chartOnlyResponse,
+        explanation: chartOnlyResponse.explanation,
+        source: activeSource,
+        routingReason: "Chart-only follow-up",
+      };
+      setExchanges(prev => {
+        const u = [...prev, newExchange];
+        setActiveExchangeIdx(u.length - 1);
+        setAnimateIdx(u.length - 1);
+        return u;
+      });
+      setHistory(prev => [
+        ...prev,
+        { role: "user" as const, content: q, source: activeSource },
+        { role: "assistant" as const, content: summary, sql: chartOnlyResponse.sql || undefined, source: activeSource },
+      ].slice(-12));
+      return;
+    }
+
     // Follow-ups inherit the current active source — unless the follow-up
     // introduces hard requirements the current source can't handle.
     // E.g., "now show firearm murders instead" adds weapon detail → needs SHR/NIBRS.
@@ -255,7 +286,7 @@ export default function WorkspaceChat({}: WorkspaceChatProps) {
     } else {
       submitQuestion(q, source as "current" | "historical" | "nibrs" | "shr" | "hate_crime", undefined, null, "manual");
     }
-  }, [source, activeSource, submitQuestion]);
+  }, [source, activeSource, response, submitQuestion]);
 
   const selectExchange = (idx: number) => {
     const ex = exchanges[idx];

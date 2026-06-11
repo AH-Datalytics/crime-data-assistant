@@ -17,6 +17,7 @@ export interface ChartConfig {
   colors?: string[];
   yAxisLabel?: string;
   xAxisLabel?: string;
+  yAxisMin?: number;
   annotations?: ChartAnnotation[];
 }
 

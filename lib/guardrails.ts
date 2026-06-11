@@ -182,6 +182,19 @@ function requestedStartYear(question: string): number | null {
   return null;
 }
 
+function requestedEndYear(question: string): number | null {
+  const patterns = [
+    /\bbetween\s+(?:19|20)\d{2}\s+(?:and|to|through|-)\s+((?:19|20)\d{2})\b/i,
+    /\b(?:from\s+)?(?:19|20)\d{2}\s*(?:-|to|through)\s*((?:19|20)\d{2})\b/i,
+    /\b(?:through|thru|until|to)\s+((?:19|20)\d{2})\b/i,
+  ];
+  for (const pattern of patterns) {
+    const match = question.match(pattern);
+    if (match) return Number(match[1]);
+  }
+  return null;
+}
+
 function sqlHasRequestedLowerYearBound(sql: string, startYear: number): boolean {
   const stripped = stripSqlStrings(sql);
   const yearRef = String.raw`(?:\b\w+\.)?\byear\b`;
@@ -475,6 +488,22 @@ const GUARDRAILS: Guardrail[] = [
     message: (ctx) => {
       const start = requestedStartYear(ctx.question) ?? "requested start year";
       return `[SYSTEM: The user requested results starting from ${start}, but the SQL does not enforce a lower year bound. Add year >= ${start} or an equivalent aliased predicate such as table_alias.year >= ${start}. Do not return earlier years.]`;
+    },
+  },
+  {
+    name: "contract-year-upper-bound-missing",
+    tabs: ["current", "historical", "nibrs", "shr"],
+    match: (ctx) => {
+      const end = requestedEndYear(ctx.question);
+      return end !== null && !sqlHasYearUpperBound(ctx.sql, end);
+    },
+    message: (ctx) => {
+      const end = requestedEndYear(ctx.question) ?? "requested end year";
+      const current = currentCalendarYear();
+      const partial = end === current
+        ? ` Include ${current} if the source has partial-year data, and disclose that ${current} is partial.`
+        : "";
+      return `[SYSTEM: The user requested results through ${end}, but the SQL does not enforce that end year. Add year <= ${end}, year BETWEEN ... AND ${end}, or an equivalent aliased predicate.${partial} Do not silently stop at an earlier year.]`;
     },
   },
   {

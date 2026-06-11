@@ -1553,6 +1553,26 @@ console.log("\n=== wave-1 query-contract guardrails ===\n");
 }
 
 {
+  const current = currentCalendarYear();
+  const sql = `SELECT i.year, ROUND(100.0 * SUM(CASE WHEN i.weapon_group = 'Firearm' THEN 1 ELSE 0 END) / COUNT(*), 1) AS firearm_pct FROM incidents i JOIN victims v ON v.incident_id = i.id WHERE i.homicide_type = 'Murder' AND i.year BETWEEN 2000 AND ${current - 1} GROUP BY i.year ORDER BY i.year`;
+  const ctx = extractQueryContext(sql, `Share of murder committed via firearm, 2000 - ${current}, start Y-axis at 60%`, "shr");
+  const r = runGuardrails(ctx);
+  assert("TP: explicit current end year truncated to prior year fires",
+    r.fired.includes("contract-year-upper-bound-missing"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  const current = currentCalendarYear();
+  const sql = `SELECT i.year, ROUND(100.0 * SUM(CASE WHEN i.weapon_group = 'Firearm' THEN 1 ELSE 0 END) / COUNT(*), 1) AS firearm_pct FROM incidents i JOIN victims v ON v.incident_id = i.id WHERE i.homicide_type = 'Murder' AND i.year BETWEEN 2000 AND ${current} GROUP BY i.year ORDER BY i.year`;
+  const ctx = extractQueryContext(sql, `Share of murder committed via firearm, 2000 - ${current}, start Y-axis at 60%`, "shr");
+  const r = runGuardrails(ctx);
+  assert("FP: explicit current end year included does not fire",
+    !r.fired.includes("contract-year-upper-bound-missing"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
   const range = pastCompleteCalendarYearsRange(5);
   const current = currentCalendarYear();
   const sql = `SELECT year, SUM(count) AS murders FROM agency_monthly WHERE offense = 'Murder' AND year BETWEEN ${current - 4} AND ${current} GROUP BY year ORDER BY year`;

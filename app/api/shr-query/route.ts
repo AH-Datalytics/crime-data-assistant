@@ -24,6 +24,7 @@ import { applyResultDisclosures } from "@/lib/result-disclosure";
 import { appendShrAgencyProbeCaveat, isZeroResult, runShrAgencyProbe } from "@/lib/shr-agency-probe";
 import { normalizeHistoryForTab } from "@/lib/chat-history";
 import { detectFollowupTransform } from "@/lib/followup-transform";
+import { applyChartCustomizations } from "@/lib/chart-customization";
 import { STATE_NAME_TO_ABBR } from "@/lib/state-population";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -294,7 +295,7 @@ export async function POST(req: NextRequest) {
         return jsonResp({
           success: true, question, sql, explanation: totalExplanation,
           title, columns, rows, rowCount: rows.length, truncated: false,
-          chartConfig: { type: "line", xAxis: "year", yAxis: ["fatal_shootings"], yAxisLabel: "Fatal Shootings", title },
+        chartConfig: applyChartCustomizations({ type: "line", xAxis: "year", yAxis: ["fatal_shootings"], yAxisLabel: "Fatal Shootings", title }, question),
           chartMeta: { source: "FBI SHR", agencyCount: 0, population: null },
           executionTimeMs: Date.now() - start,
         });
@@ -681,15 +682,15 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const chartConfig = {
-      type: autoChartType,
+    const chartConfig = applyChartCustomizations({
+      type: autoChartType as "bar" | "line" | "pie" | "stacked_bar" | "none",
       xAxis: autoXAxis,
       yAxis: autoYAxis,
       yAxisLabel: claude.yAxisLabel || undefined,
       // ChartPanel renders config.title (not the top-level response title) —
       // matches buildChartConfig in chart-config.ts / nibrs-chart-config.ts.
       title: claude.title || "Results",
-    };
+    }, question);
 
     const totalMs = Date.now() - start;
 

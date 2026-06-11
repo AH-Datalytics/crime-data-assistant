@@ -1,6 +1,7 @@
 import type { ChartConfig } from "./types";
 import type { ClaudeResponse } from "./claude";
 import { detectYearSeriesChart } from "./chart-auto-detect";
+import { applyChartCustomizations } from "./chart-customization";
 
 export const CHART_COLORS = [
   "#2d5f8a",   // steel blue
@@ -16,7 +17,8 @@ export const CHART_COLORS = [
 export function buildChartConfig(
   claude: ClaudeResponse,
   columns: string[],
-  rows: Record<string, unknown>[]
+  rows: Record<string, unknown>[],
+  question = ""
 ): ChartConfig | null {
   if (!claude.sql || rows.length === 0) {
     return null;
@@ -73,5 +75,5 @@ export function buildChartConfig(
   if (claude.yAxisLabel) config.yAxisLabel = claude.yAxisLabel;
   if (claude.xAxisLabel) config.xAxisLabel = claude.xAxisLabel;
   if (claude.annotations && claude.annotations.length > 0) config.annotations = claude.annotations;
-  return config;
+  return applyChartCustomizations(config, question);
 }

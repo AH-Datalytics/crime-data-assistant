@@ -820,7 +820,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Step 5: Build chart config
-    const chartConfig = buildNibrsChartConfig(claude, columns, rows);
+    const chartConfig = buildNibrsChartConfig(claude, columns, rows, question);
 
     // Step 6: Truncate if needed
     const truncated = rows.length >= 1000;

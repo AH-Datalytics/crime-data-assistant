@@ -1,6 +1,7 @@
 import type { ChartConfig } from "./types";
 import type { ClaudeResponse } from "./nibrs-claude";
 import { detectYearSeriesChart } from "./chart-auto-detect";
+import { applyChartCustomizations } from "./chart-customization";
 
 export const NIBRS_CHART_COLORS = [
   "#2d5f8a",   // steel blue
@@ -16,7 +17,8 @@ export const NIBRS_CHART_COLORS = [
 export function buildNibrsChartConfig(
   claude: ClaudeResponse,
   columns: string[],
-  rows: Record<string, unknown>[]
+  rows: Record<string, unknown>[],
+  question = ""
 ): ChartConfig | null {
   if (!claude.sql || rows.length === 0) {
     return null;
@@ -73,5 +75,5 @@ export function buildNibrsChartConfig(
   if (claude.yAxisLabel) config.yAxisLabel = claude.yAxisLabel;
   if (claude.xAxisLabel) config.xAxisLabel = claude.xAxisLabel;
   if (claude.annotations && claude.annotations.length > 0) config.annotations = claude.annotations;
-  return config;
+  return applyChartCustomizations(config, question);
 }

@@ -248,6 +248,9 @@ export default function NibrsChartPanel({ config, rows }: NibrsChartPanelProps) 
   const yTickFormatter = isPercent
     ? (v: number) => `${v}%`
     : formatAxisValue;
+  const yAxisScaleProps = config.yAxisMin !== undefined
+    ? { domain: [config.yAxisMin, "dataMax"] as [number, string] }
+    : {};
 
   // Use custom colors from Claude if provided, otherwise default palette
   const chartColors = config.colors && config.colors.length > 0 ? config.colors : NIBRS_CHART_COLORS;
@@ -320,6 +323,7 @@ export default function NibrsChartPanel({ config, rows }: NibrsChartPanelProps) 
               height={fewYearsMonthly ? 60 : undefined}
             />
             <YAxis tickFormatter={yTickFormatter} tick={TICK_STYLE} tickLine={false} axisLine={false} width={isPercent ? 55 : 50}
+              {...yAxisScaleProps}
               {...(config.yAxisLabel ? { label: { value: config.yAxisLabel, angle: -90, position: "insideLeft", offset: 0, dy: -10, style: { fontSize: 10, fill: "#1e2a35", fontFamily: "'DM Sans', 'Segoe UI', Arial, sans-serif", textAnchor: "middle" } } } : {})}
             />
             <Tooltip
@@ -383,6 +387,7 @@ export default function NibrsChartPanel({ config, rows }: NibrsChartPanelProps) 
               height={fewYearsMonthly ? 60 : (ym || daily || plainYears) ? 30 : 120}
             />
             <YAxis tickFormatter={yTickFormatter} tick={TICK_STYLE} tickLine={false} axisLine={false} width={isPercent ? 55 : 50}
+              {...yAxisScaleProps}
               {...(config.yAxisLabel ? { label: { value: config.yAxisLabel, angle: -90, position: "insideLeft", offset: 0, dy: -10, style: { fontSize: 10, fill: "#1e2a35", fontFamily: "'DM Sans', 'Segoe UI', Arial, sans-serif", textAnchor: "middle" } } } : {})}
             />
             <Tooltip

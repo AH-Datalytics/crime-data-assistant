@@ -1072,7 +1072,7 @@ export async function POST(req: NextRequest) {
         }
 
         // Step 5: Build chart config + metadata
-        const chartConfig = buildChartConfig(claude, columns, rows);
+        const chartConfig = buildChartConfig(claude, columns, rows, question);
         const chartMeta = isHistorical ? getHistoricalChartMeta(db, sql) : getChartMeta(db, sql);
         const truncated = rows.length >= maxLimit;
 

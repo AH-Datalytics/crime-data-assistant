@@ -340,6 +340,11 @@ function ChartPanel({ config, rows, meta }: ChartPanelProps) {
 
     // Compute clean Y-axis ticks (round intervals starting at 0)
     const yTickInfo = niceYTicks(chartData, effectiveYKeys);
+    const yAxisScaleProps = config.yAxisMin !== undefined
+      ? { domain: [config.yAxisMin, "dataMax"] as [number, string] }
+      : yTickInfo
+        ? { ticks: yTickInfo.ticks, domain: yTickInfo.domain }
+        : {};
 
     // Use custom colors from Claude if provided, otherwise default palette
     const colors = config.colors && config.colors.length > 0 ? config.colors : NYT_COLORS;
@@ -420,7 +425,7 @@ function ChartPanel({ config, rows, meta }: ChartPanelProps) {
                 tickLine={false}
                 axisLine={false}
                 width={isPercent ? 55 : 50}
-                {...(yTickInfo ? { ticks: yTickInfo.ticks, domain: yTickInfo.domain } : {})}
+                {...yAxisScaleProps}
                 {...(config.yAxisLabel ? { label: { value: config.yAxisLabel, angle: -90, position: "insideLeft", offset: 0, dy: -10, style: { fontSize: 10, fill: "#1e2a35", fontFamily: "'DM Sans', 'Segoe UI', Arial, sans-serif", textAnchor: "middle" } } } : {})}
               />
               <Tooltip
@@ -512,7 +517,7 @@ function ChartPanel({ config, rows, meta }: ChartPanelProps) {
                 tickLine={false}
                 axisLine={false}
                 width={isPercent ? 55 : 50}
-                {...(yTickInfo ? { ticks: yTickInfo.ticks, domain: yTickInfo.domain } : {})}
+                {...yAxisScaleProps}
                 {...(config.yAxisLabel ? { label: { value: config.yAxisLabel, angle: -90, position: "insideLeft", offset: 0, dy: -10, style: { fontSize: 10, fill: "#1e2a35", fontFamily: "'DM Sans', 'Segoe UI', Arial, sans-serif", textAnchor: "middle" } } } : {})}
               />
               <Tooltip
