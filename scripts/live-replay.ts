@@ -267,6 +267,7 @@ const ALL_TESTS: TestCase[] = [
   { id: "AUD-11", question: "which cities are in Santa Clara County?", tab: "nibrs", category: "audit-probe", expect: "rows", minRows: 5, responseIncludes: ["San Jose"], note: "June 11 #4 — crosswalk live: county membership now answered from agency_county_crosswalk (assertion flipped from the pre-crosswalk refusal)" },
   { id: "AUD-13", question: "how has gun violence changed in Cook County since 2015?", tab: "shr", category: "audit-probe", expect: "clarification", responseIncludes: ["specify a state"], note: "June 11 #4 — ambiguous county (GA/IL/MN) must ask for state, not guess or agency-match" },
   { id: "AUD-14", question: "how has gun violence changed in Cook County, Illinois since 2015?", tab: "shr", category: "audit-probe", expect: "rows", sqlIncludes: ["agency_county_crosswalk"], sqlExcludes: ["agency = 'Cook County'"], note: "June 11 #4 — state-qualified county resolves countywide via crosswalk, not agency name" },
+  { id: "AUD-15", question: "violent crime in Mecklenburg County, North Carolina since 2018", tab: "historical", category: "audit-probe", expect: "rows", sqlIncludes: ["agency_county_crosswalk"], note: "Log #4213 — countywide question must aggregate via crosswalk, not the single county-agency record" },
   { id: "AUD-12", question: "which cities are represented in Pennsylvania?", tab: "current", category: "audit-probe", expect: "rows", minRows: 2, note: "June 11 #4 — state-scoped metadata city list must filter by state" },
 ];
 

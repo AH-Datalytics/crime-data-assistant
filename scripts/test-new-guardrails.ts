@@ -1308,9 +1308,9 @@ console.log("\n═══ missing-group-by-year ═══\n");
 console.log("\n═══ current-county-name-suffix ═══\n");
 
 {
-  // TP: Fairfax County VA — strip suffix, add type='County'
+  // TP: explicit Fairfax County agency — strip suffix, add type='County'
   const sql = `SELECT am.year, am.month, am.offense, am.count FROM agency_monthly am WHERE am.agency = 'Fairfax County' AND am.state = 'VA' ORDER BY am.year`;
-  const ctx = extractQueryContext(sql, "crime in Fairfax County VA", "current");
+  const ctx = extractQueryContext(sql, "crime for the Fairfax County agency in VA", "current");
   const r = runGuardrails(ctx);
   assert("TP: Fairfax County fires current-county-name-suffix",
     r.fired.includes("current-county-name-suffix"),
@@ -1321,9 +1321,9 @@ console.log("\n═══ current-county-name-suffix ═══\n");
 }
 
 {
-  // TP: Jefferson Parish LA — Parish also maps to type='County'
+  // TP: explicit Jefferson Parish sheriff agency — Parish also maps to type='County'
   const sql = `SELECT am.year, am.offense, am.count FROM agency_monthly am WHERE am.agency = 'Jefferson Parish' AND am.state = 'LA' ORDER BY am.year`;
-  const ctx = extractQueryContext(sql, "crime in Jefferson Parish LA", "current");
+  const ctx = extractQueryContext(sql, "crime for the Jefferson Parish Sheriff in LA", "current");
   const r = runGuardrails(ctx);
   assert("TP: Jefferson Parish fires and rewrites",
     r.fired.includes("current-county-name-suffix"),
@@ -1336,7 +1336,7 @@ console.log("\n═══ current-county-name-suffix ═══\n");
 {
   // TP: bare agency (no alias) — agency = 'Baltimore County'
   const sql = `SELECT year, offense, count FROM agency_monthly WHERE agency = 'Baltimore County' AND state = 'MD'`;
-  const ctx = extractQueryContext(sql, "crime in Baltimore County MD", "current");
+  const ctx = extractQueryContext(sql, "crime for the Baltimore County Police Department in MD", "current");
   const r = runGuardrails(ctx);
   assert("TP: bare agency='Baltimore County' fires",
     r.fired.includes("current-county-name-suffix"),
@@ -1349,7 +1349,7 @@ console.log("\n═══ current-county-name-suffix ═══\n");
 {
   // TP: conflicting type='City' should be replaced with 'County'
   const sql = `SELECT * FROM agency_monthly WHERE agency = 'Baltimore County' AND type = 'City' AND state = 'MD'`;
-  const ctx = extractQueryContext(sql, "crime in Baltimore County MD", "current");
+  const ctx = extractQueryContext(sql, "crime for the Baltimore County Police Department in MD", "current");
   const r = runGuardrails(ctx);
   assert("TP: conflicting type='City' replaced with 'County'",
     r.fired.includes("current-county-name-suffix"),
@@ -1388,7 +1388,7 @@ console.log("\n═══ shr-county-agency-name ═══\n");
 {
   // TP: Fairfax County exact match on SHR — should fire retry
   const sql = `SELECT i.year, COUNT(*) AS victims FROM incidents i JOIN victims v ON v.incident_id = i.id WHERE i.agency = 'Fairfax County' AND i.state = 'VA' GROUP BY i.year`;
-  const ctx = extractQueryContext(sql, "Fairfax County murders in Virginia", "shr");
+  const ctx = extractQueryContext(sql, "Fairfax County Sheriff murders in Virginia", "shr");
   const r = runGuardrails(ctx);
   assert("TP: SHR Fairfax County fires shr-county-agency-name",
     r.fired.includes("shr-county-agency-name"),
@@ -1411,7 +1411,7 @@ console.log("\n═══ shr-county-agency-name ═══\n");
 {
   // FP: SHR query already using LIKE — should NOT fire
   const sql = `SELECT i.year, COUNT(*) FROM incidents i JOIN victims v ON v.incident_id = i.id WHERE i.agency LIKE '%Fairfax%' AND i.state = 'VA' AND i.agency_type = 'County' GROUP BY i.year`;
-  const ctx = extractQueryContext(sql, "Fairfax County murders in Virginia", "shr");
+  const ctx = extractQueryContext(sql, "Fairfax County Sheriff murders in Virginia", "shr");
   const r = runGuardrails(ctx);
   assert("FP: SHR LIKE query does NOT fire shr-county-agency-name",
     !r.fired.includes("shr-county-agency-name"),
@@ -1694,6 +1694,69 @@ console.log("\n=== wave-2 nibrs category guardrails ===\n");
   const r = runGuardrails(ctx);
   assert("FP: NIBRS killed-by-police justifiable homicide remains answerable",
     !r.fired.includes("nibrs-officer-involved-unsupported"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+// ═════════════════════════════════════════════════════════════════════
+//  countywide-crosswalk-required guardrail
+// ═════════════════════════════════════════════════════════════════════
+
+console.log("\n═══ countywide-crosswalk-required ═══\n");
+
+{
+  const sql = `SELECT hac.year, hac.violent FROM historical_agency_crime hac JOIN historical_agency ha ON ha.ori = hac.ori WHERE ha.agency LIKE '%Mecklenburg%' AND ha.state = 'nc' AND ha.type = 'county' AND hac.year BETWEEN 2002 AND 2024 ORDER BY hac.year LIMIT 1000`;
+  const ctx = extractQueryContext(sql, "Show me violent crime trends in Mecklenburg county in North Carolina between 2002 and 2024", "historical");
+  const r = runGuardrails(ctx);
+  assert("TP: #4213 Historical countywide agency pattern fires",
+    r.fired.includes("countywide-crosswalk-required"),
+    `fired: ${JSON.stringify(r.fired)}`);
+  assert("TP: #4213 retry instruction names crosswalk",
+    r.issues.some((m) => m.includes("agency_county_crosswalk") && m.includes("MECKLENBURG") && m.includes("NC")),
+    r.issues.join("\n"));
+}
+
+{
+  const sql = `SELECT hac.year, SUM(hac.violent) AS violent FROM historical_agency_crime hac JOIN agency_county_crosswalk ac ON hac.ori = ac.ori9 OR substr(hac.ori, 1, 7) = ac.ori WHERE ac.state = 'NC' AND ac.county_key = 'MECKLENBURG' AND hac.year BETWEEN 2002 AND 2024 GROUP BY hac.year ORDER BY hac.year`;
+  const ctx = extractQueryContext(sql, "Show me violent crime trends in Mecklenburg county in North Carolina between 2002 and 2024", "historical");
+  const r = runGuardrails(ctx);
+  assert("FP: Historical countywide query using crosswalk does not fire",
+    !r.fired.includes("countywide-crosswalk-required"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  const sql = `SELECT hac.year, hac.violent FROM historical_agency_crime hac JOIN historical_agency ha ON ha.ori = hac.ori WHERE ha.agency LIKE '%Mecklenburg%' AND ha.state = 'NC' AND ha.type = 'county' AND hac.year BETWEEN 2002 AND 2024 ORDER BY hac.year`;
+  const ctx = extractQueryContext(sql, "Show violent crime for Mecklenburg County Sheriff in North Carolina between 2002 and 2024", "historical");
+  const r = runGuardrails(ctx);
+  assert("FP: explicit county sheriff agency question does not require crosswalk",
+    !r.fired.includes("countywide-crosswalk-required"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  const sql = `SELECT data_year, SUM(offense_count) AS robberies FROM summary_city_monthly WHERE state = 'CA' AND agency_name LIKE '%Santa Clara%' AND ucr_offense_code = '120' GROUP BY data_year`;
+  const ctx = extractQueryContext(sql, "show robberies in Santa Clara County California", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("TP: NIBRS countywide query without crosswalk fires",
+    r.fired.includes("countywide-crosswalk-required"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  const sql = `SELECT data_year, SUM(offense_count) AS robberies FROM summary_city_monthly scm JOIN agency_county_crosswalk ac ON scm.ori = ac.ori9 OR substr(scm.ori, 1, 7) = ac.ori WHERE ac.state = 'CA' AND ac.county_key = 'SANTA CLARA' AND ucr_offense_code = '120' GROUP BY data_year`;
+  const ctx = extractQueryContext(sql, "show robberies in Santa Clara County California", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("FP: NIBRS countywide query using crosswalk does not fire",
+    !r.fired.includes("countywide-crosswalk-required"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  const sql = `SELECT i.year, COUNT(*) AS victims FROM incidents i JOIN victims v ON v.incident_id = i.id WHERE i.agency = 'Cook County' AND i.state = 'IL' GROUP BY i.year`;
+  const ctx = extractQueryContext(sql, "murders in Cook County Illinois since 2020", "shr");
+  const r = runGuardrails(ctx);
+  assert("TP: SHR countywide query using agency name fires",
+    r.fired.includes("countywide-crosswalk-required"),
     `fired: ${JSON.stringify(r.fired)}`);
 }
 console.log("\n" + "═".repeat(60));

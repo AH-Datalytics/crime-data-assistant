@@ -23,6 +23,7 @@ import {
   relativeYearRangeForQuestion,
 } from "./time-conventions";
 import { explicitStateSubstateMismatch } from "./explicit-state-intent";
+import { stateNameToAbbr } from "./state-population";
 
 const STATE_NAMES_RE = /\b(alabama|alaska|arizona|arkansas|california|colorado|connecticut|delaware|florida|georgia|hawaii|idaho|illinois|indiana|iowa|kansas|kentucky|louisiana|maine|maryland|massachusetts|michigan|minnesota|mississippi|missouri|montana|nebraska|nevada|new hampshire|new jersey|new mexico|new york|north carolina|north dakota|ohio|oklahoma|oregon|pennsylvania|rhode island|south carolina|south dakota|tennessee|texas|utah|vermont|virginia|washington state|west virginia|wisconsin|wyoming|district of columbia|united states)\b/i;
 
@@ -44,6 +45,72 @@ function extractPlaceFromQuestion(ctx: QueryContext): string {
 
 function stripSqlStrings(sql: string): string {
   return sql.replace(/'([^']|'')*'/g, "''");
+}
+
+function countyKey(value: string): string {
+  return value
+    .replace(/\b(county|parish|borough)\b/ig, " ")
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, " ")
+    .trim();
+}
+
+function countyScopeFromQuestion(question: string): { name: string; suffix: string; key: string } | null {
+  const matches = [...question.matchAll(/\b([A-Za-z][A-Za-z.'-]*(?:\s+[A-Za-z][A-Za-z.'-]*){0,4})\s+(County|Parish|Borough)\b/gi)];
+  for (const match of matches) {
+    let tokens = match[1]
+      .replace(/^\b(the|a|an)\b\s+/i, "")
+      .split(/\s+/);
+    const prepIndex = tokens.reduce((last, token, index) =>
+      /^(in|for|from|within|inside|across|covering)$/i.test(token) ? index : last, -1);
+    if (prepIndex >= 0) tokens = tokens.slice(prepIndex + 1);
+    tokens = tokens.filter((token) => !/^(crime|crimes|violent|property|trend|trends|rate|rates|data|show|me|the|a|an)$/i.test(token));
+    const name = tokens.join(" ").trim();
+    const key = countyKey(name);
+    if (key) return { name, suffix: match[2], key };
+  }
+  return null;
+}
+
+function stateAbbrFromQuestion(question: string): string | null {
+  const explicitAbbr = question.match(/\b(?:in|for|within|inside|across|from|,\s*)\s*([A-Z]{2})\b/);
+  if (explicitAbbr) return explicitAbbr[1].toUpperCase();
+
+  const names = question.match(/\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2}\b/g) || [];
+  for (const name of names) {
+    const abbr = stateNameToAbbr(name);
+    if (abbr && abbr !== "US") return abbr;
+  }
+  return null;
+}
+
+function isExplicitCountyAgencyQuestion(question: string): boolean {
+  return /\b(?:sheriff|sheriff's|sheriffs|police department|police dept|pd|county police|county sheriff|county agency|county agencies|sheriff's office|sheriff office)\b/i.test(question);
+}
+
+function isCountywideGeographyQuestion(question: string): boolean {
+  if (!countyScopeFromQuestion(question)) return false;
+  if (isExplicitCountyAgencyQuestion(question)) return false;
+  return true;
+}
+
+function countywideCrosswalkMismatch(ctx: QueryContext): boolean {
+  if (!isCountywideGeographyQuestion(ctx.question)) return false;
+  const sql = ctx.sql;
+  const usesCrosswalk = /\bagency_county_crosswalk\b/i.test(sql);
+  const narrowsToCountyAgency = /\b(?:\w+\.)?(?:type|agency_type)\s*=\s*'county'/i.test(sql);
+  return !usesCrosswalk || narrowsToCountyAgency;
+}
+
+function countywideCrosswalkMessage(ctx: QueryContext): string {
+  const county = countyScopeFromQuestion(ctx.question);
+  const state = stateAbbrFromQuestion(ctx.question) || ctx.states[0] || "XX";
+  const countyKeyText = county?.key || "COUNTY_NAME";
+  const countyLabel = county ? `${county.name} ${county.suffix}` : "the requested county";
+  const joinHint = ctx.tab === "shr"
+    ? "For SHR incidents, join on i.ori = ac.ori OR substr(i.ori, 1, 7) = ac.ori."
+    : "For 9-character ORI tables, join on table.ori = ac.ori9 OR substr(table.ori, 1, 7) = ac.ori.";
+  return `[SYSTEM: The user asked for countywide geography for ${countyLabel}, not a single county/sheriff agency. Use agency_county_crosswalk to include all mapped agencies in that county. Filter with ac.county_key = '${countyKeyText}'${state !== "XX" ? ` and ac.state = '${state}'` : " and ask for/require state if the county name is ambiguous"}. ${joinHint} Do not filter agency LIKE '%${county?.name || "County"}%' or type/agency_type = 'County' unless the user explicitly asks for a sheriff, county police department, or county agency.]`;
 }
 
 function findTopLevelKeyword(sql: string, keyword: string, start = 0): number {
@@ -236,6 +303,12 @@ export interface GuardrailResult {
 /* ------------------------------------------------------------------ */
 
 const GUARDRAILS: Guardrail[] = [
+  {
+    name: "countywide-crosswalk-required",
+    tabs: ["current", "historical", "nibrs", "shr"],
+    match: countywideCrosswalkMismatch,
+    message: countywideCrosswalkMessage,
+  },
   // --- Current / Historical ---
   {
     name: "current-crime-count-column",
@@ -564,6 +637,7 @@ const GUARDRAILS: Guardrail[] = [
     name: "current-county-name-suffix",
     tabs: ["current"],
     match: (ctx) => {
+      if (isCountywideGeographyQuestion(ctx.question)) return false;
       // Detect agency = 'X County' or agency = 'X Parish' (with optional table alias)
       return /(?:\w+\.)?agency\s*=\s*'[^']+\s+(?:County|Parish)'/i.test(ctx.sql);
     },
@@ -1476,6 +1550,7 @@ const GUARDRAILS: Guardrail[] = [
     name: "historical-county-got-state",
     tabs: ["historical"],
     match: (ctx) => {
+      if (isCountywideGeographyQuestion(ctx.question)) return false;
       const sql = ctx.sql.toLowerCase();
       const q = ctx.question;
       // SQL uses the state_national table
@@ -1498,6 +1573,7 @@ const GUARDRAILS: Guardrail[] = [
     name: "historical-county-name-stripped",
     tabs: ["historical"],
     match: (ctx) => {
+      if (isCountywideGeographyQuestion(ctx.question)) return false;
       const q = ctx.question.toLowerCase();
       const sql = ctx.sql.toLowerCase();
       // User said "X County" or "X Parish" but SQL has agency = 'X' without "County"/"Parish"
@@ -1512,6 +1588,7 @@ const GUARDRAILS: Guardrail[] = [
       return hasStripped;
     },
     rewrite: (sql, ctx) => {
+      if (isCountywideGeographyQuestion(ctx.question)) return null;
       const countyMatch = ctx.question.match(/\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2})\s+(County|Parish)\b/);
       if (!countyMatch) return null;
       const placeName = countyMatch[1].trim();
@@ -1532,6 +1609,7 @@ const GUARDRAILS: Guardrail[] = [
     name: "historical-parish-type-city",
     tabs: ["historical"],
     match: (ctx) => {
+      if (isCountywideGeographyQuestion(ctx.question)) return false;
       return /\bparish\b/i.test(ctx.question) && /type\s*=\s*'city'/i.test(ctx.sql);
     },
     rewrite: (sql) => sql.replace(/type\s*=\s*'city'/gi, "type = 'county'"),
@@ -1743,6 +1821,7 @@ const GUARDRAILS: Guardrail[] = [
     name: "shr-county-agency-name",
     tabs: ["shr"],
     match: (ctx) => {
+      if (isCountywideGeographyQuestion(ctx.question)) return false;
       const q = ctx.question.toLowerCase();
       // User asks about a county/parish/sheriff agency
       const isCountyQuestion = /\b(county|parish|sheriff)\b/i.test(ctx.question);
