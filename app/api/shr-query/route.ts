@@ -7,6 +7,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { checkSessionLimit, maybeCleanup } from "@/lib/captcha";
 import { extractQueryContext } from "@/lib/query-context";
 import { runGuardrails } from "@/lib/guardrails";
+import { explicitStateIntent } from "@/lib/explicit-state-intent";
 import type { QueryError } from "@/lib/types";
 import { sanitizeExplanation, validateExplanationCount } from "@/lib/explain";
 import Anthropic from "@anthropic-ai/sdk";
@@ -145,7 +146,13 @@ export async function POST(req: NextRequest) {
       let whereClauses = ["i.homicide_type = 'Murder'", "i.weapon_group = 'Firearm'", `i.year >= ${startYear}`];
       let titlePlace = "Nationally";
 
-      if (cityMatch) {
+      // Explicit state-level wording ("New York State", "statewide in Washington")
+      // must resolve to a state filter, never a same-named city agency (F18 / #4155).
+      const stateIntent = explicitStateIntent(question);
+      if (stateIntent) {
+        titlePlace = `${stateIntent.stateName} (statewide)`;
+        whereClauses.push(`i.state = '${stateIntent.state}'`);
+      } else if (cityMatch) {
         const city = cityMatch[1];
         titlePlace = city;
         whereClauses.push(`i.agency = '${city.replace(/'/g, "''")}'`);
