@@ -150,6 +150,12 @@ function findUndeclaredAliases(sql: string): string[] {
   return Array.from(undeclared);
 }
 
+function hasNibrsOffenseCodesBadColumn(sql: string): boolean {
+  if (!/\bnibrs_offense_codes\b/i.test(sql)) return false;
+  const withoutOutputAlias = sql.replace(/\bAS\s+ucr_offense_code\b/gi, "");
+  return /\b(?:\w+\.)?ucr_offense_code\b/i.test(withoutOutputAlias);
+}
+
 // ─── Public API ─────────────────────────────────────────────────────
 
 export function findNibrsSqlIssues(sql: string): {
@@ -183,6 +189,14 @@ export function findNibrsSqlIssues(sql: string): {
     fired.push("nibrs-undeclared-table-alias");
     issues.push(
       `Your SQL references undeclared table alias(es): ${aliases}. Every qualified column reference like s.year must use an alias declared in FROM or JOIN, or the qualifier must be removed.`
+    );
+  }
+
+  // 4. nibrs_offense_codes uses code, not ucr_offense_code.
+  if (hasNibrsOffenseCodesBadColumn(cleaned)) {
+    fired.push("nibrs-offense-codes-column");
+    issues.push(
+      "nibrs_offense_codes has columns code, offense_name, and category. It does not have ucr_offense_code. Use code AS ucr_offense_code if you need that output label, and ORDER BY code."
     );
   }
 

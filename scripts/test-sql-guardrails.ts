@@ -324,6 +324,31 @@ assert(
 //  Summary
 // ══════════════════════════════════════════════════════════════════════
 
+// ------------------------------------------------------------------
+//  nibrs_offense_codes schema
+// ------------------------------------------------------------------
+
+console.log("\n--- nibrs-offense-codes-column ---\n");
+
+{
+  const sql = `SELECT DISTINCT ucr_offense_code, offense_name FROM nibrs_offense_codes WHERE offense_name LIKE '%force%' OR offense_name LIKE '%use of%' OR offense_name LIKE '%assault%' OR offense_name LIKE '%police%' ORDER BY ucr_offense_code LIMIT 1000`;
+  const r = findNibrsSqlIssues(sql);
+  assert("INVALID: #4221 nibrs_offense_codes.ucr_offense_code fires",
+    r.fired.includes("nibrs-offense-codes-column"),
+    `fired: ${r.fired}`);
+  assert("INVALID: #4221 issue explains code column",
+    r.issues.some((issue) => issue.includes("code") && issue.includes("ucr_offense_code")),
+    `issues: ${r.issues}`);
+}
+
+assert(
+  "VALID: nibrs_offense_codes code column with output alias",
+  !fires(
+    "SELECT DISTINCT code AS ucr_offense_code, offense_name FROM nibrs_offense_codes WHERE offense_name LIKE '%assault%' ORDER BY code LIMIT 1000",
+    "nibrs-offense-codes-column"
+  )
+);
+
 console.log("\n" + "═".repeat(60));
 console.log(`SUMMARY: ${pass} passed, ${fail} failed out of ${pass + fail} tests`);
 console.log("═".repeat(60));

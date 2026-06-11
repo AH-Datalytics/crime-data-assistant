@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb, getWriteDb } from "@/lib/rtci-db";
 import { getNibrsDb } from "@/lib/nibrs-db";
 import { getShrDb } from "@/lib/shr-db";
+import { getHateCrimeDb } from "@/lib/hc-db";
 import { recommendTabs, isFollowUp } from "@/lib/tab-suggest";
 
 const LOG_KEY = process.env.QUERY_LOG_KEY;
@@ -242,6 +243,8 @@ export async function POST(req: NextRequest) {
       db = getNibrsDb();
     } else if (tab === "shr") {
       db = getShrDb();
+    } else if (tab === "hate_crime") {
+      db = getHateCrimeDb();
     } else {
       db = getDb();
     }
