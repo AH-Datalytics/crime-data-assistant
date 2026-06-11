@@ -264,6 +264,8 @@ const ALL_TESTS: TestCase[] = [
   { id: "AUD-08", question: "what percentage of homicides in Texas involved a firearm since 2020?", tab: "shr", category: "audit-probe", expect: "rows", sqlExcludes: ["::numeric", "::float"], note: "June 11 — ratio queries must use SQLite-compatible casts, never Postgres :: syntax" },
   { id: "AUD-09", question: "disorderly conduct arrests in the 10 most populous states", tab: "nibrs", category: "audit-probe", expect: "rows", sqlIncludes: ["state_population"], note: "June 11 (#4146 timeout class) — must rank states from state_population, not SUM(agencies.population)" },
   { id: "AUD-10", question: "murders in Chicago over the last decade", tab: "historical", category: "audit-probe", expect: "rows", sqlIncludes: ["2016"], note: "June 11 — 'last decade' = last 10 complete calendar years (2016-2025 as of June 2026)" },
+  { id: "AUD-11", question: "which cities are in Santa Clara County?", tab: "nibrs", category: "audit-probe", expect: "rows_or_text", responseIncludes: ["crosswalk"], responseExcludes: ["SAN JOSE", "SUNNYVALE"], note: "June 11 #4 — deterministic metadata must not invent county-contained city membership from city names" },
+  { id: "AUD-12", question: "which cities are represented in Pennsylvania?", tab: "current", category: "audit-probe", expect: "rows", minRows: 2, note: "June 11 #4 — state-scoped metadata city list must filter by state" },
 ];
 
 // ══════════════════════════════════════════════════════════════════════

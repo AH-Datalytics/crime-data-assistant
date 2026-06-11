@@ -1,5 +1,6 @@
 import type Database from "better-sqlite3";
 import type { ChartMeta } from "./types";
+import { STATE_NAME_TO_ABBR } from "./state-population";
 
 export type MetadataSource = "current" | "historical" | "nibrs" | "shr" | "hate_crime";
 
@@ -45,7 +46,8 @@ type Intent =
   | "agency_count"
   | "available_agencies"
   | "city_count"
-  | "available_cities";
+  | "available_cities"
+  | "county_membership_unavailable";
 
 function norm(question: string): string {
   return question.toLowerCase().replace(/[^\w\s']/g, " ").replace(/\s+/g, " ").trim();
@@ -61,6 +63,11 @@ function detectMetadataIntent(question: string): Intent | null {
   const mentionsCity = /\bcit(?:y|ies)\b/.test(q);
   const asksCount = /\b(how many|number of|count)\b/.test(q);
   const asksAvailable = /\b(which|what|list|available|represented|covered|coverage|have data|data for|reporting|included)\b/.test(q);
+  const asksCountyMembership = /\b(county|counties|parish|parishes|borough)\b/.test(q) &&
+    (mentionsAgency || mentionsCity) &&
+    (asksCount || asksAvailable || /\b(?:in|within|inside|cover(?:ing)?)\b/.test(q));
+
+  if (asksCountyMembership) return "county_membership_unavailable";
 
   if (mentionsAgency) {
     if (asksCount) return "agency_count";
@@ -112,7 +119,7 @@ function tableExists(db: Database.Database, table: string): boolean {
 }
 
 function columnsFor(intent: Intent): string[] {
-  if (intent === "download_help") return ["answer"];
+  if (intent === "download_help" || intent === "county_membership_unavailable") return ["answer"];
   if (intent === "state_count") return ["state_count"];
   if (intent === "year_range") return ["source", "first_year", "latest_year"];
   if (intent === "agency_count") return ["agency_count"];
@@ -178,6 +185,38 @@ function downloadResult(source: MetadataSource): MetadataCoverageResult {
   );
 }
 
+function countyMembershipUnavailableResult(source: MetadataSource): MetadataCoverageResult {
+  const explanation = source === "nibrs"
+    ? "I do not currently have a complete city/agency-to-county membership crosswalk for NIBRS. The county_lookup table identifies county/parish agencies by ORI, but it does not list every city agency located inside each county."
+    : `I do not currently have a complete city/agency-to-county membership crosswalk for ${sourceLabel(source)}. I should not infer county membership from city-name searches.`;
+  return result(
+    source,
+    "county_membership_unavailable",
+    "SELECT 'Complete agency-by-county membership crosswalk is not available in this source' AS answer",
+    [{ answer: explanation }],
+    explanation,
+  );
+}
+
+function stateScope(question: string): string | null {
+  const q = question.replace(/\bwhich\s+states?\b/ig, "");
+
+  if (/\bWashington,\s*D\.?C\.?\b|\bWashington DC\b|\bD\.?C\.?\b/i.test(q)) return "DC";
+
+  for (const [name, abbr] of Object.entries(STATE_NAME_TO_ABBR)) {
+    if (abbr === "US") continue;
+    const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    if (abbr === "WA" && /\bWashington\b/i.test(q) && !/\bWashington\s+State\b|\bState\s+of\s+Washington\b/i.test(q)) {
+      continue;
+    }
+    const namePattern = new RegExp(`\\b(?:in|for|within|inside|across|from)\\s+${escaped}\\b|\\b${escaped}\\s+State\\b|\\bState\\s+of\\s+${escaped}\\b`, "i");
+    const abbrPattern = new RegExp(`\\b(?:in|for|within|inside|across|from)\\s+${abbr}\\b|\\b${abbr}\\s+State\\b`);
+    if (namePattern.test(q) || abbrPattern.test(q)) return abbr;
+  }
+
+  return null;
+}
+
 function stateSql(source: MetadataSource, intent: Intent): string | null {
   const statesCte = valuesCte(US_STATES_DC);
   switch (source) {
@@ -220,61 +259,63 @@ function stateSql(source: MetadataSource, intent: Intent): string | null {
   }
 }
 
-function entitySql(source: MetadataSource, intent: Intent, db: Database.Database): string | null {
+function entitySql(source: MetadataSource, intent: Intent, db: Database.Database, stateFilter: string | null): string | null {
   const isCity = intent === "city_count" || intent === "available_cities";
   const isCount = intent === "agency_count" || intent === "city_count";
+  const stateWhere = stateFilter ? ` AND state = ${quote(stateFilter)}` : "";
+  const historicalStateWhere = stateFilter ? ` AND UPPER(state) = ${quote(stateFilter)}` : "";
 
   switch (source) {
     case "current": {
       if (!tableExists(db, "agencies")) return null;
       if (isCity) {
         return isCount
-          ? "SELECT COUNT(DISTINCT agency || '|' || state) AS city_count FROM agencies WHERE national_sample = 1 AND type = 'City' AND agency IS NOT NULL"
-          : "SELECT agency AS city, state FROM agencies WHERE national_sample = 1 AND type = 'City' AND agency IS NOT NULL ORDER BY state, agency LIMIT 50";
+          ? `SELECT COUNT(DISTINCT agency || '|' || state) AS city_count FROM agencies WHERE national_sample = 1 AND type = 'City' AND agency IS NOT NULL${stateWhere}`
+          : `SELECT agency AS city, state FROM agencies WHERE national_sample = 1 AND type = 'City' AND agency IS NOT NULL${stateWhere} ORDER BY state, agency LIMIT 50`;
       }
       return isCount
-        ? "SELECT COUNT(DISTINCT ori) AS agency_count FROM agencies WHERE national_sample = 1 AND agency IS NOT NULL"
-        : "SELECT agency, state FROM agencies WHERE national_sample = 1 AND agency IS NOT NULL ORDER BY state, agency LIMIT 50";
+        ? `SELECT COUNT(DISTINCT ori) AS agency_count FROM agencies WHERE national_sample = 1 AND agency IS NOT NULL${stateWhere}`
+        : `SELECT agency, state FROM agencies WHERE national_sample = 1 AND agency IS NOT NULL${stateWhere} ORDER BY state, agency LIMIT 50`;
     }
     case "historical": {
       if (!tableExists(db, "historical_agency")) return null;
       if (isCity) {
         return isCount
-          ? "SELECT COUNT(DISTINCT ori) AS city_count FROM historical_agency WHERE type = 'city' AND agency IS NOT NULL"
-          : "SELECT agency AS city, UPPER(state) AS state FROM historical_agency WHERE type = 'city' AND agency IS NOT NULL ORDER BY state, agency LIMIT 50";
+          ? `SELECT COUNT(DISTINCT ori) AS city_count FROM historical_agency WHERE type = 'city' AND agency IS NOT NULL${historicalStateWhere}`
+          : `SELECT agency AS city, UPPER(state) AS state FROM historical_agency WHERE type = 'city' AND agency IS NOT NULL${historicalStateWhere} ORDER BY state, agency LIMIT 50`;
       }
       return isCount
-        ? "SELECT COUNT(DISTINCT ori) AS agency_count FROM historical_agency WHERE agency IS NOT NULL"
-        : "SELECT agency, UPPER(state) AS state FROM historical_agency WHERE agency IS NOT NULL ORDER BY state, agency LIMIT 50";
+        ? `SELECT COUNT(DISTINCT ori) AS agency_count FROM historical_agency WHERE agency IS NOT NULL${historicalStateWhere}`
+        : `SELECT agency, UPPER(state) AS state FROM historical_agency WHERE agency IS NOT NULL${historicalStateWhere} ORDER BY state, agency LIMIT 50`;
     }
     case "nibrs": {
       if (!tableExists(db, "agencies")) return null;
       if (isCity) {
         return isCount
-          ? "SELECT COUNT(DISTINCT city || '|' || state) AS city_count FROM agencies WHERE city IS NOT NULL AND city <> '' AND state IS NOT NULL"
-          : "SELECT DISTINCT city, state FROM agencies WHERE city IS NOT NULL AND city <> '' AND state IS NOT NULL ORDER BY state, city LIMIT 50";
+          ? `SELECT COUNT(DISTINCT city || '|' || state) AS city_count FROM agencies WHERE city IS NOT NULL AND city <> '' AND state IS NOT NULL${stateWhere}`
+          : `SELECT DISTINCT city, state FROM agencies WHERE city IS NOT NULL AND city <> '' AND state IS NOT NULL${stateWhere} ORDER BY state, city LIMIT 50`;
       }
       return isCount
-        ? "SELECT COUNT(DISTINCT ori) AS agency_count FROM agencies WHERE ori IS NOT NULL"
-        : "SELECT DISTINCT ori AS agency, state FROM agencies WHERE ori IS NOT NULL ORDER BY state, ori LIMIT 50";
+        ? `SELECT COUNT(DISTINCT ori) AS agency_count FROM agencies WHERE ori IS NOT NULL${stateWhere}`
+        : `SELECT DISTINCT ori AS agency, state FROM agencies WHERE ori IS NOT NULL${stateWhere} ORDER BY state, ori LIMIT 50`;
     }
     case "shr": {
       if (!tableExists(db, "incidents")) return null;
       if (isCity) {
         return isCount
-          ? "SELECT COUNT(DISTINCT agency || '|' || state) AS city_count FROM incidents WHERE agency_type = 'City' AND agency IS NOT NULL"
-          : "SELECT DISTINCT agency AS city, state FROM incidents WHERE agency_type = 'City' AND agency IS NOT NULL ORDER BY state, agency LIMIT 50";
+          ? `SELECT COUNT(DISTINCT agency || '|' || state) AS city_count FROM incidents WHERE agency_type = 'City' AND agency IS NOT NULL${stateWhere}`
+          : `SELECT DISTINCT agency AS city, state FROM incidents WHERE agency_type = 'City' AND agency IS NOT NULL${stateWhere} ORDER BY state, agency LIMIT 50`;
       }
       return isCount
-        ? "SELECT COUNT(DISTINCT ori) AS agency_count FROM incidents WHERE ori IS NOT NULL"
-        : "SELECT DISTINCT agency, state FROM incidents WHERE agency IS NOT NULL ORDER BY state, agency LIMIT 50";
+        ? `SELECT COUNT(DISTINCT ori) AS agency_count FROM incidents WHERE ori IS NOT NULL${stateWhere}`
+        : `SELECT DISTINCT agency, state FROM incidents WHERE agency IS NOT NULL${stateWhere} ORDER BY state, agency LIMIT 50`;
     }
     case "hate_crime": {
       if (!tableExists(db, "hate_crime_incidents")) return null;
       if (isCity) return null;
       return isCount
-        ? "SELECT COUNT(DISTINCT ori) AS agency_count FROM hate_crime_incidents WHERE ori IS NOT NULL"
-        : "SELECT DISTINCT agency_name AS agency, state FROM hate_crime_incidents WHERE agency_name IS NOT NULL ORDER BY state, agency_name LIMIT 50";
+        ? `SELECT COUNT(DISTINCT ori) AS agency_count FROM hate_crime_incidents WHERE ori IS NOT NULL${stateWhere}`
+        : `SELECT DISTINCT agency_name AS agency, state FROM hate_crime_incidents WHERE agency_name IS NOT NULL${stateWhere} ORDER BY state, agency_name LIMIT 50`;
     }
   }
 }
@@ -358,6 +399,7 @@ export function answerMetadataQuestion(
   const intent = detectMetadataIntent(question);
   if (!intent) return null;
   if (intent === "download_help") return downloadResult(source);
+  if (intent === "county_membership_unavailable") return countyMembershipUnavailableResult(source);
   if (!db) return null;
 
   try {
@@ -373,7 +415,7 @@ export function answerMetadataQuestion(
       intent === "city_count" ||
       intent === "available_cities"
     ) {
-      const sql = entitySql(source, intent, db);
+      const sql = entitySql(source, intent, db, stateScope(question));
       if (!sql) return null;
       const rows = runRows(db, sql);
       const truncated = intent === "available_agencies" || intent === "available_cities";

@@ -55,6 +55,7 @@ function makeDb() {
       ('A1', 'Birmingham', 'AL', 'City', 'BIRMINGHAM', 1),
       ('L1', 'New Orleans', 'LA', 'City', 'NEW ORLEANS', 1),
       ('X1', 'Houston', 'TX', 'City', 'HOUSTON', 0),
+      ('P1', 'Philadelphia', 'PA', 'City', 'PHILADELPHIA', 1),
       ('N1', 'Omaha', 'NB', 'City', 'OMAHA', NULL);
     INSERT INTO agency_monthly VALUES (2023), (2024), (2025);
     INSERT INTO historical_state_national VALUES
@@ -65,10 +66,12 @@ function makeDb() {
     INSERT INTO historical_agency_crime VALUES (1930), (2025);
     INSERT INTO historical_agency VALUES
       ('HA1', 'Birmingham', 'al', 'city'),
+      ('HPA1', 'Philadelphia', 'pa', 'city'),
       ('HA2', 'Jefferson County', 'al', 'county');
     INSERT INTO incidents VALUES
       ('S1', 'Birmingham', 'AL', 'City', 1976),
       ('S1', 'Birmingham', 'AL', 'City', 2024),
+      ('SPA1', 'Philadelphia', 'PA', 'City', 2024),
       ('S2', 'New Orleans', 'LA', 'City', 2023);
     INSERT INTO hate_crime_participation VALUES
       ('AL', 1991, 12),
@@ -87,14 +90,14 @@ const db = makeDb();
 {
   const result = answerMetadataQuestion("current", "which states do you have data for?", db);
   assert(result);
-  assert.deepEqual(result.rows.map((r) => r.state), ["AL", "LA"]);
-  assert.match(result.explanation, /2 states\/DC represented/i);
+  assert.deepEqual(result.rows.map((r) => r.state), ["AL", "LA", "PA"]);
+  assert.match(result.explanation, /3 states\/DC represented/i);
 }
 
 {
   const result = answerMetadataQuestion("current", "how many states is that?", db);
   assert(result);
-  assert.equal(result.rows[0].state_count, 2);
+  assert.equal(result.rows[0].state_count, 3);
 }
 
 {
@@ -171,20 +174,43 @@ const db = makeDb();
 {
   const result = answerMetadataQuestion("current", "how many agencies are covered?", db);
   assert(result);
-  assert.equal(result.rows[0].agency_count, 2);
+  assert.equal(result.rows[0].agency_count, 3);
 }
 
 {
   const result = answerMetadataQuestion("current", "which cities are represented?", db);
   assert(result);
   assert.equal(result.truncated, true);
-  assert.deepEqual(result.rows.map((r) => r.city), ["Birmingham", "New Orleans"]);
+  assert.deepEqual(result.rows.map((r) => r.city), ["Birmingham", "New Orleans", "Philadelphia"]);
+}
+
+{
+  const result = answerMetadataQuestion("current", "which cities are represented in Pennsylvania?", db);
+  assert(result);
+  assert.equal(result.truncated, true);
+  assert.deepEqual(result.rows.map((r) => r.city), ["Philadelphia"]);
+  assert.match(result.sql, /state = 'PA'/);
+}
+
+{
+  const result = answerMetadataQuestion("historical", "which cities are represented in Pennsylvania?", db);
+  assert(result);
+  assert.deepEqual(result.rows.map((r) => r.city), ["Philadelphia"]);
+  assert.match(result.sql, /UPPER\(state\) = 'PA'/);
+}
+
+{
+  const result = answerMetadataQuestion("nibrs", "which cities are in Santa Clara County?", db);
+  assert(result);
+  assert.deepEqual(result.columns, ["answer"]);
+  assert.match(result.explanation, /complete city\/agency-to-county membership crosswalk/i);
+  assert.match(result.explanation, /does not list every city agency/i);
 }
 
 {
   const result = answerMetadataQuestion("historical", "how many cities do you have data for?", db);
   assert(result);
-  assert.equal(result.rows[0].city_count, 1);
+  assert.equal(result.rows[0].city_count, 2);
 }
 
 {
