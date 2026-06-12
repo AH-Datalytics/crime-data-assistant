@@ -1,3 +1,5 @@
+import { autoRoute } from "./tab-suggest";
+
 export interface RoutingLogMeta {
   confidence: string | null;
   mode: string | null;
@@ -18,9 +20,12 @@ export function parseRoutingLogMeta(body: unknown): RoutingLogMeta {
   const record = body && typeof body === "object" ? body as Record<string, unknown> : {};
   const confidence = cleanString(record.routingConfidence, 32);
   const mode = cleanString(record.routingMode, 32);
+  const reason = cleanString(record.routingReason, 500);
+  const question = cleanString(record.question, 2000);
+  const fallbackRoute = (!confidence || !reason) && question ? autoRoute(question) : null;
   return {
-    confidence: confidence && VALID_CONFIDENCE.has(confidence) ? confidence : null,
+    confidence: confidence && VALID_CONFIDENCE.has(confidence) ? confidence : fallbackRoute?.confidence ?? null,
     mode: mode && VALID_MODE.has(mode) ? mode : null,
-    reason: cleanString(record.routingReason, 500),
+    reason: reason ?? fallbackRoute?.reason ?? null,
   };
 }
