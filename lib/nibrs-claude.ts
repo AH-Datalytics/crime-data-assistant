@@ -249,9 +249,8 @@ Violent crimes by victim age group for agencies that reported every year from 20
   WHERE d.ucr_offense_code IN (${UCR_VIOLENT_LIST})
     AND d.year BETWEEN 2015 AND 2025
     AND d.ori IN (
-      SELECT ori FROM nibrs_agency_completeness
-      WHERE year BETWEEN 2015 AND 2025 AND months_reported = 12
-      GROUP BY ori HAVING COUNT(*) = 11
+      SELECT ori FROM nibrs_consistent_reporters
+      WHERE start_year = 2015 AND end_year = 2025
     )
   GROUP BY d.age_group ORDER BY victims DESC
 NOTE: If the user asks for "by year" too, use GROUP BY d.year, d.age_group. Never write GROUP BY d.age_group GROUP BY year.
@@ -942,7 +941,19 @@ Victim race by offender race for a specific year:
 - months_reported = number of distinct months the agency reported at least one offense
 - total_offenses = total offense count for that agency-year (useful for flagging suspiciously low reporters)
 - INDEXES: (ori), (year), (year, months_reported)
-- USE FOR: Filtering to consistent reporters in multi-year trend queries. Default to consistent reporters for any national/state trend spanning 2+ years.
+- USE FOR: Fallback filtering to consistent reporters in multi-year trend queries when nibrs_consistent_reporters is unavailable.
+
+### nibrs_consistent_reporters (PRECOMPUTED CONSISTENT REPORTER RANGES)
+- COLUMNS: start_year INT, end_year INT, ori TEXT, years_required INT
+- One row per ORI per contiguous year range where that ORI reported all 12 months in every year in the range.
+- Definition: an agency must have months_reported = 12 in nibrs_agency_completeness for EVERY chosen year to qualify.
+- USE FOR: Preferred filter when the user asks for continuously reporting agencies, consistent reporters, agencies that reported every year, or to adjust for incomplete coverage.
+
+Preferred consistent-reporter filter for a chosen range:
+  AND d.ori IN (
+    SELECT ori FROM nibrs_consistent_reporters
+    WHERE start_year = 2019 AND end_year = 2024
+  )
 
 Consistent reporters for a year range (reported all 12 months every year):
   AND ori IN (
@@ -951,20 +962,20 @@ Consistent reporters for a year range (reported all 12 months every year):
     GROUP BY ori HAVING COUNT(*) = 6
   )
 
-Correct pattern for any consistent-reporter subquery:
+Fallback pattern if nibrs_consistent_reporters is unavailable:
   SELECT ori
   FROM nibrs_agency_completeness
-  WHERE year BETWEEN [start_year] AND [end_year]
+  WHERE year BETWEEN [start_year] AND [end_year] AND months_reported = 12
   GROUP BY ori
   HAVING COUNT(*) = [number_of_years]
 
 Wrong empty pattern: WHERE year = [single_year] followed by HAVING COUNT(DISTINCT year) = [number_greater_than_1] is always empty because the WHERE clause allows only one year.
 
-IMPORTANT: The completeness filter ONLY applies to queries on **city-level tables** (summary_city_monthly, summary_victim_city_monthly). For any multi-year national trend on a city-level table, ALWAYS filter to consistent reporters. This prevents coverage expansion from being mistaken for crime increases.
+IMPORTANT: The completeness filter ONLY applies to ORI-level/city-level tables (summary_city_monthly, summary_victim_city_monthly, summary_victim_demographics, summary_offender_demographics, summary_arrestee_demographics). For any multi-year national trend on an ORI-level table, ALWAYS filter to consistent reporters. This prevents coverage expansion from being mistaken for crime increases.
 
 **Disclosure in explanation (MANDATORY):** When you apply a completeness filter, your explanation MUST state how many agencies it includes and that these are individual agencies (mostly city police departments), not geographic areas. Example: "Filtered to approximately 6,000 agencies that reported consistently from 2020 to 2025. These are individual law enforcement agencies — mostly city police departments — not counties or geographic regions. The number of qualifying agencies varies by the year range requested: longer ranges yield fewer agencies." Do NOT say "cities" — say "agencies" since some are county sheriffs, transit police, university police, etc.
 
-**STATE-LEVEL and NATIONAL trends using state tables**: Use summary_state_monthly (or summary_victim_state_monthly for person crimes) — these are pre-aggregated by state and do NOT need a completeness filter. For national totals, SUM across all states from the state-level table. Do NOT use summary_city_monthly with a completeness subquery for state-level or national queries — many states transitioned to NIBRS recently and have zero agencies with long reporting histories, which causes empty results. The summary_state_monthly / summary_victim_state_monthly tables already contain the correct totals.
+**STATE-LEVEL and NATIONAL trends using state tables**: Use summary_state_monthly (or summary_victim_state_monthly for person crimes) when the user asks for ordinary state/national totals — these are pre-aggregated by state and do NOT need a completeness filter. For national totals, SUM across all states from the state-level table. EXCEPTION: if the user explicitly asks for continuously reporting agencies, consistent reporters, agencies that reported every year, or to adjust for incomplete coverage, you MUST use ORI-level tables plus nibrs_agency_completeness. State-level summary tables cannot be filtered to consistent agencies. In that case, explain that the result is limited to agencies reporting all 12 months in every requested year and is not a national estimate.
 
 **Completeness filter year range**: When the user does not specify a year range, do NOT guess a wide range like 2010-2025. Use a recent range like the last 5 years. A completeness filter spanning many years will exclude late-transition states/agencies that only have a few years of data.
 

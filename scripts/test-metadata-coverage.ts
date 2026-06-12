@@ -186,6 +186,16 @@ const db = makeDb();
 }
 
 {
+  const result = answerMetadataQuestion("nibrs", "only include agencies that reported every year from 2018 through 2025", db);
+  assert.equal(result, null);
+}
+
+{
+  const result = answerMetadataQuestion("nibrs", "for continuously reporting agencies only, show me murders by year", db);
+  assert.equal(result, null);
+}
+
+{
   const result = answerMetadataQuestion("current", "can I download this?", null);
   assert(result);
   assert.equal(result.columns[0], "answer");

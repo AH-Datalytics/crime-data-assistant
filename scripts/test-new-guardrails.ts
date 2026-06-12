@@ -1779,6 +1779,44 @@ console.log("\n═══ countywide-crosswalk-required ═══\n");
     r.fired.includes("countywide-crosswalk-required"),
     `fired: ${JSON.stringify(r.fired)}`);
 }
+console.log("\n=== nibrs-continuous-reporting-required ===\n");
+
+{
+  const sql = `SELECT d.year, d.age_group, SUM(d.offender_count) AS offenders FROM summary_offender_demographics d WHERE d.ucr_offense_code IN ('09A','120','13A') AND d.year BETWEEN 2018 AND 2025 GROUP BY d.year, d.age_group`;
+  const ctx = extractQueryContext(sql, "show murders, robberies, and aggravated assaults by offender age and year from continuously reporting agencies", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("TP: continuous reporter request without filter fires",
+    r.fired.includes("nibrs-continuous-reporting-required"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  const sql = `SELECT d.year, d.age_group, SUM(d.offender_count) AS offenders FROM summary_offender_demographics d WHERE d.ucr_offense_code IN ('09A','120','13A') AND d.year BETWEEN 2018 AND 2025 AND d.ori IN (SELECT ori FROM nibrs_consistent_reporters WHERE start_year = 2018 AND end_year = 2025) GROUP BY d.year, d.age_group`;
+  const ctx = extractQueryContext(sql, "show murders, robberies, and aggravated assaults by offender age and year from continuously reporting agencies", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("FP: continuous reporter request with range table passes",
+    !r.fired.includes("nibrs-continuous-reporting-required"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  const sql = `SELECT d.year, d.age_group, SUM(d.offender_count) AS offenders FROM summary_offender_demographics d WHERE d.ucr_offense_code IN ('09A','120','13A') AND d.year BETWEEN 2018 AND 2025 AND d.ori IN (SELECT ori FROM nibrs_agency_completeness WHERE year BETWEEN 2018 AND 2025 AND months_reported = 12 GROUP BY ori HAVING COUNT(*) = 8) GROUP BY d.year, d.age_group`;
+  const ctx = extractQueryContext(sql, "only include agencies that reported every year from 2018 through 2025", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("FP: continuous reporter request with completeness fallback passes",
+    !r.fired.includes("nibrs-continuous-reporting-required"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  const sql = `SELECT d.year, d.age_group, SUM(d.offender_count) AS offenders FROM summary_offender_demographics d WHERE d.ucr_offense_code IN ('09A','120','13A') AND d.year BETWEEN 2018 AND 2025 AND d.ori IN (SELECT ori FROM nibrs_agency_completeness WHERE year BETWEEN 2018 AND 2025 GROUP BY ori HAVING COUNT(*) = 8) GROUP BY d.year, d.age_group`;
+  const ctx = extractQueryContext(sql, "only include agencies that reported every year from 2018 through 2025", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("TP: completeness fallback without 12 months still fires",
+    r.fired.includes("nibrs-continuous-reporting-required"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
 console.log("\n" + "═".repeat(60));
 console.log(`SUMMARY: ${pass} passed, ${fail} failed out of ${pass + fail} tests`);
 console.log("═".repeat(60));

@@ -58,10 +58,23 @@ function norm(question: string): string {
   return question.toLowerCase().replace(/[^\w\s']/g, " ").replace(/\s+/g, " ").trim();
 }
 
+function asksContinuousReportingFilter(q: string): boolean {
+  return /\b(?:continuous(?:ly)?|consistent(?:ly)?)\s+(?:reporting\s+)?(?:agenc(?:y|ies)|reporters?)\b/i.test(q) ||
+    /\b(?:agenc(?:y|ies)|reporters?)\s+that\s+reported\s+every\s+year\b/i.test(q) ||
+    /\breported\s+(?:all\s+)?(?:12\s+)?months\s+every\s+year\b/i.test(q) ||
+    /\ball\s+12\s+months\s+(?:in|for)\s+every\s+year\b/i.test(q) ||
+    /\badjust(?:ed)?\s+for\s+incomplete\s+coverage\b/i.test(q) ||
+    /\binclude\s+(?:only\s+)?(?:continuous(?:ly)?|consistent(?:ly)?)\s+(?:reporting\s+)?(?:agenc(?:y|ies)|reporters?)\b/i.test(q);
+}
+
 function detectMetadataIntent(question: string): Intent | null {
   const q = norm(question);
   if (/\b(download|export|csv)\b/.test(q) && /\b(this|these|result|results|table|data|chart|it)\b/.test(q)) {
     return "download_help";
+  }
+
+  if (asksContinuousReportingFilter(q)) {
+    return null;
   }
 
   const mentionsAgency = /\bagenc(?:y|ies)\b|\bdepartments?\b|\bpolice departments?\b/.test(q);

@@ -23,6 +23,11 @@ function appendSentence(text: string, sentence: string): string {
   return `${trimmed}\n\n${sentence}`;
 }
 
+function usesContinuousReportingFilter(sql: string): boolean {
+  return /\bnibrs_consistent_reporters\b/i.test(sql) ||
+    (/\bnibrs_agency_completeness\b/i.test(sql) && /\bmonths_reported\s*=\s*12\b/i.test(sql));
+}
+
 function asksForTheftSubtype(question: string): boolean {
   return /\b(?:larceny from auto|theft from (?:motor )?vehicle|vehicle burglary|shoplifting|pickpocket(?:ing)?|pocket-picking|purse snatching|theft from building|theft of motor vehicle parts|auto parts)\b/i.test(question);
 }
@@ -255,6 +260,17 @@ export function applyResultDisclosures(opts: {
       explanation = appendSentence(
         explanation,
         `Definition: NIBRS property crime is reported here using the UCR-aligned set: ${NIBRS_UCR_PROPERTY_LABEL}.`
+      );
+    }
+
+    if (usesContinuousReportingFilter(opts.sql)) {
+      explanation = explanation
+        .replace(/\bwith incomplete coverage\b/gi, "with continuous reporting")
+        .replace(/\bcities with incomplete coverage\b/gi, "agencies with continuous reporting")
+        .replace(/\bacross (?:the )?cit(?:y|ies)\b/gi, "across continuously reporting agencies");
+      explanation = appendSentence(
+        explanation,
+        "Coverage filter: Results are restricted to agencies that reported all 12 months in every requested year. These are individual reporting agencies, not geographic totals; this improves year-to-year comparability but is not a national estimate."
       );
     }
   }

@@ -18,6 +18,12 @@ import zipfile
 from datetime import datetime
 from urllib.request import urlopen, Request
 
+SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
+if SCRIPT_DIR not in sys.path:
+    sys.path.insert(0, SCRIPT_DIR)
+
+from build_nibrs_consistent_reporters import rebuild_consistent_reporters
+
 
 def retry(fn, *args, max_retries=3, delay=30, label="operation", **kwargs):
     """Retry a function up to max_retries times with exponential backoff."""
@@ -640,6 +646,15 @@ def ensure_performance_indexes(conn):
             CREATE INDEX IF NOT EXISTS idx_state_population_year
             ON state_population(year, state)
         """)
+    if conn.execute("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'nibrs_consistent_reporters'").fetchone():
+        conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_ncr_ori_range
+            ON nibrs_consistent_reporters(ori, start_year, end_year)
+        """)
+        conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_ncr_end_start
+            ON nibrs_consistent_reporters(end_year, start_year)
+        """)
     conn.commit()
     log(f"  Performance indexes ready ({time.time()-t:.0f}s)")
 
@@ -825,6 +840,7 @@ def main():
     # Rebuild summary tables for affected years only
     retry(rebuild_summaries, conn, affected_years, label="rebuild summaries")
     retry(ensure_state_population, conn, label="state population")
+    retry(rebuild_consistent_reporters, conn, log, label="consistent reporters")
     retry(ensure_performance_indexes, conn, label="performance indexes")
 
     # Save checksums

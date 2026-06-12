@@ -94,6 +94,15 @@ function isCountywideGeographyQuestion(question: string): boolean {
   return true;
 }
 
+function asksContinuousReportingFilter(question: string): boolean {
+  return /\b(?:continuous(?:ly)?|consistent(?:ly)?)\s+(?:reporting\s+)?(?:agenc(?:y|ies)|reporters?)\b/i.test(question) ||
+    /\b(?:agenc(?:y|ies)|reporters?)\s+that\s+reported\s+every\s+year\b/i.test(question) ||
+    /\breported\s+(?:all\s+)?(?:12\s+)?months\s+every\s+year\b/i.test(question) ||
+    /\ball\s+12\s+months\s+(?:in|for)\s+every\s+year\b/i.test(question) ||
+    /\badjust(?:ed)?\s+for\s+incomplete\s+coverage\b/i.test(question) ||
+    /\binclude\s+(?:only\s+)?(?:continuous(?:ly)?|consistent(?:ly)?)\s+(?:reporting\s+)?(?:agenc(?:y|ies)|reporters?)\b/i.test(question);
+}
+
 function countywideCrosswalkMismatch(ctx: QueryContext): boolean {
   if (!isCountywideGeographyQuestion(ctx.question)) return false;
   const sql = ctx.sql;
@@ -1132,6 +1141,18 @@ const GUARDRAILS: Guardrail[] = [
     },
     override: () =>
       "I can't reliably combine data from two different summary tables — joining them would produce incorrect results due to different aggregation grains. I can answer each part separately: for example, I can show victim demographics OR clearance rates, but not both in a single query unless a pre-built combined table exists. Try asking about one dimension at a time, or ask if a specific combination is available.",
+  },
+  {
+    name: "nibrs-continuous-reporting-required",
+    tabs: ["nibrs"],
+    match: (ctx) => {
+      if (!asksContinuousReportingFilter(ctx.question)) return false;
+      if (/\bnibrs_consistent_reporters\b/i.test(ctx.sql)) return false;
+      if (/\bnibrs_agency_completeness\b/i.test(ctx.sql) && /\bmonths_reported\s*=\s*12\b/i.test(ctx.sql)) return false;
+      return true;
+    },
+    message: () =>
+      "[SYSTEM: The user asked to restrict the result to continuously/consistently reporting NIBRS agencies, but the SQL does not use a consistent-reporter filter. Do not return agency metadata or a coverage list. Rewrite the data query using ORI-level tables so the filter is possible: summary_victim_city_monthly or summary_victim_demographics for person-crime victim/offender demographics, summary_offender_demographics for offender demographics, summary_city_monthly for property/society offense counts, and summary_arrestee_demographics for arrests. Prefer fact_alias.ori IN (SELECT ori FROM nibrs_consistent_reporters WHERE start_year = [start_year] AND end_year = [end_year]). If that table is unavailable, use nibrs_agency_completeness with months_reported = 12 for every year: SELECT ori FROM nibrs_agency_completeness WHERE year BETWEEN [start_year] AND [end_year] AND months_reported = 12 GROUP BY ori HAVING COUNT(*) = [number_of_years]. Preserve the user's offenses, breakdowns, metric, and year range.]",
   },
   {
     name: "nibrs-state-table-with-ori",

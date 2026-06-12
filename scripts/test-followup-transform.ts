@@ -32,6 +32,20 @@ const historyWithSql: PromptHistoryMessage[] = [
 }
 
 {
+  const transform = detectFollowupTransform("only include agencies that reported every year from 2018 through 2025", historyWithSql);
+  assert(transform);
+  assert.equal(transform.name, "add_continuous_reporting_filter");
+  assert.match(transform.instruction, /nibrs_consistent_reporters/);
+  assert.match(transform.instruction, /reported all 12 months in every chosen year/);
+}
+
+{
+  const transform = detectFollowupTransform("adjust for incomplete coverage", historyWithSql);
+  assert(transform);
+  assert.equal(transform.name, "add_continuous_reporting_filter");
+}
+
+{
   const transform = detectFollowupTransform("split it out by state", [
     { role: "user", content: "show murder trends" },
     { role: "assistant", content: "Here is the chart." },

@@ -72,7 +72,7 @@ const EVAL_SET: EvalQuery[] = [
     question: "show nationwide total of robberies by age of offender from 2015 to 2025 for agencies that reported in all of those years",
     category: "consistent reporter",
     knownIssues: ["self-join CTE crash", "timeout"],
-    requirePatterns: [/nibrs_agency_completeness|HAVING\s+COUNT/i],
+    requirePatterns: [/nibrs_consistent_reporters|nibrs_agency_completeness|HAVING\s+COUNT/i],
   },
 
   // --- Offense code labeling ---
@@ -211,7 +211,7 @@ const EVAL_SET: EvalQuery[] = [
     category: "SQL structure",
     knownIssues: ["duplicate GROUP BY when combining age group with completeness filter"],
     rejectPatterns: [/GROUP\s+BY\s+d\.age_group\s+GROUP\s+BY/i, /GROUP\s+BY\s+age_group\s+GROUP\s+BY/i],
-    requirePatterns: [/summary_victim_demographics/i, /nibrs_agency_completeness/i, /age_group/i, /HAVING\s+COUNT\(\*\)\s*=\s*11/i],
+    requirePatterns: [/summary_victim_demographics/i, /nibrs_consistent_reporters|nibrs_agency_completeness/i, /age_group/i],
   },
   {
     id: "table-selection-dv-city-no-victim-count",
