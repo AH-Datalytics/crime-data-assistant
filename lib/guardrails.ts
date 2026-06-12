@@ -793,7 +793,7 @@ const GUARDRAILS: Guardrail[] = [
       return usesAgencyTable && hasStateFilter && groupsByYear && !selectsAgency;
     },
     message: () =>
-      "You aggregated historical_agency_crime by state, which only includes agencies that reported — it dramatically undercounts. Use historical_state_national instead, which has FBI statewide estimates. Column names are compatible: assault, motor_vehicle_theft, murder, rape, robbery, burglary, theft all work in both tables. Use the full state name (e.g., 'North Carolina' not 'nc').",
+      "You aggregated historical_agency_crime by state, which only includes agencies that reported — it dramatically undercounts. Use historical_state_national instead, which has FBI statewide estimates. Use full state names (e.g., 'North Carolina' not 'nc'). Note the state/national column names differ from agency columns: use aggravated_assault/aggravated_assault_rate instead of assault/assault_rate, auto_theft/auto_theft_rate instead of motor_vehicle_theft/motor_vehicle_theft_rate, and calculate violent/property rates from component rate columns.",
   },
 
   // --- Historical: listing every agency in a state (un-chartable) ---
@@ -1501,6 +1501,28 @@ const GUARDRAILS: Guardrail[] = [
     },
     rewrite: (sql) => {
       const fixed = sql.replace(/\bviolent_rate\b/gi, "violent_crime_rate_per_100k");
+      return fixed !== sql ? fixed : null;
+    },
+  },
+  {
+    name: "historical-state-national-aggregate-columns",
+    tabs: ["historical"],
+    match: (ctx) => {
+      if (!/\bhistorical_state_national\b/i.test(ctx.sql)) return false;
+      return /\bviolent_rate\b/i.test(ctx.sql) ||
+        /\bproperty_rate\b/i.test(ctx.sql) ||
+        /\bassault_rate\b/i.test(ctx.sql) ||
+        /(?<!aggravated_)\bassault\b/i.test(ctx.sql) ||
+        /\bmotor_vehicle_theft(?:_rate)?\b/i.test(ctx.sql);
+    },
+    rewrite: (sql) => {
+      let fixed = sql
+        .replace(/\bviolent_rate\b/gi, "(murder_rate + rape_rate + robbery_rate + aggravated_assault_rate)")
+        .replace(/\bproperty_rate\b/gi, "(burglary_rate + theft_rate + auto_theft_rate)")
+        .replace(/\bassault_rate\b/gi, "aggravated_assault_rate")
+        .replace(/(?<!aggravated_)\bassault\b/gi, "aggravated_assault")
+        .replace(/\bmotor_vehicle_theft_rate\b/gi, "auto_theft_rate")
+        .replace(/\bmotor_vehicle_theft\b/gi, "auto_theft");
       return fixed !== sql ? fixed : null;
     },
   },

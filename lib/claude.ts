@@ -791,11 +791,11 @@ State and national annual data, ${HISTORICAL.stateNatMinYear}–${HISTORICAL.sta
 - state TEXT — full state name (e.g., 'Texas', 'New York') or 'United States' for national totals
 - year INTEGER — ${HISTORICAL.stateNatMinYear}–${HISTORICAL.stateNatMaxYear}
 - population INTEGER
-- murder INTEGER, rape INTEGER, robbery INTEGER, aggravated_assault INTEGER (alias: assault)
-- burglary INTEGER, theft INTEGER, auto_theft INTEGER (alias: motor_vehicle_theft), total_offenses INTEGER
+- murder INTEGER, rape INTEGER, robbery INTEGER, aggravated_assault INTEGER
+- burglary INTEGER, theft INTEGER, auto_theft INTEGER, total_offenses INTEGER
 - murder_rate REAL, rape_rate REAL, robbery_rate REAL, aggravated_assault_rate REAL
 - burglary_rate REAL, theft_rate REAL, auto_theft_rate REAL, total_offenses_rate REAL
-Column aliases: You can use either "assault" or "aggravated_assault", and either "motor_vehicle_theft" or "auto_theft" — they return the same data.
+Do NOT use assault, assault_rate, motor_vehicle_theft, motor_vehicle_theft_rate, violent_rate, or property_rate in this table. They do not exist. For state/national violent crime rates, calculate murder_rate + rape_rate + robbery_rate + aggravated_assault_rate. For state/national property crime rates, calculate burglary_rate + theft_rate + auto_theft_rate.
 
 Pre-calculated rates are per 100,000 population. State names are full names, NOT abbreviations. National row uses state = 'United States'.
 
@@ -903,8 +903,8 @@ ${HISTORICAL.agencyClearanceRows.toLocaleString()} rows. All values are percenta
 
 ## KEY DIFFERENCES FROM MODERN DATA
 - **ANNUAL ONLY** — no month column, no monthly breakdowns, no rolling 12-month patterns
-- Column names are lowercase: murder (not 'Murder'), assault (not 'Aggravated Assault'), etc.
-- **If the user says "assault" or "assaults" without qualifying, it means aggravated assault.** Use the 'assault' column — it works in both tables.
+- Column names are lowercase: murder (not 'Murder'), assault (not 'Aggravated Assault') in the agency table, aggravated_assault in the state/national table, etc.
+- **If the user says "assault" or "assaults" without qualifying, it means aggravated assault.** Use historical_agency_crime.assault for agency rows and historical_state_national.aggravated_assault / aggravated_assault_rate for state/national rows.
 - **If the user says "sexual assault," use the 'rape' column** but note in your explanation that this uses the FBI's UCR "Rape" category — not the broader legal definition of "sexual assault."
 - Each crime type is its own column — there is NO offense column to filter on
 - Agency crime table requires a JOIN to historical_agency for name/state lookups
@@ -912,7 +912,7 @@ ${HISTORICAL.agencyClearanceRows.toLocaleString()} rows. All values are percenta
 - historical_state_national uses full state names ('Texas', 'California', 'New York') — these are DIFFERENT conventions
 - State/national table has pre-calculated per-100K rates — use them when the user asks for rates
 - Pre-1960 data exists but has fewer reporting agencies (~3,800/yr vs ~16,000 post-1960). **Do NOT default to starting at 1960** — always use the full available range unless the user specifies a start year. Add a note about thinner pre-1960 coverage only if the results include those years.
-- Both tables support "assault" and "motor_vehicle_theft" as column names (historical_state_national has aliases). You can use the same column names across both tables.
+- Do not assume agency-table column names work in historical_state_national. Agency rows use assault and motor_vehicle_theft; state/national rows use aggravated_assault and auto_theft.
 - **NO ARREST DATA** — This dataset does NOT contain arrest data, juvenile arrest data, or any arrest breakdowns. If asked about arrests, set sql to null and explain: "The Historical Library contains reported crime counts, staffing, and clearance rates — not arrest data. Try the NIBRS tab for arrest-related queries."
 
 ## QUERY RULES

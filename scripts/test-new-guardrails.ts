@@ -1864,6 +1864,32 @@ ORDER BY cd.violent_rate DESC LIMIT 1000`;
     r.sql);
 }
 
+console.log("\n=== historical state/national aggregate column regression ===\n");
+
+{
+  const sql = `SELECT year, state, ROUND(violent_rate, 1) AS violent_crime_rate FROM historical_state_national WHERE state IN ('New Hampshire', 'Massachusetts') AND year >= 2000 ORDER BY state, year LIMIT 1000`;
+  const ctx = extractQueryContext(sql, "What is the vilont ctime rate in NH versus Massachussetts sincce 2000", "historical");
+  const r = runGuardrails(ctx);
+  assert("TP: #4279 historical_state_national violent_rate rewrite fires",
+    r.fired.includes("historical-state-national-aggregate-columns"),
+    `fired: ${JSON.stringify(r.fired)}`);
+  assert("TP: #4279 rewritten SQL computes violent rate from component rates",
+    /murder_rate\s*\+\s*rape_rate\s*\+\s*robbery_rate\s*\+\s*aggravated_assault_rate/i.test(r.sql) && !/\bviolent_rate\b/i.test(r.sql),
+    r.sql);
+}
+
+{
+  const sql = `SELECT year, ROUND((murder + rape + robbery + assault) * 100000.0 / population, 1) AS violent_crime_rate FROM historical_state_national WHERE state = 'Massachusetts' AND year >= 2000 ORDER BY year LIMIT 1000`;
+  const ctx = extractQueryContext(sql, "violent crime rate in Massachusetts since 2000", "historical");
+  const r = runGuardrails(ctx);
+  assert("TP: historical_state_national assault alias rewrite fires",
+    r.fired.includes("historical-state-national-aggregate-columns"),
+    `fired: ${JSON.stringify(r.fired)}`);
+  assert("TP: historical_state_national assault alias rewritten",
+    /\baggravated_assault\b/i.test(r.sql) && !/(?<!aggravated_)\bassault\b/i.test(r.sql),
+    r.sql);
+}
+
 console.log("\n" + "═".repeat(60));
 console.log(`SUMMARY: ${pass} passed, ${fail} failed out of ${pass + fail} tests`);
 console.log("═".repeat(60));

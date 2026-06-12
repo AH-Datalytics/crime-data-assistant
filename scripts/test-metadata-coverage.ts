@@ -186,6 +186,11 @@ const db = makeDb();
 }
 
 {
+  const result = answerMetadataQuestion("historical", "Using 2023 data, which cities in Louisiana had the highest violent crime rate", db);
+  assert.equal(result, null);
+}
+
+{
   const result = answerMetadataQuestion("nibrs", "only include agencies that reported every year from 2018 through 2025", db);
   assert.equal(result, null);
 }

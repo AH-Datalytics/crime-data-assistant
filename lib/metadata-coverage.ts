@@ -67,13 +67,17 @@ function asksContinuousReportingFilter(q: string): boolean {
     /\binclude\s+(?:only\s+)?(?:continuous(?:ly)?|consistent(?:ly)?)\s+(?:reporting\s+)?(?:agenc(?:y|ies)|reporters?)\b/i.test(q);
 }
 
+function asksAnalyticResult(q: string): boolean {
+  return /\b(rate|rates|per\s*(?:100\s*k|100,?000|capita)|highest|lowest|top|bottom|most|least|rank(?:ed|ing)?|trend|trends|compare|comparison)\b/.test(q);
+}
+
 function detectMetadataIntent(question: string): Intent | null {
   const q = norm(question);
   if (/\b(download|export|csv)\b/.test(q) && /\b(this|these|result|results|table|data|chart|it)\b/.test(q)) {
     return "download_help";
   }
 
-  if (asksContinuousReportingFilter(q)) {
+  if (asksContinuousReportingFilter(q) || asksAnalyticResult(q)) {
     return null;
   }
 
