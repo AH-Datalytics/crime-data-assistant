@@ -497,7 +497,7 @@ export default function WorkspaceChat({}: WorkspaceChatProps) {
       {hasStarted && !showDisambiguation && (
         <div className="flex-1 flex min-h-0">
           {/* LEFT RAIL */}
-          <div className="w-[260px] lg:w-[320px] xl:w-[340px] border-r border-[var(--border)] flex flex-col bg-white shrink-0 hidden md:flex">
+          <div className="w-[260px] lg:w-[320px] xl:w-[340px] border-r border-[var(--border)] hidden min-[700px]:flex flex-col bg-white shrink-0">
             <div ref={railRef} className="flex-1 overflow-y-auto p-4 space-y-3">
               {exchanges.map((ex, i) => {
                 const isActive = i === activeExchangeIdx;
@@ -549,7 +549,7 @@ export default function WorkspaceChat({}: WorkspaceChatProps) {
           {/* RIGHT STAGE */}
           <div className={`flex-1 flex flex-col min-h-0 overflow-x-hidden bg-[var(--surface)] ${hasData ? "" : "overflow-y-auto"}`}>
             {/* Mobile: history pills */}
-            <div className="md:hidden border-b border-[var(--border)] bg-white">
+            <div className="min-[700px]:hidden border-b border-[var(--border)] bg-white">
               {exchanges.length > 0 && (
                 <div className="scroll-gradient px-3 py-2" style={{ "--bg-gradient-end": "#fff" } as React.CSSProperties}>
                   <div className="flex flex-nowrap gap-1.5 overflow-x-auto scrollbar-hide pr-6">

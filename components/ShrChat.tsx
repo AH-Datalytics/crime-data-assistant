@@ -245,7 +245,7 @@ export default function ShrChat({ visible, heroData }: ShrChatProps) {
       <div className="flex-1 min-h-0 flex">
         {/* LEFT RAIL */}
         {hasActiveQuery && (
-          <div className="w-[260px] lg:w-[320px] xl:w-[340px] border-r border-[var(--border)] flex flex-col bg-white shrink-0 hidden md:flex">
+          <div className="w-[260px] lg:w-[320px] xl:w-[340px] border-r border-[var(--border)] hidden min-[700px]:flex flex-col bg-white shrink-0">
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
               {!loading && (
                 <form onSubmit={(e) => { e.preventDefault(); const el = e.currentTarget.elements.namedItem("railask") as HTMLTextAreaElement; const val = el?.value?.trim(); if (val) { setMessages([]); setCurrentResponse(null); setExchanges([]); setActiveExchangeIdx(-1); submitQuestion(val); el.value = ""; } }} className="flex flex-col gap-1.5">
