@@ -14,6 +14,14 @@ export const CHART_COLORS = [
   "#6050b0",   // indigo
 ];
 
+function asksScatter(question: string): boolean {
+  return /\bscatter(?:\s+plot)?\b|\bplot\b[\s\S]{0,80}\bvs\.?\b|\bvs\.?\b[\s\S]{0,80}\bplot\b/i.test(question);
+}
+
+function numericColumns(columns: string[], rows: Record<string, unknown>[]): string[] {
+  return columns.filter((column) => typeof rows[0]?.[column] === "number");
+}
+
 export function buildChartConfig(
   claude: ClaudeResponse,
   columns: string[],
@@ -22,6 +30,27 @@ export function buildChartConfig(
 ): ChartConfig | null {
   if (!claude.sql || rows.length === 0) {
     return null;
+  }
+
+  if (asksScatter(question)) {
+    const numeric = numericColumns(columns, rows);
+    if (numeric.length >= 2) {
+      const requestedX = columns.includes(claude.xAxis) && typeof rows[0]?.[claude.xAxis] === "number"
+        ? claude.xAxis
+        : numeric[0];
+      const requestedY = (claude.yAxis || "")
+        .split(",")
+        .map((s) => s.trim())
+        .find((s) => columns.includes(s) && s !== requestedX && typeof rows[0]?.[s] === "number") || numeric.find((s) => s !== requestedX);
+      if (requestedY) {
+        claude = {
+          ...claude,
+          chartHint: "scatter",
+          xAxis: requestedX,
+          yAxis: requestedY,
+        };
+      }
+    }
   }
 
   // Auto-detect chart type if Claude omitted chart fields or said "none".

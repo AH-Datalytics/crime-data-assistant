@@ -5,6 +5,7 @@
  */
 
 import { autoRoute, isFollowUp, manualSourceNudge, parseIntent, type TabId } from "../lib/tab-suggest";
+import { parseRoutingLogMeta } from "../lib/routing-log-meta";
 
 interface TestCase {
   question: string;
@@ -13,6 +14,7 @@ interface TestCase {
   mustExclude?: TabId[];            // datasets that must NOT be primary or full alternative
   unsupported?: string[];           // expected unsupported concepts
   expectFollowUp?: boolean;         // expected isFollowUp result
+  expectedConfidence?: "high" | "medium" | "low";
   note?: string;                    // explanation for reviewers
 }
 
@@ -46,6 +48,12 @@ function test(tc: TestCase) {
   if (!primary || !expectedPrimaries.includes(primary)) {
     fail++;
     failures.push({ question: tc.question, issue: `Primary: got ${primary}, expected ${expectedPrimaries.join("|")}` });
+    return;
+  }
+
+  if (tc.expectedConfidence && route?.confidence !== tc.expectedConfidence) {
+    fail++;
+    failures.push({ question: tc.question, issue: `Confidence: got ${route?.confidence}, expected ${tc.expectedConfidence}` });
     return;
   }
 
@@ -133,6 +141,20 @@ test({ question: "Examine trends in gang homicides in Chicago IL over time", exp
 test({ question: "How many gang murders have there been in Chicago over time?", expectedPrimary: "shr" });
 // 3180: crime rates vs staffing → Historical for staffing
 test({ question: "Compare crime rates vs police staffing levels across the 20 largest cities in the US", expectedPrimary: "historical" });
+// 4272: staffing exists only in Historical; confidence must be high so the UI auto-picks/nudges.
+test({ question: "give me a scatter plot of violent crime rate per 100k in 2024 vs officers per 100k in cities of 250k or more", expectedPrimary: "historical", mustExclude: ["current", "nibrs", "shr"], expectedConfidence: "high" });
+{
+  const meta = parseRoutingLogMeta({
+    question: "Historical give me a scatter plot of violent crime rate per 100k in 2024 vs officers per 100k in cities of 250k or more",
+    routingMode: "manual",
+  });
+  if (meta.mode !== "manual" || meta.confidence !== "high" || !meta.reason) {
+    fail++;
+    failures.push({ question: "Historical give me a scatter plot of violent crime rate per 100k in 2024 vs officers per 100k in cities of 250k or more", issue: `Routing log fallback: got mode=${meta.mode}, confidence=${meta.confidence}, reason=${meta.reason}` });
+  } else {
+    pass++;
+  }
+}
 // 3182: carjacking data for NOLA
 test({ question: "Do you have carjacking data for new orleans by month?", expectedPrimary: "nibrs" });
 // 3188: marijuana possession arrests

@@ -22,7 +22,7 @@ const annotationSchema = z.object({
 export const claudeResponseSchema = z.object({
   sql: z.string().max(MAX_SQL_LENGTH).nullable(),
   explanation: z.string().max(MAX_EXPLANATION_LENGTH),
-  chartHint: z.enum(["bar", "line", "pie", "stacked_bar", "none"]).catch("none"),
+  chartHint: z.enum(["bar", "line", "pie", "stacked_bar", "scatter", "none"]).catch("none"),
   xAxis: z.string().max(MAX_AXIS_LENGTH).catch(""),
   yAxis: z.string().max(MAX_AXIS_LENGTH).catch(""),
   title: z.string().max(MAX_TITLE_LENGTH).catch(""),

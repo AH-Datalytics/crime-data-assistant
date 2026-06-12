@@ -271,6 +271,7 @@ const ALL_TESTS: TestCase[] = [
   { id: "AUD-16", question: "Does NIBRS data have information on use of force?", tab: "nibrs", category: "audit-probe", expect: "rows_or_text", responseIncludes: ["force"], responseExcludes: ["SELECT"], note: "Log #4221 — capability override: deterministic no-SQL explanation, never a fabricated query" },
   { id: "AUD-17", question: "share of homicides involving a firearm from 2000 to 2026", tab: "shr", category: "audit-probe", expect: "rows", sqlIncludes: ["2026"], note: "Log #4228 — explicit end year must not silently truncate to 2025" },
   { id: "AUD-18", question: "murder trend from 2020 to 2024 among agencies that reported all 12 months every year", tab: "nibrs", category: "audit-probe", expect: "rows", sqlIncludes: ["nibrs_consistent_reporters"], note: "Logs #4242-4271 — continuous-reporter queries use the precomputed table (was a timeout class)" },
+  { id: "AUD-19", question: "give me a scatter plot of violent crime rate per 100k in 2024 vs officers per 100k in cities of 250k or more", tab: "historical", category: "audit-probe", expect: "rows", sqlExcludes: ["per_1k", "* 1000.0"], note: "Log #4272 — per-100k units honored, scatter chart supported, staffing routes Historical" },
   { id: "AUD-12", question: "which cities are represented in Pennsylvania?", tab: "current", category: "audit-probe", expect: "rows", minRows: 2, note: "June 11 #4 — state-scoped metadata city list must filter by state" },
 ];
 

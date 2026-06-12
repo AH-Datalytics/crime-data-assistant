@@ -1817,6 +1817,53 @@ console.log("\n=== nibrs-continuous-reporting-required ===\n");
     `fired: ${JSON.stringify(r.fired)}`);
 }
 
+console.log("\n=== historical staffing per-100k scatter regression ===\n");
+
+{
+  const sql = `
+WITH city_pop AS (
+  SELECT DISTINCT ha.ori, ha.agency, ha.state, hap.population
+  FROM historical_agency ha
+  JOIN historical_agency_population hap ON hap.ori = ha.ori AND hap.year = 2024
+  WHERE ha.type = 'city' AND hap.population >= 250000
+),
+crime_data AS (
+  SELECT cp.ori, cp.agency, cp.state, cp.population,
+         ROUND(hac.violent * 100000.0 / cp.population, 1) AS violent_rate
+  FROM city_pop cp
+  JOIN historical_agency_crime hac ON hac.ori = cp.ori AND hac.year = 2024
+),
+staff_data AS (
+  SELECT cp.ori,
+         ROUND(hs.officer_total * 1000.0 / cp.population, 1) AS officers_per_1k
+  FROM city_pop cp
+  JOIN historical_staffing hs ON hs.ori = cp.ori AND hs.year = 2024
+  WHERE hs.officer_total > 0
+)
+SELECT cd.agency || ', ' || UPPER(cd.state) AS city, cd.violent_rate, sd.officers_per_1k
+FROM crime_data cd
+LEFT JOIN staff_data sd ON sd.ori = cd.ori
+WHERE cd.violent_rate IS NOT NULL AND sd.officers_per_1k IS NOT NULL
+ORDER BY cd.violent_rate DESC LIMIT 1000`;
+  const ctx = extractQueryContext(sql, "give me a scatter plot of violent crime rate per 100k in 2024 vs officers per 100k in cities of 250k or more", "historical");
+  const r = runGuardrails(ctx);
+  assert("TP: #4272 officer per-100k unit guardrail fires",
+    r.fired.includes("historical-officers-per-100k-unit"),
+    `fired: ${JSON.stringify(r.fired)}`);
+  assert("TP: #4272 violent rate alias guardrail fires",
+    r.fired.includes("historical-violent-rate-per-100k-alias"),
+    `fired: ${JSON.stringify(r.fired)}`);
+  assert("TP: #4272 rewritten SQL uses officers_per_100k",
+    /\bofficers_per_100k\b/i.test(r.sql) && !/\bofficers_per_1k\b/i.test(r.sql),
+    r.sql);
+  assert("TP: #4272 rewritten SQL uses 100k officer denominator",
+    /officer_total\s*\*\s*100000\.0/i.test(r.sql) && !/officer_total\s*\*\s*1000\.0/i.test(r.sql),
+    r.sql);
+  assert("TP: #4272 rewritten SQL uses explicit violent per-100k alias",
+    /\bviolent_crime_rate_per_100k\b/i.test(r.sql) && !/\bviolent_rate\b/i.test(r.sql),
+    r.sql);
+}
+
 console.log("\n" + "═".repeat(60));
 console.log(`SUMMARY: ${pass} passed, ${fail} failed out of ${pass + fail} tests`);
 console.log("═".repeat(60));

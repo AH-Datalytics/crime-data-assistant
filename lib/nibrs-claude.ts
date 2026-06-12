@@ -1555,7 +1555,7 @@ Return ONLY a JSON object (no markdown fences, no extra text):
 {
   "sql": "SELECT ...",
   "explanation": "One sentence describing what this query returns (e.g., 'Annual murder victim counts in Texas from 2020 to 2023'). Describe the scope (time range, geography, metric) — do NOT describe what the data shows. Do NOT cite specific numbers, counts, or totals. A separate system will generate the real explanation after seeing results. Include any mandatory NIBRS coverage disclaimers for national/state queries.",
-  "chartHint": "bar" | "line" | "pie" | "stacked_bar" | "none",
+  "chartHint": "bar" | "line" | "pie" | "stacked_bar" | "scatter" | "none",
   "xAxis": "column name for x-axis",
   "yAxis": "column name(s) for y-axis, comma-separated if multiple",
   "title": "Short descriptive title for the results",
@@ -1697,7 +1697,7 @@ When the user sends a follow-up message that modifies the previous query (e.g., 
 export interface ClaudeResponse {
   sql: string | null;
   explanation: string;
-  chartHint: "bar" | "line" | "pie" | "stacked_bar" | "none";
+  chartHint: "bar" | "line" | "pie" | "stacked_bar" | "scatter" | "none";
   xAxis: string;
   yAxis: string;
   title: string;

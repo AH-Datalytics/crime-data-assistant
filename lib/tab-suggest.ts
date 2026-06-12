@@ -516,7 +516,7 @@ function detectRequiredAttributes(q: string): string[] {
   }
 
   // Staffing
-  if (/\b(staffing|officers?\s*per\s*capita|sworn\s*officers?|police\s*officers?|law\s*enforcement\s*employees?)\b/i.test(q)) {
+  if (/\b(staffing|officers?\s*per\s*(?:capita|100\s*k|100,?000|1\s*k|1,?000)|sworn\s*officers?|police\s*officers?|law\s*enforcement\s*employees?)\b/i.test(q)) {
     attrs.push("staffing");
   }
 
@@ -1066,6 +1066,13 @@ export function autoRoute(question: string): AutoRouteResult | null {
     confidence = "medium";
   } else {
     confidence = "low";
+  }
+
+  // Staffing is only available in Historical. Treat it as a deterministic
+  // source requirement even when broad crime-rate wording leaves other tabs
+  // superficially viable.
+  if (primary.tab === "historical" && intent.requiredAttributes.includes("staffing")) {
+    confidence = "high";
   }
 
   return {

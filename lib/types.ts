@@ -10,7 +10,7 @@ export interface ChartAnnotation {
 }
 
 export interface ChartConfig {
-  type: "bar" | "line" | "pie" | "stacked_bar" | "none";
+  type: "bar" | "line" | "pie" | "stacked_bar" | "scatter" | "none";
   xAxis: string;
   yAxis: string[];
   title: string;

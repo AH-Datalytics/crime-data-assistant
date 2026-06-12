@@ -30,6 +30,11 @@ const categoricalRows = [
   { year: 2024, state: "MA", firearm_homicides: 5 },
 ];
 
+const scatterRows = [
+  { city: "A, AA", violent_crime_rate_per_100k: 320.5, officers_per_100k: 210.2 },
+  { city: "B, BB", violent_crime_rate_per_100k: 450.1, officers_per_100k: 188.7 },
+];
+
 {
   const config = buildChartConfig(
     { sql: "SELECT year, firearm_homicides FROM x", chartHint: "none" } as any,
@@ -80,6 +85,18 @@ const categoricalRows = [
 {
   const autoChart = detectYearSeriesChart(["year", "state", "firearm_homicides"], categoricalRows);
   assert("shared detector rejects extra categorical columns", autoChart === null);
+}
+
+{
+  const config = buildChartConfig(
+    { sql: "SELECT city, violent_crime_rate_per_100k, officers_per_100k FROM x", chartHint: "none", xAxis: "", yAxis: "" } as any,
+    ["city", "violent_crime_rate_per_100k", "officers_per_100k"],
+    scatterRows,
+    "give me a scatter plot of violent crime rate per 100k vs officers per 100k"
+  );
+  assert("current: explicit scatter request renders scatter even when chartHint none", config?.type === "scatter");
+  assert("current: scatter picks first numeric x-axis", config?.xAxis === "violent_crime_rate_per_100k");
+  assert("current: scatter picks second numeric y-axis", config?.yAxis.join(",") === "officers_per_100k");
 }
 
 console.log(`chart-config tests: ${passed} passed, ${failed} failed`);

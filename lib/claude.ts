@@ -507,6 +507,7 @@ Note: The baseline period always gets the value 100.0. Use SUM(count) for totals
 - Regional or group comparisons by year (4+ groups, or when comparing groups side-by-side is the emphasis) → "bar" (grouped bar chart) with xAxis = "year" and yAxis = comma-separated group columns
 - Category comparison (states, agencies, offenses in a single period) → "bar"
 - Composition (offense breakdown) → "pie"
+- Scatter/correlation request ("scatter plot", "X vs Y") → "scatter" with xAxis set to the first numeric metric and yAxis set to the second numeric metric. Include a label/name column such as city or agency for tooltips.
 - Multiple offense trends for one entity → "line" with multiple y columns, or "stacked_bar"
 
 ## RESPONSE FORMAT
@@ -514,7 +515,7 @@ Always respond with valid JSON (no markdown fences):
 {
   "sql": "SELECT ...",
   "explanation": "One sentence describing what this query returns (e.g., 'Monthly murder counts for Houston from 2020 to 2024'). Describe the scope (time range, geography, metric) — do NOT describe what the data shows. Do NOT cite specific numbers. A separate system will generate the real explanation after seeing results. Include any mandatory disclaimers.",
-  "chartHint": "line" | "bar" | "pie" | "stacked_bar" | "none",
+  "chartHint": "line" | "bar" | "pie" | "stacked_bar" | "scatter" | "none",
   "xAxis": "column_name for x-axis",
   "yAxis": "column_name(s) for y-axis, comma-separated if multiple",
   "title": "Short chart title — use '[Agency/Place] [Metric] Per [Period]' format (e.g., 'LAPD Officers Per Year', 'Houston Murders Per Month'). Never use vague words like 'Over Time' or 'Trend'. Keep under 6 words.",
@@ -600,7 +601,7 @@ When the user sends a follow-up that modifies the previous query (e.g., "now sho
 export interface ClaudeResponse {
   sql: string | null;
   explanation: string;
-  chartHint: "bar" | "line" | "pie" | "stacked_bar" | "none";
+  chartHint: "bar" | "line" | "pie" | "stacked_bar" | "scatter" | "none";
   xAxis: string;
   yAxis: string;
   title: string;
@@ -822,7 +823,7 @@ ${HISTORICAL.staffingRows.toLocaleString()} rows. Coverage: ~3,800 agencies/year
 
 **IMPORTANT: Only return the columns the user asked about.** If they ask about officers, only SELECT officer_total — do NOT also include civilian_total or all_total unless specifically requested. Match the query to what was asked.
 
-**CHART TYPE: Always use bar charts (not line charts) for staffing queries.** Many agencies have gaps in reporting (missing years).
+**CHART TYPE: Use bar charts (not line charts) for staffing time-series/count queries.** Many agencies have gaps in reporting (missing years). If the user explicitly asks for a scatter plot or "X vs Y" relationship involving staffing, use chartHint = "scatter" instead.
 
 **IMPORTANT — FILL GAPS FOR STAFFING CHARTS:** To make missing years visible in bar charts, use a recursive CTE to produce all years in the range, then LEFT JOIN staffing data. Missing years will have NULL values and appear as gaps. The CTE range must match the actual data range for the agency — do NOT extend beyond the last year with data. Always JOIN through historical_agency by name — NEVER guess an ORI code. Always use the COALESCE pattern:
 WITH agency AS (SELECT ori FROM historical_agency WHERE agency = 'Chicago' AND state = 'il' AND type = 'city'), years AS (SELECT MIN(hs.year) AS year FROM historical_staffing hs JOIN agency a ON a.ori = hs.ori WHERE hs.all_total > 0 UNION ALL SELECT year + 1 FROM years WHERE year < (SELECT MAX(hs.year) FROM historical_staffing hs JOIN agency a ON a.ori = hs.ori WHERE hs.all_total > 0))
@@ -835,13 +836,20 @@ When the user asks for officers "per capita", "per 1,000", or "rate":
 - You MUST JOIN historical_agency_population and compute ROUND(hs.officer_total * 1000.0 / hap.population, 1) AS officers_per_1k
 - You MUST set yAxisLabel to "Officers per 1,000 Residents"
 - Do NOT include raw officer_total in the SELECT — it confuses the chart when mixed with rates
+When the user explicitly asks for officers "per 100k" or "per 100,000":
+- You MUST compute ROUND(hs.officer_total * 100000.0 / hap.population, 1) AS officers_per_100k
+- You MUST set yAxisLabel to "Officers per 100,000 Residents"
+- Do NOT use officers_per_1k or a 1,000 denominator when the user asked for 100k.
 When the user asks for officer COUNTS (not per capita):
 - Return officer_total directly, do NOT set yAxisLabel to anything about "per 1,000"
 - NEVER return raw counts with a per-capita label, or per-capita rates without the label.
 
+For crime-rate columns in mixed staffing/crime comparisons, include the denominator in the alias. Example: violent crime rate per 100k should be aliased as violent_crime_rate_per_100k, not violent_rate.
+
 **Staffing query examples:**
 - Officers for a specific agency: SELECT hs.year, COALESCE(hs.officer_total, hs.all_total) AS staffing, CASE WHEN hs.all_total > 0 AND (hs.officer_total IS NULL OR hs.officer_total = 0) THEN 'Employees*' ELSE 'Officers' END AS data_type FROM historical_staffing hs JOIN historical_agency ha ON ha.ori = hs.ori WHERE ha.agency = 'Chicago' AND ha.state = 'il' AND hs.all_total > 0 ORDER BY hs.year
 - Officers per capita for an agency: JOIN historical_agency_population hap ON hap.ori = hs.ori AND hap.year = hs.year, then ROUND(hs.officer_total * 1000.0 / hap.population, 1) AS officers_per_1k
+- Officers per 100k for an agency: JOIN historical_agency_population hap ON hap.ori = hs.ori AND hap.year = hs.year, then ROUND(hs.officer_total * 100000.0 / hap.population, 1) AS officers_per_100k
 - Top agencies by officers per capita: SELECT ha.agency, ha.state, hs.officer_total, hap.population, ROUND(hs.officer_total * 1000.0 / hap.population, 1) AS officers_per_1k FROM historical_staffing hs JOIN historical_agency ha ON ha.ori = hs.ori JOIN historical_agency_population hap ON hap.ori = hs.ori AND hap.year = hs.year WHERE hs.year = 2023 AND hs.officer_total > 0 AND hap.population > 50000 ORDER BY officers_per_1k DESC LIMIT 20
 - Compare staffing between two specific agencies over time (e.g., "Chicago vs NYPD officers per year"):
     WITH years AS (SELECT DISTINCT year FROM historical_staffing WHERE all_total > 0)
@@ -1086,6 +1094,7 @@ ${HISTORICAL.agencyClearanceRows.toLocaleString()} rows. All values are percenta
 - Regional or group comparisons by year (e.g., Northeast vs South vs Midwest vs West by year, or 4+ agencies by year) → "bar" (grouped bar chart) with xAxis = "year" and yAxis = comma-separated region/group columns. Use "bar" NOT "line" when the emphasis is comparing groups side-by-side rather than tracking a single trend.
 - Category comparison (states, agencies, offenses in a single period) → "bar"
 - Composition (offense breakdown) → "pie"
+- Scatter/correlation request ("scatter plot", "X vs Y") → "scatter" with xAxis set to the first numeric metric and yAxis set to the second numeric metric. Include a label/name column such as city or agency for tooltips.
 - **Officer/staffing counts** (single agency over time) → "bar" with xAxis = "year". Bar charts are better than lines for headcount data.
 - Multiple crime type trends for one entity → "line" with multiple y columns, or "stacked_bar"
 - Since data is ANNUAL only, line charts always use xAxis = "year" (never year+month)
@@ -1095,7 +1104,7 @@ Always respond with valid JSON (no markdown fences):
 {
   "sql": "SELECT ...",
   "explanation": "One sentence describing what this query returns (e.g., 'Monthly murder counts for Houston from 2020 to 2024'). Describe the scope (time range, geography, metric) — do NOT describe what the data shows. Do NOT cite specific numbers. A separate system will generate the real explanation after seeing results. Include any mandatory disclaimers.",
-  "chartHint": "line" | "bar" | "pie" | "stacked_bar" | "none",
+  "chartHint": "line" | "bar" | "pie" | "stacked_bar" | "scatter" | "none",
   "xAxis": "column_name for x-axis",
   "yAxis": "column_name(s) for y-axis, comma-separated if multiple",
   "title": "Short chart title — use '[Agency/Place] [Metric] Per [Period]' format (e.g., 'LAPD Officers Per Year', 'Houston Murders Per Month'). Never use vague words like 'Over Time' or 'Trend'. Keep under 6 words.",

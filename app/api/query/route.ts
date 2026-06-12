@@ -186,6 +186,11 @@ function getHistoricalChartMeta(
       return { agencyCount: 0, population: null, source: src };
     }
 
+    // Staffing queries are Historical Library / FBI SRS too.
+    if (sqlLower.includes("historical_staffing")) {
+      return { agencyCount: 0, population: null, source: src };
+    }
+
     // Agency-level queries — count distinct agencies
     if (sqlLower.includes("historical_agency_crime")) {
       const agencyRe = /ha\.agency\s*=\s*'([^']+)'/gi;
@@ -395,7 +400,7 @@ export async function POST(req: NextRequest) {
         let claude: Awaited<ReturnType<typeof translateToSql>>;
 
         if (cached) {
-          claude = { sql: cached.sql, explanation: cached.explanation, title: cached.title || "", chartHint: (cached.chartType as "bar" | "line" | "pie" | "stacked_bar" | "none") || "none", xAxis: cached.xAxis || "", yAxis: cached.yAxis?.join(",") || "", colors: cached.colors as string[] | undefined, yAxisLabel: cached.yAxisLabel, xAxisLabel: cached.xAxisLabel, annotations: cached.annotations as typeof claude.annotations };
+          claude = { sql: cached.sql, explanation: cached.explanation, title: cached.title || "", chartHint: (cached.chartType as "bar" | "line" | "pie" | "stacked_bar" | "scatter" | "none") || "none", xAxis: cached.xAxis || "", yAxis: cached.yAxis?.join(",") || "", colors: cached.colors as string[] | undefined, yAxisLabel: cached.yAxisLabel, xAxisLabel: cached.xAxisLabel, annotations: cached.annotations as typeof claude.annotations };
           fromCache = true;
         } else {
           claude = await translateToSql(

@@ -15,6 +15,9 @@ import {
   Tooltip,
   Legend,
   ReferenceLine,
+  ScatterChart,
+  Scatter,
+  ZAxis,
 } from "recharts";
 import type { ChartConfig } from "@/lib/types";
 import { NIBRS_CHART_COLORS } from "@/lib/nibrs-chart-config";
@@ -215,7 +218,9 @@ export default function NibrsChartPanel({ config, rows }: NibrsChartPanelProps) 
   const daily = !ym && isDate(data, config.xAxis);
 
   // Auto-pivot long-format data (e.g. year × category → grouped series)
-  const { data: chartData, effectiveYKeys } = detectAndPivot(data, xKey, config.yAxis);
+  const { data: chartData, effectiveYKeys } = config.type === "scatter"
+    ? { data, effectiveYKeys: config.yAxis }
+    : detectAndPivot(data, xKey, config.yAxis);
 
   const dataYears = new Set(
     chartData.map((d) => String(d[daily ? config.xAxis : xKey] ?? "").slice(0, 4))
@@ -292,7 +297,50 @@ export default function NibrsChartPanel({ config, rows }: NibrsChartPanelProps) 
         </div>
       )}
       <ResponsiveContainer width="100%" height="100%">
-        {config.type === "line" ? (
+        {config.type === "scatter" ? (
+          <ScatterChart data={chartData} margin={{ top: 20, right: 24, bottom: 24, left: 8 }}>
+            <CartesianGrid horizontal vertical stroke={GRID_COLOR} strokeWidth={1} />
+            <XAxis
+              type="number"
+              dataKey={config.xAxis}
+              name={properCase(config.xAxis)}
+              tickFormatter={formatAxisValue}
+              tick={TICK_STYLE}
+              tickLine={false}
+              axisLine={false}
+              {...(config.xAxisLabel ? { label: { value: config.xAxisLabel, position: "insideBottom", offset: -12, style: { fontSize: 11, fill: "#1e2a35", fontFamily: "'DM Sans', 'Segoe UI', Arial, sans-serif" } } } : {})}
+            />
+            <YAxis
+              type="number"
+              dataKey={effectiveYKeys[0]}
+              name={properCase(effectiveYKeys[0])}
+              tickFormatter={yTickFormatter}
+              tick={TICK_STYLE}
+              tickLine={false}
+              axisLine={false}
+              width={isPercent ? 55 : 50}
+              {...yAxisScaleProps}
+              {...(config.yAxisLabel ? { label: { value: config.yAxisLabel, angle: -90, position: "insideLeft", offset: 0, dy: -10, style: { fontSize: 10, fill: "#1e2a35", fontFamily: "'DM Sans', 'Segoe UI', Arial, sans-serif", textAnchor: "middle" } } } : {})}
+            />
+            <ZAxis range={[48, 48]} />
+            <Tooltip
+              cursor={{ strokeDasharray: "3 3" }}
+              formatter={(v, name) => [fmtVal(v as number, isPercent), name]}
+              labelFormatter={(_, payload) => {
+                const row = payload?.[0]?.payload as Record<string, unknown> | undefined;
+                return String(row?.city ?? row?.agency ?? row?.state ?? row?.name ?? "");
+              }}
+              contentStyle={tooltipContentStyle}
+              labelStyle={{ color: "#ffffff" }}
+              itemStyle={{ color: "#ffffff" }}
+            />
+            <Scatter
+              name={properCase(effectiveYKeys[0])}
+              data={chartData}
+              fill={chartColors[0]}
+            />
+          </ScatterChart>
+        ) : config.type === "line" ? (
           <LineChart data={chartData} margin={{ top: 20, right: 24, bottom: 8, left: 8 }}>
             <CartesianGrid horizontal vertical={false} stroke={GRID_COLOR} strokeWidth={1} />
             <XAxis

@@ -103,6 +103,14 @@ function asksContinuousReportingFilter(question: string): boolean {
     /\binclude\s+(?:only\s+)?(?:continuous(?:ly)?|consistent(?:ly)?)\s+(?:reporting\s+)?(?:agenc(?:y|ies)|reporters?)\b/i.test(question);
 }
 
+function asksOfficersPer100k(question: string): boolean {
+  return /\bofficers?\b/i.test(question) && /\bper\s*(?:100\s*k|100,?000)\b/i.test(question);
+}
+
+function asksViolentCrimePer100k(question: string): boolean {
+  return /\bviolent\s+crime\s+rate\b/i.test(question) && /\bper\s*(?:100\s*k|100,?000)\b/i.test(question);
+}
+
 function countywideCrosswalkMismatch(ctx: QueryContext): boolean {
   if (!isCountywideGeographyQuestion(ctx.question)) return false;
   const sql = ctx.sql;
@@ -1463,6 +1471,38 @@ const GUARDRAILS: Guardrail[] = [
     },
     message: () =>
       "Your staffing query does not filter out years with no data. In historical_staffing, a value of 0 means the agency did not report — NOT that they had zero officers. Add WHERE all_total > 0 (or AND all_total > 0) to exclude non-reporting years.",
+  },
+  {
+    name: "historical-officers-per-100k-unit",
+    tabs: ["historical"],
+    match: (ctx) => {
+      if (!asksOfficersPer100k(ctx.question)) return false;
+      if (!/\bhistorical_staffing\b/i.test(ctx.sql)) return false;
+      return /\bofficer_total\s*\*\s*1000(?:\.0)?\b/i.test(ctx.sql) ||
+        /\b1000(?:\.0)?\s*\*\s*(?:\w+\.)?officer_total\b/i.test(ctx.sql) ||
+        /\bofficers_per_1k\b/i.test(ctx.sql);
+    },
+    rewrite: (sql) => {
+      let fixed = sql
+        .replace(/\bofficer_total\s*\*\s*1000(?:\.0)?\b/gi, "officer_total * 100000.0")
+        .replace(/\b((?:\w+\.)?officer_total)\s*\*\s*1000(?:\.0)?\b/gi, "$1 * 100000.0")
+        .replace(/\b1000(?:\.0)?\s*\*\s*((?:\w+\.)?officer_total)\b/gi, "100000.0 * $1")
+        .replace(/\bofficers_per_1k\b/gi, "officers_per_100k");
+      return fixed !== sql ? fixed : null;
+    },
+  },
+  {
+    name: "historical-violent-rate-per-100k-alias",
+    tabs: ["historical"],
+    match: (ctx) => {
+      if (!asksViolentCrimePer100k(ctx.question)) return false;
+      if (!/\bhistorical_agency_crime\b/i.test(ctx.sql)) return false;
+      return /\bAS\s+violent_rate\b/i.test(ctx.sql) || /\bviolent_rate\b/i.test(ctx.sql);
+    },
+    rewrite: (sql) => {
+      const fixed = sql.replace(/\bviolent_rate\b/gi, "violent_crime_rate_per_100k");
+      return fixed !== sql ? fixed : null;
+    },
   },
   // Detect single-agency historical time series without gap-fill CTE
   // --- Historical: hardcoded ORI code instead of name lookup ---
