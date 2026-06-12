@@ -21,7 +21,7 @@ import {
 } from "recharts";
 import type { ChartConfig } from "@/lib/types";
 import { NIBRS_CHART_COLORS } from "@/lib/nibrs-chart-config";
-import { formatAxisValue, fmtVal, decadeTicksForYears } from "@/lib/utils";
+import { formatAxisValue, fmtVal, decadeTicksForYears, scatterEntityLabel } from "@/lib/utils";
 
 const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
@@ -325,14 +325,22 @@ export default function NibrsChartPanel({ config, rows }: NibrsChartPanelProps) 
             <ZAxis range={[48, 48]} />
             <Tooltip
               cursor={{ strokeDasharray: "3 3" }}
-              formatter={(v, name) => [fmtVal(v as number, isPercent), name]}
-              labelFormatter={(_, payload) => {
-                const row = payload?.[0]?.payload as Record<string, unknown> | undefined;
-                return String(row?.city ?? row?.agency ?? row?.state ?? row?.name ?? "");
+              content={({ active, payload }) => {
+                // Recharts scatter tooltips have no label row, so labelFormatter
+                // never renders — custom content is required to show the
+                // entity (city/agency) name for each point.
+                if (!active || !payload?.length) return null;
+                const row = payload[0]?.payload as Record<string, unknown> | undefined;
+                const entity = scatterEntityLabel(row);
+                return (
+                  <div style={tooltipContentStyle}>
+                    {entity && <div style={{ fontWeight: 600, marginBottom: 4 }}>{entity}</div>}
+                    {payload.map((p) => (
+                      <div key={String(p.name)}>{String(p.name)}: {fmtVal(p.value as number, isPercent)}</div>
+                    ))}
+                  </div>
+                );
               }}
-              contentStyle={tooltipContentStyle}
-              labelStyle={{ color: "#ffffff" }}
-              itemStyle={{ color: "#ffffff" }}
             />
             <Scatter
               name={properCase(effectiveYKeys[0])}

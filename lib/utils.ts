@@ -61,3 +61,17 @@ export function formatDate(yyyymmdd: string): string {
   const d = yyyymmdd.slice(6, 8);
   return `${m}/${d}/${y}`;
 }
+
+/** Entity label for a scatter point: known label columns first, then the
+ *  first string-valued field (scatter rows are otherwise all numeric). */
+export function scatterEntityLabel(row: Record<string, unknown> | undefined): string {
+  if (!row) return "";
+  for (const key of ["city", "agency", "agency_name", "state", "name", "county", "label"]) {
+    const v = row[key];
+    if (typeof v === "string" && v.trim()) return v;
+  }
+  for (const v of Object.values(row)) {
+    if (typeof v === "string" && v.trim() && isNaN(Number(v))) return v;
+  }
+  return "";
+}
