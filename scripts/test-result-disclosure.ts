@@ -150,4 +150,49 @@ import { applyResultDisclosures } from "../lib/result-disclosure";
   assert.match(explanation, /Geography warning: This result filters agency New York; it is not statewide data for New York\./);
 }
 
+{
+  const explanation = applyResultDisclosures({
+    explanation: "Victim counts by age group across the requested cities for each year from 2015 to 2025.",
+    question: "disaggregate by year",
+    sql: "SELECT d.year, d.age_group, SUM(d.victim_count) AS victims FROM summary_victim_demographics d WHERE d.ori IN (SELECT ori FROM nibrs_consistent_reporters WHERE start_year = 2015 AND end_year = 2025) GROUP BY d.year, d.age_group",
+    rows: [{ year: 2015, age_group: "18-24", victims: 10 }],
+    tab: "nibrs",
+  });
+  assert.doesNotMatch(explanation, /\brequested cities\b/i);
+  assert.match(explanation, /across continuously reporting agencies/);
+  assert.match(explanation, /reported all 12 months in every requested year/);
+}
+
+{
+  const explanation = applyResultDisclosures({
+    explanation: "Murder data for Detroit in 2026.",
+    question: "how mnay murders in detroit in 2026",
+    sql: "SELECT year, month, SUM(count) AS murders FROM agency_monthly WHERE agency = 'Detroit' AND year = 2026 GROUP BY year, month",
+    rows: [
+      { year: 2026, month: 1, murders: 16 },
+      { year: 2026, month: 2, murders: 14 },
+      { year: 2026, month: 3, murders: 18 },
+    ],
+    tab: "current",
+  });
+  assert.match(explanation, /Returned period: January-March 2026\./);
+}
+
+{
+  const explanation = applyResultDisclosures({
+    explanation: "Murder data for Detroit in April and May 2026.\n\nNote: Current Trends data comes from a sample.",
+    question: "where is april and may",
+    sql: "SELECT year, month, SUM(count) AS murders FROM agency_monthly WHERE agency = 'Detroit' AND year = 2026 GROUP BY year, month",
+    rows: [
+      { year: 2026, month: 1, murders: 16 },
+      { year: 2026, month: 2, murders: 14 },
+      { year: 2026, month: 3, murders: 18 },
+    ],
+    tab: "current",
+  });
+  assert.doesNotMatch(explanation, /Murder data for Detroit in April and May 2026/i);
+  assert.match(explanation, /April and May 2026 are not available in Current Trends yet/);
+  assert.match(explanation, /latest returned month is March 2026/);
+}
+
 console.log("result disclosure tests passed");

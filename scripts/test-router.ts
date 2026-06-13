@@ -155,6 +155,18 @@ test({ question: "give me a scatter plot of violent crime rate per 100k in 2024 
     pass++;
   }
 }
+{
+  const meta = parseRoutingLogMeta({
+    question: "disaggregate by year",
+    routingMode: "follow_up",
+  });
+  if (meta.mode !== "follow_up" || meta.confidence !== null || meta.reason !== "Follow-up inherited prior source context") {
+    fail++;
+    failures.push({ question: "disaggregate by year", issue: `Follow-up routing fallback: got mode=${meta.mode}, confidence=${meta.confidence}, reason=${meta.reason}` });
+  } else {
+    pass++;
+  }
+}
 // 3182: carjacking data for NOLA
 test({ question: "Do you have carjacking data for new orleans by month?", expectedPrimary: "nibrs" });
 // 3188: marijuana possession arrests

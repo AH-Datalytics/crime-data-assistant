@@ -12,6 +12,21 @@ const MONTH_NAMES = [
   "July", "August", "September", "October", "November", "December",
 ];
 
+const MONTH_ALIASES: [number, RegExp][] = [
+  [1, /\bjan(?:uary)?\b/i],
+  [2, /\bfeb(?:ruary)?\b/i],
+  [3, /\bmar(?:ch)?\b/i],
+  [4, /\bapr(?:il)?\b/i],
+  [5, /\bmay\b/i],
+  [6, /\bjun(?:e)?\b/i],
+  [7, /\bjul(?:y)?\b/i],
+  [8, /\baug(?:ust)?\b/i],
+  [9, /\bsep(?:t(?:ember)?|tember)?\b/i],
+  [10, /\boct(?:ober)?\b/i],
+  [11, /\bnov(?:ember)?\b/i],
+  [12, /\bdec(?:ember)?\b/i],
+];
+
 function hasYearMention(text: string): boolean {
   return /\b(?:19|20)\d{2}\b/.test(text);
 }
@@ -26,6 +41,22 @@ function appendSentence(text: string, sentence: string): string {
 function usesContinuousReportingFilter(sql: string): boolean {
   return /\bnibrs_consistent_reporters\b/i.test(sql) ||
     (/\bnibrs_agency_completeness\b/i.test(sql) && /\bmonths_reported\s*=\s*12\b/i.test(sql));
+}
+
+function normalizeContinuousReportingExplanation(explanation: string): string {
+  return explanation
+    .replace(/\bwith incomplete coverage\b/gi, "with continuous reporting")
+    .replace(/\bcities with incomplete coverage\b/gi, "agencies with continuous reporting")
+    .replace(/\bacross (?:the )?cit(?:y|ies)\b/gi, "across continuously reporting agencies")
+    .replace(/\bacross the requested cities\b/gi, "across continuously reporting agencies")
+    .replace(/\bfor the requested cities\b/gi, "for continuously reporting agencies")
+    .replace(/\bfrom the requested cities\b/gi, "from continuously reporting agencies")
+    .replace(/\bfrom cities that (?:reported|submitted data) continuously\b/gi, "from agencies that reported continuously")
+    .replace(/\bby cities that (?:reported|submitted data) continuously\b/gi, "by agencies that reported continuously")
+    .replace(/\bcities that (?:reported|submitted data) continuously\b/gi, "agencies that reported continuously")
+    .replace(/\bcities that submitted data\b/gi, "agencies that submitted data")
+    .replace(/\bfrom cities\b/gi, "from agencies")
+    .replace(/\bby cities\b/gi, "by agencies");
 }
 
 function asksForTheftSubtype(question: string): boolean {
@@ -198,23 +229,75 @@ function yearRangeFromSql(sql: string): string | null {
   return null;
 }
 
+function monthPointsFromRows(rows: Record<string, unknown>[]): { year: number; month: number }[] {
+  const yearCol = ["year", "data_year", "Year"].find((c) => rows[0]?.[c] !== undefined);
+  const monthCol = ["month", "Month"].find((c) => rows[0]?.[c] !== undefined);
+  if (!yearCol || !monthCol) return [];
+  return rows
+    .map((r) => ({ year: Number(r[yearCol]), month: Number(r[monthCol]) }))
+    .filter((p) => Number.isFinite(p.year) && Number.isFinite(p.month) && p.month >= 1 && p.month <= 12)
+    .sort((a, b) => a.year - b.year || a.month - b.month);
+}
+
+function returnedMonthRange(rows: Record<string, unknown>[]): string | null {
+  const points = monthPointsFromRows(rows);
+  if (points.length === 0) return null;
+  const lo = points[0];
+  const hi = points[points.length - 1];
+  if (lo.year === hi.year) return `${MONTH_NAMES[lo.month - 1]}-${MONTH_NAMES[hi.month - 1]} ${hi.year}`;
+  return `${MONTH_NAMES[lo.month - 1]} ${lo.year}-${MONTH_NAMES[hi.month - 1]} ${hi.year}`;
+}
+
+function requestedMonths(question: string): number[] {
+  const months: number[] = [];
+  for (const [month, pattern] of MONTH_ALIASES) {
+    if (pattern.test(question)) months.push(month);
+  }
+  return months;
+}
+
+function yearFromQuestionOrRows(question: string, rows: Record<string, unknown>[]): number | null {
+  const mentioned = question.match(/\b((?:19|20)\d{2})\b/);
+  if (mentioned) return Number(mentioned[1]);
+  const points = monthPointsFromRows(rows);
+  return points.length > 0 ? points[points.length - 1].year : null;
+}
+
+function currentMissingMonthNote(question: string, rows: Record<string, unknown>[]): string | null {
+  const asked = requestedMonths(question);
+  if (asked.length === 0) return null;
+  const points = monthPointsFromRows(rows);
+  if (points.length === 0) return null;
+  const returned = new Set(points.map((p) => p.month));
+  const missing = asked.filter((month) => !returned.has(month));
+  if (missing.length === 0) return null;
+  const latest = points[points.length - 1];
+  const year = yearFromQuestionOrRows(question, rows) ?? latest.year;
+  const missingNames = missing.map((month) => MONTH_NAMES[month - 1]).join(" and ");
+  return `${missingNames} ${year} ${missing.length === 1 ? "is" : "are"} not available in Current Trends yet. The latest returned month is ${MONTH_NAMES[latest.month - 1]} ${latest.year}.`;
+}
+
+function removeMissingMonthClaim(explanation: string, missingNote: string): string {
+  const missingNames = MONTH_NAMES.filter((name) => missingNote.includes(name));
+  if (missingNames.length === 0) return explanation;
+  const monthPattern = new RegExp(`\\b(?:${missingNames.join("|")})\\b`, "i");
+  const sentences = explanation.split(/(?<=[.!?])\s+/);
+  if (sentences.length === 0) return explanation;
+  const first = sentences[0];
+  if (
+    monthPattern.test(first) &&
+    /\b(?:data|counts?|results?|shows?|contains?|includes?|for)\b/i.test(first)
+  ) {
+    return sentences.slice(1).join(" ").trim();
+  }
+  return explanation;
+}
+
 function ytdRange(question: string, sql: string, rows: Record<string, unknown>[]): string | null {
   if (!/\b(ytd|year[-\s]?to[-\s]?date|so far|this year|to date)\b/i.test(question)) return null;
 
-  const yearCol = ["year", "data_year", "Year"].find((c) => rows[0]?.[c] !== undefined);
-  const monthCol = ["month", "Month"].find((c) => rows[0]?.[c] !== undefined);
-  if (yearCol && monthCol) {
-    const points = rows
-      .map((r) => ({ year: Number(r[yearCol]), month: Number(r[monthCol]) }))
-      .filter((p) => Number.isFinite(p.year) && Number.isFinite(p.month) && p.month >= 1 && p.month <= 12)
-      .sort((a, b) => a.year - b.year || a.month - b.month);
-    if (points.length > 0) {
-      const lo = points[0];
-      const hi = points[points.length - 1];
-      if (lo.year === hi.year) return `${MONTH_NAMES[lo.month - 1]}-${MONTH_NAMES[hi.month - 1]} ${hi.year}`;
-      return `${MONTH_NAMES[lo.month - 1]} ${lo.year}-${MONTH_NAMES[hi.month - 1]} ${hi.year}`;
-    }
-  }
+  const returned = returnedMonthRange(rows);
+  if (returned) return returned;
 
   const sqlYear = sql.match(/\byear\s*=\s*((?:19|20)\d{2})/i)?.[1] || sql.match(/\byear\s*<=?\s*((?:19|20)\d{2})/i)?.[1];
   const sqlMonth = sql.match(/\bmonth\s*<=\s*(1[0-2]|[1-9])\b/i)?.[1];
@@ -264,10 +347,7 @@ export function applyResultDisclosures(opts: {
     }
 
     if (usesContinuousReportingFilter(opts.sql)) {
-      explanation = explanation
-        .replace(/\bwith incomplete coverage\b/gi, "with continuous reporting")
-        .replace(/\bcities with incomplete coverage\b/gi, "agencies with continuous reporting")
-        .replace(/\bacross (?:the )?cit(?:y|ies)\b/gi, "across continuously reporting agencies");
+      explanation = normalizeContinuousReportingExplanation(explanation);
       explanation = appendSentence(
         explanation,
         "Coverage filter: Results are restricted to agencies that reported all 12 months in every requested year. These are individual reporting agencies, not geographic totals; this improves year-to-year comparability but is not a national estimate."
@@ -303,8 +383,18 @@ export function applyResultDisclosures(opts: {
   }
 
   const ytd = ytdRange(opts.question, opts.sql, opts.rows);
-  if (ytd && !new RegExp(ytd.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i").test(explanation)) {
-    explanation = appendSentence(explanation, `Returned period: ${ytd}.`);
+  const currentReturnedPeriod = opts.tab === "current" ? returnedMonthRange(opts.rows) : null;
+  const returnedPeriod = ytd || currentReturnedPeriod;
+  if (returnedPeriod && !new RegExp(returnedPeriod.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i").test(explanation)) {
+    explanation = appendSentence(explanation, `Returned period: ${returnedPeriod}.`);
+  }
+
+  if (opts.tab === "current") {
+    const missingMonthNote = currentMissingMonthNote(opts.question, opts.rows);
+    if (missingMonthNote) {
+      explanation = removeMissingMonthClaim(explanation, missingMonthNote);
+      explanation = appendSentence(explanation, missingMonthNote);
+    }
   }
 
   if (!hasYearMention(explanation)) {

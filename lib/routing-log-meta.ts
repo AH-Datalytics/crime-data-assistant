@@ -22,10 +22,12 @@ export function parseRoutingLogMeta(body: unknown): RoutingLogMeta {
   const mode = cleanString(record.routingMode, 32);
   const reason = cleanString(record.routingReason, 500);
   const question = cleanString(record.question, 2000);
-  const fallbackRoute = (!confidence || !reason) && question ? autoRoute(question) : null;
+  const validMode = mode && VALID_MODE.has(mode) ? mode : null;
+  const isFollowUp = validMode === "follow_up";
+  const fallbackRoute = !isFollowUp && (!confidence || !reason) && question ? autoRoute(question) : null;
   return {
     confidence: confidence && VALID_CONFIDENCE.has(confidence) ? confidence : fallbackRoute?.confidence ?? null,
-    mode: mode && VALID_MODE.has(mode) ? mode : null,
-    reason: reason ?? fallbackRoute?.reason ?? null,
+    mode: validMode,
+    reason: reason ?? (isFollowUp ? "Follow-up inherited prior source context" : fallbackRoute?.reason ?? null),
   };
 }

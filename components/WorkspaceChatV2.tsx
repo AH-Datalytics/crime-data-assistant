@@ -271,7 +271,7 @@ export default function WorkspaceChat({}: WorkspaceChatProps) {
           return;
         }
       }
-      submitQuestion(q, activeSource, "Follow-up — keeping current source", null, "follow_up");
+      submitQuestion(q, activeSource, `Follow-up — inherited ${TAB_DISPLAY_NAMES[activeSource]} context`, null, "follow_up");
       return;
     }
 
@@ -517,7 +517,7 @@ export default function WorkspaceChat({}: WorkspaceChatProps) {
                       <button onClick={(e) => { e.stopPropagation(); setExpandedRailIdx(isExpanded ? -1 : i); }} className="text-[10px] mt-1 cursor-pointer" style={{ color: accentColor }}>{isExpanded ? "Show less" : "Show more"}</button>
                     )}
                     {isActive && !loading && (
-                      <form onSubmit={(e) => { e.preventDefault(); const el = e.currentTarget.elements.namedItem("followup") as HTMLInputElement; const val = el?.value?.trim(); if (val && activeSource) { submitQuestion(val, activeSource, undefined, null, "follow_up"); el.value = ""; } }} className="flex gap-1 mt-2">
+                      <form onSubmit={(e) => { e.preventDefault(); const el = e.currentTarget.elements.namedItem("followup") as HTMLInputElement; const val = el?.value?.trim(); if (val && activeSource) { submitQuestion(val, activeSource, `Follow-up — inherited ${TAB_DISPLAY_NAMES[activeSource]} context`, null, "follow_up"); el.value = ""; } }} className="flex gap-1 mt-2">
                         <input name="followup" type="text" placeholder="Follow up..." className="flex-1 min-w-0 px-2 py-1.5 text-[11px] border border-[var(--border)] rounded focus:outline-none focus:border-[var(--accent)] bg-[var(--surface)]" />
                         <button type="submit" className="px-2 py-1.5 text-[10px] font-semibold text-white rounded hover:opacity-90 cursor-pointer shrink-0" style={{ backgroundColor: accentColor }}>Ask</button>
                       </form>
