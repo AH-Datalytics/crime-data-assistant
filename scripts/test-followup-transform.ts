@@ -11,6 +11,15 @@ const historyWithSql: PromptHistoryMessage[] = [
   },
 ];
 
+const domesticViolenceRateHistory: PromptHistoryMessage[] = [
+  { role: "user", content: "rates of domestic violence across jurisdictions in 2025" },
+  {
+    role: "assistant",
+    content:
+      "SELECT dv.state, dv.dv_incidents, ROUND(dv.dv_incidents * 100000.0 / pop.reporting_population, 1) AS rate_per_100k FROM summary_domestic_violence dv JOIN agencies a ON a.ori = dv.ori",
+  },
+];
+
 {
   const transform = detectFollowupTransform("split it out by state", historyWithSql);
   assert(transform);
@@ -43,6 +52,15 @@ const historyWithSql: PromptHistoryMessage[] = [
   const transform = detectFollowupTransform("adjust for incomplete coverage", historyWithSql);
   assert(transform);
   assert.equal(transform.name, "add_continuous_reporting_filter");
+}
+
+{
+  const transform = detectFollowupTransform("please show just victim demographics.", domesticViolenceRateHistory);
+  assert(transform);
+  assert.equal(transform.name, "replace_with_dv_victim_demographics");
+  assert.match(transform.instruction, /replaces the prior domestic-violence metric/);
+  assert.match(transform.instruction, /Do NOT preserve any prior per-capita/);
+  assert.match(transform.instruction, /victim_sequence/);
 }
 
 {

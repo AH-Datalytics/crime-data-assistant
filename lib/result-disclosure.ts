@@ -43,6 +43,15 @@ function usesContinuousReportingFilter(sql: string): boolean {
     (/\bnibrs_agency_completeness\b/i.test(sql) && /\bmonths_reported\s*=\s*12\b/i.test(sql));
 }
 
+function usesNibrsDvReportingPopulationRate(sql: string): boolean {
+  return /\bsummary_domestic_violence\b/i.test(sql) &&
+    /\bnibrs_agency_completeness\b/i.test(sql) &&
+    /\bagencies\b/i.test(sql) &&
+    (/\breporting_population\b/i.test(sql) ||
+      /\brate_per_100k\b/i.test(sql) ||
+      /\bSUM\s*\(\s*\w+\.population\s*\*\s*\w+\.months_reported\s*\/\s*12\.0\s*\)/i.test(sql));
+}
+
 function normalizeContinuousReportingExplanation(explanation: string): string {
   return explanation
     .replace(/\bwith incomplete coverage\b/gi, "with continuous reporting")
@@ -351,6 +360,13 @@ export function applyResultDisclosures(opts: {
       explanation = appendSentence(
         explanation,
         "Coverage filter: Results are restricted to agencies that reported all 12 months in every requested year. These are individual reporting agencies, not geographic totals; this improves year-to-year comparability but is not a national estimate."
+      );
+    }
+
+    if (usesNibrsDvReportingPopulationRate(opts.sql)) {
+      explanation = appendSentence(
+        explanation,
+        "Rate denominator: population served by NIBRS-reporting agencies, adjusted for months reported; this is not a complete official state population rate."
       );
     }
   }

@@ -103,6 +103,22 @@ function asksContinuousReportingFilter(question: string): boolean {
     /\binclude\s+(?:only\s+)?(?:continuous(?:ly)?|consistent(?:ly)?)\s+(?:reporting\s+)?(?:agenc(?:y|ies)|reporters?)\b/i.test(question);
 }
 
+function asksDomesticViolence(question: string): boolean {
+  return /\bdomestic\s+violence\b|\b(?<![a-z])dv(?![a-z])\b/i.test(question);
+}
+
+function asksPerCapitaRate(question: string): boolean {
+  return /\b(?:rates?|per\s*capita|per\s*100k|per\s*100,000|per\s+hundred\s+thousand)\b/i.test(question);
+}
+
+function asksDomesticViolenceRate(question: string): boolean {
+  return asksDomesticViolence(question) && asksPerCapitaRate(question);
+}
+
+function domesticViolenceRateMessage(): string {
+  return "[SYSTEM: The user asked for domestic violence rates. Do not join summary_domestic_violence to another summary_* table to infer population; that triggers cross-summary grain errors. Use summary_domestic_violence for the numerator and agencies plus nibrs_agency_completeness for the denominator. The denominator must be the population served by reporting agencies, adjusted by months reported; it is not the full official state population. For state comparisons in 2025, use this pattern: WITH dv AS (SELECT state, COUNT(DISTINCT ori || ':' || data_year || ':' || incident_num) AS dv_incidents FROM summary_domestic_violence WHERE data_year = 2025 GROUP BY state), population AS (SELECT a.state, SUM(a.population * nac.months_reported / 12.0) AS reporting_population FROM nibrs_agency_completeness nac JOIN agencies a ON a.ori = nac.ori AND a.year = nac.year WHERE nac.year = 2025 AND nac.months_reported > 0 AND a.population > 0 GROUP BY a.state) SELECT dv.state, dv.dv_incidents, population.reporting_population, ROUND(dv.dv_incidents * 100000.0 / NULLIF(population.reporting_population, 0), 1) AS rate_per_100k FROM dv JOIN population ON population.state = dv.state WHERE population.reporting_population > 0 ORDER BY rate_per_100k DESC LIMIT 1000. Explain that the denominator is population served by agencies that reported in NIBRS, adjusted for partial-year reporting, not a complete official state population.]";
+}
+
 function asksOfficersPer100k(question: string): boolean {
   return /\bofficers?\b/i.test(question) && /\bper\s*(?:100\s*k|100,?000)\b/i.test(question);
 }
@@ -1147,8 +1163,12 @@ const GUARDRAILS: Guardrail[] = [
       if (isCityState) return false;
       return true;
     },
-    override: () =>
-      "I can't reliably combine data from two different summary tables — joining them would produce incorrect results due to different aggregation grains. I can answer each part separately: for example, I can show victim demographics OR clearance rates, but not both in a single query unless a pre-built combined table exists. Try asking about one dimension at a time, or ask if a specific combination is available.",
+    message: (ctx) => asksDomesticViolenceRate(ctx.question)
+      ? domesticViolenceRateMessage()
+      : "[SYSTEM: Do not join different summary_* tables to infer missing dimensions; that produces incorrect results due to different aggregation grains. Use a single summary table that already contains the requested dimensions, use a pre-built combined table, or set sql to null and explain which dimensions are available separately.]",
+    override: (ctx) => asksDomesticViolenceRate(ctx.question)
+      ? null
+      : "I can't reliably combine data from two different summary tables — joining them would produce incorrect results due to different aggregation grains. I can answer each part separately: for example, I can show victim demographics OR clearance rates, but not both in a single query unless a pre-built combined table exists. Try asking about one dimension at a time, or ask if a specific combination is available.",
   },
   {
     name: "nibrs-continuous-reporting-required",
@@ -2411,6 +2431,7 @@ const GUARDRAILS: Guardrail[] = [
       const sqlLower = sql.toLowerCase();
       if (!sqlLower.includes("summary_domestic_violence")) return false;
       const q = ctx.question.toLowerCase();
+      if (/\bstates?\b/i.test(q) && /\bGROUP\s+BY\s+(?:\w+\.)?state\b/i.test(sql) && !/\bGROUP\s+BY\b[\s\S]*\bcity\b/i.test(sql)) return false;
       // Only fire for "by city" ranking queries
       const isCityQuery = /\bby\s+city\b|\bcit(y|ies)\b/i.test(q);
       if (!isCityQuery) return false;
@@ -2443,6 +2464,13 @@ const GUARDRAILS: Guardrail[] = [
       const issues = (ctx as any)._dvCityIssues as string[] || [];
       return `[SYSTEM: City-level DV query issues:\n${issues.map(i => `- ${i}`).join("\n")}\nCorrect pattern: SELECT a.city, a.state, COUNT(DISTINCT dv.ori || ':' || dv.data_year || ':' || dv.incident_num) AS dv_incidents FROM summary_domestic_violence dv JOIN agencies a ON a.ori = dv.ori AND a.year = dv.data_year WHERE a.state = '...' AND a.agency_type = 'City' AND a.population > 0 AND a.city != '' GROUP BY a.city, a.state ORDER BY dv_incidents DESC LIMIT 50]`;
     },
+  },
+  {
+    name: "nibrs-dv-victim-count-column",
+    tabs: ["nibrs"],
+    match: (ctx) => /\bsummary_domestic_violence\b/i.test(ctx.sql) && /\bvictim_count\b/i.test(ctx.sql),
+    message: () =>
+      "[SYSTEM: summary_domestic_violence has no victim_count column. For DV incident counts, use COUNT(DISTINCT dv.ori || ':' || dv.data_year || ':' || dv.incident_num). For DV victim demographics, count distinct victims with COUNT(DISTINCT dv.ori || ':' || dv.data_year || ':' || dv.incident_num || ':' || dv.victim_sequence) and group by victim_sex, victim_race, and an age bucket derived from victim_age. Do not use SUM(dv.victim_count).]",
   },
 ];
 

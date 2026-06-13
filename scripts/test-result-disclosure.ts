@@ -80,6 +80,19 @@ import { applyResultDisclosures } from "../lib/result-disclosure";
 
 {
   const explanation = applyResultDisclosures({
+    explanation: "Domestic violence incident rates by state in 2025.",
+    question: "domestic violence incident counts per 100,000 population across states in 2025",
+    sql: "WITH dv AS (SELECT state, COUNT(DISTINCT ori || ':' || data_year || ':' || incident_num) AS dv_incidents FROM summary_domestic_violence WHERE data_year = 2025 GROUP BY state), population AS (SELECT a.state, SUM(a.population * nac.months_reported / 12.0) AS reporting_population FROM nibrs_agency_completeness nac JOIN agencies a ON a.ori = nac.ori AND a.year = nac.year WHERE nac.year = 2025 AND nac.months_reported > 0 AND a.population > 0 GROUP BY a.state) SELECT dv.state, population.reporting_population, ROUND(dv.dv_incidents * 100000.0 / population.reporting_population, 1) AS rate_per_100k FROM dv JOIN population ON population.state = dv.state",
+    rows: [{ state: "TX", reporting_population: 100000, rate_per_100k: 2.5 }],
+    tab: "nibrs",
+  });
+  assert.match(explanation, /population served by NIBRS-reporting agencies/);
+  assert.match(explanation, /adjusted for months reported/);
+  assert.match(explanation, /not a complete official state population rate/);
+}
+
+{
+  const explanation = applyResultDisclosures({
     explanation: "Motor vehicle theft counts for the requested cities.",
     question: "motor vehicle theft in six Texas cities",
     sql: "SELECT city, SUM(offense_count) AS thefts FROM summary_city_monthly WHERE city IN ('HOUSTON','DALLAS','JERSEY VILLAGE','WEST UNIVERSITY PLACE') GROUP BY city",

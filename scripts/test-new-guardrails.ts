@@ -1206,6 +1206,24 @@ console.log("\n═══ nibrs-dv-city-schema ═══\n");
 }
 
 {
+  const sql = `WITH state_dv_incidents AS (SELECT dv.state, COUNT(DISTINCT dv.ori || ':' || dv.data_year || ':' || dv.incident_num) AS dv_incidents FROM summary_domestic_violence dv WHERE dv.data_year = 2025 GROUP BY dv.state), state_population AS (SELECT a.state, SUM(a.population * rpt.months_reported / 12.0) AS adj_population FROM agencies a JOIN (SELECT ori, year, COUNT(DISTINCT month) AS months_reported FROM summary_city_monthly WHERE year = 2025 GROUP BY ori, year) rpt ON rpt.ori = a.ori AND rpt.year = a.year WHERE a.year = 2025 AND a.population > 0 GROUP BY a.state) SELECT dv.state, dv.dv_incidents, ROUND(dv.dv_incidents * 100000.0 / NULLIF(pop.adj_population, 0), 1) AS rate_per_100k FROM state_dv_incidents dv LEFT JOIN state_population pop ON pop.state = dv.state ORDER BY rate_per_100k DESC LIMIT 50`;
+  const ctx = extractQueryContext(sql, "please use Domestic violence incident counts per 100,000 population (per-capita rates), comparing cities or states, and lets compare across states", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("TP: DV state-rate cross-summary join retries instead of hard-stopping",
+    r.fired.includes("nibrs-cross-summary-join") && r.overrideResponse === null,
+    `fired: ${JSON.stringify(r.fired)}, override=${r.overrideResponse}`);
+  assert("TP: DV state-rate retry message points to nibrs_agency_completeness",
+    r.issues.some((issue) => /nibrs_agency_completeness/.test(issue)),
+    `issues: ${JSON.stringify(r.issues)}`);
+  assert("TP: DV state-rate retry message uses reporting-population denominator",
+    r.issues.some((issue) => /SUM\(a\.population \* nac\.months_reported \/ 12\.0\)/.test(issue) && /rate_per_100k/.test(issue) && /not a complete official state population/.test(issue)),
+    `issues: ${JSON.stringify(r.issues)}`);
+  assert("FP: DV state-rate question with quoted cities does not fire city-schema",
+    !r.fired.includes("nibrs-dv-city-schema"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
   // TP: DV by city, GROUP BY city only (missing state)
   const sql = `SELECT a.city, COUNT(DISTINCT dv.ori || ':' || dv.data_year || ':' || dv.incident_num) AS dv_incidents FROM summary_domestic_violence dv JOIN agencies a ON a.ori = dv.ori AND a.year = dv.data_year WHERE a.agency_type = 'City' GROUP BY a.city ORDER BY dv_incidents DESC LIMIT 50`;
   const ctx = extractQueryContext(sql, "top cities for domestic violence nationwide", "nibrs");
@@ -1213,6 +1231,18 @@ console.log("\n═══ nibrs-dv-city-schema ═══\n");
   assert("TP: GROUP BY city without state fires",
     r.fired.includes("nibrs-dv-city-schema"),
     `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  const sql = `SELECT dv.state, SUM(dv.victim_count) AS victims FROM summary_domestic_violence dv WHERE dv.data_year = 2025 GROUP BY dv.state`;
+  const ctx = extractQueryContext(sql, "domestic violence victim demographics across states", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("TP: summary_domestic_violence victim_count column fires",
+    r.fired.includes("nibrs-dv-victim-count-column"),
+    `fired: ${JSON.stringify(r.fired)}`);
+  assert("TP: victim_count message tells model to count distinct victims",
+    r.issues.some((issue) => /victim_sequence/.test(issue) && /Do not use SUM/.test(issue)),
+    `issues: ${JSON.stringify(r.issues)}`);
 }
 
 // ══════════════════════════════════════════════════════════════════════

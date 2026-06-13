@@ -3,7 +3,7 @@ import type { PromptHistoryMessage } from "./chat-history";
 export type FollowupBreakdown = "state" | "city" | "agency";
 
 export interface FollowupTransform {
-  name: "add_breakdown" | "add_continuous_reporting_filter";
+  name: "add_breakdown" | "add_continuous_reporting_filter" | "replace_with_dv_victim_demographics";
   dimension?: FollowupBreakdown;
   instruction: string;
 }
@@ -23,6 +23,12 @@ function hasPriorSql(history: PromptHistoryMessage[]): boolean {
   return history.some((msg) => msg.role === "assistant" && /\bSELECT\b[\s\S]+\bFROM\b/i.test(msg.content));
 }
 
+function hasPriorDomesticViolenceContext(history: PromptHistoryMessage[]): boolean {
+  return history.some((msg) =>
+    /\bsummary_domestic_violence\b|\bdomestic\s+violence\b|\b(?<![a-z])dv(?![a-z])\b/i.test(msg.content)
+  );
+}
+
 function requestedContinuousReportingFilter(question: string): boolean {
   return /\b(?:continuous(?:ly)?|consistent(?:ly)?)\s+(?:reporting\s+)?(?:agenc(?:y|ies)|reporters?)\b/i.test(question) ||
     /\b(?:agenc(?:y|ies)|reporters?)\s+that\s+reported\s+every\s+year\b/i.test(question) ||
@@ -32,7 +38,20 @@ function requestedContinuousReportingFilter(question: string): boolean {
     /\binclude\s+(?:only\s+)?(?:continuous(?:ly)?|consistent(?:ly)?)\s+(?:reporting\s+)?(?:agenc(?:y|ies)|reporters?)\b/i.test(question);
 }
 
+function requestedDomesticViolenceVictimDemographics(question: string): boolean {
+  return /\bvictim\s+demographics\b/i.test(question) &&
+    /\b(?:just|only|instead|rather|show|use|break(?:\s+it)?\s+down|demographics?)\b/i.test(question);
+}
+
 export function detectFollowupTransform(question: string, history: PromptHistoryMessage[]): FollowupTransform | null {
+  if (requestedDomesticViolenceVictimDemographics(question) && hasPriorDomesticViolenceContext(history)) {
+    return {
+      name: "replace_with_dv_victim_demographics",
+      instruction:
+        "[SYSTEM: This follow-up replaces the prior domestic-violence metric with victim demographics. Do NOT preserve any prior per-capita/rate/population/denominator calculation, ranking metric, or summary_city_monthly join. Use summary_domestic_violence as the fact table. Preserve the prior year and geography when available. For a prior state-comparison question, group by dv.state plus victim demographics. Count distinct victims with COUNT(DISTINCT dv.ori || ':' || dv.data_year || ':' || dv.incident_num || ':' || dv.victim_sequence), not victim_count. Group by victim_sex, victim_race, and an age bucket derived from victim_age; treat non-numeric victim_age values as Unknown before casting. Do not ask for clarification unless the prior context has no year or geography at all.]",
+    };
+  }
+
   if (requestedContinuousReportingFilter(question) && hasPriorSql(history)) {
     return {
       name: "add_continuous_reporting_filter",
