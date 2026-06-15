@@ -1920,6 +1920,75 @@ console.log("\n=== historical state/national aggregate column regression ===\n")
     r.sql);
 }
 
+console.log("\n=== June 14-15 query audit regressions ===\n");
+
+{
+  const sql = `WITH city_data AS (
+  SELECT am.ori, am.agency, am.state, am.year, SUM(am.count) as murders
+  FROM agency_monthly am
+  JOIN agency_population ap ON ap.ori = am.ori AND ap.year = am.year
+  WHERE am.type = 'City' AND am.offense = 'Murder' AND am.year = 2025 AND ap.population >= 500000
+  GROUP BY am.ori, am.agency, am.state, am.year
+)
+SELECT cd.agency || ', ' || cd.state as city, cd.murders, ap.population,
+  ROUND(cd.murders * 100000.0 / ap.population, 1) as rate_per_100k
+FROM city_data cd JOIN agency_population ap ON ap.ori = cd.ori AND ap.year = cd.year
+ORDER BY rate_per_100k DESC LIMIT 20`;
+  const ctx = extractQueryContext(sql, "los angeles homicide rate in 2025 vs. other large cities", "current");
+  const r = runGuardrails(ctx);
+  assert("TP: #4322 requested city cannot be omitted by LIMIT",
+    r.fired.includes("requested-entity-vs-other-omitted"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  const sql = `SELECT i.state, i.agency, COUNT(*) as victims,
+    ROUND(COUNT(*) * 100000.0 / NULLIF(AVG(i.population), 0), 1) as rate_per_100k
+    FROM incidents i JOIN victims v ON v.incident_id = i.id
+    WHERE i.year = 2025 AND i.homicide_type = 'Murder'
+    AND (i.agency_type = 'City' OR i.agency_type IS NULL OR i.agency_type = '')
+    AND AVG(i.population) >= 250000
+    GROUP BY i.state, i.agency ORDER BY rate_per_100k DESC LIMIT 20`;
+  const ctx = extractQueryContext(sql, "los angeles homicide rate in 2025 vs. other large cities", "shr");
+  const r = runGuardrails(ctx);
+  assert("FP: #4323 SHR city ranking may use AVG population per agency",
+    !r.fired.includes("shr-rate-bad-denominator"),
+    `fired: ${JSON.stringify(r.fired)}`);
+  assert("TP: #4323 aggregate function in WHERE still retries",
+    r.fired.includes("shr-aggregate-in-where"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  const sql = `SELECT year, month, rolling_12month FROM (
+    SELECT year, month, SUM(offense_count) OVER (ORDER BY year, month ROWS BETWEEN 11 PRECEDING AND CURRENT ROW) AS rolling_12month
+    FROM (SELECT s.year, s.month, SUM(s.offense_count) AS offense_count
+      FROM summary_carjacking_monthly s
+      WHERE s.ori IN (SELECT ori FROM nibrs_consistent_reporters WHERE start_year <= 2019 AND end_year >= 2019)
+      AND s.year >= 2019 AND s.year <= 2026 GROUP BY s.year, s.month)
+  ) WHERE year >= 2019 ORDER BY year, month LIMIT 1000`;
+  const ctx = extractQueryContext(sql, "Carjackings rolling over 12 months since 2019 in consistent reporting agencies", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("TP: #4327 broad start-only consistent reporter interval fires",
+    r.fired.includes("nibrs-consistent-reporter-range-contract"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  const sql = `SELECT year, month, rolling_12month FROM (
+    SELECT year, month, SUM(offense_count) OVER (ORDER BY year, month ROWS BETWEEN 11 PRECEDING AND CURRENT ROW) AS rolling_12month
+    FROM (SELECT s.year, s.month, SUM(s.offense_count) AS offense_count
+      FROM summary_carjacking_monthly s
+      WHERE s.ori IN (SELECT ori FROM nibrs_consistent_reporters WHERE start_year = 2018 AND end_year = 2026)
+      AND s.year >= 2018 AND s.year <= 2026 GROUP BY s.year, s.month)
+  ) WHERE year >= 2019 AND (year < 2026 OR (year = 2026 AND month = 1)) ORDER BY year, month LIMIT 1000`;
+  const ctx = extractQueryContext(sql, "No, in the consistent reporters", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("TP: #4331 current partial year cannot be exact consistent-reporter end",
+    r.fired.includes("nibrs-consistent-reporter-range-contract"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
 console.log("\n" + "═".repeat(60));
 console.log(`SUMMARY: ${pass} passed, ${fail} failed out of ${pass + fail} tests`);
 console.log("═".repeat(60));

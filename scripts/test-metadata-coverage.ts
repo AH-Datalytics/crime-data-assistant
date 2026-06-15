@@ -186,6 +186,16 @@ const db = makeDb();
 }
 
 {
+  const result = answerMetadataQuestion("historical", "How many homicides have there been in the City of Los Angeles so far this year?", db);
+  assert.equal(result, null);
+}
+
+{
+  const result = answerMetadataQuestion("nibrs", "How many agencies and population?", db);
+  assert.equal(result, null);
+}
+
+{
   const result = answerMetadataQuestion("historical", "Using 2023 data, which cities in Louisiana had the highest violent crime rate", db);
   assert.equal(result, null);
 }

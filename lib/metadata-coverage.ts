@@ -68,7 +68,8 @@ function asksContinuousReportingFilter(q: string): boolean {
 }
 
 function asksAnalyticResult(q: string): boolean {
-  return /\b(rate|rates|per\s*(?:100\s*k|100,?000|capita)|highest|lowest|top|bottom|most|least|rank(?:ed|ing)?|trend|trends|compare|comparison)\b/.test(q);
+  return /\b(rate|rates|per\s*(?:100\s*k|100,?000|capita)|highest|lowest|top|bottom|most|least|rank(?:ed|ing)?|trend|trends|compare|comparison)\b/.test(q) ||
+    /\b(crime|crimes|offense|offenses|homicide|homicides|murder|murders|robbery|robberies|assault|assaults|burglary|burglaries|theft|thefts|rape|rapes|carjacking|carjackings|arrest|arrests|clearance|clearances|victim|victims)\b/.test(q);
 }
 
 function detectMetadataIntent(question: string): Intent | null {
@@ -85,6 +86,9 @@ function detectMetadataIntent(question: string): Intent | null {
   const mentionsCity = /\bcit(?:y|ies)\b/.test(q);
   const asksCount = /\b(how many|number of|count)\b/.test(q);
   const asksAvailable = /\b(which|what|list|available|represented|covered|coverage|have data|data for|reporting|included)\b/.test(q);
+  if (/\bpopulation\b/.test(q) && mentionsAgency) {
+    return null;
+  }
   const asksCountyMembership = /\b(county|counties|parish|parishes|borough)\b/.test(q) &&
     (mentionsAgency || mentionsCity) &&
     (asksCount || asksAvailable || /\b(?:in|within|inside|cover(?:ing)?)\b/.test(q));

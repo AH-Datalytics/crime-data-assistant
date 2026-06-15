@@ -955,6 +955,8 @@ Preferred consistent-reporter filter for a chosen range:
     WHERE start_year = 2019 AND end_year = 2024
   )
 
+CRITICAL RANGE RULE: nibrs_consistent_reporters is keyed by the exact complete-year interval chosen for comparability. If the user asks "since 2019" and the current year is partial, use start_year = 2019 and end_year = the latest complete calendar year, then include current-year monthly rows separately with a partial-year disclosure if the user asked for "to present." Do NOT write start_year <= 2019 AND end_year >= 2019; that only proves the agency was consistent for some interval containing 2019. Do NOT require end_year = the current partial year until that year has all 12 months.
+
 Consistent reporters for a year range (reported all 12 months every year):
   AND ori IN (
     SELECT ori FROM nibrs_agency_completeness

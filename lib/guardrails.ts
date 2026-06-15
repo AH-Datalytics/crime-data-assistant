@@ -119,6 +119,44 @@ function domesticViolenceRateMessage(): string {
   return "[SYSTEM: The user asked for domestic violence rates. Do not join summary_domestic_violence to another summary_* table to infer population; that triggers cross-summary grain errors. Use summary_domestic_violence for the numerator and agencies plus nibrs_agency_completeness for the denominator. The denominator must be the population served by reporting agencies, adjusted by months reported; it is not the full official state population. For state comparisons in 2025, use this pattern: WITH dv AS (SELECT state, COUNT(DISTINCT ori || ':' || data_year || ':' || incident_num) AS dv_incidents FROM summary_domestic_violence WHERE data_year = 2025 GROUP BY state), population AS (SELECT a.state, SUM(a.population * nac.months_reported / 12.0) AS reporting_population FROM nibrs_agency_completeness nac JOIN agencies a ON a.ori = nac.ori AND a.year = nac.year WHERE nac.year = 2025 AND nac.months_reported > 0 AND a.population > 0 GROUP BY a.state) SELECT dv.state, dv.dv_incidents, population.reporting_population, ROUND(dv.dv_incidents * 100000.0 / NULLIF(population.reporting_population, 0), 1) AS rate_per_100k FROM dv JOIN population ON population.state = dv.state WHERE population.reporting_population > 0 ORDER BY rate_per_100k DESC LIMIT 1000. Explain that the denominator is population served by agencies that reported in NIBRS, adjusted for partial-year reporting, not a complete official state population.]";
 }
 
+function normalizeEntityForSearch(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function requestedEntityForVsOther(ctx: QueryContext): string | null {
+  const q = ctx.question;
+  if (!/\b(?:vs\.?|versus|compare|compared)\b/i.test(q)) return null;
+  if (!/\bother\b|\blarge\b|\bsimilar\b|\bbig\b/i.test(q)) return null;
+  const candidate = ctx.geos.find((geo) => !STATE_NAMES_RE.test(geo));
+  if (candidate) return candidate;
+  const lead = q.match(/^\s*([A-Za-z][A-Za-z .'-]+?)\s+(?:homicide|homicides|murder|murders|crime|robbery|assault|burglary|theft|rate|rates)\b/i);
+  return lead ? lead[1].trim() : null;
+}
+
+function sqlMentionsEntity(sql: string, entity: string): boolean {
+  const normSql = normalizeEntityForSearch(sql);
+  const normEntity = normalizeEntityForSearch(entity);
+  return normEntity.length > 0 && normSql.includes(normEntity);
+}
+
+function expectedConsistentReporterEndYear(question: string): number {
+  const requestedEnd = requestedEndYear(question);
+  const current = currentCalendarYear();
+  if (requestedEnd !== null && requestedEnd < current) return requestedEnd;
+  return current - 1;
+}
+
+function hasBroadConsistentReporterStartOnly(sql: string, startYear: number): boolean {
+  const stripped = stripSqlStrings(sql);
+  const startOnly = new RegExp(`\\bstart_year\\s*<=\\s*${startYear}\\b[\\s\\S]{0,80}\\bend_year\\s*>=\\s*${startYear}\\b`, "i");
+  return startOnly.test(stripped);
+}
+
+function hasImpossibleCurrentYearConsistentReporterEnd(sql: string): boolean {
+  const current = currentCalendarYear();
+  return new RegExp(`\\bend_year\\s*=\\s*${current}\\b`, "i").test(stripSqlStrings(sql));
+}
+
 function asksOfficersPer100k(question: string): boolean {
   return /\bofficers?\b/i.test(question) && /\bper\s*(?:100\s*k|100,?000)\b/i.test(question);
 }
@@ -497,6 +535,20 @@ const GUARDRAILS: Guardrail[] = [
       const topNMatch = ctx.question.toLowerCase().match(/\btop\s+(\d+)/i);
       const n = topNMatch ? topNMatch[1] : "N";
       return `The user asked for the top ${n} but your SQL returns all entities without limiting to ${n}. Use a CTE or subquery to first identify the top ${n} entities (e.g., by total count), then filter the main query to only those ${n} ORIs/agencies. Example: WITH top_agencies AS (SELECT ori FROM ... GROUP BY ori ORDER BY SUM(count) DESC LIMIT ${n}) SELECT ... WHERE ori IN (SELECT ori FROM top_agencies).`;
+    },
+  },
+  {
+    name: "requested-entity-vs-other-omitted",
+    tabs: ["current", "historical", "nibrs", "shr"],
+    match: (ctx) => {
+      const requested = requestedEntityForVsOther(ctx);
+      if (!requested) return false;
+      if (!/\bORDER\s+BY\b[\s\S]*\bLIMIT\s+\d+\b/i.test(ctx.sql)) return false;
+      return !sqlMentionsEntity(ctx.sql, requested);
+    },
+    message: (ctx) => {
+      const requested = requestedEntityForVsOther(ctx) || "the requested city";
+      return `[SYSTEM: The user asked to compare ${requested} with other peer/large cities. Your SQL ranks cities with ORDER BY/LIMIT but does not force-include ${requested}, so ${requested} can be omitted if it falls below the cutoff. Build a CTE for top comparison cities, a CTE for the requested city, UNION them, and return both the requested entity and the comparison set. Do not let LIMIT exclude the requested city.]`;
     },
   },
   {
@@ -1181,6 +1233,21 @@ const GUARDRAILS: Guardrail[] = [
     },
     message: () =>
       "[SYSTEM: The user asked to restrict the result to continuously/consistently reporting NIBRS agencies, but the SQL does not use a consistent-reporter filter. Do not return agency metadata or a coverage list. Rewrite the data query using ORI-level tables so the filter is possible: summary_victim_city_monthly or summary_victim_demographics for person-crime victim/offender demographics, summary_offender_demographics for offender demographics, summary_city_monthly for property/society offense counts, and summary_arrestee_demographics for arrests. Prefer fact_alias.ori IN (SELECT ori FROM nibrs_consistent_reporters WHERE start_year = [start_year] AND end_year = [end_year]). If that table is unavailable, use nibrs_agency_completeness with months_reported = 12 for every year: SELECT ori FROM nibrs_agency_completeness WHERE year BETWEEN [start_year] AND [end_year] AND months_reported = 12 GROUP BY ori HAVING COUNT(*) = [number_of_years]. Preserve the user's offenses, breakdowns, metric, and year range.]",
+  },
+  {
+    name: "nibrs-consistent-reporter-range-contract",
+    tabs: ["nibrs"],
+    match: (ctx) => {
+      if (!/\bnibrs_consistent_reporters\b/i.test(ctx.sql)) return false;
+      const start = requestedStartYear(ctx.question);
+      if (start !== null && hasBroadConsistentReporterStartOnly(ctx.sql, start)) return true;
+      return hasImpossibleCurrentYearConsistentReporterEnd(ctx.sql);
+    },
+    message: (ctx) => {
+      const start = requestedStartYear(ctx.question) ?? "[start_year]";
+      const end = expectedConsistentReporterEndYear(ctx.question);
+      return `[SYSTEM: The consistent-reporter lookup must use the exact chosen complete-year range from nibrs_consistent_reporters. Use WHERE start_year = ${start} AND end_year = ${end}, not start_year <= ${start} AND end_year >= ${start}. Do not require end_year = ${currentCalendarYear()} while the current year is partial; choose agencies that reported all 12 months in every complete requested year, then include current-year months only as partial data with a disclosure.]`;
+    },
   },
   {
     name: "nibrs-state-table-with-ori",
@@ -2029,8 +2096,13 @@ const GUARDRAILS: Guardrail[] = [
       if (!calculatesRate) return false;
       const hasSingleAgencyFilter = /\bagency\s*=\s*'[^']+'/i.test(sql);
       if (hasSingleAgencyFilter) return false;
-      const groupsByAggregateGeo = /GROUP\s+BY[\s\S]*\b(?:state|state_name|division|year)\b/i.test(sql);
-      const asksAggregateRate = /\b(state|statewide|national|nationwide|division|overall|rate|per\s+capita|per\s+100k)\b/i.test(ctx.question);
+      const groupsByAgency = /GROUP\s+BY[\s\S]*\bagency\b/i.test(sql);
+      if (groupsByAgency) return false;
+      const groupsByAggregateGeo = /GROUP\s+BY[\s\S]*\b(?:state_name|division)\b/i.test(sql) ||
+        /GROUP\s+BY[\s\S]*\bi\.state\b/i.test(sql);
+      const asksAggregateRate = ctx.scope === "state" ||
+        ctx.states.length > 0 ||
+        /\b(state|statewide|national|nationwide|division|overall)\b/i.test(ctx.question);
       return groupsByAggregateGeo || asksAggregateRate;
     },
     override: () =>
