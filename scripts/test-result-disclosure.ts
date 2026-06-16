@@ -178,6 +178,17 @@ import { applyResultDisclosures } from "../lib/result-disclosure";
 
 {
   const explanation = applyResultDisclosures({
+    explanation: "Juvenile offender counts by year, with reporting coverage shown for context.",
+    question: "juvenile offenders by year with reporting coverage",
+    sql: "WITH reporting_coverage AS (SELECT year, SUM(CASE WHEN months_reported = 12 THEN 1 ELSE 0 END) AS complete_agencies FROM nibrs_agency_completeness GROUP BY year) SELECT d.year, SUM(d.offender_count) AS offenders, rc.complete_agencies FROM summary_offender_demographics d LEFT JOIN reporting_coverage rc ON rc.year = d.year WHERE d.age_group = 'Under 18' GROUP BY d.year, rc.complete_agencies",
+    rows: [{ year: 2024, offenders: 10, complete_agencies: 8000 }],
+    tab: "nibrs",
+  });
+  assert.doesNotMatch(explanation, /Coverage filter:/, "coverage metric join is not a continuous-reporter fact filter");
+}
+
+{
+  const explanation = applyResultDisclosures({
     explanation: "Murder data for Detroit in 2026.",
     question: "how mnay murders in detroit in 2026",
     sql: "SELECT year, month, SUM(count) AS murders FROM agency_monthly WHERE agency = 'Detroit' AND year = 2026 GROUP BY year, month",

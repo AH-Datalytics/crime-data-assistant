@@ -119,6 +119,15 @@ function domesticViolenceRateMessage(): string {
   return "[SYSTEM: The user asked for domestic violence rates. Do not join summary_domestic_violence to another summary_* table to infer population; that triggers cross-summary grain errors. Use summary_domestic_violence for the numerator and agencies plus nibrs_agency_completeness for the denominator. The denominator must be the population served by reporting agencies, adjusted by months reported; it is not the full official state population. For state comparisons in 2025, use this pattern: WITH dv AS (SELECT state, COUNT(DISTINCT ori || ':' || data_year || ':' || incident_num) AS dv_incidents FROM summary_domestic_violence WHERE data_year = 2025 GROUP BY state), population AS (SELECT a.state, SUM(a.population * nac.months_reported / 12.0) AS reporting_population FROM nibrs_agency_completeness nac JOIN agencies a ON a.ori = nac.ori AND a.year = nac.year WHERE nac.year = 2025 AND nac.months_reported > 0 AND a.population > 0 GROUP BY a.state) SELECT dv.state, dv.dv_incidents, population.reporting_population, ROUND(dv.dv_incidents * 100000.0 / NULLIF(population.reporting_population, 0), 1) AS rate_per_100k FROM dv JOIN population ON population.state = dv.state WHERE population.reporting_population > 0 ORDER BY rate_per_100k DESC LIMIT 1000. Explain that the denominator is population served by agencies that reported in NIBRS, adjusted for partial-year reporting, not a complete official state population.]";
 }
 
+function usesOffenderSummaryComboCount(sql: string): boolean {
+  if (!/\bsummary_offender_demographics\b/i.test(sql)) return false;
+  const distinctCounts = [...sql.matchAll(/\bCOUNT\s*\(\s*DISTINCT\s+([\s\S]*?)\)/gi)];
+  return distinctCounts.some((match) => {
+    const expr = stripSqlStrings(match[1]);
+    return /\bucr_offense_code\b/i.test(expr) && /\b(?:ori|year)\b/i.test(expr);
+  });
+}
+
 function normalizeEntityForSearch(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 }
@@ -1221,6 +1230,13 @@ const GUARDRAILS: Guardrail[] = [
     override: (ctx) => asksDomesticViolenceRate(ctx.question)
       ? null
       : "I can't reliably combine data from two different summary tables — joining them would produce incorrect results due to different aggregation grains. I can answer each part separately: for example, I can show victim demographics OR clearance rates, but not both in a single query unless a pre-built combined table exists. Try asking about one dimension at a time, or ask if a specific combination is available.",
+  },
+  {
+    name: "nibrs-offender-summary-count-contract",
+    tabs: ["nibrs"],
+    match: (ctx) => usesOffenderSummaryComboCount(ctx.sql),
+    message: () =>
+      "[SYSTEM: summary_offender_demographics is already aggregated with offender_count. Do not count DISTINCT ori/year/ucr_offense_code combinations; that counts reporting agency-offense-year cells, not offenders, incidents, or crimes. Rewrite using SUM(d.offender_count) AS offenders from summary_offender_demographics d, preserving the requested year, state/city/ORI, offense, age/race/sex/ethnicity, and continuous-reporter filters. Group by only the dimensions the user requested.]",
   },
   {
     name: "nibrs-continuous-reporting-required",

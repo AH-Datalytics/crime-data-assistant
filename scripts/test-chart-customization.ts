@@ -1,6 +1,6 @@
 #!/usr/bin/env npx tsx
 
-import { applyChartCustomizations, applyChartOnlyCustomization, extractYAxisMax, extractYAxisMin, isYAxisDomainOnlyRequest, isYAxisMinOnlyRequest } from "../lib/chart-customization.js";
+import { applyChartCustomizations, applyChartOnlyCustomization, extractChartType, extractYAxisMax, extractYAxisMin, isChartTypeOnlyRequest, isYAxisDomainOnlyRequest, isYAxisMinOnlyRequest } from "../lib/chart-customization.js";
 import type { QueryResponse } from "../lib/types.js";
 
 let pass = 0;
@@ -22,9 +22,14 @@ assert("extracts y-axis ceiling", extractYAxisMax("Set the ceiling to 80") === 8
 assert("extracts y-axis max", extractYAxisMax("Set y-axis max to 85%") === 85);
 assert("extracts min from range phrasing", extractYAxisMin("set the Y-axis from 60 to 80") === 60);
 assert("extracts max from range phrasing", extractYAxisMax("set the Y-axis from 60 to 80") === 80);
+assert("extracts line chart type", extractChartType("show this as a line chart") === "line");
+assert("extracts bar chart type", extractChartType("make it a bar graph") === "bar");
+assert("extracts scatter chart type", extractChartType("show this as a scatter plot") === "scatter");
 assert("recognizes chart-only y-axis follow-up", isYAxisMinOnlyRequest("Start Y-axis at 60% on the chart"));
 assert("recognizes chart-only y-axis domain follow-up", isYAxisDomainOnlyRequest("Set the floor to 60 and ceiling to 80"));
+assert("recognizes chart-only type follow-up", isChartTypeOnlyRequest("show this as a line chart"));
 assert("does not treat full data question as chart-only", !isYAxisMinOnlyRequest("Share of murder committed via firearm, 2000 - 2026, start Y-axis at 60%"));
+assert("does not treat data request with chart words as chart-only", !isChartTypeOnlyRequest("show homicide rates by year as a line chart"));
 
 const chartConfig = applyChartCustomizations({
   type: "line",
@@ -64,6 +69,9 @@ assert("chart-only follow-up preserves SQL", updated?.sql === response.sql);
 const updatedDomain = applyChartOnlyCustomization("Set the floor to 60 and ceiling to 80", response);
 assert("chart-only floor/ceiling sets min", updatedDomain?.chartConfig?.yAxisMin === 60, JSON.stringify(updatedDomain?.chartConfig));
 assert("chart-only floor/ceiling sets max", updatedDomain?.chartConfig?.yAxisMax === 80, JSON.stringify(updatedDomain?.chartConfig));
+const updatedType = applyChartOnlyCustomization("show this as a bar chart", response);
+assert("chart-only type follow-up changes chart type", updatedType?.chartConfig?.type === "bar", JSON.stringify(updatedType?.chartConfig));
+assert("chart-only type follow-up preserves SQL", updatedType?.sql === response.sql);
 assert("non-chart follow-up does not update locally", applyChartOnlyCustomization("show this as a table", response) === null);
 
 console.log(`chart customization tests: ${pass} passed, ${fail} failed`);

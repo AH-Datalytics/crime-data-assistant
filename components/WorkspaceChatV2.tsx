@@ -225,8 +225,7 @@ export default function WorkspaceChat({}: WorkspaceChatProps) {
 
     const chartOnlyResponse = applyChartOnlyCustomization(q, response);
     if (chartOnlyResponse && activeSource) {
-      const min = chartOnlyResponse.chartConfig?.yAxisMin;
-      const summary = min !== undefined ? `Updated the chart Y-axis to start at ${min}.` : "Updated the chart.";
+      const summary = chartOnlyResponse.explanation.split(/\n|\./)[0] + ".";
       setResponse(chartOnlyResponse);
       setExplanation(chartOnlyResponse.explanation);
       setLastQuestion(q);

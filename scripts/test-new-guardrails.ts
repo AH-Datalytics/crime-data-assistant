@@ -1989,6 +1989,30 @@ ORDER BY rate_per_100k DESC LIMIT 20`;
     `fired: ${JSON.stringify(r.fired)}`);
 }
 
+{
+  const sql = `SELECT d.year, COUNT(DISTINCT d.ori || ':' || d.year || ':' || d.ucr_offense_code) AS offenses
+    FROM summary_offender_demographics d
+    WHERE d.age_group = 'Under 18' AND d.year BETWEEN 2021 AND 2025
+    GROUP BY d.year`;
+  const ctx = extractQueryContext(sql, "juvenile offender offenses by year since 2021", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("TP: #4348 offender summary combo count fires",
+    r.fired.includes("nibrs-offender-summary-count-contract"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  const sql = `SELECT d.year, SUM(d.offender_count) AS offenders
+    FROM summary_offender_demographics d
+    WHERE d.age_group = 'Under 18' AND d.year BETWEEN 2021 AND 2025
+    GROUP BY d.year`;
+  const ctx = extractQueryContext(sql, "juvenile offenders by year since 2021", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("FP: offender summary SUM(offender_count) passes",
+    !r.fired.includes("nibrs-offender-summary-count-contract"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
 console.log("\n" + "═".repeat(60));
 console.log(`SUMMARY: ${pass} passed, ${fail} failed out of ${pass + fail} tests`);
 console.log("═".repeat(60));

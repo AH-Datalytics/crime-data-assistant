@@ -39,8 +39,10 @@ function appendSentence(text: string, sentence: string): string {
 }
 
 function usesContinuousReportingFilter(sql: string): boolean {
-  return /\bnibrs_consistent_reporters\b/i.test(sql) ||
-    (/\bnibrs_agency_completeness\b/i.test(sql) && /\bmonths_reported\s*=\s*12\b/i.test(sql));
+  const compact = sql.replace(/\s+/g, " ");
+  return /\b(?:\w+\.)?ori\s+IN\s*\(\s*SELECT\s+(?:DISTINCT\s+)?ori\s+FROM\s+nibrs_consistent_reporters\b/i.test(compact) ||
+    /\b(?:\w+\.)?ori\s+IN\s*\(\s*SELECT\s+(?:DISTINCT\s+)?ori\s+FROM\s+nibrs_agency_completeness\b[\s\S]*?\bmonths_reported\s*=\s*12\b[\s\S]*?\bGROUP\s+BY\s+ori\b[\s\S]*?\bHAVING\b/i.test(compact) ||
+    /\bJOIN\s+nibrs_consistent_reporters\b[\s\S]{0,200}\bON\b[\s\S]{0,160}\bori\s*=/i.test(compact);
 }
 
 function usesNibrsDvReportingPopulationRate(sql: string): boolean {
@@ -57,9 +59,13 @@ function normalizeContinuousReportingExplanation(explanation: string): string {
     .replace(/\bwith incomplete coverage\b/gi, "with continuous reporting")
     .replace(/\bcities with incomplete coverage\b/gi, "agencies with continuous reporting")
     .replace(/\bacross (?:the )?cit(?:y|ies)\b/gi, "across continuously reporting agencies")
+    .replace(/\bacross the requested city\b/gi, "across continuously reporting agencies")
     .replace(/\bacross the requested cities\b/gi, "across continuously reporting agencies")
+    .replace(/\bfor the requested city\b/gi, "for continuously reporting agencies")
     .replace(/\bfor the requested cities\b/gi, "for continuously reporting agencies")
+    .replace(/\bfrom the requested city\b/gi, "from continuously reporting agencies")
     .replace(/\bfrom the requested cities\b/gi, "from continuously reporting agencies")
+    .replace(/\brequested city\b/gi, "continuously reporting agencies")
     .replace(/\bfrom cities that (?:reported|submitted data) continuously\b/gi, "from agencies that reported continuously")
     .replace(/\bby cities that (?:reported|submitted data) continuously\b/gi, "by agencies that reported continuously")
     .replace(/\bcities that (?:reported|submitted data) continuously\b/gi, "agencies that reported continuously")

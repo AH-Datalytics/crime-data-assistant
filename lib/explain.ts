@@ -57,6 +57,7 @@ function extractMetrics(columns: string[]): string[] {
   const skip = new Set([
     "year", "data_year", "month", "city", "state", "agency_name",
     "agency", "state_name", "population", "Year", "Month",
+    "ucr_offense_code", "ucr_arrest_offense", "offense_code",
   ]);
   return columns.filter((c) => !skip.has(c));
 }
@@ -85,6 +86,9 @@ function extractEntitiesFromResults(
     "year", "data_year", "month", "population", "Year", "Month",
     "count", "total", "rate", "rate_per_100k", "pct_change",
     "count_2020", "count_2024", "count_2024_plus", "y2020", "y2024",
+    "ucr_offense_code", "ucr_arrest_offense", "offense_code",
+    "offense", "offense_name", "arrest_offense", "crime_type",
+    "age_group", "race", "sex", "ethnicity", "weapon", "weapon_category",
   ]);
   for (const col of columns) {
     if (metricCols.has(col)) continue;

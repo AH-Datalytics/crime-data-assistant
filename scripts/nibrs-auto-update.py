@@ -649,6 +649,14 @@ def ensure_performance_indexes(conn):
         CREATE INDEX IF NOT EXISTS idx_sod_continuous_age
         ON summary_offender_demographics(ucr_offense_code, year, ori, age_group, offender_count)
     """)
+    conn.execute("""
+        CREATE INDEX IF NOT EXISTS idx_sad_age_year_ori
+        ON summary_arrestee_demographics(age_group, year, ori, arrestee_count)
+    """)
+    conn.execute("""
+        CREATE INDEX IF NOT EXISTS idx_sod_age_year_ori
+        ON summary_offender_demographics(age_group, year, ori, offender_count)
+    """)
     if conn.execute("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'state_population'").fetchone():
         conn.execute("""
             CREATE INDEX IF NOT EXISTS idx_state_population_year

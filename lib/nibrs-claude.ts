@@ -266,6 +266,7 @@ For daily person crime counts, use the raw victims table:
 - Supports filtering by any combination of ori, ucr_offense_code, age_group, sex, race, and ethnicity. Use exactly these column names — do not use offense_code, sex_code, or race_code (those do not exist). If the requested filters are among these columns, refusing the query is wrong — generate SQL.
 - Same values as summary_victim_demographics (including ethnicity: H/N/U/''), but count column is offender_count. ${formatRowCount(NIBRS.summaryRowCounts["summary_offender_demographics"] || 30800000)} rows.
 - USE FOR: offender demographics — race, sex, age, weapon type. NEVER query raw offenders (${NIBRS.rawRowCounts["offenders"] || "195M"} rows).
+- COUNTING CONTRACT: To count offenders from this table, ALWAYS use SUM(d.offender_count). NEVER use COUNT(DISTINCT d.ori || ':' || d.year || ':' || d.ucr_offense_code) or similar — that counts agency/offense/year cells, not offenders.
 - Never claim a column is missing without verifying against these schema docs first.
 - **CRITICAL WORDING**: This table counts OFFENDERS (people), NOT incidents or crimes. When reporting results from this table:
   - SAY: "X% of known/suspected offenders were in [age group/race/sex]"

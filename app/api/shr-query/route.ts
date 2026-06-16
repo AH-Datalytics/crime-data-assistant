@@ -72,6 +72,69 @@ function stateMention(question: string): string | null {
   return null;
 }
 
+function shootingCityIntent(question: string): { agency: string; display: string; state?: string } | null {
+  const aliases: { pattern: RegExp; agency: string; display: string; state: string }[] = [
+    { pattern: /\b(?:NYC|NYPD|New York City)\b/i, agency: "New York", display: "New York City", state: "NY" },
+    { pattern: /\b(?:LAPD|Los Angeles)\b/i, agency: "Los Angeles", display: "Los Angeles", state: "CA" },
+    { pattern: /\b(?:CPD|Chicago)\b/i, agency: "Chicago", display: "Chicago", state: "IL" },
+  ];
+  for (const alias of aliases) {
+    if (alias.pattern.test(question)) {
+      return { agency: alias.agency, display: alias.display, state: alias.state };
+    }
+  }
+
+  const match = question.match(/\b(?:in|for|from|within|across)\s+([A-Z][A-Za-z.'-]*(?:\s+[A-Z][A-Za-z.'-]*){0,3})(?:,\s*([A-Z]{2}))?\b/);
+  if (!match) return null;
+  const raw = match[1].trim();
+  if (/^(County|Parish|Borough|State|January|February|March|April|May|June|July|August|September|October|November|December)$/i.test(raw)) {
+    return null;
+  }
+  if (stateMention(raw) || explicitStateIntent(`${raw} State`)) return null;
+  const state = match[2] || stateMention(question) || undefined;
+  return { agency: raw, display: displayPlace(raw), state };
+}
+
+function shootingYearIntent(question: string): { clause: string; label: string; explanation: string } {
+  const between = question.match(/\b(?:between|from)\s+((?:19|20)\d{2})\s+(?:and|to|through|-)\s+((?:19|20)\d{2})\b/i) ||
+    question.match(/\b((?:19|20)\d{2})\s*(?:-|to|through)\s*((?:19|20)\d{2})\b/i);
+  if (between) {
+    const start = Math.min(Number(between[1]), Number(between[2]));
+    const end = Math.max(Number(between[1]), Number(between[2]));
+    return {
+      clause: `i.year BETWEEN ${start} AND ${end}`,
+      label: `${start}-${end}`,
+      explanation: `from ${start} to ${end}`,
+    };
+  }
+
+  const since = question.match(/\b(?:since|starting(?:\s+in)?|beginning(?:\s+in)?|from)\s+((?:19|20)\d{2})\b/i);
+  if (since) {
+    const start = Number(since[1]);
+    return {
+      clause: `i.year >= ${start}`,
+      label: `${start}-Present`,
+      explanation: `since ${start}`,
+    };
+  }
+
+  const exact = question.match(/\b(?:in|during|for)\s+((?:19|20)\d{2})\b/i) || question.match(/\b((?:19|20)\d{2})\b/);
+  if (exact) {
+    const year = Number(exact[1]);
+    return {
+      clause: `i.year = ${year}`,
+      label: String(year),
+      explanation: `in ${year}`,
+    };
+  }
+
+  return {
+    clause: "i.year >= 2000",
+    label: "2000-Present",
+    explanation: "since 2000",
+  };
+}
+
 export async function POST(req: NextRequest) {
   const ip =
     req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
@@ -180,12 +243,10 @@ export async function POST(req: NextRequest) {
     // Deterministic fatal shooting handling — bypass Claude entirely
     // Route bare/ambiguous shooting queries directly to firearm homicide data
     if (asksShooting && !wantsNonfatal) {
-      const cityMatch = question.match(/\bin\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\b/);
       const stateMatch = question.match(/\b([A-Z]{2})\b/) || question.match(/\bin\s+(\w+)\b/i);
-      const yearMatch = question.match(/\bsince\s+(\d{4})\b/i) || question.match(/\bfrom\s+(\d{4})\b/i);
-      const startYear = yearMatch ? parseInt(yearMatch[1]) : 2000;
+      const yearIntent = shootingYearIntent(question);
 
-      let whereClauses = ["i.homicide_type = 'Murder'", "i.weapon_group = 'Firearm'", `i.year >= ${startYear}`];
+      let whereClauses = ["i.homicide_type = 'Murder'", "i.weapon_group = 'Firearm'", yearIntent.clause];
       let joinClauses = "JOIN victims v ON v.incident_id = i.id";
       let withClause = "";
       let titlePlace = "Nationally";
@@ -247,15 +308,13 @@ export async function POST(req: NextRequest) {
       } else if (stateIntent) {
         titlePlace = `${stateIntent.stateName} (statewide)`;
         whereClauses.push(`i.state = '${stateIntent.state}'`);
-      } else if (cityMatch) {
-        const city = cityMatch[1];
-        titlePlace = city;
-        whereClauses.push(`i.agency = '${city.replace(/'/g, "''")}'`);
+      } else if (shootingCityIntent(question)) {
+        const city = shootingCityIntent(question)!;
+        titlePlace = city.display;
+        whereClauses.push(`i.agency = '${city.agency.replace(/'/g, "''")}'`);
         whereClauses.push("(i.agency_type = 'City' OR i.agency_type IS NULL OR i.agency_type = '')");
-        // Add state if detected
-        const stateAbbr = question.match(/\b([A-Z]{2})\b/);
-        if (stateAbbr && stateAbbr[1] !== city.toUpperCase().slice(0, 2)) {
-          whereClauses.push(`i.state = '${stateAbbr[1]}'`);
+        if (city.state) {
+          whereClauses.push(`i.state = '${city.state}'`);
         }
       } else if (stateMatch && /^[A-Z]{2}$/.test(stateMatch[1])) {
         titlePlace = stateMatch[1];
@@ -263,8 +322,8 @@ export async function POST(req: NextRequest) {
       }
 
       const sql = `${withClause}SELECT i.year, COUNT(*) AS fatal_shootings FROM incidents i ${joinClauses} WHERE ${whereClauses.join(" AND ")} GROUP BY i.year ORDER BY i.year LIMIT 1000`;
-      const title = `Fatal Shootings (Firearm Homicides), ${titlePlace}, ${startYear}-Present`;
-      const explanation = `Fatal shootings (firearm homicides) by year${titlePlace !== "Nationally" ? ` in ${titlePlace}` : ""} since ${startYear}. This shows only homicides where the weapon was a firearm - nonfatal shootings are not tracked in this database.`;
+      const title = `Fatal Shootings (Firearm Homicides), ${titlePlace}, ${yearIntent.label}`;
+      const explanation = `Fatal shootings (firearm homicides) by year${titlePlace !== "Nationally" ? ` in ${titlePlace}` : ""} ${yearIntent.explanation}. This shows only homicides where the weapon was a firearm - nonfatal shootings are not tracked in this database.`;
 
       // Execute the deterministic SQL
       const db = getShrDb();
