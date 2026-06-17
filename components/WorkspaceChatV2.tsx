@@ -14,6 +14,7 @@ import Tracker, { getPageToken } from "./Tracker";
 import HomeIcon from "./HomeIcon";
 import GettingStarted from "./GettingStarted";
 import ExplainerContent from "./ExplainerContent";
+import QueryGuidance from "./QueryGuidance";
 
 /** Render inline markdown: **bold** and [text](url) links */
 function renderInlineMarkdown(text: string) {
@@ -120,7 +121,6 @@ export default function WorkspaceChat({}: WorkspaceChatProps) {
   const [activeExchangeIdx, setActiveExchangeIdx] = useState(-1);
   const [expandedRailIdx, setExpandedRailIdx] = useState(-1);
   const [animateIdx, setAnimateIdx] = useState(-1);
-  const [showMobileRail, setShowMobileRail] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
 
   // Result state
@@ -139,6 +139,10 @@ export default function WorkspaceChat({}: WorkspaceChatProps) {
   }, [exchanges.length, loading]);
 
   const accentColor = activeSource ? TAB_COLORS[activeSource] : "#475EC7";
+  const setGuidedInput = useCallback((value: string) => {
+    setInput(value);
+    setShowDisambiguation(false);
+  }, []);
 
   const submitQuestion = useCallback(
     async (
@@ -361,7 +365,7 @@ export default function WorkspaceChat({}: WorkspaceChatProps) {
               <input
                 type="text"
                 value={input}
-                onChange={(e) => { setInput(e.target.value); setShowDisambiguation(false); }}
+                onChange={(e) => setGuidedInput(e.target.value)}
                 placeholder="Ask about crime data..."
                 className="flex-1 min-w-0 px-3 py-2 text-[13px] border border-[var(--border)] rounded-lg focus:outline-none focus:border-[#475EC7] focus:ring-1 focus:ring-[#475EC7]/20 bg-[var(--surface)]"
                 disabled={loading}
@@ -403,6 +407,19 @@ export default function WorkspaceChat({}: WorkspaceChatProps) {
         </div>
       </header>
 
+      {hasStarted && !showDisambiguation && (
+        <div className="bg-white border-b border-[var(--border)] px-3 sm:px-4 md:px-6">
+          <div className="max-w-[760px] py-2">
+            <QueryGuidance
+              input={input}
+              onChangeInput={setGuidedInput}
+              showExamples={false}
+              compact
+            />
+          </div>
+        </div>
+      )}
+
       {showTutorial && (
         <div
           className="fixed inset-0 z-50 bg-black/35 p-3 sm:p-6"
@@ -439,24 +456,27 @@ export default function WorkspaceChat({}: WorkspaceChatProps) {
           onSelectTab={(tab) => { setSource(tab); }}
           onAsk={(q) => { setInput(q); handleAsk(q); }}
           renderInputBar={() => (
-            <form onSubmit={(e) => { e.preventDefault(); handleAsk(input); }} className="flex flex-col sm:flex-row gap-2">
-              <input
-                type="text"
-                value={input}
-                onChange={(e) => { setInput(e.target.value); setShowDisambiguation(false); }}
-                placeholder="Ask about crime data..."
-                className="flex-1 min-w-0 px-4 py-2.5 text-[14px] border border-[var(--border)] rounded-xl focus:outline-none focus:border-[#475EC7] focus:ring-2 focus:ring-[#475EC7]/20 bg-white shadow-sm"
-                disabled={loading}
-              />
-              <button
-                type="submit"
-                disabled={!input.trim() || loading}
-                className="px-5 py-2.5 text-[13px] font-semibold text-white rounded-xl disabled:opacity-40 cursor-pointer shrink-0 hover:opacity-90 shadow-sm"
-                style={{ backgroundColor: "#475EC7" }}
-              >
-                Ask
-              </button>
-            </form>
+            <div className="space-y-3">
+              <form onSubmit={(e) => { e.preventDefault(); handleAsk(input); }} className="flex flex-col sm:flex-row gap-2">
+                <input
+                  type="text"
+                  value={input}
+                  onChange={(e) => setGuidedInput(e.target.value)}
+                  placeholder="Ask about crime data..."
+                  className="flex-1 min-w-0 px-4 py-2.5 text-[14px] border border-[var(--border)] rounded-xl focus:outline-none focus:border-[#475EC7] focus:ring-2 focus:ring-[#475EC7]/20 bg-white shadow-sm"
+                  disabled={loading}
+                />
+                <button
+                  type="submit"
+                  disabled={!input.trim() || loading}
+                  className="px-5 py-2.5 text-[13px] font-semibold text-white rounded-xl disabled:opacity-40 cursor-pointer shrink-0 hover:opacity-90 shadow-sm"
+                  style={{ backgroundColor: "#475EC7" }}
+                >
+                  Ask
+                </button>
+              </form>
+              <QueryGuidance input={input} onChangeInput={setGuidedInput} />
+            </div>
           )}
         />
       )}
