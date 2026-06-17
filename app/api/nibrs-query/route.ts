@@ -59,6 +59,12 @@ function asksContinuousReportingFilter(question: string): boolean {
     /\binclude\s+(?:only\s+)?(?:continuous(?:ly)?|consistent(?:ly)?)\s+(?:reporting\s+)?(?:agenc(?:y|ies)|reporters?)\b/i.test(question);
 }
 
+function continuousReporterRouteIssue(sql: string, question: string): string | null {
+  if (!asksContinuousReportingFilter(question)) return null;
+  if (/\bnibrs_consistent_reporters\b/i.test(sql)) return null;
+  return "[SYSTEM: The user asked for agencies that reported all 12 months in every requested year. Rewrite the query with ORI-level summary tables, not state-level summary tables, and filter the fact table with ori IN (SELECT ori FROM nibrs_consistent_reporters WHERE start_year = [start_year] AND end_year = [end_year]). Preserve the requested offense, metric, breakdowns, and year range.]";
+}
+
 /** Resolve which model this request should use. Returns the full model ID. */
 function resolveNibrsModel(sessionId: string | null, canaryFlag: boolean): string {
   const defaultModel = process.env.NIBRS_MODEL || "claude-haiku-4-5-20251001";
@@ -317,6 +323,15 @@ export async function POST(req: NextRequest) {
       console.log(`[nibrs][guardrails] Fired: ${guardrailResult.fired.join(", ")}`);
     }
 
+    const routeGuardrailIssues: string[] = [];
+    const routeGuardrailsFired: string[] = [];
+    const continuousReporterIssue = continuousReporterRouteIssue(sql, question);
+    if (continuousReporterIssue) {
+      routeGuardrailIssues.push(continuousReporterIssue);
+      routeGuardrailsFired.push("nibrs-continuous-reporting-required-route");
+      console.log("[nibrs][route-guardrails] Fired: nibrs-continuous-reporting-required-route");
+    }
+
     const localSqlGuardrails = findNibrsSqlIssues(sql);
     if (localSqlGuardrails.fired.length > 0) {
       console.log(`[nibrs][sql-guardrails] Fired: ${localSqlGuardrails.fired.join(", ")}`);
@@ -344,7 +359,7 @@ export async function POST(req: NextRequest) {
 
     // For NIBRS guardrails that need Claude retry, send all issues at once
     // so a single retry fixes everything (avoids cascading retries)
-    const combinedGuardrailIssues = [...guardrailResult.issues, ...localSqlGuardrails.issues];
+    const combinedGuardrailIssues = [...guardrailResult.issues, ...routeGuardrailIssues, ...localSqlGuardrails.issues];
     if (combinedGuardrailIssues.length > 0) {
       const combinedIssues = combinedGuardrailIssues.join("\n\n");
       console.log(`[nibrs][guardrail-retry] Retrying with ${combinedGuardrailIssues.length} issue(s)`);
@@ -395,6 +410,11 @@ export async function POST(req: NextRequest) {
       if (geoContractBad) {
         const msg = "I couldn't build a reliable query for that specific geography. Try asking for a specific city or state instead.";
         writeNibrsLog(question, sql, 0, "geography_second_failure", Date.now() - claudeStart, msg, postRetryResult.fired, activeModelLabel, sessionId);
+        return jsonResp({ success: true, question, sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - claudeStart } as QueryResponse);
+      }
+      if (continuousReporterRouteIssue(sql, question)) {
+        const msg = "I couldn't build a reliable continuous-reporter query for that request. Try asking for the same offense and year range without the continuous-reporting filter, or narrow it to a specific city or state.";
+        writeNibrsLog(question, sql, 0, "continuous_reporter_second_failure", Date.now() - claudeStart, msg, [...postRetryResult.fired, "nibrs-continuous-reporting-required-route"], activeModelLabel, sessionId);
         return jsonResp({ success: true, question, sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - claudeStart } as QueryResponse);
       }
       // Apply any post-retry rewrites
@@ -504,7 +524,7 @@ export async function POST(req: NextRequest) {
               console.log(`[nibrs][error-recovery] Retry succeeded`);
             } catch (retryErr) {
               const retryMsg = retryErr instanceof Error ? retryErr.message : String(retryErr);
-              writeNibrsLog(question, sql, 0, `DB retry failed: ${retryMsg}`, Date.now() - claudeStart, null, guardrailResult.fired, activeModelLabel, sessionId);
+              writeNibrsLog(question, sql, 0, `DB retry failed: ${retryMsg}`, Date.now() - claudeStart, null, [...guardrailResult.fired, ...routeGuardrailsFired], activeModelLabel, sessionId);
               const userError = isTimeout
                 ? `This query is too complex for the database. Try narrowing your request — for example, ask about a specific city, state, or shorter time range instead of a broad national query.`
                 : msg.includes("no such column") || msg.includes("ambiguous")
@@ -516,14 +536,14 @@ export async function POST(req: NextRequest) {
               );
             }
           } else {
-            writeNibrsLog(question, sql, 0, `DB: ${msg} (retry validation failed)`, Date.now() - claudeStart, null, guardrailResult.fired, activeModelLabel, sessionId);
+            writeNibrsLog(question, sql, 0, `DB: ${msg} (retry validation failed)`, Date.now() - claudeStart, null, [...guardrailResult.fired, ...routeGuardrailsFired], activeModelLabel, sessionId);
             return jsonResp(
               { success: false, error: `I had trouble with that query. Try rephrasing your question.`, sql } as QueryError,
               500
             );
           }
         } else {
-          writeNibrsLog(question, sql, 0, `DB: ${msg}`, Date.now() - claudeStart, null, guardrailResult.fired, activeModelLabel, sessionId);
+          writeNibrsLog(question, sql, 0, `DB: ${msg}`, Date.now() - claudeStart, null, [...guardrailResult.fired, ...routeGuardrailsFired], activeModelLabel, sessionId);
           return jsonResp(
             { success: false, error: isTimeout ? `This query is too complex for the database. Try asking about a specific city, state, or shorter time range.` : `Database error: ${msg}`, sql } as QueryError,
             500
@@ -539,7 +559,7 @@ export async function POST(req: NextRequest) {
       const { allNull } = detectAllNullData(columns, rows);
       if (allNull) {
         const emptyMsg = "I ran that query but all the values came back empty — the math likely broke somewhere (like dividing by zero). Could you try asking that a different way?";
-        writeNibrsLog(question, sql, 0, "all_null_columns", Date.now() - claudeStart, emptyMsg, guardrailResult.fired, activeModelLabel, sessionId);
+        writeNibrsLog(question, sql, 0, "all_null_columns", Date.now() - claudeStart, emptyMsg, [...guardrailResult.fired, ...routeGuardrailsFired], activeModelLabel, sessionId);
         return jsonResp({
           success: true,
           question,
@@ -823,8 +843,9 @@ export async function POST(req: NextRequest) {
 
     // Log success (after CDE check so explanation includes any disclaimers)
     const totalMs = Date.now() - claudeStart;
-    console.log(`[nibrs][result] model=${activeModelLabel} rows=${rows.length} retries=${retryCount} scaffold_stripped=${scaffoldStripped} guardrails=[${guardrailResult.fired.join(",")}] total_ms=${totalMs} db_ms=${executionTimeMs}${canaryFlag ? " CANARY" : ""}`);
-    writeNibrsLog(question, sql, rows.length, null, totalMs, explanation, guardrailResult.fired, activeModelLabel, sessionId);
+    const firedGuardrails = [...guardrailResult.fired, ...routeGuardrailsFired];
+    console.log(`[nibrs][result] model=${activeModelLabel} rows=${rows.length} retries=${retryCount} scaffold_stripped=${scaffoldStripped} guardrails=[${firedGuardrails.join(",")}] total_ms=${totalMs} db_ms=${executionTimeMs}${canaryFlag ? " CANARY" : ""}`);
+    writeNibrsLog(question, sql, rows.length, null, totalMs, explanation, firedGuardrails, activeModelLabel, sessionId);
 
     // Cache successful responses (only standalone questions)
     if (!cached && cacheableStandalone) {
