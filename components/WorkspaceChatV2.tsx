@@ -475,7 +475,7 @@ export default function WorkspaceChat({}: WorkspaceChatProps) {
                   Ask
                 </button>
               </form>
-              <QueryGuidance input={input} onChangeInput={setGuidedInput} />
+              <QueryGuidance input={input} onChangeInput={setGuidedInput} showExamples={false} />
             </div>
           )}
         />
