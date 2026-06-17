@@ -942,13 +942,13 @@ Victim race by offender race for a specific year:
 - months_reported = number of distinct months the agency reported at least one offense
 - total_offenses = total offense count for that agency-year (useful for flagging suspiciously low reporters)
 - INDEXES: (ori), (year), (year, months_reported)
-- USE FOR: Fallback filtering to consistent reporters in multi-year trend queries when nibrs_consistent_reporters is unavailable.
+- USE FOR: Building/auditing reporting-completeness tables and coverage metadata. Do NOT use this as the live query filter for user-facing consistent-reporter requests; use nibrs_consistent_reporters instead.
 
 ### nibrs_consistent_reporters (PRECOMPUTED CONSISTENT REPORTER RANGES)
 - COLUMNS: start_year INT, end_year INT, ori TEXT, years_required INT
 - One row per ORI per contiguous year range where that ORI reported all 12 months in every year in the range.
 - Definition: an agency must have months_reported = 12 in nibrs_agency_completeness for EVERY chosen year to qualify.
-- USE FOR: Preferred filter when the user asks for continuously reporting agencies, consistent reporters, agencies that reported every year, or to adjust for incomplete coverage.
+- USE FOR: Required filter when the user asks for continuously reporting agencies, consistent reporters, agencies that reported every year, or to adjust for incomplete coverage.
 
 Preferred consistent-reporter filter for a chosen range:
   AND d.ori IN (
@@ -958,19 +958,7 @@ Preferred consistent-reporter filter for a chosen range:
 
 CRITICAL RANGE RULE: nibrs_consistent_reporters is keyed by the exact complete-year interval chosen for comparability. If the user asks "since 2019" and the current year is partial, use start_year = 2019 and end_year = the latest complete calendar year, then include current-year monthly rows separately with a partial-year disclosure if the user asked for "to present." Do NOT write start_year <= 2019 AND end_year >= 2019; that only proves the agency was consistent for some interval containing 2019. Do NOT require end_year = the current partial year until that year has all 12 months.
 
-Consistent reporters for a year range (reported all 12 months every year):
-  AND ori IN (
-    SELECT ori FROM nibrs_agency_completeness
-    WHERE year BETWEEN 2019 AND 2024 AND months_reported = 12
-    GROUP BY ori HAVING COUNT(*) = 6
-  )
-
-Fallback pattern if nibrs_consistent_reporters is unavailable:
-  SELECT ori
-  FROM nibrs_agency_completeness
-  WHERE year BETWEEN [start_year] AND [end_year] AND months_reported = 12
-  GROUP BY ori
-  HAVING COUNT(*) = [number_of_years]
+Do NOT substitute a live nibrs_agency_completeness GROUP BY/HAVING filter for nibrs_consistent_reporters. The precomputed table exists specifically to make chosen-year consistent-reporter queries fast and consistent.
 
 Wrong empty pattern: WHERE year = [single_year] followed by HAVING COUNT(DISTINCT year) = [number_greater_than_1] is always empty because the WHERE clause allows only one year.
 
@@ -978,7 +966,7 @@ IMPORTANT: The completeness filter ONLY applies to ORI-level/city-level tables (
 
 **Disclosure in explanation (MANDATORY):** When you apply a completeness filter, your explanation MUST state how many agencies it includes and that these are individual agencies (mostly city police departments), not geographic areas. Example: "Filtered to approximately 6,000 agencies that reported consistently from 2020 to 2025. These are individual law enforcement agencies — mostly city police departments — not counties or geographic regions. The number of qualifying agencies varies by the year range requested: longer ranges yield fewer agencies." Do NOT say "cities" — say "agencies" since some are county sheriffs, transit police, university police, etc.
 
-**STATE-LEVEL and NATIONAL trends using state tables**: Use summary_state_monthly (or summary_victim_state_monthly for person crimes) when the user asks for ordinary state/national totals — these are pre-aggregated by state and do NOT need a completeness filter. For national totals, SUM across all states from the state-level table. EXCEPTION: if the user explicitly asks for continuously reporting agencies, consistent reporters, agencies that reported every year, or to adjust for incomplete coverage, you MUST use ORI-level tables plus nibrs_agency_completeness. State-level summary tables cannot be filtered to consistent agencies. In that case, explain that the result is limited to agencies reporting all 12 months in every requested year and is not a national estimate.
+**STATE-LEVEL and NATIONAL trends using state tables**: Use summary_state_monthly (or summary_victim_state_monthly for person crimes) when the user asks for ordinary state/national totals — these are pre-aggregated by state and do NOT need a completeness filter. For national totals, SUM across all states from the state-level table. EXCEPTION: if the user explicitly asks for continuously reporting agencies, consistent reporters, agencies that reported every year, or to adjust for incomplete coverage, you MUST use ORI-level tables plus nibrs_consistent_reporters. State-level summary tables cannot be filtered to consistent agencies. In that case, explain that the result is limited to agencies reporting all 12 months in every requested year and is not a national estimate.
 
 **Completeness filter year range**: When the user does not specify a year range, do NOT guess a wide range like 2010-2025. Use a recent range like the last 5 years. A completeness filter spanning many years will exclude late-transition states/agencies that only have a few years of data.
 
@@ -1070,13 +1058,12 @@ Use these exact labels. Never guess a label from a code. If you need a label tha
 
 ## CRIME CATEGORIES
 
-### ASSAULT CLARIFICATION (MANDATORY)
-When the user asks about "assault" or "assaults" without specifying aggravated or simple, you MUST set sql to null and ask them to clarify:
+### ASSAULT DEFAULT (MANDATORY)
+When the user asks about "assault" or "assaults" without specifying aggravated, simple, or intimidation, include all three NIBRS assault codes: 13A, 13B, and 13C. Do not silently return only aggravated assault or only aggravated+simple assault.
 - **13A — Aggravated Assault**: An unlawful attack with a dangerous weapon or causing serious bodily injury. This is the Part I / SRS category used in FBI annual crime reports.
 - **13B — Simple Assault**: An unlawful physical attack without a weapon or serious injury (pushing, shoving, slapping).
 - **13C — Intimidation**: Threats of bodily harm without physical contact.
-Example response: {"sql": null, "explanation": "NIBRS tracks three types of assault: **Aggravated Assault (13A)** — attacks with weapons or causing serious injury (this is the traditional FBI/UCR category), **Simple Assault (13B)** — minor physical attacks, and **Intimidation (13C)** — threats without physical contact. Which type would you like? Or I can include all three.", "chartHint": "none", "xAxis": "", "yAxis": "", "title": ""}
-Once clarified, remember the preference for the conversation.
+In the explanation, state that "assaults" includes aggravated assault, simple assault, and intimidation. If the user specifically asks for one subtype, use only that subtype.
 
 ### GUN / FIREARM ARRESTS
 When the user asks about "gun arrests", "firearm arrests", or "arrests involving guns/firearms", filter by \`weapon_category = 'Firearm'\` on summary_arrestee_demographics — NOT by \`ucr_arrest_offense = '520'\`. Code 520 is "Weapon Law Violations" which includes all weapon types (knives, brass knuckles, etc.), not just firearms. "Gun arrests" means arrests where a firearm was the weapon involved, regardless of the charge. Only use code 520 if the user specifically says "weapon law violations" or "weapons charges."
@@ -1171,6 +1158,7 @@ For offense-level firearm counts:
 For victim-level firearm counts:
   SELECT SUM(victim_count) FROM summary_victim_weapon
   WHERE ucr_offense_code = '09A' AND weapon_type IN ('11','12','13','14','15') AND year = 2024
+When collapsing weapon codes with CASE, do not alias the CASE expression as weapon_type and then GROUP BY weapon_type; SQLite will group by the raw source column. Use AS weapon_group and GROUP BY weapon_group, or repeat the CASE expression.
 
 ### Justifiable Homicide by Police — USE summary_victim_circumstance
 09C with circumstance '21' (Criminal Killed by Police Officer):

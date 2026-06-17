@@ -219,4 +219,44 @@ import { applyResultDisclosures } from "../lib/result-disclosure";
   assert.match(explanation, /latest returned month is March 2026/);
 }
 
+{
+  const explanation = applyResultDisclosures({
+    explanation: "Rolling homicide counts for the requested cities.",
+    question: "show rolling homicide index for NYC, Baltimore, Philadelphia, and Washington DC",
+    sql: "SELECT agency AS city, year, month, SUM(count) AS murders FROM agency_monthly WHERE state IN ('NY','MD','PA','DC') AND agency IN ('New York','Baltimore','Philadelphia','Washington') GROUP BY city, year, month",
+    rows: [
+      { city: "New York", year: 2025, month: 1, murders: 10 },
+      { city: "Baltimore", year: 2025, month: 1, murders: 5 },
+      { city: "Philadelphia", year: 2025, month: 1, murders: 6 },
+      { city: "Washington", year: 2025, month: 1, murders: 4 },
+    ],
+    tab: "current",
+  });
+  assert.doesNotMatch(explanation, /No data found for: NY|No data found for: MD|No data found for: PA|No data found for: DC/);
+}
+
+{
+  const explanation = applyResultDisclosures({
+    explanation: "Victim counts for cities that consistently reported data for each year.",
+    question: "show assaults by year for consistent reporting agencies",
+    sql: "SELECT year, SUM(victim_count) AS victims FROM summary_victim_city_monthly WHERE ori IN (SELECT ori FROM nibrs_consistent_reporters WHERE start_year = 2017 AND end_year = 2025) GROUP BY year",
+    rows: [{ year: 2017, victims: 10 }, { year: 2025, victims: 15 }],
+    tab: "nibrs",
+  });
+  assert.doesNotMatch(explanation, /cities that consistently reported/i);
+  assert.match(explanation, /agencies that reported continuously/);
+}
+
+{
+  const explanation = applyResultDisclosures({
+    explanation: "Weapon breakdown for assaults for an unknown time period.",
+    question: "breakdown of weapons used in assaults 2024",
+    sql: "SELECT weapon_group, SUM(offense_count) AS assaults FROM summary_offense_weapon WHERE year = 2024 GROUP BY weapon_group",
+    rows: [{ weapon_group: "Firearm", assaults: 10 }],
+    tab: "nibrs",
+  });
+  assert.doesNotMatch(explanation, /unknown time period/i);
+  assert.match(explanation, /for 2024/);
+}
+
 console.log("result disclosure tests passed");

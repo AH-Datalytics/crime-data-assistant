@@ -161,9 +161,45 @@ function hasBroadConsistentReporterStartOnly(sql: string, startYear: number): bo
   return startOnly.test(stripped);
 }
 
+function hasBroadConsistentReporterContainingRange(sql: string, startYear: number, endYear: number): boolean {
+  const stripped = stripSqlStrings(sql);
+  const startRef = String.raw`\bstart_year\s*<=?\s*${startYear}\b`;
+  const endRef = String.raw`\bend_year\s*>=?\s*${endYear}\b`;
+  return new RegExp(`${startRef}[\\s\\S]{0,120}${endRef}`, "i").test(stripped) ||
+    new RegExp(`${endRef}[\\s\\S]{0,120}${startRef}`, "i").test(stripped);
+}
+
 function hasImpossibleCurrentYearConsistentReporterEnd(sql: string): boolean {
   const current = currentCalendarYear();
   return new RegExp(`\\bend_year\\s*=\\s*${current}\\b`, "i").test(stripSqlStrings(sql));
+}
+
+function asksWeaponInjuryBreakdown(question: string): boolean {
+  return /\binjur(?:y|ies|ed)\b/i.test(question) &&
+    /\b(?:weapon|weapons|firearm|firearms|gun|guns|knife|knives|stabb(?:ing|ings)?)\b/i.test(question);
+}
+
+function usesBroadRawWeaponInjuryAggregate(sql: string): boolean {
+  if (!/\bFROM\s+victims\b|\bJOIN\s+victims\b/i.test(sql)) return false;
+  if (!/\binjury_type\b/i.test(sql)) return false;
+  if (!/\bweapon_type\b|\btype_weapon_[123]\b|\boffense_weapons\b|\bsummary_(?:victim|offense)_weapon\b/i.test(sql)) return false;
+  if (!/\bCOUNT\s*\(|\bSUM\s*\(|\bGROUP\s+BY\b/i.test(sql)) return false;
+
+  const hasTightOri = /\b(?:\w+\.)?ori\s*=\s*'[^']+'/i.test(sql) || /\b(?:\w+\.)?ori\s+IN\s*\([^)]{1,300}\)/i.test(sql);
+  const hasTightDate = /\bincident_date\s+(?:BETWEEN|>=|>|=)\b/i.test(sql);
+  return !(hasTightOri && hasTightDate);
+}
+
+function asksBareAssault(question: string): boolean {
+  return /\bassaults?\b/i.test(question) &&
+    !/\b(?:aggravated|simple|intimidation|sexual|domestic|dv|assaults?\s+with|firearm|gun|knife|weapon|robbery)\b/i.test(question);
+}
+
+function usesPartialAssaultCodeSet(sql: string): boolean {
+  const codes = sqlQuotedCodes(sql);
+  const assaultCodes = ["13A", "13B", "13C"].filter((code) => codes.has(code));
+  if (assaultCodes.length === 0 || assaultCodes.length === 3) return false;
+  return /\bucr_(?:offense|arrest)_code\b|\boffense_code\b/i.test(sql);
 }
 
 function asksOfficersPer100k(question: string): boolean {
@@ -1072,6 +1108,13 @@ const GUARDRAILS: Guardrail[] = [
       "[SYSTEM: You MUST use summary_victim_state_monthly or summary_victim_city_monthly for this query. Do NOT use the raw victims table.]",
   },
   {
+    name: "nibrs-weapon-injury-combination-unsupported",
+    tabs: ["nibrs"],
+    match: (ctx) => asksWeaponInjuryBreakdown(ctx.question) && usesBroadRawWeaponInjuryAggregate(ctx.sql),
+    override: () =>
+      "I can't reliably break NIBRS results down by both weapon type and injury type from the available summary tables. I can show a weapon breakdown, or an injury-type breakdown separately; a combined weapon-by-injury table would need to be precomputed before this can be answered safely.",
+  },
+  {
     name: "nibrs-raw-table-for-counts",
     tabs: ["nibrs"],
     match: (ctx) => {
@@ -1244,11 +1287,10 @@ const GUARDRAILS: Guardrail[] = [
     match: (ctx) => {
       if (!asksContinuousReportingFilter(ctx.question)) return false;
       if (/\bnibrs_consistent_reporters\b/i.test(ctx.sql)) return false;
-      if (/\bnibrs_agency_completeness\b/i.test(ctx.sql) && /\bmonths_reported\s*=\s*12\b/i.test(ctx.sql)) return false;
       return true;
     },
     message: () =>
-      "[SYSTEM: The user asked to restrict the result to continuously/consistently reporting NIBRS agencies, but the SQL does not use a consistent-reporter filter. Do not return agency metadata or a coverage list. Rewrite the data query using ORI-level tables so the filter is possible: summary_victim_city_monthly or summary_victim_demographics for person-crime victim/offender demographics, summary_offender_demographics for offender demographics, summary_city_monthly for property/society offense counts, and summary_arrestee_demographics for arrests. Prefer fact_alias.ori IN (SELECT ori FROM nibrs_consistent_reporters WHERE start_year = [start_year] AND end_year = [end_year]). If that table is unavailable, use nibrs_agency_completeness with months_reported = 12 for every year: SELECT ori FROM nibrs_agency_completeness WHERE year BETWEEN [start_year] AND [end_year] AND months_reported = 12 GROUP BY ori HAVING COUNT(*) = [number_of_years]. Preserve the user's offenses, breakdowns, metric, and year range.]",
+      "[SYSTEM: The user asked to restrict the result to continuously/consistently reporting NIBRS agencies, but the SQL does not use the precomputed consistent-reporter range table. Do not return agency metadata or a coverage list. Rewrite the data query using ORI-level tables so the filter is possible: summary_victim_city_monthly or summary_victim_demographics for person-crime victim/offender demographics, summary_offender_demographics for offender demographics, summary_city_monthly for property/society offense counts, and summary_arrestee_demographics for arrests. Use fact_alias.ori IN (SELECT ori FROM nibrs_consistent_reporters WHERE start_year = [start_year] AND end_year = [end_year]). Do not use nibrs_agency_completeness as the live query filter when nibrs_consistent_reporters is available. Preserve the user's offenses, breakdowns, metric, and year range.]",
   },
   {
     name: "nibrs-consistent-reporter-range-contract",
@@ -1256,13 +1298,17 @@ const GUARDRAILS: Guardrail[] = [
     match: (ctx) => {
       if (!/\bnibrs_consistent_reporters\b/i.test(ctx.sql)) return false;
       const start = requestedStartYear(ctx.question);
-      if (start !== null && hasBroadConsistentReporterStartOnly(ctx.sql, start)) return true;
+      const end = expectedConsistentReporterEndYear(ctx.question);
+      if (start !== null && (
+        hasBroadConsistentReporterStartOnly(ctx.sql, start) ||
+        hasBroadConsistentReporterContainingRange(ctx.sql, start, end)
+      )) return true;
       return hasImpossibleCurrentYearConsistentReporterEnd(ctx.sql);
     },
     message: (ctx) => {
       const start = requestedStartYear(ctx.question) ?? "[start_year]";
       const end = expectedConsistentReporterEndYear(ctx.question);
-      return `[SYSTEM: The consistent-reporter lookup must use the exact chosen complete-year range from nibrs_consistent_reporters. Use WHERE start_year = ${start} AND end_year = ${end}, not start_year <= ${start} AND end_year >= ${start}. Do not require end_year = ${currentCalendarYear()} while the current year is partial; choose agencies that reported all 12 months in every complete requested year, then include current-year months only as partial data with a disclosure.]`;
+      return `[SYSTEM: The consistent-reporter lookup must use the exact chosen complete-year range from nibrs_consistent_reporters. Use WHERE start_year = ${start} AND end_year = ${end}. Do not use a broad containment predicate such as start_year <= ${start} AND end_year >= ${end}; that selects agencies consistent over longer ranges and changes the denominator/population. Do not require end_year = ${currentCalendarYear()} while the current year is partial; choose agencies that reported all 12 months in every complete requested year, then include current-year months only as partial data with a disclosure.]`;
     },
   },
   {
@@ -1554,6 +1600,13 @@ const GUARDRAILS: Guardrail[] = [
       const aliasMatch = sql.match(/CASE[\s\S]+weapon_type[\s\S]+END\s+AS\s+(\w+)/i);
       if (!aliasMatch) return null;
       const alias = aliasMatch[1];
+      if (/^weapon_type$/i.test(alias)) {
+        const fixed = sql
+          .replace(/\bEND\s+AS\s+weapon_type\b/i, "END AS weapon_group")
+          .replace(/\bGROUP\s+BY\s+(?:\w+\.)?weapon_type\b/i, "GROUP BY weapon_group")
+          .replace(/\bORDER\s+BY\s+(?:\w+\.)?weapon_type\b/i, "ORDER BY weapon_group");
+        return fixed !== sql ? fixed : null;
+      }
       // Replace GROUP BY ...weapon_type... with the alias
       const fixed = sql.replace(
         /(GROUP\s+BY\s+(?:[\s\S]*?,\s*)?)(?:\w+\.)?weapon_type\b/i,
@@ -1561,6 +1614,13 @@ const GUARDRAILS: Guardrail[] = [
       );
       return fixed !== sql ? fixed : null;
     },
+  },
+  {
+    name: "nibrs-bare-assault-partial-code-set",
+    tabs: ["nibrs"],
+    match: (ctx) => asksBareAssault(ctx.question) && usesPartialAssaultCodeSet(ctx.sql),
+    message: () =>
+      "[SYSTEM: The user asked for assault/assaults without choosing a subtype. Do not silently return only aggravated assault or only aggravated+simple assault. Either ask for clarification, or include all three NIBRS assault codes and disclose the definition: 13A aggravated assault, 13B simple assault, and 13C intimidation. If you run the query, use ucr_offense_code IN ('13A','13B','13C').]",
   },
   // --- Historical: staffing query without zero filter or with future years ---
   {

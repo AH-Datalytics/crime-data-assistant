@@ -66,6 +66,9 @@ function normalizeContinuousReportingExplanation(explanation: string): string {
     .replace(/\bfrom the requested city\b/gi, "from continuously reporting agencies")
     .replace(/\bfrom the requested cities\b/gi, "from continuously reporting agencies")
     .replace(/\brequested city\b/gi, "continuously reporting agencies")
+    .replace(/\bfrom cities that consistently reported(?: data)?\b/gi, "from agencies that reported continuously")
+    .replace(/\bby cities that consistently reported(?: data)?\b/gi, "by agencies that reported continuously")
+    .replace(/\bcities that consistently reported(?: data)?\b/gi, "agencies that reported continuously")
     .replace(/\bfrom cities that (?:reported|submitted data) continuously\b/gi, "from agencies that reported continuously")
     .replace(/\bby cities that (?:reported|submitted data) continuously\b/gi, "by agencies that reported continuously")
     .replace(/\bcities that (?:reported|submitted data) continuously\b/gi, "agencies that reported continuously")
@@ -98,14 +101,14 @@ function normalizeEntity(value: string): string {
 
 function extractRequestedEntitiesFromSql(sql: string): string[] {
   const entities: string[] = [];
-  const inRe = /\b(?:city|agency|agency_name|state)\s+IN\s*\(([^)]*)\)/gi;
+  const inRe = /\b(?:city|agency|agency_name)\s+IN\s*\(([^)]*)\)/gi;
   let inMatch;
   while ((inMatch = inRe.exec(sql)) !== null) {
     const quoted = inMatch[1].match(/'([^']+)'/g) || [];
     for (const q of quoted) entities.push(q.slice(1, -1));
   }
 
-  const eqRe = /\b(?:city|agency|agency_name|state)\s*=\s*'([^']+)'/gi;
+  const eqRe = /\b(?:city|agency|agency_name)\s*=\s*'([^']+)'/gi;
   let eqMatch;
   while ((eqMatch = eqRe.exec(sql)) !== null) entities.push(eqMatch[1]);
 
@@ -419,8 +422,12 @@ export function applyResultDisclosures(opts: {
     }
   }
 
+  const period = yearRangeFromRows(opts.rows) || yearRangeFromSql(opts.sql);
+  if (period) {
+    explanation = explanation.replace(/\bfor an unknown time period\b/gi, `for ${period}`);
+  }
+
   if (!hasYearMention(explanation)) {
-    const period = yearRangeFromRows(opts.rows) || yearRangeFromSql(opts.sql);
     if (period) explanation = appendSentence(explanation, `Period: ${period}.`);
   }
 

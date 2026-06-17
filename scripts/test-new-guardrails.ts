@@ -1833,8 +1833,8 @@ console.log("\n=== nibrs-continuous-reporting-required ===\n");
   const sql = `SELECT d.year, d.age_group, SUM(d.offender_count) AS offenders FROM summary_offender_demographics d WHERE d.ucr_offense_code IN ('09A','120','13A') AND d.year BETWEEN 2018 AND 2025 AND d.ori IN (SELECT ori FROM nibrs_agency_completeness WHERE year BETWEEN 2018 AND 2025 AND months_reported = 12 GROUP BY ori HAVING COUNT(*) = 8) GROUP BY d.year, d.age_group`;
   const ctx = extractQueryContext(sql, "only include agencies that reported every year from 2018 through 2025", "nibrs");
   const r = runGuardrails(ctx);
-  assert("FP: continuous reporter request with completeness fallback passes",
-    !r.fired.includes("nibrs-continuous-reporting-required"),
+  assert("TP: completeness fallback must use precomputed consistent reporter table",
+    r.fired.includes("nibrs-continuous-reporting-required"),
     `fired: ${JSON.stringify(r.fired)}`);
 }
 
@@ -2010,6 +2010,89 @@ ORDER BY rate_per_100k DESC LIMIT 20`;
   const r = runGuardrails(ctx);
   assert("FP: offender summary SUM(offender_count) passes",
     !r.fired.includes("nibrs-offender-summary-count-contract"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+console.log("\n=== June 16 query audit regressions ===\n");
+
+{
+  const sql = `SELECT d.year, SUM(d.offender_count) AS offenders
+    FROM summary_offender_demographics d
+    WHERE d.year BETWEEN 2017 AND 2025
+      AND d.ori IN (SELECT ori FROM nibrs_consistent_reporters WHERE start_year <= 2017 AND end_year >= 2025)
+    GROUP BY d.year`;
+  const ctx = extractQueryContext(sql, "show offender counts from 2017 to 2025 among consistent reporting agencies", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("TP: #4375 broad containing consistent-reporter range fires",
+    r.fired.includes("nibrs-consistent-reporter-range-contract"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  const sql = `SELECT CASE WHEN w.weapon_type IN ('11','12','13','14','15') THEN 'Firearm' WHEN w.weapon_type = '20' THEN 'Knife/Stabbing' ELSE 'Other' END AS weapon_type,
+    SUM(w.offense_count) AS offenses
+    FROM summary_offense_weapon w
+    WHERE w.year = 2024 AND w.ucr_offense_code IN ('09A','120','13A')
+    GROUP BY weapon_type
+    ORDER BY offenses DESC`;
+  const ctx = extractQueryContext(sql, "number of gun crimes vs stabbings in 2024", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("TP: #4389 weapon CASE alias shadow fires",
+    r.fired.includes("nibrs-weapon-group-by-code"),
+    `fired: ${JSON.stringify(r.fired)}`);
+  assert("TP: #4389 weapon CASE alias rewritten",
+    /\bAS\s+weapon_group\b/i.test(r.sql) && /\bGROUP\s+BY\s+weapon_group\b/i.test(r.sql),
+    r.sql);
+}
+
+{
+  const sql = `SELECT v.injury_type, w.weapon_type, COUNT(*) AS victims
+    FROM victims v
+    JOIN offense_weapons w ON w.ori = v.ori AND w.year = v.year AND w.incident_num = v.incident_num
+    WHERE v.year = 2024
+    GROUP BY v.injury_type, w.weapon_type`;
+  const ctx = extractQueryContext(sql, "firearm crimes in 2024 by injury type", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("TP: #4393 broad weapon+injury combination returns friendly override",
+    r.fired.includes("nibrs-weapon-injury-combination-unsupported") && /combined weapon-by-injury table/i.test(r.overrideResponse || ""),
+    `fired: ${JSON.stringify(r.fired)} override=${r.overrideResponse}`);
+}
+
+{
+  const sql = `SELECT CASE WHEN w.weapon_type IN ('11','12','13','14','15') THEN 'Firearm' ELSE 'Other' END AS weapon_group,
+    SUM(w.offense_count) AS assaults
+    FROM summary_offense_weapon w
+    WHERE w.year = 2024 AND w.ucr_offense_code IN ('13A','13B')
+    GROUP BY weapon_group`;
+  const ctx = extractQueryContext(sql, "breakdown of weapons used in assaults 2024", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("TP: #4394 bare assault partial code set fires",
+    r.fired.includes("nibrs-bare-assault-partial-code-set"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  const sql = `SELECT CASE WHEN w.weapon_type IN ('11','12','13','14','15') THEN 'Firearm' ELSE 'Other' END AS weapon_group,
+    SUM(w.offense_count) AS assaults
+    FROM summary_offense_weapon w
+    WHERE w.year = 2024 AND w.ucr_offense_code IN ('13A','13B','13C')
+    GROUP BY weapon_group`;
+  const ctx = extractQueryContext(sql, "breakdown of weapons used in assaults 2024", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("FP: bare assault all three NIBRS assault codes passes",
+    !r.fired.includes("nibrs-bare-assault-partial-code-set"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  const sql = `SELECT year, SUM(victim_count) AS aggravated_assaults
+    FROM summary_victim_state_monthly
+    WHERE ucr_offense_code = '13A' AND year >= 2020
+    GROUP BY year`;
+  const ctx = extractQueryContext(sql, "aggravated assault trend since 2020", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("FP: explicit aggravated assault single code passes",
+    !r.fired.includes("nibrs-bare-assault-partial-code-set"),
     `fired: ${JSON.stringify(r.fired)}`);
 }
 

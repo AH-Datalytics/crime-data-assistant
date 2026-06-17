@@ -72,27 +72,42 @@ function stateMention(question: string): string | null {
   return null;
 }
 
-function shootingCityIntent(question: string): { agency: string; display: string; state?: string } | null {
+type ShootingCityIntent = { agency: string; display: string; state?: string };
+
+function shootingCityIntents(question: string): ShootingCityIntent[] {
   const aliases: { pattern: RegExp; agency: string; display: string; state: string }[] = [
+    { pattern: /\b(?:KCMO|Kansas City,\s*MO|Kansas City,?\s+Missouri)\b/i, agency: "Kansas City", display: "Kansas City, MO", state: "MO" },
+    { pattern: /\b(?:KCK|Kansas City,\s*KS|Kansas City,?\s+Kansas)\b/i, agency: "Kansas City", display: "Kansas City, KS", state: "KS" },
     { pattern: /\b(?:NYC|NYPD|New York City)\b/i, agency: "New York", display: "New York City", state: "NY" },
     { pattern: /\b(?:LAPD|Los Angeles)\b/i, agency: "Los Angeles", display: "Los Angeles", state: "CA" },
     { pattern: /\b(?:CPD|Chicago)\b/i, agency: "Chicago", display: "Chicago", state: "IL" },
   ];
+  const hits: ShootingCityIntent[] = [];
   for (const alias of aliases) {
     if (alias.pattern.test(question)) {
-      return { agency: alias.agency, display: alias.display, state: alias.state };
+      hits.push({ agency: alias.agency, display: alias.display, state: alias.state });
     }
+  }
+  if (hits.length > 0) {
+    return hits.filter((hit, index, all) =>
+      all.findIndex((other) => other.agency === hit.agency && other.state === hit.state) === index
+    );
   }
 
   const match = question.match(/\b(?:in|for|from|within|across)\s+([A-Z][A-Za-z.'-]*(?:\s+[A-Z][A-Za-z.'-]*){0,3})(?:,\s*([A-Z]{2}))?\b/);
-  if (!match) return null;
+  if (!match) return [];
   const raw = match[1].trim();
   if (/^(County|Parish|Borough|State|January|February|March|April|May|June|July|August|September|October|November|December)$/i.test(raw)) {
-    return null;
+    return [];
   }
-  if (stateMention(raw) || explicitStateIntent(`${raw} State`)) return null;
+  if (stateMention(raw) || explicitStateIntent(`${raw} State`)) return [];
   const state = match[2] || stateMention(question) || undefined;
-  return { agency: raw, display: displayPlace(raw), state };
+  return [{ agency: raw, display: displayPlace(raw), state }];
+}
+
+function ambiguousKansasCityIntent(question: string): boolean {
+  return /\bKansas City\b/i.test(question) &&
+    !/\b(?:KCMO|KCK|Kansas City,\s*(?:MO|KS)|Kansas City,?\s+Missouri|Kansas City,?\s+Kansas)\b/i.test(question);
 }
 
 function shootingYearIntent(question: string): { clause: string; label: string; explanation: string } {
@@ -308,20 +323,37 @@ export async function POST(req: NextRequest) {
       } else if (stateIntent) {
         titlePlace = `${stateIntent.stateName} (statewide)`;
         whereClauses.push(`i.state = '${stateIntent.state}'`);
-      } else if (shootingCityIntent(question)) {
-        const city = shootingCityIntent(question)!;
-        titlePlace = city.display;
-        whereClauses.push(`i.agency = '${city.agency.replace(/'/g, "''")}'`);
-        whereClauses.push("(i.agency_type = 'City' OR i.agency_type IS NULL OR i.agency_type = '')");
-        if (city.state) {
-          whereClauses.push(`i.state = '${city.state}'`);
+      } else if (ambiguousKansasCityIntent(question)) {
+        const explanation = "Please specify Kansas City, Missouri (KCMO) or Kansas City, Kansas (KCK). Both exist in the SHR data, and I should not combine or choose between them without that state.";
+        writeLog(question, null, 0, "ambiguous_city", Date.now() - start, explanation, "shr", ["deterministic-shooting"], "deterministic", sessionId);
+        return jsonResp({
+          success: true, question, sql: null, explanation,
+          title: "", columns: [], rows: [], rowCount: 0, truncated: false,
+          chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - start,
+        });
+      } else {
+        const cities = shootingCityIntents(question);
+        if (cities.length > 0) {
+          titlePlace = cities.map((city) => city.display).join(" and ");
+          const cityClauses = cities.map((city) => {
+            const agency = `i.agency = '${city.agency.replace(/'/g, "''")}'`;
+            const state = city.state ? ` AND i.state = '${city.state}'` : "";
+            return `(${agency}${state})`;
+          });
+          whereClauses.push(`(${cityClauses.join(" OR ")})`);
+          whereClauses.push("(i.agency_type = 'City' OR i.agency_type IS NULL OR i.agency_type = '')");
         }
-      } else if (stateMatch && /^[A-Z]{2}$/.test(stateMatch[1])) {
+      }
+      if (titlePlace === "Nationally" && stateMatch && /^[A-Z]{2}$/.test(stateMatch[1])) {
         titlePlace = stateMatch[1];
         whereClauses.push(`i.state = '${stateMatch[1]}'`);
       }
 
-      const sql = `${withClause}SELECT i.year, COUNT(*) AS fatal_shootings FROM incidents i ${joinClauses} WHERE ${whereClauses.join(" AND ")} GROUP BY i.year ORDER BY i.year LIMIT 1000`;
+      const isMultiCity = /\bi\.agency\s*=/.test(whereClauses.join(" ")) && /\sOR\s/.test(whereClauses.join(" "));
+      const selectPlace = isMultiCity ? "i.agency, i.state, " : "";
+      const groupPlace = isMultiCity ? ", i.agency, i.state" : "";
+      const orderPlace = isMultiCity ? ", i.agency, i.state" : "";
+      const sql = `${withClause}SELECT i.year, ${selectPlace}COUNT(*) AS fatal_shootings FROM incidents i ${joinClauses} WHERE ${whereClauses.join(" AND ")} GROUP BY i.year${groupPlace} ORDER BY i.year${orderPlace} LIMIT 1000`;
       const title = `Fatal Shootings (Firearm Homicides), ${titlePlace}, ${yearIntent.label}`;
       const explanation = `Fatal shootings (firearm homicides) by year${titlePlace !== "Nationally" ? ` in ${titlePlace}` : ""} ${yearIntent.explanation}. This shows only homicides where the weapon was a firearm - nonfatal shootings are not tracked in this database.`;
 
