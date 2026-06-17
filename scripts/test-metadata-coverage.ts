@@ -279,5 +279,10 @@ const db = makeDb();
   assert.deepEqual(result.rows.map((r) => r.agency), ["Birmingham Police Department", "New Orleans Police Department"]);
 }
 
+{
+  const result = answerMetadataQuestion("shr", "fatal shooting data for Kansas City", db);
+  assert.equal(result, null);
+}
+
 db.close();
 console.log("metadata coverage tests passed");

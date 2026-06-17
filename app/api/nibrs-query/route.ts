@@ -49,6 +49,16 @@ function modelLabel(modelId: string): string {
   return modelId;
 }
 
+function asksContinuousReportingFilter(question: string): boolean {
+  return /\b(?:continuous(?:ly)?|consistent(?:ly)?)\s+(?:reporting\s+)?(?:agenc(?:y|ies)|reporters?)\b/i.test(question) ||
+    /\b(?:agenc(?:y|ies)|reporters?)\s+that\s+reported\s+every\s+year\b/i.test(question) ||
+    /\bagenc(?:y|ies)\s+that\s+reported\s+all\s+12\s+months\b/i.test(question) ||
+    /\breported\s+(?:all\s+)?(?:12\s+)?months\s+every\s+year\b/i.test(question) ||
+    /\ball\s+12\s+months\s+(?:in|for)\s+every\s+year\b/i.test(question) ||
+    /\badjust(?:ed)?\s+for\s+incomplete\s+coverage\b/i.test(question) ||
+    /\binclude\s+(?:only\s+)?(?:continuous(?:ly)?|consistent(?:ly)?)\s+(?:reporting\s+)?(?:agenc(?:y|ies)|reporters?)\b/i.test(question);
+}
+
 /** Resolve which model this request should use. Returns the full model ID. */
 function resolveNibrsModel(sessionId: string | null, canaryFlag: boolean): string {
   const defaultModel = process.env.NIBRS_MODEL || "claude-haiku-4-5-20251001";
@@ -190,8 +200,10 @@ export async function POST(req: NextRequest) {
       : history;
     const claudeStart = Date.now();
 
-    // Check response cache (only standalone questions)
-    const cached = promptHistory.length === 0 ? getCached(question, "nibrs") : null;
+    // Check response cache (only standalone questions). Continuous-reporter
+    // requests are contract-sensitive and must not reuse stale broad-summary SQL.
+    const cacheableStandalone = promptHistory.length === 0 && !asksContinuousReportingFilter(question);
+    const cached = cacheableStandalone ? getCached(question, "nibrs") : null;
 
     let claude: Awaited<ReturnType<typeof translateToSql>>;
 
@@ -815,7 +827,7 @@ export async function POST(req: NextRequest) {
     writeNibrsLog(question, sql, rows.length, null, totalMs, explanation, guardrailResult.fired, activeModelLabel, sessionId);
 
     // Cache successful responses (only standalone questions)
-    if (!cached && promptHistory.length === 0) {
+    if (!cached && cacheableStandalone) {
       setCache(question, "nibrs", { sql, explanation: claude.explanation, title: claude.title, chartType: claude.chartHint, xAxis: claude.xAxis, yAxis: claude.yAxis ? [claude.yAxis] : undefined, yAxisLabel: claude.yAxisLabel, xAxisLabel: claude.xAxisLabel, colors: claude.colors, annotations: claude.annotations });
     }
 

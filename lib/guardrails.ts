@@ -97,6 +97,7 @@ function isCountywideGeographyQuestion(question: string): boolean {
 function asksContinuousReportingFilter(question: string): boolean {
   return /\b(?:continuous(?:ly)?|consistent(?:ly)?)\s+(?:reporting\s+)?(?:agenc(?:y|ies)|reporters?)\b/i.test(question) ||
     /\b(?:agenc(?:y|ies)|reporters?)\s+that\s+reported\s+every\s+year\b/i.test(question) ||
+    /\bagenc(?:y|ies)\s+that\s+reported\s+all\s+12\s+months\b/i.test(question) ||
     /\breported\s+(?:all\s+)?(?:12\s+)?months\s+every\s+year\b/i.test(question) ||
     /\ball\s+12\s+months\s+(?:in|for)\s+every\s+year\b/i.test(question) ||
     /\badjust(?:ed)?\s+for\s+incomplete\s+coverage\b/i.test(question) ||

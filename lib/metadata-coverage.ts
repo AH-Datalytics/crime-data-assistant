@@ -61,6 +61,7 @@ function norm(question: string): string {
 function asksContinuousReportingFilter(q: string): boolean {
   return /\b(?:continuous(?:ly)?|consistent(?:ly)?)\s+(?:reporting\s+)?(?:agenc(?:y|ies)|reporters?)\b/i.test(q) ||
     /\b(?:agenc(?:y|ies)|reporters?)\s+that\s+reported\s+every\s+year\b/i.test(q) ||
+    /\bagenc(?:y|ies)\s+that\s+reported\s+all\s+12\s+months\b/i.test(q) ||
     /\breported\s+(?:all\s+)?(?:12\s+)?months\s+every\s+year\b/i.test(q) ||
     /\ball\s+12\s+months\s+(?:in|for)\s+every\s+year\b/i.test(q) ||
     /\badjust(?:ed)?\s+for\s+incomplete\s+coverage\b/i.test(q) ||
@@ -69,7 +70,7 @@ function asksContinuousReportingFilter(q: string): boolean {
 
 function asksAnalyticResult(q: string): boolean {
   return /\b(rate|rates|per\s*(?:100\s*k|100,?000|capita)|highest|lowest|top|bottom|most|least|rank(?:ed|ing)?|trend|trends|compare|comparison)\b/.test(q) ||
-    /\b(crime|crimes|offense|offenses|homicide|homicides|murder|murders|robbery|robberies|assault|assaults|burglary|burglaries|theft|thefts|rape|rapes|carjacking|carjackings|arrest|arrests|clearance|clearances|victim|victims)\b/.test(q);
+    /\b(crime|crimes|offense|offenses|homicide|homicides|murder|murders|shooting|shootings|gun violence|robbery|robberies|assault|assaults|burglary|burglaries|theft|thefts|rape|rapes|carjacking|carjackings|arrest|arrests|clearance|clearances|victim|victims)\b/.test(q);
 }
 
 function detectMetadataIntent(question: string): Intent | null {

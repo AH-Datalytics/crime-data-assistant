@@ -1847,6 +1847,18 @@ console.log("\n=== nibrs-continuous-reporting-required ===\n");
     `fired: ${JSON.stringify(r.fired)}`);
 }
 
+{
+  const sql = `SELECT year, SUM(victim_count) AS murders
+    FROM summary_victim_state_monthly
+    WHERE ucr_offense_code = '09A' AND year BETWEEN 2020 AND 2024
+    GROUP BY year`;
+  const ctx = extractQueryContext(sql, "murder trend from 2020 to 2024 among agencies that reported all 12 months every year", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("TP: continuous reporter request using state summary table fires",
+    r.fired.includes("nibrs-continuous-reporting-required"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
 console.log("\n=== historical staffing per-100k scatter regression ===\n");
 
 {
