@@ -66,6 +66,8 @@ function makeDb() {
       ('X1', 'Houston', 'TX', 'City', 'HOUSTON', 0),
       ('P1', 'Philadelphia', 'PA', 'City', 'PHILADELPHIA', 1),
       ('N1', 'Omaha', 'NB', 'City', 'OMAHA', NULL),
+      ('IL0010000', 'Chicago', 'IL', 'City', 'CHICAGO', 1),
+      ('GA0750000', 'Adel', 'GA', 'City', 'ADEL', 1),
       ('IN0494900', 'Indianapolis', 'IN', 'City', 'INDIANAPOLIS', 0),
       ('IN0490100', 'Beech Grove', 'IN', 'City', 'BEECH GROVE', 0),
       ('CA0431300', 'San Jose', 'CA', 'City', 'San Jose', 0),
@@ -99,6 +101,8 @@ function makeDb() {
       ('CA04316', 'CA0431600', 'Sunnyvale', 'CA', '06085', 'Santa Clara', 'SANTA CLARA'),
       ('INIPD00', 'IN0494900', 'Indianapolis', 'IN', '18097', 'Marion', 'MARION'),
       ('IN04901', 'IN0490100', 'Beech Grove', 'IN', '18097', 'Marion', 'MARION'),
+      ('IL00100', 'IL0010000', 'Chicago', 'IL', '17031', 'Cook', 'COOK'),
+      ('GA07500', 'GA0750000', 'Adel', 'GA', '13075', 'Cook', 'COOK'),
       ('OR00101', 'OR0010100', 'Albany', 'OR', '41043', 'Linn', 'LINN'),
       ('IA00101', 'IA0010100', 'Algona', 'IA', '19109', 'Linn', 'LINN');
   `);
@@ -111,14 +115,14 @@ const db = makeDb();
 {
   const result = answerMetadataQuestion("current", "which states do you have data for?", db);
   assert(result);
-  assert.deepEqual(result.rows.map((r) => r.state), ["AL", "LA", "PA"]);
-  assert.match(result.explanation, /3 states\/DC represented/i);
+  assert.deepEqual(result.rows.map((r) => r.state), ["AL", "GA", "IL", "LA", "PA"]);
+  assert.match(result.explanation, /5 states\/DC represented/i);
 }
 
 {
   const result = answerMetadataQuestion("current", "how many states is that?", db);
   assert(result);
-  assert.equal(result.rows[0].state_count, 3);
+  assert.equal(result.rows[0].state_count, 5);
 }
 
 {
@@ -220,14 +224,14 @@ const db = makeDb();
 {
   const result = answerMetadataQuestion("current", "how many agencies are covered?", db);
   assert(result);
-  assert.equal(result.rows[0].agency_count, 3);
+  assert.equal(result.rows[0].agency_count, 5);
 }
 
 {
   const result = answerMetadataQuestion("current", "which cities are represented?", db);
   assert(result);
   assert.equal(result.truncated, true);
-  assert.deepEqual(result.rows.map((r) => r.city), ["Birmingham", "New Orleans", "Philadelphia"]);
+  assert.deepEqual(result.rows.map((r) => r.city), ["Birmingham", "Adel", "Chicago", "New Orleans", "Philadelphia"]);
 }
 
 {
@@ -258,6 +262,28 @@ const db = makeDb();
   assert(result);
   assert.deepEqual(result.rows.map((r) => r.city), ["BEECH GROVE", "INDIANAPOLIS"]);
   assert.match(result.sql, /a\.ori = x\.ori9/);
+}
+
+{
+  const result = answerMetadataQuestion("current", "which agencies are in Cook County, Illinois?", db);
+  assert(result);
+  assert.deepEqual(result.rows.map((r) => r.agency), ["Chicago"]);
+  assert.match(result.sql, /state = 'IL'/);
+  assert.doesNotMatch(result.explanation, /matches multiple states/i);
+}
+
+{
+  const result = answerMetadataQuestion("current", "which agencies are in Cook County IL?", db);
+  assert(result);
+  assert.deepEqual(result.rows.map((r) => r.agency), ["Chicago"]);
+  assert.match(result.sql, /state = 'IL'/);
+}
+
+{
+  const result = answerMetadataQuestion("current", "which agencies are in Cook County?", db);
+  assert(result);
+  assert.deepEqual(result.columns, ["answer"]);
+  assert.match(result.explanation, /matches multiple states/i);
 }
 
 {

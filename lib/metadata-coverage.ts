@@ -268,6 +268,13 @@ function stateScope(question: string): string | null {
   for (const [name, abbr] of Object.entries(STATE_NAME_TO_ABBR)) {
     if (abbr === "US") continue;
     const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const countyNamePattern = new RegExp(`\\b(?:County|Parish|Borough)\\s*,?\\s+${escaped}\\b`, "i");
+    const countyAbbrPattern = new RegExp(
+      abbr === "IN" || abbr === "OR"
+        ? `\\b(?:County|Parish|Borough)\\s*,\\s*${abbr}\\b`
+        : `\\b(?:County|Parish|Borough)\\s*,?\\s+${abbr}\\b`
+    );
+    if (countyNamePattern.test(q) || countyAbbrPattern.test(q)) return abbr;
     if (abbr === "WA" && /\bWashington\b/i.test(q) && !/\bWashington\s+State\b|\bState\s+of\s+Washington\b/i.test(q)) {
       continue;
     }
