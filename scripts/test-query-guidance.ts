@@ -32,6 +32,10 @@ assertDoesNotWarn("fatal shootings in Kansas City, Missouri per month from 2020 
 assert.equal(hasBlockingQueryGuidanceWarnings("fatal shootings in Kansas City, Missouri per month from 2020 to 2024"), false);
 assertDoesNotWarn("fatal shootings in KCK per month from 2020 to 2024", "kansas-city");
 
+assert.deepEqual(warningIds("shootings in Kansas City"), ["kansas-city", "shooting-scope"]);
+assert.equal(hasBlockingQueryGuidanceWarnings("shootings in Kansas City"), true);
+assert.deepEqual(warningIds("fatal shootings in Kansas City, Missouri"), []);
+
 assertWarns("shootings in Baltimore since 2020", "baltimore");
 assertDoesNotWarn("shootings in Baltimore County, Maryland since 2020", "baltimore");
 
@@ -39,6 +43,8 @@ assertWarns("murders in St. Louis since 2020", "st-louis");
 assertDoesNotWarn("murders in St. Louis County, Missouri since 2020", "st-louis");
 
 assertWarns("gun violence in New York since 2022", "new-york");
+assert.deepEqual(warningIds("gun violence in New York since 2022"), ["new-york", "gun-violence"]);
+assert.equal(hasBlockingQueryGuidanceWarnings("gun violence in New York since 2022"), true);
 assertDoesNotWarn("gun violence in New York State since 2022", "new-york");
 assertDoesNotWarn("New York City vs Chicago officers per year since 1930", "new-york");
 

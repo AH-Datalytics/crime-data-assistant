@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import {
   HOW_TO_ASK_EXAMPLES,
+  type GuidanceWarning,
   applyGuidanceAction,
   getQueryGuidanceWarnings,
 } from "@/lib/query-guidance";
@@ -14,6 +15,54 @@ type QueryGuidanceProps = {
   compact?: boolean;
   floating?: boolean;
 };
+
+function actionLabel(label: string) {
+  return label.replace(/^Use\s+/i, "");
+}
+
+function GuidanceWarningRow({
+  input,
+  warning,
+  onChangeInput,
+}: {
+  input: string;
+  warning: GuidanceWarning;
+  onChangeInput: (value: string) => void;
+}) {
+  const hasActions = Boolean(warning.actions?.length);
+  const promptLabel = warning.kind === "blocking" ? "Choose:" : "Better choices:";
+  const buttonClass =
+    warning.kind === "blocking"
+      ? "rounded-md border border-[#475EC7]/20 bg-[#475EC7]/5 px-2 py-0.5 text-[11px] font-semibold text-[#475EC7] hover:border-[#475EC7]/50 hover:bg-[#475EC7]/10 cursor-pointer transition-colors"
+      : "rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-[11px] font-medium text-[var(--foreground)] hover:border-[#475EC7]/40 hover:bg-white hover:text-[#475EC7] cursor-pointer transition-colors";
+
+  return (
+    <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[12px] leading-5">
+      <span className={warning.kind === "blocking" ? "text-[var(--foreground)]" : "text-[var(--muted)]"}>
+        <span className="font-semibold text-[var(--foreground)]">{warning.title}.</span>{" "}
+        {warning.detail}
+        {hasActions && (
+          <>
+            {" "}
+            <span className={warning.kind === "blocking" ? "font-semibold text-[#475EC7]" : "font-semibold text-[var(--foreground)]"}>
+              {promptLabel}
+            </span>
+          </>
+        )}
+      </span>
+      {warning.actions?.map((action) => (
+        <button
+          key={action.label}
+          type="button"
+          onClick={() => onChangeInput(applyGuidanceAction(input, action))}
+          className={buttonClass}
+        >
+          {actionLabel(action.label)}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 export default function QueryGuidance({
   input,
@@ -27,7 +76,7 @@ export default function QueryGuidance({
   const blocking = warnings.filter((warning) => warning.kind === "blocking");
   const advisory = warnings.filter((warning) => warning.kind === "advisory");
   const containerClass = floating
-    ? "absolute left-0 top-full z-30 mt-1 w-max min-w-full max-w-[calc(100vw-2rem)] rounded-lg border border-[var(--border)] bg-white px-2 py-1.5 shadow-lg"
+    ? "absolute left-0 top-full z-30 mt-1 w-max min-w-full max-w-[calc(100vw-2rem)] rounded-lg border border-[var(--border)] bg-white px-2.5 py-2 shadow-lg"
     : compact
       ? "space-y-2"
       : "space-y-3";
@@ -61,41 +110,17 @@ export default function QueryGuidance({
       )}
 
       {blocking.length > 0 && (
-        <div className={floating ? "" : "px-1.5"}>
+        <div className={floating ? "space-y-2" : "space-y-2 px-1.5"}>
           {blocking.map((warning) => (
-            <div key={warning.id} className="flex flex-wrap items-center gap-1.5 text-[12px] leading-6">
-              <span className="text-[var(--foreground)]">{warning.title}. <span className="font-semibold text-[#475EC7]">Choose:</span></span>
-              {warning.actions?.map((action) => (
-                <button
-                  key={action.label}
-                  type="button"
-                  onClick={() => onChangeInput(applyGuidanceAction(input, action))}
-                  className="rounded-md border border-[#475EC7]/20 bg-[#475EC7]/5 px-2 py-0.5 text-[11px] font-semibold text-[#475EC7] hover:border-[#475EC7]/50 hover:bg-[#475EC7]/10 cursor-pointer transition-colors"
-                >
-                  {action.label.replace(/^Use\s+/i, "")}
-                </button>
-              ))}
-            </div>
+            <GuidanceWarningRow key={warning.id} input={input} warning={warning} onChangeInput={onChangeInput} />
           ))}
         </div>
       )}
 
       {advisory.length > 0 && (
-        <div className={floating ? "" : "px-1.5"}>
+        <div className={floating ? "space-y-2" : "space-y-2 px-1.5"}>
           {advisory.map((warning) => (
-            <div key={warning.id} className="flex flex-wrap items-center gap-1.5 text-[12px] leading-6 text-[var(--muted)]">
-              <span>{warning.title}{warning.actions && warning.actions.length > 0 ? "." : ""} {warning.actions && warning.actions.length > 0 && <span className="font-semibold text-[var(--foreground)]">Better choices:</span>}</span>
-              {warning.actions?.map((action) => (
-                <button
-                  key={action.label}
-                  type="button"
-                  onClick={() => onChangeInput(applyGuidanceAction(input, action))}
-                  className="rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-[11px] font-medium text-[var(--foreground)] hover:border-[#475EC7]/40 hover:bg-white hover:text-[#475EC7] cursor-pointer transition-colors"
-                >
-                  {action.label.replace(/^Use\s+/i, "")}
-                </button>
-              ))}
-            </div>
+            <GuidanceWarningRow key={warning.id} input={input} warning={warning} onChangeInput={onChangeInput} />
           ))}
         </div>
       )}
