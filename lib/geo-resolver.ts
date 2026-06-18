@@ -67,6 +67,15 @@ type AmbiguousCountyTrap = {
   states: string[];
 };
 
+type CityCountyTrap = {
+  key: string;
+  cityReplacement: string;
+  countyReplacement: string;
+  id?: string;
+  title?: string;
+  detail?: string;
+};
+
 const STATE_LABELS: Record<string, string> = {
   AL: "Alabama",
   AK: "Alaska",
@@ -151,6 +160,40 @@ function countyTrap({ name: countyName, states }: AmbiguousCountyTrap): KnownTra
       title: `${countyName} County needs a state`,
       detail: `${countyName} County exists in multiple states. Add the state so countywide results use the right geography.`,
       actions,
+    },
+  };
+}
+
+function cityCountyTrap({
+  key,
+  cityReplacement,
+  countyReplacement,
+  id,
+  title,
+  detail,
+}: CityCountyTrap): KnownTrap {
+  const name = literalPattern(key);
+  const stateQualifier = [
+    `\\s*,\\s*(?:${STATE_NAME_PATTERN}|${STATE_ABBREVIATION_PATTERN})`,
+    `\\s+in\\s+(?:${STATE_NAME_PATTERN}|${STATE_ABBREVIATION_PATTERN})`,
+    `\\s+(?:${STATE_NAME_PATTERN}|${DIRECT_STATE_ABBREVIATION_PATTERN})`,
+  ].join("|");
+  const qualified = new RegExp(
+    `\\b${name}\\b(?:\\s+(?:city|county)\\b|${stateQualifier})\\b`,
+    "i"
+  );
+  return {
+    mentioned: new RegExp(`\\b${name}\\b`, "i"),
+    qualified,
+    issue: {
+      id: id ?? `city-county-${key.toLowerCase().replace(/\s+/g, "-")}`,
+      kind: "blocking",
+      title: title ?? `${key} city and county are separate`,
+      detail: detail ?? `${key} can mean the city or the county. Choose one so results use the right jurisdiction.`,
+      actions: [
+        { label: `Use ${cityReplacement}`, pattern: `\\b${key}\\b`, replacement: cityReplacement },
+        { label: `Use ${countyReplacement}`, pattern: `\\b${key}\\b`, replacement: countyReplacement },
+      ],
     },
   };
 }
@@ -240,6 +283,46 @@ const KNOWN_GEO_TRAPS: KnownTrap[] = [
       ],
     },
   },
+  cityCountyTrap({
+    key: "Alameda",
+    cityReplacement: "Alameda, California",
+    countyReplacement: "Alameda County, California",
+  }),
+  cityCountyTrap({
+    key: "Albany",
+    cityReplacement: "Albany, New York",
+    countyReplacement: "Albany County, New York",
+  }),
+  cityCountyTrap({
+    key: "Boise",
+    cityReplacement: "Boise, Idaho",
+    countyReplacement: "Boise County, Idaho",
+  }),
+  cityCountyTrap({
+    key: "Fairfax",
+    cityReplacement: "Fairfax, Virginia",
+    countyReplacement: "Fairfax County, Virginia",
+  }),
+  cityCountyTrap({
+    key: "Los Angeles",
+    cityReplacement: "Los Angeles, California",
+    countyReplacement: "Los Angeles County, California",
+  }),
+  cityCountyTrap({
+    key: "Sacramento",
+    cityReplacement: "Sacramento, California",
+    countyReplacement: "Sacramento County, California",
+  }),
+  cityCountyTrap({
+    key: "San Diego",
+    cityReplacement: "San Diego, California",
+    countyReplacement: "San Diego County, California",
+  }),
+  cityCountyTrap({
+    key: "El Paso",
+    cityReplacement: "El Paso, Texas",
+    countyReplacement: "El Paso County, Texas",
+  }),
   ...GENERATED_AMBIGUOUS_COUNTIES.map(countyTrap),
 ];
 

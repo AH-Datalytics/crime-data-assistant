@@ -64,6 +64,21 @@ assertDoesNotWarn("crime in Linn County, Oregon", "county-linn");
 assertWarns("violent assaults in Portland in 2022", "portland");
 assertDoesNotWarn("violent assaults in Portland, Oregon in 2022", "portland");
 
+assertWarns("crime in Alameda since 2008", "city-county-alameda");
+assertDoesNotWarn("crime in Alameda, California since 2008", "city-county-alameda");
+assertDoesNotWarn("crime in Alameda CA since 2008", "city-county-alameda");
+assertDoesNotWarn("crime in Alameda County since 2008", "city-county-alameda");
+
+assertWarns("violent crime in Los Angeles", "city-county-los-angeles");
+assertDoesNotWarn("violent crime in Los Angeles, California", "city-county-los-angeles");
+assertDoesNotWarn("violent crime in Los Angeles CA", "city-county-los-angeles");
+assertDoesNotWarn("violent crime in Los Angeles County, California", "city-county-los-angeles");
+
+assertWarns("crime in Fairfax", "city-county-fairfax");
+assertDoesNotWarn("crime in Fairfax, Virginia", "city-county-fairfax");
+assertDoesNotWarn("crime in Fairfax VA", "city-county-fairfax");
+assertDoesNotWarn("crime in Fairfax County, Virginia", "city-county-fairfax");
+
 assertWarns("gun violence in Louisiana since 2020", "gun-violence");
 assert.equal(hasBlockingQueryGuidanceWarnings("gun violence in Louisiana since 2020"), false);
 assertDoesNotWarn("fatal firearm homicides in Louisiana since 2020", "gun-violence");

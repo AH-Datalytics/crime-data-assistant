@@ -45,6 +45,43 @@ assertNoIssue("crime in Washington County, Oregon in 2023", "county-washington")
 assertIssue("violent assaults in Portland in 2022", "portland");
 assertNoIssue("violent assaults in Portland, Oregon in 2022", "portland");
 
+assertIssue("crime in Alameda since 2008", "city-county-alameda");
+assertNoIssue("crime in Alameda, California since 2008", "city-county-alameda");
+assertNoIssue("crime in Alameda CA since 2008", "city-county-alameda");
+assertNoIssue("crime in Alameda County since 2008", "city-county-alameda");
+
+assertIssue("violent crime in Albany in 2024", "city-county-albany");
+assertNoIssue("violent crime in Albany, New York in 2024", "city-county-albany");
+assertNoIssue("violent crime in Albany NY in 2024", "city-county-albany");
+assertNoIssue("violent crime in Albany County, New York in 2024", "city-county-albany");
+
+assertIssue("burglary trend in Boise", "city-county-boise");
+assertNoIssue("burglary trend in Boise, Idaho", "city-county-boise");
+assertNoIssue("burglary trend in Boise County, Idaho", "city-county-boise");
+
+assertIssue("crime in Fairfax", "city-county-fairfax");
+assertNoIssue("crime in Fairfax, Virginia", "city-county-fairfax");
+assertNoIssue("crime in Fairfax VA", "city-county-fairfax");
+assertNoIssue("crime in Fairfax County, Virginia", "city-county-fairfax");
+
+assertIssue("violent crime in Los Angeles", "city-county-los-angeles");
+assertNoIssue("violent crime in Los Angeles, California", "city-county-los-angeles");
+assertNoIssue("violent crime in Los Angeles CA", "city-county-los-angeles");
+assertNoIssue("violent crime in Los Angeles County, California", "city-county-los-angeles");
+
+assertIssue("murder trend in Sacramento", "city-county-sacramento");
+assertNoIssue("murder trend in Sacramento, California", "city-county-sacramento");
+assertNoIssue("murder trend in Sacramento County, California", "city-county-sacramento");
+
+assertIssue("fatal shootings in San Diego", "city-county-san-diego");
+assertNoIssue("fatal shootings in San Diego, California", "city-county-san-diego");
+assertNoIssue("fatal shootings in San Diego County, California", "city-county-san-diego");
+
+assertIssue("violent crime in El Paso", "city-county-el-paso");
+assertNoIssue("violent crime in El Paso, Texas", "city-county-el-paso");
+assertNoIssue("violent crime in El Paso TX", "city-county-el-paso");
+assertNoIssue("violent crime in El Paso County, Texas", "city-county-el-paso");
+
 assertIssue("fatal shootings in Cook County", "county-cook");
 assertNoIssue("fatal shootings in Cook County, Illinois", "county-cook");
 assertNoIssue("fatal shootings in Cook County IL", "county-cook");
