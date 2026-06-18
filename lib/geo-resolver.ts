@@ -19,6 +19,98 @@ type KnownTrap = {
   issue: GeoResolutionIssue;
 };
 
+const STATE_NAMES = [
+  "alabama", "alaska", "arizona", "arkansas", "california", "colorado",
+  "connecticut", "delaware", "florida", "georgia", "hawaii", "idaho",
+  "illinois", "indiana", "iowa", "kansas", "kentucky", "louisiana",
+  "maine", "maryland", "massachusetts", "michigan", "minnesota",
+  "mississippi", "missouri", "montana", "nebraska", "nevada",
+  "new hampshire", "new jersey", "new mexico", "new york",
+  "north carolina", "north dakota", "ohio", "oklahoma", "oregon",
+  "pennsylvania", "rhode island", "south carolina", "south dakota",
+  "tennessee", "texas", "utah", "vermont", "virginia", "washington",
+  "west virginia", "wisconsin", "wyoming", "district of columbia",
+];
+
+const STATE_ABBREVIATIONS = [
+  "al", "ak", "az", "ar", "ca", "co", "ct", "de", "fl", "ga", "hi", "id",
+  "il", "in", "ia", "ks", "ky", "la", "me", "md", "ma", "mi", "mn", "ms",
+  "mo", "mt", "ne", "nv", "nh", "nj", "nm", "ny", "nc", "nd", "oh", "ok",
+  "or", "pa", "ri", "sc", "sd", "tn", "tx", "ut", "vt", "va", "wa", "wv",
+  "wi", "wy", "dc", "d.c.",
+];
+
+const STATE_NAME_PATTERN = STATE_NAMES
+  .map((value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+"))
+  .sort((a, b) => b.length - a.length)
+  .join("|");
+
+const STATE_ABBREVIATION_PATTERN = STATE_ABBREVIATIONS
+  .map((value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+  .sort((a, b) => b.length - a.length)
+  .join("|");
+
+const DIRECT_STATE_ABBREVIATION_PATTERN = STATE_ABBREVIATIONS
+  .filter((value) => !["in", "or"].includes(value))
+  .map((value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+  .sort((a, b) => b.length - a.length)
+  .join("|");
+
+function literalPattern(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+");
+}
+
+type AmbiguousCountyTrap = {
+  key: string;
+  states?: string[];
+};
+
+const AMBIGUOUS_COUNTY_TRAPS: AmbiguousCountyTrap[] = [
+  { key: "Cook", states: ["Illinois", "Georgia", "Minnesota"] },
+  { key: "Orange", states: ["California", "Florida", "New York", "North Carolina", "Texas", "Virginia"] },
+  { key: "Jefferson" },
+  { key: "Montgomery" },
+  { key: "Franklin" },
+  { key: "Washington" },
+  { key: "Jackson" },
+  { key: "Madison" },
+  { key: "Lincoln" },
+  { key: "Marion" },
+  { key: "Monroe" },
+  { key: "Union" },
+  { key: "Clark" },
+  { key: "Wayne" },
+  { key: "Adams" },
+  { key: "Warren" },
+];
+
+function countyTrap({ key, states }: AmbiguousCountyTrap): KnownTrap {
+  const name = literalPattern(key);
+  const countyPhrase = `${name}\\s+County`;
+  const stateQualifier = [
+    `\\s*,\\s*(?:${STATE_NAME_PATTERN}|${STATE_ABBREVIATION_PATTERN})`,
+    `\\s+(?:in|of)\\s+(?:${STATE_NAME_PATTERN}|${STATE_ABBREVIATION_PATTERN})`,
+    `\\s+(?:${STATE_NAME_PATTERN}|${DIRECT_STATE_ABBREVIATION_PATTERN})`,
+  ].join("|");
+  const qualified = new RegExp(`\\b${countyPhrase}\\b(?:${stateQualifier})\\b`, "i");
+  const actions = states?.map((state) => ({
+    label: `Use ${key} County, ${state}`,
+    pattern: `\\b${key}\\s+County\\b`,
+    replacement: `${key} County, ${state}`,
+  }));
+  return {
+    mentioned: new RegExp(`\\b${countyPhrase}\\b`, "i"),
+    qualified,
+    issue: {
+      id: `county-${key.toLowerCase().replace(/\s+/g, "-")}`,
+      kind: "blocking",
+      title: `${key} County needs a state`,
+      detail: `${key} County exists in multiple states. Add the state so countywide results use the right geography.`,
+      actions,
+    },
+  };
+}
+
 const KNOWN_GEO_TRAPS: KnownTrap[] = [
   {
     mentioned: /\bkansas\s+city\b/i,
@@ -104,6 +196,7 @@ const KNOWN_GEO_TRAPS: KnownTrap[] = [
       ],
     },
   },
+  ...AMBIGUOUS_COUNTY_TRAPS.map(countyTrap),
 ];
 
 export function getGeoResolutionIssues(input: string): GeoResolutionIssue[] {

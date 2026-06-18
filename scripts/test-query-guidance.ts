@@ -51,6 +51,13 @@ assertDoesNotWarn("New York City vs Chicago officers per year since 1930", "new-
 assertWarns("crime in Washington in 2023", "washington");
 assertDoesNotWarn("crime in Washington, DC in 2023", "washington");
 assertDoesNotWarn("crime in Washington State in 2023", "washington");
+assertWarns("crime in Washington County in 2023", "county-washington");
+assertDoesNotWarn("crime in Washington County, Oregon in 2023", "washington");
+assertDoesNotWarn("crime in Washington County, Oregon in 2023", "county-washington");
+
+assertWarns("crime in Cook County", "county-cook");
+assert.equal(hasBlockingQueryGuidanceWarnings("crime in Cook County"), true);
+assertDoesNotWarn("crime in Cook County, Illinois", "county-cook");
 
 assertWarns("violent assaults in Portland in 2022", "portland");
 assertDoesNotWarn("violent assaults in Portland, Oregon in 2022", "portland");
