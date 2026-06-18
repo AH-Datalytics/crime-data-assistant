@@ -7,6 +7,7 @@ export type GuidanceAction = {
 
 export type GuidanceWarning = {
   id: string;
+  kind: "blocking" | "advisory";
   title: string;
   detail: string;
   actions?: GuidanceAction[];
@@ -48,6 +49,7 @@ export function getQueryGuidanceWarnings(input: string): GuidanceWarning[] {
   const placeWarnings: (GuidanceWarning | null)[] = [
     ambiguousPlace(text, /\bkansas\s+city\b/i, /\b(kcmo|kck)\b|\bkansas\s+city\s*,?\s*(missouri|mo|kansas|ks)\b/i, {
       id: "kansas-city",
+      kind: "blocking",
       title: "Kansas City needs a state",
       detail: "Kansas City can mean Missouri or Kansas. Spell out the state when the geography matters.",
       actions: [
@@ -57,6 +59,7 @@ export function getQueryGuidanceWarnings(input: string): GuidanceWarning[] {
     }),
     ambiguousPlace(text, /\bbaltimore\b/i, /\bbaltimore\s+(city|county)\b|\bbaltimore\s*,?\s*(md|maryland)\b/i, {
       id: "baltimore",
+      kind: "blocking",
       title: "Baltimore city and county are separate",
       detail: "Use Baltimore city or Baltimore County, Maryland so the result does not mix jurisdictions.",
       actions: [
@@ -66,6 +69,7 @@ export function getQueryGuidanceWarnings(input: string): GuidanceWarning[] {
     }),
     ambiguousPlace(text, /\bst\.?\s+louis\b/i, /\bst\.?\s+louis\s+(city|county)\b|\bst\.?\s+louis\s*,?\s*(mo|missouri)\b/i, {
       id: "st-louis",
+      kind: "blocking",
       title: "St. Louis city and county are separate",
       detail: "Use St. Louis city or St. Louis County, Missouri when asking for local results.",
       actions: [
@@ -75,6 +79,7 @@ export function getQueryGuidanceWarnings(input: string): GuidanceWarning[] {
     }),
     ambiguousPlace(text, /\bnew\s+york\b/i, /\b(new\s+york\s+city|nyc|nypd|new\s+york\s+state|state\s+of\s+new\s+york|ny\s+state)\b/i, {
       id: "new-york",
+      kind: "blocking",
       title: "New York can mean city or state",
       detail: "Say New York City or New York State to avoid city/state collisions.",
       actions: [
@@ -84,6 +89,7 @@ export function getQueryGuidanceWarnings(input: string): GuidanceWarning[] {
     }),
     ambiguousPlace(text, /\bwashington\b/i, /\b(washington\s*,?\s*d\.?c\.?|dc|district\s+of\s+columbia|washington\s+state|state\s+of\s+washington)\b/i, {
       id: "washington",
+      kind: "blocking",
       title: "Washington can mean DC or state",
       detail: "Say Washington, DC or Washington State when asking for geography-specific results.",
       actions: [
@@ -93,6 +99,7 @@ export function getQueryGuidanceWarnings(input: string): GuidanceWarning[] {
     }),
     ambiguousPlace(text, /\bportland\b/i, /\bportland\s*,?\s*(or|oregon|me|maine)\b/i, {
       id: "portland",
+      kind: "blocking",
       title: "Portland needs a state",
       detail: "Portland usually needs Oregon or Maine to avoid the wrong city.",
       actions: [
@@ -104,14 +111,28 @@ export function getQueryGuidanceWarnings(input: string): GuidanceWarning[] {
 
   warnings.push(...placeWarnings.filter((w): w is GuidanceWarning => Boolean(w)));
 
-  if (has(/\b(gun\s+violence|shootings?)\b/i, text) && !has(/\b(fatal|nonfatal|firearm\s+(homicides?|assaults?|injur(?:y|ies)))\b/i, text)) {
+  if (has(/\bgun\s+violence\b/i, text) && !has(/\b(fatal|nonfatal|firearm\s+(homicides?|assaults?|injur(?:y|ies)))\b/i, text)) {
     warnings.push({
       id: "gun-violence",
-      title: "Gun violence is not one FBI field",
-      detail: "For exact results, ask for fatal firearm homicides. Broader firearm violence is a proxy and should be named that way.",
+      kind: "advisory",
+      title: "The FBI does not systemically track all shootings",
+      detail: "Fatal shootings can be answered directly. Broader firearm violence measures are proxies and should be named that way.",
       actions: [
-        { label: "Use fatal firearm homicides", pattern: "\\bgun\\s+violence\\b", replacement: "fatal firearm homicides" },
+        { label: "Use fatal shootings", pattern: "\\bgun\\s+violence\\b", replacement: "fatal shootings" },
         { label: "Use firearm-involved assaults proxy", pattern: "\\bgun\\s+violence\\b", replacement: "firearm-involved assaults proxy" },
+      ],
+    });
+  }
+
+  if (has(/\bshootings?\b/i, text) && !has(/\b(fatal|nonfatal|firearm\s+(homicides?|assaults?|injur(?:y|ies)))\b/i, text)) {
+    warnings.push({
+      id: "shooting-scope",
+      kind: "advisory",
+      title: "The FBI does not systemically track all shootings",
+      detail: "Fatal shootings can be answered directly. Broader shooting measures are proxies and should be named that way.",
+      actions: [
+        { label: "Use fatal shootings", pattern: "\\bshootings?\\b", replacement: "fatal shootings" },
+        { label: "Use firearm-involved assaults proxy", pattern: "\\bshootings?\\b", replacement: "firearm-involved assaults proxy" },
       ],
     });
   }
@@ -119,6 +140,7 @@ export function getQueryGuidanceWarnings(input: string): GuidanceWarning[] {
   if (has(/\bassaults?\b/i, text) && !has(/\b(aggravated|simple|intimidation|sexual|domestic|dv|firearm|gun|knife|weapon)\s+assaults?\b|\bassaults?\s+(with|involving|by)\b/i, text)) {
     warnings.push({
       id: "assault-type",
+      kind: "advisory",
       title: "Assault needs a type",
       detail: "NIBRS separates aggravated assault, simple assault, and intimidation. Pick one or ask for all assault categories.",
       actions: [
@@ -132,12 +154,17 @@ export function getQueryGuidanceWarnings(input: string): GuidanceWarning[] {
   if (has(/\b(consistent|continuous)\s+report(?:er|ers|ing)|\breported\s+all\s+12\s+months\b/i, text)) {
     warnings.push({
       id: "consistent-reporters",
+      kind: "advisory",
       title: "Consistent reporting means 12 months",
       detail: "An agency counts as consistent for a year only if it reported all 12 months in that year.",
     });
   }
 
   return warnings;
+}
+
+export function hasBlockingQueryGuidanceWarnings(input: string): boolean {
+  return getQueryGuidanceWarnings(input).some((warning) => warning.kind === "blocking");
 }
 
 export function applyGuidanceAction(input: string, action: GuidanceAction): string {

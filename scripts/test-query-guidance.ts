@@ -3,6 +3,7 @@ import {
   HOW_TO_ASK_EXAMPLES,
   applyGuidanceAction,
   getQueryGuidanceWarnings,
+  hasBlockingQueryGuidanceWarnings,
 } from "../lib/query-guidance";
 
 function warningIds(input: string) {
@@ -26,7 +27,9 @@ assert.deepEqual(HOW_TO_ASK_EXAMPLES.map((e) => `${e.category}: ${e.question}`),
 ]);
 
 assertWarns("fatal shootings in Kansas City per month from 2020 to 2024", "kansas-city");
+assert.equal(hasBlockingQueryGuidanceWarnings("fatal shootings in Kansas City per month from 2020 to 2024"), true);
 assertDoesNotWarn("fatal shootings in Kansas City, Missouri per month from 2020 to 2024", "kansas-city");
+assert.equal(hasBlockingQueryGuidanceWarnings("fatal shootings in Kansas City, Missouri per month from 2020 to 2024"), false);
 assertDoesNotWarn("fatal shootings in KCK per month from 2020 to 2024", "kansas-city");
 
 assertWarns("shootings in Baltimore since 2020", "baltimore");
@@ -47,9 +50,21 @@ assertWarns("violent assaults in Portland in 2022", "portland");
 assertDoesNotWarn("violent assaults in Portland, Oregon in 2022", "portland");
 
 assertWarns("gun violence in Louisiana since 2020", "gun-violence");
+assert.equal(hasBlockingQueryGuidanceWarnings("gun violence in Louisiana since 2020"), false);
 assertDoesNotWarn("fatal firearm homicides in Louisiana since 2020", "gun-violence");
+assert.equal(
+  getQueryGuidanceWarnings("gun violence in Louisiana since 2020")[0].title,
+  "The FBI does not systemically track all shootings"
+);
+
+assertWarns("shootings in Louisiana since 2020", "shooting-scope");
+assertDoesNotWarn("fatal shootings in Louisiana since 2020", "shooting-scope");
+const shootingWarning = getQueryGuidanceWarnings("shootings in Louisiana since 2020")[0];
+assert.equal(shootingWarning.title, "The FBI does not systemically track all shootings");
+assert.equal(shootingWarning.actions![0].label, "Use fatal shootings");
 
 assertWarns("assaults in Texas in 2023", "assault-type");
+assert.equal(hasBlockingQueryGuidanceWarnings("assaults in Texas in 2023"), false);
 assertDoesNotWarn("aggravated assault in Texas in 2023", "assault-type");
 
 assertWarns("show consistent reporters in Ohio from 2019 to 2024", "consistent-reporters");

@@ -5,6 +5,7 @@ import type { QueryResponse, StreamEvent } from "@/lib/types";
 import { autoRoute, isFollowUp, manualSourceNudge, parseIntent, recommendTabs, TAB_DISPLAY_NAMES, TAB_COLORS, type TabRecommendation } from "@/lib/tab-suggest";
 import { pickerOptions, type SourceId as RegistrySourceId, type PickerSourceId } from "@/lib/sources";
 import { applyChartOnlyCustomization } from "@/lib/chart-customization";
+import { hasBlockingQueryGuidanceWarnings } from "@/lib/query-guidance";
 import DataTable from "./DataTable";
 import ChartPanel from "./ChartPanel";
 import ExportButtons from "./ExportButtons";
@@ -143,6 +144,13 @@ export default function WorkspaceChat({}: WorkspaceChatProps) {
     setInput(value);
     setShowDisambiguation(false);
   }, []);
+  const inputBlockedByGuidance = hasBlockingQueryGuidanceWarnings(input);
+  const inputSubmitDisabled = !input.trim() || loading || inputBlockedByGuidance;
+  const askButtonClass = inputBlockedByGuidance
+    ? "border border-[#475EC7]/30 bg-white text-[#475EC7] cursor-not-allowed"
+    : !input.trim() || loading
+      ? "text-white opacity-40 cursor-not-allowed"
+      : "text-white cursor-pointer hover:opacity-90";
 
   const submitQuestion = useCallback(
     async (
@@ -225,6 +233,7 @@ export default function WorkspaceChat({}: WorkspaceChatProps) {
   const handleAsk = useCallback((question: string) => {
     const q = question.trim();
     if (!q) return;
+    if (hasBlockingQueryGuidanceWarnings(q)) return;
     setShowDisambiguation(false);
 
     const chartOnlyResponse = applyChartOnlyCustomization(q, response);
@@ -362,21 +371,30 @@ export default function WorkspaceChat({}: WorkspaceChatProps) {
           {/* Input bar — hidden on landing, shown after first query */}
           {hasStarted && (<>
             <form onSubmit={(e) => { e.preventDefault(); handleAsk(input); }} className="flex-1 flex gap-2 min-w-0 max-w-[760px]">
-              <input
-                type="text"
-                value={input}
-                onChange={(e) => setGuidedInput(e.target.value)}
-                placeholder="Ask about crime data..."
-                className="flex-1 min-w-0 px-3 py-2 text-[13px] border border-[var(--border)] rounded-lg focus:outline-none focus:border-[#475EC7] focus:ring-1 focus:ring-[#475EC7]/20 bg-[var(--surface)]"
-                disabled={loading}
-              />
+              <div className="relative flex-1 min-w-0">
+                <input
+                  type="text"
+                  value={input}
+                  onChange={(e) => setGuidedInput(e.target.value)}
+                  placeholder="Ask about crime data..."
+                  className="w-full min-w-0 px-3 py-2 text-[13px] border border-[var(--border)] rounded-lg focus:outline-none focus:border-[#475EC7] focus:ring-1 focus:ring-[#475EC7]/20 bg-[var(--surface)]"
+                  disabled={loading}
+                />
+                <QueryGuidance
+                  input={input}
+                  onChangeInput={setGuidedInput}
+                  showExamples={false}
+                  compact
+                  floating
+                />
+              </div>
               <button
                 type="submit"
-                disabled={!input.trim() || loading}
-                className="px-4 py-2 text-[12px] font-semibold text-white rounded-lg disabled:opacity-40 cursor-pointer shrink-0 hover:opacity-90"
-                style={{ backgroundColor: "#475EC7" }}
+                disabled={inputSubmitDisabled}
+                className={`px-4 py-2 text-[12px] font-semibold rounded-lg shrink-0 ${askButtonClass}`}
+                style={inputBlockedByGuidance ? undefined : { backgroundColor: "#475EC7" }}
               >
-                Ask
+                {inputBlockedByGuidance ? "Clarify first" : "Ask"}
               </button>
             </form>
             <button
@@ -406,19 +424,6 @@ export default function WorkspaceChat({}: WorkspaceChatProps) {
           </>)}
         </div>
       </header>
-
-      {hasStarted && !showDisambiguation && (
-        <div className="bg-white border-b border-[var(--border)] px-3 sm:px-4 md:px-6">
-          <div className="max-w-[760px] py-2">
-            <QueryGuidance
-              input={input}
-              onChangeInput={setGuidedInput}
-              showExamples={false}
-              compact
-            />
-          </div>
-        </div>
-      )}
 
       {showTutorial && (
         <div
@@ -456,26 +461,28 @@ export default function WorkspaceChat({}: WorkspaceChatProps) {
           onSelectTab={(tab) => { setSource(tab); }}
           onAsk={(q) => { setInput(q); handleAsk(q); }}
           renderInputBar={() => (
-            <div className="space-y-3">
+            <div className="relative">
               <form onSubmit={(e) => { e.preventDefault(); handleAsk(input); }} className="flex flex-col sm:flex-row gap-2">
-                <input
-                  type="text"
-                  value={input}
-                  onChange={(e) => setGuidedInput(e.target.value)}
-                  placeholder="Ask about crime data..."
-                  className="flex-1 min-w-0 px-4 py-2.5 text-[14px] border border-[var(--border)] rounded-xl focus:outline-none focus:border-[#475EC7] focus:ring-2 focus:ring-[#475EC7]/20 bg-white shadow-sm"
-                  disabled={loading}
-                />
+                <div className="relative flex-1 min-w-0">
+                  <input
+                    type="text"
+                    value={input}
+                    onChange={(e) => setGuidedInput(e.target.value)}
+                    placeholder="Ask about crime data..."
+                    className="w-full min-w-0 px-4 py-2.5 text-[14px] border border-[var(--border)] rounded-xl focus:outline-none focus:border-[#475EC7] focus:ring-2 focus:ring-[#475EC7]/20 bg-white shadow-sm"
+                    disabled={loading}
+                  />
+                  <QueryGuidance input={input} onChangeInput={setGuidedInput} showExamples={false} floating />
+                </div>
                 <button
                   type="submit"
-                  disabled={!input.trim() || loading}
-                  className="px-5 py-2.5 text-[13px] font-semibold text-white rounded-xl disabled:opacity-40 cursor-pointer shrink-0 hover:opacity-90 shadow-sm"
-                  style={{ backgroundColor: "#475EC7" }}
+                  disabled={inputSubmitDisabled}
+                  className={`px-5 py-2.5 text-[13px] font-semibold rounded-xl shrink-0 shadow-sm ${askButtonClass}`}
+                  style={inputBlockedByGuidance ? undefined : { backgroundColor: "#475EC7" }}
                 >
-                  Ask
+                  {inputBlockedByGuidance ? "Clarify first" : "Ask"}
                 </button>
               </form>
-              <QueryGuidance input={input} onChangeInput={setGuidedInput} showExamples={false} />
             </div>
           )}
         />
