@@ -48,6 +48,64 @@ function queryLatestMonth(
   return monthLabel(Number(row.year), Number(row.month));
 }
 
+function validYearExpr(yearCol: string) {
+  return `CAST(${yearCol} AS INTEGER) BETWEEN 1900 AND 2100`;
+}
+
+function validMonthExpr(monthCol: string) {
+  return `CAST(${monthCol} AS INTEGER) BETWEEN 1 AND 12`;
+}
+
+function queryYearRangeFromTables(
+  db: { prepare: (sql: string) => { get: () => unknown } },
+  tables: { table: string; yearCol?: string; monthCol?: string }[]
+): { min_year: number; max_year: number } {
+  const ident = /^[A-Za-z_][\w]*$/;
+  const selects = tables.map(({ table, yearCol = "year", monthCol }) => {
+    if (!ident.test(table) || !ident.test(yearCol) || (monthCol && !ident.test(monthCol))) {
+      throw new Error("Invalid identifier for year range query");
+    }
+    const predicates = [validYearExpr(yearCol)];
+    if (monthCol) predicates.push(validMonthExpr(monthCol));
+    return `SELECT CAST(${yearCol} AS INTEGER) AS year FROM ${table} WHERE ${predicates.join(" AND ")}`;
+  });
+
+  const row = db.prepare(`
+    SELECT MIN(year) AS min_year, MAX(year) AS max_year
+    FROM (
+      ${selects.join("\nUNION ALL\n")}
+    )
+  `).get() as { min_year?: number | null; max_year?: number | null } | undefined;
+  if (!row?.min_year || !row?.max_year) throw new Error("No valid numeric year rows");
+  return { min_year: Number(row.min_year), max_year: Number(row.max_year) };
+}
+
+function queryLatestNumericMonth(
+  db: { prepare: (sql: string) => { get: () => unknown } },
+  table: string,
+  yearCol = "year",
+  monthCol = "month"
+): DataCutoff {
+  const ident = /^[A-Za-z_][\w]*$/;
+  if (!ident.test(table) || !ident.test(yearCol) || !ident.test(monthCol)) {
+    throw new Error("Invalid identifier for cutoff query");
+  }
+  const valid = `${validYearExpr(yearCol)} AND ${validMonthExpr(monthCol)}`;
+  const row = db.prepare(`
+    WITH valid_months AS (
+      SELECT CAST(${yearCol} AS INTEGER) AS year, CAST(${monthCol} AS INTEGER) AS month
+      FROM ${table}
+      WHERE ${valid}
+    )
+    SELECT year, MAX(month) AS month
+    FROM valid_months
+    WHERE year = (SELECT MAX(year) FROM valid_months)
+    GROUP BY year
+  `).get() as { year?: number | null; month?: number | null } | undefined;
+  if (!row?.year || !row?.month) throw new Error(`No numeric monthly cutoff rows in ${table}`);
+  return monthLabel(Number(row.year), Number(row.month));
+}
+
 function tableCountEstimate(
   db: { prepare: (sql: string) => unknown },
   table: string
@@ -155,16 +213,18 @@ function loadNibrsFacts() {
 
     // Use summary/coverage tables for startup facts. Scanning raw incidents
     // here can read the full 100GB+ NIBRS DB during the first request.
-    const dateRange = db.prepare(`
-      SELECT MIN(year) AS min_year, MAX(year) AS max_year
-      FROM (
-        SELECT year FROM nibrs_state_coverage
-        UNION ALL
-        SELECT year FROM summary_state_monthly
-      )
-    `).get() as { min_year: number; max_year: number };
+    const dateRange = queryYearRangeFromTables(db, [
+      { table: "nibrs_state_coverage" },
+      { table: "summary_state_monthly", monthCol: "month" },
+      { table: "summary_victim_state_monthly", monthCol: "month" },
+      { table: "nibrs_agency_completeness" },
+    ]);
     const totalIncidents = tableCountEstimate(db, "incidents") || 0;
-    const totalLabel = totalIncidents >= 1_000_000_000 ? `${(totalIncidents / 1_000_000_000).toFixed(1)}B+` : `${(totalIncidents / 1_000_000).toFixed(0)}M+`;
+    const totalLabel = totalIncidents
+      ? totalIncidents >= 1_000_000_000
+        ? `${(totalIncidents / 1_000_000_000).toFixed(1)}B+`
+        : `${Math.max(1, Math.round(totalIncidents / 1_000_000))}M+`
+      : "count unavailable";
 
     // Current/partial year detection
     const currentYear = new Date().getFullYear();
@@ -302,9 +362,9 @@ function loadRtciCutoff(): DataCutoff {
 function loadNibrsCutoff(): DataCutoff {
   try {
     const db = getNibrsDb();
-    for (const table of ["summary_state_monthly", "summary_victim_state_monthly", "incidents"]) {
+    for (const table of ["summary_state_monthly", "summary_victim_state_monthly"]) {
       try {
-        return queryLatestMonth(db, table);
+        return queryLatestNumericMonth(db, table);
       } catch { /* try next table */ }
     }
     throw new Error("No NIBRS monthly tables available for cutoff");
