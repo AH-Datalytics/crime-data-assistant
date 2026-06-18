@@ -93,6 +93,7 @@ const REVIEWED_CITY_COUNTY: GeoPlaceCatalogEntry[] = [
 const MANUAL_ALIASES: GeoPlaceCatalogEntry[] = [
   city("New York City", "NY", ["New York", "NYC", "New York City", "NYPD"]),
   state("New York", "NY", ["New York", "New York State", "State of New York", "NY State"]),
+  county("New York", "NY", ["New York County", "New York County, NY", "New York County NY", "New York County, New York", "New York County New York"], "manual-alias"),
   city("Washington", "DC", ["Washington", "Washington, DC", "Washington DC", "D.C.", "DC", "District of Columbia"]),
   state("Washington", "WA", ["Washington", "Washington State", "State of Washington"]),
   city("Kansas City", "MO", ["Kansas City", "KCMO", "Kansas City, Missouri", "Kansas City MO"]),

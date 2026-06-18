@@ -196,5 +196,10 @@ function aliasKey(value: string): string {
 
 function aliasPattern(alias: string): RegExp {
   const escaped = alias.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+");
-  return new RegExp(`(?<![A-Za-z0-9])${escaped}(?![A-Za-z0-9])`, "gi");
+  const flags = hasAmbiguousStateCodeSuffix(alias) ? "g" : "gi";
+  return new RegExp(`(?<![A-Za-z0-9])${escaped}(?![A-Za-z0-9])`, flags);
+}
+
+function hasAmbiguousStateCodeSuffix(alias: string): boolean {
+  return /(?:^|[\s,])(?:IN|OR)$/u.test(alias);
 }
