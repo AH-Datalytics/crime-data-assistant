@@ -48,6 +48,20 @@ function queryLatestMonth(
   return monthLabel(Number(row.year), Number(row.month));
 }
 
+function tableCountEstimate(
+  db: { prepare: (sql: string) => unknown },
+  table: string
+): number | null {
+  try {
+    const stmt = db.prepare("SELECT stat FROM sqlite_stat1 WHERE tbl = ? LIMIT 1") as { get: (param: string) => unknown };
+    const stat = stmt.get(table) as { stat?: string } | undefined;
+    const n = stat?.stat ? Number.parseInt(stat.stat.split(" ")[0], 10) : NaN;
+    return Number.isFinite(n) && n > 0 ? n : null;
+  } catch {
+    return null;
+  }
+}
+
 // ─── RTCI (Current Trends) facts ───
 
 function loadRtciFacts() {
@@ -139,28 +153,22 @@ function loadNibrsFacts() {
   try {
     const db = getNibrsDb();
 
-    // Date range
-    const dateRange = db.prepare("SELECT MIN(year) AS min_year, MAX(year) AS max_year FROM incidents").get() as { min_year: number; max_year: number };
-
-    // Incident counts by year
-    const incidentCounts = db.prepare(
-      "SELECT year, COUNT(*) AS cnt FROM incidents GROUP BY year ORDER BY year"
-    ).all() as { year: number; cnt: number }[];
-    const incidentCountStr = incidentCounts
-      .map(r => {
-        const millions = r.cnt / 1_000_000;
-        const label = millions >= 1 ? `${millions.toFixed(1)}M` : `${(r.cnt / 1000).toFixed(0)}K`;
-        return `${r.year}: ${label}`;
-      })
-      .join(", ");
-    const totalIncidents = incidentCounts.reduce((sum, r) => sum + r.cnt, 0);
+    // Use summary/coverage tables for startup facts. Scanning raw incidents
+    // here can read the full 100GB+ NIBRS DB during the first request.
+    const dateRange = db.prepare(`
+      SELECT MIN(year) AS min_year, MAX(year) AS max_year
+      FROM (
+        SELECT year FROM nibrs_state_coverage
+        UNION ALL
+        SELECT year FROM summary_state_monthly
+      )
+    `).get() as { min_year: number; max_year: number };
+    const totalIncidents = tableCountEstimate(db, "incidents") || 0;
     const totalLabel = totalIncidents >= 1_000_000_000 ? `${(totalIncidents / 1_000_000_000).toFixed(1)}B+` : `${(totalIncidents / 1_000_000).toFixed(0)}M+`;
 
     // Current/partial year detection
     const currentYear = new Date().getFullYear();
-    const lastFullYear = incidentCounts.length > 0
-      ? incidentCounts.filter(r => r.year < currentYear).pop()?.year || currentYear - 1
-      : currentYear - 1;
+    const lastFullYear = Math.min(dateRange.max_year, currentYear - 1);
 
     // Summary table row counts (for performance guidance)
     const summaryRowCounts: Record<string, number> = {};
@@ -219,7 +227,7 @@ function loadNibrsFacts() {
     return {
       minYear: dateRange.min_year,
       maxYear: dateRange.max_year,
-      incidentCountStr,
+      incidentCountStr: "see NIBRS summary tables",
       totalLabel,
       currentYear,
       lastFullYear,
