@@ -87,6 +87,7 @@ const REVIEWED_CITY_COUNTY: GeoPlaceCatalogEntry[] = [
   county("San Diego", "CA", ["San Diego", "San Diego County", "San Diego County, California", "San Diego County CA"]),
   city("El Paso", "TX", ["El Paso", "El Paso, Texas", "El Paso TX"]),
   county("El Paso", "TX", ["El Paso", "El Paso County", "El Paso County, Texas", "El Paso County TX"]),
+  county("Miami-Dade", "FL", ["Miami-Dade", "Miami-Dade County", "Miami-Dade County, FL", "Miami-Dade County FL", "Miami-Dade County, Florida", "Miami-Dade County Florida"]),
 ];
 
 const MANUAL_ALIASES: GeoPlaceCatalogEntry[] = [
@@ -118,6 +119,7 @@ export const GEO_PLACE_CATALOG: GeoPlaceCatalogEntry[] = [
   ...GENERATED_AMBIGUOUS_COUNTIES.flatMap(({ name, states }) =>
     states.map((code) => county(name, code, [
       `${name} County`,
+      `${name} County, ${code}`,
       `${name} County ${code}`,
       `${name} County, ${stateName(code)}`,
       `${name} County ${stateName(code)}`,

@@ -209,10 +209,9 @@ assertSourceStatuses("gun violence in Cook County, Illinois since 2015", "county
   shr: "safe_exact",
 });
 
-// Known Phase 2 gaps from the production report:
-// - "Kings County, NY" currently still carries the California candidate.
-// - "Miami-Dade County" currently tokenizes as Miami city plus Dade County candidates.
-// Keep these out of the hard canary set until state-qualified county disambiguation is wired.
+assertResolve("violent crimes in Kings County, NY", ["county:NY:kings"], false);
+assertResolve("crime in Pierce County, WA", ["county:WA:pierce"], false);
+assertResolve("Murder rate in Miami-Dade County 2022-2026", ["county:FL:miami-dade"], false);
 
 rtci.close();
 nibrs.close();
