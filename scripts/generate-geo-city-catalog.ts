@@ -25,13 +25,18 @@ const STATE_NAMES: Record<string, string> = {
 
 const EXCLUDED_BARE_NAMES = new Set([
   "BALTIMORE",
+  "BLACK",
   "KANSAS CITY",
   "MANY",
   "NEW YORK",
+  "OTHER",
   "PORTLAND",
   "SAINT LOUIS",
   "ST LOUIS",
+  "UNKNOWN",
   "WASHINGTON",
+  "WARD",
+  "WHITE",
 ]);
 
 function argValue(name: string): string | null {
@@ -126,6 +131,8 @@ function normalizeKey(value: string): string {
     .trim();
 }
 
+const STATE_NAME_KEYS = new Set(Object.values(STATE_NAMES).map(normalizeKey));
+
 function displayName(rawName: string, key: string): string {
   const cleaned = rawName
     .replace(/\b(police|department|dept|sheriff'?s?|office)\b/ig, " ")
@@ -179,8 +186,12 @@ function cityAliases(city: CityRecord): string[] {
     `${city.name}, ${stateName}`,
     `${city.name} ${stateName}`,
   ];
-  if (!EXCLUDED_BARE_NAMES.has(city.key)) aliases.unshift(city.name);
+  if (!isExcludedBareAlias(city.key)) aliases.unshift(city.name);
   return Array.from(new Set(aliases));
+}
+
+function isExcludedBareAlias(key: string): boolean {
+  return EXCLUDED_BARE_NAMES.has(key) || STATE_NAME_KEYS.has(key);
 }
 
 main();
