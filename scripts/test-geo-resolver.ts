@@ -52,6 +52,9 @@ assertNoIssue("fatal shootings in Cook County IL", "county-cook");
 assertIssue("violent crime in Orange County", "county-orange");
 assertNoIssue("violent crime in Orange County, California", "county-orange");
 
+assertIssue("crime in Linn County", "county-linn");
+assertNoIssue("crime in Linn County, Oregon", "county-linn");
+
 assertIssue("crime in Jefferson County", "county-jefferson");
 assertNoIssue("crime in Jefferson County, Alabama", "county-jefferson");
 assertNoIssue("crime in Jefferson Parish", "county-jefferson");
@@ -75,7 +78,7 @@ assert.equal(
 
 assert.equal(
   geoClarificationText(getGeoResolutionIssues("crime in Cook County")[0]),
-  "Cook County exists in multiple states. Add the state so countywide results use the right geography. Choose: Cook County, Illinois or Cook County, Georgia or Cook County, Minnesota."
+  "Cook County exists in multiple states. Add the state so countywide results use the right geography. Choose: Cook County, Georgia or Cook County, Illinois or Cook County, Minnesota."
 );
 
 assert.equal(

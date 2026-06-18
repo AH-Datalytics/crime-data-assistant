@@ -1,3 +1,5 @@
+import { GENERATED_AMBIGUOUS_COUNTIES } from "./generated/ambiguous-counties";
+
 export type GeoResolutionAction = {
   label: string;
   pattern?: string;
@@ -61,31 +63,70 @@ function literalPattern(value: string) {
 }
 
 type AmbiguousCountyTrap = {
-  key: string;
-  states?: string[];
+  name: string;
+  states: string[];
 };
 
-const AMBIGUOUS_COUNTY_TRAPS: AmbiguousCountyTrap[] = [
-  { key: "Cook", states: ["Illinois", "Georgia", "Minnesota"] },
-  { key: "Orange", states: ["California", "Florida", "New York", "North Carolina", "Texas", "Virginia"] },
-  { key: "Jefferson" },
-  { key: "Montgomery" },
-  { key: "Franklin" },
-  { key: "Washington" },
-  { key: "Jackson" },
-  { key: "Madison" },
-  { key: "Lincoln" },
-  { key: "Marion" },
-  { key: "Monroe" },
-  { key: "Union" },
-  { key: "Clark" },
-  { key: "Wayne" },
-  { key: "Adams" },
-  { key: "Warren" },
-];
+const STATE_LABELS: Record<string, string> = {
+  AL: "Alabama",
+  AK: "Alaska",
+  AZ: "Arizona",
+  AR: "Arkansas",
+  CA: "California",
+  CO: "Colorado",
+  CT: "Connecticut",
+  DE: "Delaware",
+  FL: "Florida",
+  GA: "Georgia",
+  HI: "Hawaii",
+  ID: "Idaho",
+  IL: "Illinois",
+  IN: "Indiana",
+  IA: "Iowa",
+  KS: "Kansas",
+  KY: "Kentucky",
+  LA: "Louisiana",
+  ME: "Maine",
+  MD: "Maryland",
+  MA: "Massachusetts",
+  MI: "Michigan",
+  MN: "Minnesota",
+  MS: "Mississippi",
+  MO: "Missouri",
+  MT: "Montana",
+  NE: "Nebraska",
+  NV: "Nevada",
+  NH: "New Hampshire",
+  NJ: "New Jersey",
+  NM: "New Mexico",
+  NY: "New York",
+  NC: "North Carolina",
+  ND: "North Dakota",
+  OH: "Ohio",
+  OK: "Oklahoma",
+  OR: "Oregon",
+  PA: "Pennsylvania",
+  RI: "Rhode Island",
+  SC: "South Carolina",
+  SD: "South Dakota",
+  TN: "Tennessee",
+  TX: "Texas",
+  UT: "Utah",
+  VT: "Vermont",
+  VA: "Virginia",
+  WA: "Washington",
+  WV: "West Virginia",
+  WI: "Wisconsin",
+  WY: "Wyoming",
+  DC: "District of Columbia",
+};
 
-function countyTrap({ key, states }: AmbiguousCountyTrap): KnownTrap {
-  const name = literalPattern(key);
+function stateLabel(code: string) {
+  return STATE_LABELS[code.toUpperCase()] ?? code;
+}
+
+function countyTrap({ name: countyName, states }: AmbiguousCountyTrap): KnownTrap {
+  const name = literalPattern(countyName);
   const countyPhrase = `${name}\\s+County`;
   const stateQualifier = [
     `\\s*,\\s*(?:${STATE_NAME_PATTERN}|${STATE_ABBREVIATION_PATTERN})`,
@@ -93,19 +134,22 @@ function countyTrap({ key, states }: AmbiguousCountyTrap): KnownTrap {
     `\\s+(?:${STATE_NAME_PATTERN}|${DIRECT_STATE_ABBREVIATION_PATTERN})`,
   ].join("|");
   const qualified = new RegExp(`\\b${countyPhrase}\\b(?:${stateQualifier})\\b`, "i");
-  const actions = states?.map((state) => ({
-    label: `Use ${key} County, ${state}`,
-    pattern: `\\b${key}\\s+County\\b`,
-    replacement: `${key} County, ${state}`,
-  }));
+  const actionStates = states.length <= 6 ? states.map(stateLabel) : [];
+  const actions = actionStates.length > 0
+    ? actionStates.map((state) => ({
+      label: `Use ${countyName} County, ${state}`,
+      pattern: `\\b${countyName}\\s+County\\b`,
+      replacement: `${countyName} County, ${state}`,
+    }))
+    : undefined;
   return {
     mentioned: new RegExp(`\\b${countyPhrase}\\b`, "i"),
     qualified,
     issue: {
-      id: `county-${key.toLowerCase().replace(/\s+/g, "-")}`,
+      id: `county-${countyName.toLowerCase().replace(/\s+/g, "-")}`,
       kind: "blocking",
-      title: `${key} County needs a state`,
-      detail: `${key} County exists in multiple states. Add the state so countywide results use the right geography.`,
+      title: `${countyName} County needs a state`,
+      detail: `${countyName} County exists in multiple states. Add the state so countywide results use the right geography.`,
       actions,
     },
   };
@@ -196,7 +240,7 @@ const KNOWN_GEO_TRAPS: KnownTrap[] = [
       ],
     },
   },
-  ...AMBIGUOUS_COUNTY_TRAPS.map(countyTrap),
+  ...GENERATED_AMBIGUOUS_COUNTIES.map(countyTrap),
 ];
 
 export function getGeoResolutionIssues(input: string): GeoResolutionIssue[] {

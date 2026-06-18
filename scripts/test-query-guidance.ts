@@ -58,6 +58,8 @@ assertDoesNotWarn("crime in Washington County, Oregon in 2023", "county-washingt
 assertWarns("crime in Cook County", "county-cook");
 assert.equal(hasBlockingQueryGuidanceWarnings("crime in Cook County"), true);
 assertDoesNotWarn("crime in Cook County, Illinois", "county-cook");
+assertWarns("crime in Linn County", "county-linn");
+assertDoesNotWarn("crime in Linn County, Oregon", "county-linn");
 
 assertWarns("violent assaults in Portland in 2022", "portland");
 assertDoesNotWarn("violent assaults in Portland, Oregon in 2022", "portland");
