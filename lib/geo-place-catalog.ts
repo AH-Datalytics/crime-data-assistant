@@ -11,6 +11,9 @@ export type GeoPlaceCatalogEntry = {
   aliases: string[];
   canonicalQuery?: string;
   source: "state-list" | "generated-county" | "generated-city" | "reviewed-trap" | "manual-alias";
+  dominancePopulation?: number;
+  dominancePopulationYear?: number;
+  dominancePopulationSource?: "current" | "historical";
 };
 
 const STATES: { code: string; name: string }[] = [
@@ -106,7 +109,11 @@ export const GEO_PLACE_CATALOG: GeoPlaceCatalogEntry[] = [
   ...MANUAL_ALIASES,
   ...REVIEWED_CITY_COUNTY,
   ...GENERATED_GEO_CITIES.map((entry) =>
-    city(entry.name, entry.state, entry.aliases, "generated-city")
+    city(entry.name, entry.state, entry.aliases, "generated-city", {
+      dominancePopulation: entry.dominancePopulation,
+      dominancePopulationYear: entry.dominancePopulationYear,
+      dominancePopulationSource: entry.dominancePopulationSource,
+    })
   ),
   ...GENERATED_AMBIGUOUS_COUNTIES.flatMap(({ name, states }) =>
     states.map((code) => county(name, code, [
@@ -118,7 +125,13 @@ export const GEO_PLACE_CATALOG: GeoPlaceCatalogEntry[] = [
   ),
 ];
 
-function city(name: string, stateCode: string, aliases: string[], source: GeoPlaceCatalogEntry["source"] = "reviewed-trap"): GeoPlaceCatalogEntry {
+function city(
+  name: string,
+  stateCode: string,
+  aliases: string[],
+  source: GeoPlaceCatalogEntry["source"] = "reviewed-trap",
+  metadata: Pick<GeoPlaceCatalogEntry, "dominancePopulation" | "dominancePopulationYear" | "dominancePopulationSource"> = {}
+): GeoPlaceCatalogEntry {
   return {
     id: `city:${stateCode}:${slug(name)}`,
     kind: "city",
@@ -127,6 +140,7 @@ function city(name: string, stateCode: string, aliases: string[], source: GeoPla
     aliases,
     canonicalQuery: `${name}, ${stateCode}`,
     source,
+    ...metadata,
   };
 }
 

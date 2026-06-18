@@ -7,6 +7,9 @@ type CityRecord = {
   name: string;
   state: string;
   sources: Set<string>;
+  dominancePopulation?: number;
+  dominancePopulationYear?: number;
+  dominancePopulationSource?: "current" | "historical";
 };
 
 const STATE_NAMES: Record<string, string> = {
@@ -37,6 +40,13 @@ const EXCLUDED_BARE_NAMES = new Set([
   "WASHINGTON",
   "WARD",
   "WHITE",
+]);
+
+const CANONICAL_CITY_KEYS = new Map<string, { key: string; name: string }>([
+  ["NC:CHARLOTTE MECKLENBURG", { key: "CHARLOTTE", name: "Charlotte" }],
+  ["TN:METROPOLITAN NASHVILLE", { key: "NASHVILLE", name: "Nashville" }],
+  ["NV:LAS VEGAS METROPOLITAN", { key: "LAS VEGAS", name: "Las Vegas" }],
+  ["KY:LOUISVILLE METRO", { key: "LOUISVILLE", name: "Louisville" }],
 ]);
 
 function argValue(name: string): string | null {
@@ -70,42 +80,108 @@ function main() {
 
 function loadCurrent(db: Database.Database, cities: Map<string, CityRecord>) {
   if (!tableExists(db, "agencies")) return;
-  const rows = db.prepare(`
-    SELECT agency, state
+  const hasPopulation = tableExists(db, "agency_population");
+  const rows = db.prepare(hasPopulation ? `
+    WITH latest_population AS (
+      SELECT ori, MAX(year) AS year
+      FROM agency_population
+      WHERE population IS NOT NULL AND population > 0
+      GROUP BY ori
+    )
+    SELECT a.agency, a.state, ap.population, ap.year AS population_year
+    FROM agencies a
+    LEFT JOIN latest_population lp ON lp.ori = a.ori
+    LEFT JOIN agency_population ap ON ap.ori = lp.ori AND ap.year = lp.year
+    WHERE a.agency IS NOT NULL AND a.state IS NOT NULL AND a.type = 'City'
+  ` : `
+    SELECT agency, state, NULL AS population, NULL AS population_year
     FROM agencies
     WHERE agency IS NOT NULL AND state IS NOT NULL AND type = 'City'
-  `).all() as { agency: string; state: string }[];
+  `).all() as { agency: string; state: string; population: number | null; population_year: number | null }[];
 
-  for (const row of rows) addCity(cities, row.agency, row.state, "current");
+  for (const row of rows) {
+    addCity(cities, row.agency, row.state, "current", row.population, row.population_year);
+  }
 }
 
 function loadHistorical(db: Database.Database, cities: Map<string, CityRecord>) {
   if (!tableExists(db, "historical_agency")) return;
-  const rows = db.prepare(`
-    SELECT agency, state
+  const hasPopulation = tableExists(db, "historical_agency_population");
+  const rows = db.prepare(hasPopulation ? `
+    WITH latest_population AS (
+      SELECT ori, MAX(year) AS year
+      FROM historical_agency_population
+      WHERE population IS NOT NULL AND population > 0
+      GROUP BY ori
+    )
+    SELECT ha.agency, ha.state, hap.population, hap.year AS population_year
+    FROM historical_agency ha
+    LEFT JOIN latest_population lp ON lp.ori = ha.ori
+    LEFT JOIN historical_agency_population hap ON hap.ori = lp.ori AND hap.year = lp.year
+    WHERE ha.agency IS NOT NULL AND ha.state IS NOT NULL AND lower(ha.type) = 'city'
+  ` : `
+    SELECT agency, state, NULL AS population, NULL AS population_year
     FROM historical_agency
     WHERE agency IS NOT NULL AND state IS NOT NULL AND lower(type) = 'city'
-  `).all() as { agency: string; state: string }[];
+  `).all() as { agency: string; state: string; population: number | null; population_year: number | null }[];
 
-  for (const row of rows) addCity(cities, row.agency, row.state, "historical");
+  for (const row of rows) {
+    addCity(cities, row.agency, row.state, "historical", row.population, row.population_year);
+  }
 }
 
-function addCity(cities: Map<string, CityRecord>, rawName: string, rawState: string, source: string) {
+function addCity(
+  cities: Map<string, CityRecord>,
+  rawName: string,
+  rawState: string,
+  source: "current" | "historical",
+  population: number | null = null,
+  populationYear: number | null = null
+) {
   const state = normalizeState(rawState);
-  const key = normalizeKey(rawName);
+  const rawKey = normalizeKey(rawName);
+  const canonical = canonicalCity(rawKey, state);
+  const key = canonical.key;
   if (!key || !(state in STATE_NAMES)) return;
   const id = `${state}:${key}`;
   const existing = cities.get(id);
   if (existing) {
     existing.sources.add(source);
+    applyDominancePopulation(existing, source, population, populationYear);
     return;
   }
-  cities.set(id, {
+  const record: CityRecord = {
     key,
-    name: displayName(rawName, key),
+    name: canonical.name ?? displayName(rawName, key),
     state,
     sources: new Set([source]),
-  });
+  };
+  applyDominancePopulation(record, source, population, populationYear);
+  cities.set(id, record);
+}
+
+function canonicalCity(rawKey: string, state: string): { key: string; name?: string } {
+  return CANONICAL_CITY_KEYS.get(`${state}:${rawKey}`) ?? { key: rawKey };
+}
+
+function applyDominancePopulation(
+  city: CityRecord,
+  source: "current" | "historical",
+  population: number | null,
+  populationYear: number | null
+) {
+  if (!population || !populationYear || population <= 0) return;
+  if (city.dominancePopulationSource === "historical" && source !== "historical") return;
+  if (
+    source === "historical" && city.dominancePopulationSource !== "historical" ||
+    !city.dominancePopulationYear ||
+    populationYear > city.dominancePopulationYear ||
+    (populationYear === city.dominancePopulationYear && population > (city.dominancePopulation ?? 0))
+  ) {
+    city.dominancePopulation = population;
+    city.dominancePopulationYear = populationYear;
+    city.dominancePopulationSource = source;
+  }
 }
 
 function tableExists(db: Database.Database, table: string): boolean {
@@ -166,12 +242,27 @@ function render(entries: CityRecord[]): string {
   lines.push("  state: string;");
   lines.push("  aliases: string[];");
   lines.push("  sources: string[];");
+  lines.push("  dominancePopulation?: number;");
+  lines.push("  dominancePopulationYear?: number;");
+  lines.push("  dominancePopulationSource?: \"current\" | \"historical\";");
   lines.push("};");
   lines.push("");
   lines.push("export const GENERATED_GEO_CITIES: GeneratedGeoCity[] = [");
   for (const city of entries) {
     const aliases = cityAliases(city);
-    lines.push(`  { id: ${JSON.stringify(`city:${city.state}:${slug(city.name)}`)}, name: ${JSON.stringify(city.name)}, state: ${JSON.stringify(city.state)}, aliases: ${JSON.stringify(aliases)}, sources: ${JSON.stringify([...city.sources].sort())} },`);
+    const fields = [
+      `id: ${JSON.stringify(`city:${city.state}:${slug(city.name)}`)}`,
+      `name: ${JSON.stringify(city.name)}`,
+      `state: ${JSON.stringify(city.state)}`,
+      `aliases: ${JSON.stringify(aliases)}`,
+      `sources: ${JSON.stringify([...city.sources].sort())}`,
+    ];
+    if (city.dominancePopulation && city.dominancePopulationYear && city.dominancePopulationSource) {
+      fields.push(`dominancePopulation: ${city.dominancePopulation}`);
+      fields.push(`dominancePopulationYear: ${city.dominancePopulationYear}`);
+      fields.push(`dominancePopulationSource: ${JSON.stringify(city.dominancePopulationSource)}`);
+    }
+    lines.push(`  { ${fields.join(", ")} },`);
   }
   lines.push("];");
   lines.push("");

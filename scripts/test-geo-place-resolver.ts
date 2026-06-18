@@ -40,15 +40,28 @@ assertCandidates("Robbery in Anchorage Alaska", ["city:AK:anchorage"]);
 assertDoesNotClarify("Robbery in Anchorage Alaska");
 assertCandidates("Robberies in Anchorage AK", ["city:AK:anchorage"]);
 assertDoesNotClarify("Robberies in Anchorage AK");
-assertCandidates("Robberies in Anchorage", ["city:AK:anchorage", "city:KY:anchorage"]);
-assertClarifies("Robberies in Anchorage");
+assertCandidates("Robberies in Anchorage", ["city:AK:anchorage"]);
+assertDoesNotClarify("Robberies in Anchorage");
 
 assertCandidates("New Orleans robberies per month", ["city:LA:new-orleans"]);
 assertDoesNotClarify("New Orleans robberies per month");
 
 assertCandidates("Murder rate in Houston Texas since 2010", ["city:TX:houston"]);
 assertDoesNotClarify("Murder rate in Houston Texas since 2010");
-assertClarifies("Murder rate in Houston since 2010");
+assertCandidates("Murder rate in Houston since 2010", ["city:TX:houston"]);
+assertDoesNotClarify("Murder rate in Houston since 2010");
+assertCandidates("How many vehicle burglaries per month in Boston in 2023?", ["city:MA:boston"]);
+assertDoesNotClarify("How many vehicle burglaries per month in Boston in 2023?");
+assertCandidates("Show me theft in Omaha rolling over 12 months", ["city:NE:omaha"]);
+assertDoesNotClarify("Show me theft in Omaha rolling over 12 months");
+assertCandidates("violent crime per capita over time in Charlotte", ["city:NC:charlotte"]);
+assertDoesNotClarify("violent crime per capita over time in Charlotte");
+assertCandidates("crime trend in Nashville", ["city:TN:nashville"]);
+assertDoesNotClarify("crime trend in Nashville");
+assertCandidates("crime trend in Las Vegas", ["city:NV:las-vegas"]);
+assertDoesNotClarify("crime trend in Las Vegas");
+assertCandidates("crime trend in Louisville", ["city:KY:louisville"]);
+assertDoesNotClarify("crime trend in Louisville");
 
 assertCandidates("drug offenses in Salem Oregon since 2000", ["city:OR:salem"]);
 assertDoesNotClarify("drug offenses in Salem Oregon since 2000");

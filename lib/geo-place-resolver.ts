@@ -41,6 +41,8 @@ type RawMatch = {
 };
 
 const aliasGroupCache = new WeakMap<GeoPlaceCatalogEntry[], AliasGroup[]>();
+const DOMINANT_CITY_MIN_POPULATION = 100_000;
+const DOMINANT_CITY_MAX_SECONDARY_RATIO = 0.25;
 
 export function resolveGeoPlaces(
   input: string,
@@ -121,7 +123,8 @@ function buildAliasGroups(catalog: GeoPlaceCatalogEntry[]): AliasGroup[] {
 }
 
 function mentionFromMatch(match: RawMatch): GeoPlaceMention {
-  const candidates = match.entries.map((entry) => candidateFromEntry(entry, match));
+  const entries = applyBareCityDominance(match);
+  const candidates = entries.map((entry) => candidateFromEntry(entry, match, entries.length));
   const requiresClarification = candidates.length > 1;
   const reason = requiresClarification
     ? `${match.text} matched ${candidates.length} possible places`
@@ -137,14 +140,39 @@ function mentionFromMatch(match: RawMatch): GeoPlaceMention {
   };
 }
 
-function candidateFromEntry(entry: GeoPlaceCatalogEntry, match: RawMatch): GeoPlaceCandidate {
+function applyBareCityDominance(match: RawMatch): GeoPlaceCatalogEntry[] {
+  if (match.entries.length <= 1 || !isBareGeneratedCityGroup(match)) return match.entries;
+
+  const ranked = [...match.entries].sort(
+    (a, b) => (b.dominancePopulation ?? 0) - (a.dominancePopulation ?? 0)
+  );
+  const top = ranked[0];
+  if (!top.dominancePopulation || top.dominancePopulation < DOMINANT_CITY_MIN_POPULATION) {
+    return match.entries;
+  }
+  if (ranked.some((entry) => !entry.dominancePopulation)) return match.entries;
+
+  const threshold = top.dominancePopulation * DOMINANT_CITY_MAX_SECONDARY_RATIO;
+  const hasPlausiblePeer = ranked.slice(1).some((entry) => (entry.dominancePopulation ?? 0) >= threshold);
+  return hasPlausiblePeer ? match.entries : [top];
+}
+
+function isBareGeneratedCityGroup(match: RawMatch): boolean {
+  return match.entries.every((entry) =>
+    entry.kind === "city" &&
+    entry.source === "generated-city" &&
+    aliasKey(match.alias) === aliasKey(entry.name)
+  );
+}
+
+function candidateFromEntry(entry: GeoPlaceCatalogEntry, match: RawMatch, candidateCount: number): GeoPlaceCandidate {
   return {
     id: entry.id,
     kind: entry.kind,
     name: entry.name,
     state: entry.state,
     canonicalQuery: entry.canonicalQuery,
-    confidence: match.entries.length === 1 ? 0.95 : 0.55,
+    confidence: candidateCount === 1 ? 0.95 : 0.55,
     reason: `Matched alias "${match.alias}" from ${entry.source}`,
     source: entry.source,
   };
