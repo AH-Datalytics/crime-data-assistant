@@ -22,6 +22,14 @@ This resolver is dark-launched: these results are not used by the UI, router, pr
 | GEO-14 | murders in Baltimore city | city:MD:baltimore-city | **Baltimore city**<br>city:MD:baltimore-city (0.95) | no |
 | GEO-15 | Compare Portland, Oregon with Portland, Maine | two unambiguous city mentions | **Portland, Oregon**<br>city:OR:portland (0.95)<br><br>**Portland, Maine**<br>city:ME:portland (0.95) | no |
 | GEO-16 | show national murder trend | no place mention | none | no |
+| GEO-17 | Robbery in Anchorage Alaska | city:AK:anchorage | **Anchorage Alaska**<br>city:AK:anchorage (0.95) | no |
+| GEO-18 | Robberies in Anchorage AK | city:AK:anchorage | **Anchorage AK**<br>city:AK:anchorage (0.95) | no |
+| GEO-19 | Robberies in Anchorage | ambiguous multi-state city | **Anchorage**<br>city:AK:anchorage (0.55)<br>city:KY:anchorage (0.55) | yes |
+| GEO-20 | New Orleans robberies per month | city:LA:new-orleans | **New Orleans**<br>city:LA:new-orleans (0.95) | no |
+| GEO-21 | Murder rate in Houston Texas since 2010 | city:TX:houston | **Houston Texas**<br>city:TX:houston (0.95) | no |
+| GEO-22 | Murder rate in Houston since 2010 | ambiguous multi-state city | **Houston**<br>city:AK:houston (0.55)<br>city:DE:houston (0.55)<br>city:MN:houston (0.55)<br>city:MO:houston (0.55)<br>city:MS:houston (0.55)<br>city:PA:houston (0.55)<br>city:TX:houston (0.55) | yes |
+| GEO-23 | crime in Springfield IL | city:IL:springfield | **Springfield IL**<br>city:IL:springfield (0.95) | no |
+| GEO-24 | crime in Springfield | ambiguous multi-state city | **Springfield**<br>city:CO:springfield (0.55)<br>city:FL:springfield (0.55)<br>city:GA:springfield (0.55)<br>city:IL:springfield (0.55)<br>city:KY:springfield (0.55)<br>city:LA:springfield (0.55)<br>city:MA:springfield (0.55)<br>city:MI:springfield (0.55)<br>city:MN:springfield (0.55)<br>city:MO:springfield (0.55)<br>city:NH:springfield (0.55)<br>city:OH:springfield (0.55)<br>city:OR:springfield (0.55)<br>city:SC:springfield (0.55)<br>city:SD:springfield (0.55)<br>city:TN:springfield (0.55)<br>city:VT:springfield (0.55) | yes |
 
 ## Promotion Notes
 

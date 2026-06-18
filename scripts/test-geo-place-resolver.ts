@@ -36,6 +36,28 @@ assertClarifies("crime in Alameda since 2008");
 assertCandidates("crime in Alameda County since 2008", ["county:CA:alameda"]);
 assertDoesNotClarify("crime in Alameda County since 2008");
 
+assertCandidates("Robbery in Anchorage Alaska", ["city:AK:anchorage"]);
+assertDoesNotClarify("Robbery in Anchorage Alaska");
+assertCandidates("Robberies in Anchorage AK", ["city:AK:anchorage"]);
+assertDoesNotClarify("Robberies in Anchorage AK");
+assertCandidates("Robberies in Anchorage", ["city:AK:anchorage", "city:KY:anchorage"]);
+assertClarifies("Robberies in Anchorage");
+
+assertCandidates("New Orleans robberies per month", ["city:LA:new-orleans"]);
+assertDoesNotClarify("New Orleans robberies per month");
+
+assertCandidates("Murder rate in Houston Texas since 2010", ["city:TX:houston"]);
+assertDoesNotClarify("Murder rate in Houston Texas since 2010");
+assertClarifies("Murder rate in Houston since 2010");
+
+assertCandidates("drug offenses in Salem Oregon since 2000", ["city:OR:salem"]);
+assertDoesNotClarify("drug offenses in Salem Oregon since 2000");
+assertClarifies("drug offenses in Salem since 2000");
+
+assertCandidates("crime in Springfield IL", ["city:IL:springfield"]);
+assertDoesNotClarify("crime in Springfield IL");
+assertClarifies("crime in Springfield");
+
 assertCandidates("fatal shootings in Kansas City", ["city:KS:kansas-city", "city:MO:kansas-city"]);
 assertClarifies("fatal shootings in Kansas City");
 assertCandidates("fatal shootings in KCMO", ["city:MO:kansas-city"]);
@@ -76,7 +98,7 @@ assert.equal(resolveGeoPlaces("show national murder trend").mentions.length, 0);
 
 const mention = first("violent crime in El Paso");
 assert.equal(mention.text, "El Paso");
-assert.equal(mention.candidates.length, 2);
-assert.ok(mention.reason.includes("2 possible places"));
+assert.equal(mention.candidates.length, 3);
+assert.ok(mention.reason.includes("3 possible places"));
 
 console.log("geo place resolver tests passed");

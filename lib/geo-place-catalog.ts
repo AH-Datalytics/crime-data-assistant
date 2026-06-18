@@ -1,4 +1,5 @@
 import { GENERATED_AMBIGUOUS_COUNTIES } from "./generated/ambiguous-counties";
+import { GENERATED_GEO_CITIES } from "./generated/geo-cities";
 
 export type GeoPlaceKind = "city" | "county" | "state" | "agency_alias";
 
@@ -9,7 +10,7 @@ export type GeoPlaceCatalogEntry = {
   state?: string;
   aliases: string[];
   canonicalQuery?: string;
-  source: "state-list" | "generated-county" | "reviewed-trap" | "manual-alias";
+  source: "state-list" | "generated-county" | "generated-city" | "reviewed-trap" | "manual-alias";
 };
 
 const STATES: { code: string; name: string }[] = [
@@ -104,6 +105,9 @@ export const GEO_PLACE_CATALOG: GeoPlaceCatalogEntry[] = [
   ...STATES.map(({ code, name }) => state(name, code, [name])),
   ...MANUAL_ALIASES,
   ...REVIEWED_CITY_COUNTY,
+  ...GENERATED_GEO_CITIES.map((entry) =>
+    city(entry.name, entry.state, entry.aliases, "generated-city")
+  ),
   ...GENERATED_AMBIGUOUS_COUNTIES.flatMap(({ name, states }) =>
     states.map((code) => county(name, code, [
       `${name} County`,

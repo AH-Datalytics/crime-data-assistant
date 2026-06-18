@@ -40,6 +40,8 @@ type RawMatch = {
   entries: GeoPlaceCatalogEntry[];
 };
 
+const aliasGroupCache = new WeakMap<GeoPlaceCatalogEntry[], AliasGroup[]>();
+
 export function resolveGeoPlaces(
   input: string,
   catalog: GeoPlaceCatalogEntry[] = GEO_PLACE_CATALOG
@@ -92,6 +94,9 @@ function findMatches(input: string, catalog: GeoPlaceCatalogEntry[]): RawMatch[]
 }
 
 function buildAliasGroups(catalog: GeoPlaceCatalogEntry[]): AliasGroup[] {
+  const cached = aliasGroupCache.get(catalog);
+  if (cached) return cached;
+
   const byAlias = new Map<string, { alias: string; entries: Map<string, GeoPlaceCatalogEntry> }>();
 
   for (const entry of catalog) {
@@ -104,13 +109,15 @@ function buildAliasGroups(catalog: GeoPlaceCatalogEntry[]): AliasGroup[] {
     }
   }
 
-  return [...byAlias.values()]
+  const groups = [...byAlias.values()]
     .map((group) => ({
       alias: group.alias,
       pattern: aliasPattern(group.alias),
       entries: [...group.entries.values()].sort(compareEntries),
     }))
     .sort((a, b) => b.alias.length - a.alias.length);
+  aliasGroupCache.set(catalog, groups);
+  return groups;
 }
 
 function mentionFromMatch(match: RawMatch): GeoPlaceMention {

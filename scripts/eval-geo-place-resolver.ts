@@ -25,6 +25,14 @@ const CASES: Case[] = [
   { id: "GEO-14", query: "murders in Baltimore city", expected: "city:MD:baltimore-city" },
   { id: "GEO-15", query: "Compare Portland, Oregon with Portland, Maine", expected: "two unambiguous city mentions" },
   { id: "GEO-16", query: "show national murder trend", expected: "no place mention" },
+  { id: "GEO-17", query: "Robbery in Anchorage Alaska", expected: "city:AK:anchorage" },
+  { id: "GEO-18", query: "Robberies in Anchorage AK", expected: "city:AK:anchorage" },
+  { id: "GEO-19", query: "Robberies in Anchorage", expected: "ambiguous multi-state city" },
+  { id: "GEO-20", query: "New Orleans robberies per month", expected: "city:LA:new-orleans" },
+  { id: "GEO-21", query: "Murder rate in Houston Texas since 2010", expected: "city:TX:houston" },
+  { id: "GEO-22", query: "Murder rate in Houston since 2010", expected: "ambiguous multi-state city" },
+  { id: "GEO-23", query: "crime in Springfield IL", expected: "city:IL:springfield" },
+  { id: "GEO-24", query: "crime in Springfield", expected: "ambiguous multi-state city" },
 ];
 
 function main() {
