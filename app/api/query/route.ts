@@ -22,6 +22,7 @@ import { validateTablesForTab } from "@/lib/table-allowlist";
 import { applyResultDisclosures } from "@/lib/result-disclosure";
 import { normalizeHistoryForTab } from "@/lib/chat-history";
 import { detectFollowupTransform } from "@/lib/followup-transform";
+import { getBlockingGeoClarification } from "@/lib/geo-resolver";
 
 function sseEvent(event: StreamEvent): string {
   return `data: ${JSON.stringify(event)}\n\n`;
@@ -327,6 +328,44 @@ export async function POST(req: NextRequest) {
   ) => logQuery(q, sqlText, rowCount, logError, ms, logResponse, tabName, guardrails, model, sid, routingMeta);
 
   const tab = body?.mode === "historical" ? "historical" : "current";
+  const geoClarification = getBlockingGeoClarification(question);
+  if (geoClarification) {
+    const ms = Date.now() - totalStart;
+    writeLog(question, null, 0, null, ms, geoClarification.explanation, tab, [`geo:${geoClarification.issue.id}`], "deterministic", sessionId);
+
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(
+          encoder.encode(
+            sseEvent({
+              type: "result",
+              sql: null as unknown as string,
+              explanation: geoClarification.explanation,
+              title: "",
+              columns: [],
+              rows: [],
+              rowCount: 0,
+              truncated: false,
+              chartConfig: null,
+              chartMeta: null,
+              executionTimeMs: ms,
+            })
+          )
+        );
+        controller.close();
+      },
+    });
+
+    return new Response(stream, {
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive",
+        "X-RateLimit-Remaining": String(rateCheck.remaining),
+      },
+    });
+  }
+
   const metadata = answerMetadataQuestion(tab, question, getDb());
   if (metadata) {
     const ms = Date.now() - totalStart;

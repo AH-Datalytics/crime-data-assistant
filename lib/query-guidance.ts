@@ -1,3 +1,5 @@
+import { getGeoResolutionIssues } from "./geo-resolver";
+
 export type GuidanceAction = {
   label: string;
   pattern?: string;
@@ -30,86 +32,11 @@ function has(pattern: RegExp, text: string) {
   return pattern.test(text);
 }
 
-function ambiguousPlace(
-  text: string,
-  mentioned: RegExp,
-  qualified: RegExp,
-  warning: GuidanceWarning
-): GuidanceWarning | null {
-  if (!has(mentioned, text) || has(qualified, text)) return null;
-  return warning;
-}
-
 export function getQueryGuidanceWarnings(input: string): GuidanceWarning[] {
   const text = input.trim();
   if (!text) return [];
 
-  const warnings: GuidanceWarning[] = [];
-
-  const placeWarnings: (GuidanceWarning | null)[] = [
-    ambiguousPlace(text, /\bkansas\s+city\b/i, /\b(kcmo|kck)\b|\bkansas\s+city\s*,?\s*(missouri|mo|kansas|ks)\b/i, {
-      id: "kansas-city",
-      kind: "blocking",
-      title: "Kansas City needs a state",
-      detail: "Kansas City can mean Missouri or Kansas. Spell out the state when the geography matters.",
-      actions: [
-        { label: "Use Kansas City, Missouri", pattern: "\\bKansas\\s+City\\b", replacement: "Kansas City, Missouri" },
-        { label: "Use Kansas City, Kansas", pattern: "\\bKansas\\s+City\\b", replacement: "Kansas City, Kansas" },
-      ],
-    }),
-    ambiguousPlace(text, /\bbaltimore\b/i, /\bbaltimore\s+(city|county)\b|\bbaltimore\s*,?\s*(md|maryland)\b/i, {
-      id: "baltimore",
-      kind: "blocking",
-      title: "Baltimore city and county are separate",
-      detail: "Use Baltimore city or Baltimore County, Maryland so the result does not mix jurisdictions.",
-      actions: [
-        { label: "Use Baltimore city", pattern: "\\bBaltimore\\b", replacement: "Baltimore city" },
-        { label: "Use Baltimore County", pattern: "\\bBaltimore\\b", replacement: "Baltimore County, Maryland" },
-      ],
-    }),
-    ambiguousPlace(text, /\bst\.?\s+louis\b/i, /\bst\.?\s+louis\s+(city|county)\b|\bst\.?\s+louis\s*,?\s*(mo|missouri)\b/i, {
-      id: "st-louis",
-      kind: "blocking",
-      title: "St. Louis city and county are separate",
-      detail: "Use St. Louis city or St. Louis County, Missouri when asking for local results.",
-      actions: [
-        { label: "Use St. Louis city", pattern: "\\bSt\\.?\\s+Louis\\b", replacement: "St. Louis city" },
-        { label: "Use St. Louis County", pattern: "\\bSt\\.?\\s+Louis\\b", replacement: "St. Louis County, Missouri" },
-      ],
-    }),
-    ambiguousPlace(text, /\bnew\s+york\b/i, /\b(new\s+york\s+city|nyc|nypd|new\s+york\s+state|state\s+of\s+new\s+york|ny\s+state)\b/i, {
-      id: "new-york",
-      kind: "blocking",
-      title: "New York can mean city or state",
-      detail: "Say New York City or New York State to avoid city/state collisions.",
-      actions: [
-        { label: "Use New York City", pattern: "\\bNew\\s+York\\b", replacement: "New York City" },
-        { label: "Use New York State", pattern: "\\bNew\\s+York\\b", replacement: "New York State" },
-      ],
-    }),
-    ambiguousPlace(text, /\bwashington\b/i, /\b(washington\s*,?\s*d\.?c\.?|dc|district\s+of\s+columbia|washington\s+state|state\s+of\s+washington)\b/i, {
-      id: "washington",
-      kind: "blocking",
-      title: "Washington can mean DC or state",
-      detail: "Say Washington, DC or Washington State when asking for geography-specific results.",
-      actions: [
-        { label: "Use Washington, DC", pattern: "\\bWashington\\b", replacement: "Washington, DC" },
-        { label: "Use Washington State", pattern: "\\bWashington\\b", replacement: "Washington State" },
-      ],
-    }),
-    ambiguousPlace(text, /\bportland\b/i, /\bportland\s*,?\s*(or|oregon|me|maine)\b/i, {
-      id: "portland",
-      kind: "blocking",
-      title: "Portland needs a state",
-      detail: "Portland usually needs Oregon or Maine to avoid the wrong city.",
-      actions: [
-        { label: "Use Portland, Oregon", pattern: "\\bPortland\\b", replacement: "Portland, Oregon" },
-        { label: "Use Portland, Maine", pattern: "\\bPortland\\b", replacement: "Portland, Maine" },
-      ],
-    }),
-  ];
-
-  warnings.push(...placeWarnings.filter((w): w is GuidanceWarning => Boolean(w)));
+  const warnings: GuidanceWarning[] = [...getGeoResolutionIssues(text)];
 
   if (has(/\bgun\s+violence\b/i, text) && !has(/\b(fatal|nonfatal|firearm\s+(homicides?|assaults?|injur(?:y|ies)))\b/i, text)) {
     warnings.push({

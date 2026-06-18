@@ -22,6 +22,7 @@ import { normalizeHistoryForTab } from "@/lib/chat-history";
 import { pastCompleteCalendarYearsRange } from "@/lib/time-conventions";
 import { detectFollowupTransform } from "@/lib/followup-transform";
 import { detectNibrsCapabilityOverride } from "@/lib/nibrs-capability-overrides";
+import { getBlockingGeoClarification } from "@/lib/geo-resolver";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -85,6 +86,7 @@ function resolveNibrsModel(sessionId: string | null, canaryFlag: boolean): strin
 }
 
 export async function POST(req: NextRequest) {
+  const routeStart = Date.now();
   // Rate limiting
   const ip =
     req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
@@ -154,6 +156,26 @@ export async function POST(req: NextRequest) {
         { success: false, error: "Question too long (max 2000 characters)" } as QueryError,
         400
       );
+    }
+
+    const geoClarification = getBlockingGeoClarification(question);
+    if (geoClarification) {
+      const executionMs = Date.now() - routeStart;
+      writeNibrsLog(question, null, 0, null, executionMs, geoClarification.explanation, [`geo:${geoClarification.issue.id}`], "deterministic", sessionId);
+      return jsonResp({
+        success: true,
+        question,
+        sql: null as unknown as string,
+        explanation: geoClarification.explanation,
+        title: "",
+        columns: [],
+        rows: [],
+        rowCount: 0,
+        truncated: false,
+        chartConfig: null,
+        chartMeta: null,
+        executionTimeMs: executionMs,
+      } as QueryResponse);
     }
 
     const capabilityStart = Date.now();

@@ -26,6 +26,7 @@ import { normalizeHistoryForTab } from "@/lib/chat-history";
 import { detectFollowupTransform } from "@/lib/followup-transform";
 import { applyChartCustomizations } from "@/lib/chart-customization";
 import { STATE_NAME_TO_ABBR } from "@/lib/state-population";
+import { getBlockingGeoClarification } from "@/lib/geo-resolver";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function jsonResp(data: Record<string, any> | QueryError, status = 200) {
@@ -221,6 +222,26 @@ export async function POST(req: NextRequest) {
       model: string | null = null,
       sid: string | null = null
     ) => logQuery(q, sqlText, rowCount, logError, ms, logResponse, tabName, guardrails, model, sid, routingMeta);
+
+    const geoClarification = getBlockingGeoClarification(question);
+    if (geoClarification) {
+      const executionMs = Date.now() - start;
+      writeLog(question, null, 0, null, executionMs, geoClarification.explanation, "shr", [`geo:${geoClarification.issue.id}`], "deterministic", sessionId);
+      return jsonResp({
+        success: true,
+        question,
+        sql: null,
+        explanation: geoClarification.explanation,
+        title: "",
+        columns: [],
+        rows: [],
+        rowCount: 0,
+        truncated: false,
+        chartConfig: null,
+        chartMeta: null,
+        executionTimeMs: executionMs,
+      });
+    }
 
     const metadata = answerMetadataQuestion("shr", question, getShrDb());
     if (metadata) {
