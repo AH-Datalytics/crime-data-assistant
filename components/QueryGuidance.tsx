@@ -30,21 +30,25 @@ function GuidanceWarningRow({
   onChangeInput: (value: string) => void;
 }) {
   const hasActions = Boolean(warning.actions?.length);
-  const promptLabel = warning.kind === "blocking" ? "Choose:" : "Better choices:";
+  const promptLabel = warning.kind === "blocking" ? "Choose" : "Better choices";
+  const rowClass =
+    warning.kind === "blocking"
+      ? "rounded-md border border-[#D8DDED] bg-[#FAFBFF] px-2.5 py-2"
+      : "rounded-md border border-[var(--border)] bg-[var(--surface)] px-2.5 py-2";
   const buttonClass =
     warning.kind === "blocking"
-      ? "rounded-md border border-[#475EC7]/20 bg-[#475EC7]/5 px-2 py-0.5 text-[11px] font-semibold text-[#475EC7] hover:border-[#475EC7]/50 hover:bg-[#475EC7]/10 cursor-pointer transition-colors"
-      : "rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-[11px] font-medium text-[var(--foreground)] hover:border-[#475EC7]/40 hover:bg-white hover:text-[#475EC7] cursor-pointer transition-colors";
+      ? "rounded border border-[#C9D0EA] bg-white px-2 py-1 text-[11px] font-medium leading-none text-[#354A9F] hover:border-[#475EC7]/60 hover:bg-[#F4F6FF] cursor-pointer transition-colors"
+      : "rounded border border-[var(--border)] bg-white px-2 py-1 text-[11px] font-medium leading-none text-[var(--foreground)] hover:border-[#475EC7]/40 hover:text-[#475EC7] cursor-pointer transition-colors";
 
   return (
-    <div className="text-[12px] leading-5">
-      <div className={warning.kind === "blocking" ? "text-[var(--foreground)]" : "text-[var(--muted)]"}>
+    <div className={rowClass}>
+      <div className={warning.kind === "blocking" ? "text-[13px] leading-[18px] text-[var(--foreground)]" : "text-[13px] leading-[18px] text-[var(--muted)]"}>
         <span className="font-semibold text-[var(--foreground)]">{warning.title}.</span>{" "}
         {warning.detail}
       </div>
       {hasActions && (
-        <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-          <span className={warning.kind === "blocking" ? "mr-0.5 text-[12px] font-semibold text-[#475EC7]" : "mr-0.5 text-[12px] font-semibold text-[var(--foreground)]"}>
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          <span className="mr-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">
             {promptLabel}
           </span>
           {warning.actions?.map((action) => (
@@ -80,7 +84,7 @@ export default function QueryGuidance({
   const blocking = warnings.filter((warning) => warning.kind === "blocking");
   const advisory = warnings.filter((warning) => warning.kind === "advisory");
   const containerClass = floating
-    ? "absolute left-0 top-full z-30 mt-1 w-[min(640px,calc(100vw-2rem))] max-w-[calc(100vw-2rem)] rounded-lg border border-[var(--border)] bg-white px-3 py-2.5 pr-9 shadow-lg"
+    ? "absolute left-0 top-full z-30 mt-1 w-[min(640px,calc(100vw-2rem))] max-w-[calc(100vw-2rem)] rounded-lg border border-[var(--border)] bg-white p-2 pr-9 shadow-lg"
     : compact
       ? "space-y-2"
       : "space-y-3";
@@ -126,7 +130,7 @@ export default function QueryGuidance({
       )}
 
       {blocking.length > 0 && (
-        <div className={floating ? "space-y-2" : "space-y-2 px-1.5"}>
+        <div className="space-y-2">
           {blocking.map((warning) => (
             <GuidanceWarningRow key={warning.id} input={input} warning={warning} onChangeInput={onChangeInput} />
           ))}
@@ -134,7 +138,7 @@ export default function QueryGuidance({
       )}
 
       {advisory.length > 0 && (
-        <div className={floating ? "space-y-2" : "space-y-2 px-1.5"}>
+        <div className="space-y-2">
           {advisory.map((warning) => (
             <GuidanceWarningRow key={warning.id} input={input} warning={warning} onChangeInput={onChangeInput} />
           ))}
