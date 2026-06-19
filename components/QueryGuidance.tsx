@@ -41,17 +41,12 @@ function GuidanceWarningRow({
       <div className={warning.kind === "blocking" ? "text-[var(--foreground)]" : "text-[var(--muted)]"}>
         <span className="font-semibold text-[var(--foreground)]">{warning.title}.</span>{" "}
         {warning.detail}
-        {hasActions && (
-          <>
-            {" "}
-            <span className={warning.kind === "blocking" ? "font-semibold text-[#475EC7]" : "font-semibold text-[var(--foreground)]"}>
-              {promptLabel}
-            </span>
-          </>
-        )}
       </div>
       {hasActions && (
-        <div className="mt-1.5 flex flex-wrap gap-1.5">
+        <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+          <span className={warning.kind === "blocking" ? "mr-0.5 text-[12px] font-semibold text-[#475EC7]" : "mr-0.5 text-[12px] font-semibold text-[var(--foreground)]"}>
+            {promptLabel}
+          </span>
           {warning.actions?.map((action) => (
             <button
               key={action.label}

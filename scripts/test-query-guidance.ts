@@ -45,6 +45,9 @@ assertDoesNotWarn("murders in St. Louis County, Missouri since 2020", "st-louis"
 assertWarns("gun violence in New York since 2022", "new-york");
 assert.deepEqual(warningIds("gun violence in New York since 2022"), ["new-york", "gun-violence"]);
 assert.equal(hasBlockingQueryGuidanceWarnings("gun violence in New York since 2022"), true);
+const newYorkWarning = getQueryGuidanceWarnings("gun violence in New York since 2022")[0];
+assert.equal(newYorkWarning.title, "New York is ambiguous");
+assert.equal(newYorkWarning.detail, "Say New York City or New York State to avoid ambiguity.");
 assertDoesNotWarn("gun violence in New York State since 2022", "new-york");
 assertDoesNotWarn("New York City vs Chicago officers per year since 1930", "new-york");
 

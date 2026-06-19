@@ -43,7 +43,7 @@ const DETAIL_OVERRIDES: Record<string, string> = {
   "kansas-city": "Kansas City can mean Missouri or Kansas. Spell out the state when the geography matters.",
   baltimore: "Use Baltimore city or Baltimore County, Maryland so the result does not mix jurisdictions.",
   "st-louis": "Use St. Louis city or St. Louis County, Missouri when asking for local results.",
-  "new-york": "Say New York City or New York State to avoid city/state collisions.",
+  "new-york": "Say New York City or New York State to avoid ambiguity.",
   washington: "Say Washington, DC or Washington State when asking for geography-specific results.",
   portland: "Portland usually needs Oregon or Maine to avoid the wrong city.",
 };
@@ -166,7 +166,7 @@ function issueId(mention: GeoPlaceMention, issueKind: ReturnType<typeof classify
 function titleFor(label: string, issueKind: ReturnType<typeof classifyCandidates>): string {
   if (issueKind === "county") return `${label.replace(/\s+County$/i, "")} County needs a state`;
   if (issueKind === "city-county") return `${label} city and county are separate`;
-  if (issueKind === "city-state") return `${label} can mean city or state`;
+  if (issueKind === "city-state") return `${label} is ambiguous`;
   if (issueKind === "city") return `${label} needs a state`;
   return `${label} needs clarification`;
 }
@@ -182,7 +182,7 @@ function detailFor(label: string, candidates: GeoPlaceCandidate[], issueKind: Re
     return `${label} can mean the city or the county. Choose one so results use the right jurisdiction.`;
   }
   if (issueKind === "city-state") {
-    return `Say ${choices.join(" or ")} to avoid city/state collisions.`;
+    return `Say ${choices.join(" or ")} to avoid ambiguity.`;
   }
   if (issueKind === "city") {
     return `${label} exists in multiple states. Add the state so results use the right city.`;

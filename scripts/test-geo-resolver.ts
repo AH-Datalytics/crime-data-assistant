@@ -34,6 +34,11 @@ assertIssue("gun violence in New York since 2022", "new-york");
 assertNoIssue("gun violence in New York State since 2022", "new-york");
 assertNoIssue("New York City vs Chicago officers per year since 1930", "new-york");
 assertNoIssue("robberies in New York County, New York in 2024", "new-york");
+assert.equal(getGeoResolutionIssues("gun violence in New York since 2022")[0].title, "New York is ambiguous");
+assert.equal(
+  geoClarificationText(getGeoResolutionIssues("gun violence in New York since 2022")[0]),
+  "Say New York City or New York State to avoid ambiguity. Choose: New York City or New York State."
+);
 
 assertIssue("crime in Washington in 2023", "washington");
 assertNoIssue("crime in Washington, DC in 2023", "washington");
