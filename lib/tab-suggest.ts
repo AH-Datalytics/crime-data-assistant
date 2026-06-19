@@ -16,6 +16,7 @@ import {
   pastYearsIncludingCurrentRange,
   relativeYearRangeForQuestion,
 } from "./time-conventions";
+import { isDemographicHomicideRateQuestion } from "./capability-overrides";
 
 export type TabId = SourceId;
 
@@ -283,7 +284,7 @@ function detectOffense(q: string): string | null {
 function detectMeasure(q: string): string {
   if (/\bclearance\s*(rate|percent|pct)/i.test(q)) return "clearance_rate";
   if (/\bcleared?\s*by\s*(arrest|exceptional)/i.test(q) || /\b(arrest|exceptional)\s*clearance/i.test(q)) return "clearance_rate";
-  if (/\b(rate|per\s*capita|per\s*100k|per\s*100,000)\b/i.test(q)) return "rate";
+  if (/\b(rates?|per\s*capita|per\s*100\s*k|per\s*100,?000)\b/i.test(q)) return "rate";
   if (/\b(share|percent|proportion|breakdown)\b/i.test(q)) return "share";
   if (/\b(ranking|rank|top\s*\d+|highest|lowest|most|least|which\s+(cities|states|agencies))\b/i.test(q)) return "ranking";
   if (/\b(compare|comparison|vs\.?|versus)\b/i.test(q)) return "comparison";
@@ -416,6 +417,7 @@ function detectGranularity(q: string): "monthly" | "annual" | "unspecified" {
 
 function detectRequiredAttributes(q: string): string[] {
   const attrs: string[] = [];
+  const homicideContext = /\b(homicides?|murders?|killings?)\b/i.test(q);
 
   // Weapon / firearm
   if (/\b(weapon|firearm|gun|gunshot|knife|handgun|rifle|shotgun|blunt|strangulation)\b/i.test(q) ||
@@ -429,6 +431,12 @@ function detectRequiredAttributes(q: string): string[] {
   if (/\bvictim\s*(race|sex|age|demographic|gender)/i.test(q) ||
       /\b(murder|homicide)\s*victim\s*(race|sex|age|by\s*race|by\s*age|by\s*sex)/i.test(q)) {
     attrs.push("victim_race");
+  }
+  if (homicideContext && /\b(race|racial|ethnicity|ethnic|black|white|hispanic|latino|asian|native|american\s+indian)\b/i.test(q)) {
+    if (!attrs.includes("victim_race")) attrs.push("victim_race");
+  }
+  if (homicideContext && /\b(gender|sex|female|male|women|men)\b/i.test(q)) {
+    if (!attrs.includes("victim_sex")) attrs.push("victim_sex");
   }
   // Implicit demographic requirement: "female/male victims", "Black/White victims", "victim age", "by age group"
   if (/\b(female|male|women|men)\s*(murder|homicide|victim|crime)/i.test(q) ||
@@ -586,6 +594,10 @@ function detectUnsupportedConcepts(q: string): string[] {
   // Specific drug arrests (arrest table doesn't break down by drug type)
   if (/\b(marijuana|cannabis|weed|cocaine|heroin|fentanyl|meth)\s*(possession\s*)?(arrest|arrested|arrests)\b/i.test(q)) {
     concepts.push("specific_drug_arrests");
+  }
+
+  if (isDemographicHomicideRateQuestion(q)) {
+    concepts.push("demographic_homicide_rate_denominator");
   }
 
   return concepts;

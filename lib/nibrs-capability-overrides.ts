@@ -1,10 +1,9 @@
-export interface NibrsCapabilityOverride {
-  title: string;
-  explanation: string;
-  guardrail: string;
-}
+import { detectDemographicHomicideRateOverride, type CapabilityOverride } from "./capability-overrides";
 
-export function detectNibrsCapabilityOverride(question: string): NibrsCapabilityOverride | null {
+export function detectNibrsCapabilityOverride(question: string): CapabilityOverride | null {
+  const demographicRateOverride = detectDemographicHomicideRateOverride(question);
+  if (demographicRateOverride) return demographicRateOverride;
+
   const q = question.toLowerCase();
   const asksUseOfForce =
     /\buse\s+of\s+force\b/i.test(q) ||

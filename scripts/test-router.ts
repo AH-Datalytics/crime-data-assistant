@@ -227,6 +227,8 @@ test({ question: "stranger homicides vs acquaintance homicides", expectedPrimary
 test({ question: "female murder victims in California", expectedPrimary: ["shr", "nibrs"], mustExclude: ["current", "historical"] });
 test({ question: "murder victims by age group nationally", expectedPrimary: ["shr", "nibrs"], mustExclude: ["current", "historical"] });
 test({ question: "Black murder victims by year since 2000", expectedPrimary: ["shr", "nibrs"], mustExclude: ["current", "historical"] });
+test({ question: "homicide rates for gender and race", expectedPrimary: ["shr", "nibrs"], mustExclude: ["current", "historical"], unsupported: ["demographic_homicide_rate_denominator"], note: "#4442 rates need denominators no source has, not Historical" });
+test({ question: "homicide counts by gender and race", expectedPrimary: ["shr", "nibrs"], mustExclude: ["current", "historical"], note: "Counts/shares by demographics remain queryable" });
 
 // Offender demographics
 test({ question: "offender race in robberies", expectedPrimary: "nibrs", mustExclude: ["current", "historical"] });

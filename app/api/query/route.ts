@@ -23,6 +23,7 @@ import { applyResultDisclosures } from "@/lib/result-disclosure";
 import { normalizeHistoryForTab } from "@/lib/chat-history";
 import { detectFollowupTransform } from "@/lib/followup-transform";
 import { getBlockingGeoClarification } from "@/lib/geo-resolver";
+import { detectDemographicHomicideRateOverride } from "@/lib/capability-overrides";
 
 function sseEvent(event: StreamEvent): string {
   return `data: ${JSON.stringify(event)}\n\n`;
@@ -328,6 +329,44 @@ export async function POST(req: NextRequest) {
   ) => logQuery(q, sqlText, rowCount, logError, ms, logResponse, tabName, guardrails, model, sid, routingMeta);
 
   const tab = body?.mode === "historical" ? "historical" : "current";
+  const capabilityOverride = detectDemographicHomicideRateOverride(question);
+  if (capabilityOverride) {
+    const ms = Date.now() - totalStart;
+    writeLog(question, null, 0, null, ms, capabilityOverride.explanation, tab, [capabilityOverride.guardrail], "deterministic", sessionId);
+
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(
+          encoder.encode(
+            sseEvent({
+              type: "result",
+              sql: null as unknown as string,
+              explanation: capabilityOverride.explanation,
+              title: capabilityOverride.title,
+              columns: [],
+              rows: [],
+              rowCount: 0,
+              truncated: false,
+              chartConfig: null,
+              chartMeta: null,
+              executionTimeMs: ms,
+            })
+          )
+        );
+        controller.close();
+      },
+    });
+
+    return new Response(stream, {
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive",
+        "X-RateLimit-Remaining": String(rateCheck.remaining),
+      },
+    });
+  }
+
   const geoClarification = getBlockingGeoClarification(question);
   if (geoClarification) {
     const ms = Date.now() - totalStart;

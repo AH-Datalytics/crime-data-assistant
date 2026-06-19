@@ -27,6 +27,7 @@ import { detectFollowupTransform } from "@/lib/followup-transform";
 import { applyChartCustomizations } from "@/lib/chart-customization";
 import { STATE_NAME_TO_ABBR } from "@/lib/state-population";
 import { getBlockingGeoClarification } from "@/lib/geo-resolver";
+import { detectDemographicHomicideRateOverride } from "@/lib/capability-overrides";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function jsonResp(data: Record<string, any> | QueryError, status = 200) {
@@ -239,6 +240,26 @@ export async function POST(req: NextRequest) {
         truncated: false,
         chartConfig: null,
         chartMeta: null,
+        executionTimeMs: executionMs,
+      });
+    }
+
+    const capabilityOverride = detectDemographicHomicideRateOverride(question);
+    if (capabilityOverride) {
+      const executionMs = Date.now() - start;
+      writeLog(question, null, 0, null, executionMs, capabilityOverride.explanation, "shr", [capabilityOverride.guardrail], "deterministic", sessionId);
+      return jsonResp({
+        success: true,
+        question,
+        sql: null,
+        explanation: capabilityOverride.explanation,
+        title: capabilityOverride.title,
+        columns: [],
+        rows: [],
+        rowCount: 0,
+        truncated: false,
+        chartConfig: null,
+        chartMeta: { source: "FBI SHR", agencyCount: 0, population: null },
         executionTimeMs: executionMs,
       });
     }
