@@ -40,7 +40,7 @@ const ACTION_OVERRIDES: Record<string, { label: string; replacement: string; ran
 };
 
 const DETAIL_OVERRIDES: Record<string, string> = {
-  "kansas-city": "Kansas City can mean Missouri or Kansas. Spell out the state when the geography matters.",
+  "kansas-city": "Kansas City can mean Missouri or Kansas.",
   baltimore: "Use Baltimore city or Baltimore County, Maryland so the result does not mix jurisdictions.",
   "st-louis": "Use St. Louis city or St. Louis County, Missouri when asking for local results.",
   "new-york": "Say New York City or New York State to avoid ambiguity.",

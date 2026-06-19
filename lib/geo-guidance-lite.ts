@@ -59,7 +59,7 @@ const STATE_LABELS: Record<string, string> = {
 };
 
 const KNOWN_GEO_TRAPS: KnownTrap[] = [
-  trap("kansas-city", /\bkansas\s+city\b/i, /\b(kcmo|kck)\b|\bkansas\s+city\s*,?\s*(missouri|mo|kansas|ks)\b/i, "Kansas City needs a state", "Kansas City can mean Missouri or Kansas. Spell out the state when the geography matters.", [
+  trap("kansas-city", /\bkansas\s+city\b/i, /\b(kcmo|kck)\b|\bkansas\s+city\s*,?\s*(missouri|mo|kansas|ks)\b/i, "Kansas City needs a state", "Kansas City can mean Missouri or Kansas.", [
     ["Use Kansas City, Missouri", "\\bKansas\\s+City\\b", "Kansas City, Missouri"],
     ["Use Kansas City, Kansas", "\\bKansas\\s+City\\b", "Kansas City, Kansas"],
   ]),
