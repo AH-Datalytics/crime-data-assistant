@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   HOW_TO_ASK_EXAMPLES,
   type GuidanceWarning,
@@ -37,8 +37,8 @@ function GuidanceWarningRow({
       : "rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-[11px] font-medium text-[var(--foreground)] hover:border-[#475EC7]/40 hover:bg-white hover:text-[#475EC7] cursor-pointer transition-colors";
 
   return (
-    <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[12px] leading-5">
-      <span className={warning.kind === "blocking" ? "text-[var(--foreground)]" : "text-[var(--muted)]"}>
+    <div className="text-[12px] leading-5">
+      <div className={warning.kind === "blocking" ? "text-[var(--foreground)]" : "text-[var(--muted)]"}>
         <span className="font-semibold text-[var(--foreground)]">{warning.title}.</span>{" "}
         {warning.detail}
         {hasActions && (
@@ -49,17 +49,21 @@ function GuidanceWarningRow({
             </span>
           </>
         )}
-      </span>
-      {warning.actions?.map((action) => (
-        <button
-          key={action.label}
-          type="button"
-          onClick={() => onChangeInput(applyGuidanceAction(input, action))}
-          className={buttonClass}
-        >
-          {actionLabel(action.label)}
-        </button>
-      ))}
+      </div>
+      {hasActions && (
+        <div className="mt-1.5 flex flex-wrap gap-1.5">
+          {warning.actions?.map((action) => (
+            <button
+              key={action.label}
+              type="button"
+              onClick={() => onChangeInput(applyGuidanceAction(input, action))}
+              className={buttonClass}
+            >
+              {actionLabel(action.label)}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -72,17 +76,34 @@ export default function QueryGuidance({
   floating = false,
 }: QueryGuidanceProps) {
   const warnings = useMemo(() => getQueryGuidanceWarnings(input), [input]);
+  const [dismissedInput, setDismissedInput] = useState<string | null>(null);
+  useEffect(() => {
+    if (dismissedInput && dismissedInput !== input) setDismissedInput(null);
+  }, [dismissedInput, input]);
   if (!showExamples && warnings.length === 0) return null;
+  if (floating && warnings.length > 0 && dismissedInput === input) return null;
   const blocking = warnings.filter((warning) => warning.kind === "blocking");
   const advisory = warnings.filter((warning) => warning.kind === "advisory");
   const containerClass = floating
-    ? "absolute left-0 top-full z-30 mt-1 w-max min-w-full max-w-[calc(100vw-2rem)] rounded-lg border border-[var(--border)] bg-white px-2.5 py-2 shadow-lg"
+    ? "absolute left-0 top-full z-30 mt-1 w-[min(640px,calc(100vw-2rem))] max-w-[calc(100vw-2rem)] rounded-lg border border-[var(--border)] bg-white px-3 py-2.5 pr-9 shadow-lg"
     : compact
       ? "space-y-2"
       : "space-y-3";
 
   return (
     <div className={containerClass}>
+      {floating && warnings.length > 0 && (
+        <button
+          type="button"
+          onClick={() => setDismissedInput(input)}
+          className="absolute right-2 top-2 inline-flex h-6 w-6 items-center justify-center rounded-md text-[var(--muted)] hover:bg-[var(--surface)] hover:text-[var(--foreground)] cursor-pointer"
+          aria-label="Dismiss guidance"
+        >
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+            <path d="M4 4l8 8M12 4l-8 8" />
+          </svg>
+        </button>
+      )}
       {showExamples && (
         <section className="rounded-lg border border-[var(--border)] bg-white px-3 py-3 shadow-sm">
           <div className="flex items-center justify-between gap-3 mb-2">
