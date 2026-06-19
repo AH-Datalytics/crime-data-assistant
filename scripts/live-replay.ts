@@ -278,6 +278,8 @@ const ALL_TESTS: TestCase[] = [
   { id: "AUD-23", question: "fatal shooting data for Kansas City", tab: "shr", category: "audit-probe", expect: "clarification", responseIncludes: ["KCMO", "KCK"], note: "Kansas City without state is ambiguous; ask rather than combine MO/KS or guess" },
   { id: "AUD-24", question: "firearm crimes in 2024 by injury type", tab: "nibrs", category: "audit-probe", expect: "override", responseIncludes: ["firearm", "injury"], note: "Logs #4393/#4395 — broad firearm-by-injury asks need a friendly limitation, not raw-table retries/timeouts" },
   { id: "AUD-25", question: "breakdown of weapons used in assaults 2024", tab: "nibrs", category: "audit-probe", expect: "rows", sqlIncludes: ["13A", "13B", "13C"], note: "Log #4394 — bare assaults include aggravated assault, simple assault, and intimidation unless user chooses a subtype" },
+  { id: "AUD-26", question: "homicide rates for gender and race", tab: "shr", category: "audit-probe", expect: "override", responseIncludes: ["population denominators", "counts"], responseExcludes: ["Historical Library"], note: "Log #4442 — demographic homicide per-capita rates need race/sex population denominators no source has; must not suggest Historical" },
+  { id: "AUD-27", question: "homicide counts by gender and race nationally in 2024", tab: "auto", expectedTab: ["shr", "nibrs"], category: "audit-probe", expect: "rows", note: "#4442 carve-out — demographic homicide counts/shares remain answerable" },
   { id: "AUD-12", question: "which cities are represented in Pennsylvania?", tab: "current", category: "audit-probe", expect: "rows", minRows: 2, note: "June 11 #4 — state-scoped metadata city list must filter by state" },
 ];
 
