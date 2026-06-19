@@ -1,4 +1,4 @@
-import { getGeoResolutionIssues } from "./geo-resolver";
+import { getGeoGuidanceIssues } from "./geo-guidance-lite";
 
 export type GuidanceAction = {
   label: string;
@@ -36,7 +36,7 @@ export function getQueryGuidanceWarnings(input: string): GuidanceWarning[] {
   const text = input.trim();
   if (!text) return [];
 
-  const warnings: GuidanceWarning[] = [...getGeoResolutionIssues(text)];
+  const warnings: GuidanceWarning[] = [...getGeoGuidanceIssues(text)];
 
   if (has(/\bgun\s+violence\b/i, text) && !has(/\b(fatal|nonfatal|firearm\s+(homicides?|assaults?|injur(?:y|ies)))\b/i, text)) {
     warnings.push({
