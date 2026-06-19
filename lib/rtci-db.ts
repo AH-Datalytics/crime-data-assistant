@@ -4,6 +4,7 @@ import os from "os";
 import fs from "fs";
 import { findExistingPaths, getManagedDb, resolveDbPath } from "./sqlite-db";
 import type { RoutingLogMeta } from "./routing-log-meta";
+import { serializeQueryGuidanceLogMeta } from "./query-guidance-log";
 
 const state = {
   db: null as Database.Database | null,
@@ -84,7 +85,8 @@ export function getWriteDb(): Database.Database | null {
         session_id TEXT,
         routing_confidence TEXT,
         routing_mode TEXT,
-        routing_reason TEXT
+        routing_reason TEXT,
+        query_guidance TEXT
       )
     `);
     _writeDb.exec(`
@@ -99,7 +101,7 @@ export function getWriteDb(): Database.Database | null {
       )
     `);
     // Add columns if table already exists without them
-    for (const col of ["tab TEXT", "session_id TEXT", "guardrails TEXT", "model TEXT", "routing_confidence TEXT", "routing_mode TEXT", "routing_reason TEXT"]) {
+    for (const col of ["tab TEXT", "session_id TEXT", "guardrails TEXT", "model TEXT", "routing_confidence TEXT", "routing_mode TEXT", "routing_reason TEXT", "query_guidance TEXT"]) {
       try { _writeDb.exec(`ALTER TABLE query_log ADD COLUMN ${col}`); } catch { /* already exists */ }
     }
     return _writeDb;
@@ -127,7 +129,7 @@ export function logQuery(
   if (db) {
     try {
       db.prepare(
-        "INSERT INTO query_log (ts, tab, question, sql, rows, error, ms, response, guardrails, model, session_id, routing_confidence, routing_mode, routing_reason) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        "INSERT INTO query_log (ts, tab, question, sql, rows, error, ms, response, guardrails, model, session_id, routing_confidence, routing_mode, routing_reason, query_guidance) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
       ).run(
         Date.now(),
         tab,
@@ -142,7 +144,8 @@ export function logQuery(
         sessionId ? sessionId.slice(0, 64) : null,
         routingMeta?.confidence ?? null,
         routingMeta?.mode ?? null,
-        routingMeta?.reason ?? null
+        routingMeta?.reason ?? null,
+        serializeQueryGuidanceLogMeta(question || "")
       );
     } catch (e) {
       console.warn("Log write failed:", e);
@@ -166,6 +169,7 @@ export function logQuery(
         routingConfidence: routingMeta?.confidence ?? null,
         routingMode: routingMeta?.mode ?? null,
         routingReason: routingMeta?.reason ?? null,
+        queryGuidance: serializeQueryGuidanceLogMeta(question || ""),
       }),
     }).catch(() => {});
   }
