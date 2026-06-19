@@ -89,11 +89,19 @@ assert.equal(
   getQueryGuidanceWarnings("gun violence in Louisiana since 2020")[0].title,
   "The FBI does not systemically track all shootings"
 );
+assert.equal(
+  getQueryGuidanceWarnings("gun violence in Louisiana since 2020")[0].detail,
+  "You can query fatal shootings specifically or aggravated assaults with a firearm as a broader measure."
+);
 
 assertWarns("shootings in Louisiana since 2020", "shooting-scope");
 assertDoesNotWarn("fatal shootings in Louisiana since 2020", "shooting-scope");
 const shootingWarning = getQueryGuidanceWarnings("shootings in Louisiana since 2020")[0];
 assert.equal(shootingWarning.title, "The FBI does not systemically track all shootings");
+assert.equal(
+  shootingWarning.detail,
+  "You can query fatal shootings specifically or aggravated assaults with a firearm as a broader measure."
+);
 assert.equal(shootingWarning.actions![0].label, "Use fatal shootings");
 assert.equal(shootingWarning.actions![1].label, "Use aggravated assaults with a firearm");
 assert.equal(

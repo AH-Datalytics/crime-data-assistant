@@ -43,7 +43,7 @@ export function getQueryGuidanceWarnings(input: string): GuidanceWarning[] {
       id: "gun-violence",
       kind: "advisory",
       title: "The FBI does not systemically track all shootings",
-      detail: "Fatal shootings can be answered directly. Broader firearm violence measures are proxies and should be named that way.",
+      detail: "You can query fatal shootings specifically or aggravated assaults with a firearm as a broader measure.",
       actions: [
         { label: "Use fatal shootings", pattern: "\\bgun\\s+violence\\b", replacement: "fatal shootings" },
         { label: "Use aggravated assaults with a firearm", pattern: "\\bgun\\s+violence\\b", replacement: "aggravated assaults with a firearm" },
@@ -56,7 +56,7 @@ export function getQueryGuidanceWarnings(input: string): GuidanceWarning[] {
       id: "shooting-scope",
       kind: "advisory",
       title: "The FBI does not systemically track all shootings",
-      detail: "Fatal shootings can be answered directly. Broader shooting measures are proxies and should be named that way.",
+      detail: "You can query fatal shootings specifically or aggravated assaults with a firearm as a broader measure.",
       actions: [
         { label: "Use fatal shootings", pattern: "\\bshootings?\\b", replacement: "fatal shootings" },
         { label: "Use aggravated assaults with a firearm", pattern: "\\bshootings?\\b", replacement: "aggravated assaults with a firearm" },
