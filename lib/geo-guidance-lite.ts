@@ -59,6 +59,11 @@ const STATE_LABELS: Record<string, string> = {
 };
 
 const KNOWN_GEO_TRAPS: KnownTrap[] = [
+  trap("la", /\bL\.?A\.?\b/, /\b(Los\s+Angeles|Louisiana|L\.?A\.?\s+(?:city|county))\b/i, "LA is ambiguous", "LA can mean Los Angeles city, Los Angeles County, or Louisiana.", [
+    ["Use Los Angeles city", "\\bL\\.?A\\.?\\b", "Los Angeles, California"],
+    ["Use Los Angeles County", "\\bL\\.?A\\.?\\b", "Los Angeles County, California"],
+    ["Use Louisiana", "\\bL\\.?A\\.?\\b", "Louisiana"],
+  ]),
   trap("kansas-city", /\bkansas\s+city\b/i, /\b(kcmo|kck)\b|\bkansas\s+city\s*,?\s*(missouri|mo|kansas|ks)\b/i, "Kansas City needs a state", "Kansas City can mean Missouri or Kansas.", [
     ["Use Kansas City, Missouri", "\\bKansas\\s+City\\b", "Kansas City, Missouri"],
     ["Use Kansas City, Kansas", "\\bKansas\\s+City\\b", "Kansas City, Kansas"],

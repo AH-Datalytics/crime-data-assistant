@@ -17,6 +17,7 @@ export type GeoResolutionIssue = {
 
 const LEGACY_IDS: Record<string, string> = {
   "kansas-city": "kansas-city",
+  la: "la",
   baltimore: "baltimore",
   "st-louis": "st-louis",
   "new-york": "new-york",
@@ -27,6 +28,9 @@ const LEGACY_IDS: Record<string, string> = {
 const ACTION_OVERRIDES: Record<string, { label: string; replacement: string; rank: number }> = {
   "city:MO:kansas-city": { label: "Kansas City, Missouri", replacement: "Kansas City, Missouri", rank: 0 },
   "city:KS:kansas-city": { label: "Kansas City, Kansas", replacement: "Kansas City, Kansas", rank: 1 },
+  "city:CA:los-angeles": { label: "Los Angeles city", replacement: "Los Angeles, California", rank: 0 },
+  "county:CA:los-angeles": { label: "Los Angeles County", replacement: "Los Angeles County, California", rank: 1 },
+  "state:LA": { label: "Louisiana", replacement: "Louisiana", rank: 2 },
   "city:MD:baltimore-city": { label: "Baltimore city", replacement: "Baltimore city", rank: 0 },
   "county:MD:baltimore": { label: "Baltimore County", replacement: "Baltimore County, Maryland", rank: 1 },
   "city:MO:st-louis-city": { label: "St. Louis city", replacement: "St. Louis city", rank: 0 },
@@ -40,6 +44,7 @@ const ACTION_OVERRIDES: Record<string, { label: string; replacement: string; ran
 };
 
 const DETAIL_OVERRIDES: Record<string, string> = {
+  la: "LA can mean Los Angeles city, Los Angeles County, or Louisiana.",
   "kansas-city": "Kansas City can mean Missouri or Kansas.",
   baltimore: "Use Baltimore city or Baltimore County, Maryland so the result does not mix jurisdictions.",
   "st-louis": "Use St. Louis city or St. Louis County, Missouri when asking for local results.",
@@ -164,6 +169,7 @@ function issueId(mention: GeoPlaceMention, issueKind: ReturnType<typeof classify
 }
 
 function titleFor(label: string, issueKind: ReturnType<typeof classifyCandidates>): string {
+  if (slug(label) === "la") return "LA is ambiguous";
   if (issueKind === "county") return `${label.replace(/\s+County$/i, "")} County needs a state`;
   if (issueKind === "city-county") return `${label} city and county are separate`;
   if (issueKind === "city-state") return `${label} is ambiguous`;

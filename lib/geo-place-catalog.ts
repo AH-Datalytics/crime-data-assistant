@@ -16,7 +16,7 @@ export type GeoPlaceCatalogEntry = {
   dominancePopulationSource?: "current" | "historical";
 };
 
-const STATES: { code: string; name: string }[] = [
+const STATES: { code: string; name: string; aliases?: string[] }[] = [
   { code: "AL", name: "Alabama" },
   { code: "AK", name: "Alaska" },
   { code: "AZ", name: "Arizona" },
@@ -34,7 +34,7 @@ const STATES: { code: string; name: string }[] = [
   { code: "IA", name: "Iowa" },
   { code: "KS", name: "Kansas" },
   { code: "KY", name: "Kentucky" },
-  { code: "LA", name: "Louisiana" },
+  { code: "LA", name: "Louisiana", aliases: ["Louisiana", "LA"] },
   { code: "ME", name: "Maine" },
   { code: "MD", name: "Maryland" },
   { code: "MA", name: "Massachusetts" },
@@ -79,8 +79,8 @@ const REVIEWED_CITY_COUNTY: GeoPlaceCatalogEntry[] = [
   county("Boise", "ID", ["Boise", "Boise County", "Boise County, Idaho", "Boise County ID"]),
   city("Fairfax", "VA", ["Fairfax", "Fairfax, Virginia", "Fairfax VA"]),
   county("Fairfax", "VA", ["Fairfax", "Fairfax County", "Fairfax County, Virginia", "Fairfax County VA"]),
-  city("Los Angeles", "CA", ["Los Angeles", "Los Angeles, California", "Los Angeles CA"]),
-  county("Los Angeles", "CA", ["Los Angeles", "Los Angeles County", "Los Angeles County, California", "Los Angeles County CA"]),
+  city("Los Angeles", "CA", ["Los Angeles", "Los Angeles, California", "Los Angeles CA", "LA", "L.A.", "LA city", "L.A. city"]),
+  county("Los Angeles", "CA", ["Los Angeles", "Los Angeles County", "Los Angeles County, California", "Los Angeles County CA", "LA", "LA County", "L.A. County"]),
   city("Sacramento", "CA", ["Sacramento", "Sacramento, California", "Sacramento CA"]),
   county("Sacramento", "CA", ["Sacramento", "Sacramento County", "Sacramento County, California", "Sacramento County CA"]),
   city("San Diego", "CA", ["San Diego", "San Diego, California", "San Diego CA"]),
@@ -107,7 +107,7 @@ const MANUAL_ALIASES: GeoPlaceCatalogEntry[] = [
 ];
 
 export const GEO_PLACE_CATALOG: GeoPlaceCatalogEntry[] = [
-  ...STATES.map(({ code, name }) => state(name, code, [name])),
+  ...STATES.map(({ code, name, aliases }) => state(name, code, aliases ?? [name])),
   ...MANUAL_ALIASES,
   ...REVIEWED_CITY_COUNTY,
   ...GENERATED_GEO_CITIES.map((entry) =>

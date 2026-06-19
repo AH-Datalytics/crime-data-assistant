@@ -22,6 +22,11 @@ assertIssue("fatal shootings in Kansas City per month from 2020 to 2024", "kansa
 assertNoIssue("fatal shootings in KCMO per month from 2020 to 2024", "kansas-city");
 assertNoIssue("fatal shootings in Kansas City, Kansas per month from 2020 to 2024", "kansas-city");
 
+assertIssue("LA murders per month", "la");
+assertNoIssue("Louisiana murders per month", "la");
+assertNoIssue("Los Angeles murders per month", "la");
+assertNoIssue("LA County murders per month", "la");
+
 assertIssue("shootings in Baltimore since 2020", "baltimore");
 assertNoIssue("shootings in Baltimore city since 2020", "baltimore");
 assertNoIssue("shootings in Baltimore County, Maryland since 2020", "baltimore");
@@ -38,6 +43,12 @@ assert.equal(getGeoResolutionIssues("gun violence in New York since 2022")[0].ti
 assert.equal(
   geoClarificationText(getGeoResolutionIssues("gun violence in New York since 2022")[0]),
   "Say New York City or New York State to avoid ambiguity. Choose: New York City or New York State."
+);
+
+assert.equal(getGeoResolutionIssues("LA murders per month")[0].title, "LA is ambiguous");
+assert.equal(
+  geoClarificationText(getGeoResolutionIssues("LA murders per month")[0]),
+  "LA can mean Los Angeles city, Los Angeles County, or Louisiana. Choose: Los Angeles city or Los Angeles County or Louisiana."
 );
 
 assertIssue("crime in Washington in 2023", "washington");

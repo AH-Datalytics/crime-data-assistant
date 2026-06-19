@@ -36,6 +36,12 @@ assert.deepEqual(warningIds("shootings in Kansas City"), ["kansas-city", "shooti
 assert.equal(hasBlockingQueryGuidanceWarnings("shootings in Kansas City"), true);
 assert.deepEqual(warningIds("fatal shootings in Kansas City, Missouri"), []);
 
+assertWarns("LA murders per month", "la");
+assert.equal(hasBlockingQueryGuidanceWarnings("LA murders per month"), true);
+assertDoesNotWarn("Louisiana murders per month", "la");
+assertDoesNotWarn("Los Angeles murders per month", "la");
+assertDoesNotWarn("LA County murders per month", "la");
+
 assertWarns("shootings in Baltimore since 2020", "baltimore");
 assertDoesNotWarn("shootings in Baltimore County, Maryland since 2020", "baltimore");
 
@@ -120,6 +126,18 @@ const kcWarning = getQueryGuidanceWarnings("fatal shootings in Kansas City per m
 assert.equal(
   applyGuidanceAction("fatal shootings in Kansas City per month", kcWarning.actions![0]),
   "fatal shootings in Kansas City, Missouri per month"
+);
+
+const laWarning = getQueryGuidanceWarnings("LA murders per month")[0];
+assert.equal(laWarning.title, "LA is ambiguous");
+assert.equal(laWarning.detail, "LA can mean Los Angeles city, Los Angeles County, or Louisiana.");
+assert.equal(
+  applyGuidanceAction("LA murders per month", laWarning.actions![0]),
+  "Los Angeles, California murders per month"
+);
+assert.equal(
+  applyGuidanceAction("LA murders per month", laWarning.actions![2]),
+  "Louisiana murders per month"
 );
 
 console.log("query guidance tests passed");

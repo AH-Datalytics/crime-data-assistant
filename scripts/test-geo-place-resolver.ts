@@ -26,6 +26,12 @@ function assertDoesNotClarify(input: string) {
 
 assertCandidates("violent crime in Los Angeles", ["city:CA:los-angeles", "county:CA:los-angeles"]);
 assertClarifies("violent crime in Los Angeles");
+assertCandidates("LA murders per month", ["city:CA:los-angeles", "county:CA:los-angeles", "state:LA"]);
+assertClarifies("LA murders per month");
+assertCandidates("LA County murders per month", ["county:CA:los-angeles"]);
+assertDoesNotClarify("LA County murders per month");
+assertCandidates("Louisiana murders per month", ["state:LA"]);
+assertDoesNotClarify("Louisiana murders per month");
 assertCandidates("violent crime in Los Angeles CA", ["city:CA:los-angeles"]);
 assertDoesNotClarify("violent crime in Los Angeles CA");
 assertCandidates("violent crime in Los Angeles County, California", ["county:CA:los-angeles"]);
