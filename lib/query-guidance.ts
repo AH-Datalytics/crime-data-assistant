@@ -46,7 +46,7 @@ export function getQueryGuidanceWarnings(input: string): GuidanceWarning[] {
       detail: "Fatal shootings can be answered directly. Broader firearm violence measures are proxies and should be named that way.",
       actions: [
         { label: "Use fatal shootings", pattern: "\\bgun\\s+violence\\b", replacement: "fatal shootings" },
-        { label: "Use firearm-involved assaults proxy", pattern: "\\bgun\\s+violence\\b", replacement: "firearm-involved assaults proxy" },
+        { label: "Use aggravated assaults with a firearm", pattern: "\\bgun\\s+violence\\b", replacement: "aggravated assaults with a firearm" },
       ],
     });
   }
@@ -59,7 +59,7 @@ export function getQueryGuidanceWarnings(input: string): GuidanceWarning[] {
       detail: "Fatal shootings can be answered directly. Broader shooting measures are proxies and should be named that way.",
       actions: [
         { label: "Use fatal shootings", pattern: "\\bshootings?\\b", replacement: "fatal shootings" },
-        { label: "Use firearm-involved assaults proxy", pattern: "\\bshootings?\\b", replacement: "firearm-involved assaults proxy" },
+        { label: "Use aggravated assaults with a firearm", pattern: "\\bshootings?\\b", replacement: "aggravated assaults with a firearm" },
       ],
     });
   }

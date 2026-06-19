@@ -92,6 +92,11 @@ assertDoesNotWarn("fatal shootings in Louisiana since 2020", "shooting-scope");
 const shootingWarning = getQueryGuidanceWarnings("shootings in Louisiana since 2020")[0];
 assert.equal(shootingWarning.title, "The FBI does not systemically track all shootings");
 assert.equal(shootingWarning.actions![0].label, "Use fatal shootings");
+assert.equal(shootingWarning.actions![1].label, "Use aggravated assaults with a firearm");
+assert.equal(
+  applyGuidanceAction("shootings in Louisiana since 2020", shootingWarning.actions![1]),
+  "aggravated assaults with a firearm in Louisiana since 2020"
+);
 
 assertWarns("assaults in Texas in 2023", "assault-type");
 assert.equal(hasBlockingQueryGuidanceWarnings("assaults in Texas in 2023"), false);
