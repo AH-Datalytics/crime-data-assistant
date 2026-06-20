@@ -79,13 +79,19 @@ assertClarifies("crime in Springfield");
 
 assertCandidates("fatal shootings in Kansas City", ["city:KS:kansas-city", "city:MO:kansas-city"]);
 assertClarifies("fatal shootings in Kansas City");
+assertCandidates("fatal shootings in KC", ["city:KS:kansas-city", "city:MO:kansas-city"]);
+assertClarifies("fatal shootings in KC");
 assertCandidates("fatal shootings in KCMO", ["city:MO:kansas-city"]);
 assertCandidates("fatal shootings in KCK", ["city:KS:kansas-city"]);
 
 assertCandidates("gun violence in New York", ["city:NY:new-york-city", "state:NY"]);
 assertClarifies("gun violence in New York");
+assertCandidates("gun violence in NY", ["city:NY:new-york-city", "state:NY"]);
+assertClarifies("gun violence in NY");
 assertCandidates("gun violence in New York State", ["state:NY"]);
 assertDoesNotClarify("gun violence in New York State");
+assertCandidates("gun violence in NY State", ["state:NY"]);
+assertDoesNotClarify("gun violence in NY State");
 assertCandidates("gun violence in NYC", ["city:NY:new-york-city"]);
 
 assertCandidates("crime in Washington", ["city:DC:washington", "state:WA"]);
@@ -105,8 +111,18 @@ assertDoesNotClarify("crime in Linn County, Oregon");
 
 assertCandidates("murders in Baltimore", ["city:MD:baltimore-city", "county:MD:baltimore"]);
 assertClarifies("murders in Baltimore");
+assertCandidates("murders in batlimore", ["city:MD:baltimore-city", "county:MD:baltimore"]);
+assertClarifies("murders in batlimore");
 assertCandidates("murders in Baltimore city", ["city:MD:baltimore-city"]);
+assertCandidates("murders in batlimore city", ["city:MD:baltimore-city"]);
 assertCandidates("murders in Baltimore County, Maryland", ["county:MD:baltimore"]);
+
+assertCandidates("murders in STL", ["city:MO:st-louis-city", "county:MO:st-louis"]);
+assertClarifies("murders in STL");
+assertCandidates("murders in STL city", ["city:MO:st-louis-city"]);
+assertDoesNotClarify("murders in STL city");
+assertCandidates("murders in STL County", ["county:MO:st-louis"]);
+assertDoesNotClarify("murders in STL County");
 
 const multi = resolveGeoPlaces("Compare Portland, Oregon with Portland, Maine");
 assert.equal(multi.mentions.length, 2);

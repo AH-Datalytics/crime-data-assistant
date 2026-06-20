@@ -16,10 +16,14 @@ export type GeoResolutionIssue = {
 };
 
 const LEGACY_IDS: Record<string, string> = {
+  kc: "kansas-city",
   "kansas-city": "kansas-city",
   la: "la",
+  ny: "new-york",
   baltimore: "baltimore",
+  batlimore: "baltimore",
   "st-louis": "st-louis",
+  stl: "st-louis",
   "new-york": "new-york",
   washington: "washington",
   portland: "portland",
@@ -44,10 +48,14 @@ const ACTION_OVERRIDES: Record<string, { label: string; replacement: string; ran
 };
 
 const DETAIL_OVERRIDES: Record<string, string> = {
+  kc: "KC can mean Kansas City, Missouri or Kansas City, Kansas.",
   la: "LA can mean Los Angeles city, Los Angeles County, or Louisiana.",
+  ny: "NY can mean New York City or New York State.",
   "kansas-city": "Kansas City can mean Missouri or Kansas.",
   baltimore: "Use Baltimore city or Baltimore County, Maryland so the result does not mix jurisdictions.",
+  batlimore: "Use Baltimore city or Baltimore County, Maryland so the result does not mix jurisdictions.",
   "st-louis": "Use St. Louis city or St. Louis County, Missouri when asking for local results.",
+  stl: "STL can mean St. Louis city or St. Louis County.",
   "new-york": "Say New York City or New York State to avoid ambiguity.",
   washington: "Say Washington, DC or Washington State when asking for geography-specific results.",
   portland: "Portland usually needs Oregon or Maine to avoid the wrong city.",
@@ -169,7 +177,11 @@ function issueId(mention: GeoPlaceMention, issueKind: ReturnType<typeof classify
 }
 
 function titleFor(label: string, issueKind: ReturnType<typeof classifyCandidates>): string {
+  if (slug(label) === "kc") return "KC needs a state";
   if (slug(label) === "la") return "LA is ambiguous";
+  if (slug(label) === "ny") return "NY is ambiguous";
+  if (slug(label) === "batlimore") return "Baltimore city and county are separate";
+  if (slug(label) === "stl") return "STL city and county are separate";
   if (issueKind === "county") return `${label.replace(/\s+County$/i, "")} County needs a state`;
   if (issueKind === "city-county") return `${label} city and county are separate`;
   if (issueKind === "city-state") return `${label} is ambiguous`;
@@ -243,6 +255,7 @@ function kindRank(kind: GeoPlaceCandidate["kind"]): number {
 }
 
 function displayMention(mention: GeoPlaceMention): string {
+  if (slug(mention.text) === "kc") return "KC";
   const candidateNames = new Set(mention.candidates.map((candidate) => candidate.name.replace(/\s+County$/i, "")));
   if (candidateNames.size === 1) return [...candidateNames][0];
   return mention.text.replace(/\s+/g, " ").trim();

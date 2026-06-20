@@ -27,10 +27,12 @@ assert.deepEqual(HOW_TO_ASK_EXAMPLES.map((e) => `${e.category}: ${e.question}`),
 ]);
 
 assertWarns("fatal shootings in Kansas City per month from 2020 to 2024", "kansas-city");
+assertWarns("fatal shootings in KC per month from 2020 to 2024", "kansas-city");
 assert.equal(hasBlockingQueryGuidanceWarnings("fatal shootings in Kansas City per month from 2020 to 2024"), true);
 assertDoesNotWarn("fatal shootings in Kansas City, Missouri per month from 2020 to 2024", "kansas-city");
 assert.equal(hasBlockingQueryGuidanceWarnings("fatal shootings in Kansas City, Missouri per month from 2020 to 2024"), false);
 assertDoesNotWarn("fatal shootings in KCK per month from 2020 to 2024", "kansas-city");
+assertDoesNotWarn("fatal shootings in KCMO per month from 2020 to 2024", "kansas-city");
 
 assert.deepEqual(warningIds("shootings in Kansas City"), ["kansas-city", "shooting-scope"]);
 assert.equal(hasBlockingQueryGuidanceWarnings("shootings in Kansas City"), true);
@@ -41,20 +43,29 @@ assert.equal(hasBlockingQueryGuidanceWarnings("LA murders per month"), true);
 assertDoesNotWarn("Louisiana murders per month", "la");
 assertDoesNotWarn("Los Angeles murders per month", "la");
 assertDoesNotWarn("LA County murders per month", "la");
+assertDoesNotWarn("Baton Rouge LA murders per month", "la");
 
 assertWarns("shootings in Baltimore since 2020", "baltimore");
+assertWarns("shootings in batlimore since 2020", "baltimore");
 assertDoesNotWarn("shootings in Baltimore County, Maryland since 2020", "baltimore");
+assertDoesNotWarn("shootings in batlimore city since 2020", "baltimore");
 
 assertWarns("murders in St. Louis since 2020", "st-louis");
+assertWarns("murders in STL since 2020", "st-louis");
 assertDoesNotWarn("murders in St. Louis County, Missouri since 2020", "st-louis");
+assertDoesNotWarn("murders in STL city since 2020", "st-louis");
+assertDoesNotWarn("murders in STL County since 2020", "st-louis");
 
 assertWarns("gun violence in New York since 2022", "new-york");
+assertWarns("gun violence in NY since 2022", "new-york");
 assert.deepEqual(warningIds("gun violence in New York since 2022"), ["new-york", "gun-violence"]);
 assert.equal(hasBlockingQueryGuidanceWarnings("gun violence in New York since 2022"), true);
 const newYorkWarning = getQueryGuidanceWarnings("gun violence in New York since 2022")[0];
 assert.equal(newYorkWarning.title, "New York is ambiguous");
 assert.equal(newYorkWarning.detail, "Say New York City or New York State to avoid ambiguity.");
 assertDoesNotWarn("gun violence in New York State since 2022", "new-york");
+assertDoesNotWarn("gun violence in NY State since 2022", "new-york");
+assertDoesNotWarn("Albany NY robberies since 2020", "new-york");
 assertDoesNotWarn("New York City vs Chicago officers per year since 1930", "new-york");
 
 assertWarns("crime in Washington in 2023", "washington");
@@ -128,6 +139,13 @@ assert.equal(
   "fatal shootings in Kansas City, Missouri per month"
 );
 
+const kcShortWarning = getQueryGuidanceWarnings("fatal shootings in KC per month")[0];
+assert.equal(kcShortWarning.title, "KC needs a state");
+assert.equal(
+  applyGuidanceAction("fatal shootings in KC per month", kcShortWarning.actions![1]),
+  "fatal shootings in Kansas City, Kansas per month"
+);
+
 const laWarning = getQueryGuidanceWarnings("LA murders per month")[0];
 assert.equal(laWarning.title, "LA is ambiguous");
 assert.equal(laWarning.detail, "LA can mean Los Angeles city, Los Angeles County, or Louisiana.");
@@ -138,6 +156,27 @@ assert.equal(
 assert.equal(
   applyGuidanceAction("LA murders per month", laWarning.actions![2]),
   "Louisiana murders per month"
+);
+
+const nyWarning = getQueryGuidanceWarnings("gun violence in NY since 2022")[0];
+assert.equal(nyWarning.title, "NY is ambiguous");
+assert.equal(
+  applyGuidanceAction("gun violence in NY since 2022", nyWarning.actions![0]),
+  "gun violence in New York City since 2022"
+);
+
+const stlWarning = getQueryGuidanceWarnings("murders in STL")[0];
+assert.equal(stlWarning.title, "STL city and county are separate");
+assert.equal(
+  applyGuidanceAction("murders in STL", stlWarning.actions![1]),
+  "murders in St. Louis County, Missouri"
+);
+
+const batlimoreWarning = getQueryGuidanceWarnings("batlimore murders per month")[0];
+assert.equal(batlimoreWarning.title, "Baltimore city and county are separate");
+assert.equal(
+  applyGuidanceAction("batlimore murders per month", batlimoreWarning.actions![0]),
+  "Baltimore city murders per month"
 );
 
 console.log("query guidance tests passed");

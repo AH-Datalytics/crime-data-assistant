@@ -19,6 +19,7 @@ function assertNoIssue(input: string, id: string) {
 }
 
 assertIssue("fatal shootings in Kansas City per month from 2020 to 2024", "kansas-city");
+assertIssue("fatal shootings in KC per month from 2020 to 2024", "kansas-city");
 assertNoIssue("fatal shootings in KCMO per month from 2020 to 2024", "kansas-city");
 assertNoIssue("fatal shootings in Kansas City, Kansas per month from 2020 to 2024", "kansas-city");
 
@@ -28,21 +29,46 @@ assertNoIssue("Los Angeles murders per month", "la");
 assertNoIssue("LA County murders per month", "la");
 
 assertIssue("shootings in Baltimore since 2020", "baltimore");
+assertIssue("shootings in batlimore since 2020", "baltimore");
 assertNoIssue("shootings in Baltimore city since 2020", "baltimore");
+assertNoIssue("shootings in batlimore city since 2020", "baltimore");
 assertNoIssue("shootings in Baltimore County, Maryland since 2020", "baltimore");
 
 assertIssue("murders in St. Louis since 2020", "st-louis");
+assertIssue("murders in STL since 2020", "st-louis");
 assertNoIssue("murders in St. Louis city since 2020", "st-louis");
+assertNoIssue("murders in STL city since 2020", "st-louis");
+assertNoIssue("murders in STL County since 2020", "st-louis");
 assertNoIssue("murders in St. Louis County, Missouri since 2020", "st-louis");
 
 assertIssue("gun violence in New York since 2022", "new-york");
+assertIssue("gun violence in NY since 2022", "new-york");
 assertNoIssue("gun violence in New York State since 2022", "new-york");
+assertNoIssue("gun violence in NY State since 2022", "new-york");
 assertNoIssue("New York City vs Chicago officers per year since 1930", "new-york");
 assertNoIssue("robberies in New York County, New York in 2024", "new-york");
 assert.equal(getGeoResolutionIssues("gun violence in New York since 2022")[0].title, "New York is ambiguous");
 assert.equal(
   geoClarificationText(getGeoResolutionIssues("gun violence in New York since 2022")[0]),
   "Say New York City or New York State to avoid ambiguity. Choose: New York City or New York State."
+);
+
+assert.equal(getGeoResolutionIssues("gun violence in NY since 2022")[0].title, "NY is ambiguous");
+assert.equal(
+  geoClarificationText(getGeoResolutionIssues("gun violence in NY since 2022")[0]),
+  "NY can mean New York City or New York State. Choose: New York City or New York State."
+);
+
+assert.equal(getGeoResolutionIssues("fatal shootings in KC")[0].title, "KC needs a state");
+assert.equal(
+  geoClarificationText(getGeoResolutionIssues("fatal shootings in KC")[0]),
+  "KC can mean Kansas City, Missouri or Kansas City, Kansas. Choose: Kansas City, Missouri or Kansas City, Kansas."
+);
+
+assert.equal(getGeoResolutionIssues("murders in STL")[0].title, "STL city and county are separate");
+assert.equal(
+  geoClarificationText(getGeoResolutionIssues("murders in STL")[0]),
+  "STL can mean St. Louis city or St. Louis County. Choose: St. Louis city or St. Louis County."
 );
 
 assert.equal(getGeoResolutionIssues("LA murders per month")[0].title, "LA is ambiguous");

@@ -48,7 +48,7 @@ const STATES: { code: string; name: string; aliases?: string[] }[] = [
   { code: "NH", name: "New Hampshire" },
   { code: "NJ", name: "New Jersey" },
   { code: "NM", name: "New Mexico" },
-  { code: "NY", name: "New York" },
+  { code: "NY", name: "New York", aliases: ["New York", "NY"] },
   { code: "NC", name: "North Carolina" },
   { code: "ND", name: "North Dakota" },
   { code: "OH", name: "Ohio" },
@@ -91,17 +91,17 @@ const REVIEWED_CITY_COUNTY: GeoPlaceCatalogEntry[] = [
 ];
 
 const MANUAL_ALIASES: GeoPlaceCatalogEntry[] = [
-  city("New York City", "NY", ["New York", "NYC", "New York City", "NYPD"]),
+  city("New York City", "NY", ["New York", "NY", "NYC", "New York City", "NYPD"]),
   state("New York", "NY", ["New York", "New York State", "State of New York", "NY State"]),
   county("New York", "NY", ["New York County", "New York County, NY", "New York County NY", "New York County, New York", "New York County New York"], "manual-alias"),
   city("Washington", "DC", ["Washington", "Washington, DC", "Washington DC", "D.C.", "DC", "District of Columbia"]),
   state("Washington", "WA", ["Washington", "Washington State", "State of Washington"]),
-  city("Kansas City", "MO", ["Kansas City", "KCMO", "Kansas City, Missouri", "Kansas City MO"]),
-  city("Kansas City", "KS", ["Kansas City", "KCK", "Kansas City, Kansas", "Kansas City KS"]),
-  city("Baltimore city", "MD", ["Baltimore", "Baltimore city", "Baltimore, Maryland", "Baltimore MD"]),
-  county("Baltimore", "MD", ["Baltimore", "Baltimore County", "Baltimore County, Maryland", "Baltimore County MD"]),
-  city("St. Louis city", "MO", ["St. Louis", "Saint Louis", "St Louis", "St. Louis city", "Saint Louis city", "St Louis city", "St. Louis, Missouri", "St Louis MO"]),
-  county("St. Louis", "MO", ["St. Louis", "Saint Louis", "St Louis", "St. Louis County", "Saint Louis County", "St Louis County", "St. Louis County, Missouri", "St Louis County MO"]),
+  city("Kansas City", "MO", ["Kansas City", "KC", "KCMO", "Kansas City, Missouri", "Kansas City MO"]),
+  city("Kansas City", "KS", ["Kansas City", "KC", "KCK", "Kansas City, Kansas", "Kansas City KS"]),
+  city("Baltimore city", "MD", ["Baltimore", "Batlimore", "Baltimore city", "Batlimore city", "Baltimore, Maryland", "Baltimore MD"]),
+  county("Baltimore", "MD", ["Baltimore", "Batlimore", "Baltimore County", "Batlimore County", "Baltimore County, Maryland", "Baltimore County MD"]),
+  city("St. Louis city", "MO", ["St. Louis", "Saint Louis", "St Louis", "STL", "St. Louis city", "Saint Louis city", "St Louis city", "STL city", "St. Louis, Missouri", "St Louis MO"]),
+  county("St. Louis", "MO", ["St. Louis", "Saint Louis", "St Louis", "STL", "St. Louis County", "Saint Louis County", "St Louis County", "STL County", "St. Louis County, Missouri", "St Louis County MO"]),
   city("Portland", "OR", ["Portland", "Portland, Oregon", "Portland OR"]),
   city("Portland", "ME", ["Portland", "Portland, Maine", "Portland ME"]),
 ];

@@ -59,7 +59,11 @@ const STATE_LABELS: Record<string, string> = {
 };
 
 const KNOWN_GEO_TRAPS: KnownTrap[] = [
-  trap("la", /\bL\.?A\.?\b/, /\b(Los\s+Angeles|Louisiana|L\.?A\.?\s+(?:city|county))\b/i, "LA is ambiguous", "LA can mean Los Angeles city, Los Angeles County, or Louisiana.", [
+  trap("kansas-city", /\bKC\b/i, /\b(KCMO|KCK|KC\s*,?\s*(missouri|mo|kansas|ks))\b/i, "KC needs a state", "KC can mean Kansas City, Missouri or Kansas City, Kansas.", [
+    ["Use Kansas City, Missouri", "\\bKC\\b", "Kansas City, Missouri"],
+    ["Use Kansas City, Kansas", "\\bKC\\b", "Kansas City, Kansas"],
+  ]),
+  trap("la", /(^|\b(?:in|for|of|across|near|around)\s+)L\.?A\.?\b/i, /\b(Los\s+Angeles|Louisiana|L\.?A\.?\s+(?:city|county))\b/i, "LA is ambiguous", "LA can mean Los Angeles city, Los Angeles County, or Louisiana.", [
     ["Use Los Angeles city", "\\bL\\.?A\\.?\\b", "Los Angeles, California"],
     ["Use Los Angeles County", "\\bL\\.?A\\.?\\b", "Los Angeles County, California"],
     ["Use Louisiana", "\\bL\\.?A\\.?\\b", "Louisiana"],
@@ -72,13 +76,25 @@ const KNOWN_GEO_TRAPS: KnownTrap[] = [
     ["Use Baltimore city", "\\bBaltimore\\b", "Baltimore city"],
     ["Use Baltimore County", "\\bBaltimore\\b", "Baltimore County, Maryland"],
   ]),
+  trap("baltimore", /\bbatlimore\b/i, /\bbatlimore\s+(city|county)\b|\bbatlimore\s*,?\s*(md|maryland)\b/i, "Baltimore city and county are separate", "Use Baltimore city or Baltimore County, Maryland so the result does not mix jurisdictions.", [
+    ["Use Baltimore city", "\\bBatlimore\\b", "Baltimore city"],
+    ["Use Baltimore County", "\\bBatlimore\\b", "Baltimore County, Maryland"],
+  ]),
   trap("st-louis", /\bst\.?\s+louis\b/i, /\bst\.?\s+louis\s+(city|county)\b|\bst\.?\s+louis\s*,?\s*(mo|missouri)\b/i, "St. Louis city and county are separate", "Use St. Louis city or St. Louis County, Missouri when asking for local results.", [
     ["Use St. Louis city", "\\bSt\\.?\\s+Louis\\b", "St. Louis city"],
     ["Use St. Louis County", "\\bSt\\.?\\s+Louis\\b", "St. Louis County, Missouri"],
   ]),
+  trap("st-louis", /\bSTL\b/i, /\bSTL\s+(city|county)\b|\bSTL\s*,?\s*(mo|missouri)\b/i, "STL city and county are separate", "STL can mean St. Louis city or St. Louis County.", [
+    ["Use St. Louis city", "\\bSTL\\b", "St. Louis city"],
+    ["Use St. Louis County", "\\bSTL\\b", "St. Louis County, Missouri"],
+  ]),
   trap("new-york", /\bnew\s+york\b/i, /\b(new\s+york\s+city|nyc|nypd|new\s+york\s+state|state\s+of\s+new\s+york|ny\s+state|new\s+york\s+(?:county|parish|borough))\b/i, "New York is ambiguous", "Say New York City or New York State to avoid ambiguity.", [
     ["Use New York City", "\\bNew\\s+York\\b", "New York City"],
     ["Use New York State", "\\bNew\\s+York\\b", "New York State"],
+  ]),
+  trap("new-york", /(^|\b(?:in|for|of|across|near|around)\s+)NY\b/i, /\b(NYC|NYPD|NY\s+state|new\s+york\s+city|new\s+york\s+state|state\s+of\s+new\s+york|new\s+york\s+(?:county|parish|borough))\b/i, "NY is ambiguous", "NY can mean New York City or New York State.", [
+    ["Use New York City", "\\bNY\\b", "New York City"],
+    ["Use New York State", "\\bNY\\b", "New York State"],
   ]),
   trap("washington", /\bwashington\b/i, /\b(washington\s*,?\s*d\.?c\.?|dc|district\s+of\s+columbia|washington\s+state|state\s+of\s+washington|washington\s+(?:county|parish|borough))\b/i, "Washington is ambiguous", "Say Washington, DC or Washington State when asking for geography-specific results.", [
     ["Use Washington, DC", "\\bWashington\\b", "Washington, DC"],
