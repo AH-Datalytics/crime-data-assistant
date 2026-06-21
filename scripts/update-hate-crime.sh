@@ -12,20 +12,24 @@ APP_DIR="/opt/nibrs/current"
 DB_PATH="/opt/nibrs/hate_crime.db"
 SCRIPT="$APP_DIR/scripts/import-hate-crime.py"
 CURRENT_YEAR=$(date +%Y)
+PROTECTED_YEARS="${PROTECTED_UPDATE_YEARS:-2025}"
+TARGET_YEAR="${HATE_CRIME_UPDATE_YEAR:-$CURRENT_YEAR}"
 
 echo "[$(date)] Checking for hate crime data updates..."
+echo "  Protected years: $PROTECTED_YEARS"
 
 # Get current max year in DB
 MAX_YEAR=$(sqlite3 "$DB_PATH" "SELECT MAX(year) FROM hate_crime_incidents" 2>/dev/null || echo "0")
 echo "  Current max year in DB: $MAX_YEAR"
 
-# Try to import the latest year (current - 1, since CDE publishes with a lag)
-TARGET_YEAR=$((CURRENT_YEAR - 1))
-
-if [ "$MAX_YEAR" -ge "$TARGET_YEAR" ]; then
-    echo "  Already have data through $MAX_YEAR, checking for current year $CURRENT_YEAR..."
-    TARGET_YEAR=$CURRENT_YEAR
-fi
+IFS=',' read -ra PROTECTED_YEAR_LIST <<< "$PROTECTED_YEARS"
+for protected_year in "${PROTECTED_YEAR_LIST[@]}"; do
+    protected_year="${protected_year//[[:space:]]/}"
+    if [ "$protected_year" = "$TARGET_YEAR" ]; then
+        echo "  Refusing to update protected hate crime year $TARGET_YEAR."
+        exit 1
+    fi
+done
 
 # Attempt import — will fail gracefully if the year isn't available on CDE yet
 echo "  Attempting to import year $TARGET_YEAR..."
@@ -34,7 +38,7 @@ cd "$APP_DIR"
 # Save row count before
 BEFORE=$(sqlite3 "$DB_PATH" "SELECT COUNT(*) FROM hate_crime_incidents WHERE year = $TARGET_YEAR" 2>/dev/null || echo "0")
 
-python3 -u "$SCRIPT" --years "$TARGET_YEAR" --db "$DB_PATH" 2>&1 || {
+python3 -u "$SCRIPT" --years "$TARGET_YEAR" --db "$DB_PATH" --protected-years "$PROTECTED_YEARS" 2>&1 || {
     echo "  Import failed or no data available for $TARGET_YEAR. This is expected if CDE hasn't published yet."
     exit 0
 }

@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """
 NIBRS Monthly Auto-Update for VPS
-Downloads current year + last year from CDE, detects changes via SHA256,
+Downloads the current year from CDE, detects changes via SHA256,
 replaces data for changed years, rebuilds all summary tables for those years only.
 
 Cron (15th of each month, 6 PM UTC / 1 PM ET / 12 PM CT):
   0 18 15 * * /usr/bin/python3 /opt/nibrs/scripts/nibrs-auto-update.py >> /opt/nibrs/update.log 2>&1
 """
+import argparse
 import hashlib
 import json
 import os
@@ -46,6 +47,7 @@ DATA_DIR = "/opt/nibrs/data"
 CHECKSUM_FILE = "/opt/nibrs/checksums.json"
 TMP_DIR = "/mnt/HC_Volume_105124811/tmp"
 BATCH_SIZE = 100_000
+DEFAULT_PROTECTED_YEARS = "2025"
 
 CDE_URL = "https://cde.ucr.cjis.gov/LATEST/s3/signedurl?key=master_files/nibrs/nibrs-{year}.zip"
 
@@ -137,9 +139,56 @@ def save_checksums(checksums):
         json.dump(checksums, f, indent=2)
 
 
-def get_years_to_update():
+def parse_year_csv(value):
+    years = set()
+    if not value:
+        return years
+    for part in str(value).replace(" ", "").split(","):
+        if not part:
+            continue
+        try:
+            years.add(int(part))
+        except ValueError:
+            raise SystemExit(f"Invalid protected year: {part}")
+    return years
+
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--years",
+        nargs="*",
+        type=int,
+        help="Specific CDE NIBRS years to update. Defaults to current year only.",
+    )
+    parser.add_argument(
+        "--protected-years",
+        default=os.environ.get("PROTECTED_UPDATE_YEARS", DEFAULT_PROTECTED_YEARS),
+        help="Comma-separated years the updater must not delete/reimport.",
+    )
+    parser.add_argument(
+        "--allow-protected-years",
+        action="store_true",
+        help="Allow updating protected years. Requires an explicit operator decision.",
+    )
+    return parser.parse_args()
+
+
+def get_years_to_update(years_arg=None):
+    if years_arg:
+        return sorted(set(years_arg))
     now = datetime.now()
-    return [now.year - 1, now.year]
+    return [now.year]
+
+
+def assert_no_protected_years(years, protected_years, allow=False):
+    blocked = sorted(set(years) & set(protected_years))
+    if blocked and not allow:
+        raise SystemExit(
+            "Refusing to update protected year(s): "
+            + ", ".join(str(y) for y in blocked)
+            + ". Re-run with --allow-protected-years only if this is intentional."
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -747,6 +796,13 @@ def main():
     log("NIBRS AUTO-UPDATE STARTING")
     log("=" * 60)
 
+    args = parse_args()
+    years = get_years_to_update(args.years)
+    protected_years = parse_year_csv(args.protected_years)
+    assert_no_protected_years(years, protected_years, args.allow_protected_years)
+    log(f"Protected years: {sorted(protected_years)}")
+    log(f"Years to check: {years}")
+
     os.environ['SQLITE_TMPDIR'] = TMP_DIR
     os.makedirs(TMP_DIR, exist_ok=True)
     os.makedirs(DATA_DIR, exist_ok=True)
@@ -754,9 +810,6 @@ def main():
     if not os.path.exists(DB_PATH):
         log(f"ERROR: Database not found: {DB_PATH}")
         sys.exit(1)
-
-    years = get_years_to_update()
-    log(f"Years to check: {years}")
 
     checksums = load_checksums()
     years_to_process = []

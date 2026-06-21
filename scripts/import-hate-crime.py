@@ -9,9 +9,12 @@ import sqlite3
 import requests
 import zipfile
 import io
+import os
 import time
 import sys
 import argparse
+
+DEFAULT_PROTECTED_YEARS = "2025"
 
 # ── Code Lookups ──────────────────────────────────────────────
 
@@ -135,6 +138,28 @@ def download_year(year):
     name = z.namelist()[0]
     return z.read(name).decode('latin1')
 
+def parse_year_csv(value):
+    years = set()
+    if not value:
+        return years
+    for part in str(value).replace(" ", "").split(","):
+        if not part:
+            continue
+        try:
+            years.add(int(part))
+        except ValueError:
+            raise SystemExit(f"Invalid protected year: {part}")
+    return years
+
+def assert_no_protected_years(years, protected_years, allow=False):
+    blocked = sorted(set(years) & set(protected_years))
+    if blocked and not allow:
+        raise SystemExit(
+            "Refusing to update protected year(s): "
+            + ", ".join(str(y) for y in blocked)
+            + ". Re-run with --allow-protected-years only if this is intentional."
+        )
+
 def parse_year(text):
     """Parse one year of hate crime master file data. Returns (incidents, bh_counts)."""
     lines = text.split('\n')
@@ -246,9 +271,21 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--years', nargs='*', type=int, help='Specific years to import')
     parser.add_argument('--db', default='data/hate-crime/hate_crime.db', help='Output database path')
+    parser.add_argument(
+        '--protected-years',
+        default=os.environ.get('PROTECTED_UPDATE_YEARS', DEFAULT_PROTECTED_YEARS),
+        help='Comma-separated years the importer must not delete/reimport.',
+    )
+    parser.add_argument(
+        '--allow-protected-years',
+        action='store_true',
+        help='Allow importing protected years. Requires an explicit operator decision.',
+    )
     args = parser.parse_args()
 
     years = args.years or list(range(1991, 2026))
+    protected_years = parse_year_csv(args.protected_years)
+    assert_no_protected_years(years, protected_years, args.allow_protected_years)
     db_path = args.db
 
     print(f"Importing hate crime data for {len(years)} years into {db_path}")
