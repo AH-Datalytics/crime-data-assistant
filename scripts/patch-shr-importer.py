@@ -15,23 +15,27 @@ DERIVED_ANCHOR = "  console.log('\\nUpdate complete!');"
 DERIVED_MARKER = "Rebuilding SHR derived tables"
 YEAR_MARKER = "PROTECTED_UPDATE_YEARS"
 
-OLD_YEAR_BLOCK = """const currentYear = now.getFullYear();
-const yearsToUpdate = [currentYear - 1, currentYear];"""
+OLD_YEAR_BLOCKS = [
+    """const currentYear = now.getFullYear();
+const yearsToUpdate = [currentYear - 1, currentYear];""",
+    """  const currentYear = now.getFullYear();
+  const yearsToUpdate = [currentYear - 1, currentYear];""",
+]
 
-NEW_YEAR_BLOCK = """const currentYear = now.getFullYear();
-const protectedYears = new Set((process.env.PROTECTED_UPDATE_YEARS || '2025')
-  .split(',')
-  .map(s => parseInt(s.trim(), 10))
-  .filter(Number.isFinite));
-const requestedYears = (process.env.SHR_UPDATE_YEARS || String(currentYear))
-  .split(',')
-  .map(s => parseInt(s.trim(), 10))
-  .filter(Number.isFinite);
-const yearsToUpdate = [...new Set(requestedYears)].sort();
-const blockedYears = yearsToUpdate.filter(y => protectedYears.has(y));
-if (blockedYears.length) {
-  throw new Error(`Refusing to update protected SHR year(s): ${blockedYears.join(', ')}`);
-}"""
+NEW_YEAR_BLOCK = """  const currentYear = now.getFullYear();
+  const protectedYears = new Set((process.env.PROTECTED_UPDATE_YEARS || '2025')
+    .split(',')
+    .map(s => parseInt(s.trim(), 10))
+    .filter(Number.isFinite));
+  const requestedYears = (process.env.SHR_UPDATE_YEARS || String(currentYear))
+    .split(',')
+    .map(s => parseInt(s.trim(), 10))
+    .filter(Number.isFinite);
+  const yearsToUpdate = [...new Set(requestedYears)].sort();
+  const blockedYears = yearsToUpdate.filter(y => protectedYears.has(y));
+  if (blockedYears.length) {
+    throw new Error(`Refusing to update protected SHR year(s): ${blockedYears.join(', ')}`);
+  }"""
 
 DERIVED_POST = """  // Post-import: rebuild derived tables so prompt/allowlist dependencies persist.
   // See docs/query-audit-2026-06-09-proposals.md.
@@ -49,12 +53,15 @@ def main():
 
     if YEAR_MARKER in source:
         print("year protection already patched")
-    elif OLD_YEAR_BLOCK in source:
-        source = source.replace(OLD_YEAR_BLOCK, NEW_YEAR_BLOCK)
-        changed = True
-        print("patched year protection")
     else:
-        raise SystemExit("year block anchor not found; aborting")
+        for old_year_block in OLD_YEAR_BLOCKS:
+            if old_year_block in source:
+                source = source.replace(old_year_block, NEW_YEAR_BLOCK)
+                changed = True
+                print("patched year protection")
+                break
+        else:
+            raise SystemExit("year block anchor not found; aborting")
 
     if DERIVED_MARKER in source:
         print("derived-table rebuild already patched")
