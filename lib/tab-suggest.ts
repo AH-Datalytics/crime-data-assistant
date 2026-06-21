@@ -109,6 +109,8 @@ interface DatasetCapabilities {
   hasStateRates: boolean;
 }
 
+export type SourceYearRanges = Partial<Record<TabId, { start: number; end: number }>>;
+
 const DATASET_REGISTRY: Record<TabId, DatasetCapabilities> = {
   current: {
     id: "current",
@@ -186,6 +188,13 @@ const DATASET_REGISTRY: Record<TabId, DatasetCapabilities> = {
     hasStateRates: false,
   },
 };
+
+function datasetsWithYearRanges(yearRanges?: SourceYearRanges): DatasetCapabilities[] {
+  return (Object.values(DATASET_REGISTRY) as DatasetCapabilities[]).map((ds) => {
+    const override = yearRanges?.[ds.id];
+    return override ? { ...ds, yearRange: override } : ds;
+  });
+}
 
 // ══════════════════════════════════════════════════════════════════════
 //  Offense detection
@@ -973,7 +982,7 @@ function scoreDataset(ds: DatasetCapabilities, intent: QueryIntent): RouteScore 
  * Route a question to the best dataset(s).
  * Returns scored recommendations for all applicable datasets.
  */
-export function recommendTabs(question: string): TabRecommendation[] {
+export function recommendTabs(question: string, yearRanges?: SourceYearRanges): TabRecommendation[] {
   const q = question.trim();
   if (!q || q.length < 5) return [];
 
@@ -981,7 +990,7 @@ export function recommendTabs(question: string): TabRecommendation[] {
 
   // Score only enabled datasets
   const enabled = enabledSourceIds();
-  const scores = (Object.values(DATASET_REGISTRY) as DatasetCapabilities[])
+  const scores = datasetsWithYearRanges(yearRanges)
     .filter(ds => enabled.has(ds.id))
     .map(ds => scoreDataset(ds, intent));
 
@@ -1007,8 +1016,8 @@ export function recommendTabs(question: string): TabRecommendation[] {
  * Single-tab suggestion for the in-tab banner.
  * Only suggests if the top recommendation is different from the current tab.
  */
-export function suggestTab(question: string, currentTab: TabId): TabSuggestion | null {
-  const recs = recommendTabs(question);
+export function suggestTab(question: string, currentTab: TabId, yearRanges?: SourceYearRanges): TabSuggestion | null {
+  const recs = recommendTabs(question, yearRanges);
   if (recs.length === 0) return null;
   const top = recs.find(r => r.primary);
   if (!top || top.tab === currentTab) return null;
@@ -1026,7 +1035,7 @@ export function suggestTab(question: string, currentTab: TabId): TabSuggestion |
  * user on their current tab — the query modifies the previous result,
  * not a new standalone question.
  */
-export function autoRoute(question: string): AutoRouteResult | null {
+export function autoRoute(question: string, yearRanges?: SourceYearRanges): AutoRouteResult | null {
   // Follow-ups should not produce a routing decision at all.
   // The UI keeps the user on their current tab.
   if (isFollowUp(question)) return null;
@@ -1055,7 +1064,7 @@ export function autoRoute(question: string): AutoRouteResult | null {
     return { source: "shr", reason: "Interpreting as fatal shootings (firearm homicides) — nonfatal shooting data not available", confidence: "high", alternatives: [] };
   }
 
-  const recs = recommendTabs(question);
+  const recs = recommendTabs(question, yearRanges);
   if (recs.length === 0) return null;
 
   const primary = recs[0];
@@ -1105,8 +1114,8 @@ export function autoRoute(question: string): AutoRouteResult | null {
  * This is intentionally conservative: only high-confidence routes to a
  * different enabled source produce a nudge.
  */
-export function manualSourceNudge(question: string, activeSource: TabId): ManualSourceNudge | null {
-  const route = autoRoute(question);
+export function manualSourceNudge(question: string, activeSource: TabId, yearRanges?: SourceYearRanges): ManualSourceNudge | null {
+  const route = autoRoute(question, yearRanges);
   if (!route || route.source === activeSource || route.confidence !== "high") return null;
 
   return {

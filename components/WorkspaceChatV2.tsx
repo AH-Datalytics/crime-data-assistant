@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import type { QueryResponse, StreamEvent } from "@/lib/types";
-import { autoRoute, isFollowUp, manualSourceNudge, parseIntent, recommendTabs, TAB_DISPLAY_NAMES, TAB_COLORS, type TabRecommendation } from "@/lib/tab-suggest";
+import { autoRoute, isFollowUp, manualSourceNudge, parseIntent, recommendTabs, TAB_DISPLAY_NAMES, TAB_COLORS, type SourceYearRanges, type TabRecommendation } from "@/lib/tab-suggest";
 import { pickerOptions, type SourceId as RegistrySourceId, type PickerSourceId } from "@/lib/sources";
 import { applyChartOnlyCustomization } from "@/lib/chart-customization";
 import { hasBlockingQueryGuidanceWarnings } from "@/lib/query-guidance";
@@ -97,9 +97,10 @@ interface WorkspaceChatProps {
   heroPopulation?: number | null;
   historicalHeroData?: { year: number; murder_rate: number }[];
   shrHeroData?: { year: number; pct_firearm: number }[];
+  sourceYearRanges?: SourceYearRanges;
 }
 
-export default function WorkspaceChat({}: WorkspaceChatProps) {
+export default function WorkspaceChat({ sourceYearRanges }: WorkspaceChatProps) {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [elapsed, setElapsed] = useState(0);
@@ -277,7 +278,7 @@ export default function WorkspaceChat({}: WorkspaceChatProps) {
       const currentLacksDemos = activeSource === "current" || activeSource === "historical";
       if (hasHardReq && currentLacksDemos) {
         // Follow-up adds a requirement the current tab can't handle — reroute
-        const r = autoRoute(q);
+        const r = autoRoute(q, sourceYearRanges);
         if (r) {
           submitQuestion(q, r.source, `Rerouted — ${r.reason}`, r.confidence, "follow_up");
           return;
@@ -288,9 +289,9 @@ export default function WorkspaceChat({}: WorkspaceChatProps) {
     }
 
     if (source === "auto") {
-      const r = autoRoute(q);
+      const r = autoRoute(q, sourceYearRanges);
       if (!r || r.confidence !== "high") {
-        const recs = r ? [{ tab: r.source, why: r.reason, primary: true, score: 10 }, ...r.alternatives] : recommendTabs(q);
+        const recs = r ? [{ tab: r.source, why: r.reason, primary: true, score: 10 }, ...r.alternatives] : recommendTabs(q, sourceYearRanges);
         setPendingQuestion(q); setDisambiguationRecs(recs.length > 0 ? recs : []); setDisambiguationConfidence(r?.confidence ?? null); setShowDisambiguation(true); setAnimateIdx(-1);
         return;
       }
@@ -298,7 +299,7 @@ export default function WorkspaceChat({}: WorkspaceChatProps) {
     } else {
       submitQuestion(q, source as "current" | "historical" | "nibrs" | "shr" | "hate_crime", undefined, null, "manual");
     }
-  }, [source, activeSource, response, submitQuestion]);
+  }, [source, activeSource, response, submitQuestion, sourceYearRanges]);
 
   const selectExchange = (idx: number) => {
     const ex = exchanges[idx];
@@ -315,7 +316,7 @@ export default function WorkspaceChat({}: WorkspaceChatProps) {
     activeExchange &&
     activeExchangeIdx === exchanges.length - 1 &&
     !activeExchange.routingReason
-      ? manualSourceNudge(activeExchange.question, activeExchange.source)
+      ? manualSourceNudge(activeExchange.question, activeExchange.source, sourceYearRanges)
       : null;
   const sourceNudgeBanner = sourceNudge && activeExchange ? (
     <div

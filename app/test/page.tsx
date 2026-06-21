@@ -1,5 +1,6 @@
 import { getDb } from "@/lib/rtci-db";
 import { getShrDb } from "@/lib/shr-db";
+import { HISTORICAL, NIBRS, RTCI, SHR } from "@/lib/dynamic-facts";
 import WorkspaceChatV2 from "@/components/WorkspaceChatV2";
 
 function getHeroData() {
@@ -86,6 +87,12 @@ export default function TestPage() {
       heroPopulation={population}
       historicalHeroData={historicalHeroData}
       shrHeroData={shrHeroData}
+      sourceYearRanges={{
+        current: { start: RTCI.minYear, end: RTCI.maxYear },
+        historical: { start: HISTORICAL.crimeMinYear, end: HISTORICAL.crimeMaxYear },
+        nibrs: { start: NIBRS.minYear, end: NIBRS.maxYear },
+        shr: { start: SHR.minYear, end: SHR.maxYear },
+      }}
     />
   );
 }
