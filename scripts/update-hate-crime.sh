@@ -12,8 +12,18 @@ APP_DIR="/opt/nibrs/current"
 DB_PATH="/opt/nibrs/hate_crime.db"
 SCRIPT="$APP_DIR/scripts/import-hate-crime.py"
 CURRENT_YEAR=$(date +%Y)
-PROTECTED_YEARS="${PROTECTED_UPDATE_YEARS:-2025}"
-TARGET_YEAR="${HATE_CRIME_UPDATE_YEAR:-$CURRENT_YEAR}"
+CURRENT_MONTH=$((10#$(date +%m)))
+
+if [ "$CURRENT_MONTH" -lt 6 ]; then
+    DEFAULT_TARGET_YEAR=$((CURRENT_YEAR - 1))
+    DEFAULT_PROTECTED_YEARS=""
+else
+    DEFAULT_TARGET_YEAR=$CURRENT_YEAR
+    DEFAULT_PROTECTED_YEARS=$((CURRENT_YEAR - 1))
+fi
+
+PROTECTED_YEARS="${PROTECTED_UPDATE_YEARS:-$DEFAULT_PROTECTED_YEARS}"
+TARGET_YEAR="${HATE_CRIME_UPDATE_YEAR:-$DEFAULT_TARGET_YEAR}"
 
 echo "[$(date)] Checking for hate crime data updates..."
 echo "  Protected years: $PROTECTED_YEARS"

@@ -13,8 +13,7 @@ import os
 import time
 import sys
 import argparse
-
-DEFAULT_PROTECTED_YEARS = "2025"
+from datetime import datetime
 
 # ── Code Lookups ──────────────────────────────────────────────
 
@@ -160,6 +159,10 @@ def assert_no_protected_years(years, protected_years, allow=False):
             + ". Re-run with --allow-protected-years only if this is intentional."
         )
 
+def default_protected_years(now=None):
+    now = now or datetime.now()
+    return str(now.year - 1) if now.month >= 6 else ""
+
 def parse_year(text):
     """Parse one year of hate crime master file data. Returns (incidents, bh_counts)."""
     lines = text.split('\n')
@@ -273,8 +276,8 @@ def main():
     parser.add_argument('--db', default='data/hate-crime/hate_crime.db', help='Output database path')
     parser.add_argument(
         '--protected-years',
-        default=os.environ.get('PROTECTED_UPDATE_YEARS', DEFAULT_PROTECTED_YEARS),
-        help='Comma-separated years the importer must not delete/reimport.',
+        default=os.environ.get('PROTECTED_UPDATE_YEARS', default_protected_years()),
+        help='Comma-separated years the importer must not delete/reimport. Defaults to the prior year from June through December.',
     )
     parser.add_argument(
         '--allow-protected-years',

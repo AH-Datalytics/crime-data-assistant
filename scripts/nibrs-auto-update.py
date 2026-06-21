@@ -47,7 +47,6 @@ DATA_DIR = "/opt/nibrs/data"
 CHECKSUM_FILE = "/opt/nibrs/checksums.json"
 TMP_DIR = "/mnt/HC_Volume_105124811/tmp"
 BATCH_SIZE = 100_000
-DEFAULT_PROTECTED_YEARS = "2025"
 
 CDE_URL = "https://cde.ucr.cjis.gov/LATEST/s3/signedurl?key=master_files/nibrs/nibrs-{year}.zip"
 
@@ -163,8 +162,8 @@ def parse_args():
     )
     parser.add_argument(
         "--protected-years",
-        default=os.environ.get("PROTECTED_UPDATE_YEARS", DEFAULT_PROTECTED_YEARS),
-        help="Comma-separated years the updater must not delete/reimport.",
+        default=os.environ.get("PROTECTED_UPDATE_YEARS", default_protected_years()),
+        help="Comma-separated years the updater must not delete/reimport. Defaults to the prior year from June through December.",
     )
     parser.add_argument(
         "--allow-protected-years",
@@ -174,10 +173,17 @@ def parse_args():
     return parser.parse_args()
 
 
-def get_years_to_update(years_arg=None):
+def default_protected_years(now=None):
+    now = now or datetime.now()
+    return str(now.year - 1) if now.month >= 6 else ""
+
+
+def get_years_to_update(years_arg=None, now=None):
     if years_arg:
         return sorted(set(years_arg))
-    now = datetime.now()
+    now = now or datetime.now()
+    if now.month < 6:
+        return [now.year - 1, now.year]
     return [now.year]
 
 
