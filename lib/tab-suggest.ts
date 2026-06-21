@@ -126,7 +126,7 @@ const DATASET_REGISTRY: Record<TabId, DatasetCapabilities> = {
     id: "historical",
     displayName: "Historical Library",
     description: "Annual agency, state, and nationwide data going back decades",
-    yearRange: { start: 1930, end: 2024 },
+    yearRange: { start: 1930, end: 2025 },
     granularity: ["annual"],
     offenseScope: "part1_ucr",
     attributes: new Set(["clearance_rate", "staffing"]),
@@ -138,7 +138,7 @@ const DATASET_REGISTRY: Record<TabId, DatasetCapabilities> = {
     id: "nibrs",
     displayName: "NIBRS",
     description: "Incident-level detail, 1991 - present",
-    yearRange: { start: 1991, end: 2025 },
+    yearRange: { start: 1991, end: 2026 },
     granularity: ["monthly", "annual"],
     offenseScope: "all_nibrs",
     attributes: new Set([
@@ -158,7 +158,7 @@ const DATASET_REGISTRY: Record<TabId, DatasetCapabilities> = {
     id: "shr",
     displayName: "Homicide Reports",
     description: "Homicide victim-offender detail, 1976–present",
-    yearRange: { start: 1976, end: 2024 },
+    yearRange: { start: 1976, end: 2025 },
     granularity: ["monthly", "annual"],
     offenseScope: "homicide_only",
     attributes: new Set([
@@ -794,6 +794,11 @@ function scoreDataset(ds: DatasetCapabilities, intent: QueryIntent): RouteScore 
       }
     }
     score -= Math.min(3, gap / 5); // small penalty for minor gaps
+  }
+  if (intent.timeRange.start !== null && intent.timeRange.start > ds.yearRange.end) {
+    excluded = true;
+    excludeReason = `Data currently ends in ${ds.yearRange.end}, before the requested year`;
+    return { tab: ds.id, score: 0, why, excluded, excludeReason };
   }
   if (intent.timeRange.end !== null && intent.timeRange.end > ds.yearRange.end) {
     const gap = intent.timeRange.end - ds.yearRange.end;

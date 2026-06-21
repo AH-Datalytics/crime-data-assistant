@@ -49,8 +49,8 @@ export function asksForSubstateEntities(question: string): boolean {
 }
 
 export function sqlNarrowsToSubstateEntity(sql: string): boolean {
-  return /\b(?:\w+\.)?(?:agency|city|agency_name)\s*(?:=|LIKE|IN\s*\()/i.test(sql) ||
-    /\b(?:\w+\.)?ori\s*(?:=|IN\s*\()/i.test(sql) ||
+  return /\b(?:\w+\.)?(?:agency|city|agency_name)\s*(?:=\s*'[^']+'|LIKE\s*'[^']+'|IN\s*\()/i.test(sql) ||
+    /\b(?:\w+\.)?ori\s*(?:=\s*'[^']+'|IN\s*\()/i.test(sql) ||
     /\b(?:\w+\.)?type\s*=\s*'(?:City|County)'/i.test(sql) ||
     /\b(?:\w+\.)?agency_type\s*=\s*'(?:City|County)'/i.test(sql);
 }

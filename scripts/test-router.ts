@@ -143,6 +143,8 @@ test({ question: "How many gang murders have there been in Chicago over time?", 
 test({ question: "Compare crime rates vs police staffing levels across the 20 largest cities in the US", expectedPrimary: "historical" });
 // 4272: staffing exists only in Historical; confidence must be high so the UI auto-picks/nudges.
 test({ question: "give me a scatter plot of violent crime rate per 100k in 2024 vs officers per 100k in cities of 250k or more", expectedPrimary: "historical", mustExclude: ["current", "nibrs", "shr"], expectedConfidence: "high" });
+// 4455: Historical annual crime data cannot answer current-year requests; Current can answer partial monthly data.
+test({ question: "what is seattle's 2026 per capita murder rate", expectedPrimary: "current", mustExclude: ["historical"], note: "#4455 Historical ends before 2026; Current has partial monthly data" });
 {
   const meta = parseRoutingLogMeta({
     question: "Historical give me a scatter plot of violent crime rate per 100k in 2024 vs officers per 100k in cities of 250k or more",

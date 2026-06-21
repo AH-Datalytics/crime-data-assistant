@@ -165,6 +165,17 @@ import { applyResultDisclosures } from "../lib/result-disclosure";
 
 {
   const explanation = applyResultDisclosures({
+    explanation: "Maryland statewide murder counts by month.",
+    question: "murders in the State of Maryland in 2026",
+    sql: "SELECT am.year, am.month, SUM(am.count) AS murders FROM agency_monthly am JOIN agencies a ON a.ori = am.ori WHERE a.state = 'MD' AND am.year = 2026 GROUP BY am.year, am.month",
+    rows: [{ year: 2026, month: 1, murders: 10 }],
+    tab: "current",
+  });
+  assert.doesNotMatch(explanation, /not statewide data/i);
+}
+
+{
+  const explanation = applyResultDisclosures({
     explanation: "Victim counts by age group across the requested cities for each year from 2015 to 2025.",
     question: "disaggregate by year",
     sql: "SELECT d.year, d.age_group, SUM(d.victim_count) AS victims FROM summary_victim_demographics d WHERE d.ori IN (SELECT ori FROM nibrs_consistent_reporters WHERE start_year = 2015 AND end_year = 2025) GROUP BY d.year, d.age_group",
@@ -200,6 +211,23 @@ import { applyResultDisclosures } from "../lib/result-disclosure";
     tab: "current",
   });
   assert.match(explanation, /Returned period: January-March 2026\./);
+}
+
+{
+  const explanation = applyResultDisclosures({
+    explanation: "Seattle's 2026 per-capita murder rate is shown by month.",
+    question: "what is seattle's 2026 per capita murder rate",
+    sql: "SELECT year, month, SUM(count) * 100000.0 / AVG(population) AS murder_rate_per_100k FROM agency_monthly WHERE agency = 'Seattle' AND year = 2026 GROUP BY year, month",
+    rows: [
+      { year: 2026, month: 1, murder_rate_per_100k: 1.2 },
+      { year: 2026, month: 2, murder_rate_per_100k: 1.3 },
+      { year: 2026, month: 3, murder_rate_per_100k: 1.4 },
+    ],
+    tab: "current",
+  });
+  assert.match(explanation, /Returned period: January-March 2026\./);
+  assert.match(explanation, /2026 is incomplete/);
+  assert.match(explanation, /not a full-year 2026 rate/);
 }
 
 {

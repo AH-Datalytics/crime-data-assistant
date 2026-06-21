@@ -24,6 +24,7 @@ import { normalizeHistoryForTab } from "@/lib/chat-history";
 import { detectFollowupTransform } from "@/lib/followup-transform";
 import { getBlockingGeoClarification } from "@/lib/geo-resolver";
 import { detectDemographicHomicideRateOverride } from "@/lib/capability-overrides";
+import { historicalYearAvailability } from "@/lib/year-availability";
 
 function sseEvent(event: StreamEvent): string {
   return `data: ${JSON.stringify(event)}\n\n`;
@@ -381,6 +382,44 @@ export async function POST(req: NextRequest) {
               sql: null as unknown as string,
               explanation: geoClarification.explanation,
               title: "",
+              columns: [],
+              rows: [],
+              rowCount: 0,
+              truncated: false,
+              chartConfig: null,
+              chartMeta: null,
+              executionTimeMs: ms,
+            })
+          )
+        );
+        controller.close();
+      },
+    });
+
+    return new Response(stream, {
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive",
+        "X-RateLimit-Remaining": String(rateCheck.remaining),
+      },
+    });
+  }
+
+  const historicalAvailability = tab === "historical" ? historicalYearAvailability(question) : null;
+  if (historicalAvailability) {
+    const ms = Date.now() - totalStart;
+    writeLog(question, null, 0, null, ms, historicalAvailability.explanation, tab, ["historical-year-unavailable"], "deterministic", sessionId);
+
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(
+          encoder.encode(
+            sseEvent({
+              type: "result",
+              sql: null as unknown as string,
+              explanation: historicalAvailability.explanation,
+              title: "Year not available in Historical",
               columns: [],
               rows: [],
               rowCount: 0,

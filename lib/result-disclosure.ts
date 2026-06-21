@@ -266,6 +266,41 @@ function returnedMonthRange(rows: Record<string, unknown>[]): string | null {
   return `${MONTH_NAMES[lo.month - 1]} ${lo.year}-${MONTH_NAMES[hi.month - 1]} ${hi.year}`;
 }
 
+function rowsIncludeYear(rows: Record<string, unknown>[], year: number): boolean {
+  const yearCols = ["year", "data_year", "Year"];
+  return rows.some((row) =>
+    yearCols.some((col) => Number(row[col]) === year)
+  );
+}
+
+function hasCurrentYearSignal(question: string, sql: string, rows: Record<string, unknown>[], year: number): boolean {
+  if (rowsIncludeYear(rows, year)) return true;
+  const escapedYear = String(year);
+  return new RegExp(`\\b${escapedYear}\\b`).test(question) ||
+    new RegExp(`\\byear\\s*(?:=|<=|BETWEEN[^\\n;]+AND)\\s*${escapedYear}\\b`, "i").test(sql) ||
+    /\b(?:this year|current year|ytd|year[-\s]?to[-\s]?date|so far|to date)\b/i.test(question);
+}
+
+function hasCurrentPartialDisclosure(explanation: string, year: number): boolean {
+  return new RegExp(`\\b${year}\\b[\\s\\S]{0,140}\\b(?:partial|incomplete|year[-\\s]?to[-\\s]?date|YTD|not\\s+a\\s+full[-\\s]?year|preliminary)\\b`, "i").test(explanation);
+}
+
+function currentPartialYearNote(
+  question: string,
+  sql: string,
+  rows: Record<string, unknown>[],
+  returnedPeriod: string | null,
+): string | null {
+  const currentYear = new Date().getFullYear();
+  if (!hasCurrentYearSignal(question, sql, rows, currentYear)) return null;
+
+  const rateish = /\b(?:rates?|per\s+capita|per\s*100k|per\s*100,000)\b/i.test(question) ||
+    /\b(?:rate|per_100k|per_capita)\b/i.test(sql);
+  const metric = rateish ? "rate" : "total";
+  const basis = returnedPeriod ? ` based on returned data (${returnedPeriod})` : " based on the returned data";
+  return `${currentYear} is incomplete; this is a partial-year ${metric}${basis}, not a full-year ${currentYear} ${metric}.`;
+}
+
 function requestedMonths(question: string): number[] {
   const months: number[] = [];
   for (const [month, pattern] of MONTH_ALIASES) {
@@ -412,6 +447,13 @@ export function applyResultDisclosures(opts: {
   const returnedPeriod = ytd || currentReturnedPeriod;
   if (returnedPeriod && !new RegExp(returnedPeriod.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i").test(explanation)) {
     explanation = appendSentence(explanation, `Returned period: ${returnedPeriod}.`);
+  }
+
+  if (opts.tab === "current") {
+    const partialYearNote = currentPartialYearNote(opts.question, opts.sql, opts.rows, returnedPeriod);
+    if (partialYearNote && !hasCurrentPartialDisclosure(explanation, new Date().getFullYear())) {
+      explanation = appendSentence(explanation, partialYearNote);
+    }
   }
 
   if (opts.tab === "current") {
