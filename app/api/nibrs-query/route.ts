@@ -23,7 +23,7 @@ import { pastCompleteCalendarYearsRange } from "@/lib/time-conventions";
 import { detectFollowupTransform } from "@/lib/followup-transform";
 import { detectNibrsCapabilityOverride } from "@/lib/nibrs-capability-overrides";
 import { getBlockingGeoClarification } from "@/lib/geo-resolver";
-import { asksCampusAgency, buildCampusAgencySummarySql, knownCampusAgencyResolution, resolveCampusAgencyOris, shouldResolveCampusAgencySql } from "@/lib/nibrs-campus-agency";
+import { asksCampusAgency, buildCampusAgencySummarySql, campusAgencyChartAxesFromSql, knownCampusAgencyResolution, resolveCampusAgencyOris, shouldResolveCampusAgencySql } from "@/lib/nibrs-campus-agency";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -493,7 +493,13 @@ export async function POST(req: NextRequest) {
       try {
         const resolution = knownCampusResolution || resolveCampusAgencyOris(getNibrsDb(), question);
         if (resolution && resolution.oris.length > 0) {
+          const campusChartAxes = campusAgencyChartAxesFromSql(sql, question);
           sql = buildCampusAgencySummarySql(resolution.oris, question, sql);
+          if (campusChartAxes) {
+            claude.chartHint = "line";
+            claude.xAxis = campusChartAxes.xAxis;
+            claude.yAxis = campusChartAxes.yAxis;
+          }
           routeGuardrailsFired.push("nibrs-campus-agency-ori-resolve");
           const resolvedLabel = resolution.rows
             .map((row) => `${row.city} (${row.ori})`)
@@ -603,12 +609,18 @@ export async function POST(req: NextRequest) {
       try {
         const resolution = resolveCampusAgencyOris(getNibrsDb(), question);
         if (resolution && resolution.oris.length > 0) {
+          const campusChartAxes = campusAgencyChartAxesFromSql(sql, question);
           const fallbackSql = buildCampusAgencySummarySql(resolution.oris, question, sql);
           const fallbackResult = await executeWithTimeout(fallbackSql);
           if (fallbackResult.rows.length > 0) {
             sql = fallbackSql;
             rows = fallbackResult.rows;
             columns = fallbackResult.columns;
+            if (campusChartAxes) {
+              claude.chartHint = "line";
+              claude.xAxis = campusChartAxes.xAxis;
+              claude.yAxis = campusChartAxes.yAxis;
+            }
             routeGuardrailsFired.push("nibrs-campus-agency-zero-result-rescue");
             claude.title = claude.title || "Campus Agency NIBRS Offenses";
             claude.explanation = `This query resolves the campus agency ORI rather than using the surrounding city police department.`;

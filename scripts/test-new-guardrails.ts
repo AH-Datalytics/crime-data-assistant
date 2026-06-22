@@ -11,6 +11,7 @@ import { extractQueryContext } from "../lib/query-context.js";
 import { runGuardrails } from "../lib/guardrails.js";
 import { detectAllNullData } from "../lib/all-null-detection.js";
 import { buildCampusAgencySummarySql, chooseCampusAgencyOris, knownCampusAgencyResolution } from "../lib/nibrs-campus-agency.js";
+import { buildNibrsChartConfig } from "../lib/nibrs-chart-config.js";
 import { currentCalendarYear, pastCompleteCalendarYearsRange, pastYearsIncludingCurrentRange } from "../lib/time-conventions.js";
 
 let pass = 0;
@@ -471,8 +472,11 @@ console.log("\n═══ nibrs-city-no-agency-type ═══\n");
   assert("TP: campus fallback SQL uses literal campus ORI",
     /s\.ori IN \('CA0019700'\)/.test(sql),
     sql);
-  assert("TP: campus fallback SQL keeps monthly grain when requested",
-    /SELECT s\.year, s\.month/.test(sql) && /GROUP BY s\.year, s\.month/.test(sql),
+  assert("TP: campus fallback SQL uses chart-safe monthly period",
+    /printf\('%04d-%02d', s\.year, s\.month\) AS period/.test(sql) && /GROUP BY s\.year, s\.month/.test(sql),
+    sql);
+  assert("TP: campus fallback SQL returns one metric for single-offense monthly trend",
+    /SUM\(s\.offense_count\) AS vehicle_burglaries/.test(sql) && !/SELECT[\s\S]*\bs\.ori\b[\s\S]*FROM/i.test(sql) && !/\boffense_name\b/.test(sql),
     sql);
   assert("TP: campus fallback SQL preserves requested offense code",
     /s\.ucr_offense_code = '23F'/.test(sql),
@@ -480,6 +484,28 @@ console.log("\n═══ nibrs-city-no-agency-type ═══\n");
   assert("TP: campus fallback SQL preserves requested year filter",
     /s\.year >= 2021/.test(sql),
     sql);
+}
+
+{
+  const chart = buildNibrsChartConfig(
+    {
+      sql: "SELECT year, month, SUM(offense_count) AS vehicle_burglaries FROM summary_city_monthly GROUP BY year, month",
+      explanation: "",
+      title: "Vehicle Burglaries",
+      chartHint: "line",
+      xAxis: "year",
+      yAxis: "",
+    },
+    ["year", "month", "vehicle_burglaries"],
+    [
+      { year: 2024, month: 1, vehicle_burglaries: 3 },
+      { year: 2024, month: 2, vehicle_burglaries: 5 },
+    ],
+    "vehicle burglaries per month"
+  );
+  assert("TP: chart fallback does not graph month as a metric",
+    chart?.yAxis.length === 1 && chart.yAxis[0] === "vehicle_burglaries",
+    `chart: ${JSON.stringify(chart)}`);
 }
 
 {

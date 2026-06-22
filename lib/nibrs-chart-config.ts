@@ -22,6 +22,10 @@ function numericColumns(columns: string[], rows: Record<string, unknown>[]): str
   return columns.filter((column) => typeof rows[0]?.[column] === "number");
 }
 
+function isDimensionLikeNumericColumn(column: string): boolean {
+  return /^(?:year|data_year|month|quarter|day|week)$/i.test(column);
+}
+
 export function buildNibrsChartConfig(
   claude: ClaudeResponse,
   columns: string[],
@@ -79,6 +83,7 @@ export function buildNibrsChartConfig(
       ? yAxisCandidates
       : columns.filter((column) => {
           if (column === xAxis) return false;
+          if (isDimensionLikeNumericColumn(column)) return false;
           return typeof rows[0]?.[column] === "number";
         });
 

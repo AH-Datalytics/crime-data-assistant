@@ -168,6 +168,16 @@ function offenseFilterFromSql(sql: string | null | undefined): string {
   return codes.length > 0 ? ` AND s.ucr_offense_code IN (${codes.join(", ")})` : "";
 }
 
+function offenseCodesFromSql(sql: string | null | undefined): string[] {
+  if (!sql) return [];
+  const equals = sql.match(/\b(?:\w+\.)?ucr_offense_code\s*=\s*'([0-9A-Z]+)'/i);
+  if (equals) return [equals[1].toUpperCase()];
+
+  const inList = sql.match(/\b(?:\w+\.)?ucr_offense_code\s+IN\s*\(([^)]+)\)/i);
+  if (!inList) return [];
+  return [...inList[1].matchAll(/'([0-9A-Z]+)'/gi)].map((match) => match[1].toUpperCase());
+}
+
 function yearFilterFromSql(sql: string | null | undefined): string {
   if (!sql) return "";
   const source = sql.replace(/\s+/g, " ");
@@ -188,6 +198,39 @@ function yearFilterFromSql(sql: string | null | undefined): string {
   return filters.length > 0 ? ` AND ${filters.join(" AND ")}` : "";
 }
 
+function safeSqlAlias(value: string): string | null {
+  const alias = value
+    .toLowerCase()
+    .replace(/[^a-z0-9_]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 60);
+  if (!alias || /^\d/.test(alias)) return null;
+  if (["year", "month", "period", "ori", "agency", "state", "ucr_offense_code", "offense_name"].includes(alias)) return null;
+  return alias;
+}
+
+export function campusAgencyMetricAliasFromSql(sourceSql: string | null | undefined, question = ""): string {
+  const sourceAlias = sourceSql?.match(/\bSUM\s*\(\s*(?:\w+\.)?offense_count\s*\)\s+AS\s+([A-Za-z_][A-Za-z0-9_]*)/i)?.[1];
+  const safeSourceAlias = sourceAlias ? safeSqlAlias(sourceAlias) : null;
+  if (safeSourceAlias && safeSourceAlias !== "offense_count") return safeSourceAlias;
+
+  const text = normalizeText(question);
+  if (/\bVEHICLE\b/.test(text) && /\bBURGLAR/.test(text)) return "vehicle_burglaries";
+  if (/\bBURGLAR/.test(text)) return "burglaries";
+  if (/\bMOTOR\b/.test(text) && /\bVEHICLE\b/.test(text) && /\bTHEFT\b/.test(text)) return "motor_vehicle_thefts";
+  if (/\bROBBER/.test(text)) return "robberies";
+  if (/\bASSAULT/.test(text)) return "assaults";
+  return "offense_count";
+}
+
+export function campusAgencyChartAxesFromSql(sourceSql: string | null | undefined, question: string): { xAxis: string; yAxis: string } | null {
+  if (offenseCodesFromSql(sourceSql).length !== 1) return null;
+  return {
+    xAxis: /\bmonth(?:ly)?\b/i.test(question) ? "period" : "year",
+    yAxis: campusAgencyMetricAliasFromSql(sourceSql, question),
+  };
+}
+
 export function hasLiteralCampusOri(sql: string): boolean {
   return /\b(?:\w+\.)?ori\s*=\s*'[A-Z0-9]{7,9}'/i.test(sql) ||
     /\b(?:\w+\.)?ori\s+IN\s*\((?!\s*SELECT)[^)]*'[A-Z0-9]{7,9}'/i.test(sql);
@@ -203,20 +246,37 @@ export function shouldResolveCampusAgencySql(question: string, sql: string): boo
 export function buildCampusAgencySummarySql(oris: string[], question: string, sourceSql?: string | null): string {
   const quotedOris = oris.map((ori) => `'${ori.replace(/'/g, "''")}'`).join(", ");
   const includeMonth = /\bmonth(?:ly)?\b/i.test(question);
+  const offenseFilter = offenseFilterFromSql(sourceSql);
+  const yearFilter = yearFilterFromSql(sourceSql);
+  const offenseCodes = offenseCodesFromSql(sourceSql);
+
+  if (offenseCodes.length === 1) {
+    const metricAlias = campusAgencyMetricAliasFromSql(sourceSql, question);
+    const periodColumn = includeMonth ? "printf('%04d-%02d', s.year, s.month) AS period" : "s.year";
+    const periodGroup = includeMonth ? "s.year, s.month" : "s.year";
+    const periodOrder = includeMonth ? "s.year, s.month" : "s.year";
+
+    return `SELECT ${periodColumn}, SUM(s.offense_count) AS ${metricAlias}
+FROM summary_city_monthly s
+WHERE s.ori IN (${quotedOris})
+${offenseFilter}
+${yearFilter}
+GROUP BY ${periodGroup}
+ORDER BY ${periodOrder}
+LIMIT 1000`;
+  }
+
   const periodColumns = includeMonth ? "s.year, s.month" : "s.year";
   const periodGroup = includeMonth ? "s.year, s.month" : "s.year";
   const periodOrder = includeMonth ? "s.year, s.month" : "s.year";
-  const offenseFilter = offenseFilterFromSql(sourceSql);
-  const yearFilter = yearFilterFromSql(sourceSql);
 
-  return `SELECT ${periodColumns}, s.ori, a.city AS agency, a.state, s.ucr_offense_code, o.offense_name, SUM(s.offense_count) AS offense_count
+  return `SELECT ${periodColumns}, s.ucr_offense_code, o.offense_name, SUM(s.offense_count) AS offense_count
 FROM summary_city_monthly s
-JOIN agencies a ON a.ori = s.ori AND a.year = s.year
 LEFT JOIN nibrs_offense_codes o ON o.code = s.ucr_offense_code
 WHERE s.ori IN (${quotedOris})
 ${offenseFilter}
 ${yearFilter}
-GROUP BY ${periodGroup}, s.ori, a.city, a.state, s.ucr_offense_code, o.offense_name
+GROUP BY ${periodGroup}, s.ucr_offense_code, o.offense_name
 ORDER BY ${periodOrder}, s.ucr_offense_code
 LIMIT 1000`;
 }
