@@ -144,18 +144,31 @@ export function resolveCampusAgencyOris(db: Database.Database, question: string)
   return chooseCampusAgencyOris(question, rows);
 }
 
-export function buildCampusAgencySummarySql(oris: string[], question: string): string {
+function offenseFilterFromSql(sql: string | null | undefined): string {
+  if (!sql) return "";
+  const equals = sql.match(/\b(?:\w+\.)?ucr_offense_code\s*=\s*'([0-9A-Z]+)'/i);
+  if (equals) return ` AND s.ucr_offense_code = '${equals[1].replace(/'/g, "''")}'`;
+
+  const inList = sql.match(/\b(?:\w+\.)?ucr_offense_code\s+IN\s*\(([^)]+)\)/i);
+  if (!inList) return "";
+  const codes = [...inList[1].matchAll(/'([0-9A-Z]+)'/gi)].map((match) => `'${match[1].replace(/'/g, "''")}'`);
+  return codes.length > 0 ? ` AND s.ucr_offense_code IN (${codes.join(", ")})` : "";
+}
+
+export function buildCampusAgencySummarySql(oris: string[], question: string, sourceSql?: string | null): string {
   const quotedOris = oris.map((ori) => `'${ori.replace(/'/g, "''")}'`).join(", ");
   const includeMonth = /\bmonth(?:ly)?\b/i.test(question);
   const periodColumns = includeMonth ? "s.year, s.month" : "s.year";
   const periodGroup = includeMonth ? "s.year, s.month" : "s.year";
   const periodOrder = includeMonth ? "s.year, s.month" : "s.year";
+  const offenseFilter = offenseFilterFromSql(sourceSql);
 
   return `SELECT ${periodColumns}, s.ori, a.city AS agency, a.state, s.ucr_offense_code, o.offense_name, SUM(s.offense_count) AS offense_count
 FROM summary_city_monthly s
 JOIN agencies a ON a.ori = s.ori AND a.year = s.year
 LEFT JOIN nibrs_offense_codes o ON o.code = s.ucr_offense_code
 WHERE s.ori IN (${quotedOris})
+${offenseFilter}
 GROUP BY ${periodGroup}, s.ori, a.city, a.state, s.ucr_offense_code, o.offense_name
 ORDER BY ${periodOrder}, s.ucr_offense_code
 LIMIT 1000`;

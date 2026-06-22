@@ -458,12 +458,19 @@ console.log("\n═══ nibrs-city-no-agency-type ═══\n");
 }
 
 {
-  const sql = buildCampusAgencySummarySql(["CA0019700"], "crime by month at University of California Berkeley");
+  const sql = buildCampusAgencySummarySql(
+    ["CA0019700"],
+    "University of California Berkley vehicle burglaries per month",
+    "SELECT year, month, SUM(offense_count) FROM summary_city_monthly WHERE ucr_offense_code = '23F'"
+  );
   assert("TP: campus fallback SQL uses literal campus ORI",
     /s\.ori IN \('CA0019700'\)/.test(sql),
     sql);
   assert("TP: campus fallback SQL keeps monthly grain when requested",
     /SELECT s\.year, s\.month/.test(sql) && /GROUP BY s\.year, s\.month/.test(sql),
+    sql);
+  assert("TP: campus fallback SQL preserves requested offense code",
+    /s\.ucr_offense_code = '23F'/.test(sql),
     sql);
 }
 

@@ -585,7 +585,7 @@ export async function POST(req: NextRequest) {
       try {
         const resolution = resolveCampusAgencyOris(getNibrsDb(), question);
         if (resolution && resolution.oris.length > 0) {
-          const fallbackSql = buildCampusAgencySummarySql(resolution.oris, question);
+          const fallbackSql = buildCampusAgencySummarySql(resolution.oris, question, sql);
           const fallbackResult = await executeWithTimeout(fallbackSql);
           if (fallbackResult.rows.length > 0) {
             sql = fallbackSql;
