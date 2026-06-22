@@ -449,7 +449,7 @@ console.log("\n═══ nibrs-city-no-agency-type ═══\n");
     [
       { ori: "CA0010300", city: "BERKELEY", state: "CA", population: 124321 },
       { ori: "CA0019700", city: "UN OF CA: BERKELEY", state: "CA", population: 0 },
-      { ori: "CA0012700", city: "LAWRENCE BERKELEY LAB", state: "CA", population: 0 },
+      { ori: "CA0012700", city: "UN OF CA: LAWRENCE BERKELEY LAB", state: "CA", population: 0 },
     ]
   );
   assert("TP: campus resolver maps UC Berkeley to CA0019700 naming variant",

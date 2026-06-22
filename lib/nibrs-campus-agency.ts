@@ -66,13 +66,24 @@ function tokenMatchesAgency(token: string, agencyText: string, state: string): b
   return Boolean(stateAbbr && (stateAbbr === state || new RegExp(`\\b${stateAbbr}\\b`).test(agencyText)));
 }
 
+function campusSpecificityPenalty(agencyText: string, questionText: string): number {
+  let penalty = 0;
+  for (const token of agencyText.split(" ")) {
+    if (GENERIC_TOKENS.has(token) || token.length < 5) continue;
+    if (/^\d+$/.test(token)) continue;
+    if (!questionText.includes(token)) penalty++;
+  }
+  return penalty;
+}
+
 export function chooseCampusAgencyOris(question: string, rows: CampusAgencyRow[]): CampusAgencyResolution | null {
   if (!asksCampusAgency(question)) return null;
+  const normalizedQuestion = normalizeText(question);
   const tokens = questionTokens(question);
   if (tokens.length === 0) return null;
 
   const hintedStates = stateHints(question);
-  const byOri = new Map<string, { row: CampusAgencyRow; score: number }>();
+  const byOri = new Map<string, { row: CampusAgencyRow; score: number; penalty: number }>();
 
   for (const row of rows) {
     const agencyText = normalizeText(row.city || "");
@@ -84,17 +95,25 @@ export function chooseCampusAgencyOris(question: string, rows: CampusAgencyRow[]
     const required = Math.min(2, tokens.length);
     if (score < required) continue;
 
+    const penalty = campusSpecificityPenalty(agencyText, normalizedQuestion);
     const current = byOri.get(row.ori);
-    if (!current || score > current.score) {
-      byOri.set(row.ori, { row, score });
+    if (!current || score > current.score || (score === current.score && penalty < current.penalty)) {
+      byOri.set(row.ori, { row, score, penalty });
     }
   }
 
   if (byOri.size === 0) return null;
-  const matches = [...byOri.values()].sort((a, b) => b.score - a.score || a.row.ori.localeCompare(b.row.ori));
+  const matches = [...byOri.values()].sort((a, b) =>
+    b.score - a.score ||
+    a.penalty - b.penalty ||
+    a.row.ori.localeCompare(b.row.ori)
+  );
+  const bestScore = matches[0].score;
+  const bestPenalty = matches[0].penalty;
+  const bestMatches = matches.filter((match) => match.score === bestScore && match.penalty === bestPenalty);
   return {
-    oris: matches.map((match) => match.row.ori),
-    rows: matches.map((match) => match.row),
+    oris: bestMatches.map((match) => match.row.ori),
+    rows: bestMatches.map((match) => match.row),
   };
 }
 
