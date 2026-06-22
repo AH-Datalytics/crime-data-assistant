@@ -34,7 +34,13 @@ export function asksCampusAgency(question: string): boolean {
 }
 
 function normalizeText(value: string): string {
-  return value.toUpperCase().replace(/[^A-Z0-9]+/g, " ").trim().replace(/\s+/g, " ");
+  return value
+    .toUpperCase()
+    .replace(/\bBERKELY\b/g, "BERKELEY")
+    .replace(/\bUNIVEFRSIT(Y|IES)\b/g, "UNIVERSIT$1")
+    .replace(/[^A-Z0-9]+/g, " ")
+    .trim()
+    .replace(/\s+/g, " ");
 }
 
 function stateHints(question: string): string[] {
@@ -135,4 +141,3 @@ GROUP BY ${periodGroup}, s.ori, a.city, a.state, s.ucr_offense_code, o.offense_n
 ORDER BY ${periodOrder}, s.ucr_offense_code
 LIMIT 1000`;
 }
-

@@ -445,7 +445,7 @@ console.log("\n═══ nibrs-city-no-agency-type ═══\n");
 
 {
   const resolution = chooseCampusAgencyOris(
-    "Can you give me historical crime reported by the University of California Berkeley",
+    "Give me NIBRS crime data for University of California Berkely with crime type description historical to present",
     [
       { ori: "CA0010300", city: "BERKELEY", state: "CA", population: 124321 },
       { ori: "CA0019700", city: "UN OF CA: BERKELEY", state: "CA", population: 0 },
