@@ -10,7 +10,7 @@
 import { extractQueryContext } from "../lib/query-context.js";
 import { runGuardrails } from "../lib/guardrails.js";
 import { detectAllNullData } from "../lib/all-null-detection.js";
-import { buildCampusAgencySummarySql, chooseCampusAgencyOris } from "../lib/nibrs-campus-agency.js";
+import { buildCampusAgencySummarySql, chooseCampusAgencyOris, knownCampusAgencyResolution } from "../lib/nibrs-campus-agency.js";
 import { currentCalendarYear, pastCompleteCalendarYearsRange, pastYearsIncludingCurrentRange } from "../lib/time-conventions.js";
 
 let pass = 0;
@@ -444,6 +444,11 @@ console.log("\n═══ city-like-no-state ═══\n");
 console.log("\n═══ nibrs-city-no-agency-type ═══\n");
 
 {
+  const known = knownCampusAgencyResolution("University of California Berkley vehicle burglaries per month");
+  assert("TP: known campus resolver tolerates UC Berkeley misspelling",
+    known?.oris[0] === "CA0019700",
+    `known: ${JSON.stringify(known)}`);
+
   const resolution = chooseCampusAgencyOris(
     "Give me NIBRS crime data for University of California Berkely with crime type description historical to present",
     [

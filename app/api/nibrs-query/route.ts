@@ -23,7 +23,7 @@ import { pastCompleteCalendarYearsRange } from "@/lib/time-conventions";
 import { detectFollowupTransform } from "@/lib/followup-transform";
 import { detectNibrsCapabilityOverride } from "@/lib/nibrs-capability-overrides";
 import { getBlockingGeoClarification } from "@/lib/geo-resolver";
-import { asksCampusAgency, buildCampusAgencySummarySql, resolveCampusAgencyOris, shouldResolveCampusAgencySql } from "@/lib/nibrs-campus-agency";
+import { asksCampusAgency, buildCampusAgencySummarySql, knownCampusAgencyResolution, resolveCampusAgencyOris, shouldResolveCampusAgencySql } from "@/lib/nibrs-campus-agency";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -488,9 +488,10 @@ export async function POST(req: NextRequest) {
 
     let campusAgencyScopeNote: string | null = null;
 
-    if (shouldResolveCampusAgencySql(question, sql)) {
+    const knownCampusResolution = knownCampusAgencyResolution(question);
+    if (knownCampusResolution || shouldResolveCampusAgencySql(question, sql)) {
       try {
-        const resolution = resolveCampusAgencyOris(getNibrsDb(), question);
+        const resolution = knownCampusResolution || resolveCampusAgencyOris(getNibrsDb(), question);
         if (resolution && resolution.oris.length > 0) {
           sql = buildCampusAgencySummarySql(resolution.oris, question, sql);
           routeGuardrailsFired.push("nibrs-campus-agency-ori-resolve");

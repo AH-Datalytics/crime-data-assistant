@@ -33,6 +33,16 @@ export function asksCampusAgency(question: string): boolean {
   return CAMPUS_RE.test(question);
 }
 
+export function knownCampusAgencyResolution(question: string): CampusAgencyResolution | null {
+  if (/\b(?:university\s+of\s+california|uc)\s+berke?ley\b/i.test(question)) {
+    return {
+      oris: ["CA0019700"],
+      rows: [{ ori: "CA0019700", city: "UN OF CA: BERKELEY", state: "CA", population: 0 }],
+    };
+  }
+  return null;
+}
+
 function normalizeText(value: string): string {
   return value
     .toUpperCase()
@@ -118,6 +128,9 @@ export function chooseCampusAgencyOris(question: string, rows: CampusAgencyRow[]
 }
 
 export function resolveCampusAgencyOris(db: Database.Database, question: string): CampusAgencyResolution | null {
+  const known = knownCampusAgencyResolution(question);
+  if (known) return known;
+
   const hintedStates = stateHints(question);
   const params: string[] = [];
   let stateWhere = "";
