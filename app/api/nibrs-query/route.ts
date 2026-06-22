@@ -23,7 +23,7 @@ import { pastCompleteCalendarYearsRange } from "@/lib/time-conventions";
 import { detectFollowupTransform } from "@/lib/followup-transform";
 import { detectNibrsCapabilityOverride } from "@/lib/nibrs-capability-overrides";
 import { getBlockingGeoClarification } from "@/lib/geo-resolver";
-import { asksCampusAgency, buildCampusAgencySummarySql, resolveCampusAgencyOris } from "@/lib/nibrs-campus-agency";
+import { asksCampusAgency, buildCampusAgencySummarySql, resolveCampusAgencyOris, shouldResolveCampusAgencySql } from "@/lib/nibrs-campus-agency";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -486,12 +486,29 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    let campusAgencyScopeNote: string | null = null;
+
+    if (shouldResolveCampusAgencySql(question, sql)) {
+      try {
+        const resolution = resolveCampusAgencyOris(getNibrsDb(), question);
+        if (resolution && resolution.oris.length > 0) {
+          sql = buildCampusAgencySummarySql(resolution.oris, question, sql);
+          routeGuardrailsFired.push("nibrs-campus-agency-ori-resolve");
+          const resolvedLabel = resolution.rows
+            .map((row) => `${row.city} (${row.ori})`)
+            .join(", ");
+          campusAgencyScopeNote = `Scope: campus agency ${resolvedLabel}, not the surrounding citywide police department.`;
+        }
+      } catch (campusErr) {
+        console.log("[nibrs][campus-agency-resolve] Error:", campusErr);
+      }
+    }
+
     // Step 3: Execute SQL (in worker thread with 15s timeout)
     const startTime = Date.now();
 
     let rows: Record<string, unknown>[] = undefined!;
     let columns: string[] = undefined!;
-    let campusAgencyScopeNote: string | null = null;
 
     try {
       const result = await executeWithTimeout(sql);
