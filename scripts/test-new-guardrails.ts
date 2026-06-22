@@ -10,7 +10,7 @@
 import { extractQueryContext } from "../lib/query-context.js";
 import { runGuardrails } from "../lib/guardrails.js";
 import { detectAllNullData } from "../lib/all-null-detection.js";
-import { buildCampusAgencySummarySql, chooseCampusAgencyOris, knownCampusAgencyResolution } from "../lib/nibrs-campus-agency.js";
+import { buildCampusAgencySummarySql, campusAgencyDisplayName, chooseCampusAgencyOris, knownCampusAgencyResolution } from "../lib/nibrs-campus-agency.js";
 import { buildNibrsChartConfig } from "../lib/nibrs-chart-config.js";
 import { currentCalendarYear, pastCompleteCalendarYearsRange, pastYearsIncludingCurrentRange } from "../lib/time-conventions.js";
 
@@ -473,7 +473,7 @@ console.log("\n═══ nibrs-city-no-agency-type ═══\n");
     /s\.ori IN \('CA0019700'\)/.test(sql),
     sql);
   assert("TP: campus fallback SQL uses chart-safe monthly period",
-    /printf\('%04d-%02d', s\.year, s\.month\) AS period/.test(sql) && /GROUP BY s\.year, s\.month/.test(sql),
+    /CASE s\.month[\s\S]*'Sep'[\s\S]*END \|\| ' ' \|\| s\.year AS period/.test(sql) && /GROUP BY s\.year, s\.month/.test(sql),
     sql);
   assert("TP: campus fallback SQL returns one metric for single-offense monthly trend",
     /SUM\(s\.offense_count\) AS vehicle_burglaries/.test(sql) && !/SELECT[\s\S]*\bs\.ori\b[\s\S]*FROM/i.test(sql) && !/\boffense_name\b/.test(sql),
@@ -484,6 +484,8 @@ console.log("\n═══ nibrs-city-no-agency-type ═══\n");
   assert("TP: campus fallback SQL preserves requested year filter",
     /s\.year >= 2021/.test(sql),
     sql);
+  assert("TP: UC Berkeley campus display name is friendly",
+    campusAgencyDisplayName({ ori: "CA0019700", city: "UN OF CA: BERKELEY", state: "CA", population: 0 }) === "UC Berkeley");
 }
 
 {

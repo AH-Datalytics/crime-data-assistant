@@ -13,6 +13,21 @@ export interface CampusAgencyResolution {
   rows: CampusAgencyRow[];
 }
 
+const MONTH_LABEL_CASE = `CASE s.month
+  WHEN 1 THEN 'Jan'
+  WHEN 2 THEN 'Feb'
+  WHEN 3 THEN 'Mar'
+  WHEN 4 THEN 'Apr'
+  WHEN 5 THEN 'May'
+  WHEN 6 THEN 'Jun'
+  WHEN 7 THEN 'Jul'
+  WHEN 8 THEN 'Aug'
+  WHEN 9 THEN 'Sep'
+  WHEN 10 THEN 'Oct'
+  WHEN 11 THEN 'Nov'
+  WHEN 12 THEN 'Dec'
+END || ' ' || s.year`;
+
 const CAMPUS_RE = /\b(?:universit(?:y|ies)|univefrsit(?:y|ies)|college|campus)\b/i;
 const CAMPUS_NAME_RE = /\b(?:UN|UNIV|UNIVERSITY|COLLEGE|CAMPUS)\b/i;
 
@@ -231,6 +246,18 @@ export function campusAgencyChartAxesFromSql(sourceSql: string | null | undefine
   };
 }
 
+export function campusAgencyDisplayName(row: CampusAgencyRow): string {
+  const normalized = normalizeText(row.city || "");
+  if (normalized === "UN OF CA BERKELEY" || normalized === "UNIVERSITY OF CALIFORNIA BERKELEY") {
+    return "UC Berkeley";
+  }
+  return (row.city || "the campus agency")
+    .toLowerCase()
+    .replace(/\bun\b/g, "University")
+    .replace(/\bca\b/g, "California")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
 export function hasLiteralCampusOri(sql: string): boolean {
   return /\b(?:\w+\.)?ori\s*=\s*'[A-Z0-9]{7,9}'/i.test(sql) ||
     /\b(?:\w+\.)?ori\s+IN\s*\((?!\s*SELECT)[^)]*'[A-Z0-9]{7,9}'/i.test(sql);
@@ -252,7 +279,7 @@ export function buildCampusAgencySummarySql(oris: string[], question: string, so
 
   if (offenseCodes.length === 1) {
     const metricAlias = campusAgencyMetricAliasFromSql(sourceSql, question);
-    const periodColumn = includeMonth ? "printf('%04d-%02d', s.year, s.month) AS period" : "s.year";
+    const periodColumn = includeMonth ? `${MONTH_LABEL_CASE} AS period` : "s.year";
     const periodGroup = includeMonth ? "s.year, s.month" : "s.year";
     const periodOrder = includeMonth ? "s.year, s.month" : "s.year";
 

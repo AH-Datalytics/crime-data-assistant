@@ -23,7 +23,7 @@ import { pastCompleteCalendarYearsRange } from "@/lib/time-conventions";
 import { detectFollowupTransform } from "@/lib/followup-transform";
 import { detectNibrsCapabilityOverride } from "@/lib/nibrs-capability-overrides";
 import { getBlockingGeoClarification } from "@/lib/geo-resolver";
-import { asksCampusAgency, buildCampusAgencySummarySql, campusAgencyChartAxesFromSql, knownCampusAgencyResolution, resolveCampusAgencyOris, shouldResolveCampusAgencySql } from "@/lib/nibrs-campus-agency";
+import { asksCampusAgency, buildCampusAgencySummarySql, campusAgencyChartAxesFromSql, campusAgencyDisplayName, knownCampusAgencyResolution, resolveCampusAgencyOris, shouldResolveCampusAgencySql } from "@/lib/nibrs-campus-agency";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -502,9 +502,9 @@ export async function POST(req: NextRequest) {
           }
           routeGuardrailsFired.push("nibrs-campus-agency-ori-resolve");
           const resolvedLabel = resolution.rows
-            .map((row) => `${row.city} (${row.ori})`)
+            .map((row) => `${campusAgencyDisplayName(row)} (${row.ori})`)
             .join(", ");
-          campusAgencyScopeNote = `Scope: campus agency ${resolvedLabel}, not the surrounding citywide police department.`;
+          campusAgencyScopeNote = `Results use the FBI NIBRS campus-agency record for ${resolvedLabel}, rather than the surrounding city police department.`;
         }
       } catch (campusErr) {
         console.log("[nibrs][campus-agency-resolve] Error:", campusErr);
@@ -625,9 +625,9 @@ export async function POST(req: NextRequest) {
             claude.title = claude.title || "Campus Agency NIBRS Offenses";
             claude.explanation = `This query resolves the campus agency ORI rather than using the surrounding city police department.`;
             const resolvedLabel = resolution.rows
-              .map((row) => `${row.city} (${row.ori})`)
+              .map((row) => `${campusAgencyDisplayName(row)} (${row.ori})`)
               .join(", ");
-            campusAgencyScopeNote = `Scope: campus agency ${resolvedLabel}, not the surrounding citywide police department.`;
+            campusAgencyScopeNote = `Results use the FBI NIBRS campus-agency record for ${resolvedLabel}, rather than the surrounding city police department.`;
           }
         }
       } catch (campusErr) {
