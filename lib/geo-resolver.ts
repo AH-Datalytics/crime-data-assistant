@@ -115,12 +115,15 @@ const STATE_LABELS: Record<string, string> = {
   DC: "District of Columbia",
 };
 
+const STATE_ABBREVIATIONS = new Set(Object.keys(STATE_LABELS));
+
 export function getGeoResolutionIssues(input: string): GeoResolutionIssue[] {
   const text = input.trim();
   if (!text) return [];
 
   return resolveGeoPlaces(text).mentions
     .filter((mention) => mention.requiresClarification && mention.candidates.length > 1)
+    .filter((mention) => !isStateAbbreviationComparison(text, mention))
     .map(issueFromMention);
 }
 
@@ -252,6 +255,25 @@ function kindRank(kind: GeoPlaceCandidate["kind"]): number {
   if (kind === "county") return 1;
   if (kind === "state") return 2;
   return 3;
+}
+
+function isStateAbbreviationComparison(input: string, mention: GeoPlaceMention): boolean {
+  const token = mention.text.replace(/\./g, "").trim().toUpperCase();
+  if (!STATE_ABBREVIATIONS.has(token)) return false;
+
+  const stateTokens = uppercaseStateAbbreviations(input);
+  if (stateTokens.length < 2) return false;
+
+  const hasComparisonCue = /\b(?:vs\.?|versus|compare|compared|comparison|between)\b|[,/;]/i.test(input);
+  if (!hasComparisonCue) return false;
+
+  if (token === "LA") return stateTokens.length >= 3;
+  return true;
+}
+
+function uppercaseStateAbbreviations(input: string): string[] {
+  const matches = input.match(/\b[A-Z]{2}\b/g) ?? [];
+  return [...new Set(matches.filter((token) => STATE_ABBREVIATIONS.has(token)))];
 }
 
 function displayMention(mention: GeoPlaceMention): string {

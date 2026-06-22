@@ -46,6 +46,8 @@ assertIssue("gun violence in NY since 2022", "new-york");
 assertNoIssue("gun violence in New York State since 2022", "new-york");
 assertNoIssue("gun violence in NY State since 2022", "new-york");
 assertNoIssue("New York City vs Chicago officers per year since 1930", "new-york");
+assertNoIssue("CA vs. TX vs. GA vs NY vs IL murder rate per year", "new-york");
+assertNoIssue("CA vs TX vs GA vs NY vs IL murder rate per year", "new-york");
 assertNoIssue("robberies in New York County, New York in 2024", "new-york");
 assert.equal(getGeoResolutionIssues("gun violence in New York since 2022")[0].title, "New York is ambiguous");
 assert.equal(

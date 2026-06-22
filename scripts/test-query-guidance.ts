@@ -67,6 +67,8 @@ assertDoesNotWarn("gun violence in New York State since 2022", "new-york");
 assertDoesNotWarn("gun violence in NY State since 2022", "new-york");
 assertDoesNotWarn("Albany NY robberies since 2020", "new-york");
 assertDoesNotWarn("New York City vs Chicago officers per year since 1930", "new-york");
+assertDoesNotWarn("CA vs. TX vs. GA vs NY vs IL murder rate per year", "new-york");
+assertDoesNotWarn("CA vs TX vs GA vs NY vs IL murder rate per year", "new-york");
 
 assertWarns("crime in Washington in 2023", "washington");
 assertDoesNotWarn("crime in Washington, DC in 2023", "washington");

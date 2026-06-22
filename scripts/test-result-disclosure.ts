@@ -287,4 +287,18 @@ import { applyResultDisclosures } from "../lib/result-disclosure";
   assert.match(explanation, /for 2024/);
 }
 
+{
+  const explanation = applyResultDisclosures({
+    explanation: "California murder rates by year.",
+    question: "CA vs. TX vs. GA vs NY vs IL murder rate per year",
+    sql: "SELECT year, MAX(CASE WHEN state = 'California' THEN murder_rate END) AS california, MAX(CASE WHEN state = 'Texas' THEN murder_rate END) AS texas, MAX(CASE WHEN state = 'Georgia' THEN murder_rate END) AS georgia, MAX(CASE WHEN state = 'New York' THEN murder_rate END) AS new_york, MAX(CASE WHEN state = 'Illinois' THEN murder_rate END) AS illinois FROM historical_state_national WHERE state IN ('California','Texas','Georgia','New York','Illinois') GROUP BY year ORDER BY year",
+    rows: [
+      { year: 2020, california: 5.6, texas: 6.6, georgia: 8.4, new_york: 4.2, illinois: 9.1 },
+      { year: 2021, california: 6.0, texas: 7.0, georgia: 8.9, new_york: 4.5, illinois: 9.4 },
+    ],
+    tab: "historical",
+  });
+  assert.match(explanation, /Comparison includes: California, Texas, Georgia, New York, Illinois\./);
+}
+
 console.log("result disclosure tests passed");

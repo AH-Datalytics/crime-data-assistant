@@ -58,6 +58,8 @@ const STATE_LABELS: Record<string, string> = {
   WV: "West Virginia", WI: "Wisconsin", WY: "Wyoming", DC: "District of Columbia",
 };
 
+const STATE_ABBREVIATION_SET = new Set(Object.keys(STATE_LABELS));
+
 const KNOWN_GEO_TRAPS: KnownTrap[] = [
   trap("kansas-city", /\bKC\b/i, /\b(KCMO|KCK|KC\s*,?\s*(missouri|mo|kansas|ks))\b/i, "KC needs a state", "KC can mean Kansas City, Missouri or Kansas City, Kansas.", [
     ["Use Kansas City, Missouri", "\\bKC\\b", "Kansas City, Missouri"],
@@ -120,7 +122,23 @@ export function getGeoGuidanceIssues(input: string): GeoResolutionIssue[] {
   if (!text) return [];
   return KNOWN_GEO_TRAPS
     .filter((candidate) => candidate.mentioned.test(text) && !candidate.qualified.test(text))
+    .filter((candidate) => !suppressedByStateAbbreviationList(text, candidate.issue.id))
     .map((candidate) => candidate.issue);
+}
+
+function suppressedByStateAbbreviationList(input: string, issueId: string): boolean {
+  if (issueId !== "new-york" && issueId !== "la") return false;
+  const stateTokens = uppercaseStateAbbreviations(input);
+  if (stateTokens.length < 2) return false;
+  if (!/\b(?:vs\.?|versus|compare|compared|comparison|between)\b|[,/;]/i.test(input)) return false;
+
+  if (issueId === "new-york") return stateTokens.includes("NY");
+  return stateTokens.includes("LA") && stateTokens.length >= 3;
+}
+
+function uppercaseStateAbbreviations(input: string): string[] {
+  const matches = input.match(/\b[A-Z]{2}\b/g) ?? [];
+  return [...new Set(matches.filter((token) => STATE_ABBREVIATION_SET.has(token)))];
 }
 
 function trap(

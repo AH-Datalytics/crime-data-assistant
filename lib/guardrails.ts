@@ -262,6 +262,29 @@ function outerWhereClause(sql: string): string | null {
   return where || null;
 }
 
+function outerSelectClause(sql: string): string | null {
+  const selectIdx = findTopLevelKeyword(sql, "select");
+  if (selectIdx < 0) return null;
+  const fromIdx = findTopLevelKeyword(sql, "from", selectIdx + "select".length);
+  if (fromIdx < 0) return null;
+  const select = sql.slice(selectIdx + "select".length, fromIdx).trim();
+  return select || null;
+}
+
+function hasHistoricalStatePivotWithoutYearGroup(sql: string): boolean {
+  const stripped = stripSqlStrings(sql);
+  if (!/\bhistorical_state_national\b/i.test(stripped)) return false;
+  if (findTopLevelKeyword(sql, "group by") >= 0) return false;
+
+  const select = outerSelectClause(sql);
+  if (!select || !/\byear\b/i.test(select)) return false;
+
+  const stateCaseCount = (stripped.match(/\bCASE\s+WHEN\s+(?:\w+\.)?state\s*=/gi) ?? []).length;
+  if (stateCaseCount < 2) return false;
+
+  return /\bstate\s+IN\s*\(/i.test(stripped) || /\bvs\.?|\bversus\b|\bcompare|\bcomparison/i.test(stripped);
+}
+
 function hasTopLevelBoolean(whereClause: string, op: "and" | "or"): boolean {
   const sql = stripSqlStrings(whereClause).toLowerCase();
   let depth = 0;
@@ -1689,6 +1712,13 @@ const GUARDRAILS: Guardrail[] = [
         .replace(/\bmotor_vehicle_theft\b/gi, "auto_theft");
       return fixed !== sql ? fixed : null;
     },
+  },
+  {
+    name: "historical-state-pivot-missing-group-by",
+    tabs: ["historical"],
+    match: (ctx) => hasHistoricalStatePivotWithoutYearGroup(ctx.sql),
+    message: () =>
+      "[SYSTEM: The user asked for a multi-state historical comparison, but the SQL pivots states into columns without GROUP BY year. That returns sparse state-year rows instead of one comparison row per year. Return one row per year: wrap each state CASE expression in an aggregate such as MAX(CASE WHEN state = 'California' THEN murder_rate END) AS california for rates, or SUM(CASE WHEN state = 'California' THEN murder END) AS california for counts. Add GROUP BY year and ORDER BY year. Do not return one row per state-year.]",
   },
   // Detect single-agency historical time series without gap-fill CTE
   // --- Historical: hardcoded ORI code instead of name lookup ---

@@ -220,6 +220,50 @@ function setOperationCorrection(sql: string, rows: Record<string, unknown>[]): s
   return "Set interpretation: These rows are missing from the compared set, not records present in it.";
 }
 
+const COMPARISON_EXCLUDED_COLUMNS = new Set([
+  "year", "data_year", "month", "state", "city", "agency", "agency_name", "ori",
+  "name", "county", "offense", "ucr_offense_code", "offense_code", "source",
+  "count", "counts", "total", "value", "rate", "population", "rank",
+]);
+
+function isNumericLike(value: unknown): boolean {
+  if (typeof value === "number") return Number.isFinite(value);
+  if (typeof value === "bigint") return true;
+  return false;
+}
+
+function isGenericMetricColumn(column: string): boolean {
+  return /(?:^|_)(?:rate|count|counts|total|totals|population|offenses?|victims?|murders?|homicides?|incidents?|arrests?|agencies|months|officers?|percent|pct|100k|100000)(?:_|$)/i.test(column);
+}
+
+function labelFromComparisonColumn(column: string): string {
+  return column
+    .split(/_+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join(" ");
+}
+
+function comparisonColumnLabels(rows: Record<string, unknown>[]): string[] {
+  if (rows.length === 0) return [];
+  const columns = Object.keys(rows[0]);
+  return columns
+    .filter((column) => !COMPARISON_EXCLUDED_COLUMNS.has(column.toLowerCase()))
+    .filter((column) => !isGenericMetricColumn(column))
+    .filter((column) => rows.some((row) => isNumericLike(row[column])))
+    .map(labelFromComparisonColumn);
+}
+
+function comparisonDisclosure(explanation: string, rows: Record<string, unknown>[]): string | null {
+  const labels = comparisonColumnLabels(rows);
+  if (labels.length < 2) return null;
+
+  const normalizedExplanation = explanation.toLowerCase();
+  if (labels.every((label) => normalizedExplanation.includes(label.toLowerCase()))) return null;
+
+  return `Comparison includes: ${labels.join(", ")}.`;
+}
+
 function yearRangeFromRows(rows: Record<string, unknown>[]): string | null {
   const yearCol = ["year", "data_year", "Year"].find((c) => rows[0]?.[c] !== undefined);
   if (!yearCol) return null;
@@ -431,6 +475,11 @@ export function applyResultDisclosures(opts: {
   const setCorrection = setOperationCorrection(opts.sql, opts.rows);
   if (setCorrection) {
     explanation = appendSentence(explanation, setCorrection);
+  }
+
+  const comparison = comparisonDisclosure(explanation, opts.rows);
+  if (comparison) {
+    explanation = appendSentence(explanation, comparison);
   }
 
   const stateMismatch = explicitStateSubstateMismatch(opts.question, opts.sql);

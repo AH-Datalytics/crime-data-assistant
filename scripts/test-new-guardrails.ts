@@ -1932,6 +1932,42 @@ console.log("\n=== historical state/national aggregate column regression ===\n")
     r.sql);
 }
 
+{
+  const sql = `SELECT year,
+    ROUND(CASE WHEN state = 'California' THEN murder_rate END, 1) AS california,
+    ROUND(CASE WHEN state = 'Texas' THEN murder_rate END, 1) AS texas,
+    ROUND(CASE WHEN state = 'Georgia' THEN murder_rate END, 1) AS georgia,
+    ROUND(CASE WHEN state = 'New York' THEN murder_rate END, 1) AS new_york,
+    ROUND(CASE WHEN state = 'Illinois' THEN murder_rate END, 1) AS illinois
+  FROM historical_state_national
+  WHERE state IN ('California', 'Texas', 'Georgia', 'New York', 'Illinois')
+  ORDER BY year LIMIT 1000`;
+  const ctx = extractQueryContext(sql, "CA vs. TX vs. GA vs NY vs IL murder rate per year", "historical");
+  const r = runGuardrails(ctx);
+  assert("TP: #4476 historical pivot without GROUP BY year fires",
+    r.fired.includes("historical-state-pivot-missing-group-by"),
+    `fired: ${JSON.stringify(r.fired)}`);
+  assert("TP: #4476 retry instruction requires GROUP BY year",
+    r.issues.some((issue) => /GROUP BY year/i.test(issue) && /one row per year/i.test(issue)),
+    `issues: ${JSON.stringify(r.issues)}`);
+}
+
+{
+  const sql = `SELECT year,
+    ROUND(MAX(CASE WHEN state = 'California' THEN murder_rate END), 1) AS california,
+    ROUND(MAX(CASE WHEN state = 'Texas' THEN murder_rate END), 1) AS texas,
+    ROUND(MAX(CASE WHEN state = 'New York' THEN murder_rate END), 1) AS new_york
+  FROM historical_state_national
+  WHERE state IN ('California', 'Texas', 'New York')
+  GROUP BY year
+  ORDER BY year LIMIT 1000`;
+  const ctx = extractQueryContext(sql, "CA vs TX vs NY murder rate per year", "historical");
+  const r = runGuardrails(ctx);
+  assert("FP: valid historical pivot with GROUP BY year passes",
+    !r.fired.includes("historical-state-pivot-missing-group-by"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
 console.log("\n=== June 14-15 query audit regressions ===\n");
 
 {
