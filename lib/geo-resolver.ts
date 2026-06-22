@@ -124,6 +124,7 @@ export function getGeoResolutionIssues(input: string): GeoResolutionIssue[] {
   return resolveGeoPlaces(text).mentions
     .filter((mention) => mention.requiresClarification && mention.candidates.length > 1)
     .filter((mention) => !isStateAbbreviationComparison(text, mention))
+    .filter((mention) => !isCampusAgencyNameWithStateContext(text, mention))
     .map(issueFromMention);
 }
 
@@ -269,6 +270,24 @@ function isStateAbbreviationComparison(input: string, mention: GeoPlaceMention):
 
   if (token === "LA") return stateTokens.length >= 3;
   return true;
+}
+
+function isCampusAgencyNameWithStateContext(input: string, mention: GeoPlaceMention): boolean {
+  if (!/\b(?:university|universities|univefrsity|univefrsities|college|campus)\s+(?:of|police|pd|department|agency)\b/i.test(input)) {
+    return false;
+  }
+  if (!hasExplicitStateContext(input)) return false;
+
+  const issueKind = classifyCandidates(mention.candidates);
+  return issueKind === "city" || issueKind === "city-county" || issueKind === "city-state";
+}
+
+function hasExplicitStateContext(input: string): boolean {
+  for (const label of Object.values(STATE_LABELS)) {
+    const pattern = new RegExp(`\\b${label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+")}\\b`, "i");
+    if (pattern.test(input)) return true;
+  }
+  return /\b(?:AL|AK|AZ|AR|CA|CO|CT|DE|FL|GA|HI|ID|IL|IN|IA|KS|KY|LA|ME|MD|MA|MI|MN|MS|MO|MT|NE|NV|NH|NJ|NM|NY|NC|ND|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VT|VA|WA|WV|WI|WY|DC)\b/.test(input);
 }
 
 function uppercaseStateAbbreviations(input: string): string[] {

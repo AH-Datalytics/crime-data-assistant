@@ -123,6 +123,7 @@ export function getGeoGuidanceIssues(input: string): GeoResolutionIssue[] {
   return KNOWN_GEO_TRAPS
     .filter((candidate) => candidate.mentioned.test(text) && !candidate.qualified.test(text))
     .filter((candidate) => !suppressedByStateAbbreviationList(text, candidate.issue.id))
+    .filter((candidate) => !suppressedByCampusAgencyName(text, candidate.issue.id))
     .map((candidate) => candidate.issue);
 }
 
@@ -134,6 +135,17 @@ function suppressedByStateAbbreviationList(input: string, issueId: string): bool
 
   if (issueId === "new-york") return stateTokens.includes("NY");
   return stateTokens.includes("LA") && stateTokens.length >= 3;
+}
+
+function suppressedByCampusAgencyName(input: string, issueId: string): boolean {
+  if (!/^(?:city-county-|county-)|^(?:kansas-city|la|new-york|washington|portland|baltimore|st-louis)$/.test(issueId)) return false;
+  if (!/\b(?:university|universities|univefrsity|univefrsities|college|campus)\s+(?:of|police|pd|department|agency)\b/i.test(input)) return false;
+  return hasExplicitStateContext(input);
+}
+
+function hasExplicitStateContext(input: string): boolean {
+  if (new RegExp(`\\b(?:${STATE_NAME_PATTERN})\\b`, "i").test(input)) return true;
+  return /\b(?:AL|AK|AZ|AR|CA|CO|CT|DE|FL|GA|HI|ID|IL|IN|IA|KS|KY|LA|ME|MD|MA|MI|MN|MS|MO|MT|NE|NV|NH|NJ|NM|NY|NC|ND|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VT|VA|WA|WV|WI|WY|DC)\b/.test(input);
 }
 
 function uppercaseStateAbbreviations(input: string): string[] {

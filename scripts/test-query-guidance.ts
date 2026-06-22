@@ -86,6 +86,9 @@ assertDoesNotWarn("crime in Linn County, Oregon", "county-linn");
 assertWarns("violent assaults in Portland in 2022", "portland");
 assertDoesNotWarn("violent assaults in Portland, Oregon in 2022", "portland");
 
+assert.equal(hasBlockingQueryGuidanceWarnings("University of California Los Angeles vehicle burglaries per month"), false);
+assertDoesNotWarn("University of California Los Angeles vehicle burglaries per month", "city-county-los-angeles");
+
 assertWarns("crime in Alameda since 2008", "city-county-alameda");
 assertDoesNotWarn("crime in Alameda, California since 2008", "city-county-alameda");
 assertDoesNotWarn("crime in Alameda CA since 2008", "city-county-alameda");

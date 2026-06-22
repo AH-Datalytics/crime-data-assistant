@@ -89,6 +89,15 @@ assertNoIssue("crime in Washington County, Oregon in 2023", "county-washington")
 assertIssue("violent assaults in Portland in 2022", "portland");
 assertNoIssue("violent assaults in Portland, Oregon in 2022", "portland");
 
+assert.equal(
+  hasBlockingGeoResolutionIssue("University of California Berkley vehicle burglaries per month"),
+  false
+);
+assert.equal(
+  hasBlockingGeoResolutionIssue("University of California Los Angeles vehicle burglaries per month"),
+  false
+);
+
 assertIssue("crime in Alameda since 2008", "city-county-alameda");
 assertNoIssue("crime in Alameda, California since 2008", "city-county-alameda");
 assertNoIssue("crime in Alameda CA since 2008", "city-county-alameda");
