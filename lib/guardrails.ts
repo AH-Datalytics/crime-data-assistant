@@ -108,6 +108,10 @@ function asksDomesticViolence(question: string): boolean {
   return /\bdomestic\s+violence\b|\b(?<![a-z])dv(?![a-z])\b/i.test(question);
 }
 
+function asksCampusAgency(question: string): boolean {
+  return /\b(?:universit(?:y|ies)|univefrsit(?:y|ies)|college|campus)\b/i.test(question);
+}
+
 function asksPerCapitaRate(question: string): boolean {
   return /\b(?:rates?|per\s*capita|per\s*100k|per\s*100,000|per\s+hundred\s+thousand)\b/i.test(question);
 }
@@ -228,6 +232,46 @@ function countywideCrosswalkMessage(ctx: QueryContext): string {
     ? "For SHR incidents, join on i.ori = ac.ori OR substr(i.ori, 1, 7) = ac.ori."
     : "For 9-character ORI tables, join on table.ori = ac.ori9 OR substr(table.ori, 1, 7) = ac.ori.";
   return `[SYSTEM: The user asked for countywide geography for ${countyLabel}, not a single county/sheriff agency. Use agency_county_crosswalk to include all mapped agencies in that county. Filter with ac.county_key = '${countyKeyText}'${state !== "XX" ? ` and ac.state = '${state}'` : " and ask for/require state if the county name is ambiguous"}. ${joinHint} Do not filter agency LIKE '%${county?.name || "County"}%' or type/agency_type = 'County' unless the user explicitly asks for a sheriff, county police department, or county agency.]`;
+}
+
+function hasCampusNameLookup(sql: string): boolean {
+  return /\b(?:upper\s*\(\s*(?:\w+\.)?city\s*\)|(?:\w+\.)?city)\s+LIKE\s+'%[^']*(?:UNIV|UNIVERSITY|UN OF|UN CA|COLLEGE|CAMPUS)[^']*%'/i.test(sql);
+}
+
+function hasLiteralOriFilter(sql: string): boolean {
+  return /\b(?:\w+\.)?ori\s*=\s*'[A-Z0-9]{7,9}'/i.test(sql) ||
+    /\b(?:\w+\.)?ori\s+IN\s*\((?!\s*SELECT)[^)]*'[A-Z0-9]{7,9}'/i.test(sql);
+}
+
+function hasCampusAgencySqlMismatch(ctx: QueryContext): boolean {
+  if (!asksCampusAgency(ctx.question)) return false;
+  const sql = ctx.sql;
+  if (!sql) return false;
+  if (hasLiteralOriFilter(sql) || hasCampusNameLookup(sql)) return false;
+
+  if (ctx.tab === "nibrs") {
+    if (!/\bagencies\b/i.test(sql)) return false;
+    const hasCityOnlyLookup = /\b(?:\w+\.)?city\s*(?:=|LIKE)\s*'[^']+'/i.test(sql);
+    const filtersPopulation = /\b(?:\w+\.)?population\s*>\s*0\b/i.test(sql);
+    const filtersCityType = /\b(?:\w+\.)?agency_type\s*=\s*'City'/i.test(sql) || /\bpop_group\s+LIKE\s+'1%'/i.test(sql);
+    const usesNonNameIndicator = /\bagency_indicator\s+LIKE\s+'%University%'/i.test(sql);
+    return hasCityOnlyLookup || filtersPopulation || filtersCityType || usesNonNameIndicator;
+  }
+
+  if (ctx.tab === "shr") {
+    if (/\bshr_agency_alias\b/i.test(sql)) return false;
+    return /\b(?:\w+\.)?agency\s*(?:=|LIKE)\s*'[^']+'/i.test(sql) ||
+      /\b(?:\w+\.)?agency_type\s*=\s*'City'/i.test(sql);
+  }
+
+  return false;
+}
+
+function campusAgencyMessage(ctx: QueryContext): string {
+  if (ctx.tab === "shr") {
+    return "[SYSTEM: The user asked for a university/college/campus agency. Do not answer with the surrounding city agency. Resolve the campus agency through shr_agency_alias by searching alias/canonical_agency for university/college/campus terms plus the place name, then filter incidents by the resolved ORI. Do not require agency_type = 'City' or population > 0 for campus agencies; many campus agencies are agency_type Other/blank or have zero population. If no campus ORI has incidents, say that the campus agency has no SHR homicide records in this database; do not substitute citywide data.]";
+  }
+  return "[SYSTEM: The user asked for a university/college/campus agency, not the surrounding city police department. Do not answer with a bare city filter, population > 0, agency_type = 'City', pop_group LIKE '1%', or agency_indicator LIKE '%University%' — those can select the city PD and exclude campus ORIs. First resolve campus ORIs from agencies across all years by searching agency city/name strings for campus terms plus the place, e.g. SELECT DISTINCT ori FROM agencies WHERE state = 'CA' AND (upper(city) LIKE '%UN%BERKELEY%' OR upper(city) LIKE '%UNIV%BERKELEY%' OR upper(city) LIKE '%UNIVERSITY%BERKELEY%' OR upper(city) LIKE '%COLLEGE%BERKELEY%' OR upper(city) LIKE '%CAMPUS%BERKELEY%'). Then filter ORI-level summary tables with fact.ori IN (resolved ORIs) for all available years. Campus agencies often have population = 0; do not require population > 0. For University of California Berkeley, the campus ORI is CA0019700. If the resolved campus ORI returns no rows, say the campus agency has no NIBRS incident data in this database; do not substitute Berkeley city data.]";
 }
 
 function findTopLevelKeyword(sql: string, keyword: string, start = 0): number {
@@ -1060,6 +1104,12 @@ const GUARDRAILS: Guardrail[] = [
   },
 
   // --- NIBRS ---
+  {
+    name: "campus-agency-not-city",
+    tabs: ["nibrs", "shr"],
+    match: hasCampusAgencySqlMismatch,
+    message: campusAgencyMessage,
+  },
   {
     name: "nibrs-offense-category-drift",
     tabs: ["nibrs"],

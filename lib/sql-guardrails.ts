@@ -152,8 +152,29 @@ function findUndeclaredAliases(sql: string): string[] {
 
 function hasNibrsOffenseCodesBadColumn(sql: string): boolean {
   if (!/\bnibrs_offense_codes\b/i.test(sql)) return false;
+
+  const aliases = new Set<string>();
+  const tableRe = /\b(?:FROM|JOIN)\s+nibrs_offense_codes(?:\s+(?:AS\s+)?([A-Za-z_][\w]*))?/gi;
+  let match;
+  while ((match = tableRe.exec(sql)) !== null) {
+    const alias = match[1];
+    if (alias && !SQL_KEYWORDS.has(alias.toLowerCase())) aliases.add(alias);
+    aliases.add("nibrs_offense_codes");
+  }
+
+  for (const alias of aliases) {
+    const escaped = alias.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    if (new RegExp(`\\b${escaped}\\.ucr_offense_code\\b`, "i").test(sql)) return true;
+  }
+
+  const tableRefs = [...sql.matchAll(/\b(?:FROM|JOIN)\s+([A-Za-z_][\w]*)/gi)]
+    .map((m) => m[1].toLowerCase())
+    .filter((table) => !SQL_KEYWORDS.has(table));
+  const onlyOffenseCodesTable = tableRefs.length > 0 && tableRefs.every((table) => table === "nibrs_offense_codes");
+  if (!onlyOffenseCodesTable) return false;
+
   const withoutOutputAlias = sql.replace(/\bAS\s+ucr_offense_code\b/gi, "");
-  return /\b(?:\w+\.)?ucr_offense_code\b/i.test(withoutOutputAlias);
+  return /\bucr_offense_code\b/i.test(withoutOutputAlias);
 }
 
 // ─── Public API ─────────────────────────────────────────────────────

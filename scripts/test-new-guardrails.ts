@@ -443,6 +443,66 @@ console.log("\n═══ city-like-no-state ═══\n");
 console.log("\n═══ nibrs-city-no-agency-type ═══\n");
 
 {
+  const sql = `SELECT a.year, a.ori, a.city, a.state, a.population, s.ucr_offense_code, SUM(s.offense_count) AS total_offenses
+    FROM summary_city_monthly s
+    JOIN agencies a ON a.ori = s.ori AND a.year = s.year
+    WHERE a.city LIKE '%BERKELEY%' AND a.state = 'CA' AND a.population > 0
+    GROUP BY a.year, a.ori, a.city, a.state, a.population, s.ucr_offense_code
+    ORDER BY a.year, s.ucr_offense_code LIMIT 1000`;
+  const ctx = extractQueryContext(sql, "Can you give me historical crime reported by the Univefrsity of California Berkeley", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("TP: #4481 university typo cannot fall through to Berkeley city PD",
+    r.fired.includes("campus-agency-not-city"),
+    `fired: ${JSON.stringify(r.fired)}`);
+  assert("TP: #4481 retry instruction names campus ORI lookup",
+    r.issues.some((issue) => /campus ORI|CA0019700|population > 0/i.test(issue)),
+    `issues: ${JSON.stringify(r.issues)}`);
+}
+
+{
+  const sql = `SELECT s.year, s.month, o.code AS ucr_offense_code, o.offense_name, SUM(s.offense_count) AS offense_count
+    FROM summary_city_monthly s
+    JOIN nibrs_offense_codes o ON o.code = s.ucr_offense_code
+    WHERE s.ori IN (SELECT ori FROM agencies WHERE city = 'BERKELEY' AND state = 'CA' AND agency_indicator LIKE '%University%')
+    GROUP BY s.year, s.month, s.ucr_offense_code, o.offense_name
+    ORDER BY s.year, s.month, o.code LIMIT 1000`;
+  const ctx = extractQueryContext(sql, "Give me NIBRS crime data for University of California Berkely with crime type description historical to present", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("TP: #4487 agency_indicator campus lookup fires",
+    r.fired.includes("campus-agency-not-city"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  const sql = `WITH campus_oris AS (
+      SELECT DISTINCT ori FROM agencies
+      WHERE state = 'CA'
+        AND (upper(city) LIKE '%UN%BERKELEY%' OR upper(city) LIKE '%UNIV%BERKELEY%' OR upper(city) LIKE '%UNIVERSITY%BERKELEY%')
+    )
+    SELECT s.year, SUM(s.offense_count) AS offenses
+    FROM summary_city_monthly s
+    WHERE s.ori IN (SELECT ori FROM campus_oris)
+    GROUP BY s.year ORDER BY s.year`;
+  const ctx = extractQueryContext(sql, "crime reported by University of California Berkeley", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("FP: campus name ORI lookup passes",
+    !r.fired.includes("campus-agency-not-city"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  const sql = `SELECT i.year, COUNT(*) AS homicides
+    FROM incidents i
+    WHERE i.agency = 'Berkeley' AND i.state = 'CA' AND i.agency_type = 'City'
+    GROUP BY i.year`;
+  const ctx = extractQueryContext(sql, "homicides reported by University of California Berkeley", "shr");
+  const r = runGuardrails(ctx);
+  assert("TP: SHR campus question cannot use surrounding city agency",
+    r.fired.includes("campus-agency-not-city"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
   // TP: Portland query without agency_type — should fire retry message
   const sql = `WITH portland_data AS (
   SELECT s.year, SUM(s.offense_count) AS portland_offenses, a.population AS portland_pop

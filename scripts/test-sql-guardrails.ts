@@ -349,6 +349,22 @@ assert(
   )
 );
 
+assert(
+  "VALID: joined nibrs_offense_codes may group by fact-table ucr_offense_code",
+  !fires(
+    "SELECT s.year, s.month, o.code AS ucr_offense_code, o.offense_name, SUM(s.offense_count) AS offense_count FROM summary_city_monthly s JOIN nibrs_offense_codes o ON o.code = s.ucr_offense_code WHERE s.ori = 'CA0019700' GROUP BY s.year, s.month, s.ucr_offense_code, o.offense_name ORDER BY s.year, s.month, o.code LIMIT 1000",
+    "nibrs-offense-codes-column"
+  )
+);
+
+assert(
+  "INVALID: nibrs_offense_codes alias cannot reference missing ucr_offense_code",
+  fires(
+    "SELECT o.ucr_offense_code, o.offense_name FROM nibrs_offense_codes o ORDER BY o.ucr_offense_code",
+    "nibrs-offense-codes-column"
+  )
+);
+
 console.log("\n" + "═".repeat(60));
 console.log(`SUMMARY: ${pass} passed, ${fail} failed out of ${pass + fail} tests`);
 console.log("═".repeat(60));

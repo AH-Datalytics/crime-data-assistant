@@ -98,6 +98,18 @@ The database contains incident-level crime data from ${NIBRS.minYear}-${NIBRS.ma
 - agency_type TEXT — 'City', 'County', or 'Other' (derived from pop_group: 1-7=City, 8x/9x=County, 0=Other)
 - population INT — agency service population (from BH records). Use for per-capita rate calculations.
 
+**UNIVERSITY / COLLEGE / CAMPUS AGENCIES:** These are agency-level queries, not surrounding-city queries. Do NOT answer a university/college/campus request with \`city = 'BERKELEY'\`, \`population > 0\`, \`agency_type = 'City'\`, or \`pop_group LIKE '1%'\`; that can select the city police department and exclude the campus ORI. Resolve campus ORIs by searching \`agencies.city\` across ALL years for campus terms plus the place, then use those ORIs for the fact table. Campus agencies often have population = 0 and may be labeled as City/Other inconsistently, so never require population > 0 for them. Example for University of California Berkeley:
+  SELECT s.year, s.month, SUM(s.offense_count) AS offenses
+  FROM summary_city_monthly s
+  WHERE s.ori IN (
+    SELECT DISTINCT ori FROM agencies
+    WHERE state = 'CA'
+      AND (upper(city) LIKE '%UN%BERKELEY%' OR upper(city) LIKE '%UNIV%BERKELEY%' OR upper(city) LIKE '%UNIVERSITY%BERKELEY%' OR upper(city) LIKE '%COLLEGE%BERKELEY%' OR upper(city) LIKE '%CAMPUS%BERKELEY%')
+  )
+  GROUP BY s.year, s.month
+  ORDER BY s.year, s.month
+For UC Berkeley specifically, the campus ORI is CA0019700. If a resolved campus ORI has no rows, say that the campus agency has no NIBRS incident data in this database; do not substitute citywide data.
+
 ### incidents (one row per incident)
 - year INT, state TEXT (2-letter), ori TEXT, incident_num TEXT
 - incident_date TEXT — YYYYMMDD format
