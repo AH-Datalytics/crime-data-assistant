@@ -491,6 +491,7 @@ export async function POST(req: NextRequest) {
 
     let rows: Record<string, unknown>[] = undefined!;
     let columns: string[] = undefined!;
+    let campusAgencyScopeNote: string | null = null;
 
     try {
       const result = await executeWithTimeout(sql);
@@ -593,6 +594,10 @@ export async function POST(req: NextRequest) {
             routeGuardrailsFired.push("nibrs-campus-agency-zero-result-rescue");
             claude.title = claude.title || "Campus Agency NIBRS Offenses";
             claude.explanation = `This query resolves the campus agency ORI rather than using the surrounding city police department.`;
+            const resolvedLabel = resolution.rows
+              .map((row) => `${row.city} (${row.ori})`)
+              .join(", ");
+            campusAgencyScopeNote = `Scope: campus agency ${resolvedLabel}, not the surrounding citywide police department.`;
           }
         }
       } catch (campusErr) {
@@ -823,6 +828,9 @@ export async function POST(req: NextRequest) {
       ? (stripInternalScaffold(postExplanation) || explanation)
       : postExplanation;
     explanation = applyResultDisclosures({ explanation, question, sql, rows, tab: "nibrs" });
+    if (campusAgencyScopeNote && !explanation.includes(campusAgencyScopeNote)) {
+      explanation += `\n\n${campusAgencyScopeNote}`;
+    }
     if (containsInternalScaffold(postExplanation)) {
       console.log(`[nibrs][internal-scaffold] Stripped scaffold text from post-query explanation`);
     }
