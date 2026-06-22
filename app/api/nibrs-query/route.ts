@@ -23,6 +23,7 @@ import { pastCompleteCalendarYearsRange } from "@/lib/time-conventions";
 import { detectFollowupTransform } from "@/lib/followup-transform";
 import { detectNibrsCapabilityOverride } from "@/lib/nibrs-capability-overrides";
 import { getBlockingGeoClarification } from "@/lib/geo-resolver";
+import { asksCampusAgency, buildCampusAgencySummarySql, resolveCampusAgencyOris } from "@/lib/nibrs-campus-agency";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -575,6 +576,29 @@ export async function POST(req: NextRequest) {
     }
 
     const executionTimeMs = Date.now() - startTime;
+
+    // Campus agencies can have zero population and non-city naming conventions
+    // such as "UN OF CA: BERKELEY". If the model's campus lookup returns no
+    // rows, resolve the campus ORI from agencies.city and rerun a safe ORI query.
+    if (rows.length === 0 && asksCampusAgency(question)) {
+      try {
+        const resolution = resolveCampusAgencyOris(getNibrsDb(), question);
+        if (resolution && resolution.oris.length > 0) {
+          const fallbackSql = buildCampusAgencySummarySql(resolution.oris, question);
+          const fallbackResult = await executeWithTimeout(fallbackSql);
+          if (fallbackResult.rows.length > 0) {
+            sql = fallbackSql;
+            rows = fallbackResult.rows;
+            columns = fallbackResult.columns;
+            routeGuardrailsFired.push("nibrs-campus-agency-zero-result-rescue");
+            claude.title = claude.title || "Campus Agency NIBRS Offenses";
+            claude.explanation = `This query resolves the campus agency ORI rather than using the surrounding city police department.`;
+          }
+        }
+      } catch (campusErr) {
+        console.log("[nibrs][campus-agency-rescue] Error:", campusErr);
+      }
+    }
 
     // Step 3b: Detect all-null data columns (query returned rows but no usable values)
     {

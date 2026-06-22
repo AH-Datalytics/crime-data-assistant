@@ -10,6 +10,7 @@
 import { extractQueryContext } from "../lib/query-context.js";
 import { runGuardrails } from "../lib/guardrails.js";
 import { detectAllNullData } from "../lib/all-null-detection.js";
+import { buildCampusAgencySummarySql, chooseCampusAgencyOris } from "../lib/nibrs-campus-agency.js";
 import { currentCalendarYear, pastCompleteCalendarYearsRange, pastYearsIncludingCurrentRange } from "../lib/time-conventions.js";
 
 let pass = 0;
@@ -441,6 +442,30 @@ console.log("\n═══ city-like-no-state ═══\n");
 // ══════════════════════════════════════════════════════════════════════
 
 console.log("\n═══ nibrs-city-no-agency-type ═══\n");
+
+{
+  const resolution = chooseCampusAgencyOris(
+    "Can you give me historical crime reported by the University of California Berkeley",
+    [
+      { ori: "CA0010300", city: "BERKELEY", state: "CA", population: 124321 },
+      { ori: "CA0019700", city: "UN OF CA: BERKELEY", state: "CA", population: 0 },
+      { ori: "CA0012700", city: "LAWRENCE BERKELEY LAB", state: "CA", population: 0 },
+    ]
+  );
+  assert("TP: campus resolver maps UC Berkeley to CA0019700 naming variant",
+    resolution?.oris[0] === "CA0019700",
+    `resolution: ${JSON.stringify(resolution)}`);
+}
+
+{
+  const sql = buildCampusAgencySummarySql(["CA0019700"], "crime by month at University of California Berkeley");
+  assert("TP: campus fallback SQL uses literal campus ORI",
+    /s\.ori IN \('CA0019700'\)/.test(sql),
+    sql);
+  assert("TP: campus fallback SQL keeps monthly grain when requested",
+    /SELECT s\.year, s\.month/.test(sql) && /GROUP BY s\.year, s\.month/.test(sql),
+    sql);
+}
 
 {
   const sql = `SELECT a.year, a.ori, a.city, a.state, a.population, s.ucr_offense_code, SUM(s.offense_count) AS total_offenses
