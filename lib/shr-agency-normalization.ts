@@ -80,6 +80,15 @@ export function agencySearchKey(value: string): string {
 
 function agencyDisplayOverride(value: string): string | null {
   const key = agencySearchKey(value);
+  if (/^CHARLOTTE(?:\s+MECKLENBURG)?(?:\s+POLICE\s+DEPARTMENT)?$/.test(key)) {
+    return "Charlotte";
+  }
+  if (/^ST\s+LOUIS(?:\s+METROPOLITAN(?:\s+POLICE\s+DEPARTMENT)?)?$/.test(key)) {
+    return "St. Louis";
+  }
+  if (/^ST\s+LOUIS\s+COUNTY(?:\s+POLICE\s+DEPARTMENT)?$/.test(key)) {
+    return "St. Louis County";
+  }
   if (/^(METROPOLITAN NASHVILLE|NASHVILLE METROPOLITAN)(?:\s+P|\s+POLICE\s+DEPARTMENT)?$/.test(key)) {
     return "Nashville";
   }
@@ -98,6 +107,10 @@ export function displayShrAgencyName(value: string): string {
 
 export function normalizeShrAgencyText(value: string): string {
   return (value || "")
+    .replace(/\bCHARLOTTE[- ]MECKLENBURG(?: POLICE DEPARTMENT)?\b/gi, "Charlotte")
+    .replace(/\bSAINT LOUIS\b/gi, "St. Louis")
+    .replace(/\bST\.?\s+LOUIS\s+METROPOLITAN(?: POLICE DEPARTMENT)?\b/gi, "St. Louis")
+    .replace(/\bST\.?\s+LOUIS\s+COUNTY(?: POLICE DEPARTMENT)?\b/gi, "St. Louis County")
     .replace(/\bMETROPOLITAN NASHVILLE P(?:OLICE DEPARTMENT)?\b/gi, "Nashville")
     .replace(/\bMETROPOLITAN NASHVILLE POLICE DEPARTMENT\b/gi, "Nashville")
     .replace(/\bNASHVILLE METROPOLITAN POLICE DEPARTMENT\b/gi, "Nashville")

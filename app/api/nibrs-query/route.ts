@@ -51,6 +51,48 @@ function modelLabel(modelId: string): string {
   return modelId;
 }
 
+function titlePlacePart(value: string): string {
+  if (/^(?:DC|US|USA)$/i.test(value)) return value.toUpperCase();
+  if (/^st$/i.test(value)) return "St.";
+  return value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
+}
+
+function displayNibrsCityName(value: string): string {
+  const key = value
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (key === "SAINT LOUIS" || key === "ST LOUIS") return "St. Louis";
+  if (key === "CHARLOTTE MECKLENBURG") return "Charlotte";
+  if (key === "METROPOLITAN NASHVILLE" || key === "NASHVILLE METROPOLITAN") return "Nashville";
+  if (key === "LAS VEGAS METRO PD" || key === "LAS VEGAS METROPOLITAN") return "Las Vegas";
+  return value
+    .trim()
+    .split(/(\s+|-)/)
+    .map((part) => (/^\s+$|^-$/u.test(part) ? part : titlePlacePart(part)))
+    .join("");
+}
+
+function normalizeNibrsDisplayRows(rows: Record<string, unknown>[]): Record<string, unknown>[] {
+  const cityLikeColumns = new Set(["city", "agency", "agency_name", "jurisdiction"]);
+  return rows.map((row) => {
+    let changed = false;
+    const next: Record<string, unknown> = { ...row };
+    for (const key of Object.keys(next)) {
+      if (!cityLikeColumns.has(key.toLowerCase())) continue;
+      if (typeof next[key] !== "string") continue;
+      const normalized = displayNibrsCityName(next[key]);
+      if (normalized && normalized !== next[key]) {
+        next[key] = normalized;
+        changed = true;
+      }
+    }
+    return changed ? next : row;
+  });
+}
+
 function asksContinuousReportingFilter(question: string): boolean {
   return /\b(?:continuous(?:ly)?|consistent(?:ly)?)\s+(?:reporting\s+)?(?:agenc(?:y|ies)|reporters?)\b/i.test(question) ||
     /\b(?:agenc(?:y|ies)|reporters?)\s+that\s+reported\s+every\s+year\b/i.test(question) ||
@@ -521,6 +563,7 @@ export async function POST(req: NextRequest) {
       const result = await executeWithTimeout(sql);
       rows = result.rows;
       columns = result.columns;
+      rows = normalizeNibrsDisplayRows(rows);
     } catch (dbErr) {
       const msg = dbErr instanceof Error ? dbErr.message : String(dbErr);
       const isTimeout = msg.includes("timed out");
@@ -532,6 +575,7 @@ export async function POST(req: NextRequest) {
           const retryResult = await executeWithTimeout(sql);
           rows = retryResult.rows;
           columns = retryResult.columns;
+          rows = normalizeNibrsDisplayRows(rows);
           console.log(`[nibrs][timeout-retry] Second attempt succeeded`);
         } catch (retryErr) {
           const retryMsg = retryErr instanceof Error ? retryErr.message : String(retryErr);
@@ -567,6 +611,7 @@ export async function POST(req: NextRequest) {
               const retryResult = await executeWithTimeout(retryValidation.sanitized!);
               rows = retryResult.rows;
               columns = retryResult.columns;
+              rows = normalizeNibrsDisplayRows(rows);
               sql = retryValidation.sanitized!;
               applyRetryMeta(claude, retry);
               console.log(`[nibrs][error-recovery] Retry succeeded`);
@@ -614,7 +659,7 @@ export async function POST(req: NextRequest) {
           const fallbackResult = await executeWithTimeout(fallbackSql);
           if (fallbackResult.rows.length > 0) {
             sql = fallbackSql;
-            rows = fallbackResult.rows;
+            rows = normalizeNibrsDisplayRows(fallbackResult.rows);
             columns = fallbackResult.columns;
             if (campusChartAxes) {
               claude.chartHint = "line";

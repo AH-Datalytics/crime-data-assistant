@@ -45,12 +45,16 @@ import {
 {
   assert.equal(displayShrAgencyName("METROPOLITAN NASHVILLE P"), "Nashville");
   assert.equal(displayShrAgencyName("METROPOLITAN NASHVILLE POLICE DEPARTMENT"), "Nashville");
+  assert.equal(displayShrAgencyName("CHARLOTTE-MECKLENBURG POLICE DEPARTMENT"), "Charlotte");
+  assert.equal(displayShrAgencyName("Saint Louis Metropolitan Police Department"), "St. Louis");
+  assert.equal(displayShrAgencyName("ST. LOUIS COUNTY POLICE DEPARTMENT"), "St. Louis County");
   assert.equal(displayShrAgencyName("LAS VEGAS METROPOLITAN POLICE DEPARTMENT"), "Las Vegas");
   assert.equal(displayShrAgencyName("LOUISVILLE METRO POLICE DEPARTMENT"), "Louisville");
   assert.equal(
-    normalizeShrAgencyText("Fatal shootings for METROPOLITAN NASHVILLE P by year."),
-    "Fatal shootings for Nashville by year."
+    normalizeShrAgencyText("Fatal shootings for METROPOLITAN NASHVILLE P and CHARLOTTE-MECKLENBURG by year."),
+    "Fatal shootings for Nashville and Charlotte by year."
   );
+  assert.equal(normalizeShrAgencyText("Murders in Saint Louis by year."), "Murders in St. Louis by year.");
 }
 
 console.log("SHR agency normalization tests passed");

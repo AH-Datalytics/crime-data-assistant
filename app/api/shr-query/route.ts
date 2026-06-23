@@ -102,6 +102,8 @@ function shootingCityIntents(question: string): ShootingCityIntent[] {
     { pattern: /\b(?:NYC|NYPD|New York City)\b/i, agency: "New York", display: "New York City", state: "NY" },
     { pattern: /\b(?:LAPD|Los Angeles)\b/i, agency: "Los Angeles", display: "Los Angeles", state: "CA" },
     { pattern: /\b(?:CPD|Chicago)\b/i, agency: "Chicago", display: "Chicago", state: "IL" },
+    { pattern: /\b(?:Charlotte|Charlotte-Mecklenburg|CMPD)(?:,?\s+(?:NC|North Carolina))?\b/i, agency: "Charlotte-Mecklenburg", agencyLike: "CHARLOTTE%MECKLENBURG%", display: "Charlotte", state: "NC" },
+    { pattern: /\b(?:St\.?\s*Louis|Saint Louis|STL)\s+city\b|\b(?:St\.?\s*Louis|Saint Louis),?\s+(?:MO|Missouri)\b/i, agency: "St. Louis", agencyLike: "ST%LOUIS%", display: "St. Louis city", state: "MO" },
     { pattern: /\bNashville(?:,?\s+(?:TN|Tennessee))?\b/i, agency: "Metropolitan Nashville", agencyLike: "METROPOLITAN NASHVILLE%", display: "Nashville", state: "TN" },
     { pattern: /\bLas Vegas(?:,?\s+(?:NV|Nevada))?\b/i, agency: "Las Vegas Metropolitan", agencyLike: "LAS VEGAS METROPOLITAN%", display: "Las Vegas", state: "NV" },
     { pattern: /\bLouisville(?:,?\s+(?:KY|Kentucky))?\b/i, agency: "Louisville Metro", agencyLike: "LOUISVILLE%METRO%", display: "Louisville", state: "KY" },

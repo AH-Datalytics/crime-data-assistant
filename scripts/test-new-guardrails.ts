@@ -2272,6 +2272,33 @@ console.log("\n=== June 16 query audit regressions ===\n");
     `fired: ${JSON.stringify(r.fired)}`);
 }
 
+{
+  const sql = `SELECT city, state, SUM(total_offenses) AS murders
+    FROM summary_clearance_city_annual
+    WHERE ucr_offense_code = '09A'
+      AND city IN ('CHICAGO','LOS ANGELES','AUSTIN','COLUMBUS')
+      AND state IN ('IL','CA','TX','OH')
+    GROUP BY city, state`;
+  const ctx = extractQueryContext(sql, "murder clearance rate for Chicago, Los Angeles, Austin, and Columbus in 2025", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("TP: #4527 unpaired city/state IN lists fire",
+    r.fired.includes("nibrs-unpaired-city-state-in"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  const sql = `SELECT city, state, SUM(total_offenses) AS murders
+    FROM summary_clearance_city_annual
+    WHERE ucr_offense_code = '09A'
+      AND ((city = 'CHICAGO' AND state = 'IL') OR (city = 'LOS ANGELES' AND state = 'CA'))
+    GROUP BY city, state`;
+  const ctx = extractQueryContext(sql, "murder clearance rate for Chicago and Los Angeles in 2025", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("FP: paired city/state OR branches pass",
+    !r.fired.includes("nibrs-unpaired-city-state-in"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
 console.log("\n" + "═".repeat(60));
 console.log(`SUMMARY: ${pass} passed, ${fail} failed out of ${pass + fail} tests`);
 console.log("═".repeat(60));

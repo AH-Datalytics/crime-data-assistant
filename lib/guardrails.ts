@@ -120,6 +120,24 @@ function asksDomesticViolenceRate(question: string): boolean {
   return asksDomesticViolence(question) && asksPerCapitaRate(question);
 }
 
+function literalListCount(value: string): number {
+  return (value.match(/'([^']|'')*'/g) || []).length;
+}
+
+function hasUnpairedMultiCityStateFilter(sql: string): boolean {
+  const compact = sql.replace(/\s+/g, " ");
+  if (/\(\s*(?:\w+\.)?city\s*,\s*(?:\w+\.)?state\s*\)\s+IN\b/i.test(compact)) return false;
+
+  const cityIn = compact.match(/\b(?:\w+\.)?city\s+IN\s*\(([^)]+)\)/i);
+  if (!cityIn || literalListCount(cityIn[1]) < 2) return false;
+
+  const stateIn = compact.match(/\b(?:\w+\.)?state\s+IN\s*\(([^)]+)\)/i);
+  if (stateIn && literalListCount(stateIn[1]) > 1) return true;
+
+  const hasSingleState = /\b(?:\w+\.)?state\s*=\s*'[^']+'/i.test(compact);
+  return !hasSingleState;
+}
+
 function domesticViolenceRateMessage(): string {
   return "[SYSTEM: The user asked for domestic violence rates. Do not join summary_domestic_violence to another summary_* table to infer population; that triggers cross-summary grain errors. Use summary_domestic_violence for the numerator and agencies plus nibrs_agency_completeness for the denominator. The denominator must be the population served by reporting agencies, adjusted by months reported; it is not the full official state population. For state comparisons in 2025, use this pattern: WITH dv AS (SELECT state, COUNT(DISTINCT ori || ':' || data_year || ':' || incident_num) AS dv_incidents FROM summary_domestic_violence WHERE data_year = 2025 GROUP BY state), population AS (SELECT a.state, SUM(a.population * nac.months_reported / 12.0) AS reporting_population FROM nibrs_agency_completeness nac JOIN agencies a ON a.ori = nac.ori AND a.year = nac.year WHERE nac.year = 2025 AND nac.months_reported > 0 AND a.population > 0 GROUP BY a.state) SELECT dv.state, dv.dv_incidents, population.reporting_population, ROUND(dv.dv_incidents * 100000.0 / NULLIF(population.reporting_population, 0), 1) AS rate_per_100k FROM dv JOIN population ON population.state = dv.state WHERE population.reporting_population > 0 ORDER BY rate_per_100k DESC LIMIT 1000. Explain that the denominator is population served by agencies that reported in NIBRS, adjusted for partial-year reporting, not a complete official state population.]";
 }
@@ -1485,6 +1503,13 @@ const GUARDRAILS: Guardrail[] = [
     },
     message: () =>
       "[SYSTEM: Your JOIN between a city-level summary table and the agencies table matches on state+year but NOT ori. This creates a cartesian product — every summary row gets multiplied by every agency in that state/year, producing wildly inflated and incorrect results. You MUST match on ori: JOIN agencies a ON a.ori = s.ori AND a.year = s.year. Alternatively, for ranking cities by crime counts, you don't need the agencies JOIN at all — use summary_clearance_city_annual which already has city name and population, or use an ORI subquery to get city names.]",
+  },
+  {
+    name: "nibrs-unpaired-city-state-in",
+    tabs: ["nibrs"],
+    match: (ctx) => hasUnpairedMultiCityStateFilter(ctx.sql),
+    message: () =>
+      "[SYSTEM: Your multi-city filter uses city IN (...) without pairing each city to its intended state. This can pull same-named cities from the wrong states. Rewrite with explicit city-state pairs: WHERE (city = 'CHICAGO' AND state = 'IL') OR (city = 'LOS ANGELES' AND state = 'CA'), or use a VALUES/CTE table with city and state columns and join on both. Do not use separate city IN (...) and state IN (...) lists for named city comparisons.]",
   },
   {
     name: "nibrs-city-case-sensitivity",
