@@ -122,7 +122,16 @@ function returnedEntities(rows: Record<string, unknown>[]): Set<string> {
     for (const col of cols) {
       const value = row[col];
       if (value !== undefined && value !== null && String(value).trim()) {
-        values.add(normalizeEntity(String(value)));
+        const normalized = normalizeEntity(String(value));
+        values.add(normalized);
+        if (normalized === "st louis") values.add("saint louis");
+        if (normalized === "saint louis") values.add("st louis");
+        if (normalized === "charlotte") values.add("charlotte mecklenburg");
+        if (normalized === "nashville") values.add("metropolitan nashville");
+        if (normalized === "las vegas") {
+          values.add("las vegas metro pd");
+          values.add("las vegas metropolitan");
+        }
       }
     }
   }

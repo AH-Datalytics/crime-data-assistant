@@ -265,6 +265,24 @@ import { applyResultDisclosures } from "../lib/result-disclosure";
 
 {
   const explanation = applyResultDisclosures({
+    explanation: "Murder clearance rates for Chicago, Austin, Columbus, Charlotte, Nashville, and St. Louis.",
+    question: "murder clearance rates for Chicago Illinois, Austin Texas, Columbus Ohio, Charlotte North Carolina, Nashville Tennessee, and St. Louis city",
+    sql: "SELECT city, state, SUM(total_offenses) AS murders FROM summary_clearance_city_annual WHERE (city = 'CHICAGO' AND state = 'IL') OR (city = 'AUSTIN' AND state = 'TX') OR (city = 'COLUMBUS' AND state = 'OH') OR (city = 'CHARLOTTE' AND state = 'NC') OR (city = 'NASHVILLE' AND state = 'TN') OR (city = 'SAINT LOUIS' AND state = 'MO') GROUP BY city, state",
+    rows: [
+      { city: "Chicago", state: "IL", murders: 1 },
+      { city: "Austin", state: "TX", murders: 1 },
+      { city: "Columbus", state: "OH", murders: 1 },
+      { city: "Charlotte", state: "NC", murders: 1 },
+      { city: "Nashville", state: "TN", murders: 1 },
+      { city: "St. Louis", state: "MO", murders: 1 },
+    ],
+    tab: "nibrs",
+  });
+  assert.doesNotMatch(explanation, /No data found for: SAINT LOUIS/);
+}
+
+{
+  const explanation = applyResultDisclosures({
     explanation: "Victim counts for cities that consistently reported data for each year.",
     question: "show assaults by year for consistent reporting agencies",
     sql: "SELECT year, SUM(victim_count) AS victims FROM summary_victim_city_monthly WHERE ori IN (SELECT ori FROM nibrs_consistent_reporters WHERE start_year = 2017 AND end_year = 2025) GROUP BY year",
