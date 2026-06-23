@@ -78,6 +78,33 @@ export function agencySearchKey(value: string): string {
     .trim();
 }
 
+function agencyDisplayOverride(value: string): string | null {
+  const key = agencySearchKey(value);
+  if (/^(METROPOLITAN NASHVILLE|NASHVILLE METROPOLITAN)(?:\s+P|\s+POLICE\s+DEPARTMENT)?$/.test(key)) {
+    return "Nashville";
+  }
+  if (/^LAS VEGAS METROPOLITAN(?:\s+POLICE\s+DEPARTMENT)?$/.test(key)) {
+    return "Las Vegas";
+  }
+  if (/^LOUISVILLE(?:\s+JEFFERSON\s+COUNTY)?\s+METRO(?:\s+POLICE\s+DEPARTMENT)?$/.test(key)) {
+    return "Louisville";
+  }
+  return null;
+}
+
+export function displayShrAgencyName(value: string): string {
+  return agencyDisplayOverride(value) || canonicalizeShrAgencyName(value);
+}
+
+export function normalizeShrAgencyText(value: string): string {
+  return (value || "")
+    .replace(/\bMETROPOLITAN NASHVILLE P(?:OLICE DEPARTMENT)?\b/gi, "Nashville")
+    .replace(/\bMETROPOLITAN NASHVILLE POLICE DEPARTMENT\b/gi, "Nashville")
+    .replace(/\bNASHVILLE METROPOLITAN POLICE DEPARTMENT\b/gi, "Nashville")
+    .replace(/\bLAS VEGAS METROPOLITAN POLICE DEPARTMENT\b/gi, "Las Vegas")
+    .replace(/\bLOUISVILLE(?: JEFFERSON COUNTY)? METRO POLICE DEPARTMENT\b/gi, "Louisville");
+}
+
 function stripAgencyDescriptor(value: string): string {
   return canonicalizeShrAgencyName(value)
     .replace(/\bCounty Police Department\b/gi, "County")

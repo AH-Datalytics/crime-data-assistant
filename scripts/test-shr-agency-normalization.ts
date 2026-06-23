@@ -4,7 +4,9 @@ import {
   buildShrAgencyAliases,
   buildShrAgencyIdentity,
   canonicalizeShrAgencyName,
+  displayShrAgencyName,
   inferShrAgencyType,
+  normalizeShrAgencyText,
 } from "../lib/shr-agency-normalization";
 
 {
@@ -38,6 +40,17 @@ import {
   assert.equal(identity.canonicalAgency, "St. Louis County Police Department");
   assert.equal(identity.agencyType, "County");
   assert(identity.aliases.includes("St. Louis County"));
+}
+
+{
+  assert.equal(displayShrAgencyName("METROPOLITAN NASHVILLE P"), "Nashville");
+  assert.equal(displayShrAgencyName("METROPOLITAN NASHVILLE POLICE DEPARTMENT"), "Nashville");
+  assert.equal(displayShrAgencyName("LAS VEGAS METROPOLITAN POLICE DEPARTMENT"), "Las Vegas");
+  assert.equal(displayShrAgencyName("LOUISVILLE METRO POLICE DEPARTMENT"), "Louisville");
+  assert.equal(
+    normalizeShrAgencyText("Fatal shootings for METROPOLITAN NASHVILLE P by year."),
+    "Fatal shootings for Nashville by year."
+  );
 }
 
 console.log("SHR agency normalization tests passed");

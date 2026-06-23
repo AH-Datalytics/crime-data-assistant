@@ -28,6 +28,7 @@ import { applyChartCustomizations } from "@/lib/chart-customization";
 import { STATE_NAME_TO_ABBR } from "@/lib/state-population";
 import { getBlockingGeoClarification } from "@/lib/geo-resolver";
 import { detectDemographicHomicideRateOverride } from "@/lib/capability-overrides";
+import { displayShrAgencyName, normalizeShrAgencyText } from "@/lib/shr-agency-normalization";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function jsonResp(data: Record<string, any> | QueryError, status = 200) {
@@ -48,6 +49,24 @@ function displayPlace(value: string): string {
     .split(/\s+/)
     .map((part) => /^(of|and|the)$/i.test(part) ? part.toLowerCase() : part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
     .join(" ");
+}
+
+function normalizeShrDisplayRows(rows: Record<string, unknown>[]): Record<string, unknown>[] {
+  const agencyLikeColumns = new Set(["agency", "agency_name", "canonical_agency", "city"]);
+  return rows.map((row) => {
+    let changed = false;
+    const next: Record<string, unknown> = { ...row };
+    for (const key of Object.keys(next)) {
+      if (!agencyLikeColumns.has(key.toLowerCase())) continue;
+      if (typeof next[key] !== "string") continue;
+      const normalized = displayShrAgencyName(next[key]);
+      if (normalized && normalized !== next[key]) {
+        next[key] = normalized;
+        changed = true;
+      }
+    }
+    return changed ? next : row;
+  });
 }
 
 function countyIntent(question: string): { key: string; display: string } | null {
@@ -405,11 +424,12 @@ export async function POST(req: NextRequest) {
         return jsonResp({ success: false, error: "SHR database not available." } as QueryError, 500);
       }
       try {
-        const rows = db.prepare(sql).all() as Record<string, unknown>[];
+        let rows = db.prepare(sql).all() as Record<string, unknown>[];
+        rows = normalizeShrDisplayRows(rows);
         const columns = rows.length > 0 ? Object.keys(rows[0]) : ["year", "fatal_shootings"];
 
         // Add caveats
-        const caveats = [explanation];
+        const caveats = [normalizeShrAgencyText(explanation)];
         caveats.push("Not all agencies and states report SHR data every year, so these counts underrepresent total fatal shootings.");
         let totalExplanation = caveats.join("\n\n");
 
@@ -424,11 +444,12 @@ export async function POST(req: NextRequest) {
           }
         }
 
+        const displayTitle = normalizeShrAgencyText(title);
         writeLog(question, sql, rows.length, null, Date.now() - start, totalExplanation, "shr", detGuardrails, "deterministic", sessionId);
         return jsonResp({
           success: true, question, sql, explanation: totalExplanation,
-          title, columns, rows, rowCount: rows.length, truncated: false,
-        chartConfig: applyChartCustomizations({ type: "line", xAxis: "year", yAxis: ["fatal_shootings"], yAxisLabel: "Fatal Shootings", title }, question),
+          title: displayTitle, columns, rows, rowCount: rows.length, truncated: false,
+        chartConfig: applyChartCustomizations({ type: "line", xAxis: "year", yAxis: ["fatal_shootings"], yAxisLabel: "Fatal Shootings", title: displayTitle }, question),
           chartMeta: { source: "FBI SHR", agencyCount: 0, population: null },
           executionTimeMs: Date.now() - start,
         });
@@ -697,6 +718,7 @@ export async function POST(req: NextRequest) {
     let rows: Record<string, unknown>[];
     try {
       rows = db.prepare(sql).all() as Record<string, unknown>[];
+      rows = normalizeShrDisplayRows(rows);
     } catch (dbErr) {
       const msg = dbErr instanceof Error ? dbErr.message : String(dbErr);
       writeLog(question, sql, 0, `DB: ${msg}`, Date.now() - start, null, "shr", [], "haiku-4.5", sessionId);
@@ -707,6 +729,8 @@ export async function POST(req: NextRequest) {
     }
 
     const executionMs = Date.now() - start;
+    claude.title = claude.title ? normalizeShrAgencyText(claude.title) : claude.title;
+    claude.explanation = normalizeShrAgencyText(claude.explanation || "");
 
     if (rows.length === 0) {
       let explanation = claude.explanation || "The query returned no results.";
@@ -918,6 +942,7 @@ export async function POST(req: NextRequest) {
     // Fix hallucinated counts using distinct entity detection
     explanation = validateExplanationCount(explanation, rows as Record<string, unknown>[], columns);
     explanation = applyResultDisclosures({ explanation, question, sql, rows, tab: "shr" });
+    explanation = normalizeShrAgencyText(explanation);
 
     // Sanitize any leaked SQL/JSON
     explanation = sanitizeExplanation(explanation);
