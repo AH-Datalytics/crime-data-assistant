@@ -93,15 +93,18 @@ function stateMention(question: string): string | null {
   return null;
 }
 
-type ShootingCityIntent = { agency: string; display: string; state?: string };
+type ShootingCityIntent = { agency: string; display: string; state?: string; agencyLike?: string };
 
 function shootingCityIntents(question: string): ShootingCityIntent[] {
-  const aliases: { pattern: RegExp; agency: string; display: string; state: string }[] = [
+  const aliases: (ShootingCityIntent & { pattern: RegExp; state: string })[] = [
     { pattern: /\b(?:KCMO|Kansas City,\s*MO|Kansas City,?\s+Missouri)\b/i, agency: "Kansas City", display: "Kansas City, MO", state: "MO" },
     { pattern: /\b(?:KCK|Kansas City,\s*KS|Kansas City,?\s+Kansas)\b/i, agency: "Kansas City", display: "Kansas City, KS", state: "KS" },
     { pattern: /\b(?:NYC|NYPD|New York City)\b/i, agency: "New York", display: "New York City", state: "NY" },
     { pattern: /\b(?:LAPD|Los Angeles)\b/i, agency: "Los Angeles", display: "Los Angeles", state: "CA" },
     { pattern: /\b(?:CPD|Chicago)\b/i, agency: "Chicago", display: "Chicago", state: "IL" },
+    { pattern: /\bNashville(?:,?\s+(?:TN|Tennessee))?\b/i, agency: "Metropolitan Nashville", agencyLike: "METROPOLITAN NASHVILLE%", display: "Nashville", state: "TN" },
+    { pattern: /\bLas Vegas(?:,?\s+(?:NV|Nevada))?\b/i, agency: "Las Vegas Metropolitan", agencyLike: "LAS VEGAS METROPOLITAN%", display: "Las Vegas", state: "NV" },
+    { pattern: /\bLouisville(?:,?\s+(?:KY|Kentucky))?\b/i, agency: "Louisville Metro", agencyLike: "LOUISVILLE%METRO%", display: "Louisville", state: "KY" },
   ];
   const hits: ShootingCityIntent[] = [];
   for (const alias of aliases) {
@@ -397,7 +400,9 @@ export async function POST(req: NextRequest) {
         if (cities.length > 0) {
           titlePlace = cities.map((city) => city.display).join(" and ");
           const cityClauses = cities.map((city) => {
-            const agency = `i.agency = '${city.agency.replace(/'/g, "''")}'`;
+            const agency = city.agencyLike
+              ? `i.agency LIKE '${city.agencyLike.replace(/'/g, "''")}'`
+              : `i.agency = '${city.agency.replace(/'/g, "''")}'`;
             const state = city.state ? ` AND i.state = '${city.state}'` : "";
             return `(${agency}${state})`;
           });
