@@ -109,7 +109,7 @@ function shootingCityIntents(question: string): ShootingCityIntent[] {
   const hits: ShootingCityIntent[] = [];
   for (const alias of aliases) {
     if (alias.pattern.test(question)) {
-      hits.push({ agency: alias.agency, display: alias.display, state: alias.state });
+      hits.push({ agency: alias.agency, agencyLike: alias.agencyLike, display: alias.display, state: alias.state });
     }
   }
   if (hits.length > 0) {
