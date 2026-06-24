@@ -309,6 +309,7 @@ export default function WorkspaceChat({ sourceYearRanges }: WorkspaceChatProps) 
 
   const hasData = response && (response.chartConfig || response.rows.length > 0);
   const isScatterChart = response?.chartConfig?.type === "scatter";
+  const scatterFocusMode = isScatterChart && showChart;
   const hasStarted = exchanges.length > 0 || loading || error || showDisambiguation;
   const activeExchange = exchanges[activeExchangeIdx];
   const rerunQuestion = exchanges[activeExchangeIdx]?.question || lastQuestion;
@@ -525,7 +526,7 @@ export default function WorkspaceChat({ sourceYearRanges }: WorkspaceChatProps) 
       {hasStarted && !showDisambiguation && (
         <div className="flex-1 flex min-h-0">
           {/* LEFT RAIL */}
-          <div className="w-[260px] lg:w-[320px] xl:w-[340px] border-r border-[var(--border)] hidden min-[700px]:flex flex-col bg-white shrink-0">
+          <div className={scatterFocusMode ? "hidden" : "w-[260px] lg:w-[320px] xl:w-[340px] border-r border-[var(--border)] hidden min-[700px]:flex flex-col bg-white shrink-0"}>
             <div ref={railRef} className="flex-1 overflow-y-auto p-4 space-y-3">
               {exchanges.map((ex, i) => {
                 const isActive = i === activeExchangeIdx;
@@ -667,7 +668,12 @@ export default function WorkspaceChat({ sourceYearRanges }: WorkspaceChatProps) 
                 <div className={`flex-1 flex flex-col ${!isScatterChart && showChart && response.chartConfig && showTable && response.rows.length > 0 ? "md:flex-row" : ""} gap-3 sm:gap-6 min-h-0`}>
                   {response.chartConfig && showChart && (
                     <div ref={chartRef} className={`bg-white flex flex-col ${isScatterChart ? "w-full shrink-0" : showTable && response.rows.length > 0 ? "md:flex-[1.15] md:min-w-0" : "w-full flex-1"}`}>
-                      <div className="flex-1 min-h-0" style={{ minHeight: isScatterChart ? 460 : 280 }}>
+                      <div
+                        className="flex-1 min-h-0"
+                        style={isScatterChart
+                          ? { minHeight: "min(760px, calc(100vh - 240px))", height: "min(760px, calc(100vh - 240px))" }
+                          : { minHeight: 280 }}
+                      >
                         <ChartPanel config={response.chartConfig} rows={response.rows} meta={response.chartMeta} />
                       </div>
                     </div>
