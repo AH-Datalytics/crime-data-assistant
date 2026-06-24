@@ -53,6 +53,18 @@ function extractYearRange(rows: Record<string, unknown>[]): string | null {
   return lo === hi ? String(lo) : `${lo} to ${hi}`;
 }
 
+export function earliestReturnedYear(rows: Record<string, unknown>[]): number | null {
+  const yearCol = ["year", "data_year", "Year"].find(
+    (c) => rows[0]?.[c] !== undefined
+  );
+  if (!yearCol) return null;
+  const years = rows
+    .map((r) => Number(r[yearCol]))
+    .filter((n) => Number.isFinite(n));
+  if (years.length === 0) return null;
+  return Math.min(...years);
+}
+
 function extractMetrics(columns: string[]): string[] {
   const skip = new Set([
     "year", "data_year", "month", "city", "state", "agency_name",
@@ -150,8 +162,8 @@ function buildDisclaimers(
         (c) => rows[0]?.[c] !== undefined
       );
       if (yearCol) {
-        const actual = Number(rows[0][yearCol]);
-        if (!isNaN(actual) && actual > requested + 1) {
+        const actual = earliestReturnedYear(rows);
+        if (actual !== null && actual > requested + 1) {
           parts.push(
             `Data begins in ${actual} although ${requested} was requested — earlier years are not available in this dataset. For data going back further, try the [Historical Library](/?tab=historical) tab (annual data from the 1930s) or the [Current Trends](/?tab=current) tab.`
           );
