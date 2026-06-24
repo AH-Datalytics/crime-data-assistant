@@ -308,7 +308,6 @@ export default function WorkspaceChat({ sourceYearRanges }: WorkspaceChatProps) 
   };
 
   const hasData = response && (response.chartConfig || response.rows.length > 0);
-  const isScatterChart = response?.chartConfig?.type === "scatter";
   const hasStarted = exchanges.length > 0 || loading || error || showDisambiguation;
   const activeExchange = exchanges[activeExchangeIdx];
   const rerunQuestion = exchanges[activeExchangeIdx]?.question || lastQuestion;
@@ -663,17 +662,17 @@ export default function WorkspaceChat({ sourceYearRanges }: WorkspaceChatProps) 
                   </div>
                 </div>
 
-                {/* Chart + Table */}
-                <div className={`flex-1 flex flex-col ${!isScatterChart && showChart && response.chartConfig && showTable && response.rows.length > 0 ? "md:flex-row" : ""} gap-3 sm:gap-6 min-h-0`}>
+                {/* Chart + Table side by side */}
+                <div className={`flex-1 flex flex-col ${showChart && response.chartConfig && showTable && response.rows.length > 0 ? "md:flex-row" : ""} gap-3 sm:gap-6 min-h-0`}>
                   {response.chartConfig && showChart && (
-                    <div ref={chartRef} className={`bg-white flex flex-col ${isScatterChart ? "w-full shrink-0" : showTable && response.rows.length > 0 ? "md:flex-[1.15] md:min-w-0" : "w-full flex-1"}`}>
-                      <div className="flex-1 min-h-0" style={{ minHeight: isScatterChart ? 460 : 280 }}>
+                    <div ref={chartRef} className={`bg-white flex flex-col ${showTable && response.rows.length > 0 ? "md:flex-[1.15] md:min-w-0" : "w-full flex-1"}`}>
+                      <div className="flex-1 min-h-0" style={{ minHeight: 280 }}>
                         <ChartPanel config={response.chartConfig} rows={response.rows} meta={response.chartMeta} />
                       </div>
                     </div>
                   )}
                   {response.rows.length > 0 && showTable && (
-                    <div className={`bg-white overflow-hidden workspace-table flex flex-col ${!isScatterChart && showChart && response.chartConfig ? "md:flex-[0.85] md:min-w-0" : "w-full flex-1"}`}>
+                    <div className={`bg-white overflow-hidden workspace-table flex flex-col ${showChart && response.chartConfig ? "md:flex-[0.85] md:min-w-0" : "w-full flex-1"}`}>
                       <DataTable columns={response.columns} rows={response.rows} truncated={response.truncated} fillHeight />
                     </div>
                   )}
