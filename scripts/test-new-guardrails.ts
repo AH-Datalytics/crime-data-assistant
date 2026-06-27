@@ -1684,6 +1684,21 @@ console.log("\n=== wave-1 query-contract guardrails ===\n");
 }
 
 {
+  const sql = `SELECT hac.year, SUM(hac.violent) AS violent
+    FROM historical_agency_crime hac
+    JOIN historical_agency ha ON ha.ori = hac.ori
+    WHERE (ha.agency = 'Chicago' AND ha.state = 'IL')
+      OR (ha.agency = 'Houston' AND ha.state = 'TX')
+      AND hac.year BETWEEN 1991 AND 2025
+    GROUP BY hac.year`;
+  const ctx = extractQueryContext(sql, "What counts as violent crime here? Can you show this as a per capita rate?", "historical");
+  const r = runGuardrails(ctx);
+  assert("TP: #4570 parenthesized branches still need shared filter parentheses",
+    r.fired.includes("or-and-precedence"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
   const sql = `SELECT year, SUM(count) AS murders FROM agency_monthly WHERE (agency = 'Houston' OR agency = 'Dallas') AND offense = 'Murder' GROUP BY year`;
   const ctx = extractQueryContext(sql, "Compare Houston and Dallas murders", "current");
   const r = runGuardrails(ctx);

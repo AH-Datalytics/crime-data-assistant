@@ -97,6 +97,8 @@ assertDoesNotWarn("crime in Alameda County since 2008", "city-county-alameda");
 assertWarns("violent crime in Los Angeles", "city-county-los-angeles");
 assertDoesNotWarn("violent crime in Los Angeles, California", "city-county-los-angeles");
 assertDoesNotWarn("violent crime in Los Angeles CA", "city-county-los-angeles");
+assertDoesNotWarn("violent crime in Los Angeles city", "city-county-los-angeles");
+assertDoesNotWarn("Chicago violent crime vs. that of Los Angeles city, New York City, and Houston", "city-county-los-angeles");
 assertDoesNotWarn("violent crime in Los Angeles County, California", "city-county-los-angeles");
 
 assertWarns("crime in Fairfax", "city-county-fairfax");

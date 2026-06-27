@@ -120,6 +120,8 @@ assertNoIssue("crime in Fairfax County, Virginia", "city-county-fairfax");
 assertIssue("violent crime in Los Angeles", "city-county-los-angeles");
 assertNoIssue("violent crime in Los Angeles, California", "city-county-los-angeles");
 assertNoIssue("violent crime in Los Angeles CA", "city-county-los-angeles");
+assertNoIssue("violent crime in Los Angeles city", "city-county-los-angeles");
+assertNoIssue("Chicago violent crime vs. that of Los Angeles city, New York City, and Houston", "city-county-los-angeles");
 assertNoIssue("violent crime in Los Angeles County, California", "city-county-los-angeles");
 
 assertIssue("murder trend in Sacramento", "city-county-sacramento");

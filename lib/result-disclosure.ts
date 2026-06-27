@@ -95,6 +95,26 @@ function asksBarePropertyCrime(question: string): boolean {
     !/\b(crimes against property|nibrs definition|nibrs taxonomy|fraud|vandalism|bribery|embezzlement|stolen property)\b/i.test(question);
 }
 
+function asksGenericCrime(question: string): boolean {
+  return /\bcrimes?\b/i.test(question) &&
+    !/\b(?:violent|property|murder|homicide|rape|robbery|assault|burglary|theft|larceny|motor vehicle theft|arson|domestic violence|dui|drug|weapons?|firearm|gun|shootings?)\b/i.test(question);
+}
+
+function usesViolentPersonOffenseFilter(sql: string): boolean {
+  const compact = sql.replace(/\s+/g, " ");
+  return /\bsummary_victim_(?:city|state)_monthly\b/i.test(compact) &&
+    /\bucr_offense_code\s+IN\s*\([^)]*'09A'[^)]*'11A'[^)]*'11B'[^)]*'11C'[^)]*'13A'[^)]*\)/i.test(compact) &&
+    !/\b'120'\b/.test(compact);
+}
+
+function normalizeClearanceRateExplanation(explanation: string, sql: string): string {
+  if (!/\bnational_clearance_rate\b/i.test(sql)) return explanation;
+  return explanation
+    .replace(/\bNational murder rate data\b/gi, "National murder clearance rate data")
+    .replace(/\bmurder rate data\b/gi, "murder clearance rate data")
+    .replace(/\bMurder rate data\b/g, "Murder clearance rate data");
+}
+
 function normalizeEntity(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 }
@@ -246,11 +266,15 @@ function isGenericMetricColumn(column: string): boolean {
 }
 
 function labelFromComparisonColumn(column: string): string {
-  return column
+  const label = column
     .split(/_+/)
     .filter(Boolean)
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
     .join(" ");
+  return label
+    .replace(/\bNyc\b/g, "NYC")
+    .replace(/\bDc\b/g, "DC")
+    .replace(/\bLa\b/g, "LA");
 }
 
 function comparisonColumnLabels(rows: Record<string, unknown>[]): string[] {
@@ -418,7 +442,7 @@ export function applyResultDisclosures(opts: {
   rows: Record<string, unknown>[];
   tab?: string;
 }): string {
-  let explanation = opts.explanation;
+  let explanation = normalizeClearanceRateExplanation(opts.explanation, opts.sql);
   const agencyDescriptor = stripUngroundedAgencyDescriptors(explanation, opts.question, opts.rows);
   explanation = agencyDescriptor.explanation;
   if (agencyDescriptor.changed) {
@@ -449,6 +473,11 @@ export function applyResultDisclosures(opts: {
       explanation = appendSentence(
         explanation,
         `Definition: NIBRS property crime is reported here using the UCR-aligned set: ${NIBRS_UCR_PROPERTY_LABEL}.`
+      );
+    } else if (asksGenericCrime(opts.question) && usesViolentPersonOffenseFilter(opts.sql)) {
+      explanation = appendSentence(
+        explanation,
+        "Definition: This result uses a person-offense filter: murder/nonnegligent manslaughter, sex offenses, and aggravated assault. It is not all crime."
       );
     }
 

@@ -125,6 +125,7 @@ export function getGeoResolutionIssues(input: string): GeoResolutionIssue[] {
     .filter((mention) => mention.requiresClarification && mention.candidates.length > 1)
     .filter((mention) => !isStateAbbreviationComparison(text, mention))
     .filter((mention) => !isCampusAgencyNameWithStateContext(text, mention))
+    .filter((mention) => !hasExplicitCityCountyKindContext(text, mention))
     .map(issueFromMention);
 }
 
@@ -280,6 +281,17 @@ function isCampusAgencyNameWithStateContext(input: string, mention: GeoPlaceMent
 
   const issueKind = classifyCandidates(mention.candidates);
   return issueKind === "city" || issueKind === "city-county" || issueKind === "city-state";
+}
+
+function hasExplicitCityCountyKindContext(input: string, mention: GeoPlaceMention): boolean {
+  if (classifyCandidates(mention.candidates) !== "city-county") return false;
+
+  const mentionPattern = mention.text
+    .replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+    .replace(/\s+/g, "\\s+");
+
+  return new RegExp(`\\b${mentionPattern}\\s+(?:city|county)\\b`, "i").test(input) ||
+    new RegExp(`\\b(?:city|county)\\s+of\\s+${mentionPattern}\\b`, "i").test(input);
 }
 
 function hasExplicitStateContext(input: string): boolean {

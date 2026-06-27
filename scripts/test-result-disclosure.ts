@@ -319,4 +319,42 @@ import { applyResultDisclosures } from "../lib/result-disclosure";
   assert.match(explanation, /Comparison includes: California, Texas, Georgia, New York, Illinois\./);
 }
 
+{
+  const explanation = applyResultDisclosures({
+    explanation: "National murder rate data from 1960 to 2024.",
+    question: "National murder clearance rate since 1960",
+    sql: "SELECT year, murder_rate FROM national_clearance_rate WHERE year >= 1960 ORDER BY year",
+    rows: [{ year: 1960, murder_rate: 91.0 }, { year: 2024, murder_rate: 58.0 }],
+    tab: "historical",
+  });
+  assert.match(explanation, /National murder clearance rate data/);
+  assert.doesNotMatch(explanation, /National murder rate data/);
+}
+
+{
+  const explanation = applyResultDisclosures({
+    explanation: "Crime trends for Durham and Fort Myers.",
+    question: "compare durham nc crime to fort myers fl",
+    sql: "SELECT data_year, city, SUM(victim_count) AS victims FROM summary_victim_city_monthly WHERE ucr_offense_code IN ('09A','11A','11B','11C','13A') GROUP BY data_year, city",
+    rows: [{ data_year: 2024, city: "DURHAM", victims: 10 }],
+    tab: "nibrs",
+  });
+  assert.match(explanation, /person-offense filter/);
+  assert.doesNotMatch(explanation, /robbery/);
+  assert.match(explanation, /not all crime/);
+}
+
+{
+  const explanation = applyResultDisclosures({
+    explanation: "Rolling homicide counts for the requested cities.",
+    question: "show rolling homicide index for Chicago, NYC, and Houston",
+    sql: "SELECT year, chicago, nyc, houston FROM x",
+    rows: [
+      { year: 2024, chicago: 100, nyc: 90, houston: 80 },
+    ],
+    tab: "current",
+  });
+  assert.match(explanation, /Comparison includes: Chicago, NYC, Houston\./);
+}
+
 console.log("result disclosure tests passed");

@@ -697,6 +697,13 @@ export async function POST(req: NextRequest) {
             controller.enqueue(encoder.encode(sseEvent({ type: "result", sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - totalStart })));
             close(); return;
           }
+          const orPrecedenceStillBad = postRetryResult.fired.includes("or-and-precedence");
+          if (orPrecedenceStillBad) {
+            const msg = "I couldn't build a reliable multi-place query after correcting the SQL structure. Try asking for fewer places or restating the comparison.";
+            writeLog(question, claude.sql, 0, "or_precedence_second_failure", Date.now() - totalStart, msg, tab, postRetryResult.fired, "haiku-4.5", sessionId);
+            controller.enqueue(encoder.encode(sseEvent({ type: "result", sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - totalStart })));
+            close(); return;
+          }
           // Geography contract: block if city/county-got-state or geography-missing still fires after retry
           const geoContractViolation = postRetryResult.fired.some(f =>
             f === "historical-city-got-state" || f === "historical-county-got-state" || f === "contract-geography-missing"
