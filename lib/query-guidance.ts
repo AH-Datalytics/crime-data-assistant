@@ -32,11 +32,36 @@ function has(pattern: RegExp, text: string) {
   return pattern.test(text);
 }
 
+function asksGenericCrime(text: string): boolean {
+  if (!/\bcrimes?\b/i.test(text)) return false;
+  return !/\b(?:violent|property|hate|index|overall|all|murder|homicide|rape|robbery|assault|burglary|theft|larceny|motor\s+vehicle|auto\s+theft|arson|domestic\s+violence|dui|drug|weapons?|firearm|gun|shootings?|clearance|offender|victim|arrestee|arrest)\b/i.test(text);
+}
+
 export function getQueryGuidanceWarnings(input: string): GuidanceWarning[] {
   const text = input.trim();
   if (!text) return [];
 
   const warnings: GuidanceWarning[] = [...getGeoGuidanceIssues(text)];
+
+  if (asksGenericCrime(text)) {
+    warnings.push({
+      id: "generic-crime-type",
+      kind: "advisory",
+      title: "Crime can mean different measures",
+      detail: "For a cleaner answer, choose a crime type or category before running the query.",
+      actions: [
+        { label: "Use violent crime", pattern: "\\bcrimes?\\b", replacement: "violent crime" },
+        { label: "Use property crime", pattern: "\\bcrimes?\\b", replacement: "property crime" },
+        { label: "Use murder", pattern: "\\bcrimes?\\b", replacement: "murder" },
+        { label: "Use rape", pattern: "\\bcrimes?\\b", replacement: "rape" },
+        { label: "Use robbery", pattern: "\\bcrimes?\\b", replacement: "robbery" },
+        { label: "Use aggravated assault", pattern: "\\bcrimes?\\b", replacement: "aggravated assault" },
+        { label: "Use burglary", pattern: "\\bcrimes?\\b", replacement: "burglary" },
+        { label: "Use larceny/theft", pattern: "\\bcrimes?\\b", replacement: "larceny/theft" },
+        { label: "Use motor vehicle theft", pattern: "\\bcrimes?\\b", replacement: "motor vehicle theft" },
+      ],
+    });
+  }
 
   if (has(/\bgun\s+violence\b/i, text) && !has(/\b(fatal|nonfatal|firearm\s+(homicides?|assaults?|injur(?:y|ies)))\b/i, text)) {
     warnings.push({

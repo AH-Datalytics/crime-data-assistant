@@ -21,6 +21,11 @@ assert.deepEqual(advisory?.warningIds, ["gun-violence"]);
 assert.equal(advisory?.geo.mentions.length, 1);
 assert.deepEqual(advisory?.geo.mentions[0].candidateIds, ["state:LA"]);
 
+const genericCrime = getQueryGuidanceLogMeta("crime in Dallas since 2020");
+assert.equal(genericCrime?.status, "advisory");
+assert.deepEqual(genericCrime?.warningIds, ["generic-crime-type"]);
+assert.deepEqual(genericCrime?.advisoryIds, ["generic-crime-type"]);
+
 const laBlocked = getQueryGuidanceLogMeta("LA murders per month");
 assert.equal(laBlocked?.status, "blocked");
 assert.deepEqual(laBlocked?.blockingIds, ["la"]);

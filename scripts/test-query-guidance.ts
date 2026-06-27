@@ -38,6 +38,35 @@ assert.deepEqual(warningIds("shootings in Kansas City"), ["kansas-city", "shooti
 assert.equal(hasBlockingQueryGuidanceWarnings("shootings in Kansas City"), true);
 assert.deepEqual(warningIds("fatal shootings in Kansas City, Missouri"), []);
 
+assertWarns("crime in Dallas since 2020", "generic-crime-type");
+assert.equal(hasBlockingQueryGuidanceWarnings("crime in Dallas since 2020"), false);
+assertDoesNotWarn("violent crime in Dallas since 2020", "generic-crime-type");
+assertDoesNotWarn("property crime in Dallas since 2020", "generic-crime-type");
+assertDoesNotWarn("murder in Dallas since 2020", "generic-crime-type");
+assertDoesNotWarn("hate crimes in Dallas since 2020", "generic-crime-type");
+const genericCrimeWarning = getQueryGuidanceWarnings("crime in Dallas since 2020")[0];
+assert.equal(genericCrimeWarning.title, "Crime can mean different measures");
+assert.equal(genericCrimeWarning.detail, "For a cleaner answer, choose a crime type or category before running the query.");
+assert.deepEqual(genericCrimeWarning.actions!.map((action) => action.label), [
+  "Use violent crime",
+  "Use property crime",
+  "Use murder",
+  "Use rape",
+  "Use robbery",
+  "Use aggravated assault",
+  "Use burglary",
+  "Use larceny/theft",
+  "Use motor vehicle theft",
+]);
+assert.equal(
+  applyGuidanceAction("crime in Dallas since 2020", genericCrimeWarning.actions![0]),
+  "violent crime in Dallas since 2020"
+);
+assert.equal(
+  applyGuidanceAction("crimes in Dallas since 2020", genericCrimeWarning.actions![8]),
+  "motor vehicle theft in Dallas since 2020"
+);
+
 assertWarns("LA murders per month", "la");
 assert.equal(hasBlockingQueryGuidanceWarnings("LA murders per month"), true);
 assertDoesNotWarn("Louisiana murders per month", "la");
