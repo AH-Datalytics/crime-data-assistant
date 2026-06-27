@@ -95,6 +95,10 @@ function asksBarePropertyCrime(question: string): boolean {
     !/\b(crimes against property|nibrs definition|nibrs taxonomy|fraud|vandalism|bribery|embezzlement|stolen property)\b/i.test(question);
 }
 
+function asksClearanceMetric(question: string): boolean {
+  return /\b(?:clearance|cleared|solve[sd]?|solving|unsolved)\b/i.test(question);
+}
+
 function asksGenericCrime(question: string): boolean {
   return /\bcrimes?\b/i.test(question) &&
     !/\b(?:violent|property|murder|homicide|rape|robbery|assault|burglary|theft|larceny|motor vehicle theft|arson|domestic violence|dui|drug|weapons?|firearm|gun|shootings?)\b/i.test(question);
@@ -513,6 +517,13 @@ export function applyResultDisclosures(opts: {
   const setCorrection = setOperationCorrection(opts.sql, opts.rows);
   if (setCorrection) {
     explanation = appendSentence(explanation, setCorrection);
+  }
+
+  if (asksClearanceMetric(opts.question)) {
+    explanation = appendSentence(
+      explanation,
+      "Clearance note: FBI clearance means cleared by arrest or exceptional means; it is not the same as conviction or prosecution."
+    );
   }
 
   const comparison = comparisonDisclosure(explanation, opts.rows);

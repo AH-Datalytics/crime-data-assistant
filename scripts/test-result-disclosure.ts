@@ -333,6 +333,18 @@ import { applyResultDisclosures } from "../lib/result-disclosure";
 
 {
   const explanation = applyResultDisclosures({
+    explanation: "Murder clearance rates for Chicago.",
+    question: "murder solve rate in Chicago since 2020",
+    sql: "SELECT year, clearance_rate FROM summary_clearance_city_annual WHERE city = 'CHICAGO'",
+    rows: [{ year: 2024, clearance_rate: 54.2 }],
+    tab: "nibrs",
+  });
+  assert.match(explanation, /FBI clearance means cleared by arrest or exceptional means/);
+  assert.match(explanation, /not the same as conviction or prosecution/);
+}
+
+{
+  const explanation = applyResultDisclosures({
     explanation: "Crime trends for Durham and Fort Myers.",
     question: "compare durham nc crime to fort myers fl",
     sql: "SELECT data_year, city, SUM(victim_count) AS victims FROM summary_victim_city_monthly WHERE ucr_offense_code IN ('09A','11A','11B','11C','13A') GROUP BY data_year, city",

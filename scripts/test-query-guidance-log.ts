@@ -26,6 +26,11 @@ assert.equal(genericCrime?.status, "advisory");
 assert.deepEqual(genericCrime?.warningIds, ["generic-crime-type"]);
 assert.deepEqual(genericCrime?.advisoryIds, ["generic-crime-type"]);
 
+const demographicRate = getQueryGuidanceLogMeta("homicide rates for gender and race");
+assert.equal(demographicRate?.status, "advisory");
+assert.deepEqual(demographicRate?.warningIds, ["demographic-rate-denominator"]);
+assert.deepEqual(demographicRate?.advisoryIds, ["demographic-rate-denominator"]);
+
 const laBlocked = getQueryGuidanceLogMeta("LA murders per month");
 assert.equal(laBlocked?.status, "blocked");
 assert.deepEqual(laBlocked?.blockingIds, ["la"]);

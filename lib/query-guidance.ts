@@ -37,11 +37,31 @@ function asksGenericCrime(text: string): boolean {
   return !/\b(?:violent|property|hate|index|overall|all|murder|homicide|rape|robbery|assault|burglary|theft|larceny|motor\s+vehicle|auto\s+theft|arson|domestic\s+violence|dui|drug|weapons?|firearm|gun|shootings?|clearance|offender|victim|arrestee|arrest)\b/i.test(text);
 }
 
+function asksDemographicRate(text: string): boolean {
+  return /\b(?:rates?|per\s*(?:capita|100k|100,?000))\b/i.test(text) &&
+    /\b(?:race|racial|sex|gender|male|female|men|women|age|ages|demographic|demographics)\b/i.test(text);
+}
+
 export function getQueryGuidanceWarnings(input: string): GuidanceWarning[] {
   const text = input.trim();
   if (!text) return [];
 
   const warnings: GuidanceWarning[] = [...getGeoGuidanceIssues(text)];
+
+  if (asksDemographicRate(text)) {
+    warnings.push({
+      id: "demographic-rate-denominator",
+      kind: "advisory",
+      title: "The FBI data does not include matching population denominators for demographic groups",
+      detail: "",
+      actions: [
+        { label: "Use victim counts by race and sex", pattern: "\\brates?\\b", replacement: "counts" },
+        { label: "Use offender counts by race and sex", pattern: "\\brates?\\b", replacement: "counts" },
+        { label: "Use victim age breakdown", pattern: "\\brates?\\b", replacement: "breakdown" },
+        { label: "Use offender age breakdown", pattern: "\\brates?\\b", replacement: "breakdown" },
+      ],
+    });
+  }
 
   if (asksGenericCrime(text)) {
     warnings.push({

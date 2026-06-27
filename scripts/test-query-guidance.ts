@@ -67,6 +67,18 @@ assert.equal(
   "motor vehicle theft in Dallas since 2020"
 );
 
+assertWarns("homicide rates for gender and race", "demographic-rate-denominator");
+assert.equal(hasBlockingQueryGuidanceWarnings("homicide rates for gender and race"), false);
+assertDoesNotWarn("homicide counts for gender and race", "demographic-rate-denominator");
+assertDoesNotWarn("victim race breakdown for homicide", "demographic-rate-denominator");
+const demographicRateWarning = getQueryGuidanceWarnings("homicide rates for gender and race")[0];
+assert.equal(
+  demographicRateWarning.title,
+  "The FBI data does not include matching population denominators for demographic groups"
+);
+assert.equal(demographicRateWarning.actions![0].label, "Use victim counts by race and sex");
+assert.equal(demographicRateWarning.actions![3].label, "Use offender age breakdown");
+
 assertWarns("LA murders per month", "la");
 assert.equal(hasBlockingQueryGuidanceWarnings("LA murders per month"), true);
 assertDoesNotWarn("Louisiana murders per month", "la");
