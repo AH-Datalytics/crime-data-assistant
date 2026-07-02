@@ -57,7 +57,9 @@ function usesNibrsDvReportingPopulationRate(sql: string): boolean {
 function normalizeContinuousReportingExplanation(explanation: string): string {
   return explanation
     .replace(/\bwith incomplete coverage\b/gi, "with continuous reporting")
+    .replace(/\bwith incomplete crime data coverage\b/gi, "with continuous reporting")
     .replace(/\bcities with incomplete coverage\b/gi, "agencies with continuous reporting")
+    .replace(/\bcities with incomplete crime data coverage\b/gi, "agencies with continuous reporting")
     .replace(/\bacross (?:the )?cit(?:y|ies)\b/gi, "across continuously reporting agencies")
     .replace(/\bacross the requested city\b/gi, "across continuously reporting agencies")
     .replace(/\bacross the requested cities\b/gi, "across continuously reporting agencies")
@@ -79,6 +81,14 @@ function normalizeContinuousReportingExplanation(explanation: string): string {
 
 function asksForTheftSubtype(question: string): boolean {
   return /\b(?:larceny from auto|theft from (?:motor )?vehicle|vehicle burglary|shoplifting|pickpocket(?:ing)?|pocket-picking|purse snatching|theft from building|theft of motor vehicle parts|auto parts)\b/i.test(question);
+}
+
+function groupsByOffenseAndAge(sql: string, rows: Record<string, unknown>[]): boolean {
+  const sqlHasBoth = /\bucr_offense_code\b/i.test(sql) && /\bage_group\b/i.test(sql);
+  const groupedTogether = /\bGROUP\s+BY\b[\s\S]{0,300}\bucr_offense_code\b[\s\S]{0,300}\bage_group\b/i.test(sql) ||
+    /\bGROUP\s+BY\b[\s\S]{0,300}\bage_group\b[\s\S]{0,300}\bucr_offense_code\b/i.test(sql);
+  if (sqlHasBoth && groupedTogether) return true;
+  return rows.some((row) => "ucr_offense_code" in row && "age_group" in row);
 }
 
 function usesParentTheftSql(sql: string): boolean {
@@ -497,6 +507,13 @@ export function applyResultDisclosures(opts: {
       explanation = appendSentence(
         explanation,
         "Rate denominator: population served by NIBRS-reporting agencies, adjusted for months reported; this is not a complete official state population rate."
+      );
+    }
+
+    if (groupsByOffenseAndAge(opts.sql, opts.rows) && !/\boffense\b/i.test(explanation)) {
+      explanation = appendSentence(
+        explanation,
+        "Breakdown note: Results are grouped by offense code and age group."
       );
     }
   }

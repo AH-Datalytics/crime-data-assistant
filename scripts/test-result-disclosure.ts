@@ -369,4 +369,17 @@ import { applyResultDisclosures } from "../lib/result-disclosure";
   assert.match(explanation, /Comparison includes: Chicago, NYC, Houston\./);
 }
 
+{
+  const explanation = applyResultDisclosures({
+    explanation: "The chart shows incidents by age group for agencies with incomplete crime data coverage.",
+    question: "show murders, robberies, and aggravated assaults by offender age and year from continuously reporting agencies",
+    sql: "SELECT d.year, d.ucr_offense_code, d.age_group, SUM(d.offender_count) AS offenders FROM summary_offender_demographics d WHERE d.ori IN (SELECT ori FROM nibrs_consistent_reporters WHERE start_year = 2018 AND end_year = 2025) GROUP BY d.year, d.ucr_offense_code, d.age_group",
+    rows: [{ year: 2025, ucr_offense_code: "09A", age_group: "25-34", offenders: 10 }],
+    tab: "nibrs",
+  });
+  assert.match(explanation, /agencies with continuous reporting/);
+  assert.match(explanation, /Coverage filter:/);
+  assert.match(explanation, /grouped by offense code and age group/);
+}
+
 console.log("result disclosure tests passed");

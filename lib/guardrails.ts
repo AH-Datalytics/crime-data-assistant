@@ -142,6 +142,10 @@ function domesticViolenceRateMessage(): string {
   return "[SYSTEM: The user asked for domestic violence rates. Do not join summary_domestic_violence to another summary_* table to infer population; that triggers cross-summary grain errors. Use summary_domestic_violence for the numerator and agencies plus nibrs_agency_completeness for the denominator. The denominator must be the population served by reporting agencies, adjusted by months reported; it is not the full official state population. For state comparisons in 2025, use this pattern: WITH dv AS (SELECT state, COUNT(DISTINCT ori || ':' || data_year || ':' || incident_num) AS dv_incidents FROM summary_domestic_violence WHERE data_year = 2025 GROUP BY state), population AS (SELECT a.state, SUM(a.population * nac.months_reported / 12.0) AS reporting_population FROM nibrs_agency_completeness nac JOIN agencies a ON a.ori = nac.ori AND a.year = nac.year WHERE nac.year = 2025 AND nac.months_reported > 0 AND a.population > 0 GROUP BY a.state) SELECT dv.state, dv.dv_incidents, population.reporting_population, ROUND(dv.dv_incidents * 100000.0 / NULLIF(population.reporting_population, 0), 1) AS rate_per_100k FROM dv JOIN population ON population.state = dv.state WHERE population.reporting_population > 0 ORDER BY rate_per_100k DESC LIMIT 1000. Explain that the denominator is population served by agencies that reported in NIBRS, adjusted for partial-year reporting, not a complete official state population.]";
 }
 
+function hasDirectSummaryTableJoin(sql: string): boolean {
+  return /\bFROM\s+summary_\w+\b(?:\s+\w+)?[\s\S]{0,800}?\bJOIN\s+summary_\w+\b/i.test(sql);
+}
+
 function usesOffenderSummaryComboCount(sql: string): boolean {
   if (!/\bsummary_offender_demographics\b/i.test(sql)) return false;
   const distinctCounts = [...sql.matchAll(/\bCOUNT\s*\(\s*DISTINCT\s+([\s\S]*?)\)/gi)];
@@ -1357,7 +1361,8 @@ const GUARDRAILS: Guardrail[] = [
       // Exempt: city + state level of same dimension (handled by cross-level-join)
       const isCityState = summaryTables.every(t => /monthly/.test(t));
       if (isCityState) return false;
-      return true;
+      if (asksDomesticViolenceRate(ctx.question) && /\bsummary_domestic_violence\b/i.test(ctx.sql)) return true;
+      return hasDirectSummaryTableJoin(ctx.sql);
     },
     message: (ctx) => asksDomesticViolenceRate(ctx.question)
       ? domesticViolenceRateMessage()
@@ -1831,12 +1836,22 @@ const GUARDRAILS: Guardrail[] = [
   // The old guardrail was incorrectly telling the model to use INNER JOIN,
   // which silently skips missing years instead of showing gaps.
   {
+    name: "historical-ne-gu-state-codes",
+    tabs: ["historical"],
+    match: (ctx) => /\b(?:\w+\.)?state\s*=\s*'(NE|GU)'/i.test(ctx.sql),
+    rewrite: (sql) => {
+      let fixed = sql.replace(/\b((?:\w+\.)?state)\s*=\s*'NE'/gi, "$1 = 'nb'");
+      fixed = fixed.replace(/\b((?:\w+\.)?state)\s*=\s*'GU'/gi, "$1 = 'gm'");
+      return fixed !== sql ? fixed : null;
+    },
+  },
+  {
     name: "nibrs-ne-gu-state-codes",
     tabs: ["nibrs"],
     match: (ctx) => /state\s*=\s*'(NE|GU)'/i.test(ctx.sql),
     rewrite: (sql) => {
-      let fixed = sql.replace(/state\s*=\s*'NE'/gi, "state = 'NB'");
-      fixed = fixed.replace(/state\s*=\s*'GU'/gi, "state = 'GM'");
+      let fixed = sql.replace(/\b((?:\w+\.)?state)\s*=\s*'NE'/gi, "$1 IN ('NE','NB')");
+      fixed = fixed.replace(/\b((?:\w+\.)?state)\s*=\s*'GU'/gi, "$1 IN ('GU','GM')");
       return fixed !== sql ? fixed : null;
     },
   },
@@ -2725,6 +2740,22 @@ const GUARDRAILS: Guardrail[] = [
     match: (ctx) => /\bsummary_domestic_violence\b/i.test(ctx.sql) && /\bvictim_count\b/i.test(ctx.sql),
     message: () =>
       "[SYSTEM: summary_domestic_violence has no victim_count column. For DV incident counts, use COUNT(DISTINCT dv.ori || ':' || dv.data_year || ':' || dv.incident_num). For DV victim demographics, count distinct victims with COUNT(DISTINCT dv.ori || ':' || dv.data_year || ':' || dv.incident_num || ':' || dv.victim_sequence) and group by victim_sex, victim_race, and an age bucket derived from victim_age. Do not use SUM(dv.victim_count).]",
+  },
+  {
+    name: "nibrs-dv-subquery-incident-count",
+    tabs: ["nibrs"],
+    match: (ctx) => {
+      if (!/\bsummary_domestic_violence\b/i.test(ctx.sql)) return false;
+      if (!/\bincident_count\b/i.test(ctx.sql)) return false;
+      return /\bSUM\s*\(\s*CASE\s+WHEN\s+[\s\S]{0,240}?\bdv_category\b[\s\S]{0,240}?\s+THEN\s+1\s+ELSE\s+0\s+END\s*\)/i.test(ctx.sql);
+    },
+    rewrite: (sql) => {
+      const fixed = sql.replace(
+        /\bSUM\s*\(\s*CASE\s+WHEN\s+([\s\S]{0,240}?\bdv_category\b[\s\S]{0,240}?)\s+THEN\s+1\s+ELSE\s+0\s+END\s*\)/gi,
+        "SUM(CASE WHEN $1 THEN incident_count ELSE 0 END)"
+      );
+      return fixed !== sql ? fixed : null;
+    },
   },
 ];
 

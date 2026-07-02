@@ -310,5 +310,16 @@ const db = makeDb();
   assert.equal(result, null);
 }
 
+{
+  const result = answerMetadataQuestion("current", "what 12 agencies are included in this", db);
+  assert.equal(result, null);
+}
+
+{
+  const result = answerMetadataQuestion("current", "which agencies are included in this source", db);
+  assert(result);
+  assert.deepEqual(result.columns, ["agency", "state"]);
+}
+
 db.close();
 console.log("metadata coverage tests passed");

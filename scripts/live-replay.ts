@@ -280,6 +280,8 @@ const ALL_TESTS: TestCase[] = [
   { id: "AUD-25", question: "breakdown of weapons used in assaults 2024", tab: "nibrs", category: "audit-probe", expect: "rows", sqlIncludes: ["13A", "13B", "13C"], note: "Log #4394 — bare assaults include aggravated assault, simple assault, and intimidation unless user chooses a subtype" },
   { id: "AUD-26", question: "homicide rates for gender and race", tab: "shr", category: "audit-probe", expect: "override", responseIncludes: ["population denominators", "counts"], responseExcludes: ["Historical Library"], note: "Log #4442 — demographic homicide per-capita rates need race/sex population denominators no source has; must not suggest Historical" },
   { id: "AUD-27", question: "homicide counts by gender and race nationally in 2024", tab: "auto", expectedTab: ["shr", "nibrs"], category: "audit-probe", expect: "rows", note: "#4442 carve-out — demographic homicide counts/shares remain answerable" },
+  { id: "AUD-28", question: "auto theft clearance rate in Omaha NE since 1960", tab: "historical", category: "audit-probe", expect: "rows", sqlIncludes: ["state = 'nb'"], note: "July 2 Omaha — Historical stores Nebraska as legacy NB; contract validator must rewrite NE to nb before execution" },
+  { id: "AUD-29", question: "Omaha NE burglaries from 2000 to 2026", tab: "nibrs", category: "audit-probe", expect: "rows", sqlIncludes: ["state IN ('NE','NB')"], note: "July 2 Omaha — NIBRS splits Nebraska across NE (1998-2012) and NB (2013+); validator must keep both eras" },
   { id: "AUD-12", question: "which cities are represented in Pennsylvania?", tab: "current", category: "audit-probe", expect: "rows", minRows: 2, note: "June 11 #4 — state-scoped metadata city list must filter by state" },
 ];
 

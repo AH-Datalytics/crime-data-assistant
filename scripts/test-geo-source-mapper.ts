@@ -25,6 +25,7 @@ rtci.exec(`
   INSERT INTO agencies VALUES
     ('TXHPD00', 'Houston', 'TX', 'City'),
     ('NCCMPD0', 'Charlotte', 'NC', 'City'),
+    ('NEOMPD0', 'Omaha', 'NE', 'City'),
     ('MOKCPD0', 'Kansas City', 'MO', 'City'),
     ('KSKCPD0', 'Kansas City', 'KS', 'City');
   INSERT INTO agency_monthly VALUES ('TXHPD00', 'Houston', 'TX', 'City', 2026, 1, 'murder', 1);
@@ -32,6 +33,7 @@ rtci.exec(`
   INSERT INTO historical_agency VALUES
     ('TXHPD00', 'Houston', 'TX', 'city'),
     ('NCCMPD0', 'Charlotte-Mecklenburg', 'NC', 'city'),
+    ('NEOMPD0', 'Omaha', 'nb', 'city'),
     ('MOKCPD0', 'Kansas City', 'MO', 'city'),
     ('KSKCPD0', 'Kansas City', 'KS', 'city');
 
@@ -54,7 +56,9 @@ nibrs.exec(`
   );
   INSERT INTO agencies VALUES
     ('TXHPD0000', 2025, 'HOUSTON', 'TX', 'City', 2300000),
-    ('NCCMPD000', 2025, 'CHARLOTTE', 'NC', 'City', 900000);
+    ('NCCMPD000', 2025, 'CHARLOTTE', 'NC', 'City', 900000),
+    ('NEOLD000', 2012, 'OMAHA', 'NE', 'City', 450000),
+    ('NENEW000', 2025, 'OMAHA', 'NB', 'City', 480000);
   INSERT INTO agency_county_crosswalk VALUES
     ('NCCMPD0', 'NCCMPD000', 'Charlotte-Mecklenburg Police Department', 'NC', '37119', 'Mecklenburg County', 'MECKLENBURG', 'test');
 `);
@@ -106,6 +110,14 @@ assert.equal(maps.find((m) => m.source === "shr")?.status, "safe_exact");
 maps = mapping("violent crime in Charlotte", "city:NC:charlotte");
 assert.equal(maps.find((m) => m.source === "historical")?.status, "safe_exact");
 assert.equal(maps.find((m) => m.source === "historical")?.matches[0]?.agency, "Charlotte-Mecklenburg");
+
+maps = mapping("auto theft clearance rate in Omaha NE", "city:NE:omaha");
+assert.equal(maps.find((m) => m.source === "historical")?.status, "safe_exact");
+assert.equal(maps.find((m) => m.source === "historical")?.filters[0], "state = 'NB'");
+assert.equal(maps.find((m) => m.source === "historical")?.matches[0]?.state, "NB");
+assert.equal(maps.find((m) => m.source === "nibrs")?.status, "safe_exact");
+assert.equal(maps.find((m) => m.source === "nibrs")?.filters[0], "agencies.state IN ('NE','NB')");
+assert.equal(maps.find((m) => m.source === "nibrs")?.matches.length, 2);
 
 const kc = resolveGeoPlaces("fatal shootings in Kansas City");
 assert.equal(kc.requiresClarification, true);

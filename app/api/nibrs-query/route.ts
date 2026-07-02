@@ -24,6 +24,7 @@ import { detectFollowupTransform } from "@/lib/followup-transform";
 import { detectNibrsCapabilityOverride } from "@/lib/nibrs-capability-overrides";
 import { getBlockingGeoClarification } from "@/lib/geo-resolver";
 import { asksCampusAgency, buildCampusAgencySummarySql, campusAgencyChartAxesFromSql, campusAgencyDisplayName, knownCampusAgencyResolution, resolveCampusAgencyOris, shouldResolveCampusAgencySql } from "@/lib/nibrs-campus-agency";
+import { validateQueryContractSql } from "@/lib/query-contract-validator";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -390,6 +391,23 @@ export async function POST(req: NextRequest) {
 
     const routeGuardrailIssues: string[] = [];
     const routeGuardrailsFired: string[] = [];
+    const applyContractValidation = (inputSql: string): string => {
+      const contractResult = validateQueryContractSql({
+        question,
+        source: "nibrs",
+        sql: inputSql,
+        routingMeta,
+      });
+      if (contractResult.fired.length > 0) {
+        for (const fired of contractResult.fired) {
+          if (!routeGuardrailsFired.includes(fired)) routeGuardrailsFired.push(fired);
+        }
+      }
+      if (contractResult.warnings.length > 0) {
+        console.log(`[nibrs][contract] Warnings: ${contractResult.warnings.join(", ")}`);
+      }
+      return contractResult.sql;
+    };
     const continuousReporterIssue = continuousReporterRouteIssue(sql, question);
     if (continuousReporterIssue) {
       routeGuardrailIssues.push(continuousReporterIssue);
@@ -500,6 +518,8 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    sql = applyContractValidation(sql);
+
     {
       const tableCheck = validateTablesForTab(sql, "nibrs", getNibrsDb());
       if (!tableCheck.ok) {
@@ -515,7 +535,7 @@ export async function POST(req: NextRequest) {
         if (retry.sql) {
           const retryValidation = validateAndSanitize(retry.sql);
           if (retryValidation.valid) {
-            const retrySql = retryValidation.sanitized!;
+            const retrySql = applyContractValidation(retryValidation.sanitized!);
             const retryTableCheck = validateTablesForTab(retrySql, "nibrs", getNibrsDb());
             if (retryTableCheck.ok) {
               sql = retrySql;
@@ -566,6 +586,7 @@ export async function POST(req: NextRequest) {
     let columns: string[] = undefined!;
 
     try {
+      sql = applyContractValidation(sql);
       const result = await executeWithTimeout(sql);
       rows = result.rows;
       columns = result.columns;
@@ -613,12 +634,13 @@ export async function POST(req: NextRequest) {
         if (retry.sql) {
           const retryValidation = validateAndSanitize(retry.sql);
           if (retryValidation.valid) {
+            const retrySql = applyContractValidation(retryValidation.sanitized!);
             try {
-              const retryResult = await executeWithTimeout(retryValidation.sanitized!);
+              const retryResult = await executeWithTimeout(retrySql);
               rows = retryResult.rows;
               columns = retryResult.columns;
               rows = normalizeNibrsDisplayRows(rows);
-              sql = retryValidation.sanitized!;
+              sql = retrySql;
               applyRetryMeta(claude, retry);
               console.log(`[nibrs][error-recovery] Retry succeeded`);
             } catch (retryErr) {
@@ -661,7 +683,7 @@ export async function POST(req: NextRequest) {
         const resolution = resolveCampusAgencyOris(getNibrsDb(), question);
         if (resolution && resolution.oris.length > 0) {
           const campusChartAxes = campusAgencyChartAxesFromSql(sql, question);
-          const fallbackSql = buildCampusAgencySummarySql(resolution.oris, question, sql);
+          const fallbackSql = applyContractValidation(buildCampusAgencySummarySql(resolution.oris, question, sql));
           const fallbackResult = await executeWithTimeout(fallbackSql);
           if (fallbackResult.rows.length > 0) {
             sql = fallbackSql;

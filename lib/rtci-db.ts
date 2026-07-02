@@ -5,6 +5,7 @@ import fs from "fs";
 import { findExistingPaths, getManagedDb, resolveDbPath } from "./sqlite-db";
 import type { RoutingLogMeta } from "./routing-log-meta";
 import { serializeQueryGuidanceLogMeta } from "./query-guidance-log";
+import { serializeQueryContractLogMeta, type QueryContractSource } from "./query-contract";
 
 const state = {
   db: null as Database.Database | null,
@@ -86,7 +87,8 @@ export function getWriteDb(): Database.Database | null {
         routing_confidence TEXT,
         routing_mode TEXT,
         routing_reason TEXT,
-        query_guidance TEXT
+        query_guidance TEXT,
+        query_contract TEXT
       )
     `);
     _writeDb.exec(`
@@ -101,7 +103,7 @@ export function getWriteDb(): Database.Database | null {
       )
     `);
     // Add columns if table already exists without them
-    for (const col of ["tab TEXT", "session_id TEXT", "guardrails TEXT", "model TEXT", "routing_confidence TEXT", "routing_mode TEXT", "routing_reason TEXT", "query_guidance TEXT"]) {
+    for (const col of ["tab TEXT", "session_id TEXT", "guardrails TEXT", "model TEXT", "routing_confidence TEXT", "routing_mode TEXT", "routing_reason TEXT", "query_guidance TEXT", "query_contract TEXT"]) {
       try { _writeDb.exec(`ALTER TABLE query_log ADD COLUMN ${col}`); } catch { /* already exists */ }
     }
     return _writeDb;
@@ -128,8 +130,9 @@ export function logQuery(
   const db = getWriteDb();
   if (db) {
     try {
+      const contractSource = tab === "hate_crime" ? "hate_crime" : tab as QueryContractSource;
       db.prepare(
-        "INSERT INTO query_log (ts, tab, question, sql, rows, error, ms, response, guardrails, model, session_id, routing_confidence, routing_mode, routing_reason, query_guidance) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        "INSERT INTO query_log (ts, tab, question, sql, rows, error, ms, response, guardrails, model, session_id, routing_confidence, routing_mode, routing_reason, query_guidance, query_contract) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
       ).run(
         Date.now(),
         tab,
@@ -145,7 +148,8 @@ export function logQuery(
         routingMeta?.confidence ?? null,
         routingMeta?.mode ?? null,
         routingMeta?.reason ?? null,
-        serializeQueryGuidanceLogMeta(question || "")
+        serializeQueryGuidanceLogMeta(question || ""),
+        serializeQueryContractLogMeta(question || "", contractSource, routingMeta)
       );
     } catch (e) {
       console.warn("Log write failed:", e);
@@ -170,6 +174,7 @@ export function logQuery(
         routingMode: routingMeta?.mode ?? null,
         routingReason: routingMeta?.reason ?? null,
         queryGuidance: serializeQueryGuidanceLogMeta(question || ""),
+        queryContract: serializeQueryContractLogMeta(question || "", tab === "hate_crime" ? "hate_crime" : tab as QueryContractSource, routingMeta),
       }),
     }).catch(() => {});
   }

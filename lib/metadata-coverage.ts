@@ -133,6 +133,22 @@ function detectMetadataIntent(question: string): Intent | null {
   return null;
 }
 
+function isDeicticEntityMetadataFollowup(question: string, intent: Intent): boolean {
+  if (
+    intent !== "available_agencies" &&
+    intent !== "available_cities" &&
+    intent !== "agency_count" &&
+    intent !== "city_count"
+  ) {
+    return false;
+  }
+
+  const q = norm(question);
+  if (/\b(?:this|that)\s+(?:source|database|dataset|data source)\b/.test(q)) return false;
+  return /\b(?:this|these|those|that|it|previous|prior|last|above|result|results|answer|table|chart)\b/.test(q) &&
+    /\b(?:included|shown|listed|returned|in this|in these|from this|from these)\b/.test(q);
+}
+
 function quote(value: string): string {
   return `'${value.replace(/'/g, "''")}'`;
 }
@@ -597,6 +613,7 @@ export function answerMetadataQuestion(
 ): MetadataCoverageResult | null {
   const intent = detectMetadataIntent(question);
   if (!intent) return null;
+  if (isDeicticEntityMetadataFollowup(question, intent)) return null;
   if (intent === "download_help") return downloadResult(source);
   if (intent === "county_membership_unavailable") return countyMembershipUnavailableResult(source);
   if (!db) return null;

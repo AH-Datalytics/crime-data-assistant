@@ -25,6 +25,7 @@ import { detectFollowupTransform } from "@/lib/followup-transform";
 import { getBlockingGeoClarification } from "@/lib/geo-resolver";
 import { detectDemographicHomicideRateOverride } from "@/lib/capability-overrides";
 import { historicalYearAvailability } from "@/lib/year-availability";
+import { validateQueryContractSql } from "@/lib/query-contract-validator";
 
 function sseEvent(event: StreamEvent): string {
   return `data: ${JSON.stringify(event)}\n\n`;
@@ -216,18 +217,28 @@ function getHistoricalChartMeta(
 function findSimilarAgencies(
   db: ReturnType<typeof getDb>,
   name: string,
-  historical = false
+  historical = false,
+  state?: string | null
 ): { agency: string; state: string }[] {
   try {
     const table = historical ? "historical_agency" : "agencies";
+    const stateFilter = state ? " AND UPPER(state) = ?" : "";
+    const params = state ? [`%${name}%`, state.toUpperCase()] : [`%${name}%`];
     return db
       .prepare(
-        `SELECT DISTINCT agency, state FROM ${table} WHERE agency LIKE ? LIMIT 5`
+        `SELECT DISTINCT agency, state FROM ${table} WHERE agency LIKE ?${stateFilter} LIMIT 5`
       )
-      .all(`%${name}%`) as { agency: string; state: string }[];
+      .all(...params) as { agency: string; state: string }[];
   } catch {
     return [];
   }
+}
+
+function displayStateCode(state: string, historical = false): string {
+  const upper = state.toUpperCase();
+  if (historical && upper === "NB") return "NE";
+  if (historical && upper === "GM") return "GU";
+  return upper;
 }
 
 export async function POST(req: NextRequest) {
@@ -493,6 +504,21 @@ export async function POST(req: NextRequest) {
           controller.close();
         }
       };
+      const applyContractValidation = (inputSql: string): string => {
+        const contractResult = validateQueryContractSql({
+          question,
+          source: tab === "historical" ? "historical" : "current",
+          sql: inputSql,
+          routingMeta,
+        });
+        if (contractResult.fired.length > 0) {
+          firedGuardrails = [...new Set([...firedGuardrails, ...contractResult.fired])];
+        }
+        if (contractResult.warnings.length > 0) {
+          console.log(`[query][contract] Warnings: ${contractResult.warnings.join(", ")}`);
+        }
+        return contractResult.sql;
+      };
 
       try {
         // Step 1: Translate to SQL via Claude
@@ -717,6 +743,8 @@ export async function POST(req: NextRequest) {
           if (postRetryResult.sql !== claude.sql) claude.sql = postRetryResult.sql;
         }
 
+        claude.sql = applyContractValidation(claude.sql);
+
         controller.enqueue(
           encoder.encode(
             sseEvent({ type: "status", text: "Running query..." })
@@ -775,7 +803,7 @@ export async function POST(req: NextRequest) {
               if (retry.sql) {
                 const retryValidation = validateAndSanitize(retry.sql, { maxLimit });
                 if (retryValidation.valid) {
-                  const retrySql = retryValidation.sanitized!;
+                  const retrySql = applyContractValidation(retryValidation.sanitized!);
                   const retryTableCheck = validateTablesForTab(retrySql, tab, getDb());
                   if (retryTableCheck.ok) {
                     sql = retrySql;
@@ -807,6 +835,7 @@ export async function POST(req: NextRequest) {
         let columns: string[];
 
         try {
+          sql = applyContractValidation(sql);
           const stmt = db.prepare(sql);
           const result = executeWithTimeoutSync<Record<string, unknown>>(db, stmt, 30000);
           columns = stmt.columns().map((c) => c.name);
@@ -847,12 +876,13 @@ export async function POST(req: NextRequest) {
           if (retry.sql) {
             const retryValidation = validateAndSanitize(retry.sql, { maxLimit });
             if (retryValidation.valid) {
+              const retrySql = applyContractValidation(retryValidation.sanitized!);
               try {
-                const retryStmt = db.prepare(retryValidation.sanitized!);
+                const retryStmt = db.prepare(retrySql);
                 const retryResult = executeWithTimeoutSync<Record<string, unknown>>(db, retryStmt, 30000);
                 columns = retryStmt.columns().map((c) => c.name);
                 rows = retryResult;
-                sql = retryValidation.sanitized!;
+                sql = retrySql;
                 applyRetryMeta(claude, retry);
               } catch (retryErr) {
                 const retryMsg =
@@ -930,10 +960,11 @@ export async function POST(req: NextRequest) {
         // Step 4: Handle empty results
         if (rows.length === 0) {
           const agencyName = extractAgencyName(sql);
+          const requestedState = sql.match(/\b(?:\w+\.)?state\s*=\s*'([^']+)'/i)?.[1] ?? null;
           let emptyMsg: string;
 
           if (agencyName) {
-            const similar = findSimilarAgencies(db, agencyName, isHistorical);
+            const similar = findSimilarAgencies(db, agencyName, isHistorical, requestedState);
             if (similar.length === 0) {
               emptyMsg = isHistorical
                 ? `"${agencyName}" is not in our dataset. Try the [NIBRS](/test?tab=nibrs) tab, which has incident-level data from agencies nationwide, or the [Current Trends](/test?tab=current) tab for monthly data from ~${RTCI.agencyCount} major agencies.`
@@ -988,16 +1019,16 @@ export async function POST(req: NextRequest) {
                     }
                   }
                   if (offenseList) {
-                    emptyMsg = `${exactMatch.agency}, ${exactMatch.state.toUpperCase()} is in our dataset, but no data was found for that specific query. This agency reports the following offenses: ${offenseList}. Try one of those instead, or adjust the date range.`;
+                    emptyMsg = `${exactMatch.agency}, ${displayStateCode(exactMatch.state, isHistorical)} is in our dataset, but no data was found for that specific query. This agency reports the following offenses: ${offenseList}. Try one of those instead, or adjust the date range.`;
                   } else {
-                    emptyMsg = `${exactMatch.agency}, ${exactMatch.state.toUpperCase()} is in our dataset, but no data was found for that specific query. The agency may not report this offense, or the date range may not have data. Try a different offense or broader date range.`;
+                    emptyMsg = `${exactMatch.agency}, ${displayStateCode(exactMatch.state, isHistorical)} is in our dataset, but no data was found for that specific query. The agency may not report this offense, or the date range may not have data. Try a different offense or broader date range.`;
                   }
                 } catch {
-                  emptyMsg = `${exactMatch.agency}, ${exactMatch.state.toUpperCase()} is in our dataset, but no data was found for that specific query. The agency may not report this offense, or the date range may not have data. Try a different offense or broader date range.`;
+                  emptyMsg = `${exactMatch.agency}, ${displayStateCode(exactMatch.state, isHistorical)} is in our dataset, but no data was found for that specific query. The agency may not report this offense, or the date range may not have data. Try a different offense or broader date range.`;
                 }
               } else {
                 const suggestions = similar
-                  .map((s) => `${s.agency}, ${s.state.toUpperCase()}`)
+                  .map((s) => `${s.agency}, ${displayStateCode(s.state, isHistorical)}`)
                   .join("; ");
                 emptyMsg = `"${agencyName}" wasn't found in our dataset. Did you mean: ${suggestions}? Our data covers ~${RTCI.agencyCount} major agencies across ${RTCI.stateCount} states.`;
               }
@@ -1181,12 +1212,13 @@ export async function POST(req: NextRequest) {
               if (rollingFixed.sql) {
                 const rv = validateAndSanitize(rollingFixed.sql, { maxLimit });
                 if (rv.valid) {
+                  const rollingSql = applyContractValidation(rv.sanitized!);
                   try {
-                    const stmt2 = db.prepare(rv.sanitized!);
+                    const stmt2 = db.prepare(rollingSql);
                     const result2 = stmt2.all() as Record<string, unknown>[];
                     rows = result2;
                     columns = stmt2.columns().map(c => c.name);
-                    sql = rv.sanitized!;
+                    sql = rollingSql;
                     applyRetryMeta(claude, rollingFixed);
                     claude.explanation = (claude.explanation || "") + "\n\nNote: Raw monthly data had many zero-count months, so results were converted to a rolling 12-month sum for a clearer trend.";
                     console.log(`[sparse-monthly] Rolling 12-month retry succeeded, ${rows.length} rows`);

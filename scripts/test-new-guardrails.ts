@@ -2314,6 +2314,81 @@ console.log("\n=== June 16 query audit regressions ===\n");
     `fired: ${JSON.stringify(r.fired)}`);
 }
 
+console.log("\n=== July 1 query audit regressions ===\n");
+
+{
+  const sql = `WITH years AS (
+    SELECT 1960 AS year UNION ALL SELECT year + 1 FROM years WHERE year < 2025
+  )
+  SELECT y.year, hac.clearance_rate
+  FROM years y
+  LEFT JOIN historical_agency_clearance hac ON hac.year = y.year
+  LEFT JOIN historical_agency ha ON ha.ori = hac.ori
+  WHERE ha.agency = 'Omaha' AND ha.state = 'ne'
+  ORDER BY y.year`;
+  const ctx = extractQueryContext(sql, "Omaha NE auto theft clearance rate since 1960", "historical");
+  const r = runGuardrails(ctx);
+  assert("TP: Historical Nebraska state code rewrites to legacy nb",
+    r.fired.includes("historical-ne-gu-state-codes") && /\bha\.state = 'nb'/i.test(r.sql),
+    `fired: ${JSON.stringify(r.fired)}, sql=${r.sql}`);
+}
+
+{
+  const sql = `SELECT data_year AS year, SUM(victim_count) AS burglaries
+  FROM summary_city_monthly scm
+  JOIN agencies a ON a.ori = scm.ori AND a.year = scm.data_year
+  WHERE a.city = 'OMAHA' AND a.state = 'NE' AND ucr_offense_code = '220'
+  GROUP BY data_year
+  ORDER BY data_year`;
+  const ctx = extractQueryContext(sql, "Omaha NE burglaries from 2000 to 2026", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("TP: NIBRS Nebraska state code keeps both NE and NB eras",
+    r.fired.includes("nibrs-ne-gu-state-codes") && /\ba\.state IN \('NE','NB'\)/i.test(r.sql),
+    `fired: ${JSON.stringify(r.fired)}, sql=${r.sql}`);
+}
+
+{
+  const sql = `WITH dv_trends AS (
+    SELECT data_year AS year, COUNT(DISTINCT dv.ori || ':' || dv.data_year || ':' || dv.incident_num) AS dv_incidents
+    FROM summary_domestic_violence dv
+    WHERE dv.data_year BETWEEN 2021 AND 2025
+    GROUP BY dv.data_year
+  ),
+  violent_trends AS (
+    SELECT year, SUM(victim_count) AS violent_crimes
+    FROM summary_victim_state_monthly
+    WHERE ucr_offense_code IN ('09A','11A','11B','11C','120','13A')
+      AND year BETWEEN 2021 AND 2025
+    GROUP BY year
+  )
+  SELECT dv.year, dv.dv_incidents, vc.violent_crimes
+  FROM dv_trends dv JOIN violent_trends vc ON dv.year = vc.year
+  ORDER BY dv.year LIMIT 1000`;
+  const ctx = extractQueryContext(sql, "Compare domestic violence and violent crime trends from 2021 to 2025", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("FP: Separate aggregate CTE comparison does not fire cross-summary join",
+    !r.fired.includes("nibrs-cross-summary-join"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  const sql = `SELECT data_year AS year,
+         SUM(CASE WHEN dv_category = 'intimate_partner' THEN 1 ELSE 0 END) AS intimate_partner_incidents
+  FROM (
+    SELECT dv.data_year, dv.dv_category,
+           COUNT(DISTINCT dv.ori || ':' || dv.data_year || ':' || dv.incident_num) AS incident_count
+    FROM summary_domestic_violence dv
+    WHERE dv.data_year BETWEEN 2021 AND 2025
+    GROUP BY dv.data_year, dv.dv_category
+  )
+  GROUP BY data_year ORDER BY data_year LIMIT 1000`;
+  const ctx = extractQueryContext(sql, "intimate partner violence trend since 2021", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("TP: DV category subquery sums incident_count instead of category rows",
+    r.fired.includes("nibrs-dv-subquery-incident-count") && /THEN incident_count ELSE 0 END/i.test(r.sql),
+    `fired: ${JSON.stringify(r.fired)}, sql=${r.sql}`);
+}
+
 console.log("\n" + "═".repeat(60));
 console.log(`SUMMARY: ${pass} passed, ${fail} failed out of ${pass + fail} tests`);
 console.log("═".repeat(60));

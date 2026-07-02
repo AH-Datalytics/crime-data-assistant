@@ -56,6 +56,17 @@ const HISTORICAL_CITY_ALIASES = new Map<string, string[]>([
   ["KY|LOUISVILLE", ["LOUISVILLE METRO", "LOUISVILLE"]],
 ]);
 
+const SOURCE_STATE_CODES: Partial<Record<GeoSource, Record<string, string | string[]>>> = {
+  historical: {
+    NE: "NB",
+    GU: "GM",
+  },
+  nibrs: {
+    NE: ["NE", "NB"],
+    GU: ["GU", "GM"],
+  },
+};
+
 export function mapGeoCandidateToSources(
   candidate: GeoPlaceCandidate,
   dbs: GeoSourceMapperDbs
@@ -104,14 +115,15 @@ function mapState(
 ): GeoSourceMapping {
   const db = dbFor(source, dbs);
   const table = stateValidationTable(source);
+  const stateFilter = stateFilterClause("state", sourceStateCodes(source, state));
   if (!db || !tableExists(db, table)) {
-    return base(candidate, source, "unknown", [`state = '${state}'`], [], `${source} database/table unavailable for shadow validation.`);
+    return base(candidate, source, "unknown", [stateFilter.label], [], `${source} database/table unavailable for shadow validation.`);
   }
-  const row = safeGet<{ c: number }>(db, `SELECT COUNT(*) AS c FROM ${table} WHERE upper(state) = ?`, [state]);
+  const row = safeGet<{ c: number }>(db, `SELECT COUNT(*) AS c FROM ${table} WHERE ${stateFilter.sql}`, stateFilter.params);
   if ((row?.c ?? 0) > 0) {
-    return base(candidate, source, "safe_exact", [`state = '${state}'`], [], `State code ${state} is directly filterable in ${table}.`);
+    return base(candidate, source, "safe_exact", [stateFilter.label], [], `State code ${stateFilter.display} is directly filterable in ${table}.`);
   }
-  return base(candidate, source, "unsupported", [`state = '${state}'`], [], `No ${source} rows found for state ${state}.`);
+  return base(candidate, source, "unsupported", [stateFilter.label], [], `No ${source} rows found for state ${stateFilter.display}.`);
 }
 
 function stateValidationTable(source: GeoSource): string {
@@ -187,7 +199,8 @@ function mapHistoricalCity(
   state: string,
   db?: Database.Database | null
 ): GeoSourceMapping {
-  const filters = [`state = '${state}'`, `type = 'city'`, `agency ~= '${candidate.name}'`];
+  const sourceState = sourceStateCode("historical", state);
+  const filters = [`state = '${sourceState}'`, `type = 'city'`, `agency ~= '${candidate.name}'`];
   if (!db) return base(candidate, "historical", "unknown", filters, [], "historical database unavailable for city validation.");
   if (!tableExists(db, "historical_agency")) {
     return base(candidate, "historical", "unknown", filters, [], "historical_agency table unavailable.");
@@ -201,7 +214,7 @@ function mapHistoricalCity(
       'historical_agency' AS sourceTable
     FROM historical_agency
     WHERE upper(state) = ? AND lower(type) = 'city'
-  `, [state]).filter((row) => aliases.has(normalizePlaceKey(row.agency || ""))).slice(0, 50);
+  `, [sourceState]).filter((row) => aliases.has(normalizePlaceKey(row.agency || ""))).slice(0, 50);
   if (rows.length === 1) return base(candidate, "historical", "safe_exact", filters, rows, "One historical city agency matches this place.");
   if (rows.length > 1) return base(candidate, "historical", "needs_clarification", filters, rows, "Multiple historical city agencies match this place.");
   return base(candidate, "historical", "unsupported", filters, [], "No historical city agency matched this place.");
@@ -212,7 +225,8 @@ function mapNibrsCity(
   state: string,
   db?: Database.Database | null
 ): GeoSourceMapping {
-  const filters = [`agencies.state = '${state}'`, `agencies.city = '${candidate.name.toUpperCase()}'`];
+  const stateFilter = stateFilterClause("agencies.state", sourceStateCodes("nibrs", state));
+  const filters = [stateFilter.label, `agencies.city = '${candidate.name.toUpperCase()}'`];
   if (!db) return base(candidate, "nibrs", "unknown", filters, [], "nibrs database unavailable for city validation.");
   if (!tableExists(db, "agencies")) return base(candidate, "nibrs", "unknown", filters, [], "nibrs agencies table unavailable.");
   const cityColumn = firstExistingColumn(db, "agencies", ["city", "agency", "agency_name"]);
@@ -230,9 +244,9 @@ function mapNibrsCity(
       ${populationColumn ? `, ${populationColumn} AS population` : ""}
       ${typeColumn ? `, ${typeColumn} AS agency_type` : ""}
     FROM agencies
-    WHERE upper(state) = ?
+    WHERE ${stateFilter.sql}
     LIMIT 10000
-  `, [state])
+  `, stateFilter.params)
     .filter((row) => aliases.has(normalizePlaceKey(String(row.city || ""))))
     .filter((row) => !typeColumn || /city/i.test(String(row.agency_type || "")))
     .map((row) => ({
@@ -322,6 +336,34 @@ function base(
 function dbFor(source: DbSource, dbs: GeoSourceMapperDbs): Database.Database | null | undefined {
   if (source === "current" || source === "historical") return dbs.currentHistorical;
   return dbs[source];
+}
+
+function sourceStateCode(source: GeoSource, state: string): string {
+  return sourceStateCodes(source, state)[0];
+}
+
+function sourceStateCodes(source: GeoSource, state: string): string[] {
+  const value = SOURCE_STATE_CODES[source]?.[state.toUpperCase()] ?? state.toUpperCase();
+  return Array.isArray(value) ? value : [value];
+}
+
+function stateFilterClause(column: string, states: string[]): { sql: string; params: string[]; label: string; display: string } {
+  const normalized = states.map((state) => state.toUpperCase());
+  const display = normalized.join("/");
+  if (normalized.length === 1) {
+    return {
+      sql: `upper(${column}) = ?`,
+      params: normalized,
+      label: `${column} = '${normalized[0]}'`,
+      display,
+    };
+  }
+  return {
+    sql: `upper(${column}) IN (${normalized.map(() => "?").join(",")})`,
+    params: normalized,
+    label: `${column} IN (${normalized.map((state) => `'${state}'`).join(",")})`,
+    display,
+  };
 }
 
 function parseCandidateId(id: string): ParsedCandidate | null {
