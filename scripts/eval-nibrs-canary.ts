@@ -20,7 +20,7 @@ import { extractQueryContext } from "../lib/query-context.js";
 import { runGuardrails } from "../lib/guardrails.js";
 
 const HAIKU = "claude-haiku-4-5-20251001";
-const SONNET = "claude-sonnet-4-5-20250929";
+const SONNET = "claude-sonnet-5";
 
 interface EvalQuery {
   id: string;

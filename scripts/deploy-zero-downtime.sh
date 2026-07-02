@@ -140,6 +140,13 @@ fi
 
 npm ci --production=false || die "npm ci failed"
 
+# Cron scripts run from this release dir — verify their runtime deps resolve
+# here, or a missing package.json entry silently kills the cron for weeks
+# (resend was absent June 5 – July 2, 2026: no daily email, no audit findings).
+for dep in resend better-sqlite3; do
+  node -e "require('$dep')" || die "cron runtime dep '$dep' does not resolve in release dir"
+done
+
 # ── Step 4: Build ──────────────────────────────────────────────────────
 log "Building Next.js app..."
 trap cleanup_on_failure ERR

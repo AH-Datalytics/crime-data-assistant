@@ -536,6 +536,21 @@ function analyze(queries) {
   return { stats, issues, suggestions };
 }
 
+function getScoreboard() {
+  try {
+    const tableExists = db
+      .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='scoreboard_runs'")
+      .get();
+    if (!tableExists) return null;
+    const rows = db.prepare("SELECT * FROM scoreboard_runs ORDER BY id DESC LIMIT 2").all();
+    if (rows.length === 0) return null;
+    return { latest: rows[0], prev: rows[1] || null };
+  } catch (err) {
+    console.error("Scoreboard read failed:", err.message);
+    return null;
+  }
+}
+
 function buildEmail(stats, issues, visitors, suggestions, weeklyTrends) {
   const date = new Date().toLocaleDateString("en-US", {
     weekday: "long",
@@ -586,6 +601,29 @@ function buildEmail(stats, issues, visitors, suggestions, weeklyTrends) {
 <body>
 <h1>Crime Data Assistant</h1>
 <div class="subtitle">${date}</div>`;
+
+  // Nightly scoreboard (top of email — the single accuracy number)
+  const scoreboard = getScoreboard();
+  if (scoreboard) {
+    const { latest, prev } = scoreboard;
+    const scored = latest.passed + latest.failed;
+    const pct = scored > 0 ? ((100 * latest.passed) / scored).toFixed(1) : "0.0";
+    let deltaStr = "";
+    if (prev) {
+      const delta = 100 * (latest.accuracy - prev.accuracy);
+      const sign = delta >= 0 ? "+" : "";
+      const color = delta >= 0 ? "#2e7d32" : "#c62828";
+      deltaStr = ` <span style="color:${color}; font-size: 13px;">(${sign}${delta.toFixed(1)} pts vs prior run)</span>`;
+    }
+    const failedIds = JSON.parse(latest.failed_ids || "[]");
+    html += `<h2>Nightly Scoreboard</h2>
+    <p style="font-size: 18px; margin: 8px 0;"><strong>${latest.passed}/${scored} passed (${pct}%)</strong>${deltaStr}</p>
+    <p style="font-size: 12px; color: #888; margin: 4px 0;">Run ${latest.run_ts} against ${latest.host} — ${latest.inconclusive} inconclusive (excluded from score)</p>`;
+    if (failedIds.length > 0) {
+      html += `<p style="font-size: 13px;"><strong>Failing cases:</strong> ${failedIds.join(", ")}<br>
+      <span style="color: #888;">Rerun: <code>npx tsx scripts/live-replay.ts --rerun ${failedIds.join(",")}</code></span></p>`;
+    }
+  }
 
   // Traffic sources section (top of email)
   if (visitors) {
@@ -1179,6 +1217,13 @@ async function main() {
     month: "long",
     day: "numeric",
   });
+
+  if (process.argv.includes("--dry-run")) {
+    fs.mkdirSync("audit", { recursive: true });
+    fs.writeFileSync("audit/daily-email-preview.html", html);
+    console.log("Dry run — email written to audit/daily-email-preview.html, not sent");
+    return;
+  }
 
   try {
     const result = await resend.emails.send({

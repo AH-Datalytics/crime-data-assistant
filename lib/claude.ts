@@ -632,7 +632,7 @@ export async function translateToSql(
   const message = await client.messages.create({
     model: "claude-haiku-4-5-20251001",
     max_tokens: 2048,
-    system: [{ type: "text", text: systemPrompt || SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
+    system: [{ type: "text", text: systemPrompt || SYSTEM_PROMPT, cache_control: { type: "ephemeral", ttl: "1h" } }],
     messages,
   });
 

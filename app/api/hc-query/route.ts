@@ -226,7 +226,7 @@ export async function POST(req: NextRequest) {
       const response = await client.messages.create({
         model: "claude-haiku-4-5-20251001",
         max_tokens: 2000,
-        system: [{ type: "text", text: getHateCrimeSystemPrompt(), cache_control: { type: "ephemeral" } }],
+        system: [{ type: "text", text: getHateCrimeSystemPrompt(), cache_control: { type: "ephemeral", ttl: "1h" } }],
         messages,
       });
 
@@ -255,7 +255,7 @@ export async function POST(req: NextRequest) {
             const retryResp = await client.messages.create({
               model: "claude-haiku-4-5-20251001",
               max_tokens: 2000,
-              system: [{ type: "text", text: getHateCrimeSystemPrompt(), cache_control: { type: "ephemeral" } }],
+              system: [{ type: "text", text: getHateCrimeSystemPrompt(), cache_control: { type: "ephemeral", ttl: "1h" } }],
               messages: retryMessages,
             });
             const retryText = retryResp.content.filter((b): b is Anthropic.TextBlock => b.type === "text").map(b => b.text).join("");
@@ -304,7 +304,7 @@ export async function POST(req: NextRequest) {
             const retryResp = await client.messages.create({
               model: "claude-haiku-4-5-20251001",
               max_tokens: 2000,
-              system: [{ type: "text", text: getHateCrimeSystemPrompt(), cache_control: { type: "ephemeral" } }],
+              system: [{ type: "text", text: getHateCrimeSystemPrompt(), cache_control: { type: "ephemeral", ttl: "1h" } }],
               messages: retryMessages,
             });
             const retryText = retryResp.content.filter((b): b is Anthropic.TextBlock => b.type === "text").map(b => b.text).join("");
@@ -396,7 +396,7 @@ export async function POST(req: NextRequest) {
         const retryResp = await client.messages.create({
           model: "claude-haiku-4-5-20251001",
           max_tokens: 2000,
-          system: [{ type: "text", text: getHateCrimeSystemPrompt(), cache_control: { type: "ephemeral" } }],
+          system: [{ type: "text", text: getHateCrimeSystemPrompt(), cache_control: { type: "ephemeral", ttl: "1h" } }],
           messages: retryMessages,
         });
         const retryText = retryResp.content.filter((b): b is Anthropic.TextBlock => b.type === "text").map(b => b.text).join("");

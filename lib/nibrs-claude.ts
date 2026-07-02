@@ -1739,13 +1739,18 @@ export async function translateToSql(
   const message = await client.messages.create({
     model: nibrsModel,
     max_tokens: 2048,
-    system: [{ type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
+    // Sonnet 5 runs adaptive thinking when the param is omitted, which puts a
+    // thinking block at content[0] and breaks JSON extraction below.
+    ...(nibrsModel.startsWith("claude-sonnet-5")
+      ? { thinking: { type: "disabled" as const } }
+      : {}),
+    system: [{ type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral", ttl: "1h" } }],
     messages,
   });
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const u = message.usage as any;
-  const modelShort = nibrsModel.includes("sonnet") ? "sonnet-4.5" : nibrsModel.includes("haiku") ? "haiku-4.5" : nibrsModel;
+  const modelShort = nibrsModel.startsWith("claude-sonnet-5") ? "sonnet-5" : nibrsModel.includes("sonnet") ? "sonnet-4.5" : nibrsModel.includes("haiku") ? "haiku-4.5" : nibrsModel;
   console.log(`[nibrs][model=${modelShort}][cache] input=${u.input_tokens} output=${u.output_tokens} cache_read=${u.cache_read_input_tokens ?? 0} cache_create=${u.cache_creation_input_tokens ?? 0}`);
 
   const text =
