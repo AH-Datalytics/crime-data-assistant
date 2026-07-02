@@ -26,6 +26,7 @@ import { getBlockingGeoClarification } from "@/lib/geo-resolver";
 import { detectDemographicHomicideRateOverride } from "@/lib/capability-overrides";
 import { historicalYearAvailability } from "@/lib/year-availability";
 import { validateQueryContractSql } from "@/lib/query-contract-validator";
+import { resolveGeoPlaces } from "@/lib/geo-place-resolver";
 
 function sseEvent(event: StreamEvent): string {
   return `data: ${JSON.stringify(event)}\n\n`;
@@ -241,6 +242,72 @@ function displayStateCode(state: string, historical = false): string {
   return upper;
 }
 
+function sqlQuote(value: string): string {
+  return `'${value.replace(/'/g, "''")}'`;
+}
+
+function historicalSourceState(state: string): string {
+  const upper = state.toUpperCase();
+  if (upper === "NE") return "nb";
+  if (upper === "GU") return "gm";
+  return upper;
+}
+
+function hasHistoricalMetricIntent(question: string): boolean {
+  return /\b(?:crime|crimes|violent|property|murder|homicide|rape|robbery|assault|burglary|theft|larceny|auto|motor vehicle|clearance|cleared|rate|rates|staffing|officers?|police force|trend|trends?|by year|per year|monthly|compare|vs\.?|versus|population)\b/i.test(question);
+}
+
+function answerHistoricalPlaceLookup(
+  question: string,
+  db: ReturnType<typeof getDb>
+): {
+  sql: string;
+  rows: Record<string, unknown>[];
+  columns: string[];
+  explanation: string;
+  title: string;
+} | null {
+  if (hasHistoricalMetricIntent(question)) return null;
+  const resolution = resolveGeoPlaces(question);
+  const first = resolution.mentions[0];
+  const candidate = first?.candidates[0];
+  if (!candidate?.state || first.requiresClarification) return null;
+  if (candidate.kind !== "city" && candidate.kind !== "county") return null;
+
+  const sourceState = historicalSourceState(candidate.state);
+  const type = candidate.kind;
+  const agency = candidate.name;
+  const sql = `
+    SELECT
+      ha.agency,
+      '${candidate.state.toUpperCase()}' AS state,
+      ha.type,
+      (SELECT MIN(hc.year) || '-' || MAX(hc.year) FROM historical_agency_crime hc WHERE hc.ori = ha.ori) AS crime_years,
+      (SELECT MIN(hclr.year) || '-' || MAX(hclr.year) FROM historical_agency_clearance hclr WHERE hclr.ori = ha.ori) AS clearance_years,
+      (SELECT MIN(hs.year) || '-' || MAX(hs.year) FROM historical_staffing hs WHERE hs.ori = ha.ori) AS staffing_years
+    FROM historical_agency ha
+    WHERE UPPER(ha.state) = UPPER(${sqlQuote(sourceState)})
+      AND LOWER(ha.type) = ${sqlQuote(type)}
+      AND UPPER(ha.agency) = UPPER(${sqlQuote(agency)})
+    ORDER BY ha.agency
+    LIMIT 20
+  `.trim();
+
+  try {
+    const rows = db.prepare(sql).all() as Record<string, unknown>[];
+    if (rows.length === 0) return null;
+    return {
+      sql,
+      rows,
+      columns: ["agency", "state", "type", "crime_years", "clearance_years", "staffing_years"],
+      title: `${candidate.name}, ${candidate.state.toUpperCase()}`,
+      explanation: `Historical Library agency coverage for ${candidate.name}, ${candidate.state.toUpperCase()}. Ask for a specific metric to chart counts, rates, staffing, or clearances over time.`,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export async function POST(req: NextRequest) {
   const encoder = new TextEncoder();
   const totalStart = Date.now();
@@ -434,6 +501,44 @@ export async function POST(req: NextRequest) {
               columns: [],
               rows: [],
               rowCount: 0,
+              truncated: false,
+              chartConfig: null,
+              chartMeta: null,
+              executionTimeMs: ms,
+            })
+          )
+        );
+        controller.close();
+      },
+    });
+
+    return new Response(stream, {
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive",
+        "X-RateLimit-Remaining": String(rateCheck.remaining),
+      },
+    });
+  }
+
+  const historicalPlace = tab === "historical" ? answerHistoricalPlaceLookup(question, getDb()) : null;
+  if (historicalPlace) {
+    const ms = Date.now() - totalStart;
+    writeLog(question, historicalPlace.sql, historicalPlace.rows.length, null, ms, historicalPlace.explanation, tab, ["deterministic-place-lookup"], "deterministic", sessionId);
+
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(
+          encoder.encode(
+            sseEvent({
+              type: "result",
+              sql: historicalPlace.sql,
+              explanation: historicalPlace.explanation,
+              title: historicalPlace.title,
+              columns: historicalPlace.columns,
+              rows: historicalPlace.rows,
+              rowCount: historicalPlace.rows.length,
               truncated: false,
               chartConfig: null,
               chartMeta: null,

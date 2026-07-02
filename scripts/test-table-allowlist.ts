@@ -25,6 +25,25 @@ assert.deepEqual(
   "ignores CTE name while keeping real tables"
 );
 
+assert.deepEqual(
+  extractReferencedTables(`
+    WITH agency AS (
+      SELECT ori FROM agencies LIMIT 1
+    ),
+    years AS (
+      SELECT 2000 AS year
+    ),
+    yr AS (
+      SELECT year FROM years UNION ALL SELECT year + 1 FROM yr WHERE year < 2024
+    )
+    SELECT y.year
+    FROM yr y
+    JOIN agency a ON 1=1
+  `),
+  ["agencies"],
+  "ignores every CTE name in a recursive CTE chain"
+);
+
 {
   const result = validateTablesForTab("SELECT * FROM summary_state_monthly JOIN agencies ON 1=1", "nibrs", db);
   assert.equal(result.ok, true, "known active-tab tables pass");
