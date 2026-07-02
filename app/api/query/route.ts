@@ -254,7 +254,7 @@ function historicalSourceState(state: string): string {
 }
 
 function hasHistoricalMetricIntent(question: string): boolean {
-  return /\b(?:crime|crimes|violent|property|murder|homicide|rape|robbery|assault|burglary|theft|larceny|auto|motor vehicle|clearance|cleared|rate|rates|staffing|officers?|police force|trend|trends?|by year|per year|monthly|compare|vs\.?|versus|population)\b/i.test(question);
+  return /\b(?:crimes?|violent|property|murders?|homicides?|rapes?|robber(?:y|ies)|assaults?|burglar(?:y|ies)|thefts?|larcen(?:y|ies)|auto|motor vehicle|clearance|cleared|rates?|staffing|officers?|police force|trends?|by year|per year|monthly|compare|vs\.?|versus|population)\b/i.test(question);
 }
 
 function answerHistoricalPlaceLookup(
