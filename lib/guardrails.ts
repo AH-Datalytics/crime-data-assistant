@@ -1848,10 +1848,10 @@ const GUARDRAILS: Guardrail[] = [
   {
     name: "nibrs-ne-gu-state-codes",
     tabs: ["nibrs"],
-    match: (ctx) => /state\s*=\s*'(NE|GU)'/i.test(ctx.sql),
+    match: (ctx) => /state\s*=\s*'(NE|NB|GU|GM)'/i.test(ctx.sql),
     rewrite: (sql) => {
-      let fixed = sql.replace(/\b((?:\w+\.)?state)\s*=\s*'NE'/gi, "$1 IN ('NE','NB')");
-      fixed = fixed.replace(/\b((?:\w+\.)?state)\s*=\s*'GU'/gi, "$1 IN ('GU','GM')");
+      let fixed = sql.replace(/\b((?:\w+\.)?state)\s*=\s*'(?:NE|NB)'/gi, "$1 IN ('NE','NB')");
+      fixed = fixed.replace(/\b((?:\w+\.)?state)\s*=\s*'(?:GU|GM)'/gi, "$1 IN ('GU','GM')");
       return fixed !== sql ? fixed : null;
     },
   },

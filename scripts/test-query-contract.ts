@@ -106,6 +106,16 @@ import { validateQueryContractSql } from "../lib/query-contract-validator";
 
 {
   const result = validateQueryContractSql({
+    question: "Omaha NE burglaries from 2000 to 2026",
+    source: "nibrs",
+    sql: "SELECT s.year, SUM(s.offense_count) FROM summary_city_monthly s WHERE s.city = 'OMAHA' AND s.state = 'NB' GROUP BY s.year",
+  });
+  assert(result.fired.includes("contract-state-code-alias"));
+  assert.match(result.sql, /s\.state IN \('NE','NB'\)/);
+}
+
+{
+  const result = validateQueryContractSql({
     question: "Houston TX murders since 2020",
     source: "historical",
     sql: "SELECT hac.year, hac.murder FROM historical_agency_crime hac JOIN historical_agency ha ON ha.ori = hac.ori WHERE ha.agency = 'Houston' AND ha.state = 'TX'",

@@ -2348,6 +2348,19 @@ console.log("\n=== July 1 query audit regressions ===\n");
 }
 
 {
+  const sql = `SELECT s.year, SUM(s.offense_count) AS burglaries
+  FROM summary_city_monthly s
+  WHERE s.city = 'OMAHA' AND s.state = 'NB' AND s.ucr_offense_code = '220'
+  GROUP BY s.year
+  ORDER BY s.year`;
+  const ctx = extractQueryContext(sql, "Omaha NE burglaries from 2000 to 2026", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("TP: NIBRS existing NB state code expands to both Nebraska eras",
+    r.fired.includes("nibrs-ne-gu-state-codes") && /\bs\.state IN \('NE','NB'\)/i.test(r.sql),
+    `fired: ${JSON.stringify(r.fired)}, sql=${r.sql}`);
+}
+
+{
   const sql = `WITH dv_trends AS (
     SELECT data_year AS year, COUNT(DISTINCT dv.ori || ':' || dv.data_year || ':' || dv.incident_num) AS dv_incidents
     FROM summary_domestic_violence dv

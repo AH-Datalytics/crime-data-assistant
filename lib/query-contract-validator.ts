@@ -10,7 +10,9 @@ export interface QueryContractSqlValidation {
 function rewriteStateEquals(sql: string, requestedState: string, sourceState: string | string[]): string {
   const sourceStates = Array.isArray(sourceState) ? sourceState : [sourceState];
   if (sourceStates.length === 1 && requestedState.toUpperCase() === sourceStates[0].toUpperCase()) return sql;
-  const pattern = new RegExp(`\\b((?:\\w+\\.)?state)\\s*=\\s*'${requestedState}'`, "gi");
+
+  const candidates = [...new Set([requestedState, ...sourceStates].map((state) => state.toUpperCase()))];
+  const pattern = new RegExp(`\\b((?:\\w+\\.)?state)\\s*=\\s*'(${candidates.join("|")})'`, "gi");
   if (sourceStates.length === 1) return sql.replace(pattern, `$1 = '${sourceStates[0]}'`);
   return sql.replace(pattern, `$1 IN (${sourceStates.map((state) => `'${state}'`).join(",")})`);
 }
