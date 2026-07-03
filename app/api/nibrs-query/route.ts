@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getNibrsDb, executeWithTimeout, logNibrsQuery } from "@/lib/nibrs-db";
+import { isZeroResult } from "@/lib/shr-agency-probe";
+import { appendNibrsAgencyProbeCaveat, runNibrsAgencyProbe } from "@/lib/nibrs-agency-probe";
 import { validatePageToken } from "@/lib/page-token";
 import { translateToSql } from "@/lib/nibrs-claude";
 import { validateAndSanitize } from "@/lib/sql-safety";
@@ -931,6 +933,20 @@ export async function POST(req: NextRequest) {
       ? (stripInternalScaffold(postExplanation) || explanation)
       : postExplanation;
     explanation = applyResultDisclosures({ explanation, question, sql, rows, tab: "nibrs" });
+    // Zero-result agency probe (query-audit-2026-07-03 F25): when an agency-scoped
+    // query returns nothing, explain the agency's actual reporting span instead of
+    // leaving a bare "no results" — e.g. Jackson PD reports NIBRS only since 2025.
+    if (isZeroResult(rows, columns)) {
+      try {
+        const agencyProbe = runNibrsAgencyProbe(getNibrsDb(), sql);
+        if (agencyProbe) {
+          explanation = appendNibrsAgencyProbeCaveat(explanation, agencyProbe);
+          routeGuardrailsFired.push("nibrs-agency-zero-probe");
+        }
+      } catch (probeErr) {
+        console.log(`[nibrs][agency-probe] Error:`, probeErr);
+      }
+    }
     if (campusAgencyScopeNote && !explanation.includes(campusAgencyScopeNote)) {
       explanation += `\n\n${campusAgencyScopeNote}`;
     }

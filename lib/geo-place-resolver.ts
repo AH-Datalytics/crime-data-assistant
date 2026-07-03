@@ -9,6 +9,7 @@ export type GeoPlaceCandidate = {
   confidence: number;
   reason: string;
   source: GeoPlaceCatalogEntry["source"];
+  population?: number;
 };
 
 export type GeoPlaceMention = {
@@ -175,6 +176,7 @@ function candidateFromEntry(entry: GeoPlaceCatalogEntry, match: RawMatch, candid
     confidence: candidateCount === 1 ? 0.95 : 0.55,
     reason: `Matched alias "${match.alias}" from ${entry.source}`,
     source: entry.source,
+    population: entry.dominancePopulation,
   };
 }
 

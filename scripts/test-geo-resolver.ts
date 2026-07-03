@@ -178,4 +178,22 @@ assert.equal(
   "Jefferson County exists in multiple states. Add the state so countywide results use the right geography."
 );
 
+// --- query-audit-2026-07-03 F24: state context resolves city ambiguity ---
+// #4596: "mississippi" in the sentence must resolve bare "jackson" silently
+assert.equal(
+  hasBlockingGeoResolutionIssue("include the jackson police department, the hinds county sheriff, and the mississippi capitol police"),
+  false
+);
+assert.equal(hasBlockingGeoResolutionIssue("firearm crimes in jackson mississippi by offender age"), false);
+// Bare "jackson" with no state still clarifies, with the largest city (MS) listed first
+{
+  const jackson = getBlockingGeoClarification("crime in jackson");
+  assert.equal(jackson?.issue.id, "jackson");
+  assert.ok(jackson?.explanation.includes("Choose: Jackson, MS"), jackson?.explanation);
+}
+// State words inside a city name must not count as state context
+assert.equal(hasBlockingGeoResolutionIssue("compare murders in kansas city and st louis"), true);
+// Special city-vs-state clarifiers unaffected
+assert.equal(hasBlockingGeoResolutionIssue("washington murders"), true);
+
 console.log("geo resolver tests passed");

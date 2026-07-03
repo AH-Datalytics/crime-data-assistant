@@ -27,7 +27,7 @@ import { detectFollowupTransform } from "@/lib/followup-transform";
 import { applyChartCustomizations } from "@/lib/chart-customization";
 import { STATE_NAME_TO_ABBR } from "@/lib/state-population";
 import { getBlockingGeoClarification } from "@/lib/geo-resolver";
-import { detectDemographicHomicideRateOverride } from "@/lib/capability-overrides";
+import { detectShrGroupRateOverride } from "@/lib/capability-overrides";
 import { displayShrAgencyName, normalizeShrAgencyText } from "@/lib/shr-agency-normalization";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -268,7 +268,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const capabilityOverride = detectDemographicHomicideRateOverride(question);
+    const capabilityOverride = detectShrGroupRateOverride(question);
     if (capabilityOverride) {
       const executionMs = Date.now() - start;
       writeLog(question, null, 0, null, executionMs, capabilityOverride.explanation, "shr", [capabilityOverride.guardrail], "deterministic", sessionId);

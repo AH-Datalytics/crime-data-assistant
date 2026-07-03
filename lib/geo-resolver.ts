@@ -121,12 +121,70 @@ export function getGeoResolutionIssues(input: string): GeoResolutionIssue[] {
   const text = input.trim();
   if (!text) return [];
 
-  return resolveGeoPlaces(text).mentions
+  const allMentions = resolveGeoPlaces(text).mentions;
+  return allMentions
+    .map((mention) => resolveCityByStateContext(text, mention, allMentions))
     .filter((mention) => mention.requiresClarification && mention.candidates.length > 1)
     .filter((mention) => !isStateAbbreviationComparison(text, mention))
     .filter((mention) => !isCampusAgencyNameWithStateContext(text, mention))
     .filter((mention) => !hasExplicitCityCountyKindContext(text, mention))
     .map(issueFromMention);
+}
+
+/**
+ * "jackson police department ... mississippi capitol police" must not ask which
+ * Jackson (query-audit-2026-07-03 F24). When the surrounding text names exactly
+ * one state and the ambiguous city has exactly one candidate in that state,
+ * resolve to it instead of clarifying. City-kind ambiguity only — city-vs-county
+ * and city-vs-state splits (Baltimore, NY, Washington) keep their clarifiers.
+ * Mention spans are stripped before scanning so "Kansas City" is not read as Kansas.
+ */
+function resolveCityByStateContext(
+  input: string,
+  mention: GeoPlaceMention,
+  allMentions: GeoPlaceMention[]
+): GeoPlaceMention {
+  if (!mention.requiresClarification || mention.candidates.length < 2) return mention;
+  if (classifyCandidates(mention.candidates) !== "city") return mention;
+
+  // Strip only ambiguous mention spans: "Kansas City" must not read as Kansas,
+  // but an unambiguous "mississippi" mention is exactly the state context we want.
+  const ambiguousSpans = allMentions
+    .filter((m) => m.candidates.length > 1)
+    .sort((a, b) => a.start - b.start);
+  let remainder = "";
+  let cursor = 0;
+  for (const m of ambiguousSpans) {
+    remainder += input.slice(cursor, m.start) + " ";
+    cursor = Math.max(cursor, m.end);
+  }
+  remainder += input.slice(cursor);
+
+  const states = statesMentionedIn(remainder);
+  if (states.size !== 1) return mention;
+  const [state] = [...states];
+  const inState = mention.candidates.filter((candidate) => candidate.state === state);
+  if (inState.length !== 1) return mention;
+
+  return {
+    ...mention,
+    candidates: inState,
+    requiresClarification: false,
+    reason: `${mention.text} resolved to ${state} from state context`,
+  };
+}
+
+function statesMentionedIn(input: string): Set<string> {
+  const found = new Set<string>();
+  for (const [abbr, label] of Object.entries(STATE_LABELS)) {
+    const pattern = new RegExp(
+      `\\b${label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+")}\\b`,
+      "i"
+    );
+    if (pattern.test(input)) found.add(abbr);
+  }
+  for (const token of uppercaseStateAbbreviations(input)) found.add(token);
+  return found;
 }
 
 export function hasBlockingGeoResolutionIssue(input: string): boolean {
@@ -221,6 +279,11 @@ function actionCandidates(candidates: GeoPlaceCandidate[]): GeoPlaceCandidate[] 
       if (actionDelta !== 0) return actionDelta;
       const kindDelta = kindRank(a.kind) - kindRank(b.kind);
       if (kindDelta !== 0) return kindDelta;
+      // Largest places first — alphabetical order let the 8-option cap drop
+      // Jackson, MS (the most likely referent) while keeping 8 smaller Jacksons
+      // (query-audit-2026-07-03 F24)
+      const populationDelta = (b.population ?? 0) - (a.population ?? 0);
+      if (populationDelta !== 0) return populationDelta;
       return actionReplacement(a).localeCompare(actionReplacement(b));
     })
     .slice(0, 8);

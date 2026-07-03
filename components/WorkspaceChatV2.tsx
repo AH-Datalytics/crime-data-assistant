@@ -178,10 +178,16 @@ export default function WorkspaceChat({ sourceYearRanges }: WorkspaceChatProps) 
       const mode = tab === "historical" ? "historical" : "current";
 
       try {
-        const body: Record<string, unknown> = { question, history, pageToken: getPageToken(), routingMode };
+        // Session id from the Tracker component — required for per-session
+        // analytics and captcha/daily-cap accounting; without it every query
+        // logs session_id NULL (query-audit-2026-07-03 F28)
+        const sessionId = (() => {
+          try { return sessionStorage.getItem("cda-session") || null; } catch { return null; }
+        })();
+        const body: Record<string, unknown> = { question, history, pageToken: getPageToken(), routingMode, sessionId };
         if (reason) body.routingReason = reason;
         if (routingConfidence) body.routingConfidence = routingConfidence;
-        if (tab === "current" || tab === "historical") { body.mode = mode; body.sessionId = null; }
+        if (tab === "current" || tab === "historical") { body.mode = mode; }
 
         const res = await fetch(route, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
 

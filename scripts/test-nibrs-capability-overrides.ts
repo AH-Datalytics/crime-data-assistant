@@ -1,6 +1,7 @@
 #!/usr/bin/env npx tsx
 
 import { detectNibrsCapabilityOverride } from "../lib/nibrs-capability-overrides.js";
+import { detectShrGroupRateOverride } from "../lib/capability-overrides.js";
 
 let pass = 0;
 let fail = 0;
@@ -47,6 +48,51 @@ function assert(name: string, condition: boolean, detail?: string) {
 {
   const r = detectNibrsCapabilityOverride("justifiable homicides where criminals were killed by police");
   assert("narrow killed-by-police justifiable homicide remains queryable", r === null, JSON.stringify(r));
+}
+
+// --- SHR-tab group-rate override: follow-up-safe (no homicide word required) ---
+// query-audit-2026-07-03 F27: front door was blind to follow-ups that drop "murder"
+{
+  const r = detectShrGroupRateOverride("i want ir in per capita seperated by race and sex");
+  assert("#4704 follow-up per-capita by race+sex fires without homicide word",
+    r?.guardrail === "demographic-homicide-rate-denominator-unavailable",
+    JSON.stringify(r));
+}
+
+{
+  const r = detectShrGroupRateOverride("Population by race and sex and rate per 100000");
+  assert("#4705 rate-per-100k by race+sex fires without homicide word",
+    r?.guardrail === "demographic-homicide-rate-denominator-unavailable",
+    JSON.stringify(r));
+}
+
+{
+  const r = detectShrGroupRateOverride("murder rate by age group nationally");
+  assert("rate by age group fires (age has no denominator either)",
+    r?.guardrail === "demographic-homicide-rate-denominator-unavailable",
+    JSON.stringify(r));
+}
+
+{
+  const r = detectShrGroupRateOverride("murder rate per capita by state in 2024");
+  assert("overall per-capita rate by state does NOT fire", r === null, JSON.stringify(r));
+}
+
+{
+  const r = detectShrGroupRateOverride("i want to know the counts of murder comited by blacks asians hispanics and white prople also seperated by sex");
+  assert("#4702 counts by race+sex (no rate word) does NOT fire", r === null, JSON.stringify(r));
+}
+
+{
+  const r = detectShrGroupRateOverride("what share of murders were committed by men");
+  assert("share question (no rate word) does NOT fire", r === null, JSON.stringify(r));
+}
+
+{
+  // Clearance questions must fall through to shr-clearance-override's redirect,
+  // not get a misleading population-denominator refusal
+  const r = detectShrGroupRateOverride("clearance rate for murders by victim race");
+  assert("clearance rate by race does NOT fire (clearance override handles it)", r === null, JSON.stringify(r));
 }
 
 console.log(`nibrs capability override tests: ${pass} passed, ${fail} failed`);

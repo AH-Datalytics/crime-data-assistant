@@ -2464,6 +2464,25 @@ const GUARDRAILS: Guardrail[] = [
       "[SYSTEM: Your SQL has an ORDER BY column that doesn't exist in the result set. In SQLite compound queries (UNION, etc.), ORDER BY must reference output column names or positions, not table-qualified names. Use the column alias from the SELECT clause.]",
   },
 
+  // Group-specific per-capita rates — FBI data has no population by race/sex/age (query-audit-2026-07-03 F27).
+  // Without this, contract-rate-no-population steers the model into joining TOTAL population
+  // for every demographic subgroup and presenting it as a group rate (#4705), or the model
+  // invents race_population/sex_population tables (#4709). Refuse deterministically instead.
+  {
+    name: "group-rate-denominator-unavailable",
+    tabs: ["nibrs", "shr"],
+    match: (ctx) => {
+      const q = ctx.question;
+      const wantsPerCapita =
+        /\b(per\s*capita|per\s*100[,.]?\s*000|per\s*100\s*k|per\s*hundred\s*thousand|victimi[sz]ation\s+rates?|offending\s+rates?|how\s+likely)\b/i.test(q) ||
+        (/\brates?\b/i.test(q) && /\bpopulation\b/i.test(q));
+      if (!wantsPerCapita) return false;
+      return /\b(race|races|racial|ethnicit\w+|hispanic|latino\w*|black|white|asian|american\s+indian|native\s+american|sex|gender|male|female|males|females|men|women|age\s+group|by\s+age|juvenile\w*|elderly|teen\w*)\b/i.test(q);
+    },
+    override: () =>
+      "FBI crime data includes only total population figures — population is not broken down by race, ethnicity, sex, or age. That means group-specific per-capita rates (for example, murders per 100,000 Black residents, or per 100,000 men) cannot be calculated from this data. I can show raw counts broken down by race, sex, or age; each group's share of total incidents; or an overall per-capita rate using total population.",
+  },
+
   // #16: Court outcomes, immigration, policy covariates — out of scope
   {
     name: "charge-severity-unavailable",
@@ -2737,7 +2756,22 @@ const GUARDRAILS: Guardrail[] = [
   {
     name: "nibrs-dv-victim-count-column",
     tabs: ["nibrs"],
-    match: (ctx) => /\bsummary_domestic_violence\b/i.test(ctx.sql) && /\bvictim_count\b/i.test(ctx.sql),
+    match: (ctx) => {
+      if (!/\bsummary_domestic_violence\b/i.test(ctx.sql)) return false;
+      if (!/\bvictim_count\b/i.test(ctx.sql)) return false;
+      // victim_count qualified with a DV-table alias is always wrong
+      const dvAliases = [...ctx.sql.matchAll(/\b(?:FROM|JOIN)\s+summary_domestic_violence\b(?:\s+(?:AS\s+)?(\w+))?/gi)]
+        .map((m) => m[1])
+        .filter((alias): alias is string => Boolean(alias) && !/^(WHERE|ON|GROUP|ORDER|LEFT|JOIN|INNER)$/i.test(alias!));
+      if (dvAliases.some((alias) => new RegExp(`\\b${alias}\\.victim_count\\b`, "i").test(ctx.sql))) return true;
+      // unqualified victim_count only implicates the DV table when no other summary
+      // table (which legitimately has that column) appears in the SQL — a valid
+      // multi-CTE comparison must not be scolded (query-audit-2026-07-03 F23, #4586)
+      const otherSummaryTables = (ctx.sql.match(/\bsummary_\w+/gi) || [])
+        .map((t) => t.toLowerCase())
+        .filter((t) => t !== "summary_domestic_violence");
+      return otherSummaryTables.length === 0;
+    },
     message: () =>
       "[SYSTEM: summary_domestic_violence has no victim_count column. For DV incident counts, use COUNT(DISTINCT dv.ori || ':' || dv.data_year || ':' || dv.incident_num). For DV victim demographics, count distinct victims with COUNT(DISTINCT dv.ori || ':' || dv.data_year || ':' || dv.incident_num || ':' || dv.victim_sequence) and group by victim_sex, victim_race, and an age bucket derived from victim_age. Do not use SUM(dv.victim_count).]",
   },
@@ -2756,6 +2790,34 @@ const GUARDRAILS: Guardrail[] = [
       );
       return fixed !== sql ? fixed : null;
     },
+  },
+  // Generalization of nibrs-dv-subquery-incident-count for ANY grouped subquery
+  // (query-audit-2026-07-03 F22: #4587 reported 1 IPV incident/year vs actual ~1M).
+  // Outer SUM(CASE ... THEN 1 ELSE 0) over an already-grouped subquery counts GROUPS,
+  // not the underlying units, whenever the subquery's aggregate alias is never used.
+  // Must stay LAST in this array: the DV-specific rewrite runs first, and this
+  // matcher then sees the rewritten (fixed) SQL and stays quiet.
+  {
+    name: "nested-aggregation-discards-measure",
+    tabs: ["current", "historical", "nibrs", "shr"],
+    match: (ctx) => {
+      const sql = ctx.sql;
+      if (!/\bSUM\s*\(\s*CASE\s+WHEN\b[\s\S]{0,300}?\bTHEN\s+1\s+ELSE\s+0\s+END\s*\)/i.test(sql)) return false;
+      // needs an inner grouped SELECT (derived table or CTE body)
+      if (!/\(\s*SELECT\b[\s\S]+?\bGROUP\s+BY\b[\s\S]+?\)/i.test(sql)) return false;
+      const aggAliases = [...sql.matchAll(/\b(?:COUNT|SUM)\s*\((?:[^()]|\([^()]*\))*\)\s+AS\s+(\w+)/gi)]
+        // the SUM(CASE...1/0) construct itself is the outer counter, not an inner measure
+        .filter((m) => !/\bTHEN\s+1\s+ELSE\s+0\s+END/i.test(m[0]));
+      if (aggAliases.length === 0) return false;
+      // fires only when some inner aggregate alias is computed but never referenced
+      // anywhere else (its definition is the only occurrence in the whole SQL)
+      return aggAliases.some((m) => {
+        const occurrences = sql.match(new RegExp(`\\b${m[1]}\\b`, "gi")) ?? [];
+        return occurrences.length <= 1;
+      });
+    },
+    message: () =>
+      "[SYSTEM: Your outer query uses SUM(CASE WHEN ... THEN 1 ELSE 0 END) over an already-grouped subquery. That counts GROUPS (one per subquery row), not the underlying incidents/victims/arrests — the subquery's aggregate column is computed but never used. Either reference the inner aggregate (SUM(CASE WHEN cond THEN <aggregate_alias> ELSE 0 END) or SUM(<aggregate_alias>)), or drop the nesting and put the filter in the inner query's WHERE clause.]",
   },
 ];
 

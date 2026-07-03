@@ -2402,6 +2402,206 @@ console.log("\n=== July 1 query audit regressions ===\n");
     `fired: ${JSON.stringify(r.fired)}, sql=${r.sql}`);
 }
 
+// ══════════════════════════════════════════════════════════════════════
+//  group-rate-denominator-unavailable (query-audit-2026-07-03 F27)
+// ══════════════════════════════════════════════════════════════════════
+
+console.log("\n═══ group-rate-denominator-unavailable ═══\n");
+
+{
+  // TP: #4705 — race/sex rates with total-US denominator must hard-refuse
+  const ctx = extractQueryContext(
+    "WITH offender_counts AS (SELECT i.year, i.off_race, i.off_sex, COUNT(*) as murder_count FROM incidents i WHERE i.homicide_type = 'Murder' GROUP BY i.year, i.off_race, i.off_sex) SELECT oc.*, ROUND(oc.murder_count * 100000.0 / NULLIF(sp.population, 0), 1) as rate FROM offender_counts oc JOIN state_population sp ON sp.state = 'US' AND sp.year = oc.year",
+    "Population by race and sex and rate per 100000",
+    "shr"
+  );
+  const r = runGuardrails(ctx);
+  assert("TP: #4705 race/sex per-100k hard-refuses",
+    r.overrideGuardrail === "group-rate-denominator-unavailable",
+    `override: ${r.overrideGuardrail}`);
+}
+
+{
+  // TP: #4704 — "per capita seperated by race and sex" (typos included)
+  const ctx = extractQueryContext(
+    "SELECT off_race, off_sex, COUNT(*) FROM incidents GROUP BY off_race, off_sex",
+    "i want ir in per capita seperated by race and sex",
+    "shr"
+  );
+  const r = runGuardrails(ctx);
+  assert("TP: #4704 per-capita by race+sex hard-refuses",
+    r.overrideGuardrail === "group-rate-denominator-unavailable",
+    `override: ${r.overrideGuardrail}`);
+}
+
+{
+  // TP: #4703 phrasing — "how likely is this or that group to commit murder"
+  const ctx = extractQueryContext(
+    "SELECT off_race, COUNT(*) FROM incidents WHERE homicide_type = 'Murder' GROUP BY off_race",
+    "how likely is this or that group to commit murder by race",
+    "shr"
+  );
+  const r = runGuardrails(ctx);
+  assert("TP: 'how likely' + race hard-refuses",
+    r.overrideGuardrail === "group-rate-denominator-unavailable",
+    `override: ${r.overrideGuardrail}`);
+}
+
+{
+  // TP: NIBRS tab — arrest rate per 100k by race
+  const ctx = extractQueryContext(
+    "SELECT race, SUM(arrestee_count) FROM summary_arrestee_demographics WHERE state = 'TX' GROUP BY race",
+    "arrest rate per 100k by race in Texas",
+    "nibrs"
+  );
+  const r = runGuardrails(ctx);
+  assert("TP: NIBRS arrest rate per 100k by race hard-refuses",
+    r.overrideGuardrail === "group-rate-denominator-unavailable",
+    `override: ${r.overrideGuardrail}`);
+}
+
+{
+  // FP: overall per-capita rate by state — total population is the right denominator
+  const ctx = extractQueryContext(
+    "SELECT i.state, COUNT(*) * 100000.0 / sp.population AS rate FROM incidents i JOIN state_population sp ON sp.state = i.state AND sp.year = 2024 WHERE i.year = 2024 GROUP BY i.state, sp.population",
+    "murder rate per capita by state in 2024",
+    "shr"
+  );
+  const r = runGuardrails(ctx);
+  assert("FP: overall state per-capita rate does NOT refuse",
+    r.overrideGuardrail !== "group-rate-denominator-unavailable",
+    `override: ${r.overrideGuardrail}`);
+}
+
+{
+  // FP: share/percent by race — answerable without population
+  const ctx = extractQueryContext(
+    "SELECT off_race, COUNT(*) FROM incidents WHERE year = 2020 GROUP BY off_race",
+    "what percent of murders were committed by each race in 2020",
+    "shr"
+  );
+  const r = runGuardrails(ctx);
+  assert("FP: percent-share by race does NOT refuse",
+    r.overrideGuardrail !== "group-rate-denominator-unavailable",
+    `override: ${r.overrideGuardrail}`);
+}
+
+{
+  // FP: plain city murder rate, no demographics mentioned
+  const ctx = extractQueryContext(
+    "SELECT i.year, ROUND(COUNT(*) * 100000.0 / NULLIF(AVG(i.population), 0), 1) FROM incidents i WHERE i.agency = 'Chicago' GROUP BY i.year",
+    "murder rate in Chicago per capita over time",
+    "shr"
+  );
+  const r = runGuardrails(ctx);
+  assert("FP: plain city per-capita rate does NOT refuse",
+    r.overrideGuardrail !== "group-rate-denominator-unavailable",
+    `override: ${r.overrideGuardrail}`);
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  nibrs-dv-victim-count-column FP fix (query-audit-2026-07-03 F23)
+// ══════════════════════════════════════════════════════════════════════
+
+console.log("\n═══ nibrs-dv-victim-count-column scoping ═══\n");
+
+{
+  // TP: victim_count qualified with the DV table's alias
+  const ctx = extractQueryContext(
+    "SELECT data_year, SUM(dv.victim_count) FROM summary_domestic_violence dv GROUP BY data_year",
+    "domestic violence victims by year",
+    "nibrs"
+  );
+  const r = runGuardrails(ctx);
+  assert("TP: dv.victim_count fires",
+    r.fired.includes("nibrs-dv-victim-count-column"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  // TP: bare victim_count when the DV table is the only summary table
+  const ctx = extractQueryContext(
+    "SELECT data_year, SUM(victim_count) FROM summary_domestic_violence GROUP BY data_year",
+    "domestic violence victims by year",
+    "nibrs"
+  );
+  const r = runGuardrails(ctx);
+  assert("TP: bare victim_count with only DV table fires",
+    r.fired.includes("nibrs-dv-victim-count-column"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  // FP: #4586 — victim_count belongs to summary_victim_state_monthly in another CTE
+  const ctx = extractQueryContext(
+    "WITH dv_trends AS (SELECT data_year AS year, COUNT(DISTINCT dv.ori || ':' || dv.data_year || ':' || dv.incident_num) AS dv_incidents FROM summary_domestic_violence dv WHERE dv.data_year BETWEEN 2021 AND 2025 GROUP BY dv.data_year), violent_trends AS (SELECT year, SUM(victim_count) AS violent_crimes FROM summary_victim_state_monthly WHERE ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND year BETWEEN 2021 AND 2025 GROUP BY year) SELECT dv.year, dv.dv_incidents, vc.violent_crimes FROM dv_trends dv JOIN violent_trends vc ON dv.year = vc.year ORDER BY dv.year",
+    "have domestic violence trends followed the same patterns as other types of violent crime in the past 5 years",
+    "nibrs"
+  );
+  const r = runGuardrails(ctx);
+  assert("FP: #4586 valid CTE comparison fires NOTHING",
+    r.fired.length === 0 && !r.overrideGuardrail,
+    `fired: ${JSON.stringify(r.fired)}, override: ${r.overrideGuardrail}`);
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  nested-aggregation-discards-measure (query-audit-2026-07-03 F22)
+// ══════════════════════════════════════════════════════════════════════
+
+console.log("\n═══ nested-aggregation-discards-measure ═══\n");
+
+{
+  // TP: non-DV variant of #4587 — outer SUM(CASE 1/0) discards inner victim total
+  const ctx = extractQueryContext(
+    "SELECT year, SUM(CASE WHEN weapon_category = 'Firearm' THEN 1 ELSE 0 END) AS firearm_victims FROM (SELECT year, weapon_category, SUM(victim_count) AS victim_total FROM summary_victim_state_monthly WHERE year BETWEEN 2021 AND 2025 GROUP BY year, weapon_category) GROUP BY year",
+    "firearm crime victims by year",
+    "nibrs"
+  );
+  const r = runGuardrails(ctx);
+  assert("TP: generic grouped-subquery SUM(CASE 1/0) fires",
+    r.fired.includes("nested-aggregation-discards-measure"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  // FP: inner aggregate alias IS referenced — legitimate group counting
+  const ctx = extractQueryContext(
+    "SELECT year, SUM(CASE WHEN cnt > 100 THEN 1 ELSE 0 END) AS high_crime_cities FROM (SELECT year, city, SUM(victim_count) AS cnt FROM summary_victim_city_monthly GROUP BY year, city) GROUP BY year",
+    "how many cities had over 100 murders each year",
+    "nibrs"
+  );
+  const r = runGuardrails(ctx);
+  assert("FP: does NOT fire when inner aggregate alias is referenced",
+    !r.fired.includes("nested-aggregation-discards-measure"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  // FP: #4587 DV shape — the DV-specific rewrite fixes it first; general rule stays quiet
+  const ctx = extractQueryContext(
+    "SELECT data_year AS year, SUM(CASE WHEN dv_category = 'intimate_partner' THEN 1 ELSE 0 END) AS ipv FROM (SELECT dv.data_year, dv.dv_category, COUNT(DISTINCT dv.ori || ':' || dv.data_year || ':' || dv.incident_num) AS incident_count FROM summary_domestic_violence dv WHERE dv.data_year BETWEEN 2021 AND 2025 GROUP BY dv.data_year, dv.dv_category) GROUP BY data_year",
+    "intimate partner violence trend",
+    "nibrs"
+  );
+  const r = runGuardrails(ctx);
+  assert("FP: stays quiet after DV rewrite already fixed the SQL",
+    r.fired.includes("nibrs-dv-subquery-incident-count") && !r.fired.includes("nested-aggregation-discards-measure"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  // FP: flat query, no nesting
+  const ctx = extractQueryContext(
+    "SELECT year, SUM(CASE WHEN weapon_category = 'Firearm' THEN victim_count ELSE 0 END) AS firearm_victims FROM summary_victim_state_monthly GROUP BY year",
+    "firearm victims by year",
+    "nibrs"
+  );
+  const r = runGuardrails(ctx);
+  assert("FP: flat SUM(CASE) query does NOT fire",
+    !r.fired.includes("nested-aggregation-discards-measure"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
 console.log("\n" + "═".repeat(60));
 console.log(`SUMMARY: ${pass} passed, ${fail} failed out of ${pass + fail} tests`);
 console.log("═".repeat(60));

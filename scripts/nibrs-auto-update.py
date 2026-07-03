@@ -915,6 +915,16 @@ def main():
     # Rebuild summary tables for affected years only
     retry(rebuild_summaries, conn, affected_years, label="rebuild summaries")
     retry(ensure_state_population, conn, label="state population")
+    # ensure_state_population drops/rebuilds from historical data (ends ~currentYear-2);
+    # extend with FBI CDE API figures so current-year rate queries keep working (F26)
+    log("Extending state_population with FBI CDE current-year figures...")
+    cde_result = subprocess.run(
+        ["npx", "tsx", "scripts/extend-state-population-cde.ts", f"--db={DB_PATH}", "--apply"],
+        cwd="/opt/nibrs/repo", capture_output=True, text=True, timeout=600,
+    )
+    log(cde_result.stdout.strip() or cde_result.stderr.strip())
+    if cde_result.returncode != 0:
+        log("  WARNING: CDE state_population extension failed; current-year rates may return empty")
     retry(rebuild_consistent_reporters, conn, log, label="consistent reporters")
     retry(ensure_performance_indexes, conn, label="performance indexes")
 

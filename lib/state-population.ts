@@ -100,3 +100,4 @@ export function buildStatePopulationRows(
     .filter((row): row is StatePopulationRow => row !== null)
     .sort((a, b) => a.state.localeCompare(b.state) || a.year - b.year);
 }
+
