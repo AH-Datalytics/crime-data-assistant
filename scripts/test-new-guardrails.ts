@@ -8,7 +8,7 @@
  */
 
 import { extractQueryContext } from "../lib/query-context.js";
-import { runGuardrails } from "../lib/guardrails.js";
+import { runGuardrails, GUARDRAIL_NAMES } from "../lib/guardrails.js";
 import { detectAllNullData } from "../lib/all-null-detection.js";
 import { buildCampusAgencySummarySql, campusAgencyDisplayName, chooseCampusAgencyOris, knownCampusAgencyResolution } from "../lib/nibrs-campus-agency.js";
 import { buildNibrsChartConfig } from "../lib/nibrs-chart-config.js";
@@ -2497,6 +2497,68 @@ console.log("\n═══ group-rate-denominator-unavailable ═══\n");
   assert("FP: plain city per-capita rate does NOT refuse",
     r.overrideGuardrail !== "group-rate-denominator-unavailable",
     `override: ${r.overrideGuardrail}`);
+}
+
+{
+  // CODEX finding 1, fact-based branch: SQL that joins total population and groups
+  // by a demographic column refuses regardless of question wording
+  const ctx = extractQueryContext(
+    "SELECT i.off_race, COUNT(*) * 100000.0 / NULLIF(sp.population, 0) AS val FROM incidents i JOIN state_population sp ON sp.state = 'US' AND sp.year = 2024 WHERE i.year = 2024 GROUP BY i.off_race",
+    "break down the murder numbers by race compared to how many people there are",
+    "shr"
+  );
+  const r = runGuardrails(ctx);
+  assert("TP: total-pop denominator + demographic GROUP BY refuses on SQL shape alone",
+    r.overrideGuardrail === "group-rate-denominator-unavailable",
+    `override: ${r.overrideGuardrail}`);
+}
+
+{
+  // CODEX finding 1: "per 10,000" phrasing caught by the guardrail net too
+  const ctx = extractQueryContext(
+    "SELECT off_race, COUNT(*) FROM incidents WHERE year = 2024 GROUP BY off_race",
+    "murders per 10,000 Black residents in 2024",
+    "shr"
+  );
+  const r = runGuardrails(ctx);
+  assert("TP: per-10,000 phrasing refuses",
+    r.overrideGuardrail === "group-rate-denominator-unavailable",
+    `override: ${r.overrideGuardrail}`);
+}
+
+{
+  // NIBRS clearance rates stay answerable despite the broader rate-intent regex
+  const ctx = extractQueryContext(
+    "SELECT victim_race, SUM(cleared_count) * 100.0 / SUM(offense_count) AS clearance_rate FROM summary_clearance_demographics WHERE year = 2024 GROUP BY victim_race",
+    "clearance rate by victim race in 2024",
+    "nibrs"
+  );
+  const r = runGuardrails(ctx);
+  assert("FP: NIBRS clearance rate by race still does NOT refuse",
+    r.overrideGuardrail !== "group-rate-denominator-unavailable",
+    `override: ${r.overrideGuardrail}`);
+}
+
+{
+  // CODEX finding 4: guardrail order — the DV rewrite must precede the generic
+  // nested-aggregation matcher (it sees post-rewrite SQL and stays quiet)
+  assert("ORDER: DV subquery rewrite precedes nested-aggregation guardrail",
+    GUARDRAIL_NAMES.indexOf("nibrs-dv-subquery-incident-count") !== -1 &&
+    GUARDRAIL_NAMES.indexOf("nibrs-dv-subquery-incident-count") < GUARDRAIL_NAMES.indexOf("nested-aggregation-discards-measure"),
+    `order: ${GUARDRAIL_NAMES.indexOf("nibrs-dv-subquery-incident-count")} vs ${GUARDRAIL_NAMES.indexOf("nested-aggregation-discards-measure")}`);
+}
+
+{
+  // CODEX finding 4: alias appearing inside a string literal must not suppress the check
+  const ctx = extractQueryContext(
+    "SELECT year, SUM(CASE WHEN weapon_category = 'victim_total' THEN 1 ELSE 0 END) AS x FROM (SELECT year, weapon_category, SUM(victim_count) AS victim_total FROM summary_victim_state_monthly GROUP BY year, weapon_category) GROUP BY year",
+    "victims by year",
+    "nibrs"
+  );
+  const r = runGuardrails(ctx);
+  assert("TP: alias inside string literal does not suppress nested-aggregation check",
+    r.fired.includes("nested-aggregation-discards-measure"),
+    `fired: ${JSON.stringify(r.fired)}`);
 }
 
 // ══════════════════════════════════════════════════════════════════════

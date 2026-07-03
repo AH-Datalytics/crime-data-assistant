@@ -87,5 +87,14 @@ const jacksonSql = `SELECT d.year, d.age_group, SUM(d.offender_count) AS offende
   assert("state-only query has no agency scope", scope === null, JSON.stringify(scope));
 }
 
+{
+  // CODEX_REVIEW_9577edc finding 3: multi-state comparison (KCMO vs KCK) has no
+  // safe flat city/state pairing — probe must stand down, not describe one side
+  const sql = `SELECT year, SUM(x) FROM summary_city_monthly WHERE ori IN (SELECT ori FROM agencies WHERE (city = 'KANSAS CITY' AND state = 'MO') OR (city = 'KANSAS CITY' AND state = 'KS')) GROUP BY year`;
+  const scope = extractNibrsAgencyScope(sql);
+  assert("multi-state comparison SQL yields no scope", scope === null, JSON.stringify(scope));
+  assert("multi-state comparison probe returns null", runNibrsAgencyProbe(db, sql) === null, "probe should stand down");
+}
+
 console.log(`nibrs agency probe tests: ${pass} passed, ${fail} failed`);
 process.exit(fail > 0 ? 1 : 0);

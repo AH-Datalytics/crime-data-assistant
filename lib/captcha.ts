@@ -24,6 +24,12 @@ interface SessionState {
   dailyDate: string;
 }
 
+// Per-worker in-memory store: under PM2 cluster mode (2 workers) each worker
+// tracks its own counts, so effective thresholds are approximate — captcha
+// fires around 10-20 queries and the daily cap lands between 75 and 150
+// depending on load balancing. Known and accepted since 2026-04; if exact
+// enforcement ever matters, move this state to a shared store keyed by
+// sessionId + date (CODEX_REVIEW_9577edc finding 6, deferred).
 const sessions = new Map<string, SessionState>();
 
 function today(): string {

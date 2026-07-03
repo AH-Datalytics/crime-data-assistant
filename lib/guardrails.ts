@@ -24,6 +24,7 @@ import {
 } from "./time-conventions";
 import { explicitStateSubstateMismatch } from "./explicit-state-intent";
 import { stateNameToAbbr } from "./state-population";
+import { GROUP_RATE_INTENT_RE } from "./capability-overrides";
 
 const STATE_NAMES_RE = /\b(alabama|alaska|arizona|arkansas|california|colorado|connecticut|delaware|florida|georgia|hawaii|idaho|illinois|indiana|iowa|kansas|kentucky|louisiana|maine|maryland|massachusetts|michigan|minnesota|mississippi|missouri|montana|nebraska|nevada|new hampshire|new jersey|new mexico|new york|north carolina|north dakota|ohio|oklahoma|oregon|pennsylvania|rhode island|south carolina|south dakota|tennessee|texas|utah|vermont|virginia|washington state|west virginia|wisconsin|wyoming|district of columbia|united states)\b/i;
 
@@ -2473,11 +2474,24 @@ const GUARDRAILS: Guardrail[] = [
     tabs: ["nibrs", "shr"],
     match: (ctx) => {
       const q = ctx.question;
+      const demographicWords = /\b(race|races|racial|ethnicit\w+|hispanic|latino\w*|black|white|asian|american\s+indian|native\s+american|sex|gender|male|female|males|females|men|women|age\s+group|by\s+age|juvenile\w*|elderly|teen\w*)\b/i.test(q);
+      // Fact-based branch (CODEX_REVIEW_9577edc finding 1): regardless of question
+      // wording, SQL that joins total population and groups by a demographic column
+      // is computing a group rate with the wrong denominator.
+      if (demographicWords &&
+          /\bstate_population\b/i.test(ctx.sql) &&
+          /GROUP\s+BY[\s\S]{0,200}?\b(?:off_race|off_sex|off_ethnic|victim_race|victim_sex|race|sex|ethnicity|age_group)\b/i.test(ctx.sql) &&
+          /\/\s*(?:NULLIF\s*\(\s*)?(?:\w+\.)?population\b/i.test(ctx.sql)) {
+        return true;
+      }
+      // Clearance rates divide cleared by total cases — no population denominator
+      // involved; NIBRS answers those legitimately (e.g. "clearance rate by victim race")
+      if (/\b(clearance|cleared|solve[ds]?|unsolved|closure|close rate|cold case)\b/i.test(q)) return false;
       const wantsPerCapita =
-        /\b(per\s*capita|per\s*100[,.]?\s*000|per\s*100\s*k|per\s*hundred\s*thousand|victimi[sz]ation\s+rates?|offending\s+rates?|how\s+likely)\b/i.test(q) ||
-        (/\brates?\b/i.test(q) && /\bpopulation\b/i.test(q));
+        /\b(victimi[sz]ation\s+rates?|offending\s+rates?)\b/i.test(q) ||
+        GROUP_RATE_INTENT_RE.test(q);
       if (!wantsPerCapita) return false;
-      return /\b(race|races|racial|ethnicit\w+|hispanic|latino\w*|black|white|asian|american\s+indian|native\s+american|sex|gender|male|female|males|females|men|women|age\s+group|by\s+age|juvenile\w*|elderly|teen\w*)\b/i.test(q);
+      return demographicWords;
     },
     override: () =>
       "FBI crime data includes only total population figures — population is not broken down by race, ethnicity, sex, or age. That means group-specific per-capita rates (for example, murders per 100,000 Black residents, or per 100,000 men) cannot be calculated from this data. I can show raw counts broken down by race, sex, or age; each group's share of total incidents; or an overall per-capita rate using total population.",
@@ -2801,7 +2815,11 @@ const GUARDRAILS: Guardrail[] = [
     name: "nested-aggregation-discards-measure",
     tabs: ["current", "historical", "nibrs", "shr"],
     match: (ctx) => {
-      const sql = ctx.sql;
+      // Strip string literals and comments so an alias appearing inside quoted
+      // text or a comment can't suppress the check (CODEX_REVIEW_9577edc finding 4)
+      const sql = stripSqlStrings(ctx.sql)
+        .replace(/--[^\n]*/g, " ")
+        .replace(/\/\*[\s\S]*?\*\//g, " ");
       if (!/\bSUM\s*\(\s*CASE\s+WHEN\b[\s\S]{0,300}?\bTHEN\s+1\s+ELSE\s+0\s+END\s*\)/i.test(sql)) return false;
       // needs an inner grouped SELECT (derived table or CTE body)
       if (!/\(\s*SELECT\b[\s\S]+?\bGROUP\s+BY\b[\s\S]+?\)/i.test(sql)) return false;
@@ -2820,6 +2838,13 @@ const GUARDRAILS: Guardrail[] = [
       "[SYSTEM: Your outer query uses SUM(CASE WHEN ... THEN 1 ELSE 0 END) over an already-grouped subquery. That counts GROUPS (one per subquery row), not the underlying incidents/victims/arrests — the subquery's aggregate column is computed but never used. Either reference the inner aggregate (SUM(CASE WHEN cond THEN <aggregate_alias> ELSE 0 END) or SUM(<aggregate_alias>)), or drop the nesting and put the filter in the inner query's WHERE clause.]",
   },
 ];
+
+/**
+ * Guardrail evaluation order, exported for order-dependency tests:
+ * the DV-specific rewrite must run before nested-aggregation-discards-measure
+ * (CODEX_REVIEW_9577edc finding 4).
+ */
+export const GUARDRAIL_NAMES: string[] = GUARDRAILS.map((g) => g.name);
 
 /* ------------------------------------------------------------------ */
 /*  Runner                                                             */

@@ -34,7 +34,14 @@ function titleCase(value: string): string {
 }
 
 export function extractNibrsAgencyScope(sql: string): NibrsAgencyScope | null {
-  const state = sql.match(/\b(?:\w+\.)?state\s*=\s*'([A-Z]{2})'/i)?.[1]?.toUpperCase() ?? null;
+  // Multi-state SQL (e.g. Kansas City MO vs KS comparisons) has no safe flat
+  // city/state pairing — a single global state would silently drop one side of
+  // the comparison (CODEX_REVIEW_9577edc finding 3). Stand down instead.
+  const stateLiterals = new Set(
+    [...sql.matchAll(/\b(?:\w+\.)?state\s*=\s*'([A-Z]{2})'/gi)].map((m) => m[1].toUpperCase())
+  );
+  if (stateLiterals.size > 1) return null;
+  const state = stateLiterals.size === 1 ? [...stateLiterals][0] : null;
 
   const cityFilters = [...sql.matchAll(/\b(?:\w+\.)?city\s*(=|LIKE)\s*'([^']+)'/gi)].map((m) => ({
     comparator: m[1].toUpperCase() as "=" | "LIKE",

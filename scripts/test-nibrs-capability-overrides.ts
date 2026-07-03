@@ -95,5 +95,34 @@ function assert(name: string, condition: boolean, detail?: string) {
   assert("clearance rate by race does NOT fire (clearance override handles it)", r === null, JSON.stringify(r));
 }
 
+// --- CODEX_REVIEW_9577edc finding 1: broader rate-intent phrasings ---
+{
+  const r = detectShrGroupRateOverride("murders per 10,000 Black residents");
+  assert("per 10,000 phrasing fires", r !== null, JSON.stringify(r));
+}
+{
+  const r = detectShrGroupRateOverride("murder risk by race");
+  assert("'risk by race' fires", r !== null, JSON.stringify(r));
+}
+{
+  const r = detectShrGroupRateOverride("murders relative to population by ethnicity");
+  assert("'relative to population' fires", r !== null, JSON.stringify(r));
+}
+{
+  const r = detectShrGroupRateOverride("murders per million men");
+  assert("'per million' fires", r !== null, JSON.stringify(r));
+}
+
+// --- CODEX_REVIEW_9577edc finding 2: non-SHR concepts get the accurate refusal ---
+{
+  const r = detectShrGroupRateOverride("arrest rate by race for robbery in Chicago");
+  assert("non-homicide concept (robbery arrests) does NOT fire the denominator refusal",
+    r === null, JSON.stringify(r));
+}
+{
+  const r = detectShrGroupRateOverride("drug arrest rates by sex");
+  assert("drug arrests do NOT fire the denominator refusal", r === null, JSON.stringify(r));
+}
+
 console.log(`nibrs capability override tests: ${pass} passed, ${fail} failed`);
 process.exit(fail > 0 ? 1 : 0);

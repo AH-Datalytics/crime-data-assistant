@@ -10,6 +10,39 @@ const DEMOGRAPHIC_RE = /\b(gender|sex|race|racial|ethnicity|ethnic|female|male|w
 
 const AGE_GROUP_RE = /\b(age\s+groups?|by\s+age|juveniles?|teens?|teenagers?|elderly|minors)\b/i;
 
+/**
+ * Per-capita/rate intent, shared by the SHR front door and the
+ * group-rate-denominator-unavailable guardrail so the two nets can't drift
+ * apart (CODEX_REVIEW_9577edc finding 1). Covers denominator variants
+ * (per 1,000 / 10,000 / million), likelihood phrasings ("murder risk by
+ * race", "how likely"), and population-relative phrasings.
+ */
+export const GROUP_RATE_INTENT_RE = new RegExp(
+  [
+    String.raw`per\s*capita`,
+    String.raw`per\s*cap\b`,
+    String.raw`per\s*1[0,.\s]*0{2,}\s*(?:k\b|people|persons|residents|population|men|women|males|females)?`,
+    String.raw`per\s*(?:hundred|thousand|million)(?:\s+(?:thousand|people|persons|residents))?`,
+    String.raw`\brates?\b`,
+    String.raw`\brisk\b`,
+    String.raw`\blikelihood\b`,
+    String.raw`how\s+likely`,
+    String.raw`\bodds\b`,
+    String.raw`relative\s+to\s+(?:the\s+)?population`,
+    String.raw`adjusted\s+for\s+population`,
+    String.raw`population[-\s]adjusted`,
+  ].join("|"),
+  "i"
+);
+
+export function hasGroupRateIntent(question: string): boolean {
+  return GROUP_RATE_INTENT_RE.test(question);
+}
+
+export function mentionsDemographicGroup(question: string): boolean {
+  return DEMOGRAPHIC_RE.test(question) || AGE_GROUP_RE.test(question);
+}
+
 export function isDemographicHomicideRateQuestion(question: string): boolean {
   return HOMICIDE_RE.test(question) && RATE_RE.test(question) && DEMOGRAPHIC_RE.test(question);
 }
@@ -24,8 +57,12 @@ export function detectShrGroupRateOverride(question: string): CapabilityOverride
   // Clearance-rate questions are about case outcomes, not population denominators —
   // let the shr-clearance-override give its redirect to Historical/NIBRS instead.
   if (/\b(clearance|cleared|solve[ds]?|unsolved|closure|close rate|cold case)\b/i.test(question)) return null;
-  if (!RATE_RE.test(question)) return null;
-  if (!DEMOGRAPHIC_RE.test(question) && !AGE_GROUP_RE.test(question)) return null;
+  // Clearly non-SHR concepts (arrests, non-homicide offenses, staffing) should get
+  // the accurate scope refusal from the existing SHR overrides, not a misleading
+  // denominator explanation (CODEX_REVIEW_9577edc finding 2).
+  if (/\b(arrests?|arrested|arrestees?|robber(?:y|ies)|burglar(?:y|ies)|thefts?|larcen(?:y|ies)|assaults?|rapes?|carjackings?|drugs?|narcotics?|dui|staffing|officers?\s+employed)\b/i.test(question)) return null;
+  if (!hasGroupRateIntent(question)) return null;
+  if (!mentionsDemographicGroup(question)) return null;
 
   return {
     title: "Demographic Homicide Rates",

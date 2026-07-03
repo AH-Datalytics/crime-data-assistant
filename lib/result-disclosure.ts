@@ -466,6 +466,23 @@ export function applyResultDisclosures(opts: {
     );
   }
 
+  // Recent-year rate denominators come from the FBI CDE's current population
+  // estimate, applied flat across in-progress years until official estimates
+  // publish (state_population rows with source 'FBI CDE API...'); disclose so
+  // recent-year rates aren't read as using year-specific denominators
+  // (CODEX_REVIEW_9577edc finding 5)
+  if (/\bstate_population\b/i.test(opts.sql)) {
+    const currentYear = new Date().getFullYear();
+    const cdeYears = [currentYear - 1, currentYear];
+    const textToScan = `${opts.sql} ${opts.rows.slice(0, 50).map((r) => Object.values(r).join(" ")).join(" ")}`;
+    if (cdeYears.some((y) => new RegExp(`\\b${y}\\b`).test(textToScan))) {
+      explanation = appendSentence(
+        explanation,
+        `Note: Population denominators for ${cdeYears[0]}–${cdeYears[1]} use the FBI CDE's current population estimate, which the FBI applies to in-progress years; rates for these years may be revised when official estimates are published.`
+      );
+    }
+  }
+
   if (
     (opts.tab === "current" || opts.tab === "historical") &&
     asksForTheftSubtype(opts.question) &&
