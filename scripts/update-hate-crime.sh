@@ -60,9 +60,13 @@ if [ "$BEFORE" = "$AFTER" ]; then
     echo "  No new data for $TARGET_YEAR (rows unchanged: $AFTER)"
 else
     echo "  Updated! $TARGET_YEAR: $BEFORE → $AFTER rows"
+    # Refresh query-planner statistics — imports/rebuilds leave stale or missing
+    # sqlite_stat1 rows and the planner picks bad plans without them
+    # (2026-07-03 diagnosis on nibrs.db: 34s vs 0.1s for the same query)
+    sqlite3 "$DB_PATH" "PRAGMA analysis_limit=1000; ANALYZE;"
     # Checkpoint WAL and verify
     sqlite3 "$DB_PATH" "PRAGMA wal_checkpoint(TRUNCATE); PRAGMA integrity_check;"
-    echo "  DB checkpointed and verified."
+    echo "  DB checkpointed, analyzed, and verified."
 fi
 
 echo "[$(date)] Done."
