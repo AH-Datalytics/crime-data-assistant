@@ -401,6 +401,19 @@ def main():
     # Current/Historical county support.
     ensure_crosswalk(db_path, args.crosswalk_source, args.crosswalk_cde)
 
+    # Refresh query-planner statistics BEFORE deploy — the scp wholesale-replaces
+    # the VPS file, and a statistics-less database makes SQLite pick
+    # catastrophically bad plans (2026-07-03 diagnosis: 34s vs 0.1s for the same
+    # query). Sampled ANALYZE costs well under a second.
+    print("Refreshing query-planner statistics (ANALYZE)...")
+    conn = sqlite3.connect(db_path)
+    conn.execute("PRAGMA analysis_limit=1000")
+    conn.execute("ANALYZE")
+    conn.commit()
+    stat_rows = conn.execute("SELECT COUNT(*) FROM sqlite_stat1").fetchone()[0]
+    conn.close()
+    print(f"  ANALYZE done: {stat_rows} statistics rows")
+
     # Deploy if requested
     if args.deploy:
         deploy_to_vps(db_path, year, month, args.full_rebuild)
