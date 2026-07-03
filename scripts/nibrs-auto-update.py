@@ -793,6 +793,63 @@ def ensure_state_population(conn):
     log(f"  state_population ready: {len(rows):,} rows, {states} entities, {first_year}-{last_year} ({time.time()-t:.0f}s)")
 
 
+def rebuild_dv_trends(conn):
+    """Precomputed annual DV incident counts (year x state x category).
+
+    COUNT DISTINCT over summary_domestic_violence is CPU-bound (~15s per live
+    query, ~70s for this full rebuild) — precomputing makes DV trend questions
+    millisecond lookups. 'all_dv' rows hold the deduplicated total (an incident
+    can appear in both categories, so category rows must not be summed for
+    totals). See docs/query-audit-2026-07-03-proposals.md (pre-aggregation).
+    """
+    log("Rebuilding summary_dv_trends...")
+    t = time.time()
+    conn.execute("DROP TABLE IF EXISTS summary_dv_trends")
+    conn.execute("""
+        CREATE TABLE summary_dv_trends AS
+        SELECT data_year, state, dv_category,
+               COUNT(DISTINCT ori || ':' || data_year || ':' || incident_num) AS incident_count
+        FROM summary_domestic_violence
+        GROUP BY data_year, state, dv_category
+        UNION ALL
+        SELECT data_year, state, 'all_dv',
+               COUNT(DISTINCT ori || ':' || data_year || ':' || incident_num)
+        FROM summary_domestic_violence
+        GROUP BY data_year, state
+    """)
+    conn.execute("CREATE INDEX idx_dvt_cat_year ON summary_dv_trends(dv_category, data_year)")
+    conn.execute("CREATE INDEX idx_dvt_state_year ON summary_dv_trends(state, data_year)")
+    conn.commit()
+    count = conn.execute("SELECT COUNT(*) FROM summary_dv_trends").fetchone()[0]
+    log(f"  summary_dv_trends ready: {count:,} rows ({time.time()-t:.0f}s)")
+
+
+def refresh_planner_statistics(conn):
+    """Sampled ANALYZE on summary/lookup tables after rebuilds.
+
+    Without sqlite_stat1 rows the planner picks catastrophically bad plans
+    (e.g. driving a state-filtered demographics query through the ORI index:
+    34s instead of 0.1s — 2026-07-03 diagnosis). Rebuilt tables lose their
+    statistics, so this must run after every rebuild. analysis_limit keeps it
+    to ~1000 sampled rows per index (<1s total).
+    """
+    log("Refreshing query-planner statistics (ANALYZE)...")
+    t = time.time()
+    conn.execute("PRAGMA analysis_limit=1000")
+    tables = conn.execute("""
+        SELECT name FROM sqlite_master WHERE type = 'table' AND (
+            name LIKE 'summary_%' OR name IN (
+                'agencies','nibrs_consistent_reporters','nibrs_agency_completeness',
+                'agency_county_crosswalk','state_population','county_lookup'
+            )
+        )
+    """).fetchall()
+    for (table,) in tables:
+        conn.execute(f"ANALYZE {table}")
+    conn.commit()
+    log(f"  ANALYZE done: {len(tables)} tables ({time.time()-t:.0f}s)")
+
+
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
@@ -926,7 +983,9 @@ def main():
     if cde_result.returncode != 0:
         log("  WARNING: CDE state_population extension failed; current-year rates may return empty")
     retry(rebuild_consistent_reporters, conn, log, label="consistent reporters")
+    retry(rebuild_dv_trends, conn, label="dv trends")
     retry(ensure_performance_indexes, conn, label="performance indexes")
+    retry(refresh_planner_statistics, conn, label="planner statistics")
 
     # Save checksums
     save_checksums(checksums)

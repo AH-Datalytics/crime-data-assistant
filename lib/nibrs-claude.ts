@@ -992,7 +992,8 @@ IMPORTANT: The completeness filter ONLY applies to ORI-level/city-level tables (
 - LOCATION SUMMARY (summary_offense_location): ALL "where did crimes happen" queries by location type
 - HATE CRIME SUMMARY (summary_hate_crime): ALL bias-motivated crime queries
 - WEAPON SUMMARIES (summary_offense_weapon, summary_victim_weapon): specific weapon type breakdowns (handgun vs rifle vs knife etc.) — offense-level or victim-level
-- DOMESTIC VIOLENCE SUMMARY (summary_domestic_violence): DV incident counts, victim demographics, relationship breakdowns. "DV" ALWAYS means Domestic Violence, NEVER "Drug and Vice".
+- DV TRENDS (summary_dv_trends): PRECOMPUTED annual DV incident counts by year/state/category — first choice for DV counts and trends. "DV" ALWAYS means Domestic Violence, NEVER "Drug and Vice".
+- DOMESTIC VIOLENCE SUMMARY (summary_domestic_violence): incident-level DV detail (victim demographics, relationships, offenses) when summary_dv_trends lacks the dimension.
 - DV ARRESTS (summary_dv_arrests): DV-related arrests with arrestee demographics (sex, race, age_group, offense, dv_category).
 - CIRCUMSTANCE SUMMARY (summary_victim_circumstance): DV murders/assaults by circumstance code, gang, argument breakdowns
 - WEAPON+CIRCUMSTANCE CROSS (summary_victim_weapon_circumstance): queries combining weapon AND circumstance — "DV murders with firearms", "gang homicides by weapon". NEVER cross summary_victim_weapon with summary_victim_circumstance via ORI joins.
@@ -1110,7 +1111,15 @@ Use CASE expressions to display bias codes as readable names.
 ### Domestic Violence — "DV" ALWAYS means Domestic Violence, NEVER "Drug and Vice"
 Three table options depending on what's needed:
 
-**summary_domestic_violence** — incident-level DV data with victim demographics, relationship, and offense detail. Best for: DV incident counts, DV by offense type, DV victim demographics, DV by relationship type (intimate partner vs family).
+**summary_dv_trends** — PRECOMPUTED annual DV incident counts. ALWAYS use this instead of summary_domestic_violence for DV counts/trends by year, state, or category — it returns in milliseconds vs 15+ seconds.
+- COLUMNS: data_year INT, state TEXT, dv_category TEXT, incident_count INT
+- dv_category: 'intimate_partner', 'family', or 'all_dv' (deduplicated total — an incident can appear in both categories, so use the 'all_dv' rows for totals, NEVER sum the category rows)
+- National totals: SUM(incident_count) across states (incidents never span states).
+- IPV trend example: SELECT data_year, SUM(incident_count) AS incidents FROM summary_dv_trends WHERE dv_category = 'intimate_partner' AND data_year BETWEEN 2021 AND 2025 GROUP BY data_year ORDER BY data_year
+- State DV totals example: SELECT data_year, incident_count FROM summary_dv_trends WHERE state = 'TX' AND dv_category = 'all_dv' ORDER BY data_year
+- Use summary_domestic_violence (below) only when you need dimensions this table lacks: victim demographics, relationship codes, offense codes, agency/city level, or monthly detail.
+
+**summary_domestic_violence** — incident-level DV data with victim demographics, relationship, and offense detail. Best for: DV by offense type, DV victim demographics, DV by relationship type, agency/city-level DV. For plain counts/trends by year/state/category use summary_dv_trends instead.
 - COLUMNS: data_year INT, state TEXT, ori TEXT, incident_num TEXT, incident_date TEXT, victim_sequence TEXT, offense_code TEXT, relationship_code TEXT, dv_category TEXT, victim_sex TEXT, victim_age TEXT, victim_race TEXT
 - dv_category: 'intimate_partner' or 'family'
 - relationship_code: SE=Spouse, CS=Common-law Spouse, BG=Boyfriend/Girlfriend, XS=Ex-Spouse, SC=Stepchild, CH=Child, PA=Parent, SB=Sibling, etc.
