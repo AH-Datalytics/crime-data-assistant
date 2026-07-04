@@ -695,7 +695,12 @@ async function run() {
     const start = Date.now();
 
     try {
-      const resp = await runQuery(tc.question, tab, pageToken);
+      // Per-case session id: a shared session trips the captcha threshold
+      // (~10 queries), after which every case 202s → 20s wait → "-retry"
+      // session — doubling log rows and adding ~13 min per full run
+      // (observed July 3 + 4 nightly runs). Multi-step sessions keep a
+      // shared id per session on purpose (follow-up context needs it).
+      const resp = await runQuery(tc.question, tab, pageToken, `${SESSION_ID}-${tc.id}`);
       const durationMs = Date.now() - start;
       const { status, failures } = checkAssertions(tc, resp, tab);
 

@@ -327,5 +327,14 @@ else
   log "  Release:  $RELEASE_DIR"
   log "  Symlink:  $CURRENT_LINK -> $(readlink -f "$CURRENT_LINK")"
   log "  PM2:      $(pm2 show "$PM2_APP" 2>/dev/null | grep status | head -1 || echo 'check pm2 status')"
+
+  # Post-deploy full scoreboard in the BACKGROUND — regressions come from
+  # deploys, so the full suite runs here (and weekly) while the nightly cron
+  # runs --quick to keep Anthropic costs down. Results land in
+  # scoreboard_runs and the next daily email; deploy returns immediately.
+  if [[ "${SKIP_SCOREBOARD:-0}" != "1" ]]; then
+    log "  Launching post-deploy full scoreboard in background (log: /var/log/scoreboard.log)..."
+    nohup bash -c "cd '$CURRENT_LINK' && npx tsx scripts/nightly-scoreboard.ts" >> /var/log/scoreboard.log 2>&1 &
+  fi
 fi
 log ""
