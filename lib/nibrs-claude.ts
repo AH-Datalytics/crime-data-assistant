@@ -185,6 +185,8 @@ Person crime codes: 09A, 09B, 09C, 11A, 11B, 11C, 11D, 13A, 13B, 13C, 100, 36A, 
 
 **CRITICAL PERFORMANCE RULE**: For ALL person crime count/trend queries, you MUST use the victim summary tables (summary_victim_state_monthly or summary_victim_city_monthly). The raw victims table has ${NIBRS.rawRowCounts["victims"] || "95M"} rows and takes 2+ MINUTES per query. The summary tables return results in <50ms. For demographic breakdowns (race, sex, age, weapon type), use summary_victim_demographics instead of the raw victims table. ONLY use the raw victims table for daily date-level counts or fields not in any summary table.
 
+⚠️ **VICTIM SUMMARY TABLES CONTAIN ONLY PERSON CRIME CODES** (09A, 09B, 09C, 11A, 11B, 11C, 11D, 13A, 13B, 13C, 100, 36A, 36B, 64A, 64B). Property/society offenses — robbery (120), burglary (220), theft (23x), motor vehicle theft (240), arson (200), drugs (35A/35B), weapons (520), etc. — are NOT in summary_victim_state_monthly or summary_victim_city_monthly and will return ZERO rows. For those offenses use summary_state_monthly / summary_city_monthly (offense counts are the correct unit for non-person crimes).
+
 ### summary_victim_state_monthly (STATE-LEVEL ONLY — NO ori column)
 - COLUMNS: year INT, month INT (1-12), state TEXT, ucr_offense_code TEXT, victim_count INT
 - ⚠️ This table has NO ori column. NEVER filter by ori on this table. For city/agency queries, use summary_victim_city_monthly instead.
@@ -194,7 +196,7 @@ Person crime codes: 09A, 09B, 09C, 11A, 11B, 11C, 11D, 13A, 13B, 13C, 100, 36A, 
 ### summary_victim_city_monthly (CITY/AGENCY LEVEL — HAS ori column)
 - COLUMNS: year INT, month INT (1-12), state TEXT, ori TEXT, ucr_offense_code TEXT, victim_count INT
 - INDEXES: (ori, year), (state, year), (ucr_offense_code, year, state), (ori, ucr_offense_code, year)
-- USE FOR: ANY query filtering by city or agency. Also works for state-level queries (just don't filter by ori).
+- USE FOR: ANY query filtering by city or agency. Also works for state-level queries (just don't filter by ori). Person crime codes only — see warning above.
 
 State-level person crime example (murders in TX by year):
   SELECT year, SUM(victim_count) AS murders
@@ -266,6 +268,19 @@ Violent crimes by victim age group for agencies that reported every year from 20
     )
   GROUP BY d.age_group ORDER BY victims DESC
 NOTE: If the user asks for "by year" too, use GROUP BY d.year, d.age_group. Never write GROUP BY d.age_group GROUP BY year.
+
+### summary_victims_per_incident (VICTIMS-PER-INCIDENT DISTRIBUTION — state level)
+- COLUMNS: year INT, state TEXT, ucr_offense_code TEXT, victims_in_incident INT (exact count of individual victims connected to that offense in one incident), incident_count INT
+- INDEXES: (ucr_offense_code, year)
+- USE FOR: "how many X incidents involve multiple victims?", "incidents with 3+ victims", "share of single-victim vs multi-victim incidents". NEVER use raw tables for these.
+- State-level only (no ori column). For city-level victims-per-incident questions, explain that this breakdown is only available statewide/nationally.
+
+Multi-victim aggravated assault incidents example:
+  SELECT year, SUM(CASE WHEN victims_in_incident > 1 THEN incident_count ELSE 0 END) AS multi_victim_incidents,
+         SUM(incident_count) AS total_incidents
+  FROM summary_victims_per_incident
+  WHERE ucr_offense_code = '13A'
+  GROUP BY year ORDER BY year
 
 For daily person crime counts, use the raw victims table:
   SELECT v.incident_date AS date, COUNT(*) AS murders FROM victims v

@@ -679,6 +679,48 @@ def rebuild_summaries(conn, years):
         conn.commit()
     log(f"    Done ({time.time()-t:.0f}s)")
 
+    # ---- 9. summary_victims_per_incident ----
+    # Incidents bucketed by individual-victim count per offense code
+    # (state-level; see scripts/build-victims-per-incident.py for the initial build)
+    log("  Building summary_victims_per_incident...")
+    t = time.time()
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS summary_victims_per_incident (
+            year INT, state TEXT, ucr_offense_code TEXT,
+            victims_in_incident INT, incident_count INT
+        )
+    """)
+    conn.execute("""
+        CREATE INDEX IF NOT EXISTS idx_svpi_code_year
+        ON summary_victims_per_incident(ucr_offense_code, year)
+    """)
+    for yr in years:
+        conn.execute(f"DELETE FROM summary_victims_per_incident WHERE year = {yr}")
+        conn.execute(f"""
+            INSERT INTO summary_victims_per_incident
+            SELECT year, state, code, vc AS victims_in_incident, COUNT(*) AS incident_count
+            FROM (
+                SELECT year, state, ori, incident_num, code, COUNT(*) AS vc
+                FROM (
+                    SELECT year, state, ori, incident_num, connected_offense_1 AS code FROM victims
+                      WHERE year = {yr} AND victim_type = 'I'
+                      AND connected_offense_1 IS NOT NULL AND connected_offense_1 != ''
+                    UNION ALL
+                    SELECT year, state, ori, incident_num, connected_offense_2 FROM victims
+                      WHERE year = {yr} AND victim_type = 'I'
+                      AND connected_offense_2 IS NOT NULL AND connected_offense_2 != ''
+                    UNION ALL
+                    SELECT year, state, ori, incident_num, connected_offense_3 FROM victims
+                      WHERE year = {yr} AND victim_type = 'I'
+                      AND connected_offense_3 IS NOT NULL AND connected_offense_3 != ''
+                )
+                GROUP BY year, state, ori, incident_num, code
+            )
+            GROUP BY year, state, code, vc
+        """)
+        conn.commit()
+    log(f"    Done ({time.time()-t:.0f}s)")
+
     conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
     elapsed = time.time() - total_start
     log(f"  Summary rebuild complete ({elapsed:.0f}s / {elapsed/60:.1f} min)")
@@ -968,6 +1010,28 @@ def main():
         """, (yr,))
     conn.commit()
     log(f"  Updated agency_type for years: {','.join(str(y) for y in affected_years)}")
+
+    # Backfill blank cities from the ORI's most recent prior-year nonblank city.
+    # FBI 2025+ batch headers blanked ~600 agency cities (Menifee, Carmel, Pontiac...)
+    # and re-addressed Boston PD as ROXBURY CROSSING, which broke every
+    # city = '...' lookup for those agencies (July 5 audit, P05).
+    for yr in affected_years:
+        cur = conn.execute("""
+            UPDATE agencies SET city = (
+                SELECT p.city FROM agencies p
+                WHERE p.ori = agencies.ori AND p.year < agencies.year AND p.city != ''
+                ORDER BY p.year DESC LIMIT 1
+            )
+            WHERE year = ? AND city = ''
+              AND EXISTS (SELECT 1 FROM agencies p
+                          WHERE p.ori = agencies.ori AND p.year < agencies.year AND p.city != '')
+        """, (yr,))
+        log(f"  Backfilled {cur.rowcount} blank agency cities for {yr}")
+    conn.execute("""
+        UPDATE agencies SET city = 'BOSTON'
+        WHERE ori = 'MA0130100' AND city = 'ROXBURY CROSSING'
+    """)
+    conn.commit()
 
     # Rebuild summary tables for affected years only
     retry(rebuild_summaries, conn, affected_years, label="rebuild summaries")

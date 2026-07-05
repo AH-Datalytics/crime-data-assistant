@@ -48,6 +48,27 @@ function stripSqlStrings(sql: string): string {
   return sql.replace(/'([^']|'')*'/g, "''");
 }
 
+/** NIBRS crimes-against-persons codes — the only codes in the victim summary tables. */
+const NIBRS_PERSON_CRIME_CODES = new Set([
+  "09A", "09B", "09C", "100", "11A", "11B", "11C", "11D",
+  "13A", "13B", "13C", "36A", "36B", "64A", "64B",
+]);
+
+/** Extract every ucr_offense_code string literal from `= '...'` and `IN (...)` filters. */
+function extractUcrOffenseCodeLiterals(sql: string): string[] {
+  const codes: string[] = [];
+  for (const m of sql.matchAll(/ucr_offense_code\s*(?:=\s*'([^']+)'|IN\s*\(([^)]*)\))/gi)) {
+    if (m[1]) codes.push(m[1]);
+    else if (m[2]) {
+      for (const part of m[2].split(",")) {
+        const code = part.replace(/['\s]/g, "");
+        if (code) codes.push(code);
+      }
+    }
+  }
+  return codes.map((c) => c.toUpperCase());
+}
+
 function countyKey(value: string): string {
   return value
     .replace(/\b(county|parish|borough)\b/ig, " ")
@@ -1208,8 +1229,13 @@ const GUARDRAILS: Guardrail[] = [
     name: "nibrs-weapon-injury-combination-unsupported",
     tabs: ["nibrs"],
     match: (ctx) => asksWeaponInjuryBreakdown(ctx.question) && usesBroadRawWeaponInjuryAggregate(ctx.sql),
-    override: () =>
-      "I can't reliably break NIBRS results down by both weapon type and injury type from the available summary tables. I can show a weapon breakdown, or an injury-type breakdown separately; a combined weapon-by-injury table would need to be precomputed before this can be answered safely.",
+    override: (ctx) => {
+      // Echo the user's weapon term so the limitation reads as an answer to
+      // THEIR question ("firearm crimes by injury type"), not a generic notice
+      const weaponMatch = ctx.question.match(/\b(firearms?|guns?|handguns?|rifles?|shotguns?|knife|knives|blunt objects?|weapons?)\b/i);
+      const weaponTerm = (weaponMatch?.[1] ?? "weapon").toLowerCase().replace(/knives/, "knife").replace(/s$/, "");
+      return `I can't reliably break NIBRS ${weaponTerm} results down by both weapon type and injury type from the available summary tables. I can show a ${weaponTerm === "weapon" ? "weapon" : weaponTerm} breakdown, or an injury-type breakdown separately; a combined weapon-by-injury table would need to be precomputed before this can be answered safely.`;
+    },
   },
   {
     name: "nibrs-raw-table-for-counts",
@@ -1260,7 +1286,9 @@ const GUARDRAILS: Guardrail[] = [
       const sql = ctx.sql;
       // Suggest the specific summary table based on which raw table was used
       let suggestion = "";
-      if (/\bFROM\s+offenses\b|\bJOIN\s+offenses\b/i.test(sql)) {
+      if (/\b(?:victims?|incidents?)\s+(?:per|in\s+(?:an?\s+)?)incident|multiple\s+victims|multi-?victim|\d\+?\s+(?:or\s+more\s+)?victims/i.test(ctx.question)) {
+        suggestion = " For victims-per-incident questions (multiple victims, N+ victims), use summary_victims_per_incident (year, state, ucr_offense_code, victims_in_incident, incident_count) — e.g. SUM(incident_count) WHERE victims_in_incident > 1.";
+      } else if (/\bFROM\s+offenses\b|\bJOIN\s+offenses\b/i.test(sql)) {
         suggestion = " Use summary_state_monthly (state-level) or summary_city_monthly (city-level) for offense counts. For person crimes (murder, rape, assault), use summary_victim_state_monthly or summary_victim_city_monthly instead.";
       } else if (/\bFROM\s+property\b|\bJOIN\s+property\b/i.test(sql)) {
         suggestion = " Use summary_property_offense for property loss data.";
@@ -1270,6 +1298,31 @@ const GUARDRAILS: Guardrail[] = [
         suggestion = " Use summary_offense_weapon for weapon data.";
       }
       return `[SYSTEM: CRITICAL — Your query uses a raw table that has 100M+ rows and WILL time out. You must rewrite it completely using a summary table.${suggestion} Generate a NEW query from scratch using the correct summary table — do not just replace the table name, as the column names and structure are different.]`;
+    },
+  },
+  {
+    // Victim summary tables contain ONLY person crime codes — a robbery (120)
+    // or burglary (220) filter returns zero rows silently (K02, July 5).
+    // Pure non-person queries are rewritten to the offense summary tables
+    // (offense counts ARE the correct FBI counting unit for non-person crimes).
+    // Mixed person + non-person code lists are left alone — the prompt tells
+    // the model to split those. MUST run before nibrs-property-crime-victim-table
+    // so the rewrite pre-empts that guardrail's Claude retry.
+    name: "nibrs-victim-table-nonperson-code",
+    tabs: ["nibrs"],
+    match: (ctx) => {
+      if (!/\bsummary_victim_(?:state|city)_monthly\b/i.test(ctx.sql)) return false;
+      const codes = extractUcrOffenseCodeLiterals(ctx.sql);
+      return codes.length > 0 && codes.some((c) => !NIBRS_PERSON_CRIME_CODES.has(c));
+    },
+    rewrite: (sql) => {
+      const codes = extractUcrOffenseCodeLiterals(sql);
+      if (codes.some((c) => NIBRS_PERSON_CRIME_CODES.has(c))) return null; // mixed — do not downgrade person crimes
+      const fixed = sql
+        .replace(/\bsummary_victim_state_monthly\b/gi, "summary_state_monthly")
+        .replace(/\bsummary_victim_city_monthly\b/gi, "summary_city_monthly")
+        .replace(/\bvictim_count\b/gi, "offense_count");
+      return fixed !== sql ? fixed : null;
     },
   },
   {
@@ -1928,8 +1981,15 @@ const GUARDRAILS: Guardrail[] = [
       if (!usesStateTable) return false;
       // State names that should NOT trigger this guardrail
       const STATE_NAMES = /\b(alabama|alaska|arizona|arkansas|california|colorado|connecticut|delaware|florida|georgia|hawaii|idaho|illinois|indiana|iowa|kansas|kentucky|louisiana|maine|maryland|massachusetts|michigan|minnesota|mississippi|missouri|montana|nebraska|nevada|new hampshire|new jersey|new mexico|new york|north carolina|north dakota|ohio|oklahoma|oregon|pennsylvania|rhode island|south carolina|south dakota|tennessee|texas|utah|vermont|virginia|washington state|west virginia|wisconsin|wyoming|district of columbia|united states)\b/i;
-      // Filter geos to exclude state names
-      const cityGeos = ctx.geos.filter(g => !STATE_NAMES.test(g));
+      // Filter geos to exclude state names. A bare geo ("Washington") is NOT
+      // a city when the question phrases it as a state ("Washington state",
+      // "state of Washington") — the geo extractor drops the "state" suffix,
+      // which made this guardrail kill correct state SQL (G03, July 5).
+      const explicitStatePhrase = (g: string) => {
+        const esc = g.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        return new RegExp(`\\b${esc}\\s+state\\b|\\bstate\\s+of\\s+${esc}\\b`, "i").test(ctx.question);
+      };
+      const cityGeos = ctx.geos.filter(g => !STATE_NAMES.test(g) && !explicitStatePhrase(g));
       // Explicit city name allowlist (not states)
       const q = ctx.question.toLowerCase();
       const CITY_NAMES = /\b(denver|houston|chicago|dallas|phoenix|seattle|portland|miami|atlanta|boston|detroit|memphis|nashville|austin|charlotte|columbus|cleveland|pittsburgh|cincinnati|orlando|tampa|minneapolis|milwaukee|new orleans|omaha|raleigh|oakland|sacramento|fresno|tucson|albuquerque|el paso|san antonio|san diego|san francisco|los angeles|philadelphia|baltimore|richmond|norfolk|durham|stockton|anchorage|honolulu|arlington|lubbock|garland|madison|reno|glendale|hialeah|chesapeake|south bend|springfield|jacksonville|kansas city|st\.?\s*louis|baton rouge)\b/i;

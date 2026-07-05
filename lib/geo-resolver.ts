@@ -128,7 +128,19 @@ export function getGeoResolutionIssues(input: string): GeoResolutionIssue[] {
     .filter((mention) => !isStateAbbreviationComparison(text, mention))
     .filter((mention) => !isCampusAgencyNameWithStateContext(text, mention))
     .filter((mention) => !hasExplicitCityCountyKindContext(text, mention))
+    .filter((mention) => !isCountySuffixContext(text, mention))
     .map(issueFromMention);
+}
+
+/**
+ * "Jefferson Parish Louisiana" matched the bare city group "Jefferson" and
+ * offered an 8-state city list with no Louisiana option (C05, July 5). A
+ * city-kind mention immediately followed by County/Parish/Borough is a county
+ * reference — the county crosswalk guardrails own that path, not this clarifier.
+ */
+function isCountySuffixContext(input: string, mention: GeoPlaceMention): boolean {
+  if (classifyCandidates(mention.candidates) !== "city") return false;
+  return /^\s+(county|parish|borough)\b/i.test(input.slice(mention.end));
 }
 
 /**
@@ -164,6 +176,18 @@ function resolveCityByStateContext(
   if (states.size !== 1) return mention;
   const [state] = [...states];
   const inState = mention.candidates.filter((candidate) => candidate.state === state);
+
+  // The user named a state but NONE of the candidates are in it — a clarifier
+  // list of other states' cities is useless ("Jefferson Parish Louisiana"
+  // offered GA/WI/IA/... with no LA option, C05 July 5). Stand down and let
+  // the model + downstream guardrails resolve the place within that state.
+  if (inState.length === 0) {
+    return {
+      ...mention,
+      requiresClarification: false,
+      reason: `${mention.text} has no candidates in ${state}; deferring to downstream geo handling`,
+    };
+  }
   if (inState.length !== 1) return mention;
 
   return {

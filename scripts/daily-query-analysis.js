@@ -616,12 +616,17 @@ function buildEmail(stats, issues, visitors, suggestions, weeklyTrends) {
       deltaStr = ` <span style="color:${color}; font-size: 13px;">(${sign}${delta.toFixed(1)} pts vs prior run)</span>`;
     }
     const failedIds = JSON.parse(latest.failed_ids || "[]");
+    const flakyIds = JSON.parse(latest.flaky_ids || "[]");
+    const flakyStr = flakyIds.length > 0 ? ` <span style="color:#f57c00; font-size: 13px;">(${flakyIds.length} flaky — passed on retry)</span>` : "";
     html += `<h2>Nightly Scoreboard</h2>
-    <p style="font-size: 18px; margin: 8px 0;"><strong>${latest.passed}/${scored} passed (${pct}%)</strong>${deltaStr}</p>
+    <p style="font-size: 18px; margin: 8px 0;"><strong>${latest.passed}/${scored} passed (${pct}%)</strong>${deltaStr}${flakyStr}</p>
     <p style="font-size: 12px; color: #888; margin: 4px 0;">Run ${latest.run_ts} against ${latest.host} — ${latest.inconclusive} inconclusive (excluded from score)</p>`;
     if (failedIds.length > 0) {
       html += `<p style="font-size: 13px;"><strong>Failing cases:</strong> ${failedIds.join(", ")}<br>
       <span style="color: #888;">Rerun: <code>npx tsx scripts/live-replay.ts --rerun ${failedIds.join(",")}</code></span></p>`;
+    }
+    if (flakyIds.length > 0) {
+      html += `<p style="font-size: 13px;"><strong>Flaky cases (failed once, passed on retry):</strong> ${flakyIds.join(", ")}</p>`;
     }
   }
 

@@ -33,8 +33,9 @@ interface ReplayRun {
   passed: number;
   failed: number;
   inconclusive: number;
+  flaky?: number;
   errors: number;
-  results: { id: string; status: string; category: string; failures: string[] }[];
+  results: { id: string; status: string; category: string; failures: string[]; flaky?: boolean }[];
 }
 
 function latestReplayJson(): string | null {
@@ -75,6 +76,7 @@ function main() {
   const accuracy = scored > 0 ? run.passed / scored : 0;
   const failedIds = run.results.filter((r) => r.status === "fail").map((r) => r.id);
   const inconclusiveIds = run.results.filter((r) => r.status === "inconclusive").map((r) => r.id);
+  const flakyIds = run.results.filter((r) => r.flaky).map((r) => r.id);
 
   const dbPath = resolveQueryLogPath();
   const db = new Database(dbPath);
@@ -94,14 +96,16 @@ function main() {
       json_path TEXT
     )
   `);
+  // flaky_ids added 2026-07-05 (retry-once); ALTER is a no-op error on fresh tables
+  try { db.exec("ALTER TABLE scoreboard_runs ADD COLUMN flaky_ids TEXT"); } catch { /* column exists */ }
   const prev = db
     .prepare("SELECT * FROM scoreboard_runs ORDER BY id DESC LIMIT 1")
     .get() as { accuracy: number; passed: number; failed: number; run_ts: string } | undefined;
 
   db.prepare(
     `INSERT INTO scoreboard_runs
-     (run_ts, host, mode, total, passed, failed, inconclusive, accuracy, failed_ids, inconclusive_ids, json_path)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+     (run_ts, host, mode, total, passed, failed, inconclusive, accuracy, failed_ids, inconclusive_ids, flaky_ids, json_path)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   ).run(
     run.timestamp,
     run.host,
@@ -113,12 +117,13 @@ function main() {
     accuracy,
     JSON.stringify(failedIds),
     JSON.stringify(inconclusiveIds),
+    JSON.stringify(flakyIds),
     jsonPath,
   );
   db.close();
 
   const pctStr = `${(100 * accuracy).toFixed(1)}%`;
-  console.log(`\n[scoreboard] ${run.passed}/${scored} passed (${pctStr}), ${run.inconclusive} inconclusive`);
+  console.log(`\n[scoreboard] ${run.passed}/${scored} passed (${pctStr}), ${run.inconclusive} inconclusive${flakyIds.length ? `, ${flakyIds.length} flaky` : ""}`);
   if (prev) {
     const delta = 100 * (accuracy - prev.accuracy);
     console.log(
@@ -126,6 +131,7 @@ function main() {
     );
   }
   if (failedIds.length) console.log(`[scoreboard] Failed: ${failedIds.join(", ")}`);
+  if (flakyIds.length) console.log(`[scoreboard] Flaky (passed on retry): ${flakyIds.join(", ")}`);
   if (inconclusiveIds.length) console.log(`[scoreboard] Inconclusive: ${inconclusiveIds.join(", ")}`);
   console.log(`[scoreboard] Persisted to ${dbPath}`);
 }

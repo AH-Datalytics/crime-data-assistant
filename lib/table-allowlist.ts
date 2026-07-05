@@ -47,9 +47,27 @@ function extractCteNames(sql: string): Set<string> {
   return names;
 }
 
+/**
+ * Belt-and-suspenders CTE detection: any `name AS (` in a read-only SELECT is a
+ * CTE header (column aliases never precede parens). The stateful walker in
+ * extractCteNames can bail early on unusual-but-valid WITH clauses, which made
+ * the allowlist flag CTE names as unknown tables (A13/July 5 scoreboard,
+ * error "table_allowlist:agency_or,min_max,years").
+ */
+function extractCteNamesLoose(sql: string): Set<string> {
+  const names = new Set<string>();
+  const re = /\b([A-Za-z_][\w]*)\s+(?:\([^)]*\)\s*)?AS\s*\(/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(sql)) !== null) {
+    if (!/^(?:cast|select)$/i.test(m[1])) names.add(m[1].toLowerCase());
+  }
+  return names;
+}
+
 export function extractReferencedTables(sql: string): string[] {
   const cleaned = stripSqlStrings(sql);
   const ctes = extractCteNames(cleaned);
+  for (const name of extractCteNamesLoose(cleaned)) ctes.add(name);
   const tables = new Set<string>();
   const tableRe = /\b(?:FROM|JOIN)\s+(?!\()(?:(?:main|temp)\.)?([A-Za-z_][\w]*)\b/gi;
   let m: RegExpExecArray | null;

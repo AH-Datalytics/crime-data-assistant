@@ -23,6 +23,7 @@ import { applyResultDisclosures } from "@/lib/result-disclosure";
 import { normalizeHistoryForTab } from "@/lib/chat-history";
 import { detectFollowupTransform } from "@/lib/followup-transform";
 import { getBlockingGeoClarification } from "@/lib/geo-resolver";
+import { getCountyScopeClarification } from "@/lib/county-clarifier";
 import { detectDemographicHomicideRateOverride } from "@/lib/capability-overrides";
 import { historicalYearAvailability } from "@/lib/year-availability";
 import { validateQueryContractSql } from "@/lib/query-contract-validator";
@@ -422,6 +423,46 @@ export async function POST(req: NextRequest) {
               sql: null as unknown as string,
               explanation: capabilityOverride.explanation,
               title: capabilityOverride.title,
+              columns: [],
+              rows: [],
+              rowCount: 0,
+              truncated: false,
+              chartConfig: null,
+              chartMeta: null,
+              executionTimeMs: ms,
+            })
+          )
+        );
+        controller.close();
+      },
+    });
+
+    return new Response(stream, {
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive",
+        "X-RateLimit-Remaining": String(rateCheck.remaining),
+      },
+    });
+  }
+
+  const countyScope = getBlockingGeoClarification(question)
+    ? null
+    : getCountyScopeClarification(question, body?.history);
+  if (countyScope) {
+    const ms = Date.now() - totalStart;
+    writeLog(question, null, 0, null, ms, countyScope.explanation, tab, [`geo:${countyScope.id}`], "deterministic", sessionId);
+
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(
+          encoder.encode(
+            sseEvent({
+              type: "result",
+              sql: null as unknown as string,
+              explanation: countyScope.explanation,
+              title: "",
               columns: [],
               rows: [],
               rowCount: 0,

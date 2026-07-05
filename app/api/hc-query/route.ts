@@ -21,6 +21,7 @@ import { normalizeHistoryForTab } from "@/lib/chat-history";
 import { detectFollowupTransform } from "@/lib/followup-transform";
 import { applyChartCustomizations } from "@/lib/chart-customization";
 import { getBlockingGeoClarification } from "@/lib/geo-resolver";
+import { getCountyScopeClarification } from "@/lib/county-clarifier";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function jsonResp(data: Record<string, any> | QueryError, status = 200) {
@@ -166,6 +167,26 @@ export async function POST(req: NextRequest) {
         question,
         sql: null,
         explanation: geoClarification.explanation,
+        title: "",
+        columns: [],
+        rows: [],
+        rowCount: 0,
+        truncated: false,
+        chartConfig: null,
+        chartMeta: null,
+        executionTimeMs: executionMs,
+      });
+    }
+
+    const countyScope = getCountyScopeClarification(question, body?.history);
+    if (countyScope) {
+      const executionMs = Date.now() - start;
+      writeLog(question, null, 0, null, executionMs, countyScope.explanation, "hate_crime", [`geo:${countyScope.id}`], "deterministic", sessionId);
+      return jsonResp({
+        success: true,
+        question,
+        sql: null,
+        explanation: countyScope.explanation,
         title: "",
         columns: [],
         rows: [],

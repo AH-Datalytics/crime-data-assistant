@@ -25,6 +25,7 @@ import { pastCompleteCalendarYearsRange } from "@/lib/time-conventions";
 import { detectFollowupTransform } from "@/lib/followup-transform";
 import { detectNibrsCapabilityOverride } from "@/lib/nibrs-capability-overrides";
 import { getBlockingGeoClarification } from "@/lib/geo-resolver";
+import { getCountyScopeClarification } from "@/lib/county-clarifier";
 import { asksCampusAgency, buildCampusAgencySummarySql, campusAgencyChartAxesFromSql, campusAgencyDisplayName, knownCampusAgencyResolution, resolveCampusAgencyOris, shouldResolveCampusAgencySql } from "@/lib/nibrs-campus-agency";
 import { validateQueryContractSql } from "@/lib/query-contract-validator";
 
@@ -213,6 +214,26 @@ export async function POST(req: NextRequest) {
         question,
         sql: null as unknown as string,
         explanation: geoClarification.explanation,
+        title: "",
+        columns: [],
+        rows: [],
+        rowCount: 0,
+        truncated: false,
+        chartConfig: null,
+        chartMeta: null,
+        executionTimeMs: executionMs,
+      } as QueryResponse);
+    }
+
+    const countyScope = getCountyScopeClarification(question, body?.history);
+    if (countyScope) {
+      const executionMs = Date.now() - routeStart;
+      writeNibrsLog(question, null, 0, null, executionMs, countyScope.explanation, [`geo:${countyScope.id}`], "deterministic", sessionId);
+      return jsonResp({
+        success: true,
+        question,
+        sql: null as unknown as string,
+        explanation: countyScope.explanation,
         title: "",
         columns: [],
         rows: [],

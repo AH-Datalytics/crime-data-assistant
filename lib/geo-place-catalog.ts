@@ -124,6 +124,15 @@ export const GEO_PLACE_CATALOG: GeoPlaceCatalogEntry[] = [
       `${name} County ${code}`,
       `${name} County, ${stateName(code)}`,
       `${name} County ${stateName(code)}`,
+      // Louisiana counties are parishes — "Jefferson Parish" must resolve to
+      // the LA county entry, not fall through to the bare "Jefferson" city group
+      ...(code === "LA" ? [
+        `${name} Parish`,
+        `${name} Parish, LA`,
+        `${name} Parish LA`,
+        `${name} Parish, Louisiana`,
+        `${name} Parish Louisiana`,
+      ] : []),
     ], "generated-county"))
   ),
 ];
