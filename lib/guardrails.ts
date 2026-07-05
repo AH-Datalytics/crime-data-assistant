@@ -947,6 +947,8 @@ const GUARDRAILS: Guardrail[] = [
     name: "city-abbreviation-to-national",
     tabs: ["current", "historical"],
     match: (ctx) => {
+      // Countywide questions are owned by countywide-crosswalk-required
+      if (isCountywideGeographyQuestion(ctx.question)) return false;
       // Only fire if question mentions a city via abbreviation or leading pattern
       // but SQL uses national/state tables with no agency filter
       const sqlLower = ctx.sql.toLowerCase();
@@ -1975,6 +1977,10 @@ const GUARDRAILS: Guardrail[] = [
     name: "historical-city-got-state",
     tabs: ["historical"],
     match: (ctx) => {
+      // Countywide questions are owned by countywide-crosswalk-required —
+      // firing here too would tell the model to use a single CITY agency,
+      // directly contradicting the crosswalk instruction
+      if (isCountywideGeographyQuestion(ctx.question)) return false;
       const sql = ctx.sql.toLowerCase();
       // SQL uses the state_national table (not agency-level)
       const usesStateTable = sql.includes("historical_state_national");

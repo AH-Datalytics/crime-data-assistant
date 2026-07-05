@@ -3,9 +3,62 @@ import type { PromptHistoryMessage } from "./chat-history";
 export type FollowupBreakdown = "state" | "city" | "agency";
 
 export interface FollowupTransform {
-  name: "add_breakdown" | "add_continuous_reporting_filter" | "replace_with_dv_victim_demographics";
+  name: "add_breakdown" | "add_continuous_reporting_filter" | "replace_with_dv_victim_demographics" | "resolve_county_scope";
   dimension?: FollowupBreakdown;
   instruction: string;
+  /** When set, routes should use this instead of the raw question for guardrail
+   *  context extraction — bare answers like "Countywide total" carry no county
+   *  name, so guardrails like countywide-crosswalk-required can't fire on them. */
+  contextQuestion?: string;
+}
+
+/** Signature phrase of the county-scope clarifier (lib/county-clarifier.ts). */
+const COUNTY_CLARIFIER_SIGNATURE = "countywide total (all law enforcement agencies";
+
+function countyScopeAnswer(question: string): "countywide" | "sheriff" | null {
+  const q = question.trim();
+  if (q.length > 80) return null; // bare scope answers, not new full questions
+  const countywide = /\b(county\s*-?\s*wide|countywide|all (?:law enforcement )?agencies|whole county|entire county|total across)\b/i.test(q);
+  const sheriff = /\bsheriff\b|\bcounty (?:agency|police|record)\b/i.test(q);
+  if (countywide && !sheriff) return "countywide";
+  if (sheriff && !countywide) return "sheriff";
+  return null;
+}
+
+/**
+ * The user answered the county-scope clarifier ("Countywide total" / "Sheriff's
+ * office only"). Recover the original county question from history and return
+ * the transform. Without this, the model answered "Countywide total" with
+ * STATE-level data — the county context lived only in history (MS02-S2, July 5).
+ */
+function detectCountyScopeResolution(question: string, history: PromptHistoryMessage[]): FollowupTransform | null {
+  const scope = countyScopeAnswer(question);
+  if (!scope) return null;
+
+  for (let i = history.length - 1; i >= 0; i--) {
+    const msg = history[i];
+    if (msg.role !== "assistant" || !msg.content.toLowerCase().includes(COUNTY_CLARIFIER_SIGNATURE)) continue;
+    for (let j = i - 1; j >= 0; j--) {
+      if (history[j].role !== "user") continue;
+      const original = history[j].content.trim();
+      if (scope === "countywide") {
+        return {
+          name: "resolve_county_scope",
+          contextQuestion: `${original} (countywide total across all agencies)`,
+          instruction:
+            `[SYSTEM: The user answered the county-scope clarifier: they want the COUNTYWIDE TOTAL for their original question "${original}". Sum across ALL law enforcement agencies mapped to the county via agency_county_crosswalk (county_key is the bare uppercase county/parish name without the County/Parish suffix). Do NOT use state-level tables (historical_state_national, summary_state_monthly, summary_victim_state_monthly) — this is a county question, not a state question. In the explanation, disclose that the countywide total sums all mapped reporting agencies and depends on each agency's reporting participation.]`,
+        };
+      }
+      return {
+        name: "resolve_county_scope",
+        contextQuestion: `${original} (sheriff's office only)`,
+        instruction:
+          `[SYSTEM: The user answered the county-scope clarifier: they want ONLY the county law-enforcement agency (sheriff's office) for their original question "${original}". Query the single county agency record — for Historical use historical_agency with type = 'county' and the county agency name; on other tabs resolve the county agency's ORI. Do NOT sum multiple agencies via the crosswalk and do NOT use state-level tables.]`,
+      };
+    }
+    return null;
+  }
+  return null;
 }
 
 function requestedBreakdown(question: string): FollowupBreakdown | null {
@@ -44,6 +97,9 @@ function requestedDomesticViolenceVictimDemographics(question: string): boolean 
 }
 
 export function detectFollowupTransform(question: string, history: PromptHistoryMessage[]): FollowupTransform | null {
+  const countyScope = detectCountyScopeResolution(question, history);
+  if (countyScope) return countyScope;
+
   if (requestedDomesticViolenceVictimDemographics(question) && hasPriorDomesticViolenceContext(history)) {
     return {
       name: "replace_with_dv_victim_demographics",

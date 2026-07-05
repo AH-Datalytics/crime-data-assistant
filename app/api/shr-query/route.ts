@@ -231,6 +231,9 @@ export async function POST(req: NextRequest) {
 
     const history = normalizeHistoryForTab(body?.history, "shr");
     const followupTransform = detectFollowupTransform(question, history);
+    // Bare clarifier answers ("Countywide total") carry no county name — use
+    // the transform's reconstructed question so guardrails see the geography
+    const guardrailQuestion = followupTransform?.contextQuestion ?? question;
     const promptHistory = followupTransform
       ? [...history, { role: "user" as const, content: followupTransform.instruction }]
       : history;
@@ -660,7 +663,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Step 2b: Run guardrails
-    const ctx = extractQueryContext(sql, question, "shr");
+    const ctx = extractQueryContext(sql, guardrailQuestion, "shr");
     const guardrailResult = runGuardrails(ctx);
     if (guardrailResult.sql !== sql) {
       sql = guardrailResult.sql;
@@ -722,7 +725,7 @@ export async function POST(req: NextRequest) {
 
     // Step 2c: Post-retry guardrail re-check
     {
-      const postRetryCtx = extractQueryContext(sql, question, "shr");
+      const postRetryCtx = extractQueryContext(sql, guardrailQuestion, "shr");
       const postRetryResult = runGuardrails(postRetryCtx);
       if (postRetryResult.overrideResponse) {
         const msg = postRetryResult.overrideResponse;

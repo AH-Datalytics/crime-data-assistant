@@ -677,6 +677,9 @@ export async function POST(req: NextRequest) {
         const isHistorical = body?.mode === "historical";
         const history = normalizeHistoryForTab(body?.history, isHistorical ? "historical" : "current");
         const followupTransform = detectFollowupTransform(question, history);
+        // Bare clarifier answers ("Countywide total") carry no county name — use
+        // the transform's reconstructed question so guardrails see the geography
+        const guardrailQuestion = followupTransform?.contextQuestion ?? question;
         const promptHistory = followupTransform
           ? [...history, { role: "user" as const, content: followupTransform.instruction }]
           : history;
@@ -778,7 +781,7 @@ export async function POST(req: NextRequest) {
         }
 
         // Step 1b: Extract context and run guardrails
-        const ctx = extractQueryContext(claude.sql, question, tab as "current" | "historical");
+        const ctx = extractQueryContext(claude.sql, guardrailQuestion, tab as "current" | "historical");
         const guardrailResult = runGuardrails(ctx);
 
         // Also check yAxis/yAxisLabel issues that need ClaudeResponse fields
@@ -855,7 +858,7 @@ export async function POST(req: NextRequest) {
 
         // Post-retry guardrail re-check
         {
-          const postRetryCtx = extractQueryContext(claude.sql, question, tab as "current" | "historical");
+          const postRetryCtx = extractQueryContext(claude.sql, guardrailQuestion, tab as "current" | "historical");
           const postRetryResult = runGuardrails(postRetryCtx);
           if (postRetryResult.overrideResponse) {
             writeLog(question, claude.sql, 0, `guardrail_override:${postRetryResult.overrideGuardrail}`, Date.now() - totalStart, postRetryResult.overrideResponse, tab, postRetryResult.fired, "haiku-4.5", sessionId);
@@ -1418,7 +1421,7 @@ export async function POST(req: NextRequest) {
 
         // Step 6: Generate refined explanation in background, send as update
         // Re-extract context from final SQL (may have been fixed by guardrails/retry)
-        const finalCtx = extractQueryContext(sql, question, tab as "current" | "historical");
+        const finalCtx = extractQueryContext(sql, guardrailQuestion, tab as "current" | "historical");
         try {
           let postExplanation = await generateExplanation({
             ctx: finalCtx,

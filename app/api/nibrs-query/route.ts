@@ -290,6 +290,9 @@ export async function POST(req: NextRequest) {
     // Step 1: Translate to SQL via Claude (with conversation history for context)
     const history = normalizeHistoryForTab(body?.history, "nibrs");
     const followupTransform = detectFollowupTransform(question, history);
+    // Bare clarifier answers ("Countywide total") carry no county name — use
+    // the transform's reconstructed question so guardrails see the geography
+    const guardrailQuestion = followupTransform?.contextQuestion ?? question;
     const promptHistory = followupTransform
       ? [...history, { role: "user" as const, content: followupTransform.instruction }]
       : history;
@@ -400,7 +403,7 @@ export async function POST(req: NextRequest) {
     let sql = validation.sanitized!;
 
     // Step 2a: Run shared guardrail pipeline
-    const ctx = extractQueryContext(sql, question, "nibrs");
+    const ctx = extractQueryContext(sql, guardrailQuestion, "nibrs");
     const guardrailResult = runGuardrails(ctx);
 
     // Apply auto-rewrites (e.g., NE→NB state codes, state→city table fixes)
@@ -487,7 +490,7 @@ export async function POST(req: NextRequest) {
 
     // Step 2b: Post-retry guardrail re-check — block if critical guardrails still fire
     {
-      const postRetryCtx = extractQueryContext(sql, question, "nibrs");
+      const postRetryCtx = extractQueryContext(sql, guardrailQuestion, "nibrs");
       const postRetryResult = runGuardrails(postRetryCtx);
       // Hard override on second failure
       if (postRetryResult.overrideResponse) {
@@ -941,7 +944,7 @@ export async function POST(req: NextRequest) {
     const cdeDisclaimers = explanation.slice(claude.explanation.length).trim();
     const explainStart = Date.now();
     // Re-extract context from final SQL (may have been fixed by guardrails/retry)
-    const finalCtx = extractQueryContext(sql, question, "nibrs");
+    const finalCtx = extractQueryContext(sql, guardrailQuestion, "nibrs");
     const postExplanation = await generateExplanation({
       ctx: finalCtx,
       columns,
