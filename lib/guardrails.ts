@@ -116,6 +116,23 @@ function isCountywideGeographyQuestion(question: string): boolean {
   return true;
 }
 
+function exactYearRequested(question: string): number | null {
+  const years = [...question.matchAll(/\b(19\d{2}|20\d{2})\b/g)].map((match) => Number(match[1]));
+  const uniqueYears = [...new Set(years)];
+  if (uniqueYears.length !== 1) return null;
+  const year = uniqueYears[0];
+  if (/\b(?:between|from|since|through|thru|to|until|after|before|last|past)\b/i.test(question)) return null;
+  const yearPattern = new RegExp(`\\b(?:in|for|during)\\s+${year}\\b|\\b${year}\\s+(?:only|alone)\\b`, "i");
+  return yearPattern.test(question) ? year : null;
+}
+
+function sqlConstrainedToExactYear(sql: string, year: number): boolean {
+  const value = String(year);
+  return new RegExp(`\\b(?:\\w+\\.)?year\\s*=\\s*${value}\\b`, "i").test(sql) ||
+    new RegExp(`\\b(?:\\w+\\.)?year\\s+IN\\s*\\(\\s*${value}\\s*\\)`, "i").test(sql) ||
+    new RegExp(`\\b(?:\\w+\\.)?year\\s+BETWEEN\\s+${value}\\s+AND\\s+${value}\\b`, "i").test(sql);
+}
+
 function asksContinuousReportingFilter(question: string): boolean {
   return /\b(?:continuous(?:ly)?|consistent(?:ly)?)\s+(?:reporting\s+)?(?:agenc(?:y|ies)|reporters?)\b/i.test(question) ||
     /\b(?:agenc(?:y|ies)|reporters?)\s+that\s+reported\s+every\s+year\b/i.test(question) ||
@@ -564,6 +581,21 @@ const GUARDRAILS: Guardrail[] = [
       ctx.isPerCapita && !ctx.sql.toLowerCase().includes("population") && !/_rate\b/.test(ctx.sql) && !/_clr\b/.test(ctx.sql),
     message: () =>
       "The user asked for rates/per capita but the SQL does not join population data.",
+  },
+  {
+    name: "historical-exact-year-expanded",
+    tabs: ["historical"],
+    match: (ctx) => {
+      const year = exactYearRequested(ctx.question);
+      if (!year) return false;
+      if (sqlConstrainedToExactYear(ctx.sql, year)) return false;
+      return /\bhistorical_(?:agency_crime|agency_clearance|staffing|agency_population|state_national)\b/i.test(ctx.sql) &&
+        /\byear\b/i.test(ctx.sql);
+    },
+    message: (ctx) => {
+      const year = exactYearRequested(ctx.question);
+      return `[SYSTEM: The user asked for exactly ${year}. Do not expand this into the agency's full available history, a recursive year range, or a multi-year trend. Filter the final result to year = ${year} and return only that year unless the user explicitly asks for a range.]`;
+    },
   },
   {
     name: "unpivoted-comparison",
@@ -1305,21 +1337,35 @@ const GUARDRAILS: Guardrail[] = [
   {
     // Victim summary tables contain ONLY person crime codes — a robbery (120)
     // or burglary (220) filter returns zero rows silently (K02, July 5).
+    // Mixed person + non-person lists need a retry so the model splits the
+    // query across victim summaries and offense summaries.
+    name: "nibrs-victim-table-mixed-code-list",
+    tabs: ["nibrs"],
+    match: (ctx) => {
+      if (!/\bsummary_victim_(?:state|city)_monthly\b/i.test(ctx.sql)) return false;
+      const codes = extractUcrOffenseCodeLiterals(ctx.sql);
+      return codes.some((c) => NIBRS_PERSON_CRIME_CODES.has(c)) &&
+        codes.some((c) => !NIBRS_PERSON_CRIME_CODES.has(c));
+    },
+    message: () =>
+      "[SYSTEM: Your query filters a victim summary table with a mixed person/non-person offense list. Victim summary tables contain only person-crime codes. Split the calculation: count person-crime codes from summary_victim_state_monthly/summary_victim_city_monthly using SUM(victim_count), count non-person codes such as robbery (120), burglary, theft, auto theft, arson, drugs, or weapons from summary_state_monthly/summary_city_monthly using SUM(offense_count), then UNION ALL or join the two aggregates and sum them in the outer query. Do not drop the non-person codes and do not query raw tables.]",
+  },
+  {
+    // Victim summary tables contain ONLY person crime codes — a robbery (120)
+    // or burglary (220) filter returns zero rows silently (K02, July 5).
     // Pure non-person queries are rewritten to the offense summary tables
     // (offense counts ARE the correct FBI counting unit for non-person crimes).
-    // Mixed person + non-person code lists are left alone — the prompt tells
-    // the model to split those. MUST run before nibrs-property-crime-victim-table
-    // so the rewrite pre-empts that guardrail's Claude retry.
+    // MUST run before nibrs-property-crime-victim-table so the rewrite
+    // pre-empts that guardrail's Claude retry.
     name: "nibrs-victim-table-nonperson-code",
     tabs: ["nibrs"],
     match: (ctx) => {
       if (!/\bsummary_victim_(?:state|city)_monthly\b/i.test(ctx.sql)) return false;
       const codes = extractUcrOffenseCodeLiterals(ctx.sql);
-      return codes.length > 0 && codes.some((c) => !NIBRS_PERSON_CRIME_CODES.has(c));
+      return codes.length > 0 && codes.every((c) => !NIBRS_PERSON_CRIME_CODES.has(c));
     },
     rewrite: (sql) => {
       const codes = extractUcrOffenseCodeLiterals(sql);
-      if (codes.some((c) => NIBRS_PERSON_CRIME_CODES.has(c))) return null; // mixed — do not downgrade person crimes
       const fixed = sql
         .replace(/\bsummary_victim_state_monthly\b/gi, "summary_state_monthly")
         .replace(/\bsummary_victim_city_monthly\b/gi, "summary_city_monthly")

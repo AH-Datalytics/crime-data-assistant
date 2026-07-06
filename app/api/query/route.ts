@@ -258,6 +258,13 @@ function hasHistoricalMetricIntent(question: string): boolean {
   return /\b(?:crimes?|violent|property|murders?|homicides?|rapes?|robber(?:y|ies)|assaults?|burglar(?:y|ies)|thefts?|larcen(?:y|ies)|auto|motor vehicle|clearance|cleared|rates?|staffing|officers?|police force|trends?|by year|per year|monthly|compare|vs\.?|versus|population)\b/i.test(question);
 }
 
+function isSameResultFollowup(question: string, rawHistory?: unknown): boolean {
+  const hasHistory = Array.isArray(rawHistory) && rawHistory.length > 0;
+  if (!hasHistory) return false;
+  return /\b(?:same|previous|prior|last)\b/i.test(question) &&
+    /\b(?:chart|table|data|query|result|results)\b/i.test(question);
+}
+
 function answerHistoricalPlaceLookup(
   question: string,
   db: ReturnType<typeof getDb>
@@ -563,7 +570,9 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  const historicalPlace = tab === "historical" ? answerHistoricalPlaceLookup(question, getDb()) : null;
+  const historicalPlace = tab === "historical" && !isSameResultFollowup(question, body?.history)
+    ? answerHistoricalPlaceLookup(question, getDb())
+    : null;
   if (historicalPlace) {
     const ms = Date.now() - totalStart;
     writeLog(question, historicalPlace.sql, historicalPlace.rows.length, null, ms, historicalPlace.explanation, tab, ["deterministic-place-lookup"], "deterministic", sessionId);

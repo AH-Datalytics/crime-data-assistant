@@ -46,6 +46,8 @@ const TICK_STYLE = {
 };
 
 const GRID_COLOR = "#ddd8ce";
+const X_AXIS_LINE_STYLE = { stroke: "#b8b0a5", strokeWidth: 1 };
+const X_AXIS_TICK_LINE_STYLE = { stroke: "#b8b0a5", strokeWidth: 1 };
 
 function properCase(s: string): string {
   // Handle rolling_12m, rolling_12, rolling_12_month etc. → "Rolling 12-Month"
@@ -403,8 +405,8 @@ function ChartPanel({ config, rows, meta }: ChartPanelProps) {
                 name={properCase(config.xAxis)}
                 tickFormatter={formatAxisValue}
                 tick={TICK_STYLE}
-                tickLine={false}
-                axisLine={false}
+                tickLine={X_AXIS_TICK_LINE_STYLE}
+                axisLine={X_AXIS_LINE_STYLE}
                 {...(config.xAxisLabel ? { label: { value: config.xAxisLabel, position: "insideBottom", offset: -12, style: { fontSize: 11, fill: "#1e2a35", fontFamily: "'DM Sans', 'Segoe UI', Arial, sans-serif" } } } : {})}
               />
               <YAxis
@@ -454,8 +456,8 @@ function ChartPanel({ config, rows, meta }: ChartPanelProps) {
               <XAxis
                 dataKey={xAxisDataKey}
                 tick={TICK_STYLE}
-                tickLine={false}
-                axisLine={false}
+                tickLine={X_AXIS_TICK_LINE_STYLE}
+                axisLine={X_AXIS_LINE_STYLE}
                 {...(plainYears ? { type: "number" as const, domain: ["dataMin", "dataMax"] as const } : {})}
                 tickFormatter={
                   daily ? (v) => formatDateTickLabel(v, dailySingleYear)
@@ -476,7 +478,7 @@ function ChartPanel({ config, rows, meta }: ChartPanelProps) {
                 }
                 angle={fewYearsMonthly ? -40 : 0}
                 textAnchor={fewYearsMonthly ? "end" : "middle"}
-                height={fewYearsMonthly ? 60 : undefined}
+                height={fewYearsMonthly ? 60 : (plainYears || ym || daily) ? 34 : undefined}
               />
               <YAxis
                 tickFormatter={yTickFormatter}
@@ -548,8 +550,8 @@ function ChartPanel({ config, rows, meta }: ChartPanelProps) {
               <XAxis
                 dataKey={xAxisDataKey}
                 tick={TICK_STYLE}
-                tickLine={false}
-                axisLine={false}
+                tickLine={X_AXIS_TICK_LINE_STYLE}
+                axisLine={X_AXIS_LINE_STYLE}
                 tickFormatter={
                   daily ? (v: string) => formatDateTickLabel(v, dailySingleYear)
                   : singleYearMonthly ? (v: string) => formatMonthOnly(v)

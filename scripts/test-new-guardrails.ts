@@ -2601,8 +2601,10 @@ console.log("\n═══ nibrs-dv-victim-count-column scoping ═══\n");
     "nibrs"
   );
   const r = runGuardrails(ctx);
-  assert("FP: #4586 valid CTE comparison fires NOTHING",
-    r.fired.length === 0 && !r.overrideGuardrail,
+  assert("TP: #4586 mixed violent-crime list gets split-table retry, not a block",
+    r.fired.includes("nibrs-victim-table-mixed-code-list") &&
+    r.issues.some((issue) => /Split the calculation/i.test(issue)) &&
+    !r.overrideGuardrail,
     `fired: ${JSON.stringify(r.fired)}, override: ${r.overrideGuardrail}`);
 }
 
@@ -2661,6 +2663,46 @@ console.log("\n═══ nested-aggregation-discards-measure ═══\n");
   const r = runGuardrails(ctx);
   assert("FP: flat SUM(CASE) query does NOT fire",
     !r.fired.includes("nested-aggregation-discards-measure"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  historical-exact-year-expanded
+// ══════════════════════════════════════════════════════════════════════
+
+{
+  const ctx = extractQueryContext(
+    "WITH agency AS (SELECT ha.ori FROM historical_agency ha WHERE ha.agency = 'Chicago'), years AS (SELECT 1932 AS year UNION ALL SELECT year + 1 FROM years WHERE year < 2025) SELECT y.year, hac.violent_rate FROM years y LEFT JOIN historical_agency_crime hac ON hac.year = y.year ORDER BY y.year",
+    "what was the violent crime rate in Chicago, IL in 2024?",
+    "historical"
+  );
+  const r = runGuardrails(ctx);
+  assert("TP: exact-year Historical ask must not expand to full time series",
+    r.fired.includes("historical-exact-year-expanded"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  const ctx = extractQueryContext(
+    "SELECT hac.year, hac.violent_rate FROM historical_agency_crime hac JOIN historical_agency ha ON ha.ori = hac.ori WHERE ha.agency = 'Chicago' AND ha.state = 'il' AND hac.year = 2024",
+    "what was the violent crime rate in Chicago, IL in 2024?",
+    "historical"
+  );
+  const r = runGuardrails(ctx);
+  assert("FP: exact-year Historical ask accepts year = 2024",
+    !r.fired.includes("historical-exact-year-expanded"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  const ctx = extractQueryContext(
+    "SELECT hac.year, hac.violent_rate FROM historical_agency_crime hac JOIN historical_agency ha ON ha.ori = hac.ori WHERE ha.agency = 'Chicago' AND hac.year BETWEEN 2024 AND 2025",
+    "violent crime rate in Chicago since 2024",
+    "historical"
+  );
+  const r = runGuardrails(ctx);
+  assert("FP: since-year Historical ask can return a range",
+    !r.fired.includes("historical-exact-year-expanded"),
     `fired: ${JSON.stringify(r.fired)}`);
 }
 
