@@ -16,6 +16,11 @@ import { HISTORICAL } from "../lib/dynamic-facts";
 }
 
 {
+  const result = historicalYearAvailability(`homicide rate graph from 1960 to ${HISTORICAL.crimeMaxYear + 1}`);
+  assert.equal(result, null, "Historical trend queries spanning available years should return the available range");
+}
+
+{
   const result = historicalYearAvailability("how many officers did Chicago have in 2026");
   assert.ok(result, "future staffing year should be unavailable in Historical");
   assert.equal(result.maxYear, HISTORICAL.staffingMaxYear);

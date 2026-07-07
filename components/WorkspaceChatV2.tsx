@@ -71,6 +71,9 @@ type RoutingMode = "auto" | "picker" | "manual" | "follow_up" | "rerun";
 const SOURCE_OPTIONS = pickerOptions();
 const RERUN_SOURCE_OPTIONS = SOURCE_OPTIONS.filter((opt): opt is { id: RegistrySourceId; label: string; color: string } => opt.id !== "auto");
 
+function isContextDependentQuestion(question: string): boolean {
+  return /\b(?:same|that|this|it|those|them|again|also|instead|change|add|remove|make|where is|what about|show me the same|show the same|do the same)\b/i.test(question.trim());
+}
 
 async function readSSEStream(response: Response, onEvent: (event: StreamEvent) => void) {
   const reader = response.body?.getReader();
@@ -317,6 +320,11 @@ export default function WorkspaceChat({ sourceYearRanges }: WorkspaceChatProps) 
   const hasStarted = exchanges.length > 0 || loading || error || showDisambiguation;
   const activeExchange = exchanges[activeExchangeIdx];
   const rerunQuestion = exchanges[activeExchangeIdx]?.question || lastQuestion;
+  const canCrossSourceRerun =
+    !!rerunQuestion &&
+    !activeExchange?.routingReason?.startsWith("Follow-up") &&
+    !activeExchange?.routingReason?.startsWith("Rerun") &&
+    !isContextDependentQuestion(rerunQuestion);
   const rerunSourceOptions = activeSource ? RERUN_SOURCE_OPTIONS.filter(opt => opt.id !== activeSource) : RERUN_SOURCE_OPTIONS;
   const sourceNudge =
     activeExchange &&
@@ -341,7 +349,7 @@ export default function WorkspaceChat({ sourceYearRanges }: WorkspaceChatProps) 
       </button>
     </div>
   ) : null;
-  const rerunControl = rerunQuestion && !loading && rerunSourceOptions.length > 0 ? (
+  const rerunControl = canCrossSourceRerun && !loading && rerunSourceOptions.length > 0 ? (
     <div className="relative shrink-0">
       <select
         value=""

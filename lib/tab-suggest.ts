@@ -369,6 +369,13 @@ function detectTimeRange(q: string): QueryIntent["timeRange"] {
   const rangeMatch = q.match(/\b(19\d{2}|20\d{2})\s*(?:to|through|-|–)\s*(19\d{2}|20\d{2})\b/i);
   if (rangeMatch) return { start: parseInt(rangeMatch[1]), end: parseInt(rangeMatch[2]) };
 
+  // "from 1960 to present" is an open-ended historical range, not a current-year-only ask.
+  const openEndedRangeMatch = q.match(/\b(?:since|from|starting|beginning)\s+(19\d{2}|20\d{2})\s*(?:(?:to|through|-|–)\s*)?(?:present|current|now|today)\b/i);
+  if (openEndedRangeMatch) return { start: parseInt(openEndedRangeMatch[1]), end: null };
+
+  const bareOpenEndedRangeMatch = q.match(/\b(19\d{2}|20\d{2})\s*(?:to|through|-|–)\s*(?:present|current|now|today)\b/i);
+  if (bareOpenEndedRangeMatch) return { start: parseInt(bareOpenEndedRangeMatch[1]), end: null };
+
   // "past/last N years"
   const relativeYears = q.match(/\b(?:past|last)\s+(\d{1,2})\s+years?\b/i);
   if (relativeYears) {

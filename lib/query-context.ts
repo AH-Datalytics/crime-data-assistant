@@ -74,6 +74,10 @@ export function extractQueryContext(
   tab: Tab
 ): QueryContext {
   const sqlLower = sql.toLowerCase();
+  const sqlHasExplicitAggregateGeo =
+    /\bhistorical_state_national\b/i.test(sql) ||
+    /\bnational_monthly\b/i.test(sql) ||
+    /\bstate\s*=\s*'United States'/i.test(sql);
 
   // --- Tables ---
   const tables: string[] = [];
@@ -100,7 +104,7 @@ export function extractQueryContext(
   }
 
   // If no geos from SQL, try to extract from the user's question
-  if (geos.length === 0) {
+  if (geos.length === 0 && !sqlHasExplicitAggregateGeo) {
     // "in Charlotte", "in New York City"
     const inMatch = question.match(/\bin\s+([A-Z][a-z]+(?:[\s-][A-Z][a-z]+)*)/);
     if (inMatch) {
@@ -122,7 +126,7 @@ export function extractQueryContext(
         );
         if (leadingCity) {
           // Reject common English words that aren't city names
-          const NON_CITY_LEADING = /^(National|What|How|Why|When|Where|Which|Who|Show|List|Get|Find|Total|Annual|Compare|Give|Tell|Are|Is|Has|The|All|Any|Do|Does|Did|Can|Could|Should|Would|Will|May|Might)$/i;
+          const NON_CITY_LEADING = /^(National|Historical|Current|NIBRS|SHR|Hate|FBI|What|How|Why|When|Where|Which|Who|Show|List|Get|Find|Total|Annual|Compare|Give|Tell|Are|Is|Has|The|All|Any|Do|Does|Did|Can|Could|Should|Would|Will|May|Might)$/i;
           if (!NON_CITY_LEADING.test(leadingCity[1])) {
             geos.push(leadingCity[1]);
           }

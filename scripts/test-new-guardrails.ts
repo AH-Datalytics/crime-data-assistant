@@ -50,6 +50,18 @@ console.log("\n═══ sql-safety ═══\n");
     `fired: ${JSON.stringify(r.fired)}`);
 }
 
+{
+  const ctx = extractQueryContext(
+    "SELECT year, murder_rate FROM historical_state_national WHERE state = 'United States' AND year BETWEEN 1960 AND 2025 ORDER BY year LIMIT 1000",
+    "Historical homicide rate from 1960 to 2025",
+    "historical"
+  );
+  const r = runGuardrails(ctx);
+  assert("FP: Historical source label is not treated as a city",
+    !r.fired.includes("historical-city-got-state") && !r.fired.includes("city-abbreviation-to-national"),
+    `geos: ${JSON.stringify(ctx.geos)}, fired: ${JSON.stringify(r.fired)}`);
+}
+
 // ══════════════════════════════════════════════════════════════════════
 //  agency-lookup-not-crime-data guardrail
 // ══════════════════════════════════════════════════════════════════════

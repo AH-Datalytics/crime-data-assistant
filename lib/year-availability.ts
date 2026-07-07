@@ -33,6 +33,8 @@ export function historicalYearAvailability(question: string): HistoricalYearAvai
   const requestedYear = Math.max(...years);
   const { maxYear, label, canUseCurrent } = historicalMaxYearForQuestion(question);
   if (requestedYear <= maxYear) return null;
+  const spansAvailableHistoricalYears = years.length >= 2 && Math.min(...years) <= maxYear;
+  if (label === "annual crime data" && spansAvailableHistoricalYears) return null;
 
   const currentSuggestion = canUseCurrent
     ? ` For ${requestedYear} partial-year monthly data, use Current Trends.`
