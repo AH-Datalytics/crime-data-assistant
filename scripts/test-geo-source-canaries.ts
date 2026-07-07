@@ -159,8 +159,8 @@ assertSourceStatuses("fatal shooting data for KCMO", "city:MO:kansas-city", {
   shr: "safe_exact",
 });
 
-assertResolve("baltimore per capita murder trend", ["city:MD:baltimore-city", "county:MD:baltimore"], true);
-assertResolve("baltimore city per capita murder trend", ["city:MD:baltimore-city"], false);
+assertResolve("baltimore per capita murder trend", ["city:MD:baltimore", "county:MD:baltimore"], true);
+assertResolve("baltimore city per capita murder trend", ["city:MD:baltimore"], false);
 assertResolve("baltimore county murder trend", ["county:MD:baltimore"], false);
 assertSourceStatuses("baltimore county murder trend", "county:MD:baltimore", {
   current: "safe_exact",
@@ -192,7 +192,7 @@ assertSourceStatuses("robbery clearance in Los Angeles County, California", "cou
   shr: "safe_exact",
 });
 
-assertResolve("St Louis murders per year", ["city:MO:st-louis-city", "county:MO:st-louis"], true);
+assertResolve("St Louis murders per year", ["city:MO:st-louis", "county:MO:st-louis"], true);
 assertResolve("St Louis County murders per year", ["county:MN:st-louis", "county:MO:st-louis"], true);
 assertResolve("St Louis County, Missouri murders per year", ["county:MO:st-louis"], false);
 

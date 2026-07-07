@@ -67,10 +67,10 @@ assert.equal(
   "KC can mean Kansas City, Missouri or Kansas City, Kansas. Choose: Kansas City, Missouri or Kansas City, Kansas."
 );
 
-assert.equal(getGeoResolutionIssues("murders in STL")[0].title, "STL city and county are separate");
+assert.equal(getGeoResolutionIssues("murders in STL")[0].title, "St. Louis city and county are separate");
 assert.equal(
   geoClarificationText(getGeoResolutionIssues("murders in STL")[0]),
-  "STL can mean St. Louis city or St. Louis County. Choose: St. Louis city or St. Louis County."
+  "Use St. Louis city or St. Louis County, Missouri when asking for local results. Choose: St. Louis city or St. Louis County."
 );
 
 assert.equal(getGeoResolutionIssues("LA murders per month")[0].title, "LA is ambiguous");

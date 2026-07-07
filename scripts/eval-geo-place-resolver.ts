@@ -22,7 +22,7 @@ const CASES: Case[] = [
   { id: "GEO-11", query: "crime in Washington County, Oregon", expected: "county:OR:washington" },
   { id: "GEO-12", query: "crime in Linn County", expected: "ambiguous multi-state county" },
   { id: "GEO-13", query: "murders in Baltimore", expected: "ambiguous city/county" },
-  { id: "GEO-14", query: "murders in Baltimore city", expected: "city:MD:baltimore-city" },
+  { id: "GEO-14", query: "murders in Baltimore city", expected: "city:MD:baltimore" },
   { id: "GEO-15", query: "Compare Portland, Oregon with Portland, Maine", expected: "two unambiguous city mentions" },
   { id: "GEO-16", query: "show national murder trend", expected: "no place mention" },
   { id: "GEO-17", query: "Robbery in Anchorage Alaska", expected: "city:AK:anchorage" },

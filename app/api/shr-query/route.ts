@@ -31,6 +31,7 @@ import { getBlockingGeoClarification } from "@/lib/geo-resolver";
 import { getCountyScopeClarification } from "@/lib/county-clarifier";
 import { detectShrGroupRateOverride } from "@/lib/capability-overrides";
 import { displayShrAgencyName, normalizeShrAgencyText } from "@/lib/shr-agency-normalization";
+import { validateQueryContractSql } from "@/lib/query-contract-validator";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function jsonResp(data: Record<string, any> | QueryError, status = 200) {
@@ -252,6 +253,21 @@ export async function POST(req: NextRequest) {
       model: string | null = null,
       sid: string | null = null
     ) => logQuery(q, sqlText, rowCount, logError, ms, logResponse, tabName, guardrails, model, sid, routingMeta);
+    const applyContractValidation = (inputSql: string): string => {
+      const contractResult = validateQueryContractSql({
+        question: guardrailQuestion,
+        source: "shr",
+        sql: inputSql,
+        routingMeta,
+      });
+      if (contractResult.fired.length > 0) {
+        console.log(`[shr][contract] Fired: ${contractResult.fired.join(", ")}`);
+      }
+      if (contractResult.warnings.length > 0) {
+        console.log(`[shr][contract] Warnings: ${contractResult.warnings.join(", ")}`);
+      }
+      return contractResult.sql;
+    };
 
     const geoClarification = getBlockingGeoClarification(question);
     if (geoClarification) {
@@ -446,7 +462,7 @@ export async function POST(req: NextRequest) {
       const selectPlace = isMultiCity ? "i.agency, i.state, " : "";
       const groupPlace = isMultiCity ? ", i.agency, i.state" : "";
       const orderPlace = isMultiCity ? ", i.agency, i.state" : "";
-      const sql = `${withClause}SELECT i.year, ${selectPlace}COUNT(*) AS fatal_shootings FROM incidents i ${joinClauses} WHERE ${whereClauses.join(" AND ")} GROUP BY i.year${groupPlace} ORDER BY i.year${orderPlace} LIMIT 1000`;
+      const sql = applyContractValidation(`${withClause}SELECT i.year, ${selectPlace}COUNT(*) AS fatal_shootings FROM incidents i ${joinClauses} WHERE ${whereClauses.join(" AND ")} GROUP BY i.year${groupPlace} ORDER BY i.year${orderPlace} LIMIT 1000`);
       const title = `Fatal Shootings (Firearm Homicides), ${titlePlace}, ${yearIntent.label}`;
       const explanation = `Fatal shootings (firearm homicides) by year${titlePlace !== "Nationally" ? ` in ${titlePlace}` : ""} ${yearIntent.explanation}. This shows only homicides where the weapon was a firearm - nonfatal shootings are not tracked in this database.`;
 
@@ -611,7 +627,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    let sql = validation.sanitized!;
+    let sql = applyContractValidation(validation.sanitized!);
 
     {
       const tableDb = getShrDb();
@@ -638,7 +654,7 @@ export async function POST(req: NextRequest) {
             if (retryClaude?.sql) {
               const retryValidation = validateAndSanitize(retryClaude.sql as string);
               if (retryValidation.valid) {
-                const retrySql = retryValidation.sanitized!;
+                const retrySql = applyContractValidation(retryValidation.sanitized!);
                 const retryTableCheck = validateTablesForTab(retrySql, "shr", tableDb);
                 if (retryTableCheck.ok) {
                   sql = retrySql;
@@ -711,7 +727,7 @@ export async function POST(req: NextRequest) {
         if (retryClaude?.sql) {
           const retryValidation = validateAndSanitize(retryClaude.sql as string);
           if (retryValidation.valid) {
-            sql = retryValidation.sanitized!;
+            sql = applyContractValidation(retryValidation.sanitized!);
             claude.explanation = (retryClaude.explanation as string) || claude.explanation;
             claude.title = (retryClaude.title as string) || claude.title;
             claude.chartType = (retryClaude.chartType as string) || claude.chartType;
@@ -745,7 +761,7 @@ export async function POST(req: NextRequest) {
         writeLog(question, sql, 0, "or_precedence_second_failure", Date.now() - start, msg, "shr", postRetryResult.fired, "haiku-4.5", sessionId);
         return jsonResp({ success: true, question, sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - start });
       }
-      if (postRetryResult.sql !== sql) sql = postRetryResult.sql;
+      if (postRetryResult.sql !== sql) sql = applyContractValidation(postRetryResult.sql);
     }
 
     // Step 3: Execute
@@ -755,6 +771,7 @@ export async function POST(req: NextRequest) {
     }
     let rows: Record<string, unknown>[];
     try {
+      sql = applyContractValidation(sql);
       rows = db.prepare(sql).all() as Record<string, unknown>[];
       rows = normalizeShrDisplayRows(rows);
     } catch (dbErr) {

@@ -124,4 +124,55 @@ import { validateQueryContractSql } from "../lib/query-contract-validator";
   assert.equal(result.sql.includes("ha.state = 'TX'"), true);
 }
 
+{
+  const contract = buildQueryContract("baltimore city homicides in first 6 months of each year", "shr");
+  assert(contract);
+  assert.equal(contract.geography.kind, "city");
+  assert.equal(contract.geography.name, "Baltimore");
+  assert.equal(contract.geography.state, "MD");
+}
+
+{
+  const result = validateQueryContractSql({
+    question: "baltimore city homicides in first 6 months of each year",
+    source: "shr",
+    sql: "SELECT i.year, COUNT(*) FROM incidents i WHERE i.ori IN (SELECT ori FROM shr_agency_alias WHERE state = 'MD' AND alias_key LIKE '%BALTIMORE%CITY%') GROUP BY i.year",
+  });
+  assert(result.fired.includes("contract-city-jurisdiction-suffix"));
+  assert.match(result.sql, /alias_key = 'BALTIMORE'/);
+  assert.doesNotMatch(result.sql, /BALTIMORE%CITY/i);
+}
+
+{
+  const result = validateQueryContractSql({
+    question: "Richmond city murders by year",
+    source: "historical",
+    sql: "SELECT year, murder FROM historical_agency_crime hac JOIN historical_agency ha ON ha.ori = hac.ori WHERE ha.agency = 'Richmond City' AND ha.state = 'VA'",
+  });
+  assert(result.fired.includes("contract-city-jurisdiction-suffix"));
+  assert.match(result.sql, /ha\.agency = 'Richmond'/);
+  assert.doesNotMatch(result.sql, /Richmond City/);
+}
+
+{
+  const result = validateQueryContractSql({
+    question: "Fairfax city assaults",
+    source: "nibrs",
+    sql: "SELECT data_year, SUM(offense_count) FROM summary_city_monthly scm JOIN agencies a ON a.ori = scm.ori WHERE a.city = 'FAIRFAX CITY' AND a.state = 'VA' GROUP BY data_year",
+  });
+  assert(result.fired.includes("contract-city-jurisdiction-suffix"));
+  assert.match(result.sql, /a\.city = 'FAIRFAX'/);
+  assert.doesNotMatch(result.sql, /FAIRFAX CITY/);
+}
+
+{
+  const result = validateQueryContractSql({
+    question: "Kansas City Missouri murders",
+    source: "current",
+    sql: "SELECT year, SUM(murders) FROM agency_monthly WHERE agency = 'Kansas City' AND state = 'MO' GROUP BY year",
+  });
+  assert.deepEqual(result.fired, []);
+  assert.match(result.sql, /Kansas City/);
+}
+
 console.log("query contract tests passed");

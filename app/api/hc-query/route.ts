@@ -22,6 +22,7 @@ import { detectFollowupTransform } from "@/lib/followup-transform";
 import { applyChartCustomizations } from "@/lib/chart-customization";
 import { getBlockingGeoClarification } from "@/lib/geo-resolver";
 import { getCountyScopeClarification } from "@/lib/county-clarifier";
+import { validateQueryContractSql } from "@/lib/query-contract-validator";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function jsonResp(data: Record<string, any> | QueryError, status = 200) {
@@ -157,6 +158,21 @@ export async function POST(req: NextRequest) {
       model: string | null = null,
       sid: string | null = null
     ) => logQuery(q, sqlText, rowCount, logError, ms, logResponse, tabName, guardrails, model, sid, routingMeta);
+    const applyContractValidation = (inputSql: string): string => {
+      const contractResult = validateQueryContractSql({
+        question,
+        source: "hate_crime",
+        sql: inputSql,
+        routingMeta,
+      });
+      if (contractResult.fired.length > 0) {
+        console.log(`[hate_crime][contract] Fired: ${contractResult.fired.join(", ")}`);
+      }
+      if (contractResult.warnings.length > 0) {
+        console.log(`[hate_crime][contract] Warnings: ${contractResult.warnings.join(", ")}`);
+      }
+      return contractResult.sql;
+    };
 
     const geoClarification = getBlockingGeoClarification(question);
     if (geoClarification) {
@@ -309,7 +325,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    let sql = validation.sanitized!;
+    let sql = applyContractValidation(validation.sanitized!);
 
     {
       const tableDb = getHateCrimeDb();
@@ -333,7 +349,7 @@ export async function POST(req: NextRequest) {
             if (retryClaude?.sql) {
               const retryValidation = validateAndSanitize(retryClaude.sql as string);
               if (retryValidation.valid) {
-                const retrySql = retryValidation.sanitized!;
+                const retrySql = applyContractValidation(retryValidation.sanitized!);
                 const retryTableCheck = validateTablesForTab(retrySql, "hate_crime", tableDb);
                 if (retryTableCheck.ok) {
                   sql = retrySql;
@@ -402,6 +418,7 @@ export async function POST(req: NextRequest) {
 
     let rows: Record<string, unknown>[];
     try {
+      sql = applyContractValidation(sql);
       rows = db.prepare(sql).all() as Record<string, unknown>[];
     } catch (dbErr) {
       const msg = dbErr instanceof Error ? dbErr.message : String(dbErr);
@@ -425,8 +442,10 @@ export async function POST(req: NextRequest) {
         if (retryClaude?.sql) {
           const retryValidation = validateAndSanitize(retryClaude.sql as string);
           if (retryValidation.valid) {
-            const retryRows = db.prepare(retryValidation.sanitized!).all() as Record<string, unknown>[];
+            const retrySql = applyContractValidation(retryValidation.sanitized!);
+            const retryRows = db.prepare(retrySql).all() as Record<string, unknown>[];
             rows = retryRows;
+            sql = retrySql;
             claude.explanation = (retryClaude.explanation as string) || claude.explanation;
             claude.title = (retryClaude.title as string) || claude.title;
             claude.chartType = (retryClaude.chartType as string) || claude.chartType;

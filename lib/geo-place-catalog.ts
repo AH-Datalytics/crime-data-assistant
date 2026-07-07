@@ -70,6 +70,49 @@ const STATES: { code: string; name: string; aliases?: string[] }[] = [
   { code: "DC", name: "District of Columbia" },
 ];
 
+const CITY_JURISDICTION_ALIAS_KEYS = new Set([
+  "MD:BALTIMORE",
+  "MO:ST. LOUIS",
+  "VA:ALEXANDRIA",
+  "VA:BRISTOL",
+  "VA:BUENA VISTA",
+  "VA:CHARLOTTESVILLE",
+  "VA:CHESAPEAKE",
+  "VA:COLONIAL HEIGHTS",
+  "VA:COVINGTON",
+  "VA:DANVILLE",
+  "VA:EMPORIA",
+  "VA:FAIRFAX",
+  "VA:FALLS CHURCH",
+  "VA:FRANKLIN",
+  "VA:FREDERICKSBURG",
+  "VA:GALAX",
+  "VA:HAMPTON",
+  "VA:HARRISONBURG",
+  "VA:HOPEWELL",
+  "VA:LEXINGTON",
+  "VA:LYNCHBURG",
+  "VA:MANASSAS",
+  "VA:MANASSAS PARK",
+  "VA:MARTINSVILLE",
+  "VA:NEWPORT NEWS",
+  "VA:NORFOLK",
+  "VA:NORTON",
+  "VA:PETERSBURG",
+  "VA:POQUOSON",
+  "VA:PORTSMOUTH",
+  "VA:RADFORD",
+  "VA:RICHMOND",
+  "VA:ROANOKE",
+  "VA:SALEM",
+  "VA:STAUNTON",
+  "VA:SUFFOLK",
+  "VA:VIRGINIA BEACH",
+  "VA:WAYNESBORO",
+  "VA:WILLIAMSBURG",
+  "VA:WINCHESTER",
+]);
+
 const REVIEWED_CITY_COUNTY: GeoPlaceCatalogEntry[] = [
   city("Alameda", "CA", ["Alameda", "Alameda, California", "Alameda CA"]),
   county("Alameda", "CA", ["Alameda", "Alameda County", "Alameda County, California", "Alameda County CA"]),
@@ -98,9 +141,9 @@ const MANUAL_ALIASES: GeoPlaceCatalogEntry[] = [
   state("Washington", "WA", ["Washington", "Washington State", "State of Washington"]),
   city("Kansas City", "MO", ["Kansas City", "KC", "KCMO", "Kansas City, Missouri", "Kansas City MO"]),
   city("Kansas City", "KS", ["Kansas City", "KC", "KCK", "Kansas City, Kansas", "Kansas City KS"]),
-  city("Baltimore city", "MD", ["Baltimore", "Batlimore", "Baltimore city", "Batlimore city", "Baltimore, Maryland", "Baltimore MD"]),
+  city("Baltimore", "MD", ["Baltimore", "Batlimore", "Baltimore city", "Batlimore city", "Baltimore, Maryland", "Baltimore MD"]),
   county("Baltimore", "MD", ["Baltimore", "Batlimore", "Baltimore County", "Batlimore County", "Baltimore County, Maryland", "Baltimore County MD"]),
-  city("St. Louis city", "MO", ["St. Louis", "Saint Louis", "St Louis", "STL", "St. Louis city", "Saint Louis city", "St Louis city", "STL city", "St. Louis, Missouri", "St Louis MO"]),
+  city("St. Louis", "MO", ["St. Louis", "Saint Louis", "St Louis", "STL", "St. Louis city", "Saint Louis city", "St Louis city", "STL city", "St. Louis, Missouri", "St Louis MO"]),
   county("St. Louis", "MO", ["St. Louis", "Saint Louis", "St Louis", "STL", "St. Louis County", "Saint Louis County", "St Louis County", "STL County", "St. Louis County, Missouri", "St Louis County MO"]),
   city("Portland", "OR", ["Portland", "Portland, Oregon", "Portland OR"]),
   city("Portland", "ME", ["Portland", "Portland, Maine", "Portland ME"]),
@@ -110,7 +153,7 @@ export const GEO_PLACE_CATALOG: GeoPlaceCatalogEntry[] = [
   ...STATES.map(({ code, name, aliases }) => state(name, code, aliases ?? [name])),
   ...MANUAL_ALIASES,
   ...REVIEWED_CITY_COUNTY,
-  ...GENERATED_GEO_CITIES.map((entry) =>
+  ...GENERATED_GEO_CITIES.filter((entry) => !isGeneratedJurisdictionDuplicate(entry.name, entry.state)).map((entry) =>
     city(entry.name, entry.state, entry.aliases, "generated-city", {
       dominancePopulation: entry.dominancePopulation,
       dominancePopulationYear: entry.dominancePopulationYear,
@@ -144,16 +187,31 @@ function city(
   source: GeoPlaceCatalogEntry["source"] = "reviewed-trap",
   metadata: Pick<GeoPlaceCatalogEntry, "dominancePopulation" | "dominancePopulationYear" | "dominancePopulationSource"> = {}
 ): GeoPlaceCatalogEntry {
+  const cityAliases = cityJurisdictionAliases(name, stateCode, aliases);
   return {
     id: `city:${stateCode}:${slug(name)}`,
     kind: "city",
     name,
     state: stateCode,
-    aliases,
+    aliases: cityAliases,
     canonicalQuery: `${name}, ${stateCode}`,
     source,
     ...metadata,
   };
+}
+
+function cityJurisdictionAliases(name: string, stateCode: string, aliases: string[]): string[] {
+  const values = new Set(aliases);
+  const jurisdictionKey = `${stateCode}:${name.toUpperCase()}`;
+  if (!/\bCity$/i.test(name) && CITY_JURISDICTION_ALIAS_KEYS.has(jurisdictionKey)) {
+    values.add(`${name} City`);
+  }
+  return [...values];
+}
+
+function isGeneratedJurisdictionDuplicate(name: string, stateCode: string): boolean {
+  const baseName = name.replace(/\s+city$/i, "").trim();
+  return baseName !== name && CITY_JURISDICTION_ALIAS_KEYS.has(`${stateCode}:${baseName.toUpperCase()}`);
 }
 
 function county(name: string, stateCode: string, aliases: string[], source: GeoPlaceCatalogEntry["source"] = "reviewed-trap"): GeoPlaceCatalogEntry {

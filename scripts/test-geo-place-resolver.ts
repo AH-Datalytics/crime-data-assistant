@@ -109,17 +109,17 @@ assertClarifies("crime in Linn County");
 assertCandidates("crime in Linn County, Oregon", ["county:OR:linn"]);
 assertDoesNotClarify("crime in Linn County, Oregon");
 
-assertCandidates("murders in Baltimore", ["city:MD:baltimore-city", "county:MD:baltimore"]);
+assertCandidates("murders in Baltimore", ["city:MD:baltimore", "county:MD:baltimore"]);
 assertClarifies("murders in Baltimore");
-assertCandidates("murders in batlimore", ["city:MD:baltimore-city", "county:MD:baltimore"]);
+assertCandidates("murders in batlimore", ["city:MD:baltimore", "county:MD:baltimore"]);
 assertClarifies("murders in batlimore");
-assertCandidates("murders in Baltimore city", ["city:MD:baltimore-city"]);
-assertCandidates("murders in batlimore city", ["city:MD:baltimore-city"]);
+assertCandidates("murders in Baltimore city", ["city:MD:baltimore"]);
+assertCandidates("murders in batlimore city", ["city:MD:baltimore"]);
 assertCandidates("murders in Baltimore County, Maryland", ["county:MD:baltimore"]);
 
-assertCandidates("murders in STL", ["city:MO:st-louis-city", "county:MO:st-louis"]);
+assertCandidates("murders in STL", ["city:MO:st-louis", "county:MO:st-louis"]);
 assertClarifies("murders in STL");
-assertCandidates("murders in STL city", ["city:MO:st-louis-city"]);
+assertCandidates("murders in STL city", ["city:MO:st-louis"]);
 assertDoesNotClarify("murders in STL city");
 assertCandidates("murders in STL County", ["county:MO:st-louis"]);
 assertDoesNotClarify("murders in STL County");

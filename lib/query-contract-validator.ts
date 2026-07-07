@@ -21,6 +21,40 @@ function hasStateFilter(sql: string): boolean {
   return /\b(?:\w+\.)?state\s*(?:=|IN\s*\()\s*'[^']+'/i.test(sql);
 }
 
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function normalizeSqlLiteral(value: string, template: string): string {
+  const compact = value.replace(/\s+/g, " ").trim();
+  return /^[A-Z0-9 .'-]+$/.test(template) ? compact.toUpperCase() : compact;
+}
+
+function rewriteCityJurisdictionSuffix(sql: string, cityName: string): string {
+  if (!cityName || /\bCity$/i.test(cityName)) return sql;
+
+  const canonical = cityName.replace(/\s+/g, " ").trim();
+  const canonicalRe = escapeRegExp(canonical).replace(/\s+/g, "\\s+");
+  let rewritten = sql;
+
+  rewritten = rewritten.replace(
+    new RegExp(`(\\balias_key\\s+)LIKE\\s+'%${canonicalRe}%CITY%'`, "gi"),
+    (_match, prefix) => `${prefix}= '${canonical.toUpperCase()}'`
+  );
+
+  rewritten = rewritten.replace(
+    new RegExp(`(\\b(?:\\w+\\.)?(?:city|agency|agency_name|canonical_agency|alias_key)\\s*=\\s*)'(${canonicalRe}\\s+City)'`, "gi"),
+    (_match, prefix, literal) => `${prefix}'${normalizeSqlLiteral(canonical, literal)}'`
+  );
+
+  rewritten = rewritten.replace(
+    new RegExp(`(\\b(?:\\w+\\.)?(?:city|agency|agency_name|canonical_agency)\\s+LIKE\\s+')%(${canonicalRe})%CITY%(')`, "gi"),
+    (_match, prefix, literal, suffix) => `${prefix}%${normalizeSqlLiteral(canonical, literal)}%${suffix}`
+  );
+
+  return rewritten;
+}
+
 export function validateQueryContractSql(opts: {
   question: string;
   source: QueryContractSource;
@@ -41,6 +75,14 @@ export function validateQueryContractSql(opts: {
     if (rewritten !== sql) {
       sql = rewritten;
       fired.push("contract-state-code-alias");
+    }
+  }
+
+  if (contract.geography.kind === "city" && contract.geography.name) {
+    const rewritten = rewriteCityJurisdictionSuffix(sql, contract.geography.name);
+    if (rewritten !== sql) {
+      sql = rewritten;
+      fired.push("contract-city-jurisdiction-suffix");
     }
   }
 
