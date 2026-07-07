@@ -165,6 +165,22 @@ import { validateQueryContractSql } from "../lib/query-contract-validator";
   assert.doesNotMatch(result.sql, /Richmond City/);
 }
 
+for (const aliasSql of [
+  "SELECT * FROM incidents i WHERE i.ori IN (SELECT ori FROM shr_agency_alias WHERE state = 'MO' AND alias_key LIKE '%ST. LOUIS CITY%')",
+  "SELECT * FROM incidents i WHERE i.ori IN (SELECT ori FROM shr_agency_alias WHERE state = 'MO' AND alias_key LIKE '%ST LOUIS CITY%')",
+  "SELECT * FROM incidents i WHERE i.ori IN (SELECT ori FROM shr_agency_alias WHERE state = 'MO' AND alias_key LIKE '%SAINT LOUIS CITY%')",
+  "SELECT * FROM incidents i WHERE i.ori IN (SELECT ori FROM shr_agency_alias WHERE state = 'MO' AND alias_key = 'SAINT LOUIS CITY')",
+]) {
+  const result = validateQueryContractSql({
+    question: "st louis city murders",
+    source: "shr",
+    sql: aliasSql,
+  });
+  assert(result.fired.includes("contract-city-jurisdiction-suffix"));
+  assert.match(result.sql, /alias_key = 'ST LOUIS'/);
+  assert.doesNotMatch(result.sql, /LOUIS CITY/i);
+}
+
 {
   const result = validateQueryContractSql({
     question: "Fairfax city assaults",

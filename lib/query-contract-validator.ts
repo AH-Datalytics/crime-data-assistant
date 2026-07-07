@@ -30,20 +30,38 @@ function normalizeSqlLiteral(value: string, template: string): string {
   return /^[A-Z0-9 .'-]+$/.test(template) ? compact.toUpperCase() : compact;
 }
 
+function normalizeAliasKeyLiteral(value: string): string {
+  return value.replace(/\./g, "").replace(/\s+/g, " ").trim().toUpperCase();
+}
+
+function cityNameRegexSource(cityName: string): string {
+  const canonical = cityName.replace(/\s+/g, " ").trim();
+  const saintMatch = canonical.match(/^St\.?\s+(.+)$/i);
+  if (saintMatch) {
+    return `(?:St\\.?|Saint)\\s+${escapeRegExp(saintMatch[1]).replace(/\s+/g, "\\s+")}`;
+  }
+  return escapeRegExp(canonical).replace(/\s+/g, "\\s+");
+}
+
 function rewriteCityJurisdictionSuffix(sql: string, cityName: string): string {
   if (!cityName || /\bCity$/i.test(cityName)) return sql;
 
   const canonical = cityName.replace(/\s+/g, " ").trim();
-  const canonicalRe = escapeRegExp(canonical).replace(/\s+/g, "\\s+");
+  const canonicalRe = cityNameRegexSource(canonical);
   let rewritten = sql;
 
   rewritten = rewritten.replace(
     new RegExp(`(\\balias_key\\s+)LIKE\\s+'%${canonicalRe}(?:%|\\s+)CITY%'`, "gi"),
-    (_match, prefix) => `${prefix}= '${canonical.toUpperCase()}'`
+    (_match, prefix) => `${prefix}= '${normalizeAliasKeyLiteral(canonical)}'`
   );
 
   rewritten = rewritten.replace(
-    new RegExp(`(\\b(?:\\w+\\.)?(?:city|agency|agency_name|canonical_agency|alias_key)\\s*=\\s*)'(${canonicalRe}\\s+City)'`, "gi"),
+    new RegExp(`(\\balias_key\\s*=\\s*)'(${canonicalRe}\\s+City)'`, "gi"),
+    (_match, prefix) => `${prefix}'${normalizeAliasKeyLiteral(canonical)}'`
+  );
+
+  rewritten = rewritten.replace(
+    new RegExp(`(\\b(?:\\w+\\.)?(?:city|agency|agency_name|canonical_agency)\\s*=\\s*)'(${canonicalRe}\\s+City)'`, "gi"),
     (_match, prefix, literal) => `${prefix}'${normalizeSqlLiteral(canonical, literal)}'`
   );
 
