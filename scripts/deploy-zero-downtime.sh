@@ -6,6 +6,10 @@
 # Usage:
 #   bash scripts/deploy-zero-downtime.sh          # deploy HEAD of dev
 #   bash scripts/deploy-zero-downtime.sh <branch>  # deploy a specific branch/tag
+#   RUN_SCOREBOARD=1 bash scripts/deploy-zero-downtime.sh dev
+#     # optional post-deploy quick scoreboard
+#   RUN_SCOREBOARD=1 SCOREBOARD_MODE=full bash scripts/deploy-zero-downtime.sh dev
+#     # optional post-deploy full scoreboard
 #
 # Bootstrap mode (first migration only — PM2 not yet registered):
 #   BOOTSTRAP=1 bash scripts/deploy-zero-downtime.sh dev
@@ -328,13 +332,18 @@ else
   log "  Symlink:  $CURRENT_LINK -> $(readlink -f "$CURRENT_LINK")"
   log "  PM2:      $(pm2 show "$PM2_APP" 2>/dev/null | grep status | head -1 || echo 'check pm2 status')"
 
-  # Post-deploy full scoreboard in the BACKGROUND — regressions come from
-  # deploys, so the full suite runs here (and weekly) while the nightly cron
-  # runs --quick to keep Anthropic costs down. Results land in
-  # scoreboard_runs and the next daily email; deploy returns immediately.
-  if [[ "${SKIP_SCOREBOARD:-0}" != "1" ]]; then
-    log "  Launching post-deploy full scoreboard in background (log: /var/log/scoreboard.log)..."
-    nohup bash -c "cd '$CURRENT_LINK' && npx tsx scripts/nightly-scoreboard.ts" >> /var/log/scoreboard.log 2>&1 &
+  # Optional post-deploy scoreboard in the BACKGROUND. It is opt-in because
+  # replaying queries can create material API cost, especially across repeated
+  # deploys. Use RUN_SCOREBOARD=1 SCOREBOARD_MODE=quick|full when needed.
+  if [[ "${RUN_SCOREBOARD:-0}" == "1" ]]; then
+    SCOREBOARD_ARGS="--quick"
+    if [[ "${SCOREBOARD_MODE:-quick}" == "full" ]]; then
+      SCOREBOARD_ARGS=""
+    fi
+    log "  Launching post-deploy ${SCOREBOARD_MODE:-quick} scoreboard in background (log: /var/log/scoreboard.log)..."
+    nohup bash -c "cd '$CURRENT_LINK' && npx tsx scripts/nightly-scoreboard.ts $SCOREBOARD_ARGS" >> /var/log/scoreboard.log 2>&1 &
+  else
+    log "  Post-deploy scoreboard skipped (set RUN_SCOREBOARD=1 to run it)."
   fi
 fi
 log ""
