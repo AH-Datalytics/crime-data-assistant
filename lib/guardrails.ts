@@ -10,6 +10,7 @@
  */
 
 import type { QueryContext, Tab } from "./query-context";
+import { asksForCountsInsteadOfRates } from "./rate-intent";
 import {
   formatNibrsCodeList,
   NIBRS_UCR_PROPERTY_CODES,
@@ -281,7 +282,12 @@ function countywideCrosswalkMismatch(ctx: QueryContext): boolean {
   const sql = ctx.sql;
   const usesCrosswalk = /\bagency_county_crosswalk\b/i.test(sql);
   const narrowsToCountyAgency = /\b(?:\w+\.)?(?:type|agency_type)\s*=\s*'county'/i.test(sql);
-  return !usesCrosswalk || narrowsToCountyAgency;
+  const bareCrosswalkOri =
+    /\b(?:\w+\.)?ori\s+IN\s*\(\s*SELECT\s+(?:DISTINCT\s+)?ori\s+FROM\s+agency_county_crosswalk\b/i.test(sql) ||
+    /\bWITH\s+\w+\s+AS\s*\(\s*SELECT\s+(?:DISTINCT\s+)?ori\s+FROM\s+agency_county_crosswalk\b/i.test(sql);
+  const hasSafeOriJoin = /\b(?:\w+\.)?ori\s*=\s*(?:\w+\.)?ori9\b/i.test(sql) ||
+    /\bsubstr\s*\(\s*(?:\w+\.)?ori\s*,\s*1\s*,\s*7\s*\)\s*=\s*(?:\w+\.)?ori\b/i.test(sql);
+  return !usesCrosswalk || narrowsToCountyAgency || (bareCrosswalkOri && !hasSafeOriJoin);
 }
 
 function countywideCrosswalkMessage(ctx: QueryContext): string {
@@ -1144,7 +1150,7 @@ const GUARDRAILS: Guardrail[] = [
       const q = ctx.question.toLowerCase();
       // User asks for rate/per capita but SQL doesn't join population
       // Skip if user explicitly rejected rates
-      if (/\b(not rates?|raw numbers?|raw counts?|counts?\s*(?:,\s*)?not rates?)\b/i.test(q)) return false;
+      if (asksForCountsInsteadOfRates(ctx.question) || /\b(not rates?|raw numbers?|raw counts?|counts?\s*(?:,\s*)?not rates?)\b/i.test(q)) return false;
       const wantsRate = /\b(rates?|per\s*capita|per\s*100k|per\s*100,000|per\s*hundred\s*thousand)\b/i.test(q);
       if (!wantsRate) return false;
       // Skip if user is comparing demographic groups — "rates" is colloquial, not per-capita
@@ -2010,6 +2016,7 @@ const GUARDRAILS: Guardrail[] = [
       const isExplicitState =
         /\bWashington\s+[Ss]tate\b/i.test(q) ||
         /\bstate\s+of\s+Washington\b/i.test(q) ||
+        /\b(?:County|Parish|Borough)\s*,?\s+Washington\b/i.test(q) ||
         /\bWA\b/.test(q); // uppercase-only WA = state abbreviation
       // If neither explicit, it's ambiguous
       return !isExplicitDC && !isExplicitState;

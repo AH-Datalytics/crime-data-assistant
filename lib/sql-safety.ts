@@ -28,7 +28,7 @@ export function validateAndSanitize(sql: string, opts?: { maxLimit?: number }): 
     return { valid: false, error: "Empty SQL" };
   }
 
-  const trimmed = sql.trim();
+  const trimmed = sql.trim().replace(/;+\s*$/, "");
 
   // Must start with SELECT or WITH
   const firstWord = trimmed.split(/\s+/)[0].toUpperCase();
@@ -36,7 +36,9 @@ export function validateAndSanitize(sql: string, opts?: { maxLimit?: number }): 
     return { valid: false, error: "Only SELECT queries are allowed" };
   }
 
-  // No semicolons (prevent multi-statement)
+  // No semicolons (prevent multi-statement). A single trailing semicolon is
+  // normalized above because models and deterministic templates sometimes add
+  // one even though it is not a second statement.
   const withoutStrings = stripStringLiterals(trimmed);
   if (withoutStrings.includes(";")) {
     return { valid: false, error: "Multiple statements are not allowed" };

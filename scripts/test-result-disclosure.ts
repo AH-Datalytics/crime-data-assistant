@@ -93,6 +93,18 @@ import { applyResultDisclosures } from "../lib/result-disclosure";
 
 {
   const explanation = applyResultDisclosures({
+    explanation: "Domestic violence arrests in Washington statewide from 2021 to 2026.",
+    question: "how many charges of domestic violence in Washington, DC",
+    sql: "SELECT data_year, SUM(arrest_count) AS arrests FROM summary_dv_arrests WHERE state = 'DC' GROUP BY data_year",
+    rows: [{ data_year: 2025, arrests: 10 }],
+    tab: "nibrs",
+  });
+  assert.match(explanation, /Washington, DC/);
+  assert.doesNotMatch(explanation, /Washington statewide|Washington state/i);
+}
+
+{
+  const explanation = applyResultDisclosures({
     explanation: "Motor vehicle theft counts for the requested cities.",
     question: "motor vehicle theft in six Texas cities",
     sql: "SELECT city, SUM(offense_count) AS thefts FROM summary_city_monthly WHERE city IN ('HOUSTON','DALLAS','JERSEY VILLAGE','WEST UNIVERSITY PLACE') GROUP BY city",

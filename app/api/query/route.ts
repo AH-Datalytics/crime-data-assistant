@@ -11,6 +11,7 @@ import { RTCI } from "@/lib/dynamic-facts";
 import { generateExplanation, sanitizeExplanation } from "@/lib/explain";
 import { extractQueryContext } from "@/lib/query-context";
 import { runGuardrails } from "@/lib/guardrails";
+import { asksForCountsInsteadOfRates } from "@/lib/rate-intent";
 import { applyRetryMeta } from "@/lib/types";
 import type { StreamEvent, ChartMeta } from "@/lib/types";
 import { getCached, setCache } from "@/lib/response-cache";
@@ -875,7 +876,7 @@ export async function POST(req: NextRequest) {
             close(); return;
           }
           const rateStillBad = postRetryResult.fired.some(f => f.includes("rate-no-population"));
-          if (rateStillBad && /\b(rates?|per\s*capita|per\s*100)/i.test(question) && !/\b(not rates?|raw|counts?\s+not\s+rates?)\b/i.test(question)) {
+          if (rateStillBad && /\b(rates?|per\s*capita|per\s*100)/i.test(question) && !asksForCountsInsteadOfRates(question) && !/\b(not rates?|raw|counts?\s+not\s+rates?)\b/i.test(question)) {
             const msg = "I wasn't able to calculate a valid per-capita rate for this query. Try asking for raw counts, or use the [Historical Library](/test?tab=historical) tab for state/national rates.";
             writeLog(question, claude.sql, 0, "rate_second_failure", Date.now() - totalStart, msg, tab, postRetryResult.fired, "haiku-4.5", sessionId);
             controller.enqueue(encoder.encode(sseEvent({ type: "result", sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - totalStart })));

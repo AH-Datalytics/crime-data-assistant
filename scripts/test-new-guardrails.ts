@@ -9,6 +9,7 @@
 
 import { extractQueryContext } from "../lib/query-context.js";
 import { runGuardrails, GUARDRAIL_NAMES } from "../lib/guardrails.js";
+import { validateAndSanitize } from "../lib/sql-safety.js";
 import { detectAllNullData } from "../lib/all-null-detection.js";
 import { buildCampusAgencySummarySql, campusAgencyDisplayName, chooseCampusAgencyOris, knownCampusAgencyResolution } from "../lib/nibrs-campus-agency.js";
 import { buildNibrsChartConfig } from "../lib/nibrs-chart-config.js";
@@ -26,6 +27,27 @@ function assert(name: string, condition: boolean, detail?: string) {
     failures.push({ name, detail });
     console.log(`  FAIL: ${name}${detail ? ` — ${detail}` : ""}`);
   }
+}
+
+console.log("\n═══ sql-safety ═══\n");
+
+{
+  const result = validateAndSanitize("SELECT year, murder FROM historical_state_national WHERE year = 2024;");
+  assert("allows one trailing semicolon",
+    result.valid && !result.sanitized?.includes(";"),
+    JSON.stringify(result));
+}
+
+{
+  const ctx = extractQueryContext(
+    "SELECT i.year, COUNT(*) AS victims FROM incidents i JOIN victims v ON v.incident_id = i.id WHERE i.year >= 2010 GROUP BY i.year",
+    "Can you give me number instead of rate? (raw counts, not rates)",
+    "shr"
+  );
+  const r = runGuardrails(ctx);
+  assert("contract-rate-no-population does not fire for count instead of rate follow-up",
+    !r.fired.includes("contract-rate-no-population"),
+    `fired: ${JSON.stringify(r.fired)}`);
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -1085,6 +1107,18 @@ console.log("\n═══ washington-ambiguity ═══\n");
 }
 
 {
+  const ctx = extractQueryContext(
+    "SELECT year, SUM(count) FROM agency_monthly WHERE state = 'WA' GROUP BY year",
+    "calculate the same for King County, Washington",
+    "current"
+  );
+  const r = runGuardrails(ctx);
+  assert("FP: 'County, Washington' means Washington state, not ambiguous DC/state",
+    !r.fired.includes("washington-ambiguity"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
   // FP: "by city in the state of Washington" — combined geography + state phrase
   const ctx = extractQueryContext(
     "SELECT d.data_year, a.city, a.state, COUNT(DISTINCT d.incident_num) AS dv_incidents FROM summary_domestic_violence d JOIN agencies a ON a.ori = d.ori WHERE a.state = 'WA' GROUP BY a.city, a.state ORDER BY dv_incidents DESC LIMIT 50",
@@ -1941,6 +1975,23 @@ console.log("\n═══ countywide-crosswalk-required ═══\n");
   const r = runGuardrails(ctx);
   assert("FP: NIBRS countywide query using crosswalk does not fire",
     !r.fired.includes("countywide-crosswalk-required"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  const sql = `WITH maricopa_agencies AS (
+  SELECT DISTINCT ori
+  FROM agency_county_crosswalk
+  WHERE county_key = 'MARICOPA' AND state = 'AZ'
+)
+SELECT am.year, SUM(am.count) AS violent
+FROM agency_monthly am
+WHERE am.ori IN (SELECT ori FROM maricopa_agencies)
+GROUP BY am.year`;
+  const ctx = extractQueryContext(sql, "show violent crime rates for Maricopa County, Arizona countywide total", "current");
+  const r = runGuardrails(ctx);
+  assert("TP: Current countywide query with bare crosswalk ori CTE fires",
+    r.fired.includes("countywide-crosswalk-required"),
     `fired: ${JSON.stringify(r.fired)}`);
 }
 

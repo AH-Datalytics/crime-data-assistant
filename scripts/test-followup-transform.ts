@@ -55,6 +55,27 @@ const domesticViolenceRateHistory: PromptHistoryMessage[] = [
 }
 
 {
+  const transform = detectFollowupTransform("Can you give me number instead of rate?", domesticViolenceRateHistory);
+  assert(transform);
+  assert.equal(transform.name, "replace_rate_with_count");
+  assert.match(transform.contextQuestion || "", /raw counts, not rates/);
+  assert.match(transform.instruction, /remove population joins/);
+  assert.match(transform.instruction, /Do not refuse because the prior query asked for a rate/);
+}
+
+{
+  const transform = detectFollowupTransform("sheriff's office only", [
+    { role: "user", content: "show violent crime in Cook County, IL" },
+    { role: "assistant", content: "For Cook County, do you want the countywide total (all law enforcement agencies mapped to Cook County, summed — totals depend on each agency's reporting participation) or the sheriff's office only (the single county agency record)? Choose: Countywide total or Sheriff's office only." },
+  ]);
+  assert(transform);
+  assert.equal(transform.name, "resolve_county_scope");
+  assert.match(transform.instruction, /NOT "Cook County Sheriff"/);
+  assert.match(transform.instruction, /agency = 'Maricopa' AND type = 'County'/);
+  assert.match(transform.instruction, /do not search agencies\.city = 'COOK COUNTY'/);
+}
+
+{
   const transform = detectFollowupTransform("please show just victim demographics.", domesticViolenceRateHistory);
   assert(transform);
   assert.equal(transform.name, "replace_with_dv_victim_demographics");

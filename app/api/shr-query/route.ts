@@ -7,6 +7,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { checkSessionLimit, maybeCleanup } from "@/lib/captcha";
 import { extractQueryContext } from "@/lib/query-context";
 import { runGuardrails } from "@/lib/guardrails";
+import { asksForCountsInsteadOfRates } from "@/lib/rate-intent";
 import { explicitStateIntent } from "@/lib/explicit-state-intent";
 import type { QueryError } from "@/lib/types";
 import { sanitizeExplanation, validateExplanationCount } from "@/lib/explain";
@@ -733,7 +734,7 @@ export async function POST(req: NextRequest) {
         return jsonResp({ success: true, question, sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - start });
       }
       const rateStillBad = postRetryResult.fired.some(f => f.includes("rate-no-population"));
-      if (rateStillBad && /\b(rates?|per\s*capita|per\s*100)/i.test(question)) {
+      if (rateStillBad && /\b(rates?|per\s*capita|per\s*100)/i.test(question) && !asksForCountsInsteadOfRates(question)) {
         const msg = "I wasn't able to calculate a valid per-capita rate for this query. For murder rates, try the [Historical Library](/test?tab=historical) tab which has FBI statewide estimates.";
         writeLog(question, sql, 0, "rate_second_failure", Date.now() - start, msg, "shr", postRetryResult.fired, "haiku-4.5", sessionId);
         return jsonResp({ success: true, question, sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - start });

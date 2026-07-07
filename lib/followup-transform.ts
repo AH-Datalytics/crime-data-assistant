@@ -1,9 +1,10 @@
 import type { PromptHistoryMessage } from "./chat-history";
+import { asksForCountsInsteadOfRates } from "./rate-intent";
 
 export type FollowupBreakdown = "state" | "city" | "agency";
 
 export interface FollowupTransform {
-  name: "add_breakdown" | "add_continuous_reporting_filter" | "replace_with_dv_victim_demographics" | "resolve_county_scope";
+  name: "add_breakdown" | "add_continuous_reporting_filter" | "replace_with_dv_victim_demographics" | "replace_rate_with_count" | "resolve_county_scope";
   dimension?: FollowupBreakdown;
   instruction: string;
   /** When set, routes should use this instead of the raw question for guardrail
@@ -53,7 +54,7 @@ function detectCountyScopeResolution(question: string, history: PromptHistoryMes
         name: "resolve_county_scope",
         contextQuestion: `${original} (sheriff's office only)`,
         instruction:
-          `[SYSTEM: The user answered the county-scope clarifier: they want ONLY the county law-enforcement agency (sheriff's office) for their original question "${original}". Query the single county agency record — for Historical use historical_agency with type = 'county' and the county agency name; on other tabs resolve the county agency's ORI. Do NOT sum multiple agencies via the crosswalk and do NOT use state-level tables.]`,
+          `[SYSTEM: The user answered the county-scope clarifier: they want ONLY the county law-enforcement agency (sheriff's office) for their original question "${original}". Query the single county agency record, not a countywide rollup. For Historical, use historical_agency with type = 'county' and the canonical county agency name from the database (usually "Cook County" / "Maricopa County", NOT "Cook County Sheriff" unless that exact agency name exists). For Current, county agencies are stored without the suffix: agency = 'Maricopa' AND type = 'County'. For NIBRS/SHR, resolve a real county agency ORI/name first; do not search agencies.city = 'COOK COUNTY' or invent agency_type = 'Other'. If the source has no matching county agency record, say that directly and suggest countywide total or another source. Do NOT sum multiple agencies via the crosswalk and do NOT use state-level tables.]`,
       };
     }
     return null;
@@ -99,6 +100,15 @@ function requestedDomesticViolenceVictimDemographics(question: string): boolean 
 export function detectFollowupTransform(question: string, history: PromptHistoryMessage[]): FollowupTransform | null {
   const countyScope = detectCountyScopeResolution(question, history);
   if (countyScope) return countyScope;
+
+  if (asksForCountsInsteadOfRates(question) && hasPriorSql(history)) {
+    return {
+      name: "replace_rate_with_count",
+      contextQuestion: `${question} (raw counts, not rates)`,
+      instruction:
+        "[SYSTEM: This follow-up replaces the prior rate/per-capita metric with raw counts or numbers. Preserve the prior dataset, geography, offense/topic, and time range unless the user explicitly changes them, but remove population joins, per-capita math, rate aliases, and rate-denominator requirements. Do not refuse because the prior query asked for a rate.]",
+    };
+  }
 
   if (requestedDomesticViolenceVictimDemographics(question) && hasPriorDomesticViolenceContext(history)) {
     return {

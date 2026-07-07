@@ -129,6 +129,14 @@ function normalizeClearanceRateExplanation(explanation: string, sql: string): st
     .replace(/\bMurder rate data\b/g, "Murder clearance rate data");
 }
 
+function normalizeDcExplanation(explanation: string, sql: string): string {
+  if (!/\bstate\s*=\s*['"]DC['"]|\bstate\s+IN\s*\([^)]*['"]DC['"]/i.test(sql)) return explanation;
+  return explanation
+    .replace(/\bWashington\s+statewide\b/gi, "Washington, DC")
+    .replace(/\bWashington\s+State\b/g, "Washington, DC")
+    .replace(/\bWashington\s+state\b/gi, "Washington, DC");
+}
+
 function normalizeEntity(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 }
@@ -456,7 +464,7 @@ export function applyResultDisclosures(opts: {
   rows: Record<string, unknown>[];
   tab?: string;
 }): string {
-  let explanation = normalizeClearanceRateExplanation(opts.explanation, opts.sql);
+  let explanation = normalizeDcExplanation(normalizeClearanceRateExplanation(opts.explanation, opts.sql), opts.sql);
   const agencyDescriptor = stripUngroundedAgencyDescriptors(explanation, opts.question, opts.rows);
   explanation = agencyDescriptor.explanation;
   if (agencyDescriptor.changed) {
