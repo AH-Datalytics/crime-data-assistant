@@ -145,6 +145,17 @@ import { validateQueryContractSql } from "../lib/query-contract-validator";
 
 {
   const result = validateQueryContractSql({
+    question: "baltimore city homicides in first 6 months of each year",
+    source: "shr",
+    sql: "SELECT i.year, COUNT(*) FROM incidents i WHERE i.ori IN (SELECT ori FROM shr_agency_alias WHERE state = 'MD' AND alias_key LIKE '%BALTIMORE CITY%') GROUP BY i.year",
+  });
+  assert(result.fired.includes("contract-city-jurisdiction-suffix"));
+  assert.match(result.sql, /alias_key = 'BALTIMORE'/);
+  assert.doesNotMatch(result.sql, /BALTIMORE CITY/i);
+}
+
+{
+  const result = validateQueryContractSql({
     question: "Richmond city murders by year",
     source: "historical",
     sql: "SELECT year, murder FROM historical_agency_crime hac JOIN historical_agency ha ON ha.ori = hac.ori WHERE ha.agency = 'Richmond City' AND ha.state = 'VA'",

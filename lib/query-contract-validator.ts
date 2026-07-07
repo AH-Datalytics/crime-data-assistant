@@ -38,7 +38,7 @@ function rewriteCityJurisdictionSuffix(sql: string, cityName: string): string {
   let rewritten = sql;
 
   rewritten = rewritten.replace(
-    new RegExp(`(\\balias_key\\s+)LIKE\\s+'%${canonicalRe}%CITY%'`, "gi"),
+    new RegExp(`(\\balias_key\\s+)LIKE\\s+'%${canonicalRe}(?:%|\\s+)CITY%'`, "gi"),
     (_match, prefix) => `${prefix}= '${canonical.toUpperCase()}'`
   );
 
