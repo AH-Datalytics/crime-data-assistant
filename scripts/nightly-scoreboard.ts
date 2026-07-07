@@ -1,18 +1,19 @@
 #!/usr/bin/env npx tsx
 /**
- * Nightly accuracy scoreboard — runs the full live-replay suite against the
- * app, computes a single accuracy number, and persists the run to
+ * Accuracy scoreboard — runs a fixed live-replay suite against the app,
+ * computes a single smoke-test number, and persists the run to
  * query_log.db (scoreboard_runs) so the daily email can report the score and
  * its day-over-day delta.
  *
  * Usage:
- *   npx tsx scripts/nightly-scoreboard.ts                          # localhost, full suite
+ *   npx tsx scripts/nightly-scoreboard.ts --quick                  # localhost, 18-case smoke run
+ *   npx tsx scripts/nightly-scoreboard.ts                          # localhost, full suite (manual/major changes)
  *   npx tsx scripts/nightly-scoreboard.ts --host https://nibrsai.com
- *   npx tsx scripts/nightly-scoreboard.ts --quick                  # 18-case smoke run
  *   npx tsx scripts/nightly-scoreboard.ts --skip-run               # score latest existing audit JSON
  *
- * Intended cron (VPS, before the 13:00 UTC daily email):
- *   30 11 * * * cd /opt/nibrs/current && npx tsx scripts/nightly-scoreboard.ts >> /opt/nibrs/logs/scoreboard.log 2>&1
+ * Intended cron (VPS, before the 13:00 UTC daily email): daily quick only.
+ * Full runs are manual because they can create material API cost.
+ *   30 11 * * * cd /opt/nibrs/current && npx tsx scripts/nightly-scoreboard.ts --quick >> /var/log/scoreboard.log 2>&1
  */
 
 import { spawnSync } from "node:child_process";
