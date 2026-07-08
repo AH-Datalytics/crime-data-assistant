@@ -35,10 +35,8 @@ function GuidanceWarningRow({
     warning.kind === "blocking"
       ? "rounded-md border border-[#D8DDED] bg-[#FAFBFF] px-2.5 py-2"
       : "rounded-md border border-[var(--border)] bg-[var(--surface)] px-2.5 py-2";
-  const buttonClass =
-    warning.kind === "blocking"
-      ? "rounded border border-[#C9D0EA] bg-white px-2 py-1 text-[11px] font-medium leading-none text-[#354A9F] hover:border-[#475EC7]/60 hover:bg-[#F4F6FF] cursor-pointer transition-colors"
-      : "rounded border border-[var(--border)] bg-white px-2 py-1 text-[11px] font-medium leading-none text-[var(--foreground)] hover:border-[#475EC7]/40 hover:text-[#475EC7] cursor-pointer transition-colors";
+  const buttonClass = "rounded-md border px-3 py-1.5 text-[12px] font-semibold leading-none shadow-sm cursor-pointer transition-colors hover:opacity-90";
+  const buttonStyle = { backgroundColor: "#475EC7", borderColor: "#354A9F", color: "#fff" };
 
   return (
     <div className={rowClass}>
@@ -47,8 +45,8 @@ function GuidanceWarningRow({
         {warning.detail}
       </div>
       {hasActions && (
-        <div className="mt-2 flex flex-wrap items-center gap-1.5">
-          <span className="mr-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <span className="mr-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">
             {promptLabel}
           </span>
           {warning.actions?.map((action) => (
@@ -57,6 +55,7 @@ function GuidanceWarningRow({
               type="button"
               onClick={() => onChangeInput(applyGuidanceAction(input, action))}
               className={buttonClass}
+              style={buttonStyle}
             >
               {actionLabel(action.label)}
             </button>

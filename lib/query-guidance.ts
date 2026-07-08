@@ -42,6 +42,11 @@ function asksDemographicRate(text: string): boolean {
     /\b(?:race|racial|sex|gender|male|female|men|women|age|ages|demographic|demographics)\b/i.test(text);
 }
 
+function asksAmbiguousTheft(text: string): boolean {
+  if (!/\bthefts?\b/i.test(text)) return false;
+  return !/\b(?:motor\s+vehicle|auto|vehicle|car|from\s+(?:a\s+)?(?:vehicle|car|auto)|larceny\s*\/?|shoplifting|identity|retail|pocket.?picking|purse.?snatching|burglary)\s*thefts?\b|\bthefts?\s+(?:from|of|out\s+of|involving|by)\b/i.test(text);
+}
+
 export function getQueryGuidanceWarnings(input: string): GuidanceWarning[] {
   const text = input.trim();
   if (!text) return [];
@@ -86,7 +91,7 @@ export function getQueryGuidanceWarnings(input: string): GuidanceWarning[] {
   if (has(/\bgun\s+violence\b/i, text) && !has(/\b(fatal|nonfatal|firearm\s+(homicides?|assaults?|injur(?:y|ies)))\b/i, text)) {
     warnings.push({
       id: "gun-violence",
-      kind: "advisory",
+      kind: "blocking",
       title: "The FBI does not systemically track all shootings",
       detail: "You can query fatal shootings specifically or aggravated assaults with a firearm as a broader measure.",
       actions: [
@@ -99,7 +104,7 @@ export function getQueryGuidanceWarnings(input: string): GuidanceWarning[] {
   if (has(/\bshootings?\b/i, text) && !has(/\b(fatal|nonfatal|firearm\s+(homicides?|assaults?|injur(?:y|ies)))\b/i, text)) {
     warnings.push({
       id: "shooting-scope",
-      kind: "advisory",
+      kind: "blocking",
       title: "The FBI does not systemically track all shootings",
       detail: "You can query fatal shootings specifically or aggravated assaults with a firearm as a broader measure.",
       actions: [
@@ -114,11 +119,25 @@ export function getQueryGuidanceWarnings(input: string): GuidanceWarning[] {
       id: "assault-type",
       kind: "advisory",
       title: "Assault needs a type",
-      detail: "NIBRS separates aggravated assault, simple assault, and intimidation. Pick one or ask for all assault categories.",
+      detail: "Assault can mean different offense types. Pick aggravated assault, simple assault, or ask for all assault categories.",
       actions: [
         { label: "All assault categories", pattern: "\\bassaults?\\b", replacement: "all assault categories" },
         { label: "Aggravated assault", pattern: "\\bassaults?\\b", replacement: "aggravated assault" },
         { label: "Simple assault", pattern: "\\bassaults?\\b", replacement: "simple assault" },
+      ],
+    });
+  }
+
+  if (asksAmbiguousTheft(text)) {
+    warnings.push({
+      id: "theft-type",
+      kind: "advisory",
+      title: "Theft can mean different offense types",
+      detail: "For a cleaner answer, choose larceny/theft, motor vehicle theft, or theft from vehicle.",
+      actions: [
+        { label: "Use larceny/theft", pattern: "\\bthefts?\\b", replacement: "larceny/theft" },
+        { label: "Use motor vehicle theft", pattern: "\\bthefts?\\b", replacement: "motor vehicle theft" },
+        { label: "Use theft from vehicle", pattern: "\\bthefts?\\b", replacement: "theft from vehicle" },
       ],
     });
   }

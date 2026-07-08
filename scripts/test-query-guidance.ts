@@ -148,7 +148,7 @@ assertDoesNotWarn("crime in Fairfax VA", "city-county-fairfax");
 assertDoesNotWarn("crime in Fairfax County, Virginia", "city-county-fairfax");
 
 assertWarns("gun violence in Louisiana since 2020", "gun-violence");
-assert.equal(hasBlockingQueryGuidanceWarnings("gun violence in Louisiana since 2020"), false);
+assert.equal(hasBlockingQueryGuidanceWarnings("gun violence in Louisiana since 2020"), true);
 assertDoesNotWarn("fatal firearm homicides in Louisiana since 2020", "gun-violence");
 assert.equal(
   getQueryGuidanceWarnings("gun violence in Louisiana since 2020")[0].title,
@@ -160,6 +160,7 @@ assert.equal(
 );
 
 assertWarns("shootings in Louisiana since 2020", "shooting-scope");
+assert.equal(hasBlockingQueryGuidanceWarnings("shootings in Louisiana since 2020"), true);
 assertDoesNotWarn("fatal shootings in Louisiana since 2020", "shooting-scope");
 const shootingWarning = getQueryGuidanceWarnings("shootings in Louisiana since 2020")[0];
 assert.equal(shootingWarning.title, "The FBI does not systemically track all shootings");
@@ -177,6 +178,35 @@ assert.equal(
 assertWarns("assaults in Texas in 2023", "assault-type");
 assert.equal(hasBlockingQueryGuidanceWarnings("assaults in Texas in 2023"), false);
 assertDoesNotWarn("aggravated assault in Texas in 2023", "assault-type");
+const assaultWarning = getQueryGuidanceWarnings("assaults in Texas in 2023").find((warning) => warning.id === "assault-type")!;
+assert.deepEqual(assaultWarning.actions!.map((action) => action.label), [
+  "All assault categories",
+  "Aggravated assault",
+  "Simple assault",
+]);
+assert.equal(
+  applyGuidanceAction("assaults in Texas in 2023", assaultWarning.actions![1]),
+  "aggravated assault in Texas in 2023"
+);
+
+assertWarns("thefts in Dallas since 2020", "theft-type");
+assert.equal(hasBlockingQueryGuidanceWarnings("thefts in Dallas since 2020"), false);
+assertDoesNotWarn("larceny/theft in Dallas since 2020", "theft-type");
+assertDoesNotWarn("motor vehicle theft in Dallas since 2020", "theft-type");
+assertDoesNotWarn("auto thefts in Dallas since 2020", "theft-type");
+assertDoesNotWarn("thefts from vehicles in Dallas since 2020", "theft-type");
+const theftWarning = getQueryGuidanceWarnings("thefts in Dallas since 2020").find((warning) => warning.id === "theft-type")!;
+assert.equal(theftWarning.title, "Theft can mean different offense types");
+assert.equal(theftWarning.detail, "For a cleaner answer, choose larceny/theft, motor vehicle theft, or theft from vehicle.");
+assert.deepEqual(theftWarning.actions!.map((action) => action.label), [
+  "Use larceny/theft",
+  "Use motor vehicle theft",
+  "Use theft from vehicle",
+]);
+assert.equal(
+  applyGuidanceAction("thefts in Dallas since 2020", theftWarning.actions![2]),
+  "theft from vehicle in Dallas since 2020"
+);
 
 assertWarns("show consistent reporters in Ohio from 2019 to 2024", "consistent-reporters");
 assertWarns("agencies that reported all 12 months in 2024", "consistent-reporters");

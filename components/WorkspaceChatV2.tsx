@@ -16,6 +16,7 @@ import HomeIcon from "./HomeIcon";
 import GettingStarted from "./GettingStarted";
 import ExplainerContent from "./ExplainerContent";
 import QueryGuidance from "./QueryGuidance";
+import QueryPlanChips from "./QueryPlanChips";
 
 /** Render inline markdown: **bold** and [text](url) links */
 function renderInlineMarkdown(text: string) {
@@ -155,6 +156,9 @@ export default function WorkspaceChat({ sourceYearRanges }: WorkspaceChatProps) 
     : !input.trim() || loading
       ? "text-white opacity-40 cursor-not-allowed"
       : "text-white cursor-pointer hover:opacity-90";
+  const askButtonStyle = inputBlockedByGuidance
+    ? { alignSelf: "flex-start" as const }
+    : { backgroundColor: "#475EC7", alignSelf: "flex-start" as const };
 
   const submitQuestion = useCallback(
     async (
@@ -375,7 +379,7 @@ export default function WorkspaceChat({ sourceYearRanges }: WorkspaceChatProps) 
 
       {/* Header with input */}
       <header className="bg-white border-b border-[var(--border)] shrink-0">
-        <div className="px-3 sm:px-4 md:px-6 flex items-center gap-3" style={{ height: 56 }}>
+        <div className="px-3 sm:px-4 md:px-6 flex items-center gap-3 py-2" style={{ minHeight: 56 }}>
           <button
             onClick={() => { setResponse(null); setExplanation(""); setError(""); setActiveSource(null); setShowDisambiguation(false); setExchanges([]); setHistory([]); setActiveExchangeIdx(-1); setShowTutorial(false); }}
             className="shrink-0 cursor-pointer hover:opacity-70 transition-opacity"
@@ -395,19 +399,20 @@ export default function WorkspaceChat({ sourceYearRanges }: WorkspaceChatProps) 
                   className="w-full min-w-0 px-3 py-2 text-[13px] border border-[var(--border)] rounded-lg focus:outline-none focus:border-[#475EC7] focus:ring-1 focus:ring-[#475EC7]/20 bg-[var(--surface)]"
                   disabled={loading}
                 />
-                <QueryGuidance
-                  input={input}
-                  onChangeInput={setGuidedInput}
-                  showExamples={false}
-                  compact
-                  floating
-                />
-              </div>
-              <button
+                  <QueryGuidance
+                    input={input}
+                    onChangeInput={setGuidedInput}
+                    showExamples={false}
+                    compact
+                    floating
+                  />
+                  <QueryPlanChips input={input} selectedSource={source} activeSource={activeSource} />
+                </div>
+                <button
                 type="submit"
                 disabled={inputSubmitDisabled}
-                className={`px-4 py-2 text-[12px] font-semibold rounded-lg shrink-0 ${askButtonClass}`}
-                style={inputBlockedByGuidance ? undefined : { backgroundColor: "#475EC7" }}
+                className={`self-start min-w-[112px] whitespace-nowrap px-4 py-2 text-[12px] font-semibold rounded-lg shrink-0 ${askButtonClass}`}
+                style={askButtonStyle}
               >
                 {inputBlockedByGuidance ? "Clarify first" : "Ask"}
               </button>
@@ -486,14 +491,15 @@ export default function WorkspaceChat({ sourceYearRanges }: WorkspaceChatProps) 
                     placeholder="Ask about crime data..."
                     className="w-full min-w-0 px-4 py-2.5 text-[14px] border border-[var(--border)] rounded-xl focus:outline-none focus:border-[#475EC7] focus:ring-2 focus:ring-[#475EC7]/20 bg-white shadow-sm"
                     disabled={loading}
-                  />
-                  <QueryGuidance input={input} onChangeInput={setGuidedInput} showExamples={false} floating />
-                </div>
+                    />
+                    <QueryGuidance input={input} onChangeInput={setGuidedInput} showExamples={false} floating />
+                    <QueryPlanChips input={input} selectedSource={source} activeSource={activeSource} />
+                  </div>
                 <button
                   type="submit"
                   disabled={inputSubmitDisabled}
-                  className={`px-5 py-2.5 text-[13px] font-semibold rounded-xl shrink-0 shadow-sm ${askButtonClass}`}
-                  style={inputBlockedByGuidance ? undefined : { backgroundColor: "#475EC7" }}
+                    className={`self-start min-w-[116px] whitespace-nowrap px-5 py-2.5 text-[13px] font-semibold rounded-xl shrink-0 shadow-sm ${askButtonClass}`}
+                    style={askButtonStyle}
                 >
                   {inputBlockedByGuidance ? "Clarify first" : "Ask"}
                 </button>

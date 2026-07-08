@@ -982,6 +982,17 @@ function scoreDataset(ds: DatasetCapabilities, intent: QueryIntent): RouteScore 
       : why;
   }
 
+  // NIBRS can technically aggregate Part I offenses, but it is a poor default
+  // suggestion for plain annual UCR-style counts/trends because participation
+  // changes over time. Keep it preferred for NIBRS-only offenses and detail
+  // questions; demote it for broad aggregate asks that Historical/Current/SHR
+  // can answer more directly.
+  if (ds.id === "nibrs" && intent.requiredAttributes.length === 0 &&
+      intent.offense && PART1_OFFENSES.has(intent.offense) &&
+      intent.measure !== "ranking") {
+    score -= 2;
+  }
+
   return { tab: ds.id, score, why, excluded, excludeReason };
 }
 

@@ -3,8 +3,8 @@ import { getQueryGuidanceLogMeta, serializeQueryGuidanceLogMeta } from "../lib/q
 
 const blocked = getQueryGuidanceLogMeta("shootings in Kansas City");
 assert.equal(blocked?.status, "blocked");
-assert.deepEqual(blocked?.blockingIds, ["kansas-city"]);
-assert.deepEqual(blocked?.advisoryIds, ["shooting-scope"]);
+assert.deepEqual(blocked?.blockingIds, ["kansas-city", "shooting-scope"]);
+assert.deepEqual(blocked?.advisoryIds, []);
 assert.equal(blocked?.geo.requiresClarification, true);
 assert.equal(blocked?.geo.mentions[0].text, "Kansas City");
 assert.ok(blocked?.geo.mentions[0].candidateIds.includes("city:MO:kansas-city"));
@@ -12,14 +12,15 @@ assert.ok(blocked?.geo.mentions[0].candidateIds.includes("city:KS:kansas-city"))
 
 const kcBlocked = getQueryGuidanceLogMeta("shootings in KC");
 assert.equal(kcBlocked?.status, "blocked");
-assert.deepEqual(kcBlocked?.blockingIds, ["kansas-city"]);
+assert.deepEqual(kcBlocked?.blockingIds, ["kansas-city", "shooting-scope"]);
 assert.equal(kcBlocked?.geo.mentions[0].text, "KC");
 
-const advisory = getQueryGuidanceLogMeta("gun violence in Louisiana since 2020");
-assert.equal(advisory?.status, "advisory");
-assert.deepEqual(advisory?.warningIds, ["gun-violence"]);
-assert.equal(advisory?.geo.mentions.length, 1);
-assert.deepEqual(advisory?.geo.mentions[0].candidateIds, ["state:LA"]);
+const shootingBlocked = getQueryGuidanceLogMeta("gun violence in Louisiana since 2020");
+assert.equal(shootingBlocked?.status, "blocked");
+assert.deepEqual(shootingBlocked?.warningIds, ["gun-violence"]);
+assert.deepEqual(shootingBlocked?.blockingIds, ["gun-violence"]);
+assert.equal(shootingBlocked?.geo.mentions.length, 1);
+assert.deepEqual(shootingBlocked?.geo.mentions[0].candidateIds, ["state:LA"]);
 
 const genericCrime = getQueryGuidanceLogMeta("crime in Dallas since 2020");
 assert.equal(genericCrime?.status, "advisory");
@@ -30,6 +31,11 @@ const demographicRate = getQueryGuidanceLogMeta("homicide rates for gender and r
 assert.equal(demographicRate?.status, "advisory");
 assert.deepEqual(demographicRate?.warningIds, ["demographic-rate-denominator"]);
 assert.deepEqual(demographicRate?.advisoryIds, ["demographic-rate-denominator"]);
+
+const ambiguousTheft = getQueryGuidanceLogMeta("thefts in Dallas since 2020");
+assert.equal(ambiguousTheft?.status, "advisory");
+assert.deepEqual(ambiguousTheft?.warningIds, ["theft-type"]);
+assert.deepEqual(ambiguousTheft?.advisoryIds, ["theft-type"]);
 
 const laBlocked = getQueryGuidanceLogMeta("LA murders per month");
 assert.equal(laBlocked?.status, "blocked");
@@ -42,7 +48,7 @@ assert.ok(laBlocked?.geo.mentions[0].candidateIds.includes("state:LA"));
 
 const nyBlocked = getQueryGuidanceLogMeta("gun violence in NY since 2022");
 assert.equal(nyBlocked?.status, "blocked");
-assert.deepEqual(nyBlocked?.blockingIds, ["new-york"]);
+assert.deepEqual(nyBlocked?.blockingIds, ["new-york", "gun-violence"]);
 assert.equal(nyBlocked?.geo.mentions[0].text, "NY");
 assert.ok(nyBlocked?.geo.mentions[0].candidateIds.includes("city:NY:new-york-city"));
 assert.ok(nyBlocked?.geo.mentions[0].candidateIds.includes("state:NY"));
