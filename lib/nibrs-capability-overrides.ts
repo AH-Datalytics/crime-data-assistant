@@ -1,6 +1,13 @@
-import { detectDemographicHomicideRateOverride, type CapabilityOverride } from "./capability-overrides";
+import {
+  detectDemographicHomicideRateOverride,
+  detectNibrsCountywideDemographicsOverride,
+  type CapabilityOverride,
+} from "./capability-overrides";
 
 export function detectNibrsCapabilityOverride(question: string): CapabilityOverride | null {
+  const countywideDemographicsOverride = detectNibrsCountywideDemographicsOverride(question);
+  if (countywideDemographicsOverride) return countywideDemographicsOverride;
+
   const demographicRateOverride = detectDemographicHomicideRateOverride(question);
   if (demographicRateOverride) return demographicRateOverride;
 

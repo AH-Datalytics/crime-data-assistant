@@ -2139,6 +2139,39 @@ console.log("\n=== historical state/national aggregate column regression ===\n")
 }
 
 {
+  const sql = `SELECT year, violent_rate AS murder_clearance_rate FROM national_clearance_rate WHERE year >= 1960 ORDER BY year LIMIT 1000`;
+  const ctx = extractQueryContext(sql, "National murder clearance rate since 1960", "historical");
+  const r = runGuardrails(ctx);
+  assert("TP: #6221 national murder clearance cannot use violent_rate",
+    r.fired.includes("historical-offense-specific-clearance-column"),
+    `fired: ${JSON.stringify(r.fired)}`);
+  assert("TP: #6221 national murder clearance rewrites to murder_rate",
+    /\bmurder_rate\b/i.test(r.sql) && !/\bviolent_rate\b/i.test(r.sql),
+    r.sql);
+}
+
+{
+  const sql = `SELECT hc.year, hc.violent_clr AS murder_clearance_rate FROM historical_agency_clearance hc JOIN historical_agency ha ON ha.ori = hc.ori WHERE ha.agency = 'Detroit' AND ha.state = 'mi' ORDER BY hc.year LIMIT 1000`;
+  const ctx = extractQueryContext(sql, "murder clearance rate in Detroit since 1960", "historical");
+  const r = runGuardrails(ctx);
+  assert("TP: agency murder clearance cannot use violent_clr",
+    r.fired.includes("historical-offense-specific-clearance-column"),
+    `fired: ${JSON.stringify(r.fired)}`);
+  assert("TP: agency murder clearance rewrites to murder_clr",
+    /\bmurder_clr\b/i.test(r.sql) && !/\bviolent_clr\b/i.test(r.sql),
+    r.sql);
+}
+
+{
+  const sql = `SELECT year, violent_rate FROM national_clearance_rate WHERE year >= 1960 ORDER BY year LIMIT 1000`;
+  const ctx = extractQueryContext(sql, "national violent crime clearance rate since 1960", "historical");
+  const r = runGuardrails(ctx);
+  assert("FP: broad violent clearance rate may use violent_rate",
+    !r.fired.includes("historical-offense-specific-clearance-column"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
   const sql = `SELECT year,
     ROUND(CASE WHEN state = 'California' THEN murder_rate END, 1) AS california,
     ROUND(CASE WHEN state = 'Texas' THEN murder_rate END, 1) AS texas,
@@ -2297,6 +2330,55 @@ console.log("\n=== June 16 query audit regressions ===\n");
   assert("TP: #4389 weapon CASE alias rewritten",
     /\bAS\s+weapon_group\b/i.test(r.sql) && /\bGROUP\s+BY\s+weapon_group\b/i.test(r.sql),
     r.sql);
+}
+
+{
+  const sql = `SELECT s.year, s.month, SUM(s.victim_count) AS firearm_assaults
+    FROM summary_victim_city_monthly s
+    WHERE s.ucr_offense_code = '13A'
+      AND s.year BETWEEN 2021 AND 2025
+      AND s.ori IN (SELECT ori FROM agencies WHERE city = 'NEW YORK' AND state = 'NY' AND year = 2025 AND population > 0 ORDER BY pop_group LIMIT 1)
+    GROUP BY s.year, s.month
+    ORDER BY s.year, s.month`;
+  const ctx = extractQueryContext(sql, "monthly aggravated assaults with a firearm in new york city", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("TP: #6333 weapon-qualified person crime cannot use plain victim monthly table",
+    r.fired.includes("nibrs-weapon-qualified-person-crime-table"),
+    `fired: ${JSON.stringify(r.fired)}`);
+  assert("TP: #6333 retry instruction requires weapon-capable victim table",
+    r.issues.some((issue) => /summary_victim_weapon|summary_victim_demographics/i.test(issue) && /weapon/i.test(issue)),
+    `issues: ${JSON.stringify(r.issues)}`);
+}
+
+{
+  const sql = `SELECT s.year, SUM(s.victim_count) AS firearm_assaults
+    FROM summary_victim_weapon s
+    WHERE s.ucr_offense_code = '13A'
+      AND s.weapon_type IN ('11','11A','12','12A','13','13A','14','14A','15')
+      AND s.year BETWEEN 2021 AND 2025
+      AND s.ori IN (SELECT ori FROM agencies WHERE city = 'NEW YORK' AND state = 'NY' AND year = 2025 AND population > 0 ORDER BY pop_group LIMIT 1)
+    GROUP BY s.year
+    ORDER BY s.year`;
+  const ctx = extractQueryContext(sql, "aggravated assaults with a firearm in new york city by year", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("FP: weapon-qualified person crime using summary_victim_weapon passes",
+    !r.fired.includes("nibrs-weapon-qualified-person-crime-table"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  const sql = `SELECT s.year, s.month, SUM(s.victim_count) AS aggravated_assaults
+    FROM summary_victim_city_monthly s
+    WHERE s.ucr_offense_code = '13A'
+      AND s.year BETWEEN 2021 AND 2025
+      AND s.ori IN (SELECT ori FROM agencies WHERE city = 'NEW YORK' AND state = 'NY' AND year = 2025 AND population > 0 ORDER BY pop_group LIMIT 1)
+    GROUP BY s.year, s.month
+    ORDER BY s.year, s.month`;
+  const ctx = extractQueryContext(sql, "monthly aggravated assaults in new york city", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("FP: plain aggravated assault can use victim monthly table",
+    !r.fired.includes("nibrs-weapon-qualified-person-crime-table"),
+    `fired: ${JSON.stringify(r.fired)}`);
 }
 
 {
@@ -2769,9 +2851,75 @@ console.log("\n═══ nested-aggregation-discards-measure ═══\n");
     `fired: ${JSON.stringify(r.fired)}`);
 }
 
-console.log("\n" + "═".repeat(60));
+{
+  const ctx = extractQueryContext(
+    `WITH agency_ny AS (
+      SELECT ha.ori FROM historical_agency ha WHERE ha.agency = 'New York' AND ha.state = 'ny' AND ha.type = 'city' LIMIT 1
+    ), years AS (
+      SELECT 1930 AS year UNION ALL SELECT year + 1 FROM years WHERE year < 2025
+    )
+    SELECT y.year,
+      ROUND((COALESCE(hac.murder, 0) + COALESCE(hac.rape, 0) + COALESCE(hac.robbery, 0) + COALESCE(hac.assault, 0)) * 100000.0 / COALESCE(hap.population, 1), 1) AS violent_rate
+    FROM years y
+    LEFT JOIN agency_ny a ON 1=1
+    LEFT JOIN historical_agency_crime hac ON hac.ori = a.ori AND hac.year = y.year
+    LEFT JOIN historical_agency_population hap ON hap.ori = a.ori AND hap.year = y.year
+    ORDER BY y.year`,
+    "Can I see the violent crime rate in New York City since 1930?",
+    "historical"
+  );
+  const r = runGuardrails(ctx);
+  assert("TP: #6368 Historical rate query must not zero-fill missing years",
+    r.fired.includes("historical-rate-zero-fill"),
+    `fired: ${JSON.stringify(r.fired)}`);
+  assert("TP: #6368 retry instruction requires NULL gaps instead of fake zero rates",
+    r.issues.some((issue) => /fake zero rates/i.test(issue) && /NULL/i.test(issue)),
+    `issues: ${JSON.stringify(r.issues)}`);
+}
+
+{
+  const ctx = extractQueryContext(
+    `WITH years AS (
+      SELECT 1930 AS year UNION ALL SELECT year + 1 FROM years WHERE year < 2025
+    )
+    SELECT y.year,
+      CASE WHEN hac.murder IS NOT NULL AND hac.rape IS NOT NULL AND hac.robbery IS NOT NULL AND hac.assault IS NOT NULL AND hap.population > 0
+        THEN ROUND((hac.murder + hac.rape + hac.robbery + hac.assault) * 100000.0 / hap.population, 1)
+        ELSE NULL
+      END AS violent_rate
+    FROM years y
+    LEFT JOIN historical_agency_crime hac ON hac.year = y.year
+    LEFT JOIN historical_agency_population hap ON hap.ori = hac.ori AND hap.year = y.year
+    ORDER BY y.year`,
+    "Can I see the violent crime rate in New York City since 1930?",
+    "historical"
+  );
+  const r = runGuardrails(ctx);
+  assert("FP: Historical rate gap-fill with NULL-preserving CASE passes zero-fill guardrail",
+    !r.fired.includes("historical-rate-zero-fill"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  const ctx = extractQueryContext(
+    `WITH years AS (
+      SELECT 1930 AS year UNION ALL SELECT year + 1 FROM years WHERE year < 2025
+    )
+    SELECT y.year, COALESCE(hac.murder, 0) AS murders
+    FROM years y
+    LEFT JOIN historical_agency_crime hac ON hac.year = y.year
+    ORDER BY y.year`,
+    "Can I see murders in New York City since 1930?",
+    "historical"
+  );
+  const r = runGuardrails(ctx);
+  assert("FP: Historical count query is not treated as rate zero-fill",
+    !r.fired.includes("historical-rate-zero-fill"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
 console.log(`SUMMARY: ${pass} passed, ${fail} failed out of ${pass + fail} tests`);
-console.log("═".repeat(60));
+console.log("=".repeat(60));
 
 if (failures.length > 0) {
   console.log("\nFailures:");

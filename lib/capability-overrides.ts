@@ -82,3 +82,20 @@ export function detectDemographicHomicideRateOverride(question: string): Capabil
       "I can't calculate per-capita homicide rates by race or sex/gender from these datasets because they do not include matching population denominators by race and sex/gender for each requested geography and year. I can show homicide counts, shares, or breakdowns by victim race and sex/gender in the Homicide Reports data, and NIBRS can show victim or offender demographic counts where available.",
   };
 }
+
+const COUNTY_SCOPE_RE = /\b[A-Za-z][A-Za-z.'-]*(?:\s+[A-Za-z][A-Za-z.'-]*){0,4}\s+(?:county|parish|borough)\b/i;
+const COUNTY_METADATA_RE = /\b(?:which|what|list|show)\b[\s\S]{0,40}\b(?:agencies|agency|cities|city|jurisdictions|departments)\b/i;
+const NIBRS_DEMOGRAPHIC_BREAKDOWN_RE = /\b(?:offenders?|victims?|arrestees?|suspects?|demographics?|demographic|age|ages|age\s+group|race|racial|ethnicity|ethnic|sex|gender|male|female|men|women|juvenile|juveniles?|adult|adults?)\b/i;
+
+export function detectNibrsCountywideDemographicsOverride(question: string): CapabilityOverride | null {
+  if (!COUNTY_SCOPE_RE.test(question)) return null;
+  if (COUNTY_METADATA_RE.test(question)) return null;
+  if (!NIBRS_DEMOGRAPHIC_BREAKDOWN_RE.test(question)) return null;
+
+  return {
+    title: "Countywide Demographic Breakdowns",
+    guardrail: "nibrs-countywide-demographics-unsupported",
+    explanation:
+      "I can't reliably produce countywide demographic breakdowns from NIBRS because county totals require combining many agencies with varying participation and reporting completeness. Better choices: ask for a specific city or agency, ask for a statewide demographic breakdown, or ask for a countywide offense count without demographic breakdowns.",
+  };
+}

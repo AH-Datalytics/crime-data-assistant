@@ -50,6 +50,31 @@ function assert(name: string, condition: boolean, detail?: string) {
   assert("narrow killed-by-police justifiable homicide remains queryable", r === null, JSON.stringify(r));
 }
 
+{
+  const r = detectNibrsCapabilityOverride("show me violent crime offenders by age for Tarrant County, Texas");
+  assert("countywide NIBRS offender demographics get deterministic refusal",
+    r?.guardrail === "nibrs-countywide-demographics-unsupported",
+    JSON.stringify(r));
+  assert("countywide demographics refusal points to better choices",
+    Boolean(r?.explanation.includes("specific city or agency") && r.explanation.includes("countywide offense count")),
+    r?.explanation);
+}
+
+{
+  const r = detectNibrsCapabilityOverride("violent crime in Tarrant County, Texas by year");
+  assert("countywide offense counts without demographics remain queryable", r === null, JSON.stringify(r));
+}
+
+{
+  const r = detectNibrsCapabilityOverride("offender age breakdown for robberies in Fort Worth");
+  assert("city demographic breakdowns remain queryable", r === null, JSON.stringify(r));
+}
+
+{
+  const r = detectNibrsCapabilityOverride("which agencies are mapped to Tarrant County, Texas?");
+  assert("county agency metadata questions remain queryable", r === null, JSON.stringify(r));
+}
+
 // --- SHR-tab group-rate override: follow-up-safe (no homicide word required) ---
 // query-audit-2026-07-03 F27: front door was blind to follow-ups that drop "murder"
 {

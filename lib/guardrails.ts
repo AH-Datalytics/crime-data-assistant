@@ -262,6 +262,15 @@ function asksBareAssault(question: string): boolean {
     !/\b(?:aggravated|simple|intimidation|sexual|domestic|dv|assaults?\s+with|firearm|gun|knife|weapon|robbery)\b/i.test(question);
 }
 
+function asksWeaponQualifiedNibrsPersonCrime(question: string): boolean {
+  if (!/\b(?:weapons?|firearms?|guns?|handguns?|rifles?|shotguns?|knives?|stabb(?:ing|ings)?|blunt\s+objects?)\b/i.test(question)) return false;
+  return /\b(?:murders?|homicides?|killings?|rapes?|assaults?|aggravated\s+assaults?|simple\s+assaults?|intimidation|kidnappings?|sex\s+offenses?|victims?)\b/i.test(question);
+}
+
+function usesPlainNibrsVictimMonthlyTable(sql: string): boolean {
+  return /\bsummary_victim_(?:state|city)_monthly\b/i.test(sql);
+}
+
 function usesPartialAssaultCodeSet(sql: string): boolean {
   const codes = sqlQuotedCodes(sql);
   const assaultCodes = ["13A", "13B", "13C"].filter((code) => codes.has(code));
@@ -275,6 +284,20 @@ function asksOfficersPer100k(question: string): boolean {
 
 function asksViolentCrimePer100k(question: string): boolean {
   return /\bviolent\s+crime\s+rate\b/i.test(question) && /\bper\s*(?:100\s*k|100,?000)\b/i.test(question);
+}
+
+function asksHistoricalRate(question: string): boolean {
+  return /\brates?\b|\bper\s*(?:100\s*k|100,?000|capita)\b/i.test(question);
+}
+
+function hasHistoricalRateZeroFill(sql: string): boolean {
+  const usesHistoricalRateTable = /\bhistorical_agency_(?:crime|population|clearance)\b|\bhistorical_staffing\b|\bhistorical_state_national\b/i.test(sql);
+  if (!usesHistoricalRateTable) return false;
+  const looksLikeRate = /\b(?:rate|per_100k|per\s*100000)\b/i.test(sql) || /\*\s*100000(?:\.0)?\b/i.test(sql);
+  if (!looksLikeRate) return false;
+
+  const zeroFilledHistoricalMeasure = /\b(?:COALESCE|IFNULL)\s*\(\s*(?:\w+\.)?(?:murder|rape|robbery|assault|violent|property|burglary|theft|motor_vehicle_theft|population|all_total|officer_total|civilian_total)\s*,\s*(?:0|0\.0|1|1\.0)\s*\)/i;
+  return zeroFilledHistoricalMeasure.test(sql);
 }
 
 function countywideCrosswalkMismatch(ctx: QueryContext): boolean {
@@ -530,6 +553,63 @@ function missingAny(codes: Set<string>, expected: readonly string[]): boolean {
 
 function hasAny(codes: Set<string>, candidates: readonly string[]): boolean {
   return candidates.some((code) => codes.has(code));
+}
+
+type HistoricalClearanceMeasure = {
+  label: string;
+  nationalColumn: string;
+  agencyColumn: string;
+};
+
+function requestedHistoricalClearanceMeasure(question: string): HistoricalClearanceMeasure | null {
+  if (!/\b(clearance|cleared|clear\s+rate|solve[ds]?|unsolved|closure|close rate)\b/i.test(question)) return null;
+  const q = question.toLowerCase();
+  const candidates: HistoricalClearanceMeasure[] = [];
+  if (/\b(motor\s+vehicle\s+thefts?|auto\s+thefts?|car\s+thefts?|vehicle\s+thefts?)\b/i.test(q)) {
+    candidates.push({ label: "auto theft", nationalColumn: "auto_theft_rate", agencyColumn: "motor_vehicle_theft_clr" });
+  }
+  if (/\b(murders?|homicides?|killings?)\b/i.test(q)) {
+    candidates.push({ label: "murder", nationalColumn: "murder_rate", agencyColumn: "murder_clr" });
+  }
+  if (/\brapes?\b/i.test(q)) {
+    candidates.push({ label: "rape", nationalColumn: "rape_rate", agencyColumn: "rape_clr" });
+  }
+  if (/\brobber(?:y|ies)\b/i.test(q)) {
+    candidates.push({ label: "robbery", nationalColumn: "robbery_rate", agencyColumn: "robbery_clr" });
+  }
+  if (/\bassaults?\b/i.test(q)) {
+    candidates.push({ label: "aggravated assault", nationalColumn: "assault_rate", agencyColumn: "assault_clr" });
+  }
+  if (/\bburglar(?:y|ies)\b/i.test(q)) {
+    candidates.push({ label: "burglary", nationalColumn: "burglary_rate", agencyColumn: "burglary_clr" });
+  }
+  if (/\b(?:larcen(?:y|ies)|(?<!auto\s)(?<!vehicle\s)(?<!car\s)thefts?)\b/i.test(q)) {
+    candidates.push({ label: "theft", nationalColumn: "theft_rate", agencyColumn: "theft_clr" });
+  }
+  if (candidates.length === 1) return candidates[0];
+  if (candidates.length > 1) return null;
+  if (/\b(violent\s+crime|violent\s+offenses?|violent)\b/i.test(q)) {
+    return { label: "violent crime", nationalColumn: "violent_rate", agencyColumn: "violent_clr" };
+  }
+  if (/\b(property\s+crime|property\s+offenses?|property)\b/i.test(q)) {
+    return { label: "property crime", nationalColumn: "property_rate", agencyColumn: "property_clr" };
+  }
+  return null;
+}
+
+function replaceHistoricalClearanceColumns(sql: string, measure: HistoricalClearanceMeasure): string {
+  let fixed = sql;
+  if (/\bnational_clearance_rate\b/i.test(fixed)) {
+    fixed = fixed
+      .replace(/\b(?:violent|property|murder|rape|robbery|assault|burglary|theft|auto_theft)_rate\b/gi, measure.nationalColumn)
+      .replace(/\bmotor_vehicle_theft_rate\b/gi, measure.nationalColumn);
+  }
+  if (/\bhistorical_agency_clearance\b/i.test(fixed)) {
+    fixed = fixed
+      .replace(/\b(?:violent|property|murder|rape|robbery|assault|burglary|theft|motor_vehicle_theft)_clr\b/gi, measure.agencyColumn)
+      .replace(/\bauto_theft_clr\b/gi, measure.agencyColumn);
+  }
+  return fixed;
 }
 
 export interface Guardrail {
@@ -1266,6 +1346,17 @@ const GUARDRAILS: Guardrail[] = [
       "[SYSTEM: You MUST use summary_victim_state_monthly or summary_victim_city_monthly for this query. Do NOT use the raw victims table.]",
   },
   {
+    name: "nibrs-weapon-qualified-person-crime-table",
+    tabs: ["nibrs"],
+    match: (ctx) => {
+      if (!asksWeaponQualifiedNibrsPersonCrime(ctx.question)) return false;
+      if (!usesPlainNibrsVictimMonthlyTable(ctx.sql)) return false;
+      return !/\bsummary_victim_(?:weapon|demographics|weapon_circumstance(?:_demo)?)\b/i.test(ctx.sql);
+    },
+    message: () =>
+      "[SYSTEM: The user asked for a weapon-qualified person crime, but the SQL uses plain summary_victim_state_monthly/summary_victim_city_monthly. Those tables do not contain weapon filters, so they return all victims for the offense. Rewrite using a weapon-capable victim table: summary_victim_weapon for weapon_type filters or summary_victim_demographics for weapon_category = 'Firearm'. For city queries, filter ORI through agencies; for state/national queries, use the state column or group nationally. Do not silently drop the weapon filter. If the user requested monthly grain and no safe weapon-capable monthly summary supports it, explain that limitation and offer the annual weapon-filtered result instead of returning unfiltered monthly counts.]",
+  },
+  {
     name: "nibrs-weapon-injury-combination-unsupported",
     tabs: ["nibrs"],
     match: (ctx) => asksWeaponInjuryBreakdown(ctx.question) && usesBroadRawWeaponInjuryAggregate(ctx.sql),
@@ -1902,6 +1993,39 @@ const GUARDRAILS: Guardrail[] = [
     },
   },
   {
+    name: "historical-offense-specific-clearance-column",
+    tabs: ["historical"],
+    match: (ctx) => {
+      const measure = requestedHistoricalClearanceMeasure(ctx.question);
+      if (!measure) return false;
+      const sql = ctx.sql;
+      const usesNational = /\bnational_clearance_rate\b/i.test(sql);
+      const usesAgency = /\bhistorical_agency_clearance\b/i.test(sql);
+      if (!usesNational && !usesAgency) return false;
+
+      if (usesNational) {
+        const clearanceRateColumns = sql.match(/\b(?:violent|property|murder|rape|robbery|assault|burglary|theft|auto_theft)_rate\b/gi) || [];
+        if (clearanceRateColumns.length > 0 && !clearanceRateColumns.some((col) => col.toLowerCase() === measure.nationalColumn)) return true;
+      }
+      if (usesAgency) {
+        const clearanceAgencyColumns = sql.match(/\b(?:violent|property|murder|rape|robbery|assault|burglary|theft|motor_vehicle_theft)_clr\b/gi) || [];
+        if (clearanceAgencyColumns.length > 0 && !clearanceAgencyColumns.some((col) => col.toLowerCase() === measure.agencyColumn)) return true;
+      }
+      return false;
+    },
+    rewrite: (sql, ctx) => {
+      const measure = requestedHistoricalClearanceMeasure(ctx.question);
+      if (!measure) return null;
+      const fixed = replaceHistoricalClearanceColumns(sql, measure);
+      return fixed !== sql ? fixed : null;
+    },
+    message: (ctx) => {
+      const measure = requestedHistoricalClearanceMeasure(ctx.question);
+      if (!measure) return "[SYSTEM: The user asked for an offense-specific clearance rate. Use the clearance column for that specific offense, not a broad violent/property clearance column.]";
+      return `[SYSTEM: The user asked for ${measure.label} clearance rates. Use ${measure.nationalColumn} on national_clearance_rate or ${measure.agencyColumn} on historical_agency_clearance. Do not substitute broad violent/property clearance columns for an offense-specific clearance question.]`;
+    },
+  },
+  {
     name: "historical-state-pivot-missing-group-by",
     tabs: ["historical"],
     match: (ctx) => hasHistoricalStatePivotWithoutYearGroup(ctx.sql),
@@ -1937,6 +2061,13 @@ const GUARDRAILS: Guardrail[] = [
     },
     message: () =>
       "Your query retrieves historical data for a single agency over a year range but does not use a recursive CTE to fill missing years. Many agencies have gaps in reporting — without gap-fill, the chart will misleadingly connect data across missing years. Use: WITH years AS (SELECT <start> AS year UNION ALL SELECT year + 1 FROM years WHERE year < <end>) SELECT y.year, ... FROM years y LEFT JOIN ... This ensures missing years appear as NULL/gaps in the chart.",
+  },
+  {
+    name: "historical-rate-zero-fill",
+    tabs: ["historical"],
+    match: (ctx) => asksHistoricalRate(ctx.question) && hasHistoricalRateZeroFill(ctx.sql),
+    message: () =>
+      "[SYSTEM: The user asked for a Historical rate time series. Do not use COALESCE/IFNULL to turn missing crime, staffing, clearance, or population values into 0 or 1 inside rate calculations. Gap-fill years with a LEFT JOIN if needed, but preserve missing source data as NULL so charts show gaps instead of fake zero rates. Use CASE WHEN the numerator columns and denominator are present and denominator > 0 THEN ROUND(... * 100000.0 / denominator, 1) ELSE NULL END.]",
   },
   // NOTE: historical-staffing-left-join-nulls guardrail REMOVED.
   // LEFT JOIN with a years CTE is the CORRECT pattern for staffing queries —
