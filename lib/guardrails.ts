@@ -271,6 +271,20 @@ function usesPlainNibrsVictimMonthlyTable(sql: string): boolean {
   return /\bsummary_victim_(?:state|city)_monthly\b/i.test(sql);
 }
 
+function asksNibrsVictimDemographicDimension(question: string): boolean {
+  return /\b(?:demographics?|age|race|racial|ethnicit\w+|hispanic|latino\w*|sex|gender|male|female|men|women|juvenile\w*|teen\w*)\b/i.test(question);
+}
+
+function asksNibrsCircumstanceDimension(question: string): boolean {
+  return /\b(?:domestic\s+violence|intimate\s+partner|gang(?:land)?|juvenile\s+gang|argument|circumstance|justifiable|police\s+shooting)\b/i.test(question);
+}
+
+function asksWeaponOnlyNibrsVictimTrend(question: string): boolean {
+  return asksWeaponQualifiedNibrsPersonCrime(question) &&
+    !asksNibrsVictimDemographicDimension(question) &&
+    !asksNibrsCircumstanceDimension(question);
+}
+
 function usesPartialAssaultCodeSet(sql: string): boolean {
   const codes = sqlQuotedCodes(sql);
   const assaultCodes = ["13A", "13B", "13C"].filter((code) => codes.has(code));
@@ -1354,7 +1368,17 @@ const GUARDRAILS: Guardrail[] = [
       return !/\bsummary_victim_(?:weapon|demographics|weapon_circumstance(?:_demo)?)\b/i.test(ctx.sql);
     },
     message: () =>
-      "[SYSTEM: The user asked for a weapon-qualified person crime, but the SQL uses plain summary_victim_state_monthly/summary_victim_city_monthly. Those tables do not contain weapon filters, so they return all victims for the offense. Rewrite using a weapon-capable victim table: summary_victim_weapon for weapon_type filters or summary_victim_demographics for weapon_category = 'Firearm'. For city queries, filter ORI through agencies; for state/national queries, use the state column or group nationally. Do not silently drop the weapon filter. If the user requested monthly grain and no safe weapon-capable monthly summary supports it, explain that limitation and offer the annual weapon-filtered result instead of returning unfiltered monthly counts.]",
+      "[SYSTEM: The user asked for a weapon-qualified person crime, but the SQL uses plain summary_victim_state_monthly/summary_victim_city_monthly. Those tables do not contain weapon filters, so they return all victims for the offense. For weapon-only victim counts/trends/rankings, rewrite using summary_victim_weapon and filter weapon_type to the requested weapon codes. Use summary_victim_demographics only when the user explicitly asks for race, sex, age, ethnicity, or another victim demographic breakdown. For city queries, filter ORI through agencies; for state/national queries, use the state column or group nationally. Do not silently drop the weapon filter. If the user requested monthly grain and no safe weapon-capable monthly summary supports it, explain that limitation and offer the annual weapon-filtered result instead of returning unfiltered monthly counts.]",
+  },
+  {
+    name: "nibrs-weapon-only-victim-demographics-table",
+    tabs: ["nibrs"],
+    match: (ctx) => {
+      if (!asksWeaponOnlyNibrsVictimTrend(ctx.question)) return false;
+      return /\bsummary_victim_demographics\b/i.test(ctx.sql);
+    },
+    message: () =>
+      "[SYSTEM: The user asked for a weapon-only NIBRS victim count/trend/ranking, not a victim demographic breakdown. Do NOT use summary_victim_demographics for this shape. Rewrite using summary_victim_weapon and filter weapon_type to the requested weapon codes. For firearms use weapon_type IN ('11','11A','12','12A','13','13A','14','14A','15','15A'). Use summary_victim_demographics only when the user explicitly asks for race, sex, age, ethnicity, or another victim demographic breakdown.]",
   },
   {
     name: "nibrs-weapon-injury-combination-unsupported",

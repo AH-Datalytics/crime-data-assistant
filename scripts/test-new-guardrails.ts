@@ -2346,7 +2346,25 @@ console.log("\n=== June 16 query audit regressions ===\n");
     r.fired.includes("nibrs-weapon-qualified-person-crime-table"),
     `fired: ${JSON.stringify(r.fired)}`);
   assert("TP: #6333 retry instruction requires weapon-capable victim table",
-    r.issues.some((issue) => /summary_victim_weapon|summary_victim_demographics/i.test(issue) && /weapon/i.test(issue)),
+    r.issues.some((issue) => /summary_victim_weapon/i.test(issue) && /weapon/i.test(issue) && /summary_victim_demographics only when/i.test(issue)),
+    `issues: ${JSON.stringify(r.issues)}`);
+}
+
+{
+  const sql = `SELECT year, SUM(victim_count) AS firearm_agg_assaults
+    FROM summary_victim_demographics
+    WHERE ucr_offense_code = '13A'
+      AND weapon_category = 'Firearm'
+      AND year BETWEEN 2021 AND 2025
+    GROUP BY year
+    ORDER BY year`;
+  const ctx = extractQueryContext(sql, "How bad is aggravated assaults with a firearm in America? Is it getting better?", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("TP: #6369 weapon-only trend cannot use summary_victim_demographics",
+    r.fired.includes("nibrs-weapon-only-victim-demographics-table"),
+    `fired: ${JSON.stringify(r.fired)}`);
+  assert("TP: #6369 retry instruction requires summary_victim_weapon",
+    r.issues.some((issue) => /summary_victim_weapon/i.test(issue) && /Do NOT use summary_victim_demographics/i.test(issue)),
     `issues: ${JSON.stringify(r.issues)}`);
 }
 
@@ -2362,7 +2380,23 @@ console.log("\n=== June 16 query audit regressions ===\n");
   const ctx = extractQueryContext(sql, "aggravated assaults with a firearm in new york city by year", "nibrs");
   const r = runGuardrails(ctx);
   assert("FP: weapon-qualified person crime using summary_victim_weapon passes",
-    !r.fired.includes("nibrs-weapon-qualified-person-crime-table"),
+    !r.fired.includes("nibrs-weapon-qualified-person-crime-table") &&
+      !r.fired.includes("nibrs-weapon-only-victim-demographics-table"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  const sql = `SELECT d.year, d.race, SUM(d.victim_count) AS firearm_assaults
+    FROM summary_victim_demographics d
+    WHERE d.ucr_offense_code = '13A'
+      AND d.weapon_category = 'Firearm'
+      AND d.year BETWEEN 2021 AND 2025
+    GROUP BY d.year, d.race
+    ORDER BY d.year, d.race`;
+  const ctx = extractQueryContext(sql, "firearm aggravated assault victims by race in America since 2021", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("FP: weapon + demographic breakdown can use summary_victim_demographics",
+    !r.fired.includes("nibrs-weapon-only-victim-demographics-table"),
     `fired: ${JSON.stringify(r.fired)}`);
 }
 

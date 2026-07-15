@@ -64,7 +64,7 @@ RULE: If the query involves counting, summing, or trending ANY of the above pers
 The ONLY exceptions where you may use the raw victims table:
 - Query requires victim demographics (age, sex, race) — use summary_victim_demographics instead
 - Query requires daily (not monthly) breakdowns for a SINGLE city over a SHORT time range (1-3 months max). You must filter by state, ori, year, AND a narrow incident_date range. Multi-city or multi-year daily queries on raw victims WILL crash.
-- Query requires fields not in summary tables (weapon, injury, relationship) — still must be tightly filtered by state + year + ori
+- Query requires fields not in summary tables (injury, relationship) — still must be tightly filtered by state + year + ori
 
 ADDITIONAL RULES:
 - For offender demographics (race, sex, age), ALWAYS use summary_offender_demographics (${formatRowCount(NIBRS.summaryRowCounts["summary_offender_demographics"] || 28000000)} rows) instead of raw offenders (${NIBRS.rawRowCounts["offenders"] || "195M"} rows).
@@ -183,7 +183,7 @@ Per FBI NIBRS standards, the counting unit depends on the offense category:
 These offenses are counted as ONE offense per VICTIM. You MUST count from the victims table, NOT the offenses table. The offenses table has only 1 record per incident regardless of victim count, so it UNDERCOUNTS by up to 20%.
 Person crime codes: 09A, 09B, 09C, 11A, 11B, 11C, 11D, 13A, 13B, 13C, 100, 36A, 36B, 64A, 64B
 
-**CRITICAL PERFORMANCE RULE**: For ALL person crime count/trend queries, you MUST use the victim summary tables (summary_victim_state_monthly or summary_victim_city_monthly). The raw victims table has ${NIBRS.rawRowCounts["victims"] || "95M"} rows and takes 2+ MINUTES per query. The summary tables return results in <50ms. For demographic breakdowns (race, sex, age, weapon type), use summary_victim_demographics instead of the raw victims table. ONLY use the raw victims table for daily date-level counts or fields not in any summary table.
+**CRITICAL PERFORMANCE RULE**: For ALL plain person crime count/trend queries, you MUST use the victim summary tables (summary_victim_state_monthly or summary_victim_city_monthly). The raw victims table has ${NIBRS.rawRowCounts["victims"] || "95M"} rows and takes 2+ MINUTES per query. The summary tables return results in <50ms. For weapon-only victim counts/trends/rankings, use summary_victim_weapon. For demographic breakdowns (race, sex, age, ethnicity), use summary_victim_demographics instead of the raw victims table. ONLY use the raw victims table for daily date-level counts or fields not in any summary table.
 
 ⚠️ **VICTIM SUMMARY TABLES CONTAIN ONLY PERSON CRIME CODES** (09A, 09B, 09C, 11A, 11B, 11C, 11D, 13A, 13B, 13C, 100, 36A, 36B, 64A, 64B). Property/society offenses — robbery (120), burglary (220), theft (23x), motor vehicle theft (240), arson (200), drugs (35A/35B), weapons (520), etc. — are NOT in summary_victim_state_monthly or summary_victim_city_monthly and will return ZERO rows. For those offenses use summary_state_monthly / summary_city_monthly (offense counts are the correct unit for non-person crimes).
 
@@ -218,7 +218,7 @@ City-level person crime example (agg assaults in Houston PD by month):
   AND ori IN (SELECT ori FROM agencies WHERE city = 'HOUSTON' AND state = 'TX' AND year = 2025 AND pop_group LIKE '1%')
   GROUP BY year, month ORDER BY year, month
 
-### summary_victim_demographics (DEMOGRAPHIC BREAKDOWNS — weapon, race, sex, age, ethnicity)
+### summary_victim_demographics (VICTIM DEMOGRAPHIC BREAKDOWNS — race, sex, age, ethnicity)
 - COLUMNS: ori TEXT, year INT, ucr_offense_code TEXT, weapon_category TEXT, race TEXT, sex TEXT, age_group TEXT, ethnicity TEXT, victim_count INT, state TEXT — has state column. For state queries use WHERE state = 'TX'. For city queries use ORI subquery.
 - weapon_category values: 'Firearm', 'Knife', 'Blunt Object', 'Other', 'Unknown'
 - race values: 'W' (White), 'B' (Black), 'I' (American Indian), 'A' (Asian), 'P' (Pacific Islander), 'U' (Unknown)
@@ -227,18 +227,19 @@ City-level person crime example (agg assaults in Houston PD by month):
 - ethnicity values: 'H' (Hispanic or Latino), 'N' (Not Hispanic or Latino), 'U' (Unknown), '' (blank/not reported). Filter out '' and 'U' when computing Hispanic percentages. Use CASE WHEN ethnicity = 'H' THEN 'Hispanic' WHEN ethnicity = 'N' THEN 'Not Hispanic' ELSE 'Unknown' END.
 - ucr_offense_code coverage: 09A, 09B, 11A, 11B, 11C, 13A, 13B, 120 (person crimes + robbery)
 - INDEXES: (ori, year), (ucr_offense_code, year)
-- USE FOR: ANY query involving victim demographics — race, sex, age, weapon type breakdowns. City rankings by weapon type. This table is pre-aggregated and returns in <1s vs 2+ minutes on raw victims.
+- USE FOR: queries involving victim demographics — race, sex, age, ethnicity, including demographic queries that also filter to a coarse weapon_category. Do NOT use this for weapon-only counts/trends/rankings; use summary_victim_weapon for that shape. This table is pre-aggregated and returns in <1s vs 2+ minutes on raw victims.
 - **AGE BUCKET RULE**: age_group values are fixed buckets (Under 18, 18-24, 25-34, 35-44, 45-54, 55-64, 65+, Unknown). If the user requests a custom range that doesn't align (e.g., "25-39"), explain which buckets you used and note the mismatch.
 
 Top cities by firearm murder rate example:
-  SELECT a.city, a.state, SUM(d.victim_count) AS firearm_murders, a.population,
-         ROUND(SUM(d.victim_count) * 100000.0 / a.population, 1) AS rate_per_100k
-  FROM summary_victim_demographics d
-  JOIN agencies a ON a.ori = d.ori AND a.year = d.year
-  WHERE d.year = 2025 AND d.ucr_offense_code = '09A' AND d.weapon_category = 'Firearm'
+  SELECT a.city, a.state, SUM(s.victim_count) AS firearm_murders, a.population,
+         ROUND(SUM(s.victim_count) * 100000.0 / a.population, 1) AS rate_per_100k
+  FROM summary_victim_weapon s
+  JOIN agencies a ON a.ori = s.ori AND a.year = s.year
+  WHERE s.year = 2025 AND s.ucr_offense_code = '09A'
+    AND s.weapon_type IN ('11','11A','12','12A','13','13A','14','14A','15','15A')
     AND a.population >= 100000
   GROUP BY a.city, a.state, a.population
-  HAVING SUM(d.victim_count) >= 5
+  HAVING SUM(s.victim_count) >= 5
   ORDER BY rate_per_100k DESC LIMIT 10
 
 Murder victims by race/sex for a city example:
@@ -255,7 +256,7 @@ Juvenile firearm homicides in a city by year example:
     AND d.ori IN (SELECT ori FROM agencies WHERE city = 'NEW HAVEN' AND state = 'CT' AND year = 2025 AND population > 0 ORDER BY pop_group LIMIT 1)
     AND d.year >= 2016
   GROUP BY d.year ORDER BY d.year
-NOTE: summary_victim_demographics supports ANY combination of age_group + weapon_category + race + sex + ethnicity + ucr_offense_code per ORI. Use it for ALL demographic-filtered queries — do NOT claim you need the raw victims table when this summary table has the needed columns.
+NOTE: summary_victim_demographics supports ANY combination of age_group + weapon_category + race + sex + ethnicity + ucr_offense_code per ORI. Use it for demographic-filtered victim queries — do NOT claim you need the raw victims table when this summary table has the needed columns. For weapon-only counts/trends/rankings, use summary_victim_weapon instead.
 
 Violent crimes by victim age group for agencies that reported every year from 2015 to 2025:
   SELECT d.age_group, SUM(d.victim_count) AS victims
@@ -355,7 +356,7 @@ Firearm-involved arrestees under 18 by arrest offense example:
 
 ### Crimes Against Property — COUNT OFFENSES (one per distinct operation)
 120 Robbery, 200 Arson, 210 Extortion, 220 Burglary, 23A-23H Larceny/Theft, 240 Motor Vehicle Theft (1 per stolen vehicle), 250 Counterfeiting, 26A-26G Fraud, 270 Embezzlement, 280 Stolen Property, 290 Vandalism, 510 Bribery
-→ Count from summary_city_monthly or summary_state_monthly. For robbery counts/trends, ALWAYS use these offense summary tables (NOT victim summary tables). Robbery is a property crime in NIBRS. The summary_victim_demographics table includes robbery only for demographic breakdowns (race/sex/age/weapon).
+→ Count from summary_city_monthly or summary_state_monthly. For robbery counts/trends, ALWAYS use these offense summary tables (NOT victim summary tables). Robbery is a property crime in NIBRS. The victim summary tables include robbery only for victim-level weapon or demographic breakdowns.
 → **If the user asks about "victims" of a property crime** (e.g., "burglary victims", "auto theft victims"): NIBRS generally counts property crimes per offense, not per victim. Use the offense summary tables (summary_city_monthly / summary_state_monthly) and mention in your explanation that property crimes in NIBRS are counted by offense, not by victim. **Exception: carjacking has dedicated victim/offender/arrestee demographic summaries — use those when the user asks specifically about carjacking victims/offenders/arrestees.**
 
 Vehicle burglaries per month in a city example:
@@ -1000,13 +1001,13 @@ IMPORTANT: The completeness filter ONLY applies to ORI-level/city-level tables (
 **DEFAULT YEAR FILTER (MANDATORY)**: When the user does NOT specify a year or year range, ALWAYS default to the last 5 complete calendar years (year BETWEEN ${DEFAULT_FIVE_COMPLETE_YEARS.start} AND ${DEFAULT_FIVE_COMPLETE_YEARS.end}). NEVER omit the year filter entirely — summary tables have millions of rows and scanning all years causes timeouts. If the user explicitly asks for "all time" or "all years", then omit the filter. If they explicitly ask to include this year/current year/YTD/to date, include ${NIBRS.currentYear} and describe it as partial/preliminary. When you apply the default, your explanation MUST state the exact years — e.g., "Since no year range was specified, showing data from ${DEFAULT_FIVE_COMPLETE_YEARS.start} to ${DEFAULT_FIVE_COMPLETE_YEARS.end}." For ranking/aggregate queries without GROUP BY year, this is the ONLY way the user knows which years are included — omitting it makes the result uninterpretable.
 
 ### WHEN TO USE SUMMARY TABLES vs RAW TABLES
-**SINGLE SUMMARY TABLE FIRST**: Before using raw tables or joining summaries, check whether one summary table already has every requested dimension and measure. If it does, use that table directly. Examples: summary_victim_demographics has offense + weapon + age/race/sex/ethnicity; summary_clearance_city_annual has offense + city/ORI + total_offenses + total_cleared; summary_clearance_detail has offense + ORI + exceptional clearance type counts. Do NOT refuse or cross-join summaries when a single summary table contains the requested filters and denominator.
-- VICTIM SUMMARY TABLES (summary_victim_state_monthly, summary_victim_city_monthly): ALL person crime counts/trends (murder, rape, assault, intimidation, kidnapping, sex offenses, human trafficking). These are pre-aggregated from victims+connected_offense fields. Use these ALWAYS for person crime counts.
+**SINGLE SUMMARY TABLE FIRST**: Before using raw tables or joining summaries, check whether one summary table already has every requested dimension and measure. If it does, use that table directly. Examples: summary_victim_weapon has offense + weapon; summary_victim_demographics has offense + age/race/sex/ethnicity; summary_clearance_city_annual has offense + city/ORI + total_offenses + total_cleared; summary_clearance_detail has offense + ORI + exceptional clearance type counts. Do NOT refuse or cross-join summaries when a single summary table contains the requested filters and denominator.
+- VICTIM SUMMARY TABLES (summary_victim_state_monthly, summary_victim_city_monthly): plain person crime counts/trends (murder, rape, assault, intimidation, kidnapping, sex offenses, human trafficking). These are pre-aggregated from victims+connected_offense fields. For weapon-qualified person-crime counts/trends/rankings, use summary_victim_weapon instead.
 - OFFENSE SUMMARY TABLES (summary_state_monthly, summary_city_monthly): property/society crime counts, trends, monthly/yearly totals, comparisons between cities/states, top-N by count
 - CARJACKING SUMMARY (summary_carjacking_monthly): ALL carjacking counts. For carjacking demographics (victim/offender/arrestee race, sex, age, weapon), use summary_carjacking_victim_demographics, summary_carjacking_offender_demographics, or summary_carjacking_arrestee_demographics
 - LOCATION SUMMARY (summary_offense_location): ALL "where did crimes happen" queries by location type
 - HATE CRIME SUMMARY (summary_hate_crime): ALL bias-motivated crime queries
-- WEAPON SUMMARIES (summary_offense_weapon, summary_victim_weapon): specific weapon type breakdowns (handgun vs rifle vs knife etc.) — offense-level or victim-level
+- WEAPON SUMMARIES (summary_offense_weapon, summary_victim_weapon): weapon-qualified counts/trends/rankings and specific weapon type breakdowns (firearm, handgun vs rifle vs knife etc.) — offense-level or victim-level
 - DV TRENDS (summary_dv_trends): PRECOMPUTED annual DV incident counts by year/state/category — first choice for DV counts and trends. "DV" ALWAYS means Domestic Violence, NEVER "Drug and Vice".
 - DOMESTIC VIOLENCE SUMMARY (summary_domestic_violence): incident-level DV detail (victim demographics, relationships, offenses) when summary_dv_trends lacks the dimension.
 - DV ARRESTS (summary_dv_arrests): DV-related arrests with arrestee demographics (sex, race, age_group, offense, dv_category).

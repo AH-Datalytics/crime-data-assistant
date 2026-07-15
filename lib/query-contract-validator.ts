@@ -1,10 +1,12 @@
 import { buildQueryContract, type QueryContractSource } from "./query-contract";
 import type { RoutingLogMeta } from "./routing-log-meta";
+import { validateSourceCapabilities, type SourceCapabilityFinding } from "./source-capabilities";
 
 export interface QueryContractSqlValidation {
   sql: string;
   fired: string[];
   warnings: string[];
+  capabilityFindings: SourceCapabilityFinding[];
 }
 
 function rewriteStateEquals(sql: string, requestedState: string, sourceState: string | string[]): string {
@@ -80,7 +82,7 @@ export function validateQueryContractSql(opts: {
   routingMeta?: RoutingLogMeta | null;
 }): QueryContractSqlValidation {
   const contract = buildQueryContract(opts.question, opts.source, opts.routingMeta);
-  if (!contract) return { sql: opts.sql, fired: [], warnings: [] };
+  if (!contract) return { sql: opts.sql, fired: [], warnings: [], capabilityFindings: [] };
 
   let sql = opts.sql;
   const fired: string[] = [];
@@ -113,5 +115,15 @@ export function validateQueryContractSql(opts: {
     warnings.push("contract-geography-state-missing");
   }
 
-  return { sql, fired, warnings };
+  const capabilityFindings = validateSourceCapabilities({
+    question: opts.question,
+    source: opts.source,
+    contract,
+    sql,
+  });
+  for (const finding of capabilityFindings) {
+    warnings.push(`capability-${finding.ruleId}`);
+  }
+
+  return { sql, fired, warnings: [...new Set(warnings)], capabilityFindings };
 }
