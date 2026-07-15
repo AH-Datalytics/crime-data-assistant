@@ -63,6 +63,42 @@ console.log("\n═══ sql-safety ═══\n");
 }
 
 // ══════════════════════════════════════════════════════════════════════
+{
+  const ctx = extractQueryContext(
+    "SELECT year, SUM(victim_count) AS firearm_agg_assaults FROM summary_victim_weapon WHERE ucr_offense_code = '13A' AND weapon_type IN ('11','12','13','14','15') AND year BETWEEN 2021 AND 2025 GROUP BY year ORDER BY year",
+    "How bad is aggravated assaults with a firearm in America? Is it getting better?",
+    "nibrs"
+  );
+  const r = runGuardrails(ctx);
+  assert("TP: broad NIBRS firearm filters must include automatic weapon codes",
+    r.fired.includes("nibrs-firearm-weapon-code-set-incomplete"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  const ctx = extractQueryContext(
+    "SELECT year, SUM(victim_count) AS firearm_agg_assaults FROM summary_victim_weapon WHERE ucr_offense_code = '13A' AND weapon_type IN ('11','11A','12','12A','13','13A','14','14A','15','15A') AND year BETWEEN 2021 AND 2025 GROUP BY year ORDER BY year",
+    "How bad is aggravated assaults with a firearm in America? Is it getting better?",
+    "nibrs"
+  );
+  const r = runGuardrails(ctx);
+  assert("FP: complete NIBRS firearm weapon set satisfies firearm guardrail",
+    !r.fired.includes("nibrs-firearm-weapon-code-set-incomplete"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  const ctx = extractQueryContext(
+    "SELECT year, SUM(victim_count) AS handgun_agg_assaults FROM summary_victim_weapon WHERE ucr_offense_code = '13A' AND weapon_type IN ('12','12A') AND year BETWEEN 2021 AND 2025 GROUP BY year ORDER BY year",
+    "How have handgun aggravated assaults changed since 2021?",
+    "nibrs"
+  );
+  const r = runGuardrails(ctx);
+  assert("FP: handgun-specific NIBRS weapon filters do not need all firearm codes",
+    !r.fired.includes("nibrs-firearm-weapon-code-set-incomplete"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
 //  agency-lookup-not-crime-data guardrail
 // ══════════════════════════════════════════════════════════════════════
 

@@ -519,7 +519,8 @@ Hate crimes by bias type example:
 
 ### summary_offense_weapon (SPECIFIC WEAPON TYPE PER OFFENSE)
 - COLUMNS: ori TEXT, year INT, ucr_offense_code TEXT, weapon_type TEXT, offense_count INT, state TEXT — has state column. For state queries use WHERE state = 'TX'. For city queries use ORI subquery.
-- weapon_type: specific weapon codes — '11'=Firearm (unspecified), '11A'=Firearm automatic, '12'=Handgun, '12A'=Handgun automatic, '13'=Rifle, '13A'=Rifle automatic, '14'=Shotgun, '14A'=Shotgun automatic, '15'=Other Firearm, '20'=Knife, '30'=Blunt Object, '35'=Motor Vehicle, '40'=Personal Weapons, '50'=Poison, '60'=Explosives, '65'=Fire, '70'=Drugs, '85'=Asphyxiation, '90'=Other, '95'=Unknown, '99'=None. IMPORTANT: The 'A' suffix codes (11A, 12A, 13A, 14A) mean automatic variants — always merge them with their base code in CASE statements (e.g., WHEN weapon_type IN ('12','12A') THEN 'Handgun'). Always GROUP BY the CASE alias, not by weapon_type.
+- weapon_type: specific weapon codes — '11'=Firearm (unspecified), '11A'=Firearm automatic, '12'=Handgun, '12A'=Handgun automatic, '13'=Rifle, '13A'=Rifle automatic, '14'=Shotgun, '14A'=Shotgun automatic, '15'=Other Firearm, '15A'=Other Firearm automatic, '20'=Knife, '30'=Blunt Object, '35'=Motor Vehicle, '40'=Personal Weapons, '50'=Poison, '60'=Explosives, '65'=Fire, '70'=Drugs, '85'=Asphyxiation, '90'=Other, '95'=Unknown, '99'=None. IMPORTANT: The 'A' suffix codes (11A, 12A, 13A, 14A, 15A) mean automatic variants — always merge them with their base code in CASE statements (e.g., WHEN weapon_type IN ('12','12A') THEN 'Handgun'). Always GROUP BY the CASE alias, not by weapon_type.
+- For broad firearm/gun filters, always use the complete set: weapon_type IN ('11','11A','12','12A','13','13A','14','14A','15','15A').
 - INDEXES: (ori, year), (ucr_offense_code, year), (weapon_type, year)
 - USE FOR: Specific weapon breakdowns at the OFFENSE level — "handgun vs rifle in murders", "weapon types in aggravated assaults". For victim-level weapon breakdowns, use summary_victim_weapon instead.
 
@@ -554,7 +555,7 @@ IMPORTANT: For city-level time-of-day queries, this table CANNOT help — it has
 - USE FOR: Specific weapon breakdowns at the VICTIM level — "murder victims killed by handgun vs rifle", "how many rape victims involved a knife". Pre-joined from victims + offenses. NEVER join raw victims with raw offenses for weapon queries.
 
 Murder victims by specific weapon example:
-  SELECT CASE WHEN s.weapon_type IN ('11','11A') THEN 'Firearm (type unknown)' WHEN s.weapon_type IN ('12','12A') THEN 'Handgun' WHEN s.weapon_type IN ('13','13A') THEN 'Rifle' WHEN s.weapon_type IN ('14','14A') THEN 'Shotgun' WHEN s.weapon_type = '15' THEN 'Other Firearm' WHEN s.weapon_type = '20' THEN 'Knife' WHEN s.weapon_type = '30' THEN 'Blunt Object' WHEN s.weapon_type = '35' THEN 'Motor Vehicle' WHEN s.weapon_type = '40' THEN 'Personal Weapons' WHEN s.weapon_type = '50' THEN 'Poison' WHEN s.weapon_type = '60' THEN 'Explosives' WHEN s.weapon_type = '65' THEN 'Fire' WHEN s.weapon_type = '70' THEN 'Drugs' WHEN s.weapon_type = '85' THEN 'Asphyxiation' WHEN s.weapon_type = '90' THEN 'Other' WHEN s.weapon_type = '95' THEN 'Unknown' WHEN s.weapon_type = '99' THEN 'None' ELSE s.weapon_type END AS weapon,
+  SELECT CASE WHEN s.weapon_type IN ('11','11A') THEN 'Firearm (type unknown)' WHEN s.weapon_type IN ('12','12A') THEN 'Handgun' WHEN s.weapon_type IN ('13','13A') THEN 'Rifle' WHEN s.weapon_type IN ('14','14A') THEN 'Shotgun' WHEN s.weapon_type IN ('15','15A') THEN 'Other Firearm' WHEN s.weapon_type = '20' THEN 'Knife' WHEN s.weapon_type = '30' THEN 'Blunt Object' WHEN s.weapon_type = '35' THEN 'Motor Vehicle' WHEN s.weapon_type = '40' THEN 'Personal Weapons' WHEN s.weapon_type = '50' THEN 'Poison' WHEN s.weapon_type = '60' THEN 'Explosives' WHEN s.weapon_type = '65' THEN 'Fire' WHEN s.weapon_type = '70' THEN 'Drugs' WHEN s.weapon_type = '85' THEN 'Asphyxiation' WHEN s.weapon_type = '90' THEN 'Other' WHEN s.weapon_type = '95' THEN 'Unknown' WHEN s.weapon_type = '99' THEN 'None' ELSE s.weapon_type END AS weapon,
     SUM(s.victim_count) AS victims
   FROM summary_victim_weapon s
   WHERE s.ucr_offense_code = '09A' AND s.year = 2025
@@ -562,7 +563,7 @@ Murder victims by specific weapon example:
 IMPORTANT: Always GROUP BY the CASE expression alias (weapon), NOT by s.weapon_type — otherwise codes like '11' and '11A' produce duplicate rows.
 
 Murders by weapon in Houston in 2025 example:
-  SELECT CASE WHEN s.weapon_type IN ('11','11A') THEN 'Firearm (type unknown)' WHEN s.weapon_type IN ('12','12A') THEN 'Handgun' WHEN s.weapon_type IN ('13','13A') THEN 'Rifle' WHEN s.weapon_type IN ('14','14A') THEN 'Shotgun' WHEN s.weapon_type = '15' THEN 'Other Firearm' WHEN s.weapon_type = '20' THEN 'Knife' WHEN s.weapon_type = '30' THEN 'Blunt Object' WHEN s.weapon_type = '35' THEN 'Motor Vehicle' WHEN s.weapon_type = '40' THEN 'Personal Weapons' WHEN s.weapon_type = '50' THEN 'Poison' WHEN s.weapon_type = '60' THEN 'Explosives' WHEN s.weapon_type = '65' THEN 'Fire' WHEN s.weapon_type = '70' THEN 'Drugs' WHEN s.weapon_type = '85' THEN 'Asphyxiation' WHEN s.weapon_type = '90' THEN 'Other' WHEN s.weapon_type = '95' THEN 'Unknown' WHEN s.weapon_type = '99' THEN 'None' ELSE s.weapon_type END AS weapon,
+  SELECT CASE WHEN s.weapon_type IN ('11','11A') THEN 'Firearm (type unknown)' WHEN s.weapon_type IN ('12','12A') THEN 'Handgun' WHEN s.weapon_type IN ('13','13A') THEN 'Rifle' WHEN s.weapon_type IN ('14','14A') THEN 'Shotgun' WHEN s.weapon_type IN ('15','15A') THEN 'Other Firearm' WHEN s.weapon_type = '20' THEN 'Knife' WHEN s.weapon_type = '30' THEN 'Blunt Object' WHEN s.weapon_type = '35' THEN 'Motor Vehicle' WHEN s.weapon_type = '40' THEN 'Personal Weapons' WHEN s.weapon_type = '50' THEN 'Poison' WHEN s.weapon_type = '60' THEN 'Explosives' WHEN s.weapon_type = '65' THEN 'Fire' WHEN s.weapon_type = '70' THEN 'Drugs' WHEN s.weapon_type = '85' THEN 'Asphyxiation' WHEN s.weapon_type = '90' THEN 'Other' WHEN s.weapon_type = '95' THEN 'Unknown' WHEN s.weapon_type = '99' THEN 'None' ELSE s.weapon_type END AS weapon,
     SUM(s.victim_count) AS victims
   FROM summary_victim_weapon s
   WHERE s.ucr_offense_code = '09A' AND s.year = 2025
@@ -594,7 +595,7 @@ Gang-related murders nationally example:
 ### summary_victim_weapon_circumstance (CROSS-DIMENSIONAL: weapon + circumstance per victim)
 - COLUMNS: state TEXT, ori TEXT, year INT, ucr_offense_code TEXT, weapon_type TEXT, circumstance_code TEXT, victim_count INT
 - Coverage: 09A (Murder), 09B (Negligent Manslaughter), 09C (Justifiable Homicide), 13A (Aggravated Assault)
-- weapon_type: specific weapon codes — '11'=Firearm (unspecified), '12'=Handgun, '13'=Rifle, '14'=Shotgun, '15'=Other Firearm, '20'=Knife, '30'=Blunt Object, '35'=Motor Vehicle, '40'=Personal Weapons, '90'=Other, '95'=Unknown, '99'=None
+- weapon_type: specific weapon codes — same as summary_offense_weapon. For broad firearm/gun filters, always include automatic variants: weapon_type IN ('11','11A','12','12A','13','13A','14','14A','15','15A').
 - circumstance_code: same codes as summary_victim_circumstance — '01'=Argument, '02'=Assault on LEO, '03'=Drug Dealing, '04'=Gangland, '05'=Juvenile Gang, '06'=Domestic Violence, '07'=Mercy Killing, '08'=Other Felony, '09'=Other, '10'=Unknown. For 09C: '20'=Killed by Private Citizen, '21'=Killed by Police.
 - INDEXES: (state, year, ucr_offense_code), (ori, year), (circumstance_code, year), (weapon_type, year)
 - **USE FOR: ANY query combining weapon AND circumstance** — "DV murders with firearms", "gang homicides by weapon type", "what weapons are used in argument-related murders". This is the ONLY table that correctly crosses these two dimensions at the incident level.
@@ -605,10 +606,10 @@ DV murders with firearms in Texas example:
   SELECT SUM(victim_count) AS dv_firearm_murders
   FROM summary_victim_weapon_circumstance
   WHERE ucr_offense_code = '09A' AND circumstance_code = '06'
-    AND weapon_type IN ('11','12','13','14','15') AND state = 'TX'
+    AND weapon_type IN ('11','11A','12','12A','13','13A','14','14A','15','15A') AND state = 'TX'
 
 Gang homicides by weapon type in California example:
-  SELECT CASE WHEN weapon_type IN ('11','11A') THEN 'Firearm (type unknown)' WHEN weapon_type IN ('12','12A') THEN 'Handgun' WHEN weapon_type IN ('13','13A') THEN 'Rifle' WHEN weapon_type IN ('14','14A') THEN 'Shotgun' WHEN weapon_type = '15' THEN 'Other Firearm' WHEN weapon_type = '20' THEN 'Knife' WHEN weapon_type = '40' THEN 'Personal Weapons' ELSE 'Other' END AS weapon,
+  SELECT CASE WHEN weapon_type IN ('11','11A') THEN 'Firearm (type unknown)' WHEN weapon_type IN ('12','12A') THEN 'Handgun' WHEN weapon_type IN ('13','13A') THEN 'Rifle' WHEN weapon_type IN ('14','14A') THEN 'Shotgun' WHEN weapon_type IN ('15','15A') THEN 'Other Firearm' WHEN weapon_type = '20' THEN 'Knife' WHEN weapon_type = '40' THEN 'Personal Weapons' ELSE 'Other' END AS weapon,
     SUM(victim_count) AS victims
   FROM summary_victim_weapon_circumstance
   WHERE ucr_offense_code = '09A' AND circumstance_code IN ('04','05') AND state = 'CA'
@@ -627,7 +628,7 @@ Gang homicides by weapon type in California example:
 
 DV murders by sex and weapon type in Texas example:
   SELECT year,
-    CASE WHEN weapon_type IN ('11','12','13','14','15') THEN 'Firearm' ELSE 'Non-Firearm' END AS weapon,
+    CASE WHEN weapon_type IN ('11','11A','12','12A','13','13A','14','14A','15','15A') THEN 'Firearm' ELSE 'Non-Firearm' END AS weapon,
     sex, SUM(victim_count) AS victims
   FROM summary_victim_weapon_circumstance_demo
   WHERE ucr_offense_code = '09A' AND circumstance_code = '06' AND state = 'TX'
@@ -637,14 +638,14 @@ Juvenile firearm DV murders by year example:
   SELECT year, SUM(victim_count) AS victims
   FROM summary_victim_weapon_circumstance_demo
   WHERE ucr_offense_code = '09A' AND circumstance_code = '06'
-    AND weapon_type IN ('11','12','13','14','15') AND age_group = 'Under 18'
+    AND weapon_type IN ('11','11A','12','12A','13','13A','14','14A','15','15A') AND age_group = 'Under 18'
   GROUP BY year ORDER BY year
 
 Female gang homicide victims involving firearms by race example:
   SELECT race, SUM(victim_count) AS victims
   FROM summary_victim_weapon_circumstance_demo
   WHERE ucr_offense_code = '09A' AND circumstance_code IN ('04','05')
-    AND weapon_type IN ('11','12','13','14','15') AND sex = 'F' AND year = 2025
+    AND weapon_type IN ('11','11A','12','12A','13','13A','14','14A','15','15A') AND sex = 'F' AND year = 2025
   GROUP BY race ORDER BY victims DESC
 
 ### summary_victim_relationship (CROSS-DIMENSIONAL: relationship + demographics per victim)
@@ -1167,7 +1168,7 @@ Three table options depending on what's needed:
 
 **summary_victim_weapon_circumstance** — for DV with weapon breakdown:
   SELECT SUM(victim_count) FROM summary_victim_weapon_circumstance
-  WHERE ucr_offense_code = '09A' AND circumstance_code = '06' AND weapon_type IN ('11','12','13','14','15') AND state = 'TX'
+  WHERE ucr_offense_code = '09A' AND circumstance_code = '06' AND weapon_type IN ('11','11A','12','12A','13','13A','14','14A','15','15A') AND state = 'TX'
 
 ### LEOKA (Law Enforcement Officers Killed and Assaulted)
 Victims with victim_type = 'L' (Law Enforcement Officer). This requires the raw victims table (no summary table has victim_type filtering).
@@ -1188,13 +1189,13 @@ For national gang-tagged murders:
 For city-level queries, if results are 0: explain that this agency likely does not tag gang circumstances — not that there are no gang murders.
 
 ### Firearm-Involved Crime — USE summary_offense_weapon or summary_victim_weapon
-Firearm weapon codes: '11'=Firearm (type unknown), '12'=Handgun, '13'=Rifle, '14'=Shotgun, '15'=Other Firearm.
+Firearm weapon codes: '11'=Firearm (type unknown), '11A'=Firearm automatic, '12'=Handgun, '12A'=Handgun automatic, '13'=Rifle, '13A'=Rifle automatic, '14'=Shotgun, '14A'=Shotgun automatic, '15'=Other Firearm, '15A'=Other Firearm automatic. For broad firearm/gun filters, use all ten codes.
 For offense-level firearm counts:
   SELECT SUM(offense_count) FROM summary_offense_weapon
-  WHERE ucr_offense_code = '13A' AND weapon_type IN ('11','12','13','14','15') AND year = 2024 AND state = 'TX'
+  WHERE ucr_offense_code = '13A' AND weapon_type IN ('11','11A','12','12A','13','13A','14','14A','15','15A') AND year = 2024 AND state = 'TX'
 For victim-level firearm counts:
   SELECT SUM(victim_count) FROM summary_victim_weapon
-  WHERE ucr_offense_code = '09A' AND weapon_type IN ('11','12','13','14','15') AND year = 2024
+  WHERE ucr_offense_code = '09A' AND weapon_type IN ('11','11A','12','12A','13','13A','14','14A','15','15A') AND year = 2024
 When collapsing weapon codes with CASE, do not alias the CASE expression as weapon_type and then GROUP BY weapon_type; SQLite will group by the raw source column. Use AS weapon_group and GROUP BY weapon_group, or repeat the CASE expression.
 
 ### Justifiable Homicide by Police — USE summary_victim_circumstance

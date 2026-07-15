@@ -267,6 +267,39 @@ function asksWeaponQualifiedNibrsPersonCrime(question: string): boolean {
   return /\b(?:murders?|homicides?|killings?|rapes?|assaults?|aggravated\s+assaults?|simple\s+assaults?|intimidation|kidnappings?|sex\s+offenses?|victims?)\b/i.test(question);
 }
 
+const NIBRS_FIREARM_WEAPON_CODES = ["11", "11A", "12", "12A", "13", "13A", "14", "14A", "15", "15A"] as const;
+const NIBRS_BASE_FIREARM_WEAPON_CODES = new Set(["11", "12", "13", "14", "15"]);
+
+function asksBroadFirearmWeapon(question: string): boolean {
+  if (!/\b(?:firearms?|guns?)\b/i.test(question)) return false;
+  return !/\b(?:handguns?|pistols?|rifles?|shotguns?)\b/i.test(question);
+}
+
+function nibrsWeaponTypeLiterals(sql: string): Set<string> {
+  const codes = new Set<string>();
+  const re = /\bweapon_type\s*(?:=\s*'([^']+)'|IN\s*\(([^)]*)\))/gi;
+  let match;
+  while ((match = re.exec(sql)) !== null) {
+    const raw = match[1] ? `'${match[1]}'` : match[2] || "";
+    for (const literal of raw.matchAll(/'([0-9A-Z]{2,3})'/gi)) {
+      codes.add(literal[1].toUpperCase());
+    }
+  }
+  return codes;
+}
+
+function usesIncompleteBroadNibrsFirearmWeaponSet(question: string, sql: string): boolean {
+  if (!asksBroadFirearmWeapon(question)) return false;
+  if (!/\bsummary_(?:offense|victim)_weapon\b|\bsummary_victim_weapon_circumstance(?:_demo)?\b/i.test(sql)) return false;
+  if (/\bweapon_category\s*=\s*'Firearm'/i.test(sql)) return false;
+
+  const codes = nibrsWeaponTypeLiterals(sql);
+  if (codes.size === 0) return false;
+  const includesBaseFirearmCode = [...codes].some((code) => NIBRS_BASE_FIREARM_WEAPON_CODES.has(code));
+  if (!includesBaseFirearmCode) return false;
+  return NIBRS_FIREARM_WEAPON_CODES.some((code) => !codes.has(code));
+}
+
 function usesPlainNibrsVictimMonthlyTable(sql: string): boolean {
   return /\bsummary_victim_(?:state|city)_monthly\b/i.test(sql);
 }
@@ -1379,6 +1412,13 @@ const GUARDRAILS: Guardrail[] = [
     },
     message: () =>
       "[SYSTEM: The user asked for a weapon-only NIBRS victim count/trend/ranking, not a victim demographic breakdown. Do NOT use summary_victim_demographics for this shape. Rewrite using summary_victim_weapon and filter weapon_type to the requested weapon codes. For firearms use weapon_type IN ('11','11A','12','12A','13','13A','14','14A','15','15A'). Use summary_victim_demographics only when the user explicitly asks for race, sex, age, ethnicity, or another victim demographic breakdown.]",
+  },
+  {
+    name: "nibrs-firearm-weapon-code-set-incomplete",
+    tabs: ["nibrs"],
+    match: (ctx) => usesIncompleteBroadNibrsFirearmWeaponSet(ctx.question, ctx.sql),
+    message: () =>
+      "[SYSTEM: The user asked for a broad firearm/gun NIBRS weapon filter, but the SQL omitted automatic-firearm weapon codes. Use the complete firearm weapon set everywhere the query filters or groups broad firearms: weapon_type IN ('11','11A','12','12A','13','13A','14','14A','15','15A'). This includes firearm CASE expressions as well as WHERE filters.]",
   },
   {
     name: "nibrs-weapon-injury-combination-unsupported",

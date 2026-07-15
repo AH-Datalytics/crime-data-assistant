@@ -36,7 +36,7 @@ function assertDoesNotFind(name: string, ids: string[], unexpected: string) {
     `SELECT s.year, SUM(s.victim_count) AS firearm_assaults
      FROM summary_victim_weapon s
      WHERE s.ucr_offense_code = '13A'
-       AND s.weapon_type IN ('11','11A','12','12A','13','13A','14','14A','15')
+       AND s.weapon_type IN ('11','11A','12','12A','13','13A','14','14A','15','15A')
      GROUP BY s.year`
   );
   assertDoesNotFind("weapon-capable victim table satisfies weapon contract", ids, "nibrs-weapon-person-crime-table");
