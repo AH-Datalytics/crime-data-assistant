@@ -2453,10 +2453,43 @@ console.log("\n=== June 16 query audit regressions ===\n");
 }
 
 {
+  const sql = `SELECT CAST(year AS TEXT) AS year, SUM(offense_count) AS firearm_assaults
+    FROM summary_offense_weapon
+    WHERE ucr_offense_code = '13A'
+      AND weapon_type IN ('11','11A','12','12A','13','13A','14','14A','15','15A')
+      AND year BETWEEN 2021 AND 2025
+    GROUP BY year
+    ORDER BY year`;
+  const ctx = extractQueryContext(sql, "How bad is aggravated assaults with a firearm in America? Is it getting better?", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("TP: #6369 default person-crime weapon trend cannot use offense-level weapon table",
+    r.fired.includes("nibrs-weapon-only-person-crime-offense-table"),
+    `fired: ${JSON.stringify(r.fired)}`);
+  assert("TP: #6369 offense-table retry instruction requires summary_victim_weapon",
+    r.issues.some((issue) => /summary_victim_weapon/i.test(issue) && /summary_offense_weapon/i.test(issue)),
+    `issues: ${JSON.stringify(r.issues)}`);
+}
+
+{
+  const sql = `SELECT year, SUM(offense_count) AS firearm_assault_offenses
+    FROM summary_offense_weapon
+    WHERE ucr_offense_code = '13A'
+      AND weapon_type IN ('11','11A','12','12A','13','13A','14','14A','15','15A')
+      AND year BETWEEN 2021 AND 2025
+    GROUP BY year
+    ORDER BY year`;
+  const ctx = extractQueryContext(sql, "How have aggravated assault offense counts involving firearms changed?", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("FP: explicit NIBRS offense-level weapon query may use summary_offense_weapon",
+    !r.fired.includes("nibrs-weapon-only-person-crime-offense-table"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
   const sql = `SELECT s.year, SUM(s.victim_count) AS firearm_assaults
     FROM summary_victim_weapon s
     WHERE s.ucr_offense_code = '13A'
-      AND s.weapon_type IN ('11','11A','12','12A','13','13A','14','14A','15')
+      AND s.weapon_type IN ('11','11A','12','12A','13','13A','14','14A','15','15A')
       AND s.year BETWEEN 2021 AND 2025
       AND s.ori IN (SELECT ori FROM agencies WHERE city = 'NEW YORK' AND state = 'NY' AND year = 2025 AND population > 0 ORDER BY pop_group LIMIT 1)
     GROUP BY s.year
@@ -2465,7 +2498,9 @@ console.log("\n=== June 16 query audit regressions ===\n");
   const r = runGuardrails(ctx);
   assert("FP: weapon-qualified person crime using summary_victim_weapon passes",
     !r.fired.includes("nibrs-weapon-qualified-person-crime-table") &&
-      !r.fired.includes("nibrs-weapon-only-victim-demographics-table"),
+      !r.fired.includes("nibrs-weapon-only-victim-demographics-table") &&
+      !r.fired.includes("nibrs-weapon-only-person-crime-offense-table") &&
+      !r.fired.includes("nibrs-firearm-weapon-code-set-incomplete"),
     `fired: ${JSON.stringify(r.fired)}`);
 }
 

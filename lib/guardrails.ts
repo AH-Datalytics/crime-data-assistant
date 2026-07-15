@@ -304,6 +304,16 @@ function usesPlainNibrsVictimMonthlyTable(sql: string): boolean {
   return /\bsummary_victim_(?:state|city)_monthly\b/i.test(sql);
 }
 
+function asksExplicitNibrsOffenseLevel(question: string): boolean {
+  return /\boffense[-\s]?level\b|\boffense\s+records?\b|\boffense\s+counts?\b|\boffenses?\s+(?:involving|with|by|using)\b/i.test(question);
+}
+
+function usesOffenseWeaponForNibrsPersonCrime(sql: string): boolean {
+  if (!/\bsummary_offense_weapon\b/i.test(sql)) return false;
+  const codes = extractUcrOffenseCodeLiterals(sql);
+  return codes.some((code) => NIBRS_PERSON_CRIME_CODES.has(code) || code === "120");
+}
+
 function asksNibrsVictimDemographicDimension(question: string): boolean {
   return /\b(?:demographics?|age|race|racial|ethnicit\w+|hispanic|latino\w*|sex|gender|male|female|men|women|juvenile\w*|teen\w*)\b/i.test(question);
 }
@@ -1454,6 +1464,17 @@ const GUARDRAILS: Guardrail[] = [
     },
     message: () =>
       "[SYSTEM: The user asked for a weapon-only NIBRS victim count/trend/ranking, not a victim demographic breakdown. Do NOT use summary_victim_demographics for this shape. Rewrite using summary_victim_weapon and filter weapon_type to the requested weapon codes. For firearms use weapon_type IN ('11','11A','12','12A','13','13A','14','14A','15','15A'). Use summary_victim_demographics only when the user explicitly asks for race, sex, age, ethnicity, or another victim demographic breakdown.]",
+  },
+  {
+    name: "nibrs-weapon-only-person-crime-offense-table",
+    tabs: ["nibrs"],
+    match: (ctx) => {
+      if (!asksWeaponOnlyNibrsVictimTrend(ctx.question)) return false;
+      if (asksExplicitNibrsOffenseLevel(ctx.question)) return false;
+      return usesOffenseWeaponForNibrsPersonCrime(ctx.sql);
+    },
+    message: () =>
+      "[SYSTEM: The user asked for a weapon-qualified person-crime count/trend/ranking. By default, NIBRS person-crime counts in this app are victim counts, not offense-record counts. Do NOT use summary_offense_weapon unless the user explicitly asks for offense-level/offense-record counts. Rewrite using summary_victim_weapon with SUM(victim_count), and filter weapon_type to the requested weapon codes. For firearms use weapon_type IN ('11','11A','12','12A','13','13A','14','14A','15','15A').]",
   },
   {
     name: "nibrs-firearm-weapon-code-set-incomplete",
