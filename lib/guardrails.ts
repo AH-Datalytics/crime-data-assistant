@@ -557,6 +557,41 @@ function violatesPastYearsConvention(ctx: QueryContext): boolean {
     sqlIncludesCurrentCalendarYear(ctx.sql);
 }
 
+function hasAnnualYearGrouping(sql: string): boolean {
+  const stripped = stripSqlStrings(sql);
+  const group = stripped.match(/\bGROUP\s+BY\s+([\s\S]*?)(?:\bORDER\s+BY\b|\bLIMIT\b|$)/i)?.[1] || "";
+  return /\byear\b/i.test(group) && !/\bmonth\b/i.test(group);
+}
+
+function sqlMayIncludeCurrentCalendarYear(sql: string): boolean {
+  const current = currentCalendarYear();
+  if (sqlHasYearUpperBound(sql, current - 1)) return false;
+
+  const stripped = stripSqlStrings(sql);
+  const yearRef = String.raw`(?:\b\w+\.)?\byear\b`;
+  const eqRe = new RegExp(`${yearRef}\\s*=\\s*${current}\\b`, "i");
+  const leCurrentRe = new RegExp(`${yearRef}\\s*<=\\s*${current}\\b`, "i");
+  const betweenCurrentRe = new RegExp(`${yearRef}\\s+BETWEEN\\s+(?:19|20)\\d{2}\\s+AND\\s+${current}\\b`, "i");
+  const inCurrentRe = new RegExp(`${yearRef}\\s+IN\\s*\\([^)]*\\b${current}\\b[^)]*\\)`, "i");
+  if (eqRe.test(stripped) || leCurrentRe.test(stripped) || betweenCurrentRe.test(stripped) || inCurrentRe.test(stripped)) return true;
+
+  const ge = stripped.match(new RegExp(`${yearRef}\\s*>=\\s*((?:19|20)\\d{2})\\b`, "i"));
+  if (ge && Number(ge[1]) <= current) return true;
+
+  const gt = stripped.match(new RegExp(`${yearRef}\\s*>\\s*((?:19|20)\\d{2})\\b`, "i"));
+  if (gt && Number(gt[1]) < current) return true;
+
+  return !new RegExp(`${yearRef}\\s*(?:=|<|>|BETWEEN|IN)`, "i").test(stripped);
+}
+
+function nibrsAnnualTrendImplicitlyIncludesCurrentYear(ctx: QueryContext): boolean {
+  if (asksToIncludeCurrentYear(ctx.question)) return false;
+  if (requestedEndYear(ctx.question) !== null) return false;
+  if (exactYearRequested(ctx.question) === currentCalendarYear()) return false;
+  if (!hasAnnualYearGrouping(ctx.sql)) return false;
+  return sqlMayIncludeCurrentCalendarYear(ctx.sql);
+}
+
 function asksForTheftSubtype(question: string): boolean {
   return /\b(?:larceny from auto|theft from (?:motor )?vehicle|vehicle burglary|shoplifting|pickpocket(?:ing)?|pocket-picking|purse snatching|theft from building|theft of motor vehicle parts|auto parts)\b/i.test(question);
 }
@@ -921,6 +956,13 @@ const GUARDRAILS: Guardrail[] = [
       const range = relativeYearRangeForQuestion(ctx.question);
       return `[SYSTEM: The user asked for "past/last N years" without asking to include the current partial year. Use the last N complete calendar years only: year BETWEEN ${range?.start} AND ${range?.end}. Do not include ${currentCalendarYear()} unless the user explicitly says "including this year", "this year", "YTD", "to date", or "to present".]`;
     },
+  },
+  {
+    name: "nibrs-annual-trend-implicit-current-year",
+    tabs: ["nibrs"],
+    match: (ctx) => nibrsAnnualTrendImplicitlyIncludesCurrentYear(ctx),
+    message: () =>
+      `[SYSTEM: This is an annual NIBRS trend and the user did not explicitly ask for ${currentCalendarYear()}, YTD, to date, or to present. Do not include the current partial year as an annual trend point because it will look like an artificial drop. Cap the annual query at year <= ${currentCalendarYear() - 1}, or use year BETWEEN [start] AND ${currentCalendarYear() - 1}. Only include ${currentCalendarYear()} when the user explicitly asks for current-year/YTD data, and then disclose that it is partial.]`,
   },
   {
     name: "current-historical-theft-subtype-parent",

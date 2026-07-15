@@ -99,6 +99,54 @@ console.log("\n═══ sql-safety ═══\n");
     `fired: ${JSON.stringify(r.fired)}`);
 }
 
+{
+  const ctx = extractQueryContext(
+    "SELECT year, SUM(victim_count) AS firearm_agg_assaults FROM summary_victim_weapon WHERE ucr_offense_code = '13A' AND weapon_type IN ('11','11A','12','12A','13','13A','14','14A','15','15A') AND year >= 2021 GROUP BY year ORDER BY year",
+    "How bad is aggravated assaults with a firearm in America? Is it getting better?",
+    "nibrs"
+  );
+  const r = runGuardrails(ctx);
+  assert("TP: annual NIBRS trends without explicit current-year request must not include partial current year",
+    r.fired.includes("nibrs-annual-trend-implicit-current-year"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  const ctx = extractQueryContext(
+    "SELECT year, SUM(victim_count) AS firearm_agg_assaults FROM summary_victim_weapon WHERE ucr_offense_code = '13A' AND weapon_type IN ('11','11A','12','12A','13','13A','14','14A','15','15A') AND year BETWEEN 2021 AND 2025 GROUP BY year ORDER BY year",
+    "How bad is aggravated assaults with a firearm in America? Is it getting better?",
+    "nibrs"
+  );
+  const r = runGuardrails(ctx);
+  assert("FP: annual NIBRS trends capped at the last complete year satisfy partial-year guardrail",
+    !r.fired.includes("nibrs-annual-trend-implicit-current-year"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  const ctx = extractQueryContext(
+    "SELECT year, SUM(victim_count) AS firearm_agg_assaults FROM summary_victim_weapon WHERE ucr_offense_code = '13A' AND weapon_type IN ('11','11A','12','12A','13','13A','14','14A','15','15A') AND year BETWEEN 2021 AND 2026 GROUP BY year ORDER BY year",
+    "How bad is aggravated assaults with a firearm in America through 2026?",
+    "nibrs"
+  );
+  const r = runGuardrails(ctx);
+  assert("FP: explicit NIBRS current-year annual request may include partial current year",
+    !r.fired.includes("nibrs-annual-trend-implicit-current-year"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  const ctx = extractQueryContext(
+    "SELECT year, month, SUM(victim_count) AS assaults FROM summary_victim_state_monthly WHERE ucr_offense_code = '13A' AND year >= 2021 GROUP BY year, month ORDER BY year, month",
+    "monthly aggravated assaults since 2021",
+    "nibrs"
+  );
+  const r = runGuardrails(ctx);
+  assert("FP: monthly NIBRS trends may include current partial months",
+    !r.fired.includes("nibrs-annual-trend-implicit-current-year"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
 //  agency-lookup-not-crime-data guardrail
 // ══════════════════════════════════════════════════════════════════════
 
