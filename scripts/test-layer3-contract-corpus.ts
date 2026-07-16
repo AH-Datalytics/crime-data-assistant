@@ -13,6 +13,8 @@ type CorpusCase = {
   expectNoFindings?: string[];
   expectRetry?: string[];
   expectBlock?: string[];
+  expectFired?: string[];
+  expectSqlIncludes?: string[];
 };
 
 const cases: CorpusCase[] = [
@@ -100,6 +102,19 @@ const cases: CorpusCase[] = [
     expectRetry: ["nibrs-campus-agency-resolution"],
   },
   {
+    id: "L3-NIBRS-CAMPUS-02",
+    family: "campus agency resolution",
+    question: "University of California Berkeley vehicle burglaries per month",
+    source: "nibrs",
+    sql: `
+      SELECT s.year, s.month, SUM(s.offense_count)
+      FROM summary_city_monthly s
+      WHERE s.ori IN ('CA0019700') AND s.ucr_offense_code = '220'
+      GROUP BY s.year, s.month
+    `,
+    expectNoFindings: ["nibrs-campus-agency-resolution"],
+  },
+  {
     id: "L3-SHR-CAMPUS-01",
     family: "campus agency resolution",
     question: "UCLA murders since 2000",
@@ -112,6 +127,35 @@ const cases: CorpusCase[] = [
     `,
     expectFindings: ["shr-campus-agency-resolution"],
     expectRetry: ["shr-campus-agency-resolution"],
+  },
+  {
+    id: "L3-GEO-STATE-CODE-01",
+    family: "source-specific state codes",
+    question: "auto theft clearance rate in Omaha, NE by year",
+    source: "historical",
+    sql: `
+      SELECT hac.year, SUM(hac.cleared_motor_vehicle_theft)
+      FROM historical_agency_clearance hac
+      JOIN historical_agency ha ON ha.ori = hac.ori
+      WHERE ha.city = 'Omaha' AND ha.state = 'NE'
+      GROUP BY hac.year
+    `,
+    expectFired: ["contract-state-code-alias"],
+    expectSqlIncludes: ["ha.state = 'nb'"],
+  },
+  {
+    id: "L3-GEO-STATE-CODE-02",
+    family: "source-specific state codes",
+    question: "Nebraska violent crime trend from 2010 to 2024",
+    source: "nibrs",
+    sql: `
+      SELECT s.year, SUM(s.victim_count)
+      FROM summary_victim_state_monthly s
+      WHERE s.state = 'NE'
+      GROUP BY s.year
+    `,
+    expectFired: ["contract-state-code-alias"],
+    expectSqlIncludes: ["s.state IN ('NE','NB')"],
   },
   {
     id: "L3-GEO-COUNTY-01",
@@ -132,6 +176,35 @@ const cases: CorpusCase[] = [
     id: "L3-GEO-COUNTY-02",
     family: "countywide crosswalk",
     question: "murders in Cook County Illinois by year",
+    source: "current",
+    sql: `
+      SELECT year, SUM(count)
+      FROM agency_monthly
+      WHERE agency = 'Cook County' AND type = 'County' AND state = 'IL'
+      GROUP BY year
+    `,
+    expectFindings: ["current-countywide-crosswalk"],
+    expectRetry: ["current-countywide-crosswalk"],
+  },
+  {
+    id: "L3-GEO-COUNTY-03",
+    family: "countywide crosswalk",
+    question: "murders in Cook County Illinois by year",
+    source: "nibrs",
+    sql: `
+      SELECT s.year, SUM(s.victim_count)
+      FROM summary_victim_city_monthly s
+      JOIN county_lookup cl ON cl.ori = s.ori
+      WHERE cl.county_name = 'Cook County'
+      GROUP BY s.year
+    `,
+    expectFindings: ["nibrs-countywide-crosswalk"],
+    expectRetry: ["nibrs-countywide-crosswalk"],
+  },
+  {
+    id: "L3-GEO-COUNTY-04",
+    family: "countywide crosswalk",
+    question: "murders in Cook County Illinois by year",
     source: "nibrs",
     sql: `
       SELECT s.year, SUM(s.victim_count)
@@ -141,6 +214,33 @@ const cases: CorpusCase[] = [
       GROUP BY s.year
     `,
     expectNoFindings: ["nibrs-countywide-crosswalk"],
+  },
+  {
+    id: "L3-GEO-COUNTY-05",
+    family: "countywide crosswalk",
+    question: "fatal shootings in Cook County Illinois by year",
+    source: "shr",
+    sql: `
+      SELECT i.year, COUNT(*)
+      FROM incidents i
+      WHERE i.agency = 'Cook County'
+      GROUP BY i.year
+    `,
+    expectFindings: ["shr-countywide-crosswalk"],
+    expectRetry: ["shr-countywide-crosswalk"],
+  },
+  {
+    id: "L3-GEO-COUNTY-06",
+    family: "unsupported countywide demographics",
+    question: "show me violent crime offenders by age for Tarrant County, Texas",
+    source: "nibrs",
+    sql: `
+      SELECT d.year, d.age_group, SUM(d.offender_count)
+      FROM summary_offender_demographics d
+      GROUP BY d.year, d.age_group
+    `,
+    expectFindings: ["nibrs-countywide-demographics-unsupported"],
+    expectBlock: ["nibrs-countywide-demographics-unsupported"],
   },
   {
     id: "L3-GEO-STATE-01",
@@ -157,6 +257,81 @@ const cases: CorpusCase[] = [
     expectRetry: ["contract-state-scope-local-filter"],
   },
   {
+    id: "L3-NIBRS-COMPARABILITY-01",
+    family: "continuous reporters",
+    question: "show me violent crimes by offender age by year for 2021 to 2025 for continuously reporting agencies",
+    source: "nibrs",
+    sql: `
+      SELECT d.year, d.age_group, SUM(d.offender_count)
+      FROM summary_offender_demographics d
+      WHERE d.year BETWEEN 2021 AND 2025
+      GROUP BY d.year, d.age_group
+    `,
+    expectFindings: ["nibrs-continuous-reporters-range-table"],
+    expectRetry: ["nibrs-continuous-reporters-range-table"],
+  },
+  {
+    id: "L3-NIBRS-COMPARABILITY-02",
+    family: "continuous reporters",
+    question: "show me violent crimes by offender age by year for 2021 to 2025 for continuously reporting agencies",
+    source: "nibrs",
+    sql: `
+      SELECT d.year, d.age_group, SUM(d.offender_count)
+      FROM summary_offender_demographics d
+      WHERE d.year BETWEEN 2021 AND 2025
+        AND d.ori IN (
+          SELECT ori FROM nibrs_consistent_reporters
+          WHERE start_year = 2021 AND end_year = 2025
+        )
+      GROUP BY d.year, d.age_group
+    `,
+    expectNoFindings: ["nibrs-continuous-reporters-range-table"],
+  },
+  {
+    id: "L3-NIBRS-DEMOGRAPHICS-01",
+    family: "demographic breakdown table",
+    question: "offender age breakdown for robberies since 2020",
+    source: "nibrs",
+    sql: `
+      SELECT year, SUM(offense_count) AS robberies
+      FROM summary_city_monthly
+      WHERE ucr_offense_code = '120'
+      GROUP BY year
+    `,
+    expectFindings: ["nibrs-demographic-breakdown-table"],
+    expectRetry: ["nibrs-demographic-breakdown-table"],
+  },
+  {
+    id: "L3-NIBRS-DEMOGRAPHICS-02",
+    family: "weapon demographic breakdown table",
+    question: "firearm aggravated assault victims by race in America since 2021",
+    source: "nibrs",
+    sql: `
+      SELECT year, race, SUM(victim_count) AS firearm_agg_assaults
+      FROM summary_victim_weapon
+      WHERE ucr_offense_code = '13A'
+        AND weapon_category = 'Firearm'
+      GROUP BY year, race
+    `,
+    expectFindings: ["nibrs-weapon-demographic-person-crime-table"],
+    expectRetry: ["nibrs-weapon-demographic-person-crime-table"],
+  },
+  {
+    id: "L3-NIBRS-CIRCUMSTANCE-01",
+    family: "weapon circumstance table",
+    question: "domestic violence aggravated assaults with a firearm since 2020",
+    source: "nibrs",
+    sql: `
+      SELECT year, SUM(victim_count) AS firearm_agg_assaults
+      FROM summary_victim_weapon
+      WHERE ucr_offense_code = '13A'
+        AND weapon_category = 'Firearm'
+      GROUP BY year
+    `,
+    expectFindings: ["nibrs-weapon-circumstance-person-crime-table"],
+    expectRetry: ["nibrs-weapon-circumstance-person-crime-table"],
+  },
+  {
     id: "L3-RATE-01",
     family: "rate denominators",
     question: "violent crime rate in New York City since 1930",
@@ -169,6 +344,80 @@ const cases: CorpusCase[] = [
     `,
     expectFindings: ["historical-local-rate-population"],
     expectRetry: ["historical-local-rate-population"],
+  },
+  {
+    id: "L3-RATE-02",
+    family: "rate denominators",
+    question: "violent crime rate in California since 2008",
+    source: "historical",
+    sql: `
+      SELECT ha.state, SUM(hac.violent) * 100000.0 / SUM(hap.population) AS rate
+      FROM historical_agency_crime hac
+      JOIN historical_agency ha ON ha.ori = hac.ori
+      JOIN historical_agency_population hap ON hap.ori = hac.ori AND hap.year = hac.year
+      WHERE ha.state = 'ca'
+    `,
+    expectFindings: ["historical-state-national-rate-table"],
+    expectRetry: ["historical-state-national-rate-table"],
+  },
+  {
+    id: "L3-RATE-03",
+    family: "rate denominators",
+    question: "violent crime rate in New York City since 1930",
+    source: "historical",
+    sql: `
+      SELECT hac.year, hac.violent * 100000.0 / hap.population AS rate
+      FROM historical_agency_crime hac
+      JOIN historical_agency_population hap ON hap.ori = hac.ori AND hap.year = hac.year
+      WHERE hac.year >= 1930
+    `,
+    expectNoFindings: ["historical-local-rate-population"],
+  },
+  {
+    id: "L3-RATE-04",
+    family: "rate denominators",
+    question: "violent crime rate in New York City since 1930",
+    source: "historical",
+    sql: `
+      SELECT y.year,
+        ROUND((COALESCE(hac.murder, 0) + COALESCE(hac.rape, 0)) * 100000.0 / COALESCE(hap.population, 1), 1) AS rate
+      FROM years y
+      LEFT JOIN historical_agency_crime hac ON hac.year = y.year
+      LEFT JOIN historical_agency_population hap ON hap.ori = hac.ori AND hap.year = y.year
+    `,
+    expectFindings: ["historical-rate-null-gaps"],
+    expectRetry: ["historical-rate-null-gaps"],
+  },
+  {
+    id: "L3-RATE-05",
+    family: "rate denominators",
+    question: "murder rate in Houston in 2026",
+    source: "current",
+    sql: `
+      SELECT year, month, SUM(count) AS murders
+      FROM agency_monthly
+      WHERE offense = 'Murder'
+      GROUP BY year, month
+    `,
+    expectFindings: ["current-rate-population"],
+    expectRetry: ["current-rate-population"],
+  },
+  {
+    id: "L3-HISTORICAL-CLEARANCE-01",
+    family: "historical clearance table",
+    question: "auto theft clearance rate in Omaha, NE by year",
+    source: "historical",
+    sql: `
+      SELECT hac.year, SUM(hac.motor_vehicle_theft) AS auto_thefts
+      FROM historical_agency_crime hac
+      JOIN historical_agency ha ON ha.ori = hac.ori
+      WHERE ha.city = 'Omaha' AND ha.state = 'NE'
+      GROUP BY hac.year
+    `,
+    expectFindings: ["historical-clearance-table"],
+    expectRetry: ["historical-clearance-table"],
+    expectFired: ["contract-state-code-alias"],
+    expectSqlIncludes: ["ha.state = 'nb'"],
   },
   {
     id: "L3-SHR-RATE-01",
@@ -227,6 +476,20 @@ for (const testCase of cases) {
     assert(
       result.warnings.includes(expected),
       `${testCase.id}: expected warning ${expected}, got ${JSON.stringify(result.warnings)}`
+    );
+  }
+
+  for (const expected of testCase.expectFired ?? []) {
+    assert(
+      result.fired.includes(expected),
+      `${testCase.id}: expected fired contract action ${expected}, got ${JSON.stringify(result.fired)}`
+    );
+  }
+
+  for (const expected of testCase.expectSqlIncludes ?? []) {
+    assert(
+      result.sql.includes(expected),
+      `${testCase.id}: expected rewritten SQL to include ${expected}, got ${result.sql}`
     );
   }
 
