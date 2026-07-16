@@ -86,7 +86,11 @@ RAW_TABLES = ['agencies', 'incidents', 'offenses', 'property', 'victims',
 SUMMARY_TABLES = ['summary_city_monthly', 'summary_state_monthly',
                   'summary_victim_city_monthly', 'summary_victim_state_monthly',
                   'summary_victim_demographics', 'summary_victim_weapon',
-                  'summary_carjacking_monthly', 'summary_drug_monthly']
+                  'summary_carjacking_monthly', 'summary_drug_monthly',
+                  'summary_arrestee_demographics',
+                  'summary_carjacking_victim_demographics',
+                  'summary_carjacking_offender_demographics',
+                  'summary_carjacking_arrestee_demographics']
 
 PERSON_CRIMES = (
     "'09A','09B','09C','100','11A','11B','11C','11D',"
@@ -94,6 +98,62 @@ PERSON_CRIMES = (
 )
 
 WEAPON_VICTIM_CRIMES = "'09A','09B','09C','11A','11B','11C','13A','13B','120'"
+FIREARM_WEAPON_CODES = "'11','11A','12','12A','13','13A','14','14A','15','15A'"
+
+SUMMARY_DUPLICATE_CHECKS = {
+    'summary_victim_demographics': {
+        'year_col': 'year',
+        'key_cols': ['ori', 'year', 'ucr_offense_code', 'weapon_category', 'race', 'sex', 'age_group', 'ethnicity', 'state'],
+    },
+    'summary_arrestee_demographics': {
+        'year_col': 'year',
+        'key_cols': ['ori', 'year', 'ucr_arrest_offense', 'weapon_category', 'race', 'sex', 'age_group', 'ethnicity', 'state'],
+    },
+    'summary_drug_monthly': {
+        'year_col': 'year',
+        'key_cols': ['year', 'month', 'state', 'ori', 'ucr_offense_code', 'suspected_drug_type'],
+    },
+    'summary_carjacking_victim_demographics': {
+        'year_col': 'year',
+        'key_cols': ['ori', 'year', 'weapon_category', 'race', 'sex', 'age_group', 'state'],
+    },
+    'summary_carjacking_offender_demographics': {
+        'year_col': 'year',
+        'key_cols': ['ori', 'year', 'weapon_category', 'race', 'sex', 'age_group', 'state'],
+    },
+    'summary_carjacking_arrestee_demographics': {
+        'year_col': 'year',
+        'key_cols': ['ori', 'year', 'weapon_category', 'race', 'sex', 'age_group', 'state'],
+    },
+}
+
+
+def weapon_category_expr(col):
+    return f"""
+                CASE
+                    WHEN {col} IN ({FIREARM_WEAPON_CODES}) THEN 'Firearm'
+                    WHEN {col} IN ('20') THEN 'Knife'
+                    WHEN {col} IN ('30') THEN 'Blunt Object'
+                    WHEN {col} IN ('90','95','99','') OR {col} IS NULL THEN 'Unknown'
+                    ELSE 'Other'
+                END
+    """
+
+
+def age_group_expr(col):
+    return f"""
+                CASE
+                    WHEN {col} = '' OR {col} IS NULL OR {col} = '00' THEN 'Unknown'
+                    WHEN CAST({col} AS INT) < 18 THEN 'Under 18'
+                    WHEN CAST({col} AS INT) BETWEEN 18 AND 24 THEN '18-24'
+                    WHEN CAST({col} AS INT) BETWEEN 25 AND 34 THEN '25-34'
+                    WHEN CAST({col} AS INT) BETWEEN 35 AND 44 THEN '35-44'
+                    WHEN CAST({col} AS INT) BETWEEN 45 AND 54 THEN '45-54'
+                    WHEN CAST({col} AS INT) BETWEEN 55 AND 64 THEN '55-64'
+                    WHEN CAST({col} AS INT) >= 65 THEN '65+'
+                    ELSE 'Unknown'
+                END
+    """
 
 
 def log(msg):
@@ -183,6 +243,23 @@ def parse_args():
         nargs="+",
         type=int,
         help="Maintenance mode: rebuild only summary_victim_demographics for existing raw-data years, then verify duplicate keys.",
+    )
+    parser.add_argument(
+        "--rebuild-arrestee-demographics-years",
+        nargs="+",
+        type=int,
+        help="Maintenance mode: rebuild only summary_arrestee_demographics for existing raw-data years, then verify duplicate keys.",
+    )
+    parser.add_argument(
+        "--rebuild-carjacking-demographics-years",
+        nargs="+",
+        type=int,
+        help="Maintenance mode: rebuild carjacking demographic summaries for existing raw-data years, then verify duplicate keys.",
+    )
+    parser.add_argument(
+        "--verify-derived-duplicates",
+        action="store_true",
+        help="Read-only maintenance mode: verify duplicate keys on derived summary tables. Use --years to limit the scan.",
     )
     return parser.parse_args()
 
@@ -474,32 +551,35 @@ def rebuild_summary_victim_demographics(conn, years):
     """Rebuild summary_victim_demographics for the given years only."""
     log("  Building summary_victim_demographics...")
     t = time.time()
+    weapon_cat = weapon_category_expr("o.type_weapon_1")
+    age_grp = age_group_expr("v.age")
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS summary_victim_demographics (
+            ori TEXT,
+            year INT,
+            ucr_offense_code TEXT,
+            weapon_category TEXT,
+            race TEXT,
+            sex TEXT,
+            age_group TEXT,
+            ethnicity TEXT,
+            victim_count INT,
+            state TEXT
+        )
+    """)
     for yr in years:
         conn.execute(f"DELETE FROM summary_victim_demographics WHERE year = {yr}")
         conn.execute(f"""
-            INSERT INTO summary_victim_demographics
+            INSERT INTO summary_victim_demographics (
+                ori, year, ucr_offense_code, weapon_category, race, sex,
+                age_group, ethnicity, victim_count, state
+            )
             SELECT
                 v.ori, v.year, v.connected_offense_1 AS ucr_offense_code,
-                CASE
-                    WHEN o.type_weapon_1 IN ('11','12','13','14','15') THEN 'Firearm'
-                    WHEN o.type_weapon_1 IN ('20') THEN 'Knife'
-                    WHEN o.type_weapon_1 IN ('30') THEN 'Blunt Object'
-                    WHEN o.type_weapon_1 IN ('90','95','99','') THEN 'Unknown'
-                    ELSE 'Other'
-                END AS weapon_category,
+                {weapon_cat} AS weapon_category,
                 COALESCE(NULLIF(v.race, ''), 'U') AS race,
                 COALESCE(NULLIF(v.sex, ''), 'U') AS sex,
-                CASE
-                    WHEN v.age = '' OR v.age IS NULL OR v.age = '00' THEN 'Unknown'
-                    WHEN CAST(v.age AS INT) < 18 THEN 'Under 18'
-                    WHEN CAST(v.age AS INT) BETWEEN 18 AND 24 THEN '18-24'
-                    WHEN CAST(v.age AS INT) BETWEEN 25 AND 34 THEN '25-34'
-                    WHEN CAST(v.age AS INT) BETWEEN 35 AND 44 THEN '35-44'
-                    WHEN CAST(v.age AS INT) BETWEEN 45 AND 54 THEN '45-54'
-                    WHEN CAST(v.age AS INT) BETWEEN 55 AND 64 THEN '55-64'
-                    WHEN CAST(v.age AS INT) >= 65 THEN '65+'
-                    ELSE 'Unknown'
-                END AS age_group,
+                {age_grp} AS age_group,
                 COALESCE(v.ethnicity, 'U') AS ethnicity,
                 COUNT(*) AS victim_count,
                 v.state
@@ -511,6 +591,204 @@ def rebuild_summary_victim_demographics(conn, years):
             GROUP BY v.ori, v.year, v.connected_offense_1, weapon_category, race, sex, age_group, ethnicity, v.state
         """)
         conn.commit()
+    log(f"    Done ({time.time()-t:.0f}s)")
+
+
+def rebuild_summary_arrestee_demographics(conn, years):
+    """Rebuild summary_arrestee_demographics for the given years only."""
+    log("  Building summary_arrestee_demographics...")
+    t = time.time()
+    weapon_offense = weapon_category_expr("off.type_weapon_1")
+    weapon_arrestee = weapon_category_expr("a.arrestee_weapon_1")
+    age_grp = age_group_expr("a.age")
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS summary_arrestee_demographics (
+            ori TEXT,
+            year INT,
+            ucr_arrest_offense TEXT,
+            weapon_category TEXT,
+            race TEXT,
+            sex TEXT,
+            age_group TEXT,
+            ethnicity TEXT,
+            arrestee_count INT,
+            state TEXT
+        )
+    """)
+    for yr in years:
+        conn.execute(f"DELETE FROM summary_arrestee_demographics WHERE year = {yr}")
+        conn.execute(f"""
+            INSERT INTO summary_arrestee_demographics (
+                ori, year, ucr_arrest_offense, weapon_category, race, sex,
+                age_group, ethnicity, arrestee_count, state
+            )
+            WITH offense_weapon AS (
+                SELECT year, ori, incident_num, ucr_offense_code, MIN(type_weapon_1) AS type_weapon_1
+                FROM offenses
+                WHERE year = {yr}
+                GROUP BY year, ori, incident_num, ucr_offense_code
+            )
+            SELECT
+                a.ori, a.year, a.ucr_arrest_offense,
+                {weapon_offense} AS weapon_category,
+                COALESCE(a.race, 'U') AS race,
+                COALESCE(a.sex, 'U') AS sex,
+                {age_grp} AS age_group,
+                COALESCE(a.ethnicity, 'U') AS ethnicity,
+                COUNT(*) AS arrestee_count,
+                a.state
+            FROM arrestees a
+            JOIN offense_weapon off ON a.year = off.year AND a.ori = off.ori
+                AND a.incident_num = off.incident_num
+                AND off.ucr_offense_code = a.ucr_arrest_offense
+            WHERE a.year = {yr} AND a.ucr_arrest_offense NOT LIKE '90%'
+            GROUP BY a.ori, a.year, a.ucr_arrest_offense,
+                weapon_category, race, sex, age_group, ethnicity, a.state
+        """)
+        conn.execute(f"""
+            INSERT INTO summary_arrestee_demographics (
+                ori, year, ucr_arrest_offense, weapon_category, race, sex,
+                age_group, ethnicity, arrestee_count, state
+            )
+            SELECT
+                a.ori, a.year, a.ucr_arrest_offense,
+                {weapon_arrestee} AS weapon_category,
+                COALESCE(a.race, 'U') AS race,
+                COALESCE(a.sex, 'U') AS sex,
+                {age_grp} AS age_group,
+                COALESCE(a.ethnicity, 'U') AS ethnicity,
+                COUNT(*) AS arrestee_count,
+                a.state
+            FROM arrestees a
+            WHERE a.year = {yr} AND a.ucr_arrest_offense LIKE '90%'
+            GROUP BY a.ori, a.year, a.ucr_arrest_offense,
+                weapon_category, race, sex, age_group, ethnicity, a.state
+        """)
+        conn.commit()
+    log(f"    Done ({time.time()-t:.0f}s)")
+
+
+def rebuild_summary_carjacking_demographics(conn, years):
+    """Rebuild carjacking victim/offender/arrestee demographic summaries."""
+    log("  Building summary_carjacking_*_demographics...")
+    t = time.time()
+    year_list = ','.join(str(y) for y in years)
+    conn.execute("DROP TABLE IF EXISTS _tmp_carjacking_incidents")
+    conn.execute(f"""
+        CREATE TEMP TABLE _tmp_carjacking_incidents AS
+        SELECT o.ori, o.incident_num, o.year, MIN(o.type_weapon_1) AS weapon
+        FROM offenses o
+        WHERE o.year IN ({year_list})
+          AND o.ucr_offense_code = '120'
+          AND EXISTS (
+            SELECT 1 FROM property p
+            WHERE p.ori = o.ori AND p.incident_num = o.incident_num AND p.year = o.year
+              AND p.type_property_loss = '7'
+              AND p.property_description IN ('03','05','24','28','37')
+          )
+        GROUP BY o.ori, o.incident_num, o.year
+    """)
+    conn.execute("CREATE UNIQUE INDEX idx_tmp_carjacking_incidents ON _tmp_carjacking_incidents(ori, incident_num, year)")
+
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS summary_carjacking_victim_demographics (
+            ori TEXT, year INT, weapon_category TEXT, race TEXT, sex TEXT,
+            age_group TEXT, victim_count INT, state TEXT
+        )
+    """)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS summary_carjacking_offender_demographics (
+            ori TEXT, year INT, weapon_category TEXT, race TEXT, sex TEXT,
+            age_group TEXT, offender_count INT, state TEXT
+        )
+    """)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS summary_carjacking_arrestee_demographics (
+            ori TEXT, year INT, weapon_category TEXT, race TEXT, sex TEXT,
+            age_group TEXT, arrestee_count INT, state TEXT
+        )
+    """)
+
+    for table in [
+        'summary_carjacking_victim_demographics',
+        'summary_carjacking_offender_demographics',
+        'summary_carjacking_arrestee_demographics',
+    ]:
+        conn.execute(f"DELETE FROM {table} WHERE year IN ({year_list})")
+
+    victim_weapon = weapon_category_expr("cj.weapon")
+    victim_age = age_group_expr("v.age")
+    conn.execute(f"""
+        INSERT INTO summary_carjacking_victim_demographics (
+            ori, year, weapon_category, race, sex, age_group, victim_count, state
+        )
+        SELECT
+            v.ori, v.year,
+            {victim_weapon} AS weapon_category,
+            COALESCE(NULLIF(v.race, ''), 'U') AS race,
+            COALESCE(NULLIF(v.sex, ''), 'U') AS sex,
+            {victim_age} AS age_group,
+            COUNT(*) AS victim_count,
+            v.state
+        FROM victims v
+        INNER JOIN _tmp_carjacking_incidents cj
+            ON v.ori = cj.ori AND v.incident_num = cj.incident_num AND v.year = cj.year
+        WHERE v.victim_type = 'I'
+        GROUP BY v.ori, v.year, weapon_category, race, sex, age_group, v.state
+    """)
+
+    offender_weapon = weapon_category_expr("cj.weapon")
+    offender_age = age_group_expr("off.age")
+    conn.execute(f"""
+        INSERT INTO summary_carjacking_offender_demographics (
+            ori, year, weapon_category, race, sex, age_group, offender_count, state
+        )
+        SELECT
+            off.ori, off.year,
+            {offender_weapon} AS weapon_category,
+            COALESCE(NULLIF(off.race, ''), 'U') AS race,
+            COALESCE(NULLIF(off.sex, ''), 'U') AS sex,
+            {offender_age} AS age_group,
+            COUNT(*) AS offender_count,
+            off.state
+        FROM offenders off
+        INNER JOIN _tmp_carjacking_incidents cj
+            ON off.ori = cj.ori AND off.incident_num = cj.incident_num AND off.year = cj.year
+        GROUP BY off.ori, off.year, weapon_category, race, sex, age_group, off.state
+    """)
+
+    arrestee_weapon = weapon_category_expr("a.arrestee_weapon_1")
+    arrestee_age = age_group_expr("a.age")
+    conn.execute(f"""
+        INSERT INTO summary_carjacking_arrestee_demographics (
+            ori, year, weapon_category, race, sex, age_group, arrestee_count, state
+        )
+        SELECT
+            a.ori, a.year,
+            {arrestee_weapon} AS weapon_category,
+            COALESCE(NULLIF(a.race, ''), 'U') AS race,
+            COALESCE(NULLIF(a.sex, ''), 'U') AS sex,
+            {arrestee_age} AS age_group,
+            COUNT(*) AS arrestee_count,
+            a.state
+        FROM arrestees a
+        INNER JOIN _tmp_carjacking_incidents cj
+            ON a.ori = cj.ori AND a.incident_num = cj.incident_num AND a.year = cj.year
+        GROUP BY a.ori, a.year, weapon_category, race, sex, age_group, a.state
+    """)
+    conn.execute("DROP TABLE IF EXISTS _tmp_carjacking_incidents")
+    conn.commit()
+
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_scvd_ori_year ON summary_carjacking_victim_demographics(ori, year)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_scvd_state_year ON summary_carjacking_victim_demographics(state, year)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_scvd_year ON summary_carjacking_victim_demographics(year)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_scod_ori_year ON summary_carjacking_offender_demographics(ori, year)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_scod_state_year ON summary_carjacking_offender_demographics(state, year)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_scod_year ON summary_carjacking_offender_demographics(year)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_scad_ori_year ON summary_carjacking_arrestee_demographics(ori, year)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_scad_state_year ON summary_carjacking_arrestee_demographics(state, year)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_scad_year ON summary_carjacking_arrestee_demographics(year)")
+    conn.commit()
     log(f"    Done ({time.time()-t:.0f}s)")
 
 
@@ -722,34 +1000,84 @@ def rebuild_summaries(conn, years):
     # ---- 9. summary_drug_monthly ----
     log("  Building summary_drug_monthly...")
     t = time.time()
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS summary_drug_monthly (
+            year INT,
+            month INT,
+            state TEXT,
+            ori TEXT,
+            ucr_offense_code TEXT,
+            suspected_drug_type TEXT,
+            offense_count INT
+        )
+    """)
+    property_cols = {
+        row[1]
+        for row in conn.execute("PRAGMA table_info(property)").fetchall()
+    }
+    drug_cols = ['suspected_drug_type_1', 'suspected_drug_type_2', 'suspected_drug_type_3']
+    missing_drug_cols = [col for col in drug_cols if col not in property_cols]
     for yr in years:
         conn.execute(f"DELETE FROM summary_drug_monthly WHERE year = {yr}")
-        for col_num, col_name in [(1, 'suspected_drug_type_1'), (2, 'suspected_drug_type_2'), (3, 'suspected_drug_type_3')]:
-            try:
-                conn.execute(f"""
-                    INSERT INTO summary_drug_monthly
-                    SELECT o.year,
-                           CAST(SUBSTR(o.incident_date, 5, 2) AS INT) AS month,
-                           o.state, o.ori, o.ucr_offense_code,
-                           p.{col_name} AS suspected_drug_type,
-                           COUNT(DISTINCT o.ori || o.incident_num) AS offense_count
-                    FROM offenses o
-                    JOIN property p ON p.year = o.year AND p.ori = o.ori
-                        AND p.incident_num = o.incident_num
-                    WHERE o.year = {yr}
-                      AND o.ucr_offense_code IN ('35A', '35B')
-                      AND o.incident_date IS NOT NULL AND LENGTH(o.incident_date) >= 6
-                      AND p.{col_name} IS NOT NULL AND p.{col_name} != ''
-                    GROUP BY o.year, SUBSTR(o.incident_date, 5, 2), o.state, o.ori,
-                             o.ucr_offense_code, p.{col_name}
-                """)
-            except sqlite3.OperationalError:
-                log(f"    WARNING: {col_name} column missing, skipping")
-                break
+        if missing_drug_cols:
+            log(f"    WARNING: missing drug columns {missing_drug_cols}, skipping summary_drug_monthly for {yr}")
+            continue
+        conn.execute(f"""
+            INSERT INTO summary_drug_monthly (
+                year, month, state, ori, ucr_offense_code, suspected_drug_type, offense_count
+            )
+            SELECT
+                year, month, state, ori, ucr_offense_code, suspected_drug_type,
+                COUNT(DISTINCT ori || ':' || incident_num) AS offense_count
+            FROM (
+                SELECT DISTINCT o.year,
+                       CAST(SUBSTR(o.incident_date, 5, 2) AS INT) AS month,
+                       o.state, o.ori, o.incident_num, o.ucr_offense_code,
+                       p.suspected_drug_type_1 AS suspected_drug_type
+                FROM offenses o
+                JOIN property p ON p.year = o.year AND p.ori = o.ori
+                    AND p.incident_num = o.incident_num
+                WHERE o.year = {yr}
+                  AND o.ucr_offense_code IN ('35A', '35B')
+                  AND o.incident_date IS NOT NULL AND LENGTH(o.incident_date) >= 6
+                  AND p.suspected_drug_type_1 IS NOT NULL AND p.suspected_drug_type_1 != ''
+                UNION
+                SELECT DISTINCT o.year,
+                       CAST(SUBSTR(o.incident_date, 5, 2) AS INT) AS month,
+                       o.state, o.ori, o.incident_num, o.ucr_offense_code,
+                       p.suspected_drug_type_2 AS suspected_drug_type
+                FROM offenses o
+                JOIN property p ON p.year = o.year AND p.ori = o.ori
+                    AND p.incident_num = o.incident_num
+                WHERE o.year = {yr}
+                  AND o.ucr_offense_code IN ('35A', '35B')
+                  AND o.incident_date IS NOT NULL AND LENGTH(o.incident_date) >= 6
+                  AND p.suspected_drug_type_2 IS NOT NULL AND p.suspected_drug_type_2 != ''
+                UNION
+                SELECT DISTINCT o.year,
+                       CAST(SUBSTR(o.incident_date, 5, 2) AS INT) AS month,
+                       o.state, o.ori, o.incident_num, o.ucr_offense_code,
+                       p.suspected_drug_type_3 AS suspected_drug_type
+                FROM offenses o
+                JOIN property p ON p.year = o.year AND p.ori = o.ori
+                    AND p.incident_num = o.incident_num
+                WHERE o.year = {yr}
+                  AND o.ucr_offense_code IN ('35A', '35B')
+                  AND o.incident_date IS NOT NULL AND LENGTH(o.incident_date) >= 6
+                  AND p.suspected_drug_type_3 IS NOT NULL AND p.suspected_drug_type_3 != ''
+            ) incident_drugs
+            GROUP BY year, month, state, ori, ucr_offense_code, suspected_drug_type
+        """)
         conn.commit()
     log(f"    Done ({time.time()-t:.0f}s)")
 
-    # ---- 10. summary_victims_per_incident ----
+    # ---- 10. summary_arrestee_demographics ----
+    rebuild_summary_arrestee_demographics(conn, years)
+
+    # ---- 11. summary_carjacking_*_demographics ----
+    rebuild_summary_carjacking_demographics(conn, years)
+
+    # ---- 12. summary_victims_per_incident ----
     # Incidents bucketed by individual-victim count per offense code
     # (state-level; see scripts/build-victims-per-incident.py for the initial build)
     log("  Building summary_victims_per_incident...")
@@ -796,29 +1124,46 @@ def rebuild_summaries(conn, years):
     log(f"  Summary rebuild complete ({elapsed:.0f}s / {elapsed/60:.1f} min)")
 
 
+def verify_summary_duplicate_keys(conn, years=None, table_names=None):
+    """Fail if protected summary tables have duplicate logical-key rows."""
+    names = table_names or list(SUMMARY_DUPLICATE_CHECKS.keys())
+    years = sorted(set(int(y) for y in years)) if years else None
+    year_label = ",".join(str(y) for y in years) if years else "all years"
+
+    for table in names:
+        config = SUMMARY_DUPLICATE_CHECKS[table]
+        if not conn.execute("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?", (table,)).fetchone():
+            raise RuntimeError(f"{table} is missing")
+
+        where = ""
+        if years:
+            year_list = ','.join(str(y) for y in years)
+            where = f"WHERE {config['year_col']} IN ({year_list})"
+
+        key_cols = ', '.join(config['key_cols'])
+        row = conn.execute(f"""
+            SELECT COUNT(*) AS duplicate_groups, COALESCE(SUM(extra_rows), 0) AS extra_rows
+            FROM (
+                SELECT COUNT(*) - 1 AS extra_rows
+                FROM {table}
+                {where}
+                GROUP BY {key_cols}
+                HAVING COUNT(*) > 1
+            )
+        """).fetchone()
+        duplicate_groups = row[0] or 0
+        extra_rows = row[1] or 0
+        if duplicate_groups:
+            raise RuntimeError(
+                f"{table} has {duplicate_groups:,} duplicate key groups "
+                f"({extra_rows:,} extra rows) for {year_label}"
+            )
+        log(f"  {table} duplicate-key check passed for {year_label}")
+
+
 def verify_summary_victim_demographics_unique(conn, years):
-    """Fail if the demographics summary has duplicate full-key rows."""
-    if not years:
-        return
-    year_list = ','.join(str(y) for y in years)
-    row = conn.execute(f"""
-        SELECT COUNT(*) AS duplicate_groups, COALESCE(SUM(extra_rows), 0) AS extra_rows
-        FROM (
-            SELECT COUNT(*) - 1 AS extra_rows
-            FROM summary_victim_demographics
-            WHERE year IN ({year_list})
-            GROUP BY ori, year, ucr_offense_code, weapon_category, race, sex, age_group, ethnicity, state
-            HAVING COUNT(*) > 1
-        )
-    """).fetchone()
-    duplicate_groups = row[0] or 0
-    extra_rows = row[1] or 0
-    if duplicate_groups:
-        raise RuntimeError(
-            f"summary_victim_demographics has {duplicate_groups:,} duplicate key groups "
-            f"({extra_rows:,} extra rows) for years {year_list}"
-        )
-    log(f"  summary_victim_demographics duplicate-key check passed for years: {year_list}")
+    """Backward-compatible wrapper for the older victim-only maintenance path."""
+    verify_summary_duplicate_keys(conn, years, ['summary_victim_demographics'])
 
 
 def ensure_performance_indexes(conn):
@@ -1013,11 +1358,22 @@ def main():
     log("=" * 60)
 
     args = parse_args()
-    if args.rebuild_derived_years and args.rebuild_victim_demographics_years:
-        raise SystemExit("Choose only one maintenance mode: --rebuild-derived-years or --rebuild-victim-demographics-years.")
+    maintenance_modes = [
+        args.rebuild_derived_years,
+        args.rebuild_victim_demographics_years,
+        args.rebuild_arrestee_demographics_years,
+        args.rebuild_carjacking_demographics_years,
+    ]
+    if sum(1 for mode in maintenance_modes if mode) > 1:
+        raise SystemExit(
+            "Choose only one maintenance mode: --rebuild-derived-years, "
+            "--rebuild-victim-demographics-years, --rebuild-arrestee-demographics-years, "
+            "or --rebuild-carjacking-demographics-years."
+        )
+    has_maintenance_mode = any(maintenance_modes)
 
     years = []
-    if not args.rebuild_derived_years and not args.rebuild_victim_demographics_years:
+    if not has_maintenance_mode and not args.verify_derived_duplicates:
         years = get_years_to_update(args.years)
         protected_years = parse_year_csv(args.protected_years)
         assert_no_protected_years(years, protected_years, args.allow_protected_years)
@@ -1031,6 +1387,17 @@ def main():
     if not os.path.exists(DB_PATH):
         log(f"ERROR: Database not found: {DB_PATH}")
         sys.exit(1)
+
+    if args.verify_derived_duplicates and not has_maintenance_mode:
+        affected_years = sorted(set(args.years)) if args.years else None
+        log(f"Maintenance mode: verifying derived duplicate keys for {affected_years or 'all years'}")
+        conn = sqlite3.connect(DB_PATH)
+        try:
+            retry(verify_summary_duplicate_keys, conn, affected_years, label="derived duplicate-key check")
+        finally:
+            conn.close()
+        log("AUTO-UPDATE COMPLETE")
+        return
 
     if args.rebuild_victim_demographics_years:
         affected_years = sorted(set(args.rebuild_victim_demographics_years))
@@ -1068,6 +1435,88 @@ def main():
         log("AUTO-UPDATE COMPLETE")
         return
 
+    if args.rebuild_arrestee_demographics_years:
+        affected_years = sorted(set(args.rebuild_arrestee_demographics_years))
+        log(f"Maintenance mode: rebuilding summary_arrestee_demographics for years: {affected_years}")
+        log("Stopping nibrs app for arrestee-demographics rebuild...")
+        subprocess.run(["pm2", "stop", "nibrs"], capture_output=True, text=True)
+        time.sleep(3)
+        subprocess.run(["fuser", "-k", DB_PATH], capture_output=True, text=True)
+        time.sleep(1)
+
+        conn = sqlite3.connect(DB_PATH)
+        conn.execute("PRAGMA journal_mode = WAL")
+        conn.execute("PRAGMA synchronous = NORMAL")
+        conn.execute("PRAGMA cache_size = -256000")
+        conn.execute("PRAGMA temp_store = FILE")
+        conn.execute("PRAGMA mmap_size = 0")
+        total_start = time.time()
+        try:
+            retry(rebuild_summary_arrestee_demographics, conn, affected_years, label="rebuild summary_arrestee_demographics")
+            retry(verify_summary_duplicate_keys, conn, affected_years, ['summary_arrestee_demographics'], label="summary arrestee demographics duplicate check")
+            retry(ensure_performance_indexes, conn, label="performance indexes")
+            retry(refresh_planner_statistics, conn, label="planner statistics")
+            conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+        finally:
+            conn.close()
+
+        elapsed = time.time() - total_start
+        log(f"summary_arrestee_demographics rebuild complete in {elapsed:.0f}s ({elapsed/60:.1f} min)")
+        log("Restarting nibrs app...")
+        result = subprocess.run(["pm2", "restart", "nibrs"], capture_output=True, text=True)
+        if result.returncode == 0:
+            log("  App restarted successfully")
+        else:
+            log(f"  pm2 restart failed: {result.stderr}")
+        log("AUTO-UPDATE COMPLETE")
+        return
+
+    if args.rebuild_carjacking_demographics_years:
+        affected_years = sorted(set(args.rebuild_carjacking_demographics_years))
+        log(f"Maintenance mode: rebuilding carjacking demographic summaries for years: {affected_years}")
+        log("Stopping nibrs app for carjacking-demographics rebuild...")
+        subprocess.run(["pm2", "stop", "nibrs"], capture_output=True, text=True)
+        time.sleep(3)
+        subprocess.run(["fuser", "-k", DB_PATH], capture_output=True, text=True)
+        time.sleep(1)
+
+        conn = sqlite3.connect(DB_PATH)
+        conn.execute("PRAGMA journal_mode = WAL")
+        conn.execute("PRAGMA synchronous = NORMAL")
+        conn.execute("PRAGMA cache_size = -256000")
+        conn.execute("PRAGMA temp_store = FILE")
+        conn.execute("PRAGMA mmap_size = 0")
+        total_start = time.time()
+        try:
+            retry(rebuild_summary_carjacking_demographics, conn, affected_years, label="rebuild carjacking demographics")
+            retry(
+                verify_summary_duplicate_keys,
+                conn,
+                affected_years,
+                [
+                    'summary_carjacking_victim_demographics',
+                    'summary_carjacking_offender_demographics',
+                    'summary_carjacking_arrestee_demographics',
+                ],
+                label="carjacking demographics duplicate check",
+            )
+            retry(ensure_performance_indexes, conn, label="performance indexes")
+            retry(refresh_planner_statistics, conn, label="planner statistics")
+            conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+        finally:
+            conn.close()
+
+        elapsed = time.time() - total_start
+        log(f"Carjacking demographic rebuild complete in {elapsed:.0f}s ({elapsed/60:.1f} min)")
+        log("Restarting nibrs app...")
+        result = subprocess.run(["pm2", "restart", "nibrs"], capture_output=True, text=True)
+        if result.returncode == 0:
+            log("  App restarted successfully")
+        else:
+            log(f"  pm2 restart failed: {result.stderr}")
+        log("AUTO-UPDATE COMPLETE")
+        return
+
     if args.rebuild_derived_years:
         affected_years = sorted(set(args.rebuild_derived_years))
         log(f"Maintenance mode: rebuilding derived summaries for years: {affected_years}")
@@ -1086,7 +1535,7 @@ def main():
         total_start = time.time()
         try:
             retry(rebuild_summaries, conn, affected_years, label="rebuild summaries")
-            retry(verify_summary_victim_demographics_unique, conn, affected_years, label="summary victim demographics duplicate check")
+            retry(verify_summary_duplicate_keys, conn, affected_years, label="summary duplicate-key check")
             retry(ensure_performance_indexes, conn, label="performance indexes")
             retry(refresh_planner_statistics, conn, label="planner statistics")
             conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
@@ -1223,7 +1672,7 @@ def main():
 
     # Rebuild summary tables for affected years only
     retry(rebuild_summaries, conn, affected_years, label="rebuild summaries")
-    retry(verify_summary_victim_demographics_unique, conn, affected_years, label="summary victim demographics duplicate check")
+    retry(verify_summary_duplicate_keys, conn, affected_years, label="summary duplicate-key check")
     retry(ensure_state_population, conn, label="state population")
     # ensure_state_population drops/rebuilds from historical data (ends ~currentYear-2);
     # extend with FBI CDE API figures so current-year rate queries keep working (F26)
