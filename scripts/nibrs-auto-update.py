@@ -113,6 +113,18 @@ SUMMARY_DUPLICATE_CHECKS = {
         'year_col': 'year',
         'key_cols': ['year', 'month', 'state', 'ori', 'ucr_offense_code', 'suspected_drug_type'],
     },
+    'summary_victim_state_monthly': {
+        'year_col': 'year',
+        'key_cols': ['state', 'year', 'month', 'ucr_offense_code'],
+    },
+    'summary_domestic_violence': {
+        'year_col': 'data_year',
+        'key_cols': [
+            'data_year', 'state', 'ori', 'incident_num', 'incident_date', 'victim_sequence',
+            'offense_code', 'relationship_code', 'dv_category', 'victim_sex', 'victim_age',
+            'victim_race',
+        ],
+    },
     'summary_carjacking_victim_demographics': {
         'year_col': 'year',
         'key_cols': ['ori', 'year', 'weapon_category', 'race', 'sex', 'age_group', 'state'],
@@ -928,7 +940,9 @@ def rebuild_summaries(conn, years):
     t = time.time()
     conn.execute("DELETE FROM summary_victim_state_monthly WHERE year IN (" + year_list + ")")
     conn.execute(f"""
-        INSERT INTO summary_victim_state_monthly
+        INSERT INTO summary_victim_state_monthly (
+            year, month, state, ucr_offense_code, victim_count
+        )
         SELECT year, month, state, ucr_offense_code, SUM(victim_count) AS victim_count
         FROM summary_victim_city_monthly
         WHERE year IN ({year_list})
