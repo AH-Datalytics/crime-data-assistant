@@ -552,7 +552,10 @@ def rebuild_summary_victim_demographics(conn, years):
     log("  Building summary_victim_demographics...")
     t = time.time()
     weapon_cat = weapon_category_expr("o.type_weapon_1")
+    race_expr = "COALESCE(NULLIF(v.race, ''), 'U')"
+    sex_expr = "COALESCE(NULLIF(v.sex, ''), 'U')"
     age_grp = age_group_expr("v.age")
+    ethnicity_expr = "COALESCE(v.ethnicity, 'U')"
     conn.execute("""
         CREATE TABLE IF NOT EXISTS summary_victim_demographics (
             ori TEXT,
@@ -577,10 +580,10 @@ def rebuild_summary_victim_demographics(conn, years):
             SELECT
                 v.ori, v.year, v.connected_offense_1 AS ucr_offense_code,
                 {weapon_cat} AS weapon_category,
-                COALESCE(NULLIF(v.race, ''), 'U') AS race,
-                COALESCE(NULLIF(v.sex, ''), 'U') AS sex,
+                {race_expr} AS race,
+                {sex_expr} AS sex,
                 {age_grp} AS age_group,
-                COALESCE(v.ethnicity, 'U') AS ethnicity,
+                {ethnicity_expr} AS ethnicity,
                 COUNT(*) AS victim_count,
                 v.state
             FROM victims v
@@ -588,7 +591,8 @@ def rebuild_summary_victim_demographics(conn, years):
                 AND o.incident_num = v.incident_num AND o.ucr_offense_code = v.connected_offense_1
             WHERE v.year = {yr}
               AND v.connected_offense_1 IN ({PERSON_CRIMES}) AND v.victim_type = 'I'
-            GROUP BY v.ori, v.year, v.connected_offense_1, weapon_category, race, sex, age_group, ethnicity, v.state
+            GROUP BY v.ori, v.year, v.connected_offense_1,
+                {weapon_cat}, {race_expr}, {sex_expr}, {age_grp}, {ethnicity_expr}, v.state
         """)
         conn.commit()
     log(f"    Done ({time.time()-t:.0f}s)")
@@ -600,7 +604,10 @@ def rebuild_summary_arrestee_demographics(conn, years):
     t = time.time()
     weapon_offense = weapon_category_expr("off.type_weapon_1")
     weapon_arrestee = weapon_category_expr("a.arrestee_weapon_1")
+    race_expr = "COALESCE(a.race, 'U')"
+    sex_expr = "COALESCE(a.sex, 'U')"
     age_grp = age_group_expr("a.age")
+    ethnicity_expr = "COALESCE(a.ethnicity, 'U')"
     conn.execute("""
         CREATE TABLE IF NOT EXISTS summary_arrestee_demographics (
             ori TEXT,
@@ -631,10 +638,10 @@ def rebuild_summary_arrestee_demographics(conn, years):
             SELECT
                 a.ori, a.year, a.ucr_arrest_offense,
                 {weapon_offense} AS weapon_category,
-                COALESCE(a.race, 'U') AS race,
-                COALESCE(a.sex, 'U') AS sex,
+                {race_expr} AS race,
+                {sex_expr} AS sex,
                 {age_grp} AS age_group,
-                COALESCE(a.ethnicity, 'U') AS ethnicity,
+                {ethnicity_expr} AS ethnicity,
                 COUNT(*) AS arrestee_count,
                 a.state
             FROM arrestees a
@@ -643,7 +650,7 @@ def rebuild_summary_arrestee_demographics(conn, years):
                 AND off.ucr_offense_code = a.ucr_arrest_offense
             WHERE a.year = {yr} AND a.ucr_arrest_offense NOT LIKE '90%'
             GROUP BY a.ori, a.year, a.ucr_arrest_offense,
-                weapon_category, race, sex, age_group, ethnicity, a.state
+                {weapon_offense}, {race_expr}, {sex_expr}, {age_grp}, {ethnicity_expr}, a.state
         """)
         conn.execute(f"""
             INSERT INTO summary_arrestee_demographics (
@@ -653,16 +660,16 @@ def rebuild_summary_arrestee_demographics(conn, years):
             SELECT
                 a.ori, a.year, a.ucr_arrest_offense,
                 {weapon_arrestee} AS weapon_category,
-                COALESCE(a.race, 'U') AS race,
-                COALESCE(a.sex, 'U') AS sex,
+                {race_expr} AS race,
+                {sex_expr} AS sex,
                 {age_grp} AS age_group,
-                COALESCE(a.ethnicity, 'U') AS ethnicity,
+                {ethnicity_expr} AS ethnicity,
                 COUNT(*) AS arrestee_count,
                 a.state
             FROM arrestees a
             WHERE a.year = {yr} AND a.ucr_arrest_offense LIKE '90%'
             GROUP BY a.ori, a.year, a.ucr_arrest_offense,
-                weapon_category, race, sex, age_group, ethnicity, a.state
+                {weapon_arrestee}, {race_expr}, {sex_expr}, {age_grp}, {ethnicity_expr}, a.state
         """)
         conn.commit()
     log(f"    Done ({time.time()-t:.0f}s)")
@@ -717,6 +724,8 @@ def rebuild_summary_carjacking_demographics(conn, years):
         conn.execute(f"DELETE FROM {table} WHERE year IN ({year_list})")
 
     victim_weapon = weapon_category_expr("cj.weapon")
+    victim_race = "COALESCE(NULLIF(v.race, ''), 'U')"
+    victim_sex = "COALESCE(NULLIF(v.sex, ''), 'U')"
     victim_age = age_group_expr("v.age")
     conn.execute(f"""
         INSERT INTO summary_carjacking_victim_demographics (
@@ -725,8 +734,8 @@ def rebuild_summary_carjacking_demographics(conn, years):
         SELECT
             v.ori, v.year,
             {victim_weapon} AS weapon_category,
-            COALESCE(NULLIF(v.race, ''), 'U') AS race,
-            COALESCE(NULLIF(v.sex, ''), 'U') AS sex,
+            {victim_race} AS race,
+            {victim_sex} AS sex,
             {victim_age} AS age_group,
             COUNT(*) AS victim_count,
             v.state
@@ -734,10 +743,12 @@ def rebuild_summary_carjacking_demographics(conn, years):
         INNER JOIN _tmp_carjacking_incidents cj
             ON v.ori = cj.ori AND v.incident_num = cj.incident_num AND v.year = cj.year
         WHERE v.victim_type = 'I'
-        GROUP BY v.ori, v.year, weapon_category, race, sex, age_group, v.state
+        GROUP BY v.ori, v.year, {victim_weapon}, {victim_race}, {victim_sex}, {victim_age}, v.state
     """)
 
     offender_weapon = weapon_category_expr("cj.weapon")
+    offender_race = "COALESCE(NULLIF(off.race, ''), 'U')"
+    offender_sex = "COALESCE(NULLIF(off.sex, ''), 'U')"
     offender_age = age_group_expr("off.age")
     conn.execute(f"""
         INSERT INTO summary_carjacking_offender_demographics (
@@ -746,18 +757,20 @@ def rebuild_summary_carjacking_demographics(conn, years):
         SELECT
             off.ori, off.year,
             {offender_weapon} AS weapon_category,
-            COALESCE(NULLIF(off.race, ''), 'U') AS race,
-            COALESCE(NULLIF(off.sex, ''), 'U') AS sex,
+            {offender_race} AS race,
+            {offender_sex} AS sex,
             {offender_age} AS age_group,
             COUNT(*) AS offender_count,
             off.state
         FROM offenders off
         INNER JOIN _tmp_carjacking_incidents cj
             ON off.ori = cj.ori AND off.incident_num = cj.incident_num AND off.year = cj.year
-        GROUP BY off.ori, off.year, weapon_category, race, sex, age_group, off.state
+        GROUP BY off.ori, off.year, {offender_weapon}, {offender_race}, {offender_sex}, {offender_age}, off.state
     """)
 
     arrestee_weapon = weapon_category_expr("a.arrestee_weapon_1")
+    arrestee_race = "COALESCE(NULLIF(a.race, ''), 'U')"
+    arrestee_sex = "COALESCE(NULLIF(a.sex, ''), 'U')"
     arrestee_age = age_group_expr("a.age")
     conn.execute(f"""
         INSERT INTO summary_carjacking_arrestee_demographics (
@@ -766,15 +779,15 @@ def rebuild_summary_carjacking_demographics(conn, years):
         SELECT
             a.ori, a.year,
             {arrestee_weapon} AS weapon_category,
-            COALESCE(NULLIF(a.race, ''), 'U') AS race,
-            COALESCE(NULLIF(a.sex, ''), 'U') AS sex,
+            {arrestee_race} AS race,
+            {arrestee_sex} AS sex,
             {arrestee_age} AS age_group,
             COUNT(*) AS arrestee_count,
             a.state
         FROM arrestees a
         INNER JOIN _tmp_carjacking_incidents cj
             ON a.ori = cj.ori AND a.incident_num = cj.incident_num AND a.year = cj.year
-        GROUP BY a.ori, a.year, weapon_category, race, sex, age_group, a.state
+        GROUP BY a.ori, a.year, {arrestee_weapon}, {arrestee_race}, {arrestee_sex}, {arrestee_age}, a.state
     """)
     conn.execute("DROP TABLE IF EXISTS _tmp_carjacking_incidents")
     conn.commit()
