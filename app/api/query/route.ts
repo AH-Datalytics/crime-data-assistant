@@ -27,7 +27,12 @@ import { getBlockingGeoClarification } from "@/lib/geo-resolver";
 import { getCountyScopeClarification } from "@/lib/county-clarifier";
 import { detectDemographicHomicideRateOverride } from "@/lib/capability-overrides";
 import { historicalYearAvailability } from "@/lib/year-availability";
-import { validateQueryContractSql } from "@/lib/query-contract-validator";
+import {
+  queryContractFailureMessage,
+  queryContractGuardrails,
+  validateQueryContractSql,
+  type QueryContractSqlValidation,
+} from "@/lib/query-contract-validator";
 import { resolveGeoPlaces } from "@/lib/geo-place-resolver";
 
 function sseEvent(event: StreamEvent): string {
@@ -660,20 +665,48 @@ export async function POST(req: NextRequest) {
           controller.close();
         }
       };
-      const applyContractValidation = (inputSql: string): string => {
+      const recordContractValidation = (contractResult: QueryContractSqlValidation) => {
+        const contractGuardrails = queryContractGuardrails(contractResult);
+        if (contractGuardrails.length > 0) {
+          firedGuardrails = [...new Set([...firedGuardrails, ...contractGuardrails])];
+        }
+        if (contractResult.warnings.length > 0) {
+          console.log(`[query][contract] Warnings: ${contractResult.warnings.join(", ")}`);
+        }
+      };
+      const runContractValidation = (inputSql: string): QueryContractSqlValidation => {
         const contractResult = validateQueryContractSql({
           question,
           source: tab === "historical" ? "historical" : "current",
           sql: inputSql,
           routingMeta,
         });
-        if (contractResult.fired.length > 0) {
-          firedGuardrails = [...new Set([...firedGuardrails, ...contractResult.fired])];
-        }
-        if (contractResult.warnings.length > 0) {
-          console.log(`[query][contract] Warnings: ${contractResult.warnings.join(", ")}`);
-        }
-        return contractResult.sql;
+        recordContractValidation(contractResult);
+        return contractResult;
+      };
+      const emitContractFailure = (contractResult: QueryContractSqlValidation, logError: string): boolean => {
+        const msg = queryContractFailureMessage(contractResult);
+        if (!msg) return false;
+        writeLog(question, contractResult.sql, 0, logError, Date.now() - totalStart, msg, tab, firedGuardrails, "haiku-4.5", sessionId);
+        controller.enqueue(
+          encoder.encode(
+            sseEvent({
+              type: "result",
+              sql: null as unknown as string,
+              explanation: msg,
+              title: "",
+              columns: [],
+              rows: [],
+              rowCount: 0,
+              truncated: false,
+              chartConfig: null,
+              chartMeta: null,
+              executionTimeMs: Date.now() - totalStart,
+            })
+          )
+        );
+        close();
+        return true;
       };
 
       try {
@@ -820,6 +853,13 @@ export async function POST(req: NextRequest) {
           console.log(`[guardrails] Fired: ${firedGuardrails.join(", ")}`);
         }
 
+        const initialContractResult = runContractValidation(claude.sql);
+        claude.sql = initialContractResult.sql;
+        if (initialContractResult.blockReasons.length > 0) {
+          if (emitContractFailure(initialContractResult, `contract_block:${initialContractResult.enforced.join(",")}`)) return;
+        }
+        issues.push(...initialContractResult.retryIssues);
+
         // Hard override — skip retry, return deterministic response
         if (guardrailResult.overrideResponse) {
           const overrideExplanation = guardrailResult.overrideResponse;
@@ -900,9 +940,15 @@ export async function POST(req: NextRequest) {
             close(); return;
           }
           if (postRetryResult.sql !== claude.sql) claude.sql = postRetryResult.sql;
+
+          const postRetryContract = runContractValidation(claude.sql);
+          claude.sql = postRetryContract.sql;
+          if (emitContractFailure(postRetryContract, `contract_second_failure:${postRetryContract.enforced.join(",")}`)) return;
         }
 
-        claude.sql = applyContractValidation(claude.sql);
+        const preValidationContract = runContractValidation(claude.sql);
+        claude.sql = preValidationContract.sql;
+        if (emitContractFailure(preValidationContract, `contract_final_failure:${preValidationContract.enforced.join(",")}`)) return;
 
         controller.enqueue(
           encoder.encode(
@@ -962,7 +1008,9 @@ export async function POST(req: NextRequest) {
               if (retry.sql) {
                 const retryValidation = validateAndSanitize(retry.sql, { maxLimit });
                 if (retryValidation.valid) {
-                  const retrySql = applyContractValidation(retryValidation.sanitized!);
+                  const retryContract = runContractValidation(retryValidation.sanitized!);
+                  const retrySql = retryContract.sql;
+                  if (emitContractFailure(retryContract, `contract_table_retry_failure:${retryContract.enforced.join(",")}`)) return;
                   const retryTableCheck = validateTablesForTab(retrySql, tab, getDb());
                   if (retryTableCheck.ok) {
                     sql = retrySql;
@@ -994,7 +1042,9 @@ export async function POST(req: NextRequest) {
         let columns: string[];
 
         try {
-          sql = applyContractValidation(sql);
+          const executionContract = runContractValidation(sql);
+          sql = executionContract.sql;
+          if (emitContractFailure(executionContract, `contract_execution_failure:${executionContract.enforced.join(",")}`)) return;
           const stmt = db.prepare(sql);
           const result = executeWithTimeoutSync<Record<string, unknown>>(db, stmt, 30000);
           columns = stmt.columns().map((c) => c.name);
@@ -1035,7 +1085,9 @@ export async function POST(req: NextRequest) {
           if (retry.sql) {
             const retryValidation = validateAndSanitize(retry.sql, { maxLimit });
             if (retryValidation.valid) {
-              const retrySql = applyContractValidation(retryValidation.sanitized!);
+              const retryContract = runContractValidation(retryValidation.sanitized!);
+              const retrySql = retryContract.sql;
+              if (emitContractFailure(retryContract, `contract_db_retry_failure:${retryContract.enforced.join(",")}`)) return;
               try {
                 const retryStmt = db.prepare(retrySql);
                 const retryResult = executeWithTimeoutSync<Record<string, unknown>>(db, retryStmt, 30000);
@@ -1371,7 +1423,9 @@ export async function POST(req: NextRequest) {
               if (rollingFixed.sql) {
                 const rv = validateAndSanitize(rollingFixed.sql, { maxLimit });
                 if (rv.valid) {
-                  const rollingSql = applyContractValidation(rv.sanitized!);
+                  const rollingContract = runContractValidation(rv.sanitized!);
+                  const rollingSql = rollingContract.sql;
+                  if (emitContractFailure(rollingContract, `contract_rolling_retry_failure:${rollingContract.enforced.join(",")}`)) return;
                   try {
                     const stmt2 = db.prepare(rollingSql);
                     const result2 = stmt2.all() as Record<string, unknown>[];

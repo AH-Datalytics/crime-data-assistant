@@ -31,6 +31,56 @@ function assertDoesNotFind(name: string, ids: string[], unexpected: string) {
 
 {
   const ids = findingIds(
+    "firearm murder clearance rate in Chicago",
+    "nibrs",
+    `SELECT year, SUM(cleared_count) * 100.0 / SUM(victim_count) AS clearance_rate
+     FROM summary_victim_weapon
+     WHERE ucr_offense_code = '09A' AND weapon_category = 'Firearm'
+     GROUP BY year`
+  );
+  assertFinds("NIBRS cannot combine weapon-specific counts with clearance rates", ids, "nibrs-clearance-weapon-unsupported");
+}
+
+{
+  const ids = findingIds(
+    "carjacking clearance rates in Chicago",
+    "nibrs",
+    `SELECT year, SUM(total_cleared) * 100.0 / SUM(total_offenses) AS clearance_rate
+     FROM summary_clearance_city_annual
+     WHERE city = 'CHICAGO'
+     GROUP BY year`
+  );
+  assertFinds("carjacking clearance needs carjacking clearance summary", ids, "nibrs-carjacking-clearance-table");
+}
+
+{
+  const ids = findingIds(
+    "cleared by arrest vs exceptional means for robbery in Chicago",
+    "nibrs",
+    `SELECT year, SUM(cleared_count) AS cleared
+     FROM summary_city_monthly
+     WHERE ucr_offense_code = '120'
+     GROUP BY year`
+  );
+  assertFinds("clearance type query cannot use ordinary offense monthly summary", ids, "nibrs-clearance-type-table");
+}
+
+{
+  const ids = findingIds(
+    "cleared by arrest vs exceptional means for robbery in Chicago",
+    "nibrs",
+    `SELECT year,
+       SUM(cleared_by_arrest) AS by_arrest,
+       SUM(cleared_exceptional) AS exceptional
+     FROM summary_clearance_type
+     WHERE ucr_offense_code = '120'
+     GROUP BY year`
+  );
+  assertDoesNotFind("clearance type table satisfies contract", ids, "nibrs-clearance-type-table");
+}
+
+{
+  const ids = findingIds(
     "aggravated assaults with a firearm in new york city by year",
     "nibrs",
     `SELECT s.year, SUM(s.victim_count) AS firearm_assaults
@@ -98,6 +148,58 @@ function assertDoesNotFind(name: string, ids: string[], unexpected: string) {
 
 {
   const ids = findingIds(
+    "murders in Cook County Illinois by year",
+    "nibrs",
+    `SELECT year, SUM(victim_count)
+     FROM summary_victim_city_monthly s
+     JOIN county_lookup cl ON cl.ori = s.ori
+     WHERE cl.county_name = 'Cook County'
+     GROUP BY year`
+  );
+  assertFinds("NIBRS countywide geography needs crosswalk", ids, "nibrs-countywide-crosswalk");
+}
+
+{
+  const ids = findingIds(
+    "murders in Cook County Illinois by year",
+    "nibrs",
+    `SELECT s.year, SUM(s.victim_count)
+     FROM summary_victim_city_monthly s
+     JOIN agency_county_crosswalk ac ON s.ori = ac.ori9 OR substr(s.ori, 1, 7) = ac.ori
+     WHERE ac.county_key = 'COOK' AND ac.state = 'IL'
+     GROUP BY s.year`
+  );
+  assertDoesNotFind("NIBRS countywide crosswalk satisfies contract", ids, "nibrs-countywide-crosswalk");
+}
+
+{
+  const ids = findingIds(
+    "University of California Berkeley vehicle burglaries per month",
+    "nibrs",
+    `SELECT s.year, s.month, SUM(s.offense_count)
+     FROM summary_city_monthly s
+     WHERE s.city = 'BERKELEY' AND s.ucr_offense_code = '220'
+     GROUP BY s.year, s.month`
+  );
+  assertFinds("NIBRS campus query cannot use city-only summary", ids, "nibrs-campus-agency-resolution");
+}
+
+{
+  const ids = findingIds(
+    "University of California Berkeley vehicle burglaries per month",
+    "nibrs",
+    `SELECT s.year, s.month, SUM(s.offense_count)
+     FROM summary_city_monthly s
+     JOIN agencies a ON a.ori = s.ori AND a.year = s.year
+     WHERE a.agency_name LIKE '%UNIVERSITY OF CALIFORNIA%'
+       AND s.ucr_offense_code = '220'
+     GROUP BY s.year, s.month`
+  );
+  assertDoesNotFind("NIBRS campus agency join satisfies contract", ids, "nibrs-campus-agency-resolution");
+}
+
+{
+  const ids = findingIds(
     "show me violent crimes by offender age by year for 2021 to 2025 for continuously reporting agencies",
     "nibrs",
     `SELECT d.year, d.age_group, SUM(d.offender_count)
@@ -128,6 +230,31 @@ function assertDoesNotFind(name: string, ids: string[], unexpected: string) {
     `SELECT year, murder FROM historical_state_national WHERE state = 'United States'`
   );
   assertFinds("Historical clearance requires clearance table", ids, "historical-clearance-table");
+}
+
+{
+  const ids = findingIds(
+    "murders in Cook County Illinois by year",
+    "historical",
+    `SELECT hac.year, SUM(hac.murder)
+     FROM historical_agency_crime hac
+     JOIN historical_agency ha ON ha.ori = hac.ori
+     WHERE ha.agency = 'Cook County' AND ha.type = 'county' AND ha.state = 'il'
+     GROUP BY hac.year`
+  );
+  assertFinds("Historical countywide geography needs crosswalk", ids, "historical-countywide-crosswalk");
+}
+
+{
+  const ids = findingIds(
+    "murders in Cook County Illinois by year",
+    "current",
+    `SELECT year, SUM(count)
+     FROM agency_monthly
+     WHERE agency = 'Cook County' AND type = 'County' AND state = 'IL'
+     GROUP BY year`
+  );
+  assertFinds("Current countywide geography needs crosswalk", ids, "current-countywide-crosswalk");
 }
 
 {
@@ -213,6 +340,30 @@ function assertDoesNotFind(name: string, ids: string[], unexpected: string) {
      GROUP BY i.year, sp.population`
   );
   assertDoesNotFind("SHR state rate with state_population satisfies contract", ids, "shr-state-rate-population");
+}
+
+{
+  const ids = findingIds(
+    "fatal shootings in Cook County Illinois by year",
+    "shr",
+    `SELECT i.year, COUNT(*)
+     FROM incidents i
+     WHERE i.agency = 'Cook County'
+     GROUP BY i.year`
+  );
+  assertFinds("SHR countywide geography needs crosswalk", ids, "shr-countywide-crosswalk");
+}
+
+{
+  const ids = findingIds(
+    "UCLA murders since 2000",
+    "shr",
+    `SELECT i.year, COUNT(*)
+     FROM incidents i
+     WHERE i.agency = 'Los Angeles'
+     GROUP BY i.year`
+  );
+  assertFinds("SHR campus query needs alias resolution", ids, "shr-campus-agency-resolution");
 }
 
 {

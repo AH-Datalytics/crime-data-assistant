@@ -28,7 +28,12 @@ import { detectNibrsCapabilityOverride } from "@/lib/nibrs-capability-overrides"
 import { getBlockingGeoClarification } from "@/lib/geo-resolver";
 import { getCountyScopeClarification } from "@/lib/county-clarifier";
 import { asksCampusAgency, buildCampusAgencySummarySql, campusAgencyChartAxesFromSql, campusAgencyDisplayName, knownCampusAgencyResolution, resolveCampusAgencyOris, shouldResolveCampusAgencySql } from "@/lib/nibrs-campus-agency";
-import { validateQueryContractSql } from "@/lib/query-contract-validator";
+import {
+  queryContractFailureMessage,
+  queryContractGuardrails,
+  validateQueryContractSql,
+  type QueryContractSqlValidation,
+} from "@/lib/query-contract-validator";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -418,23 +423,62 @@ export async function POST(req: NextRequest) {
 
     const routeGuardrailIssues: string[] = [];
     const routeGuardrailsFired: string[] = [];
-    const applyContractValidation = (inputSql: string): string => {
-      const contractResult = validateQueryContractSql({
-        question,
-        source: "nibrs",
-        sql: inputSql,
-        routingMeta,
-      });
-      if (contractResult.fired.length > 0) {
-        for (const fired of contractResult.fired) {
+    const recordContractValidation = (contractResult: QueryContractSqlValidation, collectRetryIssues = false) => {
+      const contractGuardrails = queryContractGuardrails(contractResult);
+      if (contractGuardrails.length > 0) {
+        for (const fired of contractGuardrails) {
           if (!routeGuardrailsFired.includes(fired)) routeGuardrailsFired.push(fired);
         }
       }
       if (contractResult.warnings.length > 0) {
         console.log(`[nibrs][contract] Warnings: ${contractResult.warnings.join(", ")}`);
       }
-      return contractResult.sql;
+      if (collectRetryIssues) {
+        for (const issue of contractResult.retryIssues) {
+          if (!routeGuardrailIssues.includes(issue)) routeGuardrailIssues.push(issue);
+        }
+      }
     };
+    const runContractValidation = (inputSql: string, collectRetryIssues = false): QueryContractSqlValidation => {
+      const contractResult = validateQueryContractSql({
+        question,
+        source: "nibrs",
+        sql: inputSql,
+        routingMeta,
+      });
+      recordContractValidation(contractResult, collectRetryIssues);
+      return contractResult;
+    };
+    const applyContractValidation = (inputSql: string, collectRetryIssues = false): string => {
+      return runContractValidation(inputSql, collectRetryIssues).sql;
+    };
+    const contractFailureResponse = (contractResult: QueryContractSqlValidation, logError: string) => {
+      const msg = queryContractFailureMessage(contractResult);
+      if (!msg) return null;
+      writeNibrsLog(question, contractResult.sql, 0, logError, Date.now() - claudeStart, msg, [...guardrailResult.fired, ...routeGuardrailsFired], activeModelLabel, sessionId);
+      return jsonResp({
+        success: true,
+        question,
+        sql: null as unknown as string,
+        explanation: msg,
+        title: "",
+        columns: [],
+        rows: [],
+        rowCount: 0,
+        truncated: false,
+        chartConfig: null,
+        chartMeta: null,
+        executionTimeMs: Date.now() - claudeStart,
+      } as QueryResponse);
+    };
+
+    const initialContractResult = runContractValidation(sql, true);
+    sql = initialContractResult.sql;
+    const initialContractBlock = initialContractResult.blockReasons.length > 0
+      ? contractFailureResponse(initialContractResult, `contract_block:${initialContractResult.enforced.join(",")}`)
+      : null;
+    if (initialContractBlock) return initialContractBlock;
+
     const continuousReporterIssue = continuousReporterRouteIssue(sql, question);
     if (continuousReporterIssue) {
       routeGuardrailIssues.push(continuousReporterIssue);
@@ -543,9 +587,17 @@ export async function POST(req: NextRequest) {
         writeNibrsLog(question, sql, 0, `sql_guardrail_second_failure:${postRetryLocalIssues.fired.join(",")}`, Date.now() - claudeStart, msg, [...postRetryResult.fired, ...postRetryLocalIssues.fired], activeModelLabel, sessionId);
         return jsonResp({ success: true, question, sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - claudeStart } as QueryResponse);
       }
+
+      const postRetryContract = runContractValidation(sql);
+      sql = postRetryContract.sql;
+      const contractSecondFailure = contractFailureResponse(postRetryContract, `contract_second_failure:${postRetryContract.enforced.join(",")}`);
+      if (contractSecondFailure) return contractSecondFailure;
     }
 
-    sql = applyContractValidation(sql);
+    const preTableContract = runContractValidation(sql);
+    sql = preTableContract.sql;
+    const preTableContractFailure = contractFailureResponse(preTableContract, `contract_final_failure:${preTableContract.enforced.join(",")}`);
+    if (preTableContractFailure) return preTableContractFailure;
 
     {
       const tableCheck = validateTablesForTab(sql, "nibrs", getNibrsDb());
@@ -613,7 +665,10 @@ export async function POST(req: NextRequest) {
     let columns: string[] = undefined!;
 
     try {
-      sql = applyContractValidation(sql);
+      const executionContract = runContractValidation(sql);
+      sql = executionContract.sql;
+      const executionContractFailure = contractFailureResponse(executionContract, `contract_execution_failure:${executionContract.enforced.join(",")}`);
+      if (executionContractFailure) return executionContractFailure;
       const result = await executeWithTimeout(sql);
       rows = result.rows;
       columns = result.columns;
@@ -661,7 +716,10 @@ export async function POST(req: NextRequest) {
         if (retry.sql) {
           const retryValidation = validateAndSanitize(retry.sql);
           if (retryValidation.valid) {
-            const retrySql = applyContractValidation(retryValidation.sanitized!);
+            const retryContract = runContractValidation(retryValidation.sanitized!);
+            const retrySql = retryContract.sql;
+            const retryContractFailure = contractFailureResponse(retryContract, `contract_db_retry_failure:${retryContract.enforced.join(",")}`);
+            if (retryContractFailure) return retryContractFailure;
             try {
               const retryResult = await executeWithTimeout(retrySql);
               rows = retryResult.rows;
@@ -710,7 +768,10 @@ export async function POST(req: NextRequest) {
         const resolution = resolveCampusAgencyOris(getNibrsDb(), question);
         if (resolution && resolution.oris.length > 0) {
           const campusChartAxes = campusAgencyChartAxesFromSql(sql, question);
-          const fallbackSql = applyContractValidation(buildCampusAgencySummarySql(resolution.oris, question, sql));
+          const fallbackContract = runContractValidation(buildCampusAgencySummarySql(resolution.oris, question, sql));
+          const fallbackSql = fallbackContract.sql;
+          const fallbackContractFailure = contractFailureResponse(fallbackContract, `contract_campus_rescue_failure:${fallbackContract.enforced.join(",")}`);
+          if (fallbackContractFailure) return fallbackContractFailure;
           const fallbackResult = await executeWithTimeout(fallbackSql);
           if (fallbackResult.rows.length > 0) {
             sql = fallbackSql;

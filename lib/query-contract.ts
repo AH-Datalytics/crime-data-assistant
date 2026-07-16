@@ -96,7 +96,7 @@ function detectMetric(question: string): QueryContract["metric"] {
   const topicMatch = OFFENSE_PATTERNS.find((entry) => entry.pattern.test(question));
   const topic = topicMatch?.topic ?? (/\bcrimes?\b/i.test(question) ? "crime" : "unknown");
   const asksRate = /\b(?:rates?|per\s*(?:capita|100k|100,?000))\b/i.test(question);
-  const asksClearance = /\bclearance\b/i.test(question);
+  const asksClearance = /\b(?:clearance|clearances?|cleared|solve[ds]?|unsolved|exceptional(?:ly)?|cleared\s+by\s+arrest)\b/i.test(question);
   const asksRatio = /\b(?:ratio|share|percent|percentage)\b/i.test(question);
   const asksDemographic = /\b(?:race|racial|sex|gender|male|female|men|women|age|demographic)\b/i.test(question);
 
@@ -147,6 +147,22 @@ function detectGeography(question: string, source: QueryContractSource): QueryCo
   }
 
   const resolution = resolveGeoPlaces(question);
+
+  if (/\b(?:universit(?:y|ies)|college|campus|ucla|uc\s+berkeley|berkeley\s+campus)\b/i.test(question)) {
+    const first = resolution.mentions[0];
+    const candidate = first?.candidates[0];
+    const state = candidate?.state ?? null;
+    return {
+      kind: "campus",
+      name: candidate?.name ?? null,
+      state,
+      canonicalName: candidate?.canonicalQuery ?? candidate?.name ?? null,
+      ...(state && STATE_CODE_ALIASES[state] ? { sourceCodes: STATE_CODE_ALIASES[state] } : {}),
+      confidence: first?.requiresClarification ? "low" : candidate ? "medium" : "medium",
+      needsClarification: first?.requiresClarification ? first.candidates.map((c) => c.canonicalQuery ?? c.name) : [],
+    };
+  }
+
   const first = resolution.mentions[0];
   if (first?.candidates.length) {
     const candidate = first.candidates[0];
@@ -161,10 +177,6 @@ function detectGeography(question: string, source: QueryContractSource): QueryCo
       confidence: first.requiresClarification ? "low" : candidate.confidence >= 0.9 ? "high" : "medium",
       needsClarification: first.requiresClarification ? first.candidates.map((c) => c.canonicalQuery ?? c.name) : [],
     };
-  }
-
-  if (/\b(?:universit(?:y|ies)|college|campus)\b/i.test(question)) {
-    return { kind: "campus", name: null, state: null, canonicalName: null, confidence: "medium", needsClarification: [] };
   }
 
   if (/\bagenc(?:y|ies)|police department|sheriff\b/i.test(question)) {

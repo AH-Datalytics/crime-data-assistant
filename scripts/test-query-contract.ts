@@ -60,6 +60,12 @@ import { validateQueryContractSql } from "../lib/query-contract-validator";
 }
 
 {
+  const contract = buildQueryContract("University of California Berkeley vehicle burglaries per month", "nibrs");
+  assert(contract);
+  assert.equal(contract.geography.kind, "campus");
+}
+
+{
   const contract = buildQueryContract("show murders by offender age from continuously reporting agencies from 2018 to 2025", "nibrs");
   assert(contract);
   assert.equal(contract.comparability.continuousReporters, true);
@@ -200,6 +206,62 @@ for (const aliasSql of [
   });
   assert.deepEqual(result.fired, []);
   assert.match(result.sql, /Kansas City/);
+}
+
+{
+  const result = validateQueryContractSql({
+    question: "gun violence in New York State since 2022",
+    source: "shr",
+    sql: "SELECT i.year, COUNT(*) FROM incidents i WHERE i.agency = 'New York' AND i.state = 'NY' GROUP BY i.year",
+  });
+  assert(result.warnings.includes("contract-state-scope-local-filter"));
+  assert(result.retryIssues.some((issue) => issue.includes("contract-state-scope-local-filter")));
+  assert(result.enforced.includes("contract-state-scope-local-filter"));
+}
+
+{
+  const result = validateQueryContractSql({
+    question: "aggravated assaults with a firearm in 2025",
+    source: "nibrs",
+    sql: "SELECT year, SUM(victim_count) FROM summary_victim_city_monthly WHERE ucr_offense_code = '13A' AND year = 2025 GROUP BY year",
+  });
+  assert(result.capabilityFindings.some((finding) => finding.ruleId === "nibrs-weapon-person-crime-table"));
+  assert(result.retryIssues.some((issue) => issue.includes("nibrs-weapon-person-crime-table")));
+  assert(result.enforced.includes("nibrs-weapon-person-crime-table"));
+}
+
+{
+  const result = validateQueryContractSql({
+    question: "firearm murder clearance rate in Chicago",
+    source: "nibrs",
+    sql: "SELECT year, SUM(cleared_count) * 100.0 / SUM(victim_count) AS clearance_rate FROM summary_victim_weapon WHERE ucr_offense_code = '09A' AND weapon_category = 'Firearm' GROUP BY year",
+  });
+  assert(result.capabilityFindings.some((finding) => finding.ruleId === "nibrs-clearance-weapon-unsupported"));
+  assert.equal(result.retryIssues.length, 0);
+  assert(result.blockReasons[0].includes("cannot calculate clearance rates broken down by weapon type"));
+  assert(result.enforced.includes("nibrs-clearance-weapon-unsupported"));
+}
+
+{
+  const result = validateQueryContractSql({
+    question: "carjacking clearance rates in Chicago",
+    source: "nibrs",
+    sql: "SELECT year, SUM(total_cleared) * 100.0 / SUM(total_offenses) AS clearance_rate FROM summary_clearance_city_annual WHERE city = 'CHICAGO' GROUP BY year",
+  });
+  assert(result.capabilityFindings.some((finding) => finding.ruleId === "nibrs-carjacking-clearance-table"));
+  assert(result.retryIssues.some((issue) => issue.includes("nibrs-carjacking-clearance-table")));
+  assert(result.enforced.includes("nibrs-carjacking-clearance-table"));
+}
+
+{
+  const result = validateQueryContractSql({
+    question: "murders in Cook County Illinois by year",
+    source: "historical",
+    sql: "SELECT hac.year, SUM(hac.murder) FROM historical_agency_crime hac JOIN historical_agency ha ON ha.ori = hac.ori WHERE ha.agency = 'Cook County' AND ha.state = 'il' GROUP BY hac.year",
+  });
+  assert(result.capabilityFindings.some((finding) => finding.ruleId === "historical-countywide-crosswalk"));
+  assert(result.retryIssues.some((issue) => issue.includes("historical-countywide-crosswalk")));
+  assert(result.enforced.includes("historical-countywide-crosswalk"));
 }
 
 console.log("query contract tests passed");

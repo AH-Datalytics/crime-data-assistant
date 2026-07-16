@@ -52,6 +52,11 @@ function asksWeaponQualifiedPersonCrime(question: string, contract: QueryContrac
   );
 }
 
+function asksCampusAgency(question: string, contract: QueryContract): boolean {
+  return contract.geography.kind === "campus" ||
+    /\b(?:universit(?:y|ies)|college|campus|ucla|uc\s+berkeley|berkeley\s+campus)\b/i.test(question);
+}
+
 function hasDemographicBreakdown(contract: QueryContract, question: string): boolean {
   return contract.breakdowns.some((breakdown) => ["age_group", "race", "sex"].includes(breakdown)) ||
     /\b(?:demographics?|age|race|racial|ethnicit\w+|hispanic|latino\w*|sex|gender|male|female|men|women|juvenile\w*|teen\w*)\b/i.test(question);
@@ -65,6 +70,22 @@ function hasCircumstanceBreakdown(question: string, contract: QueryContract): bo
 function asksCountywide(question: string, contract: QueryContract): boolean {
   return contract.geography.kind === "county" ||
     /\b[A-Za-z][A-Za-z.'-]*(?:\s+[A-Za-z][A-Za-z.'-]*){0,4}\s+(?:county|parish|borough)\b/i.test(question);
+}
+
+function asksCountywideGeography(question: string, contract: QueryContract): boolean {
+  if (!asksCountywide(question, contract)) return false;
+  if (/\b(?:sheriff'?s?\s+office|sheriff|county\s+police|county\s+agency|police\s+department)\b/i.test(question)) return false;
+  return /\b(?:countywide|county-wide|all\s+(?:agencies|cities)|cities\s+(?:in|within)|agencies\s+(?:in|within)|crime\s+(?:in|within|for)|murders?\s+(?:in|within|for)|homicides?\s+(?:in|within|for)|shootings?\s+(?:in|within|for)|rates?\s+(?:in|within|for))\b/i.test(question) ||
+    contract.geography.kind === "county";
+}
+
+function asksClearanceType(question: string): boolean {
+  return /\b(?:cleared?\s+by\s+arrest|exceptional(?:ly)?|arrest\s+vs\.?\s+exceptional|by\s+clearance\s+type|clearance\s+type)\b/i.test(question);
+}
+
+function asksClearanceMetric(question: string, contract: QueryContract): boolean {
+  return contract.metric.unit === "clearance_rate" ||
+    /\b(?:clearance|clearances?|cleared|solve[ds]?|unsolved|exceptional(?:ly)?|cleared\s+by\s+arrest)\b/i.test(question);
 }
 
 function asksHistoricalRate(contract: QueryContract, question: string): boolean {
@@ -81,6 +102,14 @@ function isHistoricalLocalRate(contract: QueryContract): boolean {
 }
 
 export const SOURCE_CAPABILITY_RULES: SourceCapabilityRule[] = [
+  {
+    id: "current-countywide-crosswalk",
+    source: "current",
+    severity: "warning",
+    requiresAnyTables: ["agency_county_crosswalk"],
+    when: ({ question, contract }) => asksCountywideGeography(question, contract),
+    message: "Current countywide geography should use agency_county_crosswalk; a county agency row is not a countywide rollup.",
+  },
   {
     id: "nibrs-weapon-person-crime-table",
     source: "nibrs",
@@ -130,6 +159,47 @@ export const SOURCE_CAPABILITY_RULES: SourceCapabilityRule[] = [
     message: "NIBRS queries combining weapon, circumstance, and demographic breakdowns should use summary_victim_weapon_circumstance_demo.",
   },
   {
+    id: "nibrs-clearance-weapon-unsupported",
+    source: "nibrs",
+    severity: "unsupported",
+    when: ({ question, contract }) => asksClearanceMetric(question, contract) && asksWeaponQualifiedPersonCrime(question, contract),
+    message: "NIBRS cannot calculate clearance rates broken down by weapon type from the available summaries. Offer overall clearance rates or weapon-specific counts instead.",
+  },
+  {
+    id: "nibrs-carjacking-clearance-table",
+    source: "nibrs",
+    severity: "warning",
+    requiresAnyTables: ["summary_carjacking_clearance"],
+    when: ({ question, contract }) => asksClearanceMetric(question, contract) && contract.metric.topic === "carjacking",
+    message: "NIBRS carjacking clearance queries should use summary_carjacking_clearance.",
+  },
+  {
+    id: "nibrs-clearance-type-table",
+    source: "nibrs",
+    severity: "warning",
+    requiresAnyTables: ["summary_clearance_type", "summary_clearance_detail", "summary_victim_clearance_demographics", "summary_victim_circumstance_clearance_demo"],
+    forbidsTables: ["summary_city_monthly", "summary_state_monthly", "summary_victim_city_monthly", "summary_victim_state_monthly"],
+    when: ({ question, contract }) => asksClearanceMetric(question, contract) && asksClearanceType(question),
+    message: "NIBRS arrest-vs-exceptional or exceptional-clearance questions should use a clearance-detail summary table, not ordinary offense-count summaries.",
+  },
+  {
+    id: "nibrs-campus-agency-resolution",
+    source: "nibrs",
+    severity: "warning",
+    requiresAnyTables: ["agencies"],
+    when: ({ question, contract }) => asksCampusAgency(question, contract),
+    message: "NIBRS campus/university questions should resolve campus agency ORIs through agencies rather than using the surrounding citywide agency.",
+  },
+  {
+    id: "nibrs-countywide-crosswalk",
+    source: "nibrs",
+    severity: "warning",
+    requiresAnyTables: ["agency_county_crosswalk"],
+    forbidsTables: ["county_lookup"],
+    when: ({ question, contract }) => asksCountywideGeography(question, contract) && !hasDemographicBreakdown(contract, question),
+    message: "NIBRS countywide geography should use agency_county_crosswalk, not county_lookup or a single county agency.",
+  },
+  {
     id: "nibrs-countywide-demographics-unsupported",
     source: "nibrs",
     severity: "unsupported",
@@ -160,6 +230,14 @@ export const SOURCE_CAPABILITY_RULES: SourceCapabilityRule[] = [
     ],
     when: ({ question, contract }) => !asksCountywide(question, contract) && hasDemographicBreakdown(contract, question),
     message: "NIBRS demographic breakdowns should use a demographic-capable summary table.",
+  },
+  {
+    id: "historical-countywide-crosswalk",
+    source: "historical",
+    severity: "warning",
+    requiresAnyTables: ["agency_county_crosswalk"],
+    when: ({ question, contract }) => asksCountywideGeography(question, contract),
+    message: "Historical countywide geography should use agency_county_crosswalk; a county agency row is not a countywide rollup.",
   },
   {
     id: "historical-clearance-table",
@@ -195,6 +273,22 @@ export const SOURCE_CAPABILITY_RULES: SourceCapabilityRule[] = [
     forbiddenSql: [/\b(?:COALESCE|IFNULL)\s*\(\s*(?:\w+\.)?(?:murder|rape|robbery|assault|violent|property|burglary|theft|motor_vehicle_theft|population|all_total|officer_total|civilian_total)\s*,\s*(?:0|0\.0|1|1\.0)\s*\)/i],
     when: ({ contract, question }) => asksHistoricalRate(contract, question),
     message: "Historical rate time series should preserve missing values as NULL rather than zero-filling numerator or denominator fields.",
+  },
+  {
+    id: "shr-campus-agency-resolution",
+    source: "shr",
+    severity: "warning",
+    requiresAnyTables: ["shr_agency_alias"],
+    when: ({ question, contract }) => asksCampusAgency(question, contract),
+    message: "SHR campus/university questions should resolve the campus agency through shr_agency_alias rather than using the surrounding citywide agency.",
+  },
+  {
+    id: "shr-countywide-crosswalk",
+    source: "shr",
+    severity: "warning",
+    requiresAnyTables: ["agency_county_crosswalk"],
+    when: ({ question, contract }) => asksCountywideGeography(question, contract),
+    message: "SHR countywide geography should use agency_county_crosswalk; a county sheriff agency is not a countywide rollup.",
   },
   {
     id: "shr-homicide-only",

@@ -7,6 +7,71 @@ export interface QueryContractSqlValidation {
   fired: string[];
   warnings: string[];
   capabilityFindings: SourceCapabilityFinding[];
+  retryIssues: string[];
+  blockReasons: string[];
+  enforced: string[];
+}
+
+const CONTRACT_SECOND_FAILURE_MESSAGE =
+  "I couldn't build a reliable query that matched the requested source, geography, metric, and time period. Try narrowing the question or choosing one of the suggested alternatives.";
+
+const RETRY_CAPABILITY_RULES = new Set([
+  "current-countywide-crosswalk",
+  "current-rate-population",
+  "nibrs-weapon-person-crime-table",
+  "nibrs-weapon-demographic-person-crime-table",
+  "nibrs-weapon-circumstance-person-crime-table",
+  "nibrs-weapon-circumstance-demographic-person-crime-table",
+  "nibrs-carjacking-clearance-table",
+  "nibrs-clearance-type-table",
+  "nibrs-campus-agency-resolution",
+  "nibrs-countywide-crosswalk",
+  "nibrs-continuous-reporters-range-table",
+  "nibrs-demographic-breakdown-table",
+  "historical-countywide-crosswalk",
+  "historical-clearance-table",
+  "historical-state-national-rate-table",
+  "historical-local-rate-population",
+  "historical-rate-null-gaps",
+  "shr-campus-agency-resolution",
+  "shr-countywide-crosswalk",
+  "shr-state-rate-population",
+]);
+
+const BLOCK_CAPABILITY_RULES = new Set([
+  "nibrs-clearance-weapon-unsupported",
+  "nibrs-countywide-demographics-unsupported",
+  "shr-demographic-rate-unsupported",
+]);
+
+const BLOCK_MESSAGES: Record<string, string> = {
+  "nibrs-clearance-weapon-unsupported":
+    "The available NIBRS summary data cannot calculate clearance rates broken down by weapon type. I can answer overall clearance rates, or weapon-specific counts, but not weapon-specific clearance rates.",
+  "nibrs-countywide-demographics-unsupported":
+    "Countywide NIBRS demographic breakdowns are not reliable from the available summaries because county totals combine agencies with different reporting participation and completeness. Try a specific agency/city demographic breakdown, or a countywide total without demographics.",
+  "shr-demographic-rate-unsupported":
+    "The FBI data does not include matching population denominators for demographic groups. Better choices: counts by gender/race, or an overall homicide rate.",
+};
+
+function capabilityRetryIssue(finding: SourceCapabilityFinding): string {
+  const expected = finding.expectedTables?.length
+    ? ` Use one of these table(s): ${finding.expectedTables.join(", ")}.`
+    : "";
+  const forbidden = finding.forbiddenTables?.length
+    ? ` Do not use: ${finding.forbiddenTables.join(", ")}.`
+    : "";
+  const actual = finding.actualTables.length
+    ? ` Current SQL used: ${finding.actualTables.join(", ")}.`
+    : " Current SQL did not reference a usable data table.";
+  return `[SYSTEM: Query contract violation (${finding.ruleId}). ${finding.message}${expected}${forbidden}${actual} Rewrite the SQL so it satisfies the user's requested source, geography, metric, and time contract. Do not execute a query that violates this contract.]`;
+}
+
+export function queryContractFailureMessage(result: QueryContractSqlValidation): string | null {
+  return result.blockReasons[0] ?? (result.retryIssues.length > 0 ? CONTRACT_SECOND_FAILURE_MESSAGE : null);
+}
+
+export function queryContractGuardrails(result: QueryContractSqlValidation): string[] {
+  return [...new Set([...result.fired, ...result.enforced])];
 }
 
 function rewriteStateEquals(sql: string, requestedState: string, sourceState: string | string[]): string {
@@ -21,6 +86,10 @@ function rewriteStateEquals(sql: string, requestedState: string, sourceState: st
 
 function hasStateFilter(sql: string): boolean {
   return /\b(?:\w+\.)?state\s*(?:=|IN\s*\()\s*'[^']+'/i.test(sql);
+}
+
+function hasLocalPlaceFilter(sql: string): boolean {
+  return /\b(?:\w+\.)?(?:agency|agency_name|canonical_agency|city|county|alias_key)\s*(?:=|LIKE|IN\s*\()\s*'[^']+'/i.test(sql);
 }
 
 function escapeRegExp(value: string): string {
@@ -82,11 +151,24 @@ export function validateQueryContractSql(opts: {
   routingMeta?: RoutingLogMeta | null;
 }): QueryContractSqlValidation {
   const contract = buildQueryContract(opts.question, opts.source, opts.routingMeta);
-  if (!contract) return { sql: opts.sql, fired: [], warnings: [], capabilityFindings: [] };
+  if (!contract) {
+    return {
+      sql: opts.sql,
+      fired: [],
+      warnings: [],
+      capabilityFindings: [],
+      retryIssues: [],
+      blockReasons: [],
+      enforced: [],
+    };
+  }
 
   let sql = opts.sql;
   const fired: string[] = [];
   const warnings: string[] = [];
+  const retryIssues: string[] = [];
+  const blockReasons: string[] = [];
+  const enforced: string[] = [];
 
   const requestedState = contract.geography.state;
   const sourceState = requestedState ? contract.geography.sourceCodes?.[opts.source] : null;
@@ -115,6 +197,12 @@ export function validateQueryContractSql(opts: {
     warnings.push("contract-geography-state-missing");
   }
 
+  if (contract.geography.kind === "state" && hasLocalPlaceFilter(sql)) {
+    warnings.push("contract-state-scope-local-filter");
+    retryIssues.push("[SYSTEM: Query contract violation (contract-state-scope-local-filter). The user asked for a state-level result, but the SQL filters to a local city/agency/county value. Rewrite the SQL so the filter is statewide, using the state field or the appropriate state/national summary table. Do not filter to a single agency or city unless the user explicitly asked for that local place.]");
+    enforced.push("contract-state-scope-local-filter");
+  }
+
   const capabilityFindings = validateSourceCapabilities({
     question: opts.question,
     source: opts.source,
@@ -123,7 +211,22 @@ export function validateQueryContractSql(opts: {
   });
   for (const finding of capabilityFindings) {
     warnings.push(`capability-${finding.ruleId}`);
+    if (BLOCK_CAPABILITY_RULES.has(finding.ruleId)) {
+      blockReasons.push(BLOCK_MESSAGES[finding.ruleId] ?? finding.message);
+      enforced.push(finding.ruleId);
+    } else if (RETRY_CAPABILITY_RULES.has(finding.ruleId)) {
+      retryIssues.push(capabilityRetryIssue(finding));
+      enforced.push(finding.ruleId);
+    }
   }
 
-  return { sql, fired, warnings: [...new Set(warnings)], capabilityFindings };
+  return {
+    sql,
+    fired,
+    warnings: [...new Set(warnings)],
+    capabilityFindings,
+    retryIssues: [...new Set(retryIssues)],
+    blockReasons: [...new Set(blockReasons)],
+    enforced: [...new Set(enforced)],
+  };
 }
