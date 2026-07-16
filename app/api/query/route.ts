@@ -1065,6 +1065,10 @@ export async function POST(req: NextRequest) {
               sseEvent({ type: "status", text: "Retrying with corrected query..." })
             )
           );
+          const countywideRetryReminder = /\b(countywide|county|parish|borough)\b/i.test(guardrailQuestion)
+            ? " If this is a countywide geography query, the corrected SQL must use agency_county_crosswalk joined on the metric table ORI (metric_alias.ori = ac.ori9 OR substr(metric_alias.ori, 1, 7) = ac.ori). Do not replace countywide geography with a single county/sheriff agency or ha.type = 'county' unless the user explicitly asked for that agency."
+            : "";
+          const retryInstruction = `That SQL failed with error: ${msg}. Please fix the query and try again.${countywideRetryReminder}`;
           const retryHistory = [
             ...(promptHistory || []),
             { role: "user" as const, content: question },
@@ -1074,11 +1078,11 @@ export async function POST(req: NextRequest) {
             },
             {
               role: "user" as const,
-              content: `That SQL failed with error: ${msg}. Please fix the query and try again.`,
+              content: retryInstruction,
             },
           ];
           const retry = await translateToSql(
-            `Fix this SQL error: ${msg}`,
+            retryInstruction,
             retryHistory,
             systemPrompt
           );

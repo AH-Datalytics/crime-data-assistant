@@ -88,6 +88,10 @@ function asksClearanceMetric(question: string, contract: QueryContract): boolean
     /\b(?:clearance|clearances?|cleared|solve[ds]?|unsolved|exceptional(?:ly)?|cleared\s+by\s+arrest)\b/i.test(question);
 }
 
+function hasOriFilter(sql: string): boolean {
+  return /\bori\s*(?:=|IN\s*\()/i.test(sql);
+}
+
 function asksHistoricalRate(contract: QueryContract, question: string): boolean {
   return contract.metric.unit === "rate_per_100k" ||
     /\brates?\b|\bper\s*(?:100\s*k|100,?000|capita)\b/i.test(question);
@@ -187,7 +191,7 @@ export const SOURCE_CAPABILITY_RULES: SourceCapabilityRule[] = [
     source: "nibrs",
     severity: "warning",
     requiresAnyTables: ["agencies"],
-    when: ({ question, contract }) => asksCampusAgency(question, contract),
+    when: ({ question, contract, sql }) => asksCampusAgency(question, contract) && !hasOriFilter(sql),
     message: "NIBRS campus/university questions should resolve campus agency ORIs through agencies rather than using the surrounding citywide agency.",
   },
   {

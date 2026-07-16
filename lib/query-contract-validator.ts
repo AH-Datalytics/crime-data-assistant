@@ -53,7 +53,17 @@ const BLOCK_MESSAGES: Record<string, string> = {
     "The FBI data does not include matching population denominators for demographic groups. Better choices: counts by gender/race, or an overall homicide rate.",
 };
 
-function capabilityRetryIssue(finding: SourceCapabilityFinding): string {
+function countyKey(value: string | null): string | null {
+  if (!value) return null;
+  const key = value
+    .replace(/\b(county|parish|borough)\b/ig, " ")
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, " ")
+    .trim();
+  return key || null;
+}
+
+function capabilityRetryIssue(finding: SourceCapabilityFinding, contract: ReturnType<typeof buildQueryContract>): string {
   const expected = finding.expectedTables?.length
     ? ` Use one of these table(s): ${finding.expectedTables.join(", ")}.`
     : "";
@@ -63,7 +73,10 @@ function capabilityRetryIssue(finding: SourceCapabilityFinding): string {
   const actual = finding.actualTables.length
     ? ` Current SQL used: ${finding.actualTables.join(", ")}.`
     : " Current SQL did not reference a usable data table.";
-  return `[SYSTEM: Query contract violation (${finding.ruleId}). ${finding.message}${expected}${forbidden}${actual} Rewrite the SQL so it satisfies the user's requested source, geography, metric, and time contract. Do not execute a query that violates this contract.]`;
+  const countywideDetail = finding.ruleId.endsWith("countywide-crosswalk") && contract
+    ? ` For countywide geography, join agency_county_crosswalk on the metric table ORI (metric_alias.ori = ac.ori9 OR substr(metric_alias.ori, 1, 7) = ac.ori), filter ac.county_key = '${countyKey(contract.geography.name) ?? "[COUNTY_KEY]"}'${contract.geography.state ? ` and ac.state = '${contract.geography.state}'` : ""}, and do not filter to a single county/sheriff agency unless the user explicitly asked for that agency.`
+    : "";
+  return `[SYSTEM: Query contract violation (${finding.ruleId}). ${finding.message}${expected}${forbidden}${actual}${countywideDetail} Rewrite the SQL so it satisfies the user's requested source, geography, metric, and time contract. Do not execute a query that violates this contract.]`;
 }
 
 export function queryContractFailureMessage(result: QueryContractSqlValidation): string | null {
@@ -215,7 +228,7 @@ export function validateQueryContractSql(opts: {
       blockReasons.push(BLOCK_MESSAGES[finding.ruleId] ?? finding.message);
       enforced.push(finding.ruleId);
     } else if (RETRY_CAPABILITY_RULES.has(finding.ruleId)) {
-      retryIssues.push(capabilityRetryIssue(finding));
+      retryIssues.push(capabilityRetryIssue(finding, contract));
       enforced.push(finding.ruleId);
     }
   }

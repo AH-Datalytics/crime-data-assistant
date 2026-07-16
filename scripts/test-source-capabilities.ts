@@ -200,6 +200,18 @@ function assertDoesNotFind(name: string, ids: string[], unexpected: string) {
 
 {
   const ids = findingIds(
+    "University of California Berkeley vehicle burglaries per month",
+    "nibrs",
+    `SELECT s.year, s.month, SUM(s.offense_count)
+     FROM summary_city_monthly s
+     WHERE s.ori IN ('CA0019700') AND s.ucr_offense_code = '220'
+     GROUP BY s.year, s.month`
+  );
+  assertDoesNotFind("NIBRS direct campus ORI query satisfies contract", ids, "nibrs-campus-agency-resolution");
+}
+
+{
+  const ids = findingIds(
     "show me violent crimes by offender age by year for 2021 to 2025 for continuously reporting agencies",
     "nibrs",
     `SELECT d.year, d.age_group, SUM(d.offender_count)
