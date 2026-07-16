@@ -4,7 +4,7 @@
 # This script checks for new data for the current year and rebuilds if found.
 #
 # Usage: bash /opt/nibrs/current/scripts/update-hate-crime.sh
-# Cron:  0 17 15 * * bash /opt/nibrs/current/scripts/update-hate-crime.sh >> /var/log/hate-crime-update.log 2>&1
+# Cron:  0 9 16 * * bash /opt/nibrs/current/scripts/update-hate-crime.sh >> /var/log/hate-crime-update.log 2>&1
 #
 set -e
 
