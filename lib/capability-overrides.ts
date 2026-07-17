@@ -5,7 +5,7 @@ export interface CapabilityOverride {
 }
 
 export const SUB_CITY_GEOGRAPHY_RE =
-  /\b(zip\s*code|zip\s*\d|neighborhoods?|precincts?|police districts?|census tracts?|block groups?|wards?|community areas?|apartment(?:\s+complex(?:es)?)?|housing complexes?)\b/i;
+  /\b(zip\s*code|zip\s*\d|neighborhoods?|precincts?|police districts?|census tracts?|block groups?|wards?|community areas?|apartment\s+complex(?:es)?|housing\s+complex(?:es)?)\b/i;
 
 export const SUB_CITY_GEOGRAPHY_MESSAGE =
   "The FBI does not report crime data below the city/county/agency level. The available FBI datasets are organized by reporting agency, city, county, state, or national totals; they do not support ZIP code, neighborhood, precinct, ward, census tract, block group, apartment-complex, or other sub-city geography.";
