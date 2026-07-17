@@ -20,8 +20,8 @@ function assert(name: string, condition: boolean, detail?: string) {
   assert("sub-city geography gets deterministic source-wide override",
     r?.guardrail === "sub-city-geography-unsupported",
     JSON.stringify(r));
-  assert("sub-city explanation says nowhere in app has below-city/county geography",
-    Boolean(r?.explanation.includes("does not have crime data below the city/county/agency level")),
+  assert("sub-city explanation says FBI has no below-city/county geography",
+    Boolean(r?.explanation.includes("The FBI does not report crime data below the city/county/agency level")),
     r?.explanation);
   assert("sub-city explanation does not suggest NIBRS or another site",
     Boolean(r && !/NIBRS|local police|open data|CompStat/i.test(r.explanation)),

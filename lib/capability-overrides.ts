@@ -8,7 +8,7 @@ export const SUB_CITY_GEOGRAPHY_RE =
   /\b(zip\s*code|zip\s*\d|neighborhoods?|precincts?|police districts?|census tracts?|block groups?|wards?|community areas?|apartment(?:\s+complex(?:es)?)?|housing complexes?)\b/i;
 
 export const SUB_CITY_GEOGRAPHY_MESSAGE =
-  "This app does not have crime data below the city/county/agency level. The available FBI datasets are organized by reporting agency, city, county, state, or national totals; they do not support ZIP code, neighborhood, precinct, ward, census tract, block group, apartment-complex, or other sub-city geography.";
+  "The FBI does not report crime data below the city/county/agency level. The available FBI datasets are organized by reporting agency, city, county, state, or national totals; they do not support ZIP code, neighborhood, precinct, ward, census tract, block group, apartment-complex, or other sub-city geography.";
 
 export function detectSubCityGeographyOverride(question: string): CapabilityOverride | null {
   if (!SUB_CITY_GEOGRAPHY_RE.test(question)) return null;
