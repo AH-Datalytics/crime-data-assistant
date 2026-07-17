@@ -28,6 +28,8 @@ const RETRY_CAPABILITY_RULES = new Set([
   "nibrs-countywide-crosswalk",
   "nibrs-continuous-reporters-range-table",
   "nibrs-demographic-breakdown-table",
+  "nibrs-specific-drug-offense-table",
+  "nibrs-specific-drug-arrest-table",
   "nibrs-local-geography-state-table",
   "nibrs-agency-lookup-not-crime-data",
   "historical-countywide-crosswalk",
@@ -48,7 +50,6 @@ const BLOCK_CAPABILITY_RULES = new Set([
   "unsupported-court-policy-topic",
   "nibrs-clearance-weapon-unsupported",
   "nibrs-countywide-demographics-unsupported",
-  "nibrs-specific-drug-unsupported",
   "nibrs-shooting-category-unsupported",
   "shr-non-homicide-unsupported",
   "shr-clearance-unsupported",
@@ -64,8 +65,6 @@ const BLOCK_MESSAGES: Record<string, string> = {
     "The available NIBRS summary data cannot calculate clearance rates broken down by weapon type. I can answer overall clearance rates, or weapon-specific counts, but not weapon-specific clearance rates.",
   "nibrs-countywide-demographics-unsupported":
     "Countywide NIBRS demographic breakdowns are not reliable from the available summaries because county totals combine agencies with different reporting participation and completeness. Try a specific agency/city demographic breakdown, or a countywide total without demographics.",
-  "nibrs-specific-drug-unsupported":
-    "The available NIBRS summary data groups drug offenses together and cannot isolate a specific substance. I can answer total drug/narcotic violations or drug arrests, but not marijuana-, cocaine-, heroin-, methamphetamine-, fentanyl-, or opioid-specific counts.",
   "nibrs-shooting-category-unsupported":
     "The FBI does not systemically track all shootings. You can query fatal shootings specifically or aggravated assaults with a firearm as a broader measure.",
   "shr-non-homicide-unsupported":

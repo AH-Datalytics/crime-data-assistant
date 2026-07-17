@@ -639,7 +639,7 @@ const cases: CorpusCase[] = [
   },
   {
     id: "L3-UNSUPPORTED-05",
-    family: "unsupported NIBRS drug type",
+    family: "NIBRS drug type table",
     question: "marijuana possession arrests in Texas since 2020",
     source: "nibrs",
     sql: `
@@ -648,12 +648,12 @@ const cases: CorpusCase[] = [
       WHERE ucr_arrest_offense_code = '35A'
       GROUP BY year
     `,
-    expectFindings: ["nibrs-specific-drug-unsupported"],
-    expectBlock: ["nibrs-specific-drug-unsupported"],
+    expectFindings: ["nibrs-specific-drug-arrest-table"],
+    expectRetry: ["nibrs-specific-drug-arrest-table"],
   },
   {
     id: "L3-UNSUPPORTED-06",
-    family: "unsupported NIBRS drug type",
+    family: "NIBRS drug type table",
     question: "drug arrests in Texas since 2020",
     source: "nibrs",
     sql: `
@@ -662,7 +662,47 @@ const cases: CorpusCase[] = [
       WHERE ucr_arrest_offense_code = '35A'
       GROUP BY year
     `,
-    expectNoFindings: ["nibrs-specific-drug-unsupported"],
+    expectNoFindings: ["nibrs-specific-drug-arrest-table"],
+  },
+  {
+    id: "L3-UNSUPPORTED-06B",
+    family: "NIBRS drug type table",
+    question: "marijuana possession arrests in Texas since 2020",
+    source: "nibrs",
+    sql: `
+      SELECT year, SUM(arrest_count)
+      FROM summary_drug_arrests
+      WHERE ucr_arrest_offense = '35A' AND drug_category = 'E'
+      GROUP BY year
+    `,
+    expectNoFindings: ["nibrs-specific-drug-arrest-table"],
+  },
+  {
+    id: "L3-UNSUPPORTED-06C",
+    family: "NIBRS drug type table",
+    question: "marijuana drug offenses nationally",
+    source: "nibrs",
+    sql: `
+      SELECT year, SUM(offense_count)
+      FROM summary_state_monthly
+      WHERE ucr_offense_code = '35A'
+      GROUP BY year
+    `,
+    expectFindings: ["nibrs-specific-drug-offense-table"],
+    expectRetry: ["nibrs-specific-drug-offense-table"],
+  },
+  {
+    id: "L3-UNSUPPORTED-06D",
+    family: "NIBRS drug type table",
+    question: "marijuana drug offenses nationally",
+    source: "nibrs",
+    sql: `
+      SELECT year, SUM(offense_count)
+      FROM summary_drug_monthly
+      WHERE SUBSTR(suspected_drug_type, 1, 1) = 'E'
+      GROUP BY year
+    `,
+    expectNoFindings: ["nibrs-specific-drug-offense-table"],
   },
   {
     id: "L3-UNSUPPORTED-07",

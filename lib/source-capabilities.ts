@@ -125,6 +125,10 @@ function asksSpecificDrugType(question: string): boolean {
   return /\b(marijuana|cannabis|weed|cocaine|crack|heroin|meth|methamphetamine|fentanyl|opioids?|opiates?)\b/i.test(question);
 }
 
+function asksArrestMetric(question: string): boolean {
+  return /\b(arrests?|arrested|arrestees?)\b/i.test(question);
+}
+
 function asksShootingCategory(question: string): boolean {
   if (!/\b(shootings?|shot\b|gunshot|people\s+shot|gun\s+violence)\b/i.test(question)) return false;
   return !/\b(firearm (?:murder|homicide)|gun (?:murder|homicide)|(?:murder|homicide).{0,15}firearm|closest proxy|approximate|aggravated assault.{0,20}firearm)\b/i.test(question);
@@ -253,11 +257,20 @@ export const SOURCE_CAPABILITY_RULES: SourceCapabilityRule[] = [
     message: "NIBRS cannot calculate clearance rates broken down by weapon type from the available summaries. Offer overall clearance rates or weapon-specific counts instead.",
   },
   {
-    id: "nibrs-specific-drug-unsupported",
+    id: "nibrs-specific-drug-offense-table",
     source: "nibrs",
-    severity: "unsupported",
-    when: ({ question }) => asksSpecificDrugType(question),
-    message: "NIBRS summary tables group drug offenses together and cannot isolate a specific substance such as marijuana, cocaine, heroin, methamphetamine, fentanyl, or opioids.",
+    severity: "warning",
+    requiresAnyTables: ["summary_drug_monthly"],
+    when: ({ question }) => asksSpecificDrugType(question) && !asksArrestMetric(question),
+    message: "NIBRS drug-specific offense queries should use summary_drug_monthly, which contains suspected_drug_type.",
+  },
+  {
+    id: "nibrs-specific-drug-arrest-table",
+    source: "nibrs",
+    severity: "warning",
+    requiresAnyTables: ["summary_drug_arrests"],
+    when: ({ question }) => asksSpecificDrugType(question) && asksArrestMetric(question),
+    message: "NIBRS drug-specific arrest queries should use summary_drug_arrests, not the all-drug arrestee demographics summary.",
   },
   {
     id: "nibrs-shooting-category-unsupported",
