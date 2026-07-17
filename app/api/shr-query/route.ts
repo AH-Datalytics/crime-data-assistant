@@ -300,6 +300,28 @@ export async function POST(req: NextRequest) {
       });
     };
 
+    const capabilityOverride =
+      detectSubCityGeographyOverride(question) ??
+      detectShrGroupRateOverride(question);
+    if (capabilityOverride) {
+      const executionMs = Date.now() - start;
+      writeLog(question, null, 0, null, executionMs, capabilityOverride.explanation, "shr", [capabilityOverride.guardrail], "deterministic", sessionId);
+      return jsonResp({
+        success: true,
+        question,
+        sql: null,
+        explanation: capabilityOverride.explanation,
+        title: capabilityOverride.title,
+        columns: [],
+        rows: [],
+        rowCount: 0,
+        truncated: false,
+        chartConfig: null,
+        chartMeta: { source: "FBI SHR", agencyCount: 0, population: null },
+        executionTimeMs: executionMs,
+      });
+    }
+
     const geoClarification = getBlockingGeoClarification(question);
     if (geoClarification) {
       const executionMs = Date.now() - start;
@@ -336,28 +358,6 @@ export async function POST(req: NextRequest) {
         truncated: false,
         chartConfig: null,
         chartMeta: null,
-        executionTimeMs: executionMs,
-      });
-    }
-
-    const capabilityOverride =
-      detectSubCityGeographyOverride(question) ??
-      detectShrGroupRateOverride(question);
-    if (capabilityOverride) {
-      const executionMs = Date.now() - start;
-      writeLog(question, null, 0, null, executionMs, capabilityOverride.explanation, "shr", [capabilityOverride.guardrail], "deterministic", sessionId);
-      return jsonResp({
-        success: true,
-        question,
-        sql: null,
-        explanation: capabilityOverride.explanation,
-        title: capabilityOverride.title,
-        columns: [],
-        rows: [],
-        rowCount: 0,
-        truncated: false,
-        chartConfig: null,
-        chartMeta: { source: "FBI SHR", agencyCount: 0, population: null },
         executionTimeMs: executionMs,
       });
     }

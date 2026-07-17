@@ -211,6 +211,27 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const capabilityStart = Date.now();
+    const capabilityOverride = detectNibrsCapabilityOverride(question);
+    if (capabilityOverride) {
+      const executionMs = Date.now() - capabilityStart;
+      writeNibrsLog(question, null, 0, null, executionMs, capabilityOverride.explanation, [capabilityOverride.guardrail], "deterministic", sessionId);
+      return jsonResp({
+        success: true,
+        question,
+        sql: null as unknown as string,
+        explanation: capabilityOverride.explanation,
+        title: capabilityOverride.title,
+        columns: [],
+        rows: [],
+        rowCount: 0,
+        truncated: false,
+        chartConfig: null,
+        chartMeta: { source: "FBI NIBRS", agencyCount: 0, population: null },
+        executionTimeMs: executionMs,
+      } as QueryResponse);
+    }
+
     const geoClarification = getBlockingGeoClarification(question);
     if (geoClarification) {
       const executionMs = Date.now() - routeStart;
@@ -247,27 +268,6 @@ export async function POST(req: NextRequest) {
         truncated: false,
         chartConfig: null,
         chartMeta: null,
-        executionTimeMs: executionMs,
-      } as QueryResponse);
-    }
-
-    const capabilityStart = Date.now();
-    const capabilityOverride = detectNibrsCapabilityOverride(question);
-    if (capabilityOverride) {
-      const executionMs = Date.now() - capabilityStart;
-      writeNibrsLog(question, null, 0, null, executionMs, capabilityOverride.explanation, [capabilityOverride.guardrail], "deterministic", sessionId);
-      return jsonResp({
-        success: true,
-        question,
-        sql: null as unknown as string,
-        explanation: capabilityOverride.explanation,
-        title: capabilityOverride.title,
-        columns: [],
-        rows: [],
-        rowCount: 0,
-        truncated: false,
-        chartConfig: null,
-        chartMeta: { source: "FBI NIBRS", agencyCount: 0, population: null },
         executionTimeMs: executionMs,
       } as QueryResponse);
     }
