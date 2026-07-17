@@ -4,6 +4,22 @@ export interface CapabilityOverride {
   guardrail: string;
 }
 
+export const SUB_CITY_GEOGRAPHY_RE =
+  /\b(zip\s*code|zip\s*\d|neighborhoods?|precincts?|police districts?|census tracts?|block groups?|wards?|community areas?|apartment(?:\s+complex(?:es)?)?|housing complexes?)\b/i;
+
+export const SUB_CITY_GEOGRAPHY_MESSAGE =
+  "This app does not have crime data below the city/county/agency level. The available FBI datasets are organized by reporting agency, city, county, state, or national totals; they do not support ZIP code, neighborhood, precinct, ward, census tract, block group, apartment-complex, or other sub-city geography.";
+
+export function detectSubCityGeographyOverride(question: string): CapabilityOverride | null {
+  if (!SUB_CITY_GEOGRAPHY_RE.test(question)) return null;
+
+  return {
+    title: "Geography Not Available",
+    guardrail: "sub-city-geography-unsupported",
+    explanation: SUB_CITY_GEOGRAPHY_MESSAGE,
+  };
+}
+
 const HOMICIDE_RE = /\b(homicides?|murders?|killings?)\b/i;
 const RATE_RE = /\b(rates?|per\s*capita|per\s*100\s*k|per\s*100,?000)\b/i;
 const DEMOGRAPHIC_RE = /\b(gender|sex|race|racial|ethnicity|ethnic|female|male|women|men|black|white|hispanic|latino|asian|native|american\s+indian)\b/i;

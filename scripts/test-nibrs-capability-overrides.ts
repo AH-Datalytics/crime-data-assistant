@@ -1,7 +1,7 @@
 #!/usr/bin/env npx tsx
 
 import { detectNibrsCapabilityOverride } from "../lib/nibrs-capability-overrides.js";
-import { detectShrGroupRateOverride } from "../lib/capability-overrides.js";
+import { detectShrGroupRateOverride, detectSubCityGeographyOverride } from "../lib/capability-overrides.js";
 
 let pass = 0;
 let fail = 0;
@@ -13,6 +13,26 @@ function assert(name: string, condition: boolean, detail?: string) {
     fail++;
     console.log(`FAIL: ${name}${detail ? ` - ${detail}` : ""}`);
   }
+}
+
+{
+  const r = detectSubCityGeographyOverride("murders by zip code in Chicago");
+  assert("sub-city geography gets deterministic source-wide override",
+    r?.guardrail === "sub-city-geography-unsupported",
+    JSON.stringify(r));
+  assert("sub-city explanation says nowhere in app has below-city/county geography",
+    Boolean(r?.explanation.includes("does not have crime data below the city/county/agency level")),
+    r?.explanation);
+  assert("sub-city explanation does not suggest NIBRS or another site",
+    Boolean(r && !/NIBRS|local police|open data|CompStat/i.test(r.explanation)),
+    r?.explanation);
+}
+
+{
+  const r = detectNibrsCapabilityOverride("crime by ZIP code in Chicago");
+  assert("NIBRS uses shared sub-city override before model/SQL",
+    r?.guardrail === "sub-city-geography-unsupported",
+    JSON.stringify(r));
 }
 
 {

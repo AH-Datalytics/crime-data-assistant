@@ -1,5 +1,6 @@
 import type { QueryContract, QueryContractSource } from "./query-contract";
 import { extractReferencedTables } from "./table-allowlist";
+import { SUB_CITY_GEOGRAPHY_MESSAGE, SUB_CITY_GEOGRAPHY_RE } from "./capability-overrides";
 
 export type SourceCapabilitySeverity = "warning" | "unsupported";
 
@@ -135,7 +136,7 @@ function asksShootingCategory(question: string): boolean {
 }
 
 function asksSubCityGeography(question: string): boolean {
-  return /\b(zip\s*code|zip\s*\d|neighborhoods?|precincts?|police district|census tract|block group|ward\b|borough|communit(?:y|ies)|community area|apartment|complex)\b/i.test(question);
+  return SUB_CITY_GEOGRAPHY_RE.test(question);
 }
 
 function asksOutOfScopeTopic(question: string): boolean {
@@ -184,7 +185,7 @@ export const SOURCE_CAPABILITY_RULES: SourceCapabilityRule[] = [
     source,
     severity: "unsupported",
     when: ({ question }) => asksSubCityGeography(question),
-    message: "The available FBI datasets are organized by law enforcement agency, not by ZIP code, neighborhood, precinct, ward, census tract, or other sub-city geography.",
+    message: SUB_CITY_GEOGRAPHY_MESSAGE,
   })),
   ...ALL_QUERY_SOURCES.map((source): SourceCapabilityRule => ({
     id: "unsupported-court-policy-topic",

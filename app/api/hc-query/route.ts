@@ -22,6 +22,7 @@ import { detectFollowupTransform } from "@/lib/followup-transform";
 import { applyChartCustomizations } from "@/lib/chart-customization";
 import { getBlockingGeoClarification } from "@/lib/geo-resolver";
 import { getCountyScopeClarification } from "@/lib/county-clarifier";
+import { detectSubCityGeographyOverride } from "@/lib/capability-overrides";
 import {
   queryContractFailureMessage,
   queryContractGuardrails,
@@ -204,6 +205,26 @@ export async function POST(req: NextRequest) {
         executionTimeMs: Date.now() - start,
       });
     };
+
+    const capabilityOverride = detectSubCityGeographyOverride(question);
+    if (capabilityOverride) {
+      const executionMs = Date.now() - start;
+      writeLog(question, null, 0, null, executionMs, capabilityOverride.explanation, "hate_crime", [capabilityOverride.guardrail], "deterministic", sessionId);
+      return jsonResp({
+        success: true,
+        question,
+        sql: null,
+        explanation: capabilityOverride.explanation,
+        title: capabilityOverride.title,
+        columns: [],
+        rows: [],
+        rowCount: 0,
+        truncated: false,
+        chartConfig: null,
+        chartMeta: null,
+        executionTimeMs: executionMs,
+      });
+    }
 
     const geoClarification = getBlockingGeoClarification(question);
     if (geoClarification) {

@@ -1,6 +1,7 @@
 import { buildQueryContract, type QueryContractSource } from "./query-contract";
 import type { RoutingLogMeta } from "./routing-log-meta";
 import { validateSourceCapabilities, type SourceCapabilityFinding } from "./source-capabilities";
+import { SUB_CITY_GEOGRAPHY_MESSAGE } from "./capability-overrides";
 
 export interface QueryContractSqlValidation {
   sql: string;
@@ -58,7 +59,7 @@ const BLOCK_CAPABILITY_RULES = new Set([
 
 const BLOCK_MESSAGES: Record<string, string> = {
   "unsupported-sub-city-geography":
-    "The available FBI datasets are organized by law enforcement agency, not by ZIP code, neighborhood, precinct, ward, census tract, or other sub-city geography. Try a city, county, state, agency, or campus agency.",
+    SUB_CITY_GEOGRAPHY_MESSAGE,
   "unsupported-court-policy-topic":
     "The available FBI datasets track reported crime and law-enforcement reporting, not court outcomes, incarceration, fines, immigration status, or policy registries.",
   "nibrs-clearance-weapon-unsupported":

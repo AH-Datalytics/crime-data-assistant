@@ -25,7 +25,7 @@ import { normalizeHistoryForTab } from "@/lib/chat-history";
 import { detectFollowupTransform } from "@/lib/followup-transform";
 import { getBlockingGeoClarification } from "@/lib/geo-resolver";
 import { getCountyScopeClarification } from "@/lib/county-clarifier";
-import { detectDemographicHomicideRateOverride } from "@/lib/capability-overrides";
+import { detectDemographicHomicideRateOverride, detectSubCityGeographyOverride } from "@/lib/capability-overrides";
 import { historicalYearAvailability } from "@/lib/year-availability";
 import {
   queryContractFailureMessage,
@@ -422,7 +422,9 @@ export async function POST(req: NextRequest) {
   ) => logQuery(q, sqlText, rowCount, logError, ms, logResponse, tabName, guardrails, model, sid, routingMeta);
 
   const tab = body?.mode === "historical" ? "historical" : "current";
-  const capabilityOverride = detectDemographicHomicideRateOverride(question);
+  const capabilityOverride =
+    detectSubCityGeographyOverride(question) ??
+    detectDemographicHomicideRateOverride(question);
   if (capabilityOverride) {
     const ms = Date.now() - totalStart;
     writeLog(question, null, 0, null, ms, capabilityOverride.explanation, tab, [capabilityOverride.guardrail], "deterministic", sessionId);

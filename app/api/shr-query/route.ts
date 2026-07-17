@@ -29,7 +29,7 @@ import { applyChartCustomizations } from "@/lib/chart-customization";
 import { STATE_NAME_TO_ABBR } from "@/lib/state-population";
 import { getBlockingGeoClarification } from "@/lib/geo-resolver";
 import { getCountyScopeClarification } from "@/lib/county-clarifier";
-import { detectShrGroupRateOverride } from "@/lib/capability-overrides";
+import { detectShrGroupRateOverride, detectSubCityGeographyOverride } from "@/lib/capability-overrides";
 import { displayShrAgencyName, normalizeShrAgencyText } from "@/lib/shr-agency-normalization";
 import {
   queryContractFailureMessage,
@@ -340,7 +340,9 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const capabilityOverride = detectShrGroupRateOverride(question);
+    const capabilityOverride =
+      detectSubCityGeographyOverride(question) ??
+      detectShrGroupRateOverride(question);
     if (capabilityOverride) {
       const executionMs = Date.now() - start;
       writeLog(question, null, 0, null, executionMs, capabilityOverride.explanation, "shr", [capabilityOverride.guardrail], "deterministic", sessionId);

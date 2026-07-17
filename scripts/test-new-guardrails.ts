@@ -1074,6 +1074,12 @@ console.log("\n═══ Hard override guardrails ═══\n");
   const r = runGuardrails(ctx);
   assert("#11 sub-city: fires for zip code", r.fired.includes("sub-city-geography-override"));
   assert("#11 sub-city: override", r.overrideResponse !== null);
+  assert("#11 sub-city: says app has no below city/county geography",
+    Boolean(r.overrideResponse?.includes("does not have crime data below the city/county/agency level")),
+    r.overrideResponse || "no override");
+  assert("#11 sub-city: does not suggest another source",
+    !/NIBRS|local police|open data|CompStat/i.test(r.overrideResponse || ""),
+    r.overrideResponse || "no override");
 }
 
 // #12: Juvenile raw table
