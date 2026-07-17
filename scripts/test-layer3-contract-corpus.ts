@@ -257,6 +257,156 @@ const cases: CorpusCase[] = [
     expectRetry: ["contract-state-scope-local-filter"],
   },
   {
+    id: "L3-GEO-LOCAL-STATE-TABLE-01",
+    family: "local geography answered with state table",
+    question: "Denver murder trend since 2000",
+    source: "historical",
+    sql: `
+      SELECT year, murder
+      FROM historical_state_national
+      WHERE state = 'Colorado'
+      ORDER BY year
+    `,
+    expectFindings: ["historical-local-geography-state-table"],
+    expectRetry: ["historical-local-geography-state-table"],
+  },
+  {
+    id: "L3-GEO-LOCAL-STATE-TABLE-02",
+    family: "local geography answered with state table",
+    question: "Maplewood New Jersey robberies since 2021",
+    source: "nibrs",
+    sql: `
+      SELECT year, SUM(victim_count)
+      FROM summary_victim_state_monthly
+      WHERE state = 'NJ' AND ucr_offense_code = '120'
+      GROUP BY year
+    `,
+    expectFindings: ["nibrs-local-geography-state-table"],
+    expectRetry: ["nibrs-local-geography-state-table"],
+  },
+  {
+    id: "L3-GEO-LOCAL-STATE-TABLE-03",
+    family: "local geography answered with state table",
+    question: "New Jersey robberies since 2021",
+    source: "nibrs",
+    sql: `
+      SELECT year, SUM(victim_count)
+      FROM summary_victim_state_monthly
+      WHERE state = 'NJ' AND ucr_offense_code = '120'
+      GROUP BY year
+    `,
+    expectNoFindings: ["nibrs-local-geography-state-table"],
+  },
+  {
+    id: "L3-GEO-LOCAL-STATE-TABLE-04",
+    family: "local geography answered with state table",
+    question: "compare Denver murders to Colorado murders since 2000",
+    source: "historical",
+    sql: `
+      SELECT local.year, local.murders AS denver_murders, state.murder AS colorado_murders
+      FROM (
+        SELECT hac.year, SUM(hac.murder) AS murders
+        FROM historical_agency_crime hac
+        JOIN historical_agency ha ON ha.ori = hac.ori
+        WHERE ha.agency = 'Denver' AND ha.state = 'co'
+        GROUP BY hac.year
+      ) local
+      JOIN historical_state_national state ON state.year = local.year AND state.state = 'Colorado'
+    `,
+    expectNoFindings: ["historical-local-geography-state-table"],
+  },
+  {
+    id: "L3-GEO-LOCAL-STATE-TABLE-05",
+    family: "local geography answered with state table",
+    question: "compare Maplewood robberies to New Jersey robberies since 2021",
+    source: "nibrs",
+    sql: `
+      SELECT city.year, city.robberies AS maplewood_robberies, state.robberies AS new_jersey_robberies
+      FROM (
+        SELECT s.year, SUM(s.victim_count) AS robberies
+        FROM summary_victim_city_monthly s
+        JOIN agencies a ON a.ori = s.ori AND a.year = s.year
+        WHERE a.city = 'MAPLEWOOD' AND a.state = 'NJ' AND s.ucr_offense_code = '120'
+        GROUP BY s.year
+      ) city
+      JOIN (
+        SELECT year, SUM(victim_count) AS robberies
+        FROM summary_victim_state_monthly
+        WHERE state = 'NJ' AND ucr_offense_code = '120'
+        GROUP BY year
+      ) state ON state.year = city.year
+    `,
+    expectNoFindings: ["nibrs-local-geography-state-table"],
+  },
+  {
+    id: "L3-GEO-PARISH-01",
+    family: "parish type",
+    question: "murders in Jefferson Parish Louisiana by year",
+    source: "historical",
+    sql: `
+      SELECT hac.year, SUM(hac.murder)
+      FROM historical_agency_crime hac
+      JOIN historical_agency ha ON ha.ori = hac.ori
+      WHERE ha.agency = 'Jefferson Parish' AND ha.type = 'city' AND ha.state = 'la'
+      GROUP BY hac.year
+    `,
+    expectFindings: ["historical-parish-type-city"],
+    expectRetry: ["historical-parish-type-city"],
+  },
+  {
+    id: "L3-GEO-PARISH-02",
+    family: "parish type",
+    question: "compare New Orleans city and Jefferson Parish murders by year",
+    source: "historical",
+    sql: `
+      SELECT hac.year, ha.agency, SUM(hac.murder)
+      FROM historical_agency_crime hac
+      JOIN historical_agency ha ON ha.ori = hac.ori
+      WHERE (ha.agency = 'New Orleans' AND ha.type = 'city' AND ha.state = 'la')
+         OR (ha.agency = 'Jefferson Parish' AND ha.type = 'county' AND ha.state = 'la')
+      GROUP BY hac.year, ha.agency
+    `,
+    expectNoFindings: ["historical-parish-type-city"],
+  },
+  {
+    id: "L3-AGENCY-LOOKUP-01",
+    family: "agency lookup instead of crime data",
+    question: "robberies in Maplewood New Jersey since 2020",
+    source: "nibrs",
+    sql: `
+      SELECT agency_name, state, ori
+      FROM agencies
+      WHERE city = 'MAPLEWOOD' AND state = 'NJ'
+    `,
+    expectFindings: ["nibrs-agency-lookup-not-crime-data"],
+    expectRetry: ["nibrs-agency-lookup-not-crime-data"],
+  },
+  {
+    id: "L3-AGENCY-LOOKUP-02",
+    family: "agency lookup instead of crime data",
+    question: "murders in Denver since 2000",
+    source: "historical",
+    sql: `
+      SELECT agency, state, ori
+      FROM historical_agency
+      WHERE agency = 'Denver' AND state = 'co'
+    `,
+    expectFindings: ["historical-agency-lookup-not-crime-data"],
+    expectRetry: ["historical-agency-lookup-not-crime-data"],
+  },
+  {
+    id: "L3-AGENCY-LOOKUP-03",
+    family: "agency lookup instead of crime data",
+    question: "which agencies are included in Maplewood New Jersey?",
+    source: "nibrs",
+    sql: `
+      SELECT agency_name, state, ori
+      FROM agencies
+      WHERE city = 'MAPLEWOOD' AND state = 'NJ'
+    `,
+    expectNoFindings: ["nibrs-agency-lookup-not-crime-data"],
+  },
+  {
     id: "L3-NIBRS-COMPARABILITY-01",
     family: "continuous reporters",
     question: "show me violent crimes by offender age by year for 2021 to 2025 for continuously reporting agencies",
@@ -445,6 +595,127 @@ const cases: CorpusCase[] = [
     `,
     expectFindings: ["shr-demographic-rate-unsupported"],
     expectBlock: ["shr-demographic-rate-unsupported"],
+  },
+  {
+    id: "L3-UNSUPPORTED-02",
+    family: "unsupported SHR topic",
+    question: "robbery numbers in Houston since 2018",
+    source: "shr",
+    sql: `
+      SELECT i.year, COUNT(*)
+      FROM incidents i JOIN victims v ON v.incident_id = i.id
+      WHERE i.agency = 'Houston'
+      GROUP BY i.year
+    `,
+    expectFindings: ["shr-non-homicide-unsupported"],
+    expectBlock: ["shr-non-homicide-unsupported"],
+  },
+  {
+    id: "L3-UNSUPPORTED-03",
+    family: "unsupported SHR topic",
+    question: "robbery-related homicides in Houston since 2018",
+    source: "shr",
+    sql: `
+      SELECT i.year, COUNT(*)
+      FROM incidents i JOIN victims v ON v.incident_id = i.id
+      WHERE i.agency = 'Houston'
+      GROUP BY i.year
+    `,
+    expectNoFindings: ["shr-non-homicide-unsupported"],
+  },
+  {
+    id: "L3-UNSUPPORTED-04",
+    family: "unsupported SHR clearance",
+    question: "murder clearance rate in Detroit since 2010",
+    source: "shr",
+    sql: `
+      SELECT i.year, COUNT(*)
+      FROM incidents i JOIN victims v ON v.incident_id = i.id
+      WHERE i.agency = 'Detroit'
+      GROUP BY i.year
+    `,
+    expectFindings: ["shr-clearance-unsupported"],
+    expectBlock: ["shr-clearance-unsupported"],
+  },
+  {
+    id: "L3-UNSUPPORTED-05",
+    family: "unsupported NIBRS drug type",
+    question: "marijuana possession arrests in Texas since 2020",
+    source: "nibrs",
+    sql: `
+      SELECT year, SUM(arrestee_count)
+      FROM summary_arrestee_demographics
+      WHERE ucr_arrest_offense_code = '35A'
+      GROUP BY year
+    `,
+    expectFindings: ["nibrs-specific-drug-unsupported"],
+    expectBlock: ["nibrs-specific-drug-unsupported"],
+  },
+  {
+    id: "L3-UNSUPPORTED-06",
+    family: "unsupported NIBRS drug type",
+    question: "drug arrests in Texas since 2020",
+    source: "nibrs",
+    sql: `
+      SELECT year, SUM(arrestee_count)
+      FROM summary_arrestee_demographics
+      WHERE ucr_arrest_offense_code = '35A'
+      GROUP BY year
+    `,
+    expectNoFindings: ["nibrs-specific-drug-unsupported"],
+  },
+  {
+    id: "L3-UNSUPPORTED-07",
+    family: "unsupported NIBRS shooting category",
+    question: "show me shooting data over the last 10 years",
+    source: "nibrs",
+    sql: `
+      SELECT year, SUM(victim_count)
+      FROM summary_victim_state_monthly
+      WHERE ucr_offense_code = '13A'
+      GROUP BY year
+    `,
+    expectFindings: ["nibrs-shooting-category-unsupported"],
+    expectBlock: ["nibrs-shooting-category-unsupported"],
+  },
+  {
+    id: "L3-UNSUPPORTED-08",
+    family: "unsupported NIBRS shooting category",
+    question: "aggravated assaults with a firearm over the last 10 years",
+    source: "nibrs",
+    sql: `
+      SELECT year, SUM(victim_count)
+      FROM summary_victim_weapon
+      WHERE ucr_offense_code = '13A' AND weapon_category = 'Firearm'
+      GROUP BY year
+    `,
+    expectNoFindings: ["nibrs-shooting-category-unsupported"],
+  },
+  {
+    id: "L3-UNSUPPORTED-09",
+    family: "unsupported geography",
+    question: "murders by zip code in Chicago",
+    source: "historical",
+    sql: `
+      SELECT hac.year, SUM(hac.murder)
+      FROM historical_agency_crime hac
+      GROUP BY hac.year
+    `,
+    expectFindings: ["unsupported-sub-city-geography"],
+    expectBlock: ["unsupported-sub-city-geography"],
+  },
+  {
+    id: "L3-UNSUPPORTED-10",
+    family: "unsupported court or policy topic",
+    question: "how many robbery defendants were convicted in Chicago",
+    source: "historical",
+    sql: `
+      SELECT hac.year, SUM(hac.robbery)
+      FROM historical_agency_crime hac
+      GROUP BY hac.year
+    `,
+    expectFindings: ["unsupported-court-policy-topic"],
+    expectBlock: ["unsupported-court-policy-topic"],
   },
 ];
 

@@ -32,6 +32,8 @@ type SourceCapabilityRule = {
   forbiddenSql?: RegExp[];
 };
 
+const ALL_QUERY_SOURCES: QueryContractSource[] = ["current", "historical", "nibrs", "shr", "hate_crime"];
+
 function hasAnyTable(tables: Set<string>, candidates: readonly string[]): boolean {
   return candidates.some((table) => tables.has(table.toLowerCase()));
 }
@@ -105,7 +107,88 @@ function isHistoricalLocalRate(contract: QueryContract): boolean {
   return contract.geography.kind === "city" || contract.geography.kind === "agency" || contract.geography.kind === "county";
 }
 
+function isLocalGeography(contract: QueryContract): boolean {
+  return ["city", "county", "agency", "campus"].includes(contract.geography.kind);
+}
+
+function asksGeographyComparison(question: string): boolean {
+  return /\b(?:compare|compared\s+to|versus|vs\.?|against)\b/i.test(question);
+}
+
+function asksShrNonHomicideTopic(question: string): boolean {
+  const nonHomicide = /\b(robber(?:y|ies)|thefts?|larcen(?:y|ies)|burglar(?:y|ies)|assaults?|rapes?|sexual assault|auto theft|motor vehicle theft|drugs?|arrests?|staffing|officers?|sworn|personnel|property crimes?|violent crimes?)\b/i.test(question);
+  if (!nonHomicide) return false;
+  return !/\b(homicides?|murders?|kill|circumstance|felony murder|robbery-homicide|homicide during|victims of.*homicide)\b/i.test(question);
+}
+
+function asksSpecificDrugType(question: string): boolean {
+  return /\b(marijuana|cannabis|weed|cocaine|crack|heroin|meth|methamphetamine|fentanyl|opioids?|opiates?)\b/i.test(question);
+}
+
+function asksShootingCategory(question: string): boolean {
+  if (!/\b(shootings?|shot\b|gunshot|people\s+shot|gun\s+violence)\b/i.test(question)) return false;
+  return !/\b(firearm (?:murder|homicide)|gun (?:murder|homicide)|(?:murder|homicide).{0,15}firearm|closest proxy|approximate|aggravated assault.{0,20}firearm)\b/i.test(question);
+}
+
+function asksSubCityGeography(question: string): boolean {
+  return /\b(zip\s*code|zip\s*\d|neighborhoods?|precincts?|police district|census tract|block group|ward\b|borough|communit(?:y|ies)|community area|apartment|complex)\b/i.test(question);
+}
+
+function asksOutOfScopeTopic(question: string): boolean {
+  return /\b(prosecution|convicted|conviction|sentence[ds]?|incarcerat|prison population|jail population|fine[ds]?\b|fee[ds]?\b|bail|immigration status|illegal immigrant|undocumented|GARS|GVRS|gun violence restraining|red flag law|defendants?)\b/i.test(question);
+}
+
+function asksAgencyMetadata(question: string): boolean {
+  return /\b(?:which|what|list|show)\b[\s\S]{0,50}\b(?:agencies|agency|cities|city|jurisdictions|departments|included|represented)\b/i.test(question);
+}
+
+function asksCrimeData(question: string, contract: QueryContract): boolean {
+  if (asksAgencyMetadata(question)) return false;
+  return contract.metric.topic !== "unknown" ||
+    /\b(crimes?|offenses?|incidents?|victims?|murders?|homicides?|robber(?:y|ies)|assaults?|burglar(?:y|ies)|thefts?|clearance|rates?)\b/i.test(question);
+}
+
+function onlyReferencesTables(tables: Set<string>, candidates: readonly string[]): boolean {
+  if (tables.size === 0) return false;
+  return Array.from(tables).every((table) => candidates.includes(table));
+}
+
+function hasHistoricalLocalMetricTable(tables: Set<string>): boolean {
+  return hasAnyTable(tables, ["historical_agency_crime", "historical_agency_clearance", "historical_staffing"]);
+}
+
+function hasNibrsLocalMetricTable(tables: Set<string>): boolean {
+  return hasAnyTable(tables, [
+    "summary_city_monthly",
+    "summary_victim_city_monthly",
+    "summary_victim_weapon",
+    "summary_victim_demographics",
+    "summary_arrestee_demographics",
+    "summary_offender_demographics",
+    "summary_clearance_city_annual",
+    "summary_clearance_type",
+    "summary_clearance_detail",
+    "summary_carjacking_clearance",
+    "summary_domestic_violence",
+    "summary_dv_arrests",
+  ]);
+}
+
 export const SOURCE_CAPABILITY_RULES: SourceCapabilityRule[] = [
+  ...ALL_QUERY_SOURCES.map((source): SourceCapabilityRule => ({
+    id: "unsupported-sub-city-geography",
+    source,
+    severity: "unsupported",
+    when: ({ question }) => asksSubCityGeography(question),
+    message: "The available FBI datasets are organized by law enforcement agency, not by ZIP code, neighborhood, precinct, ward, census tract, or other sub-city geography.",
+  })),
+  ...ALL_QUERY_SOURCES.map((source): SourceCapabilityRule => ({
+    id: "unsupported-court-policy-topic",
+    source,
+    severity: "unsupported",
+    when: ({ question }) => asksOutOfScopeTopic(question),
+    message: "The available FBI datasets track reported crime and law-enforcement reporting, not court outcomes, incarceration, fines, immigration status, or policy registries.",
+  })),
   {
     id: "current-countywide-crosswalk",
     source: "current",
@@ -168,6 +251,20 @@ export const SOURCE_CAPABILITY_RULES: SourceCapabilityRule[] = [
     severity: "unsupported",
     when: ({ question, contract }) => asksClearanceMetric(question, contract) && asksWeaponQualifiedPersonCrime(question, contract),
     message: "NIBRS cannot calculate clearance rates broken down by weapon type from the available summaries. Offer overall clearance rates or weapon-specific counts instead.",
+  },
+  {
+    id: "nibrs-specific-drug-unsupported",
+    source: "nibrs",
+    severity: "unsupported",
+    when: ({ question }) => asksSpecificDrugType(question),
+    message: "NIBRS summary tables group drug offenses together and cannot isolate a specific substance such as marijuana, cocaine, heroin, methamphetamine, fentanyl, or opioids.",
+  },
+  {
+    id: "nibrs-shooting-category-unsupported",
+    source: "nibrs",
+    severity: "unsupported",
+    when: ({ question }) => asksShootingCategory(question),
+    message: "The FBI does not systemically track all shootings. Fatal shootings can be queried in SHR, and aggravated assaults with a firearm can be used as a broader NIBRS measure.",
   },
   {
     id: "nibrs-carjacking-clearance-table",
@@ -236,6 +333,39 @@ export const SOURCE_CAPABILITY_RULES: SourceCapabilityRule[] = [
     message: "NIBRS demographic breakdowns should use a demographic-capable summary table.",
   },
   {
+    id: "nibrs-local-geography-state-table",
+    source: "nibrs",
+    severity: "warning",
+    forbidsTables: ["summary_state_monthly", "summary_victim_state_monthly"],
+    when: ({ question, contract, tables }) =>
+      isLocalGeography(contract) &&
+      !(asksGeographyComparison(question) && hasNibrsLocalMetricTable(tables)),
+    message: "NIBRS local geography questions should not be answered from state summary tables; filter to the requested city, agency, campus agency, or county crosswalk.",
+  },
+  {
+    id: "nibrs-agency-lookup-not-crime-data",
+    source: "nibrs",
+    severity: "warning",
+    requiresAnyTables: [
+      "summary_city_monthly",
+      "summary_state_monthly",
+      "summary_victim_city_monthly",
+      "summary_victim_state_monthly",
+      "summary_victim_weapon",
+      "summary_victim_demographics",
+      "summary_arrestee_demographics",
+      "summary_offender_demographics",
+      "summary_clearance_city_annual",
+      "summary_clearance_type",
+      "summary_clearance_detail",
+      "summary_carjacking_clearance",
+      "summary_domestic_violence",
+      "summary_dv_arrests",
+    ],
+    when: ({ question, contract, tables }) => asksCrimeData(question, contract) && onlyReferencesTables(tables, ["agencies"]),
+    message: "The user asked for crime data, but the SQL only queries agency metadata. Join to an offense, victim, clearance, or demographic summary table.",
+  },
+  {
     id: "historical-countywide-crosswalk",
     source: "historical",
     severity: "warning",
@@ -279,6 +409,42 @@ export const SOURCE_CAPABILITY_RULES: SourceCapabilityRule[] = [
     message: "Historical rate time series should preserve missing values as NULL rather than zero-filling numerator or denominator fields.",
   },
   {
+    id: "historical-local-geography-state-table",
+    source: "historical",
+    severity: "warning",
+    forbidsTables: ["historical_state_national"],
+    when: ({ question, contract, tables }) =>
+      isLocalGeography(contract) &&
+      !(asksGeographyComparison(question) && hasHistoricalLocalMetricTable(tables)),
+    message: "Historical local geography questions should not be answered from historical_state_national; use agency-level historical tables for the requested city, agency, or county geography.",
+  },
+  {
+    id: "historical-parish-type-city",
+    source: "historical",
+    severity: "warning",
+    forbiddenSql: [
+      /\bagency\s*=\s*'[^']*\bparish'\s+AND\s+(?:\w+\.)?type\s*=\s*'city'/i,
+      /\b(?:\w+\.)?type\s*=\s*'city'\s+AND\s+(?:\w+\.)?agency\s*=\s*'[^']*\bparish'/i,
+    ],
+    when: ({ question }) => /\bparish\b/i.test(question),
+    message: "Louisiana parishes are county-equivalent agencies in Historical data; parish filters should use type = 'county', not type = 'city'.",
+  },
+  {
+    id: "historical-agency-lookup-not-crime-data",
+    source: "historical",
+    severity: "warning",
+    requiresAnyTables: [
+      "historical_agency_crime",
+      "historical_agency_clearance",
+      "historical_agency_population",
+      "historical_staffing",
+      "historical_state_national",
+      "national_clearance_rate",
+    ],
+    when: ({ question, contract, tables }) => asksCrimeData(question, contract) && onlyReferencesTables(tables, ["historical_agency"]),
+    message: "The user asked for crime data, but the SQL only queries Historical agency metadata. Join to historical crime, clearance, population, or staffing tables as appropriate.",
+  },
+  {
     id: "shr-campus-agency-resolution",
     source: "shr",
     severity: "warning",
@@ -301,6 +467,20 @@ export const SOURCE_CAPABILITY_RULES: SourceCapabilityRule[] = [
     requiresAnyTables: ["incidents", "victims"],
     when: ({ contract }) => contract.metric.topic === "murder" || contract.metric.topic === "unknown",
     message: "SHR answers should be homicide-specific and count victims through incidents joined to victims.",
+  },
+  {
+    id: "shr-non-homicide-unsupported",
+    source: "shr",
+    severity: "unsupported",
+    when: ({ question }) => asksShrNonHomicideTopic(question),
+    message: "The Homicide Reports dataset contains only homicide data and cannot answer non-homicide offense, arrest, staffing, or broad crime-category questions.",
+  },
+  {
+    id: "shr-clearance-unsupported",
+    source: "shr",
+    severity: "unsupported",
+    when: ({ question, contract }) => asksClearanceMetric(question, contract),
+    message: "The Homicide Reports dataset does not track whether cases were solved or cleared. Clearance-rate questions should use Historical or NIBRS data.",
   },
   {
     id: "shr-demographic-rate-unsupported",
