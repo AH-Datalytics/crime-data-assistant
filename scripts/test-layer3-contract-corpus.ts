@@ -939,6 +939,73 @@ const cases: CorpusCase[] = [
     `,
     expectNoFindings: ["nibrs-dv-assault-share-table"],
   },
+  {
+    id: "L3-DEMOGRAPHIC-RATE-01",
+    family: "unsupported demographic population rates",
+    question: "homicide rates by gender and race",
+    source: "nibrs",
+    sql: `
+      SELECT race, sex, SUM(victim_count) * 100000.0 / 1 AS rate_per_100k
+      FROM summary_victim_demographics
+      WHERE ucr_offense_code = '09A'
+      GROUP BY race, sex
+    `,
+    expectFindings: ["demographic-rate-unsupported"],
+    expectBlock: ["demographic-rate-unsupported"],
+  },
+  {
+    id: "L3-DEMOGRAPHIC-RATE-02",
+    family: "unsupported demographic population rates",
+    question: "homicide rates by gender and race",
+    source: "historical",
+    sql: `
+      SELECT year, murder_rate
+      FROM historical_state_national
+      WHERE state = 'Texas'
+    `,
+    expectFindings: ["demographic-rate-unsupported"],
+    expectBlock: ["demographic-rate-unsupported"],
+  },
+  {
+    id: "L3-DEMOGRAPHIC-RATE-03",
+    family: "unsupported demographic population rates",
+    question: "arrest rate per 100k by race in Texas",
+    source: "nibrs",
+    sql: `
+      SELECT race, SUM(arrestee_count) AS arrests
+      FROM summary_arrestee_demographics
+      WHERE state = 'TX'
+      GROUP BY race
+    `,
+    expectFindings: ["demographic-rate-unsupported"],
+    expectBlock: ["demographic-rate-unsupported"],
+  },
+  {
+    id: "L3-DEMOGRAPHIC-RATE-04",
+    family: "unsupported demographic population rates",
+    question: "murder clearance rate by victim race in 2024",
+    source: "nibrs",
+    sql: `
+      SELECT victim_race, SUM(cleared_count) * 100.0 / SUM(offense_count) AS clearance_rate
+      FROM summary_victim_clearance_demographics
+      WHERE year = 2024
+      GROUP BY victim_race
+    `,
+    expectNoFindings: ["demographic-rate-unsupported"],
+  },
+  {
+    id: "L3-DEMOGRAPHIC-RATE-05",
+    family: "unsupported demographic population rates",
+    question: "homicide counts by gender and race",
+    source: "shr",
+    sql: `
+      SELECT v.sex, v.race, COUNT(*) AS homicides
+      FROM incidents i JOIN victims v ON v.incident_id = i.id
+      GROUP BY v.sex, v.race
+    `,
+    expectNoFindings: ["demographic-rate-unsupported", "shr-demographic-rate-unsupported"],
+  },
+
 ];
 
 const familyCounts = new Map<string, number>();

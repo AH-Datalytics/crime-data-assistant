@@ -92,6 +92,61 @@ SUMMARY_TABLES = ['summary_city_monthly', 'summary_state_monthly',
                   'summary_carjacking_offender_demographics',
                   'summary_carjacking_arrestee_demographics']
 
+RAW_DUPLICATE_CHECKS = {
+    'incidents': [
+        'year', 'state', 'ori', 'incident_num', 'incident_date',
+        'report_date_indicator', 'incident_hour', 'total_offense_segments',
+        'total_victim_segments', 'total_offender_segments',
+        'total_arrestee_segments', 'cleared_exceptionally',
+        'clearance_date', 'cargo_theft',
+    ],
+    'offenses': [
+        'year', 'state', 'ori', 'incident_num', 'incident_date',
+        'ucr_offense_code', 'attempted_completed',
+        'offender_suspected_of_using_1', 'offender_suspected_of_using_2',
+        'offender_suspected_of_using_3', 'location_type',
+        'num_premises_entered', 'method_of_entry',
+        'type_criminal_activity_1', 'type_criminal_activity_2',
+        'type_criminal_activity_3', 'type_weapon_1', 'type_weapon_2',
+        'type_weapon_3', 'bias_motivation',
+    ],
+    'property': [
+        'year', 'state', 'ori', 'incident_num', 'incident_date',
+        'type_property_loss', 'property_description', 'value',
+        'date_recovered', 'num_stolen_motor_vehicles',
+        'num_recovered_motor_vehicles', 'suspected_drug_type_1',
+        'suspected_drug_type_2', 'suspected_drug_type_3',
+    ],
+    'victims': [
+        'year', 'state', 'ori', 'incident_num', 'incident_date',
+        'victim_sequence', 'victim_type', 'age', 'sex', 'race', 'ethnicity',
+        'resident_status', 'aggravated_assault_homicide_1',
+        'aggravated_assault_homicide_2', 'additional_justifiable_homicide',
+        'injury_type_1', 'injury_type_2', 'injury_type_3', 'injury_type_4',
+        'injury_type_5', 'offender_number_1', 'relationship_1',
+        'offender_number_2', 'relationship_2', 'offender_number_3',
+        'relationship_3', 'connected_offense_1', 'connected_offense_2',
+        'connected_offense_3',
+    ],
+    'offenders': [
+        'year', 'state', 'ori', 'incident_num', 'incident_date',
+        'offender_sequence', 'age', 'sex', 'race', 'ethnicity',
+    ],
+    'arrestees': [
+        'year', 'state', 'ori', 'incident_num', 'incident_date',
+        'arrestee_sequence', 'arrest_number', 'arrest_date', 'arrest_type',
+        'multiple_indicator', 'ucr_arrest_offense', 'arrestee_weapon_1',
+        'arrestee_weapon_2', 'age', 'sex', 'race', 'ethnicity',
+        'resident_status', 'disposition_under_18',
+    ],
+    'group_b_arrests': [
+        'year', 'state', 'ori', 'segment_action_type', 'incident_num',
+        'arrest_date', 'arrest_type', 'ucr_arrest_offense',
+        'arrestee_weapon_1', 'arrestee_weapon_2', 'age', 'sex', 'race',
+        'ethnicity', 'resident_status', 'disposition_under_18',
+    ],
+}
+
 PERSON_CRIMES = (
     "'09A','09B','09C','100','11A','11B','11C','11D',"
     "'13A','13B','13C','36A','36B','64A','64B'"
@@ -272,6 +327,17 @@ def parse_args():
         "--verify-derived-duplicates",
         action="store_true",
         help="Read-only maintenance mode: verify duplicate keys on derived summary tables. Use --years to limit the scan.",
+    )
+    parser.add_argument(
+        "--verify-raw-duplicates",
+        action="store_true",
+        help="Read-only maintenance mode: verify exact duplicate rows in raw NIBRS segment tables. Requires --years.",
+    )
+    parser.add_argument(
+        "--dedupe-raw-years",
+        nargs="+",
+        type=int,
+        help="Maintenance mode: delete exact duplicate raw segment rows for existing years, then rebuild and verify derived summaries.",
     )
     return parser.parse_args()
 
@@ -1188,6 +1254,74 @@ def verify_summary_duplicate_keys(conn, years=None, table_names=None):
         log(f"  {table} duplicate-key check passed for {year_label}")
 
 
+
+def raw_duplicate_count(conn, table, years):
+    config = RAW_DUPLICATE_CHECKS[table]
+    years = sorted(set(int(y) for y in years))
+    year_list = ','.join(str(y) for y in years)
+    key_cols = ', '.join(config)
+    return conn.execute(f"""
+        SELECT COUNT(*) AS duplicate_groups, COALESCE(SUM(extra_rows), 0) AS extra_rows
+        FROM (
+            SELECT COUNT(*) - 1 AS extra_rows
+            FROM {table}
+            WHERE year IN ({year_list})
+            GROUP BY {key_cols}
+            HAVING COUNT(*) > 1
+        )
+    """).fetchone()
+
+
+def verify_raw_duplicate_keys(conn, years):
+    """Fail if raw segment tables contain exact duplicate rows for selected years."""
+    if not years:
+        raise RuntimeError("Raw duplicate verification requires explicit years")
+    years = sorted(set(int(y) for y in years))
+    year_label = ",".join(str(y) for y in years)
+    for table in RAW_DUPLICATE_CHECKS:
+        duplicate_groups, extra_rows = raw_duplicate_count(conn, table, years)
+        duplicate_groups = duplicate_groups or 0
+        extra_rows = extra_rows or 0
+        if duplicate_groups:
+            raise RuntimeError(
+                f"{table} has {duplicate_groups:,} exact duplicate groups "
+                f"({extra_rows:,} extra rows) for {year_label}"
+            )
+        log(f"  {table} raw exact-duplicate check passed for {year_label}")
+
+
+def dedupe_raw_duplicates(conn, years):
+    """Delete exact duplicate raw segment rows, keeping the first rowid per group."""
+    if not years:
+        raise RuntimeError("Raw duplicate dedupe requires explicit years")
+    years = sorted(set(int(y) for y in years))
+    total_deleted = 0
+    for year in years:
+        for table, key_cols in RAW_DUPLICATE_CHECKS.items():
+            duplicate_groups, extra_rows = raw_duplicate_count(conn, table, [year])
+            duplicate_groups = duplicate_groups or 0
+            extra_rows = extra_rows or 0
+            if not duplicate_groups:
+                log(f"  {table} [{year}]: no raw exact duplicates")
+                continue
+            cols = ', '.join(key_cols)
+            log(f"  {table} [{year}]: removing {extra_rows:,} exact duplicate rows from {duplicate_groups:,} groups")
+            cur = conn.execute(f"""
+                DELETE FROM {table}
+                WHERE year = ?
+                  AND rowid NOT IN (
+                      SELECT MIN(rowid)
+                      FROM {table}
+                      WHERE year = ?
+                      GROUP BY {cols}
+                  )
+            """, (year, year))
+            total_deleted += cur.rowcount if cur.rowcount and cur.rowcount > 0 else 0
+            conn.commit()
+    log(f"  Raw exact duplicate cleanup removed {total_deleted:,} rows")
+    verify_raw_duplicate_keys(conn, years)
+
+
 def verify_summary_victim_demographics_unique(conn, years):
     """Backward-compatible wrapper for the older victim-only maintenance path."""
     verify_summary_duplicate_keys(conn, years, ['summary_victim_demographics'])
@@ -1390,17 +1524,18 @@ def main():
         args.rebuild_victim_demographics_years,
         args.rebuild_arrestee_demographics_years,
         args.rebuild_carjacking_demographics_years,
+        args.dedupe_raw_years,
     ]
     if sum(1 for mode in maintenance_modes if mode) > 1:
         raise SystemExit(
             "Choose only one maintenance mode: --rebuild-derived-years, "
             "--rebuild-victim-demographics-years, --rebuild-arrestee-demographics-years, "
-            "or --rebuild-carjacking-demographics-years."
+            "--rebuild-carjacking-demographics-years, or --dedupe-raw-years."
         )
     has_maintenance_mode = any(maintenance_modes)
 
     years = []
-    if not has_maintenance_mode and not args.verify_derived_duplicates:
+    if not has_maintenance_mode and not args.verify_derived_duplicates and not args.verify_raw_duplicates:
         years = get_years_to_update(args.years)
         protected_years = parse_year_csv(args.protected_years)
         assert_no_protected_years(years, protected_years, args.allow_protected_years)
@@ -1423,6 +1558,60 @@ def main():
             retry(verify_summary_duplicate_keys, conn, affected_years, label="derived duplicate-key check")
         finally:
             conn.close()
+        log("AUTO-UPDATE COMPLETE")
+        return
+
+    if args.verify_raw_duplicates and not has_maintenance_mode:
+        if not args.years:
+            raise SystemExit("--verify-raw-duplicates requires --years")
+        affected_years = sorted(set(args.years))
+        log(f"Maintenance mode: verifying raw exact duplicates for {affected_years}")
+        conn = sqlite3.connect(DB_PATH)
+        try:
+            retry(verify_raw_duplicate_keys, conn, affected_years, label="raw duplicate-key check")
+        finally:
+            conn.close()
+        log("AUTO-UPDATE COMPLETE")
+        return
+
+    if args.dedupe_raw_years:
+        affected_years = sorted(set(args.dedupe_raw_years))
+        protected_years = parse_year_csv(args.protected_years)
+        assert_no_protected_years(affected_years, protected_years, args.allow_protected_years)
+        log(f"Maintenance mode: deduping raw segment rows and rebuilding summaries for years: {affected_years}")
+        log("Stopping nibrs app for raw dedupe/rebuild...")
+        subprocess.run(["pm2", "stop", "nibrs"], capture_output=True, text=True)
+        time.sleep(3)
+        subprocess.run(["fuser", "-k", DB_PATH], capture_output=True, text=True)
+        time.sleep(1)
+
+        conn = sqlite3.connect(DB_PATH)
+        conn.execute("PRAGMA journal_mode = WAL")
+        conn.execute("PRAGMA synchronous = NORMAL")
+        conn.execute("PRAGMA cache_size = -256000")
+        conn.execute("PRAGMA temp_store = FILE")
+        conn.execute("PRAGMA mmap_size = 0")
+        total_start = time.time()
+        try:
+            retry(dedupe_raw_duplicates, conn, affected_years, label="raw duplicate cleanup")
+            retry(rebuild_summaries, conn, affected_years, label="rebuild summaries")
+            retry(verify_summary_duplicate_keys, conn, affected_years, label="summary duplicate-key check")
+            retry(rebuild_consistent_reporters, conn, log, label="consistent reporters")
+            retry(rebuild_dv_trends, conn, label="dv trends")
+            retry(ensure_performance_indexes, conn, label="performance indexes")
+            retry(refresh_planner_statistics, conn, label="planner statistics")
+            conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+        finally:
+            conn.close()
+
+        elapsed = time.time() - total_start
+        log(f"Raw dedupe/rebuild complete in {elapsed:.0f}s ({elapsed/60:.1f} min)")
+        log("Restarting nibrs app...")
+        result = subprocess.run(["pm2", "restart", "nibrs"], capture_output=True, text=True)
+        if result.returncode == 0:
+            log("  App restarted successfully")
+        else:
+            log(f"  pm2 restart failed: {result.stderr}")
         log("AUTO-UPDATE COMPLETE")
         return
 
@@ -1696,6 +1885,10 @@ def main():
         WHERE ori = 'MA0130100' AND city = 'ROXBURY CROSSING'
     """)
     conn.commit()
+
+    # Some CDE monthly files can contain exact duplicate segment rows. Remove
+    # duplicates before summaries are materialized so counts cannot inflate.
+    retry(dedupe_raw_duplicates, conn, affected_years, label="raw duplicate cleanup")
 
     # Rebuild summary tables for affected years only
     retry(rebuild_summaries, conn, affected_years, label="rebuild summaries")

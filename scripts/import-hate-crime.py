@@ -115,6 +115,16 @@ RACE_CODES = {
 
 ETH_CODES = {'H':'Hispanic or Latino','N':'Not Hispanic or Latino','U':'Unknown'}
 
+HATE_CRIME_DUPLICATE_COLUMNS = [
+    'year', 'state', 'state_name', 'ori', 'agency_name', 'population',
+    'pop_group', 'incident_number', 'incident_date', 'data_source',
+    'quarter', 'total_individual_victims', 'total_offenders',
+    'offender_race', 'offender_ethnicity', 'offense_group', 'offense_code',
+    'offense_name', 'offense_victims', 'location', 'bias_code', 'bias_desc',
+    'bias_category', 'victim_types', 'adult_victims', 'juvenile_victims',
+    'adult_offenders', 'juvenile_offenders',
+]
+
 def safe(s, start, end):
     if start >= len(s):
         return ''
@@ -270,127 +280,79 @@ def parse_year(text):
     return incidents, bh_counts
 
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--years', nargs='*', type=int, help='Specific years to import')
-    parser.add_argument('--db', default='data/hate-crime/hate_crime.db', help='Output database path')
-    parser.add_argument(
-        '--protected-years',
-        default=os.environ.get('PROTECTED_UPDATE_YEARS', default_protected_years()),
-        help='Comma-separated years the importer must not delete/reimport. Defaults to the prior year from June through December.',
-    )
-    parser.add_argument(
-        '--allow-protected-years',
-        action='store_true',
-        help='Allow importing protected years. Requires an explicit operator decision.',
-    )
-    args = parser.parse_args()
 
-    years = args.years or list(range(1991, 2026))
-    protected_years = parse_year_csv(args.protected_years)
-    assert_no_protected_years(years, protected_years, args.allow_protected_years)
-    db_path = args.db
+def hate_crime_duplicate_count(conn, years):
+    if not years:
+        raise RuntimeError('Hate Crime duplicate verification requires explicit years')
+    years = sorted(set(int(y) for y in years))
+    year_list = ','.join(str(y) for y in years)
+    cols = ', '.join(HATE_CRIME_DUPLICATE_COLUMNS)
+    return conn.execute(f"""
+        SELECT COUNT(*) AS duplicate_groups, COALESCE(SUM(extra_rows), 0) AS extra_rows
+        FROM (
+            SELECT COUNT(*) - 1 AS extra_rows
+            FROM hate_crime_incidents
+            WHERE year IN ({year_list})
+            GROUP BY {cols}
+            HAVING COUNT(*) > 1
+        )
+    """).fetchone()
 
-    print(f"Importing hate crime data for {len(years)} years into {db_path}")
 
-    conn = sqlite3.connect(db_path)
-    conn.execute('PRAGMA journal_mode=WAL')
-    conn.execute('PRAGMA synchronous=OFF')
+def verify_hate_crime_duplicates(conn, years):
+    years = sorted(set(int(y) for y in years))
+    duplicate_groups, extra_rows = hate_crime_duplicate_count(conn, years)
+    duplicate_groups = duplicate_groups or 0
+    extra_rows = extra_rows or 0
+    year_label = ','.join(str(y) for y in years)
+    if duplicate_groups:
+        raise RuntimeError(
+            f"hate_crime_incidents has {duplicate_groups:,} exact duplicate groups "
+            f"({extra_rows:,} extra rows) for {year_label}"
+        )
+    print(f"  hate_crime_incidents exact-duplicate check passed for {year_label}")
 
-    # Create tables
-    conn.execute("""
-    CREATE TABLE IF NOT EXISTS hate_crime_incidents (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        year INTEGER,
-        state TEXT,
-        state_name TEXT,
-        ori TEXT,
-        agency_name TEXT,
-        population INTEGER,
-        pop_group TEXT,
-        incident_number TEXT,
-        incident_date TEXT,
-        data_source TEXT,
-        quarter TEXT,
-        total_individual_victims INTEGER,
-        total_offenders INTEGER,
-        offender_race TEXT,
-        offender_ethnicity TEXT,
-        offense_group INTEGER,
-        offense_code TEXT,
-        offense_name TEXT,
-        offense_victims INTEGER,
-        location TEXT,
-        bias_code TEXT,
-        bias_desc TEXT,
-        bias_category TEXT,
-        victim_types TEXT,
-        adult_victims INTEGER,
-        juvenile_victims INTEGER,
-        adult_offenders INTEGER,
-        juvenile_offenders INTEGER
-    )""")
-    conn.commit()
 
-    insert = conn.prepare if hasattr(conn, 'prepare') else None
-    insert_sql = """INSERT INTO hate_crime_incidents (
-        year, state, state_name, ori, agency_name, population, pop_group,
-        incident_number, incident_date, data_source, quarter,
-        total_individual_victims, total_offenders, offender_race, offender_ethnicity,
-        offense_group, offense_code, offense_name, offense_victims,
-        location, bias_code, bias_desc, bias_category, victim_types,
-        adult_victims, juvenile_victims, adult_offenders, juvenile_offenders
-    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"""
-
-    total_incidents = 0
-    all_bh_counts = {}  # year → {state → count}
-    t0 = time.time()
-
+def dedupe_hate_crime_incidents(conn, years):
+    years = sorted(set(int(y) for y in years))
+    cols = ', '.join(HATE_CRIME_DUPLICATE_COLUMNS)
+    total_deleted = 0
     for year in years:
-        yt = time.time()
-        print(f"  {year}: downloading...", end=' ', flush=True)
-
-        text = download_year(year)
-        if text is None:
-            print("NOT AVAILABLE")
+        duplicate_groups, extra_rows = hate_crime_duplicate_count(conn, [year])
+        duplicate_groups = duplicate_groups or 0
+        extra_rows = extra_rows or 0
+        if not duplicate_groups:
+            print(f"  hate_crime_incidents [{year}]: no exact duplicates")
             continue
-
-        # Delete existing data for this year
-        conn.execute("DELETE FROM hate_crime_incidents WHERE year = ?", (year,))
-
-        incidents, bh_counts = parse_year(text)
-        all_bh_counts[year] = bh_counts
-
-        # Batch insert
-        rows = [(
-            i['year'], i['state'], i['state_name'], i['ori'], i['agency_name'],
-            i['population'], i['pop_group'], i['incident_number'], i['incident_date'],
-            i['data_source'], i['quarter'], i['total_individual_victims'],
-            i['total_offenders'], i['offender_race'], i['offender_ethnicity'],
-            i['offense_group'], i['offense_code'], i['offense_name'],
-            i['offense_victims'], i['location'], i['bias_code'], i['bias_desc'],
-            i['bias_category'], i['victim_types'],
-            i['adult_victims'], i['juvenile_victims'],
-            i['adult_offenders'], i['juvenile_offenders'],
-        ) for i in incidents]
-
-        conn.executemany(insert_sql, rows)
+        print(f"  hate_crime_incidents [{year}]: removing {extra_rows:,} exact duplicate rows from {duplicate_groups:,} groups")
+        cur = conn.execute(f"""
+            DELETE FROM hate_crime_incidents
+            WHERE year = ?
+              AND rowid NOT IN (
+                  SELECT MIN(rowid)
+                  FROM hate_crime_incidents
+                  WHERE year = ?
+                  GROUP BY {cols}
+              )
+        """, (year, year))
+        total_deleted += cur.rowcount if cur.rowcount and cur.rowcount > 0 else 0
         conn.commit()
+    print(f"  Hate Crime exact duplicate cleanup removed {total_deleted:,} rows")
+    verify_hate_crime_duplicates(conn, years)
 
-        elapsed = time.time() - yt
-        print(f"{len(incidents)} offense-records in {elapsed:.1f}s")
-        total_incidents += len(incidents)
 
-    # Create indexes
-    print("\nCreating indexes...")
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_hc_year ON hate_crime_incidents(year)")
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_hc_state_year ON hate_crime_incidents(state, year)")
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_hc_bias ON hate_crime_incidents(bias_category, year)")
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_hc_offense ON hate_crime_incidents(offense_code, year)")
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_hc_ori ON hate_crime_incidents(ori, year)")
-    conn.commit()
 
-    # Build summary tables
+def rebuild_hate_crime_derived_tables(conn, all_bh_counts=None):
+    all_bh_counts = all_bh_counts or {}
+    existing_total_agencies = {}
+    if conn.execute("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'hate_crime_participation'").fetchone():
+        existing_total_agencies = {
+            (int(year), state): int(total or 0)
+            for year, state, total in conn.execute(
+                "SELECT year, state, total_agencies FROM hate_crime_participation"
+            ).fetchall()
+        }
+
     print("Building summary tables...")
 
     conn.execute("DROP TABLE IF EXISTS summary_hate_crime_bias_trend")
@@ -438,9 +400,6 @@ def main():
     """)
     conn.execute("CREATE INDEX idx_hcl_year ON summary_hate_crime_location(year)")
 
-    conn.commit()
-
-    # Build participation table (BH counts = total participating, IR = those with incidents)
     print("Building participation table...")
     conn.execute("DROP TABLE IF EXISTS hate_crime_participation")
     conn.execute("""
@@ -451,7 +410,6 @@ def main():
         total_incidents INTEGER,
         total_victims INTEGER
     )""")
-    # First get incident counts from the data
     conn.execute("""
     INSERT INTO hate_crime_participation
     SELECT
@@ -463,17 +421,194 @@ def main():
     FROM hate_crime_incidents hci
     GROUP BY hci.year, hci.state
     """)
-    # Update total_agencies from BH counts (all participating, including zero-reporters)
+
+    touched = set()
+    rows = conn.execute("SELECT year, state FROM hate_crime_participation").fetchall()
+    for year, state in rows:
+        year = int(year)
+        count = all_bh_counts.get(year, {}).get(state)
+        if count is None:
+            count = existing_total_agencies.get((year, state), 0)
+        conn.execute(
+            "UPDATE hate_crime_participation SET total_agencies = ? WHERE year = ? AND state = ?",
+            (count, year, state),
+        )
+        touched.add((year, state))
+
     for year, state_counts in all_bh_counts.items():
         for state, count in state_counts.items():
-            existing = conn.execute("SELECT rowid FROM hate_crime_participation WHERE year = ? AND state = ?", (year, state)).fetchone()
-            if existing:
-                conn.execute("UPDATE hate_crime_participation SET total_agencies = ? WHERE year = ? AND state = ?", (count, year, state))
-            else:
-                # State participated but reported zero incidents
-                conn.execute("INSERT INTO hate_crime_participation VALUES (?, ?, ?, 0, 0, 0)", (year, state, count))
+            if (int(year), state) in touched:
+                continue
+            conn.execute("INSERT INTO hate_crime_participation VALUES (?, ?, ?, 0, 0, 0)", (year, state, count))
+            touched.add((int(year), state))
+
+    for (year, state), count in existing_total_agencies.items():
+        if (year, state) in touched:
+            continue
+        conn.execute("INSERT INTO hate_crime_participation VALUES (?, ?, ?, 0, 0, 0)", (year, state, count))
+
     conn.execute("CREATE INDEX idx_hcp_year ON hate_crime_participation(year)")
     conn.execute("CREATE INDEX idx_hcp_state ON hate_crime_participation(state, year)")
+    conn.commit()
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--years', nargs='*', type=int, help='Specific years to import')
+    parser.add_argument('--db', default='data/hate-crime/hate_crime.db', help='Output database path')
+    parser.add_argument(
+        '--protected-years',
+        default=os.environ.get('PROTECTED_UPDATE_YEARS', default_protected_years()),
+        help='Comma-separated years the importer must not delete/reimport. Defaults to the prior year from June through December.',
+    )
+    parser.add_argument(
+        '--allow-protected-years',
+        action='store_true',
+        help='Allow importing protected years. Requires an explicit operator decision.',
+    )
+    parser.add_argument(
+        '--verify-raw-duplicates',
+        action='store_true',
+        help='Read-only maintenance mode: verify exact duplicate hate_crime_incidents rows. Requires --years.',
+    )
+    parser.add_argument(
+        '--dedupe-raw-years',
+        nargs='+',
+        type=int,
+        help='Maintenance mode: delete exact duplicate hate_crime_incidents rows for existing years, then rebuild summaries.',
+    )
+    args = parser.parse_args()
+
+    years = args.years or list(range(1991, 2026))
+    protected_years = parse_year_csv(args.protected_years)
+    if not args.verify_raw_duplicates:
+        assert_no_protected_years(args.dedupe_raw_years or years, protected_years, args.allow_protected_years)
+    db_path = args.db
+
+    if args.verify_raw_duplicates and not args.years:
+        raise SystemExit('--verify-raw-duplicates requires --years')
+
+    if args.verify_raw_duplicates:
+        print(f"Verifying Hate Crime duplicate rows for {args.years} in {db_path}")
+    elif args.dedupe_raw_years:
+        print(f"Deduping Hate Crime duplicate rows for {args.dedupe_raw_years} in {db_path}")
+    else:
+        print(f"Importing hate crime data for {len(years)} years into {db_path}")
+
+    conn = sqlite3.connect(db_path)
+    conn.execute('PRAGMA journal_mode=WAL')
+    conn.execute('PRAGMA synchronous=OFF')
+
+    # Create tables
+    conn.execute("""
+    CREATE TABLE IF NOT EXISTS hate_crime_incidents (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        year INTEGER,
+        state TEXT,
+        state_name TEXT,
+        ori TEXT,
+        agency_name TEXT,
+        population INTEGER,
+        pop_group TEXT,
+        incident_number TEXT,
+        incident_date TEXT,
+        data_source TEXT,
+        quarter TEXT,
+        total_individual_victims INTEGER,
+        total_offenders INTEGER,
+        offender_race TEXT,
+        offender_ethnicity TEXT,
+        offense_group INTEGER,
+        offense_code TEXT,
+        offense_name TEXT,
+        offense_victims INTEGER,
+        location TEXT,
+        bias_code TEXT,
+        bias_desc TEXT,
+        bias_category TEXT,
+        victim_types TEXT,
+        adult_victims INTEGER,
+        juvenile_victims INTEGER,
+        adult_offenders INTEGER,
+        juvenile_offenders INTEGER
+    )""")
+    conn.commit()
+
+    if args.verify_raw_duplicates:
+        verify_hate_crime_duplicates(conn, args.years)
+        conn.close()
+        return
+
+    if args.dedupe_raw_years:
+        dedupe_hate_crime_incidents(conn, args.dedupe_raw_years)
+        rebuild_hate_crime_derived_tables(conn)
+        conn.close()
+        return
+
+    insert = conn.prepare if hasattr(conn, 'prepare') else None
+    insert_sql = """INSERT INTO hate_crime_incidents (
+        year, state, state_name, ori, agency_name, population, pop_group,
+        incident_number, incident_date, data_source, quarter,
+        total_individual_victims, total_offenders, offender_race, offender_ethnicity,
+        offense_group, offense_code, offense_name, offense_victims,
+        location, bias_code, bias_desc, bias_category, victim_types,
+        adult_victims, juvenile_victims, adult_offenders, juvenile_offenders
+    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"""
+
+    total_incidents = 0
+    all_bh_counts = {}  # year -> {state -> count}
+    imported_years = []
+    t0 = time.time()
+
+    for year in years:
+        yt = time.time()
+        print(f"  {year}: downloading...", end=' ', flush=True)
+
+        text = download_year(year)
+        if text is None:
+            print("NOT AVAILABLE")
+            continue
+
+        # Delete existing data for this year
+        conn.execute("DELETE FROM hate_crime_incidents WHERE year = ?", (year,))
+
+        incidents, bh_counts = parse_year(text)
+        all_bh_counts[year] = bh_counts
+
+        # Batch insert
+        rows = [(
+            i['year'], i['state'], i['state_name'], i['ori'], i['agency_name'],
+            i['population'], i['pop_group'], i['incident_number'], i['incident_date'],
+            i['data_source'], i['quarter'], i['total_individual_victims'],
+            i['total_offenders'], i['offender_race'], i['offender_ethnicity'],
+            i['offense_group'], i['offense_code'], i['offense_name'],
+            i['offense_victims'], i['location'], i['bias_code'], i['bias_desc'],
+            i['bias_category'], i['victim_types'],
+            i['adult_victims'], i['juvenile_victims'],
+            i['adult_offenders'], i['juvenile_offenders'],
+        ) for i in incidents]
+
+        conn.executemany(insert_sql, rows)
+        conn.commit()
+
+        elapsed = time.time() - yt
+        print(f"{len(incidents)} offense-records in {elapsed:.1f}s")
+        total_incidents += len(incidents)
+        imported_years.append(year)
+
+    if imported_years:
+        dedupe_hate_crime_incidents(conn, imported_years)
+
+    # Create indexes
+    print("\nCreating indexes...")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_hc_year ON hate_crime_incidents(year)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_hc_state_year ON hate_crime_incidents(state, year)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_hc_bias ON hate_crime_incidents(bias_category, year)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_hc_offense ON hate_crime_incidents(offense_code, year)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_hc_ori ON hate_crime_incidents(ori, year)")
+    conn.commit()
+
+    rebuild_hate_crime_derived_tables(conn, all_bh_counts)
 
     # Caveats table — baked-in documentation for the model
     conn.execute("DROP TABLE IF EXISTS hate_crime_caveats")

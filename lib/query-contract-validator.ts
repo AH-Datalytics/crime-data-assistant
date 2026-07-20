@@ -50,6 +50,7 @@ const RETRY_CAPABILITY_RULES = new Set([
 const BLOCK_CAPABILITY_RULES = new Set([
   "unsupported-sub-city-geography",
   "unsupported-court-policy-topic",
+  "demographic-rate-unsupported",
   "nibrs-clearance-weapon-unsupported",
   "nibrs-countywide-demographics-unsupported",
   "nibrs-shooting-category-unsupported",
@@ -63,6 +64,8 @@ const BLOCK_MESSAGES: Record<string, string> = {
     SUB_CITY_GEOGRAPHY_MESSAGE,
   "unsupported-court-policy-topic":
     "The available FBI datasets track reported crime and law-enforcement reporting, not court outcomes, incarceration, fines, immigration status, or policy registries.",
+  "demographic-rate-unsupported":
+    "The FBI data does not include matching population denominators for demographic groups. Better choices: counts by gender/race, shares by gender/race, or an overall rate.",
   "nibrs-clearance-weapon-unsupported":
     "The available NIBRS summary data cannot calculate clearance rates broken down by weapon type. I can answer overall clearance rates, or weapon-specific counts, but not weapon-specific clearance rates.",
   "nibrs-countywide-demographics-unsupported":

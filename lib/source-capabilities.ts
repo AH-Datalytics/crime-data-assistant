@@ -200,6 +200,13 @@ export const SOURCE_CAPABILITY_RULES: SourceCapabilityRule[] = [
     when: ({ question }) => asksOutOfScopeTopic(question),
     message: "The available FBI datasets track reported crime and law-enforcement reporting, not court outcomes, incarceration, fines, immigration status, or policy registries.",
   })),
+  ...ALL_QUERY_SOURCES.map((source): SourceCapabilityRule => ({
+    id: "demographic-rate-unsupported",
+    source,
+    severity: "unsupported",
+    when: ({ contract }) => contract.metric.unsupportedReason === "demographic_rate_denominator_unavailable",
+    message: "The FBI data does not include matching population denominators for demographic groups. Ask for counts or shares by demographic group, or for an overall rate using total population.",
+  })),
   {
     id: "current-countywide-crosswalk",
     source: "current",

@@ -118,7 +118,7 @@ function detectMetric(question: string): QueryContract["metric"] {
   else if (asksRatio) unit = "ratio";
   else if (topic === "unknown") unit = "unknown";
 
-  const unsupportedReason = asksRate && asksDemographic
+  const unsupportedReason = asksRate && !asksClearance && asksDemographic
     ? "demographic_rate_denominator_unavailable"
     : null;
 
