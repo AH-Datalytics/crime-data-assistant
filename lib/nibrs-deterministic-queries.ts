@@ -1,5 +1,5 @@
 import { buildQueryContract } from "./query-contract";
-import { relativeYearRangeForQuestion } from "./time-conventions";
+import { pastCompleteCalendarYearsRange, relativeYearRangeForQuestion } from "./time-conventions";
 
 export interface DeterministicNibrsQuery {
   sql: string;
@@ -30,19 +30,34 @@ function asksDomesticViolenceAggravatedAssaultShare(question: string): boolean {
   return asksShare && asksAggAssault && asksDv;
 }
 
-function yearPredicate(column: string, question: string): string {
+interface YearScope {
+  predicate: string;
+  periodText: string;
+}
+
+function allAvailableYearsRequested(question: string): boolean {
+  return /\b(?:all|every|available)\s+years?\b|\ball\s+available\s+data\b/i.test(question);
+}
+
+function yearScope(column: string, question: string): YearScope {
   const relative = relativeYearRangeForQuestion(question);
   const contract = buildQueryContract(question, "nibrs");
   const start = relative?.start ?? contract?.time.startYear ?? null;
   const end = relative?.end ?? contract?.time.endYear ?? null;
 
   if (start !== null && end !== null) {
-    if (start === end) return `${column} = ${start}`;
-    return `${column} BETWEEN ${start} AND ${end}`;
+    if (start === end) return { predicate: `${column} = ${start}`, periodText: " for the requested year" };
+    return { predicate: `${column} BETWEEN ${start} AND ${end}`, periodText: " for the requested years" };
   }
-  if (start !== null) return `${column} >= ${start}`;
-  if (end !== null) return `${column} <= ${end}`;
-  return "1 = 1";
+  if (start !== null) return { predicate: `${column} >= ${start}`, periodText: " for the requested years" };
+  if (end !== null) return { predicate: `${column} <= ${end}`, periodText: " for the requested years" };
+  if (allAvailableYearsRequested(question)) return { predicate: "1 = 1", periodText: " over all available years" };
+
+  const fallback = pastCompleteCalendarYearsRange(5);
+  return {
+    predicate: `${column} BETWEEN ${fallback.start} AND ${fallback.end}`,
+    periodText: " for the default last five complete calendar years",
+  };
 }
 
 function scopeForQuestion(question: string): {
@@ -81,10 +96,10 @@ export function buildNibrsDomesticViolenceAggravatedAssaultShareQuery(
   const scope = scopeForQuestion(question);
   if (!scope) return null;
 
-  const dvYearFilter = yearPredicate("year", question);
-  const totalYearFilter = yearPredicate("year", question);
-  const hasTimeFilter = dvYearFilter !== "1 = 1";
-  const periodText = hasTimeFilter ? " for the requested years" : "";
+  const years = yearScope("year", question);
+  const dvYearFilter = years.predicate;
+  const totalYearFilter = years.predicate;
+  const periodText = years.periodText;
 
   const sql = `
 WITH dv AS (
