@@ -28,6 +28,7 @@ import { detectNibrsCapabilityOverride } from "@/lib/nibrs-capability-overrides"
 import { getBlockingGeoClarification } from "@/lib/geo-resolver";
 import { getCountyScopeClarification } from "@/lib/county-clarifier";
 import { asksCampusAgency, buildCampusAgencySummarySql, campusAgencyChartAxesFromSql, campusAgencyDisplayName, knownCampusAgencyResolution, resolveCampusAgencyOris, shouldResolveCampusAgencySql } from "@/lib/nibrs-campus-agency";
+import { buildNibrsDomesticViolenceAggravatedAssaultShareQuery } from "@/lib/nibrs-deterministic-queries";
 import {
   queryContractFailureMessage,
   queryContractGuardrails,
@@ -270,6 +271,69 @@ export async function POST(req: NextRequest) {
         chartMeta: null,
         executionTimeMs: executionMs,
       } as QueryResponse);
+    }
+
+    const deterministicDvShare = buildNibrsDomesticViolenceAggravatedAssaultShareQuery(question);
+    if (deterministicDvShare) {
+      const deterministicStart = Date.now();
+      try {
+        const result = await executeWithTimeout(deterministicDvShare.sql);
+        const rows = normalizeNibrsDisplayRows(result.rows);
+        const columns = result.columns;
+        const executionMs = Date.now() - deterministicStart;
+        const explanation = applyResultDisclosures({
+          explanation: deterministicDvShare.explanation,
+          question,
+          sql: deterministicDvShare.sql,
+          rows,
+          tab: "nibrs",
+        });
+        const chartConfig = buildNibrsChartConfig(deterministicDvShare, columns, rows, question);
+
+        writeNibrsLog(
+          question,
+          deterministicDvShare.sql,
+          rows.length,
+          null,
+          executionMs,
+          explanation,
+          [deterministicDvShare.guardrail],
+          "deterministic",
+          sessionId
+        );
+
+        return jsonResp({
+          success: true,
+          question,
+          sql: deterministicDvShare.sql,
+          explanation,
+          title: deterministicDvShare.title,
+          columns,
+          rows,
+          rowCount: rows.length,
+          truncated: rows.length >= 1000,
+          chartConfig,
+          chartMeta: { source: "FBI NIBRS", agencyCount: 0, population: null },
+          executionTimeMs: executionMs,
+        } as QueryResponse);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        writeNibrsLog(
+          question,
+          deterministicDvShare.sql,
+          0,
+          `deterministic_dv_share_failed:${msg}`,
+          Date.now() - deterministicStart,
+          null,
+          [deterministicDvShare.guardrail],
+          "deterministic",
+          sessionId
+        );
+        return jsonResp(
+          { success: false, error: "I had trouble running that deterministic NIBRS query. Try rephrasing your question.", sql: deterministicDvShare.sql } as QueryError,
+          500
+        );
+      }
     }
 
     const metadataStart = Date.now();
