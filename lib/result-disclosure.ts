@@ -430,6 +430,20 @@ function hasCurrentPartialDisclosure(explanation: string, year: number): boolean
   return new RegExp(`\\b${year}\\b[\\s\\S]{0,140}\\b(?:partial|incomplete|year[-\\s]?to[-\\s]?date|YTD|not\\s+a\\s+full[-\\s]?year|preliminary)\\b`, "i").test(explanation);
 }
 
+function currentPartialYearMetric(question: string, sql: string): "rate" | "total" {
+  return /\b(?:rates?|per\s+capita|per\s*100k|per\s*100,000)\b/i.test(question) ||
+    /\b(?:rate|per_100k|per_capita)\b/i.test(sql)
+    ? "rate"
+    : "total";
+}
+
+function normalizeCurrentPartialYearMetric(explanation: string, question: string, sql: string, year: number): string {
+  if (currentPartialYearMetric(question, sql) !== "rate") return explanation;
+  return explanation
+    .replace(new RegExp(`(\\b${year}\\b[\\s\\S]{0,140}\\bpartial[-\\s]?year\\s+)total`, "gi"), "$1rate")
+    .replace(new RegExp(`(\\bnot\\s+a\\s+full[-\\s]?year\\s+${year}\\s+)total`, "gi"), "$1rate");
+}
+
 function currentPartialYearNote(
   question: string,
   sql: string,
@@ -439,9 +453,7 @@ function currentPartialYearNote(
   const currentYear = new Date().getFullYear();
   if (!hasCurrentYearSignal(question, sql, rows, currentYear)) return null;
 
-  const rateish = /\b(?:rates?|per\s+capita|per\s*100k|per\s*100,000)\b/i.test(question) ||
-    /\b(?:rate|per_100k|per_capita)\b/i.test(sql);
-  const metric = rateish ? "rate" : "total";
+  const metric = currentPartialYearMetric(question, sql);
   const basis = returnedPeriod ? ` based on returned data (${returnedPeriod})` : " based on the returned data";
   return `${currentYear} is incomplete; this is a partial-year ${metric}${basis}, not a full-year ${currentYear} ${metric}.`;
 }
@@ -638,8 +650,10 @@ export function applyResultDisclosures(opts: {
   }
 
   if (opts.tab === "current") {
+    const currentYear = new Date().getFullYear();
+    explanation = normalizeCurrentPartialYearMetric(explanation, opts.question, opts.sql, currentYear);
     const partialYearNote = currentPartialYearNote(opts.question, opts.sql, opts.rows, returnedPeriod);
-    if (partialYearNote && !hasCurrentPartialDisclosure(explanation, new Date().getFullYear())) {
+    if (partialYearNote && !hasCurrentPartialDisclosure(explanation, currentYear)) {
       explanation = appendSentence(explanation, partialYearNote);
     }
   }

@@ -3077,6 +3077,41 @@ console.log("\n═══ nested-aggregation-discards-measure ═══\n");
     `fired: ${JSON.stringify(r.fired)}`);
 }
 
+
+{
+  const ctx = extractQueryContext(
+    `SELECT CAST(year AS TEXT) AS year, ROUND(100.0 * SUM(CASE WHEN dv.dv_category IS NOT NULL THEN 1 ELSE 0 END) / COUNT(*), 1) AS dv_share_percent
+     FROM (SELECT DISTINCT s.year, s.ori, s.incident_num FROM summary_victim_city_monthly s WHERE s.ucr_offense_code = '13A' AND s.year BETWEEN 2021 AND 2025) agg
+     LEFT JOIN summary_domestic_violence dv ON dv.ori = agg.ori AND dv.incident_num = agg.incident_num AND dv.data_year = agg.year
+     GROUP BY year`,
+    "what share of aggravated assaults are domestic violence?",
+    "nibrs"
+  );
+  const r = runGuardrails(ctx);
+  assert("TP: DV aggravated-assault share cross-summary retries instead of hard-refusing",
+    r.fired.includes("nibrs-cross-summary-join") && r.overrideResponse === null,
+    `fired: ${JSON.stringify(r.fired)}, override=${r.overrideResponse}`);
+  assert("TP: DV aggravated-assault share retry points to summary_victim_circumstance",
+    r.issues.some((issue) => /summary_victim_circumstance/.test(issue) && /ucr_offense_code = '13A'/.test(issue) && /circumstance_code = '06'/.test(issue)),
+    `issues: ${JSON.stringify(r.issues)}`);
+}
+
+{
+  const ctx = extractQueryContext(
+    `SELECT dv.year, SUM(dv.victim_count) AS dv_victims, SUM(total.victim_count) AS total_assaults,
+       ROUND(100.0 * SUM(dv.victim_count) / SUM(total.victim_count), 1) AS dv_share_percent
+     FROM (SELECT year, SUM(victim_count) AS victim_count FROM summary_victim_circumstance WHERE ucr_offense_code = '13A' AND circumstance_code = '06' GROUP BY year) dv
+     JOIN (SELECT year, SUM(victim_count) AS victim_count FROM summary_victim_state_monthly WHERE ucr_offense_code = '13A' GROUP BY year) total ON total.year = dv.year
+     WHERE dv.year BETWEEN 2021 AND 2025
+     GROUP BY dv.year`,
+    "what share of aggravated assaults are domestic violence?",
+    "nibrs"
+  );
+  const r = runGuardrails(ctx);
+  assert("FP: DV aggravated-assault share using victim circumstance table is allowed",
+    !r.fired.includes("nibrs-dv-wrong-table") && !r.fired.includes("nibrs-cross-summary-join"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
 console.log(`SUMMARY: ${pass} passed, ${fail} failed out of ${pass + fail} tests`);
 console.log("=".repeat(60));
 

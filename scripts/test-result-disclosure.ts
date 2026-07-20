@@ -419,4 +419,17 @@ import { applyResultDisclosures } from "../lib/result-disclosure";
   assert.doesNotMatch(explanation, /through 2025/);
 }
 
+
+{
+  const explanation = applyResultDisclosures({
+    explanation: "The 20 most populous cities ranked by their 2026 murder rate. 2026 is incomplete; this is a partial-year total based on the returned data, not a full-year 2026 total.",
+    question: "the 20 most populous cities in the dataset ranked by their 2026 murder rate",
+    sql: "SELECT agency, ROUND(SUM(count) * 100000.0 / population, 1) AS rate_per_100k FROM agency_monthly WHERE year = 2026 GROUP BY agency",
+    rows: [{ agency: "Philadelphia", year: 2026, rate_per_100k: 3.5 }],
+    tab: "current",
+  });
+  assert.match(explanation, /partial-year rate/);
+  assert.match(explanation, /full-year 2026 rate/);
+  assert.doesNotMatch(explanation, /partial-year total/);
+}
 console.log("result disclosure tests passed");

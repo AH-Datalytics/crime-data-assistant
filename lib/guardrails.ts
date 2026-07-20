@@ -178,6 +178,16 @@ function hasUnpairedMultiCityStateFilter(sql: string): boolean {
   return !hasSingleState;
 }
 
+function asksDomesticViolenceAggravatedAssaultShare(question: string): boolean {
+  const asksShare = /\b(?:share|percent(?:age)?|pct|proportion|what\s+portion)\b/i.test(question);
+  const asksAggAssault = /\baggravated\s+assaults?\b/i.test(question);
+  return asksShare && asksAggAssault && asksDomesticViolence(question);
+}
+
+function domesticViolenceAggravatedAssaultShareMessage(): string {
+  return "[SYSTEM: The user asked what share of aggravated assaults are domestic violence. Use victim_count from summary_victim_circumstance for the numerator: ucr_offense_code = '13A' and circumstance_code = '06'. Use aggravated-assault victim_count from summary_victim_state_monthly or the matching city/geography victim summary for the denominator. Keep numerator and denominator at the same geography and year grain. Do NOT use summary_domestic_violence for this share, because that table counts DV incidents and would mix incident counts with victim counts.]";
+}
+
 function domesticViolenceRateMessage(): string {
   return "[SYSTEM: The user asked for domestic violence rates. Do not join summary_domestic_violence to another summary_* table to infer population; that triggers cross-summary grain errors. Use summary_domestic_violence for the numerator and agencies plus nibrs_agency_completeness for the denominator. The denominator must be the population served by reporting agencies, adjusted by months reported; it is not the full official state population. For state comparisons in 2025, use this pattern: WITH dv AS (SELECT state, COUNT(DISTINCT ori || ':' || data_year || ':' || incident_num) AS dv_incidents FROM summary_domestic_violence WHERE data_year = 2025 GROUP BY state), population AS (SELECT a.state, SUM(a.population * nac.months_reported / 12.0) AS reporting_population FROM nibrs_agency_completeness nac JOIN agencies a ON a.ori = nac.ori AND a.year = nac.year WHERE nac.year = 2025 AND nac.months_reported > 0 AND a.population > 0 GROUP BY a.state) SELECT dv.state, dv.dv_incidents, population.reporting_population, ROUND(dv.dv_incidents * 100000.0 / NULLIF(population.reporting_population, 0), 1) AS rate_per_100k FROM dv JOIN population ON population.state = dv.state WHERE population.reporting_population > 0 ORDER BY rate_per_100k DESC LIMIT 1000. Explain that the denominator is population served by agencies that reported in NIBRS, adjusted for partial-year reporting, not a complete official state population.]";
 }
@@ -1687,15 +1697,18 @@ const GUARDRAILS: Guardrail[] = [
       // Exempt: city + state level of same dimension (handled by cross-level-join)
       const isCityState = summaryTables.every(t => /monthly/.test(t));
       if (isCityState) return false;
+      if (asksDomesticViolenceAggravatedAssaultShare(ctx.question)) return /\bsummary_domestic_violence\b/i.test(ctx.sql) || hasDirectSummaryTableJoin(ctx.sql);
       if (asksDomesticViolenceRate(ctx.question) && /\bsummary_domestic_violence\b/i.test(ctx.sql)) return true;
       return hasDirectSummaryTableJoin(ctx.sql);
     },
-    message: (ctx) => asksDomesticViolenceRate(ctx.question)
-      ? domesticViolenceRateMessage()
-      : "[SYSTEM: Do not join different summary_* tables to infer missing dimensions; that produces incorrect results due to different aggregation grains. Use a single summary table that already contains the requested dimensions, use a pre-built combined table, or set sql to null and explain which dimensions are available separately.]",
-    override: (ctx) => asksDomesticViolenceRate(ctx.question)
+    message: (ctx) => asksDomesticViolenceAggravatedAssaultShare(ctx.question)
+      ? domesticViolenceAggravatedAssaultShareMessage()
+      : asksDomesticViolenceRate(ctx.question)
+        ? domesticViolenceRateMessage()
+        : "[SYSTEM: Do not join different summary_* tables to infer missing dimensions; that produces incorrect results due to different aggregation grains. Use a single summary table that already contains the requested dimensions, use a pre-built combined table, or set sql to null and explain which dimensions are available separately.]",
+    override: (ctx) => asksDomesticViolenceAggravatedAssaultShare(ctx.question) || asksDomesticViolenceRate(ctx.question)
       ? null
-      : "I can't reliably combine data from two different summary tables â€” joining them would produce incorrect results due to different aggregation grains. I can answer each part separately: for example, I can show victim demographics OR clearance rates, but not both in a single query unless a pre-built combined table exists. Try asking about one dimension at a time, or ask if a specific combination is available.",
+      : "I can't reliably combine data from two different summary tables — joining them would produce incorrect results due to different aggregation grains. I can answer each part separately: for example, I can show victim demographics OR clearance rates, but not both in a single query unless a pre-built combined table exists. Try asking about one dimension at a time, or ask if a specific combination is available.",
   },
   {
     name: "nibrs-offender-summary-count-contract",
@@ -3082,7 +3095,8 @@ const GUARDRAILS: Guardrail[] = [
       const isDvQuestion = /\bdomestic\s+violence\b|\b(?<![a-z])dv(?![a-z])\b/i.test(ctx.question);
       if (!isDvQuestion) return false;
       const sql = ctx.sql.toLowerCase();
-      // OK if already using DV tables
+      // OK if already using the right DV-specific table for this question.
+      if (asksDomesticViolenceAggravatedAssaultShare(ctx.question) && sql.includes("summary_victim_circumstance")) return false;
       if (sql.includes("summary_domestic_violence") || sql.includes("summary_dv_arrests")) return false;
       // Fire if using non-DV summary tables (city_monthly, state_monthly, victim tables with assault codes)
       const usesNonDvTable =
@@ -3092,8 +3106,9 @@ const GUARDRAILS: Guardrail[] = [
         sql.includes("summary_victim_city_monthly");
       return usesNonDvTable;
     },
-    message: () =>
-      `[SYSTEM: CRITICAL â€” The user asked about domestic violence but your query uses a general offense summary table. Domestic violence is NOT the same as assault (13A/13B/13C). NIBRS has dedicated DV tables:\n- summary_domestic_violence: DV incident counts, victim demographics, relationship breakdowns (columns: data_year, state, ori, incident_num, offense_code, relationship_code, dv_category, victim_sex, victim_age, victim_race)\n- summary_dv_arrests: DV arrest counts with demographics (columns: year, state, ori, ucr_arrest_offense, dv_category, sex, race, age_group, arrest_count)\nRewrite the query using the appropriate DV table. For city-level DV queries, join summary_domestic_violence with agencies using ori.]`,
+    message: (ctx) => asksDomesticViolenceAggravatedAssaultShare(ctx.question)
+      ? domesticViolenceAggravatedAssaultShareMessage()
+      : `[SYSTEM: CRITICAL — The user asked about domestic violence but your query uses a general offense summary table. Domestic violence is NOT the same as assault (13A/13B/13C). NIBRS has dedicated DV tables:\n- summary_domestic_violence: DV incident counts, victim demographics, relationship breakdowns (columns: data_year, state, ori, incident_num, offense_code, relationship_code, dv_category, victim_sex, victim_age, victim_race)\n- summary_dv_arrests: DV arrest counts with demographics (columns: year, state, ori, ucr_arrest_offense, dv_category, sex, race, age_group, arrest_count)\nRewrite the query using the appropriate DV table. For city-level DV queries, join summary_domestic_violence with agencies using ori.]`,
   },
 
   // --- DV schema guardrail: city-level DV queries using summary_domestic_violence ---
