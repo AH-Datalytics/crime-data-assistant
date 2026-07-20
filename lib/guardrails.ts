@@ -1708,7 +1708,7 @@ const GUARDRAILS: Guardrail[] = [
         : "[SYSTEM: Do not join different summary_* tables to infer missing dimensions; that produces incorrect results due to different aggregation grains. Use a single summary table that already contains the requested dimensions, use a pre-built combined table, or set sql to null and explain which dimensions are available separately.]",
     override: (ctx) => asksDomesticViolenceAggravatedAssaultShare(ctx.question) || asksDomesticViolenceRate(ctx.question)
       ? null
-      : "I can't reliably combine data from two different summary tables — joining them would produce incorrect results due to different aggregation grains. I can answer each part separately: for example, I can show victim demographics OR clearance rates, but not both in a single query unless a pre-built combined table exists. Try asking about one dimension at a time, or ask if a specific combination is available.",
+      : "I can't reliably combine data from two different summary tables - joining them would produce incorrect results due to different aggregation grains. I can answer each part separately: for example, I can show victim demographics OR clearance rates, but not both in a single query unless a pre-built combined table exists. Try asking about one dimension at a time, or ask if a specific combination is available.",
   },
   {
     name: "nibrs-offender-summary-count-contract",
@@ -3108,7 +3108,7 @@ const GUARDRAILS: Guardrail[] = [
     },
     message: (ctx) => asksDomesticViolenceAggravatedAssaultShare(ctx.question)
       ? domesticViolenceAggravatedAssaultShareMessage()
-      : `[SYSTEM: CRITICAL — The user asked about domestic violence but your query uses a general offense summary table. Domestic violence is NOT the same as assault (13A/13B/13C). NIBRS has dedicated DV tables:\n- summary_domestic_violence: DV incident counts, victim demographics, relationship breakdowns (columns: data_year, state, ori, incident_num, offense_code, relationship_code, dv_category, victim_sex, victim_age, victim_race)\n- summary_dv_arrests: DV arrest counts with demographics (columns: year, state, ori, ucr_arrest_offense, dv_category, sex, race, age_group, arrest_count)\nRewrite the query using the appropriate DV table. For city-level DV queries, join summary_domestic_violence with agencies using ori.]`,
+      : `[SYSTEM: CRITICAL - The user asked about domestic violence but your query uses a general offense summary table. Domestic violence is NOT the same as assault (13A/13B/13C). NIBRS has dedicated DV tables:\n- summary_domestic_violence: DV incident counts, victim demographics, relationship breakdowns (columns: data_year, state, ori, incident_num, offense_code, relationship_code, dv_category, victim_sex, victim_age, victim_race)\n- summary_dv_arrests: DV arrest counts with demographics (columns: year, state, ori, ucr_arrest_offense, dv_category, sex, race, age_group, arrest_count)\nRewrite the query using the appropriate DV table. For city-level DV queries, join summary_domestic_violence with agencies using ori.]`,
   },
 
   // --- DV schema guardrail: city-level DV queries using summary_domestic_violence ---
