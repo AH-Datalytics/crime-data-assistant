@@ -394,4 +394,29 @@ import { applyResultDisclosures } from "../lib/result-disclosure";
   assert.match(explanation, /grouped by offense code and age group/);
 }
 
+
+{
+  const explanation = applyResultDisclosures({
+    explanation: "The share of aggravated assaults that involved domestic violence victims, statewide, from 2021 to 2025.",
+    question: "what share of aggravated assaults are domestic violence?",
+    sql: "SELECT dv.year, SUM(dv.victim_count) AS dv_victims, SUM(total.victim_count) AS total_assaults FROM (SELECT year, SUM(victim_count) AS victim_count FROM summary_victim_circumstance WHERE ucr_offense_code = '13A' AND circumstance_code = '06' GROUP BY year) dv JOIN (SELECT year, SUM(victim_count) AS victim_count FROM summary_victim_state_monthly WHERE ucr_offense_code = '13A' GROUP BY year) total ON total.year = dv.year GROUP BY dv.year",
+    rows: [{ year: 2021, dv_victims: 10, total_assaults: 100 }],
+    tab: "nibrs",
+  });
+  assert.doesNotMatch(explanation, /statewide/);
+  assert.match(explanation, /nationally across reporting NIBRS agencies/);
+}
+
+{
+  const explanation = applyResultDisclosures({
+    explanation: "This query shows the annual count of murder victims overall and those killed with a firearm, from 1990 through 2025.",
+    question: "What share of murders involved a firearm since 1990?",
+    sql: "SELECT i.year, COUNT(*) AS total_murders FROM incidents i JOIN victims v ON v.incident_id = i.id WHERE i.homicide_type = 'Murder' AND i.year >= 1990 GROUP BY i.year ORDER BY i.year",
+    rows: [{ year: 1990, total_murders: 100 }, { year: 2026, total_murders: 50 }],
+    tab: "shr",
+  });
+  assert.match(explanation, /through 2026/);
+  assert.doesNotMatch(explanation, /through 2025/);
+}
+
 console.log("result disclosure tests passed");

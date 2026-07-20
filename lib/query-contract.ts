@@ -62,6 +62,18 @@ const OFFENSE_PATTERNS: { topic: string; codes: string[]; pattern: RegExp }[] = 
 ];
 
 function yearsFromQuestion(question: string): { startYear: number | null; endYear: number | null } {
+  const explicitRange = question.match(/\b(?:between|from)\s+((?:19|20)\d{2})\s+(?:and|to|through|thru|-)\s+((?:19|20)\d{2})\b/i) ||
+    question.match(/\b((?:19|20)\d{2})\s*(?:-|to|through|thru)\s*((?:19|20)\d{2})\b/i);
+  if (explicitRange) {
+    const first = Number(explicitRange[1]);
+    const second = Number(explicitRange[2]);
+    return { startYear: Math.min(first, second), endYear: Math.max(first, second) };
+  }
+
+  const openEnded = question.match(/\b(?:since|starting|beginning)\s+((?:19|20)\d{2})\b/i) ||
+    question.match(/\b(?:from\s+)?((?:19|20)\d{2})\s*(?:to|through|thru|-)\s*(?:present|current|now|today|date)\b/i);
+  if (openEnded) return { startYear: Number(openEnded[1]), endYear: null };
+
   const years = (question.match(/\b(?:19|20)\d{2}\b/g) || []).map(Number);
   if (years.length === 0) return { startYear: null, endYear: null };
   return { startYear: Math.min(...years), endYear: Math.max(...years) };

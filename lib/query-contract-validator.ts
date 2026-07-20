@@ -1,4 +1,4 @@
-import { buildQueryContract, type QueryContractSource } from "./query-contract";
+import { buildQueryContract, type QueryContract, type QueryContractSource } from "./query-contract";
 import type { RoutingLogMeta } from "./routing-log-meta";
 import { validateSourceCapabilities, type SourceCapabilityFinding } from "./source-capabilities";
 import { SUB_CITY_GEOGRAPHY_MESSAGE } from "./capability-overrides";
@@ -25,6 +25,7 @@ const RETRY_CAPABILITY_RULES = new Set([
   "nibrs-weapon-circumstance-demographic-person-crime-table",
   "nibrs-carjacking-clearance-table",
   "nibrs-clearance-type-table",
+  "nibrs-dv-assault-share-table",
   "nibrs-campus-agency-resolution",
   "nibrs-countywide-crosswalk",
   "nibrs-continuous-reporters-range-table",
@@ -110,6 +111,79 @@ export function queryContractGuardrails(result: QueryContractSqlValidation): str
   return [...new Set([...result.fired, ...result.enforced])];
 }
 
+function hasOpenEndedOrRangeTimeIntent(question: string): boolean {
+  return /\b(?:since|starting|beginning|between|through|thru|until|past|last|rolling|trends?|changed|change\s+over|over\s+time)\b/i.test(question) ||
+    /\bfrom\s+(?:19|20)\d{2}\s+(?:to|through|until|and|-)\s+(?:(?:19|20)\d{2}|present|current|now|today|date)\b/i.test(question) ||
+    /\b(?:19|20)\d{2}\s*(?:-|to|through)\s*(?:(?:19|20)\d{2}|present|current|now|today|date)\b/i.test(question);
+}
+
+function isSingleYearPointContract(question: string, contract: QueryContract): boolean {
+  const { startYear, endYear } = contract.time;
+  if (startYear === null || endYear === null || startYear !== endYear) return false;
+  if (contract.followup.operation === "chart_only" || contract.followup.operation === "metadata") return false;
+  if (hasOpenEndedOrRangeTimeIntent(question)) return false;
+  return contract.metric.unit !== "unknown" || contract.metric.topic !== "unknown";
+}
+
+function yearRefPattern(): string {
+  return String.raw`\b(?:\w+\.)?(?:year|data_year)\b`;
+}
+
+function hasRequestedSingleYearPredicate(sql: string, year: number): boolean {
+  const yearRef = yearRefPattern();
+  const y = String.raw`'?${year}'?`;
+  return new RegExp(String.raw`${yearRef}\s*=\s*${y}`, "i").test(sql) ||
+    new RegExp(String.raw`${yearRef}\s+BETWEEN\s+${y}\s+AND\s+${y}`, "i").test(sql) ||
+    new RegExp(String.raw`${yearRef}\s+IN\s*\([^)]*\b${year}\b[^)]*\)`, "i").test(sql);
+}
+
+function hasBroadYearPredicateForSingleYear(sql: string, year: number): boolean {
+  const yearRef = yearRefPattern();
+  const y = String.raw`'?${year}'?`;
+  if (new RegExp(String.raw`${yearRef}\s*<\s*${y}`, "i").test(sql)) return true;
+  if (new RegExp(String.raw`${yearRef}\s*<=\s*${y}`, "i").test(sql)) return true;
+
+  const geRe = new RegExp(String.raw`${yearRef}\s*>=\s*'((?:19|20)\d{2})'`, "gi");
+  const geBareRe = new RegExp(String.raw`${yearRef}\s*>=\s*((?:19|20)\d{2})`, "gi");
+  for (const re of [geRe, geBareRe]) {
+    let match: RegExpExecArray | null;
+    while ((match = re.exec(sql)) !== null) {
+      if (Number(match[1]) < year) return true;
+    }
+  }
+
+  const betweenRe = new RegExp(String.raw`${yearRef}\s+BETWEEN\s+'?((?:19|20)\d{2})'?\s+AND\s+'?((?:19|20)\d{2})'?`, "gi");
+  let between: RegExpExecArray | null;
+  while ((between = betweenRe.exec(sql)) !== null) {
+    const start = Number(between[1]);
+    const end = Number(between[2]);
+    if (start !== year || end !== year) return true;
+  }
+
+  const inRe = new RegExp(String.raw`${yearRef}\s+IN\s*\(([^)]*)\)`, "gi");
+  let inMatch: RegExpExecArray | null;
+  while ((inMatch = inRe.exec(sql)) !== null) {
+    const years = (inMatch[1].match(/\b(?:19|20)\d{2}\b/g) || []).map(Number);
+    if (years.some((value) => value !== year)) return true;
+  }
+
+  return false;
+}
+
+function singleYearTemporalScopeIssue(question: string, contract: QueryContract, sql: string): string | null {
+  if (!isSingleYearPointContract(question, contract)) return null;
+  const year = contract.time.startYear;
+  if (year === null) return null;
+
+  if (hasBroadYearPredicateForSingleYear(sql, year) || !hasRequestedSingleYearPredicate(sql, year)) {
+    const partial = contract.time.partialYear
+      ? ` For Current Trends partial-year ${year} queries, use year = ${year} plus the latest available month cutoff; do not include prior years in the numerator.`
+      : "";
+    return `[SYSTEM: Query contract violation (contract-single-year-temporal-scope). The user asked for ${year} only, but the SQL does not keep the metric/count numerator limited to that single year. Rewrite the SQL so fact-table year/data_year predicates use = ${year} or BETWEEN ${year} AND ${year}. Do not use year < ${year}, year <= ${year}, year >= an older year, or BETWEEN an older year AND ${year} unless the user explicitly asks for a trend, rolling window, or multi-year comparison.${partial}]`;
+  }
+
+  return null;
+}
 function rewriteStateEquals(sql: string, requestedState: string, sourceState: string | string[]): string {
   const sourceStates = Array.isArray(sourceState) ? sourceState : [sourceState];
   if (sourceStates.length === 1 && requestedState.toUpperCase() === sourceStates[0].toUpperCase()) return sql;
@@ -237,6 +311,13 @@ export function validateQueryContractSql(opts: {
     warnings.push("contract-state-scope-local-filter");
     retryIssues.push("[SYSTEM: Query contract violation (contract-state-scope-local-filter). The user asked for a state-level result, but the SQL filters to a local city/agency/county value. Rewrite the SQL so the filter is statewide, using the state field or the appropriate state/national summary table. Do not filter to a single agency or city unless the user explicitly asked for that local place.]");
     enforced.push("contract-state-scope-local-filter");
+  }
+
+  const temporalIssue = singleYearTemporalScopeIssue(opts.question, contract, sql);
+  if (temporalIssue) {
+    warnings.push("contract-single-year-temporal-scope");
+    retryIssues.push(temporalIssue);
+    enforced.push("contract-single-year-temporal-scope");
   }
 
   const capabilityFindings = validateSourceCapabilities({

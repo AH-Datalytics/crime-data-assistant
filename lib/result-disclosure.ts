@@ -137,6 +137,23 @@ function normalizeDcExplanation(explanation: string, sql: string): string {
     .replace(/\bWashington\s+state\b/gi, "Washington, DC");
 }
 
+function hasSqlStateFilter(sql: string): boolean {
+  return /\b(?:\w+\.)?state\s*(?:=|IN\s*\()\s*['"]/i.test(sql);
+}
+
+function rowsExposeStateScope(rows: Record<string, unknown>[]): boolean {
+  return rows.some((row) => row.state !== undefined || row.State !== undefined || row.state_name !== undefined);
+}
+
+function normalizeUngroundedNibrsStatewideExplanation(
+  explanation: string,
+  sql: string,
+  rows: Record<string, unknown>[],
+): string {
+  if (!/\bstatewide\b/i.test(explanation)) return explanation;
+  if (hasSqlStateFilter(sql) || rowsExposeStateScope(rows)) return explanation;
+  return explanation.replace(/\bstatewide\b/gi, "nationally across reporting NIBRS agencies");
+}
 function normalizeEntity(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 }
@@ -319,6 +336,35 @@ function comparisonDisclosure(explanation: string, rows: Record<string, unknown>
   return `Comparison includes: ${labels.join(", ")}.`;
 }
 
+function yearBoundsFromRows(rows: Record<string, unknown>[]): { min: number; max: number } | null {
+  const yearCol = ["year", "data_year", "Year"].find((c) => rows[0]?.[c] !== undefined);
+  if (!yearCol) return null;
+  const years = rows
+    .map((r) => Number(r[yearCol]))
+    .filter((n) => Number.isFinite(n))
+    .sort((a, b) => a - b);
+  if (years.length === 0) return null;
+  return { min: years[0], max: years[years.length - 1] };
+}
+
+function hasExplicitEndYear(question: string, year: number): boolean {
+  return new RegExp(`\\b(?:to|through|thru|until|and|-)\\s*${year}\\b`, "i").test(question) ||
+    new RegExp(`\\b(?:between|from)\\s+(?:19|20)\\d{2}\\s+(?:and|to|through|thru|until|-)\\s+${year}\\b`, "i").test(question);
+}
+
+function alignThroughYearWithRows(
+  explanation: string,
+  question: string,
+  rows: Record<string, unknown>[],
+): string {
+  const bounds = yearBoundsFromRows(rows);
+  if (!bounds) return explanation;
+  return explanation.replace(/\b(through|thru|to)\s+((?:19|20)\d{2})\b/gi, (match, prefix: string, yearText: string) => {
+    const stated = Number(yearText);
+    if (!Number.isFinite(stated) || stated >= bounds.max || hasExplicitEndYear(question, stated)) return match;
+    return `${prefix} ${bounds.max}`;
+  });
+}
 function yearRangeFromRows(rows: Record<string, unknown>[]): string | null {
   const yearCol = ["year", "data_year", "Year"].find((c) => rows[0]?.[c] !== undefined);
   if (!yearCol) return null;
@@ -503,6 +549,8 @@ export function applyResultDisclosures(opts: {
   }
 
   if (opts.tab === "nibrs") {
+    explanation = normalizeUngroundedNibrsStatewideExplanation(explanation, opts.sql, opts.rows);
+
     if (asksBareViolentCrime(opts.question)) {
       explanation = appendSentence(
         explanation,
@@ -603,6 +651,8 @@ export function applyResultDisclosures(opts: {
       explanation = appendSentence(explanation, missingMonthNote);
     }
   }
+
+  explanation = alignThroughYearWithRows(explanation, opts.question, opts.rows);
 
   const period = yearRangeFromRows(opts.rows) || yearRangeFromSql(opts.sql);
   if (period) {

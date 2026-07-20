@@ -10,11 +10,13 @@ type CorpusCase = {
   sql: string;
   expectFindings?: string[];
   expectWarnings?: string[];
+  expectNoWarnings?: string[];
   expectNoFindings?: string[];
   expectRetry?: string[];
   expectBlock?: string[];
   expectFired?: string[];
   expectSqlIncludes?: string[];
+  expectNoSqlIncludes?: string[];
 };
 
 const cases: CorpusCase[] = [
@@ -757,6 +759,186 @@ const cases: CorpusCase[] = [
     expectFindings: ["unsupported-court-policy-topic"],
     expectBlock: ["unsupported-court-policy-topic"],
   },
+  {
+    id: "L3-TIME-SINGLE-YEAR-CURRENT-01",
+    family: "single-year temporal scope",
+    question: "the 20 most populous cities in the dataset ranked by their 2026 murder rate",
+    source: "current",
+    sql: `
+      WITH top_cities AS (
+        SELECT am.ori, am.agency, am.state, ap.population
+        FROM agency_monthly am
+        JOIN agency_population ap ON ap.ori = am.ori AND ap.year = 2026
+        JOIN agencies a ON a.ori = am.ori
+        WHERE a.type = 'City'
+        GROUP BY am.ori, am.agency, am.state, ap.population
+        ORDER BY ap.population DESC LIMIT 20
+      ), city_murders AS (
+        SELECT am.ori, SUM(am.count) AS murders, MAX(ap.population) AS pop
+        FROM agency_monthly am
+        JOIN agency_population ap ON ap.ori = am.ori AND ap.year = 2026
+        WHERE am.ori IN (SELECT ori FROM top_cities)
+          AND am.offense = 'Murder'
+          AND (am.year < 2026 OR (am.year = 2026 AND am.month <= 5))
+        GROUP BY am.ori
+      )
+      SELECT tc.agency, ROUND(cm.murders * 100000.0 / cm.pop, 1) AS rate_per_100k
+      FROM city_murders cm JOIN top_cities tc ON tc.ori = cm.ori
+    `,
+    expectWarnings: ["contract-single-year-temporal-scope"],
+    expectRetry: ["contract-single-year-temporal-scope"],
+  },
+  {
+    id: "L3-TIME-SINGLE-YEAR-CURRENT-02",
+    family: "single-year temporal scope",
+    question: "the 20 most populous cities in the dataset ranked by their 2026 murder rate",
+    source: "current",
+    sql: `
+      WITH top_cities AS (
+        SELECT am.ori, am.agency, am.state, ap.population
+        FROM agency_monthly am
+        JOIN agency_population ap ON ap.ori = am.ori AND ap.year = 2026
+        JOIN agencies a ON a.ori = am.ori
+        WHERE a.type = 'City'
+        GROUP BY am.ori, am.agency, am.state, ap.population
+        ORDER BY ap.population DESC LIMIT 20
+      ), city_murders AS (
+        SELECT am.ori, SUM(am.count) AS murders, MAX(ap.population) AS pop
+        FROM agency_monthly am
+        JOIN agency_population ap ON ap.ori = am.ori AND ap.year = 2026
+        WHERE am.ori IN (SELECT ori FROM top_cities)
+          AND am.offense = 'Murder'
+          AND am.year = 2026 AND am.month <= 5
+        GROUP BY am.ori
+      )
+      SELECT tc.agency, ROUND(cm.murders * 100000.0 / cm.pop, 1) AS rate_per_100k
+      FROM city_murders cm JOIN top_cities tc ON tc.ori = cm.ori
+    `,
+    expectNoWarnings: ["contract-single-year-temporal-scope"],
+  },
+  {
+    id: "L3-TIME-SINGLE-YEAR-HISTORICAL-01",
+    family: "single-year temporal scope",
+    question: "violent crime rate in Houston in 2024",
+    source: "historical",
+    sql: `
+      SELECT hac.year, SUM(hac.violent) * 100000.0 / SUM(hap.population) AS rate_per_100k
+      FROM historical_agency_crime hac
+      JOIN historical_agency_population hap ON hap.ori = hac.ori AND hap.year = hac.year
+      WHERE hac.year BETWEEN 2019 AND 2024
+      GROUP BY hac.year
+    `,
+    expectWarnings: ["contract-single-year-temporal-scope"],
+    expectRetry: ["contract-single-year-temporal-scope"],
+  },
+  {
+    id: "L3-TIME-SINGLE-YEAR-NIBRS-01",
+    family: "single-year temporal scope",
+    question: "aggravated assaults in Texas in 2025",
+    source: "nibrs",
+    sql: `
+      SELECT year, SUM(victim_count) AS assaults
+      FROM summary_victim_state_monthly
+      WHERE state = 'TX' AND year BETWEEN 2021 AND 2025 AND ucr_offense_code = '13A'
+      GROUP BY year
+    `,
+    expectWarnings: ["contract-single-year-temporal-scope"],
+    expectRetry: ["contract-single-year-temporal-scope"],
+  },
+  {
+    id: "L3-TIME-SINGLE-YEAR-SHR-01",
+    family: "single-year temporal scope",
+    question: "firearm murders in Houston in 2026",
+    source: "shr",
+    sql: `
+      SELECT i.year, COUNT(*) AS firearm_murders
+      FROM incidents i
+      JOIN victims v ON v.incident_id = i.id
+      WHERE i.agency = 'Houston' AND i.weapon_group = 'Firearm' AND i.year >= 1990
+      GROUP BY i.year
+    `,
+    expectWarnings: ["contract-single-year-temporal-scope"],
+    expectRetry: ["contract-single-year-temporal-scope"],
+  },
+  {
+    id: "L3-TIME-SINGLE-YEAR-HATE-01",
+    family: "single-year temporal scope",
+    question: "anti-Jewish hate crimes in 2025",
+    source: "hate_crime",
+    sql: `
+      SELECT data_year, SUM(incident_count) AS incidents
+      FROM hate_crime_summary
+      WHERE data_year BETWEEN 2021 AND 2025
+      GROUP BY data_year
+    `,
+    expectWarnings: ["contract-single-year-temporal-scope"],
+    expectRetry: ["contract-single-year-temporal-scope"],
+  },
+  {
+    id: "L3-TIME-OPEN-ENDED-01",
+    family: "single-year temporal scope",
+    question: "Can I see murders rolling over 12 months nationally, 2018 to present?",
+    source: "current",
+    sql: `
+      WITH all_months AS (
+        SELECT year, month, count,
+          SUM(count) OVER (ORDER BY year, month ROWS BETWEEN 11 PRECEDING AND CURRENT ROW) AS rolling_12
+        FROM national_monthly
+        WHERE offense = 'Murder'
+      )
+      SELECT year, month, rolling_12
+      FROM all_months
+      WHERE year >= 2018
+      ORDER BY year, month
+    `,
+    expectNoWarnings: ["contract-single-year-temporal-scope"],
+  },
+  {
+    id: "L3-NIBRS-DV-SHARE-01",
+    family: "nibrs domestic violence share grain",
+    question: "what share of aggravated assaults over the past 5 years are domestic violence incidents?",
+    source: "nibrs",
+    sql: `
+      WITH dv_assaults AS (
+        SELECT COUNT(DISTINCT dv.ori || ':' || dv.data_year || ':' || dv.incident_num) AS dv_count
+        FROM summary_domestic_violence dv
+        WHERE dv.offense_code = '13A' AND dv.data_year BETWEEN 2021 AND 2025
+      ), all_assaults AS (
+        SELECT SUM(victim_count) AS total_count
+        FROM summary_victim_state_monthly
+        WHERE ucr_offense_code = '13A' AND year BETWEEN 2021 AND 2025
+      )
+      SELECT ROUND(100.0 * dv_assaults.dv_count / all_assaults.total_count, 1) AS pct_domestic_violence
+      FROM dv_assaults, all_assaults
+    `,
+    expectFindings: ["nibrs-dv-assault-share-table"],
+    expectRetry: ["nibrs-dv-assault-share-table"],
+  },
+  {
+    id: "L3-NIBRS-DV-SHARE-02",
+    family: "nibrs domestic violence share grain",
+    question: "what share of aggravated assaults are domestic violence?",
+    source: "nibrs",
+    sql: `
+      SELECT dv.year, SUM(dv.victim_count) AS dv_victims, SUM(total.victim_count) AS total_assaults,
+        ROUND(100.0 * SUM(dv.victim_count) / SUM(total.victim_count), 1) AS dv_share_percent
+      FROM (
+        SELECT year, SUM(victim_count) AS victim_count
+        FROM summary_victim_circumstance
+        WHERE ucr_offense_code = '13A' AND circumstance_code = '06'
+        GROUP BY year
+      ) dv
+      JOIN (
+        SELECT year, SUM(victim_count) AS victim_count
+        FROM summary_victim_state_monthly
+        WHERE ucr_offense_code = '13A'
+        GROUP BY year
+      ) total ON total.year = dv.year
+      WHERE dv.year BETWEEN 2021 AND 2025
+      GROUP BY dv.year
+    `,
+    expectNoFindings: ["nibrs-dv-assault-share-table"],
+  },
 ];
 
 const familyCounts = new Map<string, number>();
@@ -790,6 +972,13 @@ for (const testCase of cases) {
     );
   }
 
+  for (const expected of testCase.expectNoWarnings ?? []) {
+    assert(
+      !result.warnings.includes(expected),
+      `${testCase.id}: did not expect warning ${expected}, got ${JSON.stringify(result.warnings)}`
+    );
+  }
+
   for (const expected of testCase.expectFired ?? []) {
     assert(
       result.fired.includes(expected),
@@ -801,6 +990,13 @@ for (const testCase of cases) {
     assert(
       result.sql.includes(expected),
       `${testCase.id}: expected rewritten SQL to include ${expected}, got ${result.sql}`
+    );
+  }
+
+  for (const expected of testCase.expectNoSqlIncludes ?? []) {
+    assert(
+      !result.sql.includes(expected),
+      `${testCase.id}: did not expect rewritten SQL to include ${expected}, got ${result.sql}`
     );
   }
 

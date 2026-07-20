@@ -79,6 +79,13 @@ import { validateQueryContractSql } from "../lib/query-contract-validator";
   assert.equal(contract.followup.operation, "chart_only");
 }
 
+
+{
+  const contract = buildQueryContract("Can I see murders rolling over 12 months nationally, 2018 to present?", "current");
+  assert(contract);
+  assert.equal(contract.time.startYear, 2018);
+  assert.equal(contract.time.endYear, null);
+}
 {
   const serialized = serializeQueryContractLogMeta("New York State fatal shootings in 2026", "shr");
   assert(serialized);

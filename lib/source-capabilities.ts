@@ -135,6 +135,12 @@ function asksShootingCategory(question: string): boolean {
   return !/\b(firearm (?:murder|homicide)|gun (?:murder|homicide)|(?:murder|homicide).{0,15}firearm|closest proxy|approximate|aggravated assault.{0,20}firearm)\b/i.test(question);
 }
 
+function asksDomesticViolenceAggravatedAssaultShare(question: string, contract: QueryContract): boolean {
+  const asksShare = contract.metric.unit === "ratio" || /\b(?:share|percent(?:age)?|pct|proportion|what\s+portion)\b/i.test(question);
+  const asksAggAssault = contract.metric.topic === "aggravated_assault" || /\baggravated\s+assaults?\b/i.test(question);
+  const asksDv = /\bdomestic\s+violence\b|\bintimate\s+partner\b|\b(?<![a-z])dv(?![a-z])\b/i.test(question);
+  return asksShare && asksAggAssault && asksDv;
+}
 function asksSubCityGeography(question: string): boolean {
   return SUB_CITY_GEOGRAPHY_RE.test(question);
 }
@@ -279,6 +285,15 @@ export const SOURCE_CAPABILITY_RULES: SourceCapabilityRule[] = [
     severity: "unsupported",
     when: ({ question }) => asksShootingCategory(question),
     message: "The FBI does not systemically track all shootings. Fatal shootings can be queried in SHR, and aggravated assaults with a firearm can be used as a broader NIBRS measure.",
+  },
+  {
+    id: "nibrs-dv-assault-share-table",
+    source: "nibrs",
+    severity: "warning",
+    requiresAnyTables: ["summary_victim_circumstance"],
+    forbidsTables: ["summary_domestic_violence"],
+    when: ({ question, contract }) => asksDomesticViolenceAggravatedAssaultShare(question, contract),
+    message: "NIBRS domestic-violence share of aggravated assault should use victim_count from summary_victim_circumstance where ucr_offense_code = '13A' and circumstance_code = '06', divided by aggravated-assault victim_count from the same year/geography. Do not mix distinct DV incidents from summary_domestic_violence with victim totals.",
   },
   {
     id: "nibrs-carjacking-clearance-table",
