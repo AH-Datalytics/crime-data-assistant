@@ -1,5 +1,5 @@
 import { strict as assert } from "node:assert";
-import { buildNibrsDomesticViolenceAggravatedAssaultShareQuery } from "../lib/nibrs-deterministic-queries.js";
+import { buildNibrsDomesticViolenceAggravatedAssaultShareQuery, buildNibrsLocalCityOffenseCountQuery } from "../lib/nibrs-deterministic-queries.js";
 
 {
   const query = buildNibrsDomesticViolenceAggravatedAssaultShareQuery(
@@ -51,4 +51,41 @@ import { buildNibrsDomesticViolenceAggravatedAssaultShareQuery } from "../lib/ni
   assert.equal(query, null, "non-share DV aggravated-assault questions should stay with normal routing");
 }
 
+
+{
+  const query = buildNibrsLocalCityOffenseCountQuery(
+    "Omaha NE burglaries from 2000 to 2026"
+  );
+  assert.ok(query, "local Omaha burglary trend should be deterministic");
+  assert.match(query.sql, /\bFROM summary_city_monthly\b/i);
+  assert.match(query.sql, /\bucr_offense_code = '220'/i);
+  assert.match(query.sql, /\bstate IN \('NE','NB'\)/i);
+  assert.match(query.sql, /\bcity = 'OMAHA'/i);
+  assert.match(query.sql, /\byear BETWEEN 2000 AND 2026\b/i);
+  assert.doesNotMatch(query.sql, /\bsummary_state_monthly\b/i);
+  assert.equal(query.guardrail, "deterministic-nibrs-local-city-offense-count");
+}
+
+{
+  const query = buildNibrsLocalCityOffenseCountQuery(
+    "Omaha NE burglaries per month from 2023 to 2026"
+  );
+  assert.ok(query, "monthly local Omaha burglary trend should be deterministic");
+  assert.match(query.sql, /SELECT year, month,/i);
+  assert.match(query.sql, /GROUP BY year, month/i);
+}
+
+{
+  const query = buildNibrsLocalCityOffenseCountQuery(
+    "Omaha NE burglary rate from 2000 to 2026"
+  );
+  assert.equal(query, null, "local rates should stay with the normal model/validator path");
+}
+
+{
+  const query = buildNibrsLocalCityOffenseCountQuery(
+    "shootings in Omaha NE from 2020 to 2026"
+  );
+  assert.equal(query, null, "shooting/firearm proxy questions should not use the simple count builder");
+}
 console.log("nibrs deterministic query tests passed");

@@ -88,6 +88,123 @@ function scopeForQuestion(question: string): {
   return null;
 }
 
+const PERSON_COUNT_CODES = new Set([
+  "09A", "09B", "09C", "11A", "11B", "11C", "11D",
+  "13A", "13B", "13C", "100", "36A", "36B",
+]);
+
+const SIMPLE_LOCAL_COUNT_ALIASES: Record<string, string> = {
+  murder: "murders",
+  rape: "rapes",
+  robbery: "robberies",
+  aggravated_assault: "aggravated_assaults",
+  burglary: "burglaries",
+  theft: "thefts",
+  motor_vehicle_theft: "motor_vehicle_thefts",
+};
+
+function compactStatePredicate(column: string, state: string | string[]): string {
+  return statePredicate(column, state).replace(/,\s+/g, ",");
+}
+
+function nibrsCityLiteral(name: string): string {
+  const normalized = name.replace(/\s+/g, " ").trim().toUpperCase().replace(/\./g, "");
+  if (normalized === "ST LOUIS") return "SAINT LOUIS";
+  if (normalized === "ST PAUL") return "SAINT PAUL";
+  return normalized;
+}
+
+function simpleLocalOffenseCodes(codes: string[]): string[] | null {
+  if (codes.length === 0 || codes.length > 4) return null;
+  const expanded: string[] = [];
+  for (const code of codes) {
+    if (!/^[0-9A-Z]{3}$/.test(code)) return null;
+    expanded.push(code);
+  }
+  const usesPersonTable = expanded.some((code) => PERSON_COUNT_CODES.has(code));
+  const usesOffenseTable = expanded.some((code) => !PERSON_COUNT_CODES.has(code));
+  if (usesPersonTable && usesOffenseTable) return null;
+  return expanded;
+}
+
+function hasSimpleLocalTimeIntent(question: string, startYear: number | null, endYear: number | null): boolean {
+  return startYear !== null || endYear !== null ||
+    /\b(?:by|per|each)\s+(?:year|month)\b|\bmonthly\b|\btrends?\b|\bsince\b|\bfrom\b|\bbetween\b|\blast\b|\bpast\b|\ball\s+available\b/i.test(question);
+}
+
+function isExcludedSimpleLocalQuestion(question: string): boolean {
+  return /\b(?:rates?|per\s*(?:capita|100k|100,?000|10k|10,?000)|clearance|cleared|solve[ds]?|share|percent(?:age)?|ratio|compare|versus|vs\.?|top|highest|lowest|rank(?:ing)?|which\s+cit(?:y|ies)|by\s+(?:state|city|agency|race|sex|gender|age|ethnicity|weapon|injury|relationship|circumstance)|weapon|firearm|gun|shooting|shootings|domestic\s+violence|intimate\s+partner|demographic|continuous|consistent\s+report)/i.test(question);
+}
+
+export function buildNibrsLocalCityOffenseCountQuery(
+  question: string
+): DeterministicNibrsQuery | null {
+  const contract = buildQueryContract(question, "nibrs");
+  if (!contract) return null;
+  if (contract.geography.kind !== "city" || !contract.geography.name || !contract.geography.state) return null;
+  if (contract.metric.unit !== "count") return null;
+  if (!hasSimpleLocalTimeIntent(question, contract.time.startYear, contract.time.endYear)) return null;
+  if (isExcludedSimpleLocalQuestion(question)) return null;
+  if (contract.comparability.continuousReporters) return null;
+  if (contract.breakdowns.some((breakdown) => breakdown !== "year" && breakdown !== "month")) return null;
+  if (contract.metric.topic === "violent_crime" || contract.metric.topic === "property_crime" || contract.metric.topic === "domestic_violence" || contract.metric.topic === "carjacking") return null;
+
+  const codes = simpleLocalOffenseCodes(contract.metric.offenseCodes);
+  if (!codes) return null;
+
+  const usesPersonTable = codes.every((code) => PERSON_COUNT_CODES.has(code));
+  const table = usesPersonTable ? "summary_victim_city_monthly" : "summary_city_monthly";
+  const valueColumn = usesPersonTable ? "victim_count" : "offense_count";
+  const alias = SIMPLE_LOCAL_COUNT_ALIASES[contract.metric.topic] ?? "offenses";
+  const label = alias.replace(/_/g, " ");
+  const city = nibrsCityLiteral(contract.geography.name);
+  const sourceState = contract.geography.sourceCodes?.nibrs ?? contract.geography.state;
+  const factStateFilter = compactStatePredicate("state", sourceState);
+  const agencyStateFilter = compactStatePredicate("state", sourceState);
+  const years = yearScope("year", question);
+  const monthly = contract.breakdowns.includes("month");
+  const codePredicate = codes.length === 1
+    ? `ucr_offense_code = ${sqlString(codes[0])}`
+    : `ucr_offense_code IN (${codes.map(sqlString).join(",")})`;
+  const selectColumns = monthly
+    ? `year, month, SUM(${valueColumn}) AS ${alias}`
+    : `year, SUM(${valueColumn}) AS ${alias}`;
+  const groupOrder = monthly ? "year, month" : "year";
+
+  const sql = `
+SELECT ${selectColumns}
+FROM ${table}
+WHERE ${codePredicate}
+  AND ${factStateFilter}
+  AND ${years.predicate}
+  AND ori IN (
+    SELECT DISTINCT ori
+    FROM agencies
+    WHERE city = ${sqlString(city)}
+      AND ${agencyStateFilter}
+      AND agency_type = 'City'
+      AND population > 0
+  )
+GROUP BY ${groupOrder}
+ORDER BY ${groupOrder}
+LIMIT 1000`.trim();
+
+  const place = contract.geography.canonicalName ?? `${contract.geography.name}, ${contract.geography.state}`;
+  return {
+    sql,
+    title: `NIBRS ${label} in ${place}`,
+    explanation:
+      `This returns reported ${label} for ${place}${years.periodText}. ` +
+      "If some requested years do not appear, this NIBRS dataset has no rows for that city and offense in those years. " +
+      "Recent NIBRS data may be incomplete because agencies submit on different schedules.",
+    chartHint: "line",
+    xAxis: "year",
+    yAxis: alias,
+    xAxisLabel: monthly ? "Year / month" : "Year",
+    yAxisLabel: label.charAt(0).toUpperCase() + label.slice(1),
+    guardrail: "deterministic-nibrs-local-city-offense-count",
+  };
+}
 export function buildNibrsDomesticViolenceAggravatedAssaultShareQuery(
   question: string
 ): DeterministicNibrsQuery | null {
