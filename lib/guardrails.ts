@@ -2706,8 +2706,9 @@ const GUARDRAILS: Guardrail[] = [
       const sql = ctx.sql.toLowerCase();
       const nonHomicide = /\b(robber(?:y|ies)|thefts?|larcen(?:y|ies)|burglar(?:y|ies)|assaults?|rapes?|sexual assault|auto theft|motor vehicle theft|drugs?|arrests?|staffing|officers?|sworn|personnel|shootings?|property crimes?|violent crimes?)\b/i.test(q);
       if (!nonHomicide) return false;
-      const exempt = /\b(homicides?|murders?|kill|circumstance|felony murder|robbery-homicide|homicide during|victims of.*homicide)/i.test(q);
-      if (exempt) return false;
+      const exempt = /\b(homicides?|murders?|kill|circumstance|felony murder|robbery-homicide|homicide during|victims of.*homicide|fatal shootings?)/i.test(q);
+      const sqlIsFirearmHomicide = /\bhomicide_type\s*=\s*'murder'/i.test(sql) && /\bweapon_group\s*=\s*'firearm'/i.test(sql);
+      if (exempt || sqlIsFirearmHomicide) return false;
       return sql.includes("incidents") || sql.includes("victims");
     },
     override: (ctx) => {

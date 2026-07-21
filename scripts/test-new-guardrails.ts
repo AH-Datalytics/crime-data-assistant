@@ -979,6 +979,13 @@ console.log("\n═══ Hard override guardrails ═══\n");
   assert("#3 SHR robbery-homicide exempt", !r.fired.includes("shr-non-homicide-topic"));
 }
 
+// #3: FP - fatal shootings with firearm-homicide SQL are valid SHR homicide queries
+{
+  const sql = `SELECT i.year, COUNT(*) AS fatal_shootings FROM incidents i JOIN victims v ON v.incident_id = i.id WHERE i.homicide_type = 'Murder' AND i.weapon_group = 'Firearm' AND i.year >= 2020 AND i.year <= 2025 AND i.agency = 'Chicago' AND i.state = 'IL' GROUP BY i.year ORDER BY i.year`;
+  const ctx = extractQueryContext(sql, "fatal shootings in Chicago by year since 2020 (Is it getting worse? trend assessment follow-up)", "shr");
+  const r = runGuardrails(ctx);
+  assert("#3 SHR fatal-shooting firearm homicide exempt", !r.fired.includes("shr-non-homicide-topic"));
+}
 // #4: Drug type silent filter drop
 {
   const sql = `SELECT year, SUM(arrestee_count) AS marijuana_arrests FROM summary_arrestee_demographics WHERE ucr_arrest_offense = '35A' AND year >= 2022 GROUP BY year`;
