@@ -1284,7 +1284,7 @@ Examples:
     Do NOT include a year_month column in the SELECT. The chart will combine year+month automatically. Set xAxis to "year" in the response.
 
 ### GEOGRAPHY
-16. The state field uses 2-letter abbreviations (TX, CA, NY, etc.). When the user says a state name, convert to the abbreviation. **WARNING: Nebraska is stored as 'NB' (not 'NE') and Guam as 'GM' (not 'GU').** These are the NIBRS legacy codes — you MUST use NB for Nebraska and GM for Guam.
+16. The state field uses 2-letter abbreviations (TX, CA, NY, etc.). When the user says a state name, convert to the abbreviation. **WARNING: Nebraska and Guam have legacy code splits in NIBRS.** For Nebraska, use state IN ('NE','NB') so both eras are included. For Guam, use state IN ('GU','GM') so both eras are included.
 16b. Always repeat the exact state the user specified. Never substitute a different state based on geographic assumptions, nearby cities, media markets, metro areas, or your own knowledge.
 17. City names in the agencies table are UPPERCASE (e.g., 'DETROIT', 'NEW YORK', 'LOS ANGELES', 'CHICAGO'). Always use uppercase string literals when filtering by city.
 18. **ORI LOOKUPS**: The agencies table has columns (ori, year, state_code, state, city, pop_group, country_division, covered_flag, agency_indicator, population). There is NO agency_name column. To find an agency's ORI, query by city and state. **If the user provides an ORI code**, do NOT trust it blindly — validate it first: SELECT ori, city, state FROM agencies WHERE ori LIKE '[user_ori]%' AND year = 2024 LIMIT 1. User-provided ORIs may be the wrong length (7 vs 9 chars), mistyped, or wrong. In your explanation, confirm what the ORI resolved to (e.g., "ORI MA013 matches Boston, MA") so the user can verify. If no match, tell the user the ORI wasn't found and ask for the agency name instead. For large cities (250K+), the main PD has pop_group starting with '1' (1A/1B/1C). For smaller cities, the main PD may have pop_group '2' through '9'. To find the primary PD for ANY city, use the ORI with the LOWEST pop_group number: SELECT ori, city, state, pop_group FROM agencies WHERE city = 'LIVERMORE' AND state = 'CA' AND year = 2024 ORDER BY pop_group LIMIT 1. For large cities you can still use pop_group LIKE '1%' as a shortcut.
@@ -1323,7 +1323,7 @@ Examples:
    - "Bensalem" → city = 'BENSALEM', state = 'PA'
    - "Upper Darby" → city = 'UPPER DARBY', state = 'PA'
    - "West Valley" or "West Valley City" → city = 'WEST VALLEY CITY', state = 'UT'
-   - State abbreviations: Nebraska = 'NB' (not 'NE') in the agencies table. Always use state = 'NB' for Nebraska queries.
+   - State abbreviations: Nebraska spans both 'NE' and legacy 'NB' in NIBRS. Always use state IN ('NE','NB') for Nebraska queries.
    - **WARNING**: "Saint" vs "St" vs "St." is inconsistent in this table. When unsure, use LIKE '%SAINT%' or LIKE '%ST%' to find the exact stored name.
 
 ### EXAMPLE: Person crime (murder/rape/assault) in a city → summary_victim_CITY_monthly
