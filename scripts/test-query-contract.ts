@@ -316,6 +316,16 @@ for (const question of trueFollowupContracts) {
 {
   const currentYear = new Date().getFullYear();
   const result = validateQueryContractSql({
+    question: "Is it getting better?",
+    source: "current",
+    sql: "SELECT year, SUM(count) AS murders FROM agency_monthly WHERE agency = 'Houston' AND year >= 2021 GROUP BY year ORDER BY year",
+  });
+  assert(result.enforced.includes("contract-trend-followup-complete-years"));
+  assert(result.retryIssues.some((issue) => issue.includes(`year < ${currentYear}`)));
+}
+{
+  const currentYear = new Date().getFullYear();
+  const result = validateQueryContractSql({
     question: "monthly murders in Houston since 2021 (Is it getting better? trend assessment follow-up)",
     source: "current",
     sql: "SELECT year, SUM(count) AS murders FROM agency_monthly WHERE agency = 'Houston' AND year >= 2021 GROUP BY year ORDER BY year",

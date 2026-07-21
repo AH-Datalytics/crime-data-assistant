@@ -189,7 +189,15 @@ function singleYearTemporalScopeIssue(question: string, contract: QueryContract,
   return null;
 }
 function isTrendAssessmentFollowupQuestion(question: string): boolean {
-  return /\btrend assessment follow-up\b/i.test(question);
+  const q = question.trim();
+  if (/\btrend assessment follow-up\b/i.test(q)) return true;
+  if (q.length > 140) return false;
+
+  return (
+    /^(?:is|are|was|were)\s+(?:it|that|this|they|those)\s+(?:getting\s+)?(?:better|worse|higher|lower|rising|falling|improving|declining|up|down)\??$/i.test(q) ||
+    /^(?:has|have)\s+(?:it|that|this|they|those)\s+(?:gotten|become|improved|declined|risen|fallen|increased|decreased)\b.*\??$/i.test(q) ||
+    /^(?:which|what)\s+(?:is|was|were)\s+(?:higher|lower|worse|better)\??$/i.test(q)
+  );
 }
 
 function isKnownPartialCurrentSource(source: QueryContractSource): boolean {
