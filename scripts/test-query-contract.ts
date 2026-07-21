@@ -313,4 +313,43 @@ for (const question of trueFollowupContracts) {
   assert.equal(contract.followup.isFollowup, true, question);
 }
 
+{
+  const currentYear = new Date().getFullYear();
+  const result = validateQueryContractSql({
+    question: "monthly murders in Houston since 2021 (Is it getting better? trend assessment follow-up)",
+    source: "current",
+    sql: "SELECT year, SUM(count) AS murders FROM agency_monthly WHERE agency = 'Houston' AND year >= 2021 GROUP BY year ORDER BY year",
+  });
+  assert(result.enforced.includes("contract-trend-followup-complete-years"));
+  assert(result.retryIssues.some((issue) => issue.includes(`year < ${currentYear}`)));
+}
+
+{
+  const currentYear = new Date().getFullYear();
+  const result = validateQueryContractSql({
+    question: "monthly murders in Houston since 2021 (Is it getting better? trend assessment follow-up)",
+    source: "current",
+    sql: `SELECT year, SUM(count) AS murders FROM agency_monthly WHERE agency = 'Houston' AND year >= 2021 AND year < ${currentYear} GROUP BY year ORDER BY year`,
+  });
+  assert(!result.enforced.includes("contract-trend-followup-complete-years"));
+}
+
+{
+  const result = validateQueryContractSql({
+    question: "monthly murders in Houston since 2021 (Is it getting better? trend assessment follow-up)",
+    source: "current",
+    sql: "SELECT year, month, count FROM agency_monthly WHERE agency = 'Houston' AND year >= 2021 GROUP BY year, month ORDER BY year, month",
+  });
+  assert(!result.enforced.includes("contract-trend-followup-complete-years"));
+}
+
+{
+  const result = validateQueryContractSql({
+    question: "murder rate in Houston since 2021 (Is it getting better? trend assessment follow-up)",
+    source: "historical",
+    sql: "SELECT year, murder_rate FROM historical_agency_crime WHERE year >= 2021 GROUP BY year ORDER BY year",
+  });
+  assert(!result.enforced.includes("contract-trend-followup-complete-years"));
+}
+
 console.log("query contract tests passed");

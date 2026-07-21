@@ -1,4 +1,5 @@
 import { buildQueryContract, type QueryContract, type QueryContractSource } from "./query-contract";
+import { currentCalendarYear } from "./time-conventions";
 import type { RoutingLogMeta } from "./routing-log-meta";
 import { validateSourceCapabilities, type SourceCapabilityFinding } from "./source-capabilities";
 import { SUB_CITY_GEOGRAPHY_MESSAGE } from "./capability-overrides";
@@ -187,6 +188,62 @@ function singleYearTemporalScopeIssue(question: string, contract: QueryContract,
 
   return null;
 }
+function isTrendAssessmentFollowupQuestion(question: string): boolean {
+  return /\btrend assessment follow-up\b/i.test(question);
+}
+
+function isKnownPartialCurrentSource(source: QueryContractSource): boolean {
+  return source === "current" || source === "nibrs" || source === "shr";
+}
+
+function groupedAnnuallyByYear(sql: string): boolean {
+  const groupMatch = sql.match(/\bGROUP\s+BY\s+([\s\S]*?)(?:\bHAVING\b|\bORDER\s+BY\b|\bLIMIT\b|$)/i);
+  if (!groupMatch) return false;
+  const groupExpr = groupMatch[1];
+  return /\b(?:\w+\.)?(?:year|data_year)\b/i.test(groupExpr) && !/\b(?:\w+\.)?month\b/i.test(groupExpr);
+}
+
+function hasCompleteYearUpperCap(sql: string, currentYear: number): boolean {
+  const lastComplete = currentYear - 1;
+  const yearRef = yearRefPattern();
+  if (new RegExp(String.raw`${yearRef}\s*<\s*'?${currentYear}'?`, "i").test(sql)) return true;
+  if (new RegExp(String.raw`${yearRef}\s*<=\s*'?${lastComplete}'?`, "i").test(sql)) return true;
+
+  const betweenRe = new RegExp(String.raw`${yearRef}\s+BETWEEN\s+'?((?:19|20)\d{2})'?\s+AND\s+'?((?:19|20)\d{2})'?`, "gi");
+  let between: RegExpExecArray | null;
+  while ((between = betweenRe.exec(sql)) !== null) {
+    if (Number(between[2]) <= lastComplete) return true;
+  }
+
+  return false;
+}
+
+function annualTrendMayIncludeCurrentPartialYear(sql: string, currentYear: number): boolean {
+  if (!groupedAnnuallyByYear(sql)) return false;
+  if (hasCompleteYearUpperCap(sql, currentYear)) return false;
+
+  const yearRef = yearRefPattern();
+  if (new RegExp(String.raw`${yearRef}\s*=\s*'?${currentYear}'?`, "i").test(sql)) return true;
+  if (new RegExp(String.raw`${yearRef}\s*<=\s*'?${currentYear}'?`, "i").test(sql)) return true;
+  if (new RegExp(String.raw`${yearRef}\s+BETWEEN\s+'?(?:19|20)\d{2}'?\s+AND\s+'?${currentYear}'?`, "i").test(sql)) return true;
+  if (new RegExp(String.raw`${yearRef}\s+IN\s*\([^)]*\b${currentYear}\b[^)]*\)`, "i").test(sql)) return true;
+
+  // A lower-bound-only annual trend on a partial-current source will include
+  // the current partial year if rows have already been loaded.
+  if (new RegExp(String.raw`${yearRef}\s*>=\s*'?(?:19|20)\d{2}'?`, "i").test(sql)) return true;
+
+  return !new RegExp(String.raw`${yearRef}\s*(?:<|<=|=|BETWEEN|IN\s*\()`, "i").test(sql);
+}
+
+function trendAssessmentCompleteYearIssue(question: string, source: QueryContractSource, sql: string): string | null {
+  if (!isTrendAssessmentFollowupQuestion(question)) return null;
+  if (!isKnownPartialCurrentSource(source)) return null;
+  if (!annualTrendMayIncludeCurrentPartialYear(sql, currentCalendarYear())) return null;
+
+  const current = currentCalendarYear();
+  const lastComplete = current - 1;
+  return `[SYSTEM: Query contract violation (contract-trend-followup-complete-years). This is a trend-assessment follow-up, and the SQL returns annual rows that may include incomplete ${current} data. Rewrite the SQL to cap the annual comparison at complete years only: add year < ${current}, year <= ${lastComplete}, data_year < ${current}, or an equivalent upper-bound predicate on the fact-table year. Do not include ${current} as an annual trend point unless the user explicitly asked for YTD/current-year data.]`;
+}
 function rewriteStateEquals(sql: string, requestedState: string, sourceState: string | string[]): string {
   const sourceStates = Array.isArray(sourceState) ? sourceState : [sourceState];
   if (sourceStates.length === 1 && requestedState.toUpperCase() === sourceStates[0].toUpperCase()) return sql;
@@ -323,6 +380,12 @@ export function validateQueryContractSql(opts: {
     enforced.push("contract-single-year-temporal-scope");
   }
 
+  const trendFollowupIssue = trendAssessmentCompleteYearIssue(opts.question, opts.source, sql);
+  if (trendFollowupIssue) {
+    warnings.push("contract-trend-followup-complete-years");
+    retryIssues.push(trendFollowupIssue);
+    enforced.push("contract-trend-followup-complete-years");
+  }
   const capabilityFindings = validateSourceCapabilities({
     question: opts.question,
     source: opts.source,
