@@ -396,7 +396,7 @@ const SESSIONS: SessionDef[] = [
         sqlIncludesAny: [`year < ${REPLAY_CURRENT_YEAR}`, `year <= ${REPLAY_LAST_COMPLETE_YEAR}`, `data_year < ${REPLAY_CURRENT_YEAR}`, `data_year <= ${REPLAY_LAST_COMPLETE_YEAR}`],
         finalSelectIncludes: ["year"],
         finalSelectExcludes: ["month"],
-        responseIncludes: ["annual"],
+        responseIncludes: ["complete years"],
         note: "Trend assessment follow-up on partial-current SHR data should use complete annual rows",
       },
     ],
