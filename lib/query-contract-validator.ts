@@ -243,6 +243,25 @@ function annualTrendMayIncludeCurrentPartialYear(sql: string, currentYear: numbe
   return !new RegExp(String.raw`${yearRef}\s*(?:<|<=|=|BETWEEN|IN\s*\()`, "i").test(sql);
 }
 
+function finalSelectIncludesMonth(sql: string): boolean {
+  const matches = Array.from(sql.matchAll(/\bSELECT\b([\s\S]*?)\bFROM\b/gi));
+  if (matches.length === 0) return false;
+  const finalSelect = matches[matches.length - 1]?.[1] || "";
+  return /\b(?:\w+\.)?month\b/i.test(finalSelect);
+}
+
+function trendAssessmentAnnualizedOutputIssue(question: string, source: QueryContractSource, sql: string): string | null {
+  if (!isTrendAssessmentFollowupQuestion(question)) return null;
+  if (!finalSelectIncludesMonth(sql)) return null;
+
+  const current = currentCalendarYear();
+  const lastComplete = current - 1;
+  const completeYearClause = isKnownPartialCurrentSource(source)
+    ? ` Also cap partial-current data out of the full-year comparison with year < ${current}, year <= ${lastComplete}, data_year < ${current}, or an equivalent fact-table year predicate.`
+    : "";
+
+  return `[SYSTEM: Query contract violation (contract-trend-followup-annualized-output). This is a trend-assessment follow-up, but the final SELECT returns monthly rows. Rewrite the SQL to return one row per complete year, aggregating the prior monthly count/rate/share metric to annual totals or annual rates. Monthly CTEs are allowed internally, but the final SELECT should not include month.${completeYearClause} The explanation must give a direct better/worse/rising/falling conclusion from the first and latest complete years.]`;
+}
 function trendAssessmentCompleteYearIssue(question: string, source: QueryContractSource, sql: string): string | null {
   if (!isTrendAssessmentFollowupQuestion(question)) return null;
   if (!isKnownPartialCurrentSource(source)) return null;
@@ -388,6 +407,12 @@ export function validateQueryContractSql(opts: {
     enforced.push("contract-single-year-temporal-scope");
   }
 
+  const trendAnnualizedIssue = trendAssessmentAnnualizedOutputIssue(opts.question, opts.source, sql);
+  if (trendAnnualizedIssue) {
+    warnings.push("contract-trend-followup-annualized-output");
+    retryIssues.push(trendAnnualizedIssue);
+    enforced.push("contract-trend-followup-annualized-output");
+  }
   const trendFollowupIssue = trendAssessmentCompleteYearIssue(opts.question, opts.source, sql);
   if (trendFollowupIssue) {
     warnings.push("contract-trend-followup-complete-years");

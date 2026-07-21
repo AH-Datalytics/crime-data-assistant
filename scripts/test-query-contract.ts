@@ -350,6 +350,18 @@ for (const question of trueFollowupContracts) {
     source: "current",
     sql: "SELECT year, month, count FROM agency_monthly WHERE agency = 'Houston' AND year >= 2021 GROUP BY year, month ORDER BY year, month",
   });
+  assert(result.enforced.includes("contract-trend-followup-annualized-output"));
+  assert(result.retryIssues.some((issue) => issue.includes("final SELECT should not include month")));
+}
+
+{
+  const currentYear = new Date().getFullYear();
+  const result = validateQueryContractSql({
+    question: "monthly murders in Houston since 2021 (Is it getting better? trend assessment follow-up)",
+    source: "current",
+    sql: `WITH monthly AS (SELECT year, month, count FROM agency_monthly WHERE agency = 'Houston' AND year >= 2021 GROUP BY year, month), annual AS (SELECT year, SUM(count) AS murders FROM monthly GROUP BY year) SELECT year, murders FROM annual WHERE year < ${currentYear} ORDER BY year`,
+  });
+  assert(!result.enforced.includes("contract-trend-followup-annualized-output"));
   assert(!result.enforced.includes("contract-trend-followup-complete-years"));
 }
 
