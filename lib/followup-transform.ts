@@ -4,7 +4,7 @@ import { asksForCountsInsteadOfRates } from "./rate-intent";
 export type FollowupBreakdown = "state" | "city" | "agency";
 
 export interface FollowupTransform {
-  name: "add_breakdown" | "add_continuous_reporting_filter" | "replace_with_dv_victim_demographics" | "replace_rate_with_count" | "resolve_county_scope";
+  name: "add_breakdown" | "add_continuous_reporting_filter" | "replace_with_dv_victim_demographics" | "replace_rate_with_count" | "resolve_county_scope" | "assess_trend";
   dimension?: FollowupBreakdown;
   instruction: string;
   /** When set, routes should use this instead of the raw question for guardrail
@@ -77,6 +77,25 @@ function hasPriorSql(history: PromptHistoryMessage[]): boolean {
   return history.some((msg) => msg.role === "assistant" && /\bSELECT\b[\s\S]+\bFROM\b/i.test(msg.content));
 }
 
+function latestPriorUserQuestion(history: PromptHistoryMessage[]): string | null {
+  for (let i = history.length - 1; i >= 0; i--) {
+    const msg = history[i];
+    if (msg.role !== "user") continue;
+    const content = msg.content.trim();
+    if (content && !content.startsWith("[SYSTEM:")) return content;
+  }
+  return null;
+}
+
+function requestedTrendAssessment(question: string): boolean {
+  const q = question.trim();
+  if (q.length > 140) return false;
+
+  return /^(?:is|are|was|were)\s+(?:it|that|this|they|those)\s+(?:getting\s+)?(?:better|worse|higher|lower|rising|falling|improving|declining|up|down)\??$/i.test(q) ||
+    /^(?:has|have)\s+(?:it|that|this|they|those)\s+(?:gotten|become|improved|declined|risen|fallen|increased|decreased)\b.*\??$/i.test(q) ||
+    /^(?:which|what)\s+(?:is|was|were)\s+(?:higher|lower|worse|better)\??$/i.test(q);
+}
+
 function hasPriorDomesticViolenceContext(history: PromptHistoryMessage[]): boolean {
   return history.some((msg) =>
     /\bsummary_domestic_violence\b|\bdomestic\s+violence\b|\b(?<![a-z])dv(?![a-z])\b/i.test(msg.content)
@@ -115,6 +134,16 @@ export function detectFollowupTransform(question: string, history: PromptHistory
       name: "replace_with_dv_victim_demographics",
       instruction:
         "[SYSTEM: This follow-up replaces the prior domestic-violence metric with victim demographics. Do NOT preserve any prior per-capita/rate/population/denominator calculation, ranking metric, or summary_city_monthly join. Use summary_domestic_violence as the fact table. Preserve the prior year and geography when available. For a prior state-comparison question, group by dv.state plus victim demographics. Count distinct victims with COUNT(DISTINCT dv.ori || ':' || dv.data_year || ':' || dv.incident_num || ':' || dv.victim_sequence), not victim_count. Group by victim_sex, victim_race, and an age bucket derived from victim_age; treat non-numeric victim_age values as Unknown before casting. Do not ask for clarification unless the prior context has no year or geography at all.]",
+    };
+  }
+
+  if (requestedTrendAssessment(question) && hasPriorSql(history)) {
+    const priorQuestion = latestPriorUserQuestion(history);
+    return {
+      name: "assess_trend",
+      contextQuestion: priorQuestion ? `${priorQuestion} (${question} trend assessment follow-up)` : `${question} (trend assessment follow-up)`,
+      instruction:
+        "[SYSTEM: This follow-up asks whether the prior result is improving, worsening, rising, falling, or which prior series is higher/lower. Do NOT answer with 'I cannot interpret trends' and do NOT ask the user to choose a metric. Preserve the prior dataset, geography, offense/topic, filters, metric, and requested range unless the user explicitly changes them. Generate a concrete SQL query that supports the trend assessment. If the prior result was monthly, aggregate it to annual totals by year; if it was already annual, keep annual totals. Prefer one row per year with the prior count/rate/share metric, and include first/latest complete-year values or compute the percent change in the explanation from returned annual rows. Exclude incomplete current-year data from the main full-year better/worse comparison unless the user explicitly asked for YTD; if current partial-year data is returned, clearly label it as incomplete. State the direction modestly based only on the returned data.]",
     };
   }
 

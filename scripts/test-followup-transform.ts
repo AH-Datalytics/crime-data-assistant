@@ -20,6 +20,24 @@ const domesticViolenceRateHistory: PromptHistoryMessage[] = [
   },
 ];
 
+const currentMonthlyTrendHistory: PromptHistoryMessage[] = [
+  { role: "user", content: "monthly murders in Houston since 2021" },
+  {
+    role: "assistant",
+    content:
+      "SELECT am.year, am.month, am.count FROM agency_monthly am WHERE am.agency = 'Houston' AND am.state = 'TX' AND am.type = 'City' AND am.offense = 'Murder' AND am.year >= 2021 ORDER BY am.year, am.month",
+  },
+];
+
+const comparisonTrendHistory: PromptHistoryMessage[] = [
+  { role: "user", content: "Compare Atlanta and Dallas murders since 2020" },
+  {
+    role: "assistant",
+    content:
+      "SELECT am.agency, am.year, SUM(am.count) AS murders FROM agency_monthly am WHERE am.agency IN ('Atlanta','Dallas') AND am.offense = 'Murder' GROUP BY am.agency, am.year",
+  },
+];
+
 {
   const transform = detectFollowupTransform("split it out by state", historyWithSql);
   assert(transform);
@@ -61,6 +79,39 @@ const domesticViolenceRateHistory: PromptHistoryMessage[] = [
   assert.match(transform.contextQuestion || "", /raw counts, not rates/);
   assert.match(transform.instruction, /remove population joins/);
   assert.match(transform.instruction, /Do not refuse because the prior query asked for a rate/);
+}
+
+{
+  const transform = detectFollowupTransform("Is it getting better?", currentMonthlyTrendHistory);
+  assert(transform);
+  assert.equal(transform.name, "assess_trend");
+  assert.match(transform.contextQuestion || "", /monthly murders in Houston since 2021/);
+  assert.match(transform.instruction, /Do NOT answer with 'I cannot interpret trends'/);
+  assert.match(transform.instruction, /aggregate it to annual totals by year/);
+  assert.match(transform.instruction, /Exclude incomplete current-year data/);
+}
+
+{
+  const transform = detectFollowupTransform("Are they rising?", currentMonthlyTrendHistory);
+  assert(transform);
+  assert.equal(transform.name, "assess_trend");
+}
+
+{
+  const transform = detectFollowupTransform("Which is higher?", comparisonTrendHistory);
+  assert(transform);
+  assert.equal(transform.name, "assess_trend");
+  assert.match(transform.instruction, /which prior series is higher\/lower/);
+}
+
+{
+  const transform = detectFollowupTransform("How bad is robbery in Chicago? Is it getting worse?", currentMonthlyTrendHistory);
+  assert.equal(transform, null);
+}
+
+{
+  const transform = detectFollowupTransform("Is it getting better?", []);
+  assert.equal(transform, null);
 }
 
 {
