@@ -34,6 +34,7 @@ import {
   type QueryContractSqlValidation,
 } from "@/lib/query-contract-validator";
 import { resolveGeoPlaces } from "@/lib/geo-place-resolver";
+import { isFollowUp } from "@/lib/tab-suggest";
 
 function sseEvent(event: StreamEvent): string {
   return `data: ${JSON.stringify(event)}\n\n`;
@@ -269,6 +270,11 @@ function isSameResultFollowup(question: string, rawHistory?: unknown): boolean {
   if (!hasHistory) return false;
   return /\b(?:same|previous|prior|last)\b/i.test(question) &&
     /\b(?:chart|table|data|query|result|results)\b/i.test(question);
+}
+
+function shouldSkipHistoricalPlaceLookup(question: string, rawHistory?: unknown): boolean {
+  const hasHistory = Array.isArray(rawHistory) && rawHistory.length > 0;
+  return isSameResultFollowup(question, rawHistory) || (hasHistory && isFollowUp(question));
 }
 
 function answerHistoricalPlaceLookup(
@@ -578,7 +584,7 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  const historicalPlace = tab === "historical" && !isSameResultFollowup(question, body?.history)
+  const historicalPlace = tab === "historical" && !shouldSkipHistoricalPlaceLookup(question, body?.history)
     ? answerHistoricalPlaceLookup(question, getDb())
     : null;
   if (historicalPlace) {

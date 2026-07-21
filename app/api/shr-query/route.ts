@@ -605,6 +605,27 @@ export async function POST(req: NextRequest) {
 
       const claudeMs = Date.now() - start;
 
+      if (!claude.sql && followupTransform?.name === "assess_trend") {
+        try {
+          const retryMessages: Anthropic.MessageParam[] = [
+            ...messages,
+            { role: "assistant", content: claude.explanation || "No SQL was generated." },
+            { role: "user", content: "[SYSTEM: This is a follow-up to a prior SQL result. Preserve the prior dataset, geography, topic, filters, metric, and requested time range. Generate SQL for the trend assessment instead of refusing. If the prior topic was fatal shootings or firearm homicides, use SHR firearm homicides with homicide_type = 'Murder' and weapon_group = 'Firearm'; do not treat it as a broad/nonfatal shooting request. Return one row per complete year and exclude incomplete current-year rows unless the user explicitly asked for YTD.]" },
+          ];
+          const retryResp = await client.messages.create({
+            model: "claude-haiku-4-5-20251001",
+            max_tokens: 2000,
+            system: [{ type: "text", text: getShrSystemPrompt(), cache_control: { type: "ephemeral", ttl: "1h" } }],
+            messages: retryMessages,
+          });
+          const retryText = retryResp.content.filter((b): b is Anthropic.TextBlock => b.type === "text").map((b) => b.text).join("");
+          const retryClaude = extractJson(retryText);
+          if (retryClaude && typeof retryClaude === "object" && (retryClaude as Record<string, unknown>).sql) {
+            Object.assign(claude, retryClaude);
+          }
+        } catch { /* use original */ }
+      }
+
       // Text-only response — retry if model incorrectly claims an AGENCY isn't available
       // Do NOT retry when model correctly refuses non-homicide queries (theft, assault, etc.)
       if (!claude.sql) {

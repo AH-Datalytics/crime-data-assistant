@@ -37,6 +37,14 @@ const comparisonTrendHistory: PromptHistoryMessage[] = [
       "SELECT am.agency, am.year, SUM(am.count) AS murders FROM agency_monthly am WHERE am.agency IN ('Atlanta','Dallas') AND am.offense = 'Murder' GROUP BY am.agency, am.year",
   },
 ];
+const shrFatalShootingTrendHistory: PromptHistoryMessage[] = [
+  { role: "user", content: "fatal shootings in Chicago by year since 2020" },
+  {
+    role: "assistant",
+    content:
+      "SELECT i.year, COUNT(*) AS fatal_shootings FROM incidents i WHERE i.homicide_type = 'Murder' AND i.weapon_group = 'Firearm' AND i.year >= 2020 GROUP BY i.year",
+  },
+];
 
 {
   const transform = detectFollowupTransform("split it out by state", historyWithSql);
@@ -98,6 +106,14 @@ const comparisonTrendHistory: PromptHistoryMessage[] = [
   assert(transform);
   assert.equal(transform.name, "assess_trend");
 }
+{
+  const transform = detectFollowupTransform("Is it getting worse?", shrFatalShootingTrendHistory);
+  assert(transform);
+  assert.equal(transform.name, "assess_trend");
+  assert.match(transform.instruction, /preserve that as fatal shootings\/firearm homicides/i);
+  assert.match(transform.instruction, /do not refuse/i);
+}
+
 
 {
   const transform = detectFollowupTransform("Which is higher?", comparisonTrendHistory);

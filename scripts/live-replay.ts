@@ -36,7 +36,10 @@ interface TestCase {
   expectedTab?: TabId | TabId[];
   quick?: boolean;
   sqlIncludes?: string[];
+  sqlIncludesAny?: string[];
   sqlExcludes?: string[];
+  finalSelectIncludes?: string[];
+  finalSelectExcludes?: string[];
   responseIncludes?: string[];
   responseExcludes?: string[];
   expect?: "rows" | "refusal" | "clarification" | "override" | "rows_or_text";
@@ -299,7 +302,10 @@ interface SessionStep {
   tab: TabId;
   expect: "rows" | "override" | "rows_or_text";
   sqlIncludes?: string[];
+  sqlIncludesAny?: string[];
   sqlExcludes?: string[];
+  finalSelectIncludes?: string[];
+  finalSelectExcludes?: string[];
   responseIncludes?: string[];
   responseExcludes?: string[];
   note?: string;
@@ -311,6 +317,8 @@ interface SessionDef {
   steps: SessionStep[];
 }
 
+const REPLAY_CURRENT_YEAR = new Date().getFullYear();
+const REPLAY_LAST_COMPLETE_YEAR = REPLAY_CURRENT_YEAR - 1;
 const SESSIONS: SessionDef[] = [
   {
     id: "MS01",
@@ -347,6 +355,50 @@ const SESSIONS: SessionDef[] = [
     steps: [
       { question: "Can I see murders rolling over 12 months nationally, 2018 to present?", tab: "current", expect: "rows", sqlIncludes: ["national_monthly"] },
       { question: "split it out by state", tab: "current", expect: "rows", sqlIncludes: ["partition by state"], note: "Log #4052 — was a false refusal; followup-transform must produce per-state rolling windows" },
+    ],
+  },
+  {
+    id: "MS05",
+    name: "Current trend follow-up annualizes complete years",
+    steps: [
+      { question: "monthly murders in Houston since 2021", tab: "current", expect: "rows", sqlIncludes: ["agency_monthly", "month"], note: "Lead-in monthly result for trend assessment follow-up" },
+      {
+        question: "Is it getting better?",
+        tab: "current",
+        expect: "rows",
+        sqlIncludesAny: [`year < ${REPLAY_CURRENT_YEAR}`, `year <= ${REPLAY_LAST_COMPLETE_YEAR}`, `data_year < ${REPLAY_CURRENT_YEAR}`, `data_year <= ${REPLAY_LAST_COMPLETE_YEAR}`],
+        finalSelectIncludes: ["year"],
+        finalSelectExcludes: ["month"],
+        responseIncludes: ["annual"],
+        note: "July 21 regression: follow-up must return annual complete-year rows, not monthly YoY rows or a current-year partial point",
+      },
+    ],
+  },
+  {
+    id: "MS06",
+    name: "Historical follow-up replacement: place, rate, count",
+    steps: [
+      { question: "murders in Houston since 2010", tab: "historical", expect: "rows", sqlIncludes: ["murder"], note: "Lead-in count query" },
+      { question: "What about Dallas?", tab: "historical", expect: "rows", sqlIncludes: ["Dallas"], sqlExcludes: ["Houston"], note: "Follow-up should replace geography with Dallas, not compare or keep Houston" },
+      { question: "Make it per capita", tab: "historical", expect: "rows", sqlIncludesAny: ["murder_rate", "population"], responseIncludes: ["rate"], note: "Follow-up should preserve source/geography/time and change unit to a per-capita rate" },
+      { question: "Show counts instead", tab: "historical", expect: "rows", sqlExcludes: ["murder_rate"], responseIncludes: ["count"], note: "Follow-up should replace the prior rate metric with counts" },
+    ],
+  },
+  {
+    id: "MS07",
+    name: "SHR trend follow-up annualizes complete years",
+    steps: [
+      { question: "fatal shootings in Chicago by year since 2020", tab: "shr", expect: "rows", sqlIncludes: ["weapon"], note: "Lead-in SHR fatal-shooting trend" },
+      {
+        question: "Is it getting worse?",
+        tab: "shr",
+        expect: "rows",
+        sqlIncludesAny: [`year < ${REPLAY_CURRENT_YEAR}`, `year <= ${REPLAY_LAST_COMPLETE_YEAR}`, `data_year < ${REPLAY_CURRENT_YEAR}`, `data_year <= ${REPLAY_LAST_COMPLETE_YEAR}`],
+        finalSelectIncludes: ["year"],
+        finalSelectExcludes: ["month"],
+        responseIncludes: ["annual"],
+        note: "Trend assessment follow-up on partial-current SHR data should use complete annual rows",
+      },
     ],
   },
 ];
@@ -551,6 +603,12 @@ function isInfrastructureFailure(resp: ApiResponse): boolean {
   return false;
 }
 
+function finalSelectClause(sql: string | null): string {
+  if (!sql) return "";
+  const matches = Array.from(sql.matchAll(/\bSELECT\b([\s\S]*?)\bFROM\b/gi));
+  if (matches.length === 0) return "";
+  return (matches[matches.length - 1]?.[1] || "").toLowerCase();
+}
 function checkAssertions(tc: TestCase, resp: ApiResponse, tab: TabId): { status: ResultStatus; failures: string[] } {
   // Infrastructure check first — if the API didn't respond properly, mark inconclusive
   if (isInfrastructureFailure(resp)) {
@@ -621,12 +679,33 @@ function checkAssertions(tc: TestCase, resp: ApiResponse, tab: TabId): { status:
       }
     }
   }
+  if (tc.sqlIncludesAny && !isOverrideOrRefusal && resp.sql) {
+    const found = tc.sqlIncludesAny.some((inc) => sqlLower.includes(inc.toLowerCase()));
+    if (!found) {
+      failures.push(`SQL missing one of: ${tc.sqlIncludesAny.map((inc) => `"${inc}"`).join(", ")}`);
+    }
+  }
 
   // SQL excludes
   if (tc.sqlExcludes && resp.sql && !isOverrideOrRefusal) {
     for (const exc of tc.sqlExcludes) {
       if (sqlLower.includes(exc.toLowerCase())) {
         failures.push(`SQL contains forbidden "${exc}"`);
+      }
+    }
+  }
+  // Final SELECT includes/excludes. Useful when CTE internals may mention a
+  // field that should not appear in the user-facing result shape.
+  if ((tc.finalSelectIncludes || tc.finalSelectExcludes) && resp.sql && !isOverrideOrRefusal) {
+    const finalSelect = finalSelectClause(resp.sql);
+    for (const inc of tc.finalSelectIncludes || []) {
+      if (!finalSelect.includes(inc.toLowerCase())) {
+        failures.push(`Final SELECT missing "${inc}"`);
+      }
+    }
+    for (const exc of tc.finalSelectExcludes || []) {
+      if (finalSelect.includes(exc.toLowerCase())) {
+        failures.push(`Final SELECT contains forbidden "${exc}"`);
       }
     }
   }
@@ -780,7 +859,8 @@ async function run() {
           // Build a synthetic TestCase for assertion checking
           const tc: TestCase = {
             id: stepId, question: step.question, tab: step.tab, category: "session",
-            expect: step.expect, sqlIncludes: step.sqlIncludes, sqlExcludes: step.sqlExcludes,
+            expect: step.expect, sqlIncludes: step.sqlIncludes, sqlIncludesAny: step.sqlIncludesAny, sqlExcludes: step.sqlExcludes,
+            finalSelectIncludes: step.finalSelectIncludes, finalSelectExcludes: step.finalSelectExcludes,
             responseIncludes: step.responseIncludes, responseExcludes: step.responseExcludes,
             note: step.note,
           };
