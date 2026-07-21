@@ -89,6 +89,8 @@ const comparisonTrendHistory: PromptHistoryMessage[] = [
   assert.match(transform.instruction, /Do NOT answer with 'I cannot interpret trends'/);
   assert.match(transform.instruction, /aggregate it to annual totals by year/);
   assert.match(transform.instruction, /Exclude incomplete current-year data/);
+  assert.match(transform.instruction, /MUST describe the returned data as annual totals\/rates/);
+  assert.match(transform.instruction, /MUST include a direct directional sentence/);
 }
 
 {
