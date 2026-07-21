@@ -402,6 +402,26 @@ test({ question: "national murder clearance rate trend", expectedPrimary: "histo
 test({ question: "domestic homicides since 1980", expectedPrimary: "shr", expectFollowUp: false });
 test({ question: "How bad is aggravated assaults with a firearm in America? Is it getting better?", expectedPrimary: "nibrs", expectFollowUp: false, note: "Self-contained compound question with deictic pronoun is not a session follow-up" });
 
+const compoundStandaloneCases: TestCase[] = [
+  { question: "How bad is robbery in Chicago? Is it getting worse?", expectedPrimary: ["current", "historical"], expectFollowUp: false },
+  { question: "Show carjackings in DC. Are they rising?", expectedPrimary: "nibrs", expectFollowUp: false },
+  { question: "What is the murder clearance rate in Omaha? Is it improving?", expectedPrimary: "historical", expectFollowUp: false },
+  { question: "Compare Atlanta and Dallas murders. Which is higher?", expectedPrimary: ["current", "historical"], expectFollowUp: false },
+  { question: "Aggravated assaults with a firearm in California. Is it getting better?", expectedPrimary: "nibrs", expectFollowUp: false },
+  { question: "What is the hate crime trend in Texas? Is it getting worse?", expectedPrimary: "hate_crime", expectFollowUp: false },
+  { question: "Fatal shootings in New York State. Are they rising?", expectedPrimary: "shr", expectFollowUp: false },
+];
+for (const tc of compoundStandaloneCases) test({ ...tc, note: "Self-contained multi-sentence query with pronoun/continuation wording" });
+
+const trueFollowUpControls: TestCase[] = [
+  { question: "Is it getting better?", expectedPrimary: "historical", expectFollowUp: true },
+  { question: "What about Dallas?", expectedPrimary: "historical", expectFollowUp: true },
+  { question: "Make it per capita", expectedPrimary: "historical", expectFollowUp: true },
+  { question: "Show the same for 2024", expectedPrimary: "historical", expectFollowUp: true },
+  { question: "Which is higher?", expectedPrimary: "historical", expectFollowUp: true },
+];
+for (const tc of trueFollowUpControls) test({ ...tc, note: "Short continuation without enough standalone routing intent" });
+
 // ══════════════════════════════════════════════════════════════════════
 //  SECTION 7: Ambiguous geography
 // ══════════════════════════════════════════════════════════════════════

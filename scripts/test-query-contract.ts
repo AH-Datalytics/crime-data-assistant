@@ -281,4 +281,36 @@ for (const aliasSql of [
   assert(result.enforced.includes("historical-countywide-crosswalk"));
 }
 
+const compoundStandaloneContracts: Array<{ question: string; source: Parameters<typeof buildQueryContract>[1]; topic: string; geographyKind?: string; unit?: string }> = [
+  { question: "How bad is robbery in Chicago? Is it getting worse?", source: "historical", topic: "robbery", geographyKind: "city" },
+  { question: "Show carjackings in DC. Are they rising?", source: "nibrs", topic: "carjacking", geographyKind: "city" },
+  { question: "What is the murder clearance rate in Omaha? Is it improving?", source: "historical", topic: "murder", geographyKind: "city", unit: "clearance_rate" },
+  { question: "Compare Atlanta and Dallas murders. Which is higher?", source: "current", topic: "murder", geographyKind: "city" },
+  { question: "Aggravated assaults with a firearm in California. Is it getting better?", source: "nibrs", topic: "aggravated_assault", geographyKind: "state" },
+  { question: "What is the hate crime trend in Texas? Is it getting worse?", source: "hate_crime", topic: "hate_crime", geographyKind: "state" },
+  { question: "Fatal shootings in New York State. Are they rising?", source: "shr", topic: "murder", geographyKind: "state" },
+];
+for (const tc of compoundStandaloneContracts) {
+  const contract = buildQueryContract(tc.question, tc.source);
+  assert(contract, tc.question);
+  assert.equal(contract.followup.isFollowup, false, tc.question);
+  assert.equal(contract.followup.operation, null, tc.question);
+  assert.equal(contract.metric.topic, tc.topic, tc.question);
+  if (tc.geographyKind) assert.equal(contract.geography.kind, tc.geographyKind, tc.question);
+  if (tc.unit) assert.equal(contract.metric.unit, tc.unit, tc.question);
+}
+
+const trueFollowupContracts = [
+  "Is it getting better?",
+  "What about Dallas?",
+  "Make it per capita",
+  "Show the same for 2024",
+  "Which is higher?",
+];
+for (const question of trueFollowupContracts) {
+  const contract = buildQueryContract(question, "historical", { mode: "follow_up", confidence: null, reason: "Follow-up inherited prior source context" });
+  assert(contract, question);
+  assert.equal(contract.followup.isFollowup, true, question);
+}
+
 console.log("query contract tests passed");

@@ -657,6 +657,7 @@ const FOLLOWUP_PATTERNS: RegExp[] = [
   /^(yes|no|yeah|nah|nope|correct|right|exactly|perfect)\s*[.!?]*$/i,
   /^(never mind|go back|undo|revert)\b/i,
   /^(why|what|how)\s+(is|are|did|do|does|about)\s+(it|that|this|there)\b/i,
+  /^(is|are)\s+(it|that|this|they|those)\s+(getting\s+)?(?:better|worse|higher|lower|rising|falling|improving|declining)\b/i,
   /^can you (just|also|make|add|change|compare)\b/i,
   // Color/style modifications
   /\b(make|change).{0,20}\b(yellow|red|blue|green|darker|lighter|dashed|dotted|thicker|color)\b/i,
