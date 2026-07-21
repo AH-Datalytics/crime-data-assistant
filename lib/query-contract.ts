@@ -108,10 +108,10 @@ function detectBreakdowns(question: string): string[] {
 function detectMetric(question: string): QueryContract["metric"] {
   const topicMatch = OFFENSE_PATTERNS.find((entry) => entry.pattern.test(question));
   const topic = topicMatch?.topic ?? (/\bcrimes?\b/i.test(question) ? "crime" : "unknown");
-  const asksRate = /\b(?:rates?|per\s*(?:capita|100k|100,?000))\b/i.test(question);
+  const asksRate = /\b(?:rates?|per\s*(?:capita|100k|100,?000|10k|10,?000|1k|1,?000|million|1m)|relative\s+to\s+population|population[-\s]+adjusted)\b/i.test(question);
   const asksClearance = /\b(?:clearance|clearances?|cleared|solve[ds]?|unsolved|exceptional(?:ly)?|cleared\s+by\s+arrest)\b/i.test(question);
   const asksRatio = /\b(?:ratio|share|percent|percentage)\b/i.test(question);
-  const asksDemographic = /\b(?:race|racial|sex|gender|male|female|men|women|age|demographic)\b/i.test(question);
+  const asksDemographic = /\b(?:race|racial|ethnicit\w+|hispanic|latino\w*|sex|gender|male|female|men|women|age|juvenile\w*|teen\w*|demographic)\b/i.test(question);
 
   let unit: QueryContract["metric"]["unit"] = "count";
   if (asksClearance) unit = "clearance_rate";

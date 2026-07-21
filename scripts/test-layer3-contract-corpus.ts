@@ -1034,7 +1034,172 @@ const cases: CorpusCase[] = [
     `,
     expectNoFindings: ["demographic-rate-unsupported", "shr-demographic-rate-unsupported"],
   },
-
+  {
+    id: "L3-FOLLOWUP-TREND-01",
+    family: "follow-up trend assessment",
+    question: "Is it getting better?",
+    source: "current",
+    sql: `
+      SELECT year, SUM(count) AS murders
+      FROM agency_monthly
+      WHERE agency = 'Houston' AND state = 'TX' AND offense = 'Murder' AND year >= 2021
+      GROUP BY year
+      ORDER BY year
+    `,
+    expectWarnings: ["contract-trend-followup-complete-years"],
+    expectRetry: ["contract-trend-followup-complete-years"],
+  },
+  {
+    id: "L3-FOLLOWUP-TREND-02",
+    family: "follow-up trend assessment",
+    question: "monthly murders in Houston since 2021 (Is it getting better? trend assessment follow-up)",
+    source: "current",
+    sql: `
+      WITH monthly AS (
+        SELECT year, month, SUM(count) AS murders
+        FROM agency_monthly
+        WHERE agency = 'Houston' AND state = 'TX' AND offense = 'Murder'
+        GROUP BY year, month
+      )
+      SELECT year, month, murders
+      FROM monthly
+      WHERE year >= 2021
+      ORDER BY year, month
+    `,
+    expectWarnings: ["contract-trend-followup-annualized-output"],
+    expectRetry: ["contract-trend-followup-annualized-output"],
+  },
+  {
+    id: "L3-FOLLOWUP-TREND-03",
+    family: "follow-up trend assessment",
+    question: "monthly murders in Houston since 2021 (Is it getting better? trend assessment follow-up)",
+    source: "current",
+    sql: `
+      WITH monthly AS (
+        SELECT year, month, SUM(count) AS murders
+        FROM agency_monthly
+        WHERE agency = 'Houston' AND state = 'TX' AND offense = 'Murder'
+        GROUP BY year, month
+      )
+      SELECT year, SUM(murders) AS murders
+      FROM monthly
+      WHERE year >= 2021 AND year < 2026
+      GROUP BY year
+      ORDER BY year
+    `,
+    expectNoWarnings: ["contract-trend-followup-annualized-output", "contract-trend-followup-complete-years"],
+  },
+  {
+    id: "L3-FOLLOWUP-TREND-04",
+    family: "follow-up trend assessment",
+    question: "fatal shootings in Chicago by year since 2020 (Is it getting worse? trend assessment follow-up)",
+    source: "shr",
+    sql: `
+      SELECT i.year, COUNT(*) AS fatal_shootings
+      FROM incidents i JOIN victims v ON v.incident_id = i.id
+      WHERE i.homicide_type = 'Murder' AND i.weapon_group = 'Firearm' AND i.agency = 'Chicago' AND i.state = 'IL' AND i.year >= 2020
+      GROUP BY i.year
+      ORDER BY i.year
+    `,
+    expectWarnings: ["contract-trend-followup-complete-years"],
+    expectRetry: ["contract-trend-followup-complete-years"],
+    expectNoFindings: ["shr-non-homicide-unsupported"],
+  },
+  {
+    id: "L3-GEO-STATE-SCOPE-02",
+    family: "state-vs-local scope",
+    question: "murders in Louisiana since 2020",
+    source: "current",
+    sql: `
+      SELECT year, month, SUM(count) AS murders
+      FROM agency_monthly
+      WHERE agency = 'Los Angeles' AND state = 'CA' AND offense = 'Murder'
+      GROUP BY year, month
+    `,
+    expectWarnings: ["contract-state-scope-local-filter"],
+    expectRetry: ["contract-state-scope-local-filter"],
+  },
+  {
+    id: "L3-GEO-STATE-SCOPE-03",
+    family: "state-vs-local scope",
+    question: "fatal shootings in Washington State since 2020",
+    source: "shr",
+    sql: `
+      SELECT i.year, COUNT(*) AS fatal_shootings
+      FROM incidents i JOIN victims v ON v.incident_id = i.id
+      WHERE i.agency = 'Washington' AND i.weapon_group = 'Firearm'
+      GROUP BY i.year
+    `,
+    expectWarnings: ["contract-state-scope-local-filter"],
+    expectRetry: ["contract-state-scope-local-filter"],
+  },
+  {
+    id: "L3-GEO-COUNTY-07",
+    family: "countywide crosswalk",
+    question: "fatal shootings in Baltimore County since 2020",
+    source: "shr",
+    sql: `
+      SELECT i.year, COUNT(*) AS fatal_shootings
+      FROM incidents i JOIN victims v ON v.incident_id = i.id
+      WHERE i.agency = 'Baltimore County' AND i.state = 'MD'
+      GROUP BY i.year
+    `,
+    expectFindings: ["shr-countywide-crosswalk"],
+    expectRetry: ["shr-countywide-crosswalk"],
+  },
+  {
+    id: "L3-NIBRS-CAMPUS-03",
+    family: "campus agency resolution",
+    question: "University of Wisconsin Madison burglaries per month",
+    source: "nibrs",
+    sql: `
+      SELECT year, month, SUM(offense_count) AS burglaries
+      FROM summary_city_monthly
+      WHERE city = 'MADISON' AND state = 'WI' AND ucr_offense_code = '220'
+      GROUP BY year, month
+    `,
+    expectFindings: ["nibrs-campus-agency-resolution"],
+    expectRetry: ["nibrs-campus-agency-resolution"],
+  },
+  {
+    id: "L3-DEMOGRAPHIC-RATE-06",
+    family: "unsupported demographic population rates",
+    question: "homicide rate per 10,000 by ethnicity",
+    source: "shr",
+    sql: `
+      SELECT v.ethnicity, COUNT(*) * 10000.0 / 1 AS rate_per_10000
+      FROM incidents i JOIN victims v ON v.incident_id = i.id
+      GROUP BY v.ethnicity
+    `,
+    expectFindings: ["demographic-rate-unsupported", "shr-demographic-rate-unsupported"],
+    expectBlock: ["demographic-rate-unsupported", "shr-demographic-rate-unsupported"],
+  },
+  {
+    id: "L3-DEMOGRAPHIC-RATE-07",
+    family: "unsupported demographic population rates",
+    question: "juvenile arrest rates relative to population in Texas",
+    source: "nibrs",
+    sql: `
+      SELECT age_group, SUM(arrestee_count) AS juvenile_arrests
+      FROM summary_arrestee_demographics
+      WHERE state = 'TX'
+      GROUP BY age_group
+    `,
+    expectFindings: ["demographic-rate-unsupported"],
+    expectBlock: ["demographic-rate-unsupported"],
+  },
+  {
+    id: "L3-DEMOGRAPHIC-RATE-08",
+    family: "unsupported demographic population rates",
+    question: "homicide counts by ethnicity",
+    source: "shr",
+    sql: `
+      SELECT v.ethnicity, COUNT(*) AS homicides
+      FROM incidents i JOIN victims v ON v.incident_id = i.id
+      GROUP BY v.ethnicity
+    `,
+    expectNoFindings: ["demographic-rate-unsupported", "shr-demographic-rate-unsupported"],
+  },
 ];
 
 const familyCounts = new Map<string, number>();
