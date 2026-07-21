@@ -37,6 +37,7 @@ import {
   validateQueryContractSql,
   type QueryContractSqlValidation,
 } from "@/lib/query-contract-validator";
+import { partialCoverageRetryPrompt } from "@/lib/source-year-overlap";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function jsonResp(data: Record<string, any> | QueryError, status = 200) {
@@ -633,12 +634,15 @@ export async function POST(req: NextRequest) {
         // Skip retry if the refusal is about SHR's scope (non-homicide data) — these are correct refusals
         const scopeRefusal = /only (homicides?|murders?|manslaughter)|does(?:n't| not)\s+(?:include|contain|track|cover|have)\s+.*?\b(theft|robbery|assault|burglary|property|arrests?|drugs?|clearance|staffing|officers?|sworn|personnel|employment|auto theft|motor vehicle|violent crime|property crime|non-homicide|rape)\b|homicides only|murder and manslaughter only/i;
         const isCorrectScopeRefusal = scopeRefusal.test(claude.explanation || "");
-        if (refusalPatterns.test(claude.explanation || "") && !isCorrectScopeRefusal) {
+        const coverageRetryPrompt = partialCoverageRetryPrompt("shr", question, claude.explanation);
+        const genericRetryPrompt = "[SYSTEM: Your previous response claimed the data was not available, but this may be incorrect. NEVER assume an agency is missing. Always generate a SQL query and let the database answer. Try the query now.]";
+        const retryPrompt = coverageRetryPrompt ?? (refusalPatterns.test(claude.explanation || "") && !isCorrectScopeRefusal ? genericRetryPrompt : null);
+        if (retryPrompt) {
           try {
             const retryMessages: Anthropic.MessageParam[] = [
               ...messages,
               { role: "assistant", content: claude.explanation },
-              { role: "user", content: "[SYSTEM: Your previous response claimed the data was not available, but this may be incorrect. NEVER assume an agency is missing. Always generate a SQL query and let the database answer. Try the query now.]" },
+              { role: "user", content: retryPrompt },
             ];
             const retryResp = await client.messages.create({
               model: "claude-haiku-4-5-20251001",

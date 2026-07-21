@@ -35,6 +35,7 @@ import {
   validateQueryContractSql,
   type QueryContractSqlValidation,
 } from "@/lib/query-contract-validator";
+import { partialCoverageRetryPrompt } from "@/lib/source-year-overlap";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -120,16 +121,6 @@ function continuousReporterRouteIssue(sql: string, question: string): string | n
   return "[SYSTEM: The user asked for agencies that reported all 12 months in every requested year. Rewrite the query with ORI-level summary tables, not state-level summary tables, and filter the fact table with ori IN (SELECT ori FROM nibrs_consistent_reporters WHERE start_year = [start_year] AND end_year = [end_year]). Preserve the requested offense, metric, breakdowns, and year range.]";
 }
 
-function partialNibrsCoverageRetryPrompt(explanation: string | null | undefined): string | null {
-  if (!explanation) return null;
-  const text = explanation.replace(/\s+/g, " ");
-  const mentionsNibrsCoverage = /\b(?:NIBRS|reporting|coverage|available|starts?|began|begin|before)\b/i.test(text);
-  const offersOverlap = /\b(?:can|could)\s+show\s+you\b|\bavailable\s+(?:from|starting|since)\b|\breporting\s+(?:began|started)\b|\bdata\s+(?:begins|starts|is available)\s+(?:in|from|since)\b/i.test(text);
-  const includesYear = /\b(?:19|20)\d{2}\b/.test(text);
-  if (!mentionsNibrsCoverage || !offersOverlap || !includesYear) return null;
-
-  return "[SYSTEM: Your previous response described partial NIBRS coverage but returned no SQL. If the requested range overlaps any available NIBRS years, generate SQL for the overlapping years now. Preserve the user's requested geography and offense. Do not refuse solely because earlier requested years are unavailable; run the overlapping years and disclose that earlier years are unavailable. Only return sql:null if there is truly no overlap.]";
-}
 /** Resolve which model this request should use. Returns the full model ID. */
 function resolveNibrsModel(sessionId: string | null, canaryFlag: boolean): string {
   const defaultModel = process.env.NIBRS_MODEL || "claude-haiku-4-5-20251001";
@@ -398,7 +389,7 @@ export async function POST(req: NextRequest) {
         const refusalPatterns = /not (appear|be represented)|doesn't appear|not (in|included in) (this|the|our) (dataset|data|sample|library)|no data (for|available|found)|does not (have|include|cover)|not available in this|isn't (in|included)|not found in/i;
         // Retry if model asks for year range instead of defaulting
         const yearAskPattern = /\b(time (range|period)|year range|which year|what year|how many year|specify.*year|interested in)\b/i;
-        const coverageRetryPrompt = partialNibrsCoverageRetryPrompt(claude.explanation);
+        const coverageRetryPrompt = partialCoverageRetryPrompt("nibrs", question, claude.explanation);
         const retryPrompt = coverageRetryPrompt
           ? coverageRetryPrompt
           : refusalPatterns.test(claude.explanation || "")

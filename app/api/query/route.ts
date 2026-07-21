@@ -33,6 +33,7 @@ import {
   validateQueryContractSql,
   type QueryContractSqlValidation,
 } from "@/lib/query-contract-validator";
+import { partialCoverageRetryPrompt } from "@/lib/source-year-overlap";
 import { resolveGeoPlaces } from "@/lib/geo-place-resolver";
 import { isFollowUp } from "@/lib/tab-suggest";
 
@@ -754,17 +755,20 @@ export async function POST(req: NextRequest) {
 
           if (!claude.sql && !isOverBudget()) {
             // Retry if model incorrectly claims data isn't available
+            const coverageRetryPrompt = partialCoverageRetryPrompt(tab, question, claude.explanation);
             const refusalPatterns = /not (appear|be represented)|doesn't appear|not (in|included in) (this|the|our) (dataset|data|sample|library)|no data (for|available|found)|does not (have|include|cover)|not available in this|isn't (in|included)|not found in/i;
-            if (refusalPatterns.test(claude.explanation || "")) {
+            const genericRetryPrompt = tab === "historical"
+              ? "[SYSTEM: Your previous response claimed the data was not available, but this may be incorrect. The Historical Library contains ~24,937 agencies including many small towns. NEVER assume an agency is missing - always generate a SQL query. Try: SELECT DISTINCT ori, agency, state FROM historical_agency WHERE agency LIKE '%[city]%' AND state = '[st]'. Then generate the main query.]"
+              : "[SYSTEM: Your previous response claimed the data was not available, but this may be incorrect. The database contains agencies from many states. Please try generating a SQL query - search for the agency/state in the data rather than assuming it doesn't exist. Use sample_agencies or agency_monthly to check.]";
+            const retryPrompt = coverageRetryPrompt ?? (refusalPatterns.test(claude.explanation || "") ? genericRetryPrompt : null);
+            if (retryPrompt) {
               try {
                 const retryResult = await translateToSql(
                   question,
                   [
                     ...((promptHistory || []) as { role: "user" | "assistant"; content: string }[]),
                     { role: "assistant", content: claude.explanation },
-                    { role: "user", content: tab === "historical"
-                      ? "[SYSTEM: Your previous response claimed the data was not available, but this may be incorrect. The Historical Library contains ~24,937 agencies including many small towns. NEVER assume an agency is missing — always generate a SQL query. Try: SELECT DISTINCT ori, agency, state FROM historical_agency WHERE agency LIKE '%[city]%' AND state = '[st]'. Then generate the main query.]"
-                      : "[SYSTEM: Your previous response claimed the data was not available, but this may be incorrect. The database contains agencies from many states. Please try generating a SQL query — search for the agency/state in the data rather than assuming it doesn't exist. Use sample_agencies or agency_monthly to check.]" },
+                    { role: "user", content: retryPrompt },
                   ],
                   systemPrompt
                 );

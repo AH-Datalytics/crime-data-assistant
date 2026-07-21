@@ -29,6 +29,7 @@ import {
   validateQueryContractSql,
   type QueryContractSqlValidation,
 } from "@/lib/query-contract-validator";
+import { partialCoverageRetryPrompt } from "@/lib/source-year-overlap";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function jsonResp(data: Record<string, any> | QueryError, status = 200) {
@@ -333,13 +334,16 @@ export async function POST(req: NextRequest) {
 
       // Retry if model incorrectly claims data isn't available
       if (!claude.sql) {
+        const coverageRetryPrompt = partialCoverageRetryPrompt("hate_crime", question, claude.explanation);
         const refusalPatterns = /not (appear|be represented)|doesn't appear|not (in|included in) (this|the|our) (dataset|data|sample|library)|no data (for|available|found)|does not (have|include|cover)|not available|isn't (in|included)|not found in/i;
-        if (refusalPatterns.test(claude.explanation || "")) {
+        const genericRetryPrompt = "[SYSTEM: Your previous response claimed the data was not available, but this may be incorrect. Always generate a SQL query and let the database answer. Try the query now.]";
+        const retryPrompt = coverageRetryPrompt ?? (refusalPatterns.test(claude.explanation || "") ? genericRetryPrompt : null);
+        if (retryPrompt) {
           try {
             const retryMessages: Anthropic.MessageParam[] = [
               ...messages,
               { role: "assistant", content: claude.explanation },
-              { role: "user", content: "[SYSTEM: Your previous response claimed the data was not available, but this may be incorrect. Always generate a SQL query and let the database answer. Try the query now.]" },
+              { role: "user", content: retryPrompt },
             ];
             const retryResp = await client.messages.create({
               model: "claude-haiku-4-5-20251001",
