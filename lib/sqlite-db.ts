@@ -29,6 +29,14 @@ function fileMtimeMs(filePath: string): number | null {
   }
 }
 
+function canonicalPathKey(filePath: string): string {
+  try {
+    return fs.realpathSync.native(filePath);
+  } catch {
+    return filePath;
+  }
+}
+
 export function resolveDbPath(envVar: string | undefined, candidates: string[]): string | null {
   const ordered = [
     envVar,
@@ -53,9 +61,11 @@ export function findExistingPaths(envVar: string | undefined, candidates: string
   const existing: string[] = [];
   for (const candidate of ordered) {
     const resolved = path.resolve(candidate);
-    if (seen.has(resolved)) continue;
-    seen.add(resolved);
-    if (fs.existsSync(resolved)) existing.push(resolved);
+    if (!fs.existsSync(resolved)) continue;
+    const key = canonicalPathKey(resolved);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    existing.push(resolved);
   }
   return existing;
 }
