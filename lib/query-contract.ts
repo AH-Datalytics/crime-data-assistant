@@ -136,6 +136,19 @@ function detectMetric(question: string): QueryContract["metric"] {
   };
 }
 
+function hasStandaloneQueryAnchor(question: string): boolean {
+  const metric = detectMetric(question);
+  if (metric.topic !== "unknown" || metric.unit !== "unknown") return true;
+
+  const time = yearsFromQuestion(question);
+  if (time.startYear !== null || time.endYear !== null) return true;
+
+  if (/\b(?:national|nationwide|united states|u\.?s\.?|america)\b/i.test(question)) return true;
+
+  const resolution = resolveGeoPlaces(question);
+  return resolution.mentions.some((mention) => mention.candidates.length > 0);
+}
+
 function detectFollowup(question: string, routingMeta?: RoutingLogMeta | null): QueryContract["followup"] {
   if (isYAxisDomainOnlyRequest(question) || isChartTypeOnlyRequest(question)) {
     return { isFollowup: true, operation: "chart_only" };
@@ -149,12 +162,13 @@ function detectFollowup(question: string, routingMeta?: RoutingLogMeta | null): 
   }
   const deictic = /\b(?:this|these|that|those|it|same|previous|prior|last|above)\b/i.test(question);
   if (deictic && /\b(?:included|shown|listed|returned)\b/i.test(question)) return { isFollowup: true, operation: "metadata" };
+  if (deictic && hasStandaloneQueryAnchor(question)) return { isFollowup: false, operation: null };
   if (deictic) return { isFollowup: true, operation: "refine" };
   return { isFollowup: false, operation: null };
 }
 
 function detectGeography(question: string, source: QueryContractSource): QueryContract["geography"] {
-  if (/\b(?:national|nationwide|united states|u\.?s\.?)\b/i.test(question)) {
+  if (/\b(?:national|nationwide|united states|u\.?s\.?|america)\b/i.test(question)) {
     return { kind: "national", name: "United States", state: null, canonicalName: "United States", confidence: "high", needsClarification: [] };
   }
 

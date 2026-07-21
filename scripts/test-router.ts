@@ -400,6 +400,7 @@ test({ question: "Show me hate crimes in Texas", expectedPrimary: "hate_crime", 
 test({ question: "carjacking trend in Washington DC", expectedPrimary: "nibrs", expectFollowUp: false });
 test({ question: "national murder clearance rate trend", expectedPrimary: "historical", expectFollowUp: false });
 test({ question: "domestic homicides since 1980", expectedPrimary: "shr", expectFollowUp: false });
+test({ question: "How bad is aggravated assaults with a firearm in America? Is it getting better?", expectedPrimary: "nibrs", expectFollowUp: false, note: "Self-contained compound question with deictic pronoun is not a session follow-up" });
 
 // ══════════════════════════════════════════════════════════════════════
 //  SECTION 7: Ambiguous geography

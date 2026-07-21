@@ -48,6 +48,35 @@ const cases: CorpusCase[] = [
     expectNoFindings: ["nibrs-weapon-person-crime-table"],
   },
   {
+    id: "L3-NIBRS-WEAPON-03",
+    family: "nibrs weapon-qualified person crime",
+    question: "How bad is aggravated assaults with a firearm in America? Is it getting better?",
+    source: "nibrs",
+    sql: `
+      SELECT year, SUM(victim_count) AS assaults
+      FROM summary_victim_demographics
+      WHERE ucr_offense_code = '13A'
+      GROUP BY year
+    `,
+    expectFindings: ["nibrs-weapon-person-crime-table"],
+    expectRetry: ["nibrs-weapon-person-crime-table"],
+  },
+  {
+    id: "L3-NIBRS-WEAPON-04",
+    family: "nibrs weapon-qualified person crime",
+    question: "How bad is aggravated assaults with a firearm in America? Is it getting better?",
+    source: "nibrs",
+    sql: `
+      SELECT year, SUM(victim_count) AS firearm_agg_assault_victims
+      FROM summary_victim_weapon
+      WHERE ucr_offense_code = '13A'
+        AND weapon_type IN ('11','11A','12','12A','13','13A','14','14A','15','15A')
+      GROUP BY year
+    `,
+    expectNoFindings: ["nibrs-weapon-person-crime-table"],
+    expectNoSqlIncludes: ["summary_victim_demographics"],
+  },
+  {
     id: "L3-NIBRS-CLEARANCE-01",
     family: "nibrs clearance",
     question: "cleared by arrest vs exceptional means for robbery in Chicago",

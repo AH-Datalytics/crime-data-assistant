@@ -79,6 +79,16 @@ import { validateQueryContractSql } from "../lib/query-contract-validator";
   assert.equal(contract.followup.operation, "chart_only");
 }
 
+{
+  const contract = buildQueryContract("How bad is aggravated assaults with a firearm in America? Is it getting better?", "nibrs");
+  assert(contract);
+  assert.equal(contract.followup.isFollowup, false);
+  assert.equal(contract.followup.operation, null);
+  assert.equal(contract.metric.topic, "aggravated_assault");
+  assert.deepEqual(contract.metric.offenseCodes, ["13A"]);
+  assert.equal(contract.metric.unit, "count");
+  assert.equal(contract.geography.kind, "national");
+}
 
 {
   const contract = buildQueryContract("Can I see murders rolling over 12 months nationally, 2018 to present?", "current");
