@@ -1,4 +1,4 @@
-import { GEO_PLACE_CATALOG, type GeoPlaceCatalogEntry, type GeoPlaceKind } from "./geo-place-catalog";
+﻿import { GEO_PLACE_CATALOG, type GeoPlaceCatalogEntry, type GeoPlaceKind } from "./geo-place-catalog";
 
 export type GeoPlaceCandidate = {
   id: string;
@@ -29,8 +29,22 @@ export type GeoPlaceResolution = {
 
 type AliasGroup = {
   alias: string;
-  pattern: RegExp;
+  key: string;
+  caseKey: string;
+  tokenCount: number;
+  requiresExactCase: boolean;
   entries: GeoPlaceCatalogEntry[];
+};
+
+type AliasIndex = {
+  byLength: Map<number, Map<string, AliasGroup[]>>;
+  maxTokenCount: number;
+};
+
+type InputToken = {
+  key: string;
+  start: number;
+  end: number;
 };
 
 type RawMatch = {
@@ -41,7 +55,7 @@ type RawMatch = {
   entries: GeoPlaceCatalogEntry[];
 };
 
-const aliasGroupCache = new WeakMap<GeoPlaceCatalogEntry[], AliasGroup[]>();
+const aliasIndexCache = new WeakMap<GeoPlaceCatalogEntry[], AliasIndex>();
 const DOMINANT_CITY_MIN_POPULATION = 100_000;
 const DOMINANT_CITY_MAX_SECONDARY_RATIO = 0.25;
 
@@ -63,19 +77,34 @@ export function resolveGeoPlaces(
 }
 
 function findMatches(input: string, catalog: GeoPlaceCatalogEntry[]): RawMatch[] {
-  const groups = buildAliasGroups(catalog);
+  const index = buildAliasIndex(catalog);
+  const tokens = tokenizeInput(input);
   const raw: RawMatch[] = [];
+  if (tokens.length === 0) return raw;
 
-  for (const group of groups) {
-    group.pattern.lastIndex = 0;
-    for (let found = group.pattern.exec(input); found; found = group.pattern.exec(input)) {
-      raw.push({
-        start: found.index,
-        end: found.index + found[0].length,
-        text: found[0],
-        alias: group.alias,
-        entries: group.entries,
-      });
+  for (let start = 0; start < tokens.length; start += 1) {
+    const maxLength = Math.min(index.maxTokenCount, tokens.length - start);
+    const parts: string[] = [];
+    for (let length = 1; length <= maxLength; length += 1) {
+      parts.push(tokens[start + length - 1].key);
+      const byKey = index.byLength.get(length);
+      if (!byKey) continue;
+      const groups = byKey.get(parts.join(" "));
+      if (!groups) continue;
+
+      const endToken = tokens[start + length - 1];
+      const text = input.slice(tokens[start].start, endToken.end);
+      const caseKey = aliasCaseKey(text);
+      for (const group of groups) {
+        if (group.requiresExactCase && group.caseKey !== caseKey) continue;
+        raw.push({
+          start: tokens[start].start,
+          end: endToken.end,
+          text,
+          alias: group.alias,
+          entries: group.entries,
+        });
+      }
     }
   }
 
@@ -96,31 +125,74 @@ function findMatches(input: string, catalog: GeoPlaceCatalogEntry[]): RawMatch[]
   return accepted.sort((a, b) => a.start - b.start);
 }
 
-function buildAliasGroups(catalog: GeoPlaceCatalogEntry[]): AliasGroup[] {
-  const cached = aliasGroupCache.get(catalog);
+function buildAliasIndex(catalog: GeoPlaceCatalogEntry[]): AliasIndex {
+  const cached = aliasIndexCache.get(catalog);
   if (cached) return cached;
 
-  const byAlias = new Map<string, { alias: string; entries: Map<string, GeoPlaceCatalogEntry> }>();
+  const byAlias = new Map<string, {
+    alias: string;
+    key: string;
+    caseKey: string;
+    tokenCount: number;
+    requiresExactCase: boolean;
+    entries: Map<string, GeoPlaceCatalogEntry>;
+  }>();
 
   for (const entry of catalog) {
     for (const alias of entry.aliases) {
       const key = aliasKey(alias);
       if (!key) continue;
-      const group = byAlias.get(key) ?? { alias, entries: new Map<string, GeoPlaceCatalogEntry>() };
+      const tokenCount = key.split(" ").length;
+      const requiresExactCase = hasAmbiguousStateCodeSuffix(alias);
+      const groupKey = `${tokenCount}:${key}:${requiresExactCase ? aliasCaseKey(alias) : "*"}`;
+      const group = byAlias.get(groupKey) ?? {
+        alias,
+        key,
+        caseKey: aliasCaseKey(alias),
+        tokenCount,
+        requiresExactCase,
+        entries: new Map<string, GeoPlaceCatalogEntry>(),
+      };
       group.entries.set(entry.id, entry);
-      byAlias.set(key, group);
+      byAlias.set(groupKey, group);
     }
   }
 
-  const groups = [...byAlias.values()]
-    .map((group) => ({
-      alias: group.alias,
-      pattern: aliasPattern(group.alias),
-      entries: [...group.entries.values()].sort(compareEntries),
-    }))
-    .sort((a, b) => b.alias.length - a.alias.length);
-  aliasGroupCache.set(catalog, groups);
-  return groups;
+  const groups = [...byAlias.values()].map((group): AliasGroup => ({
+    alias: group.alias,
+    key: group.key,
+    caseKey: group.caseKey,
+    tokenCount: group.tokenCount,
+    requiresExactCase: group.requiresExactCase,
+    entries: [...group.entries.values()].sort(compareEntries),
+  }));
+
+  const byLength = new Map<number, Map<string, AliasGroup[]>>();
+  let maxTokenCount = 0;
+  for (const group of groups) {
+    maxTokenCount = Math.max(maxTokenCount, group.tokenCount);
+    const byKey = byLength.get(group.tokenCount) ?? new Map<string, AliasGroup[]>();
+    const list = byKey.get(group.key) ?? [];
+    list.push(group);
+    byKey.set(group.key, list);
+    byLength.set(group.tokenCount, byKey);
+  }
+
+  const index = { byLength, maxTokenCount };
+  aliasIndexCache.set(catalog, index);
+  return index;
+}
+
+function tokenizeInput(input: string): InputToken[] {
+  const tokens: InputToken[] = [];
+  const pattern = /(?:[A-Za-z]\.){2,}|[A-Za-z0-9]+(?:'[A-Za-z0-9]+)?/g;
+  let match: RegExpExecArray | null;
+  while ((match = pattern.exec(input)) !== null) {
+    const key = aliasKey(match[0]);
+    if (!key) continue;
+    tokens.push({ key, start: match.index, end: match.index + match[0].length });
+  }
+  return tokens;
 }
 
 function mentionFromMatch(match: RawMatch): GeoPlaceMention {
@@ -193,13 +265,20 @@ function overlaps(a: RawMatch, b: RawMatch): boolean {
 }
 
 function aliasKey(value: string): string {
-  return value.toLowerCase().replace(/\s+/g, " ").trim();
+  return value
+    .replace(/\./g, "")
+    .replace(/[^A-Za-z0-9]+/g, " ")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
-function aliasPattern(alias: string): RegExp {
-  const escaped = alias.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+");
-  const flags = hasAmbiguousStateCodeSuffix(alias) ? "g" : "gi";
-  return new RegExp(`(?<![A-Za-z0-9])${escaped}(?![A-Za-z0-9])`, flags);
+function aliasCaseKey(value: string): string {
+  return value
+    .replace(/\./g, "")
+    .replace(/[^A-Za-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function hasAmbiguousStateCodeSuffix(alias: string): boolean {

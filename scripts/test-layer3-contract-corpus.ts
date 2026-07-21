@@ -601,6 +601,19 @@ const cases: CorpusCase[] = [
     expectSqlIncludes: ["ha.state = 'nb'"],
   },
   {
+    id: "L3-HISTORICAL-CLEARANCE-02",
+    family: "historical clearance table",
+    question: "national murder clearance rate since 1960",
+    source: "historical",
+    sql: `
+      SELECT year, murder_rate
+      FROM national_clearance_rate
+      WHERE year >= 1960
+      ORDER BY year
+    `,
+    expectNoFindings: ["historical-clearance-table", "historical-state-national-rate-table"],
+  },
+  {
     id: "L3-SHR-RATE-01",
     family: "rate denominators",
     question: "firearm homicide rate in Pennsylvania since 2020",

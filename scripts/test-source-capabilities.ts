@@ -243,6 +243,18 @@ function assertDoesNotFind(name: string, ids: string[], unexpected: string) {
   );
   assertFinds("Historical clearance requires clearance table", ids, "historical-clearance-table");
 }
+{
+  const ids = findingIds(
+    "national murder clearance rate since 1960",
+    "historical",
+    `SELECT year, murder_rate
+     FROM national_clearance_rate
+     WHERE year >= 1960`
+  );
+  assertDoesNotFind("Historical national clearance table satisfies clearance contract", ids, "historical-clearance-table");
+  assertDoesNotFind("Historical national clearance rate should not require state/national crime table", ids, "historical-state-national-rate-table");
+}
+
 
 {
   const ids = findingIds(

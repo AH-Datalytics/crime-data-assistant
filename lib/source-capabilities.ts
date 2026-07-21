@@ -422,7 +422,7 @@ export const SOURCE_CAPABILITY_RULES: SourceCapabilityRule[] = [
     source: "historical",
     severity: "warning",
     requiresAnyTables: ["historical_state_national"],
-    when: ({ contract, question }) => asksHistoricalRate(contract, question) && isHistoricalStateOrNational(contract),
+    when: ({ contract, question }) => contract.metric.unit !== "clearance_rate" && asksHistoricalRate(contract, question) && isHistoricalStateOrNational(contract),
     message: "Historical state or national rate questions should use historical_state_national, not agency aggregation.",
   },
   {

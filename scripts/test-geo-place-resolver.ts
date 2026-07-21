@@ -71,6 +71,8 @@ assertDoesNotClarify("crime trend in Louisville");
 
 assertCandidates("drug offenses in Salem Oregon since 2000", ["city:OR:salem"]);
 assertDoesNotClarify("drug offenses in Salem Oregon since 2000");
+assertCandidates("drug offenses in Salem OR since 2000", ["city:OR:salem"]);
+assertDoesNotClarify("drug offenses in Salem OR since 2000");
 assertClarifies("drug offenses in Salem since 2000");
 
 assertCandidates("crime in Springfield IL", ["city:IL:springfield"]);
@@ -130,6 +132,10 @@ assert.deepEqual(ids(multi), ["city:OR:portland", "city:ME:portland"]);
 assert.equal(multi.requiresClarification, false);
 
 assert.equal(resolveGeoPlaces("show national murder trend").mentions.length, 0);
+assert.equal(resolveGeoPlaces("Top 10 cities by murder rate in 2025").mentions.length, 0);
+for (const input of ["Show carjacking trend by month/year", "Robbery in Houston 2020-2025", "National murder trend", "Top 10 cities by murder rate in 2025"]) {
+  resolveGeoPlaces(input);
+}
 
 const mention = first("violent crime in El Paso");
 assert.equal(mention.text, "El Paso");
