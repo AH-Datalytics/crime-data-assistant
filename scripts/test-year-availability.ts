@@ -85,6 +85,16 @@ import { partialCoverageRetryPrompt, sourceYearOverlap } from "../lib/source-yea
   assert.equal(overlap.overlapEndYear, SHR.maxYear);
 }
 {
+  const question = `fatal shootings in Houston from ${SHR.minYear - 20} to ${SHR.minYear - 1}`;
+  const overlap = sourceYearOverlap("shr", question);
+  assert.equal(overlap?.hasOverlap, false, "No-overlap SHR shooting ranges should not be retried");
+  assert.equal(
+    partialCoverageRetryPrompt("shr", question, `SHR data starts in ${SHR.minYear}.`),
+    null,
+    "No-overlap SHR shooting ranges should remain text-only refusals"
+  );
+}
+{
   const question = "anti-Asian hate crimes in California from 1980 to 1995";
   const overlap = sourceYearOverlap("hate_crime", question);
   assert.ok(overlap?.hasOverlap, "Hate Crime should detect overlap for pre-coverage ranges");

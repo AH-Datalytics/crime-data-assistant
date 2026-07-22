@@ -289,6 +289,11 @@ function hasLocalPlaceFilter(sql: string): boolean {
   return /\b(?:\w+\.)?(?:agency|agency_name|canonical_agency|city|county|alias_key)\s*(?:=|LIKE|IN\s*\()\s*'[^']+'/i.test(sql);
 }
 
+function hasSpecificOriFilter(sql: string): boolean {
+  return /\bori\s*=\s*'[^']+'/i.test(sql) ||
+    /\bori\s+IN\s*\(\s*(?:'[^']+'|SELECT\b)/i.test(sql);
+}
+
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -389,9 +394,15 @@ export function validateQueryContractSql(opts: {
     requestedState &&
     (contract.geography.kind === "city" || contract.geography.kind === "county" || contract.geography.kind === "campus") &&
     /\b(?:agency_monthly|historical_agency|historical_agency_crime|summary_\w+|incidents)\b/i.test(sql) &&
-    !hasStateFilter(sql)
+    !hasStateFilter(sql) &&
+    !hasSpecificOriFilter(sql)
   ) {
+    const sourceStateHint = Array.isArray(sourceState)
+      ? `state IN (${sourceState.map((state) => `'${state}'`).join(",")})`
+      : `state = '${sourceState ?? requestedState}'`;
     warnings.push("contract-geography-state-missing");
+    retryIssues.push(`[SYSTEM: Query contract violation (contract-geography-state-missing). The user asked for ${contract.geography.canonicalName ?? contract.geography.name ?? "a local geography"}${contract.geography.state ? `, ${contract.geography.state}` : ""}, but the SQL filters a local city/agency/county without a state predicate. Add the source-appropriate state predicate (${sourceStateHint}) or use a unique ORI filter. Do not let same-named places in other states enter the result.]`);
+    enforced.push("contract-geography-state-missing");
   }
 
   if (contract.geography.kind === "state" && hasLocalPlaceFilter(sql)) {
@@ -436,13 +447,14 @@ export function validateQueryContractSql(opts: {
     }
   }
 
+  const uniqueBlockReasons = [...new Set(blockReasons)];
   return {
     sql,
     fired,
     warnings: [...new Set(warnings)],
     capabilityFindings,
-    retryIssues: [...new Set(retryIssues)],
-    blockReasons: [...new Set(blockReasons)],
+    retryIssues: uniqueBlockReasons.length > 0 ? [] : [...new Set(retryIssues)],
+    blockReasons: uniqueBlockReasons,
     enforced: [...new Set(enforced)],
   };
 }

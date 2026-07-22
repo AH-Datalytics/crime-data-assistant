@@ -1213,7 +1213,76 @@ const cases: CorpusCase[] = [
     `,
     expectNoFindings: ["demographic-rate-unsupported", "shr-demographic-rate-unsupported"],
   },
-];
+  {
+    id: "L3-GEO-STATE-MISSING-SHR-01",
+    family: "local geography missing state predicate",
+    question: "fatal shootings in Houston from 1950 to 2026",
+    source: "shr",
+    sql: `
+      SELECT i.year, COUNT(*) AS fatal_shootings
+      FROM incidents i JOIN victims v ON v.incident_id = i.id
+      WHERE i.agency = 'Houston' AND i.homicide_type = 'Murder' AND i.weapon_group = 'Firearm'
+      GROUP BY i.year
+    `,
+    expectWarnings: ["contract-geography-state-missing"],
+    expectRetry: ["contract-geography-state-missing"],
+  },
+  {
+    id: "L3-GEO-STATE-MISSING-SHR-02",
+    family: "local geography missing state predicate",
+    question: "fatal shootings in Houston from 1950 to 2026",
+    source: "shr",
+    sql: `
+      SELECT i.year, COUNT(*) AS fatal_shootings
+      FROM incidents i JOIN victims v ON v.incident_id = i.id
+      WHERE i.agency = 'Houston' AND i.state = 'TX' AND i.homicide_type = 'Murder' AND i.weapon_group = 'Firearm'
+      GROUP BY i.year
+    `,
+    expectNoWarnings: ["contract-geography-state-missing"],
+  },
+  {
+    id: "L3-GEO-STATE-MISSING-CURRENT-01",
+    family: "local geography missing state predicate",
+    question: "murders in Los Angeles since 2020",
+    source: "current",
+    sql: `
+      SELECT year, month, SUM(count) AS murders
+      FROM agency_monthly
+      WHERE agency = 'Los Angeles' AND offense = 'Murder'
+      GROUP BY year, month
+    `,
+    expectWarnings: ["contract-geography-state-missing"],
+    expectRetry: ["contract-geography-state-missing"],
+  },
+  {
+    id: "L3-GEO-STATE-MISSING-HISTORICAL-01",
+    family: "local geography missing state predicate",
+    question: "auto theft clearance rate in Omaha, NE by year",
+    source: "historical",
+    sql: `
+      SELECT hac.year, SUM(hac.cleared_motor_vehicle_theft) * 100.0 / SUM(hac.motor_vehicle_theft) AS clearance_rate
+      FROM historical_agency_clearance hac
+      JOIN historical_agency ha ON ha.ori = hac.ori
+      WHERE ha.agency = 'Omaha'
+      GROUP BY hac.year
+    `,
+    expectWarnings: ["contract-geography-state-missing"],
+    expectRetry: ["contract-geography-state-missing"],
+  },
+  {
+    id: "L3-GEO-STATE-MISSING-ORI-01",
+    family: "local geography missing state predicate",
+    question: "University of California Berkeley vehicle burglaries per month",
+    source: "nibrs",
+    sql: `
+      SELECT s.year, s.month, SUM(s.offense_count) AS burglaries
+      FROM summary_city_monthly s
+      WHERE s.ori IN ('CA0019700') AND s.ucr_offense_code = '220'
+      GROUP BY s.year, s.month
+    `,
+    expectNoWarnings: ["contract-geography-state-missing"],
+    expectNoFindings: ["nibrs-campus-agency-resolution"],
+  },];
 
 const familyCounts = new Map<string, number>();
 
