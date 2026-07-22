@@ -37,7 +37,7 @@ import {
   validateQueryContractSql,
   type QueryContractSqlValidation,
 } from "@/lib/query-contract-validator";
-import { partialCoverageRetryPrompt } from "@/lib/source-year-overlap";
+import { partialCoverageRetryPrompt, sourceYearOverlap } from "@/lib/source-year-overlap";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function jsonResp(data: Record<string, any> | QueryError, status = 200) {
@@ -401,8 +401,30 @@ export async function POST(req: NextRequest) {
     if (asksShooting && !wantsNonfatal) {
       const stateMatch = question.match(/\b([A-Z]{2})\b/) || question.match(/\bin\s+(\w+)\b/i);
       const yearIntent = shootingYearIntent(question);
+      const yearOverlap = sourceYearOverlap("shr", question);
+      if (yearOverlap && !yearOverlap.hasOverlap) {
+        const explanation = `SHR homicide data covers ${yearOverlap.sourceStartYear}-${yearOverlap.sourceEndYear}, so it cannot answer the requested year range. Ask for fatal shootings from ${yearOverlap.sourceStartYear} onward.`;
+        writeLog(question, null, 0, "year_range_no_overlap", Date.now() - start, explanation, "shr", ["deterministic-shooting", "shr-year-no-overlap"], "deterministic", sessionId);
+        return jsonResp({
+          success: true, question, sql: null, explanation,
+          title: "Year range not available in SHR", columns: [], rows: [], rowCount: 0, truncated: false,
+          chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - start,
+        });
+      }
+      const effectiveYearClause = yearOverlap?.partial
+        ? `i.year BETWEEN ${yearOverlap.overlapStartYear} AND ${yearOverlap.overlapEndYear}`
+        : yearIntent.clause;
+      const effectiveYearLabel = yearOverlap?.partial
+        ? `${yearOverlap.overlapStartYear}-${yearOverlap.overlapEndYear}`
+        : yearIntent.label;
+      const effectiveYearExplanation = yearOverlap?.partial
+        ? `from ${yearOverlap.overlapStartYear} to ${yearOverlap.overlapEndYear}`
+        : yearIntent.explanation;
+      const overlapDisclosure = yearOverlap?.partial
+        ? `Requested years outside SHR coverage (${yearOverlap.sourceStartYear}-${yearOverlap.sourceEndYear}) were omitted; returned years ${yearOverlap.overlapStartYear}-${yearOverlap.overlapEndYear}.`
+        : "";
 
-      let whereClauses = ["i.homicide_type = 'Murder'", "i.weapon_group = 'Firearm'", yearIntent.clause];
+      let whereClauses = ["i.homicide_type = 'Murder'", "i.weapon_group = 'Firearm'", effectiveYearClause];
       let joinClauses = "JOIN victims v ON v.incident_id = i.id";
       let withClause = "";
       let titlePlace = "Nationally";
@@ -500,8 +522,8 @@ export async function POST(req: NextRequest) {
       const shootingContractFailure = contractFailureResponse(shootingContract, `contract_deterministic_shooting_failure:${shootingContract.enforced.join(",")}`, ["deterministic-shooting"]);
       if (shootingContractFailure) return shootingContractFailure;
       const sql = shootingContract.sql;
-      const title = `Fatal Shootings (Firearm Homicides), ${titlePlace}, ${yearIntent.label}`;
-      const explanation = `Fatal shootings (firearm homicides) by year${titlePlace !== "Nationally" ? ` in ${titlePlace}` : ""} ${yearIntent.explanation}. This shows only homicides where the weapon was a firearm - nonfatal shootings are not tracked in this database.`;
+      const title = `Fatal Shootings (Firearm Homicides), ${titlePlace}, ${effectiveYearLabel}`;
+      const explanation = `Fatal shootings (firearm homicides) by year${titlePlace !== "Nationally" ? ` in ${titlePlace}` : ""} ${effectiveYearExplanation}. This shows only homicides where the weapon was a firearm - nonfatal shootings are not tracked in this database.`;
 
       // Execute the deterministic SQL
       const db = getShrDb();
@@ -515,6 +537,7 @@ export async function POST(req: NextRequest) {
 
         // Add caveats
         const caveats = [normalizeShrAgencyText(explanation)];
+        if (overlapDisclosure) caveats.push(overlapDisclosure);
         caveats.push("Not all agencies and states report SHR data every year, so these counts underrepresent total fatal shootings.");
         let totalExplanation = caveats.join("\n\n");
 

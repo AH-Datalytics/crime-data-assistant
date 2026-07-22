@@ -36,6 +36,7 @@ import {
 import { partialCoverageRetryPrompt } from "@/lib/source-year-overlap";
 import { resolveGeoPlaces } from "@/lib/geo-place-resolver";
 import { isFollowUp } from "@/lib/tab-suggest";
+import { buildHistoricalCityChangeRankingPlan } from "@/lib/historical-deterministic-queries";
 
 function sseEvent(event: StreamEvent): string {
   return `data: ${JSON.stringify(event)}\n\n`;
@@ -585,6 +586,84 @@ export async function POST(req: NextRequest) {
     });
   }
 
+  const historicalCityChange = tab === "historical"
+    ? buildHistoricalCityChangeRankingPlan(question, body?.history)
+    : null;
+  if (historicalCityChange) {
+    const ms = Date.now() - totalStart;
+    if (!historicalCityChange.sql) {
+      writeLog(question, null, 0, null, ms, historicalCityChange.explanation, tab, [historicalCityChange.guardrail], "deterministic", sessionId);
+      const stream = new ReadableStream({
+        start(controller) {
+          controller.enqueue(
+            encoder.encode(
+              sseEvent({
+                type: "result",
+                sql: null as unknown as string,
+                explanation: historicalCityChange.explanation,
+                title: historicalCityChange.title,
+                columns: historicalCityChange.columns,
+                rows: [],
+                rowCount: 0,
+                truncated: false,
+                chartConfig: historicalCityChange.chartConfig,
+                chartMeta: historicalCityChange.chartMeta,
+                executionTimeMs: ms,
+              })
+            )
+          );
+          controller.close();
+        },
+      });
+      return new Response(stream, {
+        headers: {
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache",
+          Connection: "keep-alive",
+          "X-RateLimit-Remaining": String(rateCheck.remaining),
+        },
+      });
+    }
+
+    try {
+      const db = getDb();
+      const rows = executeWithTimeoutSync<Record<string, unknown>>(db, db.prepare(historicalCityChange.sql), 30000);
+      const columns = rows.length > 0 ? Object.keys(rows[0]) : historicalCityChange.columns;
+      writeLog(question, historicalCityChange.sql, rows.length, null, ms, historicalCityChange.explanation, tab, [historicalCityChange.guardrail], "deterministic", sessionId);
+      const stream = new ReadableStream({
+        start(controller) {
+          controller.enqueue(
+            encoder.encode(
+              sseEvent({
+                type: "result",
+                sql: historicalCityChange.sql!,
+                explanation: historicalCityChange.explanation,
+                title: historicalCityChange.title,
+                columns,
+                rows,
+                rowCount: rows.length,
+                truncated: false,
+                chartConfig: rows.length > 0 ? historicalCityChange.chartConfig : null,
+                chartMeta: historicalCityChange.chartMeta,
+                executionTimeMs: Date.now() - totalStart,
+              })
+            )
+          );
+          controller.close();
+        },
+      });
+      return new Response(stream, {
+        headers: {
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache",
+          Connection: "keep-alive",
+          "X-RateLimit-Remaining": String(rateCheck.remaining),
+        },
+      });
+    } catch (err) {
+      console.warn("[historical-city-change-ranking] deterministic query failed; falling back to Claude", err);
+    }
+  }
   const historicalPlace = tab === "historical" && !shouldSkipHistoricalPlaceLookup(question, body?.history)
     ? answerHistoricalPlaceLookup(question, getDb())
     : null;
