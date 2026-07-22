@@ -29,6 +29,7 @@ import { applyChartCustomizations } from "@/lib/chart-customization";
 import { STATE_NAME_TO_ABBR } from "@/lib/state-population";
 import { getBlockingGeoClarification } from "@/lib/geo-resolver";
 import { getCountyScopeClarification } from "@/lib/county-clarifier";
+import { resolveGeoPlaces } from "@/lib/geo-place-resolver";
 import { detectShrGroupRateOverride, detectSubCityGeographyOverride } from "@/lib/capability-overrides";
 import { displayShrAgencyName, normalizeShrAgencyText } from "@/lib/shr-agency-normalization";
 import {
@@ -127,6 +128,19 @@ function shootingCityIntents(question: string): ShootingCityIntent[] {
     return hits.filter((hit, index, all) =>
       all.findIndex((other) => other.agency === hit.agency && other.state === hit.state) === index
     );
+  }
+
+  const resolution = resolveGeoPlaces(question);
+  if (!resolution.requiresClarification) {
+    const cityIntents = resolution.mentions
+      .map((mention) => mention.candidates[0])
+      .filter((candidate) => candidate?.kind === "city" && candidate.state)
+      .map((candidate) => ({ agency: candidate.name, display: displayPlace(candidate.name), state: candidate.state }));
+    if (cityIntents.length > 0) {
+      return cityIntents.filter((hit, index, all) =>
+        all.findIndex((other) => other.agency === hit.agency && other.state === hit.state) === index
+      );
+    }
   }
 
   const match = question.match(/\b(?:in|for|from|within|across)\s+([A-Z][A-Za-z.'-]*(?:\s+[A-Z][A-Za-z.'-]*){0,3})(?:,\s*([A-Z]{2}))?\b/);
