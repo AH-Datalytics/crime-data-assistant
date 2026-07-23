@@ -28,7 +28,8 @@ import { detectNibrsCapabilityOverride } from "@/lib/nibrs-capability-overrides"
 import { getBlockingGeoClarification } from "@/lib/geo-resolver";
 import { getCountyScopeClarification } from "@/lib/county-clarifier";
 import { asksCampusAgency, buildCampusAgencySummarySql, campusAgencyChartAxesFromSql, campusAgencyDisplayName, knownCampusAgencyResolution, resolveCampusAgencyOris, shouldResolveCampusAgencySql } from "@/lib/nibrs-campus-agency";
-import { buildNibrsDomesticViolenceAggravatedAssaultShareQuery, buildNibrsLocalCityOffenseCountQuery } from "@/lib/nibrs-deterministic-queries";
+import { buildNibrsClearanceMethodQuery, buildNibrsDomesticViolenceAggravatedAssaultShareQuery, buildNibrsLocalCityOffenseCountQuery } from "@/lib/nibrs-deterministic-queries";
+import { optimizeNibrsSql } from "@/lib/nibrs-sql-optimizer";
 import {
   queryContractFailureMessage,
   queryContractGuardrails,
@@ -274,7 +275,7 @@ export async function POST(req: NextRequest) {
       } as QueryResponse);
     }
 
-    const deterministicQuery = buildNibrsLocalCityOffenseCountQuery(question) ?? buildNibrsDomesticViolenceAggravatedAssaultShareQuery(question);
+    const deterministicQuery = buildNibrsClearanceMethodQuery(question) ?? buildNibrsLocalCityOffenseCountQuery(question) ?? buildNibrsDomesticViolenceAggravatedAssaultShareQuery(question);
     if (deterministicQuery) {
       const deterministicStart = Date.now();
       try {
@@ -726,7 +727,9 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Step 3: Execute SQL (in worker thread with 15s timeout)
+    // Step 3: Execute SQL in a killable worker process. Apply conservative
+    // index hints after validation so agency-scoped summary queries do not use
+    // an offense-first plan against the large NIBRS database.
     const startTime = Date.now();
 
     let rows: Record<string, unknown>[] = undefined!;
@@ -737,6 +740,12 @@ export async function POST(req: NextRequest) {
       sql = executionContract.sql;
       const executionContractFailure = contractFailureResponse(executionContract, `contract_execution_failure:${executionContract.enforced.join(",")}`);
       if (executionContractFailure) return executionContractFailure;
+      const plannedSql = optimizeNibrsSql(sql);
+      if (plannedSql !== sql) {
+        sql = plannedSql;
+        routeGuardrailsFired.push("nibrs-ori-index-plan");
+        console.log(`[nibrs][query-plan] Applied ORI-first index hint`);
+      }
       const result = await executeWithTimeout(sql);
       rows = result.rows;
       columns = result.columns;
@@ -745,22 +754,9 @@ export async function POST(req: NextRequest) {
       const msg = dbErr instanceof Error ? dbErr.message : String(dbErr);
       const isTimeout = msg.includes("timed out");
 
-      // Timeouts are often transient (contention, cold cache) — retry same SQL once before asking Claude to rewrite
-      if (isTimeout) {
-        console.log(`[nibrs][timeout-retry] First attempt timed out, retrying same SQL`);
-        try {
-          const retryResult = await executeWithTimeout(sql);
-          rows = retryResult.rows;
-          columns = retryResult.columns;
-          rows = normalizeNibrsDisplayRows(rows);
-          console.log(`[nibrs][timeout-retry] Second attempt succeeded`);
-        } catch (retryErr) {
-          const retryMsg = retryErr instanceof Error ? retryErr.message : String(retryErr);
-          console.log(`[nibrs][timeout-retry] Second attempt also failed: ${retryMsg}`);
-        }
-      }
-
-      // If the same-SQL retry succeeded, skip Claude rewrite and continue to response
+      // Do not retry identical timed-out SQL. The old behavior guaranteed at
+      // least 30 seconds of extra latency and depended on the first scan warming
+      // the OS page cache. Rewrite to a safer summary-table plan instead.
       if (!rows!) {
         console.log(`[nibrs][error-recovery] DB error: ${msg}, retrying with Claude`);
 
@@ -785,7 +781,7 @@ export async function POST(req: NextRequest) {
           const retryValidation = validateAndSanitize(retry.sql);
           if (retryValidation.valid) {
             const retryContract = runContractValidation(retryValidation.sanitized!);
-            const retrySql = retryContract.sql;
+            const retrySql = optimizeNibrsSql(retryContract.sql);
             const retryContractFailure = contractFailureResponse(retryContract, `contract_db_retry_failure:${retryContract.enforced.join(",")}`);
             if (retryContractFailure) return retryContractFailure;
             try {

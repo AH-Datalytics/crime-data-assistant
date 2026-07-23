@@ -1869,6 +1869,15 @@ console.log("\n=== wave-1 query-contract guardrails ===\n");
 }
 
 {
+  const sql = `WITH years AS (SELECT 2010 AS year UNION ALL SELECT year + 1 FROM years WHERE year < 2025) SELECT y.year, hac.murder FROM years y LEFT JOIN historical_agency_crime hac ON hac.year = y.year ORDER BY y.year`;
+  const ctx = extractQueryContext(sql, "murders in Houston since 2010", "historical");
+  const r = runGuardrails(ctx);
+  assert("FP: recursive year CTE seed satisfies requested lower bound",
+    !r.fired.includes("contract-year-lower-bound-missing"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
   const current = currentCalendarYear();
   const sql = `SELECT i.year, ROUND(100.0 * SUM(CASE WHEN i.weapon_group = 'Firearm' THEN 1 ELSE 0 END) / COUNT(*), 1) AS firearm_pct FROM incidents i JOIN victims v ON v.incident_id = i.id WHERE i.homicide_type = 'Murder' AND i.year BETWEEN 2000 AND ${current - 1} GROUP BY i.year ORDER BY i.year`;
   const ctx = extractQueryContext(sql, `Share of murder committed via firearm, 2000 - ${current}, start Y-axis at 60%`, "shr");
@@ -1897,6 +1906,9 @@ console.log("\n=== wave-1 query-contract guardrails ===\n");
   assert("TP: past N years including current year fires",
     r.fired.includes("relative-past-years-complete-calendar"),
     `expected ${range.start}-${range.end}; fired: ${JSON.stringify(r.fired)}`);
+  assert("TP: past N years is repaired without a model retry",
+    r.issues.length === 0 && r.sql.includes(`year BETWEEN ${range.start} AND ${range.end}`),
+    `sql: ${r.sql}; issues: ${JSON.stringify(r.issues)}`);
 }
 
 {
