@@ -83,7 +83,7 @@ import {
     "Omaha NE burglaries from 2000 to 2026"
   );
   assert.ok(query, "local Omaha burglary trend should be deterministic");
-  assert.match(query.sql, /\bFROM summary_city_monthly\b/i);
+  assert.match(query.sql, /\bFROM summary_city_monthly INDEXED BY idx_scm_ori_year\b/i);
   assert.match(query.sql, /\bucr_offense_code = '220'/i);
   assert.match(query.sql, /\bstate IN \('NE','NB'\)/i);
   assert.match(query.sql, /\bcity = 'OMAHA'/i);
@@ -99,6 +99,14 @@ import {
   assert.ok(query, "monthly local Omaha burglary trend should be deterministic");
   assert.match(query.sql, /SELECT year, month,/i);
   assert.match(query.sql, /GROUP BY year, month/i);
+}
+
+{
+  const query = buildNibrsLocalCityOffenseCountQuery(
+    "Omaha NE homicides from 2021 to 2025"
+  );
+  assert.ok(query, "person-count city trend should be deterministic");
+  assert.match(query.sql, /\bFROM summary_victim_city_monthly INDEXED BY idx_svcm_ori\b/i);
 }
 
 {
