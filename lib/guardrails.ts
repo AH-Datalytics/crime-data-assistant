@@ -544,7 +544,8 @@ function sqlHasRequestedLowerYearBound(sql: string, startYear: number): boolean 
   const gtRe = new RegExp(`${yearRef}\\s*>\\s*${startYear - 1}\\b`, "i");
   const betweenRe = new RegExp(`${yearRef}\\s+BETWEEN\\s+${startYear}\\s+AND\\s+(?:19|20)\\d{2}\\b`, "i");
   const inRe = new RegExp(`${yearRef}\\s+IN\\s*\\([^)]*\\b${startYear}\\b[^)]*\\)`, "i");
-  return eqRe.test(stripped) || geRe.test(stripped) || gtRe.test(stripped) || betweenRe.test(stripped) || inRe.test(stripped);
+  const recursiveYearSeedRe = new RegExp(`\\bSELECT\\s+${startYear}\\s+AS\\s+year\\b`, "i");
+  return eqRe.test(stripped) || geRe.test(stripped) || gtRe.test(stripped) || betweenRe.test(stripped) || inRe.test(stripped) || recursiveYearSeedRe.test(stripped);
 }
 
 function sqlHasYearUpperBound(sql: string, endYear: number): boolean {
@@ -575,6 +576,36 @@ function violatesPastYearsConvention(ctx: QueryContext): boolean {
   return !sqlHasRequestedLowerYearBound(ctx.sql, range.start) ||
     !sqlHasYearUpperBound(ctx.sql, range.end) ||
     sqlIncludesCurrentCalendarYear(ctx.sql);
+}
+
+function rewritePastYearsConvention(sql: string, question: string): string | null {
+  const range = relativeYearRangeForQuestion(question);
+  if (!range) return null;
+
+  const yearRef = String.raw`((?:\b\w+\.)?\byear\b)`;
+  const fixed = sql
+    .replace(
+      new RegExp(`${yearRef}\\s+BETWEEN\\s+(?:19|20)\\d{2}\\s+AND\\s+(?:19|20)\\d{2}\\b`, "gi"),
+      `$1 BETWEEN ${range.start} AND ${range.end}`
+    )
+    .replace(
+      new RegExp(`${yearRef}\\s*>=\\s*(?:19|20)\\d{2}\\b`, "gi"),
+      `$1 >= ${range.start}`
+    )
+    .replace(
+      new RegExp(`${yearRef}\\s*<=\\s*(?:19|20)\\d{2}\\b`, "gi"),
+      `$1 <= ${range.end}`
+    )
+    .replace(
+      new RegExp(`${yearRef}\\s*>\\s*(?:19|20)\\d{2}\\b`, "gi"),
+      `$1 > ${range.start - 1}`
+    )
+    .replace(
+      new RegExp(`${yearRef}\\s*<\\s*(?:19|20)\\d{2}\\b`, "gi"),
+      `$1 < ${range.end + 1}`
+    );
+
+  return fixed === sql ? null : fixed;
 }
 
 function hasAnnualYearGrouping(sql: string): boolean {
@@ -970,6 +1001,12 @@ const GUARDRAILS: Guardrail[] = [
   },
   {
     name: "relative-past-years-complete-calendar",
+    tabs: ["current", "historical", "nibrs", "shr"],
+    match: (ctx) => violatesPastYearsConvention(ctx),
+    rewrite: (sql, ctx) => rewritePastYearsConvention(sql, ctx.question),
+  },
+  {
+    name: "relative-past-years-complete-calendar-retry",
     tabs: ["current", "historical", "nibrs", "shr"],
     match: (ctx) => violatesPastYearsConvention(ctx),
     message: (ctx) => {

@@ -136,6 +136,77 @@ function isExcludedSimpleLocalQuestion(question: string): boolean {
   return /\b(?:rates?|per\s*(?:capita|100k|100,?000|10k|10,?000)|clearance|cleared|solve[ds]?|share|percent(?:age)?|ratio|compare|versus|vs\.?|top|highest|lowest|rank(?:ing)?|which\s+cit(?:y|ies)|by\s+(?:state|city|agency|race|sex|gender|age|ethnicity|weapon|injury|relationship|circumstance)|weapon|firearm|gun|shooting|shootings|domestic\s+violence|intimate\s+partner|demographic|continuous|consistent\s+report)/i.test(question);
 }
 
+function asksClearanceMethodBreakdown(question: string): boolean {
+  const hasClearance = /\bclear(?:ance|ed|ing)\b/i.test(question);
+  const hasArrest = /\b(?:by\s+)?arrest\b/i.test(question);
+  const hasExceptional = /\bexception(?:al|ally)?(?:\s+means)?\b/i.test(question);
+  return hasClearance && hasArrest && hasExceptional;
+}
+
+export function buildNibrsClearanceMethodQuery(
+  question: string
+): DeterministicNibrsQuery | null {
+  if (!asksClearanceMethodBreakdown(question)) return null;
+  const contract = buildQueryContract(question, "nibrs");
+  if (!contract || contract.metric.offenseCodes.length !== 1) return null;
+  if (contract.geography.kind !== "city" && contract.geography.kind !== "state") return null;
+
+  const offenseCode = contract.metric.offenseCodes[0];
+  const years = yearScope("sct.year", question);
+  const sourceState = contract.geography.sourceCodes?.nibrs ?? contract.geography.state;
+  if (!sourceState) return null;
+
+  let tableIndex: string;
+  let geographyPredicate: string;
+  let place: string;
+  if (contract.geography.kind === "city" && contract.geography.name) {
+    const city = nibrsCityLiteral(contract.geography.name);
+    tableIndex = "idx_sct_ori_year";
+    geographyPredicate = `sct.ori IN (
+    SELECT DISTINCT ori
+    FROM agencies
+    WHERE city = ${sqlString(city)}
+      AND ${compactStatePredicate("state", sourceState)}
+      AND agency_type = 'City'
+      AND population > 0
+  )`;
+    place = contract.geography.canonicalName ?? `${contract.geography.name}, ${contract.geography.state}`;
+  } else {
+    tableIndex = "idx_sct_state_year";
+    geographyPredicate = compactStatePredicate("sct.state", sourceState);
+    place = contract.geography.canonicalName ?? contract.geography.name ?? contract.geography.state ?? "the requested state";
+  }
+
+  const sql = `
+SELECT sct.year,
+  SUM(sct.total_offenses) AS total_offenses,
+  SUM(sct.cleared_by_arrest) AS cleared_by_arrest,
+  SUM(sct.cleared_exceptional) AS cleared_exceptional,
+  ROUND(100.0 * SUM(sct.cleared_by_arrest) / NULLIF(SUM(sct.total_offenses), 0), 1) AS arrest_rate_pct,
+  ROUND(100.0 * SUM(sct.cleared_exceptional) / NULLIF(SUM(sct.total_offenses), 0), 1) AS exceptional_rate_pct
+FROM summary_clearance_type sct INDEXED BY ${tableIndex}
+WHERE sct.ucr_offense_code = ${sqlString(offenseCode)}
+  AND ${years.predicate}
+  AND ${geographyPredicate}
+GROUP BY sct.year
+ORDER BY sct.year
+LIMIT 1000`.trim();
+
+  return {
+    sql,
+    title: `NIBRS clearance methods in ${place}`,
+    explanation:
+      `This compares offenses cleared by arrest with offenses cleared through exceptional means in ${place}${years.periodText}. ` +
+      "Percentages use reported offenses as the denominator. Recent NIBRS data may be incomplete.",
+    chartHint: "line",
+    xAxis: "year",
+    yAxis: "arrest_rate_pct,exceptional_rate_pct",
+    xAxisLabel: "Year",
+    yAxisLabel: "Clearance rate (%)",
+    guardrail: "deterministic-nibrs-clearance-method",
+  };
+}
+
 export function buildNibrsLocalCityOffenseCountQuery(
   question: string
 ): DeterministicNibrsQuery | null {

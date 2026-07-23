@@ -1,5 +1,31 @@
 import { strict as assert } from "node:assert";
-import { buildNibrsDomesticViolenceAggravatedAssaultShareQuery, buildNibrsLocalCityOffenseCountQuery } from "../lib/nibrs-deterministic-queries.js";
+import {
+  buildNibrsClearanceMethodQuery,
+  buildNibrsDomesticViolenceAggravatedAssaultShareQuery,
+  buildNibrsLocalCityOffenseCountQuery,
+} from "../lib/nibrs-deterministic-queries.js";
+
+{
+  const query = buildNibrsClearanceMethodQuery(
+    "How many robberies in Chicago were cleared by arrest versus exceptional means from 2021 to 2025?"
+  );
+  assert.ok(query, "city clearance-method comparison should be deterministic");
+  assert.match(query.sql, /summary_clearance_type sct INDEXED BY idx_sct_ori_year/i);
+  assert.match(query.sql, /sct\.ucr_offense_code = '120'/i);
+  assert.match(query.sql, /city = 'CHICAGO'/i);
+  assert.match(query.sql, /sct\.year BETWEEN 2021 AND 2025/i);
+  assert.equal(query.guardrail, "deterministic-nibrs-clearance-method");
+}
+
+{
+  const query = buildNibrsClearanceMethodQuery(
+    "How many robberies in Texas were cleared by arrest versus exceptional means from 2021 to 2025?"
+  );
+  assert.ok(query, "state clearance-method comparison should be deterministic");
+  assert.match(query.sql, /summary_clearance_type sct INDEXED BY idx_sct_state_year/i);
+  assert.match(query.sql, /sct\.state = 'TX'/i);
+  assert.match(query.sql, /sct\.year BETWEEN 2021 AND 2025/i);
+}
 
 {
   const query = buildNibrsDomesticViolenceAggravatedAssaultShareQuery(
