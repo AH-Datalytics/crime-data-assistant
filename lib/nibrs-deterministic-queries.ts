@@ -225,6 +225,7 @@ export function buildNibrsLocalCityOffenseCountQuery(
 
   const usesPersonTable = codes.every((code) => PERSON_COUNT_CODES.has(code));
   const table = usesPersonTable ? "summary_victim_city_monthly" : "summary_city_monthly";
+  const tableIndex = usesPersonTable ? "idx_svcm_ori" : "idx_scm_ori_year";
   const valueColumn = usesPersonTable ? "victim_count" : "offense_count";
   const alias = SIMPLE_LOCAL_COUNT_ALIASES[contract.metric.topic] ?? "offenses";
   const label = alias.replace(/_/g, " ");
@@ -244,7 +245,7 @@ export function buildNibrsLocalCityOffenseCountQuery(
 
   const sql = `
 SELECT ${selectColumns}
-FROM ${table}
+FROM ${table} INDEXED BY ${tableIndex}
 WHERE ${codePredicate}
   AND ${factStateFilter}
   AND ${years.predicate}
