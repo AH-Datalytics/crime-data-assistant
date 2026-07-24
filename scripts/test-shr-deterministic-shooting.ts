@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { SHR } from "../lib/dynamic-facts";
 import { shootingCityIntents, shootingYearIntent } from "../lib/shr-deterministic-shooting";
+import { asksSimpleFirearmHomicideTrend } from "../lib/shr-firearm-trend-intent";
 import { sourceYearOverlap } from "../lib/source-year-overlap";
 
 {
@@ -36,6 +37,15 @@ import { sourceYearOverlap } from "../lib/source-year-overlap";
 {
   const cities = shootingCityIntents("fatal shootings in Los Angeles since 2020");
   assert.deepEqual(cities, [{ agency: "Los Angeles", agencyLike: undefined, display: "Los Angeles", state: "CA" }]);
+}
+
+{
+  const question = "firearm murders in Houston since 2010";
+  assert.equal(
+    asksSimpleFirearmHomicideTrend(question) && shootingCityIntents(question).length > 0,
+    true,
+    "simple city firearm-homicide trends should enter the deterministic shooting route"
+  );
 }
 
 console.log("SHR deterministic shooting tests passed");
