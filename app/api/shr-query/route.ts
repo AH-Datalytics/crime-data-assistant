@@ -32,6 +32,7 @@ import { getCountyScopeClarification } from "@/lib/county-clarifier";
 import { resolveGeoPlaces } from "@/lib/geo-place-resolver";
 import { detectShrGroupRateOverride, detectSubCityGeographyOverride } from "@/lib/capability-overrides";
 import { displayShrAgencyName, normalizeShrAgencyText } from "@/lib/shr-agency-normalization";
+import { asksSimpleFirearmHomicideTrend } from "@/lib/shr-firearm-trend-intent";
 import {
   queryContractFailureMessage,
   queryContractGuardrails,
@@ -398,7 +399,11 @@ export async function POST(req: NextRequest) {
     }
 
     // Deterministic nonfatal shooting refusal
-    const asksShooting = /\b(shootings?|shot\b|gunshot|people\s+shot|gun\s+violence)\b/i.test(question);
+    const asksCityFirearmHomicideTrend =
+      asksSimpleFirearmHomicideTrend(question) && shootingCityIntents(question).length > 0;
+    const asksShooting =
+      /\b(shootings?|shot\b|gunshot|people\s+shot|gun\s+violence)\b/i.test(question) ||
+      asksCityFirearmHomicideTrend;
     const wantsNonfatal = /\b(nonfatal|non-fatal|non fatal|shooting incidents?|people\s+shot|gunshot (wound|victim)|shot and (survived|wounded|injured))\b/i.test(question);
     if (asksShooting && wantsNonfatal) {
       const refusal = "This database does not track nonfatal shootings. The SHR (Supplementary Homicide Reports) only covers fatal outcomes - murders and manslaughters. For nonfatal shooting data, sources like the Gun Violence Archive or CDC WISQARS may be more appropriate. I can show you fatal shootings (firearm homicides) if that would be helpful.";
