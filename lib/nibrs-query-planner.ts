@@ -7,6 +7,8 @@ import {
   type DeterministicNibrsQuery,
 } from "./nibrs-deterministic-queries";
 import type { NibrsPlaceResolutionPlan, NibrsResolvedPlace } from "./nibrs-place-resolver";
+import { buildNibrsJuvenileArrestsByRaceQuery } from "./nibrs-rollup-deterministic";
+import { resolveNibrsRollupPath } from "./nibrs-rollup-router";
 
 export type NibrsQueryPlan =
   | { kind: "blocked"; place: NibrsResolvedPlace; explanation: string }
@@ -42,6 +44,7 @@ export function planNibrsQuery(
   if (!options.allowDeterministic) return { kind: "model", reason: "followup" };
 
   const query =
+    buildNibrsJuvenileArrestsByRaceQuery(question, resolveNibrsRollupPath() !== null) ??
     buildNibrsClearanceMethodQuery(question) ??
     buildNibrsLocalDemographicQuery(question, resolutionPlan) ??
     buildNibrsStructuredLocalTrendQuery(question, resolutionPlan) ??

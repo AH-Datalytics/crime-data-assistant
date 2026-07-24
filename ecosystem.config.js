@@ -9,6 +9,7 @@ module.exports = {
     env: {
       RTCI_DB_PATH: '/opt/nibrs/shared/crime_data.db',
       NIBRS_DB_PATH: '/opt/nibrs/nibrs.db',
+      NIBRS_ROLLUP_DB_PATH: '/opt/nibrs/shared/nibrs_rollups.db',
       SHR_DB_PATH: '/opt/nibrs/shr.db',
       QUERY_LOG_DB_PATH: '/opt/nibrs/shared/query_log.db',
       APP_DIR: '/opt/nibrs/current',

@@ -296,7 +296,8 @@ if [[ "$BOOTSTRAP" == "1" ]]; then
   log "Next step: pm2 delete nibrs && cd /opt/nibrs/current && pm2 start ecosystem.config.js && pm2 save"
 else
   log "Reloading PM2 app '$PM2_APP'..."
-  pm2 reload "$PM2_APP" --update-env
+  # Reload from the active ecosystem file so newly added runtime paths apply.
+  pm2 reload "$CURRENT_LINK/ecosystem.config.js" --only "$PM2_APP" --update-env
 
   # Give workers time to restart
   sleep 3

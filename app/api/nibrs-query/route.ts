@@ -847,8 +847,8 @@ export async function POST(req: NextRequest) {
       const plannedSql = optimizeNibrsSql(sql);
       if (plannedSql !== sql) {
         sql = plannedSql;
-        routeGuardrailsFired.push("nibrs-ori-index-plan");
-        console.log(`[nibrs][query-plan] Applied ORI-first index hint`);
+        routeGuardrailsFired.push("nibrs-query-plan");
+        console.log(`[nibrs][query-plan] Applied safe index/rollup plan`);
       }
       const result = await executeWithTimeout(sql);
       rows = result.rows;
