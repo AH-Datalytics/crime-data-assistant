@@ -42,6 +42,7 @@ def retry(fn, *args, max_retries=3, delay=30, label="operation", **kwargs):
 
 
 DB_PATH = "/mnt/HC_Volume_105124811/nibrs/nibrs.db"
+SOURCE_GENERATION_PATH = os.environ.get("NIBRS_SOURCE_GENERATION_PATH", "/opt/nibrs/shared/nibrs_source.generation")
 HISTORICAL_DB_PATH = os.environ.get("RTCI_DB_PATH", "/opt/nibrs/shared/crime_data.db")
 DATA_DIR = "/opt/nibrs/data"
 CHECKSUM_FILE = "/opt/nibrs/checksums.json"
@@ -227,6 +228,24 @@ def log(msg):
     ts = time.strftime("%Y-%m-%d %H:%M:%S")
     print(f"[{ts}] {msg}", flush=True)
 
+
+def source_generation_token(path=DB_PATH):
+    """Return the cheap source identity used to invalidate compact rollups."""
+    stat = os.stat(path)
+    return f"{stat.st_size}:{stat.st_mtime_ns}"
+
+
+def publish_source_generation():
+    """Atomically advance the generation only after a successful DB update."""
+    token = source_generation_token()
+    os.makedirs(os.path.dirname(SOURCE_GENERATION_PATH), exist_ok=True)
+    temporary = f"{SOURCE_GENERATION_PATH}.tmp.{os.getpid()}"
+    with open(temporary, "w", encoding="utf-8") as handle:
+        handle.write(token + "\n")
+        handle.flush()
+        os.fsync(handle.fileno())
+    os.replace(temporary, SOURCE_GENERATION_PATH)
+    log(f"Published source generation {token}; old compact rollups now fail closed")
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -1808,6 +1827,7 @@ def main():
 
     if not years_to_process:
         log("No changes detected. Nothing to do.")
+        publish_source_generation()
         log("AUTO-UPDATE COMPLETE")
         return
 
@@ -1922,6 +1942,7 @@ def main():
 
     conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
     conn.close()
+    publish_source_generation()
 
     fsize = os.path.getsize(DB_PATH) / (1024**3)
     elapsed = time.time() - total_start
