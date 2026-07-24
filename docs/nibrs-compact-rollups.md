@@ -11,8 +11,8 @@ circumstance, and clearance summaries. ORI-level rows are deliberately absent.
   refuses the known production hostname.
 - Build from a quiescent copy or volume snapshot on another machine.
 - Do not replace `nibrs.db`. Deploy the compact DB as a separate immutable file.
-- Routing falls back to `nibrs.db` when `NIBRS_ROLLUP_DB_PATH` is unset, absent,
-  or empty.
+- Routing falls back to `nibrs.db` when the rollup is absent, older than the source,
+  or has a generation token that differs from the production source marker.
 - City, county, agency, ORI, and continuous-reporter SQL never routes to the
   compact DB.
 
@@ -21,7 +21,8 @@ circumstance, and clearance summaries. ORI-level rows are deliberately absent.
 ```bash
 python3 scripts/build-nibrs-rollups.py \
   --source /data/nibrs.db \
-  --output /data/nibrs_rollups-YYYYMMDD.db
+  --output /data/nibrs_rollups-YYYYMMDD.db \
+  --source-generation "$(tr -d '\r\n' < /data/nibrs_source.generation)"
 ```
 
 The release build must run without `--skip-verify`. The builder checks exact
@@ -40,13 +41,12 @@ python3 scripts/benchmark-nibrs-rollups.py \
 
 ## Atomic data deployment
 
-Copy to a versioned temporary path, verify the digest, then rename and update
-the stable symlink. Do not overwrite an open database file.
+Use the deployment helper to verify the artifact SHA-256 and ensure its generation
+still matches production before atomically switching the stable symlink. Do not
+overwrite an open database file.
 
 ```bash
-scp nibrs_rollups-YYYYMMDD.db root@WEB:/opt/nibrs/shared/nibrs_rollups-YYYYMMDD.db.tmp
-ssh root@WEB 'sha256sum /opt/nibrs/shared/nibrs_rollups-YYYYMMDD.db.tmp'
-ssh root@WEB 'mv /opt/nibrs/shared/nibrs_rollups-YYYYMMDD.db.tmp /opt/nibrs/shared/nibrs_rollups-YYYYMMDD.db && ln -sfn nibrs_rollups-YYYYMMDD.db /opt/nibrs/shared/nibrs_rollups.db'
+scripts/deploy-nibrs-rollup.sh /data/nibrs_rollups-YYYYMMDD.db root@WEB
 ```
 
 Deploy the application with `scripts/deploy-zero-downtime.sh`. The ecosystem
@@ -61,3 +61,24 @@ Application rollback uses `scripts/rollback.sh`. Data rollback only requires
 repointing `nibrs_rollups.db` to the prior version and reloading PM2. Removing
 the symlink also safely disables rollup routing and returns all traffic to
 `nibrs.db`.
+
+## Continuity after a source update
+
+`nibrs-auto-update.py` publishes `/opt/nibrs/shared/nibrs_source.generation`
+only after the source update, summary rebuild, verification, and final WAL checkpoint
+succeed. A source-file modification time newer than the compact database also
+invalidates routing, covering an updater crash before the marker is published.
+
+After either signal changes, the API automatically uses the full `nibrs.db`.
+This preserves correctness but temporarily restores pre-rollup latency. To restore
+the fast path:
+
+1. Copy the quiescent source database and `nibrs_source.generation` to a
+   non-production build machine. Preserve the source file timestamp when possible.
+2. Build and validate with the copied generation token using the command above.
+3. Run `deploy-nibrs-rollup.sh`. It refuses activation if production changed
+   again during the build or upload.
+4. Run `NIBRS_DB_PATH=/opt/nibrs/nibrs.db NIBRS_ROLLUP_DB_PATH=/opt/nibrs/shared/nibrs_rollups.db NIBRS_SOURCE_GENERATION_PATH=/opt/nibrs/shared/nibrs_source.generation npx tsx scripts/check-nibrs-rollup-freshness.ts` on the web host.
+
+No application restart is required for a data-only rollup switch; new query workers
+resolve the stable symlink for each query.

@@ -39,7 +39,8 @@ class RollupBuilderTest(unittest.TestCase):
 
             subprocess.run(
                 [sys.executable, str(Path(__file__).with_name("build-nibrs-rollups.py")),
-                 "--source", str(source), "--output", str(output)],
+                 "--source", str(source), "--output", str(output),
+                 "--source-generation", "test-generation"],
                 check=True, text=True,
             )
             result = sqlite3.connect(output)
@@ -48,7 +49,9 @@ class RollupBuilderTest(unittest.TestCase):
             self.assertEqual(tx, 8)
             self.assertEqual(us, 15)
             self.assertEqual(result.execute("SELECT COUNT(*) FROM rollup_metadata WHERE key='schema_version'").fetchone()[0], 1)
+            self.assertEqual(result.execute("SELECT value FROM rollup_metadata WHERE key='source_generation'").fetchone()[0], "test-generation")
             result.close()
+            self.assertEqual(Path(str(output) + ".generation").read_text(encoding="utf-8").strip(), "test-generation")
 
 
 if __name__ == "__main__":

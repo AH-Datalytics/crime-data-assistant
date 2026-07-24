@@ -75,7 +75,7 @@ def validate_specs(conn: sqlite3.Connection) -> dict[str, dict[str, str]]:
     return result
 
 
-def create_metadata(conn: sqlite3.Connection, source: Path) -> None:
+def create_metadata(conn: sqlite3.Connection, source: Path, source_generation: str) -> None:
     conn.executescript("""
         CREATE TABLE rollup_metadata (
           key TEXT PRIMARY KEY,
@@ -88,6 +88,7 @@ def create_metadata(conn: sqlite3.Connection, source: Path) -> None:
         "source_path": str(source),
         "source_size": str(stat.st_size),
         "source_mtime_ns": str(stat.st_mtime_ns),
+        "source_generation": source_generation,
         "built_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "builder_host": socket.gethostname(),
     }
@@ -169,18 +170,25 @@ def main() -> int:
     parser.add_argument("--source", required=True, type=Path, help="Snapshot/copy of nibrs.db")
     parser.add_argument("--output", required=True, type=Path, help="New compact SQLite database")
     parser.add_argument("--skip-verify", action="store_true", help="Skip exact total verification (not for release builds)")
+    parser.add_argument("--source-generation", help="Generation token captured from the production source marker")
     args = parser.parse_args()
 
     refuse_production()
     source = args.source.resolve()
     output = args.output.resolve()
+    generation_output = Path(str(output) + ".generation")
     if not source.is_file() or source.stat().st_size == 0:
         raise SystemExit(f"Source database is missing or empty: {source}")
     if source == output:
         raise SystemExit("Output must not be the source database")
     if output.exists():
         raise SystemExit(f"Output already exists: {output}")
+    if generation_output.exists():
+        raise SystemExit(f"Generation sidecar already exists: {generation_output}")
     output.parent.mkdir(parents=True, exist_ok=True)
+    source_generation = (args.source_generation or f"{source.stat().st_size}:{source.stat().st_mtime_ns}").strip()
+    if not source_generation:
+        raise SystemExit("Source generation token cannot be empty")
 
     conn = sqlite3.connect(output, uri=True)
     try:
@@ -191,7 +199,7 @@ def main() -> int:
         conn.execute("PRAGMA cache_size=-524288")
         conn.execute("ATTACH DATABASE ? AS source", (source_uri(source),))
         columns = validate_specs(conn)
-        create_metadata(conn, source)
+        create_metadata(conn, source, source_generation)
         conn.commit()
         for spec in SPECS:
             for level in ("state", "national"):
@@ -214,6 +222,7 @@ def main() -> int:
         except Exception:
             pass
 
+    generation_output.write_text(source_generation + "\n", encoding="utf-8")
     print(f"output={output}")
     print(f"bytes={output.stat().st_size}")
     print(f"sha256={fingerprint(output)}")
