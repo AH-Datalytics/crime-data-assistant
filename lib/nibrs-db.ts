@@ -6,6 +6,7 @@ import { getManagedDb, resolveDbPath } from "./sqlite-db";
 import type { RoutingLogMeta } from "./routing-log-meta";
 import { serializeQueryGuidanceLogMeta } from "./query-guidance-log";
 import { serializeQueryContractLogMeta } from "./query-contract";
+import { resolveNibrsRollupPath, routeNibrsRollupSql } from "./nibrs-rollup-router";
 
 const state = {
   db: null as Database.Database | null,
@@ -81,7 +82,7 @@ export function executeWithTimeout(
 
     execFile(
       process.execPath,
-      [workerScript, dbPath, sql],
+      [workerScript, dbPath, resolveNibrsRollupPath() ?? "", routeNibrsRollupSql(sql).sql],
       { timeout: timeoutMs, maxBuffer: 50 * 1024 * 1024 },
       (err, stdout, stderr) => {
         if (err) {

@@ -30,6 +30,8 @@ import { getCountyScopeClarification } from "@/lib/county-clarifier";
 import { asksCampusAgency, buildCampusAgencySummarySql, campusAgencyChartAxesFromSql, campusAgencyDisplayName, knownCampusAgencyResolution, resolveCampusAgencyOris, shouldResolveCampusAgencySql } from "@/lib/nibrs-campus-agency";
 import { buildNibrsClearanceMethodQuery, buildNibrsDomesticViolenceAggravatedAssaultShareQuery, buildNibrsLocalCityOffenseCountQuery } from "@/lib/nibrs-deterministic-queries";
 import { optimizeNibrsSql } from "@/lib/nibrs-sql-optimizer";
+import { buildNibrsJuvenileArrestsByRaceQuery } from "@/lib/nibrs-rollup-deterministic";
+import { resolveNibrsRollupPath } from "@/lib/nibrs-rollup-router";
 import {
   queryContractFailureMessage,
   queryContractGuardrails,
@@ -275,7 +277,7 @@ export async function POST(req: NextRequest) {
       } as QueryResponse);
     }
 
-    const deterministicQuery = buildNibrsClearanceMethodQuery(question) ?? buildNibrsLocalCityOffenseCountQuery(question) ?? buildNibrsDomesticViolenceAggravatedAssaultShareQuery(question);
+    const deterministicQuery = buildNibrsJuvenileArrestsByRaceQuery(question, resolveNibrsRollupPath() !== null) ?? buildNibrsClearanceMethodQuery(question) ?? buildNibrsLocalCityOffenseCountQuery(question) ?? buildNibrsDomesticViolenceAggravatedAssaultShareQuery(question);
     if (deterministicQuery) {
       const deterministicStart = Date.now();
       try {
@@ -743,8 +745,8 @@ export async function POST(req: NextRequest) {
       const plannedSql = optimizeNibrsSql(sql);
       if (plannedSql !== sql) {
         sql = plannedSql;
-        routeGuardrailsFired.push("nibrs-ori-index-plan");
-        console.log(`[nibrs][query-plan] Applied ORI-first index hint`);
+        routeGuardrailsFired.push("nibrs-query-plan");
+        console.log(`[nibrs][query-plan] Applied safe index/rollup plan`);
       }
       const result = await executeWithTimeout(sql);
       rows = result.rows;

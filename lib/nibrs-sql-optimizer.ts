@@ -1,4 +1,6 @@
-/** Apply conservative SQLite index hints to generated NIBRS SQL. */
+/** Apply conservative SQLite index hints and compact-rollup routing. */
+
+import { routeNibrsRollupSql } from "./nibrs-rollup-router";
 
 interface HintRule {
   table: string;
@@ -54,5 +56,5 @@ function addIndexHint(sql: string, table: string, index: string): string {
 export function optimizeNibrsSql(sql: string): string {
   let optimized = sql;
   for (const rule of ORI_SCOPED_RULES) optimized = addIndexHint(optimized, rule.table, rule.oriIndex);
-  return optimized;
+  return routeNibrsRollupSql(optimized).sql;
 }
