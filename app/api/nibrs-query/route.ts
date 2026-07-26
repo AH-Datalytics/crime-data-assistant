@@ -30,6 +30,7 @@ import { getCountyScopeClarification } from "@/lib/county-clarifier";
 import { asksCampusAgency, buildCampusAgencySummarySql, campusAgencyChartAxesFromSql, campusAgencyDisplayName, knownCampusAgencyResolution, resolveCampusAgencyOris, shouldResolveCampusAgencySql } from "@/lib/nibrs-campus-agency";
 import { buildNibrsClearanceMethodQuery, buildNibrsDomesticViolenceAggravatedAssaultShareQuery, buildNibrsLocalCityOffenseCountQuery, buildNibrsLocalDemographicQuery, buildNibrsStructuredLocalTrendQuery } from "@/lib/nibrs-deterministic-queries";
 import { optimizeNibrsSql } from "@/lib/nibrs-sql-optimizer";
+import { buildQueryContract } from "@/lib/query-contract";
 import {
   queryContractFailureMessage,
   queryContractGuardrails,
@@ -368,14 +369,23 @@ export async function POST(req: NextRequest) {
     // Bare clarifier answers ("Countywide total") carry no county name — use
     // the transform's reconstructed question so guardrails see the geography
     const guardrailQuestion = followupTransform?.contextQuestion ?? question;
-    const promptHistory = followupTransform
+    const basePromptHistory = followupTransform
       ? [...history, { role: "user" as const, content: followupTransform.instruction }]
       : history;
+    const promptContract = buildQueryContract(guardrailQuestion, "nibrs");
+    const isOverallRate = promptContract?.metric.unit === "rate_per_100k" &&
+      promptContract.metric.unsupportedReason === null;
+    const promptHistory = isOverallRate
+      ? [...basePromptHistory, {
+          role: "user" as const,
+          content: "[SYSTEM: The query contract classifies this as an overall jurisdiction rate, not a demographic-group rate. Any demographic-looking word is part of a resolved place or offense name. Do not apply the demographic-rate prohibition; generate SQL using total jurisdiction population.]",
+        }]
+      : basePromptHistory;
     const claudeStart = Date.now();
 
     // Check response cache (only standalone questions). Continuous-reporter
     // requests are contract-sensitive and must not reuse stale broad-summary SQL.
-    const cacheableStandalone = promptHistory.length === 0 && !asksContinuousReportingFilter(question);
+    const cacheableStandalone = basePromptHistory.length === 0 && !asksContinuousReportingFilter(question);
     const cached = cacheableStandalone ? getCached(question, "nibrs") : null;
 
     let claude: Awaited<ReturnType<typeof translateToSql>>;
@@ -393,8 +403,12 @@ export async function POST(req: NextRequest) {
         const refusalPatterns = /not (appear|be represented)|doesn't appear|not (in|included in) (this|the|our) (dataset|data|sample|library)|no data (for|available|found)|does not (have|include|cover)|not available in this|isn't (in|included)|not found in/i;
         // Retry if model asks for year range instead of defaulting
         const yearAskPattern = /\b(time (range|period)|year range|which year|what year|how many year|specify.*year|interested in)\b/i;
+        const falseDemographicRefusal = isOverallRate &&
+          /population.*(?:race|ethnicity|sex|age)|group-specific per-capita|demographic group/i.test(claude.explanation || "");
         const coverageRetryPrompt = partialCoverageRetryPrompt("nibrs", question, claude.explanation);
-        const retryPrompt = coverageRetryPrompt
+        const retryPrompt = falseDemographicRefusal
+          ? "[SYSTEM: Incorrect refusal. The query contract confirms this is an overall rate for a resolved place and offense, not a demographic-group rate. Generate the SQL now using total jurisdiction population.]"
+          : coverageRetryPrompt
           ? coverageRetryPrompt
           : refusalPatterns.test(claude.explanation || "")
           ? "[SYSTEM: Your previous response claimed the data was not available, but this may be incorrect. NEVER assume an agency is missing. Always generate a SQL query and let the database answer. Try the query now.]"
