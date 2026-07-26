@@ -38,6 +38,7 @@ import {
   type QueryContractSqlValidation,
 } from "@/lib/query-contract-validator";
 import { partialCoverageRetryPrompt } from "@/lib/source-year-overlap";
+import { removedDemographicPlaceToken } from "@/lib/demographic-rate-intent";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -375,7 +376,9 @@ export async function POST(req: NextRequest) {
     const promptContract = buildQueryContract(guardrailQuestion, "nibrs");
     const isOverallRate = promptContract?.metric.unit === "rate_per_100k" &&
       promptContract.metric.unsupportedReason === null;
-    const promptHistory = isOverallRate
+    const hasDemographicPlaceDisambiguation = isOverallRate &&
+      removedDemographicPlaceToken(guardrailQuestion);
+    const promptHistory = hasDemographicPlaceDisambiguation
       ? [...basePromptHistory, {
           role: "user" as const,
           content: "[SYSTEM: The query contract classifies this as an overall jurisdiction rate, not a demographic-group rate. Any demographic-looking word is part of a resolved place or offense name. Do not apply the demographic-rate prohibition; generate SQL using total jurisdiction population.]",
@@ -403,7 +406,7 @@ export async function POST(req: NextRequest) {
         const refusalPatterns = /not (appear|be represented)|doesn't appear|not (in|included in) (this|the|our) (dataset|data|sample|library)|no data (for|available|found)|does not (have|include|cover)|not available in this|isn't (in|included)|not found in/i;
         // Retry if model asks for year range instead of defaulting
         const yearAskPattern = /\b(time (range|period)|year range|which year|what year|how many year|specify.*year|interested in)\b/i;
-        const falseDemographicRefusal = isOverallRate &&
+        const falseDemographicRefusal = hasDemographicPlaceDisambiguation &&
           /population.*(?:race|ethnicity|sex|age)|group-specific per-capita|demographic group/i.test(claude.explanation || "");
         const coverageRetryPrompt = partialCoverageRetryPrompt("nibrs", question, claude.explanation);
         const retryPrompt = falseDemographicRefusal

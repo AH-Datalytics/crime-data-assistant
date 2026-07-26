@@ -171,13 +171,16 @@ import {
   const db = new Database(":memory:");
   db.exec([
     "CREATE TABLE agencies (ori TEXT, year INTEGER, state TEXT, city TEXT, agency_type TEXT, population INTEGER, pop_group TEXT);",
-    "CREATE TABLE summary_victim_city_monthly (ori TEXT, year INTEGER, ucr_offense_code TEXT, victim_count INTEGER);",
+    "CREATE TABLE summary_victim_city_monthly (ori TEXT, year INTEGER, month INTEGER, ucr_offense_code TEXT, victim_count INTEGER);",
+    "CREATE TABLE summary_city_monthly (ori TEXT, year INTEGER, month INTEGER, ucr_offense_code TEXT, offense_count INTEGER);",
     "CREATE TABLE nibrs_agency_completeness (ori TEXT, year INTEGER, months_reported INTEGER);",
     "CREATE INDEX idx_svcm_ori ON summary_victim_city_monthly(ori);",
+    "CREATE INDEX idx_scm_ori_year ON summary_city_monthly(ori, year);",
     "CREATE INDEX idx_nac_ori_year ON nibrs_agency_completeness(ori, year);",
     `INSERT INTO agencies VALUES ('ILCPD0000', ${currentYear}, 'IL', 'CHICAGO', 'City', 2700000, '1A'), ('WIMPD0000', ${currentYear}, 'WI', 'MILWAUKEE', 'City', 560000, '1B');`,
-    `INSERT INTO summary_victim_city_monthly VALUES ('ILCPD0000', 2021, '09A', 370), ('ILCPD0000', 2022, '09A', 700), ('ILCPD0000', ${currentYear}, '09A', 300), ('WIMPD0000', 2018, '09A', 100), ('WIMPD0000', 2019, '09A', 110), ('WIMPD0000', ${currentYear}, '09A', 50);`,
-    `INSERT INTO nibrs_agency_completeness VALUES ('ILCPD0000', 2021, 6), ('ILCPD0000', 2022, 12), ('ILCPD0000', ${currentYear}, 7), ('WIMPD0000', 2018, 12), ('WIMPD0000', 2019, 12), ('WIMPD0000', 2020, 12), ('WIMPD0000', 2021, 12), ('WIMPD0000', 2022, 12), ('WIMPD0000', ${currentYear}, 7);`,
+    `INSERT INTO summary_victim_city_monthly VALUES ('ILCPD0000', 2021, 1, '09A', 370), ('ILCPD0000', 2022, 1, '09A', 700), ('ILCPD0000', ${currentYear}, 1, '09A', 300), ('WIMPD0000', 2018, 1, '09A', 100), ('WIMPD0000', 2019, 1, '09A', 110), ('WIMPD0000', ${currentYear}, 1, '09A', 50);`,
+    `INSERT INTO summary_city_monthly VALUES ('ILCPD0000', ${currentYear}, 1, '220', 1), ('WIMPD0000', ${currentYear}, 1, '220', 1);`,
+    `INSERT INTO nibrs_agency_completeness VALUES ('ILCPD0000', 2021, 6), ('ILCPD0000', 2022, 12), ('WIMPD0000', 2018, 12), ('WIMPD0000', 2019, 12), ('WIMPD0000', 2020, 12), ('WIMPD0000', 2021, 12), ('WIMPD0000', 2022, 12), ('WIMPD0000', ${currentYear}, 7);`,
   ].join("\n"));
   const rows = db.prepare(query.sql).all() as Record<string, number | null>[];
   db.close();
@@ -187,11 +190,23 @@ import {
   assert.equal(byYear.get(2021)?.chicago_il_murders, null, "historical partial years must be null");
   assert.equal(byYear.get(2022)?.chicago_il_murders, 700, "complete historical counts remain visible");
   assert.equal(byYear.get(2020)?.milwaukee_wi_murders, 0, "a complete reporting year with no matching offense is a real zero");
-  assert.equal(byYear.get(currentYear)?.chicago_il_murders, 300, "current-year partial counts remain visible without requiring YTD wording");
+  assert.equal(byYear.get(currentYear)?.chicago_il_murders, 300, "current-year summary data remains visible when completeness has not been rebuilt");
 
   const rateQuery = buildNibrsStructuredLocalTrendQuery("compare murder rates in Houston and Dallas by year from 2024 to 2025");
   assert.ok(rateQuery, "city rate comparisons should remain deterministic");
   assert.match(rateQuery.sql, /months_reported END\) = 12/i);
+}
+
+for (const question of [
+  "Murder rate for teenagers in Chicago since 2019",
+  "Murder rate for elderly residents in Chicago since 2019",
+  "Women's robbery victimization rate in Chicago",
+]) {
+  assert.equal(
+    buildNibrsStructuredLocalTrendQuery(question),
+    null,
+    "demographic rate language must never compile as an overall rate: " + question
+  );
 }
 
 {
@@ -302,6 +317,7 @@ import {
   assert.ok(sexOffenseRate, "sex-offense category rates must not be treated as demographic rates");
   assert.match(sexOffenseRate.sql, /s\.ucr_offense_code IN \('11A','11B','11C','11D','36A','36B'\)/i);
   assert.doesNotMatch(sexOffenseRate.explanation, /demographic population/i);
+  assert.match(sexOffenseRate.explanation, /forcible and nonforcible.*statutory rape/i);
 }
 
 console.log("nibrs deterministic query tests passed");

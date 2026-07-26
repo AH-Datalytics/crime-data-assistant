@@ -1,5 +1,6 @@
 import { buildQueryContract, type QueryContractGeography, type QueryContractOffense } from "./query-contract";
 import { pastCompleteCalendarYearsRange, relativeYearRangeForQuestion } from "./time-conventions";
+import { hasUnresolvedDemographicToken } from "./demographic-rate-intent";
 
 export interface DeterministicNibrsQuery {
   sql: string;
@@ -314,12 +315,20 @@ LIMIT 1000`.trim()
       "  " + target.sql,
       "),",
       "requested_years(year) AS (" + requestedYearsSql(years) + "),",
+      "current_year_reporting AS (",
+      "  SELECT s.year, COUNT(DISTINCT s.month) AS summary_months_reported",
+      "  FROM target_places AS tp",
+      "  CROSS JOIN " + table + " AS s INDEXED BY " + tableIndex,
+      "  WHERE s.ori = tp.ori AND s.year = " + currentYear,
+      "  GROUP BY s.year",
+      "),",
       "place_reporting AS (",
-      "  SELECT y.year, MAX(c.months_reported) AS months_reported",
+      "  SELECT y.year, MAX(c.months_reported) AS months_reported, MAX(cyr.summary_months_reported) AS summary_months_reported",
       "  FROM requested_years AS y",
       "  CROSS JOIN target_places AS tp",
       "  LEFT JOIN nibrs_agency_completeness AS c INDEXED BY idx_nac_ori_year",
       "    ON c.ori = tp.ori AND c.year = y.year",
+      "  LEFT JOIN current_year_reporting AS cyr ON cyr.year = y.year",
       "  GROUP BY y.year",
       "),",
       "annual_counts AS (",
@@ -332,7 +341,8 @@ LIMIT 1000`.trim()
       "  GROUP BY s.year",
       ")",
       "SELECT pr.year,",
-      "  CASE WHEN pr.months_reported = 12 OR (pr.year = " + currentYear + " AND pr.months_reported > 0)",
+      "  CASE WHEN pr.months_reported = 12 OR (pr.year = " + currentYear +
+        " AND (COALESCE(pr.months_reported, 0) > 0 OR COALESCE(pr.summary_months_reported, 0) > 0))",
       "    THEN COALESCE(ac." + alias + ", 0) ELSE NULL END AS " + alias,
       "FROM place_reporting AS pr",
       "LEFT JOIN annual_counts AS ac ON ac.year = pr.year",
@@ -348,7 +358,7 @@ LIMIT 1000`.trim()
       `This returns reported ${label} for ${place}${years.periodText}. ` +
       (monthly
         ? "Recent monthly NIBRS data may be incomplete because agencies submit on different schedules."
-        : "Historical counts are left blank unless the agency reported all 12 months; current-year partial counts remain visible and are disclosed as partial. Months reported are inferred from months containing reported offenses, so this conservative rule can suppress a complete small-agency year with a genuinely offense-free month."),
+        : "Historical counts are left blank unless the agency reported all 12 months; current-year partial counts remain visible when summary data exists and are disclosed as partial. Months reported are inferred from months containing reported offenses, so this conservative rule can suppress a complete small-agency year with a genuinely offense-free month. Recent annual totals may still change as agencies submit revisions."),
     chartHint: "line",
     xAxis: "year",
     yAxis: alias,
@@ -664,6 +674,7 @@ export function buildNibrsStructuredLocalTrendQuery(
   if (!contract || !["count", "rate_per_100k"].includes(contract.metric.unit)) return null;
   const isRate = contract.metric.unit === "rate_per_100k";
   if (isRate && /\bper\s*(?:10k|10,?000|1k|1,?000|million|1m)\b/i.test(question)) return null;
+  if (isRate && hasUnresolvedDemographicToken(question)) return null;
   if (contract.metric.offenses.length === 0 || contract.metric.offenses.length > 4) return null;
   const allCodes = contract.metric.offenses.flatMap((offense) => offense.codes);
   if (new Set(allCodes).size !== allCodes.length) return null;
@@ -715,18 +726,27 @@ export function buildNibrsStructuredLocalTrendQuery(
         sqlString(item.placeKey) + " THEN pr.population END), 0), 1) ELSE NULL END AS " + item.alias;
     }
     return "CASE WHEN " + reportingMonths + " = 12 OR (pr.year = " + currentYear +
-      " AND " + reportingMonths + " > 0) THEN " + countValue +
+      " AND (" + reportingMonths + " > 0 OR MAX(CASE WHEN pr.place_key = " +
+      sqlString(item.placeKey) + " THEN pr.summary_months_reported END) > 0)) THEN " + countValue +
       " ELSE NULL END AS " + item.alias;
   });
   const reportingCte = [
     "requested_years(year) AS (" + requestedYearsSql(years) + "),",
+    "current_year_reporting AS (",
+    "  SELECT tp.place_key, COUNT(DISTINCT s.month) AS summary_months_reported",
+    "  FROM " + targetCte + " AS tp",
+    "  CROSS JOIN summary_city_monthly AS s INDEXED BY idx_scm_ori_year",
+    "  WHERE s.ori = tp.ori AND s.year = " + currentYear,
+    "  GROUP BY tp.place_key",
+    "),",
     "place_reporting AS (",
-    "  SELECT y.year, tp.place_key, MAX(a.population) AS population, MAX(c.months_reported) AS months_reported",
+    "  SELECT y.year, tp.place_key, MAX(a.population) AS population, MAX(c.months_reported) AS months_reported, MAX(cyr.summary_months_reported) AS summary_months_reported",
     "  FROM requested_years AS y",
     "  CROSS JOIN " + targetCte + " AS tp",
     "  LEFT JOIN agencies AS a ON a.ori = tp.ori AND a.year = y.year AND a.population > 0",
     "  LEFT JOIN nibrs_agency_completeness AS c INDEXED BY idx_nac_ori_year",
     "    ON c.ori = tp.ori AND c.year = y.year",
+    "  LEFT JOIN current_year_reporting AS cyr ON cyr.place_key = tp.place_key AND y.year = " + currentYear,
     "  GROUP BY y.year, tp.place_key",
     ")",
   ];
@@ -755,9 +775,12 @@ export function buildNibrsStructuredLocalTrendQuery(
       "This returns annual reported " + offenseLabels + (isRate ? " rates per 100,000" : "") + " for " + places + years.periodText + ". " +
       "Named city police departments are resolved to city-agency ORIs; named sheriff agencies are resolved through the agency crosswalk. " +
       "Person crimes use victim summaries while robbery and other non-person offenses use offense summaries. " +
+      (contract.metric.offenses.some((offense) => offense.topic === "sex_offense")
+        ? "The sex-offense category includes forcible and nonforcible NIBRS offenses, including statutory rape. "
+        : "") +
       (isRate
-        ? "Rates use each agency's year-specific service population and are left blank unless the agency reported all 12 months."
-        : "Historical counts are left blank unless the agency reported all 12 months; current-year partial counts remain visible and are disclosed as partial. Months reported are inferred from months containing reported offenses, so this conservative rule can also suppress a complete small-agency year with a genuinely offense-free month."),
+        ? "Rates use each agency's year-specific service population and are left blank unless the agency reported all 12 months. Recent annual values may still change as agencies submit revisions."
+        : "Historical counts are left blank unless the agency reported all 12 months; current-year partial counts remain visible when summary data exists and are disclosed as partial. Months reported are inferred from months containing reported offenses, so this conservative rule can also suppress a complete small-agency year with a genuinely offense-free month. Recent annual totals may still change as agencies submit revisions."),
     chartHint: "line",
     xAxis: "year",
     yAxis: series.map((item) => item.alias).join(","),

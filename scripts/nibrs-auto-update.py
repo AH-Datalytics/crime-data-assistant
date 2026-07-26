@@ -1340,6 +1340,7 @@ def ensure_performance_indexes(conn):
         ("idx_svd_new_ori_year", "summary_victim_demographics", "ori, year"),
         ("idx_sod_new_ori_year", "summary_offender_demographics", "ori, year"),
         ("idx_sad_new_ori_year", "summary_arrestee_demographics", "ori, year"),
+        ("idx_scd_ori_year", "summary_clearance_detail", "ori, year"),
     ]
     for index_name, table_name, columns in deterministic_indexes:
         if conn.execute(

@@ -2,6 +2,7 @@
 
 import { detectNibrsCapabilityOverride } from "../lib/nibrs-capability-overrides.js";
 import { detectShrGroupRateOverride, detectSubCityGeographyOverride } from "../lib/capability-overrides.js";
+import { removedDemographicPlaceToken } from "../lib/demographic-rate-intent.js";
 
 let pass = 0;
 let fail = 0;
@@ -119,6 +120,28 @@ function assert(name: string, condition: boolean, detail?: string) {
   const r = detectNibrsCapabilityOverride("Sex offense rates in Denver since 2019");
   assert("sex-offense category does not trigger a demographic-rate refusal", r === null, JSON.stringify(r));
 }
+
+for (const question of [
+  "Murder rate for teenagers in Chicago since 2019",
+  "Murder rate for elderly residents in Chicago since 2019",
+  "Crime rate for seniors in Chicago since 2019",
+  "Crime rate for kids in Chicago since 2019",
+  "Crime rate for children in Chicago since 2019",
+  "Crime rate for minors in Chicago since 2019",
+  "Women's robbery victimization rate in Chicago",
+]) {
+  const r = detectNibrsCapabilityOverride(question);
+  assert("demographic age/sex rate is refused: " + question,
+    r?.guardrail === "demographic-rate-unsupported",
+    JSON.stringify(r));
+}
+
+assert("White Plains is the narrow demographic-place disambiguation case",
+  removedDemographicPlaceToken("What is the aggravated assault rate in White Plains, NY?"));
+assert("ordinary rate questions do not receive demographic-place model guidance",
+  !removedDemographicPlaceToken("What is the robbery rate in Chicago?"));
+assert("unresolved women's language is not mistaken for a place",
+  !removedDemographicPlaceToken("Women's robbery victimization rate in Chicago"));
 
 // --- SHR-tab group-rate override: follow-up-safe (no homicide word required) ---
 // query-audit-2026-07-03 F27: front door was blind to follow-ups that drop "murder"

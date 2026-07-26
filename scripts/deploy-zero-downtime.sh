@@ -163,6 +163,7 @@ REQUIRED_NIBRS_INDEXES=(
   idx_svd_new_ori_year
   idx_sod_new_ori_year
   idx_sad_new_ori_year
+  idx_scd_ori_year
 )
 [[ -f "$NIBRS_DB_PATH" ]] || die "NIBRS database not found at $NIBRS_DB_PATH"
 node -e '
