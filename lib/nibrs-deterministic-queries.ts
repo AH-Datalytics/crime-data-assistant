@@ -403,9 +403,10 @@ function structuredOffenseSelect(
     label: offense.label,
     sql: [
       "SELECT s.year, tp.place_key, " + sqlString(key) + " AS offense_key, SUM(s." + valueColumn + ") AS reported_count",
-      "  FROM " + table + " AS s INDEXED BY " + tableIndex,
-      "  JOIN " + targetCte + " AS tp ON tp.ori = s.ori",
-      "  WHERE " + codePredicate,
+      "  FROM " + targetCte + " AS tp",
+      "  CROSS JOIN " + table + " AS s INDEXED BY " + tableIndex,
+      "  WHERE s.ori = tp.ori",
+      "    AND " + codePredicate,
       "    AND " + years.predicate.replace(/\byear\b/g, "s.year"),
       "  GROUP BY s.year, tp.place_key",
     ].join("\n"),

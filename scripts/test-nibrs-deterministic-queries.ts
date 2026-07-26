@@ -132,8 +132,10 @@ import {
   assert.match(query.sql, /city = 'ALBUQUERQUE'/i);
   assert.match(query.sql, /agency_name\) LIKE '%BERNALILLO%'/i);
   assert.match(query.sql, /agency_name\) LIKE '%SHERIFF%'/i);
-  assert.match(query.sql, /summary_victim_city_monthly AS s INDEXED BY idx_svcm_ori/i);
-  assert.match(query.sql, /summary_city_monthly AS s INDEXED BY idx_scm_ori_year/i);
+  assert.match(query.sql, /FROM target_places AS tp\s+CROSS JOIN summary_victim_city_monthly AS s INDEXED BY idx_svcm_ori/i);
+  assert.match(query.sql, /FROM target_places AS tp\s+CROSS JOIN summary_city_monthly AS s INDEXED BY idx_scm_ori_year/i);
+  assert.equal(query.sql.match(/FROM target_places AS tp\s+CROSS JOIN summary_/gi)?.length, 3,
+    "every offense branch must keep target ORIs on the outer side of the indexed join");
   assert.match(query.sql, /s\.ucr_offense_code = '09A'/i);
   assert.match(query.sql, /s\.ucr_offense_code = '120'/i);
   assert.match(query.sql, /s\.ucr_offense_code = '13A'/i);
