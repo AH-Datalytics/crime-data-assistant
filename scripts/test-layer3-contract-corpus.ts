@@ -498,6 +498,19 @@ const cases: CorpusCase[] = [
     expectRetry: ["nibrs-weapon-demographic-person-crime-table"],
   },
   {
+    id: "L3-NIBRS-DEMOGRAPHICS-03",
+    family: "demographic breakdown table",
+    question: "show me murders, robberies, and aggravated assaults by offender age by year for 2017 to 2025",
+    source: "nibrs",
+    sql: `
+      SELECT d.year, d.age_group, SUM(d.offender_count) AS offenders
+      FROM rollup.national_summary_offender_demographics d
+      WHERE d.ucr_offense_code IN ('09A','120','13A') AND d.year BETWEEN 2017 AND 2025
+      GROUP BY d.year, d.age_group
+    `,
+    expectNoFindings: ["nibrs-demographic-breakdown-table"],
+  },
+  {
     id: "L3-NIBRS-CIRCUMSTANCE-01",
     family: "weapon circumstance table",
     question: "domestic violence aggravated assaults with a firearm since 2020",
@@ -1282,6 +1295,20 @@ const cases: CorpusCase[] = [
     `,
     expectNoWarnings: ["contract-geography-state-missing"],
     expectNoFindings: ["nibrs-campus-agency-resolution"],
+  },
+  {
+    id: "L3-GEO-STATE-MISSING-HISTORICAL-02",
+    family: "local geography missing state predicate",
+    question: "What about Dallas?",
+    source: "historical",
+    sql: `
+      SELECT ha.agency, 'TX' AS state, ha.type
+      FROM historical_agency ha
+      WHERE UPPER(ha.state) = UPPER('TX')
+        AND LOWER(ha.type) = 'city'
+        AND UPPER(ha.agency) = UPPER('Dallas')
+    `,
+    expectNoWarnings: ["contract-geography-state-missing"],
   },];
 
 const familyCounts = new Map<string, number>();

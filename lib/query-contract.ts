@@ -5,20 +5,30 @@ import { isChartTypeOnlyRequest, isYAxisDomainOnlyRequest } from "./chart-custom
 export type QueryContractSource = "current" | "historical" | "nibrs" | "shr" | "hate_crime";
 export type ContractConfidence = "high" | "medium" | "low";
 
+export type QueryContractGeography = {
+  kind: "city" | "county" | "state" | "agency" | "campus" | "national" | "unknown";
+  name: string | null;
+  state: string | null;
+  canonicalName: string | null;
+  sourceCodes?: Record<string, string | string[]>;
+  confidence: ContractConfidence;
+  needsClarification: string[];
+};
+
+export type QueryContractOffense = {
+  topic: string;
+  codes: string[];
+  label: string;
+};
+
 export type QueryContract = {
   source: QueryContractSource;
-  geography: {
-    kind: "city" | "county" | "state" | "agency" | "campus" | "national" | "unknown";
-    name: string | null;
-    state: string | null;
-    canonicalName: string | null;
-    sourceCodes?: Record<string, string | string[]>;
-    confidence: ContractConfidence;
-    needsClarification: string[];
-  };
+  geography: QueryContractGeography;
+  geographies: QueryContractGeography[];
   metric: {
     topic: string;
     offenseCodes: string[];
+    offenses: QueryContractOffense[];
     unit: "count" | "rate_per_100k" | "clearance_rate" | "ratio" | "unknown";
     numerator: string | null;
     denominator: string | null;
@@ -41,25 +51,24 @@ export type QueryContract = {
   };
   warnings: string[];
 };
-
 const STATE_CODE_ALIASES: Record<string, Record<QueryContractSource, string | string[]>> = {
   NE: { current: "NE", historical: "nb", nibrs: ["NE", "NB"], shr: "NE", hate_crime: "NE" },
   GU: { current: "GU", historical: "gm", nibrs: ["GU", "GM"], shr: "GU", hate_crime: "GU" },
 };
 
-const OFFENSE_PATTERNS: { topic: string; codes: string[]; pattern: RegExp }[] = [
-  { topic: "murder", codes: ["09A"], pattern: /\b(murders?|homicides?|killings?|fatal\s+shootings?)\b/i },
-  { topic: "hate_crime", codes: [], pattern: /\bhate\s+crimes?\b|\bbias[-\s]+motivated\b/i },
-  { topic: "rape", codes: ["11A", "11B", "11C"], pattern: /\brapes?\b/i },
-  { topic: "robbery", codes: ["120"], pattern: /\brobber(?:y|ies)\b/i },
-  { topic: "aggravated_assault", codes: ["13A"], pattern: /\baggravated\s+assaults?\b/i },
-  { topic: "burglary", codes: ["220"], pattern: /\bburglar(?:y|ies)\b/i },
-  { topic: "theft", codes: ["23A-23H"], pattern: /\b(?:theft|larceny|larcenies)\b/i },
-  { topic: "motor_vehicle_theft", codes: ["240"], pattern: /\b(?:motor\s+vehicle|auto)\s+theft\b/i },
-  { topic: "carjacking", codes: ["64A", "64B"], pattern: /\bcarjack(?:ing|ings)?\b/i },
-  { topic: "domestic_violence", codes: [], pattern: /\bdomestic\s+violence\b|\bintimate\s+partner\s+violence\b|\b(?<![a-z])dv(?![a-z])\b/i },
-  { topic: "violent_crime", codes: ["09A", "11A", "11B", "11C", "120", "13A"], pattern: /\bviolent\s+crime\b/i },
-  { topic: "property_crime", codes: ["200", "220", "23A-23H", "240"], pattern: /\bproperty\s+crime\b/i },
+const OFFENSE_PATTERNS: { topic: string; codes: string[]; label: string; pattern: RegExp }[] = [
+  { topic: "murder", codes: ["09A"], label: "Murders", pattern: /\b(murders?|homicides?|killings?|fatal\s+shootings?)\b/i },
+  { topic: "hate_crime", codes: [], label: "Hate crimes", pattern: /\bhate\s+crimes?\b|\bbias[-\s]+motivated\b/i },
+  { topic: "rape", codes: ["11A", "11B", "11C"], label: "Rapes", pattern: /\brapes?\b/i },
+  { topic: "robbery", codes: ["120"], label: "Robberies", pattern: /\brobber(?:y|ies)\b/i },
+  { topic: "aggravated_assault", codes: ["13A"], label: "Aggravated assaults", pattern: /\baggravated\s+assaults?\b/i },
+  { topic: "burglary", codes: ["220"], label: "Burglaries", pattern: /\bburglar(?:y|ies)\b/i },
+  { topic: "theft", codes: ["23A-23H"], label: "Thefts", pattern: /\b(?:theft|larceny|larcenies)\b/i },
+  { topic: "motor_vehicle_theft", codes: ["240"], label: "Motor vehicle thefts", pattern: /\b(?:motor\s+vehicle|auto)\s+thefts?\b/i },
+  { topic: "carjacking", codes: ["64A", "64B"], label: "Carjackings", pattern: /\bcarjack(?:ing|ings)?\b/i },
+  { topic: "domestic_violence", codes: [], label: "Domestic violence", pattern: /\bdomestic\s+violence\b|\bintimate\s+partner\s+violence\b|\b(?<![a-z])dv(?![a-z])\b/i },
+  { topic: "violent_crime", codes: ["09A", "11A", "11B", "11C", "120", "13A"], label: "Violent crime", pattern: /\bviolent\s+crime\b/i },
+  { topic: "property_crime", codes: ["200", "220", "23A-23H", "240"], label: "Property crime", pattern: /\bproperty\s+crime\b/i },
 ];
 
 function yearsFromQuestion(question: string): { startYear: number | null; endYear: number | null } {
@@ -96,7 +105,7 @@ function detectBreakdowns(question: string): string[] {
     ["agency", /\bby\s+agenc(?:y|ies)\b|\bagenc(?:y|ies)\s+breakdown\b/i],
     ["age_group", /\bage\b|\bage\s+group\b/i],
     ["race", /\brace|racial\b/i],
-    ["sex", /\bsex|gender|male|female|men|women\b/i],
+    ["sex", /\b(?:sex|gender|male|female|men|women)\b/i],
     ["offense_code", /\bby\s+offense\b|\boffense\s+(?:code|type|breakdown)\b/i],
   ];
   for (const [name, pattern] of checks) {
@@ -105,9 +114,29 @@ function detectBreakdowns(question: string): string[] {
   return [...new Set(breakdowns)];
 }
 
+function detectOffenses(question: string): QueryContractOffense[] {
+  const matches = OFFENSE_PATTERNS
+    .map((entry) => {
+      const match = entry.pattern.exec(question);
+      return match ? { entry, index: match.index, end: match.index + match[0].length } : null;
+    })
+    .filter((match): match is { entry: (typeof OFFENSE_PATTERNS)[number]; index: number; end: number } => match !== null)
+    .sort((a, b) => a.index - b.index || (b.end - b.index) - (a.end - a.index));
+
+  const accepted: typeof matches = [];
+  for (const match of matches) {
+    if (accepted.some((existing) => match.index < existing.end && existing.index < match.end)) continue;
+    accepted.push(match);
+  }
+
+  return accepted
+    .sort((a, b) => a.index - b.index)
+    .map(({ entry }) => ({ topic: entry.topic, codes: entry.codes, label: entry.label }));
+}
 function detectMetric(question: string): QueryContract["metric"] {
-  const topicMatch = OFFENSE_PATTERNS.find((entry) => entry.pattern.test(question));
-  const topic = topicMatch?.topic ?? (/\bcrimes?\b/i.test(question) ? "crime" : "unknown");
+  const offenses = detectOffenses(question);
+  const topic = offenses[0]?.topic ?? (/\bcrimes?\b/i.test(question) ? "crime" : "unknown");
+  const offenseCodes = [...new Set(offenses.flatMap((offense) => offense.codes))];
   const asksRate = /\b(?:rates?|per\s*(?:capita|100k|100,?000|10k|10,?000|1k|1,?000|million|1m)|relative\s+to\s+population|population[-\s]+adjusted)\b/i.test(question);
   const asksClearance = /\b(?:clearance|clearances?|cleared|solve[ds]?|unsolved|exceptional(?:ly)?|cleared\s+by\s+arrest)\b/i.test(question);
   const asksRatio = /\b(?:ratio|share|percent|percentage)\b/i.test(question);
@@ -125,7 +154,8 @@ function detectMetric(question: string): QueryContract["metric"] {
 
   return {
     topic,
-    offenseCodes: topicMatch?.codes ?? [],
+    offenseCodes,
+    offenses,
     unit,
     numerator: topic === "domestic_violence" ? "summary_domestic_violence distinct incidents" : null,
     denominator: unit === "rate_per_100k"
@@ -136,7 +166,6 @@ function detectMetric(question: string): QueryContract["metric"] {
     unsupportedReason,
   };
 }
-
 function hasStandaloneQueryAnchor(question: string): boolean {
   const metric = detectMetric(question);
   if (metric.topic !== "unknown" || metric.unit !== "unknown") return true;
@@ -168,49 +197,79 @@ function detectFollowup(question: string, routingMeta?: RoutingLogMeta | null): 
   return { isFollowup: false, operation: null };
 }
 
-function detectGeography(question: string, source: QueryContractSource): QueryContract["geography"] {
+function geographyFromCandidate(
+  question: string,
+  mention: ReturnType<typeof resolveGeoPlaces>["mentions"][number]
+): QueryContractGeography | null {
+  const candidate = mention.candidates[0];
+  if (!candidate) return null;
+
+  const suffix = question.slice(mention.end, Math.min(question.length, mention.end + 40));
+  const agencySuffix = suffix.match(/^\s+((?:city\s+)?police\s+(?:department|dept\.?)|county\s+(?:sheriff(?:'?s)?(?:\s+office)?|police(?:\s+department)?)|sheriff(?:'?s)?(?:\s+office)?)/i);
+  const countySuffix = suffix.match(/^\s+(county|parish|borough)\b/i);
+  const state = candidate.state ?? null;
+  const baseKind = candidate.kind === "agency_alias" ? "agency" : candidate.kind;
+  const kind: QueryContractGeography["kind"] = agencySuffix
+    ? "agency"
+    : countySuffix
+      ? "county"
+      : baseKind;
+  const suffixLabel = agencySuffix?.[1] ?? countySuffix?.[1] ?? "";
+  const name = suffixLabel ? (candidate.name + " " + suffixLabel).replace(/\s+/g, " ").trim() : candidate.name;
+  const canonicalName = kind === "agency"
+    ? name
+    : kind === "county"
+      ? candidate.name + " " + (countySuffix?.[1] ?? "County")
+      : candidate.canonicalQuery ?? candidate.name;
+
+  return {
+    kind,
+    name,
+    state,
+    canonicalName,
+    ...(state && STATE_CODE_ALIASES[state] ? { sourceCodes: STATE_CODE_ALIASES[state] } : {}),
+    confidence: mention.requiresClarification ? "low" : candidate.confidence >= 0.9 ? "high" : "medium",
+    needsClarification: mention.requiresClarification ? mention.candidates.map((item) => item.canonicalQuery ?? item.name) : [],
+  };
+}
+
+function detectGeographies(question: string): QueryContractGeography[] {
   if (/\b(?:national|nationwide|united states|u\.?s\.?|america)\b/i.test(question)) {
-    return { kind: "national", name: "United States", state: null, canonicalName: "United States", confidence: "high", needsClarification: [] };
+    return [{ kind: "national", name: "United States", state: null, canonicalName: "United States", confidence: "high", needsClarification: [] }];
   }
 
   const resolution = resolveGeoPlaces(question);
-
   if (/\b(?:universit(?:y|ies)|college|campus|ucla|uc\s+berkeley|berkeley\s+campus)\b/i.test(question)) {
     const first = resolution.mentions[0];
     const candidate = first?.candidates[0];
     const state = candidate?.state ?? null;
-    return {
+    return [{
       kind: "campus",
       name: candidate?.name ?? null,
       state,
       canonicalName: candidate?.canonicalQuery ?? candidate?.name ?? null,
       ...(state && STATE_CODE_ALIASES[state] ? { sourceCodes: STATE_CODE_ALIASES[state] } : {}),
-      confidence: first?.requiresClarification ? "low" : candidate ? "medium" : "medium",
-      needsClarification: first?.requiresClarification ? first.candidates.map((c) => c.canonicalQuery ?? c.name) : [],
-    };
+      confidence: first?.requiresClarification ? "low" : "medium",
+      needsClarification: first?.requiresClarification ? first.candidates.map((item) => item.canonicalQuery ?? item.name) : [],
+    }];
   }
 
-  const first = resolution.mentions[0];
-  if (first?.candidates.length) {
-    const candidate = first.candidates[0];
-    const state = candidate.state ?? null;
-    const kind = candidate.kind === "agency_alias" ? "agency" : candidate.kind;
-    return {
-      kind,
-      name: candidate.name,
-      state,
-      canonicalName: candidate.canonicalQuery ?? candidate.name,
-      ...(state && STATE_CODE_ALIASES[state] ? { sourceCodes: STATE_CODE_ALIASES[state] } : {}),
-      confidence: first.requiresClarification ? "low" : candidate.confidence >= 0.9 ? "high" : "medium",
-      needsClarification: first.requiresClarification ? first.candidates.map((c) => c.canonicalQuery ?? c.name) : [],
-    };
+  const geographies = resolution.mentions
+    .map((mention) => geographyFromCandidate(question, mention))
+    .filter((geography): geography is QueryContractGeography => geography !== null);
+
+  const unique = new Map<string, QueryContractGeography>();
+  for (const geography of geographies) {
+    const key = [geography.kind, geography.name, geography.state].join(":").toLowerCase();
+    if (!unique.has(key)) unique.set(key, geography);
   }
+  if (unique.size > 0) return [...unique.values()];
 
   if (/\bagenc(?:y|ies)|police department|sheriff\b/i.test(question)) {
-    return { kind: "agency", name: null, state: null, canonicalName: null, confidence: "low", needsClarification: [] };
+    return [{ kind: "agency", name: null, state: null, canonicalName: null, confidence: "low", needsClarification: [] }];
   }
 
-  return { kind: "unknown", name: null, state: null, canonicalName: null, confidence: "low", needsClarification: [] };
+  return [{ kind: "unknown", name: null, state: null, canonicalName: null, confidence: "low", needsClarification: [] }];
 }
 
 export function buildQueryContract(
@@ -230,9 +289,12 @@ export function buildQueryContract(
   if (continuousReporters) warnings.push("continuous_reporters_required");
   if (partialYear) warnings.push("partial_year_disclosure_required");
 
+  const geographies = detectGeographies(text);
+
   return {
     source,
-    geography: detectGeography(text, source),
+    geography: geographies[0],
+    geographies,
     metric,
     time: {
       startYear: time.startYear,

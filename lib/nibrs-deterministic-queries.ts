@@ -1,4 +1,4 @@
-import { buildQueryContract } from "./query-contract";
+import { buildQueryContract, type QueryContractGeography, type QueryContractOffense } from "./query-contract";
 import { pastCompleteCalendarYearsRange, relativeYearRangeForQuestion } from "./time-conventions";
 
 export interface DeterministicNibrsQuery {
@@ -277,6 +277,226 @@ LIMIT 1000`.trim();
     guardrail: "deterministic-nibrs-local-city-offense-count",
   };
 }
+function seriesKey(value: string): string {
+  const key = value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+  return key || "series";
+}
+
+function agencyDisplayName(value: string): string {
+  return value
+    .replace(/\bpolice\s+(?:department|dept\.?)\b/i, "Police Department")
+    .replace(/\bcounty\s+sheriff(?:'?s)?(?:\s+office)?\b/i, "County Sheriff")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function agencyNamePredicate(column: string, name: string): string | null {
+  const upper = name.toUpperCase();
+  const location = upper
+    .replace(/\bPOLICE\s+(?:DEPARTMENT|DEPT)\b/g, " ")
+    .replace(/\bCOUNTY\s+SHERIFF(?:'?S)?(?:\s+OFFICE)?\b/g, " ")
+    .replace(/\bSHERIFF(?:'?S)?(?:\s+OFFICE)?\b/g, " ")
+    .replace(/\bCOUNTY\s+POLICE(?:\s+DEPARTMENT)?\b/g, " ")
+    .replace(/[^A-Z0-9]+/g, " ")
+    .trim();
+  if (!location) return null;
+
+  const terms = ["UPPER(" + column + ") LIKE " + sqlString("%" + location + "%")];
+  if (/\bSHERIFF\b/.test(upper)) terms.push("UPPER(" + column + ") LIKE '%SHERIFF%'");
+  else if (/\bPOLICE\b/.test(upper)) terms.push("UPPER(" + column + ") LIKE '%POLICE%'");
+  else return null;
+  return terms.join(" AND ");
+}
+
+function structuredTargetSelect(geography: QueryContractGeography, index: number): {
+  key: string;
+  label: string;
+  sql: string;
+} | null {
+  if (!geography.name || !geography.state || geography.confidence === "low") return null;
+
+  const key = "place_" + (index + 1);
+  const label = geography.kind === "agency"
+    ? agencyDisplayName(geography.name)
+    : geography.canonicalName ?? geography.name + ", " + geography.state;
+  const sourceState = geography.sourceCodes?.nibrs ?? geography.state;
+  const stateFilter = compactStatePredicate("state", sourceState);
+
+  if (geography.kind === "city") {
+    return {
+      key,
+      label,
+      sql: [
+        "SELECT DISTINCT " + sqlString(key) + " AS place_key, " + sqlString(label) + " AS place_label, ori",
+        "    FROM agencies",
+        "    WHERE city = " + sqlString(nibrsCityLiteral(geography.name)),
+        "      AND " + stateFilter,
+        "      AND agency_type = 'City'",
+        "      AND population > 0",
+      ].join("\n"),
+    };
+  }
+
+  if (geography.kind !== "agency") return null;
+
+  const cityPolice = geography.name.match(/^(.+?)\s+(?:city\s+)?police\s+(?:department|dept\.?)$/i);
+  if (cityPolice) {
+    return {
+      key,
+      label,
+      sql: [
+        "SELECT DISTINCT " + sqlString(key) + " AS place_key, " + sqlString(label) + " AS place_label, ori",
+        "    FROM agencies",
+        "    WHERE city = " + sqlString(nibrsCityLiteral(cityPolice[1])),
+        "      AND " + stateFilter,
+        "      AND agency_type = 'City'",
+        "      AND population > 0",
+      ].join("\n"),
+    };
+  }
+
+  const namePredicate = agencyNamePredicate("agency_name", geography.name);
+  if (!namePredicate) return null;
+  const crosswalkState = compactStatePredicate("state", sourceState);
+  return {
+    key,
+    label,
+    sql: [
+      "SELECT DISTINCT " + sqlString(key) + " AS place_key, " + sqlString(label) + " AS place_label, ori9 AS ori",
+      "    FROM agency_county_crosswalk",
+      "    WHERE " + crosswalkState,
+      "      AND ori9 IS NOT NULL",
+      "      AND " + namePredicate,
+      "    UNION",
+      "    SELECT DISTINCT " + sqlString(key) + " AS place_key, " + sqlString(label) + " AS place_label, ori",
+      "    FROM agency_county_crosswalk",
+      "    WHERE " + crosswalkState,
+      "      AND ori IS NOT NULL",
+      "      AND " + namePredicate,
+    ].join("\n"),
+  };
+}
+
+function structuredOffenseSelect(
+  offense: QueryContractOffense,
+  targetCte: string,
+  years: YearScope
+): { key: string; label: string; sql: string } | null {
+  if (offense.codes.length === 0 || offense.codes.some((code) => !/^[0-9A-Z]{3}$/.test(code))) return null;
+  const usesPersonTable = offense.codes.every((code) => PERSON_COUNT_CODES.has(code));
+  const usesOffenseTable = offense.codes.every((code) => !PERSON_COUNT_CODES.has(code));
+  if (!usesPersonTable && !usesOffenseTable) return null;
+
+  const table = usesPersonTable ? "summary_victim_city_monthly" : "summary_city_monthly";
+  const tableIndex = usesPersonTable ? "idx_svcm_ori" : "idx_scm_ori_year";
+  const valueColumn = usesPersonTable ? "victim_count" : "offense_count";
+  const key = seriesKey(offense.topic);
+  const codePredicate = offense.codes.length === 1
+    ? "s.ucr_offense_code = " + sqlString(offense.codes[0])
+    : "s.ucr_offense_code IN (" + offense.codes.map(sqlString).join(",") + ")";
+
+  return {
+    key,
+    label: offense.label,
+    sql: [
+      "SELECT s.year, tp.place_key, " + sqlString(key) + " AS offense_key, SUM(s." + valueColumn + ") AS reported_count",
+      "  FROM " + table + " AS s INDEXED BY " + tableIndex,
+      "  JOIN " + targetCte + " AS tp ON tp.ori = s.ori",
+      "  WHERE " + codePredicate,
+      "    AND " + years.predicate.replace(/\byear\b/g, "s.year"),
+      "  GROUP BY s.year, tp.place_key",
+    ].join("\n"),
+  };
+}
+
+function isExcludedStructuredLocalQuestion(question: string): boolean {
+  return /\b(?:rates?|per\s*(?:capita|100k|100,?000|10k|10,?000)|clearance|cleared|solve[ds]?|share|percent(?:age)?|ratio|top|highest|lowest|rank(?:ing)?|by\s+(?:state|city|agency|race|sex|gender|age|ethnicity|weapon|injury|relationship|circumstance)|weapon|firearm|gun|shooting|shootings|domestic\s+violence|intimate\s+partner|demographic|continuous|consistent\s+report)\b/i.test(question);
+}
+
+export function buildNibrsStructuredLocalTrendQuery(
+  question: string
+): DeterministicNibrsQuery | null {
+  const contract = buildQueryContract(question, "nibrs");
+  if (!contract || contract.metric.unit !== "count") return null;
+  if (contract.metric.offenses.length === 0 || contract.metric.offenses.length > 4) return null;
+  const allCodes = contract.metric.offenses.flatMap((offense) => offense.codes);
+  if (new Set(allCodes).size !== allCodes.length) return null;
+  if (contract.geographies.length === 0 || contract.geographies.length > 4) return null;
+  if (contract.metric.offenses.length === 1 && contract.geographies.length === 1) return null;
+  if (contract.geographies.some((geography) => !["city", "agency"].includes(geography.kind))) return null;
+  if (contract.breakdowns.includes("month")) return null;
+  if (contract.breakdowns.some((breakdown) => breakdown !== "year")) return null;
+  if (!hasSimpleLocalTimeIntent(question, contract.time.startYear, contract.time.endYear)) return null;
+  if (isExcludedStructuredLocalQuestion(question)) return null;
+  if (contract.comparability.continuousReporters) return null;
+
+  const targets = contract.geographies.map(structuredTargetSelect);
+  if (targets.some((target) => target === null)) return null;
+  const resolvedTargets = targets.filter((target): target is NonNullable<typeof target> => target !== null);
+  const targetCte = "target_places";
+  const years = yearScope("year", question);
+  const offenses = contract.metric.offenses.map((offense) => structuredOffenseSelect(offense, targetCte, years));
+  if (offenses.some((offense) => offense === null)) return null;
+  const resolvedOffenses = offenses.filter((offense): offense is NonNullable<typeof offense> => offense !== null);
+
+  const aliases = new Set<string>();
+  const series: { alias: string; placeKey: string; offenseKey: string }[] = [];
+  for (const target of resolvedTargets) {
+    for (const offense of resolvedOffenses) {
+      let alias = seriesKey(target.label + "_" + offense.label);
+      let suffix = 2;
+      while (aliases.has(alias)) alias = seriesKey(target.label + "_" + offense.label) + "_" + suffix++;
+      aliases.add(alias);
+      series.push({
+        alias,
+
+        placeKey: target.key,
+        offenseKey: offense.key,
+      });
+    }
+  }
+
+  const pivotColumns = series.map((item) =>
+    "COALESCE(SUM(CASE WHEN place_key = " + sqlString(item.placeKey) +
+    " AND offense_key = " + sqlString(item.offenseKey) +
+    " THEN reported_count END), 0) AS " + item.alias
+  );
+  const sql = [
+    "WITH " + targetCte + " AS (",
+    "  " + resolvedTargets.map((target) => target.sql).join("\n  UNION\n  "),
+    "),",
+    "series_counts AS (",
+    "  " + resolvedOffenses.map((offense) => offense.sql).join("\n  UNION ALL\n  "),
+    ")",
+    "SELECT year,",
+    "  " + pivotColumns.join(",\n  "),
+    "FROM series_counts",
+    "GROUP BY year",
+    "ORDER BY year",
+    "LIMIT 1000",
+  ].join("\n");
+
+  const places = resolvedTargets.map((target) => target.label).join(" and ");
+  const offenseLabels = resolvedOffenses.map((offense) => offense.label.toLowerCase()).join(", ");
+  return {
+    sql,
+    title: "NIBRS offense trends for " + places,
+    explanation:
+      "This returns annual reported " + offenseLabels + " for " + places + years.periodText + ". " +
+      "Named city police departments are resolved to city-agency ORIs; named sheriff agencies are resolved through the agency crosswalk. " +
+      "Person crimes use victim summaries while robbery and other non-person offenses use offense summaries. Recent NIBRS data may be incomplete.",
+    chartHint: "line",
+    xAxis: "year",
+    yAxis: series.map((item) => item.alias).join(","),
+    xAxisLabel: "Year",
+    yAxisLabel: "Reported count",
+    guardrail: "deterministic-nibrs-structured-local-trend",
+  };
+}
+
 export function buildNibrsDomesticViolenceAggravatedAssaultShareQuery(
   question: string
 ): DeterministicNibrsQuery | null {

@@ -1,8 +1,10 @@
 import { strict as assert } from "node:assert";
+import Database from "better-sqlite3";
 import {
   buildNibrsClearanceMethodQuery,
   buildNibrsDomesticViolenceAggravatedAssaultShareQuery,
   buildNibrsLocalCityOffenseCountQuery,
+  buildNibrsStructuredLocalTrendQuery,
 } from "../lib/nibrs-deterministic-queries.js";
 
 {
@@ -121,5 +123,80 @@ import {
     "shootings in Omaha NE from 2020 to 2026"
   );
   assert.equal(query, null, "shooting/firearm proxy questions should not use the simple count builder");
+}
+{
+  const question = "show me murders, robberies, and aggravated assaults for albuquerque police department and bernalillo county sheriff by year for 2020 to 2025";
+  const query = buildNibrsStructuredLocalTrendQuery(question);
+  assert.ok(query, "multi-agency multi-offense trend should be deterministic");
+  assert.equal(query.guardrail, "deterministic-nibrs-structured-local-trend");
+  assert.match(query.sql, /city = 'ALBUQUERQUE'/i);
+  assert.match(query.sql, /agency_name\) LIKE '%BERNALILLO%'/i);
+  assert.match(query.sql, /agency_name\) LIKE '%SHERIFF%'/i);
+  assert.match(query.sql, /summary_victim_city_monthly AS s INDEXED BY idx_svcm_ori/i);
+  assert.match(query.sql, /summary_city_monthly AS s INDEXED BY idx_scm_ori_year/i);
+  assert.match(query.sql, /s\.ucr_offense_code = '09A'/i);
+  assert.match(query.sql, /s\.ucr_offense_code = '120'/i);
+  assert.match(query.sql, /s\.ucr_offense_code = '13A'/i);
+  assert.match(query.sql, /s\.year BETWEEN 2020 AND 2025/i);
+  assert.match(query.yAxis, /albuquerque_police_department_murders/);
+  assert.match(query.yAxis, /bernalillo_county_sheriff_robberies/);
+
+  const db = new Database(":memory:");
+  db.exec([
+    "CREATE TABLE agencies (ori TEXT, year INTEGER, state TEXT, city TEXT, agency_type TEXT, population INTEGER);",
+    "CREATE TABLE agency_county_crosswalk (ori TEXT, ori9 TEXT, agency_name TEXT, state TEXT);",
+    "CREATE TABLE summary_victim_city_monthly (ori TEXT, year INTEGER, ucr_offense_code TEXT, victim_count INTEGER);",
+    "CREATE TABLE summary_city_monthly (ori TEXT, year INTEGER, ucr_offense_code TEXT, offense_count INTEGER);",
+    "CREATE INDEX idx_svcm_ori ON summary_victim_city_monthly(ori);",
+    "CREATE INDEX idx_scm_ori_year ON summary_city_monthly(ori, year);",
+    "INSERT INTO agencies VALUES ('NM0010100', 2025, 'NM', 'ALBUQUERQUE', 'City', 560000);",
+    "INSERT INTO agency_county_crosswalk VALUES ('NM00100', 'NM0010000', 'Bernalillo County Sheriff', 'NM');",
+    "INSERT INTO summary_victim_city_monthly VALUES ('NM0010100', 2024, '09A', 10), ('NM0010100', 2024, '13A', 100), ('NM0010000', 2024, '09A', 3), ('NM0010000', 2024, '13A', 30);",
+    "INSERT INTO summary_city_monthly VALUES ('NM0010100', 2024, '120', 20), ('NM0010000', 2024, '120', 7);",
+  ].join("\n"));
+  const rows = db.prepare(query.sql).all() as Record<string, number>[];
+  db.close();
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].albuquerque_police_department_murders, 10);
+  assert.equal(rows[0].albuquerque_police_department_robberies, 20);
+  assert.equal(rows[0].albuquerque_police_department_aggravated_assaults, 100);
+  assert.equal(rows[0].bernalillo_county_sheriff_murders, 3);
+  assert.equal(rows[0].bernalillo_county_sheriff_robberies, 7);
+  assert.equal(rows[0].bernalillo_county_sheriff_aggravated_assaults, 30);
+}
+
+{
+  const query = buildNibrsStructuredLocalTrendQuery("compare murders in Houston and Dallas by year since 2020");
+  assert.ok(query, "multi-city annual comparison should be deterministic");
+  assert.match(query.sql, /city = 'HOUSTON'/i);
+  assert.match(query.sql, /city = 'DALLAS'/i);
+  assert.equal(query.yAxis, "houston_tx_murders,dallas_tx_murders");
+}
+
+{
+  assert.equal(
+    buildNibrsStructuredLocalTrendQuery("compare murder rates in Houston and Dallas since 2020"),
+    null,
+    "multi-city rates must stay on the validated model path"
+  );
+  assert.equal(
+    buildNibrsStructuredLocalTrendQuery("compare firearm murders in Houston and Dallas since 2020"),
+    null,
+    "weapon-qualified comparisons must stay on the validated model path"
+  );
+}
+
+{
+  const question = "compare murders in Houston and Dallas by year since 2020";
+  const started = performance.now();
+  for (let i = 0; i < 500; i += 1) buildNibrsStructuredLocalTrendQuery(question);
+  const elapsed = performance.now() - started;
+  assert.ok(elapsed < 1000, "500 local plan compilations should stay under one second; took " + elapsed.toFixed(1) + "ms");
+}
+{
+  const query = buildNibrsLocalCityOffenseCountQuery("Omaha NE motor vehicle thefts from 2020 to 2025");
+  assert.ok(query, "nested motor-vehicle-theft wording should remain a single deterministic offense");
+  assert.match(query.sql, /ucr_offense_code = '240'/i);
+  assert.doesNotMatch(query.sql, /23A-23H/i);
 }
 console.log("nibrs deterministic query tests passed");

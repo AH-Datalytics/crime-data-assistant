@@ -69,7 +69,7 @@ export function extractReferencedTables(sql: string): string[] {
   const ctes = extractCteNames(cleaned);
   for (const name of extractCteNamesLoose(cleaned)) ctes.add(name);
   const tables = new Set<string>();
-  const tableRe = /\b(?:FROM|JOIN)\s+(?!\()(?:(?:main|temp)\.)?([A-Za-z_][\w]*)\b/gi;
+  const tableRe = /\b(?:FROM|JOIN)\s+(?!\()(?:(?:[A-Za-z_][\w]*)\.)?([A-Za-z_][\w]*)\b/gi;
   let m: RegExpExecArray | null;
 
   while ((m = tableRe.exec(cleaned)) !== null) {

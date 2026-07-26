@@ -746,6 +746,7 @@ export async function POST(req: NextRequest) {
     async start(controller) {
       let sql: string | null = null;
       let firedGuardrails: string[] = [];
+      let contractQuestion = question;
       let closed = false;
       const close = () => {
         if (!closed) {
@@ -764,7 +765,7 @@ export async function POST(req: NextRequest) {
       };
       const runContractValidation = (inputSql: string): QueryContractSqlValidation => {
         const contractResult = validateQueryContractSql({
-          question,
+          question: contractQuestion,
           source: tab === "historical" ? "historical" : "current",
           sql: inputSql,
           routingMeta,
@@ -811,6 +812,7 @@ export async function POST(req: NextRequest) {
         // Bare clarifier answers ("Countywide total") carry no county name — use
         // the transform's reconstructed question so guardrails see the geography
         const guardrailQuestion = followupTransform?.contextQuestion ?? question;
+        contractQuestion = guardrailQuestion;
         const promptHistory = followupTransform
           ? [...history, { role: "user" as const, content: followupTransform.instruction }]
           : history;

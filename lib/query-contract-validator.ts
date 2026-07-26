@@ -2,7 +2,7 @@ import { buildQueryContract, type QueryContract, type QueryContractSource } from
 import { currentCalendarYear } from "./time-conventions";
 import type { RoutingLogMeta } from "./routing-log-meta";
 import { validateSourceCapabilities, type SourceCapabilityFinding } from "./source-capabilities";
-import { SUB_CITY_GEOGRAPHY_MESSAGE } from "./capability-overrides";
+import { DEMOGRAPHIC_RATE_UNSUPPORTED_MESSAGE, SUB_CITY_GEOGRAPHY_MESSAGE } from "./capability-overrides";
 
 export interface QueryContractSqlValidation {
   sql: string;
@@ -66,7 +66,7 @@ const BLOCK_MESSAGES: Record<string, string> = {
   "unsupported-court-policy-topic":
     "The available FBI datasets track reported crime and law-enforcement reporting, not court outcomes, incarceration, fines, immigration status, or policy registries.",
   "demographic-rate-unsupported":
-    "The FBI data does not include matching population denominators for demographic groups. Better choices: counts by gender/race, shares by gender/race, or an overall rate.",
+    DEMOGRAPHIC_RATE_UNSUPPORTED_MESSAGE,
   "nibrs-clearance-weapon-unsupported":
     "The available NIBRS summary data cannot calculate clearance rates broken down by weapon type. I can answer overall clearance rates, or weapon-specific counts, but not weapon-specific clearance rates.",
   "nibrs-countywide-demographics-unsupported":
@@ -282,9 +282,11 @@ function rewriteStateEquals(sql: string, requestedState: string, sourceState: st
 }
 
 function hasStateFilter(sql: string): boolean {
-  return /\b(?:\w+\.)?state\s*(?:=|IN\s*\()\s*'[^']+'/i.test(sql);
+  const stateRef = String.raw`(?:UPPER\s*\(\s*)?(?:\w+\.)?state\s*\)?`;
+  const stateLiteral = String.raw`(?:UPPER\s*\(\s*)?'[^']+'\s*\)?`;
+  return new RegExp(String.raw`\b${stateRef}\s*=\s*${stateLiteral}`, "i").test(sql) ||
+    new RegExp(String.raw`\b${stateRef}\s+IN\s*\(\s*'[^']+'`, "i").test(sql);
 }
-
 function hasLocalPlaceFilter(sql: string): boolean {
   return /\b(?:\w+\.)?(?:agency|agency_name|canonical_agency|city|county|alias_key)\s*(?:=|LIKE|IN\s*\()\s*'[^']+'/i.test(sql);
 }
@@ -416,6 +418,19 @@ export function validateQueryContractSql(opts: {
     warnings.push("contract-single-year-temporal-scope");
     retryIssues.push(temporalIssue);
     enforced.push("contract-single-year-temporal-scope");
+  }
+  if (opts.source === "nibrs" && contract.metric.offenses.length > 1 && /\bucr_offense_code\b/i.test(sql)) {
+    const requiredCodes = contract.metric.offenseCodes.filter((code) => /^[0-9A-Z]{3}$/.test(code));
+    const missingCodes = requiredCodes.filter((code) => !new RegExp("\\b" + escapeRegExp(code) + "\\b", "i").test(sql));
+    if (missingCodes.length > 0) {
+      warnings.push("contract-offense-codes-missing");
+      retryIssues.push(
+        "[SYSTEM: Query contract violation (contract-offense-codes-missing). " +
+        "The user requested multiple offenses, but the SQL omitted NIBRS offense code(s): " + missingCodes.join(", ") + ". " +
+        "Include every requested offense code. If the request mixes person and non-person offenses, aggregate person crimes from victim summaries and non-person offenses from offense summaries, then combine the annual results without dropping a requested offense.]"
+      );
+      enforced.push("contract-offense-codes-missing");
+    }
   }
 
   const trendAnnualizedIssue = trendAssessmentAnnualizedOutputIssue(opts.question, opts.source, sql);

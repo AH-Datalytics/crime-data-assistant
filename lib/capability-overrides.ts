@@ -9,6 +9,8 @@ export const SUB_CITY_GEOGRAPHY_RE =
 
 export const SUB_CITY_GEOGRAPHY_MESSAGE =
   "The FBI does not report crime data below the city/county/agency level. The available FBI datasets are organized by reporting agency, city, county, state, or national totals; they do not support ZIP code, neighborhood, precinct, ward, census tract, block group, apartment-complex, or other sub-city geography.";
+export const DEMOGRAPHIC_RATE_UNSUPPORTED_MESSAGE =
+  "I can't calculate a reliable per-capita rate for a demographic group because the FBI data does not include matching population denominators by age, race, or sex for the requested place and year. I can show raw demographic counts, the group's share of reported victims, offenders, or arrestees, or an overall crime rate using the total population.";
 
 export function detectSubCityGeographyOverride(question: string): CapabilityOverride | null {
   if (!SUB_CITY_GEOGRAPHY_RE.test(question)) return null;

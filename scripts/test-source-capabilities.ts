@@ -146,6 +146,37 @@ function assertDoesNotFind(name: string, ids: string[], unexpected: string) {
   assertFinds("countywide demographics are unsupported", ids, "nibrs-countywide-demographics-unsupported");
 }
 
+
+{
+  const ids = findingIds(
+    "show me murders, robberies, and aggravated assaults for albuquerque police department and bernalillo county sheriff by year for 2020 to 2025",
+    "nibrs",
+    `SELECT s.year, a.agency_name, s.ucr_offense_code, SUM(s.offense_count)
+     FROM summary_city_monthly s
+     JOIN agencies a ON a.ori = s.ori AND a.year = s.year
+     WHERE a.state = 'NM'
+       AND (a.agency_name = 'ALBUQUERQUE POLICE DEPARTMENT' OR a.agency_name = 'BERNALILLO COUNTY SHERIFF')
+       AND s.ucr_offense_code IN ('09A', '120', '13A')
+     GROUP BY s.year, a.agency_name, s.ucr_offense_code`
+  );
+  assertDoesNotFind("named police and sheriff agencies are not countywide demographics", ids, "nibrs-countywide-demographics-unsupported");
+  assertDoesNotFind("named police and sheriff agencies do not require a countywide crosswalk", ids, "nibrs-countywide-crosswalk");
+  assertDoesNotFind("plain agency offense counts do not require a demographic table", ids, "nibrs-demographic-breakdown-table");
+}
+
+{
+  const ids = findingIds(
+    "show me murders, aggravated assaults, and robberies for albuquerque police department by year for 2020 to 2025",
+    "nibrs",
+    `SELECT s.year, s.ucr_offense_code, SUM(s.offense_count)
+     FROM summary_city_monthly s
+     JOIN agencies a ON a.ori = s.ori AND a.year = s.year
+     WHERE a.state = 'NM' AND a.agency_name = 'ALBUQUERQUE POLICE DEPARTMENT'
+       AND s.ucr_offense_code IN ('09A', '120', '13A')
+     GROUP BY s.year, s.ucr_offense_code`
+  );
+  assertDoesNotFind("police department offense counts do not require a demographic table", ids, "nibrs-demographic-breakdown-table");
+}
 {
   const ids = findingIds(
     "murders in Cook County Illinois by year",
@@ -158,6 +189,7 @@ function assertDoesNotFind(name: string, ids: string[], unexpected: string) {
   );
   assertFinds("NIBRS countywide geography needs crosswalk", ids, "nibrs-countywide-crosswalk");
 }
+
 
 {
   const ids = findingIds(
@@ -256,6 +288,7 @@ function assertDoesNotFind(name: string, ids: string[], unexpected: string) {
 }
 
 
+
 {
   const ids = findingIds(
     "murders in Cook County Illinois by year",
@@ -268,6 +301,7 @@ function assertDoesNotFind(name: string, ids: string[], unexpected: string) {
   );
   assertFinds("Historical countywide geography needs crosswalk", ids, "historical-countywide-crosswalk");
 }
+
 
 {
   const ids = findingIds(
@@ -412,4 +446,16 @@ function assertDoesNotFind(name: string, ids: string[], unexpected: string) {
   assert.equal(result.capabilityFindings[0]?.ruleId, "nibrs-weapon-person-crime-table");
 }
 
+
+{
+  const ids = findingIds(
+    "show me murders, robberies, and aggravated assaults by offender age by year for 2017 to 2025",
+    "nibrs",
+    `SELECT d.year, d.age_group, SUM(d.offender_count) AS offenders
+     FROM rollup.national_summary_offender_demographics d
+     WHERE d.ucr_offense_code IN ('09A','120','13A') AND d.year BETWEEN 2017 AND 2025
+     GROUP BY d.year, d.age_group`
+  );
+  assertDoesNotFind("national rollup offender demographics satisfies demographic table contract", ids, "nibrs-demographic-breakdown-table");
+}
 console.log("source capability tests passed");

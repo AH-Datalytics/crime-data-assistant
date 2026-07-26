@@ -56,6 +56,20 @@ function assert(name: string, condition: boolean, detail?: string) {
 }
 
 {
+  const r = detectNibrsCapabilityOverride("Please show me the juvenile crime rate over time, 2020-2025, in Minneapolis, MN.");
+  assert("juvenile population rate gets a deterministic NIBRS override",
+    r?.guardrail === "demographic-rate-unsupported",
+    JSON.stringify(r));
+  assert("juvenile rate response offers counts, shares, and an overall rate",
+    Boolean(r?.explanation.includes("raw demographic counts") && r.explanation.includes("share") && r.explanation.includes("overall crime rate")),
+    r?.explanation);
+}
+
+{
+  const r = detectNibrsCapabilityOverride("juvenile clearance rate for robbery in Minneapolis");
+  assert("juvenile clearance rates remain queryable", r === null, JSON.stringify(r));
+}
+{
   const r = detectNibrsCapabilityOverride("show robberies involving firearms in Texas");
   assert("ordinary NIBRS weapon query does not trigger override", r === null, JSON.stringify(r));
 }

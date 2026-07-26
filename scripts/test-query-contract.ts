@@ -74,6 +74,15 @@ import { validateQueryContractSql } from "../lib/query-contract-validator";
 }
 
 {
+  const contract = buildQueryContract(
+    "show me murders, aggravated assaults, and robberies for albuquerque police department by year for 2020 to 2025",
+    "nibrs"
+  );
+  assert(contract);
+  assert.deepEqual(contract.breakdowns, ["year"]);
+}
+
+{
   const contract = buildQueryContract("start the Y-axis at 60%", "current", { mode: "follow_up", confidence: null, reason: null });
   assert(contract);
   assert.equal(contract.followup.operation, "chart_only");
@@ -374,4 +383,43 @@ for (const question of trueFollowupContracts) {
   assert(!result.enforced.includes("contract-trend-followup-complete-years"));
 }
 
+{
+  const result = validateQueryContractSql({
+    question: "What about Dallas?",
+    source: "historical",
+    sql: `SELECT ha.agency, 'TX' AS state, ha.type
+      FROM historical_agency ha
+      WHERE UPPER(ha.state) = UPPER('TX')
+        AND LOWER(ha.type) = 'city'
+        AND UPPER(ha.agency) = UPPER('Dallas')`,
+    routingMeta: { mode: "follow_up", confidence: null, reason: "Follow-up inherited prior source context" },
+  });
+  assert(!result.enforced.includes("contract-geography-state-missing"));
+}
+{
+  const question = "show me murders, robberies, and aggravated assaults for albuquerque police department and bernalillo county sheriff by year for 2020 to 2025";
+  const contract = buildQueryContract(question, "nibrs");
+  assert(contract);
+  assert.deepEqual(contract.metric.offenseCodes, ["09A", "120", "13A"]);
+  assert.deepEqual(contract.metric.offenses.map((offense) => offense.topic), ["murder", "robbery", "aggravated_assault"]);
+  assert.deepEqual(contract.geographies.map((geography) => geography.kind), ["agency", "agency"]);
+  assert.deepEqual(contract.geographies.map((geography) => geography.state), ["NM", "NM"]);
+  assert.match(contract.geographies[0].name || "", /Albuquerque police department/i);
+  assert.match(contract.geographies[1].name || "", /Bernalillo county sheriff/i);
+
+  const incomplete = validateQueryContractSql({
+    question,
+    source: "nibrs",
+    sql: "SELECT year, SUM(victim_count) FROM summary_victim_city_monthly WHERE ucr_offense_code = '09A' GROUP BY year",
+  });
+  assert(incomplete.enforced.includes("contract-offense-codes-missing"));
+  assert(incomplete.retryIssues.some((issue) => issue.includes("120") && issue.includes("13A")));
+
+  const complete = validateQueryContractSql({
+    question,
+    source: "nibrs",
+    sql: "SELECT year, SUM(reported_count) FROM (SELECT year, victim_count AS reported_count FROM summary_victim_city_monthly WHERE ucr_offense_code IN ('09A','13A') UNION ALL SELECT year, offense_count FROM summary_city_monthly WHERE ucr_offense_code = '120') GROUP BY year",
+  });
+  assert(!complete.enforced.includes("contract-offense-codes-missing"));
+}
 console.log("query contract tests passed");

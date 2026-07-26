@@ -1,7 +1,10 @@
 import {
+  DEMOGRAPHIC_RATE_UNSUPPORTED_MESSAGE,
   detectDemographicHomicideRateOverride,
   detectNibrsCountywideDemographicsOverride,
   detectSubCityGeographyOverride,
+  hasGroupRateIntent,
+  mentionsDemographicGroup,
   type CapabilityOverride,
 } from "./capability-overrides";
 
@@ -14,6 +17,17 @@ export function detectNibrsCapabilityOverride(question: string): CapabilityOverr
 
   const demographicRateOverride = detectDemographicHomicideRateOverride(question);
   if (demographicRateOverride) return demographicRateOverride;
+  if (
+    !/\b(?:clearance|cleared|solve[ds]?|unsolved)\b/i.test(question) &&
+    hasGroupRateIntent(question) &&
+    mentionsDemographicGroup(question)
+  ) {
+    return {
+      title: "Demographic Rate Not Available",
+      guardrail: "demographic-rate-unsupported",
+      explanation: DEMOGRAPHIC_RATE_UNSUPPORTED_MESSAGE,
+    };
+  }
 
   const q = question.toLowerCase();
   const asksUseOfForce =
