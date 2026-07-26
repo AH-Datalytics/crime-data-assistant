@@ -672,7 +672,7 @@ export function buildNibrsStructuredLocalTrendQuery(
   if (contract.geographies.some((geography) => !["city", "agency"].includes(geography.kind))) return null;
   if (contract.breakdowns.includes("month")) return null;
   if (contract.breakdowns.some((breakdown) => breakdown !== "year")) return null;
-  if (!hasSimpleLocalTimeIntent(question, contract.time.startYear, contract.time.endYear)) return null;
+  if (!isRate && !hasSimpleLocalTimeIntent(question, contract.time.startYear, contract.time.endYear)) return null;
   if (isExcludedStructuredLocalQuestion(question)) return null;
   if (contract.comparability.continuousReporters) return null;
 

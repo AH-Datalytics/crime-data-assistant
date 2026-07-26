@@ -443,6 +443,9 @@ for (const question of trueFollowupContracts) {
     assert.equal(contract.metric.unit, "rate_per_100k");
     assert.equal(contract.metric.unsupportedReason, null);
     assert.deepEqual(contract.breakdowns, []);
+    if (/sex offense/i.test(question)) {
+      assert.deepEqual(contract.metric.offenseCodes, ["11A", "11B", "11C", "11D", "36A", "36B"]);
+    }
   }
 
   const demographicRate = buildQueryContract("juvenile crime rate in Minneapolis", "nibrs");

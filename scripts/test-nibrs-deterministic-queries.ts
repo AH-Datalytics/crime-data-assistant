@@ -286,4 +286,22 @@ import {
   assert.equal(buildNibrsLocalDemographicQuery("murder victims by race and sex in Houston since 2020"), null,
     "multi-dimensional demographics stay on the validated model path initially");
 }
+
+{
+  const whitePlainsRate = buildNibrsStructuredLocalTrendQuery(
+    "What is the aggravated assault rate in White Plains, NY?"
+  );
+  assert.ok(whitePlainsRate, "single-city overall rates should default to five complete years");
+  assert.equal(whitePlainsRate.guardrail, "deterministic-nibrs-structured-local-rate");
+  assert.match(whitePlainsRate.sql, /city = 'WHITE PLAINS'/i);
+  assert.match(whitePlainsRate.sql, /s\.ucr_offense_code = '13A'/i);
+
+  const sexOffenseRate = buildNibrsStructuredLocalTrendQuery(
+    "Sex offense rates in Denver since 2019"
+  );
+  assert.ok(sexOffenseRate, "sex-offense category rates must not be treated as demographic rates");
+  assert.match(sexOffenseRate.sql, /s\.ucr_offense_code IN \('11A','11B','11C','11D','36A','36B'\)/i);
+  assert.doesNotMatch(sexOffenseRate.explanation, /demographic population/i);
+}
+
 console.log("nibrs deterministic query tests passed");

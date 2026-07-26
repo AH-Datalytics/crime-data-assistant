@@ -60,6 +60,7 @@ const STATE_CODE_ALIASES: Record<string, Record<QueryContractSource, string | st
 const OFFENSE_PATTERNS: { topic: string; codes: string[]; label: string; pattern: RegExp }[] = [
   { topic: "murder", codes: ["09A"], label: "Murders", pattern: /\b(murders?|homicides?|killings?|fatal\s+shootings?)\b/i },
   { topic: "hate_crime", codes: [], label: "Hate crimes", pattern: /\bhate\s+crimes?\b|\bbias[-\s]+motivated\b/i },
+  { topic: "sex_offense", codes: ["11A", "11B", "11C", "11D", "36A", "36B"], label: "Sex offenses", pattern: /\bsex(?:ual)?\s+offenses?\b|\bsex\s+crimes?\b/i },
   { topic: "rape", codes: ["11A", "11B", "11C"], label: "Rapes", pattern: /\brapes?\b/i },
   { topic: "robbery", codes: ["120"], label: "Robberies", pattern: /\brobber(?:y|ies)\b/i },
   { topic: "aggravated_assault", codes: ["13A"], label: "Aggravated assaults", pattern: /\baggravated\s+assaults?\b/i },
