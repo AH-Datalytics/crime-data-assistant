@@ -432,4 +432,22 @@ for (const question of trueFollowupContracts) {
   assert(result.enforced.includes("contract-geography-state-missing"));
 }
 
+
+{
+  for (const question of [
+    "What is the aggravated assault rate in White Plains, NY?",
+    "Sex offense rates in Denver since 2019",
+  ]) {
+    const contract = buildQueryContract(question, "nibrs");
+    assert(contract);
+    assert.equal(contract.metric.unit, "rate_per_100k");
+    assert.equal(contract.metric.unsupportedReason, null);
+    assert.deepEqual(contract.breakdowns, []);
+  }
+
+  const demographicRate = buildQueryContract("juvenile crime rate in Minneapolis", "nibrs");
+  assert(demographicRate);
+  assert.equal(demographicRate.metric.unsupportedReason, "demographic_rate_denominator_unavailable");
+}
+
 console.log("query contract tests passed");

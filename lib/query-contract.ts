@@ -1,4 +1,5 @@
 import { resolveGeoPlaces } from "./geo-place-resolver";
+import { demographicIntentText, mentionsDemographicRateGroup } from "./demographic-rate-intent";
 import type { RoutingLogMeta } from "./routing-log-meta";
 import { isChartTypeOnlyRequest, isYAxisDomainOnlyRequest } from "./chart-customization";
 
@@ -97,6 +98,7 @@ function isPartialYearQuestion(question: string): boolean {
 
 function detectBreakdowns(question: string): string[] {
   const breakdowns: string[] = [];
+  const demographicQuestion = demographicIntentText(question);
   const checks: [string, RegExp][] = [
     ["year", /\b(?:by|per|each)\s+year\b|\btrends?\b/i],
     ["month", /\b(?:by|per|each)\s+month\b|\bmonthly\b/i],
@@ -110,7 +112,8 @@ function detectBreakdowns(question: string): string[] {
     ["offense_code", /\bby\s+offense\b|\boffense\s+(?:code|type|breakdown)\b/i],
   ];
   for (const [name, pattern] of checks) {
-    if (pattern.test(question)) breakdowns.push(name);
+    const input = ["age_group", "race", "ethnicity", "sex"].includes(name) ? demographicQuestion : question;
+    if (pattern.test(input)) breakdowns.push(name);
   }
   return [...new Set(breakdowns)];
 }
@@ -141,7 +144,7 @@ function detectMetric(question: string): QueryContract["metric"] {
   const asksRate = /\b(?:rates?|per\s*(?:capita|100k|100,?000|10k|10,?000|1k|1,?000|million|1m)|relative\s+to\s+population|population[-\s]+adjusted)\b/i.test(question);
   const asksClearance = /\b(?:clearance|clearances?|cleared|solve[ds]?|unsolved|exceptional(?:ly)?|cleared\s+by\s+arrest)\b/i.test(question);
   const asksRatio = /\b(?:ratio|share|percent|percentage)\b/i.test(question);
-  const asksDemographic = /\b(?:race|racial|ethnicit\w+|hispanic|latino\w*|sex|gender|male|female|men|women|age|juvenile\w*|teen\w*|demographic)\b/i.test(question);
+  const asksDemographic = mentionsDemographicRateGroup(question);
 
   let unit: QueryContract["metric"]["unit"] = "count";
   if (asksClearance) unit = "clearance_rate";
