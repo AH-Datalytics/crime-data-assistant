@@ -394,7 +394,7 @@ export function validateQueryContractSql(opts: {
 
   if (
     requestedState &&
-    (contract.geography.kind === "city" || contract.geography.kind === "county" || contract.geography.kind === "campus") &&
+    (contract.geography.kind === "city" || contract.geography.kind === "county" || contract.geography.kind === "campus" || contract.geography.kind === "agency") &&
     /\b(?:agency_monthly|historical_agency|historical_agency_crime|summary_\w+|incidents)\b/i.test(sql) &&
     !hasStateFilter(sql) &&
     !hasSpecificOriFilter(sql)

@@ -1,3 +1,4 @@
+import { resolveGeoPlaces } from "./geo-place-resolver";
 import {
   DEMOGRAPHIC_RATE_UNSUPPORTED_MESSAGE,
   detectDemographicHomicideRateOverride,
@@ -7,6 +8,20 @@ import {
   mentionsDemographicGroup,
   type CapabilityOverride,
 } from "./capability-overrides";
+
+function mentionsNibrsDemographicRateGroup(question: string): boolean {
+  const mentions = resolveGeoPlaces(question).mentions;
+  let normalized = question;
+  for (const mention of [...mentions].sort((a, b) => b.start - a.start)) {
+    normalized = normalized.slice(0, mention.start) + " " + normalized.slice(mention.end);
+  }
+  normalized = normalized.replace(/\bsex\s+(?:offenses?|crimes?)\b/gi, " ");
+  if (!mentionsDemographicGroup(normalized)) return false;
+
+  return /\bby\s+(?:race|racial\s+group|sex|gender|ethnicity|ethnic\s+group|age(?:\s+group)?)\b/i.test(normalized) ||
+    /\b(?:among|for|of)\s+(?:female|male|women|men|black|white|hispanic|latino|asian|native|american\s+indian|juvenile|teen|minor)(?:\s+(?:people|persons|residents|victims|offenders|arrestees))?\b/i.test(normalized) ||
+    /\b(?:juvenile|female|male|women|men|black|white|hispanic|latino|asian|native)\s+(?:crime|offense|victim|offender|arrest|homicide|murder)\s+rates?\b/i.test(normalized);
+}
 
 export function detectNibrsCapabilityOverride(question: string): CapabilityOverride | null {
   const subCityOverride = detectSubCityGeographyOverride(question);
@@ -20,7 +35,7 @@ export function detectNibrsCapabilityOverride(question: string): CapabilityOverr
   if (
     !/\b(?:clearance|cleared|solve[ds]?|unsolved)\b/i.test(question) &&
     hasGroupRateIntent(question) &&
-    mentionsDemographicGroup(question)
+    mentionsNibrsDemographicRateGroup(question)
   ) {
     return {
       title: "Demographic Rate Not Available",

@@ -109,6 +109,17 @@ function assert(name: string, condition: boolean, detail?: string) {
   assert("county agency metadata questions remain queryable", r === null, JSON.stringify(r));
 }
 
+
+{
+  const r = detectNibrsCapabilityOverride("What is the aggravated assault rate in White Plains, NY?");
+  assert("White Plains place name does not trigger a demographic-rate refusal", r === null, JSON.stringify(r));
+}
+
+{
+  const r = detectNibrsCapabilityOverride("Sex offense rates in Denver since 2019");
+  assert("sex-offense category does not trigger a demographic-rate refusal", r === null, JSON.stringify(r));
+}
+
 // --- SHR-tab group-rate override: follow-up-safe (no homicide word required) ---
 // query-audit-2026-07-03 F27: front door was blind to follow-ups that drop "murder"
 {

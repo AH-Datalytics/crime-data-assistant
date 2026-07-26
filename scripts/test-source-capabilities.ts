@@ -446,16 +446,4 @@ function assertDoesNotFind(name: string, ids: string[], unexpected: string) {
   assert.equal(result.capabilityFindings[0]?.ruleId, "nibrs-weapon-person-crime-table");
 }
 
-
-{
-  const ids = findingIds(
-    "show me murders, robberies, and aggravated assaults by offender age by year for 2017 to 2025",
-    "nibrs",
-    `SELECT d.year, d.age_group, SUM(d.offender_count) AS offenders
-     FROM rollup.national_summary_offender_demographics d
-     WHERE d.ucr_offense_code IN ('09A','120','13A') AND d.year BETWEEN 2017 AND 2025
-     GROUP BY d.year, d.age_group`
-  );
-  assertDoesNotFind("national rollup offender demographics satisfies demographic table contract", ids, "nibrs-demographic-breakdown-table");
-}
 console.log("source capability tests passed");

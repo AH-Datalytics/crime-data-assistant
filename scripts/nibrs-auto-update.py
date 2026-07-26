@@ -1331,6 +1331,25 @@ def ensure_performance_indexes(conn):
     """Create idempotent indexes used by live query paths."""
     log("Ensuring performance indexes...")
     t = time.time()
+    deterministic_indexes = [
+        ("idx_scm_ori_year", "summary_city_monthly", "ori, year"),
+        ("idx_svcm_ori", "summary_victim_city_monthly", "ori"),
+        ("idx_nac_ori_year", "nibrs_agency_completeness", "ori, year"),
+        ("idx_sct_ori_year", "summary_clearance_type", "ori, year"),
+        ("idx_sct_state_year", "summary_clearance_type", "state, year"),
+        ("idx_svd_new_ori_year", "summary_victim_demographics", "ori, year"),
+        ("idx_sod_new_ori_year", "summary_offender_demographics", "ori, year"),
+        ("idx_sad_new_ori_year", "summary_arrestee_demographics", "ori, year"),
+    ]
+    for index_name, table_name, columns in deterministic_indexes:
+        if conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?",
+            (table_name,),
+        ).fetchone():
+            conn.execute(
+                f"CREATE INDEX IF NOT EXISTS {index_name} ON {table_name}({columns})"
+            )
+
     conn.execute("""
         CREATE INDEX IF NOT EXISTS idx_sad_offense_state_year
         ON summary_arrestee_demographics(ucr_arrest_offense, state, year)

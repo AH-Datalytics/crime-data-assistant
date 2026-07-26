@@ -422,4 +422,14 @@ for (const question of trueFollowupContracts) {
   });
   assert(!complete.enforced.includes("contract-offense-codes-missing"));
 }
+
+{
+  const result = validateQueryContractSql({
+    question: "murders reported by Houston Police Department since 2021",
+    source: "nibrs",
+    sql: "SELECT year, SUM(victim_count) FROM summary_victim_city_monthly WHERE agency_name = 'Houston Police Department' GROUP BY year",
+  });
+  assert(result.enforced.includes("contract-geography-state-missing"));
+}
+
 console.log("query contract tests passed");

@@ -331,10 +331,13 @@ export async function POST(req: NextRequest) {
           "deterministic",
           sessionId
         );
-        return jsonResp(
-          { success: false, error: "I had trouble running that deterministic NIBRS query. Try rephrasing your question.", sql: deterministicQuery.sql } as QueryError,
-          500
-        );
+        if (msg.includes("timed out")) {
+          return jsonResp(
+            { success: false, error: "That NIBRS query timed out. Try a smaller date range or a more specific question.", sql: deterministicQuery.sql } as QueryError,
+            500
+          );
+        }
+        console.warn("[nibrs] Deterministic query failed; continuing through guarded model path:", msg);
       }
     }
 

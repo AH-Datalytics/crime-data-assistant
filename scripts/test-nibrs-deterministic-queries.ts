@@ -86,7 +86,7 @@ import {
     "Omaha NE burglaries from 2000 to 2026"
   );
   assert.ok(query, "local Omaha burglary trend should be deterministic");
-  assert.match(query.sql, /\bFROM summary_city_monthly INDEXED BY idx_scm_ori_year\b/i);
+  assert.match(query.sql, /summary_city_monthly AS s INDEXED BY idx_scm_ori_year/i);
   assert.match(query.sql, /\bucr_offense_code = '220'/i);
   assert.match(query.sql, /\bstate IN \('NE','NB'\)/i);
   assert.match(query.sql, /\bcity = 'OMAHA'/i);
@@ -109,7 +109,7 @@ import {
     "Omaha NE homicides from 2021 to 2025"
   );
   assert.ok(query, "person-count city trend should be deterministic");
-  assert.match(query.sql, /\bFROM summary_victim_city_monthly INDEXED BY idx_svcm_ori\b/i);
+  assert.match(query.sql, /summary_victim_city_monthly AS s INDEXED BY idx_svcm_ori/i);
 }
 
 {
@@ -126,47 +126,27 @@ import {
   assert.equal(query, null, "shooting/firearm proxy questions should not use the simple count builder");
 }
 {
-  const question = "show me murders, robberies, and aggravated assaults for albuquerque police department and bernalillo county sheriff by year for 2020 to 2025";
-  const query = buildNibrsStructuredLocalTrendQuery(question);
-  assert.ok(query, "multi-agency multi-offense trend should be deterministic");
-  assert.equal(query.guardrail, "deterministic-nibrs-structured-local-trend");
-  assert.match(query.sql, /city = 'ALBUQUERQUE'/i);
-  assert.match(query.sql, /agency_name\) LIKE '%BERNALILLO%'/i);
-  assert.match(query.sql, /agency_name\) LIKE '%SHERIFF%' OR UPPER\(county_name\) LIKE '%BERNALILLO%'/i);
-  assert.match(query.sql, /FROM target_places AS tp\s+CROSS JOIN summary_victim_city_monthly AS s INDEXED BY idx_svcm_ori/i);
-  assert.match(query.sql, /FROM target_places AS tp\s+CROSS JOIN summary_city_monthly AS s INDEXED BY idx_scm_ori_year/i);
-  assert.equal(query.sql.match(/FROM target_places AS tp\s+CROSS JOIN summary_/gi)?.length, 3,
-    "every offense branch must keep target ORIs on the outer side of the indexed join");
-  assert.match(query.sql, /s\.ucr_offense_code = '09A'/i);
-  assert.match(query.sql, /s\.ucr_offense_code = '120'/i);
-  assert.match(query.sql, /s\.ucr_offense_code = '13A'/i);
-  assert.match(query.sql, /s\.year BETWEEN 2020 AND 2025/i);
-  assert.match(query.yAxis, /albuquerque_police_department_murders/);
-  assert.match(query.yAxis, /bernalillo_county_sheriff_robberies/);
-
-  const db = new Database(":memory:");
-  db.exec([
-    "CREATE TABLE agencies (ori TEXT, year INTEGER, state TEXT, city TEXT, agency_type TEXT, population INTEGER, pop_group TEXT);",
-    "CREATE TABLE agency_county_crosswalk (ori TEXT, ori9 TEXT, agency_name TEXT, state TEXT, county_name TEXT);",
-    "CREATE TABLE summary_victim_city_monthly (ori TEXT, year INTEGER, ucr_offense_code TEXT, victim_count INTEGER);",
-    "CREATE TABLE summary_city_monthly (ori TEXT, year INTEGER, ucr_offense_code TEXT, offense_count INTEGER);",
-    "CREATE INDEX idx_svcm_ori ON summary_victim_city_monthly(ori);",
-    "CREATE INDEX idx_scm_ori_year ON summary_city_monthly(ori, year);",
-    "INSERT INTO agencies VALUES ('NM0010100', 2025, 'NM', 'ALBUQUERQUE', 'City', 560000, '1B');",
-    "INSERT INTO agencies VALUES ('NM0010200', 2025, 'NM', 'ALBUQUERQUE', 'City', 15000, '7');",
-    "INSERT INTO agency_county_crosswalk VALUES ('NM00100', 'NM0010000', 'Bernalillo', 'NM', 'Bernalillo');",
-    "INSERT INTO summary_victim_city_monthly VALUES ('NM0010100', 2024, '09A', 10), ('NM0010100', 2024, '13A', 100), ('NM0010200', 2024, '09A', 999), ('NM0010200', 2024, '13A', 999), ('NM0010000', 2024, '09A', 3), ('NM0010000', 2024, '13A', 30);",
-    "INSERT INTO summary_city_monthly VALUES ('NM0010100', 2024, '120', 20), ('NM0010200', 2024, '120', 999), ('NM0010000', 2024, '120', 7);",
-  ].join("\n"));
-  const rows = db.prepare(query.sql).all() as Record<string, number>[];
-  db.close();
-  assert.equal(rows.length, 1);
-  assert.equal(rows[0].albuquerque_police_department_murders, 10);
-  assert.equal(rows[0].albuquerque_police_department_robberies, 20);
-  assert.equal(rows[0].albuquerque_police_department_aggravated_assaults, 100);
-  assert.equal(rows[0].bernalillo_county_sheriff_murders, 3);
-  assert.equal(rows[0].bernalillo_county_sheriff_robberies, 7);
-  assert.equal(rows[0].bernalillo_county_sheriff_aggravated_assaults, 30);
+  const question = "show me murders for albuquerque police department and bernalillo county sheriff by year for 2020 to 2025";
+  assert.equal(
+    buildNibrsStructuredLocalTrendQuery(question),
+    null,
+    "sheriff comparisons must fall through until a unique ORI resolver is available"
+  );
+  assert.equal(
+    buildNibrsStructuredLocalTrendQuery("compare murders for Jackson County Sheriff's Office in Missouri and Kansas City Police Department since 2020"),
+    null,
+    "same-name county sheriff wording must not use substring crosswalk resolution"
+  );
+  assert.equal(
+    buildNibrsStructuredLocalTrendQuery("compare murders for Fairfax County Police Department and Arlington Police Department since 2020"),
+    null,
+    "county-police wording must not be treated as a city name"
+  );
+  assert.equal(
+    buildNibrsStructuredLocalTrendQuery("compare murders for Jefferson County Sheriff's Office in Alabama and Birmingham Police Department since 2020"),
+    null,
+    "an accompanying state must remain disambiguation rather than creating an unsafe sheriff plan"
+  );
 }
 
 {
@@ -179,34 +159,39 @@ import {
 }
 
 {
-  const question = "compare murder rates for albuquerque police department and bernalillo county sheriff by year for 2024 to 2025";
-  const query = buildNibrsStructuredLocalTrendQuery(question);
-  assert.ok(query, "local annual rate comparison should be deterministic");
-  assert.equal(query.guardrail, "deterministic-nibrs-structured-local-rate");
-  assert.equal(query.yAxis, "albuquerque_police_department_murders_rate_per_100k,bernalillo_county_sheriff_murders_rate_per_100k");
+  const currentYear = new Date().getFullYear();
+  const query = buildNibrsStructuredLocalTrendQuery(
+    `compare murders in Chicago and Milwaukee by year from 2018 to ${currentYear}`
+  );
+  assert.ok(query, "late-adopter count comparison should be deterministic");
+  assert.match(query.sql, /requested_years\(year\)/i);
   assert.match(query.sql, /LEFT JOIN nibrs_agency_completeness AS c INDEXED BY idx_nac_ori_year/i);
-  assert.match(query.sql, /months_reported END\) = 12/i);
+  assert.match(query.explanation, /Historical counts are left blank unless the agency reported all 12 months/i);
 
   const db = new Database(":memory:");
   db.exec([
     "CREATE TABLE agencies (ori TEXT, year INTEGER, state TEXT, city TEXT, agency_type TEXT, population INTEGER, pop_group TEXT);",
-    "CREATE TABLE agency_county_crosswalk (ori TEXT, ori9 TEXT, agency_name TEXT, state TEXT, county_name TEXT);",
     "CREATE TABLE summary_victim_city_monthly (ori TEXT, year INTEGER, ucr_offense_code TEXT, victim_count INTEGER);",
     "CREATE TABLE nibrs_agency_completeness (ori TEXT, year INTEGER, months_reported INTEGER);",
     "CREATE INDEX idx_svcm_ori ON summary_victim_city_monthly(ori);",
     "CREATE INDEX idx_nac_ori_year ON nibrs_agency_completeness(ori, year);",
-    "INSERT INTO agencies VALUES ('NM0010100', 2024, 'NM', 'ALBUQUERQUE', 'City', 500000, '1B'), ('NM0010100', 2025, 'NM', 'ALBUQUERQUE', 'City', 500000, '1B'), ('NM0010200', 2024, 'NM', 'ALBUQUERQUE', 'City', 15000, '7'), ('NM0010200', 2025, 'NM', 'ALBUQUERQUE', 'City', 15000, '7'), ('NM0010000', 2024, 'NM', 'ALBUQUERQUE', 'County', 100000, '9A'), ('NM0010000', 2025, 'NM', 'ALBUQUERQUE', 'County', 100000, '9A');",
-    "INSERT INTO agency_county_crosswalk VALUES ('NM00100', 'NM0010000', 'Bernalillo', 'NM', 'Bernalillo');",
-    "INSERT INTO summary_victim_city_monthly VALUES ('NM0010100', 2024, '09A', 10), ('NM0010100', 2025, '09A', 5), ('NM0010200', 2024, '09A', 999), ('NM0010200', 2025, '09A', 999), ('NM0010000', 2024, '09A', 3), ('NM0010000', 2025, '09A', 4);",
-    "INSERT INTO nibrs_agency_completeness VALUES ('NM0010100', 2024, 12), ('NM0010100', 2025, 12), ('NM0010000', 2024, 12), ('NM0010000', 2025, 6);",
+    `INSERT INTO agencies VALUES ('ILCPD0000', ${currentYear}, 'IL', 'CHICAGO', 'City', 2700000, '1A'), ('WIMPD0000', ${currentYear}, 'WI', 'MILWAUKEE', 'City', 560000, '1B');`,
+    `INSERT INTO summary_victim_city_monthly VALUES ('ILCPD0000', 2021, '09A', 370), ('ILCPD0000', 2022, '09A', 700), ('ILCPD0000', ${currentYear}, '09A', 300), ('WIMPD0000', 2018, '09A', 100), ('WIMPD0000', 2019, '09A', 110), ('WIMPD0000', ${currentYear}, '09A', 50);`,
+    `INSERT INTO nibrs_agency_completeness VALUES ('ILCPD0000', 2021, 6), ('ILCPD0000', 2022, 12), ('ILCPD0000', ${currentYear}, 7), ('WIMPD0000', 2018, 12), ('WIMPD0000', 2019, 12), ('WIMPD0000', 2020, 12), ('WIMPD0000', 2021, 12), ('WIMPD0000', 2022, 12), ('WIMPD0000', ${currentYear}, 7);`,
   ].join("\n"));
   const rows = db.prepare(query.sql).all() as Record<string, number | null>[];
   db.close();
-  assert.equal(rows.length, 2);
-  assert.equal(rows[0].albuquerque_police_department_murders_rate_per_100k, 2);
-  assert.equal(rows[0].bernalillo_county_sheriff_murders_rate_per_100k, 3);
-  assert.equal(rows[1].albuquerque_police_department_murders_rate_per_100k, 1);
-  assert.equal(rows[1].bernalillo_county_sheriff_murders_rate_per_100k, null);
+
+  const byYear = new Map(rows.map((row) => [row.year, row]));
+  assert.equal(byYear.get(2018)?.chicago_il_murders, null, "pre-adoption years must be null, not false zero");
+  assert.equal(byYear.get(2021)?.chicago_il_murders, null, "historical partial years must be null");
+  assert.equal(byYear.get(2022)?.chicago_il_murders, 700, "complete historical counts remain visible");
+  assert.equal(byYear.get(2020)?.milwaukee_wi_murders, 0, "a complete reporting year with no matching offense is a real zero");
+  assert.equal(byYear.get(currentYear)?.chicago_il_murders, 300, "current-year partial counts remain visible without requiring YTD wording");
+
+  const rateQuery = buildNibrsStructuredLocalTrendQuery("compare murder rates in Houston and Dallas by year from 2024 to 2025");
+  assert.ok(rateQuery, "city rate comparisons should remain deterministic");
+  assert.match(rateQuery.sql, /months_reported END\) = 12/i);
 }
 
 {

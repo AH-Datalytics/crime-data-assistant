@@ -151,6 +151,38 @@ for dep in resend better-sqlite3; do
   node -e "require('$dep')" || die "cron runtime dep '$dep' does not resolve in release dir"
 done
 
+# INDEXED BY is a hard SQLite requirement. Refuse the release before the
+# symlink switch if a rebuild removed an index the deterministic path needs.
+NIBRS_DB_PATH="${NIBRS_DB_PATH:-$BASE_DIR/nibrs.db}"
+REQUIRED_NIBRS_INDEXES=(
+  idx_scm_ori_year
+  idx_svcm_ori
+  idx_nac_ori_year
+  idx_sct_ori_year
+  idx_sct_state_year
+  idx_svd_new_ori_year
+  idx_sod_new_ori_year
+  idx_sad_new_ori_year
+)
+[[ -f "$NIBRS_DB_PATH" ]] || die "NIBRS database not found at $NIBRS_DB_PATH"
+node -e '
+  const Database = require("better-sqlite3");
+  const db = new Database(process.argv[1], { readonly: true });
+  const required = process.argv.slice(2);
+  const found = new Set(db.prepare(
+    "SELECT name FROM sqlite_master WHERE type = ? AND name IN (" +
+    required.map(() => "?").join(",") + ")"
+  ).all("index", ...required).map((row) => row.name));
+  db.close();
+  const missing = required.filter((name) => !found.has(name));
+  if (missing.length) {
+    console.error("Missing required NIBRS indexes: " + missing.join(", "));
+    process.exit(1);
+  }
+' "$NIBRS_DB_PATH" "${REQUIRED_NIBRS_INDEXES[@]}" ||
+  die "NIBRS deterministic-index preflight failed; run ensure_performance_indexes before deploying"
+log "  NIBRS deterministic indexes present"
+
 # ── Step 4: Build ──────────────────────────────────────────────────────
 log "Building Next.js app..."
 trap cleanup_on_failure ERR
