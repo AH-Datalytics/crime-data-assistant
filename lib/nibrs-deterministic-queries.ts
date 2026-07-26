@@ -358,7 +358,13 @@ function structuredTargetSelect(geography: QueryContractGeography, index: number
     };
   }
 
-  const namePredicate = agencyNamePredicate("agency_name", geography.name);
+  const sheriff = geography.name.match(/^(.+?)\s+county\s+sheriff(?:'?s)?(?:\s+office)?$/i);
+  const sheriffLocation = sheriff?.[1].trim().toUpperCase();
+  const namePredicate = sheriffLocation
+    ? "UPPER(agency_name) LIKE " + sqlString("%" + sheriffLocation + "%") +
+      " AND (UPPER(agency_name) LIKE '%SHERIFF%' OR UPPER(county_name) LIKE " +
+      sqlString("%" + sheriffLocation + "%") + ")"
+    : agencyNamePredicate("agency_name", geography.name);
   if (!namePredicate) return null;
   const crosswalkState = compactStatePredicate("state", sourceState);
   return {

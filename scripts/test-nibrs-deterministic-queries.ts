@@ -131,7 +131,7 @@ import {
   assert.equal(query.guardrail, "deterministic-nibrs-structured-local-trend");
   assert.match(query.sql, /city = 'ALBUQUERQUE'/i);
   assert.match(query.sql, /agency_name\) LIKE '%BERNALILLO%'/i);
-  assert.match(query.sql, /agency_name\) LIKE '%SHERIFF%'/i);
+  assert.match(query.sql, /agency_name\) LIKE '%SHERIFF%' OR UPPER\(county_name\) LIKE '%BERNALILLO%'/i);
   assert.match(query.sql, /FROM target_places AS tp\s+CROSS JOIN summary_victim_city_monthly AS s INDEXED BY idx_svcm_ori/i);
   assert.match(query.sql, /FROM target_places AS tp\s+CROSS JOIN summary_city_monthly AS s INDEXED BY idx_scm_ori_year/i);
   assert.equal(query.sql.match(/FROM target_places AS tp\s+CROSS JOIN summary_/gi)?.length, 3,
@@ -146,13 +146,13 @@ import {
   const db = new Database(":memory:");
   db.exec([
     "CREATE TABLE agencies (ori TEXT, year INTEGER, state TEXT, city TEXT, agency_type TEXT, population INTEGER);",
-    "CREATE TABLE agency_county_crosswalk (ori TEXT, ori9 TEXT, agency_name TEXT, state TEXT);",
+    "CREATE TABLE agency_county_crosswalk (ori TEXT, ori9 TEXT, agency_name TEXT, state TEXT, county_name TEXT);",
     "CREATE TABLE summary_victim_city_monthly (ori TEXT, year INTEGER, ucr_offense_code TEXT, victim_count INTEGER);",
     "CREATE TABLE summary_city_monthly (ori TEXT, year INTEGER, ucr_offense_code TEXT, offense_count INTEGER);",
     "CREATE INDEX idx_svcm_ori ON summary_victim_city_monthly(ori);",
     "CREATE INDEX idx_scm_ori_year ON summary_city_monthly(ori, year);",
     "INSERT INTO agencies VALUES ('NM0010100', 2025, 'NM', 'ALBUQUERQUE', 'City', 560000);",
-    "INSERT INTO agency_county_crosswalk VALUES ('NM00100', 'NM0010000', 'Bernalillo County Sheriff', 'NM');",
+    "INSERT INTO agency_county_crosswalk VALUES ('NM00100', 'NM0010000', 'Bernalillo', 'NM', 'Bernalillo');",
     "INSERT INTO summary_victim_city_monthly VALUES ('NM0010100', 2024, '09A', 10), ('NM0010100', 2024, '13A', 100), ('NM0010000', 2024, '09A', 3), ('NM0010000', 2024, '13A', 30);",
     "INSERT INTO summary_city_monthly VALUES ('NM0010100', 2024, '120', 20), ('NM0010000', 2024, '120', 7);",
   ].join("\n"));
