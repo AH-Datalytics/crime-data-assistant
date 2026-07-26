@@ -178,10 +178,41 @@ import {
 }
 
 {
+  const question = "compare murder rates for albuquerque police department and bernalillo county sheriff by year for 2024 to 2025";
+  const query = buildNibrsStructuredLocalTrendQuery(question);
+  assert.ok(query, "local annual rate comparison should be deterministic");
+  assert.equal(query.guardrail, "deterministic-nibrs-structured-local-rate");
+  assert.equal(query.yAxis, "albuquerque_police_department_murders_rate_per_100k,bernalillo_county_sheriff_murders_rate_per_100k");
+  assert.match(query.sql, /LEFT JOIN nibrs_agency_completeness AS c INDEXED BY idx_nac_ori_year/i);
+  assert.match(query.sql, /months_reported END\) = 12/i);
+
+  const db = new Database(":memory:");
+  db.exec([
+    "CREATE TABLE agencies (ori TEXT, year INTEGER, state TEXT, city TEXT, agency_type TEXT, population INTEGER, pop_group TEXT);",
+    "CREATE TABLE agency_county_crosswalk (ori TEXT, ori9 TEXT, agency_name TEXT, state TEXT, county_name TEXT);",
+    "CREATE TABLE summary_victim_city_monthly (ori TEXT, year INTEGER, ucr_offense_code TEXT, victim_count INTEGER);",
+    "CREATE TABLE nibrs_agency_completeness (ori TEXT, year INTEGER, months_reported INTEGER);",
+    "CREATE INDEX idx_svcm_ori ON summary_victim_city_monthly(ori);",
+    "CREATE INDEX idx_nac_ori_year ON nibrs_agency_completeness(ori, year);",
+    "INSERT INTO agencies VALUES ('NM0010100', 2024, 'NM', 'ALBUQUERQUE', 'City', 500000, '1B'), ('NM0010100', 2025, 'NM', 'ALBUQUERQUE', 'City', 500000, '1B'), ('NM0010200', 2024, 'NM', 'ALBUQUERQUE', 'City', 15000, '7'), ('NM0010200', 2025, 'NM', 'ALBUQUERQUE', 'City', 15000, '7'), ('NM0010000', 2024, 'NM', 'ALBUQUERQUE', 'County', 100000, '9A'), ('NM0010000', 2025, 'NM', 'ALBUQUERQUE', 'County', 100000, '9A');",
+    "INSERT INTO agency_county_crosswalk VALUES ('NM00100', 'NM0010000', 'Bernalillo', 'NM', 'Bernalillo');",
+    "INSERT INTO summary_victim_city_monthly VALUES ('NM0010100', 2024, '09A', 10), ('NM0010100', 2025, '09A', 5), ('NM0010200', 2024, '09A', 999), ('NM0010200', 2025, '09A', 999), ('NM0010000', 2024, '09A', 3), ('NM0010000', 2025, '09A', 4);",
+    "INSERT INTO nibrs_agency_completeness VALUES ('NM0010100', 2024, 12), ('NM0010100', 2025, 12), ('NM0010000', 2024, 12), ('NM0010000', 2025, 6);",
+  ].join("\n"));
+  const rows = db.prepare(query.sql).all() as Record<string, number | null>[];
+  db.close();
+  assert.equal(rows.length, 2);
+  assert.equal(rows[0].albuquerque_police_department_murders_rate_per_100k, 2);
+  assert.equal(rows[0].bernalillo_county_sheriff_murders_rate_per_100k, 3);
+  assert.equal(rows[1].albuquerque_police_department_murders_rate_per_100k, 1);
+  assert.equal(rows[1].bernalillo_county_sheriff_murders_rate_per_100k, null);
+}
+
+{
   assert.equal(
-    buildNibrsStructuredLocalTrendQuery("compare murder rates in Houston and Dallas since 2020"),
+    buildNibrsStructuredLocalTrendQuery("compare murders per 10,000 in Houston and Dallas since 2020"),
     null,
-    "multi-city rates must stay on the validated model path"
+    "non-100k rate scales must stay on the validated model path"
   );
   assert.equal(
     buildNibrsStructuredLocalTrendQuery("compare firearm murders in Houston and Dallas since 2020"),

@@ -441,19 +441,21 @@ function structuredOffenseSelect(
 }
 
 function isExcludedStructuredLocalQuestion(question: string): boolean {
-  return /\b(?:rates?|per\s*(?:capita|100k|100,?000|10k|10,?000)|clearance|cleared|solve[ds]?|share|percent(?:age)?|ratio|top|highest|lowest|rank(?:ing)?|by\s+(?:state|city|agency|race|sex|gender|age|ethnicity|weapon|injury|relationship|circumstance)|weapon|firearm|gun|shooting|shootings|domestic\s+violence|intimate\s+partner|demographic|continuous|consistent\s+report)\b/i.test(question);
+  return /\b(?:clearance|cleared|solve[ds]?|share|percent(?:age)?|ratio|top|highest|lowest|rank(?:ing)?|by\s+(?:state|city|agency|race|sex|gender|age|ethnicity|weapon|injury|relationship|circumstance)|weapon|firearm|gun|shooting|shootings|domestic\s+violence|intimate\s+partner|demographic|continuous|consistent\s+report)\b/i.test(question);
 }
 
 export function buildNibrsStructuredLocalTrendQuery(
   question: string
 ): DeterministicNibrsQuery | null {
   const contract = buildQueryContract(question, "nibrs");
-  if (!contract || contract.metric.unit !== "count") return null;
+  if (!contract || !["count", "rate_per_100k"].includes(contract.metric.unit)) return null;
+  const isRate = contract.metric.unit === "rate_per_100k";
+  if (isRate && /\bper\s*(?:10k|10,?000|1k|1,?000|million|1m)\b/i.test(question)) return null;
   if (contract.metric.offenses.length === 0 || contract.metric.offenses.length > 4) return null;
   const allCodes = contract.metric.offenses.flatMap((offense) => offense.codes);
   if (new Set(allCodes).size !== allCodes.length) return null;
   if (contract.geographies.length === 0 || contract.geographies.length > 4) return null;
-  if (contract.metric.offenses.length === 1 && contract.geographies.length === 1) return null;
+  if (!isRate && contract.metric.offenses.length === 1 && contract.geographies.length === 1) return null;
   if (contract.geographies.some((geography) => !["city", "agency"].includes(geography.kind))) return null;
   if (contract.breakdowns.includes("month")) return null;
   if (contract.breakdowns.some((breakdown) => breakdown !== "year")) return null;
@@ -474,36 +476,58 @@ export function buildNibrsStructuredLocalTrendQuery(
   const series: { alias: string; placeKey: string; offenseKey: string }[] = [];
   for (const target of resolvedTargets) {
     for (const offense of resolvedOffenses) {
-      let alias = seriesKey(target.label + "_" + offense.label);
+      const baseAlias = seriesKey(target.label + "_" + offense.label + (isRate ? "_rate_per_100k" : ""));
+      let alias = baseAlias;
       let suffix = 2;
-      while (aliases.has(alias)) alias = seriesKey(target.label + "_" + offense.label) + "_" + suffix++;
+      while (aliases.has(alias)) alias = baseAlias + "_" + suffix++;
       aliases.add(alias);
       series.push({
         alias,
-
         placeKey: target.key,
         offenseKey: offense.key,
       });
     }
   }
 
-  const pivotColumns = series.map((item) =>
-    "COALESCE(SUM(CASE WHEN place_key = " + sqlString(item.placeKey) +
-    " AND offense_key = " + sqlString(item.offenseKey) +
-    " THEN reported_count END), 0) AS " + item.alias
+  const pivotColumns = series.map((item) => isRate
+    ? "CASE WHEN MAX(CASE WHEN pp.place_key = " + sqlString(item.placeKey) +
+      " THEN pp.months_reported END) = 12 THEN ROUND(100000.0 * " +
+      "COALESCE(SUM(CASE WHEN sc.place_key = " + sqlString(item.placeKey) +
+      " AND sc.offense_key = " + sqlString(item.offenseKey) +
+      " THEN sc.reported_count END), 0) / NULLIF(MAX(CASE WHEN pp.place_key = " +
+      sqlString(item.placeKey) + " THEN pp.population END), 0), 1) ELSE NULL END AS " + item.alias
+    : "COALESCE(SUM(CASE WHEN place_key = " + sqlString(item.placeKey) +
+      " AND offense_key = " + sqlString(item.offenseKey) +
+      " THEN reported_count END), 0) AS " + item.alias
   );
+  const populationCte = isRate ? [
+    "place_population AS (",
+    "  SELECT a.year, tp.place_key, MAX(a.population) AS population, MAX(c.months_reported) AS months_reported",
+    "  FROM " + targetCte + " AS tp",
+    "  CROSS JOIN agencies AS a",
+    "  LEFT JOIN nibrs_agency_completeness AS c INDEXED BY idx_nac_ori_year",
+    "    ON c.ori = a.ori AND c.year = a.year",
+    "  WHERE a.ori = tp.ori",
+    "    AND a.population > 0",
+    "    AND " + years.predicate.replace(/\byear\b/g, "a.year"),
+    "  GROUP BY a.year, tp.place_key",
+    ")",
+  ] : [];
   const sql = [
     "WITH " + targetCte + " AS (",
     "  " + resolvedTargets.map((target) => target.sql).join("\n  UNION\n  "),
     "),",
     "series_counts AS (",
     "  " + resolvedOffenses.map((offense) => offense.sql).join("\n  UNION ALL\n  "),
-    ")",
-    "SELECT year,",
+    isRate ? ")," : ")",
+    ...populationCte,
+    "SELECT " + (isRate ? "pp.year" : "year") + ",",
     "  " + pivotColumns.join(",\n  "),
-    "FROM series_counts",
-    "GROUP BY year",
-    "ORDER BY year",
+    isRate
+      ? "FROM place_population AS pp LEFT JOIN series_counts AS sc ON sc.year = pp.year AND sc.place_key = pp.place_key"
+      : "FROM series_counts",
+    "GROUP BY " + (isRate ? "pp.year" : "year"),
+    "ORDER BY " + (isRate ? "pp.year" : "year"),
     "LIMIT 1000",
   ].join("\n");
 
@@ -511,20 +535,22 @@ export function buildNibrsStructuredLocalTrendQuery(
   const offenseLabels = resolvedOffenses.map((offense) => offense.label.toLowerCase()).join(", ");
   return {
     sql,
-    title: "NIBRS offense trends for " + places,
+    title: "NIBRS offense " + (isRate ? "rate " : "") + "trends for " + places,
     explanation:
-      "This returns annual reported " + offenseLabels + " for " + places + years.periodText + ". " +
+      "This returns annual reported " + offenseLabels + (isRate ? " rates per 100,000" : "") + " for " + places + years.periodText + ". " +
       "Named city police departments are resolved to city-agency ORIs; named sheriff agencies are resolved through the agency crosswalk. " +
-      "Person crimes use victim summaries while robbery and other non-person offenses use offense summaries. Recent NIBRS data may be incomplete.",
+      "Person crimes use victim summaries while robbery and other non-person offenses use offense summaries. " +
+      (isRate
+        ? "Rates use each agency's year-specific service population and are left blank unless the agency reported all 12 months."
+        : "Recent NIBRS data may be incomplete."),
     chartHint: "line",
     xAxis: "year",
     yAxis: series.map((item) => item.alias).join(","),
     xAxisLabel: "Year",
-    yAxisLabel: "Reported count",
-    guardrail: "deterministic-nibrs-structured-local-trend",
+    yAxisLabel: isRate ? "Rate per 100,000" : "Reported count",
+    guardrail: isRate ? "deterministic-nibrs-structured-local-rate" : "deterministic-nibrs-structured-local-trend",
   };
 }
-
 export function buildNibrsDomesticViolenceAggravatedAssaultShareQuery(
   question: string
 ): DeterministicNibrsQuery | null {
