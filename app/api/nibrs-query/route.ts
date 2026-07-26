@@ -28,7 +28,7 @@ import { detectNibrsCapabilityOverride } from "@/lib/nibrs-capability-overrides"
 import { getBlockingGeoClarification } from "@/lib/geo-resolver";
 import { getCountyScopeClarification } from "@/lib/county-clarifier";
 import { asksCampusAgency, buildCampusAgencySummarySql, campusAgencyChartAxesFromSql, campusAgencyDisplayName, knownCampusAgencyResolution, resolveCampusAgencyOris, shouldResolveCampusAgencySql } from "@/lib/nibrs-campus-agency";
-import { buildNibrsClearanceMethodQuery, buildNibrsDomesticViolenceAggravatedAssaultShareQuery, buildNibrsLocalCityOffenseCountQuery, buildNibrsStructuredLocalTrendQuery } from "@/lib/nibrs-deterministic-queries";
+import { buildNibrsClearanceMethodQuery, buildNibrsDomesticViolenceAggravatedAssaultShareQuery, buildNibrsLocalCityOffenseCountQuery, buildNibrsLocalDemographicQuery, buildNibrsStructuredLocalTrendQuery } from "@/lib/nibrs-deterministic-queries";
 import { optimizeNibrsSql } from "@/lib/nibrs-sql-optimizer";
 import {
   queryContractFailureMessage,
@@ -275,7 +275,7 @@ export async function POST(req: NextRequest) {
       } as QueryResponse);
     }
 
-    const deterministicQuery = buildNibrsClearanceMethodQuery(question) ?? buildNibrsStructuredLocalTrendQuery(question) ?? buildNibrsLocalCityOffenseCountQuery(question) ?? buildNibrsDomesticViolenceAggravatedAssaultShareQuery(question);
+    const deterministicQuery = buildNibrsClearanceMethodQuery(question) ?? buildNibrsLocalDemographicQuery(question) ?? buildNibrsStructuredLocalTrendQuery(question) ?? buildNibrsLocalCityOffenseCountQuery(question) ?? buildNibrsDomesticViolenceAggravatedAssaultShareQuery(question);
     if (deterministicQuery) {
       const deterministicStart = Date.now();
       try {

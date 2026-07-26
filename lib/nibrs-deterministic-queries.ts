@@ -407,6 +407,146 @@ function structuredTargetSelect(geography: QueryContractGeography, index: number
   };
 }
 
+type NibrsDemographicRole = "victim" | "offender" | "arrestee";
+type NibrsDemographicDimension = "race" | "sex" | "age_group" | "ethnicity";
+
+function demographicRole(question: string): NibrsDemographicRole | null {
+  if (/\b(?:arrests?|arrestees?|arrested)\b/i.test(question)) return "arrestee";
+  if (/\b(?:offenders?|suspects?|perpetrators?)\b/i.test(question)) return "offender";
+  if (/\bvictims?\b/i.test(question)) return "victim";
+  return null;
+}
+
+function demographicLabelSql(column: string, dimension: NibrsDemographicDimension): string {
+  if (dimension === "race") {
+    return "CASE UPPER(COALESCE(NULLIF(TRIM(" + column + "), ''), 'U')) " +
+      "WHEN 'W' THEN 'White' WHEN 'B' THEN 'Black or African American' " +
+      "WHEN 'A' THEN 'Asian' WHEN 'I' THEN 'American Indian or Alaska Native' " +
+      "WHEN 'P' THEN 'Native Hawaiian or Other Pacific Islander' ELSE 'Unknown' END";
+  }
+  if (dimension === "sex") {
+    return "CASE UPPER(COALESCE(NULLIF(TRIM(" + column + "), ''), 'U')) " +
+      "WHEN 'M' THEN 'Male' WHEN 'F' THEN 'Female' ELSE 'Unknown' END";
+  }
+  if (dimension === "ethnicity") {
+    return "CASE UPPER(COALESCE(NULLIF(TRIM(" + column + "), ''), 'U')) " +
+      "WHEN 'H' THEN 'Hispanic or Latino' WHEN 'N' THEN 'Not Hispanic or Latino' ELSE 'Unknown' END";
+  }
+  return "COALESCE(NULLIF(TRIM(" + column + "), ''), 'Unknown')";
+}
+
+export function buildNibrsLocalDemographicQuery(
+  question: string
+): DeterministicNibrsQuery | null {
+  const contract = buildQueryContract(question, "nibrs");
+  if (!contract || !["count", "ratio"].includes(contract.metric.unit)) return null;
+  if (contract.metric.unsupportedReason) return null;
+  const role = demographicRole(question);
+  if (!role) return null;
+  const dimensions = contract.breakdowns.filter((breakdown): breakdown is NibrsDemographicDimension =>
+    ["race", "sex", "age_group", "ethnicity"].includes(breakdown)
+  );
+  if (dimensions.length !== 1) return null;
+  if (contract.metric.offenses.length !== 1) return null;
+  const offense = contract.metric.offenses[0];
+  if (offense.codes.length === 0 || offense.codes.some((code) => !/^[0-9A-Z]{3}$/.test(code))) return null;
+  if (contract.geographies.length !== 1 || !["city", "agency"].includes(contract.geographies[0].kind)) return null;
+  if (contract.geography.kind === "campus" || contract.comparability.continuousReporters) return null;
+  if (contract.breakdowns.includes("month")) return null;
+  if (/\b(?:weapon|firearm|gun|shooting|domestic\s+violence|intimate\s+partner|circumstance|injury|relationship|clearance|cleared)\b/i.test(question)) return null;
+
+  const target = structuredTargetSelect(contract.geographies[0], 0);
+  if (!target) return null;
+  const dimension = dimensions[0];
+  const annual = contract.breakdowns.includes("year");
+  const isShare = contract.metric.unit === "ratio";
+  const years = yearScope("d.year", question);
+  const roleConfig: Record<NibrsDemographicRole, {
+    table: string;
+    index: string;
+    offenseColumn: string;
+    countColumn: string;
+    countAlias: string;
+    label: string;
+  }> = {
+    victim: {
+      table: "summary_victim_demographics",
+      index: "idx_svd_new_ori_year",
+      offenseColumn: "ucr_offense_code",
+      countColumn: "victim_count",
+      countAlias: "victims",
+      label: "victims",
+    },
+    offender: {
+      table: "summary_offender_demographics",
+      index: "idx_sod_new_ori_year",
+      offenseColumn: "ucr_offense_code",
+      countColumn: "offender_count",
+      countAlias: "offenders",
+      label: "offenders",
+    },
+    arrestee: {
+      table: "summary_arrestee_demographics",
+      index: "idx_sad_new_ori_year",
+      offenseColumn: "ucr_arrest_offense",
+      countColumn: "arrestee_count",
+      countAlias: "arrestees",
+      label: "arrestees",
+    },
+  };
+  const config = roleConfig[role];
+  const dimensionSql = demographicLabelSql("d." + dimension, dimension);
+  const offensePredicate = offense.codes.length === 1
+    ? "d." + config.offenseColumn + " = " + sqlString(offense.codes[0])
+    : "d." + config.offenseColumn + " IN (" + offense.codes.map(sqlString).join(",") + ")";
+  const groupedColumns = annual ? "d.year, " + dimensionSql + " AS " + dimension : dimensionSql + " AS " + dimension;
+  const groupedBy = annual ? "d.year, " + dimensionSql : dimensionSql;
+  const finalColumns = [
+    ...(annual ? ["year", dimension, "CAST(year AS TEXT) || ' - ' || " + dimension + " AS chart_category"] : [dimension]),
+    config.countAlias,
+    ...(isShare ? [
+      "ROUND(100.0 * " + config.countAlias + " / NULLIF(SUM(" + config.countAlias + ") OVER (" +
+      (annual ? "PARTITION BY year" : "") + "), 0), 1) AS share_pct",
+    ] : []),
+  ];
+  const sql = [
+    "WITH target_places AS (",
+    "  " + target.sql,
+    "),",
+    "grouped AS (",
+    "  SELECT " + groupedColumns + ", SUM(d." + config.countColumn + ") AS " + config.countAlias,
+    "  FROM target_places AS tp",
+    "  CROSS JOIN " + config.table + " AS d INDEXED BY " + config.index,
+    "  WHERE d.ori = tp.ori",
+    "    AND " + offensePredicate,
+    "    AND " + years.predicate,
+    "  GROUP BY " + groupedBy,
+    ")",
+    "SELECT " + finalColumns.join(", "),
+    "FROM grouped",
+    "ORDER BY " + (annual ? "year, " : "") + config.countAlias + " DESC",
+    "LIMIT 1000",
+  ].join("\n");
+
+  const dimensionLabel = dimension === "age_group" ? "age group" : dimension;
+  return {
+    sql,
+    title: "NIBRS " + offense.label.toLowerCase() + " " + config.label + " by " + dimensionLabel + " in " + target.label,
+    explanation:
+      "This returns " + offense.label.toLowerCase() + " " + config.label + " by " + dimensionLabel + " in " + target.label + years.periodText + ". " +
+      "These are counts of people, not incidents; one incident can involve multiple people. " +
+      (isShare
+        ? "Shares are calculated within the returned " + config.label + " and include the Unknown category in the denominator. "
+        : "Unknown or unreported demographic values remain visible as Unknown. ") +
+      "No demographic population denominator is used.",
+    chartHint: "bar",
+    xAxis: annual ? "chart_category" : dimension,
+    yAxis: isShare ? "share_pct" : config.countAlias,
+    xAxisLabel: annual ? "Year and " + dimensionLabel : dimensionLabel.charAt(0).toUpperCase() + dimensionLabel.slice(1),
+    yAxisLabel: isShare ? "Share (%)" : config.label.charAt(0).toUpperCase() + config.label.slice(1),
+    guardrail: isShare ? "deterministic-nibrs-local-demographic-share" : "deterministic-nibrs-local-demographic-count",
+  };
+}
 function structuredOffenseSelect(
   offense: QueryContractOffense,
   targetCte: string,

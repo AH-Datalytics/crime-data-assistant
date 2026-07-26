@@ -4,6 +4,7 @@ import {
   buildNibrsClearanceMethodQuery,
   buildNibrsDomesticViolenceAggravatedAssaultShareQuery,
   buildNibrsLocalCityOffenseCountQuery,
+  buildNibrsLocalDemographicQuery,
   buildNibrsStructuredLocalTrendQuery,
 } from "../lib/nibrs-deterministic-queries.js";
 
@@ -233,5 +234,71 @@ import {
   assert.ok(query, "nested motor-vehicle-theft wording should remain a single deterministic offense");
   assert.match(query.sql, /ucr_offense_code = '240'/i);
   assert.doesNotMatch(query.sql, /23A-23H/i);
+}
+{
+  const countQuery = buildNibrsLocalDemographicQuery("murder victims by race in Houston since 2020");
+  assert.ok(countQuery, "local victim race counts should be deterministic");
+  assert.equal(countQuery.guardrail, "deterministic-nibrs-local-demographic-count");
+  assert.match(countQuery.sql, /summary_victim_demographics AS d INDEXED BY idx_svd_new_ori_year/i);
+  assert.equal(countQuery.xAxis, "race");
+  assert.equal(countQuery.yAxis, "victims");
+
+  const db = new Database(":memory:");
+  db.exec([
+    "CREATE TABLE agencies (ori TEXT, year INTEGER, state TEXT, city TEXT, agency_type TEXT, population INTEGER, pop_group TEXT);",
+    "CREATE TABLE summary_victim_demographics (ori TEXT, year INTEGER, ucr_offense_code TEXT, race TEXT, sex TEXT, age_group TEXT, ethnicity TEXT, victim_count INTEGER);",
+    "CREATE INDEX idx_svd_new_ori_year ON summary_victim_demographics(ori, year);",
+    "INSERT INTO agencies VALUES ('TXHPD0000', 2024, 'TX', 'HOUSTON', 'City', 2300000, '1A'), ('TXHPD0000', 2025, 'TX', 'HOUSTON', 'City', 2350000, '1A'), ('TX1012400', 2024, 'TX', 'HOUSTON', 'City', 12000, '5'), ('TX1012400', 2025, 'TX', 'HOUSTON', 'City', 12000, '5');",
+    "INSERT INTO summary_victim_demographics VALUES ('TXHPD0000', 2024, '09A', 'W', 'M', '25-34', 'N', 10), ('TXHPD0000', 2024, '09A', 'B', 'M', '25-34', 'N', 20), ('TXHPD0000', 2024, '09A', 'U', 'U', 'Unknown', 'U', 5), ('TXHPD0000', 2025, '09A', 'W', 'F', '25-34', 'H', 15), ('TXHPD0000', 2025, '09A', 'B', 'F', '25-34', 'N', 25), ('TXHPD0000', 2025, '09A', '', '', '', '', 2), ('TX1012400', 2024, '09A', 'B', 'M', '25-34', 'N', 999);",
+  ].join("\n"));
+  const countRows = db.prepare(countQuery.sql).all() as Record<string, number | string>[];
+  assert.deepEqual(countRows, [
+    { race: "Black or African American", victims: 45 },
+    { race: "White", victims: 25 },
+    { race: "Unknown", victims: 7 },
+  ]);
+
+  const shareQuery = buildNibrsLocalDemographicQuery("what share of murder victims are in each race in Houston since 2020");
+  assert.ok(shareQuery, "local victim race shares should be deterministic");
+  assert.equal(shareQuery.guardrail, "deterministic-nibrs-local-demographic-share");
+  const shareRows = db.prepare(shareQuery.sql).all() as Record<string, number | string>[];
+  assert.deepEqual(shareRows, [
+    { race: "Black or African American", victims: 45, share_pct: 58.4 },
+    { race: "White", victims: 25, share_pct: 32.5 },
+    { race: "Unknown", victims: 7, share_pct: 9.1 },
+  ]);
+
+  const annualQuery = buildNibrsLocalDemographicQuery("murder victims by race by year in Houston from 2024 to 2025");
+  assert.ok(annualQuery, "annual local victim race counts should be deterministic");
+  assert.equal(annualQuery.xAxis, "chart_category");
+  const annualRows = db.prepare(annualQuery.sql).all() as Record<string, number | string>[];
+  assert.equal(annualRows.length, 6);
+  assert.equal(annualRows[0].chart_category, "2024 - Black or African American");
+  db.close();
+}
+
+{
+  const offender = buildNibrsLocalDemographicQuery("robbery offenders by sex in Dallas from 2020 to 2025");
+  assert.ok(offender);
+  assert.match(offender.sql, /summary_offender_demographics AS d INDEXED BY idx_sod_new_ori_year/i);
+  assert.match(offender.sql, /SUM\(d\.offender_count\) AS offenders/i);
+
+  const arrestee = buildNibrsLocalDemographicQuery("murder arrestees by age in Dallas from 2020 to 2025");
+  assert.ok(arrestee);
+  assert.match(arrestee.sql, /summary_arrestee_demographics AS d INDEXED BY idx_sad_new_ori_year/i);
+  assert.match(arrestee.sql, /d\.ucr_arrest_offense = '09A'/i);
+
+  const ethnicity = buildNibrsLocalDemographicQuery("robbery victims by ethnicity in Dallas from 2020 to 2025");
+  assert.ok(ethnicity);
+  assert.match(ethnicity.sql, /Hispanic or Latino/i);
+
+  assert.equal(buildNibrsLocalDemographicQuery("murders by race in Houston since 2020"), null,
+    "ambiguous person role must stay on the validated model path");
+  assert.equal(buildNibrsLocalDemographicQuery("murder victim rates by race in Houston since 2020"), null,
+    "demographic population rates must remain unsupported");
+  assert.equal(buildNibrsLocalDemographicQuery("firearm murder victims by race in Houston since 2020"), null,
+    "weapon-qualified demographics require the existing specialized path");
+  assert.equal(buildNibrsLocalDemographicQuery("murder victims by race and sex in Houston since 2020"), null,
+    "multi-dimensional demographics stay on the validated model path initially");
 }
 console.log("nibrs deterministic query tests passed");

@@ -105,6 +105,7 @@ function detectBreakdowns(question: string): string[] {
     ["agency", /\bby\s+agenc(?:y|ies)\b|\bagenc(?:y|ies)\s+breakdown\b/i],
     ["age_group", /\bage\b|\bage\s+group\b/i],
     ["race", /\brace|racial\b/i],
+    ["ethnicity", /\bethnicit\w+|\bhispanic\b|\blatino\w*\b/i],
     ["sex", /\b(?:sex|gender|male|female|men|women)\b/i],
     ["offense_code", /\bby\s+offense\b|\boffense\s+(?:code|type|breakdown)\b/i],
   ];
