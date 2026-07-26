@@ -145,16 +145,17 @@ import {
 
   const db = new Database(":memory:");
   db.exec([
-    "CREATE TABLE agencies (ori TEXT, year INTEGER, state TEXT, city TEXT, agency_type TEXT, population INTEGER);",
+    "CREATE TABLE agencies (ori TEXT, year INTEGER, state TEXT, city TEXT, agency_type TEXT, population INTEGER, pop_group TEXT);",
     "CREATE TABLE agency_county_crosswalk (ori TEXT, ori9 TEXT, agency_name TEXT, state TEXT, county_name TEXT);",
     "CREATE TABLE summary_victim_city_monthly (ori TEXT, year INTEGER, ucr_offense_code TEXT, victim_count INTEGER);",
     "CREATE TABLE summary_city_monthly (ori TEXT, year INTEGER, ucr_offense_code TEXT, offense_count INTEGER);",
     "CREATE INDEX idx_svcm_ori ON summary_victim_city_monthly(ori);",
     "CREATE INDEX idx_scm_ori_year ON summary_city_monthly(ori, year);",
-    "INSERT INTO agencies VALUES ('NM0010100', 2025, 'NM', 'ALBUQUERQUE', 'City', 560000);",
+    "INSERT INTO agencies VALUES ('NM0010100', 2025, 'NM', 'ALBUQUERQUE', 'City', 560000, '1B');",
+    "INSERT INTO agencies VALUES ('NM0010200', 2025, 'NM', 'ALBUQUERQUE', 'City', 15000, '7');",
     "INSERT INTO agency_county_crosswalk VALUES ('NM00100', 'NM0010000', 'Bernalillo', 'NM', 'Bernalillo');",
-    "INSERT INTO summary_victim_city_monthly VALUES ('NM0010100', 2024, '09A', 10), ('NM0010100', 2024, '13A', 100), ('NM0010000', 2024, '09A', 3), ('NM0010000', 2024, '13A', 30);",
-    "INSERT INTO summary_city_monthly VALUES ('NM0010100', 2024, '120', 20), ('NM0010000', 2024, '120', 7);",
+    "INSERT INTO summary_victim_city_monthly VALUES ('NM0010100', 2024, '09A', 10), ('NM0010100', 2024, '13A', 100), ('NM0010200', 2024, '09A', 999), ('NM0010200', 2024, '13A', 999), ('NM0010000', 2024, '09A', 3), ('NM0010000', 2024, '13A', 30);",
+    "INSERT INTO summary_city_monthly VALUES ('NM0010100', 2024, '120', 20), ('NM0010200', 2024, '120', 999), ('NM0010000', 2024, '120', 7);",
   ].join("\n"));
   const rows = db.prepare(query.sql).all() as Record<string, number>[];
   db.close();
@@ -172,6 +173,7 @@ import {
   assert.ok(query, "multi-city annual comparison should be deterministic");
   assert.match(query.sql, /city = 'HOUSTON'/i);
   assert.match(query.sql, /city = 'DALLAS'/i);
+  assert.equal(query.sql.match(/ORDER BY primary_agency\.pop_group/gi)?.length, 2);
   assert.equal(query.yAxis, "houston_tx_murders,dallas_tx_murders");
 }
 

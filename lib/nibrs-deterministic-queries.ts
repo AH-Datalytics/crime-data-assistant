@@ -232,7 +232,8 @@ export function buildNibrsLocalCityOffenseCountQuery(
   const city = nibrsCityLiteral(contract.geography.name);
   const sourceState = contract.geography.sourceCodes?.nibrs ?? contract.geography.state;
   const factStateFilter = compactStatePredicate("state", sourceState);
-  const agencyStateFilter = compactStatePredicate("state", sourceState);
+  const agencyStateFilter = compactStatePredicate("a.state", sourceState);
+  const primaryAgencyStateFilter = compactStatePredicate("primary_agency.state", sourceState);
   const years = yearScope("year", question);
   const monthly = contract.breakdowns.includes("month");
   const codePredicate = codes.length === 1
@@ -250,12 +251,23 @@ WHERE ${codePredicate}
   AND ${factStateFilter}
   AND ${years.predicate}
   AND ori IN (
-    SELECT DISTINCT ori
-    FROM agencies
-    WHERE city = ${sqlString(city)}
+    SELECT DISTINCT a.ori
+    FROM agencies a
+    WHERE a.city = ${sqlString(city)}
       AND ${agencyStateFilter}
-      AND agency_type = 'City'
-      AND population > 0
+      AND a.agency_type = 'City'
+      AND a.population > 0
+      AND a.ori = (
+        SELECT primary_agency.ori
+        FROM agencies primary_agency
+        WHERE primary_agency.city = a.city
+          AND primary_agency.year = a.year
+          AND ${primaryAgencyStateFilter}
+          AND primary_agency.agency_type = 'City'
+          AND primary_agency.population > 0
+        ORDER BY primary_agency.pop_group, primary_agency.population DESC, primary_agency.ori
+        LIMIT 1
+      )
   )
 GROUP BY ${groupOrder}
 ORDER BY ${groupOrder}
@@ -323,20 +335,36 @@ function structuredTargetSelect(geography: QueryContractGeography, index: number
     ? agencyDisplayName(geography.name)
     : geography.canonicalName ?? geography.name + ", " + geography.state;
   const sourceState = geography.sourceCodes?.nibrs ?? geography.state;
-  const stateFilter = compactStatePredicate("state", sourceState);
+
+  const cityTargetSql = (city: string): string => {
+    const agencyStateFilter = compactStatePredicate("a.state", sourceState);
+    const primaryAgencyStateFilter = compactStatePredicate("primary_agency.state", sourceState);
+    return [
+      "SELECT DISTINCT " + sqlString(key) + " AS place_key, " + sqlString(label) + " AS place_label, a.ori",
+      "    FROM agencies a",
+      "    WHERE a.city = " + sqlString(nibrsCityLiteral(city)),
+      "      AND " + agencyStateFilter,
+      "      AND a.agency_type = 'City'",
+      "      AND a.population > 0",
+      "      AND a.ori = (",
+      "        SELECT primary_agency.ori",
+      "        FROM agencies primary_agency",
+      "        WHERE primary_agency.city = a.city",
+      "          AND primary_agency.year = a.year",
+      "          AND " + primaryAgencyStateFilter,
+      "          AND primary_agency.agency_type = 'City'",
+      "          AND primary_agency.population > 0",
+      "        ORDER BY primary_agency.pop_group, primary_agency.population DESC, primary_agency.ori",
+      "        LIMIT 1",
+      "      )",
+    ].join("\n");
+  };
 
   if (geography.kind === "city") {
     return {
       key,
       label,
-      sql: [
-        "SELECT DISTINCT " + sqlString(key) + " AS place_key, " + sqlString(label) + " AS place_label, ori",
-        "    FROM agencies",
-        "    WHERE city = " + sqlString(nibrsCityLiteral(geography.name)),
-        "      AND " + stateFilter,
-        "      AND agency_type = 'City'",
-        "      AND population > 0",
-      ].join("\n"),
+      sql: cityTargetSql(geography.name),
     };
   }
 
@@ -347,14 +375,7 @@ function structuredTargetSelect(geography: QueryContractGeography, index: number
     return {
       key,
       label,
-      sql: [
-        "SELECT DISTINCT " + sqlString(key) + " AS place_key, " + sqlString(label) + " AS place_label, ori",
-        "    FROM agencies",
-        "    WHERE city = " + sqlString(nibrsCityLiteral(cityPolice[1])),
-        "      AND " + stateFilter,
-        "      AND agency_type = 'City'",
-        "      AND population > 0",
-      ].join("\n"),
+      sql: cityTargetSql(cityPolice[1]),
     };
   }
 
