@@ -119,9 +119,8 @@ export function resolveShrAgency(
       for (let index = 1; index < chainRanges.length; index++) {
         const previous = chainRanges[index - 1];
         const current = chainRanges[index];
-        if (previous.endYear >= current.startYear) {
-          if (previous.endYear === current.startYear) previous.endYear = current.startYear - 1;
-          else {
+        if (previous.endYear > current.startYear) {
+          if (previous.endYear - current.startYear > 0) {
             const result = unavailable("ambiguous", "Overlapping SHR succession ranges would combine multiple agencies in the same year.");
             entries.set(key, result);
             return result;
