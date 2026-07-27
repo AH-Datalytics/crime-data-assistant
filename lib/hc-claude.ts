@@ -150,6 +150,41 @@ Columns: id, title, body
 7. For agency-level, incident-level, or offender/victim demographic queries -- use hate_crime_incidents with COUNT(DISTINCT ...)
 8. For participation/reporting -- use hate_crime_participation
 
+## ROLLING / MOVING WINDOW QUERIES
+When the user asks for a "rolling" figure (e.g., "hate crimes rolling over 12 months"), it is a rolling SUM over MONTHLY data derived from incident_date. NEVER answer a rolling N-month request with annual or quarterly rollups, and NEVER apply a ROWS window over years — "rolling 12 months" means a 12-MONTH window over monthly counts.
+
+Hate crime incidents are sparse: for a single city or agency, months with zero incidents have NO rows, and ROWS BETWEEN N PRECEDING counts rows, not calendar months — a window over gappy months silently spans more than the intended period. You MUST build a dense month spine and zero-fill before applying the window:
+
+\`\`\`sql
+WITH monthly AS (
+  SELECT strftime('%Y-%m', incident_date) AS ym,
+         COUNT(DISTINCT incident_number || '|' || ori || '|' || year) AS cnt
+  FROM hate_crime_incidents
+  WHERE agency_name LIKE '%HOUSTON%' AND state = 'TX' AND incident_date IS NOT NULL
+  GROUP BY ym
+),
+bounds AS (SELECT MIN(ym) AS start_ym, MAX(ym) AS end_ym FROM monthly),
+spine(ym) AS (
+  SELECT start_ym FROM bounds
+  UNION ALL
+  SELECT strftime('%Y-%m', date(ym || '-01', '+1 month')) FROM spine, bounds WHERE ym < end_ym
+),
+rolling AS (
+  SELECT s.ym, COALESCE(m.cnt, 0) AS cnt,
+    SUM(COALESCE(m.cnt, 0)) OVER (ORDER BY s.ym ROWS BETWEEN 11 PRECEDING AND CURRENT ROW) AS rolling_12m,
+    ROW_NUMBER() OVER (ORDER BY s.ym) AS rn
+  FROM spine s LEFT JOIN monthly m ON m.ym = s.ym
+)
+SELECT ym AS month, rolling_12m FROM rolling WHERE rn >= 12 ORDER BY ym LIMIT 1000
+\`\`\`
+
+Rules:
+- The monthly CTE and spine ALWAYS cover all available data (no date filter inside) so the window has full lead-in.
+- \`rn >= 12\` excludes the first 11 warm-up months — NEVER display partial windows at the start of the series.
+- When the user says "rolling since X", X is a DISPLAY filter: add \`AND ym >= 'X-01'\` to the outer SELECT alongside \`rn >= 12\`; do not filter the CTEs.
+- City/agency scope: an agency_name filter MUST be paired with a state filter (\`state = 'TX'\`) — bare LIKE '%Houston%' matches Houston County agencies in other states.
+- Window sizes: 3-month = ROWS BETWEEN 2 PRECEDING, 6-month = 5 PRECEDING, 12-month = 11 PRECEDING (with rn >= 3 / 6 / 12 respectively).
+
 ## DEFINITION BOUNDARY YEARS
 | Year | Change |
 |------|--------|

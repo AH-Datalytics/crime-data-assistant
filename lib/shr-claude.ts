@@ -150,17 +150,24 @@ One row per victim. JOINs to incidents on incident_id.
     - **State/national aggregates**: Do NOT use AVG(i.population) -- that averages agency-level populations, which is meaningless. Use the physical \`state_population(state, state_name, year, population, source)\` table for denominators. For state rates, join \`state_population sp ON sp.state = i.state AND sp.year = i.year\` and calculate \`ROUND(COUNT(*) * 100000.0 / NULLIF(sp.population, 0), 1)\`, grouping by i.year and sp.population. For national rates, aggregate SHR counts by year first, then join \`state_population sp ON sp.state = 'US' AND sp.year = counts.year\`. \`state_population\` extends through the current year: recent years use the FBI CDE's current population estimate (source column starts with 'FBI CDE API'), which the FBI applies flat across in-progress years. When a rate uses these recent-year denominators, note that the denominator is the FBI's current estimate and may be revised.
 12. **City/agency rankings** — When listing or ranking cities/agencies (e.g., "top cities", "which cities had the most"), default to LIMIT 20 unless the user specifies a different number.
 13. **Intraracial analysis** — JOIN incidents to victims. Compare off_race to victims.race. Note that off_race uses 'Asian/Pacific Islander' while victims.race also uses 'Asian/Pacific Islander' — they match.
-14. **Rolling sums** — Use a CTE that fetches ALL available monthly data with NO date filter, apply the window function, THEN filter to the requested display range in the outer query. NEVER put date filters inside the CTE — that truncates the rolling window and produces wrong values for the first N months. Window sizes: rolling 3-month = ROWS BETWEEN 2 PRECEDING AND CURRENT ROW, rolling 6-month = ROWS BETWEEN 5 PRECEDING AND CURRENT ROW, rolling 12-month = ROWS BETWEEN 11 PRECEDING AND CURRENT ROW. The outer query must start displaying from the Nth month of data (e.g., for rolling 12-month starting display in 2018, the CTE must include 2017 data for lead-in). When the user says "rolling since X", X is the display start — the CTE must still fetch ALL data. Data starts in ${SHR.minYear}.
+14. **Rolling sums** — Rolling N-month requests need MONTHLY granularity; never answer with annual rollups or a ROWS window over years. Homicides are sparse: months with zero incidents produce NO rows in a monthly CTE, and ROWS windows count rows, not calendar months — so a window over gappy months silently spans more than the intended period. Build a dense month spine and zero-fill before applying the window. The monthly CTE and spine always cover ALL available data (no date filter inside) so the window has full lead-in; "rolling since X" is a DISPLAY filter applied in the outer query. Exclude the first N-1 warm-up months (ROW_NUMBER) — never display partial windows at the start. Window sizes: 3-month = ROWS BETWEEN 2 PRECEDING, 6-month = 5 PRECEDING, 12-month = 11 PRECEDING (warm-up rn >= 3 / 6 / 12). Data starts in ${SHR.minYear}.
     Example — rolling 12-month firearm murders for an agency:
     WITH monthly AS (
-      SELECT i.year, i.month, COUNT(*) as cnt
+      SELECT printf('%04d-%02d', i.year, i.month) AS ym, COUNT(*) as cnt
       FROM incidents i JOIN victims v ON v.incident_id = i.id
-      WHERE i.agency = 'Houston' AND i.state = 'TX' AND (i.agency_type = 'City' OR i.agency_type IS NULL OR i.agency_type = '') AND i.homicide_type = 'Murder' AND i.weapon_group = 'Firearm'
-      GROUP BY i.year, i.month ORDER BY i.year, i.month
+      WHERE i.agency = 'Houston' AND i.state = 'TX' AND (i.agency_type = 'City' OR i.agency_type IS NULL OR i.agency_type = '') AND i.homicide_type = 'Murder' AND i.weapon_group = 'Firearm' AND i.month BETWEEN 1 AND 12
+      GROUP BY ym
+    ), bounds AS (SELECT MIN(ym) AS start_ym, MAX(ym) AS end_ym FROM monthly),
+    spine(ym) AS (
+      SELECT start_ym FROM bounds
+      UNION ALL
+      SELECT strftime('%Y-%m', date(ym || '-01', '+1 month')) FROM spine, bounds WHERE ym < end_ym
     ), rolling AS (
-      SELECT year, month, SUM(cnt) OVER (ORDER BY year, month ROWS BETWEEN 11 PRECEDING AND CURRENT ROW) as rolling_12m FROM monthly
+      SELECT s.ym, SUM(COALESCE(m.cnt, 0)) OVER (ORDER BY s.ym ROWS BETWEEN 11 PRECEDING AND CURRENT ROW) as rolling_12m,
+        ROW_NUMBER() OVER (ORDER BY s.ym) AS rn
+      FROM spine s LEFT JOIN monthly m ON m.ym = s.ym
     )
-    SELECT year, month, rolling_12m FROM rolling WHERE year >= 2018 AND (year < ${DATA_CUTOFF.year} OR (year = ${DATA_CUTOFF.year} AND month <= ${DATA_CUTOFF.month})) ORDER BY year, month
+    SELECT ym AS month, rolling_12m FROM rolling WHERE rn >= 12 AND ym >= '2018-01' AND ym <= printf('%04d-%02d', ${DATA_CUTOFF.year}, ${DATA_CUTOFF.month}) ORDER BY ym
     Multi-city rolling comparisons (named cities): use PARTITION BY city in the window, then pivot with CASE WHEN in the outer query. For dynamic top-N, return long format per the ENTITY SELECTION RULE.
 15. **Chart types** — Use line for trends over time, bar for category comparisons, pie for proportions of a whole. For any query with year in the results, set xAxis to "year". For single-year queries like rankings, xAxis should be the category column, not year.
     - **CRITICAL: Multi-category time series** (e.g., victims by weapon type, by sex, by race, by circumstance over time): you MUST PIVOT the data using CASE WHEN — one column per category. Do NOT return long-format rows like (year, category, count) — the chart cannot render them and shows a broken sawtooth pattern. Use \`line\` for 2-3 categories, \`stacked_bar\` for 4+. Example for weapon breakdown:
