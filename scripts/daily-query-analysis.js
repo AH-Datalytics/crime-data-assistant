@@ -201,6 +201,8 @@ function analyze(queries) {
       "nibrs-place-resolved": 0,
       "nibrs-place-resolution-block": 0,
       "nibrs-resolved-ori-warn-only": 0,
+      "shr-place-resolution-block": 0,
+      "shr-ori-not-in-source": 0,
     },
   };
 
@@ -643,11 +645,15 @@ function buildEmail(stats, issues, visitors, suggestions, weeklyTrends) {
     const resolved = stats.resolverTags["nibrs-place-resolved"];
     const blocked = stats.resolverTags["nibrs-place-resolution-block"];
     const warned = stats.resolverTags["nibrs-resolved-ori-warn-only"];
-    html += `<h2>NIBRS Resolver</h2>
+    const shrBlocked = stats.resolverTags["shr-place-resolution-block"];
+    const shrMissing = stats.resolverTags["shr-ori-not-in-source"];
+    html += `<h2>Resolver Outcomes</h2>
     <div class="stat-grid">
       <div class="stat-box"><div class="stat-num">${resolved}</div><div class="stat-label">Resolved Queries</div></div>
       <div class="stat-box"><div class="stat-num">${blocked}</div><div class="stat-label">Unsafe Resolutions Blocked</div></div>
       <div class="stat-box"><div class="stat-num" style="color:${warned > 0 ? "#f57c00" : "#4caf50"}">${warned}</div><div class="stat-label">Model ORI Warnings</div></div>
+      <div class="stat-box"><div class="stat-num">${shrBlocked}</div><div class="stat-label">SHR Resolution Blocks</div></div>
+      <div class="stat-box"><div class="stat-num">${shrMissing}</div><div class="stat-label">SHR ORIs Not Found</div></div>
     </div>`;
   }
 
