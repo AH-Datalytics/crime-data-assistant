@@ -100,8 +100,8 @@ import {
     "Omaha NE burglaries per month from 2023 to 2026"
   );
   assert.ok(query, "monthly local Omaha burglary trend should be deterministic");
-  assert.match(query.sql, /SELECT year, month,/i);
-  assert.match(query.sql, /GROUP BY year, month/i);
+  assert.match(query.sql, /SELECT s\.year, s\.month,/i);
+  assert.match(query.sql, /GROUP BY s\.year, s\.month/i);
 }
 
 {
@@ -247,9 +247,12 @@ for (const question of [
   db.exec([
     "CREATE TABLE agencies (ori TEXT, year INTEGER, state TEXT, city TEXT, agency_type TEXT, population INTEGER, pop_group TEXT);",
     "CREATE TABLE summary_victim_demographics (ori TEXT, year INTEGER, ucr_offense_code TEXT, race TEXT, sex TEXT, age_group TEXT, ethnicity TEXT, victim_count INTEGER);",
+    "CREATE TABLE nibrs_agency_completeness (ori TEXT, year INTEGER, months_reported INTEGER);",
     "CREATE INDEX idx_svd_new_ori_year ON summary_victim_demographics(ori, year);",
+    "CREATE INDEX idx_nac_ori_year ON nibrs_agency_completeness(ori, year);",
     "INSERT INTO agencies VALUES ('TXHPD0000', 2024, 'TX', 'HOUSTON', 'City', 2300000, '1A'), ('TXHPD0000', 2025, 'TX', 'HOUSTON', 'City', 2350000, '1A'), ('TX1012400', 2024, 'TX', 'HOUSTON', 'City', 12000, '5'), ('TX1012400', 2025, 'TX', 'HOUSTON', 'City', 12000, '5');",
     "INSERT INTO summary_victim_demographics VALUES ('TXHPD0000', 2024, '09A', 'W', 'M', '25-34', 'N', 10), ('TXHPD0000', 2024, '09A', 'B', 'M', '25-34', 'N', 20), ('TXHPD0000', 2024, '09A', 'U', 'U', 'Unknown', 'U', 5), ('TXHPD0000', 2025, '09A', 'W', 'F', '25-34', 'H', 15), ('TXHPD0000', 2025, '09A', 'B', 'F', '25-34', 'N', 25), ('TXHPD0000', 2025, '09A', '', '', '', '', 2), ('TX1012400', 2024, '09A', 'B', 'M', '25-34', 'N', 999);",
+    "INSERT INTO nibrs_agency_completeness VALUES ('TXHPD0000', 2024, 12), ('TXHPD0000', 2025, 12), ('TX1012400', 2024, 12);",
   ].join("\n"));
   const countRows = db.prepare(countQuery.sql).all() as Record<string, number | string>[];
   assert.deepEqual(countRows, [

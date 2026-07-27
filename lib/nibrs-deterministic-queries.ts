@@ -1,6 +1,17 @@
 import { buildQueryContract, type QueryContractGeography, type QueryContractOffense } from "./query-contract";
 import { pastCompleteCalendarYearsRange, relativeYearRangeForQuestion } from "./time-conventions";
 import { hasUnresolvedDemographicToken } from "./demographic-rate-intent";
+import {
+  resolvedPlaceForContractIndex,
+  type NibrsPlaceResolutionPlan,
+} from "./nibrs-place-resolver";
+import {
+  NIBRS_COMPLETENESS_PROXY_DISCLOSURE,
+  NIBRS_COUNT_COMPLETENESS_DISCLOSURE,
+  NIBRS_RECENT_MATURATION_DISCLOSURE,
+  nibrsAnnualValueSql,
+  nibrsDemographicCompletenessPredicate,
+} from "./nibrs-completeness";
 
 export interface DeterministicNibrsQuery {
   sql: string;
@@ -245,7 +256,8 @@ LIMIT 1000`.trim();
 }
 
 export function buildNibrsLocalCityOffenseCountQuery(
-  question: string
+  question: string,
+  resolutionPlan?: NibrsPlaceResolutionPlan | null
 ): DeterministicNibrsQuery | null {
   const contract = buildQueryContract(question, "nibrs");
   if (!contract) return null;
@@ -266,49 +278,32 @@ export function buildNibrsLocalCityOffenseCountQuery(
   const valueColumn = usesPersonTable ? "victim_count" : "offense_count";
   const alias = SIMPLE_LOCAL_COUNT_ALIASES[contract.metric.topic] ?? "offenses";
   const label = alias.replace(/_/g, " ");
-  const city = nibrsCityLiteral(contract.geography.name);
   const sourceState = contract.geography.sourceCodes?.nibrs ?? contract.geography.state;
-  const factStateFilter = compactStatePredicate("state", sourceState);
-  const agencyStateFilter = compactStatePredicate("a.state", sourceState);
-  const primaryAgencyStateFilter = compactStatePredicate("primary_agency.state", sourceState);
+  const factStateFilter = compactStatePredicate("s.state", sourceState);
   const years = yearScope("year", question);
   const monthly = contract.breakdowns.includes("month");
   const codePredicate = codes.length === 1
     ? `ucr_offense_code = ${sqlString(codes[0])}`
     : `ucr_offense_code IN (${codes.map(sqlString).join(",")})`;
-  const selectColumns = `year, month, SUM(${valueColumn}) AS ${alias}`;
   const currentYear = new Date().getFullYear();
-  const target = structuredTargetSelect(contract.geography, 0);
+  const target = structuredTargetSelect(contract.geography, 0, resolutionPlan);
   if (!target) return null;
 
   const sql = monthly
     ? `
-SELECT ${selectColumns}
-FROM ${table} INDEXED BY ${tableIndex}
-WHERE ${codePredicate}
+WITH target_places AS (
+  ${target.sql}
+)
+SELECT s.year, s.month, SUM(s.${valueColumn}) AS ${alias}
+FROM target_places AS tp
+CROSS JOIN ${table} AS s INDEXED BY ${tableIndex}
+WHERE ${codePredicate.replace(/\bucr_offense_code\b/g, "s.ucr_offense_code")}
   AND ${factStateFilter}
-  AND ${years.predicate}
-  AND ori IN (
-    SELECT DISTINCT a.ori
-    FROM agencies a
-    WHERE a.city = ${sqlString(city)}
-      AND ${agencyStateFilter}
-      AND a.agency_type = 'City'
-      AND a.population > 0
-      AND a.ori = (
-        SELECT primary_agency.ori
-        FROM agencies primary_agency
-        WHERE primary_agency.city = a.city
-          AND primary_agency.year = a.year
-          AND ${primaryAgencyStateFilter}
-          AND primary_agency.agency_type = 'City'
-          AND primary_agency.population > 0
-        ORDER BY primary_agency.pop_group, primary_agency.population DESC, primary_agency.ori
-        LIMIT 1
-      )
-  )
-GROUP BY year, month
-ORDER BY year, month
+  AND ${years.predicate.replace(/\byear\b/g, "s.year")}
+  AND s.ori = tp.ori
+  AND (tp.effective_year IS NULL OR tp.effective_year = s.year)
+GROUP BY s.year, s.month
+ORDER BY s.year, s.month
 LIMIT 1000`.trim()
     : [
       "WITH target_places AS (",
@@ -320,6 +315,7 @@ LIMIT 1000`.trim()
       "  FROM target_places AS tp",
       "  CROSS JOIN " + table + " AS s INDEXED BY " + tableIndex,
       "  WHERE s.ori = tp.ori AND s.year = " + currentYear,
+      "    AND (tp.effective_year IS NULL OR tp.effective_year = s.year)",
       "  GROUP BY s.year",
       "),",
       "place_reporting AS (",
@@ -329,6 +325,7 @@ LIMIT 1000`.trim()
       "  LEFT JOIN nibrs_agency_completeness AS c INDEXED BY idx_nac_ori_year",
       "    ON c.ori = tp.ori AND c.year = y.year",
       "  LEFT JOIN current_year_reporting AS cyr ON cyr.year = y.year",
+      "  WHERE tp.effective_year IS NULL OR tp.effective_year = y.year",
       "  GROUP BY y.year",
       "),",
       "annual_counts AS (",
@@ -336,14 +333,20 @@ LIMIT 1000`.trim()
       "  FROM target_places AS tp",
       "  CROSS JOIN " + table + " AS s INDEXED BY " + tableIndex,
       "  WHERE s.ori = tp.ori",
+      "    AND (tp.effective_year IS NULL OR tp.effective_year = s.year)",
       "    AND " + codePredicate.replace(/\bucr_offense_code\b/g, "s.ucr_offense_code"),
       "    AND " + years.predicate.replace(/\byear\b/g, "s.year"),
       "  GROUP BY s.year",
       ")",
       "SELECT pr.year,",
-      "  CASE WHEN pr.months_reported = 12 OR (pr.year = " + currentYear +
-        " AND (COALESCE(pr.months_reported, 0) > 0 OR COALESCE(pr.summary_months_reported, 0) > 0))",
-      "    THEN COALESCE(ac." + alias + ", 0) ELSE NULL END AS " + alias,
+      "  " + nibrsAnnualValueSql({
+        yearExpression: "pr.year",
+        reportingMonthsExpression: "pr.months_reported",
+        summaryMonthsExpression: "pr.summary_months_reported",
+        valueExpression: "COALESCE(ac." + alias + ", 0)",
+        unit: "count",
+        currentYear,
+      }) + " AS " + alias,
       "FROM place_reporting AS pr",
       "LEFT JOIN annual_counts AS ac ON ac.year = pr.year",
       "ORDER BY pr.year",
@@ -358,7 +361,7 @@ LIMIT 1000`.trim()
       `This returns reported ${label} for ${place}${years.periodText}. ` +
       (monthly
         ? "Recent monthly NIBRS data may be incomplete because agencies submit on different schedules."
-        : "Historical counts are left blank unless the agency reported all 12 months; current-year partial counts remain visible when summary data exists and are disclosed as partial. Months reported are inferred from months containing reported offenses, so this conservative rule can suppress a complete small-agency year with a genuinely offense-free month. Recent annual totals may still change as agencies submit revisions."),
+        : [NIBRS_COUNT_COMPLETENESS_DISCLOSURE, NIBRS_COMPLETENESS_PROXY_DISCLOSURE, NIBRS_RECENT_MATURATION_DISCLOSURE].join(" ")),
     chartHint: "line",
     xAxis: "year",
     yAxis: alias,
@@ -383,32 +386,29 @@ function agencyDisplayName(value: string): string {
     .trim();
 }
 
-function agencyNamePredicate(column: string, name: string): string | null {
-  const upper = name.toUpperCase();
-  const location = upper
-    .replace(/\bPOLICE\s+(?:DEPARTMENT|DEPT)\b/g, " ")
-    .replace(/\bCOUNTY\s+SHERIFF(?:'?S)?(?:\s+OFFICE)?\b/g, " ")
-    .replace(/\bSHERIFF(?:'?S)?(?:\s+OFFICE)?\b/g, " ")
-    .replace(/\bCOUNTY\s+POLICE(?:\s+DEPARTMENT)?\b/g, " ")
-    .replace(/[^A-Z0-9]+/g, " ")
-    .trim();
-  if (!location) return null;
-
-  const terms = ["UPPER(" + column + ") LIKE " + sqlString("%" + location + "%")];
-  if (/\bSHERIFF\b/.test(upper)) terms.push("UPPER(" + column + ") LIKE '%SHERIFF%'");
-  else if (/\bPOLICE\b/.test(upper)) terms.push("UPPER(" + column + ") LIKE '%POLICE%'");
-  else return null;
-  return terms.join(" AND ");
-}
-
-function structuredTargetSelect(geography: QueryContractGeography, index: number): {
+function structuredTargetSelect(
+  geography: QueryContractGeography,
+  index: number,
+  resolutionPlan?: NibrsPlaceResolutionPlan | null
+): {
   key: string;
   label: string;
   sql: string;
 } | null {
-  if (!geography.name || !geography.state || geography.confidence === "low") return null;
-
   const key = "place_" + (index + 1);
+  const resolved = resolvedPlaceForContractIndex(resolutionPlan, index);
+  if (resolved) {
+    return {
+      key,
+      label: resolved.label,
+      sql: resolved.oriYears.map((item) =>
+        "SELECT " + sqlString(key) + " AS place_key, " + sqlString(resolved.label) +
+        " AS place_label, " + sqlString(item.ori) + " AS ori, " + item.year + " AS effective_year"
+      ).join("\n    UNION ALL\n    "),
+    };
+  }
+
+  if (!geography.name || !geography.state || geography.confidence === "low") return null;
   const label = geography.kind === "agency"
     ? agencyDisplayName(geography.name)
     : geography.canonicalName ?? geography.name + ", " + geography.state;
@@ -418,7 +418,7 @@ function structuredTargetSelect(geography: QueryContractGeography, index: number
     const agencyStateFilter = compactStatePredicate("a.state", sourceState);
     const primaryAgencyStateFilter = compactStatePredicate("primary_agency.state", sourceState);
     return [
-      "SELECT DISTINCT " + sqlString(key) + " AS place_key, " + sqlString(label) + " AS place_label, a.ori",
+      "SELECT DISTINCT " + sqlString(key) + " AS place_key, " + sqlString(label) + " AS place_label, a.ori, NULL AS effective_year",
       "    FROM agencies a",
       "    WHERE a.city = " + sqlString(nibrsCityLiteral(city)),
       "      AND " + agencyStateFilter,
@@ -462,32 +462,7 @@ function structuredTargetSelect(geography: QueryContractGeography, index: number
     };
   }
 
-  const sheriff = geography.name.match(/^(.+?)\s+county\s+sheriff(?:'?s)?(?:\s+office)?$/i);
-  const sheriffLocation = sheriff?.[1].trim().toUpperCase();
-  const namePredicate = sheriffLocation
-    ? "UPPER(agency_name) LIKE " + sqlString("%" + sheriffLocation + "%") +
-      " AND (UPPER(agency_name) LIKE '%SHERIFF%' OR UPPER(county_name) LIKE " +
-      sqlString("%" + sheriffLocation + "%") + ")"
-    : agencyNamePredicate("agency_name", geography.name);
-  if (!namePredicate) return null;
-  const crosswalkState = compactStatePredicate("state", sourceState);
-  return {
-    key,
-    label,
-    sql: [
-      "SELECT DISTINCT " + sqlString(key) + " AS place_key, " + sqlString(label) + " AS place_label, ori9 AS ori",
-      "    FROM agency_county_crosswalk",
-      "    WHERE " + crosswalkState,
-      "      AND ori9 IS NOT NULL",
-      "      AND " + namePredicate,
-      "    UNION",
-      "    SELECT DISTINCT " + sqlString(key) + " AS place_key, " + sqlString(label) + " AS place_label, ori",
-      "    FROM agency_county_crosswalk",
-      "    WHERE " + crosswalkState,
-      "      AND ori IS NOT NULL",
-      "      AND " + namePredicate,
-    ].join("\n"),
-  };
+  return null;
 }
 
 type NibrsDemographicRole = "victim" | "offender" | "arrestee";
@@ -519,7 +494,8 @@ function demographicLabelSql(column: string, dimension: NibrsDemographicDimensio
 }
 
 export function buildNibrsLocalDemographicQuery(
-  question: string
+  question: string,
+  resolutionPlan?: NibrsPlaceResolutionPlan | null
 ): DeterministicNibrsQuery | null {
   const contract = buildQueryContract(question, "nibrs");
   if (!contract || !["count", "ratio"].includes(contract.metric.unit)) return null;
@@ -538,7 +514,7 @@ export function buildNibrsLocalDemographicQuery(
   if (contract.breakdowns.includes("month")) return null;
   if (/\b(?:weapon|firearm|gun|shooting|domestic\s+violence|intimate\s+partner|circumstance|injury|relationship|clearance|cleared)\b/i.test(question)) return null;
 
-  const target = structuredTargetSelect(contract.geographies[0], 0);
+  const target = structuredTargetSelect(contract.geographies[0], 0, resolutionPlan);
   if (!target) return null;
   const dimension = dimensions[0];
   const annual = contract.breakdowns.includes("year");
@@ -601,8 +577,10 @@ export function buildNibrsLocalDemographicQuery(
     "  FROM target_places AS tp",
     "  CROSS JOIN " + config.table + " AS d INDEXED BY " + config.index,
     "  WHERE d.ori = tp.ori",
+    "    AND (tp.effective_year IS NULL OR tp.effective_year = d.year)",
     "    AND " + offensePredicate,
     "    AND " + years.predicate,
+    "    AND " + nibrsDemographicCompletenessPredicate("d.ori", "d.year"),
     "  GROUP BY " + groupedBy,
     ")",
     "SELECT " + finalColumns.join(", "),
@@ -621,7 +599,8 @@ export function buildNibrsLocalDemographicQuery(
       (isShare
         ? "Shares are calculated within the returned " + config.label + " and include the Unknown category in the denominator. "
         : "Unknown or unreported demographic values remain visible as Unknown. ") +
-      "No demographic population denominator is used.",
+      "No demographic population denominator is used. Historical demographic rows are included only for complete 12-month reporting years; current-year rows are partial. " +
+      NIBRS_RECENT_MATURATION_DISCLOSURE,
     chartHint: "bar",
     xAxis: annual ? "chart_category" : dimension,
     yAxis: isShare ? "share_pct" : config.countAlias,
@@ -656,6 +635,7 @@ function structuredOffenseSelect(
       "  FROM " + targetCte + " AS tp",
       "  CROSS JOIN " + table + " AS s INDEXED BY " + tableIndex,
       "  WHERE s.ori = tp.ori",
+      "    AND (tp.effective_year IS NULL OR tp.effective_year = s.year)",
       "    AND " + codePredicate,
       "    AND " + years.predicate.replace(/\byear\b/g, "s.year"),
       "  GROUP BY s.year, tp.place_key",
@@ -668,7 +648,8 @@ function isExcludedStructuredLocalQuestion(question: string): boolean {
 }
 
 export function buildNibrsStructuredLocalTrendQuery(
-  question: string
+  question: string,
+  resolutionPlan?: NibrsPlaceResolutionPlan | null
 ): DeterministicNibrsQuery | null {
   const contract = buildQueryContract(question, "nibrs");
   if (!contract || !["count", "rate_per_100k"].includes(contract.metric.unit)) return null;
@@ -678,16 +659,23 @@ export function buildNibrsStructuredLocalTrendQuery(
   if (contract.metric.offenses.length === 0 || contract.metric.offenses.length > 4) return null;
   const allCodes = contract.metric.offenses.flatMap((offense) => offense.codes);
   if (new Set(allCodes).size !== allCodes.length) return null;
-  if (contract.geographies.length === 0 || contract.geographies.length > 4) return null;
+  const targetGeographies = resolutionPlan && !resolutionPlan.hasStateComparison
+    ? contract.geographies
+        .map((geography, contractIndex) => ({ geography, contractIndex }))
+        .filter(({ geography }) => ["city", "agency"].includes(geography.kind))
+    : contract.geographies.map((geography, contractIndex) => ({ geography, contractIndex }));
+  if (targetGeographies.length === 0 || targetGeographies.length > 4) return null;
   if (!isRate && contract.metric.offenses.length === 1 && contract.geographies.length === 1) return null;
-  if (contract.geographies.some((geography) => !["city", "agency"].includes(geography.kind))) return null;
+  if (targetGeographies.some(({ geography }) => !["city", "agency"].includes(geography.kind))) return null;
   if (contract.breakdowns.includes("month")) return null;
   if (contract.breakdowns.some((breakdown) => breakdown !== "year")) return null;
   if (!isRate && !hasSimpleLocalTimeIntent(question, contract.time.startYear, contract.time.endYear)) return null;
   if (isExcludedStructuredLocalQuestion(question)) return null;
   if (contract.comparability.continuousReporters) return null;
 
-  const targets = contract.geographies.map(structuredTargetSelect);
+  const targets = targetGeographies.map(({ geography, contractIndex }) =>
+    structuredTargetSelect(geography, contractIndex, resolutionPlan)
+  );
   if (targets.some((target) => target === null)) return null;
   const resolvedTargets = targets.filter((target): target is NonNullable<typeof target> => target !== null);
   const targetCte = "target_places";
@@ -720,15 +708,19 @@ export function buildNibrsStructuredLocalTrendQuery(
     const countValue = "COALESCE(SUM(CASE WHEN sc.place_key = " + sqlString(item.placeKey) +
       " AND sc.offense_key = " + sqlString(item.offenseKey) +
       " THEN sc.reported_count END), 0)";
-    if (isRate) {
-      return "CASE WHEN " + reportingMonths + " = 12 THEN ROUND(100000.0 * " +
-        countValue + " / NULLIF(MAX(CASE WHEN pr.place_key = " +
-        sqlString(item.placeKey) + " THEN pr.population END), 0), 1) ELSE NULL END AS " + item.alias;
-    }
-    return "CASE WHEN " + reportingMonths + " = 12 OR (pr.year = " + currentYear +
-      " AND (" + reportingMonths + " > 0 OR MAX(CASE WHEN pr.place_key = " +
-      sqlString(item.placeKey) + " THEN pr.summary_months_reported END) > 0)) THEN " + countValue +
-      " ELSE NULL END AS " + item.alias;
+    const valueExpression = isRate
+      ? "ROUND(100000.0 * " + countValue + " / NULLIF(MAX(CASE WHEN pr.place_key = " +
+        sqlString(item.placeKey) + " THEN pr.population END), 0), 1)"
+      : countValue;
+    return nibrsAnnualValueSql({
+      yearExpression: "pr.year",
+      reportingMonthsExpression: reportingMonths,
+      summaryMonthsExpression: "MAX(CASE WHEN pr.place_key = " + sqlString(item.placeKey) +
+        " THEN pr.summary_months_reported END)",
+      valueExpression,
+      unit: isRate ? "rate" : "count",
+      currentYear,
+    }) + " AS " + item.alias;
   });
   const reportingCte = [
     "requested_years(year) AS (" + requestedYearsSql(years) + "),",
@@ -737,6 +729,7 @@ export function buildNibrsStructuredLocalTrendQuery(
     "  FROM " + targetCte + " AS tp",
     "  CROSS JOIN summary_city_monthly AS s INDEXED BY idx_scm_ori_year",
     "  WHERE s.ori = tp.ori AND s.year = " + currentYear,
+    "    AND (tp.effective_year IS NULL OR tp.effective_year = s.year)",
     "  GROUP BY tp.place_key",
     "),",
     "place_reporting AS (",
@@ -747,6 +740,7 @@ export function buildNibrsStructuredLocalTrendQuery(
     "  LEFT JOIN nibrs_agency_completeness AS c INDEXED BY idx_nac_ori_year",
     "    ON c.ori = tp.ori AND c.year = y.year",
     "  LEFT JOIN current_year_reporting AS cyr ON cyr.place_key = tp.place_key AND y.year = " + currentYear,
+    "  WHERE tp.effective_year IS NULL OR tp.effective_year = y.year",
     "  GROUP BY y.year, tp.place_key",
     ")",
   ];
@@ -780,7 +774,7 @@ export function buildNibrsStructuredLocalTrendQuery(
         : "") +
       (isRate
         ? "Rates use each agency's year-specific service population and are left blank unless the agency reported all 12 months. Recent annual values may still change as agencies submit revisions."
-        : "Historical counts are left blank unless the agency reported all 12 months; current-year partial counts remain visible when summary data exists and are disclosed as partial. Months reported are inferred from months containing reported offenses, so this conservative rule can also suppress a complete small-agency year with a genuinely offense-free month. Recent annual totals may still change as agencies submit revisions."),
+        : [NIBRS_COUNT_COMPLETENESS_DISCLOSURE, NIBRS_COMPLETENESS_PROXY_DISCLOSURE, NIBRS_RECENT_MATURATION_DISCLOSURE].join(" ")),
     chartHint: "line",
     xAxis: "year",
     yAxis: series.map((item) => item.alias).join(","),

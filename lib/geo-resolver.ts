@@ -157,7 +157,8 @@ function resolveCityByStateContext(
   allMentions: GeoPlaceMention[]
 ): GeoPlaceMention {
   if (!mention.requiresClarification || mention.candidates.length < 2) return mention;
-  if (classifyCandidates(mention.candidates) !== "city") return mention;
+  const candidateKind = classifyCandidates(mention.candidates);
+  if (candidateKind !== "city" && candidateKind !== "county") return mention;
 
   // Strip only ambiguous mention spans: "Kansas City" must not read as Kansas,
   // but an unambiguous "mississippi" mention is exactly the state context we want.

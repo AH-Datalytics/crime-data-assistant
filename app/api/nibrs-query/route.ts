@@ -39,6 +39,11 @@ import {
 } from "@/lib/query-contract-validator";
 import { partialCoverageRetryPrompt } from "@/lib/source-year-overlap";
 import { removedDemographicPlaceToken } from "@/lib/demographic-rate-intent";
+import {
+  auditNibrsResolvedOriUsage,
+  formatNibrsResolutionGuidance,
+  resolveNibrsPlaces,
+} from "@/lib/nibrs-place-resolver";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -277,7 +282,59 @@ export async function POST(req: NextRequest) {
       } as QueryResponse);
     }
 
-    const deterministicQuery = buildNibrsClearanceMethodQuery(question) ?? buildNibrsLocalDemographicQuery(question) ?? buildNibrsStructuredLocalTrendQuery(question) ?? buildNibrsLocalCityOffenseCountQuery(question) ?? buildNibrsDomesticViolenceAggravatedAssaultShareQuery(question);
+    const history = normalizeHistoryForTab(body?.history, "nibrs");
+    const followupTransform = detectFollowupTransform(question, history);
+    const guardrailQuestion = followupTransform?.contextQuestion ?? question;
+    const basePromptHistory = followupTransform
+      ? [...history, { role: "user" as const, content: followupTransform.instruction }]
+      : history;
+    const promptContract = buildQueryContract(guardrailQuestion, "nibrs");
+    const resolutionPlan = resolveNibrsPlaces(getNibrsDb(), guardrailQuestion, promptContract);
+    const deterministicResolution = followupTransform ? null : resolutionPlan;
+    if (resolutionPlan) {
+      console.log(
+        `[nibrs][resolver] ${resolutionPlan.elapsedMs}ms ` +
+        resolutionPlan.places.map((place) => `${place.kind}:${place.status}`).join(",")
+      );
+    }
+    const deterministicGuardrails = (guardrail: string) => [
+      guardrail,
+      ...(deterministicResolution?.places.some((place) => place.status === "resolved")
+        ? ["nibrs-place-resolved"]
+        : []),
+    ];
+
+    const blockingResolution = deterministicResolution?.places.find((place) =>
+      place.status === "ambiguous" || place.status === "covered"
+    );
+    if (blockingResolution && deterministicResolution?.places.length === 1) {
+      const executionMs = Date.now() - routeStart;
+      const explanation = blockingResolution.status === "covered"
+        ? `${blockingResolution.label} has no active city-agency ORI for ${deterministicResolution.startYear}-${deterministicResolution.endYear}. It may be inactive or served under a contract/coverage arrangement, but this database does not identify a covering agency that can be safely attributed to the city. I won't substitute countywide data or another agency.`
+        : `I found multiple possible NIBRS agencies for ${blockingResolution.label}. Please name the specific department or jurisdiction so I do not combine unrelated agencies.`;
+      writeNibrsLog(question, null, 0, null, executionMs, explanation, ["nibrs-place-resolution-block"], "deterministic", sessionId);
+      return jsonResp({
+        success: true,
+        question,
+        sql: null as unknown as string,
+        explanation,
+        title: "Agency Resolution Needed",
+        columns: [],
+        rows: [],
+        rowCount: 0,
+        truncated: false,
+        chartConfig: null,
+        chartMeta: null,
+        executionTimeMs: executionMs,
+      } as QueryResponse);
+    }
+
+    const deterministicQuery =
+      buildNibrsClearanceMethodQuery(question) ??
+      buildNibrsLocalDemographicQuery(question, deterministicResolution) ??
+      buildNibrsStructuredLocalTrendQuery(question, deterministicResolution) ??
+      buildNibrsLocalCityOffenseCountQuery(question, deterministicResolution) ??
+      buildNibrsDomesticViolenceAggravatedAssaultShareQuery(question);
     if (deterministicQuery) {
       const deterministicStart = Date.now();
       try {
@@ -301,7 +358,7 @@ export async function POST(req: NextRequest) {
           null,
           executionMs,
           explanation,
-          [deterministicQuery.guardrail],
+          deterministicGuardrails(deterministicQuery.guardrail),
           "deterministic",
           sessionId
         );
@@ -329,7 +386,7 @@ export async function POST(req: NextRequest) {
           `deterministic_nibrs_query_failed:${msg}`,
           Date.now() - deterministicStart,
           null,
-          [deterministicQuery.guardrail],
+          deterministicGuardrails(deterministicQuery.guardrail),
           "deterministic",
           sessionId
         );
@@ -365,25 +422,22 @@ export async function POST(req: NextRequest) {
     }
 
     // Step 1: Translate to SQL via Claude (with conversation history for context)
-    const history = normalizeHistoryForTab(body?.history, "nibrs");
-    const followupTransform = detectFollowupTransform(question, history);
     // Bare clarifier answers ("Countywide total") carry no county name — use
     // the transform's reconstructed question so guardrails see the geography
-    const guardrailQuestion = followupTransform?.contextQuestion ?? question;
-    const basePromptHistory = followupTransform
-      ? [...history, { role: "user" as const, content: followupTransform.instruction }]
-      : history;
-    const promptContract = buildQueryContract(guardrailQuestion, "nibrs");
     const isOverallRate = promptContract?.metric.unit === "rate_per_100k" &&
       promptContract.metric.unsupportedReason === null;
     const hasDemographicPlaceDisambiguation = isOverallRate &&
       removedDemographicPlaceToken(guardrailQuestion);
-    const promptHistory = hasDemographicPlaceDisambiguation
+    const demographicPromptHistory = hasDemographicPlaceDisambiguation
       ? [...basePromptHistory, {
           role: "user" as const,
           content: "[SYSTEM: The query contract classifies this as an overall jurisdiction rate, not a demographic-group rate. Any demographic-looking word is part of a resolved place or offense name. Do not apply the demographic-rate prohibition; generate SQL using total jurisdiction population.]",
         }]
       : basePromptHistory;
+    const resolutionGuidance = formatNibrsResolutionGuidance(resolutionPlan);
+    const promptHistory = resolutionGuidance
+      ? [...demographicPromptHistory, { role: "user" as const, content: resolutionGuidance }]
+      : demographicPromptHistory;
     const claudeStart = Date.now();
 
     // Check response cache (only standalone questions). Continuous-reporter
@@ -496,6 +550,10 @@ export async function POST(req: NextRequest) {
     }
 
     let sql = validation.sanitized!;
+    const resolvedOriWarnings = auditNibrsResolvedOriUsage(resolutionPlan, sql);
+    if (resolvedOriWarnings.length > 0) {
+      console.warn(`[nibrs][resolved-ori][warn-only] ${resolvedOriWarnings.join("; ")}`);
+    }
 
     // Step 2a: Run shared guardrail pipeline
     const ctx = extractQueryContext(sql, guardrailQuestion, "nibrs");
@@ -511,7 +569,9 @@ export async function POST(req: NextRequest) {
     }
 
     const routeGuardrailIssues: string[] = [];
-    const routeGuardrailsFired: string[] = [];
+    const routeGuardrailsFired: string[] = resolvedOriWarnings.length > 0
+      ? ["nibrs-resolved-ori-warn-only"]
+      : [];
     const recordContractValidation = (contractResult: QueryContractSqlValidation, collectRetryIssues = false) => {
       const contractGuardrails = queryContractGuardrails(contractResult);
       if (contractGuardrails.length > 0) {

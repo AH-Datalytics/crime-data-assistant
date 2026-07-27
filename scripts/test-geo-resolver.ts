@@ -149,6 +149,7 @@ assertNoIssue("crime in Linn County, Oregon", "county-linn");
 
 assertIssue("crime in Jefferson County", "county-jefferson");
 assertNoIssue("crime in Jefferson County, Alabama", "county-jefferson");
+assertNoIssue("Jackson County Sheriff's Office in Missouri murders", "county-jackson");
 assertNoIssue("crime in Jefferson Parish", "county-jefferson");
 
 const issues = getGeoResolutionIssues("shootings in Kansas City and Baltimore");
