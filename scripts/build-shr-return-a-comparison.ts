@@ -3,7 +3,7 @@ import path from "node:path";
 
 type HistRow = { ori: string; agency: string; state: string; year: number; murder: number | null };
 type ShrIdentity = { ori: string; state: string; canonical_agency: string; first_year: number; last_year: number };
-type ShrCount = { ori: string; year: number; victims: number };
+type ShrCount = { ori: string; state: string; year: number; victims: number };
 
 const apply = process.argv.includes("--apply");
 const shrPath = process.env.SHR_DB_PATH || path.join(process.cwd(), "shr.db");
@@ -32,11 +32,11 @@ const hist = shr.prepare(`
   WHERE ha.ori IS NOT NULL AND ha.state IS NOT NULL
 `).all() as HistRow[];
 const shrCounts = shr.prepare(`
-  SELECT i.ori, i.year, COUNT(v.id) AS victims
+  SELECT i.ori, upper(i.state) AS state, i.year, COUNT(v.id) AS victims
   FROM main.incidents i
   LEFT JOIN main.victims v ON v.incident_id = i.id
   WHERE i.homicide_type = 'Murder' AND i.ori IS NOT NULL
-  GROUP BY i.ori, i.year
+  GROUP BY i.ori, upper(i.state), i.year
 `).all() as ShrCount[];
 
 const histByPrefix = new Map<string, HistRow[]>();
@@ -48,7 +48,7 @@ for (const row of hist) {
   (histByName.get(nameKey) || (histByName.set(nameKey, []), histByName.get(nameKey)!)).push(row);
 }
 const shrByAgencyYear = new Map<string, number>();
-for (const row of shrCounts) shrByAgencyYear.set(`${row.ori.toUpperCase()}|${row.year}`, Number(row.victims || 0));
+for (const row of shrCounts) shrByAgencyYear.set(`${row.state}|${row.ori.toUpperCase()}|${row.year}`, Number(row.victims || 0));
 
 const rows: Array<[string, string, number, number | null, number | null, string, string, string]> = [];
 for (const identity of identities) {
@@ -63,10 +63,10 @@ for (const identity of identities) {
   const histRows = selectedOri ? (prefix.length ? prefix : nameCandidates).filter((row) => row.ori === selectedOri) : [];
   const histByYear = new Map(histRows.map((row) => [row.year, Number(row.murder || 0)]));
   const years = new Set<number>();
-  for (const row of shrCounts) if (row.ori.toUpperCase() === identity.ori.toUpperCase()) years.add(row.year);
+  for (const row of shrCounts) if (row.state === state && row.ori.toUpperCase() === identity.ori.toUpperCase()) years.add(row.year);
   for (const year of histByYear.keys()) years.add(year);
   for (const year of years) {
-    const shrVictims = shrByAgencyYear.get(`${identity.ori.toUpperCase()}|${year}`) ?? 0;
+    const shrVictims = shrByAgencyYear.get(`${state}|${identity.ori.toUpperCase()}|${year}`) ?? 0;
     const retaMurders = selectedOri ? (histByYear.get(year) ?? 0) : null;
     const status = joinMethod === "ambiguous" || joinMethod === "unmatched"
       ? "join_unresolved"
@@ -89,7 +89,7 @@ if (apply) {
       join_method TEXT NOT NULL,
       era TEXT NOT NULL,
       comparison_status TEXT NOT NULL,
-      PRIMARY KEY (shr_ori, year)
+      PRIMARY KEY (shr_ori, state, year)
     );
     CREATE INDEX idx_shr_return_a_state_year ON shr_return_a_comparison(state, year);
     CREATE INDEX idx_shr_return_a_status ON shr_return_a_comparison(comparison_status);
