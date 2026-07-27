@@ -24,6 +24,16 @@ export function buildShrCanonicalLabelCase(
   return `(CASE ${labelCases.join(" ")} ELSE ${alias}.agency END)`;
 }
 
+export function formatShrResolutionGuidance(places: ShrResolvedAgency[]): string | null {
+  const resolved = places.filter((place) => place.status === "resolved");
+  if (resolved.length === 0) return null;
+  const lines = resolved.map((place) => {
+    const ranges = place.ranges.map((range) => `${range.ori} for ${range.startYear}-${range.endYear}`).join(", ");
+    return `- ${place.label}, ${place.state}: ${ranges}`;
+  });
+  return `[SYSTEM: Deterministic SHR geography resolution for the reconstructed question. Use the resolved ORI and year ranges below as hard constraints. Do not filter a resolved place with i.agency or substitute another agency. For comparisons, group/display using the requested place labels.\n${lines.join("\n")}]`;
+}
+
 type IdentityRow = {
   ori: string;
   canonical_agency: string;

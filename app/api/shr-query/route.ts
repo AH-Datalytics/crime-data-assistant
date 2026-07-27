@@ -39,7 +39,7 @@ import {
   type QueryContractSqlValidation,
 } from "@/lib/query-contract-validator";
 import { partialCoverageRetryPrompt, sourceYearOverlap } from "@/lib/source-year-overlap";
-import { buildShrCanonicalLabelCase, resolveShrAgency } from "@/lib/shr-place-resolver";
+import { buildShrCanonicalLabelCase, formatShrResolutionGuidance, resolveShrAgency } from "@/lib/shr-place-resolver";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function jsonResp(data: Record<string, any> | QueryError, status = 200) {
@@ -143,9 +143,21 @@ export async function POST(req: NextRequest) {
     // Bare clarifier answers ("Countywide total") carry no county name — use
     // the transform's reconstructed question so guardrails see the geography
     const guardrailQuestion = followupTransform?.contextQuestion ?? question;
+    const followupCities = followupTransform ? shootingCityIntents(guardrailQuestion) : [];
+    const followupDb = followupTransform ? getShrDb() : null;
+    const followupShrPlaces = followupDb && followupCities.length > 0 && followupCities.every((city) => city.state)
+      ? followupCities.map((city) => resolveShrAgency(
+        followupDb,
+        city.agencyLike ? city.display : city.agency,
+        city.state!,
+        { kind: "city" },
+      ))
+      : [];
+    const followupShrGuidance = formatShrResolutionGuidance(followupShrPlaces);
     const promptHistory = followupTransform
       ? [...history, { role: "user" as const, content: followupTransform.instruction }]
       : history;
+    if (followupShrGuidance) promptHistory.push({ role: "user" as const, content: followupShrGuidance });
     const start = Date.now();
     const routingMeta = parseRoutingLogMeta(body);
     const writeLog = (
