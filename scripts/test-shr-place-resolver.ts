@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import Database from "better-sqlite3";
-import { buildShrCanonicalLabelCase, resolveShrAgency } from "../lib/shr-place-resolver";
+import { buildShrCanonicalLabelCase, resolveShrAgency, rewriteShrResolvedAgencyPredicates } from "../lib/shr-place-resolver";
 
 const db = new Database(":memory:");
 db.exec(`
@@ -79,6 +79,16 @@ assert.deepEqual(louisvilleTrend.ranges, [
   { ori: "KY05602", startYear: 2000, endYear: 2003 },
   { ori: "KY05680", startYear: 2003, endYear: 2025 },
 ]);
+const rewritten = rewriteShrResolvedAgencyPredicates(
+  "SELECT i.year, SUM(CASE WHEN i.agency = 'Houston' THEN 1 ELSE 0 END) AS Houston FROM incidents i WHERE i.agency = 'Dallas' GROUP BY i.year",
+  [
+    { requestedName: "Houston", label: "Houston", state: "TX", agencyType: "City", status: "resolved", confidence: "high", oris: ["TXHPD00"], ranges: [{ ori: "TXHPD00", startYear: 1976, endYear: 2026 }], reason: "test" },
+    { requestedName: "Dallas", label: "Dallas", state: "TX", agencyType: "City", status: "resolved", confidence: "high", oris: ["TXDPD00"], ranges: [{ ori: "TXDPD00", startYear: 1976, endYear: 2026 }], reason: "test" },
+  ],
+);
+assert.equal(rewritten.rewritten, true);
+assert.match(rewritten.sql, /TXHPD00/);
+assert.match(rewritten.sql, /TXDPD00/);
 
 const labelCase = buildShrCanonicalLabelCase([
   { oris: ["TXHPD00"], label: "Houston" },

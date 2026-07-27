@@ -39,7 +39,7 @@ import {
   type QueryContractSqlValidation,
 } from "@/lib/query-contract-validator";
 import { partialCoverageRetryPrompt, sourceYearOverlap } from "@/lib/source-year-overlap";
-import { buildShrCanonicalLabelCase, formatShrResolutionGuidance, resolveShrAgency } from "@/lib/shr-place-resolver";
+import { buildShrCanonicalLabelCase, formatShrResolutionGuidance, resolveShrAgency, rewriteShrResolvedAgencyPredicates } from "@/lib/shr-place-resolver";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function jsonResp(data: Record<string, any> | QueryError, status = 200) {
@@ -679,7 +679,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    let initialContract = runContractValidation(validation.sanitized!);
+    const shrRewrite = followupShrPlaces.length > 0
+      ? rewriteShrResolvedAgencyPredicates(validation.sanitized!, followupShrPlaces)
+      : { sql: validation.sanitized!, rewritten: false };
+    if (shrRewrite.warning) {
+      routeGuardrailsFired.push("shr-resolved-ori-warn-only");
+      console.warn(`[shr][resolver-warning] ${shrRewrite.warning}`);
+    }
+    if (shrRewrite.rewritten) routeGuardrailsFired.push("shr-resolved-ori-rewritten");
+    let initialContract = runContractValidation(shrRewrite.sql);
     let sql = initialContract.sql;
     const initialContractBlock = initialContract.blockReasons.length > 0
       ? contractFailureResponse(initialContract, `contract_block:${initialContract.enforced.join(",")}`)

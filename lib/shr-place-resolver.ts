@@ -34,6 +34,36 @@ export function formatShrResolutionGuidance(places: ShrResolvedAgency[]): string
   return `[SYSTEM: Deterministic SHR geography resolution for the reconstructed question. Use the resolved ORI and year ranges below as hard constraints. Do not filter a resolved place with i.agency or substitute another agency. For comparisons, group/display using the requested place labels.\n${lines.join("\n")}]`;
 }
 
+export function rewriteShrResolvedAgencyPredicates(
+  sql: string,
+  places: ShrResolvedAgency[],
+): { sql: string; rewritten: boolean; warning?: string } {
+  if (!/\bi\.agency\s*=\s*'/i.test(sql)) return { sql, rewritten: false };
+  const lower = sql.toLowerCase();
+  const whereIndex = lower.indexOf(" where ");
+  const head = whereIndex >= 0 ? sql.slice(0, whereIndex) : sql;
+  if (/\bi\.agency\b(?!\s*=)/i.test(head) || /\bgroup\s+by[\s\S]*\bi\.agency\b(?!\s*=)/i.test(sql) || /\border\s+by[\s\S]*\bi\.agency\b(?!\s*=)/i.test(sql)) {
+    return { sql, rewritten: false, warning: "SHR resolved agency SQL uses i.agency outside a simple predicate." };
+  }
+  let rewrittenSql = sql;
+  for (const place of places.filter((candidate) => candidate.status === "resolved")) {
+    const names = [...new Set([place.requestedName, place.label])].filter(Boolean);
+    const ranges = place.ranges.map((range) =>
+      `(i.ori = '${range.ori.replace(/'/g, "''")}' AND i.year BETWEEN ${range.startYear} AND ${range.endYear})`
+    );
+    if (ranges.length === 0) continue;
+    const replacement = ranges.length === 1 ? ranges[0] : `(${ranges.join(" OR ")})`;
+    for (const name of names) {
+      const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      rewrittenSql = rewrittenSql.replace(new RegExp(`i\\.agency\\s*=\\s*'${escaped}'`, "gi"), replacement);
+    }
+  }
+  if (rewrittenSql === sql || /\bi\.agency\s*=\s*'/i.test(rewrittenSql)) {
+    return { sql, rewritten: false, warning: "SHR SQL contains an unresolved agency-name predicate." };
+  }
+  return { sql: rewrittenSql, rewritten: true };
+}
+
 type IdentityRow = {
   ori: string;
   canonical_agency: string;
