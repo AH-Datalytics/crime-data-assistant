@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import Database from "better-sqlite3";
-import { resolveShrAgency } from "../lib/shr-place-resolver";
+import { buildShrCanonicalLabelCase, resolveShrAgency } from "../lib/shr-place-resolver";
 
 const db = new Database(":memory:");
 db.exec(`
@@ -64,6 +64,14 @@ assert.equal(overlapping.status, "ambiguous");
 const dominant = resolveShrAgency(db, "Dominant", "TX", { startYear: 2010, endYear: 2015 });
 assert.equal(dominant.status, "resolved");
 assert.deepEqual(dominant.oris, ["TXDOMINANT1"]);
+
+const labelCase = buildShrCanonicalLabelCase([
+  { oris: ["TXHPD00"], label: "Houston" },
+  { oris: ["TXDPD00"], label: "Dallas" },
+]);
+assert.match(labelCase, /WHEN i\.ori = 'TXHPD00' THEN 'Houston'/);
+assert.match(labelCase, /WHEN i\.ori = 'TXDPD00' THEN 'Dallas'/);
+assert.match(labelCase, /ELSE i\.agency END/);
 
 db.close();
 console.log("SHR place resolver tests passed");

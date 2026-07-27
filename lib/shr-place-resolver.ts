@@ -14,6 +14,16 @@ export type ShrResolvedAgency = {
   reason: string;
 };
 
+export function buildShrCanonicalLabelCase(
+  places: Pick<ShrResolvedAgency, "oris" | "label">[],
+  alias = "i",
+): string {
+  const labelCases = places.flatMap((place) =>
+    place.oris.map((ori) => `WHEN ${alias}.ori = '${ori.replace(/'/g, "''")}' THEN '${place.label.replace(/'/g, "''")}'`)
+  );
+  return `(CASE ${labelCases.join(" ")} ELSE ${alias}.agency END)`;
+}
+
 type IdentityRow = {
   ori: string;
   canonical_agency: string;

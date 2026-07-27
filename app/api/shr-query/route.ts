@@ -39,7 +39,7 @@ import {
   type QueryContractSqlValidation,
 } from "@/lib/query-contract-validator";
 import { partialCoverageRetryPrompt, sourceYearOverlap } from "@/lib/source-year-overlap";
-import { resolveShrAgency } from "@/lib/shr-place-resolver";
+import { buildShrCanonicalLabelCase, resolveShrAgency } from "@/lib/shr-place-resolver";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function jsonResp(data: Record<string, any> | QueryError, status = 200) {
@@ -329,13 +329,13 @@ export async function POST(req: NextRequest) {
         ? `Requested years outside SHR coverage (${yearOverlap.sourceStartYear}-${yearOverlap.sourceEndYear}) were omitted; returned years ${yearOverlap.overlapStartYear}-${yearOverlap.overlapEndYear}.`
         : "";
 
-      let whereClauses = ["i.homicide_type = 'Murder'", "i.weapon_group = 'Firearm'", effectiveYearClause];
+      const whereClauses = ["i.homicide_type = 'Murder'", "i.weapon_group = 'Firearm'", effectiveYearClause];
       let joinClauses = "JOIN victims v ON v.incident_id = i.id";
       let withClause = "";
       let titlePlace = "Nationally";
       let cityCount = 0;
       let cityLabelExpression = "i.agency";
-      const explicitOri = question.match(/\bORI\s*(?:[:#=]|is)?\s*([A-Z0-9]{5,})\b/i)?.[1]?.toUpperCase() || null;
+      const explicitOri = question.match(/\bORI\s*(?:[:#=]|is)?\s*((?=[A-Z0-9]*\d)[A-Z]{2}[A-Z0-9]{3,7})\b/i)?.[1]?.toUpperCase() || null;
       const county = countyIntent(question);
       const mentionedState = stateMention(question);
 
@@ -395,7 +395,19 @@ export async function POST(req: NextRequest) {
         titlePlace = `${stateIntent.stateName} (statewide)`;
         whereClauses.push(`i.state = '${stateIntent.state}'`);
       } else if (explicitOri) {
-        titlePlace = `ORI ${explicitOri}`;
+        const db = getShrDb();
+        if (!db) {
+          return jsonResp({ success: false, error: "SHR database not available." } as QueryError, 500);
+        }
+        const identity = db.prepare(
+          "SELECT canonical_agency FROM shr_agency_identity WHERE upper(ori) = ? LIMIT 1"
+        ).get(explicitOri) as { canonical_agency?: string } | undefined;
+        if (!identity) {
+          const explanation = `I could not find ORI ${explicitOri} in the SHR agency identity data, so I cannot return a reliable result.`;
+          writeLog(question, null, 0, "shr_ori_not_in_source", Date.now() - start, explanation, "shr", ["deterministic-shooting", "shr-place-resolution-block"], "deterministic", sessionId);
+          return jsonResp({ success: true, question, sql: null, explanation, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - start });
+        }
+        titlePlace = `ORI ${explicitOri} - ${identity.canonical_agency || "identified agency"}`;
         whereClauses.push(`i.ori = '${explicitOri.replace(/'/g, "''")}'`);
       } else if (ambiguousKansasCityIntent(question)) {
         const explanation = "Please specify Kansas City, Missouri (KCMO) or Kansas City, Kansas (KCK). Both exist in the SHR data, and I should not combine or choose between them without that state.";
@@ -439,10 +451,7 @@ export async function POST(req: NextRequest) {
               return `(${ranges.join(" OR ")})`;
             });
             whereClauses.push(`(${cityClauses.join(" OR ")})`);
-            const labelCases = resolvedCities.flatMap((place) =>
-              place.oris.map((ori) => `WHEN i.ori = '${ori.replace(/'/g, "''")}' THEN '${place.label.replace(/'/g, "''")}'`)
-            );
-            cityLabelExpression = `(CASE ${labelCases.join(" ")} ELSE i.agency END)`;
+            cityLabelExpression = buildShrCanonicalLabelCase(resolvedCities);
           } else {
             const cityClauses = cities.map((city) => {
               const agency = city.agencyLike
