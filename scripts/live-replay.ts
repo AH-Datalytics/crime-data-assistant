@@ -144,6 +144,8 @@ const ALL_TESTS: TestCase[] = [
   { id: "SR07", question: "firearm murders in Lakewood, California since 2018", tab: "shr", category: "shr-resolver", expect: "clarification", responseIncludes: ["not represented"] },
   { id: "SR08", question: "firearm murders for ORI TXHPD00 since 2018", tab: "shr", category: "shr-resolver", expect: "rows", sqlIncludes: ["i.ori = 'TXHPD00'"] },
   { id: "SR09", question: "firearm murders for ORI ZZ00000 since 2018", tab: "shr", category: "shr-resolver", expect: "clarification", responseIncludes: ["could not find ORI"] },
+  { id: "SR10", question: "firearm murders in Harris County, Texas since 2018", tab: "shr", category: "shr-resolver-exemption", expect: "clarification", responseIncludes: ["countywide total"] },
+  { id: "SR11", question: "firearm murders at the University of Houston since 2018", tab: "shr", category: "shr-resolver-exemption", expect: "rows_or_text", note: "Campus resolution must remain an explicit scope rather than being contradicted by city resolution." },
 
   // ── NIBRS drug/arrest/hate/carjacking ──
   { id: "N01", question: "marijuana drug offenses nationally", tab: "nibrs", category: "nibrs", expect: "rows" },
