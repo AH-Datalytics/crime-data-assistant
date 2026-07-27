@@ -26,7 +26,7 @@ const identities = shr.prepare(`
   FROM main.shr_agency_identity
 `).all() as ShrIdentity[];
 const hist = shr.prepare(`
-  SELECT ha.ori, ha.agency, upper(ha.state) AS state, hac.year, COALESCE(hac.murder, 0) AS murder
+  SELECT ha.ori, ha.agency, upper(ha.state) AS state, hac.year, hac.murder AS murder
   FROM crime_data.historical_agency ha
   JOIN crime_data.historical_agency_crime hac ON hac.ori = ha.ori
   WHERE ha.ori IS NOT NULL AND ha.state IS NOT NULL
@@ -61,15 +61,17 @@ for (const identity of identities) {
     : prefix.length > 1 || nameCandidates.length > 1 ? "ambiguous" : "unmatched";
   const selectedOri = distinctOris.length === 1 ? distinctOris[0] : null;
   const histRows = selectedOri ? (prefix.length ? prefix : nameCandidates).filter((row) => row.ori === selectedOri) : [];
-  const histByYear = new Map(histRows.map((row) => [row.year, Number(row.murder || 0)]));
+  const histByYear = new Map(histRows.map((row) => [row.year, row.murder]));
   const years = new Set<number>();
   for (const row of shrCounts) if (row.state === state && row.ori.toUpperCase() === identity.ori.toUpperCase()) years.add(row.year);
   for (const year of histByYear.keys()) years.add(year);
   for (const year of years) {
     const shrVictims = shrByAgencyYear.get(`${state}|${identity.ori.toUpperCase()}|${year}`) ?? 0;
-    const retaMurders = selectedOri ? (histByYear.get(year) ?? 0) : null;
+    const retaMurders = selectedOri ? (histByYear.get(year) ?? null) : null;
     const status = joinMethod === "ambiguous" || joinMethod === "unmatched"
       ? "join_unresolved"
+      : retaMurders === null
+        ? "reta_unreported"
       : year < 2021
         ? retaMurders && retaMurders > 0 && shrVictims === 0 ? "pre2021_gap_candidate" : retaMurders === 0 && shrVictims === 0 ? "pre2021_true_zero_candidate" : "pre2021_matched"
         : "post2020_transition_review";
