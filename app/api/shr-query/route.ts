@@ -39,6 +39,7 @@ import {
   type QueryContractSqlValidation,
 } from "@/lib/query-contract-validator";
 import { partialCoverageRetryPrompt, sourceYearOverlap } from "@/lib/source-year-overlap";
+import { resolveShrAgency } from "@/lib/shr-place-resolver";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function jsonResp(data: Record<string, any> | QueryError, status = 200) {
@@ -332,6 +333,7 @@ export async function POST(req: NextRequest) {
       let joinClauses = "JOIN victims v ON v.incident_id = i.id";
       let withClause = "";
       let titlePlace = "Nationally";
+      let cityCount = 0;
       const county = countyIntent(question);
       const mentionedState = stateMention(question);
 
@@ -400,17 +402,46 @@ export async function POST(req: NextRequest) {
         });
       } else {
         const cities = shootingCityIntents(question);
+        cityCount = cities.length;
         if (cities.length > 0) {
           titlePlace = cities.map((city) => city.display).join(" and ");
-          const cityClauses = cities.map((city) => {
-            const agency = city.agencyLike
-              ? `i.agency LIKE '${city.agencyLike.replace(/'/g, "''")}'`
-              : `i.agency = '${city.agency.replace(/'/g, "''")}'`;
-            const state = city.state ? ` AND i.state = '${city.state}'` : "";
-            return `(${agency}${state})`;
-          });
-          whereClauses.push(`(${cityClauses.join(" OR ")})`);
-          whereClauses.push("(i.agency_type = 'City' OR i.agency_type IS NULL OR i.agency_type = '')");
+          if (cities.every((city) => city.state)) {
+            const db = getShrDb();
+            if (!db) {
+              return jsonResp({ success: false, error: "SHR database not available." } as QueryError, 500);
+            }
+            const resolvedCities = cities.map((city) => resolveShrAgency(db, city.agency, city.state!, { kind: "city" }));
+            const blockedCity = resolvedCities.find((place) => place.status !== "resolved");
+            if (blockedCity) {
+              const comparisonNote = cities.length > 1 ? " in this comparison" : "";
+              const explanation = blockedCity.status === "ambiguous"
+                ? `I cannot safely identify ${blockedCity.requestedName}, ${blockedCity.state}${comparisonNote} in the SHR agency identity data. Please specify a more precise agency.`
+                : `I cannot provide a reliable SHR result for ${blockedCity.requestedName}, ${blockedCity.state}${comparisonNote} because that agency is not represented for the requested source. I will not substitute another agency.`;
+              writeLog(question, null, 0, `shr_place_${blockedCity.status}`, Date.now() - start, explanation, "shr", ["deterministic-shooting", "shr-place-resolution-block"], "deterministic", sessionId);
+              return jsonResp({
+                success: true, question, sql: null, explanation,
+                title: "", columns: [], rows: [], rowCount: 0, truncated: false,
+                chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - start,
+              });
+            }
+            const cityClauses = resolvedCities.map((place) => {
+              const ranges = place.ranges.map((range) =>
+                `(i.ori = '${range.ori.replace(/'/g, "''")}' AND i.year BETWEEN ${range.startYear} AND ${range.endYear})`
+              );
+              return `(${ranges.join(" OR ")})`;
+            });
+            whereClauses.push(`(${cityClauses.join(" OR ")})`);
+          } else {
+            const cityClauses = cities.map((city) => {
+              const agency = city.agencyLike
+                ? `i.agency LIKE '${city.agencyLike.replace(/'/g, "''")}'`
+                : `i.agency = '${city.agency.replace(/'/g, "''")}'`;
+              const state = city.state ? ` AND i.state = '${city.state}'` : "";
+              return `(${agency}${state})`;
+            });
+            whereClauses.push(`(${cityClauses.join(" OR ")})`);
+            whereClauses.push("(i.agency_type = 'City' OR i.agency_type IS NULL OR i.agency_type = '')");
+          }
         }
       }
       if (titlePlace === "Nationally" && stateMatch && /^[A-Z]{2}$/.test(stateMatch[1])) {
@@ -418,7 +449,7 @@ export async function POST(req: NextRequest) {
         whereClauses.push(`i.state = '${stateMatch[1]}'`);
       }
 
-      const isMultiCity = /\bi\.agency\s*=/.test(whereClauses.join(" ")) && /\sOR\s/.test(whereClauses.join(" "));
+      const isMultiCity = cityCount > 1 && /\bi\.(?:agency|ori)\s*=/.test(whereClauses.join(" ")) && /\sOR\s/.test(whereClauses.join(" "));
       const selectPlace = isMultiCity ? "i.agency, i.state, " : "";
       const groupPlace = isMultiCity ? ", i.agency, i.state" : "";
       const orderPlace = isMultiCity ? ", i.agency, i.state" : "";
