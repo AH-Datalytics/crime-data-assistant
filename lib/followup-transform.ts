@@ -4,7 +4,7 @@ import { asksForCountsInsteadOfRates } from "./rate-intent";
 export type FollowupBreakdown = "state" | "city" | "agency";
 
 export interface FollowupTransform {
-  name: "add_breakdown" | "add_continuous_reporting_filter" | "replace_with_dv_victim_demographics" | "replace_rate_with_count" | "resolve_county_scope" | "assess_trend";
+  name: "add_breakdown" | "add_continuous_reporting_filter" | "replace_with_dv_victim_demographics" | "replace_rate_with_count" | "resolve_county_scope" | "assess_trend" | "compare_geographies";
   dimension?: FollowupBreakdown;
   instruction: string;
   /** When set, routes should use this instead of the raw question for guardrail
@@ -119,6 +119,18 @@ function requestedDomesticViolenceVictimDemographics(question: string): boolean 
 export function detectFollowupTransform(question: string, history: PromptHistoryMessage[]): FollowupTransform | null {
   const countyScope = detectCountyScopeResolution(question, history);
   if (countyScope) return countyScope;
+
+  const comparisonTarget = question.match(/^\s*(?:compare\s+(?:to|with|against)|what about)\s+(.+?)\s*\??\s*$/i);
+  if (comparisonTarget && hasPriorSql(history)) {
+    const priorQuestion = latestPriorUserQuestion(history);
+    if (priorQuestion) {
+      return {
+        name: "compare_geographies",
+        contextQuestion: `Compare ${priorQuestion} with ${comparisonTarget[1]}`,
+        instruction: `[SYSTEM: This follow-up adds a comparison geography. Reconstruct the complete question as "Compare ${priorQuestion} with ${comparisonTarget[1]}". Preserve the prior source, offense/topic, filters, metric, and time range. Resolve every geography in the reconstructed question through the source resolver; do not use raw agency-name matching when a resolved ORI is available.]`,
+      };
+    }
+  }
 
   if (asksForCountsInsteadOfRates(question) && hasPriorSql(history)) {
     return {
