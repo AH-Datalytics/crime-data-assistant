@@ -335,6 +335,7 @@ export async function POST(req: NextRequest) {
       let titlePlace = "Nationally";
       let cityCount = 0;
       let cityLabelExpression = "i.agency";
+      const explicitOri = question.match(/\bORI\s*(?:[:#=]|is)?\s*([A-Z0-9]{5,})\b/i)?.[1]?.toUpperCase() || null;
       const county = countyIntent(question);
       const mentionedState = stateMention(question);
 
@@ -393,6 +394,9 @@ export async function POST(req: NextRequest) {
       } else if (stateIntent) {
         titlePlace = `${stateIntent.stateName} (statewide)`;
         whereClauses.push(`i.state = '${stateIntent.state}'`);
+      } else if (explicitOri) {
+        titlePlace = `ORI ${explicitOri}`;
+        whereClauses.push(`i.ori = '${explicitOri.replace(/'/g, "''")}'`);
       } else if (ambiguousKansasCityIntent(question)) {
         const explanation = "Please specify Kansas City, Missouri (KCMO) or Kansas City, Kansas (KCK). Both exist in the SHR data, and I should not combine or choose between them without that state.";
         writeLog(question, null, 0, "ambiguous_city", Date.now() - start, explanation, "shr", ["deterministic-shooting"], "deterministic", sessionId);
