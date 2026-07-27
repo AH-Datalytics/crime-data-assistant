@@ -1,12 +1,9 @@
-export type NibrsCompletenessStatus = "complete" | "partial" | "absent" | "unknown";
+import type { SourceCompletenessDecision, SourceCompletenessStatus, SourcePeriod } from "./source-contracts";
+
+export type NibrsCompletenessStatus = SourceCompletenessStatus;
 export type NibrsCompletenessUnit = "count" | "rate";
 
-export type NibrsCompletenessDecision = {
-  status: NibrsCompletenessStatus;
-  display: boolean;
-  partial: boolean;
-  reason: string;
-};
+export type NibrsCompletenessDecision = SourceCompletenessDecision;
 
 export const NIBRS_COUNT_COMPLETENESS_DISCLOSURE =
   "Historical counts are left blank unless the agency reported all 12 months; current-year partial counts remain visible when summary data exists and are disclosed as partial.";
@@ -24,21 +21,26 @@ export function decideNibrsCompleteness(args: {
   summaryMonths?: number | null;
   unit: NibrsCompletenessUnit;
 }): NibrsCompletenessDecision {
+  const period: SourcePeriod = {
+    granularity: "year",
+    startYear: args.year,
+    endYear: args.year,
+  };
   const reportingMonths = args.reportingMonths ?? 0;
   const summaryMonths = args.summaryMonths ?? 0;
   if (reportingMonths === 12) {
-    return { status: "complete", display: true, partial: false, reason: "All 12 reporting months are present." };
+    return { status: "complete", display: true, partial: false, reason: "All 12 reporting months are present.", period };
   }
   if (args.year === args.currentYear && (reportingMonths > 0 || summaryMonths > 0)) {
     if (args.unit === "count") {
-      return { status: "partial", display: true, partial: true, reason: "Current-year summary activity is present." };
+      return { status: "partial", display: true, partial: true, reason: "Current-year summary activity is present.", period };
     }
-    return { status: "partial", display: false, partial: true, reason: "Rates require a complete 12-month year." };
+    return { status: "partial", display: false, partial: true, reason: "Rates require a complete 12-month year.", period };
   }
   if (reportingMonths > 0 || summaryMonths > 0) {
-    return { status: "partial", display: false, partial: true, reason: "Historical reporting is incomplete." };
+    return { status: "partial", display: false, partial: true, reason: "Historical reporting is incomplete.", period };
   }
-  return { status: "absent", display: false, partial: false, reason: "No reporting evidence is present." };
+  return { status: "absent", display: false, partial: false, reason: "No reporting evidence is present.", period };
 }
 
 export function nibrsAnnualValueSql(args: {

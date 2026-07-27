@@ -28,7 +28,7 @@ import { detectNibrsCapabilityOverride } from "@/lib/nibrs-capability-overrides"
 import { getBlockingGeoClarification } from "@/lib/geo-resolver";
 import { getCountyScopeClarification } from "@/lib/county-clarifier";
 import { asksCampusAgency, buildCampusAgencySummarySql, campusAgencyChartAxesFromSql, campusAgencyDisplayName, knownCampusAgencyResolution, resolveCampusAgencyOris, shouldResolveCampusAgencySql } from "@/lib/nibrs-campus-agency";
-import { buildNibrsClearanceMethodQuery, buildNibrsDomesticViolenceAggravatedAssaultShareQuery, buildNibrsLocalCityOffenseCountQuery, buildNibrsLocalDemographicQuery, buildNibrsStructuredLocalTrendQuery } from "@/lib/nibrs-deterministic-queries";
+import { planNibrsQuery } from "@/lib/nibrs-query-planner";
 import { optimizeNibrsSql } from "@/lib/nibrs-sql-optimizer";
 import { buildQueryContract } from "@/lib/query-contract";
 import {
@@ -304,10 +304,13 @@ export async function POST(req: NextRequest) {
         : []),
     ];
 
+    const nibrsPlan = planNibrsQuery(question, deterministicResolution, {
+      allowDeterministic: !followupTransform,
+    });
     const blockingResolution = deterministicResolution?.places.find((place) =>
       place.status === "ambiguous" || place.status === "covered"
     );
-    if (blockingResolution && deterministicResolution) {
+    if (nibrsPlan.kind === "blocked" && blockingResolution && deterministicResolution) {
       const executionMs = Date.now() - routeStart;
       const explanation = blockingResolution.status === "covered"
         ? `${blockingResolution.label} has no active city-agency ORI for ${deterministicResolution.startYear}-${deterministicResolution.endYear}. It may be inactive or served under a contract/coverage arrangement, but this database does not identify a covering agency that can be safely attributed to the city. I won't substitute countywide data or another agency${deterministicResolution.places.length > 1 ? " in this comparison" : ""}.`
@@ -329,13 +332,8 @@ export async function POST(req: NextRequest) {
       } as QueryResponse);
     }
 
-    const deterministicQuery =
-      buildNibrsClearanceMethodQuery(question) ??
-      buildNibrsLocalDemographicQuery(question, deterministicResolution) ??
-      buildNibrsStructuredLocalTrendQuery(question, deterministicResolution) ??
-      buildNibrsLocalCityOffenseCountQuery(question, deterministicResolution) ??
-      buildNibrsDomesticViolenceAggravatedAssaultShareQuery(question);
-    if (deterministicQuery) {
+    if (nibrsPlan.kind === "deterministic") {
+      const deterministicQuery = nibrsPlan.query;
       const deterministicStart = Date.now();
       try {
         const result = await executeWithTimeout(deterministicQuery.sql);

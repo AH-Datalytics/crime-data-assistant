@@ -1,0 +1,53 @@
+import {
+  buildNibrsClearanceMethodQuery,
+  buildNibrsDomesticViolenceAggravatedAssaultShareQuery,
+  buildNibrsLocalCityOffenseCountQuery,
+  buildNibrsLocalDemographicQuery,
+  buildNibrsStructuredLocalTrendQuery,
+  type DeterministicNibrsQuery,
+} from "./nibrs-deterministic-queries";
+import type { NibrsPlaceResolutionPlan, NibrsResolvedPlace } from "./nibrs-place-resolver";
+
+export type NibrsQueryPlan =
+  | { kind: "blocked"; place: NibrsResolvedPlace; explanation: string }
+  | { kind: "deterministic"; query: DeterministicNibrsQuery }
+  | { kind: "model"; reason: "no-deterministic-builder" | "followup" };
+
+function resolutionBlock(
+  place: NibrsResolvedPlace,
+  plan: NibrsPlaceResolutionPlan
+): string {
+  const comparisonSuffix = plan.places.length > 1 ? " in this comparison" : "";
+  if (place.status === "covered") {
+    return place.label + " has no active city-agency ORI for " + plan.startYear + "-" + plan.endYear + ". It may be inactive or served under a contract/coverage arrangement, but this database does not identify a covering agency that can be safely attributed to the city. I won't substitute countywide data or another agency" + comparisonSuffix + ".";
+  }
+  return "I found multiple possible NIBRS agencies for " + place.label + ". Please name the specific department or jurisdiction so I do not combine unrelated agencies" + comparisonSuffix + ".";
+}
+
+export function planNibrsQuery(
+  question: string,
+  resolutionPlan: NibrsPlaceResolutionPlan | null,
+  options: { allowDeterministic: boolean } = { allowDeterministic: true }
+): NibrsQueryPlan {
+  const blockingPlace = resolutionPlan?.places.find((place) =>
+    place.status === "ambiguous" || place.status === "covered"
+  );
+  if (blockingPlace && resolutionPlan) {
+    return {
+      kind: "blocked",
+      place: blockingPlace,
+      explanation: resolutionBlock(blockingPlace, resolutionPlan),
+    };
+  }
+  if (!options.allowDeterministic) return { kind: "model", reason: "followup" };
+
+  const query =
+    buildNibrsClearanceMethodQuery(question) ??
+    buildNibrsLocalDemographicQuery(question, resolutionPlan) ??
+    buildNibrsStructuredLocalTrendQuery(question, resolutionPlan) ??
+    buildNibrsLocalCityOffenseCountQuery(question, resolutionPlan) ??
+    buildNibrsDomesticViolenceAggravatedAssaultShareQuery(question);
+  return query
+    ? { kind: "deterministic", query }
+    : { kind: "model", reason: "no-deterministic-builder" };
+}

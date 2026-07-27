@@ -1,6 +1,7 @@
 import Database from "better-sqlite3";
 import { buildQueryContract, type QueryContract, type QueryContractGeography } from "./query-contract";
 import { pastCompleteCalendarYearsRange } from "./time-conventions";
+import type { SourceResolutionStatus } from "./source-contracts";
 
 export type NibrsPlaceKind =
   | "city_police"
@@ -10,7 +11,7 @@ export type NibrsPlaceKind =
   | "campus"
   | "covered";
 
-export type NibrsResolutionStatus = "resolved" | "ambiguous" | "covered" | "unsupported";
+export type NibrsResolutionStatus = SourceResolutionStatus;
 
 export type NibrsOriYear = {
   year: number;
@@ -216,7 +217,7 @@ function resolveCity(
       `No active city-agency ORI exists for ${startYear}-${endYear}. The jurisdiction may be inactive or served under a coverage/contract arrangement; no covering agency can be safely inferred.`
     );
   }
-  return placeResult(geography, contractIndex, "city_police", "unsupported", [], "No matching NIBRS city agency was found.");
+  return placeResult(geography, contractIndex, "city_police", "not_in_source", [], "No matching NIBRS city agency was found.");
 }
 
 function agencyLocation(name: string): string {
@@ -260,7 +261,7 @@ function resolveCountyAgency(
   });
   const candidateOris = [...new Set(candidates.map((row) => row.ori9 ?? row.ori).filter((ori): ori is string => Boolean(ori)))];
   if (candidateOris.length === 0) {
-    return placeResult(geography, contractIndex, kind, "unsupported", [], "No exact county-agency crosswalk match was found.");
+    return placeResult(geography, contractIndex, kind, "not_in_source", [], "No exact county-agency crosswalk match was found.");
   }
   const oriPlaceholders = candidateOris.map(() => "?").join(",");
   const rows = db.prepare(`
@@ -279,7 +280,7 @@ function resolveCountyAgency(
     orisByYear.set(row.year, values);
   }
   if (oriYears.length === 0) {
-    return placeResult(geography, contractIndex, kind, "unsupported", [], "The crosswalk match has no agency rows in the requested years.");
+    return placeResult(geography, contractIndex, kind, "not_in_source", [], "The crosswalk match has no agency rows in the requested years.");
   }
   if ([...orisByYear.values()].some((values) => values.size > 1)) {
     return placeResult(geography, contractIndex, kind, "ambiguous", oriYears, "Multiple county agencies remain after exact type matching.");
