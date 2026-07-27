@@ -334,6 +334,7 @@ export async function POST(req: NextRequest) {
       let withClause = "";
       let titlePlace = "Nationally";
       let cityCount = 0;
+      let cityLabelExpression = "i.agency";
       const county = countyIntent(question);
       const mentionedState = stateMention(question);
 
@@ -431,6 +432,10 @@ export async function POST(req: NextRequest) {
               return `(${ranges.join(" OR ")})`;
             });
             whereClauses.push(`(${cityClauses.join(" OR ")})`);
+            const labelCases = resolvedCities.flatMap((place) =>
+              place.oris.map((ori) => `WHEN i.ori = '${ori.replace(/'/g, "''")}' THEN '${place.label.replace(/'/g, "''")}'`)
+            );
+            cityLabelExpression = `(CASE ${labelCases.join(" ")} ELSE i.agency END)`;
           } else {
             const cityClauses = cities.map((city) => {
               const agency = city.agencyLike
@@ -450,9 +455,9 @@ export async function POST(req: NextRequest) {
       }
 
       const isMultiCity = cityCount > 1 && /\bi\.(?:agency|ori)\s*=/.test(whereClauses.join(" ")) && /\sOR\s/.test(whereClauses.join(" "));
-      const selectPlace = isMultiCity ? "i.agency, i.state, " : "";
-      const groupPlace = isMultiCity ? ", i.agency, i.state" : "";
-      const orderPlace = isMultiCity ? ", i.agency, i.state" : "";
+      const selectPlace = isMultiCity ? `${cityLabelExpression} AS agency, i.state, ` : "";
+      const groupPlace = isMultiCity ? `, ${cityLabelExpression}, i.state` : "";
+      const orderPlace = isMultiCity ? `, ${cityLabelExpression}, i.state` : "";
       const shootingContract = runContractValidation(`${withClause}SELECT i.year, ${selectPlace}COUNT(*) AS fatal_shootings FROM incidents i ${joinClauses} WHERE ${whereClauses.join(" AND ")} GROUP BY i.year${groupPlace} ORDER BY i.year${orderPlace} LIMIT 1000`);
       const shootingContractFailure = contractFailureResponse(shootingContract, `contract_deterministic_shooting_failure:${shootingContract.enforced.join(",")}`, ["deterministic-shooting"]);
       if (shootingContractFailure) return shootingContractFailure;
