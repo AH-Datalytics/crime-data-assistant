@@ -19,9 +19,20 @@ db.exec(`
     ('Houston Police Department', 'HOUSTON POLICE DEPARTMENT', 'TXHOUSTON', 'TX', 'Houston', 'City', 'test'),
     ('Houston Police Department', 'HOUSTON', 'TXHOUSTON', 'TX', 'Houston', 'City', 'test'),
     ('Amarillo', 'AMARILLO', 'TXAMARILLO', 'TX', 'Amarillo', 'City', 'test');
+    
   INSERT INTO shr_agency_identity VALUES
     ('TXHOUSTON', 'TX', 'Houston', 'City', 'HOUSTON', 'Houston', 'City', NULL, NULL, 10, 1990, 2025),
     ('TXAMARILLO', 'TX', 'Amarillo', 'City', 'AMARILLO', 'Amarillo', 'City', NULL, NULL, 5, 2020, 2026);
+  INSERT INTO shr_agency_alias VALUES
+    ('Metro', 'METRO', 'TXMETRO1', 'TX', 'Metro One', 'Other', 'test'),
+    ('Metro', 'METRO', 'TXMETRO2', 'TX', 'Metro Two', 'Other', 'test'),
+    ('Legacy', 'LEGACY', 'TXLEGACY1', 'TX', 'Legacy', 'City', 'test'),
+    ('Legacy', 'LEGACY', 'TXLEGACY2', 'TX', 'Legacy', 'City', 'test');
+  INSERT INTO shr_agency_identity VALUES
+    ('TXMETRO1', 'TX', 'Metro One', 'Other', 'METRO ONE', 'Metro One', 'Other', NULL, NULL, 2, 2000, 2020),
+    ('TXMETRO2', 'TX', 'Metro Two', 'Other', 'METRO TWO', 'Metro Two', 'Other', NULL, NULL, 2, 2000, 2020),
+    ('TXLEGACY1', 'TX', 'Legacy', 'City', 'LEGACY', 'Legacy', 'City', NULL, NULL, 2, 2000, 2015),
+    ('TXLEGACY2', 'TX', 'Legacy', 'City', 'LEGACY', 'Legacy', 'City', NULL, NULL, 2, 2010, 2020);
 `);
 
 const houston = resolveShrAgency(db, "Houston Police Department", "TX", { startYear: 2010, endYear: 2020 });
@@ -38,6 +49,12 @@ assert.equal(missing.ranges[0].startYear, 2020);
 
 const absent = resolveShrAgency(db, "Austin", "TX");
 assert.equal(absent.status, "not_in_source");
+
+const ambiguousAgency = resolveShrAgency(db, "Metro", "TX", { kind: "agency" });
+assert.equal(ambiguousAgency.status, "ambiguous");
+
+const overlapping = resolveShrAgency(db, "Legacy", "TX", { startYear: 2010, endYear: 2015 });
+assert.equal(overlapping.status, "ambiguous");
 
 db.close();
 console.log("SHR place resolver tests passed");

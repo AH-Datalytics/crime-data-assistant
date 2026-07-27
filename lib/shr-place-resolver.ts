@@ -84,7 +84,7 @@ export function resolveShrAgency(
     return result;
   }
   const distinctLabels = [...new Set(active.map((row) => row.canonical_agency))];
-  if (distinctLabels.length > 1 && options.kind !== "agency") {
+  if (distinctLabels.length > 1) {
     const result = {
       requestedName, label: requestedName, state: normalizedState, agencyType: active[0].agency_type, status: "ambiguous" as const,
       confidence: "low" as const, oris: [], ranges: [],
@@ -98,6 +98,19 @@ export function resolveShrAgency(
     startYear: Math.max(startYear, row.first_year),
     endYear: Math.min(endYear, row.last_year),
   }));
+  const sortedRanges = [...ranges].sort((a, b) => a.startYear - b.startYear || a.endYear - b.endYear);
+  const overlapping = sortedRanges.some((range, index) =>
+    sortedRanges.slice(0, index).some((previous) => previous.ori !== range.ori && previous.endYear >= range.startYear)
+  );
+  if (overlapping) {
+    const result = {
+      requestedName, label: requestedName, state: normalizedState, agencyType: active[0].agency_type, status: "ambiguous" as const,
+      confidence: "low" as const, oris: [], ranges: [],
+      reason: "Overlapping SHR ORI ranges would combine multiple agencies in the same year.",
+    };
+    entries.set(key, result);
+    return result;
+  }
   const result = {
     requestedName, label: distinctLabels[0], state: normalizedState, agencyType: active[0].agency_type,
     status: "resolved" as const, confidence: "high" as const,
