@@ -138,7 +138,7 @@ const ALL_TESTS: TestCase[] = [
   { id: "SR01", question: "firearm murders in Houston and Dallas since 2018", tab: "shr", category: "shr-resolver", expect: "rows", sqlIncludes: ["CASE WHEN i.ori", "TXHPD00", "TXDPD00"] },
   { id: "SR02", question: "firearm murders in New York City since 2018", tab: "shr", category: "shr-resolver", expect: "rows" },
   { id: "SR03", question: "firearm murders in Las Vegas since 2018", tab: "shr", category: "shr-resolver", expect: "rows" },
-  { id: "SR04", question: "firearm murders in Louisville since 2018", tab: "shr", category: "shr-resolver", expect: "rows_or_text", note: "SHR identity coverage ends in 2003; current-period emptiness must remain honest rather than substituting an agency." },
+  { id: "SR04", question: "firearm murders in Louisville since 2018", tab: "shr", category: "shr-resolver", expect: "rows", sqlIncludes: ["KY05680"], note: "Post-merger requests must select the successor ORI." },
   { id: "SR05", question: "firearm murders in Charlotte since 2018", tab: "shr", category: "shr-resolver", expect: "rows" },
   { id: "SR06", question: "firearm murders in New York since 2018", tab: "shr", category: "shr-resolver", expect: "clarification", responseIncludes: ["New York City", "New York State"] },
   { id: "SR07", question: "firearm murders in Lakewood, California since 2018", tab: "shr", category: "shr-resolver", expect: "rows", note: "Lakewood is represented in SHR even though it is covered by another agency in NIBRS; source semantics must remain separate." },
@@ -146,6 +146,7 @@ const ALL_TESTS: TestCase[] = [
   { id: "SR09", question: "firearm murders for ORI ZZ00000 since 2018", tab: "shr", category: "shr-resolver", expect: "clarification", responseIncludes: ["could not find ORI"] },
   { id: "SR10", question: "firearm murders in Harris County, Texas since 2018", tab: "shr", category: "shr-resolver-exemption", expect: "clarification", responseIncludes: ["countywide total"] },
   { id: "SR11", question: "firearm murders at the University of Houston since 2018", tab: "shr", category: "shr-resolver-exemption", expect: "rows_or_text", note: "Campus resolution must remain an explicit scope rather than being contradicted by city resolution." },
+  { id: "SR12", question: "firearm murders in Louisville in 2003", tab: "shr", category: "shr-resolver", expect: "rows", sqlIncludes: ["KY05602", "KY05680"], note: "Merger-year regression: both ORIs must contribute to the 2003 total (41 incidents in production)." },
 
   // ── NIBRS drug/arrest/hate/carjacking ──
   { id: "N01", question: "marijuana drug offenses nationally", tab: "nibrs", category: "nibrs", expect: "rows" },
