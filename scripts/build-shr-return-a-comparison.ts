@@ -48,7 +48,12 @@ for (const row of hist) {
   (histByName.get(nameKey) || (histByName.set(nameKey, []), histByName.get(nameKey)!)).push(row);
 }
 const shrByAgencyYear = new Map<string, number>();
-for (const row of shrCounts) shrByAgencyYear.set(`${row.state}|${row.ori.toUpperCase()}|${row.year}`, Number(row.victims || 0));
+const shrYearsByAgency = new Map<string, Set<number>>();
+for (const row of shrCounts) {
+  const agencyKey = `${row.state}|${row.ori.toUpperCase()}`;
+  shrByAgencyYear.set(`${agencyKey}|${row.year}`, Number(row.victims || 0));
+  (shrYearsByAgency.get(agencyKey) || (shrYearsByAgency.set(agencyKey, new Set()), shrYearsByAgency.get(agencyKey)!)).add(row.year);
+}
 
 const rows: Array<[string, string, number, number | null, number | null, string, string, string]> = [];
 for (const identity of identities) {
@@ -63,7 +68,7 @@ for (const identity of identities) {
   const histRows = selectedOri ? (prefix.length ? prefix : nameCandidates).filter((row) => row.ori === selectedOri) : [];
   const histByYear = new Map(histRows.map((row) => [row.year, row.murder]));
   const years = new Set<number>();
-  for (const row of shrCounts) if (row.state === state && row.ori.toUpperCase() === identity.ori.toUpperCase()) years.add(row.year);
+  for (const year of shrYearsByAgency.get(`${state}|${identity.ori.toUpperCase()}`) || []) years.add(year);
   for (const year of histByYear.keys()) years.add(year);
   for (const year of years) {
     const shrVictims = shrByAgencyYear.get(`${state}|${identity.ori.toUpperCase()}|${year}`) ?? 0;
