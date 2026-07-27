@@ -2820,14 +2820,20 @@ const GUARDRAILS: Guardrail[] = [
   // annual rows, which silently changes the requested measure.
   {
     name: "rolling-monthly-grain-required",
-    tabs: ["current", "historical", "nibrs", "shr"],
+    tabs: ["current", "historical", "nibrs", "shr", "hate_crime"],
     match: (ctx) => {
       if (!/\b(?:rolling|moving)\s*(?:over|for)?\s*\d*\s*months?\b|\b\d+\s*[- ]month\s+rolling\b/i.test(ctx.question)) return false;
       if (!/\bROWS\s+BETWEEN\s+\d+\s+PRECEDING\s+AND\s+CURRENT\s+ROW\b/i.test(ctx.sql)) return false;
       if (!/\bGROUP\s+BY\b[\s\S]*\byear\b/i.test(ctx.sql)) return false;
-      const finalSelect = ctx.sql.match(/^\s*SELECT\s+([\s\S]*?)\s+FROM\b/i)?.[1] || ctx.sql;
-      return !/\bmonth\b/i.test(finalSelect);
-    },
+      let depth = 0;
+      let finalSelectStart = 0;
+      for (let i = 0; i < ctx.sql.length - 6; i++) {
+        if (ctx.sql[i] === "(") depth++;
+        else if (ctx.sql[i] === ")") depth = Math.max(0, depth - 1);
+        else if (depth === 0 && /^SELECT\b/i.test(ctx.sql.slice(i))) finalSelectStart = i;
+      }
+      const finalSelect = ctx.sql.slice(finalSelectStart).match(/^\s*SELECT\s+([\s\S]*?)\s+FROM\b/i)?.[1] || ctx.sql.slice(finalSelectStart);
+      return !/\bmonth\b/i.test(finalSelect);    },
     message: () =>
       "[SYSTEM: The user asked for a rolling monthly total, but the SQL collapses the result to annual rows. Keep year and month in the final SELECT and GROUP BY, compute the rolling window over monthly rows, and filter only after the window is computed. Return one rolling value per month, not annual totals.]",
   },

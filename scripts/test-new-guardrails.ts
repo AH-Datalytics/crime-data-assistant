@@ -3142,6 +3142,22 @@ console.log("\n═══ nested-aggregation-discards-measure ═══\n");
     r.fired.includes("rolling-monthly-grain-required"),
     `fired: ${JSON.stringify(r.fired)}`);
 }
+{
+  const sql = `WITH monthly AS (
+    SELECT year, month, SUM(count) AS count
+    FROM hate_crime_monthly
+    GROUP BY year, month
+  ), rolling AS (
+    SELECT year, month, SUM(count) OVER (ORDER BY year, month ROWS BETWEEN 11 PRECEDING AND CURRENT ROW) AS rolling_12
+    FROM monthly
+  )
+  SELECT year, SUM(rolling_12) AS incidents FROM rolling GROUP BY year ORDER BY year`;
+  const ctx = extractQueryContext(sql, "Houston hate crimes rolling over 12 months", "hate_crime");
+  const r = runGuardrails(ctx);
+  assert("TP: hate-crime CTE rolling query cannot collapse to annual rows",
+    r.fired.includes("rolling-monthly-grain-required"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
 console.log(`SUMMARY: ${pass} passed, ${fail} failed out of ${pass + fail} tests`);
 console.log("=".repeat(60));
 

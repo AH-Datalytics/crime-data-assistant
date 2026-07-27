@@ -30,6 +30,8 @@ import {
   type QueryContractSqlValidation,
 } from "@/lib/query-contract-validator";
 import { partialCoverageRetryPrompt } from "@/lib/source-year-overlap";
+import { extractQueryContext } from "@/lib/query-context";
+import { runGuardrails } from "@/lib/guardrails";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function jsonResp(data: Record<string, any> | QueryError, status = 200) {
@@ -471,6 +473,26 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Shared SQL guardrails also apply to the dedicated Hate Crime route.
+    // This prevents rolling queries from executing after collapsing monthly
+    // windows into annual rows.
+    {
+      const guardrailResult = runGuardrails(extractQueryContext(sql, question, "hate_crime"));
+      for (const fired of guardrailResult.fired) {
+        if (!routeGuardrailsFired.includes(fired)) routeGuardrailsFired.push(fired);
+      }
+      sql = guardrailResult.sql;
+      if (guardrailResult.overrideResponse) {
+        const msg = guardrailResult.overrideResponse;
+        writeLog(question, sql, 0, `guardrail_override:${guardrailResult.overrideGuardrail}`, Date.now() - start, msg, "hate_crime", routeGuardrailsFired, "haiku-4.5", sessionId);
+        return jsonResp({ success: true, question, sql: null, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - start });
+      }
+      if (guardrailResult.needsFix) {
+        const msg = "I generated a rolling query at the wrong time grain. Please try the request again.";
+        writeLog(question, sql, 0, `guardrail_block:${guardrailResult.fired.join(",")}`, Date.now() - start, msg, "hate_crime", routeGuardrailsFired, "haiku-4.5", sessionId);
+        return jsonResp({ success: true, question, sql: null, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - start });
+      }
+    }
     // Step 2b: Incident count guardrail
     // If question asks for "hate crimes" / "incidents" and SQL uses COUNT(*) on raw
     // hate_crime_incidents without COUNT(DISTINCT ...), rewrite only the primary
