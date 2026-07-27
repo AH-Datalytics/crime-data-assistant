@@ -404,7 +404,7 @@ export async function POST(req: NextRequest) {
         ).get(explicitOri) as { canonical_agency?: string } | undefined;
         if (!identity) {
           const explanation = `I could not find ORI ${explicitOri} in the SHR agency identity data, so I cannot return a reliable result.`;
-          writeLog(question, null, 0, "shr_ori_not_in_source", Date.now() - start, explanation, "shr", ["deterministic-shooting", "shr-place-resolution-block"], "deterministic", sessionId);
+          writeLog(question, null, 0, "shr_ori_not_in_source", Date.now() - start, explanation, "shr", ["deterministic-shooting", "shr-place-resolution-block", "shr-ori-not-in-source"], "deterministic", sessionId);
           return jsonResp({ success: true, question, sql: null, explanation, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - start });
         }
         titlePlace = `ORI ${explicitOri} - ${identity.canonical_agency || "identified agency"}`;
