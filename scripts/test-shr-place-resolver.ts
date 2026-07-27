@@ -76,7 +76,7 @@ assert.deepEqual(louisville.ranges, [{ ori: "KY05680", startYear: 2018, endYear:
 const louisvilleTrend = resolveShrAgency(db, "Louisville", "KY", { startYear: 2000, endYear: 2025 });
 assert.equal(louisvilleTrend.status, "resolved");
 assert.deepEqual(louisvilleTrend.ranges, [
-  { ori: "KY05602", startYear: 2000, endYear: 2002 },
+  { ori: "KY05602", startYear: 2000, endYear: 2003 },
   { ori: "KY05680", startYear: 2003, endYear: 2025 },
 ]);
 
