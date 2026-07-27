@@ -203,6 +203,8 @@ function analyze(queries) {
       "nibrs-resolved-ori-warn-only": 0,
       "shr-place-resolution-block": 0,
       "shr-ori-not-in-source": 0,
+      "shr-resolved-ori-rewritten": 0,
+      "shr-resolved-ori-warn-only": 0,
     },
   };
 
@@ -647,6 +649,8 @@ function buildEmail(stats, issues, visitors, suggestions, weeklyTrends) {
     const warned = stats.resolverTags["nibrs-resolved-ori-warn-only"];
     const shrBlocked = stats.resolverTags["shr-place-resolution-block"];
     const shrMissing = stats.resolverTags["shr-ori-not-in-source"];
+    const shrRewritten = stats.resolverTags["shr-resolved-ori-rewritten"];
+    const shrWarned = stats.resolverTags["shr-resolved-ori-warn-only"];
     html += `<h2>Resolver Outcomes</h2>
     <div class="stat-grid">
       <div class="stat-box"><div class="stat-num">${resolved}</div><div class="stat-label">Resolved Queries</div></div>
@@ -654,6 +658,8 @@ function buildEmail(stats, issues, visitors, suggestions, weeklyTrends) {
       <div class="stat-box"><div class="stat-num" style="color:${warned > 0 ? "#f57c00" : "#4caf50"}">${warned}</div><div class="stat-label">Model ORI Warnings</div></div>
       <div class="stat-box"><div class="stat-num">${shrBlocked}</div><div class="stat-label">SHR Resolution Blocks</div></div>
       <div class="stat-box"><div class="stat-num">${shrMissing}</div><div class="stat-label">SHR ORIs Not Found</div></div>
+      <div class="stat-box"><div class="stat-num">${shrRewritten}</div><div class="stat-label">SHR ORI Rewrites</div></div>
+      <div class="stat-box"><div class="stat-num" style="color:${shrWarned > 0 ? "#f57c00" : "#4caf50"}">${shrWarned}</div><div class="stat-label">SHR ORI Warnings</div></div>
     </div>`;
   }
 
