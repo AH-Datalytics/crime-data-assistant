@@ -134,6 +134,16 @@ const ALL_TESTS: TestCase[] = [
   { id: "S08", question: "What percentage of murders involved a firearm by year since 1990?", tab: "shr", category: "shr", expect: "rows" },
   { id: "S09", question: "Percentage of inter racial homicide 1975-2023", tab: "shr", category: "shr", expect: "rows" },
   { id: "S10", question: "Break down homicide circumstances in Texas in 2023", tab: "shr", category: "shr", expect: "rows" },
+  // SHR resolver and completeness replay corpus.
+  { id: "SR01", question: "firearm murders in Houston and Dallas since 2018", tab: "shr", category: "shr-resolver", expect: "rows", sqlIncludes: ["CASE WHEN i.ori", "TXHPD00", "TXDPD00"] },
+  { id: "SR02", question: "firearm murders in New York City since 2018", tab: "shr", category: "shr-resolver", expect: "rows" },
+  { id: "SR03", question: "firearm murders in Las Vegas since 2018", tab: "shr", category: "shr-resolver", expect: "rows" },
+  { id: "SR04", question: "firearm murders in Louisville since 2018", tab: "shr", category: "shr-resolver", expect: "rows" },
+  { id: "SR05", question: "firearm murders in Charlotte since 2018", tab: "shr", category: "shr-resolver", expect: "rows" },
+  { id: "SR06", question: "firearm murders in New York since 2018", tab: "shr", category: "shr-resolver", expect: "clarification", responseIncludes: ["cannot safely identify"] },
+  { id: "SR07", question: "firearm murders in Lakewood, California since 2018", tab: "shr", category: "shr-resolver", expect: "clarification", responseIncludes: ["not represented"] },
+  { id: "SR08", question: "firearm murders for ORI TXHPD00 since 2018", tab: "shr", category: "shr-resolver", expect: "rows", sqlIncludes: ["i.ori = 'TXHPD00'"] },
+  { id: "SR09", question: "firearm murders for ORI ZZ00000 since 2018", tab: "shr", category: "shr-resolver", expect: "clarification", responseIncludes: ["could not find ORI"] },
 
   // ── NIBRS drug/arrest/hate/carjacking ──
   { id: "N01", question: "marijuana drug offenses nationally", tab: "nibrs", category: "nibrs", expect: "rows" },
