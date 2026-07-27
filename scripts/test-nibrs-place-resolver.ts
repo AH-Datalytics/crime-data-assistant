@@ -27,6 +27,11 @@ db.exec(`
     ('ILCHI0001', 2023, 'IL', 'CHICAGO', 'City', 2680000, '1A', 'N', 'E'),
     ('ILCHI0002', 2024, 'IL', 'CHICAGO', 'City', 2670000, '1A', 'N', 'E'),
     ('ILCHI0002', 2025, 'IL', 'CHICAGO', 'City', 2660000, '1A', 'N', 'E'),
+    ('TXDPD0000', 2021, 'TX', 'DALLAS', 'City', 1300000, '1A', 'N', 'E'),
+    ('TXDPD0000', 2022, 'TX', 'DALLAS', 'City', 1290000, '1A', 'N', 'E'),
+    ('TXDPD0000', 2023, 'TX', 'DALLAS', 'City', 1280000, '1A', 'N', 'E'),
+    ('TXDPD0000', 2024, 'TX', 'DALLAS', 'City', 1270000, '1A', 'N', 'E'),
+    ('TXDPD0000', 2025, 'TX', 'DALLAS', 'City', 1260000, '1A', 'N', 'E'),
     ('MO0480000', 2024, 'MO', 'JACKSON', 'County', 720000, '9A', 'N', 'E'),
     ('MO0480000', 2025, 'MO', 'JACKSON', 'County', 725000, '9A', 'N', 'E'),
     ('MO0482300', 2025, 'MO', 'JACKSON', 'County', 0, '9D', 'N', 'E'),
@@ -102,6 +107,15 @@ db.exec(`
   assert.ok(plan);
   assert.equal(plan.places[0].status, "covered");
   assert.match(plan.places[0].reason, /no active city-agency ORI/i);
+}
+
+{
+  const plan = resolveNibrsPlaces(
+    db,
+    "Compare murder rates in Dallas, TX and Lakewood, CA from 2021 to 2025"
+  );
+  assert.ok(plan);
+  assert.deepEqual(plan.places.map((place) => place.status), ["resolved", "covered"]);
 }
 
 {

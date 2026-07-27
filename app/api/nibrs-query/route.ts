@@ -307,11 +307,11 @@ export async function POST(req: NextRequest) {
     const blockingResolution = deterministicResolution?.places.find((place) =>
       place.status === "ambiguous" || place.status === "covered"
     );
-    if (blockingResolution && deterministicResolution?.places.length === 1) {
+    if (blockingResolution && deterministicResolution) {
       const executionMs = Date.now() - routeStart;
       const explanation = blockingResolution.status === "covered"
-        ? `${blockingResolution.label} has no active city-agency ORI for ${deterministicResolution.startYear}-${deterministicResolution.endYear}. It may be inactive or served under a contract/coverage arrangement, but this database does not identify a covering agency that can be safely attributed to the city. I won't substitute countywide data or another agency.`
-        : `I found multiple possible NIBRS agencies for ${blockingResolution.label}. Please name the specific department or jurisdiction so I do not combine unrelated agencies.`;
+        ? `${blockingResolution.label} has no active city-agency ORI for ${deterministicResolution.startYear}-${deterministicResolution.endYear}. It may be inactive or served under a contract/coverage arrangement, but this database does not identify a covering agency that can be safely attributed to the city. I won't substitute countywide data or another agency${deterministicResolution.places.length > 1 ? " in this comparison" : ""}.`
+        : `I found multiple possible NIBRS agencies for ${blockingResolution.label}. Please name the specific department or jurisdiction so I do not combine unrelated agencies${deterministicResolution.places.length > 1 ? " in this comparison" : ""}.`;
       writeNibrsLog(question, null, 0, null, executionMs, explanation, ["nibrs-place-resolution-block"], "deterministic", sessionId);
       return jsonResp({
         success: true,

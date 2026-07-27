@@ -200,6 +200,7 @@ import {
 for (const question of [
   "Murder rate for teenagers in Chicago since 2019",
   "Murder rate for elderly residents in Chicago since 2019",
+  "Murder rate for the elderly in Chicago since 2019",
   "Women's robbery victimization rate in Chicago",
 ]) {
   assert.equal(

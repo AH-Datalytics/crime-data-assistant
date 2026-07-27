@@ -197,6 +197,11 @@ function analyze(queries) {
     unknownAgencies: [],
     guardrailFires: {},  // { guardrailName: count }
     guardrailTotal: 0,   // queries where at least 1 guardrail fired
+    resolverTags: {
+      "nibrs-place-resolved": 0,
+      "nibrs-place-resolution-block": 0,
+      "nibrs-resolved-ori-warn-only": 0,
+    },
   };
 
   const msTimes = [];
@@ -391,7 +396,10 @@ function analyze(queries) {
       stats.guardrailTotal++;
       for (const g of q.guardrails.split(",")) {
         const name = g.trim();
-        if (name) stats.guardrailFires[name] = (stats.guardrailFires[name] || 0) + 1;
+        if (name) {
+          stats.guardrailFires[name] = (stats.guardrailFires[name] || 0) + 1;
+          if (Object.hasOwn(stats.resolverTags, name)) stats.resolverTags[name]++;
+        }
       }
     }
   }
@@ -630,6 +638,19 @@ function buildEmail(stats, issues, visitors, suggestions, weeklyTrends) {
     }
   }
 
+  const resolverTotal = Object.values(stats.resolverTags).reduce((sum, count) => sum + count, 0);
+  if (resolverTotal > 0) {
+    const resolved = stats.resolverTags["nibrs-place-resolved"];
+    const blocked = stats.resolverTags["nibrs-place-resolution-block"];
+    const warned = stats.resolverTags["nibrs-resolved-ori-warn-only"];
+    html += `<h2>NIBRS Resolver</h2>
+    <div class="stat-grid">
+      <div class="stat-box"><div class="stat-num">${resolved}</div><div class="stat-label">Resolved Queries</div></div>
+      <div class="stat-box"><div class="stat-num">${blocked}</div><div class="stat-label">Unsafe Resolutions Blocked</div></div>
+      <div class="stat-box"><div class="stat-num" style="color:${warned > 0 ? "#f57c00" : "#4caf50"}">${warned}</div><div class="stat-label">Model ORI Warnings</div></div>
+    </div>`;
+  }
+
   // Traffic sources section (top of email)
   if (visitors) {
     const yesterdayLabel = new Date(cutoff).toLocaleDateString("en-US", {
@@ -825,7 +846,7 @@ function buildEmail(stats, issues, visitors, suggestions, weeklyTrends) {
   if (guardrailEntries.length > 0) {
     const pct = stats.total > 0 ? ((stats.guardrailTotal / stats.total) * 100).toFixed(1) : "0";
     html += `<h2>Guardrails</h2>
-    <p style="font-size:13px;color:#666;margin-bottom:12px;">${stats.guardrailTotal} of ${stats.total} queries triggered a guardrail (${pct}%). Each guardrail fire means Claude's initial SQL was wrong and was caught server-side.</p>
+    <p style="font-size:13px;color:#666;margin-bottom:12px;">${stats.guardrailTotal} of ${stats.total} queries triggered a routing or validation safeguard (${pct}%). Some entries are informational resolver outcomes; retry and override tags indicate corrected model behavior.</p>
     <table style="width:100%;border-collapse:collapse;font-size:13px;margin:12px 0;">
       <thead>
         <tr style="border-bottom:2px solid #ddd;">

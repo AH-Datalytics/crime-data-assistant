@@ -124,6 +124,7 @@ function assert(name: string, condition: boolean, detail?: string) {
 for (const question of [
   "Murder rate for teenagers in Chicago since 2019",
   "Murder rate for elderly residents in Chicago since 2019",
+  "Murder rate for the elderly in Chicago since 2019",
   "Crime rate for seniors in Chicago since 2019",
   "Crime rate for kids in Chicago since 2019",
   "Crime rate for children in Chicago since 2019",
