@@ -20,6 +20,8 @@ type IdentityRow = {
   agency_type: "City" | "County" | "Other";
   first_year: number;
   last_year: number;
+  incident_count: number;
+  source_agency_names: string;
 };
 
 const cache = new WeakMap<Database.Database, Map<string, ShrResolvedAgency>>();
@@ -65,7 +67,7 @@ export function resolveShrAgency(
   const allowed = requestedType(options.kind);
   const typeSql = allowed ? " AND a.agency_type IN (" + allowed.map(() => "?").join(",") + ")" : "";
   const rows = db.prepare(
-    "SELECT DISTINCT a.ori, a.canonical_agency, a.agency_type, i.first_year, i.last_year " +
+    "SELECT DISTINCT a.ori, a.canonical_agency, a.agency_type, i.first_year, i.last_year, i.incident_count, i.source_agency_names " +
     "FROM shr_agency_alias a " +
     "JOIN shr_agency_identity i ON i.ori = a.ori AND upper(i.state) = upper(a.state) " +
     "WHERE upper(a.state) = ? AND a.alias_key = ?" + typeSql +
@@ -77,7 +79,7 @@ export function resolveShrAgency(
     entries.set(key, result);
     return result;
   }
-  const active = rows.filter((row) => row.last_year >= startYear && row.first_year <= endYear);
+  let active = rows.filter((row) => row.last_year >= startYear && row.first_year <= endYear);
   if (active.length === 0) {
     const result = unavailable("not_in_source", "SHR has no records for " + requestedName + ", " + normalizedState + ", during " + startYear + "-" + endYear + ".");
     entries.set(key, result);
@@ -92,6 +94,13 @@ export function resolveShrAgency(
     };
     entries.set(key, result);
     return result;
+  }
+  if (active.length > 1 && distinctLabels.length === 1) {
+    const ranked = [...active].sort((a, b) => b.incident_count - a.incident_count);
+    const sameSourceName = ranked.every((row) => row.source_agency_names === ranked[0].source_agency_names);
+    if (sameSourceName && ranked[0].incident_count >= ranked[1].incident_count * 10) {
+      active = [ranked[0]];
+    }
   }
   const ranges = active.map((row) => ({
     ori: row.ori,

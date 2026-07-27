@@ -28,11 +28,16 @@ db.exec(`
     ('Metro', 'METRO', 'TXMETRO2', 'TX', 'Metro Two', 'Other', 'test'),
     ('Legacy', 'LEGACY', 'TXLEGACY1', 'TX', 'Legacy', 'City', 'test'),
     ('Legacy', 'LEGACY', 'TXLEGACY2', 'TX', 'Legacy', 'City', 'test');
+  INSERT INTO shr_agency_alias VALUES
+    ('Dominant', 'DOMINANT', 'TXDOMINANT1', 'TX', 'Dominant', 'City', 'test'),
+    ('Dominant', 'DOMINANT', 'TXDOMINANT2', 'TX', 'Dominant', 'City', 'test');
   INSERT INTO shr_agency_identity VALUES
     ('TXMETRO1', 'TX', 'Metro One', 'Other', 'METRO ONE', 'Metro One', 'Other', NULL, NULL, 2, 2000, 2020),
     ('TXMETRO2', 'TX', 'Metro Two', 'Other', 'METRO TWO', 'Metro Two', 'Other', NULL, NULL, 2, 2000, 2020),
     ('TXLEGACY1', 'TX', 'Legacy', 'City', 'LEGACY', 'Legacy', 'City', NULL, NULL, 2, 2000, 2015),
-    ('TXLEGACY2', 'TX', 'Legacy', 'City', 'LEGACY', 'Legacy', 'City', NULL, NULL, 2, 2010, 2020);
+    ('TXLEGACY2', 'TX', 'Legacy', 'City', 'LEGACY', 'Legacy', 'City', NULL, NULL, 2, 2010, 2020),
+    ('TXDOMINANT1', 'TX', 'Dominant', 'City', 'DOMINANT', 'Dominant', 'City', NULL, NULL, 100, 2000, 2025),
+    ('TXDOMINANT2', 'TX', 'Dominant', 'City', 'DOMINANT', 'Dominant', 'City', NULL, NULL, 5, 2000, 2025);
 `);
 
 const houston = resolveShrAgency(db, "Houston Police Department", "TX", { startYear: 2010, endYear: 2020 });
@@ -55,6 +60,10 @@ assert.equal(ambiguousAgency.status, "ambiguous");
 
 const overlapping = resolveShrAgency(db, "Legacy", "TX", { startYear: 2010, endYear: 2015 });
 assert.equal(overlapping.status, "ambiguous");
+
+const dominant = resolveShrAgency(db, "Dominant", "TX", { startYear: 2010, endYear: 2015 });
+assert.equal(dominant.status, "resolved");
+assert.deepEqual(dominant.oris, ["TXDOMINANT1"]);
 
 db.close();
 console.log("SHR place resolver tests passed");
