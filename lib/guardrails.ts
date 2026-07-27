@@ -2815,6 +2815,22 @@ const GUARDRAILS: Guardrail[] = [
       "[SYSTEM: The user explicitly asked for raw/non-rolling values, but your SQL contains a rolling window (ROWS BETWEEN ... PRECEDING). Remove the rolling window and return raw monthly or annual counts.]",
   },
 
+  // Rolling queries must return a monthly grain. A model can otherwise
+  // compute a window over monthly data and then collapse the result to
+  // annual rows, which silently changes the requested measure.
+  {
+    name: "rolling-monthly-grain-required",
+    tabs: ["current", "historical", "nibrs", "shr"],
+    match: (ctx) => {
+      if (!/\b(?:rolling|moving)\s*(?:over|for)?\s*\d*\s*months?\b|\b\d+\s*[- ]month\s+rolling\b/i.test(ctx.question)) return false;
+      if (!/\bROWS\s+BETWEEN\s+\d+\s+PRECEDING\s+AND\s+CURRENT\s+ROW\b/i.test(ctx.sql)) return false;
+      if (!/\bGROUP\s+BY\b[\s\S]*\byear\b/i.test(ctx.sql)) return false;
+      const finalSelect = ctx.sql.match(/^\s*SELECT\s+([\s\S]*?)\s+FROM\b/i)?.[1] || ctx.sql;
+      return !/\bmonth\b/i.test(finalSelect);
+    },
+    message: () =>
+      "[SYSTEM: The user asked for a rolling monthly total, but the SQL collapses the result to annual rows. Keep year and month in the final SELECT and GROUP BY, compute the rolling window over monthly rows, and filter only after the window is computed. Return one rolling value per month, not annual totals.]",
+  },
   // Window LAG/LEAD filter-before-window bug
   {
     name: "window-lag-filter-before-window",

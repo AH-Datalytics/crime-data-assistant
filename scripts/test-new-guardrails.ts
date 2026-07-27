@@ -3131,6 +3131,17 @@ console.log("\n═══ nested-aggregation-discards-measure ═══\n");
     !r.fired.includes("nibrs-dv-wrong-table") && !r.fired.includes("nibrs-cross-summary-join"),
     `fired: ${JSON.stringify(r.fired)}`);
 }
+{
+  const sql = `SELECT year, SUM(rolling_12) AS incidents FROM (
+    SELECT year, month, SUM(count) OVER (ORDER BY year, month ROWS BETWEEN 11 PRECEDING AND CURRENT ROW) AS rolling_12
+    FROM monthly_counts GROUP BY year, month
+  ) GROUP BY year ORDER BY year`;
+  const ctx = extractQueryContext(sql, "Houston hate crimes rolling over 12 months", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("TP: rolling monthly query cannot collapse to annual rows",
+    r.fired.includes("rolling-monthly-grain-required"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
 console.log(`SUMMARY: ${pass} passed, ${fail} failed out of ${pass + fail} tests`);
 console.log("=".repeat(60));
 
