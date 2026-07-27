@@ -19,10 +19,14 @@ db.exec(`
     ('Houston Police Department', 'HOUSTON POLICE DEPARTMENT', 'TXHOUSTON', 'TX', 'Houston', 'City', 'test'),
     ('Houston Police Department', 'HOUSTON', 'TXHOUSTON', 'TX', 'Houston', 'City', 'test'),
     ('Amarillo', 'AMARILLO', 'TXAMARILLO', 'TX', 'Amarillo', 'City', 'test');
+  INSERT INTO shr_agency_alias VALUES
+    ('Louisville', 'LOUISVILLE', 'KY05602', 'KY', 'Louisville', 'City', 'test');
     
   INSERT INTO shr_agency_identity VALUES
     ('TXHOUSTON', 'TX', 'Houston', 'City', 'HOUSTON', 'Houston', 'City', NULL, NULL, 10, 1990, 2025),
-    ('TXAMARILLO', 'TX', 'Amarillo', 'City', 'AMARILLO', 'Amarillo', 'City', NULL, NULL, 5, 2020, 2026);
+    ('TXAMARILLO', 'TX', 'Amarillo', 'City', 'AMARILLO', 'Amarillo', 'City', NULL, NULL, 5, 2020, 2026),
+    ('KY05602', 'KY', 'Louisville', 'City', 'LOUISVILLE', 'Louisville', 'City', NULL, NULL, 10, 1976, 2003),
+    ('KY05680', 'KY', 'Louisville Metro', 'City', 'LOUISVILLE METRO', 'Louisville Metro', 'City', NULL, NULL, 20, 2003, 2025);
   INSERT INTO shr_agency_alias VALUES
     ('Metro', 'METRO', 'TXMETRO1', 'TX', 'Metro One', 'Other', 'test'),
     ('Metro', 'METRO', 'TXMETRO2', 'TX', 'Metro Two', 'Other', 'test'),
@@ -64,6 +68,17 @@ assert.equal(overlapping.status, "ambiguous");
 const dominant = resolveShrAgency(db, "Dominant", "TX", { startYear: 2010, endYear: 2015 });
 assert.equal(dominant.status, "resolved");
 assert.deepEqual(dominant.oris, ["TXDOMINANT1"]);
+
+const louisville = resolveShrAgency(db, "Louisville", "KY", { startYear: 2018, endYear: 2025 });
+assert.equal(louisville.status, "resolved");
+assert.deepEqual(louisville.oris, ["KY05680"]);
+assert.deepEqual(louisville.ranges, [{ ori: "KY05680", startYear: 2018, endYear: 2025 }]);
+const louisvilleTrend = resolveShrAgency(db, "Louisville", "KY", { startYear: 2000, endYear: 2025 });
+assert.equal(louisvilleTrend.status, "resolved");
+assert.deepEqual(louisvilleTrend.ranges, [
+  { ori: "KY05602", startYear: 2000, endYear: 2002 },
+  { ori: "KY05680", startYear: 2003, endYear: 2025 },
+]);
 
 const labelCase = buildShrCanonicalLabelCase([
   { oris: ["TXHPD00"], label: "Houston" },

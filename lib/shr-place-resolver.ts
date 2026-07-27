@@ -34,6 +34,12 @@ type IdentityRow = {
   source_agency_names: string;
 };
 
+// SHR keeps Louisville's pre-merger and successor agencies under different ORIs.
+// Resolve the public place name to the later ORI for post-merger requests.
+const SUCCESSION_CHAINS = [
+  { state: "KY", aliasKey: "LOUISVILLE", label: "Louisville / Louisville Metro", oris: ["KY05602", "KY05680"] },
+] as const;
+
 const cache = new WeakMap<Database.Database, Map<string, ShrResolvedAgency>>();
 
 function tableExists(db: Database.Database, table: string): boolean {
@@ -90,10 +96,49 @@ export function resolveShrAgency(
     return result;
   }
   let active = rows.filter((row) => row.last_year >= startYear && row.first_year <= endYear);
-  if (active.length === 0) {
+  if (active.length === 0 && !SUCCESSION_CHAINS.some((candidate) =>
+    candidate.state === normalizedState && candidate.aliasKey === agencySearchKey(requestedName)
+  )) {
     const result = unavailable("not_in_source", "SHR has no records for " + requestedName + ", " + normalizedState + ", during " + startYear + "-" + endYear + ".");
     entries.set(key, result);
     return result;
+  }
+  const succession = SUCCESSION_CHAINS.find((candidate) =>
+    candidate.state === normalizedState && candidate.aliasKey === agencySearchKey(requestedName)
+  );
+  if (succession) {
+    const chainRows = db.prepare(
+      "SELECT ori, canonical_agency, agency_type, first_year, last_year, incident_count, source_agency_names " +
+      "FROM shr_agency_identity WHERE upper(state) = ? AND ori IN (" + succession.oris.map(() => "?").join(",") + ")"
+    ).all(normalizedState, ...succession.oris) as IdentityRow[];
+    if (chainRows.length === succession.oris.length) {
+      const chainRanges = chainRows
+        .map((row) => ({ ori: row.ori, startYear: Math.max(startYear, row.first_year), endYear: Math.min(endYear, row.last_year) }))
+        .filter((range) => range.startYear <= range.endYear)
+        .sort((a, b) => a.startYear - b.startYear || a.endYear - b.endYear);
+      for (let index = 1; index < chainRanges.length; index++) {
+        const previous = chainRanges[index - 1];
+        const current = chainRanges[index];
+        if (previous.endYear >= current.startYear) {
+          if (previous.endYear === current.startYear) previous.endYear = current.startYear - 1;
+          else {
+            const result = unavailable("ambiguous", "Overlapping SHR succession ranges would combine multiple agencies in the same year.");
+            entries.set(key, result);
+            return result;
+          }
+        }
+      }
+      const ranges = chainRanges.filter((range) => range.startYear <= range.endYear);
+      if (ranges.length > 0) {
+        const result = {
+          requestedName, label: succession.label, state: normalizedState, agencyType: chainRows[0].agency_type,
+          status: "resolved" as const, confidence: "high" as const, oris: [...new Set(ranges.map((range) => range.ori))], ranges,
+          reason: "Resolved through SHR agency succession for " + succession.label + ".",
+        };
+        entries.set(key, result);
+        return result;
+      }
+    }
   }
   const distinctLabels = [...new Set(active.map((row) => row.canonical_agency))];
   if (distinctLabels.length > 1) {

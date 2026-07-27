@@ -418,7 +418,7 @@ const SESSIONS: SessionDef[] = [
     name: "SHR resolver follow-up preserves resolved geography",
     steps: [
       { question: "firearm murders in Houston since 2018", tab: "shr", expect: "rows", sqlIncludes: ["TXHPD00"], note: "Lead-in resolver query." },
-      { question: "compare to Dallas", tab: "shr", expect: "rows", note: "History-bearing follow-up must preserve the SHR source and resolve the comparison explicitly." },
+      { question: "compare to Dallas", tab: "shr", expect: "rows", sqlIncludes: ["TXHPD00", "TXDPD00"], note: "History-bearing follow-up must preserve the SHR source and resolve the comparison explicitly." },
     ],
   },
 ];
