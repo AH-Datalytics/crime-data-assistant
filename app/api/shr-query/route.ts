@@ -411,7 +411,10 @@ export async function POST(req: NextRequest) {
             if (!db) {
               return jsonResp({ success: false, error: "SHR database not available." } as QueryError, 500);
             }
-            const resolvedCities = cities.map((city) => resolveShrAgency(db, city.agency, city.state!, { kind: "city" }));
+            const resolvedCities = cities.map((city) => {
+              const resolutionName = city.agencyLike ? city.display : city.agency;
+              return resolveShrAgency(db, resolutionName, city.state!, { kind: "city" });
+            });
             const blockedCity = resolvedCities.find((place) => place.status !== "resolved");
             if (blockedCity) {
               const comparisonNote = cities.length > 1 ? " in this comparison" : "";
