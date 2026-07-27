@@ -413,6 +413,14 @@ const SESSIONS: SessionDef[] = [
       },
     ],
   },
+  {
+    id: "MS08",
+    name: "SHR resolver follow-up preserves resolved geography",
+    steps: [
+      { question: "firearm murders in Houston since 2018", tab: "shr", expect: "rows", sqlIncludes: ["TXHPD00"], note: "Lead-in resolver query." },
+      { question: "compare to Dallas", tab: "shr", expect: "rows", note: "History-bearing follow-up must preserve the SHR source and resolve the comparison explicitly." },
+    ],
+  },
 ];
 
 // ══════════════════════════════════════════════════════════════════════
