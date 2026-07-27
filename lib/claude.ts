@@ -280,7 +280,7 @@ WHERE year >= 2018
 ORDER BY year, month
 \`\`\`
 Note: The CTE has NO date filter so the rolling window has full lead-in data. The outer WHERE starts at 2018 (not 2017) because the first 11 months of 2017 don't have a full rolling window.
-**IMPORTANT**: When the user says "rolling 12-month since X" or "rolling since X", X is the **chart/display start year**, NOT the data start. The CTE must always have NO date filter. The outer WHERE should use year >= X. For example, "rolling 12-month murders since 2020" means: CTE fetches all data, outer query uses WHERE year >= 2020.
+**IMPORTANT**: When the user says "rolling 12-month since X" or "rolling since X", X is the **chart/display start year**, NOT the data start. The CTE must always have NO date filter. The outer result must exclude the first 11 lead-in rows so every displayed value is a complete 12-month window; never display partial-window values at the beginning as zeros or totals. The outer WHERE should use year >= X after the complete-window boundary is applied. For example, "rolling 12-month murders since 2020" means: CTE fetches all data, computes the window, then the outer query displays only complete windows from 2020 onward.
 
 ### Per-state rolling 12-month trend
 Use this when a user asks to split a national rolling trend out by state. Keep the same complete-reporter methodology by joining \`agency_monthly\` to \`sample_agencies\`, and partition the rolling window by state.

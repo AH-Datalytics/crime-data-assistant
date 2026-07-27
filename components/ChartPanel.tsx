@@ -174,18 +174,13 @@ function yearTicksForYM(data: Record<string, unknown>[], xKey: string): string[]
   if (vals.length === 0) return [];
   const years = [...new Set(vals.map((v) => v.slice(0, 4)))].sort();
 
-  // ≤2 years of data → show every month
-  if (years.length <= 2) {
-    return vals;
-  }
-
-  // pick January of each year that exists in the data
+  // Multi-year monthly charts use one tick per year.
   const ticks: string[] = [];
   for (const y of years) {
     const jan = `${y}01`;
-    if (vals.includes(jan)) ticks.push(jan);
+    ticks.push(vals.includes(jan) ? jan : vals.find((v) => v.startsWith(y))!);
   }
-  // if too many ticks (>10), thin them out evenly
+  // If too many ticks (>10), thin them out evenly
   if (ticks.length > 10) {
     const step = Math.ceil(ticks.length / 8);
     const thinned = ticks.filter((_, i) => i % step === 0);
@@ -326,7 +321,7 @@ function ChartPanel({ config, rows, meta }: ChartPanelProps) {
     const yearTicks = plainYears ? decadeTicksForYears(chartData, xAxisDataKey) : [];
 
     // Compute explicit tick positions for even spacing
-    const fewYearsMonthly = ym && !singleYearMonthly && dataYears.size <= 2;
+    const fewYearsMonthly = false;
     const ymTicks = ym && !singleYearMonthly ? yearTicksForYM(chartData, xKey) : [];
     const dailyTicks = daily ? monthTicksForDaily(chartData, config.xAxis) : [];
     const dailySingleYear = daily && new Set(dailyTicks.map(t => t.slice(0, 4))).size <= 1;
