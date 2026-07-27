@@ -10,6 +10,8 @@ interface GettingStartedProps {
   onAsk?: (question: string) => void;
   /** Render the ask bar below the hero in ask mode */
   renderInputBar?: () => React.ReactNode;
+  /** Hide the intro copy (keeping its space) while floating guidance covers it */
+  dimIntro?: boolean;
 }
 
 const TAB_CARDS: {
@@ -131,7 +133,7 @@ const SAMPLE_QUERIES: Record<TabId, { q: string; why: string }[]> = {
   ],
 };
 
-export default function GettingStarted({ onSelectTab, onAsk, renderInputBar }: GettingStartedProps) {
+export default function GettingStarted({ onSelectTab, onAsk, renderInputBar, dimIntro = false }: GettingStartedProps) {
   const showTutorial = true;
   const askMode = !!onAsk;
   const enabled = enabledSourceIds();
@@ -159,7 +161,7 @@ export default function GettingStarted({ onSelectTab, onAsk, renderInputBar }: G
             </div>
           )}
 
-          <p className="text-[13px] sm:text-[15px] text-[var(--muted)] max-w-3xl mx-auto leading-loose">
+          <p className={`text-[13px] sm:text-[15px] text-[var(--muted)] max-w-3xl mx-auto leading-loose transition-opacity duration-200 ${dimIntro ? "opacity-0" : "opacity-100"}`}>
             {askMode
               ? `Crime statistics come from multiple datasets covering different time periods, detail levels, and offense types. These sources approach crime data differently and can sometimes provide different answers to the same question. Be as specific as you can about the crime, place, and timeframe of your question, and the assistant will automatically pick the best source. More information on sourcing is provided below.`
               : "Nearly a century of crime data history. Choose a data source to start or read the guide below."}

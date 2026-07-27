@@ -134,6 +134,8 @@ export default function WorkspaceChat({ sourceYearRanges }: WorkspaceChatProps) 
   const [response, setResponse] = useState<QueryResponse | null>(null);
   const [error, setError] = useState("");
   const [lastQuestion, setLastQuestion] = useState("");
+  const [landingGuidanceOpen, setLandingGuidanceOpen] = useState(false);
+  const [guidanceAttention, setGuidanceAttention] = useState(0);
   const [showChart, setShowChart] = useState(true);
   const [showTable, setShowTable] = useState(true);
   const chartRef = useRef<HTMLDivElement>(null);
@@ -150,7 +152,9 @@ export default function WorkspaceChat({ sourceYearRanges }: WorkspaceChatProps) 
     setShowDisambiguation(false);
   }, []);
   const inputBlockedByGuidance = hasBlockingQueryGuidanceWarnings(input);
-  const inputSubmitDisabled = !input.trim() || loading || inputBlockedByGuidance;
+  // Keep the button clickable while guidance-blocked so a click can pulse the
+  // guidance card (handleAsk refuses blocked submits itself).
+  const inputSubmitDisabled = !input.trim() || loading;
   const askButtonClass = inputBlockedByGuidance
     ? "border border-[#475EC7]/30 bg-white text-[#475EC7] cursor-not-allowed"
     : !input.trim() || loading
@@ -247,7 +251,11 @@ export default function WorkspaceChat({ sourceYearRanges }: WorkspaceChatProps) 
   const handleAsk = useCallback((question: string) => {
     const q = question.trim();
     if (!q) return;
-    if (hasBlockingQueryGuidanceWarnings(q)) return;
+    if (hasBlockingQueryGuidanceWarnings(q)) {
+      // Blocked submit: pulse the guidance card so the refusal is explained.
+      setGuidanceAttention((n) => n + 1);
+      return;
+    }
     setShowDisambiguation(false);
 
     const chartOnlyResponse = applyChartOnlyCustomization(q, response);
@@ -405,6 +413,8 @@ export default function WorkspaceChat({ sourceYearRanges }: WorkspaceChatProps) 
                     showExamples={false}
                     compact
                     floating
+                    onApplyAction={handleAsk}
+                    attentionSignal={guidanceAttention}
                   />
                   <QueryPlanChips input={input} selectedSource={source} activeSource={activeSource} />
                 </div>
@@ -480,6 +490,7 @@ export default function WorkspaceChat({ sourceYearRanges }: WorkspaceChatProps) 
         <GettingStarted
           onSelectTab={(tab) => { setSource(tab); }}
           onAsk={(q) => { setInput(q); handleAsk(q); }}
+          dimIntro={landingGuidanceOpen}
           renderInputBar={() => (
             <div className="relative">
               <form onSubmit={(e) => { e.preventDefault(); handleAsk(input); }} className="flex flex-col sm:flex-row gap-2">
@@ -492,7 +503,7 @@ export default function WorkspaceChat({ sourceYearRanges }: WorkspaceChatProps) 
                     className="w-full min-w-0 px-4 py-2.5 text-[14px] border border-[var(--border)] rounded-xl focus:outline-none focus:border-[#475EC7] focus:ring-2 focus:ring-[#475EC7]/20 bg-white shadow-sm"
                     disabled={loading}
                     />
-                    <QueryGuidance input={input} onChangeInput={setGuidedInput} showExamples={false} floating />
+                    <QueryGuidance input={input} onChangeInput={setGuidedInput} showExamples={false} floating onFloatingOpenChange={setLandingGuidanceOpen} onApplyAction={handleAsk} attentionSignal={guidanceAttention} />
                     <QueryPlanChips input={input} selectedSource={source} activeSource={activeSource} />
                   </div>
                 <button
@@ -651,10 +662,13 @@ export default function WorkspaceChat({ sourceYearRanges }: WorkspaceChatProps) 
               <div className="flex-1 flex flex-col p-3 sm:p-5 lg:p-6 min-h-0">
                 {/* Source badge */}
                 {activeSource && (
-                  <div className="mb-2 shrink-0 flex items-center gap-2 flex-wrap">
-                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded text-white uppercase tracking-wider" style={{ backgroundColor: accentColor }}>{TAB_DISPLAY_NAMES[activeSource]}</span>
-                    {exchanges[activeExchangeIdx]?.routingReason && <span className="text-[11px] text-[var(--muted)]">{exchanges[activeExchangeIdx].routingReason}</span>}
-                    {rerunControl}
+                  <div className="mb-2 shrink-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded text-white uppercase tracking-wider" style={{ backgroundColor: accentColor }}>{TAB_DISPLAY_NAMES[activeSource]}</span>
+                      {exchanges[activeExchangeIdx]?.routingReason && <span className="text-[11px] text-[var(--muted)]">{exchanges[activeExchangeIdx].routingReason}</span>}
+                      {rerunControl}
+                    </div>
+                    <QueryPlanChips input={exchanges[activeExchangeIdx]?.question || lastQuestion} selectedSource={activeSource} activeSource={activeSource} variant="result" />
                   </div>
                 )}
                 {sourceNudgeBanner}

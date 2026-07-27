@@ -117,6 +117,14 @@ h1, h2, h3, h4, h5, h6 {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
 }
+/* Floating query-guidance card entrance */
+.guidance-pop-in { animation: fadeIn 0.18s ease-out; }
+/* Blocked-submit attention pulse on the guidance card */
+@keyframes guidancePulse {
+  0%, 100% { box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1); }
+  50% { box-shadow: 0 0 0 3px rgba(71, 94, 199, 0.45), 0 10px 15px -3px rgb(0 0 0 / 0.1); }
+}
+.guidance-attention { animation: guidancePulse 0.5s ease-in-out 2; }
 
 /* Tab content fade-in */
 .tab-fade-in {

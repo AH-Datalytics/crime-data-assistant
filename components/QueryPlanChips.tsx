@@ -8,7 +8,10 @@ type QueryPlanChipsProps = {
   input: string;
   selectedSource: PickerSourceId;
   activeSource: SourceId | null;
+  variant?: "input" | "result";
 };
+
+const RESULT_STALE_VALUES = new Set(["Unclear", "Needs choice", "Needs metric", "Unspecified", "Auto"]);
 
 const STATUS_CLASS = {
   ok: "border-[#DDE3EE] bg-white text-[var(--foreground)]",
@@ -17,13 +20,25 @@ const STATUS_CLASS = {
   empty: "border-[var(--border)] bg-[var(--surface)] text-[var(--muted)]",
 };
 
-export default function QueryPlanChips({ input, selectedSource, activeSource }: QueryPlanChipsProps) {
+export default function QueryPlanChips({ input, selectedSource, activeSource, variant = "input" }: QueryPlanChipsProps) {
   const plan = useMemo(() => buildQueryPlan(input, selectedSource, activeSource), [input, selectedSource, activeSource]);
   if (!plan) return null;
 
+  // Result variant: provenance for a query that already ran. The source badge
+  // covers the source chip, and picker statuses are stale once resolved.
+  const chips = variant === "result"
+    ? plan.chips
+        .filter((chip) => chip.key !== "source" && chip.status !== "empty" && !RESULT_STALE_VALUES.has(chip.value))
+        .map((chip) => ({ ...chip, status: "ok" as const }))
+    : plan.chips;
+  if (variant === "result" && chips.length < 2) return null;
+
   return (
     <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-      {plan.chips.map((chip) => (
+      {variant === "result" && (
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">Understood as</span>
+      )}
+      {chips.map((chip) => (
         <span
           key={chip.key}
           className={`inline-flex max-w-full items-center gap-1 rounded-md border px-2 py-1 text-[10px] leading-none shadow-[0_1px_0_rgba(0,0,0,0.02)] ${STATUS_CLASS[chip.status]}`}
