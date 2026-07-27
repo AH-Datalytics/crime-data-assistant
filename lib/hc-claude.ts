@@ -164,7 +164,7 @@ WITH monthly AS (
   GROUP BY ym
 ),
 bounds AS (SELECT MIN(ym) AS start_ym, MAX(ym) AS end_ym FROM monthly),
-spine(ym) AS (
+spine (ym) AS (
   SELECT start_ym FROM bounds
   UNION ALL
   SELECT strftime('%Y-%m', date(ym || '-01', '+1 month')) FROM spine, bounds WHERE ym < end_ym

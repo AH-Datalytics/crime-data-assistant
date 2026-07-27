@@ -158,7 +158,7 @@ One row per victim. JOINs to incidents on incident_id.
       WHERE i.agency = 'Houston' AND i.state = 'TX' AND (i.agency_type = 'City' OR i.agency_type IS NULL OR i.agency_type = '') AND i.homicide_type = 'Murder' AND i.weapon_group = 'Firearm' AND i.month BETWEEN 1 AND 12
       GROUP BY ym
     ), bounds AS (SELECT MIN(ym) AS start_ym, MAX(ym) AS end_ym FROM monthly),
-    spine(ym) AS (
+    spine (ym) AS (
       SELECT start_ym FROM bounds
       UNION ALL
       SELECT strftime('%Y-%m', date(ym || '-01', '+1 month')) FROM spine, bounds WHERE ym < end_ym

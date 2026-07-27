@@ -31,7 +31,7 @@ function extractCteNames(sql: string): Set<string> {
     if (depth === 0 && /^\s*SELECT\b/i.test(cleaned.slice(i))) break;
 
     if (depth === 0 && expectingName) {
-      const m = cleaned.slice(i).match(/^\s*([A-Za-z_][\w]*)\s+(?:\([^)]*\)\s*)?AS\s*\(/i);
+      const m = cleaned.slice(i).match(/^\s*([A-Za-z_][\w]*)(?:\s+|\s*\([^)]*\)\s*)AS\s*\(/i);
       if (!m) break;
       names.add(m[1].toLowerCase());
       i += m[0].length;
@@ -56,7 +56,7 @@ function extractCteNames(sql: string): Set<string> {
  */
 function extractCteNamesLoose(sql: string): Set<string> {
   const names = new Set<string>();
-  const re = /\b([A-Za-z_][\w]*)\s+(?:\([^)]*\)\s*)?AS\s*\(/gi;
+  const re = /\b([A-Za-z_][\w]*)(?:\s+|\s*\([^)]*\)\s*)AS\s*\(/gi;
   let m: RegExpExecArray | null;
   while ((m = re.exec(sql)) !== null) {
     if (!/^(?:cast|select)$/i.test(m[1])) names.add(m[1].toLowerCase());

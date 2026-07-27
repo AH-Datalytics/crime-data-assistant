@@ -1625,7 +1625,7 @@ For a 90-day rolling window with monthly data, use ROWS BETWEEN 2 PRECEDING AND 
 SPARSE MONTHS: Summary tables only contain rows for months with at least one reported offense. For a rare offense or a small agency, zero-offense months are MISSING rows, and ROWS windows count rows — not calendar months — so the window silently spans more than the intended period. When the scoped monthly series can have gaps (single agency, rare offense), build a dense month spine with a recursive CTE and LEFT JOIN + COALESCE(count, 0) before applying the window:
   WITH monthly AS (SELECT printf('%04d-%02d', year, month) AS ym, SUM(offense_count) AS cnt FROM summary_city_monthly WHERE ... GROUP BY ym),
   bounds AS (SELECT MIN(ym) AS start_ym, MAX(ym) AS end_ym FROM monthly),
-  spine(ym) AS (SELECT start_ym FROM bounds UNION ALL SELECT strftime('%Y-%m', date(ym || '-01', '+1 month')) FROM spine, bounds WHERE ym < end_ym),
+  spine (ym) AS (SELECT start_ym FROM bounds UNION ALL SELECT strftime('%Y-%m', date(ym || '-01', '+1 month')) FROM spine, bounds WHERE ym < end_ym),
   rolling AS (SELECT s.ym, SUM(COALESCE(m.cnt, 0)) OVER (ORDER BY s.ym ROWS BETWEEN 11 PRECEDING AND CURRENT ROW) AS rolling_12m, ROW_NUMBER() OVER (ORDER BY s.ym) AS rn FROM spine s LEFT JOIN monthly m ON m.ym = s.ym)
   SELECT ym, rolling_12m FROM rolling WHERE rn >= 12 ORDER BY ym -- (schematic: fill the WHERE ... above with your scope)
 NEVER answer a rolling N-month request with annual totals or a ROWS window over years — "rolling 12 months" always means a 12-month window over monthly counts, displayed only from the first complete window (rn >= 12).

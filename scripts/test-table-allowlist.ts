@@ -56,5 +56,20 @@ assert.deepEqual(
   assert.match(result.message, /do not exist in the active nibrs database/i);
 }
 
+{
+  // Recursive CTE with a column list and no space before the parens —
+  // "spine(ym) AS (" — must be recognized as a CTE, not an unknown table
+  // (production failure: table_allowlist:spine on hate-crime rolling queries).
+  const sql = `WITH monthly AS (SELECT year AS ym, COUNT(*) AS cnt FROM summary_state_monthly GROUP BY ym),
+    bounds AS (SELECT MIN(ym) AS start_ym, MAX(ym) AS end_ym FROM monthly),
+    spine(ym) AS (SELECT start_ym FROM bounds UNION ALL SELECT ym + 1 FROM spine, bounds WHERE ym < end_ym),
+    rolling AS (SELECT s.ym, SUM(COALESCE(m.cnt, 0)) OVER (ORDER BY s.ym) AS r FROM spine s LEFT JOIN monthly m ON m.ym = s.ym)
+    SELECT ym, r FROM rolling`;
+  const result = validateTablesForTab(sql, "nibrs", db);
+  assert.equal(result.ok, true, `column-list CTE without space must be recognized; unknown: ${result.unknown.join(",")}`);
+  const spaced = validateTablesForTab(sql.replace("spine(ym)", "spine (ym)"), "nibrs", db);
+  assert.equal(spaced.ok, true, "column-list CTE with space must be recognized");
+}
+
 db.close();
 console.log("table allowlist tests passed");
