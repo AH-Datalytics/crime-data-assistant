@@ -38,7 +38,7 @@ export function rewriteShrResolvedAgencyPredicates(
   sql: string,
   places: ShrResolvedAgency[],
 ): { sql: string; rewritten: boolean; warning?: string } {
-  if (!/\bi\.agency\s*=\s*'/i.test(sql)) return { sql, rewritten: false };
+  if (!/\bi\.agency\s*(?:=|LIKE)\s*'/i.test(sql)) return { sql, rewritten: false };
   const lower = sql.toLowerCase();
   const whereIndex = lower.indexOf(" where ");
   const head = whereIndex >= 0 ? sql.slice(0, whereIndex) : sql;
@@ -58,7 +58,7 @@ export function rewriteShrResolvedAgencyPredicates(
       rewrittenSql = rewrittenSql.replace(new RegExp(`i\\.agency\\s*=\\s*'${escaped}'`, "gi"), replacement);
     }
   }
-  if (rewrittenSql === sql || /\bi\.agency\s*=\s*'/i.test(rewrittenSql)) {
+  if (rewrittenSql === sql || /\bi\.agency\s*(?:=|LIKE)\s*'/i.test(rewrittenSql)) {
     return { sql, rewritten: false, warning: "SHR SQL contains an unresolved agency-name predicate." };
   }
   return { sql: rewrittenSql, rewritten: true };

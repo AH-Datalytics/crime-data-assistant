@@ -89,6 +89,11 @@ const rewritten = rewriteShrResolvedAgencyPredicates(
 assert.equal(rewritten.rewritten, true);
 assert.match(rewritten.sql, /TXHPD00/);
 assert.match(rewritten.sql, /TXDPD00/);
+const likeWarning = rewriteShrResolvedAgencyPredicates("SELECT i.year FROM incidents i WHERE i.agency LIKE 'Houston%'", [
+  { requestedName: "Houston", label: "Houston", state: "TX", agencyType: "City", status: "resolved", confidence: "high", oris: ["TXHPD00"], ranges: [{ ori: "TXHPD00", startYear: 1976, endYear: 2026 }], reason: "test" },
+]);
+assert.equal(likeWarning.rewritten, false);
+assert.match(likeWarning.warning || "", /agency-name predicate/);
 
 const labelCase = buildShrCanonicalLabelCase([
   { oris: ["TXHPD00"], label: "Houston" },

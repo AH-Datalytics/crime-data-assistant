@@ -1,5 +1,6 @@
 import type { PromptHistoryMessage } from "./chat-history";
 import { asksForCountsInsteadOfRates } from "./rate-intent";
+import { resolveGeoPlaces } from "./geo-place-resolver";
 
 export type FollowupBreakdown = "state" | "city" | "agency";
 
@@ -121,7 +122,8 @@ export function detectFollowupTransform(question: string, history: PromptHistory
   if (countyScope) return countyScope;
 
   const comparisonTarget = question.match(/^\s*(?:compare\s+(?:to|with|against)|what about)\s+(.+?)\s*\??\s*$/i);
-  if (comparisonTarget && hasPriorSql(history)) {
+  const targetResolvesAsPlace = comparisonTarget && resolveGeoPlaces(comparisonTarget[1]).mentions.length > 0;
+  if (comparisonTarget && targetResolvesAsPlace && hasPriorSql(history)) {
     const priorQuestion = latestPriorUserQuestion(history);
     if (priorQuestion) {
       return {
