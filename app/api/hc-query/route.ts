@@ -22,6 +22,7 @@ import { detectFollowupTransform } from "@/lib/followup-transform";
 import { applyChartCustomizations } from "@/lib/chart-customization";
 import { getBlockingGeoClarification } from "@/lib/geo-resolver";
 import { getCountyScopeClarification } from "@/lib/county-clarifier";
+import { detectQueryBearingFollowup } from "@/lib/query-bearing-followup";
 import { detectSubCityGeographyOverride } from "@/lib/capability-overrides";
 import {
   queryContractFailureMessage,
@@ -149,6 +150,9 @@ export async function POST(req: NextRequest) {
     }
 
     const history = normalizeHistoryForTab(body?.history, "hate_crime");
+    // Query-bearing follow-ups (prior SQL + a change request) must reach the
+    // model path with history — never the standalone metadata/county shortcuts.
+    const queryBearingFollowup = detectQueryBearingFollowup(question, body?.history);
     const followupTransform = detectFollowupTransform(question, history);
     const promptHistory = followupTransform
       ? [...history, { role: "user" as const, content: followupTransform.instruction }]
@@ -249,7 +253,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const countyScope = getCountyScopeClarification(question, body?.history);
+    const countyScope = queryBearingFollowup ? null : getCountyScopeClarification(question, body?.history);
     if (countyScope) {
       const executionMs = Date.now() - start;
       writeLog(question, null, 0, null, executionMs, countyScope.explanation, "hate_crime", [`geo:${countyScope.id}`], "deterministic", sessionId);
@@ -269,7 +273,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const metadata = answerMetadataQuestion("hate_crime", question, getHateCrimeDb());
+    const metadata = queryBearingFollowup ? null : answerMetadataQuestion("hate_crime", question, getHateCrimeDb());
     if (metadata) {
       const executionMs = Date.now() - start;
       writeLog(question, metadata.sql, metadata.rowCount, null, executionMs, metadata.explanation, "hate_crime", ["deterministic-metadata"], "deterministic", sessionId);

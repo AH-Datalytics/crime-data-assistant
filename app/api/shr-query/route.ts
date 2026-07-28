@@ -28,6 +28,7 @@ import { detectFollowupTransform } from "@/lib/followup-transform";
 import { applyChartCustomizations } from "@/lib/chart-customization";
 import { getBlockingGeoClarification } from "@/lib/geo-resolver";
 import { getCountyScopeClarification } from "@/lib/county-clarifier";
+import { detectQueryBearingFollowup } from "@/lib/query-bearing-followup";
 import { detectShrGroupRateOverride, detectSubCityGeographyOverride } from "@/lib/capability-overrides";
 import { displayShrAgencyName, normalizeShrAgencyText } from "@/lib/shr-agency-normalization";
 import { asksSimpleFirearmHomicideTrend } from "@/lib/shr-firearm-trend-intent";
@@ -139,6 +140,9 @@ export async function POST(req: NextRequest) {
     }
 
     const history = normalizeHistoryForTab(body?.history, "shr");
+    // Query-bearing follow-ups (prior SQL + a change request) must reach the
+    // model path with history — never the standalone metadata/county shortcuts.
+    const queryBearingFollowup = detectQueryBearingFollowup(question, body?.history);
     const followupTransform = detectFollowupTransform(question, history);
     // Bare clarifier answers ("Countywide total") carry no county name — use
     // the transform's reconstructed question so guardrails see the geography
@@ -256,7 +260,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const countyScope = getCountyScopeClarification(question, body?.history);
+    const countyScope = queryBearingFollowup ? null : getCountyScopeClarification(question, body?.history);
     if (countyScope) {
       const executionMs = Date.now() - start;
       writeLog(question, null, 0, null, executionMs, countyScope.explanation, "shr", [`geo:${countyScope.id}`], "deterministic", sessionId);
@@ -276,7 +280,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const metadata = answerMetadataQuestion("shr", question, getShrDb());
+    const metadata = queryBearingFollowup ? null : answerMetadataQuestion("shr", question, getShrDb());
     if (metadata) {
       const executionMs = Date.now() - start;
       writeLog(question, metadata.sql, metadata.rowCount, null, executionMs, metadata.explanation, "shr", ["deterministic-metadata"], "deterministic", sessionId);

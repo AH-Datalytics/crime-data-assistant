@@ -27,6 +27,7 @@ import { detectFollowupTransform } from "@/lib/followup-transform";
 import { detectNibrsCapabilityOverride } from "@/lib/nibrs-capability-overrides";
 import { getBlockingGeoClarification } from "@/lib/geo-resolver";
 import { getCountyScopeClarification } from "@/lib/county-clarifier";
+import { detectQueryBearingFollowup } from "@/lib/query-bearing-followup";
 import { asksCampusAgency, buildCampusAgencySummarySql, campusAgencyChartAxesFromSql, campusAgencyDisplayName, knownCampusAgencyResolution, resolveCampusAgencyOris, shouldResolveCampusAgencySql } from "@/lib/nibrs-campus-agency";
 import { planNibrsQuery } from "@/lib/nibrs-query-planner";
 import { optimizeNibrsSql } from "@/lib/nibrs-sql-optimizer";
@@ -242,6 +243,10 @@ export async function POST(req: NextRequest) {
       } as QueryResponse);
     }
 
+    // Query-bearing follow-ups (prior SQL + a change request) must reach the
+    // model path with history — never the standalone metadata/county shortcuts.
+    const queryBearingFollowup = detectQueryBearingFollowup(question, body?.history);
+
     const geoClarification = getBlockingGeoClarification(question);
     if (geoClarification) {
       const executionMs = Date.now() - routeStart;
@@ -262,7 +267,7 @@ export async function POST(req: NextRequest) {
       } as QueryResponse);
     }
 
-    const countyScope = getCountyScopeClarification(question, body?.history);
+    const countyScope = queryBearingFollowup ? null : getCountyScopeClarification(question, body?.history);
     if (countyScope) {
       const executionMs = Date.now() - routeStart;
       writeNibrsLog(question, null, 0, null, executionMs, countyScope.explanation, [`geo:${countyScope.id}`], "deterministic", sessionId);
@@ -394,7 +399,7 @@ export async function POST(req: NextRequest) {
     }
 
     const metadataStart = Date.now();
-    const metadata = answerMetadataQuestion("nibrs", question, getNibrsDb());
+    const metadata = queryBearingFollowup ? null : answerMetadataQuestion("nibrs", question, getNibrsDb());
     if (metadata) {
       const executionMs = Date.now() - metadataStart;
       writeNibrsLog(question, metadata.sql, metadata.rowCount, null, executionMs, metadata.explanation, ["deterministic-metadata"], "deterministic", sessionId);
