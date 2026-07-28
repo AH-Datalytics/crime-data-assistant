@@ -39,6 +39,7 @@ import { isFollowUp } from "@/lib/tab-suggest";
 import { buildHistoricalCityChangeRankingPlan } from "@/lib/historical-deterministic-queries";
 import { detectQueryBearingFollowup } from '@/lib/query-bearing-followup';
 import { planFollowupSafe } from '@/lib/followup-planner';
+import { buildCrossSourceFollowupTransform } from '@/lib/cross-source-followup';
 import { plannerModeForSource } from '@/lib/followup-planner-mode';
 
 function sseEvent(event: StreamEvent): string {
@@ -834,7 +835,7 @@ export async function POST(req: NextRequest) {
 
         const isHistorical = body?.mode === "historical";
         const history = normalizeHistoryForTab(body?.history, isHistorical ? "historical" : "current");
-        const followupTransform = (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing") ? followupPlan.transform : detectFollowupTransform(question, history);
+        const followupTransform = (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing") ? followupPlan.transform : (detectFollowupTransform(question, history) ?? buildCrossSourceFollowupTransform(question, body?.history, isHistorical ? "historical" : "current"));
         // Bare clarifier answers ("Countywide total") carry no county name — use
         // the transform's reconstructed question so guardrails see the geography
         const guardrailQuestion = (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing") ? followupPlan.reconstructedQuestion : (followupTransform?.contextQuestion ?? question);

@@ -29,6 +29,7 @@ import { getBlockingGeoClarification } from "@/lib/geo-resolver";
 import { getCountyScopeClarification } from "@/lib/county-clarifier";
 import { detectQueryBearingFollowup } from '@/lib/query-bearing-followup';
 import { planFollowupSafe } from '@/lib/followup-planner';
+import { buildCrossSourceFollowupTransform } from '@/lib/cross-source-followup';
 import { plannerModeForSource } from '@/lib/followup-planner-mode';
 import { asksCampusAgency, buildCampusAgencySummarySql, campusAgencyChartAxesFromSql, campusAgencyDisplayName, knownCampusAgencyResolution, resolveCampusAgencyOris, shouldResolveCampusAgencySql } from "@/lib/nibrs-campus-agency";
 import { planNibrsQuery } from "@/lib/nibrs-query-planner";
@@ -310,7 +311,7 @@ export async function POST(req: NextRequest) {
     const history = normalizeHistoryForTab(body?.history, "nibrs");
     const followupTransform = (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing")
       ? followupPlan.transform
-      : detectFollowupTransform(question, history);
+      : (detectFollowupTransform(question, history) ?? buildCrossSourceFollowupTransform(question, body?.history, "nibrs"));
     const guardrailQuestion = (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing")
       ? followupPlan.reconstructedQuestion
       : (followupTransform?.contextQuestion ?? question);

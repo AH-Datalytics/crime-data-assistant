@@ -96,6 +96,22 @@ const sql = "SELECT year, count FROM historical_state_national WHERE year >= 198
   assert.equal(p.standaloneEligible, false);
 }
 
+// MS01: cross-source fragment gets reconstructed context (history is
+// Historical-tagged, current source is SHR, so normalization drops it all)
+{
+  const h = [
+    { role: "user", content: "murders in Houston since 2010", source: "historical" },
+    { role: "assistant", content: "Rates for Houston and Dallas.\n[SQL: SELECT year, ROUND(hac.murder * 100000.0 / hap.population, 1) AS rate FROM historical_agency_crime hac JOIN historical_agency ha ON ha.ori = hac.ori WHERE (ha.agency = 'Houston' OR ha.agency = 'Dallas') AND ha.state = 'tx' AND hac.year >= 2010]", source: "historical" },
+  ];
+  const p = planFollowup("now show firearm murders instead", h, "shr");
+  assert.equal(p.kind, "query_bearing");
+  assert.equal(p.transform?.name, "carry_cross_source_context");
+  assert.match(p.reconstructedQuestion, /Houston/);
+  assert.match(p.reconstructedQuestion, /Dallas/);
+  assert.match(p.reconstructedQuestion, /2010/);
+  assert.doesNotMatch(p.transform!.instruction, /\[SQL:/, "SQL text must never cross the source boundary");
+}
+
 // Crash isolation: pathological input must degrade to null, never throw
 {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

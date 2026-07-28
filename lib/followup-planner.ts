@@ -5,6 +5,7 @@ import { isChartTypeOnlyRequest, isYAxisDomainOnlyRequest } from "./chart-custom
 import { autoRoute, parseIntent } from "./tab-suggest";
 import { detectQueryBearingFollowup, type FollowupChangeKind, OFFENSE_NOUN_RE } from "./query-bearing-followup";
 import { detectFollowupTransform, hasPriorSql, latestPriorUserQuestion, type FollowupTransform } from "./followup-transform";
+import { buildCrossSourceFollowupTransform } from "./cross-source-followup";
 import type { SourceId } from "./source-contracts";
 
 export interface FollowupPlan {
@@ -109,6 +110,7 @@ export function planFollowup(
   const priorQuestion = latestPriorUserQuestion(history);
   const changeKinds = bearing?.kinds ?? [];
   const effectiveTransform = transform ??
+    buildCrossSourceFollowupTransform(question, rawHistory, currentSource) ??
     (priorQuestion ? synthesizeTransform(changeKinds, question, priorQuestion) : null);
   const reconstructedQuestion = effectiveTransform?.contextQuestion ??
     (priorQuestion ? `${priorQuestion} (${question.trim()})` : question);

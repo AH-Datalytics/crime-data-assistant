@@ -5,7 +5,7 @@ import { resolveGeoPlaces } from "./geo-place-resolver";
 export type FollowupBreakdown = "state" | "city" | "agency";
 
 export interface FollowupTransform {
-  name: "add_breakdown" | "add_continuous_reporting_filter" | "replace_with_dv_victim_demographics" | "replace_rate_with_count" | "resolve_county_scope" | "assess_trend" | "compare_geographies" | "replace_geography" | "change_time_range" | "change_granularity" | "change_offense" | "replace_count_with_rate";
+  name: "add_breakdown" | "add_continuous_reporting_filter" | "replace_with_dv_victim_demographics" | "replace_rate_with_count" | "resolve_county_scope" | "assess_trend" | "compare_geographies" | "replace_geography" | "change_time_range" | "change_granularity" | "change_offense" | "replace_count_with_rate" | "carry_cross_source_context";
   dimension?: FollowupBreakdown;
   instruction: string;
   /** When set, routes should use this instead of the raw question for guardrail
