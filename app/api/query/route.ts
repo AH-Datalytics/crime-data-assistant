@@ -37,6 +37,7 @@ import { partialCoverageRetryPrompt } from "@/lib/source-year-overlap";
 import { resolveGeoPlaces } from "@/lib/geo-place-resolver";
 import { isFollowUp } from "@/lib/tab-suggest";
 import { buildHistoricalCityChangeRankingPlan } from "@/lib/historical-deterministic-queries";
+import { detectQueryBearingFollowup } from "@/lib/query-bearing-followup";
 
 function sseEvent(event: StreamEvent): string {
   return `data: ${JSON.stringify(event)}\n\n`;
@@ -430,6 +431,9 @@ export async function POST(req: NextRequest) {
   ) => logQuery(q, sqlText, rowCount, logError, ms, logResponse, tabName, guardrails, model, sid, routingMeta);
 
   const tab = body?.mode === "historical" ? "historical" : "current";
+  // Query-bearing follow-ups (prior SQL + a change request) must reach the
+  // model path with history — never the standalone metadata/county/place shortcuts.
+  const queryBearingFollowup = detectQueryBearingFollowup(question, body?.history);
   const capabilityOverride =
     detectSubCityGeographyOverride(question) ??
     detectDemographicHomicideRateOverride(question);
@@ -470,7 +474,7 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  const countyScope = getBlockingGeoClarification(question)
+  const countyScope = (getBlockingGeoClarification(question) || queryBearingFollowup)
     ? null
     : getCountyScopeClarification(question, body?.history);
   if (countyScope) {
@@ -664,7 +668,7 @@ export async function POST(req: NextRequest) {
       console.warn("[historical-city-change-ranking] deterministic query failed; falling back to Claude", err);
     }
   }
-  const historicalPlace = tab === "historical" && !shouldSkipHistoricalPlaceLookup(question, body?.history)
+  const historicalPlace = tab === "historical" && !queryBearingFollowup && !shouldSkipHistoricalPlaceLookup(question, body?.history)
     ? answerHistoricalPlaceLookup(question, getDb())
     : null;
   if (historicalPlace) {
@@ -704,7 +708,7 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  const metadata = answerMetadataQuestion(tab, question, getDb());
+  const metadata = queryBearingFollowup ? null : answerMetadataQuestion(tab, question, getDb());
   if (metadata) {
     const ms = Date.now() - totalStart;
     writeLog(question, metadata.sql, metadata.rowCount, null, ms, metadata.explanation, tab, ["deterministic-metadata"], "deterministic", sessionId);
