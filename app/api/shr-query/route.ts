@@ -29,7 +29,7 @@ import { applyChartCustomizations } from "@/lib/chart-customization";
 import { getBlockingGeoClarification } from "@/lib/geo-resolver";
 import { getCountyScopeClarification } from "@/lib/county-clarifier";
 import { detectQueryBearingFollowup } from '@/lib/query-bearing-followup';
-import { planFollowup } from '@/lib/followup-planner';
+import { planFollowupSafe } from '@/lib/followup-planner';
 import { plannerModeForSource } from '@/lib/followup-planner-mode';
 import { detectShrGroupRateOverride, detectSubCityGeographyOverride } from "@/lib/capability-overrides";
 import { displayShrAgencyName, normalizeShrAgencyText } from "@/lib/shr-agency-normalization";
@@ -146,7 +146,7 @@ export async function POST(req: NextRequest) {
     // model path with history — never the standalone metadata/county shortcuts.
     const queryBearingFollowup = detectQueryBearingFollowup(question, body?.history);
     const plannerMode = plannerModeForSource('shr');
-    const followupPlan = plannerMode === 'off' ? null : planFollowup(question, body?.history, 'shr');
+    const followupPlan = plannerMode === 'off' ? null : planFollowupSafe(question, body?.history, 'shr');
     if (followupPlan && plannerMode === 'compare') {
       console.log('[followup-planner][compare] ' + JSON.stringify({ source: 'shr', kind: followupPlan.kind, changeKinds: followupPlan.changeKinds, plannedSource: followupPlan.source, sourceChanged: followupPlan.sourceChanged, legacyBearing: Boolean(queryBearingFollowup), q: question.slice(0, 160), reconstructed: followupPlan.reconstructedQuestion.slice(0, 200) }));
     }
@@ -229,7 +229,7 @@ export async function POST(req: NextRequest) {
       });
     };
 
-      const planSaysQueryBearing = plannerMode === 'authoritative' ? followupPlan?.kind === 'query_bearing' : Boolean(queryBearingFollowup);
+      const planSaysQueryBearing = (plannerMode === 'authoritative' && followupPlan) ? followupPlan.kind === 'query_bearing' : Boolean(queryBearingFollowup);
   const capabilityOverride =
       detectSubCityGeographyOverride(question) ??
       detectShrGroupRateOverride(question);

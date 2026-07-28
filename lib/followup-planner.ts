@@ -82,6 +82,20 @@ function synthesizeTransform(
   return null;
 }
 
+/** Crash-isolated wrapper for route use: the planner must never take down a
+ *  request. On any error, returns null and routes fall back to the Stage 1
+ *  predicate — /api/query calls this outside its POST-level try/catch. */
+export function planFollowupSafe(
+  question: string, rawHistory: unknown, currentSource: SourceId,
+): FollowupPlan | null {
+  try {
+    return planFollowup(question, rawHistory, currentSource);
+  } catch (err) {
+    console.error("[followup-planner] planFollowup failed; falling back to legacy handling:", err);
+    return null;
+  }
+}
+
 export function planFollowup(
   question: string, rawHistory: unknown, currentSource: SourceId,
 ): FollowupPlan {

@@ -28,7 +28,7 @@ import { detectNibrsCapabilityOverride } from "@/lib/nibrs-capability-overrides"
 import { getBlockingGeoClarification } from "@/lib/geo-resolver";
 import { getCountyScopeClarification } from "@/lib/county-clarifier";
 import { detectQueryBearingFollowup } from '@/lib/query-bearing-followup';
-import { planFollowup } from '@/lib/followup-planner';
+import { planFollowupSafe } from '@/lib/followup-planner';
 import { plannerModeForSource } from '@/lib/followup-planner-mode';
 import { asksCampusAgency, buildCampusAgencySummarySql, campusAgencyChartAxesFromSql, campusAgencyDisplayName, knownCampusAgencyResolution, resolveCampusAgencyOris, shouldResolveCampusAgencySql } from "@/lib/nibrs-campus-agency";
 import { planNibrsQuery } from "@/lib/nibrs-query-planner";
@@ -249,12 +249,12 @@ export async function POST(req: NextRequest) {
     // model path with history — never the standalone metadata/county shortcuts.
     const queryBearingFollowup = detectQueryBearingFollowup(question, body?.history);
     const plannerMode = plannerModeForSource('nibrs');
-    const followupPlan = plannerMode === 'off' ? null : planFollowup(question, body?.history, 'nibrs');
+    const followupPlan = plannerMode === 'off' ? null : planFollowupSafe(question, body?.history, 'nibrs');
     if (followupPlan && plannerMode === 'compare') {
       console.log('[followup-planner][compare] ' + JSON.stringify({ source: 'nibrs', kind: followupPlan.kind, changeKinds: followupPlan.changeKinds, plannedSource: followupPlan.source, sourceChanged: followupPlan.sourceChanged, legacyBearing: Boolean(queryBearingFollowup), q: question.slice(0, 160), reconstructed: followupPlan.reconstructedQuestion.slice(0, 200) }));
     }
-    const planSaysQueryBearing = plannerMode === 'authoritative'
-      ? followupPlan?.kind === 'query_bearing'
+    const planSaysQueryBearing = (plannerMode === 'authoritative' && followupPlan)
+      ? followupPlan.kind === 'query_bearing'
       : Boolean(queryBearingFollowup);
     if (plannerMode === "authoritative" && followupPlan?.sourceChanged) {
       const executionMs = Date.now() - routeStart;

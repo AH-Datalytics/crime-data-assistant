@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { planFollowup } from "../lib/followup-planner";
+import { planFollowup, planFollowupSafe } from "../lib/followup-planner";
 
 function hist(userQ: string, assistantSql: string, source: string) {
   return [
@@ -94,4 +94,13 @@ const sql = "SELECT year, count FROM historical_state_national WHERE year >= 198
   const p = planFollowup("show this as a line chart", h, "historical");
   assert.equal(p.chartOnly, true);
   assert.equal(p.standaloneEligible, false);
-}console.log("followup-planner tests passed");
+}
+
+// Crash isolation: pathological input must degrade to null, never throw
+{
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const p = planFollowupSafe(null as any, [{ role: "assistant", content: "SELECT 1 FROM t" }], "current");
+  assert.equal(p, null);
+}
+
+console.log("followup-planner tests passed");
