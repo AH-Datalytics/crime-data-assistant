@@ -915,9 +915,10 @@ async function run() {
           // Build conversation history for next turn. Clarifications (null SQL)
           // must be recorded too — the frontend sends them, and follow-up
           // answers like "Countywide total" are meaningless without them.
-          history.push({ role: "user", content: step.question });
+          history.push({ role: "user", content: step.question, source: step.tab });
           history.push({
             role: "assistant",
+            source: step.tab,
             content: resp.sql
               ? JSON.stringify({ sql: resp.sql, explanation: resp.explanation.substring(0, 200) })
               : resp.explanation.substring(0, 300),
