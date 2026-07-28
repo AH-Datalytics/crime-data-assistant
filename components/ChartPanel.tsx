@@ -81,9 +81,18 @@ function properCase(s: string): string {
     .replace(/\bBurglary\b$/g, "Burglaries");
 }
 
-function isYearMonth(data: Record<string, unknown>[], xKey: string): boolean {
+// Monthly x values arrive as "201309" (year+month columns, current/historical)
+// or "2013-09" (strftime('%Y-%m') from the NIBRS/SHR/hate-crime rolling templates).
+const YM_SIX_RE = /^\d{6}$/;
+const YM_HYPHEN_RE = /^\d{4}-\d{2}$/;
+
+function isYearMonthValue(v: string): boolean {
+  return YM_SIX_RE.test(v) || YM_HYPHEN_RE.test(v);
+}
+
+export function isYearMonth(data: Record<string, unknown>[], xKey: string): boolean {
   const sample = data.slice(0, 3);
-  return sample.every((d) => /^\d{6}$/.test(String(d[xKey] ?? "")));
+  return sample.length > 0 && sample.every((d) => isYearMonthValue(String(d[xKey] ?? "")));
 }
 
 function isDate(data: Record<string, unknown>[], xKey: string): boolean {
@@ -94,18 +103,22 @@ function isDate(data: Record<string, unknown>[], xKey: string): boolean {
   );
 }
 
-function formatYearMonth(val: string | number): string {
+export function formatYearMonth(val: string | number): string {
   const s = String(val);
-  if (!/^\d{6}$/.test(s)) return s;
-  const m = parseInt(s.slice(4, 6), 10);
-  return `${MONTH_NAMES[m - 1] || s.slice(4)} ${s.slice(0, 4)}`;
+  const m = YM_SIX_RE.test(s) ? parseInt(s.slice(4, 6), 10)
+    : YM_HYPHEN_RE.test(s) ? parseInt(s.slice(5, 7), 10)
+    : NaN;
+  if (isNaN(m)) return s;
+  return `${MONTH_NAMES[m - 1] || s} ${s.slice(0, 4)}`;
 }
 
-function formatMonthOnly(val: string | number): string {
+export function formatMonthOnly(val: string | number): string {
   const s = String(val);
-  if (!/^\d{6}$/.test(s)) return s;
-  const m = parseInt(s.slice(4, 6), 10);
-  return MONTH_NAMES[m - 1] || s.slice(4);
+  const m = YM_SIX_RE.test(s) ? parseInt(s.slice(4, 6), 10)
+    : YM_HYPHEN_RE.test(s) ? parseInt(s.slice(5, 7), 10)
+    : NaN;
+  if (isNaN(m)) return s;
+  return MONTH_NAMES[m - 1] || s;
 }
 
 function formatDateFull(val: string | number): string {
@@ -167,18 +180,18 @@ function dailyTickInterval(dataLength: number): number {
   return Math.max(1, Math.floor(dataLength / 12));
 }
 
-/** Build evenly-spaced ticks for multi-year YYYYMM data.
- *  ≤2 years → every month, otherwise January of each year (thinned if >10). */
-function yearTicksForYM(data: Record<string, unknown>[], xKey: string): string[] {
-  const vals = data.map((d) => String(d[xKey] ?? "")).filter((v) => /^\d{6}$/.test(v));
+/** Build evenly-spaced ticks for multi-year monthly ("YYYYMM" or "YYYY-MM") data:
+ *  January of each year (or the year's first available month), thinned if >10. */
+export function yearTicksForYM(data: Record<string, unknown>[], xKey: string): string[] {
+  const vals = data.map((d) => String(d[xKey] ?? "")).filter(isYearMonthValue);
   if (vals.length === 0) return [];
   const years = [...new Set(vals.map((v) => v.slice(0, 4)))].sort();
 
   // Multi-year monthly charts use one tick per year.
   const ticks: string[] = [];
   for (const y of years) {
-    const jan = `${y}01`;
-    ticks.push(vals.includes(jan) ? jan : vals.find((v) => v.startsWith(y))!);
+    const jan = vals.find((v) => v === `${y}01` || v === `${y}-01`);
+    ticks.push(jan ?? vals.find((v) => v.startsWith(y))!);
   }
   // If too many ticks (>10), thin them out evenly
   if (ticks.length > 10) {
