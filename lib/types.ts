@@ -62,7 +62,7 @@ export interface ChartMeta {
 /**
  * Copy all chart/presentation metadata from a retry response onto the
  * working Claude response object.  Centralised here so every retry path
- * stays in sync â€” adding a new field to ClaudeResponse only needs one edit.
+ * stays in sync — adding a new field to ClaudeResponse only needs one edit.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function applyRetryMeta(target: any, source: any): void {

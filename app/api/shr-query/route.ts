@@ -143,7 +143,7 @@ export async function POST(req: NextRequest) {
 
     const history = normalizeHistoryForTab(body?.history, "shr");
     // Query-bearing follow-ups (prior SQL + a change request) must reach the
-    // model path with history Ã¢â‚¬â€ never the standalone metadata/county shortcuts.
+    // model path with history — never the standalone metadata/county shortcuts.
     const queryBearingFollowup = detectQueryBearingFollowup(question, body?.history);
     const plannerMode = plannerModeForSource('shr');
     const followupPlan = plannerMode === 'off' ? null : planFollowup(question, body?.history, 'shr');
@@ -155,7 +155,7 @@ export async function POST(req: NextRequest) {
       return jsonResp({ success: true, question, sql: null, explanation, title: "Source switch", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: 0, sourceSwitch: { source: followupPlan.source, question: followupPlan.reconstructedQuestion } });
     }
     const followupTransform = (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing") ? followupPlan.transform : detectFollowupTransform(question, history);
-    // Bare clarifier answers ("Countywide total") carry no county name Ã¢â‚¬â€ use
+    // Bare clarifier answers ("Countywide total") carry no county name — use
     // the transform's reconstructed question so guardrails see the geography
     const guardrailQuestion = (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing") ? followupPlan.reconstructedQuestion : (followupTransform?.contextQuestion ?? question);
     const followupCities = followupTransform ? shootingCityIntents(guardrailQuestion) : [];
@@ -329,7 +329,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Deterministic fatal shooting handling Ã¢â‚¬â€ bypass Claude entirely
+    // Deterministic fatal shooting handling — bypass Claude entirely
     // Route bare/ambiguous shooting queries directly to firearm homicide data
     if (asksShooting && !wantsNonfatal && !(plannerMode === "authoritative" && followupPlan?.kind === "query_bearing")) {
       const stateMatch = question.match(/\b([A-Z]{2})\b/) || question.match(/\bin\s+(\w+)\b/i);
@@ -579,7 +579,7 @@ export async function POST(req: NextRequest) {
         // Fallback: append instruction
         queryForModel = question + " [Interpret as firearm homicides: filter weapon_group = 'Firearm'. Title must say 'Fatal Shootings' or 'Firearm Homicides'.]";
       }
-      console.log(`[shr][shooting-rewrite] Original: "${question}" Ã¢â€ â€™ Rewritten: "${queryForModel}"`);
+      console.log(`[shr][shooting-rewrite] Original: "${question}" → Rewritten: "${queryForModel}"`);
     }
     const messages: Anthropic.MessageParam[] = [
       ...promptHistory.map((h: { role: string; content: string }) => ({
@@ -634,11 +634,11 @@ export async function POST(req: NextRequest) {
         } catch { /* use original */ }
       }
 
-      // Text-only response Ã¢â‚¬â€ retry if model incorrectly claims an AGENCY isn't available
+      // Text-only response — retry if model incorrectly claims an AGENCY isn't available
       // Do NOT retry when model correctly refuses non-homicide queries (theft, assault, etc.)
       if (!claude.sql) {
         const refusalPatterns = /not (appear|be represented)|doesn't appear|not (in|included in) (this|the|our) (dataset|data|sample|library)|no data (for|available|found)|does not (yet )?(have|include|cover)|not available|not yet (include|available|have)|latest available data|isn't (in|included)|not found in/i;
-        // Skip retry if the refusal is about SHR's scope (non-homicide data) Ã¢â‚¬â€ these are correct refusals
+        // Skip retry if the refusal is about SHR's scope (non-homicide data) — these are correct refusals
         const scopeRefusal = /only (homicides?|murders?|manslaughter)|does(?:n't| not)\s+(?:include|contain|track|cover|have)\s+.*?\b(theft|robbery|assault|burglary|property|arrests?|drugs?|clearance|staffing|officers?|sworn|personnel|employment|auto theft|motor vehicle|violent crime|property crime|non-homicide|rape)\b|homicides only|murder and manslaughter only/i;
         const isCorrectScopeRefusal = scopeRefusal.test(claude.explanation || "");
         const coverageRetryPrompt = partialCoverageRetryPrompt("shr", question, claude.explanation);
@@ -805,7 +805,7 @@ export async function POST(req: NextRequest) {
     if (guardrailResult.sql !== sql) {
       sql = guardrailResult.sql;
     }
-    // Hard override Ã¢â‚¬â€ skip retry, return deterministic response
+    // Hard override — skip retry, return deterministic response
     if (guardrailResult.overrideResponse) {
       const overrideExplanation = guardrailResult.overrideResponse;
       writeLog(question, sql, 0, `guardrail_override:${guardrailResult.overrideGuardrail}`, Date.now() - start, overrideExplanation, "shr", guardrailResult.fired, "haiku-4.5", sessionId);
@@ -826,7 +826,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (guardrailResult.needsFix && guardrailResult.issues.length > 0) {
-      // Retry with Claude Ã¢â‚¬â€ send guardrail fix instructions
+      // Retry with Claude — send guardrail fix instructions
       try {
         const retryMessages: Anthropic.MessageParam[] = [
           ...messages,
@@ -949,7 +949,7 @@ export async function POST(req: NextRequest) {
     {
       const { allNull } = detectAllNullData(columns, rows);
       if (allNull) {
-        const emptyMsg = "I ran that query but all the values came back empty Ã¢â‚¬â€ the math likely broke somewhere (like dividing by zero). Could you try asking that a different way?";
+        const emptyMsg = "I ran that query but all the values came back empty — the math likely broke somewhere (like dividing by zero). Could you try asking that a different way?";
         writeLog(question, sql, 0, "all_null_columns", executionMs, emptyMsg, "shr", guardrailResult.fired, "haiku-4.5", sessionId);
         return jsonResp({
           success: true,
@@ -1006,7 +1006,7 @@ export async function POST(req: NextRequest) {
           if (!claude.chartType || claude.chartType === "none") {
             claude.chartType = yCols.length <= 3 ? "line" : "stacked_bar";
           }
-          console.log(`[shr] Auto-pivoted: ${categories.length} categories Ã¢â€ â€™ ${pivotedRows.length} rows`);
+          console.log(`[shr] Auto-pivoted: ${categories.length} categories → ${pivotedRows.length} rows`);
         }
       }
     }
@@ -1029,7 +1029,7 @@ export async function POST(req: NextRequest) {
       xAxis: autoXAxis,
       yAxis: autoYAxis,
       yAxisLabel: claude.yAxisLabel || undefined,
-      // ChartPanel renders config.title (not the top-level response title) Ã¢â‚¬â€
+      // ChartPanel renders config.title (not the top-level response title) —
       // matches buildChartConfig in chart-config.ts / nibrs-chart-config.ts.
       title: claude.title || "Results",
     }, question);
@@ -1059,7 +1059,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Known SHR reporting gaps Ã¢â‚¬â€ hardcoded major agencies with documented gaps
+    // Known SHR reporting gaps — hardcoded major agencies with documented gaps
     const KNOWN_GAPS: Record<string, { agency: string; state: string; years: number[] }> = {
       "New York_NY": { agency: "New York", state: "NY", years: [2021] },
       "Los Angeles_CA": { agency: "Los Angeles", state: "CA", years: [2021] },
@@ -1078,7 +1078,7 @@ export async function POST(req: NextRequest) {
           const valueCols = columns.filter(c => c !== "year" && c !== "month" && c !== "state" && c !== "agency");
           const allZero = yearRows.every(r => valueCols.every(c => Number(r[c]) === 0 || r[c] === null));
           if (allZero) {
-            disclaimers.push(`${gap.agency} did not submit SHR data in ${gapYear} Ã¢â‚¬â€ the zero shown for that year reflects missing reporting, not an absence of homicides.`);
+            disclaimers.push(`${gap.agency} did not submit SHR data in ${gapYear} — the zero shown for that year reflects missing reporting, not an absence of homicides.`);
           }
         }
       }
@@ -1092,13 +1092,13 @@ export async function POST(req: NextRequest) {
       guardrailResult.fired.push("shr-agency-zero-probe");
     }
 
-    // Shooting caveat Ã¢â‚¬â€ if user asked about shootings, label as fatal and note nonfatal exclusion
+    // Shooting caveat — if user asked about shootings, label as fatal and note nonfatal exclusion
     if (asksShooting && !wantsNonfatal && !(plannerMode === "authoritative" && followupPlan?.kind === "query_bearing")) {
       const hasFirearmFilter = /\bweapon_group\s*=\s*'Firearm'|weapon\s+LIKE\s+'%Firearm%'|weapon_group.*Firearm/i.test(sql);
       if (hasFirearmFilter) {
         disclaimers.push("These results show fatal shootings only (homicides where the weapon was a firearm). Nonfatal shootings are not included in this database.");
       } else {
-        // Model may not have added firearm filter for bare "shootings" Ã¢â‚¬â€ add caveat anyway
+        // Model may not have added firearm filter for bare "shootings" — add caveat anyway
         disclaimers.push("Interpreting 'shootings' as firearm homicides. This data covers fatal outcomes only - nonfatal shootings are not tracked in the SHR database.");
       }
     }
@@ -1114,9 +1114,9 @@ export async function POST(req: NextRequest) {
       explanation = explanation + "\n\n" + disclaimers.join(" ");
     }
 
-    // Fix SHR offender wording Ã¢â‚¬â€ off_age/off_sex/off_race are per-incident (primary offender only)
+    // Fix SHR offender wording — off_age/off_sex/off_race are per-incident (primary offender only)
     if (/\boff_age_num\b/i.test(sql) || /\boff_age\b/i.test(sql) || /\boff_sex\b/i.test(sql) || /\boff_race\b/i.test(sql)) {
-      // "homicides involving a juvenile offender" Ã¢â€ â€™ "murder victims where the recorded offender was under 18"
+      // "homicides involving a juvenile offender" → "murder victims where the recorded offender was under 18"
       explanation = explanation
         .replace(/\bhomicides (?:involving|with) (?:a |an )?(?:juvenile|young|under.?18|minor)\s*offender/gi, "murder victims where the recorded offender was under 18")
         .replace(/\bcrimes (?:involving|with) (?:a |an )?(?:juvenile|young|under.?18|minor)\s*offender/gi, "murder victims where the recorded offender was under 18")

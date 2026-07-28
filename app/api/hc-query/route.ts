@@ -86,7 +86,7 @@ function hateCrimeCaveats(sql: string, explanation: string): string {
     caveats.push(`Data for ${currentYear - 1} may be incomplete as not all agencies have submitted reports.`);
   }
 
-  // Always append caveats ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â filter out any the model already stated
+  // Always append caveats — filter out any the model already stated
   const fresh = caveats.filter(c => {
     // Skip if explanation already contains the key phrase from this caveat
     if (c.includes("voluntary") && /\bvoluntary\b/i.test(explanation)) return false;
@@ -153,7 +153,7 @@ export async function POST(req: NextRequest) {
 
     const history = normalizeHistoryForTab(body?.history, "hate_crime");
     // Query-bearing follow-ups (prior SQL + a change request) must reach the
-    // model path with history ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â never the standalone metadata/county shortcuts.
+    // model path with history — never the standalone metadata/county shortcuts.
     const queryBearingFollowup = detectQueryBearingFollowup(question, body?.history);
     const plannerMode = plannerModeForSource('hate_crime');
     const followupPlan = plannerMode === 'off' ? null : planFollowup(question, body?.history, 'hate_crime');
@@ -639,7 +639,7 @@ export async function POST(req: NextRequest) {
       xAxis: claude.xAxis || columns[0],
       yAxis: claude.yAxis || (columns.length > 1 ? [columns[columns.length - 1]] : []),
       yAxisLabel: claude.yAxisLabel || undefined,
-      // ChartPanel renders config.title ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â matches chart-config.ts / nibrs-chart-config.ts.
+      // ChartPanel renders config.title — matches chart-config.ts / nibrs-chart-config.ts.
       title: claude.title || "Results",
     }, question);
 
