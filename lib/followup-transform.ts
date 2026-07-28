@@ -5,7 +5,7 @@ import { resolveGeoPlaces } from "./geo-place-resolver";
 export type FollowupBreakdown = "state" | "city" | "agency";
 
 export interface FollowupTransform {
-  name: "add_breakdown" | "add_continuous_reporting_filter" | "replace_with_dv_victim_demographics" | "replace_rate_with_count" | "resolve_county_scope" | "assess_trend" | "compare_geographies" | "change_time_range" | "change_granularity" | "change_offense" | "replace_count_with_rate";
+  name: "add_breakdown" | "add_continuous_reporting_filter" | "replace_with_dv_victim_demographics" | "replace_rate_with_count" | "resolve_county_scope" | "assess_trend" | "compare_geographies" | "replace_geography" | "change_time_range" | "change_granularity" | "change_offense" | "replace_count_with_rate";
   dimension?: FollowupBreakdown;
   instruction: string;
   /** When set, routes should use this instead of the raw question for guardrail
@@ -117,11 +117,37 @@ function requestedDomesticViolenceVictimDemographics(question: string): boolean 
     /\b(?:just|only|instead|rather|show|use|break(?:\s+it)?\s+down|demographics?)\b/i.test(question);
 }
 
+/** Rebuild the prior question with its (single) place mention swapped for the
+ *  new target. Falls back to an annotated form when splicing isn't safe. */
+function replaceGeographyInQuestion(priorQuestion: string, target: string): string {
+  const mentions = resolveGeoPlaces(priorQuestion).mentions;
+  if (mentions.length === 1) {
+    const m = mentions[0];
+    return priorQuestion.slice(0, m.start) + target + priorQuestion.slice(m.end);
+  }
+  return `${priorQuestion.replace(/\?+\s*$/, "")} (for ${target} only — drop the previous geography)`;
+}
+
 export function detectFollowupTransform(question: string, history: PromptHistoryMessage[]): FollowupTransform | null {
   const countyScope = detectCountyScopeResolution(question, history);
   if (countyScope) return countyScope;
 
-  const comparisonTarget = question.match(/^\s*(?:compare\s+(?:(?:it|this|that|them)\s+)?(?:to|with|against)|what about)\s+(.+?)\s*\??\s*$/i);
+  // "what about <place>?" REPLACES the prior geography — same question, new
+  // place (MS06). Users who want both say "compare to <place>", handled below.
+  const replacementTarget = question.match(/^\s*(?:what|how)\s+about\s+(.+?)\s*\??\s*$/i);
+  if (replacementTarget && resolveGeoPlaces(replacementTarget[1]).mentions.length > 0 && hasPriorSql(history)) {
+    const priorQuestion = latestPriorUserQuestion(history);
+    if (priorQuestion) {
+      const reconstructed = replaceGeographyInQuestion(priorQuestion, replacementTarget[1]);
+      return {
+        name: "replace_geography",
+        contextQuestion: reconstructed,
+        instruction: `[SYSTEM: This follow-up REPLACES the prior geography with "${replacementTarget[1]}". Reconstruct the complete question as "${reconstructed}". Preserve the prior source, offense/topic, filters, metric, granularity, and time range; do NOT include the previous geography in the SQL. Resolve the new geography through the source resolver. In the explanation, note that the previous location was replaced and that the user can say "compare them" to see both.]`,
+      };
+    }
+  }
+
+  const comparisonTarget = question.match(/^\s*compare\s+(?:(?:it|this|that|them)\s+)?(?:to|with|against)\s+(.+?)\s*\??\s*$/i);
   const targetResolvesAsPlace = comparisonTarget && resolveGeoPlaces(comparisonTarget[1]).mentions.length > 0;
   if (comparisonTarget && targetResolvesAsPlace && hasPriorSql(history)) {
     const priorQuestion = latestPriorUserQuestion(history);

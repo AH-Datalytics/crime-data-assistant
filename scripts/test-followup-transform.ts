@@ -49,10 +49,14 @@ const shrFatalShootingTrendHistory: PromptHistoryMessage[] = [
 {
   assert.equal(detectFollowupTransform("what about robberies?", currentMonthlyTrendHistory), null);
   assert.equal(detectFollowupTransform("what about 2020?", currentMonthlyTrendHistory), null);
+  // "what about <place>" REPLACES the prior geography (MS06): same question, new place
   const transform = detectFollowupTransform("what about Dallas?", currentMonthlyTrendHistory);
   assert(transform);
-  assert.equal(transform.name, "compare_geographies");
+  assert.equal(transform.name, "replace_geography");
   assert.match(transform.contextQuestion || "", /Dallas/);
+  assert.doesNotMatch(transform.contextQuestion || "", /Houston/, "prior geography must be replaced, not kept");
+  assert.match(transform.instruction, /REPLACES the prior geography/);
+  assert.match(transform.instruction, /compare them/i);
 }
 
 {
