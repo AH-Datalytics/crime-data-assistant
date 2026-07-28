@@ -35,6 +35,7 @@ export interface QueryResponse {
   chartConfig: ChartConfig | null;
   chartMeta: ChartMeta | null;
   executionTimeMs: number;
+  sourceSwitch?: { source: string; question: string };
 }
 
 export interface QueryError {
@@ -61,7 +62,7 @@ export interface ChartMeta {
 /**
  * Copy all chart/presentation metadata from a retry response onto the
  * working Claude response object.  Centralised here so every retry path
- * stays in sync — adding a new field to ClaudeResponse only needs one edit.
+ * stays in sync â€” adding a new field to ClaudeResponse only needs one edit.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function applyRetryMeta(target: any, source: any): void {
@@ -90,5 +91,6 @@ export type StreamEvent =
       chartConfig: ChartConfig | null;
       chartMeta: ChartMeta | null;
       executionTimeMs: number;
+      sourceSwitch?: { source: string; question: string };
     }
   | { type: "error"; text: string; sql?: string };

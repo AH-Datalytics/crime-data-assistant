@@ -210,7 +210,7 @@ export default function WorkspaceChat({ sourceYearRanges }: WorkspaceChatProps) 
 
         if (tab === "nibrs" || tab === "shr" || tab === "hate_crime") {
           const data = await res.json();
-          if (data.success) { finalExplanation = data.explanation || ""; finalSql = data.sql || ""; finalResponse = data; setExplanation(finalExplanation); setResponse(data); }
+          if (data.success) { finalExplanation = data.explanation || ""; finalSql = data.sql || ""; finalResponse = data; setExplanation(finalExplanation); setResponse(data); if (data.sourceSwitch && routingMode !== "rerun") { setTimeout(() => submitQuestion(data.sourceSwitch.question, data.sourceSwitch.source as "current" | "historical" | "nibrs" | "shr" | "hate_crime", "Follow-up moved to a better source", null, "rerun"), 0); } }
           else { setError(data.error || "Query failed"); }
           if (timerRef.current) clearInterval(timerRef.current);
           setLoading(false);

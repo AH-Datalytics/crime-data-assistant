@@ -246,7 +246,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Query-bearing follow-ups (prior SQL + a change request) must reach the
-    // model path with history — never the standalone metadata/county shortcuts.
+    // model path with history â€” never the standalone metadata/county shortcuts.
     const queryBearingFollowup = detectQueryBearingFollowup(question, body?.history);
     const plannerMode = plannerModeForSource('nibrs');
     const followupPlan = plannerMode === 'off' ? null : planFollowup(question, body?.history, 'nibrs');
@@ -256,6 +256,15 @@ export async function POST(req: NextRequest) {
     const planSaysQueryBearing = plannerMode === 'authoritative'
       ? followupPlan?.kind === 'query_bearing'
       : Boolean(queryBearingFollowup);
+    if (plannerMode === "authoritative" && followupPlan?.sourceChanged) {
+      const executionMs = Date.now() - routeStart;
+      const explanation = "This follow-up is a better fit for the " + followupPlan.source + " source. Rerunning it there as: " + followupPlan.reconstructedQuestion;
+      return jsonResp({
+        success: true, question, sql: null, explanation, title: "Source switch", columns: [], rows: [],
+        rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: executionMs,
+        sourceSwitch: { source: followupPlan.source, question: followupPlan.reconstructedQuestion },
+      });
+    }
     const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing")
       ? (followupPlan.chartOnly ? null : getBlockingGeoClarification(followupPlan.reconstructedQuestion))
       : getBlockingGeoClarification(question);
@@ -435,7 +444,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Step 1: Translate to SQL via Claude (with conversation history for context)
-    // Bare clarifier answers ("Countywide total") carry no county name — use
+    // Bare clarifier answers ("Countywide total") carry no county name â€” use
     // the transform's reconstructed question so guardrails see the geography
     const isOverallRate = promptContract?.metric.unit === "rate_per_100k" &&
       promptContract.metric.unsupportedReason === null;
@@ -485,7 +494,7 @@ export async function POST(req: NextRequest) {
           : yearAskPattern.test(claude.explanation || "")
           ? (() => {
               const range = pastCompleteCalendarYearsRange(5);
-              return `[SYSTEM: The user did not specify a year range. NIBRS policy is to default to the last 5 complete calendar years, not ask for clarification. Generate SQL using year BETWEEN ${range.start} AND ${range.end}. Do not ask which years — just run the query.]`;
+              return `[SYSTEM: The user did not specify a year range. NIBRS policy is to default to the last 5 complete calendar years, not ask for clarification. Generate SQL using year BETWEEN ${range.start} AND ${range.end}. Do not ask which years â€” just run the query.]`;
             })()
           : null;
         if (retryPrompt) {
@@ -572,7 +581,7 @@ export async function POST(req: NextRequest) {
     const ctx = extractQueryContext(sql, guardrailQuestion, "nibrs");
     const guardrailResult = runGuardrails(ctx);
 
-    // Apply auto-rewrites (e.g., NE→NB state codes, state→city table fixes)
+    // Apply auto-rewrites (e.g., NEâ†’NB state codes, stateâ†’city table fixes)
     if (guardrailResult.sql !== sql) {
       sql = guardrailResult.sql;
     }
@@ -653,7 +662,7 @@ export async function POST(req: NextRequest) {
       console.log(`[nibrs][sql-guardrails] Fired: ${localSqlGuardrails.fired.join(", ")}`);
     }
 
-    // Hard override — skip retry, return deterministic response
+    // Hard override â€” skip retry, return deterministic response
     if (guardrailResult.overrideResponse) {
       const overrideExplanation = guardrailResult.overrideResponse;
       writeNibrsLog(question, sql, 0, `guardrail_override:${guardrailResult.overrideGuardrail}`, Date.now() - claudeStart, overrideExplanation, guardrailResult.fired, activeModelLabel, sessionId);
@@ -695,7 +704,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Step 2b: Post-retry guardrail re-check — block if critical guardrails still fire
+    // Step 2b: Post-retry guardrail re-check â€” block if critical guardrails still fire
     {
       const postRetryCtx = extractQueryContext(sql, guardrailQuestion, "nibrs");
       const postRetryResult = runGuardrails(postRetryCtx);
@@ -712,7 +721,7 @@ export async function POST(req: NextRequest) {
         writeNibrsLog(question, sql, 0, "rate_second_failure", Date.now() - claudeStart, msg, postRetryResult.fired, activeModelLabel, sessionId);
         return jsonResp({ success: true, question, sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - claudeStart } as QueryResponse);
       }
-      // Raw table second-failure block — if retry still uses raw tables, block execution
+      // Raw table second-failure block â€” if retry still uses raw tables, block execution
       const rawStillBad = postRetryResult.fired.some(f => f === "nibrs-raw-table-for-counts" || f === "nibrs-raw-victims");
       if (rawStillBad) {
         const msg = "I wasn't able to build a valid query for this question using the available summary tables. The data needed may not be available in a pre-aggregated form. Try rephrasing your question or asking about a specific offense type, city, or time period.";
@@ -725,7 +734,7 @@ export async function POST(req: NextRequest) {
         writeNibrsLog(question, sql, 0, "or_precedence_second_failure", Date.now() - claudeStart, msg, postRetryResult.fired, activeModelLabel, sessionId);
         return jsonResp({ success: true, question, sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - claudeStart } as QueryResponse);
       }
-      // Geography contract block — city/county-got-state still fires after retry
+      // Geography contract block â€” city/county-got-state still fires after retry
       const geoContractBad = postRetryResult.fired.some(f =>
         f === "nibrs-city-got-state" || f === "contract-geography-missing"
       );
@@ -855,7 +864,7 @@ export async function POST(req: NextRequest) {
 
         // For timeouts, ask Claude to use a summary table instead
         const errorInstruction = isTimeout
-          ? `That SQL timed out after 30 seconds. The query is too slow — you MUST rewrite it to use a summary table (summary_state_monthly, summary_city_monthly, summary_victim_state_monthly, summary_victim_city_monthly, summary_victim_demographics, summary_offender_demographics, summary_arrestee_demographics, summary_property_offense, summary_drug_monthly, summary_carjacking_monthly, or summary_flash_mob_monthly). If no summary table fits, use a narrower WHERE clause.`
+          ? `That SQL timed out after 30 seconds. The query is too slow â€” you MUST rewrite it to use a summary table (summary_state_monthly, summary_city_monthly, summary_victim_state_monthly, summary_victim_city_monthly, summary_victim_demographics, summary_offender_demographics, summary_arrestee_demographics, summary_property_offense, summary_drug_monthly, summary_carjacking_monthly, or summary_flash_mob_monthly). If no summary table fits, use a narrower WHERE clause.`
           : `That SQL failed with error: ${msg}. Please fix the query and try again.`;
 
         const retryHistory = [
@@ -889,9 +898,9 @@ export async function POST(req: NextRequest) {
               const retryMsg = retryErr instanceof Error ? retryErr.message : String(retryErr);
               writeNibrsLog(question, sql, 0, `DB retry failed: ${retryMsg}`, Date.now() - claudeStart, null, [...guardrailResult.fired, ...routeGuardrailsFired], activeModelLabel, sessionId);
               const userError = isTimeout
-                ? `This query is too complex for the database. Try narrowing your request — for example, ask about a specific city, state, or shorter time range instead of a broad national query.`
+                ? `This query is too complex for the database. Try narrowing your request â€” for example, ask about a specific city, state, or shorter time range instead of a broad national query.`
                 : msg.includes("no such column") || msg.includes("ambiguous")
-                  ? `I had trouble building that query — the data may not support that exact breakdown. Try simplifying your question or asking about a broader category.`
+                  ? `I had trouble building that query â€” the data may not support that exact breakdown. Try simplifying your question or asking about a broader category.`
                   : `I had trouble with that query. Try rephrasing your question or asking about a different aspect of the data.`;
               return jsonResp(
                 { success: false, error: userError, sql } as QueryError,
@@ -957,7 +966,7 @@ export async function POST(req: NextRequest) {
     {
       const { allNull } = detectAllNullData(columns, rows);
       if (allNull) {
-        const emptyMsg = "I ran that query but all the values came back empty — the math likely broke somewhere (like dividing by zero). Could you try asking that a different way?";
+        const emptyMsg = "I ran that query but all the values came back empty â€” the math likely broke somewhere (like dividing by zero). Could you try asking that a different way?";
         writeNibrsLog(question, sql, 0, "all_null_columns", Date.now() - claudeStart, emptyMsg, [...guardrailResult.fired, ...routeGuardrailsFired], activeModelLabel, sessionId);
         return jsonResp({
           success: true,
@@ -976,11 +985,11 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Step 4: Server-side CDE audit check — append disclaimer if anomalous underreporting detected
+    // Step 4: Server-side CDE audit check â€” append disclaimer if anomalous underreporting detected
     let explanation = claude.explanation;
     const oris = new Set<string>();
     try {
-      // Extract ORI(s) from SQL — look for ori = 'XX...' or ori IN ('XX...', ...)
+      // Extract ORI(s) from SQL â€” look for ori = 'XX...' or ori IN ('XX...', ...)
       // but NOT ori IN (SELECT ...) which is a subquery, not literal values
       const oriMatches = sql.match(/ori\s*=\s*'([A-Z0-9]+)'/gi) || [];
       const oriInMatches = sql.match(/ori\s+IN\s*\((?!SELECT)([^)]+)\)/gi) || [];
@@ -1087,7 +1096,7 @@ export async function POST(req: NextRequest) {
           for (const [code, info] of byOffense) {
             if (info.flaggedYears.length === 0) continue;
 
-            // If flagged in most years (>60%), it's structural — skip this offense
+            // If flagged in most years (>60%), it's structural â€” skip this offense
             if (info.flaggedYears.length / info.totalYears > 0.6) {
               console.log(`[nibrs][cde-check] ${ori} ${code}: structural (${info.flaggedYears.length}/${info.totalYears} years flagged), skipping`);
               continue;
@@ -1178,7 +1187,7 @@ export async function POST(req: NextRequest) {
     explanation = applyResultDisclosures({ explanation, question, sql, rows, tab: "nibrs" });
     // Zero-result agency probe (query-audit-2026-07-03 F25): when an agency-scoped
     // query returns nothing, explain the agency's actual reporting span instead of
-    // leaving a bare "no results" — e.g. Jackson PD reports NIBRS only since 2025.
+    // leaving a bare "no results" â€” e.g. Jackson PD reports NIBRS only since 2025.
     if (isZeroResult(rows, columns)) {
       try {
         const agencyProbe = runNibrsAgencyProbe(getNibrsDb(), sql);
@@ -1220,7 +1229,7 @@ export async function POST(req: NextRequest) {
         .replace(/\bproportion of (?:crimes|offenses|incidents)\b/gi, "proportion of arrestees");
     }
 
-    // Step 4c2: Drug-specific arrest mislabeling (safety net — guardrail should catch this first)
+    // Step 4c2: Drug-specific arrest mislabeling (safety net â€” guardrail should catch this first)
     // If SQL uses summary_arrestee_demographics with 35A/35B but user asked about a specific drug,
     // the guardrail should have redirected to summary_drug_arrests. If it didn't, fix the explanation.
     if (/summary_arrestee_demographics/i.test(sql) && /\b3[5][AB]\b/.test(sql) && !/summary_drug_arrests/i.test(sql)) {
@@ -1250,8 +1259,8 @@ export async function POST(req: NextRequest) {
         .replace(/\bin cities across\b/gi, "nationally across");
     }
 
-    // Append standard NIBRS disclaimer — skip if explanation already has a coverage/completeness note
-    const nibrsDisclaimer = "Note: This data comes from the FBI's NIBRS program. Not all agencies report to this system, and some may have incomplete data — especially in their first year of NIBRS reporting or for recent months of data. Always verify that reported offenses are not impacted by incomplete coverage.";
+    // Append standard NIBRS disclaimer â€” skip if explanation already has a coverage/completeness note
+    const nibrsDisclaimer = "Note: This data comes from the FBI's NIBRS program. Not all agencies report to this system, and some may have incomplete data â€” especially in their first year of NIBRS reporting or for recent months of data. Always verify that reported offenses are not impacted by incomplete coverage.";
     const alreadyHasCoverageNote = /transitioning|underreporting|incomplete|not all agencies|coverage|did not report/i.test(explanation);
     if (!explanation.includes("FBI's NIBRS program") && !alreadyHasCoverageNote) {
       explanation += "\n\n" + nibrsDisclaimer;
