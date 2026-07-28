@@ -445,6 +445,7 @@ export async function POST(req: NextRequest) {
   if (plannerMode === "authoritative" && followupPlan?.sourceChanged) {
     const ms = Date.now() - totalStart;
     const explanation = "This follow-up is a better fit for the " + followupPlan.source + " source. Rerunning it there as: " + followupPlan.reconstructedQuestion;
+    writeLog(question, null, 0, null, ms, explanation, tab, ["followup-source-switch"], "followup-planner", sessionId);
     const stream = new ReadableStream({
       start(controller) {
         controller.enqueue(encoder.encode(sseEvent({

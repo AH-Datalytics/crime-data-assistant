@@ -260,6 +260,7 @@ export async function POST(req: NextRequest) {
     if (plannerMode === "authoritative" && followupPlan?.sourceChanged) {
       const executionMs = Date.now() - routeStart;
       const explanation = "This follow-up is a better fit for the " + followupPlan.source + " source. Rerunning it there as: " + followupPlan.reconstructedQuestion;
+      writeNibrsLog(question, null, 0, null, executionMs, explanation, ["followup-source-switch"], "followup-planner", sessionId);
       return jsonResp({
         success: true, question, sql: null, explanation, title: "Source switch", columns: [], rows: [],
         rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: executionMs,
