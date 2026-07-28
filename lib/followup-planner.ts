@@ -35,12 +35,21 @@ function passthrough(question: string, source: SourceId): FollowupPlan {
 function requestedTimeRange(question: string, fallback: { startYear: number | null; endYear: number | null }): { startYear: number | null; endYear: number | null } {
   const years = [...question.matchAll(/\b(?:17|18|19|20)\d{2}\b/g)].map((m) => Number(m[0]));
   if (!years.length) return fallback;
-  const start = /\b(?:start(?:ing)?|begin(?:ning)?|since|from)\b/i.test(question);
-  const end = /\b(?:end(?:ing)?|through|until|up to|to)\b/i.test(question);
-  if (years.length >= 2 || (start && end)) return { startYear: years[0], endYear: years[years.length - 1] };
-  if (start) return { ...fallback, startYear: years[0] };
-  if (end) return { ...fallback, endYear: years[0] };
-  return fallback;
+  // explicit pair: "from 1990 to 2010"
+  const pair = question.match(/\bfrom\s+((?:17|18|19|20)\d{2})\s*(?:to|through|until|-|–)\s*((?:17|18|19|20)\d{2})\b/i);
+  if (pair) return { startYear: Number(pair[1]), endYear: Number(pair[2]) };
+  if (years.length >= 2) return { startYear: Math.min(...years), endYear: Math.max(...years) };
+  const year = years[0];
+  // Bare "to" is usually the preposition of "change/set ... to 1988", so it is
+  // NOT an end marker; "go back to 1940" moves the start of the range.
+  const isStart = /\b(?:start(?:ing)?|begin(?:ning)?|since|go(?:ing)?\s+back(?:\s+\w+){0,2}\s+to)\b/i.test(question);
+  const isEnd = /\b(?:through|until|up\s+to|end(?:ing)?)\b/i.test(question);
+  if (isStart && !isEnd) return { ...fallback, startYear: year };
+  if (isEnd && !isStart) return { ...fallback, endYear: year };
+  // ambiguous single year: place it against the prior range
+  if (fallback.startYear !== null && year < fallback.startYear) return { ...fallback, startYear: year };
+  if (fallback.endYear !== null && year > fallback.endYear) return { ...fallback, endYear: year };
+  return { ...fallback, startYear: year };
 }
 
 function synthesizeTransform(

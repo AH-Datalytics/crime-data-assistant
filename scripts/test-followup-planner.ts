@@ -18,6 +18,22 @@ const sql = "SELECT year, count FROM historical_state_national WHERE year >= 198
   assert.equal(p.standaloneEligible, false);
   assert.equal(p.deterministicEligible, false);
   assert.equal(p.transform?.name, "change_time_range");
+  // "to 1988" is the preposition of "change to", not an end-year marker
+  assert.equal(p.timeRange.startYear, 1988);
+  assert.equal(p.timeRange.endYear, null);
+}
+{
+  const p = planFollowup("Go back further to 1940.", hist("Compare murder rates in Minnesota to the national rate since 1985", sql, "historical"), "historical");
+  assert.equal(p.kind, "query_bearing");
+  assert.deepEqual(p.changeKinds, ["time_range"]);
+  // "go back ... to 1940" moves the START of the range, never the end
+  assert.equal(p.timeRange.startYear, 1940);
+  assert.equal(p.timeRange.endYear, null);
+}
+{
+  const p = planFollowup("Start the chart in 2000.", hist("Compare murder rates in Minnesota to the national rate since 1985", sql, "historical"), "historical");
+  assert.equal(p.timeRange.startYear, 2000);
+  assert.equal(p.timeRange.endYear, null);
 }
 {
   const p = planFollowup("make it a rolling 12-month window", hist("monthly murders in Houston since 2021", "SELECT year, month, count FROM agency_monthly WHERE agency = 'Houston'", "current"), "current");
