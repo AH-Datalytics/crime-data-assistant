@@ -86,7 +86,7 @@ function hateCrimeCaveats(sql: string, explanation: string): string {
     caveats.push(`Data for ${currentYear - 1} may be incomplete as not all agencies have submitted reports.`);
   }
 
-  // Always append caveats — filter out any the model already stated
+  // Always append caveats ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â filter out any the model already stated
   const fresh = caveats.filter(c => {
     // Skip if explanation already contains the key phrase from this caveat
     if (c.includes("voluntary") && /\bvoluntary\b/i.test(explanation)) return false;
@@ -153,14 +153,19 @@ export async function POST(req: NextRequest) {
 
     const history = normalizeHistoryForTab(body?.history, "hate_crime");
     // Query-bearing follow-ups (prior SQL + a change request) must reach the
-    // model path with history — never the standalone metadata/county shortcuts.
+    // model path with history ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â never the standalone metadata/county shortcuts.
     const queryBearingFollowup = detectQueryBearingFollowup(question, body?.history);
     const plannerMode = plannerModeForSource('hate_crime');
-    if (plannerMode === 'compare') {
-      const followupPlan = planFollowup(question, body?.history, 'hate_crime');
+    const followupPlan = plannerMode === 'off' ? null : planFollowup(question, body?.history, 'hate_crime');
+    if (followupPlan && plannerMode === 'compare') {
       console.log('[followup-planner][compare] ' + JSON.stringify({ source: 'hate_crime', kind: followupPlan.kind, changeKinds: followupPlan.changeKinds, plannedSource: followupPlan.source, sourceChanged: followupPlan.sourceChanged, legacyBearing: Boolean(queryBearingFollowup), q: question.slice(0, 160), reconstructed: followupPlan.reconstructedQuestion.slice(0, 200) }));
     }
-    const followupTransform = detectFollowupTransform(question, history);
+    if (plannerMode === "authoritative" && followupPlan?.sourceChanged) {
+      const explanation = "This follow-up is a better fit for the " + followupPlan.source + " source. Rerunning it there as: " + followupPlan.reconstructedQuestion;
+      return jsonResp({ success: true, question, sql: null, explanation, title: "Source switch", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: 0, sourceSwitch: { source: followupPlan.source, question: followupPlan.reconstructedQuestion } });
+    }
+    const followupTransform = (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing") ? followupPlan.transform : detectFollowupTransform(question, history);
+    const guardrailQuestion = (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing") ? followupPlan.reconstructedQuestion : (followupTransform?.contextQuestion ?? question);
     const promptHistory = followupTransform
       ? [...history, { role: "user" as const, content: followupTransform.instruction }]
       : history;
@@ -192,7 +197,7 @@ export async function POST(req: NextRequest) {
     };
     const runContractValidation = (inputSql: string): QueryContractSqlValidation => {
       const contractResult = validateQueryContractSql({
-        question,
+        question: guardrailQuestion,
         source: "hate_crime",
         sql: inputSql,
         routingMeta,
@@ -220,7 +225,8 @@ export async function POST(req: NextRequest) {
       });
     };
 
-    const capabilityOverride = detectSubCityGeographyOverride(question);
+      const planSaysQueryBearing = plannerMode === 'authoritative' ? followupPlan?.kind === 'query_bearing' : Boolean(queryBearingFollowup);
+  const capabilityOverride = detectSubCityGeographyOverride(question);
     if (capabilityOverride) {
       const executionMs = Date.now() - start;
       writeLog(question, null, 0, null, executionMs, capabilityOverride.explanation, "hate_crime", [capabilityOverride.guardrail], "deterministic", sessionId);
@@ -240,7 +246,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const geoClarification = getBlockingGeoClarification(question);
+    const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing") ? (followupPlan.chartOnly ? null : getBlockingGeoClarification(followupPlan.reconstructedQuestion)) : getBlockingGeoClarification(question);
     if (geoClarification) {
       const executionMs = Date.now() - start;
       writeLog(question, null, 0, null, executionMs, geoClarification.explanation, "hate_crime", [`geo:${geoClarification.issue.id}`], "deterministic", sessionId);
@@ -260,7 +266,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const countyScope = queryBearingFollowup ? null : getCountyScopeClarification(question, body?.history);
+    const countyScope = planSaysQueryBearing ? null : getCountyScopeClarification(question, body?.history);
     if (countyScope) {
       const executionMs = Date.now() - start;
       writeLog(question, null, 0, null, executionMs, countyScope.explanation, "hate_crime", [`geo:${countyScope.id}`], "deterministic", sessionId);
@@ -280,7 +286,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const metadata = queryBearingFollowup ? null : answerMetadataQuestion("hate_crime", question, getHateCrimeDb());
+    const metadata = planSaysQueryBearing ? null : answerMetadataQuestion("hate_crime", question, getHateCrimeDb());
     if (metadata) {
       const executionMs = Date.now() - start;
       writeLog(question, metadata.sql, metadata.rowCount, null, executionMs, metadata.explanation, "hate_crime", ["deterministic-metadata"], "deterministic", sessionId);
@@ -633,7 +639,7 @@ export async function POST(req: NextRequest) {
       xAxis: claude.xAxis || columns[0],
       yAxis: claude.yAxis || (columns.length > 1 ? [columns[columns.length - 1]] : []),
       yAxisLabel: claude.yAxisLabel || undefined,
-      // ChartPanel renders config.title — matches chart-config.ts / nibrs-chart-config.ts.
+      // ChartPanel renders config.title ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â matches chart-config.ts / nibrs-chart-config.ts.
       title: claude.title || "Results",
     }, question);
 

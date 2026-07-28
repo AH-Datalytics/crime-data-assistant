@@ -226,6 +226,7 @@ export default function WorkspaceChat({ sourceYearRanges }: WorkspaceChatProps) 
                   ? { success: true as const, question, sql: event.sql, explanation: event.explanation, title: event.title, columns: event.columns, rows: event.rows, rowCount: event.rowCount, truncated: event.truncated, chartConfig: event.chartConfig, chartMeta: event.chartMeta, executionTimeMs: event.executionTimeMs }
                   : null;
                 finalResponse = qr; setResponse(qr);
+                if (event.sourceSwitch && routingMode !== "rerun") { setTimeout(() => submitQuestion(event.sourceSwitch!.question, event.sourceSwitch!.source as "current" | "historical" | "nibrs" | "shr" | "hate_crime", "Follow-up moved to a better source", null, "rerun"), 0); }
                 if (timerRef.current) clearInterval(timerRef.current); setLoading(false);
                 break;
               case "error": setError(event.text); finalSql = event.sql || ""; if (timerRef.current) clearInterval(timerRef.current); setLoading(false); break;

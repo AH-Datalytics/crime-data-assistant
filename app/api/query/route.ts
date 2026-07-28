@@ -73,7 +73,7 @@ function getChartMeta(
     if (popYear > RTCI.popMaxYear) popYear = RTCI.popMaxYear;
     if (popYear < RTCI.popMinYear) popYear = RTCI.popMinYear;
 
-    // National queries — use agency_count from the most recent completed month
+    // National queries Ã¢â‚¬â€ use agency_count from the most recent completed month
     if (sqlLower.includes("national_monthly")) {
       const row = db
         .prepare(
@@ -93,7 +93,7 @@ function getChartMeta(
       return { agencyCount: row?.cnt ?? 0, population: popRow?.pop ?? null };
     }
 
-    // State queries — count only complete reporters (national_sample = 1)
+    // State queries Ã¢â‚¬â€ count only complete reporters (national_sample = 1)
     const stateMatch = sql.match(/(?:a\.)?state\s*=\s*'([A-Z]{2})'/i);
     const isStateLevelQuery = stateMatch && (
       sqlLower.includes("state_monthly") ||
@@ -112,7 +112,7 @@ function getChartMeta(
       return { agencyCount: row.cnt, population: row.pop };
     }
 
-    // Specific agency queries — extract all agency='X' AND state='Y' pairs
+    // Specific agency queries Ã¢â‚¬â€ extract all agency='X' AND state='Y' pairs
     const agencyPairs: { agency: string; state: string }[] = [];
     const pairRe =
       /agency\s*=\s*'([^']+)'\s+AND\s+(?:\w+\.)?state\s*=\s*'([A-Z]{2})'/gi;
@@ -209,7 +209,7 @@ function getHistoricalChartMeta(
       return { agencyCount: 0, population: null, source: src };
     }
 
-    // Agency-level queries — count distinct agencies
+    // Agency-level queries Ã¢â‚¬â€ count distinct agencies
     if (sqlLower.includes("historical_agency_crime")) {
       const agencyRe = /ha\.agency\s*=\s*'([^']+)'/gi;
       const agencies: string[] = [];
@@ -336,7 +336,7 @@ function answerHistoricalPlaceLookup(
 export async function POST(req: NextRequest) {
   const encoder = new TextEncoder();
   const totalStart = Date.now();
-  const MAX_REQUEST_MS = 60000; // 60s total budget — no retries after this
+  const MAX_REQUEST_MS = 60000; // 60s total budget Ã¢â‚¬â€ no retries after this
   const isOverBudget = () => Date.now() - totalStart > MAX_REQUEST_MS;
 
   // Rate limiting
@@ -370,7 +370,7 @@ export async function POST(req: NextRequest) {
     body = await req.json();
     question = (body?.question as string)?.trim() || "";
     sessionId = ((body?.sessionId as string) || "").slice(0, 64) || null;
-    // Page token validation — block bots that hit the API directly
+    // Page token validation Ã¢â‚¬â€ block bots that hit the API directly
     const pageToken = body?.pageToken as string | undefined;
     if (!validatePageToken(pageToken)) {
       return new Response(
@@ -434,13 +434,28 @@ export async function POST(req: NextRequest) {
 
   const tab = body?.mode === "historical" ? "historical" : "current";
   // Query-bearing follow-ups (prior SQL + a change request) must reach the
-  // model path with history — never the standalone metadata/county/place shortcuts.
+  // model path with history Ã¢â‚¬â€ never the standalone metadata/county/place shortcuts.
   const queryBearingFollowup = detectQueryBearingFollowup(question, body?.history);
     const plannerMode = plannerModeForSource(tab);
-    if (plannerMode === 'compare') {
-      const followupPlan = planFollowup(question, body?.history, tab);
+    const followupPlan = plannerMode === 'off' ? null : planFollowup(question, body?.history, tab);
+    if (followupPlan && plannerMode === 'compare') {
       console.log('[followup-planner][compare] ' + JSON.stringify({ source: tab, kind: followupPlan.kind, changeKinds: followupPlan.changeKinds, plannedSource: followupPlan.source, sourceChanged: followupPlan.sourceChanged, legacyBearing: Boolean(queryBearingFollowup), q: question.slice(0, 160), reconstructed: followupPlan.reconstructedQuestion.slice(0, 200) }));
     }
+  if (plannerMode === "authoritative" && followupPlan?.sourceChanged) {
+    const ms = Date.now() - totalStart;
+    const explanation = "This follow-up is a better fit for the " + followupPlan.source + " source. Rerunning it there as: " + followupPlan.reconstructedQuestion;
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(encoder.encode(sseEvent({
+          type: "result", sql: null as unknown as string, explanation, title: "Source switch", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: ms,
+          sourceSwitch: { source: followupPlan.source, question: followupPlan.reconstructedQuestion },
+        })));
+        controller.close();
+      },
+    });
+    return new Response(stream, { headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", Connection: "keep-alive" } });
+  }
+    const planSaysQueryBearing = plannerMode === 'authoritative' ? followupPlan?.kind === 'query_bearing' : Boolean(queryBearingFollowup);
   const capabilityOverride =
     detectSubCityGeographyOverride(question) ??
     detectDemographicHomicideRateOverride(question);
@@ -521,7 +536,7 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  const geoClarification = getBlockingGeoClarification(question);
+  const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing") ? (followupPlan.chartOnly ? null : getBlockingGeoClarification(followupPlan.reconstructedQuestion)) : getBlockingGeoClarification(question);
   if (geoClarification) {
     const ms = Date.now() - totalStart;
     writeLog(question, null, 0, null, ms, geoClarification.explanation, tab, [`geo:${geoClarification.issue.id}`], "deterministic", sessionId);
@@ -715,7 +730,7 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  const metadata = queryBearingFollowup ? null : answerMetadataQuestion(tab, question, getDb());
+  const metadata = planSaysQueryBearing ? null : answerMetadataQuestion(tab, question, getDb());
   if (metadata) {
     const ms = Date.now() - totalStart;
     writeLog(question, metadata.sql, metadata.rowCount, null, ms, metadata.explanation, tab, ["deterministic-metadata"], "deterministic", sessionId);
@@ -819,10 +834,10 @@ export async function POST(req: NextRequest) {
 
         const isHistorical = body?.mode === "historical";
         const history = normalizeHistoryForTab(body?.history, isHistorical ? "historical" : "current");
-        const followupTransform = detectFollowupTransform(question, history);
-        // Bare clarifier answers ("Countywide total") carry no county name — use
+        const followupTransform = (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing") ? followupPlan.transform : detectFollowupTransform(question, history);
+        // Bare clarifier answers ("Countywide total") carry no county name Ã¢â‚¬â€ use
         // the transform's reconstructed question so guardrails see the geography
-        const guardrailQuestion = followupTransform?.contextQuestion ?? question;
+        const guardrailQuestion = (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing") ? followupPlan.reconstructedQuestion : (followupTransform?.contextQuestion ?? question);
         contractQuestion = guardrailQuestion;
         const promptHistory = followupTransform
           ? [...history, { role: "user" as const, content: followupTransform.instruction }]
@@ -964,7 +979,7 @@ export async function POST(req: NextRequest) {
         }
         issues.push(...initialContractResult.retryIssues);
 
-        // Hard override — skip retry, return deterministic response
+        // Hard override Ã¢â‚¬â€ skip retry, return deterministic response
         if (guardrailResult.overrideResponse) {
           const overrideExplanation = guardrailResult.overrideResponse;
           writeLog(question, sql, 0, `guardrail_override:${guardrailResult.overrideGuardrail}`, Date.now() - totalStart, overrideExplanation, tab, firedGuardrails, "haiku-4.5", sessionId);
@@ -1038,7 +1053,7 @@ export async function POST(req: NextRequest) {
             f === "historical-city-got-state" || f === "historical-county-got-state" || f === "contract-geography-missing"
           );
           if (geoContractViolation) {
-            const msg = "I couldn't build a reliable query for that specific geography. The data may be available under a different agency name — try searching for the county sheriff or a specific city within the county.";
+            const msg = "I couldn't build a reliable query for that specific geography. The data may be available under a different agency name Ã¢â‚¬â€ try searching for the county sheriff or a specific city within the county.";
             writeLog(question, claude.sql, 0, "geography_second_failure", Date.now() - totalStart, msg, tab, postRetryResult.fired, "haiku-4.5", sessionId);
             controller.enqueue(encoder.encode(sseEvent({ type: "result", sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - totalStart })));
             close(); return;
@@ -1457,8 +1472,8 @@ export async function POST(req: NextRequest) {
             const hasAgencyCte = /WITH\s+agency\s+AS/i.test(sql) || /historical_agency\s+ha/i.test(sql);
             const hasCountyOrCity = /\b(county|parish|agency\s*=)\b/i.test(question);
             const emptyMsg = hasAgencyCte && hasCountyOrCity
-              ? "I couldn't find a matching agency or county record for that query. The name may be stored differently in the database — try the exact agency name (e.g., 'Alameda County' not just 'Alameda'), or check the Historical Library tab which has county-level records."
-              : "I ran that query but all the values came back empty — the math likely broke somewhere (like dividing by zero). Could you try asking that a different way?";
+              ? "I couldn't find a matching agency or county record for that query. The name may be stored differently in the database Ã¢â‚¬â€ try the exact agency name (e.g., 'Alameda County' not just 'Alameda'), or check the Historical Library tab which has county-level records."
+              : "I ran that query but all the values came back empty Ã¢â‚¬â€ the math likely broke somewhere (like dividing by zero). Could you try asking that a different way?";
             writeLog(question, sql, 0, "all_null_columns", totalMs, emptyMsg, tab, firedGuardrails, "haiku-4.5", sessionId);
             controller.enqueue(
               encoder.encode(
@@ -1566,7 +1581,7 @@ export async function POST(req: NextRequest) {
 
         // Step 5c: Append deterministic RTCI sample disclaimer (server-enforced, model can't skip)
         if (!isHistorical && claude.explanation) {
-          const sampleNote = "Note: Current Trends data comes from a sample of agencies with consistent reporting — it does not represent complete state or national totals. For comprehensive state-level estimates, try the Historical Library tab.";
+          const sampleNote = "Note: Current Trends data comes from a sample of agencies with consistent reporting Ã¢â‚¬â€ it does not represent complete state or national totals. For comprehensive state-level estimates, try the Historical Library tab.";
           if (!claude.explanation.includes("sample")) {
             claude.explanation = claude.explanation + "\n\n" + sampleNote;
           }
@@ -1612,7 +1627,7 @@ export async function POST(req: NextRequest) {
           }
           // Append RTCI sample disclaimer to post-query explanation too
           if (!isHistorical && postExplanation && !postExplanation.includes("sample")) {
-            postExplanation += "\n\nNote: Current Trends data comes from a sample of agencies with consistent reporting — it does not represent complete state or national totals. For comprehensive state-level estimates, try the Historical Library tab.";
+            postExplanation += "\n\nNote: Current Trends data comes from a sample of agencies with consistent reporting Ã¢â‚¬â€ it does not represent complete state or national totals. For comprehensive state-level estimates, try the Historical Library tab.";
           }
           postExplanation = applyResultDisclosures({ explanation: postExplanation, question, sql, rows, tab });
           if (containsInternalScaffold(postExplanation)) {
@@ -1651,7 +1666,7 @@ export async function POST(req: NextRequest) {
                 .replace(/\bin cities\b/gi, "nationally");
             }
             if (!isHistorical && retryExplanation && !retryExplanation.includes("sample")) {
-              retryExplanation += "\n\nNote: Current Trends data comes from a sample of agencies with consistent reporting — it does not represent complete state or national totals. For comprehensive state-level estimates, try the Historical Library tab.";
+              retryExplanation += "\n\nNote: Current Trends data comes from a sample of agencies with consistent reporting Ã¢â‚¬â€ it does not represent complete state or national totals. For comprehensive state-level estimates, try the Historical Library tab.";
             }
             retryExplanation = applyResultDisclosures({ explanation: retryExplanation, question, sql, rows, tab });
             if (containsInternalScaffold(retryExplanation)) {
@@ -1668,7 +1683,7 @@ export async function POST(req: NextRequest) {
             const totalMs2 = Date.now() - totalStart;
             writeLog(question, sql, rows.length, null, totalMs2, retryExplanation, tab, firedGuardrails, "haiku-4.5", sessionId);
           } catch {
-            // Both attempts failed — pre-query explanation stays
+            // Both attempts failed Ã¢â‚¬â€ pre-query explanation stays
             const totalMs2 = Date.now() - totalStart;
             writeLog(question, sql, rows.length, null, totalMs2, claude.explanation, tab, firedGuardrails, "haiku-4.5", sessionId);
           }
