@@ -56,6 +56,29 @@ const shrFatalShootingTrendHistory: PromptHistoryMessage[] = [
 }
 
 {
+  const transform = detectFollowupTransform("Compare it to Dallas.", currentMonthlyTrendHistory);
+  assert(transform, "compare it to <place> should be detected");
+  assert.equal(transform.name, "compare_geographies");
+  assert.match(transform.contextQuestion || "", /Dallas/);
+}
+
+{
+  const transform = detectFollowupTransform("compare this with Fort Worth", currentMonthlyTrendHistory);
+  assert(transform, "compare this with <place> should be detected");
+  assert.equal(transform.name, "compare_geographies");
+}
+
+{
+  const transform = detectFollowupTransform("compare to Dallas", currentMonthlyTrendHistory);
+  assert(transform);
+  assert.equal(transform.name, "compare_geographies");
+}
+
+{
+  assert.equal(detectFollowupTransform("compare it to last year", currentMonthlyTrendHistory), null);
+}
+
+{
   const transform = detectFollowupTransform("split it out by state", historyWithSql);
   assert(transform);
   assert.equal(transform.dimension, "state");

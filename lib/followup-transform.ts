@@ -121,7 +121,7 @@ export function detectFollowupTransform(question: string, history: PromptHistory
   const countyScope = detectCountyScopeResolution(question, history);
   if (countyScope) return countyScope;
 
-  const comparisonTarget = question.match(/^\s*(?:compare\s+(?:to|with|against)|what about)\s+(.+?)\s*\??\s*$/i);
+  const comparisonTarget = question.match(/^\s*(?:compare\s+(?:(?:it|this|that|them)\s+)?(?:to|with|against)|what about)\s+(.+?)\s*\??\s*$/i);
   const targetResolvesAsPlace = comparisonTarget && resolveGeoPlaces(comparisonTarget[1]).mentions.length > 0;
   if (comparisonTarget && targetResolvesAsPlace && hasPriorSql(history)) {
     const priorQuestion = latestPriorUserQuestion(history);
