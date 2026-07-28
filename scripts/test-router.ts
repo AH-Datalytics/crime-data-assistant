@@ -364,6 +364,15 @@ test({ question: "trim the end date to 2025", expectedPrimary: "historical", exp
 test({ question: "now make it per capita", expectedPrimary: "historical", expectFollowUp: true });
 test({ question: "now take out robbery", expectedPrimary: "historical", expectFollowUp: true });
 test({ question: "can you make that a line chart", expectedPrimary: "historical", expectFollowUp: true });
+
+// Query-bearing follow-up regressions (2026-07-28): these modify a prior
+// successful query and must never be answered as standalone metadata
+test({ question: "Can you change the start year to 1988?", expectedPrimary: "historical", expectFollowUp: true, note: "was intercepted by metadata year_range intent" });
+test({ question: "Go back further to 1940.", expectedPrimary: "historical", expectFollowUp: true });
+test({ question: "Start the chart in 2000.", expectedPrimary: "historical", expectFollowUp: true });
+test({ question: "Make it monthly.", expectedPrimary: "historical", expectFollowUp: true });
+test({ question: "Show the rate instead.", expectedPrimary: "historical", expectFollowUp: true });
+test({ question: "Compare it to Dallas.", expectedPrimary: "historical", expectFollowUp: true });
 test({ question: "can you combine the year and month into a date (MMM-YY) on the table?", expectedPrimary: "historical", expectFollowUp: true });
 
 // Short confirmations / rejections
