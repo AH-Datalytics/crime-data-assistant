@@ -421,6 +421,7 @@ export default function NibrsChartPanel({ config, rows }: NibrsChartPanelProps) 
             <CartesianGrid horizontal vertical={false} stroke={GRID_COLOR} strokeWidth={1} />
             <XAxis
               dataKey={xAxisDataKey}
+              {...(plainYears ? { type: "number" as const, domain: ["dataMin", "dataMax"] as const } : {})}
               tick={TICK_STYLE}
               tickLine={X_AXIS_TICK_LINE_STYLE}
               axisLine={X_AXIS_LINE_STYLE}
@@ -434,7 +435,7 @@ export default function NibrsChartPanel({ config, rows }: NibrsChartPanelProps) 
               }
               angle={fewYearsMonthly ? -40 : (ym || daily || plainYears) ? 0 : -45}
               textAnchor={fewYearsMonthly ? "end" : (ym || daily || plainYears) ? "middle" : "end"}
-              {...(yearTicks.length > 0 ? { ticks: yearTicks.map(String) } : {})}
+              {...(yearTicks.length > 0 ? { ticks: yearTicks } : {})}
               {...(ymTicks.length > 0 ? { ticks: ymTicks } : {})}
               {...(dailyTicks.length > 0 ? { ticks: dailyTicks } : {})}
               interval={
