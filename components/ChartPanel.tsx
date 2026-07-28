@@ -557,6 +557,7 @@ function ChartPanel({ config, rows, meta }: ChartPanelProps) {
               <CartesianGrid horizontal vertical={false} stroke={GRID_COLOR} strokeWidth={1} />
               <XAxis
                 dataKey={xAxisDataKey}
+                {...(plainYears ? { type: "number" as const, domain: ["dataMin", "dataMax"] as const } : {})}
                 tick={TICK_STYLE}
                 tickLine={X_AXIS_TICK_LINE_STYLE}
                 axisLine={X_AXIS_LINE_STYLE}
