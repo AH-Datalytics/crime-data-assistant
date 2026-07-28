@@ -28,7 +28,7 @@ const sql = "SELECT year, count FROM historical_state_national WHERE year >= 198
 }
 {
   const p = planFollowup("compare to Dallas", hist("firearm homicides in Houston since 2015", "SELECT year, count(*) FROM incidents", "shr"), "shr");
-  assert.equal(p.transform?.name, "compare_geographies");
+  assert.ok(p.changeKinds.includes("geography"));
   assert.match(p.reconstructedQuestion, /Dallas/);
   assert.equal(p.source, "shr");
 }
@@ -42,4 +42,40 @@ const sql = "SELECT year, count FROM historical_state_national WHERE year >= 198
   assert.equal(p.transform?.name, "change_offense");
   assert.match(p.reconstructedQuestion, /carjackings/i);
 }
-console.log("followup-planner tests passed");
+{
+  const h = hist("firearm homicides in Houston since 2015", "SELECT year FROM incidents", "shr");
+  const p = planFollowup("what about carjackings?", h, "shr");
+  assert.equal(p.source, "nibrs");
+  assert.equal(p.sourceChanged, true);
+  assert.doesNotMatch(p.reconstructedQuestion, /firearm/i);
+  assert.match(p.reconstructedQuestion, /carjackings/i);
+}
+{
+  const h = hist("murders in Louisville from 1995 to 2010", "SELECT year FROM incidents", "shr");
+  const p = planFollowup("extend it through 2015", h, "shr");
+  assert.equal(p.timeRange.startYear, 1995);
+  assert.equal(p.timeRange.endYear, 2015);
+}
+{
+  const h = hist("robberies in Baltimore since 2018", "SELECT year FROM agency_monthly", "current");
+  const p = planFollowup("how does that compare to Maryland statewide?", h, "current");
+  assert.ok(p.changeKinds.includes("geography"));
+  assert.match(p.reconstructedQuestion, /Baltimore/);
+  assert.match(p.reconstructedQuestion, /Maryland/);
+}
+{
+  const h = [{ role: "user", content: "show violent crime in Cook County, IL", source: "nibrs" }, { role: "assistant", content: "Countywide total (all law enforcement agencies mapped to Cook County, summed)", source: "nibrs" }];
+  const p = planFollowup("Countywide total", h, "nibrs");
+  assert.equal(p.transform?.name, "resolve_county_scope");
+}
+{
+  const h = hist("violent crime at Ohio State University since 2018", "SELECT year FROM summary_victim_city_monthly", "nibrs");
+  const p = planFollowup("Make it monthly", h, "nibrs");
+  assert.equal(p.granularity, "monthly");
+}
+{
+  const h = hist("murder rates in Minnesota", "SELECT year FROM historical_state_national", "historical");
+  const p = planFollowup("show this as a line chart", h, "historical");
+  assert.equal(p.chartOnly, true);
+  assert.equal(p.standaloneEligible, false);
+}console.log("followup-planner tests passed");

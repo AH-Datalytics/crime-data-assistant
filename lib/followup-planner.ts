@@ -32,6 +32,17 @@ function passthrough(question: string, source: SourceId): FollowupPlan {
   };
 }
 
+function requestedTimeRange(question: string, fallback: { startYear: number | null; endYear: number | null }): { startYear: number | null; endYear: number | null } {
+  const years = [...question.matchAll(/\b(?:17|18|19|20)\d{2}\b/g)].map((m) => Number(m[0]));
+  if (!years.length) return fallback;
+  const start = /\b(?:start(?:ing)?|begin(?:ning)?|since|from)\b/i.test(question);
+  const end = /\b(?:end(?:ing)?|through|until|up to|to)\b/i.test(question);
+  if (years.length >= 2 || (start && end)) return { startYear: years[0], endYear: years[years.length - 1] };
+  if (start) return { ...fallback, startYear: years[0] };
+  if (end) return { ...fallback, endYear: years[0] };
+  return fallback;
+}
+
 function synthesizeTransform(
   kinds: FollowupChangeKind[], question: string, priorQuestion: string,
 ): FollowupTransform | null {
@@ -48,7 +59,8 @@ function synthesizeTransform(
   };
   if (kinds.includes("offense")) {
     const target = question.match(/^\s*(?:what|how)\s+about\s+(.+?)\s*\??\s*$/i)?.[1]?.trim();
-    const reconstructed = target && OFFENSE_NOUN_RE.test(target) ? priorQuestion.replace(OFFENSE_NOUN_RE, target) : base;
+    const cleanedPrior = priorQuestion.replace(/\b(?:firearm|gun|weapon[- ]related)\s+(?=\w)/gi, "");
+    const reconstructed = target && OFFENSE_NOUN_RE.test(target) ? cleanedPrior.replace(OFFENSE_NOUN_RE, target) : base;
     return {
       name: "change_offense", contextQuestion: reconstructed,
       instruction: `[SYSTEM: This follow-up changes ONLY the offense/topic of the prior question "${priorQuestion}" as requested by "${question}". Preserve the prior geography, time range, metric, and granularity.]`,
@@ -90,13 +102,12 @@ export function planFollowup(
 
   const contract = buildQueryContract(reconstructedQuestion, source);
   const intent = parseIntent(reconstructedQuestion);
+  const baseTimeRange = { startYear: contract?.time.startYear ?? null, endYear: contract?.time.endYear ?? null };
+  const timeRange = requestedTimeRange(question, baseTimeRange);
   return {
     kind: "query_bearing", source, sourceChanged, reconstructedQuestion,
     priorQuestion, changeKinds, transform: effectiveTransform, contract,
-    timeRange: {
-      startYear: contract?.time.startYear ?? null,
-      endYear: contract?.time.endYear ?? null,
-    },
+    timeRange,
     granularity: intent.granularity, chartOnly,
     deterministicEligible: false, standaloneEligible: false,
   };
