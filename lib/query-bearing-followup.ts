@@ -83,13 +83,15 @@ function refersToGeographyChange(q: string): boolean {
   return false;
 }
 
-const OFFENSE_NOUN_RE = /\b(?:murders?|homicides?|rapes?|robber(?:y|ies)|assaults?|burglar(?:y|ies)|thefts?|larcen(?:y|ies)|motor\s+vehicle\s+thefts?|carjackings?|shootings?|arsons?|violent\s+crimes?|property\s+crimes?|hate\s+crimes?)\b/i;
+export const OFFENSE_NOUN_RE = /\b(?:murders?|homicides?|rapes?|robber(?:y|ies)|assaults?|burglar(?:y|ies)|thefts?|larcen(?:y|ies)|motor\s+vehicle\s+thefts?|carjackings?|shootings?|arsons?|violent\s+crimes?|property\s+crimes?|hate\s+crimes?)\b/i;
 
 function refersToOffenseChange(q: string): boolean {
+  const whatAbout = q.match(/^\s*(?:what|how)\s+about\s+(.+?)\s*\??\s*$/i);
+  if (whatAbout && OFFENSE_NOUN_RE.test(whatAbout[1]) &&
+      resolveGeoPlaces(whatAbout[1]).mentions.length === 0) return true;
   return OFFENSE_NOUN_RE.test(q) &&
     /\binstead\b|\brather\s+than\b|\bswitch(?:\s+(?:it|this|that))?\s+to\b|\bchange\s+(?:it|this|that|the\s+offense)\s+to\b|\bnow\s+show\b|\bmake\s+it\b/i.test(q);
 }
-
 function refersToMetricChange(q: string): boolean {
   const mentionsMetric =
     /\b(?:rates?|counts?|numbers?|totals?|per\s*capita|per\s*100,?000|per\s*100\s*k|percentages?|shares?)\b/i.test(q);

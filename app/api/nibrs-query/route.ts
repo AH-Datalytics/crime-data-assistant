@@ -27,7 +27,9 @@ import { detectFollowupTransform } from "@/lib/followup-transform";
 import { detectNibrsCapabilityOverride } from "@/lib/nibrs-capability-overrides";
 import { getBlockingGeoClarification } from "@/lib/geo-resolver";
 import { getCountyScopeClarification } from "@/lib/county-clarifier";
-import { detectQueryBearingFollowup } from "@/lib/query-bearing-followup";
+import { detectQueryBearingFollowup } from '@/lib/query-bearing-followup';
+import { planFollowup } from '@/lib/followup-planner';
+import { plannerModeForSource } from '@/lib/followup-planner-mode';
 import { asksCampusAgency, buildCampusAgencySummarySql, campusAgencyChartAxesFromSql, campusAgencyDisplayName, knownCampusAgencyResolution, resolveCampusAgencyOris, shouldResolveCampusAgencySql } from "@/lib/nibrs-campus-agency";
 import { planNibrsQuery } from "@/lib/nibrs-query-planner";
 import { optimizeNibrsSql } from "@/lib/nibrs-sql-optimizer";
@@ -246,8 +248,17 @@ export async function POST(req: NextRequest) {
     // Query-bearing follow-ups (prior SQL + a change request) must reach the
     // model path with history — never the standalone metadata/county shortcuts.
     const queryBearingFollowup = detectQueryBearingFollowup(question, body?.history);
-
-    const geoClarification = getBlockingGeoClarification(question);
+    const plannerMode = plannerModeForSource('nibrs');
+    const followupPlan = plannerMode === 'off' ? null : planFollowup(question, body?.history, 'nibrs');
+    if (followupPlan && plannerMode === 'compare') {
+      console.log('[followup-planner][compare] ' + JSON.stringify({ source: 'nibrs', kind: followupPlan.kind, changeKinds: followupPlan.changeKinds, plannedSource: followupPlan.source, sourceChanged: followupPlan.sourceChanged, legacyBearing: Boolean(queryBearingFollowup), q: question.slice(0, 160), reconstructed: followupPlan.reconstructedQuestion.slice(0, 200) }));
+    }
+    const planSaysQueryBearing = plannerMode === 'authoritative'
+      ? followupPlan?.kind === 'query_bearing'
+      : Boolean(queryBearingFollowup);
+    const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing")
+      ? (followupPlan.chartOnly ? null : getBlockingGeoClarification(followupPlan.reconstructedQuestion))
+      : getBlockingGeoClarification(question);
     if (geoClarification) {
       const executionMs = Date.now() - routeStart;
       writeNibrsLog(question, null, 0, null, executionMs, geoClarification.explanation, [`geo:${geoClarification.issue.id}`], "deterministic", sessionId);
@@ -267,7 +278,7 @@ export async function POST(req: NextRequest) {
       } as QueryResponse);
     }
 
-    const countyScope = queryBearingFollowup ? null : getCountyScopeClarification(question, body?.history);
+    const countyScope = planSaysQueryBearing ? null : getCountyScopeClarification(question, body?.history);
     if (countyScope) {
       const executionMs = Date.now() - routeStart;
       writeNibrsLog(question, null, 0, null, executionMs, countyScope.explanation, [`geo:${countyScope.id}`], "deterministic", sessionId);
@@ -288,14 +299,18 @@ export async function POST(req: NextRequest) {
     }
 
     const history = normalizeHistoryForTab(body?.history, "nibrs");
-    const followupTransform = detectFollowupTransform(question, history);
-    const guardrailQuestion = followupTransform?.contextQuestion ?? question;
+    const followupTransform = (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing")
+      ? followupPlan.transform
+      : detectFollowupTransform(question, history);
+    const guardrailQuestion = (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing")
+      ? followupPlan.reconstructedQuestion
+      : (followupTransform?.contextQuestion ?? question);
     const basePromptHistory = followupTransform
       ? [...history, { role: "user" as const, content: followupTransform.instruction }]
       : history;
     const promptContract = buildQueryContract(guardrailQuestion, "nibrs");
     const resolutionPlan = resolveNibrsPlaces(getNibrsDb(), guardrailQuestion, promptContract);
-    const deterministicResolution = followupTransform ? null : resolutionPlan;
+    const deterministicResolution = (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing") ? null : (followupTransform ? null : resolutionPlan);
     if (resolutionPlan) {
       console.log(
         `[nibrs][resolver] ${resolutionPlan.elapsedMs}ms ` +
@@ -310,7 +325,7 @@ export async function POST(req: NextRequest) {
     ];
 
     const nibrsPlan = planNibrsQuery(question, deterministicResolution, {
-      allowDeterministic: !followupTransform,
+      allowDeterministic: (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing") ? false : !followupTransform,
     });
     if (nibrsPlan.kind === "blocked" && deterministicResolution) {
       const executionMs = Date.now() - routeStart;
@@ -399,7 +414,7 @@ export async function POST(req: NextRequest) {
     }
 
     const metadataStart = Date.now();
-    const metadata = queryBearingFollowup ? null : answerMetadataQuestion("nibrs", question, getNibrsDb());
+    const metadata = planSaysQueryBearing ? null : answerMetadataQuestion("nibrs", question, getNibrsDb());
     if (metadata) {
       const executionMs = Date.now() - metadataStart;
       writeNibrsLog(question, metadata.sql, metadata.rowCount, null, executionMs, metadata.explanation, ["deterministic-metadata"], "deterministic", sessionId);

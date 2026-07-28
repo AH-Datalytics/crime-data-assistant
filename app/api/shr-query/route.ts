@@ -28,7 +28,9 @@ import { detectFollowupTransform } from "@/lib/followup-transform";
 import { applyChartCustomizations } from "@/lib/chart-customization";
 import { getBlockingGeoClarification } from "@/lib/geo-resolver";
 import { getCountyScopeClarification } from "@/lib/county-clarifier";
-import { detectQueryBearingFollowup } from "@/lib/query-bearing-followup";
+import { detectQueryBearingFollowup } from '@/lib/query-bearing-followup';
+import { planFollowup } from '@/lib/followup-planner';
+import { plannerModeForSource } from '@/lib/followup-planner-mode';
 import { detectShrGroupRateOverride, detectSubCityGeographyOverride } from "@/lib/capability-overrides";
 import { displayShrAgencyName, normalizeShrAgencyText } from "@/lib/shr-agency-normalization";
 import { asksSimpleFirearmHomicideTrend } from "@/lib/shr-firearm-trend-intent";
@@ -143,6 +145,11 @@ export async function POST(req: NextRequest) {
     // Query-bearing follow-ups (prior SQL + a change request) must reach the
     // model path with history — never the standalone metadata/county shortcuts.
     const queryBearingFollowup = detectQueryBearingFollowup(question, body?.history);
+    const plannerMode = plannerModeForSource('shr');
+    if (plannerMode === 'compare') {
+      const followupPlan = planFollowup(question, body?.history, 'shr');
+      console.log('[followup-planner][compare] ' + JSON.stringify({ source: 'shr', kind: followupPlan.kind, changeKinds: followupPlan.changeKinds, plannedSource: followupPlan.source, sourceChanged: followupPlan.sourceChanged, legacyBearing: Boolean(queryBearingFollowup), q: question.slice(0, 160), reconstructed: followupPlan.reconstructedQuestion.slice(0, 200) }));
+    }
     const followupTransform = detectFollowupTransform(question, history);
     // Bare clarifier answers ("Countywide total") carry no county name — use
     // the transform's reconstructed question so guardrails see the geography

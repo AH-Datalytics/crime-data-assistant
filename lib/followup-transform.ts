@@ -5,7 +5,7 @@ import { resolveGeoPlaces } from "./geo-place-resolver";
 export type FollowupBreakdown = "state" | "city" | "agency";
 
 export interface FollowupTransform {
-  name: "add_breakdown" | "add_continuous_reporting_filter" | "replace_with_dv_victim_demographics" | "replace_rate_with_count" | "resolve_county_scope" | "assess_trend" | "compare_geographies";
+  name: "add_breakdown" | "add_continuous_reporting_filter" | "replace_with_dv_victim_demographics" | "replace_rate_with_count" | "resolve_county_scope" | "assess_trend" | "compare_geographies" | "change_time_range" | "change_granularity" | "change_offense" | "replace_count_with_rate";
   dimension?: FollowupBreakdown;
   instruction: string;
   /** When set, routes should use this instead of the raw question for guardrail
@@ -74,11 +74,11 @@ function requestedBreakdown(question: string): FollowupBreakdown | null {
   return null;
 }
 
-function hasPriorSql(history: PromptHistoryMessage[]): boolean {
+export function hasPriorSql(history: PromptHistoryMessage[]): boolean {
   return history.some((msg) => msg.role === "assistant" && /\bSELECT\b[\s\S]+\bFROM\b/i.test(msg.content));
 }
 
-function latestPriorUserQuestion(history: PromptHistoryMessage[]): string | null {
+export function latestPriorUserQuestion(history: PromptHistoryMessage[]): string | null {
   for (let i = history.length - 1; i >= 0; i--) {
     const msg = history[i];
     if (msg.role !== "user") continue;

@@ -37,7 +37,9 @@ import { partialCoverageRetryPrompt } from "@/lib/source-year-overlap";
 import { resolveGeoPlaces } from "@/lib/geo-place-resolver";
 import { isFollowUp } from "@/lib/tab-suggest";
 import { buildHistoricalCityChangeRankingPlan } from "@/lib/historical-deterministic-queries";
-import { detectQueryBearingFollowup } from "@/lib/query-bearing-followup";
+import { detectQueryBearingFollowup } from '@/lib/query-bearing-followup';
+import { planFollowup } from '@/lib/followup-planner';
+import { plannerModeForSource } from '@/lib/followup-planner-mode';
 
 function sseEvent(event: StreamEvent): string {
   return `data: ${JSON.stringify(event)}\n\n`;
@@ -434,6 +436,11 @@ export async function POST(req: NextRequest) {
   // Query-bearing follow-ups (prior SQL + a change request) must reach the
   // model path with history — never the standalone metadata/county/place shortcuts.
   const queryBearingFollowup = detectQueryBearingFollowup(question, body?.history);
+    const plannerMode = plannerModeForSource(tab);
+    if (plannerMode === 'compare') {
+      const followupPlan = planFollowup(question, body?.history, tab);
+      console.log('[followup-planner][compare] ' + JSON.stringify({ source: tab, kind: followupPlan.kind, changeKinds: followupPlan.changeKinds, plannedSource: followupPlan.source, sourceChanged: followupPlan.sourceChanged, legacyBearing: Boolean(queryBearingFollowup), q: question.slice(0, 160), reconstructed: followupPlan.reconstructedQuestion.slice(0, 200) }));
+    }
   const capabilityOverride =
     detectSubCityGeographyOverride(question) ??
     detectDemographicHomicideRateOverride(question);
