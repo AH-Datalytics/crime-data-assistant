@@ -42,6 +42,14 @@ function asksDemographicRate(text: string): boolean {
     /\b(?:race|racial|sex|gender|male|female|men|women|age|ages|demographic|demographics)\b/i.test(text);
 }
 
+function unsupportedTimePeriod(text: string): "week" | "day" | "quarter" | "hour" | null {
+  if (/\b(?:per|each)\s+weeks?\b|\bweekly\b/i.test(text)) return "week";
+  if (/\b(?:per|each)\s+days?\b|\bdaily\b/i.test(text)) return "day";
+  if (/\b(?:per|each)\s+quarters?\b|\bquarterly\b/i.test(text)) return "quarter";
+  if (/\b(?:per|each)\s+hours?\b|\bhourly\b/i.test(text) &&
+      !/\b(?:time\s+of\s+day|hour\s+of\s+day|breakdown|by\s+hour|peak\s+hours?)\b/i.test(text)) return "hour";
+  return null;
+}
 function asksAmbiguousTheft(text: string): boolean {
   if (!/\bthefts?\b/i.test(text)) return false;
   return !/\b(?:motor\s+vehicle|auto|vehicle|car|from\s+(?:a\s+)?(?:vehicle|car|auto)|larceny\s*\/?|shoplifting|identity|retail|pocket.?picking|purse.?snatching|burglary)\s*thefts?\b|\bthefts?\s+(?:from|of|out\s+of|involving|by)\b/i.test(text);
@@ -68,6 +76,21 @@ export function getQueryGuidanceWarnings(input: string): GuidanceWarning[] {
     });
   }
 
+  const unsupportedPeriod = unsupportedTimePeriod(text);
+  if (unsupportedPeriod) {
+    const periodLabel = unsupportedPeriod === "hour" ? "hourly" : `${unsupportedPeriod}ly`;
+    const pattern = "\\b(?:per|by|each)\\s+" + unsupportedPeriod + "s?\\b|\\b" + periodLabel + "\\b";
+    warnings.push({
+      id: "unsupported-time-granularity",
+      kind: "blocking",
+      title: `${periodLabel.charAt(0).toUpperCase() + periodLabel.slice(1)} trend data is not available`,
+      detail: "This service supports annual and monthly trend data. Choose one of those timeframes instead of sending an unsupported request to the model.",
+      actions: [
+        { label: "Use monthly data", pattern, replacement: "per month" },
+        { label: "Use annual data", pattern, replacement: "per year" },
+      ],
+    });
+  }
   if (asksGenericCrime(text)) {
     warnings.push({
       id: "generic-crime-type",

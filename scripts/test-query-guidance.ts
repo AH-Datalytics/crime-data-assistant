@@ -257,4 +257,14 @@ assert.equal(
   "Baltimore city murders per month"
 );
 
+const weeklyWarning = getQueryGuidanceWarnings("Philadelphia murders per week").find((warning) => warning.id === "unsupported-time-granularity")!;
+assert.equal(weeklyWarning.kind, "blocking");
+assert.equal(weeklyWarning.title, "Weekly trend data is not available");
+assert.equal(applyGuidanceAction("Philadelphia murders per week", weeklyWarning.actions![0]), "Philadelphia murders per month");
+assert.equal(applyGuidanceAction("Philadelphia murders per week", weeklyWarning.actions![1]), "Philadelphia murders per year");
+assert.equal(hasBlockingQueryGuidanceWarnings("Philadelphia murders daily"), true);
+assert.equal(hasBlockingQueryGuidanceWarnings("Philadelphia murders quarterly"), true);
+assert.equal(hasBlockingQueryGuidanceWarnings("Philadelphia murders per hour"), true);
+assert.equal(hasBlockingQueryGuidanceWarnings("robberies by hour of day in Texas"), false);
+assert.equal(hasBlockingQueryGuidanceWarnings("time of day for robberies in Texas"), false);
 console.log("query guidance tests passed");
