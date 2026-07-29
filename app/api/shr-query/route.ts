@@ -336,6 +336,7 @@ export async function POST(req: NextRequest) {
     if (asksShooting && !wantsNonfatal && !(plannerMode === "authoritative" && followupPlan?.kind === "query_bearing")) {
       const stateMatch = question.match(/\b([A-Z]{2})\b/) || question.match(/\bin\s+(\w+)\b/i);
       const yearIntent = shootingYearIntent(question);
+      const wantsMonthly = /\b(?:monthly|per\s+month|by\s+month)\b/i.test(question);
       const yearOverlap = sourceYearOverlap("shr", question);
       if (yearOverlap && !yearOverlap.hasOverlap) {
         const explanation = `SHR homicide data covers ${yearOverlap.sourceStartYear}-${yearOverlap.sourceEndYear}, so it cannot answer the requested year range. Ask for fatal shootings from ${yearOverlap.sourceStartYear} onward.`;
@@ -504,13 +505,16 @@ export async function POST(req: NextRequest) {
       const selectPlace = isMultiCity ? `${cityLabelExpression} AS agency, i.state, ` : "";
       const groupPlace = isMultiCity ? `, ${cityLabelExpression}, i.state` : "";
       const orderPlace = isMultiCity ? `, ${cityLabelExpression}, i.state` : "";
-      const shootingContract = runContractValidation(`${withClause}SELECT i.year, ${selectPlace}COUNT(*) AS fatal_shootings FROM incidents i ${joinClauses} WHERE ${whereClauses.join(" AND ")} GROUP BY i.year${groupPlace} ORDER BY i.year${orderPlace} LIMIT 1000`);
+      const periodSelect = wantsMonthly ? "printf('%04d-%02d', i.year, i.month) AS month" : "i.year";
+      const periodGroup = wantsMonthly ? "i.year, i.month" : "i.year";
+      const periodOrder = wantsMonthly ? "i.year, i.month" : "i.year";
+      if (wantsMonthly) whereClauses.push("i.month IS NOT NULL");
+      const shootingContract = runContractValidation(`${withClause}SELECT ${periodSelect}, ${selectPlace}COUNT(*) AS fatal_shootings FROM incidents i ${joinClauses} WHERE ${whereClauses.join(" AND ")} GROUP BY ${periodGroup}${groupPlace} ORDER BY ${periodOrder}${orderPlace} LIMIT 1000`);
       const shootingContractFailure = contractFailureResponse(shootingContract, `contract_deterministic_shooting_failure:${shootingContract.enforced.join(",")}`, ["deterministic-shooting"]);
       if (shootingContractFailure) return shootingContractFailure;
       const sql = shootingContract.sql;
       const title = `Fatal Shootings (Firearm Homicides), ${titlePlace}, ${effectiveYearLabel}`;
-      const explanation = `Fatal shootings (firearm homicides) by year${titlePlace !== "Nationally" ? ` in ${titlePlace}` : ""} ${effectiveYearExplanation}. This shows only homicides where the weapon was a firearm - nonfatal shootings are not tracked in this database.`;
-
+      const explanation = `Fatal shootings (firearm homicides) by ${wantsMonthly ? "month" : "year"}${titlePlace !== "Nationally" ? ` in ${titlePlace}` : ""} ${effectiveYearExplanation}. This shows only homicides where the weapon was a firearm - nonfatal shootings are not tracked in this database.`;
       // Execute the deterministic SQL
       const db = getShrDb();
       if (!db) {
@@ -519,7 +523,7 @@ export async function POST(req: NextRequest) {
       try {
         let rows = db.prepare(sql).all() as Record<string, unknown>[];
         rows = normalizeShrDisplayRows(rows);
-        const columns = rows.length > 0 ? Object.keys(rows[0]) : ["year", "fatal_shootings"];
+        const columns = rows.length > 0 ? Object.keys(rows[0]) : [wantsMonthly ? "month" : "year", "fatal_shootings"];
 
         // Add caveats
         const caveats = [normalizeShrAgencyText(explanation)];
@@ -543,7 +547,7 @@ export async function POST(req: NextRequest) {
         return jsonResp({
           success: true, question, sql, explanation: totalExplanation,
           title: displayTitle, columns, rows, rowCount: rows.length, truncated: false,
-        chartConfig: applyChartCustomizations({ type: "line", xAxis: "year", yAxis: ["fatal_shootings"], yAxisLabel: "Fatal Shootings", title: displayTitle }, question),
+        chartConfig: applyChartCustomizations({ type: "line", xAxis: wantsMonthly ? "month" : "year", yAxis: ["fatal_shootings"], yAxisLabel: "Fatal Shootings", title: displayTitle }, question),
           chartMeta: { source: "FBI SHR", agencyCount: 0, population: null },
           executionTimeMs: Date.now() - start,
         });
