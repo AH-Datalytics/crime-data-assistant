@@ -38,6 +38,7 @@ import { resolveGeoPlaces } from "@/lib/geo-place-resolver";
 import { isFollowUp } from "@/lib/tab-suggest";
 import { buildHistoricalCityChangeRankingPlan } from "@/lib/historical-deterministic-queries";
 import { buildMultiCityTrendPlan } from "@/lib/multi-city-deterministic";
+import { buildCurrentIndexedStatePlan } from "@/lib/current-indexed-state-deterministic";
 import { detectQueryBearingFollowup } from '@/lib/query-bearing-followup';
 import { planFollowupSafe } from '@/lib/followup-planner';
 import { buildCrossSourceFollowupTransform } from '@/lib/cross-source-followup';
@@ -617,6 +618,47 @@ export async function POST(req: NextRequest) {
         "X-RateLimit-Remaining": String(rateCheck.remaining),
       },
     });
+  }
+
+  const indexedStatePlan = tab === "current"
+    ? buildCurrentIndexedStatePlan(question, body?.history)
+    : null;
+  if (indexedStatePlan) {
+    try {
+      const db = getDb();
+      const rows = executeWithTimeoutSync<Record<string, unknown>>(db, db.prepare(indexedStatePlan.sql), 30000);
+      const columns = rows.length > 0 ? Object.keys(rows[0]) : indexedStatePlan.columns;
+      const ms = Date.now() - totalStart;
+      writeLog(question, indexedStatePlan.sql, rows.length, null, ms, indexedStatePlan.explanation, tab, [indexedStatePlan.guardrail], "deterministic", sessionId);
+      const stream = new ReadableStream({
+        start(controller) {
+          controller.enqueue(encoder.encode(sseEvent({
+            type: "result",
+            sql: indexedStatePlan.sql,
+            explanation: indexedStatePlan.explanation,
+            title: indexedStatePlan.title,
+            columns,
+            rows,
+            rowCount: rows.length,
+            truncated: false,
+            chartConfig: rows.length > 0 ? indexedStatePlan.chartConfig : null,
+            chartMeta: indexedStatePlan.chartMeta,
+            executionTimeMs: ms,
+          })));
+          controller.close();
+        },
+      });
+      return new Response(stream, {
+        headers: {
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache",
+          Connection: "keep-alive",
+          "X-RateLimit-Remaining": String(rateCheck.remaining),
+        },
+      });
+    } catch (err) {
+      console.warn("[current-indexed-state] deterministic query failed; falling back to Claude", err);
+    }
   }
 
   const multiCityTrend = !planSaysQueryBearing && (tab === "current" || tab === "historical")

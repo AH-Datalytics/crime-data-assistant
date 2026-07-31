@@ -14,6 +14,7 @@ assert.equal(isProductionTraffic({ tab: "nibrs", question: "", ms: 1, session_id
 assert.equal(latencyFamily("Arrest trends broken out by offense type"), "nibrs-arrests");
 assert.equal(latencyFamily("Murder trends for continuous reporting agencies"), "continuous-reporters");
 assert.equal(latencyFamily("Countywide offender age in Tarrant County"), "countywide");
+assert.equal(latencyFamily("Homicide rates in Baltimore city Boston Chicago Cleveland Detroit Houston Phoenix Pittsburgh Washington DC Philadelphia"), "multi-city");
 assert.equal(latencyFamily("2017 is good"), "followup-fragment");
 
 console.log("latency scoreboard tests passed");

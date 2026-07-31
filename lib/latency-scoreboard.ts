@@ -1,3 +1,5 @@
+import { resolveGeoPlaces } from "./geo-place-resolver";
+
 export type LatencyRow = {
   tab: string | null;
   question: string | null;
@@ -25,6 +27,10 @@ export function latencyFamily(question: string | null): string {
   if (/\b(?:consistent|continuous)(?:ly)?\s+(?:reporting\s+)?(?:agenc(?:y|ies)|reporters?)\b|reported all 12 months/i.test(text)) return "continuous-reporters";
   if (/\bcountywide\b/i.test(text)) return "countywide";
   if (/\barrests?\b/i.test(text) && /\b(?:trend|by offense|offense type|how many)\b/i.test(text)) return "nibrs-arrests";
+  const cityCount = resolveGeoPlaces(text).mentions.filter((mention) =>
+    mention.candidates.length === 1 && mention.candidates[0].kind === "city"
+  ).length;
+  if (cityCount >= 2) return "multi-city";
   if ((text.match(/\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?\s+(?:A[LKSZRCOTDEFLGAHIDNMOPSTXUVYWV]|C[AOT]|D[CE]|F[LM]|G[AU]|I[ADLN]|K[SY]|M[ADEHINOPST]|N[CDEHJMVY]|O[HKR]|P[A R]|R[HI]|S[CD]|T[NX]|U[T]|V[AIT]|W[AIVY])\b/g) ?? []).length >= 2) return "multi-city";
   if (/^\s*(?:19|20)\d{2}\s+(?:is|works|will do|please|okay|ok|yes)\b/i.test(text) || text.trim().split(/\s+/).length <= 4) return "followup-fragment";
   return "other";

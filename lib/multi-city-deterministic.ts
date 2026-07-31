@@ -94,7 +94,9 @@ export function buildMultiCityTrendPlan(
   const contract = buildQueryContract(question, source);
   if (!contract) return null;
   const { startYear, endYear } = contract.time;
-  if (startYear === null || endYear === null || startYear === endYear) return null;
+  const hasRange = startYear !== null && endYear !== null && startYear !== endYear;
+  if (source === "current" && !hasRange) return null;
+  if ((startYear === null) !== (endYear === null) || (startYear !== null && startYear === endYear)) return null;
   if (!["count", "rate_per_100k"].includes(contract.metric.unit)) return null;
   const allowedBreakdowns = new Set(["year", "month", "city"]);
   if (contract.breakdowns.some((item) => !allowedBreakdowns.has(item))) return null;
@@ -120,7 +122,7 @@ export function buildMultiCityTrendPlan(
   ${cityColumns.join(",\n  ")}
 FROM agency_monthly am
 LEFT JOIN agency_population ap ON ap.ori = am.ori AND ap.year = am.year
-WHERE am.year BETWEEN ${startYear} AND ${endYear}
+WHERE am.year BETWEEN ${startYear!} AND ${endYear!}
   AND am.offense IN (${offenseList})
   AND (${filters.join(" OR ")})
 GROUP BY ${grouping}
@@ -135,12 +137,13 @@ ORDER BY ${grouping}`;
         : count;
       return `${value} AS ${city.alias}`;
     });
+    const yearFilter = hasRange ? `hac.year BETWEEN ${startYear} AND ${endYear}` : "1 = 1";
     sql = `SELECT hac.year AS year,
   ${cityColumns.join(",\n  ")}
 FROM historical_agency ha
 JOIN historical_agency_crime hac ON hac.ori = ha.ori
 LEFT JOIN historical_agency_population hap ON hap.ori = ha.ori AND hap.year = hac.year
-WHERE hac.year BETWEEN ${startYear} AND ${endYear}
+WHERE ${yearFilter}
   AND (${filters.join(" OR ")})
 GROUP BY hac.year
 ORDER BY hac.year`;
@@ -150,10 +153,12 @@ ORDER BY hac.year`;
   const currentDisclosure = source === "current"
     ? " Current data use the RTCI sample and are not a nationally representative trend series."
     : "";
+  const rangeLabel = hasRange ? `${startYear}-${endYear}` : "All Available Years";
+  const rangeText = hasRange ? `from ${startYear} through ${endYear}` : "for all available years";
   return {
     sql,
-    title: `${selectedOffense.label[0].toUpperCase()}${selectedOffense.label.slice(1)} ${rate ? "Rates" : "Counts"} by City, ${startYear}-${endYear}`,
-    explanation: `${source === "current" ? "Current" : "Historical"} ${selectedOffense.label} ${measure} for ${placeLabels} from ${startYear} through ${endYear}.${currentDisclosure}`,
+    title: `${selectedOffense.label[0].toUpperCase()}${selectedOffense.label.slice(1)} ${rate ? "Rates" : "Counts"} by City, ${rangeLabel}`,
+    explanation: `${source === "current" ? "Current" : "Historical"} ${selectedOffense.label} ${measure} for ${placeLabels} ${rangeText}.${currentDisclosure}`,
     columns,
     chartConfig: {
       type: "line",

@@ -21,6 +21,21 @@ assert.deepEqual(historical.columns, ["year", "portland_or", "portland_me"]);
 assert.match(historical.sql, /historical_agency_crime/);
 assert.match(historical.sql, /hac\.robbery/);
 
+const historicalAllYears = buildMultiCityTrendPlan(
+  "What are the homicide rates in Baltimore city Boston Chicago Cleveland Detroit Houston Phoenix Pittsburgh Washington DC Philadelphia",
+  "historical"
+);
+assert.ok(historicalAllYears);
+assert.match(historicalAllYears.sql, /WHERE 1 = 1/);
+assert.match(historicalAllYears.title, /All Available Years/);
+
+const currentProductionPhrasing = buildMultiCityTrendPlan(
+  "What are the homicide rates in Baltimore City Boston Chicago Cleveland Detroit Houston Phoenix Pittsburgh Washington DC Philadelphia from. 2022 to 2025?",
+  "current"
+);
+assert.ok(currentProductionPhrasing);
+assert.equal(currentProductionPhrasing.chartConfig.xAxis, "period");
+
 const monthly = buildMultiCityTrendPlan(
   "Show motor vehicle theft rates in Houston TX and Phoenix AZ from 2023 to 2025",
   "current"
