@@ -458,7 +458,7 @@ export async function POST(req: NextRequest) {
     return new Response(stream, { headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", Connection: "keep-alive" } });
   }
     const planSaysQueryBearing = (plannerMode === 'authoritative' && followupPlan) ? followupPlan.kind === 'query_bearing' : Boolean(queryBearingFollowup);
-  const capabilityQuestion = (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing")
+  const capabilityQuestion = followupPlan?.kind === "query_bearing"
     ? followupPlan.reconstructedQuestion
     : question;
   const capabilityOverride =

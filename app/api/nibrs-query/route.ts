@@ -236,7 +236,7 @@ export async function POST(req: NextRequest) {
     const planSaysQueryBearing = (plannerMode === 'authoritative' && followupPlan)
       ? followupPlan.kind === 'query_bearing'
       : Boolean(queryBearingFollowup);
-    const capabilityQuestion = (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing")
+    const capabilityQuestion = followupPlan?.kind === "query_bearing"
       ? followupPlan.reconstructedQuestion
       : question;
     const capabilityStart = Date.now();
