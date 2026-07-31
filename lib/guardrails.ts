@@ -545,7 +545,9 @@ function sqlHasRequestedLowerYearBound(sql: string, startYear: number): boolean 
   const betweenRe = new RegExp(`${yearRef}\\s+BETWEEN\\s+${startYear}\\s+AND\\s+(?:19|20)\\d{2}\\b`, "i");
   const inRe = new RegExp(`${yearRef}\\s+IN\\s*\\([^)]*\\b${startYear}\\b[^)]*\\)`, "i");
   const recursiveYearSeedRe = new RegExp(`\\bSELECT\\s+${startYear}\\s+AS\\s+year\\b`, "i");
-  return eqRe.test(stripped) || geRe.test(stripped) || gtRe.test(stripped) || betweenRe.test(stripped) || inRe.test(stripped) || recursiveYearSeedRe.test(stripped);
+  const periodRef = String.raw`(?:\b\w+\.)?\b(?:ym|year_month|month_key|period)\b`;
+  const periodLowerRe = new RegExp(`${periodRef}\\s*(?:>=|=)\\s*'${startYear}-(?:0[1-9]|1[0-2])'`, "i");
+  return eqRe.test(stripped) || geRe.test(stripped) || gtRe.test(stripped) || betweenRe.test(stripped) || inRe.test(stripped) || recursiveYearSeedRe.test(stripped) || periodLowerRe.test(sql);
 }
 
 function sqlHasYearUpperBound(sql: string, endYear: number): boolean {
@@ -555,7 +557,10 @@ function sqlHasYearUpperBound(sql: string, endYear: number): boolean {
   const ltRe = new RegExp(`${yearRef}\\s*<\\s*${endYear + 1}\\b`, "i");
   const eqRe = new RegExp(`${yearRef}\\s*=\\s*${endYear}\\b`, "i");
   const betweenRe = new RegExp(`${yearRef}\\s+BETWEEN\\s+(?:19|20)\\d{2}\\s+AND\\s+${endYear}\\b`, "i");
-  return leRe.test(stripped) || ltRe.test(stripped) || eqRe.test(stripped) || betweenRe.test(stripped);
+  const periodRef = String.raw`(?:\b\w+\.)?\b(?:ym|year_month|month_key|period)\b`;
+  const periodUpperRe = new RegExp(`${periodRef}\\s*<=\\s*'${endYear}-(?:0[1-9]|1[0-2])'`, "i");
+  const nextYearExclusiveRe = new RegExp(`${periodRef}\\s*<\\s*'${endYear + 1}-01'`, "i");
+  return leRe.test(stripped) || ltRe.test(stripped) || eqRe.test(stripped) || betweenRe.test(stripped) || periodUpperRe.test(sql) || nextYearExclusiveRe.test(sql);
 }
 
 function sqlIncludesCurrentCalendarYear(sql: string): boolean {
@@ -987,7 +992,7 @@ const GUARDRAILS: Guardrail[] = [
   },
   {
     name: "contract-year-lower-bound-missing",
-    tabs: ["current", "historical", "nibrs", "shr"],
+    tabs: ["current", "historical", "nibrs", "shr", "hate_crime"],
     match: (ctx) => {
       const start = requestedStartYear(ctx.question);
       return start !== null && !sqlHasRequestedLowerYearBound(ctx.sql, start);
@@ -999,7 +1004,7 @@ const GUARDRAILS: Guardrail[] = [
   },
   {
     name: "contract-year-upper-bound-missing",
-    tabs: ["current", "historical", "nibrs", "shr"],
+    tabs: ["current", "historical", "nibrs", "shr", "hate_crime"],
     match: (ctx) => {
       const end = requestedEndYear(ctx.question);
       return end !== null && !sqlHasYearUpperBound(ctx.sql, end);

@@ -3173,6 +3173,32 @@ console.log("\n═══ nested-aggregation-discards-measure ═══\n");
     `fired: ${JSON.stringify(r.fired)}`);
 }
 
+{
+  const question = "Show Houston hate crimes as a rolling 12-month trend from 2021 through 2025";
+  const missingUpper = extractQueryContext(
+    "WITH rolling AS (SELECT ym, rolling_12m FROM monthly) SELECT ym AS month, rolling_12m FROM rolling WHERE ym >= '2021-01' ORDER BY ym",
+    question,
+    "hate_crime"
+  );
+  const missingResult = runGuardrails(missingUpper);
+  assert("TP: hate-crime month-key query must enforce the requested end year",
+    missingResult.fired.includes("contract-year-upper-bound-missing"),
+    `fired: ${JSON.stringify(missingResult.fired)}`);
+  assert("FP: hate-crime month-key lower bound is recognized",
+    !missingResult.fired.includes("contract-year-lower-bound-missing"),
+    `fired: ${JSON.stringify(missingResult.fired)}`);
+
+  const bounded = extractQueryContext(
+    "WITH rolling AS (SELECT ym, rolling_12m FROM monthly) SELECT ym AS month, rolling_12m FROM rolling WHERE ym >= '2021-01' AND ym <= '2025-12' ORDER BY ym",
+    question,
+    "hate_crime"
+  );
+  const boundedResult = runGuardrails(bounded);
+  assert("FP: bounded hate-crime month-key range satisfies both contract bounds",
+    !boundedResult.fired.includes("contract-year-lower-bound-missing") && !boundedResult.fired.includes("contract-year-upper-bound-missing"),
+    `fired: ${JSON.stringify(boundedResult.fired)}`);
+}
+
 console.log(`SUMMARY: ${pass} passed, ${fail} failed out of ${pass + fail} tests`);
 console.log("=".repeat(60));
 
