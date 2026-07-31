@@ -1,7 +1,7 @@
 #!/usr/bin/env npx tsx
 
 import { detectNibrsCapabilityOverride } from "../lib/nibrs-capability-overrides.js";
-import { detectShrGroupRateOverride, detectSubCityGeographyOverride } from "../lib/capability-overrides.js";
+import { detectCurrentYearClearanceOverride, detectShrGroupRateOverride, detectSubCityGeographyOverride } from "../lib/capability-overrides.js";
 import { removedDemographicPlaceToken } from "../lib/demographic-rate-intent.js";
 
 let pass = 0;
@@ -14,6 +14,22 @@ function assert(name: string, condition: boolean, detail?: string) {
     fail++;
     console.log(`FAIL: ${name}${detail ? ` - ${detail}` : ""}`);
   }
+}
+
+{
+  const unavailable = detectCurrentYearClearanceOverride("What is SFPD's rape clearance rate this year?");
+  assert("current-year clearance gets a deterministic unavailable response",
+    unavailable?.guardrail === "current-year-clearance-unavailable",
+    JSON.stringify(unavailable));
+  assert("current-year clearance response points to latest complete year",
+    Boolean(unavailable?.explanation.includes("latest complete reporting year")),
+    unavailable?.explanation);
+  assert("ordinary clearance remains available",
+    detectCurrentYearClearanceOverride("What is SFPD's rape clearance rate?") === null);
+  assert("current-year arrest-versus-exceptional breakdown remains NIBRS-capable",
+    detectCurrentYearClearanceOverride("Break out this year's rape clearances by arrest versus exceptional means") === null);
+  assert("NIBRS direct requests use the same current-year clearance refusal",
+    detectNibrsCapabilityOverride("What is SFPD's rape clearance rate YTD?")?.guardrail === "current-year-clearance-unavailable");
 }
 
 {

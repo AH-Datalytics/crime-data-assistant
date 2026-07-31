@@ -4,6 +4,30 @@ export interface CapabilityOverride {
   guardrail: string;
 }
 
+const CLEARANCE_QUESTION_RE = /\b(?:clearance|clearances|cleared|solve[ds]?|unsolved|closure\s+rate)\b/i;
+const CLEARANCE_METHOD_RE = /\b(?:cleared?\s+by\s+arrest|exceptional(?:ly)?|arrest\s+(?:vs\.?|versus|and)\s+exceptional|by\s+clearance\s+type|clearance\s+type)\b/i;
+
+export function asksCurrentYearClearance(question: string): boolean {
+  if (!CLEARANCE_QUESTION_RE.test(question)) return false;
+  const currentYear = new Date().getFullYear();
+  return /\b(?:this\s+year|current\s+year|current-year|ytd|year[-\s]?to[-\s]?date|so\s+far\s+this\s+year)\b/i.test(question) ||
+    new RegExp(`\\b(?:in|for|during)\\s+${currentYear}\\b`, "i").test(question);
+}
+
+export function asksUnavailableCurrentYearClearance(question: string): boolean {
+  return asksCurrentYearClearance(question) && !CLEARANCE_METHOD_RE.test(question);
+}
+
+export function detectCurrentYearClearanceOverride(question: string): CapabilityOverride | null {
+  if (!asksUnavailableCurrentYearClearance(question)) return null;
+  return {
+    title: "Current-Year Clearance Data Unavailable",
+    guardrail: "current-year-clearance-unavailable",
+    explanation:
+      "Current-year clearance rates are not available in Current Trends yet. Historical provides annual clearance rates through the latest complete reporting year, while NIBRS can break clearances down by arrest versus exceptional means. Ask for the latest complete-year clearance rate, or omit the current-year/YTD requirement.",
+  };
+}
+
 export const SUB_CITY_GEOGRAPHY_RE =
   /\b(zip\s*code|zip\s*\d|neighborhoods?|precincts?|police districts?|census tracts?|block groups?|wards?|community areas?|apartment\s+complex(?:es)?|housing\s+complex(?:es)?)\b/i;
 

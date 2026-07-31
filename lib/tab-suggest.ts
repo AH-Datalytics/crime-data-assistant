@@ -16,7 +16,7 @@ import {
   pastYearsIncludingCurrentRange,
   relativeYearRangeForQuestion,
 } from "./time-conventions";
-import { isDemographicHomicideRateQuestion } from "./capability-overrides";
+import { asksCurrentYearClearance, asksUnavailableCurrentYearClearance, isDemographicHomicideRateQuestion } from "./capability-overrides";
 
 export type TabId = SourceId;
 
@@ -1055,6 +1055,23 @@ export function suggestTab(question: string, currentTab: TabId, yearRanges?: Sou
  * not a new standalone question.
  */
 export function autoRoute(question: string, yearRanges?: SourceYearRanges): AutoRouteResult | null {
+  if (asksCurrentYearClearance(question)) {
+    if (asksUnavailableCurrentYearClearance(question)) {
+      return {
+        source: "current",
+        reason: "Current-year clearance rates are not available yet",
+        confidence: "high",
+        alternatives: [],
+      };
+    }
+    return {
+      source: "nibrs",
+      reason: "Only NIBRS distinguishes clearance by arrest vs. exceptional means",
+      confidence: "high",
+      alternatives: [],
+    };
+  }
+
   // Follow-ups should not produce a routing decision at all.
   // The UI keeps the user on their current tab.
   if (isFollowUp(question)) return null;

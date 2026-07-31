@@ -47,6 +47,7 @@ function hasPriorSqlResult(rawHistory: unknown): boolean {
 
 /** Coverage/metadata phrasings that must keep the deterministic metadata path. */
 function asksCoverageNotChange(q: string): boolean {
+  if (/^\s*(?:what|how)\s+about\s+(?:this|the\s+current)\s+year\s*\??\s*$/i.test(q)) return false;
   return /\bhow\s+far\s+back\b/i.test(q) ||
     /\b(?:what|which)\s+years?\b/i.test(q) ||
     /\b(?:earliest|latest)\s+(?:year|data)\b/i.test(q) ||
@@ -57,6 +58,11 @@ function asksCoverageNotChange(q: string): boolean {
 }
 
 function refersToTimeRangeChange(q: string): boolean {
+  // Conversational relative-time shifts: "what about this year?" / "YTD instead".
+  // Require a follow-up cue so a complete standalone question containing
+  // "this year" is not treated as a mutation merely because history exists.
+  if (/\b(?:what|how)\s+about\s+(?:this|the\s+current)\s+year\b/i.test(q) ||
+      /\b(?:this\s+year|current\s+year|ytd|year[-\s]?to[-\s]?date)\s+instead\b/i.test(q)) return true;
   // "change/set/extend/... the start year / year range / period ..."
   if (/\b(?:change|set|update|move|shift|adjust|extend|expand|shorten|limit|restrict)\b/i.test(q) &&
       /\b(?:years?|dates?|range|period|time\s*frame|timeframe)\b/i.test(q)) return true;

@@ -104,6 +104,9 @@ test({ question: "murders in Houston since 2010", expectedPrimary: "historical" 
 test({ question: "monthly murders in Houston since 2018", expectedPrimary: "current" });
 test({ question: "murder victim race in Houston since 2010", expectedPrimary: ["shr", "nibrs"], mustExclude: ["current", "historical"] });
 test({ question: "clearance rate for murder since 1960", expectedPrimary: "historical" });
+test({ question: "rape clearance rate for San Francisco this year", expectedPrimary: "current" });
+test({ question: "rape clearance rate for San Francisco YTD", expectedPrimary: "current" });
+test({ question: "this year's rape clearances by arrest versus exceptional means", expectedPrimary: "nibrs" });
 test({ question: "cleared by arrest vs exceptional means", expectedPrimary: "nibrs" });
 test({ question: "marijuana arrests", expectedPrimary: "nibrs", unsupported: ["specific_drug_arrests"] });
 test({ question: "marijuana drug offenses", expectedPrimary: "nibrs" });

@@ -225,8 +225,22 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Query-bearing follow-ups (prior SQL + a change request) must reach the
+    // model path with history — never the standalone metadata/county shortcuts.
+    const queryBearingFollowup = detectQueryBearingFollowup(question, body?.history);
+    const plannerMode = plannerModeForSource('nibrs');
+    const followupPlan = plannerMode === 'off' ? null : planFollowupSafe(question, body?.history, 'nibrs');
+    if (followupPlan && plannerMode === 'compare') {
+      console.log('[followup-planner][compare] ' + JSON.stringify({ source: 'nibrs', kind: followupPlan.kind, changeKinds: followupPlan.changeKinds, plannedSource: followupPlan.source, sourceChanged: followupPlan.sourceChanged, legacyBearing: Boolean(queryBearingFollowup), q: question.slice(0, 160), reconstructed: followupPlan.reconstructedQuestion.slice(0, 200) }));
+    }
+    const planSaysQueryBearing = (plannerMode === 'authoritative' && followupPlan)
+      ? followupPlan.kind === 'query_bearing'
+      : Boolean(queryBearingFollowup);
+    const capabilityQuestion = (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing")
+      ? followupPlan.reconstructedQuestion
+      : question;
     const capabilityStart = Date.now();
-    const capabilityOverride = detectNibrsCapabilityOverride(question);
+    const capabilityOverride = detectNibrsCapabilityOverride(capabilityQuestion);
     if (capabilityOverride) {
       const executionMs = Date.now() - capabilityStart;
       writeNibrsLog(question, null, 0, null, executionMs, capabilityOverride.explanation, [capabilityOverride.guardrail], "deterministic", sessionId);
@@ -245,18 +259,6 @@ export async function POST(req: NextRequest) {
         executionTimeMs: executionMs,
       } as QueryResponse);
     }
-
-    // Query-bearing follow-ups (prior SQL + a change request) must reach the
-    // model path with history — never the standalone metadata/county shortcuts.
-    const queryBearingFollowup = detectQueryBearingFollowup(question, body?.history);
-    const plannerMode = plannerModeForSource('nibrs');
-    const followupPlan = plannerMode === 'off' ? null : planFollowupSafe(question, body?.history, 'nibrs');
-    if (followupPlan && plannerMode === 'compare') {
-      console.log('[followup-planner][compare] ' + JSON.stringify({ source: 'nibrs', kind: followupPlan.kind, changeKinds: followupPlan.changeKinds, plannedSource: followupPlan.source, sourceChanged: followupPlan.sourceChanged, legacyBearing: Boolean(queryBearingFollowup), q: question.slice(0, 160), reconstructed: followupPlan.reconstructedQuestion.slice(0, 200) }));
-    }
-    const planSaysQueryBearing = (plannerMode === 'authoritative' && followupPlan)
-      ? followupPlan.kind === 'query_bearing'
-      : Boolean(queryBearingFollowup);
     if (plannerMode === "authoritative" && followupPlan?.sourceChanged) {
       const executionMs = Date.now() - routeStart;
       const explanation = "This follow-up is a better fit for the " + followupPlan.source + " source. Rerunning it there as: " + followupPlan.reconstructedQuestion;

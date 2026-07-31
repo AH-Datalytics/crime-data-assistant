@@ -25,7 +25,7 @@ import { normalizeHistoryForTab } from "@/lib/chat-history";
 import { detectFollowupTransform } from "@/lib/followup-transform";
 import { getBlockingGeoClarification } from "@/lib/geo-resolver";
 import { getCountyScopeClarification } from "@/lib/county-clarifier";
-import { detectDemographicHomicideRateOverride, detectSubCityGeographyOverride } from "@/lib/capability-overrides";
+import { detectCurrentYearClearanceOverride, detectDemographicHomicideRateOverride, detectSubCityGeographyOverride } from "@/lib/capability-overrides";
 import { historicalYearAvailability } from "@/lib/year-availability";
 import {
   queryContractFailureMessage,
@@ -458,7 +458,11 @@ export async function POST(req: NextRequest) {
     return new Response(stream, { headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", Connection: "keep-alive" } });
   }
     const planSaysQueryBearing = (plannerMode === 'authoritative' && followupPlan) ? followupPlan.kind === 'query_bearing' : Boolean(queryBearingFollowup);
+  const capabilityQuestion = (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing")
+    ? followupPlan.reconstructedQuestion
+    : question;
   const capabilityOverride =
+    detectCurrentYearClearanceOverride(capabilityQuestion) ??
     detectSubCityGeographyOverride(question) ??
     detectDemographicHomicideRateOverride(question);
   if (capabilityOverride) {

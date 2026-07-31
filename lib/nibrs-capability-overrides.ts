@@ -1,6 +1,7 @@
 import { mentionsDemographicRateGroup } from "./demographic-rate-intent";
 import {
   DEMOGRAPHIC_RATE_UNSUPPORTED_MESSAGE,
+  detectCurrentYearClearanceOverride,
   detectDemographicHomicideRateOverride,
   detectNibrsCountywideDemographicsOverride,
   detectSubCityGeographyOverride,
@@ -10,6 +11,9 @@ import {
 
 
 export function detectNibrsCapabilityOverride(question: string): CapabilityOverride | null {
+  const currentYearClearanceOverride = detectCurrentYearClearanceOverride(question);
+  if (currentYearClearanceOverride) return currentYearClearanceOverride;
+
   const subCityOverride = detectSubCityGeographyOverride(question);
   if (subCityOverride) return subCityOverride;
 

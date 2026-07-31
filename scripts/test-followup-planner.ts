@@ -36,6 +36,15 @@ const sql = "SELECT year, count FROM historical_state_national WHERE year >= 198
   assert.equal(p.timeRange.endYear, null);
 }
 {
+  const p = planFollowup("what about this year?", hist("What is SFPD's rape clearance rate?", "SELECT year, rape_clearance_rate FROM historical_agency_clearance", "historical"), "historical");
+  assert.equal(p.kind, "query_bearing");
+  assert.ok(p.changeKinds.includes("time_range"));
+  assert.match(p.reconstructedQuestion, /clearance rate/i);
+  assert.match(p.reconstructedQuestion, /this year/i);
+  assert.equal(p.source, "historical");
+  assert.equal(p.sourceChanged, false);
+}
+{
   const p = planFollowup("make it a rolling 12-month window", hist("monthly murders in Houston since 2021", "SELECT year, month, count FROM agency_monthly WHERE agency = 'Houston'", "current"), "current");
   assert.equal(p.kind, "query_bearing");
   assert.ok(p.changeKinds.includes("granularity"));
