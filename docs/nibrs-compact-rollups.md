@@ -82,3 +82,18 @@ the fast path:
 
 No application restart is required for a data-only rollup switch; new query workers
 resolve the stable symlink for each query.
+
+## Automated off-production refresh
+
+On the Windows build workstation, install the guarded refresh task once:
+
+    powershell -ExecutionPolicy Bypass -File scripts/install-nibrs-rollup-refresh-task.ps1
+
+The task checks production daily but exits immediately when the active rollup
+generation matches the source. After a monthly source update it requires an idle
+updater and an empty WAL, copies the 165 GB source off the web server, verifies
+that the generation and byte size stayed stable during transfer, builds and
+exactly validates the compact database, benchmarks the slow-query corpus, checks
+SHA-256 after upload, rechecks the generation, and atomically activates the new
+artifact. Logs and benchmark JSON are written under
+`C:\tmp\nibrs-rollup-refresh`.

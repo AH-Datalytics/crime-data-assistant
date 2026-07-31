@@ -367,6 +367,11 @@ else
   log "  Symlink:  $CURRENT_LINK -> $(readlink -f "$CURRENT_LINK")"
   log "  PM2:      $(pm2 show "$PM2_APP" 2>/dev/null | grep status | head -1 || echo 'check pm2 status')"
 
+  # Model-free: persist a production-traffic latency baseline for every release
+  # without adding application traffic or API cost.
+  log "  Recording 24-hour latency scoreboard..."
+  (cd "$CURRENT_LINK" && npx tsx scripts/nightly-latency-scoreboard.ts --hours 24) >> /var/log/latency-scoreboard.log 2>&1 || log "  WARNING: latency scoreboard failed; see /var/log/latency-scoreboard.log"
+
   # Optional post-deploy scoreboard in the BACKGROUND. It is opt-in because
   # replaying queries can create material API cost, especially across repeated
   # deploys. Use RUN_SCOREBOARD=1 SCOREBOARD_MODE=quick|full when needed.

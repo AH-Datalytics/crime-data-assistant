@@ -31,6 +31,15 @@ assert.match(violentByOffense.sql, /ucr_arrest_offense IN \('09A', '11A', '11B',
 assert.match(violentByOffense.sql, /GROUP BY d\.year, d\.ucr_arrest_offense/);
 assert.equal(validateAndSanitize(violentByOffense.sql).valid, true);
 
+const implicitNationalOffenseTrend = buildNibrsNationalArrestQuery("Arrest trends for violent offenses broken out by offense type", true);
+assert.ok(implicitNationalOffenseTrend);
+assert.match(implicitNationalOffenseTrend.sql, /rollup\.national_summary_arrestee_demographics/);
+assert.match(implicitNationalOffenseTrend.sql, /GROUP BY d\.year, d\.ucr_arrest_offense/);
+
+const implicitNationalExactYear = buildNibrsNationalArrestQuery("How many arrests were made in 2024?", true);
+assert.ok(implicitNationalExactYear);
+assert.match(implicitNationalExactYear.sql, /year BETWEEN 2024 AND 2024/);
+
 assert.equal(buildNibrsNationalArrestQuery("arrests in Chicago in 2024", true), null);
 assert.equal(buildNibrsNationalArrestQuery("national arrests by race in 2024", true), null);
 assert.equal(buildNibrsNationalArrestQuery("national arrests in 2024", false), null);

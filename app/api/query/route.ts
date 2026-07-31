@@ -37,6 +37,7 @@ import { partialCoverageRetryPrompt } from "@/lib/source-year-overlap";
 import { resolveGeoPlaces } from "@/lib/geo-place-resolver";
 import { isFollowUp } from "@/lib/tab-suggest";
 import { buildHistoricalCityChangeRankingPlan } from "@/lib/historical-deterministic-queries";
+import { buildMultiCityTrendPlan } from "@/lib/multi-city-deterministic";
 import { detectQueryBearingFollowup } from '@/lib/query-bearing-followup';
 import { planFollowupSafe } from '@/lib/followup-planner';
 import { buildCrossSourceFollowupTransform } from '@/lib/cross-source-followup';
@@ -616,6 +617,62 @@ export async function POST(req: NextRequest) {
         "X-RateLimit-Remaining": String(rateCheck.remaining),
       },
     });
+  }
+
+  const multiCityTrend = !planSaysQueryBearing && (tab === "current" || tab === "historical")
+    ? buildMultiCityTrendPlan(question, tab)
+    : null;
+  if (multiCityTrend) {
+    try {
+      const db = getDb();
+      const rows = executeWithTimeoutSync<Record<string, unknown>>(db, db.prepare(multiCityTrend.sql), 30000);
+      const columns = rows.length > 0 ? Object.keys(rows[0]) : multiCityTrend.columns;
+      const ms = Date.now() - totalStart;
+      writeLog(
+        question,
+        multiCityTrend.sql,
+        rows.length,
+        null,
+        ms,
+        multiCityTrend.explanation,
+        tab,
+        [multiCityTrend.guardrail],
+        "deterministic",
+        sessionId
+      );
+      const stream = new ReadableStream({
+        start(controller) {
+          controller.enqueue(
+            encoder.encode(
+              sseEvent({
+                type: "result",
+                sql: multiCityTrend.sql,
+                explanation: multiCityTrend.explanation,
+                title: multiCityTrend.title,
+                columns,
+                rows,
+                rowCount: rows.length,
+                truncated: false,
+                chartConfig: rows.length > 0 ? multiCityTrend.chartConfig : null,
+                chartMeta: multiCityTrend.chartMeta,
+                executionTimeMs: ms,
+              })
+            )
+          );
+          controller.close();
+        },
+      });
+      return new Response(stream, {
+        headers: {
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache",
+          Connection: "keep-alive",
+          "X-RateLimit-Remaining": String(rateCheck.remaining),
+        },
+      });
+    } catch (err) {
+      console.warn("[multi-city-trend] deterministic query failed; falling back to Claude", err);
+    }
   }
 
   const historicalCityChange = tab === "historical"

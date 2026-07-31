@@ -73,7 +73,8 @@ export function buildNibrsNationalArrestQuery(
   const contract = buildQueryContract(question, "nibrs");
   if (!contract) return null;
   const explicitlyNational = /\b(?:national(?:ly)?|nationwide|united states|america)\b|\bu\.?s\.?(?:\s|$)/i.test(question);
-  if (contract.geography.kind !== "national" && !explicitlyNational) return null;
+  const implicitNational = contract.geography.kind === "unknown";
+  if (contract.geography.kind !== "national" && !explicitlyNational && !implicitNational) return null;
 
   const fallback = pastCompleteCalendarYearsRange(5);
   const start = contract.time.startYear ?? fallback.start;
