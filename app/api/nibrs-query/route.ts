@@ -366,8 +366,11 @@ export async function POST(req: NextRequest) {
         const rows = normalizeNibrsDisplayRows(result.rows);
         const columns = result.columns;
         const executionMs = Date.now() - deterministicStart;
+        const deterministicExplanation = rows.length === 0 && deterministicQuery.guardrail === "deterministic-nibrs-comparable-agency-clearance"
+          ? `No NIBRS clearance data was found for ${deterministicResolution?.places[0]?.label ?? "the named target agency"} in the requested period. A peer comparison was not returned because showing peer agencies without the requested target would be misleading.`
+          : deterministicQuery.explanation;
         const explanation = applyResultDisclosures({
-          explanation: deterministicQuery.explanation,
+          explanation: deterministicExplanation,
           question,
           sql: deterministicQuery.sql,
           rows,
