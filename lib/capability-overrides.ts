@@ -131,6 +131,9 @@ const NIBRS_DEMOGRAPHIC_BREAKDOWN_RE = /\b(?:offenders?|victims?|arrestees?|susp
 
 export function detectNibrsCountywideDemographicsOverride(question: string): CapabilityOverride | null {
   if (!COUNTY_SCOPE_RE.test(question)) return null;
+  // Explicit countywide requests have a deterministic agency-crosswalk route
+  // with a participation disclosure. Keep refusing ambiguous county wording.
+  if (/\bcountywide\b/i.test(question)) return null;
   if (COUNTY_METADATA_RE.test(question)) return null;
   if (!NIBRS_DEMOGRAPHIC_BREAKDOWN_RE.test(question)) return null;
 

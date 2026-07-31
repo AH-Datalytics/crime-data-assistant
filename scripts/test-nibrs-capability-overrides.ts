@@ -112,6 +112,11 @@ function assert(name: string, condition: boolean, detail?: string) {
 }
 
 {
+  const r = detectNibrsCapabilityOverride("show countywide murder offenders by age for Tarrant County, Texas");
+  assert("explicit countywide demographics reach the deterministic crosswalk route", r === null, JSON.stringify(r));
+}
+
+{
   const r = detectNibrsCapabilityOverride("violent crime in Tarrant County, Texas by year");
   assert("countywide offense counts without demographics remain queryable", r === null, JSON.stringify(r));
 }
