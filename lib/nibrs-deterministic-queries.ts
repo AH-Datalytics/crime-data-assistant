@@ -255,6 +255,118 @@ LIMIT 1000`.trim();
   };
 }
 
+function requestedPeerCount(question: string): number {
+  const match = question.match(/\b(\d{1,2})\s+agencies\s+of\s+(?:similar|comparable)\s+size\b/i) ||
+    question.match(/\b(\d{1,2})\s+(?:most\s+)?(?:similar(?:[-\s]+siz(?:e|ed)|ly[-\s]+sized)?|comparable|peer)\b/i) ||
+    question.match(/\b(?:similar(?:[-\s]+siz(?:e|ed)|ly[-\s]+sized)?|comparable|peer)\s+(?:agencies\s*)?(\d{1,2})\b/i);
+  return Math.max(1, Math.min(20, match ? Number(match[1]) : 5));
+}
+
+export function buildNibrsComparableAgencyClearanceQuery(
+  question: string,
+  resolutionPlan?: NibrsPlaceResolutionPlan | null
+): DeterministicNibrsQuery | null {
+  if (!/\b(?:clearance|clearances|cleared|solve[ds]?)\b/i.test(question) ||
+      !/\b(?:similar(?:[-\s]+siz(?:e|ed)|ly[-\s]+sized)?|comparable|peer)\s+(?:agencies|departments)|\bagencies\s+(?:of\s+)?(?:similar|comparable)\s+size\b/i.test(question)) return null;
+  const contract = buildQueryContract(question, "nibrs");
+  if (!contract || contract.metric.offenseCodes.length === 0 || !resolutionPlan) return null;
+  const targets = resolutionPlan.places.filter((place) => place.status === "resolved" && place.kind === "city_police");
+  if (targets.length !== 1 || resolutionPlan.places.length !== 1) return null;
+  const target = targets[0];
+  const targetYears = target.oriYears
+    .filter((item) => item.year >= resolutionPlan.startYear && item.year <= resolutionPlan.endYear && item.population && item.population > 0);
+  if (targetYears.length === 0) return null;
+  const reference = [...targetYears].sort((a, b) => b.year - a.year)[0];
+  const peerCount = requestedPeerCount(question);
+  const codes = contract.metric.offenseCodes.map(sqlString).join(", ");
+  const targetRows = targetYears.map((item) =>
+    `(${item.year}, ${sqlString(item.ori)}, ${Number(item.population)})`
+  ).join(",\n    ");
+  const methodBreakdown = asksClearanceMethodBreakdown(question);
+  const sql = `WITH
+target_years(year, ori, population) AS (
+  VALUES ${targetRows}
+),
+candidate_pool AS MATERIALIZED (
+  SELECT a.ori,
+    COALESCE(NULLIF(a.city, ''), a.ori) || ', ' || a.state AS agency_label,
+    a.population
+  FROM agencies a INDEXED BY idx_agencies_year_state_population
+  WHERE a.year = ${reference.year}
+    AND a.agency_type = 'City'
+    AND a.population > 0
+    AND a.ori <> ${sqlString(reference.ori)}
+  ORDER BY ABS(a.population - ${Number(reference.population)}), a.ori
+  LIMIT 100
+),
+target_data AS MATERIALIZED (
+  SELECT 1 AS available
+  FROM target_years ty
+  CROSS JOIN summary_clearance_type target_probe INDEXED BY idx_sct_ori_year
+  WHERE target_probe.ori = ty.ori
+    AND target_probe.year = ty.year
+    AND target_probe.ucr_offense_code IN (${codes})
+  LIMIT 1
+),
+peer_candidates AS MATERIALIZED (
+  SELECT cp.ori, cp.agency_label, cp.population
+  FROM candidate_pool cp
+  WHERE EXISTS (SELECT 1 FROM target_data)
+    AND EXISTS (
+      SELECT 1
+      FROM summary_clearance_type probe INDEXED BY idx_sct_ori_year
+      WHERE probe.ori = cp.ori
+        AND probe.year BETWEEN ${resolutionPlan.startYear} AND ${resolutionPlan.endYear}
+        AND probe.ucr_offense_code IN (${codes})
+    )
+  LIMIT ${peerCount}
+),
+selected_agencies(place_label, ori, effective_year) AS (
+  SELECT ${sqlString(target.label)}, ty.ori, ty.year FROM target_years ty
+  WHERE EXISTS (SELECT 1 FROM target_data)
+  UNION ALL
+  SELECT pc.agency_label, pc.ori, NULL FROM peer_candidates pc
+),
+clearances AS (
+  SELECT sct.year, sa.place_label,
+    SUM(sct.total_offenses) AS total_offenses,
+    SUM(sct.cleared_by_arrest) AS cleared_by_arrest,
+    SUM(sct.cleared_exceptional) AS cleared_exceptional
+  FROM selected_agencies sa
+  CROSS JOIN summary_clearance_type sct INDEXED BY idx_sct_ori_year
+  WHERE sct.ori = sa.ori
+    AND (sa.effective_year IS NULL OR sa.effective_year = sct.year)
+    AND sct.year BETWEEN ${resolutionPlan.startYear} AND ${resolutionPlan.endYear}
+    AND sct.ucr_offense_code IN (${codes})
+  GROUP BY sct.year, sa.place_label
+)
+SELECT year, place_label,
+  total_offenses,
+  cleared_by_arrest,
+  cleared_exceptional,
+  ROUND(100.0 * (cleared_by_arrest + cleared_exceptional) / NULLIF(total_offenses, 0), 1) AS clearance_rate_pct,
+  ROUND(100.0 * cleared_by_arrest / NULLIF(total_offenses, 0), 1) AS arrest_rate_pct,
+  ROUND(100.0 * cleared_exceptional / NULLIF(total_offenses, 0), 1) AS exceptional_rate_pct
+FROM clearances
+ORDER BY year, place_label
+LIMIT 1000`;
+
+  const offenseLabel = contract.metric.offenses.map((item) => item.label.toLowerCase()).join(", ");
+  return {
+    sql,
+    title: `${target.label} clearance rates and similar-size agencies`,
+    explanation: `This compares ${offenseLabel} clearance rates for ${target.label} with the ${peerCount} city police agencies whose ${reference.year} service populations are closest to ${Number(reference.population).toLocaleString("en-US")}. ` +
+      (methodBreakdown ? "Arrest and exceptional clearances are shown separately. " : "The overall rate includes arrest and exceptional clearances. ") +
+      "Peer selection is based on agency service population, not broader socioeconomic similarity. Recent NIBRS data may be incomplete.",
+    chartHint: "line",
+    xAxis: "year",
+    yAxis: methodBreakdown ? "arrest_rate_pct,exceptional_rate_pct" : "clearance_rate_pct",
+    xAxisLabel: "Year",
+    yAxisLabel: "Clearance rate (%)",
+    guardrail: "deterministic-nibrs-comparable-agency-clearance",
+  };
+}
+
 export function buildNibrsLocalCityOffenseCountQuery(
   question: string,
   resolutionPlan?: NibrsPlaceResolutionPlan | null

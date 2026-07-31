@@ -1,5 +1,6 @@
 import {
   buildNibrsClearanceMethodQuery,
+  buildNibrsComparableAgencyClearanceQuery,
   buildNibrsDomesticViolenceAggravatedAssaultShareQuery,
   buildNibrsLocalCityOffenseCountQuery,
   buildNibrsLocalDemographicQuery,
@@ -7,7 +8,7 @@ import {
   type DeterministicNibrsQuery,
 } from "./nibrs-deterministic-queries";
 import type { NibrsPlaceResolutionPlan, NibrsResolvedPlace } from "./nibrs-place-resolver";
-import { buildNibrsJuvenileArrestsByRaceQuery } from "./nibrs-rollup-deterministic";
+import { buildNibrsJuvenileArrestsByRaceQuery, buildNibrsNationalArrestQuery } from "./nibrs-rollup-deterministic";
 import { resolveNibrsRollupPath } from "./nibrs-rollup-router";
 
 export type NibrsQueryPlan =
@@ -45,6 +46,8 @@ export function planNibrsQuery(
 
   const query =
     buildNibrsJuvenileArrestsByRaceQuery(question, resolveNibrsRollupPath() !== null) ??
+    buildNibrsNationalArrestQuery(question, resolveNibrsRollupPath() !== null) ??
+    buildNibrsComparableAgencyClearanceQuery(question, resolutionPlan) ??
     buildNibrsClearanceMethodQuery(question) ??
     buildNibrsLocalDemographicQuery(question, resolutionPlan) ??
     buildNibrsStructuredLocalTrendQuery(question, resolutionPlan) ??

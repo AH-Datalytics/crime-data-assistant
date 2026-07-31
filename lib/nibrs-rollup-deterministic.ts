@@ -61,3 +61,67 @@ LIMIT 1000`;
   };
 }
 
+/** Fast path for national arrest totals and offense trends that otherwise scan the agency rollup. */
+export function buildNibrsNationalArrestQuery(
+  question: string,
+  rollupAvailable: boolean
+): DeterministicNibrsQuery | null {
+  if (!rollupAvailable || !/\barrests?\b/i.test(question)) return null;
+  if (/\b(?:city|county|agency|department|sheriff|ori|continuous(?:ly)?|consistent(?:ly)?)\b/i.test(question)) return null;
+  if (/\b(?:race|racial|ethnicity|hispanic|latino|sex|gender|age|juvenile|youth|weapon|rate|per\s*(?:capita|100k|100,?000)|share|percent|monthly|by\s+month)\b/i.test(question)) return null;
+
+  const contract = buildQueryContract(question, "nibrs");
+  if (!contract) return null;
+  const explicitlyNational = /\b(?:national(?:ly)?|nationwide|united states|america)\b|\bu\.?s\.?(?:\s|$)/i.test(question);
+  if (contract.geography.kind !== "national" && !explicitlyNational) return null;
+
+  const fallback = pastCompleteCalendarYearsRange(5);
+  const start = contract.time.startYear ?? fallback.start;
+  const end = contract.time.endYear ?? fallback.end;
+  const codes = contract.metric.offenseCodes;
+  const offenseFilter = codes.length
+    ? `\n  AND d.ucr_arrest_offense IN (${codes.map(sqlString).join(", ")})`
+    : "";
+  const byOffense = /\b(?:by|breakdown\s+(?:by|of))\s+offense(?:\s+(?:type|code))?\b|\boffense\s+(?:type|code|breakdown)\b/i.test(question);
+  const offenseLabel = `CASE d.ucr_arrest_offense
+    WHEN '09A' THEN 'Murder and nonnegligent manslaughter'
+    WHEN '11A' THEN 'Rape'
+    WHEN '11B' THEN 'Sodomy'
+    WHEN '11C' THEN 'Sexual assault with an object'
+    WHEN '120' THEN 'Robbery'
+    WHEN '13A' THEN 'Aggravated assault'
+    ELSE d.ucr_arrest_offense
+  END`;
+  const sql = byOffense
+    ? `SELECT
+  d.year,
+  ${offenseLabel} AS offense,
+  SUM(d.arrestee_count) AS arrests
+FROM rollup.national_summary_arrestee_demographics d
+WHERE d.year BETWEEN ${start} AND ${end}${offenseFilter}
+GROUP BY d.year, d.ucr_arrest_offense
+ORDER BY d.year, offense
+LIMIT 1000`
+    : `SELECT
+  d.year,
+  SUM(d.arrestee_count) AS arrests
+FROM rollup.national_summary_arrestee_demographics d
+WHERE d.year BETWEEN ${start} AND ${end}${offenseFilter}
+GROUP BY d.year
+ORDER BY d.year
+LIMIT 1000`;
+
+  const topic = contract.metric.topic === "unknown" ? "all reported offenses" : contract.metric.offenses.map((item) => item.label.toLowerCase()).join(", ");
+  return {
+    sql,
+    title: byOffense ? "National NIBRS arrests by offense" : "National NIBRS arrests",
+    explanation: `This shows NIBRS arrest counts for ${topic} in the United States from ${start} through ${end}. Counts reflect participating NIBRS agencies and are not a complete national arrest census; recent data may be incomplete.`,
+    chartHint: "line",
+    xAxis: "year",
+    yAxis: "arrests",
+    xAxisLabel: "Year",
+    yAxisLabel: "Arrests",
+    guardrail: "deterministic-nibrs-rollup-national-arrests",
+  };
+}
+

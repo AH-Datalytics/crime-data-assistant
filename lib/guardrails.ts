@@ -638,7 +638,7 @@ function sqlMayIncludeCurrentCalendarYear(sql: string): boolean {
 function nibrsAnnualTrendImplicitlyIncludesCurrentYear(ctx: QueryContext): boolean {
   if (asksToIncludeCurrentYear(ctx.question)) return false;
   if (requestedEndYear(ctx.question) !== null) return false;
-  if (exactYearRequested(ctx.question) === currentCalendarYear()) return false;
+  if (exactYearRequested(ctx.question) !== null) return false;
   if (!hasAnnualYearGrouping(ctx.sql)) return false;
   return sqlMayIncludeCurrentCalendarYear(ctx.sql);
 }
@@ -814,6 +814,20 @@ const GUARDRAILS: Guardrail[] = [
     message: (ctx) => {
       const year = exactYearRequested(ctx.question);
       return `[SYSTEM: The user asked for exactly ${year}. Do not expand this into the agency's full available history, a recursive year range, or a multi-year trend. Filter the final result to year = ${year} and return only that year unless the user explicitly asks for a range.]`;
+    },
+  },
+  {
+    name: "nibrs-exact-year-expanded",
+    tabs: ["nibrs"],
+    match: (ctx) => {
+      const year = exactYearRequested(ctx.question);
+      if (!year || sqlConstrainedToExactYear(ctx.sql, year)) return false;
+      return /\b(?:summary_|national_summary_|state_summary_)[a-z_]+\b/i.test(ctx.sql) &&
+        /\byear\b/i.test(ctx.sql);
+    },
+    message: (ctx) => {
+      const year = exactYearRequested(ctx.question);
+      return `[SYSTEM: The user asked for exactly ${year}. Filter the NIBRS result to year = ${year} and return only that year. Do not expand it to a default multi-year range or trend.]`;
     },
   },
   {

@@ -3158,6 +3158,21 @@ console.log("\n═══ nested-aggregation-discards-measure ═══\n");
     r.fired.includes("rolling-monthly-grain-required"),
     `fired: ${JSON.stringify(r.fired)}`);
 }
+{
+  const ctx = extractQueryContext(
+    "SELECT year, SUM(arrestee_count) AS arrests FROM summary_arrestee_demographics WHERE year BETWEEN 2021 AND 2025 GROUP BY year ORDER BY year",
+    "How many arrests were made in 2024 in the United States?",
+    "nibrs"
+  );
+  const r = runGuardrails(ctx);
+  assert("TP: exact-year NIBRS request rejects an expanded default range",
+    r.fired.includes("nibrs-exact-year-expanded"),
+    `fired: ${JSON.stringify(r.fired)}`);
+  assert("FP: exact-year NIBRS request is not treated as an implicit current-year trend",
+    !r.fired.includes("nibrs-annual-trend-implicit-current-year"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
 console.log(`SUMMARY: ${pass} passed, ${fail} failed out of ${pass + fail} tests`);
 console.log("=".repeat(60));
 

@@ -1,12 +1,53 @@
 import { strict as assert } from "node:assert";
 import Database from "better-sqlite3";
+import { validateAndSanitize } from "../lib/sql-safety.js";
 import {
   buildNibrsClearanceMethodQuery,
+  buildNibrsComparableAgencyClearanceQuery,
   buildNibrsDomesticViolenceAggravatedAssaultShareQuery,
   buildNibrsLocalCityOffenseCountQuery,
   buildNibrsLocalDemographicQuery,
   buildNibrsStructuredLocalTrendQuery,
 } from "../lib/nibrs-deterministic-queries.js";
+
+{
+  const query = buildNibrsComparableAgencyClearanceQuery(
+    "Compare the rape clearance rate for the San Francisco Police Department against 3 agencies of similar size from 2021 to 2024",
+    {
+      question: "",
+      startYear: 2021,
+      endYear: 2024,
+      hasStateComparison: false,
+      elapsedMs: 0,
+      places: [{
+        contractIndex: 0,
+        requestedName: "San Francisco",
+        label: "San Francisco Police Department",
+        state: "CA",
+        kind: "city_police",
+        status: "resolved",
+        confidence: "high",
+        oriYears: [
+          { year: 2021, ori: "CA0380100", population: 815201 },
+          { year: 2022, ori: "CA0380100", population: 808437 },
+          { year: 2023, ori: "CA0380100", population: 808988 },
+          { year: 2024, ori: "CA0380100", population: 827526 },
+        ],
+        oriRanges: [{ ori: "CA0380100", startYear: 2021, endYear: 2024 }],
+        reason: "test",
+      }],
+    }
+  );
+  assert.ok(query, "similar-size agency clearance comparison should be deterministic");
+  assert.match(query.sql, /LIMIT 3/);
+  assert.match(query.sql, /summary_clearance_type sct INDEXED BY idx_sct_ori_year/);
+  assert.match(query.sql, /ucr_offense_code IN \('11A', '11B', '11C'\)/);
+  assert.match(query.sql, /sct\.year BETWEEN 2021 AND 2024/);
+  assert.match(query.sql, /arrest_rate_pct/);
+  assert.match(query.sql, /exceptional_rate_pct/);
+  assert.equal(validateAndSanitize(query.sql).valid, true);
+  assert.equal(query.guardrail, "deterministic-nibrs-comparable-agency-clearance");
+}
 
 {
   const query = buildNibrsClearanceMethodQuery(
