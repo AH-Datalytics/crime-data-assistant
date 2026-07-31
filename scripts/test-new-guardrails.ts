@@ -3181,8 +3181,11 @@ console.log("\n═══ nested-aggregation-discards-measure ═══\n");
     "hate_crime"
   );
   const missingResult = runGuardrails(missingUpper);
-  assert("TP: hate-crime month-key query must enforce the requested end year",
-    missingResult.fired.includes("contract-year-upper-bound-missing"),
+  assert("TP: hate-crime month-key query adds the requested end year",
+    missingResult.fired.includes("hate-crime-period-upper-bound-rewrite") && /ym <= '2025-12'/.test(missingResult.sql),
+    `fired: ${JSON.stringify(missingResult.fired)}`);
+  assert("FP: rewritten hate-crime month-key range needs no model retry",
+    !missingResult.needsFix && !missingResult.fired.includes("contract-year-upper-bound-missing"),
     `fired: ${JSON.stringify(missingResult.fired)}`);
   assert("FP: hate-crime month-key lower bound is recognized",
     !missingResult.fired.includes("contract-year-lower-bound-missing"),

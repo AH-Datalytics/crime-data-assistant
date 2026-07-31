@@ -563,6 +563,14 @@ function sqlHasYearUpperBound(sql: string, endYear: number): boolean {
   return leRe.test(stripped) || ltRe.test(stripped) || eqRe.test(stripped) || betweenRe.test(stripped) || periodUpperRe.test(sql) || nextYearExclusiveRe.test(sql);
 }
 
+function rewriteHateCrimePeriodUpperBound(sql: string, question: string): string | null {
+  const end = requestedEndYear(question);
+  if (end === null || sqlHasYearUpperBound(sql, end)) return null;
+  const lower = /((?:\b\w+\.)?\b(?:ym|year_month|month_key|period)\b)\s*>=\s*'((?:19|20)\d{2})-(?:0[1-9]|1[0-2])'/i;
+  if (!lower.test(sql)) return null;
+  return sql.replace(lower, (match, field: string) => `${match} AND ${field} <= '${end}-12'`);
+}
+
 function sqlIncludesCurrentCalendarYear(sql: string): boolean {
   const current = currentCalendarYear();
   const stripped = stripSqlStrings(sql);
@@ -1001,6 +1009,12 @@ const GUARDRAILS: Guardrail[] = [
       const start = requestedStartYear(ctx.question) ?? "requested start year";
       return `[SYSTEM: The user requested results starting from ${start}, but the SQL does not enforce a lower year bound. Add year >= ${start} or an equivalent aliased predicate such as table_alias.year >= ${start}. Do not return earlier years.]`;
     },
+  },
+  {
+    name: "hate-crime-period-upper-bound-rewrite",
+    tabs: ["hate_crime"],
+    match: (ctx) => requestedEndYear(ctx.question) !== null && !sqlHasYearUpperBound(ctx.sql, requestedEndYear(ctx.question)!),
+    rewrite: (sql, ctx) => rewriteHateCrimePeriodUpperBound(sql, ctx.question),
   },
   {
     name: "contract-year-upper-bound-missing",
