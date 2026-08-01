@@ -78,6 +78,79 @@ function getQueries() {
     .all(cutoff, cutoffEnd);
 }
 
+function getResolverWarningAudit() {
+  try {
+    const exists = db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='resolver_warning_classification'").get();
+    if (!exists) return null;
+    const byClassification = db.prepare(`
+      SELECT classification, COUNT(*) AS shapes, SUM(occurrence_count) AS occurrences
+      FROM resolver_warning_classification GROUP BY classification ORDER BY classification
+    `).all();
+    const totals = db.prepare(`
+      SELECT COUNT(*) AS total,
+             SUM(CASE WHEN classification = 'unclassified' THEN 1 ELSE 0 END) AS unclassified,
+             SUM(CASE WHEN classification IN ('false_positive','whitelisted_safe') THEN 1 ELSE 0 END) AS false_positives,
+             SUM(CASE WHEN first_seen >= ? AND first_seen < ? THEN 1 ELSE 0 END) AS new_shapes,
+             SUM(CASE WHEN last_seen >= ? AND last_seen < ? THEN occurrence_count ELSE 0 END) AS recently_seen_shape_occurrences
+      FROM resolver_warning_classification
+    `).get(cutoff, cutoffEnd, cutoff, cutoffEnd);
+    const classified = totals.total - totals.unclassified;
+    const falsePositiveRate = classified > 0 ? totals.false_positives / classified : null;
+    return {
+      byClassification, ...totals, classified, falsePositiveRate,
+      ready: totals.total > 0 && totals.unclassified === 0 && falsePositiveRate !== null && falsePositiveRate < 0.05,
+      rejectionEnabled: false,
+    };
+  } catch (err) {
+    console.warn("Resolver warning audit read failed:", err.message);
+    return null;
+  }
+}
+
+function getShrCoverageAudit() {
+  const candidates = [
+    process.env.SHR_DB_PATH,
+    "/opt/nibrs/shr.db",
+    path.join(__dirname, "..", "shr.db"),
+  ].filter(Boolean);
+  const shrPath = candidates.find((candidate) => {
+    try { return fs.existsSync(candidate) && fs.statSync(candidate).size > 0; } catch { return false; }
+  });
+  if (!shrPath) return null;
+  let shrDb;
+  try {
+    shrDb = new Database(shrPath, { readonly: true });
+    const exists = shrDb.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='shr_return_a_comparison'").get();
+    if (!exists) return null;
+    const columns = new Set(shrDb.prepare("PRAGMA table_info(shr_return_a_comparison)").all().map((row) => row.name));
+    if (!columns.has("display_status")) return { artifactPending: true, shrPath };
+    const comparisonStatuses = shrDb.prepare(`
+      SELECT comparison_status AS status, COUNT(*) AS rows, SUM(shr_victims) AS victims
+      FROM shr_return_a_comparison GROUP BY comparison_status ORDER BY rows DESC
+    `).all();
+    const displayStatuses = shrDb.prepare(`
+      SELECT display_status AS status, COUNT(*) AS rows, SUM(shr_victims) AS victims
+      FROM shr_return_a_comparison GROUP BY display_status ORDER BY rows DESC
+    `).all();
+    const totals = shrDb.prepare(`
+      SELECT COUNT(*) AS rows,
+             SUM(CASE WHEN join_method IN ('ambiguous','unmatched') THEN 1 ELSE 0 END) AS unresolved_joins,
+             SUM(comparison_conflict) AS comparison_conflicts,
+             SUM(presentation_changed) AS presentation_changed,
+             SUM(CASE WHEN classification_changed = 1 AND classification_build_ts >= ? AND classification_build_ts < ? THEN 1 ELSE 0 END) AS classifications_changed_today,
+             SUM(CASE WHEN shr_victims > 0 AND display_value IS NULL THEN 1 ELSE 0 END) AS positive_counts_hidden,
+             SUM(CASE WHEN display_value = 0 AND display_status != 'validated_zero' THEN 1 ELSE 0 END) AS invalid_zeroes
+      FROM shr_return_a_comparison
+    `).get(cutoff, cutoffEnd);
+    return { artifactPending: false, shrPath, comparisonStatuses, displayStatuses, ...totals };
+  } catch (err) {
+    console.warn("SHR coverage audit read failed:", err.message);
+    return null;
+  } finally {
+    if (shrDb) shrDb.close();
+  }
+}
+
 function getVisitors() {
   try {
     // Check if visitor_log table exists
@@ -205,6 +278,11 @@ function analyze(queries) {
       "shr-ori-not-in-source": 0,
       "shr-resolved-ori-rewritten": 0,
       "shr-resolved-ori-warn-only": 0,
+      "shr-coverage-count": 0,
+      "shr-coverage-validated-zero": 0,
+      "shr-coverage-gap": 0,
+      "shr-coverage-coverage-unknown": 0,
+      "shr-coverage-presentation-changed": 0,
     },
   };
 
@@ -563,7 +641,7 @@ function getScoreboard() {
   }
 }
 
-function buildEmail(stats, issues, visitors, suggestions, weeklyTrends) {
+function buildEmail(stats, issues, visitors, suggestions, weeklyTrends, resolverWarningAudit, shrCoverageAudit) {
   const date = new Date().toLocaleDateString("en-US", {
     weekday: "long",
     year: "numeric",
@@ -651,6 +729,11 @@ function buildEmail(stats, issues, visitors, suggestions, weeklyTrends) {
     const shrMissing = stats.resolverTags["shr-ori-not-in-source"];
     const shrRewritten = stats.resolverTags["shr-resolved-ori-rewritten"];
     const shrWarned = stats.resolverTags["shr-resolved-ori-warn-only"];
+    const shrCoverageCount = stats.resolverTags["shr-coverage-count"];
+    const shrCoverageZero = stats.resolverTags["shr-coverage-validated-zero"];
+    const shrCoverageGap = stats.resolverTags["shr-coverage-gap"];
+    const shrCoverageUnknown = stats.resolverTags["shr-coverage-coverage-unknown"];
+    const shrPresentationChanged = stats.resolverTags["shr-coverage-presentation-changed"];
     html += `<h2>Resolver Outcomes</h2>
     <div class="stat-grid">
       <div class="stat-box"><div class="stat-num">${resolved}</div><div class="stat-label">Resolved Queries</div></div>
@@ -660,7 +743,47 @@ function buildEmail(stats, issues, visitors, suggestions, weeklyTrends) {
       <div class="stat-box"><div class="stat-num">${shrMissing}</div><div class="stat-label">SHR ORIs Not Found</div></div>
       <div class="stat-box"><div class="stat-num">${shrRewritten}</div><div class="stat-label">SHR ORI Rewrites</div></div>
       <div class="stat-box"><div class="stat-num" style="color:${shrWarned > 0 ? "#f57c00" : "#4caf50"}">${shrWarned}</div><div class="stat-label">SHR ORI Warnings</div></div>
+      <div class="stat-box"><div class="stat-num">${shrCoverageCount}</div><div class="stat-label">SHR Counts Shown</div></div>
+      <div class="stat-box"><div class="stat-num">${shrCoverageZero}</div><div class="stat-label">Validated Zeroes</div></div>
+      <div class="stat-box"><div class="stat-num">${shrCoverageGap}</div><div class="stat-label">SHR Gaps</div></div>
+      <div class="stat-box"><div class="stat-num">${shrCoverageUnknown}</div><div class="stat-label">Coverage Unknown</div></div>
+      <div class="stat-box"><div class="stat-num" style="color:${shrPresentationChanged > 0 ? "#f57c00" : "#4caf50"}">${shrPresentationChanged}</div><div class="stat-label">Presentation Changed</div></div>
     </div>`;
+  }
+
+  if (resolverWarningAudit) {
+    const rate = resolverWarningAudit.falsePositiveRate == null
+      ? "unavailable"
+      : `${(resolverWarningAudit.falsePositiveRate * 100).toFixed(1)}%`;
+    html += `<h2>Resolver Warning Classification Gate</h2>
+    <p style="font-size:13px;color:#666;">Rejection remains <strong>OFF</strong>. The gate requires every warning shape classified and a false-positive rate below 5%.</p>
+    <div class="stat-grid">
+      <div class="stat-box"><div class="stat-num">${resolverWarningAudit.total}</div><div class="stat-label">Warning Shapes</div></div>
+      <div class="stat-box"><div class="stat-num" style="color:${resolverWarningAudit.unclassified > 0 ? "#f57c00" : "#4caf50"}">${resolverWarningAudit.unclassified}</div><div class="stat-label">Unclassified</div></div>
+      <div class="stat-box"><div class="stat-num">${resolverWarningAudit.new_shapes}</div><div class="stat-label">New Shapes Today</div></div>
+      <div class="stat-box"><div class="stat-num">${rate}</div><div class="stat-label">False-Positive Rate</div></div>
+      <div class="stat-box"><div class="stat-num" style="color:${resolverWarningAudit.ready ? "#4caf50" : "#f57c00"}">${resolverWarningAudit.ready ? "READY" : "NOT READY"}</div><div class="stat-label">Classification Gate</div></div>
+    </div>`;
+  }
+
+  if (shrCoverageAudit) {
+    html += `<h2>SHR Annual Coverage Classification</h2>`;
+    if (shrCoverageAudit.artifactPending) {
+      html += `<p style="font-size:13px;color:#f57c00;">The deployed comparison table has not yet been upgraded with annual display fields.</p>`;
+    } else {
+      html += `<div class="stat-grid">
+        <div class="stat-box"><div class="stat-num">${shrCoverageAudit.unresolved_joins}</div><div class="stat-label">Unresolved Joins</div></div>
+        <div class="stat-box"><div class="stat-num">${shrCoverageAudit.comparison_conflicts}</div><div class="stat-label">SHR/Return-A Conflicts</div></div>
+        <div class="stat-box"><div class="stat-num">${shrCoverageAudit.classifications_changed_today}</div><div class="stat-label">Classifications Changed Today</div></div>
+        <div class="stat-box"><div class="stat-num">${shrCoverageAudit.presentation_changed}</div><div class="stat-label">Rows Displayed Differently</div></div>
+        <div class="stat-box"><div class="stat-num" style="color:${shrCoverageAudit.positive_counts_hidden > 0 ? "#d32f2f" : "#4caf50"}">${shrCoverageAudit.positive_counts_hidden}</div><div class="stat-label">Positive Counts Hidden</div></div>
+        <div class="stat-box"><div class="stat-num" style="color:${shrCoverageAudit.invalid_zeroes > 0 ? "#d32f2f" : "#4caf50"}">${shrCoverageAudit.invalid_zeroes}</div><div class="stat-label">Invalid Zeroes</div></div>
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:13px;margin:12px 0;">
+        <thead><tr style="border-bottom:2px solid #ddd;"><th style="text-align:left;padding:6px;">Display Status</th><th style="text-align:right;padding:6px;">Rows</th><th style="text-align:right;padding:6px;">SHR Victims</th></tr></thead>
+        <tbody>${shrCoverageAudit.displayStatuses.map((row) => `<tr style="border-bottom:1px solid #eee;"><td style="padding:6px;">${escapeHtml(row.status)}</td><td style="padding:6px;text-align:right;">${row.rows}</td><td style="padding:6px;text-align:right;">${row.victims || 0}</td></tr>`).join("")}</tbody>
+      </table>`;
+    }
   }
 
   // Traffic sources section (top of email)
@@ -1233,14 +1356,11 @@ async function main() {
   const queries = getQueries();
   console.log(`Found ${queries.length} queries`);
 
-  if (queries.length === 0) {
-    console.log("No queries in the past 24 hours, skipping email");
-    return;
-  }
-
   const { stats, issues, suggestions } = analyze(queries);
   const visitors = getVisitors();
   const weeklyTrends = getWeeklyTrends();
+  const resolverWarningAudit = getResolverWarningAudit();
+  const shrCoverageAudit = getShrCoverageAudit();
   console.log(
     `Stats: ${stats.total} queries, ${stats.errors} errors, ${issues.length} issues, ${suggestions.length} suggestions, ${visitors ? visitors.pageviews + " pageviews" : "no visitor data yet"}`
   );
@@ -1248,7 +1368,10 @@ async function main() {
   // Persist findings to audit_findings table
   persistFindings(issues);
 
-  const html = buildEmail(stats, issues, visitors, suggestions, weeklyTrends);
+  const html = buildEmail(
+    stats, issues, visitors, suggestions, weeklyTrends,
+    resolverWarningAudit, shrCoverageAudit,
+  );
 
   const today = new Date().toLocaleDateString("en-US", {
     year: "numeric",

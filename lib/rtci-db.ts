@@ -6,6 +6,12 @@ import { findExistingPaths, getManagedDb, resolveDbPath } from "./sqlite-db";
 import type { RoutingLogMeta } from "./routing-log-meta";
 import { serializeQueryGuidanceLogMeta } from "./query-guidance-log";
 import { serializeQueryContractLogMeta, type QueryContractSource } from "./query-contract";
+import {
+  normalizedSqlShape,
+  resolverWarningCode,
+  resolverWarningFingerprint,
+  warningWhitelistMatch,
+} from "./resolver-warning-classification";
 
 const state = {
   db: null as Database.Database | null,
@@ -102,6 +108,29 @@ export function getWriteDb(): Database.Database | null {
         created_at INTEGER NOT NULL
       )
     `);
+    _writeDb.exec(`
+      CREATE TABLE IF NOT EXISTS resolver_warning_classification (
+        fingerprint TEXT PRIMARY KEY,
+        source TEXT NOT NULL,
+        warning_code TEXT NOT NULL,
+        warning_text TEXT NOT NULL,
+        sql_shape TEXT NOT NULL,
+        sample_question TEXT,
+        sample_sql TEXT,
+        sample_session_id TEXT,
+        first_seen INTEGER NOT NULL,
+        last_seen INTEGER NOT NULL,
+        occurrence_count INTEGER NOT NULL DEFAULT 1,
+        classification TEXT NOT NULL DEFAULT 'unclassified',
+        whitelist_rule TEXT,
+        review_notes TEXT,
+        reviewed_at INTEGER
+      );
+      CREATE INDEX IF NOT EXISTS idx_resolver_warning_last_seen
+        ON resolver_warning_classification(last_seen);
+      CREATE INDEX IF NOT EXISTS idx_resolver_warning_classification
+        ON resolver_warning_classification(classification);
+    `);
     // Add columns if table already exists without them
     for (const col of ["tab TEXT", "session_id TEXT", "guardrails TEXT", "model TEXT", "routing_confidence TEXT", "routing_mode TEXT", "routing_reason TEXT", "query_guidance TEXT", "query_contract TEXT"]) {
       try { _writeDb.exec(`ALTER TABLE query_log ADD COLUMN ${col}`); } catch { /* already exists */ }
@@ -111,6 +140,57 @@ export function getWriteDb(): Database.Database | null {
     console.warn("Query logging disabled:", e);
     _writeDisabled = true;
     return null;
+  }
+}
+
+export function logResolverWarnings(input: {
+  source: "nibrs" | "shr";
+  question: string;
+  sql: string;
+  warnings: string[];
+  sessionId?: string | null;
+}): void {
+  if (input.warnings.length === 0) return;
+  const db = getWriteDb();
+  if (!db) return;
+  const now = Date.now();
+  const upsert = db.prepare(`
+    INSERT INTO resolver_warning_classification (
+      fingerprint, source, warning_code, warning_text, sql_shape,
+      sample_question, sample_sql, sample_session_id,
+      first_seen, last_seen, occurrence_count, classification, whitelist_rule
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
+    ON CONFLICT(fingerprint) DO UPDATE SET
+      last_seen = excluded.last_seen,
+      occurrence_count = resolver_warning_classification.occurrence_count + 1,
+      sample_question = excluded.sample_question,
+      sample_sql = excluded.sample_sql,
+      sample_session_id = excluded.sample_session_id,
+      whitelist_rule = COALESCE(resolver_warning_classification.whitelist_rule, excluded.whitelist_rule)
+  `);
+  const write = db.transaction((warnings: string[]) => {
+    for (const warning of warnings) {
+      const whitelistRule = warningWhitelistMatch(input.sql);
+      upsert.run(
+        resolverWarningFingerprint(input.source, warning, input.sql),
+        input.source,
+        resolverWarningCode(warning),
+        warning.slice(0, 1000),
+        normalizedSqlShape(input.sql),
+        input.question.slice(0, 2000),
+        input.sql.slice(0, 4000),
+        input.sessionId?.slice(0, 64) || null,
+        now,
+        now,
+        whitelistRule ? "whitelisted_safe" : "unclassified",
+        whitelistRule,
+      );
+    }
+  });
+  try {
+    write(input.warnings);
+  } catch (error) {
+    console.warn("Resolver warning classification write failed:", error);
   }
 }
 

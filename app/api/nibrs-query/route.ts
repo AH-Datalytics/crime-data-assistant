@@ -48,6 +48,7 @@ import {
   formatNibrsResolutionGuidance,
   resolveNibrsPlaces,
 } from "@/lib/nibrs-place-resolver";
+import { logResolverWarnings } from "@/lib/rtci-db";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -582,6 +583,9 @@ export async function POST(req: NextRequest) {
     const resolvedOriWarnings = auditNibrsResolvedOriUsage(resolutionPlan, sql);
     if (resolvedOriWarnings.length > 0) {
       console.warn(`[nibrs][resolved-ori][warn-only] ${resolvedOriWarnings.join("; ")}`);
+      logResolverWarnings({
+        source: "nibrs", question, sql, warnings: resolvedOriWarnings, sessionId,
+      });
     }
 
     // Step 2a: Run shared guardrail pipeline

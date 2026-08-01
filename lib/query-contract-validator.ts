@@ -293,7 +293,23 @@ function hasLocalPlaceFilter(sql: string): boolean {
 
 function hasSpecificOriFilter(sql: string): boolean {
   return /\bori\s*=\s*'[^']+'/i.test(sql) ||
-    /\bori\s+IN\s*\(\s*(?:'[^']+'|SELECT\b)/i.test(sql);
+    /\bori\s+IN\s*\(\s*(?:'[^']+'|SELECT\b)/i.test(sql) ||
+    hasLiteralOriTargetJoin(sql);
+}
+
+export function hasLiteralOriTargetJoin(sql: string): boolean {
+  const cte = /\b([A-Za-z_]\w*)\s*\(([^)]*\bori\b[^)]*)\)\s+AS\s*\(\s*VALUES\b/i.exec(sql);
+  if (!cte) return false;
+  const cteName = cte[1];
+  const valuesStart = cte.index + cte[0].length;
+  const valuesSample = sql.slice(valuesStart, valuesStart + 4000);
+  if (!/'(?=[A-Z0-9]*\d)[A-Z]{2}[A-Z0-9]{3,10}'/i.test(valuesSample)) return false;
+
+  const escapedName = escapeRegExp(cteName);
+  const aliasMatch = new RegExp(`\\b(?:FROM|JOIN)\\s+${escapedName}\\s+(?:AS\\s+)?([A-Za-z_]\\w*)`, "i").exec(sql);
+  if (!aliasMatch) return false;
+  const alias = escapeRegExp(aliasMatch[1]);
+  return new RegExp(`\\b(?:[A-Za-z_]\\w*\\.)?ori\\s*=\\s*${alias}\\.ori\\b|${alias}\\.ori\\s*=\\s*(?:[A-Za-z_]\\w*\\.)?ori\\b`, "i").test(sql);
 }
 
 function escapeRegExp(value: string): string {

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getShrDb } from "@/lib/shr-db";
 import { validatePageToken } from "@/lib/page-token";
 import { validateAndSanitize } from "@/lib/sql-safety";
-import { logQuery } from "@/lib/rtci-db";
+import { logQuery, logResolverWarnings } from "@/lib/rtci-db";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { checkSessionLimit, maybeCleanup } from "@/lib/captcha";
 import { extractQueryContext } from "@/lib/query-context";
@@ -336,7 +336,10 @@ export async function POST(req: NextRequest) {
         const rows = normalizeShrDisplayRows(murderDb.prepare(contract.sql).all() as Record<string, unknown>[]);
         const explanation = `${murderPlan.explanation}\n\nNot all agencies report SHR data every month or year, so reported counts can understate actual murders.`;
         const executionMs = Date.now() - start;
-        writeLog(question, contract.sql, rows.length, null, executionMs, explanation, "shr", ["deterministic-murder", ...routeGuardrailsFired], "deterministic", sessionId);
+        const coverageStatuses = [...new Set(rows.map((row) => String(row.shr_status || "")).filter(Boolean))];
+        const coverageTags = coverageStatuses.map((status) => `shr-coverage-${status.replace(/_/g, "-")}`);
+        if (rows.some((row) => row.murder_victims == null)) coverageTags.push("shr-coverage-presentation-changed");
+        writeLog(question, contract.sql, rows.length, null, executionMs, explanation, "shr", ["deterministic-murder", ...coverageTags, ...routeGuardrailsFired], "deterministic", sessionId);
         return jsonResp({
           success: true, question, sql: contract.sql, explanation,
           title: murderPlan.title, columns: murderPlan.columns, rows,
@@ -748,6 +751,9 @@ export async function POST(req: NextRequest) {
     if (shrRewrite.warning) {
       routeGuardrailsFired.push("shr-resolved-ori-warn-only");
       console.warn(`[shr][resolver-warning] ${shrRewrite.warning}`);
+      logResolverWarnings({
+        source: "shr", question, sql: validation.sanitized!, warnings: [shrRewrite.warning], sessionId,
+      });
     }
     if (shrRewrite.rewritten) routeGuardrailsFired.push("shr-resolved-ori-rewritten");
     let initialContract = runContractValidation(shrRewrite.sql);

@@ -432,6 +432,37 @@ for (const question of trueFollowupContracts) {
   assert(result.enforced.includes("contract-geography-state-missing"));
 }
 
+{
+  const result = validateQueryContractSql({
+    question: "murders in Oakland in 2021",
+    source: "shr",
+    sql: `WITH targets(city, ori, start_year, end_year) AS (
+      VALUES ('Oakland, CA', 'CA00109', 2021, 2021)
+    )
+    SELECT i.year, COUNT(v.id) AS murder_victims
+    FROM targets t
+    JOIN incidents i ON i.ori = t.ori AND i.year BETWEEN t.start_year AND t.end_year
+    JOIN victims v ON v.incident_id = i.id
+    WHERE i.homicide_type = 'Murder'
+    GROUP BY i.year`,
+  });
+  assert(!result.enforced.includes("contract-geography-state-missing"));
+}
+
+{
+  const result = validateQueryContractSql({
+    question: "murders in Oakland in 2021",
+    source: "shr",
+    sql: `WITH targets(city, ori) AS (SELECT city, ori FROM arbitrary_agency_map)
+    SELECT i.year, COUNT(v.id) AS murder_victims
+    FROM targets t JOIN incidents i ON i.ori = t.ori
+    JOIN victims v ON v.incident_id = i.id
+    WHERE i.homicide_type = 'Murder'
+    GROUP BY i.year`,
+  });
+  assert(result.enforced.includes("contract-geography-state-missing"));
+}
+
 
 {
   for (const question of [
