@@ -87,14 +87,16 @@ export function buildShrMurderPlan(question: string, db: Database.Database): Shr
   const endMonth = throughMonth(question);
   const monthly = /\b(?:monthly|per\s+month|by\s+month)\b/i.test(question);
   const values = targetValues(places);
+  const oriFilter = `i.ori IN (${[...new Set(places.flatMap((place) => place.resolved.oris))].map(sqlText).join(", ")})`;
   const monthLabel = Object.keys(MONTHS).find((name) => MONTHS[name] === endMonth)!;
   const period = endMonth < 12 ? `January through ${monthLabel[0].toUpperCase()}${monthLabel.slice(1)}` : `calendar year ${year}`;
   const placeList = places.map((place) => place.display).join(", ");
 
   if (monthly) {
     const sql = `WITH RECURSIVE months(month) AS (SELECT 1 UNION ALL SELECT month + 1 FROM months WHERE month < ${endMonth}), targets(city, ori, start_year, end_year) AS (VALUES ${values}), places(city) AS (SELECT DISTINCT city FROM targets), coverage AS (SELECT t.city, COUNT(i.id) AS shr_records, COUNT(DISTINCT i.month) AS recorded_months FROM targets t LEFT JOIN incidents i ON i.ori = t.ori AND i.year BETWEEN t.start_year AND t.end_year AND i.year = ${year} AND i.month BETWEEN 1 AND ${endMonth} GROUP BY t.city), counts AS (SELECT t.city, i.month, COUNT(v.id) AS murder_victims FROM targets t JOIN incidents i ON i.ori = t.ori AND i.year BETWEEN t.start_year AND t.end_year JOIN victims v ON v.incident_id = i.id WHERE i.homicide_type = 'Murder' AND i.year = ${year} AND i.month BETWEEN 1 AND ${endMonth} GROUP BY t.city, i.month) SELECT printf('%04d-%02d', ${year}, m.month) AS month, p.city, CASE WHEN cv.shr_records = 0 THEN NULL ELSE COALESCE(c.murder_victims, 0) END AS murder_victims, cv.recorded_months AS shr_recorded_months, CASE WHEN cv.shr_records = 0 THEN 'No SHR homicide records in period' ELSE 'SHR records present' END AS shr_status FROM places p CROSS JOIN months m JOIN coverage cv ON cv.city = p.city LEFT JOIN counts c ON c.city = p.city AND c.month = m.month ORDER BY p.city, m.month LIMIT 1000`;
+    const guardedSql = sql.replaceAll("i.ori = t.ori", `i.ori = t.ori AND ${oriFilter}`);
     return {
-      kind: "query", sql,
+      kind: "query", sql: guardedSql,
       title: `Monthly Murder Victims, ${placeList}, ${year}`,
       explanation: `Monthly murder victim counts reported in SHR for ${placeList}, ${period}. If the agency has SHR records in the period, months without a murder record are shown as zero. If it has no SHR homicide records anywhere in the period, counts are blank rather than incorrectly shown as zero murders. One incident can have multiple victims, so this counts victim records rather than incidents.`,
       columns: ["month", "city", "murder_victims", "shr_recorded_months", "shr_status"], chartType: "line", xAxis: "month", yAxis: ["murder_victims"],
@@ -102,8 +104,9 @@ export function buildShrMurderPlan(question: string, db: Database.Database): Shr
   }
 
   const sql = `WITH targets(city, ori, start_year, end_year) AS (VALUES ${values}), places(city) AS (SELECT DISTINCT city FROM targets), coverage AS (SELECT t.city, COUNT(i.id) AS shr_records, COUNT(DISTINCT i.month) AS recorded_months FROM targets t LEFT JOIN incidents i ON i.ori = t.ori AND i.year BETWEEN t.start_year AND t.end_year AND i.year = ${year} AND i.month BETWEEN 1 AND ${endMonth} GROUP BY t.city), counts AS (SELECT t.city, COUNT(v.id) AS murder_victims FROM targets t JOIN incidents i ON i.ori = t.ori AND i.year BETWEEN t.start_year AND t.end_year JOIN victims v ON v.incident_id = i.id WHERE i.homicide_type = 'Murder' AND i.year = ${year} AND i.month BETWEEN 1 AND ${endMonth} GROUP BY t.city) SELECT p.city, CASE WHEN cv.shr_records = 0 THEN NULL ELSE COALESCE(c.murder_victims, 0) END AS murder_victims, cv.recorded_months AS shr_recorded_months, CASE WHEN cv.shr_records = 0 THEN 'No SHR homicide records in period' ELSE 'SHR records present' END AS shr_status FROM places p JOIN coverage cv ON cv.city = p.city LEFT JOIN counts c ON c.city = p.city ORDER BY p.city LIMIT 1000`;
+  const guardedSql = sql.replaceAll("i.ori = t.ori", `i.ori = t.ori AND ${oriFilter}`);
   return {
-    kind: "query", sql,
+    kind: "query", sql: guardedSql,
     title: `Murder Victims, ${period}`,
     explanation: `Murder victim counts reported in SHR for ${placeList}, ${period}. Every requested city is retained. A blank count means SHR contains no homicide records for that city in the requested period; it is not interpreted as zero murders. One incident can have multiple victims, so this counts victim records rather than incidents.`,
     columns: ["city", "murder_victims", "shr_recorded_months", "shr_status"], chartType: "bar", xAxis: "city", yAxis: ["murder_victims"],

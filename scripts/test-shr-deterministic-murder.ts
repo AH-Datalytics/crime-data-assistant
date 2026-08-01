@@ -62,6 +62,7 @@ const comparisonContract = validateQueryContractSql({
   sql: comparison.sql,
 });
 assert.deepEqual(comparisonContract.blockReasons, []);
+assert.deepEqual(comparisonContract.enforced, []);
 const comparisonRows = db.prepare(comparison.sql).all() as { city: string; murder_victims: number }[];
 assert.equal(comparisonRows.length, 5);
 assert.deepEqual(Object.fromEntries(comparisonRows.map((row) => [row.city, row.murder_victims])), {
@@ -75,9 +76,11 @@ assert.deepEqual(Object.fromEntries(comparisonRows.map((row) => [row.city, row.m
 const monthly = buildShrMurderPlan("murders per month in 2021 in Oakland", db);
 assert.equal(monthly?.kind, "query");
 if (!monthly || monthly.kind !== "query") throw new Error("monthly plan missing");
-assert.deepEqual(validateQueryContractSql({
+const monthlyContract = validateQueryContractSql({
   question: "murders per month in 2021 in Oakland", source: "shr", sql: monthly.sql,
-}).blockReasons, []);
+});
+assert.deepEqual(monthlyContract.blockReasons, []);
+assert.deepEqual(monthlyContract.enforced, []);
 const monthlyRows = db.prepare(monthly.sql).all() as { month: string; city: string; murder_victims: number | null; shr_recorded_months: number; shr_status: string }[];
 assert.equal(monthlyRows.length, 12);
 assert.equal(monthlyRows[0].murder_victims, 2);
