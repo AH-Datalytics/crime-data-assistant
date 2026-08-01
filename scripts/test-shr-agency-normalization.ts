@@ -43,6 +43,8 @@ import {
 }
 
 {
+  assert.equal(displayShrAgencyName("Washington, DC"), "Washington, DC");
+  assert.equal(displayShrAgencyName("New York City, NY"), "New York City, NY");
   assert.equal(displayShrAgencyName("METROPOLITAN NASHVILLE P"), "Nashville");
   assert.equal(displayShrAgencyName("METROPOLITAN NASHVILLE POLICE DEPARTMENT"), "Nashville");
   assert.equal(displayShrAgencyName("CHARLOTTE-MECKLENBURG POLICE DEPARTMENT"), "Charlotte");

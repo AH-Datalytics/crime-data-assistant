@@ -65,7 +65,7 @@ export function canonicalizeShrAgencyName(value: string): string {
     .replace(/\bCOUNTY POLICE DEPARTMENT\b/gi, "County Police Department")
     .replace(/\s+/g, " ")
     .trim();
-  return titleCase(out);
+  return titleCase(out).replace(/,\s*([A-Za-z]{2})$/, (_match, state: string) => `, ${state.toUpperCase()}`);
 }
 
 export function agencySearchKey(value: string): string {

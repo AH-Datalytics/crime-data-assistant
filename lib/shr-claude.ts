@@ -80,8 +80,8 @@ One row per homicide incident.
 Use these tables to resolve agency names to ORIs before filtering incidents. They are built from SHR ORI/state/name history plus NIBRS agency metadata where available.
 - shr_agency_identity: ori, state, canonical_agency, agency_type, search_key, incident_count, first_year, last_year
 - shr_agency_alias: alias, alias_key, ori, state, canonical_agency, agency_type
-- For a named agency/city/county, prefer filtering incidents by ORI from shr_agency_alias instead of exact i.agency equality. Example: \`i.ori IN (SELECT ori FROM shr_agency_alias WHERE state = 'MO' AND alias_key LIKE '%ST LOUIS COUNTY%')\`.
-- alias_key is uppercase, punctuation-stripped text. Use broad LIKE tokens for user-entered names: "St. Louis County" -> alias_key LIKE '%ST LOUIS COUNTY%'.
+- For a named agency/city/county, filter incidents by ORIs from deterministic agency-resolution guidance when it is present. Do not replace those ORIs with an agency-name or alias lookup.
+- Without deterministic guidance, alias_key is uppercase, punctuation-stripped text. Use an exact state-qualified key (for example, state = 'CA' AND alias_key = 'OAKLAND'), never a broad LIKE search. If the exact identity is uncertain, return sql as null instead of guessing or silently omitting a requested place.
 - agency_type in these lookup tables is normalized from ORI/state history. Use it to distinguish City vs County agencies, but remember County means a county law-enforcement agency, not countywide geography.
 
 ### agency_county_crosswalk (countywide geography)

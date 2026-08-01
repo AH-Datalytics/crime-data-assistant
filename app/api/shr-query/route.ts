@@ -44,6 +44,7 @@ import {
 } from "@/lib/query-contract-validator";
 import { partialCoverageRetryPrompt, sourceYearOverlap } from "@/lib/source-year-overlap";
 import { buildShrCanonicalLabelCase, formatShrResolutionGuidance, resolveShrAgency, rewriteShrResolvedAgencyPredicates } from "@/lib/shr-place-resolver";
+import { buildShrMurderPlan } from "@/lib/shr-deterministic-murder";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function jsonResp(data: Record<string, any> | QueryError, status = 200) {
@@ -312,6 +313,46 @@ export async function POST(req: NextRequest) {
         chartMeta: metadata.chartMeta,
         executionTimeMs: executionMs,
       });
+    }
+
+    // Exact-year city murder totals and monthly series use canonical SHR ORIs,
+    // victim rows, and explicit zeroes instead of model-generated alias LIKEs.
+    const murderDb = planSaysQueryBearing ? null : getShrDb();
+    const murderPlan = murderDb ? buildShrMurderPlan(question, murderDb) : null;
+    if (murderPlan?.kind === "blocked") {
+      const executionMs = Date.now() - start;
+      writeLog(question, null, 0, "shr_place_not_resolved", executionMs, murderPlan.explanation, "shr", ["deterministic-murder", "shr-place-resolution-block"], "deterministic", sessionId);
+      return jsonResp({
+        success: true, question, sql: null, explanation: murderPlan.explanation,
+        title: "", columns: [], rows: [], rowCount: 0, truncated: false,
+        chartConfig: null, chartMeta: null, executionTimeMs: executionMs,
+      });
+    }
+    if (murderPlan?.kind === "query" && murderDb) {
+      const contract = runContractValidation(murderPlan.sql);
+      const contractFailure = contractFailureResponse(contract, `contract_deterministic_murder_failure:${contract.enforced.join(",")}`, ["deterministic-murder"]);
+      if (contractFailure) return contractFailure;
+      try {
+        const rows = normalizeShrDisplayRows(murderDb.prepare(contract.sql).all() as Record<string, unknown>[]);
+        const explanation = `${murderPlan.explanation}\n\nNot all agencies report SHR data every month or year, so reported counts can understate actual murders.`;
+        const executionMs = Date.now() - start;
+        writeLog(question, contract.sql, rows.length, null, executionMs, explanation, "shr", ["deterministic-murder", ...routeGuardrailsFired], "deterministic", sessionId);
+        return jsonResp({
+          success: true, question, sql: contract.sql, explanation,
+          title: murderPlan.title, columns: murderPlan.columns, rows,
+          rowCount: rows.length, truncated: false,
+          chartConfig: applyChartCustomizations({
+            type: murderPlan.chartType, xAxis: murderPlan.xAxis, yAxis: murderPlan.yAxis,
+            yAxisLabel: "Murder Victims", title: murderPlan.title,
+          }, question),
+          chartMeta: { source: "FBI SHR", agencyCount: 0, population: null },
+          executionTimeMs: executionMs,
+        });
+      } catch (dbErr) {
+        const msg = dbErr instanceof Error ? dbErr.message : String(dbErr);
+        writeLog(question, contract.sql, 0, `DB: ${msg}`, Date.now() - start, null, "shr", ["deterministic-murder"], "deterministic", sessionId);
+        return jsonResp({ success: false, error: `Database error: ${msg}` } as QueryError, 500);
+      }
     }
 
     // Deterministic nonfatal shooting refusal

@@ -7,7 +7,10 @@ import { formatNumber, formatDate } from "@/lib/utils";
 function formatHeader(col: string): string {
   return col
     .replace(/_/g, " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase());
+    .replace(/\b\w/g, (c) => c.toUpperCase())
+    .replace(/\bDc\b/g, "DC")
+    .replace(/\bNyc\b/g, "NYC")
+    .replace(/\bUsa\b/g, "USA");
 }
 
 /** Detect if a column holds year-like values (4-digit integers ~1900-2100) */
