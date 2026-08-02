@@ -1,5 +1,9 @@
 import assert from "node:assert/strict";
-import { earliestReturnedYear, ensureExplanationOffenseLabel } from "../lib/explain";
+import {
+  earliestReturnedYear,
+  ensureExplanationOffenseLabel,
+  ensureExplanationYearRange,
+} from "../lib/explain";
 import { extractQueryContext } from "../lib/query-context";
 
 {
@@ -53,6 +57,17 @@ import { extractQueryContext } from "../lib/query-context";
   assert.equal(
     ensureExplanationOffenseLabel("Crime data for Houston.", []),
     "Crime data for Houston.",
+  );
+  assert.equal(
+    ensureExplanationYearRange(
+      "Murder data for Houston and Dallas for 2020 and 2021.",
+      "2020 to 2025",
+    ),
+    "Murder data for Houston and Dallas from 2020 to 2025.",
+  );
+  assert.equal(
+    ensureExplanationYearRange("Annual murder counts from 2020 to 2025.", "2020 to 2025"),
+    "Annual murder counts from 2020 to 2025.",
   );
 }
 

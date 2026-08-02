@@ -26,6 +26,7 @@ RULES:
 - Do NOT mention SQL, table names, or technical details.
 - Use the user's own words for their question.
 - When an offense/topic is provided, explicitly name it; never replace a specific offense with generic "crime data."
+- Use the Results metadata year range, which reflects returned rows; a short follow-up may mention only newly added years.
 - NEVER mention a city, agency, or entity name unless it appears in the "Entities in results" list. If no entities are listed, describe the data generically (e.g., "cities ranked by..."). Making up entity names is the worst possible error.
 - Geography accuracy is critical:
   - If Scope says "state" or "statewide", say "statewide" — NEVER say "cities in [state]" or "[state] cities".
@@ -99,6 +100,24 @@ export function ensureExplanationOffenseLabel(explanation: string, offenses: str
     .replace(/\bcrime counts?\b/i, `${label} counts`)
     .replace(/\bcrime incidents?\b/i, `${label} incidents`);
   return repaired !== explanation ? repaired : `${label} — ${explanation}`;
+}
+
+/** Replace a follow-up's partial year wording with the range actually returned. */
+export function ensureExplanationYearRange(explanation: string, yearRange: string | null): string {
+  if (!yearRange || !explanation) return explanation;
+  const expectedYears: string[] = yearRange.match(/\b(?:19|20)\d{2}\b/g) ?? [];
+  const mentionedYears: string[] = explanation.match(/\b(?:19|20)\d{2}\b/g) ?? [];
+  if (expectedYears.length > 0 && expectedYears.every((year) => mentionedYears.includes(year))) {
+    return explanation;
+  }
+
+  const replacement = expectedYears.length === 1 ? `in ${yearRange}` : `from ${yearRange}`;
+  const repaired = explanation.replace(
+    /\b(?:from|for|in)\s+(?:19|20)\d{2}\s+(?:to|through|and|[-–—])\s+(?:19|20)\d{2}\b/i,
+    replacement,
+  );
+  if (repaired !== explanation) return repaired;
+  return `${explanation.replace(/[.]$/, "")} ${replacement}.`;
 }
 
 /**
@@ -307,6 +326,7 @@ Describe what these results contain in one sentence (metric, geography, time ran
       let validated = validateExplanationEntities(text, resultEntities, ctx.geos);
       // Validate: fix hallucinated row/entity counts
       validated = validateExplanationCount(validated, rows, columns);
+      validated = ensureExplanationYearRange(validated, yearRange);
       return ensureExplanationOffenseLabel(validated, ctx.offenses);
     }
   } catch (e) {
@@ -314,7 +334,8 @@ Describe what these results contain in one sentence (metric, geography, time ran
   }
 
   // Fallback to pre-query explanation (sanitized)
-  return ensureExplanationOffenseLabel(sanitizeExplanation(preQueryExplanation), ctx.offenses);
+  const fallback = ensureExplanationYearRange(sanitizeExplanation(preQueryExplanation), yearRange);
+  return ensureExplanationOffenseLabel(fallback, ctx.offenses);
 }
 
 /**
