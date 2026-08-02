@@ -25,6 +25,7 @@ RULES:
 - NEVER use: "higher", "lower", "peaked", "declined", "ranging from", "compared to", "shows", "suggests", "may reflect", "driven by".
 - Do NOT mention SQL, table names, or technical details.
 - Use the user's own words for their question.
+- When an offense/topic is provided, explicitly name it; never replace a specific offense with generic "crime data."
 - NEVER mention a city, agency, or entity name unless it appears in the "Entities in results" list. If no entities are listed, describe the data generically (e.g., "cities ranked by..."). Making up entity names is the worst possible error.
 - Geography accuracy is critical:
   - If Scope says "state" or "statewide", say "statewide" — NEVER say "cities in [state]" or "[state] cities".
@@ -72,6 +73,32 @@ function extractMetrics(columns: string[]): string[] {
     "ucr_offense_code", "ucr_arrest_offense", "offense_code",
   ]);
   return columns.filter((c) => !skip.has(c));
+}
+
+const OFFENSE_MENTION: Record<string, RegExp> = {
+  murder: /\b(?:murder|murders|homicide|homicides)\b/i,
+  rape: /\b(?:rape|rapes)\b/i,
+  robbery: /\b(?:robbery|robberies)\b/i,
+  "aggravated assault": /\baggravated assaults?\b/i,
+  burglary: /\b(?:burglary|burglaries)\b/i,
+  theft: /\b(?:theft|thefts|larceny|larcenies)\b/i,
+  "motor vehicle theft": /\b(?:motor vehicle|auto|vehicle) thefts?\b/i,
+  carjacking: /\bcarjackings?\b/i,
+  arson: /\barsons?\b/i,
+};
+
+/** Ensure a known single-offense query is never described as generic crime data. */
+export function ensureExplanationOffenseLabel(explanation: string, offenses: string[]): string {
+  if (offenses.length !== 1 || !explanation) return explanation;
+  const offense = offenses[0].toLowerCase();
+  if (OFFENSE_MENTION[offense]?.test(explanation)) return explanation;
+
+  const label = offense.replace(/\b\w/g, (letter) => letter.toUpperCase());
+  const repaired = explanation
+    .replace(/\bcrime data\b/i, `${label} data`)
+    .replace(/\bcrime counts?\b/i, `${label} counts`)
+    .replace(/\bcrime incidents?\b/i, `${label} incidents`);
+  return repaired !== explanation ? repaired : `${label} — ${explanation}`;
 }
 
 /**
@@ -259,6 +286,7 @@ export async function generateExplanation(opts: {
 Results metadata:
 - Rows: ${rowCount}
 - Metrics: ${metrics.join(", ") || "various"}
+- Offense/topic: ${ctx.offenses.join(", ") || "not offense-specific"}
 - Year range: ${yearRange || "unknown"}
 - Geographies: ${geoDisplay}
 - Scope: ${ctx.scope}${entitiesLine}
@@ -279,14 +307,14 @@ Describe what these results contain in one sentence (metric, geography, time ran
       let validated = validateExplanationEntities(text, resultEntities, ctx.geos);
       // Validate: fix hallucinated row/entity counts
       validated = validateExplanationCount(validated, rows, columns);
-      return validated;
+      return ensureExplanationOffenseLabel(validated, ctx.offenses);
     }
   } catch (e) {
     console.warn(`[explain] Post-query explanation failed, using pre-query:`, e);
   }
 
   // Fallback to pre-query explanation (sanitized)
-  return sanitizeExplanation(preQueryExplanation);
+  return ensureExplanationOffenseLabel(sanitizeExplanation(preQueryExplanation), ctx.offenses);
 }
 
 /**

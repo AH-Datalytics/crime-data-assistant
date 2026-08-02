@@ -53,15 +53,15 @@ export const AGENCY_ALIASES: [RegExp, string][] = [
 /* ------------------------------------------------------------------ */
 
 const OFFENSE_MAP: [RegExp, string][] = [
-  [/\b(?:'murder'|'09[abc]'|homicide)\b/i, "murder"],
-  [/\b(?:'rape'|'11[abcd]')\b/i, "rape"],
-  [/\b(?:'robbery'|'robberies'|'120')\b/i, "robbery"],
-  [/\b(?:'aggravated assault'|'13[abc]')\b/i, "aggravated assault"],
-  [/\b(?:'burglary'|'burglaries'|'220')\b/i, "burglary"],
-  [/\b(?:'theft'|'larceny'|'larcenies'|'23[a-z]')\b/i, "theft"],
-  [/\b(?:'motor vehicle theft'|'240')\b/i, "motor vehicle theft"],
-  [/\b(?:'carjacking'|'64[ab]')\b/i, "carjacking"],
-  [/\b(?:'arson'|'200')\b/i, "arson"],
+  [/\b(?:murder|murders|homicide|homicides|09[abc])\b/i, "murder"],
+  [/\b(?:rape|rapes|11[abcd])\b/i, "rape"],
+  [/\b(?:robbery|robberies|120)\b/i, "robbery"],
+  [/\b(?:aggravated assault|aggravated assaults|13[abc])\b/i, "aggravated assault"],
+  [/\b(?:burglary|burglaries|220)\b/i, "burglary"],
+  [/\b(?:motor vehicle theft|motor vehicle thefts|auto theft|auto thefts|240)\b/i, "motor vehicle theft"],
+  [/(?<!motor vehicle )(?<!auto )\b(?:theft|thefts|larceny|larcenies|23[a-z])\b/i, "theft"],
+  [/\b(?:carjacking|carjackings|64[ab])\b/i, "carjacking"],
+  [/\b(?:arson|arsons|200)\b/i, "arson"],
 ];
 
 /* ------------------------------------------------------------------ */
