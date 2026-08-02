@@ -22,6 +22,7 @@ import {
 } from "recharts";
 import type { ChartConfig, ChartMeta } from "@/lib/types";
 import { formatAxisValue, fmtVal, decadeTicksForYears, scatterEntityLabel } from "@/lib/utils";
+import { plainYearXAxisProps } from "@/lib/chart-axis";
 
 const MONTH_NAMES = [
   "Jan", "Feb", "Mar", "Apr", "May", "Jun",
@@ -466,7 +467,7 @@ function ChartPanel({ config, rows, meta }: ChartPanelProps) {
                 tick={TICK_STYLE}
                 tickLine={X_AXIS_TICK_LINE_STYLE}
                 axisLine={X_AXIS_LINE_STYLE}
-                {...(plainYears ? { type: "number" as const, domain: ["dataMin", "dataMax"] as const } : {})}
+                {...plainYearXAxisProps(plainYears, "line")}
                 tickFormatter={
                   daily ? (v) => formatDateTickLabel(v, dailySingleYear)
                   : singleYearMonthly ? (v) => formatMonthOnly(v)
@@ -557,7 +558,7 @@ function ChartPanel({ config, rows, meta }: ChartPanelProps) {
               <CartesianGrid horizontal vertical={false} stroke={GRID_COLOR} strokeWidth={1} />
               <XAxis
                 dataKey={xAxisDataKey}
-                {...(plainYears ? { type: "number" as const, domain: ["dataMin", "dataMax"] as const } : {})}
+                {...plainYearXAxisProps(plainYears, "bar")}
                 tick={TICK_STYLE}
                 tickLine={X_AXIS_TICK_LINE_STYLE}
                 axisLine={X_AXIS_LINE_STYLE}
@@ -571,7 +572,7 @@ function ChartPanel({ config, rows, meta }: ChartPanelProps) {
                 }
                 angle={fewYearsMonthly ? -40 : (ym || daily || plainYears) ? 0 : -45}
                 textAnchor={fewYearsMonthly ? "end" : (ym || daily || plainYears) ? "middle" : "end"}
-                {...(yearTicks.length > 0 ? { ticks: yearTicks.map(String) } : {})}
+                {...(yearTicks.length > 0 ? { ticks: yearTicks } : {})}
                 {...(ymTicks.length > 0 ? { ticks: ymTicks } : {})}
                 {...(dailyTicks.length > 0 ? { ticks: dailyTicks } : {})}
                 interval={

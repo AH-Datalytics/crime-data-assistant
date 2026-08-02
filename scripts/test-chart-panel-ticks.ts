@@ -5,6 +5,7 @@
 // Run: npx tsx scripts/test-chart-panel-ticks.ts
 import assert from "node:assert/strict";
 import { isYearMonth, yearTicksForYM, formatMonthOnly, formatYearMonth } from "../components/ChartPanel";
+import { plainYearXAxisProps } from "../lib/chart-axis";
 
 function monthsHyphen(startYear: number, startMonth: number, count: number): Record<string, unknown>[] {
   const out: Record<string, unknown>[] = [];
@@ -61,5 +62,17 @@ assert.equal(formatMonthOnly("not-a-month"), "not-a-month");
 assert.equal(formatYearMonth("2013-09"), "Sep 2013");
 assert.equal(formatYearMonth("201309"), "Sep 2013");
 assert.equal(formatYearMonth("2013"), "2013");
+
+// Annual line charts need a continuous timeline, but annual bar charts need
+// categorical bands so their first/last groups remain inside the plot.
+assert.deepEqual(plainYearXAxisProps(true, "line"), {
+  type: "number",
+  domain: ["dataMin", "dataMax"],
+});
+assert.deepEqual(plainYearXAxisProps(true, "bar"), {
+  type: "category",
+  allowDuplicatedCategory: false,
+});
+assert.equal("domain" in plainYearXAxisProps(true, "bar"), false);
 
 console.log("chart panel tick tests passed");

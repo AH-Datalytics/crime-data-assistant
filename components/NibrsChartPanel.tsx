@@ -22,6 +22,7 @@ import {
 import type { ChartConfig } from "@/lib/types";
 import { NIBRS_CHART_COLORS } from "@/lib/nibrs-chart-config";
 import { formatAxisValue, fmtVal, decadeTicksForYears, scatterEntityLabel } from "@/lib/utils";
+import { plainYearXAxisProps } from "@/lib/chart-axis";
 
 const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
@@ -358,7 +359,7 @@ export default function NibrsChartPanel({ config, rows }: NibrsChartPanelProps) 
               tick={TICK_STYLE}
               tickLine={X_AXIS_TICK_LINE_STYLE}
               axisLine={X_AXIS_LINE_STYLE}
-              {...(plainYears ? { type: "number" as const, domain: ["dataMin", "dataMax"] as const } : {})}
+              {...plainYearXAxisProps(plainYears, "line")}
               tickFormatter={
                 daily ? (v) => formatDateTickLabel(v, dailySingleYear)
                 : singleYearMonthly ? (v) => formatYearMonth(v)
@@ -421,7 +422,7 @@ export default function NibrsChartPanel({ config, rows }: NibrsChartPanelProps) 
             <CartesianGrid horizontal vertical={false} stroke={GRID_COLOR} strokeWidth={1} />
             <XAxis
               dataKey={xAxisDataKey}
-              {...(plainYears ? { type: "number" as const, domain: ["dataMin", "dataMax"] as const } : {})}
+              {...plainYearXAxisProps(plainYears, "bar")}
               tick={TICK_STYLE}
               tickLine={X_AXIS_TICK_LINE_STYLE}
               axisLine={X_AXIS_LINE_STYLE}
