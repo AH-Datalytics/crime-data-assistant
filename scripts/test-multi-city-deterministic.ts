@@ -11,6 +11,16 @@ assert.deepEqual(current.chartConfig.yAxis, ["austin", "boston", "denver"]);
 assert.match(current.sql, /agency_monthly/);
 assert.match(current.sql, /Rate|ROUND\(100000\.0/i);
 assert.match(current.explanation, /RTCI sample/);
+assert.match(current.explanation, /homicide/i);
+
+const murderWording = buildMultiCityTrendPlan(
+  "Murders per year from 2022 to 2025 in Houston TX, Dallas TX, Plano TX, Atlanta GA, Memphis TN, New Orleans LA, Birmingham AL, Baton Rouge LA and Mobile AL",
+  "current",
+);
+assert.ok(murderWording);
+assert.match(murderWording.title, /^Murder Counts/);
+assert.match(murderWording.explanation, /Current murder reported count/);
+assert.doesNotMatch(murderWording.explanation, /homicide/i);
 
 const historical = buildMultiCityTrendPlan(
   "Compare robbery counts in Portland Oregon and Portland Maine from 2015 through 2024 by year",

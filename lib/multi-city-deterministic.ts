@@ -62,7 +62,10 @@ function offense(question: string): Offense | null {
   if (/\bproperty\s+crimes?\b/i.test(question)) {
     return { label: "property crime", current: ["Burglary", "Theft", "Motor Vehicle Theft"], historical: "hac.property" };
   }
-  if (/\b(?:murders?|homicides?)\b/i.test(question)) {
+  if (/\bmurders?\b/i.test(question)) {
+    return { label: "murder", current: ["Murder"], historical: "hac.murder" };
+  }
+  if (/\bhomicides?\b/i.test(question)) {
     return { label: "homicide", current: ["Murder"], historical: "hac.murder" };
   }
   if (/\brapes?\b/i.test(question)) return { label: "rape", current: ["Rape"], historical: "hac.rape" };
