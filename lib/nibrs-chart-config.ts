@@ -2,17 +2,9 @@ import type { ChartConfig } from "./types";
 import type { ClaudeResponse } from "./nibrs-claude";
 import { detectYearSeriesChart } from "./chart-auto-detect";
 import { applyChartCustomizations } from "./chart-customization";
+import { DEFAULT_CHART_COLORS } from "./chart-layout";
 
-export const NIBRS_CHART_COLORS = [
-  "#2d5f8a",   // steel blue
-  "#c4652a",   // copper
-  "#2a8a5a",   // forest green
-  "#8040a0",   // purple
-  "#b8960a",   // gold
-  "#c43838",   // crimson
-  "#1a8a8a",   // teal
-  "#6050b0",   // indigo
-];
+export const NIBRS_CHART_COLORS = DEFAULT_CHART_COLORS;
 
 function asksScatter(question: string): boolean {
   return /\bscatter(?:\s+plot)?\b|\bplot\b[\s\S]{0,80}\bvs\.?\b|\bvs\.?\b[\s\S]{0,80}\bplot\b/i.test(question);

@@ -16,5 +16,6 @@ export function plainYearXAxisProps(plainYears: boolean, chartType: PlainYearCha
   return {
     type: "number" as const,
     domain: ["dataMin", "dataMax"] as [string, string],
+    padding: { left: 8, right: 8 },
   };
 }

@@ -20,9 +20,14 @@ import {
   ZAxis,
 } from "recharts";
 import type { ChartConfig } from "@/lib/types";
-import { NIBRS_CHART_COLORS } from "@/lib/nibrs-chart-config";
 import { formatAxisValue, fmtVal, decadeTicksForYears, scatterEntityLabel } from "@/lib/utils";
 import { plainYearXAxisProps } from "@/lib/chart-axis";
+import {
+  DEFAULT_CHART_COLORS,
+  detectAndPivotChartData,
+  niceYTicks,
+  shouldUsePieLegend,
+} from "@/lib/chart-layout";
 
 const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
@@ -45,9 +50,9 @@ function properCase(s: string): string {
   return titled.replace(/\bDc\b/g, "DC").replace(/\bNy\b/g, "NY").replace(/\bNyc\b/g, "NYC").replace(/\bLa\b/g, "LA").replace(/\bUsa\b/g, "USA").replace(/\bUs\b/g, "US");
 }
 
-function isYearMonth(data: Record<string, unknown>[], xKey: string): boolean {
+export function isNibrsYearMonth(data: Record<string, unknown>[], xKey: string): boolean {
   const sample = data.slice(0, 3);
-  return sample.every((d) => /^\d{6}$/.test(String(d[xKey] ?? "")));
+  return sample.length > 0 && sample.every((d) => /^\d{6}$|^\d{4}-\d{2}$/.test(String(d[xKey] ?? "")));
 }
 
 function isDate(data: Record<string, unknown>[], xKey: string): boolean {
@@ -57,9 +62,16 @@ function isDate(data: Record<string, unknown>[], xKey: string): boolean {
 
 function formatYearMonth(val: string | number): string {
   const s = String(val);
-  if (!/^\d{6}$/.test(s)) return s;
-  const m = parseInt(s.slice(4, 6), 10);
+  if (!/^\d{6}$|^\d{4}-\d{2}$/.test(s)) return s;
+  const m = parseInt(s.includes("-") ? s.slice(5, 7) : s.slice(4, 6), 10);
   return `${MONTH_NAMES[m - 1] || s.slice(4)} ${s.slice(0, 4)}`;
+}
+
+export function formatNibrsMonthOnly(val: string | number): string {
+  const s = String(val);
+  if (!/^\d{6}$|^\d{4}-\d{2}$/.test(s)) return s;
+  const m = parseInt(s.includes("-") ? s.slice(5, 7) : s.slice(4, 6), 10);
+  return MONTH_NAMES[m - 1] || s;
 }
 
 function formatDateFull(val: string | number): string {
@@ -83,22 +95,20 @@ function dailyTickInterval(dataLength: number): number {
   return Math.max(1, Math.floor(dataLength / 12));
 }
 
-/** Build evenly-spaced ticks for multi-year YYYYMM data.
- *  ≤2 years → every month, otherwise January of each year (thinned if >10). */
-function yearTicksForYM(data: Record<string, unknown>[], xKey: string): string[] {
-  const vals = data.map((d) => String(d[xKey] ?? "")).filter((v) => /^\d{6}$/.test(v));
+/** Build one representative tick per year for multi-year YYYYMM data. */
+export function nibrsYearTicksForYM(data: Record<string, unknown>[], xKey: string): string[] {
+  const vals = data.map((d) => String(d[xKey] ?? "")).filter((v) => /^\d{6}$|^\d{4}-\d{2}$/.test(v));
   if (vals.length === 0) return [];
   const years = [...new Set(vals.map((v) => v.slice(0, 4)))].sort();
 
-  // ≤2 years of data → show every month
-  if (years.length <= 2) {
-    return vals;
-  }
+  // One representative tick per year prevents 13-24 month charts from
+  // rendering every monthly label on top of its neighbors.
 
   const ticks: string[] = [];
   for (const y of years) {
-    const jan = `${y}01`;
-    if (vals.includes(jan)) ticks.push(jan);
+    const jan = vals.find((value) => value === `${y}01` || value === `${y}-01`);
+    const first = vals.find((value) => value.startsWith(y));
+    if (jan || first) ticks.push(jan ?? first!);
   }
   if (ticks.length > 10) {
     const step = Math.ceil(ticks.length / 8);
@@ -142,57 +152,6 @@ function isPlainYears(data: Record<string, unknown>[], xKey: string): boolean {
   return sample.length > 0 && sample.every((d) => /^\d{4}$/.test(String(d[xKey] ?? "")));
 }
 
-/**
- * Auto-pivot long-format data to wide format for multi-series charts.
- *
- * Triggers when: single yAxis column, one categorical column alongside it,
- * and duplicate x values (e.g. year × city_area → City, Non-City columns).
- *
- * Input:  [{year:2022, city_area:"City", count:462}, {year:2022, city_area:"Non-City", count:985}, ...]
- * Output: [{year:2022, City:462, "Non-City":985}, ...]
- */
-function detectAndPivot(
-  data: Record<string, unknown>[],
-  xKey: string,
-  yKeys: string[]
-): { data: Record<string, unknown>[]; effectiveYKeys: string[] } {
-  if (yKeys.length !== 1 || data.length === 0) return { data, effectiveYKeys: yKeys };
-
-  // Columns in data excluding the x key and the _ym helper
-  const allKeys = Object.keys(data[0]).filter((k) => k !== "_ym" && k !== xKey);
-  const valueKey = yKeys[0];
-  const otherKeys = allKeys.filter((k) => k !== valueKey);
-
-  if (otherKeys.length < 1) return { data, effectiveYKeys: yKeys };
-
-  // Find the best categorical (string) column among the others
-  // Prefer columns with 2-8 distinct string values
-  let categoryKey: string | null = null;
-  for (const key of otherKeys) {
-    if (data.some((d) => typeof d[key] === "number")) continue;
-    const vals = [...new Set(data.map((d) => String(d[key] ?? "")))];
-    if (vals.length >= 2 && vals.length <= 8) { categoryKey = key; break; }
-  }
-  if (!categoryKey) return { data, effectiveYKeys: yKeys };
-
-  // Must have duplicate x values (otherwise nothing to pivot)
-  const xVals = data.map((d) => d[xKey]);
-  if (new Set(xVals).size === xVals.length) return { data, effectiveYKeys: yKeys };
-
-  const categories = [...new Set(data.map((d) => String(d[categoryKey!] ?? "")))];
-
-  // Pivot: one row per unique x value
-  const pivotMap = new Map<unknown, Record<string, unknown>>();
-  for (const row of data) {
-    const x = row[xKey];
-    if (!pivotMap.has(x)) pivotMap.set(x, { [xKey]: x });
-    const cat = String(row[categoryKey!] ?? "");
-    (pivotMap.get(x) as Record<string, unknown>)[cat] = row[valueKey];
-  }
-
-  return { data: [...pivotMap.values()], effectiveYKeys: categories };
-}
-
 interface NibrsChartPanelProps {
   config: ChartConfig;
   rows: Record<string, unknown>[];
@@ -217,20 +176,21 @@ export default function NibrsChartPanel({ config, rows }: NibrsChartPanelProps) 
   });
 
   const xKey = hasYearMonth ? "_ym" : config.xAxis;
-  const ym = hasYearMonth || isYearMonth(data, config.xAxis);
+  const ym = hasYearMonth || isNibrsYearMonth(data, config.xAxis);
   const daily = !ym && isDate(data, config.xAxis);
 
   // Auto-pivot long-format data (e.g. year × category → grouped series)
-  const { data: chartData, effectiveYKeys } = config.type === "scatter"
-    ? { data, effectiveYKeys: config.yAxis }
-    : detectAndPivot(data, xKey, config.yAxis);
+  const { data: chartData, effectiveYKeys, seriesOverflow } = config.type === "scatter"
+    ? { data, effectiveYKeys: config.yAxis, seriesOverflow: false }
+    : detectAndPivotChartData(data, xKey, config.yAxis);
+  if (seriesOverflow) return null;
 
   const dataYears = new Set(
     chartData.map((d) => String(d[daily ? config.xAxis : xKey] ?? "").slice(0, 4))
   );
   const singleYear = dataYears.size === 1;
   const singleYearMonthly = ym && chartData.length > 0 && singleYear;
-  const fewYearsMonthly = ym && !singleYearMonthly && dataYears.size <= 2;
+  const fewYearsMonthly = false;
 
   const multiSeries = effectiveYKeys.length > 1;
   const dataLen = chartData.length;
@@ -241,27 +201,32 @@ export default function NibrsChartPanel({ config, rows }: NibrsChartPanelProps) 
   const yearTicks = plainYears ? decadeTicksForYears(data, xAxisDataKey) : [];
 
   // Compute explicit tick positions for even spacing
-  const ymTicks = ym && !singleYearMonthly ? yearTicksForYM(data, xKey) : [];
+  const ymTicks = ym && !singleYearMonthly ? nibrsYearTicksForYM(data, xKey) : [];
   const dailyTicks = daily ? monthTicksForDaily(data, config.xAxis) : [];
   const dailySingleYear = daily && new Set(dailyTicks.map(t => t.slice(0, 4))).size <= 1;
 
   // Detect clearance/percentage y-axis columns (NOT per-100K rates)
   // Only column names with clearance/_clr/_pct/percent trigger % formatting.
   // _rate columns are NOT treated as percentages — they are per-100K rates.
-  const isPercent = config.yAxis.some((y) =>
-    /clearance|_clr|_pct|percent/i.test(y)
-  ) && config.yAxis.every((y) =>
+  const titleHintPercent = /percent|share|%/i.test(config.title || "");
+  const isPercent = (effectiveYKeys.some((y) =>
+    /clearance|_clr|_pct|percent|share/i.test(y)
+  ) || titleHintPercent) && effectiveYKeys.every((y) =>
     !/count|total|population|pop/i.test(y)
   );
   const yTickFormatter = isPercent
     ? (v: number) => `${v}%`
     : formatAxisValue;
+  const yTickInfo = niceYTicks(chartData, effectiveYKeys, config.type === "stacked_bar");
   const yAxisScaleProps = config.yAxisMin !== undefined || config.yAxisMax !== undefined
     ? { domain: [config.yAxisMin ?? "dataMin", config.yAxisMax ?? "dataMax"] as [number | string, number | string] }
-    : {};
+    : yTickInfo
+      ? { ticks: yTickInfo.ticks, domain: yTickInfo.domain }
+      : {};
 
   // Use custom colors from Claude if provided, otherwise default palette
-  const chartColors = config.colors && config.colors.length > 0 ? config.colors : NIBRS_CHART_COLORS;
+  const chartColors = config.colors && config.colors.length > 0 ? config.colors : DEFAULT_CHART_COLORS;
+  const usePieLegend = config.type === "pie" && shouldUsePieLegend(chartData, config.xAxis);
 
   const tooltipContentStyle = {
     borderRadius: 4,
@@ -307,6 +272,8 @@ export default function NibrsChartPanel({ config, rows }: NibrsChartPanelProps) 
               type="number"
               dataKey={config.xAxis}
               name={properCase(config.xAxis)}
+              domain={["auto", "auto"]}
+              padding={{ left: 12, right: 12 }}
               tickFormatter={formatAxisValue}
               tick={TICK_STYLE}
               tickLine={X_AXIS_TICK_LINE_STYLE}
@@ -322,6 +289,7 @@ export default function NibrsChartPanel({ config, rows }: NibrsChartPanelProps) 
               tickLine={false}
               axisLine={false}
               width={isPercent ? 55 : 50}
+              padding={{ top: 12, bottom: 12 }}
               {...yAxisScaleProps}
               {...(config.yAxisLabel ? { label: { value: config.yAxisLabel, angle: -90, position: "insideLeft", offset: 0, dy: -10, style: { fontSize: 10, fill: "#1e2a35", fontFamily: "'DM Sans', 'Segoe UI', Arial, sans-serif", textAnchor: "middle" } } } : {})}
             />
@@ -362,7 +330,7 @@ export default function NibrsChartPanel({ config, rows }: NibrsChartPanelProps) 
               {...plainYearXAxisProps(plainYears, "line")}
               tickFormatter={
                 daily ? (v) => formatDateTickLabel(v, dailySingleYear)
-                : singleYearMonthly ? (v) => formatYearMonth(v)
+                : singleYearMonthly ? (v) => formatNibrsMonthOnly(v)
                 : fewYearsMonthly ? (v) => formatYearMonth(v)
                 : ym ? (v: string | number) => String(v).slice(0, 4)
                 : plainYears ? (v: number) => String(v)
@@ -428,7 +396,7 @@ export default function NibrsChartPanel({ config, rows }: NibrsChartPanelProps) 
               axisLine={X_AXIS_LINE_STYLE}
               tickFormatter={
                 daily ? (v: string) => formatDateTickLabel(v, dailySingleYear)
-                : singleYearMonthly ? (v: string) => formatYearMonth(v)
+                : singleYearMonthly ? (v: string) => formatNibrsMonthOnly(v)
                 : fewYearsMonthly ? (v: string) => formatYearMonth(v)
                 : ym ? (v: string) => String(v).slice(0, 4)
                 : plainYears ? (v: number) => String(v)
@@ -483,14 +451,23 @@ export default function NibrsChartPanel({ config, rows }: NibrsChartPanelProps) 
         ) : config.type === "pie" ? (
           <PieChart>
             <Pie data={chartData} dataKey={effectiveYKeys[0]} nameKey={config.xAxis}
-              cx="50%" cy="50%" outerRadius="70%" innerRadius="20%" strokeWidth={2} stroke="#fff"
-              label={({ name, percent }) => `${name} (${((percent ?? 0) * 100).toFixed(0)}%)`}
+              cx="50%" cy="50%" outerRadius={usePieLegend ? "60%" : "70%"} innerRadius="20%" strokeWidth={2} stroke="#fff"
+              label={usePieLegend ? false : ({ name, percent }) => `${name} (${((percent ?? 0) * 100).toFixed(0)}%)`}
               labelLine={{ stroke: "#b0a99f", strokeWidth: 1 }}
             >
-              {data.map((_, i) => (
-                <Cell key={i} fill={NIBRS_CHART_COLORS[i % NIBRS_CHART_COLORS.length]} />
+              {chartData.map((_, i) => (
+                <Cell key={i} fill={chartColors[i % chartColors.length]} />
               ))}
             </Pie>
+            {usePieLegend && (
+              <Legend
+                verticalAlign="bottom"
+                align="center"
+                iconType="circle"
+                iconSize={10}
+                wrapperStyle={{ fontSize: 11, fontFamily: "'DM Sans', 'Segoe UI', Arial, sans-serif", color: "#1e2a35" }}
+              />
+            )}
             <Tooltip formatter={(v) => fmtVal(v as number, isPercent)} contentStyle={tooltipContentStyle} labelStyle={{ color: "#ffffff" }} itemStyle={{ color: "#ffffff" }} />
           </PieChart>
         ) : null}

@@ -23,21 +23,16 @@ import {
 import type { ChartConfig, ChartMeta } from "@/lib/types";
 import { formatAxisValue, fmtVal, decadeTicksForYears, scatterEntityLabel } from "@/lib/utils";
 import { plainYearXAxisProps } from "@/lib/chart-axis";
+import {
+  DEFAULT_CHART_COLORS,
+  detectAndPivotChartData,
+  niceYTicks,
+  shouldUsePieLegend,
+} from "@/lib/chart-layout";
 
 const MONTH_NAMES = [
   "Jan", "Feb", "Mar", "Apr", "May", "Jun",
   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-];
-
-const NYT_COLORS = [
-  "#2d5f8a",   // steel blue
-  "#c4652a",   // copper
-  "#2a8a5a",   // forest green
-  "#8040a0",   // purple
-  "#b8960a",   // gold
-  "#c43838",   // crimson
-  "#1a8a8a",   // teal
-  "#6050b0",   // indigo
 ];
 
 const TICK_STYLE = {
@@ -138,44 +133,6 @@ function formatDateTickLabel(val: string | number, singleYear: boolean): string 
   return singleYear ? mon : `${mon} ${s.slice(0, 4)}`;
 }
 
-/** Compute clean Y-axis ticks (multiples of 1, 2, 5, 10, 25, 50, 100, etc.)
- *  Always starts at 0 for count/rate data. Targets 4-6 ticks. */
-function niceYTicks(data: Record<string, unknown>[], yKeys: string[]): { ticks: number[]; domain: [number, number] } | null {
-  if (data.length === 0 || yKeys.length === 0) return null;
-  let maxVal = 0;
-  for (const row of data) {
-    for (const key of yKeys) {
-      const v = Number(row[key]);
-      if (!isNaN(v) && v > maxVal) maxVal = v;
-    }
-  }
-  if (maxVal <= 0) return null;
-
-  // Find a nice interval that gives 4-6 ticks
-  const candidates = [1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000, 2000, 2500, 5000, 10000, 20000, 25000, 50000, 100000, 200000, 250000, 500000, 1000000];
-  let interval = 1;
-  for (const c of candidates) {
-    if (Math.ceil(maxVal / c) >= 3 && Math.ceil(maxVal / c) <= 7) {
-      interval = c;
-      break;
-    }
-  }
-  // If no candidate fit, compute one
-  if (Math.ceil(maxVal / interval) < 3 || Math.ceil(maxVal / interval) > 7) {
-    const rawInterval = maxVal / 5;
-    const magnitude = Math.pow(10, Math.floor(Math.log10(rawInterval)));
-    const normalized = rawInterval / magnitude;
-    interval = magnitude * (normalized <= 1.5 ? 1 : normalized <= 3.5 ? 2.5 : normalized <= 7.5 ? 5 : 10);
-  }
-
-  const top = Math.ceil(maxVal / interval) * interval;
-  const ticks: number[] = [];
-  for (let v = 0; v <= top; v += interval) {
-    ticks.push(Math.round(v * 100) / 100); // avoid floating point
-  }
-  return { ticks, domain: [0, top] };
-}
-
 function dailyTickInterval(dataLength: number): number {
   if (dataLength <= 14) return 0;
   return Math.max(1, Math.floor(dataLength / 12));
@@ -240,38 +197,6 @@ function isPlainYears(data: Record<string, unknown>[], xKey: string): boolean {
   return sample.length > 0 && sample.every((d) => /^\d{4}$/.test(String(d[xKey] ?? "")));
 }
 
-function detectAndPivot(
-  data: Record<string, unknown>[],
-  xKey: string,
-  yKeys: string[]
-): { data: Record<string, unknown>[]; effectiveYKeys: string[] } {
-  if (yKeys.length !== 1 || data.length === 0) return { data, effectiveYKeys: yKeys };
-  const allKeys = Object.keys(data[0]).filter((k) => k !== "_ym" && k !== xKey);
-  const valueKey = yKeys[0];
-  const otherKeys = allKeys.filter((k) => k !== valueKey);
-  if (otherKeys.length < 1) return { data, effectiveYKeys: yKeys };
-  // Find the best categorical (string) column among the others
-  // Prefer columns with 2-8 distinct string values
-  let categoryKey: string | null = null;
-  for (const key of otherKeys) {
-    if (data.some((d) => typeof d[key] === "number")) continue;
-    const vals = [...new Set(data.map((d) => String(d[key] ?? "")))];
-    if (vals.length >= 2 && vals.length <= 8) { categoryKey = key; break; }
-  }
-  if (!categoryKey) return { data, effectiveYKeys: yKeys };
-  const xVals = data.map((d) => d[xKey]);
-  if (new Set(xVals).size === xVals.length) return { data, effectiveYKeys: yKeys };
-  const categories = [...new Set(data.map((d) => String(d[categoryKey!] ?? "")))];
-  const pivotMap = new Map<unknown, Record<string, unknown>>();
-  for (const row of data) {
-    const x = row[xKey];
-    if (!pivotMap.has(x)) pivotMap.set(x, { [xKey]: x });
-    const cat = String(row[categoryKey!] ?? "");
-    (pivotMap.get(x) as Record<string, unknown>)[cat] = row[valueKey];
-  }
-  return { data: [...pivotMap.values()], effectiveYKeys: categories };
-}
-
 function formatPopulation(pop: number): string {
   if (pop >= 1_000_000) return `${(pop / 1_000_000).toFixed(1)}M`;
   if (pop >= 1_000) return `${(pop / 1_000).toFixed(0)}K`;
@@ -308,9 +233,10 @@ function ChartPanel({ config, rows, meta }: ChartPanelProps) {
     const daily = !ym && isDate(data, config.xAxis);
 
     // Auto-pivot long-format data (e.g. year × category → grouped series)
-    const { data: chartData, effectiveYKeys } = config.type === "scatter"
-      ? { data, effectiveYKeys: config.yAxis }
-      : detectAndPivot(data, xKey, config.yAxis);
+    const { data: chartData, effectiveYKeys, seriesOverflow } = config.type === "scatter"
+      ? { data, effectiveYKeys: config.yAxis, seriesOverflow: false }
+      : detectAndPivotChartData(data, xKey, config.yAxis);
+    if (seriesOverflow) return null;
 
     const dataYears = new Set(
       chartData.map((d) => String(d[daily ? config.xAxis : xKey] ?? "").slice(0, 4))
@@ -355,7 +281,7 @@ function ChartPanel({ config, rows, meta }: ChartPanelProps) {
       : formatAxisValue;
 
     // Compute clean Y-axis ticks (round intervals starting at 0)
-    const yTickInfo = niceYTicks(chartData, effectiveYKeys);
+    const yTickInfo = niceYTicks(chartData, effectiveYKeys, config.type === "stacked_bar");
     const yAxisScaleProps = config.yAxisMin !== undefined || config.yAxisMax !== undefined
       ? { domain: [config.yAxisMin ?? "dataMin", config.yAxisMax ?? "dataMax"] as [number | string, number | string] }
       : yTickInfo
@@ -363,7 +289,8 @@ function ChartPanel({ config, rows, meta }: ChartPanelProps) {
         : {};
 
     // Use custom colors from Claude if provided, otherwise default palette
-    const colors = config.colors && config.colors.length > 0 ? config.colors : NYT_COLORS;
+    const colors = config.colors && config.colors.length > 0 ? config.colors : DEFAULT_CHART_COLORS;
+    const usePieLegend = config.type === "pie" && shouldUsePieLegend(chartData, config.xAxis);
 
     const tooltipContentStyle = {
       borderRadius: 4,
@@ -412,6 +339,8 @@ function ChartPanel({ config, rows, meta }: ChartPanelProps) {
                 type="number"
                 dataKey={config.xAxis}
                 name={properCase(config.xAxis)}
+                domain={["auto", "auto"]}
+                padding={{ left: 12, right: 12 }}
                 tickFormatter={formatAxisValue}
                 tick={TICK_STYLE}
                 tickLine={X_AXIS_TICK_LINE_STYLE}
@@ -427,6 +356,7 @@ function ChartPanel({ config, rows, meta }: ChartPanelProps) {
                 tickLine={false}
                 axisLine={false}
                 width={isPercent ? 55 : 50}
+                padding={{ top: 12, bottom: 12 }}
                 {...yAxisScaleProps}
                 {...(config.yAxisLabel ? { label: { value: config.yAxisLabel, angle: -90, position: "insideLeft", offset: 0, dy: -10, style: { fontSize: 10, fill: "#1e2a35", fontFamily: "'DM Sans', 'Segoe UI', Arial, sans-serif", textAnchor: "middle" } } } : {})}
               />
@@ -646,11 +576,11 @@ function ChartPanel({ config, rows, meta }: ChartPanelProps) {
                 nameKey={config.xAxis}
                 cx="50%"
                 cy="50%"
-                outerRadius="70%"
+                outerRadius={usePieLegend ? "60%" : "70%"}
                 innerRadius="20%"
                 strokeWidth={2}
                 stroke="#fff"
-                label={({ name, percent }) =>
+                label={usePieLegend ? false : ({ name, percent }) =>
                   `${name} (${((percent ?? 0) * 100).toFixed(0)}%)`
                 }
                 labelLine={{ stroke: "#b0a99f", strokeWidth: 1 }}
@@ -659,6 +589,15 @@ function ChartPanel({ config, rows, meta }: ChartPanelProps) {
                   <Cell key={i} fill={colors[i % colors.length]} />
                 ))}
               </Pie>
+              {usePieLegend && (
+                <Legend
+                  verticalAlign="bottom"
+                  align="center"
+                  iconType="circle"
+                  iconSize={10}
+                  wrapperStyle={{ fontSize: 11, fontFamily: "'DM Sans', 'Segoe UI', Arial, sans-serif", color: "#1e2a35" }}
+                />
+              )}
               <Tooltip
                 formatter={(v) => fmtVal(v as number, isPercent)}
                 contentStyle={tooltipContentStyle}
