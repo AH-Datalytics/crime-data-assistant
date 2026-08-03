@@ -349,6 +349,25 @@ function normalizeStateRankingScope(explanation: string, rows: Record<string, un
   return corrected === firstSentence ? explanation : corrected + explanation.slice(firstSentence.length);
 }
 
+/** Trim only trailing annual rows with no numeric metric data. */
+export function trimTrailingEmptyYearRows(rows: Record<string, unknown>[], explanation: string): { rows: Record<string, unknown>[]; explanation: string; trimmedYears: number[] } {
+  const yearCol = ["year", "data_year", "Year"].find((c) => rows[0]?.[c] !== undefined);
+  if (!yearCol || rows.length < 2) return { rows, explanation, trimmedYears: [] };
+  const excluded = new Set([yearCol.toLowerCase(), "month", "data_month", "month_num", "rank", "id", "ori", "fips", "code"]);
+  const metricCols = Object.keys(rows[0]).filter((c) => !excluded.has(c.toLowerCase()) && rows.some((r) => typeof r[c] === "number" || (typeof r[c] === "string" && r[c].trim() !== "" && Number.isFinite(Number(r[c])))));
+  if (metricCols.length === 0) return { rows, explanation, trimmedYears: [] };
+  const hasData = (row: Record<string, unknown>) => metricCols.some((c) => row[c] !== null && row[c] !== undefined && row[c] !== "" && Number.isFinite(Number(row[c])));
+  const sorted = [...rows].sort((a, b) => Number(a[yearCol]) - Number(b[yearCol]));
+  let lastData = -1;
+  for (let i = sorted.length - 1; i >= 0; i--) { if (hasData(sorted[i])) { lastData = i; break; } }
+  if (lastData < 0 || lastData === sorted.length - 1) return { rows, explanation, trimmedYears: [] };
+  const maxDataYear = Number(sorted[lastData][yearCol]);
+  const trimmedYears = sorted.slice(lastData + 1).map((r) => Number(r[yearCol]));
+  const kept = rows.filter((r) => !trimmedYears.includes(Number(r[yearCol])));
+  let updated = explanation.replace(/\b(from\s+(?:19|20)\d{2}\s+(?:to|through|thru|until|[\-\u2013\u2014])\s+)(?:19|20)\d{2}\b/i, "$1" + maxDataYear).replace(/\b(between\s+(?:19|20)\d{2}\s+and\s+)(?:19|20)\d{2}\b/i, "$1" + maxDataYear);
+  if (!new RegExp("Data is available through " + maxDataYear + "\\b", "i").test(updated)) updated = updated.trim() + (updated.trim().endsWith(".") ? "" : ".") + " Data is available through " + maxDataYear + ".";
+  return { rows: kept, explanation: updated, trimmedYears };
+}
 function yearBoundsFromRows(rows: Record<string, unknown>[]): { min: number; max: number } | null {
   const yearCol = ["year", "data_year", "Year"].find((c) => rows[0]?.[c] !== undefined);
   if (!yearCol) return null;

@@ -1,5 +1,27 @@
 import assert from "node:assert/strict";
-import { applyResultDisclosures } from "../lib/result-disclosure";
+import { applyResultDisclosures, trimTrailingEmptyYearRows } from "../lib/result-disclosure";
+
+{
+  const rows = [];
+  for (let y = 2006; y <= 2026; y++) rows.push({ year: y, burglary: y <= 2025 ? 100 : null });
+  const out = trimTrailingEmptyYearRows(rows, "Burglary counts for Menlo Park from 2006 to 2026.");
+  assert.equal(out.rows.length, 20);
+  assert.equal(out.rows[out.rows.length - 1].year, 2025);
+  assert.deepEqual(out.trimmedYears, [2026]);
+  assert.match(out.explanation, /from 2006 to 2025/);
+  assert.match(out.explanation, /available through 2025/i);
+}
+{
+  const rows = [{ year: 2023, agency: "X", burglary: 50 }, { year: 2024, agency: "X", burglary: null }, { year: 2025, agency: "X", burglary: 40 }];
+  const out = trimTrailingEmptyYearRows(rows, "Counts from 2023 to 2025.");
+  assert.equal(out.rows.length, 3);
+  assert.deepEqual(out.trimmedYears, []);
+}
+{
+  const out = trimTrailingEmptyYearRows([{ year: 2025, burglary: null }, { year: 2026, burglary: null }], "x");
+  assert.equal(out.rows.length, 2);
+}
+
 
 {
   const explanation = applyResultDisclosures({

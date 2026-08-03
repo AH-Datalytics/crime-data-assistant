@@ -20,7 +20,7 @@ import { checkSingleRowTrend } from "@/lib/single-row-trend";
 import { parseRoutingLogMeta } from "@/lib/routing-log-meta";
 import { answerMetadataQuestion } from "@/lib/metadata-coverage";
 import { validateTablesForTab } from "@/lib/table-allowlist";
-import { applyResultDisclosures } from "@/lib/result-disclosure";
+import { applyResultDisclosures, trimTrailingEmptyYearRows } from "@/lib/result-disclosure";
 import { normalizeHistoryAllSources, normalizeHistoryForTab } from "@/lib/chat-history";
 import { containsInternalLeak, INTERNAL_LEAK_SAFE_MESSAGE } from "@/lib/scaffold-helpers";
 import { buildNoSqlFallbackMessage } from "@/lib/refusal-safety";
@@ -1714,6 +1714,9 @@ export async function POST(req: NextRequest) {
             }
           }
         }
+
+        const yearTrim = (tab === "current" || tab === "historical") ? trimTrailingEmptyYearRows(rows, claude.explanation || "") : { rows, explanation: claude.explanation || "", trimmedYears: [] as number[] };
+        if (yearTrim.trimmedYears.length > 0) { rows = yearTrim.rows; claude.explanation = yearTrim.explanation; columns = rows.length > 0 ? Object.keys(rows[0]) : columns; firedGuardrails.push("trailing-empty-years-trimmed"); console.log("[query][trailing-empty-years] trimmed " + JSON.stringify(yearTrim.trimmedYears)); }
 
         // Step 5: Build chart config + metadata
         const chartConfig = buildChartConfig(claude, columns, rows, question);
