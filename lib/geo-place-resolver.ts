@@ -146,13 +146,15 @@ function fuzzyFallbackMention(input: string): GeoPlaceMention | null {
   if (!best || !best.result.best) return null;
 
   const { span, result } = best;
+  const match = result.best;
+  if (!match) return null;
   const toCandidate = (entry: GeoPlaceCatalogEntry, confidence: number, reason: string): GeoPlaceCandidate => ({
     id: entry.id, kind: entry.kind, name: entry.name, state: entry.state,
     canonicalQuery: entry.canonicalQuery, confidence, reason, source: entry.source, population: entry.dominancePopulation,
   });
 
   if (result.confident) {
-    const e = result.best.entry;
+    const e = match.entry;
     return {
       text: span.text, start: span.start, end: span.end,
       candidates: [toCandidate(e, 0.75, `Fuzzy match: "${span.text}" -> ${e.name}${e.state ? ", " + e.state : ""}`)],
