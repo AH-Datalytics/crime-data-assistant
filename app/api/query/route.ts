@@ -25,7 +25,7 @@ import { normalizeHistoryForTab } from "@/lib/chat-history";
 import { detectFollowupTransform } from "@/lib/followup-transform";
 import { getBlockingGeoClarification } from "@/lib/geo-resolver";
 import { getCountyScopeClarification } from "@/lib/county-clarifier";
-import { detectCurrentYearClearanceOverride, detectDemographicHomicideRateOverride, detectSubCityGeographyOverride } from "@/lib/capability-overrides";
+import { detectCurrentYearClearanceOverride, detectDemographicRateDenominatorFollowup, detectDemographicHomicideRateOverride, detectSubCityGeographyOverride } from "@/lib/capability-overrides";
 import { historicalYearAvailability } from "@/lib/year-availability";
 import {
   queryContractFailureMessage,
@@ -438,6 +438,10 @@ export async function POST(req: NextRequest) {
   ) => logQuery(q, sqlText, rowCount, logError, ms, logResponse, tabName, guardrails, model, sid, routingMeta);
 
   const tab = body?.mode === "historical" ? "historical" : "current";
+  const demographicRateFollowup = detectDemographicRateDenominatorFollowup(
+    question,
+    normalizeHistoryForTab(body?.history, tab),
+  );
   // Query-bearing follow-ups (prior SQL + a change request) must reach the
   // model path with history — never the standalone metadata/county/place shortcuts.
   const queryBearingFollowup = detectQueryBearingFollowup(question, body?.history);
@@ -446,7 +450,7 @@ export async function POST(req: NextRequest) {
     if (followupPlan && plannerMode === 'compare') {
       console.log('[followup-planner][compare] ' + JSON.stringify({ source: tab, kind: followupPlan.kind, changeKinds: followupPlan.changeKinds, plannedSource: followupPlan.source, sourceChanged: followupPlan.sourceChanged, legacyBearing: Boolean(queryBearingFollowup), q: question.slice(0, 160), reconstructed: followupPlan.reconstructedQuestion.slice(0, 200) }));
     }
-  if (plannerMode === "authoritative" && followupPlan?.sourceChanged) {
+  if (plannerMode === "authoritative" && followupPlan?.sourceChanged && !demographicRateFollowup) {
     const ms = Date.now() - totalStart;
     const explanation = "This follow-up is a better fit for the " + followupPlan.source + " source. Rerunning it there as: " + followupPlan.reconstructedQuestion;
     writeLog(question, null, 0, null, ms, explanation, tab, ["followup-source-switch"], "followup-planner", sessionId);
@@ -466,6 +470,7 @@ export async function POST(req: NextRequest) {
     ? followupPlan.reconstructedQuestion
     : question;
   const capabilityOverride =
+    demographicRateFollowup ??
     detectCurrentYearClearanceOverride(capabilityQuestion) ??
     detectSubCityGeographyOverride(question) ??
     detectDemographicHomicideRateOverride(question);

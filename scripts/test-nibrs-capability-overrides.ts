@@ -1,7 +1,7 @@
 #!/usr/bin/env npx tsx
 
 import { detectNibrsCapabilityOverride } from "../lib/nibrs-capability-overrides.js";
-import { detectCurrentYearClearanceOverride, detectShrGroupRateOverride, detectSubCityGeographyOverride } from "../lib/capability-overrides.js";
+import { detectCurrentYearClearanceOverride, detectDemographicRateDenominatorFollowup, detectShrGroupRateOverride, detectSubCityGeographyOverride } from "../lib/capability-overrides.js";
 import { removedDemographicPlaceToken } from "../lib/demographic-rate-intent.js";
 
 let pass = 0;
@@ -14,6 +14,16 @@ function assert(name: string, condition: boolean, detail?: string) {
     fail++;
     console.log(`FAIL: ${name}${detail ? ` - ${detail}` : ""}`);
   }
+}
+
+{
+  const prior = [{ role: "user", content: "Murders per 100,000 Black residents in Detroit, 2023" }];
+  const followup = detectDemographicRateDenominatorFollowup("Use Census population as the denominator", prior);
+  assert("demographic denominator follow-up preserves the deterministic refusal",
+    followup?.guardrail === "demographic-homicide-rate-denominator-unavailable",
+    JSON.stringify(followup));
+  assert("standalone denominator instruction does not trigger the refusal",
+    detectDemographicRateDenominatorFollowup("Use Census population as the denominator", []) === null);
 }
 
 {

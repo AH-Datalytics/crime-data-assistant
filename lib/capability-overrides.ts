@@ -125,6 +125,23 @@ export function detectDemographicHomicideRateOverride(question: string): Capabil
   };
 }
 
+const DEMOGRAPHIC_RATE_DENOMINATOR_FOLLOWUP_RE =
+  /\b(?:use|using|take|with|from)\b[\s\S]{0,50}\b(?:census|population)\b[\s\S]{0,50}\bdenominator\b/i;
+
+export function detectDemographicRateDenominatorFollowup(
+  question: string,
+  history: Array<{ role: string; content: string }>,
+): CapabilityOverride | null {
+  if (!DEMOGRAPHIC_RATE_DENOMINATOR_FOLLOWUP_RE.test(question)) return null;
+  for (let i = history.length - 1; i >= 0; i--) {
+    const prior = history[i];
+    if (prior.role !== "user") continue;
+    const override = detectDemographicHomicideRateOverride(prior.content);
+    if (override) return override;
+  }
+  return null;
+}
+
 const COUNTY_SCOPE_RE = /\b[A-Za-z][A-Za-z.'-]*(?:\s+[A-Za-z][A-Za-z.'-]*){0,4}\s+(?:county|parish|borough)\b/i;
 const COUNTY_METADATA_RE = /\b(?:which|what|list|show)\b[\s\S]{0,40}\b(?:agencies|agency|cities|city|jurisdictions|departments)\b/i;
 const NIBRS_DEMOGRAPHIC_BREAKDOWN_RE = /\b(?:offenders?|victims?|arrestees?|suspects?|demographics?|demographic|age|ages|age\s+group|race|racial|ethnicity|ethnic|sex|gender|male|female|men|women|juvenile|juveniles?|adult|adults?)\b/i;

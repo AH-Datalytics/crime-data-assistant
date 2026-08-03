@@ -33,7 +33,7 @@ import { detectQueryBearingFollowup } from '@/lib/query-bearing-followup';
 import { planFollowupSafe } from '@/lib/followup-planner';
 import { buildCrossSourceFollowupTransform } from '@/lib/cross-source-followup';
 import { plannerModeForSource } from '@/lib/followup-planner-mode';
-import { detectShrGroupRateOverride, detectSubCityGeographyOverride } from "@/lib/capability-overrides";
+import { detectDemographicRateDenominatorFollowup, detectShrGroupRateOverride, detectSubCityGeographyOverride } from "@/lib/capability-overrides";
 import { displayShrAgencyName, normalizeShrAgencyText } from "@/lib/shr-agency-normalization";
 import { asksSimpleFirearmHomicideTrend } from "@/lib/shr-firearm-trend-intent";
 import { displayPlace, shootingCityIntents, shootingYearIntent, stateMention } from "@/lib/shr-deterministic-shooting";
@@ -145,6 +145,7 @@ export async function POST(req: NextRequest) {
     }
 
     const history = normalizeHistoryForTab(body?.history, "shr");
+    const demographicRateFollowup = detectDemographicRateDenominatorFollowup(question, history);
     // Query-bearing follow-ups (prior SQL + a change request) must reach the
     // model path with history — never the standalone metadata/county shortcuts.
     const queryBearingFollowup = detectQueryBearingFollowup(question, body?.history);
@@ -153,7 +154,7 @@ export async function POST(req: NextRequest) {
     if (followupPlan && plannerMode === 'compare') {
       console.log('[followup-planner][compare] ' + JSON.stringify({ source: 'shr', kind: followupPlan.kind, changeKinds: followupPlan.changeKinds, plannedSource: followupPlan.source, sourceChanged: followupPlan.sourceChanged, legacyBearing: Boolean(queryBearingFollowup), q: question.slice(0, 160), reconstructed: followupPlan.reconstructedQuestion.slice(0, 200) }));
     }
-    if (plannerMode === "authoritative" && followupPlan?.sourceChanged) {
+    if (plannerMode === "authoritative" && followupPlan?.sourceChanged && !demographicRateFollowup) {
       const explanation = "This follow-up is a better fit for the " + followupPlan.source + " source. Rerunning it there as: " + followupPlan.reconstructedQuestion;
       logQuery(question, null, 0, null, 0, explanation, "shr", ["followup-source-switch"], "followup-planner", sessionId);
       return jsonResp({ success: true, question, sql: null, explanation, title: "Source switch", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: 0, sourceSwitch: { source: followupPlan.source, question: followupPlan.reconstructedQuestion } });
@@ -234,7 +235,8 @@ export async function POST(req: NextRequest) {
     };
 
       const planSaysQueryBearing = (plannerMode === 'authoritative' && followupPlan) ? followupPlan.kind === 'query_bearing' : Boolean(queryBearingFollowup);
-  const capabilityOverride =
+    const capabilityOverride =
+      demographicRateFollowup ??
       detectSubCityGeographyOverride(question) ??
       detectShrGroupRateOverride(question);
     if (capabilityOverride) {
