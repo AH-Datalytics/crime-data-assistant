@@ -98,6 +98,7 @@ const monthlyContract = validateQueryContractSql({
 });
 assert.deepEqual(monthlyContract.blockReasons, []);
 assert.deepEqual(monthlyContract.enforced, []);
+assert.match(monthly.sql, /targets\(city, state, ori, start_year, end_year\)/);
 const monthlyRows = db.prepare(monthly.sql).all() as { month: string; city: string; murder_victims: number | null; shr_recorded_months: number; shr_status: string }[];
 assert.equal(monthlyRows.length, 12);
 assert.equal(monthlyRows[0].murder_victims, 2);

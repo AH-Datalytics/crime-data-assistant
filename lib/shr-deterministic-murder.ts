@@ -53,7 +53,7 @@ function requestedYear(question: string): number | null {
 
 function targetValues(places: { display: string; resolved: ShrResolvedAgency }[]): string {
   return places.flatMap(({ display, resolved }) => resolved.ranges.map((range) =>
-    `(${sqlText(display)}, ${sqlText(range.ori)}, ${range.startYear}, ${range.endYear})`
+    `(${sqlText(display)}, ${sqlText(resolved.state)}, ${sqlText(range.ori)}, ${range.startYear}, ${range.endYear})`
   )).join(", ");
 }
 
@@ -109,7 +109,7 @@ export function buildShrMurderPlan(question: string, db: Database.Database): Shr
   const placeList = places.map((place) => place.display).join(", ");
 
   if (monthly) {
-    const sql = `WITH RECURSIVE months(month) AS (SELECT 1 UNION ALL SELECT month + 1 FROM months WHERE month < ${endMonth}), targets(city, ori, start_year, end_year) AS (VALUES ${values}), annual_coverage(city, annual_shr_victims, validated_zero, coverage_status, coverage_caveat, months_with_records) AS (VALUES ${annualCoverageValues}), counts AS (SELECT t.city, i.month, COUNT(v.id) AS murder_victims FROM targets t JOIN incidents i ON i.ori = t.ori AND i.year BETWEEN t.start_year AND t.end_year JOIN victims v ON v.incident_id = i.id WHERE i.homicide_type = 'Murder' AND i.year = ${year} AND i.month BETWEEN 1 AND ${endMonth} GROUP BY t.city, i.month) SELECT printf('%04d-%02d', ${year}, m.month) AS month, ac.city, CASE WHEN COALESCE(c.murder_victims, 0) > 0 THEN c.murder_victims WHEN ac.annual_shr_victims > 0 OR ac.validated_zero = 1 THEN 0 ELSE NULL END AS murder_victims, ac.months_with_records AS shr_recorded_months, ac.coverage_status AS shr_status, ac.coverage_caveat AS shr_coverage_caveat FROM annual_coverage ac CROSS JOIN months m LEFT JOIN counts c ON c.city = ac.city AND c.month = m.month ORDER BY ac.city, m.month LIMIT 1000`;
+    const sql = `WITH RECURSIVE months(month) AS (SELECT 1 UNION ALL SELECT month + 1 FROM months WHERE month < ${endMonth}), targets(city, state, ori, start_year, end_year) AS (VALUES ${values}), annual_coverage(city, annual_shr_victims, validated_zero, coverage_status, coverage_caveat, months_with_records) AS (VALUES ${annualCoverageValues}), counts AS (SELECT t.city, i.month, COUNT(v.id) AS murder_victims FROM targets t JOIN incidents i ON i.ori = t.ori AND i.year BETWEEN t.start_year AND t.end_year JOIN victims v ON v.incident_id = i.id WHERE i.homicide_type = 'Murder' AND i.year = ${year} AND i.month BETWEEN 1 AND ${endMonth} GROUP BY t.city, i.month) SELECT printf('%04d-%02d', ${year}, m.month) AS month, ac.city, CASE WHEN COALESCE(c.murder_victims, 0) > 0 THEN c.murder_victims WHEN ac.annual_shr_victims > 0 OR ac.validated_zero = 1 THEN 0 ELSE NULL END AS murder_victims, ac.months_with_records AS shr_recorded_months, ac.coverage_status AS shr_status, ac.coverage_caveat AS shr_coverage_caveat FROM annual_coverage ac CROSS JOIN months m LEFT JOIN counts c ON c.city = ac.city AND c.month = m.month ORDER BY ac.city, m.month LIMIT 1000`;
     return {
       kind: "query", sql,
       title: `Monthly Murder Victims, ${placeList}, ${year}`,
@@ -118,7 +118,7 @@ export function buildShrMurderPlan(question: string, db: Database.Database): Shr
     };
   }
 
-  const sql = `WITH targets(city, ori, start_year, end_year) AS (VALUES ${values}), annual_coverage(city, annual_shr_victims, validated_zero, coverage_status, coverage_caveat, months_with_records) AS (VALUES ${annualCoverageValues}), counts AS (SELECT t.city, COUNT(v.id) AS murder_victims FROM targets t JOIN incidents i ON i.ori = t.ori AND i.year BETWEEN t.start_year AND t.end_year JOIN victims v ON v.incident_id = i.id WHERE i.homicide_type = 'Murder' AND i.year = ${year} AND i.month BETWEEN 1 AND ${endMonth} GROUP BY t.city) SELECT ac.city, CASE WHEN COALESCE(c.murder_victims, 0) > 0 THEN c.murder_victims WHEN ac.annual_shr_victims > 0 OR ac.validated_zero = 1 THEN 0 ELSE NULL END AS murder_victims, ac.months_with_records AS shr_recorded_months, ac.coverage_status AS shr_status, ac.coverage_caveat AS shr_coverage_caveat FROM annual_coverage ac LEFT JOIN counts c ON c.city = ac.city ORDER BY ac.city LIMIT 1000`;
+  const sql = `WITH targets(city, state, ori, start_year, end_year) AS (VALUES ${values}), annual_coverage(city, annual_shr_victims, validated_zero, coverage_status, coverage_caveat, months_with_records) AS (VALUES ${annualCoverageValues}), counts AS (SELECT t.city, COUNT(v.id) AS murder_victims FROM targets t JOIN incidents i ON i.ori = t.ori AND i.year BETWEEN t.start_year AND t.end_year JOIN victims v ON v.incident_id = i.id WHERE i.homicide_type = 'Murder' AND i.year = ${year} AND i.month BETWEEN 1 AND ${endMonth} GROUP BY t.city) SELECT ac.city, CASE WHEN COALESCE(c.murder_victims, 0) > 0 THEN c.murder_victims WHEN ac.annual_shr_victims > 0 OR ac.validated_zero = 1 THEN 0 ELSE NULL END AS murder_victims, ac.months_with_records AS shr_recorded_months, ac.coverage_status AS shr_status, ac.coverage_caveat AS shr_coverage_caveat FROM annual_coverage ac LEFT JOIN counts c ON c.city = ac.city ORDER BY ac.city LIMIT 1000`;
   return {
     kind: "query", sql,
     title: `Murder Victims, ${period}`,
