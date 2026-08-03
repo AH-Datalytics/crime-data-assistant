@@ -366,7 +366,7 @@ function validateExplanationEntities(
 
   // Common US city names that might be hallucinated
   const CITY_NAMES = [
-    "Los Angeles", "New York", "Chicago", "Houston", "Phoenix", "Philadelphia",
+    "Los Angeles", "New York City", "New York", "Chicago", "Houston", "Phoenix", "Philadelphia",
     "San Antonio", "San Diego", "Dallas", "San Jose", "Austin", "Jacksonville",
     "Fort Worth", "Columbus", "Charlotte", "Indianapolis", "San Francisco",
     "Seattle", "Denver", "Washington", "Nashville", "Oklahoma City", "El Paso",
@@ -380,10 +380,12 @@ function validateExplanationEntities(
   let cleaned = explanation;
   let hadHallucination = false;
 
-  for (const city of CITY_NAMES) {
+  for (const city of [...CITY_NAMES].sort((a, b) => b.length - a.length)) {
     // Check if city is mentioned in explanation but NOT in valid names
     const cityRegex = new RegExp(`\\b${city.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "gi");
-    if (cityRegex.test(cleaned) && !validNames.has(city.toLowerCase())) {
+    const cityLower = city.toLowerCase();
+    const isValidName = [...validNames].some((name) => name.includes(cityLower) || cityLower.includes(name));
+    if (cityRegex.test(cleaned) && !isValidName) {
       hadHallucination = true;
       // Replace the hallucinated city name with generic text
       cleaned = cleaned.replace(cityRegex, "cities in the dataset");

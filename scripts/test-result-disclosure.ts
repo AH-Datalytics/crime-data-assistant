@@ -432,4 +432,27 @@ import { applyResultDisclosures } from "../lib/result-disclosure";
   assert.match(explanation, /full-year 2026 rate/);
   assert.doesNotMatch(explanation, /partial-year total/);
 }
+{
+  const explanation = applyResultDisclosures({
+    explanation: "This data contains murder rates for cities in DC, NM, CO.",
+    question: "rank states by stolen car rate 2024",
+    sql: "SELECT state, rate_per_100k FROM summary_state_monthly",
+    rows: [{ state: "DC", rate_per_100k: 10 }, { state: "NM", rate_per_100k: 9 }, { state: "CO", rate_per_100k: 8 }],
+    tab: "nibrs",
+  });
+  assert.match(explanation, /for states in DC, NM, CO/);
+}
+
+{
+  const explanation = applyResultDisclosures({
+    explanation: "This data contains murder counts for Montgomery County, Maryland.",
+    question: "What is the current countywide homicide rate?",
+    sql: "SELECT year, month, murders FROM agency_monthly",
+    rows: [{ year: 2026, month: 5, murders: 10 }],
+    tab: "current",
+  });
+  assert.match(explanation, /Returned period: May 2026\./);
+  assert.doesNotMatch(explanation, /May-May/);
+}
+
 console.log("result disclosure tests passed");

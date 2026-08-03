@@ -484,4 +484,13 @@ for (const question of trueFollowupContracts) {
   assert.equal(demographicRate.metric.unsupportedReason, "demographic_rate_denominator_unavailable");
 }
 
+{
+  const result = validateQueryContractSql({
+    question: "murders per month in 2021 in Oakland",
+    source: "shr",
+    sql: "WITH RECURSIVE months(month) AS (SELECT 1 UNION ALL SELECT month + 1 FROM months WHERE month < 12), targets(city, ori, start_year, end_year) AS (VALUES ('Oakland, CA', 'CA00109', 2021, 2021)), places(city) AS (SELECT DISTINCT city FROM targets), coverage AS (SELECT t.city, COUNT(i.id) AS shr_records, COUNT(DISTINCT i.month) AS recorded_months FROM targets t LEFT JOIN incidents i ON i.ori = t.ori AND i.year BETWEEN t.start_year AND t.end_year AND i.year = 2021 AND i.month BETWEEN 1 AND 12 GROUP BY t.city), counts AS (SELECT t.city, i.month, COUNT(v.id) AS murder_victims FROM targets t JOIN incidents i ON i.ori = t.ori AND i.year BETWEEN t.start_year AND t.end_year JOIN victims v ON v.incident_id = i.id WHERE i.homicide_type = 'Murder' AND i.year = 2021 AND i.month BETWEEN 1 AND 12 GROUP BY t.city, i.month) SELECT printf('%04d-%02d', 2021, m.month) AS month, p.city, CASE WHEN cv.shr_records = 0 THEN NULL ELSE COALESCE(c.murder_victims, 0) END AS murder_victims, cv.recorded_months AS shr_recorded_months, CASE WHEN cv.shr_records = 0 THEN 'No SHR homicide records in period' ELSE 'SHR records present' END AS shr_status FROM places p CROSS JOIN months m JOIN coverage cv ON cv.city = p.city LEFT JOIN counts c ON c.city = p.city AND c.month = m.month ORDER BY p.city, m.month LIMIT 1000",
+  });
+  assert.doesNotMatch(result.fired.join(";"), /contract-geography-state-missing/);
+}
+
 console.log("query contract tests passed");

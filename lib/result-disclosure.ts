@@ -336,6 +336,19 @@ function comparisonDisclosure(explanation: string, rows: Record<string, unknown>
   return `Comparison includes: ${labels.join(", ")}.`;
 }
 
+function normalizeStateRankingScope(explanation: string, rows: Record<string, unknown>[]): string {
+  if (rows.length === 0) return explanation;
+  const columns = Object.keys(rows[0]).map((column) => column.toLowerCase());
+  const hasState = columns.includes("state");
+  const hasLocalEntity = columns.some((column) => /^(?:city|agency|agency_name|department|ori)$/.test(column));
+  if (!hasState || hasLocalEntity) return explanation;
+  const firstSentenceMatch = explanation.match(/^[\s\S]*?(?=[.!?](?:\s|$)|$)/);
+  if (!firstSentenceMatch) return explanation;
+  const firstSentence = firstSentenceMatch[0];
+  const corrected = firstSentence.replace(/\bfor\s+(?:the\s+)?cities\s+in\b/i, (match) => match.replace(/cities/i, "states"));
+  return corrected === firstSentence ? explanation : corrected + explanation.slice(firstSentence.length);
+}
+
 function yearBoundsFromRows(rows: Record<string, unknown>[]): { min: number; max: number } | null {
   const yearCol = ["year", "data_year", "Year"].find((c) => rows[0]?.[c] !== undefined);
   if (!yearCol) return null;
@@ -407,6 +420,7 @@ function returnedMonthRange(rows: Record<string, unknown>[]): string | null {
   if (points.length === 0) return null;
   const lo = points[0];
   const hi = points[points.length - 1];
+  if (lo.year === hi.year && lo.month === hi.month) return MONTH_NAMES[lo.month - 1] + " " + hi.year;
   if (lo.year === hi.year) return `${MONTH_NAMES[lo.month - 1]}-${MONTH_NAMES[hi.month - 1]} ${hi.year}`;
   return `${MONTH_NAMES[lo.month - 1]} ${lo.year}-${MONTH_NAMES[hi.month - 1]} ${hi.year}`;
 }
@@ -523,6 +537,7 @@ export function applyResultDisclosures(opts: {
   tab?: string;
 }): string {
   let explanation = normalizeDcExplanation(normalizeClearanceRateExplanation(opts.explanation, opts.sql), opts.sql);
+  explanation = normalizeStateRankingScope(explanation, opts.rows);
   const agencyDescriptor = stripUngroundedAgencyDescriptors(explanation, opts.question, opts.rows);
   explanation = agencyDescriptor.explanation;
   if (agencyDescriptor.changed) {
