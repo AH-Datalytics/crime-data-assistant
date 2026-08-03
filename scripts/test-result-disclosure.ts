@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { applyResultDisclosures, trimTrailingEmptyYearRows } from "../lib/result-disclosure";
+import { applyResultDisclosures, laggedAnnualRecentYearNote, trimTrailingEmptyYearRows } from "../lib/result-disclosure";
 
 {
   const rows = [];
@@ -475,6 +475,38 @@ import { applyResultDisclosures, trimTrailingEmptyYearRows } from "../lib/result
   });
   assert.match(explanation, /Returned period: May 2026\./);
   assert.doesNotMatch(explanation, /May-May/);
+}
+
+{
+  // 7708 shape: annual hate-crime trend running into the in-progress year.
+  const rows = [{ year: 2023, incident_count: 12067 }, { year: 2024, incident_count: 11689 }, { year: 2025, incident_count: 10647 }, { year: 2026, incident_count: 4806 }];
+  const note = laggedAnnualRecentYearNote(rows, "National hate crime incidents by year.", 2026);
+  assert.ok(note && /incomplete|preliminary|partial|lag/i.test(note), "must disclose recent-year incompleteness");
+  assert.ok(note && /2026/.test(note), "must name the in-progress year");
+}
+
+{
+  // No recent-year rows -> no note (a trend ending at a fully-published year).
+  const rows = [{ year: 2020, incident_count: 9973 }, { year: 2021, incident_count: 11072 }];
+  assert.equal(laggedAnnualRecentYearNote(rows, "x", 2026), null);
+}
+
+{
+  // Idempotent: if the explanation already discloses, return null so we do not double-append.
+  const rows = [{ year: 2026, incident_count: 4806 }];
+  assert.equal(laggedAnnualRecentYearNote(rows, "2026 is incomplete and preliminary.", 2026), null);
+}
+
+{
+  // End-to-end through applyResultDisclosures on the hate_crime tab.
+  const out = applyResultDisclosures({
+    explanation: "National hate crime incidents by year from 2015 onward.",
+    question: "how have reported hate crimes trended since 2015?",
+    sql: "SELECT year, SUM(incident_count) FROM summary_hate_crime_bias_trend WHERE year >= 2015 GROUP BY year",
+    rows: [{ year: 2024, incident_count: 11689 }, { year: 2025, incident_count: 10647 }, { year: 2026, incident_count: 4806 }],
+    tab: "hate_crime",
+  });
+  assert.match(out, /incomplete|preliminary|partial|lag/i);
 }
 
 console.log("result disclosure tests passed");

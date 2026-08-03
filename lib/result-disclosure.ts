@@ -548,6 +548,24 @@ function ytdRange(question: string, sql: string, rows: Record<string, unknown>[]
   return null;
 }
 
+/**
+ * Disclosure for annual sources that publish on a lag: recent rows may be
+ * partial or preliminary and should be explained rather than removed.
+ */
+export function laggedAnnualRecentYearNote(
+  rows: Record<string, unknown>[],
+  explanation: string,
+  currentYear: number,
+): string | null {
+  const yearCol = ["year", "data_year", "Year"].find((c) => rows[0]?.[c] !== undefined);
+  if (!yearCol) return null;
+  const years = rows.map((r) => Number(r[yearCol])).filter(Number.isFinite);
+  const recent = years.filter((y) => y >= currentYear - 1).sort((a, b) => a - b);
+  if (recent.length === 0) return null;
+  if (/\b(?:incomplete|preliminary|partial|still\s+maturing|published?\s+on\s+a\s+lag)\b/i.test(explanation)) return null;
+  const label = recent.length === 1 ? String(recent[0]) : `${recent[0]}–${recent[recent.length - 1]}`;
+  return `Recent years (${label}) are incomplete and preliminary — the FBI publishes hate-crime data on a lag, so these counts will rise as more agencies report and should not be read as a decline.`;
+}
 export function applyResultDisclosures(opts: {
   explanation: string;
   question: string;
@@ -679,6 +697,11 @@ export function applyResultDisclosures(opts: {
   const ytd = ytdRange(opts.question, opts.sql, opts.rows);
   const currentReturnedPeriod = opts.tab === "current" ? returnedMonthRange(opts.rows) : null;
   const returnedPeriod = ytd || currentReturnedPeriod;
+
+  if (opts.tab === "hate_crime") {
+    const note = laggedAnnualRecentYearNote(opts.rows, explanation, new Date().getFullYear());
+    if (note) explanation = appendSentence(explanation, note);
+  }
   if (returnedPeriod && !new RegExp(returnedPeriod.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i").test(explanation)) {
     explanation = appendSentence(explanation, `Returned period: ${returnedPeriod}.`);
   }
