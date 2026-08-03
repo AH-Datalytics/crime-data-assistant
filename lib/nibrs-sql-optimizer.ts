@@ -49,7 +49,12 @@ function addIndexHint(sql: string, table: string, index: string): string {
     );
   }
   const withoutAlias = new RegExp(`\\b(FROM|JOIN)\\s+(${tablePattern})\\b`, "i");
-  if (!withoutAlias.test(sql) || !/\bori\s*(?:=|IN\s*\()/i.test(sql)) return sql;
+  // Only hint when there's an UNqualified ori predicate (a direct filter on
+  // this table). A qualified `x.ori = y.ori` join elsewhere in the SQL must
+  // not force the ori index onto an unrelated aggregate scan — that pins a
+  // ucr/state-filtered state-ranking to the wrong index (production 7618:
+  // 16.6s -> 1.2s once the mis-applied hint is removed).
+  if (!withoutAlias.test(sql) || !/(?<![\w.])ori\s*(?:=|IN\s*\()/i.test(sql)) return sql;
   return sql.replace(withoutAlias, `$1 $2 INDEXED BY ${index}`);
 }
 

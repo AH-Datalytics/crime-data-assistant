@@ -30,4 +30,18 @@ const stateRateSql = "SELECT a.state, SUM(a.population * rpt.months_reported / 1
 assert.match(optimizeNibrsSql(stateRateSql), /FROM nibrs_agency_completeness WHERE year = 2024/i);
 assert.doesNotMatch(optimizeNibrsSql(stateRateSql), /COUNT\s*\(\s*DISTINCT\s+month\s*\)/i);
 
+// Production 7618: an offense-filtered state-ranking scan of summary_city_monthly
+// (no ori scope of its own) must NOT be force-hinted onto idx_scm_ori_year just
+// because a qualified `rpt.ori = a.ori` join appears elsewhere — that pinned the
+// wrong index and cost 16.6s. The idx_scm_ucr path is correct for ucr filters.
+const rankingSql = "WITH sv AS (SELECT state, SUM(offense_count) AS c FROM summary_city_monthly " +
+  "WHERE ucr_offense_code = '240' AND year = 2024 GROUP BY state) " +
+  "SELECT a.state FROM agencies a JOIN (SELECT ori, COUNT(DISTINCT month) AS m " +
+  "FROM summary_city_monthly WHERE year = 2024 GROUP BY ori) rpt ON rpt.ori = a.ori GROUP BY a.state";
+assert.doesNotMatch(optimizeNibrsSql(rankingSql), /summary_city_monthly INDEXED BY idx_scm_ori_year\s+WHERE\s+ucr_offense_code/i);
+// A genuine unqualified ori filter on the un-aliased table still gets the hint.
+const singleAgency = "SELECT year, month, SUM(offense_count) FROM summary_city_monthly " +
+  "WHERE ori = 'TX01234' AND ucr_offense_code = '240' AND year = 2024 GROUP BY year, month";
+assert.match(optimizeNibrsSql(singleAgency), /INDEXED BY idx_scm_ori_year/i);
+
 console.log("nibrs SQL optimizer tests passed");
