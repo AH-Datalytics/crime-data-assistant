@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import {
+  combineCountyStateClarification,
   geoClarificationText,
   getBlockingGeoClarification,
   getGeoResolutionIssues,
@@ -196,5 +197,13 @@ assert.equal(hasBlockingGeoResolutionIssue("firearm crimes in jackson mississipp
 assert.equal(hasBlockingGeoResolutionIssue("compare murders in kansas city and st louis"), true);
 // Special city-vs-state clarifiers unaffected
 assert.equal(hasBlockingGeoResolutionIssue("washington murders"), true);
+
+assertNoIssue("crime in Suffolk County in New York", "county-suffolk");
+assertNoIssue("crime in Washington County in Oregon", "county-washington");
+assert.equal(
+  combineCountyStateClarification("crime in Suffolk County", "New York"),
+  "crime in Suffolk County, New York"
+);
+assert.equal(combineCountyStateClarification("crime in Suffolk County", "New York City"), null);
 
 console.log("geo resolver tests passed");

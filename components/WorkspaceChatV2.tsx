@@ -5,6 +5,7 @@ import type { QueryResponse, StreamEvent } from "@/lib/types";
 import { autoRoute, isFollowUp, manualSourceNudge, parseIntent, recommendTabs, TAB_DISPLAY_NAMES, TAB_COLORS, type SourceYearRanges, type TabRecommendation } from "@/lib/tab-suggest";
 import { pickerOptions, type SourceId as RegistrySourceId, type PickerSourceId } from "@/lib/sources";
 import { applyChartOnlyCustomization } from "@/lib/chart-customization";
+import { combineCountyStateClarification, getBlockingGeoClarification } from "@/lib/geo-resolver";
 import { hasBlockingQueryGuidanceWarnings } from "@/lib/query-guidance";
 import DataTable from "./DataTable";
 import ChartPanel from "./ChartPanel";
@@ -117,6 +118,7 @@ export default function WorkspaceChat({ sourceYearRanges }: WorkspaceChatProps) 
   const [disambiguationRecs, setDisambiguationRecs] = useState<TabRecommendation[]>([]);
   const [disambiguationConfidence, setDisambiguationConfidence] = useState<RoutingConfidence | null>(null);
   const [pendingQuestion, setPendingQuestion] = useState("");
+  const [pendingGeoClarification, setPendingGeoClarification] = useState<{ question: string; tab: Exclude<SourceId, "auto"> } | null>(null);
 
   // Active source for current query
   const [activeSource, setActiveSource] = useState<"current" | "historical" | "nibrs" | "shr" | "hate_crime" | null>(null);
@@ -173,6 +175,8 @@ export default function WorkspaceChat({ sourceYearRanges }: WorkspaceChatProps) 
       routingMode: RoutingMode = "manual"
     ) => {
       if (!question || loading) return;
+      const geoClarification = getBlockingGeoClarification(question);
+      setPendingGeoClarification(geoClarification?.issue.id.startsWith("county-") ? { question, tab } : null);
       setActiveSource(tab);
       setInput("");
       setLoading(true);
@@ -259,6 +263,16 @@ export default function WorkspaceChat({ sourceYearRanges }: WorkspaceChatProps) 
     }
     setShowDisambiguation(false);
 
+    // Answer the pending county clarification in the original county context.
+    if (pendingGeoClarification) {
+      const qualifiedQuestion = combineCountyStateClarification(pendingGeoClarification.question, q);
+      setPendingGeoClarification(null);
+      if (qualifiedQuestion) {
+        submitQuestion(qualifiedQuestion, pendingGeoClarification.tab, "Geo clarification answered", null, "follow_up");
+        return;
+      }
+    }
+
     const chartOnlyResponse = applyChartOnlyCustomization(q, response);
     if (chartOnlyResponse && activeSource) {
       const summary = chartOnlyResponse.explanation.split(/\n|\./)[0] + ".";
@@ -321,7 +335,7 @@ export default function WorkspaceChat({ sourceYearRanges }: WorkspaceChatProps) 
     } else {
       submitQuestion(q, source as "current" | "historical" | "nibrs" | "shr" | "hate_crime", undefined, null, "manual");
     }
-  }, [source, activeSource, response, submitQuestion, sourceYearRanges]);
+  }, [source, activeSource, response, submitQuestion, sourceYearRanges, pendingGeoClarification]);
 
   const selectExchange = (idx: number) => {
     const ex = exchanges[idx];
@@ -576,7 +590,7 @@ export default function WorkspaceChat({ sourceYearRanges }: WorkspaceChatProps) 
                       <button onClick={(e) => { e.stopPropagation(); setExpandedRailIdx(isExpanded ? -1 : i); }} className="text-[10px] mt-1 cursor-pointer" style={{ color: accentColor }}>{isExpanded ? "Show less" : "Show more"}</button>
                     )}
                     {isActive && !loading && (
-                      <form onSubmit={(e) => { e.preventDefault(); const el = e.currentTarget.elements.namedItem("followup") as HTMLInputElement; const val = el?.value?.trim(); if (val && activeSource) { if (hasBlockingQueryGuidanceWarnings(val)) { setGuidanceAttention((n) => n + 1); return; } submitQuestion(val, activeSource, `Follow-up — inherited ${TAB_DISPLAY_NAMES[activeSource]} context`, null, "follow_up"); el.value = ""; } }} className="flex gap-1 mt-2">
+                      <form onSubmit={(e) => { e.preventDefault(); const el = e.currentTarget.elements.namedItem("followup") as HTMLInputElement; const val = el?.value?.trim(); if (val && activeSource) { if (hasBlockingQueryGuidanceWarnings(val)) { setGuidanceAttention((n) => n + 1); return; } handleAsk(val); el.value = ""; } }} className="flex gap-1 mt-2">
                         <input name="followup" type="text" placeholder="Follow up..." className="flex-1 min-w-0 px-2 py-1.5 text-[11px] border border-[var(--border)] rounded focus:outline-none focus:border-[var(--accent)] bg-[var(--surface)]" />
                         <button type="submit" className="px-2 py-1.5 text-[10px] font-semibold text-white rounded hover:opacity-90 cursor-pointer shrink-0" style={{ backgroundColor: accentColor }}>Ask</button>
                       </form>

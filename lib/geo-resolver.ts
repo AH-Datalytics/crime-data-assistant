@@ -129,6 +129,7 @@ export function getGeoResolutionIssues(input: string): GeoResolutionIssue[] {
     .filter((mention) => !isCampusAgencyNameWithStateContext(text, mention))
     .filter((mention) => !hasExplicitCityCountyKindContext(text, mention))
     .filter((mention) => !isCountySuffixContext(text, mention))
+    .filter((mention) => !isExplicitCountyStateQualifier(text, mention, allMentions))
     .map(issueFromMention);
 }
 
@@ -138,6 +139,13 @@ export function getGeoResolutionIssues(input: string): GeoResolutionIssue[] {
  * city-kind mention immediately followed by County/Parish/Borough is a county
  * reference — the county crosswalk guardrails own that path, not this clarifier.
  */
+function isExplicitCountyStateQualifier(input: string, mention: GeoPlaceMention, allMentions: GeoPlaceMention[]): boolean {
+  const previousCounty = allMentions.find((candidate) => candidate.end <= mention.start && classifyCandidates(candidate.candidates) === "county");
+  if (!previousCounty) return false;
+  const between = input.slice(previousCounty.end, mention.start);
+  return /(?:,|\bin\b|\bof\b)\s*$/i.test(between);
+}
+
 function isCountySuffixContext(input: string, mention: GeoPlaceMention): boolean {
   if (classifyCandidates(mention.candidates) !== "city") return false;
   return /^\s+(county|parish|borough)\b/i.test(input.slice(mention.end));
@@ -158,6 +166,15 @@ function resolveCityByStateContext(
 ): GeoPlaceMention {
   if (!mention.requiresClarification || mention.candidates.length < 2) return mention;
   const candidateKind = classifyCandidates(mention.candidates);
+
+  // Accept natural-language state joiners after an ambiguous county.
+  if (candidateKind === "county") {
+    const explicitState = stateAfterMention(input, mention);
+    if (explicitState) {
+      const inState = mention.candidates.filter((candidate) => candidate.state === explicitState);
+      if (inState.length === 1) return { ...mention, candidates: inState, requiresClarification: false, reason: `${mention.text} resolved from explicit state context` };
+    }
+  }
   if (candidateKind !== "city" && candidateKind !== "county") return mention;
 
   // Strip only ambiguous mention spans: "Kansas City" must not read as Kansas,
@@ -199,6 +216,16 @@ function resolveCityByStateContext(
   };
 }
 
+function stateAfterMention(input: string, mention: GeoPlaceMention): string | null {
+  const remainder = input.slice(mention.end);
+  for (const [abbr, label] of Object.entries(STATE_LABELS)) {
+    const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\\s+/g, "\\s+");
+    const pattern = new RegExp(`^\\s*(?:,|\\(|\\bin\\b|\\bof\\b)\\s*${escaped}(?:\\s+State\\b)?(?:\\s*[,)]|\\s|$)`, "i");
+    if (pattern.test(remainder)) return abbr;
+  }
+  const abbr = remainder.match(/^\s*(?:,|\(|\bin\b|\bof\b)\s*([A-Z]{2})(?:\s*[,)]|\s|$)/);
+  return abbr && STATE_ABBREVIATIONS.has(abbr[1]) ? abbr[1] : null;
+}
 function statesMentionedIn(input: string): Set<string> {
   const found = new Set<string>();
   for (const [abbr, label] of Object.entries(STATE_LABELS)) {
@@ -212,6 +239,21 @@ function statesMentionedIn(input: string): Set<string> {
   return found;
 }
 
+export function combineCountyStateClarification(question: string, answer: string): string | null {
+  const stateAnswer = answer.trim().replace(/^in\s+/i, "").replace(/[?.!]$/, "").trim();
+  if (!stateAnswer) return null;
+  let stateLabel: string | null = null;
+  for (const [abbr, label] of Object.entries(STATE_LABELS)) {
+    if (stateAnswer.toLowerCase() === label.toLowerCase() || stateAnswer.toLowerCase() === `${label.toLowerCase()} state` || stateAnswer.toUpperCase() === abbr) {
+      stateLabel = label;
+      break;
+    }
+  }
+  if (!stateLabel) return null;
+  const county = question.match(/\b([A-Z][A-Za-z0-9._\x27-]*(?:\s+[A-Z][A-Za-z0-9._\x27-]*)*\s+(?:County|Parish|Borough))\b/);
+  if (!county) return null;
+  return question.replace(county[1], `${county[1]}, ${stateLabel}`);
+}
 export function hasBlockingGeoResolutionIssue(input: string): boolean {
   return getGeoResolutionIssues(input).some((issue) => issue.kind === "blocking");
 }
