@@ -3058,6 +3058,19 @@ const GUARDRAILS: Guardrail[] = [
       "[SYSTEM: Your SQL returns raw race codes (W, B, I, A, P, U) or sex codes (M, F, U) without mapping to readable names. ALWAYS use CASE WHEN: CASE race WHEN 'W' THEN 'White' WHEN 'B' THEN 'Black' WHEN 'I' THEN 'American Indian' WHEN 'A' THEN 'Asian' WHEN 'P' THEN 'Pacific Islander' ELSE 'Unknown' END AS race. For sex: CASE sex WHEN 'M' THEN 'Male' WHEN 'F' THEN 'Female' ELSE 'Unknown' END AS sex. Also GROUP BY the CASE expression or its alias, not the raw column.]",
   },
 
+  {
+    name: "hate-crime-bias-trend-missing-sum",
+    tabs: ["hate_crime"],
+    match: (ctx) => /\bFROM\s+summary_hate_crime_bias_trend\b/i.test(ctx.sql)
+      && /\bGROUP\s+BY\s+year\b/i.test(ctx.sql)
+      && /\bSELECT\s+year\s*,\s*(?:\w+\.)?incident_count\b/i.test(ctx.sql)
+      && !/\bSUM\s*\(\s*(?:\w+\.)?incident_count\s*\)/i.test(ctx.sql),
+    message: () => "[SYSTEM: summary_hate_crime_bias_trend has one row per year and bias. The user asked for the national hate-crime trend, so aggregate the bias rows with SUM(incident_count) AS incident_count and GROUP BY year. Never select a bare incident_count while grouping only by year.]",
+    rewrite: (sql) => sql.replace(
+      /(\bSELECT\s+year\s*,\s*)(\w+\.)?incident_count\b/i,
+      (_, prefix, alias) => `${prefix}SUM(${alias || ""}incident_count) AS incident_count`,
+    ),
+  },
   // --- #1: Missing GROUP BY year on aggregate + year SELECT ---
   {
     name: "missing-group-by-year",
