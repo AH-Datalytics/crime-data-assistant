@@ -713,6 +713,12 @@ export function isFollowUp(question: string): boolean {
     }
   }
 
+  // Imperative meta-instructions without offense or place inherit the active tab.
+  if (/^(?:use|using|instead\s+use|try\s+(?:using|with|a|another)|switch\s+to|base\s+(?:it|that|this)\s+on|calculate\s+(?:it|that|this)\s+(?:using|with))\b/i.test(q)) {
+    const intent = parseIntent(q);
+    if (!intent.offense && intent.geography.type === "ambiguous") return true;
+  }
+
   for (const pat of FOLLOWUP_PATTERNS) {
     if (pat.test(q)) return true;
   }
