@@ -43,6 +43,7 @@ import { detectQueryBearingFollowup } from '@/lib/query-bearing-followup';
 import { planFollowupSafe } from '@/lib/followup-planner';
 import { buildCrossSourceFollowupTransform } from '@/lib/cross-source-followup';
 import { plannerModeForSource } from '@/lib/followup-planner-mode';
+import { findVerifiedCurrentAgency } from '@/lib/current-agency-availability';
 
 function sseEvent(event: StreamEvent): string {
   return `data: ${JSON.stringify(event)}\n\n`;
@@ -1021,6 +1022,33 @@ export async function POST(req: NextRequest) {
         }
         if (containsInternalScaffold(claude.title)) {
           claude.title = "Results";
+        }
+
+        if (!claude.sql && tab === "current" && !isOverBudget()) {
+          const verifiedAgency = findVerifiedCurrentAgency(question, getDb());
+          if (verifiedAgency) {
+            console.log(`[query][verified-agency-refusal] ${verifiedAgency.agency}, ${verifiedAgency.state} has ${verifiedAgency.dataRows} Current Trends rows; forcing SQL retry`);
+            try {
+              const verifiedRetry = await translateToSql(
+                question,
+                [
+                  ...((promptHistory || []) as { role: "user" | "assistant"; content: string }[]),
+                  { role: "assistant", content: claude.explanation },
+                  { role: "user", content: "[SYSTEM: Database preflight verified that " + verifiedAgency.agency + ", " + verifiedAgency.state + " is a Current Trends city agency with " + verifiedAgency.dataRows + " monthly rows. Do not return sql null and do not claim this agency is unavailable. Generate the requested query for this exact agency, preserving the user's offense and date range.]" },
+                ],
+                systemPrompt
+              );
+              if (verifiedRetry.sql) claude = verifiedRetry;
+            } catch {
+              // Fall through to the truthful verified-availability response below.
+            }
+          }
+          if (!claude.sql && verifiedAgency) {
+            claude.explanation = "I couldn't generate the requested query, but " + verifiedAgency.agency + ", " + verifiedAgency.state + " is in Current Trends. Please try the same question again or specify the offense and date range.";
+          }
+        }
+        if (!claude.sql && tab === "current" && /not (?:in|included in)|not found|doesn\'t appear|no data|not available|does not (?:have|include|cover)/i.test(claude.explanation || "")) {
+          claude.explanation = "I couldn\'t generate a database query for that request, so I can\'t determine whether the requested agency or data is available. Please try the same question again or specify the offense and date range.";
         }
 
         if (!claude.sql) {
