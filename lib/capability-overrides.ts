@@ -126,7 +126,7 @@ export function detectDemographicHomicideRateOverride(question: string): Capabil
 }
 
 const DEMOGRAPHIC_RATE_DENOMINATOR_FOLLOWUP_RE =
-  /\b(?:use|using|take|with|from)\b[\s\S]{0,50}\b(?:census|population)\b[\s\S]{0,50}\bdenominator\b/i;
+  /\b(?:use|using|take|try|with|from|switch\s+to)\b[\s\S]{0,50}\b(?:census|acs|population)\b[\s\S]{0,50}\bdenominator\b|\b(?:use|using|try|with)\b[\s\S]{0,40}\b(?:different|another|alternate|other)\b[\s\S]{0,30}\b(?:denominator|population\s+(?:data|figures|estimates))\b/i;
 
 export function detectDemographicRateDenominatorFollowup(
   question: string,
