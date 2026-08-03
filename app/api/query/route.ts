@@ -1032,7 +1032,9 @@ export async function POST(req: NextRequest) {
           claude.title = "Results";
         }
 
+        let serverAuthoredNoSql = false;
         if (!claude.sql && tab === "current" && !isOverBudget()) {
+
           const verifiedAgency = findVerifiedCurrentAgency(question, getDb());
           if (verifiedAgency) {
             console.log(`[query][verified-agency-refusal] ${verifiedAgency.agency}, ${verifiedAgency.state} has ${verifiedAgency.dataRows} Current Trends rows; forcing SQL retry`);
@@ -1052,6 +1054,7 @@ export async function POST(req: NextRequest) {
             }
           }
           if (!claude.sql && verifiedAgency) {
+            serverAuthoredNoSql = true;
             claude.explanation = "I couldn't generate the requested query, but " + verifiedAgency.agency + ", " + verifiedAgency.state + " is in Current Trends. Please try the same question again or specify the offense and date range.";
           }
         }
@@ -1060,7 +1063,6 @@ export async function POST(req: NextRequest) {
         }
 
         if (!claude.sql) {
-          const serverAuthoredNoSql = /could(?:n.t| not) generate a database query/i.test(claude.explanation || "");
         if (containsInternalLeak(claude.explanation) || containsInternalLeak(claude.title)) { claude.explanation = INTERNAL_LEAK_SAFE_MESSAGE; claude.title = "Results"; firedGuardrails.push("internal-leak-firewall"); }
           const ms = Date.now() - totalStart;
           if (!serverAuthoredNoSql && !containsInternalLeak(claude.explanation) && !containsInternalLeak(claude.title)) { claude.explanation = buildNoSqlFallbackMessage(tab === "historical" ? "historical" : "current"); firedGuardrails.push("no-sql-server-template"); }

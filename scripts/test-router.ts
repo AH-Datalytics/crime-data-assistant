@@ -514,9 +514,8 @@ if (failures.length > 0) {
   }
 }
 
-process.exit(fail > 0 ? 1 : 0);
 if (!isFollowUp("Use Census population as the denominator")) throw new Error("imperative denominator instruction should inherit active tab");
 if (!isFollowUp("Use FBI data instead")) throw new Error("imperative source instruction should inherit active tab");
 if (!isFollowUp("use a different denominator")) throw new Error("different denominator should inherit active tab");
 if (isFollowUp("Use FBI data to show murders in Chicago since 2015")) throw new Error("fresh offense/place request must not inherit active tab");
-
+process.exit(fail > 0 ? 1 : 0);
