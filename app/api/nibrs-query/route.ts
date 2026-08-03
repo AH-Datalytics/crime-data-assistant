@@ -68,6 +68,8 @@ function jsonResp(data: unknown, status = 200) {
 import {
   containsInternalScaffold,
   stripInternalScaffold,
+  containsInternalLeak,
+  INTERNAL_LEAK_SAFE_MESSAGE,
 } from "@/lib/scaffold-helpers";
 import { findNibrsSqlIssues } from "@/lib/sql-guardrails";
 
@@ -549,8 +551,10 @@ export async function POST(req: NextRequest) {
       }
 
       if (!claude.sql) {
+        const internalLeak = containsInternalLeak(claude.explanation) || containsInternalLeak(claude.title);
+        if (internalLeak) { claude.explanation = INTERNAL_LEAK_SAFE_MESSAGE; claude.title = "Results"; }
         claude.explanation = neutralizeUnverifiedAvailabilityClaim(claude.explanation, "NIBRS");
-        writeNibrsLog(question, null, 0, null, Date.now() - claudeStart, claude.explanation, [], activeModelLabel, sessionId);
+        writeNibrsLog(question, null, 0, null, Date.now() - claudeStart, claude.explanation, internalLeak ? ["internal-leak-firewall"] : [], activeModelLabel, sessionId);
         return jsonResp({
           success: true,
           question,

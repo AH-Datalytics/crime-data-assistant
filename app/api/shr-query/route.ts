@@ -25,6 +25,7 @@ import { applyResultDisclosures } from "@/lib/result-disclosure";
 import { appendShrAgencyProbeCaveat, isZeroResult, runShrAgencyProbe } from "@/lib/shr-agency-probe";
 import { neutralizeUnverifiedAvailabilityClaim } from "@/lib/refusal-safety";
 import { normalizeHistoryAllSources, normalizeHistoryForTab } from "@/lib/chat-history";
+import { containsInternalLeak, INTERNAL_LEAK_SAFE_MESSAGE } from "@/lib/scaffold-helpers";
 import { detectFollowupTransform } from "@/lib/followup-transform";
 import { applyChartCustomizations } from "@/lib/chart-customization";
 import { getBlockingGeoClarification } from "@/lib/geo-resolver";
@@ -720,8 +721,9 @@ export async function POST(req: NextRequest) {
       }
 
       if (!claude.sql) {
+        if (containsInternalLeak(claude.explanation) || containsInternalLeak(claude.title)) { claude.explanation = INTERNAL_LEAK_SAFE_MESSAGE; claude.title = "Results"; routeGuardrailsFired.push("internal-leak-firewall"); }
         claude.explanation = neutralizeUnverifiedAvailabilityClaim(claude.explanation, "SHR");
-        writeLog(question, null, 0, null, claudeMs, claude.explanation, "shr", [], "haiku-4.5", sessionId);
+        writeLog(question, null, 0, null, claudeMs, claude.explanation, "shr", routeGuardrailsFired, "haiku-4.5", sessionId);
         return jsonResp({
           success: true,
           question,
