@@ -23,6 +23,7 @@ import { answerMetadataQuestion } from "@/lib/metadata-coverage";
 import { validateTablesForTab } from "@/lib/table-allowlist";
 import { applyResultDisclosures } from "@/lib/result-disclosure";
 import { appendShrAgencyProbeCaveat, isZeroResult, runShrAgencyProbe } from "@/lib/shr-agency-probe";
+import { neutralizeUnverifiedAvailabilityClaim } from "@/lib/refusal-safety";
 import { normalizeHistoryForTab } from "@/lib/chat-history";
 import { detectFollowupTransform } from "@/lib/followup-transform";
 import { applyChartCustomizations } from "@/lib/chart-customization";
@@ -717,6 +718,7 @@ export async function POST(req: NextRequest) {
       }
 
       if (!claude.sql) {
+        claude.explanation = neutralizeUnverifiedAvailabilityClaim(claude.explanation, "SHR");
         writeLog(question, null, 0, null, claudeMs, claude.explanation, "shr", [], "haiku-4.5", sessionId);
         return jsonResp({
           success: true,

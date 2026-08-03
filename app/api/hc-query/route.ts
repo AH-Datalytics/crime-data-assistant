@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getHateCrimeDb } from "@/lib/hc-db";
+import { neutralizeUnverifiedAvailabilityClaim } from "@/lib/refusal-safety";
 import { validatePageToken } from "@/lib/page-token";
 import { validateAndSanitize } from "@/lib/sql-safety";
 import { logQuery } from "@/lib/rtci-db";
@@ -382,6 +383,7 @@ export async function POST(req: NextRequest) {
       }
 
       if (!claude.sql) {
+        claude.explanation = neutralizeUnverifiedAvailabilityClaim(claude.explanation, "Hate Crime");
         const textExplanation = hateCrimeCaveats("", claude.explanation);
         writeLog(question, null, 0, null, claudeMs, textExplanation, "hate_crime", [], "haiku-4.5", sessionId);
         return jsonResp({

@@ -44,6 +44,7 @@ import { planFollowupSafe } from '@/lib/followup-planner';
 import { buildCrossSourceFollowupTransform } from '@/lib/cross-source-followup';
 import { plannerModeForSource } from '@/lib/followup-planner-mode';
 import { findVerifiedCurrentAgency } from '@/lib/current-agency-availability';
+import { neutralizeUnverifiedAvailabilityClaim } from "@/lib/refusal-safety";
 
 function sseEvent(event: StreamEvent): string {
   return `data: ${JSON.stringify(event)}\n\n`;
@@ -1053,6 +1054,7 @@ export async function POST(req: NextRequest) {
 
         if (!claude.sql) {
           const ms = Date.now() - totalStart;
+          claude.explanation = neutralizeUnverifiedAvailabilityClaim(claude.explanation, tab === "historical" ? "Historical" : "Current Trends");
           writeLog(question, null, 0, null, ms, claude.explanation, tab, [], "haiku-4.5", sessionId);
           controller.enqueue(
             encoder.encode(
