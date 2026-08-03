@@ -1293,6 +1293,13 @@ export async function POST(req: NextRequest) {
     }
 
     // Log success (after CDE check so explanation includes any disclaimers)
+    const finalNarrative = sanitizeUserFacingNarrative(explanation, claude.title);
+    if (finalNarrative.blocked) {
+      routeGuardrailsFired.push("internal-leak-firewall-result");
+      console.warn(`[nibrs][internal-leak-firewall] Replaced result narrative: ${explanation}`);
+    }
+    explanation = finalNarrative.explanation || "";
+    claude.title = finalNarrative.title || claude.title || "Results";
     const totalMs = Date.now() - claudeStart;
     const firedGuardrails = [...guardrailResult.fired, ...routeGuardrailsFired];
     console.log(`[nibrs][result] model=${activeModelLabel} rows=${rows.length} retries=${retryCount} scaffold_stripped=${scaffoldStripped} guardrails=[${firedGuardrails.join(",")}] total_ms=${totalMs} db_ms=${executionTimeMs}${canaryFlag ? " CANARY" : ""}`);
