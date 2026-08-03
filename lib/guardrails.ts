@@ -3071,6 +3071,19 @@ const GUARDRAILS: Guardrail[] = [
       (_, prefix, alias) => `${prefix}SUM(${alias || ""}incident_count) AS incident_count`,
     ),
   },
+  {
+    name: "hate-crime-bias-trend-missing-victim-sum",
+    tabs: ["hate_crime"],
+    match: (ctx) => /\bFROM\s+summary_hate_crime_bias_trend\b/i.test(ctx.sql)
+      && /\bGROUP\s+BY\s+year\b/i.test(ctx.sql)
+      && /\bAS\s+incident_count\s*,\s*(?:\w+\.)?victim_count\b/i.test(ctx.sql)
+      && !/\bSUM\s*\(\s*(?:\w+\.)?victim_count\s*\)/i.test(ctx.sql),
+    message: () => "[SYSTEM: summary_hate_crime_bias_trend has one row per year and bias. Aggregate victim_count with SUM(victim_count) AS victim_count when returning a national yearly trend.]",
+    rewrite: (sql) => sql.replace(
+      /(\bAS\s+incident_count\s*,\s*)(\w+\.)?victim_count\b/i,
+      (_, prefix, alias) => `${prefix}SUM(${alias || ""}victim_count) AS victim_count`,
+    ),
+  },
   // --- #1: Missing GROUP BY year on aggregate + year SELECT ---
   {
     name: "missing-group-by-year",

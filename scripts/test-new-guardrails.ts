@@ -18,12 +18,12 @@ import { currentCalendarYear, pastCompleteCalendarYearsRange, pastYearsIncluding
 let pass = 0;
 {
   const ctx = extractQueryContext(
-    "SELECT year, incident_count FROM summary_hate_crime_bias_trend WHERE year >= 2015 GROUP BY year ORDER BY year LIMIT 1000",
+    "SELECT year, incident_count, victim_count FROM summary_hate_crime_bias_trend WHERE year >= 2015 GROUP BY year ORDER BY year LIMIT 1000",
     "How have reported hate crimes trended since 2015?",
     "hate_crime",
   );
   const r = runGuardrails(ctx);
-  assert("hate-crime national trend sums bias rows", r.fired.includes("hate-crime-bias-trend-missing-sum") && /SUM\(incident_count\)/i.test(r.sql), JSON.stringify(r));
+  assert("hate-crime national trend sums bias rows", r.fired.includes("hate-crime-bias-trend-missing-sum") && /SUM\(incident_count\)/i.test(r.sql) && /SUM\(victim_count\)/i.test(r.sql), JSON.stringify(r));
 }
 
 let fail = 0;

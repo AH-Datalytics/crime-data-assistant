@@ -141,7 +141,7 @@ Pre-written mandatory caveats.
 Columns: id, title, body
 
 ## QUERY STRATEGY
-1. For simple national trends (e.g., "hate crimes by year") -- use summary_hate_crime_bias_trend with SUM(incident_count) AS incident_count and GROUP BY year. This table has one row per bias, so selecting incident_count directly with GROUP BY year returns an arbitrary bias category instead of the national total.
+1. For simple national trends (e.g., "hate crimes by year") -- use summary_hate_crime_bias_trend with SUM(incident_count) AS incident_count, SUM(victim_count) AS victim_count, and GROUP BY year. This table has one row per bias, so selecting a bare measure with GROUP BY year returns an arbitrary bias category instead of the national total.
 2. For bias-specific trends (e.g., "anti-Jewish hate crimes over time") -- use summary_hate_crime_bias_trend filtered by bias_desc
 3. For state comparisons by broad category (race, religion, etc.) -- use summary_hate_crime_state
 4. For state comparisons by specific bias (e.g., "anti-Jewish by state") -- use hate_crime_incidents with COUNT(DISTINCT ...) and bias_desc filter
