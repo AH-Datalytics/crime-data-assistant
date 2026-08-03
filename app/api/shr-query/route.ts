@@ -26,6 +26,7 @@ import { appendShrAgencyProbeCaveat, isZeroResult, runShrAgencyProbe } from "@/l
 import { neutralizeUnverifiedAvailabilityClaim } from "@/lib/refusal-safety";
 import { normalizeHistoryAllSources, normalizeHistoryForTab } from "@/lib/chat-history";
 import { containsInternalLeak, INTERNAL_LEAK_SAFE_MESSAGE } from "@/lib/scaffold-helpers";
+import { buildNoSqlFallbackMessage } from "@/lib/refusal-safety";
 import { detectFollowupTransform } from "@/lib/followup-transform";
 import { applyChartCustomizations } from "@/lib/chart-customization";
 import { getBlockingGeoClarification } from "@/lib/geo-resolver";
@@ -721,7 +722,9 @@ export async function POST(req: NextRequest) {
       }
 
       if (!claude.sql) {
+        const serverAuthoredNoSql = /could(?:n.t| not) generate a database query/i.test(claude.explanation || "");
         if (containsInternalLeak(claude.explanation) || containsInternalLeak(claude.title)) { claude.explanation = INTERNAL_LEAK_SAFE_MESSAGE; claude.title = "Results"; routeGuardrailsFired.push("internal-leak-firewall"); }
+        if (!serverAuthoredNoSql && !containsInternalLeak(claude.explanation) && !containsInternalLeak(claude.title)) { claude.explanation = buildNoSqlFallbackMessage("shr"); routeGuardrailsFired.push("no-sql-server-template"); }
         claude.explanation = neutralizeUnverifiedAvailabilityClaim(claude.explanation, "SHR");
         writeLog(question, null, 0, null, claudeMs, claude.explanation, "shr", routeGuardrailsFired, "haiku-4.5", sessionId);
         return jsonResp({

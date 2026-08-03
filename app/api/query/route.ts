@@ -23,6 +23,7 @@ import { validateTablesForTab } from "@/lib/table-allowlist";
 import { applyResultDisclosures } from "@/lib/result-disclosure";
 import { normalizeHistoryAllSources, normalizeHistoryForTab } from "@/lib/chat-history";
 import { containsInternalLeak, INTERNAL_LEAK_SAFE_MESSAGE } from "@/lib/scaffold-helpers";
+import { buildNoSqlFallbackMessage } from "@/lib/refusal-safety";
 import { detectFollowupTransform } from "@/lib/followup-transform";
 import { getBlockingGeoClarification } from "@/lib/geo-resolver";
 import { getCountyScopeClarification } from "@/lib/county-clarifier";
@@ -1059,9 +1060,11 @@ export async function POST(req: NextRequest) {
         }
 
         if (!claude.sql) {
-          if (containsInternalLeak(claude.explanation) || containsInternalLeak(claude.title)) { claude.explanation = INTERNAL_LEAK_SAFE_MESSAGE; claude.title = "Results"; firedGuardrails.push("internal-leak-firewall"); }
+          const serverAuthoredNoSql = /could(?:n.t| not) generate a database query/i.test(claude.explanation || "");
+        if (containsInternalLeak(claude.explanation) || containsInternalLeak(claude.title)) { claude.explanation = INTERNAL_LEAK_SAFE_MESSAGE; claude.title = "Results"; firedGuardrails.push("internal-leak-firewall"); }
           const ms = Date.now() - totalStart;
-          claude.explanation = neutralizeUnverifiedAvailabilityClaim(claude.explanation, tab === "historical" ? "Historical" : "Current Trends");
+          if (!serverAuthoredNoSql && !containsInternalLeak(claude.explanation) && !containsInternalLeak(claude.title)) { claude.explanation = buildNoSqlFallbackMessage(tab === "historical" ? "historical" : "current"); firedGuardrails.push("no-sql-server-template"); }
+        claude.explanation = neutralizeUnverifiedAvailabilityClaim(claude.explanation, tab === "historical" ? "Historical" : "Current Trends");
           writeLog(question, null, 0, null, ms, claude.explanation, tab, firedGuardrails, "haiku-4.5", sessionId);
           controller.enqueue(
             encoder.encode(

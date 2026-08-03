@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getNibrsDb, executeWithTimeout, logNibrsQuery } from "@/lib/nibrs-db";
 import { isZeroResult } from "@/lib/shr-agency-probe";
 import { appendNibrsAgencyProbeCaveat, runNibrsAgencyProbe } from "@/lib/nibrs-agency-probe";
-import { neutralizeUnverifiedAvailabilityClaim } from "@/lib/refusal-safety";
+import { buildNoSqlFallbackMessage, neutralizeUnverifiedAvailabilityClaim } from "@/lib/refusal-safety";
 import { validatePageToken } from "@/lib/page-token";
 import { translateToSql } from "@/lib/nibrs-claude";
 import { validateAndSanitize } from "@/lib/sql-safety";
@@ -551,10 +551,12 @@ export async function POST(req: NextRequest) {
       }
 
       if (!claude.sql) {
+        const serverAuthoredNoSql = /could(?:n.t| not) generate a database query/i.test(claude.explanation || "");
         const internalLeak = containsInternalLeak(claude.explanation) || containsInternalLeak(claude.title);
         if (internalLeak) { claude.explanation = INTERNAL_LEAK_SAFE_MESSAGE; claude.title = "Results"; }
+        if (!serverAuthoredNoSql && !internalLeak) claude.explanation = buildNoSqlFallbackMessage("nibrs");
         claude.explanation = neutralizeUnverifiedAvailabilityClaim(claude.explanation, "NIBRS");
-        writeNibrsLog(question, null, 0, null, Date.now() - claudeStart, claude.explanation, internalLeak ? ["internal-leak-firewall"] : [], activeModelLabel, sessionId);
+        writeNibrsLog(question, null, 0, null, Date.now() - claudeStart, claude.explanation, internalLeak ? ["internal-leak-firewall"] : ["no-sql-server-template"], activeModelLabel, sessionId);
         return jsonResp({
           success: true,
           question,
