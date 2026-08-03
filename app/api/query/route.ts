@@ -21,6 +21,7 @@ import { parseRoutingLogMeta } from "@/lib/routing-log-meta";
 import { answerMetadataQuestion } from "@/lib/metadata-coverage";
 import { validateTablesForTab } from "@/lib/table-allowlist";
 import { alignTitleYearRange, applyResultDisclosures, trimTrailingEmptyYearRows } from "@/lib/result-disclosure";
+import { validateGrain } from "@/lib/requested-grain";
 import { normalizeHistoryAllSources, normalizeHistoryForTab } from "@/lib/chat-history";
 import { containsInternalLeak, INTERNAL_LEAK_SAFE_MESSAGE, sanitizeUserFacingNarrative } from "@/lib/scaffold-helpers";
 import { buildNoSqlFallbackMessage } from "@/lib/refusal-safety";
@@ -1805,6 +1806,11 @@ export async function POST(req: NextRequest) {
             postExplanation += "\n\nNote: Current Trends data comes from a sample of agencies with consistent reporting — it does not represent complete state or national totals. For comprehensive state-level estimates, try the Historical Library tab.";
           }
           postExplanation = applyResultDisclosures({ explanation: postExplanation, question, sql, rows, tab });
+          const grainCheck = validateGrain(question, rows, sql);
+          if (!grainCheck.ok && grainCheck.message) {
+            postExplanation = grainCheck.message;
+            if (!firedGuardrails.includes("grain-mismatch")) firedGuardrails.push("grain-mismatch");
+          }
           const safePost = sanitizeUserFacingNarrative(postExplanation, claude.title || "Results");
           postExplanation = safePost.explanation || "";
           if (containsInternalScaffold(postExplanation)) {
@@ -1846,6 +1852,11 @@ export async function POST(req: NextRequest) {
               retryExplanation += "\n\nNote: Current Trends data comes from a sample of agencies with consistent reporting — it does not represent complete state or national totals. For comprehensive state-level estimates, try the Historical Library tab.";
             }
             retryExplanation = applyResultDisclosures({ explanation: retryExplanation, question, sql, rows, tab });
+            const retryGrainCheck = validateGrain(question, rows, sql);
+            if (!retryGrainCheck.ok && retryGrainCheck.message) {
+              retryExplanation = retryGrainCheck.message;
+              if (!firedGuardrails.includes("grain-mismatch")) firedGuardrails.push("grain-mismatch");
+            }
             const safeRetry = sanitizeUserFacingNarrative(retryExplanation, claude.title || "Results");
             retryExplanation = safeRetry.explanation || "";
             if (containsInternalScaffold(retryExplanation)) {

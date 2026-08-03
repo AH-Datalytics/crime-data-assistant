@@ -22,6 +22,7 @@ import { parseRoutingLogMeta } from "@/lib/routing-log-meta";
 import { answerMetadataQuestion } from "@/lib/metadata-coverage";
 import { validateTablesForTab } from "@/lib/table-allowlist";
 import { alignTitleYearRange, applyResultDisclosures } from "@/lib/result-disclosure";
+import { validateGrain } from "@/lib/requested-grain";
 import { buildCompletenessAnswer, detectCompletenessQuestion, loadCompletenessRows } from "@/lib/completeness-intent";
 import { normalizeHistoryForTab } from "@/lib/chat-history";
 import { pastCompleteCalendarYearsRange } from "@/lib/time-conventions";
@@ -390,13 +391,19 @@ export async function POST(req: NextRequest) {
         const deterministicExplanation = rows.length === 0 && deterministicQuery.guardrail === "deterministic-nibrs-comparable-agency-clearance"
           ? `No NIBRS clearance data was found for ${deterministicResolution?.places[0]?.label ?? "the named target agency"} in the requested period. A peer comparison was not returned because showing peer agencies without the requested target would be misleading.`
           : deterministicQuery.explanation;
-        const explanation = applyResultDisclosures({
+        let explanation = applyResultDisclosures({
           explanation: deterministicExplanation,
           question,
           sql: deterministicQuery.sql,
           rows,
           tab: "nibrs",
         });
+        const deterministicGrainCheck = validateGrain(question, rows, deterministicQuery.sql);
+        const deterministicFiredGuardrails = deterministicGuardrails(deterministicQuery.guardrail);
+        if (!deterministicGrainCheck.ok && deterministicGrainCheck.message) {
+          explanation = deterministicGrainCheck.message;
+          deterministicFiredGuardrails.push("grain-mismatch");
+        }
         deterministicQuery.title = alignTitleYearRange(deterministicQuery.title, rows);
         const chartConfig = buildNibrsChartConfig(deterministicQuery, columns, rows, question);
 
@@ -407,7 +414,7 @@ export async function POST(req: NextRequest) {
           null,
           executionMs,
           explanation,
-          deterministicGuardrails(deterministicQuery.guardrail),
+          deterministicFiredGuardrails,
           "deterministic",
           sessionId
         );
@@ -1220,6 +1227,11 @@ export async function POST(req: NextRequest) {
       ? (stripInternalScaffold(postExplanation) || explanation)
       : postExplanation;
     explanation = applyResultDisclosures({ explanation, question, sql, rows, tab: "nibrs" });
+    const grainCheck = validateGrain(question, rows, sql);
+    if (!grainCheck.ok && grainCheck.message) {
+      explanation = grainCheck.message;
+      routeGuardrailsFired.push("grain-mismatch");
+    }
     // Zero-result agency probe (query-audit-2026-07-03 F25): when an agency-scoped
     // query returns nothing, explain the agency's actual reporting span instead of
     // leaving a bare "no results" — e.g. Jackson PD reports NIBRS only since 2025.

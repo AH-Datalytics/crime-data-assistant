@@ -22,6 +22,7 @@ import { parseRoutingLogMeta } from "@/lib/routing-log-meta";
 import { answerMetadataQuestion } from "@/lib/metadata-coverage";
 import { validateTablesForTab } from "@/lib/table-allowlist";
 import { applyResultDisclosures } from "@/lib/result-disclosure";
+import { validateGrain } from "@/lib/requested-grain";
 import { buildCompletenessAnswer, detectCompletenessQuestion, loadCompletenessRows } from "@/lib/completeness-intent";
 import { appendShrAgencyProbeCaveat, isZeroResult, runShrAgencyProbe } from "@/lib/shr-agency-probe";
 import { neutralizeUnverifiedAvailabilityClaim } from "@/lib/refusal-safety";
@@ -1204,6 +1205,11 @@ export async function POST(req: NextRequest) {
     // Fix hallucinated counts using distinct entity detection
     explanation = validateExplanationCount(explanation, rows as Record<string, unknown>[], columns);
     explanation = applyResultDisclosures({ explanation, question, sql, rows, tab: "shr" });
+    const grainCheck = validateGrain(question, rows, sql);
+    if (!grainCheck.ok && grainCheck.message) {
+      explanation = grainCheck.message;
+      routeGuardrailsFired.push("grain-mismatch");
+    }
     explanation = normalizeShrAgencyText(explanation);
 
     // Sanitize any leaked SQL/JSON

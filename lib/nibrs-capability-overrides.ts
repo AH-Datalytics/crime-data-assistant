@@ -50,5 +50,16 @@ export function detectNibrsCapabilityOverride(question: string): CapabilityOverr
     };
   }
 
+  const asksMonthlyArrestSummary =
+    /\b(?:monthly|per\s+month|by\s+month)\b/i.test(question) &&
+    /\b(?:arrest(?:s|ed)?|arrestee(?:s)?|dwi|dui|driving\s+while\s+intoxicated|disorderly\s+conduct|trespass)\b/i.test(question);
+  if (asksMonthlyArrestSummary) {
+    return {
+      title: "NIBRS Arrest Data Is Annual",
+      guardrail: "nibrs-annual-only-grain",
+      explanation: "NIBRS arrest and arrestee summary data is available annually, not monthly. Ask for annual arrest totals, or use a source that provides monthly arrest data.",
+    };
+  }
+
   return null;
 }

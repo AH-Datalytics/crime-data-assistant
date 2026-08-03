@@ -18,6 +18,7 @@ import { parseRoutingLogMeta } from "@/lib/routing-log-meta";
 import { answerMetadataQuestion } from "@/lib/metadata-coverage";
 import { validateTablesForTab } from "@/lib/table-allowlist";
 import { alignTitleYearRange, applyResultDisclosures } from "@/lib/result-disclosure";
+import { validateGrain } from "@/lib/requested-grain";
 import { buildCompletenessAnswer, detectCompletenessQuestion, loadCompletenessRows } from "@/lib/completeness-intent";
 import { normalizeHistoryForTab } from "@/lib/chat-history";
 import { containsInternalLeak, INTERNAL_LEAK_SAFE_MESSAGE, sanitizeUserFacingNarrative } from "@/lib/scaffold-helpers";
@@ -675,6 +676,11 @@ export async function POST(req: NextRequest) {
     let explanation = sanitizeExplanation(claude.explanation || "");
     explanation = hateCrimeCaveats(sql, explanation);
     explanation = applyResultDisclosures({ explanation, question, sql, rows, tab: "hate_crime" });
+    const grainCheck = validateGrain(question, rows, sql);
+    if (!grainCheck.ok && grainCheck.message) {
+      explanation = grainCheck.message;
+      routeGuardrailsFired.push("grain-mismatch");
+    }
 
     const finalNarrative = sanitizeUserFacingNarrative(explanation, claude.title);
     if (finalNarrative.blocked) {

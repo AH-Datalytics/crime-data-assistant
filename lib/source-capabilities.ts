@@ -216,6 +216,16 @@ export const SOURCE_CAPABILITY_RULES: SourceCapabilityRule[] = [
     message: "Current countywide geography should use agency_county_crosswalk; a county agency row is not a countywide rollup.",
   },
   {
+    id: "nibrs-annual-only-arrestee-grain",
+    source: "nibrs",
+    severity: "warning",
+    requiresAnyTables: ["summary_arrestee_demographics", "summary_offender_demographics", "summary_dv_arrests"],
+    when: ({ question }) =>
+      /\b(?:monthly|per\s+month|by\s+month)\b/i.test(question) &&
+      /\b(?:arrest(?:s|ed)?|arrestee(?:s)?|dwi|dui|disorderly\s+conduct|trespass)\b/i.test(question),
+    message: "These NIBRS arrest summary tables report annual data, not monthly data. Use an annual request or a source with monthly arrest records.",
+  },
+  {
     id: "nibrs-weapon-person-crime-table",
     source: "nibrs",
     severity: "warning",
