@@ -138,6 +138,15 @@ function fuzzyFallbackMention(input: string): GeoPlaceMention | null {
     if (result.best.distance > cap) continue;
     // A short (<=4 char) ambiguous span is noise, not a place — skip it.
     if (!result.confident && trimmed.length <= 4) continue;
+    // Place-at-start is high false-positive risk (a leading common word like
+    // "many"/"murders" can collide with an obscure small town). Only trust it
+    // when the leading span resolves to a PROMINENT place (a real city with
+    // meaningful population, or a state/county) — not a 500-person town.
+    if (span.strict) {
+      const e = result.best.entry;
+      const prominent = e.kind === "state" || e.kind === "county" || (e.dominancePopulation ?? 0) >= 50_000;
+      if (!prominent) continue;
+    }
     const key: [number, number, number] = [result.confident ? 0 : 1, result.best.distance, -trimmed.length];
     const better = !bestKey || key[0] < bestKey[0] ||
       (key[0] === bestKey[0] && (key[1] < bestKey[1] || (key[1] === bestKey[1] && key[2] < bestKey[2])));
