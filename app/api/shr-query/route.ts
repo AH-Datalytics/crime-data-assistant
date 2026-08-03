@@ -24,7 +24,7 @@ import { validateTablesForTab } from "@/lib/table-allowlist";
 import { applyResultDisclosures } from "@/lib/result-disclosure";
 import { appendShrAgencyProbeCaveat, isZeroResult, runShrAgencyProbe } from "@/lib/shr-agency-probe";
 import { neutralizeUnverifiedAvailabilityClaim } from "@/lib/refusal-safety";
-import { normalizeHistoryForTab } from "@/lib/chat-history";
+import { normalizeHistoryAllSources, normalizeHistoryForTab } from "@/lib/chat-history";
 import { detectFollowupTransform } from "@/lib/followup-transform";
 import { applyChartCustomizations } from "@/lib/chart-customization";
 import { getBlockingGeoClarification } from "@/lib/geo-resolver";
@@ -145,7 +145,7 @@ export async function POST(req: NextRequest) {
     }
 
     const history = normalizeHistoryForTab(body?.history, "shr");
-    const demographicRateFollowup = detectDemographicRateDenominatorFollowup(question, history);
+    const demographicRateFollowup = detectDemographicRateDenominatorFollowup(question, normalizeHistoryAllSources(body?.history));
     // Query-bearing follow-ups (prior SQL + a change request) must reach the
     // model path with history — never the standalone metadata/county shortcuts.
     const queryBearingFollowup = detectQueryBearingFollowup(question, body?.history);

@@ -47,3 +47,17 @@ export function normalizeHistoryForTab(raw: unknown, tab: SourceId, limit = 6): 
 
   return normalized.slice(-limit);
 }
+
+/** Normalize history without dropping entries from other tabs for safety detectors. */
+export function normalizeHistoryAllSources(raw: unknown, limit = 6): PromptHistoryMessage[] {
+  if (!Array.isArray(raw)) return [];
+  const normalized: PromptHistoryMessage[] = [];
+  for (const entry of raw) {
+    if (!entry || typeof entry !== "object") continue;
+    const h = entry as ChatHistoryEntry;
+    if (h.role !== "user" && h.role !== "assistant") continue;
+    if (typeof h.content !== "string" || !h.content.trim()) continue;
+    normalized.push({ role: h.role, content: h.content.slice(0, 6000) });
+  }
+  return normalized.slice(-limit);
+}

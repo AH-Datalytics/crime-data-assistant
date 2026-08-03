@@ -21,7 +21,7 @@ import { parseRoutingLogMeta } from "@/lib/routing-log-meta";
 import { answerMetadataQuestion } from "@/lib/metadata-coverage";
 import { validateTablesForTab } from "@/lib/table-allowlist";
 import { applyResultDisclosures } from "@/lib/result-disclosure";
-import { normalizeHistoryForTab } from "@/lib/chat-history";
+import { normalizeHistoryAllSources, normalizeHistoryForTab } from "@/lib/chat-history";
 import { detectFollowupTransform } from "@/lib/followup-transform";
 import { getBlockingGeoClarification } from "@/lib/geo-resolver";
 import { getCountyScopeClarification } from "@/lib/county-clarifier";
@@ -440,7 +440,7 @@ export async function POST(req: NextRequest) {
   const tab = body?.mode === "historical" ? "historical" : "current";
   const demographicRateFollowup = detectDemographicRateDenominatorFollowup(
     question,
-    normalizeHistoryForTab(body?.history, tab),
+    normalizeHistoryAllSources(body?.history),
   );
   // Query-bearing follow-ups (prior SQL + a change request) must reach the
   // model path with history — never the standalone metadata/county/place shortcuts.

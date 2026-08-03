@@ -3,6 +3,7 @@
 import { detectNibrsCapabilityOverride } from "../lib/nibrs-capability-overrides.js";
 import { detectCurrentYearClearanceOverride, detectDemographicRateDenominatorFollowup, detectShrGroupRateOverride, detectSubCityGeographyOverride } from "../lib/capability-overrides.js";
 import { removedDemographicPlaceToken } from "../lib/demographic-rate-intent.js";
+import { normalizeHistoryAllSources, normalizeHistoryForTab } from "../lib/chat-history.js";
 
 let pass = 0;
 let fail = 0;
@@ -247,6 +248,22 @@ assert("unresolved women's language is not mistaken for a place",
 {
   const r = detectShrGroupRateOverride("drug arrest rates by sex");
   assert("drug arrests do NOT fire the denominator refusal", r === null, JSON.stringify(r));
+}
+
+{
+  const raw = [
+    { role: "user", content: "Murders per 100,000 Black residents in Detroit, 2023", source: "shr" },
+    { role: "assistant", content: "I can't calculate per-capita homicide rates by race, sex/gender, or age from these datasets.", source: "shr" },
+  ];
+  assert("cross-tab history reaches denominator detector", Boolean(detectDemographicRateDenominatorFollowup("Use Census population as the denominator", normalizeHistoryAllSources(raw))));
+  assert("tab-filtered history documents the prior blind spot", detectDemographicRateDenominatorFollowup("Use Census population as the denominator", normalizeHistoryForTab(raw, "historical")) === null);
+}
+{
+  const priorDemo = [{ role: "user" as const, content: "Murders per 100,000 Black residents in Detroit, 2023" }];
+  assert("different denominator follow-up fires", Boolean(detectDemographicRateDenominatorFollowup("Use a different denominator", priorDemo)));
+  assert("another population denominator follow-up fires", Boolean(detectDemographicRateDenominatorFollowup("try another population denominator", priorDemo)));
+  assert("different denominator remains gated on prior context", detectDemographicRateDenominatorFollowup("Use a different denominator", []) === null);
+  assert("unrelated question does not fire", detectDemographicRateDenominatorFollowup("show robberies in Boston 2020", priorDemo) === null);
 }
 
 console.log(`nibrs capability override tests: ${pass} passed, ${fail} failed`);
