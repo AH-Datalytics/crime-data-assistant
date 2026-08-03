@@ -267,4 +267,14 @@ assert.equal(hasBlockingQueryGuidanceWarnings("Philadelphia murders quarterly"),
 assert.equal(hasBlockingQueryGuidanceWarnings("Philadelphia murders per hour"), true);
 assert.equal(hasBlockingQueryGuidanceWarnings("robberies by hour of day in Texas"), false);
 assert.equal(hasBlockingQueryGuidanceWarnings("time of day for robberies in Texas"), false);
+
+// A state name qualifying another county is not city-vs-state ambiguous (production Suffolk County flow).
+assert.equal(hasBlockingQueryGuidanceWarnings("burglaries in Suffolk County, New York since 2015"), false);
+assert.equal(hasBlockingQueryGuidanceWarnings("Suffolk County in New York"), false);
+assert.equal(hasBlockingQueryGuidanceWarnings("Clark County, Washington murders"), false);
+// Bare ambiguous tokens still flag city-vs-state.
+assert.equal(getQueryGuidanceWarnings("murders in New York since 2015").some((w) => w.id === "new-york"), true);
+assert.equal(getQueryGuidanceWarnings("crime in Washington 2020").some((w) => w.id === "washington"), true);
+// Existing resolved forms still clear.
+assert.equal(getQueryGuidanceWarnings("murders in New York City 2020").some((w) => w.id === "new-york"), false);
 console.log("query guidance tests passed");

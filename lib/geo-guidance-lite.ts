@@ -90,7 +90,7 @@ const KNOWN_GEO_TRAPS: KnownTrap[] = [
     ["Use St. Louis city", "\\bSTL\\b", "St. Louis city"],
     ["Use St. Louis County", "\\bSTL\\b", "St. Louis County, Missouri"],
   ]),
-  trap("new-york", /\bnew\s+york\b/i, /\b(new\s+york\s+city|nyc|nypd|new\s+york\s+state|state\s+of\s+new\s+york|ny\s+state|new\s+york\s+(?:county|parish|borough))\b/i, "New York is ambiguous", "Say New York City or New York State to avoid ambiguity.", [
+  trap("new-york", /\bnew\s+york\b/i, /\b(new\s+york\s+city|nyc|nypd|new\s+york\s+state|state\s+of\s+new\s+york|ny\s+state|new\s+york\s+(?:county|parish|borough)|(?:county|parish|borough)\s*(?:,|\bin\b|\bof\b)?\s*new\s+york)\b/i, "New York is ambiguous", "Say New York City or New York State to avoid ambiguity.", [
     ["Use New York City", "\\bNew\\s+York\\b", "New York City"],
     ["Use New York State", "\\bNew\\s+York\\b", "New York State"],
   ]),
@@ -98,7 +98,7 @@ const KNOWN_GEO_TRAPS: KnownTrap[] = [
     ["Use New York City", "\\bNY\\b", "New York City"],
     ["Use New York State", "\\bNY\\b", "New York State"],
   ]),
-  trap("washington", /\bwashington\b/i, /\b(washington\s*,?\s*d\.?c\.?|dc|district\s+of\s+columbia|washington\s+state|state\s+of\s+washington|washington\s+(?:county|parish|borough))\b/i, "Washington is ambiguous", "Say Washington, DC or Washington State when asking for geography-specific results.", [
+  trap("washington", /\bwashington\b/i, /\b(washington\s*,?\s*d\.?c\.?|dc|district\s+of\s+columbia|washington\s+state|state\s+of\s+washington|washington\s+(?:county|parish|borough)|(?:county|parish|borough)\s*(?:,|\bin\b|\bof\b)?\s*washington)\b/i, "Washington is ambiguous", "Say Washington, DC or Washington State when asking for geography-specific results.", [
     ["Use Washington, DC", "\\bWashington\\b", "Washington, DC"],
     ["Use Washington State", "\\bWashington\\b", "Washington State"],
   ]),
