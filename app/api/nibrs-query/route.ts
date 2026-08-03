@@ -551,7 +551,7 @@ export async function POST(req: NextRequest) {
       }
 
       if (!claude.sql) {
-        const serverAuthoredNoSql = /could(?:n.t| not) generate a database query/i.test(claude.explanation || "");
+        const serverAuthoredNoSql = false;
         const internalLeak = containsInternalLeak(claude.explanation) || containsInternalLeak(claude.title);
         if (internalLeak) { claude.explanation = INTERNAL_LEAK_SAFE_MESSAGE; claude.title = "Results"; }
         if (!serverAuthoredNoSql && !internalLeak) claude.explanation = buildNoSqlFallbackMessage("nibrs");

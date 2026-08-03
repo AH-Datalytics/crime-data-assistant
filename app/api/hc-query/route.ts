@@ -385,7 +385,7 @@ export async function POST(req: NextRequest) {
       }
 
       if (!claude.sql) {
-        const serverAuthoredNoSql = /could(?:n.t| not) generate a database query/i.test(claude.explanation || "");
+        const serverAuthoredNoSql = false;
         if (containsInternalLeak(claude.explanation) || containsInternalLeak(claude.title)) { claude.explanation = INTERNAL_LEAK_SAFE_MESSAGE; claude.title = "Results"; routeGuardrailsFired.push("internal-leak-firewall"); }
         if (!serverAuthoredNoSql && !containsInternalLeak(claude.explanation) && !containsInternalLeak(claude.title)) { claude.explanation = buildNoSqlFallbackMessage("hate_crime"); routeGuardrailsFired.push("no-sql-server-template"); }
         claude.explanation = neutralizeUnverifiedAvailabilityClaim(claude.explanation, "Hate Crime");
