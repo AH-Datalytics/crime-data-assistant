@@ -531,4 +531,14 @@ import { alignTitleYearRange, applyResultDisclosures, laggedAnnualRecentYearNote
   assert.equal(alignTitleYearRange("Murders in Houston, 2015\u20132026", rows), "Murders in Houston, 2015\u20132026", "matching title is unchanged");
 }
 
+{
+  // sourceLabel wording: hate crime disclosure names its source, not the generic phrasing.
+  const rows = [{ year: 2022, incident_count: 12000 }, { year: 2023, incident_count: 11800 }, { year: 2024, incident_count: 11689 }, { year: 2026, incident_count: 4806 }];
+  const note = laggedAnnualRecentYearNote(rows, "Hate crime incidents by year.", 2026, { sourceLabel: "Hate crime" });
+  assert.ok(note && /Hate crime data/i.test(note), "hate-crime disclosure names its source");
+  // victim_count is a recognized metric column (NIBRS victim trends).
+  const vrows = [{ year: 2023, victim_count: 3900 }, { year: 2024, victim_count: 3970 }, { year: 2025, victim_count: 3890 }, { year: 2026, victim_count: 1646 }];
+  assert.ok(laggedAnnualRecentYearNote(vrows, "NIBRS victim trend.", 2026, { sourceLabel: "NIBRS" }), "victim_count drives the sharp-drop gate");
+}
+
 console.log("result disclosure tests passed");

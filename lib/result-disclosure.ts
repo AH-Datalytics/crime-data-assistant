@@ -576,7 +576,7 @@ export function laggedAnnualRecentYearNote(
 ): string | null {
   const yearCol = ["year", "data_year", "Year"].find((c) => rows[0]?.[c] !== undefined);
   if (!yearCol || /\b(?:incomplete|preliminary|partial|still\s+maturing|published?\s+on\s+a\s+lag)\b/i.test(explanation)) return null;
-  const metricNames = ["incident_count", "incidents", "offense_count", "offenses", "crime_count", "count", "total", "murder", "murders"];
+  const metricNames = ["incident_count", "incidents", "victim_count", "victims", "offense_count", "offenses", "crime_count", "count", "total", "murder", "murders"];
   const metricKey = metricNames.find((key) => rows.some((row) => Number.isFinite(Number(row[key])))) || Object.keys(rows[0] || {}).find((key) => key !== yearCol && rows.some((row) => Number.isFinite(Number(row[key]))));
   if (!metricKey) return null;
   const totals = new Map<number, number>();
@@ -730,7 +730,7 @@ export function applyResultDisclosures(opts: {
   const returnedPeriod = ytd || currentReturnedPeriod;
 
   if (opts.tab === "hate_crime") {
-    const note = laggedAnnualRecentYearNote(opts.rows, explanation, new Date().getFullYear());
+    const note = laggedAnnualRecentYearNote(opts.rows, explanation, new Date().getFullYear(), { sourceLabel: "Hate crime" });
     if (note) explanation = appendSentence(explanation, note);
   }
   if (opts.tab === "nibrs" || opts.tab === "historical") {
