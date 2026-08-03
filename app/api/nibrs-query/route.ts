@@ -389,6 +389,7 @@ export async function POST(req: NextRequest) {
           rows,
           tab: "nibrs",
         });
+        deterministicQuery.title = alignTitleYearRange(deterministicQuery.title, rows);
         const chartConfig = buildNibrsChartConfig(deterministicQuery, columns, rows, question);
 
         writeNibrsLog(

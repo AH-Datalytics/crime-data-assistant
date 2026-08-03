@@ -48,6 +48,11 @@ for (const [file, builder] of Object.entries(chartBuilder)) {
   const chart = source.lastIndexOf(builder + "(");
   assert.ok(align >= 0, `${file} must align the title year range`);
   assert.ok(chart >= 0 && align < chart, `${file} must align the title BEFORE building the main-path chart (${builder})`);
+  if (file === "app/api/nibrs-query/route.ts") {
+    const deterministicAlign = source.indexOf("deterministicQuery.title = alignTitleYearRange(");
+    const deterministicChart = source.indexOf("buildNibrsChartConfig(");
+    assert.ok(deterministicAlign >= 0 && deterministicChart >= 0 && deterministicAlign < deterministicChart, "NIBRS deterministic title must align before its chart is built");
+  }
 }
 
 console.log("route egress contract tests: passed");

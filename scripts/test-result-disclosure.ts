@@ -529,6 +529,7 @@ import { alignTitleYearRange, applyResultDisclosures, laggedAnnualRecentYearNote
   assert.equal(alignTitleYearRange("Murders in Houston", rows), "Murders in Houston", "title without a year is unchanged");
   assert.equal(alignTitleYearRange("Murders in Houston, 2015\u20132025", [{ city: "Houston", count: 1 }]), "Murders in Houston, 2015\u20132025", "rows without a year are unchanged");
   assert.equal(alignTitleYearRange("Murders in Houston, 2015\u20132026", rows), "Murders in Houston, 2015\u20132026", "matching title is unchanged");
+  assert.equal(alignTitleYearRange("NIBRS clearance methods in Chicago", rows), "NIBRS clearance methods in Chicago", "deterministic year-less title is unchanged");
 }
 
 {
