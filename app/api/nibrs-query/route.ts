@@ -22,6 +22,7 @@ import { parseRoutingLogMeta } from "@/lib/routing-log-meta";
 import { answerMetadataQuestion } from "@/lib/metadata-coverage";
 import { validateTablesForTab } from "@/lib/table-allowlist";
 import { alignTitleYearRange, applyResultDisclosures } from "@/lib/result-disclosure";
+import { buildCompletenessAnswer, detectCompletenessQuestion, loadCompletenessRows } from "@/lib/completeness-intent";
 import { normalizeHistoryForTab } from "@/lib/chat-history";
 import { pastCompleteCalendarYearsRange } from "@/lib/time-conventions";
 import { detectFollowupTransform } from "@/lib/followup-transform";
@@ -269,6 +270,13 @@ export async function POST(req: NextRequest) {
         chartMeta: { source: "FBI NIBRS", agencyCount: 0, population: null },
         executionTimeMs: executionMs,
       } as QueryResponse);
+    }
+    const completenessIntent = detectCompletenessQuestion(question);
+    if (completenessIntent) {
+      const completenessAnswer = buildCompletenessAnswer("nibrs", loadCompletenessRows("nibrs", getNibrsDb()), new Date().getFullYear(), completenessIntent.year);
+      const executionMs = Date.now() - routeStart;
+      writeNibrsLog(question, null, 0, null, executionMs, completenessAnswer, ["completeness-deterministic"], "deterministic", sessionId);
+      return jsonResp({ success: true, question, sql: null as unknown as string, explanation: completenessAnswer, title: "Data completeness", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: executionMs } as QueryResponse);
     }
     if (plannerMode === "authoritative" && followupPlan?.sourceChanged) {
       const executionMs = Date.now() - routeStart;

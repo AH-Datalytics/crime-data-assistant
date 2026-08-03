@@ -18,6 +18,7 @@ import { parseRoutingLogMeta } from "@/lib/routing-log-meta";
 import { answerMetadataQuestion } from "@/lib/metadata-coverage";
 import { validateTablesForTab } from "@/lib/table-allowlist";
 import { alignTitleYearRange, applyResultDisclosures } from "@/lib/result-disclosure";
+import { buildCompletenessAnswer, detectCompletenessQuestion, loadCompletenessRows } from "@/lib/completeness-intent";
 import { normalizeHistoryForTab } from "@/lib/chat-history";
 import { containsInternalLeak, INTERNAL_LEAK_SAFE_MESSAGE, sanitizeUserFacingNarrative } from "@/lib/scaffold-helpers";
 import { buildNoSqlFallbackMessage } from "@/lib/refusal-safety";
@@ -255,6 +256,14 @@ export async function POST(req: NextRequest) {
         chartMeta: null,
         executionTimeMs: executionMs,
       });
+    }
+
+    const completenessIntent = detectCompletenessQuestion(question);
+    if (completenessIntent) {
+      const completenessAnswer = buildCompletenessAnswer("hate_crime", loadCompletenessRows("hate_crime", getHateCrimeDb()), new Date().getFullYear(), completenessIntent.year);
+      const executionMs = Date.now() - start;
+      writeLog(question, null, 0, null, executionMs, completenessAnswer, "hate_crime", ["completeness-deterministic"], "deterministic", sessionId);
+      return jsonResp({ success: true, question, sql: null, explanation: completenessAnswer, title: "Data completeness", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: executionMs });
     }
 
     const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing") ? (followupPlan.chartOnly ? null : getBlockingGeoClarification(followupPlan.reconstructedQuestion)) : getBlockingGeoClarification(question);

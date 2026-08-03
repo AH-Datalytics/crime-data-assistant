@@ -24,6 +24,7 @@ import { alignTitleYearRange, applyResultDisclosures, trimTrailingEmptyYearRows 
 import { normalizeHistoryAllSources, normalizeHistoryForTab } from "@/lib/chat-history";
 import { containsInternalLeak, INTERNAL_LEAK_SAFE_MESSAGE, sanitizeUserFacingNarrative } from "@/lib/scaffold-helpers";
 import { buildNoSqlFallbackMessage } from "@/lib/refusal-safety";
+import { buildCompletenessAnswer, detectCompletenessQuestion, loadCompletenessRows } from "@/lib/completeness-intent";
 import { detectFollowupTransform } from "@/lib/followup-transform";
 import { getBlockingGeoClarification } from "@/lib/geo-resolver";
 import { getCountyScopeClarification } from "@/lib/county-clarifier";
@@ -520,6 +521,19 @@ export async function POST(req: NextRequest) {
         "X-RateLimit-Remaining": String(rateCheck.remaining),
       },
     });
+  }
+
+  const completenessIntent = detectCompletenessQuestion(capabilityQuestion);
+  if (completenessIntent && (tab === "current" || tab === "historical")) {
+    const source = tab === "historical" ? "historical" : "current";
+    const completenessAnswer = buildCompletenessAnswer(source, loadCompletenessRows(source, getDb()), new Date().getFullYear(), completenessIntent.year);
+    const ms = Date.now() - totalStart;
+    writeLog(question, null, 0, null, ms, completenessAnswer, tab, ["completeness-deterministic"], "deterministic", sessionId);
+    const stream = new ReadableStream({ start(controller) {
+      controller.enqueue(encoder.encode(sseEvent({ type: "result", sql: null as unknown as string, explanation: completenessAnswer, title: "Data completeness", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: ms })));
+      controller.close();
+    }});
+    return new Response(stream, { headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", Connection: "keep-alive", "X-RateLimit-Remaining": String(rateCheck.remaining) } });
   }
 
   const countyScope = (getBlockingGeoClarification(question) || queryBearingFollowup)
