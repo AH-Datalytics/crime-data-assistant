@@ -1,4 +1,5 @@
 ﻿import { GEO_PLACE_CATALOG, type GeoPlaceCatalogEntry, type GeoPlaceKind } from "./geo-place-catalog";
+import { fuzzyResolvePlace } from "./geo-fuzzy";
 
 export type GeoPlaceCandidate = {
   id: string;
@@ -67,13 +68,107 @@ export function resolveGeoPlaces(
   if (!text) return { input, mentions: [], requiresClarification: false };
 
   const matches = findMatches(text, catalog);
-  const mentions = matches.map((match) => mentionFromMatch(match));
+  let mentions = matches.map((match) => mentionFromMatch(match));
+
+  // Typo fallback (Task 21): only when exact resolution found no place at all.
+  // A confident single match resolves; an ambiguous one asks — never guesses.
+  if (mentions.length === 0 && catalog === GEO_PLACE_CATALOG) {
+    const fuzzy = fuzzyFallbackMention(text);
+    if (fuzzy) mentions = [fuzzy];
+  }
 
   return {
     input,
     mentions,
     requiresClarification: mentions.some((mention) => mention.requiresClarification),
   };
+}
+
+const GEO_PREPOSITIONS = new Set(["in", "for", "across", "near", "around", "within", "at", "of", "throughout"]);
+const LEADING_SKIP = new Set([
+  "show", "list", "give", "get", "what", "which", "how", "can", "could", "please", "tell",
+  "find", "see", "display", "the", "a", "an", "me", "us", "i", "want", "whats", "wheres",
+]);
+
+type FuzzySpan = { start: number; end: number; text: string; strict: boolean };
+
+/**
+ * Preposition-anchored + place-at-start fuzzy fallback (Task 21). No broad
+ * n-gram sweep: we only fuzzy-match the 1-3 words after a geo preposition and
+ * the leading 1-3 words (after skipping command words). Place-at-start is the
+ * higher false-positive risk, so it demands a tighter edit distance.
+ */
+function fuzzyFallbackMention(input: string): GeoPlaceMention | null {
+  const tokens = tokenizeInput(input);
+  if (tokens.length === 0) return null;
+  const spans: FuzzySpan[] = [];
+  const addSpan = (i: number, len: number, strict: boolean) => {
+    const last = tokens[i + len - 1];
+    if (!last) return;
+    spans.push({ start: tokens[i].start, end: last.end, text: input.slice(tokens[i].start, last.end), strict });
+  };
+
+  for (let i = 0; i < tokens.length; i += 1) {
+    if (!GEO_PREPOSITIONS.has(tokens[i].key)) continue;
+    for (let len = 1; len <= 3 && i + len < tokens.length; len += 1) {
+      const next = tokens[i + len];
+      if (/^\d+$/.test(next.key) || GEO_PREPOSITIONS.has(next.key)) break;
+      addSpan(i + 1, len, false);
+    }
+  }
+  let startIdx = 0;
+  while (startIdx < tokens.length && LEADING_SKIP.has(tokens[startIdx].key)) startIdx += 1;
+  for (let len = 1; len <= 3 && startIdx + len <= tokens.length; len += 1) {
+    const t = tokens[startIdx + len - 1];
+    if (/^\d+$/.test(t.key) || GEO_PREPOSITIONS.has(t.key)) break;
+    addSpan(startIdx, len, true);
+  }
+
+  // Rank: confident before ambiguous, then smaller edit distance, then LONGER
+  // span (more specific). This stops a short sub-span ("san" -> "Man") from
+  // beating the real place ("san antnio" -> "San Antonio").
+  let best: { span: FuzzySpan; result: ReturnType<typeof fuzzyResolvePlace> } | null = null;
+  let bestKey: [number, number, number] | null = null;
+  for (const span of spans) {
+    const trimmed = span.text.trim();
+    if (/^\d+$/.test(trimmed)) continue;
+    const result = fuzzyResolvePlace(span.text);
+    if (!result.best) continue;
+    const cap = span.strict ? 1 : 2; // place-at-start must be within one typo
+    if (result.best.distance > cap) continue;
+    // A short (<=4 char) ambiguous span is noise, not a place — skip it.
+    if (!result.confident && trimmed.length <= 4) continue;
+    const key: [number, number, number] = [result.confident ? 0 : 1, result.best.distance, -trimmed.length];
+    const better = !bestKey || key[0] < bestKey[0] ||
+      (key[0] === bestKey[0] && (key[1] < bestKey[1] || (key[1] === bestKey[1] && key[2] < bestKey[2])));
+    if (better) { best = { span, result }; bestKey = key; }
+  }
+  if (!best || !best.result.best) return null;
+
+  const { span, result } = best;
+  const toCandidate = (entry: GeoPlaceCatalogEntry, confidence: number, reason: string): GeoPlaceCandidate => ({
+    id: entry.id, kind: entry.kind, name: entry.name, state: entry.state,
+    canonicalQuery: entry.canonicalQuery, confidence, reason, source: entry.source, population: entry.dominancePopulation,
+  });
+
+  if (result.confident) {
+    const e = result.best.entry;
+    return {
+      text: span.text, start: span.start, end: span.end,
+      candidates: [toCandidate(e, 0.75, `Fuzzy match: "${span.text}" -> ${e.name}${e.state ? ", " + e.state : ""}`)],
+      requiresClarification: false,
+      reason: `Fuzzy-resolved "${span.text}" to ${e.name}`,
+    };
+  }
+  if (result.needsConfirmation) {
+    return {
+      text: span.text, start: span.start, end: span.end,
+      candidates: result.candidates.slice(0, 4).map((c) => toCandidate(c.entry, 0.5, `Possible match for "${span.text}"`)),
+      requiresClarification: true,
+      reason: `"${span.text}" is close to multiple places -- please confirm which you meant`,
+    };
+  }
+  return null;
 }
 
 function findMatches(input: string, catalog: GeoPlaceCatalogEntry[]): RawMatch[] {

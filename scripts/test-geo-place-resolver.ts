@@ -142,4 +142,25 @@ assert.equal(mention.text, "El Paso");
 assert.equal(mention.candidates.length, 3);
 assert.ok(mention.reason.includes("3 possible places"));
 
+// Task 21b: typo-tolerant fallback (fires only when exact resolution finds nothing).
+{
+  const nola = resolveGeoPlaces("murders in new orlens 2020").mentions[0];
+  assert.ok(nola && /new orleans/i.test(nola.candidates[0].name), "new orlens -> New Orleans");
+  assert.equal(nola.requiresClarification, false, "confident typo resolves without asking");
+}
+{
+  const sa = resolveGeoPlaces("car theft in san antnio 2021").mentions[0];
+  assert.ok(sa && /san antonio/i.test(sa.candidates[0].name), "san antnio -> San Antonio (longer confident span beats short sub-span)");
+}
+{
+  // place-at-start extension.
+  const nola2 = resolveGeoPlaces("new orlens crime rate").mentions[0];
+  assert.ok(nola2 && /new orleans/i.test(nola2.candidates[0].name), "leading typo resolves");
+}
+{
+  // no place -> no fuzzy false match.
+  assert.equal(resolveGeoPlaces("homicide trends nationally").mentions.length, 0, "non-place query stays unresolved");
+  assert.equal(resolveGeoPlaces("show me robbery data").mentions.length, 0, "command words are not fuzzy-matched");
+}
+
 console.log("geo place resolver tests passed");
