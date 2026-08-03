@@ -665,6 +665,13 @@ export async function POST(req: NextRequest) {
     explanation = hateCrimeCaveats(sql, explanation);
     explanation = applyResultDisclosures({ explanation, question, sql, rows, tab: "hate_crime" });
 
+    const finalNarrative = sanitizeUserFacingNarrative(explanation, claude.title);
+    if (finalNarrative.blocked) {
+      routeGuardrailsFired.push("internal-leak-firewall-result");
+      console.warn(`[hate_crime][internal-leak-firewall] Replaced result narrative: ${explanation}`);
+    }
+    explanation = finalNarrative.explanation || "";
+    claude.title = finalNarrative.title || claude.title || "Results";
     writeLog(question, sql, rows.length, null, totalMs, explanation, "hate_crime", routeGuardrailsFired, "haiku-4.5", sessionId);
 
     // Cache successful responses (only standalone questions)

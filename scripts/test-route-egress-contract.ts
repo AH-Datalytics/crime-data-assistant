@@ -29,6 +29,8 @@ for (const file of routes.slice(1)) {
   const disclosure = source.indexOf("applyResultDisclosures");
   const finalSanitizer = source.lastIndexOf("sanitizeUserFacingNarrative");
   assert.ok(disclosure >= 0 && finalSanitizer > disclosure, `${file} result path must sanitize after disclosure`);
+  assert.match(source, /internal-leak-firewall-result/, `${file} must tag result-path firewall events`);
+  assert.ok(source.includes("console.warn") && source.includes("internal-leak-firewall"), `${file} must log result-path firewall events`);
 }
 
 console.log("route egress contract tests: passed");

@@ -1200,6 +1200,13 @@ export async function POST(req: NextRequest) {
     // Sanitize any leaked SQL/JSON
     explanation = sanitizeExplanation(explanation);
 
+    const finalNarrative = sanitizeUserFacingNarrative(explanation, claude.title);
+    if (finalNarrative.blocked) {
+      routeGuardrailsFired.push("internal-leak-firewall-result");
+      console.warn(`[shr][internal-leak-firewall] Replaced result narrative: ${explanation}`);
+    }
+    explanation = finalNarrative.explanation || "";
+    claude.title = finalNarrative.title || claude.title || "Results";
     writeLog(question, sql, rows.length, null, totalMs, explanation, "shr", [...new Set([...guardrailResult.fired, ...routeGuardrailsFired])], "haiku-4.5", sessionId);
 
     // Cache successful responses (only standalone questions)
