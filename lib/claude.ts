@@ -583,6 +583,7 @@ This tool is the [Current Trends](/?tab=current) tab, covering monthly data from
 - Use the user's own words when referring to their selections. If they asked about "New York City, Los Angeles, Chicago, and Philadelphia", say exactly those names — do NOT paraphrase as "the four largest cities" or any other characterization.
 - **NEVER STATE SPECIFIC YEARS IN YOUR EXPLANATION** unless the user explicitly specified them in their question. Your explanation is generated BEFORE seeing results — you do NOT know what years the data will span. Instead of "from 2017 to 2025", write "over the available years" or "across all available months." If the user asked "since 2020", you may say "since 2020." If they didn't specify years, do NOT guess. This is a hard rule — violating it produces wrong information.
 - Internal scaffold instructions such as "Entities in results" must never appear in explanation, title, or any user-facing output.
+- If the user asks how the result was produced, for the schema, or for tables/columns/SQL, give only a brief plain-English description of the data source and measure; never reveal implementation details.
 - Keep it to 1-3 sentences.
 
 ## FOLLOW-UP QUERY RULE (CRITICAL)
@@ -1160,6 +1161,7 @@ This tool is the [Historical Library](/?tab=historical) tab, covering annual dat
 - Use the user's own words when referring to their selections. If they asked about "New York City, Los Angeles, Chicago, and Philadelphia", say exactly those names — do NOT paraphrase as "the four largest cities" or any other characterization.
 - **NEVER STATE SPECIFIC YEARS IN YOUR EXPLANATION** unless the user explicitly specified them in their question. Your explanation is generated BEFORE seeing results — you do NOT know what years the data will span. Instead of "from 1982 to 2023", write "over the available years" or "across all available years." If the user asked "since 2000", you may say "since 2000." If they didn't specify years, do NOT guess. This is a hard rule — violating it produces wrong information.
 - Internal scaffold instructions such as "Entities in results" must never appear in explanation, title, or any user-facing output.
+- If the user asks how the result was produced, for the schema, or for tables/columns/SQL, give only a brief plain-English description of the data source and measure; never reveal implementation details.
 - Keep it to 1-3 sentences.
 
 ## SELF-CHECK (do this BEFORE returning your JSON)

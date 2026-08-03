@@ -22,7 +22,7 @@ import { answerMetadataQuestion } from "@/lib/metadata-coverage";
 import { validateTablesForTab } from "@/lib/table-allowlist";
 import { applyResultDisclosures, trimTrailingEmptyYearRows } from "@/lib/result-disclosure";
 import { normalizeHistoryAllSources, normalizeHistoryForTab } from "@/lib/chat-history";
-import { containsInternalLeak, INTERNAL_LEAK_SAFE_MESSAGE } from "@/lib/scaffold-helpers";
+import { containsInternalLeak, INTERNAL_LEAK_SAFE_MESSAGE, sanitizeUserFacingNarrative } from "@/lib/scaffold-helpers";
 import { buildNoSqlFallbackMessage } from "@/lib/refusal-safety";
 import { detectFollowupTransform } from "@/lib/followup-transform";
 import { getBlockingGeoClarification } from "@/lib/geo-resolver";
@@ -49,7 +49,16 @@ import { findVerifiedCurrentAgency } from '@/lib/current-agency-availability';
 import { neutralizeUnverifiedAvailabilityClaim } from "@/lib/refusal-safety";
 
 function sseEvent(event: StreamEvent): string {
-  return `data: ${JSON.stringify(event)}\n\n`;
+  const payload = { ...event } as Record<string, unknown>;
+  if (typeof payload.explanation === "string" || typeof payload.title === "string") {
+    const safe = sanitizeUserFacingNarrative(payload.explanation as string | undefined, payload.title as string | undefined);
+    payload.explanation = safe.explanation;
+    payload.title = safe.title;
+  }
+  if (payload.type === "explanation" && typeof payload.text === "string") {
+    payload.text = sanitizeUserFacingNarrative(payload.text, undefined).explanation;
+  }
+  return `data: ${JSON.stringify(payload)}\n\n`;
 }
 import {
   containsInternalScaffold,
@@ -1780,6 +1789,8 @@ export async function POST(req: NextRequest) {
             postExplanation += "\n\nNote: Current Trends data comes from a sample of agencies with consistent reporting — it does not represent complete state or national totals. For comprehensive state-level estimates, try the Historical Library tab.";
           }
           postExplanation = applyResultDisclosures({ explanation: postExplanation, question, sql, rows, tab });
+          const safePost = sanitizeUserFacingNarrative(postExplanation, claude.title || "Results");
+          postExplanation = safePost.explanation || "";
           if (containsInternalScaffold(postExplanation)) {
             console.log(`[query][internal-scaffold] Stripping scaffold text from post-query explanation`);
             postExplanation = stripInternalScaffold(postExplanation) || claude.explanation;
@@ -1819,6 +1830,8 @@ export async function POST(req: NextRequest) {
               retryExplanation += "\n\nNote: Current Trends data comes from a sample of agencies with consistent reporting — it does not represent complete state or national totals. For comprehensive state-level estimates, try the Historical Library tab.";
             }
             retryExplanation = applyResultDisclosures({ explanation: retryExplanation, question, sql, rows, tab });
+            const safeRetry = sanitizeUserFacingNarrative(retryExplanation, claude.title || "Results");
+            retryExplanation = safeRetry.explanation || "";
             if (containsInternalScaffold(retryExplanation)) {
               console.log(`[query][internal-scaffold] Stripping scaffold text from retry explanation`);
               retryExplanation = stripInternalScaffold(retryExplanation) || claude.explanation;

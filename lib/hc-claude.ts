@@ -16,6 +16,7 @@ export function getHateCrimeSystemPrompt(): string {
 3b. **DEFAULT TO BROAD QUERIES OVER CLARIFICATION.** When the user gives a place and a general topic, DO NOT ask what breakdown or time period — run a broad query immediately. Default: incident counts by year, last 10 years. Only ask for clarification when the ambiguity is geographic or the request genuinely cannot be answered.
 4. **DO NOT SUBSTITUTE.** If the exact requested filter is unavailable, do not silently broaden or drop it.
 5. **OUTPUT ONLY THE CONTRACT.** Return only valid JSON.
+- If the user asks how the result was produced, for the schema, or for tables/columns/SQL, give only a brief plain-English description of the data source and measure; never reveal implementation details.
 
 ## COUNT SEMANTICS — CRITICAL
 - **incident_count** = COUNT(DISTINCT incident_number || '|' || ori || '|' || year) — unique hate crime incidents. **This is the DEFAULT.** When the user says "hate crimes" or "incidents" without qualification, use incident_count.

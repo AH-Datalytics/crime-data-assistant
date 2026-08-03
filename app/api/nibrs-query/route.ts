@@ -62,7 +62,13 @@ export async function OPTIONS() {
 }
 
 function jsonResp(data: unknown, status = 200) {
-  return NextResponse.json(data, { status, headers: CORS_HEADERS });
+  const payload: Record<string, any> = { ...((data as Record<string, any>) || {}) };
+  if (typeof payload.explanation === 'string' || typeof payload.title === 'string') {
+    const safe = sanitizeUserFacingNarrative(payload.explanation, payload.title);
+    payload.explanation = safe.explanation;
+    payload.title = safe.title;
+  }
+  return NextResponse.json(payload, { status, headers: CORS_HEADERS });
 }
 
 import {
@@ -70,6 +76,7 @@ import {
   stripInternalScaffold,
   containsInternalLeak,
   INTERNAL_LEAK_SAFE_MESSAGE,
+  sanitizeUserFacingNarrative,
 } from "@/lib/scaffold-helpers";
 import { findNibrsSqlIssues } from "@/lib/sql-guardrails";
 

@@ -19,7 +19,7 @@ import { answerMetadataQuestion } from "@/lib/metadata-coverage";
 import { validateTablesForTab } from "@/lib/table-allowlist";
 import { applyResultDisclosures } from "@/lib/result-disclosure";
 import { normalizeHistoryForTab } from "@/lib/chat-history";
-import { containsInternalLeak, INTERNAL_LEAK_SAFE_MESSAGE } from "@/lib/scaffold-helpers";
+import { containsInternalLeak, INTERNAL_LEAK_SAFE_MESSAGE, sanitizeUserFacingNarrative } from "@/lib/scaffold-helpers";
 import { buildNoSqlFallbackMessage } from "@/lib/refusal-safety";
 import { detectFollowupTransform } from "@/lib/followup-transform";
 import { applyChartCustomizations } from "@/lib/chart-customization";
@@ -42,7 +42,13 @@ import { runGuardrails } from "@/lib/guardrails";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function jsonResp(data: Record<string, any> | QueryError, status = 200) {
-  return NextResponse.json(data, { status });
+  const payload: Record<string, any> = { ...(data as Record<string, any>) };
+  if (typeof payload.explanation === 'string' || typeof payload.title === 'string') {
+    const safe = sanitizeUserFacingNarrative(payload.explanation, payload.title);
+    payload.explanation = safe.explanation;
+    payload.title = safe.title;
+  }
+  return NextResponse.json(payload, { status });
 }
 
 /** Mandatory caveats appended to every hate crime response */
