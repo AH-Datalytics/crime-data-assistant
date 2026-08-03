@@ -647,6 +647,9 @@ export async function POST(req: NextRequest) {
         });
       }
     }
+    // Align the title's year range to the returned data BEFORE building the
+    // chart, so the rendered chart title (config.title) is corrected too.
+    claude.title = alignTitleYearRange(claude.title, rows);
     // Build chart config
     const chartConfig = applyChartCustomizations({
       type: (claude.chartType || "none") as "bar" | "line" | "pie" | "stacked_bar" | "none",

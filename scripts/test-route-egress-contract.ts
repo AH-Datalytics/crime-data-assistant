@@ -33,4 +33,21 @@ for (const file of routes.slice(1)) {
   assert.ok(source.includes("console.warn") && source.includes("internal-leak-firewall"), `${file} must log result-path firewall events`);
 }
 
+// Title alignment must run BEFORE the chart config is built, or the rendered
+// chart title keeps the model's stale year range (production hate-crime bug).
+const chartBuilder: Record<string, string> = {
+  "app/api/query/route.ts": "buildChartConfig",
+  "app/api/nibrs-query/route.ts": "buildNibrsChartConfig",
+  "app/api/hc-query/route.ts": "applyChartCustomizations",
+};
+for (const [file, builder] of Object.entries(chartBuilder)) {
+  const source = fs.readFileSync(file, "utf8");
+  const align = source.indexOf("alignTitleYearRange(claude.title");
+  // Main model-path chart build is the LAST occurrence (nibrs also has an
+  // earlier deterministic-path build that returns before the title step).
+  const chart = source.lastIndexOf(builder + "(");
+  assert.ok(align >= 0, `${file} must align the title year range`);
+  assert.ok(chart >= 0 && align < chart, `${file} must align the title BEFORE building the main-path chart (${builder})`);
+}
+
 console.log("route egress contract tests: passed");
