@@ -1421,7 +1421,7 @@ const GUARDRAILS: Guardrail[] = [
     },
     message: (ctx) => {
       if (ctx.tab === "shr") return "The user asked for rates but the SQL does not calculate a per-capita rate. Use ROUND(COUNT(*) * 100000.0 / NULLIF(AVG(i.population), 0), 1) for single-agency SHR rates. For state/national aggregate rates, join state_population by state/year or use state = 'US' for national denominators.";
-      if (ctx.tab === "nibrs") return "The user asked for rates but the SQL does not calculate a per-capita rate. JOIN the agencies table to get population, then use ROUND(SUM(count) * 100000.0 / population, 1). For state-level rates, redirect to the Historical Library tab.";
+      if (ctx.tab === "nibrs") return "The user asked for rates but the SQL does not calculate a per-capita rate. JOIN agencies to get population, then use ROUND(SUM(count) * 100000.0 / denominator, 1). For state-level NIBRS rates when the user explicitly insists on NIBRS, join nibrs_agency_completeness c to agencies a on ori and year and use SUM(a.population * c.months_reported / 12.0) as the adjusted reporting population. Explain that this is not the full official state population; Historical is preferred for complete statewide rankings. Do not recompute reporting months from summary_city_monthly.";
       return "The user asked for rates/per capita but the SQL does not reference population data. JOIN agency_population (Current Trends) or use the population column (Historical) and divide by population to calculate the rate.";
     },
   },

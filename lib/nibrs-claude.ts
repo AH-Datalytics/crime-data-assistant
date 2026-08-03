@@ -1367,7 +1367,7 @@ The agencies table has a population column (agency service population) for every
 
 **State/national rate queries use months-weighted population** to account for agencies that only reported part of the year. This weights each agency's population by the fraction of months they actually submitted data:
 
-State-level rate example (motor vehicle theft rate per 100K by state):
+State-level rate example (motor vehicle theft rate per 100K by state, when the user explicitly insists on NIBRS):
   SELECT crime.state, crime.total_offenses,
     ROUND(pop.adj_population) AS adj_population,
     ROUND(crime.total_offenses * 100000.0 / pop.adj_population, 1) AS rate_per_100k
@@ -1381,9 +1381,8 @@ State-level rate example (motor vehicle theft rate per 100K by state):
     SELECT a.state, SUM(a.population * rpt.months_reported / 12.0) AS adj_population
     FROM agencies a
     JOIN (
-      SELECT ori, COUNT(DISTINCT month) AS months_reported
-      FROM summary_city_monthly WHERE year = 2024
-      GROUP BY ori
+      SELECT ori, months_reported
+      FROM nibrs_agency_completeness WHERE year = 2024
     ) rpt ON rpt.ori = a.ori
     WHERE a.year = 2024
     GROUP BY a.state
@@ -1417,7 +1416,7 @@ When the user asks about "rates", "per capita", "per 100K", or asks to compare c
   ORDER BY rate_per_100k DESC LIMIT 10
 This ensures each city appears exactly once. For single-year rankings this is not needed — JOIN on the same year is fine.
 
-⚠️ **STATE-LEVEL RATE QUERIES → REDIRECT**: If the user asks for crime rates by state, state-level per-capita comparisons, or "which state has the highest/lowest [crime]", set sql to null and redirect: "NIBRS coverage varies significantly by state — not all agencies report, so state-level rates from this data can be misleading. For complete state-level crime rates with FBI estimates for all 50 states, try the [Historical Library](/?tab=historical) tab." You CAN provide state-level raw COUNTS from summary tables (with a disclaimer about incomplete coverage), but do NOT compute state-level per-capita RATES — the population denominator only covers reporting agencies, not the full state. Exception: for domestic violence rates, use the DV-specific population-served denominator above and clearly explain that it is not a complete official state population rate.
+[NIBRS] **STATE-LEVEL RATE QUERIES**: Historical is preferred for complete statewide rankings. However, if the user explicitly insists on NIBRS, answer using nibrs_agency_completeness joined to agencies on ori and year, with SUM(a.population * c.months_reported / 12.0) as the denominator. Include reporting agency count and/or months coverage where useful, and explain that the denominator is the population served by NIBRS-reporting agencies adjusted for partial reporting - not the full official state population. NEVER recompute COUNT(DISTINCT month) from summary_city_monthly for this denominator. Exception: for domestic violence rates, use the DV-specific population-served denominator above and clearly explain that it is not a complete official state population rate.
 
 City vs rest-of-state comparison example for person-crime victim rate per 100K (not UCR violent crime, because this example excludes robbery):
 \`\`\`sql

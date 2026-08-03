@@ -55,6 +55,11 @@ function addIndexHint(sql: string, table: string, index: string): string {
 
 export function optimizeNibrsSql(sql: string): string {
   let optimized = sql;
+  // Use the precomputed completeness table instead of rescanning monthly rollups.
+  optimized = optimized.replace(
+    /SELECT\s+ori\s*,\s*COUNT\s*\(\s*DISTINCT\s+month\s*\)\s+AS\s+months_reported\s+FROM\s+summary_city_monthly\s+WHERE\s+year\s*=\s*(\d{4})\s+GROUP\s+BY\s+ori/gi,
+    "SELECT ori, months_reported FROM nibrs_agency_completeness WHERE year = $1"
+  );
   for (const rule of ORI_SCOPED_RULES) optimized = addIndexHint(optimized, rule.table, rule.oriIndex);
   return routeNibrsRollupSql(optimized).sql;
 }
