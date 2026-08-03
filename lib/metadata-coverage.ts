@@ -69,7 +69,8 @@ function asksContinuousReportingFilter(q: string): boolean {
 }
 
 function asksAnalyticResult(q: string): boolean {
-  return /\b(rate|rates|per\s*(?:100\s*k|100,?000|capita)|highest|lowest|top|bottom|most|least|rank(?:ed|ing)?|trend|trends|compare|comparison)\b/.test(q) ||
+  return /\b(rate|rates|per\s*(?:100\s*k|100,?000|capita)|highest|lowest|top|bottom|most|least|rank(?:ed|ing)?|trend|trends|compare|comparison|safest|riskiest|dangerous|increase[ds]?|increasing|decrease[ds]?|decreasing|declin(?:e|ed|ing)|change[ds]?|rose|fell|grew)\b/.test(q) ||
+    /\b(?:over|under|more than|less than|at least|greater than|fewer than|above|below)\s+[\d,]+\+?\s*(?:k\b|thousand|million|residents|people|population)/.test(q) ||
     /\b(crime|crimes|offense|offenses|homicide|homicides|murder|murders|shooting|shootings|gun violence|robbery|robberies|assault|assaults|burglary|burglaries|theft|thefts|rape|rapes|carjacking|carjackings|arrest|arrests|clearance|clearances|victim|victims)\b/.test(q);
 }
 
@@ -111,7 +112,9 @@ function detectMetadataIntent(question: string): Intent | null {
     if (asksAvailable) return "available_cities";
   }
 
-  const mentionsState = /\bstates?\b/.test(q);
+  // "United States" contains "States" but is a national reference, not a request
+  // for the list of available states — don't let it trigger the states path.
+  const mentionsState = /\bstates?\b/.test(q.replace(/\bunited states\b/g, " "));
   if (mentionsState) {
     if (/\b(missing|not represented|not available|not covered|not included|not in|without data|no data|don't have|do not have|cant tell|can't tell)\b/.test(q) ||
         /\b(?:aren't|are not|isn't|is not)\s+(?:represented|available|covered|included|in)\b/.test(q)) {

@@ -321,5 +321,16 @@ const db = makeDb();
   assert.deepEqual(result.columns, ["agency", "state"]);
 }
 
+// Task 18: analytical questions must NOT be captured by the metadata handler.
+assert.equal(answerMetadataQuestion("current", "which states are safest?", db), null, "safest is analytical");
+assert.equal(answerMetadataQuestion("current", "which states had the highest robbery rate?", db), null, "rate/highest is analytical");
+assert.equal(answerMetadataQuestion("current", "which cities have over 250k population for car theft?", db), null, "population threshold is analytical");
+assert.equal(answerMetadataQuestion("nibrs", "how has crime changed across states?", db), null, "changed is analytical");
+// "United States" must not trigger the available-states path just because it contains "States".
+assert.equal(answerMetadataQuestion("current", "what crime data do you have for the United States?", db), null, "United States is not an available-states request");
+// Genuine coverage questions still route to metadata.
+assert(answerMetadataQuestion("current", "which states do you have data for?", db), "genuine states-coverage still works");
+assert(answerMetadataQuestion("current", "how many states are represented?", db), "state count still works");
+
 db.close();
 console.log("metadata coverage tests passed");
