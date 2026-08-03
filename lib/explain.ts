@@ -342,7 +342,7 @@ Describe what these results contain in one sentence (metric, geography, time ran
  * Validate that entity names in the explanation actually appear in the results.
  * If a hallucinated entity is detected, strip it or replace with generic text.
  */
-function validateExplanationEntities(
+export function validateExplanationEntities(
   explanation: string,
   resultEntities: string[],
   sqlGeos: string[]

@@ -3,8 +3,27 @@ import {
   earliestReturnedYear,
   ensureExplanationOffenseLabel,
   ensureExplanationYearRange,
+  validateExplanationEntities,
 } from "../lib/explain";
 import { extractQueryContext } from "../lib/query-context";
+
+{
+  const absent = validateExplanationEntities(
+    "Results for Baltimore, Los Angeles, New York City, Washington, and Oakland.",
+    ["Baltimore, MD", "Los Angeles, CA", "Washington, DC", "Oakland, CA"],
+    [],
+  );
+  assert.doesNotMatch(absent, /New York City/i);
+  assert.doesNotMatch(absent, /dataset City/i);
+  assert.match(absent, /cities in the dataset/i);
+
+  const present = validateExplanationEntities(
+    "Results for Baltimore, Los Angeles, New York City, Washington, and Oakland.",
+    ["Baltimore, MD", "Los Angeles, CA", "New York City, NY", "Washington, DC", "Oakland, CA"],
+    [],
+  );
+  assert.match(present, /New York City/);
+}
 
 {
   const rows = [
