@@ -17,7 +17,7 @@ import { isSourceEnabled } from "@/lib/sources";
 import { parseRoutingLogMeta } from "@/lib/routing-log-meta";
 import { answerMetadataQuestion } from "@/lib/metadata-coverage";
 import { validateTablesForTab } from "@/lib/table-allowlist";
-import { applyResultDisclosures } from "@/lib/result-disclosure";
+import { alignTitleYearRange, applyResultDisclosures } from "@/lib/result-disclosure";
 import { normalizeHistoryForTab } from "@/lib/chat-history";
 import { containsInternalLeak, INTERNAL_LEAK_SAFE_MESSAGE, sanitizeUserFacingNarrative } from "@/lib/scaffold-helpers";
 import { buildNoSqlFallbackMessage } from "@/lib/refusal-safety";
@@ -647,7 +647,6 @@ export async function POST(req: NextRequest) {
         });
       }
     }
-
     // Build chart config
     const chartConfig = applyChartCustomizations({
       type: (claude.chartType || "none") as "bar" | "line" | "pie" | "stacked_bar" | "none",
@@ -672,6 +671,7 @@ export async function POST(req: NextRequest) {
     }
     explanation = finalNarrative.explanation || "";
     claude.title = finalNarrative.title || claude.title || "Results";
+    claude.title = alignTitleYearRange(claude.title, rows);
     writeLog(question, sql, rows.length, null, totalMs, explanation, "hate_crime", routeGuardrailsFired, "haiku-4.5", sessionId);
 
     // Cache successful responses (only standalone questions)

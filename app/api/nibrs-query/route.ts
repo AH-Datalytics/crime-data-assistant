@@ -21,7 +21,7 @@ import { checkSingleRowTrend } from "@/lib/single-row-trend";
 import { parseRoutingLogMeta } from "@/lib/routing-log-meta";
 import { answerMetadataQuestion } from "@/lib/metadata-coverage";
 import { validateTablesForTab } from "@/lib/table-allowlist";
-import { applyResultDisclosures } from "@/lib/result-disclosure";
+import { alignTitleYearRange, applyResultDisclosures } from "@/lib/result-disclosure";
 import { normalizeHistoryForTab } from "@/lib/chat-history";
 import { pastCompleteCalendarYearsRange } from "@/lib/time-conventions";
 import { detectFollowupTransform } from "@/lib/followup-transform";
@@ -1300,6 +1300,7 @@ export async function POST(req: NextRequest) {
     }
     explanation = finalNarrative.explanation || "";
     claude.title = finalNarrative.title || claude.title || "Results";
+    claude.title = alignTitleYearRange(claude.title, rows);
     const totalMs = Date.now() - claudeStart;
     const firedGuardrails = [...guardrailResult.fired, ...routeGuardrailsFired];
     console.log(`[nibrs][result] model=${activeModelLabel} rows=${rows.length} retries=${retryCount} scaffold_stripped=${scaffoldStripped} guardrails=[${firedGuardrails.join(",")}] total_ms=${totalMs} db_ms=${executionTimeMs}${canaryFlag ? " CANARY" : ""}`);
@@ -1309,7 +1310,6 @@ export async function POST(req: NextRequest) {
     if (!cached && cacheableStandalone) {
       setCache(question, "nibrs", { sql, explanation: claude.explanation, title: claude.title, chartType: claude.chartHint, xAxis: claude.xAxis, yAxis: claude.yAxis ? [claude.yAxis] : undefined, yAxisLabel: claude.yAxisLabel, xAxisLabel: claude.xAxisLabel, colors: claude.colors, annotations: claude.annotations });
     }
-
     // Step 5: Build chart config
     const chartConfig = buildNibrsChartConfig(claude, columns, rows, question);
 

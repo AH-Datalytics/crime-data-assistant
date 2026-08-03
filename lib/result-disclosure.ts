@@ -379,6 +379,22 @@ function yearBoundsFromRows(rows: Record<string, unknown>[]): { min: number; max
   return { min: years[0], max: years[years.length - 1] };
 }
 
+export function alignTitleYearRange<T extends string | null | undefined>(title: T, rows: Record<string, unknown>[]): T {
+  if (title == null) return title;
+  const bounds = yearBoundsFromRows(rows);
+  if (!bounds) return title;
+  const rangePattern = /\b((?:19|20)\d{2})(\s*(?:\u2013|-|to)\s*)((?:19|20)\d{2})\b/;
+  const range = title.match(rangePattern);
+  if (range) {
+    if (Number(range[1]) === bounds.min && Number(range[3]) === bounds.max) return title;
+    return title.replace(rangePattern, String(bounds.min) + range[2] + String(bounds.max)) as T;
+  }
+  const trailingYearPattern = /\b((?:19|20)\d{2})\s*$/;
+  const trailingYear = title.match(trailingYearPattern);
+  if (!trailingYear || Number(trailingYear[1]) === bounds.max) return title;
+  return title.replace(trailingYearPattern, String(bounds.max)) as T;
+}
+
 function hasExplicitEndYear(question: string, year: number): boolean {
   return new RegExp(`\\b(?:to|through|thru|until|and|-)\\s*${year}\\b`, "i").test(question) ||
     new RegExp(`\\b(?:between|from)\\s+(?:19|20)\\d{2}\\s+(?:and|to|through|thru|until|-)\\s+${year}\\b`, "i").test(question);
@@ -556,16 +572,31 @@ export function laggedAnnualRecentYearNote(
   rows: Record<string, unknown>[],
   explanation: string,
   currentYear: number,
+  opts?: { sourceLabel?: string },
 ): string | null {
   const yearCol = ["year", "data_year", "Year"].find((c) => rows[0]?.[c] !== undefined);
-  if (!yearCol) return null;
-  const years = rows.map((r) => Number(r[yearCol])).filter(Number.isFinite);
-  const recent = years.filter((y) => y >= currentYear - 1).sort((a, b) => a - b);
-  if (recent.length === 0) return null;
-  if (/\b(?:incomplete|preliminary|partial|still\s+maturing|published?\s+on\s+a\s+lag)\b/i.test(explanation)) return null;
-  const label = recent.length === 1 ? String(recent[0]) : `${recent[0]}–${recent[recent.length - 1]}`;
-  return `Recent years (${label}) are incomplete and preliminary — the FBI publishes hate-crime data on a lag, so these counts will rise as more agencies report and should not be read as a decline.`;
+  if (!yearCol || /\b(?:incomplete|preliminary|partial|still\s+maturing|published?\s+on\s+a\s+lag)\b/i.test(explanation)) return null;
+  const metricNames = ["incident_count", "incidents", "offense_count", "offenses", "crime_count", "count", "total", "murder", "murders"];
+  const metricKey = metricNames.find((key) => rows.some((row) => Number.isFinite(Number(row[key])))) || Object.keys(rows[0] || {}).find((key) => key !== yearCol && rows.some((row) => Number.isFinite(Number(row[key]))));
+  if (!metricKey) return null;
+  const totals = new Map<number, number>();
+  for (const row of rows) {
+    const year = Number(row[yearCol]); const value = Number(row[metricKey]);
+    if (Number.isFinite(year) && Number.isFinite(value)) totals.set(year, (totals.get(year) || 0) + value);
+  }
+  const priorYears = [...totals.keys()].filter((year) => year < currentYear - 1).sort((a, b) => a - b).slice(-3);
+  if (priorYears.length < 2) return null;
+  const baseline = priorYears.map((year) => totals.get(year)!).sort((a, b) => a - b);
+  const middle = Math.floor(baseline.length / 2);
+  const median = baseline.length % 2 ? baseline[middle] : (baseline[middle - 1] + baseline[middle]) / 2;
+  if (!Number.isFinite(median) || median <= 0) return null;
+  const flaggedYears = [...totals.entries()].filter(([year, value]) => year >= currentYear - 1 && year <= currentYear && value < median * 0.6).map(([year]) => year).sort((a, b) => a - b);
+  if (flaggedYears.length === 0) return null;
+  const label = flaggedYears.length === 1 ? String(flaggedYears[0]) : String(flaggedYears[0]) + "\u2013" + String(flaggedYears[flaggedYears.length - 1]);
+  const source = opts?.sourceLabel ? opts.sourceLabel + " data" : "These data";
+  return "Recent year" + (flaggedYears.length === 1 ? "" : "s") + " (" + label + ") may be incomplete or preliminary \u2014 " + source + " are published on a lag, so counts can rise as more agencies report and the recent drop should not be read as a true decline.";
 }
+
 export function applyResultDisclosures(opts: {
   explanation: string;
   question: string;
@@ -700,6 +731,10 @@ export function applyResultDisclosures(opts: {
 
   if (opts.tab === "hate_crime") {
     const note = laggedAnnualRecentYearNote(opts.rows, explanation, new Date().getFullYear());
+    if (note) explanation = appendSentence(explanation, note);
+  }
+  if (opts.tab === "nibrs" || opts.tab === "historical") {
+    const note = laggedAnnualRecentYearNote(opts.rows, explanation, new Date().getFullYear(), { sourceLabel: opts.tab === "nibrs" ? "NIBRS" : "Historical" });
     if (note) explanation = appendSentence(explanation, note);
   }
   if (returnedPeriod && !new RegExp(returnedPeriod.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i").test(explanation)) {

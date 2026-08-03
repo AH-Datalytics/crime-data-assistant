@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { applyResultDisclosures, laggedAnnualRecentYearNote, trimTrailingEmptyYearRows } from "../lib/result-disclosure";
+import { alignTitleYearRange, applyResultDisclosures, laggedAnnualRecentYearNote, trimTrailingEmptyYearRows } from "../lib/result-disclosure";
 
 {
   const rows = [];
@@ -503,10 +503,32 @@ import { applyResultDisclosures, laggedAnnualRecentYearNote, trimTrailingEmptyYe
     explanation: "National hate crime incidents by year from 2015 onward.",
     question: "how have reported hate crimes trended since 2015?",
     sql: "SELECT year, SUM(incident_count) FROM summary_hate_crime_bias_trend WHERE year >= 2015 GROUP BY year",
-    rows: [{ year: 2024, incident_count: 11689 }, { year: 2025, incident_count: 10647 }, { year: 2026, incident_count: 4806 }],
+    rows: [{ year: 2022, incident_count: 12000 }, { year: 2023, incident_count: 11800 }, { year: 2024, incident_count: 11689 }, { year: 2025, incident_count: 10647 }, { year: 2026, incident_count: 4806 }],
     tab: "hate_crime",
   });
   assert.match(out, /incomplete|preliminary|partial|lag/i);
+}
+
+
+{
+  const nibrsRows = [{ year: 2023, incident_count: 3900 }, { year: 2024, incident_count: 3970 }, { year: 2025, incident_count: 3890 }, { year: 2026, incident_count: 1646 }];
+  const note = laggedAnnualRecentYearNote(nibrsRows, "Annual NIBRS trend.", 2026, { sourceLabel: "NIBRS" });
+  assert.ok(note && /2026/.test(note), "NIBRS sharp recent drop is disclosed");
+  assert.doesNotMatch(note || "", /hate-crime/i, "NIBRS disclosure is source-neutral");
+  const historicalRows = [{ year: 2022, count: 50000 }, { year: 2023, count: 52000 }, { year: 2024, count: 50000 }, { year: 2025, count: 13000 }];
+  assert.ok(laggedAnnualRecentYearNote(historicalRows, "Historical annual trend.", 2026, { sourceLabel: "Historical" }), "Historical sharp recent drop is disclosed");
+}
+{
+  const completeLower = [{ year: 2023, count: 100 }, { year: 2024, count: 100 }, { year: 2025, count: 90 }];
+  assert.equal(laggedAnnualRecentYearNote(completeLower, "Complete annual trend.", 2026), null, "complete-but-lower latest year is not flagged");
+}
+{
+  const rows = [{ year: 2015, count: 1 }, { year: 2025, count: 2 }, { year: 2026, count: 3 }];
+  assert.equal(alignTitleYearRange("U.S. Hate Crime Incidents, 2015\u20132025", rows), "U.S. Hate Crime Incidents, 2015\u20132026");
+  assert.equal(alignTitleYearRange("Murders in Houston, 2015 to 2030", [{ data_year: 2018, count: 1 }, { data_year: 2024, count: 2 }]), "Murders in Houston, 2018 to 2024");
+  assert.equal(alignTitleYearRange("Murders in Houston", rows), "Murders in Houston", "title without a year is unchanged");
+  assert.equal(alignTitleYearRange("Murders in Houston, 2015\u20132025", [{ city: "Houston", count: 1 }]), "Murders in Houston, 2015\u20132025", "rows without a year are unchanged");
+  assert.equal(alignTitleYearRange("Murders in Houston, 2015\u20132026", rows), "Murders in Houston, 2015\u20132026", "matching title is unchanged");
 }
 
 console.log("result disclosure tests passed");
