@@ -3212,6 +3212,32 @@ console.log("\n═══ nested-aggregation-discards-measure ═══\n");
     `fired: ${JSON.stringify(boundedResult.fired)}`);
 }
 
+{
+  const rollingQuestion = "violent crime rolling over 12 months";
+  const badRolling = extractQueryContext(
+    "WITH rolling AS (SELECT year, month, SUM(count) OVER (ORDER BY year, month ROWS BETWEEN 11 PRECEDING AND CURRENT ROW) AS rolling_12 FROM national_monthly WHERE offense IN ('Murder', 'Rape', 'Robbery', 'Aggravated Assault')) SELECT year, month, rolling_12 FROM rolling WHERE year >= 2018",
+    rollingQuestion,
+    "current",
+  );
+  const badRollingResult = runGuardrails(badRolling);
+  assert(
+    "TP: multi-offense national rolling query must aggregate before windowing",
+    badRollingResult.fired.includes("rolling-multi-offense-not-aggregated"),
+    `fired: ${JSON.stringify(badRollingResult.fired)}`,
+  );
+
+  const goodRolling = extractQueryContext(
+    "WITH monthly AS (SELECT year, month, SUM(count) AS monthly_total FROM national_monthly WHERE offense IN ('Murder', 'Rape', 'Robbery', 'Aggravated Assault') GROUP BY year, month), rolling AS (SELECT year, month, SUM(monthly_total) OVER (ORDER BY year, month ROWS BETWEEN 11 PRECEDING AND CURRENT ROW) AS rolling_12 FROM monthly) SELECT year, month, rolling_12 FROM rolling WHERE year >= 2018",
+    rollingQuestion,
+    "current",
+  );
+  const goodRollingResult = runGuardrails(goodRolling);
+  assert(
+    "FP: aggregated multi-offense national rolling query is accepted",
+    !goodRollingResult.fired.includes("rolling-multi-offense-not-aggregated"),
+    `fired: ${JSON.stringify(goodRollingResult.fired)}`,
+  );
+}
 console.log(`SUMMARY: ${pass} passed, ${fail} failed out of ${pass + fail} tests`);
 console.log("=".repeat(60));
 

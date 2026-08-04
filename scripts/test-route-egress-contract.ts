@@ -51,6 +51,14 @@ for (const file of routes) {
   const finalizationCount = (source.match(/finalizeGuardrailTags\(/g) || []).length;
   assert.ok(finalizationCount >= 1, `${file} must finalize guardrail tags before final logging`);
 }
+// National chart metadata must use the latest source month/year, not the
+// requested display start year (7845 exposed the old year >= 2018 behavior).
+assert.match(streaming, /SELECT agency_count as cnt, year, month FROM national_monthly/,
+  "national chart metadata must read the latest source period");
+assert.match(streaming, /ORDER BY year DESC, month DESC/,
+  "national chart metadata must order by the latest source period");
+assert.match(streaming, /latestPopulationYear/,
+  "national population metadata must use the latest source year");
 // Title alignment must run BEFORE the chart config is built, or the rendered
 // chart title keeps the model's stale year range (production hate-crime bug).
 const chartBuilder: Record<string, string> = {

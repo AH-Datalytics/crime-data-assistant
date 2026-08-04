@@ -284,6 +284,25 @@ ORDER BY year, month
 Note: The CTE has NO date filter so the rolling window has full lead-in data. The outer WHERE starts at 2018 (not 2017) because the first 11 months of 2017 don't have a full rolling window.
 **IMPORTANT**: When the user says "rolling 12-month since X" or "rolling since X", X is the **chart/display start year**, NOT the data start. The CTE must always have NO date filter. The outer result must exclude the first 11 lead-in rows so every displayed value is a complete 12-month window; never display partial-window values at the beginning as zeros or totals. The outer WHERE should use year >= X after the complete-window boundary is applied. For example, "rolling 12-month murders since 2020" means: CTE fetches all data, computes the window, then the outer query displays only complete windows from 2020 onward.
 
+### Multi-offense national rolling trend
+When the user asks for a rolling total across multiple offenses (for example, “violent crime rolling over 12 months”), \`national_monthly\` has one row per offense per month. Aggregate those rows to exactly one row per year/month BEFORE applying the window:
+\`\`\`sql
+WITH monthly AS (
+  SELECT year, month, SUM(count) AS monthly_total
+  FROM national_monthly
+  WHERE offense IN ('Murder', 'Rape', 'Robbery', 'Aggravated Assault')
+  GROUP BY year, month
+), rolling AS (
+  SELECT year, month,
+    SUM(monthly_total) OVER (ORDER BY year, month ROWS BETWEEN 11 PRECEDING AND CURRENT ROW) AS rolling_12
+  FROM monthly
+)
+SELECT year, month, rolling_12
+FROM rolling
+WHERE year >= 2018
+ORDER BY year, month
+\`\`\`
+Never apply \`ROWS BETWEEN 11 PRECEDING\` directly to \`national_monthly\` when more than one offense is selected: that produces a 12-row window, not a 12-month window.
 ### Per-state rolling 12-month trend
 Use this when a user asks to split a national rolling trend out by state. Keep the same complete-reporter methodology by joining \`agency_monthly\` to \`sample_agencies\`, and partition the rolling window by state.
 \`\`\`sql

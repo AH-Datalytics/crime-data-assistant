@@ -94,23 +94,28 @@ function getChartMeta(
     if (popYear > RTCI.popMaxYear) popYear = RTCI.popMaxYear;
     if (popYear < RTCI.popMinYear) popYear = RTCI.popMinYear;
 
-    // National queries — use agency_count from the most recent completed month
+    // National queries — use the agency count and population for the latest
+    // month actually present in the source, not the query display start year.
     if (sqlLower.includes("national_monthly")) {
       const row = db
         .prepare(
-          `SELECT agency_count as cnt FROM national_monthly
+          `SELECT agency_count as cnt, year, month FROM national_monthly
            WHERE offense = 'Murder'
            ORDER BY year DESC, month DESC
            LIMIT 1`
         )
-        .get() as { cnt: number } | undefined;
+        .get() as { cnt: number; year: number; month: number } | undefined;
+      const latestPopulationYear = Math.min(
+        Math.max(row?.year ?? RTCI.maxYear, RTCI.popMinYear),
+        RTCI.popMaxYear,
+      );
       const popRow = db
         .prepare(
           `SELECT SUM(p.population) as pop FROM agency_population p
            JOIN sample_agencies sa ON sa.ori = p.ori
            WHERE p.year = ?`
         )
-        .get(popYear) as { pop: number | null } | undefined;
+        .get(latestPopulationYear) as { pop: number | null } | undefined;
       return { agencyCount: row?.cnt ?? 0, population: popRow?.pop ?? null };
     }
 

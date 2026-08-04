@@ -2870,7 +2870,23 @@ const GUARDRAILS: Guardrail[] = [
     message: () =>
       "[SYSTEM: The user asked for a rolling monthly total, but the SQL collapses the result to annual rows. Keep year and month in the final SELECT and GROUP BY, compute the rolling window over monthly rows, and filter only after the window is computed. Return one rolling value per month, not annual totals.]",
   },
-  // Window LAG/LEAD filter-before-window bug
+  // A national multi-offense rolling window must aggregate the offense rows
+  // to one row per month before applying ROWS. national_monthly is keyed by
+  // year, month, offense, so a window directly over offense-filtered rows
+  // rolls over rows rather than months.
+  {
+    name: "rolling-multi-offense-not-aggregated",
+    tabs: ["current"],
+    match: (ctx) => {
+      if (!/\brolling\b|\bmoving\b/i.test(ctx.question)) return false;
+      if (!/\bnational_monthly\b/i.test(ctx.sql)) return false;
+      if (!/\boffense\s+IN\s*\(/i.test(ctx.sql)) return false;
+      if (!/\bROWS\s+BETWEEN\s+\d+\s+PRECEDING\s+AND\s+CURRENT\s+ROW\b/i.test(ctx.sql)) return false;
+      return !/\bGROUP\s+BY\b[\s\S]*?\byear\b[\s,]*\bmonth\b/i.test(ctx.sql);
+    },
+    message: () =>
+      "[SYSTEM: This national rolling query selects multiple offense rows per month before applying the window. First aggregate SUM(count) by year, month in a monthly CTE, then apply the rolling window to that one-row-per-month result. Filter the displayed date range only after the window is computed.]",
+  },  // Window LAG/LEAD filter-before-window bug
   {
     name: "window-lag-filter-before-window",
     tabs: ["current", "historical", "nibrs", "shr"],
