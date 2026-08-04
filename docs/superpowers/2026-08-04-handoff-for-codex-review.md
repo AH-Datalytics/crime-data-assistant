@@ -4,6 +4,15 @@
 **dev HEAD:** `64d3894` — one commit ahead of production, operational-only (replay harness), inert in the release tree
 **Verification standard used all session:** every claim measured against production data or the real code path, not inferred. Where I asserted something without measuring it, I was wrong at least four times — see §5.
 
+**Related documents**
+
+| Document | Status |
+|---|---|
+| [`plans/2026-08-03-followup-policy-and-response-firewall.md`](plans/2026-08-03-followup-policy-and-response-firewall.md) | **Canonical record for Tasks 1–22** — the reliability backlog shipped 08-03/08-04, including the 7674 instruction-boundary leak, Suffolk clarifier, hate-crime partial-year work, and Tasks 16–22 (completeness, grain, metadata routing, schema validation, missing-year disclosure, typo tolerance, monitoring). Read this for anything predating today's fixes. |
+| [`specs/2026-08-04-single-year-retry-and-cache-tag-spec.md`](specs/2026-08-04-single-year-retry-and-cache-tag-spec.md) | Open — not implemented |
+| [`specs/2026-08-04-rate-denominator-fanout-spec.md`](specs/2026-08-04-rate-denominator-fanout-spec.md) | Implemented (`7ddbfb2`, `2fc5d58`) |
+| [`specs/2026-08-04-structured-response-assembly-design.md`](specs/2026-08-04-structured-response-assembly-design.md) | Cancelled — retained as history; §1a records why |
+
 ---
 
 ## 1. Shipped today (all deployed and production-verified)
