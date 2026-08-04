@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { alignTitleYearRange, applyResultDisclosures, laggedAnnualRecentYearNote, trimTrailingEmptyYearRows } from "../lib/result-disclosure";
+import { alignTitleYearRange, applyResultDisclosures, laggedAnnualRecentYearNote, missingLowerBoundNote, trimTrailingEmptyYearRows } from "../lib/result-disclosure";
 
 {
   const rows = [];
@@ -540,6 +540,21 @@ import { alignTitleYearRange, applyResultDisclosures, laggedAnnualRecentYearNote
   // victim_count is a recognized metric column (NIBRS victim trends).
   const vrows = [{ year: 2023, victim_count: 3900 }, { year: 2024, victim_count: 3970 }, { year: 2025, victim_count: 3890 }, { year: 2026, victim_count: 1646 }];
   assert.ok(laggedAnnualRecentYearNote(vrows, "NIBRS victim trend.", 2026, { sourceLabel: "NIBRS" }), "victim_count drives the sharp-drop gate");
+}
+
+{
+  const note = missingLowerBoundNote("violent crime from 2016 to present", "SELECT year FROM crime WHERE year >= 2016", [{ year: 2017, count: 10 }, { year: 2025, count: 20 }]);
+  assert.equal(note, "Although the query covered 2016 onward, this source returned data beginning in 2017.");
+  const out = applyResultDisclosures({
+    explanation: "Violent crime trends.",
+    question: "violent crime from 2016 to present",
+    sql: "SELECT year, count FROM crime WHERE year >= 2016",
+    rows: [{ year: 2017, count: 10 }, { year: 2025, count: 20 }],
+    tab: "historical",
+  });
+  assert.match(out, /Although the query covered 2016 onward, this source returned data beginning in 2017\./);
+  assert.equal(missingLowerBoundNote("violent crime from 2017 onward", "SELECT year FROM crime WHERE year >= 2017", [{ year: 2017, count: 10 }]), null);
+  assert.equal(missingLowerBoundNote("show violent crime trends", "SELECT year FROM crime", [{ year: 2017, count: 10 }]), null);
 }
 
 console.log("result disclosure tests passed");

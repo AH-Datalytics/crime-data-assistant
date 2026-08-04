@@ -379,6 +379,36 @@ function yearBoundsFromRows(rows: Record<string, unknown>[]): { min: number; max
   return { min: years[0], max: years[years.length - 1] };
 }
 
+function requestedLowerBoundYear(question: string, sql: string): number | null {
+  const questionPatterns = [
+    /\b(?:since|from|starting(?:\s+in)?|beginning(?:\s+in)?)\s+(?:the\s+year\s+)?((?:19|20)\d{2})\b/i,
+    /\b((?:19|20)\d{2})\s*(?:-|\u2013|\u2014|to|through|thru)\s*(?:19|20)\d{2}\b/i,
+    /\bbetween\s+((?:19|20)\d{2})\s+and\s+(?:19|20)\d{2}\b/i,
+  ];
+  for (const pattern of questionPatterns) {
+    const match = question.match(pattern);
+    if (match) return Number(match[1]);
+  }
+  const between = sql.match(/\b(?:year|data_year)\s+BETWEEN\s+((?:19|20)\d{2})\s+AND\s+(?:19|20)\d{2}/i);
+  if (between) return Number(between[1]);
+  const lower = sql.match(/\b(?:year|data_year)\s*>=\s*((?:19|20)\d{2})\b/i);
+  if (lower) return Number(lower[1]);
+  const exclusiveLower = sql.match(/\b(?:year|data_year)\s*>\s*((?:19|20)\d{2})\b/i);
+  if (exclusiveLower) return Number(exclusiveLower[1]) + 1;
+  return null;
+}
+
+export function missingLowerBoundNote(
+  question: string,
+  sql: string,
+  rows: Record<string, unknown>[],
+): string | null {
+  const requestedStart = requestedLowerBoundYear(question, sql);
+  const returnedBounds = yearBoundsFromRows(rows);
+  if (requestedStart === null || returnedBounds === null || returnedBounds.min <= requestedStart) return null;
+  return "Although the query covered " + requestedStart + " onward, this source returned data beginning in " + returnedBounds.min + ".";
+}
+
 export function alignTitleYearRange<T extends string | null | undefined>(title: T, rows: Record<string, unknown>[]): T {
   if (title == null) return title;
   const bounds = yearBoundsFromRows(rows);
@@ -759,6 +789,11 @@ export function applyResultDisclosures(opts: {
   }
 
   explanation = alignThroughYearWithRows(explanation, opts.question, opts.rows);
+
+  const missingLowerBound = missingLowerBoundNote(opts.question, opts.sql, opts.rows);
+  if (missingLowerBound && !explanation.includes("Although the query covered")) {
+    explanation = appendSentence(explanation, missingLowerBound);
+  }
 
   const period = yearRangeFromRows(opts.rows) || yearRangeFromSql(opts.sql);
   if (period) {
