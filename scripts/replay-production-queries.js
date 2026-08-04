@@ -128,6 +128,64 @@ const REPLAYS = [
     ],
   },
 
+  // --- Wrong-number classes (release 20260804_204514) -----------------------
+  // These assert on the FINAL SQL, not just the narrative, because both bugs
+  // produced confident prose over silently wrong values.
+  {
+    // Class A: a window over offense-keyed rows rolls over rows, not months.
+    // Pre-fix log 7845 returned 404 rows (101 months x 4 offenses) of wrong
+    // "12-month rolling" values.
+    id: "rolling-multi-offense",
+    question: "violent crime rolling over 12 months",
+    source: "Current Trends",
+    assert: (row) => [
+      [
+        /GROUP\s+BY\s+(?:\w+\.)?year\s*,\s*(?:\w+\.)?month/i.test(row.sql),
+        "must aggregate to one row per month before the window",
+      ],
+      [row.rows > 0 && row.rows < 150, `one row per month expected, got ${row.rows} (was 404 pre-fix)`],
+      [!/dataset City|cities in the dataset/i.test(row.response), "no place garbling"],
+    ],
+  },
+  {
+    // Class B: SUM(population) across an agency_monthly join multiplies the
+    // denominator by months x offenses. Pre-fix the national murder rate read
+    // ~0.63 per 100k against a correct ~7.54 (denominator 1.39 billion).
+    id: "rate-denominator",
+    question: "annual murder rate nationwide and in Baltimore since 2017",
+    source: "Current Trends",
+    // "Baltimore" is ambiguous (city vs county); the app clarifies before submit,
+    // and the clarifier rewrites the question that reaches the log.
+    clarify: "Baltimore city",
+    loggedQuestion: "annual murder rate nationwide and in Baltimore city since 2017",
+    assert: (row) => {
+      // Mirror the guardrail's actual condition. Summing population is only a
+      // fan-out when agency_population is joined to agency_monthly; there are
+      // three correct idioms, all of which must pass:
+      //   1. dedupe first  — SELECT DISTINCT ori, population
+      //   2. MAX(CASE WHEN ... THEN ap.population END) per pivoted column
+      //   3. structural separation — population aggregated in its own CTE, or
+      //      joined to `agencies` (one row per ORI) instead of agency_monthly
+      // An earlier version of this assertion flagged idiom 3 as a failure
+      // (production log 7892), which was a false positive in the test.
+      const joinsMonthlyToPopulation =
+        /agency_monthly[\s\S]{0,600}JOIN\s+agency_population/i.test(row.sql);
+      const sumsPopulation = /SUM\s*\(\s*\w*\.?population\s*\)/i.test(row.sql);
+      const deduped =
+        /DISTINCT[\s\S]{0,120}population|MAX\s*\(\s*CASE[\s\S]{0,120}population/i.test(row.sql);
+      const fanout = joinsMonthlyToPopulation && sumsPopulation && !deduped;
+      const tags = (row.guardrails || "").split(",").map((t) => t.trim()).filter(Boolean);
+      return [
+        [!fanout, "final SQL must not sum agency_population across the agency_monthly join"],
+        [
+          !tags.includes("implausible-population-denominator"),
+          "denominator plausibility backstop must not trip",
+        ],
+        [row.rows > 0, "must return rows"],
+      ];
+    },
+  },
+
   // --- Cache-behavior diagnostics -------------------------------------------
   // Log 7802 resolved "new orlens" correctly but recorded NO geo-typo-corrected
   // tag, most likely because the response was served from cache and the tag is
@@ -216,7 +274,7 @@ async function waitForNewRow(sinceId, expectedTab, expectedQuestion, timeoutMs =
     const tabClause = expectedTab ? ` AND tab='${sqlQuote(expectedTab)}'` : "";
     const rows = sqlite(
       `SELECT id, tab, rows AS rowCount, COALESCE(guardrails,'') AS guardrails, ` +
-        `COALESCE(response,'') AS response, question FROM query_log ` +
+        `COALESCE(response,'') AS response, question, COALESCE(sql,'') AS sql FROM query_log ` +
         `WHERE id > ${sinceId}${tabClause} ` +
         `AND lower(trim(question)) = lower(trim('${sqlQuote(expectedQuestion)}')) ` +
         `ORDER BY id ASC LIMIT 1;`
@@ -238,6 +296,7 @@ async function waitForNewRow(sinceId, expectedTab, expectedQuestion, timeoutMs =
         guardrails: r.guardrails || "",
         response: r.response || "",
         question: r.question || "",
+        sql: r.sql || "",
       };
     }
     await new Promise((res) => setTimeout(res, 3000));
@@ -246,11 +305,36 @@ async function waitForNewRow(sinceId, expectedTab, expectedQuestion, timeoutMs =
 }
 
 // ---------------------------------------------------------------- UI driving
-async function submitQuestion(page, question, sourceName) {
+async function submitQuestion(page, question, sourceName, clarify) {
   const box = page.locator('input[type="text"], textarea').first();
   await box.click();
   await box.fill("");
   await box.fill(question);
+  await page.waitForTimeout(1200);
+
+  // An ambiguous place REPLACES the Ask button with a geography clarifier —
+  // e.g. "annual murder rate ... in Baltimore" renders "Baltimore city" /
+  // "Baltimore County" / "Clarify first" and Ask disappears entirely. That is
+  // correct product behavior, not a failure, so resolve it before submitting.
+  const askButton = page.locator("button").filter({ hasText: /^Ask$/ });
+  if ((await askButton.count().catch(() => 0)) === 0) {
+    if (!clarify) {
+      throw new Error(
+        "Ask button absent and no `clarify` choice given — the question is ambiguous. " +
+          "Add clarify: '<button text>' to the case, or use an unambiguous question."
+      );
+    }
+    const choice = page
+      .locator("button")
+      .filter({ hasText: clarify })
+      .first();
+    if (!(await choice.count().catch(() => 0))) {
+      throw new Error(`clarifier option ${JSON.stringify(clarify)} not found`);
+    }
+    console.log(`      clarifier -> clicking "${clarify}"`);
+    await choice.click();
+    await page.waitForTimeout(1500);
+  }
 
   // The toolbar submit button is labelled exactly "Ask".
   await page.locator("button").filter({ hasText: /^Ask$/ }).first().click();
@@ -323,8 +407,11 @@ async function submitQuestion(page, question, sourceName) {
     try {
       await page.goto(TARGET_URL, { waitUntil: "domcontentloaded" });
       await page.waitForTimeout(3500);
-      await submitQuestion(page, testCase.question, testCase.source);
-      row = await waitForNewRow(before, expectedTab, testCase.question);
+      await submitQuestion(page, testCase.question, testCase.source, testCase.clarify);
+      // Clarifiers and follow-up planners can REWRITE the question before it is
+      // logged (e.g. "Baltimore" -> "Baltimore city"), so a case may declare the
+      // text it expects to find in query_log.
+      row = await waitForNewRow(before, expectedTab, testCase.loggedQuestion || testCase.question);
     } catch (err) {
       console.log(`      ERROR driving UI: ${err.message}`);
     }
@@ -341,7 +428,8 @@ async function submitQuestion(page, question, sourceName) {
     // Belt-and-braces: the SQL match should guarantee this, but assert it so a
     // future change to the matching clause cannot silently reintroduce
     // cross-attribution against live traffic.
-    if (row.question.trim().toLowerCase() !== testCase.question.trim().toLowerCase()) {
+    const expectedLogged = (testCase.loggedQuestion || testCase.question).trim().toLowerCase();
+    if (row.question.trim().toLowerCase() !== expectedLogged) {
       console.log(`      FAIL: matched row ${row.id} is not ours (question: ${JSON.stringify(row.question)})\n`);
       results.push({ id: testCase.id, ok: false, reason: "row attribution mismatch", logId: row.id });
       continue;
