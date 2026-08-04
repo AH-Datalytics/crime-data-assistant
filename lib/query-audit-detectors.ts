@@ -86,7 +86,20 @@ const D3: QueryAuditDetector = {
     const hasWindow = /rows\s+between\s+\d+\s+preceding/i.test(sql);
     const hasMonthlyShape = /\bmonth\b|data_month/.test(sql) && /group\s+by[\s\S]{0,180}\bmonth\b/i.test(sql);
     const multiOffenseWindow = hasWindow && /national_monthly/.test(sql) && /\boffense\s+in\s*\([^)]{1,120},/i.test(sql) && !/group\s+by[\s\S]{0,180}\bmonth\b/i.test(sql);
-    if ((claimsRolling && (!hasWindow || multiOffenseWindow)) || (claimsMonthly && !hasMonthlyShape) || (claimsAnnual && hasMonthlyShape && !claimsRolling)) {
+    // A window over offense-keyed rows rolls over ROWS, not months, and is wrong
+    // regardless of what the narrative claims. Gating it on claimsRolling missed
+    // production 2305, whose narrative reads "national and Baltimore crime rates
+    // for the years 2018 to 2026" and never says "rolling" — the same
+    // wording-gate mistake fixed in the shipped guardrail (ea8accb), where the
+    // question-gated version caught only 2 of 4 real instances.
+    if (multiOffenseWindow) {
+      return finding(this, row, "SQL applies a rolling window to offense-keyed rows without aggregating to one row per month, so the window spans rows rather than months.");
+    }
+    // The annual-vs-monthly comparison requires the absence of a window. A
+    // window intentionally decouples output grain from row grain, and "for each
+    // year from 2018 to 2025" is PERIOD language rather than a grain claim —
+    // together those produced a false positive on the correct query 1937.
+    if ((claimsRolling && !hasWindow) || (claimsMonthly && !hasMonthlyShape) || (claimsAnnual && hasMonthlyShape && !claimsRolling && !hasWindow)) {
       return finding(this, row, "Narrative time-grain claim does not match the SQL's temporal structure.");
     }
     return null;
