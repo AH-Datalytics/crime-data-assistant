@@ -252,6 +252,15 @@ function getVisitors() {
   }
 }
 
+const RELIABILITY_CATEGORIES = {
+  "requested-monthly-returned-annual": { tag: "grain-mismatch", threshold: 3, count: 0, examples: [] },
+  "year-range-starting-before-returned-data": { tag: "lower-bound-disclosed", threshold: 5, count: 0, examples: [] },
+  "retry-after-invalid-column": { tags: ["schema-column-invalid", "schema-column-corrected"], threshold: 3, count: 0, examples: [] },
+  "metadata-response-to-analytical-question": { tag: "metadata-coverage-answer", threshold: 3, count: 0, examples: [] },
+  "completeness-question-answered": { tag: "completeness-deterministic", threshold: 5, count: 0, examples: [] },
+  "typo-corrected-geography": { tag: "geo-typo-corrected", threshold: 5, count: 0, examples: [] },
+};
+
 function analyze(queries) {
   const issues = [];
   const stats = {
@@ -270,6 +279,7 @@ function analyze(queries) {
     unknownAgencies: [],
     guardrailFires: {},  // { guardrailName: count }
     guardrailTotal: 0,   // queries where at least 1 guardrail fired
+    reliabilityCategories: Object.fromEntries(Object.entries(RELIABILITY_CATEGORIES).map(([name, value]) => [name, { ...value, examples: [] }])),
     resolverTags: {
       "nibrs-place-resolved": 0,
       "nibrs-place-resolution-block": 0,
@@ -481,6 +491,14 @@ function analyze(queries) {
         if (name) {
           stats.guardrailFires[name] = (stats.guardrailFires[name] || 0) + 1;
           if (Object.hasOwn(stats.resolverTags, name)) stats.resolverTags[name]++;
+          for (const category of Object.values(stats.reliabilityCategories)) {
+            const tags = category.tags || [category.tag];
+            if (tags.includes(name)) {
+              category.count++;
+              if (category.examples.length < 3 && q.question) category.examples.push(q.question);
+              break;
+            }
+          }
         }
       }
     }
@@ -496,6 +514,20 @@ function analyze(queries) {
   }
 
   // --- Pattern detection: cluster issues into actionable suggestions ---
+  // Reliability signals are informational until they exceed their documented threshold.
+  for (const [category, signal] of Object.entries(stats.reliabilityCategories)) {
+    if (signal.count > signal.threshold) {
+      issues.push({
+        type: "reliability_" + category,
+        severity: "medium",
+        question: signal.examples[0] || "",
+        detail: category + " fired " + signal.count + " times (threshold " + signal.threshold + "). Examples: " + signal.examples.join(" | "),
+        tab: "mixed",
+        id: null,
+      });
+    }
+  }
+
   const suggestions = [];
 
   // 1. Repeated "no such column" errors → missing feature / schema gap
@@ -1005,6 +1037,16 @@ function buildEmail(stats, issues, visitors, suggestions, weeklyTrends, resolver
     html += `<h2>Guardrails</h2><p style="font-size:13px;color:#4caf50;">No guardrails fired in the past 24 hours.</p>`;
   }
 
+  // Reliability categories: always show counts and examples; only counts above
+  // each inline threshold also become medium-priority action items above.
+  const reliabilityEntries = Object.entries(stats.reliabilityCategories).filter(([, signal]) => signal.count > 0);
+  if (reliabilityEntries.length > 0) {
+    html += "<h2>Reliability Signals</h2><p style=\"font-size:13px;color:#666;\">These are informational counts from deterministic guardrail tags. A signal is escalated to Issues Requiring Attention only when it exceeds its documented threshold.</p><table style=\"width:100%;border-collapse:collapse;font-size:13px;\"><thead><tr style=\"border-bottom:2px solid #ddd;\"><th style=\"text-align:left;padding:8px 6px;\">Category</th><th style=\"text-align:right;padding:8px 6px;\">Count</th><th style=\"text-align:left;padding:8px 6px;\">Examples</th></tr></thead><tbody>";
+    for (const [category, signal] of reliabilityEntries) {
+      html += "<tr style=\"border-bottom:1px solid #eee;\"><td style=\"padding:6px;font-family:monospace;font-size:12px;\">" + escapeHtml(category) + "</td><td style=\"padding:6px;text-align:right;font-weight:600;\">" + signal.count + "</td><td style=\"padding:6px;color:#666;\">" + escapeHtml(signal.examples.join(" | ")) + "</td></tr>";
+    }
+    html += "</tbody></table>";
+  }
   // Issues section
   if (highIssues.length > 0 || mediumIssues.length > 0) {
     html += `<h2>Issues Requiring Attention</h2>`;
