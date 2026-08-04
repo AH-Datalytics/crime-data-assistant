@@ -118,10 +118,30 @@ const D5: QueryAuditDetector = {
     const denominator = /population|\bper\b|\/|100\s*\.0|rate/.test(sql);
     const ratio = /\/|100\s*\*|round\s*\(/.test(sql);
     const monthlyGroup = /group\s+by[\s\S]{0,180}\b(?:month|data_month)\b/i.test(sql);
-    const fanoutShape = /join\s+agency_population|from\s+agency_population/.test(sql)
-      && /sum\s*\(\s*(?:[a-z_]+\.)?population\s*\)/.test(sql)
-      && !monthlyGroup
-      && !/max\s*\(\s*case\s+when|select\s+distinct\s+ori|dedup/i.test(sql);
+    // Mirrors the shipped rate-population-fanout guardrail rather than
+    // approximating it. Three measured corrections over the first draft:
+    //   1939 was missed because !monthlyGroup excluded monthly-grain queries,
+    //     but its inflation is x4 from OFFENSES, not months. The factor is
+    //     (monthlyGroup ? 1 : 12) * offenseCount, and any factor > 1 inflates.
+    //   7463/7518 were missed because a bare `max(case when` anywhere in the
+    //     SQL counted as dedupe; both use MAX(CASE ...) for CITY pivoting while
+    //     still summing population wrongly. The exclusion must be scoped to the
+    //     population term.
+    //   2305 was wrongly flagged: its SUM(ap.population) joins `agencies`
+    //     (one row per ORI), not agency_monthly, so nothing fans out. Requiring
+    //     agency_population to be joined TO agency_monthly excludes it.
+    const populationJoinedToMonthly = /agency_monthly[\s\S]{0,600}join\s+agency_population/.test(sql);
+    const sumsPopulation = /sum\s*\(\s*(?:[a-z_]+\.)?population\s*\)/.test(sql);
+    const populationDeduped =
+      /max\s*\(\s*case\s+when[\s\S]{0,120}population/.test(sql) ||
+      /select\s+distinct[\s\S]{0,60}ori[\s\S]{0,60}population/.test(sql);
+    const offenseList = sql.match(/offense\s+in\s*\(([^)]*)\)/);
+    const offenseCount = offenseList
+      ? Math.max(1, (offenseList[1].match(/'/g) || []).length / 2)
+      : 1;
+    const inflationFactor = (monthlyGroup ? 1 : 12) * offenseCount;
+    const fanoutShape =
+      populationJoinedToMonthly && sumsPopulation && !populationDeduped && inflationFactor > 1;
     if ((rate && !denominator) || (share && !ratio) || fanoutShape) return finding(this, row, fanoutShape
       ? "Rate denominator is summed across a non-monthly agency-population join and may fan out per agency-month."
       : "Narrative claims a rate or share that the SQL does not calculate.");
