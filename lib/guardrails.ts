@@ -2886,7 +2886,34 @@ const GUARDRAILS: Guardrail[] = [
     },
     message: () =>
       "[SYSTEM: This national rolling query selects multiple offense rows per month before applying the window. First aggregate SUM(count) by year, month in a monthly CTE, then apply the rolling window to that one-row-per-month result. Filter the displayed date range only after the window is computed.]",
-  },  // Window LAG/LEAD filter-before-window bug
+  },
+
+  // Prevent agency_population from fanning out across monthly offense rows
+  // when a rate query sums the population directly.
+  {
+    name: "rate-population-fanout",
+    tabs: ["current"],
+    match: (ctx) => {
+      const sql = ctx.sql;
+      if (!/\bagency_monthly\b/i.test(sql)) return false;
+      if (!/\bagency_monthly\b[\s\S]{0,600}\bJOIN\s+agency_population\b/i.test(sql)) return false;
+      const populationSum = /\bSUM\s*\(\s*(?:\w+\s*\.\s*)?population\s*\)/i.test(sql);
+      if (!populationSum) return false;
+      if (/\bMAX\s*\(\s*CASE\s+WHEN[\s\S]*?population/i.test(sql)) return false;
+      if (/SELECT\s+DISTINCT[\s\S]*?\bori\b[\s,]*[\w.]*population/i.test(sql)) return false;
+      const offenseMatch = sql.match(/\boffense\s+IN\s*\(([^)]*)\)/i);
+      const offenseCount = offenseMatch
+        ? Math.max(1, (offenseMatch[1].match(/'[^']+'/g) || []).length)
+        : /\boffense\s*=\s*'[^']+'/i.test(sql) ? 1 : 1;
+      const monthlyGrain = /\bGROUP\s+BY\b[\s\S]*?\bmonth\b/i.test(sql);
+      const factor = (monthlyGrain ? 1 : 12) * offenseCount;
+      return factor > 1;
+    },
+    message: () =>
+      "[SYSTEM: This rate query sums agency_population after joining monthly offense rows, so the denominator is multiplied by months or offenses. Deduplicate population to one row per agency before summing: aggregate agency_monthly to one row per ORI and year in a CTE first, or sum over SELECT DISTINCT ori, population. Do not use SUM(population) over the raw monthly offense join.]",
+  },
+
+  // Window LAG/LEAD filter-before-window bug
   {
     name: "window-lag-filter-before-window",
     tabs: ["current", "historical", "nibrs", "shr"],
