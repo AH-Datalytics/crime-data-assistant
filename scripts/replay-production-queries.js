@@ -127,6 +127,44 @@ const REPLAYS = [
       [row.rows > 0, "must return rows"],
     ],
   },
+
+  // --- Cache-behavior diagnostics -------------------------------------------
+  // Log 7802 resolved "new orlens" correctly but recorded NO geo-typo-corrected
+  // tag, most likely because the response was served from cache and the tag is
+  // pushed only on the non-cached branch. These two cases run back to back with
+  // an IDENTICAL question: the first should miss the cache, the second should
+  // hit it. Marked diagnostic so cache behavior is reported without failing the
+  // Fix 2 / Fix 3 verification run.
+  {
+    id: "diag-typo-uncached",
+    question: "murders in new orlens 2019",
+    source: "Historical Library",
+    diagnostic: true,
+    assert: (row) => {
+      const tags = (row.guardrails || "").split(",").map((t) => t.trim()).filter(Boolean);
+      return [
+        [/new orleans/i.test(row.response), "typo must resolve to New Orleans"],
+        [tags.includes("geo-typo-corrected"), "first (uncached) run should record geo-typo-corrected"],
+      ];
+    },
+  },
+  {
+    id: "diag-typo-cached",
+    // Deliberately identical to diag-typo-uncached so this run hits the cache.
+    question: "murders in new orlens 2019",
+    source: "Historical Library",
+    diagnostic: true,
+    assert: (row) => {
+      const tags = (row.guardrails || "").split(",").map((t) => t.trim()).filter(Boolean);
+      return [
+        [/new orleans/i.test(row.response), "typo must still resolve to New Orleans"],
+        [
+          !tags.includes("geo-typo-corrected"),
+          "second (cached) run is expected to omit geo-typo-corrected — confirms the cache-branch gap",
+        ],
+      ];
+    },
+  },
 ];
 
 // ---------------------------------------------------------------- query_log access
@@ -270,11 +308,21 @@ async function submitQuestion(page, question, sourceName) {
     const checks = testCase.assert(row);
     const failed = checks.filter(([ok]) => !ok).map(([, label]) => label);
     if (failed.length) {
-      failed.forEach((f) => console.log(`      FAIL: ${f}`));
-      results.push({ id: testCase.id, ok: false, reason: failed.join("; "), logId: row.id });
+      // Diagnostic cases report their outcome but never fail the run — they
+      // characterize behavior (e.g. cache-branch tagging) rather than assert a
+      // contract we have already decided to enforce.
+      const level = testCase.diagnostic ? "INFO" : "FAIL";
+      failed.forEach((f) => console.log(`      ${level}: ${f}`));
+      results.push({
+        id: testCase.id,
+        ok: Boolean(testCase.diagnostic),
+        diagnostic: Boolean(testCase.diagnostic),
+        reason: failed.join("; "),
+        logId: row.id,
+      });
     } else {
       console.log(`      PASS (${checks.length} checks)`);
-      results.push({ id: testCase.id, ok: true, logId: row.id });
+      results.push({ id: testCase.id, ok: true, diagnostic: Boolean(testCase.diagnostic), logId: row.id });
     }
     console.log("");
   }
@@ -283,9 +331,13 @@ async function submitQuestion(page, question, sourceName) {
 
   console.log("=== SUMMARY ===");
   for (const r of results) {
-    console.log(`${r.ok ? "PASS" : "FAIL"}  ${r.id}${r.logId ? ` (log ${r.logId})` : ""}${r.ok ? "" : " — " + r.reason}`);
+    const label = r.diagnostic ? (r.reason ? "INFO" : "PASS") : r.ok ? "PASS" : "FAIL";
+    const note = r.reason ? " — " + r.reason : "";
+    console.log(`${label}  ${r.id}${r.logId ? ` (log ${r.logId})` : ""}${note}`);
   }
-  const failures = results.filter((r) => !r.ok).length;
-  console.log(`${results.length - failures}/${results.length} passed`);
+  const gating = results.filter((r) => !r.diagnostic);
+  const failures = gating.filter((r) => !r.ok).length;
+  console.log(`${gating.length - failures}/${gating.length} gating checks passed` +
+    (results.length > gating.length ? ` (${results.length - gating.length} diagnostic, non-gating)` : ""));
   process.exit(failures === 0 ? 0 : 1);
 })();
