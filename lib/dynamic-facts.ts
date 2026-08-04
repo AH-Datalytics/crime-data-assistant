@@ -132,6 +132,15 @@ function loadRtciFacts() {
     const popRange = db.prepare("SELECT MIN(year) AS min_year, MAX(year) AS max_year FROM agency_population").get() as { min_year: number; max_year: number };
     const popRows = (db.prepare("SELECT COUNT(*) AS n FROM agency_population").get() as { n: number }).n;
     const popAgencies = (db.prepare("SELECT COUNT(DISTINCT ori) AS n FROM agency_population").get() as { n: number }).n;
+    const latestMonthly = db.prepare("SELECT year, month FROM agency_monthly ORDER BY year DESC, month DESC LIMIT 1").get() as { year: number; month: number };
+    const latestSamplePopulation = (db.prepare(`
+      SELECT SUM(population) AS pop FROM (
+        SELECT DISTINCT am.ori, p.population
+        FROM agency_monthly am
+        JOIN agency_population p ON p.ori = am.ori AND p.year = ?
+        WHERE am.year = ? AND am.month = ?
+      )
+    `).get(latestMonthly.year, latestMonthly.year, latestMonthly.month) as { pop: number | null }).pop;
     const popYears = popRange.max_year - popRange.min_year + 1;
 
     return {
@@ -144,6 +153,7 @@ function loadRtciFacts() {
       popMaxYear: popRange.max_year,
       popRows,
       popAgencies,
+      latestSamplePopulation,
       popYears,
     };
   } catch (e) {
@@ -151,7 +161,7 @@ function loadRtciFacts() {
     return {
       agencyCount: 669, stateCount: 48, minYear: 2017, maxYear: 2025,
       totalMonths: 108, popMinYear: 1991, popMaxYear: 2026,
-      popRows: 7150, popAgencies: 717, popYears: 10,
+      popRows: 7150, popAgencies: 717, latestSamplePopulation: 115499393, popYears: 10,
     };
   }
 }

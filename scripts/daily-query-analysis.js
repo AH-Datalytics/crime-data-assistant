@@ -259,6 +259,7 @@ const RELIABILITY_CATEGORIES = {
   "metadata-response-to-analytical-question": { tag: "metadata-coverage-answer", threshold: 3, count: 0, examples: [] },
   "completeness-question-answered": { tag: "completeness-deterministic", threshold: 5, count: 0, examples: [] },
   "typo-corrected-geography": { tag: "geo-typo-corrected", threshold: 5, count: 0, examples: [] },
+  "implausible-population-denominator": { tag: "implausible-population-denominator", threshold: 1, count: 0, examples: [] },
 };
 
 function recordReliabilityTag(stats, name, question) {

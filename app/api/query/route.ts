@@ -52,6 +52,7 @@ import { buildCrossSourceFollowupTransform } from '@/lib/cross-source-followup';
 import { plannerModeForSource } from '@/lib/followup-planner-mode';
 import { findVerifiedCurrentAgency } from '@/lib/current-agency-availability';
 import { neutralizeUnverifiedAvailabilityClaim } from "@/lib/refusal-safety";
+import { implausiblePopulationDenominator } from "@/lib/rate-denominator-safety";
 
 function sseEvent(event: StreamEvent): string {
   const payload = { ...event } as Record<string, unknown>;
@@ -1778,6 +1779,10 @@ export async function POST(req: NextRequest) {
         // Step 5: Build chart config + metadata
         const chartConfig = buildChartConfig(claude, columns, rows, question);
         const chartMeta = isHistorical ? getHistoricalChartMeta(db, sql) : getChartMeta(db, sql);
+        if (tab === "current" && implausiblePopulationDenominator(rows, chartMeta?.population, RTCI.latestSamplePopulation)) {
+          firedGuardrails.push("implausible-population-denominator");
+          console.warn("[query][population-denominator] Implausible population denominator detected");
+        }
         const truncated = rows.length >= maxLimit;
 
         // Step 5b2: Single-row trend warning
