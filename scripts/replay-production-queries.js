@@ -186,6 +186,65 @@ const REPLAYS = [
     },
   },
 
+  // --- SHR qualifier drop (release 20260804_215006) --------------------------
+  // 7881 asked for "police fatal shootings" and got ALL firearm homicides:
+  // 14,777 vs a correct 349 for 2023, a 42x overstatement.
+  {
+    id: "shr-police-shootings",
+    question: "What is the trend of police fatal shootings since 2015",
+    source: "Homicide Reports",
+    assert: (row) => {
+      const tags = (row.guardrails || "").split(",").map((t) => t.trim()).filter(Boolean);
+      return [
+        [/Felon Killed by Police/i.test(row.sql), "SQL must filter to officer-involved circumstance"],
+        [tags.includes("shooting-qualifier-police"), "police qualifier must be tagged"],
+        [/police/i.test(row.response), "narrative must name police"],
+        [
+          /Washington Post|Mapping Police Violence/i.test(row.response),
+          "narrative must disclose the SHR undercount",
+        ],
+        [row.rows > 0, "must return rows"],
+      ];
+    },
+  },
+  {
+    // Control: the plain path must be untouched by the qualifier work.
+    id: "shr-plain-shootings",
+    question: "fatal shootings by year since 2015",
+    source: "Homicide Reports",
+    assert: (row) => [
+      [!/Felon Killed by Police/i.test(row.sql), "plain question must NOT add the police filter"],
+      [/firearm/i.test(row.response), "narrative must still describe firearm homicides"],
+      [row.rows > 0, "must return rows"],
+    ],
+  },
+  {
+    // An unsupported qualifier must reach the model, not be substituted.
+    id: "shr-unsupported-qualifier",
+    question: "domestic violence shootings since 2015",
+    source: "Homicide Reports",
+    // "shootings" alone is metric-ambiguous, so a metric clarifier fires first
+    // ("fatal shootings" vs "aggravated assaults with a firearm") and the
+    // question never reaches the deterministic path. Choose the metric so the
+    // qualifier-decline logic is actually exercised.
+    clarify: "fatal shootings",
+    // Choosing the metric rewrites the question that reaches the log.
+    loggedQuestion: "domestic violence fatal shootings since 2015",
+    assert: (row) => {
+      const tags = (row.guardrails || "").split(",").map((t) => t.trim()).filter(Boolean);
+      return [
+        [
+          !tags.includes("deterministic-shooting"),
+          "must NOT take the deterministic shooting path — it cannot express this qualifier",
+        ],
+        // Declining should yield a BETTER answer, not just avoid a wrong one:
+        // the model filters on intimate-partner relationships.
+        [/relationship\s+IN/i.test(row.sql), "model path must filter on relationship for domestic violence"],
+        [row.rows > 0, "must return rows"],
+      ];
+    },
+  },
+
   // --- Cache-behavior diagnostics -------------------------------------------
   // Log 7802 resolved "new orlens" correctly but recorded NO geo-typo-corrected
   // tag, most likely because the response was served from cache and the tag is
@@ -336,8 +395,18 @@ async function submitQuestion(page, question, sourceName, clarify) {
     await page.waitForTimeout(1500);
   }
 
-  // The toolbar submit button is labelled exactly "Ask".
-  await page.locator("button").filter({ hasText: /^Ask$/ }).first().click();
+  // Some clarifiers submit the query on click (the metric clarifier does), and
+  // some leave Ask disabled because another facet is still unresolved. Only
+  // click Ask when it is present AND enabled; otherwise the clarifier already
+  // submitted and clicking would hang on a disabled button.
+  const submit = page.locator("button").filter({ hasText: /^Ask$/ }).first();
+  const submitReady =
+    (await submit.count().catch(() => 0)) > 0 && (await submit.isEnabled().catch(() => false));
+  if (submitReady) {
+    await submit.click();
+  } else {
+    console.log("      (Ask unavailable/disabled — clarifier already submitted)");
+  }
 
   // The chooser may take a moment; it is optional (some questions route directly).
   for (let attempt = 0; attempt < 12; attempt++) {
