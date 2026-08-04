@@ -4,13 +4,15 @@ import path from "node:path";
 import { detectQueryAuditFindings, QUERY_AUDIT_DETECTORS, type QueryAuditRow } from "../lib/query-audit-detectors";
 
 function resolveQueryLogPath(): string {
-  const candidates = [process.env.QUERY_LOG_DB_PATH, path.join(process.cwd(), "query_log.db"), "/opt/nibrs/app/query_log.db"].filter(Boolean) as string[];
+  const argumentIndex = process.argv.indexOf("--db");
+  const argument = argumentIndex >= 0 ? process.argv[argumentIndex + 1] : undefined;
+  const candidates = [argument, process.env.QUERY_LOG_DB_PATH, path.join(process.cwd(), "query_log.db"), "/opt/nibrs/shared/query_log.db", "/opt/nibrs/app/query_log.db"].filter(Boolean) as string[];
   const found = candidates.find((candidate) => fs.existsSync(candidate));
   if (!found) throw new Error(`No query_log.db found. Checked: ${candidates.join(", ")}`);
   return found;
 }
 
-function loadCanonicalValues(): string[] {
+export function loadCanonicalValues(): string[] {
   const candidates = [process.env.SHR_DB_PATH, path.join(process.cwd(), "shr.db"), "/opt/nibrs/shr.db"].filter(Boolean) as string[];
   const source = candidates.find((candidate) => fs.existsSync(candidate) && fs.statSync(candidate).size > 0);
   if (!source) return [];
@@ -53,7 +55,9 @@ function ensureFindingsTable(db: Database.Database): void {
 export function runQueryAudit(dbPath = resolveQueryLogPath()): { total: number; flagged: Record<string, number>; unflagged: Record<string, number> } {
   const db = new Database(dbPath);
   const canonicalValues = loadCanonicalValues();
-  const rows = db.prepare("SELECT id, ts, question, sql, response, rows, guardrails, query_contract, tab FROM query_log ORDER BY id").all() as QueryAuditRow[];
+  const logColumns = new Set((db.prepare("PRAGMA table_info(query_log)").all() as Array<{ name: string }>).map((column) => column.name));
+  const contractExpression = logColumns.has("query_contract") ? "query_contract" : "NULL";
+  const rows = db.prepare(`SELECT id, ts, question, sql, response, rows, guardrails, ${contractExpression} AS query_contract, tab FROM query_log ORDER BY id`).all() as QueryAuditRow[];
   ensureFindingsTable(db);
   const insert = db.prepare(`INSERT INTO audit_findings (query_log_id, ts, severity, category, finding, proposed_fix)
     VALUES (?, ?, ?, ?, ?, ?)
