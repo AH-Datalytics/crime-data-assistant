@@ -78,6 +78,30 @@ function getQueries() {
     .all(cutoff, cutoffEnd);
 }
 
+function getAuditDetectorStats(queries) {
+  const detectors = [
+    ["D1", "qualifier-drop"], ["D2", "place-mismatch"], ["D3", "grain-mismatch"], ["D4", "year-range-mismatch"],
+    ["D5", "metric-aggregate-mismatch"], ["D6", "malformed-label"], ["D7", "refusal-on-answerable"], ["D8", "unresolved-contract-tag"],
+  ];
+  const ids = queries.map((query) => query.id).filter((id) => id !== null && id !== undefined);
+  const idSet = new Set(ids);
+  try {
+    const exists = db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='audit_findings'").get();
+    if (!exists) return detectors.map(([id, category]) => ({ id, category, flagged: 0, unflagged: queries.length, examples: [], status: "uncalibrated" }));
+    const findings = ids.length
+      ? db.prepare(`SELECT query_log_id, category, finding FROM audit_findings WHERE query_log_id IN (${ids.map(() => "?").join(",")})`).all(...ids)
+      : [];
+    return detectors.map(([id, category]) => {
+      const matches = findings.filter((item) => item.category === category && idSet.has(item.query_log_id));
+      const examples = [...new Set(matches.map((item) => queries.find((query) => query.id === item.query_log_id)?.question).filter(Boolean))].slice(0, 3);
+      return { id, category, flagged: new Set(matches.map((item) => item.query_log_id)).size, unflagged: Math.max(0, queries.length - new Set(matches.map((item) => item.query_log_id)).size), examples, status: "uncalibrated" };
+    });
+  } catch (err) {
+    console.warn("Cross-artifact auditor stats unavailable:", err.message);
+    return detectors.map(([id, category]) => ({ id, category, flagged: 0, unflagged: queries.length, examples: [], status: "uncalibrated" }));
+  }
+}
+
 function getResolverWarningAudit() {
   try {
     const exists = db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='resolver_warning_classification'").get();
@@ -301,6 +325,7 @@ function analyze(queries) {
     guardrailFires: {},  // { guardrailName: count }
     guardrailTotal: 0,   // queries where at least 1 guardrail fired
     reliabilityCategories: Object.fromEntries(Object.entries(RELIABILITY_CATEGORIES).map(([name, value]) => [name, { ...value, resolvedCount: 0, resolvedExamples: [], examples: [] }])),
+    auditDetectorStats: [],
     resolverTags: {
       "nibrs-place-resolved": 0,
       "nibrs-place-resolution-block": 0,
@@ -521,6 +546,8 @@ function analyze(queries) {
     msTimes.sort((a, b) => a - b);
     stats.medianMs = msTimes[Math.floor(msTimes.length / 2)];
   }
+
+  stats.auditDetectorStats = getAuditDetectorStats(queries);
 
   // --- Pattern detection: cluster issues into actionable suggestions ---
   // Reliability signals are informational until they exceed their documented threshold.
@@ -1053,6 +1080,14 @@ function buildEmail(stats, issues, visitors, suggestions, weeklyTrends, resolver
     html += "<h2>Reliability Signals</h2><p style=\"font-size:13px;color:#666;\">These are informational counts from deterministic guardrail tags. Unresolved counts are thresholded for attention; resolved retries are reported separately as a prompt-quality signal.</p><table style=\"width:100%;border-collapse:collapse;font-size:13px;\"><thead><tr style=\"border-bottom:2px solid #ddd;\"><th style=\"text-align:left;padding:8px 6px;\">Category</th><th style=\"text-align:right;padding:8px 6px;\">Unresolved</th><th style=\"text-align:right;padding:8px 6px;\">Resolved retries</th><th style=\"text-align:left;padding:8px 6px;\">Examples</th></tr></thead><tbody>";
     for (const [category, signal] of reliabilityEntries) {
       html += "<tr style=\"border-bottom:1px solid #eee;\"><td style=\"padding:6px;font-family:monospace;font-size:12px;\">" + escapeHtml(category) + "</td><td style=\"padding:6px;text-align:right;font-weight:600;\">" + signal.count + "</td><td style=\"padding:6px;text-align:right;\">" + signal.resolvedCount + "</td><td style=\"padding:6px;color:#666;\">" + escapeHtml(signal.examples.join(" | ") + (signal.resolvedExamples.length ? "; resolved: " + signal.resolvedExamples.join(" | ") : "")) + "</td></tr>";
+    }
+    html += "</tbody></table>";
+  }
+  // Cross-artifact auditor is internal-only: it never changes a user response.
+  if (stats.auditDetectorStats && stats.auditDetectorStats.length > 0) {
+    html += "<h2>Cross-artifact Auditor</h2><p style=\"font-size:13px;color:#666;\">Internal, non-gating checks compare each question, SQL, and narrative. Counts are uncalibrated until reviewed; users never see these findings.</p><table style=\"width:100%;border-collapse:collapse;font-size:13px;\"><thead><tr style=\"border-bottom:2px solid #ddd;\"><th style=\"text-align:left;padding:8px 6px;\">Detector</th><th style=\"text-align:right;padding:8px 6px;\">Flagged</th><th style=\"text-align:right;padding:8px 6px;\">Unflagged</th><th style=\"text-align:left;padding:8px 6px;\">Status / examples</th></tr></thead><tbody>";
+    for (const detector of stats.auditDetectorStats) {
+      html += "<tr style=\"border-bottom:1px solid #eee;\"><td style=\"padding:6px;font-family:monospace;font-size:12px;\">" + escapeHtml(detector.id + " " + detector.category) + "</td><td style=\"padding:6px;text-align:right;font-weight:600;\">" + detector.flagged + "</td><td style=\"padding:6px;text-align:right;\">" + detector.unflagged + "</td><td style=\"padding:6px;color:#666;\">" + escapeHtml(detector.status + (detector.examples.length ? ": " + detector.examples.join(" | ") : "")) + "</td></tr>";
     }
     html += "</tbody></table>";
   }
