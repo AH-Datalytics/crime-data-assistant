@@ -191,24 +191,53 @@ function maxLogId() {
   return rows.length ? Number(rows[0].maxId) : 0;
 }
 
-/** Poll until a row with id > sinceId appears (optionally on a specific tab). */
-async function waitForNewRow(sinceId, expectedTab, timeoutMs = 90000) {
+function sqlQuote(value) {
+  return String(value).replace(/'/g, "''");
+}
+
+/**
+ * Poll until OUR row appears: id > sinceId, on the expected tab, AND with a
+ * question matching what we submitted.
+ *
+ * Matching on the question is essential, not cosmetic. nibrsai.com serves live
+ * traffic, so between reading MAX(id) and submitting, a stranger's query can
+ * land first. Without a question match the harness reads that row and asserts
+ * against it — which happened: log 7816 was "Kentucky agencies by population
+ * and type in 2024" from real traffic, and the harness reported it as a failed
+ * typo replay, inventing a product bug that did not exist. A false PASS is
+ * equally possible when a foreign row happens to satisfy loose assertions.
+ *
+ * `id > sinceId` still disambiguates back-to-back replays of an identical
+ * question (the cached/uncached diagnostic pair).
+ */
+async function waitForNewRow(sinceId, expectedTab, expectedQuestion, timeoutMs = 90000) {
   const started = Date.now();
   while (Date.now() - started < timeoutMs) {
-    const tabClause = expectedTab ? ` AND tab='${expectedTab}'` : "";
+    const tabClause = expectedTab ? ` AND tab='${sqlQuote(expectedTab)}'` : "";
     const rows = sqlite(
       `SELECT id, tab, rows AS rowCount, COALESCE(guardrails,'') AS guardrails, ` +
-        `COALESCE(response,'') AS response FROM query_log ` +
-        `WHERE id > ${sinceId}${tabClause} ORDER BY id ASC LIMIT 1;`
+        `COALESCE(response,'') AS response, question FROM query_log ` +
+        `WHERE id > ${sinceId}${tabClause} ` +
+        `AND lower(trim(question)) = lower(trim('${sqlQuote(expectedQuestion)}')) ` +
+        `ORDER BY id ASC LIMIT 1;`
     );
     if (rows.length) {
       const r = rows[0];
+      // Surface interference so a clean-looking run is never silently racing.
+      const foreign = sqlite(
+        `SELECT COUNT(*) AS n FROM query_log WHERE id > ${sinceId} AND id < ${Number(r.id)};`
+      );
+      const skipped = foreign.length ? Number(foreign[0].n) : 0;
+      if (skipped > 0) {
+        console.log(`      note: ${skipped} unrelated row(s) landed first (live traffic) — matched on question text`);
+      }
       return {
         id: Number(r.id),
         tab: r.tab,
         rows: Number(r.rowCount),
         guardrails: r.guardrails || "",
         response: r.response || "",
+        question: r.question || "",
       };
     }
     await new Promise((res) => setTimeout(res, 3000));
@@ -295,15 +324,26 @@ async function submitQuestion(page, question, sourceName) {
       await page.goto(TARGET_URL, { waitUntil: "domcontentloaded" });
       await page.waitForTimeout(3500);
       await submitQuestion(page, testCase.question, testCase.source);
-      row = await waitForNewRow(before, expectedTab);
+      row = await waitForNewRow(before, expectedTab, testCase.question);
     } catch (err) {
       console.log(`      ERROR driving UI: ${err.message}`);
     }
     await page.close();
 
     if (!row) {
-      console.log(`      FAIL: no new query_log row on tab '${expectedTab}' — the query never reached the server\n`);
-      results.push({ id: testCase.id, ok: false, reason: "no new log row" });
+      console.log(
+        `      FAIL: no query_log row on tab '${expectedTab}' matching this question — it never reached the server\n`
+      );
+      results.push({ id: testCase.id, ok: false, reason: "no matching log row" });
+      continue;
+    }
+
+    // Belt-and-braces: the SQL match should guarantee this, but assert it so a
+    // future change to the matching clause cannot silently reintroduce
+    // cross-attribution against live traffic.
+    if (row.question.trim().toLowerCase() !== testCase.question.trim().toLowerCase()) {
+      console.log(`      FAIL: matched row ${row.id} is not ours (question: ${JSON.stringify(row.question)})\n`);
+      results.push({ id: testCase.id, ok: false, reason: "row attribution mismatch", logId: row.id });
       continue;
     }
 
