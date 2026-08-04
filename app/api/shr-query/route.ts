@@ -1065,6 +1065,7 @@ export async function POST(req: NextRequest) {
     // Auto-pivot long-format category data for charting
     // Detects (year, category_col, value_col) and pivots to (year, cat1, cat2, ...)
     const CATEGORY_COLS = ["sex", "race", "weapon_group", "circumstance_group", "off_race", "off_sex", "relationship", "relationship_group", "ethnicity", "off_ethnicity", "weapon", "agency", "state", "state_name"];
+    const comparisonLabels: Record<string, string> = {};
     const categorCol = columns.find(c => CATEGORY_COLS.includes(c));
     const numericCol = columns.find(c => c !== "year" && c !== "month" && !CATEGORY_COLS.includes(c) && typeof rows[0]?.[c] === "number");
     const hasYear = columns.includes("year");
@@ -1085,6 +1086,7 @@ export async function POST(req: NextRequest) {
             grouped.set(key, base);
           }
           const catName = String(r[categorCol] ?? "Unknown").replace(/[^a-zA-Z0-9 ]/g, "").replace(/\s+/g, "_");
+          comparisonLabels[catName] = String(r[categorCol] ?? "Unknown");
           grouped.get(key)![catName] = r[numericCol];
         }
 
@@ -1219,7 +1221,7 @@ export async function POST(req: NextRequest) {
 
     // Fix hallucinated counts using distinct entity detection
     explanation = validateExplanationCount(explanation, rows as Record<string, unknown>[], columns);
-    explanation = applyResultDisclosures({ explanation, question, sql, rows, tab: "shr" });
+    explanation = applyResultDisclosures({ explanation, question, sql, rows, tab: "shr", comparisonLabels });
     if (missingLowerBoundNote(question, sql, rows)) routeGuardrailsFired.push("lower-bound-disclosed");
     const grainCheck = validateGrain(question, rows, sql);
     if (!grainCheck.ok && grainCheck.message) {

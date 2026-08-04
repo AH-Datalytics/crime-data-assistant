@@ -523,6 +523,55 @@ import { alignTitleYearRange, applyResultDisclosures, laggedAnnualRecentYearNote
   assert.equal(laggedAnnualRecentYearNote(completeLower, "Complete annual trend.", 2026), null, "complete-but-lower latest year is not flagged");
 }
 {
+  const rows = [
+    { year: 2020, AsianPacific_Islander: 12, White: 20, Black: 18, American_Indian: 4 },
+    { year: 2021, AsianPacific_Islander: 14, White: 22, Black: 19, American_Indian: 5 },
+  ];
+  const beforeRows = JSON.parse(JSON.stringify(rows));
+  const comparisonLabels = {
+    AsianPacific_Islander: "Asian/Pacific Islander",
+    White: "White",
+    Black: "Black",
+    American_Indian: "American Indian",
+  };
+  const out = applyResultDisclosures({
+    explanation: "Murder victims in Houston by race.",
+    question: "murder victim race in Houston since 2020",
+    sql: "SELECT year, race, victims FROM incidents",
+    rows,
+    tab: "shr",
+    comparisonLabels,
+  });
+  assert.match(out, /Comparison includes: Asian\/Pacific Islander, White, Black, American Indian\./);
+  assert.doesNotMatch(out, /Asianpacific Islander/);
+  assert.deepEqual(rows, beforeRows, "disclosure labels must not mutate rows");
+}
+
+{
+  const out = applyResultDisclosures({
+    explanation: "A comparison of New Orleans and Houston.",
+    question: "compare New Orleans and Houston",
+    sql: "SELECT year, new_orleans, houston FROM incidents",
+    rows: [{ year: 2020, new_orleans: 10, houston: 20 }, { year: 2021, new_orleans: 11, houston: 21 }],
+    tab: "shr",
+  });
+  assert.match(out, /New Orleans/);
+  assert.doesNotMatch(out, /New_Orleans/);
+}
+
+{
+  const text = "Comparison includes: White, Black.";
+  const out = applyResultDisclosures({
+    explanation: text,
+    question: "show White and Black victims",
+    sql: "SELECT race, victims FROM incidents",
+    rows: [{ White: 20, Black: 18 }, { White: 22, Black: 19 }],
+    tab: "shr",
+    comparisonLabels: { White: "White", Black: "Black" },
+  });
+  assert.equal(out, text, "already-complete comparison text stays unchanged");
+}
+{
   const rows = [{ year: 2015, count: 1 }, { year: 2025, count: 2 }, { year: 2026, count: 3 }];
   assert.equal(alignTitleYearRange("U.S. Hate Crime Incidents, 2015\u20132025", rows), "U.S. Hate Crime Incidents, 2015\u20132026");
   assert.equal(alignTitleYearRange("Murders in Houston, 2015 to 2030", [{ data_year: 2018, count: 1 }, { data_year: 2024, count: 2 }]), "Murders in Houston, 2018 to 2024");

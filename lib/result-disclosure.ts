@@ -316,18 +316,25 @@ function labelFromComparisonColumn(column: string): string {
     .replace(/\bLa\b/g, "LA");
 }
 
-function comparisonColumnLabels(rows: Record<string, unknown>[]): string[] {
+function comparisonColumnLabels(
+  rows: Record<string, unknown>[],
+  comparisonLabels?: Record<string, string>,
+): string[] {
   if (rows.length === 0) return [];
   const columns = Object.keys(rows[0]);
   return columns
     .filter((column) => !COMPARISON_EXCLUDED_COLUMNS.has(column.toLowerCase()))
     .filter((column) => !isGenericMetricColumn(column))
     .filter((column) => rows.some((row) => isNumericLike(row[column])))
-    .map(labelFromComparisonColumn);
+    .map((column) => comparisonLabels?.[column] ?? labelFromComparisonColumn(column));
 }
 
-function comparisonDisclosure(explanation: string, rows: Record<string, unknown>[]): string | null {
-  const labels = comparisonColumnLabels(rows);
+function comparisonDisclosure(
+  explanation: string,
+  rows: Record<string, unknown>[],
+  comparisonLabels?: Record<string, string>,
+): string | null {
+  const labels = comparisonColumnLabels(rows, comparisonLabels);
   if (labels.length < 2) return null;
 
   const normalizedExplanation = explanation.toLowerCase();
@@ -633,6 +640,7 @@ export function applyResultDisclosures(opts: {
   sql: string;
   rows: Record<string, unknown>[];
   tab?: string;
+  comparisonLabels?: Record<string, string>;
 }): string {
   let explanation = normalizeDcExplanation(normalizeClearanceRateExplanation(opts.explanation, opts.sql), opts.sql);
   explanation = normalizeStateRankingScope(explanation, opts.rows);
@@ -741,7 +749,7 @@ export function applyResultDisclosures(opts: {
     );
   }
 
-  const comparison = comparisonDisclosure(explanation, opts.rows);
+  const comparison = comparisonDisclosure(explanation, opts.rows, opts.comparisonLabels);
   if (comparison) {
     explanation = appendSentence(explanation, comparison);
   }
