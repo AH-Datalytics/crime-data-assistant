@@ -161,6 +161,9 @@ assert.ok(mention.reason.includes("3 possible places"));
   // no place -> no fuzzy false match.
   assert.equal(resolveGeoPlaces("homicide trends nationally").mentions.length, 0, "non-place query stays unresolved");
   assert.equal(resolveGeoPlaces("show me robbery data").mentions.length, 0, "command words are not fuzzy-matched");
+  // A single leading adjective must not fuzzy-collide with a city ("large" -> "Largo").
+  assert.equal(resolveGeoPlaces("large cities with the most murders 2023").mentions.length, 0, "large cities is a scope, not Largo");
+  assert.equal(resolveGeoPlaces("biggest cities by violent crime").mentions.length, 0, "biggest cities is a scope, not a place");
 }
 
 console.log("geo place resolver tests passed");

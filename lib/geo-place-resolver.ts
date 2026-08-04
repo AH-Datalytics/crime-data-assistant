@@ -116,9 +116,12 @@ function fuzzyFallbackMention(input: string): GeoPlaceMention | null {
       addSpan(i + 1, len, false);
     }
   }
+  // Place-at-start requires >=2 tokens: a single leading word is too
+  // collision-prone (e.g. the adjective "large" is one edit from "Largo"),
+  // while real leading place typos ("new orlens") are multi-word.
   let startIdx = 0;
   while (startIdx < tokens.length && LEADING_SKIP.has(tokens[startIdx].key)) startIdx += 1;
-  for (let len = 1; len <= 3 && startIdx + len <= tokens.length; len += 1) {
+  for (let len = 2; len <= 3 && startIdx + len <= tokens.length; len += 1) {
     const t = tokens[startIdx + len - 1];
     if (/^\d+$/.test(t.key) || GEO_PREPOSITIONS.has(t.key)) break;
     addSpan(startIdx, len, true);
