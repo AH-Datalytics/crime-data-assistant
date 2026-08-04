@@ -3,6 +3,7 @@ import { getHateCrimeDb } from "@/lib/hc-db";
 import { neutralizeUnverifiedAvailabilityClaim } from "@/lib/refusal-safety";
 import { validatePageToken } from "@/lib/page-token";
 import { validateAndSanitize } from "@/lib/sql-safety";
+import { validateSqlSchema } from "@/lib/schema-validation";
 import { logQuery } from "@/lib/rtci-db";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { checkSessionLimit, maybeCleanup } from "@/lib/captcha";
@@ -489,7 +490,7 @@ export async function POST(req: NextRequest) {
               const retryValidation = validateAndSanitize(retryClaude.sql as string);
               if (retryValidation.valid) {
                 const retryContract = runContractValidation(retryValidation.sanitized!);
-                const retrySql = retryContract.sql;
+                let retrySql = retryContract.sql;
                 const retryContractFailure = contractFailureResponse(retryContract, `contract_table_retry_failure:${retryContract.enforced.join(",")}`, tableCheck.fired);
                 if (retryContractFailure) return retryContractFailure;
                 const retryTableCheck = validateTablesForTab(retrySql, "hate_crime", tableDb);
@@ -584,6 +585,15 @@ export async function POST(req: NextRequest) {
       sql = executionContract.sql;
       const executionContractFailure = contractFailureResponse(executionContract, `contract_execution_failure:${executionContract.enforced.join(",")}`);
       if (executionContractFailure) return executionContractFailure;
+      const schemaCheck = validateSqlSchema(db, sql);
+      if (!schemaCheck.ok) {
+        routeGuardrailsFired.push("schema-column-invalid");
+        throw new Error("Schema validation failed: " + schemaCheck.error);
+      }
+      if (schemaCheck.corrected) {
+        sql = schemaCheck.sql;
+        routeGuardrailsFired.push("schema-column-corrected");
+      }
       rows = db.prepare(sql).all() as Record<string, unknown>[];
     } catch (dbErr) {
       const msg = dbErr instanceof Error ? dbErr.message : String(dbErr);
@@ -608,9 +618,18 @@ export async function POST(req: NextRequest) {
           const retryValidation = validateAndSanitize(retryClaude.sql as string);
           if (retryValidation.valid) {
             const retryContract = runContractValidation(retryValidation.sanitized!);
-            const retrySql = retryContract.sql;
+            let retrySql = retryContract.sql;
             const retryContractFailure = contractFailureResponse(retryContract, `contract_db_retry_failure:${retryContract.enforced.join(",")}`);
             if (retryContractFailure) return retryContractFailure;
+            const retrySchemaCheck = validateSqlSchema(db, retrySql);
+            if (!retrySchemaCheck.ok) {
+                  routeGuardrailsFired.push("schema-column-invalid");
+                  throw new Error("Schema validation failed: " + retrySchemaCheck.error);
+                }
+            if (retrySchemaCheck.corrected) {
+              retrySql = retrySchemaCheck.sql;
+              routeGuardrailsFired.push("schema-column-corrected");
+            }
             const retryRows = db.prepare(retrySql).all() as Record<string, unknown>[];
             rows = retryRows;
             sql = retrySql;

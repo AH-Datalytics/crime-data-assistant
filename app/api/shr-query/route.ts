@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getShrDb } from "@/lib/shr-db";
 import { validatePageToken } from "@/lib/page-token";
 import { validateAndSanitize } from "@/lib/sql-safety";
+import { validateSqlSchema } from "@/lib/schema-validation";
 import { logQuery, logResolverWarnings } from "@/lib/rtci-db";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { checkSessionLimit, maybeCleanup } from "@/lib/captcha";
@@ -851,7 +852,7 @@ export async function POST(req: NextRequest) {
               const retryValidation = validateAndSanitize(retryClaude.sql as string);
               if (retryValidation.valid) {
                 const retryContract = runContractValidation(retryValidation.sanitized!);
-                const retrySql = retryContract.sql;
+                let retrySql = retryContract.sql;
                 const retryContractFailure = contractFailureResponse(retryContract, `contract_table_retry_failure:${retryContract.enforced.join(",")}`, tableCheck.fired);
                 if (retryContractFailure) return retryContractFailure;
                 const retryTableCheck = validateTablesForTab(retrySql, "shr", tableDb);
@@ -981,6 +982,15 @@ export async function POST(req: NextRequest) {
       sql = executionContract.sql;
       const executionContractFailure = contractFailureResponse(executionContract, `contract_execution_failure:${executionContract.enforced.join(",")}`);
       if (executionContractFailure) return executionContractFailure;
+      const schemaCheck = validateSqlSchema(db, sql);
+      if (!schemaCheck.ok) {
+        routeGuardrailsFired.push("schema-column-invalid");
+        throw new Error("Schema validation failed: " + schemaCheck.error);
+      }
+      if (schemaCheck.corrected) {
+        sql = schemaCheck.sql;
+        routeGuardrailsFired.push("schema-column-corrected");
+      }
       rows = db.prepare(sql).all() as Record<string, unknown>[];
       rows = normalizeShrDisplayRows(rows);
     } catch (dbErr) {

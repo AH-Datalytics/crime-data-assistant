@@ -6,6 +6,7 @@ import { buildNoSqlFallbackMessage, neutralizeUnverifiedAvailabilityClaim } from
 import { validatePageToken } from "@/lib/page-token";
 import { translateToSql } from "@/lib/nibrs-claude";
 import { validateAndSanitize } from "@/lib/sql-safety";
+import { validateSqlSchema } from "@/lib/schema-validation";
 import { buildNibrsChartConfig } from "@/lib/nibrs-chart-config";
 import { generateExplanation, sanitizeExplanation } from "@/lib/explain";
 import { extractQueryContext } from "@/lib/query-context";
@@ -828,7 +829,7 @@ export async function POST(req: NextRequest) {
         if (retry.sql) {
           const retryValidation = validateAndSanitize(retry.sql);
           if (retryValidation.valid) {
-            const retrySql = applyContractValidation(retryValidation.sanitized!);
+            let retrySql = applyContractValidation(retryValidation.sanitized!);
             const retryTableCheck = validateTablesForTab(retrySql, "nibrs", getNibrsDb());
             if (retryTableCheck.ok) {
               sql = retrySql;
@@ -891,6 +892,15 @@ export async function POST(req: NextRequest) {
         routeGuardrailsFired.push("nibrs-query-plan");
         console.log(`[nibrs][query-plan] Applied safe index/rollup plan`);
       }
+      const schemaCheck = validateSqlSchema(getNibrsDb(), sql);
+      if (!schemaCheck.ok) {
+        routeGuardrailsFired.push("schema-column-invalid");
+        throw new Error("Schema validation failed: " + schemaCheck.error);
+      }
+      if (schemaCheck.corrected) {
+        sql = schemaCheck.sql;
+        routeGuardrailsFired.push("schema-column-corrected");
+      }
       const result = await executeWithTimeout(sql);
       rows = result.rows;
       columns = result.columns;
@@ -926,10 +936,19 @@ export async function POST(req: NextRequest) {
           const retryValidation = validateAndSanitize(retry.sql);
           if (retryValidation.valid) {
             const retryContract = runContractValidation(retryValidation.sanitized!);
-            const retrySql = optimizeNibrsSql(retryContract.sql);
+            let retrySql = optimizeNibrsSql(retryContract.sql);
             const retryContractFailure = contractFailureResponse(retryContract, `contract_db_retry_failure:${retryContract.enforced.join(",")}`);
             if (retryContractFailure) return retryContractFailure;
             try {
+              const retrySchemaCheck = validateSqlSchema(getNibrsDb(), retrySql);
+              if (!retrySchemaCheck.ok) {
+                  routeGuardrailsFired.push("schema-column-invalid");
+                  throw new Error("Schema validation failed: " + retrySchemaCheck.error);
+                }
+              if (retrySchemaCheck.corrected) {
+                retrySql = retrySchemaCheck.sql;
+                routeGuardrailsFired.push("schema-column-corrected");
+              }
               const retryResult = await executeWithTimeout(retrySql);
               rows = retryResult.rows;
               columns = retryResult.columns;

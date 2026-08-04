@@ -3,6 +3,7 @@ import { getDb, logQuery } from "@/lib/rtci-db";
 import { validatePageToken } from "@/lib/page-token";
 import { translateToSql, getHistoricalSystemPrompt } from "@/lib/claude";
 import { validateAndSanitize } from "@/lib/sql-safety";
+import { validateSqlSchema } from "@/lib/schema-validation";
 import { executeWithTimeoutSync } from "@/lib/query-timeout";
 import { buildChartConfig } from "@/lib/chart-config";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -1300,7 +1301,7 @@ export async function POST(req: NextRequest) {
                 const retryValidation = validateAndSanitize(retry.sql, { maxLimit });
                 if (retryValidation.valid) {
                   const retryContract = runContractValidation(retryValidation.sanitized!);
-                  const retrySql = retryContract.sql;
+                  let retrySql = retryContract.sql;
                   if (emitContractFailure(retryContract, `contract_table_retry_failure:${retryContract.enforced.join(",")}`)) return;
                   const retryTableCheck = validateTablesForTab(retrySql, tab, getDb());
                   if (retryTableCheck.ok) {
@@ -1336,6 +1337,15 @@ export async function POST(req: NextRequest) {
           const executionContract = runContractValidation(sql);
           sql = executionContract.sql;
           if (emitContractFailure(executionContract, `contract_execution_failure:${executionContract.enforced.join(",")}`)) return;
+          const schemaCheck = validateSqlSchema(db, sql);
+          if (!schemaCheck.ok) {
+        firedGuardrails.push("schema-column-invalid");
+        throw new Error("Schema validation failed: " + schemaCheck.error);
+      }
+          if (schemaCheck.corrected) {
+            sql = schemaCheck.sql;
+            firedGuardrails.push("schema-column-corrected");
+          }
           const stmt = db.prepare(sql);
           const result = executeWithTimeoutSync<Record<string, unknown>>(db, stmt, 30000);
           columns = stmt.columns().map((c) => c.name);
@@ -1381,9 +1391,18 @@ export async function POST(req: NextRequest) {
             const retryValidation = validateAndSanitize(retry.sql, { maxLimit });
             if (retryValidation.valid) {
               const retryContract = runContractValidation(retryValidation.sanitized!);
-              const retrySql = retryContract.sql;
+              let retrySql = retryContract.sql;
               if (emitContractFailure(retryContract, `contract_db_retry_failure:${retryContract.enforced.join(",")}`)) return;
               try {
+                const retrySchemaCheck = validateSqlSchema(db, retrySql);
+                if (!retrySchemaCheck.ok) {
+                  firedGuardrails.push("schema-column-invalid");
+                  throw new Error("Schema validation failed: " + retrySchemaCheck.error);
+                }
+                if (retrySchemaCheck.corrected) {
+                  retrySql = retrySchemaCheck.sql;
+                  firedGuardrails.push("schema-column-corrected");
+                }
                 const retryStmt = db.prepare(retrySql);
                 const retryResult = executeWithTimeoutSync<Record<string, unknown>>(db, retryStmt, 30000);
                 columns = retryStmt.columns().map((c) => c.name);
