@@ -12,6 +12,7 @@ import { RTCI } from "@/lib/dynamic-facts";
 import { generateExplanation, sanitizeExplanation } from "@/lib/explain";
 import { extractQueryContext } from "@/lib/query-context";
 import { runGuardrails } from "@/lib/guardrails";
+import { finalizeGuardrailTags, mergeGuardrailTags } from "@/lib/guardrail-tag-state";
 import { asksForCountsInsteadOfRates } from "@/lib/rate-intent";
 import { applyRetryMeta } from "@/lib/types";
 import type { StreamEvent, ChartMeta } from "@/lib/types";
@@ -1142,7 +1143,7 @@ export async function POST(req: NextRequest) {
           claude.sql = guardrailResult.sql;
         }
 
-        firedGuardrails = guardrailResult.fired;
+        firedGuardrails = mergeGuardrailTags(firedGuardrails, guardrailResult.fired);
         if (firedGuardrails.length > 0) {
           console.log(`[guardrails] Fired: ${firedGuardrails.join(", ")}`);
         }
@@ -1848,7 +1849,7 @@ export async function POST(req: NextRequest) {
             );
           }
           const totalMs2 = Date.now() - totalStart;
-          writeLog(question, sql, rows.length, null, totalMs2, postExplanation, tab, firedGuardrails, "haiku-4.5", sessionId);
+          writeLog(question, sql, rows.length, null, totalMs2, postExplanation, tab, finalizeGuardrailTags(firedGuardrails, queryContractGuardrails(runContractValidation(sql || ""))), "haiku-4.5", sessionId);
           // Cache successful responses (only standalone questions)
           if (!fromCache && promptHistory.length === 0 && sql) {
             setCache(question, tab, { sql, explanation: claude.explanation, title: claude.title, chartType: claude.chartHint, xAxis: claude.xAxis, yAxis: claude.yAxis ? claude.yAxis.split(",").map(s => s.trim()) : undefined, yAxisLabel: claude.yAxisLabel, xAxisLabel: claude.xAxisLabel, colors: claude.colors, annotations: claude.annotations });
@@ -1895,11 +1896,11 @@ export async function POST(req: NextRequest) {
               );
             }
             const totalMs2 = Date.now() - totalStart;
-            writeLog(question, sql, rows.length, null, totalMs2, retryExplanation, tab, firedGuardrails, "haiku-4.5", sessionId);
+            writeLog(question, sql, rows.length, null, totalMs2, retryExplanation, tab, finalizeGuardrailTags(firedGuardrails, queryContractGuardrails(runContractValidation(sql || ""))), "haiku-4.5", sessionId);
           } catch {
             // Both attempts failed — pre-query explanation stays
             const totalMs2 = Date.now() - totalStart;
-            writeLog(question, sql, rows.length, null, totalMs2, claude.explanation, tab, firedGuardrails, "haiku-4.5", sessionId);
+            writeLog(question, sql, rows.length, null, totalMs2, claude.explanation, tab, finalizeGuardrailTags(firedGuardrails, queryContractGuardrails(runContractValidation(sql || ""))), "haiku-4.5", sessionId);
           }
           if (!fromCache && promptHistory.length === 0 && sql) {
             setCache(question, tab, { sql, explanation: claude.explanation, title: claude.title, chartType: claude.chartHint, xAxis: claude.xAxis, yAxis: claude.yAxis ? claude.yAxis.split(",").map(s => s.trim()) : undefined, yAxisLabel: claude.yAxisLabel, xAxisLabel: claude.xAxisLabel, colors: claude.colors, annotations: claude.annotations });
@@ -1908,7 +1909,7 @@ export async function POST(req: NextRequest) {
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         const ms = Date.now() - totalStart;
-        writeLog(question, sql, 0, msg, ms, null, tab, firedGuardrails, "haiku-4.5", sessionId);
+        writeLog(question, sql, 0, msg, ms, null, tab, finalizeGuardrailTags(firedGuardrails, queryContractGuardrails(runContractValidation(sql || ""))), "haiku-4.5", sessionId);
         console.error("Query API error:", msg);
         controller.enqueue(
           encoder.encode(

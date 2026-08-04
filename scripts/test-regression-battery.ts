@@ -7,6 +7,7 @@ import { missingLowerBoundNote } from "../lib/result-disclosure";
 import { validateGrain } from "../lib/requested-grain";
 import { validateQueryContractSql } from "../lib/query-contract-validator";
 import { validateSqlSchema } from "../lib/schema-validation";
+import { finalizeGuardrailTags, mergeGuardrailTags } from "../lib/guardrail-tag-state";
 
 /** Live-only checks: these require the deployed model/API and are not executed here. */
 export const LIVE_REPLAY = [
@@ -57,5 +58,13 @@ const lowerBound = missingLowerBoundNote(
 );
 assert.equal(lowerBound, "Although the query covered 2016 onward, this source returned data beginning in 2017.");
 
+const preservedTags = mergeGuardrailTags(["geo-typo-corrected"], ["contract-year-lower-bound-missing"]);
+assert.ok(preservedTags.includes("geo-typo-corrected"), "non-contract tags survive accumulation");
+const resolvedTags = finalizeGuardrailTags(["contract-year-lower-bound-missing", "geo-typo-corrected"], []);
+assert.ok(resolvedTags.includes("contract-year-lower-bound-missing-resolved-on-retry"));
+assert.equal(resolvedTags.includes("contract-year-lower-bound-missing"), false);
+const unresolvedTags = finalizeGuardrailTags(["contract-year-lower-bound-missing"], ["contract-year-lower-bound-missing"]);
+assert.ok(unresolvedTags.includes("contract-year-lower-bound-missing"));
+assert.equal(unresolvedTags.includes("contract-year-lower-bound-missing-resolved-on-retry"), false);
 schemaDb.close();
 console.log("regression battery passed");

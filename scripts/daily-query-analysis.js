@@ -261,6 +261,26 @@ const RELIABILITY_CATEGORIES = {
   "typo-corrected-geography": { tag: "geo-typo-corrected", threshold: 5, count: 0, examples: [] },
 };
 
+function recordReliabilityTag(stats, name, question) {
+  if (!name) return;
+  stats.guardrailFires[name] = (stats.guardrailFires[name] || 0) + 1;
+  const resolved = name.endsWith("-resolved-on-retry");
+  const baseName = resolved ? name.slice(0, -"-resolved-on-retry".length) : name;
+  if (Object.hasOwn(stats.resolverTags, name)) stats.resolverTags[name]++;
+  for (const category of Object.values(stats.reliabilityCategories)) {
+    const tags = category.tags || [category.tag];
+    if (!tags.includes(baseName)) continue;
+    if (resolved) {
+      category.resolvedCount++;
+      if (category.resolvedExamples.length < 3 && question) category.resolvedExamples.push(question);
+    } else {
+      category.count++;
+      if (category.examples.length < 3 && question) category.examples.push(question);
+    }
+    break;
+  }
+}
+
 function analyze(queries) {
   const issues = [];
   const stats = {
@@ -279,7 +299,7 @@ function analyze(queries) {
     unknownAgencies: [],
     guardrailFires: {},  // { guardrailName: count }
     guardrailTotal: 0,   // queries where at least 1 guardrail fired
-    reliabilityCategories: Object.fromEntries(Object.entries(RELIABILITY_CATEGORIES).map(([name, value]) => [name, { ...value, examples: [] }])),
+    reliabilityCategories: Object.fromEntries(Object.entries(RELIABILITY_CATEGORIES).map(([name, value]) => [name, { ...value, resolvedCount: 0, resolvedExamples: [], examples: [] }])),
     resolverTags: {
       "nibrs-place-resolved": 0,
       "nibrs-place-resolution-block": 0,
@@ -487,19 +507,7 @@ function analyze(queries) {
     if (q.guardrails) {
       stats.guardrailTotal++;
       for (const g of q.guardrails.split(",")) {
-        const name = g.trim();
-        if (name) {
-          stats.guardrailFires[name] = (stats.guardrailFires[name] || 0) + 1;
-          if (Object.hasOwn(stats.resolverTags, name)) stats.resolverTags[name]++;
-          for (const category of Object.values(stats.reliabilityCategories)) {
-            const tags = category.tags || [category.tag];
-            if (tags.includes(name)) {
-              category.count++;
-              if (category.examples.length < 3 && q.question) category.examples.push(q.question);
-              break;
-            }
-          }
-        }
+        recordReliabilityTag(stats, g.trim(), q.question);
       }
     }
   }
@@ -1039,11 +1047,11 @@ function buildEmail(stats, issues, visitors, suggestions, weeklyTrends, resolver
 
   // Reliability categories: always show counts and examples; only counts above
   // each inline threshold also become medium-priority action items above.
-  const reliabilityEntries = Object.entries(stats.reliabilityCategories).filter(([, signal]) => signal.count > 0);
+  const reliabilityEntries = Object.entries(stats.reliabilityCategories).filter(([, signal]) => signal.count > 0 || signal.resolvedCount > 0);
   if (reliabilityEntries.length > 0) {
-    html += "<h2>Reliability Signals</h2><p style=\"font-size:13px;color:#666;\">These are informational counts from deterministic guardrail tags. A signal is escalated to Issues Requiring Attention only when it exceeds its documented threshold.</p><table style=\"width:100%;border-collapse:collapse;font-size:13px;\"><thead><tr style=\"border-bottom:2px solid #ddd;\"><th style=\"text-align:left;padding:8px 6px;\">Category</th><th style=\"text-align:right;padding:8px 6px;\">Count</th><th style=\"text-align:left;padding:8px 6px;\">Examples</th></tr></thead><tbody>";
+    html += "<h2>Reliability Signals</h2><p style=\"font-size:13px;color:#666;\">These are informational counts from deterministic guardrail tags. Unresolved counts are thresholded for attention; resolved retries are reported separately as a prompt-quality signal.</p><table style=\"width:100%;border-collapse:collapse;font-size:13px;\"><thead><tr style=\"border-bottom:2px solid #ddd;\"><th style=\"text-align:left;padding:8px 6px;\">Category</th><th style=\"text-align:right;padding:8px 6px;\">Unresolved</th><th style=\"text-align:right;padding:8px 6px;\">Resolved retries</th><th style=\"text-align:left;padding:8px 6px;\">Examples</th></tr></thead><tbody>";
     for (const [category, signal] of reliabilityEntries) {
-      html += "<tr style=\"border-bottom:1px solid #eee;\"><td style=\"padding:6px;font-family:monospace;font-size:12px;\">" + escapeHtml(category) + "</td><td style=\"padding:6px;text-align:right;font-weight:600;\">" + signal.count + "</td><td style=\"padding:6px;color:#666;\">" + escapeHtml(signal.examples.join(" | ")) + "</td></tr>";
+      html += "<tr style=\"border-bottom:1px solid #eee;\"><td style=\"padding:6px;font-family:monospace;font-size:12px;\">" + escapeHtml(category) + "</td><td style=\"padding:6px;text-align:right;font-weight:600;\">" + signal.count + "</td><td style=\"padding:6px;text-align:right;\">" + signal.resolvedCount + "</td><td style=\"padding:6px;color:#666;\">" + escapeHtml(signal.examples.join(" | ") + (signal.resolvedExamples.length ? "; resolved: " + signal.resolvedExamples.join(" | ") : "")) + "</td></tr>";
     }
     html += "</tbody></table>";
   }
@@ -1442,4 +1450,5 @@ async function main() {
   }
 }
 
-main();
+if (require.main === module) main();
+module.exports = { analyze, recordReliabilityTag };

@@ -43,6 +43,7 @@ import {
 import { partialCoverageRetryPrompt } from "@/lib/source-year-overlap";
 import { extractQueryContext } from "@/lib/query-context";
 import { runGuardrails } from "@/lib/guardrails";
+import { finalizeGuardrailTags } from "@/lib/guardrail-tag-state";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function jsonResp(data: Record<string, any> | QueryError, status = 200) {
@@ -715,7 +716,7 @@ export async function POST(req: NextRequest) {
     explanation = finalNarrative.explanation || "";
     claude.title = finalNarrative.title || claude.title || "Results";
     claude.title = alignTitleYearRange(claude.title, rows);
-    writeLog(question, sql, rows.length, null, totalMs, explanation, "hate_crime", routeGuardrailsFired, "haiku-4.5", sessionId);
+    writeLog(question, sql, rows.length, null, totalMs, explanation, "hate_crime", finalizeGuardrailTags(routeGuardrailsFired, queryContractGuardrails(runContractValidation(sql))), "haiku-4.5", sessionId);
 
     // Cache successful responses (only standalone questions)
     if (!cached && promptHistory.length === 0) {

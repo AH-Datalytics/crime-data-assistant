@@ -11,6 +11,7 @@ import { buildNibrsChartConfig } from "@/lib/nibrs-chart-config";
 import { generateExplanation, sanitizeExplanation } from "@/lib/explain";
 import { extractQueryContext } from "@/lib/query-context";
 import { runGuardrails } from "@/lib/guardrails";
+import { finalizeGuardrailTags } from "@/lib/guardrail-tag-state";
 import { asksForCountsInsteadOfRates } from "@/lib/rate-intent";
 import { applyRetryMeta } from "@/lib/types";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -1349,7 +1350,7 @@ export async function POST(req: NextRequest) {
     claude.title = finalNarrative.title || claude.title || "Results";
     claude.title = alignTitleYearRange(claude.title, rows);
     const totalMs = Date.now() - claudeStart;
-    const firedGuardrails = [...guardrailResult.fired, ...routeGuardrailsFired];
+    const firedGuardrails = finalizeGuardrailTags([...guardrailResult.fired, ...routeGuardrailsFired], queryContractGuardrails(runContractValidation(sql)));
     console.log(`[nibrs][result] model=${activeModelLabel} rows=${rows.length} retries=${retryCount} scaffold_stripped=${scaffoldStripped} guardrails=[${firedGuardrails.join(",")}] total_ms=${totalMs} db_ms=${executionTimeMs}${canaryFlag ? " CANARY" : ""}`);
     writeNibrsLog(question, sql, rows.length, null, totalMs, explanation, firedGuardrails, activeModelLabel, sessionId);
 

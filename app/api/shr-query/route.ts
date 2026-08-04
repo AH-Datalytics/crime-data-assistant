@@ -8,6 +8,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { checkSessionLimit, maybeCleanup } from "@/lib/captcha";
 import { extractQueryContext } from "@/lib/query-context";
 import { runGuardrails } from "@/lib/guardrails";
+import { finalizeGuardrailTags } from "@/lib/guardrail-tag-state";
 import { asksForCountsInsteadOfRates } from "@/lib/rate-intent";
 import { explicitStateIntent } from "@/lib/explicit-state-intent";
 import type { QueryError } from "@/lib/types";
@@ -1240,7 +1241,7 @@ export async function POST(req: NextRequest) {
     }
     explanation = finalNarrative.explanation || "";
     claude.title = finalNarrative.title || claude.title || "Results";
-    writeLog(question, sql, rows.length, null, totalMs, explanation, "shr", [...new Set([...guardrailResult.fired, ...routeGuardrailsFired])], "haiku-4.5", sessionId);
+    writeLog(question, sql, rows.length, null, totalMs, explanation, "shr", finalizeGuardrailTags([...guardrailResult.fired, ...routeGuardrailsFired], queryContractGuardrails(runContractValidation(sql))), "haiku-4.5", sessionId);
 
     // Cache successful responses (only standalone questions)
     if (!cached && promptHistory.length === 0) {
