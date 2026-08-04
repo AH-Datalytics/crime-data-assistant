@@ -30,6 +30,7 @@ import { normalizeHistoryAllSources, normalizeHistoryForTab } from "@/lib/chat-h
 import { containsInternalLeak, INTERNAL_LEAK_SAFE_MESSAGE, sanitizeUserFacingNarrative } from "@/lib/scaffold-helpers";
 import { buildNoSqlFallbackMessage } from "@/lib/refusal-safety";
 import { detectFollowupTransform } from "@/lib/followup-transform";
+import { applyGeoCorrection } from "@/lib/geo-correction";
 import { applyChartCustomizations } from "@/lib/chart-customization";
 import { getBlockingGeoClarification } from "@/lib/geo-resolver";
 import { getCountyScopeClarification } from "@/lib/county-clarifier";
@@ -657,7 +658,7 @@ export async function POST(req: NextRequest) {
         role: h.role as "user" | "assistant",
         content: h.content,
       })),
-      { role: "user", content: queryForModel },
+      { role: "user", content: applyGeoCorrection(queryForModel) },
     ];
 
     if (cached) {

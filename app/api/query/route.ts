@@ -23,6 +23,7 @@ import { validateTablesForTab } from "@/lib/table-allowlist";
 import { alignTitleYearRange, applyResultDisclosures, trimTrailingEmptyYearRows } from "@/lib/result-disclosure";
 import { validateGrain } from "@/lib/requested-grain";
 import { normalizeHistoryAllSources, normalizeHistoryForTab } from "@/lib/chat-history";
+import { applyGeoCorrection } from "@/lib/geo-correction";
 import { containsInternalLeak, INTERNAL_LEAK_SAFE_MESSAGE, sanitizeUserFacingNarrative } from "@/lib/scaffold-helpers";
 import { buildNoSqlFallbackMessage } from "@/lib/refusal-safety";
 import { buildCompletenessAnswer, detectCompletenessQuestion, loadCompletenessRows } from "@/lib/completeness-intent";
@@ -993,7 +994,7 @@ export async function POST(req: NextRequest) {
           fromCache = true;
         } else {
           claude = await translateToSql(
-            question,
+            applyGeoCorrection(question),
             promptHistory as { role: "user" | "assistant"; content: string }[],
             systemPrompt
           );

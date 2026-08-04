@@ -25,6 +25,7 @@ import { alignTitleYearRange, applyResultDisclosures } from "@/lib/result-disclo
 import { validateGrain } from "@/lib/requested-grain";
 import { buildCompletenessAnswer, detectCompletenessQuestion, loadCompletenessRows } from "@/lib/completeness-intent";
 import { normalizeHistoryForTab } from "@/lib/chat-history";
+import { applyGeoCorrection } from "@/lib/geo-correction";
 import { pastCompleteCalendarYearsRange } from "@/lib/time-conventions";
 import { detectFollowupTransform } from "@/lib/followup-transform";
 import { detectNibrsCapabilityOverride } from "@/lib/nibrs-capability-overrides";
@@ -507,7 +508,7 @@ export async function POST(req: NextRequest) {
       claude = { sql: cached.sql, explanation: cached.explanation, title: cached.title || "", chartHint: (cached.chartType as "bar" | "line" | "pie" | "stacked_bar" | "scatter" | "none") || "none", xAxis: cached.xAxis || "", yAxis: cached.yAxis?.[0] || "", colors: cached.colors as string[] | undefined, yAxisLabel: cached.yAxisLabel, xAxisLabel: cached.xAxisLabel, annotations: cached.annotations as typeof claude.annotations };
     } else {
       console.log(`[nibrs][model=${activeModelLabel}] Processing: ${question.slice(0, 100)}`);
-      claude = await translateToSql(question, promptHistory, activeModel);
+      claude = await translateToSql(applyGeoCorrection(question), promptHistory, activeModel);
       const claudeMs = Date.now() - claudeStart;
       console.log(`[nibrs][timing] Claude API: ${claudeMs}ms`);
 

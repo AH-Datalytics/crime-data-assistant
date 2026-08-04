@@ -23,6 +23,7 @@ import { buildCompletenessAnswer, detectCompletenessQuestion, loadCompletenessRo
 import { normalizeHistoryForTab } from "@/lib/chat-history";
 import { containsInternalLeak, INTERNAL_LEAK_SAFE_MESSAGE, sanitizeUserFacingNarrative } from "@/lib/scaffold-helpers";
 import { buildNoSqlFallbackMessage } from "@/lib/refusal-safety";
+import { applyGeoCorrection } from "@/lib/geo-correction";
 import { detectFollowupTransform } from "@/lib/followup-transform";
 import { applyChartCustomizations } from "@/lib/chart-customization";
 import { getBlockingGeoClarification } from "@/lib/geo-resolver";
@@ -347,7 +348,7 @@ export async function POST(req: NextRequest) {
         role: h.role as "user" | "assistant",
         content: h.content,
       })),
-      { role: "user", content: question },
+      { role: "user", content: applyGeoCorrection(question) },
     ];
 
     if (cached) {
