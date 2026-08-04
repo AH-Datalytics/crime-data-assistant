@@ -259,7 +259,12 @@ async function submitQuestion(page, question, sourceName) {
 
 // ---------------------------------------------------------------- main
 (async () => {
-  const args = process.argv.slice(2).filter((a) => !a.startsWith("--"));
+  // NOTE: when launched via the playwright-skill executor (`node run.js <this
+  // file>`), process.argv still belongs to run.js, so argv[2] is this script's
+  // own path. Match only against known ids so a stray path is never mistaken
+  // for an id filter (which silently selected zero cases).
+  const knownIds = new Set(REPLAYS.map((r) => r.id));
+  const args = process.argv.slice(2).filter((a) => knownIds.has(a));
   const selftest = process.argv.includes("--selftest");
   const cases = selftest
     ? REPLAYS.filter((r) => r.id === "control-historical")
