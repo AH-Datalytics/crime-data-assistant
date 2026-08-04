@@ -44,6 +44,7 @@ import { detectDemographicRateDenominatorFollowup, detectShrGroupRateOverride, d
 import { displayShrAgencyName, normalizeShrAgencyText } from "@/lib/shr-agency-normalization";
 import { asksSimpleFirearmHomicideTrend } from "@/lib/shr-firearm-trend-intent";
 import { displayPlace, shootingCityIntents, shootingYearIntent, stateMention } from "@/lib/shr-deterministic-shooting";
+import { classifyShootingQualifier } from "@/lib/shooting-qualifiers";
 import {
   queryContractFailureMessage,
   queryContractGuardrails,
@@ -401,7 +402,16 @@ export async function POST(req: NextRequest) {
 
     // Deterministic fatal shooting handling — bypass Claude entirely
     // Route bare/ambiguous shooting queries directly to firearm homicide data
-    if (asksShooting && !wantsNonfatal && !(plannerMode === "authoritative" && followupPlan?.kind === "query_bearing")) {
+    // Qualifier awareness (production 7881). "police fatal shootings" used to
+    // return ALL firearm homicides — 14,777 vs a correct 349 for 2023 — because
+    // this path fires on any mention of "shooting" and has no notion of
+    // qualifiers. Police is now expressible; anything else it cannot express
+    // must fall through to the model rather than answer a different question.
+    const shootingQualifier = classifyShootingQualifier(question);
+    if (asksShooting && !wantsNonfatal && shootingQualifier.kind === "unsupported") {
+      console.log(`[shr][deterministic-shooting] declining: unsupported qualifier(s) ${shootingQualifier.ids.join(",")} — routing to model`);
+    }
+    if (asksShooting && !wantsNonfatal && shootingQualifier.kind !== "unsupported" && !(plannerMode === "authoritative" && followupPlan?.kind === "query_bearing")) {
       const stateMatch = question.match(/\b([A-Z]{2})\b/) || question.match(/\bin\s+(\w+)\b/i);
       const yearIntent = shootingYearIntent(question);
       const wantsMonthly = /\b(?:monthly|per\s+month|by\s+month)\b/i.test(question);
@@ -429,6 +439,11 @@ export async function POST(req: NextRequest) {
         : "";
 
       const whereClauses = ["i.homicide_type = 'Murder'", "i.weapon_group = 'Firearm'", effectiveYearClause];
+      // All 18,697 'Felon Killed by Police' incidents are homicide_type='Murder',
+      // so the Murder filter above stays valid alongside this predicate.
+      if (shootingQualifier.kind === "supported" && shootingQualifier.qualifier.clause) {
+        whereClauses.push(shootingQualifier.qualifier.clause);
+      }
       let joinClauses = "JOIN victims v ON v.incident_id = i.id";
       let withClause = "";
       let titlePlace = "Nationally";
@@ -581,8 +596,16 @@ export async function POST(req: NextRequest) {
       const shootingContractFailure = contractFailureResponse(shootingContract, `contract_deterministic_shooting_failure:${shootingContract.enforced.join(",")}`, ["deterministic-shooting"]);
       if (shootingContractFailure) return shootingContractFailure;
       const sql = shootingContract.sql;
-      const title = `Fatal Shootings (Firearm Homicides), ${titlePlace}, ${effectiveYearLabel}`;
-      const explanation = `Fatal shootings (firearm homicides) by ${wantsMonthly ? "month" : "year"}${titlePlace !== "Nationally" ? ` in ${titlePlace}` : ""} ${effectiveYearExplanation}. This shows only homicides where the weapon was a firearm - nonfatal shootings are not tracked in this database.`;
+      // The narrative must name the qualifier it actually applied. 7881 said
+      // "Fatal shootings (firearm homicides)" for a police question, which read
+      // as a confident answer to a question nobody asked.
+      const qualifierTitle =
+        shootingQualifier.kind === "supported" ? shootingQualifier.qualifier.titleLabel : "Fatal Shootings (Firearm Homicides)";
+      const qualifierNarrative =
+        shootingQualifier.kind === "supported" ? shootingQualifier.qualifier.narrativeLabel : "fatal shootings (firearm homicides)";
+      const qualifierCaveat = shootingQualifier.kind === "supported" ? shootingQualifier.qualifier.caveat : null;
+      const title = `${qualifierTitle}, ${titlePlace}, ${effectiveYearLabel}`;
+      const explanation = `${qualifierNarrative.charAt(0).toUpperCase()}${qualifierNarrative.slice(1)} by ${wantsMonthly ? "month" : "year"}${titlePlace !== "Nationally" ? ` in ${titlePlace}` : ""} ${effectiveYearExplanation}. This shows only homicides where the weapon was a firearm - nonfatal shootings are not tracked in this database.${qualifierCaveat ? ` ${qualifierCaveat}` : ""}`;
       // Execute the deterministic SQL
       const db = getShrDb();
       if (!db) {
@@ -602,6 +625,9 @@ export async function POST(req: NextRequest) {
         // Deterministic paths bypass runGuardrails, so the zero-result agency
         // probe must be applied here too (same blind spot as F18 / #4155).
         const detGuardrails = ["deterministic-shooting"];
+        // Tag the applied qualifier so the digest can distinguish a police
+        // shooting answer from a plain firearm-homicide answer.
+        if (shootingQualifier.kind === "supported") detGuardrails.push(`shooting-qualifier-${shootingQualifier.qualifier.id}`);
         if (isZeroResult(rows, columns)) {
           const probeResult = runShrAgencyProbe(db, sql);
           if (probeResult && probeResult.count > 0) {
