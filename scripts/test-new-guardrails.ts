@@ -3238,6 +3238,36 @@ console.log("\n═══ nested-aggregation-discards-measure ═══\n");
     `fired: ${JSON.stringify(goodRollingResult.fired)}`,
   );
 }
+
+{
+  // Production 2305, verbatim. A follow-up question that never says "rolling",
+  // whose SQL nonetheless feeds 4 offense rows per month into ROWS BETWEEN.
+  // Gating the guardrail on question wording let this through in production;
+  // across the full log the word-gated version caught only 2 of the 4 real
+  // instances (2305 and 7844 "now violent crime" both lacked the word).
+  const followupQuestion =
+    "yes show me how you Baltimore's rate alongside the national rate over time or for a specific year.";
+  const followupSql =
+    "WITH monthly_data AS (SELECT nm.year, nm.month, nm.count as national_count, " +
+    "(SELECT SUM(ap.population) FROM agency_population ap JOIN agencies a ON a.ori = ap.ori AND a.national_sample = 1 WHERE ap.year = nm.year) as national_pop, " +
+    "(SELECT SUM(am.count) FROM agency_monthly am WHERE am.agency = 'Baltimore' AND am.state = 'MD' AND am.type = 'City' AND am.offense IN ('Murder', 'Rape', 'Robbery', 'Aggravated Assault') AND am.year = nm.year AND am.month = nm.month) as baltimore_count " +
+    "FROM national_monthly nm WHERE nm.offense IN ('Murder', 'Rape', 'Robbery', 'Aggravated Assault')), " +
+    "rolling AS (SELECT year, month, SUM(national_count) OVER (ORDER BY year, month ROWS BETWEEN 11 PRECEDING AND CURRENT ROW) as national_rolling FROM monthly_data) " +
+    "SELECT year, month, national_rolling FROM rolling WHERE year >= 2018";
+  const followupResult = runGuardrails(extractQueryContext(followupSql, followupQuestion, "current"));
+  assert(
+    "TP: rolling fan-out is caught even when the question never says 'rolling' (2305)",
+    followupResult.fired.includes("rolling-multi-offense-not-aggregated"),
+    `fired: ${JSON.stringify(followupResult.fired)}`,
+  );
+  // 2305's population sum joins agencies (one row per ORI), not agency_monthly,
+  // so it must NOT trip the fan-out guardrail — independent-subquery negative.
+  assert(
+    "FP: independent population subquery is not a fan-out (2305)",
+    !followupResult.fired.includes("rate-population-fanout"),
+    `fired: ${JSON.stringify(followupResult.fired)}`,
+  );
+}
 console.log(`SUMMARY: ${pass} passed, ${fail} failed out of ${pass + fail} tests`);
 console.log("=".repeat(60));
 

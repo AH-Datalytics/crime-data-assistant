@@ -2878,7 +2878,12 @@ const GUARDRAILS: Guardrail[] = [
     name: "rolling-multi-offense-not-aggregated",
     tabs: ["current"],
     match: (ctx) => {
-      if (!/\brolling\b|\bmoving\b/i.test(ctx.question)) return false;
+      // Deliberately does NOT gate on the question wording. Production 2305
+      // ("yes show me how you Baltimore's rate alongside the national rate
+      // over time") is a follow-up that never repeats "rolling", yet its SQL
+      // has the defect: 4 offense rows per month feeding ROWS BETWEEN. Gating
+      // on the question let that through. The SQL conditions below are already
+      // specific to the defect.
       if (!/\bnational_monthly\b/i.test(ctx.sql)) return false;
       if (!/\boffense\s+IN\s*\(/i.test(ctx.sql)) return false;
       if (!/\bROWS\s+BETWEEN\s+\d+\s+PRECEDING\s+AND\s+CURRENT\s+ROW\b/i.test(ctx.sql)) return false;
