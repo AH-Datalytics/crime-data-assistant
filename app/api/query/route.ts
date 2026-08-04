@@ -111,11 +111,14 @@ function getChartMeta(
       );
       const popRow = db
         .prepare(
-          `SELECT SUM(p.population) as pop FROM agency_population p
-           JOIN sample_agencies sa ON sa.ori = p.ori
-           WHERE p.year = ?`
+          `SELECT SUM(population) as pop FROM (
+             SELECT DISTINCT am.ori, p.population
+             FROM agency_monthly am
+             JOIN agency_population p ON p.ori = am.ori AND p.year = ?
+             WHERE am.year = ? AND am.month = ?
+           )`
         )
-        .get(latestPopulationYear) as { pop: number | null } | undefined;
+        .get(latestPopulationYear, row?.year ?? RTCI.maxYear, row?.month ?? 12) as { pop: number | null } | undefined;
       return { agencyCount: row?.cnt ?? 0, population: popRow?.pop ?? null };
     }
 

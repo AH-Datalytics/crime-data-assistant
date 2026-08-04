@@ -59,6 +59,8 @@ assert.match(streaming, /ORDER BY year DESC, month DESC/,
   "national chart metadata must order by the latest source period");
 assert.match(streaming, /latestPopulationYear/,
   "national population metadata must use the latest source year");
+assert.match(streaming, /FROM agency_monthly am[\s\S]*WHERE am.year = \? AND am.month = \?/,
+  "national population metadata must use agencies reporting in the latest month");
 // Title alignment must run BEFORE the chart config is built, or the rendered
 // chart title keeps the model's stale year range (production hate-crime bug).
 const chartBuilder: Record<string, string> = {
