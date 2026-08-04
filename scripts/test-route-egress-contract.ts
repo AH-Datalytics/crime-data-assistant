@@ -33,6 +33,24 @@ for (const file of routes.slice(1)) {
   assert.ok(source.includes("console.warn") && source.includes("internal-leak-firewall"), `${file} must log result-path firewall events`);
 }
 
+// Guardrail tags must survive the query route's post-generation validation
+// reassignment, and every final result log must classify contract tags against
+// the SQL that actually ran.
+assert.doesNotMatch(
+  streaming,
+  /firedGuardrails\s*=\s*guardrailResult\.fired\s*;/,
+  "query route must not discard tags collected before post-generation validation",
+);
+assert.match(
+  streaming,
+  /firedGuardrails\s*=\s*mergeGuardrailTags\(firedGuardrails,\s*guardrailResult\.fired\)/,
+  "query route must merge post-generation guardrails",
+);
+for (const file of routes) {
+  const source = fs.readFileSync(file, "utf8");
+  const finalizationCount = (source.match(/finalizeGuardrailTags\(/g) || []).length;
+  assert.ok(finalizationCount >= 1, `${file} must finalize guardrail tags before final logging`);
+}
 // Title alignment must run BEFORE the chart config is built, or the rendered
 // chart title keeps the model's stale year range (production hate-crime bug).
 const chartBuilder: Record<string, string> = {
