@@ -1,7 +1,8 @@
 # Handoff for Codex review — 2026-08-04
 
-**Production:** release `20260804_204514` (nibrsai.com, VPS `/opt/nibrs/current`)
-**dev HEAD:** `64d3894` — one commit ahead of production, operational-only (replay harness), inert in the release tree
+**Production:** release `20260804_215006` (nibrsai.com, VPS `/opt/nibrs/current`)
+**dev HEAD:** `b7131c2` plus this docs commit — ahead of production only by operational/doc commits, inert in the release tree
+**Replay battery:** 11 gating cases, **11/11 passing** against production (`node <playwright-skill>/run.js scripts/replay-production-queries.js`)
 **Verification standard used all session:** every claim measured against production data or the real code path, not inferred. Where I asserted something without measuring it, I was wrong at least four times — see §5.
 
 **Related documents**
@@ -9,6 +10,7 @@
 | Document | Status |
 |---|---|
 | [`plans/2026-08-03-followup-policy-and-response-firewall.md`](plans/2026-08-03-followup-policy-and-response-firewall.md) | **Canonical record for Tasks 1–22** — the reliability backlog shipped 08-03/08-04, including the 7674 instruction-boundary leak, Suffolk clarifier, hate-crime partial-year work, and Tasks 16–22 (completeness, grain, metadata routing, schema validation, missing-year disclosure, typo tolerance, monitoring). Read this for anything predating today's fixes. |
+| [`specs/2026-08-04-cross-artifact-consistency-auditor-spec.md`](specs/2026-08-04-cross-artifact-consistency-auditor-spec.md) | Open — the automated auditor. Checks whether question, SQL, chart, and narrative **agree**, rather than counting guardrail tags. Phase order agreed: deterministic detectors, chart capture, advisory judge, re-execution. |
 | [`specs/2026-08-04-single-year-retry-and-cache-tag-spec.md`](specs/2026-08-04-single-year-retry-and-cache-tag-spec.md) | Open — not implemented |
 | [`specs/2026-08-04-rate-denominator-fanout-spec.md`](specs/2026-08-04-rate-denominator-fanout-spec.md) | Implemented (`7ddbfb2`, `2fc5d58`) |
 | [`specs/2026-08-04-structured-response-assembly-design.md`](specs/2026-08-04-structured-response-assembly-design.md) | Cancelled — retained as history; §1a records why |
@@ -37,7 +39,7 @@
 
 ## 2. Open items, in the priority I'd take them
 
-1. **SHR police-shootings qualifier drop — highest severity, spec not yet written.** See §3.
+1. ~~**SHR police-shootings qualifier drop**~~ — **FIXED and deployed** (`8137655`, release `20260804_215006`). See §3 for the diagnosis and what shipped.
 2. **Single-year recursive-series refusal.** Spec written: `docs/superpowers/specs/2026-08-04-single-year-retry-and-cache-tag-spec.md` §Item 1. Reproduced twice (7855, 7900) — recurrent, not rare. User gets `CONTRACT_SECOND_FAILURE_MESSAGE` for a trivially answerable question.
 3. **Cache-hit `geo-typo-corrected`.** Same spec, Item 2. Evidence: log 7856 (no tag) vs 7858 (tag), identical question.
 4. **`agency_monthly` rolling gap.** `rolling-multi-offense-not-aggregated` matches only `national_monthly`; `agency_monthly` is structurally identical (avg 6.9 rows/ori-month, max 7). Never hit in production, but reachable.
@@ -51,7 +53,7 @@
 
 ---
 
-## 3. SHR police-shootings — full diagnosis, spec pending
+## 3. SHR police-shootings — FIXED (`8137655`), diagnosis retained
 
 **Log 7881**, question *"What is the trend of police fatal shootings over the last…"*, tag `deterministic-shooting`:
 
@@ -70,10 +72,13 @@ The "police" qualifier is **absent from the SQL and from the narrative**, which 
 
 **Root cause is deterministic, not model drift.** `lib/shr-deterministic-shooting.ts` pattern-matches "fatal shootings"; its `shootingYearIntent` parses **only years** and has no concept of qualifiers. So this is 100% reproducible, bypasses the model entirely, and no prompt change can fix it. Log scan: 2 instances (7881, and 7639 which returned 0 rows).
 
-**Required fix, three parts:**
-1. The deterministic matcher must **decline to fire** when the question carries a qualifier it does not implement, falling through to the model path rather than answering a different question.
-2. Add police-shooting support via the `circumstance` predicate.
-3. Disclose that SHR substantially undercounts officer-involved killings relative to Washington Post / Mapping Police Violence tallies — 349 for 2023 is itself well below the true figure.
+**What shipped** (`lib/shooting-qualifiers.ts` + wiring in `app/api/shr-query/route.ts`):
+1. **Supported** — police/officer-involved adds `i.circumstance = 'Felon Killed by Police'`, renames title and narrative, attaches the undercount caveat. Live values: **335–458/year** (log 7919), against ~14,000–16,000 before.
+2. **Unsupported** — domestic, gang, juvenile, stranger, self-defense, mass, drug cause the deterministic path to **decline** and fall through to the model. Verified live (log 7910/7921): the model produced a genuinely better answer, filtering `i.relationship IN ('Wife','Husband','Girlfriend',…)` for a domestic-violence question. Declining converted a 42×-wrong answer into a right one.
+3. **Plain** fatal-shooting questions unchanged (log 7920 control).
+4. Applied qualifiers tagged `shooting-qualifier-<id>` for the digest.
+
+Note for anyone extending this: `"shootings"` alone is **metric-ambiguous**, so a metric clarifier ("fatal shootings" vs "aggravated assaults with a firearm") fires *before* the deterministic path. A test question must pass that clarifier to reach the qualifier logic at all.
 
 **Generalization worth building:** a qualifier-drop detector. Precedent already exists at `lib/guardrails.ts:1536` — *"Do not silently drop the weapon filter"* for weapon-qualified person crimes. This is that idea generalized: if a salient qualifier appears in the question, it must appear as a SQL predicate **or** be explicitly disclaimed in the narrative.
 
