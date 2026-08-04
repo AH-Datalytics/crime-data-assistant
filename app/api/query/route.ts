@@ -21,10 +21,10 @@ import { checkSingleRowTrend } from "@/lib/single-row-trend";
 import { parseRoutingLogMeta } from "@/lib/routing-log-meta";
 import { answerMetadataQuestion } from "@/lib/metadata-coverage";
 import { validateTablesForTab } from "@/lib/table-allowlist";
-import { alignTitleYearRange, applyResultDisclosures, trimTrailingEmptyYearRows } from "@/lib/result-disclosure";
+import { alignTitleYearRange, applyResultDisclosures, missingLowerBoundNote, trimTrailingEmptyYearRows } from "@/lib/result-disclosure";
 import { validateGrain } from "@/lib/requested-grain";
 import { normalizeHistoryAllSources, normalizeHistoryForTab } from "@/lib/chat-history";
-import { applyGeoCorrection } from "@/lib/geo-correction";
+import { applyGeoCorrection, geoCorrectionHint } from "@/lib/geo-correction";
 import { containsInternalLeak, INTERNAL_LEAK_SAFE_MESSAGE, sanitizeUserFacingNarrative } from "@/lib/scaffold-helpers";
 import { buildNoSqlFallbackMessage } from "@/lib/refusal-safety";
 import { buildCompletenessAnswer, detectCompletenessQuestion, loadCompletenessRows } from "@/lib/completeness-intent";
@@ -873,7 +873,7 @@ export async function POST(req: NextRequest) {
   const metadata = planSaysQueryBearing ? null : answerMetadataQuestion(tab, question, getDb());
   if (metadata) {
     const ms = Date.now() - totalStart;
-    writeLog(question, metadata.sql, metadata.rowCount, null, ms, metadata.explanation, tab, ["deterministic-metadata"], "deterministic", sessionId);
+    writeLog(question, metadata.sql, metadata.rowCount, null, ms, metadata.explanation, tab, ["deterministic-metadata", "metadata-coverage-answer"], "deterministic", sessionId);
 
     const stream = new ReadableStream({
       start(controller) {
@@ -994,8 +994,10 @@ export async function POST(req: NextRequest) {
           claude = { sql: cached.sql, explanation: cached.explanation, title: cached.title || "", chartHint: (cached.chartType as "bar" | "line" | "pie" | "stacked_bar" | "scatter" | "none") || "none", xAxis: cached.xAxis || "", yAxis: cached.yAxis?.join(",") || "", colors: cached.colors as string[] | undefined, yAxisLabel: cached.yAxisLabel, xAxisLabel: cached.xAxisLabel, annotations: cached.annotations as typeof claude.annotations };
           fromCache = true;
         } else {
+          const correctionHint = geoCorrectionHint(question);
+          if (correctionHint) firedGuardrails.push("geo-typo-corrected");
           claude = await translateToSql(
-            applyGeoCorrection(question),
+            applyGeoCorrection(question, correctionHint),
             promptHistory as { role: "user" | "assistant"; content: string }[],
             systemPrompt
           );
@@ -1826,6 +1828,7 @@ export async function POST(req: NextRequest) {
             postExplanation += "\n\nNote: Current Trends data comes from a sample of agencies with consistent reporting — it does not represent complete state or national totals. For comprehensive state-level estimates, try the Historical Library tab.";
           }
           postExplanation = applyResultDisclosures({ explanation: postExplanation, question, sql, rows, tab });
+          if (missingLowerBoundNote(question, sql, rows) && !firedGuardrails.includes("lower-bound-disclosed")) firedGuardrails.push("lower-bound-disclosed");
           const grainCheck = validateGrain(question, rows, sql);
           if (!grainCheck.ok && grainCheck.message) {
             postExplanation = grainCheck.message;
@@ -1872,6 +1875,7 @@ export async function POST(req: NextRequest) {
               retryExplanation += "\n\nNote: Current Trends data comes from a sample of agencies with consistent reporting — it does not represent complete state or national totals. For comprehensive state-level estimates, try the Historical Library tab.";
             }
             retryExplanation = applyResultDisclosures({ explanation: retryExplanation, question, sql, rows, tab });
+            if (missingLowerBoundNote(question, sql, rows) && !firedGuardrails.includes("lower-bound-disclosed")) firedGuardrails.push("lower-bound-disclosed");
             const retryGrainCheck = validateGrain(question, rows, sql);
             if (!retryGrainCheck.ok && retryGrainCheck.message) {
               retryExplanation = retryGrainCheck.message;

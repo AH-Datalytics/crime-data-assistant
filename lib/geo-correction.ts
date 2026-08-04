@@ -27,7 +27,6 @@ export function geoCorrectionHint(question: string): string | null {
 }
 
 /** Append the canonical-place hint to the question the model sees (not the logged/cached key). */
-export function applyGeoCorrection(question: string): string {
-  const hint = geoCorrectionHint(question);
+export function applyGeoCorrection(question: string, hint: string | null = geoCorrectionHint(question)): string {
   return hint ? `${question}\n\n[${hint}]` : question;
 }

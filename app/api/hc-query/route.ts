@@ -18,13 +18,13 @@ import { isSourceEnabled } from "@/lib/sources";
 import { parseRoutingLogMeta } from "@/lib/routing-log-meta";
 import { answerMetadataQuestion } from "@/lib/metadata-coverage";
 import { validateTablesForTab } from "@/lib/table-allowlist";
-import { alignTitleYearRange, applyResultDisclosures } from "@/lib/result-disclosure";
+import { alignTitleYearRange, applyResultDisclosures, missingLowerBoundNote } from "@/lib/result-disclosure";
 import { validateGrain } from "@/lib/requested-grain";
 import { buildCompletenessAnswer, detectCompletenessQuestion, loadCompletenessRows } from "@/lib/completeness-intent";
 import { normalizeHistoryForTab } from "@/lib/chat-history";
 import { containsInternalLeak, INTERNAL_LEAK_SAFE_MESSAGE, sanitizeUserFacingNarrative } from "@/lib/scaffold-helpers";
 import { buildNoSqlFallbackMessage } from "@/lib/refusal-safety";
-import { applyGeoCorrection } from "@/lib/geo-correction";
+import { applyGeoCorrection, geoCorrectionHint } from "@/lib/geo-correction";
 import { detectFollowupTransform } from "@/lib/followup-transform";
 import { applyChartCustomizations } from "@/lib/chart-customization";
 import { getBlockingGeoClarification } from "@/lib/geo-resolver";
@@ -312,7 +312,7 @@ export async function POST(req: NextRequest) {
     const metadata = planSaysQueryBearing ? null : answerMetadataQuestion("hate_crime", question, getHateCrimeDb());
     if (metadata) {
       const executionMs = Date.now() - start;
-      writeLog(question, metadata.sql, metadata.rowCount, null, executionMs, metadata.explanation, "hate_crime", ["deterministic-metadata"], "deterministic", sessionId);
+      writeLog(question, metadata.sql, metadata.rowCount, null, executionMs, metadata.explanation, "hate_crime", ["deterministic-metadata", "metadata-coverage-answer"], "deterministic", sessionId);
       return jsonResp({
         success: true,
         question,
@@ -349,7 +349,11 @@ export async function POST(req: NextRequest) {
         role: h.role as "user" | "assistant",
         content: h.content,
       })),
-      { role: "user", content: applyGeoCorrection(question) },
+      { role: "user", content: (() => {
+        const correctionHint = geoCorrectionHint(question);
+        if (correctionHint) routeGuardrailsFired.push("geo-typo-corrected");
+        return applyGeoCorrection(question, correctionHint);
+      })() },
     ];
 
     if (cached) {
@@ -696,6 +700,7 @@ export async function POST(req: NextRequest) {
     let explanation = sanitizeExplanation(claude.explanation || "");
     explanation = hateCrimeCaveats(sql, explanation);
     explanation = applyResultDisclosures({ explanation, question, sql, rows, tab: "hate_crime" });
+    if (missingLowerBoundNote(question, sql, rows)) routeGuardrailsFired.push("lower-bound-disclosed");
     const grainCheck = validateGrain(question, rows, sql);
     if (!grainCheck.ok && grainCheck.message) {
       explanation = grainCheck.message;

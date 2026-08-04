@@ -22,7 +22,7 @@ import { detectYearSeriesChart } from "@/lib/chart-auto-detect";
 import { parseRoutingLogMeta } from "@/lib/routing-log-meta";
 import { answerMetadataQuestion } from "@/lib/metadata-coverage";
 import { validateTablesForTab } from "@/lib/table-allowlist";
-import { applyResultDisclosures } from "@/lib/result-disclosure";
+import { applyResultDisclosures, missingLowerBoundNote } from "@/lib/result-disclosure";
 import { validateGrain } from "@/lib/requested-grain";
 import { buildCompletenessAnswer, detectCompletenessQuestion, loadCompletenessRows } from "@/lib/completeness-intent";
 import { appendShrAgencyProbeCaveat, isZeroResult, runShrAgencyProbe } from "@/lib/shr-agency-probe";
@@ -31,7 +31,7 @@ import { normalizeHistoryAllSources, normalizeHistoryForTab } from "@/lib/chat-h
 import { containsInternalLeak, INTERNAL_LEAK_SAFE_MESSAGE, sanitizeUserFacingNarrative } from "@/lib/scaffold-helpers";
 import { buildNoSqlFallbackMessage } from "@/lib/refusal-safety";
 import { detectFollowupTransform } from "@/lib/followup-transform";
-import { applyGeoCorrection } from "@/lib/geo-correction";
+import { applyGeoCorrection, geoCorrectionHint } from "@/lib/geo-correction";
 import { applyChartCustomizations } from "@/lib/chart-customization";
 import { getBlockingGeoClarification } from "@/lib/geo-resolver";
 import { getCountyScopeClarification } from "@/lib/county-clarifier";
@@ -321,7 +321,7 @@ export async function POST(req: NextRequest) {
     const metadata = planSaysQueryBearing ? null : answerMetadataQuestion("shr", question, getShrDb());
     if (metadata) {
       const executionMs = Date.now() - start;
-      writeLog(question, metadata.sql, metadata.rowCount, null, executionMs, metadata.explanation, "shr", ["deterministic-metadata"], "deterministic", sessionId);
+      writeLog(question, metadata.sql, metadata.rowCount, null, executionMs, metadata.explanation, "shr", ["deterministic-metadata", "metadata-coverage-answer"], "deterministic", sessionId);
       return jsonResp({
         success: true,
         question,
@@ -659,7 +659,11 @@ export async function POST(req: NextRequest) {
         role: h.role as "user" | "assistant",
         content: h.content,
       })),
-      { role: "user", content: applyGeoCorrection(queryForModel) },
+      { role: "user", content: (() => {
+        const correctionHint = geoCorrectionHint(queryForModel);
+        if (correctionHint) routeGuardrailsFired.push("geo-typo-corrected");
+        return applyGeoCorrection(queryForModel, correctionHint);
+      })() },
     ];
 
     if (cached) {
@@ -1216,6 +1220,7 @@ export async function POST(req: NextRequest) {
     // Fix hallucinated counts using distinct entity detection
     explanation = validateExplanationCount(explanation, rows as Record<string, unknown>[], columns);
     explanation = applyResultDisclosures({ explanation, question, sql, rows, tab: "shr" });
+    if (missingLowerBoundNote(question, sql, rows)) routeGuardrailsFired.push("lower-bound-disclosed");
     const grainCheck = validateGrain(question, rows, sql);
     if (!grainCheck.ok && grainCheck.message) {
       explanation = grainCheck.message;

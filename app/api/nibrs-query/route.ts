@@ -22,11 +22,11 @@ import { checkSingleRowTrend } from "@/lib/single-row-trend";
 import { parseRoutingLogMeta } from "@/lib/routing-log-meta";
 import { answerMetadataQuestion } from "@/lib/metadata-coverage";
 import { validateTablesForTab } from "@/lib/table-allowlist";
-import { alignTitleYearRange, applyResultDisclosures } from "@/lib/result-disclosure";
+import { alignTitleYearRange, applyResultDisclosures, missingLowerBoundNote } from "@/lib/result-disclosure";
 import { validateGrain } from "@/lib/requested-grain";
 import { buildCompletenessAnswer, detectCompletenessQuestion, loadCompletenessRows } from "@/lib/completeness-intent";
 import { normalizeHistoryForTab } from "@/lib/chat-history";
-import { applyGeoCorrection } from "@/lib/geo-correction";
+import { applyGeoCorrection, geoCorrectionHint } from "@/lib/geo-correction";
 import { pastCompleteCalendarYearsRange } from "@/lib/time-conventions";
 import { detectFollowupTransform } from "@/lib/followup-transform";
 import { detectNibrsCapabilityOverride } from "@/lib/nibrs-capability-overrides";
@@ -400,8 +400,9 @@ export async function POST(req: NextRequest) {
           rows,
           tab: "nibrs",
         });
-        const deterministicGrainCheck = validateGrain(question, rows, deterministicQuery.sql);
         const deterministicFiredGuardrails = deterministicGuardrails(deterministicQuery.guardrail);
+        const deterministicGrainCheck = validateGrain(question, rows, deterministicQuery.sql);
+        if (missingLowerBoundNote(question, deterministicQuery.sql, rows)) deterministicFiredGuardrails.push("lower-bound-disclosed");
         if (!deterministicGrainCheck.ok && deterministicGrainCheck.message) {
           explanation = deterministicGrainCheck.message;
           deterministicFiredGuardrails.push("grain-mismatch");
@@ -462,7 +463,7 @@ export async function POST(req: NextRequest) {
     const metadata = planSaysQueryBearing ? null : answerMetadataQuestion("nibrs", question, getNibrsDb());
     if (metadata) {
       const executionMs = Date.now() - metadataStart;
-      writeNibrsLog(question, metadata.sql, metadata.rowCount, null, executionMs, metadata.explanation, ["deterministic-metadata"], "deterministic", sessionId);
+      writeNibrsLog(question, metadata.sql, metadata.rowCount, null, executionMs, metadata.explanation, ["deterministic-metadata", "metadata-coverage-answer"], "deterministic", sessionId);
       return jsonResp({
         success: true,
         question,
@@ -503,13 +504,16 @@ export async function POST(req: NextRequest) {
     const cacheableStandalone = basePromptHistory.length === 0 && !asksContinuousReportingFilter(question);
     const cached = cacheableStandalone ? getCached(question, "nibrs") : null;
 
+    let geoCorrectionApplied = false;
     let claude: Awaited<ReturnType<typeof translateToSql>>;
 
     if (cached) {
       claude = { sql: cached.sql, explanation: cached.explanation, title: cached.title || "", chartHint: (cached.chartType as "bar" | "line" | "pie" | "stacked_bar" | "scatter" | "none") || "none", xAxis: cached.xAxis || "", yAxis: cached.yAxis?.[0] || "", colors: cached.colors as string[] | undefined, yAxisLabel: cached.yAxisLabel, xAxisLabel: cached.xAxisLabel, annotations: cached.annotations as typeof claude.annotations };
     } else {
       console.log(`[nibrs][model=${activeModelLabel}] Processing: ${question.slice(0, 100)}`);
-      claude = await translateToSql(applyGeoCorrection(question), promptHistory, activeModel);
+      const correctionHint = geoCorrectionHint(question);
+      geoCorrectionApplied = Boolean(correctionHint);
+      claude = await translateToSql(applyGeoCorrection(question, correctionHint), promptHistory, activeModel);
       const claudeMs = Date.now() - claudeStart;
       console.log(`[nibrs][timing] Claude API: ${claudeMs}ms`);
 
@@ -638,6 +642,7 @@ export async function POST(req: NextRequest) {
     const routeGuardrailsFired: string[] = resolvedOriWarnings.length > 0
       ? ["nibrs-resolved-ori-warn-only"]
       : [];
+    if (geoCorrectionApplied) routeGuardrailsFired.push("geo-typo-corrected");
     const recordContractValidation = (contractResult: QueryContractSqlValidation, collectRetryIssues = false) => {
       const contractGuardrails = queryContractGuardrails(contractResult);
       if (contractGuardrails.length > 0) {
@@ -1248,6 +1253,7 @@ export async function POST(req: NextRequest) {
       : postExplanation;
     explanation = applyResultDisclosures({ explanation, question, sql, rows, tab: "nibrs" });
     const grainCheck = validateGrain(question, rows, sql);
+    if (missingLowerBoundNote(question, sql, rows) && !routeGuardrailsFired.includes("lower-bound-disclosed")) routeGuardrailsFired.push("lower-bound-disclosed");
     if (!grainCheck.ok && grainCheck.message) {
       explanation = grainCheck.message;
       routeGuardrailsFired.push("grain-mismatch");
