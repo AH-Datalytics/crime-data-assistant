@@ -6,6 +6,8 @@
  * source of truth instead of each re-deriving context independently.
  */
 
+import { resolveGeoPlaces } from "./geo-place-resolver";
+
 export type Tab = "current" | "historical" | "nibrs" | "shr" | "hate_crime";
 export type Scope = "national" | "state" | "city" | "county" | "agency";
 
@@ -14,6 +16,12 @@ export interface QueryContext {
   question: string;
   /** Cities/agencies mentioned in SQL WHERE clauses */
   geos: string[];
+  /**
+   * Canonical place names resolved from the question when `geos` is empty
+   * (e.g. ORI-filtered SQL plus a lowercase question). Used ONLY to validate
+   * narrative entity mentions — never by guardrails, which read `geos`.
+   */
+  resolvedPlaces?: string[];
   /** State abbreviations from SQL */
   states: string[];
   /** Inferred geographic scope */
@@ -135,6 +143,31 @@ export function extractQueryContext(
     }
   }
 
+  // --- Canonical resolved places (narrative validation only) ---
+  // When neither the SQL nor the capitalized-question heuristics above yielded a
+  // place, fall back to the shared place resolver. This is the 7772/7773 case:
+  // SQL filters by ORI ('MDBPD0000') and the question is lowercase
+  // ("carjackings in baltimore city"), so a CORRECT model mention of Baltimore
+  // was rewritten to "cities in the dataset" by validateExplanationEntities.
+  //
+  // Deliberately kept OUT of `geos`: that field is read by 9 guardrails and by
+  // geoDisplay, and widening it would change guardrail behavior. Only the
+  // explain-path entity validator consumes `resolvedPlaces`.
+  //
+  // Cost is bounded — the resolver runs only when no geo was found any other
+  // way, and never when the SQL is an explicit national/aggregate query (a
+  // place mention there is genuinely suspect and should still be corrected).
+  const resolvedPlaces: string[] = [];
+  if (geos.length === 0 && !sqlHasExplicitAggregateGeo) {
+    for (const mention of resolveGeoPlaces(question).mentions) {
+      if (mention.requiresClarification || mention.candidates.length !== 1) continue;
+      const candidate = mention.candidates[0];
+      for (const name of [candidate.name, candidate.canonicalQuery]) {
+        if (name && !resolvedPlaces.includes(name)) resolvedPlaces.push(name);
+      }
+    }
+  }
+
   // --- States ---
   const states: string[] = [];
   const stateRe = /state\s*=\s*'([A-Z]{2})'/gi;
@@ -214,6 +247,7 @@ export function extractQueryContext(
     tab,
     question,
     geos,
+    resolvedPlaces,
     states,
     scope,
     timeRange: { start, end },

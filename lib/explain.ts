@@ -323,7 +323,12 @@ Describe what these results contain in one sentence (metric, geography, time ran
     const text = message.content[0].type === "text" ? message.content[0].text.trim() : "";
     if (text.length > 10) {
       // Validate: check for hallucinated entity names
-      let validated = validateExplanationEntities(text, resultEntities, ctx.geos);
+      // Valid names = places proven by SQL/rows, plus canonical places resolved
+      // from the question when the SQL identified geography by ORI only (7772).
+      let validated = validateExplanationEntities(text, resultEntities, [
+        ...ctx.geos,
+        ...(ctx.resolvedPlaces ?? []),
+      ]);
       // Validate: fix hallucinated row/entity counts
       validated = validateExplanationCount(validated, rows, columns);
       validated = ensureExplanationYearRange(validated, yearRange);
