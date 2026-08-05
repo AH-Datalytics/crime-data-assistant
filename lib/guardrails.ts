@@ -527,7 +527,13 @@ function requestedEndYear(question: string): number | null {
   const patterns = [
     /\bbetween\s+(?:19|20)\d{2}\s+(?:and|to|through|-)\s+((?:19|20)\d{2})\b/i,
     /\b(?:from\s+)?(?:19|20)\d{2}\s*(?:-|to|through)\s*((?:19|20)\d{2})\b/i,
-    /\b(?:through|thru|until|to)\s+((?:19|20)\d{2})\b/i,
+    // "back to YYYY" extends the range BACKWARDS -- it is a lower bound, not an
+    // end year. Production row 5493 ("Go back to 1976") matched the bare "to
+    // 1976" here, so contract-year-upper-bound-missing fired against SQL that
+    // correctly covered 1976-2025, and the retry message would have instructed
+    // the model to add `year <= 1976` and answer with 1976 alone.
+    // The lookbehind also covers "back through" / "back until" phrasing.
+    /(?<!\bback\s)\b(?:through|thru|until|to)\s+((?:19|20)\d{2})\b/i,
   ];
   for (const pattern of patterns) {
     const match = question.match(pattern);
