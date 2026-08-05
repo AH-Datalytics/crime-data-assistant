@@ -110,14 +110,48 @@ const D4: QueryAuditDetector = {
   id: "D4", category: "year-range-mismatch", severity: "medium",
   proposedFix: "Derive the displayed year range from returned rows or SQL bounds rather than model-authored prose.",
   detect(row) {
-    const responseYears = [...answerText(row).matchAll(/\b(19|20)\d{2}\b/g)].map((m) => Number(m[0]));
-    if (responseYears.length === 0) return null;
+    const response = answerText(row);
     const sql = sqlText(row);
+
+    // Bounds from the SQL. BETWEEN must be parsed or a closed range yields no
+    // bounds at all: production 4570 uses `year BETWEEN 1991 AND 2025` and could
+    // never fire while its narrative claimed "from 1932 to 2025".
     const lower = [...sql.matchAll(/year\s*(?:>=|>)\s*['"]?((?:19|20)\d{2})/gi)].map((m) => Number(m[1]));
     const upper = [...sql.matchAll(/year\s*(?:<=|<)\s*['"]?((?:19|20)\d{2})/gi)].map((m) => Number(m[1]));
-    const min = lower.length ? Math.min(...lower) : null; const max = upper.length ? Math.max(...upper) : null;
-    const outside = responseYears.some((year) => (min !== null && year < min) || (max !== null && year > max));
-    return outside ? finding(this, row, "Narrative names a year outside the bounds expressed by the SQL.") : null;
+    for (const between of sql.matchAll(/year\s+between\s+['"]?((?:19|20)\d{2})['"]?\s+and\s+['"]?((?:19|20)\d{2})/gi)) {
+      lower.push(Number(between[1]));
+      upper.push(Number(between[2]));
+    }
+    const min = lower.length ? Math.min(...lower) : null;
+    const max = upper.length ? Math.max(...upper) : null;
+    if (min === null && max === null) return null;
+
+    // Compare the narrative's STATED RANGE, not every year token it contains.
+    // Scanning all tokens false-positives on legitimate caveats: 4228 says
+    // "from 2000 to 2025" then "Data for 2026 is incomplete", and 5915 mentions
+    // 2026 only in a population-denominator note. Both are correct answers.
+    // Caveats are appended by the disclosure layer, so only the text BEFORE the
+    // first caveat marker states the result's range. Without this cut, 5915's
+    // note ("Population denominators for 2025–2026 use the FBI CDE's current
+    // estimate") reads as a claim of 2026 and false-positives a correct answer.
+    const caveatMarker = response.search(
+      /\bNote:|\bData for\b|\bmay be (?:incomplete|revised|preliminary)\b|\bdenominators?\b|\bin-progress\b/i
+    );
+    const claimText = caveatMarker >= 0 ? response.slice(0, caveatMarker) : response;
+
+    const claimed: number[] = [];
+    for (const range of claimText.matchAll(/\b((?:19|20)\d{2})\s*(?:-|–|to|through|thru)\s*((?:19|20)\d{2})\b/g)) {
+      claimed.push(Number(range[1]), Number(range[2]));
+    }
+    for (const since of claimText.matchAll(/\b(?:since|starting(?:\s+in)?|beginning(?:\s+in)?|from)\s+((?:19|20)\d{2})\b/gi)) {
+      claimed.push(Number(since[1]));
+    }
+    if (claimed.length === 0) return null;
+
+    const outside = claimed.filter((year) => (min !== null && year < min) || (max !== null && year > max));
+    return outside.length
+      ? finding(this, row, `Narrative states a year range (${outside.join(", ")}) outside the bounds the SQL expresses (${min ?? "open"}-${max ?? "open"}).`)
+      : null;
   },
 };
 
