@@ -26,7 +26,7 @@ import { alignTitleYearRange, applyResultDisclosures, missingLowerBoundNote, tri
 import { validateGrain } from "@/lib/requested-grain";
 import { normalizeHistoryAllSources, normalizeHistoryForTab } from "@/lib/chat-history";
 import { applyGeoCorrection, geoCorrectionHint } from "@/lib/geo-correction";
-import { containsInternalLeak, INTERNAL_LEAK_SAFE_MESSAGE, sanitizeUserFacingNarrative } from "@/lib/scaffold-helpers";
+import { containsInternalLeak, INTERNAL_LEAK_SAFE_MESSAGE, sanitizeUserFacingNarrative , sanitizeChartConfigTitle} from "@/lib/scaffold-helpers";
 import { buildNoSqlFallbackMessage } from "@/lib/refusal-safety";
 import { buildCompletenessAnswer, detectCompletenessQuestion, loadCompletenessRows } from "@/lib/completeness-intent";
 import { detectFollowupTransform } from "@/lib/followup-transform";
@@ -61,6 +61,10 @@ function sseEvent(event: StreamEvent): string {
     payload.explanation = safe.explanation;
     payload.title = safe.title;
   }
+  // ChartPanel renders chartConfig.title, which the sanitization above never
+  // touched -- a leaking title was blanked in the header while the chart still
+  // showed it. Applied here so every response path is covered.
+  if (payload.chartConfig) payload.chartConfig = sanitizeChartConfigTitle(payload.chartConfig);
   if (payload.type === "explanation" && typeof payload.text === "string") {
     payload.text = sanitizeUserFacingNarrative(payload.text, undefined).explanation;
   }

@@ -73,6 +73,10 @@ function jsonResp(data: unknown, status = 200) {
     payload.explanation = safe.explanation;
     payload.title = safe.title;
   }
+  // ChartPanel renders chartConfig.title, which the sanitization above never
+  // touched -- a leaking title was blanked in the header while the chart still
+  // showed it. Applied here so every response path is covered.
+  if (payload.chartConfig) payload.chartConfig = sanitizeChartConfigTitle(payload.chartConfig);
   return NextResponse.json(payload, { status, headers: CORS_HEADERS });
 }
 
@@ -82,6 +86,7 @@ import {
   containsInternalLeak,
   INTERNAL_LEAK_SAFE_MESSAGE,
   sanitizeUserFacingNarrative,
+  sanitizeChartConfigTitle,
 } from "@/lib/scaffold-helpers";
 import { findNibrsSqlIssues } from "@/lib/sql-guardrails";
 

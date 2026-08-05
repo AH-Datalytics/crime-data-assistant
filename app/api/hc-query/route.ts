@@ -22,7 +22,7 @@ import { alignTitleYearRange, applyResultDisclosures, missingLowerBoundNote } fr
 import { validateGrain } from "@/lib/requested-grain";
 import { buildCompletenessAnswer, detectCompletenessQuestion, loadCompletenessRows } from "@/lib/completeness-intent";
 import { normalizeHistoryForTab } from "@/lib/chat-history";
-import { containsInternalLeak, INTERNAL_LEAK_SAFE_MESSAGE, sanitizeUserFacingNarrative } from "@/lib/scaffold-helpers";
+import { containsInternalLeak, INTERNAL_LEAK_SAFE_MESSAGE, sanitizeUserFacingNarrative , sanitizeChartConfigTitle} from "@/lib/scaffold-helpers";
 import { buildNoSqlFallbackMessage } from "@/lib/refusal-safety";
 import { applyGeoCorrection, geoCorrectionHint } from "@/lib/geo-correction";
 import { detectFollowupTransform } from "@/lib/followup-transform";
@@ -53,6 +53,10 @@ function jsonResp(data: Record<string, any> | QueryError, status = 200) {
     payload.explanation = safe.explanation;
     payload.title = safe.title;
   }
+  // ChartPanel renders chartConfig.title, which the sanitization above never
+  // touched -- a leaking title was blanked in the header while the chart still
+  // showed it. Applied here so every response path is covered.
+  if (payload.chartConfig) payload.chartConfig = sanitizeChartConfigTitle(payload.chartConfig);
   return NextResponse.json(payload, { status });
 }
 
@@ -686,7 +690,7 @@ export async function POST(req: NextRequest) {
     // chart, so the rendered chart title (config.title) is corrected too.
     claude.title = alignTitleYearRange(claude.title, rows);
     // Build chart config
-    const chartConfig = applyChartCustomizations({
+    let chartConfig = applyChartCustomizations({
       type: (claude.chartType || "none") as "bar" | "line" | "pie" | "stacked_bar" | "none",
       xAxis: claude.xAxis || columns[0],
       yAxis: claude.yAxis || (columns.length > 1 ? [columns[columns.length - 1]] : []),
@@ -716,6 +720,12 @@ export async function POST(req: NextRequest) {
     explanation = finalNarrative.explanation || "";
     claude.title = finalNarrative.title || claude.title || "Results";
     claude.title = alignTitleYearRange(claude.title, rows);
+    // Built before the narrative firewall and the final title alignment ran, so
+    // its title is a snapshot of an earlier value. ChartPanel renders
+    // config.title, so bring it in step with the finalized title.
+    if (chartConfig && claude.title && chartConfig.title !== claude.title) {
+      chartConfig = { ...chartConfig, title: claude.title };
+    }
     writeLog(question, sql, rows.length, null, totalMs, explanation, "hate_crime", finalizeGuardrailTags(routeGuardrailsFired, queryContractGuardrails(runContractValidation(sql))), "haiku-4.5", sessionId);
 
     // Cache successful responses (only standalone questions)
