@@ -6,6 +6,7 @@ import { validateAndSanitize } from "@/lib/sql-safety";
 import { validateSqlSchema } from "@/lib/schema-validation";
 import { executeWithTimeoutSync } from "@/lib/query-timeout";
 import { buildChartConfig } from "@/lib/chart-config";
+import { serializeChartConfigForLog } from "@/lib/chart-config-log";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { checkSessionLimit, maybeCleanup } from "@/lib/captcha";
 import { RTCI } from "@/lib/dynamic-facts";
@@ -459,8 +460,14 @@ export async function POST(req: NextRequest) {
     tabName: string = "current",
     guardrails: string[] = [],
     model: string | null = null,
-    sid: string | null = null
-  ) => logQuery(q, sqlText, rowCount, logError, ms, logResponse, tabName, guardrails, model, sid, routingMeta);
+    sid: string | null = null,
+    /**
+     * Phase 3 chart capture. Pre-serialized through the allowlist in
+     * lib/chart-config-log so this logger cannot widen what gets stored, and so a
+     * failure to serialize degrades to null rather than losing the whole log row.
+     */
+    chartConfigJson: string | null = null
+  ) => logQuery(q, sqlText, rowCount, logError, ms, logResponse, tabName, guardrails, model, sid, routingMeta, chartConfigJson);
 
   const tab = body?.mode === "historical" ? "historical" : "current";
   const demographicRateFollowup = detectDemographicRateDenominatorFollowup(
@@ -1862,7 +1869,7 @@ export async function POST(req: NextRequest) {
             );
           }
           const totalMs2 = Date.now() - totalStart;
-          writeLog(question, sql, rows.length, null, totalMs2, postExplanation, tab, finalizeGuardrailTags(firedGuardrails, queryContractGuardrails(runContractValidation(sql || ""))), "haiku-4.5", sessionId);
+          writeLog(question, sql, rows.length, null, totalMs2, postExplanation, tab, finalizeGuardrailTags(firedGuardrails, queryContractGuardrails(runContractValidation(sql || ""))), "haiku-4.5", sessionId, serializeChartConfigForLog(chartConfig, columns));
           // Cache successful responses (only standalone questions)
           if (!fromCache && promptHistory.length === 0 && sql) {
             setCache(question, tab, { sql, explanation: claude.explanation, title: claude.title, chartType: claude.chartHint, xAxis: claude.xAxis, yAxis: claude.yAxis ? claude.yAxis.split(",").map(s => s.trim()) : undefined, yAxisLabel: claude.yAxisLabel, xAxisLabel: claude.xAxisLabel, colors: claude.colors, annotations: claude.annotations });
@@ -1909,11 +1916,11 @@ export async function POST(req: NextRequest) {
               );
             }
             const totalMs2 = Date.now() - totalStart;
-            writeLog(question, sql, rows.length, null, totalMs2, retryExplanation, tab, finalizeGuardrailTags(firedGuardrails, queryContractGuardrails(runContractValidation(sql || ""))), "haiku-4.5", sessionId);
+            writeLog(question, sql, rows.length, null, totalMs2, retryExplanation, tab, finalizeGuardrailTags(firedGuardrails, queryContractGuardrails(runContractValidation(sql || ""))), "haiku-4.5", sessionId, serializeChartConfigForLog(chartConfig, columns));
           } catch {
             // Both attempts failed — pre-query explanation stays
             const totalMs2 = Date.now() - totalStart;
-            writeLog(question, sql, rows.length, null, totalMs2, claude.explanation, tab, finalizeGuardrailTags(firedGuardrails, queryContractGuardrails(runContractValidation(sql || ""))), "haiku-4.5", sessionId);
+            writeLog(question, sql, rows.length, null, totalMs2, claude.explanation, tab, finalizeGuardrailTags(firedGuardrails, queryContractGuardrails(runContractValidation(sql || ""))), "haiku-4.5", sessionId, serializeChartConfigForLog(chartConfig, columns));
           }
           if (!fromCache && promptHistory.length === 0 && sql) {
             setCache(question, tab, { sql, explanation: claude.explanation, title: claude.title, chartType: claude.chartHint, xAxis: claude.xAxis, yAxis: claude.yAxis ? claude.yAxis.split(",").map(s => s.trim()) : undefined, yAxisLabel: claude.yAxisLabel, xAxisLabel: claude.xAxisLabel, colors: claude.colors, annotations: claude.annotations });

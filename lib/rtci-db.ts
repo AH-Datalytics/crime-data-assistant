@@ -194,6 +194,32 @@ export function logResolverWarnings(input: {
   }
 }
 
+/**
+ * Whether query_log has the Phase 3 chart_config column.
+ *
+ * Cached per database handle, not globally: getWriteDb() reopens the file when it
+ * changes on disk, and a cache keyed on nothing would go stale across a
+ * migration or a database swap. A WeakMap keyed on the handle expires naturally
+ * when that handle is discarded.
+ */
+const chartConfigColumnCache = new WeakMap<object, boolean>();
+
+export function queryLogHasChartConfig(db: object): boolean {
+  const cached = chartConfigColumnCache.get(db);
+  if (cached !== undefined) return cached;
+  let present = false;
+  try {
+    const rows = (db as { prepare: (sql: string) => { all: () => Array<{ name: string }> } })
+      .prepare("PRAGMA table_info(query_log)")
+      .all();
+    present = rows.some((row) => row.name === "chart_config");
+  } catch {
+    present = false;
+  }
+  chartConfigColumnCache.set(db, present);
+  return present;
+}
+
 export function logQuery(
   question: string,
   sql: string | null,
@@ -205,15 +231,25 @@ export function logQuery(
   guardrails: string[] = [],
   model: string | null = null,
   sessionId: string | null = null,
-  routingMeta: RoutingLogMeta | null = null
+  routingMeta: RoutingLogMeta | null = null,
+  /**
+   * Pre-serialized chart configuration (see serializeChartConfigForLog). Passed
+   * as a string rather than a ChartConfig so the allowlist serialization happens
+   * once at the call site and this function cannot accidentally widen it.
+   */
+  chartConfigJson: string | null = null
 ) {
   const db = getWriteDb();
   if (db) {
     try {
       const contractSource = tab === "hate_crime" ? "hate_crime" : tab as QueryContractSource;
-      db.prepare(
-        "INSERT INTO query_log (ts, tab, question, sql, rows, error, ms, response, guardrails, model, session_id, routing_confidence, routing_mode, routing_reason, query_guidance, query_contract) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-      ).run(
+      // Detected at runtime so schema and code can deploy in either order: an
+      // unmigrated database logs exactly as before instead of failing every write.
+      const withChartConfig = queryLogHasChartConfig(db);
+      const columns = "ts, tab, question, sql, rows, error, ms, response, guardrails, model, session_id, routing_confidence, routing_mode, routing_reason, query_guidance, query_contract" +
+        (withChartConfig ? ", chart_config" : "");
+      const placeholders = withChartConfig ? "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?" : "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?";
+      const values: unknown[] = [
         Date.now(),
         tab,
         (question || "").slice(0, 2000),
@@ -229,8 +265,10 @@ export function logQuery(
         routingMeta?.mode ?? null,
         routingMeta?.reason ?? null,
         serializeQueryGuidanceLogMeta(question || ""),
-        serializeQueryContractLogMeta(question || "", contractSource, routingMeta)
-      );
+        serializeQueryContractLogMeta(question || "", contractSource, routingMeta),
+      ];
+      if (withChartConfig) values.push(chartConfigJson);
+      db.prepare(`INSERT INTO query_log (${columns}) VALUES (${placeholders})`).run(...values);
     } catch (e) {
       console.warn("Log write failed:", e);
     }

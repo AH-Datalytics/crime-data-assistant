@@ -12,6 +12,7 @@ import { generateExplanation, sanitizeExplanation } from "@/lib/explain";
 import { extractQueryContext } from "@/lib/query-context";
 import { runGuardrails } from "@/lib/guardrails";
 import { finalizeGuardrailTags } from "@/lib/guardrail-tag-state";
+import { serializeChartConfigForLog } from "@/lib/chart-config-log";
 import { asksForCountsInsteadOfRates } from "@/lib/rate-intent";
 import { applyRetryMeta } from "@/lib/types";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -205,8 +206,10 @@ export async function POST(req: NextRequest) {
       logResponse: string | null = null,
       guardrails: string[] = [],
       model: string | null = null,
-      sid: string | null = null
-    ) => logNibrsQuery(q, sqlText, rowCount, logError, ms, logResponse, guardrails, model, sid, routingMeta);
+      sid: string | null = null,
+      /** Phase 3 chart capture; pre-serialized via the allowlist in lib/chart-config-log. */
+      chartConfigJson: string | null = null
+    ) => logNibrsQuery(q, sqlText, rowCount, logError, ms, logResponse, guardrails, model, sid, routingMeta, chartConfigJson);
 
     // Page token validation
     const pageToken = body?.pageToken as string | undefined;
@@ -1352,14 +1355,15 @@ export async function POST(req: NextRequest) {
     const totalMs = Date.now() - claudeStart;
     const firedGuardrails = finalizeGuardrailTags([...guardrailResult.fired, ...routeGuardrailsFired], queryContractGuardrails(runContractValidation(sql)));
     console.log(`[nibrs][result] model=${activeModelLabel} rows=${rows.length} retries=${retryCount} scaffold_stripped=${scaffoldStripped} guardrails=[${firedGuardrails.join(",")}] total_ms=${totalMs} db_ms=${executionTimeMs}${canaryFlag ? " CANARY" : ""}`);
-    writeNibrsLog(question, sql, rows.length, null, totalMs, explanation, firedGuardrails, activeModelLabel, sessionId);
+    // Built before logging so the captured configuration is the one actually
+    // returned to the client. buildNibrsChartConfig is pure, so moving it up is safe.
+    const chartConfig = buildNibrsChartConfig(claude, columns, rows, question);
+    writeNibrsLog(question, sql, rows.length, null, totalMs, explanation, firedGuardrails, activeModelLabel, sessionId, serializeChartConfigForLog(chartConfig, columns));
 
     // Cache successful responses (only standalone questions)
     if (!cached && cacheableStandalone) {
       setCache(question, "nibrs", { sql, explanation: claude.explanation, title: claude.title, chartType: claude.chartHint, xAxis: claude.xAxis, yAxis: claude.yAxis ? [claude.yAxis] : undefined, yAxisLabel: claude.yAxisLabel, xAxisLabel: claude.xAxisLabel, colors: claude.colors, annotations: claude.annotations });
     }
-    // Step 5: Build chart config
-    const chartConfig = buildNibrsChartConfig(claude, columns, rows, question);
 
     // Step 6: Truncate if needed
     const truncated = rows.length >= 1000;

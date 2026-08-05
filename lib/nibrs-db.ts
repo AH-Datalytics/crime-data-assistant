@@ -118,17 +118,23 @@ export function logNibrsQuery(
   guardrails: string[] = [],
   model: string | null = null,
   sessionId: string | null = null,
-  routingMeta: RoutingLogMeta | null = null
+  routingMeta: RoutingLogMeta | null = null,
+  /** Phase 3 chart capture; pre-serialized via lib/chart-config-log's allowlist. */
+  chartConfigJson: string | null = null
 ) {
   // Write to shared query_log.db via rtci-db's getWriteDb
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { getWriteDb } = require("@/lib/rtci-db");
+  const { getWriteDb, queryLogHasChartConfig } = require("@/lib/rtci-db");
   const db = getWriteDb();
   if (db) {
     try {
-      db.prepare(
-        "INSERT INTO query_log (ts, tab, question, sql, rows, error, ms, response, guardrails, model, session_id, routing_confidence, routing_mode, routing_reason, query_guidance, query_contract) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-      ).run(
+      // Detected at runtime for the same reason as logQuery: an unmigrated
+      // database must keep logging exactly as before rather than fail every write.
+      const withChartConfig = queryLogHasChartConfig(db);
+      const columns = "ts, tab, question, sql, rows, error, ms, response, guardrails, model, session_id, routing_confidence, routing_mode, routing_reason, query_guidance, query_contract" +
+        (withChartConfig ? ", chart_config" : "");
+      const placeholders = new Array(withChartConfig ? 17 : 16).fill("?").join(", ");
+      const values: unknown[] = [
         Date.now(),
         "nibrs",
         (question || "").slice(0, 2000),
@@ -144,8 +150,10 @@ export function logNibrsQuery(
         routingMeta?.mode ?? null,
         routingMeta?.reason ?? null,
         serializeQueryGuidanceLogMeta(question || ""),
-        serializeQueryContractLogMeta(question || "", "nibrs", routingMeta)
-      );
+        serializeQueryContractLogMeta(question || "", "nibrs", routingMeta),
+      ];
+      if (withChartConfig) values.push(chartConfigJson);
+      db.prepare(`INSERT INTO query_log (${columns}) VALUES (${placeholders})`).run(...values);
     } catch (e) {
       console.error("[logNibrsQuery] Failed:", e);
     }

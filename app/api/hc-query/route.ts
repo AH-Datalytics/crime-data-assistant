@@ -44,6 +44,7 @@ import { partialCoverageRetryPrompt } from "@/lib/source-year-overlap";
 import { extractQueryContext } from "@/lib/query-context";
 import { runGuardrails } from "@/lib/guardrails";
 import { finalizeGuardrailTags } from "@/lib/guardrail-tag-state";
+import { serializeChartConfigForLog } from "@/lib/chart-config-log";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function jsonResp(data: Record<string, any> | QueryError, status = 200) {
@@ -197,8 +198,10 @@ export async function POST(req: NextRequest) {
       tabName: string = "hate_crime",
       guardrails: string[] = [],
       model: string | null = null,
-      sid: string | null = null
-    ) => logQuery(q, sqlText, rowCount, logError, ms, logResponse, tabName, guardrails, model, sid, routingMeta);
+      sid: string | null = null,
+      /** Phase 3 chart capture; pre-serialized via the allowlist in lib/chart-config-log. */
+      chartConfigJson: string | null = null
+    ) => logQuery(q, sqlText, rowCount, logError, ms, logResponse, tabName, guardrails, model, sid, routingMeta, chartConfigJson);
     const routeGuardrailsFired: string[] = [];
     const recordContractValidation = (contractResult: QueryContractSqlValidation) => {
       const contractGuardrails = queryContractGuardrails(contractResult);
@@ -716,7 +719,7 @@ export async function POST(req: NextRequest) {
     explanation = finalNarrative.explanation || "";
     claude.title = finalNarrative.title || claude.title || "Results";
     claude.title = alignTitleYearRange(claude.title, rows);
-    writeLog(question, sql, rows.length, null, totalMs, explanation, "hate_crime", finalizeGuardrailTags(routeGuardrailsFired, queryContractGuardrails(runContractValidation(sql))), "haiku-4.5", sessionId);
+    writeLog(question, sql, rows.length, null, totalMs, explanation, "hate_crime", finalizeGuardrailTags(routeGuardrailsFired, queryContractGuardrails(runContractValidation(sql))), "haiku-4.5", sessionId, serializeChartConfigForLog(chartConfig, columns));
 
     // Cache successful responses (only standalone questions)
     if (!cached && promptHistory.length === 0) {
