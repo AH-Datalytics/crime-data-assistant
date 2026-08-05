@@ -54,6 +54,7 @@ import { plannerModeForSource } from '@/lib/followup-planner-mode';
 import { findVerifiedCurrentAgency } from '@/lib/current-agency-availability';
 import { neutralizeUnverifiedAvailabilityClaim } from "@/lib/refusal-safety";
 import { implausiblePopulationDenominator } from "@/lib/rate-denominator-safety";
+import { buildAgencyScorecard } from "@/lib/agency-scorecard";
 
 function sseEvent(event: StreamEvent): string {
   const payload = { ...event } as Record<string, unknown>;
@@ -545,6 +546,18 @@ export async function POST(req: NextRequest) {
         "X-RateLimit-Remaining": String(rateCheck.remaining),
       },
     });
+  }
+
+  const agencyScorecard = tab === "historical" ? buildAgencyScorecard(getDb(), capabilityQuestion) : null;
+  if (agencyScorecard) {
+    const ms = Date.now() - totalStart;
+    const scorecardTag = agencyScorecard.rows.length > 0 ? "agency-scorecard-deterministic" : "agency-scorecard-unavailable";
+    writeLog(question, agencyScorecard.sql ?? "", agencyScorecard.rows.length, null, ms, agencyScorecard.explanation, tab, [scorecardTag], "deterministic", sessionId);
+    const stream = new ReadableStream({ start(controller) {
+      controller.enqueue(encoder.encode(sseEvent({ type: "result", sql: agencyScorecard.sql ?? "", explanation: agencyScorecard.explanation, title: agencyScorecard.title, columns: agencyScorecard.columns, rows: agencyScorecard.rows, rowCount: agencyScorecard.rows.length, truncated: false, chartConfig: null, chartMeta: { source: "FBI SRS", agencyCount: 1, population: null }, executionTimeMs: ms })));
+      controller.close();
+    }});
+    return new Response(stream, { headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", Connection: "keep-alive", "X-RateLimit-Remaining": String(rateCheck.remaining) } });
   }
 
   const completenessIntent = detectCompletenessQuestion(capabilityQuestion);
