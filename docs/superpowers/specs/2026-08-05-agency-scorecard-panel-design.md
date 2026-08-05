@@ -7,9 +7,17 @@
 
 `buildAgencyScorecard` returns a good answer that looks unfinished.
 
-It produces nine rows — `offense`, `offenses`, `rate_per_100k`, `clearance_rate` — with `section: true` on the violent and property totals, and sets `chartConfig: null`. In the client, `RtciChat.tsx:543` renders the chart slot **only when `response.chartConfig` is truthy**, so a scorecard renders nothing on the chart side. What remains is the generic `DataTable`, which has no concept of section rows, so `VIOLENT CRIME` and `PROPERTY CRIME` appear as ordinary rows among the offences they summarise.
+It produces nine rows — `offense`, `offenses`, `rate_per_100k`, `clearance_rate` — with `section: true` on the violent and property totals, and sets `chartConfig: null`.
 
-The result reads as a data dump rather than a product.
+In `WorkspaceChatV2.tsx` (the component `/test` actually renders), that combination fails three gates:
+
+- **line 229** builds the response object only when `rows.length > 0 || chartConfig`, so an *unavailable* scorecard is discarded outright and never reaches the UI at all;
+- **line 346** computes `hasData` the same way, hiding the entire data region;
+- **the chart slot** requires `chartConfig`, so even a populated scorecard renders nothing on the chart side.
+
+What survives is the generic `DataTable`, which has no concept of section rows — so `VIOLENT CRIME` and `PROPERTY CRIME` appear as ordinary rows among the offences they summarise.
+
+The result reads as a data dump rather than a product, and the builder's carefully-worded unavailable copy is unreachable.
 
 ## Goal
 
@@ -29,14 +37,22 @@ These were considered and explicitly rejected during design. Recording them so t
 
 ### 1. Routing the scorecard into the chart slot
 
-Add an explicit marker to the result payload:
+Add an explicit marker in three places, all of which must agree or the marker silently vanishes mid-path:
 
 ```ts
-// lib/types.ts — QueryResponse and the StreamEvent result variant
+// lib/types.ts — QueryResponse
+scorecard?: boolean;
+
+// lib/types.ts — the StreamEvent "result" variant
 scorecard?: boolean;
 ```
 
-`app/api/query/route.ts` sets `scorecard: true` on the scorecard branch (around line 557, where the result event is enqueued).
+```ts
+// app/api/query/route.ts — the scorecard branch (~line 557)
+sseEvent({ type: "result", ..., scorecard: true })
+```
+
+The marker crosses a serialization boundary: route → `sseEvent` → JSON → client parse → `QueryResponse`. A field present on the route object but absent from the `StreamEvent` type, or dropped when the client reconstructs `qr`, would fail silently — the scorecard would simply render as it does today. **This path must be tested end to end, not just at the endpoints.**
 
 **Rejected alternative:** detecting a scorecard by comparing `columns` against `SCORECARD_COLUMNS`. That needs no payload change but couples the client to a column list by coincidence, and breaks silently the first time a column is added. It is the same failure class as `chartConfig.title` bypassing the response firewall — a property that held by accident until it didn't. State the intent instead of inferring it.
 
@@ -73,11 +89,31 @@ The panel does not receive `title` — it composes its own header from `agencyLa
 - Existing tokens (`var(--border)`, `var(--muted)`).
 - No gradients, no heavy rounding, no emoji. Editorial density, consistent with the house style.
 
-### 3. `RtciChat.tsx` changes
+### 3. Client changes — `components/WorkspaceChatV2.tsx`
 
-- Render `ScorecardPanel` in the chart slot when `response.scorecard` is set. The slot's condition currently requires `response.chartConfig`, so it must become `response.chartConfig || response.scorecard`.
-- **Suppress `DataTable` when `response.scorecard` is set.** One scorecard, not a designed one beside a plain one. This is what makes it a single product.
-- `ExportButtons` already targets `chartRef`, so the box becomes PNG-exportable with no extra work.
+**The client target is `WorkspaceChatV2`, not `RtciChat`.** `app/test/page.tsx:4` imports `WorkspaceChatV2`, and `/test` is where this is exercised. `RtciChat` is a different surface and is out of scope here.
+
+There are **two** gates that discard a zero-row scorecard, and both must change. The second is the one that makes the deliberate unavailable state reachable at all:
+
+**a. Response construction — line 229.** Currently:
+
+```ts
+const qr: QueryResponse | null = event.rows.length > 0 || event.chartConfig ? { ... } : null;
+```
+
+An unavailable scorecard has `rows.length === 0` and `chartConfig: null`, so `qr` is `null` and **nothing downstream ever sees the response**. The condition must also admit `event.scorecard`, and the constructed object must carry the marker through.
+
+**b. `hasData` — line 346.** Currently `response.chartConfig || response.rows.length > 0`. Must become `response.chartConfig || response.rows.length > 0 || response.scorecard`. Without this the whole data region is hidden and the empty-state branches at lines 641/648 take over, so the builder's carefully-worded unavailable copy could never appear.
+
+These two are why pure-helper tests are insufficient: a perfectly correct `ScorecardPanel` renders nothing if either gate drops the response.
+
+**c. Chart slot.** Condition becomes `response.chartConfig || response.scorecard`, rendering `ScorecardPanel` when the marker is present.
+
+**d. `DataTable` suppressed** when `response.scorecard` is set. One scorecard, not a designed one beside a plain one — this is what makes it a single product.
+
+**e. Table toggle.** The show/hide-table control must not offer an empty table for a scorecard. For an unavailable scorecard there are no rows at all, and for a populated one the table is redundant with the panel. Hide the toggle when `response.scorecard` is set.
+
+**f. Export.** `ExportButtons` targets `chartRef`, so the box is PNG-exportable once the panel renders inside that ref. Confirm the CSV path still produces the nine rows for a populated scorecard, and that export is either suppressed or yields something sensible for an unavailable one rather than an empty file.
 
 ### 4. Builder addition
 
@@ -101,15 +137,32 @@ buildAgencyScorecard(db, question)
 
 ## Testing
 
-The repository has no React component test infrastructure, so this will not claim rendering coverage it cannot assert. Instead:
+The repository has no React component test infrastructure, so this will not claim rendering coverage it cannot assert. But **pure-helper tests alone are not sufficient here** — the likeliest failure is a missing branch in `WorkspaceChatV2`, which no helper test can see. Three layers:
 
-- **Logic-level tests** on the panel's exported pure helpers — row grouping into sections, number formatting, the >100% detection that drives the footnote — in `scripts/test-agency-scorecard-panel.ts`, chained into `npm test`.
-- **Extend `scripts/test-agency-scorecard.ts`** to assert the builder returns a positive `population` on the success path and `0` on each unavailable path.
-- **Manual verification** against live data once deployed, since the existing scorecard has only ever been verified against a fixture. Check what year a real agency resolves to, that section totals are populated, and that a >100% clearance renders with its footnote.
+**1. Pure helpers** — `scripts/test-agency-scorecard-panel.ts`, chained into `npm test`. Row grouping into sections, number formatting, and the >100% detection that drives the footnote.
+
+**2. Marker survives the SSE path** — assert the marker is present at every hop, since it crosses a serialization boundary:
+- the route's result payload carries `scorecard: true`
+- `StreamEvent` and `QueryResponse` both declare the field, so it is not stripped by typing
+- a captured SSE `data:` line parses back to an object with `scorecard === true`
+
+**3. Wiring tests, both states** — proving the panel is reachable, which is the gap that pure helpers leave open. Source-level assertions on `WorkspaceChatV2.tsx`, in the manner of `scripts/test-chart-capture-wiring.ts`:
+- the response-construction condition at ~line 229 admits `event.scorecard`, and the constructed object carries the marker
+- `hasData` includes `response.scorecard`
+- the chart-slot condition includes `response.scorecard`
+- `DataTable` is suppressed when `response.scorecard` is set
+- the table toggle is hidden when `response.scorecard` is set
+
+Each assertion must fail if its branch is removed. A wiring test that passes against the current unmodified `WorkspaceChatV2` proves nothing — verify non-vacuity by checking the tests fail before the changes are made.
+
+**4. Manual verification against live data.** The scorecard is deployed (see Risks), so this is possible now: check what year a real agency resolves to, that section totals are populated, that a >100% clearance shows its footnote, and that an ambiguous request renders the unavailable box rather than an empty region.
+
+**Extend `scripts/test-agency-scorecard.ts`** to assert the builder returns a positive `population` and a non-empty `agencyLabel` on the success path, and `0` / `""` on each unavailable path.
 
 ## Risks
 
-- **The scorecard is not currently deployed.** `5c6462a` is on `dev`; production runs `20260805_205601` from `hotfix/nibrs-rollup-attach`, where `agency-scorecard.ts` is absent. Nothing here can be verified against live data until that changes, and `dev` and production have diverged.
+- **The scorecard IS deployed.** Production runs release `20260805_231101` from `dev@93048e4`, with `lib/agency-scorecard.ts` present. Live verification is therefore possible, and should be done — the scorecard has so far only ever been checked against a fixture. (An earlier draft of this spec said it was not deployed; that was true at the time of writing and is now stale.)
+- **Production has moved from the hotfix branch back to `dev`.** It previously ran `hotfix/nibrs-rollup-attach`. Anyone reasoning about what is live should check the deployed commit rather than assume, since the branch in use has changed twice today.
 - **Suppressing `DataTable` removes sorting and the raw-value view** for scorecard answers. Deliberate — the scorecard is a fixed nine-row layout where sorting is meaningless — but it is a capability removed, and CSV export via `ExportButtons` should be confirmed to still work.
 - **`section: true` is presentation metadata travelling in a data row.** Acceptable at this size; if a second panel type ever needs it, it belongs in a separate structure rather than mixed into the row.
 
