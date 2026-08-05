@@ -133,7 +133,19 @@ const D3: QueryAuditDetector = {
     const claimsMonthly = /monthly|per month|each month|by month/i.test(response);
     const claimsAnnual = /annual|yearly|per year|each year|by year/i.test(response);
     const hasWindow = /rows\s+between\s+\d+\s+preceding/i.test(sql);
-    const hasMonthlyShape = /\bmonth\b|data_month/.test(sql) && /group\s+by[\s\S]{0,180}\bmonth\b/i.test(sql);
+    /**
+     * A pre-aggregated monthly table is ALREADY one row per month, so a correct
+     * monthly query selects `month` and needs no GROUP BY at all. Requiring a
+     * GROUP BY made 101 of 109 grain-claim flags false positives -- e.g. row
+     * 5461, `SELECT year, month, count FROM agency_monthly WHERE agency =
+     * 'Houston' ... ORDER BY year, month`, which is exactly right for "monthly
+     * murders in Houston since 2018".
+     */
+    const readsMonthlyTable = /\b(?:from|join)\s+[a-z_.]*_monthly\b/i.test(sql);
+    const selectsMonthColumn = /select[\s\S]{0,240}\bmonth\b/i.test(sql);
+    const hasMonthlyShape =
+      (/\bmonth\b|data_month/.test(sql) && /group\s+by[\s\S]{0,180}\bmonth\b/i.test(sql)) ||
+      (readsMonthlyTable && selectsMonthColumn);
     const multiOffenseWindow = hasWindow && /national_monthly/.test(sql) && /\boffense\s+in\s*\([^)]{1,120},/i.test(sql) && !/group\s+by[\s\S]{0,180}\bmonth\b/i.test(sql);
     // A window over offense-keyed rows rolls over ROWS, not months, and is wrong
     // regardless of what the narrative claims. Gating it on claimsRolling missed
