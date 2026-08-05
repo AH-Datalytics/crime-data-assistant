@@ -34,6 +34,7 @@ function has(pattern: RegExp, text: string) {
 
 function asksGenericCrime(text: string): boolean {
   if (!/\bcrimes?\b/i.test(text)) return false;
+  if (/\bscorecard\b/i.test(text)) return false;
   return !/\b(?:violent|property|hate|index|overall|all|murder|homicide|rape|robbery|assault|burglary|theft|larceny|motor\s+vehicle|auto\s+theft|arson|domestic\s+violence|dui|drug|weapons?|firearm|gun|shootings?|clearance|offender|victim|arrestee|arrest)\b/i.test(text);
 }
 

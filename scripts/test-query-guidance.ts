@@ -42,6 +42,7 @@ assertWarns("crime in Dallas since 2020", "generic-crime-type");
 assert.equal(hasBlockingQueryGuidanceWarnings("crime in Dallas since 2020"), false);
 assertDoesNotWarn("violent crime in Dallas since 2020", "generic-crime-type");
 assertDoesNotWarn("property crime in Dallas since 2020", "generic-crime-type");
+assertDoesNotWarn("Tulsa, Oklahoma crime scorecard", "generic-crime-type");
 assertDoesNotWarn("murder in Dallas since 2020", "generic-crime-type");
 assertDoesNotWarn("hate crimes in Dallas since 2020", "generic-crime-type");
 const genericCrimeWarning = getQueryGuidanceWarnings("crime in Dallas since 2020")[0];
