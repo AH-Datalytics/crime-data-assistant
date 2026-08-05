@@ -1,7 +1,7 @@
 import type Database from "better-sqlite3";
 import { resolveGeoPlaces } from "./geo-place-resolver";
 
-export const SCORECARD_COLUMNS = ["offense", "offenses", "rate_per_100k", "clearance_rate"] as const;
+export const SCORECARD_COLUMNS = ["offense", "offenses", "rate_per_100k", "clearance_rate", "offense_change_pct"] as const;
 
 const OFFENSES = [
   { key: "violent", label: "Violent Crime", crime: "violent", clearance: "violent_clr", section: true },
@@ -32,6 +32,7 @@ export type AgencyScorecardRow = {
   offenses: number | null;
   rate_per_100k: number | null;
   clearance_rate: number | null;
+  offense_change_pct: number | null;
   section?: boolean;
 };
 
@@ -94,18 +95,24 @@ export function buildAgencyScorecard(db: Database.Database, question: string): A
   const data = db.prepare(sql).get() as Record<string, number | null> | undefined;
   if (!data || data.population == null || data.population <= 0) return unavailableScorecard(`${agency}, ${stateName} Scorecard`, `${agency}, ${stateName} has no valid population denominator for its latest complete scorecard year.`);
   const population = data.population;
+  const previousSql = `SELECT hac.violent, hac.murder, hac.rape, hac.robbery, hac.assault, hac.property, hac.burglary, hac.theft, hac.motor_vehicle_theft FROM historical_agency_crime hac JOIN historical_agency ha ON ha.ori = hac.ori WHERE ${where} AND hac.year = ${year - 1} LIMIT 1`;
+  const previous = db.prepare(previousSql).get() as Record<string, number | null> | undefined;
   const rows: AgencyScorecardRow[] = [];
   let hasOver100Clearance = false;
   for (const offense of OFFENSES) {
     const count = data[offense.crime] ?? null;
     const isSection = "section" in offense && offense.section === true;
     const clearance = data[offense.clearance] ?? null;
+    const previousCount = previous?.[offense.crime] ?? null;
     if (clearance != null && clearance > 100) hasOver100Clearance = true;
     rows.push({
       offense: offense.label,
       offenses: count,
       rate_per_100k: count == null ? null : Math.round((count * 100000 / population) * 10) / 10,
       clearance_rate: clearance,
+      offense_change_pct: count != null && previousCount != null && previousCount > 0
+        ? Math.round(((count - previousCount) * 100 / previousCount) * 10) / 10
+        : null,
       ...(isSection ? { section: true } : {}),
     });
   }
