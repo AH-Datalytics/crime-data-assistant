@@ -59,7 +59,7 @@ export interface QueryAuditDetector {
  * makes the next run re-audit from the beginning of the retention window rather
  * than resuming from a watermark set by different logic.
  */
-export const QUERY_AUDIT_SUITE_VERSION = "phase1-2026-08-04";
+export const QUERY_AUDIT_SUITE_VERSION = "phase1-2026-08-05";
 
 const text = (value: unknown) => (typeof value === "string" ? value : "");
 const sqlText = (row: QueryAuditRow) => text(row.sql).toLowerCase();
@@ -263,10 +263,30 @@ const D6: QueryAuditDetector = {
   proposedFix: "Carry canonical source labels alongside pivot keys and use them when rendering comparison disclosures.",
   detect(row) {
     const response = answerText(row); const values = row.canonicalValues || [];
+    /**
+     * Trailing sentence punctuation and ordinary lowercase prose are NOT label
+     * corruption. D6's first production run flagged 66 rows, of which only ~5
+     * were real: it was calling 'American Indian.' a mangled 'American Indian'
+     * (a period) and 'justifiable homicide' a mangled 'Justifiable Homicide'
+     * (case). The genuine defect is a LOST INTERNAL SEPARATOR, as in
+     * 'Asianpacific Islander' for 'Asian/Pacific Islander'.
+     *
+     * D6 was calibrated against a single corpus row that happened to be a real
+     * case, and it reported zero everywhere else because no local shr.db meant
+     * it had no reference data -- so this false-positive rate stayed invisible
+     * until the detector ran against production for the first time.
+     */
+    const stripEdgePunctuation = (value: string) => value.replace(/^[^a-z0-9]+/i, "").replace(/[^a-z0-9]+$/i, "");
     for (const canonical of values) {
       const normalized = canonical.replace(/[^a-z0-9]/gi, "").toLowerCase();
-      if (!normalized || canonical.replace(/[^a-z0-9 ]/gi, "").toLowerCase() === normalized) continue;
-      const candidate = response.split(/[,:;|]/).map((part) => part.trim()).find((part) => part.replace(/[^a-z0-9]/gi, "").toLowerCase() === normalized && part !== canonical);
+      // A canonical value made only of letters, digits and spaces has no
+      // internal separator to lose, so it cannot be mangled in this way.
+      if (!normalized || !/[^a-z0-9 ]/i.test(canonical)) continue;
+      const candidate = response.split(/[,:;|]/).map((part) => part.trim()).find((part) => {
+        const core = stripEdgePunctuation(part);
+        return core.replace(/[^a-z0-9]/gi, "").toLowerCase() === normalized
+          && core.toLowerCase() !== canonical.toLowerCase();
+      });
       if (candidate) return finding(this, row, `Narrative label '${candidate}' is a mangled form of canonical source value '${canonical}'.`);
     }
     return null;
