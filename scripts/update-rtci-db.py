@@ -392,9 +392,25 @@ def main():
     # Update local DB
     update_local_db(db_path, records, args.full_rebuild, year, month)
 
-    # Refresh agency populations from FBI data
-    if args.full_rebuild:
-        refresh_populations(db_path, args.pop_csv)
+    # Refresh agency populations from the authoritative populations.csv.
+    #
+    # This used to run ONLY under --full-rebuild, so routine monthly updates
+    # never applied the CSV. The result was 470 wrong values in
+    # agency_population (235 agencies x 2025 and 2026), including Kansas City,
+    # MO at 317,692 against an authoritative 518,039 -- inflating every 2025
+    # per-capita rate for a third of RTCI agencies. Houston, Dallas and San
+    # Antonio were wrong by 2-7%, small enough that no "large drop" check would
+    # have caught them.
+    #
+    # It is now unconditional. Population is a denominator: a stale one produces
+    # confidently wrong rates rather than a visible failure, so it must never
+    # depend on remembering to pass a flag.
+    #
+    # The standalone scripts/refresh_agency_populations.py covers every ORI in
+    # agency_population (this in-line step only covers sample_agencies) and adds
+    # preflight plus post-write validation. Prefer it for repairs; this call
+    # keeps routine updates from drifting between runs.
+    refresh_populations(db_path, args.pop_csv)
 
     # Rebuild + verify derived tables BEFORE any deploy — the scp wholesale-
     # replaces the VPS file, so missing derived tables would regress
