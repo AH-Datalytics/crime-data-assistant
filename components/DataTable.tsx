@@ -111,6 +111,9 @@ export default function DataTable({ columns, rows, truncated, fillHeight }: Data
                 {columns.map((col) => (
                   <td
                     key={col}
+                    style={col === "offense_change_pct" && typeof row[col] === "number"
+                      ? { color: (row[col] as number) > 0 ? "#b91c1c" : (row[col] as number) < 0 ? "#15803d" : undefined, fontWeight: 600 }
+                      : undefined}
                   >
                     {formatCell(row[col], col)}
                   </td>
