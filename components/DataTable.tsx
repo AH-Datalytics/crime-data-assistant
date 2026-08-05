@@ -87,6 +87,14 @@ export default function DataTable({ columns, rows, truncated, fillHeight }: Data
     return s;
   };
 
+  const renderCell = (val: unknown, col: string) => {
+    if (col !== "offense_change_pct") return formatCell(val, col);
+    const change = typeof val === "number" ? val : typeof val === "string" && val.trim() !== "" ? Number(val) : NaN;
+    if (!Number.isFinite(change)) return formatCell(val, col);
+    const color = change > 0 ? "#b91c1c" : change < 0 ? "#15803d" : "#1e2a35";
+    return <span style={{ color, fontWeight: 700 }}>{formatCell(change, col)}</span>;
+  };
+
   if (columns.length === 0 || rows.length === 0) return null;
 
   return (
@@ -111,11 +119,8 @@ export default function DataTable({ columns, rows, truncated, fillHeight }: Data
                 {columns.map((col) => (
                   <td
                     key={col}
-                    style={col === "offense_change_pct" && typeof row[col] === "number"
-                      ? { color: (row[col] as number) > 0 ? "#b91c1c" : (row[col] as number) < 0 ? "#15803d" : undefined, fontWeight: 600 }
-                      : undefined}
                   >
-                    {formatCell(row[col], col)}
+                    {renderCell(row[col], col)}
                   </td>
                 ))}
               </tr>
