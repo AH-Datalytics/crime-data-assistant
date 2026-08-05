@@ -26,7 +26,7 @@ import { alignTitleYearRange, applyResultDisclosures, missingLowerBoundNote, tri
 import { validateGrain } from "@/lib/requested-grain";
 import { normalizeHistoryAllSources, normalizeHistoryForTab } from "@/lib/chat-history";
 import { applyGeoCorrection, geoCorrectionHint } from "@/lib/geo-correction";
-import { containsInternalLeak, INTERNAL_LEAK_SAFE_MESSAGE, sanitizeUserFacingNarrative , sanitizeChartConfigTitle} from "@/lib/scaffold-helpers";
+import { containsInternalLeak, INTERNAL_LEAK_SAFE_MESSAGE, sanitizeUserFacingNarrative, sanitizeChartConfigTitle } from "@/lib/scaffold-helpers";
 import { buildNoSqlFallbackMessage } from "@/lib/refusal-safety";
 import { buildCompletenessAnswer, detectCompletenessQuestion, loadCompletenessRows } from "@/lib/completeness-intent";
 import { detectFollowupTransform } from "@/lib/followup-transform";

@@ -22,7 +22,7 @@ import { alignTitleYearRange, applyResultDisclosures, missingLowerBoundNote } fr
 import { validateGrain } from "@/lib/requested-grain";
 import { buildCompletenessAnswer, detectCompletenessQuestion, loadCompletenessRows } from "@/lib/completeness-intent";
 import { normalizeHistoryForTab } from "@/lib/chat-history";
-import { containsInternalLeak, INTERNAL_LEAK_SAFE_MESSAGE, sanitizeUserFacingNarrative , sanitizeChartConfigTitle} from "@/lib/scaffold-helpers";
+import { containsInternalLeak, INTERNAL_LEAK_SAFE_MESSAGE, sanitizeUserFacingNarrative, sanitizeChartConfigTitle } from "@/lib/scaffold-helpers";
 import { buildNoSqlFallbackMessage } from "@/lib/refusal-safety";
 import { applyGeoCorrection, geoCorrectionHint } from "@/lib/geo-correction";
 import { detectFollowupTransform } from "@/lib/followup-transform";

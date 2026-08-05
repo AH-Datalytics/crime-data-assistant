@@ -29,7 +29,7 @@ import { buildCompletenessAnswer, detectCompletenessQuestion, loadCompletenessRo
 import { appendShrAgencyProbeCaveat, isZeroResult, runShrAgencyProbe } from "@/lib/shr-agency-probe";
 import { neutralizeUnverifiedAvailabilityClaim } from "@/lib/refusal-safety";
 import { normalizeHistoryAllSources, normalizeHistoryForTab } from "@/lib/chat-history";
-import { containsInternalLeak, INTERNAL_LEAK_SAFE_MESSAGE, sanitizeUserFacingNarrative , sanitizeChartConfigTitle} from "@/lib/scaffold-helpers";
+import { containsInternalLeak, INTERNAL_LEAK_SAFE_MESSAGE, sanitizeUserFacingNarrative, sanitizeChartConfigTitle } from "@/lib/scaffold-helpers";
 import { buildNoSqlFallbackMessage } from "@/lib/refusal-safety";
 import { detectFollowupTransform } from "@/lib/followup-transform";
 import { applyGeoCorrection, geoCorrectionHint } from "@/lib/geo-correction";
