@@ -10,6 +10,10 @@ export type SchemaValidation = {
 
 const schemaCache = new WeakMap<object, Map<string, Set<string>>>();
 
+export function clearSchemaValidationCache(db: object): void {
+  schemaCache.delete(db);
+}
+
 function quoteIdentifier(value: string): string {
   return `"${value.replace(/"/g, '""')}"`;
 }

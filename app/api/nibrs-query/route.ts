@@ -41,6 +41,7 @@ import { plannerModeForSource } from '@/lib/followup-planner-mode';
 import { asksCampusAgency, buildCampusAgencySummarySql, campusAgencyChartAxesFromSql, campusAgencyDisplayName, knownCampusAgencyResolution, resolveCampusAgencyOris, shouldResolveCampusAgencySql } from "@/lib/nibrs-campus-agency";
 import { planNibrsQuery } from "@/lib/nibrs-query-planner";
 import { optimizeNibrsSql } from "@/lib/nibrs-sql-optimizer";
+import { nibrsRollupContextForDb, routeNibrsRollupSql } from "@/lib/nibrs-rollup-router";
 import { buildQueryContract } from "@/lib/query-contract";
 import {
   queryContractFailureMessage,
@@ -904,13 +905,19 @@ export async function POST(req: NextRequest) {
       sql = executionContract.sql;
       const executionContractFailure = contractFailureResponse(executionContract, `contract_execution_failure:${executionContract.enforced.join(",")}`);
       if (executionContractFailure) return executionContractFailure;
-      const plannedSql = optimizeNibrsSql(sql);
+      const validationDb = getNibrsDb();
+      const rollupContext = nibrsRollupContextForDb(validationDb);
+      const plannedSql = optimizeNibrsSql(sql, rollupContext?.available ?? false);
       if (plannedSql !== sql) {
         sql = plannedSql;
         routeGuardrailsFired.push("nibrs-query-plan");
         console.log(`[nibrs][query-plan] Applied safe index/rollup plan`);
       }
-      const schemaCheck = validateSqlSchema(getNibrsDb(), sql);
+      const rollupRequired = routeNibrsRollupSql(sql, true).routed;
+      if (rollupRequired && !rollupContext?.available) {
+        throw new Error("NIBRS rollup is unavailable");
+      }
+      const schemaCheck = validateSqlSchema(validationDb, sql);
       if (!schemaCheck.ok) {
         routeGuardrailsFired.push("schema-column-invalid");
         throw new Error("Schema validation failed: " + schemaCheck.error);
@@ -954,11 +961,17 @@ export async function POST(req: NextRequest) {
           const retryValidation = validateAndSanitize(retry.sql);
           if (retryValidation.valid) {
             const retryContract = runContractValidation(retryValidation.sanitized!);
-            let retrySql = optimizeNibrsSql(retryContract.sql);
+            const retryValidationDb = getNibrsDb();
+            const retryRollupContext = nibrsRollupContextForDb(retryValidationDb);
+            let retrySql = optimizeNibrsSql(retryContract.sql, retryRollupContext?.available ?? false);
             const retryContractFailure = contractFailureResponse(retryContract, `contract_db_retry_failure:${retryContract.enforced.join(",")}`);
             if (retryContractFailure) return retryContractFailure;
             try {
-              const retrySchemaCheck = validateSqlSchema(getNibrsDb(), retrySql);
+              const retryRollupRequired = routeNibrsRollupSql(retryContract.sql, true).routed;
+              if (retryRollupRequired && !retryRollupContext?.available) {
+                throw new Error("NIBRS rollup is unavailable");
+              }
+              const retrySchemaCheck = validateSqlSchema(retryValidationDb, retrySql);
               if (!retrySchemaCheck.ok) {
                   routeGuardrailsFired.push("schema-column-invalid");
                   throw new Error("Schema validation failed: " + retrySchemaCheck.error);

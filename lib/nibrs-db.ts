@@ -6,7 +6,7 @@ import { getManagedDb, resolveDbPath } from "./sqlite-db";
 import type { RoutingLogMeta } from "./routing-log-meta";
 import { serializeQueryGuidanceLogMeta } from "./query-guidance-log";
 import { serializeQueryContractLogMeta } from "./query-contract";
-import { resolveNibrsRollupPath, routeNibrsRollupSql } from "./nibrs-rollup-router";
+import { ensureNibrsRollupAttached, nibrsRollupContextForDb } from "./nibrs-rollup-router";
 
 const state = {
   db: null as Database.Database | null,
@@ -29,6 +29,13 @@ export function getNibrsDb(): Database.Database {
   });
   if (!db) {
     throw new Error("Could not open nibrs.db");
+  }
+  try {
+    ensureNibrsRollupAttached(db);
+  } catch (error) {
+    // Ordinary main-database queries may continue. Rollup-routed queries are
+    // rejected explicitly rather than falling back to main.
+    console.error("[nibrs] Rollup attachment unavailable:", error instanceof Error ? error.message : String(error));
   }
   return db;
 }
@@ -65,11 +72,17 @@ export function executeWithTimeout(
       return;
     }
 
+    const db = getNibrsDb();
+    const rollupContext = nibrsRollupContextForDb(db);
+    if (/\brollup\./i.test(sql) && !rollupContext?.available) {
+      reject(new Error("NIBRS rollup is unavailable"));
+      return;
+    }
+
     // Fall back to sync if worker script missing
     if (!workerScript) {
       console.warn("[nibrs] Worker script not found, falling back to sync execution");
       try {
-        const db = getNibrsDb();
         const stmt = db.prepare(sql);
         const rows = stmt.all() as Record<string, unknown>[];
         const columns = stmt.columns().map((c) => c.name);
@@ -82,7 +95,7 @@ export function executeWithTimeout(
 
     execFile(
       process.execPath,
-      [workerScript, dbPath, resolveNibrsRollupPath() ?? "", routeNibrsRollupSql(sql).sql],
+      [workerScript, dbPath, rollupContext?.path ?? "", sql],
       { timeout: timeoutMs, maxBuffer: 50 * 1024 * 1024 },
       (err, stdout, stderr) => {
         if (err) {
