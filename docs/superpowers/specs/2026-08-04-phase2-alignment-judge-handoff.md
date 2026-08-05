@@ -107,7 +107,30 @@ Findings go to the existing `audit_findings` table with category `alignment-*`. 
 ## 5. Scope and rollout
 
 - **Corpus first.** Run against all 35 corpus rows and report the §4 table *before* any production sampling. If per-type recall on the claim-mismatch rows is poor, the prompt needs work before it sees real traffic.
-- **Then sample the previous day's *eligible* traffic, capped at 50** — not a flat 30–50/day, which the measured distribution does not support. Do not scan all 7,900 rows.
+- **Then judge ALL of the previous day's eligible traffic — no sampling cap.** Do not scan all 7,900 rows; do not cap the day.
+
+### Why no per-day cap
+
+An earlier draft said "capped at 50". Measured over 21 days that cap is both inert and harmful:
+
+| | |
+|---|---|
+| Median eligible/day | **40** — the cap never binds |
+| Days over 50 | **7 of 21** (max 203) |
+| Cost at median | $0.36/day (~$11/month) |
+| Cost at max (203) | $1.83/day |
+
+On two-thirds of days it does nothing. On the days it binds it discards up to **75% of eligible traffic to save about $1.47** — and those are the highest-usage days, with the most varied questions and the best chance of surfacing a class nobody anticipated. A cap that only ever fires on the most informative days is backwards.
+
+**Three separate concerns were collapsed into that one number. Separate them:**
+
+| Concern | Mechanism | Value |
+|---|---|---|
+| **Coverage** | judge all eligible rows | no cap |
+| **Runaway protection** | hard daily ceiling — a safety valve against a log flood, a loop, or a bad exclusion filter, *not* a sampling decision | **500/day** (~$4.50 worst case); log loudly when hit, never silently truncate |
+| **Review capacity** | cap *surfaced findings*, not judgments — judge everything, surface the top N by confidence for human triage | start at **15/day**, tune from the real finding rate |
+
+The review cap is the one that actually protects the human: if the judge flags 20% of 200 queries, that is 40 findings nobody will read, and an unread queue is worse than no queue. Capping findings keeps coverage full while keeping the queue readable.
 
 ### Volume reality (measured 2026-07-22 → 08-04)
 
