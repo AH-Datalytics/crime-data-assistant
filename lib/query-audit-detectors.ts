@@ -26,8 +26,40 @@ export interface QueryAuditDetector {
   category: string;
   severity: QueryAuditFinding["severity"];
   proposedFix: string;
+  /**
+   * True when the detector compares the narrative against reference data loaded
+   * from a source database. Such a detector CANNOT FAIL LOUDLY on its own: with
+   * no reference values it just returns null for every row, which is
+   * indistinguishable from "found nothing wrong".
+   *
+   * D6 hid this way during calibration -- the local shr.db was a 0-byte stub, so
+   * it reported 0/1 while its logic was correct. The runner and the calibration
+   * script both check this flag and refuse to report a detector as clean when
+   * its reference data is missing.
+   */
+  requiresCanonicalValues?: boolean;
+  /**
+   * True for detectors that are ABOUT rows with no SQL (refusals). Every other
+   * detector performs a cross-artifact comparison, and a row with no SQL has no
+   * second artifact to compare against.
+   *
+   * Without this, clarification prompts get audited as though they were answers.
+   * Production row 5589 ("robbery clearance rate in New York since 1990") is a
+   * disambiguation prompt -- empty SQL, response "Say New York City or New York
+   * State" -- and D1 flagged it for dropping a "clearance" qualifier that no
+   * answer had yet claimed to honor.
+   */
+  appliesWithoutSql?: boolean;
   detect: (row: QueryAuditRow) => QueryAuditFinding | null;
 }
+
+/**
+ * Bumped whenever detector logic changes in a way that invalidates previously
+ * written findings. The incremental runner keys its watermark on this, so a bump
+ * makes the next run re-audit from the beginning of the retention window rather
+ * than resuming from a watermark set by different logic.
+ */
+export const QUERY_AUDIT_SUITE_VERSION = "phase1-2026-08-04";
 
 const text = (value: unknown) => (typeof value === "string" ? value : "");
 const sqlText = (row: QueryAuditRow) => text(row.sql).toLowerCase();
@@ -42,10 +74,27 @@ const finding = (d: QueryAuditDetector, row: QueryAuditRow, message: string): Qu
 });
 
 const qualifiers: Array<{ name: string; question: RegExp; evidence: RegExp }> = [
-  { name: "police involvement", question: /\bpolice\b|officer[- ]involved|law enforcement/i, evidence: /circumstance|felon killed by police|officer[- ]involved|law enforcement/i },
+  // The bare word "police" is NOT enough. Measured on 30 days of production
+  // traffic, matching it alone made 55 of 83 D1 flags false positives -- almost
+  // all of them Historical-tab staffing questions ("police staffing in Chicago
+  // since 1980"), which mention police but ask nothing about police as a party
+  // to a killing. The qualifier now requires the two ideas to co-occur.
+  {
+    name: "police involvement",
+    // `police` must not be the head of an AGENCY NAME. "murder rates for
+    // albuquerque police department" co-occurs with a killing word but is asking
+    // about an agency's murders, not about police as the killer -- so every
+    // mention is filtered through POLICE_AS_PARTY below.
+    question: /officer[- ]involved|police[- ]involved|\b(?:police|officers?|law enforcement)\b(?!\s+(?:department|dept\.?|bureau|force|agency|precinct|service))[^.?!]{0,48}\b(?:shoot|shot|kill|homicid|murder|fatal|death)|\b(?:shoot|shot|kill|homicid|murder|fatal|death)\w*[^.?!]{0,48}\b(?:police|officers?|law enforcement)\b(?!\s+(?:department|dept\.?|bureau|force|agency|precinct|service))/i,
+    evidence: /circumstance|felon killed by police|officer[- ]involved|law enforcement/i,
+  },
   { name: "domestic/intimate partner", question: /domestic|intimate partner|spouse|girlfriend|boyfriend/i, evidence: /relationship|domestic|intimate|wife|husband|girlfriend|boyfriend/i },
   { name: "gang", question: /\bgangs?\b/i, evidence: /gang/i },
-  { name: "juvenile", question: /juvenile|minor|under[- ]age/i, evidence: /juvenile|minor|age\s*(<|<=|between)/i },
+  // `age_group = 'Under 18'` is how the NIBRS rollups express this, so the
+  // evidence pattern has to recognise it. Production 6922 filtered juveniles
+  // correctly and was still flagged, because the old pattern only accepted
+  // "juvenile", "minor", or a numeric age comparison.
+  { name: "juvenile", question: /juvenile|minor|under[- ]age/i, evidence: /juvenile|minor|age\s*(<|<=|between)|under[- ]?18|age_group/i },
   { name: "stranger", question: /strangers?/i, evidence: /stranger/i },
   { name: "self-defense", question: /self[- ]defen[cs]e/i, evidence: /self[- ]defen[cs]e/i },
   { name: "mass shooting", question: /mass shootings?/i, evidence: /mass|victims?\s*(>=|>|between)/i },
@@ -198,6 +247,7 @@ const D5: QueryAuditDetector = {
 
 const D6: QueryAuditDetector = {
   id: "D6", category: "malformed-label", severity: "medium",
+  requiresCanonicalValues: true,
   proposedFix: "Carry canonical source labels alongside pivot keys and use them when rendering comparison disclosures.",
   detect(row) {
     const response = answerText(row); const values = row.canonicalValues || [];
@@ -213,6 +263,8 @@ const D6: QueryAuditDetector = {
 
 const D7: QueryAuditDetector = {
   id: "D7", category: "refusal-on-answerable", severity: "high",
+  // Refusals are precisely the rows with no SQL, so this detector must opt in.
+  appliesWithoutSql: true,
   proposedFix: "Use deterministic capability answers or retry query generation when the stored contract has geography, metric, and period.",
   detect(row) {
     const response = answerText(row); const refusal = /couldn't build a reliable query|could not build a reliable query|unable to (?:build|generate) (?:a )?query|no reliable query/i.test(response);
@@ -236,7 +288,12 @@ const D8: QueryAuditDetector = {
 export const QUERY_AUDIT_DETECTORS: QueryAuditDetector[] = [D1, D2, D3, D4, D5, D6, D7, D8];
 
 export function detectQueryAuditFindings(row: QueryAuditRow): QueryAuditFinding[] {
+  // A row with no SQL produced no result to describe, so there is nothing for a
+  // cross-artifact detector to disagree about. Only refusal-shaped detectors
+  // opt in to these rows.
+  const hasSql = text(row.sql).trim().length > 0;
   return QUERY_AUDIT_DETECTORS.flatMap((detector) => {
+    if (!hasSql && !detector.appliesWithoutSql) return [];
     const result = detector.detect(row);
     return result ? [result] : [];
   });

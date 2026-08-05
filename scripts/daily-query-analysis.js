@@ -78,27 +78,150 @@ function getQueries() {
     .all(cutoff, cutoffEnd);
 }
 
-function getAuditDetectorStats(queries) {
-  const detectors = [
-    ["D1", "qualifier-drop"], ["D2", "place-mismatch"], ["D3", "grain-mismatch"], ["D4", "year-range-mismatch"],
-    ["D5", "metric-aggregate-mismatch"], ["D6", "malformed-label"], ["D7", "refusal-on-answerable"], ["D8", "unresolved-contract-tag"],
-  ];
+/**
+ * Provenance labels written to audit_findings.source. These must match the
+ * constants in scripts/run-query-audit.ts; scripts/test-audit-provenance.js
+ * asserts the detector list and labels stay in sync with lib/query-audit-detectors.ts.
+ */
+const DIGEST_FINDING_SOURCE = "daily-digest";
+const DETECTOR_FINDING_SOURCE = "phase1-detector";
+
+/**
+ * Mirror of lib/query-audit-detectors.ts. Duplicated because this script runs
+ * under plain `node` and cannot import the TypeScript module. Parity is enforced
+ * by a test rather than by convention.
+ */
+const PHASE1_DETECTORS = [
+  ["D1", "qualifier-drop"], ["D2", "place-mismatch"], ["D3", "grain-mismatch"], ["D4", "year-range-mismatch"],
+  ["D5", "metric-aggregate-mismatch"], ["D6", "malformed-label"], ["D7", "refusal-on-answerable"], ["D8", "unresolved-contract-tag"],
+];
+
+/**
+ * Defect classes that this digest's own rule-based checks and the deterministic
+ * detectors both measure, by different means. When both fire on the same row the
+ * finding is "detector-confirmed" and deserves attention first; a finding from
+ * only one side is weaker evidence.
+ *
+ * Computed at READ time rather than stored, because the two writers run as
+ * separate processes in either order, and a stored flag would go stale whenever
+ * detectors are retuned.
+ */
+const SEMANTIC_FAMILIES = [
+  { family: "unnecessary refusal", detector: "refusal-on-answerable", digest: "potential_refusal" },
+  { family: "wrong place named", detector: "place-mismatch", digest: "entity_hallucination" },
+  { family: "wrong years named", detector: "year-range-mismatch", digest: "year_hallucination" },
+];
+
+/**
+ * Health of the most recent Phase 1 auditor run.
+ *
+ * This exists so that "0 flagged" can be distinguished from "the auditor never
+ * ran". Reporting a silent zero as an all-clear is the failure mode this whole
+ * workstream is meant to prevent.
+ */
+function getAuditorHealth() {
+  try {
+    const exists = db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='audit_runs'").get();
+    if (!exists) return { available: false, reason: "audit_runs table does not exist (migration not applied)" };
+    const run = db.prepare(
+      "SELECT id, status, started_ts, finished_ts, from_log_id, to_log_id, rows_audited, findings_written, detail FROM audit_runs WHERE source = ? ORDER BY id DESC LIMIT 1"
+    ).get(DETECTOR_FINDING_SOURCE);
+    if (!run) return { available: false, reason: "the auditor has never run" };
+
+    // Did the last successful run actually cover yesterday's traffic? A run that
+    // succeeded but stopped short leaves the digest reporting zeros for rows
+    // nobody examined.
+    const lastOk = db.prepare(
+      "SELECT COALESCE(MAX(to_log_id), 0) AS n FROM audit_runs WHERE source = ? AND status = 'ok'"
+    ).get(DETECTOR_FINDING_SOURCE).n;
+    const maxYesterday = db.prepare(
+      "SELECT COALESCE(MAX(id), 0) AS n FROM query_log WHERE ts >= ? AND ts < ?"
+    ).get(cutoff, cutoffEnd).n;
+    const covered = maxYesterday === 0 || lastOk >= maxYesterday;
+
+    const inert = /inert detectors[^:]*:\s*([A-Z0-9,]+)/i.exec(run.detail || "");
+    return {
+      available: run.status === "ok",
+      status: run.status,
+      runId: run.id,
+      rowsAudited: run.rows_audited,
+      findingsWritten: run.findings_written,
+      inert: inert ? inert[1].split(",").filter(Boolean) : [],
+      covered,
+      coverageGap: covered ? 0 : maxYesterday - lastOk,
+      detail: run.detail || null,
+      reason: run.status === "ok" ? null : `last run ended '${run.status}': ${run.detail || "no detail recorded"}`,
+    };
+  } catch (err) {
+    return { available: false, reason: `auditor health unavailable: ${err.message}` };
+  }
+}
+
+function getAuditDetectorStats(queries, health) {
   const ids = queries.map((query) => query.id).filter((id) => id !== null && id !== undefined);
   const idSet = new Set(ids);
+  // When the auditor did not run (or did not reach these rows) the honest report
+  // is "unavailable", not a zero that reads as a clean bill of health.
+  const unavailable = (reason) =>
+    PHASE1_DETECTORS.map(([id, category]) => ({ id, category, flagged: null, unflagged: null, examples: [], status: reason }));
+
+  if (!health || !health.available) return unavailable(health && health.reason ? health.reason : "auditor did not run");
+  if (!health.covered) return unavailable(`auditor has not yet audited these rows (${health.coverageGap} behind)`);
+
   try {
     const exists = db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='audit_findings'").get();
-    if (!exists) return detectors.map(([id, category]) => ({ id, category, flagged: 0, unflagged: queries.length, examples: [], status: "uncalibrated" }));
+    if (!exists) return unavailable("audit_findings table does not exist");
     const findings = ids.length
-      ? db.prepare(`SELECT query_log_id, category, finding FROM audit_findings WHERE query_log_id IN (${ids.map(() => "?").join(",")})`).all(...ids)
+      ? db.prepare(
+          `SELECT query_log_id, category, finding FROM audit_findings
+           WHERE source = ? AND query_log_id IN (${ids.map(() => "?").join(",")})`
+        ).all(DETECTOR_FINDING_SOURCE, ...ids)
       : [];
-    return detectors.map(([id, category]) => {
+    return PHASE1_DETECTORS.map(([id, category]) => {
       const matches = findings.filter((item) => item.category === category && idSet.has(item.query_log_id));
+      const flaggedIds = new Set(matches.map((item) => item.query_log_id));
       const examples = [...new Set(matches.map((item) => queries.find((query) => query.id === item.query_log_id)?.question).filter(Boolean))].slice(0, 3);
-      return { id, category, flagged: new Set(matches.map((item) => item.query_log_id)).size, unflagged: Math.max(0, queries.length - new Set(matches.map((item) => item.query_log_id)).size), examples, status: "uncalibrated" };
+      const status = health.inert.includes(id) ? "INERT - no reference data, zero is not an all-clear" : "calibrated";
+      return { id, category, flagged: flaggedIds.size, unflagged: Math.max(0, queries.length - flaggedIds.size), examples, status };
     });
   } catch (err) {
     console.warn("Cross-artifact auditor stats unavailable:", err.message);
-    return detectors.map(([id, category]) => ({ id, category, flagged: 0, unflagged: queries.length, examples: [], status: "uncalibrated" }));
+    return unavailable(`stats query failed: ${err.message}`);
+  }
+}
+
+/**
+ * Cross-reference detector findings against this digest's own findings on the
+ * same row, so the email can separate corroborated defects from single-source
+ * ones.
+ */
+function getDetectorConfirmed(queries) {
+  const ids = queries.map((query) => query.id).filter((id) => id !== null && id !== undefined);
+  if (ids.length === 0) return [];
+  try {
+    const exists = db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='audit_findings'").get();
+    if (!exists) return [];
+    const columns = db.prepare("PRAGMA table_info(audit_findings)").all().map((column) => column.name);
+    if (!columns.includes("source")) return [];
+    const placeholders = ids.map(() => "?").join(",");
+    const rows = db.prepare(
+      `SELECT query_log_id, category, source FROM audit_findings WHERE query_log_id IN (${placeholders})`
+    ).all(...ids);
+    return SEMANTIC_FAMILIES.map(({ family, detector, digest }) => {
+      const detectorRows = new Set(rows.filter((r) => r.source === DETECTOR_FINDING_SOURCE && r.category === detector).map((r) => r.query_log_id));
+      const digestRows = new Set(rows.filter((r) => r.source === DIGEST_FINDING_SOURCE && r.category === digest).map((r) => r.query_log_id));
+      const both = [...detectorRows].filter((id) => digestRows.has(id));
+      return {
+        family,
+        confirmed: both.length,
+        detectorOnly: detectorRows.size - both.length,
+        digestOnly: digestRows.size - both.length,
+        examples: both.slice(0, 3).map((id) => queries.find((query) => query.id === id)?.question).filter(Boolean),
+      };
+    }).filter((row) => row.confirmed + row.detectorOnly + row.digestOnly > 0);
+  } catch (err) {
+    console.warn("Detector-confirmed cross-reference unavailable:", err.message);
+    return [];
   }
 }
 
@@ -326,6 +449,8 @@ function analyze(queries) {
     guardrailTotal: 0,   // queries where at least 1 guardrail fired
     reliabilityCategories: Object.fromEntries(Object.entries(RELIABILITY_CATEGORIES).map(([name, value]) => [name, { ...value, resolvedCount: 0, resolvedExamples: [], examples: [] }])),
     auditDetectorStats: [],
+    auditorHealth: null,
+    detectorConfirmed: [],
     resolverTags: {
       "nibrs-place-resolved": 0,
       "nibrs-place-resolution-block": 0,
@@ -547,7 +672,9 @@ function analyze(queries) {
     stats.medianMs = msTimes[Math.floor(msTimes.length / 2)];
   }
 
-  stats.auditDetectorStats = getAuditDetectorStats(queries);
+  stats.auditorHealth = getAuditorHealth();
+  stats.auditDetectorStats = getAuditDetectorStats(queries, stats.auditorHealth);
+  stats.detectorConfirmed = getDetectorConfirmed(queries);
 
   // --- Pattern detection: cluster issues into actionable suggestions ---
   // Reliability signals are informational until they exceed their documented threshold.
@@ -1085,9 +1212,33 @@ function buildEmail(stats, issues, visitors, suggestions, weeklyTrends, resolver
   }
   // Cross-artifact auditor is internal-only: it never changes a user response.
   if (stats.auditDetectorStats && stats.auditDetectorStats.length > 0) {
-    html += "<h2>Cross-artifact Auditor</h2><p style=\"font-size:13px;color:#666;\">Internal, non-gating checks compare each question, SQL, and narrative. Counts are uncalibrated until reviewed; users never see these findings.</p><table style=\"width:100%;border-collapse:collapse;font-size:13px;\"><thead><tr style=\"border-bottom:2px solid #ddd;\"><th style=\"text-align:left;padding:8px 6px;\">Detector</th><th style=\"text-align:right;padding:8px 6px;\">Flagged</th><th style=\"text-align:right;padding:8px 6px;\">Unflagged</th><th style=\"text-align:left;padding:8px 6px;\">Status / examples</th></tr></thead><tbody>";
+    const health = stats.auditorHealth || {};
+    // A named line, so "the auditor is broken" can never be mistaken for
+    // "the auditor found nothing".
+    let healthLine;
+    if (!health.available) {
+      healthLine = "<strong style=\"color:#b00;\">Auditor run: UNAVAILABLE</strong> &mdash; " + escapeHtml(health.reason || "unknown reason") + ". The counts below are not a clean bill of health.";
+    } else if (!health.covered) {
+      healthLine = "<strong style=\"color:#b00;\">Auditor run: BEHIND</strong> &mdash; " + health.coverageGap + " of yesterday&rsquo;s rows were never audited.";
+    } else {
+      healthLine = "Auditor run " + health.runId + ": " + health.rowsAudited + " rows audited, " + health.findingsWritten + " findings written."
+        + (health.inert && health.inert.length ? " <strong style=\"color:#b00;\">Inert detectors: " + escapeHtml(health.inert.join(", ")) + "</strong> (missing reference data &mdash; their zeros mean nothing)." : "");
+    }
+    html += "<h2>Cross-artifact Auditor</h2><p style=\"font-size:13px;color:#666;\">Internal, non-gating checks compare each question, SQL, and narrative. Users never see these findings.</p><p style=\"font-size:13px;\">" + healthLine + "</p>";
+
+    if (stats.detectorConfirmed && stats.detectorConfirmed.length > 0) {
+      html += "<table style=\"width:100%;border-collapse:collapse;font-size:13px;margin-bottom:14px;\"><thead><tr style=\"border-bottom:2px solid #ddd;\"><th style=\"text-align:left;padding:8px 6px;\">Defect class</th><th style=\"text-align:right;padding:8px 6px;\">Confirmed by both</th><th style=\"text-align:right;padding:8px 6px;\">Detector only</th><th style=\"text-align:right;padding:8px 6px;\">Digest only</th></tr></thead><tbody>";
+      for (const family of stats.detectorConfirmed) {
+        html += "<tr style=\"border-bottom:1px solid #eee;\"><td style=\"padding:6px;\">" + escapeHtml(family.family) + (family.examples.length ? "<div style=\"color:#666;font-size:12px;\">" + escapeHtml(family.examples.join(" | ")) + "</div>" : "") + "</td><td style=\"padding:6px;text-align:right;font-weight:600;\">" + family.confirmed + "</td><td style=\"padding:6px;text-align:right;\">" + family.detectorOnly + "</td><td style=\"padding:6px;text-align:right;\">" + family.digestOnly + "</td></tr>";
+      }
+      html += "</tbody></table>";
+    }
+
+    html += "<table style=\"width:100%;border-collapse:collapse;font-size:13px;\"><thead><tr style=\"border-bottom:2px solid #ddd;\"><th style=\"text-align:left;padding:8px 6px;\">Detector</th><th style=\"text-align:right;padding:8px 6px;\">Flagged</th><th style=\"text-align:right;padding:8px 6px;\">Unflagged</th><th style=\"text-align:left;padding:8px 6px;\">Status / examples</th></tr></thead><tbody>";
     for (const detector of stats.auditDetectorStats) {
-      html += "<tr style=\"border-bottom:1px solid #eee;\"><td style=\"padding:6px;font-family:monospace;font-size:12px;\">" + escapeHtml(detector.id + " " + detector.category) + "</td><td style=\"padding:6px;text-align:right;font-weight:600;\">" + detector.flagged + "</td><td style=\"padding:6px;text-align:right;\">" + detector.unflagged + "</td><td style=\"padding:6px;color:#666;\">" + escapeHtml(detector.status + (detector.examples.length ? ": " + detector.examples.join(" | ") : "")) + "</td></tr>";
+      const flagged = detector.flagged === null ? "&mdash;" : detector.flagged;
+      const unflagged = detector.unflagged === null ? "&mdash;" : detector.unflagged;
+      html += "<tr style=\"border-bottom:1px solid #eee;\"><td style=\"padding:6px;font-family:monospace;font-size:12px;\">" + escapeHtml(detector.id + " " + detector.category) + "</td><td style=\"padding:6px;text-align:right;font-weight:600;\">" + flagged + "</td><td style=\"padding:6px;text-align:right;\">" + unflagged + "</td><td style=\"padding:6px;color:#666;\">" + escapeHtml(detector.status + (detector.examples.length ? ": " + detector.examples.join(" | ") : "")) + "</td></tr>";
     }
     html += "</tbody></table>";
   }
@@ -1402,6 +1553,7 @@ function persistFindings(issues) {
   if (issues.length === 0) return;
   try {
     const writeDb = new Database(QUERY_LOG_DB_PATH);
+    writeDb.pragma("busy_timeout = 10000");
     writeDb.exec(`
       CREATE TABLE IF NOT EXISTS audit_findings (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1411,25 +1563,59 @@ function persistFindings(issues) {
         category TEXT NOT NULL,
         finding TEXT NOT NULL,
         proposed_fix TEXT,
-        status TEXT DEFAULT 'open'
+        status TEXT DEFAULT 'open',
+        source TEXT NOT NULL DEFAULT 'legacy'
       )
     `);
-    // Create unique index to prevent duplicate findings on rerun
-    writeDb.exec(`
-      CREATE UNIQUE INDEX IF NOT EXISTS idx_audit_findings_unique
-      ON audit_findings (query_log_id, category)
-    `);
-    const insert = writeDb.prepare(
-      "INSERT OR IGNORE INTO audit_findings (query_log_id, ts, severity, category, finding) VALUES (?, ?, ?, ?, ?)"
-    );
+
+    // Provenance matters because a second writer (the Phase 1 detector runner)
+    // shares this table. Without a `source` column the two are indistinguishable
+    // and their conflict policies fight over (query_log_id, category).
+    //
+    // Deliberately NOT recreating the old 2-column unique index here: on a
+    // migrated database that index has been replaced by the 3-column version,
+    // and recreating it would re-impose a constraint the detector writer breaks.
+    const hasSource = writeDb
+      .prepare("PRAGMA table_info(audit_findings)")
+      .all()
+      .some((column) => column.name === "source");
+
+    let insert;
+    if (hasSource) {
+      writeDb.exec(`
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_audit_findings_unique_v2
+        ON audit_findings (query_log_id, category, source)
+      `);
+      insert = writeDb.prepare(
+        "INSERT OR IGNORE INTO audit_findings (query_log_id, ts, severity, category, finding, source) VALUES (?, ?, ?, ?, ?, ?)"
+      );
+    } else {
+      // Unmigrated database: keep working rather than dropping the digest email.
+      console.warn("audit_findings has no `source` column; run scripts/migrate-audit-findings-source.js. Writing without provenance.");
+      writeDb.exec(`
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_audit_findings_unique
+        ON audit_findings (query_log_id, category)
+      `);
+      insert = writeDb.prepare(
+        "INSERT OR IGNORE INTO audit_findings (query_log_id, ts, severity, category, finding) VALUES (?, ?, ?, ?, ?)"
+      );
+    }
+
     const now = Date.now();
-    let count = 0;
+    // Count what was actually written. `INSERT OR IGNORE` silently skips rows
+    // that already exist, so incrementing per iteration over-reported the total
+    // on every rerun.
+    let inserted = 0;
+    let skipped = 0;
     for (const issue of issues) {
-      insert.run(issue.id, now, issue.severity, issue.type, issue.detail);
-      count++;
+      const args = [issue.id, now, issue.severity, issue.type, issue.detail];
+      if (hasSource) args.push(DIGEST_FINDING_SOURCE);
+      const result = insert.run(...args);
+      if (result.changes > 0) inserted++;
+      else skipped++;
     }
     writeDb.close();
-    console.log(`Persisted ${count} findings to audit_findings`);
+    console.log(`Persisted ${inserted} new findings to audit_findings (${skipped} already present, unchanged)`);
   } catch (err) {
     console.warn("Failed to persist findings:", err.message);
   }
