@@ -155,7 +155,44 @@ Exclude, in this order:
 This is a floor, not a solution: exact matching cannot catch a probe phrased freshly. If synthetic volume grows, the durable fix is marking test traffic at the source (a dedicated column or a reserved `session_id` prefix the harness sets) rather than maintaining an exclusion list — worth doing before the judge's numbers are trusted for anything.
 - **Human confirmation before any action.** No fix is written and no detector is promoted on the judge's word alone.
 
-## 6. Tests
+## 6. Run accounting — every row is accounted for
+
+Every run records four counts, and they **must reconcile**:
+
+```
+eligible = judged + skipped + failed
+```
+
+Assert that identity. If it does not hold, the run is buggy and its numbers are not reportable.
+
+| Count | Meaning |
+|---|---|
+| **eligible** | rows remaining after synthetic exclusion (section 5) |
+| **judged** | rows for which the judge returned a valid, schema-conforming verdict |
+| **skipped** | rows deliberately not judged — ceiling reached, refusal, truncation, malformed output |
+| **failed** | rows where the call itself did not complete — transport error, rate limit, timeout, budget guard |
+
+**Skipped rows are recorded individually, never dropped.** When the 500/day ceiling is reached, every remaining eligible row is written with reason `ceiling-reached` — so the next run can see exactly which rows went unjudged instead of inferring it from a shortfall. The same applies to every other skip reason.
+
+| Reason | Class | Produces a finding? |
+|---|---|---|
+| `ceiling-reached` | skipped | never |
+| `refusal` (`stop_reason: "refusal"`) | skipped | never |
+| `truncated` (`stop_reason: "max_tokens"`) | skipped | never |
+| `malformed-output` (schema violation) | skipped | never |
+| `api-error` (4xx/5xx, transport) | failed | never |
+| `rate-limited` (429) | failed | never |
+| `budget-exceeded` | failed | never |
+
+**No finding is ever written from a refusal, a truncation, or malformed judge output.** Those are the *absence* of a judgment, not evidence of misalignment. Equally, a skipped row is **not** a clean row — it must not count toward an alignment rate in either direction.
+
+**API, token, and cost failures are reported separately from alignment findings.** They describe the auditor's health, not the product's. A day where 80% of judgments failed on rate limits must never read as a good alignment day — that is a broken run, and the digest has to say so.
+
+**Digest visibility.** The daily email shows, for the judge: eligible / judged / skipped / failed, the reason breakdown for skips and failures, and tokens plus estimated cost. **Hitting the ceiling gets its own named line, not a buried count** — it means coverage was incomplete that day, and the reader needs that before reading any rate. Same treatment for a run where `failed` is a material share of `eligible`.
+
+---
+
+## 7. Tests
 
 Assert returned values; all assertions before the file's final log; none after any exit; nothing that cannot fail.
 
@@ -164,6 +201,12 @@ Assert returned values; all assertions before the file's final log; none after a
 - A truncated response (`stop_reason: "max_tokens"`) records `skipped` rather than a partial finding.
 - `judge-only` vs `detector-confirmed` classification is correct against a fixture where detector output is known.
 - The digest keeps the three counts separate and labels an uncalibrated judge as such.
+- **Accounting reconciles:** `eligible == judged + skipped + failed` on a fixture with a deliberate mix of all three outcomes.
+- **Ceiling records rows individually:** with the ceiling set low, every unjudged eligible row is present with reason `ceiling-reached` — assert the row count, not just the aggregate.
+- **No findings from non-judgments:** refusal, truncation, and malformed-output fixtures each produce zero findings and are classed `skipped`.
+- **Failures are classed apart from skips:** an api-error and a 429 fixture are counted `failed`, not `skipped`, and produce zero findings.
+- **Skipped rows are not clean rows:** a skipped row contributes to neither the aligned nor the misaligned side of any rate.
+- **Digest names a ceiling hit** as its own line, and flags a run whose `failed` share is material.
 - No response path imports the judge module — assert this by source scan, the same way the route-contract test guards the tag-accumulation fix.
 
 Run full `npm test` + `npx tsc --noEmit`; re-run once on the transient `EXIT=127` npx flake. Commit, report the hash, **do not deploy.**
