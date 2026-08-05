@@ -27,7 +27,7 @@ import { alignTitleYearRange, applyResultDisclosures, missingLowerBoundNote, tri
 import { validateGrain } from "@/lib/requested-grain";
 import { normalizeHistoryAllSources, normalizeHistoryForTab } from "@/lib/chat-history";
 import { applyGeoCorrection, geoCorrectionHint } from "@/lib/geo-correction";
-import { containsInternalLeak, INTERNAL_LEAK_SAFE_MESSAGE, sanitizeUserFacingNarrative } from "@/lib/scaffold-helpers";
+import { containsInternalLeak, INTERNAL_LEAK_SAFE_MESSAGE, sanitizeUserFacingNarrative, sanitizeChartConfigTitle} from "@/lib/scaffold-helpers";
 import { buildNoSqlFallbackMessage } from "@/lib/refusal-safety";
 import { buildCompletenessAnswer, detectCompletenessQuestion, loadCompletenessRows } from "@/lib/completeness-intent";
 import { detectFollowupTransform } from "@/lib/followup-transform";
@@ -62,6 +62,10 @@ function sseEvent(event: StreamEvent): string {
     payload.explanation = safe.explanation;
     payload.title = safe.title;
   }
+  // ChartPanel renders chartConfig.title, which the sanitization above never
+  // touched -- a leaking title was blanked in the header while the chart still
+  // showed it. Applied here so every response path is covered.
+  if (payload.chartConfig) payload.chartConfig = sanitizeChartConfigTitle(payload.chartConfig);
   if (payload.type === "explanation" && typeof payload.text === "string") {
     payload.text = sanitizeUserFacingNarrative(payload.text, undefined).explanation;
   }
@@ -681,7 +685,8 @@ export async function POST(req: NextRequest) {
       const rows = executeWithTimeoutSync<Record<string, unknown>>(db, db.prepare(indexedStatePlan.sql), 30000);
       const columns = rows.length > 0 ? Object.keys(rows[0]) : indexedStatePlan.columns;
       const ms = Date.now() - totalStart;
-      writeLog(question, indexedStatePlan.sql, rows.length, null, ms, indexedStatePlan.explanation, tab, [indexedStatePlan.guardrail], "deterministic", sessionId);
+      // Deterministic answers render charts too; same capture as the model path.
+      writeLog(question, indexedStatePlan.sql, rows.length, null, ms, indexedStatePlan.explanation, tab, [indexedStatePlan.guardrail], "deterministic", sessionId, serializeChartConfigForLog(rows.length > 0 ? indexedStatePlan.chartConfig : null, columns));
       const stream = new ReadableStream({
         start(controller) {
           controller.enqueue(encoder.encode(sseEvent({
@@ -732,7 +737,9 @@ export async function POST(req: NextRequest) {
         tab,
         [multiCityTrend.guardrail],
         "deterministic",
-        sessionId
+        sessionId,
+        // Deterministic answers render charts too; same capture as the model path.
+        serializeChartConfigForLog(rows.length > 0 ? multiCityTrend.chartConfig : null, columns)
       );
       const stream = new ReadableStream({
         start(controller) {
@@ -812,7 +819,8 @@ export async function POST(req: NextRequest) {
       const db = getDb();
       const rows = executeWithTimeoutSync<Record<string, unknown>>(db, db.prepare(historicalCityChange.sql), 30000);
       const columns = rows.length > 0 ? Object.keys(rows[0]) : historicalCityChange.columns;
-      writeLog(question, historicalCityChange.sql, rows.length, null, ms, historicalCityChange.explanation, tab, [historicalCityChange.guardrail], "deterministic", sessionId);
+      // Deterministic answers render charts too; same capture as the model path.
+      writeLog(question, historicalCityChange.sql, rows.length, null, ms, historicalCityChange.explanation, tab, [historicalCityChange.guardrail], "deterministic", sessionId, serializeChartConfigForLog(rows.length > 0 ? historicalCityChange.chartConfig : null, columns));
       const stream = new ReadableStream({
         start(controller) {
           controller.enqueue(
@@ -890,7 +898,8 @@ export async function POST(req: NextRequest) {
   const metadata = planSaysQueryBearing ? null : answerMetadataQuestion(tab, question, getDb());
   if (metadata) {
     const ms = Date.now() - totalStart;
-    writeLog(question, metadata.sql, metadata.rowCount, null, ms, metadata.explanation, tab, ["deterministic-metadata", "metadata-coverage-answer"], "deterministic", sessionId);
+    // Deterministic answers render charts too; same capture as the model path.
+    writeLog(question, metadata.sql, metadata.rowCount, null, ms, metadata.explanation, tab, ["deterministic-metadata", "metadata-coverage-answer"], "deterministic", sessionId, serializeChartConfigForLog(metadata.chartConfig, metadata.columns ?? []));
 
     const stream = new ReadableStream({
       start(controller) {

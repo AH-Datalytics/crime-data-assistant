@@ -30,7 +30,7 @@ import { buildCompletenessAnswer, detectCompletenessQuestion, loadCompletenessRo
 import { appendShrAgencyProbeCaveat, isZeroResult, runShrAgencyProbe } from "@/lib/shr-agency-probe";
 import { neutralizeUnverifiedAvailabilityClaim } from "@/lib/refusal-safety";
 import { normalizeHistoryAllSources, normalizeHistoryForTab } from "@/lib/chat-history";
-import { containsInternalLeak, INTERNAL_LEAK_SAFE_MESSAGE, sanitizeUserFacingNarrative } from "@/lib/scaffold-helpers";
+import { containsInternalLeak, INTERNAL_LEAK_SAFE_MESSAGE, sanitizeUserFacingNarrative, sanitizeChartConfigTitle} from "@/lib/scaffold-helpers";
 import { buildNoSqlFallbackMessage } from "@/lib/refusal-safety";
 import { detectFollowupTransform } from "@/lib/followup-transform";
 import { applyGeoCorrection, geoCorrectionHint } from "@/lib/geo-correction";
@@ -64,6 +64,10 @@ function jsonResp(data: Record<string, any> | QueryError, status = 200) {
     payload.explanation = safe.explanation;
     payload.title = safe.title;
   }
+  // ChartPanel renders chartConfig.title, which the sanitization above never
+  // touched -- a leaking title was blanked in the header while the chart still
+  // showed it. Applied here so every response path is covered.
+  if (payload.chartConfig) payload.chartConfig = sanitizeChartConfigTitle(payload.chartConfig);
   return NextResponse.json(payload, { status });
 }
 
@@ -1149,7 +1153,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const chartConfig = applyChartCustomizations({
+    let chartConfig = applyChartCustomizations({
       type: autoChartType as "bar" | "line" | "pie" | "stacked_bar" | "none",
       xAxis: autoXAxis,
       yAxis: autoYAxis,
@@ -1270,6 +1274,13 @@ export async function POST(req: NextRequest) {
     }
     explanation = finalNarrative.explanation || "";
     claude.title = finalNarrative.title || claude.title || "Results";
+    // The chart config was built before the narrative firewall and the final
+    // title alignment ran, so its title is a snapshot of an earlier value.
+    // ChartPanel renders config.title, so bring it in step with the finalized
+    // title before the response and the log capture it.
+    if (chartConfig && claude.title && chartConfig.title !== claude.title) {
+      chartConfig = { ...chartConfig, title: claude.title };
+    }
     writeLog(question, sql, rows.length, null, totalMs, explanation, "shr", finalizeGuardrailTags([...guardrailResult.fired, ...routeGuardrailsFired], queryContractGuardrails(runContractValidation(sql))), "haiku-4.5", sessionId, serializeChartConfigForLog(chartConfig, columns));
 
     // Cache successful responses (only standalone questions)

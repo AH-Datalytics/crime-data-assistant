@@ -31,6 +31,29 @@ export function sanitizeUserFacingNarrative(
     : { explanation, title, blocked: false };
 }
 
+/**
+ * Sanitizes a chart configuration's title at egress.
+ *
+ * The response firewall sanitized `explanation` and `title` but never the chart
+ * title, and ChartPanel renders `config.title`. So a title carrying internal
+ * content was replaced with "Results" in the response header while the chart
+ * beside it still displayed the leaked text -- on every chart-bearing response.
+ *
+ * Applied inside sseEvent/jsonResp rather than at each build site, so paths added
+ * later (deterministic answers, metadata shortcuts, cached replays) are covered
+ * without anyone having to remember. Route-level fixes would close the two cases
+ * we happened to find; this closes the class.
+ *
+ * Returns the SAME object when nothing needs changing, so the common path costs
+ * one regex test and no allocation.
+ */
+export function sanitizeChartConfigTitle<T extends { title?: unknown } | null | undefined>(chartConfig: T): T {
+  if (!chartConfig || typeof chartConfig !== "object") return chartConfig;
+  const title = (chartConfig as { title?: unknown }).title;
+  if (typeof title !== "string" || !containsInternalLeak(title)) return chartConfig;
+  return { ...(chartConfig as object), title: "Results" } as T;
+}
+
 export function containsInternalLeak(value: string | null | undefined): boolean {
   return INTERNAL_LEAK_RES.some((pattern) => pattern.test(value || ""));
 }
