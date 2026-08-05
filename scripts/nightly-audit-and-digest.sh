@@ -23,8 +23,38 @@ set -uo pipefail
 
 APP_DIR="${APP_DIR:-/opt/nibrs/current}"
 AUDIT_TIMEOUT_SECONDS="${AUDIT_TIMEOUT_SECONDS:-900}"
+ENV_FILE="${CDA_ENV_FILE:-/opt/nibrs/shared/.env.cron}"
 
 cd "$APP_DIR" || { echo "FATAL: cannot cd to $APP_DIR"; exit 1; }
+
+# ---------------------------------------------------------------------------
+# Secrets
+# ---------------------------------------------------------------------------
+# RESEND_API_KEY must NOT be set inline in the crontab. An inline `VAR=value`
+# assignment in a cron command becomes part of the process command line, so any
+# local user running `ps aux` can read it -- even though the crontab file itself
+# is mode 600. Sourcing a 600 file keeps the value out of both.
+#
+# The `tr -d '\r'` is not cosmetic: an env file saved with CRLF endings yields
+# values with a trailing carriage return, which produces authentication failures
+# that look exactly like a wrong or rotated key.
+if [ -f "$ENV_FILE" ]; then
+  perms=$(stat -c %a "$ENV_FILE" 2>/dev/null || echo "unknown")
+  if [ "$perms" != "600" ]; then
+    echo "WARNING: $ENV_FILE is mode $perms; it holds a secret and should be 600."
+  fi
+  set -a
+  # shellcheck disable=SC1090
+  . <(tr -d '\r' < "$ENV_FILE")
+  set +a
+else
+  echo "WARNING: $ENV_FILE not found; relying on the inherited environment."
+fi
+
+if [ -z "${RESEND_API_KEY:-}" ]; then
+  echo "FATAL: RESEND_API_KEY is not set. The digest cannot send. Populate $ENV_FILE (mode 600)."
+  exit 1
+fi
 
 echo "=== $(date -Is) nightly-audit-and-digest starting in $APP_DIR ==="
 

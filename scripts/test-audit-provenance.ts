@@ -183,5 +183,51 @@ console.log("\n6. Detectors needing reference data are reported INERT, never cle
   check("inertness is recorded on the run row", /inert detectors/i.test(detail.detail || ""), `detail=${detail.detail}`);
 }
 
+console.log("\n7. Rollback restores the original schema and preserves digest findings");
+{
+  const rollbackModule = require("./rollback-audit-findings-source.js");
+  const dbPath = tempDb();
+  seedDb(dbPath, 5);
+  // Start from the pre-migration shape, with a digest finding already present.
+  const seed = new Database(dbPath);
+  seed.exec(`CREATE TABLE audit_findings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, query_log_id INTEGER NOT NULL, ts INTEGER NOT NULL,
+    severity TEXT NOT NULL, category TEXT NOT NULL, finding TEXT NOT NULL, proposed_fix TEXT,
+    status TEXT DEFAULT 'open')`);
+  seed.exec("CREATE UNIQUE INDEX idx_audit_findings_unique ON audit_findings (query_log_id, category)");
+  seed.prepare("INSERT INTO audit_findings (query_log_id, ts, severity, category, finding) VALUES (1, 1, 'high', 'slow', 'keep me')").run();
+  const originalColumns = seed.prepare("PRAGMA table_info(audit_findings)").all().map((c: any) => c.name).join(",");
+  const originalIndexes = seed.prepare("PRAGMA index_list(audit_findings)").all().map((i: any) => i.name).sort().join(",");
+  seed.close();
+
+  migration.migrate({ dbPath, dryRun: false });
+  // Add a detector finding that only the 3-column index permits.
+  const mid = new Database(dbPath);
+  mid.prepare("INSERT INTO audit_findings (query_log_id, ts, severity, category, finding, source) VALUES (1, 1, 'high', 'place-mismatch', 'detector', 'phase1-detector')").run();
+  mid.close();
+
+  const result = rollbackModule.rollback({ dbPath, dryRun: false });
+  check("rollback reports success", result.rolledBack === true);
+  check("detector findings deleted", result.deleted === 1, `deleted=${result.deleted}`);
+  check("digest findings preserved", result.preserved === 1, `preserved=${result.preserved}`);
+
+  const after = new Database(dbPath);
+  const columns = after.prepare("PRAGMA table_info(audit_findings)").all().map((c: any) => c.name).join(",");
+  const indexes = after.prepare("PRAGMA index_list(audit_findings)").all().map((i: any) => i.name).sort().join(",");
+  const remaining = after.prepare("SELECT finding FROM audit_findings").all() as Array<{ finding: string }>;
+  check("columns match the pre-migration schema exactly", columns === originalColumns, `${columns} vs ${originalColumns}`);
+  check("indexes match the pre-migration schema exactly", indexes === originalIndexes, `${indexes} vs ${originalIndexes}`);
+  check("the surviving row is the digest's", remaining.length === 1 && remaining[0].finding === "keep me", JSON.stringify(remaining));
+  after.close();
+
+  // Round trip: the migration must still apply cleanly after a rollback.
+  const again = migration.migrate({ dbPath, dryRun: false });
+  check("migration re-applies after rollback", again.migrated === true);
+  const second = rollbackModule.rollback({ dbPath, dryRun: false });
+  check("rollback is repeatable", second.rolledBack === true);
+  const third = rollbackModule.rollback({ dbPath, dryRun: false });
+  check("rollback on an already-rolled-back db is a no-op", third.rolledBack === false);
+}
+
 console.log(`\n${failures === 0 ? "All audit provenance checks passed." : `${failures} check(s) FAILED.`}`);
 process.exit(failures === 0 ? 0 : 1);
