@@ -43,6 +43,8 @@ export type AgencyScorecardResult = {
   rows: AgencyScorecardRow[];
   year: number | null;
   sql: string | null;
+  population: number;
+  agencyLabel: string;
 };
 
 export function detectAgencyScorecardQuestion(question: string): boolean {
@@ -53,8 +55,11 @@ function sqlQuote(value: string): string {
   return `'${value.replace(/'/g, "''")}'`;
 }
 
-function unavailableScorecard(title: string, explanation: string): AgencyScorecardResult {
-  return { title, explanation, columns: [...SCORECARD_COLUMNS], rows: [], year: null, sql: null };
+function unavailableScorecard(title: string, explanation: string, agencyLabel = ""): AgencyScorecardResult {
+  return {
+    title, explanation, columns: [...SCORECARD_COLUMNS], rows: [],
+    year: null, sql: null, population: 0, agencyLabel,
+  };
 }
 
 export function buildAgencyScorecard(db: Database.Database, question: string): AgencyScorecardResult | null {
@@ -88,12 +93,12 @@ export function buildAgencyScorecard(db: Database.Database, question: string): A
       AND hcl.burglary_clr IS NOT NULL AND hcl.theft_clr IS NOT NULL AND hcl.motor_vehicle_theft_clr IS NOT NULL
   `).get() as { year: number | null };
   const stateName = STATE_NAMES[candidate.state!.toUpperCase()] ?? candidate.state;
-  if (!complete.year) return unavailableScorecard(`${agency}, ${stateName} Scorecard`, `${agency}, ${stateName} does not have one recent year with complete crime, population, and clearance data for every scorecard row. No scorecard was substituted from an older or different source.`);
+  if (!complete.year) return unavailableScorecard(`${agency}, ${stateName} Scorecard`, `${agency}, ${stateName} does not have one recent year with complete crime, population, and clearance data for every scorecard row. No scorecard was substituted from an older or different source.`, `${agency}, ${stateName}`);
 
   const year = complete.year;
   const sql = `SELECT hac.year, hp.population, hac.violent, hac.murder, hac.rape, hac.robbery, hac.assault, hac.property, hac.burglary, hac.theft, hac.motor_vehicle_theft, hcl.violent_clr, hcl.murder_clr, hcl.rape_clr, hcl.robbery_clr, hcl.assault_clr, hcl.property_clr, hcl.burglary_clr, hcl.theft_clr, hcl.motor_vehicle_theft_clr FROM historical_agency_crime hac JOIN historical_agency_clearance hcl ON hcl.ori = hac.ori AND hcl.year = hac.year JOIN historical_agency_population hp ON hp.ori = hac.ori AND hp.year = hac.year JOIN historical_agency ha ON ha.ori = hac.ori WHERE ${where} AND hac.year = ${year} AND hp.population > 0 LIMIT 1`;
   const data = db.prepare(sql).get() as Record<string, number | null> | undefined;
-  if (!data || data.population == null || data.population <= 0) return unavailableScorecard(`${agency}, ${stateName} Scorecard`, `${agency}, ${stateName} has no valid population denominator for its latest complete scorecard year.`);
+  if (!data || data.population == null || data.population <= 0) return unavailableScorecard(`${agency}, ${stateName} Scorecard`, `${agency}, ${stateName} has no valid population denominator for its latest complete scorecard year.`, `${agency}, ${stateName}`);
   const population = data.population;
   const previousSql = `SELECT hac.violent, hac.murder, hac.rape, hac.robbery, hac.assault, hac.property, hac.burglary, hac.theft, hac.motor_vehicle_theft FROM historical_agency_crime hac JOIN historical_agency ha ON ha.ori = hac.ori WHERE ${where} AND hac.year = ${year - 1} LIMIT 1`;
   const previous = db.prepare(previousSql).get() as Record<string, number | null> | undefined;
@@ -124,5 +129,7 @@ export function buildAgencyScorecard(db: Database.Database, question: string): A
     rows,
     year,
     sql,
+    population,
+    agencyLabel: `${agency}, ${stateName}`,
   };
 }

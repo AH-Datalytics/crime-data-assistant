@@ -20,4 +20,24 @@ const fallback = buildAgencyScorecard(db, "Give me Tulsa, Oklahoma's crime score
 assert.ok(fallback); assert.equal(fallback.year, 2024); assert.match(fallback.title, /2024/);
 const unavailable = buildAgencyScorecard(db, "Give me Oklahoma crime scorecard");
 assert.ok(unavailable); assert.equal(unavailable.rows.length, 0); assert.match(unavailable.explanation, /one specific city agency/);
+
+// Boundary fields: the panel draws its header from these, so they must be on the
+// result. Both are already computed internally; this asserts they are exposed.
+const populated = buildAgencyScorecard(db, "Give me Tulsa, Oklahoma's crime scorecard");
+assert.ok(populated);
+assert.equal(populated.agencyLabel, "Tulsa, Oklahoma");
+// By this point in the script, an earlier mutation nulled 2025's rape_clr, so the
+// most recent complete year has already fallen back to 2024 (population 400000,
+// not the 2025 fixture value of 410000).
+assert.equal(populated.population, 400000);
+assert.equal(typeof populated.population, "number");
+
+// Unavailable path: every value is falsy, which is exactly the shape that a
+// conditional copy downstream would silently drop.
+const noAgency = buildAgencyScorecard(db, "Give me Oklahoma crime scorecard");
+assert.ok(noAgency);
+assert.equal(noAgency.agencyLabel, "");
+assert.equal(noAgency.population, 0);
+assert.equal(noAgency.year, null);
+
 db.close(); console.log("Agency scorecard checks passed.");
