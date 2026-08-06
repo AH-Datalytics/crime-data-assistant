@@ -72,22 +72,28 @@ These were considered and explicitly rejected during design. Recording them so t
 
 ### 1. Routing the scorecard into the chart slot
 
-Add an explicit marker in three places, all of which must agree or the marker silently vanishes mid-path:
+**Four fields must cross the boundary, not one.** The marker alone gets the panel rendered but leaves it unable to draw its header or source line. All four travel together:
 
-```ts
-// lib/types.ts — QueryResponse
-scorecard?: boolean;
+| Field | Type | Purpose |
+|---|---|---|
+| `scorecard` | `boolean` | Selects the panel and suppresses `DataTable` |
+| `agencyLabel` | `string` | Header line — `"Tulsa, OK"` |
+| `year` | `number \| null` | Header line and the `Change from <year-1>` column label |
+| `population` | `number` | Header line — `Population 415,528` |
 
-// lib/types.ts — the StreamEvent "result" variant
-scorecard?: boolean;
-```
+Each must be declared in **five** places, and every one of them has to agree or the value silently vanishes mid-path:
 
-```ts
-// app/api/query/route.ts — the scorecard branch (~line 557)
-sseEvent({ type: "result", ..., scorecard: true })
-```
+1. **`AgencyScorecardResult`** (`lib/agency-scorecard.ts`) — the builder's return type
+2. **The `StreamEvent` `"result"` variant** (`lib/types.ts`)
+3. **`QueryResponse`** (`lib/types.ts`)
+4. **The route's result payload** (`app/api/query/route.ts`, scorecard branch ~line 557)
+5. **The client's `qr` reconstruction** (`WorkspaceChatV2.tsx` ~line 229) — the object is built field-by-field, so anything not explicitly copied is dropped
 
-The marker crosses a serialization boundary: route → `sseEvent` → JSON → client parse → `QueryResponse`. A field present on the route object but absent from the `StreamEvent` type, or dropped when the client reconstructs `qr`, would fail silently — the scorecard would simply render as it does today. **This path must be tested end to end, not just at the endpoints.**
+Step 5 is the one that bites. The client does not spread the event; it names each field. A value can be correct in the route, correctly typed on both interfaces, present in the SSE `data:` line, and still never reach the panel because the reconstruction didn't copy it. That failure is invisible — the panel renders with an empty header rather than erroring.
+
+**`year` becomes `number | null`.** It is currently `number`. The unavailable paths have no year to report, and `0` would render as `Change from -1`. `unavailableScorecard` returns `year: null`, `population: 0`, `agencyLabel: ""`, and the panel omits the header lines it cannot populate.
+
+**Serialization note:** `sseEvent` sanitizes `explanation`, `title`, and `chartConfig`. It does not touch these four, but the panel's own text still passes through the same firewall via `explanation`, so no new leak path is introduced.
 
 **Rejected alternative:** detecting a scorecard by comparing `columns` against `SCORECARD_COLUMNS`. That needs no payload change but couples the client to a column list by coincidence, and breaks silently the first time a column is added. It is the same failure class as `chartConfig.title` bypassing the response firewall — a property that held by accident until it didn't. State the intent instead of inferring it.
 
@@ -176,23 +182,37 @@ The header label is composed with the actual prior year — `Change from 2024`, 
 
 #### Other builder additions
 
-`AgencyScorecardResult` currently returns `title, explanation, columns, rows, year, sql`. The panel needs two more fields, both of which the builder already holds:
+`AgencyScorecardResult` currently returns `title, explanation, columns, rows, year, sql`. Per the payload contract above it gains `population` and `agencyLabel`, and `year` widens to `number | null`. Both new values are already computed inside the builder:
 
-- `population: number` — already selected into `data.population` and validated as positive.
-- `agencyLabel: string` — already composed as `` `${agency}, ${stateName}` `` before being folded into `title`.
+- `population` — selected into `data.population` and already validated as positive.
+- `agencyLabel` — already composed as `` `${agency}, ${stateName}` `` before being folded into `title`.
 
-For the unavailable paths, `unavailableScorecard` returns `population: 0` and `agencyLabel: ""`; the panel omits the population line when it is zero and falls back to the explanation-only layout.
+So this is exposing values the builder holds, not deriving anything new.
+
+`title` stays on the result for the chat header and the export filename; the panel composes its own header from `agencyLabel` and `year` rather than parsing the formatted title.
 
 ## Data flow
 
 ```
 buildAgencyScorecard(db, question)
-  → { title, explanation, columns, rows, year, population, sql }
-      ↓ route sets scorecard: true
-  → sseEvent result payload
-      ↓ client
-  → ScorecardPanel (chart slot)   [DataTable suppressed]
+  │  returns: title, explanation, columns, rows,
+  │           year (number|null), population, agencyLabel, sql
+  ▼
+app/api/query/route.ts  — scorecard branch
+  │  payload adds: scorecard, agencyLabel, year, population
+  ▼
+sseEvent(...)  → JSON → "data: {...}"          ← serialization boundary
+  ▼
+WorkspaceChatV2.tsx ~line 229  — qr reconstruction
+  │  MUST copy all four explicitly; the object is built
+  │  field-by-field, so anything unnamed is silently dropped
+  ▼
+hasData (~line 346)  — must admit response.scorecard
+  ▼
+chart slot  → ScorecardPanel        [DataTable suppressed, toggle hidden]
 ```
+
+Every arrow is a place a field can disappear without an error. The reconstruction step is the one that fails silently and still renders.
 
 ## Testing
 
@@ -200,10 +220,23 @@ The repository has no React component test infrastructure, so this will not clai
 
 **1. Pure helpers** — `scripts/test-agency-scorecard-panel.ts`, chained into `npm test`. Row grouping into sections, number formatting, and the >100% detection that drives the footnote.
 
-**2. Marker survives the SSE path** — assert the marker is present at every hop, since it crosses a serialization boundary:
-- the route's result payload carries `scorecard: true`
-- `StreamEvent` and `QueryResponse` both declare the field, so it is not stripped by typing
-- a captured SSE `data:` line parses back to an object with `scorecard === true`
+**2. All four fields survive the SSE path** — not just the marker. Assert at every hop, since a field can be correct at both ends and still be dropped by the client's field-by-field reconstruction:
+
+- the route's result payload carries `scorecard`, `agencyLabel`, `year`, and `population`
+- `StreamEvent` and `QueryResponse` both declare all four, so none is stripped by typing
+- a captured SSE `data:` line parses back to an object carrying all four with their values intact
+- the client's `qr` reconstruction copies all four — asserted against the source, since this is the step that drops them silently
+
+**Both cases, explicitly:**
+
+| | populated | unavailable |
+|---|---|---|
+| `scorecard` | `true` | `true` |
+| `agencyLabel` | `"Tulsa, OK"` | `""` |
+| `year` | `2025` | `null` |
+| `population` | `415528` | `0` |
+
+The unavailable case is the one worth asserting hardest: it is the path where every value is falsy, so a reconstruction that copies fields conditionally (`if (event.year)`) would drop them all and leave the panel with nothing — while the populated case passed. Assert `year === null` specifically, not merely falsy, so `0` or `undefined` creeping in is caught.
 
 **3. Wiring tests, both states** — proving the panel is reachable, which is the gap that pure helpers leave open. Source-level assertions on `WorkspaceChatV2.tsx`, in the manner of `scripts/test-chart-capture-wiring.ts`:
 - the response-construction condition at ~line 229 admits `event.scorecard`, and the constructed object carries the marker
