@@ -24,3 +24,6 @@ next-env.d.ts
 *.db
 *.db-shm
 *.db-wal
+
+# Subagent-driven-development scratch (ledgers, briefs, review packages)
+.superpowers/
