@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import type { QueryResponse, StreamEvent } from "@/lib/types";
+import type { AgencyScorecardRow } from "@/lib/agency-scorecard";
 import { autoRoute, isFollowUp, manualSourceNudge, parseIntent, recommendTabs, TAB_DISPLAY_NAMES, TAB_COLORS, type SourceYearRanges, type TabRecommendation } from "@/lib/tab-suggest";
 import { pickerOptions, type SourceId as RegistrySourceId, type PickerSourceId } from "@/lib/sources";
 import { applyChartOnlyCustomization } from "@/lib/chart-customization";
@@ -9,6 +10,7 @@ import { combineCountyStateClarification, getBlockingGeoClarification } from "@/
 import { hasBlockingQueryGuidanceWarnings } from "@/lib/query-guidance";
 import DataTable from "./DataTable";
 import ChartPanel from "./ChartPanel";
+import ScorecardPanel from "./ScorecardPanel";
 import ExportButtons from "./ExportButtons";
 import QuerySkeleton from "./QuerySkeleton";
 import ErrorCard from "./ErrorCard";
@@ -226,8 +228,8 @@ export default function WorkspaceChat({ sourceYearRanges }: WorkspaceChatProps) 
               case "result":
                 finalExplanation = event.explanation; finalSql = event.sql || "";
                 setExplanation(event.explanation);
-                const qr: QueryResponse | null = event.rows.length > 0 || event.chartConfig
-                  ? { success: true as const, question, sql: event.sql, explanation: event.explanation, title: event.title, columns: event.columns, rows: event.rows, rowCount: event.rowCount, truncated: event.truncated, chartConfig: event.chartConfig, chartMeta: event.chartMeta, executionTimeMs: event.executionTimeMs }
+                const qr: QueryResponse | null = event.rows.length > 0 || event.chartConfig || event.scorecard
+                  ? { success: true as const, question, sql: event.sql, explanation: event.explanation, title: event.title, columns: event.columns, rows: event.rows, rowCount: event.rowCount, truncated: event.truncated, chartConfig: event.chartConfig, chartMeta: event.chartMeta, executionTimeMs: event.executionTimeMs, scorecard: event.scorecard, agencyLabel: event.agencyLabel, population: event.population, year: event.year }
                   : null;
                 finalResponse = qr; setResponse(qr);
                 if (event.sourceSwitch && routingMode !== "rerun") { setTimeout(() => submitQuestion(event.sourceSwitch!.question, event.sourceSwitch!.source as "current" | "historical" | "nibrs" | "shr" | "hate_crime", "Follow-up moved to a better source", null, "rerun"), 0); }
@@ -343,7 +345,7 @@ export default function WorkspaceChat({ sourceYearRanges }: WorkspaceChatProps) 
     setActiveExchangeIdx(idx); setActiveSource(ex.source); setResponse(ex.response); setExplanation(ex.explanation); setError(ex.error || "");
   };
 
-  const hasData = response && (response.chartConfig || response.rows.length > 0);
+  const hasData = response && (response.chartConfig || response.rows.length > 0 || response.scorecard);
   const hasStarted = exchanges.length > 0 || loading || error || showDisambiguation;
   const activeExchange = exchanges[activeExchangeIdx];
   const rerunQuestion = exchanges[activeExchangeIdx]?.question || lastQuestion;
@@ -698,7 +700,7 @@ export default function WorkspaceChat({ sourceYearRanges }: WorkspaceChatProps) 
                       </button>
                     )}
                     {response.chartConfig && response.rows.length > 0 && <div className="w-px bg-[var(--border)]" />}
-                    {response.rows.length > 0 && (
+                    {!response.scorecard && response.rows.length > 0 && (
                       <button onClick={() => setShowTable(v => !v)} className={`flex items-center gap-1.5 px-2.5 py-1.5 text-[10px] font-medium cursor-pointer transition-colors ${showTable ? "bg-white text-[var(--foreground)]" : "bg-[var(--surface)] text-[var(--muted-light)]"}`}>
                         <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="12" height="12" rx="1.5"/><line x1="2" y1="6" x2="14" y2="6"/><line x1="2" y1="10" x2="14" y2="10"/><line x1="6" y1="2" x2="6" y2="14"/></svg>
                         <span className="hidden sm:inline">Table</span>
@@ -713,14 +715,28 @@ export default function WorkspaceChat({ sourceYearRanges }: WorkspaceChatProps) 
 
                 {/* Chart + Table side by side */}
                 <div className={`flex-1 flex flex-col ${showChart && response.chartConfig && showTable && response.rows.length > 0 ? "md:flex-row" : ""} gap-3 sm:gap-6 min-h-0`}>
-                  {response.chartConfig && showChart && (
+                  {(response.chartConfig || response.scorecard) && showChart && (
                     <div ref={chartRef} className={`bg-white flex flex-col ${showTable && response.rows.length > 0 ? "md:flex-[1.15] md:min-w-0" : "w-full flex-1"}`}>
                       <div className="flex-1 min-h-0" style={{ minHeight: 280 }}>
-                        <ChartPanel config={response.chartConfig} rows={response.rows} meta={response.chartMeta} />
+                        {response.scorecard ? (
+                          <ScorecardPanel
+                            agencyLabel={response.agencyLabel ?? ""}
+                            year={response.year ?? null}
+                            population={response.population ?? 0}
+                            // QueryResponse.rows is Record<string, unknown>[] so that generic query
+                            // results of any shape can flow through one field; the scorecard builder
+                            // (lib/agency-scorecard.ts) populates it with AgencyScorecardRow objects
+                            // whenever response.scorecard is set, so this narrowing is safe here.
+                            rows={response.rows as AgencyScorecardRow[]}
+                            explanation={response.explanation}
+                          />
+                        ) : (
+                          <ChartPanel config={response.chartConfig!} rows={response.rows} meta={response.chartMeta} />
+                        )}
                       </div>
                     </div>
                   )}
-                  {response.rows.length > 0 && showTable && (
+                  {!response.scorecard && response.rows.length > 0 && showTable && (
                     <div className={`bg-white overflow-hidden workspace-table flex flex-col ${showChart && response.chartConfig ? "md:flex-[0.85] md:min-w-0" : "w-full flex-1"}`}>
                       <DataTable columns={response.columns} rows={response.rows} truncated={response.truncated} fillHeight />
                     </div>

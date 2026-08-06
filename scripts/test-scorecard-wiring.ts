@@ -49,5 +49,29 @@ check("route emits agencyLabel", () => assert.match(route, /agencyLabel:\s*agenc
 check("route emits population", () => assert.match(route, /population:\s*agencyScorecard\.population/));
 check("route emits year", () => assert.match(route, /year:\s*agencyScorecard\.year/));
 
+const chat = read("components/WorkspaceChatV2.tsx");
+
+console.log("\n4. WorkspaceChatV2 does not discard a zero-row scorecard");
+check("response construction admits event.scorecard", () => {
+  assert.match(chat, /event\.rows\.length > 0 \|\| event\.chartConfig \|\| event\.scorecard/);
+});
+check("the constructed object copies all four fields", () => {
+  for (const field of ["scorecard", "agencyLabel", "population"]) {
+    assert.ok(
+      new RegExp(`${field}:\\s*event\\.${field}`).test(chat),
+      `qr reconstruction does not copy ${field}`,
+    );
+  }
+});
+check("hasData admits response.scorecard", () => {
+  assert.match(chat, /const hasData =[^;]*response\.scorecard/);
+});
+
+console.log("\n5. WorkspaceChatV2 renders one scorecard, not two views of it");
+check("ScorecardPanel is imported", () => assert.match(chat, /import ScorecardPanel from "\.\/ScorecardPanel"/));
+check("chart slot admits response.scorecard", () => assert.match(chat, /response\.chartConfig \|\| response\.scorecard/));
+check("ScorecardPanel is rendered", () => assert.match(chat, /<ScorecardPanel/));
+check("DataTable is suppressed for scorecards", () => assert.match(chat, /!response\.scorecard[^)]*&&[\s\S]{0,200}<DataTable/));
+
 console.log(`\n${process.exitCode ? "FAILURES present." : `All ${passed} scorecard wiring checks passed.`}`);
 process.exit(process.exitCode ? 1 : 0);
