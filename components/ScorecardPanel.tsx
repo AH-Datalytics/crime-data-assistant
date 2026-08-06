@@ -137,7 +137,11 @@ export default function ScorecardPanel({
       </div>
 
       {hasOver100 && (
-        <p className="mx-auto mt-3 max-w-[46ch] text-[11px] leading-snug" style={{ color: "#8A8778" }}>
+        // Left-aligned and allowed the full card width. Centring a footnote inside the
+        // 46ch measure wrapped it onto three ragged lines and read as body copy competing
+        // with the table; at the card's own width it settles into one or two lines and
+        // reads as an annotation, which is what it is.
+        <p className="mt-3 text-left text-[11px] leading-snug" style={{ color: "#8A8778" }}>
           * Clearance rates can exceed 100% because agencies may clear cases in the current year
           that originated in prior reporting years.
         </p>
