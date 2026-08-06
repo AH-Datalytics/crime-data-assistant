@@ -38,8 +38,8 @@ addAgency("NY00001", "NY", "New York");
 addAgency("CA00002", "CA", "Oakland");
 addAgency("DC00001", "DC", "Washington");
 addAgency("TX00001", "TX", "Houston");
-addAgency("KY00001", "KY", "Louisville Metro", 1976, 2002);
-addAgency("KY00002", "KY", "Louisville Metro", 2003, 2024);
+addAgency("KY05602", "KY", "Louisville", 1976, 2003);
+addAgency("KY05680", "KY", "Louisville Metro", 2003, 2024);
 
 const incident = db.prepare("INSERT INTO incidents (ori, year, month, homicide_type, agency) VALUES (?, 2021, ?, 'Murder', ?)");
 const victim = db.prepare("INSERT INTO victims (incident_id) VALUES (?)");
@@ -54,8 +54,8 @@ addMurder("NY00001", 3, "New York", 1);
 addMurder("CA00002", 1, "Oakland", 2);
 addMurder("CA00002", 8, "Oakland", 1);
 addMurder("DC00001", 7, "Washington", 1);
-addMurder("KY00001", 2, "Louisville Metro", 10);
-addMurder("KY00002", 1, "Louisville Metro", 1);
+addMurder("KY05602", 2, "Louisville", 10);
+addMurder("KY05680", 1, "Louisville Metro", 1);
 const comparisonInsert = db.prepare("INSERT INTO shr_return_a_comparison VALUES (?, ?, 2021, ?, ?, 'ori_prefix_7_to_9', ?)");
 comparisonInsert.run("MD00001", "MD", 1, 1, "post2020_transition_review");
 comparisonInsert.run("CA00001", "CA", 1, 1, "post2020_transition_review");
@@ -63,8 +63,8 @@ comparisonInsert.run("NY00001", "NY", 1, 1, "post2020_transition_review");
 comparisonInsert.run("CA00002", "CA", 3, 3, "post2020_transition_review");
 comparisonInsert.run("DC00001", "DC", 1, 1, "post2020_transition_review");
 comparisonInsert.run("TX00001", "TX", null, 0, "reta_unreported");
-comparisonInsert.run("KY00001", "KY", 10, 10, "post2020_transition_review");
-comparisonInsert.run("KY00002", "KY", 1, 1, "post2020_transition_review");
+comparisonInsert.run("KY05602", "KY", 10, 10, "post2020_transition_review");
+comparisonInsert.run("KY05680", "KY", 1, 1, "post2020_transition_review");
 
 const comparison = buildShrMurderPlan(
   "Murders through July in 2021 in Baltimore city, Los Angeles, California, NYC, Oakland, and DC",

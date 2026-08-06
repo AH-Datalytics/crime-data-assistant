@@ -2,6 +2,7 @@ import Database from "better-sqlite3";
 import { buildQueryContract, type QueryContract, type QueryContractGeography } from "./query-contract";
 import { pastCompleteCalendarYearsRange } from "./time-conventions";
 import type { SourceResolutionStatus } from "./source-contracts";
+import { findConsolidatedAgency } from "./agency-consolidations";
 
 export type NibrsPlaceKind =
   | "city_police"
@@ -170,6 +171,22 @@ function resolveCity(
   const states = sourceStates(geography);
   if (!cityName || states.length === 0) {
     return placeResult(geography, contractIndex, "city_police", "unsupported", [], "City and state are required.");
+  }
+  const consolidated = states
+    .map((state) => findConsolidatedAgency(state, cityName))
+    .find((entry) => Boolean(entry));
+  if (consolidated) {
+    if (!consolidated.nibrsOri) {
+      return placeResult(geography, contractIndex, "city_police", "not_in_source", [], "Registry records no surviving NIBRS agency for this consolidation.", `${consolidated.alias}, ${consolidated.state}`);
+    }
+    const rows = db.prepare(`
+      SELECT ori, year, population, pop_group, agency_type
+      FROM agencies WHERE ori = ? AND year BETWEEN ? AND ? ORDER BY year
+    `).all(consolidated.nibrsOri, startYear, endYear) as AgencyRow[];
+    const oriYears = rows.map((row) => ({ year: row.year, ori: row.ori, population: row.population }));
+    return oriYears.length > 0
+      ? placeResult(geography, contractIndex, "city_police", "resolved", oriYears, "Resolved through the verified consolidated-agency successor ORI.", `${consolidated.alias}, ${consolidated.state}`)
+      : placeResult(geography, contractIndex, "city_police", "covered", [], `The successor ORI has no agency rows during ${startYear}-${endYear}.`, `${consolidated.alias}, ${consolidated.state}`);
   }
   const placeholders = states.map(() => "?").join(",");
   const rows = db.prepare(`

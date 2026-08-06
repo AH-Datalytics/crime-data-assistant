@@ -38,7 +38,9 @@ db.exec(`
     ('VA0290000', 2025, 'VA', 'FAIRFAX', 'County', 0, '9D', 'N', 'E'),
     ('VA0290100', 2024, 'VA', 'FAIRFAX', 'County', 1107151, '9A', 'N', 'E'),
     ('VA0290100', 2025, 'VA', 'FAIRFAX', 'County', 1125193, '9A', 'N', 'E'),
-    ('CA0193500', 2016, 'CA', 'LAKEWOOD', 'City', 81921, '3', 'N', 'C');
+    ('CA0193500', 2016, 'CA', 'LAKEWOOD', 'City', 81921, '3', 'N', 'C'),
+    ('KY0560200', 2025, 'KY', 'LOUISVILLE', 'City', 300404, '1B', 'N', 'E'),
+    ('KY0568000', 2025, 'KY', 'LOUISVILLE METRO', 'County', 691630, '1A', 'N', 'E');
   INSERT INTO agency_county_crosswalk VALUES
     ('MO04800', 'MO0480000', 'Jackson', 'MO', 'JACKSON'),
     ('MO04823', 'MO0482300', 'Jackson County Park Rgrs', 'MO', 'JACKSON'),
@@ -70,6 +72,15 @@ db.exec(`
   assert.match(query.sql, /'ILCHI0002' AS ori, 2025 AS effective_year/);
   assert.match(query.sql, /tp\.effective_year = s\.year/);
   assert.doesNotMatch(query.sql, /a\.city = 'CHICAGO'/);
+}
+
+{
+  const plan = resolveNibrsPlaces(db, "Louisville, KY murders in 2025");
+  assert.ok(plan);
+  assert.equal(plan.places[0].status, "resolved");
+  assert.equal(plan.places[0].label, "Louisville, KY");
+  assert.deepEqual(plan.places[0].oriRanges, [{ ori: "KY0568000", startYear: 2025, endYear: 2025 }]);
+  assert.doesNotMatch(JSON.stringify(plan), /KY0560200/);
 }
 
 {

@@ -55,19 +55,24 @@ import {
 import { partialCoverageRetryPrompt, sourceYearOverlap } from "@/lib/source-year-overlap";
 import { buildShrCanonicalLabelCase, formatShrResolutionGuidance, resolveShrAgency, rewriteShrResolvedAgencyPredicates } from "@/lib/shr-place-resolver";
 import { buildShrMurderPlan } from "@/lib/shr-deterministic-murder";
+import { consolidatedDisplayText, normalizeConsolidatedDisplayRows } from "@/lib/agency-consolidations";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function jsonResp(data: Record<string, any> | QueryError, status = 200) {
   const payload: Record<string, any> = { ...(data as Record<string, any>) };
   if (typeof payload.explanation === 'string' || typeof payload.title === 'string') {
     const safe = sanitizeUserFacingNarrative(payload.explanation, payload.title);
-    payload.explanation = safe.explanation;
-    payload.title = safe.title;
+    payload.explanation = safe.explanation ? consolidatedDisplayText(safe.explanation) : safe.explanation;
+    payload.title = safe.title ? consolidatedDisplayText(safe.title) : safe.title;
   }
+  if (Array.isArray(payload.rows)) payload.rows = normalizeShrDisplayRows(payload.rows);
   // ChartPanel renders chartConfig.title, which the sanitization above never
   // touched -- a leaking title was blanked in the header while the chart still
   // showed it. Applied here so every response path is covered.
-  if (payload.chartConfig) payload.chartConfig = sanitizeChartConfigTitle(payload.chartConfig);
+  if (payload.chartConfig) {
+    payload.chartConfig = sanitizeChartConfigTitle(payload.chartConfig);
+    if (typeof payload.chartConfig?.title === "string") payload.chartConfig.title = consolidatedDisplayText(payload.chartConfig.title);
+  }
   return NextResponse.json(payload, { status });
 }
 
@@ -81,7 +86,7 @@ function countyKey(value: string): string {
 
 function normalizeShrDisplayRows(rows: Record<string, unknown>[]): Record<string, unknown>[] {
   const agencyLikeColumns = new Set(["agency", "agency_name", "canonical_agency", "city"]);
-  return rows.map((row) => {
+  return normalizeConsolidatedDisplayRows(rows).map((row) => {
     let changed = false;
     const next: Record<string, unknown> = { ...row };
     for (const key of Object.keys(next)) {

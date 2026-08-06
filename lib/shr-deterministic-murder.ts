@@ -25,17 +25,6 @@ function sqlText(value: string): string {
   return `'${value.replace(/'/g, "''")}'`;
 }
 
-function resolutionName(name: string): string {
-  const overrides: Record<string, string> = {
-    "New York City": "New York",
-    Charlotte: "Charlotte-Mecklenburg",
-    Nashville: "Metropolitan Nashville",
-    "Las Vegas": "Las Vegas Metropolitan",
-    Louisville: "Louisville Metro",
-  };
-  return overrides[name] || name;
-}
-
 function displayName(name: string, state: string): string {
   return `${name}, ${state.toUpperCase()}`;
 }
@@ -87,7 +76,8 @@ export function buildShrMurderPlan(question: string, db: Database.Database): Shr
     all.findIndex((other) => other.id === candidate.id) === index
   );
   const places = unique.map((candidate) => {
-    const resolved = resolveShrAgency(db, resolutionName(candidate.name), candidate.state!, {
+    const requestedName = candidate.name === "New York City" ? "New York" : candidate.name;
+    const resolved = resolveShrAgency(db, requestedName, candidate.state!, {
       kind: "city", startYear: year, endYear: year,
     });
     return { display: displayName(candidate.name, candidate.state!), resolved };

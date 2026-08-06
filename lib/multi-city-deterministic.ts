@@ -1,6 +1,7 @@
 import { resolveGeoPlaces } from "./geo-place-resolver";
 import { buildQueryContract } from "./query-contract";
 import type { ChartConfig, ChartMeta } from "./types";
+import { consolidatedDisplayName, findConsolidatedAgency } from "./agency-consolidations";
 
 export interface MultiCityTrendPlan {
   sql: string;
@@ -12,7 +13,7 @@ export interface MultiCityTrendPlan {
   guardrail: string;
 }
 
-type City = { name: string; state: string; alias: string; label: string };
+type City = { name: string; state: string; alias: string; label: string; historicalOri?: string; currentName: string };
 type Offense = { label: string; current: string[]; historical: string };
 
 function sqlString(value: string): string {
@@ -37,11 +38,15 @@ function cities(question: string): City[] {
     const key = `${city.name}|${city.state}`;
     if (seen.has(key)) continue;
     seen.add(key);
+    const consolidated = findConsolidatedAgency(city.state, city.name);
+    const displayName = consolidatedDisplayName(city.state, city.name);
     result.push({
-      name: city.name,
+      name: displayName,
       state: city.state!,
-      alias: slug(city.name),
-      label: `${city.name}, ${city.state}`,
+      alias: slug(displayName),
+      label: `${displayName}, ${city.state}`,
+      historicalOri: consolidated?.historicalOri,
+      currentName: consolidated?.currentAgency ?? displayName,
     });
   }
   const aliasCounts = new Map<string, number>();
@@ -79,10 +84,12 @@ function offense(question: string): Offense | null {
 }
 
 function cityCondition(alias: string, city: City, source: "current" | "historical"): string {
+  if (source === "historical" && city.historicalOri) return `${alias}.ori = ${sqlString(city.historicalOri)}`;
   const name = source === "current" ? `${alias}.agency` : `${alias}.agency`;
   const state = source === "current" ? `${alias}.state` : `UPPER(${alias}.state)`;
   const type = source === "current" ? `LOWER(${alias}.type) = 'city'` : `LOWER(${alias}.type) = 'city'`;
-  return `${name} = ${sqlString(city.name)} AND ${state} = ${sqlString(city.state)} AND ${type}`;
+  const sourceName = source === "current" ? city.currentName : city.name;
+  return `${name} = ${sqlString(sourceName)} AND ${state} = ${sqlString(city.state)} AND ${type}`;
 }
 
 export function buildMultiCityTrendPlan(

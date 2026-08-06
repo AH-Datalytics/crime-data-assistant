@@ -1,6 +1,7 @@
 import Database from "better-sqlite3";
 import { agencySearchKey } from "./shr-agency-normalization";
 import type { SourceResolutionStatus } from "./source-contracts";
+import { CONSOLIDATED_AGENCIES, findConsolidatedAgency } from "./agency-consolidations";
 
 export type ShrResolvedAgency = {
   requestedName: string;
@@ -76,9 +77,14 @@ type IdentityRow = {
 
 // SHR keeps Louisville's pre-merger and successor agencies under different ORIs.
 // Resolve the public place name to the later ORI for post-merger requests.
-const SUCCESSION_CHAINS = [
-  { state: "KY", aliasKey: "LOUISVILLE", label: "Louisville / Louisville Metro", oris: ["KY05602", "KY05680"] },
-] as const;
+const SUCCESSION_CHAINS = CONSOLIDATED_AGENCIES
+  .filter((entry) => entry.shrPredecessorOri && entry.shrOri)
+  .map((entry) => ({
+    state: entry.state,
+    aliasKey: agencySearchKey(entry.alias),
+    label: entry.alias,
+    oris: [entry.shrPredecessorOri!, entry.shrOri!],
+  }));
 
 const cache = new WeakMap<Database.Database, Map<string, ShrResolvedAgency>>();
 
@@ -120,6 +126,37 @@ export function resolveShrAgency(
     return result;
   }
 
+  const succession = SUCCESSION_CHAINS.find((candidate) =>
+    candidate.state === normalizedState && candidate.aliasKey === agencySearchKey(requestedName)
+  );
+  const consolidated = findConsolidatedAgency(normalizedState, requestedName);
+  if (consolidated && !succession) {
+    if (!consolidated.shrOri) {
+      const result = unavailable("not_in_source", `SHR has no surviving identity for ${consolidated.alias}, ${normalizedState}.`);
+      result.label = consolidated.alias;
+      entries.set(key, result);
+      return result;
+    }
+    const row = db.prepare(
+      "SELECT ori, canonical_agency, agency_type, first_year, last_year, incident_count, source_agency_names " +
+      "FROM shr_agency_identity WHERE upper(state) = ? AND ori = ? LIMIT 1"
+    ).get(normalizedState, consolidated.shrOri) as IdentityRow | undefined;
+    if (!row || row.last_year < startYear || row.first_year > endYear) {
+      const result = unavailable("not_in_source", `SHR has no records for ${consolidated.alias}, ${normalizedState}, during ${startYear}-${endYear}.`);
+      result.label = consolidated.alias;
+      entries.set(key, result);
+      return result;
+    }
+    const range = { ori: row.ori, startYear: Math.max(startYear, row.first_year), endYear: Math.min(endYear, row.last_year) };
+    const result: ShrResolvedAgency = {
+      requestedName, label: consolidated.alias, state: normalizedState, agencyType: row.agency_type,
+      status: "resolved", confidence: "high", oris: [row.ori], ranges: [range],
+      reason: `Resolved through the verified consolidated-agency successor ORI for ${consolidated.alias}.`,
+    };
+    entries.set(key, result);
+    return result;
+  }
+
   const allowed = requestedType(options.kind);
   const typeSql = allowed ? " AND a.agency_type IN (" + allowed.map(() => "?").join(",") + ")" : "";
   const rows = db.prepare(
@@ -130,7 +167,7 @@ export function resolveShrAgency(
     " ORDER BY a.canonical_agency, a.ori"
   ).all(normalizedState, agencySearchKey(requestedName), ...(allowed || [])) as IdentityRow[];
 
-  if (rows.length === 0) {
+  if (rows.length === 0 && !succession) {
     const result = unavailable("not_in_source", "No SHR agency identity matches " + requestedName + ", " + normalizedState + ".");
     entries.set(key, result);
     return result;
@@ -143,9 +180,6 @@ export function resolveShrAgency(
     entries.set(key, result);
     return result;
   }
-  const succession = SUCCESSION_CHAINS.find((candidate) =>
-    candidate.state === normalizedState && candidate.aliasKey === agencySearchKey(requestedName)
-  );
   if (succession) {
     const chainRows = db.prepare(
       "SELECT ori, canonical_agency, agency_type, first_year, last_year, incident_count, source_agency_names " +

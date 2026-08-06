@@ -147,6 +147,25 @@ const MANUAL_ALIASES: GeoPlaceCatalogEntry[] = [
   county("St. Louis", "MO", ["St. Louis", "Saint Louis", "St Louis", "STL", "St. Louis County", "Saint Louis County", "St Louis County", "STL County", "St. Louis County, Missouri", "St Louis County MO"]),
   city("Portland", "OR", ["Portland", "Portland, Oregon", "Portland OR"]),
   city("Portland", "ME", ["Portland", "Portland, Maine", "Portland ME"]),
+  // Consolidated city-county governments whose common name was absent from the
+  // catalog entirely, so the question could never resolve. `name` must be the exact
+  // historical_agency name; lib/agency-consolidations.ts maps it back to the short
+  // display name ("Athens, GA", "Butte, MT") that every tab shows.
+  //
+  // Bare "Athens" stays ambiguous on purpose -- there are Athens entries in eight
+  // other states -- but "Athens, GA" now resolves instead of asking for a state it
+  // was never able to accept.
+  city("Athens", "GA", [
+    "Athens", "Athens, GA", "Athens GA", "Athens, Georgia", "Athens Georgia",
+    "Athens-Clarke County", "Athens Clarke County", "Athens-Clarke", "Athens Clarke",
+  ]),
+  // Aliases here deliberately exclude the bare hyphenated "Butte-Silver Bow": that
+  // string belongs to the generated entry for the DEAD city ORI (last real year
+  // 1981), and the consolidation registry already redirects it to this county.
+  city("Butte", "MT", [
+    "Butte", "Butte, MT", "Butte MT", "Butte, Montana", "Butte Montana",
+    "Butte-Silver Bow County", "Butte Silver Bow County",
+  ]),
 ];
 
 export const GEO_PLACE_CATALOG: GeoPlaceCatalogEntry[] = [

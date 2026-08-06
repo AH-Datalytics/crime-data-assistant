@@ -24,6 +24,8 @@ import { buildHistoricalCityChangeRankingPlan } from "../lib/historical-determin
   assert.ok(plan?.sql, "year-range follow-up should inherit the city decline ranking context");
   assert.match(plan.sql, /hac\.year IN \(2015, 2024\)/);
   assert.match(plan.sql, /LOWER\(ha\.type\) = 'city'/i);
+  assert.match(plan.sql, /ha\.agency = 'Louisville'/);
+  assert.match(plan.sql, /ha\.ori <> 'KY0568000'/);
   assert.match(plan.sql, /pct_change < 0/);
   assert.match(plan.sql, /ORDER BY pct_change ASC/);
   assert.doesNotMatch(plan.explanation, /Alabama/i);
