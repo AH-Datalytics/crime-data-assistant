@@ -51,6 +51,12 @@ for (const file of routes) {
   const finalizationCount = (source.match(/finalizeGuardrailTags\(/g) || []).length;
   assert.ok(finalizationCount >= 1, `${file} must finalize guardrail tags before final logging`);
 }
+
+const shrRoute = fs.readFileSync("app/api/shr-query/route.ts", "utf8");
+assert.match(shrRoute, /const followupCities = shootingCityIntents\(guardrailQuestion\)/,
+  "SHR must resolve named cities for initial questions and follow-ups");
+assert.doesNotMatch(shrRoute, /followupTransform \? shootingCityIntents\(guardrailQuestion\) : \[\]/,
+  "SHR initial questions must not bypass verified ORI resolution");
 // National chart metadata must use the latest source month/year, not the
 // requested display start year (7845 exposed the old year >= 2018 behavior).
 assert.match(streaming, /SELECT agency_count as cnt, year, month FROM national_monthly/,
