@@ -70,5 +70,13 @@ export function changeHeaderLabel(year: number | null): string {
  * bundle. This module has no dependencies at all.
  */
 export function detectAgencyScorecardQuestion(question: string): boolean {
-  return /\b(?:crime\s+)?scorecard\b/i.test(question);
+  // Accepts "scorecard", "scorecards", "score card", "score cards" and "score-card".
+  // The plural and the two-word spelling are how people actually type this, and missing
+  // them sent the question down the ordinary query path, which answered something else
+  // entirely. The optional "crime " prefix that used to be here was redundant -- it is
+  // covered by matching the noun anywhere in the sentence.
+  //
+  // The separator is spaces/tabs/hyphens rather than \s, deliberately: \s would match a
+  // newline and could join an unrelated "...score" and "card..." across a line break.
+  return /\bscore[ \t-]*cards?\b/i.test(question);
 }

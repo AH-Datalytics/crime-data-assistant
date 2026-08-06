@@ -11,6 +11,18 @@ const clearance = db.prepare("INSERT INTO historical_agency_clearance VALUES (?,
 crime.run("OKTULSA01", 2024, 400000, 100, 10, 20, 30, 40, 200, 50, 100, 50); population.run("OKTULSA01", 2024, 400000); clearance.run("OKTULSA01", 2024, 60, 70, 71, 72, 73, 74, 75, 76, 77);
 crime.run("OKTULSA01", 2025, 410000, 110, 11, 21, 31, 47, 210, 51, 101, 51); population.run("OKTULSA01", 2025, 410000); clearance.run("OKTULSA01", 2025, 61, 162.5, 72, 73, 74, 75, 76, 77, 78);
 assert.equal(detectAgencyScorecardQuestion("Give me Tulsa, Oklahoma's crime scorecard"), true);
+// The plural and two-word spellings are how people actually type this. Missing them sent
+// the question down the ordinary query path and answered something else entirely.
+for (const phrasing of ["Toledo scorecard", "Toledo scorecards", "Toledo score card",
+  "Toledo score cards", "Toledo score-card", "Toledo crime score card", "toledo SCORECARD",
+  "scorecard for Toledo", "Toledo  score  card"]) {
+  assert.equal(detectAgencyScorecardQuestion(phrasing), true, `should detect: ${phrasing}`);
+}
+// Near misses must NOT trigger a scorecard.
+for (const phrasing of ["Toledo crime rate", "how many murders in Toledo", "scoreboard for Toledo",
+  "Toledo scorers", "what is the score", "cards in Toledo", "high scores"]) {
+  assert.equal(detectAgencyScorecardQuestion(phrasing), false, `should NOT detect: ${phrasing}`);
+}
 const result = buildAgencyScorecard(db, "Give me Tulsa, Oklahoma's crime scorecard");
 assert.ok(result); assert.equal(result.title, "Tulsa, OK Scorecard (2025)"); assert.deepEqual(result.columns, [...SCORECARD_COLUMNS]);
 assert.deepEqual(result.rows.map((row) => row.offense), ["Violent Crime", "Murder", "Rape", "Robbery", "Aggravated Assault", "Property Crime", "Burglary", "Theft", "Motor Vehicle Theft"]);
