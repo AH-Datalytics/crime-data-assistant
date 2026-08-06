@@ -36,6 +36,10 @@ export interface QueryResponse {
   chartMeta: ChartMeta | null;
   executionTimeMs: number;
   sourceSwitch?: { source: string; question: string };
+  scorecard?: boolean;
+  agencyLabel?: string;
+  population?: number;
+  year?: number | null;
 }
 
 export interface QueryError {
@@ -92,5 +96,9 @@ export type StreamEvent =
       chartMeta: ChartMeta | null;
       executionTimeMs: number;
       sourceSwitch?: { source: string; question: string };
+      scorecard?: boolean;
+      agencyLabel?: string;
+      population?: number;
+      year?: number | null;
     }
   | { type: "error"; text: string; sql?: string };
