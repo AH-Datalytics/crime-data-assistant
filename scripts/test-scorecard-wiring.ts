@@ -22,7 +22,7 @@ function check(name: string, fn: () => void) {
   catch (e) { console.log(`  FAIL  ${name}\n        ${(e as Error).message}`); process.exitCode = 1; }
 }
 
-const FIELDS = ["scorecard", "agencyLabel", "population", "year"];
+const FIELDS = ["scorecard", "agencyLabel", "year"];
 
 console.log("\n1. QueryResponse declares every boundary field");
 for (const field of FIELDS) {
@@ -46,7 +46,6 @@ for (const field of FIELDS) {
 console.log("\n3. The route emits the marker and the header fields");
 check("route sets scorecard: true", () => assert.match(route, /scorecard:\s*true/));
 check("route emits agencyLabel", () => assert.match(route, /agencyLabel:\s*agencyScorecard\.agencyLabel/));
-check("route emits population", () => assert.match(route, /population:\s*agencyScorecard\.population/));
 check("route emits year", () => assert.match(route, /year:\s*agencyScorecard\.year/));
 
 const chat = read("components/WorkspaceChatV2.tsx");

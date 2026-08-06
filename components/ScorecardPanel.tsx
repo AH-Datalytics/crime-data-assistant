@@ -1,6 +1,7 @@
 "use client";
 
 import type { AgencyScorecardRow } from "@/lib/agency-scorecard";
+import CrimeIndexLogo from "./CrimeIndexLogo";
 import {
   formatCount, formatRate, formatClearance, formatChange,
   changeDirection, changeHeaderLabel, SCORECARD_DISPLAY_COLUMNS,
@@ -14,16 +15,40 @@ const HAIRLINE = "#E2DCCC";
 const IMPROVED = "#2F6B4F";
 const WORSENED = "#A83A32";
 
+// The card sizes to its own content instead of filling the pane. A scorecard is a
+// fixed 9-row, 5-column object -- stretching it to an arbitrary pane width just
+// spreads the same numbers further apart and reads as a layout bug. `w-fit` lets
+// the table set the width; `max-w-full` keeps it scrollable on a narrow pane.
+const SHELL = "h-full w-full overflow-auto flex items-start justify-center p-3 sm:p-4";
+const CARD = "w-fit max-w-full border p-5 sm:p-6 text-center";
+
+/**
+ * Source line sits bottom-left, logo bottom-right and lifted off the border so the
+ * mark does not read as touching the frame. This row opts out of the card's
+ * `text-center` deliberately -- it is a footer rule, not body content.
+ */
+function CardFooter() {
+  return (
+    <div className="mt-4 flex items-end justify-between gap-6">
+      <div className="text-left text-[10px] uppercase tracking-wider" style={{ color: "#8A8778" }}>
+        Source CrimeIndex.org
+      </div>
+      <div className="mb-1.5 shrink-0">
+        <CrimeIndexLogo size={22} />
+      </div>
+    </div>
+  );
+}
+
 interface ScorecardPanelProps {
   agencyLabel: string;
   year: number | null;
-  population: number;
   rows: AgencyScorecardRow[];
   explanation: string;
 }
 
 export default function ScorecardPanel({
-  agencyLabel, year, population, rows, explanation,
+  agencyLabel, year, rows, explanation,
 }: ScorecardPanelProps) {
   const heading = agencyLabel
     ? `${agencyLabel} Crime Scorecard${year != null ? ` (${year})` : ""}`
@@ -33,33 +58,26 @@ export default function ScorecardPanel({
   // unavailable scorecard looks deliberate rather than like an empty frame.
   if (rows.length === 0) {
     return (
-      <div className="h-full w-full overflow-auto p-6 sm:p-8" style={{ background: CREAM, color: SLATE }}>
-        <h2 className="text-xl sm:text-2xl font-bold tracking-tight">{heading}</h2>
-        <p className="mt-4 max-w-prose text-sm leading-relaxed" style={{ color: SLATE }}>{explanation}</p>
-        <div className="mt-8 text-[10px] uppercase tracking-wider" style={{ color: "#8A8778" }}>
-          Source CrimeIndex.org
+      <div className={SHELL}>
+        <div className={CARD} style={{ background: CREAM, color: SLATE, borderColor: RULE }}>
+          <h2 className="text-base sm:text-lg font-bold tracking-tight">{heading}</h2>
+          <p className="mx-auto mt-3 max-w-[46ch] text-[13px] leading-relaxed" style={{ color: SLATE }}>{explanation}</p>
+          <CardFooter />
         </div>
       </div>
     );
   }
 
   const hasOver100 = rows.some((row) => row.clearance_rate != null && row.clearance_rate > 100);
-  const numeric = "text-right tabular-nums whitespace-nowrap";
+  const numeric = "text-center tabular-nums whitespace-nowrap";
 
   return (
-    <div
-      className="h-full w-full overflow-auto p-6 sm:p-8"
-      style={{ background: CREAM, color: SLATE }}
-    >
-      <h2 className="text-xl sm:text-2xl font-bold tracking-tight">{heading}</h2>
-      {population > 0 && (
-        <p className="mt-1 text-xs" style={{ color: "#8A8778" }}>
-          Population {formatCount(population)}
-        </p>
-      )}
+    <div className={SHELL}>
+    <div className={CARD} style={{ background: CREAM, color: SLATE, borderColor: RULE }}>
+      <h2 className="text-base sm:text-lg font-bold tracking-tight">{heading}</h2>
 
-      <div className="mt-5 overflow-x-auto">
-        <table className="w-full border-collapse text-sm">
+      <div className="mt-4 overflow-x-auto">
+        <table className="w-auto border-collapse text-sm">
           <thead>
             <tr>
               {/* Header text is derived from SCORECARD_DISPLAY_COLUMNS (the reference-mock
@@ -70,7 +88,12 @@ export default function ScorecardPanel({
               {SCORECARD_DISPLAY_COLUMNS.map((label, index) => (
                 <th
                   key={label}
-                  className={index === 0 ? "pb-2 pr-4 text-left font-bold" : `pb-2 pl-4 font-bold ${numeric}`}
+                  // Headers wrap (data cells still don't): letting "Offense Rate Per 100k"
+                  // break over two lines is what allows the column -- and the card -- to be
+                  // narrow instead of being held open by the longest label.
+                  className={index === 0
+                    ? "px-4 pb-2 align-bottom text-center font-bold whitespace-nowrap"
+                    : "px-4 pb-2 align-bottom text-center font-bold whitespace-nowrap"}
                 >
                   {index === 2 ? changeHeaderLabel(year) : label}
                 </th>
@@ -90,19 +113,21 @@ export default function ScorecardPanel({
                   }}
                 >
                   {/* Flat layout: totals are semibold but not indented, and get no extra rules. */}
-                  <td className={`py-2.5 pr-4 ${row.section ? "font-semibold" : ""}`}>{row.offense}</td>
-                  <td className={`py-2.5 pl-4 ${numeric} ${row.section ? "font-semibold" : ""}`}>
+                  <td className={`px-4 py-2 ${row.section ? "font-semibold" : ""}`}>{row.offense}</td>
+                  <td className={`px-4 py-2 ${numeric} ${row.section ? "font-semibold" : ""}`}>
                     {formatCount(row.offenses)}
                   </td>
                   {/* Colour is redundant encoding -- the minus sign carries direction, so this
                       stays correct in greyscale and for a red-green colourblind reader. */}
-                  <td className={`py-2.5 pl-4 ${numeric}`} style={{ color: changeColor }}>
+                  <td className={`px-4 py-2 ${numeric}`} style={{ color: changeColor }}>
                     {formatChange(row.offense_change_pct)}
                   </td>
-                  <td className={`py-2.5 pl-4 ${numeric}`}>{formatRate(row.rate_per_100k)}</td>
-                  <td className={`py-2.5 pl-4 ${numeric}`}>
+                  <td className={`px-4 py-2 ${numeric}`}>{formatRate(row.rate_per_100k)}</td>
+                  <td className={`relative px-4 py-2 ${numeric}`}>
                     {formatClearance(row.clearance_rate)}
-                    {row.clearance_rate != null && row.clearance_rate > 100 ? "*" : ""}
+                    {row.clearance_rate != null && row.clearance_rate > 100 && (
+                      <span className="absolute ml-0.5 text-[10px] leading-none" aria-hidden="true">*</span>
+                    )}
                   </td>
                 </tr>
               );
@@ -112,15 +137,14 @@ export default function ScorecardPanel({
       </div>
 
       {hasOver100 && (
-        <p className="mt-4 max-w-prose text-[11px] leading-snug" style={{ color: "#8A8778" }}>
+        <p className="mx-auto mt-3 max-w-[46ch] text-[11px] leading-snug" style={{ color: "#8A8778" }}>
           * Clearance rates can exceed 100% because agencies may clear cases in the current year
           that originated in prior reporting years.
         </p>
       )}
 
-      <div className="mt-6 text-[10px] uppercase tracking-wider" style={{ color: "#8A8778" }}>
-        Source CrimeIndex.org
-      </div>
+      <CardFooter />
+    </div>
     </div>
   );
 }

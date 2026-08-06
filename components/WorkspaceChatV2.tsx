@@ -11,6 +11,7 @@ import { hasBlockingQueryGuidanceWarnings } from "@/lib/query-guidance";
 import DataTable from "./DataTable";
 import ChartPanel from "./ChartPanel";
 import ScorecardPanel from "./ScorecardPanel";
+import { detectAgencyScorecardQuestion } from "@/lib/scorecard-format";
 import ExportButtons from "./ExportButtons";
 import QuerySkeleton from "./QuerySkeleton";
 import ErrorCard from "./ErrorCard";
@@ -229,7 +230,7 @@ export default function WorkspaceChat({ sourceYearRanges }: WorkspaceChatProps) 
                 finalExplanation = event.explanation; finalSql = event.sql || "";
                 setExplanation(event.explanation);
                 const qr: QueryResponse | null = event.rows.length > 0 || event.chartConfig || event.scorecard
-                  ? { success: true as const, question, sql: event.sql, explanation: event.explanation, title: event.title, columns: event.columns, rows: event.rows, rowCount: event.rowCount, truncated: event.truncated, chartConfig: event.chartConfig, chartMeta: event.chartMeta, executionTimeMs: event.executionTimeMs, scorecard: event.scorecard, agencyLabel: event.agencyLabel, population: event.population, year: event.year }
+                  ? { success: true as const, question, sql: event.sql, explanation: event.explanation, title: event.title, columns: event.columns, rows: event.rows, rowCount: event.rowCount, truncated: event.truncated, chartConfig: event.chartConfig, chartMeta: event.chartMeta, executionTimeMs: event.executionTimeMs, scorecard: event.scorecard, agencyLabel: event.agencyLabel, year: event.year }
                   : null;
                 finalResponse = qr; setResponse(qr);
                 if (event.sourceSwitch && routingMode !== "rerun") { setTimeout(() => submitQuestion(event.sourceSwitch!.question, event.sourceSwitch!.source as "current" | "historical" | "nibrs" | "shr" | "hate_crime", "Follow-up moved to a better source", null, "rerun"), 0); }
@@ -301,6 +302,18 @@ export default function WorkspaceChat({ sourceYearRanges }: WorkspaceChatProps) 
         { role: "user" as const, content: q, source: activeSource },
         { role: "assistant" as const, content: summary, sql: chartOnlyResponse.sql || undefined, source: activeSource },
       ].slice(-12));
+      return;
+    }
+
+    // A scorecard is a Historical-library product: app/api/query/route.ts only builds
+    // one when tab === "historical". On any other tab a scorecard question falls through
+    // to an ordinary generated query, which answers something the user did not ask for.
+    // So there is nothing to disambiguate and no reason to show a source picker —
+    // route it to Historical and label why. This sits ahead of the follow-up and
+    // auto-route branches deliberately, so "give me a Louisville scorecard" behaves the
+    // same whether it is a first question, a follow-up, or asked from another tab.
+    if (detectAgencyScorecardQuestion(q)) {
+      submitQuestion(q, "historical", "Scorecard — Historical library only", "high", "auto");
       return;
     }
 
@@ -724,7 +737,6 @@ export default function WorkspaceChat({ sourceYearRanges }: WorkspaceChatProps) 
                           <ScorecardPanel
                             agencyLabel={response.agencyLabel ?? ""}
                             year={response.year ?? null}
-                            population={response.population ?? 0}
                             // QueryResponse.rows is Record<string, unknown>[] so that generic query
                             // results of any shape can flow through one field; the scorecard builder
                             // (lib/agency-scorecard.ts) populates it with AgencyScorecardRow objects

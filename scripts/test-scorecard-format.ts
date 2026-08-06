@@ -23,14 +23,14 @@ check("integer gains a decimal", () => assert.equal(formatRate(115), "115.0"));
 check("null is blank", () => assert.equal(formatRate(null), ""));
 
 console.log("\n3. Clearance keeps one decimal and is never clamped");
-check("over 100 preserved", () => assert.equal(formatClearance(162.5), "162.5"));
-check("normal value", () => assert.equal(formatClearance(38.3), "38.3"));
+check("over 100 preserved", () => assert.equal(formatClearance(162.5), "162.5%"));
+check("normal value", () => assert.equal(formatClearance(38.3), "38.3%"));
 check("null is blank", () => assert.equal(formatClearance(null), ""));
 
 console.log("\n4. Change uses a real minus sign and never shows a fake zero");
-check("negative uses U+2212", () => assert.equal(formatChange(-12.3), "−12.3"));
-check("positive has no plus sign", () => assert.equal(formatChange(8.3), "8.3"));
-check("exact zero renders as 0.0", () => assert.equal(formatChange(0), "0.0"));
+check("negative uses an ASCII hyphen, not U+2212", () => assert.equal(formatChange(-12.3), "-12.3%"));
+check("positive has no plus sign", () => assert.equal(formatChange(8.3), "8.3%"));
+check("exact zero renders as 0.0", () => assert.equal(formatChange(0), "0.0%"));
 check("null is BLANK not 0.0", () => assert.equal(formatChange(null), ""));
 
 console.log("\n5. Direction drives colour; polarity is inverted (down is good)");
@@ -46,7 +46,7 @@ check("null year degrades gracefully", () => assert.equal(changeHeaderLabel(null
 
 console.log("\n7. Display column order matches the reference mock");
 check("change is third", () => assert.deepEqual([...SCORECARD_DISPLAY_COLUMNS],
-  ["Type", "Offenses", "Change", "Rate per 100k", "Clearance Rate"]));
+  ["Type", "Offenses", "Change", "Offense Rate Per 100k", "Clearance Rate"]));
 
 console.log(`\n${process.exitCode ? "FAILURES present." : `All ${passed} scorecard format checks passed.`}`);
 process.exit(process.exitCode ? 1 : 0);

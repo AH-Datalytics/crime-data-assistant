@@ -38,7 +38,6 @@ export interface QueryResponse {
   sourceSwitch?: { source: string; question: string };
   scorecard?: boolean;
   agencyLabel?: string;
-  population?: number;
   year?: number | null;
 }
 
@@ -98,7 +97,6 @@ export type StreamEvent =
       sourceSwitch?: { source: string; question: string };
       scorecard?: boolean;
       agencyLabel?: string;
-      population?: number;
       year?: number | null;
     }
   | { type: "error"; text: string; sql?: string };

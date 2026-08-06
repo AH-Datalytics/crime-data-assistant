@@ -2240,8 +2240,13 @@ console.log("\n=== historical state/national aggregate column regression ===\n")
   assert("TP: #4279 historical_state_national violent_rate rewrite fires",
     r.fired.includes("historical-state-national-aggregate-columns"),
     `fired: ${JSON.stringify(r.fired)}`);
+  // Each component is COALESCEd now. A bare sum evaluates to NULL whenever any
+  // component is NULL -- rape is absent for every agency before 1958, when the FBI's
+  // agency-level rape series begins -- which silently blanked the violent rate for
+  // those years instead of reporting the rate of what WAS collected.
   assert("TP: #4279 rewritten SQL computes violent rate from component rates",
-    /murder_rate\s*\+\s*rape_rate\s*\+\s*robbery_rate\s*\+\s*aggravated_assault_rate/i.test(r.sql) && !/\bviolent_rate\b/i.test(r.sql),
+    /COALESCE\(murder_rate,0\)\s*\+\s*COALESCE\(rape_rate,0\)\s*\+\s*COALESCE\(robbery_rate,0\)\s*\+\s*COALESCE\(aggravated_assault_rate,0\)/i.test(r.sql)
+      && !/(?<!COALESCE\()\bviolent_rate\b/i.test(r.sql),
     r.sql);
 }
 

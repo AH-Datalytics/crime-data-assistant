@@ -2199,8 +2199,12 @@ const GUARDRAILS: Guardrail[] = [
     },
     rewrite: (sql) => {
       let fixed = sql
-        .replace(/\bviolent_rate\b/gi, "(murder_rate + rape_rate + robbery_rate + aggravated_assault_rate)")
-        .replace(/\bproperty_rate\b/gi, "(burglary_rate + theft_rate + auto_theft_rate)")
+        // COALESCE each component: rape is NULL for every agency before 1958 (the FBI's
+        // agency-level rape series starts that year), and a bare sum containing NULL is
+        // itself NULL -- so the un-COALESCEd rewrite silently blanked the violent rate for
+        // every pre-1958 row instead of reporting the rate of what WAS collected.
+        .replace(/\bviolent_rate\b/gi, "(COALESCE(murder_rate,0) + COALESCE(rape_rate,0) + COALESCE(robbery_rate,0) + COALESCE(aggravated_assault_rate,0))")
+        .replace(/\bproperty_rate\b/gi, "(COALESCE(burglary_rate,0) + COALESCE(theft_rate,0) + COALESCE(auto_theft_rate,0))")
         .replace(/\bassault_rate\b/gi, "aggravated_assault_rate")
         .replace(/(?<!aggravated_)\bassault\b/gi, "aggravated_assault")
         .replace(/\bmotor_vehicle_theft_rate\b/gi, "auto_theft_rate")

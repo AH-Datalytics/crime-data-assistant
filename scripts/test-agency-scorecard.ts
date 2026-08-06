@@ -12,7 +12,7 @@ crime.run("OKTULSA01", 2024, 400000, 100, 10, 20, 30, 40, 200, 50, 100, 50); pop
 crime.run("OKTULSA01", 2025, 410000, 110, 11, 21, 31, 47, 210, 51, 101, 51); population.run("OKTULSA01", 2025, 410000); clearance.run("OKTULSA01", 2025, 61, 162.5, 72, 73, 74, 75, 76, 77, 78);
 assert.equal(detectAgencyScorecardQuestion("Give me Tulsa, Oklahoma's crime scorecard"), true);
 const result = buildAgencyScorecard(db, "Give me Tulsa, Oklahoma's crime scorecard");
-assert.ok(result); assert.equal(result.title, "Tulsa, Oklahoma Scorecard (2025)"); assert.deepEqual(result.columns, [...SCORECARD_COLUMNS]);
+assert.ok(result); assert.equal(result.title, "Tulsa, OK Scorecard (2025)"); assert.deepEqual(result.columns, [...SCORECARD_COLUMNS]);
 assert.deepEqual(result.rows.map((row) => row.offense), ["Violent Crime", "Murder", "Rape", "Robbery", "Aggravated Assault", "Property Crime", "Burglary", "Theft", "Motor Vehicle Theft"]);
 assert.equal(result.rows[0].offenses, 110); assert.equal(result.rows[0].rate_per_100k, 26.8); assert.equal(result.rows[0].clearance_rate, 61); assert.equal(result.rows[0].offense_change_pct, 10); assert.equal(result.rows[1].offenses, 11); assert.equal(result.rows[1].rate_per_100k, 2.7); assert.equal(result.rows[1].clearance_rate, 162.5); assert.equal(result.rows[1].offense_change_pct, 10); assert.match(result.explanation, /exceed 100%/); assert.equal(result.rows[5].offenses, 210); assert.equal(result.rows[5].clearance_rate, 75); assert.equal(result.rows[5].offense_change_pct, 5); assert.equal(result.year, 2025); assert.equal(buildAgencyScorecard(db, "Give me Tulsa crime trends"), null);
 db.prepare("UPDATE historical_agency_clearance SET rape_clr = NULL WHERE ori = 'OKTULSA01' AND year = 2025").run();
@@ -25,19 +25,15 @@ assert.ok(unavailable); assert.equal(unavailable.rows.length, 0); assert.match(u
 // result. Both are already computed internally; this asserts they are exposed.
 const populated = buildAgencyScorecard(db, "Give me Tulsa, Oklahoma's crime scorecard");
 assert.ok(populated);
-assert.equal(populated.agencyLabel, "Tulsa, Oklahoma");
+assert.equal(populated.agencyLabel, "Tulsa, OK");
 // By this point in the script, an earlier mutation nulled 2025's rape_clr, so the
-// most recent complete year has already fallen back to 2024 (population 400000,
-// not the 2025 fixture value of 410000).
-assert.equal(populated.population, 400000);
-assert.equal(typeof populated.population, "number");
+// most recent complete year has already fallen back to 2024.
 
 // Unavailable path: every value is falsy, which is exactly the shape that a
 // conditional copy downstream would silently drop.
 const noAgency = buildAgencyScorecard(db, "Give me Oklahoma crime scorecard");
 assert.ok(noAgency);
 assert.equal(noAgency.agencyLabel, "");
-assert.equal(noAgency.population, 0);
 assert.equal(noAgency.year, null);
 
 db.close(); console.log("Agency scorecard checks passed.");

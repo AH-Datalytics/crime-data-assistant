@@ -571,7 +571,6 @@ export async function POST(req: NextRequest) {
       controller.enqueue(encoder.encode(sseEvent({ type: "result", sql: agencyScorecard.sql ?? "", explanation: agencyScorecard.explanation, title: agencyScorecard.title, columns: agencyScorecard.columns, rows: agencyScorecard.rows, rowCount: agencyScorecard.rows.length, truncated: false, chartConfig: null, chartMeta: { source: "FBI SRS", agencyCount: 1, population: null }, executionTimeMs: ms,
               scorecard: true,
               agencyLabel: agencyScorecard.agencyLabel,
-              population: agencyScorecard.population,
               year: agencyScorecard.year,
       })));
       controller.close();
