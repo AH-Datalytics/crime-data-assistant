@@ -3,7 +3,7 @@
 import type { AgencyScorecardRow } from "@/lib/agency-scorecard";
 import {
   formatCount, formatRate, formatClearance, formatChange,
-  changeDirection, changeHeaderLabel,
+  changeDirection, changeHeaderLabel, SCORECARD_DISPLAY_COLUMNS,
 } from "@/lib/scorecard-format";
 
 const CREAM = "#F5F1E8";
@@ -62,11 +62,19 @@ export default function ScorecardPanel({
         <table className="w-full border-collapse text-sm">
           <thead>
             <tr>
-              <th className="pb-2 pr-4 text-left font-bold">Type</th>
-              <th className={`pb-2 pl-4 font-bold ${numeric}`}>Offenses</th>
-              <th className={`pb-2 pl-4 font-bold ${numeric}`}>{changeHeaderLabel(year)}</th>
-              <th className={`pb-2 pl-4 font-bold ${numeric}`}>Rate per 100k</th>
-              <th className={`pb-2 pl-4 font-bold ${numeric}`}>Clearance Rate</th>
+              {/* Header text is derived from SCORECARD_DISPLAY_COLUMNS (the reference-mock
+                  order) rather than hardcoded, so a column reorder there is caught by the
+                  test instead of silently diverging from the rendered table. The third
+                  column is dynamic -- the constant holds its base label "Change" and this
+                  swaps in changeHeaderLabel(year) instead. */}
+              {SCORECARD_DISPLAY_COLUMNS.map((label, index) => (
+                <th
+                  key={label}
+                  className={index === 0 ? "pb-2 pr-4 text-left font-bold" : `pb-2 pl-4 font-bold ${numeric}`}
+                >
+                  {index === 2 ? changeHeaderLabel(year) : label}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
@@ -110,10 +118,8 @@ export default function ScorecardPanel({
         </p>
       )}
 
-      <div className="mt-6 flex items-end justify-between">
-        <div className="text-[10px] uppercase tracking-wider" style={{ color: "#8A8778" }}>
-          Source CrimeIndex.org
-        </div>
+      <div className="mt-6 text-[10px] uppercase tracking-wider" style={{ color: "#8A8778" }}>
+        Source CrimeIndex.org
       </div>
     </div>
   );

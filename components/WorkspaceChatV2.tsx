@@ -708,14 +708,16 @@ export default function WorkspaceChat({ sourceYearRanges }: WorkspaceChatProps) 
                     )}
                   </div>
                   <div className="flex gap-2">
-                    {response.chartConfig && showChart && <ExportButtons chartRef={chartRef} csvFilename={`${response.title || "chart"}.jpeg`} />}
+                    {(response.chartConfig || response.scorecard) && (showChart || response.scorecard) && <ExportButtons chartRef={chartRef} csvFilename={`${response.title || "chart"}.jpeg`} />}
                     {response.rows.length > 0 && <ExportButtons csvData={response.rows} csvColumns={response.columns} csvFilename={`${response.title || "data"}.csv`} />}
                   </div>
                 </div>
 
                 {/* Chart + Table side by side */}
                 <div className={`flex-1 flex flex-col ${showChart && response.chartConfig && showTable && response.rows.length > 0 ? "md:flex-row" : ""} gap-3 sm:gap-6 min-h-0`}>
-                  {(response.chartConfig || response.scorecard) && showChart && (
+                  {/* A scorecard has no companion table to toggle to, so it always renders
+                      regardless of showChart's stale state from a prior chart/table toggle. */}
+                  {(response.chartConfig || response.scorecard) && (showChart || response.scorecard) && (
                     <div ref={chartRef} className={`bg-white flex flex-col ${showTable && response.rows.length > 0 ? "md:flex-[1.15] md:min-w-0" : "w-full flex-1"}`}>
                       <div className="flex-1 min-h-0" style={{ minHeight: 280 }}>
                         {response.scorecard ? (
