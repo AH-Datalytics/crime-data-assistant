@@ -187,8 +187,11 @@ export async function POST(req: NextRequest) {
     // Bare clarifier answers ("Countywide total") carry no county name — use
     // the transform's reconstructed question so guardrails see the geography
     const guardrailQuestion = (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing") ? followupPlan.reconstructedQuestion : (followupTransform?.contextQuestion ?? question);
-    const followupCities = followupTransform ? shootingCityIntents(guardrailQuestion) : [];
-    const followupDb = followupTransform ? getShrDb() : null;
+    // Resolve named cities for initial questions as well as follow-ups. Restricting
+    // this to follow-ups let ordinary multi-year questions keep model-authored
+    // agency-name predicates and bypass verified consolidation ORIs.
+    const followupCities = shootingCityIntents(guardrailQuestion);
+    const followupDb = followupCities.length > 0 ? getShrDb() : null;
     const followupShrPlaces = followupDb && followupCities.length > 0 && followupCities.every((city) => city.state)
       ? followupCities.map((city) => resolveShrAgency(
         followupDb,

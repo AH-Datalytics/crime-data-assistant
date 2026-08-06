@@ -14,6 +14,12 @@ for (const file of routes) {
   assert.match(source, /applyResultDisclosures/, `${file} must disclose results`);
 }
 
+const shrRoute = fs.readFileSync("app/api/shr-query/route.ts", "utf8");
+assert.match(shrRoute, /const followupCities = shootingCityIntents\(guardrailQuestion\)/,
+  "SHR must resolve named cities for initial questions and follow-ups");
+assert.doesNotMatch(shrRoute, /followupTransform \? shootingCityIntents\(guardrailQuestion\) : \[\]/,
+  "SHR initial questions must not bypass verified ORI resolution");
+
 const streaming = fs.readFileSync("app/api/query/route.ts", "utf8");
 const sseStart = streaming.indexOf("function sseEvent");
 const sseBody = streaming.slice(sseStart, streaming.indexOf("function ", sseStart + 1));
