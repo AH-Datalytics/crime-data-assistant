@@ -4,6 +4,7 @@ import { validateClaudeResponse } from "./claude-schema";
 import { extractJson } from "./extract-json";
 import { removeCodeFences, removeJsonWithSqlKey } from "./text-sanitize";
 import { relativeYearConventionPrompt } from "./time-conventions";
+import { CONSOLIDATED_AGENCIES } from "./agency-consolidations";
 
 const client = new Anthropic();
 
@@ -726,6 +727,9 @@ export async function translateToSql(
 }
 
 export function getHistoricalSystemPrompt(): string {
+  const consolidationRules = CONSOLIDATED_AGENCIES.map((entry) =>
+    `- ${entry.alias}, ${entry.state}: query ha.ori = '${entry.historicalOri}' (${entry.historicalAgency}); label every result '${entry.alias}'.`,
+  ).join("\n");
   return `You are a SQL query generator for a historical U.S. crime database. You translate natural language questions about crime data into SQLite queries.
 
 ## DECISION PRIORITY
@@ -939,7 +943,11 @@ ${HISTORICAL.agencyClearanceRows.toLocaleString()} rows. All values are percenta
 
 ## QUERY RULES
 
-⚠️ **BEFORE WRITING ANY SQL** — Check if the user's city is ambiguous. These cities have BOTH City and County agencies with DIFFERENT data: Baltimore, St. Louis, El Paso, Nashville, Jacksonville, Richmond, Denver, Las Vegas, Louisville, Memphis, Kansas City. If the user says just the city name without specifying City or County, set sql to null and ask which jurisdiction they mean. NEVER silently pick one.
+⚠️ **BEFORE WRITING ANY SQL** — Check if the user's city is ambiguous. These cities have BOTH City and County agencies with DIFFERENT data: Baltimore, St. Louis, El Paso, Jacksonville, Richmond, Denver, Memphis, Kansas City. If the user says just the city name without specifying City or County, set sql to null and ask which jurisdiction they mean. NEVER silently pick one. Verified consolidated agencies listed below are not ambiguous.
+
+### VERIFIED CONSOLIDATED AGENCIES
+These ORIs are authoritative. Source-specific names are query metadata only; the alias is the only user-facing label.
+${consolidationRules}
 
 1. **Agency queries** → Always JOIN historical_agency_crime with historical_agency:
    \`\`\`sql
@@ -1004,9 +1012,7 @@ ${HISTORICAL.agencyClearanceRows.toLocaleString()} rows. All values are percenta
    - **NOTE**: Historical tables use periods in "St." names (St. Louis, St. Paul) unlike agency_monthly which omits them for some agencies
    - "DC" or "Washington DC" → agency = 'Washington', state = 'dc' (always assume DC unless user specifies a state)
    - "Winston-Salem" or "Winston Salem" → use LIKE '%Winston%' AND state = 'nc' to find exact name
-   - "Charlotte", "Charlotte-Mecklenburg", or "CMPD" → agency = 'Charlotte-Mecklenburg', state = 'nc'
-   - "Nashville", "Metro Nashville", or "MNPD" → agency = 'Metropolitan Nashville Police Department', state = 'tn' (use LIKE '%Nashville%' if unsure)
-   - "Las Vegas", "LVMPD", or "Las Vegas Metro" → agency = 'Las Vegas Metropolitan Police Department', state = 'nv' (use LIKE '%Las Vegas%' if unsure)
+   - For any verified consolidated agency above, filter by its exact successor ORI. Never use a name-only predicate or a predecessor ORI.
    - "Baton Rouge" or "East Baton Rouge" → use LIKE '%Baton Rouge%' AND state = 'la'
    - "Bensalem" → agency = 'Bensalem Township', state = 'pa'
    - "Upper Darby" → agency = 'Upper Darby Township', state = 'pa'

@@ -32,7 +32,7 @@ rtci.exec(`
 
   INSERT INTO historical_agency VALUES
     ('TXHPD00', 'Houston', 'TX', 'city'),
-    ('NCCMPD0', 'Charlotte-Mecklenburg', 'NC', 'city'),
+    ('NC0600100', 'Charlotte-Mecklenburg', 'NC', 'city'),
     ('NEOMPD0', 'Omaha', 'nb', 'city'),
     ('MOKCPD0', 'Kansas City', 'MO', 'city'),
     ('KSKCPD0', 'Kansas City', 'KS', 'city');
@@ -56,7 +56,7 @@ nibrs.exec(`
   );
   INSERT INTO agencies VALUES
     ('TXHPD0000', 2025, 'HOUSTON', 'TX', 'City', 2300000),
-    ('NCCMPD000', 2025, 'CHARLOTTE', 'NC', 'City', 900000),
+    ('NC0600100', 2025, 'CHARLOTTE', 'NC', 'City', 900000),
     ('NEOLD000', 2012, 'OMAHA', 'NE', 'City', 450000),
     ('NENEW000', 2025, 'OMAHA', 'NB', 'City', 480000);
   INSERT INTO agency_county_crosswalk VALUES
@@ -85,7 +85,9 @@ shr.exec(`
   );
   INSERT INTO shr_agency_alias VALUES
     ('Houston', 'HOUSTON', 'TXHPD00', 'TX', 'Houston', 'City', 'test'),
-    ('Charlotte-Mecklenburg', 'CHARLOTTE', 'NCCMPD0', 'NC', 'Charlotte-Mecklenburg', 'City', 'test');
+    ('Louisville', 'LOUISVILLE', 'KY05602', 'KY', 'Louisville', 'City', 'test'),
+    ('Louisville Metro', 'LOUISVILLE METRO', 'KY05680', 'KY', 'Louisville Metro', 'City', 'test'),
+    ('Charlotte-Mecklenburg', 'CHARLOTTE', 'NC06001', 'NC', 'Charlotte-Mecklenburg', 'City', 'test');
   INSERT INTO agency_county_crosswalk VALUES
     ('NCCMPD0', 'NCCMPD000', 'Charlotte-Mecklenburg Police Department', 'NC', '37119', 'Mecklenburg County', 'MECKLENBURG', 'test');
 `);
@@ -110,6 +112,12 @@ assert.equal(maps.find((m) => m.source === "shr")?.status, "safe_exact");
 maps = mapping("violent crime in Charlotte", "city:NC:charlotte");
 assert.equal(maps.find((m) => m.source === "historical")?.status, "safe_exact");
 assert.equal(maps.find((m) => m.source === "historical")?.matches[0]?.agency, "Charlotte-Mecklenburg");
+assert.equal(maps.find((m) => m.source === "historical")?.matches[0]?.ori, "NC0600100");
+assert.equal(maps.find((m) => m.source === "nibrs")?.matches[0]?.ori, "NC0600100");
+assert.equal(maps.find((m) => m.source === "shr")?.matches[0]?.ori, "NC06001");
+
+maps = mapping("violent crime in Louisville, KY", "city:KY:louisville");
+assert.deepEqual(maps.find((m) => m.source === "shr")?.matches.map((match) => match.ori).sort(), ["KY05602", "KY05680"]);
 
 maps = mapping("auto theft clearance rate in Omaha NE", "city:NE:omaha");
 assert.equal(maps.find((m) => m.source === "historical")?.status, "safe_exact");

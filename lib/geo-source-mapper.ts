@@ -1,5 +1,6 @@
 import type Database from "better-sqlite3";
 import { agencySearchKey } from "./shr-agency-normalization";
+import { CONSOLIDATED_AGENCIES, findConsolidatedAgency } from "./agency-consolidations";
 import type { GeoPlaceCandidate, GeoPlaceResolution } from "./geo-place-resolver";
 
 export type GeoSource = "current" | "historical" | "nibrs" | "shr";
@@ -49,12 +50,28 @@ type DbSource = Extract<GeoSource, "current" | "historical" | "nibrs" | "shr">;
 
 const SOURCES: GeoSource[] = ["current", "historical", "nibrs", "shr"];
 
-const HISTORICAL_CITY_ALIASES = new Map<string, string[]>([
-  ["NC|CHARLOTTE", ["CHARLOTTE MECKLENBURG", "CHARLOTTE-MECKLENBURG"]],
-  ["TN|NASHVILLE", ["METROPOLITAN NASHVILLE", "NASHVILLE"]],
-  ["NV|LAS VEGAS", ["LAS VEGAS METROPOLITAN", "LAS VEGAS"]],
-  ["KY|LOUISVILLE", ["LOUISVILLE METRO", "LOUISVILLE"]],
-]);
+/**
+ * Historical UCR files a merged agency under its post-merger name, so a question
+ * about "Charlotte" must also try "Charlotte-Mecklenburg" and one about "Macon" must
+ * try "Bibb County". Derived from lib/agency-consolidations.ts rather than hand-listed
+ * here, so the mapper and the scorecard cannot drift into disagreeing about which
+ * agency a city means -- that drift is what let the scorecard answer Louisville from
+ * a 2003 ORI while the mapper already knew about Louisville Metro.
+ *
+ * Keys use normalizePlaceKey, which strips "metro"/"metropolitan", so several entries
+ * collapse to the bare city name; the hyphenated survivors are the ones that need the
+ * explicit alias.
+ */
+const HISTORICAL_CITY_ALIASES: Map<string, string[]> = (() => {
+  const map = new Map<string, string[]>();
+  for (const entry of CONSOLIDATED_AGENCIES) {
+    const names = [entry.historicalAgency, entry.alias, entry.predecessor]
+      .filter((name): name is string => Boolean(name))
+      .map((name) => name.toUpperCase());
+    map.set(`${entry.state}|${normalizePlaceKey(entry.alias)}`, [...new Set(names)]);
+  }
+  return map;
+})();
 
 const SOURCE_STATE_CODES: Partial<Record<GeoSource, Record<string, string | string[]>>> = {
   historical: {
@@ -205,6 +222,16 @@ function mapHistoricalCity(
   if (!tableExists(db, "historical_agency")) {
     return base(candidate, "historical", "unknown", filters, [], "historical_agency table unavailable.");
   }
+  const consolidated = findConsolidatedAgency(state, candidate.name);
+  if (consolidated) {
+    const rows = safeAll<GeoSourceMatch>(db, `
+      SELECT ori, agency, upper(state) AS state, 'historical_agency' AS sourceTable
+      FROM historical_agency WHERE ori = ? LIMIT 1
+    `, [consolidated.historicalOri]);
+    return rows.length === 1
+      ? base(candidate, "historical", "safe_exact", [`ori = '${consolidated.historicalOri}'`], rows, "Verified consolidated-agency successor ORI.")
+      : base(candidate, "historical", "unsupported", [`ori = '${consolidated.historicalOri}'`], [], "Registered Historical successor ORI is unavailable.");
+  }
   const aliases = historicalCityKeys(state, candidate.name);
   const rows = safeAll<GeoSourceMatch>(db, `
     SELECT DISTINCT
@@ -229,6 +256,14 @@ function mapNibrsCity(
   const filters = [stateFilter.label, `agencies.city = '${candidate.name.toUpperCase()}'`];
   if (!db) return base(candidate, "nibrs", "unknown", filters, [], "nibrs database unavailable for city validation.");
   if (!tableExists(db, "agencies")) return base(candidate, "nibrs", "unknown", filters, [], "nibrs agencies table unavailable.");
+  const consolidated = findConsolidatedAgency(state, candidate.name);
+  if (consolidated?.nibrsOri) {
+    const rows = safeAll<Record<string, unknown>>(db, `SELECT DISTINCT ori, city, state, population FROM agencies WHERE ori = ?`, [consolidated.nibrsOri])
+      .map((row) => ({ ori: String(row.ori || ""), city: String(row.city || ""), state: String(row.state || ""), population: typeof row.population === "number" ? row.population : null, sourceTable: "agencies" }));
+    return rows.length > 0
+      ? base(candidate, "nibrs", "safe_exact", [`ori = '${consolidated.nibrsOri}'`], rows, "Verified consolidated-agency successor ORI.")
+      : base(candidate, "nibrs", "unsupported", [`ori = '${consolidated.nibrsOri}'`], [], "Registered NIBRS successor ORI is unavailable.");
+  }
   const cityColumn = firstExistingColumn(db, "agencies", ["city", "agency", "agency_name"]);
   if (!cityColumn || !columnExists(db, "agencies", "state")) {
     return base(candidate, "nibrs", "unknown", filters, [], "nibrs agencies table does not expose city/state columns.");
@@ -271,6 +306,20 @@ function mapShrCity(
   if (!db) return base(candidate, "shr", "unknown", filters, [], "shr database unavailable for city validation.");
   if (!tableExists(db, "shr_agency_alias")) {
     return base(candidate, "shr", "unknown", filters, [], "shr_agency_alias table unavailable.");
+  }
+  const consolidated = findConsolidatedAgency(state, candidate.name);
+  if (consolidated) {
+    if (!consolidated.shrOri) return base(candidate, "shr", "unsupported", [], [], "Registry records no surviving SHR identity for this consolidation.");
+    const verifiedOris = [consolidated.shrPredecessorOri, consolidated.shrOri].filter((ori): ori is string => Boolean(ori));
+    const placeholders = verifiedOris.map(() => "?").join(",");
+    const rows = safeAll<GeoSourceMatch & { agency_type?: string }>(db, `
+      SELECT DISTINCT ori, canonical_agency AS agency, state, agency_type, 'shr_agency_alias' AS sourceTable
+      FROM shr_agency_alias WHERE ori IN (${placeholders}) AND upper(state) = ? LIMIT 50
+    `, [...verifiedOris, state]);
+    const foundOris = new Set(rows.map((row) => row.ori));
+    return verifiedOris.every((ori) => foundOris.has(ori))
+      ? base(candidate, "shr", "safe_exact", [`ori IN (${verifiedOris.map((ori) => `'${ori}'`).join(",")})`], rows, "Verified consolidated-agency SHR identity chain.")
+      : base(candidate, "shr", "unsupported", [`ori IN (${verifiedOris.map((ori) => `'${ori}'`).join(",")})`], [], "Registered SHR identity is unavailable.");
   }
   const rows = safeAll<GeoSourceMatch & { agency_type?: string }>(db, `
     SELECT DISTINCT

@@ -57,6 +57,7 @@ import {
   resolveNibrsPlaces,
 } from "@/lib/nibrs-place-resolver";
 import { logResolverWarnings } from "@/lib/rtci-db";
+import { consolidatedDisplayText, normalizeConsolidatedDisplayRows } from "@/lib/agency-consolidations";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -72,13 +73,17 @@ function jsonResp(data: unknown, status = 200) {
   const payload: Record<string, any> = { ...((data as Record<string, any>) || {}) };
   if (typeof payload.explanation === 'string' || typeof payload.title === 'string') {
     const safe = sanitizeUserFacingNarrative(payload.explanation, payload.title);
-    payload.explanation = safe.explanation;
-    payload.title = safe.title;
+    payload.explanation = safe.explanation ? consolidatedDisplayText(safe.explanation) : safe.explanation;
+    payload.title = safe.title ? consolidatedDisplayText(safe.title) : safe.title;
   }
+  if (Array.isArray(payload.rows)) payload.rows = normalizeNibrsDisplayRows(payload.rows);
   // ChartPanel renders chartConfig.title, which the sanitization above never
   // touched -- a leaking title was blanked in the header while the chart still
   // showed it. Applied here so every response path is covered.
-  if (payload.chartConfig) payload.chartConfig = sanitizeChartConfigTitle(payload.chartConfig);
+  if (payload.chartConfig) {
+    payload.chartConfig = sanitizeChartConfigTitle(payload.chartConfig);
+    if (typeof payload.chartConfig?.title === "string") payload.chartConfig.title = consolidatedDisplayText(payload.chartConfig.title);
+  }
   return NextResponse.json(payload, { status, headers: CORS_HEADERS });
 }
 
@@ -124,7 +129,7 @@ function displayNibrsCityName(value: string): string {
 
 function normalizeNibrsDisplayRows(rows: Record<string, unknown>[]): Record<string, unknown>[] {
   const cityLikeColumns = new Set(["city", "agency", "agency_name", "jurisdiction"]);
-  return rows.map((row) => {
+  return normalizeConsolidatedDisplayRows(rows).map((row) => {
     let changed = false;
     const next: Record<string, unknown> = { ...row };
     for (const key of Object.keys(next)) {

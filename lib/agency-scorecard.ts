@@ -1,5 +1,6 @@
 import type Database from "better-sqlite3";
 import { resolveGeoPlaces } from "./geo-place-resolver";
+import { consolidatedDisplayName, historicalAgencyTarget } from "./agency-consolidations";
 
 export const SCORECARD_COLUMNS = ["offense", "offenses", "rate_per_100k", "clearance_rate", "offense_change_pct"] as const;
 
@@ -70,9 +71,12 @@ export function buildAgencyScorecard(db: Database.Database, question: string): A
   }
 
   const candidate = candidates[0];
-  const agency = candidate.name;
+  const agency = consolidatedDisplayName(candidate.state, candidate.name);
   const state = candidate.state!.toLowerCase();
-  const where = `ha.agency = ${sqlQuote(agency)} AND ha.state = ${sqlQuote(state)} AND ha.type = 'city'`;
+  const target = historicalAgencyTarget(candidate.state, candidate.name);
+  const where = target.ori
+    ? `ha.ori = ${sqlQuote(target.ori)}`
+    : `ha.agency = ${sqlQuote(target.agency)} AND ha.state = ${sqlQuote(state)} AND ha.type = ${sqlQuote(target.type)}`;
   const complete = db.prepare(`
     SELECT MAX(hac.year) AS year
     FROM historical_agency_crime hac

@@ -55,20 +55,31 @@ import { findVerifiedCurrentAgency } from '@/lib/current-agency-availability';
 import { neutralizeUnverifiedAvailabilityClaim } from "@/lib/refusal-safety";
 import { implausiblePopulationDenominator } from "@/lib/rate-denominator-safety";
 import { buildAgencyScorecard } from "@/lib/agency-scorecard";
+import {
+  consolidatedDisplayText,
+  findConsolidatedAgency,
+  normalizeConsolidatedDisplayRows,
+} from "@/lib/agency-consolidations";
 
 function sseEvent(event: StreamEvent): string {
   const payload = { ...event } as Record<string, unknown>;
   if (typeof payload.explanation === "string" || typeof payload.title === "string") {
     const safe = sanitizeUserFacingNarrative(payload.explanation as string | undefined, payload.title as string | undefined);
-    payload.explanation = safe.explanation;
-    payload.title = safe.title;
+    payload.explanation = safe.explanation ? consolidatedDisplayText(safe.explanation) : safe.explanation;
+    payload.title = safe.title ? consolidatedDisplayText(safe.title) : safe.title;
   }
+  if (Array.isArray(payload.rows)) payload.rows = normalizeConsolidatedDisplayRows(payload.rows as Record<string, unknown>[]);
   // ChartPanel renders chartConfig.title, which the sanitization above never
   // touched -- a leaking title was blanked in the header while the chart still
   // showed it. Applied here so every response path is covered.
-  if (payload.chartConfig) payload.chartConfig = sanitizeChartConfigTitle(payload.chartConfig);
+  if (payload.chartConfig) {
+    payload.chartConfig = sanitizeChartConfigTitle(payload.chartConfig);
+    const chart = payload.chartConfig as Record<string, unknown>;
+    if (typeof chart.title === "string") chart.title = consolidatedDisplayText(chart.title);
+  }
   if (payload.type === "explanation" && typeof payload.text === "string") {
-    payload.text = sanitizeUserFacingNarrative(payload.text, undefined).explanation;
+    const safeText = sanitizeUserFacingNarrative(payload.text, undefined).explanation;
+    payload.text = safeText ? consolidatedDisplayText(safeText) : safeText;
   }
   return `data: ${JSON.stringify(payload)}\n\n`;
 }
@@ -336,11 +347,13 @@ function answerHistoricalPlaceLookup(
   if (candidate.kind !== "city" && candidate.kind !== "county") return null;
 
   const sourceState = historicalSourceState(candidate.state);
-  const type = candidate.kind;
-  const agency = candidate.name;
+  const consolidation = findConsolidatedAgency(candidate.state, candidate.name);
+  const type = consolidation?.historicalType ?? candidate.kind;
+  const agency = consolidation?.historicalAgency ?? candidate.name;
+  const displayName = consolidation?.alias ?? candidate.name;
   const sql = `
     SELECT
-      ha.agency,
+      ${sqlQuote(displayName)} AS agency,
       '${candidate.state.toUpperCase()}' AS state,
       ha.type,
       (SELECT MIN(hc.year) || '-' || MAX(hc.year) FROM historical_agency_crime hc WHERE hc.ori = ha.ori) AS crime_years,
@@ -348,8 +361,9 @@ function answerHistoricalPlaceLookup(
       (SELECT MIN(hs.year) || '-' || MAX(hs.year) FROM historical_staffing hs WHERE hs.ori = ha.ori) AS staffing_years
     FROM historical_agency ha
     WHERE UPPER(ha.state) = UPPER(${sqlQuote(sourceState)})
-      AND LOWER(ha.type) = ${sqlQuote(type)}
-      AND UPPER(ha.agency) = UPPER(${sqlQuote(agency)})
+      ${consolidation
+        ? `AND ha.ori = ${sqlQuote(consolidation.historicalOri)}`
+        : `AND LOWER(ha.type) = ${sqlQuote(type)}\n      AND UPPER(ha.agency) = UPPER(${sqlQuote(agency)})`}
     ORDER BY ha.agency
     LIMIT 20
   `.trim();
@@ -359,10 +373,10 @@ function answerHistoricalPlaceLookup(
     if (rows.length === 0) return null;
     return {
       sql,
-      rows,
+      rows: normalizeConsolidatedDisplayRows(rows),
       columns: ["agency", "state", "type", "crime_years", "clearance_years", "staffing_years"],
-      title: `${candidate.name}, ${candidate.state.toUpperCase()}`,
-      explanation: `Historical Library agency coverage for ${candidate.name}, ${candidate.state.toUpperCase()}. Ask for a specific metric to chart counts, rates, staffing, or clearances over time.`,
+      title: `${displayName}, ${candidate.state.toUpperCase()}`,
+      explanation: `Historical Library agency coverage for ${displayName}, ${candidate.state.toUpperCase()}. Ask for a specific metric to chart counts, rates, staffing, or clearances over time.`,
     };
   } catch {
     return null;
@@ -1018,9 +1032,22 @@ export async function POST(req: NextRequest) {
         // the transform's reconstructed question so guardrails see the geography
         const guardrailQuestion = (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing") ? followupPlan.reconstructedQuestion : (followupTransform?.contextQuestion ?? question);
         contractQuestion = guardrailQuestion;
+        const consolidationTargets = isHistorical
+          ? [...new Map(resolveGeoPlaces(guardrailQuestion).mentions
+              .flatMap((mention) => mention.candidates)
+              .map((candidate) => findConsolidatedAgency(candidate.state, candidate.name))
+              .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry))
+              .map((entry) => [entry.historicalOri, entry])).values()]
+          : [];
+        const consolidationInstruction = consolidationTargets.length > 0
+          ? `Verified consolidated-agency targets: ${consolidationTargets.map((entry) =>
+              `${entry.alias}, ${entry.state} MUST query historical_agency ORI ${entry.historicalOri} (${entry.historicalAgency}) and MUST display only ${entry.alias}`,
+            ).join("; ")}. Do not query a predecessor ORI or use a source-specific agency name in output.`
+          : undefined;
         const promptHistory = followupTransform
           ? [...history, { role: "user" as const, content: followupTransform.instruction }]
           : history;
+        if (consolidationInstruction) promptHistory.push({ role: "user" as const, content: consolidationInstruction });
         const systemPrompt = isHistorical ? getHistoricalSystemPrompt() : undefined;
 
         // Check response cache (only standalone questions)
@@ -1163,6 +1190,13 @@ export async function POST(req: NextRequest) {
         // Also check yAxis/yAxisLabel issues that need ClaudeResponse fields
         const sqlLower = claude.sql.toLowerCase();
         const issues = [...guardrailResult.issues];
+        const missingConsolidationTargets = (candidateSql: string) => consolidationTargets.filter(
+          (entry) => !candidateSql.toUpperCase().includes(entry.historicalOri),
+        );
+        const missingInitialTargets = missingConsolidationTargets(claude.sql);
+        if (missingInitialTargets.length > 0) {
+          issues.push(`The SQL must target the verified successor ORI(s): ${missingInitialTargets.map((entry) => `${entry.alias}=${entry.historicalOri}`).join(", ")}. Never select the predecessor by agency name.`);
+        }
         if (claude.yAxis) {
           const yCols = claude.yAxis.split(",").map(c => c.trim().toLowerCase());
           for (const col of yCols) {
@@ -1282,6 +1316,14 @@ export async function POST(req: NextRequest) {
         const preValidationContract = runContractValidation(claude.sql);
         claude.sql = preValidationContract.sql;
         if (emitContractFailure(preValidationContract, `contract_final_failure:${preValidationContract.enforced.join(",")}`)) return;
+        const missingFinalTargets = missingConsolidationTargets(claude.sql);
+        if (missingFinalTargets.length > 0) {
+          const msg = `I couldn't safely resolve ${missingFinalTargets.map((entry) => `${entry.alias}, ${entry.state}`).join("; ")} to the verified post-consolidation agency. Please retry.`;
+          writeLog(question, claude.sql, 0, "consolidation_target_missing", Date.now() - totalStart, msg, tab, firedGuardrails, "haiku-4.5", sessionId);
+          controller.enqueue(encoder.encode(sseEvent({ type: "result", sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - totalStart })));
+          close();
+          return;
+        }
 
         controller.enqueue(
           encoder.encode(

@@ -1,4 +1,5 @@
 import type { ChartConfig, ChartMeta } from "./types";
+import { CONSOLIDATED_AGENCIES } from "./agency-consolidations";
 
 export interface HistoricalCityChangePlan {
   sql: string | null;
@@ -76,13 +77,30 @@ function direction(text: string): "decline" | "increase" {
 
 function cityLabelSql(): string {
   const stateDisplay = "CASE WHEN UPPER(ha.state) = 'NB' THEN 'NE' WHEN UPPER(ha.state) = 'GM' THEN 'GU' ELSE UPPER(ha.state) END";
+  const consolidationCases = CONSOLIDATED_AGENCIES.map((entry) =>
+    `WHEN ha.ori = '${entry.historicalOri.replace(/'/g, "''")}' THEN '${entry.alias.replace(/'/g, "''")}'`
+  ).join("\n        ");
   return `CASE
         WHEN ha.agency = 'Metropolitan Police Department' AND UPPER(ha.state) = 'DC' THEN 'Washington'
-        WHEN ha.agency = 'Metropolitan Nashville Police Department' AND UPPER(ha.state) = 'TN' THEN 'Nashville'
-        WHEN ha.agency = 'Las Vegas Metropolitan Police Department' AND UPPER(ha.state) = 'NV' THEN 'Las Vegas'
-        WHEN ha.agency = 'Charlotte-Mecklenburg' AND UPPER(ha.state) = 'NC' THEN 'Charlotte'
+        ${consolidationCases}
         ELSE ha.agency
       END || ', ' || ${stateDisplay}`;
+}
+
+function historicalCityScopeSql(): string {
+  const countySuccessors = CONSOLIDATED_AGENCIES
+    .filter((entry) => entry.historicalType === "county")
+    .map((entry) => `'${entry.historicalOri.replace(/'/g, "''")}'`);
+  return countySuccessors.length > 0
+    ? `(LOWER(ha.type) = 'city' OR ha.ori IN (${countySuccessors.join(", ")}))`
+    : "LOWER(ha.type) = 'city'";
+}
+
+function historicalPredecessorExclusionSql(): string {
+  const exclusions = CONSOLIDATED_AGENCIES
+    .filter((entry) => entry.predecessor)
+    .map((entry) => `(UPPER(ha.state) = '${entry.state.replace(/'/g, "''")}' AND ha.agency = '${entry.predecessor!.replace(/'/g, "''")}' AND ha.ori <> '${entry.historicalOri.replace(/'/g, "''")}')`);
+  return exclusions.length > 0 ? `NOT (${exclusions.join(" OR ")})` : "1 = 1";
 }
 
 export function buildHistoricalCityChangeRankingPlan(
@@ -135,7 +153,8 @@ export function buildHistoricalCityChangeRankingPlan(
       FROM historical_agency ha
       JOIN historical_agency_crime hac ON hac.ori = ha.ori
       ${floorJoin}
-      WHERE LOWER(ha.type) = 'city'
+      WHERE ${historicalCityScopeSql()}
+        AND ${historicalPredecessorExclusionSql()}
         AND hac.year IN (${range.startYear}, ${range.endYear})
         AND hac.violent IS NOT NULL
       GROUP BY city, hac.year
