@@ -11,6 +11,18 @@ const clearance = db.prepare("INSERT INTO historical_agency_clearance VALUES (?,
 crime.run("OKTULSA01", 2024, 400000, 100, 10, 20, 30, 40, 200, 50, 100, 50); population.run("OKTULSA01", 2024, 400000); clearance.run("OKTULSA01", 2024, 60, 70, 71, 72, 73, 74, 75, 76, 77);
 crime.run("OKTULSA01", 2025, 410000, 110, 11, 21, 31, 47, 210, 51, 101, 51); population.run("OKTULSA01", 2025, 410000); clearance.run("OKTULSA01", 2025, 61, 162.5, 72, 73, 74, 75, 76, 77, 78);
 assert.equal(detectAgencyScorecardQuestion("Give me Tulsa, Oklahoma's crime scorecard"), true);
+// The shared-contract fields the dispatcher and the panel rely on: agency scope,
+// structured year status, and clearance shown. These are structured so the UI never
+// has to parse status out of the explanation prose.
+{
+  const contract = buildAgencyScorecard(db, "Give me Tulsa, Oklahoma's crime scorecard");
+  assert.ok(contract);
+  assert.equal(contract.scope, "agency");
+  assert.equal(contract.showClearance, true);
+  assert.equal(contract.yearStatus, "latest");
+  assert.equal(contract.newerExcludedYear, null);
+  assert.equal(contract.statusText, `${contract.year} · Latest reliable year`);
+}
 // The plural and two-word spellings are how people actually type this. Missing them sent
 // the question down the ordinary query path and answered something else entirely.
 for (const phrasing of ["Toledo scorecard", "Toledo scorecards", "Toledo score card",

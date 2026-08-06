@@ -12,6 +12,8 @@ interface EmbedData {
 
 interface ExportButtonsProps {
   chartRef?: RefObject<HTMLDivElement | null>;
+  captureSelector?: string;
+  addFooter?: boolean;
   csvData?: Record<string, unknown>[];
   csvColumns?: string[];
   csvFilename?: string;
@@ -108,11 +110,63 @@ async function addBrandedFooter(sourceDataUrl: string): Promise<string> {
   });
 }
 
+/**
+ * The width a bounded card must be expanded to so a capture includes its full
+ * horizontally-scrollable content: the scroller's intrinsic width plus whatever the
+ * card wraps around the scroller (padding and border), which is the difference
+ * between the card's and the scroller's current layout widths.
+ *
+ * Pure on purpose -- the DOM work in expandScrollableCapture cannot run under a test,
+ * but this calculation can. At Codex's measured 390px viewport: card 340, scroller
+ * 308, table 530 -> 530 + (340 - 308) = 562 CSS px, 1124 at 2x.
+ */
+export function expandedCaptureWidth(cardWidth: number, scrollerWidth: number, scrollerScrollWidth: number): number {
+  return Math.ceil(scrollerScrollWidth + (cardWidth - scrollerWidth));
+}
+
+/**
+ * Temporarily expand a bounded capture target so its horizontally-scrollable content
+ * is fully visible, returning a restore function -- or null when nothing overflows,
+ * in which case NOTHING is touched and desktop captures stay tightly bounded.
+ *
+ * On a phone the scorecard table scrolls inside the card, and html-to-image renders
+ * the element at its laid-out size: the exported PNG silently clipped every column
+ * that was scrolled out of view. Scroll position is reset to 0 for the capture and
+ * restored with everything else.
+ */
+function expandScrollableCapture(target: HTMLElement): (() => void) | null {
+  const scroller = target.querySelector<HTMLElement>("[data-scorecard-scroll]");
+  if (!scroller || scroller.scrollWidth <= scroller.clientWidth + 1) return null;
+  const saved = {
+    scrollLeft: scroller.scrollLeft,
+    width: target.style.width,
+    maxWidth: target.style.maxWidth,
+    overflowX: scroller.style.overflowX,
+  };
+  const width = expandedCaptureWidth(
+    target.getBoundingClientRect().width,
+    scroller.getBoundingClientRect().width,
+    scroller.scrollWidth
+  );
+  scroller.scrollLeft = 0;
+  target.style.maxWidth = "none";
+  target.style.width = `${width}px`;
+  scroller.style.overflowX = "visible";
+  return () => {
+    target.style.width = saved.width;
+    target.style.maxWidth = saved.maxWidth;
+    scroller.style.overflowX = saved.overflowX;
+    scroller.scrollLeft = saved.scrollLeft;
+  };
+}
+
 const btnClass =
   "group inline-flex items-center justify-center gap-1.5 px-3 py-2.5 min-h-[44px] text-[11px] font-semibold uppercase tracking-wider rounded-md bg-[var(--surface)] text-[var(--muted)] hover:bg-[var(--foreground)] hover:text-white cursor-pointer transition-all duration-200";
 
 export default function ExportButtons({
   chartRef,
+  captureSelector,
+  addFooter = true,
   csvData,
   csvColumns,
   csvFilename = "crime-data-export.csv",
@@ -124,26 +178,46 @@ export default function ExportButtons({
 
   const captureChart = useCallback(async (): Promise<string | null> => {
     if (!chartRef?.current) return null;
-    const buttons = chartRef.current.querySelectorAll("[data-export-btn]");
+    const captureTarget = captureSelector
+      ? chartRef.current.querySelector<HTMLElement>(captureSelector)
+      : chartRef.current;
+    if (!captureTarget) return null;
+    const buttons = captureTarget.querySelectorAll("[data-export-btn]");
     buttons.forEach((b) => ((b as HTMLElement).style.display = "none"));
     try {
       const { toPng } = await import("html-to-image");
-      const dataUrl = await toPng(chartRef.current, {
-        pixelRatio: 2,
-        backgroundColor: "#F5F0E8",
-      });
-      return await addBrandedFooter(dataUrl);
+      // Expand only after the capture module is available. If its dynamic import fails
+      // (for example during a stale-bundle transition), no DOM mutation has happened and
+      // there is therefore nothing that can be left expanded on screen.
+      // Ordinary chart captures never enter this selector-only path. Copy Image and Save
+      // Image share this function, so both get the same expanded scorecard image.
+      const restoreExpansion = captureSelector ? expandScrollableCapture(captureTarget) : null;
+      let dataUrl: string;
+      try {
+        dataUrl = await toPng(captureTarget, {
+          pixelRatio: 2,
+          backgroundColor: "#F5F0E8",
+        });
+      } finally {
+        // Restore the moment the pixels are captured, not after the footer round-trip:
+        // the expanded card is visibly wrong on screen for as long as it lasts.
+        restoreExpansion?.();
+      }
+      return addFooter ? await addBrandedFooter(dataUrl) : dataUrl;
     } finally {
       buttons.forEach((b) => ((b as HTMLElement).style.display = ""));
     }
-  }, [chartRef]);
+  }, [addFooter, captureSelector, chartRef]);
 
   const handleJpeg = useCallback(async () => {
     const dataUrl = await captureChart();
     if (!dataUrl) return;
     const a = document.createElement("a");
     a.href = dataUrl;
-    a.download = csvFilename.replace(/\.csv$/, ".png");
+    // The capture is PNG data regardless of the caller's legacy filename suffix.
+    // Keep the extension honest so image viewers and downstream uploads do not have to
+    // recover from a PNG payload named .jpeg.
+    a.download = csvFilename.replace(/\.(?:csv|jpe?g|png)$/i, ".png");
     a.click();
   }, [captureChart, csvFilename]);
 

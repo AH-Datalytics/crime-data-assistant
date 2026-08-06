@@ -230,7 +230,7 @@ export default function WorkspaceChat({ sourceYearRanges }: WorkspaceChatProps) 
                 finalExplanation = event.explanation; finalSql = event.sql || "";
                 setExplanation(event.explanation);
                 const qr: QueryResponse | null = event.rows.length > 0 || event.chartConfig || event.scorecard
-                  ? { success: true as const, question, sql: event.sql, explanation: event.explanation, title: event.title, columns: event.columns, rows: event.rows, rowCount: event.rowCount, truncated: event.truncated, chartConfig: event.chartConfig, chartMeta: event.chartMeta, executionTimeMs: event.executionTimeMs, scorecard: event.scorecard, agencyLabel: event.agencyLabel, year: event.year }
+                  ? { success: true as const, question, sql: event.sql, explanation: event.explanation, title: event.title, columns: event.columns, rows: event.rows, rowCount: event.rowCount, truncated: event.truncated, chartConfig: event.chartConfig, chartMeta: event.chartMeta, executionTimeMs: event.executionTimeMs, scorecard: event.scorecard, agencyLabel: event.agencyLabel, year: event.year, scope: event.scope, yearStatus: event.yearStatus, statusText: event.statusText, newerExcludedYear: event.newerExcludedYear, showClearance: event.showClearance }
                   : null;
                 finalResponse = qr; setResponse(qr);
                 if (event.sourceSwitch && routingMode !== "rerun") { setTimeout(() => submitQuestion(event.sourceSwitch!.question, event.sourceSwitch!.source as "current" | "historical" | "nibrs" | "shr" | "hate_crime", "Follow-up moved to a better source", null, "rerun"), 0); }
@@ -721,7 +721,14 @@ export default function WorkspaceChat({ sourceYearRanges }: WorkspaceChatProps) 
                     )}
                   </div>
                   <div className="flex gap-2">
-                    {(response.chartConfig || response.scorecard) && (showChart || response.scorecard) && <ExportButtons chartRef={chartRef} csvFilename={`${response.title || "chart"}.jpeg`} />}
+                    {(response.chartConfig || response.scorecard) && (showChart || response.scorecard) && (
+                      <ExportButtons
+                        chartRef={chartRef}
+                        captureSelector={response.scorecard ? "[data-scorecard-export]" : undefined}
+                        addFooter={!response.scorecard}
+                        csvFilename={`${response.title || "chart"}.jpeg`}
+                      />
+                    )}
                     {response.rows.length > 0 && <ExportButtons csvData={response.rows} csvColumns={response.columns} csvFilename={`${response.title || "data"}.csv`} />}
                   </div>
                 </div>
@@ -743,6 +750,10 @@ export default function WorkspaceChat({ sourceYearRanges }: WorkspaceChatProps) 
                             // whenever response.scorecard is set, so this narrowing is safe here.
                             rows={response.rows as AgencyScorecardRow[]}
                             explanation={response.explanation}
+                            statusText={response.statusText}
+                            // Old cached responses predate this field; missing means an
+                            // agency card, which always shows clearance.
+                            showClearance={response.showClearance ?? true}
                           />
                         ) : (
                           <ChartPanel config={response.chartConfig!} rows={response.rows} meta={response.chartMeta} />

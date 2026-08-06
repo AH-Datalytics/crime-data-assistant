@@ -39,6 +39,11 @@ export interface QueryResponse {
   scorecard?: boolean;
   agencyLabel?: string;
   year?: number | null;
+  scope?: "agency" | "state" | "national";
+  yearStatus?: "latest" | "fallback";
+  statusText?: string;
+  newerExcludedYear?: number | null;
+  showClearance?: boolean;
 }
 
 export interface QueryError {
@@ -98,5 +103,10 @@ export type StreamEvent =
       scorecard?: boolean;
       agencyLabel?: string;
       year?: number | null;
+      scope?: "agency" | "state" | "national";
+      yearStatus?: "latest" | "fallback";
+      statusText?: string;
+      newerExcludedYear?: number | null;
+      showClearance?: boolean;
     }
   | { type: "error"; text: string; sql?: string };

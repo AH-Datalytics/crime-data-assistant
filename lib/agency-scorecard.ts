@@ -45,6 +45,19 @@ export type AgencyScorecardRow = {
   section?: boolean;
 };
 
+export type ScorecardScope = "agency" | "state" | "national";
+
+/**
+ * Shared result contract for every Historical scorecard scope. The UI reads the
+ * structured fields (scope, yearStatus, statusText, showClearance) rather than parsing
+ * prose out of `explanation`, which stays in the contract for logging and for the
+ * unavailable-card body text.
+ *
+ * `agencyLabel` is the display label for ANY scope -- "Toledo, OH", "Ohio",
+ * "United States". The name is kept for wire compatibility: the route, the client
+ * reconstruction in WorkspaceChatV2, and the wiring tests all address the field by
+ * this name, and renaming it would break old client bundles against new servers.
+ */
 export type AgencyScorecardResult = {
   title: string;
   explanation: string;
@@ -53,6 +66,15 @@ export type AgencyScorecardResult = {
   year: number | null;
   sql: string | null;
   agencyLabel: string;
+  scope: ScorecardScope;
+  /** "latest" when the newest usable year is shown; "fallback" when a newer year was rejected. */
+  yearStatus: "latest" | "fallback";
+  /** Compact line for under the card title, e.g. "2024 · Latest reliable year · 2025 may be incomplete". */
+  statusText: string;
+  /** The newer year that was rejected as possibly incomplete, when yearStatus is "fallback". */
+  newerExcludedYear: number | null;
+  /** Agency cards carry clearance; state and national cards must not render the column at all. */
+  showClearance: boolean;
 };
 
 // Defined in scorecard-format.ts (which has no dependencies) so the client can route
@@ -303,10 +325,16 @@ function implausibleAgainstHistory(
   return [];
 }
 
-function unavailableScorecard(title: string, explanation: string, agencyLabel = ""): AgencyScorecardResult {
+export function unavailableScorecard(
+  title: string,
+  explanation: string,
+  agencyLabel = "",
+  scope: ScorecardScope = "agency"
+): AgencyScorecardResult {
   return {
     title, explanation, columns: [...SCORECARD_COLUMNS], rows: [],
     year: null, sql: null, agencyLabel,
+    scope, yearStatus: "latest", statusText: "", newerExcludedYear: null, showClearance: scope === "agency",
   };
 }
 
@@ -442,7 +470,16 @@ export function buildAgencyScorecard(db: Database.Database, question: string): A
       ...(isSection ? { section: true } : {}),
     });
   }
-  const substituted = newestCompleteYear != null && year < newestCompleteYear
+  // "Fallback" means a newer COMPLETE year existed and was rejected by a reliability
+  // check. A newest year that is merely absent from completeYears (columns missing) is
+  // ordinary publication lag, not a fallback -- the status line should not cast doubt
+  // on a year this builder never considered usable in the first place.
+  const isFallback = newestCompleteYear != null && year < newestCompleteYear;
+  const newerExcludedYear = isFallback ? newestCompleteYear : null;
+  const statusText = isFallback
+    ? `${year} · Latest reliable year · ${newerExcludedYear} may be incomplete`
+    : `${year} · Latest reliable year`;
+  const substituted = isFallback
     ? ` ${newestCompleteYear} data may be incomplete, so this is the most recent year of known complete data.`
     : "";
   const disclosure = hasOver100Clearance ? " Some clearance rates exceed 100% because the FBI can clear cases in the current year that originated in prior reporting years." : "";
@@ -454,5 +491,10 @@ export function buildAgencyScorecard(db: Database.Database, question: string): A
     year,
     sql,
     agencyLabel: label,
+    scope: "agency",
+    yearStatus: isFallback ? "fallback" : "latest",
+    statusText,
+    newerExcludedYear,
+    showClearance: true,
   };
 }

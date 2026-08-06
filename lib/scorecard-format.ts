@@ -11,6 +11,15 @@ export const SCORECARD_DISPLAY_COLUMNS = [
   "Type", "Offenses", "Change", "Offense Rate Per 100k", "Clearance Rate",
 ] as const;
 
+/**
+ * The headers a given card actually shows. State and national scorecards omit
+ * Clearance Rate entirely -- the FBI publishes no state-level clearance data in this
+ * series, and a column of blanks would imply the data exists and is merely missing.
+ */
+export function scorecardDisplayColumns(showClearance: boolean): string[] {
+  return showClearance ? [...SCORECARD_DISPLAY_COLUMNS] : SCORECARD_DISPLAY_COLUMNS.slice(0, 4);
+}
+
 const blankIfNull = (value: number | null | undefined): boolean => value == null;
 
 export function formatCount(value: number | null): string {

@@ -10,6 +10,7 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
+import { expandedCaptureWidth } from "../components/ExportButtons";
 
 const root = path.join(__dirname, "..");
 const read = (p: string) => fs.readFileSync(path.join(root, p), "utf8");
@@ -22,7 +23,14 @@ function check(name: string, fn: () => void) {
   catch (e) { console.log(`  FAIL  ${name}\n        ${(e as Error).message}`); process.exitCode = 1; }
 }
 
-const FIELDS = ["scorecard", "agencyLabel", "year"];
+// Every field the scorecard boundary carries. WorkspaceChatV2 rebuilds its response
+// object field-by-field, so a field missing from any ONE of these three places --
+// types, route emit, client reconstruction -- is dropped silently, and the panel
+// falls back to defaults instead of erroring.
+const FIELDS = [
+  "scorecard", "agencyLabel", "year",
+  "scope", "yearStatus", "statusText", "newerExcludedYear", "showClearance",
+];
 
 console.log("\n1. QueryResponse declares every boundary field");
 for (const field of FIELDS) {
@@ -45,10 +53,13 @@ for (const field of FIELDS) {
 
 console.log("\n3. The route emits the marker and the header fields");
 check("route sets scorecard: true", () => assert.match(route, /scorecard:\s*true/));
-check("route emits agencyLabel", () => assert.match(route, /agencyLabel:\s*agencyScorecard\.agencyLabel/));
-check("route emits year", () => assert.match(route, /year:\s*agencyScorecard\.year/));
+for (const field of FIELDS.filter((f) => f !== "scorecard")) {
+  check(`route emits ${field}`, () =>
+    assert.match(route, new RegExp(`${field}:\\s*agencyScorecard\\.${field}`)));
+}
 
 const chat = read("components/WorkspaceChatV2.tsx");
+const scorecard = read("components/ScorecardPanel.tsx");
 
 console.log("\n4. WorkspaceChatV2 does not discard a zero-row scorecard");
 check("response construction admits event.scorecard", () => {
@@ -71,6 +82,46 @@ check("ScorecardPanel is imported", () => assert.match(chat, /import ScorecardPa
 check("chart slot admits response.scorecard", () => assert.match(chat, /response\.chartConfig \|\| response\.scorecard/));
 check("ScorecardPanel is rendered", () => assert.match(chat, /<ScorecardPanel/));
 check("DataTable is suppressed for scorecards", () => assert.match(chat, /!response\.scorecard[^)]*&&[\s\S]{0,200}<DataTable/));
+
+console.log("\n6. Scorecard image export captures the bounded card, not the full pane");
+check("scorecard marks its bounded export target", () => {
+  assert.match(scorecard, /data-scorecard-export/);
+});
+check("workspace selects the scorecard export target", () => {
+  assert.match(chat, /captureSelector=\{response\.scorecard \? "\[data-scorecard-export\]" : undefined\}/);
+});
+check("scorecard export does not append a duplicate generic footer", () => {
+  assert.match(chat, /addFooter=\{!response\.scorecard\}/);
+});
+
+console.log("\n7. Mobile export expands the card to the table's intrinsic width");
+// Codex measured the failure at a 390px viewport: card 340, scroller 308, table 530 --
+// the PNG captured only the visible 342 CSS px and clipped every scrolled-out column.
+check("expanded width = table width + the card's padding and border", () => {
+  assert.equal(expandedCaptureWidth(340, 308, 530), 562);
+});
+check("fractional layout widths round up, never clipping a pixel", () => {
+  assert.equal(expandedCaptureWidth(340.4, 308.4, 530), 562);
+});
+check("a non-overflowing table keeps the card width unchanged", () => {
+  // The DOM helper never fires in this case (scrollWidth <= clientWidth guard), so the
+  // formula degenerating to the current card width is the consistent identity.
+  assert.equal(expandedCaptureWidth(644, 612, 612), 644);
+});
+check("the panel exposes the scroll container to the exporter", () => {
+  assert.match(scorecard, /data-scorecard-scroll/);
+});
+const exportButtons = read("components/ExportButtons.tsx");
+check("expansion runs only on the bounded-capture (scorecard) path", () => {
+  assert.match(exportButtons, /captureSelector \? expandScrollableCapture\(captureTarget\) : null/);
+});
+check("expansion is restored in a finally block", () => {
+  assert.match(exportButtons, /finally \{\s*\/\/[^\n]*\n[^\n]*\n\s*restoreExpansion\?\.\(\);/);
+});
+check("scroll position is reset for capture and restored after", () => {
+  assert.match(exportButtons, /scroller\.scrollLeft = 0/);
+  assert.match(exportButtons, /scroller\.scrollLeft = saved\.scrollLeft/);
+});
 
 console.log(`\n${process.exitCode ? "FAILURES present." : `All ${passed} scorecard wiring checks passed.`}`);
 process.exit(process.exitCode ? 1 : 0);

@@ -54,7 +54,7 @@ import { plannerModeForSource } from '@/lib/followup-planner-mode';
 import { findVerifiedCurrentAgency } from '@/lib/current-agency-availability';
 import { neutralizeUnverifiedAvailabilityClaim } from "@/lib/refusal-safety";
 import { implausiblePopulationDenominator } from "@/lib/rate-denominator-safety";
-import { buildAgencyScorecard } from "@/lib/agency-scorecard";
+import { buildHistoricalScorecard } from "@/lib/historical-scorecard";
 import {
   consolidatedDisplayText,
   findConsolidatedAgency,
@@ -562,16 +562,25 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  const agencyScorecard = tab === "historical" ? buildAgencyScorecard(getDb(), capabilityQuestion) : null;
+  const agencyScorecard = tab === "historical" ? buildHistoricalScorecard(getDb(), capabilityQuestion) : null;
   if (agencyScorecard) {
     const ms = Date.now() - totalStart;
-    const scorecardTag = agencyScorecard.rows.length > 0 ? "agency-scorecard-deterministic" : "agency-scorecard-unavailable";
+    // Scope-prefixed so agency cards keep their historical tag strings ("agency-scorecard-…")
+    // and log analyses over them stay valid; state/national get their own partitions.
+    const scorecardTag = agencyScorecard.rows.length > 0
+      ? `${agencyScorecard.scope}-scorecard-deterministic`
+      : `${agencyScorecard.scope}-scorecard-unavailable`;
     writeLog(question, agencyScorecard.sql ?? "", agencyScorecard.rows.length, null, ms, agencyScorecard.explanation, tab, [scorecardTag], "deterministic", sessionId);
     const stream = new ReadableStream({ start(controller) {
       controller.enqueue(encoder.encode(sseEvent({ type: "result", sql: agencyScorecard.sql ?? "", explanation: agencyScorecard.explanation, title: agencyScorecard.title, columns: agencyScorecard.columns, rows: agencyScorecard.rows, rowCount: agencyScorecard.rows.length, truncated: false, chartConfig: null, chartMeta: { source: "FBI SRS", agencyCount: 1, population: null }, executionTimeMs: ms,
               scorecard: true,
               agencyLabel: agencyScorecard.agencyLabel,
               year: agencyScorecard.year,
+              scope: agencyScorecard.scope,
+              yearStatus: agencyScorecard.yearStatus,
+              statusText: agencyScorecard.statusText,
+              newerExcludedYear: agencyScorecard.newerExcludedYear,
+              showClearance: agencyScorecard.showClearance,
       })));
       controller.close();
     }});

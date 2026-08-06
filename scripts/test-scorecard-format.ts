@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import {
   formatCount, formatRate, formatClearance, formatChange,
-  changeDirection, changeHeaderLabel, SCORECARD_DISPLAY_COLUMNS,
+  changeDirection, changeHeaderLabel, SCORECARD_DISPLAY_COLUMNS, scorecardDisplayColumns,
 } from "../lib/scorecard-format";
 
 let passed = 0;
@@ -47,6 +47,14 @@ check("null year degrades gracefully", () => assert.equal(changeHeaderLabel(null
 console.log("\n7. Display column order matches the reference mock");
 check("change is third", () => assert.deepEqual([...SCORECARD_DISPLAY_COLUMNS],
   ["Type", "Offenses", "Change", "Offense Rate Per 100k", "Clearance Rate"]));
+
+console.log("\n8. Aggregate cards drop the clearance column entirely");
+check("agency cards keep all five headers", () => assert.deepEqual(
+  scorecardDisplayColumns(true),
+  ["Type", "Offenses", "Change", "Offense Rate Per 100k", "Clearance Rate"]));
+check("state/national cards end at the rate column", () => assert.deepEqual(
+  scorecardDisplayColumns(false),
+  ["Type", "Offenses", "Change", "Offense Rate Per 100k"]));
 
 console.log(`\n${process.exitCode ? "FAILURES present." : `All ${passed} scorecard format checks passed.`}`);
 process.exit(process.exitCode ? 1 : 0);

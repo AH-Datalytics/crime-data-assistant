@@ -4,7 +4,7 @@ import type { AgencyScorecardRow } from "@/lib/agency-scorecard";
 import CrimeIndexLogo from "./CrimeIndexLogo";
 import {
   formatCount, formatRate, formatClearance, formatChange,
-  changeDirection, changeHeaderLabel, SCORECARD_DISPLAY_COLUMNS,
+  changeDirection, changeHeaderLabel, scorecardDisplayColumns,
 } from "@/lib/scorecard-format";
 
 const CREAM = "#F5F1E8";
@@ -16,11 +16,11 @@ const IMPROVED = "#2F6B4F";
 const WORSENED = "#A83A32";
 
 // The card sizes to its own content instead of filling the pane. A scorecard is a
-// fixed 9-row, 5-column object -- stretching it to an arbitrary pane width just
-// spreads the same numbers further apart and reads as a layout bug. `w-fit` lets
-// the table set the width; `max-w-full` keeps it scrollable on a narrow pane.
+// fixed 9-row object -- stretching it to an arbitrary pane width just spreads the same
+// numbers further apart and reads as a layout bug. `w-fit` lets the table set the
+// width; `max-w-full` keeps it scrollable on a narrow pane.
 const SHELL = "h-full w-full overflow-auto flex items-start justify-center p-3 sm:p-4";
-const CARD = "w-fit max-w-full border p-5 sm:p-6 text-center";
+const CARD = "w-fit max-w-full border p-4 sm:p-6 text-center";
 
 /**
  * Source line sits bottom-left, logo bottom-right and lifted off the border so the
@@ -45,10 +45,14 @@ interface ScorecardPanelProps {
   year: number | null;
   rows: AgencyScorecardRow[];
   explanation: string;
+  /** Compact year/status line from the builder, e.g. "2024 · Latest FBI reporting year". */
+  statusText?: string;
+  /** Agency cards carry clearance; state/national cards omit the column entirely. */
+  showClearance?: boolean;
 }
 
 export default function ScorecardPanel({
-  agencyLabel, year, rows, explanation,
+  agencyLabel, year, rows, explanation, statusText, showClearance = true,
 }: ScorecardPanelProps) {
   const heading = agencyLabel
     ? `${agencyLabel} Crime Scorecard${year != null ? ` (${year})` : ""}`
@@ -59,7 +63,7 @@ export default function ScorecardPanel({
   if (rows.length === 0) {
     return (
       <div className={SHELL}>
-        <div className={CARD} style={{ background: CREAM, color: SLATE, borderColor: RULE }}>
+        <div data-scorecard-export className={CARD} style={{ background: CREAM, color: SLATE, borderColor: RULE }}>
           <h2 className="text-base sm:text-lg font-bold tracking-tight">{heading}</h2>
           <p className="mx-auto mt-3 max-w-[46ch] text-[13px] leading-relaxed" style={{ color: SLATE }}>{explanation}</p>
           <CardFooter />
@@ -68,32 +72,47 @@ export default function ScorecardPanel({
     );
   }
 
-  const hasOver100 = rows.some((row) => row.clearance_rate != null && row.clearance_rate > 100);
-  const numeric = "text-center tabular-nums whitespace-nowrap";
+  const headers = scorecardDisplayColumns(showClearance);
+  const hasOver100 = showClearance && rows.some((row) => row.clearance_rate != null && row.clearance_rate > 100);
+  // Numeric cells keep tabular figures aligned; horizontal padding steps down at narrow
+  // widths so more of the table fits before the scroll kicks in.
+  const numeric = "px-2 py-2 text-center tabular-nums whitespace-nowrap sm:px-4";
+  // The label column is sticky inside the horizontal scroll container, so on a phone the
+  // offense names stay put while the numbers scroll under them. It needs its own opaque
+  // background for exactly that reason. Left-aligned -- indentation is the group cue,
+  // and indentation is invisible in centred text.
+  const labelBase = "sticky left-0 z-10 py-2 text-left whitespace-nowrap";
 
   return (
     <div className={SHELL}>
-    <div className={CARD} style={{ background: CREAM, color: SLATE, borderColor: RULE }}>
+    <div data-scorecard-export className={CARD} style={{ background: CREAM, color: SLATE, borderColor: RULE }}>
       <h2 className="text-base sm:text-lg font-bold tracking-tight">{heading}</h2>
+      {statusText && (
+        // The structured status line -- which year this is and why -- lives directly
+        // under the title so the reporting year is unmistakable without reading prose.
+        <p className="mt-1 text-[11px] tracking-wide" style={{ color: "#8A8778" }}>{statusText}</p>
+      )}
 
-      <div className="mt-4 overflow-x-auto">
+      {/* data-scorecard-scroll: the image exporter finds this container to expand the
+          card to the table's full intrinsic width during capture, so a phone export
+          includes the columns that were scrolled out of view. */}
+      <div data-scorecard-scroll className="mt-4 overflow-x-auto">
         <table className="w-auto border-collapse text-sm">
           <thead>
             <tr>
-              {/* Header text is derived from SCORECARD_DISPLAY_COLUMNS (the reference-mock
-                  order) rather than hardcoded, so a column reorder there is caught by the
-                  test instead of silently diverging from the rendered table. The third
-                  column is dynamic -- the constant holds its base label "Change" and this
-                  swaps in changeHeaderLabel(year) instead. */}
-              {SCORECARD_DISPLAY_COLUMNS.map((label, index) => (
+              {/* Header text is derived from scorecardDisplayColumns (reference-mock
+                  order, clearance dropped for aggregate cards) rather than hardcoded, so
+                  a column change there is caught by the test instead of silently
+                  diverging from the rendered table. The third column is dynamic -- the
+                  constant holds its base label "Change" and this swaps in
+                  changeHeaderLabel(year) instead. */}
+              {headers.map((label, index) => (
                 <th
                   key={label}
-                  // Headers wrap (data cells still don't): letting "Offense Rate Per 100k"
-                  // break over two lines is what allows the column -- and the card -- to be
-                  // narrow instead of being held open by the longest label.
                   className={index === 0
-                    ? "px-4 pb-2 align-bottom text-center font-bold whitespace-nowrap"
-                    : "px-4 pb-2 align-bottom text-center font-bold whitespace-nowrap"}
+                    ? `${labelBase} px-2 pb-2 align-bottom font-bold sm:px-4`
+                    : "px-2 pb-2 align-bottom text-center font-bold whitespace-nowrap sm:px-4"}
+                  style={index === 0 ? { background: CREAM } : undefined}
                 >
                   {index === 2 ? changeHeaderLabel(year) : label}
                 </th>
@@ -105,30 +124,51 @@ export default function ScorecardPanel({
               const direction = changeDirection(row.offense_change_pct);
               const changeColor =
                 direction === "improved" ? IMPROVED : direction === "worsened" ? WORSENED : SLATE;
+              const changeText = formatChange(row.offense_change_pct);
               return (
                 <tr
                   key={row.offense}
                   style={{
-                    borderTop: index === 0 ? `2px solid ${RULE}` : `1px solid ${HAIRLINE}`,
+                    // Each section total (Violent Crime, Property Crime) opens its group
+                    // with the strong rule; component rows get the hairline.
+                    borderTop: row.section || index === 0 ? `2px solid ${RULE}` : `1px solid ${HAIRLINE}`,
                   }}
                 >
-                  {/* Flat layout: totals are semibold but not indented, and get no extra rules. */}
-                  <td className={`px-4 py-2 ${row.section ? "font-semibold" : ""}`}>{row.offense}</td>
-                  <td className={`px-4 py-2 ${numeric} ${row.section ? "font-semibold" : ""}`}>
+                  <td
+                    className={`${labelBase} ${row.section ? "px-2 font-semibold sm:px-4" : "pr-2 pl-6 sm:pr-4 sm:pl-8"}`}
+                    style={{ background: CREAM }}
+                  >
+                    {row.offense}
+                  </td>
+                  <td className={`${numeric} ${row.section ? "font-semibold" : ""}`}>
                     {formatCount(row.offenses)}
                   </td>
-                  {/* Colour is redundant encoding -- the minus sign carries direction, so this
-                      stays correct in greyscale and for a red-green colourblind reader. */}
-                  <td className={`px-4 py-2 ${numeric}`} style={{ color: changeColor }}>
-                    {formatChange(row.offense_change_pct)}
-                  </td>
-                  <td className={`px-4 py-2 ${numeric}`}>{formatRate(row.rate_per_100k)}</td>
-                  <td className={`relative px-4 py-2 ${numeric}`}>
-                    {formatClearance(row.clearance_rate)}
-                    {row.clearance_rate != null && row.clearance_rate > 100 && (
-                      <span className="absolute ml-0.5 text-[10px] leading-none" aria-hidden="true">*</span>
+                  {/* Three redundant direction encodings -- arrow, sign, colour -- so the
+                      cell stays readable in greyscale and for a red-green colourblind
+                      reader. The arrow carries an aria-label; the signed percentage is
+                      already meaningful to a screen reader on its own. Lower crime is
+                      styled as improvement: the semantic inversion is deliberate. */}
+                  <td className={`${numeric}`} style={{ color: changeColor }}>
+                    {direction === "improved" && (
+                      <span className="mr-0.5 text-[10px]" role="img" aria-label="decreased from prior year">▼</span>
                     )}
+                    {direction === "worsened" && (
+                      <span className="mr-0.5 text-[10px]" role="img" aria-label="increased from prior year">▲</span>
+                    )}
+                    {/* Unknown change renders a quiet dash, never 0.0% -- "no change" and
+                        "cannot know" are different claims. Display-only: the underlying
+                        row value stays null and exports stay ASCII-clean. */}
+                    {changeText || <span aria-label="change versus prior year unknown">–</span>}
                   </td>
+                  <td className={numeric}>{formatRate(row.rate_per_100k)}</td>
+                  {showClearance && (
+                    <td className={`relative ${numeric}`}>
+                      {formatClearance(row.clearance_rate)}
+                      {row.clearance_rate != null && row.clearance_rate > 100 && (
+                        <span className="absolute ml-0.5 text-[10px] leading-none" aria-hidden="true">*</span>
+                      )}
+                    </td>
+                  )}
                 </tr>
               );
             })}
