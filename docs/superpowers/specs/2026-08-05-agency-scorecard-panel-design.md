@@ -23,14 +23,49 @@ The result reads as a data dump rather than a product, and the builder's careful
 
 One Scorecard product: a boxed, titled, formatted table rendered on the chart side, replacing the generic table for this answer type.
 
+## Reference design
+
+The target is a supplied mock, reproduced in behaviour rather than approximated:
+
+```
+Tulsa, OK Crime Scorecard (2025)
+
+Type                  Offenses   Change from 2024   Rate per 100k   Clearance Rate
+──────────────────────────────────────────────────────────────────────────────────
+Violent Crime            3,398             –12.3           829.5             38.3
+Murder                      26             –33.3             6.3             88.5
+Rape                       471               8.3           115.0             14.4
+Robbery                    359             –11.6            87.6             35.9
+Aggravated Assault       2,542             –15.1           620.5             42.6
+Property Crime          14,138              –5.2         3,451.2             22.0
+Burglary                 2,590             –15.7           632.2             16.1
+Theft                    9,899               0.4         2,416.4             24.6
+Motor Vehicle Theft      1,649             –16.9           402.5             15.6
+
+Source CrimeIndex.org                                        [AH Datalytics mark]
+```
+
+- Warm cream ground (~`#F5F1E8`), dark slate type (~`#3A4450`).
+- **The change column is coloured, and the polarity is inverted from a financial table: crime going DOWN is good.** Negative change reads as improvement (green), positive as deterioration (red). Getting this backwards would invert the meaning of the whole column, so it is stated explicitly rather than left to convention.
+  - Colour is **redundant encoding, never the sole signal**: the `−` sign already carries the direction, so the table remains correct in greyscale, in print, and for a red-green colourblind reader. Colour makes the pattern scannable; it does not carry information by itself.
+  - Coloured by sign, with no dead-band threshold. Theft at `+0.4` is coloured as an increase. A threshold would need justifying and would introduce a third visual state for values that are already legible as near-zero.
+  - Muted, print-appropriate tones against cream — not saturated UI green and red.
+- One heavy rule beneath the header row; hairlines between data rows.
+- Figures right-aligned with tabular numerals.
+- Footer: source attribution left, AH Datalytics mark right.
+- 16:9 proportions — this is an exportable graphic, not only an in-app panel.
+- **Flat layout with subtle emphasis:** `Violent Crime` and `Property Crime` are semibold but not indented and get no extra rules. No indentation of member offences.
+
+Every figure in the mock reconciles against live production data for Tulsa 2025, so the mock was generated from real output and the chosen year is 2025.
+
 ## Non-goals
 
 These were considered and explicitly rejected during design. Recording them so they are not re-litigated or quietly reintroduced:
 
-- **No sparklines or trend lines.** Would require the builder to fetch a year range instead of one row. The scorecard is one year for one identified city.
+- **No sparklines or trend lines.** A per-offence trend line would require a multi-year range. Rejected in favour of the single prior-year change column below, which needs one extra year rather than ten.
 - **No state or national benchmark.** It would make the numbers more meaningful, but costs a query against `historical_state_national`, which has no 2025 rows — so it could not cover the years the scorecard often selects.
 - **No new route.** Not `/scorecard/[ori]`. This is a component inside the existing chat result, so it needs no routing or auth-gate work.
-- **No SQL change.** The builder's query is unchanged apart from returning the population it already selects.
+- **No state or national comparison column.** The change column compares the agency against its own prior year, not against a benchmark.
 - **No Recharts.** The graphic *is* a table. Reaching for a chart library here would add weight for nothing.
 
 ## Design
@@ -72,9 +107,9 @@ The panel does not receive `title` — it composes its own header from `agencyLa
 - Population and source (`FBI SRS`) quieter still.
 
 **Body — the nine rows as a formatted table**
-- `VIOLENT CRIME` and `PROPERTY CRIME` are section rows: heavier weight, a rule above, and **their totals populated** (counts, rate, and clearance), not blank.
-- Member offences indent beneath their section.
-- Columns: `Offense · Offenses · Rate /100k · Cleared`.
+- `Violent Crime` and `Property Crime` are **semibold, flush-left, with no indentation of the offences beneath them and no extra rules** — the flat treatment from the reference mock. Their totals are fully populated (count, change, rate, and clearance), not blank.
+- Sentence case throughout, matching the mock: `Violent Crime`, not `VIOLENT CRIME`.
+- Columns: `Type · Offenses · Change from <prior year> · Rate per 100k · Clearance Rate`.
 - Numerals right-aligned with tabular figures so digits align column-wise. This is the difference between a table that looks designed and one that looks emitted.
 
 **Clearance rates above 100%**
@@ -116,6 +151,30 @@ These two are why pure-helper tests are insufficient: a perfectly correct `Score
 **f. Export.** `ExportButtons` targets `chartRef`, so the box is PNG-exportable once the panel renders inside that ref. Confirm the CSV path still produces the nine rows for a populated scorecard, and that export is either suppressed or yields something sensible for an unavailable one rather than an empty file.
 
 ### 4. Builder addition
+
+#### The change column requires prior-year data
+
+This is the one part of the design that reaches into the data layer.
+
+**It is percent change in COUNTS, not in rates.** Determined empirically rather than assumed: against live Tulsa data (2024 → 2025), count-change reproduces all nine of the mock's figures exactly — `−12.3`, `−33.3`, `8.3`, `−11.6`, `−15.1`, `−5.2`, `−15.7`, `0.4`, `−16.9` — with zero deviation, while rate-change deviates by 8.4 points in total. Tulsa's population rose 1.03% over that span, which is precisely the gap that makes the two diverge. Implementing rate-change would make every value in the column subtly and invisibly wrong.
+
+**SQL change.** The builder's final query currently selects one row for the chosen year. It must also retrieve the prior year's nine offence counts. The complete-year selection logic is unchanged — completeness is still assessed on the scorecard year alone, because requiring a complete prior year too would push the card further back in time for no benefit.
+
+**Missing prior year.** When the prior year is absent, or a given offence count is null there, the change cell renders **blank** — never `0.0`, never `—0.0`, and never a change computed against a partial year. A blank cell says "not known"; a zero says "no change", and they are not the same claim.
+
+**Division by zero.** When a prior-year count is `0`, percent change is undefined. Render blank rather than infinity or 100%.
+
+**Column set** becomes:
+
+```ts
+export const SCORECARD_COLUMNS = [
+  "offense", "offenses", "change_pct", "rate_per_100k", "clearance_rate",
+] as const;
+```
+
+The header label is composed with the actual prior year — `Change from 2024`, not `Change from prior year` — so an exported card remains readable away from its context.
+
+#### Other builder additions
 
 `AgencyScorecardResult` currently returns `title, explanation, columns, rows, year, sql`. The panel needs two more fields, both of which the builder already holds:
 
