@@ -58,6 +58,7 @@ import { implausiblePopulationDenominator } from "@/lib/rate-denominator-safety"
 import { buildHistoricalScorecard } from "@/lib/historical-scorecard";
 import {
   consolidatedDisplayText,
+  consolidationTargetSatisfied,
   findConsolidatedAgency,
   normalizeConsolidatedDisplayRows,
 } from "@/lib/agency-consolidations";
@@ -1204,8 +1205,11 @@ export async function POST(req: NextRequest) {
         // Also check yAxis/yAxisLabel issues that need ClaudeResponse fields
         const sqlLower = claude.sql.toLowerCase();
         const issues = [...guardrailResult.issues];
+        // Satisfied by the successor ORI literal OR by the successor's own name scoped to
+        // its state -- see consolidationTargetSatisfied. Requiring the ORI literal alone
+        // refused correct SQL against the successor.
         const missingConsolidationTargets = (candidateSql: string) => consolidationTargets.filter(
-          (entry) => !candidateSql.toUpperCase().includes(entry.historicalOri),
+          (entry) => !consolidationTargetSatisfied(candidateSql, entry),
         );
         const missingInitialTargets = missingConsolidationTargets(claude.sql);
         if (missingInitialTargets.length > 0) {

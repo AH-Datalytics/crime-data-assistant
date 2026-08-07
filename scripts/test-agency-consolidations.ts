@@ -14,6 +14,7 @@ import {
   CONSOLIDATED_AGENCIES, CONSOLIDATION_EXCLUSIONS,
   findConsolidatedAgency, consolidatedDisplayName, historicalAgencyTarget,
   consolidatedDisplayValue, normalizeConsolidatedDisplayRows,
+  consolidationTargetSatisfied,
 } from "../lib/agency-consolidations";
 import { buildAgencyScorecard } from "../lib/agency-scorecard";
 
@@ -119,6 +120,36 @@ const displayRows = normalizeConsolidatedDisplayRows([
 ]);
 check("source display labels normalize by state", displayRows[0].agency === "Macon" && displayRows[1].canonical_agency === "Anaconda");
 check("display normalization does not cross state boundaries", displayRows[2].city === "Santa Clara");
+
+// ---------------------------------------------------------------------------------
+// The successor guard: accept correct SQL, keep refusing the predecessor.
+//
+// Production regression -- the guard demanded the ORI literal, so
+// `ha.agency = 'Louisville Metro' AND ha.state = 'ky'` (correct, joins to KY0568000)
+// was refused with "I couldn't safely resolve Louisville, KY".
+// ---------------------------------------------------------------------------------
+{
+  const lou = findConsolidatedAgency("KY", "Louisville")!;
+  const macon = findConsolidatedAgency("GA", "Macon")!;
+
+  check("successor selected by ORI literal is accepted",
+    consolidationTargetSatisfied("SELECT 1 FROM historical_agency ha WHERE ha.ori = 'KY0568000'", lou));
+  check("successor selected by name + state is accepted",
+    consolidationTargetSatisfied(
+      "SELECT hac.year, hac.murder FROM historical_agency_crime hac JOIN historical_agency ha ON ha.ori = hac.ori "
+      + "WHERE ha.agency = 'Louisville Metro' AND ha.state = 'ky' AND ha.type = 'city'", lou));
+  check("the dead predecessor name is still refused",
+    !consolidationTargetSatisfied("SELECT 1 FROM historical_agency ha WHERE ha.agency = 'Louisville' AND ha.state = 'ky'", lou));
+  check("successor name without a state predicate is refused",
+    !consolidationTargetSatisfied("SELECT 1 FROM historical_agency ha WHERE ha.agency = 'Louisville Metro'", lou));
+  // "Bibb County" is Macon's GA successor and also a real, unrelated AL agency.
+  check("successor name in the wrong state is refused",
+    !consolidationTargetSatisfied("SELECT 1 FROM historical_agency ha WHERE ha.agency = 'Bibb County' AND ha.state = 'al'", macon));
+  check("successor name in the right state is accepted",
+    consolidationTargetSatisfied("SELECT 1 FROM historical_agency ha WHERE ha.agency = 'Bibb County' AND ha.state = 'ga'", macon));
+  check("an unrelated agency does not satisfy the target",
+    !consolidationTargetSatisfied("SELECT 1 FROM historical_agency ha WHERE ha.agency = 'Tulsa' AND ha.state = 'ok'", lou));
+}
 
 db.close();
 if (failures > 0) {

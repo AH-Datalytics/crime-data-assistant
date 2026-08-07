@@ -309,3 +309,28 @@ export function consolidatedRtciAgency(state: string | undefined | null, name: s
   const entry = findConsolidatedAgency(state, name);
   return entry?.currentAgency ?? entry?.alias ?? name;
 }
+
+const escapeForRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/**
+ * Does this SQL actually target the post-consolidation successor?
+ *
+ * Two accepted forms. The successor ORI literal is the unambiguous one. The other is
+ * the successor's OWN historical agency name scoped to its state, which is what the
+ * model naturally writes -- `ha.agency = 'Louisville Metro' AND ha.state = 'ky'` joins
+ * to exactly KY0568000, so refusing it rejected a correct answer.
+ *
+ * The predecessor stays blocked: the name match is an exact quoted equality, so
+ * `agency = 'Louisville'` (dead after the 2003 merger, population frozen at 300,404)
+ * cannot satisfy a target whose successor is `'Louisville Metro'`.
+ *
+ * The state predicate is not optional. "Bibb County" is Macon's successor in GA and is
+ * also a real, unrelated agency in AL, so the name alone would admit the wrong state.
+ */
+export function consolidationTargetSatisfied(sql: string, entry: ConsolidatedAgency): boolean {
+  const upper = sql.toUpperCase();
+  if (upper.includes(entry.historicalOri)) return true;
+  const namePattern = new RegExp(`AGENCY\\s*=\\s*'${escapeForRegExp(entry.historicalAgency.toUpperCase())}'`);
+  const statePattern = new RegExp(`STATE\\s*=\\s*'${escapeForRegExp(entry.state.toUpperCase())}'`);
+  return namePattern.test(upper) && statePattern.test(upper);
+}
