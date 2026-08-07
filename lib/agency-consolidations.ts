@@ -241,11 +241,15 @@ export function consolidatedDisplayName(state: string | undefined | null, name: 
 }
 
 /** The `historical_agency` name and type to query for a place. */
-export function historicalAgencyTarget(state: string | undefined | null, name: string): { agency: string; type: "city" | "county"; ori?: string } {
+export function historicalAgencyTarget(
+  state: string | undefined | null,
+  name: string,
+  fallbackType: "city" | "county" = "city",
+): { agency: string; type: "city" | "county"; ori?: string } {
   const entry = findConsolidatedAgency(state, name);
   return entry
     ? { agency: entry.historicalAgency, type: entry.historicalType, ori: entry.historicalOri }
-    : { agency: name, type: "city" };
+    : { agency: name, type: fallbackType };
 }
 
 /** Replace a source/formal agency label with the friendly alias. State keeps ambiguous names scoped. */

@@ -55,7 +55,7 @@ export default function ScorecardPanel({
   agencyLabel, year, rows, explanation, statusText, showClearance = true,
 }: ScorecardPanelProps) {
   const heading = agencyLabel
-    ? `${agencyLabel} Crime Scorecard${year != null ? ` (${year})` : ""}`
+    ? `${agencyLabel}${explanation.includes("lead county agency's FBI-reported data") ? " County" : " Crime"} Scorecard${year != null ? ` (${year})` : ""}`
     : "Crime Scorecard";
 
   // Unavailable state: render the builder's explanation inside the card so an
@@ -74,6 +74,7 @@ export default function ScorecardPanel({
 
   const headers = scorecardDisplayColumns(showClearance);
   const hasOver100 = showClearance && rows.some((row) => row.clearance_rate != null && row.clearance_rate > 100);
+  const isCountyAgency = explanation.includes("lead county agency's FBI-reported data");
   // Numeric cells keep tabular figures aligned; horizontal padding steps down at narrow
   // widths so more of the table fits before the scroll kicks in.
   const numeric = "px-2 py-2 text-center tabular-nums whitespace-nowrap sm:px-4";
@@ -184,6 +185,13 @@ export default function ScorecardPanel({
         <p className="mt-3 text-left text-[11px] leading-snug" style={{ color: "#8A8778" }}>
           * Clearance rates can exceed 100% because agencies may clear cases in the current year
           that originated in prior reporting years.
+        </p>
+      )}
+
+      {isCountyAgency && (
+        <p className="mt-3 text-left text-[11px] leading-snug" style={{ color: "#8A8778" }}>
+          This scorecard reflects the lead county agency&apos;s FBI-reported data, not a countywide
+          total of all law enforcement agencies.
         </p>
       )}
 

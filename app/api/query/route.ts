@@ -35,6 +35,7 @@ import { getBlockingGeoClarification } from "@/lib/geo-resolver";
 import { getCountyScopeClarification } from "@/lib/county-clarifier";
 import { detectCurrentYearClearanceOverride, detectDemographicRateDenominatorFollowup, detectDemographicHomicideRateOverride, detectSubCityGeographyOverride } from "@/lib/capability-overrides";
 import { historicalYearAvailability } from "@/lib/year-availability";
+import { reliabilityDisclosureNote } from "@/lib/reliability-disclosure";
 import {
   queryContractFailureMessage,
   queryContractGuardrails,
@@ -1883,6 +1884,23 @@ export async function POST(req: NextRequest) {
           }
         }
 
+        // Step 5b3: Deterministic reliability caveat. Computed ONCE, BEFORE the
+        // initial result event, so the primary answer is caveated, the cache stores
+        // the caveated version, and a failure of both background explanation attempts
+        // still leaves the caveat in place. The helper is reused after each refined
+        // explanation (and after any grain override, which REPLACES the text) without
+        // duplicating the sentence.
+        const reliabilityNote = reliabilityDisclosureNote(getDb(), question, sql, rows, tab);
+        const withReliabilityNote = (text: string): string => {
+          if (!reliabilityNote) return text;
+          if (text.includes(reliabilityNote)) return text;
+          return text ? `${text} ${reliabilityNote}` : reliabilityNote;
+        };
+        if (reliabilityNote) {
+          claude.explanation = withReliabilityNote(claude.explanation || "");
+          if (!firedGuardrails.includes("reliability-disclosed")) firedGuardrails.push("reliability-disclosed");
+        }
+
         // Step 5b: Send result immediately with pre-query explanation (no waiting)
         controller.enqueue(
           encoder.encode(
@@ -1932,6 +1950,8 @@ export async function POST(req: NextRequest) {
             postExplanation = grainCheck.message;
             if (!firedGuardrails.includes("grain-mismatch")) firedGuardrails.push("grain-mismatch");
           }
+          // The grain override REPLACES the text, so the caveat is reapplied (dedup-guarded).
+          postExplanation = withReliabilityNote(postExplanation);
           const safePost = sanitizeUserFacingNarrative(postExplanation, claude.title || "Results");
           postExplanation = safePost.explanation || "";
           if (containsInternalScaffold(postExplanation)) {
@@ -1979,6 +1999,7 @@ export async function POST(req: NextRequest) {
               retryExplanation = retryGrainCheck.message;
               if (!firedGuardrails.includes("grain-mismatch")) firedGuardrails.push("grain-mismatch");
             }
+            retryExplanation = withReliabilityNote(retryExplanation);
             const safeRetry = sanitizeUserFacingNarrative(retryExplanation, claude.title || "Results");
             retryExplanation = safeRetry.explanation || "";
             if (containsInternalScaffold(retryExplanation)) {

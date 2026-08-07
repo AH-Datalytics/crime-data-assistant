@@ -3,7 +3,7 @@ import { resolveGeoPlaces } from "./geo-place-resolver";
 import { detectAgencyScorecardQuestion } from "./scorecard-format";
 import {
   buildAgencyScorecard, unavailableScorecard, STALE_SCORECARD_YEARS, SCORECARD_COLUMNS,
-  type AgencyScorecardResult, type AgencyScorecardRow,
+  type AgencyScorecardResult, type AgencyScorecardRow, type AgencyScorecardTarget,
 } from "./agency-scorecard";
 
 /**
@@ -22,6 +22,22 @@ export function buildHistoricalScorecard(db: Database.Database, question: string
   if (!detectAgencyScorecardQuestion(question)) return null;
 
   const resolution = resolveGeoPlaces(question);
+  const countyResolution = resolveCountyAgencyScorecardTarget(db, question);
+  if (countyResolution.kind === "ambiguous") {
+    return unavailableScorecard(
+      "County Scorecard Needs Clarification",
+      `There is a ${countyResolution.agency} county agency in more than one state (${countyResolution.states.join(", ")}). Please name the state.`,
+    );
+  }
+  if (countyResolution.kind === "unavailable") {
+    return unavailableScorecard(
+      "County Scorecard Unavailable",
+      `I could not find a ${countyResolution.agency} county agency record in ${countyResolution.state} in the FBI Historical agency file.`,
+    );
+  }
+  if (countyResolution.kind === "resolved") {
+    return buildAgencyScorecard(db, question, countyResolution.target);
+  }
   const allCandidates = resolution.mentions.flatMap((mention) => mention.candidates);
   const cityCandidates = allCandidates.filter((candidate) => candidate.kind === "city" && candidate.state);
   const stateCandidates = allCandidates.filter((candidate) => candidate.kind === "state" && candidate.state);
@@ -63,8 +79,76 @@ export function buildHistoricalScorecard(db: Database.Database, question: string
 
   return unavailableScorecard(
     "Scorecard Needs Clarification",
-    "I need a place for a scorecard: a city and state, a state, or \"national\" for the United States."
+    "I need a place for a scorecard: a city and state, a county and state, a state, or \"national\" for the United States."
   );
+}
+
+export type CountyResolution =
+  | { kind: "none" }
+  | { kind: "resolved"; target: AgencyScorecardTarget }
+  | { kind: "ambiguous"; agency: string; states: string[] }
+  | { kind: "unavailable"; agency: string; state: string };
+
+function normalizedWords(value: string): string {
+  return ` ${value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim()} `;
+}
+
+/**
+ * County scorecards are single FBI county-agency records. Resolve against the actual
+ * historical agency catalog so unique counties that are not in the static geo catalog
+ * (Maricopa, for example) remain reachable, while repeated names such as Cook County
+ * require a state. The resulting card discloses that it is not a countywide rollup.
+ */
+export function resolveCountyAgencyScorecardTarget(
+  db: Database.Database,
+  question: string,
+): CountyResolution {
+  if (!/\b(?:county|parish|borough)\b/i.test(question)) return { kind: "none" };
+
+  const questionWords = normalizedWords(question);
+  const rows = db.prepare(
+    "SELECT DISTINCT agency, state FROM historical_agency WHERE type = 'county' AND agency IS NOT NULL AND state IS NOT NULL"
+  ).all() as { agency: string; state: string }[];
+  let matches = rows.filter((row) => questionWords.includes(normalizedWords(row.agency)));
+  if (matches.length === 0) return { kind: "none" };
+
+  const longest = Math.max(...matches.map((row) => normalizedWords(row.agency).length));
+  matches = matches.filter((row) => normalizedWords(row.agency).length === longest);
+  const agencyName = matches[0].agency;
+  // Remove the county name before looking for a spelled-out state. Otherwise
+  // "Washington County" looks as if the user explicitly selected Washington state
+  // and silently defeats the required multi-state clarification.
+  const stateContext = questionWords.replace(normalizedWords(agencyName), " ");
+
+  const explicitStates = new Set<string>();
+  for (const [code, name] of Object.entries(STATE_CODE_TO_NAME)) {
+    if (new RegExp(`\\b${code}\\b`).test(question) || stateContext.includes(normalizedWords(name))) {
+      explicitStates.add(code.toLowerCase());
+    }
+  }
+  if (explicitStates.size > 0) {
+    matches = matches.filter((row) => explicitStates.has(row.state.toLowerCase()));
+    if (matches.length === 0) {
+      const requested = [...explicitStates][0].toUpperCase();
+      return { kind: "unavailable", agency: agencyName, state: requested };
+    }
+  }
+
+  const unique = [...new Map(matches.map((row) => [`${row.agency.toLowerCase()}|${row.state.toLowerCase()}`, row])).values()];
+  if (unique.length === 1) {
+    return {
+      kind: "resolved",
+      target: { agency: unique[0].agency, state: unique[0].state.toUpperCase(), type: "county" },
+    };
+  }
+  if (unique.length > 1) {
+    return {
+      kind: "ambiguous",
+      agency: unique[0].agency,
+      states: [...new Set(unique.map((row) => row.state.toUpperCase()))].sort(),
+    };
+  }
+  return { kind: "none" };
 }
 
 /**

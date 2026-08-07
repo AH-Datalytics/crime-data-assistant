@@ -157,6 +157,65 @@ check('"USA scorecards" -> national', scopeOf("USA scorecards") === "national:Un
 check('"Toledo scorecard" -> agency', scopeOf("Toledo scorecard") === "agency:Toledo, OH:built");
 check('"New York State scorecard" -> state', scopeOf("New York State scorecard") === "state:New York:built");
 
+// County scorecards are the single lead county agency record, never a sum of every
+// municipal agency in the county. Repeated county names require a state; unique names
+// resolve from the FBI agency table even when absent from the static geo catalog.
+const ambiguousCook = buildHistoricalScorecard(db, "Cook County scorecard");
+check('"Cook County scorecard" asks which state',
+  ambiguousCook?.rows.length === 0
+  && /more than one state/i.test(ambiguousCook.explanation)
+  && /GA, IL, MN/.test(ambiguousCook.explanation),
+  ambiguousCook?.explanation);
+
+const ambiguousWashingtonCounty = buildHistoricalScorecard(db, "Washington County scorecard");
+check('"Washington County" does not mistake the county name for Washington state',
+  ambiguousWashingtonCounty?.rows.length === 0
+  && /more than one state/i.test(ambiguousWashingtonCounty.explanation),
+  ambiguousWashingtonCounty?.explanation);
+
+const cookCounty = buildHistoricalScorecard(db, "Cook County, IL scorecard");
+check('"Cook County, IL scorecard" builds the county agency',
+  cookCounty?.scope === "agency" && cookCounty.agencyLabel === "Cook County, IL"
+  && cookCounty.rows.length === 9,
+  `scope=${cookCounty?.scope} label=${cookCounty?.agencyLabel} rows=${cookCounty?.rows.length}`);
+check("Cook County SQL is explicitly type county",
+  /ha\.type = 'county'/.test(cookCounty?.sql ?? ""), cookCounty?.sql ?? "");
+check("Cook County title identifies a county scorecard",
+  /^Cook County, IL County Scorecard/.test(cookCounty?.title ?? ""), cookCounty?.title ?? "");
+check("Cook County discloses single lead agency, not countywide total",
+  /lead county agency's FBI-reported data/i.test(cookCounty?.explanation ?? "")
+  && /not a countywide total/i.test(cookCounty?.explanation ?? ""),
+  cookCounty?.explanation ?? "");
+
+const maricopaCounty = buildHistoricalScorecard(db, "Maricopa County scorecard");
+check("unique Maricopa County resolves from verified FBI county agencies",
+  maricopaCounty?.agencyLabel === "Maricopa County, AZ"
+  && maricopaCounty.scope === "agency"
+  && maricopaCounty.rows.length === 9,
+  `label=${maricopaCounty?.agencyLabel} rows=${maricopaCounty?.rows.length}`);
+
+const wrongCookState = buildHistoricalScorecard(db, "Cook County, TX scorecard");
+check("a state with no matching county agency is unavailable, never a Texas state card",
+  wrongCookState?.rows.length === 0
+  && wrongCookState.scope === "agency"
+  && /could not find/i.test(wrongCookState.explanation),
+  `scope=${wrongCookState?.scope} explanation=${wrongCookState?.explanation}`);
+
+if (cookCounty) {
+  const countyMarkup = renderToStaticMarkup(createElement(ScorecardPanel, {
+    agencyLabel: cookCounty.agencyLabel,
+    year: cookCounty.year,
+    rows: cookCounty.rows,
+    explanation: cookCounty.explanation,
+    statusText: cookCounty.statusText,
+    showClearance: cookCounty.showClearance,
+  }));
+  check("rendered county heading names the county scorecard",
+    countyMarkup.includes("Cook County, IL County Scorecard"));
+  check("rendered/exported card contains the county-agency note",
+    countyMarkup.includes("lead county agency") && countyMarkup.includes("not a countywide"));
+}
+
 const nycCard = buildHistoricalScorecard(db, "New York City scorecard");
 check('"New York City scorecard" -> agency scope', nycCard?.scope === "agency",
   `scope=${nycCard?.scope} rows=${nycCard?.rows.length}`);
