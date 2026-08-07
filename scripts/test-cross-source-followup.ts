@@ -3,6 +3,8 @@
 // drops cross-source turns, so the target route saw a bare fragment).
 // Run: npx tsx scripts/test-cross-source-followup.ts
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
 import { buildCrossSourceFollowupTransform, extractPriorQueryState } from "../lib/cross-source-followup";
 
 // MS01's exact shape: three Historical turns (last one rates for Houston+Dallas),
@@ -70,6 +72,18 @@ const ms01History = [
 // Malformed history entries are ignored safely
 {
   assert.equal(buildCrossSourceFollowupTransform("now show firearm murders instead", [null, 42, { role: "assistant" }], "shr"), null);
+}
+
+// The rerun menu intentionally omits the active source. Make that inheritance visible
+// so an SHR user does not read the missing SHR option as an unavailable source.
+{
+  const workspace = fs.readFileSync(
+    path.join(process.cwd(), "components", "WorkspaceChatV2.tsx"),
+    "utf8",
+  );
+  assert.match(workspace, /Follow up in \$\{TAB_DISPLAY_NAMES\[activeSource\]\}/);
+  assert.match(workspace, /Run in another source \(currently \$\{TAB_DISPLAY_NAMES\[activeSource\]\}\)/);
+  assert.match(workspace, /RERUN_SOURCE_OPTIONS\.filter\(opt => opt\.id !== activeSource\)/);
 }
 
 console.log("cross-source follow-up tests passed");

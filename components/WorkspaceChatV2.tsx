@@ -402,7 +402,7 @@ export default function WorkspaceChat({ sourceYearRanges }: WorkspaceChatProps) 
         }}
         className="appearance-none pl-2.5 pr-7 py-1.5 text-[11px] font-medium rounded-md border border-[var(--border)] bg-white text-[var(--foreground)] cursor-pointer focus:outline-none focus:border-[#475EC7] focus:ring-1 focus:ring-[#475EC7]/20"
       >
-        <option value="">Run in another source...</option>
+        <option value="">{activeSource ? `Run in another source (currently ${TAB_DISPLAY_NAMES[activeSource]})...` : "Run in another source..."}</option>
         {rerunSourceOptions.map(opt => (
           <option key={opt.id} value={opt.id}>{opt.label}</option>
         ))}
@@ -606,7 +606,7 @@ export default function WorkspaceChat({ sourceYearRanges }: WorkspaceChatProps) 
                     )}
                     {isActive && !loading && (
                       <form onSubmit={(e) => { e.preventDefault(); const el = e.currentTarget.elements.namedItem("followup") as HTMLInputElement; const val = el?.value?.trim(); if (val && activeSource) { if (hasBlockingQueryGuidanceWarnings(val)) { setGuidanceAttention((n) => n + 1); return; } handleAsk(val); el.value = ""; } }} className="flex gap-1 mt-2">
-                        <input name="followup" type="text" placeholder="Follow up..." className="flex-1 min-w-0 px-2 py-1.5 text-[11px] border border-[var(--border)] rounded focus:outline-none focus:border-[var(--accent)] bg-[var(--surface)]" />
+                        <input name="followup" type="text" placeholder={activeSource ? `Follow up in ${TAB_DISPLAY_NAMES[activeSource]}...` : "Follow up..."} className="flex-1 min-w-0 px-2 py-1.5 text-[11px] border border-[var(--border)] rounded focus:outline-none focus:border-[var(--accent)] bg-[var(--surface)]" />
                         <button type="submit" className="px-2 py-1.5 text-[10px] font-semibold text-white rounded hover:opacity-90 cursor-pointer shrink-0" style={{ backgroundColor: accentColor }}>Ask</button>
                       </form>
                     )}

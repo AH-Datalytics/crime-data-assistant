@@ -56,6 +56,7 @@ import { partialCoverageRetryPrompt, sourceYearOverlap } from "@/lib/source-year
 import { buildShrCanonicalLabelCase, formatShrResolutionGuidance, resolveShrAgency, rewriteShrResolvedAgencyPredicates } from "@/lib/shr-place-resolver";
 import { buildShrMurderPlan } from "@/lib/shr-deterministic-murder";
 import { consolidatedDisplayText, normalizeConsolidatedDisplayRows } from "@/lib/agency-consolidations";
+import { selectShrPivotMetric } from "@/lib/shr-category-pivot";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function jsonResp(data: Record<string, any> | QueryError, status = 200) {
@@ -1109,7 +1110,13 @@ export async function POST(req: NextRequest) {
     const CATEGORY_COLS = ["sex", "race", "weapon_group", "circumstance_group", "off_race", "off_sex", "relationship", "relationship_group", "ethnicity", "off_ethnicity", "weapon", "agency", "state", "state_name"];
     const comparisonLabels: Record<string, string> = {};
     const categorCol = columns.find(c => CATEGORY_COLS.includes(c));
-    const numericCol = columns.find(c => c !== "year" && c !== "month" && !CATEGORY_COLS.includes(c) && typeof rows[0]?.[c] === "number");
+    const numericCol = selectShrPivotMetric({
+      question,
+      columns,
+      rows,
+      categoryColumns: CATEGORY_COLS,
+      requestedYAxis: claude.yAxis,
+    });
     const hasYear = columns.includes("year");
 
     if (categorCol && numericCol && hasYear && rows.length > 1) {

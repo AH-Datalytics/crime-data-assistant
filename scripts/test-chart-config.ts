@@ -1,6 +1,7 @@
 import { buildChartConfig } from "../lib/chart-config";
 import { buildNibrsChartConfig } from "../lib/nibrs-chart-config";
 import { detectYearSeriesChart } from "../lib/chart-auto-detect";
+import { selectShrPivotMetric } from "../lib/shr-category-pivot";
 
 let passed = 0;
 let failed = 0;
@@ -33,6 +34,12 @@ const categoricalRows = [
 const scatterRows = [
   { city: "A, AA", violent_crime_rate_per_100k: 320.5, officers_per_100k: 210.2 },
   { city: "B, BB", violent_crime_rate_per_100k: 450.1, officers_per_100k: 188.7 },
+];
+
+const query8107Rows = [
+  { year: 2024, sex: "Female", total_victims: 3573, unknown_relationship: 946, pct_unknown: 26.5 },
+  { year: 2024, sex: "Male", total_victims: 12888, unknown_relationship: 6688, pct_unknown: 51.9 },
+  { year: 2024, sex: "Unknown", total_victims: 108, unknown_relationship: 87, pct_unknown: 80.6 },
 ];
 
 {
@@ -97,6 +104,50 @@ const scatterRows = [
   assert("current: explicit scatter request renders scatter even when chartHint none", config?.type === "scatter");
   assert("current: scatter picks first numeric x-axis", config?.xAxis === "violent_crime_rate_per_100k");
   assert("current: scatter picks second numeric y-axis", config?.yAxis.join(",") === "officers_per_100k");
+}
+
+{
+  const columns = ["year", "sex", "total_victims", "unknown_relationship", "pct_unknown"];
+  const common = {
+    columns,
+    rows: query8107Rows,
+    categoryColumns: ["sex"],
+  };
+  const selected = selectShrPivotMetric({
+    ...common,
+    question: "share of murders with unknown relationship by year and sex",
+  });
+  assert("SHR 8107: share intent selects pct_unknown, never the first count column",
+    selected === "pct_unknown", `selected ${selected}`);
+
+  const selectedDespiteBadMetadata = selectShrPivotMetric({
+    ...common,
+    question: "share of murders with unknown relationship by year and sex",
+    requestedYAxis: ["total_victims"],
+  });
+  assert("SHR 8107: explicit share intent overrides wrong model chart metadata",
+    selectedDespiteBadMetadata === "pct_unknown", `selected ${selectedDespiteBadMetadata}`);
+
+  const requested = selectShrPivotMetric({
+    ...common,
+    question: "murders by year and sex",
+    requestedYAxis: ["unknown_relationship"],
+  });
+  assert("SHR pivot honors one explicit model y-axis", requested === "unknown_relationship");
+
+  const ambiguous = selectShrPivotMetric({
+    ...common,
+    question: "murders by year and sex",
+  });
+  assert("SHR pivot fails open when several measures are ambiguous", ambiguous === null);
+
+  const oneMetric = selectShrPivotMetric({
+    question: "murder victims by year and sex",
+    columns: ["year", "sex", "victims"],
+    rows: query8107Rows.map((row) => ({ year: row.year, sex: row.sex, victims: row.total_victims })),
+    categoryColumns: ["sex"],
+  });
+  assert("SHR pivot retains ordinary one-measure category results", oneMetric === "victims");
 }
 
 console.log(`chart-config tests: ${passed} passed, ${failed} failed`);
