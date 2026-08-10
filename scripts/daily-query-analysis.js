@@ -84,6 +84,19 @@ function getQueries() {
     .prepare(`SELECT ${DIGEST_QUERY_COLUMNS} FROM query_log WHERE ts >= ? AND ts < ? ORDER BY ts ASC`)
     .all(cutoff, cutoffEnd);
 }
+const INTERNAL_SESSION =
+  /(?:live-replay|codex|deploy-smoke|targeted-probe|layer3|canary|scoreboard|benchmark|eval)/i;
+
+function isHumanQuery(query) {
+  return !INTERNAL_SESSION.test(String(query.session_id || ""));
+}
+
+const CONTROLLED_OUTCOME_ERRORS = new Set(["nonfatal_shooting_refusal"]);
+
+function isControlledOutcomeError(error) {
+  return CONTROLLED_OUTCOME_ERRORS.has(String(error || ""));
+}
+
 
 /**
  * Provenance labels written to audit_findings.source. These must match the
@@ -514,7 +527,7 @@ function analyze(queries) {
     if (q.ms) msTimes.push(q.ms);
 
     // Errors
-    if (q.error) {
+    if (q.error && !isControlledOutcomeError(q.error)) {
       stats.errors++;
       issues.push({
         type: "error",
@@ -694,7 +707,7 @@ function analyze(queries) {
     }
 
     // Unnecessary refusal — sql is null but question looks like a valid data query
-    if (!q.sql && q.response && q.rows === 0) {
+    if (!q.sql && q.response && q.rows === 0 && !isControlledOutcomeError(q.error)) {
       const looksLikeDataQuery = /\b(top|rank|highest|lowest|most|least|cities|states|murder|crime|robbery|assault|theft|burglary|rape|violent|property)\b/i.test(q.question);
       const looksLikeFollowUp = /^\d+$|^option\s*\d|please/i.test(q.question.trim());
       const isRefusal = /can't|cannot|unable|not available|don't have|doesn't|doesn't appear/i.test(q.response);
@@ -898,7 +911,7 @@ function analyze(queries) {
   // 5. Frequently requested topics that get refusals → feature gap
   const refusalKeywords = {};
   for (const q of queries) {
-    if (!q.sql && q.response && q.rows === 0) {
+    if (!q.sql && q.response && q.rows === 0 && !isControlledOutcomeError(q.error)) {
       // Extract key topic words from questions that got refusals
       const words = q.question.toLowerCase().match(/\b[a-z]{4,}\b/g) || [];
       for (const w of words) {
@@ -1007,7 +1020,30 @@ function buildHumanIncidents(queries, issues) {
   });
 }
 
+function evidenceExcerpt(value, limit = 320) {
+  const text = String(value || "").replace(/\s+/g, " ").trim();
+  if (!text) return "None recorded";
+  return text.length > limit ? `${text.slice(0, limit - 1)}...` : text;
+}
+
+function alignmentAssessment(query, incidents) {
+  if (isControlledOutcomeError(query.error)) return { tone: "good", label: "Supported data limitation explained correctly" };
+  if (query.error) return { tone: "bad", label: "Failed before alignment could be established" };
+  if (!query.sql) return { tone: "review", label: "No SQL was produced, so the chain is incomplete" };
+  if (!query.response) return { tone: "review", label: "SQL ran, but no written answer was recorded" };
+  const incident = incidents.find((item) => item.ids.includes(query.id));
+  if (incident) {
+    return {
+      tone: incident.severity === "confirmed" ? "bad" : "review",
+      label: incident.severity === "confirmed"
+        ? "A failure or mismatch was detected"
+        : "A possible mismatch needs review",
+    };
+  }
+  return { tone: "good", label: "No mismatch detected by current checks" };
+}
 function buildHumanEmail(stats, incidents, queries, visitors) {
+
   const date = new Date(cutoff).toLocaleDateString("en-US", {
     weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: "America/Chicago",
   });
@@ -1021,7 +1057,7 @@ function buildHumanEmail(stats, incidents, queries, visitors) {
   let html = `<!DOCTYPE html><html><head><style>
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#252525;max-width:700px;margin:0 auto;padding:20px;line-height:1.45}
 h1{font-size:23px;margin:0 0 4px}h2{font-size:18px;margin:28px 0 12px}.sub{color:#667085;font-size:14px}.summary{background:#f8f9fb;border-radius:10px;padding:16px;margin:20px 0}.summary strong{font-size:28px;color:${statusColor}}
-.incident{border:1px solid #e4e7ec;border-left:5px solid #b42318;border-radius:8px;padding:15px;margin:12px 0}.incident.likely{border-left-color:#b54708}.incident.review{border-left-color:#667085}.label{font-size:11px;text-transform:uppercase;letter-spacing:.5px;font-weight:700;color:#667085}.title{font-size:16px;font-weight:700;margin:3px 0 10px}.question{background:#f8f9fb;border-radius:6px;padding:9px 11px;margin:7px 0 11px;font-size:13px}.row{margin:7px 0;font-size:13px}.quiet{color:#667085;font-size:12px}.healthy{background:#ecfdf3;border-radius:8px;padding:13px 15px}.uncertain{background:#fffaeb;border-radius:8px;padding:13px 15px}.footer{border-top:1px solid #e4e7ec;margin-top:28px;padding-top:12px;color:#98a2b3;font-size:11px}
+.incident{border:1px solid #e4e7ec;border-left:5px solid #b42318;border-radius:8px;padding:15px;margin:12px 0}.incident.likely{border-left-color:#b54708}.incident.review{border-left-color:#667085}.label{font-size:11px;text-transform:uppercase;letter-spacing:.5px;font-weight:700;color:#667085}.title{font-size:16px;font-weight:700;margin:3px 0 10px}.question{background:#f8f9fb;border-radius:6px;padding:9px 11px;margin:7px 0 11px;font-size:13px}.row{margin:7px 0;font-size:13px}.quiet{color:#667085;font-size:12px}.healthy{background:#ecfdf3;border-radius:8px;padding:13px 15px}.uncertain{background:#fffaeb;border-radius:8px;padding:13px 15px}.alignment{border:1px solid #e4e7ec;border-radius:8px;padding:13px;margin:10px 0}.alignment.good{border-left:5px solid #067647}.alignment.review{border-left:5px solid #b54708}.alignment.bad{border-left:5px solid #b42318}.evidence{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:11px;background:#f8f9fb;padding:8px;border-radius:5px;margin:4px 0 9px;overflow-wrap:anywhere}.footer{border-top:1px solid #e4e7ec;margin-top:28px;padding-top:12px;color:#98a2b3;font-size:11px}
 </style></head><body><h1>Crime Data Assistant - Daily Answer Review</h1><div class="sub">${escapeHtml(date)}</div>
 <div class="summary"><strong>${stats.total}</strong> questions reviewed<br><span>${confirmed} confirmed failure${confirmed === 1 ? "" : "s"} | ${likely} likely incorrect answer${likely === 1 ? "" : "s"} | ${review} item${review === 1 ? "" : "s"} to review | ${noDetectedIssue} with no problem detected</span></div>
 <p class="quiet">"No problem detected" means the automated review found nothing suspicious. It is not a guarantee that every answer was correct.</p>`;
@@ -1036,6 +1072,16 @@ h1{font-size:23px;margin:0 0 4px}h2{font-size:18px;margin:28px 0 12px}.sub{color
   } else {
     html += `<h2>Needs attention</h2><div class="healthy"><strong>No user-visible failures were detected.</strong></div>`;
   }
+
+  html += `<h2>Question - SQL - answer alignment</h2><p class="quiet">This shows the evidence for each real user query. "No mismatch detected" means the current semantic checks found the request, SQL, and written answer consistent; it does not independently verify every returned number because result rows are not stored in the query log.</p>`;
+  for (const query of queries.slice(-12).reverse()) {
+    const assessment = alignmentAssessment(query, incidents);
+    const rowSummary = isControlledOutcomeError(query.error)
+      ? "No database query needed; the requested measure is outside this source"
+      : query.error ? `Error: ${evidenceExcerpt(query.error, 180)}` : `${Number(query.rows) || 0} database row${Number(query.rows) === 1 ? "" : "s"} returned`;
+    html += `<div class="alignment ${assessment.tone}"><div class="label">Query ${query.id} | ${escapeHtml(query.tab || "unknown")}</div><div class="title">${escapeHtml(assessment.label)}</div><div class="label">User question</div><div class="question">${escapeHtml(query.question || "")}</div><div class="label">SQL sent to the database</div><div class="evidence">${escapeHtml(evidenceExcerpt(query.sql))}</div><div class="row"><strong>Database result:</strong> ${escapeHtml(rowSummary)}</div><div class="label">Written answer</div><div class="question">${escapeHtml(evidenceExcerpt(query.response, 420))}</div></div>`;
+  }
+  if (queries.length > 12) html += `<p class="quiet">${queries.length - 12} earlier real-user quer${queries.length - 12 === 1 ? "y was" : "ies were"} omitted from this compact view.</p>`;
 
   const healthy = [];
   if (stats.jsonParseFailures === 0 && stats.sqlLeaks === 0) healthy.push("No internal technical text was shown to users.");
@@ -1850,11 +1896,14 @@ function persistFindings(issues) {
 }
 
 async function main() {
+  const isTestEmail = process.argv.includes("--test-email");
   console.log(
     `Analyzing queries since ${new Date(cutoff).toISOString()}...`
   );
-  const queries = getQueries();
-  console.log(`Found ${queries.length} queries`);
+  const allQueries = getQueries();
+  const queries = allQueries.filter(isHumanQuery);
+  const excluded = allQueries.length - queries.length;
+  console.log(`Found ${queries.length} user queries (${excluded} automated/test queries excluded)`);
 
   const { stats, issues, suggestions } = analyze(queries);
   const visitors = getVisitors();
@@ -1862,8 +1911,8 @@ async function main() {
     `Stats: ${stats.total} queries, ${stats.errors} errors, ${issues.length} issues, ${suggestions.length} suggestions, ${visitors ? visitors.pageviews + " pageviews" : "no visitor data yet"}`
   );
 
-  // Persist findings to audit_findings table
-  persistFindings(issues);
+  // A test send previews real coverage without altering the audit record.
+  if (!isTestEmail) persistFindings(issues);
 
   const incidents = buildHumanIncidents(queries, issues);
   const html = buildHumanEmail(stats, incidents, queries, visitors);
@@ -1885,7 +1934,7 @@ async function main() {
     const result = await resend.emails.send({
       from: FROM_EMAIL,
       to: TO_EMAIL,
-      subject: `Crime Data Assistant Daily Answer Review - ${today}`,
+      subject: `${isTestEmail ? "[TEST] " : ""}Crime Data Assistant Daily Answer Review - ${today}`,
       html,
     });
     console.log("Email sent:", result);
@@ -1896,4 +1945,4 @@ async function main() {
 }
 
 if (require.main === module) main();
-module.exports = { analyze, buildHumanIncidents, buildHumanEmail, contractLooksAnswerable, contractCityCount, recordReliabilityTag };
+module.exports = { analyze, buildHumanIncidents, buildHumanEmail, contractLooksAnswerable, contractCityCount, isHumanQuery, recordReliabilityTag };

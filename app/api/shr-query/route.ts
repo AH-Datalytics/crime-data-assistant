@@ -408,7 +408,7 @@ export async function POST(req: NextRequest) {
     const wantsNonfatal = /\b(nonfatal|non-fatal|non fatal|shooting incidents?|people\s+shot|gunshot (wound|victim)|shot and (survived|wounded|injured))\b/i.test(question);
     if (asksShooting && wantsNonfatal) {
       const refusal = "This database does not track nonfatal shootings. The SHR (Supplementary Homicide Reports) only covers fatal outcomes - murders and manslaughters. For nonfatal shooting data, sources like the Gun Violence Archive or CDC WISQARS may be more appropriate. I can show you fatal shootings (firearm homicides) if that would be helpful.";
-      writeLog(question, null, 0, "nonfatal_shooting_refusal", Date.now() - start, refusal, "shr", [], "haiku-4.5", sessionId);
+      writeLog(question, null, 0, null, Date.now() - start, refusal, "shr", ["nonfatal-shooting-capability-limit"], "deterministic", sessionId);
       return jsonResp({
         success: true, question, sql: null, explanation: refusal,
         title: "", columns: [], rows: [], rowCount: 0, truncated: false,

@@ -11,9 +11,8 @@
  *   npx tsx scripts/nightly-scoreboard.ts --host https://nibrsai.com
  *   npx tsx scripts/nightly-scoreboard.ts --skip-run               # score latest existing audit JSON
  *
- * Intended cron (VPS, before the 13:00 UTC daily email): daily quick only.
- * Full runs are manual because they can create material API cost.
- *   30 11 * * * cd /opt/nibrs/current && npx tsx scripts/nightly-scoreboard.ts --quick >> /var/log/scoreboard.log 2>&1
+ * Manual only: do not schedule the fixed replay suite daily. Repeated passing
+ * canaries add cost and swamp the real-user signal in the answer review.
  */
 
 import { spawnSync } from "node:child_process";
