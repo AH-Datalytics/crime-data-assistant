@@ -1,6 +1,7 @@
 import { strict as assert } from "node:assert";
 import Database from "better-sqlite3";
 import { validateAndSanitize } from "../lib/sql-safety.js";
+import { resolveNibrsPlaces } from "../lib/nibrs-place-resolver.js";
 import {
   buildNibrsClearanceMethodQuery,
   buildNibrsComparableAgencyClearanceQuery,
@@ -50,15 +51,48 @@ import {
 }
 
 {
-  const query = buildNibrsClearanceMethodQuery(
-    "How many robberies in Chicago were cleared by arrest versus exceptional means from 2021 to 2025?"
-  );
+  // A city clearance-method query must filter by the RESOLVED agency, never by
+  // agencies.city. That column is a mailing city: 'SAINT LOUIS' matches 53
+  // agencies in production, so the old city-name predicate summed the entire
+  // metro into one figure -- the 8376 defect, in the deterministic path, where
+  // the model-path ORI enforcement cannot see it.
+  const cityDb = new Database(":memory:");
+  cityDb.exec(`
+    CREATE TABLE agencies (ori TEXT, year INTEGER, state TEXT, city TEXT, agency_type TEXT, population INTEGER, pop_group TEXT, covered_flag TEXT, agency_indicator TEXT);
+    CREATE INDEX idx_agencies_state_city_year ON agencies(state, city, year);
+    INSERT INTO agencies VALUES
+      ('ILCPD0000', 2021, 'IL', 'CHICAGO', 'City', 2700000, '1A', 'N', 'E'),
+      ('ILCPD0000', 2025, 'IL', 'CHICAGO', 'City', 2660000, '1A', 'N', 'E'),
+      ('MOSPD0000', 2025, 'MO', 'SAINT LOUIS', 'City', 274819, '1C', 'N', 'E'),
+      ('MO0957300', 2025, 'MO', 'SAINT LOUIS', 'City', 34147, '4', 'N', 'E'),
+      ('MO0956200', 2025, 'MO', 'ST LOUIS', 'City', 9052, '6', 'N', 'E');
+  `);
+
+  const chicagoQ = "How many robberies in Chicago were cleared by arrest versus exceptional means from 2021 to 2025?";
+  const query = buildNibrsClearanceMethodQuery(chicagoQ, resolveNibrsPlaces(cityDb, chicagoQ));
   assert.ok(query, "city clearance-method comparison should be deterministic");
   assert.match(query.sql, /summary_clearance_type sct INDEXED BY idx_sct_ori_year/i);
   assert.match(query.sql, /sct\.ucr_offense_code = '120'/i);
-  assert.match(query.sql, /city = 'CHICAGO'/i);
+  assert.match(query.sql, /sct\.ori IN \('ILCPD0000'\)/i);
+  assert.doesNotMatch(query.sql, /city\s*=/i, "must not select the agency by city name");
   assert.match(query.sql, /sct\.year BETWEEN 2021 AND 2025/i);
   assert.equal(query.guardrail, "deterministic-nibrs-clearance-method");
+
+  // St. Louis resolves to SLMPD alone, not every agency sharing the mailing city
+  for (const stl of [
+    "murder clearance by arrest and exceptional means in St Louis, MO in 2025",
+    "murder clearances by arrest and exceptional means in St Louis, MO in 2025",
+  ]) {
+    const built = buildNibrsClearanceMethodQuery(stl, resolveNibrsPlaces(cityDb, stl));
+    assert.ok(built, `plural and singular must both reach the deterministic path: ${stl}`);
+    assert.match(built.sql, /sct\.ori IN \('MOSPD0000'\)/i);
+    assert.doesNotMatch(built.sql, /city\s*=/i);
+  }
+
+  // With nothing resolved there is no safe query to build; fall through to the
+  // model, where resolvedOriEnforcementIssue applies.
+  assert.equal(buildNibrsClearanceMethodQuery(chicagoQ, null), null);
+  cityDb.close();
 }
 
 {

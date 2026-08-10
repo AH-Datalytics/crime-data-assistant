@@ -243,4 +243,20 @@ const shrFatalShootingTrendHistory: PromptHistoryMessage[] = [
   assert.equal(transform.name, "add_breakdown");
 }
 
+// A fragment carrying BOTH its own place and its own offense is a complete
+// question, not a restriction — inheriting would graft two unrelated asks.
+{
+  const priorRobbery: PromptHistoryMessage[] = [
+    { role: "user", content: "robberies in Chicago in 2024" },
+    { role: "assistant", content: "SELECT year, robbery FROM summary_city_monthly" },
+  ];
+  assert.equal(detectFollowupTransform("only murders in Dallas in 2025", priorRobbery), null);
+  assert.equal(detectFollowupTransform("just homicides in Baltimore", priorRobbery), null);
+
+  // One or the other is still a real restriction of the prior question
+  assert.equal(detectFollowupTransform("only murders", priorRobbery)?.name, "restrict_scope");
+  assert.equal(detectFollowupTransform("just clearances for Chicago", priorRobbery)?.name, "restrict_scope");
+  assert.equal(detectFollowupTransform("just clearances by type", priorRobbery)?.name, "restrict_scope");
+}
+
 console.log("follow-up transform tests passed");

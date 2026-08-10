@@ -1,6 +1,7 @@
 import type { PromptHistoryMessage } from "./chat-history";
 import { asksForCountsInsteadOfRates } from "./rate-intent";
 import { resolveGeoPlaces } from "./geo-place-resolver";
+import { OFFENSE_NOUN_RE } from "./query-bearing-followup";
 
 export type FollowupBreakdown = "state" | "city" | "agency";
 
@@ -138,6 +139,14 @@ function restrictiveFragment(question: string): string | null {
   if (!/^(?:just|only|just\s+show(?:\s+me)?|show\s+only)\s+(?:the\s+)?.{3,}$/i.test(q)) return null;
   // Conversational asides, not data requests
   if (/\b(?:curious|kidding|joking|wondering|thanks|thank\s+you|checking|testing)\b/i.test(q)) return null;
+  // A fragment that brings its own place AND its own offense is a complete
+  // question that merely opens with "only" -- inheriting the prior question
+  // would graft two unrelated asks together ("robberies in Chicago in 2024
+  // (only murders in Dallas in 2025)"). One or the other is still a genuine
+  // restriction: "only murders" narrows the prior geography's offense, and
+  // "just clearances for Chicago" narrows the prior offense's geography.
+  const namesPlace = resolveGeoPlaces(q).mentions.length > 0;
+  if (namesPlace && OFFENSE_NOUN_RE.test(q)) return null;
   return q.replace(/\?+\s*$/, "");
 }
 

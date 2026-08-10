@@ -51,7 +51,7 @@ export function planNibrsQuery(
     buildNibrsContinuousReporterQuery(question) ??
     buildNibrsCountywideDemographicQuery(question) ??
     buildNibrsComparableAgencyClearanceQuery(question, resolutionPlan) ??
-    buildNibrsClearanceMethodQuery(question) ??
+    buildNibrsClearanceMethodQuery(question, resolutionPlan) ??
     buildNibrsLocalDemographicQuery(question, resolutionPlan) ??
     buildNibrsStructuredLocalTrendQuery(question, resolutionPlan) ??
     buildNibrsLocalCityOffenseCountQuery(question, resolutionPlan) ??

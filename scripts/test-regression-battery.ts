@@ -80,6 +80,10 @@ assert.equal(unresolvedTags.includes("contract-year-lower-bound-missing-resolved
 // One user, one afternoon, five separate defects. Each has unit coverage in its
 // own suite; this walks the actual sequence so a future change that reopens the
 // chain fails here even if the individual units still pass.
+//
+// Not everything here is fixed. Jacksonville is pinned at its WRONG answer at the
+// end of the 8375 section, deliberately, so the remaining gap is visible in the
+// test rather than merely absent from it.
 // ---------------------------------------------------------------------------
 
 // 8348 - Historical cannot answer a 2025 clearance question and now says where to go
@@ -105,7 +109,16 @@ sessionDb.exec(`
     ('NY0303000', 2025, 'NY', 'NEW YORK', 'City', 8496850, '1A', 'N', 'E'),
     ('NY0230000', 2025, 'NY', 'NEW YORK CITY', 'County', 0, '9D', 'N', 'E'),
     ('MOSPD0000', 2025, 'MO', 'SAINT LOUIS', 'City', 274819, '1C', 'N', 'E'),
-    ('MO0956200', 2025, 'MO', 'ST LOUIS', 'City', 9052, '6', 'N', 'E');
+    ('MO0956200', 2025, 'MO', 'ST LOUIS', 'City', 9052, '6', 'N', 'E'),
+    -- Jacksonville is a KNOWN-UNFIXED case, pinned here so it is visible rather
+    -- than absent. The Sheriff's Office is the real agency and carries the 2025
+    -- clearance data, but it is typed County, and resolveCity filters to City --
+    -- so the 1,382-population namesake wins and Jacksonville silently vanishes
+    -- from a 32-city answer. Fixing it needs a consolidation-registry entry,
+    -- which today also forces a Historical mapping that would discard 1960-2020
+    -- (see CONSOLIDATION_EXCLUSIONS in lib/agency-consolidations.ts).
+    ('FL0160000', 2025, 'FL', 'JACKSONVILLE', 'County', 1008920, '1B', 'N', 'E'),
+    ('FL0162500', 2025, 'FL', 'JACKSONVILLE', 'City', 1382, '7', 'N', 'E');
 `);
 
 // 8375 - every place resolves, including the two that did not in production
@@ -132,6 +145,17 @@ sessionDb.exec(`
     "SELECT a.city, SUM(scd.total_offenses) FROM summary_clearance_detail scd JOIN agencies a ON a.ori = scd.ori WHERE a.city = 'SAINT LOUIS' GROUP BY a.city"
   );
   assert.ok(bypass, "8376: matching agencies by city name must be caught");
+}
+
+// KNOWN UNFIXED - Jacksonville. Asserting the wrong answer on purpose, so that
+// whoever fixes it is told by a failing test that this pin needs updating,
+// rather than leaving the gap invisible. Flip both assertions when the
+// consolidation registry can carry a NIBRS mapping without a Historical one.
+{
+  const plan = resolveNibrsPlaces(sessionDb, "murder clearances in Jacksonville, FL in 2025");
+  const ori = plan?.places[0]?.oriYears[0]?.ori;
+  assert.equal(ori, "FL0162500", "Jacksonville still resolves to the 1,382-population namesake");
+  assert.notEqual(ori, "FL0160000", "the Sheriff's Office is still NOT selected -- known gap, not a passing case");
 }
 
 // 8376 - the follow-up rebuilds from a prior turn that produced no SQL at all

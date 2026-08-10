@@ -185,14 +185,17 @@ function isExcludedSimpleLocalQuestion(question: string): boolean {
 }
 
 function asksClearanceMethodBreakdown(question: string): boolean {
-  const hasClearance = /\bclear(?:ance|ed|ing)\b/i.test(question);
+  // "clearances" is at least as common as the singular; without the optional s
+  // the plural skipped the deterministic path entirely and fell to the model.
+  const hasClearance = /\bclear(?:ances?|ed|ing)\b/i.test(question);
   const hasArrest = /\b(?:by\s+)?arrest\b/i.test(question);
   const hasExceptional = /\bexception(?:al|ally)?(?:\s+means)?\b/i.test(question);
   return hasClearance && hasArrest && hasExceptional;
 }
 
 export function buildNibrsClearanceMethodQuery(
-  question: string
+  question: string,
+  resolutionPlan?: NibrsPlaceResolutionPlan | null
 ): DeterministicNibrsQuery | null {
   if (!asksClearanceMethodBreakdown(question)) return null;
   const contract = buildQueryContract(question, "nibrs");
@@ -208,17 +211,21 @@ export function buildNibrsClearanceMethodQuery(
   let geographyPredicate: string;
   let place: string;
   if (contract.geography.kind === "city" && contract.geography.name) {
-    const city = nibrsCityLiteral(contract.geography.name);
+    // Never select the agency by city name here. agencies.city is a mailing-city
+    // field: 'SAINT LOUIS' matches 53 agencies, so the old predicate summed the
+    // whole metro into one "St. Louis" clearance figure -- the same defect the
+    // model path was producing, but inside the path that is supposed to be
+    // trustworthy, and downstream of the ORI enforcement that catches it there.
+    // Without a resolved agency there is nothing safe to build, so fall through
+    // to the model, where that enforcement applies.
+    const resolvedCity = resolutionPlan?.places.find(
+      (item) => item.status === "resolved" && item.kind === "city_police"
+    );
+    const oris = [...new Set(resolvedCity?.oriYears.map((item) => item.ori) ?? [])];
+    if (oris.length === 0) return null;
     tableIndex = "idx_sct_ori_year";
-    geographyPredicate = `sct.ori IN (
-    SELECT DISTINCT ori
-    FROM agencies
-    WHERE city = ${sqlString(city)}
-      AND ${compactStatePredicate("state", sourceState)}
-      AND agency_type = 'City'
-      AND population > 0
-  )`;
-    place = contract.geography.canonicalName ?? `${contract.geography.name}, ${contract.geography.state}`;
+    geographyPredicate = `sct.ori IN (${oris.map(sqlString).join(", ")})`;
+    place = resolvedCity?.label ?? contract.geography.canonicalName ?? `${contract.geography.name}, ${contract.geography.state}`;
   } else {
     tableIndex = "idx_sct_state_year";
     geographyPredicate = compactStatePredicate("sct.state", sourceState);
