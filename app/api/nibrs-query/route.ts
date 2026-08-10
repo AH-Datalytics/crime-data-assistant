@@ -53,6 +53,7 @@ import { partialCoverageRetryPrompt } from "@/lib/source-year-overlap";
 import { removedDemographicPlaceToken } from "@/lib/demographic-rate-intent";
 import {
   auditNibrsResolvedOriUsage,
+  resolvedOriEnforcementIssue,
   formatNibrsResolutionGuidance,
   resolveNibrsPlaces,
 } from "@/lib/nibrs-place-resolver";
@@ -637,8 +638,10 @@ export async function POST(req: NextRequest) {
 
     let sql = validation.sanitized!;
     const resolvedOriWarnings = auditNibrsResolvedOriUsage(resolutionPlan, sql);
+    // Enforced only for the city-name bypass; every other shape stays warn-only.
+    const oriEnforcement = resolvedOriEnforcementIssue(resolutionPlan, sql);
     if (resolvedOriWarnings.length > 0) {
-      console.warn(`[nibrs][resolved-ori][warn-only] ${resolvedOriWarnings.join("; ")}`);
+      console.warn(`[nibrs][resolved-ori]${oriEnforcement ? "[enforced]" : "[warn-only]"} ${resolvedOriWarnings.join("; ")}`);
       logResolverWarnings({
         source: "nibrs", question, sql, warnings: resolvedOriWarnings, sessionId,
       });
@@ -658,9 +661,12 @@ export async function POST(req: NextRequest) {
     }
 
     const routeGuardrailIssues: string[] = [];
-    const routeGuardrailsFired: string[] = resolvedOriWarnings.length > 0
+    const routeGuardrailsFired: string[] = oriEnforcement
+      ? ["nibrs-resolved-ori-enforced"]
+      : resolvedOriWarnings.length > 0
       ? ["nibrs-resolved-ori-warn-only"]
       : [];
+    if (oriEnforcement) routeGuardrailIssues.push(oriEnforcement.issue);
     if (geoCorrectionApplied) routeGuardrailsFired.push("geo-typo-corrected");
     const recordContractValidation = (contractResult: QueryContractSqlValidation, collectRetryIssues = false) => {
       const contractGuardrails = queryContractGuardrails(contractResult);
@@ -794,6 +800,14 @@ export async function POST(req: NextRequest) {
       if (rawStillBad) {
         const msg = "I wasn't able to build a valid query for this question using the available summary tables. The data needed may not be available in a pre-aggregated form. Try rephrasing your question or asking about a specific offense type, city, or time period.";
         writeNibrsLog(question, sql, 0, "raw_table_second_failure", Date.now() - claudeStart, msg, postRetryResult.fired, activeModelLabel, sessionId);
+        return jsonResp({ success: true, question, sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - claudeStart } as QueryResponse);
+      }
+      // Resolved-ORI second-failure block — the retried SQL still selects by city
+      // name. Running it would return the broadened, wrong-agency result silently.
+      const oriStillBad = resolvedOriEnforcementIssue(resolutionPlan, sql);
+      if (oriStillBad) {
+        const msg = `I matched ${oriStillBad.labels.join(", ")} to specific law-enforcement agencies, but I couldn't build a query that uses them. Rather than fall back to matching agencies by city name — which mixes in unrelated departments that share a mailing city — I stopped. Try asking for fewer cities at once, or one city at a time.`;
+        writeNibrsLog(question, sql, 0, "resolved_ori_second_failure", Date.now() - claudeStart, msg, [...postRetryResult.fired, "nibrs-resolved-ori-enforced"], activeModelLabel, sessionId);
         return jsonResp({ success: true, question, sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - claudeStart } as QueryResponse);
       }
       const orPrecedenceStillBad = postRetryResult.fired.includes("or-and-precedence");

@@ -6,6 +6,7 @@ import {
   auditNibrsResolvedOriUsage,
   formatNibrsResolutionGuidance,
   resolveNibrsPlaces,
+  resolvedOriEnforcementIssue,
 } from "../lib/nibrs-place-resolver.js";
 import { buildQueryContract } from "../lib/query-contract.js";
 import { decideNibrsCompleteness } from "../lib/nibrs-completeness.js";
@@ -159,6 +160,41 @@ db.exec(`
     summaryMonths: 3,
     unit: "rate",
   }).display, false);
+}
+
+// --- resolvedOriEnforcementIssue: city-name SQL that bypasses resolved ORIs ---
+// Production 8376 matched agencies.city by name and summed twelve same-named
+// agencies into "St. Louis". The audit already caught it; it only warned.
+{
+  const plan = resolveNibrsPlaces(db, "Chicago murders from 2021 to 2025");
+  assert.ok(plan);
+
+  const bad = resolvedOriEnforcementIssue(
+    plan,
+    "SELECT * FROM summary_clearance_detail scd JOIN agencies a ON a.ori = scd.ori WHERE a.city = 'CHICAGO' AND a.state = 'IL'"
+  );
+  assert.ok(bad, "city-name SQL that ignores resolved ORIs must be enforced");
+  assert.match(bad.issue, /\[SYSTEM:/);
+  assert.match(bad.issue, /ILCHI0001/);
+  assert.deepEqual(bad.labels, ["Chicago, IL"]);
+
+  // SQL that uses the resolved ORIs is fine
+  assert.equal(
+    resolvedOriEnforcementIssue(plan, "SELECT * FROM summary_clearance_detail WHERE ori IN ('ILCHI0001','ILCHI0002')"),
+    null
+  );
+
+  // A state/national aggregate branch has no city predicate — stays warn-only
+  assert.equal(
+    resolvedOriEnforcementIssue(plan, "SELECT year, SUM(murders) FROM summary_state_monthly WHERE state = 'IL' GROUP BY year"),
+    null
+  );
+
+  // city IN (...) and city LIKE are the same bypass
+  assert.ok(resolvedOriEnforcementIssue(plan, "SELECT * FROM agencies WHERE city IN ('CHICAGO','DALLAS')"));
+  assert.ok(resolvedOriEnforcementIssue(plan, "SELECT * FROM agencies WHERE city LIKE 'CHICAGO%'"));
+
+  assert.equal(resolvedOriEnforcementIssue(null, "SELECT 1"), null);
 }
 
 {

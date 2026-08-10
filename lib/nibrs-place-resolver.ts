@@ -445,6 +445,52 @@ export function formatNibrsResolutionGuidance(plan: NibrsPlaceResolutionPlan | n
   ].join("\n");
 }
 
+/**
+ * Enforcement wrapper around the warn-only audit. Fires only when the SQL selects
+ * agencies by city NAME while verified ORIs already exist for the resolved city
+ * places -- the exact shape that summed twelve same-named agencies into
+ * "St. Louis" in production 8376 (163 murders against SLMPD's real 131) and
+ * dropped Jacksonville, whose sheriff's office is not agency_type = 'City'.
+ *
+ * SQL with no city predicate (state and national aggregate branches) is left to
+ * the warn-only audit, because matching by state there is correct.
+ *
+ * Returns a retry issue rather than rewriting the SQL: substituting ORIs into an
+ * arbitrary multi-city, multi-year query is easy to get subtly wrong, so the
+ * route retries and then blocks.
+ */
+export function resolvedOriEnforcementIssue(
+  plan: NibrsPlaceResolutionPlan | null,
+  sql: string
+): { issue: string; labels: string[] } | null {
+  if (!plan) return null;
+  if (!/\bcity\s*(?:=|\bIN\b|\bLIKE\b)/i.test(sql)) return null;
+  const cityPlaces = plan.places.filter(
+    (place) => place.status === "resolved" && place.kind === "city_police"
+  );
+  if (cityPlaces.length === 0) return null;
+  const upperSql = sql.toUpperCase();
+  const missing = cityPlaces.filter((place) => {
+    const oris = [...new Set(place.oriYears.map((item) => item.ori))];
+    return !oris.some((ori) => upperSql.includes(ori.toUpperCase()));
+  });
+  if (missing.length === 0) return null;
+  const lines = missing.map((place) => {
+    const ranges = place.oriRanges
+      .map((range) => `${range.ori} for ${range.startYear}-${range.endYear}`)
+      .join("; ");
+    return `- ${place.label}: ${ranges}`;
+  });
+  return {
+    labels: missing.map((place) => place.label),
+    issue: [
+      "[SYSTEM: Your SQL selects agencies by city name, but deterministic resolution already identified the exact agency ORIs for these places. City-name matching pulls in unrelated agencies that share a mailing city, and misses agencies whose type is not 'City'. Rewrite the query to filter the fact table by these ORIs (ori IN (...), or one branch per place) and remove the city-name predicates for them:",
+      ...lines,
+      "]",
+    ].join("\n"),
+  };
+}
+
 export function auditNibrsResolvedOriUsage(
   plan: NibrsPlaceResolutionPlan | null,
   sql: string
