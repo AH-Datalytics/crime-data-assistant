@@ -33,6 +33,7 @@ import { pastCompleteCalendarYearsRange } from "@/lib/time-conventions";
 import { detectFollowupTransform } from "@/lib/followup-transform";
 import { detectNibrsCapabilityOverride } from "@/lib/nibrs-capability-overrides";
 import { getBlockingGeoClarification } from "@/lib/geo-resolver";
+import { boundedModelResponseJson, shouldRetryUnexplainedNoSql, UNEXPLAINED_NO_SQL_RETRY_PROMPT } from "@/lib/no-sql-retry";
 import { getCountyScopeClarification } from "@/lib/county-clarifier";
 import { detectQueryBearingFollowup } from '@/lib/query-bearing-followup';
 import { planFollowupSafe } from '@/lib/followup-planner';
@@ -220,8 +221,10 @@ export async function POST(req: NextRequest) {
       model: string | null = null,
       sid: string | null = null,
       /** Phase 3 chart capture; pre-serialized via the allowlist in lib/chart-config-log. */
-      chartConfigJson: string | null = null
-    ) => logNibrsQuery(q, sqlText, rowCount, logError, ms, logResponse, guardrails, model, sid, routingMeta, chartConfigJson);
+      chartConfigJson: string | null = null,
+      /** Bounded raw model text on no-SQL failures; diagnostic only, never user-visible. */
+      modelResponseJson: string | null = null
+    ) => logNibrsQuery(q, sqlText, rowCount, logError, ms, logResponse, guardrails, model, sid, routingMeta, chartConfigJson, modelResponseJson);
 
     // Page token validation
     const pageToken = body?.pageToken as string | undefined;
@@ -525,6 +528,10 @@ export async function POST(req: NextRequest) {
     const cached = cacheableStandalone ? getCached(question, "nibrs") : null;
 
     let geoCorrectionApplied = false;
+    // Captured before the server template overwrites claude.explanation, so a
+    // no-SQL failure can be diagnosed from the log instead of by replaying it.
+    let rawFirstNoSql: string | null = null;
+    let rawRetryNoSql: string | null = null;
     let claude: Awaited<ReturnType<typeof translateToSql>>;
 
     if (cached) {
@@ -538,6 +545,7 @@ export async function POST(req: NextRequest) {
       console.log(`[nibrs][timing] Claude API: ${claudeMs}ms`);
 
       if (!claude.sql) {
+        rawFirstNoSql = claude.explanation || null;
         // Retry if model incorrectly claims data isn't available
         const refusalPatterns = /not (appear|be represented)|doesn't appear|not (in|included in) (this|the|our) (dataset|data|sample|library)|no data (for|available|found)|does not (have|include|cover)|not available in this|isn't (in|included)|not found in/i;
         // Retry if model asks for year range instead of defaulting
@@ -556,6 +564,11 @@ export async function POST(req: NextRequest) {
               const range = pastCompleteCalendarYearsRange(5);
               return `[SYSTEM: The user did not specify a year range. NIBRS policy is to default to the last 5 complete calendar years, not ask for clarification. Generate SQL using year BETWEEN ${range.start} AND ${range.end}. Do not ask which years — just run the query.]`;
             })()
+          // Nothing above explains the missing SQL. If the request is
+          // demonstrably answerable, spend one more call before giving up —
+          // production 8375 was a one-off that replayed correctly first try.
+          : shouldRetryUnexplainedNoSql(promptContract, resolutionPlan)
+          ? UNEXPLAINED_NO_SQL_RETRY_PROMPT
           : null;
         if (retryPrompt) {
           retryCount++;
@@ -567,6 +580,8 @@ export async function POST(req: NextRequest) {
             ], activeModel);
             if (retryResult.sql) {
               Object.assign(claude, retryResult);
+            } else {
+              rawRetryNoSql = retryResult.explanation || null;
             }
           } catch { /* use original */ }
         }
@@ -605,7 +620,7 @@ export async function POST(req: NextRequest) {
         if (internalLeak) { claude.explanation = INTERNAL_LEAK_SAFE_MESSAGE; claude.title = "Results"; }
         if (!serverAuthoredNoSql && !internalLeak) claude.explanation = buildNoSqlFallbackMessage("nibrs");
         claude.explanation = neutralizeUnverifiedAvailabilityClaim(claude.explanation, "NIBRS");
-        writeNibrsLog(question, null, 0, null, Date.now() - claudeStart, claude.explanation, internalLeak ? ["internal-leak-firewall"] : ["no-sql-server-template"], activeModelLabel, sessionId);
+        writeNibrsLog(question, null, 0, null, Date.now() - claudeStart, claude.explanation, internalLeak ? ["internal-leak-firewall"] : ["no-sql-server-template"], activeModelLabel, sessionId, null, boundedModelResponseJson(rawFirstNoSql, rawRetryNoSql));
         return jsonResp({
           success: true,
           question,

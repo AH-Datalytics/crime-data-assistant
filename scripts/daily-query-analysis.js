@@ -72,9 +72,16 @@ function getYesterdayRange() {
 
 const { start: cutoff, end: cutoffEnd } = getYesterdayRange();
 
+// Columns are listed rather than SELECT *ed so a diagnostic column can be added
+// to query_log without silently entering an outbound email. model_response holds
+// raw model text captured on no-SQL failures and must stay internal.
+const DIGEST_QUERY_COLUMNS =
+  "id, ts, question, sql, rows, error, ms, response, tab, guardrails, model, session_id, " +
+  "routing_confidence, routing_mode, routing_reason, query_guidance, query_contract";
+
 function getQueries() {
   return db
-    .prepare("SELECT * FROM query_log WHERE ts >= ? AND ts < ? ORDER BY ts ASC")
+    .prepare(`SELECT ${DIGEST_QUERY_COLUMNS} FROM query_log WHERE ts >= ? AND ts < ? ORDER BY ts ASC`)
     .all(cutoff, cutoffEnd);
 }
 
@@ -428,6 +435,35 @@ function recordReliabilityTag(stats, name, question) {
     break;
   }
 }
+function contractLooksAnswerable(query) {
+  const contract = String(query.query_contract || "");
+  let parsed = null;
+  try { parsed = contract ? JSON.parse(contract) : null; } catch { /* capped contracts may be partial JSON */ }
+  const hasPlace = parsed
+    ? Boolean(parsed.geography && parsed.geography.kind && parsed.geography.kind !== "unknown")
+    : /"kind":"(?:city|state|county|agency|campus)"/.test(contract);
+  const hasMetric = parsed
+    ? Boolean(parsed.metric && (parsed.metric.topic !== "unknown" || (parsed.metric.offenseCodes || []).length > 0))
+    : /"topic":"(?!unknown)[^"]+"|"offenseCodes":\["/.test(contract) ||
+      /\b(?:murder|homicide|rape|robbery|assault|burglary|theft|crime|clearance|arrest|victim|offender)\b/i.test(query.question || "");
+  const hasTime = parsed
+    ? Boolean(parsed.time && (parsed.time.startYear !== null || parsed.time.endYear !== null))
+    : /\b(?:19|20)\d{2}\b/.test(query.question || "");
+  return hasPlace && hasMetric && hasTime;
+}
+
+function contractCityCount(query) {
+  const contract = String(query.query_contract || "");
+  try {
+    const parsed = JSON.parse(contract);
+    return Array.isArray(parsed.geographies)
+      ? parsed.geographies.filter((place) => place && place.kind === "city").length
+      : 0;
+  } catch {
+    return (contract.match(/"kind":"city"/g) || []).length;
+  }
+}
+
 
 function analyze(queries) {
   const issues = [];
@@ -489,6 +525,40 @@ function analyze(queries) {
         id: q.id,
       });
     }
+    // A structured request that reaches the server-authored no-answer fallback
+    // is a confirmed user-visible failure, even though no database error exists.
+    if (
+      !q.sql && q.rows === 0 &&
+      String(q.guardrails || "").split(",").includes("no-sql-server-template") &&
+      contractLooksAnswerable(q)
+    ) {
+      issues.push({
+        type: "answerable_no_sql",
+        severity: "high",
+        question: q.question,
+        detail: "The request had a specific place, measure, and year, but no answer was produced.",
+        tab,
+        id: q.id,
+      });
+    }
+
+    // When Historical cannot answer a clearance question, failing to mention
+    // the available NIBRS path leaves a person at a dead end.
+    if (
+      String(q.guardrails || "").split(",").includes("historical-year-unavailable") &&
+      /clearance|cleared/i.test(q.question || "") &&
+      !/\bNIBRS\b/i.test(q.response || "")
+    ) {
+      issues.push({
+        type: "missing_source_alternative",
+        severity: "medium",
+        question: q.question,
+        detail: "The answer said Historical data were unavailable but did not point the user to NIBRS clearance data.",
+        tab,
+        id: q.id,
+      });
+    }
+
 
     // Zero rows (has SQL but returned nothing)
     if (q.sql && q.rows === 0 && !q.error) {
@@ -692,6 +762,40 @@ function analyze(queries) {
   }
 
   const suggestions = [];
+  // A short follow-up can inherit a large place list from an earlier turn. If a
+  // one-year, one-row-per-place request returns far more rows than the prior
+  // contract contains cities, surface likely mailing-city overmatching.
+  const sessionQueries = new Map();
+  for (const query of queries) {
+    if (!query.session_id) continue;
+    const entries = sessionQueries.get(query.session_id) || [];
+    entries.push(query);
+    sessionQueries.set(query.session_id, entries);
+  }
+  const existingIssueIds = new Set(issues.map((issue) => `${issue.id}:${issue.type}`));
+  for (const entries of sessionQueries.values()) {
+    for (let index = 1; index < entries.length; index++) {
+      const query = entries[index];
+      if (!query.sql || Number(query.rows) <= 0 || String(query.question || "").length > 100) continue;
+      if (!/clearance|cleared/i.test(`${query.question || ""} ${query.sql || ""}`)) continue;
+      const prior = [...entries.slice(0, index)].reverse().find((candidate) => contractCityCount(candidate) >= 2);
+      if (!prior) continue;
+      const expectedCities = contractCityCount(prior);
+      if (expectedCities < 2 || Number(query.rows) <= expectedCities * 1.5) continue;
+      const key = `${query.id}:place_multiplicity`;
+      if (existingIssueIds.has(key)) continue;
+      issues.push({
+        type: "place_multiplicity",
+        severity: "high",
+        question: query.question,
+        detail: `The follow-up inherited ${expectedCities} requested cities but returned ${query.rows} rows, suggesting that some cities matched multiple agencies.`,
+        tab: query.tab || "unknown",
+        id: query.id,
+      });
+      existingIssueIds.add(key);
+    }
+  }
+
 
   // 1. Repeated "no such column" errors → missing feature / schema gap
   const columnErrors = {};
@@ -819,6 +923,130 @@ function analyze(queries) {
   }
 
   return { stats, issues, suggestions };
+}
+
+const HUMAN_INCIDENT_TYPES = new Set([
+  "error", "answerable_no_sql", "missing_source_alternative", "place_multiplicity",
+  "json_parse_failure", "sql_leak", "entity_hallucination", "potential_refusal",
+]);
+
+function buildHumanIncidents(queries, issues) {
+  const queryById = new Map(queries.map((query) => [query.id, query]));
+  const groups = new Map();
+  for (const issue of issues) {
+    if (!HUMAN_INCIDENT_TYPES.has(issue.type) || issue.id === null || issue.id === undefined) continue;
+    const query = queryById.get(issue.id);
+    if (!query) continue;
+    const key = query.session_id ? `session:${query.session_id}` : `query:${query.id}`;
+    const group = groups.get(key) || { queries: new Map(), issues: [] };
+    group.queries.set(query.id, query);
+    group.issues.push(issue);
+    groups.set(key, group);
+  }
+
+  return [...groups.values()].map((group) => {
+    const sessionId = group.queries.values().next().value?.session_id;
+    if (sessionId) {
+      for (const query of queries) {
+        if (query.session_id === sessionId) group.queries.set(query.id, query);
+      }
+    }
+    const sessionQueries = [...group.queries.values()].sort((a, b) => Number(a.ts || 0) - Number(b.ts || 0) || Number(a.id) - Number(b.id));
+    const types = new Set(group.issues.map((issue) => issue.type));
+    const ids = [...new Set(group.issues.map((issue) => issue.id))].sort((a, b) => a - b);
+    const bestQuestion = [...sessionQueries]
+      .filter((query) => ids.includes(query.id))
+      .sort((a, b) => String(b.question || "").length - String(a.question || "").length)[0]?.question || "User request";
+
+    const clearanceJourney = sessionQueries.some((query) => /clearance|cleared/i.test(query.question || "")) &&
+      (types.has("answerable_no_sql") || types.has("place_multiplicity"));
+    const comparisonFailure = types.has("error") && sessionQueries.some((query) => /\bcompare\b/i.test(query.question || ""));
+
+    let title = "User request needs attention";
+    if (clearanceJourney) title = "Multi-city clearance request failed repeatedly";
+    else if (comparisonFailure) title = "Historical city comparison failed";
+    else if (types.has("answerable_no_sql")) title = "Answerable request produced no answer";
+    else if (types.has("place_multiplicity")) title = "Location results may include extra agencies";
+    else if (types.has("missing_source_alternative")) title = "User was not directed to an available data source";
+    else if (types.has("json_parse_failure") || types.has("sql_leak")) title = "Technical text was shown to the user";
+
+    const happened = [];
+    if (types.has("missing_source_alternative")) happened.push("The first answer said the selected source could not answer, but did not direct the user to the source that could.");
+    if (types.has("answerable_no_sql")) happened.push("A later, specific request had enough information to answer, but the system returned no results.");
+    if (types.has("place_multiplicity")) happened.push("The follow-up appears to have matched several agencies for some cities, so the returned table may not be trustworthy.");
+    if (types.has("error")) happened.push("The system could not complete the request and delivered an error instead of an answer.");
+    if (types.has("entity_hallucination")) happened.push("The written answer named a place that did not match the data request.");
+    if (types.has("json_parse_failure") || types.has("sql_leak")) happened.push("Internal technical text appeared in the user-facing answer.");
+    if (types.has("potential_refusal") && !types.has("answerable_no_sql")) happened.push("The system may have declined a request that the available data could answer.");
+
+    const actions = [];
+    if (types.has("answerable_no_sql")) actions.push("retry incomplete generated answers automatically");
+    if (types.has("missing_source_alternative")) actions.push("recommend the appropriate data source when the selected source cannot answer");
+    if (types.has("place_multiplicity")) actions.push("require verified agency matches for multi-city requests");
+    if (types.has("error")) actions.push("route eligible comparisons through the reliable built-in comparison path");
+    if (types.has("entity_hallucination")) actions.push("compare places named in the answer with the requested places");
+    if (types.has("json_parse_failure") || types.has("sql_leak")) actions.push("strengthen the user-facing response filter");
+
+    const confirmed = types.has("error") || types.has("answerable_no_sql") || types.has("json_parse_failure");
+    return {
+      severity: confirmed ? "confirmed" : types.has("place_multiplicity") || types.has("entity_hallucination") ? "likely" : "review",
+      title,
+      question: bestQuestion,
+      whatHappened: happened.join(" "),
+      impact: confirmed
+        ? "High - the user did not receive a usable answer."
+        : types.has("place_multiplicity") || types.has("entity_hallucination")
+          ? "High - an answer was delivered, but its results may be unreliable."
+          : "Moderate - the user reached a dead end or received incomplete guidance.",
+      action: actions.length ? `Recommended fix: ${actions.join("; ")}.` : "Review the session and determine the appropriate product fix.",
+      ids,
+    };
+  }).sort((a, b) => {
+    const order = { confirmed: 0, likely: 1, review: 2 };
+    return order[a.severity] - order[b.severity] || a.ids[0] - b.ids[0];
+  });
+}
+
+function buildHumanEmail(stats, incidents, queries, visitors) {
+  const date = new Date(cutoff).toLocaleDateString("en-US", {
+    weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: "America/Chicago",
+  });
+  const confirmed = incidents.filter((incident) => incident.severity === "confirmed").length;
+  const likely = incidents.filter((incident) => incident.severity === "likely").length;
+  const review = incidents.filter((incident) => incident.severity === "review").length;
+  const affectedIds = new Set(incidents.flatMap((incident) => incident.ids));
+  const noDetectedIssue = Math.max(0, queries.length - affectedIds.size);
+  const statusColor = confirmed > 0 ? "#b42318" : likely > 0 ? "#b54708" : "#067647";
+
+  let html = `<!DOCTYPE html><html><head><style>
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#252525;max-width:700px;margin:0 auto;padding:20px;line-height:1.45}
+h1{font-size:23px;margin:0 0 4px}h2{font-size:18px;margin:28px 0 12px}.sub{color:#667085;font-size:14px}.summary{background:#f8f9fb;border-radius:10px;padding:16px;margin:20px 0}.summary strong{font-size:28px;color:${statusColor}}
+.incident{border:1px solid #e4e7ec;border-left:5px solid #b42318;border-radius:8px;padding:15px;margin:12px 0}.incident.likely{border-left-color:#b54708}.incident.review{border-left-color:#667085}.label{font-size:11px;text-transform:uppercase;letter-spacing:.5px;font-weight:700;color:#667085}.title{font-size:16px;font-weight:700;margin:3px 0 10px}.question{background:#f8f9fb;border-radius:6px;padding:9px 11px;margin:7px 0 11px;font-size:13px}.row{margin:7px 0;font-size:13px}.quiet{color:#667085;font-size:12px}.healthy{background:#ecfdf3;border-radius:8px;padding:13px 15px}.uncertain{background:#fffaeb;border-radius:8px;padding:13px 15px}.footer{border-top:1px solid #e4e7ec;margin-top:28px;padding-top:12px;color:#98a2b3;font-size:11px}
+</style></head><body><h1>Crime Data Assistant - Daily Answer Review</h1><div class="sub">${escapeHtml(date)}</div>
+<div class="summary"><strong>${stats.total}</strong> questions reviewed<br><span>${confirmed} confirmed failure${confirmed === 1 ? "" : "s"} | ${likely} likely incorrect answer${likely === 1 ? "" : "s"} | ${review} item${review === 1 ? "" : "s"} to review | ${noDetectedIssue} with no problem detected</span></div>
+<p class="quiet">"No problem detected" means the automated review found nothing suspicious. It is not a guarantee that every answer was correct.</p>`;
+
+  if (incidents.length) {
+    html += `<h2>Needs attention</h2>`;
+    for (const incident of incidents.slice(0, 8)) {
+      const status = incident.severity === "confirmed" ? "Confirmed failure" : incident.severity === "likely" ? "Likely incorrect" : "Needs review";
+      html += `<div class="incident ${incident.severity}"><div class="label">${status}</div><div class="title">${escapeHtml(incident.title)}</div><div class="label">What the user wanted</div><div class="question">${escapeHtml(incident.question)}</div><div class="row"><strong>What happened:</strong> ${escapeHtml(incident.whatHappened)}</div><div class="row"><strong>User impact:</strong> ${escapeHtml(incident.impact)}</div><div class="row"><strong>Next step:</strong> ${escapeHtml(incident.action)}</div><div class="quiet">Queries: ${incident.ids.join(", ")}</div></div>`;
+    }
+    if (incidents.length > 8) html += `<p class="quiet">${incidents.length - 8} additional lower-priority incident${incidents.length - 8 === 1 ? "" : "s"} recorded in the audit database.</p>`;
+  } else {
+    html += `<h2>Needs attention</h2><div class="healthy"><strong>No user-visible failures were detected.</strong></div>`;
+  }
+
+  const healthy = [];
+  if (stats.jsonParseFailures === 0 && stats.sqlLeaks === 0) healthy.push("No internal technical text was shown to users.");
+  if (stats.errors === 0) healthy.push("No requests ended in a recorded system error.");
+  if (stats.slowQueries === 0) healthy.push("No unusually slow requests were detected.");
+  if (healthy.length) html += `<h2>What looked healthy</h2><div class="healthy">${healthy.map((item) => `&bull; ${escapeHtml(item)}`).join("<br>")}</div>`;
+
+  html += `<h2>What remains uncertain</h2><div class="uncertain">The review can detect known failure patterns, but it still cannot fully verify every number or every location in a returned table. A clean result means "nothing suspicious found," not "independently proven correct."</div>`;
+  if (visitors) html += `<p class="quiet" style="margin-top:18px">Usage context: ${visitors.pageviews} page view${visitors.pageviews === 1 ? "" : "s"} from ${visitors.uniqueSessions} visitor session${visitors.uniqueSessions === 1 ? "" : "s"}.</p>`;
+  html += `<div class="footer">Technical detector details remain in the audit database and are intentionally omitted from this human-facing email.</div></body></html>`;
+  return html;
 }
 
 function getScoreboard() {
@@ -1630,9 +1858,6 @@ async function main() {
 
   const { stats, issues, suggestions } = analyze(queries);
   const visitors = getVisitors();
-  const weeklyTrends = getWeeklyTrends();
-  const resolverWarningAudit = getResolverWarningAudit();
-  const shrCoverageAudit = getShrCoverageAudit();
   console.log(
     `Stats: ${stats.total} queries, ${stats.errors} errors, ${issues.length} issues, ${suggestions.length} suggestions, ${visitors ? visitors.pageviews + " pageviews" : "no visitor data yet"}`
   );
@@ -1640,10 +1865,8 @@ async function main() {
   // Persist findings to audit_findings table
   persistFindings(issues);
 
-  const html = buildEmail(
-    stats, issues, visitors, suggestions, weeklyTrends,
-    resolverWarningAudit, shrCoverageAudit,
-  );
+  const incidents = buildHumanIncidents(queries, issues);
+  const html = buildHumanEmail(stats, incidents, queries, visitors);
 
   const today = new Date().toLocaleDateString("en-US", {
     year: "numeric",
@@ -1662,7 +1885,7 @@ async function main() {
     const result = await resend.emails.send({
       from: FROM_EMAIL,
       to: TO_EMAIL,
-      subject: `Crime Data Assistant Daily Analysis - ${today}`,
+      subject: `Crime Data Assistant Daily Answer Review - ${today}`,
       html,
     });
     console.log("Email sent:", result);
@@ -1673,4 +1896,4 @@ async function main() {
 }
 
 if (require.main === module) main();
-module.exports = { analyze, recordReliabilityTag };
+module.exports = { analyze, buildHumanIncidents, buildHumanEmail, contractLooksAnswerable, contractCityCount, recordReliabilityTag };

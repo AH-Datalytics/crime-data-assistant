@@ -220,6 +220,29 @@ export function queryLogHasChartConfig(db: object): boolean {
   return present;
 }
 
+/**
+ * Whether query_log has the model_response column — a bounded capture of the raw
+ * model text on no-SQL failures. Same per-handle caching rationale as
+ * chartConfigColumnCache above.
+ */
+const modelResponseColumnCache = new WeakMap<object, boolean>();
+
+export function queryLogHasModelResponse(db: object): boolean {
+  const cached = modelResponseColumnCache.get(db);
+  if (cached !== undefined) return cached;
+  let present = false;
+  try {
+    const rows = (db as { prepare: (sql: string) => { all: () => Array<{ name: string }> } })
+      .prepare("PRAGMA table_info(query_log)")
+      .all();
+    present = rows.some((row) => row.name === "model_response");
+  } catch {
+    present = false;
+  }
+  modelResponseColumnCache.set(db, present);
+  return present;
+}
+
 export function logQuery(
   question: string,
   sql: string | null,
