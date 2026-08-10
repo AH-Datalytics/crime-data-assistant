@@ -193,13 +193,32 @@ export const CONSOLIDATED_AGENCIES: ConsolidatedAgency[] = [
  * Cases that LOOK like this bug but are deliberately excluded, so a future sweep
  * does not "rediscover" them and wire in a wrong answer.
  *
- * - Jacksonville, FL: 'Jacksonville' [city] stops at 2020 (pop 654,126) while
- *   'Jacksonville County' [county] runs to 2025 (pop 1,008,920). Jacksonville/Duval
- *   did consolidate (1968), but 654,126 does not match Jacksonville's actual ~950k
- *   city population, and 2020 is also exactly when Florida agencies stopped
- *   submitting UCR during the state's NIBRS transition. Two explanations fit and the
- *   population check cannot separate them -- this needs FBI CDE confirmation before
- *   any rewrite. Left alone on purpose.
+ * - Jacksonville, FL: still excluded, but no longer for lack of evidence. The
+ *   question the earlier note left open has been answered, and the answer is that
+ *   this is NOT the Louisville shape.
+ *
+ *   FBI CDE (agency/byStateAbbr/FL, checked 2026-08-10) names FL0160000
+ *   "Jacksonville Sheriff's Office", type County, county DUVAL, is_nibrs true,
+ *   nibrs_start_date 2021-01-01.
+ *
+ *   The two ORIs are one agency's reporting history split at that date, not a
+ *   predecessor and a survivor that overlap:
+ *     FL0160200  'Jacksonville'        [city]    real data 1960-2020, NULL 2021-2024
+ *     FL0160000  'Jacksonville County' [county]  NULL before 2021, real data 2021-2025
+ *   Murder: 129/140 on the city ORI for 2019/2020, NULL after; NULL on the county
+ *   ORI until 2021, then 105 (2021) and 61 (2024). Perfectly complementary, zero
+ *   overlapping years. That also disposes of the old note's worry about Florida's
+ *   NIBRS transition: a transition artifact would have stopped both ORIs, and one
+ *   of them started exactly when the other stopped. The 654,126 figure is a stale
+ *   population on a dead ORI, not a jurisdiction boundary.
+ *
+ *   Why it stays out of the registry anyway: an entry names ONE historicalOri, and
+ *   the useful answer here needs both. Pointing "Jacksonville" at FL0160000 would
+ *   fix 2021-2025 and silently discard 1960-2020, which is a worse bug than the one
+ *   it fixes. shrPredecessorOri exists for exactly this problem on the SHR side;
+ *   Historical has no equivalent. Wiring this up means teaching Historical to span
+ *   a predecessor and a successor, and that is a change to the registry's shape,
+ *   not a new row in it.
  * - Kankakee, IL: 'Kankakee' [city] and 'Kankakee County' [county] are a city PD and
  *   a county sheriff that both still exist. The city's 2020 stop is Illinois
  *   reporting, not a merger.
