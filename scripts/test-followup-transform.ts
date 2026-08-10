@@ -202,4 +202,45 @@ const shrFatalShootingTrendHistory: PromptHistoryMessage[] = [
   assert.equal(transform, null);
 }
 
+// --- restrict_scope: "just/only X" fragments reconstruct from the prior user question ---
+// Production 8375/8376: the 32-city question produced no SQL, so every prior
+// detector (which all require prior SQL) declined, the resolver never ran, and
+// the model matched agencies by city name.
+{
+  const failedFirstTurn: PromptHistoryMessage[] = [
+    { role: "user", content: "give me number of murders and murder clearances by type for 2025 for these cities: Chicago, IL New York City, NY Houston, TX" },
+    { role: "assistant", content: "I could not generate a database query for that request in the NIBRS source. Please restate it with the place, offense, and date range you want." },
+  ];
+  const transform = detectFollowupTransform("just clearances by type", failedFirstTurn);
+  assert(transform, "restrictive fragment must be detected even when the prior turn produced no SQL");
+  assert.equal(transform.name, "restrict_scope");
+  assert.match(transform.contextQuestion ?? "", /Chicago, IL/);
+  assert.match(transform.contextQuestion ?? "", /just clearances by type/);
+  assert.match(transform.instruction, /\[SYSTEM:/);
+}
+
+{
+  // No prior user question -> no transform (standalone "just ..." questions pass through)
+  assert.equal(detectFollowupTransform("just clearances by type", []), null);
+}
+
+{
+  // Conversational fragments must not fire
+  assert.equal(detectFollowupTransform("just curious, thanks", historyWithSql), null);
+}
+
+{
+  // Specialized transforms still win over the generic fragment branch
+  const transform = detectFollowupTransform("just show victim demographics", domesticViolenceRateHistory);
+  assert(transform);
+  assert.equal(transform.name, "replace_with_dv_victim_demographics");
+}
+
+{
+  // A breakdown request with prior SQL still routes to add_breakdown
+  const transform = detectFollowupTransform("just break it down by state", historyWithSql);
+  assert(transform);
+  assert.equal(transform.name, "add_breakdown");
+}
+
 console.log("follow-up transform tests passed");

@@ -5,7 +5,7 @@ import { resolveGeoPlaces } from "./geo-place-resolver";
 export type FollowupBreakdown = "state" | "city" | "agency";
 
 export interface FollowupTransform {
-  name: "add_breakdown" | "add_continuous_reporting_filter" | "replace_with_dv_victim_demographics" | "replace_rate_with_count" | "resolve_county_scope" | "assess_trend" | "compare_geographies" | "replace_geography" | "change_time_range" | "change_granularity" | "change_offense" | "replace_count_with_rate" | "carry_cross_source_context";
+  name: "add_breakdown" | "add_continuous_reporting_filter" | "replace_with_dv_victim_demographics" | "replace_rate_with_count" | "resolve_county_scope" | "assess_trend" | "compare_geographies" | "replace_geography" | "change_time_range" | "change_granularity" | "change_offense" | "replace_count_with_rate" | "carry_cross_source_context" | "restrict_scope";
   dimension?: FollowupBreakdown;
   instruction: string;
   /** When set, routes should use this instead of the raw question for guardrail
@@ -128,6 +128,19 @@ function replaceGeographyInQuestion(priorQuestion: string, target: string): stri
   return `${priorQuestion.replace(/\?+\s*$/, "")} (for ${target} only — drop the previous geography)`;
 }
 
+/** "just clearances by type" / "only the counts" — a short fragment that
+ *  restricts what the prior question returned. Deliberately does NOT require
+ *  prior SQL: the prior turn may have failed to produce any (production 8375),
+ *  yet the full user question is still in history and is what we rebuild from. */
+function restrictiveFragment(question: string): string | null {
+  const q = question.trim().replace(/\s+/g, " ");
+  if (q.length > 80) return null;
+  if (!/^(?:just|only|just\s+show(?:\s+me)?|show\s+only)\s+(?:the\s+)?.{3,}$/i.test(q)) return null;
+  // Conversational asides, not data requests
+  if (/\b(?:curious|kidding|joking|wondering|thanks|thank\s+you|checking|testing)\b/i.test(q)) return null;
+  return q.replace(/\?+\s*$/, "");
+}
+
 export function detectFollowupTransform(question: string, history: PromptHistoryMessage[]): FollowupTransform | null {
   const countyScope = detectCountyScopeResolution(question, history);
   if (countyScope) return countyScope;
@@ -196,12 +209,27 @@ export function detectFollowupTransform(question: string, history: PromptHistory
   }
 
   const dimension = requestedBreakdown(question);
-  if (!dimension || !hasPriorSql(history)) return null;
+  if (dimension && hasPriorSql(history)) {
+    return {
+      name: "add_breakdown",
+      dimension,
+      instruction:
+        `[SYSTEM: This is a follow-up transformation. Preserve the prior query's dataset, offense/topic, filters, metric, time range, and chart intent unless the user explicitly changes them. Modify the prior query only to add a ${dimension} breakdown. Return rows grouped by ${dimension} plus the existing time dimension when present. For rolling/window calculations, keep the complete lead-in data in the inner CTE and add PARTITION BY ${dimension} to the window. Do not ask for clarification and do not switch datasets.]`,
+    };
+  }
 
-  return {
-    name: "add_breakdown",
-    dimension,
-    instruction:
-      `[SYSTEM: This is a follow-up transformation. Preserve the prior query's dataset, offense/topic, filters, metric, time range, and chart intent unless the user explicitly changes them. Modify the prior query only to add a ${dimension} breakdown. Return rows grouped by ${dimension} plus the existing time dimension when present. For rolling/window calculations, keep the complete lead-in data in the inner CTE and add PARTITION BY ${dimension} to the window. Do not ask for clarification and do not switch datasets.]`,
-  };
+  const fragment = restrictiveFragment(question);
+  if (fragment) {
+    const priorQuestion = latestPriorUserQuestion(history);
+    if (priorQuestion) {
+      const reconstructed = `${priorQuestion} (${fragment})`;
+      return {
+        name: "restrict_scope",
+        contextQuestion: reconstructed,
+        instruction: `[SYSTEM: This follow-up RESTRICTS the output of the prior question "${priorQuestion}" as requested by "${fragment}". Reconstruct the complete question as "${reconstructed}". Preserve the prior dataset, geography/places, filters, and time range exactly; change only which measures or columns are returned. Resolve every place through the source resolver and filter the fact table by the resolved agency identifiers; do not match agencies by city name when resolved identifiers are available. Do not ask for clarification.]`,
+      };
+    }
+  }
+
+  return null;
 }
