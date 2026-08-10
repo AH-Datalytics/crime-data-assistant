@@ -92,6 +92,23 @@ import {
   // With nothing resolved there is no safe query to build; fall through to the
   // model, where resolvedOriEnforcementIssue applies.
   assert.equal(buildNibrsClearanceMethodQuery(chicagoQ, null), null);
+
+  // This builder emits one geography predicate, so a multi-place request must not
+  // reach it. Left unguarded it answered for the first city and dropped the rest
+  // silently -- an answer that looks complete and is not.
+  cityDb.exec("INSERT INTO agencies VALUES ('TXDPD0000', 2025, 'TX', 'DALLAS', 'City', 1246336, '1A', 'N', 'E');");
+  const twoCityQ = "murder clearances by arrest and exceptional means in Chicago and Dallas in 2025";
+  const twoCityPlan = resolveNibrsPlaces(cityDb, twoCityQ);
+  assert.equal(
+    twoCityPlan?.places.filter((p) => p.status === "resolved").length,
+    2,
+    "fixture must resolve both cities, so the guard is what declines and not a resolution failure"
+  );
+  assert.equal(
+    buildNibrsClearanceMethodQuery(twoCityQ, twoCityPlan),
+    null,
+    "multi-city clearance requests must go to the model path, not answer for city one"
+  );
   cityDb.close();
 }
 

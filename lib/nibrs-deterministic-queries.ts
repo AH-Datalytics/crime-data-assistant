@@ -201,6 +201,12 @@ export function buildNibrsClearanceMethodQuery(
   const contract = buildQueryContract(question, "nibrs");
   if (!contract || contract.metric.offenseCodes.length !== 1) return null;
   if (contract.geography.kind !== "city" && contract.geography.kind !== "state") return null;
+  // This builder emits ONE geography predicate. Asked about several places it
+  // would answer for whichever the contract happens to list first and drop the
+  // rest without saying so -- the worst failure shape available, because the
+  // answer looks complete. Hand multi-place requests to the model, where
+  // resolvedOriEnforcementIssue checks every resolved place appears in the SQL.
+  if ((contract.geographies?.length ?? 0) > 1) return null;
 
   const offenseCode = contract.metric.offenseCodes[0];
   const years = yearScope("sct.year", question);
