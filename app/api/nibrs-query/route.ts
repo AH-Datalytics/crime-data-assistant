@@ -13,6 +13,7 @@ import { extractQueryContext } from "@/lib/query-context";
 import { runGuardrails } from "@/lib/guardrails";
 import { finalizeGuardrailTags } from "@/lib/guardrail-tag-state";
 import { serializeChartConfigForLog } from "@/lib/chart-config-log";
+import { attachChartAuditToPayload, createChartAuditRequestId } from "@/lib/chart-audit";
 import { asksForCountsInsteadOfRates } from "@/lib/rate-intent";
 import { applyRetryMeta } from "@/lib/types";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -86,7 +87,10 @@ function jsonResp(data: unknown, status = 200) {
     payload.chartConfig = sanitizeChartConfigTitle(payload.chartConfig);
     if (typeof payload.chartConfig?.title === "string") payload.chartConfig.title = consolidatedDisplayText(payload.chartConfig.title);
   }
-  return NextResponse.json(payload, { status, headers: CORS_HEADERS });
+  const finalized = payload.requestId
+    ? attachChartAuditToPayload(payload, { source: "nibrs", requestId: payload.requestId })
+    : payload;
+  return NextResponse.json(finalized, { status, headers: CORS_HEADERS });
 }
 
 import {
@@ -201,6 +205,8 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const question = body?.question?.trim();
+    const chartAuditRequestId = createChartAuditRequestId();
+    let chartAuditQueryLogId: number | null = null;
     const sessionId: string | null = ((body?.sessionId as string) || "").slice(0, 64) || null;
     const canaryFlag = body?._canary === true;
 
@@ -224,7 +230,10 @@ export async function POST(req: NextRequest) {
       chartConfigJson: string | null = null,
       /** Bounded raw model text on no-SQL failures; diagnostic only, never user-visible. */
       modelResponseJson: string | null = null
-    ) => logNibrsQuery(q, sqlText, rowCount, logError, ms, logResponse, guardrails, model, sid, routingMeta, chartConfigJson, modelResponseJson);
+    ) => {
+      chartAuditQueryLogId = logNibrsQuery(q, sqlText, rowCount, logError, ms, logResponse, guardrails, model, sid, routingMeta, chartConfigJson, modelResponseJson, chartAuditRequestId);
+      return chartAuditQueryLogId;
+    };
 
     // Page token validation
     const pageToken = body?.pageToken as string | undefined;
@@ -445,7 +454,7 @@ export async function POST(req: NextRequest) {
           serializeChartConfigForLog(chartConfig, columns)
         );
 
-        return jsonResp({
+        return jsonResp(attachChartAuditToPayload({
           success: true,
           question,
           sql: deterministicQuery.sql,
@@ -458,7 +467,7 @@ export async function POST(req: NextRequest) {
           chartConfig,
           chartMeta: { source: "FBI NIBRS", agencyCount: 0, population: null },
           executionTimeMs: executionMs,
-        } as QueryResponse);
+        } as QueryResponse, { source: "nibrs", requestId: chartAuditRequestId, queryLogId: chartAuditQueryLogId }));
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         writeNibrsLog(
@@ -486,8 +495,8 @@ export async function POST(req: NextRequest) {
     const metadata = planSaysQueryBearing ? null : answerMetadataQuestion("nibrs", question, getNibrsDb());
     if (metadata) {
       const executionMs = Date.now() - metadataStart;
-      writeNibrsLog(question, metadata.sql, metadata.rowCount, null, executionMs, metadata.explanation, ["deterministic-metadata", "metadata-coverage-answer"], "deterministic", sessionId);
-      return jsonResp({
+      writeNibrsLog(question, metadata.sql, metadata.rowCount, null, executionMs, metadata.explanation, ["deterministic-metadata", "metadata-coverage-answer"], "deterministic", sessionId, serializeChartConfigForLog(metadata.chartConfig, metadata.columns));
+      return jsonResp(attachChartAuditToPayload({
         success: true,
         question,
         sql: metadata.sql,
@@ -500,7 +509,7 @@ export async function POST(req: NextRequest) {
         chartConfig: metadata.chartConfig,
         chartMeta: metadata.chartMeta,
         executionTimeMs: executionMs,
-      } as QueryResponse);
+      } as QueryResponse, { source: "nibrs", requestId: chartAuditRequestId, queryLogId: chartAuditQueryLogId }));
     }
 
     // Step 1: Translate to SQL via Claude (with conversation history for context)
@@ -1424,7 +1433,7 @@ export async function POST(req: NextRequest) {
     // Step 6: Truncate if needed
     const truncated = rows.length >= 1000;
 
-    return jsonResp({
+    return jsonResp(attachChartAuditToPayload({
       success: true,
       question,
       sql,
@@ -1437,7 +1446,7 @@ export async function POST(req: NextRequest) {
       chartConfig,
       chartMeta: { source: "FBI NIBRS", agencyCount: 0, population: null },
       executionTimeMs: totalMs,
-    } as QueryResponse);
+    } as QueryResponse, { source: "nibrs", requestId: chartAuditRequestId, queryLogId: chartAuditQueryLogId }));
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("[nibrs] Query API error:", msg);

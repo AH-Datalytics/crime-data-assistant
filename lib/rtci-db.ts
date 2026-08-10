@@ -243,6 +243,21 @@ export function queryLogHasModelResponse(db: object): boolean {
   return present;
 }
 
+const requestIdColumnCache = new WeakMap<object, boolean>();
+
+export function queryLogHasRequestId(db: object): boolean {
+  const cached = requestIdColumnCache.get(db);
+  if (cached !== undefined) return cached;
+  let present = false;
+  try {
+    const rows = (db as { prepare: (sql: string) => { all: () => Array<{ name: string }> } })
+      .prepare("PRAGMA table_info(query_log)").all();
+    present = rows.some((row) => row.name === "request_id");
+  } catch { present = false; }
+  requestIdColumnCache.set(db, present);
+  return present;
+}
+
 export function logQuery(
   question: string,
   sql: string | null,
@@ -260,8 +275,9 @@ export function logQuery(
    * as a string rather than a ChartConfig so the allowlist serialization happens
    * once at the call site and this function cannot accidentally widen it.
    */
-  chartConfigJson: string | null = null
-) {
+  chartConfigJson: string | null = null,
+  requestId: string | null = null
+): number | null {
   const db = getWriteDb();
   if (db) {
     try {
@@ -269,9 +285,10 @@ export function logQuery(
       // Detected at runtime so schema and code can deploy in either order: an
       // unmigrated database logs exactly as before instead of failing every write.
       const withChartConfig = queryLogHasChartConfig(db);
+      const withRequestId = queryLogHasRequestId(db);
       const columns = "ts, tab, question, sql, rows, error, ms, response, guardrails, model, session_id, routing_confidence, routing_mode, routing_reason, query_guidance, query_contract" +
-        (withChartConfig ? ", chart_config" : "");
-      const placeholders = withChartConfig ? "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?" : "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?";
+        (withChartConfig ? ", chart_config" : "") + (withRequestId ? ", request_id" : "");
+      const placeholders = new Array(16 + (withChartConfig ? 1 : 0) + (withRequestId ? 1 : 0)).fill("?").join(", " );
       const values: unknown[] = [
         Date.now(),
         tab,
@@ -291,7 +308,9 @@ export function logQuery(
         serializeQueryContractLogMeta(question || "", contractSource, routingMeta),
       ];
       if (withChartConfig) values.push(chartConfigJson);
-      db.prepare(`INSERT INTO query_log (${columns}) VALUES (${placeholders})`).run(...values);
+      if (withRequestId) values.push(requestId ? requestId.slice(0, 64) : null);
+      const result = db.prepare(`INSERT INTO query_log (${columns}) VALUES (${placeholders})`).run(...values);
+      return Number(result.lastInsertRowid);
     } catch (e) {
       console.warn("Log write failed:", e);
     }
@@ -319,6 +338,7 @@ export function logQuery(
       }),
     }).catch(() => {});
   }
+  return null;
 }
 
 export default getDb;

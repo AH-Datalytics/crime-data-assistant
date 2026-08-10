@@ -79,7 +79,7 @@ console.log("\n1. Chart titles are sanitized (the leak)");
   check("the sanitize call sits inside the firewall, before the response is built", () => {
     for (const [name, text] of Object.entries(src)) {
       const sanitizeAt = text.indexOf("payload.chartConfig = sanitizeChartConfigTitle");
-      const returnAt = text.search(/return (?:NextResponse\.json\(payload|`data: \$\{JSON\.stringify\(payload)/);
+      const returnAt = text.search(/return (?:NextResponse\.json\((?:payload|finalized)|`data: \$\{JSON\.stringify\((?:payload|finalized))/);
       assert.ok(sanitizeAt > 0 && returnAt > 0, `${name}: could not locate firewall`);
       assert.ok(sanitizeAt < returnAt, `${name}: sanitization happens after the payload is returned`);
     }
@@ -156,6 +156,58 @@ console.log("\n3. Every chart-bearing log path captures the config");
         `${name} imports the serializer but never calls it`
       );
     }
+  });
+}
+
+console.log("\n4. Chart artifacts and browser receipts are wired end to end");
+{
+  for (const [name, text] of Object.entries(src)) {
+    check(`${name}: chart responses attach a bounded audit artifact`, () => {
+      assert.ok(text.includes("attachChartAuditToPayload"), `${name} does not attach chart audit artifacts`);
+      assert.ok(text.includes("chartAuditRequestId"), `${name} does not create a stable chart request id`);
+    });
+  }
+  for (const name of ["nibrs", "shr", "hate_crime"] as const) {
+    check(name + ": final artifact capture follows response sanitization", () => {
+      const text = src[name];
+      const firewallStart = text.indexOf("function jsonResp");
+      const sanitizeAt = text.indexOf("sanitizeChartConfigTitle(payload.chartConfig)", firewallStart);
+      const captureAt = text.indexOf("attachChartAuditToPayload(payload", firewallStart);
+      const responseAt = text.indexOf("NextResponse.json(finalized", firewallStart);
+      assert.ok(firewallStart >= 0 && sanitizeAt > firewallStart, name + ": response firewall not found");
+      assert.ok(captureAt > sanitizeAt, name + ": audit capture precedes final chart sanitization");
+      assert.ok(responseAt > captureAt, name + ": response is built before final artifact capture");
+    });
+  }
+  check("current: final artifact capture follows response normalization and sanitization", () => {
+    const text = src.current;
+    const firewallStart = text.indexOf("function sseEvent");
+    const normalizeAt = text.indexOf("normalizeConsolidatedDisplayRows", firewallStart);
+    const sanitizeAt = text.indexOf("sanitizeChartConfigTitle(payload.chartConfig)", firewallStart);
+    const captureAt = text.indexOf("attachChartAuditToPayload(payload", firewallStart);
+    const responseAt = text.indexOf("JSON.stringify(finalized)", firewallStart);
+    assert.ok(normalizeAt > firewallStart && sanitizeAt > normalizeAt, "current: final transformations not found");
+    assert.ok(captureAt > sanitizeAt, "current: audit capture precedes final chart sanitization");
+    assert.ok(responseAt > captureAt, "current: SSE is serialized before final artifact capture");
+  });
+  check("current: the server-only audit source never reaches the browser", () => {
+    const text = src.current;
+    const firewallStart = text.indexOf("function sseEvent");
+    const deleteAt = text.indexOf("delete payload.chartAuditSource", firewallStart);
+    const responseAt = text.indexOf("JSON.stringify(finalized)", firewallStart);
+    assert.ok(deleteAt > firewallStart && responseAt > deleteAt);
+  });
+  for (const component of ["components/ChartPanel.tsx", "components/NibrsChartPanel.tsx"]) {
+    check(`${component}: sends a structural browser receipt`, () => {
+      const text = fs.readFileSync(component, "utf8");
+      assert.ok(text.includes("useChartRenderReceipt"));
+      assert.ok(text.includes("requestId?: string"));
+    });
+  }
+  check("receipt endpoint persists only validated receipts", () => {
+    const text = fs.readFileSync("app/api/chart-render-receipt/route.ts", "utf8");
+    assert.ok(text.includes("receiptSchema.safeParse"));
+    assert.ok(text.includes("persistChartRenderReceipt"));
   });
 }
 

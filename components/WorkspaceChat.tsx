@@ -967,6 +967,7 @@ export default function WorkspaceChat({ heroData, heroAgencyCount, heroPopulatio
                         config={response.chartConfig}
                         rows={response.rows}
                         meta={response.chartMeta}
+                        requestId={response.requestId}
                       />
                     </div>
                   </div>

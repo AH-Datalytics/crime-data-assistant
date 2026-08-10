@@ -13,6 +13,7 @@ interface EmbedData {
   columns: string[];
   rows: Record<string, unknown>[];
   chartConfig: ChartConfig | null;
+  requestId?: string;
   chartMeta: ChartMeta | null;
 }
 
@@ -80,9 +81,9 @@ function EmbedContent() {
       {showChart && data.chartConfig && (
         <div style={{ flex: 1, minHeight: 0 }}>
           {isNibrs ? (
-            <NibrsChartPanel config={data.chartConfig} rows={data.rows} />
+            <NibrsChartPanel config={data.chartConfig} rows={data.rows} requestId={data.requestId} />
           ) : (
-            <ChartPanel config={data.chartConfig} rows={data.rows} meta={data.chartMeta} />
+            <ChartPanel config={data.chartConfig} rows={data.rows} meta={data.chartMeta} requestId={data.requestId} />
           )}
         </div>
       )}

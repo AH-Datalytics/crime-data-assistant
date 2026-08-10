@@ -135,11 +135,12 @@ export function logNibrsQuery(
   /** Phase 3 chart capture; pre-serialized via lib/chart-config-log's allowlist. */
   chartConfigJson: string | null = null,
   /** Bounded raw model text on no-SQL failures; see lib/no-sql-retry. Diagnostic only. */
-  modelResponseJson: string | null = null
-) {
+  modelResponseJson: string | null = null,
+  requestId: string | null = null
+): number | null {
   // Write to shared query_log.db via rtci-db's getWriteDb
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { getWriteDb, queryLogHasChartConfig, queryLogHasModelResponse } = require("@/lib/rtci-db");
+  const { getWriteDb, queryLogHasChartConfig, queryLogHasModelResponse, queryLogHasRequestId } = require("@/lib/rtci-db");
   const db = getWriteDb();
   if (db) {
     try {
@@ -147,6 +148,7 @@ export function logNibrsQuery(
       // database must keep logging exactly as before rather than fail every write.
       const withChartConfig = queryLogHasChartConfig(db);
       const withModelResponse = queryLogHasModelResponse(db);
+      const withRequestId = queryLogHasRequestId(db);
       const columns = "ts, tab, question, sql, rows, error, ms, response, guardrails, model, session_id, routing_confidence, routing_mode, routing_reason, query_guidance, query_contract" +
         (withChartConfig ? ", chart_config" : "") +
         (withModelResponse ? ", model_response" : "");
@@ -171,11 +173,16 @@ export function logNibrsQuery(
       ];
       if (withChartConfig) values.push(chartConfigJson);
       if (withModelResponse) values.push(modelResponseJson ? modelResponseJson.slice(0, 4000) : null);
-      db.prepare(`INSERT INTO query_log (${columns}) VALUES (${placeholders})`).run(...values);
+      if (withRequestId) values.push(requestId ? requestId.slice(0, 64) : null);
+      const finalColumns = columns + (withRequestId ? ", request_id" : "");
+      const finalPlaceholders = placeholders + (withRequestId ? ", ?" : "");
+      const result = db.prepare(`INSERT INTO query_log (${finalColumns}) VALUES (${finalPlaceholders})`).run(...values);
+      return Number(result.lastInsertRowid);
     } catch (e) {
       console.error("[logNibrsQuery] Failed:", e);
     }
   }
+  return null;
 }
 
 export default getNibrsDb;

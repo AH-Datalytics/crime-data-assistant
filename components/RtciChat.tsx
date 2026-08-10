@@ -567,7 +567,7 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
                 {response.chartConfig && showChart && (
                   <div ref={chartRef} className={`bg-white flex flex-col ${showTable && response.rows.length > 0 ? "md:flex-[1.15] md:min-w-0" : "w-full flex-1"}`}>
                     <div className="flex-1 min-h-0" style={{ minHeight: 280 }}>
-                      <ChartPanel config={response.chartConfig} rows={response.rows} meta={response.chartMeta} />
+                      <ChartPanel config={response.chartConfig} rows={response.rows} meta={response.chartMeta} requestId={response.requestId} />
                     </div>
                   </div>
                 )}

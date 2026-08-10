@@ -361,7 +361,7 @@ export default function NibrsChat({ visible }: NibrsChatProps) {
                 {currentResponse.chartConfig && showChart && (
                   <div ref={chartRef} className={`bg-white flex flex-col ${showTable && currentResponse.rows.length > 0 ? "md:flex-[1.15] md:min-w-0" : "w-full flex-1"}`}>
                     <div className="flex-1 min-h-0" style={{ minHeight: 280 }}>
-                      <NibrsChartPanel config={currentResponse.chartConfig} rows={currentResponse.rows} />
+                      <NibrsChartPanel config={currentResponse.chartConfig} rows={currentResponse.rows} requestId={currentResponse.requestId} />
                     </div>
                   </div>
                 )}

@@ -28,6 +28,7 @@ import {
   niceYTicks,
   shouldUsePieLegend,
 } from "@/lib/chart-layout";
+import { useChartRenderReceipt } from "./useChartRenderReceipt";
 
 const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
@@ -155,11 +156,10 @@ function isPlainYears(data: Record<string, unknown>[], xKey: string): boolean {
 interface NibrsChartPanelProps {
   config: ChartConfig;
   rows: Record<string, unknown>[];
+  requestId?: string;
 }
 
-export default function NibrsChartPanel({ config, rows }: NibrsChartPanelProps) {
-  if (!config || config.type === "none" || rows.length === 0) return null;
-
+function RenderedNibrsChartPanel({ config, rows, requestId }: NibrsChartPanelProps) {
   const hasYearMonth = rows.length > 0 && "year" in rows[0] && "month" in rows[0];
 
   const data = rows.map((r) => {
@@ -183,7 +183,6 @@ export default function NibrsChartPanel({ config, rows }: NibrsChartPanelProps) 
   const { data: chartData, effectiveYKeys, seriesOverflow } = config.type === "scatter"
     ? { data, effectiveYKeys: config.yAxis, seriesOverflow: false }
     : detectAndPivotChartData(data, xKey, config.yAxis);
-  if (seriesOverflow) return null;
 
   const dataYears = new Set(
     chartData.map((d) => String(d[daily ? config.xAxis : xKey] ?? "").slice(0, 4))
@@ -195,6 +194,8 @@ export default function NibrsChartPanel({ config, rows }: NibrsChartPanelProps) 
   const multiSeries = effectiveYKeys.length > 1;
   const dataLen = chartData.length;
   const xAxisDataKey = daily ? config.xAxis : ym ? xKey : config.xAxis;
+  const receiptRef = useChartRenderReceipt({ requestId, component: "NibrsChartPanel", chartType: config.type, effectiveXKey: xAxisDataKey, effectiveYKeys });
+  if (seriesOverflow) return null;
 
   // Detect plain-year x-axis (multi-year queries)
   const plainYears = !ym && !daily && isPlainYears(data, xAxisDataKey);
@@ -247,7 +248,7 @@ export default function NibrsChartPanel({ config, rows }: NibrsChartPanelProps) 
         : String(label ?? "");
 
   return (
-    <div className="h-full flex flex-col" style={{ background: "#F5F0E8" }}>
+    <div ref={receiptRef} className="h-full flex flex-col" style={{ background: "#F5F0E8" }}>
       {config.title && (
         <div
           className="text-[16px] sm:text-[20px]"
@@ -490,4 +491,9 @@ export default function NibrsChartPanel({ config, rows }: NibrsChartPanelProps) 
       </div>
     </div>
   );
+}
+
+export default function NibrsChartPanel(props: NibrsChartPanelProps) {
+  if (!props.config || props.config.type === "none" || props.rows.length === 0) return null;
+  return <RenderedNibrsChartPanel {...props} />;
 }

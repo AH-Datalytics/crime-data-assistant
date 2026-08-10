@@ -24,6 +24,7 @@ export interface ChartConfig {
 
 export interface QueryResponse {
   success: true;
+  requestId?: string;
   question: string;
   sql: string;
   explanation: string;
@@ -89,6 +90,9 @@ export type StreamEvent =
   | { type: "explanation"; text: string; title: string }
   | {
       type: "result";
+      requestId?: string;
+      /** Server-only hint removed by sseEvent before the payload is sent. */
+      chartAuditSource?: "current" | "historical";
       sql: string;
       explanation: string;
       title: string;

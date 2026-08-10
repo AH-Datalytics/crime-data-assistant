@@ -756,7 +756,7 @@ export default function WorkspaceChat({ sourceYearRanges }: WorkspaceChatProps) 
                             showClearance={response.showClearance ?? true}
                           />
                         ) : (
-                          <ChartPanel config={response.chartConfig!} rows={response.rows} meta={response.chartMeta} />
+                          <ChartPanel config={response.chartConfig!} rows={response.rows} meta={response.chartMeta} requestId={response.requestId} />
                         )}
                       </div>
                     </div>

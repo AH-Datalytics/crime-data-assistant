@@ -29,6 +29,7 @@ import {
   niceYTicks,
   shouldUsePieLegend,
 } from "@/lib/chart-layout";
+import { useChartRenderReceipt } from "./useChartRenderReceipt";
 
 const MONTH_NAMES = [
   "Jan", "Feb", "Mar", "Apr", "May", "Jun",
@@ -207,11 +208,10 @@ interface ChartPanelProps {
   config: ChartConfig;
   rows: Record<string, unknown>[];
   meta?: ChartMeta | null;
+  requestId?: string;
 }
 
-function ChartPanel({ config, rows, meta }: ChartPanelProps) {
-    if (!config || config.type === "none" || rows.length === 0) return null;
-
+function RenderedChartPanel({ config, rows, meta, requestId }: ChartPanelProps) {
     const hasYearMonth =
       rows.length > 0 && "year" in rows[0] && "month" in rows[0];
 
@@ -236,7 +236,6 @@ function ChartPanel({ config, rows, meta }: ChartPanelProps) {
     const { data: chartData, effectiveYKeys, seriesOverflow } = config.type === "scatter"
       ? { data, effectiveYKeys: config.yAxis, seriesOverflow: false }
       : detectAndPivotChartData(data, xKey, config.yAxis);
-    if (seriesOverflow) return null;
 
     const dataYears = new Set(
       chartData.map((d) => String(d[daily ? config.xAxis : xKey] ?? "").slice(0, 4))
@@ -255,6 +254,8 @@ function ChartPanel({ config, rows, meta }: ChartPanelProps) {
     const hasEmployeesDisclaimer = employeesYears.length > 0;
 
     const xAxisDataKey = daily ? config.xAxis : ym ? xKey : config.xAxis;
+    const receiptRef = useChartRenderReceipt({ requestId, component: "ChartPanel", chartType: config.type, effectiveXKey: xAxisDataKey, effectiveYKeys });
+    if (seriesOverflow) return null;
 
     // Detect plain-year x-axis (historical queries)
     const plainYears = !ym && !daily && isPlainYears(chartData, xAxisDataKey);
@@ -311,7 +312,7 @@ function ChartPanel({ config, rows, meta }: ChartPanelProps) {
           : String(label ?? "");
 
     return (
-      <div className="h-full flex flex-col" style={{ background: "#F5F0E8" }}>
+      <div ref={receiptRef} className="h-full flex flex-col" style={{ background: "#F5F0E8" }}>
         {config.title && (
           <div
             className="text-[16px] sm:text-[20px]"
@@ -650,6 +651,11 @@ function ChartPanel({ config, rows, meta }: ChartPanelProps) {
         </div>
       </div>
     );
+}
+
+function ChartPanel(props: ChartPanelProps) {
+  if (!props.config || props.config.type === "none" || props.rows.length === 0) return null;
+  return <RenderedChartPanel {...props} />;
 }
 
 export default ChartPanel;

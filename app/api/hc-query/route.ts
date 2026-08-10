@@ -45,6 +45,7 @@ import { extractQueryContext } from "@/lib/query-context";
 import { runGuardrails } from "@/lib/guardrails";
 import { finalizeGuardrailTags } from "@/lib/guardrail-tag-state";
 import { serializeChartConfigForLog } from "@/lib/chart-config-log";
+import { attachChartAuditToPayload, createChartAuditRequestId } from "@/lib/chart-audit";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function jsonResp(data: Record<string, any> | QueryError, status = 200) {
@@ -58,7 +59,10 @@ function jsonResp(data: Record<string, any> | QueryError, status = 200) {
   // touched -- a leaking title was blanked in the header while the chart still
   // showed it. Applied here so every response path is covered.
   if (payload.chartConfig) payload.chartConfig = sanitizeChartConfigTitle(payload.chartConfig);
-  return NextResponse.json(payload, { status });
+  const finalized = payload.requestId
+    ? attachChartAuditToPayload(payload, { source: "hate_crime", requestId: payload.requestId })
+    : payload;
+  return NextResponse.json(finalized, { status });
 }
 
 /** Mandatory caveats appended to every hate crime response */
@@ -143,6 +147,8 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const question = body?.question?.trim();
+    const chartAuditRequestId = createChartAuditRequestId();
+    let chartAuditQueryLogId: number | null = null;
     const sessionId: string | null = ((body?.sessionId as string) || "").slice(0, 64) || null;
 
     // Page token validation
@@ -205,7 +211,10 @@ export async function POST(req: NextRequest) {
       sid: string | null = null,
       /** Phase 3 chart capture; pre-serialized via the allowlist in lib/chart-config-log. */
       chartConfigJson: string | null = null
-    ) => logQuery(q, sqlText, rowCount, logError, ms, logResponse, tabName, guardrails, model, sid, routingMeta, chartConfigJson);
+    ) => {
+      chartAuditQueryLogId = logQuery(q, sqlText, rowCount, logError, ms, logResponse, tabName, guardrails, model, sid, routingMeta, chartConfigJson, chartAuditRequestId);
+      return chartAuditQueryLogId;
+    };
     const routeGuardrailsFired: string[] = [];
     const recordContractValidation = (contractResult: QueryContractSqlValidation) => {
       const contractGuardrails = queryContractGuardrails(contractResult);
@@ -320,8 +329,8 @@ export async function POST(req: NextRequest) {
     const metadata = planSaysQueryBearing ? null : answerMetadataQuestion("hate_crime", question, getHateCrimeDb());
     if (metadata) {
       const executionMs = Date.now() - start;
-      writeLog(question, metadata.sql, metadata.rowCount, null, executionMs, metadata.explanation, "hate_crime", ["deterministic-metadata", "metadata-coverage-answer"], "deterministic", sessionId);
-      return jsonResp({
+      writeLog(question, metadata.sql, metadata.rowCount, null, executionMs, metadata.explanation, "hate_crime", ["deterministic-metadata", "metadata-coverage-answer"], "deterministic", sessionId, serializeChartConfigForLog(metadata.chartConfig, metadata.columns));
+      return jsonResp(attachChartAuditToPayload({
         success: true,
         question,
         sql: metadata.sql,
@@ -334,7 +343,7 @@ export async function POST(req: NextRequest) {
         chartConfig: metadata.chartConfig,
         chartMeta: metadata.chartMeta,
         executionTimeMs: executionMs,
-      });
+      }, { source: "hate_crime", requestId: chartAuditRequestId, queryLogId: chartAuditQueryLogId }));
     }
 
     // Check response cache (only for standalone questions)
@@ -737,13 +746,13 @@ export async function POST(req: NextRequest) {
       setCache(question, "hate_crime", { sql, explanation: claude.explanation || "", title: claude.title, chartType: claude.chartType, xAxis: claude.xAxis, yAxis: claude.yAxis, yAxisLabel: claude.yAxisLabel });
     }
 
-    return jsonResp({
+    return jsonResp(attachChartAuditToPayload({
       success: true, question, sql, explanation,
       title: claude.title || "", columns, rows,
       rowCount: rows.length, truncated: rows.length >= 1000,
       chartConfig, chartMeta: { source: "FBI Hate Crime Statistics", agencyCount: 0, population: null },
       executionTimeMs: totalMs,
-    });
+    }, { source: "hate_crime", requestId: chartAuditRequestId, queryLogId: chartAuditQueryLogId }));
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("[hate_crime] Query API error:", msg);

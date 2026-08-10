@@ -7,6 +7,7 @@ import { validateSqlSchema } from "@/lib/schema-validation";
 import { executeWithTimeoutSync } from "@/lib/query-timeout";
 import { buildChartConfig } from "@/lib/chart-config";
 import { serializeChartConfigForLog } from "@/lib/chart-config-log";
+import { attachChartAuditToPayload, createChartAuditRequestId } from "@/lib/chart-audit";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { checkSessionLimit, maybeCleanup } from "@/lib/captcha";
 import { RTCI } from "@/lib/dynamic-facts";
@@ -83,7 +84,12 @@ function sseEvent(event: StreamEvent): string {
     const safeText = sanitizeUserFacingNarrative(payload.text, undefined).explanation;
     payload.text = safeText ? consolidatedDisplayText(safeText) : safeText;
   }
-  return `data: ${JSON.stringify(payload)}\n\n`;
+  const chartAuditSource = payload.chartAuditSource;
+  delete payload.chartAuditSource;
+  const finalized = payload.requestId && (chartAuditSource === "current" || chartAuditSource === "historical")
+    ? attachChartAuditToPayload(payload, { source: chartAuditSource, requestId: String(payload.requestId) })
+    : payload;
+  return `data: ${JSON.stringify(finalized)}\n\n`;
 }
 import {
   containsInternalScaffold,
@@ -417,6 +423,8 @@ export async function POST(req: NextRequest) {
   let question = "";
   let sessionId: string | null = null;
   let body: Record<string, unknown>;
+  const chartAuditRequestId = createChartAuditRequestId();
+  let chartAuditQueryLogId: number | null = null;
 
   try {
     body = await req.json();
@@ -488,7 +496,10 @@ export async function POST(req: NextRequest) {
      * failure to serialize degrades to null rather than losing the whole log row.
      */
     chartConfigJson: string | null = null
-  ) => logQuery(q, sqlText, rowCount, logError, ms, logResponse, tabName, guardrails, model, sid, routingMeta, chartConfigJson);
+  ) => {
+    chartAuditQueryLogId = logQuery(q, sqlText, rowCount, logError, ms, logResponse, tabName, guardrails, model, sid, routingMeta, chartConfigJson, chartAuditRequestId);
+    return chartAuditQueryLogId;
+  };
 
   const tab = body?.mode === "historical" ? "historical" : "current";
   const demographicRateFollowup = detectDemographicRateDenominatorFollowup(
@@ -729,10 +740,13 @@ export async function POST(req: NextRequest) {
       const ms = Date.now() - totalStart;
       // Deterministic answers render charts too; same capture as the model path.
       writeLog(question, indexedStatePlan.sql, rows.length, null, ms, indexedStatePlan.explanation, tab, [indexedStatePlan.guardrail], "deterministic", sessionId, serializeChartConfigForLog(rows.length > 0 ? indexedStatePlan.chartConfig : null, columns));
+      attachChartAuditToPayload({ chartConfig: rows.length > 0 ? indexedStatePlan.chartConfig : null, columns, rows }, { source: tab, requestId: chartAuditRequestId, queryLogId: chartAuditQueryLogId });
       const stream = new ReadableStream({
         start(controller) {
           controller.enqueue(encoder.encode(sseEvent({
             type: "result",
+            requestId: chartAuditRequestId,
+            chartAuditSource: tab,
             sql: indexedStatePlan.sql,
             explanation: indexedStatePlan.explanation,
             title: indexedStatePlan.title,
@@ -783,12 +797,15 @@ export async function POST(req: NextRequest) {
         // Deterministic answers render charts too; same capture as the model path.
         serializeChartConfigForLog(rows.length > 0 ? multiCityTrend.chartConfig : null, columns)
       );
+      attachChartAuditToPayload({ chartConfig: rows.length > 0 ? multiCityTrend.chartConfig : null, columns, rows }, { source: tab, requestId: chartAuditRequestId, queryLogId: chartAuditQueryLogId });
       const stream = new ReadableStream({
         start(controller) {
           controller.enqueue(
             encoder.encode(
               sseEvent({
                 type: "result",
+                requestId: chartAuditRequestId,
+                chartAuditSource: tab,
                 sql: multiCityTrend.sql,
                 explanation: multiCityTrend.explanation,
                 title: multiCityTrend.title,
@@ -863,12 +880,15 @@ export async function POST(req: NextRequest) {
       const columns = rows.length > 0 ? Object.keys(rows[0]) : historicalCityChange.columns;
       // Deterministic answers render charts too; same capture as the model path.
       writeLog(question, historicalCityChange.sql, rows.length, null, ms, historicalCityChange.explanation, tab, [historicalCityChange.guardrail], "deterministic", sessionId, serializeChartConfigForLog(rows.length > 0 ? historicalCityChange.chartConfig : null, columns));
+      attachChartAuditToPayload({ chartConfig: rows.length > 0 ? historicalCityChange.chartConfig : null, columns, rows }, { source: tab, requestId: chartAuditRequestId, queryLogId: chartAuditQueryLogId });
       const stream = new ReadableStream({
         start(controller) {
           controller.enqueue(
             encoder.encode(
               sseEvent({
                 type: "result",
+                requestId: chartAuditRequestId,
+                chartAuditSource: tab,
                 sql: historicalCityChange.sql!,
                 explanation: historicalCityChange.explanation,
                 title: historicalCityChange.title,
@@ -942,6 +962,7 @@ export async function POST(req: NextRequest) {
     const ms = Date.now() - totalStart;
     // Deterministic answers render charts too; same capture as the model path.
     writeLog(question, metadata.sql, metadata.rowCount, null, ms, metadata.explanation, tab, ["deterministic-metadata", "metadata-coverage-answer"], "deterministic", sessionId, serializeChartConfigForLog(metadata.chartConfig, metadata.columns ?? []));
+    attachChartAuditToPayload({ chartConfig: metadata.chartConfig, columns: metadata.columns ?? [], rows: metadata.rows ?? [] }, { source: tab, requestId: chartAuditRequestId, queryLogId: chartAuditQueryLogId });
 
     const stream = new ReadableStream({
       start(controller) {
@@ -949,6 +970,8 @@ export async function POST(req: NextRequest) {
           encoder.encode(
             sseEvent({
               type: "result",
+              requestId: chartAuditRequestId,
+              chartAuditSource: tab,
               sql: metadata.sql,
               explanation: metadata.explanation,
               title: metadata.title,
@@ -1873,6 +1896,7 @@ export async function POST(req: NextRequest) {
           console.warn("[query][population-denominator] Implausible population denominator detected");
         }
         const truncated = rows.length >= maxLimit;
+        attachChartAuditToPayload({ chartConfig, columns, rows }, { source: tab, requestId: chartAuditRequestId, queryLogId: chartAuditQueryLogId });
 
         // Step 5b2: Single-row trend warning
         const singleRowWarning = checkSingleRowTrend(question, rows.length);
@@ -1910,6 +1934,8 @@ export async function POST(req: NextRequest) {
           encoder.encode(
             sseEvent({
               type: "result",
+              requestId: chartAuditRequestId,
+              chartAuditSource: tab,
               sql,
               explanation: claude.explanation,
               title: claude.title || "Results",

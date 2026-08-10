@@ -80,9 +80,24 @@ const DIGEST_QUERY_COLUMNS =
   "routing_confidence, routing_mode, routing_reason, query_guidance, query_contract";
 
 function getQueries() {
+  const columns = new Set(db.prepare("PRAGMA table_info(query_log)").all().map((column) => column.name));
+  const selected = DIGEST_QUERY_COLUMNS + (columns.has("chart_config") ? ", chart_config" : ", NULL AS chart_config");
   return db
-    .prepare(`SELECT ${DIGEST_QUERY_COLUMNS} FROM query_log WHERE ts >= ? AND ts < ? ORDER BY ts ASC`)
+    .prepare(`SELECT ${selected} FROM query_log WHERE ts >= ? AND ts < ? ORDER BY ts ASC`)
     .all(cutoff, cutoffEnd);
+}
+
+function attachChartAuditResults(queries) {
+  const table = db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='chart_audit_results'").get();
+  const ids = queries.map((query) => query.id).filter((id) => id != null);
+  const results = table && ids.length
+    ? db.prepare(`SELECT query_log_id, status, summary FROM chart_audit_results WHERE query_log_id IN (${ids.map(() => "?").join(",")})`).all(...ids)
+    : [];
+  const byId = new Map(results.map((result) => [result.query_log_id, result]));
+  for (const query of queries) {
+    if (!query.chart_config) query.chartAudit = { status: "not-applicable", summary: "No chart was produced." };
+    else query.chartAudit = byId.get(query.id) || { status: "unverified", summary: "A chart was returned, but rendered-chart verification is not available." };
+  }
 }
 const INTERNAL_SESSION =
   /(?:live-replay|codex|deploy-smoke|targeted-probe|layer3|canary|scoreboard|benchmark|eval)/i;
@@ -1079,7 +1094,10 @@ h1{font-size:23px;margin:0 0 4px}h2{font-size:18px;margin:28px 0 12px}.sub{color
     const rowSummary = isControlledOutcomeError(query.error)
       ? "No database query needed; the requested measure is outside this source"
       : query.error ? `Error: ${evidenceExcerpt(query.error, 180)}` : `${Number(query.rows) || 0} database row${Number(query.rows) === 1 ? "" : "s"} returned`;
-    html += `<div class="alignment ${assessment.tone}"><div class="label">Query ${query.id} | ${escapeHtml(query.tab || "unknown")}</div><div class="title">${escapeHtml(assessment.label)}</div><div class="label">User question</div><div class="question">${escapeHtml(query.question || "")}</div><div class="label">SQL sent to the database</div><div class="evidence">${escapeHtml(evidenceExcerpt(query.sql))}</div><div class="row"><strong>Database result:</strong> ${escapeHtml(rowSummary)}</div><div class="label">Written answer</div><div class="question">${escapeHtml(evidenceExcerpt(query.response, 420))}</div></div>`;
+    const chartAudit = query.chartAudit || { status: "not-applicable", summary: "No chart was produced." };
+    const chartLabel = chartAudit.status === "incorrect" ? "Chart problem"
+      : chartAudit.status === "needs-review" ? "Chart needs review" : "Chart";
+    html += `<div class="alignment ${assessment.tone}"><div class="label">Query ${query.id} | ${escapeHtml(query.tab || "unknown")}</div><div class="title">${escapeHtml(assessment.label)}</div><div class="label">User question</div><div class="question">${escapeHtml(query.question || "")}</div><div class="label">SQL sent to the database</div><div class="evidence">${escapeHtml(evidenceExcerpt(query.sql))}</div><div class="row"><strong>Database result:</strong> ${escapeHtml(rowSummary)}</div><div class="row"><strong>${chartLabel}:</strong> ${escapeHtml(chartAudit.summary)}</div><div class="label">Written answer</div><div class="question">${escapeHtml(evidenceExcerpt(query.response, 420))}</div></div>`;
   }
   if (queries.length > 12) html += `<p class="quiet">${queries.length - 12} earlier real-user quer${queries.length - 12 === 1 ? "y was" : "ies were"} omitted from this compact view.</p>`;
 
@@ -1902,6 +1920,7 @@ async function main() {
   );
   const allQueries = getQueries();
   const queries = allQueries.filter(isHumanQuery);
+  attachChartAuditResults(queries);
   const excluded = allQueries.length - queries.length;
   console.log(`Found ${queries.length} user queries (${excluded} automated/test queries excluded)`);
 

@@ -115,6 +115,13 @@ assert.match(email, /No mismatch detected by current checks/);
 assert.match(email, /SQL sent to the database/);
 assert.match(email, /SELECT year, count FROM agency_monthly/);
 assert.match(email, /Monthly robbery counts for Chicago/);
+assert.match(email, /<strong>Chart:<\/strong> No chart was produced\./);
+
+const chartEmail = buildHumanEmail(review.stats, [], [{
+  ...reviewQueries[reviewQueries.length - 1],
+  chartAudit: { status: "incorrect", summary: "Expected Not cleared (9), but the rendered chart showed zero." },
+}], null);
+assert.match(chartEmail, /<strong>Chart problem:<\/strong> Expected Not cleared \(9\), but the rendered chart showed zero\./);
 assert.equal(isHumanQuery({ session_id: "live-replay-2026-08-09-R01" }), false);
 assert.equal(isHumanQuery({ session_id: "ordinary-user-session" }), true);
 

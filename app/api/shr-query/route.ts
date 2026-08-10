@@ -10,6 +10,7 @@ import { extractQueryContext } from "@/lib/query-context";
 import { runGuardrails } from "@/lib/guardrails";
 import { finalizeGuardrailTags } from "@/lib/guardrail-tag-state";
 import { serializeChartConfigForLog } from "@/lib/chart-config-log";
+import { attachChartAuditToPayload, createChartAuditRequestId } from "@/lib/chart-audit";
 import { asksForCountsInsteadOfRates } from "@/lib/rate-intent";
 import { explicitStateIntent } from "@/lib/explicit-state-intent";
 import type { QueryError } from "@/lib/types";
@@ -74,7 +75,10 @@ function jsonResp(data: Record<string, any> | QueryError, status = 200) {
     payload.chartConfig = sanitizeChartConfigTitle(payload.chartConfig);
     if (typeof payload.chartConfig?.title === "string") payload.chartConfig.title = consolidatedDisplayText(payload.chartConfig.title);
   }
-  return NextResponse.json(payload, { status });
+  const finalized = payload.requestId
+    ? attachChartAuditToPayload(payload, { source: "shr", requestId: payload.requestId })
+    : payload;
+  return NextResponse.json(finalized, { status });
 }
 
 function countyKey(value: string): string {
@@ -134,6 +138,8 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const question = body?.question?.trim();
+    const chartAuditRequestId = createChartAuditRequestId();
+    let chartAuditQueryLogId: number | null = null;
     const sessionId: string | null = ((body?.sessionId as string) || "").slice(0, 64) || null;
 
     // Page token validation
@@ -221,7 +227,10 @@ export async function POST(req: NextRequest) {
       sid: string | null = null,
       /** Phase 3 chart capture; pre-serialized via the allowlist in lib/chart-config-log. */
       chartConfigJson: string | null = null
-    ) => logQuery(q, sqlText, rowCount, logError, ms, logResponse, tabName, guardrails, model, sid, routingMeta, chartConfigJson);
+    ) => {
+      chartAuditQueryLogId = logQuery(q, sqlText, rowCount, logError, ms, logResponse, tabName, guardrails, model, sid, routingMeta, chartConfigJson, chartAuditRequestId);
+      return chartAuditQueryLogId;
+    };
     const routeGuardrailsFired: string[] = [];
     const recordContractValidation = (contractResult: QueryContractSqlValidation) => {
       const contractGuardrails = queryContractGuardrails(contractResult);
@@ -339,8 +348,8 @@ export async function POST(req: NextRequest) {
     const metadata = planSaysQueryBearing ? null : answerMetadataQuestion("shr", question, getShrDb());
     if (metadata) {
       const executionMs = Date.now() - start;
-      writeLog(question, metadata.sql, metadata.rowCount, null, executionMs, metadata.explanation, "shr", ["deterministic-metadata", "metadata-coverage-answer"], "deterministic", sessionId);
-      return jsonResp({
+      writeLog(question, metadata.sql, metadata.rowCount, null, executionMs, metadata.explanation, "shr", ["deterministic-metadata", "metadata-coverage-answer"], "deterministic", sessionId, serializeChartConfigForLog(metadata.chartConfig, metadata.columns));
+      return jsonResp(attachChartAuditToPayload({
         success: true,
         question,
         sql: metadata.sql,
@@ -353,7 +362,7 @@ export async function POST(req: NextRequest) {
         chartConfig: metadata.chartConfig,
         chartMeta: metadata.chartMeta,
         executionTimeMs: executionMs,
-      });
+      }, { source: "shr", requestId: chartAuditRequestId, queryLogId: chartAuditQueryLogId }));
     }
 
     // Exact-year city murder totals and monthly series use canonical SHR ORIs,
@@ -380,18 +389,19 @@ export async function POST(req: NextRequest) {
         const coverageStatuses = [...new Set(rows.map((row) => String(row.shr_status || "")).filter(Boolean))];
         const coverageTags = coverageStatuses.map((status) => `shr-coverage-${status.replace(/_/g, "-")}`);
         if (rows.some((row) => row.murder_victims == null)) coverageTags.push("shr-coverage-presentation-changed");
-        writeLog(question, contract.sql, rows.length, null, executionMs, explanation, "shr", ["deterministic-murder", ...coverageTags, ...routeGuardrailsFired], "deterministic", sessionId);
-        return jsonResp({
+        const chartConfig = applyChartCustomizations({
+          type: murderPlan.chartType, xAxis: murderPlan.xAxis, yAxis: murderPlan.yAxis,
+          yAxisLabel: "Murder Victims", title: murderPlan.title,
+        }, question);
+        writeLog(question, contract.sql, rows.length, null, executionMs, explanation, "shr", ["deterministic-murder", ...coverageTags, ...routeGuardrailsFired], "deterministic", sessionId, serializeChartConfigForLog(chartConfig, murderPlan.columns));
+        return jsonResp(attachChartAuditToPayload({
           success: true, question, sql: contract.sql, explanation,
           title: murderPlan.title, columns: murderPlan.columns, rows,
           rowCount: rows.length, truncated: false,
-          chartConfig: applyChartCustomizations({
-            type: murderPlan.chartType, xAxis: murderPlan.xAxis, yAxis: murderPlan.yAxis,
-            yAxisLabel: "Murder Victims", title: murderPlan.title,
-          }, question),
+          chartConfig,
           chartMeta: { source: "FBI SHR", agencyCount: 0, population: null },
           executionTimeMs: executionMs,
-        });
+        }, { source: "shr", requestId: chartAuditRequestId, queryLogId: chartAuditQueryLogId }));
       } catch (dbErr) {
         const msg = dbErr instanceof Error ? dbErr.message : String(dbErr);
         writeLog(question, contract.sql, 0, `DB: ${msg}`, Date.now() - start, null, "shr", ["deterministic-murder"], "deterministic", sessionId);
@@ -653,14 +663,15 @@ export async function POST(req: NextRequest) {
         }
 
         const displayTitle = normalizeShrAgencyText(title);
-        writeLog(question, sql, rows.length, null, Date.now() - start, totalExplanation, "shr", detGuardrails, "deterministic", sessionId);
-        return jsonResp({
+        const chartConfig = applyChartCustomizations({ type: "line", xAxis: wantsMonthly ? "month" : "year", yAxis: ["fatal_shootings"], yAxisLabel: "Fatal Shootings", title: displayTitle }, question);
+        writeLog(question, sql, rows.length, null, Date.now() - start, totalExplanation, "shr", detGuardrails, "deterministic", sessionId, serializeChartConfigForLog(chartConfig, columns.slice()));
+        return jsonResp(attachChartAuditToPayload({
           success: true, question, sql, explanation: totalExplanation,
           title: displayTitle, columns, rows, rowCount: rows.length, truncated: false,
-        chartConfig: applyChartCustomizations({ type: "line", xAxis: wantsMonthly ? "month" : "year", yAxis: ["fatal_shootings"], yAxisLabel: "Fatal Shootings", title: displayTitle }, question),
+        chartConfig,
           chartMeta: { source: "FBI SHR", agencyCount: 0, population: null },
           executionTimeMs: Date.now() - start,
-        });
+        }, { source: "shr", requestId: chartAuditRequestId, queryLogId: chartAuditQueryLogId }));
       } catch (dbErr) {
         const msg = dbErr instanceof Error ? dbErr.message : String(dbErr);
         writeLog(question, sql, 0, `DB: ${msg}`, Date.now() - start, null, "shr", ["deterministic-shooting"], "deterministic", sessionId);
@@ -1303,7 +1314,7 @@ export async function POST(req: NextRequest) {
       setCache(question, "shr", { sql, explanation: claude.explanation || "", title: claude.title, chartType: claude.chartType, xAxis: claude.xAxis, yAxis: claude.yAxis, yAxisLabel: claude.yAxisLabel });
     }
 
-    return jsonResp({
+    return jsonResp(attachChartAuditToPayload({
       success: true,
       question,
       sql,
@@ -1316,7 +1327,7 @@ export async function POST(req: NextRequest) {
       chartConfig,
       chartMeta: { source: "FBI SHR", agencyCount: 0, population: null },
       executionTimeMs: totalMs,
-    });
+    }, { source: "shr", requestId: chartAuditRequestId, queryLogId: chartAuditQueryLogId }));
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("SHR query error:", msg);
