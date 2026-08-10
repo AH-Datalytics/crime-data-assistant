@@ -41,7 +41,16 @@ db.exec(`
     ('VA0290100', 2025, 'VA', 'FAIRFAX', 'County', 1125193, '9A', 'N', 'E'),
     ('CA0193500', 2016, 'CA', 'LAKEWOOD', 'City', 81921, '3', 'N', 'C'),
     ('KY0560200', 2025, 'KY', 'LOUISVILLE', 'City', 300404, '1B', 'N', 'E'),
-    ('KY0568000', 2025, 'KY', 'LOUISVILLE METRO', 'County', 691630, '1A', 'N', 'E');
+    ('KY0568000', 2025, 'KY', 'LOUISVILLE METRO', 'County', 691630, '1A', 'N', 'E'),
+    -- Production spellings, verbatim. NYPD files under 'NEW YORK'; the only row
+    -- literally named 'NEW YORK CITY' is a county agency with no population, so
+    -- a NEW YORK CITY lookup found nothing and reported NYPD as not in source.
+    ('NY0303000', 2025, 'NY', 'NEW YORK', 'City', 8496850, '1A', 'N', 'E'),
+    ('NY0230000', 2025, 'NY', 'NEW YORK CITY', 'County', 0, '9D', 'N', 'E'),
+    -- St. Louis exists under both spellings as genuinely different agencies.
+    ('MOSPD0000', 2025, 'MO', 'SAINT LOUIS', 'City', 274819, '1C', 'N', 'E'),
+    ('MO0957300', 2025, 'MO', 'SAINT LOUIS', 'City', 34147, '4', 'N', 'E'),
+    ('MO0956200', 2025, 'MO', 'ST LOUIS', 'City', 9052, '6', 'N', 'E');
   INSERT INTO agency_county_crosswalk VALUES
     ('MO04800', 'MO0480000', 'Jackson', 'MO', 'JACKSON'),
     ('MO04823', 'MO0482300', 'Jackson County Park Rgrs', 'MO', 'JACKSON'),
@@ -160,6 +169,31 @@ db.exec(`
     summaryMonths: 3,
     unit: "rate",
   }).display, false);
+}
+
+// --- City aliases: the two places production 8375 got wrong ---
+{
+  // "New York City" must find NYPD, which files under city = 'NEW YORK'
+  const plan = resolveNibrsPlaces(db, "murder clearances in New York City, NY in 2025");
+  assert.ok(plan);
+  assert.equal(plan.places[0].status, "resolved", "NYPD must not be reported as absent from NIBRS");
+  assert.equal(plan.places[0].oriYears[0].ori, "NY0303000");
+}
+
+{
+  // "St Louis" must reach the 275k-population city department filed as
+  // 'SAINT LOUIS', not the 9k-population agency literally named 'ST LOUIS'
+  const plan = resolveNibrsPlaces(db, "murders in St Louis, MO in 2025");
+  assert.ok(plan);
+  assert.equal(plan.places[0].status, "resolved");
+  assert.equal(plan.places[0].oriYears[0].ori, "MOSPD0000");
+}
+
+{
+  // The other spelling resolves identically
+  const plan = resolveNibrsPlaces(db, "murders in Saint Louis, MO in 2025");
+  assert.ok(plan);
+  assert.equal(plan.places[0].oriYears[0].ori, "MOSPD0000");
 }
 
 // --- resolvedOriEnforcementIssue: city-name SQL that bypasses resolved ORIs ---

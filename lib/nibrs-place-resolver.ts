@@ -3,6 +3,7 @@ import { buildQueryContract, type QueryContract, type QueryContractGeography } f
 import { pastCompleteCalendarYearsRange } from "./time-conventions";
 import type { SourceResolutionStatus } from "./source-contracts";
 import { findConsolidatedAgency } from "./agency-consolidations";
+import { cityLookupCandidates } from "./nibrs-city-aliases";
 
 export type NibrsPlaceKind =
   | "city_police"
@@ -189,16 +190,21 @@ function resolveCity(
       : placeResult(geography, contractIndex, "city_police", "covered", [], `The successor ORI has no agency rows during ${startYear}-${endYear}.`, `${consolidated.alias}, ${consolidated.state}`);
   }
   const placeholders = states.map(() => "?").join(",");
+  // Every spelling the agencies table might file this city under. Matching one
+  // literal silently picks whichever agency happens to carry it -- see
+  // lib/nibrs-city-aliases.
+  const cityCandidates = cityLookupCandidates(cityName);
+  const cityPlaceholders = cityCandidates.map(() => "?").join(",");
   const rows = db.prepare(`
     SELECT ori, year, population, pop_group, agency_type
     FROM agencies
-    WHERE city = ?
+    WHERE city IN (${cityPlaceholders})
       AND state IN (${placeholders})
       AND agency_type = 'City'
       AND population > 0
       AND year BETWEEN ? AND ?
     ORDER BY year, pop_group, population DESC, ori
-  `).all(cityName.toUpperCase(), ...states, startYear, endYear) as AgencyRow[];
+  `).all(...cityCandidates, ...states, startYear, endYear) as AgencyRow[];
   const oriYears = choosePrimaryByYear(rows);
   if (oriYears.length > 0) {
     return placeResult(
@@ -214,8 +220,8 @@ function resolveCity(
   const historical = db.prepare(`
     SELECT MIN(year) AS first_year, MAX(year) AS last_year
     FROM agencies
-    WHERE city = ? AND state IN (${placeholders}) AND agency_type = 'City'
-  `).get(cityName.toUpperCase(), ...states) as { first_year: number | null; last_year: number | null } | undefined;
+    WHERE city IN (${cityPlaceholders}) AND state IN (${placeholders}) AND agency_type = 'City'
+  `).get(...cityCandidates, ...states) as { first_year: number | null; last_year: number | null } | undefined;
   const crosswalk = tableExists(db, "agency_county_crosswalk")
     ? db.prepare(`
         SELECT 1
