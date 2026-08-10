@@ -4,6 +4,7 @@ import { pastCompleteCalendarYearsRange } from "./time-conventions";
 import type { SourceResolutionStatus } from "./source-contracts";
 import { findConsolidatedAgency } from "./agency-consolidations";
 import { cityLookupCandidates } from "./nibrs-city-aliases";
+import { findNibrsAgencyAlias } from "./nibrs-agency-aliases";
 
 export type NibrsPlaceKind =
   | "city_police"
@@ -189,6 +190,24 @@ function resolveCity(
       ? placeResult(geography, contractIndex, "city_police", "resolved", oriYears, "Resolved through the verified consolidated-agency successor ORI.", `${consolidated.alias}, ${consolidated.state}`)
       : placeResult(geography, contractIndex, "city_police", "covered", [], `The successor ORI has no agency rows during ${startYear}-${endYear}.`, `${consolidated.alias}, ${consolidated.state}`);
   }
+  // A city whose real agency the ordinary lookup cannot reach, because it files
+  // as something other than agency_type 'City'. NIBRS-only: this never affects
+  // Historical. See lib/nibrs-agency-aliases.
+  const nibrsAlias = states
+    .map((state) => findNibrsAgencyAlias(state, cityName))
+    .find((entry) => Boolean(entry));
+  if (nibrsAlias) {
+    const rows = db.prepare(`
+      SELECT ori, year, population, pop_group, agency_type
+      FROM agencies WHERE ori = ? AND year BETWEEN ? AND ? ORDER BY year
+    `).all(nibrsAlias.nibrsOri, startYear, endYear) as AgencyRow[];
+    const oriYears = rows.map((row) => ({ year: row.year, ori: row.ori, population: row.population }));
+    // No label override: the display name stays whatever the user asked for.
+    return oriYears.length > 0
+      ? placeResult(geography, contractIndex, "city_police", "resolved", oriYears, "Resolved through the verified NIBRS agency alias for a city whose department does not file as a City agency.")
+      : placeResult(geography, contractIndex, "city_police", "covered", [], `The registered NIBRS agency has no rows during ${startYear}-${endYear}.`);
+  }
+
   const placeholders = states.map(() => "?").join(",");
   // Every spelling the agencies table might file this city under. Matching one
   // literal silently picks whichever agency happens to carry it -- see

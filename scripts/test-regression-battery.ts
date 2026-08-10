@@ -81,9 +81,8 @@ assert.equal(unresolvedTags.includes("contract-year-lower-bound-missing-resolved
 // own suite; this walks the actual sequence so a future change that reopens the
 // chain fails here even if the individual units still pass.
 //
-// Not everything here is fixed. Jacksonville is pinned at its WRONG answer at the
-// end of the 8375 section, deliberately, so the remaining gap is visible in the
-// test rather than merely absent from it.
+// All five are now closed, Jacksonville last -- it was the remaining silent
+// omission, where a 32-city question returned 31 cities and said nothing.
 // ---------------------------------------------------------------------------
 
 // 8348 - Historical cannot answer a 2025 clearance question and now says where to go
@@ -110,13 +109,10 @@ sessionDb.exec(`
     ('NY0230000', 2025, 'NY', 'NEW YORK CITY', 'County', 0, '9D', 'N', 'E'),
     ('MOSPD0000', 2025, 'MO', 'SAINT LOUIS', 'City', 274819, '1C', 'N', 'E'),
     ('MO0956200', 2025, 'MO', 'ST LOUIS', 'City', 9052, '6', 'N', 'E'),
-    -- Jacksonville is a KNOWN-UNFIXED case, pinned here so it is visible rather
-    -- than absent. The Sheriff's Office is the real agency and carries the 2025
-    -- clearance data, but it is typed County, and resolveCity filters to City --
-    -- so the 1,382-population namesake wins and Jacksonville silently vanishes
-    -- from a 32-city answer. Fixing it needs a consolidation-registry entry,
-    -- which today also forces a Historical mapping that would discard 1960-2020
-    -- (see CONSOLIDATION_EXCLUSIONS in lib/agency-consolidations.ts).
+    -- The Sheriff's Office carries Jacksonville's 2025 clearance data but files
+    -- as a County agency, so the City-only lookup used to pick the 1,382-population
+    -- namesake and drop the city from the answer entirely. Both rows are here so
+    -- the fixture can only pass by preferring the right one.
     ('FL0160000', 2025, 'FL', 'JACKSONVILLE', 'County', 1008920, '1B', 'N', 'E'),
     ('FL0162500', 2025, 'FL', 'JACKSONVILLE', 'City', 1382, '7', 'N', 'E');
 `);
@@ -147,15 +143,15 @@ sessionDb.exec(`
   assert.ok(bypass, "8376: matching agencies by city name must be caught");
 }
 
-// KNOWN UNFIXED - Jacksonville. Asserting the wrong answer on purpose, so that
-// whoever fixes it is told by a failing test that this pin needs updating,
-// rather than leaving the gap invisible. Flip both assertions when the
-// consolidation registry can carry a NIBRS mapping without a Historical one.
+// Jacksonville - the last silent omission from the 32-city answer. The Sheriff's
+// Office files as a County agency, so the City-only city lookup could not reach
+// it and the 1,382-population namesake won. Fixed via the NIBRS-only alias
+// registry, which leaves Historical alone.
 {
   const plan = resolveNibrsPlaces(sessionDb, "murder clearances in Jacksonville, FL in 2025");
-  const ori = plan?.places[0]?.oriYears[0]?.ori;
-  assert.equal(ori, "FL0162500", "Jacksonville still resolves to the 1,382-population namesake");
-  assert.notEqual(ori, "FL0160000", "the Sheriff's Office is still NOT selected -- known gap, not a passing case");
+  const place = plan?.places[0];
+  assert.equal(place?.oriYears[0]?.ori, "FL0160000", "Jacksonville resolves to the Sheriff's Office");
+  assert.equal(place?.label, "Jacksonville, FL", "and is still displayed as the user wrote it");
 }
 
 // 8376 - the follow-up rebuilds from a prior turn that produced no SQL at all
