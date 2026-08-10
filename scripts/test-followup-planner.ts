@@ -121,6 +121,23 @@ const sql = "SELECT year, count FROM historical_state_national WHERE year >= 198
   assert.doesNotMatch(p.transform!.instruction, /\[SQL:/, "SQL text must never cross the source boundary");
 }
 
+// Production 8377 -> 8378, verbatim: a complete Historical question following an
+// unrelated Current-tab result. It must plan as standalone, because only then does
+// the route reach buildMultiCityTrendPlan instead of asking the model for SQL.
+{
+  const eightThreeSevenSeven =
+    "SELECT printf('%04d-%02d', am.year, am.month) AS period, SUM(CASE WHEN am.agency = 'Chicago' THEN am.count ELSE 0 END) AS chicago FROM agency_monthly am WHERE am.year BETWEEN 2022 AND 2024";
+  const p = planFollowup(
+    "compare tulsa and oklahoma city homicides over time",
+    hist("Compare robbery in Chicago and Dallas, 2022 to 2024", eightThreeSevenSeven, "current"),
+    "historical"
+  );
+  assert.equal(p.kind, "not_followup");
+  assert.equal(p.reconstructedQuestion, "compare tulsa and oklahoma city homicides over time");
+  assert.equal(p.deterministicEligible, true);
+  assert.equal(p.transform, null);
+}
+
 // Crash isolation: pathological input must degrade to null, never throw
 {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

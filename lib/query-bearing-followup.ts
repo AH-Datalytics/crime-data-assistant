@@ -80,7 +80,10 @@ function refersToTimeRangeChange(q: string): boolean {
 }
 
 function refersToGeographyChange(q: string): boolean {
-  if (/^\s*(?:compare|vs\.?|versus)\b/i.test(q)) return true;
+  // A bare comparison that names no offense still needs the prior question for
+  // its topic ("compare Chicago to Dallas" after "murders in Chicago"). One that
+  // names its own offense does not -- see isSelfContainedQuestion.
+  if (/^\s*(?:compare|vs\.?|versus)\b/i.test(q) && !OFFENSE_NOUN_RE.test(q)) return true;
   if (/\bcompare\s+(?:(?:it|this|that|them)\s+)?(?:to|with|against)\b/i.test(q)) return true;
   if (/\b(?:make|show)\s+(?:it|this|that)\s+statewide\b/i.test(q)) return true;
   const whatAbout = q.match(/^\s*(?:what|how)\s+about\s+(.+?)\s*\??\s*$/i);
@@ -124,12 +127,27 @@ function refersToChartChange(q: string): boolean {
     /\bmake\s+(?:it|this|that)\b|\bchange\b|\bswitch\b|\bas\s+a\b|\buse\b/i.test(q);
 }
 
+/** A question that supplies its own two-or-more places AND its own offense is a
+ *  new question, not a modification of the prior one -- however many
+ *  change-request verbs it happens to contain. An anaphor disqualifies it,
+ *  because that points back at the prior result ("compare IT to Dallas").
+ *
+ *  Production 8378: "compare tulsa and oklahoma city homicides over time" was
+ *  read as a geography change against SQL from a different tab, which skipped
+ *  the deterministic multi-city plan. */
+function isSelfContainedQuestion(q: string): boolean {
+  if (/\b(?:it|this|that|them|these|those|same)\b/i.test(q)) return false;
+  if (!OFFENSE_NOUN_RE.test(q)) return false;
+  return resolveGeoPlaces(q).mentions.length >= 2;
+}
+
 export function detectQueryBearingFollowup(
   question: string,
   rawHistory: unknown
 ): QueryBearingFollowup | null {
   if (!hasPriorSqlResult(rawHistory)) return null;
   if (asksCoverageNotChange(question)) return null;
+  if (isSelfContainedQuestion(question)) return null;
 
   const kinds: FollowupChangeKind[] = [];
   if (refersToTimeRangeChange(question)) kinds.push("time_range");

@@ -70,4 +70,21 @@ assert.equal(kinds("Sheriff's office only", priorSqlHistory), null);
 // Malformed history entries are ignored safely
 assert.equal(kinds("Make it monthly.", [{ role: "assistant" }, null, 42, "x"]), null);
 
+// --- Production 8378: a complete question that opens with "compare" is standalone ---
+// It named both places and the offense; the prior SQL was 8377, on another tab.
+assert.equal(kinds("compare tulsa and oklahoma city homicides over time", priorSqlHistory), null);
+assert.equal(kinds("Compare robbery in Chicago and Dallas, 2022 to 2024", priorSqlHistory), null);
+assert.equal(kinds("Murder rates in Baltimore versus Detroit", priorSqlHistory), null);
+
+// Contextual comparisons still fire — the anaphor is what makes them follow-ups
+assert.deepEqual(kinds("Compare it to Dallas.", priorSqlHistory), ["geography"]);
+assert.deepEqual(kinds("compare to Houston", priorSqlHistory), ["geography"]);
+
+// A self-contained question is standalone even when it carries a change-request verb,
+// because it names its own two places and its own offense
+assert.equal(kinds("show murders in Tulsa and Oklahoma City by year instead", priorSqlHistory), null);
+
+// ...but the same verb with only one place is still a follow-up
+assert.deepEqual(kinds("show rates instead", priorSqlHistory), ["metric"]);
+
 console.log("query-bearing-followup tests passed");

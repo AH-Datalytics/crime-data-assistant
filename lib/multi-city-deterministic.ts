@@ -141,7 +141,11 @@ ORDER BY ${grouping}`;
     const filters = places.map((city) => `(${cityCondition("ha", city, source)})`);
     const cityColumns = places.map((city) => {
       const condition = cityCondition("ha", city, source);
-      const count = `SUM(CASE WHEN ${condition} THEN ${selectedOffense.historical} ELSE 0 END)`;
+      // No ELSE branch: a year in which this agency filed nothing must stay NULL.
+      // With ELSE 0 the grouped row -- which exists because some OTHER city in the
+      // comparison reported that year -- renders a non-reporting agency as a real
+      // zero, which on a trend chart is indistinguishable from zero homicides.
+      const count = `SUM(CASE WHEN ${condition} THEN ${selectedOffense.historical} END)`;
       const value = rate
         ? `ROUND(100000.0 * ${count} / NULLIF(MAX(CASE WHEN ${condition} THEN hap.population END), 0), 1)`
         : count;
