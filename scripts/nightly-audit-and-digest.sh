@@ -23,6 +23,7 @@ set -uo pipefail
 
 APP_DIR="${APP_DIR:-/opt/nibrs/current}"
 AUDIT_TIMEOUT_SECONDS="${AUDIT_TIMEOUT_SECONDS:-900}"
+CHART_AUDIT_TIMEOUT_SECONDS="${CHART_AUDIT_TIMEOUT_SECONDS:-300}"
 ENV_FILE="${CDA_ENV_FILE:-/opt/nibrs/shared/.env.cron}"
 
 cd "$APP_DIR" || { echo "FATAL: cannot cd to $APP_DIR"; exit 1; }
@@ -75,19 +76,34 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# Step 2: digest (critical path -- runs regardless of the auditor's outcome)
+# Step 2: rendered-chart audit (advisory and model-free)
+# ---------------------------------------------------------------------------
+chart_audit_status=0
+echo "--- rendered-chart auditor (timeout ${CHART_AUDIT_TIMEOUT_SECONDS}s) ---"
+timeout --signal=TERM --kill-after=30s "${CHART_AUDIT_TIMEOUT_SECONDS}s" npx tsx scripts/run-chart-audit.ts || chart_audit_status=$?
+
+if [ "$chart_audit_status" -eq 0 ]; then
+  echo "--- rendered-chart auditor completed ---"
+elif [ "$chart_audit_status" -eq 124 ] || [ "$chart_audit_status" -eq 137 ]; then
+  echo "--- WARNING: rendered-chart auditor TIMED OUT after ${CHART_AUDIT_TIMEOUT_SECONDS}s (exit ${chart_audit_status}); continuing to digest ---"
+else
+  echo "--- WARNING: rendered-chart auditor FAILED with exit ${chart_audit_status}; continuing to digest ---"
+fi
+
+# ---------------------------------------------------------------------------
+# Step 3: digest (critical path -- runs regardless of either auditor's outcome)
 # ---------------------------------------------------------------------------
 echo "--- daily digest ---"
 digest_status=0
 node scripts/daily-query-analysis.js || digest_status=$?
 
 if [ "$digest_status" -ne 0 ]; then
-  echo "=== $(date -Is) FAILED: digest exited ${digest_status} (auditor exited ${audit_status}) ==="
+  echo "=== $(date -Is) FAILED: digest exited ${digest_status} (query auditor ${audit_status}, chart auditor ${chart_audit_status}) ==="
   exit "$digest_status"
 fi
 
-echo "=== $(date -Is) done (auditor exit ${audit_status}, digest exit ${digest_status}) ==="
-# Deliberately exits 0 on auditor failure: the auditor is advisory, and a
-# non-zero exit here would make cron mail noise for something the digest already
+echo "=== $(date -Is) done (query auditor ${audit_status}, chart auditor ${chart_audit_status}, digest ${digest_status}) ==="
+# Deliberately exits 0 on auditor failure: both auditors are advisory, and a
+# non-zero exit here would make cron mail noise for conditions the digest already
 # reports in the email body.
 exit 0
