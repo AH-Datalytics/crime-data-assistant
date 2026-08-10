@@ -118,4 +118,31 @@ import { partialCoverageRetryPrompt, sourceYearOverlap } from "../lib/source-yea
   );
 }
 
+// --- Production 8348: a clearance year Historical lacks but NIBRS covers ---
+// The guard said "ask for 2024 or earlier" and stopped there, so the user never
+// learned that clearances by type exist only in NIBRS and were available for the
+// year they asked about.
+{
+  const testYear = Math.min(NIBRS.maxYear, HISTORICAL.clearanceMaxYear + 1);
+  const result = historicalYearAvailability(`murder clearances in Chicago in ${testYear}`);
+  assert.ok(result, `${testYear} clearance question must trigger the availability guard`);
+  assert.equal(result.maxYear, HISTORICAL.clearanceMaxYear);
+  assert.match(result.explanation, /NIBRS/, "clearance year-unavailable message must point to NIBRS");
+  assert.match(result.explanation, new RegExp(`through ${NIBRS.maxYear}`));
+}
+
+{
+  // Beyond NIBRS coverage too — no pointer, because there is nothing to point at
+  const result = historicalYearAvailability(`murder clearances in Chicago in ${NIBRS.maxYear + 1}`);
+  assert.ok(result);
+  assert.doesNotMatch(result.explanation, /NIBRS/);
+}
+
+{
+  // Staffing is not in NIBRS at all, so that label must never suggest it
+  const result = historicalYearAvailability(`police staffing in Chicago in ${HISTORICAL.staffingMaxYear + 1}`);
+  assert.ok(result);
+  assert.doesNotMatch(result.explanation, /NIBRS/);
+}
+
 console.log("year availability tests passed");
