@@ -264,6 +264,9 @@ test({ question: "exceptional clearance rate for robbery", expectedPrimary: "nib
 test({ question: "murders cleared by clearance type in 2025", expectedPrimary: "nibrs", mustExclude: ["current", "historical", "shr"] });
 test({ question: "murder clearances by type in 2025", expectedPrimary: "nibrs", mustExclude: ["current", "historical", "shr"] });
 test({ question: "murder clearances by type of clearance in 2025", expectedPrimary: "nibrs", mustExclude: ["current", "historical", "shr"] });
+test({ question: "clearances for murder by type", expectedPrimary: "nibrs", mustExclude: ["current", "historical", "shr"] });
+test({ question: "clearances for aggravated assault broken down by type", expectedPrimary: "nibrs", mustExclude: ["current", "historical", "shr"] });
+test({ question: "clearance rates for crimes by type in 2024", expectedPrimary: "historical" });
 test({
   question: "murders cleared by clearance type in 2025 in these cities: Chicago, IL New York City, NY Houston, TX Philadelphia, PA Los Angeles, CA Memphis, TN Detroit, MI Milwaukee, WI St Louis, MO Dallas, TX Indianapolis, IN Baltimore, MD Kansas City, MO Phoenix, AZ Washington, DC San Antonio, TX Cleveland, OH Atlanta, GA Charlotte, NC Las Vegas, NV Columbus, OH Birmingham, AL Jacksonville, FL Fort Worth, TX Albuquerque, NM Oklahoma City, OK Cincinnati, OH Minneapolis, MN Nashville, TN Richmond, VA Austin, TX Portland, OR",
   expectedPrimary: "nibrs",

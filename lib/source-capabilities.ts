@@ -1,6 +1,7 @@
 import type { QueryContract, QueryContractSource } from "./query-contract";
 import { extractReferencedTables } from "./table-allowlist";
 import { SUB_CITY_GEOGRAPHY_MESSAGE, SUB_CITY_GEOGRAPHY_RE } from "./capability-overrides";
+import { asksClearanceTypeBreakdown } from "./clearance-type-intent";
 
 export type SourceCapabilitySeverity = "warning" | "unsupported";
 
@@ -83,7 +84,7 @@ function asksCountywideGeography(question: string, contract: QueryContract): boo
 }
 
 function asksClearanceType(question: string): boolean {
-  return /\b(?:cleared?\s+by\s+arrest|exceptional(?:ly)?|arrest\s+vs\.?\s+exceptional|by\s+clearance\s+type|clearance\s+type)\b/i.test(question);
+  return asksClearanceTypeBreakdown(question);
 }
 
 function asksClearanceMetric(question: string, contract: QueryContract): boolean {

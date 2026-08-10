@@ -1,6 +1,7 @@
 import { buildQueryContract, type QueryContractGeography, type QueryContractOffense } from "./query-contract";
 import { pastCompleteCalendarYearsRange, relativeYearRangeForQuestion } from "./time-conventions";
 import { hasUnresolvedDemographicToken } from "./demographic-rate-intent";
+import { asksClearanceTypeBreakdown } from "./clearance-type-intent";
 import {
   resolvedPlaceForContractIndex,
   type NibrsPlaceResolutionPlan,
@@ -191,17 +192,6 @@ function asksClearanceMethodBreakdown(question: string): boolean {
   const hasArrest = /\b(?:by\s+)?arrest\b/i.test(question);
   const hasExceptional = /\bexception(?:al|ally)?(?:\s+means)?\b/i.test(question);
   return hasClearance && hasArrest && hasExceptional;
-}
-
-/** "clearances by type" / "by type of clearance" -- every category, including uncleared. */
-function asksClearanceTypeBreakdown(question: string): boolean {
-  if (!/\bclear(?:ances?|ed)\b/i.test(question)) return false;
-  // Every pattern must name "type" explicitly. A bare "breakdown of clearances"
-  // is ambiguous -- by city, by agency, by year are all common and all different
-  // requests -- so it goes to the model path rather than being claimed here.
-  return /\b(?:by|per|each)\s+(?:the\s+)?(?:clearance\s+)?type(?:s)?(?:\s+of\s+clearance)?\b/i.test(question) ||
-    /\bclearance\s+types?\b/i.test(question) ||
-    /\btypes?\s+of\s+clearance\b/i.test(question);
 }
 
 /**

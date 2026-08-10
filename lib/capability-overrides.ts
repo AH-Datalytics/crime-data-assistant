@@ -1,3 +1,5 @@
+import { asksClearanceTypeBreakdown } from "./clearance-type-intent";
+
 export interface CapabilityOverride {
   title: string;
   explanation: string;
@@ -5,7 +7,6 @@ export interface CapabilityOverride {
 }
 
 const CLEARANCE_QUESTION_RE = /\b(?:clearance|clearances|cleared|solve[ds]?|unsolved|closure\s+rate)\b/i;
-const CLEARANCE_METHOD_RE = /\b(?:cleared?\s+by\s+arrest|exceptional(?:ly)?|arrest\s+(?:vs\.?|versus|and)\s+exceptional|by\s+clearance\s+type|clearance\s+type)\b/i;
 
 export function asksCurrentYearClearance(question: string): boolean {
   if (!CLEARANCE_QUESTION_RE.test(question)) return false;
@@ -15,7 +16,7 @@ export function asksCurrentYearClearance(question: string): boolean {
 }
 
 export function asksUnavailableCurrentYearClearance(question: string): boolean {
-  return asksCurrentYearClearance(question) && !CLEARANCE_METHOD_RE.test(question);
+  return asksCurrentYearClearance(question) && !asksClearanceTypeBreakdown(question);
 }
 
 export function detectCurrentYearClearanceOverride(question: string): CapabilityOverride | null {

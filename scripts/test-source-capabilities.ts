@@ -67,6 +67,17 @@ function assertDoesNotFind(name: string, ids: string[], unexpected: string) {
 
 {
   const ids = findingIds(
+    "clearances for murder by type in Chicago",
+    "nibrs",
+    `SELECT year, SUM(murder) AS murders
+     FROM summary_city_monthly
+     GROUP BY year`
+  );
+  assertFinds("separated clearance-type phrasing still enforces the right table", ids, "nibrs-clearance-type-table");
+}
+
+{
+  const ids = findingIds(
     "cleared by arrest vs exceptional means for robbery in Chicago",
     "nibrs",
     `SELECT year,

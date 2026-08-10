@@ -465,6 +465,7 @@ for (const question of [
     "murder clearance types in Las Vegas, NV in 2025",
     "murder clearances by type of clearance in Las Vegas, NV in 2025",
     "break down murder clearances by type in Las Vegas, NV in 2025",
+    "clearances for murder by type in Las Vegas, NV in 2025",
   ]) {
     assert.ok(
       buildNibrsClearanceTypeBreakdownQuery(variant, resolveNibrsPlaces(db, variant)),
