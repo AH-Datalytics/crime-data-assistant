@@ -4,6 +4,7 @@ import { validateAndSanitize } from "../lib/sql-safety.js";
 import { resolveNibrsPlaces } from "../lib/nibrs-place-resolver.js";
 import {
   buildNibrsClearanceMethodQuery,
+  buildNibrsClearanceTypeBreakdownQuery,
   buildNibrsComparableAgencyClearanceQuery,
   buildNibrsDomesticViolenceAggravatedAssaultShareQuery,
   buildNibrsLocalCityOffenseCountQuery,
@@ -414,6 +415,86 @@ for (const question of [
   assert.match(sexOffenseRate.sql, /s\.ucr_offense_code IN \('11A','11B','11C','11D','36A','36B'\)/i);
   assert.doesNotMatch(sexOffenseRate.explanation, /demographic population/i);
   assert.match(sexOffenseRate.explanation, /forcible and nonforcible.*statutory rape/i);
+}
+
+// --- Production 8388: clearances by type must include the uncleared remainder ---
+// The model answered with a "Cleared by Arrest" row holding every measure and a
+// "Not Cleared" row of literal zeros. Las Vegas 2025 is 82 = 62 + 11 + 9. These
+// tests run the generated SQL rather than pattern-matching it, because the bug
+// was a plausible-looking query that returned wrong numbers.
+{
+  const db = new Database(":memory:");
+  db.exec(`
+    CREATE TABLE agencies (ori TEXT, year INTEGER, state TEXT, city TEXT, agency_type TEXT, population INTEGER, pop_group TEXT, covered_flag TEXT, agency_indicator TEXT);
+    CREATE INDEX idx_agencies_state_city_year ON agencies(state, city, year);
+    CREATE TABLE summary_clearance_detail (year INTEGER, state TEXT, ori TEXT, ucr_offense_code TEXT,
+      cleared_by_arrest INTEGER, cleared_A INTEGER, cleared_B INTEGER, cleared_C INTEGER,
+      cleared_D INTEGER, cleared_E INTEGER, total_offenses INTEGER);
+    CREATE INDEX idx_scd_ori_year ON summary_clearance_detail(ori, year);
+    CREATE INDEX idx_scd_state_year ON summary_clearance_detail(state, year);
+    INSERT INTO agencies VALUES
+      ('NV0020100', 2025, 'NV', 'LAS VEGAS', 'City', 1712136, '1A', 'N', 'E'),
+      ('ILCPD0000', 2025, 'IL', 'CHICAGO', 'City', 2660000, '1A', 'N', 'E');
+    INSERT INTO summary_clearance_detail VALUES
+      (2025, 'NV', 'NV0020100', '09A', 62, 11, 0, 0, 0, 0, 82),
+      (2025, 'IL', 'ILCPD0000', '09A', 62, 0, 0, 0, 0, 0, 321);
+  `);
+
+  const q = "las vegas murder clearances by type of clearance in 2025";
+  const built = buildNibrsClearanceTypeBreakdownQuery(q, resolveNibrsPlaces(db, q));
+  assert.ok(built, "8388's phrasing must reach a deterministic builder");
+  assert.equal(built.guardrail, "deterministic-nibrs-clearance-type-breakdown");
+  assert.match(built.sql, /scd\.ori IN \('NV0020100'\)/);
+
+  const rows = db.prepare(built.sql).all() as { year: number; clearance_type: string; offenses: number }[];
+  const byType = new Map(rows.map((r) => [r.clearance_type, r.offenses]));
+  assert.equal(byType.get("Cleared by arrest"), 62);
+  assert.equal(byType.get("Death of offender"), 11);
+  assert.equal(byType.get("Not cleared"), 9, "the uncleared remainder is derived, not assumed to be zero");
+  assert.equal(
+    rows.reduce((sum, r) => sum + r.offenses, 0),
+    82,
+    "categories must sum to the reported total, or the chart lies about the whole"
+  );
+  assert.equal(rows[0].clearance_type, "Cleared by arrest", "categories come back in a stable order");
+  assert.equal(rows[rows.length - 1].clearance_type, "Not cleared");
+
+  // Phrasing variants that name "type" reach the same builder
+  for (const variant of [
+    "murder clearances by type in Las Vegas, NV in 2025",
+    "murder clearance types in Las Vegas, NV in 2025",
+    "murder clearances by type of clearance in Las Vegas, NV in 2025",
+    "break down murder clearances by type in Las Vegas, NV in 2025",
+  ]) {
+    assert.ok(
+      buildNibrsClearanceTypeBreakdownQuery(variant, resolveNibrsPlaces(db, variant)),
+      `variant must build: ${variant}`
+    );
+  }
+
+  // Requests that say "breakdown" without naming type are ambiguous -- by city,
+  // by agency and by year are all common -- so this builder must not claim them.
+  for (const other of [
+    "breakdown of murder clearances in Las Vegas, NV in 2025",
+    "murder clearances by city in Nevada in 2025",
+    "murder clearances by year in Las Vegas, NV",
+  ]) {
+    assert.equal(
+      buildNibrsClearanceTypeBreakdownQuery(other, resolveNibrsPlaces(db, other)),
+      null,
+      `must not claim an ambiguous or differently-grouped request: ${other}`
+    );
+  }
+
+  // Same guards as the sibling builder: one place, and a resolved agency
+  const multi = "murder clearances by type for Chicago, IL and Las Vegas, NV in 2025";
+  assert.equal(
+    buildNibrsClearanceTypeBreakdownQuery(multi, resolveNibrsPlaces(db, multi)),
+    null,
+    "multi-place requests go to the model path, not to a single-geography builder"
+  );
+  assert.equal(buildNibrsClearanceTypeBreakdownQuery(q, null), null, "no resolved agency means no deterministic query");
+  db.close();
 }
 
 console.log("nibrs deterministic query tests passed");

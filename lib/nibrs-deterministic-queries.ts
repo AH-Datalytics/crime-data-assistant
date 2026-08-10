@@ -193,6 +193,123 @@ function asksClearanceMethodBreakdown(question: string): boolean {
   return hasClearance && hasArrest && hasExceptional;
 }
 
+/** "clearances by type" / "by type of clearance" -- every category, including uncleared. */
+function asksClearanceTypeBreakdown(question: string): boolean {
+  if (!/\bclear(?:ances?|ed)\b/i.test(question)) return false;
+  // Every pattern must name "type" explicitly. A bare "breakdown of clearances"
+  // is ambiguous -- by city, by agency, by year are all common and all different
+  // requests -- so it goes to the model path rather than being claimed here.
+  return /\b(?:by|per|each)\s+(?:the\s+)?(?:clearance\s+)?type(?:s)?(?:\s+of\s+clearance)?\b/i.test(question) ||
+    /\bclearance\s+types?\b/i.test(question) ||
+    /\btypes?\s+of\s+clearance\b/i.test(question);
+}
+
+/**
+ * Clearances broken out by every category, uncleared included.
+ *
+ * Production 8388 asked for Las Vegas murder clearances by type in 2025. The
+ * model returned two rows: one labelled "Cleared by Arrest" that actually held
+ * all six measures, and one labelled "Not Cleared" whose every numeric column
+ * was the literal 0. The real answer is 82 offenses = 62 arrest + 11 death of
+ * offender + 9 not cleared. A renderer can draw that payload perfectly and still
+ * show a chart that is wrong, so the fix belongs here, in the shape of the data.
+ *
+ * Emits tidy long format -- one row per category per year -- because that is what
+ * a categorical chart needs, and because a wide row invites exactly the
+ * mislabelling 8388 produced.
+ */
+export function buildNibrsClearanceTypeBreakdownQuery(
+  question: string,
+  resolutionPlan?: NibrsPlaceResolutionPlan | null
+): DeterministicNibrsQuery | null {
+  if (!asksClearanceTypeBreakdown(question)) return null;
+  const contract = buildQueryContract(question, "nibrs");
+  if (!contract || contract.metric.offenseCodes.length !== 1) return null;
+  if (contract.geography.kind !== "city" && contract.geography.kind !== "state") return null;
+  // One geography predicate only -- see buildNibrsClearanceMethodQuery.
+  if ((contract.geographies?.length ?? 0) > 1) return null;
+
+  const offenseCode = contract.metric.offenseCodes[0];
+  const years = yearScope("scd.year", question);
+  const sourceState = contract.geography.sourceCodes?.nibrs ?? contract.geography.state;
+  if (!sourceState) return null;
+
+  let tableIndex: string;
+  let geographyPredicate: string;
+  let place: string;
+  if (contract.geography.kind === "city") {
+    const resolvedCity = resolutionPlan?.places.find(
+      (item) => item.status === "resolved" && item.kind === "city_police"
+    );
+    const oris = [...new Set(resolvedCity?.oriYears.map((item) => item.ori) ?? [])];
+    if (oris.length === 0) return null;
+    tableIndex = "idx_scd_ori_year";
+    geographyPredicate = `scd.ori IN (${oris.map(sqlString).join(", ")})`;
+    place = resolvedCity?.label ?? `${contract.geography.name}, ${contract.geography.state}`;
+  } else {
+    tableIndex = "idx_scd_state_year";
+    geographyPredicate = compactStatePredicate("scd.state", sourceState);
+    place = contract.geography.canonicalName ?? contract.geography.name ?? contract.geography.state ?? "the requested state";
+  }
+
+  // Not cleared is derived, never assumed. It is deliberately NOT clamped at
+  // zero: no murder row in any year has clearances exceeding offenses, so a
+  // negative here would be a real data problem and should be visible rather
+  // than quietly rounded away.
+  const categories: [string, string][] = [
+    ["Cleared by arrest", "t.cleared_by_arrest"],
+    ["Death of offender", "t.cleared_a"],
+    ["Prosecution declined", "t.cleared_b"],
+    ["In custody elsewhere", "t.cleared_c"],
+    ["Victim refused to cooperate", "t.cleared_d"],
+    ["Juvenile, no custody", "t.cleared_e"],
+    ["Not cleared", "t.total_offenses - (t.cleared_by_arrest + t.cleared_a + t.cleared_b + t.cleared_c + t.cleared_d + t.cleared_e)"],
+  ];
+  const branches = categories
+    .map(([label, expr]) => `  SELECT t.year AS year, ${sqlString(label)} AS clearance_type, ${expr} AS offenses FROM totals t`)
+    .join("\n  UNION ALL\n");
+  const ordering = categories
+    .map(([label], index) => `WHEN ${sqlString(label)} THEN ${index + 1}`)
+    .join(" ");
+
+  const sql = `
+WITH totals AS (
+  SELECT scd.year AS year,
+    SUM(scd.total_offenses) AS total_offenses,
+    SUM(scd.cleared_by_arrest) AS cleared_by_arrest,
+    SUM(scd.cleared_A) AS cleared_a,
+    SUM(scd.cleared_B) AS cleared_b,
+    SUM(scd.cleared_C) AS cleared_c,
+    SUM(scd.cleared_D) AS cleared_d,
+    SUM(scd.cleared_E) AS cleared_e
+  FROM summary_clearance_detail scd INDEXED BY ${tableIndex}
+  WHERE scd.ucr_offense_code = ${sqlString(offenseCode)}
+    AND ${years.predicate}
+    AND ${geographyPredicate}
+  GROUP BY scd.year
+)
+SELECT year, clearance_type, offenses FROM (
+${branches}
+)
+ORDER BY year, CASE clearance_type ${ordering} END
+LIMIT 1000`.trim();
+
+  const offenseLabel = contract.metric.offenses?.[0]?.label ?? "offense";
+  return {
+    sql,
+    title: `${place} ${offenseLabel} clearances by type`,
+    explanation:
+      `Every clearance category for ${offenseLabel} in ${place}${years.periodText}, with uncleared offenses shown as their own category so the parts sum to the reported total. ` +
+      "FBI clearance means cleared by arrest or exceptional means; it is not a conviction. Recent NIBRS data may be incomplete.",
+    chartHint: "bar",
+    xAxis: "clearance_type",
+    yAxis: "offenses",
+    xAxisLabel: "Clearance type",
+    yAxisLabel: "Offenses",
+    guardrail: "deterministic-nibrs-clearance-type-breakdown",
+  };
+}
+
 export function buildNibrsClearanceMethodQuery(
   question: string,
   resolutionPlan?: NibrsPlaceResolutionPlan | null

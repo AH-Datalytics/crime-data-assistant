@@ -1,5 +1,6 @@
 import {
   buildNibrsClearanceMethodQuery,
+  buildNibrsClearanceTypeBreakdownQuery,
   buildNibrsComparableAgencyClearanceQuery,
   buildNibrsDomesticViolenceAggravatedAssaultShareQuery,
   buildNibrsLocalCityOffenseCountQuery,
@@ -52,6 +53,7 @@ export function planNibrsQuery(
     buildNibrsCountywideDemographicQuery(question) ??
     buildNibrsComparableAgencyClearanceQuery(question, resolutionPlan) ??
     buildNibrsClearanceMethodQuery(question, resolutionPlan) ??
+    buildNibrsClearanceTypeBreakdownQuery(question, resolutionPlan) ??
     buildNibrsLocalDemographicQuery(question, resolutionPlan) ??
     buildNibrsStructuredLocalTrendQuery(question, resolutionPlan) ??
     buildNibrsLocalCityOffenseCountQuery(question, resolutionPlan) ??
