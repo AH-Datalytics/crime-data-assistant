@@ -261,6 +261,14 @@ test({ question: "national murder clearance rate trend", expectedPrimary: "histo
 // Clearance type (arrest vs exceptional)
 test({ question: "what percentage of murders are cleared by arrest vs exceptional", expectedPrimary: "nibrs", mustExclude: ["current", "historical", "shr"] });
 test({ question: "exceptional clearance rate for robbery", expectedPrimary: "nibrs" });
+test({ question: "murders cleared by clearance type in 2025", expectedPrimary: "nibrs", mustExclude: ["current", "historical", "shr"] });
+test({ question: "murder clearances by type in 2025", expectedPrimary: "nibrs", mustExclude: ["current", "historical", "shr"] });
+test({ question: "murder clearances by type of clearance in 2025", expectedPrimary: "nibrs", mustExclude: ["current", "historical", "shr"] });
+test({
+  question: "murders cleared by clearance type in 2025 in these cities: Chicago, IL New York City, NY Houston, TX Philadelphia, PA Los Angeles, CA Memphis, TN Detroit, MI Milwaukee, WI St Louis, MO Dallas, TX Indianapolis, IN Baltimore, MD Kansas City, MO Phoenix, AZ Washington, DC San Antonio, TX Cleveland, OH Atlanta, GA Charlotte, NC Las Vegas, NV Columbus, OH Birmingham, AL Jacksonville, FL Fort Worth, TX Albuquerque, NM Oklahoma City, OK Cincinnati, OH Minneapolis, MN Nashville, TN Richmond, VA Austin, TX Portland, OR",
+  expectedPrimary: "nibrs",
+  mustExclude: ["current", "historical", "shr"],
+});
 
 // Staffing
 test({ question: "sworn officers per capita in big cities", expectedPrimary: "historical", mustExclude: ["current", "nibrs", "shr"] });

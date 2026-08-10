@@ -525,6 +525,9 @@ function detectRequiredAttributes(q: string): string[] {
   if (/\bcleared?\s*by\s*(arrest|exception(?:al)?)/i.test(q) ||
       /\b(arrest|exception(?:al)?)\s*(clearance|means)/i.test(q) ||
       /\bexception(?:al)?\s*(clearance|clear)/i.test(q) ||
+      /\b(?:clearances?|cleared)\s+(?:broken\s+down\s+)?by\s+(?:clearance\s+)?types?\b/i.test(q) ||
+      /\bclearance\s+types?\b/i.test(q) ||
+      /\btypes?\s+of\s+clearance\b/i.test(q) ||
       /\bprosecution\s*(declined|refused)/i.test(q)) {
     attrs.push("clearance_type");
   }
