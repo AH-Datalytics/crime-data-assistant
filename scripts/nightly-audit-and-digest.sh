@@ -18,6 +18,44 @@
 #
 # Note the RESEND_API_KEY must be available to this script's environment; the
 # previous crontab line set it inline.
+#
+# ---------------------------------------------------------------------------
+# SCHEDULE DRIFT OBSERVED 2026-08-11 -- production does not match the line above
+# ---------------------------------------------------------------------------
+# The installed crontab was measured as:
+#
+#   0 13 * * *   cd /opt/nibrs/current && SHR_DB_PATH=... npx tsx scripts/run-query-audit.ts
+#   5 13 * * 1   bash /opt/nibrs/current/scripts/nightly-audit-and-digest.sh
+#
+# That is two defects, not one:
+#
+#   1. This wrapper runs WEEKLY (Mondays), despite being named and documented as
+#      nightly. The digest email and the rendered-chart audit therefore run once
+#      a week.
+#   2. run-query-audit.ts is ALSO scheduled directly and daily, so on Mondays the
+#      query auditor runs twice -- once standalone at 13:00 and again inside this
+#      wrapper at 13:05.
+#
+# Consequence measured the same day: chart_audit_results was empty in production
+# while chart_audit_artifacts held 24 rows and chart_render_receipts held 15. The
+# chart auditor was added to this script in 99803bf (2026-08-10 18:28 CDT) and
+# first deployed in release 20260810_234249; this wrapper's next weekly firing was
+# 2026-08-17, so the chart auditor had never executed in production. The audit
+# logic was never at fault -- see scripts/test-chart-audit-pipeline.ts, which
+# drives the real runner and asserts artifacts + receipts produce results.
+#
+# CORRECTIVE CRONTAB (production change -- requires owner approval, not applied
+# by Stage 0). Replace BOTH lines above with this single entry:
+#
+#   0 13 * * * /opt/nibrs/current/scripts/nightly-audit-and-digest.sh >> /var/log/cda-analysis.log 2>&1
+#
+# Removing the standalone run-query-audit.ts line is part of the fix, not an
+# optional tidy-up: this wrapper already runs that auditor as its first step, and
+# leaving both scheduled reintroduces the double-run. The wrapper is the only
+# entry point that also runs the chart auditor and the digest.
+#
+# Rollback for the crontab change is to restore the two original lines; see
+# docs/runbooks/2026-08-11-rollback-and-backup-manifest.md.
 
 set -uo pipefail
 
