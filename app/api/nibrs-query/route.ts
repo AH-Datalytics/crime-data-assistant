@@ -167,6 +167,16 @@ function continuousReporterRouteIssue(sql: string, question: string): string | n
   return "[SYSTEM: The user asked for agencies that reported all 12 months in every requested year. Rewrite the query with ORI-level summary tables, not state-level summary tables, and filter the fact table with ori IN (SELECT ori FROM nibrs_consistent_reporters WHERE start_year = [start_year] AND end_year = [end_year]). Preserve the requested offense, metric, breakdowns, and year range.]";
 }
 
+function juvenileIncidentRollupAvailable(): boolean {
+  try {
+    return Boolean(getNibrsDb().prepare(
+      "SELECT 1 FROM nibrs_summary_freshness WHERE summary_name='summary_juvenile_offender_incidents' AND ready=1"
+    ).get());
+  } catch {
+    return false;
+  }
+}
+
 /** Resolve which model this request should use. Returns the full model ID. */
 function resolveNibrsModel(sessionId: string | null, canaryFlag: boolean): string {
   const defaultModel = process.env.NIBRS_MODEL || "claude-haiku-4-5-20251001";
@@ -389,6 +399,7 @@ export async function POST(req: NextRequest) {
 
     const nibrsPlan = planNibrsQuery(question, deterministicResolution, {
       allowDeterministic: (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing") ? false : !followupTransform,
+      juvenileIncidentRollupAvailable: juvenileIncidentRollupAvailable(),
     });
     if (nibrsPlan.kind === "blocked" && deterministicResolution) {
       const executionMs = Date.now() - routeStart;

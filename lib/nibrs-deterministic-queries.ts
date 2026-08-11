@@ -13,6 +13,7 @@ import {
   nibrsAnnualValueSql,
   nibrsDemographicCompletenessPredicate,
 } from "./nibrs-completeness";
+import incidentOffenseScopes from "./nibrs-incident-offense-scopes.json";
 
 export interface DeterministicNibrsQuery {
   sql: string;
@@ -28,6 +29,70 @@ export interface DeterministicNibrsQuery {
 
 function sqlString(value: string): string {
   return `'${value.replace(/'/g, "''")}'`;
+}
+
+export function asksForIncidentsWithJuvenileOffender(question: string): boolean {
+  return /\b(?:incidents?|crimes?)\b/i.test(question) &&
+    /\boffenders?\b/i.test(question) &&
+    /\b(?:under|younger\s+than|below)\s+(?:age\s*)?18\b/i.test(question);
+}
+
+export function buildNibrsJuvenileOffenderIncidentQuery(
+  question: string,
+  resolutionPlan?: NibrsPlaceResolutionPlan | null
+): DeterministicNibrsQuery | null {
+  if (!asksForIncidentsWithJuvenileOffender(question)) return null;
+  const contract = buildQueryContract(question, "nibrs");
+  if (!contract || contract.metric.unit !== "count") return null;
+
+  const knownScopes = incidentOffenseScopes as Record<string, string[]>;
+  const offenseScope = knownScopes[contract.metric.topic]
+    ? contract.metric.topic
+    : contract.metric.offenseCodes.length === 1 && /^[0-9A-Z]{3}$/.test(contract.metric.offenseCodes[0])
+      ? contract.metric.offenseCodes[0]
+      : null;
+  if (!offenseScope) return null;
+
+  const years = yearScope("s.year", question);
+  const monthly = contract.breakdowns.includes("month");
+  let geographyPredicate = "1 = 1";
+  let placeLabel = "NIBRS-reporting agencies nationwide";
+
+  if (contract.geography.kind === "state" && contract.geography.state) {
+    const sourceState = contract.geography.sourceCodes?.nibrs ?? contract.geography.state;
+    geographyPredicate = statePredicate("s.state", sourceState);
+    placeLabel = contract.geography.canonicalName ?? contract.geography.name ?? contract.geography.state;
+  } else if (contract.geography.kind === "city" || contract.geography.kind === "agency") {
+    const resolved = resolvedPlaceForContractIndex(resolutionPlan, 0);
+    if (!resolved || resolved.oriYears.length === 0) return null;
+    geographyPredicate = "(" + resolved.oriYears.map((item) =>
+      `(s.ori = ${sqlString(item.ori)} AND s.year = ${item.year})`
+    ).join(" OR ") + ")";
+    placeLabel = resolved.label;
+  } else if (contract.geography.kind !== "national" && contract.geography.kind !== "unknown") {
+    return null;
+  }
+
+  const dimensions = monthly ? ["s.year", "s.month"] : ["s.year"];
+  const selectDimensions = monthly ? "s.year, s.month" : "s.year";
+  const offenseLabel = contract.metric.offenses[0]?.label ?? contract.metric.topic.replace(/_/g, " ");
+  return {
+    sql: `SELECT ${selectDimensions}, SUM(s.incident_count) AS juvenile_offender_incidents
+FROM summary_juvenile_offender_incidents s
+WHERE s.offense_scope = ${sqlString(offenseScope)}
+  AND ${years.predicate}
+  AND ${geographyPredicate}
+GROUP BY ${dimensions.join(", ")}
+ORDER BY ${dimensions.join(", ")}`,
+    title: `${offenseLabel} Incidents With an Offender Under 18 — ${placeLabel}`,
+    explanation: `Distinct ${offenseLabel.toLowerCase()} incidents with at least one known offender age 1-17 for ${placeLabel}. Incidents with multiple qualifying offenders or multiple offenses in the requested category are counted once. Unknown offender ages are not classified as juveniles. These are incidents reported to NIBRS, not a national estimate. ${NIBRS_RECENT_MATURATION_DISCLOSURE}`,
+    chartHint: monthly || years.startYear !== years.endYear ? "line" : "bar",
+    xAxis: monthly ? "month" : "year",
+    yAxis: "juvenile_offender_incidents",
+    xAxisLabel: monthly ? "Month" : "Year",
+    yAxisLabel: "Incidents",
+    guardrail: "deterministic-nibrs-juvenile-offender-incidents",
+  };
 }
 
 function statePredicate(column: string, state: string | string[]): string {

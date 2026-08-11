@@ -5,7 +5,9 @@ import {
   buildNibrsDomesticViolenceAggravatedAssaultShareQuery,
   buildNibrsLocalCityOffenseCountQuery,
   buildNibrsLocalDemographicQuery,
+  buildNibrsJuvenileOffenderIncidentQuery,
   buildNibrsStructuredLocalTrendQuery,
+  asksForIncidentsWithJuvenileOffender,
   type DeterministicNibrsQuery,
 } from "./nibrs-deterministic-queries";
 import type { NibrsPlaceResolutionPlan, NibrsResolvedPlace } from "./nibrs-place-resolver";
@@ -18,12 +20,6 @@ export type NibrsQueryPlan =
   | { kind: "unavailable"; title: string; explanation: string }
   | { kind: "deterministic"; query: DeterministicNibrsQuery }
   | { kind: "model"; reason: "no-deterministic-builder" | "followup" };
-
-function asksForIncidentsWithJuvenileOffender(question: string): boolean {
-  return /\b(?:incidents?|crimes?)\b/i.test(question) &&
-    /\boffenders?\b/i.test(question) &&
-    /\b(?:under|younger\s+than|below)\s+(?:age\s*)?18\b/i.test(question);
-}
 
 function resolutionBlock(
   place: NibrsResolvedPlace,
@@ -39,7 +35,7 @@ function resolutionBlock(
 export function planNibrsQuery(
   question: string,
   resolutionPlan: NibrsPlaceResolutionPlan | null,
-  options: { allowDeterministic: boolean } = { allowDeterministic: true }
+  options: { allowDeterministic: boolean; juvenileIncidentRollupAvailable?: boolean } = { allowDeterministic: true }
 ): NibrsQueryPlan {
   const blockingPlace = resolutionPlan?.places.find((place) =>
     place.status === "ambiguous" || place.status === "covered"
@@ -53,7 +49,7 @@ export function planNibrsQuery(
   }
   if (!options.allowDeterministic) return { kind: "model", reason: "followup" };
 
-  if (asksForIncidentsWithJuvenileOffender(question)) {
+  if (asksForIncidentsWithJuvenileOffender(question) && !options.juvenileIncidentRollupAvailable) {
     return {
       kind: "unavailable",
       title: "Incident-Level Offender Age Is Not Yet Summarized",
@@ -62,6 +58,7 @@ export function planNibrsQuery(
   }
 
   const query =
+    buildNibrsJuvenileOffenderIncidentQuery(question, resolutionPlan) ??
     buildNibrsJuvenileArrestsByRaceQuery(question, resolveNibrsRollupPath() !== null) ??
     buildNibrsNationalArrestQuery(question, resolveNibrsRollupPath() !== null) ??
     buildNibrsContinuousReporterQuery(question) ??

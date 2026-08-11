@@ -17,6 +17,7 @@ import sys
 import time
 import zipfile
 from datetime import datetime
+from pathlib import Path
 from urllib.request import urlopen, Request
 
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -91,7 +92,12 @@ SUMMARY_TABLES = ['summary_city_monthly', 'summary_state_monthly',
                   'summary_arrestee_demographics',
                   'summary_carjacking_victim_demographics',
                   'summary_carjacking_offender_demographics',
-                  'summary_carjacking_arrestee_demographics']
+                  'summary_carjacking_arrestee_demographics',
+                  'summary_juvenile_offender_incidents']
+
+INCIDENT_OFFENSE_SCOPES = json.loads(
+    (Path(__file__).resolve().parents[1] / 'lib' / 'nibrs-incident-offense-scopes.json').read_text(encoding='utf-8')
+)
 
 RAW_DUPLICATE_CHECKS = {
     'incidents': [
@@ -192,6 +198,10 @@ SUMMARY_DUPLICATE_CHECKS = {
     'summary_carjacking_arrestee_demographics': {
         'year_col': 'year',
         'key_cols': ['ori', 'year', 'weapon_category', 'race', 'sex', 'age_group', 'state'],
+    },
+    'summary_juvenile_offender_incidents': {
+        'year_col': 'year',
+        'key_cols': ['year', 'month', 'ori', 'offense_scope'],
     },
 }
 
@@ -456,6 +466,15 @@ def delete_year(conn, year):
     """Delete all rows for a given year from raw + summary tables."""
     log(f"  Deleting existing data for {year}...")
     t = time.time()
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS nibrs_summary_freshness (
+          summary_name TEXT PRIMARY KEY, ready INTEGER NOT NULL,
+          refreshed_at TEXT NOT NULL, max_year INTEGER
+        )
+    """)
+    conn.execute(
+        "INSERT OR REPLACE INTO nibrs_summary_freshness(summary_name,ready,refreshed_at,max_year) VALUES ('summary_juvenile_offender_incidents',0,datetime('now'),NULL)"
+    )
     for table in RAW_TABLES:
         conn.execute(f"DELETE FROM {table} WHERE year = ?", (year,))
     for table in SUMMARY_TABLES:
@@ -1231,9 +1250,100 @@ def rebuild_summaries(conn, years):
         conn.commit()
     log(f"    Done ({time.time()-t:.0f}s)")
 
+    # ---- 13. summary_juvenile_offender_incidents ----
+    rebuild_summary_juvenile_offender_incidents(conn, years)
+
     conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
     elapsed = time.time() - total_start
     log(f"  Summary rebuild complete ({elapsed:.0f}s / {elapsed/60:.1f} min)")
+
+
+def rebuild_summary_juvenile_offender_incidents(conn, years):
+    """Count distinct offense incidents with at least one known offender age 1-17."""
+    log("  Building summary_juvenile_offender_incidents...")
+    started = time.time()
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS summary_juvenile_offender_incidents (
+          year INTEGER NOT NULL, month INTEGER, state TEXT, ori TEXT NOT NULL,
+          offense_scope TEXT NOT NULL, incident_count INTEGER NOT NULL
+        )
+    """)
+    has_year_age_index = conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='index' AND name='idx_offenders_year_age'"
+    ).fetchone() is not None
+    offender_hint = " INDEXED BY idx_offenders_year_age" if has_year_age_index else ""
+    for yr in years:
+        conn.execute("DELETE FROM summary_juvenile_offender_incidents WHERE year=?", (yr,))
+        conn.execute("DROP TABLE IF EXISTS _tmp_juvenile_incidents")
+        conn.execute("""
+            CREATE TEMP TABLE _tmp_juvenile_incidents (
+              year INTEGER NOT NULL, ori TEXT NOT NULL, incident_num TEXT NOT NULL,
+              state TEXT, month INTEGER, PRIMARY KEY(year,ori,incident_num)
+            ) WITHOUT ROWID
+        """)
+        conn.execute(f"""
+            INSERT OR IGNORE INTO _tmp_juvenile_incidents
+            SELECT year,ori,incident_num,state,
+                   CASE WHEN length(incident_date)>=6 THEN CAST(substr(incident_date,5,2) AS INTEGER) END
+            FROM offenders{offender_hint}
+            WHERE year=? AND age GLOB '[0-9][0-9]' AND CAST(age AS INTEGER) BETWEEN 1 AND 17
+              AND ori IS NOT NULL AND incident_num IS NOT NULL
+        """, (yr,))
+        conn.execute("DROP TABLE IF EXISTS _tmp_juvenile_scopes")
+        conn.execute("""
+            CREATE TEMP TABLE _tmp_juvenile_scopes (
+              year INTEGER NOT NULL, ori TEXT NOT NULL, incident_num TEXT NOT NULL,
+              state TEXT, month INTEGER, offense_scope TEXT NOT NULL,
+              PRIMARY KEY(year,ori,incident_num,offense_scope)
+            ) WITHOUT ROWID
+        """)
+        conn.execute("""
+            INSERT OR IGNORE INTO _tmp_juvenile_scopes
+            SELECT j.year,j.ori,j.incident_num,COALESCE(o.state,j.state),
+                   COALESCE(CASE WHEN length(o.incident_date)>=6 THEN CAST(substr(o.incident_date,5,2) AS INTEGER) END,j.month),
+                   o.ucr_offense_code
+            FROM offenses o INDEXED BY idx_offenses_year
+            JOIN _tmp_juvenile_incidents j
+              ON j.year=o.year AND j.ori=o.ori AND j.incident_num=o.incident_num
+            WHERE o.year=? AND o.ucr_offense_code IS NOT NULL AND o.ucr_offense_code<>''
+        """, (yr,))
+        for scope, codes in INCIDENT_OFFENSE_SCOPES.items():
+            placeholders = ",".join("?" for _ in codes)
+            conn.execute(f"""
+                INSERT OR IGNORE INTO _tmp_juvenile_scopes
+                SELECT year,ori,incident_num,state,month,?
+                FROM _tmp_juvenile_scopes
+                WHERE offense_scope IN ({placeholders})
+            """, (scope, *codes))
+        conn.execute("""
+            INSERT INTO summary_juvenile_offender_incidents
+            SELECT year,month,state,ori,offense_scope,COUNT(*)
+            FROM _tmp_juvenile_scopes
+            GROUP BY year,month,state,ori,offense_scope
+        """)
+        conn.commit()
+        rows = conn.execute(
+            "SELECT COUNT(*) FROM summary_juvenile_offender_incidents WHERE year=?", (yr,)
+        ).fetchone()[0]
+        log(f"    [{yr}] Juvenile-offender incident groups: {rows:,}")
+    conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_sjoi_key ON summary_juvenile_offender_incidents(year,month,ori,offense_scope)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_sjoi_scope_year ON summary_juvenile_offender_incidents(offense_scope,year)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_sjoi_state_year ON summary_juvenile_offender_incidents(state,year,offense_scope)")
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS nibrs_summary_freshness (
+          summary_name TEXT PRIMARY KEY, ready INTEGER NOT NULL,
+          refreshed_at TEXT NOT NULL, max_year INTEGER
+        )
+    """)
+    conn.execute("""
+        INSERT OR REPLACE INTO nibrs_summary_freshness(summary_name,ready,refreshed_at,max_year)
+        SELECT 'summary_juvenile_offender_incidents',1,datetime('now'),MAX(year)
+        FROM summary_juvenile_offender_incidents
+    """)
+    conn.execute("DROP TABLE IF EXISTS _tmp_juvenile_incidents")
+    conn.execute("DROP TABLE IF EXISTS _tmp_juvenile_scopes")
+    conn.commit()
+    log(f"    Done ({time.time()-started:.0f}s)")
 
 
 def verify_summary_duplicate_keys(conn, years=None, table_names=None):
