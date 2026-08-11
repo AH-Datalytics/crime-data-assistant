@@ -42,9 +42,23 @@ if (availableJuvenileIncident.kind === "deterministic") {
   assert.match(availableJuvenileIncident.query.sql, /s\.year = 2025/);
   assert.match(availableJuvenileIncident.query.explanation, /counted once/i);
   assert.match(availableJuvenileIncident.query.explanation, /not a national estimate/i);
-  db.exec("CREATE TABLE summary_juvenile_offender_incidents(year INT,month INT,state TEXT,ori TEXT,offense_scope TEXT,incident_count INT); INSERT INTO summary_juvenile_offender_incidents VALUES (2025,1,'IL','ORI1','violent_crime',3),(2025,2,'TX','ORI2','violent_crime',4),(2025,1,'IL','ORI1','120',2);");
+  db.exec("CREATE TABLE summary_juvenile_offender_incidents(year INT,month INT,state TEXT,ori TEXT,offense_scope TEXT,incident_count INT); INSERT INTO summary_juvenile_offender_incidents VALUES (2025,0,'IL','ORI1','violent_crime',5),(2025,1,'IL','ORI1','violent_crime',3),(2025,2,'TX','ORI2','violent_crime',4),(2025,1,'IL','ORI1','120',2);");
   const row = db.prepare(availableJuvenileIncident.query.sql).get() as { juvenile_offender_incidents: number };
-  assert.equal(row.juvenile_offender_incidents, 7);
+  assert.equal(row.juvenile_offender_incidents, 12);
+  const monthly = planNibrsQuery(
+    "violent crime incidents by month in 2025 with any offenders under age 18",
+    null,
+    { allowDeterministic: true, juvenileIncidentRollupAvailable: true }
+  );
+  assert.equal(monthly.kind, "deterministic");
+  if (monthly.kind === "deterministic") {
+    assert.match(monthly.query.sql, /s\.month BETWEEN 1 AND 12/);
+    const rows = db.prepare(monthly.query.sql).all() as { month: number; juvenile_offender_incidents: number }[];
+    assert.deepEqual(rows, [
+      { year: 2025, month: 1, juvenile_offender_incidents: 3 },
+      { year: 2025, month: 2, juvenile_offender_incidents: 4 },
+    ]);
+  }
 }
 db.close();
 console.log("nibrs query planner tests passed");

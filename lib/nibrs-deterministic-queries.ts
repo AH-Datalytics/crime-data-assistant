@@ -82,6 +82,7 @@ FROM summary_juvenile_offender_incidents s
 WHERE s.offense_scope = ${sqlString(offenseScope)}
   AND ${years.predicate}
   AND ${geographyPredicate}
+${monthly ? "  AND s.month BETWEEN 1 AND 12\n" : ""}
 GROUP BY ${dimensions.join(", ")}
 ORDER BY ${dimensions.join(", ")}`,
     title: `${offenseLabel} Incidents With an Offender Under 18 — ${placeLabel}`,

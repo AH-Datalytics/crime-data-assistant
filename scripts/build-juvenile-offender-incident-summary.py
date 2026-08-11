@@ -109,7 +109,7 @@ def build(source: Path, work: Path) -> None:
             ) WITHOUT ROWID;
             INSERT OR IGNORE INTO qualifying_incident_scopes
             SELECT j.year, j.ori, j.incident_num, COALESCE(o.state,j.state),
-                   COALESCE(CASE WHEN length(o.incident_date) >= 6 THEN CAST(substr(o.incident_date,5,2) AS INTEGER) END,j.month),
+                   COALESCE(CASE WHEN length(o.incident_date) >= 6 THEN CAST(substr(o.incident_date,5,2) AS INTEGER) END,j.month,0),
                    o.ucr_offense_code
             FROM source.offenses AS o NOT INDEXED
             JOIN juvenile_incidents AS j
@@ -137,7 +137,7 @@ def build(source: Path, work: Path) -> None:
               PRIMARY KEY(year, month, ori, offense_scope)
             ) WITHOUT ROWID;
             INSERT OR REPLACE INTO {TABLE}
-            SELECT year,month,state,ori,offense_scope,COUNT(*)
+            SELECT year,COALESCE(month,0),state,ori,offense_scope,COUNT(*)
             FROM qualifying_incident_scopes
             GROUP BY year,month,state,ori,offense_scope;
             CREATE INDEX IF NOT EXISTS idx_sjoi_scope_year ON {TABLE}(offense_scope,year);
@@ -157,7 +157,7 @@ def validate(conn: sqlite3.Connection) -> None:
     duplicates = conn.execute(
         f"SELECT COUNT(*) FROM (SELECT year,month,ori,offense_scope,COUNT(*) n FROM {TABLE} GROUP BY year,month,ori,offense_scope HAVING n<>1)"
     ).fetchone()[0]
-    invalid = conn.execute(f"SELECT COUNT(*) FROM {TABLE} WHERE incident_count <= 0 OR month NOT BETWEEN 1 AND 12").fetchone()[0]
+    invalid = conn.execute(f"SELECT COUNT(*) FROM {TABLE} WHERE incident_count <= 0 OR month IS NULL OR month NOT BETWEEN 0 AND 12").fetchone()[0]
     violent = conn.execute(f"SELECT COALESCE(SUM(incident_count),0) FROM {TABLE} WHERE offense_scope='violent_crime'").fetchone()[0]
     if duplicates or invalid or not violent:
         raise RuntimeError(f"Validation failed: duplicates={duplicates}, invalid={invalid}, violent_total={violent}")

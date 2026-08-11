@@ -1300,7 +1300,7 @@ def rebuild_summary_juvenile_offender_incidents(conn, years):
         conn.execute("""
             INSERT OR IGNORE INTO _tmp_juvenile_scopes
             SELECT j.year,j.ori,j.incident_num,COALESCE(o.state,j.state),
-                   COALESCE(CASE WHEN length(o.incident_date)>=6 THEN CAST(substr(o.incident_date,5,2) AS INTEGER) END,j.month),
+                   COALESCE(CASE WHEN length(o.incident_date)>=6 THEN CAST(substr(o.incident_date,5,2) AS INTEGER) END,j.month,0),
                    o.ucr_offense_code
             FROM offenses o INDEXED BY idx_offenses_year
             JOIN _tmp_juvenile_incidents j
@@ -1317,7 +1317,7 @@ def rebuild_summary_juvenile_offender_incidents(conn, years):
             """, (scope, *codes))
         conn.execute("""
             INSERT INTO summary_juvenile_offender_incidents
-            SELECT year,month,state,ori,offense_scope,COUNT(*)
+            SELECT year,COALESCE(month,0),state,ori,offense_scope,COUNT(*)
             FROM _tmp_juvenile_scopes
             GROUP BY year,month,state,ori,offense_scope
         """)

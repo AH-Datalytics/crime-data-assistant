@@ -31,7 +31,8 @@ with tempfile.TemporaryDirectory() as tmp:
         (2025,'IL','ORI1','A','20250102','02','17','','',''),
         (2025,'IL','ORI1','B','20250202','01','22','','',''),
         (2025,'IL','ORI1','C','20250302','01','17','','',''),
-        (2025,'IL','ORI1','D','20250402','01','00','','','');
+        (2025,'IL','ORI1','D','20250402','01','00','','',''),
+        (2025,'IL','ORI1','E','','01','15','','','');
       INSERT INTO offenses VALUES
         (2025,'IL','ORI1','A','20250102','120'),
         (2025,'IL','ORI1','A','20250102','120'),
@@ -39,7 +40,8 @@ with tempfile.TemporaryDirectory() as tmp:
         (2025,'IL','ORI1','B','20250202','120'),
         (2025,'IL','ORI1','C','20250302','23A'),
         (2025,'IL','ORI1','C','20250302','220'),
-        (2025,'IL','ORI1','D','20250402','09A');
+        (2025,'IL','ORI1','D','20250402','09A'),
+        (2025,'IL','ORI1','E','','120');
     """)
     db.commit()
     db.close()
@@ -55,25 +57,26 @@ with tempfile.TemporaryDirectory() as tmp:
     assert rows[(1, "120")] == 1
     assert rows[(1, "13A")] == 1
     assert rows[(1, "violent_crime")] == 1
+    assert rows[(0, "violent_crime")] == 1
     assert rows[(3, "23A")] == 1
     assert rows[(3, "220")] == 1
     assert rows[(3, "property_crime")] == 1
     assert rows[(3, "theft")] == 1
-    assert len(rows) == 7
+    assert len(rows) == 9
     result.close()
 
     builder.publish(source, work, allow_production=True)
     published = sqlite3.connect(source)
     assert published.execute(
         "SELECT SUM(incident_count) FROM summary_juvenile_offender_incidents WHERE offense_scope='violent_crime'"
-    ).fetchone()[0] == 1
+    ).fetchone()[0] == 2
     published.execute("DROP TABLE summary_juvenile_offender_incidents")
     published.execute("CREATE INDEX idx_offenses_year ON offenses(year)")
     published.execute("CREATE INDEX idx_offenders_year_age ON offenders(year,age)")
     auto_update.rebuild_summary_juvenile_offender_incidents(published, [2025])
     assert published.execute(
         "SELECT SUM(incident_count) FROM summary_juvenile_offender_incidents WHERE offense_scope='violent_crime'"
-    ).fetchone()[0] == 1
+    ).fetchone()[0] == 2
     assert published.execute(
         "SELECT SUM(incident_count) FROM summary_juvenile_offender_incidents WHERE offense_scope='property_crime'"
     ).fetchone()[0] == 1
