@@ -15,8 +15,15 @@ import { resolveNibrsRollupPath } from "./nibrs-rollup-router";
 
 export type NibrsQueryPlan =
   | { kind: "blocked"; place: NibrsResolvedPlace; explanation: string }
+  | { kind: "unavailable"; title: string; explanation: string }
   | { kind: "deterministic"; query: DeterministicNibrsQuery }
   | { kind: "model"; reason: "no-deterministic-builder" | "followup" };
+
+function asksForIncidentsWithJuvenileOffender(question: string): boolean {
+  return /\b(?:incidents?|crimes?)\b/i.test(question) &&
+    /\boffenders?\b/i.test(question) &&
+    /\b(?:under|younger\s+than|below)\s+(?:age\s*)?18\b/i.test(question);
+}
 
 function resolutionBlock(
   place: NibrsResolvedPlace,
@@ -45,6 +52,14 @@ export function planNibrsQuery(
     };
   }
   if (!options.allowDeterministic) return { kind: "model", reason: "followup" };
+
+  if (asksForIncidentsWithJuvenileOffender(question)) {
+    return {
+      kind: "unavailable",
+      title: "Incident-Level Offender Age Is Not Yet Summarized",
+      explanation: "NIBRS contains offender ages, but the live summary tables count offenders rather than distinct incidents. I cannot safely report how many violent-crime incidents had at least one offender under 18 without risking double-counting incidents with multiple offenses or offenders. I can report the number of offenders under 18 involved in violent offenses, or the number of violent-crime incidents without the offender-age condition.",
+    };
+  }
 
   const query =
     buildNibrsJuvenileArrestsByRaceQuery(question, resolveNibrsRollupPath() !== null) ??

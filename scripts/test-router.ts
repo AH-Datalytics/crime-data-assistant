@@ -117,6 +117,12 @@ test({ question: "shootings in Chicago", expectedPrimary: "shr" });
 test({ question: "crime in Alameda County since 2008", expectedPrimary: "historical" });
 test({ question: "violent crime in DC from 2014", expectedPrimary: "historical" });
 test({ question: "carjacking clearance rates", expectedPrimary: "nibrs" });
+test({
+  question: "how many violent crime incidents in 2025 had one or more offenders under age 18",
+  expectedPrimary: "nibrs",
+  mustExclude: ["current", "historical"],
+  note: "incident-level offender age is NIBRS-only",
+});
 
 // ══════════════════════════════════════════════════════════════════════
 //  SECTION 2: Production failure cases (from query log audit)

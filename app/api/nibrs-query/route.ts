@@ -410,6 +410,25 @@ export async function POST(req: NextRequest) {
       } as QueryResponse);
     }
 
+    if (nibrsPlan.kind === "unavailable") {
+      const executionMs = Date.now() - routeStart;
+      writeNibrsLog(question, null, 0, null, executionMs, nibrsPlan.explanation, ["nibrs-juvenile-offender-incident-summary-unavailable"], "deterministic", sessionId);
+      return jsonResp({
+        success: true,
+        question,
+        sql: null as unknown as string,
+        explanation: nibrsPlan.explanation,
+        title: nibrsPlan.title,
+        columns: [],
+        rows: [],
+        rowCount: 0,
+        truncated: false,
+        chartConfig: null,
+        chartMeta: null,
+        executionTimeMs: executionMs,
+      } as QueryResponse);
+    }
+
     if (nibrsPlan.kind === "deterministic") {
       const deterministicQuery = nibrsPlan.query;
       const deterministicStart = Date.now();

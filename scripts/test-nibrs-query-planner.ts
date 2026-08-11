@@ -21,5 +21,15 @@ assert.ok(resolvedPlan);
 assert.equal(planNibrsQuery(resolvedQuestion, resolvedPlan).kind, "deterministic");
 assert.equal(planNibrsQuery(resolvedQuestion, resolvedPlan, { allowDeterministic: false }).kind, "model");
 
+const juvenileIncident = planNibrsQuery(
+  "how many violent crime incidents in 2025 had one or more offenders under age 18",
+  null
+);
+assert.equal(juvenileIncident.kind, "unavailable");
+if (juvenileIncident.kind === "unavailable") {
+  assert.match(juvenileIncident.explanation, /count offenders rather than distinct incidents/i);
+  assert.match(juvenileIncident.explanation, /without risking double-counting/i);
+}
+
 db.close();
 console.log("nibrs query planner tests passed");

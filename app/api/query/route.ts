@@ -10,7 +10,7 @@ import { serializeChartConfigForLog } from "@/lib/chart-config-log";
 import { attachChartAuditToPayload, createChartAuditRequestId } from "@/lib/chart-audit";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { checkSessionLimit, maybeCleanup } from "@/lib/captcha";
-import { RTCI } from "@/lib/dynamic-facts";
+import { HISTORICAL, RTCI } from "@/lib/dynamic-facts";
 import { generateExplanation, sanitizeExplanation } from "@/lib/explain";
 import { extractQueryContext } from "@/lib/query-context";
 import { runGuardrails } from "@/lib/guardrails";
@@ -46,7 +46,7 @@ import {
 import { partialCoverageRetryPrompt } from "@/lib/source-year-overlap";
 import { resolveGeoPlaces } from "@/lib/geo-place-resolver";
 import { isFollowUp } from "@/lib/tab-suggest";
-import { buildHistoricalCityChangeRankingPlan } from "@/lib/historical-deterministic-queries";
+import { buildHistoricalCityChangeRankingPlan, buildHistoricalLocalRecentChangePlan } from "@/lib/historical-deterministic-queries";
 import { buildMultiCityTrendPlan } from "@/lib/multi-city-deterministic";
 import { buildCurrentIndexedStatePlan } from "@/lib/current-indexed-state-deterministic";
 import { detectQueryBearingFollowup } from '@/lib/query-bearing-followup';
@@ -836,7 +836,7 @@ export async function POST(req: NextRequest) {
   }
 
   const historicalCityChange = tab === "historical"
-    ? buildHistoricalCityChangeRankingPlan(question, body?.history)
+    ? buildHistoricalLocalRecentChangePlan(question, HISTORICAL.crimeMaxYear) ?? buildHistoricalCityChangeRankingPlan(question, body?.history)
     : null;
   if (historicalCityChange) {
     const ms = Date.now() - totalStart;

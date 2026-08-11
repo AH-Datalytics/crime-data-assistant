@@ -1,5 +1,6 @@
 import type { ChartConfig, ChartMeta } from "./types";
 import { CONSOLIDATED_AGENCIES } from "./agency-consolidations";
+import { resolveGeoPlaces } from "./geo-place-resolver";
 
 export interface HistoricalCityChangePlan {
   sql: string | null;
@@ -9,6 +10,72 @@ export interface HistoricalCityChangePlan {
   chartConfig: ChartConfig | null;
   chartMeta: ChartMeta | null;
   guardrail: string;
+}
+
+function sqlQuote(value: string): string {
+  return `'${value.replace(/'/g, "''")}'`;
+}
+
+export function buildHistoricalLocalRecentChangePlan(
+  question: string,
+  latestYear: number
+): HistoricalCityChangePlan | null {
+  if (!/\bviolent\s+crime\b/i.test(question)) return null;
+  if (!/\b(?:change|changed|increase|increased|decrease|decreased|rise|rose|drop|dropped)\b/i.test(question)) return null;
+  if (!/\b(?:in|over|during)\s+the\s+(?:past|last)\s+year\b/i.test(question)) return null;
+  if (hasRankingContext(question)) return null;
+
+  const resolution = resolveGeoPlaces(question);
+  if (resolution.requiresClarification || resolution.mentions.length !== 1) return null;
+  const candidate = resolution.mentions[0]?.candidates[0];
+  if (!candidate || candidate.kind !== "city" || !candidate.state) return null;
+
+  const consolidation = CONSOLIDATED_AGENCIES.find((entry) =>
+    entry.state.toUpperCase() === candidate.state!.toUpperCase() &&
+    entry.alias.toUpperCase() === candidate.name.toUpperCase()
+  );
+  const startYear = latestYear - 1;
+  const endYear = latestYear;
+  const agencyPredicate = consolidation
+    ? `ha.ori = ${sqlQuote(consolidation.historicalOri)}`
+    : `UPPER(ha.state) = ${sqlQuote(candidate.state.toUpperCase())} AND ha.agency = ${sqlQuote(candidate.name)} AND LOWER(ha.type) = 'city'`;
+  const label = `${consolidation?.alias ?? candidate.name}, ${candidate.state.toUpperCase()}`;
+  const sql = `
+    WITH agency AS (
+      SELECT ha.ori
+      FROM historical_agency ha
+      JOIN historical_agency_crime coverage ON coverage.ori = ha.ori
+      WHERE ${agencyPredicate}
+      GROUP BY ha.ori
+      ORDER BY COUNT(*) DESC
+      LIMIT 1
+    ), values_by_year AS (
+      SELECT hac.year, hac.violent
+      FROM historical_agency_crime hac
+      JOIN agency a ON a.ori = hac.ori
+      WHERE hac.year IN (${startYear}, ${endYear})
+        AND hac.violent IS NOT NULL
+    )
+    SELECT
+      ${sqlQuote(label)} AS city,
+      MAX(CASE WHEN year = ${startYear} THEN violent END) AS violent_${startYear},
+      MAX(CASE WHEN year = ${endYear} THEN violent END) AS violent_${endYear},
+      MAX(CASE WHEN year = ${endYear} THEN violent END) - MAX(CASE WHEN year = ${startYear} THEN violent END) AS numeric_change,
+      ROUND(100.0 * (MAX(CASE WHEN year = ${endYear} THEN violent END) - MAX(CASE WHEN year = ${startYear} THEN violent END)) /
+        NULLIF(MAX(CASE WHEN year = ${startYear} THEN violent END), 0), 1) AS percent_change
+    FROM values_by_year
+    HAVING violent_${startYear} IS NOT NULL AND violent_${endYear} IS NOT NULL
+  `.trim();
+
+  return {
+    sql,
+    title: `Violent Crime Change in ${label}, ${startYear}-${endYear}`,
+    explanation: `Reported violent crime in the Historical city-agency series for ${label}, comparing the two latest complete years available (${startYear} and ${endYear}).`,
+    columns: ["city", `violent_${startYear}`, `violent_${endYear}`, "numeric_change", "percent_change"],
+    chartConfig: null,
+    chartMeta: { source: "FBI SRS", agencyCount: 1, population: null },
+    guardrail: "deterministic-historical-local-recent-change",
+  };
 }
 
 function historyText(rawHistory: unknown): string {

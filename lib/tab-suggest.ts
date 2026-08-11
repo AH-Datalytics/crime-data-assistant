@@ -472,7 +472,8 @@ function detectRequiredAttributes(q: string): string[] {
   // Offender demographics
   if (/\b(offender|suspect|perpetrator)\s*(race|sex|age|demographic|gender)/i.test(q) ||
       /\b(offender|suspect)\s*(by\s*)(race|sex|age)/i.test(q) ||
-      /\b(murder|homicide)\s*offender\s*(demographic|race|age|sex)/i.test(q)) {
+      /\b(murder|homicide)\s*offender\s*(demographic|race|age|sex)/i.test(q) ||
+      /\boffenders?\b.{0,35}\b(?:under|younger\s+than|below)\s+(?:age\s*)?\d{1,2}\b/i.test(q)) {
     attrs.push("offender_demographics");
   }
 
@@ -528,7 +529,8 @@ function detectRequiredAttributes(q: string): string[] {
   }
 
   // Multiple victims / incident-level detail
-  if (/\bmultiple\s*(victim|offender)/i.test(q) || /\bincident.level/i.test(q)) {
+  if (/\bmultiple\s*(victim|offender)/i.test(q) || /\bincident.level/i.test(q) ||
+      /\b(?:incidents?|crimes?)\b.{0,45}\b(?:one\s+or\s+more|any)\s+offenders?\b/i.test(q)) {
     attrs.push("incident_level");
   }
 

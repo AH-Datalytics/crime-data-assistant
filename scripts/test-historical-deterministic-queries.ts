@@ -1,5 +1,25 @@
 import assert from "node:assert/strict";
-import { buildHistoricalCityChangeRankingPlan } from "../lib/historical-deterministic-queries";
+import { buildHistoricalCityChangeRankingPlan, buildHistoricalLocalRecentChangePlan } from "../lib/historical-deterministic-queries";
+
+{
+  const plan = buildHistoricalLocalRecentChangePlan(
+    "How has violent crime changed in the last year in Washington D.C.?",
+    2025
+  );
+  assert.ok(plan?.sql, "single-city recent change should be handled deterministically");
+  assert.match(plan.sql, /ha\.agency = 'Washington'/);
+  assert.match(plan.sql, /UPPER\(ha\.state\) = 'DC'/);
+  assert.match(plan.sql, /hac\.year IN \(2024, 2025\)/);
+  assert.match(plan.sql, /hac\.violent/);
+  assert.doesNotMatch(plan.sql, /historical_state_national/);
+  assert.deepEqual(plan.columns, ["city", "violent_2024", "violent_2025", "numeric_change", "percent_change"]);
+}
+
+assert.equal(
+  buildHistoricalLocalRecentChangePlan("How has violent crime changed in Texas in the last year?", 2025),
+  null,
+  "state questions must remain outside the local city builder"
+);
 
 {
   const plan = buildHistoricalCityChangeRankingPlan(
