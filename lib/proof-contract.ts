@@ -216,6 +216,16 @@ export interface ProofManifest {
     requestedCoverage: CheckState;
   };
   checks: Record<ProofCheck, CheckState>;
+  /**
+   * Why each `not_applicable` check does not apply, keyed by check name.
+   *
+   * Required for every check marked `not_applicable`. The handoff says such a
+   * state "must be justified by the typed plan, not selected after a check
+   * fails" -- without a recorded justification the two are indistinguishable
+   * after the fact, and `not_applicable` becomes an unfalsifiable way to pass
+   * any obligation.
+   */
+  notApplicableReasons: Partial<Record<ProofCheck, string>>;
 }
 
 /** Every check starts `unknown`: nothing is assumed to have passed. */
@@ -232,27 +242,53 @@ export function createProofManifest(sourceId: SourceId, derivation: Derivation =
     planFamily: null,
     source: { id: sourceId, dataVersion: null, health: "unknown", requestedCoverage: "unknown" },
     checks: emptyChecks(),
+    notApplicableReasons: {},
   };
 }
 
 /**
- * Whether a manifest satisfies the contract for delivering factual content.
+ * Why a manifest cannot deliver factual content, or null when it can.
  *
- * Deliberately written as "every mandatory check is affirmatively passed or
- * justifiably not applicable", NOT as "no check failed". The difference is the
- * whole point of the contract: an absent, skipped, or unknown check must block
- * delivery exactly as a failed one does.
+ * Returns the reason rather than a bare boolean so the shadow-mode logs and the
+ * reviewer queue can say what was missing instead of only that something was.
+ *
+ * Deliberately written as "every obligation is affirmatively satisfied", NOT as
+ * "nothing failed". An absent, skipped, or unknown obligation blocks delivery
+ * exactly as a failed one does -- and so does a missing piece of the evidence
+ * the manifest is supposed to carry:
+ *
+ *   - `planFamily` names the typed plan the answer came from. Without it there
+ *     is no way to know which family's regression corpus and enforcement
+ *     threshold apply, so "deterministic" is an unverifiable assertion.
+ *   - `dataVersion` identifies the source build the numbers came from. Handoff
+ *     2.1 requires "a healthy source whose version and applicable time coverage
+ *     are known"; a null version means the version is not known.
+ *   - a `not_applicable` check requires a recorded justification (see
+ *     ProofManifest.notApplicableReasons).
  */
-export function satisfiesFactualDelivery(manifest: ProofManifest): boolean {
-  if (manifest.v !== PROOF_MANIFEST_VERSION) return false;
-  if (manifest.derivation !== "deterministic") return false;
-  if (manifest.source.health !== "passed") return false;
-  if (manifest.source.requestedCoverage !== "passed") return false;
+export function factualDeliveryBlocker(manifest: ProofManifest): string | null {
+  if (manifest.v !== PROOF_MANIFEST_VERSION) return `manifest version ${manifest.v} is not ${PROOF_MANIFEST_VERSION}`;
+  if (manifest.derivation !== "deterministic") return `derivation is '${manifest.derivation}', not 'deterministic'`;
+  if (!manifest.planFamily || manifest.planFamily.trim() === "") return "planFamily is not set";
+  if (!manifest.source.dataVersion || manifest.source.dataVersion.trim() === "") return "source.dataVersion is not set";
+  if (manifest.source.health !== "passed") return `source.health is '${manifest.source.health}'`;
+  if (manifest.source.requestedCoverage !== "passed") return `source.requestedCoverage is '${manifest.source.requestedCoverage}'`;
   for (const check of PROOF_CHECKS) {
     const state = manifest.checks[check];
-    if (state !== "passed" && state !== "not_applicable") return false;
+    if (state === "passed") continue;
+    if (state === "not_applicable") {
+      const reason = manifest.notApplicableReasons?.[check];
+      if (!reason || reason.trim() === "") return `check '${check}' is not_applicable with no recorded justification`;
+      continue;
+    }
+    return `check '${check}' is '${state ?? "absent"}'`;
   }
-  return true;
+  return null;
+}
+
+/** Whether a manifest satisfies the contract for delivering factual content. */
+export function satisfiesFactualDelivery(manifest: ProofManifest): boolean {
+  return factualDeliveryBlocker(manifest) === null;
 }
 
 /** Names of checks blocking delivery, for logging and reviewer display. */
@@ -264,17 +300,26 @@ export function blockingChecks(manifest: ProofManifest): ProofCheck[] {
 }
 
 /**
- * Throws when an omission carries a source-attributable reason without evidence.
+ * Throws when an omission asserts any reason without the evidence for it.
  *
- * This is the programmatic guard for handoff 2.4: "Never claim a source lacks
- * data unless a deterministic attribution probe established that fact."
+ * Every reason except `unknown` is a claim about why an entity is absent, and
+ * handoff 7 requires that "each reason must carry evidence" -- not only the
+ * subset that blames the source. A `consolidation_mapping` or
+ * `unsupported_geography_type` with no evidence is just as unfalsifiable as an
+ * unproven `not_in_source`, and the reviewer adjudicating an omission has
+ * nothing to check it against.
+ *
+ * `unknown` is the one reason that asserts nothing, so it alone needs no
+ * evidence -- and correspondingly it can never be phrased to a user as a source
+ * limitation (see isSourceAttributable and handoff 2.4).
  */
 export function assertOmissionEvidence(omission: Omission): void {
-  if (isSourceAttributable(omission.reason) && !omission.evidence) {
-    throw new Error(
-      `Omission for ${omission.entityId} claims source-attributable reason '${omission.reason}' with no evidence. ` +
-        "Use 'capability_path_unavailable' or 'unknown' instead of asserting an unproven source limitation."
-    );
+  if (omission.reason === "unknown") return;
+  if (!omission.evidence || omission.evidence.trim() === "") {
+    const guidance = isSourceAttributable(omission.reason)
+      ? "Use 'capability_path_unavailable' or 'unknown' instead of asserting an unproven source limitation."
+      : "Record the probe or resolver output that established this reason, or use 'unknown'.";
+    throw new Error(`Omission for ${omission.entityId} claims reason '${omission.reason}' with no evidence. ${guidance}`);
   }
 }
 

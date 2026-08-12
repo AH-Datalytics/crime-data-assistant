@@ -45,7 +45,7 @@ function healthyRun(): AuditAccounting {
   const verdict = evaluateAuditHealth(accounting);
   assert.equal(verdict.state, "incomplete");
   assert.equal(verdict.cleanReportPermitted, false, "zero executed can never be clean");
-  assert.ok(verdict.reasons.some((reason) => /executed 0/.test(reason)));
+  assert.ok(verdict.reasons.some((reason) => /0 executed/.test(reason)));
   assert.throws(() => assertCleanReportPermitted(accounting, verdict), /Refusing to report a clean result/);
   // The summary line must carry the health context, never a bare zero.
   assert.match(describeAuditHealth(accounting, verdict), /INCOMPLETE/);
@@ -113,31 +113,92 @@ function healthyRun(): AuditAccounting {
   assert.ok(verdict.reasons.some((reason) => /never recorded a finish time/.test(reason)));
 }
 
-// eligible may be less than expected (a filter excluded some), but never more.
+// SCOPE RECONCILIATION. Deliberate filtering is normal and must not make a run
+// look unhealthy -- but it has to be individually accounted, or a filter that
+// silently swallows real traffic is indistinguishable from one working as
+// designed. Both identities are required:
+//   expected = excluded + eligible
+//   eligible = executed + skipped + failed
 {
+  // The ordinary case: a window of 20 rows, 10 of them internal replay traffic.
   const filtered = healthyRun();
   filtered.expected = 20;
+  filtered.excluded = Array.from({ length: 10 }, (_, i) => ({ id: `replay-${i}`, reason: "internal_session" }));
   filtered.eligible = 10;
+  filtered.executed = 10;
   const filteredVerdict = evaluateAuditHealth(filtered);
-  assert.equal(filteredVerdict.state, "incomplete");
-  assert.equal(filteredVerdict.cleanReportPermitted, false);
+  assert.equal(filteredVerdict.state, "healthy", "fully accounted filtering is healthy");
+  assert.equal(filteredVerdict.cleanReportPermitted, true);
+  assert.match(describeAuditHealth(filtered, filteredVerdict), /excluded=10/);
+
+  // An unexplained gap between expected and eligible is the silent-coverage-loss
+  // shape and must be invalid, not merely incomplete.
+  const unexplained = healthyRun();
+  unexplained.expected = 20;
+  unexplained.eligible = 10;
+  unexplained.executed = 10;
+  const unexplainedVerdict = evaluateAuditHealth(unexplained);
+  assert.equal(unexplainedVerdict.state, "invalid");
+  assert.ok(unexplainedVerdict.reasons.some((reason) => /scope does not reconcile/.test(reason)));
 
   const impossible = healthyRun();
-  impossible.expected = 5;
-  const impossibleVerdict = evaluateAuditHealth(impossible); // eligible 10 > expected 5
+  impossible.expected = 5; // eligible 10 > expected 5
+  const impossibleVerdict = evaluateAuditHealth(impossible);
   assert.equal(impossibleVerdict.state, "invalid");
-  assert.ok(impossibleVerdict.reasons.some((reason) => /exceeds expected/.test(reason)));
+  assert.ok(impossibleVerdict.reasons.some((reason) => /scope does not reconcile/.test(reason)));
 }
 
-// A suite that expected nothing and did nothing is vacuously healthy. This is
-// the legitimate "no traffic in the window" case, distinct from the D6 case
-// above where work was expected.
+// Everything filtered out. Executing zero is correct here, and keying the D6
+// rule on `eligible` rather than `expected` is what makes this healthy -- a
+// window containing only replay traffic must not raise an alarm, or readers
+// learn to ignore the alarm.
+{
+  const allFiltered = createAccounting("phase1-detector", "v1", 1_000);
+  allFiltered.expected = 8;
+  allFiltered.excluded = Array.from({ length: 8 }, (_, i) => ({ id: `canary-${i}`, reason: "internal_session" }));
+  allFiltered.eligible = 0;
+  allFiltered.executed = 0;
+  allFiltered.finishedAt = 2_000;
+  const verdict = evaluateAuditHealth(allFiltered);
+  assert.equal(verdict.state, "healthy");
+  assert.equal(verdict.cleanReportPermitted, true);
+
+  // But eligible work that went unexecuted is still the D6 case. The skip keeps
+  // the execution identity balanced, so this is `incomplete` (work was in scope
+  // and none of it ran) rather than `invalid` (the ledger lost track of it).
+  const eligibleButIdle: AuditAccounting = {
+    ...allFiltered,
+    excluded: allFiltered.excluded.slice(0, 7),
+    eligible: 1,
+    executed: 0,
+    skipped: [{ id: "row-1", reason: "missing_reference_data" }],
+  };
+  const idleVerdict = evaluateAuditHealth(eligibleButIdle);
+  assert.equal(idleVerdict.state, "incomplete");
+  assert.equal(idleVerdict.cleanReportPermitted, false);
+  assert.ok(idleVerdict.reasons.some((reason) => /0 executed/.test(reason)));
+}
+
+// A suite that saw nothing and did nothing is vacuously healthy -- the
+// legitimate "no traffic at all" case.
 {
   const idle = createAccounting("chart-audit", "v1", 1_000);
   idle.finishedAt = 2_000;
   const verdict = evaluateAuditHealth(idle);
   assert.equal(verdict.state, "healthy");
   assert.equal(verdict.cleanReportPermitted, true);
+}
+
+// Skipped eligible items block a clean report even when nothing failed: the
+// suite intended to process them and did not.
+{
+  const skipped = healthyRun();
+  skipped.executed = 9;
+  skipped.skipped = [{ id: "row-9", reason: "unsupported_shape" }];
+  const verdict = evaluateAuditHealth(skipped);
+  assert.equal(verdict.state, "incomplete");
+  assert.equal(verdict.cleanReportPermitted, false);
+  assert.ok(verdict.reasons.some((reason) => /skipped/.test(reason)));
 }
 
 console.log("audit-health tests passed");

@@ -13,6 +13,7 @@ import {
   DELIVERY_ACTIONS,
   emptyChecks,
   FACTUAL_DELIVERY_ACTIONS,
+  factualDeliveryBlocker,
   isSourceAttributable,
   OMISSION_REASONS,
   permitsAnswer,
@@ -34,6 +35,13 @@ function passingManifest(): ProofManifest {
   manifest.source.requestedCoverage = "passed";
   for (const check of PROOF_CHECKS) manifest.checks[check] = "passed";
   return manifest;
+}
+
+/** Every blocker must name what is wrong; a bare `false` is not reviewable. */
+function assertBlocked(manifest: ProofManifest, pattern: RegExp, message: string): void {
+  assert.equal(satisfiesFactualDelivery(manifest), false, message);
+  const blocker = factualDeliveryBlocker(manifest);
+  assert.ok(blocker && pattern.test(blocker), `${message} — blocker was ${JSON.stringify(blocker)}`);
 }
 
 // A fresh manifest assumes nothing: every check starts unknown, so a manifest
@@ -60,12 +68,23 @@ for (const check of PROOF_CHECKS) {
   failed.checks[check] = "failed";
   assert.equal(satisfiesFactualDelivery(failed), false, `failed '${check}' must block delivery`);
 
-  // not_applicable is the one non-passed state that may proceed, because the
-  // typed plan justified it (handoff 6.1). Verified so a future refactor cannot
-  // quietly widen or narrow the exemption.
-  const notApplicable = passingManifest();
-  notApplicable.checks[check] = "not_applicable";
-  assert.equal(satisfiesFactualDelivery(notApplicable), true, `not_applicable '${check}' may proceed`);
+  // not_applicable may proceed ONLY with a recorded justification. Without one
+  // it is indistinguishable from a check quietly waived after it failed, which
+  // would make it an unfalsifiable way to satisfy any obligation.
+  const unjustified = passingManifest();
+  unjustified.checks[check] = "not_applicable";
+  assertBlocked(unjustified, /no recorded justification/, `unjustified not_applicable '${check}' must block`);
+
+  const justified = passingManifest();
+  justified.checks[check] = "not_applicable";
+  justified.notApplicableReasons[check] = "the typed plan returns no chart for this family";
+  assert.equal(satisfiesFactualDelivery(justified), true, `justified not_applicable '${check}' may proceed`);
+
+  // An empty or whitespace justification is not a justification.
+  const blank = passingManifest();
+  blank.checks[check] = "not_applicable";
+  blank.notApplicableReasons[check] = "   ";
+  assertBlocked(blank, /no recorded justification/, `blank justification for '${check}' must block`);
 }
 
 // A deleted check key is as blocking as an unknown one. Guards against a
@@ -88,11 +107,32 @@ for (const check of PROOF_CHECKS) {
 {
   const unhealthy = passingManifest();
   unhealthy.source.health = "unknown";
-  assert.equal(satisfiesFactualDelivery(unhealthy), false, "unknown source health must block");
+  assertBlocked(unhealthy, /source\.health/, "unknown source health must block");
 
   const uncovered = passingManifest();
   uncovered.source.requestedCoverage = "failed";
-  assert.equal(satisfiesFactualDelivery(uncovered), false, "failed requested-period coverage must block");
+  assertBlocked(uncovered, /requestedCoverage/, "failed requested-period coverage must block");
+}
+
+// The manifest must carry the evidence it claims to carry. Both of these were
+// accepted by an earlier revision, which meant "deterministic" could be asserted
+// with no named plan and no known source build behind it.
+{
+  for (const empty of [null, "", "   "]) {
+    const noFamily = passingManifest();
+    noFamily.planFamily = empty as string | null;
+    assertBlocked(noFamily, /planFamily/, `planFamily=${JSON.stringify(empty)} must block: no family means no regression corpus or threshold applies`);
+
+    const noVersion = passingManifest();
+    noVersion.source.dataVersion = empty as string | null;
+    assertBlocked(noVersion, /dataVersion/, `dataVersion=${JSON.stringify(empty)} must block: handoff 2.1 requires a known source version`);
+  }
+}
+
+// A fresh manifest reports the FIRST unmet obligation, not a generic failure.
+{
+  const fresh = createProofManifest("shr");
+  assert.match(factualDeliveryBlocker(fresh) || "", /derivation/);
 }
 
 // A manifest written by a future schema version is not interpretable by this code.
@@ -119,27 +159,37 @@ for (const check of PROOF_CHECKS) {
   assert.equal(permitsAnswer(base("healthy", "failed")), false);
 }
 
-// Omission attribution: a source-attributable reason without evidence is a
-// fabricated data claim (handoff 2.4) and must throw rather than ship.
+// Omission attribution: EVERY reason except `unknown` is a claim and needs
+// evidence (handoff 7). An earlier revision required it only for
+// source-attributable reasons, which let a 'consolidation_mapping' or
+// 'unsupported_geography_type' ship with nothing a reviewer could check.
 {
-  const withoutEvidence: Omission = {
-    entityId: "FL0160200",
-    label: "Jacksonville, FL",
-    reason: "not_in_source",
-    evidence: null,
-  };
-  assert.throws(() => assertOmissionEvidence(withoutEvidence), /no evidence/i);
+  const base: Omission = { entityId: "FL0160200", label: "Jacksonville, FL", reason: "not_in_source", evidence: null };
 
-  const withEvidence: Omission = { ...withoutEvidence, evidence: "nibrs_agency_completeness has no row for FL0160200" };
-  assert.doesNotThrow(() => assertOmissionEvidence(withEvidence));
+  for (const reason of OMISSION_REASONS) {
+    const withoutEvidence: Omission = { ...base, reason };
+    if (reason === "unknown") {
+      // `unknown` asserts nothing, so it alone needs no evidence.
+      assert.doesNotThrow(() => assertOmissionEvidence(withoutEvidence), "unknown needs no evidence");
+      continue;
+    }
+    assert.throws(() => assertOmissionEvidence(withoutEvidence), /no evidence/i, `'${reason}' without evidence must throw`);
+    assert.throws(() => assertOmissionEvidence({ ...withoutEvidence, evidence: "  " }), /no evidence/i, `'${reason}' with blank evidence must throw`);
+    assert.doesNotThrow(() => assertOmissionEvidence({ ...withoutEvidence, evidence: "probe output" }), `'${reason}' with evidence is fine`);
+  }
 
-  // `unknown` and capability reasons assert nothing about the source, so they
-  // need no evidence -- but they must also never be treated as source claims.
+  // The guidance differs by kind, so the author is pointed at the right fix.
+  assert.throws(() => assertOmissionEvidence(base), /unproven source limitation/);
+  assert.throws(
+    () => assertOmissionEvidence({ ...base, reason: "consolidation_mapping" }),
+    /Record the probe or resolver output/
+  );
+
+  // Which reasons may be stated to a user as a fact about the data.
   assert.equal(isSourceAttributable("unknown"), false);
   assert.equal(isSourceAttributable("capability_path_unavailable"), false);
   assert.equal(isSourceAttributable("source_unhealthy"), false, "source_unhealthy is our state, not a data fact");
-  assert.doesNotThrow(() => assertOmissionEvidence({ ...withoutEvidence, reason: "unknown" }));
-  assert.doesNotThrow(() => assertOmissionEvidence({ ...withoutEvidence, reason: "capability_path_unavailable" }));
+  assert.equal(isSourceAttributable("not_in_source"), true);
 }
 
 // Enum shape guards. These catch a rename that would silently invalidate stored

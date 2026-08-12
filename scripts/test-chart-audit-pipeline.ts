@@ -17,7 +17,7 @@ import os from "node:os";
 import path from "node:path";
 import Database from "better-sqlite3";
 import { buildChartAuditArtifact, type ChartRenderReceipt } from "../lib/chart-audit";
-import { runChartAudit } from "./run-chart-audit";
+import { CHART_AUDIT_SOURCE, runChartAudit } from "./run-chart-audit";
 
 const repoRoot = path.resolve(__dirname, "..");
 const workDir = fs.mkdtempSync(path.join(os.tmpdir(), "chart-audit-pipeline-"));
@@ -32,6 +32,35 @@ const dbPath = path.join(workDir, "query_log.db");
  */
 const migrationScript = path.join(repoRoot, "scripts", "migrate-chart-audit-artifacts.js");
 
+/**
+ * Remove a temp directory. Best-effort by design.
+ *
+ * Every SQLite handle this suite opens is closed before cleanup runs, but on
+ * Windows the OS can still refuse to unlink a database file that better-sqlite3
+ * memory-mapped, and rmSync then throws EPERM. Files are removed individually
+ * first (which usually succeeds where a recursive directory remove does not),
+ * then the directory itself.
+ *
+ * A cleanup failure does NOT fail the suite: these directories live under the
+ * OS temp path and are reclaimed there, and failing on cleanup would report a
+ * red test for a reason unrelated to anything it asserts. The warning is kept
+ * so a genuine handle leak is still visible rather than silent.
+ */
+function removeDir(dir: string): void {
+  try {
+    for (const entry of fs.readdirSync(dir)) {
+      try {
+        fs.rmSync(path.join(dir, entry), { force: true, maxRetries: 5, retryDelay: 50 });
+      } catch {
+        /* fall through to the directory remove below */
+      }
+    }
+    fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
+  } catch (error) {
+    console.warn(`[test-chart-audit-pipeline] could not remove temp dir ${dir}: ${(error as Error).message}`);
+  }
+}
+
 try {
   // A minimal query_log, then the real migration -- so a schema drift in the
   // migration surfaces here rather than in production.
@@ -44,7 +73,12 @@ try {
         id INTEGER PRIMARY KEY AUTOINCREMENT, query_log_id INTEGER NOT NULL, ts INTEGER NOT NULL,
         severity TEXT NOT NULL, category TEXT NOT NULL, finding TEXT NOT NULL, proposed_fix TEXT,
         status TEXT DEFAULT 'open', source TEXT NOT NULL DEFAULT 'legacy');
-      CREATE UNIQUE INDEX idx_audit_findings_unique_v2 ON audit_findings (query_log_id, category, source);`);
+      CREATE UNIQUE INDEX idx_audit_findings_unique_v2 ON audit_findings (query_log_id, category, source);
+      CREATE TABLE audit_runs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, source TEXT NOT NULL, suite_version TEXT NOT NULL,
+        started_ts INTEGER NOT NULL, finished_ts INTEGER, from_log_id INTEGER, to_log_id INTEGER,
+        rows_audited INTEGER, findings_written INTEGER, status TEXT NOT NULL DEFAULT 'running', detail TEXT);
+      CREATE INDEX idx_audit_runs_watermark ON audit_runs (source, status, to_log_id);`);
     db.close();
   }
 
@@ -199,9 +233,82 @@ try {
     2,
     "a second run must upsert, not duplicate"
   );
+
+  // HEALTH REACHES THE REVIEWER. A verdict computed in memory and printed to
+  // stdout is a verdict nobody sees; the digest reads audit_runs. Without this
+  // record an empty results table and a healthy auditor with nothing to do are
+  // indistinguishable -- the exact ambiguity that let production sit with 24
+  // artifacts, 15 receipts, and 0 results while every chart was labelled
+  // "unverified".
+  const runs = rerun.prepare("SELECT source, suite_version, status, rows_audited, detail FROM audit_runs ORDER BY id").all() as Array<{
+    source: string;
+    suite_version: string;
+    status: string;
+    rows_audited: number;
+    detail: string;
+  }>;
+  assert.equal(runs.length, 2, "each run must record its health");
+  assert.equal(runs[0].source, CHART_AUDIT_SOURCE);
+  assert.notEqual(CHART_AUDIT_SOURCE, "phase1-detector", "chart-audit health must not collide with the query auditor's");
+  assert.equal(runs[0].status, "ok");
+  assert.equal(runs[0].rows_audited, 2);
+  assert.match(runs[0].detail, /expected=2 excluded=0 eligible=2 executed=2/);
+  // The digest reads this literal; keep the two in step.
+  const digestSource = fs.readFileSync(path.join(repoRoot, "scripts", "daily-query-analysis.js"), "utf8");
+  assert.match(digestSource, new RegExp(`CHART_AUDIT_SOURCE = "${CHART_AUDIT_SOURCE}"`), "digest must read the same audit_runs source");
   rerun.close();
+
+  // A MALFORMED ARTIFACT must be individually accounted, must not abort the
+  // batch, and must stop the run being reported as clean.
+  {
+    const corrupt = new Database(dbPath);
+    corrupt.prepare("UPDATE chart_audit_artifacts SET chart_config = ? WHERE request_id = ?").run("{not json", orphanRequestId);
+    corrupt.close();
+
+    const result = runChartAudit(dbPath);
+    assert.equal(result.accounting.failed.length, 1, "the malformed artifact must be recorded as failed");
+    assert.equal(result.accounting.failed[0].id, orphanRequestId);
+    assert.equal(result.counts.total, 1, "the healthy artifact must still be scored");
+    assert.equal(result.accounting.executed, 1);
+    assert.equal(result.verdict.state, "incomplete");
+    assert.equal(result.verdict.cleanReportPermitted, false, "a run with a failed artifact is not clean");
+
+    const health = new Database(dbPath, { readonly: true });
+    const latest = health.prepare("SELECT status, detail FROM audit_runs ORDER BY id DESC LIMIT 1").get() as { status: string; detail: string };
+    assert.equal(latest.status, "incomplete", "a non-clean run must not be recorded as ok");
+    assert.match(latest.detail, new RegExp(orphanRequestId), "the failing artifact must be named in the record");
+    health.close();
+  }
+
+  // MISSING SCHEMA is invalid, not clean -- and still leaves a record, so the
+  // reviewer can tell the auditor tried and could not run.
+  {
+    const bareDir = fs.mkdtempSync(path.join(os.tmpdir(), "chart-audit-bare-"));
+    const barePath = path.join(bareDir, "query_log.db");
+    try {
+      const bare = new Database(barePath);
+      bare.exec(`CREATE TABLE query_log (id INTEGER PRIMARY KEY AUTOINCREMENT, ts INTEGER, question TEXT);
+        CREATE TABLE audit_runs (id INTEGER PRIMARY KEY AUTOINCREMENT, source TEXT NOT NULL, suite_version TEXT NOT NULL,
+          started_ts INTEGER NOT NULL, finished_ts INTEGER, from_log_id INTEGER, to_log_id INTEGER,
+          rows_audited INTEGER, findings_written INTEGER, status TEXT NOT NULL DEFAULT 'running', detail TEXT);`);
+      bare.close();
+
+      assert.throws(() => runChartAudit(barePath), /schema is not installed/);
+
+      const recorded = new Database(barePath, { readonly: true });
+      const row = recorded.prepare("SELECT status, detail FROM audit_runs ORDER BY id DESC LIMIT 1").get() as
+        | { status: string; detail: string }
+        | undefined;
+      assert.ok(row, "a run that could not start must still be recorded");
+      assert.equal(row!.status, "error");
+      assert.match(row!.detail, /INVALID|schema is not installed/);
+      recorded.close();
+    } finally {
+      removeDir(bareDir);
+    }
+  }
 } finally {
-  fs.rmSync(workDir, { recursive: true, force: true });
+  removeDir(workDir);
 }
 
 console.log("chart-audit pipeline tests passed");

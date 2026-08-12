@@ -24,6 +24,25 @@
  * first-class, reconciled, assertable fact.
  */
 
+/**
+ * An item deliberately filtered out before the suite considered it.
+ *
+ * Distinct from a skip. An exclusion is a normal, expected narrowing of scope --
+ * a replay session, an internal canary, a row outside the watermark window --
+ * and says nothing bad about the run. A skip is an item the suite intended to
+ * process and could not.
+ *
+ * Modeled explicitly rather than left as the arithmetic gap between `expected`
+ * and `eligible`, because an unexplained gap is exactly the shape of a silent
+ * coverage loss: a filter that accidentally excludes real traffic looks
+ * identical to one working as designed.
+ */
+export interface AuditExclusion {
+  id: string;
+  /** Machine-readable cause, e.g. "internal_session", "outside_window". */
+  reason: string;
+}
+
 /** Why an eligible unit of work was not executed. */
 export interface AuditSkip {
   /** Identifier of the item skipped -- a row id, a fixture name, a detector id. */
@@ -48,8 +67,11 @@ export interface AuditFailure {
 export interface AuditAccounting {
   suite: string;
   suiteVersion: string;
+  /** Everything the suite saw before filtering. */
   expected: number;
-  /** Of `expected`, those that passed the suite's own eligibility filter. */
+  /** Individually accounted items removed by the suite's scope filter. */
+  excluded: AuditExclusion[];
+  /** Of `expected`, those that survived filtering: expected - excluded. */
   eligible: number;
   executed: number;
   skipped: AuditSkip[];
@@ -84,6 +106,7 @@ export function createAccounting(suite: string, suiteVersion: string, startedAt:
     suite,
     suiteVersion,
     expected: 0,
+    excluded: [],
     eligible: 0,
     executed: 0,
     skipped: [],
@@ -118,28 +141,42 @@ export function evaluateAuditHealth(accounting: AuditAccounting): AuditHealthVer
     reasons.push("run never recorded a finish time; it was killed, timed out, or crashed");
   }
 
-  // The reconciliation identity. Every eligible unit must be accounted for
-  // exactly once as executed, skipped, or failed. A mismatch means the suite
-  // lost track of its own work, which disqualifies its findings entirely.
+  // Two reconciliation identities, both required.
+  //
+  // Scope:     expected = excluded + eligible
+  // Execution: eligible = executed + skipped + failed
+  //
+  // The first makes deliberate filtering visible and individually attributable;
+  // the second makes lost work impossible to hide. A mismatch in either means
+  // the suite lost track of its own scope or its own work, which disqualifies
+  // its findings entirely.
+  const scopeAccountedFor = accounting.excluded.length + accounting.eligible;
+  if (scopeAccountedFor !== accounting.expected) {
+    state = "invalid";
+    reasons.push(
+      `scope does not reconcile: expected=${accounting.expected} but excluded+eligible=${scopeAccountedFor} ` +
+        `(excluded=${accounting.excluded.length}, eligible=${accounting.eligible})`
+    );
+  }
+
   const accountedFor = accounting.executed + accounting.skipped.length + accounting.failed.length;
   if (accountedFor !== accounting.eligible) {
     state = "invalid";
     reasons.push(
-      `accounting does not reconcile: eligible=${accounting.eligible} but executed+skipped+failed=${accountedFor} ` +
+      `execution does not reconcile: eligible=${accounting.eligible} but executed+skipped+failed=${accountedFor} ` +
         `(executed=${accounting.executed}, skipped=${accounting.skipped.length}, failed=${accounting.failed.length})`
     );
   }
 
-  if (accounting.eligible > accounting.expected) {
-    state = "invalid";
-    reasons.push(`eligible=${accounting.eligible} exceeds expected=${accounting.expected}`);
-  }
-
-  // The D6 rule. A suite that intended to do work and executed none of it has
-  // produced no evidence, regardless of how few findings it reported.
-  if (accounting.expected > 0 && accounting.executed === 0) {
+  // The D6 rule, keyed on `eligible` rather than `expected`. A suite that had
+  // work in scope and executed none of it has produced no evidence, regardless
+  // of how few findings it reported. Keying on `expected` instead would mark a
+  // run unhealthy for the ordinary case where every candidate was legitimately
+  // filtered out -- a window containing only replay traffic, say -- which would
+  // train readers to ignore the warning.
+  if (accounting.eligible > 0 && accounting.executed === 0) {
     if (state === "healthy") state = "incomplete";
-    reasons.push(`expected ${accounting.expected} item(s) but executed 0; zero findings here is not an all-clear`);
+    reasons.push(`${accounting.eligible} item(s) were eligible but 0 executed; zero findings here is not an all-clear`);
   }
 
   if (accounting.failed.length > 0 && state === "healthy") {
@@ -147,9 +184,9 @@ export function evaluateAuditHealth(accounting: AuditAccounting): AuditHealthVer
     reasons.push(`${accounting.failed.length} item(s) failed to execute`);
   }
 
-  if (accounting.eligible < accounting.expected && state === "healthy") {
+  if (accounting.skipped.length > 0 && state === "healthy") {
     state = "incomplete";
-    reasons.push(`${accounting.expected - accounting.eligible} expected item(s) were never eligible`);
+    reasons.push(`${accounting.skipped.length} eligible item(s) were skipped`);
   }
 
   return {
@@ -170,8 +207,9 @@ export function evaluateAuditHealth(accounting: AuditAccounting): AuditHealthVer
  */
 export function describeAuditHealth(accounting: AuditAccounting, verdict: AuditHealthVerdict): string {
   const base =
-    `${accounting.suite}@${accounting.suiteVersion}: expected=${accounting.expected} eligible=${accounting.eligible} ` +
-    `executed=${accounting.executed} skipped=${accounting.skipped.length} failed=${accounting.failed.length}`;
+    `${accounting.suite}@${accounting.suiteVersion}: expected=${accounting.expected} excluded=${accounting.excluded.length} ` +
+    `eligible=${accounting.eligible} executed=${accounting.executed} skipped=${accounting.skipped.length} ` +
+    `failed=${accounting.failed.length}`;
   if (verdict.cleanReportPermitted) return `${base} — healthy`;
   return `${base} — ${verdict.state.toUpperCase()}: ${verdict.reasons.join("; ")}`;
 }

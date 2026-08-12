@@ -21,6 +21,20 @@
 
 **Do not delete `/opt/nibrs/releases/20260811_151557` until enforcement has passed its observation period and cleanup is explicitly approved** (handoff §12).
 
+### Pinning is required, and a tag is not a substitute
+
+`deploy-zero-downtime.sh` keeps the last `KEEP_RELEASES=5` releases and previously protected only the current symlink target. Five deploys after this baseline was chosen, it would have been pruned — while the observation window was still open. A git tag does not help: it preserves the *source*, not the built release directory, and a rebuild is not the same artifact (different `node_modules` resolution, different build inputs).
+
+The deploy script now honours a pin list. **Creating it is a production action awaiting approval:**
+
+```bash
+mkdir -p /opt/nibrs/releases
+echo "20260811_151557" >> /opt/nibrs/releases/.pinned
+cat /opt/nibrs/releases/.pinned
+```
+
+Verify on the next deploy that the log contains `Keeping 20260811_151557 (pinned)`. **Unpinning while an observation window is open requires owner approval.** Rollback for this step is deleting the line.
+
 ### Awaiting approval — tag the baseline
 
 The handoff requires the baseline commit to be tagged. Not done: tagging pushes a ref to a shared remote.
@@ -30,11 +44,11 @@ git tag -a verified-answer-baseline-20260811 c2b52ca -m "Baseline before verifie
 git push origin verified-answer-baseline-20260811
 ```
 
-### Open gap — release directories carry no commit identifier
+### Release provenance — fixed forward, but the baseline stays inferred
 
-A release directory contains no `.git` and no `RELEASE_INFO`, so `20260811_151557 -> c2b52ca` is **inferred** from the VPS repo HEAD and deploy timing, not read from the release. If someone deploys a different branch before rollback is needed, that inference breaks.
+A release directory contained no `.git` and no `RELEASE_INFO`, so `20260811_151557 -> c2b52ca` is **inferred** from the VPS repo HEAD and deploy timing rather than read from the release.
 
-Proposed fix (deploy-script change, Stage 5 or earlier if approved): have `deploy-zero-downtime.sh` write `RELEASE_INFO` into each release directory with commit SHA, branch, build timestamp, and deploying user. Cheap, additive, and it makes every future rollback verifiable rather than inferred.
+`deploy-zero-downtime.sh` now writes `RELEASE_INFO` (release, commit, branch, built_at, built_by, host) into each release directory *before* the build, so an aborted build still leaves an identifiable directory. This is fixed forward only: **every release that exists today, including the baseline, remains unstamped.** Treat the baseline mapping as inferred until a stamped release supersedes it, and confirm the commit from `/opt/nibrs/repo` before relying on it during a rollback.
 
 ---
 
@@ -162,11 +176,11 @@ Handoff §12 requires a rehearsal before any user-visible enforcement. Sequence,
 
 | # | Action | Risk | Reversible by |
 |---|---|---|---|
-| 1 | Tag baseline commit and push the tag | Very low | `git tag -d` / `git push --delete` |
-| 2 | `mkdir -p /opt/nibrs/shared/backups` | Very low | `rmdir` |
-| 3 | Back up `query_log.db` before any migration | Very low (read-only on the live DB) | Delete the backup file |
-| 4 | Replace the two crontab lines with one nightly entry | Low — internal only; watch Resend quota | Restore `crontab.backup.<stamp>` |
-| 5 | Deploy any Stage 0/1 code | Low in `off` mode | `rollback.sh` |
-| 6 | Add `RELEASE_INFO` writing to the deploy script | Low | Revert the commit |
+| 1 | **Pin the baseline release** (`echo 20260811_151557 >> /opt/nibrs/releases/.pinned`) | Very low | Delete the line |
+| 2 | Tag baseline commit and push the tag | Very low | `git tag -d` / `git push --delete` |
+| 3 | `mkdir -p /opt/nibrs/shared/backups` | Very low | `rmdir` |
+| 4 | Back up `query_log.db` before any migration | Very low (read-only on the live DB) | Delete the backup file |
+| 5 | Replace the two crontab lines with one nightly entry | Low — internal only; **resolve the Resend daily-volume question first** | Restore `crontab.backup.<stamp>` |
+| 6 | Deploy any Stage 0/1 code | Low in `off` mode | `rollback.sh` |
 
-None has been performed.
+None has been performed. **Item 1 must happen before the first staged deployment**, since each deploy moves the baseline one place closer to the prune threshold. `RELEASE_INFO` writing and pin support are now in the deploy script (item 6 carries them to production); no separate action is required for either.

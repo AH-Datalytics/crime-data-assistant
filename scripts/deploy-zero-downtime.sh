@@ -28,6 +28,9 @@ CURRENT_LINK="$BASE_DIR/current"
 REPO_DIR="$BASE_DIR/repo"          # full clone via SSH deploy key
 PM2_APP="nibrs"
 KEEP_RELEASES=5
+# Release names listed here are never pruned, regardless of KEEP_RELEASES.
+# One name per line; blank lines and #-comments ignored.
+PINNED_FILE="$RELEASES_DIR/.pinned"
 HEALTH_URL="http://localhost:3000"
 HEALTH_TIMEOUT=15                   # seconds to wait for health check
 HEALTH_RETRIES="${HEALTH_RETRIES:-8}" # post-reload attempts; app can need ~45s to warm
@@ -186,6 +189,26 @@ node -e '
 log "  NIBRS deterministic indexes present"
 
 # ── Step 4: Build ──────────────────────────────────────────────────────
+#
+# Stamp the release with its own provenance BEFORE building, so an aborted build
+# still leaves an identifiable directory.
+#
+# Until now a release directory contained no commit identifier at all, so
+# mapping a release back to a commit meant inferring it from the VPS repo HEAD
+# and deploy timestamps. That inference silently breaks the moment someone
+# deploys a different branch, and it breaks exactly when it is needed most:
+# during a rollback, when the question is "which release was known good?".
+RELEASE_INFO_FILE="$RELEASE_DIR/RELEASE_INFO"
+{
+  echo "release=$TIMESTAMP"
+  echo "commit=$(git -C "$RELEASE_DIR" rev-parse HEAD 2>/dev/null || git rev-parse HEAD 2>/dev/null || echo unknown)"
+  echo "branch=${BRANCH:-unknown}"
+  echo "built_at=$(date -Is)"
+  echo "built_by=$(whoami 2>/dev/null || echo unknown)"
+  echo "host=$(hostname 2>/dev/null || echo unknown)"
+} > "$RELEASE_INFO_FILE" 2>/dev/null || log "  WARNING: could not write $RELEASE_INFO_FILE"
+log "  Release provenance: $(tr '\n' ' ' < "$RELEASE_INFO_FILE" 2>/dev/null || echo unavailable)"
+
 log "Building Next.js app..."
 trap cleanup_on_failure ERR
 npm run build
@@ -335,20 +358,62 @@ else
 fi
 
 # ── Step 8: Cleanup old releases ──────────────────────────────────────
+#
+# Two releases are protected from pruning: the one the symlink currently points
+# at, and any release listed in $PINNED_FILE.
+#
+# Pinning exists because "keep the last N" is not a rollback guarantee. A
+# baseline preserved for a migration's observation window is exactly the release
+# that ages out of the window while it is still needed -- five deploys after
+# pinning, the artifact you planned to roll back to is gone. A git tag does not
+# help: it preserves the source, not the built release directory, and rebuilding
+# is not the same artifact.
+#
+# To pin:    echo 20260811_151557 >> /opt/nibrs/releases/.pinned
+# To unpin:  remove that line (requires owner approval while an observation
+#            window is open -- see docs/runbooks/2026-08-11-rollback-and-backup-manifest.md)
 log "Pruning old releases (keeping last $KEEP_RELEASES)..."
 cd "$RELEASES_DIR"
+
+CURRENT_TARGET=$(readlink -f "$CURRENT_LINK")
+if [[ -f "$PINNED_FILE" ]]; then
+  # Strip comments, blank lines, and stray carriage returns from an editor.
+  PINNED=$(grep -vE '^\s*(#|$)' "$PINNED_FILE" 2>/dev/null | tr -d '\r' | sed 's/[[:space:]]*$//')
+  if [[ -n "$PINNED" ]]; then
+    log "  Pinned releases (never pruned): $(echo "$PINNED" | tr '\n' ' ')"
+  fi
+else
+  PINNED=""
+fi
+
+is_pinned() {
+  local name="$1"
+  [[ -z "$PINNED" ]] && return 1
+  while IFS= read -r pin; do
+    [[ -n "$pin" && "$pin" == "$name" ]] && return 0
+  done <<< "$PINNED"
+  return 1
+}
+
 RELEASE_COUNT=$(ls -1d */ 2>/dev/null | wc -l)
 if (( RELEASE_COUNT > KEEP_RELEASES )); then
   REMOVE_COUNT=$(( RELEASE_COUNT - KEEP_RELEASES ))
-  ls -1d */ | head -n "$REMOVE_COUNT" | while read -r old; do
-    # Never delete the release currently pointed to by the symlink
-    CURRENT_TARGET=$(readlink -f "$CURRENT_LINK")
-    OLD_FULL="$RELEASES_DIR/${old%/}"
-    if [[ "$OLD_FULL" != "$CURRENT_TARGET" ]]; then
-      log "  Removing old release: $old"
-      rm -rf "$RELEASES_DIR/$old"
+  # Piped into a subshell previously, so counters could not escape it; a while
+  # loop over a here-string keeps the skip accounting in this shell.
+  CANDIDATES=$(ls -1d */ | head -n "$REMOVE_COUNT")
+  while IFS= read -r old; do
+    [[ -z "$old" ]] && continue
+    NAME="${old%/}"
+    OLD_FULL="$RELEASES_DIR/$NAME"
+    if [[ "$OLD_FULL" == "$CURRENT_TARGET" ]]; then
+      log "  Keeping $NAME (current symlink target)"
+    elif is_pinned "$NAME"; then
+      log "  Keeping $NAME (pinned)"
+    else
+      log "  Removing old release: $NAME"
+      rm -rf "$OLD_FULL"
     fi
-  done
+  done <<< "$CANDIDATES"
 fi
 
 # ── Done ───────────────────────────────────────────────────────────────

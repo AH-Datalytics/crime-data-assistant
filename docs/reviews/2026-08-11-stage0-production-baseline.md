@@ -41,15 +41,30 @@ NIBRS_ROLLUP_DB_PATH = /opt/nibrs/shared/nibrs_rollups.db
 SHR_DB_PATH          = /opt/nibrs/shr.db
 ```
 
-`ENABLE_HATE_CRIME` is **not** present in the PM2 environment. The deploy script branches on `HC_FLAG` during preflight, so its value comes from elsewhere in the deploy environment. **Resolve before Stage 2** — hate-crime source health cannot be validated against a flag whose source of truth is unlocated.
+The hate-crime flag is **not** in the PM2 environment, but it is **not unlocated** — an earlier revision of this document said so in error, after a `grep` that covered only `/opt/nibrs/shared/.env`. Corrected on Codex review:
+
+```
+/opt/nibrs/shared/.env.local:
+  NEXT_PUBLIC_ENABLE_HATE_CRIME=…
+  HATE_CRIME_DB_PATH=…
+```
+
+`scripts/deploy-zero-downtime.sh:116` reads `NEXT_PUBLIC_ENABLE_HATE_CRIME` from `.env.local` (falling back to `.env`) and calls `die` if it is absent or not exactly `true`/`false`; when `true` it additionally requires `HATE_CRIME_DB_PATH`. The value reaches the running app through Next.js's own `.env.local` loading rather than through PM2, which is why it is absent from `pm2 jlist`. Stage 2 hate-crime source health has a defined flag and DB path to validate against.
+
+**Process note for later stages:** the same mistake — reading a `head`-truncated listing as complete — produced this error and also hid `.env.local` from the earlier file inventory. Enumerate env files explicitly rather than relying on a truncated glob.
 
 ### Environment files
 
-```
--rw------- 1 root root 166 Jul 28 13:46 /opt/nibrs/shared/.env
--rw------- 1 root root  52 Aug  5 11:38 /opt/nibrs/shared/.env.cron
--rw-r--r-- 1 root root 132 Jun 18 20:21 /opt/nibrs/shared/.env.bak-20260618-rtci-path
-```
+Full enumeration (`ls -1 /opt/nibrs/shared/.env*`), keys only:
+
+| File | Keys |
+|---|---|
+| `.env` | `RTCI_DB_PATH`, `NIBRS_DB_PATH`, `SHR_DB_PATH`, `QUERY_LOG_KEY`, `FOLLOWUP_PLANNER_MODE` |
+| `.env.local` | `ANTHROPIC_API_KEY`, `TURNSTILE_SECRET`, `HATE_CRIME_DB_PATH`, `NEXT_PUBLIC_ENABLE_HATE_CRIME`, `NIBRS_CANARY_MODEL`, `NIBRS_CANARY_SESSIONS` |
+| `.env.cron` | `RESEND_API_KEY` |
+| `.env.bak-20260618-rtci-path` | (backup, not loaded) |
+
+`.env` and `.env.cron` are mode 600. Values were never read — only key names.
 
 `.env.cron` exists at mode 600, as `nightly-audit-and-digest.sh` requires. `grep -c 'FATAL: RESEND_API_KEY' /var/log/cda-analysis.log` returned **0** — the digest has never failed for a missing key.
 
@@ -195,6 +210,8 @@ CREATE UNIQUE INDEX idx_query_log_request_id ON query_log(request_id) WHERE requ
 
 **New findings not in the handoff:**
 
-1. Release directories carry no commit identifier, so release → commit is not recoverable from the filesystem (rollback risk).
-2. `ENABLE_HATE_CRIME` is absent from the PM2 environment; its source of truth is unlocated.
-3. `logQuery` in `lib/rtci-db.ts` cannot write `model_response` at all, making diagnostic capture NIBRS-only.
+1. Release directories carried no commit identifier, so release → commit was not recoverable from the filesystem. **Addressed:** `deploy-zero-downtime.sh` now writes `RELEASE_INFO` (release, commit, branch, build time, builder, host) into each release directory before building. Existing releases — including the baseline — remain unstamped, so the baseline mapping stays inferred.
+2. Pruning kept only the last five releases and protected only the current symlink target, so the preserved baseline would eventually have been deleted mid-observation-window. **Addressed:** `deploy-zero-downtime.sh` now honours a `releases/.pinned` list that is never pruned. Creating that file on the VPS is a production action awaiting approval.
+3. `logQuery` in `lib/rtci-db.ts` cannot write `model_response` at all, making diagnostic capture NIBRS-only. Open; Stage 1 scope.
+
+**Corrected on review:** the hate-crime flag is located (`NEXT_PUBLIC_ENABLE_HATE_CRIME` in `.env.local`, read by the deploy script); an earlier revision of this document wrongly called it unlocated. See §1.

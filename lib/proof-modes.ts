@@ -76,46 +76,86 @@ export interface ModeResolution {
   /** Which configuration level decided the outcome, for logging and review. */
   decidedBy: "kill_switch" | "family" | "source" | "global" | "default";
   killSwitchEngaged: boolean;
+  /**
+   * Set when a level asked for `enforce` but the three-way authorization below
+   * was not satisfied, so the result was capped at `shadow`. Surfaced for
+   * logging: a half-configured enforcement attempt should be visible, not
+   * silently downgraded.
+   */
+  enforcementWithheldReason?: string;
+}
+
+function readExplicit(env: ModeEnv, key: string): ProofMode | null {
+  const raw = env[key];
+  if (typeof raw !== "string" || raw.trim() === "") return null;
+  return parseMode(raw);
+}
+
+function lowest(modes: ProofMode[]): ProofMode {
+  return modes.reduce((a, b) => (MODE_RANK[a] <= MODE_RANK[b] ? a : b));
 }
 
 /**
- * Resolve the effective mode for one source (and optionally one plan family).
+ * Resolve the effective mode for one source and, optionally, one plan family.
  *
- * Precedence: kill switch > family override > source override > global > default.
+ * ENFORCEMENT REQUIRES THREE INDEPENDENT AUTHORIZATIONS. The contract grants
+ * enforcement per source x family (handoff 9.1), so `enforce` is returned only
+ * when all three of these are explicitly set to "enforce":
  *
- * An override is CLAMPED to the global mode rather than allowed to exceed it.
- * Without clamping, a stale PROOF_MODE_FAMILY_* left over from an experiment
- * could re-enable enforcement for that family the moment someone set the global
- * mode back to `off` to calm an incident -- the exact scenario a kill switch
- * exists to prevent. Overrides can therefore narrow behavior but never widen it
- * past what the global setting permits.
+ *   PROOF_MODE                                  (global)
+ *   PROOF_MODE_<SOURCE>                         (source)
+ *   PROOF_MODE_FAMILY_<SOURCE>_<FAMILY>         (family)
+ *
+ * An earlier revision treated the global setting as sufficient, which meant a
+ * single PROOF_MODE=enforce would have begun altering delivery for every source
+ * and family at once -- the opposite of a per-family rollout, and impossible to
+ * stage. Any partial configuration now caps at `shadow`: the system observes and
+ * records, but cannot change what a user receives.
+ *
+ * Everything below enforcement still behaves as a ceiling: a level that is set
+ * lower than the global narrows behavior, and an unset level inherits. So
+ * PROOF_MODE=off remains a complete stop regardless of any stale per-source or
+ * per-family variable, and the kill switch outranks all of it.
  */
 export function resolveMode(sourceId: SourceId, planFamily: string | null = null, env: ModeEnv = process.env): ModeResolution {
   const killSwitchEngaged = parseKillSwitch(env[ENV_KILL_SWITCH]);
   if (killSwitchEngaged) return { mode: "off", decidedBy: "kill_switch", killSwitchEngaged: true };
 
+  const globalSet = typeof env[ENV_GLOBAL_MODE] === "string" && env[ENV_GLOBAL_MODE]!.trim() !== "";
   const global = parseMode(env[ENV_GLOBAL_MODE]);
-  const ceiling = MODE_RANK[global];
+  const source = readExplicit(env, envKeyForSource(sourceId));
+  const family = planFamily ? readExplicit(env, envKeyForFamily(sourceId, planFamily)) : null;
 
-  const clamp = (candidate: ProofMode, decidedBy: ModeResolution["decidedBy"]): ModeResolution => ({
-    mode: MODE_RANK[candidate] <= ceiling ? candidate : global,
-    decidedBy,
-    killSwitchEngaged: false,
-  });
+  const decidedBy: ModeResolution["decidedBy"] = family !== null ? "family" : source !== null ? "source" : globalSet ? "global" : "default";
 
-  if (planFamily) {
-    const raw = env[envKeyForFamily(sourceId, planFamily)];
-    if (typeof raw === "string" && raw.trim() !== "") return clamp(parseMode(raw), "family");
+  // Full authorization: every level explicitly enforces.
+  if (global === "enforce" && source === "enforce" && family === "enforce") {
+    return { mode: "enforce", decidedBy: "family", killSwitchEngaged: false };
   }
 
-  const sourceRaw = env[envKeyForSource(sourceId)];
-  if (typeof sourceRaw === "string" && sourceRaw.trim() !== "") return clamp(parseMode(sourceRaw), "source");
+  // Otherwise take the lowest setting among the levels that apply, so a narrower
+  // level always wins, then cap below enforcement.
+  const applicable: ProofMode[] = [global];
+  if (source !== null) applicable.push(source);
+  if (family !== null) applicable.push(family);
+  const effective = lowest(applicable);
 
-  if (typeof env[ENV_GLOBAL_MODE] === "string" && env[ENV_GLOBAL_MODE]!.trim() !== "") {
-    return { mode: global, decidedBy: "global", killSwitchEngaged: false };
+  if (effective === "enforce") {
+    const missing: string[] = [];
+    if (global !== "enforce") missing.push(ENV_GLOBAL_MODE);
+    if (source !== "enforce") missing.push(envKeyForSource(sourceId));
+    if (family !== "enforce") {
+      missing.push(planFamily ? envKeyForFamily(sourceId, planFamily) : "a plan family (none supplied)");
+    }
+    return {
+      mode: "shadow",
+      decidedBy,
+      killSwitchEngaged: false,
+      enforcementWithheldReason: `enforcement requires explicit authorization at every level; not set to enforce: ${missing.join(", ")}`,
+    };
   }
 
-  return { mode: DEFAULT_MODE, decidedBy: "default", killSwitchEngaged: false };
+  return { mode: effective, decidedBy, killSwitchEngaged: false };
 }
 
 /** True when the proof system may do request-path observation work. */
@@ -134,14 +174,64 @@ export function mayAlterDelivery(mode: ProofMode): boolean {
   return mode === "enforce";
 }
 
-/** Snapshot of every source's effective mode, for startup logging and review. */
+/**
+ * Snapshot of every source's family-less effective mode, for startup logging.
+ *
+ * Because enforcement is granted per source x family, this snapshot can never
+ * contain `enforce` -- use enforcedTargets() to answer "is anything enforcing?".
+ */
 export function modeSnapshot(env: ModeEnv = process.env): Record<SourceId, ProofMode> {
   const snapshot = {} as Record<SourceId, ProofMode>;
   for (const sourceId of SOURCE_IDS) snapshot[sourceId] = resolveMode(sourceId, null, env).mode;
   return snapshot;
 }
 
-/** True when no source is in enforce mode -- the Stage 0/1 expected state. */
+export interface EnforcedTarget {
+  sourceId: SourceId;
+  /**
+   * The NORMALIZED family token as it appears in the env key (upper snake case),
+   * not the plan library's original identifier. Round-trips back through
+   * envKeyForFamily() to the same key, which is what matters for resolution;
+   * treat it as an identifier for reporting, not as a display label.
+   */
+  planFamily: string;
+  /** The env variable that granted family-level authorization. */
+  envKey: string;
+}
+
+/**
+ * Every source x family currently authorized to alter delivery.
+ *
+ * Enumerated by scanning the environment for PROOF_MODE_FAMILY_* keys rather
+ * than by checking a fixed list of families, because families are declared by
+ * the plan library and this module must not need updating when one is added.
+ * A previous revision's noEnforcementActive() consulted only the family-less
+ * snapshot, so a family-level enforcement was invisible to the very function
+ * used to assert that nothing was enforcing.
+ */
+export function enforcedTargets(env: ModeEnv = process.env): EnforcedTarget[] {
+  if (parseKillSwitch(env[ENV_KILL_SWITCH])) return [];
+  const targets: EnforcedTarget[] = [];
+  const prefix = "PROOF_MODE_FAMILY_";
+  for (const envKey of Object.keys(env)) {
+    if (!envKey.startsWith(prefix)) continue;
+    const remainder = envKey.slice(prefix.length);
+    // Source ids may themselves contain an underscore (hate_crime), so match by
+    // prefix against the known ids rather than splitting on the separator.
+    const sourceId = SOURCE_IDS.find((candidate) => remainder.startsWith(`${candidate.toUpperCase()}_`));
+    if (!sourceId) continue;
+    const planFamily = remainder.slice(sourceId.length + 1);
+    if (!planFamily) continue;
+    // Re-resolve through the same path a request would take, so this can never
+    // drift from the real decision.
+    if (resolveMode(sourceId, planFamily, env).mode === "enforce") {
+      targets.push({ sourceId, planFamily, envKey });
+    }
+  }
+  return targets;
+}
+
+/** True when nothing anywhere is authorized to alter delivery. */
 export function noEnforcementActive(env: ModeEnv = process.env): boolean {
-  return Object.values(modeSnapshot(env)).every((mode) => mode !== "enforce");
+  return enforcedTargets(env).length === 0;
 }

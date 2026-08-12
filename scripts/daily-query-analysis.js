@@ -87,16 +87,27 @@ function getQueries() {
     .all(cutoff, cutoffEnd);
 }
 
-function attachChartAuditResults(queries) {
+function attachChartAuditResults(queries, chartHealth) {
   const table = db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='chart_audit_results'").get();
   const ids = queries.map((query) => query.id).filter((id) => id != null);
   const results = table && ids.length
     ? db.prepare(`SELECT query_log_id, status, summary FROM chart_audit_results WHERE query_log_id IN (${ids.map(() => "?").join(",")})`).all(...ids)
     : [];
   const byId = new Map(results.map((result) => [result.query_log_id, result]));
+
+  // When there is no result for a chart, the honest sentence depends on WHY.
+  // "verification is not available" was previously printed whether the auditor
+  // had examined the chart and found nothing to say or had never run at all --
+  // the same conflation of "checked and clean" with "never checked" that
+  // getAuditorHealth() exists to prevent on the query side.
+  const health = chartHealth || {};
+  const missingSummary = health.available
+    ? "A chart was returned. The rendered-chart auditor ran for this period but recorded no result for it."
+    : `A chart was returned, but it was NOT checked: ${health.reason || "rendered-chart auditor health is unknown"}`;
+
   for (const query of queries) {
     if (!query.chart_config) query.chartAudit = { status: "not-applicable", summary: "No chart was produced." };
-    else query.chartAudit = byId.get(query.id) || { status: "unverified", summary: "A chart was returned, but rendered-chart verification is not available." };
+    else query.chartAudit = byId.get(query.id) || { status: "unverified", summary: missingSummary };
   }
 }
 const INTERNAL_SESSION =
@@ -189,6 +200,64 @@ function getAuditorHealth() {
     };
   } catch (err) {
     return { available: false, reason: `auditor health unavailable: ${err.message}` };
+  }
+}
+
+/**
+ * Health of the most recent rendered-chart auditor run.
+ *
+ * Read from audit_runs rather than inferred from chart_audit_results, for the
+ * reason this table exists: on 2026-08-11 production held 24 chart artifacts and
+ * 15 render receipts with zero results, and every chart in the digest was
+ * labelled "unverified" -- a phrase that reads as a property of the charts when
+ * it was actually a property of an auditor that had never executed. An empty
+ * results table and a healthy auditor with nothing to do are indistinguishable
+ * without this record.
+ *
+ * Mirrors run-chart-audit.ts's CHART_AUDIT_SOURCE. That file is TypeScript and
+ * this script runs under plain node, so the literal is duplicated here and the
+ * pairing is asserted by scripts/test-chart-audit-pipeline.ts -- the same
+ * arrangement already used for PHASE1_DETECTORS.
+ */
+const CHART_AUDIT_SOURCE = "chart-audit";
+
+function getChartAuditorHealth() {
+  try {
+    const exists = db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='audit_runs'").get();
+    if (!exists) return { available: false, reason: "audit_runs table does not exist (migration not applied)" };
+    const run = db.prepare(
+      "SELECT id, status, started_ts, finished_ts, rows_audited, detail FROM audit_runs WHERE source = ? ORDER BY id DESC LIMIT 1"
+    ).get(CHART_AUDIT_SOURCE);
+    if (!run) {
+      return {
+        available: false,
+        reason:
+          "the rendered-chart auditor has never run. Charts below are reported as unverified because nothing " +
+          "checked them, not because a check found a problem.",
+      };
+    }
+
+    // A run that predates the window says nothing about the charts in it. The
+    // wrapper that invokes this auditor was observed running weekly while being
+    // documented as nightly, so a stale run is the expected failure here.
+    const ranInWindow = Number(run.started_ts) >= cutoff;
+    return {
+      available: run.status === "ok" && ranInWindow,
+      status: run.status,
+      runId: run.id,
+      rowsAudited: run.rows_audited,
+      ranInWindow,
+      lastRunAt: run.started_ts ? new Date(Number(run.started_ts)).toISOString() : null,
+      detail: run.detail || null,
+      reason:
+        run.status !== "ok"
+          ? `last chart-audit run ended '${run.status}': ${run.detail || "no detail recorded"}`
+          : ranInWindow
+            ? null
+            : `the rendered-chart auditor last ran ${run.started_ts ? new Date(Number(run.started_ts)).toISOString() : "at an unknown time"}, before this window`,
+    };
+  } catch (err) {
+    return { available: false, reason: `chart auditor health unavailable: ${err.message}` };
   }
 }
 
@@ -1107,7 +1176,15 @@ h1{font-size:23px;margin:0 0 4px}h2{font-size:18px;margin:28px 0 12px}.sub{color
   if (stats.slowQueries === 0) healthy.push("No unusually slow requests were detected.");
   if (healthy.length) html += `<h2>What looked healthy</h2><div class="healthy">${healthy.map((item) => `&bull; ${escapeHtml(item)}`).join("<br>")}</div>`;
 
-  html += `<h2>What remains uncertain</h2><div class="uncertain">The review can detect known failure patterns, but it still cannot fully verify every number or every location in a returned table. A clean result means "nothing suspicious found," not "independently proven correct."</div>`;
+  html += `<h2>What remains uncertain</h2><div class="uncertain">The review can detect known failure patterns, but it still cannot fully verify every number or every location in a returned table. A clean result means "nothing suspicious found," not "independently proven correct."`;
+  // Say plainly when the chart auditor did not run. Without this the charts
+  // above read as "unverified" and a reader reasonably concludes the checker
+  // looked and was unsure, rather than that nothing looked at all.
+  const chartHealth = stats.chartAuditorHealth || {};
+  if (!chartHealth.available) {
+    html += `<br><br><strong>Charts were not independently checked in this period.</strong> ${escapeHtml(chartHealth.reason || "Rendered-chart auditor health is unknown.")}`;
+  }
+  html += `</div>`;
   if (visitors) html += `<p class="quiet" style="margin-top:18px">Usage context: ${visitors.pageviews} page view${visitors.pageviews === 1 ? "" : "s"} from ${visitors.uniqueSessions} visitor session${visitors.uniqueSessions === 1 ? "" : "s"}.</p>`;
   html += `<div class="footer">Technical detector details remain in the audit database and are intentionally omitted from this human-facing email.</div></body></html>`;
   return html;
@@ -1920,11 +1997,16 @@ async function main() {
   );
   const allQueries = getQueries();
   const queries = allQueries.filter(isHumanQuery);
-  attachChartAuditResults(queries);
+  const chartAuditorHealth = getChartAuditorHealth();
+  if (!chartAuditorHealth.available) {
+    console.warn(`[chart-audit] NOT healthy for this window: ${chartAuditorHealth.reason}`);
+  }
+  attachChartAuditResults(queries, chartAuditorHealth);
   const excluded = allQueries.length - queries.length;
   console.log(`Found ${queries.length} user queries (${excluded} automated/test queries excluded)`);
 
   const { stats, issues, suggestions } = analyze(queries);
+  stats.chartAuditorHealth = chartAuditorHealth;
   const visitors = getVisitors();
   console.log(
     `Stats: ${stats.total} queries, ${stats.errors} errors, ${issues.length} issues, ${suggestions.length} suggestions, ${visitors ? visitors.pageviews + " pageviews" : "no visitor data yet"}`
