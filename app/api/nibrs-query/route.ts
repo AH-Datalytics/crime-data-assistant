@@ -35,6 +35,7 @@ import {
   type SealedPayload,
 } from "@/lib/proof-finalize";
 import { sealPlanDerivation } from "@/lib/plan-derivation";
+import { cacheValiditySignature } from "@/lib/proof-cache-validity";
 import type { DeliveryAction } from "@/lib/proof-contract";
 import { validateGrain } from "@/lib/requested-grain";
 import { buildCompletenessAnswer, detectCompletenessQuestion, loadCompletenessRows } from "@/lib/completeness-intent";
@@ -255,6 +256,15 @@ export async function POST(req: NextRequest) {
      * query_log keeps the RAW question so the reviewer sees what the user typed.
      */
     let proofQuestion = question;
+
+    /**
+     * Validity signature for cached entries: enforcement state plus source data
+     * version. A change to either produces a cache miss rather than replaying SQL
+     * authored under conditions no longer in force (handoff §4, §13). dataVersion is
+     * null until Stage 2 builds the source-health registry.
+     */
+    const cacheValidity = cacheValiditySignature("nibrs", null);
+
 
     /**
      * Proof finalization for one terminal exit of this route.
@@ -652,7 +662,7 @@ export async function POST(req: NextRequest) {
     // Check response cache (only standalone questions). Continuous-reporter
     // requests are contract-sensitive and must not reuse stale broad-summary SQL.
     const cacheableStandalone = basePromptHistory.length === 0 && !asksContinuousReportingFilter(question);
-    const cached = cacheableStandalone ? getCached(question, "nibrs") : null;
+    const cached = cacheableStandalone ? getCached(question, "nibrs", cacheValidity) : null;
 
     let geoCorrectionApplied = false;
     // Captured before the server template overwrites claude.explanation, so a
@@ -1580,7 +1590,7 @@ export async function POST(req: NextRequest) {
 
     // Cache successful responses (only standalone questions)
     if (!cached && cacheableStandalone) {
-      setCache(question, "nibrs", { sql, explanation: claude.explanation, title: claude.title, chartType: claude.chartHint, xAxis: claude.xAxis, yAxis: claude.yAxis ? [claude.yAxis] : undefined, yAxisLabel: claude.yAxisLabel, xAxisLabel: claude.xAxisLabel, colors: claude.colors, annotations: claude.annotations });
+      setCache(question, "nibrs", { sql, explanation: claude.explanation, title: claude.title, chartType: claude.chartHint, xAxis: claude.xAxis, yAxis: claude.yAxis ? [claude.yAxis] : undefined, yAxisLabel: claude.yAxisLabel, xAxisLabel: claude.xAxisLabel, colors: claude.colors, annotations: claude.annotations }, cacheValidity);
     }
 
     // Step 6: Truncate if needed

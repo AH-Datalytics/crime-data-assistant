@@ -73,6 +73,7 @@ import {
   type SealedPayload,
 } from "@/lib/proof-finalize";
 import { sealPlanDerivation } from "@/lib/plan-derivation";
+import { cacheValiditySignature } from "@/lib/proof-cache-validity";
 import type { DeliveryAction, SourceId } from "@/lib/proof-contract";
 
 /**
@@ -560,6 +561,15 @@ export async function POST(req: NextRequest) {
    * exit overrides what it actually has.
    */
   const proofSourceId: SourceId = tab === "historical" ? "historical" : "current";
+
+  /**
+   * Validity signature for cached entries: enforcement state plus source data
+   * version. A change to either produces a cache miss rather than replaying SQL
+   * authored under conditions no longer in force (handoff §4, §13). dataVersion is
+   * null until Stage 2 builds the source-health registry.
+   */
+  const cacheValidity = cacheValiditySignature(proofSourceId, null);
+
   /**
    * The question the proof layer reasons about: the RECONSTRUCTED one for follow-ups.
    *
@@ -1309,7 +1319,7 @@ export async function POST(req: NextRequest) {
         const systemPrompt = isHistorical ? getHistoricalSystemPrompt() : undefined;
 
         // Check response cache (only standalone questions)
-        const cached = promptHistory.length === 0 ? getCached(question, tab) : null;
+        const cached = promptHistory.length === 0 ? getCached(question, tab, cacheValidity) : null;
         let fromCache = false;
 
         let claude: Awaited<ReturnType<typeof translateToSql>>;
@@ -2312,7 +2322,7 @@ export async function POST(req: NextRequest) {
           writeLog(question, sql, rows.length, null, totalMs2, postExplanation, tab, finalizeGuardrailTags(firedGuardrails, queryContractGuardrails(runContractValidation(sql || ""))), "haiku-4.5", sessionId, serializeChartConfigForLog(chartConfig, columns), deliveredFinalization);
           // Cache successful responses (only standalone questions)
           if (!fromCache && promptHistory.length === 0 && sql) {
-            setCache(question, tab, { sql, explanation: claude.explanation, title: claude.title, chartType: claude.chartHint, xAxis: claude.xAxis, yAxis: claude.yAxis ? claude.yAxis.split(",").map(s => s.trim()) : undefined, yAxisLabel: claude.yAxisLabel, xAxisLabel: claude.xAxisLabel, colors: claude.colors, annotations: claude.annotations });
+            setCache(question, tab, { sql, explanation: claude.explanation, title: claude.title, chartType: claude.chartHint, xAxis: claude.xAxis, yAxis: claude.yAxis ? claude.yAxis.split(",").map(s => s.trim()) : undefined, yAxisLabel: claude.yAxisLabel, xAxisLabel: claude.xAxisLabel, colors: claude.colors, annotations: claude.annotations }, cacheValidity);
           }
         } catch {
           // Retry post-query explanation once before falling back
@@ -2380,7 +2390,7 @@ export async function POST(req: NextRequest) {
             writeLog(question, sql, rows.length, null, totalMs2, claude.explanation, tab, finalizeGuardrailTags(firedGuardrails, queryContractGuardrails(runContractValidation(sql || ""))), "haiku-4.5", sessionId, serializeChartConfigForLog(chartConfig, columns), finalization);
           }
           if (!fromCache && promptHistory.length === 0 && sql) {
-            setCache(question, tab, { sql, explanation: claude.explanation, title: claude.title, chartType: claude.chartHint, xAxis: claude.xAxis, yAxis: claude.yAxis ? claude.yAxis.split(",").map(s => s.trim()) : undefined, yAxisLabel: claude.yAxisLabel, xAxisLabel: claude.xAxisLabel, colors: claude.colors, annotations: claude.annotations });
+            setCache(question, tab, { sql, explanation: claude.explanation, title: claude.title, chartType: claude.chartHint, xAxis: claude.xAxis, yAxis: claude.yAxis ? claude.yAxis.split(",").map(s => s.trim()) : undefined, yAxisLabel: claude.yAxisLabel, xAxisLabel: claude.xAxisLabel, colors: claude.colors, annotations: claude.annotations }, cacheValidity);
           }
         }
       } catch (err) {

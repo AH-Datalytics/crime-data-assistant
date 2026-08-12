@@ -8,6 +8,15 @@ interface EmbedData {
   sql: string;
   chartConfig: unknown;
   chartMeta: unknown;
+  /**
+   * The request id of the answer this chart came from.
+   *
+   * Lets the server record which proven answer a shared chart originated from
+   * (handoff §4). Optional because a chart built from an older response will not have
+   * one, and that absence must stay visible as "unproved" rather than being papered
+   * over -- the server records the NULL deliberately.
+   */
+  requestId?: string;
 }
 
 interface ExportButtonsProps {

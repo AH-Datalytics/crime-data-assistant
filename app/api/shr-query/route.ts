@@ -65,6 +65,7 @@ import {
   type SealedPayload,
 } from "@/lib/proof-finalize";
 import { sealPlanDerivation } from "@/lib/plan-derivation";
+import { cacheValiditySignature } from "@/lib/proof-cache-validity";
 import type { DeliveryAction } from "@/lib/proof-contract";
 import { returnedEntityKeys } from "@/lib/result-disclosure";
 import { boundedModelResponseJson } from "@/lib/no-sql-retry";
@@ -203,6 +204,15 @@ export async function POST(req: NextRequest) {
      * the RAW question, so the reviewer sees what the user typed.
      */
     let proofQuestion = question;
+
+    /**
+     * Validity signature for cached entries: enforcement state plus source data
+     * version. A change to either produces a cache miss rather than replaying SQL
+     * authored under conditions no longer in force (handoff §4, §13). dataVersion is
+     * null until Stage 2 builds the source-health registry.
+     */
+    const cacheValidity = cacheValiditySignature("shr", null);
+
 
     /**
      * Proof finalization for one terminal exit of this route.
@@ -762,7 +772,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Check response cache (only for standalone questions, not follow-ups)
-    const cached = promptHistory.length === 0 ? getCached(question, "shr") : null;
+    const cached = promptHistory.length === 0 ? getCached(question, "shr", cacheValidity) : null;
 
     let claude: {
       sql: string | null;
@@ -1423,7 +1433,7 @@ export async function POST(req: NextRequest) {
 
     // Cache successful responses (only standalone questions)
     if (!cached && promptHistory.length === 0) {
-      setCache(question, "shr", { sql, explanation: claude.explanation || "", title: claude.title, chartType: claude.chartType, xAxis: claude.xAxis, yAxis: claude.yAxis, yAxisLabel: claude.yAxisLabel });
+      setCache(question, "shr", { sql, explanation: claude.explanation || "", title: claude.title, chartType: claude.chartType, xAxis: claude.xAxis, yAxis: claude.yAxis, yAxisLabel: claude.yAxisLabel }, cacheValidity);
     }
 
     return jsonResp(emitFactualPayload(finalization, attachChartAuditToPayload({

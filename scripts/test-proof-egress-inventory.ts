@@ -290,6 +290,50 @@ console.log("\nmodel_response is captured outside NIBRS");
   });
 }
 
+console.log("\nshared charts and the response cache are inside the contract");
+{
+  check("the embed route gates its factual payload", () => {
+    // §5 names shared-chart embeds in the terminal-response inventory explicitly. A
+    // saved chart re-executes stored SQL forever, so it is the longest-lived factual
+    // surface in the product.
+    const source = read("app/api/embed/route.ts");
+    assert.match(
+      source,
+      /function embedResp\(data: SealedPayload<object> \| EmbedError/,
+      "embed's response constructor must require a sealed payload",
+    );
+    assert.match(source, /emitFactualPayload\(finalization,/, "the read must be sealed");
+    assert.match(source, /finalizeProof\(\{/, "the read must finalize");
+  });
+
+  check("embed records the originating proof and never fabricates one", () => {
+    const source = read("app/api/embed/route.ts");
+    assert.match(source, /origin_request_id/, "creation must record the originating request");
+    assert.match(source, /origin_delivery_action/, "and the answer's terminal action");
+    // The legacy path must stay distinguishable, per §4.
+    assert.match(source, /deliveryAction: null, proofMode: null/, "an absent link yields nulls, not a default");
+  });
+
+  check("the embed read summary is gated on observation, not just on schema", () => {
+    // `off` has no effect, which includes not writing a bookkeeping row.
+    const source = read("app/api/embed/route.ts");
+    assert.match(
+      source,
+      /if \(withProof && isObserving\(finalization\.mode\)\)/,
+      "an off-mode read must leave shared_charts untouched",
+    );
+  });
+
+  check("every route threads the cache validity signature", () => {
+    for (const file of INTEGRATED_ROUTES) {
+      const source = read(file);
+      assert.match(source, /cacheValiditySignature\(/, `${file} must compute a cache validity signature`);
+      assert.match(source, /getCached\([^)]*cacheValidity\)/, `${file} must read the cache with it`);
+      assert.match(source, /setCache\([^;]*cacheValidity\)/, `${file} must write the cache with it`);
+    }
+  });
+}
+
 console.log("\nall four sources are integrated");
 {
   check("no route is left outside the contract", () => {

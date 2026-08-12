@@ -26,14 +26,26 @@ interface CachedResponse {
 
 const cache = new Map<string, CachedResponse>();
 
-function normalizeKey(question: string, tab: string): string {
+/**
+ * Cache key, including the proof validity signature when one is supplied.
+ *
+ * The signature carries the enforcement state and source data version the entry was
+ * created under (see lib/proof-cache-validity). Folding it into the key means a change
+ * to either produces a miss rather than replaying SQL that was authored under
+ * conditions no longer in force — handoff §4 and §13.
+ *
+ * Optional so that a caller with no proof context behaves exactly as before; the key
+ * is then byte-identical to the pre-Stage-1 key, which is what keeps `off` mode from
+ * changing cache behavior at all.
+ */
+function normalizeKey(question: string, tab: string, validity?: string): string {
   // Lowercase, collapse whitespace, strip trailing punctuation
   const q = question.toLowerCase().replace(/\s+/g, " ").replace(/[?.!]+$/, "").trim();
-  return `${tab}:${q}`;
+  return validity ? `${tab}:${validity}:${q}` : `${tab}:${q}`;
 }
 
-export function getCached(question: string, tab: string): CachedResponse | null {
-  const key = normalizeKey(question, tab);
+export function getCached(question: string, tab: string, validity?: string): CachedResponse | null {
+  const key = normalizeKey(question, tab, validity);
   const entry = cache.get(key);
   if (!entry) return null;
   if (Date.now() - entry.ts > TTL_MS) {
@@ -43,8 +55,13 @@ export function getCached(question: string, tab: string): CachedResponse | null 
   return entry;
 }
 
-export function setCache(question: string, tab: string, response: Omit<CachedResponse, "ts">): void {
-  const key = normalizeKey(question, tab);
+export function setCache(
+  question: string,
+  tab: string,
+  response: Omit<CachedResponse, "ts">,
+  validity?: string,
+): void {
+  const key = normalizeKey(question, tab, validity);
 
   // LRU eviction: remove oldest entry if at capacity
   if (cache.size >= MAX_ENTRIES && !cache.has(key)) {

@@ -556,7 +556,7 @@ export default function RtciChat({ mode, heroData, heroAgencyCount, heroPopulati
                 </div>
                 <div className="flex gap-2">
                   {response.chartConfig && showChart && (
-                    <ExportButtons chartRef={chartRef} csvFilename={`${response.title || "chart"}.jpeg`} embedData={response.sql ? { tab: mode, title: response.title, sql: response.sql, chartConfig: response.chartConfig, chartMeta: response.chartMeta } : undefined} />
+                    <ExportButtons chartRef={chartRef} csvFilename={`${response.title || "chart"}.jpeg`} embedData={response.sql ? { tab: mode, title: response.title, sql: response.sql, chartConfig: response.chartConfig, chartMeta: response.chartMeta, requestId: response.requestId } : undefined} />
                   )}
                   {response.rows.length > 0 && <ExportButtons csvData={response.rows} csvColumns={response.columns} csvFilename={`${response.title || "crime-data-export"}.csv`} />}
                 </div>

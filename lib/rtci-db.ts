@@ -107,7 +107,15 @@ export function getWriteDb(): Database.Database | null {
         sql TEXT NOT NULL,
         chart_config TEXT,
         chart_meta TEXT,
-        created_at INTEGER NOT NULL
+        created_at INTEGER NOT NULL,
+        -- Proof columns (handoff §4). Present here for a freshly-created database;
+        -- scripts/migrate-shared-charts-proof.js adds them to an existing one, and
+        -- app/api/embed/route.ts detects them at runtime so deploy order is free.
+        origin_request_id TEXT,
+        origin_delivery_action TEXT,
+        origin_proof_mode TEXT,
+        last_read_delivery_action TEXT,
+        last_read_at INTEGER
       )
     `);
     _writeDb.exec(`

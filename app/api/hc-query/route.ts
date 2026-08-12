@@ -27,6 +27,7 @@ import {
   type ProofFinalizationInput,
 } from "@/lib/proof-finalize";
 import { sealPlanDerivation } from "@/lib/plan-derivation";
+import { cacheValiditySignature } from "@/lib/proof-cache-validity";
 import type { SealedPayload } from "@/lib/proof-finalize";
 import type { DeliveryAction } from "@/lib/proof-contract";
 import { returnedEntityKeys } from "@/lib/result-disclosure";
@@ -222,6 +223,15 @@ export async function POST(req: NextRequest) {
      * See the equivalent note in app/api/query/route.ts.
      */
     let proofQuestion = question;
+
+    /**
+     * Validity signature for cached entries: enforcement state plus source data
+     * version. A change to either produces a cache miss rather than replaying SQL
+     * authored under conditions no longer in force (handoff §4, §13). dataVersion is
+     * null until Stage 2 builds the source-health registry.
+     */
+    const cacheValidity = cacheValiditySignature("hate_crime", null);
+
     const finalizeExit = (
       opts: Partial<ProofFinalizationInput> & { intendedAction: DeliveryAction },
     ): ProofFinalization =>
@@ -409,7 +419,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Check response cache (only for standalone questions)
-    const cached = promptHistory.length === 0 ? getCached(question, "hate_crime") : null;
+    const cached = promptHistory.length === 0 ? getCached(question, "hate_crime", cacheValidity) : null;
 
     let claude: {
       sql: string | null;
@@ -837,7 +847,7 @@ export async function POST(req: NextRequest) {
 
     // Cache successful responses (only standalone questions)
     if (!cached && promptHistory.length === 0) {
-      setCache(question, "hate_crime", { sql, explanation: claude.explanation || "", title: claude.title, chartType: claude.chartType, xAxis: claude.xAxis, yAxis: claude.yAxis, yAxisLabel: claude.yAxisLabel });
+      setCache(question, "hate_crime", { sql, explanation: claude.explanation || "", title: claude.title, chartType: claude.chartType, xAxis: claude.xAxis, yAxis: claude.yAxis, yAxisLabel: claude.yAxisLabel }, cacheValidity);
     }
 
     return jsonResp(emitFactualPayload(finalization, attachChartAuditToPayload({

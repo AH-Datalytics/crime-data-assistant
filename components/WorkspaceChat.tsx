@@ -939,6 +939,7 @@ export default function WorkspaceChat({ heroData, heroAgencyCount, heroPopulatio
                         sql: response.sql,
                         chartConfig: response.chartConfig,
                         chartMeta: response.chartMeta,
+                        requestId: response.requestId,
                       } : undefined}
                     />
                   )}

@@ -352,7 +352,7 @@ export default function NibrsChat({ visible }: NibrsChatProps) {
                 </div>
                 <div className="flex gap-2">
                   {currentResponse.chartConfig && showChart && (
-                    <ExportButtons chartRef={chartRef} csvFilename={`${currentResponse.title || "chart"}.jpeg`} embedData={currentResponse.sql ? { tab: "nibrs", title: currentResponse.title, sql: currentResponse.sql, chartConfig: currentResponse.chartConfig, chartMeta: currentResponse.chartMeta } : undefined} />
+                    <ExportButtons chartRef={chartRef} csvFilename={`${currentResponse.title || "chart"}.jpeg`} embedData={currentResponse.sql ? { tab: "nibrs", title: currentResponse.title, sql: currentResponse.sql, chartConfig: currentResponse.chartConfig, chartMeta: currentResponse.chartMeta, requestId: currentResponse.requestId } : undefined} />
                   )}
                   {currentResponse.rows.length > 0 && <ExportButtons csvData={currentResponse.rows} csvColumns={currentResponse.columns} csvFilename={`${currentResponse.title || "nibrs-export"}.csv`} />}
                 </div>
