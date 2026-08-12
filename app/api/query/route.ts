@@ -2276,6 +2276,9 @@ export async function POST(req: NextRequest) {
             console.log(`[query][internal-scaffold] Stripping scaffold text from post-query explanation`);
             postExplanation = stripInternalScaffold(postExplanation) || claude.explanation;
           }
+          // The proof that describes what the user actually ended up reading. Starts as
+          // the result event's finalization and is replaced when the narrative is.
+          let deliveredFinalization = finalization;
           if (postExplanation !== claude.explanation) {
             // Re-finalized against the REFINED text, not reusing the finalization that
             // gated the result event: this narrative is different, and the difference
@@ -2294,6 +2297,7 @@ export async function POST(req: NextRequest) {
               retries: proofRetries(),
               db,
             });
+            deliveredFinalization = postFinalization;
             controller.enqueue(
               encoder.encode(
                 sseEvent(emitFactualPayload(postFinalization, { type: "explanation", text: postExplanation, title: claude.title || "Results" }))
@@ -2301,7 +2305,11 @@ export async function POST(req: NextRequest) {
             );
           }
           const totalMs2 = Date.now() - totalStart;
-          writeLog(question, sql, rows.length, null, totalMs2, postExplanation, tab, finalizeGuardrailTags(firedGuardrails, queryContractGuardrails(runContractValidation(sql || ""))), "haiku-4.5", sessionId, serializeChartConfigForLog(chartConfig, columns), finalization);
+          // postFinalization, not finalization: the refined explanation is the prose the
+          // user ends up reading, and persisting the result event's proof instead would
+          // give the shadow review a record of text nobody was shown. Falls back to the
+          // result finalization when the narrative was not replaced.
+          writeLog(question, sql, rows.length, null, totalMs2, postExplanation, tab, finalizeGuardrailTags(firedGuardrails, queryContractGuardrails(runContractValidation(sql || ""))), "haiku-4.5", sessionId, serializeChartConfigForLog(chartConfig, columns), deliveredFinalization);
           // Cache successful responses (only standalone questions)
           if (!fromCache && promptHistory.length === 0 && sql) {
             setCache(question, tab, { sql, explanation: claude.explanation, title: claude.title, chartType: claude.chartHint, xAxis: claude.xAxis, yAxis: claude.yAxis ? claude.yAxis.split(",").map(s => s.trim()) : undefined, yAxisLabel: claude.yAxisLabel, xAxisLabel: claude.xAxisLabel, colors: claude.colors, annotations: claude.annotations });
@@ -2341,6 +2349,7 @@ export async function POST(req: NextRequest) {
               console.log(`[query][internal-scaffold] Stripping scaffold text from retry explanation`);
               retryExplanation = stripInternalScaffold(retryExplanation) || claude.explanation;
             }
+            let deliveredRetryFinalization = finalization;
             if (retryExplanation !== claude.explanation) {
               const retryFinalization = finalizeExit({
                 intendedAction: "answer",
@@ -2356,6 +2365,7 @@ export async function POST(req: NextRequest) {
                 retries: proofRetries(),
                 db,
               });
+              deliveredRetryFinalization = retryFinalization;
               controller.enqueue(
                 encoder.encode(
                   sseEvent(emitFactualPayload(retryFinalization, { type: "explanation", text: retryExplanation, title: claude.title || "Results" }))
@@ -2363,7 +2373,7 @@ export async function POST(req: NextRequest) {
               );
             }
             const totalMs2 = Date.now() - totalStart;
-            writeLog(question, sql, rows.length, null, totalMs2, retryExplanation, tab, finalizeGuardrailTags(firedGuardrails, queryContractGuardrails(runContractValidation(sql || ""))), "haiku-4.5", sessionId, serializeChartConfigForLog(chartConfig, columns), finalization);
+            writeLog(question, sql, rows.length, null, totalMs2, retryExplanation, tab, finalizeGuardrailTags(firedGuardrails, queryContractGuardrails(runContractValidation(sql || ""))), "haiku-4.5", sessionId, serializeChartConfigForLog(chartConfig, columns), deliveredRetryFinalization);
           } catch {
             // Both attempts failed — pre-query explanation stays
             const totalMs2 = Date.now() - totalStart;

@@ -26,7 +26,7 @@ import {
   sealCompilerPlanDerivation,
   verifyPlanDerivation,
 } from "../lib/plan-derivation";
-import { omissionsAreDisclosed } from "../lib/proof-checks";
+import { buildOmissionNotice, narrativeDisclosesOmissions } from "../lib/omission-wording";
 import { buildQueryLogInsert } from "../lib/query-log-columns";
 
 let passed = 0;
@@ -104,22 +104,39 @@ console.log("\n1. factual background explanations pass through the gate");
       returnedEntities: ["Austin"],
       narrative: "Murders in Austin rose in 2020.",
     }));
+    // The disclosing narrative must carry the GENERATED notice verbatim; hand-written
+    // prose that says something similar no longer qualifies.
     const disclosing = finalizeProof(base({
       question: "compare murders in Austin and Dallas in 2020",
       rows: [{ year: 2020, agency: "Austin", murders: 60 }],
       returnedEntities: ["Austin"],
-      narrative: "Results cover Austin. Dallas could not be included through this path.",
+      narrative:
+        "Results cover Austin. " +
+        buildOmissionNotice([
+          { entityId: "dallas, tx", label: "Dallas", reason: "unknown", evidence: null },
+        ])!,
     }));
     assert.strictEqual(silent.manifest.checks.entityCompleteness, "failed");
     assert.strictEqual(disclosing.manifest.checks.entityCompleteness, "passed");
   });
 
-  check("partial disclosure is not disclosure", () => {
-    // Naming three of eight omissions leaves five silent drops.
-    assert.strictEqual(omissionsAreDisclosed("We excluded Dallas and Houston.", ["Dallas", "Houston"]), true);
-    assert.strictEqual(omissionsAreDisclosed("We excluded Dallas.", ["Dallas", "Houston"]), false);
-    assert.strictEqual(omissionsAreDisclosed(null, ["Dallas"]), false);
-    assert.strictEqual(omissionsAreDisclosed(undefined, []), true);
+  check("disclosure requires the generated notice, not a mention", () => {
+    // Round-4 finding: substring matching on entity names passed on "Dallas had 10
+    // murders in 2020" -- a sentence that mentions Dallas and discloses nothing about
+    // its absence. Disclosure now means the narrative carries the generated notice.
+    const omissions = [
+      { entityId: "dallas", label: "Dallas", reason: "capability_path_unavailable" as const, evidence: "probe: x" },
+    ];
+    const notice = buildOmissionNotice(omissions)!;
+    assert.ok(notice, "a notice must be generated");
+    assert.strictEqual(
+      narrativeDisclosesOmissions("Dallas had 10 murders in 2020.", omissions),
+      false,
+      "a mere mention must not count as disclosure",
+    );
+    assert.strictEqual(narrativeDisclosesOmissions(`Results for Austin. ${notice}`, omissions), true);
+    assert.strictEqual(narrativeDisclosesOmissions(null, omissions), false);
+    assert.strictEqual(narrativeDisclosesOmissions(undefined, []), true, "no omissions is trivially disclosed");
   });
 }
 
@@ -467,9 +484,154 @@ console.log("\n5. the Hate Crime raw response survives the server template");
   });
 }
 
-console.log(`\nround-3 regression tests: ${passed} passed`);
+console.log("\n6. the persisted proof describes the prose that was delivered");
+{
+  const source = fs.readFileSync("app/api/query/route.ts", "utf8");
+
+  check("the refined-explanation log write persists ITS finalization", () => {
+    // Round-4 finding: all three terminal writeLog calls stored the result event's
+    // finalization, so the shadow review would have evaluated the pre-query prose
+    // while the user read the refined prose.
+    assert.match(
+      source,
+      /serializeChartConfigForLog\(chartConfig, columns\), deliveredFinalization\)/,
+      "the refined path must persist deliveredFinalization",
+    );
+    assert.match(
+      source,
+      /serializeChartConfigForLog\(chartConfig, columns\), deliveredRetryFinalization\)/,
+      "the retry path must persist deliveredRetryFinalization",
+    );
+  });
+
+  check("delivered defaults to the result finalization when prose is unchanged", () => {
+    // If the refined explanation matches what already went out, the result event's
+    // proof IS the proof of the delivered prose. Only a replacement swaps it.
+    assert.match(source, /let deliveredFinalization = finalization;/);
+    assert.match(source, /let deliveredRetryFinalization = finalization;/);
+    assert.match(source, /deliveredFinalization = postFinalization;/);
+    assert.match(source, /deliveredRetryFinalization = retryFinalization;/);
+  });
+
+  check("the both-attempts-failed path still persists the result finalization", () => {
+    // Correct there: nothing replaced the prose, so the pre-query explanation stands.
+    const both = source.indexOf("// Both attempts failed — pre-query explanation stays");
+    assert.ok(both > 0, "the fallback comment must exist");
+    const write = source.indexOf("columns), finalization)", both);
+    assert.ok(write > both, "the fallback must persist the result finalization");
+  });
+}
+
+console.log("\n7. the compiler-issuance boundary is mechanically closed");
+{
+  check("no API route imports sealCompilerPlanDerivation", () => {
+    // The boundary was documented but publicly callable, so any route could have
+    // minted a compiler token and unlocked enforcement for itself. Enforcement is
+    // inert today, which is why this is a guard rather than an incident -- but it is a
+    // prerequisite before enforcement, so it is asserted now rather than remembered.
+    const routes = fs
+      .readdirSync("app/api", { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => `app/api/${entry.name}/route.ts`)
+      .filter((file) => fs.existsSync(file));
+    assert.ok(routes.length >= 4, `expected several routes, found ${routes.length}`);
+    for (const file of routes) {
+      const source = fs.readFileSync(file, "utf8");
+      assert.doesNotMatch(
+        source,
+        /sealCompilerPlanDerivation/,
+        `${file} must not mint a compiler-issued derivation; only a deterministic compiler may`,
+      );
+    }
+  });
+
+  check("routes may still seal route-issued tokens", () => {
+    const source = fs.readFileSync("app/api/query/route.ts", "utf8");
+    assert.match(source, /sealPlanDerivation\(/, "route-issued sealing is the supported path");
+  });
+
+  check("a route-issued token is inert for enforcement by construction", () => {
+    assert.strictEqual(sealPlanDerivation("f", SQL).issuer, "route");
+    assert.strictEqual(sealCompilerPlanDerivation("f", SQL).issuer, "compiler");
+  });
+}
+
+console.log("\n8. enforcement identity cannot be borrowed by a failed token");
+{
+  const ENF_B = {
+    PROOF_MODE: "enforce",
+    PROOF_MODE_CURRENT: "enforce",
+    PROOF_MODE_FAMILY_CURRENT_FAMILY_B: "enforce",
+  };
+
+  check("a compiler token for family A cannot enforce as family B", () => {
+    // Round-4 reproduction: this reached mode=enforce with family=family-b and
+    // derivation=model_authored. It failed closed on the manifest blocker, but the
+    // enforcement identity and the per-family accounting were both wrong -- and those
+    // are exactly what the Stage 4 rollout gates on.
+    const finalization = finalizeProof(base({
+      env: ENF_B,
+      planFamily: "family-b",
+      derivation: sealCompilerPlanDerivation("family-a", SQL),
+    }));
+    assert.strictEqual(finalization.mode, "shadow", "must not reach enforce");
+    assert.strictEqual(finalization.mayAlterDelivery, false);
+    assert.match(finalization.enforcementWithheldReason!, /did not verify/);
+    assert.match(finalization.enforcementWithheldReason!, /plan family mismatch/);
+  });
+
+  check("a failed token contributes no family at all", () => {
+    const finalization = finalizeProof(base({
+      env: ENF_B,
+      planFamily: "family-b",
+      derivation: sealCompilerPlanDerivation("family-a", SQL),
+    }));
+    assert.strictEqual(
+      finalization.manifest.planFamily,
+      null,
+      "an unverified family claim must not become the recorded identity",
+    );
+  });
+
+  check("the verified token's family is authoritative over the caller's", () => {
+    const finalization = finalizeProof(base({
+      planFamily: "family-a",
+      derivation: sealCompilerPlanDerivation("family-a", SQL),
+    }));
+    assert.strictEqual(finalization.manifest.planFamily, "family-a");
+    assert.strictEqual(finalization.manifest.derivation, "deterministic");
+  });
+
+  check("a route label with no token is still kept for reporting", () => {
+    // Clarify and decline exits use descriptive families and assert no derivation.
+    const finalization = finalizeProof(base({
+      intendedAction: "clarify",
+      planFamily: "geo:ambiguous-state",
+      rows: [],
+      columns: [],
+    }));
+    assert.strictEqual(finalization.manifest.planFamily, "geo:ambiguous-state");
+  });
+
+  check("SQL rewritten after a compiler token also blocks enforcement", () => {
+    const finalization = finalizeProof(base({
+      env: {
+        PROOF_MODE: "enforce",
+        PROOF_MODE_CURRENT: "enforce",
+        PROOF_MODE_FAMILY_CURRENT_FAMILY_A: "enforce",
+      },
+      planFamily: "family-a",
+      sql: SQL.replace("agency_monthly", "state_monthly"),
+      derivation: sealCompilerPlanDerivation("family-a", SQL),
+    }));
+    assert.strictEqual(finalization.mayAlterDelivery, false);
+    assert.match(finalization.enforcementWithheldReason!, /rewritten between planning and execution/);
+  });
+}
+
+console.log(`\nreview regression tests: ${passed} passed`);
 if (process.exitCode) {
-  console.log("round-3 regression tests: FAILED");
+  console.log("review regression tests: FAILED");
 } else {
-  console.log("round-3 regression tests: passed");
+  console.log("review regression tests: passed");
 }

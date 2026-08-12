@@ -93,8 +93,15 @@ console.log("\noff is free");
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "prooffin-"));
     const db = new Database(path.join(dir, "x.db"));
     db.close();
+    // A question naming a city that does not come back would trigger an omission
+    // probe, which is the only path that touches the database.
     assert.doesNotThrow(() => {
-      finalizeProof(baseInput({ env: {}, db, omittedCandidates: [{ entityId: "a", label: "A", state: "LA", requestedYears: [] }] }));
+      finalizeProof(baseInput({
+        env: {},
+        db,
+        question: "compare murders in Austin and Dallas in 2020",
+        returnedEntities: ["Austin"],
+      }));
     });
   });
 
@@ -489,7 +496,8 @@ console.log("\nfailure moves toward off");
         baseInput({
           env: SHADOW_ENV,
           db,
-          omittedCandidates: [{ entityId: "a", label: "Nowhere", state: "LA", requestedYears: [2020] }],
+          question: "compare murders in Austin and Dallas in 2020",
+          returnedEntities: ["Austin"],
         }),
       );
     });

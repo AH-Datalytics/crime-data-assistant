@@ -162,13 +162,26 @@ console.log("\nthe first factual SSE event is gated");
     assert.ok(emit > stepFiveB, "the step-5b emit must be sealed with the main finalization");
   });
 
-  check("the same finalization is persisted, not a second one", () => {
-    // Three terminal writeLog calls follow (refined explanation, its retry, and the
-    // both-failed fallback). All must carry the finalization computed before the
-    // event, or the log would describe a different evaluation than the one that
-    // gated delivery.
-    const carried = (source.match(/serializeChartConfigForLog\(chartConfig, columns\), finalization\)/g) || []).length;
-    assert.strictEqual(carried, 3, `expected 3 terminal log writes carrying the finalization, found ${carried}`);
+  check("each terminal log write persists the proof of the prose IT delivered", () => {
+    // THIS ASSERTION USED TO ENCODE A DEFECT. It required all three terminal writes to
+    // carry the result event's finalization, which is precisely what was wrong: the
+    // refined explanation and its retry replace the prose the user reads, so storing
+    // the result event's proof would give the shadow review a record of text nobody
+    // was shown. Each path now persists its own.
+    const refined = (source.match(/serializeChartConfigForLog\(chartConfig, columns\), deliveredFinalization\)/g) || []).length;
+    const retry = (source.match(/serializeChartConfigForLog\(chartConfig, columns\), deliveredRetryFinalization\)/g) || []).length;
+    const fallback = (source.match(/serializeChartConfigForLog\(chartConfig, columns\), finalization\)/g) || []).length;
+    assert.strictEqual(refined, 1, `refined path: expected 1 write, found ${refined}`);
+    assert.strictEqual(retry, 1, `retry path: expected 1 write, found ${retry}`);
+    // The both-attempts-failed path is the one case where the result event's proof IS
+    // correct, because nothing replaced the prose.
+    assert.strictEqual(fallback, 1, `fallback path: expected 1 write, found ${fallback}`);
+  });
+
+  check("delivered finalizations default to the result event's", () => {
+    // So an unchanged narrative is not left unproven.
+    assert.match(source, /let deliveredFinalization = finalization;/);
+    assert.match(source, /let deliveredRetryFinalization = finalization;/);
   });
 }
 

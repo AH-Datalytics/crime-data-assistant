@@ -56,7 +56,7 @@ import { runProofChecks, type NumericClaim } from "./proof-checks";
 import { attributeOmissions, type OmittedCandidate } from "./omission-attribution";
 import { buildQueryContract, type QueryContractSource } from "./query-contract";
 import { verifyPlanDerivation, type PlanDerivation } from "./plan-derivation";
-import { omissionsAreDisclosed } from "./proof-checks";
+import { narrativeDisclosesOmissions } from "./omission-wording";
 import {
   omittedCandidatesFor,
   requestedEntitiesFromRequest,
@@ -253,13 +253,10 @@ export interface ProofFinalizationInput {
   requestedEntities?: string[];
   /** Canonical entities present in the result. */
   returnedEntities?: string[];
-  /**
-   * Requested entities absent from the result.
-   *
-   * Normally omit: computed from requested minus returned. Passing none was why the
-   * attribution system recorded zero omissions in the first revision.
-   */
-  omittedCandidates?: OmittedCandidate[];
+  // omittedCandidates is deliberately NOT an input. It was an escape hatch that let a
+  // caller declare which entities were missing -- i.e. declare its own completeness --
+  // and no route ever used it. Omissions are computed here from the requested set minus
+  // what came back, so the numbers reconcile by construction.
   /**
    * The exact narrative text being delivered with this payload.
    *
@@ -395,9 +392,22 @@ export function finalizeProof(input: ProofFinalizationInput): ProofFinalization 
       input.sourceId,
       derivationVerdict.ok ? "deterministic" : ("model_authored" as Derivation),
     );
-    // Only a VERIFIED token may contribute the family. An unverified token's family
-    // is not evidence of anything, so it must not become the recorded identity.
-    manifest.planFamily = input.planFamily ?? (derivationVerdict.ok ? derivation!.planFamily : null);
+    // THE VERIFIED TOKEN'S FAMILY IS AUTHORITATIVE, NOT THE CALLER'S CLAIM.
+    //
+    // Three cases, and the middle one is the defect this replaces:
+    //   - verified token  -> the token's family, which is proven
+    //   - token that FAILED verification -> null. Previously this fell back to
+    //     input.planFamily, so a compiler token sealed for family A presented with
+    //     `planFamily: "family-b"` was recorded as family-b and, worse, authorized by
+    //     family-b's environment variable. A family claim from a token that did not
+    //     verify is not evidence of anything.
+    //   - no token at all -> the caller's label, which is descriptive only. Clarify and
+    //     decline exits use families like "geo:ambiguous-state" and assert no derivation.
+    manifest.planFamily = derivation
+      ? derivationVerdict.ok
+        ? derivation.planFamily
+        : null
+      : input.planFamily ?? null;
 
     // WHAT WAS ASKED FOR COMES FROM THE REQUEST, NOT THE GENERATED SQL. If the SQL
     // omits Dallas, deriving the requested set from that SQL makes Dallas vanish
@@ -418,11 +428,13 @@ export function finalizeProof(input: ProofFinalizationInput): ProofFinalization 
     const requestedEntities = requestedEntityList.map((entity) => entity.label);
     const returnedEntities = input.returnedEntities ?? [];
 
-    // Computed here so no route can forget to pass them -- passing none is why the
-    // first revision's attribution recorded zero omissions everywhere.
-    const omittedCandidates =
-      input.omittedCandidates ??
-      omittedCandidatesFor(requestedEntityList, returnedEntities, requestedYearsFromContract(contract));
+    // Computed here, never supplied -- see the note on the removed input. Passing none
+    // is why the first revision's attribution recorded zero omissions everywhere.
+    const omittedCandidates = omittedCandidatesFor(
+      requestedEntityList,
+      returnedEntities,
+      requestedYearsFromContract(contract),
+    );
 
     const attribution = attributeOmissions(omittedCandidates, {
       sourceId: input.sourceId,
@@ -436,10 +448,9 @@ export function finalizeProof(input: ProofFinalizationInput): ProofFinalization 
       sourceHealth: "unknown",
     });
 
-    // DERIVED, not asserted: does the delivered text actually name every omitted
-    // entity? See omissionsAreDisclosed() and handoff 2.4.
-    const omittedLabels = omittedCandidates.map((candidate) => candidate.label);
-    const disclosed = omissionsAreDisclosed(input.narrative, omittedLabels);
+    // DERIVED from the generated notice, not inferred from prose. A narrative that
+    // merely mentions an omitted city discloses nothing about its absence.
+    const disclosed = narrativeDisclosesOmissions(input.narrative, attribution.omissions);
 
     const checks = runProofChecks({
       question: input.question,
@@ -505,19 +516,29 @@ export function finalizeProof(input: ProofFinalizationInput): ProofFinalization 
     // finalization silent about the most common reason enforcement does not engage.
     let enforcementWithheld: string | null = provisional.enforcementWithheldReason ?? null;
     if (mayAlterDelivery(mode)) {
-      const verified = resolveMode(input.sourceId, manifest.planFamily, env);
-      if (!mayAlterDelivery(verified.mode)) {
+      // ENFORCEMENT REQUIRES A VERIFIED, COMPILER-ISSUED TOKEN AND THE VERIFIED
+      // FAMILY'S OWN AUTHORIZATION. Ordered so the strongest precondition is checked
+      // first: without a passing verdict there is no trustworthy family to authorize
+      // against, and an earlier revision checked only the issuer -- so a compiler token
+      // whose family did NOT verify still reached `enforce` under the caller's claimed
+      // family. It failed closed on the manifest blocker, but the enforcement identity
+      // and the per-family accounting were both wrong, which is precisely what the
+      // Stage 4 rollout gates on.
+      if (!derivation) {
         effectiveMode = "shadow";
-        enforcementWithheld =
-          `enforcement withheld: verified plan family '${manifest.planFamily ?? "(none)"}' is not authorized to enforce`;
-      } else if (derivation && derivation.issuer !== "compiler") {
+        enforcementWithheld = "enforcement withheld: no plan derivation was sealed for this answer";
+      } else if (!derivationVerdict.ok) {
+        effectiveMode = "shadow";
+        enforcementWithheld = `enforcement withheld: derivation did not verify (${derivationVerdict.reason})`;
+      } else if (derivation.issuer !== "compiler") {
         effectiveMode = "shadow";
         enforcementWithheld =
           `enforcement withheld: derivation is ${derivation.issuer}-issued, which proves SQL identity ` +
           "but not compiler provenance";
-      } else if (!derivation) {
+      } else if (!mayAlterDelivery(resolveMode(input.sourceId, manifest.planFamily, env).mode)) {
         effectiveMode = "shadow";
-        enforcementWithheld = "enforcement withheld: no plan derivation was sealed for this answer";
+        enforcementWithheld =
+          `enforcement withheld: verified plan family '${manifest.planFamily ?? "(none)"}' is not authorized to enforce`;
       }
     }
 

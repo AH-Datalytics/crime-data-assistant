@@ -70,21 +70,17 @@ export interface CheckInput {
 }
 
 /**
- * Does the delivered narrative actually name every omitted entity?
+ * Disclosure is established by lib/omission-wording, not by this module.
  *
- * This is the evidence behind `omissionsDisclosed`. §2.4 forbids silently dropping a
- * requested entity, so "disclosed" means the user can see which ones were dropped --
- * a vague "some cities are unavailable" is not disclosure of anything checkable.
+ * An earlier version of this helper asked whether each omitted entity's NAME appeared
+ * anywhere in the narrative, which passes on "Dallas had 10 murders in 2020" -- a
+ * sentence that mentions Dallas while disclosing nothing about its absence, and which
+ * in a comparison context implies the opposite. Substring presence is not evidence.
  *
- * Requires ALL omitted labels to appear: naming three of eight and staying silent
- * about five is still five silent drops.
+ * Disclosure now means the narrative carries the deterministically generated notice.
+ * See narrativeDisclosesOmissions() and the note at the top of lib/omission-wording.
  */
-export function omissionsAreDisclosed(narrative: string | null | undefined, omittedLabels: string[]): boolean {
-  if (omittedLabels.length === 0) return true;
-  if (!narrative) return false;
-  const haystack = narrative.toLowerCase();
-  return omittedLabels.every((label) => label.trim() !== "" && haystack.includes(label.toLowerCase()));
-}
+export { narrativeDisclosesOmissions } from "./omission-wording";
 
 const NUMERIC_CLAIM_TOLERANCE = 0.005;
 
