@@ -192,17 +192,22 @@ export function entityAliasKeys(value: string): string[] {
 }
 
 /**
- * Canonical entities the SQL asked for, and the alias-expanded keys it returned.
+ * The alias-expanded entity keys a result actually returned.
  *
  * Exported for the proof layer so entityCompleteness compares exactly what
  * missingRequestedEntities() below compares. Same argument as entityAliasKeys: two
  * implementations of "did this entity come back?" would eventually disagree, and
  * then the proof record and the disclosure text would contradict each other.
+ *
+ * NOTE THAT THE REQUESTED SIDE IS NOT EXPORTED. extractRequestedEntitiesFromSql()
+ * below stays private on purpose. It is correct for the disclosure note it feeds --
+ * "the SQL named these entities and the rows are missing some" -- but it is the wrong
+ * input for the proof layer's completeness check, because the SQL that silently drops
+ * a requested city also defines what that check believes was requested. A revision of
+ * this project exported it, both model paths used it, and the 31-of-32 check became
+ * unable to detect the failure it was built for. The proof layer derives requested
+ * entities from the parsed request instead: see lib/requested-entities.ts.
  */
-export function requestedEntitiesFromSql(sql: string): string[] {
-  return extractRequestedEntitiesFromSql(sql);
-}
-
 export function returnedEntityKeys(rows: Record<string, unknown>[]): string[] {
   return [...returnedEntities(rows)];
 }

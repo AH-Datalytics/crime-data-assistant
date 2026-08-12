@@ -26,13 +26,16 @@ import {
   type ProofFinalization,
   type ProofFinalizationInput,
 } from "@/lib/proof-finalize";
+import { sealPlanDerivation } from "@/lib/plan-derivation";
+import type { SealedPayload } from "@/lib/proof-finalize";
 import type { DeliveryAction } from "@/lib/proof-contract";
-import { requestedEntitiesFromSql, returnedEntityKeys } from "@/lib/result-disclosure";
+import { returnedEntityKeys } from "@/lib/result-disclosure";
 import { validateGrain } from "@/lib/requested-grain";
 import { buildCompletenessAnswer, detectCompletenessQuestion, loadCompletenessRows } from "@/lib/completeness-intent";
 import { normalizeHistoryForTab } from "@/lib/chat-history";
 import { containsInternalLeak, INTERNAL_LEAK_SAFE_MESSAGE, sanitizeUserFacingNarrative, sanitizeChartConfigTitle} from "@/lib/scaffold-helpers";
 import { buildNoSqlFallbackMessage } from "@/lib/refusal-safety";
+import { boundedModelResponseJson } from "@/lib/no-sql-retry";
 import { applyGeoCorrection, geoCorrectionHint } from "@/lib/geo-correction";
 import { detectFollowupTransform } from "@/lib/followup-transform";
 import { applyChartCustomizations } from "@/lib/chart-customization";
@@ -56,8 +59,18 @@ import { finalizeGuardrailTags } from "@/lib/guardrail-tag-state";
 import { serializeChartConfigForLog } from "@/lib/chart-config-log";
 import { attachChartAuditToPayload, createChartAuditRequestId } from "@/lib/chart-audit";
 
+/**
+ * THE CHOKEPOINT. Factual content is accepted only as a SealedPayload, which
+ * lib/proof-finalize's emitFactualPayload() alone can produce; a QueryError
+ * (success: false) asserts no facts and needs no proof.
+ *
+ * Requiring emitFactualPayload() to be CALLED was not sufficient: this route
+ * finalized the metadata answer and then passed a raw object literal here,
+ * discarding the finalization it had just computed. Narrowing the parameter is what
+ * makes an unwrapped factual exit a compile error rather than a review finding.
+ */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function jsonResp(data: Record<string, any> | QueryError, status = 200) {
+function jsonResp(data: SealedPayload<Record<string, any>> | QueryError, status = 200) {
   const payload: Record<string, any> = { ...(data as Record<string, any>) };
   if (typeof payload.explanation === 'string' || typeof payload.title === 'string') {
     const safe = sanitizeUserFacingNarrative(payload.explanation, payload.title);
@@ -214,7 +227,6 @@ export async function POST(req: NextRequest) {
         rows: [],
         columns: [],
         truncated: false,
-        deterministic: false,
         planFamily: null,
         ...opts,
       });
@@ -246,9 +258,11 @@ export async function POST(req: NextRequest) {
       /** Phase 3 chart capture; pre-serialized via the allowlist in lib/chart-config-log. */
       chartConfigJson: string | null = null,
       /** Proof finalization for this exit; null yields baseline-identical columns. */
-      proof: ProofFinalization | null = null
+      proof: ProofFinalization | null = null,
+      /** Bounded raw model text on no-SQL failures; diagnostic only, never user-visible. */
+      modelResponseJson: string | null = null
     ) => {
-      chartAuditQueryLogId = logQuery(q, sqlText, rowCount, logError, ms, logResponse, tabName, guardrails, model, sid, routingMeta, chartConfigJson, chartAuditRequestId, null, proofLogFields(proof));
+      chartAuditQueryLogId = logQuery(q, sqlText, rowCount, logError, ms, logResponse, tabName, guardrails, model, sid, routingMeta, chartConfigJson, chartAuditRequestId, modelResponseJson, proofLogFields(proof));
       return chartAuditQueryLogId;
     };
     const routeGuardrailsFired: string[] = [];
@@ -278,7 +292,7 @@ export async function POST(req: NextRequest) {
       if (!msg) return null;
       const contractProof = finalizeExit({ intendedAction: "decline_capability", sql: contractResult.sql, guardrails: [...new Set([...guardrails, ...routeGuardrailsFired])] });
       writeLog(question, contractResult.sql, 0, logError, Date.now() - start, msg, "hate_crime", [...new Set([...guardrails, ...routeGuardrailsFired])], "haiku-4.5", sessionId, null, contractProof);
-      return jsonResp({
+      return jsonResp(emitFactualPayload(contractProof, {
         success: true,
         question,
         sql: null,
@@ -291,16 +305,16 @@ export async function POST(req: NextRequest) {
         chartConfig: null,
         chartMeta: null,
         executionTimeMs: Date.now() - start,
-      });
+      }));
     };
 
       const planSaysQueryBearing = (plannerMode === 'authoritative' && followupPlan) ? followupPlan.kind === 'query_bearing' : Boolean(queryBearingFollowup);
   const capabilityOverride = detectSubCityGeographyOverride(question);
     if (capabilityOverride) {
       const executionMs = Date.now() - start;
-      const capabilityProof = finalizeExit({ intendedAction: "decline_capability", deterministic: true, planFamily: capabilityOverride.guardrail });
+      const capabilityProof = finalizeExit({ intendedAction: "decline_capability", planFamily: capabilityOverride.guardrail });
       writeLog(question, null, 0, null, executionMs, capabilityOverride.explanation, "hate_crime", [capabilityOverride.guardrail], "deterministic", sessionId, null, capabilityProof);
-      return jsonResp({
+      return jsonResp(emitFactualPayload(capabilityProof, {
         success: true,
         question,
         sql: null,
@@ -313,14 +327,14 @@ export async function POST(req: NextRequest) {
         chartConfig: null,
         chartMeta: null,
         executionTimeMs: executionMs,
-      });
+      }));
     }
 
     const completenessIntent = detectCompletenessQuestion(question);
     if (completenessIntent) {
       const completenessAnswer = buildCompletenessAnswer("hate_crime", loadCompletenessRows("hate_crime", getHateCrimeDb()), new Date().getFullYear(), completenessIntent.year);
       const executionMs = Date.now() - start;
-      const completenessProof = finalizeExit({ intendedAction: "answer", deterministic: true, planFamily: "completeness-deterministic", guardrails: ["completeness-deterministic"] });
+      const completenessProof = finalizeExit({ intendedAction: "answer", planFamily: "completeness-deterministic", guardrails: ["completeness-deterministic"] });
       writeLog(question, null, 0, null, executionMs, completenessAnswer, "hate_crime", ["completeness-deterministic"], "deterministic", sessionId, null, completenessProof);
       return jsonResp(emitFactualPayload(completenessProof, { success: true, question, sql: null, explanation: completenessAnswer, title: "Data completeness", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: executionMs }));
     }
@@ -328,9 +342,9 @@ export async function POST(req: NextRequest) {
     const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing") ? (followupPlan.chartOnly ? null : getBlockingGeoClarification(followupPlan.reconstructedQuestion)) : getBlockingGeoClarification(question);
     if (geoClarification) {
       const executionMs = Date.now() - start;
-      const geoProof = finalizeExit({ intendedAction: "clarify", deterministic: true, planFamily: `geo:${geoClarification.issue.id}` });
+      const geoProof = finalizeExit({ intendedAction: "clarify", planFamily: `geo:${geoClarification.issue.id}` });
       writeLog(question, null, 0, null, executionMs, geoClarification.explanation, "hate_crime", [`geo:${geoClarification.issue.id}`], "deterministic", sessionId, null, geoProof);
-      return jsonResp({
+      return jsonResp(emitFactualPayload(geoProof, {
         success: true,
         question,
         sql: null,
@@ -343,15 +357,15 @@ export async function POST(req: NextRequest) {
         chartConfig: null,
         chartMeta: null,
         executionTimeMs: executionMs,
-      });
+      }));
     }
 
     const countyScope = planSaysQueryBearing ? null : getCountyScopeClarification(question, body?.history);
     if (countyScope) {
       const executionMs = Date.now() - start;
-      const countyProof = finalizeExit({ intendedAction: "clarify", deterministic: true, planFamily: `geo:${countyScope.id}` });
+      const countyProof = finalizeExit({ intendedAction: "clarify", planFamily: `geo:${countyScope.id}` });
       writeLog(question, null, 0, null, executionMs, countyScope.explanation, "hate_crime", [`geo:${countyScope.id}`], "deterministic", sessionId, null, countyProof);
-      return jsonResp({
+      return jsonResp(emitFactualPayload(countyProof, {
         success: true,
         question,
         sql: null,
@@ -364,15 +378,15 @@ export async function POST(req: NextRequest) {
         chartConfig: null,
         chartMeta: null,
         executionTimeMs: executionMs,
-      });
+      }));
     }
 
     const metadata = planSaysQueryBearing ? null : answerMetadataQuestion("hate_crime", question, getHateCrimeDb());
     if (metadata) {
       const executionMs = Date.now() - start;
-      const metadataProof = finalizeExit({ intendedAction: "answer", sql: metadata.sql, rows: metadata.rows ?? [], columns: metadata.columns ?? [], truncated: Boolean(metadata.truncated), deterministic: true, planFamily: "metadata-coverage-answer", guardrails: ["deterministic-metadata", "metadata-coverage-answer"], hasChart: Boolean(metadata.chartConfig) });
+      const metadataProof = finalizeExit({ intendedAction: "answer", sql: metadata.sql, rows: metadata.rows ?? [], columns: metadata.columns ?? [], truncated: Boolean(metadata.truncated), derivation: metadata.sql ? sealPlanDerivation("metadata-coverage-answer", metadata.sql) : null, planFamily: "metadata-coverage-answer", guardrails: ["deterministic-metadata", "metadata-coverage-answer"], hasChart: Boolean(metadata.chartConfig) });
       writeLog(question, metadata.sql, metadata.rowCount, null, executionMs, metadata.explanation, "hate_crime", ["deterministic-metadata", "metadata-coverage-answer"], "deterministic", sessionId, serializeChartConfigForLog(metadata.chartConfig, metadata.columns), metadataProof);
-      return jsonResp(attachChartAuditToPayload({
+      return jsonResp(emitFactualPayload(metadataProof, attachChartAuditToPayload({
         success: true,
         question,
         sql: metadata.sql,
@@ -385,7 +399,7 @@ export async function POST(req: NextRequest) {
         chartConfig: metadata.chartConfig,
         chartMeta: metadata.chartMeta,
         executionTimeMs: executionMs,
-      }, { source: "hate_crime", requestId: chartAuditRequestId, queryLogId: chartAuditQueryLogId }));
+      }, { source: "hate_crime", requestId: chartAuditRequestId, queryLogId: chartAuditQueryLogId })));
     }
 
     // Check response cache (only for standalone questions)
@@ -470,14 +484,17 @@ export async function POST(req: NextRequest) {
         if (containsInternalLeak(claude.explanation) || containsInternalLeak(claude.title)) { claude.explanation = INTERNAL_LEAK_SAFE_MESSAGE; claude.title = "Results"; routeGuardrailsFired.push("internal-leak-firewall"); }
         if (!serverAuthoredNoSql && !containsInternalLeak(claude.explanation) && !containsInternalLeak(claude.title)) { claude.explanation = buildNoSqlFallbackMessage("hate_crime"); routeGuardrailsFired.push("no-sql-server-template"); }
         claude.explanation = neutralizeUnverifiedAvailabilityClaim(claude.explanation, "Hate Crime");
+        // Raw model text captured before hateCrimeCaveats() and the server
+        // templates rewrite it -- see the same capture in app/api/query/route.ts.
+        const rawNoSqlText = claude.explanation || null;
         const textExplanation = hateCrimeCaveats("", claude.explanation);
         const noSqlProof = finalizeExit({ intendedAction: "decline_capability", guardrails: routeGuardrailsFired });
-        writeLog(question, null, 0, null, claudeMs, textExplanation, "hate_crime", routeGuardrailsFired, "haiku-4.5", sessionId, null, noSqlProof);
-        return jsonResp({
+        writeLog(question, null, 0, null, claudeMs, textExplanation, "hate_crime", routeGuardrailsFired, "haiku-4.5", sessionId, null, noSqlProof, boundedModelResponseJson(rawNoSqlText, null));
+        return jsonResp(emitFactualPayload(noSqlProof, {
           success: true, question, sql: null, explanation: textExplanation,
           title: "", columns: [], rows: [], rowCount: 0, truncated: false,
           chartConfig: null, chartMeta: null, executionTimeMs: claudeMs,
-        });
+        }));
       }
     }
 
@@ -796,10 +813,9 @@ export async function POST(req: NextRequest) {
       rows,
       columns,
       truncated: rows.length >= 1000,
-      // Model-authored, so this cannot satisfy the contract. Recorded honestly.
-      deterministic: false,
       guardrails: finalizeGuardrailTags(routeGuardrailsFired, queryContractGuardrails(runContractValidation(sql))),
-      requestedEntities: requestedEntitiesFromSql(sql),
+      // Not supplied: derived from the parsed request by finalizeProof. See the
+      // note at the equivalent site in app/api/query/route.ts.
       returnedEntities: returnedEntityKeys(rows),
       hasChart: Boolean(chartConfig),
       chartFromBindings: false,
@@ -811,13 +827,13 @@ export async function POST(req: NextRequest) {
       setCache(question, "hate_crime", { sql, explanation: claude.explanation || "", title: claude.title, chartType: claude.chartType, xAxis: claude.xAxis, yAxis: claude.yAxis, yAxisLabel: claude.yAxisLabel });
     }
 
-    return jsonResp(attachChartAuditToPayload(emitFactualPayload(finalization, {
+    return jsonResp(emitFactualPayload(finalization, attachChartAuditToPayload({
       success: true, question, sql, explanation,
       title: claude.title || "", columns, rows,
       rowCount: rows.length, truncated: rows.length >= 1000,
       chartConfig, chartMeta: { source: "FBI Hate Crime Statistics", agencyCount: 0, population: null },
       executionTimeMs: totalMs,
-    }), { source: "hate_crime", requestId: chartAuditRequestId, queryLogId: chartAuditQueryLogId }));
+    }, { source: "hate_crime", requestId: chartAuditRequestId, queryLogId: chartAuditQueryLogId })));
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("[hate_crime] Query API error:", msg);

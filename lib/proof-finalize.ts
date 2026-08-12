@@ -55,6 +55,12 @@ import { buildResultDigest, serializeResultDigest, type DigestPlanDeclaration, t
 import { runProofChecks, type NumericClaim } from "./proof-checks";
 import { attributeOmissions, type OmittedCandidate } from "./omission-attribution";
 import { buildQueryContract, type QueryContractSource } from "./query-contract";
+import { verifyPlanDerivation, type PlanDerivation } from "./plan-derivation";
+import {
+  omittedCandidatesFor,
+  requestedEntitiesFromRequest,
+  requestedYearsFromContract,
+} from "./requested-entities";
 
 /** Bumped when the persisted proof/digest pair changes shape incompatibly. */
 export const PROOF_SCHEMA_VERSION = 1;
@@ -153,6 +159,19 @@ interface ProofFinalizationFields {
   readonly elapsedMs: number;
   /** Set when finalization degraded because of an internal error or budget trip. */
   readonly degradedReason: string | null;
+  /**
+   * The action the CONTRACT would require, as distinct from what was delivered.
+   *
+   * `decision.action` records what the user actually received, which in shadow is
+   * always what the route intended -- that is what shadow means. But recording only
+   * that made a blocked answer indistinguishable from a proven one in the log: both
+   * showed `delivery_action = answer`. Handoff §14.1 requires the digest to report
+   * "would-answer/would-narrow/would-clarify/would-decline counts", which needs the
+   * counterfactual stored alongside the fact.
+   */
+  readonly hypotheticalAction: DeliveryAction;
+  /** Per-check reasons, for the reviewer queue. Shed first if the envelope is large. */
+  readonly checkReasons: Record<string, string> | null;
 }
 
 /**
@@ -172,6 +191,25 @@ function brandFinalization(fields: ProofFinalizationFields): ProofFinalization {
   return fields as ProofFinalization;
 }
 
+declare const sealedPayloadBrand: unique symbol;
+
+/**
+ * A factual payload that has passed through the gate.
+ *
+ * THIS IS WHAT MAKES THE CHOKEPOINT REAL. Requiring a ProofFinalization argument on
+ * emitFactualPayload() only constrains code that chooses to call it -- a route could
+ * still hand a raw `{ success: true, ... }` straight to jsonResp(), and one did: the
+ * Hate Crime metadata answer finalized and then responded without the wrap, so the
+ * finalization was computed and discarded.
+ *
+ * Sealing the PAYLOAD closes that. The response constructors now accept only a
+ * SealedPayload for factual content, and this type is produced nowhere but
+ * emitFactualPayload(). An unwrapped factual exit is a compile error, not a review
+ * finding. Purely nominal -- no runtime property is added (see
+ * ProofFinalizationFields for why that distinction is load-bearing here).
+ */
+export type SealedPayload<T> = T & { readonly [sealedPayloadBrand]: true };
+
 /** Everything finalization needs about one response. */
 export interface ProofFinalizationInput {
   sourceId: SourceId;
@@ -180,17 +218,37 @@ export interface ProofFinalizationInput {
   rows: Record<string, unknown>[];
   columns: string[];
   truncated: boolean;
-  /** True when SQL came from a deterministic planner rather than the model. */
-  deterministic: boolean;
+  /**
+   * Sealed proof that a deterministic planner produced this SQL, or null.
+   *
+   * Replaces a `deterministic: boolean`. A boolean asserted deterministic
+   * derivation on the caller's word and could not detect SQL rewritten between
+   * planning and execution -- which four separate retry paths in these routes do.
+   * See lib/plan-derivation.ts.
+   */
+  derivation?: PlanDerivation | null;
   /** Typed plan family, when the answer came from one. */
   planFamily: string | null;
   /** What the plan declares about the result's columns; drives digest sums. */
   plan?: DigestPlanDeclaration;
-  /** Canonical entities the request asked for. */
+  /**
+   * Canonical entities the request asked for.
+   *
+   * OMIT THIS unless a deterministic planner knows better than the typed plan does.
+   * When absent it is derived from the parsed request via
+   * requestedEntitiesFromRequest(). Deriving it from the generated SQL -- which the
+   * first revision did -- makes the completeness check unable to see a dropped
+   * entity, because the SQL that dropped it also defines what was "requested".
+   */
   requestedEntities?: string[];
   /** Canonical entities present in the result. */
   returnedEntities?: string[];
-  /** Requested entities absent from the result, for attribution. */
+  /**
+   * Requested entities absent from the result.
+   *
+   * Normally omit: computed from requested minus returned. Passing none was why the
+   * attribution system recorded zero omissions in the first revision.
+   */
   omittedCandidates?: OmittedCandidate[];
   /** True when the delivered narrative openly states the narrower scope. */
   omissionsDisclosed?: boolean;
@@ -241,7 +299,25 @@ function inertFinalization(
     mayAlterDelivery: false,
     elapsedMs,
     degradedReason,
+    // An inert finalization proves nothing, so the contract could not have
+    // authorized a factual answer regardless of what the route intended.
+    hypotheticalAction: hypotheticalFor(intendedAction, factualDeliveryBlocker(manifest)),
+    checkReasons: null,
   });
+}
+
+/**
+ * What the contract would require, given whether proof succeeded.
+ *
+ * A blocked factual intent becomes `decline_capability`: the product could not
+ * establish the claim, which under §2.4 is a capability statement and never an
+ * invented source limitation. A non-factual intent is unaffected -- a clarify is a
+ * clarify whether or not a manifest passed.
+ */
+function hypotheticalFor(intended: DeliveryAction, blocker: string | null): DeliveryAction {
+  if (blocker === null) return intended;
+  if (intended === "answer" || intended === "answer_limited_scope") return "decline_capability";
+  return intended;
 }
 
 /**
@@ -281,13 +357,34 @@ export function finalizeProof(input: ProofFinalizationInput): ProofFinalization 
     // is the correct Stage 1 state, not a gap: an answer whose source health was
     // never established has not met §2.1, and recording it as `passed` here would
     // manufacture the exact false assurance this project exists to remove.
+    // Derivation is VERIFIED here, not asserted by the caller: the token is checked
+    // against the SQL that actually executed, so a deterministic plan whose SQL was
+    // rewritten by a guardrail or a retry is correctly recorded as model_authored.
+    const derivation = input.derivation ?? null;
+    const derivationVerdict = verifyPlanDerivation(derivation, input.sql);
     const manifest = createProofManifest(
       input.sourceId,
-      input.deterministic ? "deterministic" : ("model_authored" as Derivation),
+      derivationVerdict.ok ? "deterministic" : ("model_authored" as Derivation),
     );
-    manifest.planFamily = input.planFamily;
+    manifest.planFamily = input.planFamily ?? derivation?.planFamily ?? null;
 
-    const attribution = attributeOmissions(input.omittedCandidates ?? [], {
+    // WHAT WAS ASKED FOR COMES FROM THE REQUEST, NOT THE GENERATED SQL. If the SQL
+    // omits Dallas, deriving the requested set from that SQL makes Dallas vanish
+    // from both the result and the expectation, and entityCompleteness passes on a
+    // silently dropped city. Only a deterministic planner may override, because it
+    // knows its own entity list (multi-city pivots cities into columns, where row
+    // scanning cannot see them).
+    const requestedFromRequest = requestedEntitiesFromRequest(contract);
+    const requestedEntities = input.requestedEntities ?? requestedFromRequest.map((entity) => entity.label);
+    const returnedEntities = input.returnedEntities ?? [];
+
+    // Computed here so no route can forget to pass them -- passing none is why the
+    // first revision's attribution recorded zero omissions everywhere.
+    const omittedCandidates =
+      input.omittedCandidates ??
+      omittedCandidatesFor(requestedFromRequest, returnedEntities, requestedYearsFromContract(contract));
+
+    const attribution = attributeOmissions(omittedCandidates, {
       sourceId: input.sourceId,
       db: input.db ?? null,
       sourceYearRange: input.sourceYearRange ?? null,
@@ -305,10 +402,10 @@ export function finalizeProof(input: ProofFinalizationInput): ProofFinalization 
       rows: input.rows,
       columns: input.columns,
       contract,
-      requestedEntities: input.requestedEntities ?? [],
-      returnedEntities: input.returnedEntities ?? [],
+      requestedEntities,
+      returnedEntities,
       omissionsDisclosed: Boolean(input.omissionsDisclosed),
-      deterministic: input.deterministic,
+      derivation,
       hasChart: Boolean(input.hasChart),
       chartFromBindings: Boolean(input.chartFromBindings),
       claims: input.claims ?? null,
@@ -320,9 +417,9 @@ export function finalizeProof(input: ProofFinalizationInput): ProofFinalization 
       rows: input.rows,
       columns: input.columns,
       truncated: input.truncated,
-      plan: { ...(input.plan ?? {}), planFamily: input.planFamily },
-      requestedEntities: input.requestedEntities,
-      returnedEntities: input.returnedEntities,
+      plan: { ...(input.plan ?? {}), planFamily: manifest.planFamily },
+      requestedEntities,
+      returnedEntities,
       omissions: attribution.omissions,
       retries: input.retries,
       guardrails: input.guardrails,
@@ -331,9 +428,11 @@ export function finalizeProof(input: ProofFinalizationInput): ProofFinalization 
     const blocker = factualDeliveryBlocker(manifest);
 
     const decision: DeliveryDecision = {
+      // What the user ACTUALLY receives. In shadow this is always the route's
+      // intent; hypotheticalAction below carries what the contract would require.
       action: input.intendedAction,
-      requested: input.requestedEntities?.length ?? null,
-      included: input.returnedEntities?.length ?? null,
+      requested: requestedEntities.length > 0 ? requestedEntities.length : null,
+      included: returnedEntities.length > 0 ? returnedEntities.length : null,
       omissions: attribution.omissions,
       retries: input.retries ?? 0,
     };
@@ -354,6 +453,8 @@ export function finalizeProof(input: ProofFinalizationInput): ProofFinalization 
       mayAlterDelivery: mayAlterDelivery(mode),
       elapsedMs,
       degradedReason: null,
+      hypotheticalAction: hypotheticalFor(input.intendedAction, blocker),
+      checkReasons: checks.reasons,
     });
   } catch (error) {
     const elapsedMs = Date.now() - startedAt;
@@ -379,6 +480,79 @@ export interface ProofLogFields {
   plan_family: string | null;
 }
 
+/** Storage bound for the proof_manifest column. */
+export const MAX_PROOF_MANIFEST_CHARS = 4000;
+
+function boundString(value: string | null, max: number): string | null {
+  if (value === null) return null;
+  return value.length > max ? `${value.slice(0, max - 1)}…` : value;
+}
+
+/**
+ * Serialize the proof envelope so the stored value is ALWAYS valid JSON.
+ *
+ * THE BUG THIS REPLACES. The previous implementation did
+ * `JSON.stringify({...}).slice(0, 4000)`, which truncates mid-token and produces
+ * unparseable text. It is reachable in production: a better-sqlite3 error message
+ * quotes the failing statement, so a degraded finalization carrying a long
+ * SqliteError filled the whole budget and stored exactly 4,000 characters ending in
+ * an unterminated string. The reviewer queue and the digest both JSON.parse this
+ * column, so the corruption surfaces as a lost record rather than an error -- and
+ * the original test asserted only `length <= 4000`, which the corrupt value passed.
+ *
+ * Fields are bounded individually BEFORE serialization, and if the envelope is
+ * still too large it sheds whole fields and re-serializes. Nothing is ever sliced
+ * after stringify.
+ */
+function serializeProofEnvelope(finalization: ProofFinalization): string | null {
+  const blocking = blockingChecks(finalization.manifest);
+  const base = {
+    manifest: finalization.manifest,
+    blocker: boundString(finalization.blocker, 400),
+    blockingChecks: blocking,
+    elapsedMs: finalization.elapsedMs,
+    degradedReason: boundString(finalization.degradedReason, 600),
+    // What the contract WOULD have required. See ProofFinalization.hypotheticalAction.
+    hypotheticalAction: finalization.hypotheticalAction,
+    checkReasons: finalization.checkReasons,
+  };
+
+  // Progressive shedding, most diagnostic first. Each rung re-serializes from
+  // scratch, so every candidate is complete and parseable by construction.
+  const candidates: (() => unknown)[] = [
+    () => base,
+    () => ({ ...base, checkReasons: undefined }),
+    () => ({ ...base, checkReasons: undefined, manifest: { ...finalization.manifest, notApplicableReasons: {} } }),
+    () => ({
+      manifest: { ...finalization.manifest, notApplicableReasons: {} },
+      blocker: boundString(finalization.blocker, 120),
+      blockingChecks: blocking,
+      elapsedMs: finalization.elapsedMs,
+      degradedReason: boundString(finalization.degradedReason, 120),
+      hypotheticalAction: finalization.hypotheticalAction,
+    }),
+    () => ({
+      v: finalization.manifest.v,
+      envelopeReduced: true,
+      blockingChecks: blocking,
+      hypotheticalAction: finalization.hypotheticalAction,
+    }),
+  ];
+
+  for (const build of candidates) {
+    try {
+      const json = JSON.stringify(build());
+      if (typeof json === "string" && json.length <= MAX_PROOF_MANIFEST_CHARS) return json;
+    } catch {
+      // Try the next, smaller shape.
+    }
+  }
+  // Last resort: a fixed, known-short, valid envelope. Recorded as an error rather
+  // than stored as null, so "the envelope could not be built" is visible instead of
+  // looking like a row the proof system never touched.
+  return JSON.stringify({ v: finalization.manifest.v, envelopeError: true });
+}
+
 /** Nothing to persist -- used in `off` mode so the logger writes exactly what it always did. */
 export const EMPTY_PROOF_LOG_FIELDS: ProofLogFields = {
   delivery_action: null,
@@ -399,26 +573,10 @@ export const EMPTY_PROOF_LOG_FIELDS: ProofLogFields = {
  */
 export function proofLogFields(finalization: ProofFinalization | null): ProofLogFields {
   if (!finalization || !isObserving(finalization.mode)) return EMPTY_PROOF_LOG_FIELDS;
-  const manifestJson = (() => {
-    try {
-      // Blocker and check reasons are carried alongside the frozen manifest shape
-      // rather than inside it: ProofManifest is a persisted wire format (§15) and
-      // must not grow diagnostic fields that a later reader would have to tolerate.
-      return JSON.stringify({
-        manifest: finalization.manifest,
-        blocker: finalization.blocker,
-        blockingChecks: blockingChecks(finalization.manifest),
-        elapsedMs: finalization.elapsedMs,
-        degradedReason: finalization.degradedReason,
-      }).slice(0, 4000);
-    } catch {
-      return null;
-    }
-  })();
   const digestJson = finalization.digest ? serializeResultDigest(finalization.digest) : null;
   return {
     delivery_action: finalization.decision.action,
-    proof_manifest: manifestJson,
+    proof_manifest: serializeProofEnvelope(finalization),
     result_digest: digestJson,
     proof_schema_version: PROOF_SCHEMA_VERSION,
     proof_mode: finalization.mode,
@@ -429,16 +587,26 @@ export function proofLogFields(finalization: ProofFinalization | null): ProofLog
 /**
  * Gate for emitting a factual payload.
  *
- * Requiring a ProofFinalization argument is the entire mechanism. In `off` and
- * `shadow` the payload is returned unchanged -- referentially identical, not a
- * copy, so no serialization difference can creep in. Stage 4 adds the enforce
- * branch here and nowhere else.
+ * Two things make this a real chokepoint rather than a convention:
+ *
+ *   1. It requires a ProofFinalization, which only this module can construct.
+ *   2. It returns a SealedPayload, which only this function can produce -- and the
+ *      response constructors (sseEvent, jsonResp) accept nothing else for factual
+ *      content. So a factual exit that skips the gate does not compile.
+ *
+ * Requirement 2 was missing at first, and a route did exactly what its absence
+ * allowed: the Hate Crime metadata answer finalized, then responded without the
+ * wrap, discarding the finalization it had just computed.
+ *
+ * In `off` and `shadow` the payload is returned REFERENTIALLY identical, not a copy,
+ * so no serialization difference can creep in. Stage 4 adds the enforce branch here
+ * and nowhere else.
  */
-export function emitFactualPayload<T>(finalization: ProofFinalization, payload: T): T {
-  if (!finalization.mayAlterDelivery) return payload;
+export function emitFactualPayload<T>(finalization: ProofFinalization, payload: T): SealedPayload<T> {
+  if (!finalization.mayAlterDelivery) return payload as SealedPayload<T>;
   // Stage 4 will substitute a clarify/decline payload here when `blocker` is
   // non-null. Until enforcement is approved by the owner, `mayAlterDelivery` is
   // false for every source and family, so this branch is unreachable in
   // production and intentionally returns the payload unchanged.
-  return payload;
+  return payload as SealedPayload<T>;
 }

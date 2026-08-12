@@ -34,6 +34,7 @@ import type { CheckState, ProofCheck } from "./proof-contract";
 import type { QueryContract } from "./query-contract";
 import { detectRequestedGrain, resultGrain } from "./requested-grain";
 import { entityAliasKeys } from "./result-disclosure";
+import { verifyPlanDerivation, type PlanDerivation } from "./plan-derivation";
 
 export interface CheckOutcome {
   state: CheckState;
@@ -238,12 +239,34 @@ function yearsInRows(rows: Record<string, unknown>[]): number[] {
 }
 
 /**
+ * Does the question express a CONTIGUOUS range, or enumerate specific years?
+ *
+ * "from 2015 to 2025" demands every year in between; "2015 and 2025" does not.
+ * lib/query-contract collapses both to startYear/endYear, so the distinction has to
+ * be recovered from the question text. Without it, a gap check would either miss
+ * real gaps (min/max only) or fabricate them for every two-year comparison.
+ */
+function asksContiguousRange(question: string): boolean {
+  return /\b(?:from\s+\d{4}\s*(?:to|through|thru|-|–|—)\s*\d{4}|between\s+\d{4}\s+and\s+\d{4}|since\s+\d{4}|\d{4}\s*(?:-|–|—)\s*\d{4})\b/i.test(
+    question,
+  ) || /\b(?:each|every|annual(?:ly)?|by year|per year|trend|over time)\b/i.test(question);
+}
+
+/**
  * Does the returned period cover the period the plan asked for?
  *
- * Under-coverage is `failed` rather than `unknown`: the plan named a year the
- * result does not contain, which is a concrete discrepancy, and §2.4 forbids
- * silently dropping a requested year. Whether that becomes a limited-scope answer
- * or a decline is the delivery layer's decision, not this check's.
+ * TWO FAILURES, NOT ONE. Checking only min and max lets a result containing just
+ * 2015 and 2025 "cover" a request for 2015-2025 -- the endpoints match and eight
+ * interior years are missing. A trend chart drawn from that is a straight line
+ * between two points presented as a decade of data. So interior gaps are checked
+ * too, but only when the question actually asked for a contiguous range; an
+ * enumerated two-year comparison is reported `unknown` rather than failed, because
+ * the plan cannot tell us which reading was meant.
+ *
+ * Under-coverage at the boundaries is `failed` rather than `unknown`: the plan named
+ * a year the result does not contain, which is a concrete discrepancy, and §2.4
+ * forbids silently dropping a requested year. Whether that becomes a limited-scope
+ * answer or a decline is the delivery layer's decision, not this check's.
  */
 export function checkTimeRange(input: CheckInput): CheckOutcome {
   const contract = input.contract;
@@ -272,9 +295,36 @@ export function checkTimeRange(input: CheckInput): CheckOutcome {
   if (shortfalls.length > 0) {
     return { state: "failed", reason: shortfalls.join("; ") };
   }
+
+  // Interior gaps. The boundaries matching is not coverage.
+  const spanStart = startYear ?? min;
+  const spanEnd = endYear ?? max;
+  if (spanEnd > spanStart) {
+    const present = new Set(years);
+    const gaps: number[] = [];
+    for (let year = spanStart; year <= spanEnd; year++) {
+      if (!present.has(year)) gaps.push(year);
+    }
+    if (gaps.length > 0) {
+      const shown = gaps.slice(0, 8).join(", ") + (gaps.length > 8 ? `, +${gaps.length - 8} more` : "");
+      if (asksContiguousRange(input.question)) {
+        return {
+          state: "failed",
+          reason: `requested ${spanStart}-${spanEnd} contiguously but ${gaps.length} year(s) are absent: ${shown}`,
+        };
+      }
+      return {
+        state: "unknown",
+        reason:
+          `${gaps.length} year(s) within ${spanStart}-${spanEnd} are absent (${shown}); the request did not ` +
+          `clearly ask for a contiguous range, so this may be an intended enumeration`,
+      };
+    }
+  }
+
   return {
     state: "passed",
-    reason: `returned ${min}-${max} covers the requested ${startYear ?? min}-${endYear ?? max}`,
+    reason: `returned ${min}-${max} covers the requested ${spanStart}-${spanEnd} with no interior gaps`,
   };
 }
 
@@ -392,18 +442,43 @@ export function checkReconciliation(input: CheckInput): CheckOutcome {
   }
   const problems: string[] = [];
   for (const column of input.columns) {
-    const isRateColumn = /(rate|pct|percent|share|clearance)/i.test(column);
+    // Every proportion-like column is bounds-checked, not only the ones whose name
+    // happens to contain pct/percent/share. An earlier revision documented
+    // clearance-rate bounds and then required that extra name match to apply them,
+    // so a column called `clearance_rate` -- the exact case named in the comment --
+    // was never checked at all.
+    const isRateColumn = /(rate|pct|percent|share|clearance|proportion|ratio)/i.test(column);
     const isCountColumn = /(count|total|incidents|victims|offenses|arrests|murders|homicides)/i.test(column);
-    for (const row of input.rows) {
-      const value = row[column];
-      if (typeof value !== "number" || !Number.isFinite(value)) continue;
-      if (isCountColumn && value < 0) {
-        problems.push(`${column} has a negative count (${value})`);
-        break;
+    const values = input.rows
+      .map((row) => row[column])
+      .filter((value): value is number => typeof value === "number" && Number.isFinite(value));
+    if (values.length === 0) continue;
+
+    if (isCountColumn) {
+      const negative = values.find((value) => value < 0);
+      if (negative !== undefined) {
+        problems.push(`${column} has a negative count (${negative})`);
+        continue;
       }
-      if (isRateColumn && /pct|percent|share/i.test(column) && (value < 0 || value > 100)) {
-        problems.push(`${column} is outside 0-100 (${value})`);
-        break;
+    }
+
+    if (isRateColumn) {
+      const negative = values.find((value) => value < 0);
+      if (negative !== undefined) {
+        problems.push(`${column} has a negative rate (${negative})`);
+        continue;
+      }
+      // Scale is inferred from the data, because this codebase emits clearance as a
+      // 0-1 proportion in some queries and a 0-100 percentage in others. A value
+      // above 100 is out of bounds on either reading, which is the check that
+      // matters; distinguishing 0-1 from 0-100 below that would need a declared
+      // unit, and inventing one here would just be a differently-wrong guess.
+      const max = Math.max(...values);
+      // `rate_per_100k` is a genuine per-capita rate with no upper bound, so it is
+      // excluded from the ceiling rather than reported as impossible.
+      const isPerCapita = /per_?100_?0?0?0?k?|per_capita|per_100000/i.test(column);
+      if (!isPerCapita && max > 100) {
+        problems.push(`${column} exceeds 100 (${max}), which is out of bounds as either a proportion or a percentage`);
       }
     }
   }
@@ -412,27 +487,34 @@ export function checkReconciliation(input: CheckInput): CheckOutcome {
   }
   return {
     state: "passed",
-    reason: "no negative counts and no out-of-range percentages in the result",
+    reason: "no negative counts, no negative rates, and no proportion column above 100",
   };
 }
 
 /**
  * Was the SQL produced deterministically from a validated plan?
  *
- * During Stage 1 every route path is still model-authored, so this returns
- * `unknown` for all real traffic and `passed` only where a deterministic planner
- * built the query. That asymmetry is the migration measurement the shadow period
- * exists to collect (§10) -- it is not a bug to be softened.
+ * TAKES A SEALED DERIVATION, NOT A BOOLEAN. An earlier revision accepted
+ * `deterministic: boolean` from the route and combined it with a QueryContract
+ * parsed independently from the question -- so nothing connected the plan to the
+ * SQL, and the check asserted deterministic derivation on a caller's word. Now it
+ * verifies a token issued where the planner's SQL was produced against the SQL that
+ * actually executed, which catches the real failure mode: the guardrail rewriter,
+ * schema corrector, table-allowlist retry, and rolling-12-month retry can each
+ * replace `sql` after planning. See lib/plan-derivation.ts for exactly what the
+ * token does and does not prove.
+ *
+ * During Stage 1 every model path is unsealed, so this returns `unknown` for all
+ * model traffic. That asymmetry is the migration measurement the shadow period
+ * exists to collect (§10) -- not a bug to be softened.
  */
-export function checkSemanticPlan(input: CheckInput, deterministic: boolean): CheckOutcome {
+export function checkSemanticPlan(input: CheckInput, derivation: PlanDerivation | null): CheckOutcome {
   if (!input.contract) {
     return { state: "unknown", reason: "the question could not be parsed into a typed plan" };
   }
-  if (!deterministic) {
-    return {
-      state: "unknown",
-      reason: "SQL was model-authored; a typed plan was parsed but did not compile the query",
-    };
+  const verdict = verifyPlanDerivation(derivation, input.sql);
+  if (!verdict.ok) {
+    return { state: "unknown", reason: verdict.reason };
   }
   if (input.contract.warnings.length > 0) {
     return {
@@ -440,7 +522,7 @@ export function checkSemanticPlan(input: CheckInput, deterministic: boolean): Ch
       reason: `deterministic plan carries unresolved warnings: ${input.contract.warnings.join(", ")}`,
     };
   }
-  return { state: "passed", reason: "SQL was compiled deterministically from a validated typed plan" };
+  return { state: "passed", reason: verdict.reason };
 }
 
 /** Was the chart built from the same validated facts as the prose? */
@@ -458,7 +540,8 @@ export function checkChartData(hasChart: boolean, chartFromBindings: boolean): C
 }
 
 export interface RunChecksInput extends CheckInput {
-  deterministic: boolean;
+  /** Sealed derivation token, or null for a model-authored answer. */
+  derivation: PlanDerivation | null;
   hasChart: boolean;
   chartFromBindings: boolean;
   claims: NumericClaim[] | null;
@@ -481,7 +564,7 @@ export interface ChecksResult {
  */
 export function runProofChecks(input: RunChecksInput): ChecksResult {
   const outcomes: Record<ProofCheck, CheckOutcome> = {
-    semanticPlan: checkSemanticPlan(input, input.deterministic),
+    semanticPlan: checkSemanticPlan(input, input.derivation),
     canonicalGeographies: checkCanonicalGeographies(input),
     entityCompleteness: checkEntityCompleteness(input),
     metric: checkMetric(input),

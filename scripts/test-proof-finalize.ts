@@ -34,9 +34,11 @@ import {
   PROOF_SCHEMA_VERSION,
   PROOF_BUDGET_MS,
   PROOF_OVERRUN_LIMIT,
+  MAX_PROOF_MANIFEST_CHARS,
   type ProofFinalizationInput,
 } from "../lib/proof-finalize";
 import { satisfiesFactualDelivery, PROOF_CHECKS } from "../lib/proof-contract";
+import { sealPlanDerivation } from "../lib/plan-derivation";
 import { noEnforcementActive } from "../lib/proof-modes";
 
 let passed = 0;
@@ -62,7 +64,6 @@ function baseInput(overrides: Partial<ProofFinalizationInput> = {}): ProofFinali
     ],
     columns: ["year", "agency", "murders"],
     truncated: false,
-    deterministic: false,
     planFamily: null,
     intendedAction: "answer",
     env: {},
@@ -166,7 +167,9 @@ console.log("\nshadow is invisible");
     assert.ok(fields.result_digest, "digest JSON must be persisted");
   });
 
-  check("persisted manifest JSON stays within the column bound", () => {
+  check("persisted manifest JSON stays within the column bound AND PARSES", () => {
+    // The original assertion checked only length, which a value truncated mid-token
+    // passes. Parsing is the assertion that matters -- see the envelope suite below.
     const wide = Array.from({ length: 40 }, (_, i) => `col${i}`);
     const rows = Array.from({ length: 50 }, () => {
       const row: Record<string, unknown> = {};
@@ -174,8 +177,10 @@ console.log("\nshadow is invisible");
       return row;
     });
     const fields = proofLogFields(finalizeProof(baseInput({ env: SHADOW_ENV, rows, columns: wide })));
-    assert.ok(fields.proof_manifest!.length <= 4000, `manifest was ${fields.proof_manifest!.length} chars`);
+    assert.ok(fields.proof_manifest!.length <= MAX_PROOF_MANIFEST_CHARS, `manifest was ${fields.proof_manifest!.length} chars`);
+    assert.doesNotThrow(() => JSON.parse(fields.proof_manifest!), "manifest must be valid JSON");
     assert.ok(fields.result_digest!.length <= 8192, `digest was ${fields.result_digest!.length} chars`);
+    assert.doesNotThrow(() => JSON.parse(fields.result_digest!), "digest must be valid JSON");
   });
 
   check("the blocker is recorded but not acted on", () => {
@@ -186,12 +191,213 @@ console.log("\nshadow is invisible");
   });
 }
 
+console.log("\nthe persisted envelope is ALWAYS valid JSON");
+{
+  /** Force a degraded finalization whose error message is arbitrarily long. */
+  function degradeWith(messageLength: number) {
+    __resetProofBudgetStateForTests();
+    const hostile: Record<string, unknown> = {};
+    Object.defineProperty(hostile, "n", {
+      enumerable: true,
+      get() {
+        throw new Error("SqliteError: no such column: " + "x".repeat(messageLength));
+      },
+    });
+    return proofLogFields(
+      finalizeProof(baseInput({ env: SHADOW_ENV, rows: [hostile], columns: ["n"] })),
+    );
+  }
+
+  check("a 6,000-character SQLite error does not corrupt the column", () => {
+    // The reported bug, reproduced: JSON.stringify(...).slice(0, 4000) truncated
+    // mid-token and stored exactly 4,000 unparseable characters. Reachable in
+    // production because better-sqlite3 quotes the failing statement in its message.
+    const fields = degradeWith(6000);
+    assert.ok(fields.proof_manifest!.length <= MAX_PROOF_MANIFEST_CHARS);
+    const parsed = JSON.parse(fields.proof_manifest!);
+    assert.ok(parsed, "envelope must parse");
+  });
+
+  check("the degraded reason survives, bounded, rather than being lost", () => {
+    const parsed = JSON.parse(degradeWith(6000).proof_manifest!);
+    assert.ok(parsed.degradedReason, "the reason must still be recorded");
+    assert.ok(parsed.degradedReason.length <= 601, `reason was ${parsed.degradedReason.length} chars`);
+    assert.match(parsed.degradedReason, /SqliteError/);
+  });
+
+  check("envelopes parse across a wide range of error sizes", () => {
+    for (const length of [0, 100, 500, 3_000, 4_000, 10_000, 50_000]) {
+      const fields = degradeWith(length);
+      assert.ok(
+        fields.proof_manifest!.length <= MAX_PROOF_MANIFEST_CHARS,
+        `length ${length}: envelope was ${fields.proof_manifest!.length} chars`,
+      );
+      assert.doesNotThrow(() => JSON.parse(fields.proof_manifest!), `length ${length}: invalid JSON`);
+    }
+  });
+
+  check("a long plan family does not corrupt the envelope", () => {
+    __resetProofBudgetStateForTests();
+    const fields = proofLogFields(
+      finalizeProof(baseInput({ env: SHADOW_ENV, planFamily: "family-" + "y".repeat(9000) })),
+    );
+    assert.ok(fields.proof_manifest!.length <= MAX_PROOF_MANIFEST_CHARS);
+    assert.doesNotThrow(() => JSON.parse(fields.proof_manifest!));
+  });
+
+  check("a reduced envelope says so rather than looking complete", () => {
+    const parsed = JSON.parse(degradeWith(50_000).proof_manifest!);
+    // Either the full shape fit after bounding, or a reduced shape was stored and
+    // labelled. What must never happen is a silently partial record.
+    const labelled = parsed.envelopeReduced === true || parsed.envelopeError === true || parsed.manifest !== undefined;
+    assert.ok(labelled, `envelope neither complete nor labelled: ${JSON.stringify(parsed).slice(0, 200)}`);
+  });
+}
+
+console.log("\nhypothetical action separates what was delivered from what was proven");
+{
+  __resetProofBudgetStateForTests();
+
+  check("a blocked answer records delivery_action=answer but hypothetical=decline_capability", () => {
+    // The fixture gap Codex flagged: asserting only that delivery_action stayed
+    // `answer` encoded the missing counterfactual as correct behavior. Both facts
+    // are needed -- shadow must not change delivery, AND §14.1 requires
+    // would-answer/would-decline counts.
+    const finalization = finalizeProof(baseInput({ env: SHADOW_ENV, intendedAction: "answer" }));
+    assert.ok(finalization.blocker, "a legacy answer must be blocked");
+    assert.strictEqual(finalization.decision.action, "answer", "shadow must not change what was delivered");
+    assert.strictEqual(finalization.hypotheticalAction, "decline_capability", "the counterfactual must be recorded");
+    assert.strictEqual(proofLogFields(finalization).delivery_action, "answer");
+    assert.strictEqual(JSON.parse(proofLogFields(finalization).proof_manifest!).hypotheticalAction, "decline_capability");
+  });
+
+  check("a non-factual intent is unchanged by a blocker", () => {
+    for (const action of ["clarify", "decline_capability", "decline_data"] as const) {
+      const finalization = finalizeProof(baseInput({ env: SHADOW_ENV, intendedAction: action, rows: [], columns: [] }));
+      assert.strictEqual(finalization.hypotheticalAction, action, `${action} should be unaffected`);
+    }
+  });
+
+  check("an unproven answer never reports hypothetical=answer", () => {
+    // The invariant that matters: nothing in Stage 1 can satisfy the contract, so
+    // no shadow row may claim the contract would have permitted a factual answer.
+    for (const deterministic of [false, true]) {
+      const finalization = finalizeProof(
+        baseInput({
+          env: SHADOW_ENV,
+          planFamily: deterministic ? "current-agency-trend" : null,
+          derivation: deterministic ? sealPlanDerivation("current-agency-trend", baseInput().sql!) : null,
+        }),
+      );
+      assert.notStrictEqual(finalization.hypotheticalAction, "answer");
+    }
+  });
+}
+
+console.log("\nrequested entities come from the REQUEST, not the generated SQL");
+{
+  __resetProofBudgetStateForTests();
+
+  check("an entity the SQL dropped is still counted as requested", () => {
+    // The reported defect: deriving the requested set from the generated SQL means
+    // the SQL that dropped Dallas also defines what was asked for, so
+    // entityCompleteness passes on a silent omission.
+    const finalization = finalizeProof(
+      baseInput({
+        env: SHADOW_ENV,
+        question: "compare murders in Austin and Dallas in 2020",
+        // SQL names Austin only -- Dallas was silently dropped by the model.
+        sql: "SELECT year, agency, SUM(count) AS murders FROM agency_monthly WHERE agency = 'Austin' GROUP BY year",
+        rows: [{ year: 2020, agency: "Austin", murders: 60 }],
+        columns: ["year", "agency", "murders"],
+        returnedEntities: ["Austin"],
+      }),
+    );
+    assert.strictEqual(finalization.decision.requested, 2, "both cities must be counted as requested");
+    assert.strictEqual(finalization.decision.included, 1);
+    assert.strictEqual(
+      finalization.manifest.checks.entityCompleteness,
+      "failed",
+      "a silently dropped city must fail completeness",
+    );
+  });
+
+  check("the dropped entity produces an attributed omission", () => {
+    // And the second half: no route passes omittedCandidates, so they must be
+    // derived. The first revision recorded zero omissions everywhere.
+    const finalization = finalizeProof(
+      baseInput({
+        env: SHADOW_ENV,
+        question: "compare murders in Austin and Dallas in 2020",
+        rows: [{ year: 2020, agency: "Austin", murders: 60 }],
+        columns: ["year", "agency", "murders"],
+        returnedEntities: ["Austin"],
+      }),
+    );
+    assert.strictEqual(finalization.decision.omissions.length, 1, "Dallas must be recorded as omitted");
+    const omission = finalization.decision.omissions[0];
+    assert.match(omission.label, /Dallas/);
+    // No database was supplied, so no probe ran and no source claim is permitted.
+    assert.strictEqual(omission.reason, "unknown");
+    assert.strictEqual(omission.evidence, null);
+  });
+
+  check("omissions reach the persisted digest", () => {
+    const finalization = finalizeProof(
+      baseInput({
+        env: SHADOW_ENV,
+        question: "compare murders in Austin and Dallas in 2020",
+        rows: [{ year: 2020, agency: "Austin", murders: 60 }],
+        columns: ["year", "agency", "murders"],
+        returnedEntities: ["Austin"],
+      }),
+    );
+    const digest = JSON.parse(proofLogFields(finalization).result_digest!);
+    assert.strictEqual(digest.omissions.length, 1);
+    assert.deepStrictEqual(digest.requestedEntities.length, 2);
+  });
+
+  check("a complete comparison records no omissions and passes completeness", () => {
+    const finalization = finalizeProof(
+      baseInput({
+        env: SHADOW_ENV,
+        question: "compare murders in Austin and Dallas in 2020",
+        rows: [
+          { year: 2020, agency: "Austin", murders: 60 },
+          { year: 2020, agency: "Dallas", murders: 80 },
+        ],
+        columns: ["year", "agency", "murders"],
+        returnedEntities: ["Austin", "Dallas"],
+      }),
+    );
+    assert.strictEqual(finalization.decision.omissions.length, 0);
+    assert.strictEqual(finalization.manifest.checks.entityCompleteness, "passed");
+  });
+
+  check("a deterministic planner may still override the requested set", () => {
+    // Multi-city trend pivots cities into COLUMNS, so row scanning cannot see them
+    // and the planner's own list is authoritative.
+    const finalization = finalizeProof(
+      baseInput({
+        env: SHADOW_ENV,
+        question: "compare murders in Austin and Dallas in 2020",
+        requestedEntities: ["Austin", "Dallas", "Houston"],
+        returnedEntities: ["Austin", "Dallas", "Houston"],
+        rows: [{ year: 2020, austin: 60, dallas: 80, houston: 90 }],
+        columns: ["year", "austin", "dallas", "houston"],
+      }),
+    );
+    assert.strictEqual(finalization.decision.requested, 3);
+    assert.strictEqual(finalization.manifest.checks.entityCompleteness, "passed");
+  });
+}
+
 console.log("\nStage 1 migration state: no legacy answer can pass");
 {
   __resetProofBudgetStateForTests();
 
   check("a model-authored answer does not satisfy factual delivery", () => {
-    const finalization = finalizeProof(baseInput({ env: SHADOW_ENV, deterministic: false }));
+    const finalization = finalizeProof(baseInput({ env: SHADOW_ENV }));
     assert.strictEqual(satisfiesFactualDelivery(finalization.manifest), false);
     assert.match(finalization.blocker!, /derivation is 'model_authored'/);
   });
@@ -202,7 +408,11 @@ console.log("\nStage 1 migration state: no legacy answer can pass");
     // are known". Recording it as passed here would manufacture exactly the false
     // assurance this project exists to remove.
     const finalization = finalizeProof(
-      baseInput({ env: SHADOW_ENV, deterministic: true, planFamily: "current-agency-trend" }),
+      baseInput({
+        env: SHADOW_ENV,
+        planFamily: "current-agency-trend",
+        derivation: sealPlanDerivation("current-agency-trend", baseInput().sql!),
+      }),
     );
     assert.strictEqual(satisfiesFactualDelivery(finalization.manifest), false);
     assert.ok(finalization.blocker);

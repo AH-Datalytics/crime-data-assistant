@@ -24,12 +24,13 @@ import { checkSingleRowTrend } from "@/lib/single-row-trend";
 import { parseRoutingLogMeta } from "@/lib/routing-log-meta";
 import { answerMetadataQuestion } from "@/lib/metadata-coverage";
 import { validateTablesForTab } from "@/lib/table-allowlist";
-import { alignTitleYearRange, applyResultDisclosures, missingLowerBoundNote, requestedEntitiesFromSql, returnedEntityKeys, trimTrailingEmptyYearRows } from "@/lib/result-disclosure";
+import { alignTitleYearRange, applyResultDisclosures, missingLowerBoundNote, returnedEntityKeys, trimTrailingEmptyYearRows } from "@/lib/result-disclosure";
 import { validateGrain } from "@/lib/requested-grain";
 import { normalizeHistoryAllSources, normalizeHistoryForTab } from "@/lib/chat-history";
 import { applyGeoCorrection, geoCorrectionHint } from "@/lib/geo-correction";
 import { containsInternalLeak, INTERNAL_LEAK_SAFE_MESSAGE, sanitizeUserFacingNarrative, sanitizeChartConfigTitle} from "@/lib/scaffold-helpers";
 import { buildNoSqlFallbackMessage } from "@/lib/refusal-safety";
+import { boundedModelResponseJson } from "@/lib/no-sql-retry";
 import { buildCompletenessAnswer, detectCompletenessQuestion, loadCompletenessRows } from "@/lib/completeness-intent";
 import { detectFollowupTransform } from "@/lib/followup-transform";
 import { getBlockingGeoClarification } from "@/lib/geo-resolver";
@@ -69,10 +70,29 @@ import {
   proofLogFields,
   type ProofFinalization,
   type ProofFinalizationInput,
+  type SealedPayload,
 } from "@/lib/proof-finalize";
+import { sealPlanDerivation } from "@/lib/plan-derivation";
 import type { DeliveryAction, SourceId } from "@/lib/proof-contract";
 
-function sseEvent(event: StreamEvent): string {
+/**
+ * Events that assert no facts: status pings, the background explanation update, and
+ * error notices. These need no proof and may be emitted freely.
+ */
+type NonFactualStreamEvent = Exclude<StreamEvent, { type: "result" }>;
+/** The factual event. Only a sealed payload is accepted. */
+type FactualStreamEvent = Extract<StreamEvent, { type: "result" }>;
+
+/**
+ * THE CHOKEPOINT. A `result` event is accepted only as a SealedPayload, which
+ * lib/proof-finalize's emitFactualPayload() alone can produce. An exit that builds
+ * a factual event without finalizing does not compile.
+ *
+ * Requiring emitFactualPayload() to be CALLED was not sufficient on its own: a
+ * route could finalize and then hand a raw object literal to this function,
+ * discarding the finalization. Narrowing the parameter here is what closes it.
+ */
+function sseEvent(event: NonFactualStreamEvent | SealedPayload<FactualStreamEvent>): string {
   const payload = { ...event } as Record<string, unknown>;
   if (typeof payload.explanation === "string" || typeof payload.title === "string") {
     const safe = sanitizeUserFacingNarrative(payload.explanation as string | undefined, payload.title as string | undefined);
@@ -511,9 +531,11 @@ export async function POST(req: NextRequest) {
      * release writes. So an exit that has not yet been instrumented logs as it
      * always did rather than logging something misleading.
      */
-    proof: ProofFinalization | null = null
+    proof: ProofFinalization | null = null,
+    /** Bounded raw model text on no-SQL failures; diagnostic only, never user-visible. */
+    modelResponseJson: string | null = null
   ) => {
-    chartAuditQueryLogId = logQuery(q, sqlText, rowCount, logError, ms, logResponse, tabName, guardrails, model, sid, routingMeta, chartConfigJson, chartAuditRequestId, null, proofLogFields(proof));
+    chartAuditQueryLogId = logQuery(q, sqlText, rowCount, logError, ms, logResponse, tabName, guardrails, model, sid, routingMeta, chartConfigJson, chartAuditRequestId, modelResponseJson, proofLogFields(proof));
     return chartAuditQueryLogId;
   };
 
@@ -542,7 +564,6 @@ export async function POST(req: NextRequest) {
       rows: [],
       columns: [],
       truncated: false,
-      deterministic: false,
       planFamily: null,
       ...opts,
     });
@@ -566,10 +587,10 @@ export async function POST(req: NextRequest) {
     writeLog(question, null, 0, null, ms, explanation, tab, ["followup-source-switch"], "followup-planner", sessionId, null, proof);
     const stream = new ReadableStream({
       start(controller) {
-        controller.enqueue(encoder.encode(sseEvent({
+        controller.enqueue(encoder.encode(sseEvent(emitFactualPayload(proof, {
           type: "result", sql: null as unknown as string, explanation, title: "Source switch", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: ms,
           sourceSwitch: { source: followupPlan.source, question: followupPlan.reconstructedQuestion },
-        })));
+        }))));
         controller.close();
       },
     });
@@ -590,7 +611,6 @@ export async function POST(req: NextRequest) {
     // requires that framing rather than a claim that the source lacks the data.
     const proof = finalizeExit({
       intendedAction: "decline_capability",
-      deterministic: true,
       planFamily: capabilityOverride.guardrail,
     });
     writeLog(question, null, 0, null, ms, capabilityOverride.explanation, tab, [capabilityOverride.guardrail], "deterministic", sessionId, null, proof);
@@ -599,7 +619,7 @@ export async function POST(req: NextRequest) {
       start(controller) {
         controller.enqueue(
           encoder.encode(
-            sseEvent({
+            sseEvent(emitFactualPayload(proof, {
               type: "result",
               sql: null as unknown as string,
               explanation: capabilityOverride.explanation,
@@ -611,7 +631,7 @@ export async function POST(req: NextRequest) {
               chartConfig: null,
               chartMeta: null,
               executionTimeMs: ms,
-            })
+            }))
           )
         );
         controller.close();
@@ -642,7 +662,9 @@ export async function POST(req: NextRequest) {
       sql: agencyScorecard.sql ?? null,
       rows: agencyScorecard.rows,
       columns: agencyScorecard.columns,
-      deterministic: true,
+      derivation: agencyScorecard.sql
+        ? sealPlanDerivation(`${agencyScorecard.scope}-scorecard`, agencyScorecard.sql)
+        : null,
       planFamily: `${agencyScorecard.scope}-scorecard`,
       guardrails: [scorecardTag],
       db: getDb(),
@@ -673,7 +695,6 @@ export async function POST(req: NextRequest) {
     // from the completeness tables even though it returns no result rows.
     const proof = finalizeExit({
       intendedAction: "answer",
-      deterministic: true,
       planFamily: "completeness-deterministic",
       guardrails: ["completeness-deterministic"],
     });
@@ -690,14 +711,14 @@ export async function POST(req: NextRequest) {
     : getCountyScopeClarification(question, body?.history);
   if (countyScope) {
     const ms = Date.now() - totalStart;
-    const proof = finalizeExit({ intendedAction: "clarify", deterministic: true, planFamily: `geo:${countyScope.id}` });
+    const proof = finalizeExit({ intendedAction: "clarify", planFamily: `geo:${countyScope.id}` });
     writeLog(question, null, 0, null, ms, countyScope.explanation, tab, [`geo:${countyScope.id}`], "deterministic", sessionId, null, proof);
 
     const stream = new ReadableStream({
       start(controller) {
         controller.enqueue(
           encoder.encode(
-            sseEvent({
+            sseEvent(emitFactualPayload(proof, {
               type: "result",
               sql: null as unknown as string,
               explanation: countyScope.explanation,
@@ -709,7 +730,7 @@ export async function POST(req: NextRequest) {
               chartConfig: null,
               chartMeta: null,
               executionTimeMs: ms,
-            })
+            }))
           )
         );
         controller.close();
@@ -729,14 +750,14 @@ export async function POST(req: NextRequest) {
   const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing") ? (followupPlan.chartOnly ? null : getBlockingGeoClarification(followupPlan.reconstructedQuestion)) : getBlockingGeoClarification(question);
   if (geoClarification) {
     const ms = Date.now() - totalStart;
-    const proof = finalizeExit({ intendedAction: "clarify", deterministic: true, planFamily: `geo:${geoClarification.issue.id}` });
+    const proof = finalizeExit({ intendedAction: "clarify", planFamily: `geo:${geoClarification.issue.id}` });
     writeLog(question, null, 0, null, ms, geoClarification.explanation, tab, [`geo:${geoClarification.issue.id}`], "deterministic", sessionId, null, proof);
 
     const stream = new ReadableStream({
       start(controller) {
         controller.enqueue(
           encoder.encode(
-            sseEvent({
+            sseEvent(emitFactualPayload(proof, {
               type: "result",
               sql: null as unknown as string,
               explanation: geoClarification.explanation,
@@ -748,7 +769,7 @@ export async function POST(req: NextRequest) {
               chartConfig: null,
               chartMeta: null,
               executionTimeMs: ms,
-            })
+            }))
           )
         );
         controller.close();
@@ -773,7 +794,6 @@ export async function POST(req: NextRequest) {
     // the evidence §2.4 requires before stating a source limitation.
     const proof = finalizeExit({
       intendedAction: "decline_data",
-      deterministic: true,
       planFamily: "historical-year-unavailable",
     });
     writeLog(question, null, 0, null, ms, historicalAvailability.explanation, tab, ["historical-year-unavailable"], "deterministic", sessionId, null, proof);
@@ -782,7 +802,7 @@ export async function POST(req: NextRequest) {
       start(controller) {
         controller.enqueue(
           encoder.encode(
-            sseEvent({
+            sseEvent(emitFactualPayload(proof, {
               type: "result",
               sql: null as unknown as string,
               explanation: historicalAvailability.explanation,
@@ -794,7 +814,7 @@ export async function POST(req: NextRequest) {
               chartConfig: null,
               chartMeta: null,
               executionTimeMs: ms,
-            })
+            }))
           )
         );
         controller.close();
@@ -825,7 +845,7 @@ export async function POST(req: NextRequest) {
         sql: indexedStatePlan.sql,
         rows,
         columns,
-        deterministic: true,
+        derivation: sealPlanDerivation(indexedStatePlan.guardrail, indexedStatePlan.sql),
         planFamily: indexedStatePlan.guardrail,
         guardrails: [indexedStatePlan.guardrail],
         hasChart: rows.length > 0 && Boolean(indexedStatePlan.chartConfig),
@@ -886,7 +906,7 @@ export async function POST(req: NextRequest) {
         sql: multiCityTrend.sql,
         rows,
         columns,
-        deterministic: true,
+        derivation: sealPlanDerivation(multiCityTrend.guardrail, multiCityTrend.sql),
         planFamily: multiCityTrend.guardrail,
         guardrails: [multiCityTrend.guardrail],
         requestedEntities: multiCityTrend.requestedCities.map((city) => city.label),
@@ -959,7 +979,6 @@ export async function POST(req: NextRequest) {
       // request -- a capability limitation, not a statement about the data.
       const proof = finalizeExit({
         intendedAction: "decline_capability",
-        deterministic: true,
         planFamily: historicalCityChange.guardrail,
         guardrails: [historicalCityChange.guardrail],
       });
@@ -1005,7 +1024,9 @@ export async function POST(req: NextRequest) {
         sql: historicalCityChange.sql,
         rows,
         columns,
-        deterministic: true,
+        derivation: historicalCityChange.sql
+          ? sealPlanDerivation(historicalCityChange.guardrail, historicalCityChange.sql)
+          : null,
         planFamily: historicalCityChange.guardrail,
         guardrails: [historicalCityChange.guardrail],
         hasChart: rows.length > 0 && Boolean(historicalCityChange.chartConfig),
@@ -1060,7 +1081,7 @@ export async function POST(req: NextRequest) {
       sql: historicalPlace.sql,
       rows: historicalPlace.rows,
       columns: historicalPlace.columns,
-      deterministic: true,
+      derivation: sealPlanDerivation("deterministic-place-lookup", historicalPlace.sql),
       planFamily: "deterministic-place-lookup",
       guardrails: ["deterministic-place-lookup"],
       db: getDb(),
@@ -1109,7 +1130,7 @@ export async function POST(req: NextRequest) {
       rows: metadata.rows ?? [],
       columns: metadata.columns ?? [],
       truncated: Boolean(metadata.truncated),
-      deterministic: true,
+      derivation: metadata.sql ? sealPlanDerivation("metadata-coverage-answer", metadata.sql) : null,
       planFamily: "metadata-coverage-answer",
       guardrails: ["deterministic-metadata", "metadata-coverage-answer"],
       hasChart: Boolean(metadata.chartConfig),
@@ -1209,7 +1230,7 @@ export async function POST(req: NextRequest) {
         writeLog(question, contractResult.sql, 0, logError, Date.now() - totalStart, msg, tab, firedGuardrails, "haiku-4.5", sessionId, null, proof);
         controller.enqueue(
           encoder.encode(
-            sseEvent({
+            sseEvent(emitFactualPayload(proof, {
               type: "result",
               sql: null as unknown as string,
               explanation: msg,
@@ -1221,7 +1242,7 @@ export async function POST(req: NextRequest) {
               chartConfig: null,
               chartMeta: null,
               executionTimeMs: Date.now() - totalStart,
-            })
+            }))
           )
         );
         close();
@@ -1337,6 +1358,18 @@ export async function POST(req: NextRequest) {
           claude.title = "Results";
         }
 
+        // RAW MODEL TEXT, CAPTURED BEFORE THE SERVER TEMPLATES OVERWRITE IT.
+        //
+        // Every branch below replaces claude.explanation with a server-authored
+        // message, so by the time writeLog runs the model's actual words are gone.
+        // That is exactly how production defect 8375 had to be diagnosed by replaying
+        // the request against the live API. The NIBRS route already captures this;
+        // Stage 1 added the logQuery parameter but left both wrappers passing a
+        // literal null, so nothing outside NIBRS was actually captured.
+        let rawFirstNoSql: string | null = null;
+        let rawRetryNoSql: string | null = null;
+        if (!claude.sql) rawFirstNoSql = claude.explanation || null;
+
         let serverAuthoredNoSql = false;
         if (!claude.sql && tab === "current" && !isOverBudget()) {
 
@@ -1353,6 +1386,7 @@ export async function POST(req: NextRequest) {
                 ],
                 systemPrompt
               );
+              rawRetryNoSql = verifiedRetry.explanation || null;
               if (verifiedRetry.sql) claude = verifiedRetry;
             } catch {
               // Fall through to the truthful verified-availability response below.
@@ -1375,10 +1409,10 @@ export async function POST(req: NextRequest) {
           // No SQL was produced, so nothing factual is being asserted. Capability
           // framing, never a claim that the source lacks the data (handoff 2.4).
           const noSqlProof = finalizeExit({ intendedAction: "decline_capability", guardrails: firedGuardrails });
-          writeLog(question, null, 0, null, ms, claude.explanation, tab, firedGuardrails, "haiku-4.5", sessionId, null, noSqlProof);
+          writeLog(question, null, 0, null, ms, claude.explanation, tab, firedGuardrails, "haiku-4.5", sessionId, null, noSqlProof, boundedModelResponseJson(rawFirstNoSql, rawRetryNoSql));
           controller.enqueue(
             encoder.encode(
-              sseEvent({
+              sseEvent(emitFactualPayload(noSqlProof, {
                 type: "result",
                 sql: "",
                 explanation: claude.explanation,
@@ -1390,7 +1424,7 @@ export async function POST(req: NextRequest) {
                 chartConfig: null,
                 chartMeta: null,
                 executionTimeMs: 0,
-              })
+              }))
             )
           );
           close();
@@ -1451,7 +1485,7 @@ export async function POST(req: NextRequest) {
           writeLog(question, sql, 0, `guardrail_override:${guardrailResult.overrideGuardrail}`, Date.now() - totalStart, overrideExplanation, tab, firedGuardrails, "haiku-4.5", sessionId, null, overrideProof);
           controller.enqueue(
             encoder.encode(
-              sseEvent({
+              sseEvent(emitFactualPayload(overrideProof, {
                 type: "result",
                 sql: null as unknown as string,
                 explanation: overrideExplanation,
@@ -1463,7 +1497,7 @@ export async function POST(req: NextRequest) {
                 chartConfig: null,
                 chartMeta: null,
                 executionTimeMs: Date.now() - totalStart,
-              })
+              }))
             )
           );
           close();
@@ -1496,22 +1530,25 @@ export async function POST(req: NextRequest) {
           const postRetryCtx = extractQueryContext(claude.sql, guardrailQuestion, tab as "current" | "historical");
           const postRetryResult = runGuardrails(postRetryCtx);
           if (postRetryResult.overrideResponse) {
-            writeLog(question, claude.sql, 0, `guardrail_override:${postRetryResult.overrideGuardrail}`, Date.now() - totalStart, postRetryResult.overrideResponse, tab, postRetryResult.fired, "haiku-4.5", sessionId, null, finalizeExit({ intendedAction: "decline_capability", sql: claude.sql, guardrails: postRetryResult.fired, planFamily: postRetryResult.overrideGuardrail ?? null }));
-            controller.enqueue(encoder.encode(sseEvent({ type: "result", sql: null as unknown as string, explanation: postRetryResult.overrideResponse, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - totalStart })));
+            const postRetryOverrideProof = finalizeExit({ intendedAction: "decline_capability", sql: claude.sql, guardrails: postRetryResult.fired, planFamily: postRetryResult.overrideGuardrail ?? null });
+            writeLog(question, claude.sql, 0, `guardrail_override:${postRetryResult.overrideGuardrail}`, Date.now() - totalStart, postRetryResult.overrideResponse, tab, postRetryResult.fired, "haiku-4.5", sessionId, null, postRetryOverrideProof);
+            controller.enqueue(encoder.encode(sseEvent(emitFactualPayload(postRetryOverrideProof, { type: "result", sql: null as unknown as string, explanation: postRetryResult.overrideResponse, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - totalStart }))));
             close(); return;
           }
           const rateStillBad = postRetryResult.fired.some(f => f.includes("rate-no-population"));
           if (rateStillBad && /\b(rates?|per\s*capita|per\s*100)/i.test(question) && !asksForCountsInsteadOfRates(question) && !/\b(not rates?|raw|counts?\s+not\s+rates?)\b/i.test(question)) {
             const msg = "I wasn't able to calculate a valid per-capita rate for this query. Try asking for raw counts, or use the [Historical Library](/test?tab=historical) tab for state/national rates.";
-            writeLog(question, claude.sql, 0, "rate_second_failure", Date.now() - totalStart, msg, tab, postRetryResult.fired, "haiku-4.5", sessionId, null, finalizeExit({ intendedAction: "decline_capability", sql: claude.sql, guardrails: postRetryResult.fired, planFamily: "rate-no-population" }));
-            controller.enqueue(encoder.encode(sseEvent({ type: "result", sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - totalStart })));
+            const rateFailureProof = finalizeExit({ intendedAction: "decline_capability", sql: claude.sql, guardrails: postRetryResult.fired, planFamily: "rate-no-population" });
+            writeLog(question, claude.sql, 0, "rate_second_failure", Date.now() - totalStart, msg, tab, postRetryResult.fired, "haiku-4.5", sessionId, null, rateFailureProof);
+            controller.enqueue(encoder.encode(sseEvent(emitFactualPayload(rateFailureProof, { type: "result", sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - totalStart }))));
             close(); return;
           }
           const orPrecedenceStillBad = postRetryResult.fired.includes("or-and-precedence");
           if (orPrecedenceStillBad) {
             const msg = "I couldn't build a reliable multi-place query after correcting the SQL structure. Try asking for fewer places or restating the comparison.";
-            writeLog(question, claude.sql, 0, "or_precedence_second_failure", Date.now() - totalStart, msg, tab, postRetryResult.fired, "haiku-4.5", sessionId, null, finalizeExit({ intendedAction: "decline_capability", sql: claude.sql, guardrails: postRetryResult.fired, planFamily: "or-and-precedence" }));
-            controller.enqueue(encoder.encode(sseEvent({ type: "result", sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - totalStart })));
+            const orPrecedenceProof = finalizeExit({ intendedAction: "decline_capability", sql: claude.sql, guardrails: postRetryResult.fired, planFamily: "or-and-precedence" });
+            writeLog(question, claude.sql, 0, "or_precedence_second_failure", Date.now() - totalStart, msg, tab, postRetryResult.fired, "haiku-4.5", sessionId, null, orPrecedenceProof);
+            controller.enqueue(encoder.encode(sseEvent(emitFactualPayload(orPrecedenceProof, { type: "result", sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - totalStart }))));
             close(); return;
           }
           // Geography contract: block if city/county-got-state or geography-missing still fires after retry
@@ -1520,8 +1557,9 @@ export async function POST(req: NextRequest) {
           );
           if (geoContractViolation) {
             const msg = "I couldn't build a reliable query for that specific geography. The data may be available under a different agency name — try searching for the county sheriff or a specific city within the county.";
-            writeLog(question, claude.sql, 0, "geography_second_failure", Date.now() - totalStart, msg, tab, postRetryResult.fired, "haiku-4.5", sessionId, null, finalizeExit({ intendedAction: "decline_capability", sql: claude.sql, guardrails: postRetryResult.fired, planFamily: "contract-geography" }));
-            controller.enqueue(encoder.encode(sseEvent({ type: "result", sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - totalStart })));
+            const geographyFailureProof = finalizeExit({ intendedAction: "decline_capability", sql: claude.sql, guardrails: postRetryResult.fired, planFamily: "contract-geography" });
+            writeLog(question, claude.sql, 0, "geography_second_failure", Date.now() - totalStart, msg, tab, postRetryResult.fired, "haiku-4.5", sessionId, null, geographyFailureProof);
+            controller.enqueue(encoder.encode(sseEvent(emitFactualPayload(geographyFailureProof, { type: "result", sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - totalStart }))));
             close(); return;
           }
           if (postRetryResult.sql !== claude.sql) claude.sql = postRetryResult.sql;
@@ -1537,8 +1575,9 @@ export async function POST(req: NextRequest) {
         const missingFinalTargets = missingConsolidationTargets(claude.sql);
         if (missingFinalTargets.length > 0) {
           const msg = `I couldn't safely resolve ${missingFinalTargets.map((entry) => `${entry.alias}, ${entry.state}`).join("; ")} to the verified post-consolidation agency. Please retry.`;
-          writeLog(question, claude.sql, 0, "consolidation_target_missing", Date.now() - totalStart, msg, tab, firedGuardrails, "haiku-4.5", sessionId, null, finalizeExit({ intendedAction: "decline_capability", sql: claude.sql, guardrails: firedGuardrails, planFamily: "consolidation-mapping" }));
-          controller.enqueue(encoder.encode(sseEvent({ type: "result", sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - totalStart })));
+          const consolidationProof = finalizeExit({ intendedAction: "decline_capability", sql: claude.sql, guardrails: firedGuardrails, planFamily: "consolidation-mapping" });
+          writeLog(question, claude.sql, 0, "consolidation_target_missing", Date.now() - totalStart, msg, tab, firedGuardrails, "haiku-4.5", sessionId, null, consolidationProof);
+          controller.enqueue(encoder.encode(sseEvent(emitFactualPayload(consolidationProof, { type: "result", sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - totalStart }))));
           close();
           return;
         }
@@ -1612,8 +1651,9 @@ export async function POST(req: NextRequest) {
                     applyRetryMeta(claude, retry);
                   } else {
                     const msg = "I couldn't build a valid query for this data source. Try switching tabs or rephrasing the question for the active dataset.";
-                    writeLog(question, retrySql, 0, `table_allowlist_second_failure:${retryTableCheck.unknown.join(",")}`, Date.now() - totalStart, msg, tab, [...firedGuardrails, ...retryTableCheck.fired], "haiku-4.5", sessionId, null, finalizeExit({ intendedAction: "decline_capability", sql: retrySql, guardrails: [...firedGuardrails, ...retryTableCheck.fired], planFamily: "table-allowlist", retries: 1 }));
-                    controller.enqueue(encoder.encode(sseEvent({ type: "result", sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - totalStart })));
+                    const retryAllowlistProof = finalizeExit({ intendedAction: "decline_capability", sql: retrySql, guardrails: [...firedGuardrails, ...retryTableCheck.fired], planFamily: "table-allowlist", retries: 1 });
+                    writeLog(question, retrySql, 0, `table_allowlist_second_failure:${retryTableCheck.unknown.join(",")}`, Date.now() - totalStart, msg, tab, [...firedGuardrails, ...retryTableCheck.fired], "haiku-4.5", sessionId, null, retryAllowlistProof);
+                    controller.enqueue(encoder.encode(sseEvent(emitFactualPayload(retryAllowlistProof, { type: "result", sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - totalStart }))));
                     close();
                     return;
                   }
@@ -1622,8 +1662,9 @@ export async function POST(req: NextRequest) {
             }
 
             const msg = "I couldn't build a valid query for this data source. Try switching tabs or rephrasing the question for the active dataset.";
-            writeLog(question, sql, 0, `table_allowlist:${tableCheck.unknown.join(",")}`, Date.now() - totalStart, msg, tab, firedGuardrails, "haiku-4.5", sessionId, null, finalizeExit({ intendedAction: "decline_capability", sql, guardrails: firedGuardrails, planFamily: "table-allowlist" }));
-            controller.enqueue(encoder.encode(sseEvent({ type: "result", sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - totalStart })));
+            const allowlistProof = finalizeExit({ intendedAction: "decline_capability", sql, guardrails: firedGuardrails, planFamily: "table-allowlist" });
+            writeLog(question, sql, 0, `table_allowlist:${tableCheck.unknown.join(",")}`, Date.now() - totalStart, msg, tab, firedGuardrails, "haiku-4.5", sessionId, null, allowlistProof);
+            controller.enqueue(encoder.encode(sseEvent(emitFactualPayload(allowlistProof, { type: "result", sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - totalStart }))));
             close();
             return;
           }
@@ -1876,7 +1917,7 @@ export async function POST(req: NextRequest) {
           writeLog(question, sql, 0, "empty_result", totalMs, emptyMsg, tab, firedGuardrails, "haiku-4.5", sessionId, null, emptyProof);
           controller.enqueue(
             encoder.encode(
-              sseEvent({
+              sseEvent(emitFactualPayload(emptyProof, {
                 type: "result",
                 sql,
                 explanation: emptyMsg,
@@ -1888,7 +1929,7 @@ export async function POST(req: NextRequest) {
                 chartConfig: null,
                 chartMeta: null,
                 executionTimeMs,
-              })
+              }))
             )
           );
           close();
@@ -1979,7 +2020,7 @@ export async function POST(req: NextRequest) {
             writeLog(question, sql, 0, "all_null_columns", totalMs, emptyMsg, tab, firedGuardrails, "haiku-4.5", sessionId, null, allNullProof);
             controller.enqueue(
               encoder.encode(
-                sseEvent({
+                sseEvent(emitFactualPayload(allNullProof, {
                   type: "result",
                   sql,
                   explanation: emptyMsg,
@@ -1991,7 +2032,7 @@ export async function POST(req: NextRequest) {
                   chartConfig: null,
                   chartMeta: null,
                   executionTimeMs,
-                })
+                }))
               )
             );
             close();
@@ -2128,20 +2169,18 @@ export async function POST(req: NextRequest) {
         // carried forward to whichever writeLog call ends up running (the refined
         // explanation, its retry, or the both-failed fallback). The log still writes
         // exactly one row per request, as it always did.
-        const requestedEntities = requestedEntitiesFromSql(sql);
+        // requestedEntities is deliberately NOT supplied: finalizeProof derives it
+        // from the parsed request. Deriving it from `sql` -- as this line did -- means
+        // the SQL that dropped a city also defines what was "requested", so
+        // entityCompleteness passes on a silent omission. See lib/requested-entities.
         const finalization = finalizeExit({
           intendedAction: "answer",
           sql,
           rows,
           columns,
           truncated,
-          // Model-authored: the SQL came from the LLM, so derivation cannot be
-          // `deterministic` and this answer cannot satisfy the contract. Recording
-          // that honestly is the migration measurement (§10), not a gap.
-          deterministic: false,
           planFamily: null,
           guardrails: firedGuardrails,
-          requestedEntities,
           returnedEntities: returnedEntityKeys(rows),
           hasChart: Boolean(chartConfig),
           chartFromBindings: false,

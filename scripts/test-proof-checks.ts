@@ -31,6 +31,7 @@ import {
 } from "../lib/proof-checks";
 import { buildQueryContract } from "../lib/query-contract";
 import { PROOF_CHECKS } from "../lib/proof-contract";
+import { sealPlanDerivation } from "../lib/plan-derivation";
 
 let passed = 0;
 function check(name: string, fn: () => void) {
@@ -380,7 +381,7 @@ console.log("\nreconciliation — derived calculations");
       input({ rows: [{ clearance_pct: 142 }], columns: ["clearance_pct"] }),
     );
     assert.strictEqual(outcome.state, "failed");
-    assert.match(outcome.reason, /outside 0-100/);
+    assert.match(outcome.reason, /exceeds 100/);
   });
 
   check("an empty result is not_applicable", () => {
@@ -416,23 +417,59 @@ console.log("\nclaims — bindings, never prose parsing");
   });
 }
 
-console.log("\nsemanticPlan and chartData");
+console.log("\nsemanticPlan requires a VERIFIED derivation, not a caller's word");
 {
-  check("model-authored SQL is unknown even with a parsed plan", () => {
-    const outcome = checkSemanticPlan(input(), false);
+  const baseSql = input().sql!;
+
+  check("no derivation is unknown", () => {
+    // Model-authored traffic. The old signature took a boolean and would have been
+    // told `true` by any route that felt deterministic.
+    const outcome = checkSemanticPlan(input(), null);
     assert.strictEqual(outcome.state, "unknown");
-    assert.match(outcome.reason, /model-authored/);
+    assert.match(outcome.reason, /no deterministic plan derivation was sealed/);
   });
 
-  check("a deterministic plan with no warnings passes", () => {
-    const outcome = checkSemanticPlan(input(), true);
+  check("a derivation sealed around the executed SQL passes", () => {
+    const outcome = checkSemanticPlan(input(), sealPlanDerivation("current-agency-trend", baseSql));
     assert.strictEqual(outcome.state, "passed");
+    assert.match(outcome.reason, /matches plan family/);
   });
 
-  check("a deterministic plan with unresolved warnings is unknown", () => {
+  check("SQL REWRITTEN after planning is unknown, not passed", () => {
+    // The real failure mode: the guardrail rewriter, schema corrector,
+    // table-allowlist retry, and rolling-12-month retry can each replace `sql`
+    // after a deterministic plan produced it. A boolean flag could not see this.
+    const derivation = sealPlanDerivation("current-agency-trend", baseSql);
+    const rewritten = input({ sql: baseSql.replace("agency_monthly", "state_monthly") });
+    const outcome = checkSemanticPlan(rewritten, derivation);
+    assert.strictEqual(outcome.state, "unknown");
+    assert.match(outcome.reason, /rewritten between planning and execution/);
+  });
+
+  check("whitespace reflow does not read as tampering", () => {
+    const derivation = sealPlanDerivation("current-agency-trend", baseSql);
+    const reflowed = input({ sql: baseSql.replace(/ /g, "\n   ") });
+    assert.strictEqual(checkSemanticPlan(reflowed, derivation).state, "passed");
+  });
+
+  check("a changed string literal DOES read as tampering", () => {
+    // Case is deliberately significant: state = 'la' and state = 'LA' are
+    // different queries against this data.
+    const derivation = sealPlanDerivation("f", "SELECT 1 FROM t WHERE state = 'LA'");
+    const outcome = checkSemanticPlan(input({ sql: "SELECT 1 FROM t WHERE state = 'la'" }), derivation);
+    assert.strictEqual(outcome.state, "unknown");
+  });
+
+  check("a derivation with no executed SQL is unknown", () => {
+    const outcome = checkSemanticPlan(input({ sql: null }), sealPlanDerivation("f", baseSql));
+    assert.strictEqual(outcome.state, "unknown");
+    assert.match(outcome.reason, /no SQL was executed/);
+  });
+
+  check("a verified plan with unresolved warnings is still unknown", () => {
     const contract = buildQueryContract("murders in Chicago 2022", "current", null)!;
     contract.warnings = ["partial_year_disclosure_required"];
-    const outcome = checkSemanticPlan(input({ contract }), true);
+    const outcome = checkSemanticPlan(input({ contract }), sealPlanDerivation("f", baseSql));
     assert.strictEqual(outcome.state, "unknown");
   });
 
@@ -449,11 +486,129 @@ console.log("\nsemanticPlan and chartData");
   });
 }
 
+console.log("\ntimeRange: endpoints matching is NOT coverage");
+{
+  check("endpoints present but the interior missing FAILS for a stated range", () => {
+    // The reported gap: rows for 2015 and 2025 alone "covered" 2015-2025 under a
+    // min/max check, and a trend chart drawn from it is a two-point straight line
+    // presented as a decade.
+    const outcome = checkTimeRange(
+      input({
+        question: "murders in Baton Rouge from 2015 to 2025",
+        rows: [2015, 2025].map((year) => ({ year, murders: 5 })),
+      }),
+    );
+    assert.strictEqual(outcome.state, "failed");
+    assert.match(outcome.reason, /contiguously/);
+    assert.match(outcome.reason, /2016/);
+  });
+
+  check("a single interior gap in a stated range fails", () => {
+    const outcome = checkTimeRange(
+      input({
+        question: "murders in Baton Rouge 2018-2022",
+        rows: [2018, 2019, 2021, 2022].map((year) => ({ year, murders: 5 })),
+      }),
+    );
+    assert.strictEqual(outcome.state, "failed");
+    assert.match(outcome.reason, /2020/);
+  });
+
+  check("'since' and trend phrasings count as contiguous", () => {
+    for (const question of [
+      "murders in Baton Rouge since 2018",
+      "annual murders in Baton Rouge 2018 to 2022",
+      "murder trend in Baton Rouge 2018 through 2022",
+    ]) {
+      const outcome = checkTimeRange(
+        input({ question, rows: [2018, 2022].map((year) => ({ year, murders: 5 })) }),
+      );
+      assert.strictEqual(outcome.state, "failed", `"${question}" should require contiguity`);
+    }
+  });
+
+  check("an ENUMERATED two-year comparison is unknown, not failed", () => {
+    // No false positive: the plan collapses "2015 and 2025" to the same start/end
+    // as a range, so an enumeration must not be reported as a gap failure.
+    const outcome = checkTimeRange(
+      input({
+        question: "compare murders in Baton Rouge in 2015 and 2025",
+        rows: [2015, 2025].map((year) => ({ year, murders: 5 })),
+      }),
+    );
+    assert.strictEqual(outcome.state, "unknown");
+    assert.match(outcome.reason, /may be an intended enumeration/);
+  });
+
+  check("a fully contiguous result still passes", () => {
+    const outcome = checkTimeRange(
+      input({
+        question: "murders in Baton Rouge from 2018 to 2022",
+        rows: [2018, 2019, 2020, 2021, 2022].map((year) => ({ year, murders: 5 })),
+      }),
+    );
+    assert.strictEqual(outcome.state, "passed");
+    assert.match(outcome.reason, /no interior gaps/);
+  });
+}
+
+console.log("\nreconciliation: rate bounds apply to rate columns, not just pct-named ones");
+{
+  check("clearance_rate above 100 fails", () => {
+    // The reported gap: the bounds check additionally required pct/percent/share in
+    // the column name, so `clearance_rate` -- the case the comment named -- was
+    // never checked.
+    const outcome = checkReconciliation(
+      input({ rows: [{ clearance_rate: 142 }], columns: ["clearance_rate"] }),
+    );
+    assert.strictEqual(outcome.state, "failed");
+    assert.match(outcome.reason, /exceeds 100/);
+  });
+
+  check("a negative rate fails", () => {
+    const outcome = checkReconciliation(
+      input({ rows: [{ clearance_rate: -0.2 }], columns: ["clearance_rate"] }),
+    );
+    assert.strictEqual(outcome.state, "failed");
+    assert.match(outcome.reason, /negative rate/);
+  });
+
+  check("a 0-1 proportion passes", () => {
+    const outcome = checkReconciliation(
+      input({ rows: [{ clearance_rate: 0.42 }, { clearance_rate: 0.61 }], columns: ["clearance_rate"] }),
+    );
+    assert.strictEqual(outcome.state, "passed");
+  });
+
+  check("a 0-100 percentage passes", () => {
+    const outcome = checkReconciliation(
+      input({ rows: [{ clearance_rate: 42 }, { clearance_rate: 61 }], columns: ["clearance_rate"] }),
+    );
+    assert.strictEqual(outcome.state, "passed");
+  });
+
+  check("a per-capita rate above 100 is NOT flagged", () => {
+    // rate_per_100k has no upper bound; reporting it as impossible would be a false
+    // positive on one of this product's most common measures.
+    const outcome = checkReconciliation(
+      input({ rows: [{ murder_rate_per_100k: 4200 }], columns: ["murder_rate_per_100k"] }),
+    );
+    assert.strictEqual(outcome.state, "passed");
+  });
+
+  check("share and proportion columns are bounded too", () => {
+    for (const column of ["victim_share", "offender_proportion", "cleared_ratio"]) {
+      const outcome = checkReconciliation(input({ rows: [{ [column]: 5000 }], columns: [column] }));
+      assert.strictEqual(outcome.state, "failed", `${column} should be bounded`);
+    }
+  });
+}
+
 console.log("\nrunProofChecks assigns every frozen category");
 {
   const result = runProofChecks({
     ...input(),
-    deterministic: false,
+    derivation: null,
     hasChart: false,
     chartFromBindings: false,
     claims: null,
