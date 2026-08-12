@@ -12,9 +12,11 @@
 // database and asserts that rows land in the results table.
 import assert from "node:assert/strict";
 import { execFileSync, spawn } from "node:child_process";
+import { once } from "node:events";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { setTimeout as delay } from "node:timers/promises";
 import Database from "better-sqlite3";
 import { buildChartAuditArtifact, type ChartRenderReceipt } from "../lib/chart-audit";
 import { CHART_AUDIT_SOURCE, runChartAudit } from "./run-chart-audit";
@@ -33,43 +35,35 @@ const dbPath = path.join(workDir, "query_log.db");
 const migrationScript = path.join(repoRoot, "scripts", "migrate-chart-audit-artifacts.js");
 
 /**
- * Block the current thread.
+ * Kill a process and everything it spawned, then await its exit.
  *
- * Deliberately synchronous: this suite's top level is synchronous, and the
- * liveness checks below use process.kill(pid, 0) rather than child events, so
- * blocking the event loop is safe here and keeps the test linear.
+ * TWO defects are fixed here, in order of discovery:
+ *
+ * 1. `child.kill()` on a shell-launched process kills the shell, not the tree
+ *    beneath it. That is how an earlier revision "passed": it killed cmd.exe,
+ *    the chart auditor kept running, and the test saw a row that was only
+ *    momentarily 'running'. The runner is now spawned directly (no shell), and
+ *    this still tree-kills for safety.
+ *
+ * 2. Waiting on `process.kill(pid, 0)` in a synchronous loop DEADLOCKS on
+ *    POSIX. A killed child becomes a zombie until its parent reaps it, and Node
+ *    reaps on the event loop -- which a synchronous spin blocks. Signal 0 then
+ *    keeps succeeding against the zombie, so the wait ran to its timeout and
+ *    failed on Linux while passing on Windows. Reproduced in a Linux container
+ *    by Codex: {"alive":true,"exitCode":null,"signalCode":null}.
+ *
+ * The completion condition is therefore the child's own 'exit' event, never a
+ * liveness probe.
  */
-function sleepSync(ms: number): void {
-  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
-}
-
-/** True while the process exists. Signal 0 tests existence without delivering. */
-function processAlive(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (error) {
-    // EPERM means it exists but is not ours to signal; only ESRCH means gone.
-    return (error as NodeJS.ErrnoException).code === "EPERM";
-  }
-}
-
-/**
- * Kill a process and everything it spawned, then wait for it to actually go.
- *
- * `child.kill()` on a shell-launched process kills the shell, not the tree
- * beneath it -- which is how an earlier revision of this test "passed": it
- * killed cmd.exe, the chart auditor kept running, and the test observed a row
- * that was only momentarily 'running'. The EPERM temp-dir warning was the
- * evidence, and it was wrongly explained away as OS handle lag.
- *
- * The runner is now spawned as a direct node child (no shell) so there is no
- * intermediate process, and this still performs a tree kill for safety and then
- * blocks until the pid is genuinely gone.
- */
-function killTreeAndWait(child: ReturnType<typeof spawn>, timeoutMs = 30_000): void {
+async function killTreeAndWait(child: ReturnType<typeof spawn>, timeoutMs = 30_000): Promise<void> {
   const pid = child.pid;
   assert.ok(pid, "spawned child must have a pid");
+
+  if (child.exitCode !== null || child.signalCode !== null) return;
+
+  // Subscribe BEFORE signalling, or a fast exit can fire before we listen.
+  const exited = once(child, "exit").then(() => "exited" as const);
+
   try {
     if (process.platform === "win32") {
       execFileSync("taskkill", ["/PID", String(pid), "/T", "/F"], { stdio: "ignore" });
@@ -78,12 +72,13 @@ function killTreeAndWait(child: ReturnType<typeof spawn>, timeoutMs = 30_000): v
       process.kill(-pid!, "SIGKILL");
     }
   } catch {
-    // Already gone, or taskkill raced us; the liveness wait below is the check.
+    // Already gone, or taskkill raced us; the exit wait below is the check.
   }
 
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline && processAlive(pid!)) sleepSync(50);
-  assert.equal(processAlive(pid!), false, `child ${pid} must be gone before the row is inspected`);
+  // ref:false so a pending timer cannot keep this process alive after the race.
+  const timedOut = delay(timeoutMs, "timeout" as const, { ref: false });
+  const outcome = await Promise.race([exited, timedOut]);
+  assert.equal(outcome, "exited", `child ${pid} did not exit within ${timeoutMs}ms; the row must not be inspected while it may still be running`);
 }
 
 /**
@@ -107,6 +102,12 @@ function removeDir(dir: string): void {
   fs.rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
 }
 
+/**
+ * The suite body is async because the interruption case must await the child's
+ * exit event -- a synchronous wait cannot work, since the event loop it blocks
+ * is the same one that reaps the exited child on POSIX.
+ */
+async function main(): Promise<void> {
 try {
   // A minimal query_log, then the real migration -- so a schema drift in the
   // migration surfaces here rather than in production.
@@ -371,6 +372,10 @@ try {
     // claiming, stop waiting immediately and say so -- spinning to the deadline
     // and then reporting "no row" would hide the real cause (a child that
     // failed to start) behind a timeout.
+    // Awaited rather than spun on: the event loop must keep turning so Node can
+    // observe the child's state at all (see killTreeAndWait). Early exit is
+    // detected from child.exitCode, which only becomes non-null once the loop
+    // has processed the exit -- a liveness probe would report a zombie as alive.
     const deadline = Date.now() + 60_000;
     let claimedRunId: number | null = null;
     let childExitedEarly = false;
@@ -382,11 +387,11 @@ try {
       poll.close();
       if (row) {
         claimedRunId = row.id;
-      } else if (child.pid && !processAlive(child.pid)) {
+      } else if (child.exitCode !== null || child.signalCode !== null) {
         childExitedEarly = true;
         break;
       } else {
-        sleepSync(100);
+        await delay(100);
       }
     }
     assert.equal(
@@ -398,13 +403,13 @@ try {
     assert.notEqual(
       claimedRunId,
       null,
-      `the runner must claim a 'running' row before auditing; none appeared within 60s (child alive=${child.pid ? processAlive(child.pid) : "no pid"})`
+      `the runner must claim a 'running' row before auditing; none appeared within 60s (exit=${child.exitCode}, signal=${child.signalCode})`
     );
 
-    // Kill the whole tree and block until the pid is gone. Inspecting the row
-    // while the auditor might still be running would let a momentarily-'running'
-    // row pass as proof of a durable interrupted state.
-    killTreeAndWait(child);
+    // Kill the whole tree and await the child's exit. Inspecting the row while
+    // the auditor might still be running would let a momentarily-'running' row
+    // pass as proof of a durable interrupted state.
+    await killTreeAndWait(child);
 
     const after = new Database(dbPath, { readonly: true });
     const rows = (after.prepare("SELECT COUNT(*) AS n FROM audit_runs").get() as { n: number }).n;
@@ -466,5 +471,14 @@ try {
 } finally {
   removeDir(workDir);
 }
+}
 
-console.log("chart-audit pipeline tests passed");
+main()
+  .then(() => console.log("chart-audit pipeline tests passed"))
+  .catch((error) => {
+    // Surface the failure and set a non-zero exit explicitly: an unhandled
+    // rejection in an async entry point would otherwise be easy to miss in the
+    // middle of a long `npm test` run.
+    console.error(error);
+    process.exitCode = 1;
+  });
