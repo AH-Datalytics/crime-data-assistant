@@ -217,12 +217,17 @@ export async function POST(req: NextRequest) {
      * hazard here -- applyResultDisclosures() already runs before delivery on this
      * path (handoff 4). In `off` mode this is a near-free sentinel.
      */
+    /**
+     * The question the proof layer reasons about: reconstructed for follow-ups.
+     * See the equivalent note in app/api/query/route.ts.
+     */
+    let proofQuestion = question;
     const finalizeExit = (
       opts: Partial<ProofFinalizationInput> & { intendedAction: DeliveryAction },
     ): ProofFinalization =>
       finalizeProof({
         sourceId: "hate_crime",
-        question,
+        question: proofQuestion,
         sql: null,
         rows: [],
         columns: [],
@@ -239,6 +244,7 @@ export async function POST(req: NextRequest) {
     }
     const followupTransform = (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing") ? followupPlan.transform : (detectFollowupTransform(question, history) ?? buildCrossSourceFollowupTransform(question, body?.history, "hate_crime"));
     const guardrailQuestion = (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing") ? followupPlan.reconstructedQuestion : (followupTransform?.contextQuestion ?? question);
+    proofQuestion = guardrailQuestion;
     const promptHistory = followupTransform
       ? [...history, { role: "user" as const, content: followupTransform.instruction }]
       : history;
@@ -480,13 +486,19 @@ export async function POST(req: NextRequest) {
       }
 
       if (!claude.sql) {
+        // RAW MODEL TEXT, CAPTURED FIRST.
+        //
+        // The three statements below each overwrite claude.explanation -- the
+        // internal-leak fallback, the server no-SQL template, and the availability
+        // neutralizer. An earlier revision captured after all three and carried a
+        // comment claiming otherwise, so what reached model_response was the server's
+        // own template and the model's actual words were still lost. That is the exact
+        // diagnostic gap this column exists to close.
+        const rawNoSqlText = claude.explanation || null;
         const serverAuthoredNoSql = false;
         if (containsInternalLeak(claude.explanation) || containsInternalLeak(claude.title)) { claude.explanation = INTERNAL_LEAK_SAFE_MESSAGE; claude.title = "Results"; routeGuardrailsFired.push("internal-leak-firewall"); }
         if (!serverAuthoredNoSql && !containsInternalLeak(claude.explanation) && !containsInternalLeak(claude.title)) { claude.explanation = buildNoSqlFallbackMessage("hate_crime"); routeGuardrailsFired.push("no-sql-server-template"); }
         claude.explanation = neutralizeUnverifiedAvailabilityClaim(claude.explanation, "Hate Crime");
-        // Raw model text captured before hateCrimeCaveats() and the server
-        // templates rewrite it -- see the same capture in app/api/query/route.ts.
-        const rawNoSqlText = claude.explanation || null;
         const textExplanation = hateCrimeCaveats("", claude.explanation);
         const noSqlProof = finalizeExit({ intendedAction: "decline_capability", guardrails: routeGuardrailsFired });
         writeLog(question, null, 0, null, claudeMs, textExplanation, "hate_crime", routeGuardrailsFired, "haiku-4.5", sessionId, null, noSqlProof, boundedModelResponseJson(rawNoSqlText, null));
@@ -817,6 +829,7 @@ export async function POST(req: NextRequest) {
       // Not supplied: derived from the parsed request by finalizeProof. See the
       // note at the equivalent site in app/api/query/route.ts.
       returnedEntities: returnedEntityKeys(rows),
+      narrative: explanation,
       hasChart: Boolean(chartConfig),
       chartFromBindings: false,
     });

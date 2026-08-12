@@ -56,10 +56,12 @@ import { runProofChecks, type NumericClaim } from "./proof-checks";
 import { attributeOmissions, type OmittedCandidate } from "./omission-attribution";
 import { buildQueryContract, type QueryContractSource } from "./query-contract";
 import { verifyPlanDerivation, type PlanDerivation } from "./plan-derivation";
+import { omissionsAreDisclosed } from "./proof-checks";
 import {
   omittedCandidatesFor,
   requestedEntitiesFromRequest,
   requestedYearsFromContract,
+  type RequestedEntity,
 } from "./requested-entities";
 
 /** Bumped when the persisted proof/digest pair changes shape incompatibly. */
@@ -160,6 +162,14 @@ interface ProofFinalizationFields {
   /** Set when finalization degraded because of an internal error or budget trip. */
   readonly degradedReason: string | null;
   /**
+   * Set when a level asked to enforce but authorization was narrowed.
+   *
+   * Kept distinct from degradedReason: a withheld enforcement is a correct, deliberate
+   * outcome of the authorization rules, not a malfunction. Collapsing the two would
+   * make a half-configured rollout read as a proof-system fault in the reviewer queue.
+   */
+  readonly enforcementWithheldReason: string | null;
+  /**
    * The action the CONTRACT would require, as distinct from what was delivered.
    *
    * `decision.action` records what the user actually received, which in shadow is
@@ -250,8 +260,19 @@ export interface ProofFinalizationInput {
    * attribution system recorded zero omissions in the first revision.
    */
   omittedCandidates?: OmittedCandidate[];
-  /** True when the delivered narrative openly states the narrower scope. */
-  omissionsDisclosed?: boolean;
+  /**
+   * The exact narrative text being delivered with this payload.
+   *
+   * Supplied so `omissionsDisclosed` can be DERIVED by checking whether the text
+   * actually names every omitted entity, rather than accepted as a caller's
+   * assertion. A route asserting `true` would let a silent omission pass
+   * entityCompleteness -- the same class of unverified claim as the old
+   * `deterministic` boolean.
+   *
+   * Omit for exits that deliver no narrative; omissions then count as undisclosed,
+   * which is the safe direction.
+   */
+  narrative?: string | null;
   /** Deterministic claim bindings. Null means none were produced. */
   claims?: NumericClaim[] | null;
   hasChart?: boolean;
@@ -303,6 +324,7 @@ function inertFinalization(
     // authorized a factual answer regardless of what the route intended.
     hypotheticalAction: hypotheticalFor(intendedAction, factualDeliveryBlocker(manifest)),
     checkReasons: null,
+    enforcementWithheldReason: null,
   });
 }
 
@@ -328,13 +350,18 @@ function hypotheticalFor(intended: DeliveryAction, blocker: string | null): Deli
  */
 export function finalizeProof(input: ProofFinalizationInput): ProofFinalization {
   const env = input.env ?? process.env;
-  const resolution = resolveMode(input.sourceId, input.planFamily, env);
-  const mode = resolution.mode;
+  // PHASE 1: resolve with the CALLER's family, only to decide whether to do any work.
+  // This value must never be the one that authorizes enforcement -- the family is
+  // unverified at this point, and per-family enforcement keyed on an unverified
+  // family would let a token sealed for family A be authorized by family B's
+  // environment variable. Phase 2 below re-resolves against the verified family.
+  const provisional = resolveMode(input.sourceId, input.planFamily, env);
 
   // OFF IS FREE. No digest, no checks, no probes, no database access.
-  if (!isObserving(mode)) {
-    return inertFinalization(input.sourceId, mode, input.intendedAction, 0, null);
+  if (!isObserving(provisional.mode)) {
+    return inertFinalization(input.sourceId, provisional.mode, input.intendedAction, 0, null);
   }
+  const mode = provisional.mode;
 
   // The circuit breaker degrades to the same inert shape as `off`, so a tripped
   // budget cannot leave a half-computed manifest that reads as partial evidence.
@@ -361,12 +388,16 @@ export function finalizeProof(input: ProofFinalizationInput): ProofFinalization 
     // against the SQL that actually executed, so a deterministic plan whose SQL was
     // rewritten by a guardrail or a retry is correctly recorded as model_authored.
     const derivation = input.derivation ?? null;
-    const derivationVerdict = verifyPlanDerivation(derivation, input.sql);
+    // The caller's claimed family is passed as the expectation, so a token sealed for
+    // a different family fails verification instead of silently relabelling the answer.
+    const derivationVerdict = verifyPlanDerivation(derivation, input.sql, input.planFamily);
     const manifest = createProofManifest(
       input.sourceId,
       derivationVerdict.ok ? "deterministic" : ("model_authored" as Derivation),
     );
-    manifest.planFamily = input.planFamily ?? derivation?.planFamily ?? null;
+    // Only a VERIFIED token may contribute the family. An unverified token's family
+    // is not evidence of anything, so it must not become the recorded identity.
+    manifest.planFamily = input.planFamily ?? (derivationVerdict.ok ? derivation!.planFamily : null);
 
     // WHAT WAS ASKED FOR COMES FROM THE REQUEST, NOT THE GENERATED SQL. If the SQL
     // omits Dallas, deriving the requested set from that SQL makes Dallas vanish
@@ -374,15 +405,24 @@ export function finalizeProof(input: ProofFinalizationInput): ProofFinalization 
     // silently dropped city. Only a deterministic planner may override, because it
     // knows its own entity list (multi-city pivots cities into columns, where row
     // scanning cannot see them).
-    const requestedFromRequest = requestedEntitiesFromRequest(contract);
-    const requestedEntities = input.requestedEntities ?? requestedFromRequest.map((entity) => entity.label);
+    // ONE authoritative requested set drives requested, included, AND omissions.
+    //
+    // An earlier revision counted `requested` from the caller's override while
+    // deriving omissions from the parsed request, so the two described different sets:
+    // a deterministic planner declaring three cities against a one-city question
+    // reported requested=3, included=3, omissions=0. Every downstream number has to
+    // come from the same list or they cannot reconcile.
+    const requestedEntityList: RequestedEntity[] = input.requestedEntities
+      ? input.requestedEntities.map((label) => ({ entityId: label.toLowerCase(), label, state: null }))
+      : requestedEntitiesFromRequest(contract);
+    const requestedEntities = requestedEntityList.map((entity) => entity.label);
     const returnedEntities = input.returnedEntities ?? [];
 
     // Computed here so no route can forget to pass them -- passing none is why the
     // first revision's attribution recorded zero omissions everywhere.
     const omittedCandidates =
       input.omittedCandidates ??
-      omittedCandidatesFor(requestedFromRequest, returnedEntities, requestedYearsFromContract(contract));
+      omittedCandidatesFor(requestedEntityList, returnedEntities, requestedYearsFromContract(contract));
 
     const attribution = attributeOmissions(omittedCandidates, {
       sourceId: input.sourceId,
@@ -396,6 +436,11 @@ export function finalizeProof(input: ProofFinalizationInput): ProofFinalization 
       sourceHealth: "unknown",
     });
 
+    // DERIVED, not asserted: does the delivered text actually name every omitted
+    // entity? See omissionsAreDisclosed() and handoff 2.4.
+    const omittedLabels = omittedCandidates.map((candidate) => candidate.label);
+    const disclosed = omissionsAreDisclosed(input.narrative, omittedLabels);
+
     const checks = runProofChecks({
       question: input.question,
       sql: input.sql,
@@ -404,8 +449,9 @@ export function finalizeProof(input: ProofFinalizationInput): ProofFinalization 
       contract,
       requestedEntities,
       returnedEntities,
-      omissionsDisclosed: Boolean(input.omissionsDisclosed),
+      omissionsDisclosed: disclosed,
       derivation,
+      expectedFamily: input.planFamily,
       hasChart: Boolean(input.hasChart),
       chartFromBindings: Boolean(input.chartFromBindings),
       claims: input.claims ?? null,
@@ -432,16 +478,54 @@ export function finalizeProof(input: ProofFinalizationInput): ProofFinalization 
       // intent; hypotheticalAction below carries what the contract would require.
       action: input.intendedAction,
       requested: requestedEntities.length > 0 ? requestedEntities.length : null,
-      included: returnedEntities.length > 0 ? returnedEntities.length : null,
+      // REQUESTED ENTITIES SUCCESSFULLY MATCHED -- not returnedEntities.length.
+      // returnedEntities holds alias-expanded row values across city, agency, and
+      // state columns, so a single Chicago row contributes "chicago" and "il" and one
+      // included entity would have been counted as two. The count that means anything
+      // is how many of the requested entities came back.
+      included:
+        requestedEntities.length > 0
+          ? Math.max(0, requestedEntities.length - omittedCandidates.length)
+          : null,
       omissions: attribution.omissions,
       retries: input.retries ?? 0,
     };
+
+    // PHASE 2: enforcement authorization, now that the family is verified.
+    //
+    // Two independent guards, both narrowing only:
+    //   - the family used for authorization is the VERIFIED one, so a mislabelled
+    //     token cannot borrow another family's approval;
+    //   - a route-issued token may never authorize delivery at all. It proves SQL
+    //     identity, not that a deterministic compiler produced the query, so it is
+    //     shadow instrumentation. Compiler-issued tokens arrive in Stage 6.
+    let effectiveMode = mode;
+    // resolveMode already explains a phase-1 cap (a half-configured rollout that asked
+    // to enforce without authorization at every level). Discarding it left the
+    // finalization silent about the most common reason enforcement does not engage.
+    let enforcementWithheld: string | null = provisional.enforcementWithheldReason ?? null;
+    if (mayAlterDelivery(mode)) {
+      const verified = resolveMode(input.sourceId, manifest.planFamily, env);
+      if (!mayAlterDelivery(verified.mode)) {
+        effectiveMode = "shadow";
+        enforcementWithheld =
+          `enforcement withheld: verified plan family '${manifest.planFamily ?? "(none)"}' is not authorized to enforce`;
+      } else if (derivation && derivation.issuer !== "compiler") {
+        effectiveMode = "shadow";
+        enforcementWithheld =
+          `enforcement withheld: derivation is ${derivation.issuer}-issued, which proves SQL identity ` +
+          "but not compiler provenance";
+      } else if (!derivation) {
+        effectiveMode = "shadow";
+        enforcementWithheld = "enforcement withheld: no plan derivation was sealed for this answer";
+      }
+    }
 
     const elapsedMs = Date.now() - startedAt;
     recordElapsed(elapsedMs);
 
     return brandFinalization({
-      mode,
+      mode: effectiveMode,
       sourceId: input.sourceId,
       manifest,
       digest,
@@ -450,9 +534,10 @@ export function finalizeProof(input: ProofFinalizationInput): ProofFinalization 
       // Even in `enforce`, delivery may only change for the explicitly authorized
       // source x family -- resolveMode() already required three independent
       // authorizations to return `enforce`, so this is simply that decision.
-      mayAlterDelivery: mayAlterDelivery(mode),
+      mayAlterDelivery: mayAlterDelivery(effectiveMode),
       elapsedMs,
       degradedReason: null,
+      enforcementWithheldReason: enforcementWithheld,
       hypotheticalAction: hypotheticalFor(input.intendedAction, blocker),
       checkReasons: checks.reasons,
     });
@@ -515,6 +600,7 @@ function serializeProofEnvelope(finalization: ProofFinalization): string | null 
     // What the contract WOULD have required. See ProofFinalization.hypotheticalAction.
     hypotheticalAction: finalization.hypotheticalAction,
     checkReasons: finalization.checkReasons,
+    enforcementWithheldReason: boundString(finalization.enforcementWithheldReason, 300),
   };
 
   // Progressive shedding, most diagnostic first. Each rung re-serializes from

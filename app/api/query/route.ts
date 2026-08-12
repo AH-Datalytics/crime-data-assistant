@@ -76,12 +76,18 @@ import { sealPlanDerivation } from "@/lib/plan-derivation";
 import type { DeliveryAction, SourceId } from "@/lib/proof-contract";
 
 /**
- * Events that assert no facts: status pings, the background explanation update, and
- * error notices. These need no proof and may be emitted freely.
+ * Events that assert no facts: status pings and error notices. These need no proof.
+ *
+ * The background `explanation` update is NOT among them, though an earlier revision
+ * classified it as non-factual. It REPLACES the narrative the user reads about the
+ * numbers -- and it is not a cosmetic rewrite: applyResultDisclosures() can add scope
+ * corrections, and a failed grain check discards the text entirely and substitutes its
+ * own message. Text that can restate what the data means is factual content, so it
+ * passes through the same gate as the result event.
  */
-type NonFactualStreamEvent = Exclude<StreamEvent, { type: "result" }>;
-/** The factual event. Only a sealed payload is accepted. */
-type FactualStreamEvent = Extract<StreamEvent, { type: "result" }>;
+type NonFactualStreamEvent = Exclude<StreamEvent, { type: "result" } | { type: "explanation" }>;
+/** Factual events. Only a sealed payload is accepted. */
+type FactualStreamEvent = Extract<StreamEvent, { type: "result" } | { type: "explanation" }>;
 
 /**
  * THE CHOKEPOINT. A `result` event is accepted only as a SealedPayload, which
@@ -554,12 +560,26 @@ export async function POST(req: NextRequest) {
    * exit overrides what it actually has.
    */
   const proofSourceId: SourceId = tab === "historical" ? "historical" : "current";
+  /**
+   * The question the proof layer reasons about: the RECONSTRUCTED one for follow-ups.
+   *
+   * A bare follow-up fragment ("just clearances by type") names no cities, so deriving
+   * requested entities from it yields none and a 32-city comparison silently loses its
+   * completeness check. SQL generation already uses the reconstructed question; proof
+   * must see the same thing or it is auditing a different request than the one that
+   * ran. Updated in place as the reconstruction becomes available, so every exit picks
+   * it up without each one having to remember.
+   *
+   * query_log keeps the RAW question -- writeLog is passed `question` directly -- so
+   * the reviewer still sees what the user actually typed.
+   */
+  let proofQuestion = question;
   const finalizeExit = (
     opts: Partial<ProofFinalizationInput> & { intendedAction: DeliveryAction },
   ): ProofFinalization =>
     finalizeProof({
       sourceId: proofSourceId,
-      question,
+      question: proofQuestion,
       sql: null,
       rows: [],
       columns: [],
@@ -600,6 +620,8 @@ export async function POST(req: NextRequest) {
   const capabilityQuestion = followupPlan?.kind === "query_bearing"
     ? followupPlan.reconstructedQuestion
     : question;
+  // Follow-up reconstruction is known by this point; every exit below inherits it.
+  proofQuestion = capabilityQuestion;
   const capabilityOverride =
     demographicRateFollowup ??
     detectCurrentYearClearanceOverride(capabilityQuestion) ??
@@ -1264,6 +1286,10 @@ export async function POST(req: NextRequest) {
         // the transform's reconstructed question so guardrails see the geography
         const guardrailQuestion = (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing") ? followupPlan.reconstructedQuestion : (followupTransform?.contextQuestion ?? question);
         contractQuestion = guardrailQuestion;
+        // The guardrail question is the most complete reconstruction available -- it
+        // is what extractQueryContext and the contract validator see -- so proof uses
+        // it for every exit from here on.
+        proofQuestion = guardrailQuestion;
         const consolidationTargets = isHistorical
           ? [...new Map(resolveGeoPlaces(guardrailQuestion).mentions
               .flatMap((mention) => mention.candidates)
@@ -2182,6 +2208,9 @@ export async function POST(req: NextRequest) {
           planFamily: null,
           guardrails: firedGuardrails,
           returnedEntities: returnedEntityKeys(rows),
+          // The exact text going out with this event, so omission disclosure is
+          // derived from what the user will actually read.
+          narrative: claude.explanation,
           hasChart: Boolean(chartConfig),
           chartFromBindings: false,
           retries: proofRetries(),
@@ -2248,9 +2277,26 @@ export async function POST(req: NextRequest) {
             postExplanation = stripInternalScaffold(postExplanation) || claude.explanation;
           }
           if (postExplanation !== claude.explanation) {
+            // Re-finalized against the REFINED text, not reusing the finalization that
+            // gated the result event: this narrative is different, and the difference
+            // is exactly what needs proving. A grain override replaces it wholesale.
+            const postFinalization = finalizeExit({
+              intendedAction: "answer",
+              question: guardrailQuestion,
+              sql,
+              rows,
+              columns,
+              truncated,
+              guardrails: firedGuardrails,
+              returnedEntities: returnedEntityKeys(rows),
+              narrative: postExplanation,
+              hasChart: Boolean(chartConfig),
+              retries: proofRetries(),
+              db,
+            });
             controller.enqueue(
               encoder.encode(
-                sseEvent({ type: "explanation", text: postExplanation, title: claude.title || "Results" })
+                sseEvent(emitFactualPayload(postFinalization, { type: "explanation", text: postExplanation, title: claude.title || "Results" }))
               )
             );
           }
@@ -2296,9 +2342,23 @@ export async function POST(req: NextRequest) {
               retryExplanation = stripInternalScaffold(retryExplanation) || claude.explanation;
             }
             if (retryExplanation !== claude.explanation) {
+              const retryFinalization = finalizeExit({
+                intendedAction: "answer",
+                question: guardrailQuestion,
+                sql,
+                rows,
+                columns,
+                truncated,
+                guardrails: firedGuardrails,
+                returnedEntities: returnedEntityKeys(rows),
+                narrative: retryExplanation,
+                hasChart: Boolean(chartConfig),
+                retries: proofRetries(),
+                db,
+              });
               controller.enqueue(
                 encoder.encode(
-                  sseEvent({ type: "explanation", text: retryExplanation, title: claude.title || "Results" })
+                  sseEvent(emitFactualPayload(retryFinalization, { type: "explanation", text: retryExplanation, title: claude.title || "Results" }))
                 )
               );
             }

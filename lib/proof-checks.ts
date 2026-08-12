@@ -60,11 +60,30 @@ export interface CheckInput {
   /**
    * True when the delivered narrative openly states the narrower scope.
    *
-   * Supplied by the caller because only the caller knows the final text. Without
-   * it, entityCompleteness cannot distinguish `answer_limited_scope` (omission
-   * disclosed) from a silent drop (§2.4).
+   * DERIVED from the narrative by lib/proof-finalize, not asserted by a route.
+   * entityCompleteness needs it to distinguish `answer_limited_scope` (omission
+   * disclosed) from a silent drop (§2.4), and a caller-supplied boolean would be one
+   * more unverified claim of exactly the kind this contract exists to remove -- a
+   * route could assert `true` and the check would accept a silent omission.
    */
   omissionsDisclosed: boolean;
+}
+
+/**
+ * Does the delivered narrative actually name every omitted entity?
+ *
+ * This is the evidence behind `omissionsDisclosed`. §2.4 forbids silently dropping a
+ * requested entity, so "disclosed" means the user can see which ones were dropped --
+ * a vague "some cities are unavailable" is not disclosure of anything checkable.
+ *
+ * Requires ALL omitted labels to appear: naming three of eight and staying silent
+ * about five is still five silent drops.
+ */
+export function omissionsAreDisclosed(narrative: string | null | undefined, omittedLabels: string[]): boolean {
+  if (omittedLabels.length === 0) return true;
+  if (!narrative) return false;
+  const haystack = narrative.toLowerCase();
+  return omittedLabels.every((label) => label.trim() !== "" && haystack.includes(label.toLowerCase()));
 }
 
 const NUMERIC_CLAIM_TOLERANCE = 0.005;
@@ -508,11 +527,16 @@ export function checkReconciliation(input: CheckInput): CheckOutcome {
  * model traffic. That asymmetry is the migration measurement the shadow period
  * exists to collect (§10) -- not a bug to be softened.
  */
-export function checkSemanticPlan(input: CheckInput, derivation: PlanDerivation | null): CheckOutcome {
+export function checkSemanticPlan(
+  input: CheckInput,
+  derivation: PlanDerivation | null,
+  /** The family the answer is being recorded under; compared against the token's. */
+  expectedFamily?: string | null,
+): CheckOutcome {
   if (!input.contract) {
     return { state: "unknown", reason: "the question could not be parsed into a typed plan" };
   }
-  const verdict = verifyPlanDerivation(derivation, input.sql);
+  const verdict = verifyPlanDerivation(derivation, input.sql, expectedFamily);
   if (!verdict.ok) {
     return { state: "unknown", reason: verdict.reason };
   }
@@ -542,6 +566,8 @@ export function checkChartData(hasChart: boolean, chartFromBindings: boolean): C
 export interface RunChecksInput extends CheckInput {
   /** Sealed derivation token, or null for a model-authored answer. */
   derivation: PlanDerivation | null;
+  /** The plan family the answer is being recorded under. */
+  expectedFamily?: string | null;
   hasChart: boolean;
   chartFromBindings: boolean;
   claims: NumericClaim[] | null;
@@ -564,7 +590,7 @@ export interface ChecksResult {
  */
 export function runProofChecks(input: RunChecksInput): ChecksResult {
   const outcomes: Record<ProofCheck, CheckOutcome> = {
-    semanticPlan: checkSemanticPlan(input, input.derivation),
+    semanticPlan: checkSemanticPlan(input, input.derivation, input.expectedFamily),
     canonicalGeographies: checkCanonicalGeographies(input),
     entityCompleteness: checkEntityCompleteness(input),
     metric: checkMetric(input),

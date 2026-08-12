@@ -43,12 +43,28 @@ import { createHash } from "node:crypto";
 /** Bump if the fingerprint algorithm changes; an old token then fails to verify. */
 export const PLAN_DERIVATION_VERSION = 1;
 
+/**
+ * Who issued the token, which bounds what it may authorize.
+ *
+ * `route`  - sealed by a route around a planner's output. Proves SQL identity only.
+ * `compiler` - issued by a deterministic compiler that owns the plan. Does not exist
+ *            yet; Stage 6 builds it.
+ *
+ * A route-issued token is honest shadow instrumentation and nothing more. It cannot
+ * establish that a deterministic compiler produced the query, so it must never
+ * authorize a delivery decision under enforcement -- see the issuer guard in
+ * lib/proof-finalize.ts. Recording the distinction in the token means that guard is
+ * a property of the evidence rather than a convention someone has to remember.
+ */
+export type DerivationIssuer = "route" | "compiler";
+
 export interface PlanDerivation {
   v: number;
   /** The typed plan family that produced the SQL. */
   planFamily: string;
   /** Fingerprint of the SQL as emitted by the planner. */
   sqlFingerprint: string;
+  issuer: DerivationIssuer;
 }
 
 /**
@@ -68,12 +84,34 @@ export function fingerprintSql(sql: string): string {
   return createHash("sha256").update(normalizeSql(sql), "utf8").digest("hex").slice(0, 32);
 }
 
-/** Seal a planner's output. Call immediately where the plan and its SQL are both in hand. */
+/**
+ * Seal a planner's output from inside a route.
+ *
+ * Call immediately where the plan and its SQL are both in hand. Issues a `route`
+ * token, which proves SQL identity but cannot authorize enforcement.
+ */
 export function sealPlanDerivation(planFamily: string, sql: string): PlanDerivation {
   return {
     v: PLAN_DERIVATION_VERSION,
     planFamily,
     sqlFingerprint: fingerprintSql(sql),
+    issuer: "route",
+  };
+}
+
+/**
+ * Issue a compiler-owned token. Reserved for Stage 6.
+ *
+ * Exported now so the enforcement guard has a positive case to test against, and so
+ * the eventual compiler has an obvious entry point rather than a temptation to reach
+ * for sealPlanDerivation().
+ */
+export function sealCompilerPlanDerivation(planFamily: string, sql: string): PlanDerivation {
+  return {
+    v: PLAN_DERIVATION_VERSION,
+    planFamily,
+    sqlFingerprint: fingerprintSql(sql),
+    issuer: "compiler",
   };
 }
 
@@ -92,6 +130,17 @@ export interface DerivationVerdict {
 export function verifyPlanDerivation(
   derivation: PlanDerivation | null | undefined,
   executedSql: string | null,
+  /**
+   * The family the caller claims this answer belongs to.
+   *
+   * VERIFIED, NOT TRUSTED. The fingerprint alone proves that some planner emitted
+   * this SQL; it says nothing about which family the answer is being recorded and
+   * authorized under. Without this comparison a token sealed for family A could be
+   * presented alongside `planFamily: "B"`, and the answer would be logged under B --
+   * and, once per-family enforcement exists, authorized by B's env variable. Pass
+   * null only when the caller genuinely has no independent claim to check.
+   */
+  expectedFamily?: string | null,
 ): DerivationVerdict {
   if (!derivation) {
     return { ok: false, reason: "no deterministic plan derivation was sealed for this answer" };
@@ -101,6 +150,17 @@ export function verifyPlanDerivation(
   }
   if (!derivation.planFamily || derivation.planFamily.trim() === "") {
     return { ok: false, reason: "derivation carries no plan family" };
+  }
+  if (derivation.issuer !== "route" && derivation.issuer !== "compiler") {
+    return { ok: false, reason: `derivation issuer '${String(derivation.issuer)}' is not recognized` };
+  }
+  if (expectedFamily && expectedFamily.trim() !== "" && expectedFamily !== derivation.planFamily) {
+    return {
+      ok: false,
+      reason:
+        `plan family mismatch: token was sealed for '${derivation.planFamily}' but this answer ` +
+        `is being recorded as '${expectedFamily}'`,
+    };
   }
   if (!executedSql || executedSql.trim() === "") {
     // A plan family with no SQL is not necessarily wrong -- some deterministic
@@ -117,5 +177,8 @@ export function verifyPlanDerivation(
         `executed ${actual}); it was rewritten between planning and execution`,
     };
   }
-  return { ok: true, reason: `executed SQL matches plan family '${derivation.planFamily}' output` };
+  return {
+    ok: true,
+    reason: `executed SQL matches plan family '${derivation.planFamily}' output (${derivation.issuer}-issued)`,
+  };
 }
