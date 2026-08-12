@@ -158,6 +158,55 @@ function normalizeEntity(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 }
 
+/**
+ * Every key one entity name may legitimately match under.
+ *
+ * Exported for lib/proof-checks.ts. Entity comparison already lives here, and a
+ * second normalizer in the proof layer would eventually disagree with this one --
+ * at which point the proof system would report an omission the disclosure layer
+ * did not, or the reverse. Handoff §9.1 says to extend this module rather than
+ * create a competing narrative-finalization layer; the same argument applies to
+ * its entity matching.
+ *
+ * The alias pairs below were added because production comparisons dropped cities
+ * whose source spelling differs from the user's: "St. Louis" vs "Saint Louis",
+ * "Charlotte" vs the "Charlotte-Mecklenburg" agency, "Las Vegas" vs "Las Vegas
+ * Metropolitan PD". Matching on the bare normalized string alone reported those
+ * as missing entities and produced a false omission claim.
+ */
+export function entityAliasKeys(value: string): string[] {
+  const normalized = normalizeEntity(value);
+  const keys = new Set<string>([normalized]);
+  if (normalized === "st louis") keys.add("saint louis");
+  if (normalized === "saint louis") keys.add("st louis");
+  if (normalized === "charlotte") keys.add("charlotte mecklenburg");
+  if (normalized === "charlotte mecklenburg") keys.add("charlotte");
+  if (normalized === "nashville") keys.add("metropolitan nashville");
+  if (normalized === "metropolitan nashville") keys.add("nashville");
+  if (normalized === "las vegas") {
+    keys.add("las vegas metro pd");
+    keys.add("las vegas metropolitan");
+  }
+  if (normalized === "las vegas metro pd" || normalized === "las vegas metropolitan") keys.add("las vegas");
+  return [...keys];
+}
+
+/**
+ * Canonical entities the SQL asked for, and the alias-expanded keys it returned.
+ *
+ * Exported for the proof layer so entityCompleteness compares exactly what
+ * missingRequestedEntities() below compares. Same argument as entityAliasKeys: two
+ * implementations of "did this entity come back?" would eventually disagree, and
+ * then the proof record and the disclosure text would contradict each other.
+ */
+export function requestedEntitiesFromSql(sql: string): string[] {
+  return extractRequestedEntitiesFromSql(sql);
+}
+
+export function returnedEntityKeys(rows: Record<string, unknown>[]): string[] {
+  return [...returnedEntities(rows)];
+}
+
 function extractRequestedEntitiesFromSql(sql: string): string[] {
   const entities: string[] = [];
   const inRe = /\b(?:city|agency|agency_name)\s+IN\s*\(([^)]*)\)/gi;
@@ -181,16 +230,9 @@ function returnedEntities(rows: Record<string, unknown>[]): Set<string> {
     for (const col of cols) {
       const value = row[col];
       if (value !== undefined && value !== null && String(value).trim()) {
-        const normalized = normalizeEntity(String(value));
-        values.add(normalized);
-        if (normalized === "st louis") values.add("saint louis");
-        if (normalized === "saint louis") values.add("st louis");
-        if (normalized === "charlotte") values.add("charlotte mecklenburg");
-        if (normalized === "nashville") values.add("metropolitan nashville");
-        if (normalized === "las vegas") {
-          values.add("las vegas metro pd");
-          values.add("las vegas metropolitan");
-        }
+        // Alias expansion moved to entityAliasKeys() so lib/proof-checks compares
+        // entities the same way this does. Behavior is unchanged.
+        for (const key of entityAliasKeys(String(value))) values.add(key);
       }
     }
   }

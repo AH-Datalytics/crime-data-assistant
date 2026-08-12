@@ -7,6 +7,8 @@ import type { RoutingLogMeta } from "./routing-log-meta";
 import { serializeQueryGuidanceLogMeta } from "./query-guidance-log";
 import { serializeQueryContractLogMeta } from "./query-contract";
 import { ensureNibrsRollupAttached, nibrsRollupContextForDb } from "./nibrs-rollup-router";
+import { buildQueryLogInsert } from "./query-log-columns";
+import { EMPTY_PROOF_LOG_FIELDS, type ProofLogFields } from "./proof-finalize";
 
 const state = {
   db: null as Database.Database | null,
@@ -136,47 +138,45 @@ export function logNibrsQuery(
   chartConfigJson: string | null = null,
   /** Bounded raw model text on no-SQL failures; see lib/no-sql-retry. Diagnostic only. */
   modelResponseJson: string | null = null,
-  requestId: string | null = null
+  requestId: string | null = null,
+  /** Proof/digest/delivery columns from lib/proof-finalize's proofLogFields(). */
+  proofFields: ProofLogFields = EMPTY_PROOF_LOG_FIELDS
 ): number | null {
   // Write to shared query_log.db via rtci-db's getWriteDb
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { getWriteDb, queryLogHasChartConfig, queryLogHasModelResponse, queryLogHasRequestId } = require("@/lib/rtci-db");
+  const { getWriteDb } = require("@/lib/rtci-db");
   const db = getWriteDb();
   if (db) {
     try {
-      // Detected at runtime for the same reason as logQuery: an unmigrated
-      // database must keep logging exactly as before rather than fail every write.
-      const withChartConfig = queryLogHasChartConfig(db);
-      const withModelResponse = queryLogHasModelResponse(db);
-      const withRequestId = queryLogHasRequestId(db);
-      const columns = "ts, tab, question, sql, rows, error, ms, response, guardrails, model, session_id, routing_confidence, routing_mode, routing_reason, query_guidance, query_contract" +
-        (withChartConfig ? ", chart_config" : "") +
-        (withModelResponse ? ", model_response" : "");
-      const placeholders = new Array(16 + (withChartConfig ? 1 : 0) + (withModelResponse ? 1 : 0)).fill("?").join(", ");
-      const values: unknown[] = [
-        Date.now(),
-        "nibrs",
-        (question || "").slice(0, 2000),
-        (sql || "").slice(0, 4000) || null,
-        rowCount,
-        error ? error.slice(0, 500) : null,
+      // Columns filtered against the live table for the same reason as logQuery: an
+      // unmigrated database must keep logging exactly as before rather than fail
+      // every write. Replaces three parallel sequences (column string, placeholder
+      // arithmetic, positional values) that had to agree by hand — a disagreement
+      // there threw inside this catch and silently lost every log row.
+      const insert = buildQueryLogInsert(db, {
+        ts: Date.now(),
+        tab: "nibrs",
+        question: (question || "").slice(0, 2000),
+        sql: (sql || "").slice(0, 4000) || null,
+        rows: rowCount,
+        error: error ? error.slice(0, 500) : null,
         ms,
-        response ? response.slice(0, 4000) : null,
-        guardrails.length > 0 ? guardrails.join(",") : null,
+        response: response ? response.slice(0, 4000) : null,
+        guardrails: guardrails.length > 0 ? guardrails.join(",") : null,
         model,
-        sessionId ? sessionId.slice(0, 64) : null,
-        routingMeta?.confidence ?? null,
-        routingMeta?.mode ?? null,
-        routingMeta?.reason ?? null,
-        serializeQueryGuidanceLogMeta(question || ""),
-        serializeQueryContractLogMeta(question || "", "nibrs", routingMeta),
-      ];
-      if (withChartConfig) values.push(chartConfigJson);
-      if (withModelResponse) values.push(modelResponseJson ? modelResponseJson.slice(0, 4000) : null);
-      if (withRequestId) values.push(requestId ? requestId.slice(0, 64) : null);
-      const finalColumns = columns + (withRequestId ? ", request_id" : "");
-      const finalPlaceholders = placeholders + (withRequestId ? ", ?" : "");
-      const result = db.prepare(`INSERT INTO query_log (${finalColumns}) VALUES (${finalPlaceholders})`).run(...values);
+        session_id: sessionId ? sessionId.slice(0, 64) : null,
+        routing_confidence: routingMeta?.confidence ?? null,
+        routing_mode: routingMeta?.mode ?? null,
+        routing_reason: routingMeta?.reason ?? null,
+        query_guidance: serializeQueryGuidanceLogMeta(question || ""),
+        query_contract: serializeQueryContractLogMeta(question || "", "nibrs", routingMeta),
+        chart_config: chartConfigJson,
+        model_response: modelResponseJson ? modelResponseJson.slice(0, 4000) : null,
+        request_id: requestId ? requestId.slice(0, 64) : null,
+        ...proofFields,
+      });
+      if (!insert) return null;
+      const result = db.prepare(insert.sql).run(...insert.values);
       return Number(result.lastInsertRowid);
     } catch (e) {
       console.error("[logNibrsQuery] Failed:", e);

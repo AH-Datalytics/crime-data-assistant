@@ -12,6 +12,8 @@ import {
   resolverWarningFingerprint,
   warningWhitelistMatch,
 } from "./resolver-warning-classification";
+import { buildQueryLogInsert, queryLogHasColumn } from "./query-log-columns";
+import { EMPTY_PROOF_LOG_FIELDS, type ProofLogFields } from "./proof-finalize";
 
 const state = {
   db: null as Database.Database | null,
@@ -195,67 +197,25 @@ export function logResolverWarnings(input: {
 }
 
 /**
- * Whether query_log has the Phase 3 chart_config column.
+ * Per-column presence checks for query_log.
  *
- * Cached per database handle, not globally: getWriteDb() reopens the file when it
- * changes on disk, and a cache keyed on nothing would go stale across a
- * migration or a database swap. A WeakMap keyed on the handle expires naturally
- * when that handle is discarded.
+ * These were three near-identical WeakMap caches, each re-running PRAGMA
+ * table_info for one column name. Stage 1 adds six more columns, at which point
+ * nine copies of the same twelve lines is worse than one shared column set — so
+ * they now delegate to lib/query-log-columns, which caches the whole set per
+ * handle with the same expiry semantics. The three exported names are kept
+ * because lib/nibrs-db.ts requires them by name.
  */
-const chartConfigColumnCache = new WeakMap<object, boolean>();
-
 export function queryLogHasChartConfig(db: object): boolean {
-  const cached = chartConfigColumnCache.get(db);
-  if (cached !== undefined) return cached;
-  let present = false;
-  try {
-    const rows = (db as { prepare: (sql: string) => { all: () => Array<{ name: string }> } })
-      .prepare("PRAGMA table_info(query_log)")
-      .all();
-    present = rows.some((row) => row.name === "chart_config");
-  } catch {
-    present = false;
-  }
-  chartConfigColumnCache.set(db, present);
-  return present;
+  return queryLogHasColumn(db, "chart_config");
 }
-
-/**
- * Whether query_log has the model_response column — a bounded capture of the raw
- * model text on no-SQL failures. Same per-handle caching rationale as
- * chartConfigColumnCache above.
- */
-const modelResponseColumnCache = new WeakMap<object, boolean>();
 
 export function queryLogHasModelResponse(db: object): boolean {
-  const cached = modelResponseColumnCache.get(db);
-  if (cached !== undefined) return cached;
-  let present = false;
-  try {
-    const rows = (db as { prepare: (sql: string) => { all: () => Array<{ name: string }> } })
-      .prepare("PRAGMA table_info(query_log)")
-      .all();
-    present = rows.some((row) => row.name === "model_response");
-  } catch {
-    present = false;
-  }
-  modelResponseColumnCache.set(db, present);
-  return present;
+  return queryLogHasColumn(db, "model_response");
 }
 
-const requestIdColumnCache = new WeakMap<object, boolean>();
-
 export function queryLogHasRequestId(db: object): boolean {
-  const cached = requestIdColumnCache.get(db);
-  if (cached !== undefined) return cached;
-  let present = false;
-  try {
-    const rows = (db as { prepare: (sql: string) => { all: () => Array<{ name: string }> } })
-      .prepare("PRAGMA table_info(query_log)").all();
-    present = rows.some((row) => row.name === "request_id");
-  } catch { present = false; }
-  requestIdColumnCache.set(db, present);
-  return present;
+  return queryLogHasColumn(db, "request_id");
 }
 
 export function logQuery(
@@ -276,40 +236,58 @@ export function logQuery(
    * once at the call site and this function cannot accidentally widen it.
    */
   chartConfigJson: string | null = null,
-  requestId: string | null = null
+  requestId: string | null = null,
+  /**
+   * Bounded raw model text on no-SQL failures. Diagnostic only; never user-visible.
+   *
+   * CLOSES A REAL GAP. Until Stage 1 this parameter did not exist, so
+   * `model_response` could only ever be written by the NIBRS route — Current
+   * Trends, Historical, SHR, and Hate Crime had no diagnostic capture at all.
+   * Handoff §3.13 requires the proof contract to apply uniformly across all five
+   * sources, and the Stage 0 baseline recorded this asymmetry as Stage 1 scope
+   * (docs/reviews/2026-08-11-stage0-production-baseline.md §4).
+   */
+  modelResponseJson: string | null = null,
+  /**
+   * Proof/digest/delivery columns from lib/proof-finalize's proofLogFields().
+   *
+   * Defaults to all-null, which is exactly what `off` mode produces — so an
+   * off-mode deployment writes query_log rows identical to the baseline release's.
+   */
+  proofFields: ProofLogFields = EMPTY_PROOF_LOG_FIELDS
 ): number | null {
   const db = getWriteDb();
   if (db) {
     try {
       const contractSource = tab === "hate_crime" ? "hate_crime" : tab as QueryContractSource;
-      // Detected at runtime so schema and code can deploy in either order: an
-      // unmigrated database logs exactly as before instead of failing every write.
-      const withChartConfig = queryLogHasChartConfig(db);
-      const withRequestId = queryLogHasRequestId(db);
-      const columns = "ts, tab, question, sql, rows, error, ms, response, guardrails, model, session_id, routing_confidence, routing_mode, routing_reason, query_guidance, query_contract" +
-        (withChartConfig ? ", chart_config" : "") + (withRequestId ? ", request_id" : "");
-      const placeholders = new Array(16 + (withChartConfig ? 1 : 0) + (withRequestId ? 1 : 0)).fill("?").join(", " );
-      const values: unknown[] = [
-        Date.now(),
+      // Columns are filtered against the live table so schema and code can deploy
+      // in either order: an unmigrated database logs exactly as before instead of
+      // failing every write. buildQueryLogInsert derives the column list, the
+      // placeholders, and the values from this one object, so they cannot drift.
+      const insert = buildQueryLogInsert(db, {
+        ts: Date.now(),
         tab,
-        (question || "").slice(0, 2000),
-        (sql || "").slice(0, 4000),
-        rowCount,
-        error ? error.slice(0, 500) : null,
+        question: (question || "").slice(0, 2000),
+        sql: (sql || "").slice(0, 4000),
+        rows: rowCount,
+        error: error ? error.slice(0, 500) : null,
         ms,
-        response ? response.slice(0, 4000) : null,
-        guardrails.length > 0 ? guardrails.join(",") : null,
+        response: response ? response.slice(0, 4000) : null,
+        guardrails: guardrails.length > 0 ? guardrails.join(",") : null,
         model,
-        sessionId ? sessionId.slice(0, 64) : null,
-        routingMeta?.confidence ?? null,
-        routingMeta?.mode ?? null,
-        routingMeta?.reason ?? null,
-        serializeQueryGuidanceLogMeta(question || ""),
-        serializeQueryContractLogMeta(question || "", contractSource, routingMeta),
-      ];
-      if (withChartConfig) values.push(chartConfigJson);
-      if (withRequestId) values.push(requestId ? requestId.slice(0, 64) : null);
-      const result = db.prepare(`INSERT INTO query_log (${columns}) VALUES (${placeholders})`).run(...values);
+        session_id: sessionId ? sessionId.slice(0, 64) : null,
+        routing_confidence: routingMeta?.confidence ?? null,
+        routing_mode: routingMeta?.mode ?? null,
+        routing_reason: routingMeta?.reason ?? null,
+        query_guidance: serializeQueryGuidanceLogMeta(question || ""),
+        query_contract: serializeQueryContractLogMeta(question || "", contractSource, routingMeta),
+        chart_config: chartConfigJson,
+        request_id: requestId ? requestId.slice(0, 64) : null,
+        model_response: modelResponseJson ? modelResponseJson.slice(0, 4000) : null,
+        ...proofFields,
+      });
+      if (!insert) return null;
+      const result = db.prepare(insert.sql).run(...insert.values);
       return Number(result.lastInsertRowid);
     } catch (e) {
       console.warn("Log write failed:", e);

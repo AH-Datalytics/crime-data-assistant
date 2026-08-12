@@ -11,6 +11,16 @@ export interface MultiCityTrendPlan {
   chartConfig: ChartConfig;
   chartMeta: ChartMeta;
   guardrail: string;
+  /**
+   * The cities this plan asked for, paired with the result column each becomes.
+   *
+   * Needed because this plan PIVOTS cities into columns rather than rows, so
+   * "which requested entities came back?" cannot be answered by scanning row
+   * values -- a city that returned no data appears as an all-null column, not as
+   * an absent row. This is the shape of the 31-of-32 completeness failure, and
+   * lib/proof-checks' entityCompleteness check needs both halves to detect it.
+   */
+  requestedCities: { label: string; alias: string }[];
 }
 
 type City = { name: string; state: string; alias: string; label: string; historicalOri?: string; currentName: string };
@@ -187,5 +197,6 @@ ORDER BY hac.year`;
       population: null,
     },
     guardrail: `deterministic-${source}-multi-city-trend`,
+    requestedCities: places.map((city) => ({ label: city.label, alias: city.alias })),
   };
 }
