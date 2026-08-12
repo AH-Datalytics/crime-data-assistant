@@ -11,7 +11,7 @@
 // drives the real runner as a subprocess against a production-shaped fixture
 // database and asserts that rows land in the results table.
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -33,6 +33,19 @@ const dbPath = path.join(workDir, "query_log.db");
 const migrationScript = path.join(repoRoot, "scripts", "migrate-chart-audit-artifacts.js");
 
 /**
+ * tsx is resolved through npx rather than a local dependency, so the
+ * interruption test spawns the runner through the platform's npx. `shell: true`
+ * is required on Windows because npx is a .cmd; arguments here are repo-internal
+ * paths under a space-free root, so the shell's concatenation is safe.
+ */
+const npxBin = process.platform === "win32" ? "npx.cmd" : "npx";
+
+/** Block the current thread. Used to poll for a child's DB write. */
+function sleepSync(ms: number): void {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
+
+/**
  * Remove a temp directory. Best-effort by design.
  *
  * Every SQLite handle this suite opens is closed before cleanup runs, but on
@@ -45,6 +58,10 @@ const migrationScript = path.join(repoRoot, "scripts", "migrate-chart-audit-arti
  * OS temp path and are reclaimed there, and failing on cleanup would report a
  * red test for a reason unrelated to anything it asserts. The warning is kept
  * so a genuine handle leak is still visible rather than silent.
+ *
+ * Expect a warning on Windows from the interruption case specifically: that
+ * test SIGKILLs a child mid-run, and a killed process releases its database
+ * handle on the OS's schedule rather than ours.
  */
 function removeDir(dir: string): void {
   try {
@@ -284,29 +301,57 @@ try {
   // suite at 300s and escalates to SIGKILL, so a process that dies mid-audit is
   // reachable -- and recording health only on completion would leave no trace,
   // which the digest would read as "never ran" rather than "ran and died".
+  //
+  // The REAL runner is spawned and killed here. An earlier revision inserted a
+  // 'running' row by hand, which only proved the schema permits that state, not
+  // that run-chart-audit.ts reaches it. CHART_AUDIT_TEST_PAUSE_MS holds the
+  // child immediately after it claims its row (see pauseForInterruptionTest).
   {
     const claimed = new Database(dbPath, { readonly: true });
     const before = (claimed.prepare("SELECT COUNT(*) AS n FROM audit_runs").get() as { n: number }).n;
     claimed.close();
 
-    // Simulate the kill: claim a row the way runChartAudit does, then stop.
-    const killed = new Database(dbPath);
-    killed
-      .prepare(
-        `INSERT INTO audit_runs (source, suite_version, started_ts, finished_ts, rows_audited, status, detail)
-         VALUES (?, ?, ?, NULL, NULL, 'running', 'run started; not yet finished')`
-      )
-      .run(CHART_AUDIT_SOURCE, "chart-audit-test", Date.now());
-    killed.close();
+    // The database path travels in QUERY_LOG_DB_PATH -- which resolveDbPath()
+    // already honours -- rather than as an argv entry. `shell: true` is needed
+    // for npx.cmd on Windows and concatenates rather than escapes its
+    // arguments, so a temp path containing a space (os.tmpdir() under a user
+    // profile with a space in the name) would otherwise split. Every remaining
+    // argument is a repo-internal, space-free path.
+    const child = spawn(npxBin, ["tsx", path.join(repoRoot, "scripts", "run-chart-audit.ts")], {
+      cwd: repoRoot,
+      env: { ...process.env, QUERY_LOG_DB_PATH: dbPath, CHART_AUDIT_TEST_PAUSE_MS: "15000" },
+      stdio: "ignore",
+      shell: process.platform === "win32",
+    });
+
+    // Wait for the child's own claim to land, then kill it mid-run.
+    const deadline = Date.now() + 60_000;
+    let claimedRunId: number | null = null;
+    while (Date.now() < deadline && claimedRunId === null) {
+      const poll = new Database(dbPath, { readonly: true });
+      const row = poll.prepare("SELECT id FROM audit_runs WHERE status = 'running' ORDER BY id DESC LIMIT 1").get() as
+        | { id: number }
+        | undefined;
+      poll.close();
+      if (row) claimedRunId = row.id;
+      else sleepSync(100);
+    }
+    assert.notEqual(claimedRunId, null, "the runner must claim a 'running' row before it starts auditing");
+
+    child.kill("SIGKILL");
+    // Give the OS a moment to reap it; the row must be unaffected either way.
+    sleepSync(500);
 
     const after = new Database(dbPath, { readonly: true });
     const rows = (after.prepare("SELECT COUNT(*) AS n FROM audit_runs").get() as { n: number }).n;
-    const stuck = after.prepare("SELECT status, finished_ts FROM audit_runs ORDER BY id DESC LIMIT 1").get() as {
+    const stuck = after.prepare("SELECT source, status, finished_ts FROM audit_runs WHERE id = ?").get(claimedRunId) as {
+      source: string;
       status: string;
       finished_ts: number | null;
     };
     after.close();
-    assert.equal(rows, before + 1, "an interrupted run must still be recorded");
+    assert.equal(rows, before + 1, "an interrupted run must leave exactly one new record");
+    assert.equal(stuck.source, CHART_AUDIT_SOURCE);
     assert.equal(stuck.status, "running", "a killed run stays 'running' -- the readable signal that it did not finish");
     assert.equal(stuck.finished_ts, null, "no finish timestamp means no audited-through watermark");
 

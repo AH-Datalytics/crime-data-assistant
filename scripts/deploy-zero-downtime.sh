@@ -31,6 +31,12 @@ KEEP_RELEASES=5
 # Release names listed here are never pruned, regardless of KEEP_RELEASES.
 # One name per line; blank lines and #-comments ignored.
 PINNED_FILE="$RELEASES_DIR/.pinned"
+
+# Pruning logic, shared with scripts/test-stage0-operational-guards.ts so the
+# test cannot pass against a copy that has drifted from what deploys.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=scripts/lib/prune-releases.sh
+source "$SCRIPT_DIR/lib/prune-releases.sh"
 HEALTH_URL="http://localhost:3000"
 HEALTH_TIMEOUT=15                   # seconds to wait for health check
 HEALTH_RETRIES="${HEALTH_RETRIES:-8}" # post-reload attempts; app can need ~45s to warm
@@ -386,48 +392,25 @@ fi
 # To unpin:  remove that line (requires owner approval while an observation
 #            window is open -- see docs/runbooks/2026-08-11-rollback-and-backup-manifest.md)
 log "Pruning old releases (keeping last $KEEP_RELEASES)..."
-cd "$RELEASES_DIR"
 
 CURRENT_TARGET=$(readlink -f "$CURRENT_LINK")
-if [[ -f "$PINNED_FILE" ]]; then
-  # Strip comments, blank lines, and stray carriage returns from an editor.
-  PINNED=$(grep -vE '^\s*(#|$)' "$PINNED_FILE" 2>/dev/null | tr -d '\r' | sed 's/[[:space:]]*$//')
-  if [[ -n "$PINNED" ]]; then
-    log "  Pinned releases (never pruned): $(echo "$PINNED" | tr '\n' ' ')"
-  fi
-else
-  PINNED=""
+PINNED_NAMES="$(prune_read_pinned "$PINNED_FILE")"
+if [[ -n "$PINNED_NAMES" ]]; then
+  log "  Pinned releases (never pruned): $(echo "$PINNED_NAMES" | tr '\n' ' ')"
 fi
 
-is_pinned() {
-  local name="$1"
-  [[ -z "$PINNED" ]] && return 1
-  while IFS= read -r pin; do
-    [[ -n "$pin" && "$pin" == "$name" ]] && return 0
-  done <<< "$PINNED"
-  return 1
-}
-
-RELEASE_COUNT=$(ls -1d */ 2>/dev/null | wc -l)
-if (( RELEASE_COUNT > KEEP_RELEASES )); then
-  REMOVE_COUNT=$(( RELEASE_COUNT - KEEP_RELEASES ))
-  # Piped into a subshell previously, so counters could not escape it; a while
-  # loop over a here-string keeps the skip accounting in this shell.
-  CANDIDATES=$(ls -1d */ | head -n "$REMOVE_COUNT")
-  while IFS= read -r old; do
-    [[ -z "$old" ]] && continue
-    NAME="${old%/}"
-    OLD_FULL="$RELEASES_DIR/$NAME"
-    if [[ "$OLD_FULL" == "$CURRENT_TARGET" ]]; then
-      log "  Keeping $NAME (current symlink target)"
-    elif is_pinned "$NAME"; then
-      log "  Keeping $NAME (pinned)"
-    else
-      log "  Removing old release: $NAME"
-      rm -rf "$OLD_FULL"
-    fi
-  done <<< "$CANDIDATES"
-fi
+# The pruning rule itself lives in scripts/lib/prune-releases.sh so that its
+# test exercises the shipped code rather than a copy of it. Decisions come back
+# on stdout and are mirrored into the deploy log here.
+while IFS= read -r decision; do
+  [[ -z "$decision" ]] && continue
+  case "$decision" in
+    "keep-current "*) log "  Keeping ${decision#keep-current } (current symlink target)" ;;
+    "keep-pinned "*)  log "  Keeping ${decision#keep-pinned } (pinned)" ;;
+    "remove "*)       log "  Removing old release: ${decision#remove }" ;;
+    *)                log "  $decision" ;;
+  esac
+done < <(prune_releases "$RELEASES_DIR" "$CURRENT_TARGET" "$KEEP_RELEASES" "$PINNED_FILE")
 
 # ── Done ───────────────────────────────────────────────────────────────
 log ""

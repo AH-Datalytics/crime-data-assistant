@@ -22,6 +22,76 @@ function removeDir(dir: string): void {
   }
 }
 
+/**
+ * Locate a POSIX bash.
+ *
+ * On Windows a bare `bash` resolves to the WSL launcher, which is absent on a
+ * normal workstation -- so this suite passed only for someone who had already
+ * put Git Bash first on PATH. Git Bash is located explicitly instead: from
+ * `git.exe` (either cmd\ or mingw64\bin\) walk up to the install root and take
+ * bin\bash.exe, falling back to the standard install locations.
+ */
+function resolveBash(): string {
+  if (process.platform !== "win32") return "bash";
+
+  const candidates: string[] = [];
+  try {
+    const gitPaths = execFileSync("where", ["git"], { encoding: "utf8" })
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean);
+    for (const gitPath of gitPaths) {
+      // C:\...\Git\cmd\git.exe  ->  C:\...\Git ; C:\...\Git\mingw64\bin\git.exe -> C:\...\Git
+      const dir = path.dirname(gitPath);
+      const roots = [path.resolve(dir, ".."), path.resolve(dir, "..", "..")];
+      for (const root of roots) candidates.push(path.join(root, "bin", "bash.exe"));
+    }
+  } catch {
+    /* `where` missing or git not on PATH; fall through to the fixed paths */
+  }
+
+  const programFiles = process.env.ProgramFiles || "C:\\Program Files";
+  const programFilesX86 = process.env["ProgramFiles(x86)"] || "C:\\Program Files (x86)";
+  candidates.push(
+    path.join(programFiles, "Git", "bin", "bash.exe"),
+    path.join(programFilesX86, "Git", "bin", "bash.exe")
+  );
+
+  const found = candidates.find((candidate) => {
+    try {
+      return fs.existsSync(candidate);
+    } catch {
+      return false;
+    }
+  });
+  if (!found) {
+    throw new Error(
+      `Could not locate Git Bash. Tried: ${candidates.join(", ")}. Install Git for Windows or put a POSIX bash on PATH.`
+    );
+  }
+  return found;
+}
+
+const BASH = resolveBash();
+
+// Platform branch self-check. The Linux path is a plain `bash` with identity
+// path conversion; asserting it here means the branch is covered even when the
+// suite happens to run on Windows.
+if (process.platform !== "win32") {
+  assert.equal(BASH, "bash", "non-Windows must use the PATH bash");
+  assert.equal(toBashPath("/opt/nibrs/releases"), "/opt/nibrs/releases", "POSIX paths pass through unchanged");
+} else {
+  assert.ok(fs.existsSync(BASH), `resolved bash must exist: ${BASH}`);
+  assert.equal(toBashPath("C:\\Users\\x\\repo"), "/c/Users/x/repo", "Windows paths must convert for Git Bash");
+}
+
+/** Convert a Windows path to the form Git Bash understands: C:\x -> /c/x */
+function toBashPath(value: string): string {
+  if (process.platform !== "win32") return value;
+  const normalized = value.replace(/\\/g, "/");
+  return normalized.replace(/^([A-Za-z]):\//, (_match, drive: string) => `/${drive.toLowerCase()}/`);
+}
+
 // ---------------------------------------------------------------------------
 // 1. Digest chart-audit coverage window
 // ---------------------------------------------------------------------------
@@ -88,48 +158,18 @@ function removeDir(dir: string): void {
     fs.writeFileSync(path.join(releasesDir, ".pinned"), "# baseline for the verified-answer observation window\n20260801_000000\n\n");
     const currentTarget = path.join(releasesDir, "20260807_000000");
 
-    // Mirrors the deploy script's Step 8. Kept in step by the source assertions
-    // below, which fail if the real block stops honouring the pin file.
+    // Source and call the SHIPPED helper. An earlier revision of this test
+    // pasted the pruning logic into a here-doc, which meant it could pass while
+    // the deployed rule drifted -- it asserted a copy was correct, not that the
+    // correct rule ships. scripts/lib/prune-releases.sh is now the single
+    // definition, sourced both here and by deploy-zero-downtime.sh.
+    const helper = toBashPath(path.join(repoRoot, "scripts", "lib", "prune-releases.sh"));
     const script = `
       set -euo pipefail
-      RELEASES_DIR="${releasesDir.replace(/\\/g, "/")}"
-      PINNED_FILE="$RELEASES_DIR/.pinned"
-      CURRENT_TARGET="${currentTarget.replace(/\\/g, "/")}"
-      KEEP_RELEASES=5
-      cd "$RELEASES_DIR"
-      if [[ -f "$PINNED_FILE" ]]; then
-        PINNED=$(grep -vE '^\\s*(#|$)' "$PINNED_FILE" 2>/dev/null | tr -d '\\r' | sed 's/[[:space:]]*$//')
-      else
-        PINNED=""
-      fi
-      is_pinned() {
-        local name="$1"
-        [[ -z "$PINNED" ]] && return 1
-        while IFS= read -r pin; do
-          [[ -n "$pin" && "$pin" == "$name" ]] && return 0
-        done <<< "$PINNED"
-        return 1
-      }
-      RELEASE_COUNT=$(ls -1d */ 2>/dev/null | wc -l)
-      if (( RELEASE_COUNT > KEEP_RELEASES )); then
-        REMOVE_COUNT=$(( RELEASE_COUNT - KEEP_RELEASES ))
-        CANDIDATES=$(ls -1d */ | head -n "$REMOVE_COUNT")
-        while IFS= read -r old; do
-          [[ -z "$old" ]] && continue
-          NAME="\${old%/}"
-          OLD_FULL="$RELEASES_DIR/$NAME"
-          if [[ "$OLD_FULL" == "$CURRENT_TARGET" ]]; then
-            echo "keep-current $NAME"
-          elif is_pinned "$NAME"; then
-            echo "keep-pinned $NAME"
-          else
-            echo "remove $NAME"
-            rm -rf "$OLD_FULL"
-          fi
-        done <<< "$CANDIDATES"
-      fi
+      source "${helper}"
+      prune_releases "${toBashPath(releasesDir)}" "${toBashPath(currentTarget)}" 5 "${toBashPath(path.join(releasesDir, ".pinned"))}"
     `;
-    const output = execFileSync("bash", ["-c", script], { encoding: "utf8" });
+    const output = execFileSync(BASH, ["-c", script], { encoding: "utf8" });
 
     assert.match(output, /keep-pinned 20260801_000000/, "the pinned baseline must be kept");
     assert.ok(fs.existsSync(path.join(releasesDir, "20260801_000000")), "pinned release must survive pruning");
@@ -137,11 +177,14 @@ function removeDir(dir: string): void {
     assert.ok(!fs.existsSync(path.join(releasesDir, "20260802_000000")), "unpinned release must be removed");
     assert.ok(fs.existsSync(currentTarget), "the current symlink target must survive");
 
-    // The real script must contain the same guards.
+    // The deploy script must call that same helper rather than reimplementing it.
     const deploy = fs.readFileSync(path.join(repoRoot, "scripts", "deploy-zero-downtime.sh"), "utf8");
     assert.match(deploy, /PINNED_FILE="\$RELEASES_DIR\/\.pinned"/, "deploy script must define the pin file");
-    assert.match(deploy, /is_pinned "\$NAME"/, "pruning must consult the pin list");
-    assert.match(deploy, /Keeping \$NAME \(pinned\)/, "pinned keeps must be logged");
+    assert.match(deploy, /source "\$SCRIPT_DIR\/lib\/prune-releases\.sh"/, "deploy must source the shared pruning helper");
+    assert.match(deploy, /prune_releases "\$RELEASES_DIR" "\$CURRENT_TARGET" "\$KEEP_RELEASES" "\$PINNED_FILE"/, "deploy must call the helper");
+    assert.match(deploy, /Keeping \$\{decision#keep-pinned \} \(pinned\)/, "pinned keeps must be logged");
+    // And must not carry a second, divergent copy of the rule.
+    assert.ok(!/^\s*is_pinned\(\)/m.test(deploy), "deploy must not redefine is_pinned locally");
   } finally {
     removeDir(workDir);
   }
@@ -188,8 +231,8 @@ function removeDir(dir: string): void {
 // ---------------------------------------------------------------------------
 // 4. Both shell scripts remain syntactically valid
 // ---------------------------------------------------------------------------
-for (const script of ["deploy-zero-downtime.sh", "nightly-audit-and-digest.sh"]) {
-  execFileSync("bash", ["-n", path.join(repoRoot, "scripts", script)], { stdio: "pipe" });
+for (const script of ["deploy-zero-downtime.sh", "nightly-audit-and-digest.sh", "lib/prune-releases.sh"]) {
+  execFileSync(BASH, ["-n", toBashPath(path.join(repoRoot, "scripts", script))], { stdio: "pipe" });
 }
 
 // Guard against an unused import warning while keeping Database available for

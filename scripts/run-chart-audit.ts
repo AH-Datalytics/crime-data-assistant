@@ -79,6 +79,7 @@ export function runChartAudit(dbPathArgument?: string): ChartAuditRun {
   // reachable state, not a hypothetical. A row stuck at 'running' is exactly the
   // signal the digest needs: it ran, and it did not finish.
   const runId = beginAuditRun(db, accounting);
+  pauseForInterruptionTest();
   try {
     const hasResults = db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='chart_audit_results'").get();
     // Recorded as a missing required input rather than thrown, so a caller that
@@ -187,6 +188,31 @@ export function runChartAudit(dbPathArgument?: string): ChartAuditRun {
   } finally {
     db.close();
   }
+}
+
+/**
+ * Test hook: block after the run row is claimed but before any auditing.
+ *
+ * Exists so scripts/test-stage0-operational-guards.ts can kill THIS process at
+ * the exact point a production timeout would kill it, and then assert the real
+ * row is still 'running'. Without a hook the test could only insert a row by
+ * hand, which proves the schema allows that state rather than that this code
+ * reaches it.
+ *
+ * Blocks synchronously via Atomics.wait rather than an async timer: the point is
+ * to hold the process in a killable state with the claim already committed, and
+ * a synchronous block cannot be skipped by the event loop draining first.
+ * Inert unless CHART_AUDIT_TEST_PAUSE_MS is set to a positive number, and capped
+ * so a stray environment variable cannot wedge a production run.
+ */
+function pauseForInterruptionTest(): void {
+  const raw = process.env.CHART_AUDIT_TEST_PAUSE_MS;
+  if (!raw) return;
+  const requested = Number(raw);
+  if (!Number.isFinite(requested) || requested <= 0) return;
+  const ms = Math.min(requested, 30_000);
+  console.log(`[run-chart-audit] TEST PAUSE ${ms}ms after claiming the run row`);
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
 }
 
 /**
