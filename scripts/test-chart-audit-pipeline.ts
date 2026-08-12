@@ -33,49 +33,78 @@ const dbPath = path.join(workDir, "query_log.db");
 const migrationScript = path.join(repoRoot, "scripts", "migrate-chart-audit-artifacts.js");
 
 /**
- * tsx is resolved through npx rather than a local dependency, so the
- * interruption test spawns the runner through the platform's npx. `shell: true`
- * is required on Windows because npx is a .cmd; arguments here are repo-internal
- * paths under a space-free root, so the shell's concatenation is safe.
+ * Block the current thread.
+ *
+ * Deliberately synchronous: this suite's top level is synchronous, and the
+ * liveness checks below use process.kill(pid, 0) rather than child events, so
+ * blocking the event loop is safe here and keeps the test linear.
  */
-const npxBin = process.platform === "win32" ? "npx.cmd" : "npx";
-
-/** Block the current thread. Used to poll for a child's DB write. */
 function sleepSync(ms: number): void {
   Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
 }
 
+/** True while the process exists. Signal 0 tests existence without delivering. */
+function processAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    // EPERM means it exists but is not ours to signal; only ESRCH means gone.
+    return (error as NodeJS.ErrnoException).code === "EPERM";
+  }
+}
+
 /**
- * Remove a temp directory. Best-effort by design.
+ * Kill a process and everything it spawned, then wait for it to actually go.
  *
- * Every SQLite handle this suite opens is closed before cleanup runs, but on
- * Windows the OS can still refuse to unlink a database file that better-sqlite3
- * memory-mapped, and rmSync then throws EPERM. Files are removed individually
- * first (which usually succeeds where a recursive directory remove does not),
- * then the directory itself.
+ * `child.kill()` on a shell-launched process kills the shell, not the tree
+ * beneath it -- which is how an earlier revision of this test "passed": it
+ * killed cmd.exe, the chart auditor kept running, and the test observed a row
+ * that was only momentarily 'running'. The EPERM temp-dir warning was the
+ * evidence, and it was wrongly explained away as OS handle lag.
  *
- * A cleanup failure does NOT fail the suite: these directories live under the
- * OS temp path and are reclaimed there, and failing on cleanup would report a
- * red test for a reason unrelated to anything it asserts. The warning is kept
- * so a genuine handle leak is still visible rather than silent.
+ * The runner is now spawned as a direct node child (no shell) so there is no
+ * intermediate process, and this still performs a tree kill for safety and then
+ * blocks until the pid is genuinely gone.
+ */
+function killTreeAndWait(child: ReturnType<typeof spawn>, timeoutMs = 30_000): void {
+  const pid = child.pid;
+  assert.ok(pid, "spawned child must have a pid");
+  try {
+    if (process.platform === "win32") {
+      execFileSync("taskkill", ["/PID", String(pid), "/T", "/F"], { stdio: "ignore" });
+    } else {
+      // Spawned detached, so the pid doubles as the process-group id.
+      process.kill(-pid!, "SIGKILL");
+    }
+  } catch {
+    // Already gone, or taskkill raced us; the liveness wait below is the check.
+  }
+
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline && processAlive(pid!)) sleepSync(50);
+  assert.equal(processAlive(pid!), false, `child ${pid} must be gone before the row is inspected`);
+}
+
+/**
+ * Remove a temp directory. STRICT -- a failure fails the suite.
  *
- * Expect a warning on Windows from the interruption case specifically: that
- * test SIGKILLs a child mid-run, and a killed process releases its database
- * handle on the OS's schedule rather than ours.
+ * This was briefly tolerant, with the EPERM it produced on Windows explained
+ * away as OS handle lag. It was not: the interruption test was killing a shell
+ * rather than the auditor beneath it, and the surviving process still held the
+ * database. A cleanup failure here means something this suite started is still
+ * running, which is exactly the condition that would let the interruption
+ * assertions pass for the wrong reason -- so it must be loud.
+ *
+ * Files are removed individually first, which succeeds on Windows in cases
+ * where a single recursive remove does not.
  */
 function removeDir(dir: string): void {
-  try {
-    for (const entry of fs.readdirSync(dir)) {
-      try {
-        fs.rmSync(path.join(dir, entry), { force: true, maxRetries: 5, retryDelay: 50 });
-      } catch {
-        /* fall through to the directory remove below */
-      }
-    }
-    fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
-  } catch (error) {
-    console.warn(`[test-chart-audit-pipeline] could not remove temp dir ${dir}: ${(error as Error).message}`);
+  if (!fs.existsSync(dir)) return;
+  for (const entry of fs.readdirSync(dir)) {
+    fs.rmSync(path.join(dir, entry), { force: true, maxRetries: 10, retryDelay: 100 });
   }
+  fs.rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
 }
 
 try {
@@ -311,36 +340,71 @@ try {
     const before = (claimed.prepare("SELECT COUNT(*) AS n FROM audit_runs").get() as { n: number }).n;
     claimed.close();
 
+    // Spawn the runner as a DIRECT node child, with no shell.
+    //
+    // process.execArgv carries the tsx loader flags this suite is already
+    // running under (--require .../preflight.cjs --import .../loader.mjs), so
+    // reusing them runs the TypeScript runner without npx and without cmd.exe.
+    // That matters for correctness, not tidiness: with a shell in between,
+    // killing the child kills only the shell.
+    //
     // The database path travels in QUERY_LOG_DB_PATH -- which resolveDbPath()
-    // already honours -- rather than as an argv entry. `shell: true` is needed
-    // for npx.cmd on Windows and concatenates rather than escapes its
-    // arguments, so a temp path containing a space (os.tmpdir() under a user
-    // profile with a space in the name) would otherwise split. Every remaining
-    // argument is a repo-internal, space-free path.
-    const child = spawn(npxBin, ["tsx", path.join(repoRoot, "scripts", "run-chart-audit.ts")], {
+    // already honours -- so no argument can be split by a path containing a
+    // space.
+    assert.ok(
+      process.execArgv.some((flag) => /tsx/.test(flag)),
+      "this suite must run under tsx (npm test / npx tsx) so the child can inherit its loader"
+    );
+    const child = spawn(process.execPath, [...process.execArgv, path.join(repoRoot, "scripts", "run-chart-audit.ts")], {
       cwd: repoRoot,
       env: { ...process.env, QUERY_LOG_DB_PATH: dbPath, CHART_AUDIT_TEST_PAUSE_MS: "15000" },
       stdio: "ignore",
-      shell: process.platform === "win32",
+      // A process group on POSIX so the whole group can be signalled; Windows
+      // uses taskkill /T instead.
+      detached: process.platform !== "win32",
     });
 
     // Wait for the child's own claim to land, then kill it mid-run.
+    //
+    // Under a loaded full-suite run, node startup plus tsx transpilation can
+    // take seconds, so the deadline is generous. If the child dies before
+    // claiming, stop waiting immediately and say so -- spinning to the deadline
+    // and then reporting "no row" would hide the real cause (a child that
+    // failed to start) behind a timeout.
     const deadline = Date.now() + 60_000;
     let claimedRunId: number | null = null;
+    let childExitedEarly = false;
     while (Date.now() < deadline && claimedRunId === null) {
       const poll = new Database(dbPath, { readonly: true });
       const row = poll.prepare("SELECT id FROM audit_runs WHERE status = 'running' ORDER BY id DESC LIMIT 1").get() as
         | { id: number }
         | undefined;
       poll.close();
-      if (row) claimedRunId = row.id;
-      else sleepSync(100);
+      if (row) {
+        claimedRunId = row.id;
+      } else if (child.pid && !processAlive(child.pid)) {
+        childExitedEarly = true;
+        break;
+      } else {
+        sleepSync(100);
+      }
     }
-    assert.notEqual(claimedRunId, null, "the runner must claim a 'running' row before it starts auditing");
+    assert.equal(
+      childExitedEarly,
+      false,
+      `the spawned runner exited before claiming a row (exit=${child.exitCode}, signal=${child.signalCode}); ` +
+        "it failed to start rather than being interrupted"
+    );
+    assert.notEqual(
+      claimedRunId,
+      null,
+      `the runner must claim a 'running' row before auditing; none appeared within 60s (child alive=${child.pid ? processAlive(child.pid) : "no pid"})`
+    );
 
-    child.kill("SIGKILL");
-    // Give the OS a moment to reap it; the row must be unaffected either way.
-    sleepSync(500);
+    // Kill the whole tree and block until the pid is gone. Inspecting the row
+    // while the auditor might still be running would let a momentarily-'running'
+    // row pass as proof of a durable interrupted state.
+    killTreeAndWait(child);
 
     const after = new Database(dbPath, { readonly: true });
     const rows = (after.prepare("SELECT COUNT(*) AS n FROM audit_runs").get() as { n: number }).n;
