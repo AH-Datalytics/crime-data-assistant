@@ -692,7 +692,13 @@ export async function POST(req: NextRequest) {
       const periodGroup = wantsMonthly ? "i.year, i.month" : "i.year";
       const periodOrder = wantsMonthly ? "i.year, i.month" : "i.year";
       if (wantsMonthly) whereClauses.push("i.month IS NOT NULL");
-      const shootingContract = runContractValidation(`${withClause}SELECT ${periodSelect}, ${selectPlace}COUNT(*) AS fatal_shootings FROM incidents i ${joinClauses} WHERE ${whereClauses.join(" AND ")} GROUP BY ${periodGroup}${groupPlace} ORDER BY ${periodOrder}${orderPlace} LIMIT 1000`);
+      // Held in a variable so the derivation can be sealed from what the PLANNER
+      // emitted. Sealing from shootingContract.sql -- the post-validation string --
+      // would fingerprint the executed SQL against itself and prove nothing, which is
+      // exactly the tautology the token exists to avoid. The contract validator can
+      // rewrite this query, and that rewrite is what must remain detectable.
+      const plannedShootingSql = `${withClause}SELECT ${periodSelect}, ${selectPlace}COUNT(*) AS fatal_shootings FROM incidents i ${joinClauses} WHERE ${whereClauses.join(" AND ")} GROUP BY ${periodGroup}${groupPlace} ORDER BY ${periodOrder}${orderPlace} LIMIT 1000`;
+      const shootingContract = runContractValidation(plannedShootingSql);
       const shootingContractFailure = contractFailureResponse(shootingContract, `contract_deterministic_shooting_failure:${shootingContract.enforced.join(",")}`, ["deterministic-shooting"]);
       if (shootingContractFailure) return shootingContractFailure;
       const sql = shootingContract.sql;
@@ -738,7 +744,7 @@ export async function POST(req: NextRequest) {
 
         const displayTitle = normalizeShrAgencyText(title);
         const chartConfig = applyChartCustomizations({ type: "line", xAxis: wantsMonthly ? "month" : "year", yAxis: ["fatal_shootings"], yAxisLabel: "Fatal Shootings", title: displayTitle }, question);
-        const shootingProof = finalizeExit({ intendedAction: rows.length > 0 ? "answer" : "decline_data", sql, rows, columns, derivation: sealPlanDerivation("deterministic-shooting", sql), planFamily: "deterministic-shooting", guardrails: detGuardrails, returnedEntities: returnedEntityKeys(rows), narrative: totalExplanation, hasChart: true, db });
+        const shootingProof = finalizeExit({ intendedAction: rows.length > 0 ? "answer" : "decline_data", sql, rows, columns, derivation: sealPlanDerivation("deterministic-shooting", plannedShootingSql), planFamily: "deterministic-shooting", guardrails: detGuardrails, returnedEntities: returnedEntityKeys(rows), narrative: totalExplanation, hasChart: true, db });
         writeLog(question, sql, rows.length, null, Date.now() - start, totalExplanation, "shr", detGuardrails, "deterministic", sessionId, serializeChartConfigForLog(chartConfig, columns.slice()), shootingProof);
         return jsonResp(emitFactualPayload(shootingProof, attachChartAuditToPayload({
           success: true, question, sql, explanation: totalExplanation,

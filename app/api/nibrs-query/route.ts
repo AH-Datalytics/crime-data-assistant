@@ -345,6 +345,13 @@ export async function POST(req: NextRequest) {
       ? followupPlan.reconstructedQuestion
       : question;
     const capabilityStart = Date.now();
+    // Every exit from here to the guardrail reconstruction below -- capability
+    // override, completeness, source switch, geo clarification, county scope -- runs
+    // BEFORE guardrailQuestion exists. They were therefore reasoning about the raw
+    // question, so a follow-up fragment ("just clearances by type") gave the proof
+    // layer no entities and silently lost its completeness check on those paths.
+    // capabilityQuestion is the reconstruction available at this point.
+    proofQuestion = capabilityQuestion;
     const capabilityOverride = detectNibrsCapabilityOverride(capabilityQuestion);
     if (capabilityOverride) {
       const executionMs = Date.now() - capabilityStart;
@@ -561,7 +568,7 @@ export async function POST(req: NextRequest) {
           deterministicProof
         );
 
-        return jsonResp(emitFactualPayload(deterministicProof, emitFactualPayload(deterministicProof, attachChartAuditToPayload({
+        return jsonResp(emitFactualPayload(deterministicProof, attachChartAuditToPayload({
           success: true,
           question,
           sql: deterministicQuery.sql,
@@ -574,7 +581,7 @@ export async function POST(req: NextRequest) {
           chartConfig,
           chartMeta: { source: "FBI NIBRS", agencyCount: 0, population: null },
           executionTimeMs: executionMs,
-        } as QueryResponse, { source: "nibrs", requestId: chartAuditRequestId, queryLogId: chartAuditQueryLogId }))));
+        } as QueryResponse, { source: "nibrs", requestId: chartAuditRequestId, queryLogId: chartAuditQueryLogId })));
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         writeNibrsLog(
@@ -1554,7 +1561,10 @@ export async function POST(req: NextRequest) {
     // Model-authored: no derivation is sealed, so this cannot satisfy the contract.
     // Recorded honestly -- that asymmetry is the migration measurement (§10).
     const finalization = finalizeExit({
-      intendedAction: "answer",
+      // An empty result asserts no facts, so it is not an `answer`. decline_data
+      // rather than decline_capability: the query ran and the source returned
+      // nothing, which is a statement about the data, not about our path.
+      intendedAction: rows.length > 0 ? "answer" : "decline_data",
       sql,
       rows,
       columns,
