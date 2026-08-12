@@ -131,7 +131,11 @@ console.log("\n3. Every chart-bearing log path captures the config");
     { route: "current", label: "historical city change deterministic", needle: /serializeChartConfigForLog\(rows\.length > 0 \? historicalCityChange\.chartConfig : null, columns\)/ },
     { route: "current", label: "metadata coverage", needle: /serializeChartConfigForLog\(metadata\.chartConfig/ },
     { route: "nibrs", label: "model path", needle: /serializeChartConfigForLog\(chartConfig, columns\)/ },
-    { route: "nibrs", label: "deterministic path", needle: /serializeChartConfigForLog\(chartConfig, columns\)\s*\n?\s*\)/ },
+    // Keyed on the multi-line call shape (the capture on its own indented line) rather
+    // than on the closing paren that used to follow it. Stage 1 appends proof arguments
+    // after the chart capture, so "followed by )" stopped distinguishing the
+    // deterministic site from the single-line model call without the capture changing.
+    { route: "nibrs", label: "deterministic path", needle: /\n\s+serializeChartConfigForLog\(chartConfig, columns\)[,)]/ },
     { route: "shr", label: "model path", needle: /serializeChartConfigForLog\(chartConfig, columns\)/ },
     { route: "hate_crime", label: "model path", needle: /serializeChartConfigForLog\(chartConfig, columns\)/ },
   ];

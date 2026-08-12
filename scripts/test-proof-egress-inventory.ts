@@ -35,10 +35,19 @@ function check(name: string, fn: () => void) {
   }
 }
 
-/** Routes whose factual exits are under the proof contract as of this stage. */
-const INTEGRATED_ROUTES = ["app/api/query/route.ts", "app/api/hc-query/route.ts"];
-/** Routes still to be integrated. Listed so the suite fails loudly when one lands. */
-const PENDING_ROUTES = ["app/api/shr-query/route.ts", "app/api/nibrs-query/route.ts"];
+/** Every route whose factual exits are under the proof contract. All four, as of Stage 1. */
+const INTEGRATED_ROUTES = [
+  "app/api/query/route.ts",
+  "app/api/hc-query/route.ts",
+  "app/api/shr-query/route.ts",
+  "app/api/nibrs-query/route.ts",
+];
+/** The three JSON routes, whose chokepoint is jsonResp rather than sseEvent. */
+const JSON_ROUTES = [
+  "app/api/hc-query/route.ts",
+  "app/api/shr-query/route.ts",
+  "app/api/nibrs-query/route.ts",
+];
 
 function read(file: string): string {
   return fs.readFileSync(file, "utf8");
@@ -67,13 +76,20 @@ console.log("\nthe chokepoint is type-enforced, not conventional");
     );
   });
 
-  check("jsonResp accepts factual content only as a SealedPayload", () => {
-    const source = read("app/api/hc-query/route.ts");
-    assert.match(
-      source,
-      /function jsonResp\(data:\s*SealedPayload</,
-      "jsonResp must narrow its factual parameter to SealedPayload",
-    );
+  check("every JSON route's jsonResp accepts factual content only as a SealedPayload", () => {
+    for (const file of JSON_ROUTES) {
+      assert.match(
+        read(file),
+        /function jsonResp\(data:\s*SealedPayload</,
+        `${file}: jsonResp must narrow its factual parameter to SealedPayload`,
+      );
+    }
+  });
+
+  check("the NIBRS route no longer accepts `unknown`", () => {
+    // It was `function jsonResp(data: unknown, ...)`, which accepted anything at all --
+    // so narrowing there created the gate rather than merely tightening it.
+    assert.doesNotMatch(read("app/api/nibrs-query/route.ts"), /function jsonResp\(data: unknown/);
   });
 
   check("emitFactualPayload is the only producer of a SealedPayload", () => {
@@ -121,11 +137,30 @@ console.log("\nno factual exit constructs a payload without the wrap");
     assert.strictEqual(raw, 0, `${raw} sseEvent call(s) build a result event without emitFactualPayload`);
   });
 
-  check("no jsonResp receives a raw success payload", () => {
-    for (const file of INTEGRATED_ROUTES.filter((f) => f.includes("hc-query"))) {
+  check("no jsonResp in any JSON route receives a raw success payload", () => {
+    for (const file of JSON_ROUTES) {
       const source = read(file);
       const raw = unwrappedFactualExits(source, "jsonResp", /success:\s*true/);
       assert.strictEqual(raw, 0, `${file}: ${raw} jsonResp call(s) build a success payload without emitFactualPayload`);
+    }
+  });
+
+  check("every route tracks the reconstructed follow-up question for proof", () => {
+    for (const file of INTEGRATED_ROUTES) {
+      const source = read(file);
+      assert.match(source, /let proofQuestion = question;/, `${file} must track an effective question`);
+      assert.match(source, /question: proofQuestion,/, `${file} must pass it to finalizeProof`);
+      assert.match(source, /proofQuestion = guardrailQuestion;/, `${file} must adopt the reconstruction`);
+    }
+  });
+
+  check("every route's log closure carries the proof columns", () => {
+    for (const file of INTEGRATED_ROUTES) {
+      assert.match(
+        read(file),
+        /proofLogFields\(proof\)/,
+        `${file}: the log closure must persist proof columns`,
+      );
     }
   });
 
@@ -255,20 +290,42 @@ console.log("\nmodel_response is captured outside NIBRS");
   });
 }
 
-console.log("\npending routes are tracked, not forgotten");
+console.log("\nall four sources are integrated");
 {
-  check("SHR and NIBRS are still un-integrated and known to be", () => {
-    // This suite fails deliberately once either route lands, forcing its exits into
-    // the inventory above rather than letting them arrive unasserted.
-    for (const file of PENDING_ROUTES) {
-      const source = read(file);
-      const integrated = source.includes("emitFactualPayload");
-      assert.strictEqual(
-        integrated,
-        false,
-        `${file} now uses the gate — add it to INTEGRATED_ROUTES and assert its exits here`,
+  check("no route is left outside the contract", () => {
+    // Replaces the pending-route tracker that guarded SHR and NIBRS while they were
+    // un-integrated. Every route directory with a POST handler must now be listed
+    // above, so a NEW source cannot be added without its exits being asserted here.
+    const routeFiles = fs
+      .readdirSync("app/api", { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => `app/api/${entry.name}/route.ts`)
+      .filter((file) => fs.existsSync(file))
+      .filter((file) => /sanitizeUserFacingNarrative/.test(read(file)));
+    for (const file of routeFiles) {
+      assert.ok(
+        INTEGRATED_ROUTES.includes(file),
+        `${file} answers questions but is not in INTEGRATED_ROUTES; add it and assert its exits`,
       );
     }
+    assert.strictEqual(routeFiles.length, INTEGRATED_ROUTES.length);
+  });
+
+  check("SHR and NIBRS seal derivations for their deterministic planners", () => {
+    // Both routes run their planner's SQL through the contract validator, which may
+    // rewrite it before execution -- exactly the case the token exists to detect.
+    assert.match(read("app/api/shr-query/route.ts"), /sealPlanDerivation\("deterministic-murder"/);
+    assert.match(read("app/api/shr-query/route.ts"), /sealPlanDerivation\("deterministic-shooting"/);
+    assert.match(read("app/api/nibrs-query/route.ts"), /sealPlanDerivation\(deterministicQuery\.guardrail/);
+  });
+
+  check("SHR captures raw no-SQL model text before the server template", () => {
+    const source = read("app/api/shr-query/route.ts");
+    const capture = source.indexOf("const rawNoSqlText = claude.explanation || null;");
+    const template = source.indexOf('buildNoSqlFallbackMessage("shr")');
+    assert.ok(capture > 0 && template > 0, "both sites must exist");
+    assert.ok(capture < template, "the raw text must be captured before it is replaced");
+    assert.match(source, /boundedModelResponseJson\(rawNoSqlText, null\)/);
   });
 }
 

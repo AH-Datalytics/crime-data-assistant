@@ -25,7 +25,17 @@ import { checkSingleRowTrend } from "@/lib/single-row-trend";
 import { parseRoutingLogMeta } from "@/lib/routing-log-meta";
 import { answerMetadataQuestion } from "@/lib/metadata-coverage";
 import { validateTablesForTab } from "@/lib/table-allowlist";
-import { alignTitleYearRange, applyResultDisclosures, missingLowerBoundNote } from "@/lib/result-disclosure";
+import { alignTitleYearRange, applyResultDisclosures, missingLowerBoundNote, returnedEntityKeys } from "@/lib/result-disclosure";
+import {
+  emitFactualPayload,
+  finalizeProof,
+  proofLogFields,
+  type ProofFinalization,
+  type ProofFinalizationInput,
+  type SealedPayload,
+} from "@/lib/proof-finalize";
+import { sealPlanDerivation } from "@/lib/plan-derivation";
+import type { DeliveryAction } from "@/lib/proof-contract";
 import { validateGrain } from "@/lib/requested-grain";
 import { buildCompletenessAnswer, detectCompletenessQuestion, loadCompletenessRows } from "@/lib/completeness-intent";
 import { normalizeHistoryForTab } from "@/lib/chat-history";
@@ -72,7 +82,20 @@ export async function OPTIONS() {
   return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
 }
 
-function jsonResp(data: unknown, status = 200) {
+/**
+ * THE CHOKEPOINT. Factual content is accepted only as a SealedPayload, which
+ * lib/proof-finalize's emitFactualPayload() alone can produce; a QueryError
+ * (success: false) asserts no facts and needs no proof. An unwrapped factual exit is
+ * a compile error rather than a review finding.
+ *
+ * This route's signature was `unknown`, which accepted anything at all -- so the
+ * narrowing here is what creates the gate, not merely tightens it.
+ */
+// `object` rather than Record<string, unknown>: this route's payloads are typed as
+// QueryResponse, and an interface has no index signature. The brand is what matters
+// here -- widening the shape does not weaken the gate, since only
+// emitFactualPayload() can produce a SealedPayload of any shape.
+function jsonResp(data: SealedPayload<object> | QueryError, status = 200) {
   const payload: Record<string, any> = { ...((data as Record<string, any>) || {}) };
   if (typeof payload.explanation === 'string' || typeof payload.title === 'string') {
     const safe = sanitizeUserFacingNarrative(payload.explanation, payload.title);
@@ -226,6 +249,33 @@ export async function POST(req: NextRequest) {
     let retryCount = 0;
     let scaffoldStripped = false;
     const routingMeta = parseRoutingLogMeta(body);
+
+    /**
+     * The question the proof layer reasons about: the RECONSTRUCTED one for follow-ups.
+     * query_log keeps the RAW question so the reviewer sees what the user typed.
+     */
+    let proofQuestion = question;
+
+    /**
+     * Proof finalization for one terminal exit of this route.
+     *
+     * This response is atomic, so there is no first-event ordering hazard --
+     * applyResultDisclosures() already runs before delivery here (handoff §4).
+     */
+    const finalizeExit = (
+      opts: Partial<ProofFinalizationInput> & { intendedAction: DeliveryAction },
+    ): ProofFinalization =>
+      finalizeProof({
+        sourceId: "nibrs",
+        question: proofQuestion,
+        sql: null,
+        rows: [],
+        columns: [],
+        truncated: false,
+        planFamily: null,
+        ...opts,
+      });
+
     const writeNibrsLog = (
       q: string,
       sqlText: string | null,
@@ -239,9 +289,11 @@ export async function POST(req: NextRequest) {
       /** Phase 3 chart capture; pre-serialized via the allowlist in lib/chart-config-log. */
       chartConfigJson: string | null = null,
       /** Bounded raw model text on no-SQL failures; diagnostic only, never user-visible. */
-      modelResponseJson: string | null = null
+      modelResponseJson: string | null = null,
+      /** Proof finalization for this exit; null yields baseline-identical columns. */
+      proof: ProofFinalization | null = null
     ) => {
-      chartAuditQueryLogId = logNibrsQuery(q, sqlText, rowCount, logError, ms, logResponse, guardrails, model, sid, routingMeta, chartConfigJson, modelResponseJson, chartAuditRequestId);
+      chartAuditQueryLogId = logNibrsQuery(q, sqlText, rowCount, logError, ms, logResponse, guardrails, model, sid, routingMeta, chartConfigJson, modelResponseJson, chartAuditRequestId, proofLogFields(proof));
       return chartAuditQueryLogId;
     };
 
@@ -296,8 +348,9 @@ export async function POST(req: NextRequest) {
     const capabilityOverride = detectNibrsCapabilityOverride(capabilityQuestion);
     if (capabilityOverride) {
       const executionMs = Date.now() - capabilityStart;
-      writeNibrsLog(question, null, 0, null, executionMs, capabilityOverride.explanation, [capabilityOverride.guardrail], "deterministic", sessionId);
-      return jsonResp({
+      const capabilityProof = finalizeExit({ intendedAction: "decline_capability", planFamily: capabilityOverride.guardrail, narrative: capabilityOverride.explanation });
+      writeNibrsLog(question, null, 0, null, executionMs, capabilityOverride.explanation, [capabilityOverride.guardrail], "deterministic", sessionId, null, null, capabilityProof);
+      return jsonResp(emitFactualPayload(capabilityProof, {
         success: true,
         question,
         sql: null as unknown as string,
@@ -310,32 +363,35 @@ export async function POST(req: NextRequest) {
         chartConfig: null,
         chartMeta: { source: "FBI NIBRS", agencyCount: 0, population: null },
         executionTimeMs: executionMs,
-      } as QueryResponse);
+      } as QueryResponse));
     }
     const completenessIntent = detectCompletenessQuestion(question);
     if (completenessIntent) {
       const completenessAnswer = buildCompletenessAnswer("nibrs", loadCompletenessRows("nibrs", getNibrsDb()), new Date().getFullYear(), completenessIntent.year);
       const executionMs = Date.now() - routeStart;
-      writeNibrsLog(question, null, 0, null, executionMs, completenessAnswer, ["completeness-deterministic"], "deterministic", sessionId);
-      return jsonResp({ success: true, question, sql: null as unknown as string, explanation: completenessAnswer, title: "Data completeness", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: executionMs } as QueryResponse);
+      const completenessProof = finalizeExit({ intendedAction: "answer", planFamily: "completeness-deterministic", guardrails: ["completeness-deterministic"], narrative: completenessAnswer });
+      writeNibrsLog(question, null, 0, null, executionMs, completenessAnswer, ["completeness-deterministic"], "deterministic", sessionId, null, null, completenessProof);
+      return jsonResp(emitFactualPayload(completenessProof, { success: true, question, sql: null as unknown as string, explanation: completenessAnswer, title: "Data completeness", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: executionMs } as QueryResponse));
     }
     if (plannerMode === "authoritative" && followupPlan?.sourceChanged) {
       const executionMs = Date.now() - routeStart;
       const explanation = "This follow-up is a better fit for the " + followupPlan.source + " source. Rerunning it there as: " + followupPlan.reconstructedQuestion;
-      writeNibrsLog(question, null, 0, null, executionMs, explanation, ["followup-source-switch"], "followup-planner", sessionId);
-      return jsonResp({
+      const switchProof = finalizeExit({ intendedAction: "clarify", planFamily: "followup-source-switch", narrative: explanation });
+      writeNibrsLog(question, null, 0, null, executionMs, explanation, ["followup-source-switch"], "followup-planner", sessionId, null, null, switchProof);
+      return jsonResp(emitFactualPayload(switchProof, {
         success: true, question, sql: null, explanation, title: "Source switch", columns: [], rows: [],
         rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: executionMs,
         sourceSwitch: { source: followupPlan.source, question: followupPlan.reconstructedQuestion },
-      });
+      }));
     }
     const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing")
       ? (followupPlan.chartOnly ? null : getBlockingGeoClarification(followupPlan.reconstructedQuestion))
       : getBlockingGeoClarification(question);
     if (geoClarification) {
       const executionMs = Date.now() - routeStart;
-      writeNibrsLog(question, null, 0, null, executionMs, geoClarification.explanation, [`geo:${geoClarification.issue.id}`], "deterministic", sessionId);
-      return jsonResp({
+      const geoProof = finalizeExit({ intendedAction: "clarify", planFamily: `geo:${geoClarification.issue.id}`, narrative: geoClarification.explanation });
+      writeNibrsLog(question, null, 0, null, executionMs, geoClarification.explanation, [`geo:${geoClarification.issue.id}`], "deterministic", sessionId, null, null, geoProof);
+      return jsonResp(emitFactualPayload(geoProof, {
         success: true,
         question,
         sql: null as unknown as string,
@@ -348,14 +404,15 @@ export async function POST(req: NextRequest) {
         chartConfig: null,
         chartMeta: null,
         executionTimeMs: executionMs,
-      } as QueryResponse);
+      } as QueryResponse));
     }
 
     const countyScope = planSaysQueryBearing ? null : getCountyScopeClarification(question, body?.history);
     if (countyScope) {
       const executionMs = Date.now() - routeStart;
-      writeNibrsLog(question, null, 0, null, executionMs, countyScope.explanation, [`geo:${countyScope.id}`], "deterministic", sessionId);
-      return jsonResp({
+      const countyProof = finalizeExit({ intendedAction: "clarify", planFamily: `geo:${countyScope.id}`, narrative: countyScope.explanation });
+      writeNibrsLog(question, null, 0, null, executionMs, countyScope.explanation, [`geo:${countyScope.id}`], "deterministic", sessionId, null, null, countyProof);
+      return jsonResp(emitFactualPayload(countyProof, {
         success: true,
         question,
         sql: null as unknown as string,
@@ -368,7 +425,7 @@ export async function POST(req: NextRequest) {
         chartConfig: null,
         chartMeta: null,
         executionTimeMs: executionMs,
-      } as QueryResponse);
+      } as QueryResponse));
     }
 
     const history = normalizeHistoryForTab(body?.history, "nibrs");
@@ -378,6 +435,9 @@ export async function POST(req: NextRequest) {
     const guardrailQuestion = (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing")
       ? followupPlan.reconstructedQuestion
       : (followupTransform?.contextQuestion ?? question);
+    // Proof reasons about the reconstructed question from here on; a bare follow-up
+    // fragment names no entities and would silently lose its completeness check.
+    proofQuestion = guardrailQuestion;
     const basePromptHistory = followupTransform
       ? [...history, { role: "user" as const, content: followupTransform.instruction }]
       : history;
@@ -404,8 +464,9 @@ export async function POST(req: NextRequest) {
     if (nibrsPlan.kind === "blocked" && deterministicResolution) {
       const executionMs = Date.now() - routeStart;
       const explanation = nibrsPlan.explanation;
-      writeNibrsLog(question, null, 0, null, executionMs, explanation, ["nibrs-place-resolution-block"], "deterministic", sessionId);
-      return jsonResp({
+      const placeBlockProof = finalizeExit({ intendedAction: "clarify", planFamily: "nibrs-place-resolution-block", narrative: explanation });
+      writeNibrsLog(question, null, 0, null, executionMs, explanation, ["nibrs-place-resolution-block"], "deterministic", sessionId, null, null, placeBlockProof);
+      return jsonResp(emitFactualPayload(placeBlockProof, {
         success: true,
         question,
         sql: null as unknown as string,
@@ -418,13 +479,14 @@ export async function POST(req: NextRequest) {
         chartConfig: null,
         chartMeta: null,
         executionTimeMs: executionMs,
-      } as QueryResponse);
+      } as QueryResponse));
     }
 
     if (nibrsPlan.kind === "unavailable") {
       const executionMs = Date.now() - routeStart;
-      writeNibrsLog(question, null, 0, null, executionMs, nibrsPlan.explanation, ["nibrs-juvenile-offender-incident-summary-unavailable"], "deterministic", sessionId);
-      return jsonResp({
+      const juvenileProof = finalizeExit({ intendedAction: "decline_capability", planFamily: "nibrs-juvenile-offender-incident-summary-unavailable", narrative: nibrsPlan.explanation });
+      writeNibrsLog(question, null, 0, null, executionMs, nibrsPlan.explanation, ["nibrs-juvenile-offender-incident-summary-unavailable"], "deterministic", sessionId, null, null, juvenileProof);
+      return jsonResp(emitFactualPayload(juvenileProof, {
         success: true,
         question,
         sql: null as unknown as string,
@@ -437,7 +499,7 @@ export async function POST(req: NextRequest) {
         chartConfig: null,
         chartMeta: null,
         executionTimeMs: executionMs,
-      } as QueryResponse);
+      } as QueryResponse));
     }
 
     if (nibrsPlan.kind === "deterministic") {
@@ -468,6 +530,19 @@ export async function POST(req: NextRequest) {
         deterministicQuery.title = alignTitleYearRange(deterministicQuery.title, rows);
         const chartConfig = buildNibrsChartConfig(deterministicQuery, columns, rows, question);
 
+        const deterministicProof = finalizeExit({
+          intendedAction: rows.length > 0 ? "answer" : "decline_data",
+          sql: deterministicQuery.sql,
+          rows,
+          columns,
+          truncated: rows.length >= 1000,
+          derivation: sealPlanDerivation(deterministicQuery.guardrail, deterministicQuery.sql),
+          planFamily: deterministicQuery.guardrail,
+          guardrails: deterministicFiredGuardrails,
+          returnedEntities: returnedEntityKeys(rows),
+          narrative: explanation,
+          hasChart: Boolean(chartConfig),
+        });
         writeNibrsLog(
           question,
           deterministicQuery.sql,
@@ -481,10 +556,12 @@ export async function POST(req: NextRequest) {
           // Deterministic answers render charts too, so they need the same capture
           // as the model path -- otherwise chart auditing has a blind spot exactly
           // where the answers are most confidently presented.
-          serializeChartConfigForLog(chartConfig, columns)
+          serializeChartConfigForLog(chartConfig, columns),
+          null,
+          deterministicProof
         );
 
-        return jsonResp(attachChartAuditToPayload({
+        return jsonResp(emitFactualPayload(deterministicProof, emitFactualPayload(deterministicProof, attachChartAuditToPayload({
           success: true,
           question,
           sql: deterministicQuery.sql,
@@ -497,7 +574,7 @@ export async function POST(req: NextRequest) {
           chartConfig,
           chartMeta: { source: "FBI NIBRS", agencyCount: 0, population: null },
           executionTimeMs: executionMs,
-        } as QueryResponse, { source: "nibrs", requestId: chartAuditRequestId, queryLogId: chartAuditQueryLogId }));
+        } as QueryResponse, { source: "nibrs", requestId: chartAuditRequestId, queryLogId: chartAuditQueryLogId }))));
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         writeNibrsLog(
@@ -509,7 +586,10 @@ export async function POST(req: NextRequest) {
           null,
           deterministicGuardrails(deterministicQuery.guardrail),
           "deterministic",
-          sessionId
+          sessionId,
+          null,
+          null,
+          finalizeExit({ intendedAction: "decline_capability", sql: deterministicQuery.sql, planFamily: deterministicQuery.guardrail })
         );
         if (msg.includes("timed out")) {
           return jsonResp(
@@ -525,8 +605,9 @@ export async function POST(req: NextRequest) {
     const metadata = planSaysQueryBearing ? null : answerMetadataQuestion("nibrs", question, getNibrsDb());
     if (metadata) {
       const executionMs = Date.now() - metadataStart;
-      writeNibrsLog(question, metadata.sql, metadata.rowCount, null, executionMs, metadata.explanation, ["deterministic-metadata", "metadata-coverage-answer"], "deterministic", sessionId, serializeChartConfigForLog(metadata.chartConfig, metadata.columns));
-      return jsonResp(attachChartAuditToPayload({
+      const metadataProof = finalizeExit({ intendedAction: "answer", sql: metadata.sql, rows: metadata.rows ?? [], columns: metadata.columns ?? [], truncated: Boolean(metadata.truncated), derivation: metadata.sql ? sealPlanDerivation("metadata-coverage-answer", metadata.sql) : null, planFamily: "metadata-coverage-answer", guardrails: ["deterministic-metadata", "metadata-coverage-answer"], hasChart: Boolean(metadata.chartConfig), narrative: metadata.explanation });
+      writeNibrsLog(question, metadata.sql, metadata.rowCount, null, executionMs, metadata.explanation, ["deterministic-metadata", "metadata-coverage-answer"], "deterministic", sessionId, serializeChartConfigForLog(metadata.chartConfig, metadata.columns), null, metadataProof);
+      return jsonResp(emitFactualPayload(metadataProof, attachChartAuditToPayload({
         success: true,
         question,
         sql: metadata.sql,
@@ -539,7 +620,7 @@ export async function POST(req: NextRequest) {
         chartConfig: metadata.chartConfig,
         chartMeta: metadata.chartMeta,
         executionTimeMs: executionMs,
-      } as QueryResponse, { source: "nibrs", requestId: chartAuditRequestId, queryLogId: chartAuditQueryLogId }));
+      } as QueryResponse, { source: "nibrs", requestId: chartAuditRequestId, queryLogId: chartAuditQueryLogId })));
     }
 
     // Step 1: Translate to SQL via Claude (with conversation history for context)
@@ -659,8 +740,9 @@ export async function POST(req: NextRequest) {
         if (internalLeak) { claude.explanation = INTERNAL_LEAK_SAFE_MESSAGE; claude.title = "Results"; }
         if (!serverAuthoredNoSql && !internalLeak) claude.explanation = buildNoSqlFallbackMessage("nibrs");
         claude.explanation = neutralizeUnverifiedAvailabilityClaim(claude.explanation, "NIBRS");
-        writeNibrsLog(question, null, 0, null, Date.now() - claudeStart, claude.explanation, internalLeak ? ["internal-leak-firewall"] : ["no-sql-server-template"], activeModelLabel, sessionId, null, boundedModelResponseJson(rawFirstNoSql, rawRetryNoSql));
-        return jsonResp({
+        const noSqlProof = finalizeExit({ intendedAction: "decline_capability", guardrails: internalLeak ? ["internal-leak-firewall"] : ["no-sql-server-template"], narrative: claude.explanation });
+        writeNibrsLog(question, null, 0, null, Date.now() - claudeStart, claude.explanation, internalLeak ? ["internal-leak-firewall"] : ["no-sql-server-template"], activeModelLabel, sessionId, null, boundedModelResponseJson(rawFirstNoSql, rawRetryNoSql), noSqlProof);
+        return jsonResp(emitFactualPayload(noSqlProof, {
           success: true,
           question,
           sql: "",
@@ -673,7 +755,7 @@ export async function POST(req: NextRequest) {
           chartConfig: null,
           chartMeta: null,
           executionTimeMs: 0,
-        } as QueryResponse);
+        } as QueryResponse));
       }
     }
 
@@ -754,8 +836,9 @@ export async function POST(req: NextRequest) {
     const contractFailureResponse = (contractResult: QueryContractSqlValidation, logError: string) => {
       const msg = queryContractFailureMessage(contractResult);
       if (!msg) return null;
-      writeNibrsLog(question, contractResult.sql, 0, logError, Date.now() - claudeStart, msg, [...guardrailResult.fired, ...routeGuardrailsFired], activeModelLabel, sessionId);
-      return jsonResp({
+      const contractProof = finalizeExit({ intendedAction: "decline_capability", sql: contractResult.sql, guardrails: [...guardrailResult.fired, ...routeGuardrailsFired] });
+      writeNibrsLog(question, contractResult.sql, 0, logError, Date.now() - claudeStart, msg, [...guardrailResult.fired, ...routeGuardrailsFired], activeModelLabel, sessionId, null, null, contractProof);
+      return jsonResp(emitFactualPayload(contractProof, {
         success: true,
         question,
         sql: null as unknown as string,
@@ -768,7 +851,7 @@ export async function POST(req: NextRequest) {
         chartConfig: null,
         chartMeta: null,
         executionTimeMs: Date.now() - claudeStart,
-      } as QueryResponse);
+      } as QueryResponse));
     };
 
     const initialContractResult = runContractValidation(sql, true);
@@ -793,8 +876,9 @@ export async function POST(req: NextRequest) {
     // Hard override — skip retry, return deterministic response
     if (guardrailResult.overrideResponse) {
       const overrideExplanation = guardrailResult.overrideResponse;
-      writeNibrsLog(question, sql, 0, `guardrail_override:${guardrailResult.overrideGuardrail}`, Date.now() - claudeStart, overrideExplanation, guardrailResult.fired, activeModelLabel, sessionId);
-      return jsonResp({
+      const overrideProof = finalizeExit({ intendedAction: "decline_capability", sql, guardrails: guardrailResult.fired, planFamily: guardrailResult.overrideGuardrail ?? null, narrative: overrideExplanation });
+      writeNibrsLog(question, sql, 0, `guardrail_override:${guardrailResult.overrideGuardrail}`, Date.now() - claudeStart, overrideExplanation, guardrailResult.fired, activeModelLabel, sessionId, null, null, overrideProof);
+      return jsonResp(emitFactualPayload(overrideProof, {
         success: true,
         question,
         sql: null as unknown as string,
@@ -807,7 +891,7 @@ export async function POST(req: NextRequest) {
         chartConfig: null,
         chartMeta: null,
         executionTimeMs: Date.now() - claudeStart,
-      } as QueryResponse);
+      } as QueryResponse));
     }
 
     // For NIBRS guardrails that need Claude retry, send all issues at once
@@ -839,36 +923,41 @@ export async function POST(req: NextRequest) {
       // Hard override on second failure
       if (postRetryResult.overrideResponse) {
         const msg = postRetryResult.overrideResponse;
-        writeNibrsLog(question, sql, 0, `guardrail_override:${postRetryResult.overrideGuardrail}`, Date.now() - claudeStart, msg, postRetryResult.fired, activeModelLabel, sessionId);
-        return jsonResp({ success: true, question, sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - claudeStart } as QueryResponse);
+        const postRetryOverrideProof = finalizeExit({ intendedAction: "decline_capability", sql, guardrails: postRetryResult.fired, planFamily: postRetryResult.overrideGuardrail ?? null, narrative: msg });
+        writeNibrsLog(question, sql, 0, `guardrail_override:${postRetryResult.overrideGuardrail}`, Date.now() - claudeStart, msg, postRetryResult.fired, activeModelLabel, sessionId, null, null, postRetryOverrideProof);
+        return jsonResp(emitFactualPayload(postRetryOverrideProof, { success: true, question, sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - claudeStart } as QueryResponse));
       }
       // Rate second-failure block
       const rateStillBad = postRetryResult.fired.some(f => f.includes("rate-no-population"));
       if (rateStillBad && /\b(rates?|per\s*capita|per\s*100)/i.test(question) && !asksForCountsInsteadOfRates(question)) {
         const msg = "I wasn't able to calculate a valid per-capita rate for this query. Try asking for raw counts instead, or use the [Historical Library](/test?tab=historical) tab for state/national rates.";
-        writeNibrsLog(question, sql, 0, "rate_second_failure", Date.now() - claudeStart, msg, postRetryResult.fired, activeModelLabel, sessionId);
-        return jsonResp({ success: true, question, sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - claudeStart } as QueryResponse);
+        const rateFailureProof = finalizeExit({ intendedAction: "decline_capability", sql, guardrails: postRetryResult.fired, planFamily: "rate-no-population", narrative: msg });
+        writeNibrsLog(question, sql, 0, "rate_second_failure", Date.now() - claudeStart, msg, postRetryResult.fired, activeModelLabel, sessionId, null, null, rateFailureProof);
+        return jsonResp(emitFactualPayload(rateFailureProof, { success: true, question, sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - claudeStart } as QueryResponse));
       }
       // Raw table second-failure block — if retry still uses raw tables, block execution
       const rawStillBad = postRetryResult.fired.some(f => f === "nibrs-raw-table-for-counts" || f === "nibrs-raw-victims");
       if (rawStillBad) {
         const msg = "I wasn't able to build a valid query for this question using the available summary tables. The data needed may not be available in a pre-aggregated form. Try rephrasing your question or asking about a specific offense type, city, or time period.";
-        writeNibrsLog(question, sql, 0, "raw_table_second_failure", Date.now() - claudeStart, msg, postRetryResult.fired, activeModelLabel, sessionId);
-        return jsonResp({ success: true, question, sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - claudeStart } as QueryResponse);
+        const rawTableProof = finalizeExit({ intendedAction: "decline_capability", sql, guardrails: postRetryResult.fired, planFamily: "raw-table", narrative: msg });
+        writeNibrsLog(question, sql, 0, "raw_table_second_failure", Date.now() - claudeStart, msg, postRetryResult.fired, activeModelLabel, sessionId, null, null, rawTableProof);
+        return jsonResp(emitFactualPayload(rawTableProof, { success: true, question, sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - claudeStart } as QueryResponse));
       }
       // Resolved-ORI second-failure block — the retried SQL still selects by city
       // name. Running it would return the broadened, wrong-agency result silently.
       const oriStillBad = resolvedOriEnforcementIssue(resolutionPlan, sql);
       if (oriStillBad) {
         const msg = `I matched ${oriStillBad.labels.join(", ")} to specific law-enforcement agencies, but I couldn't build a query that uses them. Rather than fall back to matching agencies by city name — which mixes in unrelated departments that share a mailing city — I stopped. Try asking for fewer cities at once, or one city at a time.`;
-        writeNibrsLog(question, sql, 0, "resolved_ori_second_failure", Date.now() - claudeStart, msg, [...postRetryResult.fired, "nibrs-resolved-ori-enforced"], activeModelLabel, sessionId);
-        return jsonResp({ success: true, question, sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - claudeStart } as QueryResponse);
+        const resolvedOriProof = finalizeExit({ intendedAction: "decline_capability", sql, guardrails: [...postRetryResult.fired, "nibrs-resolved-ori-enforced"], planFamily: "resolved-ori", narrative: msg });
+        writeNibrsLog(question, sql, 0, "resolved_ori_second_failure", Date.now() - claudeStart, msg, [...postRetryResult.fired, "nibrs-resolved-ori-enforced"], activeModelLabel, sessionId, null, null, resolvedOriProof);
+        return jsonResp(emitFactualPayload(resolvedOriProof, { success: true, question, sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - claudeStart } as QueryResponse));
       }
       const orPrecedenceStillBad = postRetryResult.fired.includes("or-and-precedence");
       if (orPrecedenceStillBad) {
         const msg = "I couldn't build a reliable multi-place query after correcting the SQL structure. Try asking for fewer places or restating the comparison.";
-        writeNibrsLog(question, sql, 0, "or_precedence_second_failure", Date.now() - claudeStart, msg, postRetryResult.fired, activeModelLabel, sessionId);
-        return jsonResp({ success: true, question, sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - claudeStart } as QueryResponse);
+        const orPrecedenceProof = finalizeExit({ intendedAction: "decline_capability", sql, guardrails: postRetryResult.fired, planFamily: "or-and-precedence", narrative: msg });
+        writeNibrsLog(question, sql, 0, "or_precedence_second_failure", Date.now() - claudeStart, msg, postRetryResult.fired, activeModelLabel, sessionId, null, null, orPrecedenceProof);
+        return jsonResp(emitFactualPayload(orPrecedenceProof, { success: true, question, sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - claudeStart } as QueryResponse));
       }
       // Geography contract block — city/county-got-state still fires after retry
       const geoContractBad = postRetryResult.fired.some(f =>
@@ -876,13 +965,15 @@ export async function POST(req: NextRequest) {
       );
       if (geoContractBad) {
         const msg = "I couldn't build a reliable query for that specific geography. Try asking for a specific city or state instead.";
-        writeNibrsLog(question, sql, 0, "geography_second_failure", Date.now() - claudeStart, msg, postRetryResult.fired, activeModelLabel, sessionId);
-        return jsonResp({ success: true, question, sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - claudeStart } as QueryResponse);
+        const geographyFailureProof = finalizeExit({ intendedAction: "decline_capability", sql, guardrails: postRetryResult.fired, planFamily: "contract-geography", narrative: msg });
+        writeNibrsLog(question, sql, 0, "geography_second_failure", Date.now() - claudeStart, msg, postRetryResult.fired, activeModelLabel, sessionId, null, null, geographyFailureProof);
+        return jsonResp(emitFactualPayload(geographyFailureProof, { success: true, question, sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - claudeStart } as QueryResponse));
       }
       if (continuousReporterRouteIssue(sql, question)) {
         const msg = "I couldn't build a reliable continuous-reporter query for that request. Try asking for the same offense and year range without the continuous-reporting filter, or narrow it to a specific city or state.";
-        writeNibrsLog(question, sql, 0, "continuous_reporter_second_failure", Date.now() - claudeStart, msg, [...postRetryResult.fired, "nibrs-continuous-reporting-required-route"], activeModelLabel, sessionId);
-        return jsonResp({ success: true, question, sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - claudeStart } as QueryResponse);
+        const continuousReporterProof = finalizeExit({ intendedAction: "decline_capability", sql, guardrails: [...postRetryResult.fired, "nibrs-continuous-reporting-required-route"], planFamily: "continuous-reporting", narrative: msg });
+        writeNibrsLog(question, sql, 0, "continuous_reporter_second_failure", Date.now() - claudeStart, msg, [...postRetryResult.fired, "nibrs-continuous-reporting-required-route"], activeModelLabel, sessionId, null, null, continuousReporterProof);
+        return jsonResp(emitFactualPayload(continuousReporterProof, { success: true, question, sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - claudeStart } as QueryResponse));
       }
       // Apply any post-retry rewrites
       if (postRetryResult.sql !== sql) sql = postRetryResult.sql;
@@ -891,8 +982,9 @@ export async function POST(req: NextRequest) {
       if (postRetryLocalIssues.issues.length > 0) {
         const msg = "I couldn't build a valid query after correcting the SQL structure. Try rephrasing your question or asking for a simpler breakdown.";
         console.log(`[nibrs][sql-guardrails] Still failing after retry: ${postRetryLocalIssues.fired.join(", ")}`);
-        writeNibrsLog(question, sql, 0, `sql_guardrail_second_failure:${postRetryLocalIssues.fired.join(",")}`, Date.now() - claudeStart, msg, [...postRetryResult.fired, ...postRetryLocalIssues.fired], activeModelLabel, sessionId);
-        return jsonResp({ success: true, question, sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - claudeStart } as QueryResponse);
+        const sqlGuardrailProof = finalizeExit({ intendedAction: "decline_capability", sql, guardrails: [...postRetryResult.fired, ...postRetryLocalIssues.fired], planFamily: "sql-guardrail", narrative: msg });
+        writeNibrsLog(question, sql, 0, `sql_guardrail_second_failure:${postRetryLocalIssues.fired.join(",")}`, Date.now() - claudeStart, msg, [...postRetryResult.fired, ...postRetryLocalIssues.fired], activeModelLabel, sessionId, null, null, sqlGuardrailProof);
+        return jsonResp(emitFactualPayload(sqlGuardrailProof, { success: true, question, sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - claudeStart } as QueryResponse));
       }
 
       const postRetryContract = runContractValidation(sql);
@@ -928,15 +1020,17 @@ export async function POST(req: NextRequest) {
               applyRetryMeta(claude, retry);
             } else {
               const msg = "I couldn't build a valid query for the NIBRS database. Try the Historical or Current Trends tab for broad state-level crime totals, or rephrase for NIBRS incident-level details.";
-              writeNibrsLog(question, retrySql, 0, `table_allowlist_second_failure:${retryTableCheck.unknown.join(",")}`, Date.now() - claudeStart, msg, [...guardrailResult.fired, ...tableCheck.fired, ...retryTableCheck.fired], activeModelLabel, sessionId);
-              return jsonResp({ success: true, question, sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - claudeStart } as QueryResponse);
+              const retryAllowlistProof = finalizeExit({ intendedAction: "decline_capability", sql: retrySql, guardrails: [...guardrailResult.fired, ...tableCheck.fired, ...retryTableCheck.fired], planFamily: "table-allowlist", retries: 1, narrative: msg });
+              writeNibrsLog(question, retrySql, 0, `table_allowlist_second_failure:${retryTableCheck.unknown.join(",")}`, Date.now() - claudeStart, msg, [...guardrailResult.fired, ...tableCheck.fired, ...retryTableCheck.fired], activeModelLabel, sessionId, null, null, retryAllowlistProof);
+              return jsonResp(emitFactualPayload(retryAllowlistProof, { success: true, question, sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - claudeStart } as QueryResponse));
             }
           }
         }
 
         const msg = "I couldn't build a valid query for the NIBRS database. Try the Historical or Current Trends tab for broad state-level crime totals, or rephrase for NIBRS incident-level details.";
-        writeNibrsLog(question, sql, 0, `table_allowlist:${tableCheck.unknown.join(",")}`, Date.now() - claudeStart, msg, [...guardrailResult.fired, ...tableCheck.fired], activeModelLabel, sessionId);
-        return jsonResp({ success: true, question, sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - claudeStart } as QueryResponse);
+        const allowlistProof = finalizeExit({ intendedAction: "decline_capability", sql, guardrails: [...guardrailResult.fired, ...tableCheck.fired], planFamily: "table-allowlist", narrative: msg });
+        writeNibrsLog(question, sql, 0, `table_allowlist:${tableCheck.unknown.join(",")}`, Date.now() - claudeStart, msg, [...guardrailResult.fired, ...tableCheck.fired], activeModelLabel, sessionId, null, null, allowlistProof);
+        return jsonResp(emitFactualPayload(allowlistProof, { success: true, question, sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - claudeStart } as QueryResponse));
       }
     }
 
@@ -1062,7 +1156,8 @@ export async function POST(req: NextRequest) {
               console.log(`[nibrs][error-recovery] Retry succeeded`);
             } catch (retryErr) {
               const retryMsg = retryErr instanceof Error ? retryErr.message : String(retryErr);
-              writeNibrsLog(question, sql, 0, `DB retry failed: ${retryMsg}`, Date.now() - claudeStart, null, [...guardrailResult.fired, ...routeGuardrailsFired], activeModelLabel, sessionId);
+              const dbRetryProof = finalizeExit({ intendedAction: "decline_capability", sql, guardrails: [...guardrailResult.fired, ...routeGuardrailsFired], retries: 1 });
+              writeNibrsLog(question, sql, 0, `DB retry failed: ${retryMsg}`, Date.now() - claudeStart, null, [...guardrailResult.fired, ...routeGuardrailsFired], activeModelLabel, sessionId, null, null, dbRetryProof);
               const userError = isTimeout
                 ? `This query is too complex for the database. Try narrowing your request — for example, ask about a specific city, state, or shorter time range instead of a broad national query.`
                 : msg.includes("no such column") || msg.includes("ambiguous")
@@ -1074,14 +1169,16 @@ export async function POST(req: NextRequest) {
               );
             }
           } else {
-            writeNibrsLog(question, sql, 0, `DB: ${msg} (retry validation failed)`, Date.now() - claudeStart, null, [...guardrailResult.fired, ...routeGuardrailsFired], activeModelLabel, sessionId);
+            const dbRetryValidationProof = finalizeExit({ intendedAction: "decline_capability", sql, guardrails: [...guardrailResult.fired, ...routeGuardrailsFired], retries: 1 });
+            writeNibrsLog(question, sql, 0, `DB: ${msg} (retry validation failed)`, Date.now() - claudeStart, null, [...guardrailResult.fired, ...routeGuardrailsFired], activeModelLabel, sessionId, null, null, dbRetryValidationProof);
             return jsonResp(
               { success: false, error: `I had trouble with that query. Try rephrasing your question.`, sql } as QueryError,
               500
             );
           }
         } else {
-          writeNibrsLog(question, sql, 0, `DB: ${msg}`, Date.now() - claudeStart, null, [...guardrailResult.fired, ...routeGuardrailsFired], activeModelLabel, sessionId);
+          const dbErrorProof = finalizeExit({ intendedAction: "decline_capability", sql, guardrails: [...guardrailResult.fired, ...routeGuardrailsFired] });
+          writeNibrsLog(question, sql, 0, `DB: ${msg}`, Date.now() - claudeStart, null, [...guardrailResult.fired, ...routeGuardrailsFired], activeModelLabel, sessionId, null, null, dbErrorProof);
           return jsonResp(
             { success: false, error: isTimeout ? `This query is too complex for the database. Try asking about a specific city, state, or shorter time range.` : `Database error: ${msg}`, sql } as QueryError,
             500
@@ -1133,8 +1230,9 @@ export async function POST(req: NextRequest) {
       const { allNull } = detectAllNullData(columns, rows);
       if (allNull) {
         const emptyMsg = "I ran that query but all the values came back empty — the math likely broke somewhere (like dividing by zero). Could you try asking that a different way?";
-        writeNibrsLog(question, sql, 0, "all_null_columns", Date.now() - claudeStart, emptyMsg, [...guardrailResult.fired, ...routeGuardrailsFired], activeModelLabel, sessionId);
-        return jsonResp({
+        const allNullProof = finalizeExit({ intendedAction: "decline_data", sql, guardrails: [...guardrailResult.fired, ...routeGuardrailsFired], narrative: emptyMsg });
+        writeNibrsLog(question, sql, 0, "all_null_columns", Date.now() - claudeStart, emptyMsg, [...guardrailResult.fired, ...routeGuardrailsFired], activeModelLabel, sessionId, null, null, allNullProof);
+        return jsonResp(emitFactualPayload(allNullProof, {
           success: true,
           question,
           sql,
@@ -1147,7 +1245,7 @@ export async function POST(req: NextRequest) {
           chartConfig: null,
           chartMeta: null,
           executionTimeMs,
-        } as QueryResponse);
+        } as QueryResponse));
       }
     }
 
@@ -1453,7 +1551,22 @@ export async function POST(req: NextRequest) {
     // Built before logging so the captured configuration is the one actually
     // returned to the client. buildNibrsChartConfig is pure, so moving it up is safe.
     const chartConfig = buildNibrsChartConfig(claude, columns, rows, question);
-    writeNibrsLog(question, sql, rows.length, null, totalMs, explanation, firedGuardrails, activeModelLabel, sessionId, serializeChartConfigForLog(chartConfig, columns));
+    // Model-authored: no derivation is sealed, so this cannot satisfy the contract.
+    // Recorded honestly -- that asymmetry is the migration measurement (§10).
+    const finalization = finalizeExit({
+      intendedAction: "answer",
+      sql,
+      rows,
+      columns,
+      truncated: rows.length >= 1000,
+      guardrails: firedGuardrails,
+      returnedEntities: returnedEntityKeys(rows),
+      narrative: explanation,
+      hasChart: Boolean(chartConfig),
+      chartFromBindings: false,
+      retries: retryCount,
+    });
+    writeNibrsLog(question, sql, rows.length, null, totalMs, explanation, firedGuardrails, activeModelLabel, sessionId, serializeChartConfigForLog(chartConfig, columns), null, finalization);
 
     // Cache successful responses (only standalone questions)
     if (!cached && cacheableStandalone) {
@@ -1463,7 +1576,7 @@ export async function POST(req: NextRequest) {
     // Step 6: Truncate if needed
     const truncated = rows.length >= 1000;
 
-    return jsonResp(attachChartAuditToPayload({
+    return jsonResp(emitFactualPayload(finalization, attachChartAuditToPayload({
       success: true,
       question,
       sql,
@@ -1476,7 +1589,7 @@ export async function POST(req: NextRequest) {
       chartConfig,
       chartMeta: { source: "FBI NIBRS", agencyCount: 0, population: null },
       executionTimeMs: totalMs,
-    } as QueryResponse, { source: "nibrs", requestId: chartAuditRequestId, queryLogId: chartAuditQueryLogId }));
+    } as QueryResponse, { source: "nibrs", requestId: chartAuditRequestId, queryLogId: chartAuditQueryLogId })));
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("[nibrs] Query API error:", msg);
