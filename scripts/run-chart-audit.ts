@@ -72,6 +72,13 @@ export interface ChartAuditRun {
 export function runChartAudit(dbPathArgument?: string): ChartAuditRun {
   const db = new Database(resolveDbPath(dbPathArgument));
   const accounting = createAccounting("chart-audit", CHART_AUDIT_SUITE_VERSION, Date.now());
+  // Claim a 'running' row BEFORE any work. Writing the record only on
+  // completion or a caught error means a timeout or SIGKILL leaves no evidence
+  // the auditor ran at all -- and the wrapper does bound this suite
+  // (CHART_AUDIT_TIMEOUT_SECONDS=300, escalating to SIGKILL), so that is a
+  // reachable state, not a hypothetical. A row stuck at 'running' is exactly the
+  // signal the digest needs: it ran, and it did not finish.
+  const runId = beginAuditRun(db, accounting);
   try {
     const hasResults = db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='chart_audit_results'").get();
     // Recorded as a missing required input rather than thrown, so a caller that
@@ -155,15 +162,27 @@ export function runChartAudit(dbPathArgument?: string): ChartAuditRun {
     const counts = run();
     accounting.finishedAt = Date.now();
     const verdict = evaluateAuditHealth(accounting);
-    persistAuditRun(db, accounting, verdict);
+    const recorded = finishAuditRun(db, runId, accounting, verdict);
+    if (!recorded && verdict.cleanReportPermitted) {
+      // Health that was not written is health nobody can read. Reporting a clean
+      // run whose record failed to persist would recreate the exact blind spot
+      // this suite exists to close, so the in-memory verdict is downgraded to
+      // match what a reviewer will actually see.
+      const downgraded: AuditHealthVerdict = {
+        state: "incomplete",
+        reasons: [...verdict.reasons, "audit_runs health record could not be written; this run is not verifiable"],
+        cleanReportPermitted: false,
+      };
+      return { counts, accounting, verdict: downgraded };
+    }
     return { counts, accounting, verdict };
   } catch (error) {
-    // A run that dies before finishing must still leave a record, or the digest
-    // cannot distinguish "the chart auditor found nothing" from "the chart
-    // auditor never got there" -- the precise ambiguity this suite exists to
-    // remove. finishedAt stays null, which evaluateAuditHealth reports invalid.
+    // A run that dies inside this function must still leave a record, or the
+    // digest cannot distinguish "the chart auditor found nothing" from "the
+    // chart auditor never got there". finishedAt stays null, which
+    // evaluateAuditHealth reports invalid.
     const verdict = evaluateAuditHealth(accounting);
-    persistAuditRun(db, accounting, verdict, error instanceof Error ? error.message : String(error));
+    finishAuditRun(db, runId, accounting, verdict, error instanceof Error ? error.message : String(error));
     throw error;
   } finally {
     db.close();
@@ -171,26 +190,50 @@ export function runChartAudit(dbPathArgument?: string): ChartAuditRun {
 }
 
 /**
- * Write the run into audit_runs so it reaches the reviewer.
+ * Claim a 'running' row in audit_runs before any auditing happens.
+ *
+ * Returns the row id, or null when the table is absent or the insert failed.
+ * A null id does not stop the run, but finishAuditRun() then reports that
+ * nothing was recorded and the caller downgrades a clean verdict accordingly.
+ *
+ * A row left at 'running' -- because the process was killed between here and
+ * completion -- is a deliberate, readable signal: the auditor started and did
+ * not finish. The wrapper bounds this suite at CHART_AUDIT_TIMEOUT_SECONDS=300
+ * and escalates to SIGKILL, so that is a reachable state.
+ */
+function beginAuditRun(db: Database.Database, accounting: AuditAccounting): number | null {
+  try {
+    const exists = db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='audit_runs'").get();
+    if (!exists) return null;
+    const result = db
+      .prepare(
+        `INSERT INTO audit_runs (source, suite_version, started_ts, finished_ts, from_log_id, to_log_id, rows_audited, findings_written, status, detail)
+         VALUES (?, ?, ?, NULL, NULL, NULL, NULL, NULL, 'running', ?)`
+      )
+      .run(CHART_AUDIT_SOURCE, accounting.suiteVersion, accounting.startedAt, "run started; not yet finished");
+    return Number(result.lastInsertRowid);
+  } catch (error) {
+    console.warn("[run-chart-audit] could not claim an audit_runs row:", error instanceof Error ? error.message : error);
+    return null;
+  }
+}
+
+/**
+ * Complete the claimed run record. Returns true when health was durably written.
  *
  * The digest reads health from this table, not from the runner's stdout, so a
- * verdict computed only in memory is a verdict nobody sees. Uses the same table
- * and shape as the query auditor with a distinct `source`, so both auditors are
- * discoverable through one query.
- *
- * Best-effort by design: failing to record health must not fail the audit that
- * did run. A missing row is itself reported downstream as "the auditor never
- * ran", which is the safe direction.
+ * verdict computed only in memory is a verdict nobody sees. The caller treats a
+ * false return as disqualifying for a clean report.
  */
-function persistAuditRun(
+function finishAuditRun(
   db: Database.Database,
+  runId: number | null,
   accounting: AuditAccounting,
   verdict: AuditHealthVerdict,
   fatalError?: string
-): void {
+): boolean {
+  if (runId === null) return false;
   try {
-    const exists = db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='audit_runs'").get();
-    if (!exists) return;
     const detail = [
       describeAuditHealth(accounting, verdict),
       fatalError ? `fatal: ${fatalError}` : null,
@@ -202,20 +245,13 @@ function persistAuditRun(
     // 'ok' only when a clean report is permitted; anything else must not read as
     // a healthy run to the digest.
     const status = fatalError ? "error" : verdict.cleanReportPermitted ? "ok" : verdict.state;
-    db.prepare(
-      `INSERT INTO audit_runs (source, suite_version, started_ts, finished_ts, from_log_id, to_log_id, rows_audited, findings_written, status, detail)
-       VALUES (?, ?, ?, ?, NULL, NULL, ?, NULL, ?, ?)`
-    ).run(
-      CHART_AUDIT_SOURCE,
-      accounting.suiteVersion,
-      accounting.startedAt,
-      accounting.finishedAt,
-      accounting.executed,
-      status,
-      detail.slice(0, 2000)
-    );
+    const result = db
+      .prepare("UPDATE audit_runs SET finished_ts = ?, rows_audited = ?, status = ?, detail = ? WHERE id = ?")
+      .run(accounting.finishedAt, accounting.executed, status, detail.slice(0, 2000), runId);
+    return result.changes === 1;
   } catch (error) {
     console.warn("[run-chart-audit] could not record audit_runs health:", error instanceof Error ? error.message : error);
+    return false;
   }
 }
 

@@ -86,6 +86,18 @@ else
   git reset --hard "origin/$BRANCH"
 fi
 
+# Capture provenance HERE, while the working directory is still $REPO_DIR and a
+# .git exists. The release directory is a copy that deliberately excludes .git,
+# so reading the commit after `cd "$RELEASE_DIR"` yields nothing and the stamp
+# silently records commit=unknown -- which is worse than no stamp, because it
+# looks like provenance while carrying none.
+DEPLOY_COMMIT=$(git -C "$REPO_DIR" rev-parse HEAD 2>/dev/null || echo unknown)
+DEPLOY_COMMIT_SUBJECT=$(git -C "$REPO_DIR" log -1 --format=%s 2>/dev/null || echo unknown)
+if [[ "$DEPLOY_COMMIT" == "unknown" ]]; then
+  die "Could not read HEAD from $REPO_DIR; refusing to build a release with no provenance."
+fi
+log "  Deploying commit: $DEPLOY_COMMIT ($DEPLOY_COMMIT_SUBJECT)"
+
 log "Creating release directory: $RELEASE_DIR"
 mkdir -p "$RELEASE_DIR"
 
@@ -201,13 +213,14 @@ log "  NIBRS deterministic indexes present"
 RELEASE_INFO_FILE="$RELEASE_DIR/RELEASE_INFO"
 {
   echo "release=$TIMESTAMP"
-  echo "commit=$(git -C "$RELEASE_DIR" rev-parse HEAD 2>/dev/null || git rev-parse HEAD 2>/dev/null || echo unknown)"
+  echo "commit=$DEPLOY_COMMIT"
+  echo "commit_subject=$DEPLOY_COMMIT_SUBJECT"
   echo "branch=${BRANCH:-unknown}"
   echo "built_at=$(date -Is)"
   echo "built_by=$(whoami 2>/dev/null || echo unknown)"
   echo "host=$(hostname 2>/dev/null || echo unknown)"
-} > "$RELEASE_INFO_FILE" 2>/dev/null || log "  WARNING: could not write $RELEASE_INFO_FILE"
-log "  Release provenance: $(tr '\n' ' ' < "$RELEASE_INFO_FILE" 2>/dev/null || echo unavailable)"
+} > "$RELEASE_INFO_FILE" || die "Could not write $RELEASE_INFO_FILE; refusing to build an unidentifiable release."
+log "  Release provenance: $(tr '\n' ' ' < "$RELEASE_INFO_FILE")"
 
 log "Building Next.js app..."
 trap cleanup_on_failure ERR

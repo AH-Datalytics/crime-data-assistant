@@ -142,14 +142,21 @@ for (const check of PROOF_CHECKS) {
   assert.equal(satisfiesFactualDelivery(future), false, "a mismatched manifest version must block");
 }
 
-// Source health: only healthy + covered permits an answer; unknown is degraded.
+// Source health: healthy + covered + a KNOWN VERSION permits an answer.
+// permitsAnswer() must agree with factualDeliveryBlocker(); an earlier revision
+// allowed a source of unknown version here while the manifest decision rejected
+// it, and Stage 2's source adapters would have been built on the looser helper.
 {
-  const base = (state: SourceHealth["state"], coverage: SourceHealth["requestedCoverage"]): SourceHealth => ({
+  const base = (
+    state: SourceHealth["state"],
+    coverage: SourceHealth["requestedCoverage"],
+    dataVersion: string | null = "2025-08-10"
+  ): SourceHealth => ({
     sourceId: "shr",
     capability: "comparison",
     state,
     reason: state === "healthy" ? null : "fixture",
-    dataVersion: null,
+    dataVersion,
     requestedCoverage: coverage,
   });
   assert.equal(permitsAnswer(base("healthy", "passed")), true);
@@ -157,6 +164,56 @@ for (const check of PROOF_CHECKS) {
   assert.equal(permitsAnswer(base("degraded", "passed")), false);
   assert.equal(permitsAnswer(base("healthy", "unknown")), false, "unknown coverage cannot answer");
   assert.equal(permitsAnswer(base("healthy", "failed")), false);
+
+  for (const version of [null, "", "   "]) {
+    assert.equal(
+      permitsAnswer(base("healthy", "passed", version)),
+      false,
+      `dataVersion=${JSON.stringify(version)} must not permit an answer`
+    );
+    // ...and the manifest decision must agree, so the two cannot drift.
+    const manifest = passingManifest();
+    manifest.source.dataVersion = version;
+    assert.equal(satisfiesFactualDelivery(manifest), false, "manifest must reject the same unknown version");
+  }
+}
+
+// blockingChecks() must agree with factualDeliveryBlocker() about unjustified
+// not_applicable. A reviewer shown an empty blocking list for a manifest the
+// delivery decision rejected would hunt for a defect the tooling had hidden.
+{
+  const unjustified = passingManifest();
+  unjustified.checks.chartData = "not_applicable";
+  assert.deepEqual(blockingChecks(unjustified), ["chartData"], "unjustified not_applicable must appear as blocking");
+  assert.equal(satisfiesFactualDelivery(unjustified), false);
+
+  const justified = passingManifest();
+  justified.checks.chartData = "not_applicable";
+  justified.notApplicableReasons.chartData = "this plan family returns no chart";
+  assert.deepEqual(blockingChecks(justified), [], "justified not_applicable is not blocking");
+  assert.equal(satisfiesFactualDelivery(justified), true);
+
+  const blank = passingManifest();
+  blank.checks.chartData = "not_applicable";
+  blank.notApplicableReasons.chartData = "  ";
+  assert.deepEqual(blockingChecks(blank), ["chartData"], "blank justification is no justification");
+
+  // Exhaustive agreement: for every check and state, an empty blocking list must
+  // imply the manifest delivers, and a non-empty one must imply it does not.
+  for (const check of PROOF_CHECKS) {
+    for (const state of ["passed", "failed", "unknown", "not_applicable"] as const) {
+      for (const reason of [undefined, "documented"]) {
+        const manifest = passingManifest();
+        manifest.checks[check] = state;
+        if (reason) manifest.notApplicableReasons[check] = reason;
+        assert.equal(
+          blockingChecks(manifest).length === 0,
+          satisfiesFactualDelivery(manifest),
+          `blockingChecks and satisfiesFactualDelivery disagree for ${check}=${state} reason=${String(reason)}`
+        );
+      }
+    }
+  }
 }
 
 // Omission attribution: EVERY reason except `unknown` is a claim and needs

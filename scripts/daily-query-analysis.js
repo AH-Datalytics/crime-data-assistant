@@ -237,24 +237,43 @@ function getChartAuditorHealth() {
       };
     }
 
-    // A run that predates the window says nothing about the charts in it. The
-    // wrapper that invokes this auditor was observed running weekly while being
-    // documented as nightly, so a stale run is the expected failure here.
-    const ranInWindow = Number(run.started_ts) >= cutoff;
+    // COVERAGE REQUIRES COMPLETION PAST THE WINDOW'S END, not merely a start
+    // inside it. A run that began at noon yesterday saw only the charts captured
+    // before noon, so certifying the whole day on the strength of its start time
+    // would vouch for artifacts it never looked at -- the same "ran, therefore
+    // clean" conflation this function exists to prevent, one level up.
+    //
+    // finished_ts is the audited-through watermark: this suite reads every
+    // artifact present when it runs, so everything captured before it finished
+    // was in scope. A run still at 'running' has no watermark and covers
+    // nothing, which is precisely how a killed run surfaces here.
+    const finishedAt = run.finished_ts === null || run.finished_ts === undefined ? null : Number(run.finished_ts);
+    const coversWindow = finishedAt !== null && finishedAt >= cutoffEnd;
+    const stamp = (value) => (value ? new Date(Number(value)).toISOString() : "an unknown time");
+
+    let reason = null;
+    if (run.status === "running" || finishedAt === null) {
+      reason =
+        `the rendered-chart auditor started at ${stamp(run.started_ts)} and never recorded a finish. ` +
+        "It was interrupted, so nothing it may have written can be treated as complete.";
+    } else if (run.status !== "ok") {
+      reason = `last chart-audit run ended '${run.status}': ${run.detail || "no detail recorded"}`;
+    } else if (!coversWindow) {
+      reason =
+        `the rendered-chart auditor last finished at ${stamp(finishedAt)}, before the end of this review period ` +
+        `(${new Date(cutoffEnd).toISOString()}). Charts captured after it ran were not checked.`;
+    }
+
     return {
-      available: run.status === "ok" && ranInWindow,
+      available: run.status === "ok" && coversWindow,
       status: run.status,
       runId: run.id,
       rowsAudited: run.rows_audited,
-      ranInWindow,
+      coversWindow,
       lastRunAt: run.started_ts ? new Date(Number(run.started_ts)).toISOString() : null,
+      lastFinishedAt: finishedAt ? new Date(finishedAt).toISOString() : null,
       detail: run.detail || null,
-      reason:
-        run.status !== "ok"
-          ? `last chart-audit run ended '${run.status}': ${run.detail || "no detail recorded"}`
-          : ranInWindow
-            ? null
-            : `the rendered-chart auditor last ran ${run.started_ts ? new Date(Number(run.started_ts)).toISOString() : "at an unknown time"}, before this window`,
+      reason,
     };
   } catch (err) {
     return { available: false, reason: `chart auditor health unavailable: ${err.message}` };

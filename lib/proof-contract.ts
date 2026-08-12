@@ -198,9 +198,21 @@ export interface SourceHealth {
   requestedCoverage: CheckState;
 }
 
-/** Only `healthy` permits a factual answer; `unknown` is treated as degraded. */
+/**
+ * Whether a source's health permits a factual answer.
+ *
+ * Requires a known `dataVersion` as well as healthy state and passing coverage,
+ * matching factualDeliveryBlocker(). Handoff 2.1 requires "a healthy source
+ * whose version and applicable time coverage are known", and a helper that
+ * answered `true` for a source of unknown version would disagree with the final
+ * manifest decision -- a divergence Stage 2 would build source adapters on top
+ * of, since this is the function a health check naturally reaches for.
+ */
 export function permitsAnswer(health: SourceHealth): boolean {
-  return health.state === "healthy" && health.requestedCoverage === "passed";
+  if (health.state !== "healthy") return false;
+  if (health.requestedCoverage !== "passed") return false;
+  if (!health.dataVersion || health.dataVersion.trim() === "") return false;
+  return true;
 }
 
 /** The proof manifest persisted alongside each answered query (handoff 6.1). */
@@ -291,11 +303,24 @@ export function satisfiesFactualDelivery(manifest: ProofManifest): boolean {
   return factualDeliveryBlocker(manifest) === null;
 }
 
-/** Names of checks blocking delivery, for logging and reviewer display. */
+/**
+ * Names of checks blocking delivery, for logging and reviewer display.
+ *
+ * A `not_applicable` check with no recorded justification counts as blocking
+ * here, exactly as factualDeliveryBlocker() treats it. The two must agree: a
+ * reviewer shown an empty blocking list for a manifest that the delivery
+ * decision rejected would be looking for a defect the tooling had already
+ * hidden.
+ */
 export function blockingChecks(manifest: ProofManifest): ProofCheck[] {
   return PROOF_CHECKS.filter((check) => {
     const state = manifest.checks[check];
-    return state !== "passed" && state !== "not_applicable";
+    if (state === "passed") return false;
+    if (state === "not_applicable") {
+      const reason = manifest.notApplicableReasons?.[check];
+      return !reason || reason.trim() === "";
+    }
+    return true;
   });
 }
 

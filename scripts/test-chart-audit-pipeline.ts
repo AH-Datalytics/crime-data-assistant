@@ -280,6 +280,53 @@ try {
     health.close();
   }
 
+  // AN INTERRUPTED RUN must leave evidence it started. The wrapper bounds this
+  // suite at 300s and escalates to SIGKILL, so a process that dies mid-audit is
+  // reachable -- and recording health only on completion would leave no trace,
+  // which the digest would read as "never ran" rather than "ran and died".
+  {
+    const claimed = new Database(dbPath, { readonly: true });
+    const before = (claimed.prepare("SELECT COUNT(*) AS n FROM audit_runs").get() as { n: number }).n;
+    claimed.close();
+
+    // Simulate the kill: claim a row the way runChartAudit does, then stop.
+    const killed = new Database(dbPath);
+    killed
+      .prepare(
+        `INSERT INTO audit_runs (source, suite_version, started_ts, finished_ts, rows_audited, status, detail)
+         VALUES (?, ?, ?, NULL, NULL, 'running', 'run started; not yet finished')`
+      )
+      .run(CHART_AUDIT_SOURCE, "chart-audit-test", Date.now());
+    killed.close();
+
+    const after = new Database(dbPath, { readonly: true });
+    const rows = (after.prepare("SELECT COUNT(*) AS n FROM audit_runs").get() as { n: number }).n;
+    const stuck = after.prepare("SELECT status, finished_ts FROM audit_runs ORDER BY id DESC LIMIT 1").get() as {
+      status: string;
+      finished_ts: number | null;
+    };
+    after.close();
+    assert.equal(rows, before + 1, "an interrupted run must still be recorded");
+    assert.equal(stuck.status, "running", "a killed run stays 'running' -- the readable signal that it did not finish");
+    assert.equal(stuck.finished_ts, null, "no finish timestamp means no audited-through watermark");
+
+    // A completed run afterwards must claim its OWN row, never adopt the stuck
+    // one, so the interrupted run stays visible to the reviewer.
+    const next = runChartAudit(dbPath);
+    const verify2 = new Database(dbPath, { readonly: true });
+    const stillStuck = verify2
+      .prepare("SELECT COUNT(*) AS n FROM audit_runs WHERE status = 'running'")
+      .get() as { n: number };
+    const latest = verify2.prepare("SELECT status, finished_ts FROM audit_runs ORDER BY id DESC LIMIT 1").get() as {
+      status: string;
+      finished_ts: number | null;
+    };
+    verify2.close();
+    assert.equal(stillStuck.n, 1, "the interrupted run must not be silently repaired by a later run");
+    assert.notEqual(latest.finished_ts, null, "the new run records its own finish");
+    assert.equal(latest.status, next.verdict.cleanReportPermitted ? "ok" : next.verdict.state);
+  }
+
   // MISSING SCHEMA is invalid, not clean -- and still leaves a record, so the
   // reviewer can tell the auditor tried and could not run.
   {
