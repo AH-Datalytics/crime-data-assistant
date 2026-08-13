@@ -168,11 +168,30 @@ function normalizeEntity(value: string): string {
  * create a competing narrative-finalization layer; the same argument applies to
  * its entity matching.
  *
- * The alias pairs below were added because production comparisons dropped cities
- * whose source spelling differs from the user's: "St. Louis" vs "Saint Louis",
- * "Charlotte" vs the "Charlotte-Mecklenburg" agency, "Las Vegas" vs "Las Vegas
- * Metropolitan PD". Matching on the bare normalized string alone reported those
- * as missing entities and produced a false omission claim.
+ * The alias pairs exist because source spellings differ from the user's: "St. Louis"
+ * vs "Saint Louis", "Charlotte" vs "Charlotte-Mecklenburg", "Las Vegas" vs "Las Vegas
+ * Metropolitan". Matching on the bare normalized string alone reports those as missing
+ * entities and produces a false omission claim.
+ *
+ * The rules compare the WHOLE normalized name, so they fire on "Charlotte-Mecklenburg"
+ * and not on "Charlotte-Mecklenburg PD". That is narrower than it looks and it is the
+ * baseline behavior; widening it would change which disclosure notes appear, which is
+ * a Stage 2 question, not a refactor.
+ *
+ * THESE ARE EXACTLY THE PAIRS THIS MODULE ALREADY HAD, IN EXACTLY THE SAME
+ * DIRECTIONS. Moving them out of returnedEntities() is a refactor and must stay one.
+ * An earlier revision of this extraction "tidied" the one-way rules into two-way ones,
+ * which reads like a cleanup and is not: returnedEntities() expands only the RETURNED
+ * side, so adding "charlotte mecklenburg" -> "charlotte" would have made a returned
+ * Charlotte-Mecklenburg row satisfy a requested "Charlotte" and silently deleted a
+ * missing-entity disclosure the baseline release shows a user today. Stage 1 changes
+ * no user-visible behavior, and a note that stops being written is a change.
+ *
+ * The proof layer does not need the reverse rules: lib/proof-checks and
+ * lib/requested-entities expand BOTH sides and match on any shared key, so
+ * requested "Charlotte" reaches returned "Charlotte-Mecklenburg" through the forward
+ * rule alone. Symmetric comparison belongs at the call site; it does not belong here,
+ * where only one side is expanded.
  */
 export function entityAliasKeys(value: string): string[] {
   const normalized = normalizeEntity(value);
@@ -180,14 +199,11 @@ export function entityAliasKeys(value: string): string[] {
   if (normalized === "st louis") keys.add("saint louis");
   if (normalized === "saint louis") keys.add("st louis");
   if (normalized === "charlotte") keys.add("charlotte mecklenburg");
-  if (normalized === "charlotte mecklenburg") keys.add("charlotte");
   if (normalized === "nashville") keys.add("metropolitan nashville");
-  if (normalized === "metropolitan nashville") keys.add("nashville");
   if (normalized === "las vegas") {
     keys.add("las vegas metro pd");
     keys.add("las vegas metropolitan");
   }
-  if (normalized === "las vegas metro pd" || normalized === "las vegas metropolitan") keys.add("las vegas");
   return [...keys];
 }
 
@@ -236,7 +252,9 @@ function returnedEntities(rows: Record<string, unknown>[]): Set<string> {
       const value = row[col];
       if (value !== undefined && value !== null && String(value).trim()) {
         // Alias expansion moved to entityAliasKeys() so lib/proof-checks compares
-        // entities the same way this does. Behavior is unchanged.
+        // entities the same way this does. Same pairs, same directions, so the
+        // disclosure note this feeds is byte-identical to the baseline release --
+        // see the direction warning on entityAliasKeys().
         for (const key of entityAliasKeys(String(value))) values.add(key);
       }
     }

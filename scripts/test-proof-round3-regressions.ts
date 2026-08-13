@@ -28,6 +28,8 @@ import {
 } from "../lib/plan-derivation";
 import { buildOmissionNotice, narrativeDisclosesOmissions } from "../lib/omission-wording";
 import { buildQueryLogInsert } from "../lib/query-log-columns";
+import { entityAliasKeys, returnedEntityKeys } from "../lib/result-disclosure";
+import { omittedCandidatesFor } from "../lib/requested-entities";
 
 let passed = 0;
 function check(name: string, fn: () => void) {
@@ -626,6 +628,49 @@ console.log("\n8. enforcement identity cannot be borrowed by a failed token");
     }));
     assert.strictEqual(finalization.mayAlterDelivery, false);
     assert.match(finalization.enforcementWithheldReason!, /rewritten between planning and execution/);
+  });
+}
+
+console.log("\nthe alias extraction stayed a refactor");
+{
+  // Scope-contamination guard. entityAliasKeys() was lifted out of returnedEntities()
+  // so the proof layer could compare entities the same way the disclosure layer does.
+  // The risk in that move is making the one-way rules two-way, which looks like a
+  // cleanup: returnedEntities() expands only the RETURNED side, so a reverse rule
+  // would let a returned "Charlotte-Mecklenburg" satisfy a requested "Charlotte" and
+  // delete a missing-entity note the baseline release shows a user today. Stage 1
+  // changes nothing a user sees, and a note that stops being written is a change.
+  check("the aliases are one-way, exactly as the baseline had them", () => {
+    assert.deepStrictEqual(entityAliasKeys("Charlotte").sort(), ["charlotte", "charlotte mecklenburg"]);
+    assert.deepStrictEqual(entityAliasKeys("Charlotte-Mecklenburg"), ["charlotte mecklenburg"]);
+    assert.deepStrictEqual(entityAliasKeys("Metropolitan Nashville"), ["metropolitan nashville"]);
+    assert.deepStrictEqual(entityAliasKeys("Las Vegas Metropolitan"), ["las vegas metropolitan"]);
+    // St. Louis was bidirectional in the baseline and stays that way.
+    assert.deepStrictEqual(entityAliasKeys("Saint Louis").sort(), ["saint louis", "st louis"]);
+  });
+
+  check("a returned Charlotte-Mecklenburg row still discloses a missing Charlotte", () => {
+    // The baseline behavior being preserved, asserted through the real disclosure
+    // path rather than through the helper it calls.
+    const keys = returnedEntityKeys([{ agency: "Charlotte-Mecklenburg" }, { agency: "Austin" }]);
+    assert.ok(!keys.includes("charlotte"), "the returned side must not gain the shorter name");
+  });
+
+  check("the alias rules match a whole name, not a prefix", () => {
+    // Narrower than the doc comment used to imply. Recorded so a later widening is a
+    // deliberate decision about disclosure text rather than an accident.
+    assert.deepStrictEqual(entityAliasKeys("Charlotte-Mecklenburg PD"), ["charlotte mecklenburg pd"]);
+  });
+
+  check("the proof layer still matches them, because it expands both sides", () => {
+    // Which is why the reverse rules are unnecessary: the forward rule on the
+    // REQUESTED side reaches the returned spelling on its own.
+    const missing = omittedCandidatesFor(
+      [{ entityId: "charlotte|NC", label: "Charlotte", state: "NC" }],
+      returnedEntityKeys([{ agency: "Charlotte-Mecklenburg" }]),
+      [2023],
+    );
+    assert.deepStrictEqual(missing, [], "Charlotte was returned under its agency spelling");
   });
 }
 
