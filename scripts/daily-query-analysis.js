@@ -8,6 +8,11 @@
  */
 
 const Database = require("better-sqlite3");
+const {
+  selectClause: proofSelectClause,
+  buildProofShadowReport,
+  renderProofShadowSection,
+} = require("./lib/proof-shadow-report.js");
 const { Resend } = require("resend");
 const path = require("path");
 const fs = require("fs");
@@ -81,7 +86,12 @@ const DIGEST_QUERY_COLUMNS =
 
 function getQueries() {
   const columns = new Set(db.prepare("PRAGMA table_info(query_log)").all().map((column) => column.name));
-  const selected = DIGEST_QUERY_COLUMNS + (columns.has("chart_config") ? ", chart_config" : ", NULL AS chart_config");
+  const selected =
+    DIGEST_QUERY_COLUMNS +
+    (columns.has("chart_config") ? ", chart_config" : ", NULL AS chart_config") +
+    // Same conditional shape: an unmigrated database yields NULLs and the shadow
+    // section reports "not observing" rather than failing the whole digest.
+    ", " + proofSelectClause(columns);
   return db
     .prepare(`SELECT ${selected} FROM query_log WHERE ts >= ? AND ts < ? ORDER BY ts ASC`)
     .all(cutoff, cutoffEnd);
@@ -1175,6 +1185,8 @@ h1{font-size:23px;margin:0 0 4px}h2{font-size:18px;margin:28px 0 12px}.sub{color
   } else {
     html += `<h2>Needs attention</h2><div class="healthy"><strong>No user-visible failures were detected.</strong></div>`;
   }
+
+  html += renderProofShadowSection(buildProofShadowReport(queries, isHumanQuery));
 
   html += `<h2>Question - SQL - answer alignment</h2><p class="quiet">This shows the evidence for each real user query. "No mismatch detected" means the current semantic checks found the request, SQL, and written answer consistent; it does not independently verify every returned number because result rows are not stored in the query log.</p>`;
   for (const query of queries.slice(-12).reverse()) {
