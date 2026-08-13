@@ -42,6 +42,51 @@ function selectClause(existingColumns) {
   ).join(", ");
 }
 
+/**
+ * The v1 proof checks and states, restated from lib/proof-contract.ts.
+ *
+ * Restated rather than imported because this file is CommonJS loaded by
+ * scripts/daily-query-analysis.js, a plain node script with no build step. The
+ * duplication is made safe by a drift guard in scripts/test-proof-shadow-report.ts, which
+ * CAN import the TypeScript and fails if these lists ever diverge -- so adding a proof
+ * check cannot silently leave the reporter grading a stale map as complete.
+ */
+const DECLARED_CHECKS = [
+  "semanticPlan",
+  "canonicalGeographies",
+  "entityCompleteness",
+  "metric",
+  "grain",
+  "timeRange",
+  "missingness",
+  "reconciliation",
+  "claims",
+  "chartData",
+];
+
+const VALID_CHECK_STATES = new Set(["passed", "failed", "not_applicable", "unknown"]);
+
+/**
+ * Whether this is a complete v1 check map, and therefore gradable.
+ *
+ * THE ARRAY CASE IS THE POINT. `typeof [] === "object"` in JavaScript, so a plain typeof
+ * guard accepted `{"checks":[]}` and graded it -- zero check states, counted as evaluated,
+ * indistinguishable from a clean answer. `{"checks":{}}` and any partial map did the same.
+ * Requiring every declared check to be present with a recognized state means an incomplete
+ * map is reported as a writer defect instead of contributing a silent clean row.
+ *
+ * Unrecognized EXTRA keys are tolerated deliberately: a future check added upstream should
+ * degrade to being counted, not make every envelope malformed. The drift guard is what
+ * surfaces that case as work to do.
+ */
+function isCompleteCheckMap(checks) {
+  if (!checks || typeof checks !== "object" || Array.isArray(checks)) return false;
+  for (const name of DECLARED_CHECKS) {
+    if (!VALID_CHECK_STATES.has(checks[name])) return false;
+  }
+  return true;
+}
+
 function parseEnvelope(json) {
   if (!json) return null;
   try {
@@ -153,18 +198,18 @@ function tallyRow(tally, row) {
    * STRUCTURAL VALIDATION, NOT JUST PARSEABILITY.
    *
    * Everything above recognizes a shape the serializer DECLARES. This catches everything
-   * else: `{}`, `{v:1}`, `{manifest:null}` -- parseable, undeclared, and carrying nothing
-   * to grade. Before this check they fell through to `evaluated`, which contradicted that
-   * field's definition ("rows that carried a manifest with checks in it") and credited a
-   * phantom "unrecorded" hypothetical action drawn from an empty record. A row the writer
-   * mangled must read as a writer defect, never as a graded pass.
+   * else -- parseable, undeclared, and carrying nothing to grade. Such rows used to fall
+   * through to `evaluated`, which contradicted that field's definition ("rows that carried
+   * a manifest with checks in it") and credited a phantom hypothetical action drawn from an
+   * empty record. A row the writer mangled must read as a writer defect, never as a
+   * graded pass.
    */
   const manifest = envelope.manifest;
-  const checks = manifest && typeof manifest === "object" ? manifest.checks : null;
-  if (!checks || typeof checks !== "object") {
+  if (!isCompleteCheckMap(manifest && typeof manifest === "object" ? manifest.checks : null)) {
     tally.malformed += 1;
     return;
   }
+  const checks = manifest.checks;
 
   creditWouldHave();
   tally.evaluated += 1;
@@ -352,4 +397,7 @@ module.exports = {
   shadowHealth,
   renderProofShadowSection,
   actionLabel,
+  // Exported so the drift guard can compare them against lib/proof-contract.ts.
+  DECLARED_CHECKS,
+  VALID_CHECK_STATES,
 };

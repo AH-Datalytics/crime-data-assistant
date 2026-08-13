@@ -13,6 +13,7 @@
  * misleading number this project could print.
  */
 import assert from "node:assert";
+import { PROOF_CHECKS, CHECK_STATES } from "../lib/proof-contract";
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 /** One bucket's counts. Shared by the overall figures and by every tab/family bucket. */
@@ -40,6 +41,8 @@ const report = require("./lib/proof-shadow-report.js") as {
     byTab: Map<string, Tally>;
     byFamily: Map<string, Tally>;
   };
+  DECLARED_CHECKS: string[];
+  VALID_CHECK_STATES: Set<string>;
   shadowHealth: (r: unknown) => { state: string; note: string };
   renderProofShadowSection: (r: unknown) => string;
 };
@@ -58,8 +61,22 @@ function check(name: string, fn: () => void) {
 
 const ALL_HUMAN = () => true;
 
+/**
+ * A COMPLETE v1 check map, with the named checks overridden.
+ *
+ * Every declared check must be present with a valid state for an envelope to be gradable,
+ * so a fixture that lists two checks is not a realistic envelope -- it is a malformed one.
+ * Unnamed checks default to `not_applicable`, which is excluded from the graded
+ * denominator and therefore does not disturb the pass/fail/unknown counts asserted below.
+ */
+function fullChecks(overrides: Record<string, string> = {}): Record<string, string> {
+  const checks: Record<string, string> = {};
+  for (const name of PROOF_CHECKS) checks[name] = "not_applicable";
+  return { ...checks, ...overrides };
+}
+
 function envelope(hypothetical: string, checks: Record<string, string> = {}, blocking: string[] = []) {
-  return JSON.stringify({ manifest: { checks }, blocker: blocking.length ? "blocked" : null, blockingChecks: blocking, hypotheticalAction: hypothetical });
+  return JSON.stringify({ manifest: { checks: fullChecks(checks) }, blocker: blocking.length ? "blocked" : null, blockingChecks: blocking, hypotheticalAction: hypothetical });
 }
 
 /** A shadow-era row: delivered an answer, proof blocked. */
@@ -312,6 +329,61 @@ console.log("\nnot every row with a proof record was evaluated");
         `${shape} must be visible to the reader, not silently dropped`,
       );
     }
+  });
+
+  check("a check map that is not a complete v1 map is malformed", () => {
+    // typeof [] === "object" in JavaScript, so an array slipped through a plain typeof
+    // guard; and an empty or partial map contributes zero check states while counting as
+    // evaluated -- the same false-clean D6 shape the categories above exist to prevent.
+    const shapes: Record<string, unknown> = {
+      "an array": [],
+      "an empty object": {},
+      "a partial map": { semanticPlan: "passed" },
+      "a map missing one mandatory check": (() => {
+        const partial: Record<string, string> = {};
+        for (const name of PROOF_CHECKS.slice(1)) partial[name] = "passed";
+        return partial;
+      })(),
+      "an unrecognized check state": (() => {
+        const bad: Record<string, string> = {};
+        for (const name of PROOF_CHECKS) bad[name] = "passed";
+        bad[PROOF_CHECKS[0]] = "probably";
+        return bad;
+      })(),
+    };
+    for (const [label, checks] of Object.entries(shapes)) {
+      const built = report.buildProofShadowReport(
+        [shadowRow({
+          tab: "current",
+          proof_manifest: JSON.stringify({ v: 1, hypotheticalAction: "answer", manifest: { checks } }),
+        })],
+        ALL_HUMAN,
+      );
+      assert.strictEqual(built.overall.malformed, 1, `${label} must count as malformed`);
+      assert.strictEqual(built.overall.evaluated, 0, `${label} must not count as evaluated`);
+      assert.deepStrictEqual(built.overall.wouldHave, {}, `${label} must not credit a hypothetical action`);
+      assert.strictEqual(built.overall.checks.passed, 0, `${label} must contribute no check states`);
+    }
+  });
+
+  check("a complete v1 check map IS gradable", () => {
+    // The counterpart to the above: the validation must not reject a real envelope.
+    const built = report.buildProofShadowReport(
+      [shadowRow({ tab: "current", proof_manifest: envelope("answer", { metric: "passed" }) })],
+      ALL_HUMAN,
+    );
+    assert.strictEqual(built.overall.evaluated, 1);
+    assert.strictEqual(built.overall.malformed, 0);
+    assert.strictEqual(built.overall.checks.passed, 1);
+  });
+
+  check("the reporter's declared checks and states have not drifted from the contract", () => {
+    // scripts/lib/proof-shadow-report.js is CommonJS with no build step, so it cannot
+    // import lib/proof-contract.ts and has to restate the list. This is the guard that
+    // makes the duplication safe: adding a proof check without updating the reporter
+    // fails here rather than silently letting a stale map be graded as complete.
+    assert.deepStrictEqual(report.DECLARED_CHECKS, [...PROOF_CHECKS]);
+    assert.deepStrictEqual([...report.VALID_CHECK_STATES].sort(), [...CHECK_STATES].sort());
   });
 
   check("an envelope the serializer could not build is ungradable, not evaluated", () => {
