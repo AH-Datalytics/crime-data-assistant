@@ -10,6 +10,32 @@
 
 **Spec:** `docs/superpowers/specs/2026-08-11-verified-answer-only-handoff.md` — §4, §7, §8, §Stage 2 (line 319).
 
+**Review:** `docs/superpowers/reviews/2026-08-13-stage2a-family-capability-enumeration.md`
+
+## Plan correction, 2026-08-13 — read before Task 1
+
+A pre-implementation enumeration found that this plan's original Task 1 Step 1 command
+undercounts the real plan families by 4.5× (it reports 4; there are **18 across 12 seal
+sites**), because six seal sites pass a **variable** rather than a string literal. Correcting
+that changed the inventory materially. The review carries the full evidence; the corrections
+now embedded in this plan are:
+
+1. **Enumeration is two-pass** and resolves variable-valued seal sites (Task 1 Step 1).
+2. **The inventory is keyed by distinct dependency set, not by a guessed capability name.**
+   The nine-capability shape is gone; there are **20**, because the original entries declared
+   tables the families never read and omitted tables they do read — `historical_agency_clearance`,
+   `historical_staffing`, `victims`, `hate_crime_participation`, and five of the six NIBRS
+   summary tables among them.
+3. **`metadata-coverage-answer` is too coarse and is replaced by four sealed operation
+   families** emitted from `lib/metadata-coverage.ts` where each SQL string is built (new
+   Task 1A). Historical year-coverage is genuinely **composite** across two dependency sets.
+4. **Two capabilities are unreachable in Stage 2A on architectural grounds** —
+   `current:national` and `nibrs:rollup` — and are the *only* permitted skips.
+5. **`agency_year_reliability` is retained as a labelled semantic/reliability dependency**
+   with an alignment check, not a row-count check (Task 3).
+6. **Every existing Task 9 route case fails** as written, because all four drive the model-SQL
+   path and seal nothing. The fixtures change; the assertions do not.
+
 ## Stage 2A is preparatory, not independently complete
 
 **Stage 2 closes only when 2A and 2B have both landed and their combined exit criteria pass.**
@@ -47,7 +73,9 @@ So two structural decisions run through this plan:
 
 ## File Structure
 
-- **Create `lib/source-health-inventory.ts`** — inventory: database provider, preflight adapter, required tables/columns, row bounds, dependencies, coverage source, receipt key, Stage 2A reachability, and the **nested** source → family → capability map.
+- **Create `lib/source-health-inventory.ts`** — inventory: database provider, preflight adapter, required tables/columns, row bounds, structural **and semantic** dependencies, coverage source, receipt key, Stage 2A reachability, and the **nested** source → family → capability map.
+- **Modify `lib/metadata-coverage.ts`** — seal an operation-specific derivation where each SQL string is constructed, and return it on the result (Task 1A).
+- **Modify `app/api/query/route.ts`, `app/api/nibrs-query/route.ts`, `app/api/shr-query/route.ts`, `app/api/hc-query/route.ts`** — consume `metadata.derivation` instead of sealing a generic family (Task 1A).
 - **Create `lib/source-health.ts`** — evaluator returning `{ health, trace }`, TTL cache keyed by non-forgeable handle identity, capability resolution, flag gate, budget switch, test-only introspection.
 - **Create `scripts/test-source-health-inventory.ts`** — five-source coverage, family-collision regression, non-vacuity, provider presence.
 - **Create `scripts/test-source-health.ts`** — evaluator semantics and traces.
@@ -95,6 +123,29 @@ export type DatabaseProvider = { acquire: () => OpenedDatabase | null };
 export type Preflight = (opened: OpenedDatabase | null) => { ok: boolean; reason: string; inspectedPath?: string | null };
 export type TableRequirement = { name: string; requiredColumns: string[]; minRows: number };
 export type DependencyRule = { derived: string; upstream: string; generationColumn?: string };
+/**
+ * A table that establishes whether a result can be TRUSTED, rather than one the answer's
+ * SQL reads.
+ *
+ * `agency_year_reliability` is the motivating case: no family's SQL selects from it, and
+ * that is exactly why it matters -- without it every agency-year reads as usable and the
+ * scorecard's caveats vanish silently. A health dependency need not appear in the final
+ * SQL when it determines whether the result is trustworthy.
+ *
+ * Checked by ALIGNMENT, never by row count: a nonempty table proves nothing about whether
+ * it covers the data it is supposed to qualify.
+ */
+export type SemanticDependency = {
+  table: string;
+  requiredColumns: string[];
+  /** Rows must resolve to this table via `keyColumn`. */
+  qualifies: string;
+  keyColumn: string;
+  /** Its year span must not be strictly narrower than the qualified table's. */
+  yearColumn: string;
+  /** If set, must be present and single-valued; a mixed value is a half-finished rebuild. */
+  versionColumn?: string;
+};
 export type CapabilitySpec = {
   sourceId: SourceId;
   capability: string;
@@ -102,6 +153,7 @@ export type CapabilitySpec = {
   preflight?: Preflight;
   tables: TableRequirement[];
   dependencies: DependencyRule[];
+  semanticDependencies: SemanticDependency[];
   coverage: { table: string; yearColumn: string } | null;
   receiptKey: string;
   stage2aReachable: boolean;
@@ -110,19 +162,47 @@ export type CapabilitySpec = {
 export const CAPABILITY_INVENTORY: readonly CapabilitySpec[];
 export function specFor(sourceId: SourceId, capability: string): CapabilitySpec | null;
 export const CAPABILITY_BY_SOURCE_AND_FAMILY: Readonly<Record<SourceId, Readonly<Record<string, string>>>>;
+export const UNMAPPED_FAMILIES: Readonly<Record<string, string>>;
 export function capabilityForFamily(sourceId: SourceId, planFamily: string): string | null;
 ```
 
 - [ ] **Step 1: Enumerate real families and the existing database accessors**
 
+**A single-literal grep is not a valid enumeration.** Six seal sites pass a variable, so a
+pattern like `sealPlanDerivation\(\s*"[a-z0-9-]+"` sees 4 of the 18 real families and
+silently omits every NIBRS deterministic family, all three scorecard scopes, and both
+multi-city variants. Enumeration is two passes:
+
 ```bash
-grep -rhoE 'seal(Compiler)?PlanDerivation\(\s*"[a-z0-9-]+"' --include=*.ts app lib | grep -oE '"[a-z0-9-]+"' | sort | uniq -c | sort -rn
-grep -rlE 'seal(Compiler)?PlanDerivation\(\s*"metadata-coverage-answer"' --include=*.ts app lib
+# Pass 1 -- EVERY seal site, literal or variable.
+grep -rn "sealPlanDerivation(" --include=*.ts app lib | grep -v "^lib/plan-derivation.ts"
+
+# Pass 2 -- resolve each variable-valued site to the literals its producing module can hold.
+grep -rn 'guardrail: "' --include=*.ts lib
+grep -rn "export type ScorecardScope" --include=*.ts lib
+```
+
+Expected from pass 1: **12 sites**. Expected from pass 2: the six NIBRS families in
+`lib/nibrs-deterministic-queries.ts`, `ScorecardScope = "agency" | "state" | "national"`
+(`lib/agency-scorecard.ts:49`), and `` `deterministic-${source}-multi-city-trend` `` over
+`source: "current" | "historical"` (`lib/multi-city-deterministic.ts:199`, `:107`).
+
+Then confirm the accessors and the dependency sets:
+
+```bash
 grep -rn "^export function get.*Db\b" lib/*.ts
 grep -rn "new Database(resolvedPath" lib/sqlite-db.ts
 ```
 
-`metadata-coverage-answer` is sealed in **four** places across different sources, so a family name is not a unique key.
+**Filter extracted table names against the real schema.** A naive `FROM|JOIN` scan collects
+CTE names as if they were tables — `sample_agency_year`, `county_crosswalk`, `series`,
+`pivoted`, `city_years` and others are CTEs. Check each candidate against `sqlite_master`
+before it enters the inventory; a CTE declared as a required table yields a permanent false
+`degraded`.
+
+`metadata-coverage-answer` is sealed in **four route files across five sources** (the
+`app/api/query/route.ts` site serves both Current and Historical), so a family name is not a
+unique key — and Task 1A replaces it with four operation-specific families anyway.
 
 The third command gives you the real accessor names — note that RTCI's is **`getDb` in `lib/rtci-db.ts`**, not `getRtciDb`, and Hate Crime's is **`getHateCrimeDb`**, not `getHcDb`. The fourth confirms why the providers need no candidate lists of their own: `getManagedDb` opens `new Database(resolvedPath, …)`, so `db.name` on a managed handle already *is* the resolved path. Copying each accessor's env var and fallback candidates into the inventory would reintroduce the handle/path disagreement the atomic type exists to prevent — and would be wrong on arrival, since SHR and Hate Crime each declare **two** fallback candidates.
 
@@ -131,10 +211,22 @@ The third command gives you the real accessor names — note that RTCI's is **`g
 ```typescript
 // scripts/test-source-health-inventory.ts
 import assert from "node:assert";
+import fs from "node:fs";
+import path from "node:path";
 import {
-  CAPABILITY_INVENTORY, specFor, CAPABILITY_BY_SOURCE_AND_FAMILY, capabilityForFamily,
+  CAPABILITY_INVENTORY, specFor, CAPABILITY_BY_SOURCE_AND_FAMILY, UNMAPPED_FAMILIES,
+  capabilityForFamily,
 } from "../lib/source-health-inventory";
 import { SOURCE_IDS } from "../lib/proof-contract";
+
+/**
+ * Seal sites in the four route files.
+ *
+ * 12 before Task 1A. Task 1A moves the four metadata seals into lib/metadata-coverage.ts,
+ * so this becomes 8 and the routes consume `metadata.derivation` instead. Update it in the
+ * SAME commit that moves them, never as a drive-by to silence this test.
+ */
+const EXPECTED_SEAL_SITES = 12;
 
 let passed = 0;
 function check(name: string, fn: () => void) {
@@ -181,7 +273,7 @@ check("the NIBRS rollup capability acquires the ROLLUP artifact, not the main da
   // preflight and the structural checks describe different files -- exactly what the
   // artifact_mismatch boundary exists to catch, arranged by construction.
   const rollup = specFor("nibrs", "rollup")!;
-  const summary = specFor("nibrs", "summary")!;
+  const summary = specFor("nibrs", "agency_roster")!;   // any capability on the MAIN database
   const rollupPath = (process.env.NIBRS_ROLLUP_DB_PATH ?? "").trim();
   const mainPath = (process.env.NIBRS_DB_PATH ?? "").trim();
   if (rollupPath && mainPath) {
@@ -209,6 +301,51 @@ check("Historical agency and state/national paths are SEPARATE capabilities", ()
   assert.ok(specFor("historical", "state_national"));
 });
 
+check("no two capabilities of one source declare an identical dependency set", () => {
+  // Capabilities are keyed by DEPENDENCY SET. Two entries with the same tables are one
+  // capability wearing two names, and would produce two verdicts about one artifact.
+  const seen = new Map<string, string>();
+  for (const spec of CAPABILITY_INVENTORY) {
+    const key = `${spec.sourceId}:${spec.tables.map((t) => t.name).sort().join("+")}`;
+    const previous = seen.get(key);
+    assert.ok(!previous, `${spec.capability} and ${previous} declare the same tables for ${spec.sourceId}`);
+    seen.set(key, spec.capability);
+  }
+});
+
+check("the Historical year-coverage capability is genuinely composite", () => {
+  // yearSql("historical") UNIONs both datasets, so a single-table entry here would mean
+  // half this operation's traffic gets a verdict about a table it never read.
+  const span = specFor("historical", "coverage_span")!;
+  const names = span.tables.map((t) => t.name).sort();
+  assert.deepStrictEqual(names, ["historical_agency_crime", "historical_state_national"]);
+});
+
+check("Hate Crime participation and incidents are SEPARATE capabilities", () => {
+  const participation = specFor("hate_crime", "participation");
+  const incidents = specFor("hate_crime", "incidents");
+  assert.ok(participation && incidents);
+  assert.notDeepStrictEqual(
+    participation!.tables.map((t) => t.name),
+    incidents!.tables.map((t) => t.name),
+  );
+});
+
+check("a semantic dependency is declared as such, never as a required table", () => {
+  // agency_year_reliability qualifies the agency-crime data; no family's SQL reads it.
+  // Declaring it structurally would assert it is part of the answer's own query.
+  for (const spec of CAPABILITY_INVENTORY) {
+    assert.ok(
+      !spec.tables.some((t) => t.name === "agency_year_reliability"),
+      `${spec.capability} declares agency_year_reliability structurally; it is semantic`,
+    );
+  }
+  const agencyCrime = specFor("historical", "agency_crime")!;
+  assert.strictEqual(agencyCrime.semanticDependencies.length, 1);
+  assert.strictEqual(agencyCrime.semanticDependencies[0].table, "agency_year_reliability");
+  assert.strictEqual(agencyCrime.semanticDependencies[0].qualifies, "historical_agency_crime");
+});
+
 check("every capability names required columns and a receipt key", () => {
   for (const spec of CAPABILITY_INVENTORY) {
     assert.ok(spec.receiptKey.trim() !== "", `${spec.sourceId}:${spec.capability} has no receiptKey`);
@@ -220,10 +357,13 @@ check("every capability names required columns and a receipt key", () => {
 });
 
 check("a family shared by two sources resolves per source, not globally", () => {
-  const users = SOURCE_IDS.filter((s) => capabilityForFamily(s, "metadata-coverage-answer") !== null);
-  assert.ok(users.length >= 2, `expected metadata-coverage-answer under multiple sources, saw ${users.join(",") || "none"}`);
-  const distinct = new Set(users.map((s) => `${s}:${capabilityForFamily(s, "metadata-coverage-answer")}`));
-  assert.strictEqual(distinct.size, users.length, "each source must resolve this family to its own capability");
+  const users = SOURCE_IDS.filter((s) => capabilityForFamily(s, "metadata-state-coverage") !== null);
+  assert.ok(users.length >= 2, `expected metadata-state-coverage under multiple sources, saw ${users.join(",") || "none"}`);
+  // Not every pair must differ -- SHR resolves all metadata to one capability legitimately --
+  // but Historical and Hate Crime must NOT resolve it to their agency-side capability.
+  assert.strictEqual(capabilityForFamily("historical", "metadata-state-coverage"), "state_national");
+  assert.strictEqual(capabilityForFamily("hate_crime", "metadata-state-coverage"), "participation");
+  assert.strictEqual(capabilityForFamily("hate_crime", "metadata-agency-directory"), "incidents");
 });
 
 check("the family map is not vacuously empty", () => {
@@ -237,6 +377,78 @@ check("the family map is not vacuously empty", () => {
     if (spec.stage2aReachable) assert.ok(mapped.has(key), `${key} is reachable but no verified family maps to it`);
     else assert.ok((spec.unreachableReason ?? "").trim() !== "", `${key} is unreachable and must say why`);
   }
+});
+
+check("exactly two capabilities are unreachable, and they are the expected two", () => {
+  // Pins the skip list. A third unreachable entry means either a real regression or
+  // someone made a test pass by declaring a capability out of scope.
+  const unreachable = CAPABILITY_INVENTORY
+    .filter((s) => !s.stage2aReachable)
+    .map((s) => `${s.sourceId}:${s.capability}`)
+    .sort();
+  assert.deepStrictEqual(unreachable, ["current:national", "nibrs:rollup"]);
+  for (const spec of CAPABILITY_INVENTORY.filter((s) => !s.stage2aReachable)) {
+    assert.ok(
+      (spec.unreachableReason ?? "").length > 120,
+      `${spec.capability}'s reason must explain the architecture, not just assert unreachability`,
+    );
+  }
+});
+
+check("EVERY sealed family is either mapped or explicitly classified as unmapped", () => {
+  /**
+   * The regression that stops a new family from being silently omitted.
+   *
+   * SEALED_FAMILIES is the checked-in output of the Task 1 Step 1 two-pass enumeration,
+   * INCLUDING variable-valued seal sites. A literal-only grep would have listed 4 of these
+   * 18 and this test would have passed while twelve families went unclassified.
+   */
+  const SEALED_FAMILIES: { family: string; sources: SourceId[] }[] = [
+    { family: "deterministic-current-indexed-state-followup", sources: ["current"] },
+    { family: "deterministic-current-multi-city-trend", sources: ["current"] },
+    { family: "deterministic-historical-multi-city-trend", sources: ["historical"] },
+    { family: "deterministic-historical-local-recent-change", sources: ["historical"] },
+    { family: "deterministic-historical-city-change-ranking", sources: ["historical"] },
+    { family: "deterministic-place-lookup", sources: ["historical"] },
+    { family: "agency-scorecard", sources: ["historical"] },
+    { family: "state-scorecard", sources: ["historical"] },
+    { family: "national-scorecard", sources: ["historical"] },
+    { family: "deterministic-nibrs-juvenile-offender-incidents", sources: ["nibrs"] },
+    { family: "deterministic-nibrs-clearance-type-breakdown", sources: ["nibrs"] },
+    { family: "deterministic-nibrs-clearance-method", sources: ["nibrs"] },
+    { family: "deterministic-nibrs-comparable-agency-clearance", sources: ["nibrs"] },
+    { family: "deterministic-nibrs-local-city-offense-count", sources: ["nibrs"] },
+    { family: "deterministic-nibrs-dv-assault-share", sources: ["nibrs"] },
+    { family: "deterministic-murder", sources: ["shr"] },
+    { family: "deterministic-shooting", sources: ["shr"] },
+    { family: "metadata-coverage-answer", sources: ["current", "historical", "nibrs", "shr", "hate_crime"] },
+  ];
+  for (const { family, sources } of SEALED_FAMILIES) {
+    const anyMapped = sources.some((s) => capabilityForFamily(s, family) !== null);
+    const classified = typeof UNMAPPED_FAMILIES[family] === "string" && UNMAPPED_FAMILIES[family].trim() !== "";
+    assert.ok(
+      anyMapped || classified,
+      `sealed family '${family}' is neither mapped to a capability nor classified in UNMAPPED_FAMILIES`,
+    );
+  }
+});
+
+check("the enumeration itself is current: no unlisted seal site exists", () => {
+  // Guards SEALED_FAMILIES against drift. Counts seal sites in the route files and fails if
+  // the total moves, forcing a re-run of the two-pass enumeration.
+  const routeFiles = [
+    "app/api/query/route.ts", "app/api/nibrs-query/route.ts",
+    "app/api/shr-query/route.ts", "app/api/hc-query/route.ts",
+  ];
+  const sites = routeFiles.reduce((total, file) => {
+    const source = fs.readFileSync(file, "utf8");
+    return total + [...source.matchAll(/sealPlanDerivation\(/g)].length;
+  }, 0);
+  assert.strictEqual(
+    sites, EXPECTED_SEAL_SITES,
+    `seal-site count moved from ${EXPECTED_SEAL_SITES} to ${sites}; re-run the Task 1 Step 1 ` +
+    `two-pass enumeration and update SEALED_FAMILIES before changing this number`,
+  );
 });
 
 console.log(`\nsource health inventory tests: ${passed} passed`);
@@ -268,6 +480,29 @@ export type DatabaseProvider = { acquire: () => OpenedDatabase | null };
 export type Preflight = (opened: OpenedDatabase | null) => { ok: boolean; reason: string; inspectedPath?: string | null };
 export type TableRequirement = { name: string; requiredColumns: string[]; minRows: number };
 export type DependencyRule = { derived: string; upstream: string; generationColumn?: string };
+/**
+ * A table that establishes whether a result can be TRUSTED, rather than one the answer's
+ * SQL reads.
+ *
+ * `agency_year_reliability` is the motivating case: no family's SQL selects from it, and
+ * that is exactly why it matters -- without it every agency-year reads as usable and the
+ * scorecard's caveats vanish silently. A health dependency need not appear in the final
+ * SQL when it determines whether the result is trustworthy.
+ *
+ * Checked by ALIGNMENT, never by row count: a nonempty table proves nothing about whether
+ * it covers the data it is supposed to qualify.
+ */
+export type SemanticDependency = {
+  table: string;
+  requiredColumns: string[];
+  /** Rows must resolve to this table via `keyColumn`. */
+  qualifies: string;
+  keyColumn: string;
+  /** Its year span must not be strictly narrower than the qualified table's. */
+  yearColumn: string;
+  /** If set, must be present and single-valued; a mixed value is a half-finished rebuild. */
+  versionColumn?: string;
+};
 export type CapabilitySpec = {
   sourceId: SourceId;
   capability: string;
@@ -275,6 +510,7 @@ export type CapabilitySpec = {
   preflight?: Preflight;
   tables: TableRequirement[];
   dependencies: DependencyRule[];
+  semanticDependencies: SemanticDependency[];
   coverage: { table: string; yearColumn: string } | null;
   receiptKey: string;
   stage2aReachable: boolean;
@@ -338,49 +574,194 @@ const NIBRS_MAIN = managedProvider(getNibrsDb);
 const SHR = managedProvider(getShrDb);
 const HC = managedProvider(getHateCrimeDb);
 
+/**
+ * Capabilities are keyed by DISTINCT DEPENDENCY SET, not by a convenient name.
+ *
+ * Declaring a table the answer never reads produces a confident verdict about the wrong
+ * artifact -- the same defect the artifact_mismatch boundary exists to catch, one level up.
+ * Omitting a table it does read leaves a real dependency unchecked. The honest unit is
+ * therefore the set of tables one operation actually depends on, which is why there are 20
+ * entries here rather than the 9 this plan originally proposed.
+ *
+ * SCHEMA VERIFICATION STATUS. Every RTCI/Historical entry below was verified against the
+ * real `crime_data.db`. NIBRS, SHR and Hate Crime entries were derived by reading the SQL
+ * builders only -- `nibrs.db` and `shr.db` are 0 bytes in the development tree -- and the
+ * NIBRS dependency sets are a LOWER BOUND, because the extraction scans each family's
+ * enclosing function and would miss SQL assembled in a helper. Confirm all three against
+ * production read-only before trusting them.
+ */
 export const CAPABILITY_INVENTORY: readonly CapabilitySpec[] = [
   {
     sourceId: "current", capability: "national", database: RTCI,
     tables: [{ name: "national_monthly", requiredColumns: ["year", "month", "offense"], minRows: 1 }],
-    dependencies: [], coverage: { table: "national_monthly", yearColumn: "year" },
-    receiptKey: "rtci_national", stage2aReachable: true,
+    dependencies: [], semanticDependencies: [],
+    coverage: { table: "national_monthly", yearColumn: "year" },
+    receiptKey: "rtci_national",
+    stage2aReachable: false,
+    unreachableReason:
+      "No sealed plan family reads national_monthly. RTCI national answers are produced by " +
+      "model-authored SQL, and model paths seal no derivation by design, so Stage 2A's " +
+      "evidence rule cannot reach this capability. Reaching it requires a deterministic " +
+      "RTCI national planner (new product code), not a fixture change.",
   },
   {
     sourceId: "current", capability: "sample_agencies", database: RTCI,
     tables: [
       { name: "sample_agencies", requiredColumns: ["ori"], minRows: 1 },
       { name: "agency_monthly", requiredColumns: ["ori", "year", "month"], minRows: 1 },
+      { name: "agency_population", requiredColumns: ["ori", "year", "population"], minRows: 1 },
     ],
     dependencies: [{ derived: "sample_agencies", upstream: "agency_monthly" }],
+    semanticDependencies: [],
     coverage: { table: "agency_monthly", yearColumn: "year" },
     receiptKey: "rtci_sample_agencies", stage2aReachable: true,
+  },
+  {
+    // The RTCI ROSTER, carrying the national_sample flag. A different table from
+    // `sample_agencies` (719 rows vs 558) with a different role, and the one every Current
+    // metadata operation actually reads.
+    sourceId: "current", capability: "agency_roster", database: RTCI,
+    tables: [{ name: "agencies", requiredColumns: ["ori", "agency", "state", "national_sample"], minRows: 1 }],
+    dependencies: [], semanticDependencies: [], coverage: null,
+    receiptKey: "rtci_agency_roster", stage2aReachable: true,
+  },
+  {
+    sourceId: "current", capability: "agency_directory_county", database: RTCI,
+    tables: [
+      { name: "agencies", requiredColumns: ["ori", "agency", "state"], minRows: 1 },
+      { name: "agency_county_crosswalk", requiredColumns: ["ori", "county_key", "state"], minRows: 1 },
+    ],
+    dependencies: [], semanticDependencies: [], coverage: null,
+    receiptKey: "rtci_agency_directory_county", stage2aReachable: true,
   },
   {
     sourceId: "historical", capability: "agency_crime", database: RTCI,
     tables: [
       { name: "historical_agency", requiredColumns: ["ori"], minRows: 1 },
       { name: "historical_agency_crime", requiredColumns: ["ori", "year"], minRows: 1 },
-      // Required, not optional: without it every agency-year reads as usable and the
-      // scorecard's caveats vanish silently.
-      { name: "agency_year_reliability", requiredColumns: ["ori", "year"], minRows: 1 },
+      { name: "historical_agency_population", requiredColumns: ["ori", "year", "population"], minRows: 1 },
+      { name: "historical_agency_clearance", requiredColumns: ["ori", "year"], minRows: 1 },
     ],
-    dependencies: [{ derived: "agency_year_reliability", upstream: "historical_agency_crime" }],
+    dependencies: [],
+    // NOT a structural table: no family's SQL selects from it. See SemanticDependency.
+    semanticDependencies: [{
+      table: "agency_year_reliability",
+      requiredColumns: ["ori", "year", "algorithm_version"],
+      qualifies: "historical_agency_crime",
+      keyColumn: "ori",
+      yearColumn: "year",
+      versionColumn: "algorithm_version",
+    }],
     coverage: { table: "historical_agency_crime", yearColumn: "year" },
     receiptKey: "historical_agency_crime", stage2aReachable: true,
   },
   {
+    // deterministic-place-lookup reads everything agency_crime does AND historical_staffing,
+    // so it is a different dependency set and gets its own verdict.
+    sourceId: "historical", capability: "place_profile", database: RTCI,
+    tables: [
+      { name: "historical_agency", requiredColumns: ["ori"], minRows: 1 },
+      { name: "historical_agency_crime", requiredColumns: ["ori", "year"], minRows: 1 },
+      { name: "historical_agency_clearance", requiredColumns: ["ori", "year"], minRows: 1 },
+      { name: "historical_staffing", requiredColumns: ["ori", "year", "officer_total"], minRows: 1 },
+    ],
+    dependencies: [],
+    semanticDependencies: [{
+      table: "agency_year_reliability",
+      requiredColumns: ["ori", "year", "algorithm_version"],
+      qualifies: "historical_agency_crime",
+      keyColumn: "ori",
+      yearColumn: "year",
+      versionColumn: "algorithm_version",
+    }],
+    coverage: { table: "historical_agency_crime", yearColumn: "year" },
+    receiptKey: "historical_place_profile", stage2aReachable: true,
+  },
+  {
+    sourceId: "historical", capability: "agency_directory", database: RTCI,
+    tables: [{ name: "historical_agency", requiredColumns: ["ori", "agency", "state", "type"], minRows: 1 }],
+    dependencies: [], semanticDependencies: [], coverage: null,
+    receiptKey: "historical_agency_directory", stage2aReachable: true,
+  },
+  {
     sourceId: "historical", capability: "state_national", database: RTCI,
     tables: [{ name: "historical_state_national", requiredColumns: ["state", "year"], minRows: 1 }],
-    dependencies: [], coverage: { table: "historical_state_national", yearColumn: "year" },
+    dependencies: [], semanticDependencies: [],
+    coverage: { table: "historical_state_national", yearColumn: "year" },
     receiptKey: "historical_state_national", stage2aReachable: true,
   },
   {
-    // The MAIN NIBRS database: the pre-aggregated summary tables ordinary NIBRS answers
-    // read. Distinct from the rollup artifact below, and healthy or broken independently.
-    sourceId: "nibrs", capability: "summary", database: NIBRS_MAIN,
-    tables: [{ name: "summary_victim_state_monthly", requiredColumns: ["state", "year", "month"], minRows: 1 }],
-    dependencies: [], coverage: { table: "summary_victim_state_monthly", yearColumn: "year" },
-    receiptKey: "nibrs_summary", stage2aReachable: true,
+    /**
+     * COMPOSITE, on purpose. yearSql("historical") is a UNION ALL across
+     * historical_agency_crime AND historical_state_national (lib/metadata-coverage.ts:520-524),
+     * so a year-coverage answer genuinely depends on both. Choosing one would give half of
+     * this operation's traffic a verdict about a table it did not read.
+     */
+    sourceId: "historical", capability: "coverage_span", database: RTCI,
+    tables: [
+      { name: "historical_agency_crime", requiredColumns: ["ori", "year"], minRows: 1 },
+      { name: "historical_state_national", requiredColumns: ["state", "year"], minRows: 1 },
+    ],
+    dependencies: [], semanticDependencies: [],
+    coverage: { table: "historical_agency_crime", yearColumn: "year" },
+    receiptKey: "historical_coverage_span", stage2aReachable: true,
+  },
+  {
+    sourceId: "nibrs", capability: "juvenile_offender", database: NIBRS_MAIN,
+    tables: [{ name: "summary_juvenile_offender_incidents", requiredColumns: ["year"], minRows: 1 }],
+    dependencies: [], semanticDependencies: [],
+    coverage: { table: "summary_juvenile_offender_incidents", yearColumn: "year" },
+    receiptKey: "nibrs_juvenile_offender", stage2aReachable: true,
+  },
+  {
+    // Note the inversion, confirmed against the source: the "clearance-type-breakdown"
+    // family reads summary_clearance_DETAIL, and "clearance-method" reads
+    // summary_clearance_TYPE. Mapping by name rather than by SQL gets both wrong.
+    sourceId: "nibrs", capability: "clearance_detail", database: NIBRS_MAIN,
+    tables: [{ name: "summary_clearance_detail", requiredColumns: ["year"], minRows: 1 }],
+    dependencies: [], semanticDependencies: [],
+    coverage: { table: "summary_clearance_detail", yearColumn: "year" },
+    receiptKey: "nibrs_clearance_detail", stage2aReachable: true,
+  },
+  {
+    sourceId: "nibrs", capability: "clearance_type", database: NIBRS_MAIN,
+    tables: [{ name: "summary_clearance_type", requiredColumns: ["year"], minRows: 1 }],
+    dependencies: [], semanticDependencies: [],
+    coverage: { table: "summary_clearance_type", yearColumn: "year" },
+    receiptKey: "nibrs_clearance_type", stage2aReachable: true,
+  },
+  {
+    sourceId: "nibrs", capability: "comparable_agency_clearance", database: NIBRS_MAIN,
+    tables: [
+      { name: "summary_clearance_type", requiredColumns: ["year"], minRows: 1 },
+      { name: "agencies", requiredColumns: ["ori", "state"], minRows: 1 },
+    ],
+    dependencies: [], semanticDependencies: [],
+    coverage: { table: "summary_clearance_type", yearColumn: "year" },
+    receiptKey: "nibrs_comparable_agency_clearance", stage2aReachable: true,
+  },
+  {
+    sourceId: "nibrs", capability: "city_completeness", database: NIBRS_MAIN,
+    tables: [{ name: "nibrs_agency_completeness", requiredColumns: ["ori", "year"], minRows: 1 }],
+    dependencies: [], semanticDependencies: [],
+    coverage: { table: "nibrs_agency_completeness", yearColumn: "year" },
+    receiptKey: "nibrs_city_completeness", stage2aReachable: true,
+  },
+  {
+    sourceId: "nibrs", capability: "victim_circumstance", database: NIBRS_MAIN,
+    tables: [
+      { name: "summary_victim_circumstance", requiredColumns: ["year"], minRows: 1 },
+      { name: "summary_victim_state_monthly", requiredColumns: ["state", "year", "month"], minRows: 1 },
+    ],
+    dependencies: [], semanticDependencies: [],
+    coverage: { table: "summary_victim_state_monthly", yearColumn: "year" },
+    receiptKey: "nibrs_victim_circumstance", stage2aReachable: true,
+  },
+  {
+    sourceId: "nibrs", capability: "agency_roster", database: NIBRS_MAIN,
+    tables: [{ name: "agencies", requiredColumns: ["ori", "state"], minRows: 1 }],
+    dependencies: [], semanticDependencies: [], coverage: null,
+    receiptKey: "nibrs_agency_roster", stage2aReachable: true,
   },
   {
     sourceId: "nibrs", capability: "rollup", database: NIBRS_ROLLUP,
@@ -413,20 +794,50 @@ export const CAPABILITY_INVENTORY: readonly CapabilitySpec[] = [
       { name: "state_summary_clearance_type", requiredColumns: ["state", "year"], minRows: 1 },
       { name: "national_summary_clearance_type", requiredColumns: ["year"], minRows: 1 },
     ],
-    dependencies: [], coverage: { table: "state_summary_clearance_type", yearColumn: "year" },
-    receiptKey: "nibrs_rollup", stage2aReachable: true,
+    dependencies: [], semanticDependencies: [],
+    coverage: { table: "state_summary_clearance_type", yearColumn: "year" },
+    receiptKey: "nibrs_rollup",
+    stage2aReachable: false,
+    unreachableReason:
+      "The rollup artifact is reachable only through the model-SQL path. routeNibrsRollupSql() " +
+      "is called at app/api/nibrs-query/route.ts:1100 and :1154 only; the deterministic exit " +
+      "at :526 executes its SQL unrewritten, so every deterministic NIBRS family reads the " +
+      "main database. Separately, family keying is the WRONG KEY for this capability even " +
+      "once a path exists: routing is decided by the executed SQL -- exactly one ROLLUP_SOURCES " +
+      "table (lib/nibrs-rollup-router.ts:23-29) and a non-agency scope (:174-176) -- so the " +
+      "same family routes to the rollup at state/national scope and to the main database at " +
+      "agency scope. Resolving this needs an operation-level key, not a fixture change.",
   },
   {
     sourceId: "shr", capability: "incidents", database: SHR,
-    tables: [{ name: "incidents", requiredColumns: ["ori", "year", "state", "homicide_type"], minRows: 1 }],
-    dependencies: [], coverage: { table: "incidents", yearColumn: "year" },
+    tables: [
+      { name: "incidents", requiredColumns: ["ori", "year", "state", "homicide_type"], minRows: 1 },
+      // Joined by the deterministic murder path; omitted from the original inventory.
+      { name: "victims", requiredColumns: ["incident_id"], minRows: 1 },
+    ],
+    dependencies: [], semanticDependencies: [],
+    coverage: { table: "incidents", yearColumn: "year" },
     receiptKey: "shr_incidents", stage2aReachable: true,
   },
   {
     sourceId: "hate_crime", capability: "incidents", database: HC,
     tables: [{ name: "hate_crime_incidents", requiredColumns: ["ori", "year", "state_abbr", "bias_motivation"], minRows: 1 }],
-    dependencies: [], coverage: { table: "hate_crime_incidents", yearColumn: "year" },
+    dependencies: [], semanticDependencies: [],
+    coverage: { table: "hate_crime_incidents", yearColumn: "year" },
     receiptKey: "hate_crime_incidents", stage2aReachable: true,
+  },
+  {
+    /**
+     * SEPARATE from hate_crime:incidents. Two of the three Hate Crime metadata operations
+     * -- state coverage and year coverage -- read hate_crime_participation and never touch
+     * hate_crime_incidents (lib/metadata-coverage.ts:440, :530). Folding them together
+     * would health-check the wrong table for most Hate Crime metadata traffic.
+     */
+    sourceId: "hate_crime", capability: "participation", database: HC,
+    tables: [{ name: "hate_crime_participation", requiredColumns: ["state", "year", "reporting_agencies"], minRows: 1 }],
+    dependencies: [], semanticDependencies: [],
+    coverage: { table: "hate_crime_participation", yearColumn: "year" },
+    receiptKey: "hate_crime_participation", stage2aReachable: true,
   },
 ];
 
@@ -435,16 +846,75 @@ export function specFor(sourceId: SourceId, capability: string): CapabilitySpec 
 }
 
 /**
- * sourceId -> planFamily -> capability. NESTED because a family name is not unique:
- * `metadata-coverage-answer` is sealed in four places across sources, and a flat map
- * would let one source's answer select another's capability. Replace with Step 1 output.
+ * sourceId -> planFamily -> capability. NESTED because a family name is not unique: the
+ * metadata families are sealed under all five sources, and a flat map would let one
+ * source's answer select another's capability.
+ *
+ * Every entry is justified by the SQL the family actually executes; see the review's §2 for
+ * the per-family table evidence. The metadata entries assume Task 1A has landed -- until
+ * then the four routes still seal the coarse `metadata-coverage-answer`, which maps to
+ * nothing here and is therefore correctly unresolved rather than wrongly attributed.
  */
 export const CAPABILITY_BY_SOURCE_AND_FAMILY: Readonly<Record<SourceId, Readonly<Record<string, string>>>> = {
-  current: { "metadata-coverage-answer": "national" },
-  historical: { "metadata-coverage-answer": "state_national" },
-  nibrs: { "metadata-coverage-answer": "summary" },
-  shr: { "deterministic-murder": "incidents", "deterministic-shooting": "incidents" },
-  hate_crime: { "metadata-coverage-answer": "incidents" },
+  current: {
+    "deterministic-current-indexed-state-followup": "sample_agencies",
+    "deterministic-current-multi-city-trend": "sample_agencies",
+    "metadata-year-coverage": "sample_agencies",          // yearSql reads agency_monthly
+    "metadata-agency-directory": "agency_roster",
+    "metadata-agency-directory-county": "agency_directory_county",
+    "metadata-state-coverage": "agency_roster",           // agencies WHERE national_sample = 1
+  },
+  historical: {
+    "agency-scorecard": "agency_crime",
+    "state-scorecard": "state_national",
+    "national-scorecard": "state_national",
+    "deterministic-place-lookup": "place_profile",        // the one family reading historical_staffing
+    "deterministic-historical-local-recent-change": "agency_crime",
+    "deterministic-historical-city-change-ranking": "agency_crime",
+    "deterministic-historical-multi-city-trend": "agency_crime",
+    "metadata-year-coverage": "coverage_span",            // COMPOSITE: both Historical datasets
+    "metadata-agency-directory": "agency_directory",
+    "metadata-state-coverage": "state_national",
+  },
+  nibrs: {
+    "deterministic-nibrs-juvenile-offender-incidents": "juvenile_offender",
+    "deterministic-nibrs-clearance-type-breakdown": "clearance_detail",   // reads _detail, not _type
+    "deterministic-nibrs-clearance-method": "clearance_type",             // reads _type, not _detail
+    "deterministic-nibrs-comparable-agency-clearance": "comparable_agency_clearance",
+    "deterministic-nibrs-local-city-offense-count": "city_completeness",
+    "deterministic-nibrs-dv-assault-share": "victim_circumstance",
+    "metadata-year-coverage": "agency_roster",
+    "metadata-agency-directory": "agency_roster",
+    "metadata-state-coverage": "agency_roster",
+  },
+  shr: {
+    "deterministic-murder": "incidents",
+    "deterministic-shooting": "incidents",
+    "metadata-year-coverage": "incidents",
+    "metadata-agency-directory": "incidents",
+    "metadata-state-coverage": "incidents",
+  },
+  hate_crime: {
+    "metadata-agency-directory": "incidents",
+    "metadata-state-coverage": "participation",
+    "metadata-year-coverage": "participation",
+  },
+};
+
+/**
+ * Families and operations that are deliberately NOT mapped, each with a reason.
+ *
+ * Exists so the Step 2 regression can distinguish "classified as unmapped" from "silently
+ * forgotten". A new family added to a route must appear in one map or the other.
+ */
+export const UNMAPPED_FAMILIES: Readonly<Record<string, string>> = {
+  "metadata-coverage-answer":
+    "Superseded by the four operation families in Task 1A. Too coarse to name one dependency " +
+    "set: on Historical and Hate Crime it spans two.",
+  "download_help":
+    "Returns a canned answer with no SQL (lib/metadata-coverage.ts:620); not a factual source claim.",
+  "county_membership_unavailable":
+    "Returns a canned answer with no SQL (:621); not a factual source claim.",
 };
 
 export function capabilityForFamily(sourceId: SourceId, planFamily: string): string | null {
@@ -459,6 +929,136 @@ Run: `npx tsx scripts/test-source-health-inventory.ts && npx tsc --noEmit`
 ```bash
 git add lib/source-health-inventory.ts scripts/test-source-health-inventory.ts package.json
 git commit -m "Add the source x capability inventory with capability-owned database providers"
+```
+
+---
+
+### Task 1A: Sealed metadata operation tokens
+
+**Files:** Modify `lib/metadata-coverage.ts`, `app/api/query/route.ts`, `app/api/nibrs-query/route.ts`, `app/api/shr-query/route.ts`, `app/api/hc-query/route.ts`, `scripts/test-source-health-inventory.ts`; create `scripts/test-metadata-operations.ts`
+**Read first:** `lib/metadata-coverage.ts:612-660`, `lib/plan-derivation.ts:198-205`
+
+`metadata-coverage-answer` is one family covering three structurally different operations
+over different dependency sets. On Historical it reads `historical_state_national` *or*
+`historical_agency` *or* both; on Hate Crime, `hate_crime_participation` *or*
+`hate_crime_incidents`. No per-source mapping can be truthful, because the ambiguity is
+inside the source.
+
+**The evidence must be produced where the SQL is built, and bound to that exact SQL.** A
+route-supplied capability string would be an unverified claim about work the route did not
+do; `sealPlanDerivation(family, sql)` at the construction site is a token whose fingerprint
+`verifyPlanDerivation` can check against what was actually executed.
+
+| Family | Emitted for | Builder |
+|--------|-------------|---------|
+| `metadata-year-coverage` | `year_range` | `yearSql` (`:516-532`) |
+| `metadata-agency-directory` | agency/city intents, no county scope | `entitySql` (`:450`) |
+| `metadata-agency-directory-county` | agency/city intents with a county scope | `countyEntitySql` (`:391`) |
+| `metadata-state-coverage` | `available_states`, `missing_states`, `state_count` | `stateSql` (`:335`) |
+
+`download_help` (`:620`) and `county_membership_unavailable` (`:621`) produce **no SQL** and
+must seal **nothing**. They are canned capability answers, not factual source claims, and
+`UNMAPPED_FAMILIES` records why.
+
+- [ ] **Step 1: Write the failing tests**
+
+```typescript
+// scripts/test-metadata-operations.ts
+import { answerMetadataQuestion } from "../lib/metadata-coverage";
+import { verifyPlanDerivation } from "../lib/plan-derivation";
+import { capabilityForFamily } from "../lib/source-health-inventory";
+
+check("each metadata operation seals its OWN family, bound to the SQL it built", () => {
+  const cases = [
+    { source: "historical", q: "which states have data",            family: "metadata-state-coverage" },
+    { source: "historical", q: "what years are available",          family: "metadata-year-coverage" },
+    { source: "historical", q: "how many agencies are included",    family: "metadata-agency-directory" },
+    { source: "hate_crime", q: "which states have data",            family: "metadata-state-coverage" },
+    { source: "hate_crime", q: "how many agencies are included",    family: "metadata-agency-directory" },
+  ] as const;
+  for (const c of cases) {
+    const result = answerMetadataQuestion(c.source, c.q, fixtureDbFor(c.source))!;
+    assert.ok(result?.derivation, `${c.source}/${c.q} sealed nothing`);
+    assert.strictEqual(result.derivation!.planFamily, c.family);
+    // Bound to the EXACT SQL: the whole point of sealing at the construction site.
+    assert.ok(verifyPlanDerivation(result.derivation!, result.sql, c.family).ok);
+  }
+});
+
+check("the two Historical operations resolve to DIFFERENT capabilities", () => {
+  // The defect this task exists to remove.
+  assert.notStrictEqual(
+    capabilityForFamily("historical", "metadata-state-coverage"),
+    capabilityForFamily("historical", "metadata-agency-directory"),
+  );
+});
+
+check("Historical year coverage resolves to the composite capability", () => {
+  assert.strictEqual(capabilityForFamily("historical", "metadata-year-coverage"), "coverage_span");
+});
+
+check("Hate Crime state coverage resolves to participation, not incidents", () => {
+  assert.strictEqual(capabilityForFamily("hate_crime", "metadata-state-coverage"), "participation");
+  assert.strictEqual(capabilityForFamily("hate_crime", "metadata-agency-directory"), "incidents");
+});
+
+check("a SQL-less metadata answer seals nothing", () => {
+  const help = answerMetadataQuestion("current", "how do I download this table", null)!;
+  assert.strictEqual(help.sql, "");
+  assert.strictEqual(help.derivation, null);
+});
+
+check("no route seals a metadata family of its own", () => {
+  // The family must come from the builder, never from a route's claim about it.
+  for (const file of ROUTE_FILES) {
+    assert.doesNotMatch(fs.readFileSync(file, "utf8"), /sealPlanDerivation\(\s*"metadata-/);
+  }
+});
+```
+
+- [ ] **Step 2: Run it and confirm it fails**
+
+Run: `npx tsx scripts/test-metadata-operations.ts`
+Expected: FAIL — `MetadataCoverageResult` has no `derivation`.
+
+- [ ] **Step 3: Emit the token from the builder**
+
+Add `derivation: PlanDerivation | null` to `MetadataCoverageResult`, and set it in each of
+the three SQL-producing branches of `answerMetadataQuestion` **at the point the SQL is in
+hand** — `:625-629` for year coverage, `:631-650` for the entity branches (choosing the
+county family when `county` is non-null), `:652-656` for state coverage. `result(...)`
+carries it through. `downloadResult(...)` and `countyMembershipUnavailableResult(...)` set
+`null`.
+
+- [ ] **Step 4: Consume it in the four routes**
+
+Replace each route's `derivation: metadata.sql ? sealPlanDerivation("metadata-coverage-answer", metadata.sql) : null`
+with `derivation: metadata.derivation`, and each `planFamily: "metadata-coverage-answer"`
+with `planFamily: metadata.derivation?.planFamily ?? null`. Sites:
+`app/api/query/route.ts:1165`, `app/api/nibrs-query/route.ts:625`,
+`app/api/shr-query/route.ts:423`, `app/api/hc-query/route.ts:403`.
+
+Then set `EXPECTED_SEAL_SITES = 8` in `scripts/test-source-health-inventory.ts`, in this
+commit, and drop `metadata-coverage-answer` from `SEALED_FAMILIES` — it is no longer sealed
+anywhere. Keep its `UNMAPPED_FAMILIES` entry as the record of what replaced it.
+
+- [ ] **Step 5: Prove no user-visible change**
+
+Run: `npx tsx scripts/test-metadata-operations.ts && npx tsx scripts/test-shadow-route-equivalence.ts && npx tsx scripts/test-shadow-equivalence.ts && npx tsc --noEmit`
+
+The family name reaches `query_log` and the proof envelope. It must **not** reach any user
+payload — confirm the equivalence suites still see byte-identical bodies. A changed family
+string in a response body is a contract violation, not a cosmetic diff.
+
+- [ ] **Step 6: Run the whole suite and commit**
+
+Run: `npm test` (a **127** exit is the known npx-cache flake — re-run once)
+
+```bash
+git add lib/metadata-coverage.ts app/api/query/route.ts app/api/nibrs-query/route.ts \
+        app/api/shr-query/route.ts app/api/hc-query/route.ts \
+        scripts/test-metadata-operations.ts scripts/test-source-health-inventory.ts package.json
+git commit -m "Seal metadata operation tokens where the SQL is built, replacing one coarse family"
 ```
 
 ---
@@ -816,13 +1416,111 @@ Insert after the table loop, before `trace.coverage`:
   }
 ```
 
-- [ ] **Step 4: Run it, confirm it passes, commit**
+- [ ] **Step 4: Add the semantic dependency alignment check**
+
+Add `semanticChecked: string[]` to `HealthTrace`, and a `semantic_dependency` boundary.
+
+**A row count is not evidence here.** `agency_year_reliability` is nonempty in every
+database that has ever been built; what matters is whether it *covers* the agency-crime data
+it qualifies. Three alignment checks, using the real columns
+(`ori, year, kind, source, columns_json, evidence_json, algorithm_version, generated_at`):
+
+```typescript
+  for (const dep of spec.semanticDependencies) {
+    const columns = columnsOf(db, dep.table);
+    if (columns === null) return done("degraded", `semantic dependency ${dep.table} is missing`, "semantic_dependency");
+    const absent = dep.requiredColumns.filter((column) => !columns.has(column));
+    if (absent.length > 0) {
+      return done("degraded", `${dep.table} is missing required column(s): ${absent.join(", ")}`, "semantic_dependency");
+    }
+    try {
+      // 1. Every qualifying row resolves to something it can qualify. Orphans mean the
+      //    reliability build ran against a different agency set.
+      const orphans = db.prepare(
+        `SELECT COUNT(*) AS n FROM ${dep.table} d
+          WHERE NOT EXISTS (SELECT 1 FROM ${dep.qualifies} q WHERE q.${dep.keyColumn} = d.${dep.keyColumn})`,
+      ).get() as { n: number };
+      if (orphans.n > 0) {
+        return done("degraded", `${orphans.n} row(s) in ${dep.table} qualify ${dep.keyColumn} values absent from ${dep.qualifies}`, "semantic_dependency");
+      }
+
+      // 2. Its year span is not strictly narrower. A reliability build that stopped short
+      //    leaves the most recent years silently unqualified -- every agency-year in the
+      //    gap reads as usable, which is the failure this dependency exists to prevent.
+      const span = db.prepare(
+        `SELECT (SELECT MAX(${dep.yearColumn}) FROM ${dep.table}) AS depMax,
+                (SELECT MAX(${dep.yearColumn}) FROM ${dep.qualifies}) AS qualMax`,
+      ).get() as { depMax: number | null; qualMax: number | null };
+      if (span.depMax === null || span.qualMax === null) {
+        return done("unknown", `${dep.table} or ${dep.qualifies} has no year bound to compare`, "semantic_dependency");
+      }
+      if (span.depMax < span.qualMax) {
+        return done("degraded", `${dep.table} covers through ${span.depMax} but ${dep.qualifies} extends to ${span.qualMax}; those years are unqualified`, "semantic_dependency");
+      }
+
+      // 3. One algorithm version. A mixed-version table is a half-finished rebuild, and
+      //    rows from two algorithms are not comparable evidence.
+      if (dep.versionColumn) {
+        const versions = db.prepare(
+          `SELECT COUNT(DISTINCT ${dep.versionColumn}) AS n FROM ${dep.table} WHERE ${dep.versionColumn} IS NOT NULL`,
+        ).get() as { n: number };
+        if (versions.n === 0) return done("degraded", `${dep.table} records no ${dep.versionColumn}`, "semantic_dependency");
+        if (versions.n > 1) return done("degraded", `${dep.table} mixes ${versions.n} ${dep.versionColumn} values; a rebuild is incomplete`, "semantic_dependency");
+      }
+    } catch (error) {
+      return done("unknown", `semantic dependency ${dep.table} could not be checked: ${(error as Error).message}`, "semantic_dependency");
+    }
+    trace.semanticChecked.push(`${dep.table}~${dep.qualifies}`);
+  }
+```
+
+Tests, added to `scripts/test-source-health.ts`:
+
+```typescript
+const agencyCrime = specFor("historical", "agency_crime")!;
+
+check("reliability data that stops short of the crime data is degraded, not healthy", () => {
+  // The case a nonempty-table check passes and this one catches.
+  const db = historicalFixture((d) => {
+    d.prepare("INSERT INTO historical_agency_crime VALUES (?,?)").run("TX0001", 2024);
+  }); // reliability rows only through 2022
+  const { health, trace } = evaluateCapability(agencyCrime, ctx(db));
+  assert.strictEqual(trace.boundary, "semantic_dependency");
+  assert.strictEqual(health.state, "degraded");
+  assert.match(health.reason ?? "", /unqualified|extends to/);
+});
+
+check("a mixed algorithm_version is degraded", () => {
+  const db = historicalFixture((d) => {
+    d.prepare("INSERT INTO agency_year_reliability VALUES (?,?,?)").run("TX0001", 2022, "v2");
+  });
+  assert.strictEqual(evaluateCapability(agencyCrime, ctx(db)).trace.boundary, "semantic_dependency");
+});
+
+check("an aligned reliability table is recorded and evaluation reaches the receipt", () => {
+  const { trace } = evaluateCapability(agencyCrime, ctx(historicalFixture()));
+  assert.strictEqual(trace.boundary, "missing_receipt");
+  assert.deepStrictEqual(trace.semanticChecked, ["agency_year_reliability~historical_agency_crime"]);
+});
+
+check("a nonempty but misaligned table would pass a row check and fail this one", () => {
+  // Names the distinction explicitly so a later simplification to COUNT(*) > 0 fails here.
+  const db = historicalFixture((d) => {
+    d.exec("DELETE FROM agency_year_reliability");
+    d.prepare("INSERT INTO agency_year_reliability VALUES (?,?,?)").run("ZZ9999", 2022, "v1");
+  });
+  const { trace } = evaluateCapability(agencyCrime, ctx(db));
+  assert.strictEqual(trace.boundary, "semantic_dependency");
+});
+```
+
+- [ ] **Step 5: Run it, confirm it passes, commit**
 
 Run: `npx tsx scripts/test-source-health.ts && npx tsc --noEmit`
 
 ```bash
 git add lib/source-health.ts scripts/test-source-health.ts
-git commit -m "Evaluate dependencies, generation alignment, and NIBRS artifact coherence"
+git commit -m "Evaluate dependencies, semantic reliability alignment, and NIBRS artifact coherence"
 ```
 
 ---
@@ -1220,7 +1918,7 @@ check("permitsAnswer and factualDeliveryBlocker agree on every health verdict", 
       state: c.state, reason: null, dataVersion: c.dataVersion, requestedCoverage: c.coverage,
     };
     const manifest = createProofManifest("current", "deterministic");
-    manifest.planFamily = "metadata-coverage-answer";
+    manifest.planFamily = "deterministic-current-multi-city-trend";
     for (const check of PROOF_CHECKS) manifest.checks[check] = "passed";
     manifest.source.dataVersion = health.dataVersion;
     manifest.source.health = healthToCheckState(health.state);
@@ -1269,20 +1967,45 @@ check("no Stage 2A verdict can authorize a factual answer", () => {
 });
 
 check("breaking one capability leaves unrelated capabilities alone", () => {
+  /**
+   * Corrected from an earlier draft, which enabled PROOF_CAPABILITY_CURRENT_NATIONAL and
+   * sealed `metadata-coverage-answer` over `national_monthly`. Both halves were wrong:
+   * `current:national` is unreachable in Stage 2A, and Current metadata resolves to
+   * `current:agency_roster`, not to the national capability. The test would have "passed"
+   * over a capability that never evaluated.
+   */
   __resetSourceHealthCacheForTests();
-  const env = { PROOF_MODE: "shadow", PROOF_CAPABILITY_SHR_INCIDENTS: "on", PROOF_CAPABILITY_CURRENT_NATIONAL: "on" };
+  const env = {
+    PROOF_MODE: "shadow",
+    PROOF_CAPABILITY_SHR_INCIDENTS: "on",
+    PROOF_CAPABILITY_CURRENT_SAMPLE_AGENCIES: "on",
+  };
   const brokenShr = sourceHealthFor("shr", shrSealed, SQL, "deterministic-murder",
     ctx(shrFixture((d) => d.exec("DELETE FROM incidents"))), env);
-  const nationalSql = "SELECT year, count FROM national_monthly";
-  const nationalSealed = sealPlanDerivation("metadata-coverage-answer", nationalSql);
-  const currentHealth = sourceHealthFor("current", nationalSealed, nationalSql, "metadata-coverage-answer",
-    ctx(currentFixture()), env);
+  const currentSql = "SELECT year, month, murders FROM agency_monthly WHERE ori = 'TX0001'";
+  const currentSealed = sealPlanDerivation("deterministic-current-multi-city-trend", currentSql);
+  const currentHealth = sourceHealthFor("current", currentSealed, currentSql,
+    "deterministic-current-multi-city-trend", ctx(currentFixture()), env);
   assert.strictEqual(brokenShr.state, "degraded");
   assert.notStrictEqual(currentHealth.state, "degraded");
   // And both actually evaluated, so this is isolation rather than two no-ops.
   const boundaries = __healthTracesForTests().map((t) => `${t.sourceId}:${t.boundary}`);
   assert.ok(boundaries.includes("shr:row_bounds"), `expected shr to fail on rows, saw ${boundaries.join(",")}`);
   assert.ok(boundaries.includes("current:missing_receipt"), `expected current to reach the receipt, saw ${boundaries.join(",")}`);
+});
+
+check("an unreachable capability cannot be enabled into evaluating", () => {
+  // A flag is not a path. Setting PROOF_CAPABILITY_CURRENT_NATIONAL must not manufacture a
+  // verdict for a capability no verified family can select.
+  __resetSourceHealthCacheForTests();
+  const env = { PROOF_MODE: "shadow", PROOF_CAPABILITY_CURRENT_NATIONAL: "on" };
+  const sql = "SELECT year, count FROM national_monthly";
+  const sealed = sealPlanDerivation("deterministic-current-multi-city-trend", sql);
+  const health = sourceHealthFor("current", sealed, sql, "deterministic-current-multi-city-trend",
+    ctx(currentFixture()), env);
+  // Resolves to sample_agencies, whose flag is unset -- never to national.
+  assert.notStrictEqual(health.capability, "national");
+  assert.strictEqual(health.state, "unknown");
 });
 ```
 
@@ -1299,7 +2022,49 @@ git commit -m "Pin that Stage 2A cannot authorize an answer, and that capabiliti
 
 **Files:** Modify `scripts/test-shadow-route-equivalence.ts`
 
-Two gaps this closes: the suite's four handler cases exercise only **four** source identities, because the Current/Historical handler is driven with a Current question; and enabling flags proves nothing unless a capability was evaluated **and reached the receipt boundary**.
+Three gaps this closes: the suite's four handler cases exercise only **four** source
+identities, because the Current/Historical handler is driven with a Current question;
+enabling flags proves nothing unless a capability was evaluated **and reached the receipt
+boundary**; and — the one the enumeration found — **all four existing cases drive the
+model-SQL path and seal no derivation at all**, so every one of them evaluates zero
+capabilities as written.
+
+**Every existing case must be re-pointed at a deterministic family.** Each supplies
+`coldCalls: ["translate", "explain"]` and a stubbed `reply` containing SQL, which is the
+model path; `resolveCapability` returns unresolved there by design. The fixtures change, the
+assertions do not.
+
+| Route case | Family to drive | Fixture tables to add |
+|-----------|-----------------|----------------------|
+| `app/api/query` (current) | `deterministic-current-multi-city-trend` | none — `agency_monthly`, `agency_population` already present |
+| `app/api/query` (historical, new) | `state-scorecard` | `historical_state_national` |
+| `app/api/nibrs-query` | `deterministic-nibrs-clearance-method` | `summary_clearance_type` |
+| `app/api/shr-query` | `deterministic-murder` | `victims` alongside `incidents` |
+| `app/api/hc-query` | `metadata-state-coverage` (Task 1A) | `hate_crime_participation` |
+
+A deterministic case does not consume the stubbed model reply, so `coldCalls` for these
+becomes `[]`. Keep one model-path case per route as a separate axis if the existing
+equivalence coverage is wanted — but it cannot satisfy the Stage 2 axis.
+
+**SHR needs one extra assertion.** Both SHR deterministic exits seal the planner's SQL and
+execute the contract validator's output (`app/api/shr-query/route.ts:456`/`:470`,
+`:711`/`:714`/`:757`), and `validateQueryContractSql` can rewrite
+(`lib/query-contract-validator.ts:396`, `:404`). If a rewrite fires, the fingerprint stops
+matching and the capability silently fails to resolve. Assert the derivation verified, so
+the suite reports that cause rather than an unexplained empty trace:
+
+```typescript
+assert.ok(
+  verifyPlanDerivation(sealedFromExit, executedSql, family).ok,
+  "SHR sealed the planner SQL but executed the contract validator's rewrite; " +
+  "the capability cannot resolve until they agree",
+);
+```
+
+**Skips are limited to `current:national` and `nibrs:rollup`.** No route case may be skipped
+— every source has at least one reachable family. If a Stage 2 axis is skipped for either
+unreachable capability, the skip message must name the reason from its
+`unreachableReason`. Do not weaken an assertion in place of a skip.
 
 - [ ] **Step 1: Add a Historical route case**
 
@@ -1332,15 +2097,28 @@ import { __resetSourceHealthCacheForTests, __healthTracesForTests } from "../lib
 console.log(`\n${route.label} -- Stage 2 source health enabled`);
 {
   const question = `${route.question} stage2-case`;
+  // The reachable capabilities only. current:national and nibrs:rollup are deliberately
+  // absent: enabling a flag for a capability no verified family can select would suggest
+  // coverage that does not exist.
   const CAPS: Record<string, string> = {
-    PROOF_CAPABILITY_CURRENT_NATIONAL: "on",
     PROOF_CAPABILITY_CURRENT_SAMPLE_AGENCIES: "on",
+    PROOF_CAPABILITY_CURRENT_AGENCY_ROSTER: "on",
+    PROOF_CAPABILITY_CURRENT_AGENCY_DIRECTORY_COUNTY: "on",
     PROOF_CAPABILITY_HISTORICAL_AGENCY_CRIME: "on",
+    PROOF_CAPABILITY_HISTORICAL_PLACE_PROFILE: "on",
+    PROOF_CAPABILITY_HISTORICAL_AGENCY_DIRECTORY: "on",
     PROOF_CAPABILITY_HISTORICAL_STATE_NATIONAL: "on",
-    PROOF_CAPABILITY_NIBRS_SUMMARY: "on",
-    PROOF_CAPABILITY_NIBRS_ROLLUP: "on",
+    PROOF_CAPABILITY_HISTORICAL_COVERAGE_SPAN: "on",
+    PROOF_CAPABILITY_NIBRS_JUVENILE_OFFENDER: "on",
+    PROOF_CAPABILITY_NIBRS_CLEARANCE_DETAIL: "on",
+    PROOF_CAPABILITY_NIBRS_CLEARANCE_TYPE: "on",
+    PROOF_CAPABILITY_NIBRS_COMPARABLE_AGENCY_CLEARANCE: "on",
+    PROOF_CAPABILITY_NIBRS_CITY_COMPLETENESS: "on",
+    PROOF_CAPABILITY_NIBRS_VICTIM_CIRCUMSTANCE: "on",
+    PROOF_CAPABILITY_NIBRS_AGENCY_ROSTER: "on",
     PROOF_CAPABILITY_SHR_INCIDENTS: "on",
     PROOF_CAPABILITY_HATE_CRIME_INCIDENTS: "on",
+    PROOF_CAPABILITY_HATE_CRIME_PARTICIPATION: "on",
   };
   const withCaps = async (mode: string | undefined, q: string) => {
     const saved = Object.fromEntries(Object.keys(CAPS).map((k) => [k, process.env[k]]));
@@ -1386,7 +2164,18 @@ console.log(`\n${route.label} -- Stage 2 source health enabled`);
 
 Run: `npx tsx scripts/test-shadow-route-equivalence.ts`
 
-A failure means the fixture question does not reach a deterministic typed-plan path, so no derivation is sealed. Steer the question onto a family present in `CAPABILITY_BY_SOURCE_AND_FAMILY`, or point the capability's provider at the fixture database via the suite's env variables. If a route genuinely has no such path yet, mark the capability `stage2aReachable: false` with a reason and skip that route's Stage 2 axis, naming the reason in the skip message. **Do not weaken the assertion.**
+A failure means the fixture question does not reach a deterministic typed-plan path, so no
+derivation is sealed. Steer the question onto a family present in
+`CAPABILITY_BY_SOURCE_AND_FAMILY` — the table above names one per route — or point the
+capability's provider at the fixture database via the suite's env variables.
+
+**`stage2aReachable: false` is not available as a way out here.** The enumeration in
+`docs/superpowers/reviews/2026-08-13-stage2a-family-capability-enumeration.md` established
+that every one of the five sources has at least one reachable deterministic family, and that
+exactly two capabilities — `current:national` and `nibrs:rollup` — are unreachable, for
+architectural reasons recorded in their `unreachableReason`. A third unreachable entry fails
+the Task 1 skip-list test. If a route resists, the fixture is wrong, not the inventory.
+**Do not weaken the assertion.**
 
 - [ ] **Step 4: Confirm the comparison is still live**
 
@@ -1620,9 +2409,26 @@ git commit -m "Carry the originating plan family in OriginVerdict and apply sour
 
 ## Stage 2 completion criteria
 
-**Stage 2A (this plan) delivers:** the five-source capability inventory with per-source family keying and capability-owned database providers; the structural evaluator with preflight adapter, artifact-coherence check, required columns, row bounds, dependencies and generation alignment; evaluation traces; capability resolution from verified tokens and, for embeds, from additive server-persisted origin evidence; the default-off flag gate; the budget switch; manifest wiring; and `unknown` verdicts wherever receipts are absent.
+**Stage 2A (this plan) delivers:** the five-source capability inventory — **20 capabilities
+keyed by distinct dependency set** — with per-source family keying and capability-owned
+database providers; sealed metadata operation tokens replacing one coarse family; the
+structural evaluator with preflight adapter, artifact-coherence check, required columns, row
+bounds, dependencies, generation alignment and **semantic reliability alignment**; evaluation
+traces; capability resolution from verified tokens and, for embeds, from additive
+server-persisted origin evidence; the default-off flag gate; the budget switch; manifest
+wiring; and `unknown` verdicts wherever receipts are absent.
 
-**Stage 2B delivers:** real build/import receipts in the summary builders and importers (start, finish, source version, schema version, input/output counts, reconciliation status); genuine `dataVersion` values so `healthy` becomes reachable; **and hard timeout isolation**.
+**Stage 2B delivers:** real build/import receipts in the summary builders and importers
+(start, finish, source version, schema version, input/output counts, reconciliation status);
+genuine `dataVersion` values so `healthy` becomes reachable; **and hard timeout isolation**.
+
+**Stage 2 also cannot close while `current:national` and `nibrs:rollup` remain unreachable.**
+Neither is a fixture problem. `current:national` needs a deterministic RTCI national planner;
+`nibrs:rollup` needs both a deterministic path that routes to the rollup artifact *and* an
+operation-level capability key, because rollup selection is a property of the executed SQL
+rather than of the plan family. Until later work supplies trustworthy operation evidence for
+both, they are recorded as unreachable with reasons and excluded from every enabled flag set
+— never mapped to a neighbouring capability to make a suite go green.
 
 **Stage 2 closes only when both have landed and these combined fixtures pass:**
 
@@ -1639,10 +2445,24 @@ Asserted by this plan: 1 (Tasks 1, 9, 10 — trace boundary `missing_receipt`), 
 
 ## Self-Review
 
-**Spec coverage.** §8 inputs: database open/read → capability-owned providers (Task 1) plus the `no_database` boundary (Task 2); required tables *and* columns → Task 2, with the Task 1 test rejecting any spec naming no columns; row bounds → `minRows`, empty-permitting specs rejected; builder/import receipt → `receiptKey` and the `missing_receipt` boundary, implemented in 2B; freshness for the exact requested period → `coverageFor` plus the normalized period in the cache key; dependencies between raw source, summaries, completeness and cohort tables → Task 3. §8 per-source: Current national and sample-agency independent → separate entries, asserted distinct; Historical tables + reliability metadata + latest year → `historical:agency_crime` including `agency_year_reliability`, and exercised at the route level by the new Historical case (Task 9); NIBRS extended with receipts and requested-period coverage → two capabilities over two artifacts (`nibrs:summary` on the main database, `nibrs:rollup` on the rollup file opened at the exact path `inspectNibrsRollupAvailability()` reports), with the preflight adapter reusing that inspector and the artifact-coherence check confirming both halves describe one file; SHR expected incident data and required structures → `shr:incidents`. §4 embed reads apply current source health → Task 10, both halves. §Stage 2 bullets: registry + cache → Tasks 2, 5; probes → Tasks 1–3; response behavior + kill switches → Tasks 5, 7; healthy/degraded/stale/unknown exercised → Tasks 2, 3, 8, with `healthy` deferred to 2B and stated.
+**Spec coverage.** §8 inputs: database open/read → capability-owned providers (Task 1) plus the `no_database` boundary (Task 2); required tables *and* columns → Task 2, with the Task 1 test rejecting any spec naming no columns; row bounds → `minRows`, empty-permitting specs rejected; builder/import receipt → `receiptKey` and the `missing_receipt` boundary, implemented in 2B; freshness for the exact requested period → `coverageFor` plus the normalized period in the cache key; dependencies between raw source, summaries, completeness and cohort tables → Task 3. §8 per-source: Current national and sample-agency independent → separate entries, asserted distinct, with `current:national` recorded unreachable and `current:agency_roster` split out because the RTCI roster is a different table from the sample cohort; Historical tables + reliability metadata + latest year → `historical:agency_crime` and `historical:place_profile` carrying `agency_year_reliability` as a labelled semantic dependency with an alignment check (Task 3), plus `historical:state_national` and the composite `historical:coverage_span`, exercised at the route level by the new Historical case (Task 9); NIBRS extended with receipts and requested-period coverage → **seven capabilities on the main database**, one per deterministic family's dependency set, plus `nibrs:rollup` on the rollup file opened at the exact path `inspectNibrsRollupAvailability()` reports — with the preflight adapter reusing that inspector and the artifact-coherence check confirming both halves describe one file, and `nibrs:rollup` recorded unreachable because rollup routing exists only on the model-SQL path; SHR expected incident data and required structures → `shr:incidents` over `incidents` and `victims`; Hate Crime → `hate_crime:incidents` and `hate_crime:participation`, split because two of its three metadata operations never read the incident table. §4 embed reads apply current source health → Task 10, both halves. §Stage 2 bullets: registry + cache → Tasks 2, 5; probes → Tasks 1–3; response behavior + kill switches → Tasks 5, 7; healthy/degraded/stale/unknown exercised → Tasks 2, 3, 8, with `healthy` deferred to 2B and stated.
 
 **Deliberate gaps, all named:** no `healthy` verdict reachable in 2A; `dataVersion` always `null`; hard timeout isolation deferred to 2B as criterion 8.
 
-**Placeholder scan.** `CAPABILITY_BY_SOURCE_AND_FAMILY` ships concrete rows to be replaced by the Task 1 Step 1 enumeration, and the non-vacuity test fails if a reachable capability ends up unmapped. Task 9 Step 5 and Task 10 Step 2 state their mechanisms (a view over a dropped table; direct row insertion versus creation through POST) rather than "add error handling".
+**Placeholder scan.** `CAPABILITY_BY_SOURCE_AND_FAMILY` no longer ships placeholder rows: every
+entry is justified by the SQL its family executes, per the review's §2. Three regressions
+guard it — the non-vacuity test (a reachable capability with no family fails), the skip-list
+test (a third unreachable entry fails), and the classification test (a sealed family that is
+neither mapped nor recorded in `UNMAPPED_FAMILIES` fails). Task 9 Step 5 and Task 10 Step 2
+state their mechanisms (a view over a dropped table; direct row insertion versus creation
+through POST) rather than "add error handling".
+
+**Schema verification status.** RTCI and Historical dependencies are verified against the real
+`crime_data.db`. NIBRS, SHR and Hate Crime dependencies are read from the SQL builders only —
+`nibrs.db` and `shr.db` are 0 bytes in the development tree — and the NIBRS sets are a lower
+bound, because the extraction scans each family's enclosing function and would miss SQL built
+in a helper. **Task 1 Step 4 must confirm all three against production, read-only, before the
+inventory is trusted**; a wrong table name yields a permanent false `degraded`, and a missing
+one leaves a real dependency unchecked.
 
 **Type consistency.** `DatabaseProvider` is a single `acquire(): OpenedDatabase | null` everywhere; there is no separate `path()` that could disagree with the handle. `Preflight` takes that same `OpenedDatabase`. `HealthContext` is `{ requestedYears, dbOverride?: OpenedDatabase | null }` from Task 2 onward — no caller-supplied identity, and no required database, because capabilities own their providers. `evaluateCapability` returns `{ health, trace }` in Tasks 2, 3, 5. `sourceHealthFor(sourceId, derivation, executedSql, claimedFamily, context, env?)` keeps that shape in Tasks 5–9, and every call passes all of `derivation`, `executedSql`, `claimedFamily`. `resolveCapability` takes four arguments everywhere; `verifyPlanDerivation` is always called with three. `resolveCapabilityFromPersistedOrigin` is a distinct three-argument function used only by the embed path, fed by `OriginVerdict.planFamily` rather than by any client input. `healthToCheckState` is defined in Task 7 and used in Tasks 7, 8. Every verdict is `SourceHealth` from `lib/proof-contract.ts:184`; `requestedCoverage` and `HealthTrace.coverage` only hold `CheckState` values.
