@@ -10,8 +10,9 @@ import {
   type ProofFinalization,
   type SealedPayload,
 } from "@/lib/proof-finalize";
-import { queryLogHasColumn } from "@/lib/query-log-columns";
-import { isObserving } from "@/lib/proof-modes";
+import { isObserving, resolveMode } from "@/lib/proof-modes";
+import { embedPlanFamily, originIsVerified, verifyEmbedOrigin, type OriginVerdict } from "@/lib/embed-origin";
+import { serializeChartConfigForLog } from "@/lib/chart-config-log";
 import { returnedEntityKeys } from "@/lib/result-disclosure";
 import type { SourceId } from "@/lib/proof-contract";
 
@@ -75,32 +76,9 @@ function sharedChartsHasProof(db: object): boolean {
   }
 }
 
-/**
- * The originating answer's recorded proof, looked up by the request id the client
- * carries back from the response that produced the chart.
- *
- * Returns nulls when the link is absent or the row cannot be found — which is the
- * legacy-unproved case, and must stay distinguishable from "found and it passed".
- */
-function originProof(
-  db: ReturnType<typeof getWriteDb>,
-  requestId: string | null,
-): { deliveryAction: string | null; proofMode: string | null } {
-  if (!db || !requestId) return { deliveryAction: null, proofMode: null };
-  if (!queryLogHasColumn(db, "delivery_action") || !queryLogHasColumn(db, "request_id")) {
-    return { deliveryAction: null, proofMode: null };
-  }
-  try {
-    const row = db
-      .prepare("SELECT delivery_action, proof_mode FROM query_log WHERE request_id = ? ORDER BY id DESC LIMIT 1")
-      .get(requestId) as { delivery_action: string | null; proof_mode: string | null } | undefined;
-    return {
-      deliveryAction: row?.delivery_action ?? null,
-      proofMode: row?.proof_mode ?? null,
-    };
-  } catch {
-    return { deliveryAction: null, proofMode: null };
-  }
+/** Whether the proof system is observing for the source this chart belongs to. */
+function observingFor(tab: string): boolean {
+  return isObserving(resolveMode(sourceForTab(tab), null).mode);
 }
 
 /**
@@ -131,8 +109,22 @@ export async function POST(req: NextRequest) {
     // Generate a short random ID (8 chars, URL-safe)
     const id = crypto.randomBytes(6).toString("base64url").slice(0, 8);
 
-    const origin = originProof(db, requestId);
-    const withProof = sharedChartsHasProof(db);
+    // OFF IS INERT, INCLUDING HERE. §9.1: `off` "performs no request-path work and has
+    // no effect". A first revision ran the origin lookup and wrote origin_request_id
+    // regardless of mode, so an off-mode deployment produced shared_charts rows the
+    // baseline release would never write. No lookup, no proof columns, when off.
+    const observing = observingFor(tab);
+    const withProof = observing && sharedChartsHasProof(db);
+    const origin: OriginVerdict | null = observing
+      ? verifyEmbedOrigin(db, {
+          requestId,
+          tab,
+          sql,
+          // Serialized through the same allowlist the answer's own capture used, so the
+          // two are comparable rather than being raw objects that differ by key order.
+          chartConfigJson: chartConfig ? serializeChartConfigForLog(chartConfig, []) : null,
+        })
+      : null;
 
     const columns = ["id", "tab", "title", "sql", "chart_config", "chart_meta", "created_at"];
     const values: unknown[] = [
@@ -144,20 +136,25 @@ export async function POST(req: NextRequest) {
       chartMeta ? JSON.stringify(chartMeta) : null,
       Date.now(),
     ];
-    if (withProof) {
-      columns.push("origin_request_id", "origin_delivery_action", "origin_proof_mode");
-      values.push(requestId, origin.deliveryAction, origin.proofMode);
+    if (withProof && origin) {
+      columns.push(
+        "origin_request_id",
+        "origin_delivery_action",
+        "origin_proof_mode",
+        "origin_state",
+      );
+      values.push(requestId, origin.deliveryAction, origin.proofMode, origin.state);
     }
 
     db.prepare(
       `INSERT INTO shared_charts (${columns.join(", ")}) VALUES (${columns.map(() => "?").join(", ")})`,
     ).run(...values);
 
-    if (!origin.deliveryAction) {
-      // Recorded, not blocked. Stage 1 is shadow; §4's "must not be silently treated
-      // as compliant" is satisfied by the NULL being visible and by the read path
-      // finalizing these as unproved.
-      console.warn(`[embed] chart ${id} created with no originating proof (requestId=${requestId ?? "absent"})`);
+    if (origin && !originIsVerified(origin)) {
+      // Recorded, not blocked. Stage 1 is shadow; §4's "must not be silently treated as
+      // compliant" is satisfied by origin_state being stored and by the read path
+      // finalizing on it.
+      console.warn(`[embed] chart ${id} created with an unverified origin (${origin.state}): ${origin.reason}`);
     }
 
     return embedResp({ id } as SealedPayload<{ id: string }>);
@@ -184,7 +181,7 @@ export async function GET(req: NextRequest) {
 
     const withProof = sharedChartsHasProof(writeDb);
     const selectColumns = withProof
-      ? "tab, title, sql, chart_config, chart_meta, origin_request_id, origin_delivery_action"
+      ? "tab, title, sql, chart_config, chart_meta, origin_request_id, origin_delivery_action, origin_state"
       : "tab, title, sql, chart_config, chart_meta";
     const row = writeDb.prepare(
       `SELECT ${selectColumns} FROM shared_charts WHERE id = ?`,
@@ -196,6 +193,7 @@ export async function GET(req: NextRequest) {
       chart_meta: string | null;
       origin_request_id?: string | null;
       origin_delivery_action?: string | null;
+      origin_state?: string | null;
     } | undefined;
 
     if (!row) {
@@ -237,8 +235,18 @@ export async function GET(req: NextRequest) {
     // so the title stands in for it. That means the typed plan is thin and most checks
     // report `unknown`, which is the truthful state: nobody asked anything, and the
     // stored SQL is being replayed on faith.
-    const originatingProven = row.origin_delivery_action === "answer" ||
-      row.origin_delivery_action === "answer_limited_scope";
+    // THE ORIGIN VERDICT PARTICIPATES IN THE READ'S PROOF, rather than only in a log
+    // line. A first revision assigned `embed-replay` whenever origin_request_id was
+    // merely non-null, so a forged or unmatched origin was indistinguishable from a
+    // verified one in the recorded evidence. The stored origin_state is the verdict
+    // reached at creation, when the artifact and the logged answer were both in hand.
+    const originVerdict: OriginVerdict = {
+      state: (row.origin_state as OriginVerdict["state"]) ?? "absent",
+      reason: `origin recorded at creation as '${row.origin_state ?? "absent"}'`,
+      deliveryAction: row.origin_delivery_action ?? null,
+      proofMode: null,
+    };
+    const originatingProven = originIsVerified(originVerdict);
     const finalization: ProofFinalization = finalizeProof({
       sourceId: sourceForTab(row.tab),
       question: row.title || "",
@@ -249,7 +257,10 @@ export async function GET(req: NextRequest) {
       // An embed replays SQL it did not author. Even when the originating answer was
       // deterministic, this read has no token of its own, so derivation stays absent
       // rather than inheriting a claim from a different request.
-      planFamily: withProof && row.origin_request_id ? "embed-replay" : "embed-legacy-unproved",
+      planFamily: embedPlanFamily(originVerdict),
+      // Carried into the digest so a reviewer sees the provenance state alongside the
+      // result, not only in a log line that scrolls away.
+      guardrails: [`embed-origin-${originVerdict.state}`],
       returnedEntities: returnedEntityKeys(rows),
       hasChart: Boolean(row.chart_config),
       // A chart whose originating answer was never proven cannot have chart data
@@ -277,7 +288,7 @@ export async function GET(req: NextRequest) {
     }
 
     if (!originatingProven) {
-      console.warn(`[embed] serving chart ${id} whose originating answer was not proven (origin=${row.origin_delivery_action ?? "absent"})`);
+      console.warn(`[embed] serving chart ${id} with an unverified origin (${originVerdict.state})`);
     }
 
     return embedResp(

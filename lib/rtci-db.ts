@@ -114,6 +114,7 @@ export function getWriteDb(): Database.Database | null {
         origin_request_id TEXT,
         origin_delivery_action TEXT,
         origin_proof_mode TEXT,
+        origin_state TEXT,
         last_read_delivery_action TEXT,
         last_read_at INTEGER
       )

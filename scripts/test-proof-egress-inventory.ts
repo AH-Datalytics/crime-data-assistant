@@ -306,12 +306,36 @@ console.log("\nshared charts and the response cache are inside the contract");
     assert.match(source, /finalizeProof\(\{/, "the read must finalize");
   });
 
-  check("embed records the originating proof and never fabricates one", () => {
+  check("embed VERIFIES the origin rather than looking it up", () => {
     const source = read("app/api/embed/route.ts");
-    assert.match(source, /origin_request_id/, "creation must record the originating request");
-    assert.match(source, /origin_delivery_action/, "and the answer's terminal action");
-    // The legacy path must stay distinguishable, per §4.
-    assert.match(source, /deliveryAction: null, proofMode: null/, "an absent link yields nulls, not a default");
+    assert.match(source, /verifyEmbedOrigin\(/, "creation must verify, not merely read, the claimed origin");
+    assert.match(source, /origin_state/, "and record the verdict");
+    // The route must not go back to reading delivery_action as if it were proof: in
+    // shadow that value is `answer` for every legacy answer regardless of its blocker.
+    assert.doesNotMatch(
+      source,
+      /SELECT delivery_action, proof_mode FROM query_log/,
+      "reading delivery_action as proof is the defect this replaced",
+    );
+  });
+
+  check("the origin verdict reaches the read's recorded evidence", () => {
+    const source = read("app/api/embed/route.ts");
+    assert.match(source, /planFamily: embedPlanFamily\(originVerdict\)/, "the plan family must reflect the verdict");
+    assert.match(source, /embed-origin-\$\{originVerdict\.state\}/, "and the digest must carry it");
+    assert.doesNotMatch(
+      source,
+      /"embed-replay"/,
+      "a single family for every non-null request id cannot distinguish a forged origin",
+    );
+  });
+
+  check("the binding compares the artifact, not just the id", () => {
+    const source = read("lib/embed-origin.ts");
+    assert.match(source, /does not match the chart's/, "tab must be compared");
+    assert.match(source, /not the SQL of the claimed originating answer/, "SQL must be compared");
+    assert.match(source, /chart configuration does not match/, "chart config must be compared");
+    assert.match(source, /hypotheticalAction/, "proof must come from the envelope, not delivery_action");
   });
 
   check("the embed read summary is gated on observation, not just on schema", () => {

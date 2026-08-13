@@ -19,6 +19,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import Database from "better-sqlite3";
+import { serializeChartConfigForLog } from "../lib/chart-config-log";
 
 let passed = 0;
 function check(name: string, fn: () => void | Promise<void>): Promise<void> {
@@ -47,6 +48,7 @@ const PROOF_COLUMNS = [
   "origin_request_id",
   "origin_delivery_action",
   "origin_proof_mode",
+  "origin_state",
   "last_read_delivery_action",
   "last_read_at",
 ];
@@ -85,7 +87,7 @@ async function main() {
       }
     });
 
-    await check("adds all five columns and preserves existing charts", () => {
+    await check("adds all six columns and preserves existing charts", () => {
       const result = migration.migrate({ dbPath, dryRun: false, rollback: false });
       assert.strictEqual(result.changed, true);
       const columns = columnsOf(dbPath, "shared_charts");
@@ -179,7 +181,7 @@ async function main() {
     tab: "current",
     title: "Murders in Austin",
     sql: "SELECT year, agency, count FROM agency_monthly",
-    chartConfig: { type: "line" },
+    chartConfig: { type: "line" as const, xAxis: "year", yAxis: ["count"], title: "Murders in Austin" },
     chartMeta: { source: "RTCI" },
   };
 
@@ -191,10 +193,40 @@ async function main() {
       id INTEGER PRIMARY KEY AUTOINCREMENT, ts INTEGER, tab TEXT, question TEXT, sql TEXT, rows INTEGER,
       error TEXT, ms INTEGER, response TEXT, guardrails TEXT, model TEXT, session_id TEXT,
       routing_confidence TEXT, routing_mode TEXT, routing_reason TEXT, query_guidance TEXT,
-      query_contract TEXT, request_id TEXT, delivery_action TEXT, proof_mode TEXT)`);
+      query_contract TEXT, chart_config TEXT, request_id TEXT, delivery_action TEXT,
+      proof_mode TEXT, proof_manifest TEXT)`);
+    // A PROVEN answer: the artifact matches, and the envelope has no blocker. Both
+    // halves are required now -- a delivery_action of "answer" alone is what shadow
+    // records for every legacy answer and says nothing about proof.
     log.prepare(
-      "INSERT INTO query_log (ts, tab, question, request_id, delivery_action, proof_mode) VALUES (?,?,?,?,?,?)",
-    ).run(1_786_000_000_000, "current", "murders in Austin", "req-proven", "answer", "shadow");
+      "INSERT INTO query_log (ts, tab, question, sql, chart_config, request_id, delivery_action, proof_mode, proof_manifest) " +
+        "VALUES (?,?,?,?,?,?,?,?,?)",
+    ).run(
+      1_786_000_000_000,
+      "current",
+      "murders in Austin",
+      CHART.sql,
+      serializeChartConfigForLog(CHART.chartConfig, []),
+      "req-proven",
+      "answer",
+      "shadow",
+      JSON.stringify({ blocker: null, hypotheticalAction: "answer" }),
+    );
+    // A SERVED-BUT-BLOCKED answer, which is the ordinary shadow-era state.
+    log.prepare(
+      "INSERT INTO query_log (ts, tab, question, sql, chart_config, request_id, delivery_action, proof_mode, proof_manifest) " +
+        "VALUES (?,?,?,?,?,?,?,?,?)",
+    ).run(
+      1_786_000_000_001,
+      "current",
+      "murders in Austin",
+      CHART.sql,
+      serializeChartConfigForLog(CHART.chartConfig, []),
+      "req-blocked",
+      "answer",
+      "shadow",
+      JSON.stringify({ blocker: "check 'semanticPlan' is 'unknown'", hypotheticalAction: "decline_capability" }),
+    );
     log.close();
 
     let provenId = "";
@@ -211,6 +243,29 @@ async function main() {
       assert.strictEqual(row.origin_request_id, "req-proven");
       assert.strictEqual(row.origin_delivery_action, "answer");
       assert.strictEqual(row.origin_proof_mode, "shadow");
+      assert.strictEqual(row.origin_state, "verified", "the artifact matched and the envelope passed");
+    });
+
+    await check("a chart claiming a DIFFERENT query's answer is not verified", async () => {
+      // Provenance cannot be borrowed: the SQL must be that answer's SQL.
+      const res = await post({ ...CHART, sql: "SELECT 1 AS n FROM agency_monthly", requestId: "req-proven" });
+      const { id } = await res.json() as { id: string };
+      const db = new Database(dbPath);
+      const row = db.prepare("SELECT origin_state FROM shared_charts WHERE id = ?").get(id) as Record<string, unknown>;
+      db.close();
+      assert.strictEqual(row.origin_state, "unbound");
+    });
+
+    await check("a served-but-blocked answer is bound_unproven, not verified", async () => {
+      // delivery_action is "answer" here, which is what the old check read.
+      const res = await post({ ...CHART, requestId: "req-blocked" });
+      const { id } = await res.json() as { id: string };
+      const db = new Database(dbPath);
+      const row = db.prepare("SELECT origin_state, origin_delivery_action FROM shared_charts WHERE id = ?")
+        .get(id) as Record<string, unknown>;
+      db.close();
+      assert.strictEqual(row.origin_delivery_action, "answer", "what was served is still recorded");
+      assert.strictEqual(row.origin_state, "bound_unproven", "but proof did not pass");
     });
 
     await check("a chart created WITHOUT one is recorded as unproved, not defaulted", () => {
@@ -224,6 +279,7 @@ async function main() {
         db.close();
         assert.strictEqual(row.origin_request_id, null);
         assert.strictEqual(row.origin_delivery_action, null);
+        assert.strictEqual(row.origin_state, "absent", "no claim was made, as distinct from an unmatched one");
       });
     });
 
@@ -235,6 +291,7 @@ async function main() {
       db.close();
       assert.strictEqual(row.origin_request_id, "req-does-not-exist", "the attempted link is kept");
       assert.strictEqual(row.origin_delivery_action, null, "but no proof is invented for it");
+      assert.strictEqual(row.origin_state, "unbound", "and it is recorded as unmatched, not absent");
     });
 
     console.log("\nembed reads finalize, and still serve");
@@ -245,7 +302,7 @@ async function main() {
       assert.strictEqual(body.tab, "current");
       assert.deepStrictEqual(body.columns, ["year", "agency", "count"]);
       assert.strictEqual(body.rows.length, 1);
-      assert.deepStrictEqual(body.chartConfig, { type: "line" });
+      assert.deepStrictEqual(body.chartConfig, CHART.chartConfig);
     });
 
     await check("the read records what it would have delivered", async () => {
@@ -293,6 +350,27 @@ async function main() {
     });
 
     console.log("\noff mode leaves shared_charts exactly as the baseline would");
+    await check("an off-mode creation writes no proof columns at all", async () => {
+      // §9.1 again: `off` has no effect. A first revision ran the origin lookup and
+      // wrote origin_request_id regardless of mode, producing rows the baseline
+      // release would never write. The off-mode test covered only reads and missed it.
+      delete process.env.PROOF_MODE;
+      let id = "";
+      try {
+        const res = await post({ ...CHART, requestId: "req-proven" });
+        ({ id } = await res.json() as { id: string });
+      } finally {
+        process.env.PROOF_MODE = "shadow";
+      }
+      const db = new Database(dbPath);
+      const row = db.prepare("SELECT * FROM shared_charts WHERE id = ?").get(id) as Record<string, unknown>;
+      db.close();
+      assert.ok(row, "the chart is still saved");
+      for (const column of PROOF_COLUMNS) {
+        assert.strictEqual(row[column], null, `${column} must be NULL when off`);
+      }
+    });
+
     await check("an off-mode read records nothing", async () => {
       // §9.1: `off` "performs no request-path work and has no effect". An UPDATE is an
       // effect, so an off-mode deployment must leave this table byte-identical to what

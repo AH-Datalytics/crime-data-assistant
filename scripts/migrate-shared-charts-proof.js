@@ -15,6 +15,9 @@
  *                              chart auditor already uses
  *   origin_delivery_action     the terminal action of the answer this chart came from
  *   origin_proof_mode          off | shadow | enforce, as resolved when it was created
+ *   origin_state               verified | bound_unproven | unbound | absent -- the
+ *                              verdict from lib/embed-origin, reached at creation when
+ *                              the artifact and the logged answer were both in hand
  *   last_read_delivery_action  what the most recent read would have delivered
  *   last_read_at               when that read happened
  *
@@ -45,6 +48,7 @@ const COLUMNS = [
   { name: "origin_request_id", type: "TEXT" },
   { name: "origin_delivery_action", type: "TEXT" },
   { name: "origin_proof_mode", type: "TEXT" },
+  { name: "origin_state", type: "TEXT" },
   { name: "last_read_delivery_action", type: "TEXT" },
   { name: "last_read_at", type: "INTEGER" },
 ];
