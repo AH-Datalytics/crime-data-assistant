@@ -13,7 +13,7 @@
  * misleading number this project could print.
  */
 import assert from "node:assert";
-import { PROOF_CHECKS, CHECK_STATES } from "../lib/proof-contract";
+import { PROOF_CHECKS, CHECK_STATES, PROOF_MANIFEST_VERSION } from "../lib/proof-contract";
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 /** One bucket's counts. Shared by the overall figures and by every tab/family bucket. */
@@ -27,6 +27,7 @@ type Tally = {
   reduced: number;
   envelopeError: number;
   malformed: number;
+  incompatibleVersion: number;
   delivered: Record<string, number>;
   wouldHave: Record<string, number>;
   checks: Record<string, number>;
@@ -43,6 +44,7 @@ const report = require("./lib/proof-shadow-report.js") as {
   };
   DECLARED_CHECKS: string[];
   VALID_CHECK_STATES: Set<string>;
+  MANIFEST_VERSION: number;
   shadowHealth: (r: unknown) => { state: string; note: string };
   renderProofShadowSection: (r: unknown) => string;
 };
@@ -76,7 +78,7 @@ function fullChecks(overrides: Record<string, string> = {}): Record<string, stri
 }
 
 function envelope(hypothetical: string, checks: Record<string, string> = {}, blocking: string[] = []) {
-  return JSON.stringify({ manifest: { checks: fullChecks(checks) }, blocker: blocking.length ? "blocked" : null, blockingChecks: blocking, hypotheticalAction: hypothetical });
+  return JSON.stringify({ manifest: { v: PROOF_MANIFEST_VERSION, checks: fullChecks(checks) }, blocker: blocking.length ? "blocked" : null, blockingChecks: blocking, hypotheticalAction: hypothetical });
 }
 
 /** A shadow-era row: delivered an answer, proof blocked. */
@@ -377,13 +379,43 @@ console.log("\nnot every row with a proof record was evaluated");
     assert.strictEqual(built.overall.checks.passed, 1);
   });
 
-  check("the reporter's declared checks and states have not drifted from the contract", () => {
+  check("an unversioned or incompatible envelope is never read with v1 semantics", () => {
+    // A complete v1 check map is not enough: without a version, or under a different one,
+    // these numbers would be v1 semantics applied to a schema that never agreed to them.
+    const completeMap = fullChecks({ metric: "passed" });
+    const cases: [string, unknown, "malformed" | "incompatibleVersion"][] = [
+      // Missing version is a writer defect -- no declared shape omits it.
+      ["a full envelope with no manifest.v", { hypotheticalAction: "answer", manifest: { checks: completeMap } }, "malformed"],
+      ["a reduced envelope with no v", { envelopeReduced: true, hypotheticalAction: "answer" }, "malformed"],
+      ["an error envelope with no v", { envelopeError: true }, "malformed"],
+      // A present but different version is expected skew during a rolling deploy, not a defect.
+      ["a full envelope at v2", { hypotheticalAction: "answer", manifest: { v: 2, checks: completeMap } }, "incompatibleVersion"],
+      ["a reduced envelope at v2", { v: 2, envelopeReduced: true, hypotheticalAction: "answer" }, "incompatibleVersion"],
+      ["an error envelope at v2", { v: 2, envelopeError: true }, "incompatibleVersion"],
+    ];
+    for (const [label, shape, expected] of cases) {
+      const built = report.buildProofShadowReport(
+        [shadowRow({ tab: "current", proof_manifest: JSON.stringify(shape) })],
+        ALL_HUMAN,
+      );
+      const tally = built.overall as unknown as Record<string, number>;
+      assert.strictEqual(tally[expected], 1, `${label} must count as ${expected}`);
+      assert.strictEqual(built.overall.evaluated, 0, `${label} must not be evaluated`);
+      assert.strictEqual(built.overall.reduced, 0, `${label} must not be classified as reduced`);
+      assert.strictEqual(built.overall.envelopeError, 0, `${label} must not be classified as a build failure`);
+      assert.deepStrictEqual(built.overall.wouldHave, {}, `${label} must not credit a hypothetical action`);
+      assert.match(report.renderProofShadowSection(built), /schema|malformed/, `${label} must be visible`);
+    }
+  });
+
+  check("the reporter's declared checks, states, and version have not drifted", () => {
     // scripts/lib/proof-shadow-report.js is CommonJS with no build step, so it cannot
     // import lib/proof-contract.ts and has to restate the list. This is the guard that
     // makes the duplication safe: adding a proof check without updating the reporter
     // fails here rather than silently letting a stale map be graded as complete.
     assert.deepStrictEqual(report.DECLARED_CHECKS, [...PROOF_CHECKS]);
     assert.deepStrictEqual([...report.VALID_CHECK_STATES].sort(), [...CHECK_STATES].sort());
+    assert.strictEqual(report.MANIFEST_VERSION, PROOF_MANIFEST_VERSION);
   });
 
   check("an envelope the serializer could not build is ungradable, not evaluated", () => {

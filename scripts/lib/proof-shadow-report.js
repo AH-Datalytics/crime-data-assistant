@@ -66,6 +66,9 @@ const DECLARED_CHECKS = [
 
 const VALID_CHECK_STATES = new Set(["passed", "failed", "not_applicable", "unknown"]);
 
+/** PROOF_MANIFEST_VERSION, restated here for the same reason and under the same guard. */
+const MANIFEST_VERSION = 1;
+
 /**
  * Whether this is a complete v1 check map, and therefore gradable.
  *
@@ -121,12 +124,12 @@ function emptyTally() {
      *
      * withProof is NOT that denominator. A row can be observed and still arrive here
      * with nothing to grade: the envelope was never written, it was corrupted, it shed its
-     * manifest under the size limit, the serializer could not build one at all, or what
-     * was stored is not a shape the serializer ever declares. All five are counted
-     * separately below rather than folded in, because an envelope that
-     * silently contributes zero check states is indistinguishable from a clean record --
-     * the D6 failure shape one layer in, where "nothing flagged" really means "nothing
-     * was looked at".
+     * manifest under the size limit, the serializer could not build one at all, what was
+     * stored is not a shape the serializer ever declares, or it was written under a
+     * different schema version. All six are counted separately below rather than folded
+     * in, because an envelope that silently contributes zero check states is
+     * indistinguishable from a clean record -- the D6 failure shape one layer in, where
+     * "nothing flagged" really means "nothing was looked at".
      */
     evaluated: 0,
     /** Observed, but no envelope was written at all. */
@@ -147,6 +150,14 @@ function emptyTally() {
      * `{manifest:null}`. A writer defect, and ungradable like the four above it.
      */
     malformed: 0,
+    /**
+     * Written under a different schema version, so it cannot be read with v1 semantics.
+     *
+     * Kept apart from `malformed` because this is expected during a rolling deploy -- a
+     * newer writer's rows landing in an older reporter's window -- and reporting normal
+     * skew as a defect would cry wolf on every release.
+     */
+    incompatibleVersion: 0,
     delivered: {},
     wouldHave: {},
     checks: { passed: 0, failed: 0, unknown: 0, not_applicable: 0 },
@@ -177,6 +188,34 @@ function tallyRow(tally, row) {
     tally.wouldHave[would] = (tally.wouldHave[would] || 0) + 1;
   };
 
+  /**
+   * VERSION BEFORE MEANING.
+   *
+   * Every declared shape records its schema version -- the two fallbacks at the top level,
+   * a full envelope at `manifest.v`. That version must be checked BEFORE any of them is
+   * interpreted, because everything this function does afterwards is v1 semantics. Reading
+   * a v2 record as v1, or an unversioned one as v1, is how a schema that never agreed to
+   * these meanings ends up counted under them. lib/proof-contract already refuses a
+   * manifest whose version is not current; this is the same rule at the reporting end.
+   *
+   * MISSING AND MISMATCHED ARE NOT THE SAME FINDING. No declared shape omits the version,
+   * so an absent one is a writer defect -- `malformed`. A version that is present but
+   * different is ordinary skew during a rolling deploy, where a newer writer's rows land in
+   * an older reporter's window; calling that a defect would cry wolf on a normal release.
+   * It gets its own category so the digest can say "written by a newer schema" instead.
+   */
+  const declaresFallback = Boolean(envelope.envelopeError) || Boolean(envelope.envelopeReduced);
+  const manifest = envelope.manifest && typeof envelope.manifest === "object" ? envelope.manifest : null;
+  const version = declaresFallback ? envelope.v : manifest ? manifest.v : undefined;
+  if (version === undefined || version === null) {
+    tally.malformed += 1;
+    return;
+  }
+  if (version !== MANIFEST_VERSION) {
+    tally.incompatibleVersion += 1;
+    return;
+  }
+
   // Checked BEFORE wouldHave is credited: this envelope carries only { v, envelopeError },
   // so there is no hypothetical action in it and crediting one would invent an
   // "unrecorded" bucket out of a serializer failure.
@@ -204,8 +243,7 @@ function tallyRow(tally, row) {
    * empty record. A row the writer mangled must read as a writer defect, never as a
    * graded pass.
    */
-  const manifest = envelope.manifest;
-  if (!isCompleteCheckMap(manifest && typeof manifest === "object" ? manifest.checks : null)) {
+  if (!isCompleteCheckMap(manifest.checks)) {
     tally.malformed += 1;
     return;
   }
@@ -307,13 +345,14 @@ function countsRow(counts) {
  * available instead.
  */
 function checksCell(tally) {
-  const notEvaluated = tally.envelopeMissing + tally.unparseable + tally.reduced + tally.envelopeError + tally.malformed;
+  const notEvaluated = tally.envelopeMissing + tally.unparseable + tally.reduced + tally.envelopeError + tally.malformed + tally.incompatibleVersion;
   const detail = [];
   if (tally.envelopeMissing > 0) detail.push(`no envelope: ${tally.envelopeMissing}`);
   if (tally.unparseable > 0) detail.push(`unreadable: ${tally.unparseable}`);
   if (tally.reduced > 0) detail.push(`reduced, checks lost: ${tally.reduced}`);
   if (tally.envelopeError > 0) detail.push(`could not be built: ${tally.envelopeError}`);
   if (tally.malformed > 0) detail.push(`malformed: ${tally.malformed}`);
+  if (tally.incompatibleVersion > 0) detail.push(`newer schema, not readable here: ${tally.incompatibleVersion}`);
   const suffix = detail.length > 0 ? ` <span class="quiet">(${detail.join(" &middot; ")})</span>` : "";
 
   if (tally.evaluated === 0) {
@@ -400,4 +439,5 @@ module.exports = {
   // Exported so the drift guard can compare them against lib/proof-contract.ts.
   DECLARED_CHECKS,
   VALID_CHECK_STATES,
+  MANIFEST_VERSION,
 };
