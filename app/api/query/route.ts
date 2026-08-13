@@ -884,7 +884,7 @@ export async function POST(req: NextRequest) {
         db,
       });
       // Deterministic answers render charts too; same capture as the model path.
-      writeLog(question, indexedStatePlan.sql, rows.length, null, ms, indexedStatePlan.explanation, tab, [indexedStatePlan.guardrail], "deterministic", sessionId, serializeChartConfigForLog(rows.length > 0 ? indexedStatePlan.chartConfig : null, columns), proof);
+      writeLog(question, indexedStatePlan.sql, rows.length, null, ms, indexedStatePlan.explanation, tab, [indexedStatePlan.guardrail], "deterministic", sessionId, serializeChartConfigForLog(rows.length > 0 ? indexedStatePlan.chartConfig : null, columns, indexedStatePlan.chartMeta), proof);
       attachChartAuditToPayload({ chartConfig: rows.length > 0 ? indexedStatePlan.chartConfig : null, columns, rows }, { source: tab, requestId: chartAuditRequestId, queryLogId: chartAuditQueryLogId });
       const stream = new ReadableStream({
         start(controller) {
@@ -960,7 +960,7 @@ export async function POST(req: NextRequest) {
         "deterministic",
         sessionId,
         // Deterministic answers render charts too; same capture as the model path.
-        serializeChartConfigForLog(rows.length > 0 ? multiCityTrend.chartConfig : null, columns),
+        serializeChartConfigForLog(rows.length > 0 ? multiCityTrend.chartConfig : null, columns, multiCityTrend.chartMeta),
         proof
       );
       attachChartAuditToPayload({ chartConfig: rows.length > 0 ? multiCityTrend.chartConfig : null, columns, rows }, { source: tab, requestId: chartAuditRequestId, queryLogId: chartAuditQueryLogId });
@@ -1065,7 +1065,7 @@ export async function POST(req: NextRequest) {
         db,
       });
       // Deterministic answers render charts too; same capture as the model path.
-      writeLog(question, historicalCityChange.sql, rows.length, null, ms, historicalCityChange.explanation, tab, [historicalCityChange.guardrail], "deterministic", sessionId, serializeChartConfigForLog(rows.length > 0 ? historicalCityChange.chartConfig : null, columns), proof);
+      writeLog(question, historicalCityChange.sql, rows.length, null, ms, historicalCityChange.explanation, tab, [historicalCityChange.guardrail], "deterministic", sessionId, serializeChartConfigForLog(rows.length > 0 ? historicalCityChange.chartConfig : null, columns, historicalCityChange.chartMeta), proof);
       attachChartAuditToPayload({ chartConfig: rows.length > 0 ? historicalCityChange.chartConfig : null, columns, rows }, { source: tab, requestId: chartAuditRequestId, queryLogId: chartAuditQueryLogId });
       const stream = new ReadableStream({
         start(controller) {
@@ -1169,7 +1169,7 @@ export async function POST(req: NextRequest) {
       db: getDb(),
     });
     // Deterministic answers render charts too; same capture as the model path.
-    writeLog(question, metadata.sql, metadata.rowCount, null, ms, metadata.explanation, tab, ["deterministic-metadata", "metadata-coverage-answer"], "deterministic", sessionId, serializeChartConfigForLog(metadata.chartConfig, metadata.columns ?? []), proof);
+    writeLog(question, metadata.sql, metadata.rowCount, null, ms, metadata.explanation, tab, ["deterministic-metadata", "metadata-coverage-answer"], "deterministic", sessionId, serializeChartConfigForLog(metadata.chartConfig, metadata.columns ?? [], metadata.chartMeta), proof);
     attachChartAuditToPayload({ chartConfig: metadata.chartConfig, columns: metadata.columns ?? [], rows: metadata.rows ?? [] }, { source: tab, requestId: chartAuditRequestId, queryLogId: chartAuditQueryLogId });
 
     const stream = new ReadableStream({

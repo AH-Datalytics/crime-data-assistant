@@ -421,7 +421,7 @@ export async function POST(req: NextRequest) {
     if (metadata) {
       const executionMs = Date.now() - start;
       const metadataProof = finalizeExit({ intendedAction: "answer", sql: metadata.sql, rows: metadata.rows ?? [], columns: metadata.columns ?? [], truncated: Boolean(metadata.truncated), derivation: metadata.sql ? sealPlanDerivation("metadata-coverage-answer", metadata.sql) : null, planFamily: "metadata-coverage-answer", guardrails: ["deterministic-metadata", "metadata-coverage-answer"], hasChart: Boolean(metadata.chartConfig), narrative: metadata.explanation });
-      writeLog(question, metadata.sql, metadata.rowCount, null, executionMs, metadata.explanation, "shr", ["deterministic-metadata", "metadata-coverage-answer"], "deterministic", sessionId, serializeChartConfigForLog(metadata.chartConfig, metadata.columns), metadataProof);
+      writeLog(question, metadata.sql, metadata.rowCount, null, executionMs, metadata.explanation, "shr", ["deterministic-metadata", "metadata-coverage-answer"], "deterministic", sessionId, serializeChartConfigForLog(metadata.chartConfig, metadata.columns, metadata.chartMeta), metadataProof);
       return jsonResp(emitFactualPayload(metadataProof, attachChartAuditToPayload({
         success: true,
         question,
@@ -468,7 +468,7 @@ export async function POST(req: NextRequest) {
           yAxisLabel: "Murder Victims", title: murderPlan.title,
         }, question);
         const murderProof = finalizeExit({ intendedAction: rows.length > 0 ? "answer" : "decline_data", sql: contract.sql, rows, columns: murderPlan.columns, derivation: sealPlanDerivation("deterministic-murder", murderPlan.sql), planFamily: "deterministic-murder", guardrails: ["deterministic-murder", ...coverageTags, ...routeGuardrailsFired], returnedEntities: returnedEntityKeys(rows), narrative: explanation, hasChart: true, db: murderDb });
-        writeLog(question, contract.sql, rows.length, null, executionMs, explanation, "shr", ["deterministic-murder", ...coverageTags, ...routeGuardrailsFired], "deterministic", sessionId, serializeChartConfigForLog(chartConfig, murderPlan.columns), murderProof);
+        writeLog(question, contract.sql, rows.length, null, executionMs, explanation, "shr", ["deterministic-murder", ...coverageTags, ...routeGuardrailsFired], "deterministic", sessionId, serializeChartConfigForLog(chartConfig, murderPlan.columns, { source: "FBI SHR", agencyCount: 0, population: null }), murderProof);
         return jsonResp(emitFactualPayload(murderProof, attachChartAuditToPayload({
           success: true, question, sql: contract.sql, explanation,
           title: murderPlan.title, columns: murderPlan.columns, rows,
@@ -755,7 +755,7 @@ export async function POST(req: NextRequest) {
         const displayTitle = normalizeShrAgencyText(title);
         const chartConfig = applyChartCustomizations({ type: "line", xAxis: wantsMonthly ? "month" : "year", yAxis: ["fatal_shootings"], yAxisLabel: "Fatal Shootings", title: displayTitle }, question);
         const shootingProof = finalizeExit({ intendedAction: rows.length > 0 ? "answer" : "decline_data", sql, rows, columns, derivation: sealPlanDerivation("deterministic-shooting", plannedShootingSql), planFamily: "deterministic-shooting", guardrails: detGuardrails, returnedEntities: returnedEntityKeys(rows), narrative: totalExplanation, hasChart: true, db });
-        writeLog(question, sql, rows.length, null, Date.now() - start, totalExplanation, "shr", detGuardrails, "deterministic", sessionId, serializeChartConfigForLog(chartConfig, columns.slice()), shootingProof);
+        writeLog(question, sql, rows.length, null, Date.now() - start, totalExplanation, "shr", detGuardrails, "deterministic", sessionId, serializeChartConfigForLog(chartConfig, columns.slice(), { source: "FBI SHR", agencyCount: 0, population: null }), shootingProof);
         return jsonResp(emitFactualPayload(shootingProof, attachChartAuditToPayload({
           success: true, question, sql, explanation: totalExplanation,
           title: displayTitle, columns, rows, rowCount: rows.length, truncated: false,

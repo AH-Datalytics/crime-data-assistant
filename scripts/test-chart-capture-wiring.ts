@@ -130,9 +130,9 @@ console.log("\n3. Every chart-bearing log path captures the config");
   // path that returns a chartConfig to the user.
   const expected: Array<{ route: keyof typeof ROUTES; label: string; needle: RegExp }> = [
     { route: "current", label: "model path", needle: /serializeChartConfigForLog\(chartConfig, columns[,)]/ },
-    { route: "current", label: "indexed-state deterministic", needle: /serializeChartConfigForLog\(rows\.length > 0 \? indexedStatePlan\.chartConfig : null, columns\)/ },
-    { route: "current", label: "multi-city trend deterministic", needle: /serializeChartConfigForLog\(rows\.length > 0 \? multiCityTrend\.chartConfig : null, columns\)/ },
-    { route: "current", label: "historical city change deterministic", needle: /serializeChartConfigForLog\(rows\.length > 0 \? historicalCityChange\.chartConfig : null, columns\)/ },
+    { route: "current", label: "indexed-state deterministic", needle: /serializeChartConfigForLog\(rows\.length > 0 \? indexedStatePlan\.chartConfig : null, columns[,)]/ },
+    { route: "current", label: "multi-city trend deterministic", needle: /serializeChartConfigForLog\(rows\.length > 0 \? multiCityTrend\.chartConfig : null, columns[,)]/ },
+    { route: "current", label: "historical city change deterministic", needle: /serializeChartConfigForLog\(rows\.length > 0 \? historicalCityChange\.chartConfig : null, columns[,)]/ },
     { route: "current", label: "metadata coverage", needle: /serializeChartConfigForLog\(metadata\.chartConfig/ },
     { route: "nibrs", label: "model path", needle: /serializeChartConfigForLog\(chartConfig, columns[,)]/ },
     // Keyed on the multi-line call shape (the capture on its own indented line) rather
