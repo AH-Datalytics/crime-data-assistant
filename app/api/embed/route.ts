@@ -116,7 +116,11 @@ export async function POST(req: NextRequest) {
           sql,
           // Serialized through the same allowlist the answer's own capture used, so the
           // two are comparable rather than being raw objects that differ by key order.
-          chartConfigJson: chartConfig ? serializeChartConfigForLog(chartConfig, []) : null,
+          // Serialized with the client's chartMeta so the metadata digest is computed
+          // over the same values the viewer will be shown. Columns are deliberately
+          // empty -- they are result metadata the embed has no access to, and
+          // lib/embed-origin excludes them from the comparison for that reason.
+          chartConfigJson: chartConfig ? serializeChartConfigForLog(chartConfig, [], chartMeta) : null,
         })
       : null;
 

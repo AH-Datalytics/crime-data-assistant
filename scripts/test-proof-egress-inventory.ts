@@ -203,9 +203,9 @@ console.log("\nthe first factual SSE event is gated");
     // refined explanation and its retry replace the prose the user reads, so storing
     // the result event's proof would give the shadow review a record of text nobody
     // was shown. Each path now persists its own.
-    const refined = (source.match(/serializeChartConfigForLog\(chartConfig, columns\), deliveredFinalization\)/g) || []).length;
-    const retry = (source.match(/serializeChartConfigForLog\(chartConfig, columns\), deliveredRetryFinalization\)/g) || []).length;
-    const fallback = (source.match(/serializeChartConfigForLog\(chartConfig, columns\), finalization\)/g) || []).length;
+    const refined = (source.match(/serializeChartConfigForLog\(chartConfig, columns, chartMeta\), deliveredFinalization\)/g) || []).length;
+    const retry = (source.match(/serializeChartConfigForLog\(chartConfig, columns, chartMeta\), deliveredRetryFinalization\)/g) || []).length;
+    const fallback = (source.match(/serializeChartConfigForLog\(chartConfig, columns, chartMeta\), finalization\)/g) || []).length;
     assert.strictEqual(refined, 1, `refined path: expected 1 write, found ${refined}`);
     assert.strictEqual(retry, 1, `retry path: expected 1 write, found ${retry}`);
     // The both-attempts-failed path is the one case where the result event's proof IS

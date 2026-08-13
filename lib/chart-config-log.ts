@@ -1,4 +1,5 @@
-import type { ChartConfig } from "./types";
+import { createHash } from "node:crypto";
+import type { ChartConfig, ChartMeta } from "./types";
 
 /**
  * Serializes the FINALIZED chart configuration for the query log, so the
@@ -43,8 +44,64 @@ export interface ChartConfigLogPayload {
   yAxisMin?: number;
   yAxisMax?: number;
   annotationCount?: number;
+  /**
+   * Digest of the annotation CONTENT -- label, value, and axis -- not just the count.
+   *
+   * Annotation bodies are still not stored (see the note at the call site): this is a
+   * hash, so it leaks nothing while still binding what the chart asserts. Without it,
+   * only `annotationCount` was recorded, and a shared chart could change an
+   * annotation's position and its displayed claim while keeping the count identical --
+   * and those labels render directly to the viewer in components/ChartPanel.tsx.
+   */
+  annotationsDigest?: string;
+  /**
+   * Digest of the chart METADATA -- source, agency count, population.
+   *
+   * These are rendered as factual claims beneath the chart, and on the embed path they
+   * arrive entirely from the client and were never compared against anything. A valid
+   * request id with matching SQL could therefore bless fabricated population or agency
+   * figures. Hashed rather than stored for the same reason as annotations.
+   */
+  chartMetaDigest?: string;
   /** Set when a bound was hit, so a detector never mistakes truncation for the real shape. */
   truncated?: true;
+}
+
+/**
+ * Stable digest over a canonical projection of a value.
+ *
+ * Field order is fixed by the projection rather than by object key order, so two
+ * structurally identical inputs always hash the same.
+ */
+function digest(value: unknown): string {
+  return createHash("sha256").update(JSON.stringify(value), "utf8").digest("hex").slice(0, 16);
+}
+
+/** Fields of an annotation that a viewer actually sees. */
+function annotationIdentity(annotation: unknown): unknown[] {
+  const a = (annotation ?? {}) as Record<string, unknown>;
+  return [
+    typeof a.label === "string" ? a.label.slice(0, MAX_STRING) : null,
+    typeof a.value === "number" || typeof a.value === "string" ? a.value : null,
+    typeof a.axis === "string" ? a.axis : null,
+    typeof a.type === "string" ? a.type : null,
+  ];
+}
+
+/** Digest of an annotation list, or undefined when there are none. */
+export function annotationsDigestOf(annotations: unknown): string | undefined {
+  if (!Array.isArray(annotations) || annotations.length === 0) return undefined;
+  return digest(annotations.slice(0, CHART_CONFIG_MAX_SERIES).map(annotationIdentity));
+}
+
+/** Digest of the chart metadata, or undefined when there is none. */
+export function chartMetaDigestOf(chartMeta: ChartMeta | null | undefined): string | undefined {
+  if (!chartMeta) return undefined;
+  return digest([
+    typeof chartMeta.source === "string" ? chartMeta.source : null,
+    typeof chartMeta.agencyCount === "number" ? chartMeta.agencyCount : null,
+    typeof chartMeta.population === "number" ? chartMeta.population : null,
+  ]);
 }
 
 const str = (value: unknown): string => (typeof value === "string" ? value.slice(0, MAX_STRING) : "");
@@ -56,7 +113,14 @@ const num = (value: unknown): number | undefined => (typeof value === "number" &
  */
 export function serializeChartConfigForLog(
   chartConfig: ChartConfig | null | undefined,
-  columns: string[] = []
+  columns: string[] = [],
+  /**
+   * Chart metadata, when the caller has it.
+   *
+   * Optional so existing callers are unaffected; supplying it adds a digest that binds
+   * the agency count and population a viewer is shown.
+   */
+  chartMeta?: ChartMeta | null
 ): string | null {
   try {
     if (!chartConfig) return null;
@@ -91,10 +155,15 @@ export function serializeChartConfigForLog(
     const yMax = num(chartConfig.yAxisMax);
     if (yMax !== undefined) payload.yAxisMax = yMax;
     if (Array.isArray(chartConfig.annotations) && chartConfig.annotations.length > 0) {
-      // Annotation BODIES are not stored -- they are narrative text with no
-      // auditing value, and they are the most likely place for stray content.
+      // Annotation BODIES are still not stored -- they are narrative text and the most
+      // likely place for stray content. The digest binds what they assert without
+      // recording the text itself.
       payload.annotationCount = chartConfig.annotations.length;
+      const annotations = annotationsDigestOf(chartConfig.annotations);
+      if (annotations) payload.annotationsDigest = annotations;
     }
+    const metaDigest = chartMetaDigestOf(chartMeta);
+    if (metaDigest) payload.chartMetaDigest = metaDigest;
     if (truncated) payload.truncated = true;
 
     const encoded = JSON.stringify(payload);
@@ -108,6 +177,12 @@ export function serializeChartConfigForLog(
         seriesCount: payload.seriesCount,
         columns: [],
         columnCount: payload.columnCount,
+        // Digests survive the fallback: they are 16 characters each and they are the
+        // binding. Dropping them here would mean a pathological chart config silently
+        // becomes unbindable, which is the shape of every bypass in this stage.
+        annotationCount: payload.annotationCount,
+        annotationsDigest: payload.annotationsDigest,
+        chartMetaDigest: payload.chartMetaDigest,
         truncated: true,
       };
       const fallback = JSON.stringify(minimal);

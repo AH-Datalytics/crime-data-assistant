@@ -843,7 +843,7 @@ export async function POST(req: NextRequest) {
       hasChart: Boolean(chartConfig),
       chartFromBindings: false,
     });
-    writeLog(question, sql, rows.length, null, totalMs, explanation, "hate_crime", finalizeGuardrailTags(routeGuardrailsFired, queryContractGuardrails(runContractValidation(sql))), "haiku-4.5", sessionId, serializeChartConfigForLog(chartConfig, columns), finalization);
+    writeLog(question, sql, rows.length, null, totalMs, explanation, "hate_crime", finalizeGuardrailTags(routeGuardrailsFired, queryContractGuardrails(runContractValidation(sql))), "haiku-4.5", sessionId, serializeChartConfigForLog(chartConfig, columns, { source: "FBI Hate Crime Statistics", agencyCount: 0, population: null }), finalization);
 
     // Cache successful responses (only standalone questions)
     if (!cached && promptHistory.length === 0) {

@@ -2319,7 +2319,7 @@ export async function POST(req: NextRequest) {
           // user ends up reading, and persisting the result event's proof instead would
           // give the shadow review a record of text nobody was shown. Falls back to the
           // result finalization when the narrative was not replaced.
-          writeLog(question, sql, rows.length, null, totalMs2, postExplanation, tab, finalizeGuardrailTags(firedGuardrails, queryContractGuardrails(runContractValidation(sql || ""))), "haiku-4.5", sessionId, serializeChartConfigForLog(chartConfig, columns), deliveredFinalization);
+          writeLog(question, sql, rows.length, null, totalMs2, postExplanation, tab, finalizeGuardrailTags(firedGuardrails, queryContractGuardrails(runContractValidation(sql || ""))), "haiku-4.5", sessionId, serializeChartConfigForLog(chartConfig, columns, chartMeta), deliveredFinalization);
           // Cache successful responses (only standalone questions)
           if (!fromCache && promptHistory.length === 0 && sql) {
             setCache(question, tab, { sql, explanation: claude.explanation, title: claude.title, chartType: claude.chartHint, xAxis: claude.xAxis, yAxis: claude.yAxis ? claude.yAxis.split(",").map(s => s.trim()) : undefined, yAxisLabel: claude.yAxisLabel, xAxisLabel: claude.xAxisLabel, colors: claude.colors, annotations: claude.annotations }, cacheValidity);
@@ -2383,11 +2383,11 @@ export async function POST(req: NextRequest) {
               );
             }
             const totalMs2 = Date.now() - totalStart;
-            writeLog(question, sql, rows.length, null, totalMs2, retryExplanation, tab, finalizeGuardrailTags(firedGuardrails, queryContractGuardrails(runContractValidation(sql || ""))), "haiku-4.5", sessionId, serializeChartConfigForLog(chartConfig, columns), deliveredRetryFinalization);
+            writeLog(question, sql, rows.length, null, totalMs2, retryExplanation, tab, finalizeGuardrailTags(firedGuardrails, queryContractGuardrails(runContractValidation(sql || ""))), "haiku-4.5", sessionId, serializeChartConfigForLog(chartConfig, columns, chartMeta), deliveredRetryFinalization);
           } catch {
             // Both attempts failed — pre-query explanation stays
             const totalMs2 = Date.now() - totalStart;
-            writeLog(question, sql, rows.length, null, totalMs2, claude.explanation, tab, finalizeGuardrailTags(firedGuardrails, queryContractGuardrails(runContractValidation(sql || ""))), "haiku-4.5", sessionId, serializeChartConfigForLog(chartConfig, columns), finalization);
+            writeLog(question, sql, rows.length, null, totalMs2, claude.explanation, tab, finalizeGuardrailTags(firedGuardrails, queryContractGuardrails(runContractValidation(sql || ""))), "haiku-4.5", sessionId, serializeChartConfigForLog(chartConfig, columns, chartMeta), finalization);
           }
           if (!fromCache && promptHistory.length === 0 && sql) {
             setCache(question, tab, { sql, explanation: claude.explanation, title: claude.title, chartType: claude.chartHint, xAxis: claude.xAxis, yAxis: claude.yAxis ? claude.yAxis.split(",").map(s => s.trim()) : undefined, yAxisLabel: claude.yAxisLabel, xAxisLabel: claude.xAxisLabel, colors: claude.colors, annotations: claude.annotations }, cacheValidity);

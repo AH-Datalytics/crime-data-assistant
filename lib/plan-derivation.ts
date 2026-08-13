@@ -76,49 +76,113 @@ export interface PlanDerivation {
  * different queries against this data, and SQLite string comparison is
  * case-sensitive by default.
  */
+/**
+ * Closing delimiter for each quoted region SQLite recognizes, and whether that
+ * delimiter can be escaped by doubling it.
+ *
+ * A first revision handled only `'` and `"`. SQLite also accepts backtick and bracket
+ * quoted identifiers, and both were collapsible: `[odd  column]` and `[odd column]`
+ * fingerprinted identically despite naming different columns. lib/sql-safety accepts
+ * all four forms, so all four could reach a deterministic route.
+ */
+const QUOTED_REGIONS: Record<string, { close: string; doubles: boolean }> = {
+  "'": { close: "'", doubles: true },
+  '"': { close: '"', doubles: true },
+  "`": { close: "`", doubles: true },
+  // SQLite brackets have no doubling escape; the first `]` closes the identifier.
+  "[": { close: "]", doubles: false },
+};
+
+/**
+ * Collapse whitespace only where it carries no meaning.
+ *
+ * The tolerance exists to absorb a guardrail reflowing the STATEMENT between planning
+ * and execution. It must never absorb a change to what the statement SELECTS, and
+ * three kinds of region make that distinction lexical rather than textual:
+ *
+ *   QUOTED REGIONS are preserved verbatim. `'New  York'` and `'New York'` are
+ *   different values; `[odd  column]` and `[odd column]` are different identifiers.
+ *
+ *   COMMENTS ARE REMOVED, because their text genuinely cannot change a query's
+ *   meaning -- so two statements differing only in comment prose should verify.
+ *
+ *   THE NEWLINE THAT ENDS A LINE COMMENT IS NOT REMOVED. This is the case that made
+ *   the naive version unsafe rather than merely loose:
+ *
+ *       SELECT 1 -- note\n, 2 FROM t     selects two columns
+ *       SELECT 1 -- note , 2 FROM t      selects one; the rest is commented out
+ *
+ *   Collapsing `\n` to a space made those identical. Replacing each comment with a
+ *   single space instead keeps the token boundary and leaves the two distinct.
+ */
 function normalizeSql(sql: string): string {
-  // Whitespace is collapsed OUTSIDE string literals only. A blanket `\s+ -> " "`
-  // also rewrites the inside of quoted values, so
-  //
-  //     WHERE city = 'New  York'   and   WHERE city = 'New York'
-  //
-  // fingerprinted identically -- two materially different queries. The tolerance is
-  // meant to absorb a guardrail reflowing the STATEMENT, never to absorb a change to
-  // the data being selected.
-  let out = "";
+  const out: string[] = [];
+  /**
+   * Emit a separator unless one is already there.
+   *
+   * Done inline rather than as a final `replace(/ {2,}/g, " ")` pass, because a global
+   * collapse at the end also rewrites the inside of the quoted regions this function
+   * just went to the trouble of preserving -- which is exactly the bug it was meant to
+   * fix, reintroduced one line later. My own reproduction caught it.
+   */
+  const pushSeparator = () => {
+    if (out.length > 0 && out[out.length - 1] !== " ") out.push(" ");
+  };
+
   let i = 0;
   while (i < sql.length) {
     const ch = sql[i];
-    if (ch === "'" || ch === '"') {
-      const quote = ch;
-      let literal = ch;
+
+    const region = QUOTED_REGIONS[ch];
+    if (region) {
+      out.push(ch);
       i += 1;
       while (i < sql.length) {
-        literal += sql[i];
-        // SQL escapes a quote by doubling it; consume both and keep going.
-        if (sql[i] === quote) {
-          if (sql[i + 1] === quote) {
-            literal += sql[i + 1];
+        if (sql[i] === region.close) {
+          if (region.doubles && sql[i + 1] === region.close) {
+            out.push(sql[i], sql[i + 1]);
             i += 2;
             continue;
           }
+          out.push(sql[i]);
           i += 1;
           break;
         }
+        out.push(sql[i]);
         i += 1;
       }
-      out += literal;
       continue;
     }
+
+    // Line comment: drop through the newline, but emit a separator in its place so the
+    // token boundary the newline provided survives.
+    if (ch === "-" && sql[i + 1] === "-") {
+      i += 2;
+      while (i < sql.length && sql[i] !== "\n") i += 1;
+      pushSeparator();
+      continue;
+    }
+
+    // Block comment: drop, leaving a separator. An unterminated one runs to the end,
+    // which is also how SQLite reads it.
+    if (ch === "/" && sql[i + 1] === "*") {
+      i += 2;
+      while (i < sql.length && !(sql[i] === "*" && sql[i + 1] === "/")) i += 1;
+      i += 2;
+      pushSeparator();
+      continue;
+    }
+
     if (/\s/.test(ch)) {
-      out += " ";
       while (i < sql.length && /\s/.test(sql[i])) i += 1;
+      pushSeparator();
       continue;
     }
-    out += ch;
+
+    out.push(ch);
     i += 1;
   }
-  return out.trim();
+  return out.join("").trim();
 }
 
 export function fingerprintSql(sql: string): string {

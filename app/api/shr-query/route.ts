@@ -1429,7 +1429,7 @@ export async function POST(req: NextRequest) {
       chartFromBindings: false,
       db,
     });
-    writeLog(question, sql, rows.length, null, totalMs, explanation, "shr", finalizeGuardrailTags([...guardrailResult.fired, ...routeGuardrailsFired], queryContractGuardrails(runContractValidation(sql))), "haiku-4.5", sessionId, serializeChartConfigForLog(chartConfig, columns), finalization);
+    writeLog(question, sql, rows.length, null, totalMs, explanation, "shr", finalizeGuardrailTags([...guardrailResult.fired, ...routeGuardrailsFired], queryContractGuardrails(runContractValidation(sql))), "haiku-4.5", sessionId, serializeChartConfigForLog(chartConfig, columns, { source: "FBI SHR", agencyCount: 0, population: null }), finalization);
 
     // Cache successful responses (only standalone questions)
     if (!cached && promptHistory.length === 0) {

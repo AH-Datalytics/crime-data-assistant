@@ -22,6 +22,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import Database from "better-sqlite3";
+import { serializeChartConfigForLog } from "../lib/chart-config-log";
 import {
   verifyEmbedOrigin,
   originIsVerified,
@@ -292,6 +293,105 @@ console.log("\nabsent and unavailable are distinct from forged");
       verdict = verifyEmbedOrigin(db, candidate());
     });
     assert.strictEqual(verdict!.state, "unbound");
+  });
+}
+
+console.log("\nwhat the viewer is SHOWN is bound, not just the query");
+{
+  const CHART = {
+    type: "line" as const,
+    xAxis: "year",
+    yAxis: ["murders"],
+    title: "Murders",
+    annotations: [{ label: "Policy change", value: 2015, axis: "x" as const }],
+  };
+  const META = { source: "RTCI", agencyCount: 412, population: 39_500_000 };
+
+  /** As the answer logged it, and as the embed serializes it. */
+  const logged = serializeChartConfigForLog(CHART, ["year", "murders"], META);
+  const fromEmbed = (config: unknown, meta: unknown) =>
+    serializeChartConfigForLog(config as never, [], meta as never);
+
+  check("a legitimate chart with annotations and metadata verifies", () => {
+    const db = makeLog([{ chart_config: logged }]);
+    const verdict = verifyEmbedOrigin(db, candidate({ chartConfigJson: fromEmbed(CHART, META) }));
+    db.close();
+    assert.strictEqual(verdict.state, "verified", verdict.reason);
+  });
+
+  check("changing an annotation's LABEL is caught, though the count is identical", () => {
+    // annotationCount alone was recorded, so a shared chart could rewrite what an
+    // annotation claims while keeping the count. Those labels render directly to the
+    // viewer in components/ChartPanel.tsx.
+    const db = makeLog([{ chart_config: logged }]);
+    const tampered = { ...CHART, annotations: [{ label: "Crime doubled here", value: 2015, axis: "x" as const }] };
+    const verdict = verifyEmbedOrigin(db, candidate({ chartConfigJson: fromEmbed(tampered, META) }));
+    db.close();
+    assert.strictEqual(verdict.state, "unbound");
+  });
+
+  check("moving an annotation's POSITION is caught", () => {
+    const db = makeLog([{ chart_config: logged }]);
+    const moved = { ...CHART, annotations: [{ label: "Policy change", value: 2021, axis: "x" as const }] };
+    const verdict = verifyEmbedOrigin(db, candidate({ chartConfigJson: fromEmbed(moved, META) }));
+    db.close();
+    assert.strictEqual(verdict.state, "unbound");
+  });
+
+  check("fabricating the POPULATION is caught", () => {
+    // chartMeta arrived entirely from the client and was compared against nothing, so a
+    // valid request id with matching SQL could bless invented figures. They render as
+    // factual claims beneath the chart.
+    const db = makeLog([{ chart_config: logged }]);
+    const inflated = { ...META, population: 1_000 };
+    const verdict = verifyEmbedOrigin(db, candidate({ chartConfigJson: fromEmbed(CHART, inflated) }));
+    db.close();
+    assert.strictEqual(verdict.state, "unbound");
+  });
+
+  check("fabricating the AGENCY COUNT is caught", () => {
+    const db = makeLog([{ chart_config: logged }]);
+    const verdict = verifyEmbedOrigin(
+      db,
+      candidate({ chartConfigJson: fromEmbed(CHART, { ...META, agencyCount: 9_999 }) }),
+    );
+    db.close();
+    assert.strictEqual(verdict.state, "unbound");
+  });
+
+  check("changing the SOURCE label is caught", () => {
+    const db = makeLog([{ chart_config: logged }]);
+    const verdict = verifyEmbedOrigin(
+      db,
+      candidate({ chartConfigJson: fromEmbed(CHART, { ...META, source: "FBI NIBRS" }) }),
+    );
+    db.close();
+    assert.strictEqual(verdict.state, "unbound");
+  });
+
+  check("dropping the metadata entirely is caught", () => {
+    const db = makeLog([{ chart_config: logged }]);
+    const verdict = verifyEmbedOrigin(db, candidate({ chartConfigJson: fromEmbed(CHART, null) }));
+    db.close();
+    assert.strictEqual(verdict.state, "unbound");
+  });
+
+  check("dropping the annotations entirely is caught", () => {
+    const db = makeLog([{ chart_config: logged }]);
+    const bare = { ...CHART, annotations: undefined };
+    const verdict = verifyEmbedOrigin(db, candidate({ chartConfigJson: fromEmbed(bare, META) }));
+    db.close();
+    assert.strictEqual(verdict.state, "unbound");
+  });
+
+  check("the digests never store the annotation text itself", () => {
+    // The allowlist's first constraint is that annotation bodies are not recorded. A
+    // digest binds what they assert while leaking nothing.
+    assert.ok(logged);
+    assert.doesNotMatch(logged!, /Policy change/, "annotation text must not appear in the log payload");
+    const parsed = JSON.parse(logged!) as Record<string, unknown>;
+    assert.strictEqual(typeof parsed.annotationsDigest, "string");
+    assert.strictEqual(typeof parsed.chartMetaDigest, "string");
   });
 }
 

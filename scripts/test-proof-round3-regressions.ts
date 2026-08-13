@@ -494,12 +494,12 @@ console.log("\n6. the persisted proof describes the prose that was delivered");
     // while the user read the refined prose.
     assert.match(
       source,
-      /serializeChartConfigForLog\(chartConfig, columns\), deliveredFinalization\)/,
+      /serializeChartConfigForLog\(chartConfig, columns, chartMeta\), deliveredFinalization\)/,
       "the refined path must persist deliveredFinalization",
     );
     assert.match(
       source,
-      /serializeChartConfigForLog\(chartConfig, columns\), deliveredRetryFinalization\)/,
+      /serializeChartConfigForLog\(chartConfig, columns, chartMeta\), deliveredRetryFinalization\)/,
       "the retry path must persist deliveredRetryFinalization",
     );
   });
@@ -517,7 +517,7 @@ console.log("\n6. the persisted proof describes the prose that was delivered");
     // Correct there: nothing replaced the prose, so the pre-query explanation stands.
     const both = source.indexOf("// Both attempts failed — pre-query explanation stays");
     assert.ok(both > 0, "the fallback comment must exist");
-    const write = source.indexOf("columns), finalization)", both);
+    const write = source.indexOf("columns, chartMeta), finalization)", both);
     assert.ok(write > both, "the fallback must persist the result finalization");
   });
 }

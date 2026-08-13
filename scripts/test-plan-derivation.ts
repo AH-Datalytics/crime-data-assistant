@@ -167,6 +167,68 @@ console.log("\nreformatting BETWEEN tokens is not treated as tampering");
   });
 }
 
+console.log("\nevery quoted region SQLite recognizes is preserved");
+{
+  const CASES: Array<[string, string, string]> = [
+    ["bracket identifier", "SELECT [odd  column] FROM t", "SELECT [odd column] FROM t"],
+    ["backtick identifier", "SELECT `odd  column` FROM t", "SELECT `odd column` FROM t"],
+    ["single-quoted value", "SELECT 1 FROM t WHERE c = 'a  b'", "SELECT 1 FROM t WHERE c = 'a b'"],
+    ["double-quoted identifier", 'SELECT "a  b" FROM t', 'SELECT "a b" FROM t'],
+  ];
+  for (const [label, a, b] of CASES) {
+    check(`${label}: collapsing whitespace inside it is caught`, () => {
+      // lib/sql-safety accepts all four forms, so all four can reach a deterministic
+      // route. A first revision handled only the two quote characters.
+      assert.strictEqual(verifyPlanDerivation(sealPlanDerivation("f", a), b).ok, false);
+      assert.strictEqual(verifyPlanDerivation(sealPlanDerivation("f", a), a).ok, true, "identical must still verify");
+    });
+  }
+
+  check("a bracket identifier has no doubling escape", () => {
+    // SQLite closes a bracket identifier at the first `]`; treating `]]` as an escape
+    // would swallow the rest of the statement.
+    const sql = "SELECT [a] , [b  c] FROM t";
+    assert.strictEqual(verifyPlanDerivation(sealPlanDerivation("f", sql), sql).ok, true);
+    assert.strictEqual(verifyPlanDerivation(sealPlanDerivation("f", sql), "SELECT [a] , [b c] FROM t").ok, false);
+  });
+}
+
+console.log("\ncomments: text is not semantic, the newline that ends one is");
+{
+  check("a line comment's TERMINATING NEWLINE is not collapsed away", () => {
+    // The case that made a naive collapse unsafe rather than merely loose. The first
+    // selects two columns; in the second the newline is gone, so ", 2" is inside the
+    // comment and only one column is selected.
+    const twoColumns = "SELECT 1 -- note\n, 2 FROM t";
+    const oneColumn = "SELECT 1 -- note , 2 FROM t";
+    assert.strictEqual(verifyPlanDerivation(sealPlanDerivation("f", twoColumns), oneColumn).ok, false);
+  });
+
+  check("comment TEXT changes still verify, because text cannot change meaning", () => {
+    const a = "SELECT 1 /* first note */ FROM t";
+    const b = "SELECT 1 /* a completely different note */ FROM t";
+    assert.strictEqual(verifyPlanDerivation(sealPlanDerivation("f", a), b).ok, true);
+  });
+
+  check("adding or removing a comment still verifies", () => {
+    const withComment = "SELECT 1 -- note\nFROM t";
+    assert.strictEqual(verifyPlanDerivation(sealPlanDerivation("f", withComment), "SELECT 1 FROM t").ok, true);
+  });
+
+  check("a comment cannot be used to hide a changed literal", () => {
+    const a = "SELECT 1 /* x */ FROM t WHERE c = 'New  York'";
+    const b = "SELECT 1 /* y */ FROM t WHERE c = 'New York'";
+    assert.strictEqual(verifyPlanDerivation(sealPlanDerivation("f", a), b).ok, false);
+  });
+
+  check("an unterminated block comment runs to the end, as SQLite reads it", () => {
+    assert.strictEqual(
+      verifyPlanDerivation(sealPlanDerivation("f", "SELECT 1 FROM t /* trailing"), "SELECT 1 FROM t").ok,
+      true,
+    );
+  });
+}
+
 console.log("\nreformatting INSIDE a literal IS tampering");
 {
   check("collapsing a doubled space inside a quoted value is caught", () => {

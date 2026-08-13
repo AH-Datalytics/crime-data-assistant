@@ -573,7 +573,7 @@ export async function POST(req: NextRequest) {
           // Deterministic answers render charts too, so they need the same capture
           // as the model path -- otherwise chart auditing has a blind spot exactly
           // where the answers are most confidently presented.
-          serializeChartConfigForLog(chartConfig, columns),
+          serializeChartConfigForLog(chartConfig, columns, { source: "FBI NIBRS", agencyCount: 0, population: null }),
           null,
           deterministicProof
         );
@@ -1586,7 +1586,7 @@ export async function POST(req: NextRequest) {
       chartFromBindings: false,
       retries: retryCount,
     });
-    writeNibrsLog(question, sql, rows.length, null, totalMs, explanation, firedGuardrails, activeModelLabel, sessionId, serializeChartConfigForLog(chartConfig, columns), null, finalization);
+    writeNibrsLog(question, sql, rows.length, null, totalMs, explanation, firedGuardrails, activeModelLabel, sessionId, serializeChartConfigForLog(chartConfig, columns, { source: "FBI NIBRS", agencyCount: 0, population: null }), null, finalization);
 
     // Cache successful responses (only standalone questions)
     if (!cached && cacheableStandalone) {

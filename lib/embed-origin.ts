@@ -137,6 +137,12 @@ const CHART_IDENTITY_FIELDS = [
   "yAxisMin",
   "yAxisMax",
   "annotationCount",
+  // Digests of what the viewer is actually shown. annotationCount alone let a chart
+  // change an annotation's position and its displayed claim while keeping the count,
+  // and chartMeta -- the agency count and population rendered beneath the chart --
+  // arrived from the client and was compared against nothing at all.
+  "annotationsDigest",
+  "chartMetaDigest",
 ] as const;
 
 function chartIdentity(json: string): string | null {

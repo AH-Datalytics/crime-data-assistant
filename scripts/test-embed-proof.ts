@@ -182,7 +182,7 @@ async function main() {
     title: "Murders in Austin",
     sql: "SELECT year, agency, count FROM agency_monthly",
     chartConfig: { type: "line" as const, xAxis: "year", yAxis: ["count"], title: "Murders in Austin" },
-    chartMeta: { source: "RTCI" },
+    chartMeta: { source: "RTCI", agencyCount: 412, population: 39_500_000 },
   };
 
   console.log("\nembed creation records the originating proof");
@@ -209,7 +209,9 @@ async function main() {
       // PRODUCTION SHAPE: the answer logs its chart config with the real result
       // columns, while the embed route has no result set and serializes with none.
       // Comparing those column lists made every legitimate chart origin unbound.
-      serializeChartConfigForLog(CHART.chartConfig, ["year", "agency", "count"]),
+      // WITH chartMeta, as the routes now log it -- the metadata digest is what binds
+      // the agency count and population a viewer is shown.
+      serializeChartConfigForLog(CHART.chartConfig, ["year", "agency", "count"], CHART.chartMeta),
       "req-proven",
       "answer",
       "shadow",
@@ -224,7 +226,7 @@ async function main() {
       "current",
       "murders in Austin",
       CHART.sql,
-      serializeChartConfigForLog(CHART.chartConfig, []),
+      serializeChartConfigForLog(CHART.chartConfig, [], CHART.chartMeta),
       "req-blocked",
       "answer",
       "shadow",

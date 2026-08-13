@@ -102,7 +102,11 @@ console.log("\n2. Final title corrections reach BOTH the response and the logged
       const text = src[name];
       const syncAt = text.indexOf("chartConfig = { ...chartConfig, title: claude.title }");
       const finalTitleAt = text.indexOf('claude.title = finalNarrative.title || claude.title || "Results"');
-      const logAt = text.indexOf("serializeChartConfigForLog(chartConfig, columns)");
+      // lastIndexOf, not indexOf: SHR also captures at its deterministic shooting exit
+      // via `columns.slice()`, which the relaxed prefix now matches and which sits
+      // BEFORE the title sync. The site this assertion is about is the model path's,
+      // which is the last one in the file.
+      const logAt = text.lastIndexOf("serializeChartConfigForLog(chartConfig, columns");
       assert.ok(syncAt > 0, `${name}: no title sync found`);
       assert.ok(finalTitleAt > 0 && finalTitleAt < syncAt, `${name}: sync must come AFTER the final title is set`);
       assert.ok(logAt > syncAt, `${name}: the log captures the config before the sync`);
@@ -125,19 +129,19 @@ console.log("\n3. Every chart-bearing log path captures the config");
   // Named explicitly so removing any one of them fails loudly. Each entry is a
   // path that returns a chartConfig to the user.
   const expected: Array<{ route: keyof typeof ROUTES; label: string; needle: RegExp }> = [
-    { route: "current", label: "model path", needle: /serializeChartConfigForLog\(chartConfig, columns\)/ },
+    { route: "current", label: "model path", needle: /serializeChartConfigForLog\(chartConfig, columns[,)]/ },
     { route: "current", label: "indexed-state deterministic", needle: /serializeChartConfigForLog\(rows\.length > 0 \? indexedStatePlan\.chartConfig : null, columns\)/ },
     { route: "current", label: "multi-city trend deterministic", needle: /serializeChartConfigForLog\(rows\.length > 0 \? multiCityTrend\.chartConfig : null, columns\)/ },
     { route: "current", label: "historical city change deterministic", needle: /serializeChartConfigForLog\(rows\.length > 0 \? historicalCityChange\.chartConfig : null, columns\)/ },
     { route: "current", label: "metadata coverage", needle: /serializeChartConfigForLog\(metadata\.chartConfig/ },
-    { route: "nibrs", label: "model path", needle: /serializeChartConfigForLog\(chartConfig, columns\)/ },
+    { route: "nibrs", label: "model path", needle: /serializeChartConfigForLog\(chartConfig, columns[,)]/ },
     // Keyed on the multi-line call shape (the capture on its own indented line) rather
     // than on the closing paren that used to follow it. Stage 1 appends proof arguments
     // after the chart capture, so "followed by )" stopped distinguishing the
     // deterministic site from the single-line model call without the capture changing.
-    { route: "nibrs", label: "deterministic path", needle: /\n\s+serializeChartConfigForLog\(chartConfig, columns\)[,)]/ },
-    { route: "shr", label: "model path", needle: /serializeChartConfigForLog\(chartConfig, columns\)/ },
-    { route: "hate_crime", label: "model path", needle: /serializeChartConfigForLog\(chartConfig, columns\)/ },
+    { route: "nibrs", label: "deterministic path", needle: /\n\s+serializeChartConfigForLog\(chartConfig, columns[,)]/ },
+    { route: "shr", label: "model path", needle: /serializeChartConfigForLog\(chartConfig, columns[,)]/ },
+    { route: "hate_crime", label: "model path", needle: /serializeChartConfigForLog\(chartConfig, columns[,)]/ },
   ];
 
   for (const item of expected) {
