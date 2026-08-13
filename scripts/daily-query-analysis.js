@@ -1186,7 +1186,17 @@ h1{font-size:23px;margin:0 0 4px}h2{font-size:18px;margin:28px 0 12px}.sub{color
     html += `<h2>Needs attention</h2><div class="healthy"><strong>No user-visible failures were detected.</strong></div>`;
   }
 
-  html += renderProofShadowSection(buildProofShadowReport(queries, isHumanQuery));
+  // Invariant 15: the existing digest continues independently of the proof pipeline. The
+  // reporter's row decoder is total, so this should never fire -- but this section is
+  // rendered INLINE into the email, and a throw here previously aborted the whole digest
+  // (a single row with a non-iterable blockingChecks was enough). The guard means the worst
+  // case is losing one section instead of the entire daily mail.
+  try {
+    html += renderProofShadowSection(buildProofShadowReport(queries, isHumanQuery));
+  } catch (error) {
+    console.error("[digest] proof shadow section failed; the rest of the digest is unaffected:", error);
+    html += `<h2>Verified-answer shadow observation</h2><p class="quiet">This section could not be rendered. The failure is logged; the rest of this digest is unaffected.</p>`;
+  }
 
   html += `<h2>Question - SQL - answer alignment</h2><p class="quiet">This shows the evidence for each real user query. "No mismatch detected" means the current semantic checks found the request, SQL, and written answer consistent; it does not independently verify every returned number because result rows are not stored in the query log.</p>`;
   for (const query of queries.slice(-12).reverse()) {

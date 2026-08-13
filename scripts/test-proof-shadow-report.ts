@@ -13,7 +13,7 @@
  * misleading number this project could print.
  */
 import assert from "node:assert";
-import { PROOF_CHECKS, CHECK_STATES, PROOF_MANIFEST_VERSION } from "../lib/proof-contract";
+import { PROOF_CHECKS, CHECK_STATES, PROOF_MANIFEST_VERSION, DELIVERY_ACTIONS } from "../lib/proof-contract";
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 /** One bucket's counts. Shared by the overall figures and by every tab/family bucket. */
@@ -45,6 +45,7 @@ const report = require("./lib/proof-shadow-report.js") as {
   DECLARED_CHECKS: string[];
   VALID_CHECK_STATES: Set<string>;
   MANIFEST_VERSION: number;
+  DECLARED_ACTIONS: Set<string>;
   shadowHealth: (r: unknown) => { state: string; note: string };
   renderProofShadowSection: (r: unknown) => string;
 };
@@ -416,6 +417,7 @@ console.log("\nnot every row with a proof record was evaluated");
     assert.deepStrictEqual(report.DECLARED_CHECKS, [...PROOF_CHECKS]);
     assert.deepStrictEqual([...report.VALID_CHECK_STATES].sort(), [...CHECK_STATES].sort());
     assert.strictEqual(report.MANIFEST_VERSION, PROOF_MANIFEST_VERSION);
+    assert.deepStrictEqual([...report.DECLARED_ACTIONS].sort(), [...DELIVERY_ACTIONS].sort());
   });
 
   check("an envelope the serializer could not build is ungradable, not evaluated", () => {
@@ -444,6 +446,155 @@ console.log("\nnot every row with a proof record was evaluated");
     assert.strictEqual(none.overall.evaluated, 0);
     const html = report.renderProofShadowSection(none);
     assert.doesNotMatch(html, /\d+(\.\d+)?%/, "a rate over zero evaluated records is meaningless");
+  });
+}
+
+console.log("\nthe decoder is total: no proof row can throw");
+{
+  const completeMap = fullChecks({ metric: "passed" });
+  const full = (over: Record<string, unknown>) => JSON.stringify({
+    manifest: { v: PROOF_MANIFEST_VERSION, checks: completeMap },
+    hypotheticalAction: "answer",
+    blockingChecks: [],
+    ...over,
+  });
+
+  check("a non-array blockingChecks is malformed rather than thrown or iterated", () => {
+    // `for (const x of {})` THROWS, and a string iterates per character -- blockingChecks:
+    // "metric" produced six blockers named m, e, t, r, i and c.
+    for (const hostile of [{}, "metric", 7, true, null]) {
+      let built: ReturnType<typeof report.buildProofShadowReport> | null = null;
+      assert.doesNotThrow(() => {
+        built = report.buildProofShadowReport(
+          [shadowRow({ proof_manifest: full({ blockingChecks: hostile }) })],
+          ALL_HUMAN,
+        );
+      }, `blockingChecks ${JSON.stringify(hostile)} must not throw`);
+      assert.strictEqual(built!.overall.malformed, 1, `${JSON.stringify(hostile)} must be malformed`);
+      assert.strictEqual(built!.overall.evaluated, 0);
+      assert.deepStrictEqual(built!.overall.blockedByCheck, {}, "no blocker may be invented");
+    }
+  });
+
+  check("blockingChecks entries must be declared check names, and repeats count once", () => {
+    const unknown = report.buildProofShadowReport(
+      [shadowRow({ proof_manifest: full({ blockingChecks: ["notARealCheck"] }) })],
+      ALL_HUMAN,
+    );
+    assert.strictEqual(unknown.overall.malformed, 1, "an undeclared blocker name is malformed");
+    assert.deepStrictEqual(unknown.overall.blockedByCheck, {});
+
+    const dupes = report.buildProofShadowReport(
+      [shadowRow({ proof_manifest: full({ blockingChecks: ["metric", "metric"] }) })],
+      ALL_HUMAN,
+    );
+    assert.strictEqual(dupes.overall.evaluated, 1);
+    assert.strictEqual(dupes.overall.blockedByCheck.metric, 1, "a repeated blocker counts once");
+  });
+
+  check("a hypotheticalAction that is not a declared action credits nothing", () => {
+    for (const action of [undefined, null, "", "probably", 7, {}]) {
+      const built = report.buildProofShadowReport(
+        [shadowRow({ proof_manifest: full({ hypotheticalAction: action }) })],
+        ALL_HUMAN,
+      );
+      assert.strictEqual(built.overall.malformed, 1, `action ${JSON.stringify(action)} must be malformed`);
+      assert.deepStrictEqual(built.overall.wouldHave, {}, "and must not invent an action bucket");
+      assert.strictEqual(built.overall.evaluated, 0);
+    }
+  });
+
+  check("a reduced envelope needs a declared action and a valid blocker list too", () => {
+    for (const over of [{ hypotheticalAction: "probably" }, { blockingChecks: {} }, { hypotheticalAction: undefined }]) {
+      const built = report.buildProofShadowReport(
+        [shadowRow({ proof_manifest: JSON.stringify({
+          v: PROOF_MANIFEST_VERSION, envelopeReduced: true, hypotheticalAction: "answer", blockingChecks: [], ...over,
+        }) })],
+        ALL_HUMAN,
+      );
+      assert.strictEqual(built.overall.reduced, 0, `${JSON.stringify(over)} is not a usable reduced envelope`);
+      assert.strictEqual(built.overall.malformed, 1);
+      assert.deepStrictEqual(built.overall.wouldHave, {});
+    }
+  });
+
+  check("the fallback discriminants must be exactly true", () => {
+    for (const over of [{ envelopeReduced: "yes" }, { envelopeError: 1 }, { envelopeReduced: true, envelopeError: true }]) {
+      const built = report.buildProofShadowReport(
+        [shadowRow({ proof_manifest: JSON.stringify({
+          v: PROOF_MANIFEST_VERSION, hypotheticalAction: "answer", blockingChecks: [], ...over,
+        }) })],
+        ALL_HUMAN,
+      );
+      assert.strictEqual(built.overall.reduced, 0, `${JSON.stringify(over)} must not read as reduced`);
+      assert.strictEqual(built.overall.envelopeError, 0, `${JSON.stringify(over)} must not read as a build failure`);
+      assert.strictEqual(built.overall.malformed, 1);
+    }
+  });
+
+  check("one bad row cannot stop the section rendering, and the good rows still count", () => {
+    // Contract invariant 15: the existing digest continues independently of the proof
+    // pipeline. daily-query-analysis.js renders this section INLINE, so a throw here aborts
+    // the whole email -- the failure mode this test exists to prevent.
+    const rows = [
+      shadowRow({ proof_manifest: full({ blockingChecks: {} }) }),
+      shadowRow({ proof_manifest: "{not json" }),
+      shadowRow({ proof_manifest: null }),
+      shadowRow({ tab: "nibrs", proof_manifest: envelope("answer", { metric: "passed" }) }),
+    ];
+    let html = "";
+    assert.doesNotThrow(() => {
+      html = report.renderProofShadowSection(report.buildProofShadowReport(rows, ALL_HUMAN));
+    });
+    assert.ok(html.length > 0, "the section must still render");
+    const built = report.buildProofShadowReport(rows, ALL_HUMAN);
+    assert.strictEqual(built.overall.evaluated, 1, "the one good row is still graded");
+    assert.strictEqual(built.byTab.get("nibrs")!.checks.passed, 1);
+  });
+}
+
+console.log("\nonly a recognized observing mode counts as coverage");
+{
+  check("an unrecognized or off proof_mode is not observation", () => {
+    for (const mode of ["off", "garbage", "", null, 1, true]) {
+      const built = report.buildProofShadowReport(
+        [{ tab: "current", proof_mode: mode, delivery_action: "answer", plan_family: null, proof_manifest: null }],
+        ALL_HUMAN,
+      );
+      assert.strictEqual(built.overall.withProof, 0, `proof_mode ${JSON.stringify(mode)} is not observing`);
+      assert.strictEqual(
+        report.shadowHealth(built).state,
+        "not_observing",
+        `proof_mode ${JSON.stringify(mode)} must never report complete observation`,
+      );
+    }
+  });
+
+  check("shadow and enforce both count as observing", () => {
+    for (const mode of ["shadow", "enforce"]) {
+      const built = report.buildProofShadowReport([shadowRow({ proof_mode: mode })], ALL_HUMAN);
+      assert.strictEqual(built.overall.withProof, 1, `${mode} is an observing mode`);
+    }
+  });
+}
+
+console.log("\nreduced envelopes still contribute their blockers");
+{
+  check("a reduced envelope's blockingChecks are tallied", () => {
+    // The serializer preserves blockingChecks specifically BECAUSE they are the most
+    // diagnostic field. Returning before tallying them undercounted every oversized record
+    // in "What blocked delivery most often".
+    const built = report.buildProofShadowReport(
+      [shadowRow({ proof_manifest: JSON.stringify({
+        v: PROOF_MANIFEST_VERSION, envelopeReduced: true, hypotheticalAction: "decline_capability",
+        blockingChecks: ["semanticPlan", "metric"],
+      }) })],
+      ALL_HUMAN,
+    );
+    assert.strictEqual(built.overall.reduced, 1);
+    assert.strictEqual(built.overall.blockedByCheck.semanticPlan, 1);
+    assert.strictEqual(built.overall.blockedByCheck.metric, 1);
+    assert.strictEqual(built.overall.evaluated, 0, "still not gradable, though");
   });
 }
 

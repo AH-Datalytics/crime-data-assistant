@@ -90,15 +90,119 @@ function isCompleteCheckMap(checks) {
   return true;
 }
 
-function parseEnvelope(json) {
-  if (!json) return null;
-  try {
-    return JSON.parse(json);
-  } catch {
-    // A malformed envelope is itself a finding: the writer bounded the fields wrongly,
-    // or a column was truncated. Counted rather than silently skipped.
-    return { unparseable: true };
+/**
+ * The proof modes that are actually persisted, from lib/proof-modes' isObserving.
+ *
+ * `off` writes EMPTY_PROOF_LOG_FIELDS, so a row whose proof_mode is `off` -- or any
+ * unrecognized string -- is not an observed row. Treating any truthy value as coverage let
+ * `proof_mode: "garbage"` with no envelope report withProof === rows, and therefore
+ * "complete observation", which is the worst possible thing this email can get wrong.
+ */
+const OBSERVING_MODES = new Set(["shadow", "enforce"]);
+
+/** DELIVERY_ACTIONS, restated for the same reason and under the same drift guard. */
+const DECLARED_ACTIONS = new Set([
+  "answer",
+  "answer_limited_scope",
+  "clarify",
+  "decline_capability",
+  "decline_data",
+  "decline_source_health",
+]);
+
+/**
+ * A unique array of declared check names, or null if this is not one.
+ *
+ * `for (const x of {})` THROWS, and daily-query-analysis.js renders this section inline, so
+ * that throw aborted the entire digest -- a direct breach of invariant 15, which says the
+ * existing digest continues independently of the proof pipeline. A string was worse than a
+ * throw because it was silent: blockingChecks "metric" iterated per character and invented
+ * six blockers named m, e, t, r, i and c.
+ */
+function decodeBlockingChecks(value) {
+  if (!Array.isArray(value)) return null;
+  const seen = [];
+  for (const name of value) {
+    if (typeof name !== "string" || !DECLARED_CHECKS.includes(name)) return null;
+    if (!seen.includes(name)) seen.push(name);
   }
+  return seen;
+}
+
+/**
+ * Decode one query_log row into exactly one validated outcome.
+ *
+ * WHY A DECODER RATHER THAN CHECKS SCATTERED THROUGH THE TALLY. Four separate defects came
+ * from tallying fields that had never been validated: a non-iterable blocker list threw, an
+ * undeclared hypothetical action invented a bucket, an unrecognized proof mode counted as
+ * coverage, and a reduced envelope's blockers were dropped. Validating once, up front, and
+ * returning a closed set of kinds means the tally cannot encounter an unexpected shape at
+ * all -- and this function is total: every input returns a kind, none throws.
+ *
+ * Returns `{ kind, delivered, ... }`. `delivered` is what the user actually received and is
+ * recorded for every observed row regardless of the envelope's state.
+ */
+function decodeRow(row) {
+  if (typeof row.proof_mode !== "string" || !OBSERVING_MODES.has(row.proof_mode)) {
+    return { kind: "not_observed" };
+  }
+  // An unrecognized delivery action is reported as "not recorded" rather than passed
+  // through, so a stray value cannot become a label in the email.
+  const delivered = DECLARED_ACTIONS.has(row.delivery_action) ? row.delivery_action : "unrecorded";
+  const base = { delivered };
+
+  if (!row.proof_manifest) return { ...base, kind: "envelope_missing" };
+
+  let envelope;
+  try {
+    envelope = JSON.parse(row.proof_manifest);
+  } catch {
+    // A malformed envelope is itself a finding: the writer bounded the fields wrongly, or
+    // the column was truncated. Counted rather than silently skipped.
+    return { ...base, kind: "unparseable" };
+  }
+  if (!envelope || typeof envelope !== "object" || Array.isArray(envelope)) {
+    return { ...base, kind: "malformed" };
+  }
+
+  // EXACT boolean discriminants. `envelopeReduced: "yes"` is not a reduced envelope, and a
+  // record claiming to be both fallbacks at once is not either of them.
+  const isError = envelope.envelopeError === true;
+  const isReduced = envelope.envelopeReduced === true;
+  if (isError && isReduced) return { ...base, kind: "malformed" };
+
+  /**
+   * VERSION BEFORE MEANING. Every declared shape records its schema version -- the two
+   * fallbacks at the top level, a full envelope at manifest.v -- and it must be checked
+   * before any shape is interpreted, because everything after this is v1 semantics.
+   *
+   * Missing and mismatched are different findings: no declared shape omits the version, so
+   * an absent one is a writer defect, while a present-but-different one is ordinary skew
+   * during a rolling deploy and gets its own category.
+   */
+  const manifest = envelope.manifest && typeof envelope.manifest === "object" && !Array.isArray(envelope.manifest)
+    ? envelope.manifest
+    : null;
+  const version = isError || isReduced ? envelope.v : manifest ? manifest.v : undefined;
+  if (version === undefined || version === null) return { ...base, kind: "malformed" };
+  if (version !== MANIFEST_VERSION) return { ...base, kind: "incompatible_version" };
+
+  if (isError) return { ...base, kind: "error" };
+
+  const action = DECLARED_ACTIONS.has(envelope.hypotheticalAction) ? envelope.hypotheticalAction : null;
+  const blockingChecks = decodeBlockingChecks(envelope.blockingChecks);
+
+  if (isReduced) {
+    // Reduced carries no manifest by design, but it does carry the action and the blockers,
+    // and both must be valid before either is counted.
+    if (action === null || blockingChecks === null) return { ...base, kind: "malformed" };
+    return { ...base, kind: "reduced", action, blockingChecks };
+  }
+
+  if (!manifest || !isCompleteCheckMap(manifest.checks) || action === null || blockingChecks === null) {
+    return { ...base, kind: "malformed" };
+  }
+  return { ...base, kind: "evaluated", action, checks: manifest.checks, blockingChecks };
 }
 
 /** Human-readable label for a terminal action. */
@@ -167,95 +271,56 @@ function emptyTally() {
 
 function tallyRow(tally, row) {
   tally.rows += 1;
-  const envelope = parseEnvelope(row.proof_manifest);
-  if (!row.proof_mode) return; // no proof record at all -- counted in rows, not withProof
+  const decoded = decodeRow(row);
+  if (decoded.kind === "not_observed") return;
+
   tally.withProof += 1;
+  tally.delivered[decoded.delivered] = (tally.delivered[decoded.delivered] || 0) + 1;
 
-  const delivered = row.delivery_action || "unrecorded";
-  tally.delivered[delivered] = (tally.delivered[delivered] || 0) + 1;
-
-  if (!envelope) {
-    tally.envelopeMissing += 1;
-    return;
-  }
-  if (envelope.unparseable) {
-    tally.unparseable += 1;
-    return;
-  }
-
-  const creditWouldHave = () => {
-    const would = envelope.hypotheticalAction || "unrecorded";
-    tally.wouldHave[would] = (tally.wouldHave[would] || 0) + 1;
-  };
-
-  /**
-   * VERSION BEFORE MEANING.
-   *
-   * Every declared shape records its schema version -- the two fallbacks at the top level,
-   * a full envelope at `manifest.v`. That version must be checked BEFORE any of them is
-   * interpreted, because everything this function does afterwards is v1 semantics. Reading
-   * a v2 record as v1, or an unversioned one as v1, is how a schema that never agreed to
-   * these meanings ends up counted under them. lib/proof-contract already refuses a
-   * manifest whose version is not current; this is the same rule at the reporting end.
-   *
-   * MISSING AND MISMATCHED ARE NOT THE SAME FINDING. No declared shape omits the version,
-   * so an absent one is a writer defect -- `malformed`. A version that is present but
-   * different is ordinary skew during a rolling deploy, where a newer writer's rows land in
-   * an older reporter's window; calling that a defect would cry wolf on a normal release.
-   * It gets its own category so the digest can say "written by a newer schema" instead.
-   */
-  const declaresFallback = Boolean(envelope.envelopeError) || Boolean(envelope.envelopeReduced);
-  const manifest = envelope.manifest && typeof envelope.manifest === "object" ? envelope.manifest : null;
-  const version = declaresFallback ? envelope.v : manifest ? manifest.v : undefined;
-  if (version === undefined || version === null) {
-    tally.malformed += 1;
-    return;
-  }
-  if (version !== MANIFEST_VERSION) {
-    tally.incompatibleVersion += 1;
-    return;
-  }
-
-  // Checked BEFORE wouldHave is credited: this envelope carries only { v, envelopeError },
-  // so there is no hypothetical action in it and crediting one would invent an
-  // "unrecorded" bucket out of a serializer failure.
-  if (envelope.envelopeError) {
-    tally.envelopeError += 1;
-    return;
-  }
-
-  // A reduced envelope has no manifest BY DESIGN but does still record what the contract
-  // would have done, so it is credited and classified before the structural check below --
-  // which would otherwise call the serializer's own deliberate fallback malformed.
-  if (envelope.envelopeReduced) {
-    creditWouldHave();
-    tally.reduced += 1;
-    return;
-  }
-
-  /**
-   * STRUCTURAL VALIDATION, NOT JUST PARSEABILITY.
-   *
-   * Everything above recognizes a shape the serializer DECLARES. This catches everything
-   * else -- parseable, undeclared, and carrying nothing to grade. Such rows used to fall
-   * through to `evaluated`, which contradicted that field's definition ("rows that carried
-   * a manifest with checks in it") and credited a phantom hypothetical action drawn from an
-   * empty record. A row the writer mangled must read as a writer defect, never as a
-   * graded pass.
-   */
-  if (!isCompleteCheckMap(manifest.checks)) {
-    tally.malformed += 1;
-    return;
-  }
-  const checks = manifest.checks;
-
-  creditWouldHave();
-  tally.evaluated += 1;
-  for (const state of Object.values(checks)) {
-    if (tally.checks[state] !== undefined) tally.checks[state] += 1;
-  }
-  for (const name of envelope.blockingChecks || []) {
-    tally.blockedByCheck[name] = (tally.blockedByCheck[name] || 0) + 1;
+  // Every branch below works on VALIDATED data, so nothing here can throw on a hostile
+  // value and no bucket can be invented from one.
+  switch (decoded.kind) {
+    case "envelope_missing":
+      tally.envelopeMissing += 1;
+      return;
+    case "unparseable":
+      tally.unparseable += 1;
+      return;
+    case "malformed":
+      tally.malformed += 1;
+      return;
+    case "incompatible_version":
+      tally.incompatibleVersion += 1;
+      return;
+    case "error":
+      // Carries only { v, envelopeError }: no action to credit, no blockers to tally.
+      tally.envelopeError += 1;
+      return;
+    case "reduced":
+      tally.wouldHave[decoded.action] = (tally.wouldHave[decoded.action] || 0) + 1;
+      // Blockers ARE tallied here. The serializer preserves blockingChecks in the reduced
+      // rung precisely because they are its most diagnostic field, and returning early
+      // undercounted every oversized record in "What blocked delivery most often".
+      for (const name of decoded.blockingChecks) {
+        tally.blockedByCheck[name] = (tally.blockedByCheck[name] || 0) + 1;
+      }
+      tally.reduced += 1;
+      return;
+    case "evaluated":
+      tally.wouldHave[decoded.action] = (tally.wouldHave[decoded.action] || 0) + 1;
+      tally.evaluated += 1;
+      for (const state of Object.values(decoded.checks)) {
+        if (tally.checks[state] !== undefined) tally.checks[state] += 1;
+      }
+      for (const name of decoded.blockingChecks) {
+        tally.blockedByCheck[name] = (tally.blockedByCheck[name] || 0) + 1;
+      }
+      return;
+    default:
+      // Unreachable while decodeRow returns only the kinds above; counted rather than
+      // thrown so a future kind cannot abort the digest.
+      tally.malformed += 1;
+      return;
   }
 }
 
@@ -440,4 +505,7 @@ module.exports = {
   DECLARED_CHECKS,
   VALID_CHECK_STATES,
   MANIFEST_VERSION,
+  DECLARED_ACTIONS,
+  OBSERVING_MODES,
+  decodeRow,
 };
