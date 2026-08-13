@@ -26,6 +26,8 @@ import {
   verifyEmbedOrigin,
   originIsVerified,
   embedPlanFamily,
+  sharedChartsHasProof,
+  REQUIRED_SHARED_CHART_COLUMNS,
   type OriginVerdict,
 } from "../lib/embed-origin";
 
@@ -98,15 +100,38 @@ console.log("\nthe positive case");
     assert.strictEqual(originIsVerified(verdict), true);
   });
 
-  check("whitespace reflow in the SQL does not break the binding", () => {
+  check("SQL is compared EXACTLY, so any reflow is a mismatch", () => {
+    // query_log stores SQL verbatim and only truncates, so the logged copy is either
+    // byte-identical or too short to compare. Tolerance bought nothing here and
+    // widened what could claim provenance.
     const verdict = verifyEmbedOrigin(db, candidate({ sql: SQL.replace(/ /g, "\n  ") }));
-    assert.strictEqual(verdict.state, "verified");
+    assert.strictEqual(verdict.state, "unbound");
   });
 
-  check("a chart with no config still binds when the answer logged one", () => {
-    // Only compared when both sides have one; an export without a chart is not a
-    // provenance failure.
-    assert.strictEqual(verifyEmbedOrigin(db, candidate({ chartConfigJson: null })).state, "verified");
+  check("whitespace INSIDE a literal is not collapsed away", () => {
+    // The reported collision: `'New  York'` and `'New York'` are different queries and
+    // must never share a fingerprint.
+    const doubled = "SELECT 1 FROM t WHERE city = 'New  York'";
+    const single = "SELECT 1 FROM t WHERE city = 'New York'";
+    const literalDb = makeLog([{ request_id: "req-lit", sql: doubled }]);
+    const verdict = verifyEmbedOrigin(literalDb, candidate({ requestId: "req-lit", sql: single }));
+    literalDb.close();
+    assert.strictEqual(verdict.state, "unbound", "a changed literal must not verify");
+  });
+
+  check("column metadata does not defeat the chart comparison", () => {
+    // serializeChartConfigForLog records the result's `columns`/`columnCount` alongside
+    // the chart fields. The embed route has no result set at creation, so comparing
+    // those made every legitimate chart origin unbound. Only chart identity is compared.
+    const withColumns = JSON.stringify({
+      ...JSON.parse(CHART_JSON),
+      columns: ["year", "agency", "murders"],
+      columnCount: 3,
+    });
+    const columnDb = makeLog([{ chart_config: withColumns }]);
+    const verdict = verifyEmbedOrigin(columnDb, candidate());
+    columnDb.close();
+    assert.strictEqual(verdict.state, "verified", verdict.reason);
   });
   db.close();
 }
@@ -137,6 +162,37 @@ console.log("\nprovenance cannot be borrowed");
     const verdict = verifyEmbedOrigin(db, candidate({ chartConfigJson: '{"type":"bar"}' }));
     assert.strictEqual(verdict.state, "unbound");
     assert.match(verdict.reason, /chart configuration/);
+  });
+
+  check("OMITTING the chart config no longer verifies", () => {
+    // The presence bypass, which an earlier test explicitly blessed: comparing only
+    // when both sides had a configuration meant a client could simply not send one.
+    const verdict = verifyEmbedOrigin(db, candidate({ chartConfigJson: null }));
+    assert.strictEqual(verdict.state, "unbound");
+    assert.match(verdict.reason, /carried a chart configuration and the chart does not/);
+  });
+
+  check("ADDING a chart config the answer never had does not verify", () => {
+    const noChartDb = makeLog([{ chart_config: null }]);
+    const verdict = verifyEmbedOrigin(noChartDb, candidate());
+    noChartDb.close();
+    assert.strictEqual(verdict.state, "unbound");
+    assert.match(verdict.reason, /a configuration the originating answer did not/);
+  });
+
+  check("both sides absent is a genuine no-chart export", () => {
+    const noChartDb = makeLog([{ chart_config: null }]);
+    const verdict = verifyEmbedOrigin(noChartDb, candidate({ chartConfigJson: null }));
+    noChartDb.close();
+    assert.strictEqual(verdict.state, "verified");
+  });
+
+  check("an unparseable chart configuration does not verify", () => {
+    const brokenDb = makeLog([{ chart_config: "{not json" }]);
+    const verdict = verifyEmbedOrigin(brokenDb, candidate());
+    brokenDb.close();
+    assert.strictEqual(verdict.state, "unbound");
+    assert.match(verdict.reason, /could not be parsed/);
   });
 
   check("an unknown request id is rejected", () => {
@@ -236,6 +292,73 @@ console.log("\nabsent and unavailable are distinct from forged");
       verdict = verifyEmbedOrigin(db, candidate());
     });
     assert.strictEqual(verdict!.state, "unbound");
+  });
+}
+
+console.log("\nthe schema probe covers every column this version uses");
+{
+  /** shared_charts at a given migration stage. */
+  function chartsTable(extra: string[]): Database.Database {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "chartsprobe-"));
+    const db = new Database(path.join(dir, "query_log.db"));
+    db.exec(`CREATE TABLE shared_charts (
+      id TEXT PRIMARY KEY, tab TEXT NOT NULL, title TEXT, sql TEXT NOT NULL,
+      chart_config TEXT, chart_meta TEXT, created_at INTEGER NOT NULL
+      ${extra.length ? "," + extra.map((c) => `${c} TEXT`).join(", ") : ""})`);
+    return db;
+  }
+
+  check("the PREVIOUS migration shape is rejected", () => {
+    // The reported defect: the probe checked two of six columns, so a database with
+    // the earlier five-column shape answered true — after which POST inserted
+    // origin_state and GET selected it, and every embed request 500'd. A runtime probe
+    // exists for deploy-order freedom, which a partial check gives up.
+    const db = chartsTable([
+      "origin_request_id",
+      "origin_delivery_action",
+      "origin_proof_mode",
+      "last_read_delivery_action",
+      "last_read_at",
+    ]);
+    const result = sharedChartsHasProof(db);
+    db.close();
+    assert.strictEqual(result, false, "a schema missing origin_state must not be treated as ready");
+  });
+
+  check("the full current shape is accepted", () => {
+    const db = chartsTable([...REQUIRED_SHARED_CHART_COLUMNS]);
+    const result = sharedChartsHasProof(db);
+    db.close();
+    assert.strictEqual(result, true);
+  });
+
+  check("every required column is individually load-bearing", () => {
+    // Any one of them missing must fail the probe, since the route reads or writes all.
+    for (const omitted of REQUIRED_SHARED_CHART_COLUMNS) {
+      const db = chartsTable(REQUIRED_SHARED_CHART_COLUMNS.filter((c) => c !== omitted));
+      const result = sharedChartsHasProof(db);
+      db.close();
+      assert.strictEqual(result, false, `missing ${omitted} should fail the probe`);
+    }
+  });
+
+  check("an unmigrated table and a missing table both fail", () => {
+    const bare = chartsTable([]);
+    assert.strictEqual(sharedChartsHasProof(bare), false);
+    bare.close();
+
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "chartsprobe-none-"));
+    const empty = new Database(path.join(dir, "query_log.db"));
+    assert.strictEqual(sharedChartsHasProof(empty), false, "no table at all must fail");
+    empty.close();
+  });
+
+  check("a null or closed handle fails rather than throwing", () => {
+    assert.strictEqual(sharedChartsHasProof(null), false);
+    const db = chartsTable([...REQUIRED_SHARED_CHART_COLUMNS]);
+    db.close();
+    assert.doesNotThrow(() => sharedChartsHasProof(db));
+    assert.strictEqual(sharedChartsHasProof(db), false);
   });
 }
 

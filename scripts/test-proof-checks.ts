@@ -446,10 +446,24 @@ console.log("\nsemanticPlan requires a VERIFIED derivation, not a caller's word"
     assert.match(outcome.reason, /rewritten between planning and execution/);
   });
 
-  check("whitespace reflow does not read as tampering", () => {
+  check("whitespace reflow OUTSIDE literals does not read as tampering", () => {
+    // Reflow between tokens is what guardrails actually do, and must be tolerated.
     const derivation = sealPlanDerivation("current-agency-trend", baseSql);
-    const reflowed = input({ sql: baseSql.replace(/ /g, "\n   ") });
+    const reflowed = input({
+      sql: baseSql.replace(/ FROM /g, "\n  FROM  ").replace(/ GROUP /g, "\n GROUP "),
+    });
     assert.strictEqual(checkSemanticPlan(reflowed, derivation).state, "passed");
+  });
+
+  check("whitespace INSIDE a literal IS tampering", () => {
+    // 'New  York' and 'New York' select different data. A blanket whitespace collapse
+    // treated them as the same query — and this test previously reflowed the WHOLE
+    // string, literal included, then asserted it still verified. The fixture encoded
+    // the bug.
+    const derivation = sealPlanDerivation("f", "SELECT 1 FROM t WHERE city = 'New York'");
+    const outcome = checkSemanticPlan(input({ sql: "SELECT 1 FROM t WHERE city = 'New  York'" }), derivation);
+    assert.strictEqual(outcome.state, "unknown");
+    assert.match(outcome.reason, /rewritten between planning and execution/);
   });
 
   check("a changed string literal DOES read as tampering", () => {

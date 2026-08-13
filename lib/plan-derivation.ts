@@ -77,7 +77,48 @@ export interface PlanDerivation {
  * case-sensitive by default.
  */
 function normalizeSql(sql: string): string {
-  return sql.replace(/\s+/g, " ").trim();
+  // Whitespace is collapsed OUTSIDE string literals only. A blanket `\s+ -> " "`
+  // also rewrites the inside of quoted values, so
+  //
+  //     WHERE city = 'New  York'   and   WHERE city = 'New York'
+  //
+  // fingerprinted identically -- two materially different queries. The tolerance is
+  // meant to absorb a guardrail reflowing the STATEMENT, never to absorb a change to
+  // the data being selected.
+  let out = "";
+  let i = 0;
+  while (i < sql.length) {
+    const ch = sql[i];
+    if (ch === "'" || ch === '"') {
+      const quote = ch;
+      let literal = ch;
+      i += 1;
+      while (i < sql.length) {
+        literal += sql[i];
+        // SQL escapes a quote by doubling it; consume both and keep going.
+        if (sql[i] === quote) {
+          if (sql[i + 1] === quote) {
+            literal += sql[i + 1];
+            i += 2;
+            continue;
+          }
+          i += 1;
+          break;
+        }
+        i += 1;
+      }
+      out += literal;
+      continue;
+    }
+    if (/\s/.test(ch)) {
+      out += " ";
+      while (i < sql.length && /\s/.test(sql[i])) i += 1;
+      continue;
+    }
+    out += ch;
+    i += 1;
+  }
+  return out.trim();
 }
 
 export function fingerprintSql(sql: string): string {

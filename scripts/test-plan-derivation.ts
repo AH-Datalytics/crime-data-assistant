@@ -146,24 +146,72 @@ console.log("\nthe rewrite cases this exists to catch");
   });
 }
 
-console.log("\nharmless reformatting is not treated as tampering");
+console.log("\nreformatting BETWEEN tokens is not treated as tampering");
 {
   const derivation = sealPlanDerivation("f", SQL);
 
-  check("collapsed whitespace still verifies", () => {
-    assert.strictEqual(verifyPlanDerivation(derivation, SQL.replace(/ /g, "   ")).ok, true);
+  check("extra spaces between tokens still verify", () => {
+    assert.strictEqual(verifyPlanDerivation(derivation, SQL.replace(/ FROM /g, "   FROM   ")).ok, true);
   });
 
   check("newlines and indentation still verify", () => {
-    assert.strictEqual(verifyPlanDerivation(derivation, SQL.replace(/ /g, "\n  ")).ok, true);
+    assert.strictEqual(verifyPlanDerivation(derivation, SQL.replace(/ GROUP /g, "\n  GROUP  ")).ok, true);
   });
 
   check("leading and trailing whitespace still verifies", () => {
     assert.strictEqual(verifyPlanDerivation(derivation, `\n  ${SQL}  \n`).ok, true);
   });
 
-  check("tabs still verify", () => {
-    assert.strictEqual(verifyPlanDerivation(derivation, SQL.replace(/ /g, "\t")).ok, true);
+  check("tabs between tokens still verify", () => {
+    assert.strictEqual(verifyPlanDerivation(derivation, SQL.replace(/ WHERE /g, "\tWHERE\t")).ok, true);
+  });
+}
+
+console.log("\nreformatting INSIDE a literal IS tampering");
+{
+  check("collapsing a doubled space inside a quoted value is caught", () => {
+    // The tolerance exists to absorb a guardrail reflowing the STATEMENT, never to
+    // absorb a change to the data being selected. 'New  York' and 'New York' are
+    // different queries, and an earlier revision's blanket collapse made them equal.
+    const derivation = sealPlanDerivation("f", "SELECT 1 FROM t WHERE city = 'New  York'");
+    const verdict = verifyPlanDerivation(derivation, "SELECT 1 FROM t WHERE city = 'New York'");
+    assert.strictEqual(verdict.ok, false);
+    assert.match(verdict.reason, /rewritten between planning and execution/);
+  });
+
+  check("the reverse direction is caught too", () => {
+    const derivation = sealPlanDerivation("f", "SELECT 1 FROM t WHERE city = 'New York'");
+    assert.strictEqual(verifyPlanDerivation(derivation, "SELECT 1 FROM t WHERE city = 'New  York'").ok, false);
+  });
+
+  check("a doubled quote escape does not confuse the scanner", () => {
+    // 'O''Brien  County' -- the escaped quote must not end the literal early, or the
+    // whitespace after it would be collapsed and the change would go unnoticed.
+    const sql = "SELECT 1 FROM t WHERE name = 'O''Brien  County'";
+    const derivation = sealPlanDerivation("f", sql);
+    assert.strictEqual(verifyPlanDerivation(derivation, sql).ok, true, "identical must verify");
+    assert.strictEqual(
+      verifyPlanDerivation(derivation, "SELECT 1 FROM t WHERE name = 'O''Brien County'").ok,
+      false,
+      "a collapsed space inside the escaped literal must be caught",
+    );
+  });
+
+  check("double-quoted identifiers are preserved too", () => {
+    const sql = 'SELECT 1 FROM t WHERE "odd  column" = 1';
+    const derivation = sealPlanDerivation("f", sql);
+    assert.strictEqual(verifyPlanDerivation(derivation, sql).ok, true);
+    assert.strictEqual(verifyPlanDerivation(derivation, 'SELECT 1 FROM t WHERE "odd column" = 1').ok, false);
+  });
+
+  check("reflow outside a literal still verifies when a literal is present", () => {
+    // Both behaviors at once: the statement reflows, the literal does not change.
+    const sql = "SELECT 1 FROM t WHERE city = 'New  York' GROUP BY 1";
+    const derivation = sealPlanDerivation("f", sql);
+    assert.strictEqual(
+      verifyPlanDerivation(derivation, "SELECT 1\n  FROM t\n  WHERE city = 'New  York'\n  GROUP BY 1").ok,
+      true,
+    );
   });
 }
 

@@ -11,7 +11,13 @@ import {
   type SealedPayload,
 } from "@/lib/proof-finalize";
 import { isObserving, resolveMode } from "@/lib/proof-modes";
-import { embedPlanFamily, originIsVerified, verifyEmbedOrigin, type OriginVerdict } from "@/lib/embed-origin";
+import {
+  embedPlanFamily,
+  originIsVerified,
+  sharedChartsHasProof,
+  verifyEmbedOrigin,
+  type OriginVerdict,
+} from "@/lib/embed-origin";
 import { serializeChartConfigForLog } from "@/lib/chart-config-log";
 import { returnedEntityKeys } from "@/lib/result-disclosure";
 import type { SourceId } from "@/lib/proof-contract";
@@ -64,18 +70,6 @@ function sourceForTab(tab: string): SourceId {
  * must be free to deploy in either order, and an unmigrated database must keep serving
  * embeds exactly as before rather than failing every save.
  */
-function sharedChartsHasProof(db: object): boolean {
-  try {
-    const rows = (db as { prepare: (sql: string) => { all: () => Array<{ name: string }> } })
-      .prepare("PRAGMA table_info(shared_charts)")
-      .all();
-    const names = new Set(rows.map((row) => row.name));
-    return names.has("origin_request_id") && names.has("last_read_delivery_action");
-  } catch {
-    return false;
-  }
-}
-
 /** Whether the proof system is observing for the source this chart belongs to. */
 function observingFor(tab: string): boolean {
   return isObserving(resolveMode(sourceForTab(tab), null).mode);

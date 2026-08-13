@@ -29,8 +29,39 @@
  * the read-time finalization is for.
  */
 
-import { createHash } from "node:crypto";
 import { queryLogHasColumn } from "./query-log-columns";
+
+/**
+ * EVERY shared_charts column this version reads or writes, not a representative sample.
+ *
+ * A first revision probed for two of six. A database carrying the earlier migration
+ * shape -- which had no origin_state -- therefore answered true, after which POST
+ * inserted origin_state and GET selected it, and every embed request 500'd. The point
+ * of a runtime probe is that schema and code can deploy in either order; probing a
+ * subset gives up exactly that.
+ */
+export const REQUIRED_SHARED_CHART_COLUMNS = [
+  "origin_request_id",
+  "origin_delivery_action",
+  "origin_proof_mode",
+  "origin_state",
+  "last_read_delivery_action",
+  "last_read_at",
+] as const;
+
+/** Whether shared_charts carries every proof column this version needs. */
+export function sharedChartsHasProof(db: object | null): boolean {
+  if (!db) return false;
+  try {
+    const rows = (db as { prepare: (sql: string) => { all: () => Array<{ name: string }> } })
+      .prepare("PRAGMA table_info(shared_charts)")
+      .all();
+    const names = new Set(rows.map((row) => row.name));
+    return REQUIRED_SHARED_CHART_COLUMNS.every((column) => names.has(column));
+  } catch {
+    return false;
+  }
+}
 
 /** Why an origin is or is not verified. Recorded, and surfaced to the reviewer. */
 export type OriginState =
@@ -62,18 +93,94 @@ export interface OriginCandidate {
 }
 
 /**
- * Normalized SQL fingerprint, matching lib/plan-derivation's treatment.
+ * EXACT SQL equality. No normalization of any kind.
  *
- * Whitespace is collapsed because the logged copy may have been reflowed; case is NOT
- * normalized, because `state = 'la'` and `state = 'LA'` are different queries against
- * this data.
+ * A first revision collapsed whitespace here, copying lib/plan-derivation's tolerance.
+ * That tolerance exists there for a specific reason -- guardrails reflow SQL between
+ * planning and execution -- and NONE of it applies to this comparison: query_log
+ * stores the SQL verbatim and only ever truncates it, so the logged copy is either
+ * byte-identical to the original or too short to compare.
+ *
+ * Worse, a blanket `\s+ -> " "` collapses whitespace INSIDE string literals, so
+ *
+ *     WHERE city = 'New  York'
+ *     WHERE city = 'New York'
+ *
+ * fingerprinted identically -- two materially different queries against this data. A
+ * looser comparison bought nothing and silently widened what could claim provenance.
  */
-function sqlFingerprint(sql: string): string {
-  return createHash("sha256").update(sql.replace(/\s+/g, " ").trim(), "utf8").digest("hex").slice(0, 32);
+function sqlMatches(logged: string, candidate: string): boolean {
+  return logged === candidate;
 }
 
 /** query_log truncates sql at 4000 characters; a comparison against a truncated copy proves nothing. */
 const QUERY_LOG_SQL_LIMIT = 4000;
+
+/**
+ * Fields of a logged chart payload that describe the CHART, as opposed to the result
+ * it was drawn over.
+ *
+ * serializeChartConfigForLog also records `columns` and `columnCount` -- the actual
+ * result column names, which the chart auditor needs. Those are properties of the
+ * query's output, not of the chart configuration, and the embed route has no result
+ * set at creation time. Comparing them made every legitimate chart origin unbound,
+ * because the route serialized with real columns and the embed serialized with none.
+ */
+const CHART_IDENTITY_FIELDS = [
+  "type",
+  "title",
+  "xAxis",
+  "yAxis",
+  "seriesCount",
+  "xAxisLabel",
+  "yAxisLabel",
+  "yAxisMin",
+  "yAxisMax",
+  "annotationCount",
+] as const;
+
+function chartIdentity(json: string): string | null {
+  try {
+    const parsed = JSON.parse(json) as Record<string, unknown>;
+    const identity: Record<string, unknown> = {};
+    for (const field of CHART_IDENTITY_FIELDS) {
+      if (parsed[field] !== undefined) identity[field] = parsed[field];
+    }
+    return JSON.stringify(identity);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Compare the chart halves, with DELIBERATE presence semantics.
+ *
+ * A first revision compared only when both sides had a configuration, so omitting the
+ * client config -- or supplying one where the logged answer had none -- still
+ * verified. Either asymmetry means the chart is not the artifact that answer produced,
+ * so both are now mismatches. The only case that passes on absence is both absent,
+ * which is a genuine no-chart export.
+ */
+function chartConfigMatches(logged: string | null, candidate: string | null): { match: boolean; reason: string } {
+  if (!logged && !candidate) {
+    return { match: true, reason: "neither the answer nor the chart carried a configuration" };
+  }
+  if (!logged) {
+    return { match: false, reason: "the chart carries a configuration the originating answer did not" };
+  }
+  if (!candidate) {
+    return { match: false, reason: "the originating answer carried a chart configuration and the chart does not" };
+  }
+  const loggedIdentity = chartIdentity(logged);
+  const candidateIdentity = chartIdentity(candidate);
+  if (loggedIdentity === null || candidateIdentity === null) {
+    return { match: false, reason: "a chart configuration could not be parsed for comparison" };
+  }
+  if (loggedIdentity !== candidateIdentity) {
+    return { match: false, reason: "the chart configuration does not match the originating answer's" };
+  }
+  return { match: true, reason: "chart configurations match" };
+}
 
 interface QueryLogRow {
   tab: string | null;
@@ -186,22 +293,16 @@ export function verifyEmbedOrigin(
       ...found,
     };
   }
-  if (sqlFingerprint(loggedSql) !== sqlFingerprint(candidate.sql)) {
+  if (!sqlMatches(loggedSql, candidate.sql)) {
     return {
       state: "unbound",
       reason: "the chart's SQL is not the SQL of the claimed originating answer",
       ...found,
     };
   }
-  // Chart configuration is compared only when the logged answer captured one. Both
-  // sides pass through serializeChartConfigForLog, so this is a like-for-like
-  // comparison rather than a raw-object one.
-  if (row.chart_config && candidate.chartConfigJson && row.chart_config !== candidate.chartConfigJson) {
-    return {
-      state: "unbound",
-      reason: "the chart configuration does not match the originating answer's",
-      ...found,
-    };
+  const chartVerdict = chartConfigMatches(row.chart_config ?? null, candidate.chartConfigJson);
+  if (!chartVerdict.match) {
+    return { state: "unbound", reason: chartVerdict.reason, ...found };
   }
 
   if (!envelopeProved(row.proof_manifest)) {

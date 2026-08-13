@@ -206,7 +206,10 @@ async function main() {
       "current",
       "murders in Austin",
       CHART.sql,
-      serializeChartConfigForLog(CHART.chartConfig, []),
+      // PRODUCTION SHAPE: the answer logs its chart config with the real result
+      // columns, while the embed route has no result set and serializes with none.
+      // Comparing those column lists made every legitimate chart origin unbound.
+      serializeChartConfigForLog(CHART.chartConfig, ["year", "agency", "count"]),
       "req-proven",
       "answer",
       "shadow",
