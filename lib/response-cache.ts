@@ -44,6 +44,18 @@ function normalizeKey(question: string, tab: string, validity?: string): string 
   return validity ? `${tab}:${validity}:${q}` : `${tab}:${q}`;
 }
 
+/**
+ * Empties the cache. Test-only, and named to say so.
+ *
+ * Proving that off and shadow produce the same response to the same COLD question needs
+ * two genuinely cold runs of one input. Without a reset the second run would be a cache
+ * hit, and comparing a cold response against a warm one proves nothing. Mirrors the
+ * existing __resetProofBudgetStateForTests in lib/proof-finalize.
+ */
+export function __resetResponseCacheForTests(): void {
+  cache.clear();
+}
+
 export function getCached(question: string, tab: string, validity?: string): CachedResponse | null {
   const key = normalizeKey(question, tab, validity);
   const entry = cache.get(key);

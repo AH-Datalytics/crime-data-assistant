@@ -70,11 +70,42 @@ function emptyTally() {
   return {
     rows: 0,
     withProof: 0,
+    /**
+     * Rows that carried a manifest with checks in it -- the only correct denominator for
+     * a check-state rate.
+     *
+     * withProof is NOT that denominator. A row can be observed and still arrive here
+     * with nothing to grade: the envelope was never written, it was corrupted, it shed its
+     * manifest under the size limit, the serializer could not build one at all, or what
+     * was stored is not a shape the serializer ever declares. All five are counted
+     * separately below rather than folded in, because an envelope that
+     * silently contributes zero check states is indistinguishable from a clean record --
+     * the D6 failure shape one layer in, where "nothing flagged" really means "nothing
+     * was looked at".
+     */
+    evaluated: 0,
+    /** Observed, but no envelope was written at all. */
+    envelopeMissing: 0,
+    /** Envelope present but not parseable -- a defect in the writer, not the traffic. */
+    unparseable: 0,
+    /** Envelope shed its manifest to fit the column, so its checks are unrecoverable. */
+    reduced: 0,
+    /**
+     * The serializer could not build an envelope at all and wrote { v, envelopeError }.
+     *
+     * Distinct from `reduced`: a reduced envelope still says what the contract would have
+     * done, whereas this one carries nothing but a version. Neither is gradable.
+     */
+    envelopeError: 0,
+    /**
+     * Parseable, but not any shape the serializer declares -- `{}`, `{v:1}`,
+     * `{manifest:null}`. A writer defect, and ungradable like the four above it.
+     */
+    malformed: 0,
     delivered: {},
     wouldHave: {},
     checks: { passed: 0, failed: 0, unknown: 0, not_applicable: 0 },
     blockedByCheck: {},
-    unparseable: 0,
   };
 }
 
@@ -87,16 +118,56 @@ function tallyRow(tally, row) {
   const delivered = row.delivery_action || "unrecorded";
   tally.delivered[delivered] = (tally.delivered[delivered] || 0) + 1;
 
-  if (!envelope) return;
+  if (!envelope) {
+    tally.envelopeMissing += 1;
+    return;
+  }
   if (envelope.unparseable) {
     tally.unparseable += 1;
     return;
   }
 
-  const would = envelope.hypotheticalAction || "unrecorded";
-  tally.wouldHave[would] = (tally.wouldHave[would] || 0) + 1;
+  const creditWouldHave = () => {
+    const would = envelope.hypotheticalAction || "unrecorded";
+    tally.wouldHave[would] = (tally.wouldHave[would] || 0) + 1;
+  };
 
-  const checks = (envelope.manifest && envelope.manifest.checks) || {};
+  // Checked BEFORE wouldHave is credited: this envelope carries only { v, envelopeError },
+  // so there is no hypothetical action in it and crediting one would invent an
+  // "unrecorded" bucket out of a serializer failure.
+  if (envelope.envelopeError) {
+    tally.envelopeError += 1;
+    return;
+  }
+
+  // A reduced envelope has no manifest BY DESIGN but does still record what the contract
+  // would have done, so it is credited and classified before the structural check below --
+  // which would otherwise call the serializer's own deliberate fallback malformed.
+  if (envelope.envelopeReduced) {
+    creditWouldHave();
+    tally.reduced += 1;
+    return;
+  }
+
+  /**
+   * STRUCTURAL VALIDATION, NOT JUST PARSEABILITY.
+   *
+   * Everything above recognizes a shape the serializer DECLARES. This catches everything
+   * else: `{}`, `{v:1}`, `{manifest:null}` -- parseable, undeclared, and carrying nothing
+   * to grade. Before this check they fell through to `evaluated`, which contradicted that
+   * field's definition ("rows that carried a manifest with checks in it") and credited a
+   * phantom "unrecorded" hypothetical action drawn from an empty record. A row the writer
+   * mangled must read as a writer defect, never as a graded pass.
+   */
+  const manifest = envelope.manifest;
+  const checks = manifest && typeof manifest === "object" ? manifest.checks : null;
+  if (!checks || typeof checks !== "object") {
+    tally.malformed += 1;
+    return;
+  }
+
+  creditWouldHave();
+  tally.evaluated += 1;
   for (const state of Object.values(checks)) {
     if (tally.checks[state] !== undefined) tally.checks[state] += 1;
   }
@@ -182,14 +253,53 @@ function countsRow(counts) {
   return entries.map(([key, n]) => `${escapeHtml(actionLabel(key))}: <strong>${n}</strong>`).join(" &middot; ");
 }
 
+/**
+ * Check states for one bucket, with the pass rate suppressed when nothing was graded.
+ *
+ * §9.1 Stage 1 asks for "pass/failure/unknown rates by tab and plan family". A rate over
+ * zero graded checks is not 0% and not 100%; it is undefined, and printing either would
+ * be the single most misleading number in this email. So the cell says what was actually
+ * available instead.
+ */
+function checksCell(tally) {
+  const notEvaluated = tally.envelopeMissing + tally.unparseable + tally.reduced + tally.envelopeError + tally.malformed;
+  const detail = [];
+  if (tally.envelopeMissing > 0) detail.push(`no envelope: ${tally.envelopeMissing}`);
+  if (tally.unparseable > 0) detail.push(`unreadable: ${tally.unparseable}`);
+  if (tally.reduced > 0) detail.push(`reduced, checks lost: ${tally.reduced}`);
+  if (tally.envelopeError > 0) detail.push(`could not be built: ${tally.envelopeError}`);
+  if (tally.malformed > 0) detail.push(`malformed: ${tally.malformed}`);
+  const suffix = detail.length > 0 ? ` <span class="quiet">(${detail.join(" &middot; ")})</span>` : "";
+
+  if (tally.evaluated === 0) {
+    const why = notEvaluated > 0
+      ? "no gradable record"
+      : "not observed";
+    return `<span class="quiet">${why}</span>${suffix}`;
+  }
+
+  const { passed, failed, unknown } = tally.checks;
+  const graded = passed + failed + unknown;
+  const parts = [`passed ${passed}`, `failed ${failed}`, `could not tell ${unknown}`];
+  // "not applicable" is deliberately excluded from the denominator: a check that did not
+  // apply was not a question this answer had to survive.
+  const rate = graded > 0 ? ` &mdash; ${Math.round((passed / graded) * 100)}% of graded checks passed` : "";
+  return `${parts.join(" &middot; ")}${rate}${suffix}`;
+}
+
 function tallyTable(title, entries) {
   if (entries.length === 0) return "";
-  let html = `<h3>${escapeHtml(title)}</h3><table><tr><th>${escapeHtml(title)}</th><th>Evaluated</th><th>Would have been delivered</th></tr>`;
+  let html = `<h3>${escapeHtml(title)}</h3><table><tr><th>${escapeHtml(title)}</th><th>Evaluated</th><th>Checks</th><th>Would have been delivered</th></tr>`;
   for (const [name, tally] of entries) {
+    // Coverage leads, and now distinguishes "carried a proof record" from "could actually
+    // be graded" -- the two diverge exactly when an envelope was lost or shed.
     const coverage = tally.withProof === tally.rows
       ? `${tally.withProof}`
       : `${tally.withProof} of ${tally.rows}`;
-    html += `<tr><td>${escapeHtml(name)}</td><td>${coverage}</td><td>${countsRow(tally.wouldHave)}</td></tr>`;
+    const graded = tally.evaluated === tally.withProof
+      ? coverage
+      : `${coverage} <span class="quiet">(${tally.evaluated} gradable)</span>`;
+    html += `<tr><td>${escapeHtml(name)}</td><td>${graded}</td><td>${checksCell(tally)}</td><td>${countsRow(tally.wouldHave)}</td></tr>`;
   }
   return html + "</table>";
 }

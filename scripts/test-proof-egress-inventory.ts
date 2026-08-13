@@ -348,7 +348,20 @@ console.log("\nshared charts and the response cache are inside the contract");
     );
   });
 
-  check("every route threads the cache validity signature", () => {
+  check("every route still MENTIONS the cache validity signature (structural only)", () => {
+    /**
+     * A CHEAP BACKSTOP, NOT A BEHAVIORAL CLAIM. This asserts only that the wiring is
+     * present in the source text -- that someone has not deleted the signature from a
+     * route wholesale. It says nothing about what the route does with it.
+     *
+     * That distinction is not pedantic. These three greps passed unchanged while shadow
+     * mode took a DIFFERENT cache key from off, which meant enabling shadow silently
+     * re-invoked the model and was free to return different SQL, rows, narrative and
+     * charts -- a direct violation of invariant 14 that a text search cannot see. The
+     * behavioral proof lives in scripts/test-shadow-route-equivalence.ts, which drives
+     * each handler in both modes over a cold and a warm cache and compares the response
+     * and the model-call sequence. If these two ever disagree, believe that one.
+     */
     for (const file of INTEGRATED_ROUTES) {
       const source = read(file);
       assert.match(source, /cacheValiditySignature\(/, `${file} must compute a cache validity signature`);

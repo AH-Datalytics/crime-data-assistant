@@ -15,13 +15,30 @@
 import assert from "node:assert";
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
+/** One bucket's counts. Shared by the overall figures and by every tab/family bucket. */
+type Tally = {
+  rows: number;
+  withProof: number;
+  /** Rows carrying a manifest with checks -- the only valid denominator for a rate. */
+  evaluated: number;
+  envelopeMissing: number;
+  unparseable: number;
+  reduced: number;
+  envelopeError: number;
+  malformed: number;
+  delivered: Record<string, number>;
+  wouldHave: Record<string, number>;
+  checks: Record<string, number>;
+  blockedByCheck: Record<string, number>;
+};
+
 const report = require("./lib/proof-shadow-report.js") as {
   PROOF_COLUMNS: string[];
   selectClause: (columns: Set<string>) => string;
   buildProofShadowReport: (queries: unknown[], isHuman: (q: unknown) => boolean) => {
-    overall: { rows: number; withProof: number; delivered: Record<string, number>; wouldHave: Record<string, number>; checks: Record<string, number>; blockedByCheck: Record<string, number>; unparseable: number };
-    byTab: Map<string, { rows: number; withProof: number }>;
-    byFamily: Map<string, { rows: number; withProof: number }>;
+    overall: Tally;
+    byTab: Map<string, Tally>;
+    byFamily: Map<string, Tally>;
   };
   shadowHealth: (r: unknown) => { state: string; note: string };
   renderProofShadowSection: (r: unknown) => string;
@@ -201,6 +218,128 @@ console.log("\nthe SELECT clause degrades on an unmigrated database");
     const clause = report.selectClause(new Set(report.PROOF_COLUMNS));
     assert.doesNotMatch(clause, /NULL AS/);
     for (const column of report.PROOF_COLUMNS) assert.match(clause, new RegExp(`\\b${column}\\b`));
+  });
+}
+
+console.log("\ncheck states are attributable to a tab and a family");
+{
+  /** Text of the table row whose first cell is `label`, tags stripped. */
+  function rowText(html: string, label: string): string {
+    for (const row of html.split("<tr>")) {
+      const cells = row.split("<td>").slice(1).map((cell) => cell.split("</td>")[0]);
+      if (cells.length && cells[0].replace(/<[^>]*>/g, "").trim() === label) {
+        return row.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+      }
+    }
+    return "";
+  }
+
+  // Codex's trigger for this blocker: one passing row on one tab/family, one failing row
+  // on another. The overall line shows 1 passed / 1 failed either way; the deliverable is
+  // being able to say WHICH tab and WHICH family failed.
+  const mixed = [
+    shadowRow({ tab: "current", plan_family: "family-a", proof_manifest: envelope("answer", { metric: "passed" }) }),
+    shadowRow({ tab: "nibrs", plan_family: "family-b", proof_manifest: envelope("decline_capability", { metric: "failed" }, ["metric"]) }),
+  ];
+  const built = report.buildProofShadowReport(mixed, ALL_HUMAN);
+  const html = report.renderProofShadowSection(built);
+
+  check("the tab tally carries per-tab check states", () => {
+    assert.strictEqual(built.byTab.get("current")!.checks.passed, 1);
+    assert.strictEqual(built.byTab.get("current")!.checks.failed, 0);
+    assert.strictEqual(built.byTab.get("nibrs")!.checks.failed, 1);
+    assert.strictEqual(built.byTab.get("nibrs")!.checks.passed, 0);
+  });
+
+  check("the family tally carries per-family check states", () => {
+    assert.strictEqual(built.byFamily.get("family-a")!.checks.passed, 1);
+    assert.strictEqual(built.byFamily.get("family-b")!.checks.failed, 1);
+  });
+
+  check("the email names which tab failed", () => {
+    assert.match(rowText(html, "current"), /passed 1/, `current row was: ${rowText(html, "current")}`);
+    assert.doesNotMatch(rowText(html, "current"), /failed 1/, "current must not inherit nibrs's failure");
+    assert.match(rowText(html, "nibrs"), /failed 1/, `nibrs row was: ${rowText(html, "nibrs")}`);
+  });
+
+  check("the email names which family failed", () => {
+    assert.match(rowText(html, "family-a"), /passed 1/);
+    assert.match(rowText(html, "family-b"), /failed 1/);
+    assert.doesNotMatch(rowText(html, "family-a"), /failed 1/);
+  });
+}
+
+console.log("\nnot every row with a proof record was evaluated");
+{
+  const reducedEnvelope = JSON.stringify({ v: 1, envelopeReduced: true, blockingChecks: [], hypotheticalAction: "answer" });
+  const rows = [
+    shadowRow({ tab: "current", proof_manifest: envelope("answer", { metric: "passed" }) }),
+    shadowRow({ tab: "current", proof_manifest: null }),            // observed, wrote no envelope
+    shadowRow({ tab: "current", proof_manifest: "{not json" }),     // envelope corrupted
+    shadowRow({ tab: "current", proof_manifest: reducedEnvelope }), // envelope shed its manifest
+  ];
+  const built = report.buildProofShadowReport(rows, ALL_HUMAN);
+
+  check("evaluated counts only records that carry a manifest", () => {
+    // Without this, a reduced or missing envelope reads as "evaluated, nothing to
+    // report" -- the D6 failure shape, one layer in.
+    assert.strictEqual(built.overall.evaluated, 1, "only one row actually carried checks");
+    assert.strictEqual(built.overall.withProof, 4, "all four were observed, though");
+  });
+
+  check("missing, unreadable, and reduced envelopes are counted apart", () => {
+    assert.strictEqual(built.overall.envelopeMissing, 1);
+    assert.strictEqual(built.overall.unparseable, 1);
+    assert.strictEqual(built.overall.reduced, 1);
+  });
+
+  check("a parseable envelope with no manifest checks is malformed, not evaluated", () => {
+    // Neither of the two DECLARED fallback shapes, so nothing flags it -- yet there is no
+    // manifest to grade. `evaluated` is defined as "rows that carried a manifest with
+    // checks in it", and crediting these contradicts that definition while adding a
+    // phantom "unrecorded" hypothetical action drawn from a structurally empty record.
+    for (const shape of ["{}", '{"v":1}', '{"manifest":{}}', '{"manifest":null}']) {
+      const built = report.buildProofShadowReport(
+        [shadowRow({ tab: "current", proof_manifest: shape })],
+        ALL_HUMAN,
+      );
+      assert.strictEqual(built.overall.malformed, 1, `${shape} must count as malformed`);
+      assert.strictEqual(built.overall.evaluated, 0, `${shape} has nothing to grade`);
+      assert.deepStrictEqual(built.overall.wouldHave, {}, `${shape} must not invent an action`);
+      assert.match(
+        report.renderProofShadowSection(built),
+        /malformed/,
+        `${shape} must be visible to the reader, not silently dropped`,
+      );
+    }
+  });
+
+  check("an envelope the serializer could not build is ungradable, not evaluated", () => {
+    // serializeProofEnvelope's last resort is { v, envelopeError: true } -- deliberately
+    // recorded rather than stored as null so the failure stays visible. It carries no
+    // manifest and no hypotheticalAction, so counting it as evaluated would make an
+    // envelope with nothing recoverable in it look like a clean graded record.
+    const errored = report.buildProofShadowReport(
+      [shadowRow({ tab: "current", proof_manifest: JSON.stringify({ v: 1, envelopeError: true }) })],
+      ALL_HUMAN,
+    );
+    assert.strictEqual(errored.overall.envelopeError, 1);
+    assert.strictEqual(errored.overall.evaluated, 0, "there is nothing in it to grade");
+    assert.deepStrictEqual(
+      errored.overall.wouldHave,
+      {},
+      "and it must not invent an 'unrecorded' hypothetical action either",
+    );
+  });
+
+  check("a bucket with nothing evaluated shows no rate", () => {
+    const none = report.buildProofShadowReport(
+      [shadowRow({ tab: "shr", proof_manifest: null })],
+      ALL_HUMAN,
+    );
+    assert.strictEqual(none.overall.evaluated, 0);
+    const html = report.renderProofShadowSection(none);
+    assert.doesNotMatch(html, /\d+(\.\d+)?%/, "a rate over zero evaluated records is meaningless");
   });
 }
 

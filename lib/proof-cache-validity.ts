@@ -41,9 +41,8 @@ import { PROOF_SCHEMA_VERSION } from "./proof-finalize";
 import {
   ENV_GLOBAL_MODE,
   ENV_KILL_SWITCH,
+  enforcedTargets,
   envKeyForSource,
-  isObserving,
-  resolveMode,
   type ModeEnv,
 } from "./proof-modes";
 import type { SourceId } from "./proof-contract";
@@ -83,30 +82,40 @@ export function proofConfigFingerprint(sourceId: SourceId, env: ModeEnv = proces
 }
 
 /**
- * The signature a cached entry must match to be reused, or undefined when the proof
- * system is off for this source.
+ * The signature a cached entry must match to be reused, or undefined when nothing about
+ * this source's configuration can legitimately invalidate an entry yet.
  *
- * UNDEFINED IN OFF MODE IS LOAD-BEARING. §9.1 says `off` "performs no request-path
- * work and has no effect", and lib/response-cache builds the pre-Stage-1 key when no
- * signature is supplied. So an off-mode deployment uses byte-identical cache keys to
- * the baseline release. A first revision returned a signature unconditionally, which
- * changed every key while claiming to be inert.
+ * UNDEFINED IS LOAD-BEARING. lib/response-cache builds the pre-Stage-1 key when no
+ * signature is supplied, so returning undefined means byte-identical cache keys to the
+ * baseline release. A first revision returned a signature unconditionally, which changed
+ * every key while claiming to be inert.
  *
- * The transition off -> shadow therefore invalidates the cache once. That is correct:
- * entries authored with no proof observation at all should not be replayed once the
- * system is watching.
+ * WHY OBSERVATION IS NOT ENOUGH TO DIVERGE, THOUGH IT ONCE WAS. An earlier revision
+ * diverged as soon as the source was OBSERVING, on the theory that entries authored
+ * with no proof observation should not be replayed once the system is watching. That was
+ * wrong twice over. It broke invariant 14 ("off and shadow cannot change routing, SQL,
+ * retries, rows, narrative, charts"): warming a question under `off` and then enabling
+ * shadow in the same process produced a MISS, which re-invoked the model and was free to
+ * return different SQL, rows, narrative and charts. And it bought nothing, because a
+ * cache hit re-runs the cached SQL through the route's normal exit and is therefore
+ * proof-finalized on replay anyway -- the entry gets observed either way. §4/§13 asks
+ * validity to carry "enforcement state and source data version"; shadow is neither.
+ *
+ * SO DIVERGENCE BEGINS AT ENFORCEMENT, OR AT A KNOWN SOURCE VERSION. Enforcement is
+ * granted per source x family and can never appear in a family-less resolution, so the
+ * question "is anything enforcing here?" has to go through enforcedTargets rather than
+ * resolveMode(sourceId, null, ...) -- which is the same reason applicableProofEnv scans
+ * family keys by prefix. Until Stage 2 supplies real versions, an unenforced source
+ * therefore uses the baseline key, and off <-> shadow entries interoperate in both
+ * directions.
  */
 export function cacheValiditySignature(
   sourceId: SourceId,
   dataVersion: string | null | undefined,
   env: ModeEnv = process.env,
 ): string | undefined {
-  if (!isObserving(resolveMode(sourceId, null, env).mode)) {
-    // Family-level enforcement cannot exist while the global or source level is off
-    // (resolveMode clamps downward), so a family-less `off` here genuinely means
-    // nothing is observing for this source.
-    return undefined;
-  }
-  const version = dataVersion && dataVersion.trim() !== "" ? dataVersion.trim() : UNKNOWN_DATA_VERSION;
-  return `p${PROOF_SCHEMA_VERSION}|c:${proofConfigFingerprint(sourceId, env)}|d:${version}`;
+  const version = dataVersion && dataVersion.trim() !== "" ? dataVersion.trim() : null;
+  const enforcingThisSource = enforcedTargets(env).some((target) => target.sourceId === sourceId);
+  if (!enforcingThisSource && version === null) return undefined;
+  return `p${PROOF_SCHEMA_VERSION}|c:${proofConfigFingerprint(sourceId, env)}|d:${version ?? UNKNOWN_DATA_VERSION}`;
 }
