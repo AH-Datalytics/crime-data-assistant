@@ -274,7 +274,17 @@ export function evaluateCapability(
         return done("unknown", `generation alignment for ${rule.derived} could not be checked: ${pair.error}`, "dependency");
       }
       const { derived, upstream } = pair.value;
-      if (derived !== null && upstream !== null && derived < upstream) {
+      /**
+       * A comparison missing either bound is UNKNOWN, not aligned.
+       *
+       * Treating a null bound as passing recorded the dependency as CHECKED when nothing had been
+       * compared -- the strongest possible claim from the weakest possible evidence.
+       */
+      if (derived === null || upstream === null) {
+        return done("unknown",
+          `${rule.derived} or ${rule.upstream} has no ${rule.generationColumn} bound to compare`, "dependency");
+      }
+      if (derived < upstream) {
         return done("degraded",
           `${rule.derived} generation ${derived} is older than ${rule.upstream} generation ${upstream}`, "dependency");
       }
@@ -300,43 +310,72 @@ export function evaluateCapability(
     if (absent.length > 0) {
       return done("degraded", `${dep.table} is missing required column(s): ${absent.join(", ")}`, "semantic_dependency");
     }
+    /**
+     * Matched on the AGENCY-YEAR, both ways. The relationship is per agency per year, so neither
+     * half of it can be judged on the agency alone or on a global bound:
+     *
+     *   - keyColumn only: a reliability row for TX0001/2030 finds TX0001 in the crime data and
+     *     passes, while qualifying no agency-year that exists.
+     *   - MAX(year) comparison: crime holding TX0001/2022 and CA9999/2024 against reliability
+     *     holding only CA9999/2024 has equal global maxima, so TX0001/2022 reads as qualified when
+     *     nothing qualifies it. That is exactly the silent gap this dependency exists to prevent,
+     *     and a global bound cannot see it.
+     *
+     * The reverse direction subsumes the span comparison, so the span check is gone rather than kept
+     * as a weaker duplicate that can no longer fail.
+     */
     const key = quoteIdentifier(dep.keyColumn);
+    const yearColumn = quoteIdentifier(dep.yearColumn);
+    const pairKey = `q.${key} = d.${key} AND q.${yearColumn} = d.${yearColumn}`;
+
     const orphans = scalar(db, `SELECT COUNT(*) AS n FROM ${qualifiedTable(dep.table)} d ` +
-      `WHERE NOT EXISTS (SELECT 1 FROM ${qualifiedTable(dep.qualifies)} q WHERE q.${key} = d.${key})`);
+      `WHERE NOT EXISTS (SELECT 1 FROM ${qualifiedTable(dep.qualifies)} q WHERE ${pairKey})`);
     if (orphans.kind === "threw") {
       return done("unknown", `semantic dependency ${dep.table} could not be checked: ${orphans.error}`, "semantic_dependency");
     }
     if (orphans.value > 0) {
       return done("degraded",
-        `${orphans.value} row(s) in ${dep.table} qualify ${dep.keyColumn} values absent from ${dep.qualifies}`,
+        `${orphans.value} row(s) in ${dep.table} qualify ${dep.keyColumn}/${dep.yearColumn} pairs absent from ${dep.qualifies}`,
         "semantic_dependency");
     }
-    const yearColumn = quoteIdentifier(dep.yearColumn);
-    const span = row<{ depMax: number | null; qualMax: number | null }>(db,
-      `SELECT (SELECT MAX(${yearColumn}) FROM ${qualifiedTable(dep.table)}) AS depMax, ` +
-      `(SELECT MAX(${yearColumn}) FROM ${qualifiedTable(dep.qualifies)}) AS qualMax`);
-    if (span.kind === "threw") {
-      return done("unknown", `year span for ${dep.table} could not be checked: ${span.error}`, "semantic_dependency");
+
+    const unqualified = scalar(db, `SELECT COUNT(*) AS n FROM ${qualifiedTable(dep.qualifies)} d ` +
+      `WHERE NOT EXISTS (SELECT 1 FROM ${qualifiedTable(dep.table)} q WHERE ${pairKey})`);
+    if (unqualified.kind === "threw") {
+      return done("unknown", `coverage of ${dep.qualifies} by ${dep.table} could not be checked: ${unqualified.error}`, "semantic_dependency");
     }
-    if (span.value.depMax === null || span.value.qualMax === null) {
-      return done("unknown", `${dep.table} or ${dep.qualifies} has no year bound to compare`, "semantic_dependency");
-    }
-    if (span.value.depMax < span.value.qualMax) {
+    if (unqualified.value > 0) {
       return done("degraded",
-        `${dep.table} covers through ${span.value.depMax} but ${dep.qualifies} extends to ${span.value.qualMax}; those years are unqualified`,
+        `${unqualified.value} ${dep.keyColumn}/${dep.yearColumn} row(s) in ${dep.qualifies} are unqualified by ${dep.table}`,
         "semantic_dependency");
     }
     if (dep.versionColumn) {
       // A mixed-version table is a half-finished rebuild, and rows from two algorithms are not
       // comparable evidence.
       const version = quoteIdentifier(dep.versionColumn);
-      const versions = scalar(db, `SELECT COUNT(DISTINCT ${version}) AS n FROM ${qualifiedTable(dep.table)} WHERE ${version} IS NOT NULL`);
-      if (versions.kind === "threw") {
-        return done("unknown", `${dep.versionColumn} could not be counted: ${versions.error}`, "semantic_dependency");
+      // `distinct` is a SQL keyword: aliasing a column to it makes the whole statement throw, which
+      // reported every version case as `unknown` instead of the verdict it had actually computed.
+      const counts = row<{ version_count: number; missing_count: number }>(db,
+        `SELECT COUNT(DISTINCT ${version}) AS version_count, ` +
+        `SUM(CASE WHEN ${version} IS NULL OR TRIM(${version}) = '' THEN 1 ELSE 0 END) AS missing_count ` +
+        `FROM ${qualifiedTable(dep.table)}`);
+      if (counts.kind === "threw") {
+        return done("unknown", `${dep.versionColumn} could not be counted: ${counts.error}`, "semantic_dependency");
       }
-      if (versions.value === 0) return done("degraded", `${dep.table} records no ${dep.versionColumn}`, "semantic_dependency");
-      if (versions.value > 1) {
-        return done("degraded", `${dep.table} mixes ${versions.value} ${dep.versionColumn} values; a rebuild is incomplete`, "semantic_dependency");
+      const { version_count: distinct, missing_count: missing } = counts.value;
+      /**
+       * Nulls counted, not filtered out. Restricting the DISTINCT to non-null values let a table of
+       * v1 rows plus null rows read as ONE version -- the null rows have no algorithm identity at
+       * all, so part of the table is unattributable evidence, which is worse than two versions.
+       */
+      if (missing > 0) {
+        return done("degraded",
+          `${missing} row(s) in ${dep.table} record no ${dep.versionColumn}, so their algorithm is unidentified`,
+          "semantic_dependency");
+      }
+      if (distinct === 0) return done("degraded", `${dep.table} records no ${dep.versionColumn}`, "semantic_dependency");
+      if (distinct > 1) {
+        return done("degraded", `${dep.table} mixes ${distinct} ${dep.versionColumn} values; a rebuild is incomplete`, "semantic_dependency");
       }
     }
     trace.semanticChecked.push(`${dep.table}~${dep.qualifies}`);

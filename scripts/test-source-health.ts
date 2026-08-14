@@ -447,6 +447,26 @@ check("a derived generation older than its upstream is degraded", () => {
   equal.close();
 });
 
+check("a generation comparison missing either bound is unknown, not aligned", () => {
+  /**
+   * A null bound previously fell through as PASSING and the dependency was recorded as checked --
+   * the strongest claim from the weakest evidence. Both directions are covered, because only one of
+   * them was reachable by accident.
+   */
+  const rule: DependencyRule = { derived: "cohort", upstream: "upstream", keyColumn: "ori", generationColumn: "gen" };
+  for (const [label, sql] of [
+    ["derived", "UPDATE cohort SET gen = NULL"],
+    ["upstream", "UPDATE upstream SET gen = NULL"],
+  ] as const) {
+    const db = depFixture((d) => d.exec(sql));
+    const { health, trace } = evaluateCapability(withDeps(rule), ctx(db));
+    assert.strictEqual(trace.boundary, "dependency", `${label} null bound`);
+    assert.strictEqual(health.state, "unknown", `a missing ${label} bound must not read as aligned`);
+    assert.deepStrictEqual(trace.dependenciesChecked, [], "nothing was compared, so nothing may be recorded as checked");
+    db.close();
+  }
+});
+
 check("an uncheckable dependency is unknown, not degraded", () => {
   const db = depFixture();
   const { health, trace } = evaluateCapability(withDeps({ derived: "no_such_table", upstream: "upstream", keyColumn: "ori" }), ctx(db));
@@ -473,6 +493,40 @@ function semanticFixture(mutate?: (db: Database.Database) => void): Database.Dat
   mutate?.(db);
   return db;
 }
+
+check("a qualifying row for a year that does not exist is an orphan", () => {
+  /**
+   * The review's first counterexample. Matching on the agency alone, a reliability row for
+   * TX0001/2030 finds TX0001 in the crime data and passes -- while qualifying no agency-year that
+   * exists. The relationship is per agency PER YEAR.
+   */
+  const db = semanticFixture((d) => d.prepare("INSERT INTO reliability VALUES (?,?,?)").run("TX0001", 2030, "v1"));
+  const { health, trace } = evaluateCapability(withSemantic(RELIABILITY), ctx(db));
+  assert.strictEqual(trace.boundary, "semantic_dependency");
+  assert.strictEqual(health.state, "degraded");
+  assert.match(health.reason ?? "", /pairs absent from crime/);
+  db.close();
+});
+
+check("a per-agency gap is caught even when the global year maxima agree", () => {
+  /**
+   * The review's second counterexample, and the one a MAX(year) comparison cannot see: crime holds
+   * TX0001/2022 and CA9999/2024, reliability holds only CA9999/2024. Global maxima are equal, so a
+   * span check passes while TX0001/2022 is qualified by nothing.
+   */
+  const db = semanticFixture((d) => {
+    d.prepare("INSERT INTO crime VALUES (?,?)").run("CA9999", 2024);
+    d.exec("DELETE FROM reliability");
+    d.prepare("INSERT INTO reliability VALUES (?,?,?)").run("CA9999", 2024, "v1");
+  });
+  const maxima = db.prepare("SELECT (SELECT MAX(year) FROM reliability) AS r, (SELECT MAX(year) FROM crime) AS c").get() as { r: number; c: number };
+  assert.strictEqual(maxima.r, maxima.c, "this case depends on the global maxima being equal");
+  const { health, trace } = evaluateCapability(withSemantic(RELIABILITY), ctx(db));
+  assert.strictEqual(trace.boundary, "semantic_dependency");
+  assert.strictEqual(health.state, "degraded");
+  assert.match(health.reason ?? "", /unqualified by reliability/);
+  db.close();
+});
 
 check("a qualifying table that stops short of the data it qualifies is degraded", () => {
   /**
@@ -512,7 +566,33 @@ check("a qualifying table recording no version at all is degraded", () => {
   const db = semanticFixture((d) => d.prepare("UPDATE reliability SET algorithm_version = NULL").run());
   const { health } = evaluateCapability(withSemantic(RELIABILITY), ctx(db));
   assert.strictEqual(health.state, "degraded");
-  assert.match(health.reason ?? "", /records no algorithm_version/);
+  assert.match(health.reason ?? "", /record no algorithm_version|records no algorithm_version/);
+  db.close();
+});
+
+check("SOME rows missing a version is degraded, not one version", () => {
+  /**
+   * Counting only non-null distinct values let a table of v1 rows plus null rows read as ONE
+   * version. The null rows have no algorithm identity, so part of the table is unattributable
+   * evidence -- worse than a clean two-version mix, and previously invisible.
+   */
+  const db = semanticFixture((d) => {
+    d.prepare("INSERT INTO crime VALUES (?,?)").run("TX0001", 2023);
+    d.prepare("INSERT INTO reliability VALUES (?,?,?)").run("TX0001", 2023, null);
+  });
+  const distinct = db.prepare("SELECT COUNT(DISTINCT algorithm_version) AS n FROM reliability WHERE algorithm_version IS NOT NULL").get() as { n: number };
+  assert.strictEqual(distinct.n, 1, "this case depends on the non-null versions being a single value");
+  const { health, trace } = evaluateCapability(withSemantic(RELIABILITY), ctx(db));
+  assert.strictEqual(trace.boundary, "semantic_dependency");
+  assert.strictEqual(health.state, "degraded");
+  assert.match(health.reason ?? "", /record no algorithm_version/);
+  db.close();
+});
+
+check("a blank version string counts as missing, not as a value", () => {
+  const db = semanticFixture((d) => d.prepare("UPDATE reliability SET algorithm_version = ?").run("  "));
+  const { health } = evaluateCapability(withSemantic(RELIABILITY), ctx(db));
+  assert.strictEqual(health.state, "degraded");
   db.close();
 });
 

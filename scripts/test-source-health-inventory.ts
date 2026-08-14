@@ -332,9 +332,15 @@ check("minRows follows one stated rule rather than per-capability guesswork", ()
   assert.deepStrictEqual(offenders, [], `minRows deviates from the rule (${offenders.length}):\n  ${offenders.join("\n  ")}`);
 });
 
-check("dependency rules are empty until Task 3 authors them", () => {
-  // Asserted rather than left unstated, so Task 3 adding them is a visible change here instead of
-  // silently filling fields this task pretended to populate.
+check("dependency rules remain unauthored, so the machinery has no live effect", () => {
+  /**
+   * Task 3 built the EVALUATION machinery; it did not author rules, because
+   * "agency_year_reliability qualifies historical_agency_crime on ori/year/algorithm_version" is
+   * hand-authored relational knowledge no observation can derive -- the same category as policy.
+   * So every real capability still carries none, the machinery runs only over synthetic specs in
+   * scripts/test-source-health.ts, and Task 3 is MACHINERY-ONLY pending the Stage 2B session.
+   * This assertion is what makes that state explicit rather than an oversight.
+   */
   for (const spec of CAPABILITY_INVENTORY) {
     assert.deepStrictEqual(spec.dependencies, [], `${spec.capabilityId} carries dependency rules Task 1 cannot derive`);
     assert.deepStrictEqual(spec.semanticDependencies, [], `${spec.capabilityId} carries semantic dependencies Task 1 cannot derive`);
