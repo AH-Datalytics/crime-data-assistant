@@ -1,0 +1,214 @@
+/**
+ * Generates `lib/source-health-inventory.ts` from the derived operation catalogs.
+ *
+ * Run: `npx tsx scripts/generate-source-health-inventory.ts`
+ *
+ * The inventory is GENERATED, not authored. Three hand-written inventories were wrong before this
+ * one (20, then 41, then 40 capabilities), each because a human retyped what an observation had
+ * already established. `scripts/test-source-health-inventory.ts` asserts the checked-in file is
+ * byte-identical to what this emits, so a hand edit fails the suite.
+ *
+ * The output is checked in rather than read at runtime: `lib/` must not depend on a path under
+ * `scripts/fixtures/`, and a build-time read would put a test fixture on the request path.
+ */
+import fs from "node:fs";
+import path from "node:path";
+import { capabilityFlagKey } from "../lib/capability-flag-key";
+
+const DATA_DIR = path.join(process.cwd(), "scripts", "fixtures", "operation-taxonomy");
+const REGISTRY_FILE = path.join(DATA_DIR, "capability-registry.json");
+export const INVENTORY_FILE = path.join(process.cwd(), "lib", "source-health-inventory.ts");
+
+type RegistryEntry = {
+  artifact: string;
+  prepDependencies: string[];
+  emittedDependencies: string[];
+  requiredColumns: Record<string, string[]>;
+  flagKey: string;
+  policy: Record<string, unknown> | null;
+  authorizationEligible: boolean;
+};
+
+/**
+ * The capability with no eligible deterministic operation.
+ *
+ * It cannot come from the operation catalog, because no operation reaches it -- frozen spec §8:241
+ * still requires Current Trends to independently validate the national and sample-agency tables, so
+ * it is registered here explicitly and Task 11's sweep is what evaluates it. Its tables are stated
+ * rather than observed, which is why it is the ONLY hand-written row in this file.
+ */
+const SWEEP_ONLY_SPECS = [
+  {
+    capabilityId: "crime_data::national_monthly::sweep",
+    artifact: "crime_data",
+    tables: { national_monthly: ["agency_count", "count", "month", "offense", "year"] },
+    prepDependencies: [] as string[],
+  },
+];
+
+/**
+ * minRows is a DECISION. The registry cannot supply it, so one rule is applied uniformly and the
+ * regression asserts the uniformity -- otherwise the numbers read as per-capability evidence that
+ * nobody gathered.
+ *
+ *   emitted table     -> 1  the operation reads its answer from it, so zero rows means no answer
+ *   preparation table -> 0  read while DECIDING; finding nothing there is a legitimate decline
+ *                           (an agency absent from a crosswalk), not an unhealthy source
+ */
+const EMITTED_MIN_ROWS = 1;
+const PREPARATION_MIN_ROWS = 0;
+
+const literal = (value: unknown) => JSON.stringify(value);
+
+function renderSpec(id: string, artifact: string, requiredColumns: Record<string, string[]>,
+  prepDependencies: string[], flagKey: string, policy: Record<string, unknown> | null): string {
+  const tables = Object.entries(requiredColumns)
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+    .map(([name, cols]) => `      { name: ${literal(name)}, requiredColumns: ${literal([...cols].sort())}, minRows: ${EMITTED_MIN_ROWS} },`)
+    .join("\n");
+  const prep = [...prepDependencies].sort()
+    .map((name) => `      { name: ${literal(name)}, requiredColumns: [], minRows: ${PREPARATION_MIN_ROWS} },`)
+    .join("\n");
+  return [
+    `  {`,
+    `    capabilityId: ${literal(id)},`,
+    `    artifact: ${literal(artifact)},`,
+    `    database: PROVIDERS[${literal(artifact)}],`,
+    `    preparationTables: [${prep ? `\n${prep}\n    ` : ""}],`,
+    `    tables: [\n${tables}\n    ],`,
+    `    dependencies: [],`,
+    `    semanticDependencies: [],`,
+    `    flagKey: ${literal(flagKey)},`,
+    `    policy: ${policy === null ? "null" : JSON.stringify(policy, null, 6).replace(/\n/g, "\n    ")},`,
+    `    authorizationEligible: ${policy === null ? "false" : String(isComplete(policy))},`,
+    `  },`,
+  ].join("\n");
+}
+
+const POLICY_FIELDS = ["coverage", "integrity", "availability", "receiptOwner"] as const;
+const isComplete = (policy: Record<string, unknown> | null) =>
+  policy !== null && POLICY_FIELDS.every((f) => policy[f] !== null && policy[f] !== undefined);
+
+export function renderInventory(): string {
+  const registry = JSON.parse(fs.readFileSync(REGISTRY_FILE, "utf8")) as Record<string, RegistryEntry>;
+
+  const rows: string[] = [];
+  for (const id of Object.keys(registry).sort()) {
+    const entry = registry[id];
+    // The flag key is read from the registry PIN, and separately asserted to equal
+    // capabilityFlagKey(artifact, id) so the pin and the derivation cannot diverge unnoticed.
+    rows.push(renderSpec(id, entry.artifact, entry.requiredColumns, entry.prepDependencies, entry.flagKey, entry.policy));
+  }
+  for (const sweep of SWEEP_ONLY_SPECS) {
+    rows.push(renderSpec(sweep.capabilityId, sweep.artifact, sweep.tables, sweep.prepDependencies,
+      capabilityFlagKey(sweep.artifact, sweep.capabilityId), null));
+  }
+
+  const sweepIds = SWEEP_ONLY_SPECS.map((s) => s.capabilityId);
+  const authored = Object.values(registry).filter((e) => e.policy !== null).length;
+
+  return `/**
+ * GENERATED FILE -- DO NOT EDIT BY HAND.
+ *
+ * Produced by \`npx tsx scripts/generate-source-health-inventory.ts\` from the derived operation
+ * catalogs. \`scripts/test-source-health-inventory.ts\` asserts this file is byte-identical to what
+ * the generator emits, so a hand edit fails the suite: three hand-authored inventories were wrong
+ * before this one.
+ *
+ * Capabilities: ${rows.length} (${Object.keys(registry).length} operation-backed + ${sweepIds.length} sweep-only).
+ * Policy authored: ${authored}. Authorization-eligible: ${Object.values(registry).filter((e) => isComplete(e.policy)).length}.
+ *
+ * Nothing here authorizes anything. \`authorizationEligible\` is false until every policy field is
+ * authored in \`scripts/fixtures/operation-taxonomy/capability-policy.json\`, which is Stage 2B work.
+ */
+import type { SourceId } from "./sources";
+import { getDb } from "./rtci-db";
+import { getNibrsDb } from "./nibrs-db";
+import { getShrDb } from "./shr-db";
+import { getHateCrimeDb } from "./hc-db";
+
+export type Db = import("better-sqlite3").Database;
+/** A handle and the path it was actually opened from, acquired together. */
+export type OpenedDatabase = { db: Db; resolvedPath: string };
+export type DatabaseProvider = { acquire: () => OpenedDatabase | null };
+export type TableRequirement = { name: string; requiredColumns: string[]; minRows: number };
+export type DependencyRule = { derived: string; upstream: string; generationColumn?: string };
+export type SemanticDependency = {
+  table: string; requiredColumns: string[]; qualifies: string;
+  keyColumn: string; yearColumn: string; versionColumn?: string;
+};
+export type CapabilityPolicy = {
+  coverage: { table: string; yearColumn: string } | null;
+  integrity: string[] | null;
+  /** Discriminated, so a conditional cannot be written without its condition. */
+  availability: { kind: "always" } | { kind: "conditional"; condition: string } | null;
+  receiptOwner: string | null;
+  evidence: string;
+};
+export type CapabilitySpec = {
+  capabilityId: string;              // the registry key; identity, not a label
+  artifact: SourceId | "crime_data";
+  database: DatabaseProvider;
+  /** Read while RESOLVING/CONSTRUCTING; absent from the emitted SQL. */
+  preparationTables: TableRequirement[];
+  tables: TableRequirement[];
+  /** Empty until Task 3 authors dependency rules; the regression asserts they stay empty. */
+  dependencies: DependencyRule[];
+  semanticDependencies: SemanticDependency[];
+  /**
+   * The env-var name that gates probing, PINNED here so a variable in ops config traces back to its
+   * capability. Consumers read this; they must not re-derive it.
+   */
+  flagKey: string;
+  /** Hand-authored policy, copied from capability-policy.json. null means "not yet authored". */
+  policy: CapabilityPolicy | null;
+  /** Computed from the policy, never set by hand. False unless every policy field is authored. */
+  authorizationEligible: boolean;
+};
+
+/** Acquire a handle and the path it resolved to in one call, or nothing. */
+function open(get: () => Db | null): OpenedDatabase | null {
+  try {
+    const db = get();
+    return db ? { db, resolvedPath: db.name } : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Each capability owns its provider, so no route has to hand a database over -- and a capability
+ * cannot be evaluated against a handle that belongs to a different artifact.
+ */
+const PROVIDERS: Record<string, DatabaseProvider> = {
+  crime_data: { acquire: () => open(() => getDb()) },
+  nibrs: { acquire: () => open(() => getNibrsDb()) },
+  shr: { acquire: () => open(() => getShrDb()) },
+  hate_crime: { acquire: () => open(() => getHateCrimeDb()) },
+};
+
+/** Capabilities no deterministic operation reaches; evaluated by the digest-time sweep (Task 11). */
+export const SWEEP_ONLY: readonly string[] = ${literal(sweepIds)};
+
+export const CAPABILITY_INVENTORY: readonly CapabilitySpec[] = [
+${rows.join("\n")}
+];
+
+const BY_ID = new Map(CAPABILITY_INVENTORY.map((spec) => [spec.capabilityId, spec]));
+
+/**
+ * Look a capability up by its structural id.
+ *
+ * There is no \`specFor(source, label)\` overload on purpose: a short per-source label is not
+ * identity, because two capabilities can share a table set.
+ */
+export function specFor(capabilityId: string): CapabilitySpec | null {
+  return BY_ID.get(capabilityId) ?? null;
+}
+`;
+}
+
+if (process.argv[1] && path.resolve(process.argv[1]).includes("generate-source-health-inventory")) {
+  fs.writeFileSync(INVENTORY_FILE, renderInventory());
+  console.log(`wrote ${path.relative(process.cwd(), INVENTORY_FILE)}`);
+}
