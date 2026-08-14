@@ -1475,6 +1475,31 @@ async function main() {
       `these hand-typed flag names name capabilities that no longer exist (short labels from the abandoned identity model):\n  ${stale.join("\n  ")}`);
   });
 
+  check("the plan's sourceHealthFor snippet keeps the disciplines its comments claim", () => {
+    /**
+     * The plan is a TEMPLATE that later tasks copy from, so a snippet whose comments describe
+     * bounded retention while its executable lines call `traces.push` and `cache.set` directly
+     * reintroduces the defect in whatever task copies it. Comments are not enforcement; these are.
+     */
+    const plan = fs.readFileSync(PLAN_FILE, "utf8");
+    const snippet = planCode(plan).find((block) => /export function sourceHealthFor[\s\S]*?\)\s*:\s*SourceHealth\s*\{/.test(block));
+    assert.ok(snippet, "the plan no longer contains a sourceHealthFor implementation snippet");
+    assert.ok(/function pushTrace/.test(snippet!) && /function storeVerdict/.test(snippet!),
+      "the snippet claims bounds but defines neither helper, so a copy of it has none");
+    // The ban on raw writes applies to sourceHealthFor's OWN body -- the two helpers legitimately
+    // call traces.push and cache.set; that is what makes them the single bounded write path.
+    const body = snippet!.slice(snippet!.indexOf("export function sourceHealthFor"));
+    assert.ok(!/\btraces\.push\(/.test(body),
+      "sourceHealthFor writes a trace directly instead of through pushTrace, restoring an unbounded log");
+    assert.ok(!/\bcache\.set\(/.test(body),
+      "sourceHealthFor writes the cache directly instead of through storeVerdict, restoring unbounded retention");
+    // Acquisition must sit INSIDE the containment block, not before it.
+    const acquireAt = body.indexOf("spec.database.acquire()");
+    const tryAt = body.indexOf("try {");
+    assert.ok(acquireAt > tryAt && tryAt !== -1,
+      "the snippet acquires the handle outside its try/catch, so a throwing provider propagates");
+  });
+
   check("P1-2: the runtime reads the pinned flag key instead of re-deriving it", () => {
     const plan = fs.readFileSync(PLAN_FILE, "utf8");
     const code = planCode(plan);

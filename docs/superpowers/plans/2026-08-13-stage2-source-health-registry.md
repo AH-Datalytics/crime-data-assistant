@@ -1153,9 +1153,36 @@ export const HEALTH_CACHE_MAX_ENTRIES = 256;
 export const HEALTH_TRACE_LIMIT = 500;
 const cache = new Map<string, { at: number; health: SourceHealth }>();
 const traces: HealthTrace[] = [];
+let healthNow: () => number = Date.now;
 
 function unresolvedVerdict(sourceId: SourceId, capability: string, reason: string): SourceHealth {
   return { sourceId, capability, state: "unknown", reason, dataVersion: null, requestedCoverage: "unknown" };
+}
+
+/**
+ * EVERY trace write and cache write goes through these two. They are part of the snippet, not a
+ * comment about it: a version of this block that described the bounds in prose while its executable
+ * lines called `traces.push` and `cache.set` directly would restore unbounded retention in whatever
+ * task copied it.
+ */
+function pushTrace(trace: HealthTrace): void {
+  traces.push(trace);
+  while (traces.length > HEALTH_TRACE_LIMIT) traces.shift();   // drop the OLDEST, never the newest
+}
+
+function storeVerdict(key: string, health: SourceHealth): void {
+  const now = healthNow();
+  if (cache.size >= HEALTH_CACHE_MAX_ENTRIES) {
+    for (const [candidate, entry] of cache) {
+      if (now - entry.at >= HEALTH_CACHE_TTL_MS) cache.delete(candidate);
+    }
+    while (cache.size >= HEALTH_CACHE_MAX_ENTRIES) {
+      const oldest = cache.keys().next().value;   // Map preserves insertion order
+      if (oldest === undefined) break;
+      cache.delete(oldest);
+    }
+  }
+  cache.set(key, { at: now, health });
 }
 
 export function sourceHealthFor(
@@ -1197,39 +1224,54 @@ export function sourceHealthFor(
    * would only prove two LABELS differ; reusing one label across handles would inherit
    * another database's verdict. The identity comes from a WeakMap on the handle itself.
    */
-  const probeOpened = request.dbOverride !== undefined ? request.dbOverride : spec.database.acquire();
+  // ACQUISITION IS INSIDE THE CONTAINMENT BLOCK. A version of this that acquired the handle for the
+  // cache key first would let a throwing provider -- the case invariant 15 exists for -- propagate
+  // to the route, and would leave the enabled capability's failed attempt untraced.
+  let probeOpened: OpenedDatabase | null = null;
+  try {
+    probeOpened = request.dbOverride !== undefined ? request.dbOverride : spec.database.acquire();
+  } catch (error) {
+    pushTrace({
+      sourceId, capability, dbIdentity: "no-db", dbPath: null,
+      preflight: "skipped", tablesChecked: [], dependenciesChecked: [], semanticChecked: [],
+      coverage: "unknown", boundary: "threw",
+    });
+    return unresolvedVerdict(sourceId, capability, `database acquisition threw: ${(error as Error).message}`);
+  }
+
   const period = [...(request.requestedYears ?? [])].sort((a, b) => a - b).join(",");
-  const key = `${sourceId}:${capability}:${identityOf((probeOpened?.db ?? null) as object | null)}:${period}`;
+  const key = `${sourceId}:${capability}:${identityOf(probeOpened?.db ?? null)}:${period}`;
   const hit = cache.get(key);
-  if (hit && Date.now() - hit.at < HEALTH_CACHE_TTL_MS) return hit.health;
+  if (hit && healthNow() - hit.at < HEALTH_CACHE_TTL_MS) return hit.health;
 
   const budget = budgetMs(env);
   if (budget === 0) {
     const skipped = unresolvedVerdict(sourceId, capability, "source-health budget is 0ms; no probe ran");
-    cache.set(key, { at: Date.now(), health: skipped });
+    storeVerdict(key, skipped);
     return skipped;
   }
 
-  const startedAt = Date.now();
+  const startedAt = healthNow();
   let health: SourceHealth;
   try {
     const evaluated = evaluateCapability(spec, { ...request, sourceId, dbOverride: probeOpened });
     health = evaluated.health;
-    traces.push(evaluated.trace);
+    pushTrace(evaluated.trace);
   } catch (error) {
     // A probe must never take down a response (§13, invariant 15).
     health = unresolvedVerdict(sourceId, capability, `probe threw: ${(error as Error).message}`);
-    traces.push({
-      sourceId, capability, dbIdentity: identityOf((probeOpened?.db ?? null) as object | null),
+    pushTrace({
+      sourceId, capability, dbIdentity: identityOf(probeOpened?.db ?? null),
       dbPath: probeOpened?.resolvedPath ?? null,
-      preflight: "skipped", tablesChecked: [], dependenciesChecked: [], coverage: "unknown", boundary: "threw",
+      preflight: "skipped", tablesChecked: [], dependenciesChecked: [], semanticChecked: [],
+      coverage: "unknown", boundary: "threw",
     });
   }
-  const elapsed = Date.now() - startedAt;
+  const elapsed = healthNow() - startedAt;
   if (elapsed > budget) {
     health = unresolvedVerdict(sourceId, capability, `probe exceeded its ${budget}ms budget (${elapsed}ms); verdict not treated as health`);
   }
-  cache.set(key, { at: Date.now(), health });
+  storeVerdict(key, health);
   return health;
 }
 
