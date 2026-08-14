@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import Database from "better-sqlite3";
 import { evaluateCapability, identityOf, resolveCapability, type HealthContext } from "../lib/source-health";
-import { PLAN_DERIVATION_VERSION, fingerprintSql, sealPlanDerivation, verifyPlanDerivation } from "../lib/plan-derivation";
+import { LEGACY_PLAN_DERIVATION_VERSION, PLAN_DERIVATION_VERSION, fingerprintSql, sealPlanDerivation, verifyPlanDerivation } from "../lib/plan-derivation";
 import { coverageBasisErrors } from "../lib/capability-policy";
 import {
   CAPABILITY_INVENTORY, specFor,
@@ -817,14 +817,14 @@ check("a capability that reads no rollup table skips preflight entirely", () => 
 const RESOLVE_SQL = "SELECT year, COUNT(*) AS n FROM incidents GROUP BY year";
 
 check("a capability resolves only from a token that verifies against SQL AND family", () => {
-  const sealed = sealPlanDerivation("deterministic-murder", RESOLVE_SQL, SHR_INCIDENTS_YEAR);
+  const sealed = sealPlanDerivation("deterministic-murder", SHR_INCIDENTS_YEAR, RESOLVE_SQL);
   const resolved = resolveCapability("shr", sealed, RESOLVE_SQL, "deterministic-murder");
   assert.ok("capability" in resolved, JSON.stringify(resolved));
   assert.strictEqual((resolved as { capability: string }).capability, SHR_INCIDENTS_YEAR);
 });
 
 check("no derivation, rewritten SQL, or a disagreeing family all resolve to nothing", () => {
-  const sealed = sealPlanDerivation("deterministic-murder", RESOLVE_SQL, SHR_INCIDENTS_YEAR);
+  const sealed = sealPlanDerivation("deterministic-murder", SHR_INCIDENTS_YEAR, RESOLVE_SQL);
   for (const [label, result] of [
     ["no token", resolveCapability("shr", null, RESOLVE_SQL, "deterministic-murder")],
     ["rewritten SQL", resolveCapability("shr", sealed, "SELECT 1", "deterministic-murder")],
@@ -832,6 +832,23 @@ check("no derivation, rewritten SQL, or a disagreeing family all resolve to noth
     ["no SQL", resolveCapability("shr", sealed, null, "deterministic-murder")],
   ] as const) {
     assert.ok("unresolved" in result, `${label} must not resolve: ${JSON.stringify(result)}`);
+  }
+});
+
+check("a missing or blank family claim is unresolved, never authorized", () => {
+  /**
+   * verifyPlanDerivation SKIPS the family comparison when expectedFamily is null or blank -- by
+   * design, for callers with genuinely no independent claim. Resolution is not such a caller:
+   * a capability feeds authorization, so an answer that cannot say which family it is being
+   * recorded under has no business resolving one. Both skip paths previously returned a valid
+   * SHR capability.
+   */
+  const sealed = sealPlanDerivation("deterministic-murder", SHR_INCIDENTS_YEAR, RESOLVE_SQL);
+  for (const claim of [null, "", "   "]) {
+    const resolved = resolveCapability("shr", sealed, RESOLVE_SQL, claim);
+    assert.ok("unresolved" in resolved, `claimedFamily=${JSON.stringify(claim)} must not resolve`);
+    assert.match((resolved as { unresolved: string }).unresolved, /family claim/,
+      "the reason must name the missing claim, not a downstream symptom");
   }
 });
 
@@ -857,7 +874,7 @@ check("a blank capability reads as DECLARED NOTHING, not as an unknown contract"
    * reader looking for a missing registry entry that was never named.
    */
   for (const blank of ["", "   "]) {
-    const sealed = sealPlanDerivation("deterministic-murder", RESOLVE_SQL, blank);
+    const sealed = sealPlanDerivation("deterministic-murder", blank, RESOLVE_SQL);
     const resolved = resolveCapability("shr", sealed, RESOLVE_SQL, "deterministic-murder");
     assert.ok("unresolved" in resolved);
     assert.match((resolved as { unresolved: string }).unresolved, /sealed no capability/,
@@ -866,14 +883,14 @@ check("a blank capability reads as DECLARED NOTHING, not as an unknown contract"
 });
 
 check("a capability that is not in the registry is unresolved", () => {
-  const sealed = sealPlanDerivation("deterministic-murder", RESOLVE_SQL, "shr::invented::nothing(x)");
+  const sealed = sealPlanDerivation("deterministic-murder", "shr::invented::nothing(x)", RESOLVE_SQL);
   const resolved = resolveCapability("shr", sealed, RESOLVE_SQL, "deterministic-murder");
   assert.ok("unresolved" in resolved);
   assert.match((resolved as { unresolved: string }).unresolved, /not in the registry/);
 });
 
 check("a source that does not own the capability's artifact is unresolved", () => {
-  const sealed = sealPlanDerivation("deterministic-murder", RESOLVE_SQL, SHR_INCIDENTS_YEAR);
+  const sealed = sealPlanDerivation("deterministic-murder", SHR_INCIDENTS_YEAR, RESOLVE_SQL);
   for (const sourceId of ["current", "historical", "nibrs", "hate_crime"] as const) {
     const resolved = resolveCapability(sourceId, sealed, RESOLVE_SQL, "deterministic-murder");
     assert.ok("unresolved" in resolved, `${sourceId} must not resolve an shr capability`);
@@ -895,36 +912,86 @@ check("two role branches of ONE family resolve to their own contracts", () => {
   assert.strictEqual(branches.length, 2, "expected two distinct NIBRS role-branch capabilities");
   assert.notStrictEqual(branches[0], branches[1]);
   for (const capability of branches) {
-    const sealed = sealPlanDerivation(family, RESOLVE_SQL, capability);
+    const sealed = sealPlanDerivation(family, capability, RESOLVE_SQL);
     const resolved = resolveCapability("nibrs", sealed, RESOLVE_SQL, family);
     assert.strictEqual((resolved as { capability: string }).capability, capability,
       "one family must resolve to whichever contract the builder declared");
   }
 });
 
-check("the verified verdict carries the capability, and an unverified one never does", () => {
-  // Read off the VERDICT, not the raw token, so a capability named by a derivation that failed
-  // verification cannot be picked up by a caller that forgot to check `ok`.
-  const sealed = sealPlanDerivation("deterministic-murder", RESOLVE_SQL, SHR_INCIDENTS_YEAR);
+check("only a verified verdict HAS a capability slot; a failed one cannot represent it", () => {
+  /**
+   * A structural invariant, not a runtime convention. DerivationVerdict is a discriminated union
+   * whose ok:false branch has no capability member -- so `{ok: false, capability}` is unrepresentable
+   * and the compiler, not a regression, is what excludes it. The first version asserted
+   * `bad.capability === undefined` at runtime, which polices the convention while the type still
+   * permitted the invalid state.
+   */
+  const sealed = sealPlanDerivation("deterministic-murder", SHR_INCIDENTS_YEAR, RESOLVE_SQL);
   const good = verifyPlanDerivation(sealed, RESOLVE_SQL, "deterministic-murder");
-  assert.strictEqual(good.ok, true);
-  assert.strictEqual(good.capability, SHR_INCIDENTS_YEAR);
+  assert.ok(good.ok && good.capability === SHR_INCIDENTS_YEAR);
   const bad = verifyPlanDerivation(sealed, "SELECT 1", "deterministic-murder");
   assert.strictEqual(bad.ok, false);
-  assert.strictEqual(bad.capability, undefined, "a failed verdict must not carry a capability at all");
+  if (!bad.ok) {
+    // @ts-expect-error -- the failed branch has no capability member; if this line ever compiles,
+    // the union has been widened back into the shape that could carry a capability on failure.
+    void bad.capability;
+  }
+  assert.ok(!("capability" in bad), "a failed verdict must not carry a capability at runtime either");
 });
 
-check("existing tokens still verify, so no stored envelope was invalidated", () => {
+check("a v1 token verifies as legacy with capability null, so no stored envelope was invalidated", () => {
   /**
-   * The compatibility constraint the plan asked for and could not have both ways: verifyPlanDerivation
-   * REJECTS any token whose `v` does not match, so bumping the version would make every stored
-   * envelope unverifiable rather than let an older one read as `capability: null`. The field is
-   * additive and the version is unchanged.
+   * The versioning the plan required, implemented in the verifier rather than refused: new tokens are
+   * v2 and may carry a capability; v1 is accepted as legacy and always reads as capability null.
+   * "Bump while reading older envelopes as null" needs both halves, and the first version of this
+   * task wrongly declared them incompatible because it treated the strict version check as immutable.
    */
-  const legacy = { v: PLAN_DERIVATION_VERSION, planFamily: "deterministic-murder", sqlFingerprint: fingerprintSql(RESOLVE_SQL), issuer: "route" as const };
+  const legacy = { v: LEGACY_PLAN_DERIVATION_VERSION, planFamily: "deterministic-murder", sqlFingerprint: fingerprintSql(RESOLVE_SQL), issuer: "route" as const };
   const verdict = verifyPlanDerivation(legacy, RESOLVE_SQL, "deterministic-murder");
-  assert.strictEqual(verdict.ok, true, "a token predating the capability field must still verify");
-  assert.strictEqual(verdict.capability, null);
+  assert.strictEqual(verdict.ok, true, "a stored v1 envelope must still verify");
+  assert.ok(verdict.ok && verdict.capability === null);
+});
+
+check("a capability is honored only from the version that defines it", () => {
+  // A v1 token has no business naming a capability -- nothing sealed v1 tokens with one -- so a
+  // capability smuggled onto a legacy shape reads as null, not as a declaration.
+  const smuggled = {
+    v: LEGACY_PLAN_DERIVATION_VERSION, planFamily: "deterministic-murder",
+    sqlFingerprint: fingerprintSql(RESOLVE_SQL), issuer: "route" as const, capability: SHR_INCIDENTS_YEAR,
+  };
+  const verdict = verifyPlanDerivation(smuggled, RESOLVE_SQL, "deterministic-murder");
+  assert.ok(verdict.ok && verdict.capability === null, "a v1 token must not carry a capability into a verdict");
+  const resolved = resolveCapability("shr", smuggled, RESOLVE_SQL, "deterministic-murder");
+  assert.ok("unresolved" in resolved, "a smuggled capability must not resolve");
+});
+
+check("new tokens are v2, and an unrecognized version still fails", () => {
+  const sealed = sealPlanDerivation("deterministic-murder", SHR_INCIDENTS_YEAR, RESOLVE_SQL);
+  assert.strictEqual(sealed.v, PLAN_DERIVATION_VERSION);
+  assert.strictEqual(PLAN_DERIVATION_VERSION, 2);
+  const future = { ...sealed, v: 3 };
+  const verdict = verifyPlanDerivation(future, RESOLVE_SQL, "deterministic-murder");
+  assert.strictEqual(verdict.ok, false);
+  assert.match(verdict.reason, /version/);
+});
+
+check("the three-argument seal is (family, capability, sql), fingerprinting the SQL", () => {
+  /**
+   * The approved contract, which the taxonomy harness enforces on the plan's code. The first
+   * implementation put the capability third; every argument is a string, so a caller following the
+   * plan compiled cleanly while fingerprinting the CAPABILITY and storing the SQL as the capability.
+   * This pins which argument is which by behaviour, not by name.
+   */
+  const sealed = sealPlanDerivation("deterministic-murder", SHR_INCIDENTS_YEAR, RESOLVE_SQL);
+  assert.strictEqual(sealed.capability, SHR_INCIDENTS_YEAR, "the middle argument is the capability");
+  assert.strictEqual(sealed.sqlFingerprint, fingerprintSql(RESOLVE_SQL), "the last argument is the SQL");
+  assert.notStrictEqual(sealed.sqlFingerprint, fingerprintSql(SHR_INCIDENTS_YEAR),
+    "the capability must never be what gets fingerprinted");
+  // And the two-argument form still seals SQL with no capability, for the 12 existing sites.
+  const twoArg = sealPlanDerivation("deterministic-murder", RESOLVE_SQL);
+  assert.strictEqual(twoArg.capability, null);
+  assert.strictEqual(twoArg.sqlFingerprint, fingerprintSql(RESOLVE_SQL));
 });
 
 console.log(`\nsource health tests: ${passed} passed, ${failed} failed`);

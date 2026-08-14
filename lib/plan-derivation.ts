@@ -40,8 +40,18 @@
 
 import { createHash } from "node:crypto";
 
-/** Bump if the fingerprint algorithm changes; an old token then fails to verify. */
-export const PLAN_DERIVATION_VERSION = 1;
+/**
+ * v2 tokens may carry a builder-declared capability; v1 tokens predate the field.
+ *
+ * v1 is accepted as LEGACY: it verifies exactly as before, and its capability is null regardless of
+ * what the object carries -- a v1 token has no business naming one, so a capability is honored only
+ * from the version that defines it. Any other version fails to verify. This is what "bump while
+ * reading older envelopes as null" actually requires: the bump distinguishes capability-bearing
+ * tokens from capability-free ones, and the verifier, not the version check alone, provides the
+ * compatibility.
+ */
+export const PLAN_DERIVATION_VERSION = 2;
+export const LEGACY_PLAN_DERIVATION_VERSION = 1;
 
 /**
  * Who issued the token, which bounds what it may authorize.
@@ -66,17 +76,16 @@ export interface PlanDerivation {
   sqlFingerprint: string;
   issuer: DerivationIssuer;
   /**
-   * The capability this plan built for, declared by whoever built it. OPTIONAL and absent today.
+   * The capability this plan built for, declared by whoever built it. Defined by v2; null today.
    *
    * A family cannot identify a capability: `deterministic-nibrs-continuous-reporters` spans four
    * distinct contracts over four different summary tables, and each metadata family spans five, one
    * per source. So capability identity has to come from the builder, sealed alongside the SQL.
    *
-   * Additive and optional ON PURPOSE. `verifyPlanDerivation` rejects any token whose `v` does not
-   * match, so bumping the version would invalidate every stored envelope rather than let an older one
-   * read as `capability: null` -- the plan asked for both, and only one of them is possible. An
-   * absent capability therefore stays absent and resolves to `unresolved`, which is fail-closed:
-   * nothing can authorize on a token that never named a contract.
+   * The verifier honors this field only on a v2 token; v1 tokens verify as legacy and always read as
+   * `capability: null`, so no stored envelope was invalidated by the bump and none can smuggle a
+   * capability in. An absent capability resolves to `unresolved`, which is fail-closed: nothing can
+   * authorize on a token that never named a contract.
    */
   capability?: string | null;
 }
@@ -209,24 +218,27 @@ export function fingerprintSql(sql: string): string {
  * Call immediately where the plan and its SQL are both in hand. Issues a `route`
  * token, which proves SQL identity but cannot authorize enforcement.
  */
-export function sealPlanDerivation(
-  planFamily: string,
-  sql: string,
-  /**
-   * The capability this plan built for, when the builder knows it.
-   *
-   * Trailing and optional so the existing 12 seal sites keep working unchanged: no builder computes a
-   * structural capability id yet, and inventing one at a route would be a claim about work the route
-   * did not do. Task 1A is where builders begin declaring their own, and those sites pass it here.
-   */
-  capability?: string | null,
-): PlanDerivation {
+export function sealPlanDerivation(planFamily: string, sql: string): PlanDerivation;
+export function sealPlanDerivation(planFamily: string, capability: string | null, sql: string): PlanDerivation;
+/**
+ * Two forms, and the three-argument one is `(family, capability, sql)` -- the approved contract,
+ * enforced against the plan's code by the taxonomy harness.
+ *
+ * The first implementation put the capability THIRD to spare the existing seal sites, which
+ * contradicted that contract: every argument is a string, so a caller following the plan would
+ * compile cleanly while fingerprinting the capability and storing the SQL as the capability.
+ * Overloads keep the 12 existing two-argument sites working unchanged -- no builder computes a
+ * structural capability id yet, and inventing one at a route would be a claim about work the route
+ * did not do. Task 1A is where builders begin declaring their own.
+ */
+export function sealPlanDerivation(planFamily: string, second: string | null, third?: string): PlanDerivation {
+  const [capability, sql] = third === undefined ? [null, second as string] : [second, third];
   return {
     v: PLAN_DERIVATION_VERSION,
     planFamily,
     sqlFingerprint: fingerprintSql(sql),
     issuer: "route",
-    capability: capability ?? null,
+    capability,
   };
 }
 
@@ -237,33 +249,42 @@ export function sealPlanDerivation(
  * the eventual compiler has an obvious entry point rather than a temptation to reach
  * for sealPlanDerivation().
  */
-export function sealCompilerPlanDerivation(
-  planFamily: string,
-  sql: string,
-  capability?: string | null,
-): PlanDerivation {
+export function sealCompilerPlanDerivation(planFamily: string, sql: string): PlanDerivation;
+export function sealCompilerPlanDerivation(planFamily: string, capability: string | null, sql: string): PlanDerivation;
+export function sealCompilerPlanDerivation(planFamily: string, second: string | null, third?: string): PlanDerivation {
+  const [capability, sql] = third === undefined ? [null, second as string] : [second, third];
   return {
     v: PLAN_DERIVATION_VERSION,
     planFamily,
     sqlFingerprint: fingerprintSql(sql),
     issuer: "compiler",
-    capability: capability ?? null,
+    capability,
   };
 }
 
-export interface DerivationVerdict {
-  ok: boolean;
-  /** Why verification failed, or what it confirmed. Recorded in the proof manifest. */
-  reason: string;
-  /**
-   * The capability the token declared, returned ONLY on a verified verdict.
-   *
-   * Returned here rather than left for the caller to read off the raw token, so a consumer cannot
-   * pick up a declared capability from a derivation that failed verification. Null when the token
-   * named none, which is every token sealed before builders declared them.
-   */
-  capability?: string | null;
-}
+/**
+ * A DISCRIMINATED union, so the invalid state cannot be written: only a verified verdict has a
+ * capability slot at all. The first version used `ok: boolean` plus an optional field, which could
+ * represent `{ok: false, capability: "..."}` -- the exact state the field's contract excludes -- and
+ * left the exclusion as a runtime convention a regression had to police.
+ */
+export type DerivationVerdict =
+  | {
+      ok: true;
+      /** What verification confirmed. Recorded in the proof manifest. */
+      reason: string;
+      /**
+       * The capability the token declared, read here rather than off the raw token so a consumer
+       * cannot pick one up from a derivation that failed verification. Null when the token named
+       * none -- every v1 token, and every v2 token sealed by a route.
+       */
+      capability: string | null;
+    }
+  | {
+      ok: false;
+      /** Why verification failed. Recorded in the proof manifest. */
+      reason: string;
+    };
 
 /**
  * Check a token against the SQL that actually executed.
@@ -289,8 +310,11 @@ export function verifyPlanDerivation(
   if (!derivation) {
     return { ok: false, reason: "no deterministic plan derivation was sealed for this answer" };
   }
-  if (derivation.v !== PLAN_DERIVATION_VERSION) {
-    return { ok: false, reason: `derivation version ${derivation.v} is not ${PLAN_DERIVATION_VERSION}` };
+  if (derivation.v !== PLAN_DERIVATION_VERSION && derivation.v !== LEGACY_PLAN_DERIVATION_VERSION) {
+    return {
+      ok: false,
+      reason: `derivation version ${derivation.v} is neither ${PLAN_DERIVATION_VERSION} nor legacy ${LEGACY_PLAN_DERIVATION_VERSION}`,
+    };
   }
   if (!derivation.planFamily || derivation.planFamily.trim() === "") {
     return { ok: false, reason: "derivation carries no plan family" };
@@ -321,7 +345,12 @@ export function verifyPlanDerivation(
         `executed ${actual}); it was rewritten between planning and execution`,
     };
   }
-  const capability = typeof derivation.capability === "string" && derivation.capability.trim() !== ""
+  // A capability is honored only from the version that defines the field. A v1 token carrying one
+  // is not a legitimate state -- nothing sealed v1 tokens with capabilities -- so it reads as null
+  // rather than as a declaration.
+  const capability = derivation.v === PLAN_DERIVATION_VERSION
+      && typeof derivation.capability === "string"
+      && derivation.capability.trim() !== ""
     ? derivation.capability.trim()
     : null;
   return {

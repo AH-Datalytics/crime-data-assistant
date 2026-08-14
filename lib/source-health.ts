@@ -173,6 +173,19 @@ export function resolveCapability(
 ): { capability: string } | { unresolved: string } {
   if (!derivation) return { unresolved: "no verified plan derivation was sealed for this answer" };
 
+  /**
+   * A missing family claim is refused HERE, because the verifier will not refuse it there.
+   *
+   * verifyPlanDerivation deliberately skips the family comparison for a null or blank
+   * expectedFamily -- some callers genuinely have no independent claim to check. Resolution is not
+   * such a caller: a capability feeds authorization, so an answer that cannot say which family it is
+   * being recorded under has no business resolving one. Without this gate, both skip paths resolved
+   * a valid capability with the family entirely unverified.
+   */
+  if (!claimedFamily || claimedFamily.trim() === "") {
+    return { unresolved: "no family claim was provided, so the token's family cannot be independently verified" };
+  }
+
   // All three arguments, always. The family is VERIFIED here, not trusted: without it a token sealed
   // for family A could be presented alongside family B and be recorded -- and later authorized -- as B.
   const verified = verifyPlanDerivation(derivation, executedSql, claimedFamily);
