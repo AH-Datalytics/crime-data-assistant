@@ -3,7 +3,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import Database from "better-sqlite3";
-import { evaluateCapability, identityOf, type HealthContext } from "../lib/source-health";
+import { evaluateCapability, identityOf, resolveCapability, type HealthContext } from "../lib/source-health";
+import { PLAN_DERIVATION_VERSION, fingerprintSql, sealPlanDerivation, verifyPlanDerivation } from "../lib/plan-derivation";
 import { coverageBasisErrors } from "../lib/capability-policy";
 import {
   CAPABILITY_INVENTORY, specFor,
@@ -806,6 +807,124 @@ check("a capability that reads no rollup table skips preflight entirely", () => 
   assert.strictEqual(trace.preflight, "skipped");
   assert.strictEqual(trace.boundary, "policy_incomplete");
   db.close();
+});
+
+// ---------------------------------------------------------------- Task 4: capability resolution
+/**
+ * Resolution comes from a fully VERIFIED token and from nothing else. There is no family lookup,
+ * because a family cannot identify a capability.
+ */
+const RESOLVE_SQL = "SELECT year, COUNT(*) AS n FROM incidents GROUP BY year";
+
+check("a capability resolves only from a token that verifies against SQL AND family", () => {
+  const sealed = sealPlanDerivation("deterministic-murder", RESOLVE_SQL, SHR_INCIDENTS_YEAR);
+  const resolved = resolveCapability("shr", sealed, RESOLVE_SQL, "deterministic-murder");
+  assert.ok("capability" in resolved, JSON.stringify(resolved));
+  assert.strictEqual((resolved as { capability: string }).capability, SHR_INCIDENTS_YEAR);
+});
+
+check("no derivation, rewritten SQL, or a disagreeing family all resolve to nothing", () => {
+  const sealed = sealPlanDerivation("deterministic-murder", RESOLVE_SQL, SHR_INCIDENTS_YEAR);
+  for (const [label, result] of [
+    ["no token", resolveCapability("shr", null, RESOLVE_SQL, "deterministic-murder")],
+    ["rewritten SQL", resolveCapability("shr", sealed, "SELECT 1", "deterministic-murder")],
+    ["family mismatch", resolveCapability("shr", sealed, RESOLVE_SQL, "deterministic-shooting")],
+    ["no SQL", resolveCapability("shr", sealed, null, "deterministic-murder")],
+  ] as const) {
+    assert.ok("unresolved" in result, `${label} must not resolve: ${JSON.stringify(result)}`);
+  }
+});
+
+check("a token naming NO capability is unresolved, which is every token sealed today", () => {
+  /**
+   * The fail-closed state, and the reason this task changes no production behaviour: none of the 12
+   * production seal sites declares a capability yet, because no builder computes a structural id.
+   * Inventing one at a route would be a claim about work the route did not do.
+   */
+  const legacy = sealPlanDerivation("deterministic-murder", RESOLVE_SQL);
+  assert.strictEqual(legacy.capability, null, "an undeclared capability must be null, not absent-and-guessed");
+  const resolved = resolveCapability("shr", legacy, RESOLVE_SQL, "deterministic-murder");
+  assert.ok("unresolved" in resolved);
+  assert.match((resolved as { unresolved: string }).unresolved, /sealed no capability/);
+});
+
+check("a blank capability reads as DECLARED NOTHING, not as an unknown contract", () => {
+  /**
+   * Why the capability is read off the verified verdict rather than the raw token: the verdict
+   * normalizes blank to null, so an empty declaration is diagnosed as "sealed no capability".
+   * Reading the raw field instead treats "   " as a declaration and reports "not in the registry" --
+   * both refuse, but only one of them describes what actually happened, and the wrong one sends a
+   * reader looking for a missing registry entry that was never named.
+   */
+  for (const blank of ["", "   "]) {
+    const sealed = sealPlanDerivation("deterministic-murder", RESOLVE_SQL, blank);
+    const resolved = resolveCapability("shr", sealed, RESOLVE_SQL, "deterministic-murder");
+    assert.ok("unresolved" in resolved);
+    assert.match((resolved as { unresolved: string }).unresolved, /sealed no capability/,
+      `a blank capability (${JSON.stringify(blank)}) must be diagnosed as undeclared`);
+  }
+});
+
+check("a capability that is not in the registry is unresolved", () => {
+  const sealed = sealPlanDerivation("deterministic-murder", RESOLVE_SQL, "shr::invented::nothing(x)");
+  const resolved = resolveCapability("shr", sealed, RESOLVE_SQL, "deterministic-murder");
+  assert.ok("unresolved" in resolved);
+  assert.match((resolved as { unresolved: string }).unresolved, /not in the registry/);
+});
+
+check("a source that does not own the capability's artifact is unresolved", () => {
+  const sealed = sealPlanDerivation("deterministic-murder", RESOLVE_SQL, SHR_INCIDENTS_YEAR);
+  for (const sourceId of ["current", "historical", "nibrs", "hate_crime"] as const) {
+    const resolved = resolveCapability(sourceId, sealed, RESOLVE_SQL, "deterministic-murder");
+    assert.ok("unresolved" in resolved, `${sourceId} must not resolve an shr capability`);
+    assert.match((resolved as { unresolved: string }).unresolved, /belongs to shr/);
+  }
+});
+
+check("two role branches of ONE family resolve to their own contracts", () => {
+  /**
+   * The case a family lookup answers wrongly whichever of the four it returns.
+   * `deterministic-nibrs-continuous-reporters` spans four capabilities over four summary tables, and
+   * sourceId cannot disambiguate them because all four are nibrs.
+   */
+  const family = "deterministic-nibrs-continuous-reporters";
+  const branches = CAPABILITY_INVENTORY
+    .filter((s) => s.artifact === "nibrs" && s.tables.some((t) => /summary_(victim|offender)_demographics/.test(t.name)))
+    .slice(0, 2)
+    .map((s) => s.capabilityId);
+  assert.strictEqual(branches.length, 2, "expected two distinct NIBRS role-branch capabilities");
+  assert.notStrictEqual(branches[0], branches[1]);
+  for (const capability of branches) {
+    const sealed = sealPlanDerivation(family, RESOLVE_SQL, capability);
+    const resolved = resolveCapability("nibrs", sealed, RESOLVE_SQL, family);
+    assert.strictEqual((resolved as { capability: string }).capability, capability,
+      "one family must resolve to whichever contract the builder declared");
+  }
+});
+
+check("the verified verdict carries the capability, and an unverified one never does", () => {
+  // Read off the VERDICT, not the raw token, so a capability named by a derivation that failed
+  // verification cannot be picked up by a caller that forgot to check `ok`.
+  const sealed = sealPlanDerivation("deterministic-murder", RESOLVE_SQL, SHR_INCIDENTS_YEAR);
+  const good = verifyPlanDerivation(sealed, RESOLVE_SQL, "deterministic-murder");
+  assert.strictEqual(good.ok, true);
+  assert.strictEqual(good.capability, SHR_INCIDENTS_YEAR);
+  const bad = verifyPlanDerivation(sealed, "SELECT 1", "deterministic-murder");
+  assert.strictEqual(bad.ok, false);
+  assert.strictEqual(bad.capability, undefined, "a failed verdict must not carry a capability at all");
+});
+
+check("existing tokens still verify, so no stored envelope was invalidated", () => {
+  /**
+   * The compatibility constraint the plan asked for and could not have both ways: verifyPlanDerivation
+   * REJECTS any token whose `v` does not match, so bumping the version would make every stored
+   * envelope unverifiable rather than let an older one read as `capability: null`. The field is
+   * additive and the version is unchanged.
+   */
+  const legacy = { v: PLAN_DERIVATION_VERSION, planFamily: "deterministic-murder", sqlFingerprint: fingerprintSql(RESOLVE_SQL), issuer: "route" as const };
+  const verdict = verifyPlanDerivation(legacy, RESOLVE_SQL, "deterministic-murder");
+  assert.strictEqual(verdict.ok, true, "a token predating the capability field must still verify");
+  assert.strictEqual(verdict.capability, null);
 });
 
 console.log(`\nsource health tests: ${passed} passed, ${failed} failed`);

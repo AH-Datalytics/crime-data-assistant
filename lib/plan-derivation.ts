@@ -65,6 +65,20 @@ export interface PlanDerivation {
   /** Fingerprint of the SQL as emitted by the planner. */
   sqlFingerprint: string;
   issuer: DerivationIssuer;
+  /**
+   * The capability this plan built for, declared by whoever built it. OPTIONAL and absent today.
+   *
+   * A family cannot identify a capability: `deterministic-nibrs-continuous-reporters` spans four
+   * distinct contracts over four different summary tables, and each metadata family spans five, one
+   * per source. So capability identity has to come from the builder, sealed alongside the SQL.
+   *
+   * Additive and optional ON PURPOSE. `verifyPlanDerivation` rejects any token whose `v` does not
+   * match, so bumping the version would invalidate every stored envelope rather than let an older one
+   * read as `capability: null` -- the plan asked for both, and only one of them is possible. An
+   * absent capability therefore stays absent and resolves to `unresolved`, which is fail-closed:
+   * nothing can authorize on a token that never named a contract.
+   */
+  capability?: string | null;
 }
 
 /**
@@ -195,12 +209,24 @@ export function fingerprintSql(sql: string): string {
  * Call immediately where the plan and its SQL are both in hand. Issues a `route`
  * token, which proves SQL identity but cannot authorize enforcement.
  */
-export function sealPlanDerivation(planFamily: string, sql: string): PlanDerivation {
+export function sealPlanDerivation(
+  planFamily: string,
+  sql: string,
+  /**
+   * The capability this plan built for, when the builder knows it.
+   *
+   * Trailing and optional so the existing 12 seal sites keep working unchanged: no builder computes a
+   * structural capability id yet, and inventing one at a route would be a claim about work the route
+   * did not do. Task 1A is where builders begin declaring their own, and those sites pass it here.
+   */
+  capability?: string | null,
+): PlanDerivation {
   return {
     v: PLAN_DERIVATION_VERSION,
     planFamily,
     sqlFingerprint: fingerprintSql(sql),
     issuer: "route",
+    capability: capability ?? null,
   };
 }
 
@@ -211,12 +237,17 @@ export function sealPlanDerivation(planFamily: string, sql: string): PlanDerivat
  * the eventual compiler has an obvious entry point rather than a temptation to reach
  * for sealPlanDerivation().
  */
-export function sealCompilerPlanDerivation(planFamily: string, sql: string): PlanDerivation {
+export function sealCompilerPlanDerivation(
+  planFamily: string,
+  sql: string,
+  capability?: string | null,
+): PlanDerivation {
   return {
     v: PLAN_DERIVATION_VERSION,
     planFamily,
     sqlFingerprint: fingerprintSql(sql),
     issuer: "compiler",
+    capability: capability ?? null,
   };
 }
 
@@ -224,6 +255,14 @@ export interface DerivationVerdict {
   ok: boolean;
   /** Why verification failed, or what it confirmed. Recorded in the proof manifest. */
   reason: string;
+  /**
+   * The capability the token declared, returned ONLY on a verified verdict.
+   *
+   * Returned here rather than left for the caller to read off the raw token, so a consumer cannot
+   * pick up a declared capability from a derivation that failed verification. Null when the token
+   * named none, which is every token sealed before builders declared them.
+   */
+  capability?: string | null;
 }
 
 /**
@@ -282,8 +321,12 @@ export function verifyPlanDerivation(
         `executed ${actual}); it was rewritten between planning and execution`,
     };
   }
+  const capability = typeof derivation.capability === "string" && derivation.capability.trim() !== ""
+    ? derivation.capability.trim()
+    : null;
   return {
     ok: true,
     reason: `executed SQL matches plan family '${derivation.planFamily}' output (${derivation.issuer}-issued)`,
+    capability,
   };
 }

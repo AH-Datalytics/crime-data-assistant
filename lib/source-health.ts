@@ -2,8 +2,9 @@ import type { CheckState, SourceHealth, SourceId } from "./proof-contract";
 import { coverageBasisErrors, policyIsComplete, type UnvalidatedPolicy } from "./capability-policy";
 import path from "node:path";
 import { artifactOf } from "./source-artifact";
+import { verifyPlanDerivation, type PlanDerivation } from "./plan-derivation";
 import { inspectNibrsRollupAvailability } from "./nibrs-rollup-router";
-import type { CapabilitySpec, Db, OpenedDatabase, TableRequirement } from "./source-health-inventory";
+import { specFor, type CapabilitySpec, type Db, type OpenedDatabase, type TableRequirement } from "./source-health-inventory";
 
 export type HealthBoundary =
   | "no_database" | "preflight_failed" | "artifact_mismatch" | "table_missing" | "column_missing"
@@ -149,6 +150,49 @@ function coverageFor(spec: CapabilitySpec, db: Db, requestedYears: number[] | nu
   } catch {
     return "unknown";
   }
+}
+
+/**
+ * The capability an answer is entitled to be evaluated under, or why it has none.
+ *
+ * Resolved ONLY from a fully verified plan derivation. There is deliberately no family lookup: a
+ * family cannot identify a capability, because `deterministic-nibrs-continuous-reporters` spans four
+ * distinct contracts over four summary tables and each metadata family spans five, one per source. A
+ * function from family to capability would return the wrong contract three times out of four, and
+ * `sourceId` cannot disambiguate the NIBRS cases because all four live on the same source.
+ *
+ * Every token sealed today names no capability, so this returns `unresolved` for all of them. That is
+ * the fail-closed direction and it is the intended state: nothing can authorize on a token that never
+ * declared a contract.
+ */
+export function resolveCapability(
+  sourceId: SourceId,
+  derivation: PlanDerivation | null,
+  executedSql: string | null,
+  claimedFamily: string | null,
+): { capability: string } | { unresolved: string } {
+  if (!derivation) return { unresolved: "no verified plan derivation was sealed for this answer" };
+
+  // All three arguments, always. The family is VERIFIED here, not trusted: without it a token sealed
+  // for family A could be presented alongside family B and be recorded -- and later authorized -- as B.
+  const verified = verifyPlanDerivation(derivation, executedSql, claimedFamily);
+  if (!verified.ok) return { unresolved: `plan derivation not verified: ${verified.reason}` };
+
+  // The builder's own declaration, read off the VERIFIED verdict rather than the raw token, so a
+  // capability named by a derivation that failed verification can never be picked up.
+  if (!verified.capability) {
+    return { unresolved: `plan family '${derivation.planFamily}' sealed no capability` };
+  }
+  const spec = specFor(verified.capability);
+  if (!spec) return { unresolved: `sealed capability '${verified.capability}' is not in the registry` };
+
+  // The claimed source must own the capability's artifact. evaluateCapability applies the same rule,
+  // because it is reachable independently; agreeing here means a mismatch is refused before any
+  // database is touched at all.
+  if (spec.artifact !== artifactOf(sourceId)) {
+    return { unresolved: `capability '${verified.capability}' belongs to ${spec.artifact}, not ${sourceId}` };
+  }
+  return { capability: verified.capability };
 }
 
 export function evaluateCapability(
