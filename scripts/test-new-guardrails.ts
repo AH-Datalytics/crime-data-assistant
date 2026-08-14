@@ -29,6 +29,25 @@ let pass = 0;
 let fail = 0;
 const failures: { name: string; detail?: string }[] = [];
 
+{
+  // Production 8511/8512: the valid named-city query was mistaken for a statewide dump,
+  // and the retry widened NYC to New York State. Preserve the local query and the true positive.
+  const nycSql = `SELECT ha.agency, hac.year, hac.rape FROM historical_agency_crime hac
+    JOIN historical_agency ha ON ha.ori = hac.ori
+    WHERE ha.agency = 'New York' AND ha.state = 'ny' ORDER BY hac.year LIMIT 1000`;
+  const nyc = runGuardrails(extractQueryContext(nycSql, 'New York City rapes per year', 'historical'));
+  assert('historical named-city series is not a statewide agency listing (prod 8511/8512)',
+    !nyc.fired.includes('historical-state-agency-listing'), JSON.stringify(nyc.fired));
+
+  const statewideSql = `SELECT ha.agency, hac.year, hac.rape FROM historical_agency_crime hac
+    JOIN historical_agency ha ON ha.ori = hac.ori
+    WHERE ha.state = 'ny' ORDER BY ha.agency, hac.year LIMIT 1000`;
+  const statewide = runGuardrails(extractQueryContext(statewideSql,
+    'rapes for every New York agency per year', 'historical'));
+  assert('historical statewide agency dump remains blocked',
+    statewide.fired.includes('historical-state-agency-listing'), JSON.stringify(statewide.fired));
+}
+
 function assert(name: string, condition: boolean, detail?: string) {
   if (condition) {
     pass++;

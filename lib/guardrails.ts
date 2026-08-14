@@ -1338,10 +1338,23 @@ const GUARDRAILS: Guardrail[] = [
       const usesAgencyTable = /\bhistorical_agency_crime\b/i.test(sql);
       const hasStateFilter = /\bha\.state\s*=\s*'[a-z]{2}'/i.test(sql);
       const selectsAgency = /SELECT[\s\S]*?\b(?:ha\.)?agency\b[\s\S]*?FROM/i.test(sql);
+      // A state predicate disambiguates a NAMED agency too; it does not by itself make the
+      // query a statewide agency dump. This guard previously fired on
+      // `ha.agency = 'New York' AND ha.state = 'ny'`, then instructed the retry to use
+      // historical_state_national -- turning an NYC request into New York State. The query
+      // contract caught the widened geography, but only after the useful first query had been
+      // discarded. An explicit agency or ORI predicate proves the result is locally scoped.
+      // Inspect predicates only. The agency-to-crime JOIN itself contains `ha.ori = hac.ori`;
+      // scanning the whole statement would mistake that join key for a local ORI filter and let
+      // every statewide dump through.
+      const predicates = sql.match(/\bWHERE\b([\s\S]*?)(?:\bGROUP\s+BY\b|\bORDER\s+BY\b|\bLIMIT\b|$)/i)?.[1] ?? '';
+      const hasSpecificAgencyFilter =
+        /\b(?:\w+\.)?agency\s*(?:=|LIKE\b|IN\s*\()/i.test(predicates) ||
+        /\b(?:\w+\.)?ori\s*(?:=|IN\s*\()/i.test(predicates);
       // Not a ranking — ordered by agency name, not by a metric DESC
       const isRanking = /ORDER\s+BY\s+(?:total|sum|count|murder|robbery|assault|burglary|theft|rape|violent|property)\b/i.test(sql) ||
         /ORDER\s+BY\s+\w+\s+DESC/i.test(sql);
-      return usesAgencyTable && hasStateFilter && selectsAgency && !isRanking;
+      return usesAgencyTable && hasStateFilter && selectsAgency && !hasSpecificAgencyFilter && !isRanking;
     },
     message: () =>
       "Your query lists every agency in a state, which produces hundreds or thousands of rows that cannot be charted. Use historical_state_national for the state aggregate instead (e.g., SELECT year, robbery FROM historical_state_national WHERE state = 'California'). Only use the agency table when the user explicitly asks for a ranking (top 10, highest, etc.) or names specific agencies.",
