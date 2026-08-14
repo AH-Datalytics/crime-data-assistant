@@ -14,7 +14,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { capabilityFlagKey } from "../lib/capability-flag-key";
-import { policyIsComplete } from "../lib/capability-policy";
+import { capabilityAuthorizes } from "../lib/capability-policy";
 
 const DATA_DIR = path.join(process.cwd(), "scripts", "fixtures", "operation-taxonomy");
 const REGISTRY_FILE = path.join(DATA_DIR, "capability-registry.json");
@@ -89,21 +89,28 @@ function renderSpec(id: string, artifact: string, emittedDependencies: string[],
     `    semanticDependencies: [],`,
     `    flagKey: ${literal(flagKey)},`,
     `    policy: ${policy === null ? "null" : JSON.stringify(policy, null, 6).replace(/\n/g, "\n    ")},`,
-    `    authorizationEligible: ${policy === null ? "false" : String(isComplete(policy))},`,
+    `    authorizationEligible: ${String(eligible(policy, emittedDependencies, requiredColumns))},`,
     `  },`,
   ].join("\n");
 }
 
 /**
- * Eligibility uses the SHARED validator, never a local rule.
+ * Eligibility uses the SHARED predicate, never a local rule, and it is capability-specific.
  *
- * A previous version of this generator marked a policy complete whenever its four fields were
- * non-null, ignoring the shape validation the taxonomy harness had already established -- so a
- * policy with an empty coverage table, an empty integrity array, or an empty receipt owner would
- * have generated `authorizationEligible: true`. The registry's own pin is cross-checked against
- * this in scripts/test-source-health-inventory.ts.
+ * Two earlier versions were wrong in the same direction. The first marked a policy complete whenever
+ * its four fields were non-null, ignoring shape entirely. The second used shape alone -- which cannot
+ * see which tables the capability reads, so a well-shaped policy naming a stray coverage basis was
+ * generated as ELIGIBLE while coverageBasisErrors rejected it. The pin itself was wrong; a downstream
+ * regression caught it only afterwards.
  */
-const isComplete = policyIsComplete;
+function eligible(
+  policy: Record<string, unknown> | null,
+  emittedDependencies: string[],
+  requiredColumns: Record<string, string[]>,
+): boolean {
+  const declared = emittedDependencies.map((name) => ({ name, requiredColumns: requiredColumns[name] ?? [] }));
+  return capabilityAuthorizes(policy, declared);
+}
 
 export function renderInventory(registryOverride?: Record<string, RegistryEntry>): string {
   const registry = registryOverride
@@ -134,7 +141,7 @@ export function renderInventory(registryOverride?: Record<string, RegistryEntry>
  * before this one.
  *
  * Capabilities: ${rows.length} (${Object.keys(registry).length} operation-backed + ${sweepIds.length} sweep-only).
- * Policy authored: ${authored}. Authorization-eligible: ${Object.values(registry).filter((e) => isComplete(e.policy)).length}.
+ * Policy authored: ${authored}. Authorization-eligible: ${Object.values(registry).filter((e) => eligible(e.policy, e.emittedDependencies, e.requiredColumns)).length}.
  *
  * Nothing here authorizes anything. \`authorizationEligible\` is false until every policy field is
  * authored in \`scripts/fixtures/operation-taxonomy/capability-policy.json\`, which is Stage 2B work.

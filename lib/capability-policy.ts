@@ -108,3 +108,19 @@ export function policyIsComplete(policy: UnvalidatedPolicy | null): boolean {
   if (POLICY_FIELDS.some((f) => policy[f] === null || policy[f] === undefined)) return false;
   return policyShapeErrors(policy).length === 0;
 }
+
+/**
+ * Whether a capability may authorize: shape-complete AND valid against its own contract.
+ *
+ * `policyIsComplete` cannot answer this alone, because shape is all it can see -- it does not know
+ * which tables the capability reads. A well-shaped policy naming a stray coverage basis was
+ * therefore GENERATED as eligible while `coverageBasisErrors` rejected it, so the authorization pin
+ * itself was wrong and only a downstream regression noticed. Eligibility is one predicate, and it is
+ * the one thing every consumer must agree on.
+ */
+export function capabilityAuthorizes(
+  policy: UnvalidatedPolicy | null,
+  declared: readonly { name: string; requiredColumns: readonly string[] }[],
+): boolean {
+  return policyIsComplete(policy) && coverageBasisErrors(policy, declared).length === 0;
+}

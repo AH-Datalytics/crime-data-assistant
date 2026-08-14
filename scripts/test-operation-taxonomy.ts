@@ -64,7 +64,9 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import Database from "better-sqlite3";
-import { POLICY_FIELDS, policyIsComplete, policyShapeErrors, type UnvalidatedPolicy } from "../lib/capability-policy";
+import { POLICY_FIELDS, capabilityAuthorizes, policyIsComplete, policyShapeErrors, type UnvalidatedPolicy } from "../lib/capability-policy";
+import { artifactOf as sharedArtifactOf } from "../lib/source-artifact";
+import type { SourceId } from "../lib/proof-contract";
 
 const DATA_DIR = path.join(process.cwd(), "scripts", "fixtures", "operation-taxonomy");
 const CASES_FILE = path.join(DATA_DIR, "operation-cases.json");
@@ -377,7 +379,9 @@ const ARTIFACT_PATHS: Record<string, string[]> = {
   hate_crime: [PATHS.hate_crime, PATHS.hate_crime_xwalk],
   crime_data: [PATHS.crime_data],
 };
-const artifactOf = (s: string) => (["current", "historical", "crime_data"].includes(s) ? "crime_data" : s);
+// The source -> artifact mapping is imported, not restated. Two implementations would let the
+// registry's pinned artifact and the runtime ownership check disagree about the same source.
+const artifactOf = (s: string) => sharedArtifactOf(s as SourceId | "crime_data");
 
 function cteNames(sql: string): Set<string> {
   const out = new Set<string>();
@@ -623,6 +627,16 @@ async function checkAsync(name: string, fn: () => Promise<void>) {
   try { await fn(); passed += 1; }
   catch (e) { failed += 1; console.log(`  FAIL  ${name}\n        ${(e as Error).message.split("\n").slice(0, 5).join("\n        ")}`); }
 }
+
+/**
+ * A capability's declared contract in the shape capabilityAuthorizes() needs.
+ *
+ * Eligibility is capability-SPECIFIC: shape completeness cannot see which tables the capability
+ * reads, so a well-shaped policy naming a coverage basis outside the contract would otherwise be
+ * pinned eligible.
+ */
+const declaredTables = (emitted: readonly string[], cols: Record<string, string[]>) =>
+  emitted.map((name) => ({ name, requiredColumns: cols[name] ?? [] }));
 
 // ---------------------------------------------------------------- capability flag names
 /**
@@ -923,7 +937,9 @@ async function main() {
           // name goes through a content digest.
           flagKey: envKeyForCapability(o.artifact, id),
           policy,
-          authorizationEligible: policyIsComplete(policy),
+          // Capability-SPECIFIC: shape completeness alone cannot see which tables this capability
+          // reads, so a well-shaped policy with a stray coverage basis pinned as eligible here.
+          authorizationEligible: capabilityAuthorizes(policy, declaredTables(o.emittedDependencies, o.requiredColumns)),
         };
       }
     }
@@ -1569,7 +1585,8 @@ async function main() {
       const authored = policy[id] ?? null;
       assert.deepStrictEqual(entry.policy, authored,
         `${id}: policy must be exactly what capability-policy.json authors, or null`);
-      assert.strictEqual(entry.authorizationEligible, policyIsComplete(authored),
+      assert.strictEqual(entry.authorizationEligible, capabilityAuthorizes(authored,
+          declaredTables(entry.emittedDependencies as string[], entry.requiredColumns as Record<string, string[]>)),
         `${id}: a capability whose policy is absent or partly unauthored must fail closed`);
       if (authored) {
         for (const field of [...POLICY_FIELDS, "evidence"]) {

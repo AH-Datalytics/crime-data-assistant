@@ -20,7 +20,7 @@ import {
 } from "../lib/source-health-inventory";
 import { renderInventory, INVENTORY_FILE } from "./generate-source-health-inventory";
 import { capabilityFlagKey } from "../lib/capability-flag-key";
-import { coverageBasisErrors, policyIsComplete, type UnvalidatedPolicy } from "../lib/capability-policy";
+import { capabilityAuthorizes, coverageBasisErrors, policyIsComplete, type UnvalidatedPolicy } from "../lib/capability-policy";
 
 const DATA_DIR = path.join(process.cwd(), "scripts", "fixtures", "operation-taxonomy");
 const REGISTRY_FILE = path.join(DATA_DIR, "capability-registry.json");
@@ -141,14 +141,15 @@ check("no capability authorizes anything until its policy is authored AND well f
    * non-null, and must NOT authorize.
    */
   for (const spec of CAPABILITY_INVENTORY) {
-    assert.strictEqual(spec.authorizationEligible, policyIsComplete(spec.policy as UnvalidatedPolicy | null),
+    assert.strictEqual(spec.authorizationEligible, capabilityAuthorizes(spec.policy as UnvalidatedPolicy | null, spec.tables),
       `${spec.capabilityId} misstates its eligibility`);
     const entry = registry[spec.capabilityId];
     if (!entry) continue;
     assert.deepStrictEqual(spec.policy, entry.policy, `${spec.capabilityId} policy drifted from the registry`);
     // Cross-check the registry's own pin against the same validator, so the two cannot disagree.
-    assert.strictEqual(entry.authorizationEligible, policyIsComplete(entry.policy),
-      `${spec.capabilityId}: the registry's eligibility pin disagrees with the shared validator`);
+    assert.strictEqual(entry.authorizationEligible,
+      capabilityAuthorizes(entry.policy, entry.emittedDependencies.map((name) => ({ name, requiredColumns: entry.requiredColumns[name] ?? [] }))),
+      `${spec.capabilityId}: the registry's eligibility pin disagrees with the shared predicate`);
     assert.strictEqual(spec.authorizationEligible, entry.authorizationEligible,
       `${spec.capabilityId}: inventory eligibility drifted from the registry pin`);
   }
@@ -197,6 +198,56 @@ check("an authored coverage basis must belong to the capability's emitted contra
     "a table outside the contract must be rejected");
   assert.deepStrictEqual(coverageBasisErrors({ coverage: { table: "incidents", yearColumn: "year" } } as never, declared), [],
     "a basis inside the contract must be accepted");
+});
+
+check("the GENERATOR refuses eligibility for a COMPLETE policy with a stray basis", () => {
+  /**
+   * Shape completeness is not enough, and this is the only test that can tell the two predicates
+   * apart. The policy below passes every shape rule -- all four fields authored, availability
+   * discriminated, evidence cited -- and names a coverage column that exists nowhere in the
+   * capability's contract. Judging eligibility by shape alone generated `authorizationEligible: true`
+   * while coverageBasisErrors rejected the same policy, so the authorization PIN was wrong and only a
+   * downstream assertion noticed.
+   */
+  const id = "shr::t_delta::t_delta(year)";
+  const complete = {
+    coverage: { table: "t_delta", yearColumn: "foreign_year" },   // exists in neither requiredColumns
+    integrity: ["generation alignment holds"],
+    availability: { kind: "always" },
+    receiptOwner: "scripts/import-shr.py",
+    evidence: "shape-complete in every respect, and pointing at a column outside the contract",
+  };
+  const entry = {
+    artifact: "shr", prepDependencies: [], emittedDependencies: ["t_delta"],
+    requiredColumns: { t_delta: ["year"] }, flagKey: capabilityFlagKey("shr", id),
+    policy: complete, authorizationEligible: false,
+  };
+  assert.strictEqual(policyIsComplete(complete as never), true,
+    "this mutation depends on the policy being shape-complete");
+  assert.strictEqual(coverageBasisErrors(complete as never, [{ name: "t_delta", requiredColumns: ["year"] }]).length, 1,
+    "and on its basis being rejected by the contract rule");
+  const rendered = renderInventory({ [id]: entry } as never);
+  assert.ok(!/authorizationEligible: true/.test(rendered),
+    "a shape-complete policy with a coverage basis outside the contract was generated as eligible");
+});
+
+check("the registry pin is computed by the shared capability-specific predicate", () => {
+  /**
+   * Added because a mutation SURVIVED: reverting the taxonomy harness's pin to shape-only was caught
+   * by nothing. The pin is only observably wrong when an authored policy is shape-complete AND names
+   * a stray basis, and no such policy exists -- adding one to make the mutation visible would mean
+   * authoring false policy. So the call site is constrained directly instead.
+   */
+  const harness = fs.readFileSync(path.join(process.cwd(), "scripts", "test-operation-taxonomy.ts"), "utf8");
+  const assignments = harness
+    .split("\n")
+    .map((line) => /^\s*authorizationEligible:\s*(.+?),?\s*$/.exec(line)?.[1])
+    .filter((value): value is string => Boolean(value));
+  assert.ok(assignments.length > 0, "the harness no longer pins authorizationEligible");
+  for (const assignment of assignments) {
+    assert.match(assignment, /capabilityAuthorizes\(/,
+      `the registry pin must use the capability-specific predicate, not shape alone: ${assignment}`);
+  }
 });
 
 check("a non-null but malformed policy authorizes nothing", () => {
