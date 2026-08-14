@@ -11,8 +11,7 @@
     "shapes": {
       "coverage": "{ table, yearColumn } — both non-empty strings",
       "integrity": "non-empty array of rule strings; an empty array states no rule and is not a decision",
-      "availability": "\"always\" | \"conditional\" — an enum the evaluator branches on, never prose. \"conditional\" additionally requires availabilityCondition.",
-      "availabilityCondition": "non-empty string, required only when availability is \"conditional\"",
+      "availability": "{ kind: \"always\" } | { kind: \"conditional\", condition } — discriminated, never prose and never a bare string. A conditional carries its condition INSIDE it, so the pair cannot disagree and a conditional-with-no-condition cannot be written.",
       "receiptOwner": "non-empty string naming the builder/importer that owns the receipt",
       "evidence": "non-empty string longer than 20 characters"
     },
@@ -21,8 +20,10 @@
   "hate_crime::agency_county_crosswalk+hate_crime_incidents::agency_county_crosswalk(county_fips,county_key,ori,ori9,state)|hate_crime_incidents(ori)": {
     "coverage": null,
     "integrity": null,
-    "availability": "conditional",
-    "availabilityCondition": "Requires agency_county_crosswalk in the hate_crime artifact. The table is absent from production hate_crime.db as of 2026-08-13, so this capability is unavailable in production while being structurally sound. Conditionally unavailable is not unhealthy; the builder decides at runtime.",
+    "availability": {
+      "kind": "conditional",
+      "condition": "Requires agency_county_crosswalk in the hate_crime artifact. The table is absent from production hate_crime.db as of 2026-08-13, so this capability is unavailable in production while being structurally sound. Conditionally unavailable is not unhealthy; the builder decides at runtime."
+    },
     "receiptOwner": null,
     "evidence": "Both artifact states are exercised by this suite: with the crosswalk absent, entitySql (lib/metadata-coverage.ts:457) takes the SQL-less exit and the case hate_crime:metadata-agency-directory-county records terminalKind=unavailable, sealing no capability; with the crosswalk present, the same operation reaches this contract. coverage, integrity and receiptOwner remain unauthored: a directory count has no year dimension to base coverage on, no integrity rule has been decided for the crosswalk, and receipt ownership is Stage 2B."
   }

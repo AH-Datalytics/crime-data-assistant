@@ -160,7 +160,13 @@ export type CapabilitySpec = {
   policy: {
     coverage: { table: string; yearColumn: string } | null;
     integrity: string[] | null;
-    availability: "always" | "conditional" | null;
+    /**
+     * DISCRIMINATED, so a conditional cannot be written without its condition. A flat enum plus a
+     * sibling `availabilityCondition` can represent a conditional with no condition, which puts
+     * the invariant in the validator instead of the type -- and the first version of this type
+     * omitted the sibling field entirely, so it could not represent what the validator required.
+     */
+    availability: { kind: "always" } | { kind: "conditional"; condition: string } | null;
     receiptOwner: string | null;
     evidence: string;
   } | null;
@@ -1132,7 +1138,8 @@ Jeff's confirmation before Task 5 is implemented.
 - [ ] **Step 3: Implement the gate, cache, and trace log**
 
 ```typescript
-import { envKeyForCapability, isObserving, resolveMode } from "./proof-modes";
+// envKeyForCapability is deliberately NOT imported here: the request path reads spec.flagKey.
+import { isObserving, resolveMode } from "./proof-modes";
 import { specFor } from "./source-health-inventory";
 
 export const HEALTH_CACHE_TTL_MS = 30_000;
@@ -1156,12 +1163,15 @@ export function sourceHealthFor(
   if ("unresolved" in resolved) return unresolvedVerdict(sourceId, "unresolved", resolved.unresolved);
   const capability = resolved.capability;
 
-  // The spec comes first now: the flag name is derived from the capability's own artifact, and
-  // resolveCapability has already rejected a capability whose artifact does not match sourceId.
+  // The spec comes first now: the flag name is PINNED on it, and resolveCapability has already
+  // rejected a capability whose artifact does not match sourceId.
   const spec = specFor(capability);
   if (!spec) return unresolvedVerdict(sourceId, capability, `no inventory entry for ${capability}`);
 
-  const flagKey = envKeyForCapability(spec.artifact, capability);
+  // Read the pin; do NOT re-derive it here. Generation owns envKeyForCapability() and the
+  // uniqueness check over its output. A second implementation on the request path is a drift the
+  // registry pin cannot prevent -- the runtime would simply ignore it.
+  const flagKey = spec.flagKey;
   const flag = (env[flagKey] ?? "").trim().toLowerCase();
   if (flag !== "on" && flag !== "shadow" && flag !== "enforce") {
     return unresolvedVerdict(sourceId, capability, `capability not enabled (${flagKey} is '${flag || "unset"}')`);

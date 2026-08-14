@@ -40,8 +40,19 @@
  *      whose blind spot it had just documented; and a plan check that grepped for a rejected
  *      function name let six call sites of the identity model that function belonged to survive.
  *
+ *   3. Prefer a SHAPE that cannot represent the invalid state over a validator that rejects it. A
+ *      flat `availability: "conditional"` beside an optional condition can be written wrong, so the
+ *      invariant lived only in the validator -- and the type meant to describe it omitted the
+ *      condition entirely. A discriminated value cannot be written wrong. Likewise, deriving a
+ *      value in one place and reading the pin everywhere else beats two implementations that agree
+ *      today.
+ *
  * Related: report failure categories in ONE assertion. Asserting them in sequence lets the first
  * failure hide the second, and a hidden category is one nobody can see stopped working.
+ *
+ * Also: select code by SHAPE, not by position. "The first block mentioning sourceHealthFor" picked
+ * a signature-only declaration and reported a defect that was not there; and code-shape checks
+ * strip comments first, because comments are where a rejected form is documented on purpose.
  *
  * TAXONOMY_DERIVE=1 regenerates the data files. TAXONOMY_DUMP_SQL=<path> writes every observed
  * branch with its SQL, so the derivation can be inspected against what produced it.
@@ -57,6 +68,18 @@ import Database from "better-sqlite3";
 const DATA_DIR = path.join(process.cwd(), "scripts", "fixtures", "operation-taxonomy");
 const CASES_FILE = path.join(DATA_DIR, "operation-cases.json");
 const REGISTRY_FILE = path.join(DATA_DIR, "capability-registry.json");
+/**
+ * Fenced code blocks of a markdown document, with comments removed.
+ *
+ * Comments are prose: they are where a rejected form gets documented, so a check that scans for
+ * shape must not read them as code. `//` preceded by `:` is left alone so a URL survives.
+ */
+function planCode(markdown: string): string[] {
+  return markdown.split("```").filter((_, i) => i % 2 === 1).map((block) => block
+    .replace(/\/\*[\s\S]*?\*\//g, " ")
+    .replace(/(^|[^:])\/\/[^\n]*/g, "$1"));
+}
+
 /** Hand-authored, never generated. Absent entry == no policy == cannot authorize. */
 const POLICY_FILE = path.join(DATA_DIR, "capability-policy.json");
 const PLAN_FILE = path.join(process.cwd(), "docs", "superpowers", "plans", "2026-08-13-stage2-source-health-registry.md");
@@ -651,12 +674,26 @@ function policyShapeErrors(policy: CapabilityPolicy): string[] {
     }
   }
   if (availability !== null && availability !== undefined) {
-    // An enum the evaluator branches on, not prose.
-    if (availability !== "always" && availability !== "conditional") {
-      bad.push(`availability must be "always" or "conditional", not ${JSON.stringify(availability)}`);
-    } else if (availability === "conditional" && !nonEmptyString(availabilityCondition)) {
-      bad.push("conditional availability must state availabilityCondition");
+    /**
+     * A DISCRIMINATED value, not an enum plus a loose sibling field. A flat
+     * `availability: "conditional"` alongside an optional `availabilityCondition` can represent a
+     * conditional with no condition, so the invariant lives only in the validator -- and the type
+     * that was supposed to describe it omitted the sibling field entirely. This shape cannot be
+     * built wrong: `conditional` carries its condition or it is not a `conditional`.
+     */
+    const a = availability as { kind?: unknown; condition?: unknown };
+    if (typeof a !== "object" || Array.isArray(a)) {
+      bad.push(`availability must be { kind: "always" } or { kind: "conditional", condition }, not ${JSON.stringify(availability)}`);
+    } else if (a.kind === "conditional") {
+      if (!nonEmptyString(a.condition)) bad.push("a conditional availability must state its condition");
+    } else if (a.kind !== "always") {
+      bad.push(`availability.kind must be "always" or "conditional", not ${JSON.stringify(a.kind)}`);
+    } else if ("condition" in a) {
+      bad.push("an unconditional availability must not carry a condition");
     }
+  }
+  if (availabilityCondition !== undefined) {
+    bad.push("availabilityCondition is not a field; the condition belongs inside availability");
   }
   if (receiptOwner !== null && receiptOwner !== undefined && !nonEmptyString(receiptOwner)) {
     bad.push("receiptOwner must be a non-empty owner");
@@ -1092,17 +1129,38 @@ async function main() {
     }
   }
 
-  /** The query plan, which exposes name RESOLUTION and not merely compilability. */
-  function queryPlan(o: Observation): string {
-    const db = new Database(o.artifactPath, { readonly: true });
+  /**
+   * The compiled program's SHAPE: which cursor and which column ordinal each step reads.
+   *
+   * `EXPLAIN QUERY PLAN` is too coarse to be a resolution oracle. It reports join order and
+   * subquery correlation, so it only notices a rebinding that *changes* correlation status. When
+   * the subquery is ALREADY correlated, the plans are byte-identical while the semantics change:
+   *
+   *   SELECT (SELECT x FROM inner_t i WHERE i.y = o.y) FROM outer_t o
+   *
+   * renaming `inner_t.x` rebinds `x` to `outer_t.x`, and both plans read
+   * `SCAN o / CORRELATED SCALAR SUBQUERY / SCAN i`. The bytecode does distinguish them, because
+   * the `Column` step reads a different cursor.
+   *
+   * Two operands are excluded so the oracle answers "did resolution change" and nothing else:
+   *   - p4/p5/comment carry NAMES, so a pure rename would look like a change even for a column
+   *     nothing reads -- and under `SELECT t.*` that would inflate every contract to the whole table.
+   *   - `Transaction` p3 is the schema cookie, which ANY `ALTER` bumps. Left in, every probe
+   *     reports a change and the whole mechanism reads as "everything is load-bearing".
+   */
+  type ExplainRow = { opcode: string; p1: number; p2: number; p3: number };
+  function programShape(sql: string, artifact: string, file: string): string {
+    const db = new Database(file, { readonly: true });
     try {
-      if (o.artifact === "nibrs") db.exec(`ATTACH DATABASE '${PATHS.rollup.replace(/\\/g, "/")}' AS rollup`);
-      return JSON.stringify(db.prepare(`EXPLAIN QUERY PLAN ${o.sql}`).all());
+      if (artifact === "nibrs") db.exec(`ATTACH DATABASE '${PATHS.rollup.replace(/\\/g, "/")}' AS rollup`);
+      return JSON.stringify((db.prepare(`EXPLAIN ${sql}`).all() as ExplainRow[])
+        .filter((r) => r.opcode !== "Transaction")
+        .map((r) => [r.opcode, r.p1, r.p2, r.p3]));
     } catch { return "<did not compile>"; } finally { db.close(); }
   }
   const basePlans = new Map<Observation, string>();
   const basePlan = (o: Observation) => {
-    if (!basePlans.has(o)) basePlans.set(o, queryPlan(o));
+    if (!basePlans.has(o)) basePlans.set(o, programShape(o.sql!, o.artifact, o.artifactPath));
     return basePlans.get(o)!;
   };
   /**
@@ -1115,14 +1173,18 @@ async function main() {
    * reports that column as unused, and an extractor that dropped it would stay green -- the very
    * blind spot the group probe was introduced to close for DECLARED columns, left open here.
    *
-   * The rebinding is invisible to compilation but not to name resolution: the subquery becomes
-   * CORRELATED, and the query plan says so. Comparing plans catches the rescue without depending
-   * on fixture rows being lucky enough to make the semantic difference observable.
+   * The rebinding is invisible to compilation but visible in the compiled PROGRAM, because the
+   * step that reads the column reads a different cursor. Comparing program shape catches the
+   * rescue without depending on fixture rows being lucky enough to expose the difference.
+   *
+   * `EXPLAIN QUERY PLAN` was tried first and is too coarse -- see programShape(). It only sees a
+   * rebinding that changes a subquery's correlation status, so it misses every rebinding inside a
+   * subquery that was already correlated.
    */
   function affectsResolution(o: Observation, table: string, column: string): boolean {
     const before = basePlan(o);
     return withRenamedColumn(o, table, column, () =>
-      !executes(o.sql!, o.artifact, o.artifactPath) || queryPlan(o) !== before);
+      programShape(o.sql!, o.artifact, o.artifactPath) !== before);
   }
   /** Columns the operation reads from a table that `declared` leaves out. The real detection path. */
   function missedColumns(o: Observation, declared: Record<string, string[]>): string[] {
@@ -1172,6 +1234,76 @@ async function main() {
     const missed = factual.flatMap((o) => missedColumns(o, o.requiredColumns));
     assert.deepStrictEqual(missed, [],
       `columns the SQL depends on but the contract omits (${missed.length}):\n  ${missed.join("\n  ")}`);
+  });
+
+  check("probe: the resolution oracle is sound where EXPLAIN QUERY PLAN is not", () => {
+    // Synthetic, because the production builders do not happen to emit every shape the oracle has
+    // to survive. Each row states what the oracle MUST answer.
+    //
+    // A PROPERTY MATRIX, not six independent defenses against oracle downgrade. Measured, not
+    // reasoned about -- by renaming each column and recording what each candidate oracle saw:
+    //
+    //   pin                                | compiles | planChg | shapeChg | noisyChg | pins
+    //   -----------------------------------|----------|---------|----------|----------|--------------------
+    //   1 already-correlated rebind        | yes      | NO      | yes      | yes      | shape over plan
+    //   2 column nothing reads             | yes      | no      | no       | YES      | no false positive
+    //   3 SELECT * re-export, unread       | yes      | no      | no       | YES      | no false positive
+    //   4 SELECT * re-export, read         | NO       | -       | -        | -        | compile failure
+    //   5 self-join, both aliases lose it  | NO       | -       | -        | -        | compile failure
+    //   6 bare col, uncorrelated subquery  | yes      | YES     | yes      | yes      | rebind, either oracle
+    //
+    // So: 1 pin decides program shape over query-plan shape, 2 pin compile-failure detection,
+    // 2 constrain false positives under rename/schema noise, and 1 guards rebind detection that
+    // both oracles share. Downgrading to EXPLAIN QUERY PLAN fails exactly pin 1; leaving
+    // `Transaction` in fails exactly pins 2 and 3. Pin 6 discriminates nothing between the two and
+    // is a regression guard on the mechanism, not on the choice of it.
+    const file = path.join(FIXTURES, "oracle-selftest.db");
+    const db = new Database(file);
+    db.exec(`
+      CREATE TABLE outer_t (x TEXT, y TEXT);
+      CREATE TABLE inner_t (x TEXT, y TEXT, unused TEXT);
+      CREATE TABLE wide (a TEXT, b TEXT, c TEXT);
+      CREATE TABLE selfref (x TEXT, y TEXT);
+    `);
+    db.close();
+    const synthetic = (sql: string): Observation => ({
+      branch: "oracle-selftest", source: "shr", artifact: "shr", family: null, terminalKind: "factual",
+      prepDependencies: [], emittedDependencies: [], requiredColumns: {}, executed: true,
+      sql, artifactPath: file,
+    });
+    const CORRELATED = "SELECT (SELECT x FROM inner_t i WHERE i.y = o.y) FROM outer_t o";
+    const STAR = "WITH cte AS (SELECT w.* FROM wide w) SELECT a FROM cte";
+    const CASES: [string, string, string, string, boolean][] = [
+      ["a rebind inside an ALREADY-correlated subquery", CORRELATED, "inner_t", "x", true],
+      ["a column nothing reads", CORRELATED, "inner_t", "unused", false],
+      ["a column re-exported by SELECT * but unread downstream", STAR, "wide", "c", false],
+      ["a column re-exported by SELECT * and read downstream", STAR, "wide", "a", true],
+      // NOT a rebind: renaming hits both aliases of the one table, so there is nothing to rebind
+      // to and the reference stops compiling. Pinned because that is the shape a self-join takes.
+      ["a self-joined table where both aliases lose the column at once",
+        "SELECT (SELECT x FROM selfref b WHERE b.y = a.y) FROM selfref a", "selfref", "x", true],
+      ["a bare column in an uncorrelated subquery rebinding outward",
+        "SELECT o.y FROM outer_t o WHERE o.y IN (SELECT y FROM inner_t)", "inner_t", "y", true],
+    ];
+    // Every pin is evaluated before anything is asserted. Looping with an assert inside stops at
+    // the first wrong answer, so a second regressed pin would not be reported -- and these pins
+    // guard DIFFERENT properties, so knowing which ones moved is the whole diagnostic value.
+    const wrong = CASES
+      .filter(([, sql, table, column, expected]) => affectsResolution(synthetic(sql), table, column) !== expected)
+      .map(([label, , table, column, expected]) => `${label} (${table}.${column}): expected ${expected}`);
+    assert.deepStrictEqual(wrong, [],
+      `the resolution oracle answered wrongly for ${wrong.length} of ${CASES.length} pins:\n  ${wrong.join("\n  ")}`);
+    // The specific reason EXPLAIN QUERY PLAN cannot be the oracle: identical plans, changed meaning.
+    const planOf = (f: string) => {
+      const handle = new Database(f, { readonly: true });
+      try { return JSON.stringify(handle.prepare(`EXPLAIN QUERY PLAN ${CORRELATED}`).all()); }
+      finally { handle.close(); }
+    };
+    const o = synthetic(CORRELATED);
+    const planBefore = planOf(file);
+    const planAfter = withRenamedColumn(o, "inner_t", "x", () => planOf(file));
+    assert.strictEqual(planBefore, planAfter,
+      "if the query plan now differs here, re-check whether the coarser oracle would do; the pin is stale");
   });
 
   check("probe: the omission detector catches a column dropped from a correlated subquery", () => {
@@ -1280,8 +1412,10 @@ async function main() {
   check("P1-2: the plan resolves capability from the sealed token, not from the family", () => {
     const plan = fs.readFileSync(PLAN_FILE, "utf8");
     // Only the CODE the plan specifies is forbidden from calling it. Prose that names it in order
-    // to rule it out is the record of why, and must survive.
-    const code = plan.split("```").filter((_, i) => i % 2 === 1);
+    // to rule it out is the record of why, and must survive -- including comments INSIDE code
+    // blocks, which is why every code-shape check here strips them first. One of these checks
+    // otherwise flagged its own explanatory comment.
+    const code = planCode(plan);
     const offenders = code.filter((block) => /capabilityForFamily\s*\(/.test(block));
     assert.strictEqual(offenders.length, 0,
       `${offenders.length} planned code block(s) still call capabilityForFamily(); one family maps to as many as four contracts, so this cannot be truthful`);
@@ -1309,7 +1443,7 @@ async function main() {
    */
   check("P1-2: no planned code uses the superseded short-label identity model", () => {
     const plan = fs.readFileSync(PLAN_FILE, "utf8");
-    const code = plan.split("```").filter((_, i) => i % 2 === 1);
+    const code = planCode(plan);
     /**
      * Top-level arguments of every `name(...)` call, respecting nesting and strings.
      *
@@ -1338,22 +1472,20 @@ async function main() {
       }
       return calls;
     };
-    const twoArgSpecFor: string[] = [];
-    const twoArgSeal: string[] = [];
+    // EXACT arity, not "not the arity that was wrong last time". Rejecting only >= 2 let a
+    // zero-argument specFor through, and rejecting only === 2 let one- and four-argument seals
+    // through -- the same "target the known failure" mistake these checks exist to catch.
+    const wrongArity: string[] = [];
     for (const block of code) {
-      // specFor takes a capability id. A second argument means a short per-source label.
       for (const args of callArgs(block, "specFor")) {
-        if (args.length >= 2) twoArgSpecFor.push(`specFor(${args.join(", ")})`);
+        if (args.length !== 1) wrongArity.push(`specFor takes (capabilityId): specFor(${args.join(", ")})`);
       }
-      // sealPlanDerivation takes (family, capability, sql). Two arguments means no capability.
       for (const args of callArgs(block, "sealPlanDerivation")) {
-        if (args.length === 2) twoArgSeal.push(`sealPlanDerivation(${args.join(", ")})`);
+        if (args.length !== 3) wrongArity.push(`sealPlanDerivation takes (family, capability, sql): sealPlanDerivation(${args.join(", ")})`);
       }
     }
-    assert.deepStrictEqual(twoArgSpecFor, [],
-      `specFor() is declared as specFor(capabilityId); these calls pass a short per-source label, which no structural id can produce:\n  ${twoArgSpecFor.join("\n  ")}`);
-    assert.deepStrictEqual(twoArgSeal, [],
-      `these seals omit the capability, so the token cannot carry the identity:\n  ${twoArgSeal.join("\n  ")}`);
+    assert.deepStrictEqual(wrongArity, [],
+      `planned code calls these with the wrong arity, which is how the short-label identity model survived (${wrongArity.length}):\n  ${wrongArity.join("\n  ")}`);
   });
 
   check("P1-2: capability flag names are derivable from the capability id", () => {
@@ -1365,11 +1497,15 @@ async function main() {
     assert.ok(derivation, "the plan no longer documents how a capability flag name is derived");
     assert.ok(/digest|slug|hash/i.test(derivation!),
       "flag names are derived by uppercasing the capability, but a structural id cannot be uppercased into an identifier; the derivation must go through a stable digest");
-    // Flags must actually be DERIVED somewhere in the planned code, or the digest scheme is
-    // documented and unused.
-    const code2 = plan.split("```").filter((_, i) => i % 2 === 1);
-    assert.ok(code2.some((block) => /envKeyForCapability\(/.test(block)),
-      "the plan documents a flag derivation that none of its code uses");
+    // The derivation must be CALLED, not merely declared. Searching for the bare name is satisfied
+    // by `export function envKeyForCapability(...)` itself, so the declaration is subtracted out.
+    const code2 = planCode(plan);
+    const callSites = code2.reduce((n, block) => {
+      const all = (block.match(/\benvKeyForCapability\s*\(/g) ?? []).length;
+      const declarations = (block.match(/function\s+envKeyForCapability\s*\(/g) ?? []).length;
+      return n + all - declarations;
+    }, 0);
+    assert.ok(callSites > 0, "the plan documents a flag derivation that none of its code calls");
     // Any flag name still written by hand must match what the derivation can produce. Short
     // labels like PROOF_CAPABILITY_SHR_INCIDENTS name capabilities that no longer exist and
     // cannot select a generated id.
@@ -1378,6 +1514,25 @@ async function main() {
     const stale = [...new Set(literals)].filter((name) => !shaped.test(name));
     assert.deepStrictEqual(stale, [],
       `these hand-typed flag names name capabilities that no longer exist (short labels from the abandoned identity model):\n  ${stale.join("\n  ")}`);
+  });
+
+  check("P1-2: the runtime reads the pinned flag key instead of re-deriving it", () => {
+    const plan = fs.readFileSync(PLAN_FILE, "utf8");
+    const code = planCode(plan);
+    // Generation owns the derivation and the uniqueness check; the request path reads the pin.
+    // Two implementations of one derivation is a drift the registry pin cannot prevent -- the
+    // runtime would silently ignore it.
+    // The IMPLEMENTATION, selected by shape: a signature-only declaration ends in `;` and
+    // legitimately has no body. Taking "the first block that mentions sourceHealthFor" picked the
+    // declaration and reported a defect that was not there.
+    const bodies = code.filter((block) => /export function sourceHealthFor[\s\S]*?\)\s*:\s*SourceHealth\s*\{/.test(block));
+    assert.ok(bodies.length > 0, "the plan no longer contains a sourceHealthFor implementation");
+    for (const runtime of bodies) {
+      assert.ok(/spec\.flagKey/.test(runtime),
+        "sourceHealthFor must read spec.flagKey, the name pinned in the registry");
+      assert.ok(!/envKeyForCapability\s*\(/.test(runtime),
+        "sourceHealthFor re-derives the flag name instead of reading the pin, so the harness and the runtime hold separate implementations of it");
+    }
   });
 
   // ---- P1-3: independent anchors for the column contract ----
@@ -1425,7 +1580,7 @@ async function main() {
     const wellFormed = {
       coverage: { table: "incidents", yearColumn: "year" },
       integrity: ["generation alignment: MAX(year) of a = MAX(year) of b"],
-      availability: "always",
+      availability: { kind: "always" },
       receiptOwner: "scripts/import-shr.py",
       evidence: "cited from the importer that writes the table and the spec section requiring it",
     };
@@ -1437,23 +1592,27 @@ async function main() {
       { ...wellFormed, integrity: [] },                             // no rule is not a rule
       { ...wellFormed, integrity: [""] },
       { ...wellFormed, availability: 1 },
-      { ...wellFormed, availability: "sort-of" },                   // outside the enum
+      { ...wellFormed, availability: "always" },                    // the flat form is not the shape
+      { ...wellFormed, availability: "conditional" },
       { ...wellFormed, availability: "conditional-on-artifact: requires a crosswalk" },
+      { ...wellFormed, availability: { kind: "sort-of" } },
+      { ...wellFormed, availability: { kind: "conditional" } },     // conditional with no condition
+      { ...wellFormed, availability: { kind: "conditional", condition: "" } },
+      { ...wellFormed, availability: { kind: "always", condition: "why?" } },
       { ...wellFormed, receiptOwner: false },
       { ...wellFormed, receiptOwner: "" },
       { ...wellFormed, evidence: "too short" },
       { coverage: {}, integrity: true, availability: 1, receiptOwner: false },
+      // The condition must live inside availability, not beside it, or the pair can disagree.
+      { ...wellFormed, availability: { kind: "conditional" }, availabilityCondition: "requires a crosswalk" },
     ];
     for (const policy of malformed) {
       assert.strictEqual(policyIsComplete(policy), false,
         `a malformed policy must NOT authorize: ${JSON.stringify(policy)}`);
     }
-    // `conditional` is a decision that has to say what it is conditional on.
-    assert.strictEqual(policyIsComplete({ ...wellFormed, availability: "conditional" }), false,
-      "conditional availability must state its condition");
     assert.strictEqual(
-      policyIsComplete({ ...wellFormed, availability: "conditional", availabilityCondition: "requires agency_county_crosswalk in the artifact" }),
-      true, "conditional availability with a stated condition is well-formed");
+      policyIsComplete({ ...wellFormed, availability: { kind: "conditional", condition: "requires agency_county_crosswalk in the artifact" } }),
+      true, "a conditional availability carrying its condition is well-formed");
   });
 
   check("P1-4: every capability carries authored policy or is fail-closed", () => {

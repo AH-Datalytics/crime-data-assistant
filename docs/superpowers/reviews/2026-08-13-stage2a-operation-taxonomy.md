@@ -93,14 +93,66 @@ artifact and asking what the operation's real SQL does:
 - no **undeclared** column may change how the operation resolves — otherwise the contract
   understates its needs.
 
-Those directions need different mechanisms, and using one for all of them left a blind spot in the
-omission direction. Compilation cannot see a dropped column that SQL rescues: with
-`nibrs_consistent_reporters.ori` renamed, `d.ori IN (SELECT ori FROM nibrs_consistent_reporters)`
-still compiles because `ori` re-binds to the outer `d.ori`, so an extractor that stopped declaring
-that column stayed green. The rebinding is invisible to compilation but not to name resolution —
-the subquery becomes CORRELATED — so the omission direction compares **query plans**, which
-catches the rescue without depending on fixture rows being lucky enough to expose it. A mutation
-test drops that exact column from a copy of the contract and requires the detector to find it.
+Compilation cannot see a dropped column that SQL rescues: with `nibrs_consistent_reporters.ori`
+renamed, `d.ori IN (SELECT ori FROM nibrs_consistent_reporters)` still compiles because `ori`
+re-binds to the outer `d.ori`, so an extractor that stopped declaring that column stayed green.
+
+### 3.1 The resolution oracle, and two oracles that do not work
+
+**`EXPLAIN QUERY PLAN` is too coarse.** It reports join order and subquery *correlation*, so it
+only notices a rebinding that **changes** correlation status. Where the subquery is already
+correlated, the plans are byte-identical while the meaning changes:
+
+```sql
+SELECT (SELECT x FROM inner_t i WHERE i.y = o.y) FROM outer_t o
+```
+
+Renaming `inner_t.x` rebinds `x` to `outer_t.x`. Both plans read
+`SCAN o / CORRELATED SCALAR SUBQUERY 1 / SCAN i`. Every rebinding inside an already-correlated
+subquery is invisible to it.
+
+**Raw `EXPLAIN` bytecode is too noisy.** Renaming *any* column bumps the schema cookie, which
+appears as `Transaction` p3, so every probe reports a change and the mechanism degenerates to
+"everything is load-bearing".
+
+The oracle is the compiled program's **shape**: `(opcode, p1, p2, p3)` per step, with `Transaction`
+excluded. That answers exactly one question — did resolution change — because a rebinding reads a
+different cursor. Two operands are deliberately dropped:
+
+- `p4`/`p5`/`comment` carry **names**, so a pure rename would register as a change even for a
+  column nothing reads. Under `SELECT t.*` that would inflate every contract to the whole table.
+- `Transaction` p3 is the schema cookie, as above.
+
+Six cases pin the oracle: a rebind inside an already-correlated subquery, a column nothing reads, a
+`SELECT *` re-export both read and unread downstream, a self-joined table where both aliases lose
+the column at once, and a bare column in an uncorrelated subquery rebinding outward. All six are
+evaluated before anything is asserted — a loop with an assert inside stops at the first wrong
+answer, and these pins guard different properties, so which ones moved is the diagnostic.
+
+The six are a **property matrix**, not six independent defenses against oracle downgrade. Measured
+by renaming each column and recording what each candidate oracle saw:
+
+| Pin | Compiles after rename | Plan changed | Shape changed | Noisy oracle changed | Property pinned |
+|---|---|---|---|---|---|
+| 1 already-correlated rebind | yes | **no** | yes | yes | program shape over plan shape |
+| 2 column nothing reads | yes | no | no | **yes** | no false positive under noise |
+| 3 `SELECT *` re-export, unread | yes | no | no | **yes** | no false positive under noise |
+| 4 `SELECT *` re-export, read | **no** | — | — | — | compile-failure detection |
+| 5 self-join, both aliases lose it | **no** | — | — | — | compile-failure detection |
+| 6 bare col, uncorrelated subquery | yes | **yes** | yes | yes | rebind, caught by either oracle |
+
+One pin decides program shape over query-plan shape; two pin compile-failure detection; two
+constrain false positives under rename and schema noise; one guards rebind detection that both
+oracles share. Downgrading to `EXPLAIN QUERY PLAN` fails **exactly pin 1**. Leaving `Transaction`
+in fails **exactly pins 2 and 3**, plus the omission detector. Pin 6 discriminates nothing between
+the two oracles and is a regression guard on the mechanism, not on the choice of it.
+
+A weaker oracle detects *less*, which is why the "must not detect" pins pass under it for free, and
+why the self-join pin is not a rebind test at all — the rename hits both aliases at once, so nothing
+remains to rebind to and the reference simply stops compiling.
+
+A separate mutation test drops `nibrs_consistent_reporters.ori` from a copy of the contract and
+requires the detector to find it.
 
 Renaming, not dropping. "Does the operation use this column name at all" renames it on **every**
 participating table that declares it: a single-table rename is unsound for that question, because
@@ -109,11 +161,11 @@ renamed — `ori` binds to the outer `d.ori` as a correlated reference. The firs
 probe reported exactly that against the four continuous-reporter cases, and those reports were
 wrong.
 
-"Does it read the column *from this table*" is then decided by comparing **query plans** rather
-than compilability, which settles it even when another participating table declares the same name:
-the rescue that keeps the SQL compiling also changes the plan. An earlier version skipped those
-columns as inconclusive, which left attribution for the most collision-prone names — `ori`, `year`,
-`state` — resting on the extractor alone. Every declared column passes under the stronger rule:
+"Does it read the column *from this table*" is then decided by the resolution oracle rather than by
+compilability, which settles it even when another participating table declares the same name: the
+rescue that keeps the SQL compiling still changes which cursor is read. An earlier version skipped
+those columns as inconclusive, which left attribution for the most collision-prone names — `ori`,
+`year`, `state` — resting on the extractor alone. Every declared column passes under the rule:
 **405** (table, column) probes across the 57 factual cases, over a registry declaring **344**
 distinct (capability, table, column) triples.
 
@@ -142,9 +194,15 @@ consequence: the Hate Crime crosswalk capability was recorded "available" althou
 **Fail closed, and schema-validated.** "Every field is non-null" is not a schema:
 `{coverage: {}, integrity: true, availability: 1, receiptOwner: false}` satisfies it and would
 authorize while stating nothing. Each field's shape is now checked — `coverage` as
-`{table, yearColumn}`, `integrity` as a non-empty list of rules, `availability` as the enum
-`"always" | "conditional"` with a stated `availabilityCondition`, `receiptOwner` as a non-empty
-owner, `evidence` as a real citation. A field that *is* authored must be well-formed even while
+`{table, yearColumn}`, `integrity` as a non-empty list of rules, `receiptOwner` as a non-empty
+owner, `evidence` as a real citation, and `availability` as a **discriminated** value:
+`{kind: "always"}` or `{kind: "conditional", condition}`.
+
+Discriminated rather than an enum plus a sibling field, because a flat `availability: "conditional"`
+next to an optional `availabilityCondition` can represent a conditional with no condition — the
+invariant then lives only in the validator, and the type that was supposed to describe it omitted
+the sibling field entirely, so it could not represent what the validator required. The condition
+lives inside `availability`, so the pair cannot disagree and the invalid state cannot be written. A field that *is* authored must be well-formed even while
 others remain null, or a malformed value sits in the file until the day it completes the entry and
 authorizes. A capability whose policy is absent, partly unauthored, or malformed is
 `authorizationEligible: false` and can authorize nothing. Today **1 of 51** is partly authored and
@@ -202,10 +260,24 @@ name that now means something else.
 **This needs Jeff's confirmation before Task 5:** it changes environment-variable names in
 `ecosystem.config.js`. No capability flag is set in production today, so nothing breaks now.
 
-The conformance assertions now check shape across every fenced code block: no `specFor` call may
-take a second argument, no `sealPlanDerivation` may take two, flag names must be derived at least
-once, and any hand-typed flag must match what the derivation can produce. Counting arguments needs
-a balanced-paren scan — a regex stopping at the first `)` read
+**The pin must be the only derivation.** The registry pins `flagKey` per capability, and the
+request path reads `spec.flagKey` rather than recomputing it. Generation owns the derivation and
+the uniqueness check over its output; a second implementation on the request path is a drift the
+pin cannot prevent, because the runtime would simply ignore it. `envKeyForCapability` is not even
+imported there.
+
+The conformance assertions check shape across every fenced code block, with **comments stripped**
+first — comments are where a rejected form gets documented, and one of these checks otherwise
+flagged its own explanatory comment. They require **exact arity**: `specFor` takes one argument and
+`sealPlanDerivation` takes three. Rejecting "two or more" and "exactly two" was the same
+target-the-known-failure mistake these checks exist to catch — it let a zero-argument `specFor` and
+one- and four-argument seals through. The derivation must be **called**, not merely declared:
+searching for the bare name was satisfied by `export function envKeyForCapability(...)` itself, so
+declarations are subtracted out. And the runtime implementation is selected **by shape** — a
+signature-only declaration ends in `;` and legitimately has no body; taking "the first block that
+mentions `sourceHealthFor`" picked the declaration and reported a defect that was not there.
+
+Counting arguments needs a balanced-paren scan — a regex stopping at the first `)` read
 `sealPlanDerivation("f", "shr::invented::nothing(x)", SQL)` as a two-argument call.
 
 ## 6. Preparation-only dependencies — three, not five
@@ -307,6 +379,29 @@ narrower version of it.
 The general lesson, now written into the harness header: an assertion that tests for a *named
 pattern* does not constrain *shape*, and a mechanism sound in one direction is not sound in the
 reverse direction. Both failures above are instances.
+
+### 11.2 And four found in the commit that corrected those
+
+| Claim | What was actually true |
+|---|---|
+| Attribution is decided by comparing query plans | `EXPLAIN QUERY PLAN` cannot see a rebinding inside an already-correlated subquery (§3.1); the oracle had to become program shape |
+| The shape checks constrain shape | they rejected the *known wrong* arities — "≥ 2" and "= 2" — so a zero-argument `specFor` and one- and four-argument seals passed; and "the derivation is used" was satisfied by its own declaration |
+| `flagKey` is the operationally pinned name | the request path recomputed it, so the harness and the runtime held separate implementations and the pin could be silently ignored |
+| The policy type describes the validated policy | it omitted `availabilityCondition`, which validation required and the authored entry stored |
+
+Two more, self-inflicted, found while fixing those four: a check selected the runtime block **by
+position** — the first block mentioning `sourceHealthFor` is a signature-only declaration, so it
+reported a defect that did not exist — and another flagged **its own explanatory comment**. Code
+shape checks now select by shape and strip comments first. The oracle self-test also asserted its
+six pins inside a loop, so a second regressed pin would never have been reported; it now evaluates
+all six first.
+
+A third lesson from these: **prefer a shape that cannot represent the invalid state** over a
+validator that rejects it. The discriminated `availability` is that fix; so is deriving flag names
+in one place and reading the pin everywhere else.
+
+A fourth: **measure the discrimination of a guard set instead of assuming it.** Six oracle pins
+looked like six guards on the oracle choice; only one is.
 
 ## 12. Fixtures
 
