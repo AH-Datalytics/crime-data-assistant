@@ -157,7 +157,14 @@ export type Db = import("better-sqlite3").Database;
 export type OpenedDatabase = { db: Db; resolvedPath: string };
 export type DatabaseProvider = { acquire: () => OpenedDatabase | null };
 export type TableRequirement = { name: string; requiredColumns: string[]; minRows: number };
-export type DependencyRule = { derived: string; upstream: string; generationColumn?: string };
+/**
+ * A derived table and the upstream it must agree with.
+ *
+ * keyColumn is STATED, not inferred. Taking the derived table's first required column as the join
+ * key made a semantic relationship depend on alphabetical ordering -- correct for sample_agencies
+ * only because sorting happens to put ori first.
+ */
+export type DependencyRule = { derived: string; upstream: string; keyColumn: string; generationColumn?: string };
 export type SemanticDependency = {
   table: string; requiredColumns: string[]; qualifies: string;
   keyColumn: string; yearColumn: string; versionColumn?: string;

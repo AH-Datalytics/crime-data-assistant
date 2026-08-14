@@ -1,8 +1,14 @@
 import assert from "node:assert";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import Database from "better-sqlite3";
 import { evaluateCapability, identityOf, type HealthContext } from "../lib/source-health";
 import { coverageBasisErrors } from "../lib/capability-policy";
-import { CAPABILITY_INVENTORY, specFor, type CapabilitySpec } from "../lib/source-health-inventory";
+import {
+  CAPABILITY_INVENTORY, specFor,
+  type CapabilitySpec, type DependencyRule, type SemanticDependency,
+} from "../lib/source-health-inventory";
 
 let passed = 0, failed = 0;
 function check(name: string, fn: () => void) {
@@ -371,6 +377,259 @@ check("coverage is unknown when the basis table has no year bounds", () => {
   const db = shrFixture((fixture) => fixture.exec("UPDATE incidents SET year = NULL"));
   const { trace } = evaluateCapability(withPolicy(shr), ctx(db, [2022]));
   assert.strictEqual(trace.coverage, "unknown");
+  db.close();
+});
+
+// ---------------------------------------------------------------- dependency alignment
+/**
+ * Driven through SYNTHETIC specs. No real capability carries dependency rules: Task 1 left them
+ * empty because they are hand-authored relational knowledge no observation can derive, and the
+ * inventory regression asserts they stay empty. So the machinery is exercised directly rather than
+ * by inventing rules for the 51 real capabilities.
+ */
+const withDeps = (rule: DependencyRule, tables = shr.tables): CapabilitySpec =>
+  ({ ...shr, tables, dependencies: [rule] });
+
+function depFixture(mutate?: (db: Database.Database) => void): Database.Database {
+  const db = shrFixture();
+  db.exec("CREATE TABLE cohort (ori TEXT, gen INTEGER); CREATE TABLE upstream (ori TEXT, gen INTEGER)");
+  db.prepare("INSERT INTO upstream VALUES (?,?)").run("TX0001", 2022);
+  db.prepare("INSERT INTO cohort VALUES (?,?)").run("TX0001", 2022);
+  mutate?.(db);
+  return db;
+}
+
+check("a cohort referencing rows absent upstream stops at dependency", () => {
+  const db = depFixture((d) => d.prepare("INSERT INTO cohort VALUES (?,?)").run("CA9999", 2022));
+  const { health, trace } = evaluateCapability(withDeps({ derived: "cohort", upstream: "upstream", keyColumn: "ori" }), ctx(db));
+  assert.strictEqual(trace.boundary, "dependency");
+  assert.strictEqual(health.state, "degraded");
+  assert.match(health.reason ?? "", /absent from upstream/);
+  db.close();
+});
+
+check("an aligned dependency is recorded and evaluation continues", () => {
+  const db = depFixture();
+  const { trace } = evaluateCapability(withDeps({ derived: "cohort", upstream: "upstream", keyColumn: "ori" }), ctx(db));
+  assert.deepStrictEqual(trace.dependenciesChecked, ["cohort->upstream"]);
+  assert.strictEqual(trace.boundary, "policy_incomplete", "an aligned dependency must not stop evaluation");
+  db.close();
+});
+
+check("the dependency join key is the one the rule STATES, not a positional guess", () => {
+  /**
+   * `cohort.a_id` has no upstream match while `cohort.ori` does. A rule keyed on `ori` is therefore
+   * aligned, and an implementation that took the derived table's first required column would key on
+   * `a_id` and report orphans. Sorting put `a_id` first precisely to catch that.
+   */
+  const db = depFixture((d) => {
+    d.exec("DROP TABLE cohort; CREATE TABLE cohort (a_id TEXT, ori TEXT)");
+    d.prepare("INSERT INTO cohort VALUES (?,?)").run("no-such-upstream", "TX0001");
+  });
+  const tables = [...shr.tables, { name: "cohort", requiredColumns: ["a_id", "ori"], minRows: 1 }];
+  const { trace } = evaluateCapability(withDeps({ derived: "cohort", upstream: "upstream", keyColumn: "ori" }, tables), ctx(db));
+  assert.deepStrictEqual(trace.dependenciesChecked, ["cohort->upstream"],
+    "the stated key was ignored in favour of a positional one");
+  db.close();
+});
+
+check("a derived generation older than its upstream is degraded", () => {
+  const db = depFixture((d) => d.prepare("UPDATE cohort SET gen = ?").run(2021));
+  const rule: DependencyRule = { derived: "cohort", upstream: "upstream", keyColumn: "ori", generationColumn: "gen" };
+  const { health, trace } = evaluateCapability(withDeps(rule), ctx(db));
+  assert.strictEqual(trace.boundary, "dependency");
+  assert.strictEqual(health.state, "degraded");
+  assert.match(health.reason ?? "", /older than/);
+  // Equal generations are aligned, so the check is not simply rejecting any comparison.
+  const equal = depFixture();
+  assert.strictEqual(evaluateCapability(withDeps(rule), ctx(equal)).trace.boundary, "policy_incomplete");
+  db.close();
+  equal.close();
+});
+
+check("an uncheckable dependency is unknown, not degraded", () => {
+  const db = depFixture();
+  const { health, trace } = evaluateCapability(withDeps({ derived: "no_such_table", upstream: "upstream", keyColumn: "ori" }), ctx(db));
+  assert.strictEqual(trace.boundary, "dependency");
+  assert.strictEqual(health.state, "unknown", "a dependency that cannot be evaluated is not a degraded one");
+  db.close();
+});
+
+// ---------------------------------------------------------------- semantic alignment
+const withSemantic = (dep: SemanticDependency): CapabilitySpec => ({ ...shr, semanticDependencies: [dep] });
+const RELIABILITY: SemanticDependency = {
+  table: "reliability", requiredColumns: ["ori", "year", "algorithm_version"],
+  qualifies: "crime", keyColumn: "ori", yearColumn: "year", versionColumn: "algorithm_version",
+};
+
+function semanticFixture(mutate?: (db: Database.Database) => void): Database.Database {
+  const db = shrFixture();
+  db.exec(`
+    CREATE TABLE crime (ori TEXT, year INTEGER);
+    CREATE TABLE reliability (ori TEXT, year INTEGER, algorithm_version TEXT);
+  `);
+  db.prepare("INSERT INTO crime VALUES (?,?)").run("TX0001", 2022);
+  db.prepare("INSERT INTO reliability VALUES (?,?,?)").run("TX0001", 2022, "v1");
+  mutate?.(db);
+  return db;
+}
+
+check("a qualifying table that stops short of the data it qualifies is degraded", () => {
+  /**
+   * The load-bearing case, and the one a row count cannot see: reliability is NONEMPTY and still
+   * leaves 2024 unqualified, so every agency-year in the gap would read as usable.
+   */
+  const db = semanticFixture((d) => d.prepare("INSERT INTO crime VALUES (?,?)").run("TX0001", 2024));
+  const { health, trace } = evaluateCapability(withSemantic(RELIABILITY), ctx(db));
+  assert.strictEqual(trace.boundary, "semantic_dependency");
+  assert.strictEqual(health.state, "degraded");
+  assert.match(health.reason ?? "", /unqualified|extends to/);
+  db.close();
+});
+
+check("a nonempty but misaligned qualifying table would pass a row check and fails this one", () => {
+  // Named explicitly so a later simplification to COUNT(*) > 0 fails here.
+  const db = semanticFixture((d) => {
+    d.exec("DELETE FROM reliability");
+    d.prepare("INSERT INTO reliability VALUES (?,?,?)").run("ZZ9999", 2022, "v1");
+  });
+  const rows = db.prepare("SELECT COUNT(*) AS n FROM reliability").get() as { n: number };
+  assert.strictEqual(rows.n, 1, "this case depends on the table being nonempty");
+  assert.strictEqual(evaluateCapability(withSemantic(RELIABILITY), ctx(db)).trace.boundary, "semantic_dependency");
+  db.close();
+});
+
+check("a mixed algorithm_version is degraded, and a single one is not", () => {
+  const mixed = semanticFixture((d) => d.prepare("INSERT INTO reliability VALUES (?,?,?)").run("TX0001", 2022, "v2"));
+  assert.strictEqual(evaluateCapability(withSemantic(RELIABILITY), ctx(mixed)).trace.boundary, "semantic_dependency");
+  const single = semanticFixture();
+  assert.strictEqual(evaluateCapability(withSemantic(RELIABILITY), ctx(single)).trace.boundary, "policy_incomplete");
+  mixed.close();
+  single.close();
+});
+
+check("a qualifying table recording no version at all is degraded", () => {
+  const db = semanticFixture((d) => d.prepare("UPDATE reliability SET algorithm_version = NULL").run());
+  const { health } = evaluateCapability(withSemantic(RELIABILITY), ctx(db));
+  assert.strictEqual(health.state, "degraded");
+  assert.match(health.reason ?? "", /records no algorithm_version/);
+  db.close();
+});
+
+check("a missing or under-specified qualifying table is degraded", () => {
+  const absent = semanticFixture((d) => d.exec("DROP TABLE reliability"));
+  assert.strictEqual(evaluateCapability(withSemantic(RELIABILITY), ctx(absent)).trace.boundary, "semantic_dependency");
+  const thin = semanticFixture((d) => {
+    d.exec("DROP TABLE reliability; CREATE TABLE reliability (ori TEXT, year INTEGER)");
+    d.prepare("INSERT INTO reliability VALUES (?,?)").run("TX0001", 2022);
+  });
+  const { health, trace } = evaluateCapability(withSemantic(RELIABILITY), ctx(thin));
+  assert.strictEqual(trace.boundary, "semantic_dependency");
+  /**
+   * The SPECIFIC reason, not merely one mentioning the column. `/algorithm_version/` alone also
+   * matched SQLite's own "no such column: algorithm_version" thrown later by the version count, so
+   * the test passed while the required-column check was disabled -- it confirmed the wrong mechanism.
+   */
+  assert.match(health.reason ?? "", /is missing required column\(s\): algorithm_version/);
+  assert.strictEqual(health.state, "degraded", "an under-specified qualifying table is a data defect, not an unknown");
+  absent.close();
+  thin.close();
+});
+
+check("an aligned qualifying table is recorded and evaluation continues", () => {
+  const db = semanticFixture();
+  const { trace } = evaluateCapability(withSemantic(RELIABILITY), ctx(db));
+  assert.deepStrictEqual(trace.semanticChecked, ["reliability~crime"]);
+  assert.strictEqual(trace.boundary, "policy_incomplete");
+  db.close();
+});
+
+// ---------------------------------------------------------------- rollup preflight
+/**
+ * Preflight is DERIVED from the contract -- a capability reading a `rollup.` table needs the rollup
+ * artifact -- rather than authored per capability. The seam that matters: the inspector reads the
+ * CONFIGURED path while table checks read the PROVIDER's handle, so if those are different files,
+ * structure and availability are judged against different databases.
+ */
+const NIBRS_ROLLUP = CAPABILITY_INVENTORY.find((s) =>
+  s.artifact === "nibrs" && s.tables.some((t) => t.name.startsWith("rollup.")));
+assert.ok(NIBRS_ROLLUP, "expected a rollup-reading NIBRS capability in the inventory");
+
+/**
+ * The rollup table is built from the CAPABILITY'S OWN declared columns, not from a hardcoded list.
+ * Hardcoding them made the fixture describe a different capability than `find` selected, and the
+ * failure looked like a preflight bug rather than a fixture mismatch.
+ */
+function rollupFixture(attachTo: string | null): { db: Database.Database; dir: string } {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "health-rollup-"));
+  const db = new Database(path.join(dir, "nibrs.db"));
+  if (attachTo) {
+    const declared = NIBRS_ROLLUP!.tables.find((t) => t.name.startsWith("rollup."))!;
+    const table = declared.name.slice("rollup.".length);
+    const columns = declared.requiredColumns;
+    const rollup = new Database(attachTo);
+    rollup.exec(`CREATE TABLE ${table} (${columns.map((c) => `${c} TEXT`).join(", ")})`);
+    rollup.prepare(`INSERT INTO ${table} VALUES (${columns.map(() => "?").join(",")})`)
+      .run(...columns.map((c) => (c.includes("year") ? 2022 : "x")));
+    rollup.close();
+    db.exec(`ATTACH DATABASE '${attachTo.replaceAll("\\", "/")}' AS rollup`);
+  }
+  return { db, dir };
+}
+function withRollupEnv<T>(value: string | undefined, fn: () => T): T {
+  const previous = process.env.NIBRS_ROLLUP_DB_PATH;
+  if (value === undefined) delete process.env.NIBRS_ROLLUP_DB_PATH;
+  else process.env.NIBRS_ROLLUP_DB_PATH = value;
+  try { return fn(); }
+  finally {
+    if (previous === undefined) delete process.env.NIBRS_ROLLUP_DB_PATH;
+    else process.env.NIBRS_ROLLUP_DB_PATH = previous;
+  }
+}
+const nibrsCtx = (db: Database.Database): HealthContext =>
+  ({ sourceId: "nibrs", requestedYears: [2022], dbOverride: { db, resolvedPath: db.name } });
+
+check("an unconfigured rollup surfaces the inspector's own reason", () => {
+  const { db } = rollupFixture(null);
+  const { health, trace } = withRollupEnv(undefined, () => evaluateCapability(NIBRS_ROLLUP!, nibrsCtx(db)));
+  assert.strictEqual(trace.preflight, "failed");
+  assert.strictEqual(trace.boundary, "preflight_failed");
+  assert.strictEqual(health.state, "degraded");
+  assert.match(health.reason ?? "", /rollup-unconfigured/, "the inspector's finding must not be re-derived or lost");
+  assert.deepStrictEqual(trace.tablesChecked, [], "nothing may be checked once preflight fails");
+  db.close();
+});
+
+check("a configured rollup that is NOT the attached one is an artifact mismatch", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "health-rollup-cfg-"));
+  const attached = path.join(dir, "attached.db");
+  const configured = path.join(dir, "configured.db");
+  const { db } = rollupFixture(attached);
+  fs.copyFileSync(attached, configured);            // a real, available file that is a DIFFERENT file
+  const { health, trace } = withRollupEnv(configured, () => evaluateCapability(NIBRS_ROLLUP!, nibrsCtx(db)));
+  assert.strictEqual(trace.boundary, "artifact_mismatch");
+  assert.strictEqual(health.state, "degraded");
+  assert.match(health.reason ?? "", /different files/);
+  db.close();
+});
+
+check("a coherent rollup passes preflight and evaluation continues", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "health-rollup-ok-"));
+  const rollupPath = path.join(dir, "rollup.db");
+  const { db } = rollupFixture(rollupPath);
+  const { trace } = withRollupEnv(rollupPath, () => evaluateCapability(NIBRS_ROLLUP!, nibrsCtx(db)));
+  assert.strictEqual(trace.preflight, "ok");
+  assert.ok(trace.tablesChecked.some((t) => t.startsWith("rollup.")), `expected a rollup table to be checked, saw ${trace.tablesChecked.join(",")}`);
+  assert.strictEqual(trace.boundary, "policy_incomplete", `preflight blocked a coherent rollup: ${trace.boundary}`);
+  db.close();
+});
+
+check("a capability that reads no rollup table skips preflight entirely", () => {
+  // Otherwise every SHR and crime_data capability would depend on NIBRS configuration.
+  const db = shrFixture();
+  const { trace } = withRollupEnv(undefined, () => evaluateCapability(shr, ctx(db)));
+  assert.strictEqual(trace.preflight, "skipped");
+  assert.strictEqual(trace.boundary, "policy_incomplete");
   db.close();
 });
 
