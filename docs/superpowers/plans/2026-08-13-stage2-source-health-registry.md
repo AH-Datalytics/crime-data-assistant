@@ -1022,7 +1022,10 @@ git commit -m "Resolve capability identity only from a fully verified plan deriv
 ```typescript
 export function sourceHealthFor(
   sourceId: SourceId, derivation: PlanDerivation | null, executedSql: string | null,
-  claimedFamily: string | null, context: HealthContext, env?: NodeJS.ProcessEnv,
+  // The request carries NO sourceId: the first argument is authoritative, and a second copy riding
+  // on the request let a disagreeing call poison the cache with a verdict attributed to the wrong
+  // source. HealthRequest = Omit<HealthContext, "sourceId">.
+  claimedFamily: string | null, request: HealthRequest, env?: ModeEnv,
 ): SourceHealth;
 export function __resetSourceHealthCacheForTests(): void;
 /** Full traces, in order. Test-only. */
@@ -1152,7 +1155,7 @@ function unresolvedVerdict(sourceId: SourceId, capability: string, reason: strin
 
 export function sourceHealthFor(
   sourceId: SourceId, derivation: PlanDerivation | null, executedSql: string | null,
-  claimedFamily: string | null, context: HealthContext, env: NodeJS.ProcessEnv = process.env,
+  claimedFamily: string | null, request: HealthRequest, env: ModeEnv = process.env,
 ): SourceHealth {
   // Global mode first: off does no request-path work, and a capability flag cannot
   // override it (invariant 14).
@@ -1182,8 +1185,8 @@ export function sourceHealthFor(
    * would only prove two LABELS differ; reusing one label across handles would inherit
    * another database's verdict. The identity comes from a WeakMap on the handle itself.
    */
-  const probeOpened = context.dbOverride !== undefined ? context.dbOverride : spec.database.acquire();
-  const period = [...(context.requestedYears ?? [])].sort((a, b) => a - b).join(",");
+  const probeOpened = request.dbOverride !== undefined ? request.dbOverride : spec.database.acquire();
+  const period = [...(request.requestedYears ?? [])].sort((a, b) => a - b).join(",");
   const key = `${sourceId}:${capability}:${identityOf((probeOpened?.db ?? null) as object | null)}:${period}`;
   const hit = cache.get(key);
   if (hit && Date.now() - hit.at < HEALTH_CACHE_TTL_MS) return hit.health;
@@ -1198,7 +1201,7 @@ export function sourceHealthFor(
   const startedAt = Date.now();
   let health: SourceHealth;
   try {
-    const evaluated = evaluateCapability(spec, { ...context, dbOverride: probeOpened });
+    const evaluated = evaluateCapability(spec, { ...request, sourceId, dbOverride: probeOpened });
     health = evaluated.health;
     traces.push(evaluated.trace);
   } catch (error) {

@@ -31,6 +31,18 @@ export type HealthContext = {
   dbOverride?: OpenedDatabase | null;
 };
 
+/**
+ * What a caller of sourceHealthFor supplies: everything EXCEPT the source.
+ *
+ * The source is sourceHealthFor's authoritative first argument, and it appears nowhere else on
+ * purpose. When the request also carried one, they were two copies of a single fact: the gates and
+ * the cache key read the argument while evaluation read the request, so a call whose copies
+ * disagreed produced a verdict attributed to the wrong source, cached it under the right source's
+ * key, and served it to later correct calls. The invalid state is now unrepresentable rather than
+ * checked for.
+ */
+export type HealthRequest = Omit<HealthContext, "sourceId">;
+
 const handleIds = new WeakMap<object, number>();
 let nextHandleId = 1;
 
@@ -190,7 +202,7 @@ export function sourceHealthFor(
   derivation: PlanDerivation | null,
   executedSql: string | null,
   claimedFamily: string | null,
-  context: HealthContext,
+  request: HealthRequest,
   env: ModeEnv = process.env,
 ): SourceHealth {
   if (!isObserving(resolveMode(sourceId, null, env).mode)) {
@@ -214,19 +226,21 @@ export function sourceHealthFor(
 
   let opened: OpenedDatabase | null = null;
   try {
-    opened = context.dbOverride !== undefined ? context.dbOverride : spec.database.acquire();
+    opened = request.dbOverride !== undefined ? request.dbOverride : spec.database.acquire();
   } catch (error) {
     return unresolvedVerdict(sourceId, capability, `database acquisition threw: ${(error as Error).message}`);
   }
 
-  const period = [...(context.requestedYears ?? [])].sort((a, b) => a - b).join(",");
+  const period = [...(request.requestedYears ?? [])].sort((a, b) => a - b).join(",");
   const key = `${sourceId}:${capability}:${identityOf(opened?.db ?? null)}:${period}`;
   const hit = cache.get(key);
   if (hit && healthNow() - hit.at < HEALTH_CACHE_TTL_MS) return hit.health;
 
   let health: SourceHealth;
   try {
-    const evaluated = evaluateCapability(spec, { ...context, dbOverride: opened });
+    // Spread FIRST, authoritative fields LAST: a sourceId smuggled past the types (a cast) is
+    // overridden by construction order rather than detected by a check.
+    const evaluated = evaluateCapability(spec, { ...request, sourceId, dbOverride: opened });
     health = evaluated.health;
     traces.push(evaluated.trace);
   } catch (error) {

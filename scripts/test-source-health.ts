@@ -1080,7 +1080,7 @@ check("an unresolved answer never reaches the flag gate or the provider", () => 
   withPatchedProvider(() => { acquired++; return null; }, () => {
     const noCapability = sealPlanDerivation("deterministic-murder", RESOLVE_SQL);
     const health = sourceHealthFor("shr", noCapability, RESOLVE_SQL, "deterministic-murder",
-      { sourceId: "shr", requestedYears: [2022] }, enabledEnv);
+      { requestedYears: [2022] }, enabledEnv);
     assert.strictEqual(health.state, "unknown");
     assert.strictEqual(health.capability, "unresolved");
     assert.match(health.reason ?? "", /sealed no capability/);
@@ -1094,7 +1094,7 @@ check("a disabled flag never acquires a database either", () => {
   let acquired = 0;
   withPatchedProvider(() => { acquired++; return null; }, () => {
     const health = sourceHealthFor("shr", shrSealed, RESOLVE_SQL, "deterministic-murder",
-      { sourceId: "shr", requestedYears: [2022] }, { PROOF_MODE: "shadow" });
+      { requestedYears: [2022] }, { PROOF_MODE: "shadow" });
     assert.match(health.reason ?? "", /not enabled/);
   });
   assert.strictEqual(acquired, 0, "the flag gate must precede acquisition");
@@ -1151,6 +1151,31 @@ check("a stale cache entry re-probes after the TTL", () => {
   }
 });
 
+check("the evaluation source is the authoritative first argument, and nothing can smuggle another", () => {
+  /**
+   * sourceHealthFor's first argument and a sourceId riding on the request object were two copies of
+   * one fact. The gates and the cache key used the first; evaluation used the second. A first call
+   * with a smuggled foreign source produced an artifact_mismatch verdict ATTRIBUTED TO THAT SOURCE,
+   * cached under the outer key -- and a later, entirely correct call with the same handle and period
+   * received it from cache. The request type now carries no sourceId, and a smuggled one (only
+   * constructible by defeating the types) is overridden by construction order, not by a check.
+   */
+  __resetSourceHealthCacheForTests();
+  const db = shrFixture();
+  const smuggled = { sourceId: "current", requestedYears: [2022], dbOverride: { db, resolvedPath: db.name } };
+  const first = sourceHealthFor("shr", shrSealed, RESOLVE_SQL, "deterministic-murder",
+    smuggled as never, enabledEnv);
+  assert.strictEqual(first.sourceId, "shr", "the verdict must be attributed to the authoritative source");
+  const second = callHealth(ctx(db), enabledEnv);
+  assert.strictEqual(second.sourceId, "shr");
+  const traces = __healthTracesForTests();
+  assert.strictEqual(traces.length, 1, "same source, handle and period: the second call is a cache hit");
+  assert.strictEqual(traces[0].sourceId, "shr", "the trace must not carry the smuggled source");
+  assert.notStrictEqual(traces[0].boundary, "artifact_mismatch",
+    "a smuggled foreign source must not make the capability's own source look mismatched");
+  db.close();
+});
+
 check("an unverified token is diagnosed as unverified, even when the flag is also off", () => {
   /**
    * Pins the gate ORDER: resolution before the capability flag. The two orders refuse identically
@@ -1162,7 +1187,7 @@ check("an unverified token is diagnosed as unverified, even when the flag is als
   __resetSourceHealthCacheForTests();
   const tampered = sealPlanDerivation("deterministic-murder", SHR_INCIDENTS_YEAR, RESOLVE_SQL);
   const health = sourceHealthFor("shr", tampered, "SELECT 1 /* rewritten */", "deterministic-murder",
-    { sourceId: "shr", requestedYears: [2022] }, { PROOF_MODE: "shadow" });   // flag ALSO off
+    { requestedYears: [2022] }, { PROOF_MODE: "shadow" });   // flag ALSO off
   assert.strictEqual(health.state, "unknown");
   assert.match(health.reason ?? "", /not verified|does not match/, "the unverified token is the diagnosis");
   assert.doesNotMatch(health.reason ?? "", /not enabled/, "a flag named by an unverified token must not be the diagnosis");
@@ -1178,7 +1203,7 @@ check("a provider that throws during acquisition never takes down the response",
   let acquired = 0;
   const health = withPatchedProvider(() => { acquired++; throw new Error("acquisition exploded"); }, () =>
     sourceHealthFor("shr", shrSealed, RESOLVE_SQL, "deterministic-murder",
-      { sourceId: "shr", requestedYears: [2022] }, enabledEnv));
+      { requestedYears: [2022] }, enabledEnv));
   assert.strictEqual(acquired, 1, "the gate passed, so the provider must have been reached");
   assert.strictEqual(health.state, "unknown", "an unobtainable database is not evidence about the data");
   assert.match(health.reason ?? "", /acquisition exploded/);
