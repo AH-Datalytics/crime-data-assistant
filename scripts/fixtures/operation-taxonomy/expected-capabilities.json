@@ -1,0 +1,555 @@
+{
+  "juvenile_offender_incidents": {
+    "family": "deterministic-nibrs-juvenile-offender-incidents",
+    "capability": "nibrs.juvenile_offender_incidents",
+    "artifact": "nibrs",
+    "tables": [
+      "summary_juvenile_offender_incidents"
+    ],
+    "prepOnly": []
+  },
+  "rollup_juvenile_arrests_state": {
+    "family": "deterministic-nibrs-rollup-juvenile-arrests-race",
+    "capability": "nibrs.rollup_state_summary_arrestee_demographics",
+    "artifact": "nibrs",
+    "tables": [
+      "rollup.state_summary_arrestee_demographics"
+    ],
+    "prepOnly": []
+  },
+  "rollup_juvenile_arrests_national": {
+    "family": "deterministic-nibrs-rollup-juvenile-arrests-race",
+    "capability": "nibrs.rollup_national_summary_arrestee_demographics",
+    "artifact": "nibrs",
+    "tables": [
+      "rollup.national_summary_arrestee_demographics"
+    ],
+    "prepOnly": []
+  },
+  "rollup_national_arrests": {
+    "family": "deterministic-nibrs-rollup-national-arrests",
+    "capability": "nibrs.rollup_national_summary_arrestee_demographics",
+    "artifact": "nibrs",
+    "tables": [
+      "rollup.national_summary_arrestee_demographics"
+    ],
+    "prepOnly": []
+  },
+  "continuous_reporters_victim": {
+    "family": "deterministic-nibrs-continuous-reporters",
+    "capability": "nibrs.consistent_reporters+victim_demographics",
+    "artifact": "nibrs",
+    "tables": [
+      "nibrs_consistent_reporters",
+      "summary_victim_demographics"
+    ],
+    "prepOnly": []
+  },
+  "continuous_reporters_offender": {
+    "family": "deterministic-nibrs-continuous-reporters",
+    "capability": "nibrs.consistent_reporters+offender_demographics",
+    "artifact": "nibrs",
+    "tables": [
+      "nibrs_consistent_reporters",
+      "summary_offender_demographics"
+    ],
+    "prepOnly": []
+  },
+  "continuous_reporters_arrestee": {
+    "family": "deterministic-nibrs-continuous-reporters",
+    "capability": "nibrs.consistent_reporters+arrestee_demographics",
+    "artifact": "nibrs",
+    "tables": [
+      "nibrs_consistent_reporters",
+      "summary_arrestee_demographics"
+    ],
+    "prepOnly": []
+  },
+  "continuous_reporters_victim_city": {
+    "family": "deterministic-nibrs-continuous-reporters",
+    "capability": "nibrs.consistent_reporters+victim_city_monthly",
+    "artifact": "nibrs",
+    "tables": [
+      "nibrs_consistent_reporters",
+      "summary_victim_city_monthly"
+    ],
+    "prepOnly": []
+  },
+  "countywide_victim": {
+    "family": "deterministic-nibrs-countywide-demographic",
+    "capability": "nibrs.agencies+xwalk+victim_demographics",
+    "artifact": "nibrs",
+    "tables": [
+      "agencies",
+      "agency_county_crosswalk",
+      "summary_victim_demographics"
+    ],
+    "prepOnly": []
+  },
+  "countywide_offender": {
+    "family": "deterministic-nibrs-countywide-demographic",
+    "capability": "nibrs.agencies+xwalk+offender_demographics",
+    "artifact": "nibrs",
+    "tables": [
+      "agencies",
+      "agency_county_crosswalk",
+      "summary_offender_demographics"
+    ],
+    "prepOnly": []
+  },
+  "countywide_arrestee": {
+    "family": "deterministic-nibrs-countywide-demographic",
+    "capability": "nibrs.agencies+xwalk+arrestee_demographics",
+    "artifact": "nibrs",
+    "tables": [
+      "agencies",
+      "agency_county_crosswalk",
+      "summary_arrestee_demographics"
+    ],
+    "prepOnly": []
+  },
+  "countywide_victim_city": {
+    "family": "deterministic-nibrs-countywide-demographic",
+    "capability": "nibrs.agencies+xwalk+victim_city_monthly",
+    "artifact": "nibrs",
+    "tables": [
+      "agencies",
+      "agency_county_crosswalk",
+      "summary_victim_city_monthly"
+    ],
+    "prepOnly": []
+  },
+  "comparable_agency_clearance": {
+    "family": "deterministic-nibrs-comparable-agency-clearance",
+    "capability": "nibrs.agencies+clearance_type",
+    "artifact": "nibrs",
+    "tables": [
+      "agencies",
+      "summary_clearance_type"
+    ],
+    "prepOnly": []
+  },
+  "clearance_method": {
+    "family": "deterministic-nibrs-clearance-method",
+    "capability": "nibrs.clearance_type",
+    "artifact": "nibrs",
+    "tables": [
+      "summary_clearance_type"
+    ],
+    "prepOnly": []
+  },
+  "clearance_type_breakdown": {
+    "family": "deterministic-nibrs-clearance-type-breakdown",
+    "capability": "nibrs.clearance_detail",
+    "artifact": "nibrs",
+    "tables": [
+      "summary_clearance_detail"
+    ],
+    "prepOnly": []
+  },
+  "local_demographic_count_victim": {
+    "family": "deterministic-nibrs-local-demographic-count",
+    "capability": "nibrs.agency_completeness+victim_demographics",
+    "artifact": "nibrs",
+    "tables": [
+      "nibrs_agency_completeness",
+      "summary_victim_demographics"
+    ],
+    "prepOnly": []
+  },
+  "local_demographic_count_offender": {
+    "family": "deterministic-nibrs-local-demographic-count",
+    "capability": "nibrs.agency_completeness+offender_demographics",
+    "artifact": "nibrs",
+    "tables": [
+      "nibrs_agency_completeness",
+      "summary_offender_demographics"
+    ],
+    "prepOnly": []
+  },
+  "local_demographic_count_arrestee": {
+    "family": "deterministic-nibrs-local-demographic-count",
+    "capability": "nibrs.agency_completeness+arrestee_demographics",
+    "artifact": "nibrs",
+    "tables": [
+      "nibrs_agency_completeness",
+      "summary_arrestee_demographics"
+    ],
+    "prepOnly": []
+  },
+  "local_demographic_share_victim": {
+    "family": "deterministic-nibrs-local-demographic-share",
+    "capability": "nibrs.agency_completeness+victim_demographics",
+    "artifact": "nibrs",
+    "tables": [
+      "nibrs_agency_completeness",
+      "summary_victim_demographics"
+    ],
+    "prepOnly": []
+  },
+  "structured_local_trend": {
+    "family": "deterministic-nibrs-structured-local-trend",
+    "capability": "nibrs.agencies+agency_completeness+city_monthly+victim_city_monthly",
+    "artifact": "nibrs",
+    "tables": [
+      "agencies",
+      "nibrs_agency_completeness",
+      "summary_city_monthly",
+      "summary_victim_city_monthly"
+    ],
+    "prepOnly": []
+  },
+  "structured_local_rate": {
+    "family": "deterministic-nibrs-structured-local-rate",
+    "capability": "nibrs.agencies+agency_completeness+city_monthly+victim_city_monthly",
+    "artifact": "nibrs",
+    "tables": [
+      "agencies",
+      "nibrs_agency_completeness",
+      "summary_city_monthly",
+      "summary_victim_city_monthly"
+    ],
+    "prepOnly": []
+  },
+  "structured_local_trend_person": {
+    "family": "deterministic-nibrs-structured-local-trend",
+    "capability": "nibrs.agencies+agency_completeness+city_monthly+victim_city_monthly",
+    "artifact": "nibrs",
+    "tables": [
+      "agencies",
+      "nibrs_agency_completeness",
+      "summary_city_monthly",
+      "summary_victim_city_monthly"
+    ],
+    "prepOnly": []
+  },
+  "local_city_offense_count": {
+    "family": "deterministic-nibrs-local-city-offense-count",
+    "capability": "nibrs.agencies+agency_completeness+city_monthly",
+    "artifact": "nibrs",
+    "tables": [
+      "agencies",
+      "nibrs_agency_completeness",
+      "summary_city_monthly"
+    ],
+    "prepOnly": [
+      "agencies"
+    ]
+  },
+  "local_city_offense_count_person": {
+    "family": "deterministic-nibrs-local-city-offense-count",
+    "capability": "nibrs.agency_completeness+victim_city_monthly",
+    "artifact": "nibrs",
+    "tables": [
+      "nibrs_agency_completeness",
+      "summary_victim_city_monthly"
+    ],
+    "prepOnly": []
+  },
+  "dv_assault_share": {
+    "family": "deterministic-nibrs-dv-assault-share",
+    "capability": "nibrs.victim_circumstance+victim_state_monthly",
+    "artifact": "nibrs",
+    "tables": [
+      "summary_victim_circumstance",
+      "summary_victim_state_monthly"
+    ],
+    "prepOnly": []
+  },
+  "current:metadata-year-coverage": {
+    "family": "metadata-year-coverage",
+    "capability": "crime_data.agency_monthly",
+    "artifact": "crime_data",
+    "tables": [
+      "agency_monthly"
+    ],
+    "prepOnly": []
+  },
+  "current:metadata-state-coverage": {
+    "family": "metadata-state-coverage",
+    "capability": "crime_data.agencies",
+    "artifact": "crime_data",
+    "tables": [
+      "agencies"
+    ],
+    "prepOnly": []
+  },
+  "current:metadata-agency-directory": {
+    "family": "metadata-agency-directory",
+    "capability": "crime_data.agencies",
+    "artifact": "crime_data",
+    "tables": [
+      "agencies"
+    ],
+    "prepOnly": []
+  },
+  "current:metadata-agency-directory-county": {
+    "family": "metadata-agency-directory-county",
+    "capability": "crime_data.xwalk",
+    "artifact": "crime_data",
+    "tables": [
+      "agency_county_crosswalk"
+    ],
+    "prepOnly": [
+      "agency_county_crosswalk"
+    ]
+  },
+  "historical:metadata-year-coverage": {
+    "family": "metadata-year-coverage",
+    "capability": "crime_data.hist_agency_crime+hist_state_national",
+    "artifact": "crime_data",
+    "tables": [
+      "historical_agency_crime",
+      "historical_state_national"
+    ],
+    "prepOnly": []
+  },
+  "historical:metadata-state-coverage": {
+    "family": "metadata-state-coverage",
+    "capability": "crime_data.hist_state_national",
+    "artifact": "crime_data",
+    "tables": [
+      "historical_state_national"
+    ],
+    "prepOnly": []
+  },
+  "historical:metadata-agency-directory": {
+    "family": "metadata-agency-directory",
+    "capability": "crime_data.hist_agency",
+    "artifact": "crime_data",
+    "tables": [
+      "historical_agency"
+    ],
+    "prepOnly": []
+  },
+  "historical:metadata-agency-directory-county": {
+    "family": "metadata-agency-directory-county",
+    "capability": "crime_data.xwalk",
+    "artifact": "crime_data",
+    "tables": [
+      "agency_county_crosswalk"
+    ],
+    "prepOnly": [
+      "agency_county_crosswalk"
+    ]
+  },
+  "nibrs:metadata-year-coverage": {
+    "family": "metadata-year-coverage",
+    "capability": "nibrs.agencies",
+    "artifact": "nibrs",
+    "tables": [
+      "agencies"
+    ],
+    "prepOnly": []
+  },
+  "nibrs:metadata-state-coverage": {
+    "family": "metadata-state-coverage",
+    "capability": "nibrs.agencies",
+    "artifact": "nibrs",
+    "tables": [
+      "agencies"
+    ],
+    "prepOnly": []
+  },
+  "nibrs:metadata-agency-directory": {
+    "family": "metadata-agency-directory",
+    "capability": "nibrs.agencies",
+    "artifact": "nibrs",
+    "tables": [
+      "agencies"
+    ],
+    "prepOnly": []
+  },
+  "nibrs:metadata-agency-directory-county": {
+    "family": "metadata-agency-directory-county",
+    "capability": "nibrs.agencies+xwalk",
+    "artifact": "nibrs",
+    "tables": [
+      "agencies",
+      "agency_county_crosswalk"
+    ],
+    "prepOnly": []
+  },
+  "shr:metadata-year-coverage": {
+    "family": "metadata-year-coverage",
+    "capability": "shr.incidents",
+    "artifact": "shr",
+    "tables": [
+      "incidents"
+    ],
+    "prepOnly": []
+  },
+  "shr:metadata-state-coverage": {
+    "family": "metadata-state-coverage",
+    "capability": "shr.incidents",
+    "artifact": "shr",
+    "tables": [
+      "incidents"
+    ],
+    "prepOnly": []
+  },
+  "shr:metadata-agency-directory": {
+    "family": "metadata-agency-directory",
+    "capability": "shr.incidents",
+    "artifact": "shr",
+    "tables": [
+      "incidents"
+    ],
+    "prepOnly": []
+  },
+  "shr:metadata-agency-directory-county": {
+    "family": "metadata-agency-directory-county",
+    "capability": "shr.xwalk",
+    "artifact": "shr",
+    "tables": [
+      "agency_county_crosswalk"
+    ],
+    "prepOnly": [
+      "agency_county_crosswalk"
+    ]
+  },
+  "hate_crime:metadata-year-coverage": {
+    "family": "metadata-year-coverage",
+    "capability": "hate_crime.hc_participation",
+    "artifact": "hate_crime",
+    "tables": [
+      "hate_crime_participation"
+    ],
+    "prepOnly": []
+  },
+  "hate_crime:metadata-state-coverage": {
+    "family": "metadata-state-coverage",
+    "capability": "hate_crime.hc_participation",
+    "artifact": "hate_crime",
+    "tables": [
+      "hate_crime_participation"
+    ],
+    "prepOnly": []
+  },
+  "hate_crime:metadata-agency-directory": {
+    "family": "metadata-agency-directory",
+    "capability": "hate_crime.hc_incidents",
+    "artifact": "hate_crime",
+    "tables": [
+      "hate_crime_incidents"
+    ],
+    "prepOnly": []
+  },
+  "hate_crime:metadata-agency-directory-county": {
+    "family": "metadata-agency-directory-county",
+    "capability": "hate_crime.unavailable_no_sql",
+    "artifact": "hate_crime",
+    "tables": [],
+    "prepOnly": []
+  },
+  "current:indexed_state_followup": {
+    "family": "deterministic-current-indexed-state-followup",
+    "capability": "crime_data.agency_monthly+agency_population+sample_agencies",
+    "artifact": "crime_data",
+    "tables": [
+      "agency_monthly",
+      "agency_population",
+      "sample_agencies"
+    ],
+    "prepOnly": []
+  },
+  "current:multi_city_trend": {
+    "family": "deterministic-current-multi-city-trend",
+    "capability": "crime_data.agency_monthly+agency_population",
+    "artifact": "crime_data",
+    "tables": [
+      "agency_monthly",
+      "agency_population"
+    ],
+    "prepOnly": []
+  },
+  "historical:multi_city_trend": {
+    "family": "deterministic-historical-multi-city-trend",
+    "capability": "crime_data.hist_agency+hist_agency_crime+hist_agency_population",
+    "artifact": "crime_data",
+    "tables": [
+      "historical_agency",
+      "historical_agency_crime",
+      "historical_agency_population"
+    ],
+    "prepOnly": []
+  },
+  "historical:agency_scorecard": {
+    "family": "agency-scorecard",
+    "capability": "crime_data.agencies+agency_monthly+hist_agency+hist_agency_clearance+hist_agency_crime+hist_agency_population",
+    "artifact": "crime_data",
+    "tables": [
+      "agencies",
+      "agency_monthly",
+      "historical_agency",
+      "historical_agency_clearance",
+      "historical_agency_crime",
+      "historical_agency_population"
+    ],
+    "prepOnly": [
+      "agencies",
+      "agency_monthly"
+    ]
+  },
+  "historical:state_scorecard": {
+    "family": "state-scorecard",
+    "capability": "crime_data.hist_state_national",
+    "artifact": "crime_data",
+    "tables": [
+      "historical_state_national"
+    ],
+    "prepOnly": []
+  },
+  "historical:national_scorecard": {
+    "family": "national-scorecard",
+    "capability": "crime_data.hist_state_national",
+    "artifact": "crime_data",
+    "tables": [
+      "historical_state_national"
+    ],
+    "prepOnly": []
+  },
+  "historical:local_recent_change": {
+    "family": "deterministic-historical-local-recent-change",
+    "capability": "crime_data.hist_agency+hist_agency_crime",
+    "artifact": "crime_data",
+    "tables": [
+      "historical_agency",
+      "historical_agency_crime"
+    ],
+    "prepOnly": []
+  },
+  "historical:city_change_ranking": {
+    "family": "deterministic-historical-city-change-ranking",
+    "capability": "crime_data.hist_agency+hist_agency_crime",
+    "artifact": "crime_data",
+    "tables": [
+      "historical_agency",
+      "historical_agency_crime"
+    ],
+    "prepOnly": []
+  },
+  "route:deterministic_shooting": {
+    "family": "deterministic-shooting",
+    "capability": "shr.incidents",
+    "artifact": "shr",
+    "tables": [
+      "incidents"
+    ],
+    "prepOnly": [
+      "incidents"
+    ]
+  },
+  "route:deterministic_place_lookup": {
+    "family": "deterministic-place-lookup",
+    "capability": "crime_data.hist_agency+hist_agency_clearance+hist_agency_crime+hist_staffing",
+    "artifact": "crime_data",
+    "tables": [
+      "historical_agency",
+      "historical_agency_clearance",
+      "historical_agency_crime",
+      "historical_staffing"
+    ],
+    "prepOnly": []
+  }
+}

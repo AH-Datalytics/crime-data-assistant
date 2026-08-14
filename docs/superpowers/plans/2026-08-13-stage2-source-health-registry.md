@@ -12,7 +12,44 @@
 
 **Review:** `docs/superpowers/reviews/2026-08-13-stage2a-family-capability-enumeration.md`
 
-## Plan correction, 2026-08-13 — read before Task 1
+## Plan correction #2, 2026-08-13 — the inventory below is SUPERSEDED
+
+**Read `docs/superpowers/reviews/2026-08-13-stage2a-operation-taxonomy.md` first.**
+
+The `CAPABILITY_INVENTORY` and `CAPABILITY_BY_SOURCE_AND_FAMILY` written into Task 1 below —
+**20 capabilities**, and the **41-capability** draft that briefly replaced them — are both
+wrong and must not be implemented as written. Both were hand-derived from emitted SQL.
+
+The taxonomy is now derived by **executing every builder against a real database handle and
+recording what it touched** (`scripts/test-operation-taxonomy.ts`, registered in `npm test`).
+Authoritative results:
+
+| Measure | Value |
+|---|---|
+| Sealed families today / after Task 1A | 26 / 29 |
+| Importable-builder cases | 53 |
+| Route-handler cases | 2 |
+| Combined eligible operation cases | **55** |
+| Operation-backed capabilities | **39** |
+| Registry-sweep only (`current.national`) | **1** |
+| **Register A total** | **40** |
+
+**Task 1 must build the inventory from
+`scripts/fixtures/operation-taxonomy/expected-capabilities.json`**, which carries every case's
+artifact, preparation-time dependencies, emitted-SQL dependencies, required columns and
+preparation-only set. Do not retype the table lists from the code listing below.
+
+What observation changed that hand-derivation missed:
+
+- **Preparation-time dependencies exist.** Five capabilities read tables that never appear in
+  their SQL — `historical:agency_scorecard` reads **live RTCI** `agencies` and `agency_monthly`.
+- **`nibrs:rollup` is reachable** (arrestee-demographics tables), not unreachable.
+- **`current.national` is a registry-sweep capability**, not a deletion — see new Task 11.
+- **`hate_crime` county metadata is conditionally unavailable**, not unhealthy: the crosswalk
+  is absent in production, so the builder takes the SQL-less exit and seals nothing.
+- **A county/state parser defect** exists and is NOT fixed in Stage 2A (review §4).
+
+## Plan correction #1, 2026-08-13 — read before Task 1
 
 A pre-implementation enumeration found that this plan's original Task 1 Step 1 command
 undercounts the real plan families by 4.5× (it reports 4; there are **18 across 12 seal
@@ -575,6 +612,11 @@ const SHR = managedProvider(getShrDb);
 const HC = managedProvider(getHateCrimeDb);
 
 /**
+ * SUPERSEDED -- retained only to show the SHAPE of an entry. The real 40 entries come from
+ * scripts/fixtures/operation-taxonomy/expected-capabilities.json, derived by observation.
+ * Do NOT implement the table lists below: they omit preparation-time dependencies entirely,
+ * and five capabilities have them.
+ *
  * Capabilities are keyed by DISTINCT DEPENDENCY SET, not by a convenient name.
  *
  * Declaring a table the answer never reads produces a confident verdict about the wrong
@@ -2404,6 +2446,93 @@ Run: `npm test`
 git add lib/embed-origin.ts app/api/embed/route.ts scripts/migrate-shared-charts-proof.js         lib/source-health.ts scripts/test-embed-origin.ts scripts/test-shadow-equivalence.ts
 git commit -m "Carry the originating plan family in OriginVerdict and apply source health on embed reads"
 ```
+
+---
+
+### Task 11: Digest-time registry sweep
+
+**Files:** Create `lib/source-health-sweep.ts`, `scripts/test-source-health-sweep.ts`; modify `package.json`
+
+`sourceHealthFor` is **request-driven**. `current.national` has no eligible deterministic
+operation, so nothing ever calls it and registry membership alone evaluates nothing. Frozen
+spec §8:241 requires Current Trends to "independently validate national and sample-agency
+tables and their generation alignment", so Stage 2A must actually run those probes.
+
+- [ ] **Step 1: Sweep contract**
+
+```typescript
+export type SweepEntry = { capability: string; health: SourceHealth; trace: HealthTrace };
+export function sweepRegistry(env?: NodeJS.ProcessEnv): SweepEntry[];
+```
+
+Requirements, each asserted:
+
+- Runs **outside** request paths, and only when source-health observation is enabled.
+- Enumerates **every** Register A capability, including those with no eligible operation.
+- Evaluates `current.national` and `current.sample_agencies` **independently** — separate
+  providers, separate verdicts, no shared short-circuit.
+- Emits a trace for **every** entry. An absent artifact or receipt becomes an explicit
+  `unknown` boundary, never an omission from the output.
+- Bounded, read-only, and failure-isolated: one capability throwing cannot abort the sweep or
+  the digest (invariant 15).
+
+- [ ] **Step 2: Tests**
+
+```typescript
+check("every registered capability is visited exactly once", () => {
+  const entries = sweepRegistry(enabledEnv);
+  const seen = entries.map((e) => e.capability).sort();
+  assert.deepStrictEqual(seen, [...CAPABILITY_IDS].sort());
+  assert.strictEqual(new Set(seen).size, seen.length, "a capability was visited twice");
+});
+
+check("both Current capabilities are reported independently", () => {
+  const entries = sweepRegistry(enabledEnv);
+  assert.ok(entries.find((e) => e.capability === "current.national"));
+  assert.ok(entries.find((e) => e.capability === "current.sample_agency_series"));
+});
+
+check("current.national carries the generation-alignment rule", () => {
+  // national_monthly MAX(year*100+month) must equal agency_monthly's; a lagging national
+  // series means one build ran without the other.
+});
+
+check("a throwing capability does not abort the sweep", () => {
+  // View over a dropped table: PRAGMA succeeds, COUNT(*) throws. Every other entry must
+  // still be present, and the thrower's boundary must be "threw".
+});
+
+check("with observation off the sweep performs no health work", () => {
+  assert.deepStrictEqual(sweepRegistry({}), []);
+});
+```
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add lib/source-health-sweep.ts scripts/test-source-health-sweep.ts package.json
+git commit -m "Sweep every registered capability at digest time, including the unoperated ones"
+```
+
+---
+
+## Performance workstream
+
+An explicit workstream, not an end-of-stage adjustment.
+
+1. **Pre-implementation baseline** captured before any Stage 2A code lands.
+2. **Same-build off-versus-shadow comparison** — one build, mode the only variable.
+3. **Cold and warm cases across all five sources.**
+4. **Source-health evaluation and cache instrumentation** — evaluations, hits, misses,
+   evictions, per-capability timings.
+5. **Zero health work in `off`** — asserted by instrumentation counters reading **zero**, not
+   inferred from absence of symptoms.
+6. **Identical response bytes and identical model-call sequences** between modes.
+7. **p50/p95 thresholds** against the spec §11 budget (<50 ms median, 100 ms p95 added
+   latency). **p99 is reported but observational** — it is not a frozen threshold unless a p99
+   budget is separately approved.
+8. **Repeat after Stage 2B** hard isolation and receipts land.
+9. **Production shadow observation window** before any activation.
 
 ---
 

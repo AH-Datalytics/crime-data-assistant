@@ -1,0 +1,10 @@
+CREATE TABLE "state_summary_arrestee_demographics" (state TEXT, "year" INT, "ucr_arrest_offense" TEXT, "weapon_category" TEXT, "race" TEXT, "sex" TEXT, "age_group" TEXT, "ethnicity" TEXT, "arrestee_count" INTEGER NOT NULL);
+CREATE INDEX "idx_state_summary_arrestee_demographics_route" ON "state_summary_arrestee_demographics" ("state", "ucr_arrest_offense", "year");
+CREATE INDEX "idx_state_summary_arrestee_demographics_time" ON "state_summary_arrestee_demographics" ("state", "year");
+CREATE INDEX "idx_state_summary_arrestee_demographics_age_group" ON "state_summary_arrestee_demographics" ("state", "age_group", "year", "ucr_arrest_offense");
+CREATE INDEX "idx_state_summary_arrestee_demographics_weapon_category" ON "state_summary_arrestee_demographics" ("state", "weapon_category", "year", "ucr_arrest_offense");
+CREATE TABLE "national_summary_arrestee_demographics" (state TEXT, "year" INT, "ucr_arrest_offense" TEXT, "weapon_category" TEXT, "race" TEXT, "sex" TEXT, "age_group" TEXT, "ethnicity" TEXT, "arrestee_count" INTEGER NOT NULL);
+CREATE INDEX "idx_national_summary_arrestee_demographics_route" ON "national_summary_arrestee_demographics" ("ucr_arrest_offense", "year");
+CREATE INDEX "idx_national_summary_arrestee_demographics_time" ON "national_summary_arrestee_demographics" ("year");
+CREATE INDEX "idx_national_summary_arrestee_demographics_age_group" ON "national_summary_arrestee_demographics" ("age_group", "year", "ucr_arrest_offense");
+CREATE INDEX "idx_national_summary_arrestee_demographics_weapon_category" ON "national_summary_arrestee_demographics" ("weapon_category", "year", "ucr_arrest_offense");

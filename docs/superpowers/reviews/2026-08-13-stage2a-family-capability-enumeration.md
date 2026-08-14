@@ -1,5 +1,16 @@
 # Stage 2A — plan family enumeration and capability reachability
 
+> **SUPERSEDED 2026-08-13 by `2026-08-13-stage2a-operation-taxonomy.md`.**
+>
+> This document's enumeration is **wrong and must not be used**. It reports 18 sealed families
+> and 20 capabilities. The repository seals **26** families across 12 sites; the derived
+> registry is **40** capabilities (39 operation-backed + `current.national` sweep-only).
+>
+> Cause: the NIBRS variable seal was resolved by grepping one module, but `planNibrsQuery`
+> composes builders from three, and two of them select their guardrail through a ternary.
+> Its `current:national` "unreachable" and `nibrs:rollup` "unreachable" classifications are
+> both withdrawn. Retained only as the record of how the error was found.
+
 **Date:** 2026-08-13
 **Branch:** `feature/verified-answer-only` @ `3a2714c`
 **Status:** Pre-implementation review. Requested before Task 1 code. No product code changed.
