@@ -14,6 +14,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { capabilityFlagKey } from "../lib/capability-flag-key";
+import { policyIsComplete } from "../lib/capability-policy";
 
 const DATA_DIR = path.join(process.cwd(), "scripts", "fixtures", "operation-taxonomy");
 const REGISTRY_FILE = path.join(DATA_DIR, "capability-registry.json");
@@ -60,11 +61,19 @@ const PREPARATION_MIN_ROWS = 0;
 
 const literal = (value: unknown) => JSON.stringify(value);
 
-function renderSpec(id: string, artifact: string, requiredColumns: Record<string, string[]>,
-  prepDependencies: string[], flagKey: string, policy: Record<string, unknown> | null): string {
-  const tables = Object.entries(requiredColumns)
-    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
-    .map(([name, cols]) => `      { name: ${literal(name)}, requiredColumns: ${literal([...cols].sort())}, minRows: ${EMITTED_MIN_ROWS} },`)
+function renderSpec(id: string, artifact: string, emittedDependencies: string[],
+  requiredColumns: Record<string, string[]>, prepDependencies: string[], flagKey: string,
+  policy: Record<string, unknown> | null): string {
+  /**
+   * Table membership comes from emittedDependencies, NOT from the keys of requiredColumns.
+   *
+   * An operation can depend on a table without naming any of its columns -- `SELECT COUNT(*) FROM t`
+   * reads the table and no column. Keying off requiredColumns dropped such a table out of the
+   * health inventory entirely, so nothing would ever check it. Current fixture data has no such
+   * case, which is exactly why the defect was invisible.
+   */
+  const tables = [...emittedDependencies].sort()
+    .map((name) => `      { name: ${literal(name)}, requiredColumns: ${literal([...(requiredColumns[name] ?? [])].sort())}, minRows: ${EMITTED_MIN_ROWS} },`)
     .join("\n");
   const prep = [...prepDependencies].sort()
     .map((name) => `      { name: ${literal(name)}, requiredColumns: [], minRows: ${PREPARATION_MIN_ROWS} },`)
@@ -85,23 +94,32 @@ function renderSpec(id: string, artifact: string, requiredColumns: Record<string
   ].join("\n");
 }
 
-const POLICY_FIELDS = ["coverage", "integrity", "availability", "receiptOwner"] as const;
-const isComplete = (policy: Record<string, unknown> | null) =>
-  policy !== null && POLICY_FIELDS.every((f) => policy[f] !== null && policy[f] !== undefined);
+/**
+ * Eligibility uses the SHARED validator, never a local rule.
+ *
+ * A previous version of this generator marked a policy complete whenever its four fields were
+ * non-null, ignoring the shape validation the taxonomy harness had already established -- so a
+ * policy with an empty coverage table, an empty integrity array, or an empty receipt owner would
+ * have generated `authorizationEligible: true`. The registry's own pin is cross-checked against
+ * this in scripts/test-source-health-inventory.ts.
+ */
+const isComplete = policyIsComplete;
 
-export function renderInventory(): string {
-  const registry = JSON.parse(fs.readFileSync(REGISTRY_FILE, "utf8")) as Record<string, RegistryEntry>;
+export function renderInventory(registryOverride?: Record<string, RegistryEntry>): string {
+  const registry = registryOverride
+    ?? (JSON.parse(fs.readFileSync(REGISTRY_FILE, "utf8")) as Record<string, RegistryEntry>);
 
   const rows: string[] = [];
   for (const id of Object.keys(registry).sort()) {
     const entry = registry[id];
     // The flag key is read from the registry PIN, and separately asserted to equal
     // capabilityFlagKey(artifact, id) so the pin and the derivation cannot diverge unnoticed.
-    rows.push(renderSpec(id, entry.artifact, entry.requiredColumns, entry.prepDependencies, entry.flagKey, entry.policy));
+    rows.push(renderSpec(id, entry.artifact, entry.emittedDependencies, entry.requiredColumns,
+      entry.prepDependencies, entry.flagKey, entry.policy));
   }
   for (const sweep of SWEEP_ONLY_SPECS) {
-    rows.push(renderSpec(sweep.capabilityId, sweep.artifact, sweep.tables, sweep.prepDependencies,
-      capabilityFlagKey(sweep.artifact, sweep.capabilityId), null));
+    rows.push(renderSpec(sweep.capabilityId, sweep.artifact, Object.keys(sweep.tables), sweep.tables,
+      sweep.prepDependencies, capabilityFlagKey(sweep.artifact, sweep.capabilityId), null));
   }
 
   const sweepIds = SWEEP_ONLY_SPECS.map((s) => s.capabilityId);

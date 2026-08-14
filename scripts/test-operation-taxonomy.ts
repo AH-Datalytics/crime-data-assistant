@@ -64,6 +64,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import Database from "better-sqlite3";
+import { POLICY_FIELDS, policyIsComplete, policyShapeErrors, type UnvalidatedPolicy } from "../lib/capability-policy";
 
 const DATA_DIR = path.join(process.cwd(), "scripts", "fixtures", "operation-taxonomy");
 const CASES_FILE = path.join(DATA_DIR, "operation-cases.json");
@@ -635,9 +636,9 @@ function envKeyForCapability(artifact: string, capabilityId: string): string {
 }
 
 // ---------------------------------------------------------------- authored policy
-/** Every field a capability needs before it may authorize anything. */
-const POLICY_FIELDS = ["coverage", "integrity", "availability", "receiptOwner"] as const;
-type CapabilityPolicy = Record<string, unknown>;
+// The validator lives in lib/capability-policy.ts, imported here rather than duplicated. Writing it
+// twice is how the shallow "every field is non-null" rule came back after being corrected.
+type CapabilityPolicy = UnvalidatedPolicy;
 function readPolicy(): Record<string, CapabilityPolicy> {
   if (!fs.existsSync(POLICY_FILE)) return {};
   const raw = JSON.parse(fs.readFileSync(POLICY_FILE, "utf8")) as Record<string, CapabilityPolicy>;
@@ -653,62 +654,6 @@ function readPolicy(): Record<string, CapabilityPolicy> {
  * `availability` in particular is an enum the evaluator branches on, so a descriptive sentence
  * there is a value no consumer can act on.
  */
-const nonEmptyString = (value: unknown): boolean => typeof value === "string" && value.trim() !== "";
-/**
- * Shape problems in the fields that ARE authored. `null` means "not yet authored" and is not a
- * problem; a wrong shape is, whether or not the rest of the entry is finished.
- */
-function policyShapeErrors(policy: CapabilityPolicy): string[] {
-  const bad: string[] = [];
-  const { coverage, integrity, availability, availabilityCondition, receiptOwner, evidence } = policy as Record<string, unknown>;
-
-  if (coverage !== null && coverage !== undefined) {
-    const c = coverage as { table?: unknown; yearColumn?: unknown };
-    if (typeof c !== "object" || Array.isArray(c) || !nonEmptyString(c.table) || !nonEmptyString(c.yearColumn)) {
-      bad.push("coverage must be { table, yearColumn }");
-    }
-  }
-  if (integrity !== null && integrity !== undefined) {
-    if (!Array.isArray(integrity) || integrity.length === 0 || !integrity.every(nonEmptyString)) {
-      bad.push("integrity must be a non-empty array of rules; an empty array states no rule");
-    }
-  }
-  if (availability !== null && availability !== undefined) {
-    /**
-     * A DISCRIMINATED value, not an enum plus a loose sibling field. A flat
-     * `availability: "conditional"` alongside an optional `availabilityCondition` can represent a
-     * conditional with no condition, so the invariant lives only in the validator -- and the type
-     * that was supposed to describe it omitted the sibling field entirely. This shape cannot be
-     * built wrong: `conditional` carries its condition or it is not a `conditional`.
-     */
-    const a = availability as { kind?: unknown; condition?: unknown };
-    if (typeof a !== "object" || Array.isArray(a)) {
-      bad.push(`availability must be { kind: "always" } or { kind: "conditional", condition }, not ${JSON.stringify(availability)}`);
-    } else if (a.kind === "conditional") {
-      if (!nonEmptyString(a.condition)) bad.push("a conditional availability must state its condition");
-    } else if (a.kind !== "always") {
-      bad.push(`availability.kind must be "always" or "conditional", not ${JSON.stringify(a.kind)}`);
-    } else if ("condition" in a) {
-      bad.push("an unconditional availability must not carry a condition");
-    }
-  }
-  if (availabilityCondition !== undefined) {
-    bad.push("availabilityCondition is not a field; the condition belongs inside availability");
-  }
-  if (receiptOwner !== null && receiptOwner !== undefined && !nonEmptyString(receiptOwner)) {
-    bad.push("receiptOwner must be a non-empty owner");
-  }
-  if (!nonEmptyString(evidence) || String(evidence).trim().length <= 20) {
-    bad.push("evidence must cite what the authored values rest on");
-  }
-  return bad;
-}
-function policyIsComplete(policy: CapabilityPolicy | null): boolean {
-  if (!policy) return false;
-  if (POLICY_FIELDS.some((f) => policy[f] === null || policy[f] === undefined)) return false;
-  return policyShapeErrors(policy).length === 0;
-}
-
 /** The artifact file a case's SQL runs against. */
 function artifactFile(artifact: string, override?: string): string {
   return override ?? (artifact === "nibrs" ? PATHS.nibrs : artifact === "shr" ? PATHS.shr

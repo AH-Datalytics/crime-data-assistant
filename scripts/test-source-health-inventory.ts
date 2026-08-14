@@ -20,6 +20,7 @@ import {
 } from "../lib/source-health-inventory";
 import { renderInventory, INVENTORY_FILE } from "./generate-source-health-inventory";
 import { capabilityFlagKey } from "../lib/capability-flag-key";
+import { policyIsComplete, type UnvalidatedPolicy } from "../lib/capability-policy";
 
 const DATA_DIR = path.join(process.cwd(), "scripts", "fixtures", "operation-taxonomy");
 const REGISTRY_FILE = path.join(DATA_DIR, "capability-registry.json");
@@ -55,18 +56,61 @@ check("the inventory is exactly the derived registry plus the sweep-only capabil
   }
 });
 
-check("required columns and preparation tables match the registry exactly", () => {
+check("table membership equals emittedDependencies exactly", () => {
+  /**
+   * Compared against emittedDependencies, not against the keys of requiredColumns.
+   *
+   * `SELECT COUNT(*) FROM t` depends on a table while naming no column of it. Building membership
+   * from requiredColumns dropped such a table out of the inventory, and comparing only
+   * required-column MAPS could not see it, because both sides were derived from the same keys.
+   * Current fixture data has zero mismatches, so nothing here failed while the gap was open.
+   */
   for (const spec of CAPABILITY_INVENTORY) {
     const entry = registry[spec.capabilityId];
     if (!entry) continue;                       // the sweep-only capability has no operation row
+    assert.deepStrictEqual(spec.tables.map((t) => t.name).sort(), [...entry.emittedDependencies].sort(),
+      `${spec.capabilityId} table membership drifted from emittedDependencies`);
+  }
+});
+
+check("required columns and preparation tables match the registry exactly", () => {
+  for (const spec of CAPABILITY_INVENTORY) {
+    const entry = registry[spec.capabilityId];
+    if (!entry) continue;
+    // Tables with no named column carry an empty list rather than being absent.
+    const expected = Object.fromEntries(entry.emittedDependencies.map((t) => [t, [...(entry.requiredColumns[t] ?? [])].sort()]));
     assert.deepStrictEqual(
       Object.fromEntries(spec.tables.map((t) => [t.name, [...t.requiredColumns].sort()])),
-      entry.requiredColumns,
+      expected,
       `${spec.capabilityId} required columns drifted`,
     );
     assert.deepStrictEqual(spec.preparationTables.map((t) => t.name).sort(), [...entry.prepDependencies].sort(),
       `${spec.capabilityId} preparation tables drifted`);
   }
+});
+
+check("a table emitted without a named column survives generation", () => {
+  /**
+   * The property the fixture cannot exercise, driven through the real generator with a synthetic
+   * registry. Without this, the emittedDependencies fix is untested: every assertion above passes
+   * on data that has no such table.
+   */
+  const synthetic = {
+    "shr::t_alpha+t_beta::t_alpha(x)": {
+      artifact: "shr",
+      prepDependencies: [],
+      emittedDependencies: ["t_alpha", "t_beta"],
+      requiredColumns: { t_alpha: ["x"] },      // t_beta is read by COUNT(*), naming no column
+      flagKey: capabilityFlagKey("shr", "shr::t_alpha+t_beta::t_alpha(x)"),
+      policy: null,
+      authorizationEligible: false,
+    },
+  };
+  const rendered = renderInventory(synthetic as never);
+  assert.ok(rendered.includes(`{ name: "t_beta", requiredColumns: [], minRows: 1 }`),
+    "a table with no named column was dropped from the generated inventory");
+  assert.ok(rendered.includes(`{ name: "t_alpha", requiredColumns: ["x"], minRows: 1 }`),
+    "the column-bearing table should be unaffected");
 });
 
 check("an unavailable operation seals no capability", () => {
@@ -87,13 +131,76 @@ check("current.national is registered although no operation reaches it", () => {
   for (const id of SWEEP_ONLY) assert.ok(specFor(id), `${id} is missing from the inventory`);
 });
 
-check("no capability authorizes anything until its policy is authored", () => {
+check("no capability authorizes anything until its policy is authored AND well formed", () => {
+  /**
+   * Judged by the SHARED validator, not by a local "every field is non-null" rule.
+   *
+   * Repeating the shallow rule here is worse than omitting the check: it confirmed the generator's
+   * own error instead of detecting it, because both sides applied the same wrong test. A policy with
+   * an empty coverage table, an empty integrity array, or an empty receipt owner is type-valid,
+   * non-null, and must NOT authorize.
+   */
   for (const spec of CAPABILITY_INVENTORY) {
-    const complete = spec.policy !== null &&
-      (["coverage", "integrity", "availability", "receiptOwner"] as const).every((f) => spec.policy![f] !== null);
-    assert.strictEqual(spec.authorizationEligible, complete, `${spec.capabilityId} misstates its eligibility`);
+    assert.strictEqual(spec.authorizationEligible, policyIsComplete(spec.policy as UnvalidatedPolicy | null),
+      `${spec.capabilityId} misstates its eligibility`);
     const entry = registry[spec.capabilityId];
-    if (entry) assert.deepStrictEqual(spec.policy, entry.policy, `${spec.capabilityId} policy drifted from the registry`);
+    if (!entry) continue;
+    assert.deepStrictEqual(spec.policy, entry.policy, `${spec.capabilityId} policy drifted from the registry`);
+    // Cross-check the registry's own pin against the same validator, so the two cannot disagree.
+    assert.strictEqual(entry.authorizationEligible, policyIsComplete(entry.policy),
+      `${spec.capabilityId}: the registry's eligibility pin disagrees with the shared validator`);
+    assert.strictEqual(spec.authorizationEligible, entry.authorizationEligible,
+      `${spec.capabilityId}: inventory eligibility drifted from the registry pin`);
+  }
+});
+
+check("the GENERATOR refuses eligibility for a non-null but malformed policy", () => {
+  /**
+   * Driven through renderInventory, because the assertions over real data cannot tell the shallow
+   * rule from the shared validator: every authored policy currently has null fields, so both rules
+   * answer false. This is the only test that fails if the generator goes back to "all four fields
+   * are non-null" -- which is the form it shipped in and the form the harness had already corrected.
+   */
+  const id = "shr::t_gamma::t_gamma(x)";
+  const malformed = {
+    coverage: { table: "", yearColumn: "year" },       // empty table name
+    integrity: [],                                     // no rule is not a rule
+    availability: { kind: "always" },
+    receiptOwner: "",                                  // empty owner
+    evidence: "type-valid and entirely non-null, yet it states nothing at all",
+  };
+  const rendered = renderInventory({
+    [id]: {
+      artifact: "shr", prepDependencies: [], emittedDependencies: ["t_gamma"],
+      requiredColumns: { t_gamma: ["x"] }, flagKey: capabilityFlagKey("shr", id),
+      policy: malformed, authorizationEligible: false,
+    },
+  } as never);
+  assert.ok(!/authorizationEligible: true/.test(rendered),
+    "the generator granted authority to a policy whose fields are non-null but state nothing");
+});
+
+check("a non-null but malformed policy authorizes nothing", () => {
+  // Driven through the real validator, because "non-null" was the bug. Each of these is type-valid.
+  const base = {
+    coverage: { table: "incidents", yearColumn: "year" },
+    integrity: ["generation alignment: MAX(year) of a = MAX(year) of b"],
+    availability: { kind: "always" },
+    receiptOwner: "scripts/import-shr.py",
+    evidence: "cited from the importer that writes the table and the spec section requiring it",
+  };
+  assert.strictEqual(policyIsComplete(base), true, "a well-formed policy must be eligible");
+  for (const malformed of [
+    { ...base, coverage: { table: "", yearColumn: "year" } },
+    { ...base, coverage: { table: "incidents", yearColumn: "  " } },
+    { ...base, integrity: [] },
+    { ...base, integrity: [""] },
+    { ...base, receiptOwner: "" },
+    { ...base, availability: { kind: "conditional" } },
+    { ...base, evidence: "short" },
+  ]) {
+    assert.strictEqual(policyIsComplete(malformed), false,
+      `a malformed policy must NOT authorize: ${JSON.stringify(malformed)}`);
   }
 });
 
@@ -180,7 +287,11 @@ check("the inventory is non-trivial and every spec is fully formed", () => {
   for (const spec of CAPABILITY_INVENTORY as readonly CapabilitySpec[]) {
     assert.ok(spec.capabilityId.includes("::"), `${spec.capabilityId} is not a structural id`);
     assert.ok(spec.tables.length > 0, `${spec.capabilityId} names no tables`);
-    for (const t of spec.tables) assert.ok(t.requiredColumns.length > 0, `${spec.capabilityId}: ${t.name} has no required columns`);
+    // NOT "every table names a column": an operation can depend on a table via COUNT(*) without
+    // naming one, and requiring a column here would push the generator back to keying membership off
+    // requiredColumns. At least one table must name a column, or nothing was observed at all.
+    assert.ok(spec.tables.some((t) => t.requiredColumns.length > 0),
+      `${spec.capabilityId} names no required column on any table`);
     assert.ok(/^PROOF_CAPABILITY_[A-Z_]+_[A-F0-9]{8}$/.test(spec.flagKey), `${spec.capabilityId} flag key is malformed: ${spec.flagKey}`);
   }
 });
