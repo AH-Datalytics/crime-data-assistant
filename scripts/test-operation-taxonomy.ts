@@ -28,16 +28,27 @@
  *   - prepare() recorded bare SQL globally                  -> {dbPath, sql}, scoped per case by
  *     AsyncLocalStorage so async and concurrent activity cannot cross cases
  *
- * The standing rule, learned the hard way: BEFORE claiming a check works, name the input that
- * would make it fail. If nothing can, it proves nothing. Several checks here therefore assert
- * their own non-vacuity (a minimum number of probes, a non-empty requirement set) so that a
- * derivation which stops measuring anything fails instead of passing.
+ * Two standing rules, both learned the hard way:
+ *
+ *   1. BEFORE claiming a check works, name the input that would make it fail. If nothing can, it
+ *      proves nothing. Several checks here therefore assert their own non-vacuity (a minimum
+ *      number of probes, a non-empty requirement set) so that a derivation which stops measuring
+ *      anything fails instead of passing.
+ *   2. A mechanism sound in one direction is not sound in reverse, and an assertion that tests for
+ *      a NAMED PATTERN does not constrain SHAPE. The group rename was introduced to close a
+ *      rescue in the over-attribution direction and left the omission direction using the probe
+ *      whose blind spot it had just documented; and a plan check that grepped for a rejected
+ *      function name let six call sites of the identity model that function belonged to survive.
+ *
+ * Related: report failure categories in ONE assertion. Asserting them in sequence lets the first
+ * failure hide the second, and a hidden category is one nobody can see stopped working.
  *
  * TAXONOMY_DERIVE=1 regenerates the data files. TAXONOMY_DUMP_SQL=<path> writes every observed
  * branch with its SQL, so the derivation can be inspected against what produced it.
  */
 import assert from "node:assert";
 import { AsyncLocalStorage } from "node:async_hooks";
+import { createHash } from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -589,6 +600,17 @@ async function checkAsync(name: string, fn: () => Promise<void>) {
   catch (e) { failed += 1; console.log(`  FAIL  ${name}\n        ${(e as Error).message.split("\n").slice(0, 5).join("\n        ")}`); }
 }
 
+// ---------------------------------------------------------------- capability flag names
+/**
+ * The env-var name that gates probing for one capability, mirroring the plan's
+ * `envKeyForCapability`. Kept here so the derived registry pins the mapping and the plan's
+ * examples can be checked against a real derivation instead of hand-typed labels.
+ */
+function envKeyForCapability(artifact: string, capabilityId: string): string {
+  const digest = createHash("sha256").update(capabilityId).digest("hex").slice(0, 8).toUpperCase();
+  return `PROOF_CAPABILITY_${artifact.toUpperCase()}_${digest}`;
+}
+
 // ---------------------------------------------------------------- authored policy
 /** Every field a capability needs before it may authorize anything. */
 const POLICY_FIELDS = ["coverage", "integrity", "availability", "receiptOwner"] as const;
@@ -600,11 +622,54 @@ function readPolicy(): Record<string, CapabilityPolicy> {
   return Object.fromEntries(Object.entries(raw).filter(([id]) => !id.startsWith("_")));
 }
 /**
- * Fail closed: a null policy, or one with any field still unauthored, cannot authorize. Partial
- * authoring is allowed and recorded, but it does not buy authority.
+ * Fail closed: a null policy, one with any field still unauthored, or one whose fields are the
+ * wrong SHAPE cannot authorize.
+ *
+ * "Every field is non-null" is not a schema. `{coverage: {}, integrity: true, availability: 1,
+ * receiptOwner: false}` satisfies a non-null check and authorizes, while stating nothing — and
+ * `availability` in particular is an enum the evaluator branches on, so a descriptive sentence
+ * there is a value no consumer can act on.
  */
+const nonEmptyString = (value: unknown): boolean => typeof value === "string" && value.trim() !== "";
+/**
+ * Shape problems in the fields that ARE authored. `null` means "not yet authored" and is not a
+ * problem; a wrong shape is, whether or not the rest of the entry is finished.
+ */
+function policyShapeErrors(policy: CapabilityPolicy): string[] {
+  const bad: string[] = [];
+  const { coverage, integrity, availability, availabilityCondition, receiptOwner, evidence } = policy as Record<string, unknown>;
+
+  if (coverage !== null && coverage !== undefined) {
+    const c = coverage as { table?: unknown; yearColumn?: unknown };
+    if (typeof c !== "object" || Array.isArray(c) || !nonEmptyString(c.table) || !nonEmptyString(c.yearColumn)) {
+      bad.push("coverage must be { table, yearColumn }");
+    }
+  }
+  if (integrity !== null && integrity !== undefined) {
+    if (!Array.isArray(integrity) || integrity.length === 0 || !integrity.every(nonEmptyString)) {
+      bad.push("integrity must be a non-empty array of rules; an empty array states no rule");
+    }
+  }
+  if (availability !== null && availability !== undefined) {
+    // An enum the evaluator branches on, not prose.
+    if (availability !== "always" && availability !== "conditional") {
+      bad.push(`availability must be "always" or "conditional", not ${JSON.stringify(availability)}`);
+    } else if (availability === "conditional" && !nonEmptyString(availabilityCondition)) {
+      bad.push("conditional availability must state availabilityCondition");
+    }
+  }
+  if (receiptOwner !== null && receiptOwner !== undefined && !nonEmptyString(receiptOwner)) {
+    bad.push("receiptOwner must be a non-empty owner");
+  }
+  if (!nonEmptyString(evidence) || String(evidence).trim().length <= 20) {
+    bad.push("evidence must cite what the authored values rest on");
+  }
+  return bad;
+}
 function policyIsComplete(policy: CapabilityPolicy | null): boolean {
-  return Boolean(policy) && POLICY_FIELDS.every((f) => policy![f] !== null && policy![f] !== undefined);
+  if (!policy) return false;
+  if (POLICY_FIELDS.some((f) => policy[f] === null || policy[f] === undefined)) return false;
+  return policyShapeErrors(policy).length === 0;
 }
 
 /** The artifact file a case's SQL runs against. */
@@ -870,6 +935,11 @@ async function main() {
           prepDependencies: o.prepDependencies,
           emittedDependencies: o.emittedDependencies,
           requiredColumns: o.requiredColumns,
+          // Pinned so an environment variable in ops config can be traced back to its
+          // capability. A structural id cannot be uppercased into an identifier, and a short
+          // readable label is not unique (two capabilities can share a table set), so the flag
+          // name goes through a content digest.
+          flagKey: envKeyForCapability(o.artifact, id),
           policy,
           authorizationEligible: policyIsComplete(policy),
         };
@@ -1022,6 +1092,52 @@ async function main() {
     }
   }
 
+  /** The query plan, which exposes name RESOLUTION and not merely compilability. */
+  function queryPlan(o: Observation): string {
+    const db = new Database(o.artifactPath, { readonly: true });
+    try {
+      if (o.artifact === "nibrs") db.exec(`ATTACH DATABASE '${PATHS.rollup.replace(/\\/g, "/")}' AS rollup`);
+      return JSON.stringify(db.prepare(`EXPLAIN QUERY PLAN ${o.sql}`).all());
+    } catch { return "<did not compile>"; } finally { db.close(); }
+  }
+  const basePlans = new Map<Observation, string>();
+  const basePlan = (o: Observation) => {
+    if (!basePlans.has(o)) basePlans.set(o, queryPlan(o));
+    return basePlans.get(o)!;
+  };
+  /**
+   * True when renaming ONE table's column changes how the operation resolves.
+   *
+   * Compilability alone is not enough in the direction that matters for omissions. SQL rescues an
+   * unqualified reference inside a subquery by binding it to an enclosing table: with
+   * `nibrs_consistent_reporters.ori` renamed, `d.ori IN (SELECT ori FROM nibrs_consistent_reporters)`
+   * still compiles, because `ori` re-binds to the outer `d.ori`. A compile-only probe therefore
+   * reports that column as unused, and an extractor that dropped it would stay green -- the very
+   * blind spot the group probe was introduced to close for DECLARED columns, left open here.
+   *
+   * The rebinding is invisible to compilation but not to name resolution: the subquery becomes
+   * CORRELATED, and the query plan says so. Comparing plans catches the rescue without depending
+   * on fixture rows being lucky enough to make the semantic difference observable.
+   */
+  function affectsResolution(o: Observation, table: string, column: string): boolean {
+    const before = basePlan(o);
+    return withRenamedColumn(o, table, column, () =>
+      !executes(o.sql!, o.artifact, o.artifactPath) || queryPlan(o) !== before);
+  }
+  /** Columns the operation reads from a table that `declared` leaves out. The real detection path. */
+  function missedColumns(o: Observation, declared: Record<string, string[]>): string[] {
+    const missed: string[] = [];
+    for (const table of o.emittedDependencies) {
+      const have = new Set(declared[table] ?? []);
+      const all = SCHEMAS[o.artifact].get(table.replace(/^rollup\./, "")) ?? new Set<string>();
+      for (const column of all) {
+        if (have.has(column)) continue;
+        if (affectsResolution(o, table, column)) missed.push(`${o.branch}: ${table}.${column}`);
+      }
+    }
+    return missed;
+  }
+
   check("probe: every DECLARED required column is load-bearing under execution", () => {
     const notUsedAtAll: string[] = [];
     const misattributed: string[] = [];
@@ -1032,36 +1148,48 @@ async function main() {
           probed += 1;
           // (a) does the operation depend on this column name at all?
           if (!loadBearingAnywhere(o, column)) { notUsedAtAll.push(`${o.branch}: ${table}.${column}`); continue; }
-          // (b) attribution: only decidable by execution when no other participating table
-          // declares the same name. Where one does, the single-table probe is inconclusive and
-          // alias-aware extraction is the authority (asserted separately).
-          if (tablesDeclaring(o, column).length === 1 && !loadBearing(o, table, column)) {
-            misattributed.push(`${o.branch}: ${table}.${column}`);
-          }
+          // (b) attribution. Comparing RESOLUTION, not just compilability, decides this even when
+          // another participating table declares the same name: the rescue that makes the SQL
+          // still compile also changes the plan. An earlier version skipped those columns as
+          // "inconclusive", which left attribution for the most collision-prone names -- `ori`,
+          // `year`, `state` -- resting on the extractor alone.
+          if (!affectsResolution(o, table, column)) misattributed.push(`${o.branch}: ${table}.${column}`);
         }
       }
     }
     assert.ok(probed > 200, `expected to probe every declared column, only probed ${probed}`);
-    assert.deepStrictEqual(notUsedAtAll, [],
-      `declared columns the operation does not read at all (${notUsedAtAll.length}):\n  ${notUsedAtAll.join("\n  ")}`);
-    assert.deepStrictEqual(misattributed, [],
-      `declared on a table the SQL does not read them from (${misattributed.length}):\n  ${misattributed.join("\n  ")}`);
+    // Reported together on purpose. Asserting the categories one after another lets the first
+    // failure hide the second, and a hidden category is one nobody can see stopped working.
+    const problems = [
+      ...notUsedAtAll.map((x) => `not read at all: ${x}`),
+      ...misattributed.map((x) => `read, but not from that table: ${x}`),
+    ];
+    assert.deepStrictEqual(problems, [],
+      `over-attributed declared columns (${problems.length}):\n  ${problems.join("\n  ")}`);
   });
 
   check("probe: no UNDECLARED column is load-bearing under execution", () => {
-    const missed: string[] = [];
-    for (const o of factual) {
-      for (const table of o.emittedDependencies) {
-        const declared = new Set(o.requiredColumns[table] ?? []);
-        const all = SCHEMAS[o.artifact].get(table.replace(/^rollup\./, "")) ?? new Set<string>();
-        for (const column of all) {
-          if (declared.has(column)) continue;
-          if (loadBearing(o, table, column)) missed.push(`${o.branch}: ${table}.${column}`);
-        }
-      }
-    }
+    const missed = factual.flatMap((o) => missedColumns(o, o.requiredColumns));
     assert.deepStrictEqual(missed, [],
       `columns the SQL depends on but the contract omits (${missed.length}):\n  ${missed.join("\n  ")}`);
+  });
+
+  check("probe: the omission detector catches a column dropped from a correlated subquery", () => {
+    // A mutation test of missedColumns() itself, on the exact shape that defeats a compile-only
+    // probe. Without this, the completeness assertion above could be silently unable to fail for
+    // every unqualified reference the builders make inside a subquery.
+    const o = factual.find((x) => x.branch === "continuous_reporters_victim");
+    assert.ok(o, "continuous_reporters_victim must be a factual case");
+    const table = "nibrs_consistent_reporters";
+    assert.ok((o!.requiredColumns[table] ?? []).includes("ori"),
+      `${table}.ori must be in the derived contract for this mutation to mean anything`);
+    // Compilation alone cannot see it -- this is the blind spot, pinned so it cannot reopen.
+    assert.strictEqual(loadBearing(o!, table, "ori"), false,
+      "if a single-table rename now breaks compilation, the rescue is gone and this pin is stale");
+    // Resolution can. Drop the column from a COPY of the contract and require the detector to find it.
+    const mutated = { ...o!.requiredColumns, [table]: (o!.requiredColumns[table] ?? []).filter((c) => c !== "ori") };
+    assert.deepStrictEqual(missedColumns(o!, mutated), [`${o!.branch}: ${table}.ori`],
+      "the omission detector did not notice a column the operation reads through a correlated subquery");
   });
 
   check("probe: the rename probe restored every artifact schema", () => {
@@ -1173,6 +1301,85 @@ async function main() {
       "the persisted-origin path must resolve from the persisted capability, not from a plan family");
   });
 
+  /**
+   * The checks above test for named patterns, which is why a whole second identity model survived
+   * them: short per-source labels (`specFor("shr", "incidents")`) feeding
+   * `PROOF_CAPABILITY_SHR_INCIDENTS`. Those cannot coexist with structural capability ids, and no
+   * amount of prose fixes them. These assertions check SHAPE across every code block instead.
+   */
+  check("P1-2: no planned code uses the superseded short-label identity model", () => {
+    const plan = fs.readFileSync(PLAN_FILE, "utf8");
+    const code = plan.split("```").filter((_, i) => i % 2 === 1);
+    /**
+     * Top-level arguments of every `name(...)` call, respecting nesting and strings.
+     *
+     * A regex that stops at the first `)` miscounts, because a capability id contains parentheses:
+     * `sealPlanDerivation("f", "shr::invented::nothing(x)", SQL)` looked like a two-argument call.
+     */
+    const callArgs = (text: string, name: string): string[][] => {
+      const calls: string[][] = [];
+      const pattern = new RegExp(`\\b${name}\\(`, "g");
+      for (const m of text.matchAll(pattern)) {
+        let depth = 1, quote = "", current = "", args: string[] = [];
+        for (let i = m.index! + m[0].length; i < text.length && depth > 0; i += 1) {
+          const ch = text[i];
+          if (quote) { if (ch === quote) quote = ""; current += ch; continue; }
+          if (ch === '"' || ch === "'" || ch === "`") { quote = ch; current += ch; continue; }
+          if (ch === "(" || ch === "[" || ch === "{") depth += 1;
+          else if (ch === ")" || ch === "]" || ch === "}") {
+            depth -= 1;
+            if (depth === 0) break;
+          }
+          if (ch === "," && depth === 1) { args.push(current.trim()); current = ""; continue; }
+          current += ch;
+        }
+        if (current.trim()) args.push(current.trim());
+        calls.push(args);
+      }
+      return calls;
+    };
+    const twoArgSpecFor: string[] = [];
+    const twoArgSeal: string[] = [];
+    for (const block of code) {
+      // specFor takes a capability id. A second argument means a short per-source label.
+      for (const args of callArgs(block, "specFor")) {
+        if (args.length >= 2) twoArgSpecFor.push(`specFor(${args.join(", ")})`);
+      }
+      // sealPlanDerivation takes (family, capability, sql). Two arguments means no capability.
+      for (const args of callArgs(block, "sealPlanDerivation")) {
+        if (args.length === 2) twoArgSeal.push(`sealPlanDerivation(${args.join(", ")})`);
+      }
+    }
+    assert.deepStrictEqual(twoArgSpecFor, [],
+      `specFor() is declared as specFor(capabilityId); these calls pass a short per-source label, which no structural id can produce:\n  ${twoArgSpecFor.join("\n  ")}`);
+    assert.deepStrictEqual(twoArgSeal, [],
+      `these seals omit the capability, so the token cannot carry the identity:\n  ${twoArgSeal.join("\n  ")}`);
+  });
+
+  check("P1-2: capability flag names are derivable from the capability id", () => {
+    const plan = fs.readFileSync(PLAN_FILE, "utf8");
+    // Every PROOF_CAPABILITY_* example must be producible by the documented derivation. A
+    // structural id contains `::`, `+`, `(`, `)` and `,`, so uppercasing it cannot yield
+    // PROOF_CAPABILITY_SHR_INCIDENTS -- those examples belong to the abandoned label model.
+    const derivation = plan.match(/export function envKeyForCapability[\s\S]{0,400}?\n\}/)?.[0];
+    assert.ok(derivation, "the plan no longer documents how a capability flag name is derived");
+    assert.ok(/digest|slug|hash/i.test(derivation!),
+      "flag names are derived by uppercasing the capability, but a structural id cannot be uppercased into an identifier; the derivation must go through a stable digest");
+    // Flags must actually be DERIVED somewhere in the planned code, or the digest scheme is
+    // documented and unused.
+    const code2 = plan.split("```").filter((_, i) => i % 2 === 1);
+    assert.ok(code2.some((block) => /envKeyForCapability\(/.test(block)),
+      "the plan documents a flag derivation that none of its code uses");
+    // Any flag name still written by hand must match what the derivation can produce. Short
+    // labels like PROOF_CAPABILITY_SHR_INCIDENTS name capabilities that no longer exist and
+    // cannot select a generated id.
+    const literals = [...plan.matchAll(/PROOF_CAPABILITY_[A-Z0-9_]+/g)].map((m) => m[0]);
+    const shaped = new RegExp(`^PROOF_CAPABILITY_(${["CURRENT", "HISTORICAL", "NIBRS", "SHR", "HATE_CRIME", "CRIME_DATA"].join("|")})_[A-F0-9]{8}$`);
+    const stale = [...new Set(literals)].filter((name) => !shaped.test(name));
+    assert.deepStrictEqual(stale, [],
+      `these hand-typed flag names name capabilities that no longer exist (short labels from the abandoned identity model):\n  ${stale.join("\n  ")}`);
+  });
+
   // ---- P1-3: independent anchors for the column contract ----
   // The two execution probes above and the deriver will share a mechanism once this is fixed,
   // so these anchors are stated independently of BOTH: they name specific columns that the SQL
@@ -1213,6 +1420,42 @@ async function main() {
     assert.ok(!/<fixture>/.test(raw),
       "handlePath names a fixture, which is not a production contract field");
   });
+  check("P1-4: authorization requires a well-FORMED policy, not merely non-null fields", () => {
+    // "Not null" is not a schema. A placeholder of the right arity would authorize.
+    const wellFormed = {
+      coverage: { table: "incidents", yearColumn: "year" },
+      integrity: ["generation alignment: MAX(year) of a = MAX(year) of b"],
+      availability: "always",
+      receiptOwner: "scripts/import-shr.py",
+      evidence: "cited from the importer that writes the table and the spec section requiring it",
+    };
+    assert.strictEqual(policyIsComplete(wellFormed), true, "a well-formed policy must be eligible");
+    const malformed: Record<string, unknown>[] = [
+      { ...wellFormed, coverage: {} },                              // no table/yearColumn
+      { ...wellFormed, coverage: { table: "incidents" } },          // no yearColumn
+      { ...wellFormed, integrity: true },
+      { ...wellFormed, integrity: [] },                             // no rule is not a rule
+      { ...wellFormed, integrity: [""] },
+      { ...wellFormed, availability: 1 },
+      { ...wellFormed, availability: "sort-of" },                   // outside the enum
+      { ...wellFormed, availability: "conditional-on-artifact: requires a crosswalk" },
+      { ...wellFormed, receiptOwner: false },
+      { ...wellFormed, receiptOwner: "" },
+      { ...wellFormed, evidence: "too short" },
+      { coverage: {}, integrity: true, availability: 1, receiptOwner: false },
+    ];
+    for (const policy of malformed) {
+      assert.strictEqual(policyIsComplete(policy), false,
+        `a malformed policy must NOT authorize: ${JSON.stringify(policy)}`);
+    }
+    // `conditional` is a decision that has to say what it is conditional on.
+    assert.strictEqual(policyIsComplete({ ...wellFormed, availability: "conditional" }), false,
+      "conditional availability must state its condition");
+    assert.strictEqual(
+      policyIsComplete({ ...wellFormed, availability: "conditional", availabilityCondition: "requires agency_county_crosswalk in the artifact" }),
+      true, "conditional availability with a stated condition is well-formed");
+  });
+
   check("P1-4: every capability carries authored policy or is fail-closed", () => {
     const registry = JSON.parse(fs.readFileSync(REGISTRY_FILE, "utf8")) as Record<string, Record<string, unknown>>;
     const policy = readPolicy();
@@ -1228,13 +1471,30 @@ async function main() {
         for (const field of [...POLICY_FIELDS, "evidence"]) {
           assert.ok(field in authored, `${id} authored policy does not state ${field} (null is allowed, absent is not)`);
         }
-        assert.ok(typeof authored.evidence === "string" && authored.evidence.length > 20,
-          `${id} authored policy must cite the evidence it rests on`);
+        // A field that IS authored must be well formed even while others remain null, or a
+        // malformed value sits in the file until the day it completes the entry and authorizes.
+        assert.deepStrictEqual(policyShapeErrors(authored), [],
+          `${id} authored policy is malformed: ${policyShapeErrors(authored).join("; ")}`);
       }
     }
     for (const id of Object.keys(policy)) {
       assert.ok(registry[id], `capability-policy.json authors policy for unknown capability ${id}`);
     }
+  });
+
+  check("P1-2: every capability's flag key is derivable and unique", () => {
+    const registry = JSON.parse(fs.readFileSync(REGISTRY_FILE, "utf8")) as Record<string, { artifact: string; flagKey: string }>;
+    const byFlag = new Map<string, string[]>();
+    for (const [id, entry] of Object.entries(registry)) {
+      assert.strictEqual(entry.flagKey, envKeyForCapability(entry.artifact, id),
+        `${id} has a flag key that its own id does not produce`);
+      byFlag.set(entry.flagKey, [...(byFlag.get(entry.flagKey) ?? []), id]);
+    }
+    // The key is a TRUNCATED digest. A collision would let one variable gate two capabilities,
+    // silently enabling probing for a contract nobody decided about.
+    const collisions = [...byFlag].filter(([, ids]) => ids.length > 1)
+      .map(([flag, ids]) => `${flag} <- ${ids.length} capabilities`);
+    assert.deepStrictEqual(collisions, [], `flag key collisions:\n  ${collisions.join("\n  ")}`);
   });
 
   // ---- P1-5: the case list is derived from the builders ----

@@ -84,21 +84,42 @@ separately (the builders reuse `AS s` for a *different* table in each arm), subq
 CTE pass-through (`SELECT x.*` re-exported, then read as `x.ori9` outside).
 
 That attribution is then checked **both ways** against execution, by renaming a column in the
-artifact and asking whether the operation's real SQL still compiles:
+artifact and asking what the operation's real SQL does:
 
-- every **declared** column must break compilation — otherwise it is over-attributed;
-- no **undeclared** column may break compilation — otherwise the contract understates its needs.
+- every **declared** column's *name* must be one the operation uses at all — renaming it on every
+  participating table that declares it must break compilation;
+- every **declared** column must be read *from the table it is declared on* — renaming it there
+  alone must change how the operation resolves;
+- no **undeclared** column may change how the operation resolves — otherwise the contract
+  understates its needs.
 
-Renaming, not dropping, and renaming the column on **every** participating table that declares it.
-A single-table rename is unsound on its own: `d.ori IN (SELECT ori FROM nibrs_consistent_reporters)`
-still compiles with that table's `ori` renamed, because `ori` then binds to the outer `d.ori` as a
-correlated reference — so a single-table probe reports a column the operation genuinely reads as
-unused. The first version of this probe reported exactly that against the four continuous-reporter
-cases, and those reports were wrong.
+Those directions need different mechanisms, and using one for all of them left a blind spot in the
+omission direction. Compilation cannot see a dropped column that SQL rescues: with
+`nibrs_consistent_reporters.ori` renamed, `d.ori IN (SELECT ori FROM nibrs_consistent_reporters)`
+still compiles because `ori` re-binds to the outer `d.ori`, so an extractor that stopped declaring
+that column stayed green. The rebinding is invisible to compilation but not to name resolution —
+the subquery becomes CORRELATED — so the omission direction compares **query plans**, which
+catches the rescue without depending on fixture rows being lucky enough to expose it. A mutation
+test drops that exact column from a copy of the contract and requires the detector to find it.
 
-Where two participating tables declare the same name, the single-table probe is inconclusive by
-construction, and the suite says so instead of pretending otherwise: attribution there rests on the
-scope resolution, and only the group probe constrains it.
+Renaming, not dropping. "Does the operation use this column name at all" renames it on **every**
+participating table that declares it: a single-table rename is unsound for that question, because
+`d.ori IN (SELECT ori FROM nibrs_consistent_reporters)` still compiles with that table's `ori`
+renamed — `ori` binds to the outer `d.ori` as a correlated reference. The first version of this
+probe reported exactly that against the four continuous-reporter cases, and those reports were
+wrong.
+
+"Does it read the column *from this table*" is then decided by comparing **query plans** rather
+than compilability, which settles it even when another participating table declares the same name:
+the rescue that keeps the SQL compiling also changes the plan. An earlier version skipped those
+columns as inconclusive, which left attribution for the most collision-prone names — `ori`, `year`,
+`state` — resting on the extractor alone. Every declared column passes under the stronger rule:
+**405** (table, column) probes across the 57 factual cases, over a registry declaring **344**
+distinct (capability, table, column) triples.
+
+Both categories are reported in one assertion. Asserting them in sequence let the first failure
+hide the second, and a hidden category is one nobody can see stopped working — the same masking
+that once concealed a seal assertion behind an earlier one in the same check.
 
 **What the predecessor's probe proved: nothing.** It removed a value the extractor had produced
 and asked the extractor whether its output had changed. No input could make it fail, and it passed
@@ -118,7 +139,14 @@ consequence: the Hate Crime crosswalk capability was recorded "available" althou
 | artifact, prepDependencies, emittedDependencies, requiredColumns | derived by observation + execution |
 | coverage, integrity, availability, receiptOwner | **hand-authored** in `capability-policy.json`, or `null` |
 
-**Fail closed.** A capability whose policy is absent *or partly unauthored* is
+**Fail closed, and schema-validated.** "Every field is non-null" is not a schema:
+`{coverage: {}, integrity: true, availability: 1, receiptOwner: false}` satisfies it and would
+authorize while stating nothing. Each field's shape is now checked — `coverage` as
+`{table, yearColumn}`, `integrity` as a non-empty list of rules, `availability` as the enum
+`"always" | "conditional"` with a stated `availabilityCondition`, `receiptOwner` as a non-empty
+owner, `evidence` as a real citation. A field that *is* authored must be well-formed even while
+others remain null, or a malformed value sits in the file until the day it completes the entry and
+authorizes. A capability whose policy is absent, partly unauthored, or malformed is
 `authorizationEligible: false` and can authorize nothing. Today **1 of 51** is partly authored and
 **0** are eligible. Authoring the rest is Stage 2B work and requires decisions this harness cannot
 make; the honest state is null, not a placeholder.
@@ -152,6 +180,33 @@ capability (`origin_capability`) rather than recovering a family and looking one
 
 An envelope predating the field resolves to `unresolved` — withholding authority rather than
 inventing an identity for an answer produced before the field existed.
+
+### 5.1 The plan carried a whole second identity model
+
+Changing `resolveCapability` was not enough. The plan was written throughout against short
+per-source labels — `specFor("shr", "incidents")`, `specFor("nibrs", "rollup")` — feeding
+`envKeyForCapability(sourceId, capability)` to build flags like `PROOF_CAPABILITY_SHR_INCIDENTS`.
+Those cannot coexist with structural ids, and the prose corrections did not touch them: six
+`specFor` call sites, three two-argument seals, and eighteen flag names survived because the
+conformance assertions tested for named patterns rather than shape.
+
+**A readable per-capability flag name is not derivable.** A structural id contains `::`, `+`, `(`,
+`)` and `,`, so it cannot be uppercased into an identifier; and a short label is not unique,
+because two capabilities can share a table set — which is why required columns are in the identity
+at all. Hand-maintaining a label map is what produced three wrong inventories. Flags are therefore
+`PROOF_CAPABILITY_<ARTIFACT>_<8-hex digest of the capability id>`, pinned per capability as
+`flagKey` in the registry so a variable in ops config traces back to its capability. A changed
+contract changes the flag, so probing must be re-enabled deliberately rather than inherited by a
+name that now means something else.
+
+**This needs Jeff's confirmation before Task 5:** it changes environment-variable names in
+`ecosystem.config.js`. No capability flag is set in production today, so nothing breaks now.
+
+The conformance assertions now check shape across every fenced code block: no `specFor` call may
+take a second argument, no `sealPlanDerivation` may take two, flag names must be derived at least
+once, and any hand-typed flag must match what the derivation can produce. Counting arguments needs
+a balanced-paren scan — a regex stopping at the first `)` read
+`sealPlanDerivation("f", "shr::invented::nothing(x)", SQL)` as a two-argument call.
 
 ## 6. Preparation-only dependencies — three, not five
 
@@ -236,6 +291,22 @@ shipped, and finding them required reading the artifacts instead of the intent.
 | "deterministic-shooting verified" | `operation-cases.json:272` recorded `unavailable`, `capability: null` |
 | "Sensitivity probes prove each declared column is load-bearing" | the probe compared the extractor against itself; `historical_agency.end` was in the registry |
 | "**Five** capabilities read tables absent from their emitted SQL", listing `agency_county_crosswalk` for three county-metadata capabilities | that commit's `capability-registry.json` recorded **two** preparation-only capabilities; the crosswalk is in those operations' *emitted* SQL |
+| "including 77 indexes" | the DDL files contain **114** |
+
+### 11.1 And three found in `59d69c5`, the commit that corrected the above
+
+Same shape again, so it is recorded rather than absorbed: the fix for a named defect reintroduced a
+narrower version of it.
+
+| Claim | What was actually true |
+|---|---|
+| Column contracts are checked by execution in both directions | the omission direction used the compile-only probe whose blind spot the same file documents — a dropped correlated-subquery column stayed green |
+| `capabilityForFamily` is "not part of this design" | six `specFor` calls, three seals and eighteen flag names still implemented the label model it belongs to |
+| A capability with unauthored policy "fails closed" | eligibility checked only for non-null, so a placeholder of the right arity would authorize — and the one authored entry already violated the plan's own `availability` enum |
+
+The general lesson, now written into the harness header: an assertion that tests for a *named
+pattern* does not constrain *shape*, and a mechanism sound in one direction is not sound in the
+reverse direction. Both failures above are instances.
 
 ## 12. Fixtures
 
@@ -274,4 +345,6 @@ Four production *conventions* had to be adopted, each with a comment at the seed
 - **50 capabilities have no authored policy** and therefore authorize nothing. Stage 2A
   implementation must not treat an unauthored capability as usable.
 - Receipt ownership is unmapped for all 51 (Stage 2B).
+- **The capability flag naming scheme (§5.1) needs Jeff's approval**, because it changes
+  environment-variable names in `ecosystem.config.js`.
 - The county/state parser defect (§10) is unfixed by design.

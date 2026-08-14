@@ -13,6 +13,7 @@
         "year"
       ]
     },
+    "flagKey": "PROOF_CAPABILITY_NIBRS_942E6E86",
     "policy": null,
     "authorizationEligible": false
   },
@@ -31,6 +32,7 @@
         "year"
       ]
     },
+    "flagKey": "PROOF_CAPABILITY_NIBRS_9218E874",
     "policy": null,
     "authorizationEligible": false
   },
@@ -48,6 +50,7 @@
         "year"
       ]
     },
+    "flagKey": "PROOF_CAPABILITY_NIBRS_6DD8A434",
     "policy": null,
     "authorizationEligible": false
   },
@@ -64,6 +67,7 @@
         "year"
       ]
     },
+    "flagKey": "PROOF_CAPABILITY_NIBRS_E58BBE84",
     "policy": null,
     "authorizationEligible": false
   },
@@ -88,6 +92,7 @@
         "year"
       ]
     },
+    "flagKey": "PROOF_CAPABILITY_NIBRS_01DA4F40",
     "policy": null,
     "authorizationEligible": false
   },
@@ -112,6 +117,7 @@
         "year"
       ]
     },
+    "flagKey": "PROOF_CAPABILITY_NIBRS_23B2C145",
     "policy": null,
     "authorizationEligible": false
   },
@@ -136,6 +142,7 @@
         "year"
       ]
     },
+    "flagKey": "PROOF_CAPABILITY_NIBRS_4395E4E9",
     "policy": null,
     "authorizationEligible": false
   },
@@ -159,6 +166,7 @@
         "year"
       ]
     },
+    "flagKey": "PROOF_CAPABILITY_NIBRS_0038475A",
     "policy": null,
     "authorizationEligible": false
   },
@@ -189,6 +197,7 @@
         "year"
       ]
     },
+    "flagKey": "PROOF_CAPABILITY_NIBRS_75CD65B8",
     "policy": null,
     "authorizationEligible": false
   },
@@ -219,6 +228,7 @@
         "year"
       ]
     },
+    "flagKey": "PROOF_CAPABILITY_NIBRS_455CE9B2",
     "policy": null,
     "authorizationEligible": false
   },
@@ -249,6 +259,7 @@
         "year"
       ]
     },
+    "flagKey": "PROOF_CAPABILITY_NIBRS_37D598AF",
     "policy": null,
     "authorizationEligible": false
   },
@@ -278,6 +289,7 @@
         "year"
       ]
     },
+    "flagKey": "PROOF_CAPABILITY_NIBRS_8A25856C",
     "policy": null,
     "authorizationEligible": false
   },
@@ -306,6 +318,7 @@
         "year"
       ]
     },
+    "flagKey": "PROOF_CAPABILITY_NIBRS_88FD3545",
     "policy": null,
     "authorizationEligible": false
   },
@@ -325,6 +338,7 @@
         "year"
       ]
     },
+    "flagKey": "PROOF_CAPABILITY_NIBRS_C439D6E1",
     "policy": null,
     "authorizationEligible": false
   },
@@ -348,6 +362,7 @@
         "year"
       ]
     },
+    "flagKey": "PROOF_CAPABILITY_NIBRS_94042681",
     "policy": null,
     "authorizationEligible": false
   },
@@ -372,6 +387,7 @@
         "year"
       ]
     },
+    "flagKey": "PROOF_CAPABILITY_NIBRS_B2022146",
     "policy": null,
     "authorizationEligible": false
   },
@@ -396,6 +412,7 @@
         "year"
       ]
     },
+    "flagKey": "PROOF_CAPABILITY_NIBRS_2ABC75E2",
     "policy": null,
     "authorizationEligible": false
   },
@@ -420,6 +437,7 @@
         "year"
       ]
     },
+    "flagKey": "PROOF_CAPABILITY_NIBRS_FE22F5C6",
     "policy": null,
     "authorizationEligible": false
   },
@@ -457,6 +475,7 @@
         "year"
       ]
     },
+    "flagKey": "PROOF_CAPABILITY_NIBRS_1703CC39",
     "policy": null,
     "authorizationEligible": false
   },
@@ -492,6 +511,7 @@
         "year"
       ]
     },
+    "flagKey": "PROOF_CAPABILITY_NIBRS_393A2E53",
     "policy": null,
     "authorizationEligible": false
   },
@@ -518,6 +538,7 @@
         "year"
       ]
     },
+    "flagKey": "PROOF_CAPABILITY_NIBRS_DCB88465",
     "policy": null,
     "authorizationEligible": false
   },
@@ -542,6 +563,7 @@
         "year"
       ]
     },
+    "flagKey": "PROOF_CAPABILITY_NIBRS_6C2F129B",
     "policy": null,
     "authorizationEligible": false
   },
@@ -567,6 +589,7 @@
         "year"
       ]
     },
+    "flagKey": "PROOF_CAPABILITY_NIBRS_1F22C7CF",
     "policy": null,
     "authorizationEligible": false
   },
@@ -581,6 +604,7 @@
         "year"
       ]
     },
+    "flagKey": "PROOF_CAPABILITY_CRIME_DATA_650892B1",
     "policy": null,
     "authorizationEligible": false
   },
@@ -596,6 +620,7 @@
         "state"
       ]
     },
+    "flagKey": "PROOF_CAPABILITY_CRIME_DATA_46140621",
     "policy": null,
     "authorizationEligible": false
   },
@@ -612,6 +637,7 @@
         "ori"
       ]
     },
+    "flagKey": "PROOF_CAPABILITY_CRIME_DATA_D5ABAC76",
     "policy": null,
     "authorizationEligible": false
   },
@@ -636,6 +662,7 @@
         "state"
       ]
     },
+    "flagKey": "PROOF_CAPABILITY_CRIME_DATA_F5810DD4",
     "policy": null,
     "authorizationEligible": false
   },
@@ -654,6 +681,7 @@
         "year"
       ]
     },
+    "flagKey": "PROOF_CAPABILITY_CRIME_DATA_3E9D80CE",
     "policy": null,
     "authorizationEligible": false
   },
@@ -668,6 +696,7 @@
         "state"
       ]
     },
+    "flagKey": "PROOF_CAPABILITY_CRIME_DATA_17087F69",
     "policy": null,
     "authorizationEligible": false
   },
@@ -683,6 +712,7 @@
         "ori"
       ]
     },
+    "flagKey": "PROOF_CAPABILITY_CRIME_DATA_0D468E42",
     "policy": null,
     "authorizationEligible": false
   },
@@ -706,6 +736,7 @@
         "ori"
       ]
     },
+    "flagKey": "PROOF_CAPABILITY_CRIME_DATA_DAB6C4DC",
     "policy": null,
     "authorizationEligible": false
   },
@@ -720,6 +751,7 @@
         "year"
       ]
     },
+    "flagKey": "PROOF_CAPABILITY_NIBRS_6192F2D6",
     "policy": null,
     "authorizationEligible": false
   },
@@ -734,6 +766,7 @@
         "state"
       ]
     },
+    "flagKey": "PROOF_CAPABILITY_NIBRS_7DD054A1",
     "policy": null,
     "authorizationEligible": false
   },
@@ -748,6 +781,7 @@
         "ori"
       ]
     },
+    "flagKey": "PROOF_CAPABILITY_NIBRS_E9B525A7",
     "policy": null,
     "authorizationEligible": false
   },
@@ -770,6 +804,7 @@
         "state"
       ]
     },
+    "flagKey": "PROOF_CAPABILITY_NIBRS_CE3E49D9",
     "policy": null,
     "authorizationEligible": false
   },
@@ -784,6 +819,7 @@
         "year"
       ]
     },
+    "flagKey": "PROOF_CAPABILITY_SHR_81AD8F31",
     "policy": null,
     "authorizationEligible": false
   },
@@ -798,6 +834,7 @@
         "state"
       ]
     },
+    "flagKey": "PROOF_CAPABILITY_SHR_F4DEE05F",
     "policy": null,
     "authorizationEligible": false
   },
@@ -812,6 +849,7 @@
         "ori"
       ]
     },
+    "flagKey": "PROOF_CAPABILITY_SHR_1E4E6C67",
     "policy": null,
     "authorizationEligible": false
   },
@@ -833,6 +871,7 @@
         "ori"
       ]
     },
+    "flagKey": "PROOF_CAPABILITY_SHR_26605B46",
     "policy": null,
     "authorizationEligible": false
   },
@@ -847,6 +886,7 @@
         "year"
       ]
     },
+    "flagKey": "PROOF_CAPABILITY_HATE_CRIME_59221F57",
     "policy": null,
     "authorizationEligible": false
   },
@@ -862,6 +902,7 @@
         "state"
       ]
     },
+    "flagKey": "PROOF_CAPABILITY_HATE_CRIME_B2D238C0",
     "policy": null,
     "authorizationEligible": false
   },
@@ -876,6 +917,7 @@
         "ori"
       ]
     },
+    "flagKey": "PROOF_CAPABILITY_HATE_CRIME_6180AF3F",
     "policy": null,
     "authorizationEligible": false
   },
@@ -898,10 +940,12 @@
         "ori"
       ]
     },
+    "flagKey": "PROOF_CAPABILITY_HATE_CRIME_162DA0E1",
     "policy": {
       "coverage": null,
       "integrity": null,
-      "availability": "conditional-on-artifact: requires agency_county_crosswalk in the hate_crime artifact. The table is absent from production hate_crime.db as of 2026-08-13, so this capability is unavailable in production while being structurally sound. Conditionally unavailable is not unhealthy; the builder decides at runtime.",
+      "availability": "conditional",
+      "availabilityCondition": "Requires agency_county_crosswalk in the hate_crime artifact. The table is absent from production hate_crime.db as of 2026-08-13, so this capability is unavailable in production while being structurally sound. Conditionally unavailable is not unhealthy; the builder decides at runtime.",
       "receiptOwner": null,
       "evidence": "Both artifact states are exercised by this suite: with the crosswalk absent, entitySql (lib/metadata-coverage.ts:457) takes the SQL-less exit and the case hate_crime:metadata-agency-directory-county records terminalKind=unavailable, sealing no capability; with the crosswalk present, the same operation reaches this contract. coverage, integrity and receiptOwner remain unauthored: a directory count has no year dimension to base coverage on, no integrity rule has been decided for the crosswalk, and receipt ownership is Stage 2B."
     },
@@ -932,6 +976,7 @@
         "state"
       ]
     },
+    "flagKey": "PROOF_CAPABILITY_CRIME_DATA_DACFADC6",
     "policy": null,
     "authorizationEligible": false
   },
@@ -957,6 +1002,7 @@
         "year"
       ]
     },
+    "flagKey": "PROOF_CAPABILITY_CRIME_DATA_3D59EECB",
     "policy": null,
     "authorizationEligible": false
   },
@@ -985,6 +1031,7 @@
         "year"
       ]
     },
+    "flagKey": "PROOF_CAPABILITY_CRIME_DATA_444728E8",
     "policy": null,
     "authorizationEligible": false
   },
@@ -1039,6 +1086,7 @@
         "year"
       ]
     },
+    "flagKey": "PROOF_CAPABILITY_CRIME_DATA_86002873",
     "policy": null,
     "authorizationEligible": false
   },
@@ -1069,6 +1117,7 @@
         "year"
       ]
     },
+    "flagKey": "PROOF_CAPABILITY_CRIME_DATA_C18771F1",
     "policy": null,
     "authorizationEligible": false
   },
@@ -1092,6 +1141,7 @@
         "year"
       ]
     },
+    "flagKey": "PROOF_CAPABILITY_CRIME_DATA_DDB846E2",
     "policy": null,
     "authorizationEligible": false
   },
@@ -1117,6 +1167,7 @@
         "incident_id"
       ]
     },
+    "flagKey": "PROOF_CAPABILITY_SHR_E35007D9",
     "policy": null,
     "authorizationEligible": false
   },
@@ -1149,6 +1200,7 @@
         "year"
       ]
     },
+    "flagKey": "PROOF_CAPABILITY_CRIME_DATA_FD384D4F",
     "policy": null,
     "authorizationEligible": false
   }

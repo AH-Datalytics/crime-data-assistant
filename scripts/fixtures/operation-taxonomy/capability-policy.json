@@ -5,15 +5,24 @@
       "Keys are capability ids from capability-registry.json, verbatim.",
       "An entry must state all of coverage, integrity, availability, receiptOwner. null means 'not yet authored' and is explicit, not a placeholder.",
       "evidence must cite what the value rests on: a file:line, a production observation with its date, or a spec section.",
-      "A capability authorizes nothing until all four fields are non-null (authorizationEligible in the registry). Partial authoring is recorded but buys no authority.",
+      "A capability authorizes nothing until all four fields are non-null AND well-formed (authorizationEligible in the registry). Partial authoring is recorded but buys no authority.",
       "Entries beginning with _ are documentation and are ignored."
     ],
+    "shapes": {
+      "coverage": "{ table, yearColumn } — both non-empty strings",
+      "integrity": "non-empty array of rule strings; an empty array states no rule and is not a decision",
+      "availability": "\"always\" | \"conditional\" — an enum the evaluator branches on, never prose. \"conditional\" additionally requires availabilityCondition.",
+      "availabilityCondition": "non-empty string, required only when availability is \"conditional\"",
+      "receiptOwner": "non-empty string naming the builder/importer that owns the receipt",
+      "evidence": "non-empty string longer than 20 characters"
+    },
     "state_2026_08_14": "1 of 51 capabilities partly authored, 0 authorization-eligible. Authoring the remaining 50 is Stage 2B work and requires decisions this observation harness cannot make."
   },
   "hate_crime::agency_county_crosswalk+hate_crime_incidents::agency_county_crosswalk(county_fips,county_key,ori,ori9,state)|hate_crime_incidents(ori)": {
     "coverage": null,
     "integrity": null,
-    "availability": "conditional-on-artifact: requires agency_county_crosswalk in the hate_crime artifact. The table is absent from production hate_crime.db as of 2026-08-13, so this capability is unavailable in production while being structurally sound. Conditionally unavailable is not unhealthy; the builder decides at runtime.",
+    "availability": "conditional",
+    "availabilityCondition": "Requires agency_county_crosswalk in the hate_crime artifact. The table is absent from production hate_crime.db as of 2026-08-13, so this capability is unavailable in production while being structurally sound. Conditionally unavailable is not unhealthy; the builder decides at runtime.",
     "receiptOwner": null,
     "evidence": "Both artifact states are exercised by this suite: with the crosswalk absent, entitySql (lib/metadata-coverage.ts:457) takes the SQL-less exit and the case hate_crime:metadata-agency-directory-county records terminalKind=unavailable, sealing no capability; with the crosswalk present, the same operation reaches this contract. coverage, integrity and receiptOwner remain unauthored: a directory count has no year dimension to base coverage on, no integrity rule has been decided for the crosswalk, and receipt ownership is Stage 2B."
   }

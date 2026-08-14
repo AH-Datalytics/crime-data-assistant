@@ -69,7 +69,7 @@ retype them.**
 | File | Contents |
 |---|---|
 | `scripts/fixtures/operation-taxonomy/operation-cases.json` | branch → `{ family, terminalKind, capability }` (derived) |
-| `scripts/fixtures/operation-taxonomy/capability-registry.json` | capability → `{ artifact, prepDependencies, emittedDependencies, requiredColumns, policy, authorizationEligible }` (derived) |
+| `scripts/fixtures/operation-taxonomy/capability-registry.json` | capability → `{ artifact, prepDependencies, emittedDependencies, requiredColumns, flagKey, policy, authorizationEligible }` (derived) |
 | `scripts/fixtures/operation-taxonomy/capability-policy.json` | capability → `{ coverage, integrity, availability, receiptOwner, evidence }` (**hand-authored**) |
 
 **Observation derives structure only.** Which artifact, which tables, which columns — those are
@@ -147,6 +147,11 @@ export type CapabilitySpec = {
   tables: TableRequirement[];
   dependencies: DependencyRule[];
   semanticDependencies: SemanticDependency[];
+  /**
+   * The env-var name that gates probing for this capability, pinned in the registry so a
+   * variable in ops config can be traced back. Derived via envKeyForCapability(), never typed.
+   */
+  flagKey: string;
   /**
    * Hand-authored policy, copied from capability-policy.json. NOT derived: an execution cannot
    * observe what a coverage basis means, what integrity rule applies, whether unavailability is
@@ -457,7 +462,11 @@ function shrFixture(mutate?: (db: Database.Database) => void): Database.Database
   mutate?.(db);
   return db;
 }
-const shr = specFor("shr", "incidents")!;
+// Capability ids are structural and come from the registry verbatim. There is no short
+// per-source label: two capabilities can share a table set (`shr:metadata-agency-directory` and
+// `shr:metadata-year-coverage` both read `incidents`), so nothing shorter is unique.
+const SHR_INCIDENTS_YEAR = "shr::incidents::incidents(year)";
+const shr = specFor(SHR_INCIDENTS_YEAR)!;
 // dbOverride is an OpenedDatabase, so a fixture declares the path it stands for.
 const ctx = (db: Database.Database | null, years: number[] | null = [2022]) => ({
   requestedYears: years,
@@ -653,7 +662,9 @@ git commit -m "Evaluate capability health against its own database and emit an e
 - [ ] **Step 1: Write the failing tests**
 
 ```typescript
-const sample = specFor("current", "sample_agencies")!;
+const CURRENT_SAMPLE_AGENCIES =
+  "crime_data::agency_monthly+agency_population+sample_agencies::agency_monthly(count,offense,ori,year)|agency_population(ori,population,year)|sample_agencies(ori,state)";
+const sample = specFor(CURRENT_SAMPLE_AGENCIES)!;
 
 function currentFixture(mutate?: (db: Database.Database) => void): Database.Database {
   const db = new Database(path.join(dir, `cur-${Math.random().toString(36).slice(2)}.db`));
@@ -686,10 +697,13 @@ check("an aligned dependency is recorded and evaluation continues to the receipt
   assert.deepStrictEqual(trace.dependenciesChecked, ["sample_agencies->agency_monthly"]);
 });
 
+const NIBRS_NATIONAL_ARRESTS =
+  "nibrs::rollup.national_summary_arrestee_demographics::rollup.national_summary_arrestee_demographics(arrestee_count,ucr_arrest_offense,year)";
+
 check("a NIBRS preflight that inspects a different artifact is degraded", () => {
   // Guards the seam: the inspector reads the configured rollup path while table checks
   // read the provider's handle. If those are different files, the verdict is incoherent.
-  const nibrs = specFor("nibrs", "rollup")!;
+  const nibrs = specFor(NIBRS_NATIONAL_ARRESTS)!;
   const previous = process.env.NIBRS_ROLLUP_DB_PATH;
   process.env.NIBRS_ROLLUP_DB_PATH = path.join(dir, "somewhere-else.db");
   fs.writeFileSync(process.env.NIBRS_ROLLUP_DB_PATH, "");
@@ -700,7 +714,7 @@ check("a NIBRS preflight that inspects a different artifact is degraded", () => 
 });
 
 check("an unconfigured rollup surfaces the inspector's own reason", () => {
-  const nibrs = specFor("nibrs", "rollup")!;
+  const nibrs = specFor(NIBRS_NATIONAL_ARRESTS)!;
   const previous = process.env.NIBRS_ROLLUP_DB_PATH;
   delete process.env.NIBRS_ROLLUP_DB_PATH;
   const { health, trace } = evaluateCapability(nibrs, ctx(currentFixture()));
@@ -811,7 +825,9 @@ it qualifies. Three alignment checks, using the real columns
 Tests, added to `scripts/test-source-health.ts`:
 
 ```typescript
-const agencyCrime = specFor("historical", "agency_crime")!;
+const HISTORICAL_AGENCY_CRIME =
+  "crime_data::historical_agency+historical_agency_crime::historical_agency(agency,ori,state,type)|historical_agency_crime(ori,violent,year)";
+const agencyCrime = specFor(HISTORICAL_AGENCY_CRIME)!;
 
 check("reliability data that stops short of the crime data is degraded, not healthy", () => {
   // The case a nonempty-table check passes and this one catches.
@@ -1012,8 +1028,12 @@ export function __healthTracesForTests(): HealthTrace[];
 ```typescript
 import { sourceHealthFor, __resetSourceHealthCacheForTests, __healthTracesForTests } from "../lib/source-health";
 
-const shrSealed = sealPlanDerivation("deterministic-murder", SQL);
-const enabled = { PROOF_MODE: "shadow", PROOF_CAPABILITY_SHR_INCIDENTS: "on" };
+const shrSealed = sealPlanDerivation("deterministic-murder", SHR_INCIDENTS_YEAR, SQL);
+// Derived, never typed. A literal flag name is a second copy of the identity, and the copy is
+// what went stale: the whole PROOF_CAPABILITY_<SOURCE>_<LABEL> family named capabilities that no
+// longer exist and could not select the generated ones.
+const SHR_FLAG = envKeyForCapability("shr", SHR_INCIDENTS_YEAR);
+const enabled = { PROOF_MODE: "shadow", [SHR_FLAG]: "on" };
 const call = (c: ReturnType<typeof ctx>, env: NodeJS.ProcessEnv) =>
   sourceHealthFor("shr", shrSealed, SQL, "deterministic-murder", c, env);
 
@@ -1030,20 +1050,20 @@ check("an enabled capability evaluates and reaches the receipt boundary", () => 
   call(ctx(shrFixture()), enabled);
   const traces = __healthTracesForTests();
   assert.strictEqual(traces.length, 1);
-  assert.strictEqual(traces[0].capability, "incidents");
+  assert.strictEqual(traces[0].capability, SHR_INCIDENTS_YEAR);
   assert.strictEqual(traces[0].boundary, "missing_receipt");
   assert.deepStrictEqual(traces[0].tablesChecked, ["incidents"]);
 });
 
 check("an explicitly disabled capability is not probed", () => {
   __resetSourceHealthCacheForTests();
-  call(ctx(shrFixture()), { PROOF_MODE: "shadow", PROOF_CAPABILITY_SHR_INCIDENTS: "off" });
+  call(ctx(shrFixture()), { PROOF_MODE: "shadow", [SHR_FLAG]: "off" });
   assert.deepStrictEqual(__healthTracesForTests(), []);
 });
 
 check("with proof OFF no source-health work runs at all", () => {
   __resetSourceHealthCacheForTests();
-  const health = call(ctx(shrFixture()), { PROOF_CAPABILITY_SHR_INCIDENTS: "on" });
+  const health = call(ctx(shrFixture()), { [SHR_FLAG]: "on" });
   assert.strictEqual(health.state, "unknown");
   assert.deepStrictEqual(__healthTracesForTests(), []);
 });
@@ -1080,16 +1100,34 @@ check("a different requested period re-probes the same handle", () => {
 
 ```typescript
 /**
- * Kill switch for one capability of one source, mirroring envKeyForFamily.
+ * Kill switch for one capability, mirroring envKeyForFamily.
  *
  * Read as default-OFF: only an explicit enabling value turns probing on, because §13
  * requires every new capability to default to off and an unset variable is not a
  * decision anyone made.
+ *
+ * The name goes through a DIGEST of the capability id, not through the id itself. A
+ * structural id contains `::`, `+`, `(`, `)` and `,`, so it cannot be uppercased into an
+ * environment-variable name. A short readable label was the obvious alternative and does
+ * not work either: two capabilities can share a table set, so nothing shorter than the id
+ * (tables AND columns) is unique, and hand-maintaining a label map is exactly what produced
+ * three wrong inventories. A content digest is stable, unique, and derivable by anyone
+ * holding the id.
+ *
+ * Consequence, deliberate: changing a capability's contract changes its flag, so probing
+ * must be re-enabled explicitly for the new contract rather than inherited by a name that
+ * silently now means something else. Each capability's `flagKey` is pinned in
+ * capability-registry.json so a variable in ops config can be traced back to its capability.
  */
-export function envKeyForCapability(sourceId: SourceId, capability: string): string {
-  return `PROOF_CAPABILITY_${sourceId.toUpperCase()}_${capability.toUpperCase()}`;
+export function envKeyForCapability(artifact: string, capabilityId: string): string {
+  const digest = createHash("sha256").update(capabilityId).digest("hex").slice(0, 8).toUpperCase();
+  return `PROOF_CAPABILITY_${artifact.toUpperCase()}_${digest}`;
 }
 ```
+
+**This changes the environment-variable names in `ecosystem.config.js`.** No capability flag is set
+in production today, so nothing breaks, but the naming scheme is an operational decision and needs
+Jeff's confirmation before Task 5 is implemented.
 
 - [ ] **Step 3: Implement the gate, cache, and trace log**
 
@@ -1118,13 +1156,16 @@ export function sourceHealthFor(
   if ("unresolved" in resolved) return unresolvedVerdict(sourceId, "unresolved", resolved.unresolved);
   const capability = resolved.capability;
 
-  const flagKey = envKeyForCapability(sourceId, capability);
+  // The spec comes first now: the flag name is derived from the capability's own artifact, and
+  // resolveCapability has already rejected a capability whose artifact does not match sourceId.
+  const spec = specFor(capability);
+  if (!spec) return unresolvedVerdict(sourceId, capability, `no inventory entry for ${capability}`);
+
+  const flagKey = envKeyForCapability(spec.artifact, capability);
   const flag = (env[flagKey] ?? "").trim().toLowerCase();
   if (flag !== "on" && flag !== "shadow" && flag !== "enforce") {
     return unresolvedVerdict(sourceId, capability, `capability not enabled (${flagKey} is '${flag || "unset"}')`);
   }
-  const spec = specFor(sourceId, capability);
-  if (!spec) return unresolvedVerdict(sourceId, capability, `no inventory entry for ${sourceId}:${capability}`);
 
   /**
    * Cache key includes NON-FORGEABLE handle identity. A caller-supplied identity string
@@ -1340,7 +1381,7 @@ git commit -m "Map the source-health verdict onto the proof manifest and the del
 
 ```typescript
 check("no Stage 2A verdict can authorize a factual answer", () => {
-  const env = { PROOF_MODE: "shadow", PROOF_CAPABILITY_SHR_INCIDENTS: "on" };
+  const env = { PROOF_MODE: "shadow", [SHR_FLAG]: "on" };
   const health = sourceHealthFor("shr", shrSealed, SQL, "deterministic-murder", ctx(shrFixture()), env);
   assert.strictEqual(health.dataVersion, null);
   assert.strictEqual(permitsAnswer(health), false);
@@ -1355,22 +1396,22 @@ check("no Stage 2A verdict can authorize a factual answer", () => {
 
 check("breaking one capability leaves unrelated capabilities alone", () => {
   /**
-   * Corrected from an earlier draft, which enabled PROOF_CAPABILITY_CURRENT_NATIONAL and
-   * sealed `metadata-coverage-answer` over `national_monthly`. Both halves were wrong:
-   * `current:national` has no eligible operation and is swept by Task 11; Current metadata resolves to
-   * `current:agency_roster`, not to the national capability. The test would have "passed"
-   * over a capability that never evaluated.
+   * Corrected from an earlier draft, which enabled the `current.national` flag and sealed
+   * `metadata-coverage-answer` over `national_monthly`. Both halves were wrong:
+   * `current.national` has no eligible operation and is swept by Task 11; Current metadata
+   * resolves to the agency-roster capability, not to the national one. The test would have
+   * "passed" over a capability that never evaluated.
    */
   __resetSourceHealthCacheForTests();
   const env = {
     PROOF_MODE: "shadow",
-    PROOF_CAPABILITY_SHR_INCIDENTS: "on",
-    PROOF_CAPABILITY_CURRENT_SAMPLE_AGENCIES: "on",
+    [SHR_FLAG]: "on",
+    [envKeyForCapability("crime_data", CURRENT_SAMPLE_AGENCIES)]: "on",
   };
   const brokenShr = sourceHealthFor("shr", shrSealed, SQL, "deterministic-murder",
     ctx(shrFixture((d) => d.exec("DELETE FROM incidents"))), env);
   const currentSql = "SELECT year, month, murders FROM agency_monthly WHERE ori = 'TX0001'";
-  const currentSealed = sealPlanDerivation("deterministic-current-multi-city-trend", currentSql);
+  const currentSealed = sealPlanDerivation("deterministic-current-multi-city-trend", CURRENT_SAMPLE_AGENCIES, currentSql);
   const currentHealth = sourceHealthFor("current", currentSealed, currentSql,
     "deterministic-current-multi-city-trend", ctx(currentFixture()), env);
   assert.strictEqual(brokenShr.state, "degraded");
@@ -1385,9 +1426,10 @@ check("a capability flag cannot manufacture a verdict for an unmapped capability
   // A flag is not a path. Enabling a capability no verified operation selects must not
   // produce a verdict; resolution still fails and the answer stays unknown.
   __resetSourceHealthCacheForTests();
-  const env = { PROOF_MODE: "shadow", PROOF_CAPABILITY_CRIME_DATA_NATIONAL_MONTHLY: "on" };
+  // The sweep-only capability: registered, flag-enabled, and still unreachable from an operation.
+  const env = { PROOF_MODE: "shadow", [envKeyForCapability("crime_data", SWEEP_ONLY[0])]: "on" };
   const sql = "SELECT year, count FROM national_monthly";
-  const sealed = sealPlanDerivation("deterministic-current-multi-city-trend", sql);
+  const sealed = sealPlanDerivation("deterministic-current-multi-city-trend", SWEEP_ONLY[0], sql);
   const health = sourceHealthFor("current", sealed, sql, "deterministic-current-multi-city-trend",
     ctx(currentFixture()), env);
   assert.notStrictEqual(health.capability, "national_monthly");
@@ -1494,26 +1536,11 @@ console.log(`\n${route.label} -- Stage 2 source health enabled`);
   //
   // Flag names are generated from the inventory, not typed here: hand-listing them is how this
   // block came to disagree with the catalog in the first place.
-  const CAPS: Record<string, string> = {
-    PROOF_CAPABILITY_CURRENT_SAMPLE_AGENCIES: "on",
-    PROOF_CAPABILITY_CURRENT_AGENCY_ROSTER: "on",
-    PROOF_CAPABILITY_CURRENT_AGENCY_DIRECTORY_COUNTY: "on",
-    PROOF_CAPABILITY_HISTORICAL_AGENCY_CRIME: "on",
-    PROOF_CAPABILITY_HISTORICAL_PLACE_PROFILE: "on",
-    PROOF_CAPABILITY_HISTORICAL_AGENCY_DIRECTORY: "on",
-    PROOF_CAPABILITY_HISTORICAL_STATE_NATIONAL: "on",
-    PROOF_CAPABILITY_HISTORICAL_COVERAGE_SPAN: "on",
-    PROOF_CAPABILITY_NIBRS_JUVENILE_OFFENDER: "on",
-    PROOF_CAPABILITY_NIBRS_CLEARANCE_DETAIL: "on",
-    PROOF_CAPABILITY_NIBRS_CLEARANCE_TYPE: "on",
-    PROOF_CAPABILITY_NIBRS_COMPARABLE_AGENCY_CLEARANCE: "on",
-    PROOF_CAPABILITY_NIBRS_CITY_COMPLETENESS: "on",
-    PROOF_CAPABILITY_NIBRS_VICTIM_CIRCUMSTANCE: "on",
-    PROOF_CAPABILITY_NIBRS_AGENCY_ROSTER: "on",
-    PROOF_CAPABILITY_SHR_INCIDENTS: "on",
-    PROOF_CAPABILITY_HATE_CRIME_INCIDENTS: "on",
-    PROOF_CAPABILITY_HATE_CRIME_PARTICIPATION: "on",
-  };
+  const CAPS: Record<string, string> = Object.fromEntries(
+    CAPABILITY_INVENTORY
+      .filter((spec) => !SWEEP_ONLY.includes(spec.capabilityId))
+      .map((spec) => [envKeyForCapability(spec.artifact, spec.capabilityId), "on"]),
+  );
   const withCaps = async (mode: string | undefined, q: string) => {
     const saved = Object.fromEntries(Object.keys(CAPS).map((k) => [k, process.env[k]]));
     Object.assign(process.env, CAPS);
