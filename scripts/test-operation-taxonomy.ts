@@ -5,22 +5,39 @@
  * real SQLite handle and recording what it touched. Static extraction failed three times
  * (variable seals, ternary seals, helper reads); an observation cannot miss those.
  *
- * The FIRST version of this suite reported 66/66 while proving very little. Each weakness is
- * now an explicit assertion, because a green suite over vacuous checks manufactures confidence:
+ * Successive versions of this suite were green while proving less than they claimed. Each
+ * weakness is now an explicit assertion, because a green suite over vacuous checks manufactures
+ * confidence:
  *
- *   - required columns were "at least one recognized token" -> exact set comparison, with
- *     sensitivity probes that FAIL if the comparison stops biting
+ *   - required columns were "at least one recognized token", then an exact set compared against
+ *     the extractor's own output                            -> resolved through SQL scopes and
+ *     then settled by EXECUTION: rename a column in the artifact and ask SQLite whether the
+ *     operation's real SQL still compiles, in both directions
  *   - a missing case printed a NOTE                         -> denominator equality assertion
  *   - families were never enumerated independently          -> re-derived from source here
+ *   - role branches were enumerated by hand                 -> read out of the builder source,
+ *     required for every family that selects them
  *   - a route case passed on any matching guardrail         -> factual exits now require
  *     non-null SQL, the expected tables, AND SQL that executes
- *   - prepare() recorded bare SQL globally                  -> {dbPath, sql}, scoped per case,
- *     with all module initialization completed before any case records
+ *   - a fixture that never reached a contract was recorded
+ *     as "unavailable", a claim about production            -> only an explicitly listed
+ *     production exit may be unavailable; anything else fails
+ *   - coverage/integrity/availability/receipt were generated
+ *     and presented as policy                               -> hand-authored or null, and null
+ *     authorizes nothing
+ *   - prepare() recorded bare SQL globally                  -> {dbPath, sql}, scoped per case by
+ *     AsyncLocalStorage so async and concurrent activity cannot cross cases
  *
- * TAXONOMY_DERIVE=1 regenerates the data files. Derived output is only trustworthy because the
- * probes prove the assertions detect change.
+ * The standing rule, learned the hard way: BEFORE claiming a check works, name the input that
+ * would make it fail. If nothing can, it proves nothing. Several checks here therefore assert
+ * their own non-vacuity (a minimum number of probes, a non-empty requirement set) so that a
+ * derivation which stops measuring anything fails instead of passing.
+ *
+ * TAXONOMY_DERIVE=1 regenerates the data files. TAXONOMY_DUMP_SQL=<path> writes every observed
+ * branch with its SQL, so the derivation can be inspected against what produced it.
  */
 import assert from "node:assert";
+import { AsyncLocalStorage } from "node:async_hooks";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -29,6 +46,9 @@ import Database from "better-sqlite3";
 const DATA_DIR = path.join(process.cwd(), "scripts", "fixtures", "operation-taxonomy");
 const CASES_FILE = path.join(DATA_DIR, "operation-cases.json");
 const REGISTRY_FILE = path.join(DATA_DIR, "capability-registry.json");
+/** Hand-authored, never generated. Absent entry == no policy == cannot authorize. */
+const POLICY_FILE = path.join(DATA_DIR, "capability-policy.json");
+const PLAN_FILE = path.join(process.cwd(), "docs", "superpowers", "plans", "2026-08-13-stage2-source-health-registry.md");
 const DERIVE = process.env.TAXONOMY_DERIVE === "1";
 const FIXTURES = fs.mkdtempSync(path.join(os.tmpdir(), "op-taxonomy-"));
 
@@ -55,27 +75,34 @@ console.error = (...args: unknown[]) => {
 
 // ---------------------------------------------------------------- instrumentation
 type Prepared = { dbPath: string; sql: string };
-let sink: Prepared[] | null = null;
+/**
+ * Scoped by ASYNC CONTEXT, not by a module-global assignment.
+ *
+ * A single mutable `sink` cleared in a `finally` is only correct for synchronous work. Across an
+ * await it attributes reads to whichever scope happens to be assigned when the statement is
+ * prepared: two concurrent route cases interleave into each other, and DB activity a route
+ * started but did not await lands in an unrelated case -- or, once the last scope has exited,
+ * appears after the success summary. AsyncLocalStorage binds each statement to the case whose
+ * continuation actually issued it.
+ */
+const recording = new AsyncLocalStorage<Prepared[]>();
 const originalPrepare = Database.prototype.prepare;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 (Database.prototype as any).prepare = function (sql: string, ...rest: unknown[]) {
+  const sink = recording.getStore();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   if (sink) sink.push({ dbPath: String((this as any).name ?? ""), sql });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return (originalPrepare as any).call(this, sql, ...rest);
 };
-/** Recording is scoped to one case; nothing outside the callback can contribute. */
+/** Recording is scoped to one case; nothing outside that async context can contribute. */
 function withRecording<T>(fn: () => T): { value: T; entries: Prepared[] } {
   const entries: Prepared[] = [];
-  sink = entries;
-  try { return { value: fn(), entries }; }
-  finally { sink = null; }
+  return { value: recording.run(entries, fn), entries };
 }
 async function withRecordingAsync<T>(fn: () => Promise<T>): Promise<{ value: T; entries: Prepared[] }> {
   const entries: Prepared[] = [];
-  sink = entries;
-  try { return { value: await fn(), entries }; }
-  finally { sink = null; }
+  return { value: await recording.run(entries, fn), entries };
 }
 
 // ---------------------------------------------------------------- fixtures
@@ -181,6 +208,20 @@ function buildShr() {
   }
   X.run("TX0010000", "TX0010000", "AUSTIN", "TX", 48, 453, "48453", "Travis", "TRAVIS", "seed");
   X.run("TX0020000", "TX0020000", "DALLAS", "TX", 48, 113, "48113", "Dallas", "DALLAS", "seed");
+  // Without these two tables resolveShrAgency() returns `unsupported` for every city
+  // (lib/shr-place-resolver.ts:123), the shooting route takes its place-resolution-block exit,
+  // and the incidents+victims contract is never reached. The predecessor of this fixture
+  // recorded that as "unavailable" -- a production verdict the fixture had not earned.
+  // agency_type must be 'City': requestedType("city") filters the alias join on it (:96,:161).
+  const ID = db.prepare("INSERT INTO shr_agency_identity (ori, state, canonical_agency, agency_type, search_key, source_agency_names, source_agency_types, nibrs_city, nibrs_agency_type, incident_count, first_year, last_year) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)");
+  const AL = db.prepare("INSERT INTO shr_agency_alias (alias, alias_key, ori, state, canonical_agency, agency_type, source) VALUES (?,?,?,?,?,?,?)");
+  for (const [ori, name] of [["TX0010000", "Austin"], ["TX0020000", "Dallas"]]) {
+    // alias_key is agencySearchKey(requestedName) -- uppercase, punctuation collapsed
+    // (lib/shr-agency-normalization.ts:71). A title-cased key silently resolves not_in_source.
+    const key = name.toUpperCase();
+    ID.run(ori, "TX", name, "City", key, name, "City", key, "City", 60, YEARS[0], YEARS[YEARS.length - 1]);
+    AL.run(name, key, ori, "TX", name, "City", "seed");
+  }
   db.close();
 }
 
@@ -308,7 +349,8 @@ function cteNames(sql: string): Set<string> {
   for (const m of sql.matchAll(/(?:WITH|,)\s+([a-z_][a-z0-9_]*)\s+AS\s*\(/gi)) out.add(m[1].toLowerCase());
   return out;
 }
-function tablesIn(sql: string, schema: Map<string, Set<string>>): string[] {
+function tablesIn(rawSql: string, schema: Map<string, Set<string>>): string[] {
+  const sql = stripLiterals(rawSql);
   const ctes = cteNames(sql);
   const found = new Set<string>();
   for (const m of sql.matchAll(/\b(?:FROM|JOIN)\s+((?:rollup|main)\.)?([a-z_][a-z0-9_]*)/gi)) {
@@ -319,13 +361,209 @@ function tablesIn(sql: string, schema: Map<string, Set<string>>): string[] {
   }
   return [...found].sort();
 }
-function columnsFor(sql: string, tables: string[], schema: Map<string, Set<string>>): Record<string, string[]> {
-  const tokens = new Set((sql.match(/[a-z_][a-z0-9_]*/gi) ?? []).map((t) => t.toLowerCase()));
-  const out: Record<string, string[]> = {};
-  for (const t of tables) {
-    const declared = schema.get(t.replace(/^rollup\./, ""));
-    if (declared) out[t] = [...declared].filter((c) => tokens.has(c.toLowerCase())).sort();
+/**
+ * SQL syntax and built-ins. Applied ONLY to unqualified identifiers: a qualified `ha.end` is a
+ * real column reference, while a bare `END` closing a CASE is not. Getting this list wrong
+ * understates a contract, which the "no UNDECLARED column is load-bearing" probe catches.
+ */
+const SQL_KEYWORDS = new Set(`
+SELECT DISTINCT FROM WHERE GROUP BY ORDER HAVING LIMIT OFFSET AS ON USING JOIN LEFT RIGHT INNER
+OUTER CROSS NATURAL AND OR NOT NULL IS IN BETWEEN LIKE GLOB ESCAPE EXISTS CASE WHEN THEN ELSE END
+CAST COLLATE ASC DESC NULLS FIRST LAST UNION ALL INTERSECT EXCEPT WITH RECURSIVE INDEXED
+COUNT SUM MIN MAX AVG TOTAL ROUND ABS COALESCE NULLIF IFNULL TRIM UPPER LOWER SUBSTR REPLACE INSTR
+LENGTH PRINTF STRFTIME DATE DATETIME JULIANDAY GROUP_CONCAT ROW_NUMBER OVER PARTITION
+INTEGER TEXT REAL BLOB NUMERIC MAIN ROLLUP TRUE FALSE
+`.trim().split(/\s+/));
+
+/** String literals are not column references. `'monthly agency trends'` is not `agency_monthly.agency`. */
+const stripLiterals = (sql: string) => sql.replace(/'(?:''|[^'])*'/g, "''");
+
+/** Ordered contents of one name-resolution scope: its own text interleaved with nested scopes. */
+type SqlScope = {
+  parts: (string | SqlScope)[]; parent: SqlScope | null;
+  tables: string[];
+  /** alias -> table name, or `cte:<name>` for a common table expression. */
+  aliases: Map<string, string>;
+  /** CTEs declared in this scope, visible to it and its descendants. */
+  ctes: Map<string, SqlScope>;
+};
+const newScope = (parent: SqlScope | null): SqlScope => ({ parts: [], parent, tables: [], aliases: new Map(), ctes: new Map() });
+const ownText = (scope: SqlScope) => scope.parts.filter((p): p is string => typeof p === "string").join(" ");
+const childScopes = (scope: SqlScope) => scope.parts.filter((p): p is SqlScope => typeof p !== "string");
+
+/** Split on parentheses so an inner SELECT resolves names against its own FROM first. */
+function parseScopes(sql: string): SqlScope {
+  const root = newScope(null);
+  let cur = root;
+  let text = "";
+  const flush = () => { if (text) { cur.parts.push(text); text = ""; } };
+  for (const ch of sql) {
+    if (ch === "(") {
+      flush();
+      const child = newScope(cur);
+      cur.parts.push(child);
+      cur = child;
+    } else if (ch === ")") {
+      flush();
+      cur = cur.parent ?? root;
+    } else text += ch;
   }
+  flush();
+  return root;
+}
+
+/**
+ * Each arm of a UNION is its own scope.
+ *
+ * Without this, two arms of one compound SELECT share an alias map, and the builders reuse `AS s`
+ * for a different table in each arm (`summary_victim_city_monthly AS s` then
+ * `summary_city_monthly AS s`). The second binding overwrote the first, so every column read
+ * through the first arm's `s.` was attributed to the wrong table and then dropped as undeclared --
+ * an entire table silently left out of the contract.
+ */
+function splitCompoundSelects(scope: SqlScope): void {
+  for (const child of childScopes(scope)) splitCompoundSelects(child);
+  const arms: (string | SqlScope)[][] = [[]];
+  let compound = false;
+  for (const part of scope.parts) {
+    if (typeof part !== "string") { arms[arms.length - 1].push(part); continue; }
+    const pieces = part.split(/\b(?:UNION\s+ALL|UNION|INTERSECT|EXCEPT)\b/gi);
+    arms[arms.length - 1].push(pieces[0]);
+    for (const piece of pieces.slice(1)) { arms.push([piece]); compound = true; }
+  }
+  if (!compound) return;
+  scope.parts = arms.map((parts) => {
+    const arm = newScope(scope);
+    arm.parts = parts;
+    for (const part of parts) if (typeof part !== "string") part.parent = arm;
+    return arm;
+  });
+}
+
+/**
+ * Register `name AS (...)` common table expressions against the scope they are declared in.
+ *
+ * A CTE re-exports base-table columns (`SELECT x.* FROM agency_county_crosswalk x`), and the outer
+ * query then reads them through the CTE's alias. Without this, those reads resolve to nothing and
+ * the contract omits columns the SQL genuinely depends on -- which the execution probe catches.
+ */
+function bindCtes(scope: SqlScope): void {
+  scope.parts.forEach((part, index) => {
+    if (typeof part === "string") return;
+    const prev = scope.parts[index - 1];
+    if (typeof prev !== "string") return;
+    // `name AS (`, or `name(col, ...) AS (` where the column list is itself a nested scope.
+    let name = prev.match(/\b([a-z_][a-z0-9_]*)\s+AS\s*$/i)?.[1];
+    if (!name && /^\s*AS\s*$/i.test(prev) && typeof scope.parts[index - 3] === "string") {
+      name = (scope.parts[index - 3] as string).match(/\b([a-z_][a-z0-9_]*)\s*$/i)?.[1];
+    }
+    if (name && !SQL_KEYWORDS.has(name.toUpperCase())) scope.ctes.set(name.toLowerCase(), part);
+  });
+  for (const child of childScopes(scope)) bindCtes(child);
+}
+function cteLookup(scope: SqlScope | null, name: string): SqlScope | null {
+  for (let s = scope; s; s = s.parent) {
+    const hit = s.ctes.get(name);
+    if (hit) return hit;
+  }
+  return null;
+}
+/** Base tables a CTE ultimately reads, following nested scopes and other CTEs it selects from. */
+function baseTablesOf(scope: SqlScope, seen = new Set<SqlScope>()): string[] {
+  if (seen.has(scope)) return [];
+  seen.add(scope);
+  const out = [...scope.tables];
+  for (const child of childScopes(scope)) out.push(...baseTablesOf(child, seen));
+  for (const target of scope.aliases.values()) {
+    if (!target.startsWith("cte:")) continue;
+    const cte = cteLookup(scope, target.slice(4));
+    if (cte) out.push(...baseTablesOf(cte, seen));
+  }
+  return [...new Set(out)];
+}
+
+function bindTables(scope: SqlScope, schema: Map<string, Set<string>>): void {
+  for (const m of ownText(scope).matchAll(/\b(?:FROM|JOIN)\s+((?:rollup|main)\.)?([a-z_][a-z0-9_]*)(?:\s+(?:AS\s+)?([a-z_][a-z0-9_]*))?/gi)) {
+    const qualifier = (m[1] ?? "").replace(".", "").toLowerCase();
+    const raw = m[2];
+    const isTable = schema.has(raw) || qualifier === "rollup";
+    const cte = isTable ? null : cteLookup(scope, raw.toLowerCase());
+    if (!isTable && !cte) continue;                                  // an unknown name
+    const name = cte ? `cte:${raw.toLowerCase()}` : qualifier === "rollup" ? `rollup.${raw}` : raw;
+    if (!cte) scope.tables.push(name);
+    scope.aliases.set(raw.toLowerCase(), name);
+    const alias = m[3];
+    if (alias && !SQL_KEYWORDS.has(alias.toUpperCase())) scope.aliases.set(alias.toLowerCase(), name);
+  }
+  for (const child of childScopes(scope)) bindTables(child, schema);
+}
+
+/**
+ * Attribute each column reference to the table the SQL actually reads it from.
+ *
+ * The predecessor intersected every identifier in the statement with every participating table's
+ * schema. That has no notion of which table a name belongs to, so a name declared by two tables
+ * was credited to both, `CASE ... END` produced `historical_agency.end`, and words inside string
+ * literals became columns.
+ */
+function columnsFor(sql: string, tables: string[], schema: Map<string, Set<string>>): Record<string, string[]> {
+  const wanted = new Set(tables);
+  const found = new Map<string, Set<string>>();
+  const declares = (table: string, column: string): string | null => {
+    const cols = schema.get(table.replace(/^rollup\./, ""));
+    if (!cols) return null;
+    for (const c of cols) if (c.toLowerCase() === column.toLowerCase()) return c;
+    return null;
+  };
+  const add = (table: string, column: string) => {
+    const real = declares(table, column);
+    if (!real || !wanted.has(table)) return;
+    found.set(table, (found.get(table) ?? new Set()).add(real));
+  };
+  const resolveAlias = (scope: SqlScope | null, name: string): string | null => {
+    for (let s = scope; s; s = s.parent) {
+      const hit = s.aliases.get(name);
+      if (hit) return hit;
+    }
+    return null;
+  };
+
+  const root = parseScopes(stripLiterals(sql));
+  splitCompoundSelects(root);
+  bindCtes(root);
+  bindTables(root, schema);
+
+  const walk = (scope: SqlScope) => {
+    const text = ownText(scope);
+    for (const m of text.matchAll(/\b([a-z_][a-z0-9_]*)\.([a-z_][a-z0-9_]*)\b/gi)) {
+      const target = resolveAlias(scope, m[1].toLowerCase());
+      if (!target) continue;
+      if (!target.startsWith("cte:")) { add(target, m[2]); continue; }
+      // Read through the CTE to the base tables it re-exports.
+      const cte = cteLookup(scope, target.slice(4));
+      if (cte) for (const table of baseTablesOf(cte)) add(table, m[2]);
+    }
+    for (const m of text.matchAll(/(?<![.\w])([a-z_][a-z0-9_]*)\b(?!\s*[.(])/gi)) {
+      const id = m[1].toLowerCase();
+      if (SQL_KEYWORDS.has(id.toUpperCase()) || resolveAlias(scope, id)) continue;
+      // A result name from `AS <name>` is NOT filtered here: `SELECT CASE ... END AS state FROM
+      // agencies WHERE state IS NOT NULL` uses the same word as both, and suppressing it emptied
+      // the contract. A name that is a real column of a table in scope is treated as a reference
+      // to it; a name that is only a result alias matches no table and attributes nothing. Where
+      // that guess is wrong, the "declared columns are load-bearing" probe rejects it.
+      // Innermost FROM wins, exactly as SQL name resolution does: an unqualified `ori` inside a
+      // subquery belongs to that subquery's table, not to the enclosing query's.
+      for (let s: SqlScope | null = scope; s; s = s.parent) {
+        const owners = s.tables.filter((t) => declares(t, id));
+        if (owners.length) { owners.forEach((t) => add(t, id)); break; }
+      }
+    }
+    for (const child of childScopes(scope)) walk(child);
+  };
+  walk(root);
+
+  const out: Record<string, string[]> = {};
+  for (const t of tables) if (found.has(t)) out[t] = [...found.get(t)!].sort();
   return out;
 }
 
@@ -333,10 +571,12 @@ function columnsFor(sql: string, tables: string[], schema: Map<string, Set<strin
 type CaseResult = { family: string; sql: string | null } | null;
 type Observation = {
   branch: string; source: string; artifact: string;
-  family: string | null; terminalKind: "factual" | "unavailable" | "none";
+  family: string | null; terminalKind: "factual" | "unavailable" | "unverified" | "none";
   prepDependencies: string[]; emittedDependencies: string[];
   requiredColumns: Record<string, string[]>;
-  coverage: string | null; executed: boolean; note?: string; sql: string | null;
+  executed: boolean; note?: string; sql: string | null;
+  /** The artifact file this case's SQL was executed against; probes must use the same one. */
+  artifactPath: string;
 };
 const observations: Observation[] = [];
 let passed = 0, failed = 0;
@@ -344,11 +584,38 @@ function check(name: string, fn: () => void) {
   try { fn(); passed += 1; }
   catch (e) { failed += 1; console.log(`  FAIL  ${name}\n        ${(e as Error).message.split("\n").slice(0, 5).join("\n        ")}`); }
 }
+async function checkAsync(name: string, fn: () => Promise<void>) {
+  try { await fn(); passed += 1; }
+  catch (e) { failed += 1; console.log(`  FAIL  ${name}\n        ${(e as Error).message.split("\n").slice(0, 5).join("\n        ")}`); }
+}
+
+// ---------------------------------------------------------------- authored policy
+/** Every field a capability needs before it may authorize anything. */
+const POLICY_FIELDS = ["coverage", "integrity", "availability", "receiptOwner"] as const;
+type CapabilityPolicy = Record<string, unknown>;
+function readPolicy(): Record<string, CapabilityPolicy> {
+  if (!fs.existsSync(POLICY_FILE)) return {};
+  const raw = JSON.parse(fs.readFileSync(POLICY_FILE, "utf8")) as Record<string, CapabilityPolicy>;
+  // Keys starting with _ document the file itself and are not capability ids.
+  return Object.fromEntries(Object.entries(raw).filter(([id]) => !id.startsWith("_")));
+}
+/**
+ * Fail closed: a null policy, or one with any field still unauthored, cannot authorize. Partial
+ * authoring is allowed and recorded, but it does not buy authority.
+ */
+function policyIsComplete(policy: CapabilityPolicy | null): boolean {
+  return Boolean(policy) && POLICY_FIELDS.every((f) => policy![f] !== null && policy![f] !== undefined);
+}
+
+/** The artifact file a case's SQL runs against. */
+function artifactFile(artifact: string, override?: string): string {
+  return override ?? (artifact === "nibrs" ? PATHS.nibrs : artifact === "shr" ? PATHS.shr
+    : artifact === "hate_crime" ? PATHS.hate_crime : PATHS.crime_data);
+}
 
 /** A dependency contract that cannot execute is not a contract. */
 function executes(sql: string, artifact: string, override?: string): boolean {
-  const file = override ?? (artifact === "nibrs" ? PATHS.nibrs : artifact === "shr" ? PATHS.shr
-    : artifact === "hate_crime" ? PATHS.hate_crime : PATHS.crime_data);
+  const file = artifactFile(artifact, override);
   const db = new Database(file, { readonly: true });
   try {
     if (artifact === "nibrs") db.exec(`ATTACH DATABASE '${PATHS.rollup.replace(/\\/g, "/")}' AS rollup`);
@@ -366,7 +633,6 @@ function record(branch: string, source: string, result: CaseResult, entries: Pre
   const emitted = sql ? tablesIn(sql, schema) : [];
   const prep = tablesIn(mine.map((e) => e.sql).join("\n;\n"), schema).filter((t) => !emitted.includes(t));
   const cols = sql ? columnsFor(sql, emitted, schema) : {};
-  const coverageTable = emitted.find((t) => (cols[t] ?? []).includes("year")) ?? null;
   observations.push({
     branch, source, artifact,
     family: result?.family ?? null,
@@ -375,9 +641,8 @@ function record(branch: string, source: string, result: CaseResult, entries: Pre
     // alone counts a canned refusal as a factual data claim and mints a phantom capability.
     terminalKind: sql && emitted.length > 0 ? "factual" : result ? "unavailable" : "none",
     prepDependencies: prep, emittedDependencies: emitted, requiredColumns: cols,
-    coverage: coverageTable ? `${coverageTable}.year` : null,
     executed: sql && emitted.length > 0 ? executes(sql, artifact, only) : false,
-    note, sql,
+    note, sql, artifactPath: artifactFile(artifact, only),
   });
 }
 
@@ -481,6 +746,11 @@ async function main() {
     ["local_demographic_count_offender", "how many murder offenders by race in Austin, TX from 2019 to 2022"],
     ["local_demographic_count_arrestee", "how many murder arrests by race in Austin, TX from 2019 to 2022"],
     ["local_demographic_share_victim", "what share of murder victims by race in Austin, TX from 2019 to 2022"],
+    // The share branch selects among the same three role configs as the count branch. Only
+    // victim was exercised, so an offender/arrestee share contract was never observed and could
+    // have been dropped or changed without the suite noticing.
+    ["local_demographic_share_offender", "what share of murder offenders by race in Austin, TX from 2019 to 2022"],
+    ["local_demographic_share_arrestee", "what share of murder arrests by race in Austin, TX from 2019 to 2022"],
     ["structured_local_trend", "murders and robberies in Austin, TX each year from 2019 to 2022"],
     ["structured_local_rate", "murder rate per 100,000 in Austin, TX each year from 2019 to 2022"],
     ["structured_local_trend_person", "murders and aggravated assaults in Austin, TX each year from 2019 to 2022"],
@@ -582,31 +852,33 @@ async function main() {
   };
 
   if (DERIVE) {
+    // Observation derives STRUCTURE only: which artifact, which tables, which columns. Coverage
+    // semantics, integrity rules, availability policy and receipt ownership are not properties of
+    // a SQL execution -- deriving them produced a constant ("observed-available") and a string
+    // built from the first emitted table, both presented as contract. They now come from a
+    // hand-authored file, and a capability with no authored policy cannot authorize anything.
+    const authored = readPolicy();
     const cases: Record<string, unknown> = {};
     const registry: Record<string, unknown> = {};
     for (const o of observations) {
       const id = capabilityId(o);
       cases[o.branch] = { family: o.family, terminalKind: o.terminalKind, capability: id };
       if (id && !registry[id]) {
+        const policy = authored[id] ?? null;
         registry[id] = {
           artifact: o.artifact,
-          handlePath: `<fixture>/${path.basename(ARTIFACT_PATHS[o.artifact][0])}`,
           prepDependencies: o.prepDependencies,
           emittedDependencies: o.emittedDependencies,
           requiredColumns: o.requiredColumns,
-          coverage: o.coverage,
-          integrity: o.artifact === "crime_data" && o.emittedDependencies.includes("historical_agency_crime")
-            ? ["agency_year_reliability alignment (ori,year); single algorithm_version"]
-            : o.emittedDependencies.some((t) => t.startsWith("rollup."))
-              ? ["inspectNibrsRollupAvailability preflight; artifact coherence"] : [],
-          availability: "observed-available",
-          receiptIdentity: `provisional:${o.artifact}:${o.emittedDependencies[0] ?? "none"}`,
+          policy,
+          authorizationEligible: policyIsComplete(policy),
         };
       }
     }
     fs.writeFileSync(CASES_FILE, JSON.stringify(cases, null, 2));
     fs.writeFileSync(REGISTRY_FILE, JSON.stringify(registry, null, 2));
-    console.log(`derived ${Object.keys(cases).length} cases, ${Object.keys(registry).length} capabilities`);
+    const eligible = Object.values(registry).filter((r) => (r as { authorizationEligible: boolean }).authorizationEligible).length;
+    console.log(`derived ${Object.keys(cases).length} cases, ${Object.keys(registry).length} capabilities, ${eligible} with complete authored policy`);
   } else {
     const CASES = JSON.parse(fs.readFileSync(CASES_FILE, "utf8")) as Record<string, { family: string | null; terminalKind: string; capability: string | null }>;
     const REGISTRY = JSON.parse(fs.readFileSync(REGISTRY_FILE, "utf8")) as Record<string, Record<string, unknown>>;
@@ -618,9 +890,9 @@ async function main() {
     check("every capability referenced by a case exists in the registry", () => {
       for (const [b, c] of Object.entries(CASES)) if (c.capability) assert.ok(REGISTRY[c.capability], `${b} -> unknown capability ${c.capability}`);
     });
-    check("every registry capability carries a complete contract", () => {
+    check("every registry capability carries a complete structural contract", () => {
       for (const [id, c] of Object.entries(REGISTRY)) {
-        for (const field of ["artifact", "handlePath", "prepDependencies", "emittedDependencies", "requiredColumns", "coverage", "integrity", "availability", "receiptIdentity"]) {
+        for (const field of ["artifact", "prepDependencies", "emittedDependencies", "requiredColumns", "policy", "authorizationEligible"]) {
           assert.ok(field in c, `${id} is missing ${field}`);
         }
         assert.ok(Object.keys(c.requiredColumns as object).length > 0, `${id} declares no required columns`);
@@ -684,23 +956,123 @@ async function main() {
       "SQL selecting cleared_E must fail against a schema lacking it");
   });
 
-  check("probe: every declared required column is load-bearing", () => {
-    let checked = 0;
+  // ---------------------------------------------------------------- execution-backed column probe
+  /**
+   * The predecessor probe here removed a value the EXTRACTOR produced and then asked the
+   * EXTRACTOR whether its output changed. Nothing could ever make it fail. It is replaced by a
+   * mechanism the extractor does not participate in: rename the column in the artifact and ask
+   * SQLite whether the operation's real SQL still compiles.
+   *
+   *   declared  + rename breaks compilation  -> load-bearing, correctly declared
+   *   declared  + rename changes nothing     -> OVERATTRIBUTED (this is how `CASE ... END`
+   *                                             put `historical_agency.end` in the registry)
+   *   undeclared + rename breaks compilation -> MISSED, the contract understates its needs
+   */
+  const writers = new Map<string, Database.Database>();
+  function writerFor(file: string, artifact: string): Database.Database {
+    const key = path.resolve(file);
+    let db = writers.get(key);
+    if (!db) {
+      db = new Database(file);
+      if (artifact === "nibrs") db.exec(`ATTACH DATABASE '${PATHS.rollup.replace(/\\/g, "/")}' AS rollup`);
+      writers.set(key, db);
+    }
+    return db;
+  }
+  /** Rename table.column, run fn, always rename back. */
+  function withRenamedColumn<T>(o: Observation, table: string, column: string, fn: () => T): T {
+    const writer = writerFor(o.artifactPath, o.artifact);
+    const qualified = table.startsWith("rollup.") ? `rollup."${table.slice(7)}"` : `main."${table}"`;
+    const probe = `${column}__probe`;
+    writer.exec(`ALTER TABLE ${qualified} RENAME COLUMN "${column}" TO "${probe}"`);
+    try { return fn(); }
+    finally { writer.exec(`ALTER TABLE ${qualified} RENAME COLUMN "${probe}" TO "${column}"`); }
+  }
+  /** True when the operation's SQL no longer compiles with that column renamed away. */
+  function loadBearing(o: Observation, table: string, column: string): boolean {
+    return withRenamedColumn(o, table, column, () => !executes(o.sql!, o.artifact, o.artifactPath));
+  }
+  const tablesDeclaring = (o: Observation, column: string) => o.emittedDependencies.filter((t) =>
+    (SCHEMAS[o.artifact].get(t.replace(/^rollup\./, "")) ?? new Set()).has(column));
+  /**
+   * Rename the column on EVERY participating table that declares it.
+   *
+   * A single-table rename is not sound on its own: SQL name resolution rescues an unqualified
+   * reference inside a subquery by binding it to an enclosing table instead. `d.ori IN (SELECT
+   * ori FROM nibrs_consistent_reporters)` still compiles with that table's `ori` renamed, because
+   * `ori` then resolves to the outer `d.ori` as a correlated reference -- so the single-table
+   * probe reports a column the operation genuinely reads as unused. Renaming every candidate
+   * removes the rescue and tests the column NAME the operation depends on.
+   */
+  function loadBearingAnywhere(o: Observation, column: string): boolean {
+    const targets = tablesDeclaring(o, column);
+    const applied: string[] = [];
+    const writer = writerFor(o.artifactPath, o.artifact);
+    const qualify = (t: string) => (t.startsWith("rollup.") ? `rollup."${t.slice(7)}"` : `main."${t}"`);
+    try {
+      for (const t of targets) {
+        writer.exec(`ALTER TABLE ${qualify(t)} RENAME COLUMN "${column}" TO "${column}__probe"`);
+        applied.push(t);
+      }
+      return !executes(o.sql!, o.artifact, o.artifactPath);
+    } finally {
+      for (const t of applied.reverse()) {
+        writer.exec(`ALTER TABLE ${qualify(t)} RENAME COLUMN "${column}__probe" TO "${column}"`);
+      }
+    }
+  }
+
+  check("probe: every DECLARED required column is load-bearing under execution", () => {
+    const notUsedAtAll: string[] = [];
+    const misattributed: string[] = [];
+    let probed = 0;
     for (const o of factual) {
-      const schema = SCHEMAS[o.artifact];
       for (const [table, cols] of Object.entries(o.requiredColumns)) {
         for (const column of cols) {
-          const mutated = cloneSchema(schema);
-          mutated.get(table.replace(/^rollup\./, ""))?.delete(column);
-          const observed = columnsFor(o.sql!, o.emittedDependencies, mutated);
-          assert.notDeepStrictEqual(observed, o.requiredColumns,
-            `${o.branch}: removing ${table}.${column} produced an identical contract, so it is not load-bearing`);
-          checked += 1;
+          probed += 1;
+          // (a) does the operation depend on this column name at all?
+          if (!loadBearingAnywhere(o, column)) { notUsedAtAll.push(`${o.branch}: ${table}.${column}`); continue; }
+          // (b) attribution: only decidable by execution when no other participating table
+          // declares the same name. Where one does, the single-table probe is inconclusive and
+          // alias-aware extraction is the authority (asserted separately).
+          if (tablesDeclaring(o, column).length === 1 && !loadBearing(o, table, column)) {
+            misattributed.push(`${o.branch}: ${table}.${column}`);
+          }
         }
       }
     }
-    assert.ok(checked > 200, `expected to probe every declared column, only probed ${checked}`);
+    assert.ok(probed > 200, `expected to probe every declared column, only probed ${probed}`);
+    assert.deepStrictEqual(notUsedAtAll, [],
+      `declared columns the operation does not read at all (${notUsedAtAll.length}):\n  ${notUsedAtAll.join("\n  ")}`);
+    assert.deepStrictEqual(misattributed, [],
+      `declared on a table the SQL does not read them from (${misattributed.length}):\n  ${misattributed.join("\n  ")}`);
   });
+
+  check("probe: no UNDECLARED column is load-bearing under execution", () => {
+    const missed: string[] = [];
+    for (const o of factual) {
+      for (const table of o.emittedDependencies) {
+        const declared = new Set(o.requiredColumns[table] ?? []);
+        const all = SCHEMAS[o.artifact].get(table.replace(/^rollup\./, "")) ?? new Set<string>();
+        for (const column of all) {
+          if (declared.has(column)) continue;
+          if (loadBearing(o, table, column)) missed.push(`${o.branch}: ${table}.${column}`);
+        }
+      }
+    }
+    assert.deepStrictEqual(missed, [],
+      `columns the SQL depends on but the contract omits (${missed.length}):\n  ${missed.join("\n  ")}`);
+  });
+
+  check("probe: the rename probe restored every artifact schema", () => {
+    for (const [file] of writers) {
+      for (const [table, cols] of schemaOf(file)) {
+        for (const c of cols) assert.ok(!c.endsWith("__probe"), `${file} ${table}.${c} was left renamed`);
+      }
+    }
+  });
+  for (const [, db] of writers) db.close();
+  writers.clear();
 
   check("probe: an unused column changes neither the contract nor capability identity", () => {
     const o = factual.find((x) => x.branch === "clearance_type_breakdown")!;
@@ -733,9 +1105,266 @@ async function main() {
     assert.notStrictEqual(capabilityId(dir!), capabilityId(year!), "same tables + different columns must be different capabilities");
   });
 
+  // ================================================================ P1 corrections
+  // Each check below corresponds to one P1 finding against 81fab50. They were written to
+  // fail against that commit's behaviour and artifacts.
+
+  // ---- P1-1: a fixture that cannot reach a contract is UNVERIFIED, not "unavailable" ----
+  /**
+   * Only these cases may record `unavailable`, and only because PRODUCTION takes that exit.
+   * Every other non-factual case is a fixture that failed to reach the contract, which is an
+   * unverified contract -- recording it as "unavailable" converted a false pass into a false
+   * baseline, and dropped the shooting contract out of the count entirely.
+   */
+  const UNAVAILABLE_IN_PRODUCTION: Record<string, string> = {
+    "hate_crime:metadata-agency-directory-county":
+      "production hate_crime.db has no agency_county_crosswalk; entitySql takes the SQL-less exit",
+  };
+  check("P1-1: no case is recorded unavailable unless production takes that exit", () => {
+    const wrong = observations
+      .filter((o) => o.terminalKind === "unavailable" && !(o.branch in UNAVAILABLE_IN_PRODUCTION))
+      .map((o) => `${o.branch}${o.note ? ` (${o.note})` : ""}`);
+    assert.deepStrictEqual(wrong, [],
+      `these are unverified fixtures, not production-unavailable contracts:\n  ${wrong.join("\n  ")}`);
+  });
+  check("P1-1: deterministic-shooting reaches its factual incidents+victims contract", () => {
+    const o = observations.find((x) => x.branch === "route:deterministic_shooting");
+    assert.ok(o, "the shooting route case must exist");
+    assert.strictEqual(o!.terminalKind, "factual",
+      `the shooting route never reached the factual exit (got ${o!.terminalKind})`);
+    assert.deepStrictEqual([...o!.emittedDependencies].sort(), ["incidents", "victims"],
+      `the shooting contract joins victims; observed ${o!.emittedDependencies.join(",") || "nothing"}`);
+    assert.ok(o!.executed, "the shooting SQL must execute against the SHR artifact");
+  });
+
+  // ---- P1-2: capability identity is builder-declared, never family-derived ----
+  check("P1-2: the artifacts prove a family cannot identify a capability", () => {
+    const byFamily = new Map<string, Set<string>>();
+    for (const o of factual) {
+      const id = capabilityId(o);
+      if (!o.family || !id) continue;
+      byFamily.set(o.family, (byFamily.get(o.family) ?? new Set()).add(id));
+    }
+    const ambiguous = [...byFamily].filter(([, ids]) => ids.size > 1).map(([f, ids]) => `${f} -> ${ids.size}`);
+    assert.ok(ambiguous.some((a) => a.startsWith("deterministic-nibrs-continuous-reporters")),
+      `continuous-reporters must be observed carrying several contracts; ambiguous families: ${ambiguous.join(", ") || "none"}`);
+  });
+  check("P1-2: the plan resolves capability from the sealed token, not from the family", () => {
+    const plan = fs.readFileSync(PLAN_FILE, "utf8");
+    // Only the CODE the plan specifies is forbidden from calling it. Prose that names it in order
+    // to rule it out is the record of why, and must survive.
+    const code = plan.split("```").filter((_, i) => i % 2 === 1);
+    const offenders = code.filter((block) => /capabilityForFamily\s*\(/.test(block));
+    assert.strictEqual(offenders.length, 0,
+      `${offenders.length} planned code block(s) still call capabilityForFamily(); one family maps to as many as four contracts, so this cannot be truthful`);
+    assert.ok(/sealPlanDerivation\(\s*(?:planFamily|family)\s*,\s*capability\s*,\s*sql\s*\)/.test(plan),
+      "plan must seal the builder-declared capability into the token: sealPlanDerivation(family, capability, sql)");
+    assert.ok(/verified\.capability/.test(plan),
+      "plan must read the capability off the VERIFIED token");
+    // Embed provenance: the capability must be a persisted column and the replay entry point must
+    // take it, rather than recovering a family and looking a capability up from it.
+    assert.ok(code.some((block) => /origin_capability/.test(block)),
+      "plan must persist the capability column in embed provenance, not just the family");
+    assert.ok(code.some((block) => /originIsVerified/.test(block) && /originCapability/.test(block)),
+      "the embed creation path must decide what capability to persist, not only the family");
+    const replay = code.find((block) => /resolveCapabilityFromPersistedOrigin/.test(block));
+    assert.ok(replay, "plan must define the persisted-origin replay entry point");
+    assert.ok(/originCapability/.test(replay!) && !/originPlanFamily/.test(replay!),
+      "the persisted-origin path must resolve from the persisted capability, not from a plan family");
+  });
+
+  // ---- P1-3: independent anchors for the column contract ----
+  // The two execution probes above and the deriver will share a mechanism once this is fixed,
+  // so these anchors are stated independently of BOTH: they name specific columns that the SQL
+  // text itself settles.
+  check("P1-3: a SQL keyword is never harvested as a column (CASE ... END)", () => {
+    const offenders = factual
+      .filter((o) => (o.requiredColumns["historical_agency"] ?? []).includes("end"))
+      .map((o) => o.branch);
+    assert.deepStrictEqual(offenders, [],
+      `historical_agency.end came from CASE ... END, not from a column reference: ${offenders.join(", ")}`);
+  });
+  check("P1-3: a column is attributed only to the table the SQL reads it from", () => {
+    // Both tables declare `population`; only one is read. Token intersection cannot tell them apart.
+    const both = factual.filter((o) =>
+      o.emittedDependencies.includes("historical_agency_crime") &&
+      o.emittedDependencies.includes("historical_agency_population"));
+    // Without this the check passes by measuring nothing the moment that pairing stops occurring.
+    assert.ok(both.length > 0, "no case reads both historical_agency_crime and historical_agency_population");
+    for (const o of both) {
+      const crime = o.requiredColumns["historical_agency_crime"] ?? [];
+      const pop = o.requiredColumns["historical_agency_population"] ?? [];
+      const readsCrimePopulation = /\bhac?\.population\b|historical_agency_crime\.population/i.test(o.sql!);
+      if (!readsCrimePopulation) {
+        assert.ok(!crime.includes("population"),
+          `${o.branch}: population attributed to historical_agency_crime, which the SQL never reads it from`);
+      }
+      assert.ok(pop.length > 0, `${o.branch}: historical_agency_population contributed no columns`);
+    }
+  });
+
+  // ---- P1-4: non-structural fields are authored policy or null, never generated ----
+  check("P1-4: the deriver never invents coverage, integrity, availability or receipt", () => {
+    const raw = fs.readFileSync(REGISTRY_FILE, "utf8");
+    assert.ok(!/observed-available/.test(raw),
+      "availability is a constant the observation cannot know; it must be authored policy or null");
+    assert.ok(!/"provisional:/.test(raw),
+      "receipt identity was generated from the first emitted table; it must be authored ownership or null");
+    assert.ok(!/<fixture>/.test(raw),
+      "handlePath names a fixture, which is not a production contract field");
+  });
+  check("P1-4: every capability carries authored policy or is fail-closed", () => {
+    const registry = JSON.parse(fs.readFileSync(REGISTRY_FILE, "utf8")) as Record<string, Record<string, unknown>>;
+    const policy = readPolicy();
+    for (const [id, entry] of Object.entries(registry)) {
+      assert.ok("policy" in entry, `${id} has no policy field`);
+      assert.ok("authorizationEligible" in entry, `${id} does not state whether it may authorize`);
+      const authored = policy[id] ?? null;
+      assert.deepStrictEqual(entry.policy, authored,
+        `${id}: policy must be exactly what capability-policy.json authors, or null`);
+      assert.strictEqual(entry.authorizationEligible, policyIsComplete(authored),
+        `${id}: a capability whose policy is absent or partly unauthored must fail closed`);
+      if (authored) {
+        for (const field of [...POLICY_FIELDS, "evidence"]) {
+          assert.ok(field in authored, `${id} authored policy does not state ${field} (null is allowed, absent is not)`);
+        }
+        assert.ok(typeof authored.evidence === "string" && authored.evidence.length > 20,
+          `${id} authored policy must cite the evidence it rests on`);
+      }
+    }
+    for (const id of Object.keys(policy)) {
+      assert.ok(registry[id], `capability-policy.json authors policy for unknown capability ${id}`);
+    }
+  });
+
+  // ---- P1-5: the case list is derived from the builders ----
+  /**
+   * A role branch is a `{ table, offenseColumn, countColumn, countAlias }` config a builder
+   * selects between. The handwritten case list could omit one silently: a fifth branch changes
+   * neither the family set nor the seal-site count. These are read out of the builder source, so
+   * an unexercised branch fails here.
+   */
+  type RoleBranch = { module: string; group: string; table: string; countColumn: string };
+  function roleBranchesFromSource(): RoleBranch[] {
+    const MODULES = ["lib/nibrs-scope-deterministic.ts", "lib/nibrs-deterministic-queries.ts"];
+    const out: RoleBranch[] = [];
+    for (const file of MODULES) {
+      const src = fs.readFileSync(file, "utf8");
+      // Each config literal, tagged with the nearest preceding declaration that owns it.
+      for (const m of src.matchAll(/\{\s*table:\s*"([a-z_.]+)"[^}]*?countColumn:\s*"([a-z_]+)"/gi)) {
+        const before = src.slice(0, m.index);
+        const owner = [...before.matchAll(/(?:function|const)\s+([A-Za-z_][A-Za-z0-9_]*)/g)].pop()?.[1] ?? "?";
+        out.push({ module: path.basename(file), group: owner, table: m[1], countColumn: m[2] });
+      }
+    }
+    return out;
+  }
+  /**
+   * Families that select between the branches of a group, read from the builder that calls it.
+   *
+   * Guardrails are NOT all plain literals -- two builders seal through a ternary
+   * (`guardrail: isShare ? "...-share" : "...-count"`). A literal-only scan finds no family for
+   * those builders, which silently produces an empty requirement set: the check would pass by
+   * measuring nothing. Both forms are read, and a group that resolves to no family fails.
+   */
+  function familiesUsingGroup(group: string): string[] {
+    const MODULES = ["lib/nibrs-scope-deterministic.ts", "lib/nibrs-deterministic-queries.ts"];
+    const families: string[] = [];
+    for (const file of MODULES) {
+      const src = fs.readFileSync(file, "utf8");
+      for (const chunk of src.split(/\nexport function /).slice(1)) {
+        if (!new RegExp(`\\b${group}\\s*[({\\[]`).test(chunk)) continue;
+        for (const g of chunk.matchAll(/guardrail:\s*"([a-z0-9-]+)"/g)) families.push(g[1]);
+        for (const g of chunk.matchAll(/guardrail:\s*[^?\n]+\?\s*"([a-z0-9-]+)"\s*:\s*"([a-z0-9-]+)"/g)) {
+          families.push(g[1], g[2]);
+        }
+      }
+    }
+    return [...new Set(families)];
+  }
+  check("P1-5: every builder role branch is exercised by a case, for every family that selects it", () => {
+    const branches = roleBranchesFromSource();
+    assert.ok(branches.length >= 7, `expected the role branches to be readable from source, found ${branches.length}`);
+    const uncovered: string[] = [];
+    const requirements: string[] = [];
+    for (const branch of branches) {
+      const families = familiesUsingGroup(branch.group);
+      assert.ok(families.length > 0,
+        `role branch group '${branch.group}' resolved to no family, so it would require nothing`);
+      for (const family of families) {
+        requirements.push(`${family} x ${branch.table}.${branch.countColumn}`);
+        const covered = factual.some((o) =>
+          o.family === family &&
+          o.emittedDependencies.includes(branch.table) &&
+          (o.requiredColumns[branch.table] ?? []).includes(branch.countColumn));
+        if (!covered) uncovered.push(`${family} x ${branch.table}.${branch.countColumn} (${branch.group})`);
+      }
+    }
+    assert.ok(requirements.length >= 14,
+      `only ${requirements.length} role-branch requirements were derived; the scan is too narrow to bite`);
+    assert.deepStrictEqual(uncovered, [],
+      `builder role branches with no case (${uncovered.length}):\n  ${uncovered.join("\n  ")}`);
+  });
+
+  // ---- P1-6: plan structure, and an async-scoped recording sink ----
+  check("P1-6: the plan's task structure is intact", () => {
+    const plan = fs.readFileSync(PLAN_FILE, "utf8");
+    const task1 = plan.indexOf("### Task 1:");
+    const task1a = plan.indexOf("### Task 1A:");
+    const task2 = plan.indexOf("### Task 2:");
+    assert.ok(task1 >= 0, "Task 1 has no heading of its own");
+    assert.ok(task1a > task1, "Task 1A must follow Task 1, not contain it");
+    assert.ok(task2 > task1a, "Task 2 must follow Task 1A");
+    assert.ok(!/deliberately\s+absent/.test(plan),
+      "the 'nibrs:rollup deliberately absent' text contradicts the later finding that rollup is reachable");
+  });
+  check("P1-6: the plan's inventory/registry equality accounts for the sweep-only capability", () => {
+    const plan = fs.readFileSync(PLAN_FILE, "utf8");
+    // The contradiction was an EXACT equality between the inventory and the registry, followed by
+    // an assertion requiring an id that by design is not in the registry. Both cannot hold. The
+    // fenced block carrying the equality must therefore name the sweep-only capability.
+    const block = plan.split("```").find((chunk) => chunk.includes("inventory drifted from the derived registry"));
+    assert.ok(block, "the plan no longer contains the inventory/registry equality assertion");
+    // Scoped to the ASSERTION, not the block: the sweep-only constant is declared in the same
+    // block, so searching the whole block would pass whether or not the equality actually uses it.
+    const messageAt = block!.indexOf('"inventory drifted from the derived registry"');
+    const assertion = block!.slice(block!.lastIndexOf("assert.deepStrictEqual(", messageAt), messageAt);
+    assert.ok(/SWEEP_ONLY|national_monthly::sweep/.test(assertion),
+      `the equality compares the inventory against the registry alone, while a later assertion requires a capability that is deliberately absent from the registry:\n${assertion.trim()}`);
+  });
+  await checkAsync("P1-6: concurrent recordings do not cross-contaminate", async () => {
+    const a = new Database(PATHS.crime_data, { readonly: true });
+    const b = new Database(PATHS.nibrs, { readonly: true });
+    try {
+      const [ra, rb] = await Promise.all([
+        withRecordingAsync(async () => {
+          await new Promise((r) => setTimeout(r, 15));
+          a.prepare("SELECT ori FROM agencies LIMIT 1").all();
+          return null;
+        }),
+        withRecordingAsync(async () => {
+          await new Promise((r) => setTimeout(r, 5));
+          b.prepare("SELECT ori FROM nibrs_consistent_reporters LIMIT 1").all();
+          return null;
+        }),
+      ]);
+      const paths = (e: Prepared[]) => [...new Set(e.map((x) => path.resolve(x.dbPath)))];
+      assert.deepStrictEqual(paths(ra.entries), [path.resolve(PATHS.crime_data)],
+        `a recording scope captured another scope's reads: ${paths(ra.entries).join(", ") || "nothing"}`);
+      assert.deepStrictEqual(paths(rb.entries), [path.resolve(PATHS.nibrs)],
+        `a recording scope captured another scope's reads: ${paths(rb.entries).join(", ") || "nothing"}`);
+    } finally { a.close(); b.close(); }
+  });
+
   check("no background SQLite errors occurred during the run", () => {
     assert.deepStrictEqual(backgroundErrors, [], backgroundErrors.join("\n"));
   });
+
+  // TAXONOMY_DUMP_SQL=<path> writes every observed branch with its SQL, so the derivation can be
+  // inspected against the SQL that produced it rather than against a summary of it.
+  if (process.env.TAXONOMY_DUMP_SQL) {
+    fs.writeFileSync(process.env.TAXONOMY_DUMP_SQL, JSON.stringify(observations, null, 2));
+  }
 
   const factualCount = observations.filter((o) => o.terminalKind === "factual").length;
   const caps = new Set(observations.map(capabilityId).filter(Boolean)).size;

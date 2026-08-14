@@ -43,12 +43,20 @@ Derived results, current:
 | Measure | Value |
 |---|---|
 | Sealed families today / after Task 1A | 26 / 29 |
-| Operation cases | **56** |
-| — factual | **54** |
-| — unavailable (seal no capability) | **2** |
-| Importable-builder cases / route-handler cases | 54 / 2 |
-| **Operation-backed capabilities** | **50** |
+| Operation cases | **58** |
+| — factual | **57** |
+| — unavailable in production (seal no capability) | **1** |
+| Importable-builder cases / route-handler cases | 56 / 2 |
+| **Operation-backed capabilities** | **51** |
 | Registry-sweep only (`current.national`) | 1 |
+| Capabilities with complete authored policy | **0** |
+
+The one production-unavailable case is `hate_crime:metadata-agency-directory-county`, where the
+artifact genuinely lacks `agency_county_crosswalk`. **A fixture that cannot reach a contract is
+never recorded as `unavailable`** — that reads as a production verdict the fixture had not earned,
+and it is how `deterministic-shooting` was previously dropped out of the count while appearing
+accounted for. The suite now allows `unavailable` only for an explicitly listed production exit
+and fails on any other non-factual case.
 
 **Unavailable operations are not health capabilities.** The metadata unavailable exits return a
 synthetic `SELECT '…' AS answer` (`lib/metadata-coverage.ts:247`), so classifying by SQL presence
@@ -60,49 +68,42 @@ retype them.**
 
 | File | Contents |
 |---|---|
-| `scripts/fixtures/operation-taxonomy/operation-cases.json` | branch → `{ family, terminalKind, capability }` |
-| `scripts/fixtures/operation-taxonomy/capability-registry.json` | capability → `{ artifact, handlePath, prepDependencies, emittedDependencies, requiredColumns, coverage, integrity, availability, receiptIdentity }` |
+| `scripts/fixtures/operation-taxonomy/operation-cases.json` | branch → `{ family, terminalKind, capability }` (derived) |
+| `scripts/fixtures/operation-taxonomy/capability-registry.json` | capability → `{ artifact, prepDependencies, emittedDependencies, requiredColumns, policy, authorizationEligible }` (derived) |
+| `scripts/fixtures/operation-taxonomy/capability-policy.json` | capability → `{ coverage, integrity, availability, receiptOwner, evidence }` (**hand-authored**) |
 
-`receiptIdentity` is **provisional** until Stage 2B maps builder/import ownership, and is
-excluded from capability deduplication.
+**Observation derives structure only.** Which artifact, which tables, which columns — those are
+properties of an execution. Coverage semantics, integrity rules, availability policy and receipt
+ownership are not, and deriving them produced a constant (`"observed-available"` for every
+capability) and a receipt string built from the first emitted table, both presented as contract.
+They now come from a hand-authored file the deriver only reads, and **a capability whose policy is
+absent or partly unauthored is `authorizationEligible: false` and can authorize nothing.** One of
+51 is partly authored today; the rest are null and fail closed. Authoring them is Stage 2B work.
 
 **Capability identity = artifact + (preparation ∪ emitted) tables + exact required columns.**
 Required columns are part of identity because two operations over the same table can have
 materially different contracts — `shr:metadata-agency-directory` and `shr:metadata-year-coverage`
-both read `incidents` and are distinct capabilities. Sensitivity probes in the regression prove
-each declared column is load-bearing, that an unused column changes nothing, and that removing
-`cleared_E` fails both extraction and execution.
+both read `incidents` and are distinct capabilities.
 
-**Preparation-time dependencies are real and invisible to SQL reading.** Five capabilities read
-tables that never appear in their emitted SQL; `historical:agency_scorecard` reads live RTCI
-`agencies` and `agency_monthly` while deciding.
+**Required columns are settled by execution, not by matching tokens against schemas.** The
+predecessor intersected every identifier in a statement with every participating table's schema,
+which credited a name declared by two tables to both, harvested words out of string literals
+(`'monthly agency trends'` became `agency_monthly.agency`), and turned the `END` of a `CASE`
+expression into `historical_agency.end`. Attribution is now resolved through SQL scopes — aliases,
+UNION arms, subqueries and CTE pass-through — and then checked both ways by renaming a column in
+the artifact and asking SQLite whether the operation's real SQL still compiles: every declared
+column must break it, and no undeclared column may. A probe that instead removed a value the
+extractor produced and asked the extractor whether its output changed could not fail, and passed
+while `historical_agency.end` sat in the registry.
 
-### Task 1A: Sealed metadata operation tokens
-
-**Files:** Modify `lib/metadata-coverage.ts`, `app/api/query/route.ts`, `app/api/nibrs-query/route.ts`, `app/api/shr-query/route.ts`, `app/api/hc-query/route.ts`, `scripts/test-source-health-inventory.ts`; create `scripts/test-metadata-operations.ts`
-**Read first:** `lib/metadata-coverage.ts:612-660`, `lib/plan-derivation.ts:198-205`
-
-`metadata-coverage-answer` is one family covering three structurally different operations
-over different dependency sets. On Historical it reads `historical_state_national` *or*
-`historical_agency` *or* both; on Hate Crime, `hate_crime_participation` *or*
-`hate_crime_incidents`. No per-source mapping can be truthful, because the ambiguity is
-inside the source.
-
-**The evidence must be produced where the SQL is built, and bound to that exact SQL.** A
-route-supplied capability string would be an unverified claim about work the route did not
-do; `sealPlanDerivation(family, sql)` at the construction site is a token whose fingerprint
-`verifyPlanDerivation` can check against what was actually executed.
-
-| Family | Emitted for | Builder |
-|--------|-------------|---------|
-| `metadata-year-coverage` | `year_range` | `yearSql` (`:516-532`) |
-| `metadata-agency-directory` | agency/city intents, no county scope | `entitySql` (`:450`) |
-| `metadata-agency-directory-county` | agency/city intents with a county scope | `countyEntitySql` (`:391`) |
-| `metadata-state-coverage` | `available_states`, `missing_states`, `state_count` | `stateSql` (`:335`) |
-
-`download_help` (`:620`) and `county_membership_unavailable` (`:621`) produce **no SQL** and
-must seal **nothing**. They are canned capability answers, not factual source claims, and
----
+**Preparation-time dependencies are real and invisible to SQL reading.** Three capabilities read
+tables that never appear in their emitted SQL: `historical:agency_scorecard` reads live RTCI
+`agencies` and `agency_monthly` while deciding, the NIBRS city-offense count reads `agencies`, and
+`deterministic-shooting` reads `shr_agency_alias` and `shr_agency_identity` to resolve the agency
+before it builds anything. An earlier draft claimed **five**, listing `agency_county_crosswalk`
+as preparation-only for three county-metadata capabilities; the registry that draft shipped
+contradicted it — the crosswalk is in those operations' emitted SQL, and that draft's own file
+recorded only two preparation-only capabilities.
 
 ### Task 1: Inventory generated from the derived catalogs
 
@@ -117,8 +118,11 @@ inventories.
 
 Run `npx tsx scripts/test-operation-taxonomy.ts`. It must exit 0. That suite asserts the case
 denominator exactly, re-derives the sealed-family set from source and compares it to a pinned
-list of 26, requires every factual exit to name tables and to emit SQL that executes, and runs
-the column sensitivity probes. If it fails, the catalogs are stale and Task 1 must not proceed.
+list of 26, derives the builders' role branches from source and requires a case for every one of
+them under every family that selects it, requires every factual exit to name tables and to emit
+SQL that executes, and settles required columns by renaming each column in the artifact and
+checking whether the real SQL still compiles. If it fails, the catalogs are stale and Task 1 must
+not proceed.
 
 - [ ] **Step 2: Types**
 
@@ -143,10 +147,23 @@ export type CapabilitySpec = {
   tables: TableRequirement[];
   dependencies: DependencyRule[];
   semanticDependencies: SemanticDependency[];
-  coverage: { table: string; yearColumn: string } | null;
-  /** Provisional until Stage 2B maps builder/import ownership; never a dedup input. */
-  receiptKey: string;
-  availability: "always" | "conditional";
+  /**
+   * Hand-authored policy, copied from capability-policy.json. NOT derived: an execution cannot
+   * observe what a coverage basis means, what integrity rule applies, whether unavailability is
+   * expected, or who owns the receipt. Any field may be null, meaning "not yet authored".
+   */
+  policy: {
+    coverage: { table: string; yearColumn: string } | null;
+    integrity: string[] | null;
+    availability: "always" | "conditional" | null;
+    receiptOwner: string | null;
+    evidence: string;
+  } | null;
+  /**
+   * False unless every policy field is authored. A capability that cannot authorize must not be
+   * silently treated as one that can, so this is computed from the policy, never set by hand.
+   */
+  authorizationEligible: boolean;
 };
 export const CAPABILITY_INVENTORY: readonly CapabilitySpec[];
 export function specFor(capabilityId: string): CapabilitySpec | null;
@@ -158,19 +175,32 @@ Write `lib/source-health-inventory.ts` by reading the registry at build time (or
 generator whose output is diffed in CI). Then assert in `scripts/test-source-health-inventory.ts`:
 
 ```typescript
-check("every registry capability has an inventory spec, and vice versa", () => {
+/**
+ * The one capability with no eligible operation, so it cannot come from the operation catalog.
+ * Named here once, because two assertions have to agree about it: an exact equality against the
+ * registry and the assertion below that requires it to be present. A previous draft wrote the
+ * equality as "inventory == registry" and then required this id in the inventory, so the two
+ * could not both hold.
+ */
+const SWEEP_ONLY = ["crime_data::national_monthly::sweep"];
+
+check("the inventory is exactly the derived registry plus the sweep-only capability", () => {
   const registry = JSON.parse(fs.readFileSync(REGISTRY_FILE, "utf8"));
   assert.deepStrictEqual(
     CAPABILITY_INVENTORY.map((s) => s.capabilityId).sort(),
-    Object.keys(registry).sort(),
+    [...Object.keys(registry), ...SWEEP_ONLY].sort(),
     "inventory drifted from the derived registry",
   );
+  for (const id of SWEEP_ONLY) {
+    assert.ok(!registry[id], `${id} must NOT be in the operation registry: no operation reaches it`);
+  }
 });
 
 check("required columns and preparation tables match the registry exactly", () => {
   const registry = JSON.parse(fs.readFileSync(REGISTRY_FILE, "utf8"));
   for (const spec of CAPABILITY_INVENTORY) {
     const entry = registry[spec.capabilityId];
+    if (!entry) continue;                       // the sweep-only capability has no operation row
     assert.deepStrictEqual(
       Object.fromEntries(spec.tables.map((t) => [t.name, [...t.requiredColumns].sort()])),
       entry.requiredColumns,
@@ -194,7 +224,18 @@ check("current.national is registered although no operation reaches it", () => {
   // Frozen spec §8:241 requires independent validation of the Current national and
   // sample-agency tables. It has no eligible operation, so it cannot come from the operation
   // catalog and is added here explicitly; Task 11's sweep is what evaluates it.
-  assert.ok(specFor("crime_data::national_monthly::sweep"));
+  for (const id of SWEEP_ONLY) assert.ok(specFor(id), `${id} is missing from the inventory`);
+});
+
+check("no capability authorizes anything until its policy is authored", () => {
+  const registry = JSON.parse(fs.readFileSync(REGISTRY_FILE, "utf8"));
+  for (const spec of CAPABILITY_INVENTORY) {
+    const complete = spec.policy !== null &&
+      ["coverage", "integrity", "availability", "receiptOwner"].every((f) => spec.policy![f] !== null);
+    assert.strictEqual(spec.authorizationEligible, complete, `${spec.capabilityId} misstates its eligibility`);
+    const entry = registry[spec.capabilityId];
+    if (entry) assert.deepStrictEqual(spec.policy, entry.policy, `${spec.capabilityId} policy drifted from the registry`);
+  }
 });
 ```
 
@@ -205,6 +246,40 @@ git add lib/source-health-inventory.ts scripts/test-source-health-inventory.ts p
 git commit -m "Generate the capability inventory from the derived operation catalogs"
 ```
 
+---
+
+### Task 1A: Sealed metadata operation tokens
+
+**Files:** Modify `lib/metadata-coverage.ts`, `app/api/query/route.ts`, `app/api/nibrs-query/route.ts`, `app/api/shr-query/route.ts`, `app/api/hc-query/route.ts`, `scripts/test-source-health-inventory.ts`; create `scripts/test-metadata-operations.ts`
+**Read first:** `lib/metadata-coverage.ts:612-660`, `lib/plan-derivation.ts:198-205`
+**Depends on Task 1:** it edits `scripts/test-source-health-inventory.ts` and lowers that file's
+seal-site count, so Task 1 must have created it. Task 1A previously appeared *before* Task 1 with
+Task 1 spliced into the middle of it; the two are now contiguous and in dependency order.
+
+`metadata-coverage-answer` is one family covering three structurally different operations
+over different dependency sets. On Historical it reads `historical_state_national` *or*
+`historical_agency` *or* both; on Hate Crime, `hate_crime_participation` *or*
+`hate_crime_incidents`. No per-source mapping can be truthful, because the ambiguity is
+inside the source.
+
+**The evidence must be produced where the SQL is built, and bound to that exact SQL.** A
+route-supplied capability string would be an unverified claim about work the route did not
+do; `sealPlanDerivation(family, capability, sql)` at the construction site is a token whose
+fingerprint `verifyPlanDerivation` can check against what was actually executed, and whose
+`capability` is the identity the builder itself declared.
+
+| Family | Emitted for | Builder |
+|--------|-------------|---------|
+| `metadata-year-coverage` | `year_range` | `yearSql` (`:516-532`) |
+| `metadata-agency-directory` | agency/city intents, no county scope | `entitySql` (`:450`) |
+| `metadata-agency-directory-county` | agency/city intents with a county scope | `countyEntitySql` (`:391`) |
+| `metadata-state-coverage` | `available_states`, `missing_states`, `state_count` | `stateSql` (`:335`) |
+
+Each of those four families spans **five** capabilities — one per source — so the family is not
+the identity. The builder declares the capability alongside the SQL it just built.
+
+`download_help` (`:620`) and `county_membership_unavailable` (`:621`) produce **no SQL** and
+must seal **nothing**. They are canned capability answers, not factual source claims, and
 `UNMAPPED_FAMILIES` records why.
 
 - [ ] **Step 1: Write the failing tests**
@@ -213,9 +288,9 @@ git commit -m "Generate the capability inventory from the derived operation cata
 // scripts/test-metadata-operations.ts
 import { answerMetadataQuestion } from "../lib/metadata-coverage";
 import { verifyPlanDerivation } from "../lib/plan-derivation";
-import { capabilityForFamily } from "../lib/source-health-inventory";
+import { specFor } from "../lib/source-health-inventory";
 
-check("each metadata operation seals its OWN family, bound to the SQL it built", () => {
+check("each metadata operation seals its OWN family AND capability, bound to the SQL it built", () => {
   const cases = [
     { source: "historical", q: "which states have data",            family: "metadata-state-coverage" },
     { source: "historical", q: "what years are available",          family: "metadata-year-coverage" },
@@ -227,26 +302,33 @@ check("each metadata operation seals its OWN family, bound to the SQL it built",
     const result = answerMetadataQuestion(c.source, c.q, fixtureDbFor(c.source))!;
     assert.ok(result?.derivation, `${c.source}/${c.q} sealed nothing`);
     assert.strictEqual(result.derivation!.planFamily, c.family);
+    // The capability is declared by the builder and must name a real registry entry.
+    assert.ok(result.derivation!.capability, `${c.source}/${c.q} sealed no capability`);
+    assert.ok(specFor(result.derivation!.capability!), `unknown capability ${result.derivation!.capability}`);
     // Bound to the EXACT SQL: the whole point of sealing at the construction site.
     assert.ok(verifyPlanDerivation(result.derivation!, result.sql, c.family).ok);
   }
 });
 
-check("the two Historical operations resolve to DIFFERENT capabilities", () => {
-  // The defect this task exists to remove.
-  assert.notStrictEqual(
-    capabilityForFamily("historical", "metadata-state-coverage"),
-    capabilityForFamily("historical", "metadata-agency-directory"),
-  );
+check("the same family on two sources seals two DIFFERENT capabilities", () => {
+  // The defect this task exists to remove: metadata-state-coverage spans five capabilities,
+  // one per source, so no family -> capability function can be truthful.
+  const historical = answerMetadataQuestion("historical", "which states have data", fixtureDbFor("historical"))!;
+  const hateCrime = answerMetadataQuestion("hate_crime", "which states have data", fixtureDbFor("hate_crime"))!;
+  assert.strictEqual(historical.derivation!.planFamily, hateCrime.derivation!.planFamily);
+  assert.notStrictEqual(historical.derivation!.capability, hateCrime.derivation!.capability);
 });
 
-check("Historical year coverage resolves to the composite capability", () => {
-  assert.strictEqual(capabilityForFamily("historical", "metadata-year-coverage"), "coverage_span");
+check("the two Historical operations seal DIFFERENT capabilities", () => {
+  const states = answerMetadataQuestion("historical", "which states have data", fixtureDbFor("historical"))!;
+  const agencies = answerMetadataQuestion("historical", "how many agencies are included", fixtureDbFor("historical"))!;
+  assert.notStrictEqual(states.derivation!.capability, agencies.derivation!.capability);
 });
 
-check("Hate Crime state coverage resolves to participation, not incidents", () => {
-  assert.strictEqual(capabilityForFamily("hate_crime", "metadata-state-coverage"), "participation");
-  assert.strictEqual(capabilityForFamily("hate_crime", "metadata-agency-directory"), "incidents");
+check("Hate Crime state coverage seals participation, not incidents", () => {
+  const states = answerMetadataQuestion("hate_crime", "which states have data", fixtureDbFor("hate_crime"))!;
+  const spec = specFor(states.derivation!.capability!)!;
+  assert.deepStrictEqual(spec.tables.map((t) => t.name), ["hate_crime_participation"]);
 });
 
 check("a SQL-less metadata answer seals nothing", () => {
@@ -276,6 +358,11 @@ hand** — `:625-629` for year coverage, `:631-650` for the entity branches (cho
 county family when `county` is non-null), `:652-656` for state coverage. `result(...)`
 carries it through. `downloadResult(...)` and `countyMembershipUnavailableResult(...)` set
 `null`.
+
+Each site passes **both** the family and the capability it is building for:
+`sealPlanDerivation(family, capabilityId, sql)`. The capability comes from the source the
+builder was called with plus the tables it just decided to read — the same two facts the
+operation-taxonomy registry is keyed on — never from the family alone.
 
 - [ ] **Step 4: Consume it in the four routes**
 
@@ -779,6 +866,18 @@ git commit -m "Evaluate dependencies, semantic reliability alignment, and NIBRS 
 
 `verifyPlanDerivation(derivation, executedSql, expectedFamily)` takes **three** arguments; the third is documented "VERIFIED, NOT TRUSTED", and passing it is what stops a token sealed for family A authorizing an answer recorded under family B. Every call passes all three.
 
+**The capability comes off the verified token, not out of a family lookup.** An earlier draft of
+this task called `capabilityForFamily(sourceId, family)`. The derived registry disproves that
+mapping: eleven families each span several capabilities —
+`deterministic-nibrs-continuous-reporters` and `deterministic-nibrs-countywide-demographic` span
+**four** apiece (victim, offender, arrestee and victim-city contracts over four different summary
+tables), and each of the four metadata families spans **five**, one per source. A function from
+family to capability must therefore either return the wrong contract or refuse to answer, and
+`sourceId` does not disambiguate the NIBRS cases because all four live on the same source. The
+builder is the only place that knows which contract it built, so it seals that identity into the
+token and `verifyPlanDerivation` hands back the verified value. `capabilityForFamily()` is not
+part of this design and must not be introduced.
+
 ```typescript
 export function resolveCapability(
   sourceId: SourceId,
@@ -795,12 +894,13 @@ import { resolveCapability } from "../lib/source-health";
 import { sealPlanDerivation } from "../lib/plan-derivation";
 
 const SQL = "SELECT year, SUM(victim_count) AS victims FROM incidents GROUP BY year";
+const MURDER = "shr::incidents::incidents(homicide_type,victim_count,year)";   // a real registry key
 
 check("capability comes from a derivation verified against SQL and family", () => {
-  const sealed = sealPlanDerivation("deterministic-murder", SQL);
+  const sealed = sealPlanDerivation("deterministic-murder", MURDER, SQL);
   const resolved = resolveCapability("shr", sealed, SQL, "deterministic-murder");
   assert.ok("capability" in resolved, JSON.stringify(resolved));
-  assert.strictEqual((resolved as { capability: string }).capability, "incidents");
+  assert.strictEqual((resolved as { capability: string }).capability, MURDER);
 });
 
 check("no derivation resolves to nothing", () => {
@@ -808,31 +908,55 @@ check("no derivation resolves to nothing", () => {
 });
 
 check("SQL that does not match the sealed fingerprint is rejected", () => {
-  const sealed = sealPlanDerivation("deterministic-murder", SQL);
+  const sealed = sealPlanDerivation("deterministic-murder", MURDER, SQL);
   assert.ok("unresolved" in resolveCapability("shr", sealed, "SELECT 1", "deterministic-murder"));
 });
 
 check("a family claim disagreeing with the token is rejected", () => {
-  const sealed = sealPlanDerivation("deterministic-murder", SQL);
+  const sealed = sealPlanDerivation("deterministic-murder", MURDER, SQL);
   assert.ok("unresolved" in resolveCapability("shr", sealed, SQL, "deterministic-shooting"));
 });
 
-check("a family belonging to another source cannot select this source's capability", () => {
-  const sealed = sealPlanDerivation("deterministic-murder", SQL);
+check("a token whose capability belongs to another artifact is rejected", () => {
+  // The source claim is checked against the capability's OWN artifact, not against a family map.
+  const sealed = sealPlanDerivation("deterministic-murder", MURDER, SQL);
   assert.ok("unresolved" in resolveCapability("current", sealed, SQL, "deterministic-murder"));
 });
 
-check("an unmapped family resolves to nothing rather than a default", () => {
-  const sealed = sealPlanDerivation("family-nobody-mapped", SQL);
+check("a token naming no capability resolves to nothing rather than a default", () => {
+  const sealed = sealPlanDerivation("family-nobody-mapped", null, SQL);
   assert.ok("unresolved" in resolveCapability("shr", sealed, SQL, "family-nobody-mapped"));
+});
+
+check("a token naming a capability that is not in the registry is rejected", () => {
+  const sealed = sealPlanDerivation("deterministic-murder", "shr::invented::nothing(x)", SQL);
+  assert.ok("unresolved" in resolveCapability("shr", sealed, SQL, "deterministic-murder"));
+});
+
+check("two role branches of ONE family resolve to their own contracts", () => {
+  // deterministic-nibrs-continuous-reporters spans four capabilities. This is the case a
+  // family -> capability lookup answers wrongly, whichever of the four it returns.
+  const victims = "nibrs::nibrs_consistent_reporters+summary_victim_demographics::…";
+  const offenders = "nibrs::nibrs_consistent_reporters+summary_offender_demographics::…";
+  const family = "deterministic-nibrs-continuous-reporters";
+  for (const capability of [victims, offenders]) {
+    const sealed = sealPlanDerivation(family, capability, SQL);
+    const resolved = resolveCapability("nibrs", sealed, SQL, family);
+    assert.strictEqual((resolved as { capability: string }).capability, capability);
+  }
 });
 ```
 
 - [ ] **Step 2: Run it, confirm it fails, implement**
 
+Add `capability: string | null` to `PlanDerivation` (bumping `PLAN_DERIVATION_VERSION`, and
+reading an older envelope as `capability: null` rather than guessing one), take it as
+`sealPlanDerivation`'s second argument, and have `verifyPlanDerivation` return it on success so
+the caller reads a **verified** value rather than the raw token.
+
 ```typescript
 import { verifyPlanDerivation, type PlanDerivation } from "./plan-derivation";
-import { capabilityForFamily } from "./source-health-inventory";
+import { specFor } from "./source-health-inventory";
 
 export function resolveCapability(
   sourceId: SourceId,
@@ -843,11 +967,22 @@ export function resolveCapability(
   if (!derivation) return { unresolved: "no verified plan derivation was sealed for this answer" };
   const verified = verifyPlanDerivation(derivation, executedSql, claimedFamily);
   if (!verified.ok) return { unresolved: `plan derivation not verified: ${verified.reason}` };
-  const capability = capabilityForFamily(sourceId, derivation.planFamily);
-  if (!capability) return { unresolved: `plan family '${derivation.planFamily}' maps to no capability for ${sourceId}` };
-  return { capability };
+  // The builder's own declaration, verified with the rest of the token. No family lookup: one
+  // family can span four contracts, so a family could only ever name one of them.
+  if (!verified.capability) return { unresolved: `plan family '${derivation.planFamily}' sealed no capability` };
+  const spec = specFor(verified.capability);
+  if (!spec) return { unresolved: `sealed capability '${verified.capability}' is not in the registry` };
+  // The claimed source must match the capability's OWN artifact.
+  if (spec.artifact !== artifactOf(sourceId)) {
+    return { unresolved: `capability '${verified.capability}' belongs to ${spec.artifact}, not ${sourceId}` };
+  }
+  return { capability: verified.capability };
 }
 ```
+
+A pre-existing envelope with no `capability` therefore resolves to `unresolved`, which is the
+fail-closed direction: it withholds authority instead of inventing an identity for an answer
+produced before the field existed.
 
 - [ ] **Step 3: Run it, confirm it passes, commit**
 
@@ -1122,6 +1257,11 @@ export function healthToCheckState(state: SourceHealthState): CheckState {
 }
 ```
 
+**Persist the resolved capability on the manifest** as `manifest.capability`, set from the
+`resolveCapability` result and left `null` when unresolved. It is already computed here to
+evaluate health; recording it is what lets an embed read recover the originating contract
+(Task 10) instead of trying to rediscover it from the family, which cannot identify it.
+
 ```typescript
     const health = sourceHealthFor(
       input.sourceId,
@@ -1342,9 +1482,18 @@ import { __resetSourceHealthCacheForTests, __healthTracesForTests } from "../lib
 console.log(`\n${route.label} -- Stage 2 source health enabled`);
 {
   const question = `${route.question} stage2-case`;
-  // The reachable capabilities only. current:national and nibrs:rollup are deliberately
-  // absent: enabling a flag for a capability no verified family can select would suggest
-  // coverage that does not exist.
+  // The reachable capabilities only. `current.national` is the single exception: no operation
+  // reaches it, so enabling a flag for it would suggest coverage that does not exist. Task 11's
+  // sweep is what evaluates it instead.
+  //
+  // The NIBRS rollup capabilities are NOT in that category and must be enabled here. An earlier
+  // draft excluded them as unreachable alongside current.national; the derived catalog shows
+  // otherwise — `deterministic-nibrs-rollup-juvenile-arrests-race` and
+  // `deterministic-nibrs-rollup-national-arrests` are sealed families with observed contracts
+  // over the `rollup.` tables, three capabilities between them.
+  //
+  // Flag names are generated from the inventory, not typed here: hand-listing them is how this
+  // block came to disagree with the catalog in the first place.
   const CAPS: Record<string, string> = {
     PROOF_CAPABILITY_CURRENT_SAMPLE_AGENCIES: "on",
     PROOF_CAPABILITY_CURRENT_AGENCY_ROSTER: "on",
@@ -1460,21 +1609,24 @@ Second, the same call deliberately passes **no derivation**: "this read has no t
 
 Third — and this is where an earlier draft of this plan was simply wrong — **POST does not hold the originating finalization.** It holds an `OriginVerdict` from `verifyEmbedOrigin()`, which today is `{ state, reason, deliveryAction, proofMode }` (`lib/embed-origin.ts:77-85`). There is no plan family in it, so there is currently no trusted source for one. `embedPlanFamily()` (`:343`) returns a family describing the *read* (`embed-verified-origin`, `embed-legacy-unproved`), not the originating answer's family, and must not be confused for it.
 
-So the evidence has to be produced where the verification happens: extend `OriginVerdict` with `planFamily`, extracted server-side from the verified proof envelope on the matching `query_log` row. The family must be `null` for absent, unbound, malformed, unproved, incompatible-version, and source-mismatched records. Only then may POST persist it, and only when `originIsVerified(origin)` holds and the family maps to the same source as the chart's tab.
+So the evidence has to be produced where the verification happens: extend `OriginVerdict` with the originating `planFamily` **and `capability`**, both extracted server-side from the verified proof envelope on the matching `query_log` row. Both must be `null` for absent, unbound, malformed, unproved, incompatible-version, and source-mismatched records. Only then may POST persist them, and only when `originIsVerified(origin)` holds and the capability's own artifact matches the chart's tab.
 
-Nothing about the family comes from the embed client, at creation or on read. It still cannot make a read `healthy` in 2A, because the receipt is absent.
+**The capability is what gets recovered, not the family.** Recovering a family and then looking up "the" capability for it cannot work: `deterministic-nibrs-continuous-reporters` alone spans four capabilities over four different summary tables, so the lookup would name the wrong contract three times out of four, and each metadata family spans five, one per source.
 
-- [ ] **Step 1: Add the additive column**
+Nothing about either field comes from the embed client, at creation or on read. It still cannot make a read `healthy` in 2A, because the receipt is absent.
+
+- [ ] **Step 1: Add the additive columns**
 
 In `scripts/migrate-shared-charts-proof.js`, add to the column list alongside `origin_request_id` / `origin_state`:
 
 ```javascript
   { name: "origin_plan_family", type: "TEXT" },
+  { name: "origin_capability", type: "TEXT" },
 ```
 
 Nullable and additive, so the baseline release `c2b52ca` still reads the table.
 
-- [ ] **Step 2: Extend `OriginVerdict` with a server-extracted plan family**
+- [ ] **Step 2: Extend `OriginVerdict` with a server-extracted plan family and capability**
 
 Add the field to the interface at `lib/embed-origin.ts:77`:
 
@@ -1493,61 +1645,90 @@ export interface OriginVerdict {
    * and says nothing about what the original answer queried. Never supplied by a client.
    */
   planFamily: string | null;
+  /**
+   * The ORIGINATING answer's verified capability, read from the same envelope.
+   *
+   * This, not the family, is what an embed read needs: one family can span four capabilities,
+   * so recovering a family and then looking up "the" capability for it would pick the wrong
+   * contract three times out of four. Persisted by the finalization (Task 7) and never
+   * supplied by a client. Null unless the verdict is `verified` and the envelope carried it.
+   */
+  capability: string | null;
 }
 ```
 
-Every existing `return` in `verifyEmbedOrigin()` gains `planFamily: null`; only the verified branch may set it, and only from the envelope:
+Every existing `return` in `verifyEmbedOrigin()` gains `planFamily: null, capability: null`; only
+the verified branch may set them, and only from the envelope:
 
 ```typescript
 /**
- * Plan family from a stored proof envelope, or null.
+ * Plan family and capability from a stored proof envelope, or nulls.
  *
  * Validated, not trusted: the envelope must parse, must carry the current manifest
- * version, and must name a non-empty family. An envelope written by a newer schema is
- * NOT read with today's semantics -- the same rule the digest reporter applies.
+ * version, and must name a non-empty value. An envelope written by a newer schema is
+ * NOT read with today's semantics -- the same rule the digest reporter applies. Each field
+ * is recovered independently: an envelope predating `manifest.capability` yields a family
+ * but no capability, and that must leave the read unresolved rather than let the family
+ * stand in for one.
  */
-function planFamilyFromEnvelope(json: string | null | undefined): string | null {
-  if (!json) return null;
+function originEvidenceFromEnvelope(json: string | null | undefined): { planFamily: string | null; capability: string | null } {
+  const none = { planFamily: null, capability: null };
+  if (!json) return none;
   let envelope: unknown;
-  try { envelope = JSON.parse(json); } catch { return null; }
-  if (!envelope || typeof envelope !== "object" || Array.isArray(envelope)) return null;
+  try { envelope = JSON.parse(json); } catch { return none; }
+  if (!envelope || typeof envelope !== "object" || Array.isArray(envelope)) return none;
   const manifest = (envelope as { manifest?: unknown }).manifest;
-  if (!manifest || typeof manifest !== "object" || Array.isArray(manifest)) return null;
-  const record = manifest as { v?: unknown; planFamily?: unknown };
-  if (record.v !== PROOF_MANIFEST_VERSION) return null;
-  const family = typeof record.planFamily === "string" ? record.planFamily.trim() : "";
-  return family === "" ? null : family;
+  if (!manifest || typeof manifest !== "object" || Array.isArray(manifest)) return none;
+  const record = manifest as { v?: unknown; planFamily?: unknown; capability?: unknown };
+  if (record.v !== PROOF_MANIFEST_VERSION) return none;
+  const text = (value: unknown) => (typeof value === "string" && value.trim() !== "" ? value.trim() : null);
+  return { planFamily: text(record.planFamily), capability: text(record.capability) };
 }
 ```
 
-Select `proof_manifest` alongside the columns the verifier already reads, and set
-`planFamily: planFamilyFromEnvelope(row.proof_manifest)` on the verified branch only.
+Select `proof_manifest` alongside the columns the verifier already reads, and spread
+`originEvidenceFromEnvelope(row.proof_manifest)` onto the verified branch only.
+
+**This depends on Task 7 recording `manifest.capability`.** Task 7 already threads the resolved
+capability into the finalization to evaluate health; it must also persist it on the manifest, or
+there is nothing here to recover.
 
 - [ ] **Step 3: Write the failing `lib/embed-origin.ts` regressions**
 
 In `scripts/test-embed-origin.ts`:
 
 ```typescript
-check("a verified origin carries the originating plan family", () => {
-  // Row written with a v1 envelope naming a real family.
+check("a verified origin carries the originating plan family AND capability", () => {
+  // Row written with a v1 envelope naming a real family and a real registry capability.
   const verdict = verifyEmbedOrigin(db, candidate);
   assert.strictEqual(verdict.state, "verified");
   assert.strictEqual(verdict.planFamily, "deterministic-murder");
+  assert.strictEqual(verdict.capability, "shr::incidents::incidents(homicide_type,victim_count,year)");
 });
 
-check("planFamily is null for every non-verified state", () => {
+check("both fields are null for every non-verified state", () => {
   // absent (no request id), unbound (no db), and bound_unproven must all report null:
-  // a family is evidence about a PROVEN answer, and attaching one to an unproven record
+  // this is evidence about a PROVEN answer, and attaching it to an unproven record
   // would let the embed read name a capability it never earned.
-  assert.strictEqual(verifyEmbedOrigin(db, { ...candidate, requestId: null }).planFamily, null);
-  assert.strictEqual(verifyEmbedOrigin(null, candidate).planFamily, null);
+  for (const verdict of [verifyEmbedOrigin(db, { ...candidate, requestId: null }), verifyEmbedOrigin(null, candidate)]) {
+    assert.strictEqual(verdict.planFamily, null);
+    assert.strictEqual(verdict.capability, null);
+  }
   // plus the existing bound_unproven fixture
 });
 
-check("a malformed, unversioned, or newer-schema envelope yields null", () => {
-  for (const envelope of ["{not json", "{}", JSON.stringify({ manifest: { v: 2, planFamily: "x" } }), JSON.stringify({ manifest: { v: 1 } })]) {
-    // Rewrite the row's proof_manifest to `envelope`, re-verify, and assert null.
+check("a malformed, unversioned, or newer-schema envelope yields nulls", () => {
+  for (const envelope of ["{not json", "{}", JSON.stringify({ manifest: { v: 2, planFamily: "x", capability: "y" } }), JSON.stringify({ manifest: { v: 1 } })]) {
+    // Rewrite the row's proof_manifest to `envelope`, re-verify, and assert both are null.
   }
+});
+
+check("an envelope predating manifest.capability yields a family but NO capability", () => {
+  // The pre-existing-envelope case. It must NOT fall back to a family lookup: the read stays
+  // unresolved, which withholds authority instead of guessing which of four contracts it was.
+  const envelope = JSON.stringify({ manifest: { v: PROOF_MANIFEST_VERSION, planFamily: "deterministic-murder" } });
+  // Rewrite the row's proof_manifest to `envelope`, re-verify:
+  //   verdict.planFamily === "deterministic-murder"; verdict.capability === null.
 });
 
 check("embedPlanFamily still describes the READ, not the origin", () => {
@@ -1587,27 +1768,28 @@ await check("a proved embed resolves its capability and evaluates CURRENT source
 - [ ] **Step 5: Run them and confirm they fail**
 
 Run: `npx tsx scripts/test-embed-origin.ts && npx tsx scripts/test-shadow-equivalence.ts`
-Expected: FAIL — `OriginVerdict` has no `planFamily`, so nothing can be persisted or recovered.
+Expected: FAIL — `OriginVerdict` has neither `planFamily` nor `capability`, so nothing can be
+persisted or recovered.
 
 - [ ] **Step 6: Persist and recover the evidence**
 
-At creation, POST already computes `origin = verifyEmbedOrigin(...)`. Store
-`origin.planFamily` into `origin_plan_family` **only when both hold**:
+At creation, POST already computes `origin = verifyEmbedOrigin(...)`. Store `origin.planFamily`
+into `origin_plan_family` and `origin.capability` into `origin_capability` **only when all three
+hold**:
 
 ```typescript
-    const originFamily =
-      originIsVerified(origin) &&
-      origin.planFamily &&
-      capabilityForFamily(sourceForTab(body.tab), origin.planFamily) !== null
-        ? origin.planFamily
-        : null;
+    const spec = origin.capability ? specFor(origin.capability) : null;
+    const sourceMatches = spec !== null && spec.artifact === artifactOf(sourceForTab(body.tab));
+    const originFamily = originIsVerified(origin) && sourceMatches ? origin.planFamily : null;
+    const originCapability = originIsVerified(origin) && sourceMatches ? origin.capability : null;
 ```
 
-The second condition matters as much as the first: a family that maps to no capability for
-*this chart's source* is a source mismatch, and persisting it would let a read select
-another source's capability. On read, recover the column and pass it as the claimed family
-only when the stored `origin_state` is `verified`; otherwise pass null so the read stays
-unresolved and fails closed.
+The source check matters as much as the verified state, and it is made against the **capability's
+own artifact** rather than against a family map: a capability belonging to another source is a
+mismatch, and persisting it would let a read evaluate the wrong artifact's health. On read,
+recover `origin_capability` and use it only when the stored `origin_state` is `verified`;
+otherwise pass null so the read stays unresolved and fails closed. `origin_plan_family` is
+retained for the digest and for debugging, and is never used to select a capability.
 
 Because the read still has no sealed derivation, `resolveCapability` must accept this path explicitly rather than by loosening its rules. Add a narrow second entry point used only here:
 
@@ -1617,19 +1799,22 @@ Because the read still has no sealed derivation, `resolveCapability` must accept
  *
  * Separate from resolveCapability ON PURPOSE: that function's contract is "a verified
  * token or nothing", and widening it would let any caller skip verification. This path
- * trusts SERVER-PERSISTED evidence instead -- a plan family that verifyEmbedOrigin()
+ * trusts SERVER-PERSISTED evidence instead -- a capability that verifyEmbedOrigin()
  * extracted from the originating answer's proof envelope and that POST stored only for a
  * verified, source-matched origin -- and only when the stored origin verdict is
  * `verified`. It can still never produce `healthy` in Stage 2A.
  */
 export function resolveCapabilityFromPersistedOrigin(
-  sourceId: SourceId, originState: string | null, originPlanFamily: string | null,
+  sourceId: SourceId, originState: string | null, originCapability: string | null,
 ): { capability: string } | { unresolved: string } {
   if (originState !== "verified") return { unresolved: `origin state '${originState ?? "absent"}' is not a verified origin` };
-  if (!originPlanFamily) return { unresolved: "origin evidence records no plan family" };
-  const capability = capabilityForFamily(sourceId, originPlanFamily);
-  if (!capability) return { unresolved: `origin family '${originPlanFamily}' maps to no capability for ${sourceId}` };
-  return { capability };
+  if (!originCapability) return { unresolved: "origin evidence records no capability" };
+  const spec = specFor(originCapability);
+  if (!spec) return { unresolved: `origin capability '${originCapability}' is not in the registry` };
+  if (spec.artifact !== artifactOf(sourceId)) {
+    return { unresolved: `origin capability '${originCapability}' belongs to ${spec.artifact}, not ${sourceId}` };
+  }
+  return { capability: originCapability };
 }
 ```
 

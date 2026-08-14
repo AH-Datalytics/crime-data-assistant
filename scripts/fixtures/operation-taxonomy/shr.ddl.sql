@@ -67,3 +67,34 @@ CREATE INDEX idx_agency_county_crosswalk_state_county
       ON agency_county_crosswalk(state, county_key);
 CREATE INDEX idx_agency_county_crosswalk_county
       ON agency_county_crosswalk(county_key);
+CREATE TABLE shr_agency_identity (
+      ori TEXT NOT NULL,
+      state TEXT NOT NULL,
+      canonical_agency TEXT NOT NULL,
+      agency_type TEXT NOT NULL,
+      search_key TEXT NOT NULL,
+      source_agency_names TEXT NOT NULL,
+      source_agency_types TEXT NOT NULL,
+      nibrs_city TEXT,
+      nibrs_agency_type TEXT,
+      incident_count INTEGER NOT NULL,
+      first_year INTEGER NOT NULL,
+      last_year INTEGER NOT NULL,
+      PRIMARY KEY (ori, state)
+    );
+CREATE INDEX idx_shr_agency_identity_state_key
+      ON shr_agency_identity(state, search_key);
+CREATE TABLE shr_agency_alias (
+      alias TEXT NOT NULL,
+      alias_key TEXT NOT NULL,
+      ori TEXT NOT NULL,
+      state TEXT NOT NULL,
+      canonical_agency TEXT NOT NULL,
+      agency_type TEXT NOT NULL,
+      source TEXT NOT NULL,
+      PRIMARY KEY (alias_key, ori, state)
+    );
+CREATE INDEX idx_shr_agency_alias_state_key
+      ON shr_agency_alias(state, alias_key);
+CREATE INDEX idx_shr_agency_alias_ori_state
+      ON shr_agency_alias(ori, state);
