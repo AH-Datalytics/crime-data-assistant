@@ -535,6 +535,43 @@ check("a SPARSE exception table does not degrade for unflagged rows", () => {
   db.close();
 });
 
+check("an EMPTY sparse exception table is unknown, not degraded", () => {
+  /**
+   * Zero flags means no anomaly was recorded anywhere, which structure alone cannot distinguish from
+   * a build that never ran. Under the sparse contract absence is not a defect and row presence cannot
+   * establish completeness, so the verdict is unknown pending receipt or generation evidence.
+   * Reporting `degraded` drew exactly the inference the contract forbids.
+   *
+   * A complete ledger keeps the stricter reading, so both modes are pinned here.
+   */
+  const empty = semanticFixture((d) => d.exec("DELETE FROM reliability"));
+  const sparse = evaluateCapability(withSemantic(SPARSE_RELIABILITY), ctx(empty));
+  assert.strictEqual(sparse.trace.boundary, "semantic_dependency");
+  assert.strictEqual(sparse.health.state, "unknown", `an empty sparse table was called degraded: ${sparse.health.reason}`);
+  assert.match(sparse.health.reason ?? "", /not a defect|receipt or generation evidence/);
+  assert.deepStrictEqual(sparse.trace.semanticChecked, [], "nothing was validated, so nothing may be recorded as checked");
+
+  // Non-empty crime: a complete ledger degrades here via the REVERSE check, not the emptiness rule.
+  const complete = evaluateCapability(withSemantic(RELIABILITY), ctx(empty));
+  assert.strictEqual(complete.health.state, "degraded", "a complete ledger must still enumerate what it qualifies");
+  assert.match(complete.health.reason ?? "", /unqualified by reliability/);
+  empty.close();
+
+  /**
+   * BOTH empty, which is the only state that reaches the emptiness rule on the complete path -- with
+   * a non-empty qualified table the reverse check fires first. Without this case the complete branch
+   * of that rule is unreachable, and a mutation flipping it to `unknown` survived.
+   */
+  const bothEmpty = semanticFixture((d) => d.exec("DELETE FROM reliability; DELETE FROM crime"));
+  const sparseBoth = evaluateCapability(withSemantic(SPARSE_RELIABILITY), ctx(bothEmpty));
+  assert.strictEqual(sparseBoth.health.state, "unknown");
+  const completeBoth = evaluateCapability(withSemantic(RELIABILITY), ctx(bothEmpty));
+  assert.strictEqual(completeBoth.health.state, "degraded",
+    "an empty complete ledger must still be a defect when nothing forced the reverse check");
+  assert.match(completeBoth.health.reason ?? "", /must enumerate what it qualifies/);
+  bothEmpty.close();
+});
+
 check("a SPARSE table still has its existing flags validated", () => {
   // Absence is not a defect; an INVALID flag still is. A reliability row for an agency-year the
   // crime data does not contain qualifies nothing that exists.

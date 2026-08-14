@@ -365,12 +365,47 @@ export function evaluateCapability(
           "semantic_dependency");
       }
     }
+    /**
+     * An EMPTY qualifying table is judged by the coverage mode, before any version reasoning.
+     *
+     * A sparse exception table with zero rows means no anomaly was recorded anywhere -- which is
+     * indistinguishable, from structure alone, from a build that never ran. Absence is not a defect
+     * under the sparse contract and row presence cannot establish completeness, so the honest verdict
+     * is `unknown` pending receipt/generation evidence. Reporting `degraded` claimed a negative
+     * finding that the contract explicitly says cannot be drawn this way.
+     *
+     * A complete ledger keeps the stricter reading: it is supposed to enumerate what it qualifies.
+     *
+     * If a particular sparse table must be nonempty, that belongs in an explicit rule of its own, not
+     * inferred from a version count.
+     */
+    const total = scalar(db, `SELECT COUNT(*) AS n FROM ${qualifiedTable(dep.table)}`);
+    if (total.kind === "threw") {
+      return done("unknown", `${dep.table} could not be counted: ${total.error}`, "semantic_dependency");
+    }
+    if (total.value === 0) {
+      return dep.coverage === "sparse"
+        ? done("unknown",
+          `${dep.table} holds no rows; for a sparse exception table that is not a defect, and completeness needs receipt or generation evidence`,
+          "semantic_dependency")
+        : done("degraded",
+          `${dep.table} holds no rows, and a complete ledger must enumerate what it qualifies`,
+          "semantic_dependency");
+    }
+
     if (dep.versionColumn) {
       // A mixed-version table is a half-finished rebuild, and rows from two algorithms are not
       // comparable evidence.
       const version = quoteIdentifier(dep.versionColumn);
       // `distinct` is a SQL keyword: aliasing a column to it makes the whole statement throw, which
       // reported every version case as `unknown` instead of the verdict it had actually computed.
+      /**
+       * Reached only for a NONEMPTY table, because the emptiness rule above returns first. That
+       * ordering is load-bearing: SUM over zero rows returns NULL, so `missing > 0` would be false
+       * and an empty table would fall through to the distinct count and be called degraded -- the
+       * verdict the sparse contract forbids. The empty-table tests pin the ordering, so no
+       * COALESCE is added here to paper over a state that cannot arrive.
+       */
       const counts = row<{ version_count: number; missing_count: number }>(db,
         `SELECT COUNT(DISTINCT ${version}) AS version_count, ` +
         `SUM(CASE WHEN ${version} IS NULL OR TRIM(${version}) = '' THEN 1 ELSE 0 END) AS missing_count ` +
