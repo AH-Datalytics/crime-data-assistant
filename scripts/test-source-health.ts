@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import Database from "better-sqlite3";
 import { evaluateCapability, identityOf, type HealthContext } from "../lib/source-health";
+import { coverageBasisErrors } from "../lib/capability-policy";
 import { CAPABILITY_INVENTORY, specFor, type CapabilitySpec } from "../lib/source-health-inventory";
 
 let passed = 0, failed = 0;
@@ -152,6 +153,41 @@ check("a source that does not own the capability's artifact is refused, not attr
   db.close();
 });
 
+check("attribution is refused BEFORE a handle is acquired", () => {
+  /**
+   * The guard was placed after acquisition, so it was unreachable for exactly the cases that matter:
+   * a mismatched source with no handle exited at no_database, and one whose provider threw exited at
+   * threw -- both attributed to a source that does not own the artifact. Whether attribution is
+   * truthful cannot depend on whether a database happened to be obtainable.
+   */
+  const foreign = { sourceId: "nibrs" as const, requestedYears: [2022] };
+
+  // (a) provider yields nothing
+  const nullProvider: CapabilitySpec = { ...shr, database: { acquire: () => null } };
+  const noHandle = evaluateCapability(nullProvider, foreign);
+  assert.strictEqual(noHandle.trace.boundary, "artifact_mismatch", "a mismatched source with no handle escaped as no_database");
+  assert.strictEqual(noHandle.health.state, "unknown");
+
+  // (b) provider throws
+  let acquired = 0;
+  const throwingProvider: CapabilitySpec = {
+    ...shr,
+    database: { acquire: () => { acquired++; throw new Error("handle exploded"); } },
+  };
+  const threw = evaluateCapability(throwingProvider, foreign);
+  assert.strictEqual(threw.trace.boundary, "artifact_mismatch", "a mismatched source with a throwing provider escaped as threw");
+  assert.strictEqual(threw.health.state, "unknown");
+  assert.strictEqual(acquired, 0, "no handle may be opened for a capability the caller cannot evaluate");
+
+  // (c) explicit null override takes the same path
+  assert.strictEqual(
+    evaluateCapability(shr, { ...foreign, dbOverride: null }).trace.boundary, "artifact_mismatch");
+  for (const result of [noHandle, threw]) {
+    assert.match(result.health.reason ?? "", /belongs to shr/);
+    assert.deepStrictEqual(result.trace.tablesChecked, []);
+  }
+});
+
 check("current and historical share one artifact, so both may evaluate a crime_data capability", () => {
   // The mapping this guard depends on: two tabs over crime_data.db cannot have different structural
   // health for the same table, which is why capability ids are keyed on the artifact.
@@ -293,6 +329,42 @@ check("coverage is unknown when its basis is not a table the capability reads", 
   assert.strictEqual(trace.coverage, "unknown", "coverage was judged from a table outside the capability");
   assert.strictEqual(trace.boundary, "missing_receipt");
   db.close();
+});
+
+check("coverage is unknown when the basis column is not one the capability reads", () => {
+  /**
+   * The review's reproduction: a legitimate emitted table with an existing but UNREQUIRED column.
+   * `incidents.foreign_year` exists and MIN/MAX over it succeeds, so guarding the table alone
+   * returned a confident "passed" from a column the contract never names.
+   */
+  const db = shrFixture((fixture) => {
+    fixture.exec("ALTER TABLE incidents ADD COLUMN foreign_year INTEGER");
+    fixture.prepare("UPDATE incidents SET foreign_year = ?").run(2022);
+  });
+  const spec = withPolicy(shr);
+  assert.deepStrictEqual(shr.tables.find((t) => t.name === "incidents")?.requiredColumns, ["year"],
+    "this reproduction depends on the contract requiring only incidents.year");
+  const strayColumn: CapabilitySpec = {
+    ...spec,
+    policy: { ...spec.policy!, coverage: { table: "incidents", yearColumn: "foreign_year" } },
+  };
+  const { trace } = evaluateCapability(strayColumn, ctx(db, [2022]));
+  assert.strictEqual(trace.coverage, "unknown", "coverage was judged from a column outside the contract");
+  assert.strictEqual(trace.boundary, "missing_receipt");
+  // The required column still yields a real verdict, so the guard is not simply refusing everything.
+  assert.strictEqual(evaluateCapability(spec, ctx(db, [2022])).trace.coverage, "passed");
+  db.close();
+});
+
+check("the coverage-basis rule is the shared one, table and column together", () => {
+  // Same function the registry regression applies, so runtime and validation cannot drift apart.
+  const declared = [{ name: "incidents", requiredColumns: ["year"] }];
+  const authored = (coverage: unknown) => coverageBasisErrors({ coverage } as never, declared);
+  assert.deepStrictEqual(authored({ table: "incidents", yearColumn: "year" }), []);
+  assert.strictEqual(authored({ table: "incidents", yearColumn: "foreign_year" }).length, 1);
+  assert.strictEqual(authored({ table: "unrelated", yearColumn: "year" }).length, 1);
+  assert.deepStrictEqual(coverageBasisErrors(null, declared), [], "an unauthored basis is not an error");
+  assert.deepStrictEqual(coverageBasisErrors({} as never, declared), [], "an absent basis is not an error");
 });
 
 check("coverage is unknown when the basis table has no year bounds", () => {

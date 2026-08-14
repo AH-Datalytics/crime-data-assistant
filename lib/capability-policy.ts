@@ -74,6 +74,32 @@ export function policyShapeErrors(policy: UnvalidatedPolicy): string[] {
 }
 
 /**
+ * Whether an authored coverage basis names a table AND column the capability actually reads.
+ *
+ * The pair matters, not just the table. Guarding only the table let a policy name an existing but
+ * unrequired column on a legitimate emitted table -- `incidents.foreign_year` where the contract
+ * requires only `incidents.year` -- and MIN/MAX over it succeeds, yielding a confident `passed` or
+ * `failed` computed from a column the capability never reads. Reproduced exactly that way in review.
+ *
+ * Shared so the runtime guard and registry/policy validation apply one rule rather than two.
+ */
+export function coverageBasisErrors(
+  policy: UnvalidatedPolicy | null,
+  declared: readonly { name: string; requiredColumns: readonly string[] }[],
+): string[] {
+  const coverage = policy?.coverage as { table?: unknown; yearColumn?: unknown } | null | undefined;
+  if (!coverage || typeof coverage !== "object") return [];   // unauthored is not an error
+  const table = declared.find((entry) => entry.name === coverage.table);
+  if (!table) {
+    return [`coverage basis table ${JSON.stringify(coverage.table)} is not one the capability reads`];
+  }
+  if (!table.requiredColumns.includes(String(coverage.yearColumn))) {
+    return [`coverage basis ${String(coverage.table)}.${String(coverage.yearColumn)} is not a required column of that table`];
+  }
+  return [];
+}
+
+/**
  * Fail closed: a null policy, one with any field still unauthored, or one whose authored fields are
  * the wrong shape authorizes nothing.
  */

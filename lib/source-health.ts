@@ -1,5 +1,5 @@
 import type { CheckState, SourceHealth, SourceId } from "./proof-contract";
-import { policyIsComplete, type UnvalidatedPolicy } from "./capability-policy";
+import { coverageBasisErrors, policyIsComplete, type UnvalidatedPolicy } from "./capability-policy";
 import { artifactOf } from "./source-artifact";
 import type { CapabilitySpec, Db, OpenedDatabase, TableRequirement } from "./source-health-inventory";
 
@@ -103,16 +103,14 @@ function coverageFor(spec: CapabilitySpec, db: Db, requestedYears: number[] | nu
   const coverage = spec.policy?.coverage;
   if (!coverage) return "unknown";
   /**
-   * The coverage basis must be a table this capability actually reads.
+   * The basis must be a table AND column this capability actually reads -- checked as a pair.
    *
-   * Otherwise an authored basis naming an unrelated table still produces MIN/MAX successfully, and
-   * the answer gets a confident `passed` or `failed` computed from data it never touched. Silently
-   * querying whatever table the policy names is worse than declining to judge.
-   *
-   * A coverage basis outside the capability's emitted tables is a policy-authoring error to catch in
-   * Stage 2B review, not something to tolerate here.
+   * Guarding the table alone still let an existing but unrequired column on a legitimate emitted
+   * table produce a confident verdict from data the capability never reads. A basis outside the
+   * emitted contract is a policy-authoring error for Stage 2B review, not something to tolerate at
+   * runtime, so the same rule is applied by the registry regression via coverageBasisErrors.
    */
-  if (!spec.tables.some((table) => table.name === coverage.table)) return "unknown";
+  if (coverageBasisErrors(spec.policy as UnvalidatedPolicy | null, spec.tables).length > 0) return "unknown";
   if (!requestedYears || requestedYears.length === 0) return "not_applicable";
   try {
     const bounds = db.prepare(
@@ -130,6 +128,22 @@ export function evaluateCapability(
   spec: CapabilitySpec,
   context: HealthContext,
 ): { health: SourceHealth; trace: HealthTrace } {
+  /**
+   * Ownership is settled BEFORE a handle is acquired.
+   *
+   * Placed after acquisition, this guard was unreachable for exactly the cases that matter: a
+   * mismatched source whose provider returned nothing exited at `no_database`, and one whose
+   * provider threw exited at `threw` -- both traces attributed to a caller source that does not own
+   * the artifact. Whether attribution is truthful cannot depend on whether a database happened to be
+   * obtainable. Checking first also means no handle is opened for a capability the caller was never
+   * entitled to evaluate.
+   */
+  if (artifactOf(context.sourceId) !== spec.artifact) {
+    return terminal(spec, context.sourceId, null, "unknown",
+      `capability ${spec.capabilityId} belongs to ${spec.artifact}, not to ${context.sourceId}`,
+      "artifact_mismatch");
+  }
+
   let opened: OpenedDatabase | null;
   try {
     opened = context.dbOverride !== undefined ? context.dbOverride : spec.database.acquire();
@@ -151,23 +165,6 @@ export function evaluateCapability(
   };
 
   if (!db) return done("unknown", "no database handle available from the capability provider", "no_database");
-
-  /**
-   * The claimed source must match the capability's OWN artifact.
-   *
-   * `sourceId` arrives from the caller and is stamped into both the trace and the verdict, so
-   * without this a crime_data capability evaluated with `sourceId: "shr"` produces a verdict
-   * attributed to SHR -- a truthful-looking record of health for a source whose artifact was never
-   * read. `artifact_mismatch` was declared in HealthBoundary and never reachable; this is the
-   * condition it exists for. Task 4's resolveCapability applies the same rule at resolution time,
-   * but this function is reachable independently (the Task 11 sweep calls it directly), so it
-   * defends itself rather than trusting an upstream check.
-   */
-  if (artifactOf(context.sourceId) !== spec.artifact) {
-    return done("unknown",
-      `capability ${spec.capabilityId} belongs to ${spec.artifact}, not to ${context.sourceId}`,
-      "artifact_mismatch");
-  }
 
   for (const table of structuralRequirements(spec)) {
     const columns = columnsOf(db, table.name);

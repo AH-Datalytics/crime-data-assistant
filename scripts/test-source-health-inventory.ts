@@ -20,7 +20,7 @@ import {
 } from "../lib/source-health-inventory";
 import { renderInventory, INVENTORY_FILE } from "./generate-source-health-inventory";
 import { capabilityFlagKey } from "../lib/capability-flag-key";
-import { policyIsComplete, type UnvalidatedPolicy } from "../lib/capability-policy";
+import { coverageBasisErrors, policyIsComplete, type UnvalidatedPolicy } from "../lib/capability-policy";
 
 const DATA_DIR = path.join(process.cwd(), "scripts", "fixtures", "operation-taxonomy");
 const REGISTRY_FILE = path.join(DATA_DIR, "capability-registry.json");
@@ -178,6 +178,25 @@ check("the GENERATOR refuses eligibility for a non-null but malformed policy", (
   } as never);
   assert.ok(!/authorizationEligible: true/.test(rendered),
     "the generator granted authority to a policy whose fields are non-null but state nothing");
+});
+
+check("an authored coverage basis must belong to the capability's emitted contract", () => {
+  /**
+   * Rejected at validation time as well as at runtime, so a stray basis is caught when it is
+   * AUTHORED rather than only when it is evaluated. Driven partly by a synthetic spec because no
+   * capability has coverage authored yet -- over real data alone this would assert nothing.
+   */
+  for (const spec of CAPABILITY_INVENTORY) {
+    assert.deepStrictEqual(coverageBasisErrors(spec.policy as UnvalidatedPolicy | null, spec.tables), [],
+      `${spec.capabilityId} authored a coverage basis outside its emitted contract`);
+  }
+  const declared = [{ name: "incidents", requiredColumns: ["year"] }];
+  assert.strictEqual(coverageBasisErrors({ coverage: { table: "incidents", yearColumn: "foreign_year" } } as never, declared).length, 1,
+    "an existing but unrequired column must be rejected");
+  assert.strictEqual(coverageBasisErrors({ coverage: { table: "unrelated", yearColumn: "year" } } as never, declared).length, 1,
+    "a table outside the contract must be rejected");
+  assert.deepStrictEqual(coverageBasisErrors({ coverage: { table: "incidents", yearColumn: "year" } } as never, declared), [],
+    "a basis inside the contract must be accepted");
 });
 
 check("a non-null but malformed policy authorizes nothing", () => {
