@@ -173,3 +173,23 @@ CREATE TABLE "summary_juvenile_offender_incidents"(
 CREATE UNIQUE INDEX idx_sjoi_key ON summary_juvenile_offender_incidents(year,month,ori,offense_scope);
 CREATE INDEX idx_sjoi_scope_year ON summary_juvenile_offender_incidents(offense_scope,year);
 CREATE INDEX idx_sjoi_state_year ON summary_juvenile_offender_incidents(state,year,offense_scope);
+CREATE TABLE nibrs_state_coverage (
+            state TEXT NOT NULL,
+            year INTEGER NOT NULL,
+            total_agencies INTEGER,
+            reporting_agencies INTEGER,
+            total_population INTEGER,
+            reporting_population INTEGER,
+            coverage_pct REAL,
+            PRIMARY KEY (state, year)
+        );
+CREATE TABLE IF NOT EXISTS "summary_state_monthly"(
+  year INT,
+  month INT,
+  state TEXT,
+  ucr_offense_code TEXT,
+  offense_count,
+  cleared_count
+);
+CREATE INDEX idx_ssm_state ON summary_state_monthly(state, year, month);
+CREATE INDEX idx_ssm_ucr ON summary_state_monthly(ucr_offense_code, year, month);

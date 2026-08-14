@@ -170,3 +170,15 @@ CREATE TABLE "agency_year_reliability" (
     PRIMARY KEY (ori, year, kind, source)
   );
 CREATE INDEX idx_agency_year_reliability_ori ON agency_year_reliability (ori, year);
+CREATE TABLE national_clearance_rate (
+    year INTEGER PRIMARY KEY,
+    violent_rate REAL,
+    property_rate REAL,
+    murder_rate REAL,
+    rape_rate REAL,
+    robbery_rate REAL,
+    assault_rate REAL,
+    burglary_rate REAL,
+    theft_rate REAL,
+    auto_theft_rate REAL
+);

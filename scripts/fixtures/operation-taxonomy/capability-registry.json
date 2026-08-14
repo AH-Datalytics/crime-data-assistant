@@ -1,0 +1,1313 @@
+{
+  "nibrs::summary_juvenile_offender_incidents::summary_juvenile_offender_incidents(incident_count,offense_scope,state,year)": {
+    "artifact": "nibrs",
+    "handlePath": "<fixture>/nibrs.db",
+    "prepDependencies": [],
+    "emittedDependencies": [
+      "summary_juvenile_offender_incidents"
+    ],
+    "requiredColumns": {
+      "summary_juvenile_offender_incidents": [
+        "incident_count",
+        "offense_scope",
+        "state",
+        "year"
+      ]
+    },
+    "coverage": "summary_juvenile_offender_incidents.year",
+    "integrity": [],
+    "availability": "observed-available",
+    "receiptIdentity": "provisional:nibrs:summary_juvenile_offender_incidents"
+  },
+  "nibrs::rollup.state_summary_arrestee_demographics::rollup.state_summary_arrestee_demographics(age_group,arrestee_count,race,state,year)": {
+    "artifact": "nibrs",
+    "handlePath": "<fixture>/nibrs.db",
+    "prepDependencies": [],
+    "emittedDependencies": [
+      "rollup.state_summary_arrestee_demographics"
+    ],
+    "requiredColumns": {
+      "rollup.state_summary_arrestee_demographics": [
+        "age_group",
+        "arrestee_count",
+        "race",
+        "state",
+        "year"
+      ]
+    },
+    "coverage": "rollup.state_summary_arrestee_demographics.year",
+    "integrity": [
+      "inspectNibrsRollupAvailability preflight; artifact coherence"
+    ],
+    "availability": "observed-available",
+    "receiptIdentity": "provisional:nibrs:rollup.state_summary_arrestee_demographics"
+  },
+  "nibrs::rollup.national_summary_arrestee_demographics::rollup.national_summary_arrestee_demographics(age_group,arrestee_count,race,year)": {
+    "artifact": "nibrs",
+    "handlePath": "<fixture>/nibrs.db",
+    "prepDependencies": [],
+    "emittedDependencies": [
+      "rollup.national_summary_arrestee_demographics"
+    ],
+    "requiredColumns": {
+      "rollup.national_summary_arrestee_demographics": [
+        "age_group",
+        "arrestee_count",
+        "race",
+        "year"
+      ]
+    },
+    "coverage": "rollup.national_summary_arrestee_demographics.year",
+    "integrity": [
+      "inspectNibrsRollupAvailability preflight; artifact coherence"
+    ],
+    "availability": "observed-available",
+    "receiptIdentity": "provisional:nibrs:rollup.national_summary_arrestee_demographics"
+  },
+  "nibrs::rollup.national_summary_arrestee_demographics::rollup.national_summary_arrestee_demographics(arrestee_count,ucr_arrest_offense,year)": {
+    "artifact": "nibrs",
+    "handlePath": "<fixture>/nibrs.db",
+    "prepDependencies": [],
+    "emittedDependencies": [
+      "rollup.national_summary_arrestee_demographics"
+    ],
+    "requiredColumns": {
+      "rollup.national_summary_arrestee_demographics": [
+        "arrestee_count",
+        "ucr_arrest_offense",
+        "year"
+      ]
+    },
+    "coverage": "rollup.national_summary_arrestee_demographics.year",
+    "integrity": [
+      "inspectNibrsRollupAvailability preflight; artifact coherence"
+    ],
+    "availability": "observed-available",
+    "receiptIdentity": "provisional:nibrs:rollup.national_summary_arrestee_demographics"
+  },
+  "nibrs::nibrs_consistent_reporters+summary_victim_demographics::nibrs_consistent_reporters(end_year,ori,start_year)|summary_victim_demographics(ori,race,ucr_offense_code,victim_count,year)": {
+    "artifact": "nibrs",
+    "handlePath": "<fixture>/nibrs.db",
+    "prepDependencies": [],
+    "emittedDependencies": [
+      "nibrs_consistent_reporters",
+      "summary_victim_demographics"
+    ],
+    "requiredColumns": {
+      "nibrs_consistent_reporters": [
+        "end_year",
+        "ori",
+        "start_year"
+      ],
+      "summary_victim_demographics": [
+        "ori",
+        "race",
+        "ucr_offense_code",
+        "victim_count",
+        "year"
+      ]
+    },
+    "coverage": "summary_victim_demographics.year",
+    "integrity": [],
+    "availability": "observed-available",
+    "receiptIdentity": "provisional:nibrs:nibrs_consistent_reporters"
+  },
+  "nibrs::nibrs_consistent_reporters+summary_offender_demographics::nibrs_consistent_reporters(end_year,ori,start_year)|summary_offender_demographics(offender_count,ori,race,ucr_offense_code,year)": {
+    "artifact": "nibrs",
+    "handlePath": "<fixture>/nibrs.db",
+    "prepDependencies": [],
+    "emittedDependencies": [
+      "nibrs_consistent_reporters",
+      "summary_offender_demographics"
+    ],
+    "requiredColumns": {
+      "nibrs_consistent_reporters": [
+        "end_year",
+        "ori",
+        "start_year"
+      ],
+      "summary_offender_demographics": [
+        "offender_count",
+        "ori",
+        "race",
+        "ucr_offense_code",
+        "year"
+      ]
+    },
+    "coverage": "summary_offender_demographics.year",
+    "integrity": [],
+    "availability": "observed-available",
+    "receiptIdentity": "provisional:nibrs:nibrs_consistent_reporters"
+  },
+  "nibrs::nibrs_consistent_reporters+summary_arrestee_demographics::nibrs_consistent_reporters(end_year,ori,start_year)|summary_arrestee_demographics(arrestee_count,ori,race,ucr_arrest_offense,year)": {
+    "artifact": "nibrs",
+    "handlePath": "<fixture>/nibrs.db",
+    "prepDependencies": [],
+    "emittedDependencies": [
+      "nibrs_consistent_reporters",
+      "summary_arrestee_demographics"
+    ],
+    "requiredColumns": {
+      "nibrs_consistent_reporters": [
+        "end_year",
+        "ori",
+        "start_year"
+      ],
+      "summary_arrestee_demographics": [
+        "arrestee_count",
+        "ori",
+        "race",
+        "ucr_arrest_offense",
+        "year"
+      ]
+    },
+    "coverage": "summary_arrestee_demographics.year",
+    "integrity": [],
+    "availability": "observed-available",
+    "receiptIdentity": "provisional:nibrs:nibrs_consistent_reporters"
+  },
+  "nibrs::nibrs_consistent_reporters+summary_victim_city_monthly::nibrs_consistent_reporters(end_year,ori,start_year)|summary_victim_city_monthly(ori,ucr_offense_code,victim_count,year)": {
+    "artifact": "nibrs",
+    "handlePath": "<fixture>/nibrs.db",
+    "prepDependencies": [],
+    "emittedDependencies": [
+      "nibrs_consistent_reporters",
+      "summary_victim_city_monthly"
+    ],
+    "requiredColumns": {
+      "nibrs_consistent_reporters": [
+        "end_year",
+        "ori",
+        "start_year"
+      ],
+      "summary_victim_city_monthly": [
+        "ori",
+        "ucr_offense_code",
+        "victim_count",
+        "year"
+      ]
+    },
+    "coverage": "summary_victim_city_monthly.year",
+    "integrity": [],
+    "availability": "observed-available",
+    "receiptIdentity": "provisional:nibrs:nibrs_consistent_reporters"
+  },
+  "nibrs::agencies+agency_county_crosswalk+summary_victim_demographics::agencies(ori,state,year)|agency_county_crosswalk(county_key,ori,ori9,state)|summary_victim_demographics(ori,race,state,ucr_offense_code,victim_count,year)": {
+    "artifact": "nibrs",
+    "handlePath": "<fixture>/nibrs.db",
+    "prepDependencies": [],
+    "emittedDependencies": [
+      "agencies",
+      "agency_county_crosswalk",
+      "summary_victim_demographics"
+    ],
+    "requiredColumns": {
+      "agencies": [
+        "ori",
+        "state",
+        "year"
+      ],
+      "agency_county_crosswalk": [
+        "county_key",
+        "ori",
+        "ori9",
+        "state"
+      ],
+      "summary_victim_demographics": [
+        "ori",
+        "race",
+        "state",
+        "ucr_offense_code",
+        "victim_count",
+        "year"
+      ]
+    },
+    "coverage": "agencies.year",
+    "integrity": [],
+    "availability": "observed-available",
+    "receiptIdentity": "provisional:nibrs:agencies"
+  },
+  "nibrs::agencies+agency_county_crosswalk+summary_offender_demographics::agencies(ori,state,year)|agency_county_crosswalk(county_key,ori,ori9,state)|summary_offender_demographics(offender_count,ori,race,state,ucr_offense_code,year)": {
+    "artifact": "nibrs",
+    "handlePath": "<fixture>/nibrs.db",
+    "prepDependencies": [],
+    "emittedDependencies": [
+      "agencies",
+      "agency_county_crosswalk",
+      "summary_offender_demographics"
+    ],
+    "requiredColumns": {
+      "agencies": [
+        "ori",
+        "state",
+        "year"
+      ],
+      "agency_county_crosswalk": [
+        "county_key",
+        "ori",
+        "ori9",
+        "state"
+      ],
+      "summary_offender_demographics": [
+        "offender_count",
+        "ori",
+        "race",
+        "state",
+        "ucr_offense_code",
+        "year"
+      ]
+    },
+    "coverage": "agencies.year",
+    "integrity": [],
+    "availability": "observed-available",
+    "receiptIdentity": "provisional:nibrs:agencies"
+  },
+  "nibrs::agencies+agency_county_crosswalk+summary_arrestee_demographics::agencies(ori,state,year)|agency_county_crosswalk(county_key,ori,ori9,state)|summary_arrestee_demographics(arrestee_count,ori,race,state,ucr_arrest_offense,year)": {
+    "artifact": "nibrs",
+    "handlePath": "<fixture>/nibrs.db",
+    "prepDependencies": [],
+    "emittedDependencies": [
+      "agencies",
+      "agency_county_crosswalk",
+      "summary_arrestee_demographics"
+    ],
+    "requiredColumns": {
+      "agencies": [
+        "ori",
+        "state",
+        "year"
+      ],
+      "agency_county_crosswalk": [
+        "county_key",
+        "ori",
+        "ori9",
+        "state"
+      ],
+      "summary_arrestee_demographics": [
+        "arrestee_count",
+        "ori",
+        "race",
+        "state",
+        "ucr_arrest_offense",
+        "year"
+      ]
+    },
+    "coverage": "agencies.year",
+    "integrity": [],
+    "availability": "observed-available",
+    "receiptIdentity": "provisional:nibrs:agencies"
+  },
+  "nibrs::agencies+agency_county_crosswalk+summary_victim_city_monthly::agencies(ori,state,year)|agency_county_crosswalk(county_key,ori,ori9,state)|summary_victim_city_monthly(ori,state,ucr_offense_code,victim_count,year)": {
+    "artifact": "nibrs",
+    "handlePath": "<fixture>/nibrs.db",
+    "prepDependencies": [],
+    "emittedDependencies": [
+      "agencies",
+      "agency_county_crosswalk",
+      "summary_victim_city_monthly"
+    ],
+    "requiredColumns": {
+      "agencies": [
+        "ori",
+        "state",
+        "year"
+      ],
+      "agency_county_crosswalk": [
+        "county_key",
+        "ori",
+        "ori9",
+        "state"
+      ],
+      "summary_victim_city_monthly": [
+        "ori",
+        "state",
+        "ucr_offense_code",
+        "victim_count",
+        "year"
+      ]
+    },
+    "coverage": "agencies.year",
+    "integrity": [],
+    "availability": "observed-available",
+    "receiptIdentity": "provisional:nibrs:agencies"
+  },
+  "nibrs::agencies+summary_clearance_type::agencies(agency_type,city,ori,population,state,year)|summary_clearance_type(cleared_by_arrest,cleared_exceptional,ori,state,total_offenses,ucr_offense_code,year)": {
+    "artifact": "nibrs",
+    "handlePath": "<fixture>/nibrs.db",
+    "prepDependencies": [],
+    "emittedDependencies": [
+      "agencies",
+      "summary_clearance_type"
+    ],
+    "requiredColumns": {
+      "agencies": [
+        "agency_type",
+        "city",
+        "ori",
+        "population",
+        "state",
+        "year"
+      ],
+      "summary_clearance_type": [
+        "cleared_by_arrest",
+        "cleared_exceptional",
+        "ori",
+        "state",
+        "total_offenses",
+        "ucr_offense_code",
+        "year"
+      ]
+    },
+    "coverage": "agencies.year",
+    "integrity": [],
+    "availability": "observed-available",
+    "receiptIdentity": "provisional:nibrs:agencies"
+  },
+  "nibrs::summary_clearance_type::summary_clearance_type(cleared_by_arrest,cleared_exceptional,ori,total_offenses,ucr_offense_code,year)": {
+    "artifact": "nibrs",
+    "handlePath": "<fixture>/nibrs.db",
+    "prepDependencies": [],
+    "emittedDependencies": [
+      "summary_clearance_type"
+    ],
+    "requiredColumns": {
+      "summary_clearance_type": [
+        "cleared_by_arrest",
+        "cleared_exceptional",
+        "ori",
+        "total_offenses",
+        "ucr_offense_code",
+        "year"
+      ]
+    },
+    "coverage": "summary_clearance_type.year",
+    "integrity": [],
+    "availability": "observed-available",
+    "receiptIdentity": "provisional:nibrs:summary_clearance_type"
+  },
+  "nibrs::summary_clearance_detail::summary_clearance_detail(cleared_A,cleared_B,cleared_C,cleared_D,cleared_E,cleared_by_arrest,state,total_offenses,ucr_offense_code,year)": {
+    "artifact": "nibrs",
+    "handlePath": "<fixture>/nibrs.db",
+    "prepDependencies": [],
+    "emittedDependencies": [
+      "summary_clearance_detail"
+    ],
+    "requiredColumns": {
+      "summary_clearance_detail": [
+        "cleared_A",
+        "cleared_B",
+        "cleared_C",
+        "cleared_D",
+        "cleared_E",
+        "cleared_by_arrest",
+        "state",
+        "total_offenses",
+        "ucr_offense_code",
+        "year"
+      ]
+    },
+    "coverage": "summary_clearance_detail.year",
+    "integrity": [],
+    "availability": "observed-available",
+    "receiptIdentity": "provisional:nibrs:summary_clearance_detail"
+  },
+  "nibrs::nibrs_agency_completeness+summary_victim_demographics::nibrs_agency_completeness(months_reported,ori,year)|summary_victim_demographics(ori,race,ucr_offense_code,victim_count,year)": {
+    "artifact": "nibrs",
+    "handlePath": "<fixture>/nibrs.db",
+    "prepDependencies": [],
+    "emittedDependencies": [
+      "nibrs_agency_completeness",
+      "summary_victim_demographics"
+    ],
+    "requiredColumns": {
+      "nibrs_agency_completeness": [
+        "months_reported",
+        "ori",
+        "year"
+      ],
+      "summary_victim_demographics": [
+        "ori",
+        "race",
+        "ucr_offense_code",
+        "victim_count",
+        "year"
+      ]
+    },
+    "coverage": "nibrs_agency_completeness.year",
+    "integrity": [],
+    "availability": "observed-available",
+    "receiptIdentity": "provisional:nibrs:nibrs_agency_completeness"
+  },
+  "nibrs::nibrs_agency_completeness+summary_offender_demographics::nibrs_agency_completeness(months_reported,ori,year)|summary_offender_demographics(offender_count,ori,race,ucr_offense_code,year)": {
+    "artifact": "nibrs",
+    "handlePath": "<fixture>/nibrs.db",
+    "prepDependencies": [],
+    "emittedDependencies": [
+      "nibrs_agency_completeness",
+      "summary_offender_demographics"
+    ],
+    "requiredColumns": {
+      "nibrs_agency_completeness": [
+        "months_reported",
+        "ori",
+        "year"
+      ],
+      "summary_offender_demographics": [
+        "offender_count",
+        "ori",
+        "race",
+        "ucr_offense_code",
+        "year"
+      ]
+    },
+    "coverage": "nibrs_agency_completeness.year",
+    "integrity": [],
+    "availability": "observed-available",
+    "receiptIdentity": "provisional:nibrs:nibrs_agency_completeness"
+  },
+  "nibrs::nibrs_agency_completeness+summary_arrestee_demographics::nibrs_agency_completeness(months_reported,ori,year)|summary_arrestee_demographics(arrestee_count,ori,race,ucr_arrest_offense,year)": {
+    "artifact": "nibrs",
+    "handlePath": "<fixture>/nibrs.db",
+    "prepDependencies": [],
+    "emittedDependencies": [
+      "nibrs_agency_completeness",
+      "summary_arrestee_demographics"
+    ],
+    "requiredColumns": {
+      "nibrs_agency_completeness": [
+        "months_reported",
+        "ori",
+        "year"
+      ],
+      "summary_arrestee_demographics": [
+        "arrestee_count",
+        "ori",
+        "race",
+        "ucr_arrest_offense",
+        "year"
+      ]
+    },
+    "coverage": "nibrs_agency_completeness.year",
+    "integrity": [],
+    "availability": "observed-available",
+    "receiptIdentity": "provisional:nibrs:nibrs_agency_completeness"
+  },
+  "nibrs::agencies+nibrs_agency_completeness+summary_city_monthly+summary_victim_city_monthly::agencies(ori,population,year)|nibrs_agency_completeness(months_reported,ori,year)|summary_city_monthly(month,offense_count,ori,ucr_offense_code,year)|summary_victim_city_monthly(month,ori,ucr_offense_code,victim_count,year)": {
+    "artifact": "nibrs",
+    "handlePath": "<fixture>/nibrs.db",
+    "prepDependencies": [],
+    "emittedDependencies": [
+      "agencies",
+      "nibrs_agency_completeness",
+      "summary_city_monthly",
+      "summary_victim_city_monthly"
+    ],
+    "requiredColumns": {
+      "agencies": [
+        "ori",
+        "population",
+        "year"
+      ],
+      "nibrs_agency_completeness": [
+        "months_reported",
+        "ori",
+        "year"
+      ],
+      "summary_city_monthly": [
+        "month",
+        "offense_count",
+        "ori",
+        "ucr_offense_code",
+        "year"
+      ],
+      "summary_victim_city_monthly": [
+        "month",
+        "ori",
+        "ucr_offense_code",
+        "victim_count",
+        "year"
+      ]
+    },
+    "coverage": "agencies.year",
+    "integrity": [],
+    "availability": "observed-available",
+    "receiptIdentity": "provisional:nibrs:agencies"
+  },
+  "nibrs::agencies+nibrs_agency_completeness+summary_city_monthly+summary_victim_city_monthly::agencies(ori,population,year)|nibrs_agency_completeness(months_reported,ori,year)|summary_city_monthly(month,ori,ucr_offense_code,year)|summary_victim_city_monthly(month,ori,ucr_offense_code,victim_count,year)": {
+    "artifact": "nibrs",
+    "handlePath": "<fixture>/nibrs.db",
+    "prepDependencies": [],
+    "emittedDependencies": [
+      "agencies",
+      "nibrs_agency_completeness",
+      "summary_city_monthly",
+      "summary_victim_city_monthly"
+    ],
+    "requiredColumns": {
+      "agencies": [
+        "ori",
+        "population",
+        "year"
+      ],
+      "nibrs_agency_completeness": [
+        "months_reported",
+        "ori",
+        "year"
+      ],
+      "summary_city_monthly": [
+        "month",
+        "ori",
+        "ucr_offense_code",
+        "year"
+      ],
+      "summary_victim_city_monthly": [
+        "month",
+        "ori",
+        "ucr_offense_code",
+        "victim_count",
+        "year"
+      ]
+    },
+    "coverage": "agencies.year",
+    "integrity": [],
+    "availability": "observed-available",
+    "receiptIdentity": "provisional:nibrs:agencies"
+  },
+  "nibrs::agencies+nibrs_agency_completeness+summary_city_monthly::nibrs_agency_completeness(months_reported,ori,year)|summary_city_monthly(month,offense_count,ori,ucr_offense_code,year)": {
+    "artifact": "nibrs",
+    "handlePath": "<fixture>/nibrs.db",
+    "prepDependencies": [
+      "agencies"
+    ],
+    "emittedDependencies": [
+      "nibrs_agency_completeness",
+      "summary_city_monthly"
+    ],
+    "requiredColumns": {
+      "nibrs_agency_completeness": [
+        "months_reported",
+        "ori",
+        "year"
+      ],
+      "summary_city_monthly": [
+        "month",
+        "offense_count",
+        "ori",
+        "ucr_offense_code",
+        "year"
+      ]
+    },
+    "coverage": "nibrs_agency_completeness.year",
+    "integrity": [],
+    "availability": "observed-available",
+    "receiptIdentity": "provisional:nibrs:nibrs_agency_completeness"
+  },
+  "nibrs::nibrs_agency_completeness+summary_victim_city_monthly::nibrs_agency_completeness(months_reported,ori,year)|summary_victim_city_monthly(month,ori,ucr_offense_code,victim_count,year)": {
+    "artifact": "nibrs",
+    "handlePath": "<fixture>/nibrs.db",
+    "prepDependencies": [],
+    "emittedDependencies": [
+      "nibrs_agency_completeness",
+      "summary_victim_city_monthly"
+    ],
+    "requiredColumns": {
+      "nibrs_agency_completeness": [
+        "months_reported",
+        "ori",
+        "year"
+      ],
+      "summary_victim_city_monthly": [
+        "month",
+        "ori",
+        "ucr_offense_code",
+        "victim_count",
+        "year"
+      ]
+    },
+    "coverage": "nibrs_agency_completeness.year",
+    "integrity": [],
+    "availability": "observed-available",
+    "receiptIdentity": "provisional:nibrs:nibrs_agency_completeness"
+  },
+  "nibrs::summary_victim_circumstance+summary_victim_state_monthly::summary_victim_circumstance(circumstance_code,state,ucr_offense_code,victim_count,year)|summary_victim_state_monthly(state,ucr_offense_code,victim_count,year)": {
+    "artifact": "nibrs",
+    "handlePath": "<fixture>/nibrs.db",
+    "prepDependencies": [],
+    "emittedDependencies": [
+      "summary_victim_circumstance",
+      "summary_victim_state_monthly"
+    ],
+    "requiredColumns": {
+      "summary_victim_circumstance": [
+        "circumstance_code",
+        "state",
+        "ucr_offense_code",
+        "victim_count",
+        "year"
+      ],
+      "summary_victim_state_monthly": [
+        "state",
+        "ucr_offense_code",
+        "victim_count",
+        "year"
+      ]
+    },
+    "coverage": "summary_victim_circumstance.year",
+    "integrity": [],
+    "availability": "observed-available",
+    "receiptIdentity": "provisional:nibrs:summary_victim_circumstance"
+  },
+  "crime_data::agency_monthly::agency_monthly(agency,year)": {
+    "artifact": "crime_data",
+    "handlePath": "<fixture>/crime_data.db",
+    "prepDependencies": [],
+    "emittedDependencies": [
+      "agency_monthly"
+    ],
+    "requiredColumns": {
+      "agency_monthly": [
+        "agency",
+        "year"
+      ]
+    },
+    "coverage": "agency_monthly.year",
+    "integrity": [],
+    "availability": "observed-available",
+    "receiptIdentity": "provisional:crime_data:agency_monthly"
+  },
+  "crime_data::agencies::agencies(national_sample,state)": {
+    "artifact": "crime_data",
+    "handlePath": "<fixture>/crime_data.db",
+    "prepDependencies": [],
+    "emittedDependencies": [
+      "agencies"
+    ],
+    "requiredColumns": {
+      "agencies": [
+        "national_sample",
+        "state"
+      ]
+    },
+    "coverage": null,
+    "integrity": [],
+    "availability": "observed-available",
+    "receiptIdentity": "provisional:crime_data:agencies"
+  },
+  "crime_data::agencies::agencies(agency,national_sample,ori)": {
+    "artifact": "crime_data",
+    "handlePath": "<fixture>/crime_data.db",
+    "prepDependencies": [],
+    "emittedDependencies": [
+      "agencies"
+    ],
+    "requiredColumns": {
+      "agencies": [
+        "agency",
+        "national_sample",
+        "ori"
+      ]
+    },
+    "coverage": null,
+    "integrity": [],
+    "availability": "observed-available",
+    "receiptIdentity": "provisional:crime_data:agencies"
+  },
+  "crime_data::agencies+agency_county_crosswalk::agencies(agency,national_sample,ori,state)|agency_county_crosswalk(county_fips,county_key,ori,ori9,state)": {
+    "artifact": "crime_data",
+    "handlePath": "<fixture>/crime_data.db",
+    "prepDependencies": [],
+    "emittedDependencies": [
+      "agencies",
+      "agency_county_crosswalk"
+    ],
+    "requiredColumns": {
+      "agencies": [
+        "agency",
+        "national_sample",
+        "ori",
+        "state"
+      ],
+      "agency_county_crosswalk": [
+        "county_fips",
+        "county_key",
+        "ori",
+        "ori9",
+        "state"
+      ]
+    },
+    "coverage": null,
+    "integrity": [],
+    "availability": "observed-available",
+    "receiptIdentity": "provisional:crime_data:agencies"
+  },
+  "crime_data::historical_agency_crime+historical_state_national::historical_agency_crime(year)|historical_state_national(state,year)": {
+    "artifact": "crime_data",
+    "handlePath": "<fixture>/crime_data.db",
+    "prepDependencies": [],
+    "emittedDependencies": [
+      "historical_agency_crime",
+      "historical_state_national"
+    ],
+    "requiredColumns": {
+      "historical_agency_crime": [
+        "year"
+      ],
+      "historical_state_national": [
+        "state",
+        "year"
+      ]
+    },
+    "coverage": "historical_agency_crime.year",
+    "integrity": [
+      "agency_year_reliability alignment (ori,year); single algorithm_version"
+    ],
+    "availability": "observed-available",
+    "receiptIdentity": "provisional:crime_data:historical_agency_crime"
+  },
+  "crime_data::historical_state_national::historical_state_national(state)": {
+    "artifact": "crime_data",
+    "handlePath": "<fixture>/crime_data.db",
+    "prepDependencies": [],
+    "emittedDependencies": [
+      "historical_state_national"
+    ],
+    "requiredColumns": {
+      "historical_state_national": [
+        "state"
+      ]
+    },
+    "coverage": null,
+    "integrity": [],
+    "availability": "observed-available",
+    "receiptIdentity": "provisional:crime_data:historical_state_national"
+  },
+  "crime_data::historical_agency::historical_agency(agency,ori)": {
+    "artifact": "crime_data",
+    "handlePath": "<fixture>/crime_data.db",
+    "prepDependencies": [],
+    "emittedDependencies": [
+      "historical_agency"
+    ],
+    "requiredColumns": {
+      "historical_agency": [
+        "agency",
+        "ori"
+      ]
+    },
+    "coverage": null,
+    "integrity": [],
+    "availability": "observed-available",
+    "receiptIdentity": "provisional:crime_data:historical_agency"
+  },
+  "crime_data::agency_county_crosswalk+historical_agency::agency_county_crosswalk(county_fips,county_key,ori,ori9,state)|historical_agency(agency,ori,state)": {
+    "artifact": "crime_data",
+    "handlePath": "<fixture>/crime_data.db",
+    "prepDependencies": [],
+    "emittedDependencies": [
+      "agency_county_crosswalk",
+      "historical_agency"
+    ],
+    "requiredColumns": {
+      "agency_county_crosswalk": [
+        "county_fips",
+        "county_key",
+        "ori",
+        "ori9",
+        "state"
+      ],
+      "historical_agency": [
+        "agency",
+        "ori",
+        "state"
+      ]
+    },
+    "coverage": null,
+    "integrity": [],
+    "availability": "observed-available",
+    "receiptIdentity": "provisional:crime_data:agency_county_crosswalk"
+  },
+  "nibrs::agencies::agencies(year)": {
+    "artifact": "nibrs",
+    "handlePath": "<fixture>/nibrs.db",
+    "prepDependencies": [],
+    "emittedDependencies": [
+      "agencies"
+    ],
+    "requiredColumns": {
+      "agencies": [
+        "year"
+      ]
+    },
+    "coverage": "agencies.year",
+    "integrity": [],
+    "availability": "observed-available",
+    "receiptIdentity": "provisional:nibrs:agencies"
+  },
+  "nibrs::agencies::agencies(state)": {
+    "artifact": "nibrs",
+    "handlePath": "<fixture>/nibrs.db",
+    "prepDependencies": [],
+    "emittedDependencies": [
+      "agencies"
+    ],
+    "requiredColumns": {
+      "agencies": [
+        "state"
+      ]
+    },
+    "coverage": null,
+    "integrity": [],
+    "availability": "observed-available",
+    "receiptIdentity": "provisional:nibrs:agencies"
+  },
+  "nibrs::agencies::agencies(ori)": {
+    "artifact": "nibrs",
+    "handlePath": "<fixture>/nibrs.db",
+    "prepDependencies": [],
+    "emittedDependencies": [
+      "agencies"
+    ],
+    "requiredColumns": {
+      "agencies": [
+        "ori"
+      ]
+    },
+    "coverage": null,
+    "integrity": [],
+    "availability": "observed-available",
+    "receiptIdentity": "provisional:nibrs:agencies"
+  },
+  "nibrs::agencies+agency_county_crosswalk::agencies(ori,state)|agency_county_crosswalk(county_fips,county_key,ori,ori9,state)": {
+    "artifact": "nibrs",
+    "handlePath": "<fixture>/nibrs.db",
+    "prepDependencies": [],
+    "emittedDependencies": [
+      "agencies",
+      "agency_county_crosswalk"
+    ],
+    "requiredColumns": {
+      "agencies": [
+        "ori",
+        "state"
+      ],
+      "agency_county_crosswalk": [
+        "county_fips",
+        "county_key",
+        "ori",
+        "ori9",
+        "state"
+      ]
+    },
+    "coverage": null,
+    "integrity": [],
+    "availability": "observed-available",
+    "receiptIdentity": "provisional:nibrs:agencies"
+  },
+  "shr::incidents::incidents(year)": {
+    "artifact": "shr",
+    "handlePath": "<fixture>/shr.db",
+    "prepDependencies": [],
+    "emittedDependencies": [
+      "incidents"
+    ],
+    "requiredColumns": {
+      "incidents": [
+        "year"
+      ]
+    },
+    "coverage": "incidents.year",
+    "integrity": [],
+    "availability": "observed-available",
+    "receiptIdentity": "provisional:shr:incidents"
+  },
+  "shr::incidents::incidents(state)": {
+    "artifact": "shr",
+    "handlePath": "<fixture>/shr.db",
+    "prepDependencies": [],
+    "emittedDependencies": [
+      "incidents"
+    ],
+    "requiredColumns": {
+      "incidents": [
+        "state"
+      ]
+    },
+    "coverage": null,
+    "integrity": [],
+    "availability": "observed-available",
+    "receiptIdentity": "provisional:shr:incidents"
+  },
+  "shr::incidents::incidents(ori)": {
+    "artifact": "shr",
+    "handlePath": "<fixture>/shr.db",
+    "prepDependencies": [],
+    "emittedDependencies": [
+      "incidents"
+    ],
+    "requiredColumns": {
+      "incidents": [
+        "ori"
+      ]
+    },
+    "coverage": null,
+    "integrity": [],
+    "availability": "observed-available",
+    "receiptIdentity": "provisional:shr:incidents"
+  },
+  "shr::agency_county_crosswalk+incidents::agency_county_crosswalk(county_fips,county_key,ori,state)|incidents(ori,state)": {
+    "artifact": "shr",
+    "handlePath": "<fixture>/shr.db",
+    "prepDependencies": [],
+    "emittedDependencies": [
+      "agency_county_crosswalk",
+      "incidents"
+    ],
+    "requiredColumns": {
+      "agency_county_crosswalk": [
+        "county_fips",
+        "county_key",
+        "ori",
+        "state"
+      ],
+      "incidents": [
+        "ori",
+        "state"
+      ]
+    },
+    "coverage": null,
+    "integrity": [],
+    "availability": "observed-available",
+    "receiptIdentity": "provisional:shr:agency_county_crosswalk"
+  },
+  "hate_crime::hate_crime_participation::hate_crime_participation(year)": {
+    "artifact": "hate_crime",
+    "handlePath": "<fixture>/hate_crime.db",
+    "prepDependencies": [],
+    "emittedDependencies": [
+      "hate_crime_participation"
+    ],
+    "requiredColumns": {
+      "hate_crime_participation": [
+        "year"
+      ]
+    },
+    "coverage": "hate_crime_participation.year",
+    "integrity": [],
+    "availability": "observed-available",
+    "receiptIdentity": "provisional:hate_crime:hate_crime_participation"
+  },
+  "hate_crime::hate_crime_participation::hate_crime_participation(reporting_agencies,state)": {
+    "artifact": "hate_crime",
+    "handlePath": "<fixture>/hate_crime.db",
+    "prepDependencies": [],
+    "emittedDependencies": [
+      "hate_crime_participation"
+    ],
+    "requiredColumns": {
+      "hate_crime_participation": [
+        "reporting_agencies",
+        "state"
+      ]
+    },
+    "coverage": null,
+    "integrity": [],
+    "availability": "observed-available",
+    "receiptIdentity": "provisional:hate_crime:hate_crime_participation"
+  },
+  "hate_crime::hate_crime_incidents::hate_crime_incidents(ori)": {
+    "artifact": "hate_crime",
+    "handlePath": "<fixture>/hate_crime.db",
+    "prepDependencies": [],
+    "emittedDependencies": [
+      "hate_crime_incidents"
+    ],
+    "requiredColumns": {
+      "hate_crime_incidents": [
+        "ori"
+      ]
+    },
+    "coverage": null,
+    "integrity": [],
+    "availability": "observed-available",
+    "receiptIdentity": "provisional:hate_crime:hate_crime_incidents"
+  },
+  "hate_crime::agency_county_crosswalk+hate_crime_incidents::agency_county_crosswalk(county_fips,county_key,ori,ori9,state)|hate_crime_incidents(ori,state)": {
+    "artifact": "hate_crime",
+    "handlePath": "<fixture>/hate_crime.db",
+    "prepDependencies": [],
+    "emittedDependencies": [
+      "agency_county_crosswalk",
+      "hate_crime_incidents"
+    ],
+    "requiredColumns": {
+      "agency_county_crosswalk": [
+        "county_fips",
+        "county_key",
+        "ori",
+        "ori9",
+        "state"
+      ],
+      "hate_crime_incidents": [
+        "ori",
+        "state"
+      ]
+    },
+    "coverage": null,
+    "integrity": [],
+    "availability": "observed-available",
+    "receiptIdentity": "provisional:hate_crime:agency_county_crosswalk"
+  },
+  "crime_data::agency_monthly+agency_population+sample_agencies::agency_monthly(count,offense,ori,state,year)|agency_population(ori,population,year)|sample_agencies(ori,state)": {
+    "artifact": "crime_data",
+    "handlePath": "<fixture>/crime_data.db",
+    "prepDependencies": [],
+    "emittedDependencies": [
+      "agency_monthly",
+      "agency_population",
+      "sample_agencies"
+    ],
+    "requiredColumns": {
+      "agency_monthly": [
+        "count",
+        "offense",
+        "ori",
+        "state",
+        "year"
+      ],
+      "agency_population": [
+        "ori",
+        "population",
+        "year"
+      ],
+      "sample_agencies": [
+        "ori",
+        "state"
+      ]
+    },
+    "coverage": "agency_monthly.year",
+    "integrity": [],
+    "availability": "observed-available",
+    "receiptIdentity": "provisional:crime_data:agency_monthly"
+  },
+  "crime_data::agency_monthly+agency_population::agency_monthly(agency,count,offense,ori,state,type,year)|agency_population(ori,year)": {
+    "artifact": "crime_data",
+    "handlePath": "<fixture>/crime_data.db",
+    "prepDependencies": [],
+    "emittedDependencies": [
+      "agency_monthly",
+      "agency_population"
+    ],
+    "requiredColumns": {
+      "agency_monthly": [
+        "agency",
+        "count",
+        "offense",
+        "ori",
+        "state",
+        "type",
+        "year"
+      ],
+      "agency_population": [
+        "ori",
+        "year"
+      ]
+    },
+    "coverage": "agency_monthly.year",
+    "integrity": [],
+    "availability": "observed-available",
+    "receiptIdentity": "provisional:crime_data:agency_monthly"
+  },
+  "crime_data::historical_agency+historical_agency_crime+historical_agency_population::historical_agency(agency,end,ori,state,type)|historical_agency_crime(murder,ori,year)|historical_agency_population(ori,year)": {
+    "artifact": "crime_data",
+    "handlePath": "<fixture>/crime_data.db",
+    "prepDependencies": [],
+    "emittedDependencies": [
+      "historical_agency",
+      "historical_agency_crime",
+      "historical_agency_population"
+    ],
+    "requiredColumns": {
+      "historical_agency": [
+        "agency",
+        "end",
+        "ori",
+        "state",
+        "type"
+      ],
+      "historical_agency_crime": [
+        "murder",
+        "ori",
+        "year"
+      ],
+      "historical_agency_population": [
+        "ori",
+        "year"
+      ]
+    },
+    "coverage": "historical_agency_crime.year",
+    "integrity": [
+      "agency_year_reliability alignment (ori,year); single algorithm_version"
+    ],
+    "availability": "observed-available",
+    "receiptIdentity": "provisional:crime_data:historical_agency"
+  },
+  "crime_data::agencies+agency_monthly+historical_agency+historical_agency_clearance+historical_agency_crime+historical_agency_population::historical_agency(agency,ori,state,type)|historical_agency_clearance(assault_clr,burglary_clr,motor_vehicle_theft_clr,murder_clr,ori,property_clr,rape_clr,robbery_clr,theft_clr,violent_clr,year)|historical_agency_crime(assault,burglary,motor_vehicle_theft,murder,ori,population,property,rape,robbery,theft,violent,year)|historical_agency_population(ori,population,year)": {
+    "artifact": "crime_data",
+    "handlePath": "<fixture>/crime_data.db",
+    "prepDependencies": [
+      "agencies",
+      "agency_monthly"
+    ],
+    "emittedDependencies": [
+      "historical_agency",
+      "historical_agency_clearance",
+      "historical_agency_crime",
+      "historical_agency_population"
+    ],
+    "requiredColumns": {
+      "historical_agency": [
+        "agency",
+        "ori",
+        "state",
+        "type"
+      ],
+      "historical_agency_clearance": [
+        "assault_clr",
+        "burglary_clr",
+        "motor_vehicle_theft_clr",
+        "murder_clr",
+        "ori",
+        "property_clr",
+        "rape_clr",
+        "robbery_clr",
+        "theft_clr",
+        "violent_clr",
+        "year"
+      ],
+      "historical_agency_crime": [
+        "assault",
+        "burglary",
+        "motor_vehicle_theft",
+        "murder",
+        "ori",
+        "population",
+        "property",
+        "rape",
+        "robbery",
+        "theft",
+        "violent",
+        "year"
+      ],
+      "historical_agency_population": [
+        "ori",
+        "population",
+        "year"
+      ]
+    },
+    "coverage": "historical_agency_clearance.year",
+    "integrity": [
+      "agency_year_reliability alignment (ori,year); single algorithm_version"
+    ],
+    "availability": "observed-available",
+    "receiptIdentity": "provisional:crime_data:historical_agency"
+  },
+  "crime_data::historical_state_national::historical_state_national(aggravated_assault,aggravated_assault_rate,auto_theft,auto_theft_rate,burglary,burglary_rate,murder,murder_rate,population,rape,rape_rate,robbery,robbery_rate,state,theft,theft_rate,year)": {
+    "artifact": "crime_data",
+    "handlePath": "<fixture>/crime_data.db",
+    "prepDependencies": [],
+    "emittedDependencies": [
+      "historical_state_national"
+    ],
+    "requiredColumns": {
+      "historical_state_national": [
+        "aggravated_assault",
+        "aggravated_assault_rate",
+        "auto_theft",
+        "auto_theft_rate",
+        "burglary",
+        "burglary_rate",
+        "murder",
+        "murder_rate",
+        "population",
+        "rape",
+        "rape_rate",
+        "robbery",
+        "robbery_rate",
+        "state",
+        "theft",
+        "theft_rate",
+        "year"
+      ]
+    },
+    "coverage": "historical_state_national.year",
+    "integrity": [],
+    "availability": "observed-available",
+    "receiptIdentity": "provisional:crime_data:historical_state_national"
+  },
+  "crime_data::historical_agency+historical_agency_crime::historical_agency(agency,end,ori,state,type)|historical_agency_crime(ori,violent,year)": {
+    "artifact": "crime_data",
+    "handlePath": "<fixture>/crime_data.db",
+    "prepDependencies": [],
+    "emittedDependencies": [
+      "historical_agency",
+      "historical_agency_crime"
+    ],
+    "requiredColumns": {
+      "historical_agency": [
+        "agency",
+        "end",
+        "ori",
+        "state",
+        "type"
+      ],
+      "historical_agency_crime": [
+        "ori",
+        "violent",
+        "year"
+      ]
+    },
+    "coverage": "historical_agency_crime.year",
+    "integrity": [
+      "agency_year_reliability alignment (ori,year); single algorithm_version"
+    ],
+    "availability": "observed-available",
+    "receiptIdentity": "provisional:crime_data:historical_agency"
+  },
+  "crime_data::historical_agency+historical_agency_clearance+historical_agency_crime+historical_staffing::historical_agency(agency,ori,state,type)|historical_agency_clearance(ori,year)|historical_agency_crime(ori,year)|historical_staffing(ori,year)": {
+    "artifact": "crime_data",
+    "handlePath": "<fixture>/crime_data.db",
+    "prepDependencies": [],
+    "emittedDependencies": [
+      "historical_agency",
+      "historical_agency_clearance",
+      "historical_agency_crime",
+      "historical_staffing"
+    ],
+    "requiredColumns": {
+      "historical_agency": [
+        "agency",
+        "ori",
+        "state",
+        "type"
+      ],
+      "historical_agency_clearance": [
+        "ori",
+        "year"
+      ],
+      "historical_agency_crime": [
+        "ori",
+        "year"
+      ],
+      "historical_staffing": [
+        "ori",
+        "year"
+      ]
+    },
+    "coverage": "historical_agency_clearance.year",
+    "integrity": [
+      "agency_year_reliability alignment (ori,year); single algorithm_version"
+    ],
+    "availability": "observed-available",
+    "receiptIdentity": "provisional:crime_data:historical_agency"
+  }
+}

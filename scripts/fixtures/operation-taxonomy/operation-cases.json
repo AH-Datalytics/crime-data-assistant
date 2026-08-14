@@ -1,0 +1,282 @@
+{
+  "juvenile_offender_incidents": {
+    "family": "deterministic-nibrs-juvenile-offender-incidents",
+    "terminalKind": "factual",
+    "capability": "nibrs::summary_juvenile_offender_incidents::summary_juvenile_offender_incidents(incident_count,offense_scope,state,year)"
+  },
+  "rollup_juvenile_arrests_state": {
+    "family": "deterministic-nibrs-rollup-juvenile-arrests-race",
+    "terminalKind": "factual",
+    "capability": "nibrs::rollup.state_summary_arrestee_demographics::rollup.state_summary_arrestee_demographics(age_group,arrestee_count,race,state,year)"
+  },
+  "rollup_juvenile_arrests_national": {
+    "family": "deterministic-nibrs-rollup-juvenile-arrests-race",
+    "terminalKind": "factual",
+    "capability": "nibrs::rollup.national_summary_arrestee_demographics::rollup.national_summary_arrestee_demographics(age_group,arrestee_count,race,year)"
+  },
+  "rollup_national_arrests": {
+    "family": "deterministic-nibrs-rollup-national-arrests",
+    "terminalKind": "factual",
+    "capability": "nibrs::rollup.national_summary_arrestee_demographics::rollup.national_summary_arrestee_demographics(arrestee_count,ucr_arrest_offense,year)"
+  },
+  "continuous_reporters_victim": {
+    "family": "deterministic-nibrs-continuous-reporters",
+    "terminalKind": "factual",
+    "capability": "nibrs::nibrs_consistent_reporters+summary_victim_demographics::nibrs_consistent_reporters(end_year,ori,start_year)|summary_victim_demographics(ori,race,ucr_offense_code,victim_count,year)"
+  },
+  "continuous_reporters_offender": {
+    "family": "deterministic-nibrs-continuous-reporters",
+    "terminalKind": "factual",
+    "capability": "nibrs::nibrs_consistent_reporters+summary_offender_demographics::nibrs_consistent_reporters(end_year,ori,start_year)|summary_offender_demographics(offender_count,ori,race,ucr_offense_code,year)"
+  },
+  "continuous_reporters_arrestee": {
+    "family": "deterministic-nibrs-continuous-reporters",
+    "terminalKind": "factual",
+    "capability": "nibrs::nibrs_consistent_reporters+summary_arrestee_demographics::nibrs_consistent_reporters(end_year,ori,start_year)|summary_arrestee_demographics(arrestee_count,ori,race,ucr_arrest_offense,year)"
+  },
+  "continuous_reporters_victim_city": {
+    "family": "deterministic-nibrs-continuous-reporters",
+    "terminalKind": "factual",
+    "capability": "nibrs::nibrs_consistent_reporters+summary_victim_city_monthly::nibrs_consistent_reporters(end_year,ori,start_year)|summary_victim_city_monthly(ori,ucr_offense_code,victim_count,year)"
+  },
+  "countywide_victim": {
+    "family": "deterministic-nibrs-countywide-demographic",
+    "terminalKind": "factual",
+    "capability": "nibrs::agencies+agency_county_crosswalk+summary_victim_demographics::agencies(ori,state,year)|agency_county_crosswalk(county_key,ori,ori9,state)|summary_victim_demographics(ori,race,state,ucr_offense_code,victim_count,year)"
+  },
+  "countywide_offender": {
+    "family": "deterministic-nibrs-countywide-demographic",
+    "terminalKind": "factual",
+    "capability": "nibrs::agencies+agency_county_crosswalk+summary_offender_demographics::agencies(ori,state,year)|agency_county_crosswalk(county_key,ori,ori9,state)|summary_offender_demographics(offender_count,ori,race,state,ucr_offense_code,year)"
+  },
+  "countywide_arrestee": {
+    "family": "deterministic-nibrs-countywide-demographic",
+    "terminalKind": "factual",
+    "capability": "nibrs::agencies+agency_county_crosswalk+summary_arrestee_demographics::agencies(ori,state,year)|agency_county_crosswalk(county_key,ori,ori9,state)|summary_arrestee_demographics(arrestee_count,ori,race,state,ucr_arrest_offense,year)"
+  },
+  "countywide_victim_city": {
+    "family": "deterministic-nibrs-countywide-demographic",
+    "terminalKind": "factual",
+    "capability": "nibrs::agencies+agency_county_crosswalk+summary_victim_city_monthly::agencies(ori,state,year)|agency_county_crosswalk(county_key,ori,ori9,state)|summary_victim_city_monthly(ori,state,ucr_offense_code,victim_count,year)"
+  },
+  "comparable_agency_clearance": {
+    "family": "deterministic-nibrs-comparable-agency-clearance",
+    "terminalKind": "factual",
+    "capability": "nibrs::agencies+summary_clearance_type::agencies(agency_type,city,ori,population,state,year)|summary_clearance_type(cleared_by_arrest,cleared_exceptional,ori,state,total_offenses,ucr_offense_code,year)"
+  },
+  "clearance_method": {
+    "family": "deterministic-nibrs-clearance-method",
+    "terminalKind": "factual",
+    "capability": "nibrs::summary_clearance_type::summary_clearance_type(cleared_by_arrest,cleared_exceptional,ori,total_offenses,ucr_offense_code,year)"
+  },
+  "clearance_type_breakdown": {
+    "family": "deterministic-nibrs-clearance-type-breakdown",
+    "terminalKind": "factual",
+    "capability": "nibrs::summary_clearance_detail::summary_clearance_detail(cleared_A,cleared_B,cleared_C,cleared_D,cleared_E,cleared_by_arrest,state,total_offenses,ucr_offense_code,year)"
+  },
+  "local_demographic_count_victim": {
+    "family": "deterministic-nibrs-local-demographic-count",
+    "terminalKind": "factual",
+    "capability": "nibrs::nibrs_agency_completeness+summary_victim_demographics::nibrs_agency_completeness(months_reported,ori,year)|summary_victim_demographics(ori,race,ucr_offense_code,victim_count,year)"
+  },
+  "local_demographic_count_offender": {
+    "family": "deterministic-nibrs-local-demographic-count",
+    "terminalKind": "factual",
+    "capability": "nibrs::nibrs_agency_completeness+summary_offender_demographics::nibrs_agency_completeness(months_reported,ori,year)|summary_offender_demographics(offender_count,ori,race,ucr_offense_code,year)"
+  },
+  "local_demographic_count_arrestee": {
+    "family": "deterministic-nibrs-local-demographic-count",
+    "terminalKind": "factual",
+    "capability": "nibrs::nibrs_agency_completeness+summary_arrestee_demographics::nibrs_agency_completeness(months_reported,ori,year)|summary_arrestee_demographics(arrestee_count,ori,race,ucr_arrest_offense,year)"
+  },
+  "local_demographic_share_victim": {
+    "family": "deterministic-nibrs-local-demographic-share",
+    "terminalKind": "factual",
+    "capability": "nibrs::nibrs_agency_completeness+summary_victim_demographics::nibrs_agency_completeness(months_reported,ori,year)|summary_victim_demographics(ori,race,ucr_offense_code,victim_count,year)"
+  },
+  "structured_local_trend": {
+    "family": "deterministic-nibrs-structured-local-trend",
+    "terminalKind": "factual",
+    "capability": "nibrs::agencies+nibrs_agency_completeness+summary_city_monthly+summary_victim_city_monthly::agencies(ori,population,year)|nibrs_agency_completeness(months_reported,ori,year)|summary_city_monthly(month,offense_count,ori,ucr_offense_code,year)|summary_victim_city_monthly(month,ori,ucr_offense_code,victim_count,year)"
+  },
+  "structured_local_rate": {
+    "family": "deterministic-nibrs-structured-local-rate",
+    "terminalKind": "factual",
+    "capability": "nibrs::agencies+nibrs_agency_completeness+summary_city_monthly+summary_victim_city_monthly::agencies(ori,population,year)|nibrs_agency_completeness(months_reported,ori,year)|summary_city_monthly(month,ori,ucr_offense_code,year)|summary_victim_city_monthly(month,ori,ucr_offense_code,victim_count,year)"
+  },
+  "structured_local_trend_person": {
+    "family": "deterministic-nibrs-structured-local-trend",
+    "terminalKind": "factual",
+    "capability": "nibrs::agencies+nibrs_agency_completeness+summary_city_monthly+summary_victim_city_monthly::agencies(ori,population,year)|nibrs_agency_completeness(months_reported,ori,year)|summary_city_monthly(month,ori,ucr_offense_code,year)|summary_victim_city_monthly(month,ori,ucr_offense_code,victim_count,year)"
+  },
+  "local_city_offense_count": {
+    "family": "deterministic-nibrs-local-city-offense-count",
+    "terminalKind": "factual",
+    "capability": "nibrs::agencies+nibrs_agency_completeness+summary_city_monthly::nibrs_agency_completeness(months_reported,ori,year)|summary_city_monthly(month,offense_count,ori,ucr_offense_code,year)"
+  },
+  "local_city_offense_count_person": {
+    "family": "deterministic-nibrs-local-city-offense-count",
+    "terminalKind": "factual",
+    "capability": "nibrs::nibrs_agency_completeness+summary_victim_city_monthly::nibrs_agency_completeness(months_reported,ori,year)|summary_victim_city_monthly(month,ori,ucr_offense_code,victim_count,year)"
+  },
+  "dv_assault_share": {
+    "family": "deterministic-nibrs-dv-assault-share",
+    "terminalKind": "factual",
+    "capability": "nibrs::summary_victim_circumstance+summary_victim_state_monthly::summary_victim_circumstance(circumstance_code,state,ucr_offense_code,victim_count,year)|summary_victim_state_monthly(state,ucr_offense_code,victim_count,year)"
+  },
+  "current:metadata-year-coverage": {
+    "family": "metadata-year-coverage",
+    "terminalKind": "factual",
+    "capability": "crime_data::agency_monthly::agency_monthly(agency,year)"
+  },
+  "current:metadata-state-coverage": {
+    "family": "metadata-state-coverage",
+    "terminalKind": "factual",
+    "capability": "crime_data::agencies::agencies(national_sample,state)"
+  },
+  "current:metadata-agency-directory": {
+    "family": "metadata-agency-directory",
+    "terminalKind": "factual",
+    "capability": "crime_data::agencies::agencies(agency,national_sample,ori)"
+  },
+  "current:metadata-agency-directory-county": {
+    "family": "metadata-agency-directory-county",
+    "terminalKind": "factual",
+    "capability": "crime_data::agencies+agency_county_crosswalk::agencies(agency,national_sample,ori,state)|agency_county_crosswalk(county_fips,county_key,ori,ori9,state)"
+  },
+  "historical:metadata-year-coverage": {
+    "family": "metadata-year-coverage",
+    "terminalKind": "factual",
+    "capability": "crime_data::historical_agency_crime+historical_state_national::historical_agency_crime(year)|historical_state_national(state,year)"
+  },
+  "historical:metadata-state-coverage": {
+    "family": "metadata-state-coverage",
+    "terminalKind": "factual",
+    "capability": "crime_data::historical_state_national::historical_state_national(state)"
+  },
+  "historical:metadata-agency-directory": {
+    "family": "metadata-agency-directory",
+    "terminalKind": "factual",
+    "capability": "crime_data::historical_agency::historical_agency(agency,ori)"
+  },
+  "historical:metadata-agency-directory-county": {
+    "family": "metadata-agency-directory-county",
+    "terminalKind": "factual",
+    "capability": "crime_data::agency_county_crosswalk+historical_agency::agency_county_crosswalk(county_fips,county_key,ori,ori9,state)|historical_agency(agency,ori,state)"
+  },
+  "nibrs:metadata-year-coverage": {
+    "family": "metadata-year-coverage",
+    "terminalKind": "factual",
+    "capability": "nibrs::agencies::agencies(year)"
+  },
+  "nibrs:metadata-state-coverage": {
+    "family": "metadata-state-coverage",
+    "terminalKind": "factual",
+    "capability": "nibrs::agencies::agencies(state)"
+  },
+  "nibrs:metadata-agency-directory": {
+    "family": "metadata-agency-directory",
+    "terminalKind": "factual",
+    "capability": "nibrs::agencies::agencies(ori)"
+  },
+  "nibrs:metadata-agency-directory-county": {
+    "family": "metadata-agency-directory-county",
+    "terminalKind": "factual",
+    "capability": "nibrs::agencies+agency_county_crosswalk::agencies(ori,state)|agency_county_crosswalk(county_fips,county_key,ori,ori9,state)"
+  },
+  "shr:metadata-year-coverage": {
+    "family": "metadata-year-coverage",
+    "terminalKind": "factual",
+    "capability": "shr::incidents::incidents(year)"
+  },
+  "shr:metadata-state-coverage": {
+    "family": "metadata-state-coverage",
+    "terminalKind": "factual",
+    "capability": "shr::incidents::incidents(state)"
+  },
+  "shr:metadata-agency-directory": {
+    "family": "metadata-agency-directory",
+    "terminalKind": "factual",
+    "capability": "shr::incidents::incidents(ori)"
+  },
+  "shr:metadata-agency-directory-county": {
+    "family": "metadata-agency-directory-county",
+    "terminalKind": "factual",
+    "capability": "shr::agency_county_crosswalk+incidents::agency_county_crosswalk(county_fips,county_key,ori,state)|incidents(ori,state)"
+  },
+  "hate_crime:metadata-year-coverage": {
+    "family": "metadata-year-coverage",
+    "terminalKind": "factual",
+    "capability": "hate_crime::hate_crime_participation::hate_crime_participation(year)"
+  },
+  "hate_crime:metadata-state-coverage": {
+    "family": "metadata-state-coverage",
+    "terminalKind": "factual",
+    "capability": "hate_crime::hate_crime_participation::hate_crime_participation(reporting_agencies,state)"
+  },
+  "hate_crime:metadata-agency-directory": {
+    "family": "metadata-agency-directory",
+    "terminalKind": "factual",
+    "capability": "hate_crime::hate_crime_incidents::hate_crime_incidents(ori)"
+  },
+  "hate_crime:metadata-agency-directory-county": {
+    "family": "metadata-agency-directory-county",
+    "terminalKind": "unavailable",
+    "capability": null
+  },
+  "hate_crime:metadata-agency-directory-county:crosswalk-present": {
+    "family": "metadata-agency-directory-county",
+    "terminalKind": "factual",
+    "capability": "hate_crime::agency_county_crosswalk+hate_crime_incidents::agency_county_crosswalk(county_fips,county_key,ori,ori9,state)|hate_crime_incidents(ori,state)"
+  },
+  "current:indexed_state_followup": {
+    "family": "deterministic-current-indexed-state-followup",
+    "terminalKind": "factual",
+    "capability": "crime_data::agency_monthly+agency_population+sample_agencies::agency_monthly(count,offense,ori,state,year)|agency_population(ori,population,year)|sample_agencies(ori,state)"
+  },
+  "current:multi_city_trend": {
+    "family": "deterministic-current-multi-city-trend",
+    "terminalKind": "factual",
+    "capability": "crime_data::agency_monthly+agency_population::agency_monthly(agency,count,offense,ori,state,type,year)|agency_population(ori,year)"
+  },
+  "historical:multi_city_trend": {
+    "family": "deterministic-historical-multi-city-trend",
+    "terminalKind": "factual",
+    "capability": "crime_data::historical_agency+historical_agency_crime+historical_agency_population::historical_agency(agency,end,ori,state,type)|historical_agency_crime(murder,ori,year)|historical_agency_population(ori,year)"
+  },
+  "historical:agency_scorecard": {
+    "family": "agency-scorecard",
+    "terminalKind": "factual",
+    "capability": "crime_data::agencies+agency_monthly+historical_agency+historical_agency_clearance+historical_agency_crime+historical_agency_population::historical_agency(agency,ori,state,type)|historical_agency_clearance(assault_clr,burglary_clr,motor_vehicle_theft_clr,murder_clr,ori,property_clr,rape_clr,robbery_clr,theft_clr,violent_clr,year)|historical_agency_crime(assault,burglary,motor_vehicle_theft,murder,ori,population,property,rape,robbery,theft,violent,year)|historical_agency_population(ori,population,year)"
+  },
+  "historical:state_scorecard": {
+    "family": "state-scorecard",
+    "terminalKind": "factual",
+    "capability": "crime_data::historical_state_national::historical_state_national(aggravated_assault,aggravated_assault_rate,auto_theft,auto_theft_rate,burglary,burglary_rate,murder,murder_rate,population,rape,rape_rate,robbery,robbery_rate,state,theft,theft_rate,year)"
+  },
+  "historical:national_scorecard": {
+    "family": "national-scorecard",
+    "terminalKind": "factual",
+    "capability": "crime_data::historical_state_national::historical_state_national(aggravated_assault,aggravated_assault_rate,auto_theft,auto_theft_rate,burglary,burglary_rate,murder,murder_rate,population,rape,rape_rate,robbery,robbery_rate,state,theft,theft_rate,year)"
+  },
+  "historical:local_recent_change": {
+    "family": "deterministic-historical-local-recent-change",
+    "terminalKind": "factual",
+    "capability": "crime_data::historical_agency+historical_agency_crime::historical_agency(agency,end,ori,state,type)|historical_agency_crime(ori,violent,year)"
+  },
+  "historical:city_change_ranking": {
+    "family": "deterministic-historical-city-change-ranking",
+    "terminalKind": "factual",
+    "capability": "crime_data::historical_agency+historical_agency_crime::historical_agency(agency,end,ori,state,type)|historical_agency_crime(ori,violent,year)"
+  },
+  "route:deterministic_shooting": {
+    "family": "deterministic-shooting",
+    "terminalKind": "unavailable",
+    "capability": null
+  },
+  "route:deterministic_place_lookup": {
+    "family": "deterministic-place-lookup",
+    "terminalKind": "factual",
+    "capability": "crime_data::historical_agency+historical_agency_clearance+historical_agency_crime+historical_staffing::historical_agency(agency,ori,state,type)|historical_agency_clearance(ori,year)|historical_agency_crime(ori,year)|historical_staffing(ori,year)"
+  }
+}
