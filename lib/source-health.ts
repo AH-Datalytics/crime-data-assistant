@@ -1,5 +1,6 @@
 import type { CheckState, SourceHealth, SourceId } from "./proof-contract";
 import { policyIsComplete, type UnvalidatedPolicy } from "./capability-policy";
+import { artifactOf } from "./source-artifact";
 import type { CapabilitySpec, Db, OpenedDatabase, TableRequirement } from "./source-health-inventory";
 
 export type HealthBoundary =
@@ -46,24 +47,38 @@ function qualifiedTable(table: string): string {
   return table.split(".").map(quoteIdentifier).join(".");
 }
 
-function columnsOf(db: Db, table: string): Set<string> | null {
+/**
+ * A structural read, distinguishing "the table is not there" from "we could not look".
+ *
+ * Collapsing both into null made every read failure -- a locked database, an unreadable file, an
+ * attached schema that is not attached -- report `degraded`, which Task 7 maps onto a FAILED check.
+ * That asserts a negative finding about the data when what actually happened is that health could
+ * not be determined. `unknown` is the honest state for that, and it is a different verdict: §8
+ * treats unknown as degraded at the GATE without rewriting the evidence.
+ */
+type Read<T> = { kind: "ok"; value: T } | { kind: "threw"; error: string };
+/** Only a table lookup can come back "missing"; a row count over a table already found cannot. */
+type TableRead<T> = Read<T> | { kind: "missing" };
+
+function columnsOf(db: Db, table: string): TableRead<Set<string>> {
   try {
     const parts = table.split(".");
     const pragma = parts.length === 2
       ? `PRAGMA ${quoteIdentifier(parts[0])}.table_info(${quoteIdentifier(parts[1])})`
       : `PRAGMA table_info(${quoteIdentifier(table)})`;
     const rows = db.prepare(pragma).all() as { name: string }[];
-    return rows.length === 0 ? null : new Set(rows.map((row) => row.name));
-  } catch {
-    return null;
+    // table_info returns zero rows for a name that is not a table: absent, not unreadable.
+    return rows.length === 0 ? { kind: "missing" } : { kind: "ok", value: new Set(rows.map((row) => row.name)) };
+  } catch (error) {
+    return { kind: "threw", error: (error as Error).message };
   }
 }
 
-function rowCount(db: Db, table: string): number | null {
+function rowCount(db: Db, table: string): Read<number> {
   try {
-    return (db.prepare(`SELECT COUNT(*) AS n FROM ${qualifiedTable(table)}`).get() as { n: number }).n;
-  } catch {
-    return null;
+    return { kind: "ok", value: (db.prepare(`SELECT COUNT(*) AS n FROM ${qualifiedTable(table)}`).get() as { n: number }).n };
+  } catch (error) {
+    return { kind: "threw", error: (error as Error).message };
   }
 }
 
@@ -87,6 +102,17 @@ function structuralRequirements(spec: CapabilitySpec): TableRequirement[] {
 function coverageFor(spec: CapabilitySpec, db: Db, requestedYears: number[] | null): CheckState {
   const coverage = spec.policy?.coverage;
   if (!coverage) return "unknown";
+  /**
+   * The coverage basis must be a table this capability actually reads.
+   *
+   * Otherwise an authored basis naming an unrelated table still produces MIN/MAX successfully, and
+   * the answer gets a confident `passed` or `failed` computed from data it never touched. Silently
+   * querying whatever table the policy names is worse than declining to judge.
+   *
+   * A coverage basis outside the capability's emitted tables is a policy-authoring error to catch in
+   * Stage 2B review, not something to tolerate here.
+   */
+  if (!spec.tables.some((table) => table.name === coverage.table)) return "unknown";
   if (!requestedYears || requestedYears.length === 0) return "not_applicable";
   try {
     const bounds = db.prepare(
@@ -126,17 +152,39 @@ export function evaluateCapability(
 
   if (!db) return done("unknown", "no database handle available from the capability provider", "no_database");
 
+  /**
+   * The claimed source must match the capability's OWN artifact.
+   *
+   * `sourceId` arrives from the caller and is stamped into both the trace and the verdict, so
+   * without this a crime_data capability evaluated with `sourceId: "shr"` produces a verdict
+   * attributed to SHR -- a truthful-looking record of health for a source whose artifact was never
+   * read. `artifact_mismatch` was declared in HealthBoundary and never reachable; this is the
+   * condition it exists for. Task 4's resolveCapability applies the same rule at resolution time,
+   * but this function is reachable independently (the Task 11 sweep calls it directly), so it
+   * defends itself rather than trusting an upstream check.
+   */
+  if (artifactOf(context.sourceId) !== spec.artifact) {
+    return done("unknown",
+      `capability ${spec.capabilityId} belongs to ${spec.artifact}, not to ${context.sourceId}`,
+      "artifact_mismatch");
+  }
+
   for (const table of structuralRequirements(spec)) {
     const columns = columnsOf(db, table.name);
-    if (columns === null) return done("degraded", `required table ${table.name} is missing`, "table_missing");
-    const absent = table.requiredColumns.filter((column) => !columns.has(column));
+    if (columns.kind === "threw") {
+      return done("unknown", `table ${table.name} could not be read: ${columns.error}`, "threw");
+    }
+    if (columns.kind === "missing") return done("degraded", `required table ${table.name} is missing`, "table_missing");
+    const absent = table.requiredColumns.filter((column) => !columns.value.has(column));
     if (absent.length > 0) {
       return done("degraded", `table ${table.name} is missing required column(s): ${absent.join(", ")}`, "column_missing");
     }
     const rows = rowCount(db, table.name);
-    if (rows === null) return done("degraded", `required table ${table.name} could not be read`, "table_missing");
-    if (rows < table.minRows) {
-      return done("degraded", `table ${table.name} has ${rows} rows, below the required ${table.minRows}`, "row_bounds");
+    if (rows.kind === "threw") {
+      return done("unknown", `row count for ${table.name} could not be read: ${rows.error}`, "threw");
+    }
+    if (rows.value < table.minRows) {
+      return done("degraded", `table ${table.name} has ${rows.value} rows, below the required ${table.minRows}`, "row_bounds");
     }
     trace.tablesChecked.push(table.name);
   }
