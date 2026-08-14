@@ -168,10 +168,39 @@ function coverageFor(spec: CapabilitySpec, db: Db, requestedYears: number[] | nu
 // ---------------------------------------------------------------- flag gate, cache, traces
 
 export const HEALTH_CACHE_TTL_MS = 30_000;
+/**
+ * Both retention structures are BOUNDED, because Task 7 puts this on the request path and a
+ * process-lifetime Map keyed by capability/handle/period grows with traffic. TTL is freshness, not
+ * eviction: an expired entry answered nothing and still occupied memory forever.
+ */
+export const HEALTH_CACHE_MAX_ENTRIES = 256;
+export const HEALTH_TRACE_LIMIT = 500;
 const cache = new Map<string, { at: number; health: SourceHealth }>();
 const traces: HealthTrace[] = [];
 /** Injectable for the TTL regression only; everything else reads real time. */
 let healthNow: () => number = Date.now;
+
+/** The trace log is a ring: the oldest entry is dropped, never the newest. */
+function pushTrace(trace: HealthTrace): void {
+  traces.push(trace);
+  while (traces.length > HEALTH_TRACE_LIMIT) traces.shift();
+}
+
+/** Purge expired entries first; if the cap is still hit, evict oldest-inserted (Map order). */
+function storeVerdict(key: string, health: SourceHealth): void {
+  const now = healthNow();
+  if (cache.size >= HEALTH_CACHE_MAX_ENTRIES) {
+    for (const [candidate, entry] of cache) {
+      if (now - entry.at >= HEALTH_CACHE_TTL_MS) cache.delete(candidate);
+    }
+    while (cache.size >= HEALTH_CACHE_MAX_ENTRIES) {
+      const oldest = cache.keys().next().value;
+      if (oldest === undefined) break;
+      cache.delete(oldest);
+    }
+  }
+  cache.set(key, { at: now, health });
+}
 
 function unresolvedVerdict(sourceId: SourceId, capability: string, reason: string): SourceHealth {
   return { sourceId, capability, state: "unknown", reason, dataVersion: null, requestedCoverage: "unknown" };
@@ -213,6 +242,19 @@ export function sourceHealthFor(
   if ("unresolved" in resolved) return unresolvedVerdict(sourceId, "unresolved", resolved.unresolved);
   const capability = resolved.capability;
 
+  /**
+   * The mode recheck with the VERIFIED family. The broad gate above passes null -- it has no
+   * verified family yet, and consulting one an unverified token merely claims would be
+   * input-driven configuration (the W8 property). But null permanently excluded the per-family
+   * override, so global shadow + family OFF + capability flag on still probed. The narrower
+   * override must win, and it is consulted only now that resolution has verified the family, and
+   * before the capability flag is read.
+   */
+  if (!isObserving(resolveMode(sourceId, claimedFamily, env).mode)) {
+    return unresolvedVerdict(sourceId, capability,
+      `proof mode is off for plan family '${claimedFamily}'`);
+  }
+
   // resolveCapability only returns registry members, so the spec exists; the lookup is kept rather
   // than assumed so a future resolver change cannot silently hand an unregistered id through.
   const spec = specFor(capability);
@@ -228,6 +270,13 @@ export function sourceHealthFor(
   try {
     opened = request.dbOverride !== undefined ? request.dbOverride : spec.database.acquire();
   } catch (error) {
+    // Containment alone is not accounting: without a trace, an enabled capability whose provider
+    // always throws leaves no record of ever having been tried.
+    pushTrace({
+      sourceId, capability, dbIdentity: "no-db", dbPath: null,
+      preflight: "skipped", tablesChecked: [], dependenciesChecked: [], semanticChecked: [],
+      coverage: "unknown", boundary: "threw",
+    });
     return unresolvedVerdict(sourceId, capability, `database acquisition threw: ${(error as Error).message}`);
   }
 
@@ -242,20 +291,20 @@ export function sourceHealthFor(
     // overridden by construction order rather than detected by a check.
     const evaluated = evaluateCapability(spec, { ...request, sourceId, dbOverride: opened });
     health = evaluated.health;
-    traces.push(evaluated.trace);
+    pushTrace(evaluated.trace);
   } catch (error) {
     // Defect containment, mandated by invariant 15. evaluateCapability guards its own reads, so this
     // fires only on a defect in it -- and a defect in the prober must degrade to `unknown`, never
     // take the answer down with it.
     health = unresolvedVerdict(sourceId, capability, `probe threw: ${(error as Error).message}`);
-    traces.push({
+    pushTrace({
       sourceId, capability, dbIdentity: identityOf(opened?.db ?? null),
       dbPath: opened?.resolvedPath ?? null,
       preflight: "skipped", tablesChecked: [], dependenciesChecked: [], semanticChecked: [],
       coverage: "unknown", boundary: "threw",
     });
   }
-  cache.set(key, { at: healthNow(), health });
+  storeVerdict(key, health);
   return health;
 }
 

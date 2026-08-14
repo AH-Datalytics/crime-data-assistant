@@ -1146,6 +1146,11 @@ import { isObserving, resolveMode } from "./proof-modes";
 import { specFor } from "./source-health-inventory";
 
 export const HEALTH_CACHE_TTL_MS = 30_000;
+// Both retention structures are BOUNDED (cache: TTL purge + oldest-entry eviction at
+// HEALTH_CACHE_MAX_ENTRIES; traces: a ring of HEALTH_TRACE_LIMIT dropping the oldest).
+// TTL alone is freshness, not eviction -- an expired entry still occupies memory forever.
+export const HEALTH_CACHE_MAX_ENTRIES = 256;
+export const HEALTH_TRACE_LIMIT = 500;
 const cache = new Map<string, { at: number; health: SourceHealth }>();
 const traces: HealthTrace[] = [];
 
@@ -1165,6 +1170,13 @@ export function sourceHealthFor(
   const resolved = resolveCapability(sourceId, derivation, executedSql, claimedFamily);
   if ("unresolved" in resolved) return unresolvedVerdict(sourceId, "unresolved", resolved.unresolved);
   const capability = resolved.capability;
+
+  // Mode recheck with the VERIFIED family, so the per-family OFF override wins. The broad gate
+  // above passes null on purpose -- consulting a family an unverified token merely claims would be
+  // input-driven configuration -- but null permanently excluded the narrower override.
+  if (!isObserving(resolveMode(sourceId, claimedFamily, env).mode)) {
+    return unresolvedVerdict(sourceId, capability, `proof mode is off for plan family '${claimedFamily}'`);
+  }
 
   // The spec comes first now: the flag name is PINNED on it, and resolveCapability has already
   // rejected a capability whose artifact does not match sourceId.

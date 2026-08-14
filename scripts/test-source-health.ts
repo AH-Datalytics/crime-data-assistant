@@ -5,12 +5,13 @@ import path from "node:path";
 import Database from "better-sqlite3";
 import {
   evaluateCapability, identityOf, resolveCapability, sourceHealthFor,
-  HEALTH_CACHE_TTL_MS, __healthTracesForTests, __resetSourceHealthCacheForTests, __setHealthClockForTests,
+  HEALTH_CACHE_MAX_ENTRIES, HEALTH_CACHE_TTL_MS, HEALTH_TRACE_LIMIT,
+  __healthTracesForTests, __resetSourceHealthCacheForTests, __setHealthClockForTests,
   type HealthContext,
 } from "../lib/source-health";
 import { LEGACY_PLAN_DERIVATION_VERSION, PLAN_DERIVATION_VERSION, fingerprintSql, sealPlanDerivation, verifyPlanDerivation } from "../lib/plan-derivation";
 import { coverageBasisErrors } from "../lib/capability-policy";
-import type { ModeEnv } from "../lib/proof-modes";
+import { envKeyForFamily, type ModeEnv } from "../lib/proof-modes";
 import {
   CAPABILITY_INVENTORY, specFor,
   type CapabilitySpec, type DependencyRule, type SemanticDependency,
@@ -1176,6 +1177,72 @@ check("the evaluation source is the authoritative first argument, and nothing ca
   db.close();
 });
 
+check("a per-family OFF override stops work after resolution, before the flag", () => {
+  /**
+   * resolveMode supports per-source AND per-family overrides, and the broad gate passed `null` for
+   * the family permanently -- so global shadow + family OFF + capability flag on still acquired the
+   * database and evaluated. The narrower override must win. The recheck runs AFTER resolution so the
+   * family consulted is the VERIFIED one (preserving the W8 property), and BEFORE the capability
+   * flag, so a disabled family never reads it.
+   */
+  __resetSourceHealthCacheForTests();
+  const familyOff = { ...enabledEnv, [envKeyForFamily("shr", "deterministic-murder")]: "off" };
+  let acquired = 0;
+  withPatchedProvider(() => { acquired++; return null; }, () => {
+    const health = sourceHealthFor("shr", shrSealed, RESOLVE_SQL, "deterministic-murder",
+      { requestedYears: [2022] }, familyOff);
+    assert.strictEqual(health.state, "unknown");
+    assert.match(health.reason ?? "", /family/, "the reason must name the family override");
+  });
+  assert.strictEqual(acquired, 0, "a family-off answer must not acquire a database");
+  assert.deepStrictEqual(__healthTracesForTests(), []);
+
+  // An explicit family shadow (or on) still probes, so the recheck is an override, not a lockout.
+  const db = shrFixture();
+  const familyShadow = { ...enabledEnv, [envKeyForFamily("shr", "deterministic-murder")]: "shadow" };
+  sourceHealthFor("shr", shrSealed, RESOLVE_SQL, "deterministic-murder",
+    { requestedYears: [2022], dbOverride: { db, resolvedPath: db.name } }, familyShadow);
+  assert.strictEqual(__healthTracesForTests().length, 1);
+  db.close();
+});
+
+check("the cache is bounded: the oldest entry is evicted, not accumulated forever", () => {
+  /**
+   * TTL was freshness only -- expired and inactive keys were never removed, so every distinct
+   * capability/handle/period key lived for the process lifetime. Proven behaviourally rather than by
+   * size introspection: fill the cache to its cap with distinct periods, overflow it by one, and the
+   * FIRST period must re-evaluate (it was evicted) while a late period is still served from cache.
+   */
+  __resetSourceHealthCacheForTests();
+  assert.strictEqual(HEALTH_CACHE_MAX_ENTRIES, 256, "test arithmetic depends on the cap");
+  const db = shrFixture();
+  const at = (year: number) => callHealth(ctx(db, [year]), enabledEnv);
+  for (let year = 0; year < HEALTH_CACHE_MAX_ENTRIES; year++) at(year);
+  assert.strictEqual(__healthTracesForTests().length, HEALTH_CACHE_MAX_ENTRIES);
+  at(HEALTH_CACHE_MAX_ENTRIES);                     // overflow by one
+  at(0);                                            // the oldest key must have been evicted
+  assert.strictEqual(__healthTracesForTests().length, HEALTH_CACHE_MAX_ENTRIES + 2,
+    "the evicted oldest period must re-evaluate");
+  at(HEALTH_CACHE_MAX_ENTRIES);                     // a late key is still cached
+  assert.strictEqual(__healthTracesForTests().length, HEALTH_CACHE_MAX_ENTRIES + 2,
+    "a recent key must still be served from cache");
+  db.close();
+});
+
+check("the trace log is a bounded ring that drops the oldest entry", () => {
+  // Every evaluation appended a full trace forever, cleared only by the test reset -- unbounded
+  // growth for the lifetime of the process once Task 7 wires this into traffic.
+  __resetSourceHealthCacheForTests();
+  const db = shrFixture();
+  callHealth(ctx(db, [900_000]), enabledEnv);
+  const first = __healthTracesForTests()[0];
+  for (let year = 0; year < HEALTH_TRACE_LIMIT; year++) callHealth(ctx(db, [year]), enabledEnv);
+  const traces = __healthTracesForTests();
+  assert.strictEqual(traces.length, HEALTH_TRACE_LIMIT, "the ring must hold exactly its limit");
+  assert.ok(!traces.includes(first), "the OLDEST trace is the one dropped");
+  db.close();
+});
+
 check("an unverified token is diagnosed as unverified, even when the flag is also off", () => {
   /**
    * Pins the gate ORDER: resolution before the capability flag. The two orders refuse identically
@@ -1207,6 +1274,16 @@ check("a provider that throws during acquisition never takes down the response",
   assert.strictEqual(acquired, 1, "the gate passed, so the provider must have been reached");
   assert.strictEqual(health.state, "unknown", "an unobtainable database is not evidence about the data");
   assert.match(health.reason ?? "", /acquisition exploded/);
+  /**
+   * Containment alone is not accounting. The verdict survived, but the enabled capability's failed
+   * attempt vanished from the traces -- an operator diagnosing "why is this capability always
+   * unknown" would find no record that it was ever tried. One truthful `threw` trace is required.
+   */
+  const traces = __healthTracesForTests();
+  assert.strictEqual(traces.length, 1, "a failed acquisition of an ENABLED capability must be traced");
+  assert.strictEqual(traces[0].boundary, "threw");
+  assert.strictEqual(traces[0].dbIdentity, "no-db");
+  assert.strictEqual(traces[0].capability, SHR_INCIDENTS_YEAR);
 });
 
 console.log(`\nsource health tests: ${passed} passed, ${failed} failed`);
