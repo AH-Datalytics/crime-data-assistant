@@ -43,6 +43,17 @@ export function envKeyForSource(sourceId: SourceId): string {
   return `PROOF_MODE_${sourceId.toUpperCase()}`;
 }
 /** Per-family override, e.g. PROOF_MODE_FAMILY_NIBRS_CLEARANCE_TYPE=enforce. */
+/**
+ * Kill switch for one capability, beside envKeyForFamily so ops finds both in one place.
+ *
+ * A RE-EXPORT, not a second implementation: the derivation lives once in
+ * lib/capability-flag-key.ts, generation pins its output per capability as `flagKey` in
+ * capability-registry.json, and the request path reads that pin (`spec.flagKey`) rather than
+ * calling this. Two implementations of one derivation is the drift the pin cannot prevent --
+ * the runtime would silently ignore it.
+ */
+export { capabilityFlagKey as envKeyForCapability } from "./capability-flag-key";
+
 export function envKeyForFamily(sourceId: SourceId, planFamily: string): string {
   const normalized = planFamily.replace(/[^A-Za-z0-9]+/g, "_").toUpperCase();
   return `PROOF_MODE_FAMILY_${sourceId.toUpperCase()}_${normalized}`;

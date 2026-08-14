@@ -4,6 +4,7 @@ import path from "node:path";
 import { artifactOf } from "./source-artifact";
 import { verifyPlanDerivation, type PlanDerivation } from "./plan-derivation";
 import { inspectNibrsRollupAvailability } from "./nibrs-rollup-router";
+import { isObserving, resolveMode, type ModeEnv } from "./proof-modes";
 import { specFor, type CapabilitySpec, type Db, type OpenedDatabase, type TableRequirement } from "./source-health-inventory";
 
 export type HealthBoundary =
@@ -150,6 +151,109 @@ function coverageFor(spec: CapabilitySpec, db: Db, requestedYears: number[] | nu
   } catch {
     return "unknown";
   }
+}
+
+// ---------------------------------------------------------------- flag gate, cache, traces
+
+export const HEALTH_CACHE_TTL_MS = 30_000;
+const cache = new Map<string, { at: number; health: SourceHealth }>();
+const traces: HealthTrace[] = [];
+/** Injectable for the TTL regression only; everything else reads real time. */
+let healthNow: () => number = Date.now;
+
+function unresolvedVerdict(sourceId: SourceId, capability: string, reason: string): SourceHealth {
+  return { sourceId, capability, state: "unknown", reason, dataVersion: null, requestedCoverage: "unknown" };
+}
+
+/**
+ * The flag-gated entry point a route will eventually call. Order is load-bearing:
+ *
+ *   1. Global proof mode. Off does no request-path work at all, and a capability flag cannot
+ *      override it (invariant 14); the kill switch beats both.
+ *   2. Capability resolution from the verified token. Unresolved answers stop here -- before any
+ *      flag is read and before any database is acquired.
+ *   3. The capability's own flag, read from the PIN (`spec.flagKey`), never re-derived: generation
+ *      owns the derivation and the uniqueness check, and a second implementation on the request
+ *      path is a drift the pin cannot prevent. Default-OFF: only an explicit "on", "shadow" or
+ *      "enforce" enables probing, because an unset variable is not a decision anyone made (§13).
+ *   4. A cache keyed by NON-FORGEABLE handle identity plus the requested period. A caller-supplied
+ *      identity string would only prove two labels differ; reusing one label across handles would
+ *      inherit another database's verdict. The identity comes from a WeakMap on the handle itself.
+ *   5. Evaluation, with the trace recorded. Nothing here may take down a response (invariant 15),
+ *      which includes ACQUISITION: the plan's draft acquired the handle for the cache key outside
+ *      its try/catch, so the throwing provider its own comment warned about would have propagated.
+ *
+ * The budget switch is Task 6's and is deliberately absent here.
+ */
+export function sourceHealthFor(
+  sourceId: SourceId,
+  derivation: PlanDerivation | null,
+  executedSql: string | null,
+  claimedFamily: string | null,
+  context: HealthContext,
+  env: ModeEnv = process.env,
+): SourceHealth {
+  if (!isObserving(resolveMode(sourceId, null, env).mode)) {
+    return unresolvedVerdict(sourceId, "unresolved", "proof system is off for this source");
+  }
+
+  const resolved = resolveCapability(sourceId, derivation, executedSql, claimedFamily);
+  if ("unresolved" in resolved) return unresolvedVerdict(sourceId, "unresolved", resolved.unresolved);
+  const capability = resolved.capability;
+
+  // resolveCapability only returns registry members, so the spec exists; the lookup is kept rather
+  // than assumed so a future resolver change cannot silently hand an unregistered id through.
+  const spec = specFor(capability);
+  if (!spec) return unresolvedVerdict(sourceId, capability, `no inventory entry for ${capability}`);
+
+  const flagKey = spec.flagKey;
+  const flag = (env[flagKey] ?? "").trim().toLowerCase();
+  if (flag !== "on" && flag !== "shadow" && flag !== "enforce") {
+    return unresolvedVerdict(sourceId, capability, `capability not enabled (${flagKey} is '${flag || "unset"}')`);
+  }
+
+  let opened: OpenedDatabase | null = null;
+  try {
+    opened = context.dbOverride !== undefined ? context.dbOverride : spec.database.acquire();
+  } catch (error) {
+    return unresolvedVerdict(sourceId, capability, `database acquisition threw: ${(error as Error).message}`);
+  }
+
+  const period = [...(context.requestedYears ?? [])].sort((a, b) => a - b).join(",");
+  const key = `${sourceId}:${capability}:${identityOf(opened?.db ?? null)}:${period}`;
+  const hit = cache.get(key);
+  if (hit && healthNow() - hit.at < HEALTH_CACHE_TTL_MS) return hit.health;
+
+  let health: SourceHealth;
+  try {
+    const evaluated = evaluateCapability(spec, { ...context, dbOverride: opened });
+    health = evaluated.health;
+    traces.push(evaluated.trace);
+  } catch (error) {
+    // Defect containment, mandated by invariant 15. evaluateCapability guards its own reads, so this
+    // fires only on a defect in it -- and a defect in the prober must degrade to `unknown`, never
+    // take the answer down with it.
+    health = unresolvedVerdict(sourceId, capability, `probe threw: ${(error as Error).message}`);
+    traces.push({
+      sourceId, capability, dbIdentity: identityOf(opened?.db ?? null),
+      dbPath: opened?.resolvedPath ?? null,
+      preflight: "skipped", tablesChecked: [], dependenciesChecked: [], semanticChecked: [],
+      coverage: "unknown", boundary: "threw",
+    });
+  }
+  cache.set(key, { at: healthNow(), health });
+  return health;
+}
+
+export function __resetSourceHealthCacheForTests(): void {
+  cache.clear();
+  traces.length = 0;
+}
+export function __healthTracesForTests(): HealthTrace[] {
+  return [...traces];
+}
+export function __setHealthClockForTests(clock: (() => number) | null): void {
+  healthNow = clock ?? Date.now;
 }
 
 /**

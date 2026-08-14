@@ -3,9 +3,14 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import Database from "better-sqlite3";
-import { evaluateCapability, identityOf, resolveCapability, type HealthContext } from "../lib/source-health";
+import {
+  evaluateCapability, identityOf, resolveCapability, sourceHealthFor,
+  HEALTH_CACHE_TTL_MS, __healthTracesForTests, __resetSourceHealthCacheForTests, __setHealthClockForTests,
+  type HealthContext,
+} from "../lib/source-health";
 import { LEGACY_PLAN_DERIVATION_VERSION, PLAN_DERIVATION_VERSION, fingerprintSql, sealPlanDerivation, verifyPlanDerivation } from "../lib/plan-derivation";
 import { coverageBasisErrors } from "../lib/capability-policy";
+import type { ModeEnv } from "../lib/proof-modes";
 import {
   CAPABILITY_INVENTORY, specFor,
   type CapabilitySpec, type DependencyRule, type SemanticDependency,
@@ -992,6 +997,191 @@ check("the three-argument seal is (family, capability, sql), fingerprinting the 
   const twoArg = sealPlanDerivation("deterministic-murder", RESOLVE_SQL);
   assert.strictEqual(twoArg.capability, null);
   assert.strictEqual(twoArg.sqlFingerprint, fingerprintSql(RESOLVE_SQL));
+});
+
+// ---------------------------------------------------------------- Task 5: flag gate, cache, traces
+/**
+ * sourceHealthFor is the flag-gated entry point: global proof mode first (a capability flag cannot
+ * override it -- invariant 14), then capability resolution, then the capability's own default-off
+ * flag, then a cache keyed by non-forgeable handle identity, then evaluation with a trace.
+ */
+const SHR_FLAG = shr.flagKey;   // the PIN. Never derived here: the runtime reads what generation pinned.
+const enabledEnv = { PROOF_MODE: "shadow", [SHR_FLAG]: "on" };
+const shrSealed = sealPlanDerivation("deterministic-murder", SHR_INCIDENTS_YEAR, RESOLVE_SQL);
+const callHealth = (c: HealthContext, env: ModeEnv) =>
+  sourceHealthFor("shr", shrSealed, RESOLVE_SQL, "deterministic-murder", c, env);
+
+check("an UNSET capability flag does not enable probing, and neither does garbage", () => {
+  __resetSourceHealthCacheForTests();
+  for (const env of [
+    { PROOF_MODE: "shadow" },
+    { PROOF_MODE: "shadow", [SHR_FLAG]: "off" },
+    { PROOF_MODE: "shadow", [SHR_FLAG]: "1" },
+    { PROOF_MODE: "shadow", [SHR_FLAG]: "true" },
+    { PROOF_MODE: "shadow", [SHR_FLAG]: "yes" },
+  ]) {
+    const db = shrFixture();
+    const health = callHealth(ctx(db), env);
+    assert.strictEqual(health.state, "unknown", JSON.stringify(env));
+    assert.match(health.reason ?? "", /not enabled/);
+    db.close();
+  }
+  // Default-OFF means an explicit enabling value, not "anything truthy". An unset variable is not
+  // a decision anyone made (§13).
+  assert.deepStrictEqual(__healthTracesForTests(), []);
+});
+
+check("an enabled capability evaluates once and traces once", () => {
+  __resetSourceHealthCacheForTests();
+  const db = shrFixture();
+  const health = callHealth(ctx(db), enabledEnv);
+  const traces = __healthTracesForTests();
+  assert.strictEqual(traces.length, 1);
+  assert.strictEqual(traces[0].capability, SHR_INCIDENTS_YEAR);
+  // The raw spec's policy is unauthored, so evaluation stops at policy_incomplete -- NOT
+  // missing_receipt as the plan's draft expected; that boundary needs a complete policy.
+  assert.strictEqual(traces[0].boundary, "policy_incomplete");
+  assert.deepStrictEqual(traces[0].tablesChecked, ["incidents"]);
+  assert.strictEqual(health.capability, SHR_INCIDENTS_YEAR);
+  db.close();
+});
+
+check("global OFF does no source-health work at all, whatever the capability flag says", () => {
+  // Invariant 14: a capability flag cannot override the global mode. And the kill switch beats both.
+  __resetSourceHealthCacheForTests();
+  for (const env of [
+    { [SHR_FLAG]: "on" },                                        // no global mode set
+    { PROOF_MODE: "off", [SHR_FLAG]: "on" },
+    { PROOF_MODE: "shadow", PROOF_KILL_SWITCH: "on", [SHR_FLAG]: "on" },
+  ]) {
+    const db = shrFixture();
+    const health = callHealth(ctx(db), env);
+    assert.strictEqual(health.state, "unknown", JSON.stringify(env));
+    db.close();
+  }
+  assert.deepStrictEqual(__healthTracesForTests(), [], "off must do no work, not merely report none");
+});
+
+/**
+ * Swap the registry spec's provider for the duration of fn, restoring it whatever happens.
+ * A const arrow, not a function declaration: a declaration hoists above the module-level
+ * assert that narrows `shr`, so TypeScript rightly refuses the unnarrowed access inside it.
+ */
+const withPatchedProvider = <T,>(acquire: () => { db: Database.Database; resolvedPath: string } | null, fn: () => T): T => {
+  const original = shr.database.acquire;
+  (shr.database as { acquire: typeof original }).acquire = acquire;
+  try { return fn(); }
+  finally { (shr.database as { acquire: typeof original }).acquire = original; }
+};
+
+check("an unresolved answer never reaches the flag gate or the provider", () => {
+  __resetSourceHealthCacheForTests();
+  let acquired = 0;
+  withPatchedProvider(() => { acquired++; return null; }, () => {
+    const noCapability = sealPlanDerivation("deterministic-murder", RESOLVE_SQL);
+    const health = sourceHealthFor("shr", noCapability, RESOLVE_SQL, "deterministic-murder",
+      { sourceId: "shr", requestedYears: [2022] }, enabledEnv);
+    assert.strictEqual(health.state, "unknown");
+    assert.strictEqual(health.capability, "unresolved");
+    assert.match(health.reason ?? "", /sealed no capability/);
+  });
+  assert.strictEqual(acquired, 0, "an unresolved answer must not acquire a database");
+  assert.deepStrictEqual(__healthTracesForTests(), []);
+});
+
+check("a disabled flag never acquires a database either", () => {
+  __resetSourceHealthCacheForTests();
+  let acquired = 0;
+  withPatchedProvider(() => { acquired++; return null; }, () => {
+    const health = sourceHealthFor("shr", shrSealed, RESOLVE_SQL, "deterministic-murder",
+      { sourceId: "shr", requestedYears: [2022] }, { PROOF_MODE: "shadow" });
+    assert.match(health.reason ?? "", /not enabled/);
+  });
+  assert.strictEqual(acquired, 0, "the flag gate must precede acquisition");
+});
+
+check("a verdict for one database is never replayed for another", () => {
+  __resetSourceHealthCacheForTests();
+  const good = shrFixture();
+  const broken = shrFixture((d) => d.exec("DELETE FROM incidents"));
+  assert.match(callHealth(ctx(good), enabledEnv).reason ?? "", /policy/);
+  assert.strictEqual(callHealth(ctx(broken), enabledEnv).state, "degraded");
+  const traces = __healthTracesForTests();
+  assert.strictEqual(traces.length, 2);
+  assert.notStrictEqual(traces[0].dbIdentity, traces[1].dbIdentity, "identity must distinguish the handles");
+  good.close();
+  broken.close();
+});
+
+check("the same handle and period is served from cache", () => {
+  __resetSourceHealthCacheForTests();
+  const db = shrFixture();
+  const first = callHealth(ctx(db), enabledEnv);
+  const second = callHealth(ctx(db), enabledEnv);
+  assert.strictEqual(__healthTracesForTests().length, 1, "the second call must be a cache hit");
+  assert.deepStrictEqual(second, first);
+  db.close();
+});
+
+check("a different requested period re-probes the same handle", () => {
+  __resetSourceHealthCacheForTests();
+  const db = shrFixture();
+  callHealth(ctx(db, [2022]), enabledEnv);
+  callHealth(ctx(db, [2019]), enabledEnv);
+  assert.strictEqual(__healthTracesForTests().length, 2);
+  db.close();
+});
+
+check("a stale cache entry re-probes after the TTL", () => {
+  __resetSourceHealthCacheForTests();
+  const db = shrFixture();
+  let now = 1_000_000;
+  __setHealthClockForTests(() => now);
+  try {
+    callHealth(ctx(db), enabledEnv);
+    now += HEALTH_CACHE_TTL_MS - 1;
+    callHealth(ctx(db), enabledEnv);
+    assert.strictEqual(__healthTracesForTests().length, 1, "inside the TTL is a hit");
+    now += 2;
+    callHealth(ctx(db), enabledEnv);
+    assert.strictEqual(__healthTracesForTests().length, 2, "past the TTL must re-probe");
+  } finally {
+    __setHealthClockForTests(null);
+    db.close();
+  }
+});
+
+check("an unverified token is diagnosed as unverified, even when the flag is also off", () => {
+  /**
+   * Pins the gate ORDER: resolution before the capability flag. The two orders refuse identically
+   * everywhere except when BOTH fail -- an invalid token whose claimed capability's flag is off --
+   * where flag-first reports "not enabled" for a capability nothing verified. The flag consulted
+   * must belong to a VERIFIED capability: an env-var lookup selected by an unverified declaration is
+   * input-driven configuration, and the diagnosis should name the deeper defect.
+   */
+  __resetSourceHealthCacheForTests();
+  const tampered = sealPlanDerivation("deterministic-murder", SHR_INCIDENTS_YEAR, RESOLVE_SQL);
+  const health = sourceHealthFor("shr", tampered, "SELECT 1 /* rewritten */", "deterministic-murder",
+    { sourceId: "shr", requestedYears: [2022] }, { PROOF_MODE: "shadow" });   // flag ALSO off
+  assert.strictEqual(health.state, "unknown");
+  assert.match(health.reason ?? "", /not verified|does not match/, "the unverified token is the diagnosis");
+  assert.doesNotMatch(health.reason ?? "", /not enabled/, "a flag named by an unverified token must not be the diagnosis");
+});
+
+check("a provider that throws during acquisition never takes down the response", () => {
+  /**
+   * Invariant 15: a probe must never take down a response. The plan's own draft acquired the handle
+   * for the cache key OUTSIDE its try/catch, so a throwing provider -- the very case its comment
+   * cites three lines later -- would have propagated to the route. Acquisition is guarded.
+   */
+  __resetSourceHealthCacheForTests();
+  let acquired = 0;
+  const health = withPatchedProvider(() => { acquired++; throw new Error("acquisition exploded"); }, () =>
+    sourceHealthFor("shr", shrSealed, RESOLVE_SQL, "deterministic-murder",
+      { sourceId: "shr", requestedYears: [2022] }, enabledEnv));
+  assert.strictEqual(acquired, 1, "the gate passed, so the provider must have been reached");
+  assert.strictEqual(health.state, "unknown", "an unobtainable database is not evidence about the data");
+  assert.match(health.reason ?? "", /acquisition exploded/);
 });
 
 console.log(`\nsource health tests: ${passed} passed, ${failed} failed`);

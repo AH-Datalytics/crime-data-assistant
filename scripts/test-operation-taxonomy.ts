@@ -59,13 +59,13 @@
  */
 import assert from "node:assert";
 import { AsyncLocalStorage } from "node:async_hooks";
-import { createHash } from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import Database from "better-sqlite3";
 import { POLICY_FIELDS, capabilityAuthorizes, policyIsComplete, policyShapeErrors, type UnvalidatedPolicy } from "../lib/capability-policy";
 import { artifactOf as sharedArtifactOf } from "../lib/source-artifact";
+import { capabilityFlagKey } from "../lib/capability-flag-key";
 import type { SourceId } from "../lib/proof-contract";
 
 const DATA_DIR = path.join(process.cwd(), "scripts", "fixtures", "operation-taxonomy");
@@ -640,14 +640,12 @@ const declaredTables = (emitted: readonly string[], cols: Record<string, string[
 
 // ---------------------------------------------------------------- capability flag names
 /**
- * The env-var name that gates probing for one capability, mirroring the plan's
- * `envKeyForCapability`. Kept here so the derived registry pins the mapping and the plan's
- * examples can be checked against a real derivation instead of hand-typed labels.
+ * The ONE derivation, imported -- not a local copy. This file originally held its own
+ * implementation used to pin `flagKey` into the registry, with a cross-check asserting the pin
+ * equals the shared module's output; importing removes the second implementation entirely, which
+ * is strictly stronger than checking that two implementations agree.
  */
-function envKeyForCapability(artifact: string, capabilityId: string): string {
-  const digest = createHash("sha256").update(capabilityId).digest("hex").slice(0, 8).toUpperCase();
-  return `PROOF_CAPABILITY_${artifact.toUpperCase()}_${digest}`;
-}
+const envKeyForCapability = capabilityFlagKey;
 
 // ---------------------------------------------------------------- authored policy
 // The validator lives in lib/capability-policy.ts, imported here rather than duplicated. Writing it
