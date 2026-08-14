@@ -168,6 +168,21 @@ export type DependencyRule = { derived: string; upstream: string; keyColumn: str
 export type SemanticDependency = {
   table: string; requiredColumns: string[]; qualifies: string;
   keyColumn: string; yearColumn: string; versionColumn?: string;
+  /**
+   * Whether the qualifying table is a COMPLETE ledger or a SPARSE exception table.
+   *
+   * This is not a detail. \`agency_year_reliability\` is sparse: its builder inserts a row only for a
+   * detected finding (scripts/build-agency-year-reliability.ts, inside \`for (const finding of
+   * findings)\`), so an absent agency-year normally means no anomaly was recorded. Requiring every
+   * qualified row to have a qualifying row would therefore degrade nearly every real capability
+   * holding ordinary unflagged crime data.
+   *
+   *   complete -> every qualified row must have a qualifying row
+   *   sparse   -> existing flags must be VALID; absence is not a defect, and build completeness
+   *               cannot be established from row presence or MAX(year) at all, because a recent year
+   *               may legitimately produce zero flags. It needs generation/receipt evidence.
+   */
+  coverage: "complete" | "sparse";
 };
 export type CapabilityPolicy = {
   coverage: { table: string; yearColumn: string } | null;

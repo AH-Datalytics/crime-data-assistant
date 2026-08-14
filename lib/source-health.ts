@@ -339,15 +339,31 @@ export function evaluateCapability(
         "semantic_dependency");
     }
 
-    const unqualified = scalar(db, `SELECT COUNT(*) AS n FROM ${qualifiedTable(dep.qualifies)} d ` +
-      `WHERE NOT EXISTS (SELECT 1 FROM ${qualifiedTable(dep.table)} q WHERE ${pairKey})`);
-    if (unqualified.kind === "threw") {
-      return done("unknown", `coverage of ${dep.qualifies} by ${dep.table} could not be checked: ${unqualified.error}`, "semantic_dependency");
-    }
-    if (unqualified.value > 0) {
-      return done("degraded",
-        `${unqualified.value} ${dep.keyColumn}/${dep.yearColumn} row(s) in ${dep.qualifies} are unqualified by ${dep.table}`,
-        "semantic_dependency");
+    /**
+     * The reverse direction applies ONLY to a complete ledger.
+     *
+     * `agency_year_reliability` is a sparse EXCEPTION table -- its builder inserts a row only for a
+     * detected finding, so an absent agency-year normally means no anomaly was recorded. Requiring
+     * every qualified row to have a qualifying row would degrade nearly every real capability
+     * holding ordinary unflagged crime data. The synthetic fixture that first covered this modelled
+     * reliability as a complete ledger, which is precisely why the mismatch passed.
+     *
+     * For a sparse table, build completeness cannot be established structurally at all: row presence
+     * says nothing, and MAX(year) says nothing either, because a recent year may legitimately
+     * produce zero flags. It needs generation/receipt evidence, which is Stage 2B. The trace records
+     * which claim was actually made so a sparse check cannot be read as a coverage guarantee.
+     */
+    if (dep.coverage === "complete") {
+      const unqualified = scalar(db, `SELECT COUNT(*) AS n FROM ${qualifiedTable(dep.qualifies)} d ` +
+        `WHERE NOT EXISTS (SELECT 1 FROM ${qualifiedTable(dep.table)} q WHERE ${pairKey})`);
+      if (unqualified.kind === "threw") {
+        return done("unknown", `coverage of ${dep.qualifies} by ${dep.table} could not be checked: ${unqualified.error}`, "semantic_dependency");
+      }
+      if (unqualified.value > 0) {
+        return done("degraded",
+          `${unqualified.value} ${dep.keyColumn}/${dep.yearColumn} row(s) in ${dep.qualifies} are unqualified by ${dep.table}`,
+          "semantic_dependency");
+      }
     }
     if (dep.versionColumn) {
       // A mixed-version table is a half-finished rebuild, and rows from two algorithms are not
@@ -378,7 +394,9 @@ export function evaluateCapability(
         return done("degraded", `${dep.table} mixes ${distinct} ${dep.versionColumn} values; a rebuild is incomplete`, "semantic_dependency");
       }
     }
-    trace.semanticChecked.push(`${dep.table}~${dep.qualifies}`);
+    // The mode is recorded, because "flags validated" and "coverage guaranteed" are different claims
+    // and an undifferentiated entry would let the weaker one be read as the stronger.
+    trace.semanticChecked.push(`${dep.table}~${dep.qualifies}(${dep.coverage})`);
   }
 
   if (!policyIsComplete(spec.policy as UnvalidatedPolicy | null)) {

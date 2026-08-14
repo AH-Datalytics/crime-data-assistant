@@ -477,10 +477,20 @@ check("an uncheckable dependency is unknown, not degraded", () => {
 
 // ---------------------------------------------------------------- semantic alignment
 const withSemantic = (dep: SemanticDependency): CapabilitySpec => ({ ...shr, semanticDependencies: [dep] });
+/**
+ * A COMPLETE ledger: every qualified row must have a qualifying row. Used for the reverse-direction
+ * cases below.
+ */
 const RELIABILITY: SemanticDependency = {
   table: "reliability", requiredColumns: ["ori", "year", "algorithm_version"],
   qualifies: "crime", keyColumn: "ori", yearColumn: "year", versionColumn: "algorithm_version",
+  coverage: "complete",
 };
+/**
+ * A SPARSE exception table, which is what agency_year_reliability actually is: its builder inserts a
+ * row only for a detected finding, so an absent agency-year normally means no anomaly was recorded.
+ */
+const SPARSE_RELIABILITY: SemanticDependency = { ...RELIABILITY, coverage: "sparse" };
 
 function semanticFixture(mutate?: (db: Database.Database) => void): Database.Database {
   const db = shrFixture();
@@ -493,6 +503,54 @@ function semanticFixture(mutate?: (db: Database.Database) => void): Database.Dat
   mutate?.(db);
   return db;
 }
+
+check("a SPARSE exception table does not degrade for unflagged rows", () => {
+  /**
+   * The production shape, and the one the earlier model got wrong. agency_year_reliability inserts a
+   * row only for a detected finding (scripts/build-agency-year-reliability.ts, inside
+   * `for (const finding of findings)`), so an absent agency-year normally means no anomaly was
+   * recorded. Requiring every qualified row to have a qualifying row degraded nearly every real
+   * capability holding ordinary unflagged crime data.
+   *
+   * The first fixture for this hid the mismatch by modelling reliability as a complete ledger.
+   */
+  const db = semanticFixture((d) => {
+    d.prepare("INSERT INTO crime VALUES (?,?)").run("TX0001", 2023);   // ordinary, unflagged
+    d.prepare("INSERT INTO crime VALUES (?,?)").run("CA9999", 2024);   // ordinary, unflagged
+  });
+  const flags = db.prepare("SELECT COUNT(*) AS n FROM reliability").get() as { n: number };
+  const rows = db.prepare("SELECT COUNT(*) AS n FROM crime").get() as { n: number };
+  assert.ok(flags.n < rows.n, "this case depends on the flag table being sparser than the data");
+
+  const sparse = evaluateCapability(withSemantic(SPARSE_RELIABILITY), ctx(db));
+  assert.strictEqual(sparse.trace.boundary, "policy_incomplete",
+    `unflagged rows degraded a sparse exception table: ${sparse.health.reason}`);
+  assert.deepStrictEqual(sparse.trace.semanticChecked, ["reliability~crime(sparse)"],
+    "the trace must record that flags were validated, not that coverage was guaranteed");
+
+  // The same data against a COMPLETE ledger is a defect, so the distinction is doing the work.
+  const complete = evaluateCapability(withSemantic(RELIABILITY), ctx(db));
+  assert.strictEqual(complete.trace.boundary, "semantic_dependency");
+  assert.strictEqual(complete.health.state, "degraded");
+  db.close();
+});
+
+check("a SPARSE table still has its existing flags validated", () => {
+  // Absence is not a defect; an INVALID flag still is. A reliability row for an agency-year the
+  // crime data does not contain qualifies nothing that exists.
+  const db = semanticFixture((d) => d.prepare("INSERT INTO reliability VALUES (?,?,?)").run("TX0001", 2030, "v1"));
+  const { health, trace } = evaluateCapability(withSemantic(SPARSE_RELIABILITY), ctx(db));
+  assert.strictEqual(trace.boundary, "semantic_dependency");
+  assert.strictEqual(health.state, "degraded");
+  assert.match(health.reason ?? "", /pairs absent from crime/);
+  db.close();
+});
+
+check("a SPARSE table still has its version identity enforced", () => {
+  const db = semanticFixture((d) => d.prepare("INSERT INTO reliability VALUES (?,?,?)").run("TX0001", 2022, "v2"));
+  assert.strictEqual(evaluateCapability(withSemantic(SPARSE_RELIABILITY), ctx(db)).trace.boundary, "semantic_dependency");
+  db.close();
+});
 
 check("a qualifying row for a year that does not exist is an orphan", () => {
   /**
@@ -619,7 +677,7 @@ check("a missing or under-specified qualifying table is degraded", () => {
 check("an aligned qualifying table is recorded and evaluation continues", () => {
   const db = semanticFixture();
   const { trace } = evaluateCapability(withSemantic(RELIABILITY), ctx(db));
-  assert.deepStrictEqual(trace.semanticChecked, ["reliability~crime"]);
+  assert.deepStrictEqual(trace.semanticChecked, ["reliability~crime(complete)"]);
   assert.strictEqual(trace.boundary, "policy_incomplete");
   db.close();
 });
