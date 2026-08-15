@@ -60,7 +60,14 @@ export type CapabilityPolicy = {
     | { kind: "column"; table: string; yearColumn: string; justification?: string }
     | { kind: "none"; reason: string }
     | null;
-  integrity: string[] | null;
+  /**
+   * A rule is DRAFT PROSE (a string) or BOUND ({ rule, boundTo }), and only a bound rule whose
+   * target is in the generated check catalog authorizes. Prose is kept -- it is the record of what
+   * "broken" means here and what a binding will be written from -- but a capability stays ineligible
+   * while any rule is unbound, because a field that is mandatory BECAUSE integrity matters cannot
+   * grant an eligibility that ignores it.
+   */
+  integrity: (string | { rule: string; boundTo: string })[] | null;
   /** Discriminated, so a conditional cannot be written without its condition. */
   availability: { kind: "always" } | { kind: "conditional"; condition: string } | null;
   receiptOwner: string | null;

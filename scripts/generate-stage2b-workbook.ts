@@ -398,8 +398,14 @@ function render(){
     '<div class="sug">Free text, one rule per line. Leave empty for undecided. An empty list is not a rule.'+
       ' <b>Draft, and non-authorizing</b>: a sentence nothing can run is a draft of a rule. This capability stays ineligible'+
       ' until every rule names an executable check or a receipt attestation, however complete the rest of the entry looks.</div>'+
+    /* Bound rules are shown but not editable here: the textarea is re-parsed on every keystroke
+       anywhere on the card, so anything inside it can be rewritten by an unrelated edit. */
+    (S.boundRules(cap.id).length
+      ? '<div class="sug"><b>Bound rules</b> (kept as authored; edit them in the policy source)<ul style="margin:6px 0 0;padding-left:20px">'+
+        S.boundRules(cap.id).map((r)=>'<li>'+esc(r.rule)+' <code>'+esc(r.boundTo)+'</code></li>').join('')+
+        '</ul></div>' : '')+
     '<textarea id="integrity" placeholder="e.g. national_monthly and agency_monthly must share a MAX(year*100+month)">'+
-      esc(d.integrity ? d.integrity.join("\\n") : "")+'</textarea></div>'+
+      esc(S.draftRules(cap.id).join("\\n"))+'</textarea></div>'+
 
    '<div class="q"><h3>3. Availability — is this always present?</h3>'+
     '<div class="row"><div><label>Kind</label><select id="avail">'+
@@ -446,17 +452,17 @@ function render(){
     return basis;
   };
   const save = () => {
-    const lines = document.getElementById("integrity").value.split("\\n").map((s)=>s.trim()).filter(Boolean);
     const kind = document.getElementById("avail").value;
     const cond = document.getElementById("cond").value.trim();
     const owner = document.getElementById("owner").value.trim();
     S.update(cap.id, {
       coverage: readCoverage(),
-      integrity: lines.length ? lines : null,
       availability: kind === "" ? null : kind === "always" ? {kind:"always"} : {kind:"conditional",condition:cond},
       receiptOwner: owner === "" ? null : owner,
       evidence: document.getElementById("evidence").value,
     });
+    /* Drafts replace ONLY the prose rules; bound rules are never round-tripped through the textarea. */
+    S.setIntegrityDrafts(cap.id, document.getElementById("integrity").value.split("\\n"));
     status();
   };
   for (const id of ["integrity","avail","cond","owner","evidence","covReason","covJust"]){

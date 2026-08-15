@@ -4730,12 +4730,23 @@ function createStage2bSession(DATA) {
    * older session silently overwrites newer policy, and there is no record that it happened.
    */
   const baseline = {};
+  /**
+   * What the REPOSITORY held, fixed for the life of the page and never written to.
+   *
+   * `baseline` is per-session and a load may legitimately adopt the one a file was authored
+   * against. That made it stale-able across successive loads: loading a session authored against an
+   * older policy moved `baseline`, and loading a second, empty session then reset the decisions but
+   * left the moved baseline in place -- so the older value was restored, reported clean, and
+   * exported nothing. Every load now resets BOTH from this, before applying the file.
+   */
+  const repositoryBaseline = {};
   const withdrawn = {};
   const capabilityById = {};
   for (const cap of DATA.capabilities) {
     capabilityById[cap.id] = cap;
     const prior = DATA.authored[cap.id] ? clone(DATA.authored[cap.id]) : null;
-    baseline[cap.id] = prior;
+    repositoryBaseline[cap.id] = prior ? normalize(prior) : null;
+    baseline[cap.id] = prior ? normalize(prior) : null;
     decisions[cap.id] = prior ? normalize(prior) : blank();
   }
 
@@ -4820,6 +4831,27 @@ function createStage2bSession(DATA) {
     return Array.isArray(integrity) && integrity.length > 0 && integrity.every((rule) =>
       rule && typeof rule === "object" && !Array.isArray(rule)
       && String(rule.rule || "").trim() !== "" && String(rule.boundTo || "").trim() !== "");
+  }
+
+  /**
+   * The rules a person can edit as text, and the bound ones they cannot.
+   *
+   * The page renders integrity into a textarea and re-parses it on EVERY field edit. With bound
+   * rules in the list that round trip was destructive twice over: `join` rendered an object as
+   * "[object Object]", and the next keystroke anywhere on the card -- an owner, a coverage answer,
+   * a word of evidence -- parsed that string back as a draft rule and overwrote the binding. So the
+   * textarea carries prose only, bound rules are shown separately and left alone, and re-authoring
+   * the drafts cannot reach them.
+   */
+  const boundRules = (integrity) => (Array.isArray(integrity) ? integrity.filter((r) => r && typeof r === "object") : []);
+  const draftRules = (integrity) => (Array.isArray(integrity) ? integrity.filter((r) => typeof r === "string") : []);
+
+  /** Replace ONLY the prose rules, preserving every bound rule exactly where it was. */
+  function setIntegrityDrafts(id, lines) {
+    const kept = boundRules(decisions[id].integrity);
+    const drafts = (lines || []).map((s) => String(s).trim()).filter(Boolean);
+    const combined = kept.concat(drafts);
+    return update(id, { integrity: combined.length ? combined : null });
   }
 
   /** Applies a patch, reporting whether anything actually changed. Rendering must not mark dirty. */
@@ -4931,6 +4963,7 @@ function createStage2bSession(DATA) {
     // Complete replacement: every capability returns to what the policy source held, then the file
     // is applied over it. Nothing from the previous session survives unseen.
     for (const id of Object.keys(decisions)) {
+      baseline[id] = repositoryBaseline[id] === null ? null : clone(repositoryBaseline[id]);
       decisions[id] = baseline[id] ? normalize(baseline[id]) : blank();
       delete withdrawn[id];
     }
@@ -5017,6 +5050,9 @@ function createStage2bSession(DATA) {
     isComplete: isComplete,
     integrityIsBound: integrityIsBound,
     counts: counts,
+    setIntegrityDrafts: setIntegrityDrafts,
+    boundRules: (id) => boundRules(decisions[id].integrity),
+    draftRules: (id) => draftRules(decisions[id].integrity),
     changeSet: changeSet,
     serialize: serialize,
     loadSession: loadSession,
@@ -5117,8 +5153,14 @@ function render(){
     '<div class="sug">Free text, one rule per line. Leave empty for undecided. An empty list is not a rule.'+
       ' <b>Draft, and non-authorizing</b>: a sentence nothing can run is a draft of a rule. This capability stays ineligible'+
       ' until every rule names an executable check or a receipt attestation, however complete the rest of the entry looks.</div>'+
+    /* Bound rules are shown but not editable here: the textarea is re-parsed on every keystroke
+       anywhere on the card, so anything inside it can be rewritten by an unrelated edit. */
+    (S.boundRules(cap.id).length
+      ? '<div class="sug"><b>Bound rules</b> (kept as authored; edit them in the policy source)<ul style="margin:6px 0 0;padding-left:20px">'+
+        S.boundRules(cap.id).map((r)=>'<li>'+esc(r.rule)+' <code>'+esc(r.boundTo)+'</code></li>').join('')+
+        '</ul></div>' : '')+
     '<textarea id="integrity" placeholder="e.g. national_monthly and agency_monthly must share a MAX(year*100+month)">'+
-      esc(d.integrity ? d.integrity.join("\n") : "")+'</textarea></div>'+
+      esc(S.draftRules(cap.id).join("\n"))+'</textarea></div>'+
 
    '<div class="q"><h3>3. Availability — is this always present?</h3>'+
     '<div class="row"><div><label>Kind</label><select id="avail">'+
@@ -5165,17 +5207,17 @@ function render(){
     return basis;
   };
   const save = () => {
-    const lines = document.getElementById("integrity").value.split("\n").map((s)=>s.trim()).filter(Boolean);
     const kind = document.getElementById("avail").value;
     const cond = document.getElementById("cond").value.trim();
     const owner = document.getElementById("owner").value.trim();
     S.update(cap.id, {
       coverage: readCoverage(),
-      integrity: lines.length ? lines : null,
       availability: kind === "" ? null : kind === "always" ? {kind:"always"} : {kind:"conditional",condition:cond},
       receiptOwner: owner === "" ? null : owner,
       evidence: document.getElementById("evidence").value,
     });
+    /* Drafts replace ONLY the prose rules; bound rules are never round-tripped through the textarea. */
+    S.setIntegrityDrafts(cap.id, document.getElementById("integrity").value.split("\n"));
     status();
   };
   for (const id of ["integrity","avail","cond","owner","evidence","covReason","covJust"]){

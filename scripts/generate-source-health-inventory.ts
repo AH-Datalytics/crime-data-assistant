@@ -144,8 +144,19 @@ export function renderInventory(registryOverride?: Record<string, RegistryEntry>
   }
 
   const sweepIds = SWEEP_ONLY_SPECS.map((s) => s.capabilityId);
+  /**
+   * Both counts span EVERY capability the file emits, sweep-only included.
+   *
+   * The header counted only registry rows while the specs below it already carried sweep-only
+   * policy, so the first sweep-only capability to be authored would have been described by a number
+   * that did not include it -- a summary quietly disagreeing with the rows it summarises.
+   */
   const authored = Object.values(registry).filter((e) => e.policy !== null).length
     + SWEEP_ONLY_SPECS.filter((s) => authoredPolicy[s.capabilityId]).length;
+  const eligibleCount =
+    Object.values(registry).filter((e) => eligible(e.policy, e.emittedDependencies, e.requiredColumns)).length
+    + SWEEP_ONLY_SPECS.filter((s) => eligible(
+      authoredPolicy[s.capabilityId] ?? null, Object.keys(s.tables), s.tables)).length;
 
   return `/**
  * GENERATED FILE -- DO NOT EDIT BY HAND.
@@ -156,7 +167,7 @@ export function renderInventory(registryOverride?: Record<string, RegistryEntry>
  * before this one.
  *
  * Capabilities: ${rows.length} (${Object.keys(registry).length} operation-backed + ${sweepIds.length} sweep-only).
- * Policy authored: ${authored}. Authorization-eligible: ${Object.values(registry).filter((e) => eligible(e.policy, e.emittedDependencies, e.requiredColumns)).length}.
+ * Policy authored: ${authored}. Authorization-eligible: ${eligibleCount}.
  *
  * Nothing here authorizes anything. \`authorizationEligible\` is false until every policy field is
  * authored in \`scripts/fixtures/operation-taxonomy/capability-policy.json\`, which is Stage 2B work.
@@ -209,7 +220,14 @@ export type CapabilityPolicy = {
     | { kind: "column"; table: string; yearColumn: string; justification?: string }
     | { kind: "none"; reason: string }
     | null;
-  integrity: string[] | null;
+  /**
+   * A rule is DRAFT PROSE (a string) or BOUND ({ rule, boundTo }), and only a bound rule whose
+   * target is in the generated check catalog authorizes. Prose is kept -- it is the record of what
+   * "broken" means here and what a binding will be written from -- but a capability stays ineligible
+   * while any rule is unbound, because a field that is mandatory BECAUSE integrity matters cannot
+   * grant an eligibility that ignores it.
+   */
+  integrity: (string | { rule: string; boundTo: string })[] | null;
   /** Discriminated, so a conditional cannot be written without its condition. */
   availability: { kind: "always" } | { kind: "conditional"; condition: string } | null;
   receiptOwner: string | null;

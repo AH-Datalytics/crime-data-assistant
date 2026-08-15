@@ -23,7 +23,7 @@ import {
 } from "./generate-stage2b-workbook";
 import { importDecisions, writePolicy } from "./import-stage2b-decisions";
 import {
-  authorizationBlockers, capabilityAuthorizes, integrityIsBound, isYearBearingColumn, policyIsComplete,
+  authorizationBlockers, capabilityAuthorizes, integrityIsExecutable, isYearBearingColumn, policyIsComplete,
   policyShapeErrors, type UnvalidatedPolicy,
 } from "../lib/capability-policy";
 import { SWEEP_ONLY_IDS } from "../lib/sweep-only-capabilities";
@@ -335,8 +335,17 @@ check("\"no year dimension\" is recorded as a decision, not collapsed to an unde
   const stored = result.policy[withYear.id] as UnvalidatedPolicy;
   assert.notStrictEqual(stored.coverage, null, "a decided no-year-dimension must not be stored as null");
   assert.deepStrictEqual(stored.coverage, decided.coverage, "the decision and its reason must survive the import");
-  assert.deepStrictEqual(result.eligible, [withYear.id],
-    "a capability whose coverage question is answered -- including answered as 'no year dimension' -- may be eligible");
+  /**
+   * Nothing is eligible today, because no integrity rule is executable. What matters here is that
+   * the COVERAGE question is settled: answering "no year dimension" must not itself be what holds
+   * the capability back, or the decision would be indistinguishable from never making it.
+   */
+  const declaredHere = withYear.reads.map((name) => ({ name, requiredColumns: withYear.columns[name] ?? [] }));
+  const blockers = authorizationBlockers(decided, declaredHere);
+  assert.ok(!blockers.some((b) => /coverage/.test(b)),
+    `answering "no year dimension" is being treated as a coverage problem: ${JSON.stringify(blockers)}`);
+  assert.ok(blockers.some((b) => /integrity rule can be executed/.test(b)),
+    "the only remaining blocker should be the one nobody has machinery for yet");
 
   const reasonless = { ...decided, coverage: { kind: "none" } };
   const refused = importInto(decisionsFile({ [withYear.id]: reasonless }));
@@ -564,17 +573,34 @@ check("unbound integrity prose blocks eligibility, however complete the rest of 
 
   assert.strictEqual(policyIsComplete(draft), true, "a prose entry is still a well-formed, complete draft");
   assert.strictEqual(capabilityAuthorizes(draft, declared), false, "unbound integrity prose authorized");
-  assert.strictEqual(capabilityAuthorizes(bound, declared), true, "a bound rule must be able to authorize");
-  assert.ok(authorizationBlockers(draft, declared).some((b) => /unbound prose/.test(b)),
+  /**
+   * And a BOUND rule authorizes nothing either, because `boundTo` binds to nothing. There is no
+   * catalog to resolve it against, no resolver, and no runtime consumer -- so `boundTo: "banana"`
+   * bound exactly as much as any other string, and prose plus an arbitrary second string authorized
+   * precisely what prose alone had. Nothing gets past this until the machinery exists.
+   */
+  assert.strictEqual(capabilityAuthorizes(bound, declared), false, "a bound-looking rule authorized with nothing behind it");
+  const banana = { ...wellFormed(yearBasis.table, yearBasis.yearColumn), integrity: [{ rule: "r", boundTo: "banana" }] };
+  assert.strictEqual(capabilityAuthorizes(banana, declared), false, "boundTo: \"banana\" authorized");
+  for (const shape of [null, [], ["prose"], [{ rule: "r", boundTo: "checks/real.sql" }], "anything"]) {
+    assert.strictEqual(integrityIsExecutable(shape), false, `${JSON.stringify(shape)} was treated as executable`);
+  }
+  assert.ok(authorizationBlockers(draft, declared).some((b) => /no integrity rule can be executed/.test(b)),
     "the blocker is not reported by name");
-  assert.strictEqual(integrityIsBound([{ rule: "x", boundTo: "" }]), false, "an empty binding counts as bound");
 
   // The importer agrees: the draft imports and is recorded, but is not eligible.
-  const imported = importInto(decisionsFile({ [withYear.id]: draft }));
-  assert.ok(imported.ok, JSON.stringify(!imported.ok && imported.errors));
-  if (!imported.ok) return;
-  assert.deepStrictEqual(imported.eligible, [], "a prose-integrity capability was made eligible at import");
-  assert.deepStrictEqual(imported.authored, [withYear.id], "the draft must still be recorded");
+  for (const [what, policy] of [["prose", draft], ["a binding to nothing", bound]] as [string, Record<string, unknown>][]) {
+    const imported = importInto(decisionsFile({ [withYear.id]: policy }));
+    assert.ok(imported.ok, `${what}: ${JSON.stringify(!imported.ok && imported.errors)}`);
+    if (!imported.ok) continue;
+    assert.deepStrictEqual(imported.eligible, [], `${what}: was made eligible at import`);
+    assert.deepStrictEqual(imported.authored, [withYear.id], `${what}: the draft must still be recorded`);
+  }
+  // The generated inventory says the same thing about every capability in it.
+  const inventory = fs.readFileSync(path.join(process.cwd(), "lib", "source-health-inventory.ts"), "utf8");
+  assert.ok(!/authorizationEligible: true/.test(inventory),
+    "a capability is pinned eligible while no integrity rule can be executed");
+  assert.ok(/Authorization-eligible: 0\./.test(inventory), "the inventory header claims an eligible capability");
 
   // And the RUNTIME gate uses the same predicate, not a weaker one.
   const runtime = fs.readFileSync(path.join(process.cwd(), "lib", "source-health.ts"), "utf8");
@@ -690,6 +716,77 @@ check("withdrawal is a named act, never inferred from blank fields", () => {
   assert.ok(/confirm\("Withdraw the authored policy/.test(html), "withdrawal is not confirmed");
 });
 
+check("an unrelated edit cannot rewrite a bound integrity rule", () => {
+  /**
+   * The page renders integrity into a textarea and re-parses it on EVERY field edit. With a bound
+   * rule in the list that round trip was destructive twice over: `join` rendered the object as
+   * "[object Object]", and the next keystroke anywhere on the card -- an owner, a coverage answer,
+   * a word of evidence -- parsed that string back as a draft rule and overwrote the binding.
+   */
+  const bound = { rule: "the derived table must not outrun its upstream", boundTo: "checks/derived-alignment.sql" };
+  const S = sessionFor({ [withYear.id]: { ...wellFormed(yearBasis.table, yearBasis.yearColumn), integrity: [bound] } });
+
+  assert.deepStrictEqual(S.boundRules(withYear.id), [bound], "the bound rule is not recognised as bound");
+  assert.deepStrictEqual(S.draftRules(withYear.id), [], "a bound rule leaked into the editable drafts");
+
+  // What the textarea shows, fed straight back the way an unrelated edit does.
+  S.setIntegrityDrafts(withYear.id, S.draftRules(withYear.id));
+  S.update(withYear.id, { receiptOwner: "scripts/some-other-owner.py" });
+  assert.deepStrictEqual(S.decisions[withYear.id].integrity, [bound],
+    "an unrelated edit rewrote the bound rule");
+  assert.ok(!JSON.stringify(S.decisions[withYear.id].integrity).includes("[object Object]"),
+    "the bound rule was stringified into the drafts");
+
+  // Adding prose keeps the binding and appends.
+  S.setIntegrityDrafts(withYear.id, ["a new draft rule someone typed"]);
+  assert.deepStrictEqual(S.decisions[withYear.id].integrity, [bound, "a new draft rule someone typed"],
+    "authoring a draft dropped the bound rule");
+
+  const html = renderWorkbook(registry);
+  assert.ok(!/d\.integrity\.join\(/.test(html), "the page still round-trips every integrity rule through the textarea");
+  assert.ok(/S\.draftRules\(cap\.id\)\.join\(/.test(html), "the textarea is not restricted to draft prose");
+  assert.ok(/Bound rules/.test(html), "the page never shows the bound rules it is preserving");
+});
+
+check("successive loads cannot restore a baseline from an earlier one", () => {
+  /**
+   * `baseline` is per-session and a load may legitimately adopt the one its file was authored
+   * against -- which made it stale-able. Loading a session authored against an older policy moved
+   * the baseline; loading a second, empty session then reset the decisions but left the moved
+   * baseline in place, so the older value came back, reported clean, and exported nothing.
+   */
+  const authored = wellFormed(yearBasis.table, yearBasis.yearColumn);
+  const S = sessionFor({ [withYear.id]: authored });
+  const older = { ...authored, receiptOwner: "scripts/an-older-owner.py" };
+
+  const first = S.loadSession({
+    v: DECISIONS_VERSION, fingerprint: FINGERPRINT,
+    decisions: { [withYear.id]: { ...authored, evidence: "a revision authored against the older policy value" } },
+    basedOn: { [withYear.id]: older },
+  });
+  assert.ok(first.ok);
+  assert.deepStrictEqual(S.baselineFor(withYear.id).receiptOwner, older.receiptOwner, "the load did not adopt the file's baseline");
+
+  const second = S.loadSession({ v: DECISIONS_VERSION, fingerprint: FINGERPRINT, decisions: {}, basedOn: {} });
+  assert.ok(second.ok);
+  assert.deepStrictEqual(S.baselineFor(withYear.id), authored,
+    "an empty load left the previous file's baseline in place, so the repository value was lost");
+  assert.deepStrictEqual(S.changeSet(), {}, "a session reset to the repository value still reports changes");
+});
+
+check("the inventory header counts every capability it emits, sweep-only included", () => {
+  const generator = fs.readFileSync(path.join(process.cwd(), "scripts", "generate-source-health-inventory.ts"), "utf8");
+  for (const [what, pattern] of [["authored", /const authored =[\s\S]{0,240}?SWEEP_ONLY_SPECS/],
+    ["eligible", /const eligibleCount =[\s\S]{0,320}?SWEEP_ONLY_SPECS/]] as [string, RegExp][]) {
+    assert.ok(pattern.test(generator), `the ${what} count excludes sweep-only capabilities`);
+  }
+  const inventory = fs.readFileSync(path.join(process.cwd(), "lib", "source-health-inventory.ts"), "utf8");
+  const header = /Capabilities: (\d+) \((\d+) operation-backed \+ (\d+) sweep-only\)/.exec(inventory);
+  assert.ok(header, "the inventory header does not state its capability counts");
+  assert.strictEqual(Number(header![1]), Number(header![2]) + Number(header![3]), "the header's own counts do not add up");
+  assert.strictEqual(Number(header![1]), Object.keys(DECIDABLE).length, "the inventory and the workbook disagree on the capability set");
+});
+
 check("the page's idea of Complete is the importer's", () => {
   /**
    * "All fields non-null plus some evidence" was weaker than the boundary's rule, so the counter
@@ -719,6 +816,28 @@ check("the page's idea of Complete is the importer's", () => {
   S.update(withYear.id, wellFormed(yearBasis.table, yearBasis.yearColumn));
   assert.strictEqual(S.isComplete(withYear.id), true, "a finished entry is not counted complete");
   assert.ok(importInto(decisionsFile({ [withYear.id]: wellFormed(yearBasis.table, yearBasis.yearColumn) })).ok);
+});
+
+check("the policy README documents the semantics that are actually enforced", () => {
+  /**
+   * The file Stage 2B authors read first. It still said all four non-null fields authorize, typed
+   * integrity as bare prose, and told the reader an eligible capability asserts nothing about
+   * integrity -- three statements the gate now contradicts. A mutation reverting this text survived
+   * the whole suite, which is why it is asserted rather than assumed.
+   */
+  const doc = JSON.parse(fs.readFileSync(path.join(DATA_DIR, "capability-policy.json"), "utf8")) as any;
+  const rules = (doc._README.rules as string[]).join(" ");
+  assert.ok(/STATING ALL FOUR IS NOT ENOUGH TO AUTHORIZE/.test(rules),
+    "the README still implies that authoring all four fields authorizes");
+  assert.ok(/no capability is authorization-eligible/.test(rules),
+    "the README does not record that nothing is eligible while integrity is unexecutable");
+  assert.ok(/integrity-executable/.test(rules), "the README's eligibility rule omits the integrity requirement");
+  assert.ok(/DRAFT PROSE \(a string\) or BOUND/.test(doc._README.shapes.integrity),
+    "the README still types integrity as bare prose");
+  assert.ok(/NON-AUTHORIZING TODAY/.test(doc._README.shapes.integrity),
+    "the README does not say that neither integrity form authorizes yet");
+  assert.ok(!/asserts nothing whatever about integrity/.test(JSON.stringify(doc._README)),
+    "the README still carries the rejected 'eligibility asserts nothing about integrity' framing");
 });
 
 check("the authoritative plan documents the shape that is actually enforced", () => {

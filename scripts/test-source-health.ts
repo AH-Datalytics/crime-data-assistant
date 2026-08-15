@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import Database from "better-sqlite3";
 import {
-  evaluateCapability, identityOf, resolveCapability, sourceHealthFor,
+  coverageFor, evaluateCapability, identityOf, resolveCapability, sourceHealthFor,
   HEALTH_CACHE_MAX_ENTRIES, HEALTH_CACHE_TTL_MS, HEALTH_TRACE_LIMIT,
   __healthTracesForTests, __resetSourceHealthCacheForTests, __setHealthClockForTests,
   type HealthContext,
@@ -131,14 +131,19 @@ check("preparation tables are structural dependencies too", () => {
 });
 
 check("coverage is recorded independently of the missing receipt", () => {
+  /**
+   * The three coverage verdicts are taken from coverageFor directly. Through evaluateCapability
+   * they would all read "unknown" today -- not because coverage cannot be judged, but because the
+   * authorization gate refuses every capability while no integrity rule is executable, and a test
+   * that cannot tell those two apart is testing the gate.
+   */
   const spec = withPolicy(shr);
   const covered = shrFixture();
   const outside = shrFixture();
   const timeless = shrFixture();
-  assert.strictEqual(evaluateCapability(spec, ctx(covered, [2022])).trace.coverage, "passed");
-  assert.strictEqual(evaluateCapability(spec, ctx(outside, [2030])).trace.coverage, "failed");
-  assert.strictEqual(evaluateCapability(spec, ctx(timeless, null)).trace.coverage, "not_applicable");
-  assert.strictEqual(evaluateCapability(spec, ctx(shrFixture())).trace.boundary, "missing_receipt");
+  assert.strictEqual(coverageFor(spec, covered, [2022]), "passed");
+  assert.strictEqual(coverageFor(spec, outside, [2030]), "failed");
+  assert.strictEqual(coverageFor(spec, timeless, null), "not_applicable");
   covered.close();
   outside.close();
   timeless.close();
@@ -375,8 +380,16 @@ check("coverage is unknown when the basis column is not one the capability reads
   const { trace } = evaluateCapability(strayColumn, ctx(db, [2022]));
   assert.strictEqual(trace.coverage, "unknown", "coverage was judged from a column outside the contract");
   assert.strictEqual(trace.boundary, "policy_incomplete", "a basis outside the contract must stop at the authorization gate");
-  // The required column still yields a real verdict, so the guard is not simply refusing everything.
-  assert.strictEqual(evaluateCapability(spec, ctx(db, [2022])).trace.coverage, "passed");
+  /**
+   * The positive control runs coverageFor DIRECTLY.
+   *
+   * Nothing can pass the authorization gate while no integrity rule is executable, so asserting
+   * "passed" through `evaluateCapability` would now assert only that the gate blocks -- the guard
+   * would look correct precisely because everything is refused. Called directly, the required
+   * column still yields a real verdict and the stray one still does not.
+   */
+  assert.strictEqual(coverageFor(spec, db, [2022]), "passed", "the guard is refusing a legitimate basis too");
+  assert.strictEqual(coverageFor(strayColumn, db, [2022]), "unknown", "a stray column produced a confident verdict");
   db.close();
 });
 
@@ -392,9 +405,37 @@ check("the coverage-basis rule is the shared one, table and column together", ()
 });
 
 check("coverage is unknown when the basis table has no year bounds", () => {
+  // Direct, for the same reason as above: through the gate this would pass without evaluating anything.
   const db = shrFixture((fixture) => fixture.exec("UPDATE incidents SET year = NULL"));
+  assert.strictEqual(coverageFor(withPolicy(shr), db, [2022]), "unknown");
+  const intact = shrFixture();
+  assert.strictEqual(coverageFor(withPolicy(shr), intact, [2022]), "passed",
+    "the same call on intact data must reach a verdict, or the check above proves nothing");
+  db.close(); intact.close();
+});
+
+check("an authored no-year-dimension answer is not applicable rather than unknown", () => {
+  const db = shrFixture();
+  const spec = withPolicy(shr);
+  const noYear: CapabilitySpec = {
+    ...spec,
+    policy: { ...spec.policy!, coverage: { kind: "none", reason: "a directory count has no year dimension" } },
+  };
+  assert.strictEqual(coverageFor(noYear, db, [2022]), "not_applicable",
+    "a decided no-year-dimension was collapsed back into unknown");
+  db.close();
+});
+
+check("no capability can authorize while no integrity rule is executable", () => {
+  /**
+   * Stated as a property, not left implicit in other tests passing. `boundTo` resolves against no
+   * catalog and has no runtime consumer, so a bound-looking rule authorizes exactly what prose did.
+   * When that machinery lands this test is the one that must be revisited deliberately.
+   */
+  const db = shrFixture();
   const { trace } = evaluateCapability(withPolicy(shr), ctx(db, [2022]));
-  assert.strictEqual(trace.coverage, "unknown");
+  assert.strictEqual(trace.boundary, "policy_incomplete",
+    "a capability got past the authorization gate with an unexecutable integrity rule");
   db.close();
 });
 

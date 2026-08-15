@@ -72,16 +72,33 @@ function unknownKeys(value: object, allowed: readonly string[], what: string): s
  * that ignores it grants exactly the assurance nobody checked. Until each rule names an executable
  * check or a receipt attestation, the honest verdict is not eligible.
  */
-export function integrityRuleIsBound(rule: unknown): boolean {
+export function integrityRuleIsWellFormed(rule: unknown): boolean {
+  if (nonEmptyString(rule)) return true;                        // draft prose
   if (typeof rule !== "object" || rule === null || Array.isArray(rule)) return false;
   const r = rule as { rule?: unknown; boundTo?: unknown };
   return nonEmptyString(r.rule) && nonEmptyString(r.boundTo)
     && unknownKeys(r, INTEGRITY_RULE_KEYS, "an integrity rule").length === 0;
 }
 
-/** Every rule bound, over a non-empty list. An empty list states no rule and is not a decision. */
-export function integrityIsBound(integrity: unknown): boolean {
-  return Array.isArray(integrity) && integrity.length > 0 && integrity.every(integrityRuleIsBound);
+/**
+ * Whether an integrity rule can actually be CHECKED by something. Today nothing can.
+ *
+ * `{ rule, boundTo }` was introduced so a rule could name an executable check or a receipt
+ * attestation. What it named was a string. There is no catalog to resolve that string against, no
+ * resolver, and no runtime consumer of it -- so `boundTo: "banana"` bound exactly as much as
+ * anything else, and prose plus an arbitrary second string authorized precisely what prose alone
+ * had. That is the original defect wearing a narrower disguise.
+ *
+ * The shape is kept, because it is the form a real binding will be written in and drafts written
+ * now will not have to be rewritten. The authorization it confers is none. This returns false for
+ * every input by construction, and it will keep returning false until there is machinery that runs
+ * a bound rule for this function to ask -- at which point this is the ONE place that changes, and
+ * every consumer of `capabilityAuthorizes` inherits it. `scripts/test-stage2b-workbook.ts` asserts
+ * that no shape whatsoever gets past it.
+ */
+export function integrityIsExecutable(integrity: unknown): boolean {
+  void integrity;
+  return false;
 }
 
 /**
@@ -134,6 +151,10 @@ export function policyShapeErrors(policy: UnvalidatedPolicy): string[] {
           bad.push("a bound integrity rule must carry a non-empty rule and the check it is boundTo");
         }
         bad.push(...unknownKeys(r, INTEGRITY_RULE_KEYS, "an integrity rule"));
+      }
+      if (!integrity.every(integrityRuleIsWellFormed)) {
+        // Reported once more in aggregate so a caller checking only the count cannot miss it.
+        if (bad.length === 0) bad.push("an integrity rule is neither prose nor a well-formed binding");
       }
     }
   }
@@ -237,7 +258,7 @@ export function capabilityAuthorizes(
 ): boolean {
   return policyIsComplete(policy)
     && coverageBasisErrors(policy, declared).length === 0
-    && integrityIsBound(policy?.integrity);
+    && integrityIsExecutable(policy?.integrity);
 }
 
 /** Why a complete-looking policy still authorizes nothing. For reporting, never for gating. */
@@ -250,8 +271,9 @@ export function authorizationBlockers(
   for (const field of POLICY_FIELDS) {
     if (policy[field] === null || policy[field] === undefined) blockers.push(`${field} is not authored`);
   }
-  if (policy.integrity !== null && policy.integrity !== undefined && !integrityIsBound(policy.integrity)) {
-    blockers.push("integrity rules are unbound prose; each must name an executable check or receipt attestation");
+  if (!integrityIsExecutable(policy.integrity)) {
+    blockers.push("no integrity rule can be executed yet: there is no check catalog, resolver or runtime "
+      + "consumer for a rule's binding, so nothing authorizes until that machinery exists");
   }
   return blockers;
 }

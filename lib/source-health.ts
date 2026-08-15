@@ -140,7 +140,15 @@ function structuralRequirements(spec: CapabilitySpec): TableRequirement[] {
   return [...byName.values()];
 }
 
-function coverageFor(spec: CapabilitySpec, db: Db, requestedYears: number[] | null): CheckState {
+/**
+ * Exported so it can be tested DIRECTLY.
+ *
+ * The authorization gate above it now refuses everything, because no integrity rule is executable
+ * yet -- which is correct, and would otherwise have made this function unreachable through
+ * `evaluateCapability` and quietly untested. Testing it through a gate that currently blocks
+ * everything would have asserted only that the gate blocks.
+ */
+export function coverageFor(spec: CapabilitySpec, db: Db, requestedYears: number[] | null): CheckState {
   const coverage = spec.policy?.coverage as
     { kind?: string; table?: string; yearColumn?: string } | null | undefined;
   if (!coverage) return "unknown";
