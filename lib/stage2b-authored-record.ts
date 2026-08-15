@@ -102,15 +102,29 @@ export function recordShapeErrors(entries: AuthoredRecord): string[] {
   return bad;
 }
 
-export type DerivedPolicy = { policy: Record<string, unknown>; errors: string[] };
+export type DerivedPolicy = {
+  policy: Record<string, unknown>;
+  errors: string[];
+  /** Decided entries omitted because they were confirmed against a contract that no longer holds. */
+  expired: string[];
+};
 
 /**
- * The policy a record implies. Deterministic, and a pure function of the record.
+ * The policy a record implies. Deterministic, and a pure function of the record and the contract.
  *
  * `open` entries derive nothing: an answer nobody confirmed is recorded work in progress, not a
  * decision. `legacy` entries derive their migrated policy, marked so that nothing can ever read
  * them as authorizing. `decided` entries derive through the ONE translation function, and the
  * audit snapshot -- if present -- must equal that derivation exactly.
+ *
+ * THE CONFIRMATION EXPIRES WITH THE CONTRACT. A `decided` entry records the contract it was
+ * confirmed against, and this checked nothing until now: re-wording a question, changing what an
+ * option is said to do, or changing the translation itself left the old policy deriving -- and
+ * potentially active -- under a confirmation that approved something nobody had read. An entry
+ * whose stored contract is not the current one is OMITTED rather than refused, because refusing it
+ * would take the whole record down with it; the answer is still there for the workbook to reopen
+ * and the person to confirm again. Omitting is the fail-closed reading: no policy, so no
+ * authorization, until a human re-confirms under the wording that now exists.
  */
 export function derivePolicy(
   entries: AuthoredRecord,
@@ -120,10 +134,13 @@ export function derivePolicy(
     mergeWithExisting: (proposed: Record<string, unknown>, existing: unknown) => { merged: Record<string, unknown> };
     mappingFingerprint: (proposed: unknown) => string;
   },
+  /** The contract in force NOW. Required, so no caller can derive without deciding what it is. */
+  contractFingerprint: string,
 ): DerivedPolicy {
   const byId = new Map(capabilities.map((c) => [c.id, c]));
   const policy: Record<string, unknown> = {};
   const errors: string[] = [];
+  const expired: string[] = [];
 
   for (const id of Object.keys(entries).sort()) {
     const entry = entries[id];
@@ -134,6 +151,13 @@ export function derivePolicy(
     const capability = byId.get(id);
     if (!capability) { errors.push(`${id}: an answer is recorded for a capability the registry does not contain`); continue; }
     if (entry.kind === "open") continue;
+
+    /**
+     * Before anything is re-derived, not after. A changed contract can change the translation, so
+     * the snapshot and confirmation checks below would report a stale entry as a CONTRADICTION --
+     * a hard error that stops the record deriving at all, instead of the one entry standing down.
+     */
+    if (entry.contractFingerprint !== contractFingerprint) { expired.push(id); continue; }
 
     const derived = pl.mergeWithExisting(pl.proposeMapping(capability, entry.human).proposed, entry.preserved);
     if (entry.mapping && JSON.stringify(entry.mapping) !== JSON.stringify(derived.merged)) {
@@ -148,7 +172,35 @@ export function derivePolicy(
     }
     policy[id] = derived.merged;
   }
-  return { policy, errors };
+  return { policy, errors, expired };
+}
+
+/**
+ * The exact authored entry, as a value two sessions can compare.
+ *
+ * Optimistic concurrency used to be checked against what the record DERIVES, which cannot see the
+ * difference between two answers that derive the same thing -- and derives nothing at all for an
+ * unconfirmed one, so two people answering the same open capability both compared equal to null and
+ * the second silently replaced the first's authoritative human answer. The record is what is being
+ * overwritten, so the record is what a baseline has to name.
+ *
+ * Key order is normalised, because the baseline travels through a browser and back and must not
+ * depend on how a JSON round trip happened to order it.
+ */
+export function entryDigest(entry: AuthoredEntry | null | undefined): string {
+  if (!entry) return "absent";
+  const stable = (value: unknown): unknown => {
+    if (Array.isArray(value)) return value.map(stable);
+    if (value && typeof value === "object") {
+      const out: Record<string, unknown> = {};
+      for (const key of Object.keys(value as Record<string, unknown>).sort()) {
+        out[key] = stable((value as Record<string, unknown>)[key]);
+      }
+      return out;
+    }
+    return value;
+  };
+  return createHash("sha256").update(JSON.stringify(stable(entry))).digest("hex").slice(0, 16);
 }
 
 /** The digest of the authored record's exact bytes, stamped into anything generated from it. */

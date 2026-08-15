@@ -26,8 +26,8 @@ import path from "node:path";
 import { coverageBasisErrors, policyShapeErrors, type UnvalidatedPolicy } from "../lib/capability-policy";
 import {
   AUTHORED_FILE, GENERATED_POLICY_FILE, type AuthoredEntry, type AuthoredRecord,
-  commitAuthoredRecord, derivePolicy, derivedEntryAuthorizes, readAuthoredRecord, recordShapeErrors,
-  renderAuthoredRecord,
+  commitAuthoredRecord, derivePolicy, derivedEntryAuthorizes, entryDigest, readAuthoredRecord,
+  recordShapeErrors, renderAuthoredRecord,
 } from "../lib/stage2b-authored-record";
 import {
   DECISIONS_VERSION, buildWorkbookModel, decidableRegistry, loadCatalog, loadPlainLanguage,
@@ -91,15 +91,18 @@ export function importDecisions(
   const model = buildWorkbookModel(registryInput);
   const errors: string[] = [];
 
-  let parsed: { v?: unknown; fingerprint?: unknown; decisions?: unknown; basedOn?: unknown };
+  let parsed: {
+    v?: unknown; contractFingerprint?: unknown; decisions?: unknown;
+    basedOn?: unknown; basedOnEntry?: unknown;
+  };
   try { parsed = JSON.parse(raw); }
   catch (error) { return { ok: false, errors: [`not valid JSON: ${(error as Error).message}`] }; }
 
   if (parsed.v !== DECISIONS_VERSION) errors.push(`decisions version ${String(parsed.v)} is not ${DECISIONS_VERSION}`);
   const expected = workbookFingerprint(registryInput, CATALOG);
-  if (parsed.fingerprint !== expected) {
+  if (parsed.contractFingerprint !== expected) {
     errors.push(
-      `this export was authored against decision contract ${String(parsed.fingerprint)}, but the contract is now ${expected}; ` +
+      `this export was authored against decision contract ${String(parsed.contractFingerprint)}, but the contract is now ${expected}; ` +
       "regenerate the workbook and re-check every answer (the contract covers the questions, the "
       + "options and their consequences, and the translation, not only the database structure)",
     );
@@ -112,12 +115,19 @@ export function importDecisions(
   if (!basedOn || typeof basedOn !== "object" || Array.isArray(basedOn)) {
     return { ok: false, errors: [...errors, "the export carries no basedOn baseline, so a safe merge is impossible"] };
   }
+  const basedOnEntry = (parsed.basedOnEntry ?? null) as Record<string, unknown> | null;
+  if (!basedOnEntry || typeof basedOnEntry !== "object" || Array.isArray(basedOnEntry)) {
+    return {
+      ok: false,
+      errors: [...errors, "the export names no authored entry it was based on, so a safe merge is impossible"],
+    };
+  }
 
   const existing = recordOverride ?? readAuthoredRecord();
   const shape = recordShapeErrors(existing.entries);
   if (shape.length) return { ok: false, errors: [...errors, ...shape.map((e) => `the authored record is malformed — ${e}`)] };
   /** What the record currently derives to. There is no separately stored policy to consult. */
-  const current = derivePolicy(existing.entries, model, PL);
+  const current = derivePolicy(existing.entries, model, PL, expected);
   if (current.errors.length) {
     return { ok: false, errors: [...errors, ...current.errors.map((e) => `the authored record does not derive — ${e}`)] };
   }
@@ -143,9 +153,27 @@ export function importDecisions(
     }
 
     /**
-     * Optimistic concurrency, per entry, against what the record DERIVES. If it no longer holds
-     * what this session began from, someone has changed it since and this import would overwrite
-     * their answer with one authored in ignorance of it.
+     * Optimistic concurrency, per entry, against the AUTHORED ENTRY itself.
+     *
+     * This was checked against what the record derives, which cannot see the thing being
+     * overwritten. Two people answering the same unconfirmed capability both derive no policy, so
+     * both compared equal and the second import silently replaced the first's human answer; two
+     * different answers that derive the same policy had the same hole. The record is what is
+     * written, so the record is what the baseline names.
+     */
+    if (!Object.prototype.hasOwnProperty.call(basedOnEntry, id)) {
+      errors.push(`${id}: the export changes this capability but names no authored entry it was based on`);
+      continue;
+    }
+    if (basedOnEntry[id] !== entryDigest(existing.entries[id])) {
+      errors.push(`${id}: the recorded answer has changed since this session began; `
+        + "re-open the workbook and redo this one");
+      continue;
+    }
+    /**
+     * And the derived baseline too, which is what the page merged against. It can be stale while
+     * the record is current -- a session loaded from an older file carries the older file's
+     * baseline -- and an unresolved answer would then preserve fields from a policy nobody has.
      */
     if (!Object.prototype.hasOwnProperty.call(basedOn, id)) {
       errors.push(`${id}: the export changes this capability but records no baseline for it`);
@@ -237,7 +265,7 @@ export function importDecisions(
   // The record has to derive cleanly as a whole, not merely entry by entry.
   const finalShape = recordShapeErrors(entries);
   if (finalShape.length) return { ok: false, errors: finalShape };
-  const derived = derivePolicy(entries, model, PL);
+  const derived = derivePolicy(entries, model, PL, expected);
   if (derived.errors.length) return { ok: false, errors: derived.errors };
 
   const eligible = Object.keys(derived.policy).filter((id) => {

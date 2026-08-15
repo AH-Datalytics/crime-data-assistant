@@ -25,7 +25,9 @@ import path from "node:path";
 import { createRequire } from "node:module";
 import { isYearBearingColumn } from "../lib/capability-policy";
 import { decidableCapabilities } from "../lib/sweep-only-capabilities";
-import { derivePolicy, readAuthoredRecord, recordShapeErrors } from "../lib/stage2b-authored-record";
+import {
+  type AuthoredRecord, derivePolicy, entryDigest, readAuthoredRecord, recordShapeErrors,
+} from "../lib/stage2b-authored-record";
 
 const DATA_DIR = path.join(process.cwd(), "scripts", "fixtures", "operation-taxonomy");
 const REGISTRY_FILE = path.join(DATA_DIR, "capability-registry.json");
@@ -38,14 +40,18 @@ export const CATALOG_MODULE_FILE = path.join(process.cwd(), "lib", "stage2b-capa
 export const WORKBOOK_FILE = path.join(process.cwd(), "docs", "superpowers", "stage2b-policy-workbook.html");
 
 /**
- * 4: the fingerprint an export is checked against now covers the QUESTIONS as well as the database
- * structure. A version-3 file was authored against wording this workbook can no longer identify, so
- * it is refused by version rather than accepted on a fingerprint that never saw the catalog.
+ * 5: ONE fingerprint, named `contractFingerprint` from the record through the page to the importer,
+ * and a per-entry baseline (`basedOnEntry`) naming the authored record rather than what it derives.
+ * Version 4 carried two differently-computed fingerprints under two names and no record baseline,
+ * so a v4 file cannot be read safely here and is refused by version.
+ *
+ * 4 was: the fingerprint an export is checked against covers the QUESTIONS as well as the database
+ * structure.
  *
  * 3 was: plain-language questions, with an entry carrying the HUMAN answer, the technical mapping
  * it proposes, and a confirmation of that exact mapping.
  */
-export const DECISIONS_VERSION = 4;
+export const DECISIONS_VERSION = 5;
 
 export type RegistryEntry = {
   artifact: string;
@@ -296,12 +302,20 @@ function embedJson(value: unknown): string {
 export function renderWorkbook(
   registryOverride?: Record<string, RegistryEntry>,
   catalogOverride?: { coverageAgainst: (ids: string[]) => { missing: string[]; extra: string[] }; fingerprint: () => string },
+  /**
+   * `recordOverride` exists so the regression can drive a REAL page built from a chosen record,
+   * instead of hand-assembling the payload the page would have been given. Every seeding defect
+   * this file has had survived a test that reconstructed the payload: the reconstruction supplied
+   * the value the page got wrong. Real generation always reads the checked-in record.
+   */
+  recordOverride?: { docs: Record<string, unknown>; entries: AuthoredRecord },
 ): string {
   const registryInput = registryOverride
     ?? (JSON.parse(fs.readFileSync(REGISTRY_FILE, "utf8")) as Record<string, RegistryEntry>);
   const model = buildWorkbookModel(registryInput);
   const catalog = catalogOverride ?? loadCatalog();
-  const fingerprint = workbookFingerprint(registryInput, catalog as { fingerprint: () => string });
+  /** ONE identity, under ONE name, from here to the page to the importer. */
+  const contractFingerprint = workbookFingerprint(registryInput, catalog as { fingerprint: () => string });
   /**
    * Seeded from the ONE authored record: what it derives, and the answers behind it.
    *
@@ -309,13 +323,13 @@ export function renderWorkbook(
    * decision whose question had been lost, or an answer whose policy had been overwritten. There is
    * one source now, so the two cannot disagree.
    */
-  const record = readAuthoredRecord();
+  const record = recordOverride ?? readAuthoredRecord();
   const recordShape = recordShapeErrors(record.entries);
   if (recordShape.length) {
     throw new Error(["the authored record is malformed, so no workbook was written.",
       ...recordShape.map((problem) => `  ${problem}`)].join("\n"));
   }
-  const derived = derivePolicy(record.entries, model, loadPlainLanguage(catalog));
+  const derived = derivePolicy(record.entries, model, loadPlainLanguage(catalog), contractFingerprint);
   if (derived.errors.length) {
     throw new Error(["the authored record does not derive, so no workbook was written.",
       ...derived.errors.map((problem) => `  ${problem}`)].join("\n"));
@@ -326,14 +340,27 @@ export function renderWorkbook(
     .map(([id, entry]) => [id, {
       human: (entry as { human: Record<string, unknown> }).human,
       mappingConfirmed: entry.kind === "decided" ? entry.confirmed : null,
-      catalogFingerprint: (entry as { contractFingerprint: string }).contractFingerprint,
+      /**
+       * The contract the answer was given against, under the SAME name the record and the importer
+       * use. It was carried here as `catalogFingerprint` and compared against the catalog-only
+       * digest, which is a different value -- so every restored confirmation looked re-worded and
+       * was dropped, every time, in production. Two names for one identity is how that hid.
+       */
+      contractFingerprint: (entry as { contractFingerprint: string }).contractFingerprint,
     }]));
 
+  /**
+   * What the AUTHORED ENTRY was when this page was generated, per capability.
+   *
+   * The export carries these back so the importer can refuse a session that began before someone
+   * else's answer landed. The derived policy cannot do that job: an unconfirmed answer derives
+   * nothing, so two people editing the same open capability both look like they started from the
+   * same emptiness.
+   */
+  const entryDigests = Object.fromEntries(model.map((cap) => [cap.id, entryDigest(record.entries[cap.id])]));
 
   const payload = embedJson({
-    v: DECISIONS_VERSION, fingerprint, capabilities: model, authored, answers,
-    /** Carried separately so a restored answer can be told apart from a re-worded question. */
-    catalogFingerprint: (catalog as { fingerprint: () => string }).fingerprint(),
+    v: DECISIONS_VERSION, contractFingerprint, capabilities: model, authored, answers, entryDigests,
   });
   /**
    * Inlined VERBATIM, not re-implemented. The suite imports the same files and asserts the page

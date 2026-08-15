@@ -19,7 +19,9 @@ import {
   AUTHORED_FILE, GENERATED_POLICY_FILE, derivePolicy, readAuthoredRecord, recordDigest,
   recordShapeErrors,
 } from "../lib/stage2b-authored-record";
-import { buildWorkbookModel, loadCatalog, loadPlainLanguage, type RegistryEntry } from "./generate-stage2b-workbook";
+import {
+  buildWorkbookModel, loadCatalog, loadPlainLanguage, workbookFingerprint, type RegistryEntry,
+} from "./generate-stage2b-workbook";
 
 const REGISTRY_FILE = path.join(process.cwd(), "scripts", "fixtures", "operation-taxonomy", "capability-registry.json");
 
@@ -44,18 +46,23 @@ export function renderPolicyFile(policy: Record<string, unknown>, generatedFrom:
   return `${JSON.stringify(ordered, null, 2)}\n`;
 }
 
-export function generatePolicyFile(): { text: string; errors: string[] } {
+export function generatePolicyFile(): { text: string; errors: string[]; expired: string[] } {
   const registry = JSON.parse(fs.readFileSync(REGISTRY_FILE, "utf8")) as Record<string, RegistryEntry>;
   const catalog = loadCatalog();
   const pl = loadPlainLanguage(catalog);
   const { entries } = readAuthoredRecord();
 
   const shape = recordShapeErrors(entries);
-  if (shape.length) return { text: "", errors: shape };
+  if (shape.length) return { text: "", errors: shape, expired: [] };
 
-  const derived = derivePolicy(entries, buildWorkbookModel(registry), pl);
-  if (derived.errors.length) return { text: "", errors: derived.errors };
-  return { text: renderPolicyFile(derived.policy, recordDigest(AUTHORED_FILE)), errors: [] };
+  /**
+   * Derived against the contract in force NOW, so a confirmation given under wording that has since
+   * changed stops producing policy. Those entries are named rather than silently dropped: nothing
+   * is lost -- the answer is still in the record, waiting to be re-confirmed in the workbook.
+   */
+  const derived = derivePolicy(entries, buildWorkbookModel(registry), pl, workbookFingerprint(registry, catalog));
+  if (derived.errors.length) return { text: "", errors: derived.errors, expired: derived.expired };
+  return { text: renderPolicyFile(derived.policy, recordDigest(AUTHORED_FILE)), errors: [], expired: derived.expired };
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]).includes("generate-capability-policy")) {
@@ -67,4 +74,8 @@ if (process.argv[1] && path.resolve(process.argv[1]).includes("generate-capabili
   }
   fs.writeFileSync(GENERATED_POLICY_FILE, result.text);
   console.log(`wrote ${path.relative(process.cwd(), GENERATED_POLICY_FILE)}`);
+  for (const id of result.expired) {
+    console.log(`  ${id}: confirmed against an older decision contract, so it derives no policy until`
+      + " someone re-opens the workbook and confirms the wording that exists now");
+  }
 }

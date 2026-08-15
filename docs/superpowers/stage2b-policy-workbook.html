@@ -82,8 +82,8 @@ code{font:12px ui-monospace,Menlo,monospace;background:#f2f3f7;padding:1px 4px;b
 </dialog>
 <script>
 const DATA = {
- "v": 4,
- "fingerprint": "a3a24ec7c746eef1",
+ "v": 5,
+ "contractFingerprint": "a3a24ec7c746eef1",
  "capabilities": [
   {
    "id": "crime_data::agencies+agency_county_crosswalk::agencies(agency,national_sample,ori)|agency_county_crosswalk(county_fips,county_key,ori,ori9,state)",
@@ -4639,7 +4639,60 @@ const DATA = {
   }
  },
  "answers": {},
- "catalogFingerprint": "3893c8e9"
+ "entryDigests": {
+  "crime_data::agencies+agency_county_crosswalk::agencies(agency,national_sample,ori)|agency_county_crosswalk(county_fips,county_key,ori,ori9,state)": "absent",
+  "crime_data::agencies+agency_monthly+historical_agency+historical_agency_clearance+historical_agency_crime+historical_agency_population::historical_agency(agency,ori,state,type)|historical_agency_clearance(assault_clr,burglary_clr,motor_vehicle_theft_clr,murder_clr,ori,property_clr,rape_clr,robbery_clr,theft_clr,violent_clr,year)|historical_agency_crime(assault,burglary,motor_vehicle_theft,murder,ori,property,rape,robbery,theft,violent,year)|historical_agency_population(ori,population,year)": "absent",
+  "crime_data::agencies::agencies(agency,national_sample,ori)": "absent",
+  "crime_data::agencies::agencies(national_sample,state)": "absent",
+  "crime_data::agency_county_crosswalk+historical_agency::agency_county_crosswalk(county_fips,county_key,ori,ori9,state)|historical_agency(agency,ori)": "absent",
+  "crime_data::agency_monthly+agency_population+sample_agencies::agency_monthly(count,offense,ori,year)|agency_population(ori,population,year)|sample_agencies(ori,state)": "absent",
+  "crime_data::agency_monthly+agency_population::agency_monthly(agency,count,offense,ori,state,type,year)|agency_population(ori,year)": "absent",
+  "crime_data::agency_monthly::agency_monthly(year)": "absent",
+  "crime_data::historical_agency+historical_agency_clearance+historical_agency_crime+historical_staffing::historical_agency(agency,ori,state,type)|historical_agency_clearance(ori,year)|historical_agency_crime(ori,year)|historical_staffing(ori,year)": "absent",
+  "crime_data::historical_agency+historical_agency_crime+historical_agency_population::historical_agency(agency,ori,state,type)|historical_agency_crime(murder,ori,year)|historical_agency_population(ori,year)": "absent",
+  "crime_data::historical_agency+historical_agency_crime::historical_agency(agency,ori,state,type)|historical_agency_crime(ori,violent,year)": "absent",
+  "crime_data::historical_agency::historical_agency(agency,ori)": "absent",
+  "crime_data::historical_agency_crime+historical_state_national::historical_agency_crime(year)|historical_state_national(year)": "absent",
+  "crime_data::historical_state_national::historical_state_national(aggravated_assault,aggravated_assault_rate,auto_theft,auto_theft_rate,burglary,burglary_rate,murder,murder_rate,population,rape,rape_rate,robbery,robbery_rate,state,theft,theft_rate,year)": "absent",
+  "crime_data::historical_state_national::historical_state_national(state)": "absent",
+  "crime_data::national_monthly::sweep": "absent",
+  "hate_crime::agency_county_crosswalk+hate_crime_incidents::agency_county_crosswalk(county_fips,county_key,ori,ori9,state)|hate_crime_incidents(ori)": "36fdf874da05ded1",
+  "hate_crime::hate_crime_incidents::hate_crime_incidents(ori)": "absent",
+  "hate_crime::hate_crime_participation::hate_crime_participation(reporting_agencies,state)": "absent",
+  "hate_crime::hate_crime_participation::hate_crime_participation(year)": "absent",
+  "nibrs::agencies+agency_county_crosswalk+summary_arrestee_demographics::agencies(ori,year)|agency_county_crosswalk(county_key,ori,ori9,state)|summary_arrestee_demographics(arrestee_count,ori,race,ucr_arrest_offense,year)": "absent",
+  "nibrs::agencies+agency_county_crosswalk+summary_offender_demographics::agencies(ori,year)|agency_county_crosswalk(county_key,ori,ori9,state)|summary_offender_demographics(offender_count,ori,race,ucr_offense_code,year)": "absent",
+  "nibrs::agencies+agency_county_crosswalk+summary_victim_city_monthly::agencies(ori,year)|agency_county_crosswalk(county_key,ori,ori9,state)|summary_victim_city_monthly(ori,ucr_offense_code,victim_count,year)": "absent",
+  "nibrs::agencies+agency_county_crosswalk+summary_victim_demographics::agencies(ori,year)|agency_county_crosswalk(county_key,ori,ori9,state)|summary_victim_demographics(ori,race,ucr_offense_code,victim_count,year)": "absent",
+  "nibrs::agencies+agency_county_crosswalk::agencies(ori)|agency_county_crosswalk(county_fips,county_key,ori,ori9,state)": "absent",
+  "nibrs::agencies+nibrs_agency_completeness+summary_city_monthly+summary_victim_city_monthly::agencies(ori,population,year)|nibrs_agency_completeness(months_reported,ori,year)|summary_city_monthly(month,offense_count,ori,ucr_offense_code,year)|summary_victim_city_monthly(ori,ucr_offense_code,victim_count,year)": "absent",
+  "nibrs::agencies+nibrs_agency_completeness+summary_city_monthly+summary_victim_city_monthly::agencies(ori,population,year)|nibrs_agency_completeness(months_reported,ori,year)|summary_city_monthly(month,ori,year)|summary_victim_city_monthly(ori,ucr_offense_code,victim_count,year)": "absent",
+  "nibrs::agencies+nibrs_agency_completeness+summary_city_monthly::nibrs_agency_completeness(months_reported,ori,year)|summary_city_monthly(month,offense_count,ori,ucr_offense_code,year)": "absent",
+  "nibrs::agencies+summary_clearance_type::agencies(agency_type,city,ori,population,state,year)|summary_clearance_type(cleared_by_arrest,cleared_exceptional,ori,total_offenses,ucr_offense_code,year)": "absent",
+  "nibrs::agencies::agencies(ori)": "absent",
+  "nibrs::agencies::agencies(state)": "absent",
+  "nibrs::agencies::agencies(year)": "absent",
+  "nibrs::nibrs_agency_completeness+summary_arrestee_demographics::nibrs_agency_completeness(months_reported,ori,year)|summary_arrestee_demographics(arrestee_count,ori,race,ucr_arrest_offense,year)": "absent",
+  "nibrs::nibrs_agency_completeness+summary_offender_demographics::nibrs_agency_completeness(months_reported,ori,year)|summary_offender_demographics(offender_count,ori,race,ucr_offense_code,year)": "absent",
+  "nibrs::nibrs_agency_completeness+summary_victim_city_monthly::nibrs_agency_completeness(months_reported,ori,year)|summary_victim_city_monthly(month,ori,ucr_offense_code,victim_count,year)": "absent",
+  "nibrs::nibrs_agency_completeness+summary_victim_demographics::nibrs_agency_completeness(months_reported,ori,year)|summary_victim_demographics(ori,race,ucr_offense_code,victim_count,year)": "absent",
+  "nibrs::nibrs_consistent_reporters+summary_arrestee_demographics::nibrs_consistent_reporters(end_year,ori,start_year)|summary_arrestee_demographics(arrestee_count,ori,race,ucr_arrest_offense,year)": "absent",
+  "nibrs::nibrs_consistent_reporters+summary_offender_demographics::nibrs_consistent_reporters(end_year,ori,start_year)|summary_offender_demographics(offender_count,ori,race,ucr_offense_code,year)": "absent",
+  "nibrs::nibrs_consistent_reporters+summary_victim_city_monthly::nibrs_consistent_reporters(end_year,ori,start_year)|summary_victim_city_monthly(ori,ucr_offense_code,victim_count,year)": "absent",
+  "nibrs::nibrs_consistent_reporters+summary_victim_demographics::nibrs_consistent_reporters(end_year,ori,start_year)|summary_victim_demographics(ori,race,ucr_offense_code,victim_count,year)": "absent",
+  "nibrs::rollup.national_summary_arrestee_demographics::rollup.national_summary_arrestee_demographics(age_group,arrestee_count,race,year)": "absent",
+  "nibrs::rollup.national_summary_arrestee_demographics::rollup.national_summary_arrestee_demographics(arrestee_count,ucr_arrest_offense,year)": "absent",
+  "nibrs::rollup.state_summary_arrestee_demographics::rollup.state_summary_arrestee_demographics(age_group,arrestee_count,race,state,year)": "absent",
+  "nibrs::summary_clearance_detail::summary_clearance_detail(cleared_A,cleared_B,cleared_C,cleared_D,cleared_E,cleared_by_arrest,state,total_offenses,ucr_offense_code,year)": "absent",
+  "nibrs::summary_clearance_type::summary_clearance_type(cleared_by_arrest,cleared_exceptional,ori,total_offenses,ucr_offense_code,year)": "absent",
+  "nibrs::summary_juvenile_offender_incidents::summary_juvenile_offender_incidents(incident_count,offense_scope,state,year)": "absent",
+  "nibrs::summary_victim_circumstance+summary_victim_state_monthly::summary_victim_circumstance(circumstance_code,state,ucr_offense_code,victim_count,year)|summary_victim_state_monthly(state,ucr_offense_code,victim_count,year)": "absent",
+  "shr::agency_county_crosswalk+incidents::agency_county_crosswalk(county_fips,county_key,ori,state)|incidents(ori)": "absent",
+  "shr::incidents+shr_agency_alias+shr_agency_identity+victims::incidents(homicide_type,id,ori,weapon_group,year)|victims(incident_id)": "absent",
+  "shr::incidents::incidents(ori)": "absent",
+  "shr::incidents::incidents(state)": "absent",
+  "shr::incidents::incidents(year)": "absent"
+ }
 };
 /* Your answers live only in this page's memory until you press Export. Nothing here can reach the
    repository, a database, or any switch: the sole output is a downloaded file. */
@@ -5471,6 +5524,17 @@ function createStage2bSession(DATA, plainLanguage) {
    */
   const repositoryAnswers = {};
   /**
+   * The AUTHORED ENTRY each capability held when this session began, as an opaque digest.
+   *
+   * Separate from `baseline`, which is the derived policy and exists so an unresolved answer can
+   * keep what is already recorded. This one exists for a different job: telling the importer what
+   * this session was authored on top of, so a second export cannot silently replace someone else's
+   * answer. The derived policy cannot do that job -- an unconfirmed answer derives nothing, and two
+   * different answers can derive the same thing.
+   */
+  const recordBaseline = {};
+  const repositoryEntryDigest = {};
+  /**
    * Capabilities whose question has been RE-WORDED since the answer was recorded.
    *
    * The answer is restored -- it is still what the person said -- but its confirmation is not, and
@@ -5479,13 +5543,22 @@ function createStage2bSession(DATA, plainLanguage) {
    */
   const rewordedSince = {};
   const recorded = DATA.answers || {};
+  const digests = DATA.entryDigests || {};
   for (const cap of DATA.capabilities) {
     capabilityById[cap.id] = cap;
     const prior = DATA.authored[cap.id] ? clone(DATA.authored[cap.id]) : null;
     repositoryBaseline[cap.id] = prior;
     baseline[cap.id] = clone(prior);
+    repositoryEntryDigest[cap.id] = digests[cap.id] || "absent";
+    recordBaseline[cap.id] = repositoryEntryDigest[cap.id];
     const priorAnswer = recorded[cap.id] || null;
-    const sameWording = !!priorAnswer && priorAnswer.catalogFingerprint === DATA.catalogFingerprint;
+    /**
+     * Compared against the SAME identity the answer was recorded under. These were two different
+     * fingerprints under two names -- the answer carried the full decision contract and this
+     * compared it against the catalog-only digest -- so no restored confirmation ever survived,
+     * and the page asked every returning author to re-confirm work they had already confirmed.
+     */
+    const sameWording = !!priorAnswer && priorAnswer.contractFingerprint === DATA.contractFingerprint;
     if (priorAnswer && !sameWording) rewordedSince[cap.id] = true;
     repositoryAnswers[cap.id] = priorAnswer ? clone(priorAnswer) : null;
     human[cap.id] = priorAnswer ? Object.assign(PL.blankAnswer(), priorAnswer.human || {}) : PL.blankAnswer();
@@ -5631,8 +5704,15 @@ function createStage2bSession(DATA, plainLanguage) {
   function serialize() {
     const changed = changeSet();
     const basedOn = {};
-    for (const id of Object.keys(changed)) basedOn[id] = baseline[id] === null ? null : clone(baseline[id]);
-    return JSON.stringify({ v: DATA.v, fingerprint: DATA.fingerprint, decisions: changed, basedOn }, null, 2) + "\n";
+    /** The authoritative baseline: the RECORD entry, not what it derives. */
+    const basedOnEntry = {};
+    for (const id of Object.keys(changed)) {
+      basedOn[id] = baseline[id] === null ? null : clone(baseline[id]);
+      basedOnEntry[id] = recordBaseline[id];
+    }
+    return JSON.stringify({
+      v: DATA.v, contractFingerprint: DATA.contractFingerprint, decisions: changed, basedOn, basedOnEntry,
+    }, null, 2) + "\n";
   }
 
   /**
@@ -5650,11 +5730,11 @@ function createStage2bSession(DATA, plainLanguage) {
     if (parsed.v !== DATA.v) {
       return { ok: false, reason: "that session is version " + String(parsed.v) + "; this workbook writes version " + String(DATA.v) };
     }
-    if (parsed.fingerprint !== DATA.fingerprint) {
+    if (parsed.contractFingerprint !== DATA.contractFingerprint) {
       return {
         ok: false, stale: true,
-        reason: "That session was authored against a different registry structure (" + String(parsed.fingerprint)
-          + " vs " + DATA.fingerprint + "), so the questions themselves may have changed. Nothing was loaded."
+        reason: "That session was authored against a different registry structure (" + String(parsed.contractFingerprint)
+          + " vs " + DATA.contractFingerprint + "), so the questions themselves may have changed. Nothing was loaded."
           + " Re-answer against this workbook rather than carrying the old answers across.",
       };
     }
@@ -5668,6 +5748,7 @@ function createStage2bSession(DATA, plainLanguage) {
 
     for (const id of Object.keys(human)) {
       baseline[id] = clone(repositoryBaseline[id]);
+      recordBaseline[id] = repositoryEntryDigest[id];
       const seeded = repositoryAnswers[id];
       human[id] = seeded ? Object.assign(PL.blankAnswer(), seeded.human || {}) : PL.blankAnswer();
       confirmed[id] = seeded && !rewordedSince[id] ? (seeded.mappingConfirmed || null) : null;
@@ -5687,6 +5768,16 @@ function createStage2bSession(DATA, plainLanguage) {
       }
       if (parsed.basedOn && Object.prototype.hasOwnProperty.call(parsed.basedOn, id)) {
         baseline[id] = parsed.basedOn[id] === null ? null : clone(parsed.basedOn[id]);
+      }
+      /**
+       * The file's record baseline travels with it, and is NOT refreshed to this page's.
+       *
+       * Adopting the current one here would launder a stale session: an export made before someone
+       * else's answer landed would come back claiming to have been authored on top of it, and the
+       * importer's conflict check -- the whole point of carrying a baseline -- would pass.
+       */
+      if (parsed.basedOnEntry && Object.prototype.hasOwnProperty.call(parsed.basedOnEntry, id)) {
+        recordBaseline[id] = parsed.basedOnEntry[id];
       }
       applied += 1;
     }
@@ -5758,6 +5849,8 @@ function createStage2bSession(DATA, plainLanguage) {
     isDirty: () => dirty,
     markClean: () => { dirty = false; },
     baselineFor: (id) => baseline[id],
+    /** The authored entry this session began from, as carried into the export. */
+    recordBaselineFor: (id) => recordBaseline[id],
   };
 }
 

@@ -28,8 +28,8 @@ import { importDecisions } from "./import-stage2b-decisions";
 import { generatePolicyFile, renderPolicyFile } from "./generate-capability-policy";
 import {
   AUTHORED_FILE, GENERATED_POLICY_FILE, type AuthoredRecord, commitAuthoredRecord, derivePolicy,
-  derivedEntryAuthorizes, loadGeneratedPolicy, readAuthoredRecord, recordDigest, recordShapeErrors,
-  renderAuthoredRecord,
+  derivedEntryAuthorizes, entryDigest, loadGeneratedPolicy, readAuthoredRecord, recordDigest,
+  recordShapeErrors, renderAuthoredRecord,
 } from "../lib/stage2b-authored-record";
 import {
   authorizationBlockers, authorizesApartFromIntegrity, capabilityAuthorizes, integrityIsExecutable,
@@ -63,9 +63,38 @@ const withYear = model.find((c) => c.coverageCandidates.some((o) => o.yearBearin
 const yearBasis = withYear.coverageCandidates.find((o) => o.yearBearing)!;
 const withoutYear = model.find((c) => c.coverageCandidates.length > 0 && !c.coverageCandidates.some((o) => o.yearBearing))!;
 
-function sessionFor(authored: Record<string, unknown> = {}) {
-  return createStage2bSession({ v: DECISIONS_VERSION, fingerprint: FINGERPRINT, capabilities: model, authored,
-    catalogFingerprint: CATALOG.fingerprint() }, PL);
+/**
+ * A session over a chosen derived-policy baseline.
+ *
+ * `entries` is the authored record that baseline came from, because the export has to name the
+ * RECORD it was authored on top of and not only what the record derives. Tests that pass a policy
+ * baseline without the record it came from would be exporting a baseline that claims the capability
+ * was unanswered.
+ */
+function sessionFor(authored: Record<string, unknown> = {}, entries: AuthoredRecord = {} as AuthoredRecord) {
+  return createStage2bSession({
+    v: DECISIONS_VERSION, contractFingerprint: FINGERPRINT, capabilities: model, authored,
+    entryDigests: Object.fromEntries(model.map((c) => [c.id, entryDigest(entries[c.id])])),
+  }, PL);
+}
+
+/** The payload the page was actually handed, read back out of a rendered workbook. */
+function embeddedData(html: string): Record<string, any> {
+  const start = html.indexOf("const DATA = ") + "const DATA = ".length;
+  return JSON.parse(html.slice(start, html.indexOf("\n/* Your answers live only")).trim().replace(/;$/, ""));
+}
+
+/**
+ * A session over the REAL page's payload, produced by rendering the workbook from a record.
+ *
+ * THIS IS THE POINT OF THE HELPER. The seeding regression used to rebuild the payload by hand, and
+ * so supplied the very field the generator got wrong: the page shipped an answer's full contract
+ * fingerprint under a name the session compared against the catalog-only one, so in production
+ * every restored confirmation looked re-worded and was dropped -- underneath a green test that had
+ * handed the session two values it had made agree. Nothing here reconstructs what the page emits.
+ */
+function workbookSession(record: { docs: Record<string, unknown>; entries: AuthoredRecord }) {
+  return createStage2bSession(embeddedData(renderWorkbook(registry, undefined, record)), PL);
 }
 
 /** A complete set of plain-language answers, as a person clicking through would produce. */
@@ -270,20 +299,21 @@ check("what the person answered survives into a checked-in record, and reopens w
   assert.strictEqual(recorded.human.evidence, human.evidence, "the reasoning was dropped");
   assert.ok(recorded.confirmed, "the confirmation provenance was dropped");
 
-  // Reopening the workbook restores it, and does NOT report it as an unsaved change.
-  const asSeed = (entries: AuthoredRecord) => Object.fromEntries(Object.entries(entries)
-    .filter(([, e]) => e.kind === "decided" || e.kind === "open")
-    .map(([id, e]) => [id, { human: (e as any).human,
-      mappingConfirmed: e.kind === "decided" ? e.confirmed : null,
-      catalogFingerprint: (e as any).contractFingerprint }]));
-  const reopen = (entries: AuthoredRecord, catalogFingerprint = FINGERPRINT) =>
-    createStage2bSession({
-      v: DECISIONS_VERSION, fingerprint: FINGERPRINT, capabilities: model,
-      authored: { [withYear.id]: result.policy[withYear.id] }, answers: asSeed(entries), catalogFingerprint,
-    }, PL);
-  const reopened = reopen(result.entries);
+  /**
+   * Reopening the REAL page restores it, and does NOT report it as an unsaved change.
+   *
+   * Driven through `renderWorkbook`, because this is exactly where a reconstructed payload lied:
+   * the old version of this test built the seed itself and made the two fingerprints agree, while
+   * the page emitted one under a name the session compared against a different value entirely.
+   */
+  const prior = { docs: result.docs, entries: result.entries };
+  const reopened = workbookSession(prior);
   assert.strictEqual(reopened.human(withYear.id).coverage, human.coverage, "the reopened workbook lost the answer");
-  assert.strictEqual(reopened.isMappingConfirmed(withYear.id), true, "the reopened workbook lost the confirmation");
+  assert.strictEqual(reopened.isMappingConfirmed(withYear.id), true,
+    "the page dropped a confirmation nothing had invalidated, so every returning author is asked to "
+    + "re-confirm work they already confirmed");
+  assert.strictEqual(reopened.needsReconfirmation(withYear.id), false,
+    "the page says the question was re-worded when it was not");
   assert.deepStrictEqual(reopened.changeSet(), {}, "a restored answer is reported as an unsaved change");
   assert.strictEqual(reopened.isDirty(), false);
 
@@ -296,11 +326,26 @@ check("what the person answered survives into a checked-in record, and reopens w
   assert.deepStrictEqual(Object.keys(reopened.changeSet()), [withYear.id], "editing a restored answer is not a change");
 
   /**
-   * And if the QUESTION has been re-worded since, the answer comes back but the confirmation does
-   * not. A confirmation approves one translation of one question; once the question changes, it
-   * approves something nobody read.
+   * And if the CONTRACT has moved since, the answer comes back but the confirmation does not, and
+   * the entry stops producing policy. A confirmation approves one translation of one question as it
+   * was worded; once any of that changes it approves something nobody read, so the policy it used
+   * to derive must stand down until a person confirms the wording that exists now.
    */
-  const reworded = reopen(result.entries, "different-wording");
+  const stale = JSON.parse(JSON.stringify(result.entries)) as AuthoredRecord;
+  (stale[withYear.id] as { contractFingerprint: string }).contractFingerprint = "an-older-contract";
+
+  const derivedFromStale = derivePolicy(stale, model, PL, FINGERPRINT);
+  assert.deepStrictEqual(derivedFromStale.expired, [withYear.id],
+    "a confirmation given under a contract that no longer exists was not stood down");
+  assert.ok(!(withYear.id in derivedFromStale.policy),
+    "an expired confirmation still derived policy, so re-wording a question leaves the old decision active");
+  assert.deepStrictEqual(derivedFromStale.errors, [],
+    "an expired confirmation was refused as a contradiction, which would take the whole record down with it");
+
+  const rewordedPage = renderWorkbook(registry, undefined, { docs: result.docs, entries: stale });
+  assert.ok(!(withYear.id in embeddedData(rewordedPage).authored),
+    "the page still shows policy derived from a confirmation that has expired");
+  const reworded = createStage2bSession(embeddedData(rewordedPage), PL);
   assert.strictEqual(reworded.human(withYear.id).coverage, human.coverage, "a re-worded question lost the answer too");
   assert.strictEqual(reworded.isMappingConfirmed(withYear.id), false, "a confirmation survived a re-worded question");
   assert.strictEqual(reworded.needsReconfirmation(withYear.id), true, "the page is not told to ask again");
@@ -308,9 +353,9 @@ check("what the person answered survives into a checked-in record, and reopens w
   assert.ok(/re-worded since/.test(renderWorkbook(registry)), "the page never explains why it is asking again");
 
   // Withdrawing removes the durable record too, not just the policy.
-  const W = sessionFor({ [withYear.id]: result.policy[withYear.id] as Record<string, unknown> });
+  const W = sessionFor({ [withYear.id]: result.policy[withYear.id] as Record<string, unknown> }, result.entries);
   W.withdraw(withYear.id);
-  const removed = importDecisions(W.serialize(), registry, { docs: result.docs, entries: result.entries });
+  const removed = importDecisions(W.serialize(), registry, prior);
   assert.ok(removed.ok && !(withYear.id in (removed as any).entries),
     "withdrawing removed the policy but left the answer record behind");
 });
@@ -388,7 +433,7 @@ check("the fingerprint covers everything a person reads, and the translation its
   // And a session authored against any other contract does not load.
   const S = sessionFor();
   const otherContract = JSON.parse(exportWith(withYear.id, answers()));
-  otherContract.fingerprint = fingerprintOf(realSource.replace(
+  otherContract.contractFingerprint = fingerprintOf(realSource.replace(
     "1. Do we know the first and last year this data covers?",
     "1. Can we tell the first and last year this data covers?"));
   const refused = S.loadSession(otherContract);
@@ -396,9 +441,9 @@ check("the fingerprint covers everything a person reads, and the translation its
   assert.ok(refused.stale, "it was not refused as stale");
 
   // A pre-catalog export is refused by version rather than accepted on an older fingerprint.
-  assert.ok(DECISIONS_VERSION >= 4, "the version was not raised when the fingerprint changed meaning");
+  assert.ok(DECISIONS_VERSION >= 5, "the version was not raised when the fingerprint changed meaning");
   const old = JSON.parse(exportWith(withYear.id, answers()));
-  old.v = 3;
+  old.v = DECISIONS_VERSION - 1;
   assert.strictEqual(importInto(JSON.stringify(old)).ok, false, "a version-3 export was still accepted");
 });
 
@@ -521,7 +566,7 @@ check("a migrated legacy entry authorizes nothing, whatever it contains", () => 
   assert.ok(authorizationBlockers({ ...complete, origin: "legacy" }, declared).some((b) => /migrated/.test(b)),
     "the blocker does not name why");
   // And derivation marks them, so the mark cannot be lost between record and policy.
-  const derived = derivePolicy(legacyRecord(withYear.id, complete).entries, model, PL);
+  const derived = derivePolicy(legacyRecord(withYear.id, complete).entries, model, PL, FINGERPRINT);
   assert.strictEqual((derived.policy[withYear.id] as Record<string, unknown>).origin, "legacy",
     "derivation dropped the legacy marker");
 });
@@ -535,7 +580,7 @@ check("a confirmation that does not match the re-derivation derives nothing", ()
   const prior = recordWith(withYear.id, answers());
   const tampered = JSON.parse(JSON.stringify(prior.entries)) as AuthoredRecord;
   (tampered[withYear.id] as { confirmed: string }).confirmed = "0000dead";
-  const derived = derivePolicy(tampered, model, PL);
+  const derived = derivePolicy(tampered, model, PL, FINGERPRINT);
   assert.ok(derived.errors.some((e) => /given for a different mapping/.test(e)),
     "a confirmation for some other mapping was accepted as policy");
   assert.ok(!(withYear.id in derived.policy), "the mis-confirmed entry still produced policy");
@@ -544,7 +589,7 @@ check("a confirmation that does not match the re-derivation derives nothing", ()
   const edited = JSON.parse(JSON.stringify(prior.entries)) as AuthoredRecord;
   (edited[withYear.id] as { human: Record<string, unknown> }).human.availability = "sometimes";
   (edited[withYear.id] as { human: Record<string, unknown> }).human.availabilityWhen = "after the annual load";
-  const afterEdit = derivePolicy(edited, model, PL);
+  const afterEdit = derivePolicy(edited, model, PL, FINGERPRINT);
   assert.ok(afterEdit.errors.length > 0, "an answer edited after confirmation still derived policy");
 });
 
@@ -562,7 +607,7 @@ check("the recorded mapping is audit evidence only, and must equal re-derivation
   const prior = recordWith(withYear.id, answers());
   const tampered = JSON.parse(JSON.stringify(prior.entries)) as AuthoredRecord;
   (tampered[withYear.id] as { mapping: Record<string, unknown> }).mapping.receiptOwner = "a value nobody chose";
-  const derived = derivePolicy(tampered, model, PL);
+  const derived = derivePolicy(tampered, model, PL, FINGERPRINT);
   assert.ok(derived.errors.some((e) => /disagrees with itself/.test(e)),
     "a mapping snapshot that contradicts the answer was accepted as policy");
   assert.ok(!(withYear.id in derived.policy), "the contradicted entry still produced policy");
@@ -665,7 +710,7 @@ check("an unresolved answer never erases an existing decision", () => {
    */
   const prior = recordWith(withYear.id, answers());
   const existingDerived = prior.policy[withYear.id] as Record<string, unknown>;
-  const S = sessionFor({ [withYear.id]: existingDerived });
+  const S = sessionFor({ [withYear.id]: existingDerived }, prior.entries);
   S.update(withYear.id, {
     ...PL.blankAnswer(), coverage: PL.UNSURE, availability: PL.UNSURE, owner: PL.UNSURE, integrityUnsure: true,
     evidence: "nobody here knows yet; recorded so the open question is visible rather than assumed",
@@ -689,7 +734,7 @@ check("an unresolved answer never erases an existing decision", () => {
       `${field} was erased at import by an unresolved answer`);
   }
   // Withdrawal is still the way to remove one, and it still works.
-  const W = sessionFor({ [withYear.id]: existingDerived });
+  const W = sessionFor({ [withYear.id]: existingDerived }, prior.entries);
   W.withdraw(withYear.id);
   const removed = importDecisions(W.serialize(), registry, prior);
   assert.ok(removed.ok && !(withYear.id in removed.policy), "the named withdrawal no longer removes anything");
@@ -965,9 +1010,90 @@ check("a change authored against a stale baseline is refused by name", () => {
   assert.ok(!result.ok && result.errors.some((e) => e.includes(withYear.id) && /changed since this session began/.test(e)));
 });
 
+check("two sessions cannot silently overwrite each other's answer on an unconfirmed capability", () => {
+  /**
+   * The conflict check compared what the record DERIVES. An unconfirmed answer derives nothing, so
+   * two people who opened the workbook on the same open capability both compared equal to null, and
+   * the second import replaced the first's authoritative human answer with no conflict raised, no
+   * warning printed, and nothing in the output to notice afterwards.
+   */
+  const opened = importInto(exportWith(withYear.id, answers(), false));
+  assert.ok(opened.ok, JSON.stringify(!opened.ok && opened.errors));
+  if (!opened.ok) return;
+  assert.strictEqual((opened.entries[withYear.id] as { kind: string }).kind, "open",
+    "this fixture cannot show anything: the entry is not an unconfirmed one");
+  const start = { docs: opened.docs, entries: opened.entries };
+
+  /**
+   * Two people open the SAME page, answer differently, and neither confirms. Both answers derive
+   * no policy, which is precisely what made them indistinguishable: leave one of them confirmed
+   * and the derived baseline moves, so the older check would have caught it and this would prove
+   * nothing about the new one.
+   */
+  const A = workbookSession(start);
+  A.update(withYear.id, answers(withYear, { evidence: "session A: confirmed with the analyst who runs the monthly load" }));
+  const B = workbookSession(start);
+  B.update(withYear.id, answers(withYear, { evidence: "session B: read the runbook, and never spoke to anyone about it" }));
+
+  const first = importDecisions(A.serialize(), registry, start);
+  assert.ok(first.ok, JSON.stringify(!first.ok && first.errors));
+  if (!first.ok) return;
+  assert.deepStrictEqual(first.open, [withYear.id], "the fixture stopped being an unconfirmed answer");
+  assert.strictEqual(first.policy[withYear.id], undefined,
+    "this fixture cannot show anything: the answer derives policy, so the derived baseline would move");
+  const landed = { docs: first.docs, entries: first.entries };
+  const second = importDecisions(B.serialize(), registry, landed);
+  assert.strictEqual(second.ok, false, "the second session silently replaced the first session's answer");
+  assert.ok(!second.ok && second.errors.some((e) => e.includes(withYear.id) && /changed since this session began/.test(e)),
+    "the refusal does not name the capability whose answer would have been lost");
+  assert.match((first.entries[withYear.id] as unknown as { human: { evidence: string } }).human.evidence, /session A/,
+    "the first session's answer is not what the record holds");
+
+  /**
+   * And it cannot be laundered by loading the stale file into a page generated afterwards. If the
+   * load adopted the current baseline, re-exporting would present the same overwrite as a clean
+   * import -- which is how the stale-session defect worked the last time.
+   */
+  const later = workbookSession(landed);
+  assert.ok(later.loadSession(JSON.parse(B.serialize())).ok, "the stale session did not load");
+  assert.strictEqual(later.recordBaselineFor(withYear.id), B.recordBaselineFor(withYear.id),
+    "loading refreshed the baseline to the current record, so re-exporting would hide the conflict");
+  assert.strictEqual(importDecisions(later.serialize(), registry, landed).ok, false,
+    "a stale session was laundered through the page into a clean import");
+});
+
+check("a second session cannot overwrite an answer that happens to derive the same policy", () => {
+  /**
+   * Two materially different answers can produce byte-identical policy: the reason someone gives
+   * for a coverage basis is part of what they said and is not part of the mapping when the column
+   * is named like a year. Comparing the derived policy saw no conflict at all, so the second import
+   * overwrote the first person's stated reasoning while every technical field stayed the same.
+   */
+  const base = recordWith(withYear.id, answers(withYear, { coverageReason: "the pipeline owner named this column" }));
+  const start = { docs: base.docs, entries: base.entries };
+
+  const A = workbookSession(start);
+  assert.ok(A.update(withYear.id, { coverageReason: "session A: the runbook names this column as the load key" }),
+    "editing the reason was not treated as a change to the answer");
+  const afterA = importDecisions(A.serialize(), registry, start);
+  assert.ok(afterA.ok, JSON.stringify(!afterA.ok && afterA.errors));
+  if (!afterA.ok) return;
+  assert.deepStrictEqual(afterA.policy[withYear.id], base.policy[withYear.id],
+    "this fixture cannot show anything: the two answers derive different policy, which the old check would catch");
+  assert.match((afterA.entries[withYear.id] as unknown as { human: { coverageReason: string } }).human.coverageReason, /session A/,
+    "the first session's answer was not recorded");
+
+  const B = workbookSession(start);
+  B.update(withYear.id, { coverageReason: "session B: I picked it because it was the only one offered" });
+  const second = importDecisions(B.serialize(), registry, { docs: afterA.docs, entries: afterA.entries });
+  assert.strictEqual(second.ok, false, "a second answer overwrote the first because the policy they derive is identical");
+  assert.ok(!second.ok && second.errors.some((e) => e.includes(withYear.id) && /changed since this session began/.test(e)),
+    "the refusal does not name the capability whose answer would have been lost");
+});
+
 check("withdrawal is a named act, never inferred from unanswered questions", () => {
   const prior = recordWith(withYear.id, answers());
-  const S = sessionFor({ [withYear.id]: prior.policy[withYear.id] as Record<string, unknown> });
+  const S = sessionFor({ [withYear.id]: prior.policy[withYear.id] as Record<string, unknown> }, prior.entries);
   assert.strictEqual(S.canWithdraw(withYear.id), true, "an authored capability is not withdrawable");
   assert.strictEqual(sessionFor().canWithdraw(withYear.id), false, "an unauthored capability offers withdrawal");
   S.withdraw(withYear.id);
@@ -988,7 +1114,7 @@ check("withdrawal is a named act, never inferred from unanswered questions", () 
 check("a stale session cannot be laundered through the page into a fresh fingerprint", () => {
   const S = sessionFor();
   const stale = JSON.parse(exportWith(withYear.id, answers()));
-  stale.fingerprint = "deadbeefdeadbeef";
+  stale.contractFingerprint = "deadbeefdeadbeef";
   const result = S.loadSession(stale);
   assert.strictEqual(result.ok, false, "a stale session loaded");
   assert.ok(result.stale && /different registry structure/.test(result.reason));
@@ -1018,14 +1144,14 @@ check("successive loads cannot restore a baseline from an earlier one", () => {
   first.basedOn[withYear.id] = older;
   assert.ok(S.loadSession(first).ok);
   assert.strictEqual(S.baselineFor(withYear.id).receiptOwner, "an older value", "the load did not adopt the file's baseline");
-  assert.ok(S.loadSession({ v: DECISIONS_VERSION, fingerprint: FINGERPRINT, decisions: {}, basedOn: {} }).ok);
+  assert.ok(S.loadSession({ v: DECISIONS_VERSION, contractFingerprint: FINGERPRINT, decisions: {}, basedOn: {}, basedOnEntry: {} }).ok);
   assert.deepStrictEqual(S.baselineFor(withYear.id), authored,
     "an empty load left the previous file's baseline in place, so the repository value was lost");
   assert.deepStrictEqual(S.changeSet(), {}, "a session reset to the repository value still reports changes");
 });
 
 check("a session written by a different version is refused rather than misread", () => {
-  const result = sessionFor().loadSession({ v: DECISIONS_VERSION - 1, fingerprint: FINGERPRINT, decisions: {}, basedOn: {} });
+  const result = sessionFor().loadSession({ v: DECISIONS_VERSION - 1, contractFingerprint: FINGERPRINT, decisions: {}, basedOn: {}, basedOnEntry: {} });
   assert.strictEqual(result.ok, false);
   assert.ok(/version/.test(result.reason));
 });
