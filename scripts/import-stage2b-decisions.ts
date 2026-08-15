@@ -19,8 +19,28 @@
  */
 import fs from "node:fs";
 import path from "node:path";
-import { DECISION_KEYS, capabilityAuthorizes, coverageBasisErrors, policyShapeErrors, type UnvalidatedPolicy } from "../lib/capability-policy";
-import { DECISIONS_VERSION, decidableRegistry, registryFingerprint, type RegistryEntry } from "./generate-stage2b-workbook";
+import { createRequire } from "node:module";
+import { capabilityAuthorizes, coverageBasisErrors, policyShapeErrors, type UnvalidatedPolicy } from "../lib/capability-policy";
+import {
+  DECISIONS_VERSION, PLAIN_LANGUAGE_MODULE_FILE, buildWorkbookModel, decidableRegistry,
+  registryFingerprint, type RegistryEntry,
+} from "./generate-stage2b-workbook";
+
+/**
+ * The SAME translation the page runs, loaded from the same file the page inlines.
+ *
+ * Re-implementing it here would put two derivations behind one confirmation: the person would
+ * approve what the page proposed and the importer would write what it derived, and nothing would
+ * notice they had diverged.
+ */
+const require = createRequire(import.meta.url);
+const { createStage2bPlainLanguage } = require(PLAIN_LANGUAGE_MODULE_FILE) as {
+  createStage2bPlainLanguage: () => any;
+};
+const PL = createStage2bPlainLanguage();
+
+/** What a change-set entry may carry. A withdrawal carries only its operation. */
+const ENTRY_KEYS: readonly string[] = ["human", "proposed", "unresolved", "mappingConfirmed", "operation"];
 
 const DATA_DIR = path.join(process.cwd(), "scripts", "fixtures", "operation-taxonomy");
 const REGISTRY_FILE = path.join(DATA_DIR, "capability-registry.json");
@@ -55,6 +75,7 @@ export function importDecisions(
   const registryInput = registryOverride
     ?? (JSON.parse(fs.readFileSync(REGISTRY_FILE, "utf8")) as Record<string, RegistryEntry>);
   const registry = decidableRegistry(registryInput);
+  const workbookModel = buildWorkbookModel(registryInput);
   const errors: string[] = [];
 
   let parsed: { v?: unknown; fingerprint?: unknown; decisions?: unknown; basedOn?: unknown };
@@ -152,21 +173,56 @@ export function importDecisions(
 
     /**
      * Checked on what ARRIVED, not on what is copied out of it. Rebuilding the candidate from the
-     * five known fields silently dropped anything else the file carried, so an unknown top-level key
+     * known fields silently dropped anything else the file carried, so an unknown top-level key
      * could never produce an error -- the validator only ever saw the fields it already expected.
      */
-    const strayKeys = Object.keys(decision).filter((key) => !DECISION_KEYS.includes(key));
+    const strayKeys = Object.keys(decision).filter((key) => !ENTRY_KEYS.includes(key));
     if (strayKeys.length) {
-      errors.push(`${id}: the decision carries ${strayKeys.map((k) => JSON.stringify(k)).join(", ")}, which it does not have`);
+      errors.push(`${id}: the entry carries ${strayKeys.map((k) => JSON.stringify(k)).join(", ")}, which it does not have`);
+      continue;
+    }
+
+    /**
+     * THE TRANSLATION IS RE-DERIVED HERE, and the confirmation must match it.
+     *
+     * The page proposes a technical mapping from a human answer and shows it; this recomputes that
+     * mapping from the SAME human answer with the SAME code, and refuses if the file's proposal
+     * disagrees. Trusting the file's `proposed` block would have let a page -- or a hand edit --
+     * ship a policy the person never saw beside the question they answered, which is the one thing
+     * a human-facing workbook must not be able to do.
+     */
+    const capability = workbookModel.find((c) => c.id === id);
+    if (!capability) { errors.push(`${id}: not a capability in the workbook model`); continue; }
+    const humanAnswer = decision.human;
+    if (!humanAnswer || typeof humanAnswer !== "object" || Array.isArray(humanAnswer)) {
+      errors.push(`${id}: the entry carries no human answer, so there is nothing a mapping could have come from`);
+      continue;
+    }
+    const rederived = PL.proposeMapping(capability, humanAnswer);
+    const asJson = (value: unknown) => JSON.stringify(value ?? null);
+    if (asJson(decision.proposed) !== asJson(rederived.proposed)) {
+      errors.push(`${id}: the exported technical mapping is not what this answer produces; `
+        + "re-open the workbook, review the mapping again and confirm it");
+      continue;
+    }
+    const expectedFingerprint = PL.mappingFingerprint(rederived.proposed);
+    if (!decision.mappingConfirmed) {
+      errors.push(`${id}: the technical mapping was never confirmed; the workbook shows it beside the `
+        + "answer and asks you to approve it before it can become policy");
+      continue;
+    }
+    if (decision.mappingConfirmed !== expectedFingerprint) {
+      errors.push(`${id}: the confirmed mapping is stale — the answer changed after it was approved, `
+        + "so the mapping that was approved is not the one in this file");
       continue;
     }
 
     const candidate: UnvalidatedPolicy = {
-      coverage: decision.coverage ?? null,
-      integrity: decision.integrity ?? null,
-      availability: decision.availability ?? null,
-      receiptOwner: decision.receiptOwner ?? null,
-      evidence: typeof decision.evidence === "string" ? decision.evidence : "",
+      coverage: rederived.proposed.coverage ?? null,
+      integrity: rederived.proposed.integrity ?? null,
+      availability: rederived.proposed.availability ?? null,
+      receiptOwner: rederived.proposed.receiptOwner ?? null,
+      evidence: typeof rederived.proposed.evidence === "string" ? rederived.proposed.evidence : "",
     };
 
     if (isUntouched(candidate)) {

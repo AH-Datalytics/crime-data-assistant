@@ -2,83 +2,87 @@
 <html lang="en"><head><meta charset="utf-8"/>
 <title>Stage 2B policy workbook</title>
 <style>
-:root{--ink:#16181d;--dim:#5b6172;--line:#d8dbe3;--bg:#fbfbfd;--card:#fff;--warn:#8a5a00;--warnbg:#fff6e5;--ok:#1c6b4a;--sug:#4a5878;--sugbg:#eef1f7;--alert:#8c2f1d;--alertbg:#fdefec}
+:root{--ink:#16181d;--dim:#5b6172;--line:#d8dbe3;--bg:#fbfbfd;--card:#fff;--warn:#8a5a00;--warnbg:#fff6e5;--ok:#1c6b4a;--okbg:#e9f4ee;--sug:#4a5878;--sugbg:#eef1f7;--alert:#8c2f1d;--alertbg:#fdefec}
 *{box-sizing:border-box}
-body{margin:0;font:15px/1.55 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:var(--ink);background:var(--bg)}
-header{position:sticky;top:0;background:var(--card);border-bottom:1px solid var(--line);padding:10px 20px;display:flex;gap:18px;align-items:center;flex-wrap:wrap;z-index:5}
+body{margin:0;font:15.5px/1.6 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:var(--ink);background:var(--bg)}
+header{position:sticky;top:0;background:var(--card);border-bottom:1px solid var(--line);padding:10px 20px;display:flex;gap:16px;align-items:center;flex-wrap:wrap;z-index:5}
 header b{font-size:14px}
 .counts{color:var(--dim);font-size:13px;display:flex;gap:14px;flex-wrap:wrap}
-main{max-width:940px;margin:0 auto;padding:20px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:18px 20px;margin-bottom:16px}
-h2{font-size:17px;margin:0 0 4px}
-.id{font:12px ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--dim);word-break:break-all;margin-bottom:10px}
-.meta{font-size:13px;color:var(--dim);margin-bottom:14px}
-.q{border-top:1px solid var(--line);padding:14px 0}
-.q h3{font-size:14px;margin:0 0 8px}
-label{display:block;font-size:13px;margin:6px 0 3px;color:var(--dim)}
-select,input[type=text],textarea{width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:5px;font:inherit;background:#fff}
-textarea{min-height:52px;resize:vertical}
-.row{display:flex;gap:10px;flex-wrap:wrap}.row>*{flex:1;min-width:200px}
-.sug{background:var(--sugbg);border-left:3px solid var(--sug);padding:7px 10px;margin:8px 0;font-size:12.5px;color:#39435c;border-radius:0 4px 4px 0}
-.sug b{color:var(--sug)}
-.warn{background:var(--warnbg);border-left:3px solid var(--warn);padding:8px 11px;margin:10px 0;font-size:13px;color:var(--warn);border-radius:0 4px 4px 0}
-.alert{background:var(--alertbg);border-left:3px solid var(--alert);padding:8px 11px;margin:10px 0;font-size:13px;color:var(--alert);border-radius:0 4px 4px 0}
+main{max-width:820px;margin:0 auto;padding:22px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:20px 22px;margin-bottom:16px}
+h2{font-size:19px;line-height:1.4;margin:0 0 10px;font-weight:600}
+.q{border-top:1px solid var(--line);padding:16px 0}
+.q h3{font-size:15px;margin:0 0 4px}
+.q .hint{font-size:13.5px;color:var(--dim);margin:0 0 10px}
+label.opt{display:block;border:1px solid var(--line);border-radius:6px;padding:9px 12px;margin:6px 0;cursor:pointer}
+label.opt:hover{background:#f7f8fb}
+label.opt input{margin-right:9px}
+label.opt .why{display:block;font-size:13px;color:var(--dim);margin:3px 0 0 24px}
+.tag{display:inline-block;font-size:11px;background:var(--okbg);color:var(--ok);border-radius:999px;padding:1px 8px;margin-left:6px;font-weight:600}
+input[type=text],textarea{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:5px;font:inherit;background:#fff;margin-top:6px}
+textarea{min-height:58px;resize:vertical}
+details{margin:8px 0;font-size:13.5px}
+details summary{cursor:pointer;color:var(--sug)}
+details .body{background:var(--sugbg);border-left:3px solid var(--sug);padding:9px 12px;margin-top:6px;border-radius:0 4px 4px 0;color:#39435c}
+.observed{font-size:12.5px;color:var(--dim);font-style:italic}
+.mapping{background:var(--sugbg);border:1px solid #d3d9e6;border-radius:7px;padding:13px 15px;margin-top:6px}
+.mapping dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:13.5px}
+.mapping dt{color:var(--dim)}
+.mapping dd{margin:0}
+.warn{background:var(--warnbg);border-left:3px solid var(--warn);padding:9px 12px;margin:10px 0;font-size:13.5px;color:var(--warn);border-radius:0 4px 4px 0}
+.alert{background:var(--alertbg);border-left:3px solid var(--alert);padding:9px 12px;margin:10px 0;font-size:13.5px;color:var(--alert);border-radius:0 4px 4px 0}
+.good{background:var(--okbg);border-left:3px solid var(--ok);padding:9px 12px;margin:10px 0;font-size:13.5px;color:var(--ok);border-radius:0 4px 4px 0}
 button{font:inherit;padding:8px 14px;border:1px solid var(--line);background:#fff;border-radius:6px;cursor:pointer}
 button.primary{background:var(--ink);color:#fff;border-color:var(--ink)}
 button:disabled{opacity:.45;cursor:not-allowed}
 .nav{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
-.undecided{color:var(--warn);font-weight:600}
-.decided{color:var(--ok);font-weight:600}
 #dirty{font-size:12.5px;font-weight:600;padding:3px 9px;border-radius:999px}
 #dirty.unsaved{background:var(--warnbg);color:var(--warn)}
-#dirty.saved{background:#e9f4ee;color:var(--ok)}
-ul.affected{margin:8px 0 0;padding-left:20px;font:12px ui-monospace,Menlo,monospace;max-height:190px;overflow:auto}
+#dirty.saved{background:var(--okbg);color:var(--ok)}
+ul.affected{margin:8px 0 0;padding-left:20px;font-size:12.5px;max-height:190px;overflow:auto}
 dialog{border:1px solid var(--line);border-radius:9px;padding:20px;max-width:640px}
-dialog h3{margin-top:0}
-.pill{display:inline-block;font-size:11.5px;background:#eef0f5;color:var(--dim);border-radius:999px;padding:2px 9px;margin-right:6px}
-code{font:12px ui-monospace,Menlo,monospace;background:#f2f3f7;padding:1px 4px;border-radius:3px}
+code{font:12px ui-monospace,Menlo,monospace;background:#f2f3f7;padding:1px 4px;border-radius:3px;word-break:break-all}
 </style></head><body>
 <header>
  <b>Stage 2B policy workbook</b>
  <span id="dirty" class="saved">Nothing to save yet</span>
  <span class="counts" id="counts"></span>
  <span style="flex:1"></span>
- <select id="filter" style="width:auto">
-  <option value="all">All capabilities</option>
-  <option value="undecided">Any field undecided</option>
-  <option value="integrity">Integrity undecided</option>
-  <option value="coverage">Coverage undecided</option>
-  <option value="owner">Receipt owner undecided</option>
-  <option value="conditional">Possibly conditional</option>
-  <option value="unique">Unique table set</option>
+ <select id="filter" style="width:auto;padding:6px 8px;border:1px solid var(--line);border-radius:5px">
+  <option value="all">All lookups</option>
+  <option value="unanswered">Not yet answered</option>
+  <option value="unconfirmed">Answered, mapping not confirmed</option>
+  <option value="problems">Needs something fixed</option>
+  <option value="conditional">Possibly sometimes-unavailable</option>
  </select>
  <button id="import">Load a saved session</button>
- <button class="primary" id="export">Export decisions</button>
+ <button class="primary" id="export">Export answers</button>
  <input type="file" id="file" accept="application/json" hidden/>
 </header>
 <main>
  <div class="alert" id="staleness" hidden></div>
- <div class="sug">Decisions live only in this tab until you press <b>Export decisions</b>. Nothing here
-  can change the repository. Export whenever you have done a few — a closed tab or a browser crash
-  takes unexported work with it.</div>
+ <div class="warn">Your answers live only in this tab until you press <b>Export answers</b>. Nothing here
+  changes any system, switches anything on, or reaches the internet. Export every few answers — a closed
+  tab or a browser crash takes unexported work with it.</div>
  <div id="card"></div>
  <div class="nav">
   <button id="prev">Previous</button>
   <button id="next">Next</button>
-  <button class="primary" id="nextUndecided">Next undecided</button>
-  <button id="cluster">Apply to related capabilities…</button>
+  <button class="primary" id="nextUnanswered">Next unanswered</button>
+  <button id="cluster">Copy these answers to similar lookups…</button>
  </div>
 </main>
 <dialog id="confirm">
- <h3>Apply to related capabilities</h3>
+ <h3>Copy to similar lookups</h3>
  <p id="confirmIntro"></p>
- <p style="font-size:13px;color:#5b6172">Every capability that would change is named below. Nothing is applied until you confirm.</p>
+ <p style="font-size:13px;color:#5b6172">Every lookup that would change is named below. Each one keeps its
+  own technical mapping, which you will need to review and confirm separately. Nothing is copied until you confirm.</p>
  <ul class="affected" id="affected"></ul>
- <div class="nav"><button id="cancelCluster">Cancel</button><button class="primary" id="applyCluster">Apply to these</button></div>
+ <div class="nav"><button id="cancelCluster">Cancel</button><button class="primary" id="applyCluster">Copy to these</button></div>
 </dialog>
 <script>
 const DATA = {
- "v": 2,
+ "v": 3,
  "fingerprint": "31571190a66c1a62",
  "capabilities": [
   {
@@ -174,8 +178,7 @@ const DATA = {
     "validate-nibrs-prompt-sql.ts"
    ],
    "conditionalHint": "agency_county_crosswalk is absent from production hate_crime.db; availability may be conditional",
-   "existingPolicy": null,
-   "description": "Reads agencies, agency_county_crosswalk from the crime_data artifact."
+   "existingPolicy": null
   },
   {
    "id": "crime_data::agencies+agency_monthly+historical_agency+historical_agency_clearance+historical_agency_crime+historical_agency_population::historical_agency(agency,ori,state,type)|historical_agency_clearance(assault_clr,burglary_clr,motor_vehicle_theft_clr,murder_clr,ori,property_clr,rape_clr,robbery_clr,theft_clr,violent_clr,year)|historical_agency_crime(assault,burglary,motor_vehicle_theft,murder,ori,property,rape,robbery,theft,violent,year)|historical_agency_population(ori,population,year)",
@@ -399,8 +402,7 @@ const DATA = {
     "import_reta_2025.py"
    ],
    "conditionalHint": null,
-   "existingPolicy": null,
-   "description": "Reads historical_agency, historical_agency_clearance, historical_agency_crime, historical_agency_population from the crime_data artifact. It also reads agencies, agency_monthly while deciding what to build."
+   "existingPolicy": null
   },
   {
    "id": "crime_data::agencies::agencies(agency,national_sample,ori)",
@@ -465,8 +467,7 @@ const DATA = {
     "build-carjacking-clearance.sql"
    ],
    "conditionalHint": null,
-   "existingPolicy": null,
-   "description": "Reads agencies from the crime_data artifact."
+   "existingPolicy": null
   },
   {
    "id": "crime_data::agencies::agencies(national_sample,state)",
@@ -525,8 +526,7 @@ const DATA = {
     "build-carjacking-clearance.sql"
    ],
    "conditionalHint": null,
-   "existingPolicy": null,
-   "description": "Reads agencies from the crime_data artifact."
+   "existingPolicy": null
   },
   {
    "id": "crime_data::agency_county_crosswalk+historical_agency::agency_county_crosswalk(county_fips,county_key,ori,ori9,state)|historical_agency(agency,ori)",
@@ -608,8 +608,7 @@ const DATA = {
     "audit-geo-collisions.ts"
    ],
    "conditionalHint": "agency_county_crosswalk is absent from production hate_crime.db; availability may be conditional",
-   "existingPolicy": null,
-   "description": "Reads agency_county_crosswalk, historical_agency from the crime_data artifact."
+   "existingPolicy": null
   },
   {
    "id": "crime_data::agency_monthly+agency_population+sample_agencies::agency_monthly(count,offense,ori,year)|agency_population(ori,population,year)|sample_agencies(ori,state)",
@@ -706,8 +705,7 @@ const DATA = {
     "update-rtci-db.py"
    ],
    "conditionalHint": null,
-   "existingPolicy": null,
-   "description": "Reads agency_monthly, agency_population, sample_agencies from the crime_data artifact."
+   "existingPolicy": null
   },
   {
    "id": "crime_data::agency_monthly+agency_population::agency_monthly(agency,count,offense,ori,state,type,year)|agency_population(ori,year)",
@@ -802,8 +800,7 @@ const DATA = {
     "update-rtci-db.py"
    ],
    "conditionalHint": null,
-   "existingPolicy": null,
-   "description": "Reads agency_monthly, agency_population from the crime_data artifact."
+   "existingPolicy": null
   },
   {
    "id": "crime_data::agency_monthly::agency_monthly(year)",
@@ -846,13 +843,12 @@ const DATA = {
     "build-agency-year-reliability.ts",
     "build_db.py",
     "check-sample.py",
-    "generate-stage2b-workbook.ts",
     "live-replay.ts",
-    "replay-production-queries.js"
+    "replay-production-queries.js",
+    "structural-eval.js"
    ],
    "conditionalHint": null,
-   "existingPolicy": null,
-   "description": "Reads agency_monthly from the crime_data artifact."
+   "existingPolicy": null
   },
   {
    "id": "crime_data::historical_agency+historical_agency_clearance+historical_agency_crime+historical_staffing::historical_agency(agency,ori,state,type)|historical_agency_clearance(ori,year)|historical_agency_crime(ori,year)|historical_staffing(ori,year)",
@@ -958,8 +954,7 @@ const DATA = {
     "import_historical.py"
    ],
    "conditionalHint": null,
-   "existingPolicy": null,
-   "description": "Reads historical_agency, historical_agency_clearance, historical_agency_crime, historical_staffing from the crime_data artifact."
+   "existingPolicy": null
   },
   {
    "id": "crime_data::historical_agency+historical_agency_crime+historical_agency_population::historical_agency(agency,ori,state,type)|historical_agency_crime(murder,ori,year)|historical_agency_population(ori,year)",
@@ -1060,8 +1055,7 @@ const DATA = {
     "test_refresh_agency_populations.py"
    ],
    "conditionalHint": null,
-   "existingPolicy": null,
-   "description": "Reads historical_agency, historical_agency_crime, historical_agency_population from the crime_data artifact."
+   "existingPolicy": null
   },
   {
    "id": "crime_data::historical_agency+historical_agency_crime::historical_agency(agency,ori,state,type)|historical_agency_crime(ori,violent,year)",
@@ -1148,8 +1142,7 @@ const DATA = {
     "merge-duplicate-oris.sql"
    ],
    "conditionalHint": null,
-   "existingPolicy": null,
-   "description": "Reads historical_agency, historical_agency_crime from the crime_data artifact."
+   "existingPolicy": null
   },
   {
    "id": "crime_data::historical_agency::historical_agency(agency,ori)",
@@ -1203,8 +1196,7 @@ const DATA = {
     "check-name-mismatches.js"
    ],
    "conditionalHint": null,
-   "existingPolicy": null,
-   "description": "Reads historical_agency from the crime_data artifact."
+   "existingPolicy": null
   },
   {
    "id": "crime_data::historical_agency_crime+historical_state_national::historical_agency_crime(year)|historical_state_national(year)",
@@ -1256,8 +1248,7 @@ const DATA = {
     "import_historical.py"
    ],
    "conditionalHint": null,
-   "existingPolicy": null,
-   "description": "Reads historical_agency_crime, historical_state_national from the crime_data artifact."
+   "existingPolicy": null
   },
   {
    "id": "crime_data::historical_state_national::historical_state_national(aggravated_assault,aggravated_assault_rate,auto_theft,auto_theft_rate,burglary,burglary_rate,murder,murder_rate,population,rape,rape_rate,robbery,robbery_rate,state,theft,theft_rate,year)",
@@ -1403,8 +1394,7 @@ const DATA = {
     "nibrs-auto-update.py"
    ],
    "conditionalHint": null,
-   "existingPolicy": null,
-   "description": "Reads historical_state_national from the crime_data artifact."
+   "existingPolicy": null
   },
   {
    "id": "crime_data::historical_state_national::historical_state_national(state)",
@@ -1454,8 +1444,7 @@ const DATA = {
     "nibrs-auto-update.py"
    ],
    "conditionalHint": null,
-   "existingPolicy": null,
-   "description": "Reads historical_state_national from the crime_data artifact."
+   "existingPolicy": null
   },
   {
    "id": "crime_data::national_monthly::sweep",
@@ -1520,15 +1509,13 @@ const DATA = {
    ],
    "ownerCandidates": [
     "build_db.py",
-    "generate-stage2b-workbook.ts",
     "live-replay.ts",
     "smoke-test.py",
     "update-rtci-db.py",
     "update-rtci.py"
    ],
    "conditionalHint": null,
-   "existingPolicy": null,
-   "description": "Reads national_monthly from the crime_data artifact."
+   "existingPolicy": null
   },
   {
    "id": "hate_crime::agency_county_crosswalk+hate_crime_incidents::agency_county_crosswalk(county_fips,county_key,ori,ori9,state)|hate_crime_incidents(ori)",
@@ -1599,8 +1586,7 @@ const DATA = {
     },
     "receiptOwner": null,
     "evidence": "Both artifact states are exercised by this suite: with the crosswalk absent, entitySql (lib/metadata-coverage.ts:457) takes the SQL-less exit and the case hate_crime:metadata-agency-directory-county records terminalKind=unavailable, sealing no capability; with the crosswalk present, the same operation reaches this contract. coverage, integrity and receiptOwner remain unauthored: a directory count has no year dimension to base coverage on, no integrity rule has been decided for the crosswalk, and receipt ownership is Stage 2B."
-   },
-   "description": "Reads agency_county_crosswalk, hate_crime_incidents from the hate_crime artifact."
+   }
   },
   {
    "id": "hate_crime::hate_crime_incidents::hate_crime_incidents(ori)",
@@ -1631,8 +1617,7 @@ const DATA = {
     "import-hate-crime.py"
    ],
    "conditionalHint": null,
-   "existingPolicy": null,
-   "description": "Reads hate_crime_incidents from the hate_crime artifact."
+   "existingPolicy": null
   },
   {
    "id": "hate_crime::hate_crime_participation::hate_crime_participation(reporting_agencies,state)",
@@ -1672,8 +1657,7 @@ const DATA = {
     "live-replay.ts"
    ],
    "conditionalHint": null,
-   "existingPolicy": null,
-   "description": "Reads hate_crime_participation from the hate_crime artifact."
+   "existingPolicy": null
   },
   {
    "id": "hate_crime::hate_crime_participation::hate_crime_participation(year)",
@@ -1707,8 +1691,7 @@ const DATA = {
     "live-replay.ts"
    ],
    "conditionalHint": null,
-   "existingPolicy": null,
-   "description": "Reads hate_crime_participation from the hate_crime artifact."
+   "existingPolicy": null
   },
   {
    "id": "nibrs::agencies+agency_county_crosswalk+summary_arrestee_demographics::agencies(ori,year)|agency_county_crosswalk(county_key,ori,ori9,state)|summary_arrestee_demographics(arrestee_count,ori,race,ucr_arrest_offense,year)",
@@ -1830,8 +1813,7 @@ const DATA = {
     "validate-nibrs-prompt-sql.ts"
    ],
    "conditionalHint": "agency_county_crosswalk is absent from production hate_crime.db; availability may be conditional",
-   "existingPolicy": null,
-   "description": "Reads agencies, agency_county_crosswalk, summary_arrestee_demographics from the nibrs artifact."
+   "existingPolicy": null
   },
   {
    "id": "nibrs::agencies+agency_county_crosswalk+summary_offender_demographics::agencies(ori,year)|agency_county_crosswalk(county_key,ori,ori9,state)|summary_offender_demographics(offender_count,ori,race,ucr_offense_code,year)",
@@ -1952,8 +1934,7 @@ const DATA = {
     "nibrs-auto-update.py"
    ],
    "conditionalHint": "agency_county_crosswalk is absent from production hate_crime.db; availability may be conditional",
-   "existingPolicy": null,
-   "description": "Reads agencies, agency_county_crosswalk, summary_offender_demographics from the nibrs artifact."
+   "existingPolicy": null
   },
   {
    "id": "nibrs::agencies+agency_county_crosswalk+summary_victim_city_monthly::agencies(ori,year)|agency_county_crosswalk(county_key,ori,ori9,state)|summary_victim_city_monthly(ori,ucr_offense_code,victim_count,year)",
@@ -2067,8 +2048,7 @@ const DATA = {
     "nibrs-auto-update.py"
    ],
    "conditionalHint": "agency_county_crosswalk is absent from production hate_crime.db; availability may be conditional",
-   "existingPolicy": null,
-   "description": "Reads agencies, agency_county_crosswalk, summary_victim_city_monthly from the nibrs artifact."
+   "existingPolicy": null
   },
   {
    "id": "nibrs::agencies+agency_county_crosswalk+summary_victim_demographics::agencies(ori,year)|agency_county_crosswalk(county_key,ori,ori9,state)|summary_victim_demographics(ori,race,ucr_offense_code,victim_count,year)",
@@ -2189,8 +2169,7 @@ const DATA = {
     "nibrs-auto-update.py"
    ],
    "conditionalHint": "agency_county_crosswalk is absent from production hate_crime.db; availability may be conditional",
-   "existingPolicy": null,
-   "description": "Reads agencies, agency_county_crosswalk, summary_victim_demographics from the nibrs artifact."
+   "existingPolicy": null
   },
   {
    "id": "nibrs::agencies+agency_county_crosswalk::agencies(ori)|agency_county_crosswalk(county_fips,county_key,ori,ori9,state)",
@@ -2284,8 +2263,7 @@ const DATA = {
     "validate-nibrs-prompt-sql.ts"
    ],
    "conditionalHint": "agency_county_crosswalk is absent from production hate_crime.db; availability may be conditional",
-   "existingPolicy": null,
-   "description": "Reads agencies, agency_county_crosswalk from the nibrs artifact."
+   "existingPolicy": null
   },
   {
    "id": "nibrs::agencies+nibrs_agency_completeness+summary_city_monthly+summary_victim_city_monthly::agencies(ori,population,year)|nibrs_agency_completeness(months_reported,ori,year)|summary_city_monthly(month,offense_count,ori,ucr_offense_code,year)|summary_victim_city_monthly(ori,ucr_offense_code,victim_count,year)",
@@ -2435,8 +2413,7 @@ const DATA = {
     "nibrs-auto-update.py"
    ],
    "conditionalHint": null,
-   "existingPolicy": null,
-   "description": "Reads agencies, nibrs_agency_completeness, summary_city_monthly, summary_victim_city_monthly from the nibrs artifact."
+   "existingPolicy": null
   },
   {
    "id": "nibrs::agencies+nibrs_agency_completeness+summary_city_monthly+summary_victim_city_monthly::agencies(ori,population,year)|nibrs_agency_completeness(months_reported,ori,year)|summary_city_monthly(month,ori,year)|summary_victim_city_monthly(ori,ucr_offense_code,victim_count,year)",
@@ -2574,8 +2551,7 @@ const DATA = {
     "nibrs-auto-update.py"
    ],
    "conditionalHint": null,
-   "existingPolicy": null,
-   "description": "Reads agencies, nibrs_agency_completeness, summary_city_monthly, summary_victim_city_monthly from the nibrs artifact."
+   "existingPolicy": null
   },
   {
    "id": "nibrs::agencies+nibrs_agency_completeness+summary_city_monthly::nibrs_agency_completeness(months_reported,ori,year)|summary_city_monthly(month,offense_count,ori,ucr_offense_code,year)",
@@ -2677,8 +2653,7 @@ const DATA = {
     "nibrs-auto-update.py"
    ],
    "conditionalHint": null,
-   "existingPolicy": null,
-   "description": "Reads nibrs_agency_completeness, summary_city_monthly from the nibrs artifact. It also reads agencies while deciding what to build."
+   "existingPolicy": null
   },
   {
    "id": "nibrs::agencies+summary_clearance_type::agencies(agency_type,city,ori,population,state,year)|summary_clearance_type(cleared_by_arrest,cleared_exceptional,ori,total_offenses,ucr_offense_code,year)",
@@ -2803,8 +2778,7 @@ const DATA = {
     "nibrs-auto-update.py"
    ],
    "conditionalHint": null,
-   "existingPolicy": null,
-   "description": "Reads agencies, summary_clearance_type from the nibrs artifact."
+   "existingPolicy": null
   },
   {
    "id": "nibrs::agencies::agencies(ori)",
@@ -2868,8 +2842,7 @@ const DATA = {
     "build-carjacking-clearance.sql"
    ],
    "conditionalHint": null,
-   "existingPolicy": null,
-   "description": "Reads agencies from the nibrs artifact."
+   "existingPolicy": null
   },
   {
    "id": "nibrs::agencies::agencies(state)",
@@ -2933,8 +2906,7 @@ const DATA = {
     "build-carjacking-clearance.sql"
    ],
    "conditionalHint": null,
-   "existingPolicy": null,
-   "description": "Reads agencies from the nibrs artifact."
+   "existingPolicy": null
   },
   {
    "id": "nibrs::agencies::agencies(year)",
@@ -2998,8 +2970,7 @@ const DATA = {
     "build-carjacking-clearance.sql"
    ],
    "conditionalHint": null,
-   "existingPolicy": null,
-   "description": "Reads agencies from the nibrs artifact."
+   "existingPolicy": null
   },
   {
    "id": "nibrs::nibrs_agency_completeness+summary_arrestee_demographics::nibrs_agency_completeness(months_reported,ori,year)|summary_arrestee_demographics(arrestee_count,ori,race,ucr_arrest_offense,year)",
@@ -3098,8 +3069,7 @@ const DATA = {
     "nibrs-auto-update.py"
    ],
    "conditionalHint": null,
-   "existingPolicy": null,
-   "description": "Reads nibrs_agency_completeness, summary_arrestee_demographics from the nibrs artifact."
+   "existingPolicy": null
   },
   {
    "id": "nibrs::nibrs_agency_completeness+summary_offender_demographics::nibrs_agency_completeness(months_reported,ori,year)|summary_offender_demographics(offender_count,ori,race,ucr_offense_code,year)",
@@ -3200,8 +3170,7 @@ const DATA = {
     "replay-error-queries.ts"
    ],
    "conditionalHint": null,
-   "existingPolicy": null,
-   "description": "Reads nibrs_agency_completeness, summary_offender_demographics from the nibrs artifact."
+   "existingPolicy": null
   },
   {
    "id": "nibrs::nibrs_agency_completeness+summary_victim_city_monthly::nibrs_agency_completeness(months_reported,ori,year)|summary_victim_city_monthly(month,ori,ucr_offense_code,victim_count,year)",
@@ -3301,8 +3270,7 @@ const DATA = {
     "nibrs-auto-update.py"
    ],
    "conditionalHint": null,
-   "existingPolicy": null,
-   "description": "Reads nibrs_agency_completeness, summary_victim_city_monthly from the nibrs artifact."
+   "existingPolicy": null
   },
   {
    "id": "nibrs::nibrs_agency_completeness+summary_victim_demographics::nibrs_agency_completeness(months_reported,ori,year)|summary_victim_demographics(ori,race,ucr_offense_code,victim_count,year)",
@@ -3402,8 +3370,7 @@ const DATA = {
     "nibrs-auto-update.py"
    ],
    "conditionalHint": null,
-   "existingPolicy": null,
-   "description": "Reads nibrs_agency_completeness, summary_victim_demographics from the nibrs artifact."
+   "existingPolicy": null
   },
   {
    "id": "nibrs::nibrs_consistent_reporters+summary_arrestee_demographics::nibrs_consistent_reporters(end_year,ori,start_year)|summary_arrestee_demographics(arrestee_count,ori,race,ucr_arrest_offense,year)",
@@ -3503,8 +3470,7 @@ const DATA = {
     "validate-nibrs-prompt-sql.ts"
    ],
    "conditionalHint": null,
-   "existingPolicy": null,
-   "description": "Reads nibrs_consistent_reporters, summary_arrestee_demographics from the nibrs artifact."
+   "existingPolicy": null
   },
   {
    "id": "nibrs::nibrs_consistent_reporters+summary_offender_demographics::nibrs_consistent_reporters(end_year,ori,start_year)|summary_offender_demographics(offender_count,ori,race,ucr_offense_code,year)",
@@ -3604,8 +3570,7 @@ const DATA = {
     "nibrs-auto-update.py"
    ],
    "conditionalHint": null,
-   "existingPolicy": null,
-   "description": "Reads nibrs_consistent_reporters, summary_offender_demographics from the nibrs artifact."
+   "existingPolicy": null
   },
   {
    "id": "nibrs::nibrs_consistent_reporters+summary_victim_city_monthly::nibrs_consistent_reporters(end_year,ori,start_year)|summary_victim_city_monthly(ori,ucr_offense_code,victim_count,year)",
@@ -3699,8 +3664,7 @@ const DATA = {
     "nibrs-auto-update.py"
    ],
    "conditionalHint": null,
-   "existingPolicy": null,
-   "description": "Reads nibrs_consistent_reporters, summary_victim_city_monthly from the nibrs artifact."
+   "existingPolicy": null
   },
   {
    "id": "nibrs::nibrs_consistent_reporters+summary_victim_demographics::nibrs_consistent_reporters(end_year,ori,start_year)|summary_victim_demographics(ori,race,ucr_offense_code,victim_count,year)",
@@ -3800,8 +3764,7 @@ const DATA = {
     "nibrs-auto-update.py"
    ],
    "conditionalHint": null,
-   "existingPolicy": null,
-   "description": "Reads nibrs_consistent_reporters, summary_victim_demographics from the nibrs artifact."
+   "existingPolicy": null
   },
   {
    "id": "nibrs::rollup.national_summary_arrestee_demographics::rollup.national_summary_arrestee_demographics(age_group,arrestee_count,race,year)",
@@ -3876,8 +3839,7 @@ const DATA = {
     "test_build_nibrs_rollups.py"
    ],
    "conditionalHint": "reads a rollup.* table, which is a separately configured artifact",
-   "existingPolicy": null,
-   "description": "Reads rollup.national_summary_arrestee_demographics from the nibrs artifact."
+   "existingPolicy": null
   },
   {
    "id": "nibrs::rollup.national_summary_arrestee_demographics::rollup.national_summary_arrestee_demographics(arrestee_count,ucr_arrest_offense,year)",
@@ -3946,8 +3908,7 @@ const DATA = {
     "test_build_nibrs_rollups.py"
    ],
    "conditionalHint": "reads a rollup.* table, which is a separately configured artifact",
-   "existingPolicy": null,
-   "description": "Reads rollup.national_summary_arrestee_demographics from the nibrs artifact."
+   "existingPolicy": null
   },
   {
    "id": "nibrs::rollup.state_summary_arrestee_demographics::rollup.state_summary_arrestee_demographics(age_group,arrestee_count,race,state,year)",
@@ -4025,8 +3986,7 @@ const DATA = {
     "test_build_nibrs_rollups.py"
    ],
    "conditionalHint": "reads a rollup.* table, which is a separately configured artifact",
-   "existingPolicy": null,
-   "description": "Reads rollup.state_summary_arrestee_demographics from the nibrs artifact."
+   "existingPolicy": null
   },
   {
    "id": "nibrs::summary_clearance_detail::summary_clearance_detail(cleared_A,cleared_B,cleared_C,cleared_D,cleared_E,cleared_by_arrest,state,total_offenses,ucr_offense_code,year)",
@@ -4138,8 +4098,7 @@ const DATA = {
     "test_build_nibrs_rollups.py"
    ],
    "conditionalHint": null,
-   "existingPolicy": null,
-   "description": "Reads summary_clearance_detail from the nibrs artifact."
+   "existingPolicy": null
   },
   {
    "id": "nibrs::summary_clearance_type::summary_clearance_type(cleared_by_arrest,cleared_exceptional,ori,total_offenses,ucr_offense_code,year)",
@@ -4228,8 +4187,7 @@ const DATA = {
     "test_build_nibrs_rollups.py"
    ],
    "conditionalHint": null,
-   "existingPolicy": null,
-   "description": "Reads summary_clearance_type from the nibrs artifact."
+   "existingPolicy": null
   },
   {
    "id": "nibrs::summary_juvenile_offender_incidents::summary_juvenile_offender_incidents(incident_count,offense_scope,state,year)",
@@ -4303,8 +4261,7 @@ const DATA = {
     "test_build_juvenile_offender_incident_summary.py"
    ],
    "conditionalHint": null,
-   "existingPolicy": null,
-   "description": "Reads summary_juvenile_offender_incidents from the nibrs artifact."
+   "existingPolicy": null
   },
   {
    "id": "nibrs::summary_victim_circumstance+summary_victim_state_monthly::summary_victim_circumstance(circumstance_code,state,ucr_offense_code,victim_count,year)|summary_victim_state_monthly(state,ucr_offense_code,victim_count,year)",
@@ -4410,8 +4367,7 @@ const DATA = {
     "replay-query-log.ts"
    ],
    "conditionalHint": null,
-   "existingPolicy": null,
-   "description": "Reads summary_victim_circumstance, summary_victim_state_monthly from the nibrs artifact."
+   "existingPolicy": null
   },
   {
    "id": "shr::agency_county_crosswalk+incidents::agency_county_crosswalk(county_fips,county_key,ori,state)|incidents(ori)",
@@ -4472,8 +4428,7 @@ const DATA = {
     "validate-nibrs-prompt-sql.ts"
    ],
    "conditionalHint": "agency_county_crosswalk is absent from production hate_crime.db; availability may be conditional",
-   "existingPolicy": null,
-   "description": "Reads agency_county_crosswalk, incidents from the shr artifact."
+   "existingPolicy": null
   },
   {
    "id": "shr::incidents+shr_agency_alias+shr_agency_identity+victims::incidents(homicide_type,id,ori,weapon_group,year)|victims(incident_id)",
@@ -4546,8 +4501,7 @@ const DATA = {
     "build_vccd.py"
    ],
    "conditionalHint": null,
-   "existingPolicy": null,
-   "description": "Reads incidents, victims from the shr artifact. It also reads shr_agency_alias, shr_agency_identity while deciding what to build."
+   "existingPolicy": null
   },
   {
    "id": "shr::incidents::incidents(ori)",
@@ -4587,8 +4541,7 @@ const DATA = {
     "build-victim-circumstance-clearance-demo.sql"
    ],
    "conditionalHint": null,
-   "existingPolicy": null,
-   "description": "Reads incidents from the shr artifact."
+   "existingPolicy": null
   },
   {
    "id": "shr::incidents::incidents(state)",
@@ -4628,8 +4581,7 @@ const DATA = {
     "build-victim-circumstance-clearance-demo.sql"
    ],
    "conditionalHint": null,
-   "existingPolicy": null,
-   "description": "Reads incidents from the shr artifact."
+   "existingPolicy": null
   },
   {
    "id": "shr::incidents::incidents(year)",
@@ -4669,8 +4621,7 @@ const DATA = {
     "build-victim-circumstance-clearance-demo.sql"
    ],
    "conditionalHint": null,
-   "existingPolicy": null,
-   "description": "Reads incidents from the shr artifact."
+   "existingPolicy": null
   }
  ],
  "authored": {
@@ -4686,8 +4637,292 @@ const DATA = {
   }
  }
 };
-/* Decisions live only in this page's memory until you press Export. Nothing here can reach the
-   repository, a database, or any flag: the sole output is a downloaded file. */
+/* Your answers live only in this page's memory until you press Export. Nothing here can reach the
+   repository, a database, or any switch: the sole output is a downloaded file. */
+
+/**
+ * Turns a capability's OBSERVED structure into questions a policy owner can answer.
+ *
+ * Plain browser-compatible JavaScript, inlined verbatim into the workbook and imported by the
+ * importer and the regression suite, so the page's proposal and the boundary's expectation are
+ * computed by the same code and cannot drift.
+ *
+ * THE RULE THIS FILE EXISTS TO ENFORCE: a human answer is never silently translated into technical
+ * policy. Everything here PROPOSES; the proposal is shown, and it becomes policy only when the
+ * person confirms that specific proposal. Nothing here decides, and nothing here is pre-selected --
+ * a recommendation that arrived already chosen would be an inference wearing a human's signature.
+ *
+ * Descriptions are derived from names, so they are approximations of meaning and are labelled as
+ * such. The exact tables and columns are always one disclosure away, because the derivation is a
+ * convenience and the structure is the fact.
+ */
+function createStage2bPlainLanguage() {
+  const UNSURE = "unsure";
+
+  /** What each artifact is, in the words someone asking a question would use. */
+  const ARTIFACTS = {
+    crime_data: "recent crime trends and the long-running FBI series",
+    nibrs: "detailed incident-level FBI data (NIBRS)",
+    shr: "homicide records (the Supplementary Homicide Reports)",
+    hate_crime: "hate crime records",
+  };
+
+  /**
+   * The update processes a policy owner would recognise, per artifact.
+   *
+   * Labels, not filenames: "who keeps this fresh" is answered by naming a process, and a policy
+   * owner knows the monthly update, not `update-rtci.py`. The candidate filenames stay visible as
+   * evidence under technical details, where they are what they actually are -- a filename search.
+   */
+  const PROCESSES = {
+    crime_data: [
+      "The monthly crime-trends update",
+      "The historical FBI series load",
+      "The agency population refresh",
+    ],
+    nibrs: [
+      "The annual NIBRS rebuild",
+      "The NIBRS summary and rollup build",
+    ],
+    shr: ["The homicide (SHR) import"],
+    hate_crime: ["The hate crime import"],
+  };
+
+  const WORDS = {
+    agency: "agency", agencies: "agencies", monthly: "monthly", victim: "victim", victims: "victim",
+    state: "state", city: "city", national: "national", population: "population",
+    clearance: "case-clearance", arrestee: "arrestee", offender: "offender",
+    demographics: "demographics", incidents: "incidents", incident: "incident",
+    circumstance: "circumstance", juvenile: "juvenile", crosswalk: "county lookup",
+    completeness: "reporting completeness", consistent: "consistent-reporter", reporters: "list",
+    sample: "sample", staffing: "police staffing", crime: "crime", participation: "participation",
+    detail: "detail", type: "type", summary: "counts", carjacking: "carjacking",
+  };
+
+  /** A readable phrase for a table name. An approximation of meaning, never a substitute for it. */
+  function tablePhrase(table) {
+    const bare = String(table).replace(/^rollup\./, "").replace(/^(summary|historical)_/, "");
+    const words = bare.split("_").map((w) => WORDS[w] || w).filter(Boolean);
+    return words.join(" ");
+  }
+
+  /** The user-facing question this capability answers, in ordinary language. */
+  function describeQuestion(cap) {
+    const subject = cap.reads.map(tablePhrase).join(", ");
+    const where = ARTIFACTS[cap.artifact] || cap.artifact;
+    return "When someone asks about " + where + ", this is the lookup that answers using "
+      + (subject || "no data") + ".";
+  }
+
+  /**
+   * The coverage question, asked as a question about the ANSWER rather than about a column.
+   *
+   * The recommendation comes from an observation -- some column this capability reads is named like
+   * a year -- and says so. Every column stays reachable under technical details, because a year
+   * column whose name the pattern missed must not become unanswerable, and because the mark is a
+   * hint and hints are wrong sometimes.
+   */
+  function recommendedYearColumn(cap) {
+    const marked = cap.coverageCandidates.filter((o) => o.yearBearing);
+    if (marked.length === 0) return null;
+    // Prefer a column on the first emitted table, so the basis sits on what the answer is read from.
+    const primary = marked.find((o) => o.table === cap.reads[0]);
+    return primary || marked[0];
+  }
+
+  function coverageOptions(cap) {
+    const recommended = recommendedYearColumn(cap);
+    const options = [];
+    if (recommended) {
+      options.push({
+        value: "years",
+        label: "Yes — the data records which year each record belongs to",
+        consequence: "If someone asks about years this data does not cover, the answer can say so"
+          + " instead of returning a confident number.",
+        recommended: true,
+        why: "Observed: this lookup reads a column named " + recommended.table + "." + recommended.yearColumn
+          + ", which is named like a year. That it is named like a year is a fact about the name, not"
+          + " a check that it holds years — which is why you are being asked.",
+      });
+    }
+    options.push({
+      value: "no-years",
+      label: "No — this answer is not about a time period",
+      consequence: "No year check will be run for this lookup, and nothing will claim one was.",
+      recommended: !recommended,
+      why: recommended
+        ? "Choose this if the column named like a year is not what the answer is bounded by."
+        : "Observed: no column this lookup reads is named like a year, so there may be nothing to bound.",
+    });
+    options.push({
+      value: UNSURE,
+      label: "I'm not sure",
+      consequence: "Recorded as undecided. Nothing is assumed, and this lookup stays unauthorised.",
+      recommended: false,
+      why: "Leaving it open is a real answer; a guess recorded as a decision is not.",
+    });
+    return options;
+  }
+
+  /**
+   * Integrity asked as a scenario, because "what integrity rule applies" is not a question anyone
+   * can answer cold. Each choice becomes a sentence in the record; none becomes an executable check,
+   * and the workbook never asks for one.
+   */
+  function integrityScenarios(cap) {
+    const first = cap.reads[0] ? tablePhrase(cap.reads[0]) : "this data";
+    const scenarios = [
+      {
+        value: "stale",
+        label: "It quietly stops being updated, but still looks current",
+        prose: "The " + first + " must not stop advancing while still appearing current: if the source has newer data, this must too.",
+      },
+      {
+        value: "missing",
+        label: "Some agencies or places are missing without saying so",
+        prose: "Coverage of " + first + " must not silently lose agencies or places; a smaller answer must be explainable.",
+      },
+      {
+        value: "double",
+        label: "The same event is counted more than once",
+        prose: "Records in " + first + " must not double-count the same event.",
+      },
+    ];
+    if (cap.reads.length > 1) {
+      scenarios.push({
+        value: "disagree",
+        label: "Two parts of this data disagree when they should match",
+        prose: cap.reads.map(tablePhrase).join(" and ") + " must agree where they overlap.",
+      });
+    }
+    return scenarios;
+  }
+
+  function availabilityOptions() {
+    return [
+      { value: "always", label: "Always — it should be there every time",
+        consequence: "If it is ever missing, that is treated as a fault worth reporting." },
+      { value: "sometimes", label: "Sometimes — there are situations where it is legitimately absent",
+        consequence: "When it is absent for the reason you give, that is expected rather than a fault." },
+      { value: UNSURE, label: "I'm not sure",
+        consequence: "Recorded as undecided. Nothing is assumed about whether absence is a fault." },
+    ];
+  }
+
+  function ownerOptions(cap) {
+    const processes = PROCESSES[cap.artifact] || [];
+    return processes.map((label) => ({ value: label, label: label }))
+      .concat([{ value: "other", label: "Another process — name it" },
+        { value: UNSURE, label: "I'm not sure" }]);
+  }
+
+  function blankAnswer() {
+    return {
+      coverage: null, coverageColumn: null, coverageReason: "",
+      integrity: [], integrityOther: "", integrityUnsure: false,
+      availability: null, availabilityWhen: "",
+      owner: null, ownerOther: "",
+      evidence: "",
+    };
+  }
+
+  const answered = (human) => !!human && (human.coverage !== null || human.availability !== null
+    || human.owner !== null || (human.integrity || []).length > 0 || human.integrityUnsure
+    || String(human.integrityOther || "").trim() !== "" || String(human.evidence || "").trim() !== "");
+
+  /**
+   * The technical policy a set of human answers WOULD produce.
+   *
+   * Returned for display and confirmation, never applied. "I'm not sure" produces null, which is the
+   * fail-closed value: recorded as asked-and-open, authorising nothing.
+   */
+  function proposeMapping(cap, human) {
+    const h = human || blankAnswer();
+    const proposed = { coverage: null, integrity: null, availability: null, receiptOwner: null, evidence: h.evidence || "" };
+    const unresolved = [];
+
+    if (h.coverage === "years") {
+      const chosen = h.coverageColumn
+        ? cap.coverageCandidates.find((o) => o.table === h.coverageColumn.table && o.yearColumn === h.coverageColumn.yearColumn)
+        : recommendedYearColumn(cap);
+      if (chosen) {
+        proposed.coverage = { kind: "column", table: chosen.table, yearColumn: chosen.yearColumn };
+        // An unmarked column chosen deliberately still has to say why; the sentence is the person's.
+        if (!chosen.yearBearing) {
+          proposed.coverage.justification = String(h.coverageReason || "").trim();
+        }
+      } else unresolved.push("coverage");
+    } else if (h.coverage === "no-years") {
+      proposed.coverage = { kind: "none", reason: String(h.coverageReason || "").trim() };
+    } else unresolved.push("coverage");
+
+    const rules = [];
+    const catalog = integrityScenarios(cap);
+    for (const value of h.integrity || []) {
+      const scenario = catalog.find((s) => s.value === value);
+      if (scenario) rules.push(scenario.prose);
+    }
+    if (String(h.integrityOther || "").trim()) rules.push(String(h.integrityOther).trim());
+    if (rules.length && !h.integrityUnsure) proposed.integrity = rules;
+    else unresolved.push("integrity");
+
+    if (h.availability === "always") proposed.availability = { kind: "always" };
+    else if (h.availability === "sometimes") {
+      proposed.availability = { kind: "conditional", condition: String(h.availabilityWhen || "").trim() };
+    } else unresolved.push("availability");
+
+    if (h.owner === "other") {
+      const named = String(h.ownerOther || "").trim();
+      if (named) proposed.receiptOwner = named; else unresolved.push("receiptOwner");
+    } else if (h.owner && h.owner !== UNSURE) proposed.receiptOwner = h.owner;
+    else unresolved.push("receiptOwner");
+
+    return { proposed: proposed, unresolved: unresolved };
+  }
+
+  /**
+   * A stable digest of a proposal, so a confirmation can be tied to the EXACT mapping confirmed.
+   *
+   * FNV-1a over canonical JSON: deterministic, dependency-free, and identical in the page and at
+   * the boundary. It detects a changed proposal, which is all it is asked to do -- if the human
+   * answer moves after the mapping was confirmed, the confirmation no longer matches and the
+   * importer refuses it as stale rather than importing a mapping nobody looked at.
+   */
+  function canonical(proposed) {
+    const p = proposed || {};
+    return JSON.stringify([p.coverage ?? null, p.integrity ?? null, p.availability ?? null,
+      p.receiptOwner ?? null, p.evidence || ""]);
+  }
+  function mappingFingerprint(proposed) {
+    const text = canonical(proposed);
+    let hash = 0x811c9dc5;
+    for (let i = 0; i < text.length; i++) {
+      hash ^= text.charCodeAt(i);
+      hash = (hash + ((hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24))) >>> 0;
+    }
+    return ("0000000" + hash.toString(16)).slice(-8);
+  }
+
+  return {
+    UNSURE: UNSURE,
+    tablePhrase: tablePhrase,
+    describeQuestion: describeQuestion,
+    recommendedYearColumn: recommendedYearColumn,
+    coverageOptions: coverageOptions,
+    integrityScenarios: integrityScenarios,
+    availabilityOptions: availabilityOptions,
+    ownerOptions: ownerOptions,
+    blankAnswer: blankAnswer,
+    isAnswered: answered,
+    proposeMapping: proposeMapping,
+    mappingFingerprint: mappingFingerprint,
+  };
+}
+
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = { createStage2bPlainLanguage: createStage2bPlainLanguage };
+}
+
 
 /**
  * The Stage 2B workbook's decision state, as one testable unit.
@@ -4698,221 +4933,148 @@ const DATA = {
  * could do was match its text -- and sixteen text assertions passed over a page that threw a
  * SyntaxError on load and rendered nothing. Text matching cannot see behaviour; this can be called.
  *
- * It owns no DOM. The page is a thin binding over these functions: read fields, call update, render
- * what comes back. Nothing here can reach the repository, a database, or any flag.
+ * WHAT IS STORED IS THE HUMAN ANSWER. The technical policy is DERIVED from it, shown, and applied
+ * only after the person confirms that exact derivation. Storing the technical form instead would
+ * make the translation invisible: the record would show a coverage basis nobody chose in those
+ * terms, and no later reader could tell what question had actually been answered.
+ *
+ * It owns no DOM. Nothing here can reach the repository, a database, or any flag.
  */
-function createStage2bSession(DATA) {
+function createStage2bSession(DATA, plainLanguage) {
+  const PL = plainLanguage || createStage2bPlainLanguage();
   const clone = (value) => (value === null || value === undefined ? null : JSON.parse(JSON.stringify(value)));
-  const FIELDS = ["coverage", "integrity", "availability", "receiptOwner"];
+  const POLICY_FIELDS = ["coverage", "integrity", "availability", "receiptOwner"];
 
-  function blank() {
-    return { coverage: null, integrity: null, availability: null, receiptOwner: null, evidence: "" };
-  }
-
-  /** Field order and null-normalisation fixed here so two equal decisions always serialise equal. */
-  function normalize(d) {
-    return {
-      coverage: d.coverage === undefined ? null : d.coverage,
-      integrity: d.integrity === undefined ? null : d.integrity,
-      availability: d.availability === undefined ? null : d.availability,
-      receiptOwner: d.receiptOwner === undefined ? null : d.receiptOwner,
-      evidence: d.evidence || "",
-    };
-  }
-  const same = (a, b) => JSON.stringify(a === null ? null : normalize(a)) === JSON.stringify(b === null ? null : normalize(b));
-
-  const decisions = {};
-  /**
-   * What the policy source held for each capability when this session began.
-   *
-   * Exported alongside the change set so the importer can tell "I am changing an entry that still
-   * looks the way I found it" from "someone else has since changed it". Without it, importing an
-   * older session silently overwrites newer policy, and there is no record that it happened.
-   */
-  const baseline = {};
-  /**
-   * What the REPOSITORY held, fixed for the life of the page and never written to.
-   *
-   * `baseline` is per-session and a load may legitimately adopt the one a file was authored
-   * against. That made it stale-able across successive loads: loading a session authored against an
-   * older policy moved `baseline`, and loading a second, empty session then reset the decisions but
-   * left the moved baseline in place -- so the older value was restored, reported clean, and
-   * exported nothing. Every load now resets BOTH from this, before applying the file.
-   */
-  const repositoryBaseline = {};
+  const human = {};
+  const confirmed = {};
   const withdrawn = {};
   const capabilityById = {};
+  /**
+   * What the policy source held when this session began, and an immutable copy of it.
+   *
+   * `baseline` may legitimately be replaced by the one a loaded file was authored against, which
+   * made it stale-able: loading an older session moved it, and a second, empty load then restored
+   * the moved value instead of the repository's. Every load resets both from `repositoryBaseline`.
+   */
+  const baseline = {};
+  const repositoryBaseline = {};
   for (const cap of DATA.capabilities) {
     capabilityById[cap.id] = cap;
     const prior = DATA.authored[cap.id] ? clone(DATA.authored[cap.id]) : null;
-    repositoryBaseline[cap.id] = prior ? normalize(prior) : null;
-    baseline[cap.id] = prior ? normalize(prior) : null;
-    decisions[cap.id] = prior ? normalize(prior) : blank();
+    repositoryBaseline[cap.id] = prior;
+    baseline[cap.id] = clone(prior);
+    human[cap.id] = PL.blankAnswer();
+    confirmed[cap.id] = null;
   }
 
   let dirty = false;
 
-  const undecidedFields = (d) => FIELDS.filter((f) => d[f] === null || d[f] === undefined);
+  /** The technical policy these answers WOULD produce. Never applied by anything here. */
+  function proposal(id) { return PL.proposeMapping(capabilityById[id], human[id]); }
+  function fingerprintOf(id) { return PL.mappingFingerprint(proposal(id).proposed); }
 
   /**
-   * A coverage basis on a column whose NAME does not look year-bearing must say why.
+   * A confirmation is tied to the EXACT proposal confirmed, so it expires by itself.
    *
-   * The naming heuristic never blocks the honest answer -- every readable column stays selectable,
-   * because a year column the pattern failed to recognise would otherwise be unreachable. But
-   * `agencies.national_sample` must not become a coverage basis through one casual click, so the
-   * unmarked choice costs a sentence. The importer enforces the same rule independently; this is
-   * where the person is told about it, not where it is guaranteed.
+   * Storing a boolean would have let an answer change after the mapping was approved and carried
+   * the approval along with it -- the person would have confirmed one translation and exported
+   * another. Comparing fingerprints means any edit that changes the proposal silently un-confirms
+   * it, and the page says so.
    */
-  function coverageNeedsJustification(capId, coverage) {
-    if (!coverage || coverage.kind !== "column") return false;
-    const cap = capabilityById[capId];
-    if (!cap) return false;
-    const candidate = cap.coverageCandidates.find(
-      (o) => o.table === coverage.table && o.yearColumn === coverage.yearColumn);
-    return !!candidate && !candidate.yearBearing;
+  function isMappingConfirmed(id) { return confirmed[id] !== null && confirmed[id] === fingerprintOf(id); }
+  function confirmMapping(id) {
+    if (!PL.isAnswered(human[id])) return false;
+    confirmed[id] = fingerprintOf(id);
+    dirty = true;
+    return true;
   }
 
-  function coverageProblem(capId, coverage) {
-    if (!coverage) return null;
-    if (coverage.kind === "none") {
-      return String(coverage.reason || "").trim() ? null : "state why this capability has no year dimension";
+  /** Answers that cannot yet be turned into a coherent mapping. Same rules the importer applies. */
+  function problems(id) {
+    const cap = capabilityById[id], h = human[id], found = [];
+    if (h.coverage === "no-years" && !String(h.coverageReason || "").trim()) {
+      found.push("say why this answer is not about a time period");
     }
-    if (coverage.kind !== "column") return "coverage must name a column or state that there is no year dimension";
-    if (coverageNeedsJustification(capId, coverage) && !String(coverage.justification || "").trim()) {
-      return coverage.table + "." + coverage.yearColumn + " does not look year-bearing; say why it is the coverage basis";
+    if (h.coverage === "years" && h.coverageColumn) {
+      const chosen = cap.coverageCandidates.find(
+        (o) => o.table === h.coverageColumn.table && o.yearColumn === h.coverageColumn.yearColumn);
+      if (chosen && !chosen.yearBearing && !String(h.coverageReason || "").trim()) {
+        found.push("that column is not named like a year, so say why it is the right basis");
+      }
     }
-    return null;
-  }
-
-  /**
-   * Everything wrong with what is currently authored, by the SAME rules the importer applies.
-   *
-   * "All fields non-null plus some evidence" was a weaker test than the boundary's, so the page
-   * cheerfully reported a capability Complete while its coverage carried no reason and its
-   * conditional availability carried no condition -- a count that told the author they were finished
-   * with an entry the importer would refuse.
-   */
-  function problems(capId) {
-    const d = decisions[capId];
-    const found = [];
-    const coverage = coverageProblem(capId, d.coverage);
-    if (coverage) found.push(coverage);
-    if (d.availability && d.availability.kind === "conditional" && !String(d.availability.condition || "").trim()) {
-      found.push("a conditional availability must state its condition");
+    if (h.availability === "sometimes" && !String(h.availabilityWhen || "").trim()) {
+      found.push("say when it is legitimately absent");
     }
-    if (d.availability && d.availability.kind !== "conditional" && d.availability.kind !== "always") {
-      found.push("availability must be always or conditional");
-    }
-    if (d.integrity !== null && (!Array.isArray(d.integrity) || d.integrity.length === 0)) {
-      found.push("integrity must list at least one rule; an empty list states no rule");
-    }
-    if (d.evidence && String(d.evidence).trim().length <= 20 && undecidedFields(d).length === 0) {
-      found.push("evidence must cite what the authored values rest on");
+    if (h.owner === "other" && !String(h.ownerOther || "").trim()) found.push("name the process");
+    if (PL.isAnswered(h) && String(h.evidence || "").trim().length <= 20) {
+      found.push("say what these answers rest on");
     }
     return found;
   }
 
-  /** Every question answered, well formed, and cited. NOT the same as authorizing. */
-  function isComplete(capId) {
-    const d = decisions[capId];
-    return undecidedFields(d).length === 0
-      && String(d.evidence || "").trim().length > 20
-      && problems(capId).length === 0;
+  /** Answered throughout, coherent, cited, and with the technical mapping confirmed. */
+  function isComplete(id) {
+    const p = proposal(id);
+    return p.unresolved.length === 0 && problems(id).length === 0 && isMappingConfirmed(id);
   }
 
-  /**
-   * Whether every rule is written in the BOUND SHAPE. Not whether anything can run it.
-   *
-   * Deliberately not called `integrityIsBound` any more, and deliberately not consulted by anything
-   * that decides authority: no integrity rule is executable, in either form, so the page must not
-   * imply that reaching this shape buys something. `lib/capability-policy.ts` holds the predicate
-   * that decides, and it answers false for every input.
-   */
-  function integrityIsInBoundShape(integrity) {
-    return Array.isArray(integrity) && integrity.length > 0 && integrity.every((rule) =>
-      rule && typeof rule === "object" && !Array.isArray(rule)
-      && String(rule.rule || "").trim() !== "" && String(rule.boundTo || "").trim() !== "");
-  }
-
-  /**
-   * The rules a person can edit as text, and the bound ones they cannot.
-   *
-   * The page renders integrity into a textarea and re-parses it on EVERY field edit. With bound
-   * rules in the list that round trip was destructive twice over: `join` rendered an object as
-   * "[object Object]", and the next keystroke anywhere on the card -- an owner, a coverage answer,
-   * a word of evidence -- parsed that string back as a draft rule and overwrote the binding. So the
-   * textarea carries prose only, bound rules are shown separately and left alone, and re-authoring
-   * the drafts cannot reach them.
-   */
-  const boundRules = (integrity) => (Array.isArray(integrity) ? integrity.filter((r) => r && typeof r === "object") : []);
-  const draftRules = (integrity) => (Array.isArray(integrity) ? integrity.filter((r) => typeof r === "string") : []);
-
-  /** Replace ONLY the prose rules, preserving every bound rule exactly where it was. */
-  function setIntegrityDrafts(id, lines) {
-    const kept = boundRules(decisions[id].integrity);
-    const drafts = (lines || []).map((s) => String(s).trim()).filter(Boolean);
-    const combined = kept.concat(drafts);
-    return update(id, { integrity: combined.length ? combined : null });
-  }
-
-  /** Applies a patch, reporting whether anything actually changed. Rendering must not mark dirty. */
   function update(id, patch) {
-    const d = decisions[id];
-    if (!d) return false;
-    const before = JSON.stringify(normalize(d));
-    for (const key of Object.keys(patch)) d[key] = patch[key];
-    const changed = JSON.stringify(normalize(d)) !== before;
+    const before = JSON.stringify(human[id]);
+    for (const key of Object.keys(patch)) human[id][key] = patch[key];
+    const changed = JSON.stringify(human[id]) !== before;
     if (changed) { dirty = true; delete withdrawn[id]; }
     return changed;
   }
 
-  /**
-   * Withdrawing authored policy is a NAMED act, never inferred from empty fields.
-   *
-   * Clearing every field used to be read as deletion at the importer, while the page offered only
-   * "Undecided" and no confirmation -- so the gesture that means "I have not decided this yet" and
-   * the gesture that means "remove what was decided" were the same gesture, and the destructive
-   * reading was the one that won.
-   */
-  function canWithdraw(id) { return baseline[id] !== null && baseline[id] !== undefined; }
-  function withdraw(id) {
-    if (!canWithdraw(id)) return false;
-    withdrawn[id] = true;
-    decisions[id] = blank();
-    dirty = true;
-    return true;
-  }
-  const isWithdrawn = (id) => withdrawn[id] === true;
-
   function counts() {
-    const c = { coverage: 0, integrity: 0, availability: 0, receiptOwner: 0, complete: 0, problems: 0 };
+    const c = { coverage: 0, integrity: 0, availability: 0, receiptOwner: 0, complete: 0, problems: 0, unconfirmed: 0 };
     for (const cap of DATA.capabilities) {
-      const d = decisions[cap.id];
-      for (const f of FIELDS) if (d[f] === null) c[f] += 1;
+      const p = proposal(cap.id);
+      for (const f of POLICY_FIELDS) if (p.unresolved.indexOf(f) >= 0) c[f] += 1;
       if (isComplete(cap.id)) c.complete += 1;
       if (problems(cap.id).length) c.problems += 1;
+      if (PL.isAnswered(human[cap.id]) && !isMappingConfirmed(cap.id)) c.unconfirmed += 1;
     }
     return c;
   }
 
   /**
-   * Only what this session actually changed.
+   * Withdrawing authored policy is a NAMED act, never inferred from empty fields.
    *
-   * A full snapshot was not merely verbose: the importer rebuilds the policy file from what it
-   * receives, so an omitted entry is a DELETED entry and an old snapshot silently reverts newer
-   * work. A change set plus a per-entry baseline can be merged, and a merge that would clobber
-   * someone else's newer answer can be refused by name.
+   * Clearing every answer used to be read as deletion at the importer, while the page offered only
+   * "not sure" and no confirmation -- so "I have not decided this" and "remove what was decided"
+   * were the same gesture, and the destructive reading won.
+   */
+  function canWithdraw(id) { return baseline[id] !== null && baseline[id] !== undefined; }
+  function withdraw(id) {
+    if (!canWithdraw(id)) return false;
+    withdrawn[id] = true;
+    human[id] = PL.blankAnswer();
+    confirmed[id] = null;
+    dirty = true;
+    return true;
+  }
+  const isWithdrawn = (id) => withdrawn[id] === true;
+
+  /**
+   * Only what this session changed, carrying the human answer AND the mapping it proposes.
+   *
+   * Both, always. The human answer is the decision and the record of what was actually asked; the
+   * proposal is what the importer will write. Exporting only one of them would either hide the
+   * translation or lose the question it answered.
    */
   function changeSet() {
     const out = {};
-    for (const id of Object.keys(decisions).sort()) {
+    for (const id of Object.keys(human).sort()) {
       if (withdrawn[id]) { out[id] = { operation: "withdraw" }; continue; }
-      const d = normalize(decisions[id]);
-      const untouched = d.coverage === null && d.integrity === null && d.availability === null
-        && d.receiptOwner === null && String(d.evidence).trim() === "";
-      if (baseline[id] === null && untouched) continue;
-      if (baseline[id] !== null && same(decisions[id], baseline[id])) continue;
-      out[id] = d;
+      if (!PL.isAnswered(human[id])) continue;
+      const p = proposal(id);
+      out[id] = {
+        human: clone(human[id]),
+        proposed: p.proposed,
+        unresolved: p.unresolved.slice(),
+        mappingConfirmed: isMappingConfirmed(id) ? confirmed[id] : null,
+      };
     }
     return out;
   }
@@ -4920,7 +5082,7 @@ function createStage2bSession(DATA) {
   function serialize() {
     const changed = changeSet();
     const basedOn = {};
-    for (const id of Object.keys(changed)) basedOn[id] = baseline[id] === null ? null : normalize(baseline[id]);
+    for (const id of Object.keys(changed)) basedOn[id] = baseline[id] === null ? null : clone(baseline[id]);
     return JSON.stringify({ v: DATA.v, fingerprint: DATA.fingerprint, decisions: changed, basedOn }, null, 2) + "\n";
   }
 
@@ -4929,13 +5091,9 @@ function createStage2bSession(DATA) {
    *
    * Merging looked harmless and was not: unrelated edits made in this tab survived the load and were
    * then marked clean along with the file's, so an export afterwards carried work the author never
-   * saw on screen and had no reason to believe was still there. Loading over unsaved work now
-   * requires saying so.
-   *
-   * A session authored against a DIFFERENT registry structure applies nothing at all. Warning and
-   * then copying the decisions anyway was worse than either alternative: the next export stamped
-   * them with the CURRENT fingerprint, so answers to questions that no longer exist arrived at the
-   * importer wearing a fingerprint that made them look freshly authored.
+   * saw on screen. A session authored against a DIFFERENT registry structure applies nothing at all
+   * -- warning and copying anyway meant the next export stamped those answers with the CURRENT
+   * fingerprint, and the check that refused the file accepted its laundered copy.
    */
   function loadSession(parsed, options) {
     const opts = options || {};
@@ -4945,8 +5103,7 @@ function createStage2bSession(DATA) {
     }
     if (parsed.fingerprint !== DATA.fingerprint) {
       return {
-        ok: false,
-        stale: true,
+        ok: false, stale: true,
         reason: "That session was authored against a different registry structure (" + String(parsed.fingerprint)
           + " vs " + DATA.fingerprint + "), so the questions themselves may have changed. Nothing was loaded."
           + " Re-answer against this workbook rather than carrying the old answers across.",
@@ -4954,33 +5111,32 @@ function createStage2bSession(DATA) {
     }
     if (dirty && !opts.discardUnsaved) {
       return {
-        ok: false,
-        needsConfirmation: true,
+        ok: false, needsConfirmation: true,
         reason: "This tab has unsaved changes. Loading a session replaces everything on screen with"
           + " the file's contents. Export first, or confirm to discard what is unsaved.",
       };
     }
 
-    // Complete replacement: every capability returns to what the policy source held, then the file
-    // is applied over it. Nothing from the previous session survives unseen.
-    for (const id of Object.keys(decisions)) {
-      baseline[id] = repositoryBaseline[id] === null ? null : clone(repositoryBaseline[id]);
-      decisions[id] = baseline[id] ? normalize(baseline[id]) : blank();
+    for (const id of Object.keys(human)) {
+      baseline[id] = clone(repositoryBaseline[id]);
+      human[id] = PL.blankAnswer();
+      confirmed[id] = null;
       delete withdrawn[id];
     }
     const incoming = parsed.decisions || {};
     const unknown = [];
     let applied = 0;
     for (const id of Object.keys(incoming)) {
-      if (!decisions[id]) { unknown.push(id); continue; }
-      if (incoming[id] && incoming[id].operation === "withdraw") {
-        withdrawn[id] = true;
-        decisions[id] = blank();
-      } else {
-        decisions[id] = normalize(Object.assign(blank(), incoming[id]));
+      if (!human[id]) { unknown.push(id); continue; }
+      const entry = incoming[id] || {};
+      if (entry.operation === "withdraw") { withdrawn[id] = true; }
+      else {
+        human[id] = Object.assign(PL.blankAnswer(), entry.human || {});
+        // A confirmation only survives if it still matches what these answers propose NOW.
+        confirmed[id] = entry.mappingConfirmed || null;
       }
       if (parsed.basedOn && Object.prototype.hasOwnProperty.call(parsed.basedOn, id)) {
-        baseline[id] = parsed.basedOn[id] === null ? null : normalize(parsed.basedOn[id]);
+        baseline[id] = parsed.basedOn[id] === null ? null : clone(parsed.basedOn[id]);
       }
       applied += 1;
     }
@@ -4990,77 +5146,60 @@ function createStage2bSession(DATA) {
 
   /** Which capabilities a cluster application would touch, and what it would cost them. */
   function clusterPlan(id) {
-    const cap = capabilityById[id], d = decisions[id];
+    const cap = capabilityById[id];
     const targets = cap.tableCluster.length ? cap.tableCluster.slice() : cap.artifactCluster.slice();
-    const scope = cap.tableCluster.length ? "the same table set" : "the same artifact";
-    const fields = FIELDS.filter((f) => d[f] !== null);
-    const detail = targets.map((t) => {
-      const target = capabilityById[t];
-      const copyable = fields.filter((f) => f !== "coverage" || coverageFits(target, d.coverage));
-      const overwrites = copyable.filter((f) => decisions[t][f] !== null && JSON.stringify(decisions[t][f]) !== JSON.stringify(d[f]));
-      return {
-        id: t,
-        overwrites: overwrites,
-        coverageDropped: fields.indexOf("coverage") >= 0 && !coverageFits(target, d.coverage),
-        /**
-         * Evidence describes the VALUES it was written for. Leaving a target's own evidence beside
-         * fields that have just been replaced leaves a citation that describes values no longer
-         * there -- which reads, later, as though someone checked.
-         */
-        evidenceReplaced: overwrites.length > 0 || copyable.some((f) => decisions[t][f] === null),
-      };
-    });
-    return { targets: targets, fields: fields, scope: scope, detail: detail };
-  }
-
-  function coverageFits(target, coverage) {
-    if (!coverage) return false;
-    if (coverage.kind === "none") return true;
-    return target.coverageCandidates.some((o) => o.table === coverage.table && o.yearColumn === coverage.yearColumn);
+    const scope = cap.tableCluster.length ? "the same tables" : "the same data source";
+    const detail = targets.map((t) => ({
+      id: t,
+      overwrites: PL.isAnswered(human[t]),
+      /**
+       * A copied answer proposes a DIFFERENT mapping for a different capability, so the target's
+       * confirmation cannot survive: it approved a translation that no longer applies.
+       */
+      confirmationCleared: confirmed[t] !== null,
+    }));
+    return { targets: targets, scope: scope, detail: detail, answered: PL.isAnswered(human[id]) };
   }
 
   function applyCluster(id) {
-    const plan = clusterPlan(id), source = decisions[id];
+    const plan = clusterPlan(id);
     const changed = [];
+    if (!plan.answered) return { changed: changed };
     for (const entry of plan.detail) {
-      const target = decisions[entry.id];
-      let touched = false;
-      for (const f of plan.fields) {
-        if (f === "coverage" && !coverageFits(capabilityById[entry.id], source.coverage)) continue;
-        if (JSON.stringify(target[f]) !== JSON.stringify(source[f])) touched = true;
-        target[f] = clone(source[f]);
+      const copy = clone(human[id]);
+      /* Coverage is a column on a specific table: only carry it where the target reads that pair. */
+      if (copy.coverageColumn) {
+        const target = capabilityById[entry.id];
+        const fits = target.coverageCandidates.some(
+          (o) => o.table === copy.coverageColumn.table && o.yearColumn === copy.coverageColumn.yearColumn);
+        if (!fits) copy.coverageColumn = null;
       }
-      if (touched) {
-        target.evidence = source.evidence || "";
-        delete withdrawn[entry.id];
-        changed.push(entry.id);
-        dirty = true;
-      }
+      human[entry.id] = copy;
+      confirmed[entry.id] = null;      // the mapping differs; it must be looked at again
+      delete withdrawn[entry.id];
+      changed.push(entry.id);
+      dirty = true;
     }
     return { changed: changed };
   }
 
   return {
-    FIELDS: FIELDS,
-    decisions: decisions,
+    POLICY_FIELDS: POLICY_FIELDS,
     capability: (id) => capabilityById[id],
-    blank: blank,
+    human: (id) => human[id],
     update: update,
-    undecidedFields: undecidedFields,
+    proposal: proposal,
+    mappingFingerprint: fingerprintOf,
+    isMappingConfirmed: isMappingConfirmed,
+    confirmMapping: confirmMapping,
     problems: problems,
     isComplete: isComplete,
-    integrityIsInBoundShape: integrityIsInBoundShape,
     counts: counts,
-    setIntegrityDrafts: setIntegrityDrafts,
-    boundRules: (id) => boundRules(decisions[id].integrity),
-    draftRules: (id) => draftRules(decisions[id].integrity),
     changeSet: changeSet,
     serialize: serialize,
     loadSession: loadSession,
     clusterPlan: clusterPlan,
     applyCluster: applyCluster,
-    coverageNeedsJustification: coverageNeedsJustification,
-    coverageProblem: coverageProblem,
     canWithdraw: canWithdraw,
     withdraw: withdraw,
     isWithdrawn: isWithdrawn,
@@ -5073,181 +5212,223 @@ function createStage2bSession(DATA) {
 if (typeof module !== "undefined" && module.exports) module.exports = { createStage2bSession: createStage2bSession };
 
 
-const S = createStage2bSession(DATA);
+const PL = createStage2bPlainLanguage();
+const S = createStage2bSession(DATA, PL);
 let index = 0;
 
-const isUnique = (c) => c.tableCluster.length === 0;
+function esc(s){ return String(s).replace(/[&<>"]/g, (m) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
+
 function matches(cap){
-  const d = S.decisions[cap.id], f = document.getElementById("filter").value;
+  const f = document.getElementById("filter").value;
   if (f === "all") return true;
-  if (f === "undecided") return S.undecidedFields(d).length > 0;
+  if (f === "unanswered") return !PL.isAnswered(S.human(cap.id));
+  if (f === "unconfirmed") return PL.isAnswered(S.human(cap.id)) && !S.isMappingConfirmed(cap.id);
+  if (f === "problems") return S.problems(cap.id).length > 0;
   if (f === "conditional") return !!cap.conditionalHint;
-  if (f === "unique") return isUnique(cap);
-  return d[f === "owner" ? "receiptOwner" : f] === null;
+  return true;
 }
 function visible(){ const v = DATA.capabilities.filter(matches); return v.length ? v : DATA.capabilities; }
-
-function esc(s){ return String(s).replace(/[&<>"]/g, (m) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
 
 function status(){
   const c = S.counts();
   document.getElementById("counts").innerHTML =
-    '<span>Complete: <b class="decided">'+c.complete+'</b>/'+DATA.capabilities.length+'</span>'+
-    (c.problems?'<span>Needs fixing: <b class="undecided">'+c.problems+'</b></span>':'')+
-    '<span>Coverage undecided: <b class="undecided">'+c.coverage+'</b></span>'+
-    '<span>Integrity undecided: <b class="undecided">'+c.integrity+'</b></span>'+
-    '<span>Availability undecided: <b class="undecided">'+c.availability+'</b></span>'+
-    '<span>Owner undecided: <b class="undecided">'+c.receiptOwner+'</b></span>';
+    '<span>Finished: <b>'+c.complete+'</b>/'+DATA.capabilities.length+'</span>'+
+    '<span>Awaiting confirmation: <b>'+c.unconfirmed+'</b></span>'+
+    (c.problems?'<span>Needs fixing: <b>'+c.problems+'</b></span>':'');
   const badge = document.getElementById("dirty");
   const changed = Object.keys(S.changeSet()).length;
-  if (S.isDirty()){ badge.className = "unsaved"; badge.textContent = "Unsaved changes — export to keep them"; }
+  if (S.isDirty()){ badge.className = "unsaved"; badge.textContent = "Unsaved — export to keep your answers"; }
   else { badge.className = "saved"; badge.textContent = changed ? "Saved: "+changed+" exported" : "Nothing to save yet"; }
+}
+
+/* Renders the technical policy these answers WOULD produce. Shown, never applied unconfirmed. */
+function mappingPanel(cap){
+  const p = S.proposal(cap.id), m = p.proposed;
+  const line = (label, value) => '<dt>'+label+'</dt><dd>'+value+'</dd>';
+  const rows = [
+    line('Year coverage', m.coverage === null ? '<i>left open</i>'
+      : m.coverage.kind === 'none' ? 'no year dimension — ' + esc(m.coverage.reason)
+      : 'bounded by <code>'+esc(m.coverage.table+'.'+m.coverage.yearColumn)+'</code>'),
+    line('What "broken" means', m.integrity === null ? '<i>left open</i>'
+      : '<ul style="margin:0;padding-left:16px">'+m.integrity.map((r)=>'<li>'+esc(r)+'</li>').join('')+'</ul>'),
+    line('Availability', m.availability === null ? '<i>left open</i>'
+      : m.availability.kind === 'always' ? 'always expected'
+      : 'sometimes absent — ' + esc(m.availability.condition)),
+    line('Kept fresh by', m.receiptOwner === null ? '<i>left open</i>' : esc(m.receiptOwner)),
+  ].join('');
+  const confirmed = S.isMappingConfirmed(cap.id);
+  const answered = PL.isAnswered(S.human(cap.id));
+  const problems = S.problems(cap.id);
+  return '<div class="q"><h3>Check the technical wording before it is recorded</h3>'+
+    '<p class="hint">This is exactly what would be written down for this lookup. Nothing is recorded until'+
+    ' you confirm it, and changing any answer above cancels the confirmation so you see the new wording.</p>'+
+    '<div class="mapping"><dl>'+rows+'</dl></div>'+
+    (problems.length ? '<div class="alert">Before this can be confirmed: '+problems.map(esc).join('; ')+'</div>' : '')+
+    (p.unresolved.length ? '<div class="warn">Left open: '+p.unresolved.map((f)=>esc(({coverage:'year coverage',integrity:'what broken means',availability:'availability',receiptOwner:'who keeps it fresh'})[f]||f)).join(', ')+
+      '. That is a legitimate place to stop — it is recorded as undecided, and this lookup stays switched off.</div>' : '')+
+    (confirmed ? '<div class="good">Confirmed. This wording is what your export will carry.</div>'
+      : '<button class="primary" id="confirmMapping"'+(answered && !problems.length ? '' : ' disabled')+'>I have read this wording — confirm it</button>')+
+    '</div>';
 }
 
 function render(){
   const list = visible();
   if (index >= list.length) index = 0;
-  const cap = list[index], d = S.decisions[cap.id];
-  const cov = d.coverage;
-  const selectedIndex = cov && cov.kind === "column"
-    ? cap.coverageCandidates.findIndex((o) => o.table===cov.table && o.yearColumn===cov.yearColumn) : -1;
-  const covOpts = cap.coverageCandidates.map((o,i) =>
-    '<option value="'+i+'"'+(i===selectedIndex ? ' selected':'')+'>'+
-      esc(o.table+'.'+o.yearColumn)+(o.yearBearing?' — suggested (year-bearing)':'')+'</option>').join('');
-  const ownerOpts = cap.ownerCandidates.map((o) =>
-    '<option value="'+esc(o)+'"'+(d.receiptOwner===o?' selected':'')+'>'+esc(o)+'</option>').join('');
-  const avail = d.availability ? d.availability.kind : "";
-  const needsJust = S.coverageNeedsJustification(cap.id, cov);
-  const problem = S.coverageProblem(cap.id, cov);
+  const cap = list[index], h = S.human(cap.id);
+
+  const covOpts = PL.coverageOptions(cap).map((o) =>
+    '<label class="opt"><input type="radio" name="cov" value="'+esc(o.value)+'"'+(h.coverage===o.value?' checked':'')+'/>'+
+      esc(o.label)+(o.recommended?'<span class="tag">recommended</span>':'')+
+      '<span class="why">'+esc(o.consequence)+'</span></label>').join('');
+  const covWhy = PL.coverageOptions(cap).map((o)=>'<li><b>'+esc(o.label)+'</b> — '+esc(o.why)+'</li>').join('');
+  const scenarios = PL.integrityScenarios(cap).map((s) =>
+    '<label class="opt"><input type="checkbox" name="integ" value="'+esc(s.value)+'"'+
+      ((h.integrity||[]).indexOf(s.value)>=0?' checked':'')+'/>'+esc(s.label)+'</label>').join('');
+  const availOpts = PL.availabilityOptions().map((o) =>
+    '<label class="opt"><input type="radio" name="avail" value="'+esc(o.value)+'"'+(h.availability===o.value?' checked':'')+'/>'+
+      esc(o.label)+'<span class="why">'+esc(o.consequence)+'</span></label>').join('');
+  const ownerOpts = PL.ownerOptions(cap).map((o) =>
+    '<label class="opt"><input type="radio" name="owner" value="'+esc(o.value)+'"'+(h.owner===o.value?' checked':'')+'/>'+
+      esc(o.label)+'</label>').join('');
 
   document.getElementById("card").innerHTML =
   '<div class="card">'+
    '<div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap">'+
-     '<h2>'+esc(cap.description)+'</h2>'+
-     '<span class="pill">'+(index+1)+' of '+list.length+(list.length!==DATA.capabilities.length?' (filtered)':'')+'</span></div>'+
-   '<div class="id">'+esc(cap.id)+'</div>'+
-   '<div class="meta"><span class="pill">'+esc(cap.artifact)+'</span>'+
-     'Reads <code>'+cap.reads.map(esc).join('</code> <code>')+'</code>'+
-     (cap.prepares.length?' · prepares <code>'+cap.prepares.map(esc).join('</code> <code>')+'</code>':'')+
+     '<h2>'+esc(PL.describeQuestion(cap))+'</h2>'+
+     '<span class="observed">'+(index+1)+' of '+list.length+'</span></div>'+
+   '<p class="observed">The description above is derived from the names in the data, so treat it as a'+
+     ' summary rather than a definition. Everything under "Technical details" is observed from the code'+
+     ' and is not up for decision; the questions below are.</p>'+
+   '<details><summary>Technical details</summary><div class="body">'+
+     'Identifier <code>'+esc(cap.id)+'</code><br/>Data source <code>'+esc(cap.artifact)+'</code><br/>'+
+     'Reads '+cap.reads.map((t)=>'<code>'+esc(t)+'</code>').join(' ')+
      '<br/>Columns: '+Object.keys(cap.columns).map((t)=>esc(t)+' ('+cap.columns[t].map(esc).join(', ')+')').join(' · ')+
-     '<br/>Shares its table set with '+cap.tableCluster.length+' other capability(ies); '+cap.artifactCluster.length+' others use this artifact.</div>'+
-   (cap.conditionalHint?'<div class="warn">'+esc(cap.conditionalHint)+'</div>':'')+
+     (cap.ownerCandidates.length?'<br/>Scripts mentioning every one of these tables (a filename search, not an answer): '+
+       cap.ownerCandidates.map((o)=>'<code>'+esc(o)+'</code>').join(' '):'')+
+   '</div></details>'+
+   (cap.conditionalHint?'<div class="warn">Observed: '+esc(cap.conditionalHint)+'</div>':'')+
 
-   '<div class="q"><h3>1. Coverage — how do we know the data covers the years asked for?</h3>'+
-    '<div class="sug"><b>Candidates</b> (every column this capability reads)'+
-      (cap.coverageCandidates.some((o)=>o.yearBearing)?'':' — no column here looks year-bearing, so "No year dimension" may be the honest answer')+
-      '. The mark is a hint, not a filter: any column may be chosen, and an unmarked one asks you to say why.</div>'+
-    '<div class="row"><div><label>Basis</label><select id="cov">'+
-      '<option value=""'+(cov?'':' selected')+'>— Undecided —</option>'+covOpts+
-      '<option value="none"'+(cov&&cov.kind==="none"?' selected':'')+'>No year dimension (state the reason below)</option>'+
-    '</select></div></div>'+
-    (cov&&cov.kind==="none"
-      ? '<div><label>Why does this capability have no year dimension?</label>'+
-        '<input type="text" id="covReason" value="'+esc(cov.reason||"")+'"/></div>' : '')+
-    (needsJust
-      ? '<div><label>This column is not year-bearing by name. Why is it the coverage basis?</label>'+
-        '<input type="text" id="covJust" value="'+esc(cov.justification||"")+'"/></div>' : '')+
-    (problem?'<div class="alert">'+esc(problem)+'</div>':'')+
+   '<div class="q"><h3>1. Can this answer tell which years it covers?</h3>'+
+    '<p class="hint">If someone asks about a year this data does not include, should the system be able to'+
+    ' notice and say so?</p>'+covOpts+
+    '<details><summary>Why this is recommended</summary><div class="body"><ul style="margin:0;padding-left:16px">'+covWhy+'</ul>'+
+      '<div style="margin-top:8px">Every column this lookup reads is listed below. The recommendation comes from'+
+      ' a column NAME, which is a fact about the name and not a check of its contents — if the right column is a'+
+      ' different one, choose it here.</div>'+
+      '<div style="margin-top:6px"><label>Use a specific column instead</label><select id="covColumn" style="width:100%;padding:7px">'+
+        '<option value="">— use the recommended one —</option>'+
+        cap.coverageCandidates.map((o,i)=>'<option value="'+i+'"'+
+          (h.coverageColumn && h.coverageColumn.table===o.table && h.coverageColumn.yearColumn===o.yearColumn?' selected':'')+
+          '>'+esc(o.table+'.'+o.yearColumn)+(o.yearBearing?' — named like a year':'')+'</option>').join('')+
+      '</select></div></div></details>'+
+    '<label>If this is not about a time period, or you picked a column that is not named like a year, say why</label>'+
+    '<input type="text" id="covReason" value="'+esc(h.coverageReason||"")+'"/>'+
    '</div>'+
 
-   '<div class="q"><h3>2. Integrity — what would tell us this data is broken?</h3>'+
-    '<div class="sug">Free text, one rule per line. Leave empty for undecided. An empty list is not a rule.'+
-      ' <b>Draft, and non-authorizing</b>: write the plain-language rule describing what broken data would look like.'+
-      ' Nothing can run these yet, and no capability becomes eligible however complete the rest of the entry looks —'+
-      ' what you write here is the record a real check will later be written from.</div>'+
-    /* Bound rules are shown but not editable here: the textarea is re-parsed on every keystroke
-       anywhere on the card, so anything inside it can be rewritten by an unrelated edit. */
-    (S.boundRules(cap.id).length
-      ? '<div class="sug"><b>Bound rules</b> (kept as authored; edit them in the policy source)<ul style="margin:6px 0 0;padding-left:20px">'+
-        S.boundRules(cap.id).map((r)=>'<li>'+esc(r.rule)+' <code>'+esc(r.boundTo)+'</code></li>').join('')+
-        '</ul></div>' : '')+
-    '<textarea id="integrity" placeholder="e.g. national_monthly and agency_monthly must share a MAX(year*100+month)">'+
-      esc(S.draftRules(cap.id).join("\n"))+'</textarea></div>'+
+   '<div class="q"><h3>2. What would make this answer untrustworthy?</h3>'+
+    '<p class="hint">Tick anything that would mean the numbers should not be relied on. These are written down'+
+    ' in your words as a description of what "broken" looks like — nothing here builds an automatic check.</p>'+
+    scenarios+
+    '<label class="opt"><input type="checkbox" id="integUnsure"'+(h.integrityUnsure?' checked':'')+'/>I\u2019m not sure</label>'+
+    '<label>Something else (optional)</label>'+
+    '<input type="text" id="integOther" value="'+esc(h.integrityOther||"")+'"/>'+
+   '</div>'+
 
-   '<div class="q"><h3>3. Availability — is this always present?</h3>'+
-    '<div class="row"><div><label>Kind</label><select id="avail">'+
-      '<option value="">— Undecided —</option>'+
-      '<option value="always"'+(avail==="always"?' selected':'')+'>Always</option>'+
-      '<option value="conditional"'+(avail==="conditional"?' selected':'')+'>Conditional</option>'+
-    '</select></div><div><label>Condition (required if conditional)</label>'+
-      '<input type="text" id="cond" value="'+esc(d.availability&&d.availability.condition?d.availability.condition:"")+'"/></div></div></div>'+
+   '<div class="q"><h3>3. Should people normally expect this answer to be available?</h3>'+
+    '<p class="hint">Some lookups are legitimately missing in some situations. Saying so means an absence is'+
+    ' treated as expected rather than reported as a fault.</p>'+availOpts+
+    (h.availability==="sometimes"
+      ? '<label>When is it legitimately unavailable?</label><input type="text" id="availWhen" value="'+esc(h.availabilityWhen||"")+'"/>'
+      : '')+
+   '</div>'+
 
-   '<div class="q"><h3>4. Receipt owner — which process keeps this fresh?</h3>'+
-    '<div class="sug"><b>Scripts mentioning every table this reads</b> — a place to look, not an answer'+
-      (cap.ownerCandidates.length?'':' — none found; type the owner yourself')+'</div>'+
-    '<div class="row"><div><label>From candidates</label><select id="ownerPick">'+
-      '<option value="">— Undecided —</option>'+ownerOpts+
-      '<option value="__other"'+(d.receiptOwner&&!cap.ownerCandidates.includes(d.receiptOwner)?' selected':'')+'>Other (type below)</option>'+
-    '</select></div><div><label>Owner</label><input type="text" id="owner" value="'+esc(d.receiptOwner||"")+'"/></div></div></div>'+
+   '<div class="q"><h3>4. Which update process keeps this data fresh?</h3>'+
+    '<p class="hint">Who is responsible when this data stops being updated. Choose the process you would'+
+    ' expect to have run.</p>'+ownerOpts+
+    (h.owner==="other"
+      ? '<label>Name the process</label><input type="text" id="ownerOther" value="'+esc(h.ownerOther||"")+'"/>'
+      : '')+
+   '</div>'+
 
-   '<div class="q"><h3>Evidence — what do these answers rest on?</h3>'+
-    '<div class="sug">Required before a capability counts as complete. A file:line, a production observation with its date, or a spec section.</div>'+
-    '<textarea id="evidence">'+esc(d.evidence||"")+'</textarea></div>'+
-   /* Withdrawal is offered only where there is authored policy to remove, and never by blanking. */
+   '<div class="q"><h3>What are these answers based on?</h3>'+
+    '<p class="hint">A sentence is enough: who you checked with, which document, or what you already know.'+
+    ' This is what a future reader will use to judge the decision.</p>'+
+    '<textarea id="evidence">'+esc(h.evidence||"")+'</textarea></div>'+
+
+   '<div id="mapping"></div>'+
+
    (S.canWithdraw(cap.id)
-     ? '<div class="q"><h3>Withdraw authored policy</h3>'+
-       '<div class="sug">This capability already carries authored policy. Removing it is a named act,'+
-       ' separate from leaving a question undecided: clearing the fields above does NOT delete it.</div>'+
+     ? '<div class="q"><h3>Remove the existing policy for this lookup</h3>'+
+       '<p class="hint">Something was already recorded here. Removing it is a separate, named action —'+
+       ' leaving the questions above unanswered does NOT delete it.</p>'+
        (S.isWithdrawn(cap.id)
-         ? '<div class="alert">Marked for withdrawal. Exporting and importing will remove the authored policy for this capability.</div>'
-         : '<button id="withdraw">Withdraw this authored policy…</button>')
+         ? '<div class="alert">Marked for removal. Exporting and importing will remove what was recorded.</div>'
+         : '<button id="withdraw">Remove the recorded policy…</button>')
        +'</div>'
      : '')+
   '</div>';
 
-  const readCoverage = () => {
-    const sel = document.getElementById("cov").value;
-    if (sel === "") return null;
-    if (sel === "none"){
-      const reason = document.getElementById("covReason");
-      return { kind:"none", reason: reason ? reason.value.trim() : "" };
-    }
-    const candidate = cap.coverageCandidates[Number(sel)];
-    const basis = { kind:"column", table:candidate.table, yearColumn:candidate.yearColumn };
-    const just = document.getElementById("covJust");
-    if (just && just.value.trim()) basis.justification = just.value.trim();
-    return basis;
+  const value = (id) => { const el = document.getElementById(id); return el ? el.value : ""; };
+  /**
+   * The mapping panel repaints on every edit, in place.
+   *
+   * It used to be part of the card, which is only rebuilt when a radio changes -- so typing the
+   * missing reason cleared the problem, and the "confirm" button stayed greyed out with no way to
+   * press it. Repainting only this panel keeps the cursor where the person is typing.
+   */
+  const renderMapping = () => {
+    const host = document.getElementById("mapping");
+    if (!host) return;
+    host.innerHTML = mappingPanel(cap);
+    const button = document.getElementById("confirmMapping");
+    if (button) button.addEventListener("click", () => { S.confirmMapping(cap.id); status(); renderMapping(); });
   };
   const save = () => {
-    const kind = document.getElementById("avail").value;
-    const cond = document.getElementById("cond").value.trim();
-    const owner = document.getElementById("owner").value.trim();
+    const covRadio = document.querySelector('input[name=cov]:checked');
+    const availRadio = document.querySelector('input[name=avail]:checked');
+    const ownerRadio = document.querySelector('input[name=owner]:checked');
+    const columnSel = document.getElementById("covColumn");
+    const picked = columnSel && columnSel.value !== "" ? cap.coverageCandidates[Number(columnSel.value)] : null;
     S.update(cap.id, {
-      coverage: readCoverage(),
-      availability: kind === "" ? null : kind === "always" ? {kind:"always"} : {kind:"conditional",condition:cond},
-      receiptOwner: owner === "" ? null : owner,
-      evidence: document.getElementById("evidence").value,
+      coverage: covRadio ? covRadio.value : null,
+      coverageColumn: picked ? { table: picked.table, yearColumn: picked.yearColumn } : null,
+      coverageReason: value("covReason"),
+      integrity: Array.prototype.slice.call(document.querySelectorAll('input[name=integ]:checked')).map((e)=>e.value),
+      integrityOther: value("integOther"),
+      integrityUnsure: !!(document.getElementById("integUnsure") || {}).checked,
+      availability: availRadio ? availRadio.value : null,
+      availabilityWhen: value("availWhen"),
+      owner: ownerRadio ? ownerRadio.value : null,
+      ownerOther: value("ownerOther"),
+      evidence: value("evidence"),
     });
-    /* Drafts replace ONLY the prose rules; bound rules are never round-tripped through the textarea. */
-    S.setIntegrityDrafts(cap.id, document.getElementById("integrity").value.split("\n"));
     status();
+    renderMapping();
   };
-  for (const id of ["integrity","avail","cond","owner","evidence","covReason","covJust"]){
+  /* Radios re-render, because which follow-up field is asked depends on the choice. */
+  for (const name of ["cov","avail","owner"]){
+    Array.prototype.slice.call(document.querySelectorAll('input[name='+name+']')).forEach((el) => {
+      el.addEventListener("change", () => { save(); render(); });
+    });
+  }
+  for (const id of ["covReason","integOther","availWhen","ownerOther","evidence"]){
     const el = document.getElementById(id); if (el) el.addEventListener("input", save);
   }
-  /* Coverage re-renders: which follow-up field is required depends on what was chosen. */
-  document.getElementById("cov").addEventListener("change", (e) => {
-    const sel = e.target.value;
-    if (sel !== "" && sel !== "none"){
-      const candidate = cap.coverageCandidates[Number(sel)];
-      if (!candidate.yearBearing){
-        const ok = confirm(candidate.table+"."+candidate.yearColumn+" does not look like a year column.\n\n"+
-          "It can still be the coverage basis, but you will be asked to say why. Use it?");
-        if (!ok){ render(); return; }
-      }
-    }
-    save(); render();
+  const columnSel = document.getElementById("covColumn");
+  if (columnSel) columnSel.addEventListener("change", () => { save(); render(); });
+  Array.prototype.slice.call(document.querySelectorAll('input[name=integ]')).forEach((el) => {
+    el.addEventListener("change", () => { save(); render(); });
   });
+  const unsure = document.getElementById("integUnsure");
+  if (unsure) unsure.addEventListener("change", () => { save(); render(); });
+
+  renderMapping();
+
   const withdrawButton = document.getElementById("withdraw");
   if (withdrawButton) withdrawButton.addEventListener("click", () => {
-    if (!confirm("Withdraw the authored policy for this capability?\n\n"+cap.id+
-      "\n\nExporting and importing will REMOVE it from the policy file. This is not the same as"+
-      " leaving a question undecided.")) return;
+    if (!confirm("Remove the recorded policy for this lookup?\n\n"+cap.id+
+      "\n\nExporting and importing will REMOVE it. This is not the same as leaving the questions unanswered.")) return;
     S.withdraw(cap.id); status(); render();
-  });
-  document.getElementById("ownerPick").addEventListener("change", (e) => {
-    if (e.target.value && e.target.value !== "__other") document.getElementById("owner").value = e.target.value;
-    save();
   });
   status();
 }
@@ -5255,31 +5436,29 @@ function render(){
 document.getElementById("filter").addEventListener("change", () => { index = 0; render(); });
 document.getElementById("prev").addEventListener("click", () => { const l=visible(); index=(index-1+l.length)%l.length; render(); });
 document.getElementById("next").addEventListener("click", () => { const l=visible(); index=(index+1)%l.length; render(); });
-document.getElementById("nextUndecided").addEventListener("click", () => {
+document.getElementById("nextUnanswered").addEventListener("click", () => {
   const l = visible();
   for (let step=1; step<=l.length; step++){
     const probe=(index+step)%l.length;
-    if (S.undecidedFields(S.decisions[l[probe].id]).length){ index=probe; render(); return; }
+    if (!PL.isAnswered(S.human(l[probe].id))){ index=probe; render(); return; }
   }
-  alert("No undecided capability in the current filter.");
+  alert("Every lookup in this view has been answered.");
 });
 
-/* Cluster application names EVERY affected capability, and what it costs them, before anything changes. */
+/* Copying names EVERY affected lookup, and what it costs them, before anything changes. */
 document.getElementById("cluster").addEventListener("click", () => {
   const cap = visible()[index];
   const plan = S.clusterPlan(cap.id);
-  document.getElementById("confirmIntro").textContent =
-    plan.fields.length ? 'Copy '+plan.fields.join(", ")+' to '+plan.targets.length+' capability(ies) sharing '+plan.scope+
-      '. Evidence on any capability that changes is REPLACED with this one\u2019s, because evidence describes the values it was written for.'
-                       : 'This capability has no decided field to copy.';
+  document.getElementById("confirmIntro").textContent = plan.answered
+    ? 'Copy your answers to '+plan.targets.length+' lookup(s) reading '+plan.scope+'.'
+    : 'There are no answers here to copy yet.';
   document.getElementById("affected").innerHTML = plan.detail.map((entry) => {
     const notes = [];
-    if (entry.overwrites.length) notes.push('would overwrite '+entry.overwrites.join(", "));
-    if (entry.coverageDropped) notes.push('coverage not copied — that column pair is not one it reads');
-    if (entry.evidenceReplaced) notes.push('evidence replaced');
+    if (entry.overwrites) notes.push('replaces answers already given there');
+    if (entry.confirmationCleared) notes.push('its confirmation will be cancelled, so you must re-check its wording');
     return '<li>'+esc(entry.id)+(notes.length?' <b style="color:#8a5a00">— '+esc(notes.join("; "))+'</b>':'')+'</li>';
   }).join('') || '<li>(none)</li>';
-  document.getElementById("applyCluster").disabled = !plan.fields.length || !plan.targets.length;
+  document.getElementById("applyCluster").disabled = !plan.answered || !plan.targets.length;
   document.getElementById("confirm").showModal();
 });
 document.getElementById("cancelCluster").addEventListener("click", () => document.getElementById("confirm").close());
@@ -5307,13 +5486,13 @@ document.getElementById("file").addEventListener("change", (e) => {
     let result = S.loadSession(parsed);
     /* Loading REPLACES the session, so unsaved work has to be given up deliberately. */
     if (!result.ok && result.needsConfirmation){
-      if (!confirm(result.reason)) { note.hidden = false; note.textContent = "Nothing was loaded; your unsaved changes are still here."; return; }
+      if (!confirm(result.reason)) { note.hidden = false; note.textContent = "Nothing was loaded; your unsaved answers are still here."; return; }
       result = S.loadSession(parsed, { discardUnsaved: true });
     }
     if (!result.ok){ note.hidden = false; note.textContent = result.reason; index = 0; status(); render(); return; }
     note.hidden = result.unknown.length === 0;
-    if (result.unknown.length) note.textContent = "Loaded "+result.applied+" capability(ies). "+
-      result.unknown.length+" id(s) in that file are not capabilities in this registry and were ignored.";
+    if (result.unknown.length) note.textContent = "Loaded "+result.applied+" lookup(s). "+
+      result.unknown.length+" entry(ies) in that file are not lookups in this workbook and were ignored.";
     index = 0; status(); render();
   };
   reader.readAsText(f);

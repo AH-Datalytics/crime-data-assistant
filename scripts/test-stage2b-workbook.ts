@@ -1,16 +1,17 @@
 /**
  * The gate on the Stage 2B decision machine.
  *
- * These are the properties that must hold BEFORE any policy is authored through the workbook,
- * because a defect here does not produce a wrong answer -- it produces a wrong RECORD of a human
- * decision, which is far harder to notice later. The machine must not infer answers, must not hide
- * omissions, and must not silently apply defaults.
+ * These are the properties that must hold BEFORE any policy is authored, because a defect here does
+ * not produce a wrong answer -- it produces a wrong RECORD of a human decision, which is far harder
+ * to notice later. The machine must not infer answers, must not hide omissions, must not silently
+ * apply defaults, and must never turn a plain-language answer into technical policy that the person
+ * did not see and approve.
  *
- * WHERE THESE ASSERTIONS POINT. The page's decision logic lives in `lib/stage2b-session.js`, is
- * inlined verbatim into the workbook, and is imported here and CALLED. That distinction is the whole
- * lesson of this file: sixteen assertions about the page's text once passed over a page that threw a
- * SyntaxError on load and rendered nothing, and a stale-session defect sat in the terminal output of
- * a passing run because the check looked for a warning rather than for what happened next. Text
+ * WHERE THESE ASSERTIONS POINT. The page's logic lives in `lib/stage2b-plain-language.js` and
+ * `lib/stage2b-session.js`, is inlined verbatim into the workbook, and is imported here and CALLED.
+ * That distinction is the lesson of this file: sixteen assertions about the page's text once passed
+ * over a page that threw a SyntaxError on load, and a stale-session defect sat in the output of a
+ * passing run because the check looked for a warning rather than for what happened next. Text
  * matching is used only where behaviour genuinely lives in the browser, and is labelled as such.
  */
 import assert from "node:assert";
@@ -18,21 +19,21 @@ import fs from "node:fs";
 import path from "node:path";
 import { createRequire } from "node:module";
 import {
-  DECISIONS_VERSION, SESSION_MODULE_FILE, buildWorkbookModel, decidableRegistry, registryFingerprint,
-  renderWorkbook, type RegistryEntry,
+  DECISIONS_VERSION, PLAIN_LANGUAGE_MODULE_FILE, SESSION_MODULE_FILE, buildWorkbookModel,
+  decidableRegistry, registryFingerprint, renderWorkbook, type RegistryEntry,
 } from "./generate-stage2b-workbook";
 import { importDecisions, writePolicy } from "./import-stage2b-decisions";
 import {
-  authorizationBlockers, capabilityAuthorizes, integrityIsExecutable, isYearBearingColumn, policyIsComplete,
-  policyShapeErrors, type UnvalidatedPolicy,
+  authorizationBlockers, capabilityAuthorizes, integrityIsExecutable, isYearBearingColumn,
+  policyIsComplete, policyShapeErrors,
 } from "../lib/capability-policy";
 import { SWEEP_ONLY_IDS } from "../lib/sweep-only-capabilities";
 
 const require = createRequire(import.meta.url);
-/** The same file the page inlines. Imported, so these tests exercise behaviour rather than text. */
-const { createStage2bSession } = require(SESSION_MODULE_FILE) as {
-  createStage2bSession: (data: unknown) => any;
-};
+/** The same files the page inlines. Imported, so these tests exercise behaviour rather than text. */
+const { createStage2bSession } = require(SESSION_MODULE_FILE) as { createStage2bSession: (d: unknown, pl?: unknown) => any };
+const { createStage2bPlainLanguage } = require(PLAIN_LANGUAGE_MODULE_FILE) as { createStage2bPlainLanguage: () => any };
+const PL = createStage2bPlainLanguage();
 
 const DATA_DIR = path.join(process.cwd(), "scripts", "fixtures", "operation-taxonomy");
 const REGISTRY_FILE = path.join(DATA_DIR, "capability-registry.json");
@@ -46,117 +47,468 @@ function check(name: string, fn: () => void) {
 }
 
 const FINGERPRINT = registryFingerprint(registry);
-
-/**
- * An export as the page writes one: a change set plus the baseline each entry was authored against.
- * `basedOn` defaults to "there was no entry", which pairs with the empty policy the tests import
- * into, so a test that does not care about concurrency does not have to model it.
- */
-const decisionsFile = (
-  decisions: Record<string, unknown>,
-  basedOn?: Record<string, unknown>,
-  overrides: Record<string, unknown> = {},
-) => JSON.stringify({
-  v: DECISIONS_VERSION,
-  fingerprint: FINGERPRINT,
-  decisions,
-  basedOn: basedOn ?? Object.fromEntries(Object.keys(decisions).map((id) => [id, null])),
-  ...overrides,
-}, null, 2) + "\n";
-
-/** Imports against an EMPTY policy file unless a test supplies one, so tests do not share state. */
-const importInto = (raw: string, policy: Record<string, unknown> = {}) => importDecisions(raw, registry, policy);
-
-/** A fully authored entry whose integrity rules are BOUND, so it is capable of authorizing. */
-const wellFormed = (table: string, yearColumn: string) => ({
-  coverage: { kind: "column", table, yearColumn },
-  integrity: [{ rule: "the derived table must not outrun its upstream", boundTo: "checks/derived-alignment.sql" }],
-  availability: { kind: "always" },
-  receiptOwner: "scripts/import-shr.py",
-  evidence: "cited from the importer that writes the table and the spec section requiring it",
-});
-
-/** The same entry with integrity left as the prose a person actually writes first. */
-const draftIntegrity = (table: string, yearColumn: string) => ({
-  ...wellFormed(table, yearColumn),
-  integrity: ["the derived table must not outrun its upstream"],
-});
-
 const model = buildWorkbookModel(registry);
-/** A capability with a genuinely year-bearing column, so a valid basis exists that needs no excuse. */
+/** A capability with a genuinely year-bearing column, so the recommended answer exists. */
 const withYear = model.find((c) => c.coverageCandidates.some((o) => o.yearBearing))!;
 const yearBasis = withYear.coverageCandidates.find((o) => o.yearBearing)!;
-assert.ok(withYear, "expected at least one capability reading a year column");
+const withoutYear = model.find((c) => c.coverageCandidates.length > 0 && !c.coverageCandidates.some((o) => o.yearBearing))!;
 
-/** DATA as the page embeds it, so the session under test is the session that ships. */
 function sessionFor(authored: Record<string, unknown> = {}) {
-  return createStage2bSession({
-    v: DECISIONS_VERSION, fingerprint: FINGERPRINT, capabilities: model, authored,
-  });
+  return createStage2bSession({ v: DECISIONS_VERSION, fingerprint: FINGERPRINT, capabilities: model, authored }, PL);
 }
+
+/** A complete set of plain-language answers, as a person clicking through would produce. */
+const answers = (cap = withYear, over: Record<string, unknown> = {}) => ({
+  ...PL.blankAnswer(),
+  coverage: cap.coverageCandidates.some((o: any) => o.yearBearing) ? "years" : "no-years",
+  coverageReason: cap.coverageCandidates.some((o: any) => o.yearBearing) ? "" : "this lookup answers a directory question, not a time-series one",
+  integrity: ["stale"],
+  availability: "always",
+  owner: PL.ownerOptions(cap)[0].value,
+  evidence: "checked with the analyst who owns this pipeline and confirmed against the monthly runbook",
+  ...over,
+});
+
+/** An export, produced the way the page produces one: answered, then the mapping confirmed. */
+function exportWith(capId: string, human: Record<string, unknown>, confirmIt = true) {
+  const S = sessionFor();
+  S.update(capId, human);
+  if (confirmIt) S.confirmMapping(capId);
+  return S.serialize();
+}
+
+const importInto = (raw: string, policy: Record<string, unknown> = {}) => importDecisions(raw, registry, policy);
 
 // ---------------------------------------------------------------- 0. the page actually runs
 
 check("the workbook's script parses, and its embedded data is valid JSON", () => {
   /**
    * The check every other assertion here presupposed and none of them made. Sixteen tests asserted
-   * on the page's TEXT -- that a phrase appeared, that a handler was bound in the right order -- and
-   * all sixteen passed while the page threw a SyntaxError on load and rendered nothing at all. An
-   * apostrophe inside a single-quoted string was enough ("this capability's columns"), and text
-   * matching cannot see that.
-   *
-   * Parsed with `new Function`, which compiles without executing: no DOM is needed, and a page that
-   * cannot compile can never render whatever the other tests found in its source.
+   * on the page's TEXT and all of them passed while the page threw a SyntaxError on load and
+   * rendered nothing at all. An apostrophe inside a single-quoted string was enough.
    */
   const html = renderWorkbook(registry);
   const script = /<script>([\s\S]*)<\/script>/.exec(html);
   assert.ok(script, "the workbook has no script block");
-  try {
-    new Function(script![1]);
-  } catch (error) {
-    assert.fail(`the workbook's script does not parse, so the page renders nothing: ${(error as Error).message}`);
-  }
+  try { new Function(script![1]); }
+  catch (error) { assert.fail(`the workbook's script does not parse, so the page renders nothing: ${(error as Error).message}`); }
   const start = html.indexOf("const DATA = ") + "const DATA = ".length;
-  const embedded = html.slice(start, html.indexOf("\n/* Decisions live only")).trim().replace(/;$/, "");
-  const data = JSON.parse(embedded) as { capabilities: unknown[] };
-  assert.strictEqual(data.capabilities.length, Object.keys(DECIDABLE).length);
+  const embedded = html.slice(start, html.indexOf("\n/* Your answers live only")).trim().replace(/;$/, "");
+  assert.strictEqual((JSON.parse(embedded) as { capabilities: unknown[] }).capabilities.length, Object.keys(DECIDABLE).length);
 });
 
-check("the page inlines the session module verbatim, so tested and shipped logic cannot diverge", () => {
-  const source = fs.readFileSync(SESSION_MODULE_FILE, "utf8");
-  assert.ok(renderWorkbook(registry).includes(source),
-    "the workbook does not contain lib/stage2b-session.js unchanged; the tests would be exercising a different copy");
-  assert.ok(!source.includes("</scr" + "ipt"), "the session module would close the script element it is inlined into");
+check("the page inlines both logic modules verbatim, so tested and shipped logic cannot diverge", () => {
+  const html = renderWorkbook(registry);
+  for (const file of [SESSION_MODULE_FILE, PLAIN_LANGUAGE_MODULE_FILE]) {
+    const source = fs.readFileSync(file, "utf8");
+    assert.ok(html.includes(source), `${path.basename(file)} is not inlined unchanged; the tests exercise a different copy`);
+    assert.ok(!source.includes("</scr" + "ipt"), `${path.basename(file)} would close the script element it is inlined into`);
+  }
 });
 
-// ---------------------------------------------------------------- 1. exactly once
+// ---------------------------------------------------------------- 1. the human-facing surface
 
-check("every decidable capability appears exactly once in the workbook", () => {
+check("no technical field is required to answer any question", () => {
+  /**
+   * The property that makes this usable by the person whose decision it actually is. Every question
+   * is answerable from the plain-language controls alone: no table, no column, no filename, no
+   * binding. The technical surface exists, but only as optional detail.
+   */
+  for (const cap of model) {
+    const S = sessionFor();
+    S.update(cap.id, answers(cap));
+    const p = S.proposal(cap.id);
+    assert.deepStrictEqual(p.unresolved, [],
+      `${cap.id}: plain-language answers alone left ${p.unresolved.join(", ")} unresolved`);
+    assert.deepStrictEqual(S.problems(cap.id), [],
+      `${cap.id}: plain-language answers alone produced ${S.problems(cap.id).join("; ")}`);
+    // And the mapping they produce is valid policy at the boundary.
+    assert.ok(S.confirmMapping(cap.id), `${cap.id}: a complete answer could not be confirmed`);
+    const result = importInto(S.serialize());
+    assert.ok(result.ok, `${cap.id}: ${JSON.stringify(!result.ok && result.errors)}`);
+  }
+  // The human answer never carries a column unless someone opens the technical disclosure.
+  assert.strictEqual(PL.blankAnswer().coverageColumn, null, "a column is pre-set before anyone chose one");
+});
+
+check("every question offers \"I'm not sure\", and it fails closed", () => {
+  const S = sessionFor();
+  S.update(withYear.id, {
+    ...PL.blankAnswer(),
+    coverage: PL.UNSURE, availability: PL.UNSURE, owner: PL.UNSURE, integrityUnsure: true,
+    evidence: "nobody here knows yet; recorded so the open question is visible rather than assumed",
+  });
+  const p = S.proposal(withYear.id);
+  assert.deepStrictEqual([...p.unresolved].sort(), ["availability", "coverage", "integrity", "receiptOwner"],
+    "an unsure answer resolved into technical policy");
+  for (const field of ["coverage", "integrity", "availability", "receiptOwner"]) {
+    assert.strictEqual((p.proposed as Record<string, unknown>)[field], null, `${field} acquired a value from "not sure"`);
+  }
+  // It is still a recorded answer, not an absence: it exports, and it authorizes nothing.
+  S.confirmMapping(withYear.id);
+  const result = importInto(S.serialize());
+  assert.ok(result.ok, JSON.stringify(!result.ok && result.errors));
+  if (!result.ok) return;
+  assert.deepStrictEqual(result.eligible, [], "an unsure answer produced an authorised capability");
+  assert.ok(withYear.id in result.policy, "an unsure answer was discarded rather than recorded as open");
+
+  // Every question offers it.
+  assert.ok(PL.coverageOptions(withYear).some((o: any) => o.value === PL.UNSURE), "coverage has no unsure option");
+  assert.ok(PL.availabilityOptions().some((o: any) => o.value === PL.UNSURE), "availability has no unsure option");
+  assert.ok(PL.ownerOptions(withYear).some((o: any) => o.value === PL.UNSURE), "receipt owner has no unsure option");
+  assert.ok(/I\\u2019m not sure|I'm not sure/.test(renderWorkbook(registry)), "the page never offers 'I'm not sure' for integrity");
+});
+
+check("a recommendation is shown but never pre-selected", () => {
+  /**
+   * The property that keeps this a decision machine rather than an inference machine. A workbook
+   * that pre-picked the single plausible answer would launder a guess into the record as a human
+   * decision -- and the person would have no way to tell which answers were theirs.
+   */
+  const S = sessionFor();
+  for (const cap of model) {
+    const h = S.human(cap.id);
+    assert.strictEqual(h.coverage, null, `${cap.id}: coverage opens pre-answered`);
+    assert.strictEqual(h.availability, null, `${cap.id}: availability opens pre-answered`);
+    assert.strictEqual(h.owner, null, `${cap.id}: receipt owner opens pre-answered`);
+    assert.deepStrictEqual(h.integrity, [], `${cap.id}: integrity opens pre-answered`);
+    assert.ok(PL.coverageOptions(cap).some((o: any) => o.recommended), `${cap.id}: no option is marked recommended`);
+  }
+  assert.strictEqual(S.counts().complete, 0, "a lookup counts as finished before anyone answered anything");
+
+  // In the rendered page, "recommended" is a label; `checked` appears only where a stored answer is.
+  const html = renderWorkbook(registry);
+  assert.ok(/recommended<\/span>/.test(html), "the recommendation is never shown to the reader");
+  for (const [question, stored] of [["cov", "h.coverage"], ["avail", "h.availability"], ["owner", "h.owner"]] as [string, string][]) {
+    const template = new RegExp('name="' + question + '"[^\\n]*?\\(' + stored.replace(".", "\\.") + '===o\\.value\\?');
+    assert.ok(template.test(html),
+      `the ${question} option is checked by something other than the stored answer, so the page chooses for the user`);
+  }
+});
+
+check("the mapping panel repaints as you type, so a fixed problem re-enables confirmation", () => {
+  /**
+   * Found by driving the real page, not by any assertion here. The panel was part of the card,
+   * which is only rebuilt when a radio changes -- so typing the missing reason cleared the problem
+   * while the confirm button stayed greyed out, with no way to press it and nothing saying why.
+   * Repainting only the panel also keeps the cursor where the person is typing.
+   */
+  const html = renderWorkbook(registry);
+  assert.ok(/<div id="mapping"><\/div>/.test(html), "the mapping panel is not its own repaintable region");
+  const save = html.slice(html.indexOf("const save = () => {"), html.indexOf("/* Radios re-render"));
+  assert.ok(/renderMapping\(\);/.test(save), "typing does not repaint the mapping panel, so its button state goes stale");
+  const renderMapping = html.slice(html.indexOf("const renderMapping = () => {"), html.indexOf("const save = () => {"));
+  assert.ok(/addEventListener\("click"/.test(renderMapping), "the repainted panel loses its confirm handler");
+  // The button's enabled state is derived from the problems, not from when the card was last built.
+  assert.ok(/answered && !problems\.length \? '' : ' disabled'/.test(html),
+    "the confirm button is enabled by something other than the current state of the answers");
+});
+
+check("the technical detail is present, optional, and marked as observed rather than decided", () => {
+  const html = renderWorkbook(registry);
+  assert.ok(/<details><summary>Technical details<\/summary>/.test(html), "the technical detail is not behind a disclosure");
+  assert.ok(/Why this is recommended/.test(html), "the recommendation's basis is not disclosed");
+  assert.ok(/observed from the code/.test(html), "the page does not distinguish observation from decision");
+  // The identifier and tables are in the disclosure, not in the question.
+  const question = html.slice(html.indexOf("1. Can this answer tell which years"), html.indexOf("2. What would make"));
+  assert.ok(!/cap\.id/.test(question), "the capability identifier is part of the coverage question itself");
+});
+
+// ---------------------------------------------------------------- 2. the translation is confirmed
+
+check("the importer refuses a mapping that was never confirmed", () => {
+  const result = importInto(exportWith(withYear.id, answers(), false));
+  assert.strictEqual(result.ok, false, "an unconfirmed mapping was imported");
+  assert.ok(!result.ok && result.errors.some((e) => /never confirmed/.test(e)), "the refusal must say what is missing");
+});
+
+check("the importer refuses a confirmation that has gone stale", () => {
+  /**
+   * The person confirmed one translation; the answer then changed, so the export carries an
+   * approval of a mapping that is no longer the one in the file. A boolean confirmation would have
+   * travelled with the edit and hidden exactly this.
+   */
+  const S = sessionFor();
+  S.update(withYear.id, answers());
+  S.confirmMapping(withYear.id);
+  assert.strictEqual(S.isMappingConfirmed(withYear.id), true);
+  S.update(withYear.id, { availability: "sometimes", availabilityWhen: "only after the annual load" });
+  assert.strictEqual(S.isMappingConfirmed(withYear.id), false, "the confirmation survived a change to the answer");
+
+  // Force the stale pairing into a file the way a hand edit or an older page could.
+  const stale = JSON.parse(exportWith(withYear.id, answers()));
+  stale.decisions[withYear.id].human.availability = "sometimes";
+  stale.decisions[withYear.id].human.availabilityWhen = "only after the annual load";
+  const result = importInto(JSON.stringify(stale));
+  assert.strictEqual(result.ok, false, "a stale confirmation was accepted");
+  assert.ok(!result.ok && result.errors.some((e) => /stale|not what this answer produces/.test(e)));
+
+  /**
+   * Isolated, because the case above also fails the re-derivation check and so proves nothing about
+   * this one: here the answer and the mapping agree, and ONLY the confirmation is for a different
+   * mapping. Removing the staleness check left the whole suite green until this was added.
+   */
+  const onlyConfirmationWrong = JSON.parse(exportWith(withYear.id, answers()));
+  onlyConfirmationWrong.decisions[withYear.id].mappingConfirmed = "0000dead";
+  const isolated = importInto(JSON.stringify(onlyConfirmationWrong));
+  assert.strictEqual(isolated.ok, false, "a confirmation of some other mapping was accepted");
+  assert.ok(!isolated.ok && isolated.errors.some((e) => /stale/.test(e)), "the refusal must say the approval is stale");
+});
+
+check("the importer re-derives the mapping and refuses one the answer does not produce", () => {
+  /**
+   * Trusting the file's `proposed` block would let a page -- or a hand edit -- ship policy the
+   * person never saw beside the question they answered, which is the one thing a human-facing
+   * workbook must not be able to do.
+   */
+  const tampered = JSON.parse(exportWith(withYear.id, answers()));
+  tampered.decisions[withYear.id].proposed.receiptOwner = "a process nobody chose";
+  const result = importInto(JSON.stringify(tampered));
+  assert.strictEqual(result.ok, false, "the importer trusted the file's technical mapping");
+  assert.ok(!result.ok && result.errors.some((e) => /not what this answer produces/.test(e)));
+});
+
+check("an export carries the human answer AND the mapping, never one without the other", () => {
+  const exported = JSON.parse(exportWith(withYear.id, answers())) as any;
+  const entry = exported.decisions[withYear.id];
+  assert.ok(entry.human, "the export drops the answer the person actually gave");
+  assert.ok(entry.proposed, "the export drops the technical mapping");
+  assert.ok(entry.mappingConfirmed, "the export drops the confirmation");
+  assert.strictEqual(entry.human.coverage, "years", "the human answer is not recorded in the person's terms");
+  assert.strictEqual(entry.proposed.coverage.kind, "column", "the mapping is not recorded in technical terms");
+
+  const withoutHuman = JSON.parse(exportWith(withYear.id, answers()));
+  delete withoutHuman.decisions[withYear.id].human;
+  const result = importInto(JSON.stringify(withoutHuman));
+  assert.strictEqual(result.ok, false, "an entry with no human answer was imported");
+  assert.ok(!result.ok && result.errors.some((e) => /no human answer/.test(e)));
+});
+
+check("draft integrity prose is preserved, and no binding is ever asked for", () => {
+  const S = sessionFor();
+  S.update(withYear.id, answers(withYear, { integrity: ["stale", "double"], integrityOther: "the county lookup goes missing" }));
+  const proposed = S.proposal(withYear.id).proposed;
+  assert.strictEqual(proposed.integrity.length, 3, "a chosen scenario or the free text was dropped");
+  assert.ok(proposed.integrity.every((r: unknown) => typeof r === "string"), "a rule was recorded as something other than prose");
+  assert.ok(proposed.integrity.some((r: string) => /county lookup goes missing/.test(r)), "the person's own words were lost");
+  const html = renderWorkbook(registry);
+  assert.ok(!/boundTo/.test(html), "the page asks the reader for a binding");
+  assert.ok(/nothing here builds an automatic check/.test(html), "the page implies these rules will be executed");
+});
+
+// ---------------------------------------------------------------- 3. eligibility stays closed
+
+check("unbound integrity prose blocks eligibility, however complete the rest of the entry is", () => {
+  const declared = withYear.reads.map((name) => ({ name, requiredColumns: withYear.columns[name] ?? [] }));
+  const drafted = { coverage: { kind: "column", table: yearBasis.table, yearColumn: yearBasis.yearColumn },
+    integrity: ["a sentence a person wrote"], availability: { kind: "always" }, receiptOwner: "The monthly crime-trends update",
+    evidence: "cited from the runbook and confirmed with the analyst who owns the pipeline" };
+  assert.strictEqual(policyIsComplete(drafted), true, "a prose entry is still a well-formed, complete draft");
+  assert.strictEqual(capabilityAuthorizes(drafted, declared), false, "unbound integrity prose authorized");
+  const bound = { ...drafted, integrity: [{ rule: "r", boundTo: "banana" }] };
+  assert.strictEqual(capabilityAuthorizes(bound, declared), false, "boundTo: \"banana\" authorized");
+  for (const shape of [null, [], ["prose"], [{ rule: "r", boundTo: "checks/real.sql" }], "anything"]) {
+    assert.strictEqual(integrityIsExecutable(shape), false, `${JSON.stringify(shape)} was treated as executable`);
+  }
+  assert.ok(authorizationBlockers(drafted, declared).some((b) => /no integrity rule can be executed/.test(b)));
+
+  const runtime = fs.readFileSync(path.join(process.cwd(), "lib", "source-health.ts"), "utf8");
+  assert.ok(!/if \(!policyIsComplete\(/.test(runtime), "the runtime gates on a weaker predicate than the registry pin");
+  assert.ok(/capabilityAuthorizes\(spec\.policy/.test(runtime), "the runtime does not gate on capabilityAuthorizes");
+
+  const inventory = fs.readFileSync(path.join(process.cwd(), "lib", "source-health-inventory.ts"), "utf8");
+  assert.ok(!/authorizationEligible: true/.test(inventory), "a capability is pinned eligible while nothing is executable");
+  assert.ok(/Authorization-eligible: 0\./.test(inventory), "the inventory header claims an eligible capability");
+});
+
+check("a full set of answers records policy and still authorizes nothing", () => {
+  const result = importInto(exportWith(withYear.id, answers()));
+  assert.ok(result.ok, JSON.stringify(!result.ok && result.errors));
+  if (!result.ok) return;
+  assert.deepStrictEqual(result.authored, [withYear.id], "a complete answer was not recorded");
+  assert.deepStrictEqual(result.eligible, [], "a complete answer switched a capability on");
+  const stored = result.policy[withYear.id] as Record<string, unknown>;
+  assert.deepStrictEqual(stored.coverage, { kind: "column", table: yearBasis.table, yearColumn: yearBasis.yearColumn });
+  assert.deepStrictEqual(stored.availability, { kind: "always" });
+});
+
+// ---------------------------------------------------------------- 4. coverage
+
+check("a lookup with no year-like column recommends the honest answer, and can still name a column", () => {
+  const options = PL.coverageOptions(withoutYear);
+  const recommended = options.find((o: any) => o.recommended);
+  assert.strictEqual(recommended.value, "no-years", "a lookup with no year column recommends bounding it by one anyway");
+  assert.ok(/no column this lookup reads is named like a year/.test(recommended.why), "the recommendation gives no basis");
+
+  // The honest answer stays reachable: the naming heuristic must not make a real year column unusable.
+  const S = sessionFor();
+  const column = withoutYear.coverageCandidates[0];
+  S.update(withoutYear.id, answers(withoutYear, {
+    coverage: "years", coverageColumn: { table: column.table, yearColumn: column.yearColumn }, coverageReason: "",
+  }));
+  assert.ok(S.problems(withoutYear.id).some((p: string) => /not named like a year/.test(p)),
+    "an unmarked column was accepted with no reason given");
+  S.update(withoutYear.id, { coverageReason: "this column stores an ISO date whose first four characters are the year" });
+  assert.deepStrictEqual(S.problems(withoutYear.id), [], "a justified unmarked column is still refused");
+  const proposed = S.proposal(withoutYear.id).proposed;
+  assert.strictEqual(proposed.coverage.justification, "this column stores an ISO date whose first four characters are the year");
+});
+
+check("\"not about a time period\" is recorded as a decision with its reason", () => {
+  const S = sessionFor();
+  S.update(withYear.id, answers(withYear, { coverage: "no-years", coverageReason: "" }));
+  assert.ok(S.problems(withYear.id).some((p: string) => /not about a time period/.test(p)), "a reasonless answer was accepted");
+  S.update(withYear.id, { coverageReason: "this is a directory count with no time dimension to bound" });
+  const proposed = S.proposal(withYear.id).proposed;
+  assert.deepStrictEqual(proposed.coverage, { kind: "none", reason: "this is a directory count with no time dimension to bound" });
+  S.confirmMapping(withYear.id);
+  const result = importInto(S.serialize());
+  assert.ok(result.ok, JSON.stringify(!result.ok && result.errors));
+  if (!result.ok) return;
+  assert.notStrictEqual((result.policy[withYear.id] as any).coverage, null, "a decided no-year answer was stored as undecided");
+});
+
+check("a basis outside the contract is refused at import even if the page emitted it", () => {
+  const tampered = JSON.parse(exportWith(withYear.id, answers()));
+  tampered.decisions[withYear.id].human.coverageColumn = { table: "unrelated_table", yearColumn: "year" };
+  const result = importInto(JSON.stringify(tampered));
+  assert.strictEqual(result.ok, false, "a basis outside the contract was accepted");
+});
+
+// ---------------------------------------------------------------- 5. export, merge, withdrawal
+
+check("the export carries only what this session changed", () => {
+  const S = sessionFor();
+  assert.deepStrictEqual(S.changeSet(), {}, "an untouched session exports something");
+  S.update(withYear.id, answers());
+  assert.deepStrictEqual(Object.keys(S.changeSet()), [withYear.id], "the change set is not exactly what changed");
+  assert.ok(withYear.id in JSON.parse(S.serialize()).basedOn, "a change records no baseline");
+});
+
+check("importing a change set preserves capabilities it does not mention", () => {
+  const other = model.find((c) => c.id !== withYear.id)!;
+  const existingPolicy = { [other.id]: { coverage: null, integrity: null, availability: null, receiptOwner: null, evidence: "prior" } };
+  const result = importDecisions(exportWith(withYear.id, answers()), registry, existingPolicy);
+  assert.ok(result.ok, JSON.stringify(!result.ok && result.errors));
+  if (!result.ok) return;
+  assert.ok(other.id in result.policy, "an entry the change set never mentioned was deleted by importing");
+});
+
+check("a change authored against a stale baseline is refused by name", () => {
+  const theirs = { coverage: null, integrity: null, availability: null, receiptOwner: "someone else's answer", evidence: "theirs" };
+  const result = importDecisions(exportWith(withYear.id, answers()), registry, { [withYear.id]: theirs });
+  assert.strictEqual(result.ok, false, "an import overwrote an entry that changed underneath it");
+  assert.ok(!result.ok && result.errors.some((e) => e.includes(withYear.id) && /changed since this session began/.test(e)));
+});
+
+check("withdrawal is a named act, never inferred from unanswered questions", () => {
+  const authored = { coverage: null, integrity: null, availability: null, receiptOwner: "prior owner", evidence: "prior" };
+  const S = sessionFor({ [withYear.id]: authored });
+  assert.strictEqual(S.canWithdraw(withYear.id), true, "an authored capability is not withdrawable");
+  assert.strictEqual(sessionFor().canWithdraw(withYear.id), false, "an unauthored capability offers withdrawal");
+  S.withdraw(withYear.id);
+  assert.deepStrictEqual(S.changeSet()[withYear.id], { operation: "withdraw" });
+  const result = importDecisions(S.serialize(), registry, { [withYear.id]: authored });
+  assert.ok(result.ok, JSON.stringify(!result.ok && result.errors));
+  if (!result.ok) return;
+  assert.deepStrictEqual(result.cleared, [withYear.id]);
+  assert.ok(!(withYear.id in result.policy), "the withdrawn entry survived");
+
+  const html = renderWorkbook(registry);
+  assert.ok(/Remove the recorded policy/.test(html), "the page never offers removal");
+  assert.ok(/confirm\("Remove the recorded policy/.test(html), "removal is not confirmed");
+});
+
+// ---------------------------------------------------------------- 6. sessions
+
+check("a stale session cannot be laundered through the page into a fresh fingerprint", () => {
+  const S = sessionFor();
+  const stale = JSON.parse(exportWith(withYear.id, answers()));
+  stale.fingerprint = "deadbeefdeadbeef";
+  const result = S.loadSession(stale);
+  assert.strictEqual(result.ok, false, "a stale session loaded");
+  assert.ok(result.stale && /different registry structure/.test(result.reason));
+  assert.deepStrictEqual(S.changeSet(), {}, "the stale answers were copied in and would be re-exported as current");
+  assert.strictEqual(S.isDirty(), false, "refusing a load left the session dirty");
+});
+
+check("loading replaces the session, and will not silently absorb unsaved work", () => {
+  const other = model.find((c) => c.id !== withYear.id)!;
+  const S = sessionFor();
+  S.update(other.id, answers(other));
+  const file = JSON.parse(exportWith(withYear.id, answers()));
+  const refused = S.loadSession(file);
+  assert.strictEqual(refused.ok, false, "loading over unsaved work happened without asking");
+  assert.ok(refused.needsConfirmation, "the refusal is not a confirmable one");
+  assert.ok(other.id in S.changeSet(), "the refused load discarded the work it was warning about");
+  assert.ok(S.loadSession(file, { discardUnsaved: true }).ok, "confirming did not let the load proceed");
+  assert.deepStrictEqual(Object.keys(S.changeSet()), [withYear.id], "work from before the load survived, now marked saved");
+  assert.strictEqual(S.isDirty(), false);
+});
+
+check("successive loads cannot restore a baseline from an earlier one", () => {
+  const authored = { coverage: null, integrity: null, availability: null, receiptOwner: "repository value", evidence: "repo" };
+  const S = sessionFor({ [withYear.id]: authored });
+  const older = { ...authored, receiptOwner: "an older value" };
+  const first = JSON.parse(exportWith(withYear.id, answers()));
+  first.basedOn[withYear.id] = older;
+  assert.ok(S.loadSession(first).ok);
+  assert.strictEqual(S.baselineFor(withYear.id).receiptOwner, "an older value", "the load did not adopt the file's baseline");
+  assert.ok(S.loadSession({ v: DECISIONS_VERSION, fingerprint: FINGERPRINT, decisions: {}, basedOn: {} }).ok);
+  assert.deepStrictEqual(S.baselineFor(withYear.id), authored,
+    "an empty load left the previous file's baseline in place, so the repository value was lost");
+  assert.deepStrictEqual(S.changeSet(), {}, "a session reset to the repository value still reports changes");
+});
+
+check("a session written by a different version is refused rather than misread", () => {
+  const result = sessionFor().loadSession({ v: DECISIONS_VERSION - 1, fingerprint: FINGERPRINT, decisions: {}, basedOn: {} });
+  assert.strictEqual(result.ok, false);
+  assert.ok(/version/.test(result.reason));
+});
+
+check("the page tracks unsaved work and guards the close only when there is something to lose", () => {
+  const S = sessionFor();
+  assert.strictEqual(S.isDirty(), false);
+  S.update(withYear.id, answers());
+  assert.strictEqual(S.isDirty(), true, "an answer is not unsaved work");
+  S.serialize(); S.markClean();
+  assert.strictEqual(S.isDirty(), false, "exporting did not save the work");
+  const html = renderWorkbook(registry);
+  const handler = /addEventListener\("beforeunload"[\s\S]{0,320}/.exec(html);
+  assert.ok(handler && /if \(!S\.isDirty\(\)\) return;/.test(handler[0]), "the close guard is unconditional or missing");
+  assert.ok(/Export every few answers/.test(html), "the page never suggests exporting periodically");
+});
+
+// ---------------------------------------------------------------- 7. the capability set
+
+check("every decidable capability appears exactly once, sweep-only included", () => {
   const ids = model.map((c) => c.id);
   assert.deepStrictEqual([...ids].sort(), Object.keys(DECIDABLE).sort(), "the workbook is not the decidable registry");
   assert.strictEqual(new Set(ids).size, ids.length, "a capability appears more than once");
-  const html = renderWorkbook(registry);
-  for (const id of ids) {
-    assert.ok(html.includes(JSON.stringify(id).slice(1, -1)), `${id} is missing from the rendered workbook`);
+  for (const id of SWEEP_ONLY_IDS) {
+    const cap = model.find((c) => c.id === id);
+    assert.ok(cap, `${id} is missing from the workbook`);
+    const S = sessionFor();
+    S.update(id, answers(cap!));
+    S.confirmMapping(id);
+    assert.ok(importInto(S.serialize()).ok, `${id} cannot be answered and imported`);
   }
 });
 
-check("the sweep-only capability is asked about and can be answered", () => {
-  /**
-   * It reaches no deterministic operation, so it cannot come from the derived catalog -- and while
-   * it was a private constant inside the inventory generator, the workbook never asked about it and
-   * the importer refused it as "not a capability in the registry". A capability that could be
-   * neither decided nor declined.
-   */
-  assert.ok(SWEEP_ONLY_IDS.length > 0, "there is no sweep-only capability to carry");
-  for (const id of SWEEP_ONLY_IDS) {
-    const capability = model.find((c) => c.id === id);
-    assert.ok(capability, `${id} is missing from the workbook`);
-    assert.ok(capability!.coverageCandidates.length > 0, `${id} offers no coverage basis to choose`);
-    const basis = capability!.coverageCandidates.find((o) => o.yearBearing) ?? capability!.coverageCandidates[0];
-    const result = importInto(decisionsFile({ [id]: wellFormed(basis.table, basis.yearColumn) }));
-    assert.ok(result.ok, `the importer refuses the sweep-only capability: ${JSON.stringify(!result.ok && result.errors)}`);
+check("an authored sweep-only capability reaches the runtime inventory", () => {
+  const generator = fs.readFileSync(path.join(process.cwd(), "scripts", "generate-source-health-inventory.ts"), "utf8");
+  const sweepRender = /for \(const sweep of SWEEP_ONLY_SPECS\)[\s\S]{0,400}?\n  \}/.exec(generator);
+  assert.ok(sweepRender, "the sweep-only rendering loop is not in the expected form");
+  assert.ok(!/,\s*null\)\);/.test(sweepRender![0]), "sweep-only capabilities are still rendered with a hardcoded null policy");
+  assert.ok(/authoredPolicy\[sweep\.capabilityId\]/.test(sweepRender![0]), "they do not read the authored policy source");
+  for (const [what, pattern] of [["authored", /const authored =[\s\S]{0,240}?SWEEP_ONLY_SPECS/],
+    ["eligible", /const eligibleCount =[\s\S]{0,320}?SWEEP_ONLY_SPECS/]] as [string, RegExp][]) {
+    assert.ok(pattern.test(generator), `the ${what} count excludes sweep-only capabilities`);
   }
+  const inventory = fs.readFileSync(path.join(process.cwd(), "lib", "source-health-inventory.ts"), "utf8");
+  const header = /Capabilities: (\d+) \((\d+) operation-backed \+ (\d+) sweep-only\)/.exec(inventory);
+  assert.ok(header && Number(header[1]) === Number(header[2]) + Number(header[3]), "the header's counts do not add up");
+  assert.strictEqual(Number(header![1]), Object.keys(DECIDABLE).length, "the inventory and the workbook disagree");
 });
 
 check("the workbook has no capability list of its own to drift", () => {
@@ -165,378 +517,22 @@ check("the workbook has no capability list of its own to drift", () => {
     requiredColumns: { t_solo: ["year"] }, flagKey: "PROOF_CAPABILITY_SHR_DEADBEEF",
     policy: null, authorizationEligible: false,
   } } as Record<string, RegistryEntry>;
-  const ids = buildWorkbookModel(synthetic).map((c) => c.id);
-  assert.deepStrictEqual(ids.sort(), ["shr::t_solo::t_solo(year)", ...SWEEP_ONLY_IDS].sort(),
-    "the workbook is not the synthetic registry plus the sweep-only capabilities");
+  assert.deepStrictEqual(buildWorkbookModel(synthetic).map((c) => c.id).sort(),
+    ["shr::t_solo::t_solo(year)", ...SWEEP_ONLY_IDS].sort());
   assert.ok(!renderWorkbook(synthetic).includes(Object.keys(registry)[0]),
     "the workbook carried a capability from the real registry into a synthetic one");
 });
 
-// ---------------------------------------------------------------- 2. no invented capability
-
 check("an invented capability cannot be imported", () => {
-  const result = importInto(decisionsFile({
-    "shr::invented::nothing(x)": wellFormed("incidents", "year"),
-  }));
+  const exported = JSON.parse(exportWith(withYear.id, answers()));
+  exported.decisions["shr::invented::nothing(x)"] = exported.decisions[withYear.id];
+  exported.basedOn["shr::invented::nothing(x)"] = null;
+  const result = importInto(JSON.stringify(exported));
   assert.strictEqual(result.ok, false);
   assert.ok(!result.ok && result.errors.some((e) => /not a capability in the registry/.test(e)));
 });
 
-// ---------------------------------------------------------------- 3. undecided stays null
-
-check("every unanswered field stays null and the capability stays ineligible", () => {
-  const partial = {
-    coverage: { kind: "column", table: yearBasis.table, yearColumn: yearBasis.yearColumn },
-    integrity: null, availability: null, receiptOwner: null,
-    evidence: "only the coverage basis has been decided so far, and that is a legitimate state",
-  };
-  const result = importInto(decisionsFile({ [withYear.id]: partial }));
-  assert.ok(result.ok, JSON.stringify(!result.ok && result.errors));
-  if (!result.ok) return;
-  const stored = result.policy[withYear.id] as Record<string, unknown>;
-  assert.strictEqual(stored.integrity, null, "an unanswered field must stay null, not acquire a default");
-  assert.strictEqual(stored.availability, null);
-  assert.strictEqual(stored.receiptOwner, null);
-  assert.deepStrictEqual(result.eligible, [], "a partly authored capability must not be eligible");
-});
-
-check("a capability nobody touched is absent entirely, not written as an empty shell", () => {
-  const untouched = { coverage: null, integrity: null, availability: null, receiptOwner: null, evidence: "" };
-  const result = importInto(decisionsFile({ [withYear.id]: untouched }));
-  assert.ok(result.ok, JSON.stringify(!result.ok && result.errors));
-  if (!result.ok) return;
-  assert.deepStrictEqual(result.authored, [], "an untouched capability must not be recorded as authored");
-  assert.ok(!(withYear.id in result.policy));
-});
-
-// ---------------------------------------------------------------- 4. cluster application
-
-check("cluster application names every affected capability, and what it costs them", () => {
-  const clustered = model.find((c) => c.tableCluster.length > 0);
-  assert.ok(clustered, "expected a capability sharing its table set with another");
-  const S = sessionFor();
-  const basis = clustered!.coverageCandidates.find((o) => o.yearBearing) ?? clustered!.coverageCandidates[0];
-  S.update(clustered!.id, wellFormed(basis.table, basis.yearColumn));
-  const plan = S.clusterPlan(clustered!.id);
-  assert.deepStrictEqual(plan.detail.map((d: any) => d.id).sort(), [...clustered!.tableCluster].sort(),
-    "the plan does not name exactly the capabilities it would change");
-  assert.ok(plan.fields.length > 0, "a decided capability must have fields to copy");
-  // Applying changes only the named ones.
-  const before = JSON.stringify(S.decisions);
-  const applied = S.applyCluster(clustered!.id);
-  for (const id of applied.changed) assert.ok(plan.targets.includes(id), `${id} changed but was never named`);
-  assert.notStrictEqual(JSON.stringify(S.decisions), before, "the apply step changed nothing at all");
-});
-
-check("evidence is replaced wherever cluster-applied fields change", () => {
-  /**
-   * Evidence describes the VALUES it was written for. Keeping a target's own citation beside fields
-   * that have just been overwritten leaves a sentence describing values that are no longer there --
-   * which reads, later, exactly like someone having checked.
-   */
-  const clustered = model.find((c) => c.tableCluster.length > 0)!;
-  const target = clustered.tableCluster[0];
-  const S = sessionFor();
-  const basis = clustered.coverageCandidates.find((o) => o.yearBearing) ?? clustered.coverageCandidates[0];
-  S.update(clustered.id, wellFormed(basis.table, basis.yearColumn));
-  S.update(target, {
-    availability: { kind: "conditional", condition: "only when the crosswalk is present" },
-    evidence: "an ORIGINAL citation that describes the conditional availability authored here",
-  });
-  const plan = S.clusterPlan(clustered.id);
-  const entry = plan.detail.find((d: any) => d.id === target);
-  assert.ok(entry.evidenceReplaced, "the plan does not warn that this capability's evidence will be replaced");
-  S.applyCluster(clustered.id);
-  assert.notStrictEqual(S.decisions[target].evidence, "an ORIGINAL citation that describes the conditional availability authored here",
-    "the target kept evidence describing values that were just overwritten");
-  assert.strictEqual(S.decisions[target].evidence, S.decisions[clustered.id].evidence,
-    "a changed target must carry the evidence of the values it now holds");
-});
-
-// ---------------------------------------------------------------- 5. coverage
-
-check("coverage options are exactly the pairs the capability reads -- no more, no fewer", () => {
-  for (const capability of model) {
-    const offered = capability.coverageCandidates.map((o) => `${o.table}.${o.yearColumn}`).sort();
-    const readable = capability.reads
-      .flatMap((table) => (capability.columns[table] ?? []).map((column) => `${table}.${column}`)).sort();
-    assert.deepStrictEqual(offered, readable, `${capability.id}: offered options are not the pairs it reads`);
-  }
-});
-
-check("year-bearing options are MARKED, never used to filter the list", () => {
-  const withMixed = model.find((c) =>
-    c.coverageCandidates.some((o) => o.yearBearing) && c.coverageCandidates.some((o) => !o.yearBearing));
-  assert.ok(withMixed, "expected a capability reading both year and non-year columns");
-  for (const candidate of withMixed!.coverageCandidates) {
-    assert.strictEqual(candidate.yearBearing, isYearBearingColumn(candidate.yearColumn), `${candidate.yearColumn} is marked wrongly`);
-  }
-  const marks = withMixed!.coverageCandidates.map((o) => o.yearBearing);
-  assert.deepStrictEqual(marks, [...marks].sort((a, b) => Number(b) - Number(a)), "suggested options must sort first");
-  assert.ok(renderWorkbook(registry).includes("suggested (year-bearing)"), "the mark must be visible to the reader");
-});
-
-check("an unmarked column stays selectable but costs a justification", () => {
-  /**
-   * Both halves matter. The naming heuristic must never block the honest answer -- a year column it
-   * fails to recognise would otherwise be unreachable -- but `agencies.national_sample` must not
-   * become a coverage basis through one casual click either. It was authored in a browser in exactly
-   * that way, on a capability whose own page said no column there looked year-bearing, and reached
-   * authorization-eligible with no friction whatever.
-   */
-  const mixed = model.find((c) =>
-    c.coverageCandidates.some((o) => o.yearBearing) && c.coverageCandidates.some((o) => !o.yearBearing))!;
-  const unmarked = mixed.coverageCandidates.find((o) => !o.yearBearing)!;
-  const S = sessionFor();
-
-  const basis = { kind: "column", table: unmarked.table, yearColumn: unmarked.yearColumn };
-  assert.strictEqual(S.coverageNeedsJustification(mixed.id, basis), true, "an unmarked column must ask why");
-  assert.ok(S.coverageProblem(mixed.id, basis), "an unjustified unmarked basis must be reported as a problem");
-  assert.strictEqual(S.coverageProblem(mixed.id, { ...basis, justification: "the column stores an ISO date" }), null,
-    "a justified unmarked basis is legitimate and must be accepted");
-
-  const marked = mixed.coverageCandidates.find((o) => o.yearBearing)!;
-  assert.strictEqual(S.coverageNeedsJustification(mixed.id, { kind: "column", table: marked.table, yearColumn: marked.yearColumn }), false,
-    "a year-bearing column must not demand an excuse");
-
-  // Enforced at the BOUNDARY too: the page is a convenience, the importer is the guarantee.
-  const unjustified = { ...wellFormed(unmarked.table, unmarked.yearColumn), coverage: basis };
-  const refused = importInto(decisionsFile({ [mixed.id]: unjustified }));
-  assert.strictEqual(refused.ok, false, "the importer accepted an unmarked basis with no justification");
-  assert.ok(!refused.ok && refused.errors.some((e) => /year-bearing/.test(e)));
-
-  const justified = { ...unjustified, coverage: { ...basis, justification: "the column stores an ISO date whose prefix is the year" } };
-  const accepted = importInto(decisionsFile({ [mixed.id]: justified }));
-  assert.ok(accepted.ok, `a justified unmarked basis must import: ${JSON.stringify(!accepted.ok && accepted.errors)}`);
-});
-
-check("a basis outside the contract is refused at import even if the page emitted it", () => {
-  const stray = { ...wellFormed("incidents", "year"), coverage: { kind: "column", table: "unrelated_table", yearColumn: "year" } };
-  const result = importInto(decisionsFile({ [withYear.id]: stray }));
-  assert.strictEqual(result.ok, false);
-  assert.ok(!result.ok && result.errors.some((e) => /coverage basis/.test(e)),
-    "the importer must re-check the basis rather than trust the workbook");
-});
-
-check("\"no year dimension\" is recorded as a decision, not collapsed to an undecided null", () => {
-  /**
-   * It was written as the string "none" and normalised to null on import, so a considered answer
-   * became indistinguishable from never having been asked: the capability read as undecided forever
-   * and the reasoning was discarded at the boundary.
-   */
-  const decided = {
-    ...wellFormed(yearBasis.table, yearBasis.yearColumn),
-    coverage: { kind: "none", reason: "a directory count has no year dimension to bound" },
-    evidence: "an agency directory count has no year dimension to bound, which is a decision not an omission",
-  };
-  const result = importInto(decisionsFile({ [withYear.id]: decided }));
-  assert.ok(result.ok, JSON.stringify(!result.ok && result.errors));
-  if (!result.ok) return;
-  const stored = result.policy[withYear.id] as UnvalidatedPolicy;
-  assert.notStrictEqual(stored.coverage, null, "a decided no-year-dimension must not be stored as null");
-  assert.deepStrictEqual(stored.coverage, decided.coverage, "the decision and its reason must survive the import");
-  /**
-   * Nothing is eligible today, because no integrity rule is executable. What matters here is that
-   * the COVERAGE question is settled: answering "no year dimension" must not itself be what holds
-   * the capability back, or the decision would be indistinguishable from never making it.
-   */
-  const declaredHere = withYear.reads.map((name) => ({ name, requiredColumns: withYear.columns[name] ?? [] }));
-  const blockers = authorizationBlockers(decided, declaredHere);
-  assert.ok(!blockers.some((b) => /coverage/.test(b)),
-    `answering "no year dimension" is being treated as a coverage problem: ${JSON.stringify(blockers)}`);
-  assert.ok(blockers.some((b) => /integrity rule can be executed/.test(b)),
-    "the only remaining blocker should be the one nobody has machinery for yet");
-
-  const reasonless = { ...decided, coverage: { kind: "none" } };
-  const refused = importInto(decisionsFile({ [withYear.id]: reasonless }));
-  assert.strictEqual(refused.ok, false, "no-year-dimension without a reason is an assertion, not a decision");
-});
-
-check("a derived hint cannot ride into the policy file beside the decision", () => {
-  /**
-   * The generator leaked `yearBearing` -- an OBSERVATION about a column's name -- into the exported
-   * coverage object, and the importer wrote it to the policy file, where it sat beside the authored
-   * decision looking equally authoritative and went stale the moment the taxonomy was regenerated.
-   * Refused rather than stripped: stripping would hide the next leak instead of failing on it.
-   */
-  const leaked = {
-    ...wellFormed(yearBasis.table, yearBasis.yearColumn),
-    coverage: { kind: "column", table: yearBasis.table, yearColumn: yearBasis.yearColumn, yearBearing: false },
-  };
-  const result = importInto(decisionsFile({ [withYear.id]: leaked }));
-  assert.strictEqual(result.ok, false, "an unknown coverage key was accepted");
-  assert.ok(!result.ok && result.errors.some((e) => /yearBearing/.test(e)), "the refusal must name the offending key");
-
-  // And the page does not emit it in the first place.
-  const S = sessionFor();
-  S.update(withYear.id, wellFormed(yearBasis.table, yearBasis.yearColumn));
-  const exported = JSON.parse(S.serialize()) as { decisions: Record<string, any> };
-  assert.deepStrictEqual(Object.keys(exported.decisions[withYear.id].coverage).sort(), ["kind", "table", "yearColumn"],
-    "the page exported a coverage object carrying more than the decision");
-});
-
-// ---------------------------------------------------------------- 6. export is a change set
-
-check("the export carries only what this session changed", () => {
-  /**
-   * A full snapshot was not merely verbose. The importer rebuilds the file from what it receives, so
-   * every omitted entry was a DELETED entry -- and a snapshot taken before someone else's import
-   * silently reverted their work on entries this session never touched.
-   */
-  const S = sessionFor();
-  assert.deepStrictEqual(S.changeSet(), {}, "an untouched session must export nothing");
-  S.update(withYear.id, wellFormed(yearBasis.table, yearBasis.yearColumn));
-  const changed = S.changeSet();
-  assert.deepStrictEqual(Object.keys(changed), [withYear.id], "the change set is not exactly what changed");
-  const exported = JSON.parse(S.serialize());
-  assert.deepStrictEqual(Object.keys(exported.decisions), [withYear.id]);
-  assert.ok(withYear.id in exported.basedOn, "a change must record the baseline it was authored against");
-});
-
-check("importing a change set preserves capabilities it does not mention", () => {
-  const other = model.find((c) => c.id !== withYear.id)!;
-  const existingPolicy = { [other.id]: wellFormed("incidents", "year") };
-  const result = importDecisions(
-    decisionsFile({ [withYear.id]: wellFormed(yearBasis.table, yearBasis.yearColumn) }),
-    registry, existingPolicy);
-  assert.ok(result.ok, JSON.stringify(!result.ok && result.errors));
-  if (!result.ok) return;
-  assert.ok(other.id in result.policy, "an entry the change set never mentioned was deleted by importing");
-  assert.deepStrictEqual(result.policy[other.id], existingPolicy[other.id], "an untouched entry was modified");
-});
-
-check("a change authored against a stale baseline is refused by name", () => {
-  /**
-   * Optimistic concurrency. Two people, or one person and an older tab, authoring the same
-   * capability must not resolve by last-writer-wins in silence.
-   */
-  const mine = wellFormed(yearBasis.table, yearBasis.yearColumn);
-  const theirs = { ...wellFormed(yearBasis.table, yearBasis.yearColumn), receiptOwner: "scripts/someone-elses-importer.py" };
-  // I began with no entry; the file now holds theirs.
-  const result = importDecisions(decisionsFile({ [withYear.id]: mine }, { [withYear.id]: null }),
-    registry, { [withYear.id]: theirs });
-  assert.strictEqual(result.ok, false, "an import overwrote an entry that changed underneath it");
-  assert.ok(!result.ok && result.errors.some((e) => e.includes(withYear.id) && /changed since this session began/.test(e)),
-    "the refusal must name the capability that moved");
-
-  // Same change, correct baseline: accepted.
-  const fine = importDecisions(decisionsFile({ [withYear.id]: mine }, { [withYear.id]: theirs }),
-    registry, { [withYear.id]: theirs });
-  assert.ok(fine.ok, `a change authored against the current value must merge: ${JSON.stringify(!fine.ok && fine.errors)}`);
-});
-
-check("export and re-import round-trip byte-identically", () => {
-  const exported = decisionsFile({ [withYear.id]: wellFormed(yearBasis.table, yearBasis.yearColumn) });
-  const first = importInto(exported);
-  const second = importInto(exported);
-  assert.ok(first.ok && second.ok, JSON.stringify(!first.ok && first.errors));
-  if (!first.ok || !second.ok) return;
-  assert.deepStrictEqual(second.policy, first.policy, "importing the same export twice must produce the same policy");
-  assert.strictEqual(writePolicy(first.policy), writePolicy(second.policy), "the written file must be byte-identical");
-});
-
-// ---------------------------------------------------------------- 7. staleness
-
-check("a registry structure change invalidates an existing export", () => {
-  const exported = decisionsFile({ [withYear.id]: wellFormed(yearBasis.table, yearBasis.yearColumn) });
-  const moved = JSON.parse(JSON.stringify(registry)) as Record<string, RegistryEntry>;
-  moved[withYear.id].requiredColumns[yearBasis.table] = [...moved[withYear.id].requiredColumns[yearBasis.table], "an_added_column"];
-  assert.notStrictEqual(registryFingerprint(moved), FINGERPRINT, "the fingerprint must move with the structure");
-  const result = importDecisions(exported, moved, {});
-  assert.strictEqual(result.ok, false);
-  assert.ok(!result.ok && result.errors.some((e) => /regenerate the workbook/.test(e)));
-});
-
-check("a stale session cannot be laundered through the page into a fresh fingerprint", () => {
-  /**
-   * The defect this file previously could not see. Loading a fingerprint-mismatched file WARNED and
-   * then copied its decisions anyway; the next export stamped them with the CURRENT fingerprint, so
-   * answers to questions that no longer exist arrived at the importer looking freshly authored. The
-   * old test asserted the warning text appeared -- which it did, in the same run where the counter
-   * moved from 0/51 to 1/51 behind it.
-   */
-  const S = sessionFor();
-  const stale = {
-    v: DECISIONS_VERSION,
-    fingerprint: "deadbeefdeadbeef",
-    decisions: { [withYear.id]: wellFormed(yearBasis.table, yearBasis.yearColumn) },
-    basedOn: { [withYear.id]: null },
-  };
-  const result = S.loadSession(stale);
-  assert.strictEqual(result.ok, false, "a stale session must not load");
-  assert.ok(result.stale && /different registry structure/.test(result.reason), "the refusal must say why");
-  assert.deepStrictEqual(S.changeSet(), {},
-    "the stale decisions were copied into the session and would be re-exported under the current fingerprint");
-  assert.strictEqual(S.decisions[withYear.id].coverage, null, "a stale answer reached the live session");
-  assert.strictEqual(S.isDirty(), false, "refusing a load must not leave the session dirty");
-});
-
-check("a session with a matching fingerprint loads, and adopts the baseline it was authored against", () => {
-  const S = sessionFor();
-  const loaded = S.loadSession({
-    v: DECISIONS_VERSION, fingerprint: FINGERPRINT,
-    decisions: { [withYear.id]: wellFormed(yearBasis.table, yearBasis.yearColumn) },
-    basedOn: { [withYear.id]: null },
-  });
-  assert.ok(loaded.ok, "a current session must load");
-  assert.strictEqual(loaded.applied, 1);
-  assert.deepStrictEqual(S.decisions[withYear.id].coverage, { kind: "column", table: yearBasis.table, yearColumn: yearBasis.yearColumn });
-  assert.strictEqual(S.isDirty(), false, "a freshly loaded session has nothing unsaved");
-  assert.deepStrictEqual(Object.keys(S.changeSet()), [withYear.id], "loaded work must still be exportable");
-});
-
-check("a session written by a different version is refused rather than misread", () => {
-  const S = sessionFor();
-  const result = S.loadSession({ v: DECISIONS_VERSION - 1, fingerprint: FINGERPRINT, decisions: {}, basedOn: {} });
-  assert.strictEqual(result.ok, false);
-  assert.ok(/version/.test(result.reason));
-});
-
-check("authoring policy does not change the fingerprint, so a session survives its own import", () => {
-  const authoredRegistry = JSON.parse(JSON.stringify(registry)) as Record<string, RegistryEntry>;
-  authoredRegistry[withYear.id].policy = wellFormed("incidents", "year");
-  authoredRegistry[withYear.id].authorizationEligible = true;
-  assert.strictEqual(registryFingerprint(authoredRegistry), FINGERPRINT);
-});
-
-// ---------------------------------------------------------------- 8. unsaved work
-
-check("the session tracks unsaved work, and is clean after exporting or loading", () => {
-  /**
-   * Ninety-seven decisions live in one tab's memory. Nothing warned before a close discarded them,
-   * and the guard has to be conditional: one that always fires is one people learn to dismiss.
-   */
-  const S = sessionFor();
-  assert.strictEqual(S.isDirty(), false, "a fresh session has nothing to lose");
-  S.update(withYear.id, wellFormed(yearBasis.table, yearBasis.yearColumn));
-  assert.strictEqual(S.isDirty(), true, "an authored decision is unsaved work");
-  S.serialize(); S.markClean();
-  assert.strictEqual(S.isDirty(), false, "exporting saves the work");
-  S.update(withYear.id, { evidence: "a revised citation that changes what is recorded here materially" });
-  assert.strictEqual(S.isDirty(), true, "editing after an export is unsaved again");
-});
-
-check("re-applying the values already held is not unsaved work", () => {
-  // Rendering a card writes its own values back; that must not raise the guard.
-  const S = sessionFor();
-  const values = wellFormed(yearBasis.table, yearBasis.yearColumn);
-  S.update(withYear.id, values);
-  S.markClean();
-  S.update(withYear.id, JSON.parse(JSON.stringify(values)));
-  assert.strictEqual(S.isDirty(), false, "writing back identical values marked the session dirty");
-});
-
-check("the page guards the close only when there is something to lose", () => {
-  // Text, because beforeunload is genuinely the browser's: the CONDITION is what is asserted.
-  const html = renderWorkbook(registry);
-  const handler = /addEventListener\("beforeunload"[\s\S]{0,320}/.exec(html);
-  assert.ok(handler, "the page does not guard against losing unexported work");
-  assert.ok(/if \(!S\.isDirty\(\)\) return;/.test(handler![0]), "the guard is unconditional, so it will be dismissed by habit");
-  assert.ok(/preventDefault/.test(handler![0]), "the guard does not actually stop the unload");
-  assert.ok(/Export whenever you have done a few/.test(html), "the page never suggests exporting periodically");
-});
-
-// ---------------------------------------------------------------- 9. no activation
+// ---------------------------------------------------------------- 8. no activation
 
 check("nothing in the decision machine can set a flag or activate anything", () => {
   const html = renderWorkbook(registry);
@@ -548,400 +544,85 @@ check("nothing in the decision machine can set a flag or activate anything", () 
   for (const forbidden of ["fetch(", "XMLHttpRequest", "localStorage", "sessionStorage", "navigator.sendBeacon"]) {
     assert.ok(!html.includes(forbidden), `the workbook uses ${forbidden}; it must be inert and local`);
   }
-  const importer = fs.readFileSync(path.join(process.cwd(), "scripts", "import-stage2b-decisions.ts"), "utf8");
-  assert.ok(!/PROOF_CAPABILITY|PROOF_MODE|flagKey/.test(importer),
-    "the importer touches flags; authoring policy makes a capability eligible, which is not enabling it");
-});
-
-check("the importer is the only thing that can write the policy source", () => {
-  const html = renderWorkbook(registry);
-  assert.ok(!html.includes("capability-policy.json"),
-    "the workbook names the policy source; it must produce a download that a checked-in importer validates");
+  assert.ok(!html.includes("capability-policy.json"), "the workbook names the policy source it must not touch");
   assert.ok(/download = "stage2b-policy-decisions.json"/.test(html), "the workbook must export to a file");
+  const importer = fs.readFileSync(path.join(process.cwd(), "scripts", "import-stage2b-decisions.ts"), "utf8");
+  assert.ok(!/PROOF_CAPABILITY|PROOF_MODE|flagKey/.test(importer), "the importer touches flags");
 });
 
-check("unbound integrity prose blocks eligibility, however complete the rest of the entry is", () => {
-  /**
-   * Documenting that "eligibility asserts nothing about integrity" does not make an eligible
-   * capability safe. The field is mandatory BECAUSE integrity matters, so an eligibility that
-   * ignores it grants exactly the assurance nobody checked. A prose rule is a draft; it is kept,
-   * and it authorizes nothing until it names something that can be run.
-   */
+check("exact keys are enforced at every level", () => {
   const declared = withYear.reads.map((name) => ({ name, requiredColumns: withYear.columns[name] ?? [] }));
-  const draft = draftIntegrity(yearBasis.table, yearBasis.yearColumn);
-  const bound = wellFormed(yearBasis.table, yearBasis.yearColumn);
-
-  assert.strictEqual(policyIsComplete(draft), true, "a prose entry is still a well-formed, complete draft");
-  assert.strictEqual(capabilityAuthorizes(draft, declared), false, "unbound integrity prose authorized");
-  /**
-   * And a BOUND rule authorizes nothing either, because `boundTo` binds to nothing. There is no
-   * catalog to resolve it against, no resolver, and no runtime consumer -- so `boundTo: "banana"`
-   * bound exactly as much as any other string, and prose plus an arbitrary second string authorized
-   * precisely what prose alone had. Nothing gets past this until the machinery exists.
-   */
-  assert.strictEqual(capabilityAuthorizes(bound, declared), false, "a bound-looking rule authorized with nothing behind it");
-  const banana = { ...wellFormed(yearBasis.table, yearBasis.yearColumn), integrity: [{ rule: "r", boundTo: "banana" }] };
-  assert.strictEqual(capabilityAuthorizes(banana, declared), false, "boundTo: \"banana\" authorized");
-  for (const shape of [null, [], ["prose"], [{ rule: "r", boundTo: "checks/real.sql" }], "anything"]) {
-    assert.strictEqual(integrityIsExecutable(shape), false, `${JSON.stringify(shape)} was treated as executable`);
-  }
-  assert.ok(authorizationBlockers(draft, declared).some((b) => /no integrity rule can be executed/.test(b)),
-    "the blocker is not reported by name");
-
-  // The importer agrees: the draft imports and is recorded, but is not eligible.
-  for (const [what, policy] of [["prose", draft], ["a binding to nothing", bound]] as [string, Record<string, unknown>][]) {
-    const imported = importInto(decisionsFile({ [withYear.id]: policy }));
-    assert.ok(imported.ok, `${what}: ${JSON.stringify(!imported.ok && imported.errors)}`);
-    if (!imported.ok) continue;
-    assert.deepStrictEqual(imported.eligible, [], `${what}: was made eligible at import`);
-    assert.deepStrictEqual(imported.authored, [withYear.id], `${what}: the draft must still be recorded`);
-  }
-  // The generated inventory says the same thing about every capability in it.
-  const inventory = fs.readFileSync(path.join(process.cwd(), "lib", "source-health-inventory.ts"), "utf8");
-  assert.ok(!/authorizationEligible: true/.test(inventory),
-    "a capability is pinned eligible while no integrity rule can be executed");
-  assert.ok(/Authorization-eligible: 0\./.test(inventory), "the inventory header claims an eligible capability");
-
-  // And the RUNTIME gate uses the same predicate, not a weaker one.
-  const runtime = fs.readFileSync(path.join(process.cwd(), "lib", "source-health.ts"), "utf8");
-  assert.ok(!/if \(!policyIsComplete\(/.test(runtime),
-    "the runtime gates on policyIsComplete, which is weaker than the predicate the registry was pinned with");
-  assert.ok(/capabilityAuthorizes\(spec\.policy/.test(runtime), "the runtime does not gate on capabilityAuthorizes");
-
-  const html = renderWorkbook(registry);
-  assert.ok(/Draft, and non-authorizing/.test(html), "the page does not tell the author that prose authorizes nothing");
-});
-
-check("an authored sweep-only capability reaches the runtime inventory", () => {
-  /**
-   * The importer accepted a decision for it and the inventory generator then rendered it with a
-   * hardcoded `policy: null`, so it could be authored and could never authorize. A question whose
-   * answer is discarded is worse than a question never asked.
-   */
-  const generator = fs.readFileSync(path.join(process.cwd(), "scripts", "generate-source-health-inventory.ts"), "utf8");
-  const sweepRender = /for \(const sweep of SWEEP_ONLY_SPECS\)[\s\S]{0,400}?\n  \}/.exec(generator);
-  assert.ok(sweepRender, "the sweep-only rendering loop is not in the expected form");
-  assert.ok(!/,\s*null\)\);/.test(sweepRender![0]),
-    "sweep-only capabilities are still rendered with a hardcoded null policy, so authoring one cannot reach the runtime");
-  assert.ok(/authoredPolicy\[sweep\.capabilityId\]/.test(sweepRender![0]),
-    "sweep-only capabilities do not read the authored policy source");
-  // The inventory itself carries every sweep-only id.
-  const inventory = fs.readFileSync(path.join(process.cwd(), "lib", "source-health-inventory.ts"), "utf8");
-  for (const id of SWEEP_ONLY_IDS) assert.ok(inventory.includes(id), `${id} is absent from the generated inventory`);
-});
-
-check("exact keys are enforced at every level, not only on coverage", () => {
-  /**
-   * The refusal was applied where the leak had been FOUND rather than to the shape of the leak, so
-   * one level up and one level down were still open: `{kind:"always", observedAvailable:true}`
-   * produced no shape error and became eligible.
-   */
-  const declared = withYear.reads.map((name) => ({ name, requiredColumns: withYear.columns[name] ?? [] }));
-  const base = wellFormed(yearBasis.table, yearBasis.yearColumn);
-  const leaks: [string, Record<string, unknown>][] = [
+  const base = { coverage: { kind: "column", table: yearBasis.table, yearColumn: yearBasis.yearColumn },
+    integrity: ["a rule"], availability: { kind: "always" }, receiptOwner: "owner",
+    evidence: "cited from the runbook and confirmed with the analyst who owns it" };
+  for (const [what, policy] of [
     ["availability variant", { ...base, availability: { kind: "always", observedAvailable: true } }],
-    ["conditional variant", { ...base, availability: { kind: "conditional", condition: "x", observed: 1 } }],
+    ["coverage", { ...base, coverage: { ...base.coverage, yearBearing: false } }],
     ["top-level decision", { ...base, derivedFrom: "an observation that is not a decision" }],
-    ["bound integrity rule", { ...base, integrity: [{ rule: "r", boundTo: "c", observed: true }] }],
-  ];
-  for (const [what, policy] of leaks) {
+  ] as [string, Record<string, unknown>][]) {
     assert.ok(policyShapeErrors(policy).length > 0, `${what}: an unknown key produced no shape error`);
     assert.strictEqual(capabilityAuthorizes(policy, declared), false, `${what}: an unknown key still authorized`);
-    const result = importInto(decisionsFile({ [withYear.id]: policy }));
-    assert.strictEqual(result.ok, false, `${what}: the importer accepted an unknown key`);
   }
+  // And an unknown key on the change-set entry itself is refused.
+  const exported = JSON.parse(exportWith(withYear.id, answers()));
+  exported.decisions[withYear.id].smuggled = true;
+  const result = importInto(JSON.stringify(exported));
+  assert.strictEqual(result.ok, false, "an unknown entry key was accepted");
 });
 
-check("loading replaces the session, and will not silently absorb unsaved work", () => {
-  /**
-   * Merging looked harmless and was not. Unrelated edits made in this tab survived the load and were
-   * then marked CLEAN along with the file's, so a later export carried work the author never saw on
-   * screen and had no reason to believe was still there.
-   */
-  const other = model.find((c) => c.id !== withYear.id)!;
-  const S = sessionFor();
-  S.update(other.id, wellFormed("incidents", "year"));          // unsaved work on A
-  assert.strictEqual(S.isDirty(), true);
-
-  const file = {
-    v: DECISIONS_VERSION, fingerprint: FINGERPRINT,
-    decisions: { [withYear.id]: wellFormed(yearBasis.table, yearBasis.yearColumn) },   // a file about B
-    basedOn: { [withYear.id]: null },
-  };
-  const refused = S.loadSession(file);
-  assert.strictEqual(refused.ok, false, "loading over unsaved work happened without asking");
-  assert.ok(refused.needsConfirmation, "the refusal must be a confirmable one, not a dead end");
-  assert.ok(other.id in S.changeSet(), "the refused load discarded the unsaved work it was warning about");
-
-  const loaded = S.loadSession(file, { discardUnsaved: true });
-  assert.ok(loaded.ok, "confirming must let the load proceed");
-  const after = S.changeSet();
-  assert.deepStrictEqual(Object.keys(after), [withYear.id],
-    "the loaded session still contains work from before the load, now marked saved");
-  assert.strictEqual(S.isDirty(), false, "a freshly loaded session has nothing unsaved");
-});
-
-check("withdrawal is a named act, never inferred from blank fields", () => {
-  /**
-   * Clearing every field used to mean deletion at the importer, while the page offered only
-   * "Undecided" and no confirmation -- so "I have not decided this yet" and "remove what was
-   * decided" were the same gesture, and the destructive reading won.
-   */
-  const authored = wellFormed(yearBasis.table, yearBasis.yearColumn);
-  const blanked = { coverage: null, integrity: null, availability: null, receiptOwner: null, evidence: "" };
-  const refused = importDecisions(decisionsFile({ [withYear.id]: blanked }, { [withYear.id]: authored }),
-    registry, { [withYear.id]: authored });
-  assert.strictEqual(refused.ok, false, "blanking every field silently deleted authored policy");
-  assert.ok(!refused.ok && refused.errors.some((e) => /not a withdrawal/.test(e)), "the refusal must name the real operation");
-
-  const withdrawn = importDecisions(decisionsFile({ [withYear.id]: { operation: "withdraw" } }, { [withYear.id]: authored }),
-    registry, { [withYear.id]: authored });
-  assert.ok(withdrawn.ok, `an explicit withdrawal must be accepted: ${JSON.stringify(!withdrawn.ok && withdrawn.errors)}`);
-  if (!withdrawn.ok) return;
-  assert.deepStrictEqual(withdrawn.cleared, [withYear.id]);
-  assert.ok(!(withYear.id in withdrawn.policy), "the withdrawn entry survived");
-
-  // Nothing to withdraw is an error, not a silent no-op.
-  const nothing = importInto(decisionsFile({ [withYear.id]: { operation: "withdraw" } }));
-  assert.strictEqual(nothing.ok, false, "withdrawing an unauthored capability was accepted");
-
-  // The session offers it only where policy exists, and the page confirms by name.
-  const S = sessionFor({ [withYear.id]: authored });
-  assert.strictEqual(S.canWithdraw(withYear.id), true, "an authored capability must be withdrawable");
-  assert.strictEqual(sessionFor().canWithdraw(withYear.id), false, "an unauthored capability offers withdrawal");
-  S.withdraw(withYear.id);
-  assert.deepStrictEqual(S.changeSet()[withYear.id], { operation: "withdraw" });
-  const html = renderWorkbook(registry);
-  assert.ok(/Withdraw this authored policy/.test(html), "the page never offers withdrawal");
-  assert.ok(/confirm\("Withdraw the authored policy/.test(html), "withdrawal is not confirmed");
-});
-
-check("an unrelated edit cannot rewrite a bound integrity rule", () => {
-  /**
-   * The page renders integrity into a textarea and re-parses it on EVERY field edit. With a bound
-   * rule in the list that round trip was destructive twice over: `join` rendered the object as
-   * "[object Object]", and the next keystroke anywhere on the card -- an owner, a coverage answer,
-   * a word of evidence -- parsed that string back as a draft rule and overwrote the binding.
-   */
-  const bound = { rule: "the derived table must not outrun its upstream", boundTo: "checks/derived-alignment.sql" };
-  const S = sessionFor({ [withYear.id]: { ...wellFormed(yearBasis.table, yearBasis.yearColumn), integrity: [bound] } });
-
-  assert.deepStrictEqual(S.boundRules(withYear.id), [bound], "the bound rule is not recognised as bound");
-  assert.deepStrictEqual(S.draftRules(withYear.id), [], "a bound rule leaked into the editable drafts");
-
-  // What the textarea shows, fed straight back the way an unrelated edit does.
-  S.setIntegrityDrafts(withYear.id, S.draftRules(withYear.id));
-  S.update(withYear.id, { receiptOwner: "scripts/some-other-owner.py" });
-  assert.deepStrictEqual(S.decisions[withYear.id].integrity, [bound],
-    "an unrelated edit rewrote the bound rule");
-  assert.ok(!JSON.stringify(S.decisions[withYear.id].integrity).includes("[object Object]"),
-    "the bound rule was stringified into the drafts");
-
-  // Adding prose keeps the binding and appends.
-  S.setIntegrityDrafts(withYear.id, ["a new draft rule someone typed"]);
-  assert.deepStrictEqual(S.decisions[withYear.id].integrity, [bound, "a new draft rule someone typed"],
-    "authoring a draft dropped the bound rule");
-
-  const html = renderWorkbook(registry);
-  assert.ok(!/d\.integrity\.join\(/.test(html), "the page still round-trips every integrity rule through the textarea");
-  assert.ok(/S\.draftRules\(cap\.id\)\.join\(/.test(html), "the textarea is not restricted to draft prose");
-  assert.ok(/Bound rules/.test(html), "the page never shows the bound rules it is preserving");
-});
-
-check("successive loads cannot restore a baseline from an earlier one", () => {
-  /**
-   * `baseline` is per-session and a load may legitimately adopt the one its file was authored
-   * against -- which made it stale-able. Loading a session authored against an older policy moved
-   * the baseline; loading a second, empty session then reset the decisions but left the moved
-   * baseline in place, so the older value came back, reported clean, and exported nothing.
-   */
-  const authored = wellFormed(yearBasis.table, yearBasis.yearColumn);
-  const S = sessionFor({ [withYear.id]: authored });
-  const older = { ...authored, receiptOwner: "scripts/an-older-owner.py" };
-
-  const first = S.loadSession({
-    v: DECISIONS_VERSION, fingerprint: FINGERPRINT,
-    decisions: { [withYear.id]: { ...authored, evidence: "a revision authored against the older policy value" } },
-    basedOn: { [withYear.id]: older },
-  });
-  assert.ok(first.ok);
-  assert.deepStrictEqual(S.baselineFor(withYear.id).receiptOwner, older.receiptOwner, "the load did not adopt the file's baseline");
-
-  const second = S.loadSession({ v: DECISIONS_VERSION, fingerprint: FINGERPRINT, decisions: {}, basedOn: {} });
-  assert.ok(second.ok);
-  assert.deepStrictEqual(S.baselineFor(withYear.id), authored,
-    "an empty load left the previous file's baseline in place, so the repository value was lost");
-  assert.deepStrictEqual(S.changeSet(), {}, "a session reset to the repository value still reports changes");
-});
-
-check("the inventory header counts every capability it emits, sweep-only included", () => {
-  const generator = fs.readFileSync(path.join(process.cwd(), "scripts", "generate-source-health-inventory.ts"), "utf8");
-  for (const [what, pattern] of [["authored", /const authored =[\s\S]{0,240}?SWEEP_ONLY_SPECS/],
-    ["eligible", /const eligibleCount =[\s\S]{0,320}?SWEEP_ONLY_SPECS/]] as [string, RegExp][]) {
-    assert.ok(pattern.test(generator), `the ${what} count excludes sweep-only capabilities`);
-  }
-  const inventory = fs.readFileSync(path.join(process.cwd(), "lib", "source-health-inventory.ts"), "utf8");
-  const header = /Capabilities: (\d+) \((\d+) operation-backed \+ (\d+) sweep-only\)/.exec(inventory);
-  assert.ok(header, "the inventory header does not state its capability counts");
-  assert.strictEqual(Number(header![1]), Number(header![2]) + Number(header![3]), "the header's own counts do not add up");
-  assert.strictEqual(Number(header![1]), Object.keys(DECIDABLE).length, "the inventory and the workbook disagree on the capability set");
-});
-
-check("the page's idea of Complete is the importer's", () => {
-  /**
-   * "All fields non-null plus some evidence" was weaker than the boundary's rule, so the counter
-   * reported a capability Complete while its coverage carried no reason and its conditional
-   * availability carried no condition -- telling the author they were finished with an entry the
-   * importer would refuse.
-   */
-  const cases: [string, Record<string, unknown>][] = [
-    ["coverage of no-year-dimension with no reason",
-      { ...wellFormed(yearBasis.table, yearBasis.yearColumn), coverage: { kind: "none", reason: "" } }],
-    ["conditional availability with a blank condition",
-      { ...wellFormed(yearBasis.table, yearBasis.yearColumn), availability: { kind: "conditional", condition: "  " } }],
-    ["an empty integrity list",
-      { ...wellFormed(yearBasis.table, yearBasis.yearColumn), integrity: [] }],
-  ];
-  for (const [what, policy] of cases) {
-    const S = sessionFor();
-    S.update(withYear.id, policy);
-    assert.strictEqual(S.isComplete(withYear.id), false, `${what}: the page called an invalid decision complete`);
-    assert.ok(S.problems(withYear.id).length > 0, `${what}: the page reports no problem`);
-    assert.strictEqual(S.counts().complete, 0, `${what}: counted toward Complete`);
-    const result = importInto(decisionsFile({ [withYear.id]: policy }));
-    assert.strictEqual(result.ok, false, `${what}: the importer accepted what the page called invalid`);
-  }
-  // ...and a genuinely finished entry is complete on both sides.
-  const S = sessionFor();
-  S.update(withYear.id, wellFormed(yearBasis.table, yearBasis.yearColumn));
-  assert.strictEqual(S.isComplete(withYear.id), true, "a finished entry is not counted complete");
-  assert.ok(importInto(decisionsFile({ [withYear.id]: wellFormed(yearBasis.table, yearBasis.yearColumn) })).ok);
-});
+// ---------------------------------------------------------------- 9. the documents
 
 check("the policy README documents the semantics that are actually enforced", () => {
-  /**
-   * The file Stage 2B authors read first. It still said all four non-null fields authorize, typed
-   * integrity as bare prose, and told the reader an eligible capability asserts nothing about
-   * integrity -- three statements the gate now contradicts. A mutation reverting this text survived
-   * the whole suite, which is why it is asserted rather than assumed.
-   */
   const doc = JSON.parse(fs.readFileSync(path.join(DATA_DIR, "capability-policy.json"), "utf8")) as any;
   const rules = (doc._README.rules as string[]).join(" ");
-  assert.ok(/STATING ALL FOUR IS NOT ENOUGH TO AUTHORIZE/.test(rules),
-    "the README still implies that authoring all four fields authorizes");
-  assert.ok(/no capability is authorization-eligible/.test(rules),
-    "the README does not record that nothing is eligible while integrity is unexecutable");
-  assert.ok(/integrity-executable/.test(rules), "the README's eligibility rule omits the integrity requirement");
-  assert.ok(/DRAFT PROSE \(a string\) or BOUND/.test(doc._README.shapes.integrity),
-    "the README still types integrity as bare prose");
-  assert.ok(/NON-AUTHORIZING TODAY/.test(doc._README.shapes.integrity),
-    "the README does not say that neither integrity form authorizes yet");
+  assert.ok(/STATING ALL FOUR IS NOT ENOUGH TO AUTHORIZE/.test(rules), "the README implies four fields authorize");
+  assert.ok(/no capability is authorization-eligible/.test(rules), "the README does not record that nothing is eligible");
+  assert.ok(/DRAFT PROSE \(a string\) or BOUND/.test(doc._README.shapes.integrity), "the README types integrity as bare prose");
   assert.ok(!/asserts nothing whatever about integrity/.test(JSON.stringify(doc._README)),
-    "the README still carries the rejected 'eligibility asserts nothing about integrity' framing");
+    "the README carries the rejected 'eligibility asserts nothing about integrity' framing");
 });
 
 check("the authoritative plan documents the shape that is actually enforced", () => {
-  /**
-   * Tasks 6-11 are written from the plan. A plan still specifying `{table, yearColumn} | null` would
-   * have them reintroduce the shape this correction removed.
-   */
   const plan = fs.readFileSync(path.join(process.cwd(), "docs", "superpowers", "plans",
     "2026-08-13-stage2-source-health-registry.md"), "utf8");
-  assert.ok(!/coverage: \{ table: string; yearColumn: string \} \| null/.test(plan),
-    "the plan still specifies the obsolete untagged coverage shape");
-  assert.ok(/kind: "none"; reason: string/.test(plan), "the plan does not carry the no-year-dimension variant");
-  assert.ok(/boundTo: string/.test(plan), "the plan does not carry bound integrity rules");
-  assert.ok(!/integrity: string\[\] \| null/.test(plan), "the plan still types integrity as bare prose");
-  assert.ok(/coverage\.kind === "none"/.test(plan), "the plan's evaluator snippet ignores the no-year-dimension answer");
+  assert.ok(!/coverage: \{ table: string; yearColumn: string \} \| null/.test(plan), "the plan keeps the obsolete coverage shape");
+  assert.ok(/kind: "none"; reason: string/.test(plan), "the plan lacks the no-year-dimension variant");
+  assert.ok(/boundTo: string/.test(plan) && /NEITHER AUTHORIZES TODAY/.test(plan), "the plan misstates integrity's authority");
+  assert.ok(/coverage\.kind === "none"/.test(plan), "the plan's evaluator ignores the no-year-dimension answer");
 });
 
-// ---------------------------------------------------------------- 10. suggestions are not answers
-
-check("no candidate is pre-selected, and every suggestion is labelled as one", () => {
-  const blankRegistry = JSON.parse(JSON.stringify(registry)) as Record<string, RegistryEntry>;
-  for (const id of Object.keys(blankRegistry)) blankRegistry[id].policy = null;
-  const html = renderWorkbook(blankRegistry);
-
-  // Behaviour: with nothing authored, every field of every capability opens undecided.
-  const S = sessionFor();
-  for (const capability of model) {
-    const d = S.decisions[capability.id];
-    assert.deepStrictEqual(S.undecidedFields(d).sort(), [...S.FIELDS].sort(),
-      `${capability.id} opens with a field already answered`);
-  }
-  const counts = S.counts();
-  assert.strictEqual(counts.complete, 0, "a capability counts as complete before anyone decided anything");
-
-  /**
-   * The embedded prior decisions may only be ones already authored in the policy source -- that is
-   * the resume feature. What it must never do is pre-fill a capability nobody has decided.
-   */
-  const embedded = JSON.parse(html.slice(html.indexOf("const DATA = ") + "const DATA = ".length,
-    html.indexOf("\n/* Decisions live only")).trim().replace(/;$/, "")) as { authored: Record<string, unknown> };
-  const policySource = JSON.parse(fs.readFileSync(path.join(DATA_DIR, "capability-policy.json"), "utf8")) as Record<string, unknown>;
-  for (const id of Object.keys(embedded.authored)) {
-    assert.ok(id in policySource, `${id} is pre-filled in the workbook but authored nowhere`);
-  }
-
-  /**
-   * Selection is driven by the stored decision, not by position. Asserted on the template because
-   * the options are built in the browser: a server-side search for `<option value="0" selected>`
-   * could never match, and passed while a mutation pre-selecting the first candidate ran unnoticed.
-   */
-  const optionTemplate = /'<option value="'\+i\+'"'\+\(([^)]*)\?/.exec(html);
-  assert.ok(optionTemplate, "the coverage option template is not in the expected form");
-  assert.ok(/selectedIndex/.test(optionTemplate![1]),
-    "an option is selected by something other than the stored decision, so the page chooses for the user");
-  const selectedIndexDecl = /const selectedIndex = ([\s\S]*?);\n/.exec(html);
-  assert.ok(selectedIndexDecl && /cov\b/.test(selectedIndexDecl[1]),
-    "the selected option is not derived from the authored coverage");
-  assert.ok(!/\bi\s*===\s*0\b/.test(optionTemplate![1]), "the first candidate is pre-selected");
-  assert.ok(html.includes("— Undecided —"), "undecided must be an offered state");
-  assert.ok(/<b>Candidates<\/b>/.test(html) && /a place to look, not an answer/.test(html),
-    "suggestions must be labelled as suggestions");
-  const generatorText = fs.readFileSync(path.join(process.cwd(), "scripts", "generate-stage2b-workbook.ts"), "utf8")
-    .replace(/\s*\n\s*\*?\s*/g, " ");
-  assert.ok(/never pre-selected/.test(generatorText) && /It does not decide anything/.test(generatorText),
-    "the generator must state the no-inference rule it is bound by");
-});
-
-check("owner candidates are evidence from a filename search, never a claim of ownership", () => {
-  for (const capability of model) {
-    for (const candidate of capability.ownerCandidates) {
-      assert.ok(fs.existsSync(path.join(process.cwd(), "scripts", candidate)),
-        `${capability.id}: offers ${candidate}, which does not exist`);
-    }
-  }
-  assert.ok(/Scripts mentioning every table this reads/.test(renderWorkbook(registry)),
-    "owner candidates must be framed as a search result");
-});
-
-// ---------------------------------------------------------------- 11. the embedding boundary
+// ---------------------------------------------------------------- 10. the embedding boundary
 
 check("embedded content cannot end the script element or the statement it sits in", () => {
-  /**
-   * A capability id, a condition or a piece of evidence containing `</script>` closes the block from
-   * inside its own string literal and spills the rest of the payload onto the page as markup. U+2028
-   * and U+2029 are line terminators to a JavaScript parser but not to JSON, so they end the
-   * statement mid-string. Escaped at the boundary, because that is where the hazard is.
-   */
   const hostile = "t_x" + "</scr" + "ipt><b>" + String.fromCharCode(0x2028) + String.fromCharCode(0x2029);
   const synthetic = { [`shr::${hostile}::${hostile}(year)`]: {
     artifact: "shr", prepDependencies: [], emittedDependencies: [hostile],
     requiredColumns: { [hostile]: ["year"] }, flagKey: "PROOF_CAPABILITY_SHR_DEADBEEF",
     policy: null, authorizationEligible: false,
   } } as Record<string, RegistryEntry>;
-
   const html = renderWorkbook(synthetic);
-  // A browser ends the element at the FIRST closing tag, so that is what must be parsed.
   const script = /<script>([\s\S]*?)<\/script>/.exec(html);
   assert.ok(script, "no script block survived");
   try { new Function(script![1]); }
   catch (error) { assert.fail(`hostile content broke the page: ${(error as Error).message}`); }
   const embedded = JSON.parse(script![1].slice(script![1].indexOf("const DATA = ") + "const DATA = ".length,
-    script![1].indexOf("\n/* Decisions live only")).trim().replace(/;$/, "")) as { capabilities: { id: string }[] };
-  assert.ok(embedded.capabilities.some((c) => c.id.includes(hostile)),
-    "the hostile id did not survive the escaping intact, so escaping corrupted the data");
+    script![1].indexOf("\n/* Your answers live only")).trim().replace(/;$/, "")) as { capabilities: { id: string }[] };
+  assert.ok(embedded.capabilities.some((c) => c.id.includes(hostile)), "escaping corrupted the data it protected");
+});
+
+check("owner candidates are evidence from a filename search, never presented as the answer", () => {
+  for (const capability of model) {
+    for (const candidate of capability.ownerCandidates) {
+      assert.ok(fs.existsSync(path.join(process.cwd(), "scripts", candidate)),
+        `${capability.id}: offers ${candidate}, which does not exist`);
+    }
+  }
+  const html = renderWorkbook(registry);
+  assert.ok(/a filename search, not an answer/.test(html), "filenames are not framed as a search result");
+  // The owner question itself offers processes, not filenames.
+  for (const option of PL.ownerOptions(withYear)) {
+    assert.ok(!/\.(py|ts|js|sql)$/.test(option.value), `the owner question offers the filename ${option.value}`);
+  }
 });
 
 console.log(`\nstage2b workbook: ${passed} passed, ${failed} failed`);

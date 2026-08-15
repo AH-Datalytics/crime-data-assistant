@@ -29,14 +29,16 @@ const DATA_DIR = path.join(process.cwd(), "scripts", "fixtures", "operation-taxo
 const REGISTRY_FILE = path.join(DATA_DIR, "capability-registry.json");
 const POLICY_FILE = path.join(DATA_DIR, "capability-policy.json");
 export const SESSION_MODULE_FILE = path.join(process.cwd(), "lib", "stage2b-session.js");
+export const PLAIN_LANGUAGE_MODULE_FILE = path.join(process.cwd(), "lib", "stage2b-plain-language.js");
 export const WORKBOOK_FILE = path.join(process.cwd(), "docs", "superpowers", "stage2b-policy-workbook.html");
 
 /**
- * 2: the export became a conflict-checked CHANGE SET carrying the baseline each entry was authored
- * against, and coverage became a discriminated union. A v1 file cannot be read as either, so it is
- * refused by version rather than misread field by field.
+ * 3: the workbook asks a policy owner plain-language questions, and an entry now carries the HUMAN
+ * answer, the technical mapping it proposes, and a confirmation of that exact mapping. A v2 file
+ * carries a technical decision with no record of the question it answered, so it is refused by
+ * version rather than read as though someone had approved a translation they never saw.
  */
-export const DECISIONS_VERSION = 2;
+export const DECISIONS_VERSION = 3;
 
 export type RegistryEntry = {
   artifact: string;
@@ -211,11 +213,10 @@ function embedJson(value: unknown): string {
     .split(LINE_SEPARATOR).join("\\u2028")
     .split(PARAGRAPH_SEPARATOR).join("\\u2029");
 }
-
 export function renderWorkbook(registryOverride?: Record<string, RegistryEntry>): string {
   const registryInput = registryOverride
     ?? (JSON.parse(fs.readFileSync(REGISTRY_FILE, "utf8")) as Record<string, RegistryEntry>);
-  const model = buildWorkbookModel(registryInput).map((c) => ({ ...c, description: describe(c) }));
+  const model = buildWorkbookModel(registryInput);
   const fingerprint = registryFingerprint(registryInput);
   const existing = fs.existsSync(POLICY_FILE)
     ? JSON.parse(fs.readFileSync(POLICY_FILE, "utf8")) as Record<string, unknown>
@@ -226,272 +227,322 @@ export function renderWorkbook(registryOverride?: Record<string, RegistryEntry>)
 
   const payload = embedJson({ v: DECISIONS_VERSION, fingerprint, capabilities: model, authored });
   /**
-   * Inlined VERBATIM, not re-implemented. The suite imports the same file and asserts the page
-   * contains it unchanged, so there is exactly one copy of this logic and no way for the tested
-   * copy and the shipped copy to disagree.
+   * Inlined VERBATIM, not re-implemented. The suite imports the same files and asserts the page
+   * contains them unchanged, so there is exactly one copy of this logic and no way for the tested
+   * copy and the shipped copy to disagree. The importer loads the plain-language module too, so the
+   * translation the person confirms is the translation the boundary re-derives.
    */
+  const plainLanguageSource = fs.readFileSync(PLAIN_LANGUAGE_MODULE_FILE, "utf8");
   const sessionSource = fs.readFileSync(SESSION_MODULE_FILE, "utf8");
 
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"/>
 <title>Stage 2B policy workbook</title>
 <style>
-:root{--ink:#16181d;--dim:#5b6172;--line:#d8dbe3;--bg:#fbfbfd;--card:#fff;--warn:#8a5a00;--warnbg:#fff6e5;--ok:#1c6b4a;--sug:#4a5878;--sugbg:#eef1f7;--alert:#8c2f1d;--alertbg:#fdefec}
+:root{--ink:#16181d;--dim:#5b6172;--line:#d8dbe3;--bg:#fbfbfd;--card:#fff;--warn:#8a5a00;--warnbg:#fff6e5;--ok:#1c6b4a;--okbg:#e9f4ee;--sug:#4a5878;--sugbg:#eef1f7;--alert:#8c2f1d;--alertbg:#fdefec}
 *{box-sizing:border-box}
-body{margin:0;font:15px/1.55 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:var(--ink);background:var(--bg)}
-header{position:sticky;top:0;background:var(--card);border-bottom:1px solid var(--line);padding:10px 20px;display:flex;gap:18px;align-items:center;flex-wrap:wrap;z-index:5}
+body{margin:0;font:15.5px/1.6 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:var(--ink);background:var(--bg)}
+header{position:sticky;top:0;background:var(--card);border-bottom:1px solid var(--line);padding:10px 20px;display:flex;gap:16px;align-items:center;flex-wrap:wrap;z-index:5}
 header b{font-size:14px}
 .counts{color:var(--dim);font-size:13px;display:flex;gap:14px;flex-wrap:wrap}
-main{max-width:940px;margin:0 auto;padding:20px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:18px 20px;margin-bottom:16px}
-h2{font-size:17px;margin:0 0 4px}
-.id{font:12px ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--dim);word-break:break-all;margin-bottom:10px}
-.meta{font-size:13px;color:var(--dim);margin-bottom:14px}
-.q{border-top:1px solid var(--line);padding:14px 0}
-.q h3{font-size:14px;margin:0 0 8px}
-label{display:block;font-size:13px;margin:6px 0 3px;color:var(--dim)}
-select,input[type=text],textarea{width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:5px;font:inherit;background:#fff}
-textarea{min-height:52px;resize:vertical}
-.row{display:flex;gap:10px;flex-wrap:wrap}.row>*{flex:1;min-width:200px}
-.sug{background:var(--sugbg);border-left:3px solid var(--sug);padding:7px 10px;margin:8px 0;font-size:12.5px;color:#39435c;border-radius:0 4px 4px 0}
-.sug b{color:var(--sug)}
-.warn{background:var(--warnbg);border-left:3px solid var(--warn);padding:8px 11px;margin:10px 0;font-size:13px;color:var(--warn);border-radius:0 4px 4px 0}
-.alert{background:var(--alertbg);border-left:3px solid var(--alert);padding:8px 11px;margin:10px 0;font-size:13px;color:var(--alert);border-radius:0 4px 4px 0}
+main{max-width:820px;margin:0 auto;padding:22px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:20px 22px;margin-bottom:16px}
+h2{font-size:19px;line-height:1.4;margin:0 0 10px;font-weight:600}
+.q{border-top:1px solid var(--line);padding:16px 0}
+.q h3{font-size:15px;margin:0 0 4px}
+.q .hint{font-size:13.5px;color:var(--dim);margin:0 0 10px}
+label.opt{display:block;border:1px solid var(--line);border-radius:6px;padding:9px 12px;margin:6px 0;cursor:pointer}
+label.opt:hover{background:#f7f8fb}
+label.opt input{margin-right:9px}
+label.opt .why{display:block;font-size:13px;color:var(--dim);margin:3px 0 0 24px}
+.tag{display:inline-block;font-size:11px;background:var(--okbg);color:var(--ok);border-radius:999px;padding:1px 8px;margin-left:6px;font-weight:600}
+input[type=text],textarea{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:5px;font:inherit;background:#fff;margin-top:6px}
+textarea{min-height:58px;resize:vertical}
+details{margin:8px 0;font-size:13.5px}
+details summary{cursor:pointer;color:var(--sug)}
+details .body{background:var(--sugbg);border-left:3px solid var(--sug);padding:9px 12px;margin-top:6px;border-radius:0 4px 4px 0;color:#39435c}
+.observed{font-size:12.5px;color:var(--dim);font-style:italic}
+.mapping{background:var(--sugbg);border:1px solid #d3d9e6;border-radius:7px;padding:13px 15px;margin-top:6px}
+.mapping dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:13.5px}
+.mapping dt{color:var(--dim)}
+.mapping dd{margin:0}
+.warn{background:var(--warnbg);border-left:3px solid var(--warn);padding:9px 12px;margin:10px 0;font-size:13.5px;color:var(--warn);border-radius:0 4px 4px 0}
+.alert{background:var(--alertbg);border-left:3px solid var(--alert);padding:9px 12px;margin:10px 0;font-size:13.5px;color:var(--alert);border-radius:0 4px 4px 0}
+.good{background:var(--okbg);border-left:3px solid var(--ok);padding:9px 12px;margin:10px 0;font-size:13.5px;color:var(--ok);border-radius:0 4px 4px 0}
 button{font:inherit;padding:8px 14px;border:1px solid var(--line);background:#fff;border-radius:6px;cursor:pointer}
 button.primary{background:var(--ink);color:#fff;border-color:var(--ink)}
 button:disabled{opacity:.45;cursor:not-allowed}
 .nav{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
-.undecided{color:var(--warn);font-weight:600}
-.decided{color:var(--ok);font-weight:600}
 #dirty{font-size:12.5px;font-weight:600;padding:3px 9px;border-radius:999px}
 #dirty.unsaved{background:var(--warnbg);color:var(--warn)}
-#dirty.saved{background:#e9f4ee;color:var(--ok)}
-ul.affected{margin:8px 0 0;padding-left:20px;font:12px ui-monospace,Menlo,monospace;max-height:190px;overflow:auto}
+#dirty.saved{background:var(--okbg);color:var(--ok)}
+ul.affected{margin:8px 0 0;padding-left:20px;font-size:12.5px;max-height:190px;overflow:auto}
 dialog{border:1px solid var(--line);border-radius:9px;padding:20px;max-width:640px}
-dialog h3{margin-top:0}
-.pill{display:inline-block;font-size:11.5px;background:#eef0f5;color:var(--dim);border-radius:999px;padding:2px 9px;margin-right:6px}
-code{font:12px ui-monospace,Menlo,monospace;background:#f2f3f7;padding:1px 4px;border-radius:3px}
+code{font:12px ui-monospace,Menlo,monospace;background:#f2f3f7;padding:1px 4px;border-radius:3px;word-break:break-all}
 </style></head><body>
 <header>
  <b>Stage 2B policy workbook</b>
  <span id="dirty" class="saved">Nothing to save yet</span>
  <span class="counts" id="counts"></span>
  <span style="flex:1"></span>
- <select id="filter" style="width:auto">
-  <option value="all">All capabilities</option>
-  <option value="undecided">Any field undecided</option>
-  <option value="integrity">Integrity undecided</option>
-  <option value="coverage">Coverage undecided</option>
-  <option value="owner">Receipt owner undecided</option>
-  <option value="conditional">Possibly conditional</option>
-  <option value="unique">Unique table set</option>
+ <select id="filter" style="width:auto;padding:6px 8px;border:1px solid var(--line);border-radius:5px">
+  <option value="all">All lookups</option>
+  <option value="unanswered">Not yet answered</option>
+  <option value="unconfirmed">Answered, mapping not confirmed</option>
+  <option value="problems">Needs something fixed</option>
+  <option value="conditional">Possibly sometimes-unavailable</option>
  </select>
  <button id="import">Load a saved session</button>
- <button class="primary" id="export">Export decisions</button>
+ <button class="primary" id="export">Export answers</button>
  <input type="file" id="file" accept="application/json" hidden/>
 </header>
 <main>
  <div class="alert" id="staleness" hidden></div>
- <div class="sug">Decisions live only in this tab until you press <b>Export decisions</b>. Nothing here
-  can change the repository. Export whenever you have done a few — a closed tab or a browser crash
-  takes unexported work with it.</div>
+ <div class="warn">Your answers live only in this tab until you press <b>Export answers</b>. Nothing here
+  changes any system, switches anything on, or reaches the internet. Export every few answers — a closed
+  tab or a browser crash takes unexported work with it.</div>
  <div id="card"></div>
  <div class="nav">
   <button id="prev">Previous</button>
   <button id="next">Next</button>
-  <button class="primary" id="nextUndecided">Next undecided</button>
-  <button id="cluster">Apply to related capabilities…</button>
+  <button class="primary" id="nextUnanswered">Next unanswered</button>
+  <button id="cluster">Copy these answers to similar lookups…</button>
  </div>
 </main>
 <dialog id="confirm">
- <h3>Apply to related capabilities</h3>
+ <h3>Copy to similar lookups</h3>
  <p id="confirmIntro"></p>
- <p style="font-size:13px;color:#5b6172">Every capability that would change is named below. Nothing is applied until you confirm.</p>
+ <p style="font-size:13px;color:#5b6172">Every lookup that would change is named below. Each one keeps its
+  own technical mapping, which you will need to review and confirm separately. Nothing is copied until you confirm.</p>
  <ul class="affected" id="affected"></ul>
- <div class="nav"><button id="cancelCluster">Cancel</button><button class="primary" id="applyCluster">Apply to these</button></div>
+ <div class="nav"><button id="cancelCluster">Cancel</button><button class="primary" id="applyCluster">Copy to these</button></div>
 </dialog>
 <script>
 const DATA = ${payload};
-/* Decisions live only in this page's memory until you press Export. Nothing here can reach the
-   repository, a database, or any flag: the sole output is a downloaded file. */
+/* Your answers live only in this page's memory until you press Export. Nothing here can reach the
+   repository, a database, or any switch: the sole output is a downloaded file. */
+
+${plainLanguageSource}
 
 ${sessionSource}
 
-const S = createStage2bSession(DATA);
+const PL = createStage2bPlainLanguage();
+const S = createStage2bSession(DATA, PL);
 let index = 0;
 
-const isUnique = (c) => c.tableCluster.length === 0;
+function esc(s){ return String(s).replace(/[&<>"]/g, (m) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
+
 function matches(cap){
-  const d = S.decisions[cap.id], f = document.getElementById("filter").value;
+  const f = document.getElementById("filter").value;
   if (f === "all") return true;
-  if (f === "undecided") return S.undecidedFields(d).length > 0;
+  if (f === "unanswered") return !PL.isAnswered(S.human(cap.id));
+  if (f === "unconfirmed") return PL.isAnswered(S.human(cap.id)) && !S.isMappingConfirmed(cap.id);
+  if (f === "problems") return S.problems(cap.id).length > 0;
   if (f === "conditional") return !!cap.conditionalHint;
-  if (f === "unique") return isUnique(cap);
-  return d[f === "owner" ? "receiptOwner" : f] === null;
+  return true;
 }
 function visible(){ const v = DATA.capabilities.filter(matches); return v.length ? v : DATA.capabilities; }
-
-function esc(s){ return String(s).replace(/[&<>"]/g, (m) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
 
 function status(){
   const c = S.counts();
   document.getElementById("counts").innerHTML =
-    '<span>Complete: <b class="decided">'+c.complete+'</b>/'+DATA.capabilities.length+'</span>'+
-    (c.problems?'<span>Needs fixing: <b class="undecided">'+c.problems+'</b></span>':'')+
-    '<span>Coverage undecided: <b class="undecided">'+c.coverage+'</b></span>'+
-    '<span>Integrity undecided: <b class="undecided">'+c.integrity+'</b></span>'+
-    '<span>Availability undecided: <b class="undecided">'+c.availability+'</b></span>'+
-    '<span>Owner undecided: <b class="undecided">'+c.receiptOwner+'</b></span>';
+    '<span>Finished: <b>'+c.complete+'</b>/'+DATA.capabilities.length+'</span>'+
+    '<span>Awaiting confirmation: <b>'+c.unconfirmed+'</b></span>'+
+    (c.problems?'<span>Needs fixing: <b>'+c.problems+'</b></span>':'');
   const badge = document.getElementById("dirty");
   const changed = Object.keys(S.changeSet()).length;
-  if (S.isDirty()){ badge.className = "unsaved"; badge.textContent = "Unsaved changes — export to keep them"; }
+  if (S.isDirty()){ badge.className = "unsaved"; badge.textContent = "Unsaved — export to keep your answers"; }
   else { badge.className = "saved"; badge.textContent = changed ? "Saved: "+changed+" exported" : "Nothing to save yet"; }
+}
+
+/* Renders the technical policy these answers WOULD produce. Shown, never applied unconfirmed. */
+function mappingPanel(cap){
+  const p = S.proposal(cap.id), m = p.proposed;
+  const line = (label, value) => '<dt>'+label+'</dt><dd>'+value+'</dd>';
+  const rows = [
+    line('Year coverage', m.coverage === null ? '<i>left open</i>'
+      : m.coverage.kind === 'none' ? 'no year dimension — ' + esc(m.coverage.reason)
+      : 'bounded by <code>'+esc(m.coverage.table+'.'+m.coverage.yearColumn)+'</code>'),
+    line('What "broken" means', m.integrity === null ? '<i>left open</i>'
+      : '<ul style="margin:0;padding-left:16px">'+m.integrity.map((r)=>'<li>'+esc(r)+'</li>').join('')+'</ul>'),
+    line('Availability', m.availability === null ? '<i>left open</i>'
+      : m.availability.kind === 'always' ? 'always expected'
+      : 'sometimes absent — ' + esc(m.availability.condition)),
+    line('Kept fresh by', m.receiptOwner === null ? '<i>left open</i>' : esc(m.receiptOwner)),
+  ].join('');
+  const confirmed = S.isMappingConfirmed(cap.id);
+  const answered = PL.isAnswered(S.human(cap.id));
+  const problems = S.problems(cap.id);
+  return '<div class="q"><h3>Check the technical wording before it is recorded</h3>'+
+    '<p class="hint">This is exactly what would be written down for this lookup. Nothing is recorded until'+
+    ' you confirm it, and changing any answer above cancels the confirmation so you see the new wording.</p>'+
+    '<div class="mapping"><dl>'+rows+'</dl></div>'+
+    (problems.length ? '<div class="alert">Before this can be confirmed: '+problems.map(esc).join('; ')+'</div>' : '')+
+    (p.unresolved.length ? '<div class="warn">Left open: '+p.unresolved.map((f)=>esc(({coverage:'year coverage',integrity:'what broken means',availability:'availability',receiptOwner:'who keeps it fresh'})[f]||f)).join(', ')+
+      '. That is a legitimate place to stop — it is recorded as undecided, and this lookup stays switched off.</div>' : '')+
+    (confirmed ? '<div class="good">Confirmed. This wording is what your export will carry.</div>'
+      : '<button class="primary" id="confirmMapping"'+(answered && !problems.length ? '' : ' disabled')+'>I have read this wording — confirm it</button>')+
+    '</div>';
 }
 
 function render(){
   const list = visible();
   if (index >= list.length) index = 0;
-  const cap = list[index], d = S.decisions[cap.id];
-  const cov = d.coverage;
-  const selectedIndex = cov && cov.kind === "column"
-    ? cap.coverageCandidates.findIndex((o) => o.table===cov.table && o.yearColumn===cov.yearColumn) : -1;
-  const covOpts = cap.coverageCandidates.map((o,i) =>
-    '<option value="'+i+'"'+(i===selectedIndex ? ' selected':'')+'>'+
-      esc(o.table+'.'+o.yearColumn)+(o.yearBearing?' — suggested (year-bearing)':'')+'</option>').join('');
-  const ownerOpts = cap.ownerCandidates.map((o) =>
-    '<option value="'+esc(o)+'"'+(d.receiptOwner===o?' selected':'')+'>'+esc(o)+'</option>').join('');
-  const avail = d.availability ? d.availability.kind : "";
-  const needsJust = S.coverageNeedsJustification(cap.id, cov);
-  const problem = S.coverageProblem(cap.id, cov);
+  const cap = list[index], h = S.human(cap.id);
+
+  const covOpts = PL.coverageOptions(cap).map((o) =>
+    '<label class="opt"><input type="radio" name="cov" value="'+esc(o.value)+'"'+(h.coverage===o.value?' checked':'')+'/>'+
+      esc(o.label)+(o.recommended?'<span class="tag">recommended</span>':'')+
+      '<span class="why">'+esc(o.consequence)+'</span></label>').join('');
+  const covWhy = PL.coverageOptions(cap).map((o)=>'<li><b>'+esc(o.label)+'</b> — '+esc(o.why)+'</li>').join('');
+  const scenarios = PL.integrityScenarios(cap).map((s) =>
+    '<label class="opt"><input type="checkbox" name="integ" value="'+esc(s.value)+'"'+
+      ((h.integrity||[]).indexOf(s.value)>=0?' checked':'')+'/>'+esc(s.label)+'</label>').join('');
+  const availOpts = PL.availabilityOptions().map((o) =>
+    '<label class="opt"><input type="radio" name="avail" value="'+esc(o.value)+'"'+(h.availability===o.value?' checked':'')+'/>'+
+      esc(o.label)+'<span class="why">'+esc(o.consequence)+'</span></label>').join('');
+  const ownerOpts = PL.ownerOptions(cap).map((o) =>
+    '<label class="opt"><input type="radio" name="owner" value="'+esc(o.value)+'"'+(h.owner===o.value?' checked':'')+'/>'+
+      esc(o.label)+'</label>').join('');
 
   document.getElementById("card").innerHTML =
   '<div class="card">'+
    '<div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap">'+
-     '<h2>'+esc(cap.description)+'</h2>'+
-     '<span class="pill">'+(index+1)+' of '+list.length+(list.length!==DATA.capabilities.length?' (filtered)':'')+'</span></div>'+
-   '<div class="id">'+esc(cap.id)+'</div>'+
-   '<div class="meta"><span class="pill">'+esc(cap.artifact)+'</span>'+
-     'Reads <code>'+cap.reads.map(esc).join('</code> <code>')+'</code>'+
-     (cap.prepares.length?' · prepares <code>'+cap.prepares.map(esc).join('</code> <code>')+'</code>':'')+
+     '<h2>'+esc(PL.describeQuestion(cap))+'</h2>'+
+     '<span class="observed">'+(index+1)+' of '+list.length+'</span></div>'+
+   '<p class="observed">The description above is derived from the names in the data, so treat it as a'+
+     ' summary rather than a definition. Everything under "Technical details" is observed from the code'+
+     ' and is not up for decision; the questions below are.</p>'+
+   '<details><summary>Technical details</summary><div class="body">'+
+     'Identifier <code>'+esc(cap.id)+'</code><br/>Data source <code>'+esc(cap.artifact)+'</code><br/>'+
+     'Reads '+cap.reads.map((t)=>'<code>'+esc(t)+'</code>').join(' ')+
      '<br/>Columns: '+Object.keys(cap.columns).map((t)=>esc(t)+' ('+cap.columns[t].map(esc).join(', ')+')').join(' · ')+
-     '<br/>Shares its table set with '+cap.tableCluster.length+' other capability(ies); '+cap.artifactCluster.length+' others use this artifact.</div>'+
-   (cap.conditionalHint?'<div class="warn">'+esc(cap.conditionalHint)+'</div>':'')+
+     (cap.ownerCandidates.length?'<br/>Scripts mentioning every one of these tables (a filename search, not an answer): '+
+       cap.ownerCandidates.map((o)=>'<code>'+esc(o)+'</code>').join(' '):'')+
+   '</div></details>'+
+   (cap.conditionalHint?'<div class="warn">Observed: '+esc(cap.conditionalHint)+'</div>':'')+
 
-   '<div class="q"><h3>1. Coverage — how do we know the data covers the years asked for?</h3>'+
-    '<div class="sug"><b>Candidates</b> (every column this capability reads)'+
-      (cap.coverageCandidates.some((o)=>o.yearBearing)?'':' — no column here looks year-bearing, so "No year dimension" may be the honest answer')+
-      '. The mark is a hint, not a filter: any column may be chosen, and an unmarked one asks you to say why.</div>'+
-    '<div class="row"><div><label>Basis</label><select id="cov">'+
-      '<option value=""'+(cov?'':' selected')+'>— Undecided —</option>'+covOpts+
-      '<option value="none"'+(cov&&cov.kind==="none"?' selected':'')+'>No year dimension (state the reason below)</option>'+
-    '</select></div></div>'+
-    (cov&&cov.kind==="none"
-      ? '<div><label>Why does this capability have no year dimension?</label>'+
-        '<input type="text" id="covReason" value="'+esc(cov.reason||"")+'"/></div>' : '')+
-    (needsJust
-      ? '<div><label>This column is not year-bearing by name. Why is it the coverage basis?</label>'+
-        '<input type="text" id="covJust" value="'+esc(cov.justification||"")+'"/></div>' : '')+
-    (problem?'<div class="alert">'+esc(problem)+'</div>':'')+
+   '<div class="q"><h3>1. Can this answer tell which years it covers?</h3>'+
+    '<p class="hint">If someone asks about a year this data does not include, should the system be able to'+
+    ' notice and say so?</p>'+covOpts+
+    '<details><summary>Why this is recommended</summary><div class="body"><ul style="margin:0;padding-left:16px">'+covWhy+'</ul>'+
+      '<div style="margin-top:8px">Every column this lookup reads is listed below. The recommendation comes from'+
+      ' a column NAME, which is a fact about the name and not a check of its contents — if the right column is a'+
+      ' different one, choose it here.</div>'+
+      '<div style="margin-top:6px"><label>Use a specific column instead</label><select id="covColumn" style="width:100%;padding:7px">'+
+        '<option value="">— use the recommended one —</option>'+
+        cap.coverageCandidates.map((o,i)=>'<option value="'+i+'"'+
+          (h.coverageColumn && h.coverageColumn.table===o.table && h.coverageColumn.yearColumn===o.yearColumn?' selected':'')+
+          '>'+esc(o.table+'.'+o.yearColumn)+(o.yearBearing?' — named like a year':'')+'</option>').join('')+
+      '</select></div></div></details>'+
+    '<label>If this is not about a time period, or you picked a column that is not named like a year, say why</label>'+
+    '<input type="text" id="covReason" value="'+esc(h.coverageReason||"")+'"/>'+
    '</div>'+
 
-   '<div class="q"><h3>2. Integrity — what would tell us this data is broken?</h3>'+
-    '<div class="sug">Free text, one rule per line. Leave empty for undecided. An empty list is not a rule.'+
-      ' <b>Draft, and non-authorizing</b>: write the plain-language rule describing what broken data would look like.'+
-      ' Nothing can run these yet, and no capability becomes eligible however complete the rest of the entry looks —'+
-      ' what you write here is the record a real check will later be written from.</div>'+
-    /* Bound rules are shown but not editable here: the textarea is re-parsed on every keystroke
-       anywhere on the card, so anything inside it can be rewritten by an unrelated edit. */
-    (S.boundRules(cap.id).length
-      ? '<div class="sug"><b>Bound rules</b> (kept as authored; edit them in the policy source)<ul style="margin:6px 0 0;padding-left:20px">'+
-        S.boundRules(cap.id).map((r)=>'<li>'+esc(r.rule)+' <code>'+esc(r.boundTo)+'</code></li>').join('')+
-        '</ul></div>' : '')+
-    '<textarea id="integrity" placeholder="e.g. national_monthly and agency_monthly must share a MAX(year*100+month)">'+
-      esc(S.draftRules(cap.id).join("\\n"))+'</textarea></div>'+
+   '<div class="q"><h3>2. What would make this answer untrustworthy?</h3>'+
+    '<p class="hint">Tick anything that would mean the numbers should not be relied on. These are written down'+
+    ' in your words as a description of what "broken" looks like — nothing here builds an automatic check.</p>'+
+    scenarios+
+    '<label class="opt"><input type="checkbox" id="integUnsure"'+(h.integrityUnsure?' checked':'')+'/>I\\u2019m not sure</label>'+
+    '<label>Something else (optional)</label>'+
+    '<input type="text" id="integOther" value="'+esc(h.integrityOther||"")+'"/>'+
+   '</div>'+
 
-   '<div class="q"><h3>3. Availability — is this always present?</h3>'+
-    '<div class="row"><div><label>Kind</label><select id="avail">'+
-      '<option value="">— Undecided —</option>'+
-      '<option value="always"'+(avail==="always"?' selected':'')+'>Always</option>'+
-      '<option value="conditional"'+(avail==="conditional"?' selected':'')+'>Conditional</option>'+
-    '</select></div><div><label>Condition (required if conditional)</label>'+
-      '<input type="text" id="cond" value="'+esc(d.availability&&d.availability.condition?d.availability.condition:"")+'"/></div></div></div>'+
+   '<div class="q"><h3>3. Should people normally expect this answer to be available?</h3>'+
+    '<p class="hint">Some lookups are legitimately missing in some situations. Saying so means an absence is'+
+    ' treated as expected rather than reported as a fault.</p>'+availOpts+
+    (h.availability==="sometimes"
+      ? '<label>When is it legitimately unavailable?</label><input type="text" id="availWhen" value="'+esc(h.availabilityWhen||"")+'"/>'
+      : '')+
+   '</div>'+
 
-   '<div class="q"><h3>4. Receipt owner — which process keeps this fresh?</h3>'+
-    '<div class="sug"><b>Scripts mentioning every table this reads</b> — a place to look, not an answer'+
-      (cap.ownerCandidates.length?'':' — none found; type the owner yourself')+'</div>'+
-    '<div class="row"><div><label>From candidates</label><select id="ownerPick">'+
-      '<option value="">— Undecided —</option>'+ownerOpts+
-      '<option value="__other"'+(d.receiptOwner&&!cap.ownerCandidates.includes(d.receiptOwner)?' selected':'')+'>Other (type below)</option>'+
-    '</select></div><div><label>Owner</label><input type="text" id="owner" value="'+esc(d.receiptOwner||"")+'"/></div></div></div>'+
+   '<div class="q"><h3>4. Which update process keeps this data fresh?</h3>'+
+    '<p class="hint">Who is responsible when this data stops being updated. Choose the process you would'+
+    ' expect to have run.</p>'+ownerOpts+
+    (h.owner==="other"
+      ? '<label>Name the process</label><input type="text" id="ownerOther" value="'+esc(h.ownerOther||"")+'"/>'
+      : '')+
+   '</div>'+
 
-   '<div class="q"><h3>Evidence — what do these answers rest on?</h3>'+
-    '<div class="sug">Required before a capability counts as complete. A file:line, a production observation with its date, or a spec section.</div>'+
-    '<textarea id="evidence">'+esc(d.evidence||"")+'</textarea></div>'+
-   /* Withdrawal is offered only where there is authored policy to remove, and never by blanking. */
+   '<div class="q"><h3>What are these answers based on?</h3>'+
+    '<p class="hint">A sentence is enough: who you checked with, which document, or what you already know.'+
+    ' This is what a future reader will use to judge the decision.</p>'+
+    '<textarea id="evidence">'+esc(h.evidence||"")+'</textarea></div>'+
+
+   '<div id="mapping"></div>'+
+
    (S.canWithdraw(cap.id)
-     ? '<div class="q"><h3>Withdraw authored policy</h3>'+
-       '<div class="sug">This capability already carries authored policy. Removing it is a named act,'+
-       ' separate from leaving a question undecided: clearing the fields above does NOT delete it.</div>'+
+     ? '<div class="q"><h3>Remove the existing policy for this lookup</h3>'+
+       '<p class="hint">Something was already recorded here. Removing it is a separate, named action —'+
+       ' leaving the questions above unanswered does NOT delete it.</p>'+
        (S.isWithdrawn(cap.id)
-         ? '<div class="alert">Marked for withdrawal. Exporting and importing will remove the authored policy for this capability.</div>'
-         : '<button id="withdraw">Withdraw this authored policy…</button>')
+         ? '<div class="alert">Marked for removal. Exporting and importing will remove what was recorded.</div>'
+         : '<button id="withdraw">Remove the recorded policy…</button>')
        +'</div>'
      : '')+
   '</div>';
 
-  const readCoverage = () => {
-    const sel = document.getElementById("cov").value;
-    if (sel === "") return null;
-    if (sel === "none"){
-      const reason = document.getElementById("covReason");
-      return { kind:"none", reason: reason ? reason.value.trim() : "" };
-    }
-    const candidate = cap.coverageCandidates[Number(sel)];
-    const basis = { kind:"column", table:candidate.table, yearColumn:candidate.yearColumn };
-    const just = document.getElementById("covJust");
-    if (just && just.value.trim()) basis.justification = just.value.trim();
-    return basis;
+  const value = (id) => { const el = document.getElementById(id); return el ? el.value : ""; };
+  /**
+   * The mapping panel repaints on every edit, in place.
+   *
+   * It used to be part of the card, which is only rebuilt when a radio changes -- so typing the
+   * missing reason cleared the problem, and the "confirm" button stayed greyed out with no way to
+   * press it. Repainting only this panel keeps the cursor where the person is typing.
+   */
+  const renderMapping = () => {
+    const host = document.getElementById("mapping");
+    if (!host) return;
+    host.innerHTML = mappingPanel(cap);
+    const button = document.getElementById("confirmMapping");
+    if (button) button.addEventListener("click", () => { S.confirmMapping(cap.id); status(); renderMapping(); });
   };
   const save = () => {
-    const kind = document.getElementById("avail").value;
-    const cond = document.getElementById("cond").value.trim();
-    const owner = document.getElementById("owner").value.trim();
+    const covRadio = document.querySelector('input[name=cov]:checked');
+    const availRadio = document.querySelector('input[name=avail]:checked');
+    const ownerRadio = document.querySelector('input[name=owner]:checked');
+    const columnSel = document.getElementById("covColumn");
+    const picked = columnSel && columnSel.value !== "" ? cap.coverageCandidates[Number(columnSel.value)] : null;
     S.update(cap.id, {
-      coverage: readCoverage(),
-      availability: kind === "" ? null : kind === "always" ? {kind:"always"} : {kind:"conditional",condition:cond},
-      receiptOwner: owner === "" ? null : owner,
-      evidence: document.getElementById("evidence").value,
+      coverage: covRadio ? covRadio.value : null,
+      coverageColumn: picked ? { table: picked.table, yearColumn: picked.yearColumn } : null,
+      coverageReason: value("covReason"),
+      integrity: Array.prototype.slice.call(document.querySelectorAll('input[name=integ]:checked')).map((e)=>e.value),
+      integrityOther: value("integOther"),
+      integrityUnsure: !!(document.getElementById("integUnsure") || {}).checked,
+      availability: availRadio ? availRadio.value : null,
+      availabilityWhen: value("availWhen"),
+      owner: ownerRadio ? ownerRadio.value : null,
+      ownerOther: value("ownerOther"),
+      evidence: value("evidence"),
     });
-    /* Drafts replace ONLY the prose rules; bound rules are never round-tripped through the textarea. */
-    S.setIntegrityDrafts(cap.id, document.getElementById("integrity").value.split("\\n"));
     status();
+    renderMapping();
   };
-  for (const id of ["integrity","avail","cond","owner","evidence","covReason","covJust"]){
+  /* Radios re-render, because which follow-up field is asked depends on the choice. */
+  for (const name of ["cov","avail","owner"]){
+    Array.prototype.slice.call(document.querySelectorAll('input[name='+name+']')).forEach((el) => {
+      el.addEventListener("change", () => { save(); render(); });
+    });
+  }
+  for (const id of ["covReason","integOther","availWhen","ownerOther","evidence"]){
     const el = document.getElementById(id); if (el) el.addEventListener("input", save);
   }
-  /* Coverage re-renders: which follow-up field is required depends on what was chosen. */
-  document.getElementById("cov").addEventListener("change", (e) => {
-    const sel = e.target.value;
-    if (sel !== "" && sel !== "none"){
-      const candidate = cap.coverageCandidates[Number(sel)];
-      if (!candidate.yearBearing){
-        const ok = confirm(candidate.table+"."+candidate.yearColumn+" does not look like a year column.\\n\\n"+
-          "It can still be the coverage basis, but you will be asked to say why. Use it?");
-        if (!ok){ render(); return; }
-      }
-    }
-    save(); render();
+  const columnSel = document.getElementById("covColumn");
+  if (columnSel) columnSel.addEventListener("change", () => { save(); render(); });
+  Array.prototype.slice.call(document.querySelectorAll('input[name=integ]')).forEach((el) => {
+    el.addEventListener("change", () => { save(); render(); });
   });
+  const unsure = document.getElementById("integUnsure");
+  if (unsure) unsure.addEventListener("change", () => { save(); render(); });
+
+  renderMapping();
+
   const withdrawButton = document.getElementById("withdraw");
   if (withdrawButton) withdrawButton.addEventListener("click", () => {
-    if (!confirm("Withdraw the authored policy for this capability?\\n\\n"+cap.id+
-      "\\n\\nExporting and importing will REMOVE it from the policy file. This is not the same as"+
-      " leaving a question undecided.")) return;
+    if (!confirm("Remove the recorded policy for this lookup?\\n\\n"+cap.id+
+      "\\n\\nExporting and importing will REMOVE it. This is not the same as leaving the questions unanswered.")) return;
     S.withdraw(cap.id); status(); render();
-  });
-  document.getElementById("ownerPick").addEventListener("change", (e) => {
-    if (e.target.value && e.target.value !== "__other") document.getElementById("owner").value = e.target.value;
-    save();
   });
   status();
 }
@@ -499,31 +550,29 @@ function render(){
 document.getElementById("filter").addEventListener("change", () => { index = 0; render(); });
 document.getElementById("prev").addEventListener("click", () => { const l=visible(); index=(index-1+l.length)%l.length; render(); });
 document.getElementById("next").addEventListener("click", () => { const l=visible(); index=(index+1)%l.length; render(); });
-document.getElementById("nextUndecided").addEventListener("click", () => {
+document.getElementById("nextUnanswered").addEventListener("click", () => {
   const l = visible();
   for (let step=1; step<=l.length; step++){
     const probe=(index+step)%l.length;
-    if (S.undecidedFields(S.decisions[l[probe].id]).length){ index=probe; render(); return; }
+    if (!PL.isAnswered(S.human(l[probe].id))){ index=probe; render(); return; }
   }
-  alert("No undecided capability in the current filter.");
+  alert("Every lookup in this view has been answered.");
 });
 
-/* Cluster application names EVERY affected capability, and what it costs them, before anything changes. */
+/* Copying names EVERY affected lookup, and what it costs them, before anything changes. */
 document.getElementById("cluster").addEventListener("click", () => {
   const cap = visible()[index];
   const plan = S.clusterPlan(cap.id);
-  document.getElementById("confirmIntro").textContent =
-    plan.fields.length ? 'Copy '+plan.fields.join(", ")+' to '+plan.targets.length+' capability(ies) sharing '+plan.scope+
-      '. Evidence on any capability that changes is REPLACED with this one\\u2019s, because evidence describes the values it was written for.'
-                       : 'This capability has no decided field to copy.';
+  document.getElementById("confirmIntro").textContent = plan.answered
+    ? 'Copy your answers to '+plan.targets.length+' lookup(s) reading '+plan.scope+'.'
+    : 'There are no answers here to copy yet.';
   document.getElementById("affected").innerHTML = plan.detail.map((entry) => {
     const notes = [];
-    if (entry.overwrites.length) notes.push('would overwrite '+entry.overwrites.join(", "));
-    if (entry.coverageDropped) notes.push('coverage not copied — that column pair is not one it reads');
-    if (entry.evidenceReplaced) notes.push('evidence replaced');
+    if (entry.overwrites) notes.push('replaces answers already given there');
+    if (entry.confirmationCleared) notes.push('its confirmation will be cancelled, so you must re-check its wording');
     return '<li>'+esc(entry.id)+(notes.length?' <b style="color:#8a5a00">— '+esc(notes.join("; "))+'</b>':'')+'</li>';
   }).join('') || '<li>(none)</li>';
-  document.getElementById("applyCluster").disabled = !plan.fields.length || !plan.targets.length;
+  document.getElementById("applyCluster").disabled = !plan.answered || !plan.targets.length;
   document.getElementById("confirm").showModal();
 });
 document.getElementById("cancelCluster").addEventListener("click", () => document.getElementById("confirm").close());
@@ -551,13 +600,13 @@ document.getElementById("file").addEventListener("change", (e) => {
     let result = S.loadSession(parsed);
     /* Loading REPLACES the session, so unsaved work has to be given up deliberately. */
     if (!result.ok && result.needsConfirmation){
-      if (!confirm(result.reason)) { note.hidden = false; note.textContent = "Nothing was loaded; your unsaved changes are still here."; return; }
+      if (!confirm(result.reason)) { note.hidden = false; note.textContent = "Nothing was loaded; your unsaved answers are still here."; return; }
       result = S.loadSession(parsed, { discardUnsaved: true });
     }
     if (!result.ok){ note.hidden = false; note.textContent = result.reason; index = 0; status(); render(); return; }
     note.hidden = result.unknown.length === 0;
-    if (result.unknown.length) note.textContent = "Loaded "+result.applied+" capability(ies). "+
-      result.unknown.length+" id(s) in that file are not capabilities in this registry and were ignored.";
+    if (result.unknown.length) note.textContent = "Loaded "+result.applied+" lookup(s). "+
+      result.unknown.length+" entry(ies) in that file are not lookups in this workbook and were ignored.";
     index = 0; status(); render();
   };
   reader.readAsText(f);
