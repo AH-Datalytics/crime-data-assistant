@@ -83,7 +83,7 @@ code{font:12px ui-monospace,Menlo,monospace;background:#f2f3f7;padding:1px 4px;b
 <script>
 const DATA = {
  "v": 4,
- "fingerprint": "7397af3e951cd435",
+ "fingerprint": "a3a24ec7c746eef1",
  "capabilities": [
   {
    "id": "crime_data::agencies+agency_county_crosswalk::agencies(agency,national_sample,ori)|agency_county_crosswalk(county_fips,county_key,ori,ori9,state)",
@@ -1585,7 +1585,8 @@ const DATA = {
      "condition": "Requires agency_county_crosswalk in the hate_crime artifact. The table is absent from production hate_crime.db as of 2026-08-13, so this capability is unavailable in production while being structurally sound. Conditionally unavailable is not unhealthy; the builder decides at runtime."
     },
     "receiptOwner": null,
-    "evidence": "Both artifact states are exercised by this suite: with the crosswalk absent, entitySql (lib/metadata-coverage.ts:457) takes the SQL-less exit and the case hate_crime:metadata-agency-directory-county records terminalKind=unavailable, sealing no capability; with the crosswalk present, the same operation reaches this contract. coverage, integrity and receiptOwner remain unauthored: a directory count has no year dimension to base coverage on, no integrity rule has been decided for the crosswalk, and receipt ownership is Stage 2B."
+    "evidence": "Both artifact states are exercised by this suite: with the crosswalk absent, entitySql (lib/metadata-coverage.ts:457) takes the SQL-less exit and the case hate_crime:metadata-agency-directory-county records terminalKind=unavailable, sealing no capability; with the crosswalk present, the same operation reaches this contract. coverage, integrity and receiptOwner remain unauthored: a directory count has no year dimension to base coverage on, no integrity rule has been decided for the crosswalk, and receipt ownership is Stage 2B.",
+    "origin": "legacy"
    }
   },
   {
@@ -4633,7 +4634,8 @@ const DATA = {
     "condition": "Requires agency_county_crosswalk in the hate_crime artifact. The table is absent from production hate_crime.db as of 2026-08-13, so this capability is unavailable in production while being structurally sound. Conditionally unavailable is not unhealthy; the builder decides at runtime."
    },
    "receiptOwner": null,
-   "evidence": "Both artifact states are exercised by this suite: with the crosswalk absent, entitySql (lib/metadata-coverage.ts:457) takes the SQL-less exit and the case hate_crime:metadata-agency-directory-county records terminalKind=unavailable, sealing no capability; with the crosswalk present, the same operation reaches this contract. coverage, integrity and receiptOwner remain unauthored: a directory count has no year dimension to base coverage on, no integrity rule has been decided for the crosswalk, and receipt ownership is Stage 2B."
+   "evidence": "Both artifact states are exercised by this suite: with the crosswalk absent, entitySql (lib/metadata-coverage.ts:457) takes the SQL-less exit and the case hate_crime:metadata-agency-directory-county records terminalKind=unavailable, sealing no capability; with the crosswalk present, the same operation reaches this contract. coverage, integrity and receiptOwner remain unauthored: a directory count has no year dimension to base coverage on, no integrity rule has been decided for the crosswalk, and receipt ownership is Stage 2B.",
+   "origin": "legacy"
   }
  },
  "answers": {},
@@ -5090,6 +5092,61 @@ function createStage2bPlainLanguage(capabilityCatalog) {
     hate_crime: "hate crime records",
   };
 
+  /**
+   * The wording every capability shares: the question headings, the hints under them, and the
+   * labels on the recorded summary.
+   *
+   * It lives HERE rather than in the page template so it is part of the decision contract that the
+   * workbook fingerprint covers. While it sat in the generator's HTML, a question could be reworded
+   * -- changing what someone was actually asked -- without invalidating a single confirmation.
+   */
+  const QUESTIONS = {
+    coverage: {
+      heading: "1. Do we know the first and last year this data covers?",
+      hint: "If someone asks about a year we do not have, should the system be able to say so?"
+        + " It can only check the first and last year — it will not notice a year missing in between,"
+        + " so please do not rely on it for that.",
+      reasonLabel: "If this is not about a time period, or you picked a column that is not named like a year, say why",
+    },
+    integrity: {
+      heading: "2. What would make you stop trusting these numbers?",
+      hint: "Tick anything that would mean people should not rely on this. Your answers get written"
+        + " down in plain words as a description of what \"gone wrong\" looks like here —"
+        + " nothing here builds an automatic check.",
+      otherLabel: "Something else (optional)",
+      unsureLabel: "I’m not sure",
+    },
+    availability: {
+      heading: "3. Should this data always be there?",
+      hint: "Some data is legitimately missing sometimes. Saying so means we treat it as expected"
+        + " instead of raising it as a problem every time.",
+      whenLabel: "When is it fine for this to be missing?",
+    },
+    owner: {
+      heading: "4. Who keeps this data up to date?",
+      hint: "If this stopped being refreshed, whose job would it be. Pick the update you would expect"
+        + " to have run.",
+      otherLabel: "What is it called?",
+    },
+    evidence: {
+      heading: "What are you basing this on?",
+      hint: "A sentence is enough: who you asked, what you read, or what you already know."
+        + " Someone reading this later will use it to judge whether the decision still holds.",
+    },
+    mapping: {
+      heading: "Check what gets written down",
+      hint: "This is exactly what your answers would record. Nothing is saved until you confirm it,"
+        + " and changing any answer above cancels the confirmation so you get to read the new version.",
+      confirmLabel: "I have read this — confirm it",
+      labels: {
+        coverage: "Years",
+        integrity: "What \"gone wrong\" looks like",
+        availability: "Always there?",
+        receiptOwner: "Kept up to date by",
+      },
+    },
+  };
+
   const WORDS = {
     agency: "agency", agencies: "agencies", monthly: "monthly", victim: "victim", victims: "victim",
     state: "state", city: "city", national: "national", population: "population",
@@ -5343,6 +5400,23 @@ function createStage2bPlainLanguage(capabilityCatalog) {
     ownerOptions: ownerOptions,
     blankAnswer: blankAnswer,
     isAnswered: answered,
+    questions: () => QUESTIONS,
+    /**
+     * EVERYTHING a person would read for one capability, as data.
+     *
+     * The workbook fingerprint is taken over this for every capability, so any change to what is
+     * asked or to the consequence attached to an answer invalidates confirmations. Covering only
+     * the per-capability catalog left the shared headings, the option labels and the consequences
+     * outside the identity -- all of them things a person reads before deciding.
+     */
+    contractFor: (cap) => ({
+      id: cap.id,
+      question: describeQuestion(cap),
+      coverage: coverageOptions(cap).map((o) => [o.value, o.label, o.consequence, o.why, !!o.recommended]),
+      integrity: integrityScenarios(cap).map((s) => [s.value, s.label, s.prose]),
+      availability: availabilityOptions().map((o) => [o.value, o.label, o.consequence]),
+      owner: ownerOptions(cap).map((o) => [o.value, o.label]),
+    }),
     proposeMapping: proposeMapping,
     mergeWithExisting: mergeWithExisting,
     mappingFingerprint: mappingFingerprint,
@@ -5691,6 +5765,8 @@ if (typeof module !== "undefined" && module.exports) module.exports = { createSt
 
 
 const PL = createStage2bPlainLanguage(stage2bCapabilityCatalog());
+/* Shared wording comes from the contract the fingerprint covers, never from this template. */
+const Q = PL.questions();
 const S = createStage2bSession(DATA, PL);
 let index = 0;
 
@@ -5727,22 +5803,21 @@ function mappingPanel(cap){
     ? ' <b style="color:#8a5a00">— kept from what was already recorded; your answer left this open</b>' : '';
   const line = (label, value, field) => '<dt>'+label+'</dt><dd>'+value+(field?kept(field):'')+'</dd>';
   const rows = [
-    line('Years', m.coverage === null ? '<i>left open</i>'
+    line(Q.mapping.labels.coverage, m.coverage === null ? '<i>left open</i>'
       : m.coverage.kind === 'none' ? 'not about a time period — ' + esc(m.coverage.reason)
       : 'first and last year read from <code>'+esc(m.coverage.table+'.'+m.coverage.yearColumn)+'</code>', 'coverage'),
-    line('What "gone wrong" looks like', m.integrity === null ? '<i>left open</i>'
+    line(Q.mapping.labels.integrity, m.integrity === null ? '<i>left open</i>'
       : '<ul style="margin:0;padding-left:16px">'+m.integrity.map((r)=>'<li>'+esc(r)+'</li>').join('')+'</ul>', 'integrity'),
-    line('Always there?', m.availability === null ? '<i>left open</i>'
+    line(Q.mapping.labels.availability, m.availability === null ? '<i>left open</i>'
       : m.availability.kind === 'always' ? 'yes, always expected'
       : 'not always — ' + esc(m.availability.condition), 'availability'),
-    line('Kept up to date by', m.receiptOwner === null ? '<i>left open</i>' : esc(m.receiptOwner), 'receiptOwner'),
+    line(Q.mapping.labels.receiptOwner, m.receiptOwner === null ? '<i>left open</i>' : esc(m.receiptOwner), 'receiptOwner'),
   ].join('');
   const confirmed = S.isMappingConfirmed(cap.id);
   const answered = PL.isAnswered(S.human(cap.id));
   const problems = S.problems(cap.id);
-  return '<div class="q"><h3>Check what gets written down</h3>'+
-    '<p class="hint">This is exactly what your answers would record. Nothing is saved until you confirm it,'+
-    ' and changing any answer above cancels the confirmation so you get to read the new version.</p>'+
+  return '<div class="q"><h3>'+esc(Q.mapping.heading)+'</h3>'+
+    '<p class="hint">'+esc(Q.mapping.hint)+'</p>'+
     '<div class="mapping"><dl>'+rows+'</dl></div>'+
     (problems.length ? '<div class="alert">Before this can be confirmed: '+problems.map(esc).join('; ')+'</div>' : '')+
     (p.unresolved.length ? '<div class="warn">Left open: '+p.unresolved.map((f)=>esc(({coverage:'the years question',integrity:'what going wrong looks like',availability:'whether it is always there',receiptOwner:'who keeps it up to date'})[f]||f)).join(', ')+
@@ -5753,7 +5828,7 @@ function mappingPanel(cap){
     (S.needsReconfirmation(cap.id) ? '<div class="warn">You confirmed this before, but the question has been'+
       ' re-worded since. Your answer is still here — please read the wording above and confirm it again.</div>' : '')+
     (confirmed ? '<div class="good">Confirmed. This wording is what your export will carry.</div>'
-      : '<button class="primary" id="confirmMapping"'+(answered && !problems.length ? '' : ' disabled')+'>I have read this — confirm it</button>')+
+      : '<button class="primary" id="confirmMapping"'+(answered && !problems.length ? '' : ' disabled')+'>'+esc(Q.mapping.confirmLabel)+'</button>')+
     '</div>';
 }
 
@@ -5794,10 +5869,8 @@ function render(){
    '</div></details>'+
    (cap.conditionalHint?'<div class="warn">Observed: '+esc(cap.conditionalHint)+'</div>':'')+
 
-   '<div class="q"><h3>1. Do we know the first and last year this data covers?</h3>'+
-    '<p class="hint">If someone asks about a year we do not have, should the system be able to say so?'+
-    ' It can only check the first and last year — it will not notice a year missing in between,'+
-    ' so please do not rely on it for that.</p>'+covOpts+
+   '<div class="q"><h3>'+esc(Q.coverage.heading)+'</h3>'+
+    '<p class="hint">'+esc(Q.coverage.hint)+'</p>'+covOpts+
     '<details><summary>Why this is recommended</summary><div class="body"><ul style="margin:0;padding-left:16px">'+covWhy+'</ul>'+
       '<div style="margin-top:8px">Every column this lookup reads is listed below. The recommendation comes from'+
       ' a column NAME, which is a fact about the name and not a check of its contents — if the right column is a'+
@@ -5808,39 +5881,34 @@ function render(){
           (h.coverageColumn && h.coverageColumn.table===o.table && h.coverageColumn.yearColumn===o.yearColumn?' selected':'')+
           '>'+esc(o.table+'.'+o.yearColumn)+(o.yearBearing?' — named like a year':'')+'</option>').join('')+
       '</select></div></div></details>'+
-    '<label>If this is not about a time period, or you picked a column that is not named like a year, say why</label>'+
+    '<label>'+esc(Q.coverage.reasonLabel)+'</label>'+
     '<input type="text" id="covReason" value="'+esc(h.coverageReason||"")+'"/>'+
    '</div>'+
 
-   '<div class="q"><h3>2. What would make you stop trusting these numbers?</h3>'+
-    '<p class="hint">Tick anything that would mean people should not rely on this. Your answers get written'+
-    ' down in plain words as a description of what "gone wrong" looks like here —'+
-    ' nothing here builds an automatic check.</p>'+
+   '<div class="q"><h3>'+esc(Q.integrity.heading)+'</h3>'+
+    '<p class="hint">'+esc(Q.integrity.hint)+'</p>'+
     scenarios+
-    '<label class="opt"><input type="checkbox" id="integUnsure"'+(h.integrityUnsure?' checked':'')+'/>I\u2019m not sure</label>'+
-    '<label>Something else (optional)</label>'+
+    '<label class="opt"><input type="checkbox" id="integUnsure"'+(h.integrityUnsure?' checked':'')+'/>'+esc(Q.integrity.unsureLabel)+'</label>'+
+    '<label>'+esc(Q.integrity.otherLabel)+'</label>'+
     '<input type="text" id="integOther" value="'+esc(h.integrityOther||"")+'"/>'+
    '</div>'+
 
-   '<div class="q"><h3>3. Should this data always be there?</h3>'+
-    '<p class="hint">Some data is legitimately missing sometimes. Saying so means we treat it as expected'+
-    ' instead of raising it as a problem every time.</p>'+availOpts+
+   '<div class="q"><h3>'+esc(Q.availability.heading)+'</h3>'+
+    '<p class="hint">'+esc(Q.availability.hint)+'</p>'+availOpts+
     (h.availability==="sometimes"
-      ? '<label>When is it fine for this to be missing?</label><input type="text" id="availWhen" value="'+esc(h.availabilityWhen||"")+'"/>'
+      ? '<label>'+esc(Q.availability.whenLabel)+'</label><input type="text" id="availWhen" value="'+esc(h.availabilityWhen||"")+'"/>'
       : '')+
    '</div>'+
 
-   '<div class="q"><h3>4. Who keeps this data up to date?</h3>'+
-    '<p class="hint">If this stopped being refreshed, whose job would it be. Pick the update you would expect'+
-    ' to have run.</p>'+ownerOpts+
+   '<div class="q"><h3>'+esc(Q.owner.heading)+'</h3>'+
+    '<p class="hint">'+esc(Q.owner.hint)+'</p>'+ownerOpts+
     (h.owner==="other"
-      ? '<label>What is it called?</label><input type="text" id="ownerOther" value="'+esc(h.ownerOther||"")+'"/>'
+      ? '<label>'+esc(Q.owner.otherLabel)+'</label><input type="text" id="ownerOther" value="'+esc(h.ownerOther||"")+'"/>'
       : '')+
    '</div>'+
 
-   '<div class="q"><h3>What are you basing this on?</h3>'+
-    '<p class="hint">A sentence is enough: who you asked, what you read, or what you already know.'+
-    ' Someone reading this later will use it to judge whether the decision still holds.</p>'+
+   '<div class="q"><h3>'+esc(Q.evidence.heading)+'</h3>'+
+    '<p class="hint">'+esc(Q.evidence.hint)+'</p>'+
     '<textarea id="evidence">'+esc(h.evidence||"")+'</textarea></div>'+
 
    '<div id="mapping"></div>'+

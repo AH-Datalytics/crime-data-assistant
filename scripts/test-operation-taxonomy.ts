@@ -64,6 +64,7 @@ import os from "node:os";
 import path from "node:path";
 import Database from "better-sqlite3";
 import { POLICY_FIELDS, capabilityAuthorizes, policyIsComplete, policyShapeErrors, type UnvalidatedPolicy } from "../lib/capability-policy";
+import { loadGeneratedPolicy } from "../lib/stage2b-authored-record";
 import { artifactOf as sharedArtifactOf } from "../lib/source-artifact";
 import { capabilityFlagKey } from "../lib/capability-flag-key";
 import type { SourceId } from "../lib/proof-contract";
@@ -652,8 +653,12 @@ const envKeyForCapability = capabilityFlagKey;
 // twice is how the shallow "every field is non-null" rule came back after being corrected.
 type CapabilityPolicy = UnvalidatedPolicy;
 function readPolicy(): Record<string, CapabilityPolicy> {
+  /**
+   * Through the canonical loader, which refuses a generated policy that lags the authored record.
+   * Reading the file directly would let the derivation pin a decision that has since been changed.
+   */
   if (!fs.existsSync(POLICY_FILE)) return {};
-  const raw = JSON.parse(fs.readFileSync(POLICY_FILE, "utf8")) as Record<string, CapabilityPolicy>;
+  const raw = loadGeneratedPolicy() as unknown as Record<string, CapabilityPolicy>;
   // Keys starting with _ document the file itself and are not capability ids.
   return Object.fromEntries(Object.entries(raw).filter(([id]) => !id.startsWith("_")));
 }

@@ -72,6 +72,11 @@ export type CapabilityPolicy = {
   availability: { kind: "always" } | { kind: "conditional"; condition: string } | null;
   receiptOwner: string | null;
   evidence: string;
+  /**
+   * Present only on policy migrated from before the workbook existed. It has no human answer and no
+   * confirmation behind it, so it authorizes nothing whatever its fields contain.
+   */
+  origin?: "legacy";
 };
 export type CapabilitySpec = {
   capabilityId: string;              // the registry key; identity, not a label
@@ -367,7 +372,8 @@ export const CAPABILITY_INVENTORY: readonly CapabilitySpec[] = [
                 "condition": "Requires agency_county_crosswalk in the hate_crime artifact. The table is absent from production hate_crime.db as of 2026-08-13, so this capability is unavailable in production while being structurally sound. Conditionally unavailable is not unhealthy; the builder decides at runtime."
           },
           "receiptOwner": null,
-          "evidence": "Both artifact states are exercised by this suite: with the crosswalk absent, entitySql (lib/metadata-coverage.ts:457) takes the SQL-less exit and the case hate_crime:metadata-agency-directory-county records terminalKind=unavailable, sealing no capability; with the crosswalk present, the same operation reaches this contract. coverage, integrity and receiptOwner remain unauthored: a directory count has no year dimension to base coverage on, no integrity rule has been decided for the crosswalk, and receipt ownership is Stage 2B."
+          "evidence": "Both artifact states are exercised by this suite: with the crosswalk absent, entitySql (lib/metadata-coverage.ts:457) takes the SQL-less exit and the case hate_crime:metadata-agency-directory-county records terminalKind=unavailable, sealing no capability; with the crosswalk present, the same operation reaches this contract. coverage, integrity and receiptOwner remain unauthored: a directory count has no year dimension to base coverage on, no integrity rule has been decided for the crosswalk, and receipt ownership is Stage 2B.",
+          "origin": "legacy"
     },
     authorizationEligible: false,
   },

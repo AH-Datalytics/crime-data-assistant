@@ -15,6 +15,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { capabilityFlagKey } from "../lib/capability-flag-key";
 import { capabilityAuthorizes } from "../lib/capability-policy";
+import { loadGeneratedPolicy } from "../lib/stage2b-authored-record";
 /**
  * The capability with no eligible deterministic operation.
  *
@@ -59,10 +60,12 @@ const literal = (value: unknown) => JSON.stringify(value);
  * read the same file directly rather than being handed a null.
  */
 function readAuthoredPolicy(): Record<string, Record<string, unknown>> {
-  const file = path.join(DATA_DIR, "capability-policy.json");
-  if (!fs.existsSync(file)) return {};
-  const parsed = JSON.parse(fs.readFileSync(file, "utf8")) as Record<string, Record<string, unknown>>;
-  return Object.fromEntries(Object.entries(parsed).filter(([id]) => !id.startsWith("_")));
+  /**
+   * Through the canonical loader, which refuses a generated policy that lags the record it came
+   * from. Reading the file directly would let this generator bake a stale decision into the
+   * inventory -- the same "two records of one fact" defect, one step further downstream.
+   */
+  return loadGeneratedPolicy() as Record<string, Record<string, unknown>>;
 }
 
 function renderSpec(id: string, artifact: string, emittedDependencies: string[],
@@ -232,6 +235,11 @@ export type CapabilityPolicy = {
   availability: { kind: "always" } | { kind: "conditional"; condition: string } | null;
   receiptOwner: string | null;
   evidence: string;
+  /**
+   * Present only on policy migrated from before the workbook existed. It has no human answer and no
+   * confirmation behind it, so it authorizes nothing whatever its fields contain.
+   */
+  origin?: "legacy";
 };
 export type CapabilitySpec = {
   capabilityId: string;              // the registry key; identity, not a label

@@ -1,23 +1,11 @@
 {
   "_README": {
-    "purpose": "HAND-AUTHORED capability policy. Never generated. Observation can see which tables and columns an operation touches; it cannot see coverage semantics, integrity rules, availability policy or receipt ownership. Deriving those produced a constant ('observed-available') and a string built from the first emitted table, both presented as contract.",
-    "rules": [
-      "Keys are capability ids from capability-registry.json, verbatim.",
-      "An entry must state all of coverage, integrity, availability, receiptOwner. null means 'not yet authored' and is explicit, not a placeholder.",
-      "STATING ALL FOUR IS NOT ENOUGH TO AUTHORIZE. Eligibility additionally requires that the coverage basis names a table and column the capability actually reads, and that every integrity rule can be executed. Nothing can execute one today -- there is no check catalog, resolver, or runtime consumer of a rule's binding -- so no capability is authorization-eligible, and authoring through the workbook produces recorded DRAFTS. That is deliberate: the integrity field is mandatory because integrity matters, so an eligibility that ignored it would grant exactly the assurance nobody checked.",
-      "evidence must cite what the value rests on: a file:line, a production observation with its date, or a spec section.",
-      "A capability authorizes nothing until all four fields are non-null, well-formed, contract-valid AND integrity-executable (authorizationEligible in the registry). Partial authoring is recorded but buys no authority.",
-      "Entries beginning with _ are documentation and are ignored."
-    ],
-    "shapes": {
-      "coverage": "DISCRIMINATED: { kind: \"column\", table, yearColumn } | { kind: \"none\", reason }. A column basis on a column whose name is not year-bearing must also carry a justification. \"No year dimension\" is an ANSWER and is written as kind \"none\" with its reason — it was previously the string \"none\", normalised to null on import, which made a considered decision indistinguishable from never having been asked. No other keys are accepted: a derived hint (yearBearing) leaking in from the generator was silently written into this file, where an observation sat beside a decision looking equally authoritative.",
-      "integrity": "non-empty array; each entry is DRAFT PROSE (a string) or BOUND ({ rule, boundTo }); an empty array states no rule and is not a decision. NON-AUTHORIZING TODAY: nothing parses or executes either form, and boundTo currently resolves against no catalog, so no integrity rule can authorize and every capability stays ineligible. The bound shape exists so drafts written now need not be rewritten when the machinery that runs a rule lands; until then it is a promise, not a check.",
-      "availability": "{ kind: \"always\" } | { kind: \"conditional\", condition } — discriminated, never prose and never a bare string. A conditional carries its condition INSIDE it, so the pair cannot disagree and a conditional-with-no-condition cannot be written.",
-      "receiptOwner": "non-empty string naming the builder/importer that owns the receipt",
-      "evidence": "non-empty string longer than 20 characters"
-    },
-    "state_2026_08_14": "1 of 52 capabilities partly authored, 0 authorization-eligible. The 52nd is the sweep-only capability (crime_data::national_monthly::sweep), which reaches no deterministic operation and lives in lib/sweep-only-capabilities.ts; it needs the same four decisions as any other. Authoring the remaining 51 is Stage 2B work and requires decisions this observation harness cannot make."
+    "purpose": "GENERATED FILE -- DO NOT EDIT BY HAND. Derived from capability-answers.json, which is the one authored source for Stage 2B. Editing this file is pointless: the regression asserts it is byte-identical to what scripts/generate-capability-policy.ts emits, and every consumer refuses it when its _generatedFrom no longer matches the record it came from.",
+    "authored_in": "scripts/fixtures/operation-taxonomy/capability-answers.json",
+    "regenerate_with": "npx tsx scripts/generate-capability-policy.ts",
+    "eligibility": "A capability authorizes nothing until every policy field is authored and well formed, the coverage basis names a table and column it actually reads, and every integrity rule can be executed. Nothing can execute one today, so no capability is authorization-eligible and the workbook produces recorded drafts. Entries with origin \"legacy\" predate the workbook, have no human answer behind them, and authorize nothing whatever their fields contain."
   },
+  "_generatedFrom": "da826a3b199357f8",
   "hate_crime::agency_county_crosswalk+hate_crime_incidents::agency_county_crosswalk(county_fips,county_key,ori,ori9,state)|hate_crime_incidents(ori)": {
     "coverage": null,
     "integrity": null,
@@ -26,6 +14,7 @@
       "condition": "Requires agency_county_crosswalk in the hate_crime artifact. The table is absent from production hate_crime.db as of 2026-08-13, so this capability is unavailable in production while being structurally sound. Conditionally unavailable is not unhealthy; the builder decides at runtime."
     },
     "receiptOwner": null,
-    "evidence": "Both artifact states are exercised by this suite: with the crosswalk absent, entitySql (lib/metadata-coverage.ts:457) takes the SQL-less exit and the case hate_crime:metadata-agency-directory-county records terminalKind=unavailable, sealing no capability; with the crosswalk present, the same operation reaches this contract. coverage, integrity and receiptOwner remain unauthored: a directory count has no year dimension to base coverage on, no integrity rule has been decided for the crosswalk, and receipt ownership is Stage 2B."
+    "evidence": "Both artifact states are exercised by this suite: with the crosswalk absent, entitySql (lib/metadata-coverage.ts:457) takes the SQL-less exit and the case hate_crime:metadata-agency-directory-county records terminalKind=unavailable, sealing no capability; with the crosswalk present, the same operation reaches this contract. coverage, integrity and receiptOwner remain unauthored: a directory count has no year dimension to base coverage on, no integrity rule has been decided for the crosswalk, and receipt ownership is Stage 2B.",
+    "origin": "legacy"
   }
 }

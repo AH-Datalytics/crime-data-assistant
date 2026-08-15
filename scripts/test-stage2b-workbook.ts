@@ -24,10 +24,16 @@ import {
   workbookFingerprint,
   type RegistryEntry,
 } from "./generate-stage2b-workbook";
-import { commitPolicyAndAnswers, importDecisions, policyAnswerMismatch, writePolicy } from "./import-stage2b-decisions";
+import { importDecisions } from "./import-stage2b-decisions";
+import { generatePolicyFile, renderPolicyFile } from "./generate-capability-policy";
 import {
-  authorizationBlockers, capabilityAuthorizes, integrityIsExecutable, isYearBearingColumn,
-  policyIsComplete, policyShapeErrors,
+  AUTHORED_FILE, GENERATED_POLICY_FILE, type AuthoredRecord, commitAuthoredRecord, derivePolicy,
+  derivedEntryAuthorizes, loadGeneratedPolicy, readAuthoredRecord, recordDigest, recordShapeErrors,
+  renderAuthoredRecord,
+} from "../lib/stage2b-authored-record";
+import {
+  authorizationBlockers, authorizesApartFromIntegrity, capabilityAuthorizes, integrityIsExecutable,
+  isYearBearingColumn, policyIsComplete, policyShapeErrors,
 } from "../lib/capability-policy";
 import { SWEEP_ONLY_IDS } from "../lib/sweep-only-capabilities";
 
@@ -82,7 +88,22 @@ function exportWith(capId: string, human: Record<string, unknown>, confirmIt = t
   return S.serialize();
 }
 
-const importInto = (raw: string, policy: Record<string, unknown> = {}) => importDecisions(raw, registry, policy);
+/** The empty authored record: nothing decided, nothing migrated. */
+const EMPTY_RECORD = { docs: {} as Record<string, unknown>, entries: {} as AuthoredRecord };
+const importInto = (raw: string, record = EMPTY_RECORD) => importDecisions(raw, registry, record);
+
+/** A record in which one capability is already decided, produced exactly the way the importer does. */
+function recordWith(capId: string, human: Record<string, unknown>) {
+  const result = importDecisions(exportWith(capId, human), registry, EMPTY_RECORD);
+  if (!result.ok) throw new Error("could not build the prior record: " + result.errors.join("; "));
+  return { docs: result.docs, entries: result.entries, policy: result.policy };
+}
+
+/** A record holding one migrated legacy entry, as the one-time migration produced. */
+const legacyRecord = (capId: string, policy: Record<string, unknown>) => ({
+  docs: {} as Record<string, unknown>,
+  entries: { [capId]: { kind: "legacy" as const, policy } } as AuthoredRecord,
+});
 
 /**
  * A catalog that covers exactly the ids given, for the tests that drive a SYNTHETIC registry.
@@ -96,6 +117,13 @@ const catalogCovering = (ids: string[]) => ({
     extra: ids.filter((id) => !registryIds.includes(id)),
   }),
   fingerprint: () => "synthetic",
+  ids: () => ids,
+  entry: () => null,
+  question: () => "a synthetic capability, described only for a structural test",
+  processLabels: () => ["A synthetic update process"],
+  scenarios: () => [{ value: "stale", label: "It stops being updated", prose: "It must not stop." }],
+  PROCESSES: {},
+  SCENARIOS: {},
 });
 
 // ---------------------------------------------------------------- 0. the page actually runs
@@ -235,19 +263,25 @@ check("what the person answered survives into a checked-in record, and reopens w
   const result = importInto(exportWith(withYear.id, human));
   assert.ok(result.ok, JSON.stringify(!result.ok && result.errors));
   if (!result.ok) return;
-  const recorded = result.answers[withYear.id] as { human: Record<string, unknown>; mappingConfirmed: string };
+  const recorded = result.entries[withYear.id] as { kind: string; human: Record<string, unknown>; confirmed: string };
   assert.ok(recorded, "the answer was not recorded anywhere durable");
+  assert.strictEqual(recorded.kind, "decided", "a confirmed answer was not recorded as a decision");
   assert.strictEqual(recorded.human.coverage, human.coverage, "the recorded answer is not the one given");
   assert.strictEqual(recorded.human.evidence, human.evidence, "the reasoning was dropped");
-  assert.ok(recorded.mappingConfirmed, "the confirmation provenance was dropped");
+  assert.ok(recorded.confirmed, "the confirmation provenance was dropped");
 
   // Reopening the workbook restores it, and does NOT report it as an unsaved change.
-  const reopen = (answersRecord: Record<string, unknown>, catalogFingerprint = CATALOG.fingerprint()) =>
+  const asSeed = (entries: AuthoredRecord) => Object.fromEntries(Object.entries(entries)
+    .filter(([, e]) => e.kind === "decided" || e.kind === "open")
+    .map(([id, e]) => [id, { human: (e as any).human,
+      mappingConfirmed: e.kind === "decided" ? e.confirmed : null,
+      catalogFingerprint: (e as any).contractFingerprint }]));
+  const reopen = (entries: AuthoredRecord, catalogFingerprint = FINGERPRINT) =>
     createStage2bSession({
       v: DECISIONS_VERSION, fingerprint: FINGERPRINT, capabilities: model,
-      authored: { [withYear.id]: result.policy[withYear.id] }, answers: answersRecord, catalogFingerprint,
+      authored: { [withYear.id]: result.policy[withYear.id] }, answers: asSeed(entries), catalogFingerprint,
     }, PL);
-  const reopened = reopen(result.answers);
+  const reopened = reopen(result.entries);
   assert.strictEqual(reopened.human(withYear.id).coverage, human.coverage, "the reopened workbook lost the answer");
   assert.strictEqual(reopened.isMappingConfirmed(withYear.id), true, "the reopened workbook lost the confirmation");
   assert.deepStrictEqual(reopened.changeSet(), {}, "a restored answer is reported as an unsaved change");
@@ -266,7 +300,7 @@ check("what the person answered survives into a checked-in record, and reopens w
    * not. A confirmation approves one translation of one question; once the question changes, it
    * approves something nobody read.
    */
-  const reworded = reopen(result.answers, "different-wording");
+  const reworded = reopen(result.entries, "different-wording");
   assert.strictEqual(reworded.human(withYear.id).coverage, human.coverage, "a re-worded question lost the answer too");
   assert.strictEqual(reworded.isMappingConfirmed(withYear.id), false, "a confirmation survived a re-worded question");
   assert.strictEqual(reworded.needsReconfirmation(withYear.id), true, "the page is not told to ask again");
@@ -276,88 +310,297 @@ check("what the person answered survives into a checked-in record, and reopens w
   // Withdrawing removes the durable record too, not just the policy.
   const W = sessionFor({ [withYear.id]: result.policy[withYear.id] as Record<string, unknown> });
   W.withdraw(withYear.id);
-  const removed = importDecisions(W.serialize(), registry,
-    { [withYear.id]: result.policy[withYear.id] as Record<string, unknown> }, result.answers);
-  assert.ok(removed.ok && !(withYear.id in (removed as any).answers),
+  const removed = importDecisions(W.serialize(), registry, { docs: result.docs, entries: result.entries });
+  assert.ok(removed.ok && !(withYear.id in (removed as any).entries),
     "withdrawing removed the policy but left the answer record behind");
 });
 
-check("the fingerprint covers the questions, not only the database structure", () => {
+check("the fingerprint covers everything a person reads, and the translation itself", () => {
   /**
-   * A confirmation attaches to the question as it was asked. While only database structure was
-   * fingerprinted, a reworded question, a changed failure scenario or a narrowed set of process
-   * choices moved nothing -- so an old session still loaded, and its approval survived under
-   * wording the person had never read.
+   * A confirmation attaches to one translation of one question AS IT WAS WORDED. While the identity
+   * covered only database structure and the per-capability catalog, a shared question heading, an
+   * option's stated consequence, or `proposeMapping` itself could all change without invalidating a
+   * single confirmation -- so an approval could end up attached to something nobody read.
+   *
+   * Every case below mutates a REAL contract field taken from the production modules. Substituting a
+   * fake digest would only prove that workbookFingerprint consumes the digest it is handed.
    */
-  const reworded = {
-    ...CATALOG,
-    fingerprint: () => "reworded",
-    coverageAgainst: CATALOG.coverageAgainst,
-  };
-  assert.notStrictEqual(workbookFingerprint(registry, reworded), FINGERPRINT,
-    "re-wording every question left the fingerprint untouched");
+  const realSource = fs.readFileSync(PLAIN_LANGUAGE_MODULE_FILE, "utf8");
+  /**
+   * Rebuild the translation module FROM SOURCE, so a mutation changes the real thing rather than a
+   * wrapper around it. Overriding an exported method is not enough: `contractFor` calls the module's
+   * own internals, so a spread-over copy would leave the contract untouched and the test would pass
+   * while proving nothing.
+   */
+  const plFrom = (source: string) =>
+    (new Function(source + "\nreturn createStage2bPlainLanguage;")() as (c: unknown) => any)(CATALOG);
+  const fingerprintOf = (source: string, translationSource = realSource) =>
+    workbookFingerprint(registry, CATALOG, { plainLanguage: plFrom(source), translationSource });
 
-  // Structure alone still moves it, so the original guard is intact.
+  assert.strictEqual(fingerprintOf(realSource), FINGERPRINT, "the contract is not reproducible from the real module");
+
+  /**
+   * Each case edits a REAL string in the production module and holds the translation digest at its
+   * true value, so only the wording differs. That isolates it: the fingerprint has to move because
+   * what the person READS changed, not merely because the file's bytes did.
+   */
+  const wordingCases: [string, string, string][] = [
+    ["a question heading", "1. Do we know the first and last year this data covers?",
+      "1. Can we tell the first and last year this data covers?"],
+    ["a question hint", "Some data is legitimately missing sometimes.",
+      "Some data is legitimately missing now and then."],
+    ["what an answer is said to do", "If it ever goes missing, that gets treated as a problem worth flagging.",
+      "If it ever goes missing, that gets treated as a problem worth flagging and reported weekly."],
+    ["an option label", "Yes — we know the first and last year it covers",
+      "Yes — we know the earliest and latest year it covers"],
+    ["the label on the recorded summary", 'coverage: "Years"', 'coverage: "Year range"'],
+  ];
+  for (const [what, from, to] of wordingCases) {
+    assert.ok(realSource.includes(from), `this test is stale: the module no longer contains ${what}`);
+    const mutated = realSource.replace(from, to);
+    assert.notStrictEqual(mutated, realSource, `${what} did not actually change`);
+    assert.notStrictEqual(fingerprintOf(mutated), FINGERPRINT,
+      `changing ${what} left every confirmation valid`);
+  }
+
+  // The per-capability catalog is covered too, by a real question rather than a substituted digest.
+  const realCatalogQuestion = CATALOG.question(withYear.id);
+  assert.ok(realCatalogQuestion, "this test is stale: the capability has no catalogued question");
+  const rewordedCatalog = { ...CATALOG, fingerprint: () => CATALOG.fingerprint(),
+    question: (id: string) => (id === withYear.id ? realCatalogQuestion + " (revised)" : CATALOG.question(id)) };
+  assert.notStrictEqual(
+    workbookFingerprint(registry, rewordedCatalog, { plainLanguage: createStage2bPlainLanguage(rewordedCatalog), translationSource: realSource }),
+    FINGERPRINT, "re-wording a capability's own question left every confirmation valid");
+
+  // And the translation itself, holding every displayed word constant.
+  const changedTranslation = realSource.replace(
+    'proposed.availability = { kind: "always" };',
+    'proposed.availability = { kind: "always" }; /* the rule changed */');
+  assert.notStrictEqual(changedTranslation, realSource, "the translation source did not actually change");
+  assert.notStrictEqual(workbookFingerprint(registry, CATALOG, { plainLanguage: PL, translationSource: changedTranslation }),
+    FINGERPRINT, "changing how an answer becomes policy left every confirmation valid");
+
+  // Structure still moves it, so the original guard is intact.
   const moved = JSON.parse(JSON.stringify(registry)) as Record<string, RegistryEntry>;
   moved[withYear.id].requiredColumns[yearBasis.table] = [...moved[withYear.id].requiredColumns[yearBasis.table], "an_added_column"];
   assert.notStrictEqual(workbookFingerprint(moved, CATALOG), FINGERPRINT, "a structural change left the fingerprint untouched");
 
-  // A session authored against other wording does not load.
+  // And a session authored against any other contract does not load.
   const S = sessionFor();
-  const otherWording = JSON.parse(exportWith(withYear.id, answers()));
-  otherWording.fingerprint = workbookFingerprint(registry, reworded);
-  const refused = S.loadSession(otherWording);
+  const otherContract = JSON.parse(exportWith(withYear.id, answers()));
+  otherContract.fingerprint = fingerprintOf(realSource.replace(
+    "1. Do we know the first and last year this data covers?",
+    "1. Can we tell the first and last year this data covers?"));
+  const refused = S.loadSession(otherContract);
   assert.strictEqual(refused.ok, false, "a session authored against different wording loaded");
   assert.ok(refused.stale, "it was not refused as stale");
 
-  // And a pre-catalog export is refused by version rather than accepted on an old fingerprint.
+  // A pre-catalog export is refused by version rather than accepted on an older fingerprint.
   assert.ok(DECISIONS_VERSION >= 4, "the version was not raised when the fingerprint changed meaning");
   const old = JSON.parse(exportWith(withYear.id, answers()));
   old.v = 3;
   assert.strictEqual(importInto(JSON.stringify(old)).ok, false, "a version-3 export was still accepted");
 });
 
-check("policy and its human record are written together, or not at all", () => {
+check("the page reads its shared wording from the contract, not from its own template", () => {
   /**
-   * Two independent writes with the policy first meant a crash between them left the technical
-   * decision committed and the human record missing -- the exact state the record was added to
-   * prevent, and afterwards indistinguishable from policy authored by hand.
+   * If the page kept its own copy of a heading, the fingerprint would cover a string nobody reads
+   * and miss the one they do.
    */
-  const policy = { [withYear.id]: { coverage: null, integrity: null, availability: null, receiptOwner: null, evidence: "x" } };
-  const orphaned = { [withYear.id]: { human: {}, mappingConfirmed: "abc" },
-    "shr::incidents::incidents(year)": { human: {}, mappingConfirmed: "def" } };
-  assert.deepStrictEqual(policyAnswerMismatch(policy, { [withYear.id]: orphaned[withYear.id] }), [],
-    "a matching pair was reported as a mismatch");
-  const problems = policyAnswerMismatch(policy, orphaned);
-  assert.strictEqual(problems.length, 1, "an answer with no policy entry was not reported");
-  assert.ok(/no policy entry exists/.test(problems[0]));
-  assert.throws(() => commitPolicyAndAnswers(policy, orphaned), /inconsistent pair/,
-    "an inconsistent pair was written anyway");
+  const html = renderWorkbook(registry);
+  const wording = PL.questions();
+  for (const [where, text] of [
+    ["coverage heading", wording.coverage.heading],
+    ["integrity heading", wording.integrity.heading],
+    ["availability heading", wording.availability.heading],
+    ["owner heading", wording.owner.heading],
+    ["evidence heading", wording.evidence.heading],
+    ["mapping heading", wording.mapping.heading],
+  ] as [string, string][]) {
+    assert.ok(html.includes(text), `the ${where} in the contract does not appear on the page`);
+    assert.ok(!new RegExp("<h3>" + text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "</h3>").test(html),
+      `the page hard-codes the ${where} instead of reading it from the contract`);
+  }
+  assert.ok(/const Q = PL\.questions\(\);/.test(html), "the page does not take its wording from the contract");
+});
 
-  // Policy entries without answers stay legal: the file predates the workbook.
-  assert.deepStrictEqual(policyAnswerMismatch({ ...policy, "_README": {} }, {}), [],
-    "a hand-authored policy entry with no recorded answer was reported as a mismatch");
+check("there is ONE authored source, and policy is derived from it", () => {
+  /**
+   * The redesign, asserted as a property. The same decision used to live in two authoritative files
+   * written one after the other, and every review found another way for them to disagree: a crash
+   * between the writes, an orphaned answer, an update that kept its id and passed a key-only check.
+   * Policy is not stored independently any more, so it cannot disagree with the answers.
+   */
+  const generated = generatePolicyFile();
+  assert.deepStrictEqual(generated.errors, [], "the checked-in record does not derive");
+  assert.strictEqual(fs.readFileSync(GENERATED_POLICY_FILE, "utf8"), generated.text,
+    "capability-policy.json is not byte-identical to what the generator emits; it has been hand-edited "
+    + "or is stale. Run: npx tsx scripts/generate-capability-policy.ts");
 
-  // The importer commits through that one path, rather than writing the two files itself.
+  // It is stamped with the record it came from, and refused when that no longer matches.
+  const raw = JSON.parse(fs.readFileSync(GENERATED_POLICY_FILE, "utf8")) as Record<string, unknown>;
+  assert.strictEqual(raw._generatedFrom, recordDigest(AUTHORED_FILE), "the generated policy is not stamped with its source");
+  assert.ok(/DO NOT EDIT BY HAND/.test(JSON.stringify(raw._README)), "the generated file does not say it is generated");
+  assert.doesNotThrow(() => loadGeneratedPolicy(), "the canonical loader refuses the current pair");
+});
+
+check("no consumer silently trusts a policy that lags its source", () => {
+  /**
+   * A generated file that quietly falls behind is the two-record defect again, just slower to
+   * notice. Every reader goes through the loader, and the loader fails closed.
+   */
+  const stale = path.join(DATA_DIR, "policy-stale-probe.json");
+  const current = JSON.parse(fs.readFileSync(GENERATED_POLICY_FILE, "utf8")) as Record<string, unknown>;
+  fs.writeFileSync(stale, JSON.stringify({ ...current, _generatedFrom: "0000000000000000" }, null, 2));
+  try {
+    assert.throws(() => loadGeneratedPolicy(stale), /generated from a different version/,
+      "a policy stamped with the wrong source was accepted");
+    assert.throws(() => loadGeneratedPolicy(path.join(DATA_DIR, "absent-policy.json")), /has not been generated/,
+      "a missing generated policy was tolerated");
+  } finally { fs.rmSync(stale, { force: true }); }
+
+  // The consumers read through it rather than opening the file themselves.
+  for (const file of ["scripts/generate-source-health-inventory.ts", "scripts/test-operation-taxonomy.ts"]) {
+    const text = fs.readFileSync(path.join(process.cwd(), file), "utf8");
+    assert.ok(/loadGeneratedPolicy/.test(text), `${file} does not read policy through the canonical loader`);
+    assert.ok(!/readFileSync\([^)]*capability-policy\.json/.test(text),
+      `${file} opens the generated policy directly, so it can be handed a stale one`);
+  }
+});
+
+check("the authored record is a closed union, and the importer can never write a legacy entry", () => {
+  const { entries } = readAuthoredRecord();
+  assert.deepStrictEqual(recordShapeErrors(entries), [], "the checked-in record is malformed");
+  for (const [id, entry] of Object.entries(entries)) {
+    assert.ok(["decided", "open", "legacy"].includes(entry.kind), `${id}: unknown entry kind`);
+  }
+  // Malformed variants are refused rather than coerced.
+  for (const [what, entry] of [
+    ["a decided entry with no confirmation", { kind: "decided", human: {}, preserved: {}, contractFingerprint: "x" }],
+    ["an open entry carrying a confirmation", { kind: "open", human: {}, contractFingerprint: "x", confirmed: "y" }],
+    ["a legacy entry carrying a human answer", { kind: "legacy", policy: {}, human: {} }],
+    ["an entry of no known kind", { kind: "invented", human: {} }],
+  ] as [string, unknown][]) {
+    assert.ok(recordShapeErrors({ "shr::incidents::incidents(year)": entry } as AuthoredRecord).length > 0,
+      `${what} was accepted`);
+  }
+  // Nothing in the importer can produce one.
+  const importer = fs.readFileSync(path.join(process.cwd(), "scripts", "import-stage2b-decisions.ts"), "utf8");
+  assert.ok(!/kind:\s*"legacy"/.test(importer), "the importer can create a legacy entry");
+  assert.ok(/kind:\s*"decided"/.test(importer) && /kind:\s*"open"/.test(importer),
+    "the importer does not write the two kinds it is allowed to");
+});
+
+check("a migrated legacy entry authorizes nothing, whatever it contains", () => {
+  /**
+   * It has no human answer and no confirmation behind it, so it cannot be read as a decision anyone
+   * made through the questions. Structural: the shared predicate refuses it, so no consumer has to
+   * remember the rule.
+   */
+  const declared = withYear.reads.map((name) => ({ name, requiredColumns: withYear.columns[name] ?? [] }));
+  const complete = {
+    coverage: { kind: "column", table: yearBasis.table, yearColumn: yearBasis.yearColumn },
+    integrity: [{ rule: "r", boundTo: "checks/x.sql" }],
+    availability: { kind: "always" }, receiptOwner: "someone",
+    evidence: "a complete-looking entry migrated from before the workbook existed",
+  };
+  assert.strictEqual(derivedEntryAuthorizes({ ...complete, origin: "legacy" }, declared), false,
+    "a legacy entry authorized");
+  assert.strictEqual(capabilityAuthorizes({ ...complete, origin: "legacy" }, declared), false,
+    "the shared predicate let a legacy entry authorize");
+  /**
+   * Asserted on the predicate WITHOUT the integrity gate in front of it. Nothing can authorize
+   * today, so a check on `capabilityAuthorizes` alone cannot tell a working legacy refusal from a
+   * missing one -- both return false. This is the assertion that still means something on the day
+   * integrity bindings exist.
+   */
+  assert.strictEqual(authorizesApartFromIntegrity(complete, declared), true,
+    "this fixture cannot show anything: it would not authorize even without the legacy marker");
+  assert.strictEqual(authorizesApartFromIntegrity({ ...complete, origin: "legacy" }, declared), false,
+    "the migrated-legacy refusal is not what stops this entry; it is only the integrity gate");
+  assert.ok(authorizationBlockers({ ...complete, origin: "legacy" }, declared).some((b) => /migrated/.test(b)),
+    "the blocker does not name why");
+  // And derivation marks them, so the mark cannot be lost between record and policy.
+  const derived = derivePolicy(legacyRecord(withYear.id, complete).entries, model, PL);
+  assert.strictEqual((derived.policy[withYear.id] as Record<string, unknown>).origin, "legacy",
+    "derivation dropped the legacy marker");
+});
+
+check("a confirmation that does not match the re-derivation derives nothing", () => {
+  /**
+   * The importer checks this before writing, so a record on disk always agrees -- which means the
+   * derivation's own check is never exercised by an ordinary import, and a regression that only
+   * imports cannot see it. A record can also arrive by hand edit, merge, or a future writer.
+   */
+  const prior = recordWith(withYear.id, answers());
+  const tampered = JSON.parse(JSON.stringify(prior.entries)) as AuthoredRecord;
+  (tampered[withYear.id] as { confirmed: string }).confirmed = "0000dead";
+  const derived = derivePolicy(tampered, model, PL);
+  assert.ok(derived.errors.some((e) => /given for a different mapping/.test(e)),
+    "a confirmation for some other mapping was accepted as policy");
+  assert.ok(!(withYear.id in derived.policy), "the mis-confirmed entry still produced policy");
+
+  // And an entry whose human answer was edited after confirmation derives nothing either.
+  const edited = JSON.parse(JSON.stringify(prior.entries)) as AuthoredRecord;
+  (edited[withYear.id] as { human: Record<string, unknown> }).human.availability = "sometimes";
+  (edited[withYear.id] as { human: Record<string, unknown> }).human.availabilityWhen = "after the annual load";
+  const afterEdit = derivePolicy(edited, model, PL);
+  assert.ok(afterEdit.errors.length > 0, "an answer edited after confirmation still derived policy");
+});
+
+check("an unconfirmed answer is recorded but derives no policy", () => {
+  const result = importInto(exportWith(withYear.id, answers(), false));
+  assert.ok(result.ok, JSON.stringify(!result.ok && result.errors));
+  if (!result.ok) return;
+  assert.deepStrictEqual(result.open, [withYear.id], "an unconfirmed answer was not recorded as work in progress");
+  assert.deepStrictEqual(result.decided, [], "an unconfirmed answer was recorded as a decision");
+  assert.ok(!(withYear.id in result.policy), "an unconfirmed answer derived policy");
+  assert.strictEqual((result.entries[withYear.id] as { kind: string }).kind, "open");
+});
+
+check("the recorded mapping is audit evidence only, and must equal re-derivation", () => {
+  const prior = recordWith(withYear.id, answers());
+  const tampered = JSON.parse(JSON.stringify(prior.entries)) as AuthoredRecord;
+  (tampered[withYear.id] as { mapping: Record<string, unknown> }).mapping.receiptOwner = "a value nobody chose";
+  const derived = derivePolicy(tampered, model, PL);
+  assert.ok(derived.errors.some((e) => /disagrees with itself/.test(e)),
+    "a mapping snapshot that contradicts the answer was accepted as policy");
+  assert.ok(!(withYear.id in derived.policy), "the contradicted entry still produced policy");
+});
+
+check("an interruption at any persistence boundary leaves the record wholly old or wholly new", () => {
+  /**
+   * One file, one rename. The point of the redesign: there is no window in which half a decision is
+   * committed, because there is no second file to be out of step with.
+   */
+  const probe = path.join(DATA_DIR, "record-fault-probe.json");
+  const staged = `${probe}.staged`;
+  const OLD = renderAuthoredRecord({ _note: "before" }, {} as AuthoredRecord);
+  const NEW = renderAuthoredRecord({ _note: "after" }, {} as AuthoredRecord);
+  try {
+    for (const failAt of ["before-write", "after-write", "after-rename", undefined] as const) {
+      fs.writeFileSync(probe, OLD);
+      fs.rmSync(staged, { force: true });
+      let threw = false;
+      try { commitAuthoredRecord(NEW, { file: probe, failAt }); } catch { threw = true; }
+      const after = fs.readFileSync(probe, "utf8");
+      assert.ok(after === OLD || after === NEW,
+        `failing at ${String(failAt)} left the record neither wholly old nor wholly new`);
+      assert.ok(JSON.parse(after), `failing at ${String(failAt)} left the record unparseable`);
+      if (failAt === "before-write" || failAt === "after-write") {
+        assert.strictEqual(after, OLD, `failing at ${String(failAt)} committed a partial write`);
+        assert.ok(threw, "the injected failure did not surface");
+      } else {
+        assert.strictEqual(after, NEW, `${String(failAt)} did not commit the new record`);
+      }
+    }
+  } finally { fs.rmSync(probe, { force: true }); fs.rmSync(staged, { force: true }); }
+
+  // And the importer commits through that one path, writing nothing else.
   const importer = fs.readFileSync(path.join(process.cwd(), "scripts", "import-stage2b-decisions.ts"), "utf8");
   const cli = importer.slice(importer.indexOf("if (process.argv[1]"));
-  assert.ok(/commitPolicyAndAnswers\(/.test(cli), "the importer does not commit the pair through one path");
-  assert.ok(!/writeFileSync\(POLICY_FILE|writeFileSync\(ANSWERS_FILE/.test(cli),
-    "the importer still writes either file directly, so the pair can be split by a crash");
-  assert.ok(/\.staged/.test(importer), "the pair is not staged before being moved into place");
-
-  // Generation refuses to seed from a pair that disagrees.
-  const answersFile = path.join(DATA_DIR, "capability-answers.json");
-  const existed = fs.existsSync(answersFile);
-  const original = existed ? fs.readFileSync(answersFile, "utf8") : null;
-  try {
-    fs.writeFileSync(answersFile, JSON.stringify({ "shr::invented::nothing(x)": { human: {} } }, null, 2));
-    assert.throws(() => renderWorkbook(registry), /disagree/,
-      "the workbook was generated from a policy and answer record that disagree");
-  } finally {
-    if (original === null) fs.rmSync(answersFile, { force: true });
-    else fs.writeFileSync(answersFile, original);
-  }
+  assert.ok(/commitAuthoredRecord\(/.test(cli), "the importer does not commit through the atomic path");
+  assert.ok(!/writeFileSync\(AUTHORED_FILE/.test(importer), "the importer writes the authored file directly");
 });
 
 // ---------------------------------------------------------------- 1. the human-facing surface
@@ -420,14 +663,9 @@ check("an unresolved answer never erases an existing decision", () => {
    * entry and returned success. A decided capability became undecided with no withdrawal and
    * nothing named. Removing a decision is the separate, confirmed act at the bottom of the page.
    */
-  const existing = {
-    coverage: { kind: "column", table: yearBasis.table, yearColumn: yearBasis.yearColumn },
-    integrity: ["an existing rule somebody decided earlier"],
-    availability: { kind: "always" },
-    receiptOwner: "The monthly crime-trends update",
-    evidence: "the original decision, recorded by whoever answered these questions before",
-  };
-  const S = sessionFor({ [withYear.id]: existing });
+  const prior = recordWith(withYear.id, answers());
+  const existingDerived = prior.policy[withYear.id] as Record<string, unknown>;
+  const S = sessionFor({ [withYear.id]: existingDerived });
   S.update(withYear.id, {
     ...PL.blankAnswer(), coverage: PL.UNSURE, availability: PL.UNSURE, owner: PL.UNSURE, integrityUnsure: true,
     evidence: "nobody here knows yet; recorded so the open question is visible rather than assumed",
@@ -437,23 +675,23 @@ check("an unresolved answer never erases an existing decision", () => {
   assert.deepStrictEqual([...p.preserved].sort(), ["availability", "coverage", "integrity", "receiptOwner"],
     "an unresolved answer did not preserve the existing decision");
   for (const field of ["coverage", "integrity", "availability", "receiptOwner"]) {
-    assert.deepStrictEqual((p.merged as Record<string, unknown>)[field], (existing as Record<string, unknown>)[field],
+    assert.deepStrictEqual((p.merged as Record<string, unknown>)[field], existingDerived[field],
       `${field} was about to be erased by an unresolved answer`);
   }
 
   S.confirmMapping(withYear.id);
-  const result = importDecisions(S.serialize(), registry, { [withYear.id]: existing });
+  const result = importDecisions(S.serialize(), registry, prior);
   assert.ok(result.ok, JSON.stringify(!result.ok && result.errors));
   if (!result.ok) return;
   const stored = result.policy[withYear.id] as Record<string, unknown>;
   for (const field of ["coverage", "integrity", "availability", "receiptOwner"]) {
-    assert.deepStrictEqual(stored[field], (existing as Record<string, unknown>)[field],
+    assert.deepStrictEqual(stored[field], existingDerived[field],
       `${field} was erased at import by an unresolved answer`);
   }
   // Withdrawal is still the way to remove one, and it still works.
-  const W = sessionFor({ [withYear.id]: existing });
+  const W = sessionFor({ [withYear.id]: existingDerived });
   W.withdraw(withYear.id);
-  const removed = importDecisions(W.serialize(), registry, { [withYear.id]: existing });
+  const removed = importDecisions(W.serialize(), registry, prior);
   assert.ok(removed.ok && !(withYear.id in removed.policy), "the named withdrawal no longer removes anything");
 
   // And the page says which fields are being kept rather than set.
@@ -544,12 +782,6 @@ check("the technical detail is present, optional, and marked as observed rather 
 });
 
 // ---------------------------------------------------------------- 2. the translation is confirmed
-
-check("the importer refuses a mapping that was never confirmed", () => {
-  const result = importInto(exportWith(withYear.id, answers(), false));
-  assert.strictEqual(result.ok, false, "an unconfirmed mapping was imported");
-  assert.ok(!result.ok && result.errors.some((e) => /never confirmed/.test(e)), "the refusal must say what is missing");
-});
 
 check("the importer refuses a confirmation that has gone stale", () => {
   /**
@@ -655,7 +887,7 @@ check("a full set of answers records policy and still authorizes nothing", () =>
   const result = importInto(exportWith(withYear.id, answers()));
   assert.ok(result.ok, JSON.stringify(!result.ok && result.errors));
   if (!result.ok) return;
-  assert.deepStrictEqual(result.authored, [withYear.id], "a complete answer was not recorded");
+  assert.deepStrictEqual(result.decided, [withYear.id], "a complete answer was not recorded");
   assert.deepStrictEqual(result.eligible, [], "a complete answer switched a capability on");
   const stored = result.policy[withYear.id] as Record<string, unknown>;
   assert.deepStrictEqual(stored.coverage, { kind: "column", table: yearBasis.table, yearColumn: yearBasis.yearColumn });
@@ -717,28 +949,30 @@ check("the export carries only what this session changed", () => {
 
 check("importing a change set preserves capabilities it does not mention", () => {
   const other = model.find((c) => c.id !== withYear.id)!;
-  const existingPolicy = { [other.id]: { coverage: null, integrity: null, availability: null, receiptOwner: null, evidence: "prior" } };
-  const result = importDecisions(exportWith(withYear.id, answers()), registry, existingPolicy);
+  const prior = recordWith(other.id, answers(other));
+  const result = importDecisions(exportWith(withYear.id, answers()), registry, prior);
   assert.ok(result.ok, JSON.stringify(!result.ok && result.errors));
   if (!result.ok) return;
   assert.ok(other.id in result.policy, "an entry the change set never mentioned was deleted by importing");
 });
 
 check("a change authored against a stale baseline is refused by name", () => {
-  const theirs = { coverage: null, integrity: null, availability: null, receiptOwner: "someone else's answer", evidence: "theirs" };
-  const result = importDecisions(exportWith(withYear.id, answers()), registry, { [withYear.id]: theirs });
+  const theirs = recordWith(withYear.id, answers(withYear, {
+    evidence: "someone else answered this first, against a different understanding of the pipeline",
+  }));
+  const result = importDecisions(exportWith(withYear.id, answers()), registry, theirs);
   assert.strictEqual(result.ok, false, "an import overwrote an entry that changed underneath it");
   assert.ok(!result.ok && result.errors.some((e) => e.includes(withYear.id) && /changed since this session began/.test(e)));
 });
 
 check("withdrawal is a named act, never inferred from unanswered questions", () => {
-  const authored = { coverage: null, integrity: null, availability: null, receiptOwner: "prior owner", evidence: "prior" };
-  const S = sessionFor({ [withYear.id]: authored });
+  const prior = recordWith(withYear.id, answers());
+  const S = sessionFor({ [withYear.id]: prior.policy[withYear.id] as Record<string, unknown> });
   assert.strictEqual(S.canWithdraw(withYear.id), true, "an authored capability is not withdrawable");
   assert.strictEqual(sessionFor().canWithdraw(withYear.id), false, "an unauthored capability offers withdrawal");
   S.withdraw(withYear.id);
   assert.deepStrictEqual(S.changeSet()[withYear.id], { operation: "withdraw" });
-  const result = importDecisions(S.serialize(), registry, { [withYear.id]: authored });
+  const result = importDecisions(S.serialize(), registry, prior);
   assert.ok(result.ok, JSON.stringify(!result.ok && result.errors));
   if (!result.ok) return;
   assert.deepStrictEqual(result.cleared, [withYear.id]);
@@ -910,14 +1144,21 @@ check("exact keys are enforced at every level", () => {
 
 // ---------------------------------------------------------------- 9. the documents
 
-check("the policy README documents the semantics that are actually enforced", () => {
-  const doc = JSON.parse(fs.readFileSync(path.join(DATA_DIR, "capability-policy.json"), "utf8")) as any;
-  const rules = (doc._README.rules as string[]).join(" ");
-  assert.ok(/STATING ALL FOUR IS NOT ENOUGH TO AUTHORIZE/.test(rules), "the README implies four fields authorize");
-  assert.ok(/no capability is authorization-eligible/.test(rules), "the README does not record that nothing is eligible");
-  assert.ok(/DRAFT PROSE \(a string\) or BOUND/.test(doc._README.shapes.integrity), "the README types integrity as bare prose");
-  assert.ok(!/asserts nothing whatever about integrity/.test(JSON.stringify(doc._README)),
-    "the README carries the rejected 'eligibility asserts nothing about integrity' framing");
+check("the authored record documents what it is, and the generated file says it is generated", () => {
+  const record = JSON.parse(fs.readFileSync(AUTHORED_FILE, "utf8")) as any;
+  const readme = JSON.stringify(record._README);
+  assert.ok(/THE ONE AUTHORED SOURCE/.test(readme), "the record does not say it is the authored source");
+  assert.ok(/DERIVED from this file/.test(readme), "the record does not say policy is derived from it");
+  assert.ok(/atomic rename/.test(readme), "the record does not record how it is written");
+  for (const kind of ["decided", "open", "legacy"]) {
+    assert.ok(record._README.entry_kinds[kind], `the record does not document its "${kind}" entries`);
+  }
+  assert.ok(/authorizes nothing/.test(record._README.entry_kinds.legacy), "legacy entries are not documented as non-authorizing");
+  assert.ok(/No capability is authorization-eligible/.test(readme), "the record does not record that nothing is eligible");
+
+  const generated = JSON.parse(fs.readFileSync(GENERATED_POLICY_FILE, "utf8")) as any;
+  assert.ok(/DO NOT EDIT BY HAND/.test(JSON.stringify(generated._README)), "the generated file does not warn against editing");
+  assert.ok(/capability-answers\.json/.test(JSON.stringify(generated._README)), "the generated file does not name its source");
 });
 
 check("the authoritative plan documents the shape that is actually enforced", () => {

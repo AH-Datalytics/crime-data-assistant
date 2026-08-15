@@ -25,6 +25,7 @@ import path from "node:path";
 import { createRequire } from "node:module";
 import { isYearBearingColumn } from "../lib/capability-policy";
 import { decidableCapabilities } from "../lib/sweep-only-capabilities";
+import { derivePolicy, readAuthoredRecord, recordShapeErrors } from "../lib/stage2b-authored-record";
 
 const DATA_DIR = path.join(process.cwd(), "scripts", "fixtures", "operation-taxonomy");
 const REGISTRY_FILE = path.join(DATA_DIR, "capability-registry.json");
@@ -85,13 +86,58 @@ export function decidableRegistry(registry: Record<string, RegistryEntry>): Reco
  * cleanly and its confirmation survived under wording the person never read -- a confirmation
  * attached to a question they did not answer.
  */
+export type DecisionContractParts = {
+  catalog: { fingerprint: () => string };
+  plainLanguage?: any;
+  translationSource?: string;
+};
+
+/**
+ * EVERYTHING a person reads before deciding, plus the logic that turns their answer into policy.
+ *
+ * The registry fingerprint covers database structure. The catalog covers the per-capability
+ * question. Neither covered the shared question headings and hints, the option labels and their
+ * stated consequences, or `proposeMapping`/`mergeWithExisting` themselves -- so a question could be
+ * re-worded, an option's consequence rewritten, or the translation changed outright, and every
+ * existing confirmation would survive. A confirmation approves one translation of one question as
+ * it was worded; all three of those are part of that, so all three are in the identity.
+ */
+export function decisionContract(
+  registry: Record<string, RegistryEntry>,
+  parts: DecisionContractParts,
+): string {
+  const pl = parts.plainLanguage ?? loadPlainLanguage(parts.catalog);
+  const translation = parts.translationSource ?? fs.readFileSync(PLAIN_LANGUAGE_MODULE_FILE, "utf8");
+  return JSON.stringify({
+    structure: registryFingerprint(registry),
+    catalog: parts.catalog.fingerprint(),
+    shared: pl.questions(),
+    displayed: buildWorkbookModel(registry).map((cap: WorkbookCapability) => pl.contractFor(cap)),
+    /**
+     * The translation logic by CONTENT. A change to how an answer becomes policy changes what the
+     * person's confirmation means, even when every word on the page is identical.
+     */
+    translation: createHash("sha256").update(translation).digest("hex").slice(0, 16),
+  });
+}
+
 export function workbookFingerprint(
   registry: Record<string, RegistryEntry>,
   catalog: { fingerprint: () => string },
+  parts: Omit<DecisionContractParts, "catalog"> = {},
 ): string {
   return createHash("sha256")
-    .update(JSON.stringify([registryFingerprint(registry), catalog.fingerprint()]))
+    .update(decisionContract(registry, { catalog, ...parts }))
     .digest("hex").slice(0, 16);
+}
+
+/** The translation module, loaded from the same file the page inlines. */
+export function loadPlainLanguage(catalog: unknown): any {
+  const req = createRequire(import.meta.url);
+  const { createStage2bPlainLanguage } = req(PLAIN_LANGUAGE_MODULE_FILE) as {
+    createStage2bPlainLanguage: (c: unknown) => any;
+  };
+  return createStage2bPlainLanguage(catalog);
 }
 
 export function registryFingerprint(registry: Record<string, RegistryEntry>): string {
@@ -256,39 +302,33 @@ export function renderWorkbook(
   const model = buildWorkbookModel(registryInput);
   const catalog = catalogOverride ?? loadCatalog();
   const fingerprint = workbookFingerprint(registryInput, catalog as { fingerprint: () => string });
-  const existing = fs.existsSync(POLICY_FILE)
-    ? JSON.parse(fs.readFileSync(POLICY_FILE, "utf8")) as Record<string, unknown>
-    : {};
-  const authored = Object.fromEntries(
-    Object.entries(existing).filter(([id]) => !id.startsWith("_")),
-  );
-
   /**
-   * Previously recorded answers, so reopening the workbook shows what was decided and why.
+   * Seeded from the ONE authored record: what it derives, and the answers behind it.
    *
-   * Without this the page opened blank over existing policy: the technical result survived and the
-   * question it answered did not, so the only way to review a decision was to read the mapping and
-   * guess what had been asked.
+   * The page used to read the policy file and a separate answers file, which is how it could show a
+   * decision whose question had been lost, or an answer whose policy had been overwritten. There is
+   * one source now, so the two cannot disagree.
    */
-  const answers = fs.existsSync(ANSWERS_FILE)
-    ? JSON.parse(fs.readFileSync(ANSWERS_FILE, "utf8")) as Record<string, unknown>
-    : {};
-  /**
-   * The pair has to agree before either is trusted.
-   *
-   * Policy and answers are written as two files. If a crash lands between them, the technical
-   * decision exists and the human record does not -- and seeding from a half-written pair would
-   * quietly present that as a complete history. Refusing is the recovery signal.
-   */
-  const orphaned = Object.keys(answers).filter((id) => !(id in authored));
-  if (orphaned.length) {
-    throw new Error([
-      "capability-answers.json and capability-policy.json disagree, so no workbook was written.",
-      ...orphaned.map((id) => `  an answer is recorded with no policy entry: ${id}`),
-      "The importer writes both together; a pair this far apart means a write was interrupted.",
-      "Re-run the import that produced them, or remove the orphaned answers.",
-    ].join("\n"));
+  const record = readAuthoredRecord();
+  const recordShape = recordShapeErrors(record.entries);
+  if (recordShape.length) {
+    throw new Error(["the authored record is malformed, so no workbook was written.",
+      ...recordShape.map((problem) => `  ${problem}`)].join("\n"));
   }
+  const derived = derivePolicy(record.entries, model, loadPlainLanguage(catalog));
+  if (derived.errors.length) {
+    throw new Error(["the authored record does not derive, so no workbook was written.",
+      ...derived.errors.map((problem) => `  ${problem}`)].join("\n"));
+  }
+  const authored = derived.policy;
+  const answers = Object.fromEntries(Object.entries(record.entries)
+    .filter(([, entry]) => entry.kind === "decided" || entry.kind === "open")
+    .map(([id, entry]) => [id, {
+      human: (entry as { human: Record<string, unknown> }).human,
+      mappingConfirmed: entry.kind === "decided" ? entry.confirmed : null,
+      catalogFingerprint: (entry as { contractFingerprint: string }).contractFingerprint,
+    }]));
+
 
   const payload = embedJson({
     v: DECISIONS_VERSION, fingerprint, capabilities: model, authored, answers,
@@ -419,6 +459,8 @@ ${plainLanguageSource}
 ${sessionSource}
 
 const PL = createStage2bPlainLanguage(stage2bCapabilityCatalog());
+/* Shared wording comes from the contract the fingerprint covers, never from this template. */
+const Q = PL.questions();
 const S = createStage2bSession(DATA, PL);
 let index = 0;
 
@@ -455,22 +497,21 @@ function mappingPanel(cap){
     ? ' <b style="color:#8a5a00">— kept from what was already recorded; your answer left this open</b>' : '';
   const line = (label, value, field) => '<dt>'+label+'</dt><dd>'+value+(field?kept(field):'')+'</dd>';
   const rows = [
-    line('Years', m.coverage === null ? '<i>left open</i>'
+    line(Q.mapping.labels.coverage, m.coverage === null ? '<i>left open</i>'
       : m.coverage.kind === 'none' ? 'not about a time period — ' + esc(m.coverage.reason)
       : 'first and last year read from <code>'+esc(m.coverage.table+'.'+m.coverage.yearColumn)+'</code>', 'coverage'),
-    line('What "gone wrong" looks like', m.integrity === null ? '<i>left open</i>'
+    line(Q.mapping.labels.integrity, m.integrity === null ? '<i>left open</i>'
       : '<ul style="margin:0;padding-left:16px">'+m.integrity.map((r)=>'<li>'+esc(r)+'</li>').join('')+'</ul>', 'integrity'),
-    line('Always there?', m.availability === null ? '<i>left open</i>'
+    line(Q.mapping.labels.availability, m.availability === null ? '<i>left open</i>'
       : m.availability.kind === 'always' ? 'yes, always expected'
       : 'not always — ' + esc(m.availability.condition), 'availability'),
-    line('Kept up to date by', m.receiptOwner === null ? '<i>left open</i>' : esc(m.receiptOwner), 'receiptOwner'),
+    line(Q.mapping.labels.receiptOwner, m.receiptOwner === null ? '<i>left open</i>' : esc(m.receiptOwner), 'receiptOwner'),
   ].join('');
   const confirmed = S.isMappingConfirmed(cap.id);
   const answered = PL.isAnswered(S.human(cap.id));
   const problems = S.problems(cap.id);
-  return '<div class="q"><h3>Check what gets written down</h3>'+
-    '<p class="hint">This is exactly what your answers would record. Nothing is saved until you confirm it,'+
-    ' and changing any answer above cancels the confirmation so you get to read the new version.</p>'+
+  return '<div class="q"><h3>'+esc(Q.mapping.heading)+'</h3>'+
+    '<p class="hint">'+esc(Q.mapping.hint)+'</p>'+
     '<div class="mapping"><dl>'+rows+'</dl></div>'+
     (problems.length ? '<div class="alert">Before this can be confirmed: '+problems.map(esc).join('; ')+'</div>' : '')+
     (p.unresolved.length ? '<div class="warn">Left open: '+p.unresolved.map((f)=>esc(({coverage:'the years question',integrity:'what going wrong looks like',availability:'whether it is always there',receiptOwner:'who keeps it up to date'})[f]||f)).join(', ')+
@@ -481,7 +522,7 @@ function mappingPanel(cap){
     (S.needsReconfirmation(cap.id) ? '<div class="warn">You confirmed this before, but the question has been'+
       ' re-worded since. Your answer is still here — please read the wording above and confirm it again.</div>' : '')+
     (confirmed ? '<div class="good">Confirmed. This wording is what your export will carry.</div>'
-      : '<button class="primary" id="confirmMapping"'+(answered && !problems.length ? '' : ' disabled')+'>I have read this — confirm it</button>')+
+      : '<button class="primary" id="confirmMapping"'+(answered && !problems.length ? '' : ' disabled')+'>'+esc(Q.mapping.confirmLabel)+'</button>')+
     '</div>';
 }
 
@@ -522,10 +563,8 @@ function render(){
    '</div></details>'+
    (cap.conditionalHint?'<div class="warn">Observed: '+esc(cap.conditionalHint)+'</div>':'')+
 
-   '<div class="q"><h3>1. Do we know the first and last year this data covers?</h3>'+
-    '<p class="hint">If someone asks about a year we do not have, should the system be able to say so?'+
-    ' It can only check the first and last year — it will not notice a year missing in between,'+
-    ' so please do not rely on it for that.</p>'+covOpts+
+   '<div class="q"><h3>'+esc(Q.coverage.heading)+'</h3>'+
+    '<p class="hint">'+esc(Q.coverage.hint)+'</p>'+covOpts+
     '<details><summary>Why this is recommended</summary><div class="body"><ul style="margin:0;padding-left:16px">'+covWhy+'</ul>'+
       '<div style="margin-top:8px">Every column this lookup reads is listed below. The recommendation comes from'+
       ' a column NAME, which is a fact about the name and not a check of its contents — if the right column is a'+
@@ -536,39 +575,34 @@ function render(){
           (h.coverageColumn && h.coverageColumn.table===o.table && h.coverageColumn.yearColumn===o.yearColumn?' selected':'')+
           '>'+esc(o.table+'.'+o.yearColumn)+(o.yearBearing?' — named like a year':'')+'</option>').join('')+
       '</select></div></div></details>'+
-    '<label>If this is not about a time period, or you picked a column that is not named like a year, say why</label>'+
+    '<label>'+esc(Q.coverage.reasonLabel)+'</label>'+
     '<input type="text" id="covReason" value="'+esc(h.coverageReason||"")+'"/>'+
    '</div>'+
 
-   '<div class="q"><h3>2. What would make you stop trusting these numbers?</h3>'+
-    '<p class="hint">Tick anything that would mean people should not rely on this. Your answers get written'+
-    ' down in plain words as a description of what "gone wrong" looks like here —'+
-    ' nothing here builds an automatic check.</p>'+
+   '<div class="q"><h3>'+esc(Q.integrity.heading)+'</h3>'+
+    '<p class="hint">'+esc(Q.integrity.hint)+'</p>'+
     scenarios+
-    '<label class="opt"><input type="checkbox" id="integUnsure"'+(h.integrityUnsure?' checked':'')+'/>I\\u2019m not sure</label>'+
-    '<label>Something else (optional)</label>'+
+    '<label class="opt"><input type="checkbox" id="integUnsure"'+(h.integrityUnsure?' checked':'')+'/>'+esc(Q.integrity.unsureLabel)+'</label>'+
+    '<label>'+esc(Q.integrity.otherLabel)+'</label>'+
     '<input type="text" id="integOther" value="'+esc(h.integrityOther||"")+'"/>'+
    '</div>'+
 
-   '<div class="q"><h3>3. Should this data always be there?</h3>'+
-    '<p class="hint">Some data is legitimately missing sometimes. Saying so means we treat it as expected'+
-    ' instead of raising it as a problem every time.</p>'+availOpts+
+   '<div class="q"><h3>'+esc(Q.availability.heading)+'</h3>'+
+    '<p class="hint">'+esc(Q.availability.hint)+'</p>'+availOpts+
     (h.availability==="sometimes"
-      ? '<label>When is it fine for this to be missing?</label><input type="text" id="availWhen" value="'+esc(h.availabilityWhen||"")+'"/>'
+      ? '<label>'+esc(Q.availability.whenLabel)+'</label><input type="text" id="availWhen" value="'+esc(h.availabilityWhen||"")+'"/>'
       : '')+
    '</div>'+
 
-   '<div class="q"><h3>4. Who keeps this data up to date?</h3>'+
-    '<p class="hint">If this stopped being refreshed, whose job would it be. Pick the update you would expect'+
-    ' to have run.</p>'+ownerOpts+
+   '<div class="q"><h3>'+esc(Q.owner.heading)+'</h3>'+
+    '<p class="hint">'+esc(Q.owner.hint)+'</p>'+ownerOpts+
     (h.owner==="other"
-      ? '<label>What is it called?</label><input type="text" id="ownerOther" value="'+esc(h.ownerOther||"")+'"/>'
+      ? '<label>'+esc(Q.owner.otherLabel)+'</label><input type="text" id="ownerOther" value="'+esc(h.ownerOther||"")+'"/>'
       : '')+
    '</div>'+
 
-   '<div class="q"><h3>What are you basing this on?</h3>'+
-    '<p class="hint">A sentence is enough: who you asked, what you read, or what you already know.'+
-    ' Someone reading this later will use it to judge whether the decision still holds.</p>'+
+   '<div class="q"><h3>'+esc(Q.evidence.heading)+'</h3>'+
+    '<p class="hint">'+esc(Q.evidence.hint)+'</p>'+
     '<textarea id="evidence">'+esc(h.evidence||"")+'</textarea></div>'+
 
    '<div id="mapping"></div>'+

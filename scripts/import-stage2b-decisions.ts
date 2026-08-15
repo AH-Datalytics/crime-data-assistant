@@ -1,67 +1,73 @@
 /**
- * Validates a workbook export and writes it into the policy source.
+ * Validates a workbook export and writes it into the ONE authored source.
  *
  * Run: `npx tsx scripts/import-stage2b-decisions.ts <path-to-stage2b-policy-decisions.json>`
  *
  * Separate from the workbook ON PURPOSE. The browser page can only produce a downloaded file; this
- * checked-in script is the single thing that may change `capability-policy.json`, so no page can
+ * checked-in script is the single thing that may change `capability-answers.json`, so no page can
  * edit the repository and no incomplete session can convert itself into authorization. Everything
  * the workbook could get wrong is re-checked here against the live registry rather than trusted.
  *
  * It sets no flags and activates nothing: authoring policy makes a capability ELIGIBLE to be
  * probed, which is a different act from enabling it.
  *
- * What arrives is a CHANGE SET, not a snapshot. The importer used to rebuild the file from whatever
- * it was handed, which made every omission a deletion: a partial export silently dropped the
- * capabilities it did not mention, and a stale full export silently reverted newer work. Each
- * changed entry now carries the value it was authored against, so a merge that would overwrite
- * someone else's newer answer is refused by name instead of performed quietly.
+ * ONE RECORD, ONE RENAME. Policy is derived from the record by
+ * `scripts/generate-capability-policy.ts`, so there is no second authoritative file to fall out of
+ * step with -- which is what every previous synchronisation defect came down to. The record is
+ * written through a single atomic rename; regenerating the derived policy afterwards is a separate
+ * step, and a stale one is refused at read time rather than silently trusted.
+ *
+ * What arrives is a CHANGE SET. Each changed entry carries the value it was authored against, so a
+ * merge that would overwrite someone else's newer answer is refused by name instead of performed
+ * quietly.
  */
 import fs from "node:fs";
 import path from "node:path";
-import { createRequire } from "node:module";
-import { capabilityAuthorizes, coverageBasisErrors, policyShapeErrors, type UnvalidatedPolicy } from "../lib/capability-policy";
+import { coverageBasisErrors, policyShapeErrors, type UnvalidatedPolicy } from "../lib/capability-policy";
 import {
-  DECISIONS_VERSION, PLAIN_LANGUAGE_MODULE_FILE, buildWorkbookModel, decidableRegistry,
-  loadCatalog, workbookFingerprint, type RegistryEntry,
+  AUTHORED_FILE, GENERATED_POLICY_FILE, type AuthoredEntry, type AuthoredRecord,
+  commitAuthoredRecord, derivePolicy, derivedEntryAuthorizes, readAuthoredRecord, recordShapeErrors,
+  renderAuthoredRecord,
+} from "../lib/stage2b-authored-record";
+import {
+  DECISIONS_VERSION, buildWorkbookModel, decidableRegistry, loadCatalog, loadPlainLanguage,
+  workbookFingerprint, type RegistryEntry,
 } from "./generate-stage2b-workbook";
+import { generatePolicyFile } from "./generate-capability-policy";
 
 /**
- * The SAME translation the page runs, loaded from the same file the page inlines.
+ * The SAME translation the page runs, from the same file the page inlines.
  *
  * Re-implementing it here would put two derivations behind one confirmation: the person would
  * approve what the page proposed and the importer would write what it derived, and nothing would
  * notice they had diverged.
  */
-const require = createRequire(import.meta.url);
-const { createStage2bPlainLanguage } = require(PLAIN_LANGUAGE_MODULE_FILE) as {
-  createStage2bPlainLanguage: (catalog: unknown) => any;
-};
-/** The catalog is passed explicitly: in Node these are separate modules with no shared global. */
 const CATALOG = loadCatalog();
-const PL = createStage2bPlainLanguage(CATALOG);
+const PL = loadPlainLanguage(CATALOG);
 
 /** What a change-set entry may carry. A withdrawal carries only its operation. */
 const ENTRY_KEYS: readonly string[] = ["human", "proposed", "unresolved", "preserved", "mappingConfirmed", "operation"];
 
 const DATA_DIR = path.join(process.cwd(), "scripts", "fixtures", "operation-taxonomy");
 const REGISTRY_FILE = path.join(DATA_DIR, "capability-registry.json");
-export const POLICY_FILE = path.join(DATA_DIR, "capability-policy.json");
-/**
- * The DURABLE record of what the person was asked and what they answered.
- *
- * The policy file holds the technical result; on its own it loses the question. Regenerating the
- * workbook opened every card blank even where policy existed, so the reasoning behind a decision
- * survived only in whatever export file happened to still be on someone's disk. This is checked in
- * beside the policy, seeds the workbook, and makes an answer reviewable in its own terms.
- */
-export const ANSWERS_FILE = path.join(DATA_DIR, "capability-answers.json");
+export { AUTHORED_FILE, GENERATED_POLICY_FILE };
 
 export type ImportResult =
-  | { ok: true; policy: Record<string, unknown>; answers: Record<string, unknown>; authored: string[]; cleared: string[]; eligible: string[] }
+  | {
+      ok: true;
+      /** The new authored record. The ONLY thing that gets written. */
+      docs: Record<string, unknown>;
+      entries: AuthoredRecord;
+      /** What that record derives to. Reported, never stored independently. */
+      policy: Record<string, unknown>;
+      decided: string[];
+      open: string[];
+      cleared: string[];
+      eligible: string[];
+    }
   | { ok: false; errors: string[] };
 
-/** Fixed field order and null-normalisation, so two equal entries always compare equal. */
+/** Fixed field order and null-normalisation, so two entries that mean the same compare equal. */
 function canonical(entry: unknown): string {
   if (entry === null || entry === undefined) return "null";
   const e = entry as Record<string, unknown>;
@@ -74,20 +80,15 @@ function canonical(entry: unknown): string {
   });
 }
 
-const isUntouched = (candidate: UnvalidatedPolicy): boolean =>
-  candidate.coverage === null && candidate.integrity === null && candidate.availability === null
-  && candidate.receiptOwner === null && String(candidate.evidence ?? "").trim() === "";
-
 export function importDecisions(
   raw: string,
   registryOverride?: Record<string, RegistryEntry>,
-  policyOverride?: Record<string, unknown>,
-  answersOverride?: Record<string, unknown>,
+  recordOverride?: { docs: Record<string, unknown>; entries: AuthoredRecord },
 ): ImportResult {
   const registryInput = registryOverride
     ?? (JSON.parse(fs.readFileSync(REGISTRY_FILE, "utf8")) as Record<string, RegistryEntry>);
   const registry = decidableRegistry(registryInput);
-  const workbookModel = buildWorkbookModel(registryInput);
+  const model = buildWorkbookModel(registryInput);
   const errors: string[] = [];
 
   let parsed: { v?: unknown; fingerprint?: unknown; decisions?: unknown; basedOn?: unknown };
@@ -97,12 +98,10 @@ export function importDecisions(
   if (parsed.v !== DECISIONS_VERSION) errors.push(`decisions version ${String(parsed.v)} is not ${DECISIONS_VERSION}`);
   const expected = workbookFingerprint(registryInput, CATALOG);
   if (parsed.fingerprint !== expected) {
-    // Stale export: the questions themselves may have changed, so answers to the old ones cannot be
-    // carried across silently.
     errors.push(
-      `this export was authored against registry structure ${String(parsed.fingerprint)}, but the registry is now ${expected}; ` +
-      "regenerate the workbook and re-check every answer (this covers the questions as well as the "
-      + "database structure, so re-worded questions invalidate an export too)",
+      `this export was authored against decision contract ${String(parsed.fingerprint)}, but the contract is now ${expected}; ` +
+      "regenerate the workbook and re-check every answer (the contract covers the questions, the "
+      + "options and their consequences, and the translation, not only the database structure)",
     );
   }
   const decisions = parsed.decisions;
@@ -114,85 +113,29 @@ export function importDecisions(
     return { ok: false, errors: [...errors, "the export carries no basedOn baseline, so a safe merge is impossible"] };
   }
 
-  const existingFile = policyOverride
-    ?? (fs.existsSync(POLICY_FILE)
-      ? JSON.parse(fs.readFileSync(POLICY_FILE, "utf8")) as Record<string, unknown>
-      : {});
-  const docs = Object.fromEntries(Object.entries(existingFile).filter(([id]) => id.startsWith("_")));
-  const current: Record<string, unknown> = Object.fromEntries(
-    Object.entries(existingFile).filter(([id]) => !id.startsWith("_")),
-  );
+  const existing = recordOverride ?? readAuthoredRecord();
+  const shape = recordShapeErrors(existing.entries);
+  if (shape.length) return { ok: false, errors: [...errors, ...shape.map((e) => `the authored record is malformed — ${e}`)] };
+  /** What the record currently derives to. There is no separately stored policy to consult. */
+  const current = derivePolicy(existing.entries, model, PL);
+  if (current.errors.length) {
+    return { ok: false, errors: [...errors, ...current.errors.map((e) => `the authored record does not derive — ${e}`)] };
+  }
 
-  const merged: Record<string, unknown> = { ...current };
-  /** Carried forward, so importing one capability never drops the record of the others. */
-  const answers: Record<string, unknown> = { ...(answersOverride
-    ?? (fs.existsSync(ANSWERS_FILE) ? JSON.parse(fs.readFileSync(ANSWERS_FILE, "utf8")) as Record<string, unknown> : {})) };
-  const authored: string[] = [];
+  const entries: AuthoredRecord = { ...existing.entries };
+  const decided: string[] = [];
+  const open: string[] = [];
   const cleared: string[] = [];
-  const eligible: string[] = [];
 
   for (const id of Object.keys(decisions as Record<string, unknown>).sort()) {
-    const entry = registry[id];
-    // An id the registry does not contain cannot be imported: the workbook is generated FROM the
-    // registry, so anything else is either stale or invented.
-    if (!entry) { errors.push(`${id}: not a capability in the registry`); continue; }
+    const registryEntry = registry[id];
+    if (!registryEntry) { errors.push(`${id}: not a capability in the registry`); continue; }
 
     const decision = (decisions as Record<string, Record<string, unknown>>)[id];
     if (!decision || typeof decision !== "object" || Array.isArray(decision)) {
       errors.push(`${id}: decision is not an object`);
       continue;
     }
-
-    /**
-     * Optimistic concurrency, per entry. The session recorded what the policy held for this
-     * capability when it began; if the file no longer holds that, someone has changed it since and
-     * this import would overwrite their answer with one authored in ignorance of it.
-     */
-    if (!Object.prototype.hasOwnProperty.call(basedOn, id)) {
-      errors.push(`${id}: the export changes this capability but records no baseline for it`);
-      continue;
-    }
-    if (canonical(basedOn[id]) !== canonical(current[id] ?? null)) {
-      errors.push(
-        `${id}: policy has changed since this session began — it was authored against ` +
-        `${basedOn[id] === null ? "no entry" : "a different entry"}, but the file now holds ` +
-        `${current[id] === undefined ? "no entry" : "another"}; re-open the workbook and redo this one`,
-      );
-      continue;
-    }
-
-    /**
-     * Withdrawal is a NAMED operation, never inferred from blank fields.
-     *
-     * Clearing every field used to be read as deletion, while the page offered only "Undecided" and
-     * no confirmation -- so "I have not decided this yet" and "remove what was decided" were the
-     * same gesture, and the destructive reading won. An entry that is merely blank is now refused
-     * with the name of the operation that would have been meant.
-     */
-    if (decision.operation !== undefined) {
-      if (decision.operation !== "withdraw") {
-        errors.push(`${id}: unknown operation ${JSON.stringify(decision.operation)}`);
-        continue;
-      }
-      if (Object.keys(decision).length > 1) {
-        errors.push(`${id}: a withdrawal carries no other fields`);
-        continue;
-      }
-      if (current[id] === undefined) {
-        errors.push(`${id}: nothing is authored here to withdraw`);
-        continue;
-      }
-      delete merged[id];
-      delete answers[id];
-      cleared.push(id);
-      continue;
-    }
-
-    /**
-     * Checked on what ARRIVED, not on what is copied out of it. Rebuilding the candidate from the
-     * known fields silently dropped anything else the file carried, so an unknown top-level key
-     * could never produce an error -- the validator only ever saw the fields it already expected.
-     */
     const strayKeys = Object.keys(decision).filter((key) => !ENTRY_KEYS.includes(key));
     if (strayKeys.length) {
       errors.push(`${id}: the entry carries ${strayKeys.map((k) => JSON.stringify(k)).join(", ")}, which it does not have`);
@@ -200,45 +143,61 @@ export function importDecisions(
     }
 
     /**
-     * THE TRANSLATION IS RE-DERIVED HERE, and the confirmation must match it.
-     *
-     * The page proposes a technical mapping from a human answer and shows it; this recomputes that
-     * mapping from the SAME human answer with the SAME code, and refuses if the file's proposal
-     * disagrees. Trusting the file's `proposed` block would have let a page -- or a hand edit --
-     * ship a policy the person never saw beside the question they answered, which is the one thing
-     * a human-facing workbook must not be able to do.
+     * Optimistic concurrency, per entry, against what the record DERIVES. If it no longer holds
+     * what this session began from, someone has changed it since and this import would overwrite
+     * their answer with one authored in ignorance of it.
      */
-    const capability = workbookModel.find((c) => c.id === id);
+    if (!Object.prototype.hasOwnProperty.call(basedOn, id)) {
+      errors.push(`${id}: the export changes this capability but records no baseline for it`);
+      continue;
+    }
+    if (canonical(basedOn[id]) !== canonical(current.policy[id] ?? null)) {
+      errors.push(`${id}: policy has changed since this session began; re-open the workbook and redo this one`);
+      continue;
+    }
+
+    if (decision.operation !== undefined) {
+      if (decision.operation !== "withdraw") { errors.push(`${id}: unknown operation ${JSON.stringify(decision.operation)}`); continue; }
+      if (Object.keys(decision).length > 1) { errors.push(`${id}: a withdrawal carries no other fields`); continue; }
+      if (!(id in entries)) { errors.push(`${id}: nothing is recorded here to withdraw`); continue; }
+      delete entries[id];
+      cleared.push(id);
+      continue;
+    }
+
+    const capability = model.find((c) => c.id === id);
     if (!capability) { errors.push(`${id}: not a capability in the workbook model`); continue; }
     const humanAnswer = decision.human;
     if (!humanAnswer || typeof humanAnswer !== "object" || Array.isArray(humanAnswer)) {
       errors.push(`${id}: the entry carries no human answer, so there is nothing a mapping could have come from`);
       continue;
     }
+
     /**
-     * Re-derived AND re-merged, in that order.
-     *
-     * An unresolved answer keeps whatever the policy source already holds for that field. Writing
-     * the bare proposal instead replaced a complete existing entry with four nulls the moment
-     * someone answered "I'm not sure" and cited evidence -- a decision undone with no withdrawal,
-     * nothing named, and a successful import. Removing a decision is `operation: "withdraw"`, which
-     * names the capability and is confirmed on its own.
+     * THE TRANSLATION IS RE-DERIVED HERE, and the confirmation must match it. Trusting the file's
+     * `proposed` block would let a page -- or a hand edit -- ship policy the person never saw
+     * beside the question they answered.
      */
+    const preserved = (current.policy[id] ?? null) as Record<string, unknown> | null;
     const rederived = PL.proposeMapping(capability, humanAnswer);
-    const remerged = PL.mergeWithExisting(rederived.proposed, current[id] ?? null);
+    const remerged = PL.mergeWithExisting(rederived.proposed, preserved);
     const asJson = (value: unknown) => JSON.stringify(value ?? null);
     if (asJson(decision.proposed) !== asJson(remerged.merged)) {
       errors.push(`${id}: the exported technical mapping is not what this answer produces; `
         + "re-open the workbook, review the mapping again and confirm it");
       continue;
     }
-    const expectedFingerprint = PL.mappingFingerprint(remerged.merged);
+
     if (!decision.mappingConfirmed) {
-      errors.push(`${id}: the technical mapping was never confirmed; the workbook shows it beside the `
-        + "answer and asks you to approve it before it can become policy");
+      /**
+       * Recorded as work in progress. An unconfirmed answer derives NO policy, so nothing it could
+       * imply reaches the runtime -- it is kept so reopening the workbook does not lose it.
+       */
+      entries[id] = { kind: "open", human: humanAnswer as Record<string, unknown>, contractFingerprint: expected };
+      open.push(id);
       continue;
     }
-    if (decision.mappingConfirmed !== expectedFingerprint) {
+    if (decision.mappingConfirmed !== PL.mappingFingerprint(remerged.merged)) {
       errors.push(`${id}: the confirmed mapping is stale — the answer changed after it was approved, `
         + "so the mapping that was approved is not the one in this file");
       continue;
@@ -251,103 +210,45 @@ export function importDecisions(
       receiptOwner: remerged.merged.receiptOwner ?? null,
       evidence: typeof remerged.merged.evidence === "string" ? remerged.merged.evidence : "",
     };
-
-    if (isUntouched(candidate)) {
-      if (current[id] !== undefined) {
-        errors.push(`${id}: every field is blank, which is not a withdrawal — `
-          + 'use the workbook\'s "Withdraw" action if you mean to remove the authored policy');
-      }
-      continue;   // nothing authored here and nothing to remove: stays absent, the fail-closed default
-    }
-
-    // Shape, re-checked here rather than trusted from the page.
-    const shape = policyShapeErrors(candidate).filter((problem) =>
-      // An unauthored entry legitimately cites no evidence yet; evidence is only REQUIRED once the
-      // entry is otherwise complete, which capabilityAuthorizes enforces below.
+    const shapeProblems = policyShapeErrors(candidate).filter((problem) =>
       !(problem.startsWith("evidence") && String(candidate.evidence).trim() === ""));
-    for (const problem of shape) errors.push(`${id}: ${problem}`);
-
-    // The basis must belong to THIS capability's contract -- the same rule the runtime applies.
-    const declared = entry.emittedDependencies.map((name) => ({ name, requiredColumns: entry.requiredColumns[name] ?? [] }));
+    for (const problem of shapeProblems) errors.push(`${id}: ${problem}`);
+    const declared = registryEntry.emittedDependencies.map(
+      (name) => ({ name, requiredColumns: registryEntry.requiredColumns[name] ?? [] }));
     for (const problem of coverageBasisErrors(candidate, declared)) errors.push(`${id}: ${problem}`);
 
-    merged[id] = candidate;
-    /**
-     * The catalog fingerprint travels WITH the answer, so a later reader can tell whether the
-     * question has been re-worded since. Without it a restored answer showed as confirmed under
-     * wording nobody had read.
-     */
-    answers[id] = {
-      human: humanAnswer,
-      mappingConfirmed: decision.mappingConfirmed,
-      catalogFingerprint: CATALOG.fingerprint(),
+    entries[id] = {
+      kind: "decided",
+      human: humanAnswer as Record<string, unknown>,
+      /** Carried so re-derivation needs nothing outside the entry. */
+      preserved: Object.fromEntries((decision.preserved as string[] ?? [])
+        .filter((field) => preserved && preserved[field] !== undefined && preserved[field] !== null)
+        .map((field) => [field, (preserved as Record<string, unknown>)[field]])),
+      contractFingerprint: expected,
+      confirmed: decision.mappingConfirmed as string,
+      /** Audit evidence. `derivePolicy` refuses the record if it ever disagrees with re-derivation. */
+      mapping: remerged.merged,
     };
-    authored.push(id);
-    if (capabilityAuthorizes(candidate, declared)) eligible.push(id);
+    decided.push(id);
   }
 
   if (errors.length) return { ok: false, errors };
-  return { ok: true, policy: { ...docs, ...merged }, answers, authored, cleared, eligible };
-}
 
-/**
- * Both files, or neither.
- *
- * They were two independent writes with the policy first, so a crash between them left the
- * technical decision committed and the human record missing -- exactly the state the sidecar was
- * added to prevent, and indistinguishable afterwards from policy authored by hand. Both are staged,
- * validated together, and only then moved into place; a failure part-way leaves the staged files
- * behind and the pair unchanged, and generation refuses a mismatched pair either way.
- */
-export function commitPolicyAndAnswers(policy: Record<string, unknown>, answers: Record<string, unknown>): void {
-  const problems = policyAnswerMismatch(policy, answers);
-  if (problems.length) throw new Error(["refusing to write an inconsistent pair:", ...problems].join("\n  "));
+  // The record has to derive cleanly as a whole, not merely entry by entry.
+  const finalShape = recordShapeErrors(entries);
+  if (finalShape.length) return { ok: false, errors: finalShape };
+  const derived = derivePolicy(entries, model, PL);
+  if (derived.errors.length) return { ok: false, errors: derived.errors };
 
-  const policyTemp = `${POLICY_FILE}.staged`;
-  const answersTemp = `${ANSWERS_FILE}.staged`;
-  fs.writeFileSync(policyTemp, writePolicy(policy));
-  fs.writeFileSync(answersTemp, writeAnswers(answers));
-  // Read the staged pair back and check it before either replaces a real file.
-  const staged = policyAnswerMismatch(
-    JSON.parse(fs.readFileSync(policyTemp, "utf8")) as Record<string, unknown>,
-    JSON.parse(fs.readFileSync(answersTemp, "utf8")) as Record<string, unknown>);
-  if (staged.length) {
-    fs.rmSync(policyTemp, { force: true });
-    fs.rmSync(answersTemp, { force: true });
-    throw new Error(["the staged pair does not agree, so nothing was written:", ...staged].join("\n  "));
-  }
-  fs.renameSync(policyTemp, POLICY_FILE);
-  fs.renameSync(answersTemp, ANSWERS_FILE);
-}
+  const eligible = Object.keys(derived.policy).filter((id) => {
+    const registryEntry = registry[id];
+    if (!registryEntry) return false;
+    const declared = registryEntry.emittedDependencies.map(
+      (name) => ({ name, requiredColumns: registryEntry.requiredColumns[name] ?? [] }));
+    return derivedEntryAuthorizes(derived.policy[id] as UnvalidatedPolicy, declared);
+  });
 
-/**
- * Every recorded answer must have a policy entry to be the answer TO.
- *
- * The reverse is allowed: the policy file predates this workbook and holds one entry authored by
- * hand, which has no recorded answer and legitimately never will.
- */
-export function policyAnswerMismatch(policy: Record<string, unknown>, answers: Record<string, unknown>): string[] {
-  const entries = Object.keys(policy).filter((id) => !id.startsWith("_"));
-  return Object.keys(answers)
-    .filter((id) => !entries.includes(id))
-    .map((id) => `${id}: an answer is recorded but no policy entry exists for it`);
-}
-
-/** Serialise the durable answer record in a stable order, so a diff shows only what changed. */
-export function writeAnswers(answers: Record<string, unknown>): string {
-  const ordered: Record<string, unknown> = {};
-  for (const id of Object.keys(answers).sort()) ordered[id] = answers[id];
-  return `${JSON.stringify(ordered, null, 2)}
-`;
-}
-
-/** Serialise the merged policy, documentation blocks first and capabilities in a stable order. */
-export function writePolicy(policy: Record<string, unknown>): string {
-  const docs = Object.keys(policy).filter((id) => id.startsWith("_")).sort();
-  const entries = Object.keys(policy).filter((id) => !id.startsWith("_")).sort();
-  const ordered: Record<string, unknown> = {};
-  for (const id of [...docs, ...entries]) ordered[id] = policy[id];
-  return `${JSON.stringify(ordered, null, 2)}\n`;
+  return { ok: true, docs: existing.docs, entries, policy: derived.policy, decided, open, cleared, eligible };
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]).includes("import-stage2b-decisions")) {
@@ -359,9 +260,20 @@ if (process.argv[1] && path.resolve(process.argv[1]).includes("import-stage2b-de
     for (const error of result.errors) console.error(`  - ${error}`);
     process.exit(1);
   }
-  commitPolicyAndAnswers(result.policy, result.answers);
-  console.log(`merged ${result.authored.length} authored capability(ies)`
+  // One atomic rename of the one authored file. Nothing else is authoritative.
+  commitAuthoredRecord(renderAuthoredRecord(result.docs, result.entries));
+  console.log(`recorded ${result.decided.length} confirmed decision(s), ${result.open.length} in progress`
     + (result.cleared.length ? `, withdrew ${result.cleared.length}` : "")
-    + `; ${result.eligible.length} now authorization-eligible`);
-  console.log("Re-run the derivation and the suites: TAXONOMY_DERIVE=1 npx tsx scripts/test-operation-taxonomy.ts && npm test");
+    + `; ${result.eligible.length} authorization-eligible`);
+
+  const generated = generatePolicyFile();
+  if (generated.errors.length) {
+    console.error("the record was written, but the derived policy could not be generated:");
+    for (const error of generated.errors) console.error(`  - ${error}`);
+    console.error("Nothing is corrupt: the record is whole, and every consumer refuses a policy that lags it.");
+    process.exit(1);
+  }
+  fs.writeFileSync(GENERATED_POLICY_FILE, generated.text);
+  console.log(`regenerated ${path.relative(process.cwd(), GENERATED_POLICY_FILE)}`);
+  console.log("Re-run the suites: npm test");
 }

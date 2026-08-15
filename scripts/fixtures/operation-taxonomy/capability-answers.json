@@ -1,0 +1,26 @@
+{
+  "_README": {
+    "purpose": "THE ONE AUTHORED SOURCE for Stage 2B. It holds what a person was asked, what they answered, and the confirmation they gave. capability-policy.json is DERIVED from this file and is not authoritative: the same decision used to live in two files written one after the other, and every review found another way for them to disagree.",
+    "written_by": "scripts/import-stage2b-decisions.ts, through one atomic rename",
+    "derives": "scripts/fixtures/operation-taxonomy/capability-policy.json, via scripts/generate-capability-policy.ts",
+    "entry_kinds": {
+      "decided": "a workbook answer whose technical mapping the person read and confirmed; derives policy",
+      "open": "a workbook answer they have not confirmed; recorded as work in progress, derives NO policy",
+      "legacy": "policy that predates the workbook, migrated once. It has no human answer and no confirmation behind it, so it authorizes nothing whatever its fields contain, and the importer can never create one."
+    },
+    "eligibility": "No capability is authorization-eligible: an integrity rule must be executable to authorize, and nothing can execute one yet. Authoring here produces recorded drafts."
+  },
+  "hate_crime::agency_county_crosswalk+hate_crime_incidents::agency_county_crosswalk(county_fips,county_key,ori,ori9,state)|hate_crime_incidents(ori)": {
+    "kind": "legacy",
+    "policy": {
+      "coverage": null,
+      "integrity": null,
+      "availability": {
+        "kind": "conditional",
+        "condition": "Requires agency_county_crosswalk in the hate_crime artifact. The table is absent from production hate_crime.db as of 2026-08-13, so this capability is unavailable in production while being structurally sound. Conditionally unavailable is not unhealthy; the builder decides at runtime."
+      },
+      "receiptOwner": null,
+      "evidence": "Both artifact states are exercised by this suite: with the crosswalk absent, entitySql (lib/metadata-coverage.ts:457) takes the SQL-less exit and the case hate_crime:metadata-agency-directory-county records terminalKind=unavailable, sealing no capability; with the crosswalk present, the same operation reaches this contract. coverage, integrity and receiptOwner remain unauthored: a directory count has no year dimension to base coverage on, no integrity rule has been decided for the crosswalk, and receipt ownership is Stage 2B."
+    }
+  }
+}

@@ -43,7 +43,17 @@ export function isYearBearingColumn(column: string): boolean {
  * eligible. A rule that guards the place a defect was found, rather than the shape of the defect,
  * is a rule that catches it once.
  */
-export const DECISION_KEYS: readonly string[] = ["coverage", "integrity", "availability", "receiptOwner", "evidence"];
+export const DECISION_KEYS: readonly string[] = ["coverage", "integrity", "availability", "receiptOwner", "evidence", "origin"];
+
+/**
+ * Policy that predates the workbook, migrated once into the authored record.
+ *
+ * It has no human answer and no confirmation behind it, so it can never be read as a decision
+ * somebody made through the questions -- and it authorizes nothing, whatever its fields contain.
+ * Structural rather than incidental: an entry with this origin is refused authority by
+ * `capabilityAuthorizes` itself, so no consumer has to remember the rule.
+ */
+export const LEGACY_ORIGIN = "legacy";
 const COVERAGE_KEYS: Record<string, readonly string[]> = {
   column: ["kind", "table", "yearColumn", "justification"],
   none: ["kind", "reason"],
@@ -188,6 +198,9 @@ export function policyShapeErrors(policy: UnvalidatedPolicy): string[] {
   if (availabilityCondition !== undefined) {
     bad.push("availabilityCondition is not a field; the condition belongs inside availability");
   }
+  if (policy.origin !== undefined && policy.origin !== LEGACY_ORIGIN) {
+    bad.push(`origin, when present, must be ${JSON.stringify(LEGACY_ORIGIN)}`);
+  }
   return bad;
 }
 
@@ -254,13 +267,28 @@ export function policyIsComplete(policy: UnvalidatedPolicy | null): boolean {
  * the one thing every consumer must agree on -- including the runtime gate, which must not use a
  * weaker test than the one the registry was pinned with.
  */
+/**
+ * Everything authorization requires EXCEPT an executable integrity rule.
+ *
+ * Split out so each condition is observable on its own. Nothing can authorize today -- no integrity
+ * rule is executable -- which means every other guard sits behind a condition that is always false,
+ * and a regression on `capabilityAuthorizes` cannot tell a working guard from a missing one. This is
+ * where the migrated-legacy refusal is testable, and where it stays true on the day integrity
+ * bindings arrive.
+ */
+export function authorizesApartFromIntegrity(
+  policy: UnvalidatedPolicy | null,
+  declared: readonly { name: string; requiredColumns: readonly string[] }[],
+): boolean {
+  if (policy && policy.origin === LEGACY_ORIGIN) return false;
+  return policyIsComplete(policy) && coverageBasisErrors(policy, declared).length === 0;
+}
+
 export function capabilityAuthorizes(
   policy: UnvalidatedPolicy | null,
   declared: readonly { name: string; requiredColumns: readonly string[] }[],
 ): boolean {
-  return policyIsComplete(policy)
-    && coverageBasisErrors(policy, declared).length === 0
-    && integrityIsExecutable(policy?.integrity);
+  return authorizesApartFromIntegrity(policy, declared) && integrityIsExecutable(policy?.integrity);
 }
 
 /** Why a complete-looking policy still authorizes nothing. For reporting, never for gating. */
@@ -270,6 +298,10 @@ export function authorizationBlockers(
 ): string[] {
   if (!policy) return ["no policy is authored"];
   const blockers = [...policyShapeErrors(policy), ...coverageBasisErrors(policy, declared)];
+  if (policy.origin === LEGACY_ORIGIN) {
+    blockers.push("this policy was migrated from before the workbook existed; nobody answered the "
+      + "questions behind it, so it authorizes nothing until it is decided through the workbook");
+  }
   for (const field of POLICY_FIELDS) {
     if (policy[field] === null || policy[field] === undefined) blockers.push(`${field} is not authored`);
   }
