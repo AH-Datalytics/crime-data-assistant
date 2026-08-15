@@ -396,8 +396,9 @@ function render(){
 
    '<div class="q"><h3>2. Integrity — what would tell us this data is broken?</h3>'+
     '<div class="sug">Free text, one rule per line. Leave empty for undecided. An empty list is not a rule.'+
-      ' <b>Draft, and non-authorizing</b>: a sentence nothing can run is a draft of a rule. This capability stays ineligible'+
-      ' until every rule names an executable check or a receipt attestation, however complete the rest of the entry looks.</div>'+
+      ' <b>Draft, and non-authorizing</b>: write the plain-language rule describing what broken data would look like.'+
+      ' Nothing can run these yet, and no capability becomes eligible however complete the rest of the entry looks —'+
+      ' what you write here is the record a real check will later be written from.</div>'+
     /* Bound rules are shown but not editable here: the textarea is re-parsed on every keystroke
        anywhere on the card, so anything inside it can be rewritten by an unrelated edit. */
     (S.boundRules(cap.id).length

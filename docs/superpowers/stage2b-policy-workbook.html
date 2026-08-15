@@ -4821,13 +4821,14 @@ function createStage2bSession(DATA) {
   }
 
   /**
-   * Integrity prose authorizes nothing, so the page must not imply otherwise.
+   * Whether every rule is written in the BOUND SHAPE. Not whether anything can run it.
    *
-   * A rule bound to something runnable is written { rule, boundTo }; a bare sentence is a draft. The
-   * workbook authors drafts today, which is why a completed capability is still not an authorizing
-   * one, and saying so here keeps the count honest rather than leaving it to a footnote.
+   * Deliberately not called `integrityIsBound` any more, and deliberately not consulted by anything
+   * that decides authority: no integrity rule is executable, in either form, so the page must not
+   * imply that reaching this shape buys something. `lib/capability-policy.ts` holds the predicate
+   * that decides, and it answers false for every input.
    */
-  function integrityIsBound(integrity) {
+  function integrityIsInBoundShape(integrity) {
     return Array.isArray(integrity) && integrity.length > 0 && integrity.every((rule) =>
       rule && typeof rule === "object" && !Array.isArray(rule)
       && String(rule.rule || "").trim() !== "" && String(rule.boundTo || "").trim() !== "");
@@ -5048,7 +5049,7 @@ function createStage2bSession(DATA) {
     undecidedFields: undecidedFields,
     problems: problems,
     isComplete: isComplete,
-    integrityIsBound: integrityIsBound,
+    integrityIsInBoundShape: integrityIsInBoundShape,
     counts: counts,
     setIntegrityDrafts: setIntegrityDrafts,
     boundRules: (id) => boundRules(decisions[id].integrity),
@@ -5151,8 +5152,9 @@ function render(){
 
    '<div class="q"><h3>2. Integrity — what would tell us this data is broken?</h3>'+
     '<div class="sug">Free text, one rule per line. Leave empty for undecided. An empty list is not a rule.'+
-      ' <b>Draft, and non-authorizing</b>: a sentence nothing can run is a draft of a rule. This capability stays ineligible'+
-      ' until every rule names an executable check or a receipt attestation, however complete the rest of the entry looks.</div>'+
+      ' <b>Draft, and non-authorizing</b>: write the plain-language rule describing what broken data would look like.'+
+      ' Nothing can run these yet, and no capability becomes eligible however complete the rest of the entry looks —'+
+      ' what you write here is the record a real check will later be written from.</div>'+
     /* Bound rules are shown but not editable here: the textarea is re-parsed on every keystroke
        anywhere on the card, so anything inside it can be rewritten by an unrelated edit. */
     (S.boundRules(cap.id).length

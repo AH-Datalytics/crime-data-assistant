@@ -170,12 +170,14 @@ export type CapabilitySpec = {
       | { kind: "none"; reason: string }
       | null;
     /**
-     * A rule is DRAFT PROSE (a string) or BOUND ({ rule, boundTo }), and only a bound rule
-     * authorizes. Prose is worth keeping -- it is the record of what "broken" means here and what a
-     * binding will be written from -- but a capability stays INELIGIBLE while any rule is unbound.
-     * Documenting that eligibility "asserts nothing about integrity" does not make it safe: the
-     * field is mandatory because integrity matters, so an eligibility ignoring it grants exactly the
-     * assurance nobody checked.
+     * A rule is DRAFT PROSE (a string) or BOUND ({ rule, boundTo }). NEITHER AUTHORIZES TODAY:
+     * `boundTo` resolves against no catalog, has no resolver and no runtime consumer, so no rule is
+     * executable and NO capability is authorization-eligible. Prose is worth keeping -- it is the
+     * record of what "broken" means here and what a real check will be written from. Documenting
+     * that eligibility "asserts nothing about integrity" does not make it safe: the field is
+     * mandatory because integrity matters, so an eligibility ignoring it grants exactly the
+     * assurance nobody checked. `integrityIsExecutable` is the single predicate, and building the
+     * machinery it would ask is the task that makes eligibility reachable at all.
      */
     integrity: (string | { rule: string; boundTo: string })[] | null;
     /**

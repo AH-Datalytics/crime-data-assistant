@@ -221,11 +221,11 @@ export type CapabilityPolicy = {
     | { kind: "none"; reason: string }
     | null;
   /**
-   * A rule is DRAFT PROSE (a string) or BOUND ({ rule, boundTo }), and only a bound rule whose
-   * target is in the generated check catalog authorizes. Prose is kept -- it is the record of what
-   * "broken" means here and what a binding will be written from -- but a capability stays ineligible
-   * while any rule is unbound, because a field that is mandatory BECAUSE integrity matters cannot
-   * grant an eligibility that ignores it.
+   * A rule is DRAFT PROSE (a string) or BOUND ({ rule, boundTo }). NEITHER AUTHORIZES TODAY: there
+   * is no catalog to resolve boundTo against, no resolver and no runtime consumer of it, so no
+   * integrity rule can be executed and every capability is ineligible. The bound shape exists so
+   * that drafts written now need not be rewritten when machinery that runs a rule lands; until then
+   * it records an intention, not a check. lib/capability-policy.ts holds the one predicate.
    */
   integrity: (string | { rule: string; boundTo: string })[] | null;
   /** Discriminated, so a conditional cannot be written without its condition. */

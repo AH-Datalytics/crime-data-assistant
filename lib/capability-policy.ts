@@ -69,8 +69,10 @@ function unknownKeys(value: object, allowed: readonly string[], what: string): s
  * is what a binding will later be written FROM. What it must not do is contribute to authorization.
  * Documenting that "eligibility asserts nothing about integrity" does not make an eligible
  * capability safe -- the field is mandatory precisely because integrity matters, so an eligibility
- * that ignores it grants exactly the assurance nobody checked. Until each rule names an executable
- * check or a receipt attestation, the honest verdict is not eligible.
+ * that ignores it grants exactly the assurance nobody checked.
+ *
+ * NEITHER FORM AUTHORIZES TODAY. `boundTo` resolves against nothing: see `integrityIsExecutable`,
+ * which is the one predicate, and the only place that changes when the machinery exists.
  */
 export function integrityRuleIsWellFormed(rule: unknown): boolean {
   if (nonEmptyString(rule)) return true;                        // draft prose
