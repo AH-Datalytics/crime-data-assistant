@@ -14,16 +14,29 @@
  * no credentials and no network. It cannot write to the repository and cannot enable anything: the
  * only thing it produces is a downloaded JSON file, which a separate checked-in importer validates
  * before any policy source changes.
+ *
+ * The page's decision logic is NOT written here. It lives in `lib/stage2b-session.js` and is inlined
+ * verbatim, so the regression suite can call it instead of matching its text -- the distinction that
+ * let a page which threw on load pass sixteen assertions about its own source.
  */
 import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { isYearBearingColumn } from "../lib/capability-policy";
+import { decidableCapabilities } from "../lib/sweep-only-capabilities";
 
 const DATA_DIR = path.join(process.cwd(), "scripts", "fixtures", "operation-taxonomy");
 const REGISTRY_FILE = path.join(DATA_DIR, "capability-registry.json");
 const POLICY_FILE = path.join(DATA_DIR, "capability-policy.json");
+export const SESSION_MODULE_FILE = path.join(process.cwd(), "lib", "stage2b-session.js");
 export const WORKBOOK_FILE = path.join(process.cwd(), "docs", "superpowers", "stage2b-policy-workbook.html");
-export const DECISIONS_VERSION = 1;
+
+/**
+ * 2: the export became a conflict-checked CHANGE SET carrying the baseline each entry was authored
+ * against, and coverage became a discriminated union. A v1 file cannot be read as either, so it is
+ * refused by version rather than misread field by field.
+ */
+export const DECISIONS_VERSION = 2;
 
 export type RegistryEntry = {
   artifact: string;
@@ -36,6 +49,19 @@ export type RegistryEntry = {
 };
 
 /**
+ * Every capability the workbook asks about: the derived registry plus the sweep-only ones.
+ *
+ * Merged in ONE place, used by the generator and the importer alike. The sweep-only capability is
+ * real, needs the same four decisions as any other, and reaches no deterministic operation -- so
+ * while it was private to the inventory generator the workbook never asked about it and the
+ * importer refused it as unknown. Both now see the same question set, which also means both compute
+ * the same fingerprint over it.
+ */
+export function decidableRegistry(registry: Record<string, RegistryEntry>): Record<string, RegistryEntry> {
+  return decidableCapabilities(registry) as Record<string, RegistryEntry>;
+}
+
+/**
  * Identifies the STRUCTURE the decisions were made against.
  *
  * Only the structural fields, deliberately: authoring policy changes `policy` and
@@ -44,13 +70,14 @@ export type RegistryEntry = {
  * or artifacts is what makes an export stale, because the questions themselves would have changed.
  */
 export function registryFingerprint(registry: Record<string, RegistryEntry>): string {
-  const structural = Object.keys(registry).sort().map((id) => ({
+  const full = decidableRegistry(registry);
+  const structural = Object.keys(full).sort().map((id) => ({
     id,
-    artifact: registry[id].artifact,
-    emittedDependencies: [...registry[id].emittedDependencies].sort(),
-    prepDependencies: [...registry[id].prepDependencies].sort(),
+    artifact: full[id].artifact,
+    emittedDependencies: [...full[id].emittedDependencies].sort(),
+    prepDependencies: [...full[id].prepDependencies].sort(),
     requiredColumns: Object.fromEntries(
-      Object.keys(registry[id].requiredColumns).sort().map((t) => [t, [...registry[id].requiredColumns[t]].sort()]),
+      Object.keys(full[id].requiredColumns).sort().map((t) => [t, [...full[id].requiredColumns[t]].sort()]),
     ),
   }));
   return createHash("sha256").update(JSON.stringify(structural)).digest("hex").slice(0, 16);
@@ -68,6 +95,7 @@ export type WorkbookCapability = {
    * All of them are offered, not just the ones matching a name pattern: filtering by the pattern
    * made that guess load-bearing, because a year column it failed to recognise would have been
    * unselectable and the honest answer unreachable. The mark is a suggestion; the list is complete.
+   * Choosing an unmarked one is allowed and costs a justification.
    */
   coverageCandidates: { table: string; yearColumn: string; yearBearing: boolean }[];
   /** Other capabilities over the same emitted table set, and over the same artifact. */
@@ -79,8 +107,6 @@ export type WorkbookCapability = {
   conditionalHint: string | null;
   existingPolicy: Record<string, unknown> | null;
 };
-
-const YEARISH = /(^|_)(year|yr)($|_)/i;
 
 /** Scripts that mention every one of these tables -- a place to look, not an owner. */
 function ownerCandidates(tables: string[], scriptIndex: { file: string; text: string }[]): string[] {
@@ -114,7 +140,8 @@ function readScriptIndexUncached(): { file: string; text: string }[] {
     });
 }
 
-export function buildWorkbookModel(registry: Record<string, RegistryEntry>): WorkbookCapability[] {
+export function buildWorkbookModel(registryInput: Record<string, RegistryEntry>): WorkbookCapability[] {
+  const registry = decidableRegistry(registryInput);
   const scriptIndex = readScriptIndex();
   const byTableSet = new Map<string, string[]>();
   for (const id of Object.keys(registry).sort()) {
@@ -133,7 +160,7 @@ export function buildWorkbookModel(registry: Record<string, RegistryEntry>): Wor
     const coverageCandidates: { table: string; yearColumn: string; yearBearing: boolean }[] = [];
     for (const table of [...entry.emittedDependencies].sort()) {
       for (const column of [...(entry.requiredColumns[table] ?? [])].sort()) {
-        coverageCandidates.push({ table, yearColumn: column, yearBearing: YEARISH.test(column) });
+        coverageCandidates.push({ table, yearColumn: column, yearBearing: isYearBearingColumn(column) });
       }
     }
     // Year-bearing first, so the likely answers are at the top without any being pre-selected.
@@ -167,11 +194,29 @@ function describe(capability: WorkbookCapability): string {
   return `Reads ${reads} from the ${capability.artifact} artifact.${prep}`;
 }
 
+/**
+ * Embeds JSON inside a <script> element without letting its CONTENT end the element.
+ *
+ * `</script>` anywhere in a capability id, a condition or a piece of evidence closes the block from
+ * inside the string literal, and the rest of the payload lands on the page as markup. U+2028 and
+ * U+2029 are line terminators to a JavaScript parser but not to JSON, so they end the statement
+ * mid-string. Escaping is at the boundary because that is where the hazard is; nothing upstream has
+ * to remember.
+ */
+function embedJson(value: unknown): string {
+  const LINE_SEPARATOR = String.fromCharCode(0x2028);
+  const PARAGRAPH_SEPARATOR = String.fromCharCode(0x2029);
+  return JSON.stringify(value, null, 1)
+    .split("<").join("\\u003c")
+    .split(LINE_SEPARATOR).join("\\u2028")
+    .split(PARAGRAPH_SEPARATOR).join("\\u2029");
+}
+
 export function renderWorkbook(registryOverride?: Record<string, RegistryEntry>): string {
-  const registry = registryOverride
+  const registryInput = registryOverride
     ?? (JSON.parse(fs.readFileSync(REGISTRY_FILE, "utf8")) as Record<string, RegistryEntry>);
-  const model = buildWorkbookModel(registry).map((c) => ({ ...c, description: describe(c) }));
-  const fingerprint = registryFingerprint(registry);
+  const model = buildWorkbookModel(registryInput).map((c) => ({ ...c, description: describe(c) }));
+  const fingerprint = registryFingerprint(registryInput);
   const existing = fs.existsSync(POLICY_FILE)
     ? JSON.parse(fs.readFileSync(POLICY_FILE, "utf8")) as Record<string, unknown>
     : {};
@@ -179,13 +224,19 @@ export function renderWorkbook(registryOverride?: Record<string, RegistryEntry>)
     Object.entries(existing).filter(([id]) => !id.startsWith("_")),
   );
 
-  const payload = JSON.stringify({ v: DECISIONS_VERSION, fingerprint, capabilities: model, authored }, null, 1);
+  const payload = embedJson({ v: DECISIONS_VERSION, fingerprint, capabilities: model, authored });
+  /**
+   * Inlined VERBATIM, not re-implemented. The suite imports the same file and asserts the page
+   * contains it unchanged, so there is exactly one copy of this logic and no way for the tested
+   * copy and the shipped copy to disagree.
+   */
+  const sessionSource = fs.readFileSync(SESSION_MODULE_FILE, "utf8");
 
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"/>
 <title>Stage 2B policy workbook</title>
 <style>
-:root{--ink:#16181d;--dim:#5b6172;--line:#d8dbe3;--bg:#fbfbfd;--card:#fff;--warn:#8a5a00;--warnbg:#fff6e5;--ok:#1c6b4a;--sug:#4a5878;--sugbg:#eef1f7}
+:root{--ink:#16181d;--dim:#5b6172;--line:#d8dbe3;--bg:#fbfbfd;--card:#fff;--warn:#8a5a00;--warnbg:#fff6e5;--ok:#1c6b4a;--sug:#4a5878;--sugbg:#eef1f7;--alert:#8c2f1d;--alertbg:#fdefec}
 *{box-sizing:border-box}
 body{margin:0;font:15px/1.55 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:var(--ink);background:var(--bg)}
 header{position:sticky;top:0;background:var(--card);border-bottom:1px solid var(--line);padding:10px 20px;display:flex;gap:18px;align-items:center;flex-wrap:wrap;z-index:5}
@@ -205,12 +256,16 @@ textarea{min-height:52px;resize:vertical}
 .sug{background:var(--sugbg);border-left:3px solid var(--sug);padding:7px 10px;margin:8px 0;font-size:12.5px;color:#39435c;border-radius:0 4px 4px 0}
 .sug b{color:var(--sug)}
 .warn{background:var(--warnbg);border-left:3px solid var(--warn);padding:8px 11px;margin:10px 0;font-size:13px;color:var(--warn);border-radius:0 4px 4px 0}
+.alert{background:var(--alertbg);border-left:3px solid var(--alert);padding:8px 11px;margin:10px 0;font-size:13px;color:var(--alert);border-radius:0 4px 4px 0}
 button{font:inherit;padding:8px 14px;border:1px solid var(--line);background:#fff;border-radius:6px;cursor:pointer}
 button.primary{background:var(--ink);color:#fff;border-color:var(--ink)}
 button:disabled{opacity:.45;cursor:not-allowed}
 .nav{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
 .undecided{color:var(--warn);font-weight:600}
 .decided{color:var(--ok);font-weight:600}
+#dirty{font-size:12.5px;font-weight:600;padding:3px 9px;border-radius:999px}
+#dirty.unsaved{background:var(--warnbg);color:var(--warn)}
+#dirty.saved{background:#e9f4ee;color:var(--ok)}
 ul.affected{margin:8px 0 0;padding-left:20px;font:12px ui-monospace,Menlo,monospace;max-height:190px;overflow:auto}
 dialog{border:1px solid var(--line);border-radius:9px;padding:20px;max-width:640px}
 dialog h3{margin-top:0}
@@ -219,6 +274,7 @@ code{font:12px ui-monospace,Menlo,monospace;background:#f2f3f7;padding:1px 4px;b
 </style></head><body>
 <header>
  <b>Stage 2B policy workbook</b>
+ <span id="dirty" class="saved">Nothing to save yet</span>
  <span class="counts" id="counts"></span>
  <span style="flex:1"></span>
  <select id="filter" style="width:auto">
@@ -235,7 +291,10 @@ code{font:12px ui-monospace,Menlo,monospace;background:#f2f3f7;padding:1px 4px;b
  <input type="file" id="file" accept="application/json" hidden/>
 </header>
 <main>
- <div class="warn" id="staleness" hidden></div>
+ <div class="alert" id="staleness" hidden></div>
+ <div class="sug">Decisions live only in this tab until you press <b>Export decisions</b>. Nothing here
+  can change the repository. Export whenever you have done a few — a closed tab or a browser crash
+  takes unexported work with it.</div>
  <div id="card"></div>
  <div class="nav">
   <button id="prev">Previous</button>
@@ -255,55 +314,55 @@ code{font:12px ui-monospace,Menlo,monospace;background:#f2f3f7;padding:1px 4px;b
 const DATA = ${payload};
 /* Decisions live only in this page's memory until you press Export. Nothing here can reach the
    repository, a database, or any flag: the sole output is a downloaded file. */
-const decisions = {};
-for (const cap of DATA.capabilities) {
-  const prior = DATA.authored[cap.id];
-  decisions[cap.id] = prior ? JSON.parse(JSON.stringify(prior)) : blank();
-}
-function blank(){ return { coverage:null, integrity:null, availability:null, receiptOwner:null, evidence:"" }; }
+
+${sessionSource}
+
+const S = createStage2bSession(DATA);
 let index = 0;
 
-const FIELDS = ["coverage","integrity","availability","receiptOwner"];
-const undecidedFields = (d) => FIELDS.filter((f) => d[f] === null || d[f] === undefined);
 const isUnique = (c) => c.tableCluster.length === 0;
-
 function matches(cap){
-  const d = decisions[cap.id], f = document.getElementById("filter").value;
+  const d = S.decisions[cap.id], f = document.getElementById("filter").value;
   if (f === "all") return true;
-  if (f === "undecided") return undecidedFields(d).length > 0;
+  if (f === "undecided") return S.undecidedFields(d).length > 0;
   if (f === "conditional") return !!cap.conditionalHint;
   if (f === "unique") return isUnique(cap);
   return d[f === "owner" ? "receiptOwner" : f] === null;
 }
 function visible(){ const v = DATA.capabilities.filter(matches); return v.length ? v : DATA.capabilities; }
 
-function counts(){
-  const c = { coverage:0, integrity:0, availability:0, receiptOwner:0, complete:0 };
-  for (const cap of DATA.capabilities){
-    const d = decisions[cap.id];
-    for (const f of FIELDS) if (d[f] === null) c[f]++;
-    if (undecidedFields(d).length === 0 && (d.evidence||"").trim().length > 20) c.complete++;
-  }
+function esc(s){ return String(s).replace(/[&<>"]/g, (m) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
+
+function status(){
+  const c = S.counts();
   document.getElementById("counts").innerHTML =
     '<span>Complete: <b class="decided">'+c.complete+'</b>/'+DATA.capabilities.length+'</span>'+
     '<span>Coverage undecided: <b class="undecided">'+c.coverage+'</b></span>'+
     '<span>Integrity undecided: <b class="undecided">'+c.integrity+'</b></span>'+
     '<span>Availability undecided: <b class="undecided">'+c.availability+'</b></span>'+
     '<span>Owner undecided: <b class="undecided">'+c.receiptOwner+'</b></span>';
+  const badge = document.getElementById("dirty");
+  const changed = Object.keys(S.changeSet()).length;
+  if (S.isDirty()){ badge.className = "unsaved"; badge.textContent = "Unsaved changes — export to keep them"; }
+  else { badge.className = "saved"; badge.textContent = changed ? "Saved: "+changed+" exported" : "Nothing to save yet"; }
 }
-
-function esc(s){ return String(s).replace(/[&<>"]/g, (m) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
 
 function render(){
   const list = visible();
   if (index >= list.length) index = 0;
-  const cap = list[index], d = decisions[cap.id];
+  const cap = list[index], d = S.decisions[cap.id];
+  const cov = d.coverage;
+  const selectedIndex = cov && cov.kind === "column"
+    ? cap.coverageCandidates.findIndex((o) => o.table===cov.table && o.yearColumn===cov.yearColumn) : -1;
   const covOpts = cap.coverageCandidates.map((o,i) =>
-    '<option value="'+i+'"'+(d.coverage && d.coverage.table===o.table && d.coverage.yearColumn===o.yearColumn ? ' selected':'')+'>'+
+    '<option value="'+i+'"'+(i===selectedIndex ? ' selected':'')+'>'+
       esc(o.table+'.'+o.yearColumn)+(o.yearBearing?' — suggested (year-bearing)':'')+'</option>').join('');
   const ownerOpts = cap.ownerCandidates.map((o) =>
     '<option value="'+esc(o)+'"'+(d.receiptOwner===o?' selected':'')+'>'+esc(o)+'</option>').join('');
   const avail = d.availability ? d.availability.kind : "";
+  const needsJust = S.coverageNeedsJustification(cap.id, cov);
+  const problem = S.coverageProblem(cap.id, cov);
+
   document.getElementById("card").innerHTML =
   '<div class="card">'+
    '<div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap">'+
@@ -320,14 +379,23 @@ function render(){
    '<div class="q"><h3>1. Coverage — how do we know the data covers the years asked for?</h3>'+
     '<div class="sug"><b>Candidates</b> (every column this capability reads)'+
       (cap.coverageCandidates.some((o)=>o.yearBearing)?'':' — no column here looks year-bearing, so "No year dimension" may be the honest answer')+
-      '. The mark is a hint, not a filter.</div>'+
+      '. The mark is a hint, not a filter: any column may be chosen, and an unmarked one asks you to say why.</div>'+
     '<div class="row"><div><label>Basis</label><select id="cov">'+
-      '<option value="">— Undecided —</option>'+covOpts+
-      '<option value="none"'+(d.coverage==="none"?' selected':'')+'>No year dimension (state the reason below)</option>'+
-    '</select></div></div></div>'+
+      '<option value=""'+(cov?'':' selected')+'>— Undecided —</option>'+covOpts+
+      '<option value="none"'+(cov&&cov.kind==="none"?' selected':'')+'>No year dimension (state the reason below)</option>'+
+    '</select></div></div>'+
+    (cov&&cov.kind==="none"
+      ? '<div><label>Why does this capability have no year dimension?</label>'+
+        '<input type="text" id="covReason" value="'+esc(cov.reason||"")+'"/></div>' : '')+
+    (needsJust
+      ? '<div><label>This column is not year-bearing by name. Why is it the coverage basis?</label>'+
+        '<input type="text" id="covJust" value="'+esc(cov.justification||"")+'"/></div>' : '')+
+    (problem?'<div class="alert">'+esc(problem)+'</div>':'')+
+   '</div>'+
 
    '<div class="q"><h3>2. Integrity — what would tell us this data is broken?</h3>'+
-    '<div class="sug">Free text, one rule per line. Leave empty for undecided. An empty list is not a rule.</div>'+
+    '<div class="sug">Free text, one rule per line. Leave empty for undecided. An empty list is not a rule.'+
+      ' <b>Recorded, not enforced</b>: nothing executes these sentences, so an authorized capability claims nothing about integrity until they are bound to real checks.</div>'+
     '<textarea id="integrity" placeholder="e.g. national_monthly and agency_monthly must share a MAX(year*100+month)">'+
       esc(d.integrity ? d.integrity.join("\\n") : "")+'</textarea></div>'+
 
@@ -352,25 +420,54 @@ function render(){
     '<textarea id="evidence">'+esc(d.evidence||"")+'</textarea></div>'+
   '</div>';
 
+  const readCoverage = () => {
+    const sel = document.getElementById("cov").value;
+    if (sel === "") return null;
+    if (sel === "none"){
+      const reason = document.getElementById("covReason");
+      return { kind:"none", reason: reason ? reason.value.trim() : "" };
+    }
+    const candidate = cap.coverageCandidates[Number(sel)];
+    const basis = { kind:"column", table:candidate.table, yearColumn:candidate.yearColumn };
+    const just = document.getElementById("covJust");
+    if (just && just.value.trim()) basis.justification = just.value.trim();
+    return basis;
+  };
   const save = () => {
-    const covSel = document.getElementById("cov").value;
-    d.coverage = covSel === "" ? null : covSel === "none" ? "none" : cap.coverageCandidates[Number(covSel)];
     const lines = document.getElementById("integrity").value.split("\\n").map((s)=>s.trim()).filter(Boolean);
-    d.integrity = lines.length ? lines : null;
     const kind = document.getElementById("avail").value;
     const cond = document.getElementById("cond").value.trim();
-    d.availability = kind === "" ? null : kind === "always" ? {kind:"always"} : {kind:"conditional",condition:cond};
     const owner = document.getElementById("owner").value.trim();
-    d.receiptOwner = owner === "" ? null : owner;
-    d.evidence = document.getElementById("evidence").value;
-    counts();
+    S.update(cap.id, {
+      coverage: readCoverage(),
+      integrity: lines.length ? lines : null,
+      availability: kind === "" ? null : kind === "always" ? {kind:"always"} : {kind:"conditional",condition:cond},
+      receiptOwner: owner === "" ? null : owner,
+      evidence: document.getElementById("evidence").value,
+    });
+    status();
   };
-  for (const id of ["cov","integrity","avail","cond","owner","evidence"]) document.getElementById(id).addEventListener("input", save);
+  for (const id of ["integrity","avail","cond","owner","evidence","covReason","covJust"]){
+    const el = document.getElementById(id); if (el) el.addEventListener("input", save);
+  }
+  /* Coverage re-renders: which follow-up field is required depends on what was chosen. */
+  document.getElementById("cov").addEventListener("change", (e) => {
+    const sel = e.target.value;
+    if (sel !== "" && sel !== "none"){
+      const candidate = cap.coverageCandidates[Number(sel)];
+      if (!candidate.yearBearing){
+        const ok = confirm(candidate.table+"."+candidate.yearColumn+" does not look like a year column.\\n\\n"+
+          "It can still be the coverage basis, but you will be asked to say why. Use it?");
+        if (!ok){ render(); return; }
+      }
+    }
+    save(); render();
+  });
   document.getElementById("ownerPick").addEventListener("change", (e) => {
     if (e.target.value && e.target.value !== "__other") document.getElementById("owner").value = e.target.value;
     save();
   });
-  counts();
+  status();
 }
 
 document.getElementById("filter").addEventListener("change", () => { index = 0; render(); });
@@ -380,80 +477,67 @@ document.getElementById("nextUndecided").addEventListener("click", () => {
   const l = visible();
   for (let step=1; step<=l.length; step++){
     const probe=(index+step)%l.length;
-    if (undecidedFields(decisions[l[probe].id]).length){ index=probe; render(); return; }
+    if (S.undecidedFields(S.decisions[l[probe].id]).length){ index=probe; render(); return; }
   }
   alert("No undecided capability in the current filter.");
 });
 
-/* Cluster application names EVERY affected capability before anything changes. */
+/* Cluster application names EVERY affected capability, and what it costs them, before anything changes. */
 document.getElementById("cluster").addEventListener("click", () => {
-  const cap = visible()[index], d = decisions[cap.id];
-  const targets = cap.tableCluster.length ? cap.tableCluster : cap.artifactCluster;
-  const scope = cap.tableCluster.length ? "the same table set" : "the same artifact";
-  const fields = FIELDS.filter((f) => d[f] !== null);
+  const cap = visible()[index];
+  const plan = S.clusterPlan(cap.id);
   document.getElementById("confirmIntro").textContent =
-    fields.length ? 'Copy '+fields.join(", ")+' to '+targets.length+' capability(ies) sharing '+scope+'.'
-                  : 'This capability has no decided field to copy.';
-  document.getElementById("affected").innerHTML = targets.map((t) => {
-    const overwrite = FIELDS.some((f) => fields.includes(f) && decisions[t][f] !== null);
-    return '<li>'+esc(t)+(overwrite?' <b style="color:#8a5a00">— would overwrite an existing answer</b>':'')+'</li>';
+    plan.fields.length ? 'Copy '+plan.fields.join(", ")+' to '+plan.targets.length+' capability(ies) sharing '+plan.scope+
+      '. Evidence on any capability that changes is REPLACED with this one\\u2019s, because evidence describes the values it was written for.'
+                       : 'This capability has no decided field to copy.';
+  document.getElementById("affected").innerHTML = plan.detail.map((entry) => {
+    const notes = [];
+    if (entry.overwrites.length) notes.push('would overwrite '+entry.overwrites.join(", "));
+    if (entry.coverageDropped) notes.push('coverage not copied — that column pair is not one it reads');
+    if (entry.evidenceReplaced) notes.push('evidence replaced');
+    return '<li>'+esc(entry.id)+(notes.length?' <b style="color:#8a5a00">— '+esc(notes.join("; "))+'</b>':'')+'</li>';
   }).join('') || '<li>(none)</li>';
-  document.getElementById("applyCluster").disabled = !fields.length || !targets.length;
+  document.getElementById("applyCluster").disabled = !plan.fields.length || !plan.targets.length;
   document.getElementById("confirm").showModal();
 });
 document.getElementById("cancelCluster").addEventListener("click", () => document.getElementById("confirm").close());
 document.getElementById("applyCluster").addEventListener("click", () => {
-  const cap = visible()[index], d = decisions[cap.id];
-  const targets = cap.tableCluster.length ? cap.tableCluster : cap.artifactCluster;
-  for (const t of targets){
-    for (const f of FIELDS) if (d[f] !== null) decisions[t][f] = JSON.parse(JSON.stringify(d[f]));
-    /* Coverage is a table/column pair: only copy it where that pair is one the TARGET reads. */
-    const target = DATA.capabilities.find((c) => c.id === t);
-    if (d.coverage && d.coverage !== "none" &&
-        !target.coverageCandidates.some((o) => o.table===d.coverage.table && o.yearColumn===d.coverage.yearColumn)) {
-      decisions[t].coverage = null;
-    }
-    if (!decisions[t].evidence) decisions[t].evidence = d.evidence;
-  }
+  S.applyCluster(visible()[index].id);
   document.getElementById("confirm").close();
-  counts(); render();
+  status(); render();
 });
 
-/* Deterministic export: sorted ids, fixed field order, so re-exporting an unchanged session is
-   byte-identical and a diff shows only what you actually changed. */
-function serialize(){
-  const out = {};
-  for (const id of Object.keys(decisions).sort()){
-    const d = decisions[id];
-    out[id] = { coverage:d.coverage??null, integrity:d.integrity??null, availability:d.availability??null,
-                receiptOwner:d.receiptOwner??null, evidence:d.evidence||"" };
-  }
-  return JSON.stringify({ v: DATA.v, fingerprint: DATA.fingerprint, decisions: out }, null, 2) + "\\n";
-}
 document.getElementById("export").addEventListener("click", () => {
-  const blob = new Blob([serialize()], {type:"application/json"});
+  const blob = new Blob([S.serialize()], {type:"application/json"});
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob); a.download = "stage2b-policy-decisions.json"; a.click();
   URL.revokeObjectURL(a.href);
+  S.markClean();
+  status();
 });
 document.getElementById("import").addEventListener("click", () => document.getElementById("file").click());
 document.getElementById("file").addEventListener("change", (e) => {
   const f = e.target.files[0]; if (!f) return;
   const reader = new FileReader();
   reader.onload = () => {
-    let parsed; try { parsed = JSON.parse(reader.result); } catch { alert("That file is not JSON."); return; }
-    if (parsed.fingerprint !== DATA.fingerprint){
-      document.getElementById("staleness").hidden = false;
-      document.getElementById("staleness").textContent =
-        "This session was authored against a different registry structure ("+parsed.fingerprint+" vs "+DATA.fingerprint+
-        "). The questions may have changed. Regenerate the workbook and re-check every answer; the importer will refuse this file.";
-    }
-    for (const id of Object.keys(parsed.decisions||{})){
-      if (decisions[id]) decisions[id] = Object.assign(blank(), parsed.decisions[id]);
-    }
-    index = 0; counts(); render();
+    const note = document.getElementById("staleness");
+    let parsed; try { parsed = JSON.parse(reader.result); } catch { note.hidden = false; note.textContent = "That file is not JSON. Nothing was loaded."; return; }
+    const result = S.loadSession(parsed);
+    if (!result.ok){ note.hidden = false; note.textContent = result.reason; index = 0; status(); render(); return; }
+    note.hidden = result.unknown.length === 0;
+    if (result.unknown.length) note.textContent = "Loaded "+result.applied+" capability(ies). "+
+      result.unknown.length+" id(s) in that file are not capabilities in this registry and were ignored.";
+    index = 0; status(); render();
   };
   reader.readAsText(f);
+});
+
+/* Only when there is something to lose. A guard that always fires is one people learn to dismiss. */
+window.addEventListener("beforeunload", (e) => {
+  if (!S.isDirty()) return;
+  e.preventDefault();
+  e.returnValue = "";
+  return "";
 });
 render();
 </script></body></html>

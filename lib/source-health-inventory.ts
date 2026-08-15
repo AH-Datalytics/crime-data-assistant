@@ -51,7 +51,15 @@ export type SemanticDependency = {
   coverage: "complete" | "sparse";
 };
 export type CapabilityPolicy = {
-  coverage: { table: string; yearColumn: string } | null;
+  /**
+   * Discriminated, so an authored "no year dimension" is an ANSWER rather than an absence. It was
+   * once the string "none", normalised to null on import, which made a considered decision
+   * indistinguishable from never having been asked.
+   */
+  coverage:
+    | { kind: "column"; table: string; yearColumn: string; justification?: string }
+    | { kind: "none"; reason: string }
+    | null;
   integrity: string[] | null;
   /** Discriminated, so a conditional cannot be written without its condition. */
   availability: { kind: "always" } | { kind: "conditional"; condition: string } | null;

@@ -15,6 +15,15 @@ import fs from "node:fs";
 import path from "node:path";
 import { capabilityFlagKey } from "../lib/capability-flag-key";
 import { capabilityAuthorizes } from "../lib/capability-policy";
+/**
+ * The capability with no eligible deterministic operation.
+ *
+ * Imported rather than declared here. It is not only this file's concern: the workbook must ASK
+ * about it and the importer must accept an answer for it, and while it lived as a private constant
+ * neither could see it -- so it was a capability that could be neither decided nor declined. One
+ * carrier now, in `lib/sweep-only-capabilities.ts`.
+ */
+import { SWEEP_ONLY_SPECS } from "../lib/sweep-only-capabilities";
 
 const DATA_DIR = path.join(process.cwd(), "scripts", "fixtures", "operation-taxonomy");
 const REGISTRY_FILE = path.join(DATA_DIR, "capability-registry.json");
@@ -29,23 +38,6 @@ type RegistryEntry = {
   policy: Record<string, unknown> | null;
   authorizationEligible: boolean;
 };
-
-/**
- * The capability with no eligible deterministic operation.
- *
- * It cannot come from the operation catalog, because no operation reaches it -- frozen spec §8:241
- * still requires Current Trends to independently validate the national and sample-agency tables, so
- * it is registered here explicitly and Task 11's sweep is what evaluates it. Its tables are stated
- * rather than observed, which is why it is the ONLY hand-written row in this file.
- */
-const SWEEP_ONLY_SPECS = [
-  {
-    capabilityId: "crime_data::national_monthly::sweep",
-    artifact: "crime_data",
-    tables: { national_monthly: ["agency_count", "count", "month", "offense", "year"] },
-    prepDependencies: [] as string[],
-  },
-];
 
 /**
  * minRows is a DECISION. The registry cannot supply it, so one rule is applied uniformly and the
@@ -185,7 +177,15 @@ export type SemanticDependency = {
   coverage: "complete" | "sparse";
 };
 export type CapabilityPolicy = {
-  coverage: { table: string; yearColumn: string } | null;
+  /**
+   * Discriminated, so an authored "no year dimension" is an ANSWER rather than an absence. It was
+   * once the string "none", normalised to null on import, which made a considered decision
+   * indistinguishable from never having been asked.
+   */
+  coverage:
+    | { kind: "column"; table: string; yearColumn: string; justification?: string }
+    | { kind: "none"; reason: string }
+    | null;
   integrity: string[] | null;
   /** Discriminated, so a conditional cannot be written without its condition. */
   availability: { kind: "always" } | { kind: "conditional"; condition: string } | null;

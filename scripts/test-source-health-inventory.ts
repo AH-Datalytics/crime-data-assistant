@@ -164,7 +164,7 @@ check("the GENERATOR refuses eligibility for a non-null but malformed policy", (
    */
   const id = "shr::t_gamma::t_gamma(x)";
   const malformed = {
-    coverage: { table: "", yearColumn: "year" },       // empty table name
+    coverage: { kind: "column", table: "", yearColumn: "year" },       // empty table name
     integrity: [],                                     // no rule is not a rule
     availability: { kind: "always" },
     receiptOwner: "",                                  // empty owner
@@ -192,11 +192,11 @@ check("an authored coverage basis must belong to the capability's emitted contra
       `${spec.capabilityId} authored a coverage basis outside its emitted contract`);
   }
   const declared = [{ name: "incidents", requiredColumns: ["year"] }];
-  assert.strictEqual(coverageBasisErrors({ coverage: { table: "incidents", yearColumn: "foreign_year" } } as never, declared).length, 1,
+  assert.strictEqual(coverageBasisErrors({ coverage: { kind: "column", table: "incidents", yearColumn: "foreign_year" } } as never, declared).length, 1,
     "an existing but unrequired column must be rejected");
-  assert.strictEqual(coverageBasisErrors({ coverage: { table: "unrelated", yearColumn: "year" } } as never, declared).length, 1,
+  assert.strictEqual(coverageBasisErrors({ coverage: { kind: "column", table: "unrelated", yearColumn: "year" } } as never, declared).length, 1,
     "a table outside the contract must be rejected");
-  assert.deepStrictEqual(coverageBasisErrors({ coverage: { table: "incidents", yearColumn: "year" } } as never, declared), [],
+  assert.deepStrictEqual(coverageBasisErrors({ coverage: { kind: "column", table: "incidents", yearColumn: "year" } } as never, declared), [],
     "a basis inside the contract must be accepted");
 });
 
@@ -211,7 +211,7 @@ check("the GENERATOR refuses eligibility for a COMPLETE policy with a stray basi
    */
   const id = "shr::t_delta::t_delta(year)";
   const complete = {
-    coverage: { table: "t_delta", yearColumn: "foreign_year" },   // exists in neither requiredColumns
+    coverage: { kind: "column", table: "t_delta", yearColumn: "foreign_year" },   // exists in neither requiredColumns
     integrity: ["generation alignment holds"],
     availability: { kind: "always" },
     receiptOwner: "scripts/import-shr.py",
@@ -253,7 +253,7 @@ check("the registry pin is computed by the shared capability-specific predicate"
 check("a non-null but malformed policy authorizes nothing", () => {
   // Driven through the real validator, because "non-null" was the bug. Each of these is type-valid.
   const base = {
-    coverage: { table: "incidents", yearColumn: "year" },
+    coverage: { kind: "column", table: "incidents", yearColumn: "year" },
     integrity: ["generation alignment: MAX(year) of a = MAX(year) of b"],
     availability: { kind: "always" },
     receiptOwner: "scripts/import-shr.py",
@@ -261,8 +261,8 @@ check("a non-null but malformed policy authorizes nothing", () => {
   };
   assert.strictEqual(policyIsComplete(base), true, "a well-formed policy must be eligible");
   for (const malformed of [
-    { ...base, coverage: { table: "", yearColumn: "year" } },
-    { ...base, coverage: { table: "incidents", yearColumn: "  " } },
+    { ...base, coverage: { kind: "column", table: "", yearColumn: "year" } },
+    { ...base, coverage: { kind: "column", table: "incidents", yearColumn: "  " } },
     { ...base, integrity: [] },
     { ...base, integrity: [""] },
     { ...base, receiptOwner: "" },

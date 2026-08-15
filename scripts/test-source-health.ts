@@ -54,7 +54,7 @@ function withPolicy(spec: CapabilitySpec): CapabilitySpec {
   return {
     ...spec,
     policy: {
-      coverage: { table: "incidents", yearColumn: "year" },
+      coverage: { kind: "column", table: "incidents", yearColumn: "year" },
       integrity: ["required structure is readable"],
       availability: { kind: "always" },
       receiptOwner: "shr-import",
@@ -336,7 +336,7 @@ check("coverage is unknown when its basis is not a table the capability reads", 
   const spec = withPolicy(shr);
   const strayBasis: CapabilitySpec = {
     ...spec,
-    policy: { ...spec.policy!, coverage: { table: "unrelated", yearColumn: "year" } },
+    policy: { ...spec.policy!, coverage: { kind: "column", table: "unrelated", yearColumn: "year" } },
   };
   const { trace } = evaluateCapability(strayBasis, ctx(db, [1999]));
   assert.strictEqual(trace.coverage, "unknown", "coverage was judged from a table outside the capability");
@@ -359,7 +359,7 @@ check("coverage is unknown when the basis column is not one the capability reads
     "this reproduction depends on the contract requiring only incidents.year");
   const strayColumn: CapabilitySpec = {
     ...spec,
-    policy: { ...spec.policy!, coverage: { table: "incidents", yearColumn: "foreign_year" } },
+    policy: { ...spec.policy!, coverage: { kind: "column", table: "incidents", yearColumn: "foreign_year" } },
   };
   const { trace } = evaluateCapability(strayColumn, ctx(db, [2022]));
   assert.strictEqual(trace.coverage, "unknown", "coverage was judged from a column outside the contract");
@@ -373,9 +373,9 @@ check("the coverage-basis rule is the shared one, table and column together", ()
   // Same function the registry regression applies, so runtime and validation cannot drift apart.
   const declared = [{ name: "incidents", requiredColumns: ["year"] }];
   const authored = (coverage: unknown) => coverageBasisErrors({ coverage } as never, declared);
-  assert.deepStrictEqual(authored({ table: "incidents", yearColumn: "year" }), []);
-  assert.strictEqual(authored({ table: "incidents", yearColumn: "foreign_year" }).length, 1);
-  assert.strictEqual(authored({ table: "unrelated", yearColumn: "year" }).length, 1);
+  assert.deepStrictEqual(authored({ kind: "column", table: "incidents", yearColumn: "year" }), []);
+  assert.strictEqual(authored({ kind: "column", table: "incidents", yearColumn: "foreign_year" }).length, 1);
+  assert.strictEqual(authored({ kind: "column", table: "unrelated", yearColumn: "year" }).length, 1);
   assert.deepStrictEqual(coverageBasisErrors(null, declared), [], "an unauthored basis is not an error");
   assert.deepStrictEqual(coverageBasisErrors({} as never, declared), [], "an absent basis is not an error");
 });

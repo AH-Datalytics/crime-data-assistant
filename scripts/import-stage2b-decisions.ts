@@ -10,45 +10,59 @@
  *
  * It sets no flags and activates nothing: authoring policy makes a capability ELIGIBLE to be
  * probed, which is a different act from enabling it.
+ *
+ * What arrives is a CHANGE SET, not a snapshot. The importer used to rebuild the file from whatever
+ * it was handed, which made every omission a deletion: a partial export silently dropped the
+ * capabilities it did not mention, and a stale full export silently reverted newer work. Each
+ * changed entry now carries the value it was authored against, so a merge that would overwrite
+ * someone else's newer answer is refused by name instead of performed quietly.
  */
 import fs from "node:fs";
 import path from "node:path";
 import { capabilityAuthorizes, coverageBasisErrors, policyShapeErrors, type UnvalidatedPolicy } from "../lib/capability-policy";
-import { DECISIONS_VERSION, registryFingerprint, type RegistryEntry } from "./generate-stage2b-workbook";
+import { DECISIONS_VERSION, decidableRegistry, registryFingerprint, type RegistryEntry } from "./generate-stage2b-workbook";
 
 const DATA_DIR = path.join(process.cwd(), "scripts", "fixtures", "operation-taxonomy");
 const REGISTRY_FILE = path.join(DATA_DIR, "capability-registry.json");
 export const POLICY_FILE = path.join(DATA_DIR, "capability-policy.json");
 
 export type ImportResult =
-  | { ok: true; policy: Record<string, unknown>; authored: string[]; eligible: string[] }
+  | { ok: true; policy: Record<string, unknown>; authored: string[]; cleared: string[]; eligible: string[] }
   | { ok: false; errors: string[] };
 
-/**
- * A decided coverage basis, or null. `"none"` is the workbook's way of saying "this capability has
- * no year dimension", which is a DECISION and is recorded as such -- not as an undecided null.
- */
-function normalizeCoverage(value: unknown): { ok: true; value: unknown } | { ok: false; error: string } {
-  if (value === null || value === undefined) return { ok: true, value: null };
-  if (value === "none") return { ok: true, value: null };
-  if (typeof value !== "object" || Array.isArray(value)) return { ok: false, error: "coverage must be a { table, yearColumn } pair, null, or \"none\"" };
-  return { ok: true, value };
+/** Fixed field order and null-normalisation, so two equal entries always compare equal. */
+function canonical(entry: unknown): string {
+  if (entry === null || entry === undefined) return "null";
+  const e = entry as Record<string, unknown>;
+  return JSON.stringify({
+    coverage: e.coverage ?? null,
+    integrity: e.integrity ?? null,
+    availability: e.availability ?? null,
+    receiptOwner: e.receiptOwner ?? null,
+    evidence: e.evidence ?? "",
+  });
 }
+
+const isUntouched = (candidate: UnvalidatedPolicy): boolean =>
+  candidate.coverage === null && candidate.integrity === null && candidate.availability === null
+  && candidate.receiptOwner === null && String(candidate.evidence ?? "").trim() === "";
 
 export function importDecisions(
   raw: string,
   registryOverride?: Record<string, RegistryEntry>,
+  policyOverride?: Record<string, unknown>,
 ): ImportResult {
-  const registry = registryOverride
+  const registryInput = registryOverride
     ?? (JSON.parse(fs.readFileSync(REGISTRY_FILE, "utf8")) as Record<string, RegistryEntry>);
+  const registry = decidableRegistry(registryInput);
   const errors: string[] = [];
 
-  let parsed: { v?: unknown; fingerprint?: unknown; decisions?: unknown };
+  let parsed: { v?: unknown; fingerprint?: unknown; decisions?: unknown; basedOn?: unknown };
   try { parsed = JSON.parse(raw); }
   catch (error) { return { ok: false, errors: [`not valid JSON: ${(error as Error).message}`] }; }
 
   if (parsed.v !== DECISIONS_VERSION) errors.push(`decisions version ${String(parsed.v)} is not ${DECISIONS_VERSION}`);
-  const expected = registryFingerprint(registry);
+  const expected = registryFingerprint(registryInput);
   if (parsed.fingerprint !== expected) {
     // Stale export: the questions themselves may have changed, so answers to the old ones cannot be
     // carried across silently.
@@ -61,9 +75,23 @@ export function importDecisions(
   if (!decisions || typeof decisions !== "object" || Array.isArray(decisions)) {
     return { ok: false, errors: [...errors, "the export carries no decisions object"] };
   }
+  const basedOn = (parsed.basedOn ?? null) as Record<string, unknown> | null;
+  if (!basedOn || typeof basedOn !== "object" || Array.isArray(basedOn)) {
+    return { ok: false, errors: [...errors, "the export carries no basedOn baseline, so a safe merge is impossible"] };
+  }
 
-  const policy: Record<string, unknown> = {};
+  const existingFile = policyOverride
+    ?? (fs.existsSync(POLICY_FILE)
+      ? JSON.parse(fs.readFileSync(POLICY_FILE, "utf8")) as Record<string, unknown>
+      : {});
+  const docs = Object.fromEntries(Object.entries(existingFile).filter(([id]) => id.startsWith("_")));
+  const current: Record<string, unknown> = Object.fromEntries(
+    Object.entries(existingFile).filter(([id]) => !id.startsWith("_")),
+  );
+
+  const merged: Record<string, unknown> = { ...current };
   const authored: string[] = [];
+  const cleared: string[] = [];
   const eligible: string[] = [];
 
   for (const id of Object.keys(decisions as Record<string, unknown>).sort()) {
@@ -78,21 +106,37 @@ export function importDecisions(
       continue;
     }
 
-    const coverage = normalizeCoverage(decision.coverage);
-    if (!coverage.ok) { errors.push(`${id}: ${coverage.error}`); continue; }
+    /**
+     * Optimistic concurrency, per entry. The session recorded what the policy held for this
+     * capability when it began; if the file no longer holds that, someone has changed it since and
+     * this import would overwrite their answer with one authored in ignorance of it.
+     */
+    if (!Object.prototype.hasOwnProperty.call(basedOn, id)) {
+      errors.push(`${id}: the export changes this capability but records no baseline for it`);
+      continue;
+    }
+    if (canonical(basedOn[id]) !== canonical(current[id] ?? null)) {
+      errors.push(
+        `${id}: policy has changed since this session began — it was authored against ` +
+        `${basedOn[id] === null ? "no entry" : "a different entry"}, but the file now holds ` +
+        `${current[id] === undefined ? "no entry" : "another"}; re-open the workbook and redo this one`,
+      );
+      continue;
+    }
 
     const candidate: UnvalidatedPolicy = {
-      coverage: coverage.value,
+      coverage: decision.coverage ?? null,
       integrity: decision.integrity ?? null,
       availability: decision.availability ?? null,
       receiptOwner: decision.receiptOwner ?? null,
       evidence: typeof decision.evidence === "string" ? decision.evidence : "",
     };
 
-    const untouched = candidate.coverage === null && candidate.integrity === null
-      && candidate.availability === null && candidate.receiptOwner === null
-      && String(candidate.evidence).trim() === "";
-    if (untouched) continue;   // never decided; stays absent, which is the fail-closed default
+    /** An entry emptied back to nothing is a withdrawal of what was authored, not a no-op. */
+    if (isUntouched(candidate)) {
+      if (id in merged) { delete merged[id]; cleared.push(id); }
+      continue;
+    }
 
     // Shape, re-checked here rather than trusted from the page.
     const shape = policyShapeErrors(candidate).filter((problem) =>
@@ -105,24 +149,22 @@ export function importDecisions(
     const declared = entry.emittedDependencies.map((name) => ({ name, requiredColumns: entry.requiredColumns[name] ?? [] }));
     for (const problem of coverageBasisErrors(candidate, declared)) errors.push(`${id}: ${problem}`);
 
-    policy[id] = candidate;
+    merged[id] = candidate;
     authored.push(id);
     if (capabilityAuthorizes(candidate, declared)) eligible.push(id);
   }
 
   if (errors.length) return { ok: false, errors };
-  return { ok: true, policy, authored, eligible };
+  return { ok: true, policy: { ...docs, ...merged }, authored, cleared, eligible };
 }
 
-/** Rewrite the policy file, preserving its `_`-prefixed documentation blocks verbatim. */
+/** Serialise the merged policy, documentation blocks first and capabilities in a stable order. */
 export function writePolicy(policy: Record<string, unknown>): string {
-  const existing = fs.existsSync(POLICY_FILE)
-    ? JSON.parse(fs.readFileSync(POLICY_FILE, "utf8")) as Record<string, unknown>
-    : {};
-  const docs = Object.fromEntries(Object.entries(existing).filter(([id]) => id.startsWith("_")));
-  const merged: Record<string, unknown> = { ...docs };
-  for (const id of Object.keys(policy).sort()) merged[id] = policy[id];
-  return `${JSON.stringify(merged, null, 2)}\n`;
+  const docs = Object.keys(policy).filter((id) => id.startsWith("_")).sort();
+  const entries = Object.keys(policy).filter((id) => !id.startsWith("_")).sort();
+  const ordered: Record<string, unknown> = {};
+  for (const id of [...docs, ...entries]) ordered[id] = policy[id];
+  return `${JSON.stringify(ordered, null, 2)}\n`;
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]).includes("import-stage2b-decisions")) {
@@ -135,6 +177,8 @@ if (process.argv[1] && path.resolve(process.argv[1]).includes("import-stage2b-de
     process.exit(1);
   }
   fs.writeFileSync(POLICY_FILE, writePolicy(result.policy));
-  console.log(`imported ${result.authored.length} authored capability(ies); ${result.eligible.length} now authorization-eligible`);
+  console.log(`merged ${result.authored.length} authored capability(ies)`
+    + (result.cleared.length ? `, withdrew ${result.cleared.length}` : "")
+    + `; ${result.eligible.length} now authorization-eligible`);
   console.log("Re-run the derivation and the suites: TAXONOMY_DERIVE=1 npx tsx scripts/test-operation-taxonomy.ts && npm test");
 }

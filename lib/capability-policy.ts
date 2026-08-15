@@ -22,20 +22,82 @@ export type UnvalidatedPolicy = Record<string, unknown>;
 const nonEmptyString = (value: unknown): boolean => typeof value === "string" && value.trim() !== "";
 
 /**
+ * Whether a column's NAME suggests it carries a year.
+ *
+ * A hint about naming, never a gate on what may be authored. It decides only whether an unmarked
+ * choice must be justified -- a year column this pattern fails to recognise stays selectable, and
+ * costs a sentence rather than being unreachable.
+ */
+export function isYearBearingColumn(column: string): boolean {
+  return /(^|_)(year|yr)($|_)/i.test(column);
+}
+
+/**
+ * The keys each coverage variant may carry. Anything else is refused rather than ignored.
+ *
+ * A generator that leaked a derived field into the hand-authored record -- `yearBearing`, an
+ * OBSERVATION about a column name -- had it accepted and written to the policy file, where it sat
+ * beside the decision looking equally authoritative and went stale the moment the taxonomy was
+ * regenerated. Silently stripping it would have hidden the same leak; refusing makes the next one
+ * fail loudly at the boundary.
+ */
+const COVERAGE_KEYS: Record<string, readonly string[]> = {
+  column: ["kind", "table", "yearColumn", "justification"],
+  none: ["kind", "reason"],
+};
+
+/**
+ * INTEGRITY IS RECORDED, NOT ENFORCED.
+ *
+ * An integrity rule is a sentence a person wrote. No code parses it, executes it, or checks data
+ * against it, so a capability's authorization asserts nothing whatever about integrity -- it says
+ * the four fields are authored and well formed, and that coverage names a column the capability
+ * actually reads. Anything that later wants to CLAIM integrity is checked must first bind these
+ * rules to executable checks; until then the honest reading of an eligible capability is "coverage,
+ * availability and receipt ownership are decided, and someone wrote down what broken would look
+ * like". `scripts/test-stage2b-workbook.ts` regresses that nothing treats a rule as executed.
+ */
+export const INTEGRITY_IS_ENFORCED = false;
+
+/**
  * Shape problems in the fields that ARE authored.
  *
  * `null` means "not yet authored" and is not a problem. A wrong SHAPE is, whether or not the rest
  * of the entry is finished -- otherwise a malformed value sits in the file until the day it
  * completes the entry and silently grants authority.
  */
+function unknownCoverageKeys(coverage: object, kind: "column" | "none"): string[] {
+  const allowed = COVERAGE_KEYS[kind];
+  const extra = Object.keys(coverage).filter((key) => !allowed.includes(key));
+  return extra.length
+    ? [`coverage carries ${extra.map((k) => JSON.stringify(k)).join(", ")}, which a ${kind} basis does not have`]
+    : [];
+}
+
 export function policyShapeErrors(policy: UnvalidatedPolicy): string[] {
   const bad: string[] = [];
   const { coverage, integrity, availability, availabilityCondition, receiptOwner, evidence } = policy;
 
   if (coverage !== null && coverage !== undefined) {
-    const c = coverage as { table?: unknown; yearColumn?: unknown };
-    if (typeof c !== "object" || Array.isArray(c) || !nonEmptyString(c.table) || !nonEmptyString(c.yearColumn)) {
-      bad.push("coverage must be { table, yearColumn } with both non-empty");
+    /**
+     * DISCRIMINATED, so "this capability has no year dimension" is a DECISION rather than an
+     * absence. It was previously written as the string "none" and normalised to null on import,
+     * which made a considered answer indistinguishable from never having been asked -- the
+     * capability read as undecided forever and the reasoning was discarded at the boundary.
+     */
+    const c = coverage as { kind?: unknown; table?: unknown; yearColumn?: unknown; reason?: unknown };
+    if (typeof c !== "object" || Array.isArray(c)) {
+      bad.push('coverage must be { kind: "column", table, yearColumn } or { kind: "none", reason }');
+    } else if (c.kind === "column") {
+      if (!nonEmptyString(c.table) || !nonEmptyString(c.yearColumn)) {
+        bad.push('a column coverage basis must name a non-empty table and yearColumn');
+      }
+      bad.push(...unknownCoverageKeys(c, "column"));
+    } else if (c.kind === "none") {
+      if (!nonEmptyString(c.reason)) bad.push("a coverage of no-year-dimension must state its reason");
+      bad.push(...unknownCoverageKeys(c, "none"));
+    } else {
+      bad.push(`coverage.kind must be "column" or "none", not ${JSON.stringify(c.kind)}`);
     }
   }
   if (integrity !== null && integrity !== undefined) {
@@ -87,14 +149,26 @@ export function coverageBasisErrors(
   policy: UnvalidatedPolicy | null,
   declared: readonly { name: string; requiredColumns: readonly string[] }[],
 ): string[] {
-  const coverage = policy?.coverage as { table?: unknown; yearColumn?: unknown } | null | undefined;
+  const coverage = policy?.coverage as
+    { kind?: unknown; table?: unknown; yearColumn?: unknown; justification?: unknown } | null | undefined;
   if (!coverage || typeof coverage !== "object") return [];   // unauthored is not an error
+  if (coverage.kind === "none") return [];                    // no year dimension names no basis
   const table = declared.find((entry) => entry.name === coverage.table);
   if (!table) {
     return [`coverage basis table ${JSON.stringify(coverage.table)} is not one the capability reads`];
   }
   if (!table.requiredColumns.includes(String(coverage.yearColumn))) {
     return [`coverage basis ${String(coverage.table)}.${String(coverage.yearColumn)} is not a required column of that table`];
+  }
+  /**
+   * Enforced HERE, not only in the workbook, because the page is a convenience and this is the
+   * boundary. A column whose name gives no sign of carrying a year may still be the right basis --
+   * the heuristic must not block the honest answer -- but it must not become one through a single
+   * click either, so the unmarked choice has to say why.
+   */
+  if (!isYearBearingColumn(String(coverage.yearColumn)) && !nonEmptyString(coverage.justification)) {
+    return [`coverage basis ${String(coverage.table)}.${String(coverage.yearColumn)} does not look year-bearing, `
+      + "so it must carry a justification saying why it is the coverage basis"];
   }
   return [];
 }

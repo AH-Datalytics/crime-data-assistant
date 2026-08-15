@@ -141,8 +141,16 @@ function structuralRequirements(spec: CapabilitySpec): TableRequirement[] {
 }
 
 function coverageFor(spec: CapabilitySpec, db: Db, requestedYears: number[] | null): CheckState {
-  const coverage = spec.policy?.coverage;
+  const coverage = spec.policy?.coverage as
+    { kind?: string; table?: string; yearColumn?: string } | null | undefined;
   if (!coverage) return "unknown";
+  /**
+   * An authored "no year dimension" is an ANSWER, and its answer is that a year check does not
+   * apply here -- not that coverage is unknown. Collapsing it to unknown threw away the decision and
+   * reported the capability as un-assessed forever.
+   */
+  if (coverage.kind === "none") return "not_applicable";
+  if (coverage.kind !== "column") return "unknown";
   /**
    * The basis must be a table AND column this capability actually reads -- checked as a pair.
    *
@@ -152,11 +160,13 @@ function coverageFor(spec: CapabilitySpec, db: Db, requestedYears: number[] | nu
    * runtime, so the same rule is applied by the registry regression via coverageBasisErrors.
    */
   if (coverageBasisErrors(spec.policy as UnvalidatedPolicy | null, spec.tables).length > 0) return "unknown";
+  const { table, yearColumn } = coverage;
+  if (!table || !yearColumn) return "unknown";
   if (!requestedYears || requestedYears.length === 0) return "not_applicable";
   try {
     const bounds = db.prepare(
-      `SELECT MIN(${quoteIdentifier(coverage.yearColumn)}) AS lo, ` +
-      `MAX(${quoteIdentifier(coverage.yearColumn)}) AS hi FROM ${qualifiedTable(coverage.table)}`,
+      `SELECT MIN(${quoteIdentifier(yearColumn)}) AS lo, ` +
+      `MAX(${quoteIdentifier(yearColumn)}) AS hi FROM ${qualifiedTable(table)}`,
     ).get() as { lo: number | null; hi: number | null };
     if (bounds.lo === null || bounds.hi === null) return "unknown";
     return requestedYears.every((year) => year >= bounds.lo! && year <= bounds.hi!) ? "passed" : "failed";

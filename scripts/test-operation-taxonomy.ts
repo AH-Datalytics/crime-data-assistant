@@ -1562,7 +1562,7 @@ async function main() {
   check("P1-4: authorization requires a well-FORMED policy, not merely non-null fields", () => {
     // "Not null" is not a schema. A placeholder of the right arity would authorize.
     const wellFormed = {
-      coverage: { table: "incidents", yearColumn: "year" },
+      coverage: { kind: "column", table: "incidents", yearColumn: "year" },
       integrity: ["generation alignment: MAX(year) of a = MAX(year) of b"],
       availability: { kind: "always" },
       receiptOwner: "scripts/import-shr.py",
@@ -1570,8 +1570,12 @@ async function main() {
     };
     assert.strictEqual(policyIsComplete(wellFormed), true, "a well-formed policy must be eligible");
     const malformed: Record<string, unknown>[] = [
-      { ...wellFormed, coverage: {} },                              // no table/yearColumn
-      { ...wellFormed, coverage: { table: "incidents" } },          // no yearColumn
+      { ...wellFormed, coverage: {} },                              // no kind to discriminate on
+      { ...wellFormed, coverage: { kind: "column", table: "incidents" } },   // no yearColumn
+      { ...wellFormed, coverage: { kind: "none" } },                // no-year-dimension with no reason
+      { ...wellFormed, coverage: { table: "incidents", yearColumn: "year" } },   // the old untagged shape
+      // A derived hint riding in beside the decision: refused, not silently stripped.
+      { ...wellFormed, coverage: { kind: "column", table: "incidents", yearColumn: "year", yearBearing: false } },
       { ...wellFormed, integrity: true },
       { ...wellFormed, integrity: [] },                             // no rule is not a rule
       { ...wellFormed, integrity: [""] },

@@ -9,13 +9,13 @@
       "Entries beginning with _ are documentation and are ignored."
     ],
     "shapes": {
-      "coverage": "{ table, yearColumn } — both non-empty strings",
-      "integrity": "non-empty array of rule strings; an empty array states no rule and is not a decision",
+      "coverage": "DISCRIMINATED: { kind: \"column\", table, yearColumn } | { kind: \"none\", reason }. A column basis on a column whose name is not year-bearing must also carry a justification. \"No year dimension\" is an ANSWER and is written as kind \"none\" with its reason — it was previously the string \"none\", normalised to null on import, which made a considered decision indistinguishable from never having been asked. No other keys are accepted: a derived hint (yearBearing) leaking in from the generator was silently written into this file, where an observation sat beside a decision looking equally authoritative.",
+      "integrity": "non-empty array of rule strings; an empty array states no rule and is not a decision. RECORDED, NOT ENFORCED: nothing parses or executes these sentences, so an eligible capability asserts nothing whatever about integrity until they are bound to real checks.",
       "availability": "{ kind: \"always\" } | { kind: \"conditional\", condition } — discriminated, never prose and never a bare string. A conditional carries its condition INSIDE it, so the pair cannot disagree and a conditional-with-no-condition cannot be written.",
       "receiptOwner": "non-empty string naming the builder/importer that owns the receipt",
       "evidence": "non-empty string longer than 20 characters"
     },
-    "state_2026_08_14": "1 of 51 capabilities partly authored, 0 authorization-eligible. Authoring the remaining 50 is Stage 2B work and requires decisions this observation harness cannot make."
+    "state_2026_08_14": "1 of 52 capabilities partly authored, 0 authorization-eligible. The 52nd is the sweep-only capability (crime_data::national_monthly::sweep), which reaches no deterministic operation and lives in lib/sweep-only-capabilities.ts; it needs the same four decisions as any other. Authoring the remaining 51 is Stage 2B work and requires decisions this observation harness cannot make."
   },
   "hate_crime::agency_county_crosswalk+hate_crime_incidents::agency_county_crosswalk(county_fips,county_key,ori,ori9,state)|hate_crime_incidents(ori)": {
     "coverage": null,
