@@ -16,8 +16,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import {
-  AUTHORED_FILE, GENERATED_POLICY_FILE, derivePolicy, readAuthoredRecord, recordDigest,
-  recordShapeErrors,
+  AUTHORED_FILE, GENERATED_POLICY_FILE, type PolicyProvenance, derivePolicy, readAuthoredRecord,
+  recordDigest, recordShapeErrors,
 } from "../lib/stage2b-authored-record";
 import {
   buildWorkbookModel, loadCatalog, loadPlainLanguage, workbookFingerprint, type RegistryEntry,
@@ -25,13 +25,17 @@ import {
 
 const REGISTRY_FILE = path.join(process.cwd(), "scripts", "fixtures", "operation-taxonomy", "capability-registry.json");
 
-export function renderPolicyFile(policy: Record<string, unknown>, generatedFrom: string): string {
+export function renderPolicyFile(policy: Record<string, unknown>, generatedFrom: PolicyProvenance): string {
   const ordered: Record<string, unknown> = {
     _README: {
       purpose: "GENERATED FILE -- DO NOT EDIT BY HAND. Derived from capability-answers.json, which is "
         + "the one authored source for Stage 2B. Editing this file is pointless: the regression asserts "
         + "it is byte-identical to what scripts/generate-capability-policy.ts emits, and every consumer "
-        + "refuses it when its _generatedFrom no longer matches the record it came from.",
+        + "refuses it when its _generatedFrom no longer matches BOTH the record it came from and the "
+        + "decision contract it was derived under.",
+      generated_from: "record = the exact bytes of capability-answers.json; contract = the questions, "
+        + "options, consequences and translation an answer was confirmed against. Policy is a function "
+        + "of both, so a stamp naming only one of them cannot tell you this file is current.",
       authored_in: "scripts/fixtures/operation-taxonomy/capability-answers.json",
       regenerate_with: "npx tsx scripts/generate-capability-policy.ts",
       eligibility: "A capability authorizes nothing until every policy field is authored and well formed, "
@@ -60,9 +64,12 @@ export function generatePolicyFile(): { text: string; errors: string[]; expired:
    * changed stops producing policy. Those entries are named rather than silently dropped: nothing
    * is lost -- the answer is still in the record, waiting to be re-confirmed in the workbook.
    */
-  const derived = derivePolicy(entries, buildWorkbookModel(registry), pl, workbookFingerprint(registry, catalog));
+  const contract = workbookFingerprint(registry, catalog);
+  const derived = derivePolicy(entries, buildWorkbookModel(registry), pl, contract);
   if (derived.errors.length) return { text: "", errors: derived.errors, expired: derived.expired };
-  return { text: renderPolicyFile(derived.policy, recordDigest(AUTHORED_FILE)), errors: [], expired: derived.expired };
+  /** Stamped with BOTH inputs, because the policy is a function of both. */
+  const provenance = { record: recordDigest(AUTHORED_FILE), contract };
+  return { text: renderPolicyFile(derived.policy, provenance), errors: [], expired: derived.expired };
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]).includes("generate-capability-policy")) {

@@ -137,6 +137,17 @@ export function workbookFingerprint(
     .digest("hex").slice(0, 16);
 }
 
+/**
+ * The contract in force, from the checked-in registry and catalog.
+ *
+ * One place computes it, so a consumer asking "is this generated policy current?" cannot answer
+ * with a contract of its own construction. Every reader of the generated policy passes this.
+ */
+export function currentContractFingerprint(): string {
+  const registry = JSON.parse(fs.readFileSync(REGISTRY_FILE, "utf8")) as Record<string, RegistryEntry>;
+  return workbookFingerprint(registry, loadCatalog());
+}
+
 /** The translation module, loaded from the same file the page inlines. */
 export function loadPlainLanguage(catalog: unknown): any {
   const req = createRequire(import.meta.url);

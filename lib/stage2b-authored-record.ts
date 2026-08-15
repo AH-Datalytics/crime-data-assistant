@@ -209,14 +209,27 @@ export function recordDigest(file = AUTHORED_FILE): string {
   return createHash("sha256").update(fs.readFileSync(file)).digest("hex").slice(0, 16);
 }
 
+/** What a generated policy is a function of. BOTH halves, or the stamp does not pin it. */
+export type PolicyProvenance = { record: string; contract: string };
+
 /**
- * Read the generated policy, refusing it if it was not generated from the record on disk NOW.
+ * Read the generated policy, refusing it unless it was generated from BOTH the record on disk NOW
+ * and the decision contract in force NOW.
  *
  * Every consumer goes through here. A generated file that silently lags its source is the same
  * defect as two authoritative files, just slower to notice: the digest turns it into a loud
  * failure with the command that fixes it.
+ *
+ * THE CONTRACT IS HALF OF THE PROVENANCE. Policy is derived from the record AND the contract --
+ * `derivePolicy` stands a decided entry down when the wording it was confirmed against has moved.
+ * While the stamp named only the record, changing a question without touching
+ * `capability-answers.json` left the old generated file looking current: its record digest still
+ * matched, so the loader handed out policy whose confirmation had expired. Both inputs are stamped
+ * and both are checked, because a derived artifact is only as fresh as its stalest input.
  */
 export function loadGeneratedPolicy(
+  /** Required, so no consumer can read a policy without saying which contract it expects. */
+  contractFingerprint: string,
   policyFile = GENERATED_POLICY_FILE,
   authoredFile = AUTHORED_FILE,
 ): Record<string, unknown> {
@@ -224,14 +237,26 @@ export function loadGeneratedPolicy(
     throw new Error(`${path.basename(policyFile)} has not been generated. Run: npx tsx scripts/generate-capability-policy.ts`);
   }
   const raw = JSON.parse(fs.readFileSync(policyFile, "utf8")) as Record<string, unknown>;
-  const stamped = (raw._generatedFrom ?? null) as string | null;
-  const actual = recordDigest(authoredFile);
-  if (stamped !== actual) {
+  const stampedValue = raw._generatedFrom;
+  const stamped = (stampedValue && typeof stampedValue === "object" && !Array.isArray(stampedValue)
+    ? stampedValue : {}) as Partial<PolicyProvenance>;
+  const regenerate = ["  Nothing may read a generated policy that lags either input. Run:",
+    "    npx tsx scripts/generate-capability-policy.ts"];
+  const record = recordDigest(authoredFile);
+  if (stamped.record !== record) {
     throw new Error([
       `${path.basename(policyFile)} was generated from a different version of ${path.basename(authoredFile)}`,
-      `  it says it came from ${String(stamped)}; the record on disk is ${actual}`,
-      "  Nothing may read a generated policy that lags its source. Run:",
-      "    npx tsx scripts/generate-capability-policy.ts",
+      `  it says it came from ${String(stamped.record)}; the record on disk is ${record}`,
+      ...regenerate,
+    ].join("\n"));
+  }
+  if (stamped.contract !== contractFingerprint) {
+    throw new Error([
+      `${path.basename(policyFile)} was generated under a different decision contract`,
+      `  it says it came from ${String(stamped.contract)}; the contract in force is ${contractFingerprint}`,
+      "  A confirmation approves one wording of one question. When the wording moves, the policy it",
+      "  derived stands down -- and a generated file from before the move still shows it as active.",
+      ...regenerate,
     ].join("\n"));
   }
   return Object.fromEntries(Object.entries(raw).filter(([id]) => !isDocKey(id)));

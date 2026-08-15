@@ -1,11 +1,15 @@
 {
   "_README": {
-    "purpose": "GENERATED FILE -- DO NOT EDIT BY HAND. Derived from capability-answers.json, which is the one authored source for Stage 2B. Editing this file is pointless: the regression asserts it is byte-identical to what scripts/generate-capability-policy.ts emits, and every consumer refuses it when its _generatedFrom no longer matches the record it came from.",
+    "purpose": "GENERATED FILE -- DO NOT EDIT BY HAND. Derived from capability-answers.json, which is the one authored source for Stage 2B. Editing this file is pointless: the regression asserts it is byte-identical to what scripts/generate-capability-policy.ts emits, and every consumer refuses it when its _generatedFrom no longer matches BOTH the record it came from and the decision contract it was derived under.",
+    "generated_from": "record = the exact bytes of capability-answers.json; contract = the questions, options, consequences and translation an answer was confirmed against. Policy is a function of both, so a stamp naming only one of them cannot tell you this file is current.",
     "authored_in": "scripts/fixtures/operation-taxonomy/capability-answers.json",
     "regenerate_with": "npx tsx scripts/generate-capability-policy.ts",
     "eligibility": "A capability authorizes nothing until every policy field is authored and well formed, the coverage basis names a table and column it actually reads, and every integrity rule can be executed. Nothing can execute one today, so no capability is authorization-eligible and the workbook produces recorded drafts. Entries with origin \"legacy\" predate the workbook, have no human answer behind them, and authorize nothing whatever their fields contain."
   },
-  "_generatedFrom": "da826a3b199357f8",
+  "_generatedFrom": {
+    "record": "da826a3b199357f8",
+    "contract": "a3a24ec7c746eef1"
+  },
   "hate_crime::agency_county_crosswalk+hate_crime_incidents::agency_county_crosswalk(county_fips,county_key,ori,ori9,state)|hate_crime_incidents(ori)": {
     "coverage": null,
     "integrity": null,

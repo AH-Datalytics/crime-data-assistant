@@ -65,6 +65,7 @@ import path from "node:path";
 import Database from "better-sqlite3";
 import { POLICY_FIELDS, capabilityAuthorizes, policyIsComplete, policyShapeErrors, type UnvalidatedPolicy } from "../lib/capability-policy";
 import { loadGeneratedPolicy } from "../lib/stage2b-authored-record";
+import { currentContractFingerprint } from "./generate-stage2b-workbook";
 import { artifactOf as sharedArtifactOf } from "../lib/source-artifact";
 import { capabilityFlagKey } from "../lib/capability-flag-key";
 import type { SourceId } from "../lib/proof-contract";
@@ -658,7 +659,7 @@ function readPolicy(): Record<string, CapabilityPolicy> {
    * Reading the file directly would let the derivation pin a decision that has since been changed.
    */
   if (!fs.existsSync(POLICY_FILE)) return {};
-  const raw = loadGeneratedPolicy() as unknown as Record<string, CapabilityPolicy>;
+  const raw = loadGeneratedPolicy(currentContractFingerprint()) as unknown as Record<string, CapabilityPolicy>;
   // Keys starting with _ document the file itself and are not capability ids.
   return Object.fromEntries(Object.entries(raw).filter(([id]) => !id.startsWith("_")));
 }

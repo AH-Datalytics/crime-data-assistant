@@ -20,8 +20,8 @@ import path from "node:path";
 import { createRequire } from "node:module";
 import {
   CATALOG_MODULE_FILE, DECISIONS_VERSION, PLAIN_LANGUAGE_MODULE_FILE, SESSION_MODULE_FILE,
-  buildWorkbookModel, decidableRegistry, loadCatalog, registryFingerprint, renderWorkbook,
-  workbookFingerprint,
+  WORKBOOK_FILE, buildWorkbookModel, decidableRegistry, loadCatalog, registryFingerprint,
+  renderWorkbook, workbookFingerprint,
   type RegistryEntry,
 } from "./generate-stage2b-workbook";
 import { importDecisions } from "./import-stage2b-decisions";
@@ -482,11 +482,25 @@ check("there is ONE authored source, and policy is derived from it", () => {
     "capability-policy.json is not byte-identical to what the generator emits; it has been hand-edited "
     + "or is stale. Run: npx tsx scripts/generate-capability-policy.ts");
 
-  // It is stamped with the record it came from, and refused when that no longer matches.
+  // It is stamped with BOTH inputs it is a function of, and refused when either no longer matches.
   const raw = JSON.parse(fs.readFileSync(GENERATED_POLICY_FILE, "utf8")) as Record<string, unknown>;
-  assert.strictEqual(raw._generatedFrom, recordDigest(AUTHORED_FILE), "the generated policy is not stamped with its source");
+  assert.deepStrictEqual(raw._generatedFrom, { record: recordDigest(AUTHORED_FILE), contract: FINGERPRINT },
+    "the generated policy is not stamped with both the record and the contract it was derived under");
   assert.ok(/DO NOT EDIT BY HAND/.test(JSON.stringify(raw._README)), "the generated file does not say it is generated");
-  assert.doesNotThrow(() => loadGeneratedPolicy(), "the canonical loader refuses the current pair");
+  assert.doesNotThrow(() => loadGeneratedPolicy(FINGERPRINT), "the canonical loader refuses the current pair");
+});
+
+check("the workbook a person opens is the workbook this suite exercises", () => {
+  /**
+   * Everything asserted here is asserted about `renderWorkbook()`. The file someone actually opens
+   * is a checked-in artifact of it, and nothing tied the two together: a change to the generator,
+   * the catalog or the inlined logic left a stale page on disk that every test above would still
+   * pass. The page is the product; a green suite over a page nobody is running is the exact shape
+   * of defect this file exists to stop.
+   */
+  assert.strictEqual(fs.readFileSync(WORKBOOK_FILE, "utf8"), renderWorkbook(),
+    `${path.relative(process.cwd(), WORKBOOK_FILE)} is not what the generator emits, so the page being `
+    + "opened is not the page these tests exercise. Run: npx tsx scripts/generate-stage2b-workbook.ts");
 });
 
 check("no consumer silently trusts a policy that lags its source", () => {
@@ -496,12 +510,17 @@ check("no consumer silently trusts a policy that lags its source", () => {
    */
   const stale = path.join(DATA_DIR, "policy-stale-probe.json");
   const current = JSON.parse(fs.readFileSync(GENERATED_POLICY_FILE, "utf8")) as Record<string, unknown>;
-  fs.writeFileSync(stale, JSON.stringify({ ...current, _generatedFrom: "0000000000000000" }, null, 2));
+  fs.writeFileSync(stale, JSON.stringify(
+    { ...current, _generatedFrom: { record: "0000000000000000", contract: FINGERPRINT } }, null, 2));
   try {
-    assert.throws(() => loadGeneratedPolicy(stale), /generated from a different version/,
+    assert.throws(() => loadGeneratedPolicy(FINGERPRINT, stale), /generated from a different version/,
       "a policy stamped with the wrong source was accepted");
-    assert.throws(() => loadGeneratedPolicy(path.join(DATA_DIR, "absent-policy.json")), /has not been generated/,
+    assert.throws(() => loadGeneratedPolicy(FINGERPRINT, path.join(DATA_DIR, "absent-policy.json")), /has not been generated/,
       "a missing generated policy was tolerated");
+    // A stamp of the old shape names only one input and cannot pin the file; it is refused, not read.
+    fs.writeFileSync(stale, JSON.stringify({ ...current, _generatedFrom: recordDigest(AUTHORED_FILE) }, null, 2));
+    assert.throws(() => loadGeneratedPolicy(FINGERPRINT, stale), /different version/,
+      "a policy stamped the old way, with the record alone, was accepted");
   } finally { fs.rmSync(stale, { force: true }); }
 
   // The consumers read through it rather than opening the file themselves.
@@ -510,6 +529,64 @@ check("no consumer silently trusts a policy that lags its source", () => {
     assert.ok(/loadGeneratedPolicy/.test(text), `${file} does not read policy through the canonical loader`);
     assert.ok(!/readFileSync\([^)]*capability-policy\.json/.test(text),
       `${file} opens the generated policy directly, so it can be handed a stale one`);
+  }
+});
+
+check("a generated policy is refused when the CONTRACT moves, even though the record has not", () => {
+  /**
+   * Policy is a function of the record AND the contract: a decided entry stands down when the
+   * wording it was confirmed against changes. The freshness stamp named only the record, so
+   * re-wording a question without touching `capability-answers.json` left the old generated file
+   * looking current -- its record digest still matched -- and the loader kept handing out policy
+   * whose confirmation had expired. That is the gap this closes.
+   *
+   * The contract here moves because a REAL question is re-worded in the production module, not
+   * because a digest was substituted; a fabricated fingerprint would only prove the loader compares
+   * the two strings it is handed.
+   */
+  const realSource = fs.readFileSync(PLAIN_LANGUAGE_MODULE_FILE, "utf8");
+  const heading = "1. Do we know the first and last year this data covers?";
+  assert.ok(realSource.includes(heading), "this test is stale: the module no longer asks that question");
+  const rewordedSource = realSource.replace(heading, "1. Can we tell the first and last year this data covers?");
+  const plFrom = (source: string) =>
+    (new Function(source + "\nreturn createStage2bPlainLanguage;")() as (c: unknown) => any)(CATALOG);
+  const movedContract = workbookFingerprint(registry, CATALOG,
+    { plainLanguage: plFrom(rewordedSource), translationSource: rewordedSource });
+  assert.notStrictEqual(movedContract, FINGERPRINT, "re-wording a real question did not move the contract");
+
+  /**
+   * A record with a confirmed decision, and the policy it derived under the contract of the day.
+   * Under the moved contract that same record derives NOTHING for it, so the generated file below
+   * is stale in its CONTENT -- not merely in its stamp.
+   */
+  const prior = recordWith(withYear.id, answers());
+  const underOld = derivePolicy(prior.entries, model, PL, FINGERPRINT);
+  assert.ok(withYear.id in underOld.policy, "the fixture did not derive policy under the current contract");
+  const underNew = derivePolicy(prior.entries, model, PL, movedContract);
+  assert.deepStrictEqual(underNew.expired, [withYear.id], "the confirmation did not expire with the wording");
+  assert.ok(!(withYear.id in underNew.policy),
+    "this fixture cannot show anything: the entry derives the same policy under both contracts");
+
+  /** The record on disk is untouched, so its digest still matches. Only the contract has moved. */
+  const probe = path.join(DATA_DIR, "policy-contract-probe.json");
+  const recordStamp = recordDigest(AUTHORED_FILE);
+  fs.writeFileSync(probe, renderPolicyFile(underOld.policy, { record: recordStamp, contract: FINGERPRINT }));
+  try {
+    assert.strictEqual(
+      (JSON.parse(fs.readFileSync(probe, "utf8")) as { _generatedFrom: { record: string } })._generatedFrom.record,
+      recordStamp, "the probe does not carry the current record digest, so the record half would refuse it anyway");
+    assert.throws(() => loadGeneratedPolicy(movedContract, probe), /different decision contract/,
+      "a generated policy from before the re-wording was accepted, so an expired confirmation stayed active");
+    // And it is the CONTRACT that refuses it: under the contract it was generated for, it still loads.
+    assert.doesNotThrow(() => loadGeneratedPolicy(FINGERPRINT, probe),
+      "the probe is refused for some reason other than the contract, so this proves nothing");
+  } finally { fs.rmSync(probe, { force: true }); }
+
+  // Every consumer passes a contract rather than assuming one, and they all get it from one place.
+  for (const file of ["scripts/generate-source-health-inventory.ts", "scripts/test-operation-taxonomy.ts"]) {
+    const text = fs.readFileSync(path.join(process.cwd(), file), "utf8");
+    assert.ok(/loadGeneratedPolicy\(currentContractFingerprint\(\)/.test(text),
+      `${file} reads the generated policy without checking it against the contract in force`);
   }
 });
 

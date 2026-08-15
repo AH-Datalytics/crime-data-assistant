@@ -16,6 +16,7 @@ import path from "node:path";
 import { capabilityFlagKey } from "../lib/capability-flag-key";
 import { capabilityAuthorizes } from "../lib/capability-policy";
 import { loadGeneratedPolicy } from "../lib/stage2b-authored-record";
+import { currentContractFingerprint } from "./generate-stage2b-workbook";
 /**
  * The capability with no eligible deterministic operation.
  *
@@ -65,7 +66,7 @@ function readAuthoredPolicy(): Record<string, Record<string, unknown>> {
    * from. Reading the file directly would let this generator bake a stale decision into the
    * inventory -- the same "two records of one fact" defect, one step further downstream.
    */
-  return loadGeneratedPolicy() as Record<string, Record<string, unknown>>;
+  return loadGeneratedPolicy(currentContractFingerprint()) as Record<string, Record<string, unknown>>;
 }
 
 function renderSpec(id: string, artifact: string, emittedDependencies: string[],
