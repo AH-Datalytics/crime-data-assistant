@@ -414,6 +414,29 @@ check("coverage is unknown when the basis table has no year bounds", () => {
   db.close(); intact.close();
 });
 
+check("coverage checks BOUNDS, and a year missing inside the range is not detected", () => {
+  /**
+   * Recorded as a tested property rather than a comment, because the workbook asks a policy owner
+   * to authorise this check and the question must not promise more than it does. With rows for 2020
+   * and 2022 and none for 2021, a request for 2021 passes: MIN and MAX bracket it.
+   *
+   * If per-year presence checking is ever implemented, this test is the one that must change, and
+   * changing it means deciding deliberately that `passed` now means something stronger.
+   */
+  const db = shrFixture((fixture) => {
+    fixture.exec("DELETE FROM incidents");
+    const insert = fixture.prepare("INSERT INTO incidents (year) VALUES (?)");
+    insert.run(2020);
+    insert.run(2022);
+  });
+  const spec = withPolicy(shr);
+  assert.strictEqual(coverageFor(spec, db, [2021]), "passed",
+    "this test documents a KNOWN limitation; if it now fails, the check got stronger and the workbook's question must too");
+  assert.strictEqual(coverageFor(spec, db, [2019]), "failed", "a year below the range must still fail");
+  assert.strictEqual(coverageFor(spec, db, [2023]), "failed", "a year above the range must still fail");
+  db.close();
+});
+
 check("an authored no-year-dimension answer is not applicable rather than unknown", () => {
   const db = shrFixture();
   const spec = withPolicy(shr);

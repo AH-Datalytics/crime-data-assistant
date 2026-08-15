@@ -171,6 +171,14 @@ export function coverageFor(spec: CapabilitySpec, db: Db, requestedYears: number
   const { table, yearColumn } = coverage;
   if (!table || !yearColumn) return "unknown";
   if (!requestedYears || requestedYears.length === 0) return "not_applicable";
+  /**
+   * BOUNDS ONLY. This compares the requested years against MIN and MAX, so it catches a request
+   * outside the span and cannot see a year missing INSIDE it: with rows for 2020 and 2022 and none
+   * for 2021, a request for 2021 passes. The workbook asks the correspondingly narrow question --
+   * "does this data record an earliest and latest year" -- because the question a policy owner is
+   * asked must not promise evidence the check does not produce. Per-year presence checking would
+   * widen this, and would be a deliberate change to what `passed` means.
+   */
   try {
     const bounds = db.prepare(
       `SELECT MIN(${quoteIdentifier(yearColumn)}) AS lo, ` +

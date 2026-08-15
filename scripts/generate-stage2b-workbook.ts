@@ -357,31 +357,37 @@ function status(){
 
 /* Renders the technical policy these answers WOULD produce. Shown, never applied unconfirmed. */
 function mappingPanel(cap){
-  const p = S.proposal(cap.id), m = p.proposed;
-  const line = (label, value) => '<dt>'+label+'</dt><dd>'+value+'</dd>';
+  const p = S.proposal(cap.id), m = p.merged;
+  /* Kept-not-set is marked, because a field shown blank would describe a different outcome. */
+  const kept = (field) => p.preserved.indexOf(field) >= 0
+    ? ' <b style="color:#8a5a00">— kept from what was already recorded; your answer left this open</b>' : '';
+  const line = (label, value, field) => '<dt>'+label+'</dt><dd>'+value+(field?kept(field):'')+'</dd>';
   const rows = [
-    line('Year coverage', m.coverage === null ? '<i>left open</i>'
-      : m.coverage.kind === 'none' ? 'no year dimension — ' + esc(m.coverage.reason)
-      : 'bounded by <code>'+esc(m.coverage.table+'.'+m.coverage.yearColumn)+'</code>'),
-    line('What "broken" means', m.integrity === null ? '<i>left open</i>'
-      : '<ul style="margin:0;padding-left:16px">'+m.integrity.map((r)=>'<li>'+esc(r)+'</li>').join('')+'</ul>'),
-    line('Availability', m.availability === null ? '<i>left open</i>'
-      : m.availability.kind === 'always' ? 'always expected'
-      : 'sometimes absent — ' + esc(m.availability.condition)),
-    line('Kept fresh by', m.receiptOwner === null ? '<i>left open</i>' : esc(m.receiptOwner)),
+    line('Years', m.coverage === null ? '<i>left open</i>'
+      : m.coverage.kind === 'none' ? 'not about a time period — ' + esc(m.coverage.reason)
+      : 'first and last year read from <code>'+esc(m.coverage.table+'.'+m.coverage.yearColumn)+'</code>', 'coverage'),
+    line('What "gone wrong" looks like', m.integrity === null ? '<i>left open</i>'
+      : '<ul style="margin:0;padding-left:16px">'+m.integrity.map((r)=>'<li>'+esc(r)+'</li>').join('')+'</ul>', 'integrity'),
+    line('Always there?', m.availability === null ? '<i>left open</i>'
+      : m.availability.kind === 'always' ? 'yes, always expected'
+      : 'not always — ' + esc(m.availability.condition), 'availability'),
+    line('Kept up to date by', m.receiptOwner === null ? '<i>left open</i>' : esc(m.receiptOwner), 'receiptOwner'),
   ].join('');
   const confirmed = S.isMappingConfirmed(cap.id);
   const answered = PL.isAnswered(S.human(cap.id));
   const problems = S.problems(cap.id);
-  return '<div class="q"><h3>Check the technical wording before it is recorded</h3>'+
-    '<p class="hint">This is exactly what would be written down for this lookup. Nothing is recorded until'+
-    ' you confirm it, and changing any answer above cancels the confirmation so you see the new wording.</p>'+
+  return '<div class="q"><h3>Check what gets written down</h3>'+
+    '<p class="hint">This is exactly what your answers would record. Nothing is saved until you confirm it,'+
+    ' and changing any answer above cancels the confirmation so you get to read the new version.</p>'+
     '<div class="mapping"><dl>'+rows+'</dl></div>'+
     (problems.length ? '<div class="alert">Before this can be confirmed: '+problems.map(esc).join('; ')+'</div>' : '')+
-    (p.unresolved.length ? '<div class="warn">Left open: '+p.unresolved.map((f)=>esc(({coverage:'year coverage',integrity:'what broken means',availability:'availability',receiptOwner:'who keeps it fresh'})[f]||f)).join(', ')+
-      '. That is a legitimate place to stop — it is recorded as undecided, and this lookup stays switched off.</div>' : '')+
+    (p.unresolved.length ? '<div class="warn">Left open: '+p.unresolved.map((f)=>esc(({coverage:'the years question',integrity:'what going wrong looks like',availability:'whether it is always there',receiptOwner:'who keeps it up to date'})[f]||f)).join(', ')+
+      '. That is a legitimate place to stop — it is recorded as undecided, and this lookup stays switched off.'+
+      (p.preserved.length ? ' Anything already recorded for those is kept as it was: leaving a question open never'
+        + ' deletes an existing decision. Removing one is the separate action at the bottom of this page.' : '')+
+      '</div>' : '')+
     (confirmed ? '<div class="good">Confirmed. This wording is what your export will carry.</div>'
-      : '<button class="primary" id="confirmMapping"'+(answered && !problems.length ? '' : ' disabled')+'>I have read this wording — confirm it</button>')+
+      : '<button class="primary" id="confirmMapping"'+(answered && !problems.length ? '' : ' disabled')+'>I have read this — confirm it</button>')+
     '</div>';
 }
 
@@ -410,9 +416,9 @@ function render(){
    '<div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap">'+
      '<h2>'+esc(PL.describeQuestion(cap))+'</h2>'+
      '<span class="observed">'+(index+1)+' of '+list.length+'</span></div>'+
-   '<p class="observed">The description above is derived from the names in the data, so treat it as a'+
-     ' summary rather than a definition. Everything under "Technical details" is observed from the code'+
-     ' and is not up for decision; the questions below are.</p>'+
+   '<p class="observed">That summary comes from the names used in the data, so read it as a rough'+
+     ' description rather than an exact one. Everything under "Technical details" is what the code'+
+     ' actually does — it is not up for decision. The four questions below are.</p>'+
    '<details><summary>Technical details</summary><div class="body">'+
      'Identifier <code>'+esc(cap.id)+'</code><br/>Data source <code>'+esc(cap.artifact)+'</code><br/>'+
      'Reads '+cap.reads.map((t)=>'<code>'+esc(t)+'</code>').join(' ')+
@@ -422,9 +428,10 @@ function render(){
    '</div></details>'+
    (cap.conditionalHint?'<div class="warn">Observed: '+esc(cap.conditionalHint)+'</div>':'')+
 
-   '<div class="q"><h3>1. Can this answer tell which years it covers?</h3>'+
-    '<p class="hint">If someone asks about a year this data does not include, should the system be able to'+
-    ' notice and say so?</p>'+covOpts+
+   '<div class="q"><h3>1. Do we know the first and last year this data covers?</h3>'+
+    '<p class="hint">If someone asks about a year we do not have, should the system be able to say so?'+
+    ' It can only check the first and last year — it will not notice a year missing in between,'+
+    ' so please do not rely on it for that.</p>'+covOpts+
     '<details><summary>Why this is recommended</summary><div class="body"><ul style="margin:0;padding-left:16px">'+covWhy+'</ul>'+
       '<div style="margin-top:8px">Every column this lookup reads is listed below. The recommendation comes from'+
       ' a column NAME, which is a fact about the name and not a check of its contents — if the right column is a'+
@@ -439,34 +446,35 @@ function render(){
     '<input type="text" id="covReason" value="'+esc(h.coverageReason||"")+'"/>'+
    '</div>'+
 
-   '<div class="q"><h3>2. What would make this answer untrustworthy?</h3>'+
-    '<p class="hint">Tick anything that would mean the numbers should not be relied on. These are written down'+
-    ' in your words as a description of what "broken" looks like — nothing here builds an automatic check.</p>'+
+   '<div class="q"><h3>2. What would make you stop trusting these numbers?</h3>'+
+    '<p class="hint">Tick anything that would mean people should not rely on this. Your answers get written'+
+    ' down in plain words as a description of what "gone wrong" looks like here —'+
+    ' nothing here builds an automatic check.</p>'+
     scenarios+
     '<label class="opt"><input type="checkbox" id="integUnsure"'+(h.integrityUnsure?' checked':'')+'/>I\\u2019m not sure</label>'+
     '<label>Something else (optional)</label>'+
     '<input type="text" id="integOther" value="'+esc(h.integrityOther||"")+'"/>'+
    '</div>'+
 
-   '<div class="q"><h3>3. Should people normally expect this answer to be available?</h3>'+
-    '<p class="hint">Some lookups are legitimately missing in some situations. Saying so means an absence is'+
-    ' treated as expected rather than reported as a fault.</p>'+availOpts+
+   '<div class="q"><h3>3. Should this data always be there?</h3>'+
+    '<p class="hint">Some data is legitimately missing sometimes. Saying so means we treat it as expected'+
+    ' instead of raising it as a problem every time.</p>'+availOpts+
     (h.availability==="sometimes"
-      ? '<label>When is it legitimately unavailable?</label><input type="text" id="availWhen" value="'+esc(h.availabilityWhen||"")+'"/>'
+      ? '<label>When is it fine for this to be missing?</label><input type="text" id="availWhen" value="'+esc(h.availabilityWhen||"")+'"/>'
       : '')+
    '</div>'+
 
-   '<div class="q"><h3>4. Which update process keeps this data fresh?</h3>'+
-    '<p class="hint">Who is responsible when this data stops being updated. Choose the process you would'+
-    ' expect to have run.</p>'+ownerOpts+
+   '<div class="q"><h3>4. Who keeps this data up to date?</h3>'+
+    '<p class="hint">If this stopped being refreshed, whose job would it be. Pick the update you would expect'+
+    ' to have run.</p>'+ownerOpts+
     (h.owner==="other"
-      ? '<label>Name the process</label><input type="text" id="ownerOther" value="'+esc(h.ownerOther||"")+'"/>'
+      ? '<label>What is it called?</label><input type="text" id="ownerOther" value="'+esc(h.ownerOther||"")+'"/>'
       : '')+
    '</div>'+
 
-   '<div class="q"><h3>What are these answers based on?</h3>'+
-    '<p class="hint">A sentence is enough: who you checked with, which document, or what you already know.'+
-    ' This is what a future reader will use to judge the decision.</p>'+
+   '<div class="q"><h3>What are you basing this on?</h3>'+
+    '<p class="hint">A sentence is enough: who you asked, what you read, or what you already know.'+
+    ' Someone reading this later will use it to judge whether the decision still holds.</p>'+
     '<textarea id="evidence">'+esc(h.evidence||"")+'</textarea></div>'+
 
    '<div id="mapping"></div>'+

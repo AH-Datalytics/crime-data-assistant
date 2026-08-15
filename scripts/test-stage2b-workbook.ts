@@ -159,6 +159,80 @@ check("every question offers \"I'm not sure\", and it fails closed", () => {
   assert.ok(/I\\u2019m not sure|I'm not sure/.test(renderWorkbook(registry)), "the page never offers 'I'm not sure' for integrity");
 });
 
+check("an unresolved answer never erases an existing decision", () => {
+  /**
+   * The human controls start blank even where policy already exists, so answering "I'm not sure"
+   * and citing evidence produced four nulls -- and the importer wrote them over a complete existing
+   * entry and returned success. A decided capability became undecided with no withdrawal and
+   * nothing named. Removing a decision is the separate, confirmed act at the bottom of the page.
+   */
+  const existing = {
+    coverage: { kind: "column", table: yearBasis.table, yearColumn: yearBasis.yearColumn },
+    integrity: ["an existing rule somebody decided earlier"],
+    availability: { kind: "always" },
+    receiptOwner: "The monthly crime-trends update",
+    evidence: "the original decision, recorded by whoever answered these questions before",
+  };
+  const S = sessionFor({ [withYear.id]: existing });
+  S.update(withYear.id, {
+    ...PL.blankAnswer(), coverage: PL.UNSURE, availability: PL.UNSURE, owner: PL.UNSURE, integrityUnsure: true,
+    evidence: "nobody here knows yet; recorded so the open question is visible rather than assumed",
+  });
+
+  const p = S.proposal(withYear.id);
+  assert.deepStrictEqual([...p.preserved].sort(), ["availability", "coverage", "integrity", "receiptOwner"],
+    "an unresolved answer did not preserve the existing decision");
+  for (const field of ["coverage", "integrity", "availability", "receiptOwner"]) {
+    assert.deepStrictEqual((p.merged as Record<string, unknown>)[field], (existing as Record<string, unknown>)[field],
+      `${field} was about to be erased by an unresolved answer`);
+  }
+
+  S.confirmMapping(withYear.id);
+  const result = importDecisions(S.serialize(), registry, { [withYear.id]: existing });
+  assert.ok(result.ok, JSON.stringify(!result.ok && result.errors));
+  if (!result.ok) return;
+  const stored = result.policy[withYear.id] as Record<string, unknown>;
+  for (const field of ["coverage", "integrity", "availability", "receiptOwner"]) {
+    assert.deepStrictEqual(stored[field], (existing as Record<string, unknown>)[field],
+      `${field} was erased at import by an unresolved answer`);
+  }
+  // Withdrawal is still the way to remove one, and it still works.
+  const W = sessionFor({ [withYear.id]: existing });
+  W.withdraw(withYear.id);
+  const removed = importDecisions(W.serialize(), registry, { [withYear.id]: existing });
+  assert.ok(removed.ok && !(withYear.id in removed.policy), "the named withdrawal no longer removes anything");
+
+  // And the page says which fields are being kept rather than set.
+  const html = renderWorkbook(registry);
+  assert.ok(/kept from what was already recorded/.test(html), "the page never says a field is being kept");
+  assert.ok(/leaving a question open never/.test(html), "the page does not tell the reader that open questions are safe");
+});
+
+check("the coverage question promises only what the check delivers", () => {
+  /**
+   * The question said the system could notice "years this data does not cover". The check compares
+   * the requested years against MIN and MAX and nothing else, so with rows for 2020 and 2022 and
+   * none for 2021, a request for 2021 passes. Asking a policy owner to authorise gap detection that
+   * does not exist is worse than not asking: they would rely on it.
+   */
+  const yearsOption = PL.coverageOptions(withYear).find((o: any) => o.value === "years");
+  assert.ok(yearsOption, "there is no option for a lookup that records years");
+  assert.ok(/first and last year/.test(yearsOption.label), "the label still promises general coverage");
+  assert.ok(/missing in between/.test(yearsOption.consequence),
+    "the consequence does not disclose that a gap inside the range is undetected");
+  assert.ok(!/years this data does not cover|which year each record belongs to/.test(yearsOption.consequence + yearsOption.label),
+    "the overpromising wording survives");
+
+  const html = renderWorkbook(registry);
+  assert.ok(/Do we know the first and last year this data covers\?/.test(html), "the page still asks the wider question");
+  // Contiguous fragment: the page builds this sentence by concatenation, so the source is split.
+  assert.ok(/not notice a year missing in between/.test(html), "the page does not disclose the limitation");
+
+  // The limitation is recorded at the check itself, where the next reader of the code will meet it.
+  const runtime = fs.readFileSync(path.join(process.cwd(), "lib", "source-health.ts"), "utf8");
+  assert.ok(/BOUNDS ONLY/.test(runtime), "coverageFor does not record what it cannot see");
+});
+
 check("a recommendation is shown but never pre-selected", () => {
   /**
    * The property that keeps this a decision machine rather than an inference machine. A workbook
@@ -208,7 +282,8 @@ check("the technical detail is present, optional, and marked as observed rather 
   const html = renderWorkbook(registry);
   assert.ok(/<details><summary>Technical details<\/summary>/.test(html), "the technical detail is not behind a disclosure");
   assert.ok(/Why this is recommended/.test(html), "the recommendation's basis is not disclosed");
-  assert.ok(/observed from the code/.test(html), "the page does not distinguish observation from decision");
+  assert.ok(/what the code/.test(html) && /not up for decision/.test(html),
+    "the page does not distinguish what the code does from what is being decided");
   // The identifier and tables are in the disclosure, not in the question.
   const question = html.slice(html.indexOf("1. Can this answer tell which years"), html.indexOf("2. What would make"));
   assert.ok(!/cap\.id/.test(question), "the capability identifier is part of the coverage question itself");
@@ -338,7 +413,7 @@ check("a lookup with no year-like column recommends the honest answer, and can s
   const options = PL.coverageOptions(withoutYear);
   const recommended = options.find((o: any) => o.recommended);
   assert.strictEqual(recommended.value, "no-years", "a lookup with no year column recommends bounding it by one anyway");
-  assert.ok(/no column this lookup reads is named like a year/.test(recommended.why), "the recommendation gives no basis");
+  assert.ok(/none of the columns this uses looks like a year/i.test(recommended.why), "the recommendation gives no basis");
 
   // The honest answer stays reachable: the naming heuristic must not make a real year column unusable.
   const S = sessionFor();

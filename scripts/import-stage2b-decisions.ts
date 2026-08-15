@@ -40,7 +40,7 @@ const { createStage2bPlainLanguage } = require(PLAIN_LANGUAGE_MODULE_FILE) as {
 const PL = createStage2bPlainLanguage();
 
 /** What a change-set entry may carry. A withdrawal carries only its operation. */
-const ENTRY_KEYS: readonly string[] = ["human", "proposed", "unresolved", "mappingConfirmed", "operation"];
+const ENTRY_KEYS: readonly string[] = ["human", "proposed", "unresolved", "preserved", "mappingConfirmed", "operation"];
 
 const DATA_DIR = path.join(process.cwd(), "scripts", "fixtures", "operation-taxonomy");
 const REGISTRY_FILE = path.join(DATA_DIR, "capability-registry.json");
@@ -198,14 +198,24 @@ export function importDecisions(
       errors.push(`${id}: the entry carries no human answer, so there is nothing a mapping could have come from`);
       continue;
     }
+    /**
+     * Re-derived AND re-merged, in that order.
+     *
+     * An unresolved answer keeps whatever the policy source already holds for that field. Writing
+     * the bare proposal instead replaced a complete existing entry with four nulls the moment
+     * someone answered "I'm not sure" and cited evidence -- a decision undone with no withdrawal,
+     * nothing named, and a successful import. Removing a decision is `operation: "withdraw"`, which
+     * names the capability and is confirmed on its own.
+     */
     const rederived = PL.proposeMapping(capability, humanAnswer);
+    const remerged = PL.mergeWithExisting(rederived.proposed, current[id] ?? null);
     const asJson = (value: unknown) => JSON.stringify(value ?? null);
-    if (asJson(decision.proposed) !== asJson(rederived.proposed)) {
+    if (asJson(decision.proposed) !== asJson(remerged.merged)) {
       errors.push(`${id}: the exported technical mapping is not what this answer produces; `
         + "re-open the workbook, review the mapping again and confirm it");
       continue;
     }
-    const expectedFingerprint = PL.mappingFingerprint(rederived.proposed);
+    const expectedFingerprint = PL.mappingFingerprint(remerged.merged);
     if (!decision.mappingConfirmed) {
       errors.push(`${id}: the technical mapping was never confirmed; the workbook shows it beside the `
         + "answer and asks you to approve it before it can become policy");
@@ -218,11 +228,11 @@ export function importDecisions(
     }
 
     const candidate: UnvalidatedPolicy = {
-      coverage: rederived.proposed.coverage ?? null,
-      integrity: rederived.proposed.integrity ?? null,
-      availability: rederived.proposed.availability ?? null,
-      receiptOwner: rederived.proposed.receiptOwner ?? null,
-      evidence: typeof rederived.proposed.evidence === "string" ? rederived.proposed.evidence : "",
+      coverage: remerged.merged.coverage ?? null,
+      integrity: remerged.merged.integrity ?? null,
+      availability: remerged.merged.availability ?? null,
+      receiptOwner: remerged.merged.receiptOwner ?? null,
+      evidence: typeof remerged.merged.evidence === "string" ? remerged.merged.evidence : "",
     };
 
     if (isUntouched(candidate)) {
