@@ -4655,9 +4655,9 @@ function render(){
    (cap.conditionalHint?'<div class="warn">'+esc(cap.conditionalHint)+'</div>':'')+
 
    '<div class="q"><h3>1. Coverage — how do we know the data covers the years asked for?</h3>'+
-    '<div class="sug"><b>Candidates</b> (year-bearing columns this capability actually reads)'+
-      (cap.coverageCandidates.some((o)=>o.yearBearing)?'':' — none of this capability's columns look year-bearing, so "No year dimension" may be the honest answer')+
-      '. Every column this capability reads is listed; the mark is a hint, not a filter.</div>'+
+    '<div class="sug"><b>Candidates</b> (every column this capability reads)'+
+      (cap.coverageCandidates.some((o)=>o.yearBearing)?'':' — no column here looks year-bearing, so "No year dimension" may be the honest answer')+
+      '. The mark is a hint, not a filter.</div>'+
     '<div class="row"><div><label>Basis</label><select id="cov">'+
       '<option value="">— Undecided —</option>'+covOpts+
       '<option value="none"'+(d.coverage==="none"?' selected':'')+'>No year dimension (state the reason below)</option>'+

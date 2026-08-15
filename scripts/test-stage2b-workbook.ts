@@ -41,6 +41,33 @@ const wellFormed = (table: string, yearColumn: string) => ({
 const withYear = buildWorkbookModel(registry).find((c) => c.coverageCandidates.length > 0)!;
 assert.ok(withYear, "expected at least one capability reading a year column");
 
+// ---------------------------------------------------------------- 0. the page actually runs
+
+check("the workbook's script parses, and its embedded data is valid JSON", () => {
+  /**
+   * The check every other assertion here presupposed and none of them made. Sixteen tests asserted
+   * on the page's TEXT -- that a phrase appeared, that a handler was bound in the right order -- and
+   * all sixteen passed while the page threw a SyntaxError on load and rendered nothing at all. An
+   * apostrophe inside a single-quoted string was enough ("this capability's columns"), and text
+   * matching cannot see that.
+   *
+   * Parsed with `new Function`, which compiles without executing: no DOM is needed, and a page that
+   * cannot compile can never render whatever the other tests found in its source.
+   */
+  const html = renderWorkbook(registry);
+  const script = /<script>([\s\S]*)<\/script>/.exec(html);
+  assert.ok(script, "the workbook has no script block");
+  try {
+    new Function(script![1]);
+  } catch (error) {
+    assert.fail(`the workbook's script does not parse, so the page renders nothing: ${(error as Error).message}`);
+  }
+  const start = html.indexOf("const DATA = ") + "const DATA = ".length;
+  const embedded = html.slice(start, html.indexOf("\n/* Decisions live only")).trim().replace(/;$/, "");
+  const data = JSON.parse(embedded) as { capabilities: unknown[] };
+  assert.strictEqual(data.capabilities.length, Object.keys(registry).length);
+});
+
 // ---------------------------------------------------------------- 1. exactly once
 
 check("every registry capability appears exactly once in the workbook", () => {

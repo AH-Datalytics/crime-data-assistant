@@ -92,7 +92,18 @@ function ownerCandidates(tables: string[], scriptIndex: { file: string; text: st
     .slice(0, 6);
 }
 
+/**
+ * Read once per process. Each render scans every script for every capability's tables, so re-reading
+ * the directory per call made the regression suite take longer than the rest of `npm test` combined.
+ */
+let scriptIndexCache: { file: string; text: string }[] | null = null;
 function readScriptIndex(): { file: string; text: string }[] {
+  if (scriptIndexCache) return scriptIndexCache;
+  scriptIndexCache = readScriptIndexUncached();
+  return scriptIndexCache;
+}
+
+function readScriptIndexUncached(): { file: string; text: string }[] {
   const dir = path.join(process.cwd(), "scripts");
   return fs.readdirSync(dir)
     .filter((file) => /\.(ts|js|py|sql)$/.test(file) && !file.startsWith("test-"))
@@ -307,9 +318,9 @@ function render(){
    (cap.conditionalHint?'<div class="warn">'+esc(cap.conditionalHint)+'</div>':'')+
 
    '<div class="q"><h3>1. Coverage — how do we know the data covers the years asked for?</h3>'+
-    '<div class="sug"><b>Candidates</b> (year-bearing columns this capability actually reads)'+
-      (cap.coverageCandidates.some((o)=>o.yearBearing)?'':' — none of this capability's columns look year-bearing, so "No year dimension" may be the honest answer')+
-      '. Every column this capability reads is listed; the mark is a hint, not a filter.</div>'+
+    '<div class="sug"><b>Candidates</b> (every column this capability reads)'+
+      (cap.coverageCandidates.some((o)=>o.yearBearing)?'':' — no column here looks year-bearing, so "No year dimension" may be the honest answer')+
+      '. The mark is a hint, not a filter.</div>'+
     '<div class="row"><div><label>Basis</label><select id="cov">'+
       '<option value="">— Undecided —</option>'+covOpts+
       '<option value="none"'+(d.coverage==="none"?' selected':'')+'>No year dimension (state the reason below)</option>'+
