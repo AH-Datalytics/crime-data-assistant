@@ -4730,6 +4730,7 @@ function createStage2bSession(DATA) {
    * older session silently overwrites newer policy, and there is no record that it happened.
    */
   const baseline = {};
+  const withdrawn = {};
   const capabilityById = {};
   for (const cap of DATA.capabilities) {
     capabilityById[cap.id] = cap;
@@ -4741,7 +4742,6 @@ function createStage2bSession(DATA) {
   let dirty = false;
 
   const undecidedFields = (d) => FIELDS.filter((f) => d[f] === null || d[f] === undefined);
-  const isComplete = (d) => undecidedFields(d).length === 0 && String(d.evidence || "").trim().length > 20;
 
   /**
    * A coverage basis on a column whose NAME does not look year-bearing must say why.
@@ -4773,6 +4773,55 @@ function createStage2bSession(DATA) {
     return null;
   }
 
+  /**
+   * Everything wrong with what is currently authored, by the SAME rules the importer applies.
+   *
+   * "All fields non-null plus some evidence" was a weaker test than the boundary's, so the page
+   * cheerfully reported a capability Complete while its coverage carried no reason and its
+   * conditional availability carried no condition -- a count that told the author they were finished
+   * with an entry the importer would refuse.
+   */
+  function problems(capId) {
+    const d = decisions[capId];
+    const found = [];
+    const coverage = coverageProblem(capId, d.coverage);
+    if (coverage) found.push(coverage);
+    if (d.availability && d.availability.kind === "conditional" && !String(d.availability.condition || "").trim()) {
+      found.push("a conditional availability must state its condition");
+    }
+    if (d.availability && d.availability.kind !== "conditional" && d.availability.kind !== "always") {
+      found.push("availability must be always or conditional");
+    }
+    if (d.integrity !== null && (!Array.isArray(d.integrity) || d.integrity.length === 0)) {
+      found.push("integrity must list at least one rule; an empty list states no rule");
+    }
+    if (d.evidence && String(d.evidence).trim().length <= 20 && undecidedFields(d).length === 0) {
+      found.push("evidence must cite what the authored values rest on");
+    }
+    return found;
+  }
+
+  /** Every question answered, well formed, and cited. NOT the same as authorizing. */
+  function isComplete(capId) {
+    const d = decisions[capId];
+    return undecidedFields(d).length === 0
+      && String(d.evidence || "").trim().length > 20
+      && problems(capId).length === 0;
+  }
+
+  /**
+   * Integrity prose authorizes nothing, so the page must not imply otherwise.
+   *
+   * A rule bound to something runnable is written { rule, boundTo }; a bare sentence is a draft. The
+   * workbook authors drafts today, which is why a completed capability is still not an authorizing
+   * one, and saying so here keeps the count honest rather than leaving it to a footnote.
+   */
+  function integrityIsBound(integrity) {
+    return Array.isArray(integrity) && integrity.length > 0 && integrity.every((rule) =>
+      rule && typeof rule === "object" && !Array.isArray(rule)
+      && String(rule.rule || "").trim() !== "" && String(rule.boundTo || "").trim() !== "");
+  }
+
   /** Applies a patch, reporting whether anything actually changed. Rendering must not mark dirty. */
   function update(id, patch) {
     const d = decisions[id];
@@ -4780,16 +4829,35 @@ function createStage2bSession(DATA) {
     const before = JSON.stringify(normalize(d));
     for (const key of Object.keys(patch)) d[key] = patch[key];
     const changed = JSON.stringify(normalize(d)) !== before;
-    if (changed) dirty = true;
+    if (changed) { dirty = true; delete withdrawn[id]; }
     return changed;
   }
 
+  /**
+   * Withdrawing authored policy is a NAMED act, never inferred from empty fields.
+   *
+   * Clearing every field used to be read as deletion at the importer, while the page offered only
+   * "Undecided" and no confirmation -- so the gesture that means "I have not decided this yet" and
+   * the gesture that means "remove what was decided" were the same gesture, and the destructive
+   * reading was the one that won.
+   */
+  function canWithdraw(id) { return baseline[id] !== null && baseline[id] !== undefined; }
+  function withdraw(id) {
+    if (!canWithdraw(id)) return false;
+    withdrawn[id] = true;
+    decisions[id] = blank();
+    dirty = true;
+    return true;
+  }
+  const isWithdrawn = (id) => withdrawn[id] === true;
+
   function counts() {
-    const c = { coverage: 0, integrity: 0, availability: 0, receiptOwner: 0, complete: 0 };
+    const c = { coverage: 0, integrity: 0, availability: 0, receiptOwner: 0, complete: 0, problems: 0 };
     for (const cap of DATA.capabilities) {
       const d = decisions[cap.id];
       for (const f of FIELDS) if (d[f] === null) c[f] += 1;
-      if (isComplete(d)) c.complete += 1;
+      if (isComplete(cap.id)) c.complete += 1;
+      if (problems(cap.id).length) c.problems += 1;
     }
     return c;
   }
@@ -4797,14 +4865,15 @@ function createStage2bSession(DATA) {
   /**
    * Only what this session actually changed.
    *
-   * A full snapshot of every capability was not merely verbose: the importer rebuilds the policy
-   * file from what it receives, so an omitted entry is a DELETED entry and an old snapshot silently
-   * reverts newer work. A change set plus a per-entry baseline can be merged, and a merge that would
-   * clobber someone else's newer answer can be refused by name.
+   * A full snapshot was not merely verbose: the importer rebuilds the policy file from what it
+   * receives, so an omitted entry is a DELETED entry and an old snapshot silently reverts newer
+   * work. A change set plus a per-entry baseline can be merged, and a merge that would clobber
+   * someone else's newer answer can be refused by name.
    */
   function changeSet() {
     const out = {};
     for (const id of Object.keys(decisions).sort()) {
+      if (withdrawn[id]) { out[id] = { operation: "withdraw" }; continue; }
       const d = normalize(decisions[id]);
       const untouched = d.coverage === null && d.integrity === null && d.availability === null
         && d.receiptOwner === null && String(d.evidence).trim() === "";
@@ -4823,14 +4892,20 @@ function createStage2bSession(DATA) {
   }
 
   /**
-   * Loading a session authored against a DIFFERENT registry structure applies nothing.
+   * Loading REPLACES the session; it does not merge into whatever is on screen.
    *
-   * Warning and then copying the decisions anyway was worse than either alternative: the next export
-   * stamped them with the CURRENT fingerprint, so answers to questions that no longer exist arrived
-   * at the importer wearing a fingerprint that made them look freshly authored, and the staleness
-   * check that refused the original file accepted its laundered copy.
+   * Merging looked harmless and was not: unrelated edits made in this tab survived the load and were
+   * then marked clean along with the file's, so an export afterwards carried work the author never
+   * saw on screen and had no reason to believe was still there. Loading over unsaved work now
+   * requires saying so.
+   *
+   * A session authored against a DIFFERENT registry structure applies nothing at all. Warning and
+   * then copying the decisions anyway was worse than either alternative: the next export stamped
+   * them with the CURRENT fingerprint, so answers to questions that no longer exist arrived at the
+   * importer wearing a fingerprint that made them look freshly authored.
    */
-  function loadSession(parsed) {
+  function loadSession(parsed, options) {
+    const opts = options || {};
     if (!parsed || typeof parsed !== "object") return { ok: false, reason: "that file is not a workbook session" };
     if (parsed.v !== DATA.v) {
       return { ok: false, reason: "that session is version " + String(parsed.v) + "; this workbook writes version " + String(DATA.v) };
@@ -4844,12 +4919,32 @@ function createStage2bSession(DATA) {
           + " Re-answer against this workbook rather than carrying the old answers across.",
       };
     }
+    if (dirty && !opts.discardUnsaved) {
+      return {
+        ok: false,
+        needsConfirmation: true,
+        reason: "This tab has unsaved changes. Loading a session replaces everything on screen with"
+          + " the file's contents. Export first, or confirm to discard what is unsaved.",
+      };
+    }
+
+    // Complete replacement: every capability returns to what the policy source held, then the file
+    // is applied over it. Nothing from the previous session survives unseen.
+    for (const id of Object.keys(decisions)) {
+      decisions[id] = baseline[id] ? normalize(baseline[id]) : blank();
+      delete withdrawn[id];
+    }
     const incoming = parsed.decisions || {};
     const unknown = [];
     let applied = 0;
     for (const id of Object.keys(incoming)) {
       if (!decisions[id]) { unknown.push(id); continue; }
-      decisions[id] = normalize(Object.assign(blank(), incoming[id]));
+      if (incoming[id] && incoming[id].operation === "withdraw") {
+        withdrawn[id] = true;
+        decisions[id] = blank();
+      } else {
+        decisions[id] = normalize(Object.assign(blank(), incoming[id]));
+      }
       if (parsed.basedOn && Object.prototype.hasOwnProperty.call(parsed.basedOn, id)) {
         baseline[id] = parsed.basedOn[id] === null ? null : normalize(parsed.basedOn[id]);
       }
@@ -4903,6 +4998,7 @@ function createStage2bSession(DATA) {
       }
       if (touched) {
         target.evidence = source.evidence || "";
+        delete withdrawn[entry.id];
         changed.push(entry.id);
         dirty = true;
       }
@@ -4917,7 +5013,9 @@ function createStage2bSession(DATA) {
     blank: blank,
     update: update,
     undecidedFields: undecidedFields,
+    problems: problems,
     isComplete: isComplete,
+    integrityIsBound: integrityIsBound,
     counts: counts,
     changeSet: changeSet,
     serialize: serialize,
@@ -4926,6 +5024,9 @@ function createStage2bSession(DATA) {
     applyCluster: applyCluster,
     coverageNeedsJustification: coverageNeedsJustification,
     coverageProblem: coverageProblem,
+    canWithdraw: canWithdraw,
+    withdraw: withdraw,
+    isWithdrawn: isWithdrawn,
     isDirty: () => dirty,
     markClean: () => { dirty = false; },
     baselineFor: (id) => baseline[id],
@@ -4955,6 +5056,7 @@ function status(){
   const c = S.counts();
   document.getElementById("counts").innerHTML =
     '<span>Complete: <b class="decided">'+c.complete+'</b>/'+DATA.capabilities.length+'</span>'+
+    (c.problems?'<span>Needs fixing: <b class="undecided">'+c.problems+'</b></span>':'')+
     '<span>Coverage undecided: <b class="undecided">'+c.coverage+'</b></span>'+
     '<span>Integrity undecided: <b class="undecided">'+c.integrity+'</b></span>'+
     '<span>Availability undecided: <b class="undecided">'+c.availability+'</b></span>'+
@@ -5013,7 +5115,8 @@ function render(){
 
    '<div class="q"><h3>2. Integrity — what would tell us this data is broken?</h3>'+
     '<div class="sug">Free text, one rule per line. Leave empty for undecided. An empty list is not a rule.'+
-      ' <b>Recorded, not enforced</b>: nothing executes these sentences, so an authorized capability claims nothing about integrity until they are bound to real checks.</div>'+
+      ' <b>Draft, and non-authorizing</b>: a sentence nothing can run is a draft of a rule. This capability stays ineligible'+
+      ' until every rule names an executable check or a receipt attestation, however complete the rest of the entry looks.</div>'+
     '<textarea id="integrity" placeholder="e.g. national_monthly and agency_monthly must share a MAX(year*100+month)">'+
       esc(d.integrity ? d.integrity.join("\n") : "")+'</textarea></div>'+
 
@@ -5036,6 +5139,16 @@ function render(){
    '<div class="q"><h3>Evidence — what do these answers rest on?</h3>'+
     '<div class="sug">Required before a capability counts as complete. A file:line, a production observation with its date, or a spec section.</div>'+
     '<textarea id="evidence">'+esc(d.evidence||"")+'</textarea></div>'+
+   /* Withdrawal is offered only where there is authored policy to remove, and never by blanking. */
+   (S.canWithdraw(cap.id)
+     ? '<div class="q"><h3>Withdraw authored policy</h3>'+
+       '<div class="sug">This capability already carries authored policy. Removing it is a named act,'+
+       ' separate from leaving a question undecided: clearing the fields above does NOT delete it.</div>'+
+       (S.isWithdrawn(cap.id)
+         ? '<div class="alert">Marked for withdrawal. Exporting and importing will remove the authored policy for this capability.</div>'
+         : '<button id="withdraw">Withdraw this authored policy…</button>')
+       +'</div>'
+     : '')+
   '</div>';
 
   const readCoverage = () => {
@@ -5080,6 +5193,13 @@ function render(){
       }
     }
     save(); render();
+  });
+  const withdrawButton = document.getElementById("withdraw");
+  if (withdrawButton) withdrawButton.addEventListener("click", () => {
+    if (!confirm("Withdraw the authored policy for this capability?\n\n"+cap.id+
+      "\n\nExporting and importing will REMOVE it from the policy file. This is not the same as"+
+      " leaving a question undecided.")) return;
+    S.withdraw(cap.id); status(); render();
   });
   document.getElementById("ownerPick").addEventListener("change", (e) => {
     if (e.target.value && e.target.value !== "__other") document.getElementById("owner").value = e.target.value;
@@ -5140,7 +5260,12 @@ document.getElementById("file").addEventListener("change", (e) => {
   reader.onload = () => {
     const note = document.getElementById("staleness");
     let parsed; try { parsed = JSON.parse(reader.result); } catch { note.hidden = false; note.textContent = "That file is not JSON. Nothing was loaded."; return; }
-    const result = S.loadSession(parsed);
+    let result = S.loadSession(parsed);
+    /* Loading REPLACES the session, so unsaved work has to be given up deliberately. */
+    if (!result.ok && result.needsConfirmation){
+      if (!confirm(result.reason)) { note.hidden = false; note.textContent = "Nothing was loaded; your unsaved changes are still here."; return; }
+      result = S.loadSession(parsed, { discardUnsaved: true });
+    }
     if (!result.ok){ note.hidden = false; note.textContent = result.reason; index = 0; status(); render(); return; }
     note.hidden = result.unknown.length === 0;
     if (result.unknown.length) note.textContent = "Loaded "+result.applied+" capability(ies). "+

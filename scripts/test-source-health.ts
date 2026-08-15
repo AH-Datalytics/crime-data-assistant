@@ -55,7 +55,12 @@ function withPolicy(spec: CapabilitySpec): CapabilitySpec {
     ...spec,
     policy: {
       coverage: { kind: "column", table: "incidents", yearColumn: "year" },
-      integrity: ["required structure is readable"],
+      /**
+       * BOUND, because the runtime gate is `capabilityAuthorizes` and unbound prose authorizes
+       * nothing. A fixture carrying prose would exercise the not-yet-authorizing path on every
+       * case and quietly stop testing everything downstream of the gate.
+       */
+      integrity: [{ rule: "required structure is readable", boundTo: "checks/shr-structure.sql" }],
       availability: { kind: "always" },
       receiptOwner: "shr-import",
       evidence: "test-only complete policy",
@@ -340,7 +345,13 @@ check("coverage is unknown when its basis is not a table the capability reads", 
   };
   const { trace } = evaluateCapability(strayBasis, ctx(db, [1999]));
   assert.strictEqual(trace.coverage, "unknown", "coverage was judged from a table outside the capability");
-  assert.strictEqual(trace.boundary, "missing_receipt");
+  /**
+   * Stopped at the AUTHORIZATION gate rather than deeper in the coverage check. A basis outside the
+   * contract is a policy error, and the runtime now applies the same predicate the registry was
+   * pinned with -- so a capability the registry calls ineligible no longer proceeds as though it
+   * were merely missing a receipt.
+   */
+  assert.strictEqual(trace.boundary, "policy_incomplete");
   db.close();
 });
 
@@ -363,7 +374,7 @@ check("coverage is unknown when the basis column is not one the capability reads
   };
   const { trace } = evaluateCapability(strayColumn, ctx(db, [2022]));
   assert.strictEqual(trace.coverage, "unknown", "coverage was judged from a column outside the contract");
-  assert.strictEqual(trace.boundary, "missing_receipt");
+  assert.strictEqual(trace.boundary, "policy_incomplete", "a basis outside the contract must stop at the authorization gate");
   // The required column still yields a real verdict, so the guard is not simply refusing everything.
   assert.strictEqual(evaluateCapability(spec, ctx(db, [2022])).trace.coverage, "passed");
   db.close();

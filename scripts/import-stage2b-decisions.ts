@@ -19,7 +19,7 @@
  */
 import fs from "node:fs";
 import path from "node:path";
-import { capabilityAuthorizes, coverageBasisErrors, policyShapeErrors, type UnvalidatedPolicy } from "../lib/capability-policy";
+import { DECISION_KEYS, capabilityAuthorizes, coverageBasisErrors, policyShapeErrors, type UnvalidatedPolicy } from "../lib/capability-policy";
 import { DECISIONS_VERSION, decidableRegistry, registryFingerprint, type RegistryEntry } from "./generate-stage2b-workbook";
 
 const DATA_DIR = path.join(process.cwd(), "scripts", "fixtures", "operation-taxonomy");
@@ -124,6 +124,43 @@ export function importDecisions(
       continue;
     }
 
+    /**
+     * Withdrawal is a NAMED operation, never inferred from blank fields.
+     *
+     * Clearing every field used to be read as deletion, while the page offered only "Undecided" and
+     * no confirmation -- so "I have not decided this yet" and "remove what was decided" were the
+     * same gesture, and the destructive reading won. An entry that is merely blank is now refused
+     * with the name of the operation that would have been meant.
+     */
+    if (decision.operation !== undefined) {
+      if (decision.operation !== "withdraw") {
+        errors.push(`${id}: unknown operation ${JSON.stringify(decision.operation)}`);
+        continue;
+      }
+      if (Object.keys(decision).length > 1) {
+        errors.push(`${id}: a withdrawal carries no other fields`);
+        continue;
+      }
+      if (current[id] === undefined) {
+        errors.push(`${id}: nothing is authored here to withdraw`);
+        continue;
+      }
+      delete merged[id];
+      cleared.push(id);
+      continue;
+    }
+
+    /**
+     * Checked on what ARRIVED, not on what is copied out of it. Rebuilding the candidate from the
+     * five known fields silently dropped anything else the file carried, so an unknown top-level key
+     * could never produce an error -- the validator only ever saw the fields it already expected.
+     */
+    const strayKeys = Object.keys(decision).filter((key) => !DECISION_KEYS.includes(key));
+    if (strayKeys.length) {
+      errors.push(`${id}: the decision carries ${strayKeys.map((k) => JSON.stringify(k)).join(", ")}, which it does not have`);
+      continue;
+    }
+
     const candidate: UnvalidatedPolicy = {
       coverage: decision.coverage ?? null,
       integrity: decision.integrity ?? null,
@@ -132,10 +169,12 @@ export function importDecisions(
       evidence: typeof decision.evidence === "string" ? decision.evidence : "",
     };
 
-    /** An entry emptied back to nothing is a withdrawal of what was authored, not a no-op. */
     if (isUntouched(candidate)) {
-      if (id in merged) { delete merged[id]; cleared.push(id); }
-      continue;
+      if (current[id] !== undefined) {
+        errors.push(`${id}: every field is blank, which is not a withdrawal — `
+          + 'use the workbook\'s "Withdraw" action if you mean to remove the authored policy');
+      }
+      continue;   // nothing authored here and nothing to remove: stays absent, the fail-closed default
     }
 
     // Shape, re-checked here rather than trusted from the page.

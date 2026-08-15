@@ -53,6 +53,18 @@ const PREPARATION_MIN_ROWS = 0;
 
 const literal = (value: unknown) => JSON.stringify(value);
 
+/**
+ * Hand-authored policy, keyed by capability id. Operation-backed capabilities receive theirs via the
+ * registry, which the taxonomy derivation copies in; sweep-only ones have no registry row, so they
+ * read the same file directly rather than being handed a null.
+ */
+function readAuthoredPolicy(): Record<string, Record<string, unknown>> {
+  const file = path.join(DATA_DIR, "capability-policy.json");
+  if (!fs.existsSync(file)) return {};
+  const parsed = JSON.parse(fs.readFileSync(file, "utf8")) as Record<string, Record<string, unknown>>;
+  return Object.fromEntries(Object.entries(parsed).filter(([id]) => !id.startsWith("_")));
+}
+
 function renderSpec(id: string, artifact: string, emittedDependencies: string[],
   requiredColumns: Record<string, string[]>, prepDependencies: string[], flagKey: string,
   policy: Record<string, unknown> | null): string {
@@ -116,13 +128,24 @@ export function renderInventory(registryOverride?: Record<string, RegistryEntry>
     rows.push(renderSpec(id, entry.artifact, entry.emittedDependencies, entry.requiredColumns,
       entry.prepDependencies, entry.flagKey, entry.policy));
   }
+  /**
+   * Sweep-only capabilities read their policy from the SAME source as every other capability.
+   *
+   * Their policy was hardcoded to null here, which made them authorable and un-authorizable: the
+   * importer accepted a decision for one and the inventory then dropped it on the floor, so no
+   * amount of authoring could ever reach the runtime. A capability that can be asked a question
+   * whose answer is discarded is worse than one that is never asked.
+   */
+  const authoredPolicy = readAuthoredPolicy();
   for (const sweep of SWEEP_ONLY_SPECS) {
     rows.push(renderSpec(sweep.capabilityId, sweep.artifact, Object.keys(sweep.tables), sweep.tables,
-      sweep.prepDependencies, capabilityFlagKey(sweep.artifact, sweep.capabilityId), null));
+      sweep.prepDependencies, capabilityFlagKey(sweep.artifact, sweep.capabilityId),
+      authoredPolicy[sweep.capabilityId] ?? null));
   }
 
   const sweepIds = SWEEP_ONLY_SPECS.map((s) => s.capabilityId);
-  const authored = Object.values(registry).filter((e) => e.policy !== null).length;
+  const authored = Object.values(registry).filter((e) => e.policy !== null).length
+    + SWEEP_ONLY_SPECS.filter((s) => authoredPolicy[s.capabilityId]).length;
 
   return `/**
  * GENERATED FILE -- DO NOT EDIT BY HAND.

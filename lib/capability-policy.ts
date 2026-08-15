@@ -33,31 +33,56 @@ export function isYearBearingColumn(column: string): boolean {
 }
 
 /**
- * The keys each coverage variant may carry. Anything else is refused rather than ignored.
+ * EXACT key sets, at every level.
  *
- * A generator that leaked a derived field into the hand-authored record -- `yearBearing`, an
- * OBSERVATION about a column name -- had it accepted and written to the policy file, where it sat
- * beside the decision looking equally authoritative and went stale the moment the taxonomy was
- * regenerated. Silently stripping it would have hidden the same leak; refusing makes the next one
- * fail loudly at the boundary.
+ * Refusing unknown keys was first applied to coverage alone, because that is where the leak had
+ * been found: the generator put `yearBearing` -- an OBSERVATION about a column name -- into the
+ * hand-authored record, where it sat beside the decision looking equally authoritative and went
+ * stale the moment the taxonomy was regenerated. The same hole was still open one level up and one
+ * level down: `{kind:"always", observedAvailable:true}` produced no shape error and became
+ * eligible. A rule that guards the place a defect was found, rather than the shape of the defect,
+ * is a rule that catches it once.
  */
+export const DECISION_KEYS: readonly string[] = ["coverage", "integrity", "availability", "receiptOwner", "evidence"];
 const COVERAGE_KEYS: Record<string, readonly string[]> = {
   column: ["kind", "table", "yearColumn", "justification"],
   none: ["kind", "reason"],
 };
+const AVAILABILITY_KEYS: Record<string, readonly string[]> = {
+  always: ["kind"],
+  conditional: ["kind", "condition"],
+};
+const INTEGRITY_RULE_KEYS: readonly string[] = ["rule", "boundTo"];
+
+function unknownKeys(value: object, allowed: readonly string[], what: string): string[] {
+  const extra = Object.keys(value).filter((key) => !allowed.includes(key));
+  return extra.length ? [`${what} carries ${extra.map((k) => JSON.stringify(k)).join(", ")}, which it does not have`] : [];
+}
 
 /**
- * INTEGRITY IS RECORDED, NOT ENFORCED.
+ * An integrity rule is DRAFT PROSE or it is BOUND, and only a bound one authorizes.
  *
- * An integrity rule is a sentence a person wrote. No code parses it, executes it, or checks data
- * against it, so a capability's authorization asserts nothing whatever about integrity -- it says
- * the four fields are authored and well formed, and that coverage names a column the capability
- * actually reads. Anything that later wants to CLAIM integrity is checked must first bind these
- * rules to executable checks; until then the honest reading of an eligible capability is "coverage,
- * availability and receipt ownership are decided, and someone wrote down what broken would look
- * like". `scripts/test-stage2b-workbook.ts` regresses that nothing treats a rule as executed.
+ *   "national_monthly must not outrun agency_monthly"          <- a sentence a person wrote
+ *   { rule: "...", boundTo: "checks/rtci-alignment.sql" }      <- something that can be run
+ *
+ * Prose is worth authoring and worth keeping: it is the record of what "broken" means here, and it
+ * is what a binding will later be written FROM. What it must not do is contribute to authorization.
+ * Documenting that "eligibility asserts nothing about integrity" does not make an eligible
+ * capability safe -- the field is mandatory precisely because integrity matters, so an eligibility
+ * that ignores it grants exactly the assurance nobody checked. Until each rule names an executable
+ * check or a receipt attestation, the honest verdict is not eligible.
  */
-export const INTEGRITY_IS_ENFORCED = false;
+export function integrityRuleIsBound(rule: unknown): boolean {
+  if (typeof rule !== "object" || rule === null || Array.isArray(rule)) return false;
+  const r = rule as { rule?: unknown; boundTo?: unknown };
+  return nonEmptyString(r.rule) && nonEmptyString(r.boundTo)
+    && unknownKeys(r, INTEGRITY_RULE_KEYS, "an integrity rule").length === 0;
+}
+
+/** Every rule bound, over a non-empty list. An empty list states no rule and is not a decision. */
+export function integrityIsBound(integrity: unknown): boolean {
+  return Array.isArray(integrity) && integrity.length > 0 && integrity.every(integrityRuleIsBound);
+}
 
 /**
  * Shape problems in the fields that ARE authored.
@@ -66,17 +91,11 @@ export const INTEGRITY_IS_ENFORCED = false;
  * of the entry is finished -- otherwise a malformed value sits in the file until the day it
  * completes the entry and silently grants authority.
  */
-function unknownCoverageKeys(coverage: object, kind: "column" | "none"): string[] {
-  const allowed = COVERAGE_KEYS[kind];
-  const extra = Object.keys(coverage).filter((key) => !allowed.includes(key));
-  return extra.length
-    ? [`coverage carries ${extra.map((k) => JSON.stringify(k)).join(", ")}, which a ${kind} basis does not have`]
-    : [];
-}
-
 export function policyShapeErrors(policy: UnvalidatedPolicy): string[] {
   const bad: string[] = [];
   const { coverage, integrity, availability, availabilityCondition, receiptOwner, evidence } = policy;
+
+  bad.push(...unknownKeys(policy, DECISION_KEYS, "the decision"));
 
   if (coverage !== null && coverage !== undefined) {
     /**
@@ -90,19 +109,32 @@ export function policyShapeErrors(policy: UnvalidatedPolicy): string[] {
       bad.push('coverage must be { kind: "column", table, yearColumn } or { kind: "none", reason }');
     } else if (c.kind === "column") {
       if (!nonEmptyString(c.table) || !nonEmptyString(c.yearColumn)) {
-        bad.push('a column coverage basis must name a non-empty table and yearColumn');
+        bad.push("a column coverage basis must name a non-empty table and yearColumn");
       }
-      bad.push(...unknownCoverageKeys(c, "column"));
+      bad.push(...unknownKeys(c, COVERAGE_KEYS.column, "a column coverage basis"));
     } else if (c.kind === "none") {
       if (!nonEmptyString(c.reason)) bad.push("a coverage of no-year-dimension must state its reason");
-      bad.push(...unknownCoverageKeys(c, "none"));
+      bad.push(...unknownKeys(c, COVERAGE_KEYS.none, "a no-year-dimension coverage"));
     } else {
       bad.push(`coverage.kind must be "column" or "none", not ${JSON.stringify(c.kind)}`);
     }
   }
   if (integrity !== null && integrity !== undefined) {
-    if (!Array.isArray(integrity) || integrity.length === 0 || !integrity.every(nonEmptyString)) {
-      bad.push("integrity must be a non-empty array of non-empty rules; an empty array states no rule");
+    if (!Array.isArray(integrity) || integrity.length === 0) {
+      bad.push("integrity must be a non-empty array of rules; an empty array states no rule");
+    } else {
+      for (const rule of integrity) {
+        if (nonEmptyString(rule)) continue;                       // draft prose: well formed, non-authorizing
+        if (typeof rule !== "object" || rule === null || Array.isArray(rule)) {
+          bad.push("an integrity rule must be prose or { rule, boundTo }");
+          continue;
+        }
+        const r = rule as { rule?: unknown; boundTo?: unknown };
+        if (!nonEmptyString(r.rule) || !nonEmptyString(r.boundTo)) {
+          bad.push("a bound integrity rule must carry a non-empty rule and the check it is boundTo");
+        }
+        bad.push(...unknownKeys(r, INTEGRITY_RULE_KEYS, "an integrity rule"));
+      }
     }
   }
   if (availability !== null && availability !== undefined) {
@@ -117,10 +149,11 @@ export function policyShapeErrors(policy: UnvalidatedPolicy): string[] {
       bad.push(`availability must be { kind: "always" } or { kind: "conditional", condition }, not ${JSON.stringify(availability)}`);
     } else if (a.kind === "conditional") {
       if (!nonEmptyString(a.condition)) bad.push("a conditional availability must state its condition");
-    } else if (a.kind !== "always") {
+      bad.push(...unknownKeys(a, AVAILABILITY_KEYS.conditional, "a conditional availability"));
+    } else if (a.kind === "always") {
+      bad.push(...unknownKeys(a, AVAILABILITY_KEYS.always, "an unconditional availability"));
+    } else {
       bad.push(`availability.kind must be "always" or "conditional", not ${JSON.stringify(a.kind)}`);
-    } else if ("condition" in a) {
-      bad.push("an unconditional availability must not carry a condition");
     }
   }
   if (receiptOwner !== null && receiptOwner !== undefined && !nonEmptyString(receiptOwner)) {
@@ -176,6 +209,10 @@ export function coverageBasisErrors(
 /**
  * Fail closed: a null policy, one with any field still unauthored, or one whose authored fields are
  * the wrong shape authorizes nothing.
+ *
+ * Well-formedness, NOT authorization. A policy can be complete and correctly shaped while its
+ * integrity rules are still unbound prose; that is a finished draft, and `capabilityAuthorizes` is
+ * the predicate that decides whether it may do anything.
  */
 export function policyIsComplete(policy: UnvalidatedPolicy | null): boolean {
   if (!policy) return false;
@@ -184,17 +221,37 @@ export function policyIsComplete(policy: UnvalidatedPolicy | null): boolean {
 }
 
 /**
- * Whether a capability may authorize: shape-complete AND valid against its own contract.
+ * Whether a capability may authorize: shape-complete, valid against its own contract, AND carrying
+ * integrity rules that something can actually run.
  *
  * `policyIsComplete` cannot answer this alone, because shape is all it can see -- it does not know
  * which tables the capability reads. A well-shaped policy naming a stray coverage basis was
  * therefore GENERATED as eligible while `coverageBasisErrors` rejected it, so the authorization pin
  * itself was wrong and only a downstream regression noticed. Eligibility is one predicate, and it is
- * the one thing every consumer must agree on.
+ * the one thing every consumer must agree on -- including the runtime gate, which must not use a
+ * weaker test than the one the registry was pinned with.
  */
 export function capabilityAuthorizes(
   policy: UnvalidatedPolicy | null,
   declared: readonly { name: string; requiredColumns: readonly string[] }[],
 ): boolean {
-  return policyIsComplete(policy) && coverageBasisErrors(policy, declared).length === 0;
+  return policyIsComplete(policy)
+    && coverageBasisErrors(policy, declared).length === 0
+    && integrityIsBound(policy?.integrity);
+}
+
+/** Why a complete-looking policy still authorizes nothing. For reporting, never for gating. */
+export function authorizationBlockers(
+  policy: UnvalidatedPolicy | null,
+  declared: readonly { name: string; requiredColumns: readonly string[] }[],
+): string[] {
+  if (!policy) return ["no policy is authored"];
+  const blockers = [...policyShapeErrors(policy), ...coverageBasisErrors(policy, declared)];
+  for (const field of POLICY_FIELDS) {
+    if (policy[field] === null || policy[field] === undefined) blockers.push(`${field} is not authored`);
+  }
+  if (policy.integrity !== null && policy.integrity !== undefined && !integrityIsBound(policy.integrity)) {
+    blockers.push("integrity rules are unbound prose; each must name an executable check or receipt attestation");
+  }
+  return blockers;
 }

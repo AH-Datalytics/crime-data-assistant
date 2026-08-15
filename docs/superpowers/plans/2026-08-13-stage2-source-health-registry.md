@@ -158,8 +158,26 @@ export type CapabilitySpec = {
    * expected, or who owns the receipt. Any field may be null, meaning "not yet authored".
    */
   policy: {
-    coverage: { table: string; yearColumn: string } | null;
-    integrity: string[] | null;
+    /**
+     * DISCRIMINATED. "No year dimension" is an ANSWER, not an absence: it was once the string
+     * "none", normalised to null on import, which made a considered decision indistinguishable from
+     * never having been asked. A column basis on a column whose name is not year-bearing must also
+     * carry a justification. No other keys are accepted at any level -- a derived hint (yearBearing)
+     * once leaked from the generator into the hand-authored record and was written to the file.
+     */
+    coverage:
+      | { kind: "column"; table: string; yearColumn: string; justification?: string }
+      | { kind: "none"; reason: string }
+      | null;
+    /**
+     * A rule is DRAFT PROSE (a string) or BOUND ({ rule, boundTo }), and only a bound rule
+     * authorizes. Prose is worth keeping -- it is the record of what "broken" means here and what a
+     * binding will be written from -- but a capability stays INELIGIBLE while any rule is unbound.
+     * Documenting that eligibility "asserts nothing about integrity" does not make it safe: the
+     * field is mandatory because integrity matters, so an eligibility ignoring it grants exactly the
+     * assurance nobody checked.
+     */
+    integrity: (string | { rule: string; boundTo: string })[] | null;
     /**
      * DISCRIMINATED, so a conditional cannot be written without its condition. A flat enum plus a
      * sibling `availabilityCondition` can represent a conditional with no condition, which puts
@@ -579,11 +597,20 @@ function rowCount(db: Db, table: string): number | null {
 }
 
 function coverageFor(spec: CapabilitySpec, db: Db, requestedYears: number[] | null): CheckState {
-  if (!spec.coverage) return "unknown";
+  const coverage = spec.policy?.coverage;
+  if (!coverage) return "unknown";
+  // An authored "no year dimension" is an ANSWER: a year check does not apply here. Collapsing it
+  // to "unknown" threw the decision away and reported the capability un-assessed forever.
+  if (coverage.kind === "none") return "not_applicable";
+  if (coverage.kind !== "column") return "unknown";
+  // The basis must be a table AND column this capability reads, checked as a pair by the ONE
+  // validator; a stray-but-existing column yields a confident verdict from data it never reads.
+  if (coverageBasisErrors(spec.policy, spec.tables).length > 0) return "unknown";
   if (!requestedYears || requestedYears.length === 0) return "not_applicable";
   try {
     const bounds = db
-      .prepare(`SELECT MIN(${spec.coverage.yearColumn}) AS lo, MAX(${spec.coverage.yearColumn}) AS hi FROM ${spec.coverage.table}`)
+      .prepare(`SELECT MIN(${quoteIdentifier(coverage.yearColumn)}) AS lo, ` +
+               `MAX(${quoteIdentifier(coverage.yearColumn)}) AS hi FROM ${qualifiedTable(coverage.table)}`)
       .get() as { lo: number | null; hi: number | null };
     if (bounds.lo === null || bounds.hi === null) return "unknown";
     return requestedYears.every((y) => y >= bounds.lo! && y <= bounds.hi!) ? "passed" : "failed";

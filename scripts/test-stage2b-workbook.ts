@@ -22,7 +22,10 @@ import {
   renderWorkbook, type RegistryEntry,
 } from "./generate-stage2b-workbook";
 import { importDecisions, writePolicy } from "./import-stage2b-decisions";
-import { INTEGRITY_IS_ENFORCED, capabilityAuthorizes, isYearBearingColumn, type UnvalidatedPolicy } from "../lib/capability-policy";
+import {
+  authorizationBlockers, capabilityAuthorizes, integrityIsBound, isYearBearingColumn, policyIsComplete,
+  policyShapeErrors, type UnvalidatedPolicy,
+} from "../lib/capability-policy";
 import { SWEEP_ONLY_IDS } from "../lib/sweep-only-capabilities";
 
 const require = createRequire(import.meta.url);
@@ -64,12 +67,19 @@ const decisionsFile = (
 /** Imports against an EMPTY policy file unless a test supplies one, so tests do not share state. */
 const importInto = (raw: string, policy: Record<string, unknown> = {}) => importDecisions(raw, registry, policy);
 
+/** A fully authored entry whose integrity rules are BOUND, so it is capable of authorizing. */
 const wellFormed = (table: string, yearColumn: string) => ({
   coverage: { kind: "column", table, yearColumn },
-  integrity: ["the derived table must not outrun its upstream"],
+  integrity: [{ rule: "the derived table must not outrun its upstream", boundTo: "checks/derived-alignment.sql" }],
   availability: { kind: "always" },
   receiptOwner: "scripts/import-shr.py",
   evidence: "cited from the importer that writes the table and the spec section requiring it",
+});
+
+/** The same entry with integrity left as the prose a person actually writes first. */
+const draftIntegrity = (table: string, yearColumn: string) => ({
+  ...wellFormed(table, yearColumn),
+  integrity: ["the derived table must not outrun its upstream"],
 });
 
 const model = buildWorkbookModel(registry);
@@ -315,9 +325,8 @@ check("\"no year dimension\" is recorded as a decision, not collapsed to an unde
    * and the reasoning was discarded at the boundary.
    */
   const decided = {
+    ...wellFormed(yearBasis.table, yearBasis.yearColumn),
     coverage: { kind: "none", reason: "a directory count has no year dimension to bound" },
-    integrity: ["the directory count must match the agency roster"],
-    availability: { kind: "always" }, receiptOwner: "scripts/import-shr.py",
     evidence: "an agency directory count has no year dimension to bound, which is a decision not an omission",
   };
   const result = importInto(decisionsFile({ [withYear.id]: decided }));
@@ -542,23 +551,189 @@ check("the importer is the only thing that can write the policy source", () => {
   assert.ok(/download = "stage2b-policy-decisions.json"/.test(html), "the workbook must export to a file");
 });
 
-check("integrity rules are recorded but authorize nothing about integrity", () => {
+check("unbound integrity prose blocks eligibility, however complete the rest of the entry is", () => {
   /**
-   * An integrity rule is a sentence a person wrote. Nothing parses it, executes it, or checks data
-   * against it -- so an eligible capability must not be read as one whose integrity is checked.
+   * Documenting that "eligibility asserts nothing about integrity" does not make an eligible
+   * capability safe. The field is mandatory BECAUSE integrity matters, so an eligibility that
+   * ignores it grants exactly the assurance nobody checked. A prose rule is a draft; it is kept,
+   * and it authorizes nothing until it names something that can be run.
    */
-  assert.strictEqual(INTEGRITY_IS_ENFORCED, false, "something claims integrity rules are enforced");
+  const declared = withYear.reads.map((name) => ({ name, requiredColumns: withYear.columns[name] ?? [] }));
+  const draft = draftIntegrity(yearBasis.table, yearBasis.yearColumn);
+  const bound = wellFormed(yearBasis.table, yearBasis.yearColumn);
+
+  assert.strictEqual(policyIsComplete(draft), true, "a prose entry is still a well-formed, complete draft");
+  assert.strictEqual(capabilityAuthorizes(draft, declared), false, "unbound integrity prose authorized");
+  assert.strictEqual(capabilityAuthorizes(bound, declared), true, "a bound rule must be able to authorize");
+  assert.ok(authorizationBlockers(draft, declared).some((b) => /unbound prose/.test(b)),
+    "the blocker is not reported by name");
+  assert.strictEqual(integrityIsBound([{ rule: "x", boundTo: "" }]), false, "an empty binding counts as bound");
+
+  // The importer agrees: the draft imports and is recorded, but is not eligible.
+  const imported = importInto(decisionsFile({ [withYear.id]: draft }));
+  assert.ok(imported.ok, JSON.stringify(!imported.ok && imported.errors));
+  if (!imported.ok) return;
+  assert.deepStrictEqual(imported.eligible, [], "a prose-integrity capability was made eligible at import");
+  assert.deepStrictEqual(imported.authored, [withYear.id], "the draft must still be recorded");
+
+  // And the RUNTIME gate uses the same predicate, not a weaker one.
+  const runtime = fs.readFileSync(path.join(process.cwd(), "lib", "source-health.ts"), "utf8");
+  assert.ok(!/if \(!policyIsComplete\(/.test(runtime),
+    "the runtime gates on policyIsComplete, which is weaker than the predicate the registry was pinned with");
+  assert.ok(/capabilityAuthorizes\(spec\.policy/.test(runtime), "the runtime does not gate on capabilityAuthorizes");
+
   const html = renderWorkbook(registry);
-  assert.ok(/Recorded, not enforced/.test(html), "the page does not tell the author that integrity is unenforced");
-  const policyDoc = JSON.parse(fs.readFileSync(path.join(DATA_DIR, "capability-policy.json"), "utf8")) as any;
-  assert.ok(/RECORDED, NOT ENFORCED/.test(policyDoc._README.shapes.integrity),
-    "the policy file does not record that its integrity rules are unenforced");
-  // Nothing turns a rule into SQL or a check.
-  for (const file of ["lib/source-health.ts", "lib/capability-policy.ts"]) {
-    const text = fs.readFileSync(path.join(process.cwd(), file), "utf8");
-    assert.ok(!/policy\??\.integrity\s*\.(map|forEach|some|every)\s*\(/.test(text),
-      `${file} iterates integrity rules as though it executed them`);
+  assert.ok(/Draft, and non-authorizing/.test(html), "the page does not tell the author that prose authorizes nothing");
+});
+
+check("an authored sweep-only capability reaches the runtime inventory", () => {
+  /**
+   * The importer accepted a decision for it and the inventory generator then rendered it with a
+   * hardcoded `policy: null`, so it could be authored and could never authorize. A question whose
+   * answer is discarded is worse than a question never asked.
+   */
+  const generator = fs.readFileSync(path.join(process.cwd(), "scripts", "generate-source-health-inventory.ts"), "utf8");
+  const sweepRender = /for \(const sweep of SWEEP_ONLY_SPECS\)[\s\S]{0,400}?\n  \}/.exec(generator);
+  assert.ok(sweepRender, "the sweep-only rendering loop is not in the expected form");
+  assert.ok(!/,\s*null\)\);/.test(sweepRender![0]),
+    "sweep-only capabilities are still rendered with a hardcoded null policy, so authoring one cannot reach the runtime");
+  assert.ok(/authoredPolicy\[sweep\.capabilityId\]/.test(sweepRender![0]),
+    "sweep-only capabilities do not read the authored policy source");
+  // The inventory itself carries every sweep-only id.
+  const inventory = fs.readFileSync(path.join(process.cwd(), "lib", "source-health-inventory.ts"), "utf8");
+  for (const id of SWEEP_ONLY_IDS) assert.ok(inventory.includes(id), `${id} is absent from the generated inventory`);
+});
+
+check("exact keys are enforced at every level, not only on coverage", () => {
+  /**
+   * The refusal was applied where the leak had been FOUND rather than to the shape of the leak, so
+   * one level up and one level down were still open: `{kind:"always", observedAvailable:true}`
+   * produced no shape error and became eligible.
+   */
+  const declared = withYear.reads.map((name) => ({ name, requiredColumns: withYear.columns[name] ?? [] }));
+  const base = wellFormed(yearBasis.table, yearBasis.yearColumn);
+  const leaks: [string, Record<string, unknown>][] = [
+    ["availability variant", { ...base, availability: { kind: "always", observedAvailable: true } }],
+    ["conditional variant", { ...base, availability: { kind: "conditional", condition: "x", observed: 1 } }],
+    ["top-level decision", { ...base, derivedFrom: "an observation that is not a decision" }],
+    ["bound integrity rule", { ...base, integrity: [{ rule: "r", boundTo: "c", observed: true }] }],
+  ];
+  for (const [what, policy] of leaks) {
+    assert.ok(policyShapeErrors(policy).length > 0, `${what}: an unknown key produced no shape error`);
+    assert.strictEqual(capabilityAuthorizes(policy, declared), false, `${what}: an unknown key still authorized`);
+    const result = importInto(decisionsFile({ [withYear.id]: policy }));
+    assert.strictEqual(result.ok, false, `${what}: the importer accepted an unknown key`);
   }
+});
+
+check("loading replaces the session, and will not silently absorb unsaved work", () => {
+  /**
+   * Merging looked harmless and was not. Unrelated edits made in this tab survived the load and were
+   * then marked CLEAN along with the file's, so a later export carried work the author never saw on
+   * screen and had no reason to believe was still there.
+   */
+  const other = model.find((c) => c.id !== withYear.id)!;
+  const S = sessionFor();
+  S.update(other.id, wellFormed("incidents", "year"));          // unsaved work on A
+  assert.strictEqual(S.isDirty(), true);
+
+  const file = {
+    v: DECISIONS_VERSION, fingerprint: FINGERPRINT,
+    decisions: { [withYear.id]: wellFormed(yearBasis.table, yearBasis.yearColumn) },   // a file about B
+    basedOn: { [withYear.id]: null },
+  };
+  const refused = S.loadSession(file);
+  assert.strictEqual(refused.ok, false, "loading over unsaved work happened without asking");
+  assert.ok(refused.needsConfirmation, "the refusal must be a confirmable one, not a dead end");
+  assert.ok(other.id in S.changeSet(), "the refused load discarded the unsaved work it was warning about");
+
+  const loaded = S.loadSession(file, { discardUnsaved: true });
+  assert.ok(loaded.ok, "confirming must let the load proceed");
+  const after = S.changeSet();
+  assert.deepStrictEqual(Object.keys(after), [withYear.id],
+    "the loaded session still contains work from before the load, now marked saved");
+  assert.strictEqual(S.isDirty(), false, "a freshly loaded session has nothing unsaved");
+});
+
+check("withdrawal is a named act, never inferred from blank fields", () => {
+  /**
+   * Clearing every field used to mean deletion at the importer, while the page offered only
+   * "Undecided" and no confirmation -- so "I have not decided this yet" and "remove what was
+   * decided" were the same gesture, and the destructive reading won.
+   */
+  const authored = wellFormed(yearBasis.table, yearBasis.yearColumn);
+  const blanked = { coverage: null, integrity: null, availability: null, receiptOwner: null, evidence: "" };
+  const refused = importDecisions(decisionsFile({ [withYear.id]: blanked }, { [withYear.id]: authored }),
+    registry, { [withYear.id]: authored });
+  assert.strictEqual(refused.ok, false, "blanking every field silently deleted authored policy");
+  assert.ok(!refused.ok && refused.errors.some((e) => /not a withdrawal/.test(e)), "the refusal must name the real operation");
+
+  const withdrawn = importDecisions(decisionsFile({ [withYear.id]: { operation: "withdraw" } }, { [withYear.id]: authored }),
+    registry, { [withYear.id]: authored });
+  assert.ok(withdrawn.ok, `an explicit withdrawal must be accepted: ${JSON.stringify(!withdrawn.ok && withdrawn.errors)}`);
+  if (!withdrawn.ok) return;
+  assert.deepStrictEqual(withdrawn.cleared, [withYear.id]);
+  assert.ok(!(withYear.id in withdrawn.policy), "the withdrawn entry survived");
+
+  // Nothing to withdraw is an error, not a silent no-op.
+  const nothing = importInto(decisionsFile({ [withYear.id]: { operation: "withdraw" } }));
+  assert.strictEqual(nothing.ok, false, "withdrawing an unauthored capability was accepted");
+
+  // The session offers it only where policy exists, and the page confirms by name.
+  const S = sessionFor({ [withYear.id]: authored });
+  assert.strictEqual(S.canWithdraw(withYear.id), true, "an authored capability must be withdrawable");
+  assert.strictEqual(sessionFor().canWithdraw(withYear.id), false, "an unauthored capability offers withdrawal");
+  S.withdraw(withYear.id);
+  assert.deepStrictEqual(S.changeSet()[withYear.id], { operation: "withdraw" });
+  const html = renderWorkbook(registry);
+  assert.ok(/Withdraw this authored policy/.test(html), "the page never offers withdrawal");
+  assert.ok(/confirm\("Withdraw the authored policy/.test(html), "withdrawal is not confirmed");
+});
+
+check("the page's idea of Complete is the importer's", () => {
+  /**
+   * "All fields non-null plus some evidence" was weaker than the boundary's rule, so the counter
+   * reported a capability Complete while its coverage carried no reason and its conditional
+   * availability carried no condition -- telling the author they were finished with an entry the
+   * importer would refuse.
+   */
+  const cases: [string, Record<string, unknown>][] = [
+    ["coverage of no-year-dimension with no reason",
+      { ...wellFormed(yearBasis.table, yearBasis.yearColumn), coverage: { kind: "none", reason: "" } }],
+    ["conditional availability with a blank condition",
+      { ...wellFormed(yearBasis.table, yearBasis.yearColumn), availability: { kind: "conditional", condition: "  " } }],
+    ["an empty integrity list",
+      { ...wellFormed(yearBasis.table, yearBasis.yearColumn), integrity: [] }],
+  ];
+  for (const [what, policy] of cases) {
+    const S = sessionFor();
+    S.update(withYear.id, policy);
+    assert.strictEqual(S.isComplete(withYear.id), false, `${what}: the page called an invalid decision complete`);
+    assert.ok(S.problems(withYear.id).length > 0, `${what}: the page reports no problem`);
+    assert.strictEqual(S.counts().complete, 0, `${what}: counted toward Complete`);
+    const result = importInto(decisionsFile({ [withYear.id]: policy }));
+    assert.strictEqual(result.ok, false, `${what}: the importer accepted what the page called invalid`);
+  }
+  // ...and a genuinely finished entry is complete on both sides.
+  const S = sessionFor();
+  S.update(withYear.id, wellFormed(yearBasis.table, yearBasis.yearColumn));
+  assert.strictEqual(S.isComplete(withYear.id), true, "a finished entry is not counted complete");
+  assert.ok(importInto(decisionsFile({ [withYear.id]: wellFormed(yearBasis.table, yearBasis.yearColumn) })).ok);
+});
+
+check("the authoritative plan documents the shape that is actually enforced", () => {
+  /**
+   * Tasks 6-11 are written from the plan. A plan still specifying `{table, yearColumn} | null` would
+   * have them reintroduce the shape this correction removed.
+   */
+  const plan = fs.readFileSync(path.join(process.cwd(), "docs", "superpowers", "plans",
+    "2026-08-13-stage2-source-health-registry.md"), "utf8");
+  assert.ok(!/coverage: \{ table: string; yearColumn: string \} \| null/.test(plan),
+    "the plan still specifies the obsolete untagged coverage shape");
+  assert.ok(/kind: "none"; reason: string/.test(plan), "the plan does not carry the no-year-dimension variant");
+  assert.ok(/boundTo: string/.test(plan), "the plan does not carry bound integrity rules");
+  assert.ok(!/integrity: string\[\] \| null/.test(plan), "the plan still types integrity as bare prose");
+  assert.ok(/coverage\.kind === "none"/.test(plan), "the plan's evaluator snippet ignores the no-year-dimension answer");
 });
 
 // ---------------------------------------------------------------- 10. suggestions are not answers

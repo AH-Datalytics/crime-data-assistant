@@ -337,6 +337,7 @@ function status(){
   const c = S.counts();
   document.getElementById("counts").innerHTML =
     '<span>Complete: <b class="decided">'+c.complete+'</b>/'+DATA.capabilities.length+'</span>'+
+    (c.problems?'<span>Needs fixing: <b class="undecided">'+c.problems+'</b></span>':'')+
     '<span>Coverage undecided: <b class="undecided">'+c.coverage+'</b></span>'+
     '<span>Integrity undecided: <b class="undecided">'+c.integrity+'</b></span>'+
     '<span>Availability undecided: <b class="undecided">'+c.availability+'</b></span>'+
@@ -395,7 +396,8 @@ function render(){
 
    '<div class="q"><h3>2. Integrity — what would tell us this data is broken?</h3>'+
     '<div class="sug">Free text, one rule per line. Leave empty for undecided. An empty list is not a rule.'+
-      ' <b>Recorded, not enforced</b>: nothing executes these sentences, so an authorized capability claims nothing about integrity until they are bound to real checks.</div>'+
+      ' <b>Draft, and non-authorizing</b>: a sentence nothing can run is a draft of a rule. This capability stays ineligible'+
+      ' until every rule names an executable check or a receipt attestation, however complete the rest of the entry looks.</div>'+
     '<textarea id="integrity" placeholder="e.g. national_monthly and agency_monthly must share a MAX(year*100+month)">'+
       esc(d.integrity ? d.integrity.join("\\n") : "")+'</textarea></div>'+
 
@@ -418,6 +420,16 @@ function render(){
    '<div class="q"><h3>Evidence — what do these answers rest on?</h3>'+
     '<div class="sug">Required before a capability counts as complete. A file:line, a production observation with its date, or a spec section.</div>'+
     '<textarea id="evidence">'+esc(d.evidence||"")+'</textarea></div>'+
+   /* Withdrawal is offered only where there is authored policy to remove, and never by blanking. */
+   (S.canWithdraw(cap.id)
+     ? '<div class="q"><h3>Withdraw authored policy</h3>'+
+       '<div class="sug">This capability already carries authored policy. Removing it is a named act,'+
+       ' separate from leaving a question undecided: clearing the fields above does NOT delete it.</div>'+
+       (S.isWithdrawn(cap.id)
+         ? '<div class="alert">Marked for withdrawal. Exporting and importing will remove the authored policy for this capability.</div>'
+         : '<button id="withdraw">Withdraw this authored policy…</button>')
+       +'</div>'
+     : '')+
   '</div>';
 
   const readCoverage = () => {
@@ -462,6 +474,13 @@ function render(){
       }
     }
     save(); render();
+  });
+  const withdrawButton = document.getElementById("withdraw");
+  if (withdrawButton) withdrawButton.addEventListener("click", () => {
+    if (!confirm("Withdraw the authored policy for this capability?\\n\\n"+cap.id+
+      "\\n\\nExporting and importing will REMOVE it from the policy file. This is not the same as"+
+      " leaving a question undecided.")) return;
+    S.withdraw(cap.id); status(); render();
   });
   document.getElementById("ownerPick").addEventListener("change", (e) => {
     if (e.target.value && e.target.value !== "__other") document.getElementById("owner").value = e.target.value;
@@ -522,7 +541,12 @@ document.getElementById("file").addEventListener("change", (e) => {
   reader.onload = () => {
     const note = document.getElementById("staleness");
     let parsed; try { parsed = JSON.parse(reader.result); } catch { note.hidden = false; note.textContent = "That file is not JSON. Nothing was loaded."; return; }
-    const result = S.loadSession(parsed);
+    let result = S.loadSession(parsed);
+    /* Loading REPLACES the session, so unsaved work has to be given up deliberately. */
+    if (!result.ok && result.needsConfirmation){
+      if (!confirm(result.reason)) { note.hidden = false; note.textContent = "Nothing was loaded; your unsaved changes are still here."; return; }
+      result = S.loadSession(parsed, { discardUnsaved: true });
+    }
     if (!result.ok){ note.hidden = false; note.textContent = result.reason; index = 0; status(); render(); return; }
     note.hidden = result.unknown.length === 0;
     if (result.unknown.length) note.textContent = "Loaded "+result.applied+" capability(ies). "+

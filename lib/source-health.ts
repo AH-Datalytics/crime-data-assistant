@@ -1,5 +1,5 @@
 import type { CheckState, SourceHealth, SourceId } from "./proof-contract";
-import { coverageBasisErrors, policyIsComplete, type UnvalidatedPolicy } from "./capability-policy";
+import { capabilityAuthorizes, coverageBasisErrors, type UnvalidatedPolicy } from "./capability-policy";
 import path from "node:path";
 import { artifactOf } from "./source-artifact";
 import { verifyPlanDerivation, type PlanDerivation } from "./plan-derivation";
@@ -668,8 +668,13 @@ export function evaluateCapability(
     trace.semanticChecked.push(`${dep.table}~${dep.qualifies}(${dep.coverage})`);
   }
 
-  if (!policyIsComplete(spec.policy as UnvalidatedPolicy | null)) {
-    return done("unknown", "capability policy is absent or incomplete", "policy_incomplete");
+  /**
+   * The SAME predicate the registry was pinned with. Gating on `policyIsComplete` was a weaker test
+   * than the one that decided eligibility: a policy whose integrity rules are unbound prose is a
+   * finished draft, not an authorization, and the runtime must not treat it as one.
+   */
+  if (!capabilityAuthorizes(spec.policy as UnvalidatedPolicy | null, spec.tables)) {
+    return done("unknown", "capability policy is absent, incomplete, or not yet authorizing", "policy_incomplete");
   }
 
   trace.coverage = coverageFor(spec, db, context.requestedYears);
