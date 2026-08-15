@@ -22,14 +22,18 @@
 import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { createRequire } from "node:module";
 import { isYearBearingColumn } from "../lib/capability-policy";
 import { decidableCapabilities } from "../lib/sweep-only-capabilities";
 
 const DATA_DIR = path.join(process.cwd(), "scripts", "fixtures", "operation-taxonomy");
 const REGISTRY_FILE = path.join(DATA_DIR, "capability-registry.json");
 const POLICY_FILE = path.join(DATA_DIR, "capability-policy.json");
+/** The durable record of what people were asked and answered, written by the importer. */
+const ANSWERS_FILE = path.join(DATA_DIR, "capability-answers.json");
 export const SESSION_MODULE_FILE = path.join(process.cwd(), "lib", "stage2b-session.js");
 export const PLAIN_LANGUAGE_MODULE_FILE = path.join(process.cwd(), "lib", "stage2b-plain-language.js");
+export const CATALOG_MODULE_FILE = path.join(process.cwd(), "lib", "stage2b-capability-catalog.js");
 export const WORKBOOK_FILE = path.join(process.cwd(), "docs", "superpowers", "stage2b-policy-workbook.html");
 
 /**
@@ -109,6 +113,13 @@ export type WorkbookCapability = {
   conditionalHint: string | null;
   existingPolicy: Record<string, unknown> | null;
 };
+
+/** The reviewed catalog, loaded from the same file the page inlines. */
+export function loadCatalog(): any {
+  const req = createRequire(import.meta.url);
+  const { stage2bCapabilityCatalog } = req(CATALOG_MODULE_FILE) as { stage2bCapabilityCatalog: () => any };
+  return stage2bCapabilityCatalog();
+}
 
 /** Scripts that mention every one of these tables -- a place to look, not an owner. */
 function ownerCandidates(tables: string[], scriptIndex: { file: string; text: string }[]): string[] {
@@ -213,7 +224,14 @@ function embedJson(value: unknown): string {
     .split(LINE_SEPARATOR).join("\\u2028")
     .split(PARAGRAPH_SEPARATOR).join("\\u2029");
 }
-export function renderWorkbook(registryOverride?: Record<string, RegistryEntry>): string {
+/**
+ * `catalogOverride` exists for tests that drive a SYNTHETIC registry. Real generation always uses
+ * the reviewed catalog and refuses to write a workbook that does not match it.
+ */
+export function renderWorkbook(
+  registryOverride?: Record<string, RegistryEntry>,
+  catalogOverride?: { coverageAgainst: (ids: string[]) => { missing: string[]; extra: string[] } },
+): string {
   const registryInput = registryOverride
     ?? (JSON.parse(fs.readFileSync(REGISTRY_FILE, "utf8")) as Record<string, RegistryEntry>);
   const model = buildWorkbookModel(registryInput);
@@ -225,15 +243,48 @@ export function renderWorkbook(registryOverride?: Record<string, RegistryEntry>)
     Object.entries(existing).filter(([id]) => !id.startsWith("_")),
   );
 
-  const payload = embedJson({ v: DECISIONS_VERSION, fingerprint, capabilities: model, authored });
+  /**
+   * Previously recorded answers, so reopening the workbook shows what was decided and why.
+   *
+   * Without this the page opened blank over existing policy: the technical result survived and the
+   * question it answered did not, so the only way to review a decision was to read the mapping and
+   * guess what had been asked.
+   */
+  const answers = fs.existsSync(ANSWERS_FILE)
+    ? JSON.parse(fs.readFileSync(ANSWERS_FILE, "utf8")) as Record<string, unknown>
+    : {};
+
+  const payload = embedJson({ v: DECISIONS_VERSION, fingerprint, capabilities: model, authored, answers });
   /**
    * Inlined VERBATIM, not re-implemented. The suite imports the same files and asserts the page
    * contains them unchanged, so there is exactly one copy of this logic and no way for the tested
    * copy and the shipped copy to disagree. The importer loads the plain-language module too, so the
    * translation the person confirms is the translation the boundary re-derives.
    */
+  const catalogSource = fs.readFileSync(CATALOG_MODULE_FILE, "utf8");
   const plainLanguageSource = fs.readFileSync(PLAIN_LANGUAGE_MODULE_FILE, "utf8");
   const sessionSource = fs.readFileSync(SESSION_MODULE_FILE, "utf8");
+
+  /**
+   * The catalog must cover the registry EXACTLY, or no workbook is produced.
+   *
+   * A capability that arrived without a reviewed description would otherwise be handed a paraphrase
+   * of its table names -- which is how three different NIBRS capabilities came to share one
+   * description, and how every crime_data capability came to offer all three update processes. A
+   * missing entry is a thing to write, not a thing to fall back from.
+   */
+  const catalog = catalogOverride ?? loadCatalog();
+  const coverage = catalog.coverageAgainst(model.map((c) => c.id));
+  if (coverage.missing.length || coverage.extra.length) {
+    const lines = [
+      "the reviewed capability catalog does not match the registry, so no workbook was written.",
+      ...coverage.missing.map((id: string) => `  MISSING from lib/stage2b-capability-catalog.js: ${id}`),
+      ...coverage.extra.map((id: string) => `  NO LONGER in the registry, remove it: ${id}`),
+      "Each entry needs the question it answers, the update processes that could own it, and the",
+      "failure scenarios worth asking about for that data.",
+    ];
+    throw new Error(lines.join("\n"));
+  }
 
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"/>
@@ -322,11 +373,13 @@ const DATA = ${payload};
 /* Your answers live only in this page's memory until you press Export. Nothing here can reach the
    repository, a database, or any switch: the sole output is a downloaded file. */
 
+${catalogSource}
+
 ${plainLanguageSource}
 
 ${sessionSource}
 
-const PL = createStage2bPlainLanguage();
+const PL = createStage2bPlainLanguage(stage2bCapabilityCatalog());
 const S = createStage2bSession(DATA, PL);
 let index = 0;
 

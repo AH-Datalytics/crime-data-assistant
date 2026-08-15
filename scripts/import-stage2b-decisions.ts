@@ -23,7 +23,7 @@ import { createRequire } from "node:module";
 import { capabilityAuthorizes, coverageBasisErrors, policyShapeErrors, type UnvalidatedPolicy } from "../lib/capability-policy";
 import {
   DECISIONS_VERSION, PLAIN_LANGUAGE_MODULE_FILE, buildWorkbookModel, decidableRegistry,
-  registryFingerprint, type RegistryEntry,
+  loadCatalog, registryFingerprint, type RegistryEntry,
 } from "./generate-stage2b-workbook";
 
 /**
@@ -35,9 +35,10 @@ import {
  */
 const require = createRequire(import.meta.url);
 const { createStage2bPlainLanguage } = require(PLAIN_LANGUAGE_MODULE_FILE) as {
-  createStage2bPlainLanguage: () => any;
+  createStage2bPlainLanguage: (catalog: unknown) => any;
 };
-const PL = createStage2bPlainLanguage();
+/** The catalog is passed explicitly: in Node these are separate modules with no shared global. */
+const PL = createStage2bPlainLanguage(loadCatalog());
 
 /** What a change-set entry may carry. A withdrawal carries only its operation. */
 const ENTRY_KEYS: readonly string[] = ["human", "proposed", "unresolved", "preserved", "mappingConfirmed", "operation"];
@@ -45,9 +46,18 @@ const ENTRY_KEYS: readonly string[] = ["human", "proposed", "unresolved", "prese
 const DATA_DIR = path.join(process.cwd(), "scripts", "fixtures", "operation-taxonomy");
 const REGISTRY_FILE = path.join(DATA_DIR, "capability-registry.json");
 export const POLICY_FILE = path.join(DATA_DIR, "capability-policy.json");
+/**
+ * The DURABLE record of what the person was asked and what they answered.
+ *
+ * The policy file holds the technical result; on its own it loses the question. Regenerating the
+ * workbook opened every card blank even where policy existed, so the reasoning behind a decision
+ * survived only in whatever export file happened to still be on someone's disk. This is checked in
+ * beside the policy, seeds the workbook, and makes an answer reviewable in its own terms.
+ */
+export const ANSWERS_FILE = path.join(DATA_DIR, "capability-answers.json");
 
 export type ImportResult =
-  | { ok: true; policy: Record<string, unknown>; authored: string[]; cleared: string[]; eligible: string[] }
+  | { ok: true; policy: Record<string, unknown>; answers: Record<string, unknown>; authored: string[]; cleared: string[]; eligible: string[] }
   | { ok: false; errors: string[] };
 
 /** Fixed field order and null-normalisation, so two equal entries always compare equal. */
@@ -71,6 +81,7 @@ export function importDecisions(
   raw: string,
   registryOverride?: Record<string, RegistryEntry>,
   policyOverride?: Record<string, unknown>,
+  answersOverride?: Record<string, unknown>,
 ): ImportResult {
   const registryInput = registryOverride
     ?? (JSON.parse(fs.readFileSync(REGISTRY_FILE, "utf8")) as Record<string, RegistryEntry>);
@@ -111,6 +122,9 @@ export function importDecisions(
   );
 
   const merged: Record<string, unknown> = { ...current };
+  /** Carried forward, so importing one capability never drops the record of the others. */
+  const answers: Record<string, unknown> = { ...(answersOverride
+    ?? (fs.existsSync(ANSWERS_FILE) ? JSON.parse(fs.readFileSync(ANSWERS_FILE, "utf8")) as Record<string, unknown> : {})) };
   const authored: string[] = [];
   const cleared: string[] = [];
   const eligible: string[] = [];
@@ -167,6 +181,7 @@ export function importDecisions(
         continue;
       }
       delete merged[id];
+      delete answers[id];
       cleared.push(id);
       continue;
     }
@@ -255,12 +270,21 @@ export function importDecisions(
     for (const problem of coverageBasisErrors(candidate, declared)) errors.push(`${id}: ${problem}`);
 
     merged[id] = candidate;
+    answers[id] = { human: humanAnswer, mappingConfirmed: decision.mappingConfirmed };
     authored.push(id);
     if (capabilityAuthorizes(candidate, declared)) eligible.push(id);
   }
 
   if (errors.length) return { ok: false, errors };
-  return { ok: true, policy: { ...docs, ...merged }, authored, cleared, eligible };
+  return { ok: true, policy: { ...docs, ...merged }, answers, authored, cleared, eligible };
+}
+
+/** Serialise the durable answer record in a stable order, so a diff shows only what changed. */
+export function writeAnswers(answers: Record<string, unknown>): string {
+  const ordered: Record<string, unknown> = {};
+  for (const id of Object.keys(answers).sort()) ordered[id] = answers[id];
+  return `${JSON.stringify(ordered, null, 2)}
+`;
 }
 
 /** Serialise the merged policy, documentation blocks first and capabilities in a stable order. */
@@ -282,6 +306,7 @@ if (process.argv[1] && path.resolve(process.argv[1]).includes("import-stage2b-de
     process.exit(1);
   }
   fs.writeFileSync(POLICY_FILE, writePolicy(result.policy));
+  fs.writeFileSync(ANSWERS_FILE, writeAnswers(result.answers));
   console.log(`merged ${result.authored.length} authored capability(ies)`
     + (result.cleared.length ? `, withdrew ${result.cleared.length}` : "")
     + `; ${result.eligible.length} now authorization-eligible`);

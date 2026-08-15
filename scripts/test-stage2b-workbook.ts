@@ -19,8 +19,9 @@ import fs from "node:fs";
 import path from "node:path";
 import { createRequire } from "node:module";
 import {
-  DECISIONS_VERSION, PLAIN_LANGUAGE_MODULE_FILE, SESSION_MODULE_FILE, buildWorkbookModel,
-  decidableRegistry, registryFingerprint, renderWorkbook, type RegistryEntry,
+  CATALOG_MODULE_FILE, DECISIONS_VERSION, PLAIN_LANGUAGE_MODULE_FILE, SESSION_MODULE_FILE,
+  buildWorkbookModel, decidableRegistry, loadCatalog, registryFingerprint, renderWorkbook,
+  type RegistryEntry,
 } from "./generate-stage2b-workbook";
 import { importDecisions, writePolicy } from "./import-stage2b-decisions";
 import {
@@ -32,8 +33,9 @@ import { SWEEP_ONLY_IDS } from "../lib/sweep-only-capabilities";
 const require = createRequire(import.meta.url);
 /** The same files the page inlines. Imported, so these tests exercise behaviour rather than text. */
 const { createStage2bSession } = require(SESSION_MODULE_FILE) as { createStage2bSession: (d: unknown, pl?: unknown) => any };
-const { createStage2bPlainLanguage } = require(PLAIN_LANGUAGE_MODULE_FILE) as { createStage2bPlainLanguage: () => any };
-const PL = createStage2bPlainLanguage();
+const { createStage2bPlainLanguage } = require(PLAIN_LANGUAGE_MODULE_FILE) as { createStage2bPlainLanguage: (c?: unknown) => any };
+const CATALOG = loadCatalog();
+const PL = createStage2bPlainLanguage(CATALOG);
 
 const DATA_DIR = path.join(process.cwd(), "scripts", "fixtures", "operation-taxonomy");
 const REGISTRY_FILE = path.join(DATA_DIR, "capability-registry.json");
@@ -62,7 +64,7 @@ const answers = (cap = withYear, over: Record<string, unknown> = {}) => ({
   ...PL.blankAnswer(),
   coverage: cap.coverageCandidates.some((o: any) => o.yearBearing) ? "years" : "no-years",
   coverageReason: cap.coverageCandidates.some((o: any) => o.yearBearing) ? "" : "this lookup answers a directory question, not a time-series one",
-  integrity: ["stale"],
+  integrity: [PL.integrityScenarios(cap)[0].value],
   availability: "always",
   owner: PL.ownerOptions(cap)[0].value,
   evidence: "checked with the analyst who owns this pipeline and confirmed against the monthly runbook",
@@ -78,6 +80,19 @@ function exportWith(capId: string, human: Record<string, unknown>, confirmIt = t
 }
 
 const importInto = (raw: string, policy: Record<string, unknown> = {}) => importDecisions(raw, registry, policy);
+
+/**
+ * A catalog that covers exactly the ids given, for the tests that drive a SYNTHETIC registry.
+ *
+ * Real generation always uses the reviewed catalog; these tests are about the workbook's structure,
+ * not about its descriptions, and they must not be able to weaken the coverage rule for real runs.
+ */
+const catalogCovering = (ids: string[]) => ({
+  coverageAgainst: (registryIds: string[]) => ({
+    missing: registryIds.filter((id) => !ids.includes(id)),
+    extra: ids.filter((id) => !registryIds.includes(id)),
+  }),
+});
 
 // ---------------------------------------------------------------- 0. the page actually runs
 
@@ -104,6 +119,149 @@ check("the page inlines both logic modules verbatim, so tested and shipped logic
     assert.ok(html.includes(source), `${path.basename(file)} is not inlined unchanged; the tests exercise a different copy`);
     assert.ok(!source.includes("</scr" + "ipt"), `${path.basename(file)} would close the script element it is inlined into`);
   }
+});
+
+// ---------------------------------------------------------------- 0b. the reviewed catalog
+
+check("the catalog covers the registry exactly, and generation fails when it does not", () => {
+  /**
+   * A capability arriving without a reviewed description used to inherit a paraphrase of its table
+   * names -- which is how the NIBRS agency lookup, state list and year-coverage check all came to
+   * read "answered from the agencies". A missing entry is a thing to write, not to fall back from.
+   */
+  const coverage = CATALOG.coverageAgainst(model.map((c) => c.id));
+  assert.deepStrictEqual(coverage.missing, [], "capabilities with no reviewed description");
+  assert.deepStrictEqual(coverage.extra, [], "catalog entries for capabilities that no longer exist");
+  assert.strictEqual(CATALOG.ids().length, model.length, "the catalog and the registry differ in size");
+
+  // Losing a capability fails generation rather than producing a workbook with a hole in it.
+  const shrunk = JSON.parse(JSON.stringify(registry)) as Record<string, RegistryEntry>;
+  delete shrunk[Object.keys(shrunk)[0]];
+  assert.throws(() => renderWorkbook(shrunk), /does not match the registry/,
+    "removing a capability still produced a workbook");
+  // And gaining one does too.
+  const grown = JSON.parse(JSON.stringify(registry)) as Record<string, RegistryEntry>;
+  grown["shr::t_new::t_new(year)"] = {
+    artifact: "shr", prepDependencies: [], emittedDependencies: ["t_new"],
+    requiredColumns: { t_new: ["year"] }, flagKey: "PROOF_CAPABILITY_SHR_DEADBEEF",
+    policy: null, authorizationEligible: false,
+  };
+  assert.throws(() => renderWorkbook(grown), /MISSING from lib\/stage2b-capability-catalog\.js/,
+    "a new capability was given a workbook page with no reviewed description");
+});
+
+check("every capability is described distinctly, in terms of what it answers", () => {
+  const questions = new Map<string, string[]>();
+  for (const cap of model) {
+    const q = PL.describeQuestion(cap);
+    assert.ok(!/NO DESCRIPTION/.test(q), `${cap.id} has no reviewed description`);
+    assert.ok(q.length > 25, `${cap.id}: the description is too short to distinguish anything`);
+    questions.set(q, [...(questions.get(q) ?? []), cap.id]);
+  }
+  for (const [q, ids] of questions) {
+    assert.strictEqual(ids.length, 1, `${ids.length} capabilities share one description: "${q}"\n  ${ids.join("\n  ")}`);
+  }
+  // The three that used to collide are now told apart.
+  const collided = model.filter((c) => c.artifact === "nibrs" && c.reads.length === 1 && c.reads[0] === "agencies");
+  assert.ok(collided.length >= 3, "expected the NIBRS agencies capabilities that previously shared a description");
+  const distinct = new Set(collided.map((c) => PL.describeQuestion(c)));
+  assert.strictEqual(distinct.size, collided.length, "the NIBRS agencies capabilities still share a description");
+  for (const cap of collided) {
+    assert.ok(!/answered from the/.test(PL.describeQuestion(cap)), "the description is still a paraphrase of table names");
+  }
+});
+
+check("owner choices are narrowed to the processes that could own this capability", () => {
+  /**
+   * Every crime_data capability used to offer all three update processes, so the only way to pick
+   * was to open the technical details -- which defeats the layer.
+   */
+  const artifactWide = new Map<string, Set<string>>();
+  for (const cap of model) {
+    const named = PL.ownerOptions(cap).filter((o: any) => o.value !== "other" && o.value !== PL.UNSURE);
+    assert.ok(named.length >= 1, `${cap.id}: offers no update process at all`);
+    assert.ok(named.length <= 2, `${cap.id}: offers ${named.length} processes, which is a menu rather than a choice`);
+    for (const o of named) {
+      assert.ok(!/\.(py|ts|js|sql)$/.test(o.value), `${cap.id}: offers the filename ${o.value}`);
+    }
+    const set = artifactWide.get(cap.artifact) ?? new Set<string>();
+    named.forEach((o: any) => set.add(o.value));
+    artifactWide.set(cap.artifact, set);
+  }
+  // crime_data has three processes overall; no single capability may offer all of them.
+  assert.strictEqual(artifactWide.get("crime_data")!.size, 3, "expected three crime_data processes across the artifact");
+  for (const cap of model.filter((c) => c.artifact === "crime_data")) {
+    const named = PL.ownerOptions(cap).filter((o: any) => o.value !== "other" && o.value !== PL.UNSURE);
+    assert.ok(named.length < 3, `${cap.id}: still offers every process for its data source`);
+  }
+  // "Something else" and "I'm not sure" remain everywhere, so narrowing never traps anyone.
+  for (const cap of model) {
+    const values = PL.ownerOptions(cap).map((o: any) => o.value);
+    assert.ok(values.includes("other") && values.includes(PL.UNSURE), `${cap.id}: narrowing removed the escape hatches`);
+  }
+});
+
+check("the failure scenarios offered are the ones that fit this data", () => {
+  const perCapability = new Map<string, string>();
+  for (const cap of model) {
+    const scenarios = PL.integrityScenarios(cap);
+    assert.ok(scenarios.length >= 2, `${cap.id}: offers too few scenarios to be a real question`);
+    for (const s of scenarios) {
+      assert.ok(s.label && s.prose, `${cap.id}: a scenario is missing its wording`);
+      assert.ok(!/\b(table|column|ori|schema)\b/i.test(s.label), `${cap.id}: scenario label is technical: ${s.label}`);
+    }
+    perCapability.set(cap.id, scenarios.map((s: any) => s.value).sort().join(","));
+  }
+  // Not one generic set repeated everywhere.
+  assert.ok(new Set([...perCapability.values()]).size >= 8,
+    "the same handful of scenarios is offered almost everywhere, so they are not capability-relevant");
+  // A county-crosswalk capability is asked about unmatched agencies; a year-coverage one is not.
+  const crosswalk = model.find((c) => c.reads.includes("agency_county_crosswalk"))!;
+  assert.ok(PL.integrityScenarios(crosswalk).some((s: any) => s.value === "crosswalk"),
+    "a county lookup is not asked about agencies that cannot be matched to a county");
+});
+
+check("what the person answered survives into a checked-in record, and reopens with it", () => {
+  /**
+   * The policy file holds the technical result; on its own it loses the question. Regenerating the
+   * workbook opened every card blank even where policy existed, so the reasoning behind a decision
+   * survived only in whatever export file happened to still be on someone's disk.
+   */
+  const human = answers();
+  const result = importInto(exportWith(withYear.id, human));
+  assert.ok(result.ok, JSON.stringify(!result.ok && result.errors));
+  if (!result.ok) return;
+  const recorded = result.answers[withYear.id] as { human: Record<string, unknown>; mappingConfirmed: string };
+  assert.ok(recorded, "the answer was not recorded anywhere durable");
+  assert.strictEqual(recorded.human.coverage, human.coverage, "the recorded answer is not the one given");
+  assert.strictEqual(recorded.human.evidence, human.evidence, "the reasoning was dropped");
+  assert.ok(recorded.mappingConfirmed, "the confirmation provenance was dropped");
+
+  // Reopening the workbook restores it, and does NOT report it as an unsaved change.
+  const reopened = createStage2bSession({
+    v: DECISIONS_VERSION, fingerprint: FINGERPRINT, capabilities: model,
+    authored: { [withYear.id]: result.policy[withYear.id] }, answers: result.answers,
+  }, PL);
+  assert.strictEqual(reopened.human(withYear.id).coverage, human.coverage, "the reopened workbook lost the answer");
+  assert.strictEqual(reopened.isMappingConfirmed(withYear.id), true, "the reopened workbook lost the confirmation");
+  assert.deepStrictEqual(reopened.changeSet(), {}, "a restored answer is reported as an unsaved change");
+  assert.strictEqual(reopened.isDirty(), false);
+
+  // A capability nobody answered still opens blank: restoring must never invent an answer.
+  const other = model.find((c) => c.id !== withYear.id)!;
+  assert.strictEqual(reopened.human(other.id).coverage, null, "an unanswered capability was seeded with something");
+
+  // Editing a restored answer is a change again.
+  reopened.update(withYear.id, { evidence: "a revised note that changes what was recorded here materially" });
+  assert.deepStrictEqual(Object.keys(reopened.changeSet()), [withYear.id], "editing a restored answer is not a change");
+
+  // Withdrawing removes the durable record too, not just the policy.
+  const W = sessionFor({ [withYear.id]: result.policy[withYear.id] as Record<string, unknown> });
+  W.withdraw(withYear.id);
+  const removed = importDecisions(W.serialize(), registry,
+    { [withYear.id]: result.policy[withYear.id] as Record<string, unknown> }, result.answers);
+  assert.ok(removed.ok && !(withYear.id in (removed as any).answers),
+    "withdrawing removed the policy but left the answer record behind");
 });
 
 // ---------------------------------------------------------------- 1. the human-facing surface
@@ -361,9 +519,10 @@ check("an export carries the human answer AND the mapping, never one without the
 
 check("draft integrity prose is preserved, and no binding is ever asked for", () => {
   const S = sessionFor();
-  S.update(withYear.id, answers(withYear, { integrity: ["stale", "double"], integrityOther: "the county lookup goes missing" }));
+  const own = PL.integrityScenarios(withYear).map((s: any) => s.value).slice(0, 2);
+  S.update(withYear.id, answers(withYear, { integrity: own, integrityOther: "the county lookup goes missing" }));
   const proposed = S.proposal(withYear.id).proposed;
-  assert.strictEqual(proposed.integrity.length, 3, "a chosen scenario or the free text was dropped");
+  assert.strictEqual(proposed.integrity.length, own.length + 1, "a chosen scenario or the free text was dropped");
   assert.ok(proposed.integrity.every((r: unknown) => typeof r === "string"), "a rule was recorded as something other than prose");
   assert.ok(proposed.integrity.some((r: string) => /county lookup goes missing/.test(r)), "the person's own words were lost");
   const html = renderWorkbook(registry);
@@ -592,9 +751,17 @@ check("the workbook has no capability list of its own to drift", () => {
     requiredColumns: { t_solo: ["year"] }, flagKey: "PROOF_CAPABILITY_SHR_DEADBEEF",
     policy: null, authorizationEligible: false,
   } } as Record<string, RegistryEntry>;
-  assert.deepStrictEqual(buildWorkbookModel(synthetic).map((c) => c.id).sort(),
-    ["shr::t_solo::t_solo(year)", ...SWEEP_ONLY_IDS].sort());
-  assert.ok(!renderWorkbook(synthetic).includes(Object.keys(registry)[0]),
+  const ids = buildWorkbookModel(synthetic).map((c) => c.id);
+  assert.deepStrictEqual([...ids].sort(), ["shr::t_solo::t_solo(year)", ...SWEEP_ONLY_IDS].sort());
+  /**
+   * Asserted on the EMBEDDED capability list, not on the whole page: the reviewed catalog is
+   * inlined verbatim and legitimately names every real capability, so a substring search over the
+   * page would fail for the wrong reason.
+   */
+  const html = renderWorkbook(synthetic, catalogCovering(ids));
+  const embedded = JSON.parse(html.slice(html.indexOf("const DATA = ") + "const DATA = ".length,
+    html.indexOf("\n/* Your answers live only")).trim().replace(/;$/, "")) as { capabilities: { id: string }[] };
+  assert.deepStrictEqual(embedded.capabilities.map((c) => c.id).sort(), [...ids].sort(),
     "the workbook carried a capability from the real registry into a synthetic one");
 });
 
@@ -675,7 +842,7 @@ check("embedded content cannot end the script element or the statement it sits i
     requiredColumns: { [hostile]: ["year"] }, flagKey: "PROOF_CAPABILITY_SHR_DEADBEEF",
     policy: null, authorizationEligible: false,
   } } as Record<string, RegistryEntry>;
-  const html = renderWorkbook(synthetic);
+  const html = renderWorkbook(synthetic, catalogCovering(buildWorkbookModel(synthetic).map((c) => c.id)));
   const script = /<script>([\s\S]*?)<\/script>/.exec(html);
   assert.ok(script, "no script block survived");
   try { new Function(script![1]); }
