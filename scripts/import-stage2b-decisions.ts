@@ -23,7 +23,7 @@ import { createRequire } from "node:module";
 import { capabilityAuthorizes, coverageBasisErrors, policyShapeErrors, type UnvalidatedPolicy } from "../lib/capability-policy";
 import {
   DECISIONS_VERSION, PLAIN_LANGUAGE_MODULE_FILE, buildWorkbookModel, decidableRegistry,
-  loadCatalog, registryFingerprint, type RegistryEntry,
+  loadCatalog, workbookFingerprint, type RegistryEntry,
 } from "./generate-stage2b-workbook";
 
 /**
@@ -38,7 +38,8 @@ const { createStage2bPlainLanguage } = require(PLAIN_LANGUAGE_MODULE_FILE) as {
   createStage2bPlainLanguage: (catalog: unknown) => any;
 };
 /** The catalog is passed explicitly: in Node these are separate modules with no shared global. */
-const PL = createStage2bPlainLanguage(loadCatalog());
+const CATALOG = loadCatalog();
+const PL = createStage2bPlainLanguage(CATALOG);
 
 /** What a change-set entry may carry. A withdrawal carries only its operation. */
 const ENTRY_KEYS: readonly string[] = ["human", "proposed", "unresolved", "preserved", "mappingConfirmed", "operation"];
@@ -94,13 +95,14 @@ export function importDecisions(
   catch (error) { return { ok: false, errors: [`not valid JSON: ${(error as Error).message}`] }; }
 
   if (parsed.v !== DECISIONS_VERSION) errors.push(`decisions version ${String(parsed.v)} is not ${DECISIONS_VERSION}`);
-  const expected = registryFingerprint(registryInput);
+  const expected = workbookFingerprint(registryInput, CATALOG);
   if (parsed.fingerprint !== expected) {
     // Stale export: the questions themselves may have changed, so answers to the old ones cannot be
     // carried across silently.
     errors.push(
       `this export was authored against registry structure ${String(parsed.fingerprint)}, but the registry is now ${expected}; ` +
-      "regenerate the workbook and re-check every answer",
+      "regenerate the workbook and re-check every answer (this covers the questions as well as the "
+      + "database structure, so re-worded questions invalidate an export too)",
     );
   }
   const decisions = parsed.decisions;
@@ -270,13 +272,65 @@ export function importDecisions(
     for (const problem of coverageBasisErrors(candidate, declared)) errors.push(`${id}: ${problem}`);
 
     merged[id] = candidate;
-    answers[id] = { human: humanAnswer, mappingConfirmed: decision.mappingConfirmed };
+    /**
+     * The catalog fingerprint travels WITH the answer, so a later reader can tell whether the
+     * question has been re-worded since. Without it a restored answer showed as confirmed under
+     * wording nobody had read.
+     */
+    answers[id] = {
+      human: humanAnswer,
+      mappingConfirmed: decision.mappingConfirmed,
+      catalogFingerprint: CATALOG.fingerprint(),
+    };
     authored.push(id);
     if (capabilityAuthorizes(candidate, declared)) eligible.push(id);
   }
 
   if (errors.length) return { ok: false, errors };
   return { ok: true, policy: { ...docs, ...merged }, answers, authored, cleared, eligible };
+}
+
+/**
+ * Both files, or neither.
+ *
+ * They were two independent writes with the policy first, so a crash between them left the
+ * technical decision committed and the human record missing -- exactly the state the sidecar was
+ * added to prevent, and indistinguishable afterwards from policy authored by hand. Both are staged,
+ * validated together, and only then moved into place; a failure part-way leaves the staged files
+ * behind and the pair unchanged, and generation refuses a mismatched pair either way.
+ */
+export function commitPolicyAndAnswers(policy: Record<string, unknown>, answers: Record<string, unknown>): void {
+  const problems = policyAnswerMismatch(policy, answers);
+  if (problems.length) throw new Error(["refusing to write an inconsistent pair:", ...problems].join("\n  "));
+
+  const policyTemp = `${POLICY_FILE}.staged`;
+  const answersTemp = `${ANSWERS_FILE}.staged`;
+  fs.writeFileSync(policyTemp, writePolicy(policy));
+  fs.writeFileSync(answersTemp, writeAnswers(answers));
+  // Read the staged pair back and check it before either replaces a real file.
+  const staged = policyAnswerMismatch(
+    JSON.parse(fs.readFileSync(policyTemp, "utf8")) as Record<string, unknown>,
+    JSON.parse(fs.readFileSync(answersTemp, "utf8")) as Record<string, unknown>);
+  if (staged.length) {
+    fs.rmSync(policyTemp, { force: true });
+    fs.rmSync(answersTemp, { force: true });
+    throw new Error(["the staged pair does not agree, so nothing was written:", ...staged].join("\n  "));
+  }
+  fs.renameSync(policyTemp, POLICY_FILE);
+  fs.renameSync(answersTemp, ANSWERS_FILE);
+}
+
+/**
+ * Every recorded answer must have a policy entry to be the answer TO.
+ *
+ * The reverse is allowed: the policy file predates this workbook and holds one entry authored by
+ * hand, which has no recorded answer and legitimately never will.
+ */
+export function policyAnswerMismatch(policy: Record<string, unknown>, answers: Record<string, unknown>): string[] {
+  const entries = Object.keys(policy).filter((id) => !id.startsWith("_"));
+  return Object.keys(answers)
+    .filter((id) => !entries.includes(id))
+    .map((id) => `${id}: an answer is recorded but no policy entry exists for it`);
 }
 
 /** Serialise the durable answer record in a stable order, so a diff shows only what changed. */
@@ -305,8 +359,7 @@ if (process.argv[1] && path.resolve(process.argv[1]).includes("import-stage2b-de
     for (const error of result.errors) console.error(`  - ${error}`);
     process.exit(1);
   }
-  fs.writeFileSync(POLICY_FILE, writePolicy(result.policy));
-  fs.writeFileSync(ANSWERS_FILE, writeAnswers(result.answers));
+  commitPolicyAndAnswers(result.policy, result.answers);
   console.log(`merged ${result.authored.length} authored capability(ies)`
     + (result.cleared.length ? `, withdrew ${result.cleared.length}` : "")
     + `; ${result.eligible.length} now authorization-eligible`);

@@ -37,12 +37,14 @@ export const CATALOG_MODULE_FILE = path.join(process.cwd(), "lib", "stage2b-capa
 export const WORKBOOK_FILE = path.join(process.cwd(), "docs", "superpowers", "stage2b-policy-workbook.html");
 
 /**
- * 3: the workbook asks a policy owner plain-language questions, and an entry now carries the HUMAN
- * answer, the technical mapping it proposes, and a confirmation of that exact mapping. A v2 file
- * carries a technical decision with no record of the question it answered, so it is refused by
- * version rather than read as though someone had approved a translation they never saw.
+ * 4: the fingerprint an export is checked against now covers the QUESTIONS as well as the database
+ * structure. A version-3 file was authored against wording this workbook can no longer identify, so
+ * it is refused by version rather than accepted on a fingerprint that never saw the catalog.
+ *
+ * 3 was: plain-language questions, with an entry carrying the HUMAN answer, the technical mapping
+ * it proposes, and a confirmation of that exact mapping.
  */
-export const DECISIONS_VERSION = 3;
+export const DECISIONS_VERSION = 4;
 
 export type RegistryEntry = {
   artifact: string;
@@ -75,6 +77,23 @@ export function decidableRegistry(registry: Record<string, RegistryEntry>): Reco
  * session's own decisions would invalidate the file that produced them. A change to tables, columns
  * or artifacts is what makes an export stale, because the questions themselves would have changed.
  */
+/**
+ * What an answer was given AGAINST: the database structure and the questions alike.
+ *
+ * The structural fingerprint alone was not identity enough. A reworded question, a changed failure
+ * scenario or a narrowed set of process choices moved nothing in it, so an old session loaded
+ * cleanly and its confirmation survived under wording the person never read -- a confirmation
+ * attached to a question they did not answer.
+ */
+export function workbookFingerprint(
+  registry: Record<string, RegistryEntry>,
+  catalog: { fingerprint: () => string },
+): string {
+  return createHash("sha256")
+    .update(JSON.stringify([registryFingerprint(registry), catalog.fingerprint()]))
+    .digest("hex").slice(0, 16);
+}
+
 export function registryFingerprint(registry: Record<string, RegistryEntry>): string {
   const full = decidableRegistry(registry);
   const structural = Object.keys(full).sort().map((id) => ({
@@ -230,12 +249,13 @@ function embedJson(value: unknown): string {
  */
 export function renderWorkbook(
   registryOverride?: Record<string, RegistryEntry>,
-  catalogOverride?: { coverageAgainst: (ids: string[]) => { missing: string[]; extra: string[] } },
+  catalogOverride?: { coverageAgainst: (ids: string[]) => { missing: string[]; extra: string[] }; fingerprint: () => string },
 ): string {
   const registryInput = registryOverride
     ?? (JSON.parse(fs.readFileSync(REGISTRY_FILE, "utf8")) as Record<string, RegistryEntry>);
   const model = buildWorkbookModel(registryInput);
-  const fingerprint = registryFingerprint(registryInput);
+  const catalog = catalogOverride ?? loadCatalog();
+  const fingerprint = workbookFingerprint(registryInput, catalog as { fingerprint: () => string });
   const existing = fs.existsSync(POLICY_FILE)
     ? JSON.parse(fs.readFileSync(POLICY_FILE, "utf8")) as Record<string, unknown>
     : {};
@@ -253,8 +273,28 @@ export function renderWorkbook(
   const answers = fs.existsSync(ANSWERS_FILE)
     ? JSON.parse(fs.readFileSync(ANSWERS_FILE, "utf8")) as Record<string, unknown>
     : {};
+  /**
+   * The pair has to agree before either is trusted.
+   *
+   * Policy and answers are written as two files. If a crash lands between them, the technical
+   * decision exists and the human record does not -- and seeding from a half-written pair would
+   * quietly present that as a complete history. Refusing is the recovery signal.
+   */
+  const orphaned = Object.keys(answers).filter((id) => !(id in authored));
+  if (orphaned.length) {
+    throw new Error([
+      "capability-answers.json and capability-policy.json disagree, so no workbook was written.",
+      ...orphaned.map((id) => `  an answer is recorded with no policy entry: ${id}`),
+      "The importer writes both together; a pair this far apart means a write was interrupted.",
+      "Re-run the import that produced them, or remove the orphaned answers.",
+    ].join("\n"));
+  }
 
-  const payload = embedJson({ v: DECISIONS_VERSION, fingerprint, capabilities: model, authored, answers });
+  const payload = embedJson({
+    v: DECISIONS_VERSION, fingerprint, capabilities: model, authored, answers,
+    /** Carried separately so a restored answer can be told apart from a re-worded question. */
+    catalogFingerprint: (catalog as { fingerprint: () => string }).fingerprint(),
+  });
   /**
    * Inlined VERBATIM, not re-implemented. The suite imports the same files and asserts the page
    * contains them unchanged, so there is exactly one copy of this logic and no way for the tested
@@ -273,7 +313,6 @@ export function renderWorkbook(
    * description, and how every crime_data capability came to offer all three update processes. A
    * missing entry is a thing to write, not a thing to fall back from.
    */
-  const catalog = catalogOverride ?? loadCatalog();
   const coverage = catalog.coverageAgainst(model.map((c) => c.id));
   if (coverage.missing.length || coverage.extra.length) {
     const lines = [
@@ -439,6 +478,8 @@ function mappingPanel(cap){
       (p.preserved.length ? ' Anything already recorded for those is kept as it was: leaving a question open never'
         + ' deletes an existing decision. Removing one is the separate action at the bottom of this page.' : '')+
       '</div>' : '')+
+    (S.needsReconfirmation(cap.id) ? '<div class="warn">You confirmed this before, but the question has been'+
+      ' re-worded since. Your answer is still here — please read the wording above and confirm it again.</div>' : '')+
     (confirmed ? '<div class="good">Confirmed. This wording is what your export will carry.</div>'
       : '<button class="primary" id="confirmMapping"'+(answered && !problems.length ? '' : ' disabled')+'>I have read this — confirm it</button>')+
     '</div>';

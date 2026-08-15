@@ -21,9 +21,10 @@ import { createRequire } from "node:module";
 import {
   CATALOG_MODULE_FILE, DECISIONS_VERSION, PLAIN_LANGUAGE_MODULE_FILE, SESSION_MODULE_FILE,
   buildWorkbookModel, decidableRegistry, loadCatalog, registryFingerprint, renderWorkbook,
+  workbookFingerprint,
   type RegistryEntry,
 } from "./generate-stage2b-workbook";
-import { importDecisions, writePolicy } from "./import-stage2b-decisions";
+import { commitPolicyAndAnswers, importDecisions, policyAnswerMismatch, writePolicy } from "./import-stage2b-decisions";
 import {
   authorizationBlockers, capabilityAuthorizes, integrityIsExecutable, isYearBearingColumn,
   policyIsComplete, policyShapeErrors,
@@ -48,7 +49,8 @@ function check(name: string, fn: () => void) {
   catch (e) { failed += 1; console.log(`  FAIL  ${name}\n        ${(e as Error).message.split("\n").slice(0, 6).join("\n        ")}`); }
 }
 
-const FINGERPRINT = registryFingerprint(registry);
+/** What an answer is given against: the database structure AND the questions. */
+const FINGERPRINT = workbookFingerprint(registry, CATALOG);
 const model = buildWorkbookModel(registry);
 /** A capability with a genuinely year-bearing column, so the recommended answer exists. */
 const withYear = model.find((c) => c.coverageCandidates.some((o) => o.yearBearing))!;
@@ -56,7 +58,8 @@ const yearBasis = withYear.coverageCandidates.find((o) => o.yearBearing)!;
 const withoutYear = model.find((c) => c.coverageCandidates.length > 0 && !c.coverageCandidates.some((o) => o.yearBearing))!;
 
 function sessionFor(authored: Record<string, unknown> = {}) {
-  return createStage2bSession({ v: DECISIONS_VERSION, fingerprint: FINGERPRINT, capabilities: model, authored }, PL);
+  return createStage2bSession({ v: DECISIONS_VERSION, fingerprint: FINGERPRINT, capabilities: model, authored,
+    catalogFingerprint: CATALOG.fingerprint() }, PL);
 }
 
 /** A complete set of plain-language answers, as a person clicking through would produce. */
@@ -92,6 +95,7 @@ const catalogCovering = (ids: string[]) => ({
     missing: registryIds.filter((id) => !ids.includes(id)),
     extra: ids.filter((id) => !registryIds.includes(id)),
   }),
+  fingerprint: () => "synthetic",
 });
 
 // ---------------------------------------------------------------- 0. the page actually runs
@@ -238,10 +242,12 @@ check("what the person answered survives into a checked-in record, and reopens w
   assert.ok(recorded.mappingConfirmed, "the confirmation provenance was dropped");
 
   // Reopening the workbook restores it, and does NOT report it as an unsaved change.
-  const reopened = createStage2bSession({
-    v: DECISIONS_VERSION, fingerprint: FINGERPRINT, capabilities: model,
-    authored: { [withYear.id]: result.policy[withYear.id] }, answers: result.answers,
-  }, PL);
+  const reopen = (answersRecord: Record<string, unknown>, catalogFingerprint = CATALOG.fingerprint()) =>
+    createStage2bSession({
+      v: DECISIONS_VERSION, fingerprint: FINGERPRINT, capabilities: model,
+      authored: { [withYear.id]: result.policy[withYear.id] }, answers: answersRecord, catalogFingerprint,
+    }, PL);
+  const reopened = reopen(result.answers);
   assert.strictEqual(reopened.human(withYear.id).coverage, human.coverage, "the reopened workbook lost the answer");
   assert.strictEqual(reopened.isMappingConfirmed(withYear.id), true, "the reopened workbook lost the confirmation");
   assert.deepStrictEqual(reopened.changeSet(), {}, "a restored answer is reported as an unsaved change");
@@ -255,6 +261,18 @@ check("what the person answered survives into a checked-in record, and reopens w
   reopened.update(withYear.id, { evidence: "a revised note that changes what was recorded here materially" });
   assert.deepStrictEqual(Object.keys(reopened.changeSet()), [withYear.id], "editing a restored answer is not a change");
 
+  /**
+   * And if the QUESTION has been re-worded since, the answer comes back but the confirmation does
+   * not. A confirmation approves one translation of one question; once the question changes, it
+   * approves something nobody read.
+   */
+  const reworded = reopen(result.answers, "different-wording");
+  assert.strictEqual(reworded.human(withYear.id).coverage, human.coverage, "a re-worded question lost the answer too");
+  assert.strictEqual(reworded.isMappingConfirmed(withYear.id), false, "a confirmation survived a re-worded question");
+  assert.strictEqual(reworded.needsReconfirmation(withYear.id), true, "the page is not told to ask again");
+  assert.ok(withYear.id in reworded.changeSet(), "a re-worded answer is not offered for re-confirmation on export");
+  assert.ok(/re-worded since/.test(renderWorkbook(registry)), "the page never explains why it is asking again");
+
   // Withdrawing removes the durable record too, not just the policy.
   const W = sessionFor({ [withYear.id]: result.policy[withYear.id] as Record<string, unknown> });
   W.withdraw(withYear.id);
@@ -262,6 +280,84 @@ check("what the person answered survives into a checked-in record, and reopens w
     { [withYear.id]: result.policy[withYear.id] as Record<string, unknown> }, result.answers);
   assert.ok(removed.ok && !(withYear.id in (removed as any).answers),
     "withdrawing removed the policy but left the answer record behind");
+});
+
+check("the fingerprint covers the questions, not only the database structure", () => {
+  /**
+   * A confirmation attaches to the question as it was asked. While only database structure was
+   * fingerprinted, a reworded question, a changed failure scenario or a narrowed set of process
+   * choices moved nothing -- so an old session still loaded, and its approval survived under
+   * wording the person had never read.
+   */
+  const reworded = {
+    ...CATALOG,
+    fingerprint: () => "reworded",
+    coverageAgainst: CATALOG.coverageAgainst,
+  };
+  assert.notStrictEqual(workbookFingerprint(registry, reworded), FINGERPRINT,
+    "re-wording every question left the fingerprint untouched");
+
+  // Structure alone still moves it, so the original guard is intact.
+  const moved = JSON.parse(JSON.stringify(registry)) as Record<string, RegistryEntry>;
+  moved[withYear.id].requiredColumns[yearBasis.table] = [...moved[withYear.id].requiredColumns[yearBasis.table], "an_added_column"];
+  assert.notStrictEqual(workbookFingerprint(moved, CATALOG), FINGERPRINT, "a structural change left the fingerprint untouched");
+
+  // A session authored against other wording does not load.
+  const S = sessionFor();
+  const otherWording = JSON.parse(exportWith(withYear.id, answers()));
+  otherWording.fingerprint = workbookFingerprint(registry, reworded);
+  const refused = S.loadSession(otherWording);
+  assert.strictEqual(refused.ok, false, "a session authored against different wording loaded");
+  assert.ok(refused.stale, "it was not refused as stale");
+
+  // And a pre-catalog export is refused by version rather than accepted on an old fingerprint.
+  assert.ok(DECISIONS_VERSION >= 4, "the version was not raised when the fingerprint changed meaning");
+  const old = JSON.parse(exportWith(withYear.id, answers()));
+  old.v = 3;
+  assert.strictEqual(importInto(JSON.stringify(old)).ok, false, "a version-3 export was still accepted");
+});
+
+check("policy and its human record are written together, or not at all", () => {
+  /**
+   * Two independent writes with the policy first meant a crash between them left the technical
+   * decision committed and the human record missing -- the exact state the record was added to
+   * prevent, and afterwards indistinguishable from policy authored by hand.
+   */
+  const policy = { [withYear.id]: { coverage: null, integrity: null, availability: null, receiptOwner: null, evidence: "x" } };
+  const orphaned = { [withYear.id]: { human: {}, mappingConfirmed: "abc" },
+    "shr::incidents::incidents(year)": { human: {}, mappingConfirmed: "def" } };
+  assert.deepStrictEqual(policyAnswerMismatch(policy, { [withYear.id]: orphaned[withYear.id] }), [],
+    "a matching pair was reported as a mismatch");
+  const problems = policyAnswerMismatch(policy, orphaned);
+  assert.strictEqual(problems.length, 1, "an answer with no policy entry was not reported");
+  assert.ok(/no policy entry exists/.test(problems[0]));
+  assert.throws(() => commitPolicyAndAnswers(policy, orphaned), /inconsistent pair/,
+    "an inconsistent pair was written anyway");
+
+  // Policy entries without answers stay legal: the file predates the workbook.
+  assert.deepStrictEqual(policyAnswerMismatch({ ...policy, "_README": {} }, {}), [],
+    "a hand-authored policy entry with no recorded answer was reported as a mismatch");
+
+  // The importer commits through that one path, rather than writing the two files itself.
+  const importer = fs.readFileSync(path.join(process.cwd(), "scripts", "import-stage2b-decisions.ts"), "utf8");
+  const cli = importer.slice(importer.indexOf("if (process.argv[1]"));
+  assert.ok(/commitPolicyAndAnswers\(/.test(cli), "the importer does not commit the pair through one path");
+  assert.ok(!/writeFileSync\(POLICY_FILE|writeFileSync\(ANSWERS_FILE/.test(cli),
+    "the importer still writes either file directly, so the pair can be split by a crash");
+  assert.ok(/\.staged/.test(importer), "the pair is not staged before being moved into place");
+
+  // Generation refuses to seed from a pair that disagrees.
+  const answersFile = path.join(DATA_DIR, "capability-answers.json");
+  const existed = fs.existsSync(answersFile);
+  const original = existed ? fs.readFileSync(answersFile, "utf8") : null;
+  try {
+    fs.writeFileSync(answersFile, JSON.stringify({ "shr::invented::nothing(x)": { human: {} } }, null, 2));
+    assert.throws(() => renderWorkbook(registry), /disagree/,
+      "the workbook was generated from a policy and answer record that disagree");
+  } finally {
+    if (original === null) fs.rmSync(answersFile, { force: true });
+    else fs.writeFileSync(answersFile, original);
+  }
 });
 
 // ---------------------------------------------------------------- 1. the human-facing surface

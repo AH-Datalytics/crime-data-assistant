@@ -82,8 +82,8 @@ code{font:12px ui-monospace,Menlo,monospace;background:#f2f3f7;padding:1px 4px;b
 </dialog>
 <script>
 const DATA = {
- "v": 3,
- "fingerprint": "31571190a66c1a62",
+ "v": 4,
+ "fingerprint": "7397af3e951cd435",
  "capabilities": [
   {
    "id": "crime_data::agencies+agency_county_crosswalk::agencies(agency,national_sample,ori)|agency_county_crosswalk(county_fips,county_key,ori,ori9,state)",
@@ -4636,7 +4636,8 @@ const DATA = {
    "evidence": "Both artifact states are exercised by this suite: with the crosswalk absent, entitySql (lib/metadata-coverage.ts:457) takes the SQL-less exit and the case hate_crime:metadata-agency-directory-county records terminalKind=unavailable, sealing no capability; with the crosswalk present, the same operation reaches this contract. coverage, integrity and receiptOwner remain unauthored: a directory count has no year dimension to base coverage on, no integrity rule has been decided for the crosswalk, and receipt ownership is Stage 2B."
   }
  },
- "answers": {}
+ "answers": {},
+ "catalogFingerprint": "3893c8e9"
 };
 /* Your answers live only in this page's memory until you press Export. Nothing here can reach the
    repository, a database, or any switch: the sole output is a downloaded file. */
@@ -4993,9 +4994,37 @@ function stage2bCapabilityCatalog() {
   },
   };
 
+  /**
+   * A digest of everything a person would have READ when answering.
+   *
+   * The registry fingerprint covers database structure only, so a reworded question, a changed
+   * scenario or a different set of process choices left it untouched -- an old session still
+   * loaded, and a restored answer still showed as confirmed under wording nobody had seen. What a
+   * confirmation attaches to is the question as it was asked, so the question has to be in the
+   * identity.
+   *
+   * FNV-1a over canonical JSON: deterministic, dependency-free, and identical in the page and at
+   * the boundary.
+   */
+  function fingerprint() {
+    const canonical = Object.keys(CATALOG).sort().map((id) => {
+      const e = CATALOG[id];
+      return [id, e.question, e.processes.map((k) => PROCESSES[k] || k),
+        e.integrity.map((k) => [k, SCENARIOS[k] ? SCENARIOS[k].label : "", SCENARIOS[k] ? SCENARIOS[k].prose : ""])];
+    });
+    const text = JSON.stringify(canonical);
+    let hash = 0x811c9dc5;
+    for (let i = 0; i < text.length; i++) {
+      hash ^= text.charCodeAt(i);
+      hash = (hash + ((hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24))) >>> 0;
+    }
+    return ("0000000" + hash.toString(16)).slice(-8);
+  }
+
   return {
     PROCESSES: PROCESSES,
     SCENARIOS: SCENARIOS,
+    fingerprint: fingerprint,
     ids: () => Object.keys(CATALOG),
     entry: (id) => CATALOG[id] || null,
     /** The question this capability answers, or null when it has none -- never a fallback. */
@@ -5367,6 +5396,14 @@ function createStage2bSession(DATA, plainLanguage) {
    * blank -- seeding must never invent an answer, only restore one.
    */
   const repositoryAnswers = {};
+  /**
+   * Capabilities whose question has been RE-WORDED since the answer was recorded.
+   *
+   * The answer is restored -- it is still what the person said -- but its confirmation is not, and
+   * the page says why. A confirmation approves a specific translation of a specific question; once
+   * the question changes it approves something nobody read.
+   */
+  const rewordedSince = {};
   const recorded = DATA.answers || {};
   for (const cap of DATA.capabilities) {
     capabilityById[cap.id] = cap;
@@ -5374,9 +5411,11 @@ function createStage2bSession(DATA, plainLanguage) {
     repositoryBaseline[cap.id] = prior;
     baseline[cap.id] = clone(prior);
     const priorAnswer = recorded[cap.id] || null;
+    const sameWording = !!priorAnswer && priorAnswer.catalogFingerprint === DATA.catalogFingerprint;
+    if (priorAnswer && !sameWording) rewordedSince[cap.id] = true;
     repositoryAnswers[cap.id] = priorAnswer ? clone(priorAnswer) : null;
     human[cap.id] = priorAnswer ? Object.assign(PL.blankAnswer(), priorAnswer.human || {}) : PL.blankAnswer();
-    confirmed[cap.id] = priorAnswer ? (priorAnswer.mappingConfirmed || null) : null;
+    confirmed[cap.id] = sameWording ? (priorAnswer.mappingConfirmed || null) : null;
   }
 
   let dirty = false;
@@ -5499,7 +5538,7 @@ function createStage2bSession(DATA, plainLanguage) {
        * Without this every seeded capability would reappear in the change set on every export, so a
        * diff of two sessions would show fifty untouched entries and hide the one that moved.
        */
-      const seeded = repositoryAnswers[id];
+      const seeded = rewordedSince[id] ? null : repositoryAnswers[id];
       if (seeded && JSON.stringify(seeded.human || {}) === JSON.stringify(human[id])
           && (seeded.mappingConfirmed || null) === (isMappingConfirmed(id) ? confirmed[id] : null)) continue;
       const p = proposal(id);
@@ -5557,7 +5596,7 @@ function createStage2bSession(DATA, plainLanguage) {
       baseline[id] = clone(repositoryBaseline[id]);
       const seeded = repositoryAnswers[id];
       human[id] = seeded ? Object.assign(PL.blankAnswer(), seeded.human || {}) : PL.blankAnswer();
-      confirmed[id] = seeded ? (seeded.mappingConfirmed || null) : null;
+      confirmed[id] = seeded && !rewordedSince[id] ? (seeded.mappingConfirmed || null) : null;
       delete withdrawn[id];
     }
     const incoming = parsed.decisions || {};
@@ -5628,6 +5667,8 @@ function createStage2bSession(DATA, plainLanguage) {
     proposal: proposal,
     mappingFingerprint: fingerprintOf,
     isMappingConfirmed: isMappingConfirmed,
+    /** True when the answer was restored but the question has been re-worded since. */
+    needsReconfirmation: (id) => rewordedSince[id] === true && PL.isAnswered(human[id]),
     confirmMapping: confirmMapping,
     problems: problems,
     isComplete: isComplete,
@@ -5709,6 +5750,8 @@ function mappingPanel(cap){
       (p.preserved.length ? ' Anything already recorded for those is kept as it was: leaving a question open never'
         + ' deletes an existing decision. Removing one is the separate action at the bottom of this page.' : '')+
       '</div>' : '')+
+    (S.needsReconfirmation(cap.id) ? '<div class="warn">You confirmed this before, but the question has been'+
+      ' re-worded since. Your answer is still here — please read the wording above and confirm it again.</div>' : '')+
     (confirmed ? '<div class="good">Confirmed. This wording is what your export will carry.</div>'
       : '<button class="primary" id="confirmMapping"'+(answered && !problems.length ? '' : ' disabled')+'>I have read this — confirm it</button>')+
     '</div>';
