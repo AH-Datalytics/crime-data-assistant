@@ -31,12 +31,11 @@ import {
 
 const DATA_DIR = path.join(process.cwd(), "scripts", "fixtures", "operation-taxonomy");
 const REGISTRY_FILE = path.join(DATA_DIR, "capability-registry.json");
-const POLICY_FILE = path.join(DATA_DIR, "capability-policy.json");
-/** The durable record of what people were asked and answered, written by the importer. */
-const ANSWERS_FILE = path.join(DATA_DIR, "capability-answers.json");
 export const SESSION_MODULE_FILE = path.join(process.cwd(), "lib", "stage2b-session.js");
 export const PLAIN_LANGUAGE_MODULE_FILE = path.join(process.cwd(), "lib", "stage2b-plain-language.js");
 export const CATALOG_MODULE_FILE = path.join(process.cwd(), "lib", "stage2b-capability-catalog.js");
+/** The card a person reads, as a function the suite can call rather than a template it must grep. */
+export const CARD_MODULE_FILE = path.join(process.cwd(), "lib", "stage2b-card.js");
 export const WORKBOOK_FILE = path.join(process.cwd(), "docs", "superpowers", "stage2b-policy-workbook.html");
 
 /**
@@ -282,13 +281,6 @@ export function buildWorkbookModel(registryInput: Record<string, RegistryEntry>)
   });
 }
 
-/** Plain-language summary. Describes the CONTRACT; it does not interpret intent. */
-function describe(capability: WorkbookCapability): string {
-  const reads = capability.reads.join(", ") || "no tables";
-  const prep = capability.prepares.length ? ` It also reads ${capability.prepares.join(", ")} while deciding what to build.` : "";
-  return `Reads ${reads} from the ${capability.artifact} artifact.${prep}`;
-}
-
 /**
  * Embeds JSON inside a <script> element without letting its CONTENT end the element.
  *
@@ -381,6 +373,7 @@ export function renderWorkbook(
    */
   const catalogSource = fs.readFileSync(CATALOG_MODULE_FILE, "utf8");
   const plainLanguageSource = fs.readFileSync(PLAIN_LANGUAGE_MODULE_FILE, "utf8");
+  const cardSource = fs.readFileSync(CARD_MODULE_FILE, "utf8");
   const sessionSource = fs.readFileSync(SESSION_MODULE_FILE, "utf8");
 
   /**
@@ -405,7 +398,7 @@ export function renderWorkbook(
 
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"/>
-<title>Stage 2B policy workbook</title>
+<title>Stage 2B decision workbook</title>
 <style>
 :root{--ink:#16181d;--dim:#5b6172;--line:#d8dbe3;--bg:#fbfbfd;--card:#fff;--warn:#8a5a00;--warnbg:#fff6e5;--ok:#1c6b4a;--okbg:#e9f4ee;--sug:#4a5878;--sugbg:#eef1f7;--alert:#8c2f1d;--alertbg:#fdefec}
 *{box-sizing:border-box}
@@ -415,25 +408,41 @@ header b{font-size:14px}
 .counts{color:var(--dim);font-size:13px;display:flex;gap:14px;flex-wrap:wrap}
 main{max-width:820px;margin:0 auto;padding:22px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:20px 22px;margin-bottom:16px}
-h2{font-size:19px;line-height:1.4;margin:0 0 10px;font-weight:600}
-.q{border-top:1px solid var(--line);padding:16px 0}
-.q h3{font-size:15px;margin:0 0 4px}
+.head{position:relative;padding-bottom:6px}
+.eyebrow{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin:0 0 4px;font-weight:600}
+h2{font-size:20px;line-height:1.35;margin:0 0 8px;font-weight:600}
+.example{margin:0;font-size:14.5px;color:#39435c;background:var(--sugbg);border-left:3px solid var(--sug);padding:8px 12px;border-radius:0 4px 4px 0}
+.example span{color:var(--dim);font-size:12.5px;display:block}
+.head .observed{position:absolute;top:0;right:0}
+.q{border-top:1px solid var(--line);padding:16px 0;margin-top:14px}
+.q h3{font-size:16px;margin:0 0 6px}
+.decide{margin:0 0 10px;font-size:14px;color:#39435c}
+.decide b{color:var(--ink)}
+.choices{margin:12px 0 4px;font-size:12.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--dim);font-weight:600}
 .q .hint{font-size:13.5px;color:var(--dim);margin:0 0 10px}
 label.opt{display:block;border:1px solid var(--line);border-radius:6px;padding:9px 12px;margin:6px 0;cursor:pointer}
 label.opt:hover{background:#f7f8fb}
 label.opt input{margin-right:9px}
 label.opt .why{display:block;font-size:13px;color:var(--dim);margin:3px 0 0 24px}
-.tag{display:inline-block;font-size:11px;background:var(--okbg);color:var(--ok);border-radius:999px;padding:1px 8px;margin-left:6px;font-weight:600}
+.rec{background:var(--okbg);border-left:3px solid var(--ok);padding:10px 13px;margin:12px 0 0;border-radius:0 4px 4px 0;font-size:13.5px;color:#17513a}
+.rec b{color:var(--ok)}
+.recnote{display:block;font-size:12.5px;color:var(--dim);margin-top:4px}
 input[type=text],textarea{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:5px;font:inherit;background:#fff;margin-top:6px}
 textarea{min-height:58px;resize:vertical}
-details{margin:8px 0;font-size:13.5px}
+details{margin:14px 0 0;font-size:13.5px}
 details summary{cursor:pointer;color:var(--sug)}
 details .body{background:var(--sugbg);border-left:3px solid var(--sug);padding:9px 12px;margin-top:6px;border-radius:0 4px 4px 0;color:#39435c}
+details.technical{border-top:1px solid var(--line);padding-top:14px}
 .observed{font-size:12.5px;color:var(--dim);font-style:italic}
-.mapping{background:var(--sugbg);border:1px solid #d3d9e6;border-radius:7px;padding:13px 15px;margin-top:6px}
-.mapping dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:13.5px}
+.means{background:#fff;border:1px solid var(--line);border-radius:7px;padding:13px 15px;margin-top:6px}
+.means dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:8px 14px;font-size:14px}
+.means dt{color:var(--dim);font-weight:600}
+.means dd{margin:0}
+.keptnote{color:var(--warn)}
+.mapping{margin:0;display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:13px}
 .mapping dt{color:var(--dim)}
 .mapping dd{margin:0}
+.followup{background:var(--sugbg);border-left:3px solid var(--sug);padding:9px 12px;margin:10px 0;font-size:13.5px;color:#39435c;border-radius:0 4px 4px 0}
 .warn{background:var(--warnbg);border-left:3px solid var(--warn);padding:9px 12px;margin:10px 0;font-size:13.5px;color:var(--warn);border-radius:0 4px 4px 0}
 .alert{background:var(--alertbg);border-left:3px solid var(--alert);padding:9px 12px;margin:10px 0;font-size:13.5px;color:var(--alert);border-radius:0 4px 4px 0}
 .good{background:var(--okbg);border-left:3px solid var(--ok);padding:9px 12px;margin:10px 0;font-size:13.5px;color:var(--ok);border-radius:0 4px 4px 0}
@@ -449,41 +458,32 @@ dialog{border:1px solid var(--line);border-radius:9px;padding:20px;max-width:640
 code{font:12px ui-monospace,Menlo,monospace;background:#f2f3f7;padding:1px 4px;border-radius:3px;word-break:break-all}
 </style></head><body>
 <header>
- <b>Stage 2B policy workbook</b>
- <span id="dirty" class="saved">Nothing to save yet</span>
+ <b>Stage 2B decision workbook</b>
+ <span id="dirty" class="saved"></span>
  <span class="counts" id="counts"></span>
  <span style="flex:1"></span>
- <select id="filter" style="width:auto;padding:6px 8px;border:1px solid var(--line);border-radius:5px">
-  <option value="all">All lookups</option>
-  <option value="unanswered">Not yet answered</option>
-  <option value="unconfirmed">Answered, mapping not confirmed</option>
-  <option value="problems">Needs something fixed</option>
-  <option value="conditional">Possibly sometimes-unavailable</option>
- </select>
- <button id="import">Load a saved session</button>
- <button class="primary" id="export">Export answers</button>
+ <select id="filter" style="width:auto;padding:6px 8px;border:1px solid var(--line);border-radius:5px"></select>
+ <button id="import"></button>
+ <button class="primary" id="export"></button>
  <input type="file" id="file" accept="application/json" hidden/>
 </header>
 <main>
  <div class="alert" id="staleness" hidden></div>
- <div class="warn">Your answers live only in this tab until you press <b>Export answers</b>. Nothing here
-  changes any system, switches anything on, or reaches the internet. Export every few answers — a closed
-  tab or a browser crash takes unexported work with it.</div>
+ <div class="warn" id="unsavedWarning"></div>
  <div id="card"></div>
  <div class="nav">
-  <button id="prev">Previous</button>
-  <button id="next">Next</button>
-  <button class="primary" id="nextUnanswered">Next unanswered</button>
-  <button id="cluster">Copy these answers to similar lookups…</button>
+  <button id="prev"></button>
+  <button id="next"></button>
+  <button class="primary" id="nextUnanswered"></button>
+  <button id="cluster"></button>
  </div>
 </main>
 <dialog id="confirm">
- <h3>Copy to similar lookups</h3>
+ <h3 id="clusterHeading"></h3>
  <p id="confirmIntro"></p>
- <p style="font-size:13px;color:#5b6172">Every lookup that would change is named below. Each one keeps its
-  own technical mapping, which you will need to review and confirm separately. Nothing is copied until you confirm.</p>
+ <p style="font-size:13px;color:#5b6172" id="clusterNote"></p>
  <ul class="affected" id="affected"></ul>
- <div class="nav"><button id="cancelCluster">Cancel</button><button class="primary" id="applyCluster">Copy to these</button></div>
+ <div class="nav"><button id="cancelCluster"></button><button class="primary" id="applyCluster"></button></div>
 </dialog>
 <script>
 const DATA = ${payload};
@@ -494,15 +494,36 @@ ${catalogSource}
 
 ${plainLanguageSource}
 
+${cardSource}
+
 ${sessionSource}
 
 const PL = createStage2bPlainLanguage(stage2bCapabilityCatalog());
-/* Shared wording comes from the contract the fingerprint covers, never from this template. */
+/* Every word on the page comes from the contract the fingerprint covers, never from this template. */
 const Q = PL.questions();
+const P = Q.page;
+const Card = createStage2bCard(PL);
 const S = createStage2bSession(DATA, PL);
 let index = 0;
 
-function esc(s){ return String(s).replace(/[&<>"]/g, (m) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
+function esc(s){ return Card.esc(s); }
+
+/* Chrome text, from the contract like everything else. */
+document.getElementById("filter").innerHTML =
+  [["all",P.filters.all],["unanswered",P.filters.unanswered],["unconfirmed",P.filters.unconfirmed],
+   ["problems",P.filters.problems],["followUp",P.filters.followUp]]
+  .map(([v,l]) => '<option value="'+esc(v)+'">'+esc(l)+'</option>').join('');
+document.getElementById("import").textContent = P.buttons.load;
+document.getElementById("export").textContent = P.buttons.exportAnswers;
+document.getElementById("prev").textContent = P.buttons.prev;
+document.getElementById("next").textContent = P.buttons.next;
+document.getElementById("nextUnanswered").textContent = P.buttons.nextUnanswered;
+document.getElementById("cluster").textContent = P.buttons.cluster;
+document.getElementById("unsavedWarning").textContent = P.unsavedWarning;
+document.getElementById("clusterHeading").textContent = P.cluster.heading;
+document.getElementById("clusterNote").textContent = P.cluster.note;
+document.getElementById("cancelCluster").textContent = P.cluster.cancel;
+document.getElementById("applyCluster").textContent = P.cluster.apply;
 
 function matches(cap){
   const f = document.getElementById("filter").value;
@@ -510,7 +531,7 @@ function matches(cap){
   if (f === "unanswered") return !PL.isAnswered(S.human(cap.id));
   if (f === "unconfirmed") return PL.isAnswered(S.human(cap.id)) && !S.isMappingConfirmed(cap.id);
   if (f === "problems") return S.problems(cap.id).length > 0;
-  if (f === "conditional") return !!cap.conditionalHint;
+  if (f === "followUp") return S.proposal(cap.id).followUps.length > 0;
   return true;
 }
 function visible(){ const v = DATA.capabilities.filter(matches); return v.length ? v : DATA.capabilities; }
@@ -518,169 +539,43 @@ function visible(){ const v = DATA.capabilities.filter(matches); return v.length
 function status(){
   const c = S.counts();
   document.getElementById("counts").innerHTML =
-    '<span>Finished: <b>'+c.complete+'</b>/'+DATA.capabilities.length+'</span>'+
-    '<span>Awaiting confirmation: <b>'+c.unconfirmed+'</b></span>'+
-    (c.problems?'<span>Needs fixing: <b>'+c.problems+'</b></span>':'');
+    '<span>'+esc(P.counts.finished)+': <b>'+c.complete+'</b>/'+DATA.capabilities.length+'</span>'+
+    '<span>'+esc(P.counts.awaiting)+': <b>'+c.unconfirmed+'</b></span>'+
+    (c.problems?'<span>'+esc(P.counts.needsFixing)+': <b>'+c.problems+'</b></span>':'');
   const badge = document.getElementById("dirty");
   const changed = Object.keys(S.changeSet()).length;
-  if (S.isDirty()){ badge.className = "unsaved"; badge.textContent = "Unsaved — export to keep your answers"; }
-  else { badge.className = "saved"; badge.textContent = changed ? "Saved: "+changed+" exported" : "Nothing to save yet"; }
-}
-
-/* Renders the technical policy these answers WOULD produce. Shown, never applied unconfirmed. */
-function mappingPanel(cap){
-  const p = S.proposal(cap.id), m = p.merged;
-  /* Kept-not-set is marked, because a field shown blank would describe a different outcome. */
-  const kept = (field) => p.preserved.indexOf(field) >= 0
-    ? ' <b style="color:#8a5a00">— kept from what was already recorded; your answer left this open</b>' : '';
-  const line = (label, value, field) => '<dt>'+label+'</dt><dd>'+value+(field?kept(field):'')+'</dd>';
-  const rows = [
-    line(Q.mapping.labels.coverage, m.coverage === null ? '<i>left open</i>'
-      : m.coverage.kind === 'none' ? 'not about a time period — ' + esc(m.coverage.reason)
-      : 'first and last year read from <code>'+esc(m.coverage.table+'.'+m.coverage.yearColumn)+'</code>', 'coverage'),
-    line(Q.mapping.labels.integrity, m.integrity === null ? '<i>left open</i>'
-      : '<ul style="margin:0;padding-left:16px">'+m.integrity.map((r)=>'<li>'+esc(r)+'</li>').join('')+'</ul>', 'integrity'),
-    line(Q.mapping.labels.availability, m.availability === null ? '<i>left open</i>'
-      : m.availability.kind === 'always' ? 'yes, always expected'
-      : 'not always — ' + esc(m.availability.condition), 'availability'),
-    line(Q.mapping.labels.receiptOwner, m.receiptOwner === null ? '<i>left open</i>' : esc(m.receiptOwner), 'receiptOwner'),
-  ].join('');
-  const confirmed = S.isMappingConfirmed(cap.id);
-  const answered = PL.isAnswered(S.human(cap.id));
-  const problems = S.problems(cap.id);
-  return '<div class="q"><h3>'+esc(Q.mapping.heading)+'</h3>'+
-    '<p class="hint">'+esc(Q.mapping.hint)+'</p>'+
-    '<div class="mapping"><dl>'+rows+'</dl></div>'+
-    (problems.length ? '<div class="alert">Before this can be confirmed: '+problems.map(esc).join('; ')+'</div>' : '')+
-    (p.unresolved.length ? '<div class="warn">Left open: '+p.unresolved.map((f)=>esc(({coverage:'the years question',integrity:'what going wrong looks like',availability:'whether it is always there',receiptOwner:'who keeps it up to date'})[f]||f)).join(', ')+
-      '. That is a legitimate place to stop — it is recorded as undecided, and this lookup stays switched off.'+
-      (p.preserved.length ? ' Anything already recorded for those is kept as it was: leaving a question open never'
-        + ' deletes an existing decision. Removing one is the separate action at the bottom of this page.' : '')+
-      '</div>' : '')+
-    (S.needsReconfirmation(cap.id) ? '<div class="warn">You confirmed this before, but the question has been'+
-      ' re-worded since. Your answer is still here — please read the wording above and confirm it again.</div>' : '')+
-    (confirmed ? '<div class="good">Confirmed. This wording is what your export will carry.</div>'
-      : '<button class="primary" id="confirmMapping"'+(answered && !problems.length ? '' : ' disabled')+'>'+esc(Q.mapping.confirmLabel)+'</button>')+
-    '</div>';
+  if (S.isDirty()){ badge.className = "unsaved"; badge.textContent = P.dirty.unsaved; }
+  else { badge.className = "saved"; badge.textContent = changed ? P.dirty.saved.replace("%s", changed) : P.dirty.nothing; }
 }
 
 function render(){
   const list = visible();
   if (index >= list.length) index = 0;
-  const cap = list[index], h = S.human(cap.id);
+  const cap = list[index];
 
-  const covOpts = PL.coverageOptions(cap).map((o) =>
-    '<label class="opt"><input type="radio" name="cov" value="'+esc(o.value)+'"'+(h.coverage===o.value?' checked':'')+'/>'+
-      esc(o.label)+(o.recommended?'<span class="tag">recommended</span>':'')+
-      '<span class="why">'+esc(o.consequence)+'</span></label>').join('');
-  const covWhy = PL.coverageOptions(cap).map((o)=>'<li><b>'+esc(o.label)+'</b> — '+esc(o.why)+'</li>').join('');
-  const scenarios = PL.integrityScenarios(cap).map((s) =>
-    '<label class="opt"><input type="checkbox" name="integ" value="'+esc(s.value)+'"'+
-      ((h.integrity||[]).indexOf(s.value)>=0?' checked':'')+'/>'+esc(s.label)+'</label>').join('');
-  const availOpts = PL.availabilityOptions().map((o) =>
-    '<label class="opt"><input type="radio" name="avail" value="'+esc(o.value)+'"'+(h.availability===o.value?' checked':'')+'/>'+
-      esc(o.label)+'<span class="why">'+esc(o.consequence)+'</span></label>').join('');
-  const ownerOpts = PL.ownerOptions(cap).map((o) =>
-    '<label class="opt"><input type="radio" name="owner" value="'+esc(o.value)+'"'+(h.owner===o.value?' checked':'')+'/>'+
-      esc(o.label)+'</label>').join('');
-
-  document.getElementById("card").innerHTML =
-  '<div class="card">'+
-   '<div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap">'+
-     '<h2>'+esc(PL.describeQuestion(cap))+'</h2>'+
-     '<span class="observed">'+(index+1)+' of '+list.length+'</span></div>'+
-   '<p class="observed">That summary comes from the names used in the data, so read it as a rough'+
-     ' description rather than an exact one. Everything under "Technical details" is what the code'+
-     ' actually does — it is not up for decision. The four questions below are.</p>'+
-   '<details><summary>Technical details</summary><div class="body">'+
-     'Identifier <code>'+esc(cap.id)+'</code><br/>Data source <code>'+esc(cap.artifact)+'</code><br/>'+
-     'Reads '+cap.reads.map((t)=>'<code>'+esc(t)+'</code>').join(' ')+
-     '<br/>Columns: '+Object.keys(cap.columns).map((t)=>esc(t)+' ('+cap.columns[t].map(esc).join(', ')+')').join(' · ')+
-     (cap.ownerCandidates.length?'<br/>Scripts mentioning every one of these tables (a filename search, not an answer): '+
-       cap.ownerCandidates.map((o)=>'<code>'+esc(o)+'</code>').join(' '):'')+
-   '</div></details>'+
-   (cap.conditionalHint?'<div class="warn">Observed: '+esc(cap.conditionalHint)+'</div>':'')+
-
-   '<div class="q"><h3>'+esc(Q.coverage.heading)+'</h3>'+
-    '<p class="hint">'+esc(Q.coverage.hint)+'</p>'+covOpts+
-    '<details><summary>Why this is recommended</summary><div class="body"><ul style="margin:0;padding-left:16px">'+covWhy+'</ul>'+
-      '<div style="margin-top:8px">Every column this lookup reads is listed below. The recommendation comes from'+
-      ' a column NAME, which is a fact about the name and not a check of its contents — if the right column is a'+
-      ' different one, choose it here.</div>'+
-      '<div style="margin-top:6px"><label>Use a specific column instead</label><select id="covColumn" style="width:100%;padding:7px">'+
-        '<option value="">— use the recommended one —</option>'+
-        cap.coverageCandidates.map((o,i)=>'<option value="'+i+'"'+
-          (h.coverageColumn && h.coverageColumn.table===o.table && h.coverageColumn.yearColumn===o.yearColumn?' selected':'')+
-          '>'+esc(o.table+'.'+o.yearColumn)+(o.yearBearing?' — named like a year':'')+'</option>').join('')+
-      '</select></div></div></details>'+
-    '<label>'+esc(Q.coverage.reasonLabel)+'</label>'+
-    '<input type="text" id="covReason" value="'+esc(h.coverageReason||"")+'"/>'+
-   '</div>'+
-
-   '<div class="q"><h3>'+esc(Q.integrity.heading)+'</h3>'+
-    '<p class="hint">'+esc(Q.integrity.hint)+'</p>'+
-    scenarios+
-    '<label class="opt"><input type="checkbox" id="integUnsure"'+(h.integrityUnsure?' checked':'')+'/>'+esc(Q.integrity.unsureLabel)+'</label>'+
-    '<label>'+esc(Q.integrity.otherLabel)+'</label>'+
-    '<input type="text" id="integOther" value="'+esc(h.integrityOther||"")+'"/>'+
-   '</div>'+
-
-   '<div class="q"><h3>'+esc(Q.availability.heading)+'</h3>'+
-    '<p class="hint">'+esc(Q.availability.hint)+'</p>'+availOpts+
-    (h.availability==="sometimes"
-      ? '<label>'+esc(Q.availability.whenLabel)+'</label><input type="text" id="availWhen" value="'+esc(h.availabilityWhen||"")+'"/>'
-      : '')+
-   '</div>'+
-
-   '<div class="q"><h3>'+esc(Q.owner.heading)+'</h3>'+
-    '<p class="hint">'+esc(Q.owner.hint)+'</p>'+ownerOpts+
-    (h.owner==="other"
-      ? '<label>'+esc(Q.owner.otherLabel)+'</label><input type="text" id="ownerOther" value="'+esc(h.ownerOther||"")+'"/>'
-      : '')+
-   '</div>'+
-
-   '<div class="q"><h3>'+esc(Q.evidence.heading)+'</h3>'+
-    '<p class="hint">'+esc(Q.evidence.hint)+'</p>'+
-    '<textarea id="evidence">'+esc(h.evidence||"")+'</textarea></div>'+
-
-   '<div id="mapping"></div>'+
-
-   (S.canWithdraw(cap.id)
-     ? '<div class="q"><h3>Remove the existing policy for this lookup</h3>'+
-       '<p class="hint">Something was already recorded here. Removing it is a separate, named action —'+
-       ' leaving the questions above unanswered does NOT delete it.</p>'+
-       (S.isWithdrawn(cap.id)
-         ? '<div class="alert">Marked for removal. Exporting and importing will remove what was recorded.</div>'
-         : '<button id="withdraw">Remove the recorded policy…</button>')
-       +'</div>'
-     : '')+
-  '</div>';
+  document.getElementById("card").innerHTML = Card.primary(cap, S, (index+1)+' of '+list.length);
 
   const value = (id) => { const el = document.getElementById(id); return el ? el.value : ""; };
   /**
-   * The mapping panel repaints on every edit, in place.
+   * The summary repaints on every edit, in place.
    *
    * It used to be part of the card, which is only rebuilt when a radio changes -- so typing the
-   * missing reason cleared the problem, and the "confirm" button stayed greyed out with no way to
+   * missing sentence cleared the problem, and the confirm button stayed greyed out with no way to
    * press it. Repainting only this panel keeps the cursor where the person is typing.
    */
-  const renderMapping = () => {
-    const host = document.getElementById("mapping");
+  const renderSummary = () => {
+    const host = document.getElementById("summary");
     if (!host) return;
-    host.innerHTML = mappingPanel(cap);
+    host.innerHTML = Card.summaryPanel(cap, S);
     const button = document.getElementById("confirmMapping");
-    if (button) button.addEventListener("click", () => { S.confirmMapping(cap.id); status(); renderMapping(); });
+    if (button) button.addEventListener("click", () => { S.confirmMapping(cap.id); status(); renderSummary(); });
   };
   const save = () => {
     const covRadio = document.querySelector('input[name=cov]:checked');
     const availRadio = document.querySelector('input[name=avail]:checked');
     const ownerRadio = document.querySelector('input[name=owner]:checked');
-    const columnSel = document.getElementById("covColumn");
-    const picked = columnSel && columnSel.value !== "" ? cap.coverageCandidates[Number(columnSel.value)] : null;
     S.update(cap.id, {
       coverage: covRadio ? covRadio.value : null,
-      coverageColumn: picked ? { table: picked.table, yearColumn: picked.yearColumn } : null,
-      coverageReason: value("covReason"),
       integrity: Array.prototype.slice.call(document.querySelectorAll('input[name=integ]:checked')).map((e)=>e.value),
       integrityOther: value("integOther"),
       integrityUnsure: !!(document.getElementById("integUnsure") || {}).checked,
@@ -691,7 +586,7 @@ function render(){
       evidence: value("evidence"),
     });
     status();
-    renderMapping();
+    renderSummary();
   };
   /* Radios re-render, because which follow-up field is asked depends on the choice. */
   for (const name of ["cov","avail","owner"]){
@@ -699,23 +594,20 @@ function render(){
       el.addEventListener("change", () => { save(); render(); });
     });
   }
-  for (const id of ["covReason","integOther","availWhen","ownerOther","evidence"]){
+  for (const id of ["integOther","availWhen","ownerOther","evidence"]){
     const el = document.getElementById(id); if (el) el.addEventListener("input", save);
   }
-  const columnSel = document.getElementById("covColumn");
-  if (columnSel) columnSel.addEventListener("change", () => { save(); render(); });
   Array.prototype.slice.call(document.querySelectorAll('input[name=integ]')).forEach((el) => {
     el.addEventListener("change", () => { save(); render(); });
   });
   const unsure = document.getElementById("integUnsure");
   if (unsure) unsure.addEventListener("change", () => { save(); render(); });
 
-  renderMapping();
+  renderSummary();
 
   const withdrawButton = document.getElementById("withdraw");
   if (withdrawButton) withdrawButton.addEventListener("click", () => {
-    if (!confirm("Remove the recorded policy for this lookup?\\n\\n"+cap.id+
-      "\\n\\nExporting and importing will REMOVE it. This is not the same as leaving the questions unanswered.")) return;
+    if (!confirm(Q.withdraw.confirm+"\\n\\n"+PL.describeQuestion(cap)+"\\n\\n"+Q.withdraw.confirmDetail)) return;
     S.withdraw(cap.id); status(); render();
   });
   status();
@@ -730,21 +622,22 @@ document.getElementById("nextUnanswered").addEventListener("click", () => {
     const probe=(index+step)%l.length;
     if (!PL.isAnswered(S.human(l[probe].id))){ index=probe; render(); return; }
   }
-  alert("Every lookup in this view has been answered.");
+  alert(P.allAnswered);
 });
 
-/* Copying names EVERY affected lookup, and what it costs them, before anything changes. */
+/* Copying names EVERY affected question, and what it costs them, before anything changes. */
 document.getElementById("cluster").addEventListener("click", () => {
   const cap = visible()[index];
   const plan = S.clusterPlan(cap.id);
   document.getElementById("confirmIntro").textContent = plan.answered
-    ? 'Copy your answers to '+plan.targets.length+' lookup(s) reading '+plan.scope+'.'
-    : 'There are no answers here to copy yet.';
+    ? P.cluster.intro.replace("%n", plan.targets.length).replace("%s", P.cluster.scope[plan.scope])
+    : P.cluster.none;
   document.getElementById("affected").innerHTML = plan.detail.map((entry) => {
     const notes = [];
-    if (entry.overwrites) notes.push('replaces answers already given there');
-    if (entry.confirmationCleared) notes.push('its confirmation will be cancelled, so you must re-check its wording');
-    return '<li>'+esc(entry.id)+(notes.length?' <b style="color:#8a5a00">— '+esc(notes.join("; "))+'</b>':'')+'</li>';
+    if (entry.overwrites) notes.push(P.cluster.overwrites);
+    if (entry.confirmationCleared) notes.push(P.cluster.cleared);
+    const named = S.capability(entry.id);
+    return '<li>'+esc(PL.describeQuestion(named))+(notes.length?' <b style="color:#8a5a00">— '+esc(notes.join("; "))+'</b>':'')+'</li>';
   }).join('') || '<li>(none)</li>';
   document.getElementById("applyCluster").disabled = !plan.answered || !plan.targets.length;
   document.getElementById("confirm").showModal();
@@ -779,8 +672,8 @@ document.getElementById("file").addEventListener("change", (e) => {
     }
     if (!result.ok){ note.hidden = false; note.textContent = result.reason; index = 0; status(); render(); return; }
     note.hidden = result.unknown.length === 0;
-    if (result.unknown.length) note.textContent = "Loaded "+result.applied+" lookup(s). "+
-      result.unknown.length+" entry(ies) in that file are not lookups in this workbook and were ignored.";
+    if (result.unknown.length) note.textContent = "Loaded "+result.applied+" question(s). "+
+      result.unknown.length+" entry(ies) in that file are not questions in this workbook and were ignored.";
     index = 0; status(); render();
   };
   reader.readAsText(f);

@@ -19,7 +19,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { createRequire } from "node:module";
 import {
-  CATALOG_MODULE_FILE, DECISIONS_VERSION, PLAIN_LANGUAGE_MODULE_FILE, SESSION_MODULE_FILE,
+  CARD_MODULE_FILE, CATALOG_MODULE_FILE, DECISIONS_VERSION, PLAIN_LANGUAGE_MODULE_FILE, SESSION_MODULE_FILE,
   WORKBOOK_FILE, buildWorkbookModel, decidableRegistry, loadCatalog, registryFingerprint,
   renderWorkbook, workbookFingerprint,
   type RegistryEntry,
@@ -32,8 +32,8 @@ import {
   recordShapeErrors, renderAuthoredRecord,
 } from "../lib/stage2b-authored-record";
 import {
-  authorizationBlockers, authorizesApartFromIntegrity, capabilityAuthorizes, integrityIsExecutable,
-  isYearBearingColumn, policyIsComplete, policyShapeErrors,
+  authorizationBlockers, authorizesApartFromIntegrity, capabilityAuthorizes, coverageBasisErrors,
+  integrityIsExecutable, isYearBearingColumn, policyIsComplete, policyShapeErrors,
 } from "../lib/capability-policy";
 import { SWEEP_ONLY_IDS } from "../lib/sweep-only-capabilities";
 
@@ -41,8 +41,10 @@ const require = createRequire(import.meta.url);
 /** The same files the page inlines. Imported, so these tests exercise behaviour rather than text. */
 const { createStage2bSession } = require(SESSION_MODULE_FILE) as { createStage2bSession: (d: unknown, pl?: unknown) => any };
 const { createStage2bPlainLanguage } = require(PLAIN_LANGUAGE_MODULE_FILE) as { createStage2bPlainLanguage: (c?: unknown) => any };
+const { createStage2bCard } = require(CARD_MODULE_FILE) as { createStage2bCard: (pl: unknown) => any };
 const CATALOG = loadCatalog();
 const PL = createStage2bPlainLanguage(CATALOG);
+const CARD = createStage2bCard(PL);
 
 const DATA_DIR = path.join(process.cwd(), "scripts", "fixtures", "operation-taxonomy");
 const REGISTRY_FILE = path.join(DATA_DIR, "capability-registry.json");
@@ -61,7 +63,15 @@ const model = buildWorkbookModel(registry);
 /** A capability with a genuinely year-bearing column, so the recommended answer exists. */
 const withYear = model.find((c) => c.coverageCandidates.some((o) => o.yearBearing))!;
 const yearBasis = withYear.coverageCandidates.find((o) => o.yearBearing)!;
-const withoutYear = model.find((c) => c.coverageCandidates.length > 0 && !c.coverageCandidates.some((o) => o.yearBearing))!;
+/**
+ * A question where a year genuinely matters and there is nothing dated to read.
+ *
+ * The engineering-follow-up fixture: the human judgment is "yes" -- homicides happen on a date --
+ * while the answer itself carries no date. Selected by both properties, so it cannot drift into
+ * being a capability where "no" was simply the right answer.
+ */
+const withoutYear = model.find((c) => !c.coverageCandidates.some((o) => o.yearBearing)
+  && (CATALOG.yearAdvice(c.id) || {}).recommend === "yes")!;
 
 /**
  * A session over a chosen derived-policy baseline.
@@ -97,14 +107,41 @@ function workbookSession(record: { docs: Record<string, unknown>; entries: Autho
   return createStage2bSession(embeddedData(renderWorkbook(registry, undefined, record)), PL);
 }
 
+/**
+ * The card a person actually reads, as markup, for one capability.
+ *
+ * The whole reason the card is a module. Asserting "does the deciding path avoid database
+ * language?" over the finished page is impossible -- the page inlines its own source code, so every
+ * search hits a comment or an identifier. Here the card is called, and what comes back is only what
+ * would be displayed.
+ */
+function renderedCard(cap: { id: string }, session: any = sessionFor()) {
+  return CARD.primary(cap, session, "1 of " + model.length) + CARD.summaryPanel(cap, session);
+}
+/**
+ * The deciding path with the collapsed disclosure removed.
+ *
+ * The disclosure is where tables and columns are allowed to live; everything left is what a person
+ * has to read in order to answer, and it is held to a vocabulary they can follow.
+ */
+function primarySurface(cap: { id: string }, session: any = sessionFor()) {
+  return renderedCard(cap, session).replace(/<details class="technical">[\s\S]*?<\/details>/g, "");
+}
+/** Visible text only: markup, attribute values and entities stripped. What a reader sees. */
+function visibleText(markup: string) {
+  return markup.replace(/<[^>]*>/g, " ").replace(/&mdash;/g, "—").replace(/&middot;/g, "·")
+    .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"')
+    .replace(/\s+/g, " ").trim();
+}
+
 /** A complete set of plain-language answers, as a person clicking through would produce. */
 const answers = (cap = withYear, over: Record<string, unknown> = {}) => ({
   ...PL.blankAnswer(),
-  coverage: cap.coverageCandidates.some((o: any) => o.yearBearing) ? "years" : "no-years",
-  coverageReason: cap.coverageCandidates.some((o: any) => o.yearBearing) ? "" : "this lookup answers a directory question, not a time-series one",
-  integrity: [PL.integrityScenarios(cap)[0].value],
+  /** "Yes" only where something dated can actually be read; otherwise the honest answer resolves. */
+  coverage: PL.automaticYearBasis(cap) ? "years" : "no-years",
+  integrity: [PL.trustScenarios(cap)[0].value],
   availability: "always",
-  owner: PL.ownerOptions(cap)[0].value,
+  owner: PL.responsibilityOptions(cap)[0].value,
   evidence: "checked with the analyst who owns this pipeline and confirmed against the monthly runbook",
   ...over,
 });
@@ -149,6 +186,8 @@ const catalogCovering = (ids: string[]) => ({
   ids: () => ids,
   entry: () => null,
   question: () => "a synthetic capability, described only for a structural test",
+  example: () => "a synthetic asking of it",
+  yearAdvice: () => ({ recommend: "no", why: "a synthetic reason, for a structural test" }),
   processLabels: () => ["A synthetic update process"],
   scenarios: () => [{ value: "stale", label: "It stops being updated", prose: "It must not stop." }],
   PROCESSES: {},
@@ -239,7 +278,7 @@ check("owner choices are narrowed to the processes that could own this capabilit
    */
   const artifactWide = new Map<string, Set<string>>();
   for (const cap of model) {
-    const named = PL.ownerOptions(cap).filter((o: any) => o.value !== "other" && o.value !== PL.UNSURE);
+    const named = PL.responsibilityOptions(cap).filter((o: any) => o.value !== "other" && o.value !== PL.UNSURE);
     assert.ok(named.length >= 1, `${cap.id}: offers no update process at all`);
     assert.ok(named.length <= 2, `${cap.id}: offers ${named.length} processes, which is a menu rather than a choice`);
     for (const o of named) {
@@ -252,12 +291,12 @@ check("owner choices are narrowed to the processes that could own this capabilit
   // crime_data has three processes overall; no single capability may offer all of them.
   assert.strictEqual(artifactWide.get("crime_data")!.size, 3, "expected three crime_data processes across the artifact");
   for (const cap of model.filter((c) => c.artifact === "crime_data")) {
-    const named = PL.ownerOptions(cap).filter((o: any) => o.value !== "other" && o.value !== PL.UNSURE);
+    const named = PL.responsibilityOptions(cap).filter((o: any) => o.value !== "other" && o.value !== PL.UNSURE);
     assert.ok(named.length < 3, `${cap.id}: still offers every process for its data source`);
   }
   // "Something else" and "I'm not sure" remain everywhere, so narrowing never traps anyone.
   for (const cap of model) {
-    const values = PL.ownerOptions(cap).map((o: any) => o.value);
+    const values = PL.responsibilityOptions(cap).map((o: any) => o.value);
     assert.ok(values.includes("other") && values.includes(PL.UNSURE), `${cap.id}: narrowing removed the escape hatches`);
   }
 });
@@ -265,7 +304,7 @@ check("owner choices are narrowed to the processes that could own this capabilit
 check("the failure scenarios offered are the ones that fit this data", () => {
   const perCapability = new Map<string, string>();
   for (const cap of model) {
-    const scenarios = PL.integrityScenarios(cap);
+    const scenarios = PL.trustScenarios(cap);
     assert.ok(scenarios.length >= 2, `${cap.id}: offers too few scenarios to be a real question`);
     for (const s of scenarios) {
       assert.ok(s.label && s.prose, `${cap.id}: a scenario is missing its wording`);
@@ -278,7 +317,7 @@ check("the failure scenarios offered are the ones that fit this data", () => {
     "the same handful of scenarios is offered almost everywhere, so they are not capability-relevant");
   // A county-crosswalk capability is asked about unmatched agencies; a year-coverage one is not.
   const crosswalk = model.find((c) => c.reads.includes("agency_county_crosswalk"))!;
-  assert.ok(PL.integrityScenarios(crosswalk).some((s: any) => s.value === "crosswalk"),
+  assert.ok(PL.trustScenarios(crosswalk).some((s: any) => s.value === "crosswalk"),
     "a county lookup is not asked about agencies that cannot be matched to a county");
 });
 
@@ -390,16 +429,38 @@ check("the fingerprint covers everything a person reads, and the translation its
    * what the person READS changed, not merely because the file's bytes did.
    */
   const wordingCases: [string, string, string][] = [
-    ["a question heading", "1. Do we know the first and last year this data covers?",
-      "1. Can we tell the first and last year this data covers?"],
-    ["a question hint", "Some data is legitimately missing sometimes.",
-      "Some data is legitimately missing now and then."],
-    ["what an answer is said to do", "If it ever goes missing, that gets treated as a problem worth flagging.",
-      "If it ever goes missing, that gets treated as a problem worth flagging and reported weekly."],
-    ["an option label", "Yes — we know the first and last year it covers",
-      "Yes — we know the earliest and latest year it covers"],
-    ["the label on the recorded summary", 'coverage: "Years"', 'coverage: "Year range"'],
+    ["a question heading", "1. Can someone reasonably ask this question for a particular year?",
+      "1. Could someone reasonably ask this question for a particular year?"],
+    ["the statement of what is being decided", "You are deciding how the chatbot should react when this data is not there at all.",
+      "You are deciding how the chatbot ought to react when this data is not there at all."],
+    ["what an answer is said to do", "Missing data should be treated as a problem that needs attention.",
+      "Missing data should be treated as a problem that needs attention within a day."],
+    ["an option label", "Yes — year matters for this answer.",
+      "Yes — the year matters for this answer."],
+    ["a label on the plain-language summary", 'availability: "If it is missing"', 'availability: "When it is missing"'],
   ];
+
+  /**
+   * The per-capability wording lives in the reviewed catalog, so it is mutated at ITS source. The
+   * example and the recommendation's reason are both read before deciding, so both are identity.
+   */
+  const realCatalogSource = fs.readFileSync(CATALOG_MODULE_FILE, "utf8");
+  const catalogFrom = (source: string) =>
+    (new Function(source + "\nreturn stage2bCapabilityCatalog;")() as () => any)();
+  const catalogCases: [string, string, string][] = [
+    ["the example someone might ask", "Is Chicago in the recent crime trends data?",
+      "Is Chicago in the recent crime-trends data?"],
+    ["a recommendation's reason", "This answer lists which departments exist; it does not provide a yearly statistic.",
+      "This answer lists which departments exist; it never provides a yearly statistic."],
+  ];
+  for (const [what, from, to] of catalogCases) {
+    assert.ok(realCatalogSource.includes(from), `this test is stale: the catalog no longer contains ${what}`);
+    const mutatedCatalog = catalogFrom(realCatalogSource.replace(from, to));
+    assert.notStrictEqual(
+      workbookFingerprint(registry, mutatedCatalog, {
+        plainLanguage: createStage2bPlainLanguage(mutatedCatalog), translationSource: realSource }),
+      FINGERPRINT, `changing ${what} left every confirmation valid`);
+  }
   for (const [what, from, to] of wordingCases) {
     assert.ok(realSource.includes(from), `this test is stale: the module no longer contains ${what}`);
     const mutated = realSource.replace(from, to);
@@ -434,8 +495,8 @@ check("the fingerprint covers everything a person reads, and the translation its
   const S = sessionFor();
   const otherContract = JSON.parse(exportWith(withYear.id, answers()));
   otherContract.contractFingerprint = fingerprintOf(realSource.replace(
-    "1. Do we know the first and last year this data covers?",
-    "1. Can we tell the first and last year this data covers?"));
+    "1. Can someone reasonably ask this question for a particular year?",
+    "1. Could someone reasonably ask this question for a particular year?"));
   const refused = S.loadSession(otherContract);
   assert.strictEqual(refused.ok, false, "a session authored against different wording loaded");
   assert.ok(refused.stale, "it was not refused as stale");
@@ -453,18 +514,30 @@ check("the page reads its shared wording from the contract, not from its own tem
    * and miss the one they do.
    */
   const html = renderWorkbook(registry);
+  const generator = fs.readFileSync(path.join(process.cwd(), "scripts", "generate-stage2b-workbook.ts"), "utf8");
   const wording = PL.questions();
+  const card = renderedCard(withYear);
   for (const [where, text] of [
-    ["coverage heading", wording.coverage.heading],
-    ["integrity heading", wording.integrity.heading],
+    ["year heading", wording.year.heading],
+    ["trust heading", wording.trust.heading],
     ["availability heading", wording.availability.heading],
-    ["owner heading", wording.owner.heading],
+    ["responsibility heading", wording.responsibility.heading],
     ["evidence heading", wording.evidence.heading],
-    ["mapping heading", wording.mapping.heading],
+    ["summary heading", wording.summary.heading],
+    ["what-is-being-decided heading", wording.card.decisionHeading],
+    ["what-this-answers heading", wording.card.answersHeading],
   ] as [string, string][]) {
     assert.ok(html.includes(text), `the ${where} in the contract does not appear on the page`);
-    assert.ok(!new RegExp("<h3>" + text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "</h3>").test(html),
-      `the page hard-codes the ${where} instead of reading it from the contract`);
+    /**
+     * Asserted against the GENERATOR's own source, not the finished page. The page legitimately
+     * contains every one of these strings -- it inlines the module that defines them -- so a search
+     * over the page cannot tell "read from the contract" from "typed into the template". Only the
+     * template can be checked for having its own copy.
+     */
+    assert.ok(!generator.includes(text), `the page template hard-codes the ${where} instead of reading it from the contract`);
+  }
+  for (const heading of [wording.year.heading, wording.trust.heading, wording.summary.heading]) {
+    assert.ok(card.includes(heading), `the ${heading} is not on the card a person reads`);
   }
   assert.ok(/const Q = PL\.questions\(\);/.test(html), "the page does not take its wording from the contract");
 });
@@ -545,9 +618,9 @@ check("a generated policy is refused when the CONTRACT moves, even though the re
    * the two strings it is handed.
    */
   const realSource = fs.readFileSync(PLAIN_LANGUAGE_MODULE_FILE, "utf8");
-  const heading = "1. Do we know the first and last year this data covers?";
+  const heading = "1. Can someone reasonably ask this question for a particular year?";
   assert.ok(realSource.includes(heading), "this test is stale: the module no longer asks that question");
-  const rewordedSource = realSource.replace(heading, "1. Can we tell the first and last year this data covers?");
+  const rewordedSource = realSource.replace(heading, "1. Could someone reasonably ask this question for a particular year?");
   const plFrom = (source: string) =>
     (new Function(source + "\nreturn createStage2bPlainLanguage;")() as (c: unknown) => any)(CATALOG);
   const movedContract = workbookFingerprint(registry, CATALOG,
@@ -727,6 +800,165 @@ check("an interruption at any persistence boundary leaves the record wholly old 
 
 // ---------------------------------------------------------------- 1. the human-facing surface
 
+/**
+ * The words the deciding path may not use.
+ *
+ * Not a style rule. Each of these names a thing in the system rather than a thing in the world, and
+ * a person who does not already know the system cannot act on any of them. They stay legal inside
+ * the collapsed disclosure, where they describe what the code does rather than what is being asked.
+ */
+const IMPLEMENTATION_WORDS = ["capability", "policy", "coverage basis", "integrity rule", "artifact",
+  "table", "column", "schema", "validator", "authorization", "receipt owner", "mapping", "lookup"];
+
+check("the deciding path never uses implementation language, on any of the questions", () => {
+  for (const cap of model) {
+    const text = visibleText(primarySurface(cap)).toLowerCase();
+    for (const word of IMPLEMENTATION_WORDS) {
+      const at = text.indexOf(word);
+      assert.strictEqual(at, -1,
+        `${cap.id}: the deciding path says "${word}" — ...${text.slice(Math.max(0, at - 60), at + 60)}...`);
+    }
+  }
+  // The page's own chrome is on that path too: its buttons, filters, warnings and dialogs.
+  const chrome = JSON.stringify(PL.questions().page).toLowerCase();
+  for (const word of IMPLEMENTATION_WORDS) {
+    assert.ok(!chrome.includes(word), `the page's own controls say "${word}"`);
+  }
+  /**
+   * Including anything the SESSION hands the page to display. The copy dialog was built from a
+   * sentence the session returned -- "the same tables" -- which is how the one string on the
+   * deciding path that did not come from the contract was also the one still naming the database.
+   */
+  const plan = sessionFor().clusterPlan(withYear.id);
+  const scopes = PL.questions().page.cluster.scope;
+  assert.ok(scopes[plan.scope], `the copy dialog has no wording for scope ${JSON.stringify(plan.scope)}`);
+  for (const text of Object.values(scopes) as string[]) {
+    for (const word of IMPLEMENTATION_WORDS) {
+      assert.ok(!text.toLowerCase().includes(word), `the copy dialog says "${word}"`);
+    }
+  }
+
+  /**
+   * AND WITH SOMETHING ALREADY RECORDED, which is where this first went wrong.
+   *
+   * Rendering every card over an empty baseline proved nothing about the one case that matters:
+   * a value carried over from before the workbook existed, written in whatever words its author
+   * used. The checked-in record holds exactly one, and its text reads "this capability is
+   * unavailable in production ... the builder decides at runtime". The summary pasted it straight
+   * onto the deciding path, and only the browser saw it. A kept value is now described, not quoted.
+   */
+  const { entries: real } = readAuthoredRecord();
+  const carried = Object.keys(real).filter((id) => model.some((c) => c.id === id));
+  assert.ok(carried.length > 0, "this test is stale: nothing is recorded, so nothing can be carried over");
+  for (const id of carried) {
+    const cap = model.find((c) => c.id === id)!;
+    const seeded = workbookSession({ docs: {}, entries: real });
+    const text = visibleText(
+      (CARD.primary(cap, seeded, "1 of 52") + CARD.summaryPanel(cap, seeded))
+        .replace(/<details class="technical">[\s\S]*?<\/details>/g, "")).toLowerCase();
+    for (const word of IMPLEMENTATION_WORDS) {
+      assert.ok(!text.includes(word),
+        `${id}: a value recorded earlier puts "${word}" on the deciding path — ...`
+        + `${text.slice(Math.max(0, text.indexOf(word) - 60), text.indexOf(word) + 60)}...`);
+    }
+    // It is not hidden, though: the wording that was used is still one disclosure away.
+    assert.ok(visibleText(CARD.technical(cap, seeded)).length > 0,
+      `${id}: the recorded wording is not readable anywhere`);
+  }
+  // And the words ARE allowed where they belong, or the rule would just be pushing them off-screen.
+  const disclosure = visibleText(CARD.technical(withYear, sessionFor())).toLowerCase();
+  assert.ok(IMPLEMENTATION_WORDS.some((w) => disclosure.includes(w)),
+    "the technical disclosure names nothing technical, so the split is not real");
+});
+
+check("every card states what it helps answer, with a realistic example", () => {
+  for (const cap of model) {
+    const text = visibleText(primarySurface(cap));
+    assert.ok(text.includes(PL.questions().card.answersHeading),
+      `${cap.id}: the card never says what question it helps answer`);
+    const example = CATALOG.example(cap.id);
+    assert.ok(example && example.length > 15, `${cap.id}: has no realistic example`);
+    assert.ok(text.includes(example), `${cap.id}: the example is not shown`);
+    /** Something a person would actually say: a question, or an instruction like "Show me ...". */
+    assert.ok(/\?$/.test(example.trim()) || /^(Show|List|Tell|Give) /.test(example.trim()),
+      `${cap.id}: the example is not phrased as someone asking: ${example}`);
+    assert.ok(!IMPLEMENTATION_WORDS.some((w) => example.toLowerCase().includes(w)),
+      `${cap.id}: the example is written in implementation language: ${example}`);
+    assert.ok(text.indexOf(PL.describeQuestion(cap)) < text.indexOf(PL.questions().year.heading),
+      `${cap.id}: the first question comes before the reader is told what this is about`);
+  }
+});
+
+check("every choice says what it causes, and every question says what is being decided", () => {
+  for (const cap of model) {
+    const text = visibleText(primarySurface(cap));
+    for (const set of [PL.yearOptions(cap), PL.availabilityOptions()]) {
+      for (const o of set) {
+        assert.ok(o.consequence && o.consequence.length > 25,
+          `${cap.id}: the option "${o.label}" has no plain-language consequence`);
+        assert.ok(text.includes(o.consequence), `${cap.id}: the consequence of "${o.label}" is not shown`);
+      }
+    }
+    for (const decision of [PL.questions().year.decision, PL.questions().trust.decision,
+      PL.questions().availability.decision, PL.questions().responsibility.decision]) {
+      assert.ok(text.includes(decision), `${cap.id}: a question never states what is being decided`);
+    }
+    // "I'm not sure" is offered on every question, and says it changes nothing.
+    assert.ok(text.includes(PL.questions().year.options.unsure.consequence),
+      `${cap.id}: nothing tells the reader what "I'm not sure" does`);
+  }
+});
+
+check("a question that is a list recommends that the year does not matter, for a human reason", () => {
+  /**
+   * The concrete case the redesign was asked for. A directory does not become a time series because
+   * something dated happens to sit beside it, so the recommendation has to come from what the
+   * question IS -- and it has to say why in words that can be disagreed with.
+   */
+  const directory = model.find((c) => /which agencies exist in the long fbi series/i.test(PL.describeQuestion(c)))!;
+  assert.ok(directory, "this test is stale: the agency directory question is gone");
+  const advice = CATALOG.yearAdvice(directory.id);
+  assert.strictEqual(advice.recommend, "no", "a directory is recommended as though it were a yearly statistic");
+  assert.ok(/lists which departments exist/.test(advice.why), "the reason is not about what this question is");
+  assert.ok(!/column|table|year-bearing|dated/i.test(advice.why),
+    `the reason explains the data's shape rather than the question: ${advice.why}`);
+
+  const text = visibleText(primarySurface(directory));
+  assert.ok(text.includes(`${PL.questions().card.recommendationLabel}: No.`),
+    "the recommendation does not read as an answer to the question asked");
+  assert.ok(text.includes(advice.why), "the recommendation appears without its reason");
+
+  /**
+   * And it is genuinely a judgment, not a readout of the data: a directory whose data DOES carry
+   * something dated is still recommended "no". Recommending from the columns would flip it.
+   */
+  const datedDirectory = model.find((c) => CATALOG.yearAdvice(c.id).recommend === "no"
+    && c.coverageCandidates.some((o) => o.yearBearing));
+  assert.ok(datedDirectory,
+    "this test is stale: no question recommends 'no' while carrying something dated, so the two cannot be told apart");
+});
+
+check("nothing is authored, and nothing is eligible, however the workbook is used", () => {
+  /**
+   * The standing property for the whole of Stage 2B. The redesign changed what people read; it must
+   * not have changed what the machine can switch on, which is still nothing.
+   */
+  const { entries } = readAuthoredRecord();
+  const authored = Object.entries(entries).filter(([, e]) => e.kind !== "legacy");
+  assert.deepStrictEqual(authored, [], "policy has been authored into the checked-in record");
+
+  // Even a complete, confirmed answer to every question authorizes nothing.
+  const S = sessionFor();
+  for (const cap of model) { S.update(cap.id, answers(cap)); S.confirmMapping(cap.id); }
+  const result = importInto(S.serialize());
+  assert.ok(result.ok, JSON.stringify(!result.ok && result.errors));
+  if (!result.ok) return;
+  assert.deepStrictEqual(result.eligible, [],
+    `answering every question made ${result.eligible.length} capability(ies) authorization-eligible`);
+  assert.strictEqual(integrityIsExecutable(["anything a person could write"]), false,
+    "an integrity rule became executable, which is what eligibility waits on");
+});
+
 check("no technical field is required to answer any question", () => {
   /**
    * The property that makes this usable by the person whose decision it actually is. Every question
@@ -746,8 +978,22 @@ check("no technical field is required to answer any question", () => {
     const result = importInto(S.serialize());
     assert.ok(result.ok, `${cap.id}: ${JSON.stringify(!result.ok && result.errors)}`);
   }
-  // The human answer never carries a column unless someone opens the technical disclosure.
-  assert.strictEqual(PL.blankAnswer().coverageColumn, null, "a column is pre-set before anyone chose one");
+  /**
+   * The human answer cannot carry a database choice AT ALL any more.
+   *
+   * It used to hold one, and the page asked for it: pick a column, and justify the pick if its name
+   * did not look like a year. That is not a judgment the person whose decision this is can make,
+   * and asking them for it turned a question about crime data into a quiz about schemas. What to
+   * read is worked out here; where it cannot be, that is engineering's to close.
+   */
+  const blank = PL.blankAnswer();
+  assert.deepStrictEqual(Object.keys(blank).sort(),
+    ["availability", "availabilityWhen", "coverage", "evidence", "integrity", "integrityOther",
+      "integrityUnsure", "owner", "ownerOther"],
+    "the human answer carries a field that is not one of the four questions and their follow-ups");
+  for (const key of Object.keys(blank)) {
+    assert.ok(!/column|table|basis/i.test(key), `the human answer still carries ${key}`);
+  }
 });
 
 check("every question offers \"I'm not sure\", and it fails closed", () => {
@@ -772,9 +1018,9 @@ check("every question offers \"I'm not sure\", and it fails closed", () => {
   assert.ok(withYear.id in result.policy, "an unsure answer was discarded rather than recorded as open");
 
   // Every question offers it.
-  assert.ok(PL.coverageOptions(withYear).some((o: any) => o.value === PL.UNSURE), "coverage has no unsure option");
+  assert.ok(PL.yearOptions(withYear).some((o: any) => o.value === PL.UNSURE), "coverage has no unsure option");
   assert.ok(PL.availabilityOptions().some((o: any) => o.value === PL.UNSURE), "availability has no unsure option");
-  assert.ok(PL.ownerOptions(withYear).some((o: any) => o.value === PL.UNSURE), "receipt owner has no unsure option");
+  assert.ok(PL.responsibilityOptions(withYear).some((o: any) => o.value === PL.UNSURE), "receipt owner has no unsure option");
   assert.ok(/I\\u2019m not sure|I'm not sure/.test(renderWorkbook(registry)), "the page never offers 'I'm not sure' for integrity");
 });
 
@@ -816,31 +1062,40 @@ check("an unresolved answer never erases an existing decision", () => {
   const removed = importDecisions(W.serialize(), registry, prior);
   assert.ok(removed.ok && !(withYear.id in removed.policy), "the named withdrawal no longer removes anything");
 
-  // And the page says which fields are being kept rather than set.
-  const html = renderWorkbook(registry);
-  assert.ok(/kept from what was already recorded/.test(html), "the page never says a field is being kept");
-  assert.ok(/leaving a question open never/.test(html), "the page does not tell the reader that open questions are safe");
+  // And the summary a person reads says which answers are being kept rather than set.
+  const K = sessionFor({ [withYear.id]: existingDerived }, prior.entries);
+  K.update(withYear.id, {
+    ...PL.blankAnswer(), coverage: PL.UNSURE, availability: PL.UNSURE, owner: PL.UNSURE, integrityUnsure: true,
+    evidence: "nobody here knows yet; recorded so the open question is visible rather than assumed",
+  });
+  const shown = visibleText(CARD.summaryPanel(withYear, K));
+  assert.ok(shown.includes(PL.questions().summary.keptDetail),
+    `the summary never says an answer is being kept rather than set: ${shown}`);
+  assert.ok(!shown.includes(String(existingDerived.receiptOwner)),
+    "the summary quotes the value that was already recorded instead of describing it");
 });
 
-check("the coverage question promises only what the check delivers", () => {
+check("the year question promises only what the protection delivers", () => {
   /**
-   * The question said the system could notice "years this data does not cover". The check compares
-   * the requested years against MIN and MAX and nothing else, so with rows for 2020 and 2022 and
-   * none for 2021, a request for 2021 passes. Asking a policy owner to authorise gap detection that
-   * does not exist is worse than not asking: they would rely on it.
+   * The check compares a requested year against the first and last it has and nothing else, so with
+   * 2020 and 2022 present and 2021 absent, a request for 2021 passes. Asking someone to authorise
+   * gap detection that does not exist is worse than not asking: they would rely on it.
    */
-  const yearsOption = PL.coverageOptions(withYear).find((o: any) => o.value === "years");
-  assert.ok(yearsOption, "there is no option for a lookup that records years");
-  assert.ok(/first and last year/.test(yearsOption.label), "the label still promises general coverage");
-  assert.ok(/missing in between/.test(yearsOption.consequence),
+  const yearsOption = PL.yearOptions(withYear).find((o: any) => o.value === "years");
+  assert.ok(yearsOption, "there is no option for an answer where the year matters");
+  assert.ok(/refuse years earlier than the first available year or later than the last available year/
+    .test(yearsOption.consequence), "the consequence does not say what protection is actually applied");
+  assert.ok(/does not detect a missing year inside that range/.test(yearsOption.consequence),
     "the consequence does not disclose that a gap inside the range is undetected");
   assert.ok(!/years this data does not cover|which year each record belongs to/.test(yearsOption.consequence + yearsOption.label),
     "the overpromising wording survives");
 
-  const html = renderWorkbook(registry);
-  assert.ok(/Do we know the first and last year this data covers\?/.test(html), "the page still asks the wider question");
-  // Contiguous fragment: the page builds this sentence by concatenation, so the source is split.
-  assert.ok(/not notice a year missing in between/.test(html), "the page does not disclose the limitation");
+  // And a person reading the card is told both halves, on the deciding path.
+  const surface = visibleText(primarySurface(withYear));
+  assert.ok(surface.includes("refuse years earlier than the first available year"),
+    "the card never says what the protection does");
+  assert.ok(surface.includes("does not detect a missing year inside that range"),
+    "the card never discloses the limitation");
 
   // The limitation is recorded at the check itself, where the next reader of the code will meet it.
   const runtime = fs.readFileSync(path.join(process.cwd(), "lib", "source-health.ts"), "utf8");
@@ -860,47 +1115,74 @@ check("a recommendation is shown but never pre-selected", () => {
     assert.strictEqual(h.availability, null, `${cap.id}: availability opens pre-answered`);
     assert.strictEqual(h.owner, null, `${cap.id}: receipt owner opens pre-answered`);
     assert.deepStrictEqual(h.integrity, [], `${cap.id}: integrity opens pre-answered`);
-    assert.ok(PL.coverageOptions(cap).some((o: any) => o.recommended), `${cap.id}: no option is marked recommended`);
+    assert.ok(PL.yearOptions(cap).some((o: any) => o.recommended), `${cap.id}: no option is marked recommended`);
   }
   assert.strictEqual(S.counts().complete, 0, "a lookup counts as finished before anyone answered anything");
 
-  // In the rendered page, "recommended" is a label; `checked` appears only where a stored answer is.
-  const html = renderWorkbook(registry);
-  assert.ok(/recommended<\/span>/.test(html), "the recommendation is never shown to the reader");
-  for (const [question, stored] of [["cov", "h.coverage"], ["avail", "h.availability"], ["owner", "h.owner"]] as [string, string][]) {
-    const template = new RegExp('name="' + question + '"[^\\n]*?\\(' + stored.replace(".", "\\.") + '===o\\.value\\?');
-    assert.ok(template.test(html),
-      `the ${question} option is checked by something other than the stored answer, so the page chooses for the user`);
+  /**
+   * On the card, the recommendation is its OWN block with its own reason, and nothing is checked.
+   *
+   * Fusing it onto the option label ("No — this question is not about a particular year
+   * recommended") reads as one label, which makes advice look like part of the choice. And a
+   * `checked` attribute anywhere on an untouched card would be the workbook answering for someone.
+   */
+  const label = PL.questions().card.recommendationLabel;
+  for (const cap of model) {
+    const surface = renderedCard(cap);
+    /** On the INPUT elements, not anywhere in the text: the evidence hint says "checked the ...". */
+    assert.ok(!/<input[^>]*\schecked/.test(surface), `${cap.id}: an option is pre-checked before anyone chose one`);
+    const advice = CATALOG.yearAdvice(cap.id);
+    const text = visibleText(surface);
+    assert.ok(text.includes(`${label}: ${advice.recommend === "yes" ? "Yes" : "No"}.`),
+      `${cap.id}: the recommendation is not shown as its own statement`);
+    assert.ok(text.includes(advice.why), `${cap.id}: the recommendation is shown without its reason`);
+    const option = PL.yearOptions(cap).find((o: any) => o.recommended);
+    assert.ok(option, `${cap.id}: no option carries the recommendation`);
+    assert.ok(!/recommend/i.test(option.label), `${cap.id}: the recommendation is fused into the option label`);
   }
 });
 
-check("the mapping panel repaints as you type, so a fixed problem re-enables confirmation", () => {
+check("the summary repaints as you type, so a fixed problem re-enables confirmation", () => {
   /**
    * Found by driving the real page, not by any assertion here. The panel was part of the card,
-   * which is only rebuilt when a radio changes -- so typing the missing reason cleared the problem
+   * which is only rebuilt when a radio changes -- so typing the missing sentence cleared the problem
    * while the confirm button stayed greyed out, with no way to press it and nothing saying why.
    * Repainting only the panel also keeps the cursor where the person is typing.
    */
   const html = renderWorkbook(registry);
-  assert.ok(/<div id="mapping"><\/div>/.test(html), "the mapping panel is not its own repaintable region");
+  assert.ok(/<div id="summary"><\/div>/.test(html), "the summary is not its own repaintable region");
   const save = html.slice(html.indexOf("const save = () => {"), html.indexOf("/* Radios re-render"));
-  assert.ok(/renderMapping\(\);/.test(save), "typing does not repaint the mapping panel, so its button state goes stale");
-  const renderMapping = html.slice(html.indexOf("const renderMapping = () => {"), html.indexOf("const save = () => {"));
-  assert.ok(/addEventListener\("click"/.test(renderMapping), "the repainted panel loses its confirm handler");
-  // The button's enabled state is derived from the problems, not from when the card was last built.
-  assert.ok(/answered && !problems\.length \? '' : ' disabled'/.test(html),
-    "the confirm button is enabled by something other than the current state of the answers");
+  assert.ok(/renderSummary\(\);/.test(save), "typing does not repaint the summary, so its button state goes stale");
+  const renderSummary = html.slice(html.indexOf("const renderSummary = () => {"), html.indexOf("const save = () => {"));
+  assert.ok(/addEventListener\("click"/.test(renderSummary), "the repainted panel loses its confirm handler");
+
+  // The button's enabled state is derived from the answers NOW, not from when the card was built.
+  const S = sessionFor();
+  assert.ok(/disabled/.test(CARD.summaryPanel(withYear, S)), "an unanswered question offers confirmation");
+  S.update(withYear.id, answers(withYear, { availability: "sometimes", availabilityWhen: "" }));
+  assert.ok(/disabled/.test(CARD.summaryPanel(withYear, S)), "a question with something missing offers confirmation");
+  S.update(withYear.id, { availabilityWhen: "only some states send this, so it is missing for the rest" });
+  assert.ok(!/disabled/.test(CARD.summaryPanel(withYear, S)),
+    "supplying the missing sentence did not re-enable confirmation");
 });
 
-check("the technical detail is present, optional, and marked as observed rather than decided", () => {
-  const html = renderWorkbook(registry);
-  assert.ok(/<details><summary>Technical details<\/summary>/.test(html), "the technical detail is not behind a disclosure");
-  assert.ok(/Why this is recommended/.test(html), "the recommendation's basis is not disclosed");
-  assert.ok(/what the code/.test(html) && /not up for decision/.test(html),
-    "the page does not distinguish what the code does from what is being decided");
-  // The identifier and tables are in the disclosure, not in the question.
-  const question = html.slice(html.indexOf("1. Can this answer tell which years"), html.indexOf("2. What would make"));
-  assert.ok(!/cap\.id/.test(question), "the capability identifier is part of the coverage question itself");
+check("the technical detail is present, optional, and never needed to answer anything", () => {
+  const surface = renderedCard(withYear);
+  assert.ok(/<details class="technical"><summary>Technical details<\/summary>/.test(surface),
+    "the technical detail is not behind a marked disclosure");
+  const technical = /<details class="technical">[\s\S]*?<\/details>/.exec(surface);
+  assert.ok(technical, "the disclosure is not one element, so the two surfaces cannot be told apart");
+  const inside = visibleText(technical![0]);
+  assert.ok(inside.includes(withYear.id), "the identifier is not in the disclosure");
+  assert.ok(inside.includes(PL.questions().card.technicalNote),
+    "the disclosure does not say that nothing in it is the reader's to decide");
+
+  // And the identifier, the tables and the columns appear NOWHERE else.
+  const outside = visibleText(primarySurface(withYear));
+  assert.ok(!outside.includes(withYear.id), "the identifier is part of the deciding path");
+  for (const table of withYear.reads) {
+    assert.ok(!outside.includes(table), `the deciding path names ${table}`);
+  }
 });
 
 // ---------------------------------------------------------------- 2. the translation is confirmed
@@ -969,15 +1251,17 @@ check("an export carries the human answer AND the mapping, never one without the
 
 check("draft integrity prose is preserved, and no binding is ever asked for", () => {
   const S = sessionFor();
-  const own = PL.integrityScenarios(withYear).map((s: any) => s.value).slice(0, 2);
+  const own = PL.trustScenarios(withYear).map((s: any) => s.value).slice(0, 2);
   S.update(withYear.id, answers(withYear, { integrity: own, integrityOther: "the county lookup goes missing" }));
   const proposed = S.proposal(withYear.id).proposed;
   assert.strictEqual(proposed.integrity.length, own.length + 1, "a chosen scenario or the free text was dropped");
   assert.ok(proposed.integrity.every((r: unknown) => typeof r === "string"), "a rule was recorded as something other than prose");
   assert.ok(proposed.integrity.some((r: string) => /county lookup goes missing/.test(r)), "the person's own words were lost");
-  const html = renderWorkbook(registry);
-  assert.ok(!/boundTo/.test(html), "the page asks the reader for a binding");
-  assert.ok(/nothing here builds an automatic check/.test(html), "the page implies these rules will be executed");
+  const surface = visibleText(primarySurface(withYear));
+  assert.ok(!/boundTo/.test(renderedCard(withYear)), "the card asks the reader for a binding");
+  assert.ok(surface.includes("These checks have not been implemented yet, so this records a requirement"
+    + " and does not activate anything."),
+    "the card implies these rules will be executed");
 });
 
 // ---------------------------------------------------------------- 3. eligibility stays closed
@@ -1016,35 +1300,59 @@ check("a full set of answers records policy and still authorizes nothing", () =>
   assert.deepStrictEqual(stored.availability, { kind: "always" });
 });
 
-// ---------------------------------------------------------------- 4. coverage
+// ---------------------------------------------------------------- 4. the year question
 
-check("a lookup with no year-like column recommends the honest answer, and can still name a column", () => {
-  const options = PL.coverageOptions(withoutYear);
-  const recommended = options.find((o: any) => o.recommended);
-  assert.strictEqual(recommended.value, "no-years", "a lookup with no year column recommends bounding it by one anyway");
-  assert.ok(/none of the columns this uses looks like a year/i.test(recommended.why), "the recommendation gives no basis");
+check("saying the year matters, where nothing dated can be read, is engineering's follow-up", () => {
+  /**
+   * The person is not asked to solve this and is not blamed for it. Two county answers genuinely
+   * have nothing dated to read; the honest thing is to record the human judgment -- a year DOES
+   * matter for homicides -- and hand the technical gap to engineering, fail-closed in the meantime.
+   *
+   * The old design did the opposite: it demanded the person pick a column and then justify the
+   * pick, which is a question only engineering can answer, asked of the one person whose judgment
+   * was actually needed.
+   */
+  assert.ok(withoutYear, "this test is stale: every capability now has something dated to read");
+  assert.strictEqual(CATALOG.yearAdvice(withoutYear.id).recommend, "yes",
+    "this fixture cannot show anything: the recommendation is not that a year matters");
 
-  // The honest answer stays reachable: the naming heuristic must not make a real year column unusable.
   const S = sessionFor();
-  const column = withoutYear.coverageCandidates[0];
-  S.update(withoutYear.id, answers(withoutYear, {
-    coverage: "years", coverageColumn: { table: column.table, yearColumn: column.yearColumn }, coverageReason: "",
-  }));
-  assert.ok(S.problems(withoutYear.id).some((p: string) => /not named like a year/.test(p)),
-    "an unmarked column was accepted with no reason given");
-  S.update(withoutYear.id, { coverageReason: "this column stores an ISO date whose first four characters are the year" });
-  assert.deepStrictEqual(S.problems(withoutYear.id), [], "a justified unmarked column is still refused");
-  const proposed = S.proposal(withoutYear.id).proposed;
-  assert.strictEqual(proposed.coverage.justification, "this column stores an ISO date whose first four characters are the year");
+  S.update(withoutYear.id, answers(withoutYear, { coverage: "years" }));
+  const p = S.proposal(withoutYear.id);
+  assert.deepStrictEqual(p.followUps, ["coverage"], "the gap was not recorded as engineering's follow-up");
+  assert.strictEqual(p.merged.coverage, null, "a basis was invented where there is nothing dated to read");
+
+  // It is NOT presented as something the person left undone, or must fix.
+  assert.deepStrictEqual(S.problems(withoutYear.id), [],
+    "the person is asked to fix a gap that is not theirs to fix");
+  assert.strictEqual(S.isComplete(withoutYear.id), false, "an answer with no basis counted as finished");
+
+  // And the card says so, in those terms.
+  const shown = visibleText(CARD.summaryPanel(withoutYear, S));
+  assert.ok(shown.includes(PL.questions().card.followUpHeading), "the card never says this is with engineering");
+  assert.ok(shown.includes("Working out what it should read is an engineering job, not yours."),
+    `the card does not tell the reader this is not theirs to solve: ${shown}`);
+
+  // Fail-closed: recorded, and authorizing nothing.
+  S.confirmMapping(withoutYear.id);
+  const result = importInto(S.serialize());
+  assert.ok(result.ok, JSON.stringify(!result.ok && result.errors));
+  if (!result.ok) return;
+  assert.deepStrictEqual(result.eligible, [], "an unresolved year basis switched something on");
 });
 
-check("\"not about a time period\" is recorded as a decision with its reason", () => {
+check("\"not about a particular year\" is recorded as a decision, with no reason demanded", () => {
+  /**
+   * It used to make the person type a justification for choosing the honest answer. Answering "no"
+   * is a decision, not an exception needing an excuse; what gets recorded is the decision itself.
+   */
   const S = sessionFor();
-  S.update(withYear.id, answers(withYear, { coverage: "no-years", coverageReason: "" }));
-  assert.ok(S.problems(withYear.id).some((p: string) => /not about a time period/.test(p)), "a reasonless answer was accepted");
-  S.update(withYear.id, { coverageReason: "this is a directory count with no time dimension to bound" });
+  S.update(withYear.id, answers(withYear, { coverage: "no-years" }));
+  assert.deepStrictEqual(S.problems(withYear.id), [], "the honest answer was refused until a reason was typed");
   const proposed = S.proposal(withYear.id).proposed;
-  assert.deepStrictEqual(proposed.coverage, { kind: "none", reason: "this is a directory count with no time dimension to bound" });
+  assert.deepStrictEqual(proposed.coverage, { kind: "none", reason: PL.questions().year.noneReason });
+  assert.ok(/Answered in the workbook/.test(proposed.coverage.reason),
+    "the recorded reason claims something the person did not say");
   S.confirmMapping(withYear.id);
   const result = importInto(S.serialize());
   assert.ok(result.ok, JSON.stringify(!result.ok && result.errors));
@@ -1052,11 +1360,24 @@ check("\"not about a time period\" is recorded as a decision with its reason", (
   assert.notStrictEqual((result.policy[withYear.id] as any).coverage, null, "a decided no-year answer was stored as undecided");
 });
 
-check("a basis outside the contract is refused at import even if the page emitted it", () => {
-  const tampered = JSON.parse(exportWith(withYear.id, answers()));
-  tampered.decisions[withYear.id].human.coverageColumn = { table: "unrelated_table", yearColumn: "year" };
-  const result = importInto(JSON.stringify(tampered));
-  assert.strictEqual(result.ok, false, "a basis outside the contract was accepted");
+check("a basis outside what the answer reads is refused, wherever it came from", () => {
+  /**
+   * The page can no longer emit one -- the basis is chosen from what the capability reads -- so this
+   * guards the layer below: a hand edit, a migration, or a future writer. Asserted directly on the
+   * predicate, because there is no longer a workbook path that can reach it.
+   */
+  const declared = withYear.reads.map((name) => ({ name, requiredColumns: withYear.columns[name] ?? [] }));
+  const stray = { coverage: { kind: "column", table: "unrelated_table", yearColumn: "year" },
+    integrity: ["a sentence a person wrote"], availability: { kind: "always" }, receiptOwner: "someone",
+    evidence: "an entry naming a table this answer does not read" };
+  assert.ok(coverageBasisErrors(stray, declared).some((e) => /is not one the capability reads/.test(e)),
+    "a basis naming something the answer does not read was accepted");
+  assert.strictEqual(capabilityAuthorizes(stray, declared), false, "it authorized anyway");
+
+  // And the human answer has no way to carry one, so the page cannot produce this at all.
+  const exported = JSON.parse(exportWith(withYear.id, answers()));
+  assert.ok(!("coverageColumn" in exported.decisions[withYear.id].human),
+    "the export still carries a database choice made by the person");
 });
 
 // ---------------------------------------------------------------- 5. export, merge, withdrawal
@@ -1141,27 +1462,29 @@ check("two sessions cannot silently overwrite each other's answer on an unconfir
 
 check("a second session cannot overwrite an answer that happens to derive the same policy", () => {
   /**
-   * Two materially different answers can produce byte-identical policy: the reason someone gives
-   * for a coverage basis is part of what they said and is not part of the mapping when the column
-   * is named like a year. Comparing the derived policy saw no conflict at all, so the second import
-   * overwrote the first person's stated reasoning while every technical field stayed the same.
+   * Two materially different answers can produce byte-identical policy. Someone who describes when
+   * the data is legitimately missing and THEN decides it should always be there leaves that
+   * sentence behind in their answer, where it is part of what they said and no part of the mapping.
+   * Comparing the derived policy saw no conflict at all, so the second import overwrote the first
+   * person's words while every technical field stayed the same.
    */
-  const base = recordWith(withYear.id, answers(withYear, { coverageReason: "the pipeline owner named this column" }));
+  const base = recordWith(withYear.id, answers(withYear, {
+    availability: "always", availabilityWhen: "an earlier draft: only some states send this" }));
   const start = { docs: base.docs, entries: base.entries };
 
   const A = workbookSession(start);
-  assert.ok(A.update(withYear.id, { coverageReason: "session A: the runbook names this column as the load key" }),
-    "editing the reason was not treated as a change to the answer");
+  assert.ok(A.update(withYear.id, { availabilityWhen: "session A: I checked, and it is always sent" }),
+    "editing what the person wrote was not treated as a change to the answer");
   const afterA = importDecisions(A.serialize(), registry, start);
   assert.ok(afterA.ok, JSON.stringify(!afterA.ok && afterA.errors));
   if (!afterA.ok) return;
   assert.deepStrictEqual(afterA.policy[withYear.id], base.policy[withYear.id],
     "this fixture cannot show anything: the two answers derive different policy, which the old check would catch");
-  assert.match((afterA.entries[withYear.id] as unknown as { human: { coverageReason: string } }).human.coverageReason, /session A/,
+  assert.match((afterA.entries[withYear.id] as unknown as { human: { availabilityWhen: string } }).human.availabilityWhen, /session A/,
     "the first session's answer was not recorded");
 
   const B = workbookSession(start);
-  B.update(withYear.id, { coverageReason: "session B: I picked it because it was the only one offered" });
+  B.update(withYear.id, { availabilityWhen: "session B: nobody asked me, I assumed it is always there" });
   const second = importDecisions(B.serialize(), registry, { docs: afterA.docs, entries: afterA.entries });
   assert.strictEqual(second.ok, false, "a second answer overwrote the first because the policy they derive is identical");
   assert.ok(!second.ok && second.errors.some((e) => e.includes(withYear.id) && /changed since this session began/.test(e)),
@@ -1182,8 +1505,14 @@ check("withdrawal is a named act, never inferred from unanswered questions", () 
   assert.ok(!(withYear.id in result.policy), "the withdrawn entry survived");
 
   const html = renderWorkbook(registry);
-  assert.ok(/Remove the recorded policy/.test(html), "the page never offers removal");
-  assert.ok(/confirm\("Remove the recorded policy/.test(html), "removal is not confirmed");
+  const wording = PL.questions().withdraw;
+  const withdrawable = renderedCard(withYear, sessionFor({ [withYear.id]: prior.policy[withYear.id] as Record<string, unknown> }, prior.entries));
+  assert.ok(visibleText(withdrawable).includes(wording.button), "the card never offers removal");
+  assert.ok(visibleText(withdrawable).includes(wording.heading), "removal is offered without saying what it removes");
+  assert.ok(new RegExp("confirm\\(Q\\.withdraw\\.confirm").test(html), "removal is not confirmed");
+  assert.ok(/not the same as leaving the/.test(wording.confirmDetail),
+    "the confirmation does not say what removal is not the same as");
+  assert.ok(/Q\.withdraw\.confirmDetail/.test(html), "the page does not show that part of the confirmation");
 });
 
 // ---------------------------------------------------------------- 6. sessions
@@ -1243,7 +1572,14 @@ check("the page tracks unsaved work and guards the close only when there is some
   const html = renderWorkbook(registry);
   const handler = /addEventListener\("beforeunload"[\s\S]{0,320}/.exec(html);
   assert.ok(handler && /if \(!S\.isDirty\(\)\) return;/.test(handler[0]), "the close guard is unconditional or missing");
-  assert.ok(/Export every few answers/.test(html), "the page never suggests exporting periodically");
+  /**
+   * Asserted on the CONTRACT, not on the page's bytes. The warning is set from it at runtime, and
+   * the module builds the sentence by concatenation, so searching the page for a contiguous phrase
+   * tests how the source happens to wrap rather than what a reader is told.
+   */
+  assert.ok(PL.questions().page.unsavedWarning.includes("Export every few answers"),
+    "the page never suggests exporting periodically");
+  assert.ok(html.includes("unsavedWarning"), "the page never renders the unsaved-work warning");
 });
 
 // ---------------------------------------------------------------- 7. the capability set
@@ -1402,7 +1738,7 @@ check("owner candidates are evidence from a filename search, never presented as 
   const html = renderWorkbook(registry);
   assert.ok(/a filename search, not an answer/.test(html), "filenames are not framed as a search result");
   // The owner question itself offers processes, not filenames.
-  for (const option of PL.ownerOptions(withYear)) {
+  for (const option of PL.responsibilityOptions(withYear)) {
     assert.ok(!/\.(py|ts|js|sql)$/.test(option.value), `the owner question offers the filename ${option.value}`);
   }
 });

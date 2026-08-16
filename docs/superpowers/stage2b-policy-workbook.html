@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"/>
-<title>Stage 2B policy workbook</title>
+<title>Stage 2B decision workbook</title>
 <style>
 :root{--ink:#16181d;--dim:#5b6172;--line:#d8dbe3;--bg:#fbfbfd;--card:#fff;--warn:#8a5a00;--warnbg:#fff6e5;--ok:#1c6b4a;--okbg:#e9f4ee;--sug:#4a5878;--sugbg:#eef1f7;--alert:#8c2f1d;--alertbg:#fdefec}
 *{box-sizing:border-box}
@@ -10,25 +10,41 @@ header b{font-size:14px}
 .counts{color:var(--dim);font-size:13px;display:flex;gap:14px;flex-wrap:wrap}
 main{max-width:820px;margin:0 auto;padding:22px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:20px 22px;margin-bottom:16px}
-h2{font-size:19px;line-height:1.4;margin:0 0 10px;font-weight:600}
-.q{border-top:1px solid var(--line);padding:16px 0}
-.q h3{font-size:15px;margin:0 0 4px}
+.head{position:relative;padding-bottom:6px}
+.eyebrow{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin:0 0 4px;font-weight:600}
+h2{font-size:20px;line-height:1.35;margin:0 0 8px;font-weight:600}
+.example{margin:0;font-size:14.5px;color:#39435c;background:var(--sugbg);border-left:3px solid var(--sug);padding:8px 12px;border-radius:0 4px 4px 0}
+.example span{color:var(--dim);font-size:12.5px;display:block}
+.head .observed{position:absolute;top:0;right:0}
+.q{border-top:1px solid var(--line);padding:16px 0;margin-top:14px}
+.q h3{font-size:16px;margin:0 0 6px}
+.decide{margin:0 0 10px;font-size:14px;color:#39435c}
+.decide b{color:var(--ink)}
+.choices{margin:12px 0 4px;font-size:12.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--dim);font-weight:600}
 .q .hint{font-size:13.5px;color:var(--dim);margin:0 0 10px}
 label.opt{display:block;border:1px solid var(--line);border-radius:6px;padding:9px 12px;margin:6px 0;cursor:pointer}
 label.opt:hover{background:#f7f8fb}
 label.opt input{margin-right:9px}
 label.opt .why{display:block;font-size:13px;color:var(--dim);margin:3px 0 0 24px}
-.tag{display:inline-block;font-size:11px;background:var(--okbg);color:var(--ok);border-radius:999px;padding:1px 8px;margin-left:6px;font-weight:600}
+.rec{background:var(--okbg);border-left:3px solid var(--ok);padding:10px 13px;margin:12px 0 0;border-radius:0 4px 4px 0;font-size:13.5px;color:#17513a}
+.rec b{color:var(--ok)}
+.recnote{display:block;font-size:12.5px;color:var(--dim);margin-top:4px}
 input[type=text],textarea{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:5px;font:inherit;background:#fff;margin-top:6px}
 textarea{min-height:58px;resize:vertical}
-details{margin:8px 0;font-size:13.5px}
+details{margin:14px 0 0;font-size:13.5px}
 details summary{cursor:pointer;color:var(--sug)}
 details .body{background:var(--sugbg);border-left:3px solid var(--sug);padding:9px 12px;margin-top:6px;border-radius:0 4px 4px 0;color:#39435c}
+details.technical{border-top:1px solid var(--line);padding-top:14px}
 .observed{font-size:12.5px;color:var(--dim);font-style:italic}
-.mapping{background:var(--sugbg);border:1px solid #d3d9e6;border-radius:7px;padding:13px 15px;margin-top:6px}
-.mapping dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:13.5px}
+.means{background:#fff;border:1px solid var(--line);border-radius:7px;padding:13px 15px;margin-top:6px}
+.means dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:8px 14px;font-size:14px}
+.means dt{color:var(--dim);font-weight:600}
+.means dd{margin:0}
+.keptnote{color:var(--warn)}
+.mapping{margin:0;display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:13px}
 .mapping dt{color:var(--dim)}
 .mapping dd{margin:0}
+.followup{background:var(--sugbg);border-left:3px solid var(--sug);padding:9px 12px;margin:10px 0;font-size:13.5px;color:#39435c;border-radius:0 4px 4px 0}
 .warn{background:var(--warnbg);border-left:3px solid var(--warn);padding:9px 12px;margin:10px 0;font-size:13.5px;color:var(--warn);border-radius:0 4px 4px 0}
 .alert{background:var(--alertbg);border-left:3px solid var(--alert);padding:9px 12px;margin:10px 0;font-size:13.5px;color:var(--alert);border-radius:0 4px 4px 0}
 .good{background:var(--okbg);border-left:3px solid var(--ok);padding:9px 12px;margin:10px 0;font-size:13.5px;color:var(--ok);border-radius:0 4px 4px 0}
@@ -44,46 +60,37 @@ dialog{border:1px solid var(--line);border-radius:9px;padding:20px;max-width:640
 code{font:12px ui-monospace,Menlo,monospace;background:#f2f3f7;padding:1px 4px;border-radius:3px;word-break:break-all}
 </style></head><body>
 <header>
- <b>Stage 2B policy workbook</b>
- <span id="dirty" class="saved">Nothing to save yet</span>
+ <b>Stage 2B decision workbook</b>
+ <span id="dirty" class="saved"></span>
  <span class="counts" id="counts"></span>
  <span style="flex:1"></span>
- <select id="filter" style="width:auto;padding:6px 8px;border:1px solid var(--line);border-radius:5px">
-  <option value="all">All lookups</option>
-  <option value="unanswered">Not yet answered</option>
-  <option value="unconfirmed">Answered, mapping not confirmed</option>
-  <option value="problems">Needs something fixed</option>
-  <option value="conditional">Possibly sometimes-unavailable</option>
- </select>
- <button id="import">Load a saved session</button>
- <button class="primary" id="export">Export answers</button>
+ <select id="filter" style="width:auto;padding:6px 8px;border:1px solid var(--line);border-radius:5px"></select>
+ <button id="import"></button>
+ <button class="primary" id="export"></button>
  <input type="file" id="file" accept="application/json" hidden/>
 </header>
 <main>
  <div class="alert" id="staleness" hidden></div>
- <div class="warn">Your answers live only in this tab until you press <b>Export answers</b>. Nothing here
-  changes any system, switches anything on, or reaches the internet. Export every few answers — a closed
-  tab or a browser crash takes unexported work with it.</div>
+ <div class="warn" id="unsavedWarning"></div>
  <div id="card"></div>
  <div class="nav">
-  <button id="prev">Previous</button>
-  <button id="next">Next</button>
-  <button class="primary" id="nextUnanswered">Next unanswered</button>
-  <button id="cluster">Copy these answers to similar lookups…</button>
+  <button id="prev"></button>
+  <button id="next"></button>
+  <button class="primary" id="nextUnanswered"></button>
+  <button id="cluster"></button>
  </div>
 </main>
 <dialog id="confirm">
- <h3>Copy to similar lookups</h3>
+ <h3 id="clusterHeading"></h3>
  <p id="confirmIntro"></p>
- <p style="font-size:13px;color:#5b6172">Every lookup that would change is named below. Each one keeps its
-  own technical mapping, which you will need to review and confirm separately. Nothing is copied until you confirm.</p>
+ <p style="font-size:13px;color:#5b6172" id="clusterNote"></p>
  <ul class="affected" id="affected"></ul>
- <div class="nav"><button id="cancelCluster">Cancel</button><button class="primary" id="applyCluster">Copy to these</button></div>
+ <div class="nav"><button id="cancelCluster"></button><button class="primary" id="applyCluster"></button></div>
 </dialog>
 <script>
 const DATA = {
  "v": 5,
- "contractFingerprint": "a3a24ec7c746eef1",
+ "contractFingerprint": "f0d6e19ee87ffefb",
  "capabilities": [
   {
    "id": "crime_data::agencies+agency_county_crosswalk::agencies(agency,national_sample,ori)|agency_county_crosswalk(county_fips,county_key,ori,ori9,state)",
@@ -4708,9 +4715,17 @@ const DATA = {
  * capability offered all three update processes, so the only way to pick was to open the technical
  * details, which is exactly what this layer exists to avoid.
  *
- * So this file says, per capability: the question it answers, the update processes that could
- * plausibly own it, and the failure scenarios worth asking about for THIS data rather than a
- * generic set. None of it is policy -- it decides nothing, it only makes the question answerable.
+ * So this file says, per capability: the question it answers, a realistic example of someone asking
+ * it, whether a year is a sensible thing to ask it about and WHY in ordinary words, the update
+ * processes that could plausibly own it, and the failure scenarios worth asking about for THIS data
+ * rather than a generic set. None of it is policy -- it decides nothing, it only makes the question
+ * answerable.
+ *
+ * THE YEAR ADVICE IS ABOUT THE SUBJECT MATTER, NEVER ABOUT WHAT THE DATA HAPPENS TO CARRY. Homicide
+ * records are dated, so someone can reasonably ask about one year of them; that stays true even
+ * where the answer does not currently read a date. Recommending "no" in that case would let a
+ * technical gap masquerade as a human judgment. Working out what to read is an engineering job, and
+ * the workbook says so rather than handing it to the person answering.
  *
  * It must cover the registry EXACTLY. Generation fails when a capability is added or removed, so a
  * new capability cannot quietly arrive with no description and inherit a neighbour's.
@@ -4720,9 +4735,9 @@ const DATA = {
  */
 function stage2bCapabilityCatalog() {
   /**
-   * The update processes a policy owner would recognise. Labels, not filenames: "who keeps this
-   * fresh" is answered by naming a process, and the candidate filenames remain visible as evidence
-   * under technical details, where they are what they actually are -- a filename search.
+   * The update processes a policy owner would recognise. Labels, not filenames: "who should be
+   * contacted" is answered by naming a process, and the candidate filenames remain visible as
+   * evidence under technical details, where they are what they actually are -- a filename search.
    */
   const PROCESSES = {
     trends: "The monthly crime-trends update",
@@ -4788,262 +4803,366 @@ function stage2bCapabilityCatalog() {
 
   const CATALOG = {
   "crime_data::agencies+agency_county_crosswalk::agencies(agency,national_sample,ori)|agency_county_crosswalk(county_fips,county_key,ori,ori9,state)": {
-    question: "Which recent-trends agencies police a given county — the lookup behind \"crime in X County\".",
+    question: "Which recent-trends agencies police a given county — the question behind \"crime in X County\".",
+    example: "Which police departments cover Orleans Parish?",
+    year: { recommend: "no", why: "This names which departments cover a county. It is a list of places, not a figure that is reported year by year." },
     processes: ["trends"],
     integrity: ["crosswalk","missing_agencies","stale"],
   },
   "crime_data::agencies+agency_monthly+historical_agency+historical_agency_clearance+historical_agency_crime+historical_agency_population::historical_agency(agency,ori,state,type)|historical_agency_clearance(assault_clr,burglary_clr,motor_vehicle_theft_clr,murder_clr,ori,property_clr,rape_clr,robbery_clr,theft_clr,violent_clr,year)|historical_agency_crime(assault,burglary,motor_vehicle_theft,murder,ori,property,rape,robbery,theft,violent,year)|historical_agency_population(ori,population,year)": {
     question: "One agency's whole record in the long FBI series: offences, how many were solved, and the population behind the rates, year by year.",
+    example: "Show me New Orleans PD's crime, how much of it was solved, and its population, for every year on record.",
+    year: { recommend: "yes", why: "Every figure here belongs to a particular year, so someone can reasonably ask for a year we do not have." },
     processes: ["historical","population"],
     integrity: ["stale","disagree","population","clearance"],
   },
   "crime_data::agencies::agencies(agency,national_sample,ori)": {
     question: "Which agencies are in the recent-trends sample, looked up by name — how \"Chicago\" becomes a specific police department.",
+    example: "Is Chicago in the recent crime trends data?",
+    year: { recommend: "no", why: "This turns a place name into a specific department. The answer is the same whichever year someone is interested in." },
     processes: ["trends"],
     integrity: ["missing_agencies","stale"],
   },
   "crime_data::agencies::agencies(national_sample,state)": {
     question: "Which states have agencies in the recent-trends sample, and how many.",
+    example: "Which states are represented in the recent crime trends data?",
+    year: { recommend: "no", why: "This lists which states appear at all. It is a roster, not a yearly statistic." },
     processes: ["trends"],
     integrity: ["missing_agencies","stale"],
   },
   "crime_data::agency_county_crosswalk+historical_agency::agency_county_crosswalk(county_fips,county_key,ori,ori9,state)|historical_agency(agency,ori)": {
     question: "Which agencies in the long FBI series police a given county.",
+    example: "Which departments in the long-running FBI series cover Cook County?",
+    year: { recommend: "no", why: "This names which departments cover a county. It is a list of places, not a figure reported per year." },
     processes: ["historical"],
     integrity: ["crosswalk","missing_agencies"],
   },
   "crime_data::agency_monthly+agency_population+sample_agencies::agency_monthly(count,offense,ori,year)|agency_population(ori,population,year)|sample_agencies(ori,state)": {
     question: "Recent monthly crime counts and per-population rates across the sample, grouped by state.",
+    example: "How have robbery rates changed by state over the last three years?",
+    year: { recommend: "yes", why: "These counts and rates are reported month by month within particular years, so a request can fall outside what we hold." },
     processes: ["trends","population"],
     integrity: ["stale","population","coverage_gap"],
   },
   "crime_data::agency_monthly+agency_population::agency_monthly(agency,count,offense,ori,state,type,year)|agency_population(ori,year)": {
     question: "Recent monthly crime counts and rates for one named agency.",
+    example: "How many burglaries did Baltimore PD report in 2023?",
+    year: { recommend: "yes", why: "This reports figures for a named year, so someone can ask for a year that is not in the data." },
     processes: ["trends","population"],
     integrity: ["stale","population","coverage_gap"],
   },
   "crime_data::agency_monthly::agency_monthly(year)": {
     question: "Which years the recent-trends data actually covers — what to say when someone asks for a year we may not have.",
+    example: "What years of recent crime data do you have?",
+    year: { recommend: "no", why: "This is itself the answer about which years exist. Asking it about one particular year would go in a circle." },
     processes: ["trends"],
     integrity: ["stale","coverage_gap"],
   },
   "crime_data::historical_agency+historical_agency_clearance+historical_agency_crime+historical_staffing::historical_agency(agency,ori,state,type)|historical_agency_clearance(ori,year)|historical_agency_crime(ori,year)|historical_staffing(ori,year)": {
     question: "Police staffing for an agency alongside its crime and clearance figures, year by year.",
+    example: "How many sworn officers did Detroit PD have in 2015, and what was its crime that year?",
+    year: { recommend: "yes", why: "Staffing and crime are both reported for a particular year, so a request can fall outside the years we hold." },
     processes: ["historical"],
     integrity: ["stale","disagree","missing_agencies"],
   },
   "crime_data::historical_agency+historical_agency_crime+historical_agency_population::historical_agency(agency,ori,state,type)|historical_agency_crime(murder,ori,year)|historical_agency_population(ori,year)": {
     question: "Murder counts and murder rates for one agency across the long FBI series.",
+    example: "What was Philadelphia's murder rate in 1995?",
+    year: { recommend: "yes", why: "Murder counts and rates belong to a particular year, so someone can ask for one we do not have." },
     processes: ["historical","population"],
     integrity: ["stale","population","disagree"],
   },
   "crime_data::historical_agency+historical_agency_crime::historical_agency(agency,ori,state,type)|historical_agency_crime(ori,violent,year)": {
     question: "Violent crime for one agency across the long FBI series.",
+    example: "What was violent crime in Houston in 1988?",
+    year: { recommend: "yes", why: "Violent crime is reported here one year at a time, so a request can fall outside the range we hold." },
     processes: ["historical"],
     integrity: ["stale","disagree"],
   },
   "crime_data::historical_agency::historical_agency(agency,ori)": {
     question: "Which agencies exist in the long FBI series, looked up by name.",
+    example: "Is Tulsa PD in the long-running FBI series?",
+    year: { recommend: "no", why: "This answer lists which departments exist; it does not provide a yearly statistic." },
     processes: ["historical"],
     integrity: ["missing_agencies","stale"],
   },
   "crime_data::historical_agency_crime+historical_state_national::historical_agency_crime(year)|historical_state_national(year)": {
     question: "Which years the long FBI series covers, for both agency-level and state/national figures.",
+    example: "How far back does the FBI series go?",
+    year: { recommend: "no", why: "This is itself the answer about which years exist, so it is not asked about one year at a time." },
     processes: ["historical"],
     integrity: ["stale","disagree","coverage_gap"],
   },
   "crime_data::historical_state_national::historical_state_national(aggravated_assault,aggravated_assault_rate,auto_theft,auto_theft_rate,burglary,burglary_rate,murder,murder_rate,population,rape,rape_rate,robbery,robbery_rate,state,theft,theft_rate,year)": {
     question: "State and national crime counts and rates going back decades — the headline long-run series.",
+    example: "What was the national murder rate in 1991?",
+    year: { recommend: "yes", why: "These are yearly figures, so someone can reasonably ask for a year we do not have." },
     processes: ["historical"],
     integrity: ["stale","population","disagree"],
   },
   "crime_data::historical_state_national::historical_state_national(state)": {
     question: "Which states, plus the national total, exist in the long FBI series.",
+    example: "Which states are in the long-running FBI series?",
+    year: { recommend: "no", why: "This lists which states appear. It is a roster, not a yearly figure." },
     processes: ["historical"],
     integrity: ["missing_agencies","stale"],
   },
   "crime_data::national_monthly::sweep": {
     question: "National monthly crime totals, used to check the recent-trends sample against the national picture.",
+    example: "What were the national monthly crime totals last year?",
+    year: { recommend: "yes", why: "These totals are reported month by month within particular years." },
     processes: ["trends"],
     integrity: ["stale","disagree","coverage_gap"],
   },
   "hate_crime::agency_county_crosswalk+hate_crime_incidents::agency_county_crosswalk(county_fips,county_key,ori,ori9,state)|hate_crime_incidents(ori)": {
     question: "Hate crime incidents for a given county.",
+    example: "How many hate crimes were reported in Maricopa County in 2022?",
+    year: { recommend: "yes", why: "Hate crime incidents happen on a date, so someone can reasonably ask about one year of them." },
     processes: ["hate_crime"],
     integrity: ["crosswalk","missing_agencies","stale"],
   },
   "hate_crime::hate_crime_incidents::hate_crime_incidents(ori)": {
     question: "Which agencies reported hate crime incidents at all.",
+    example: "Which departments report hate crimes?",
+    year: { recommend: "no", why: "This lists which departments report at all; it is not a yearly count." },
     processes: ["hate_crime"],
     integrity: ["missing_agencies","stale"],
   },
   "hate_crime::hate_crime_participation::hate_crime_participation(reporting_agencies,state)": {
     question: "How many agencies in each state take part in hate crime reporting — the context for \"only N agencies reported\".",
+    example: "How many departments in Texas take part in hate crime reporting?",
+    year: { recommend: "no", why: "This is the standing count of who takes part, not a figure broken out year by year." },
     processes: ["hate_crime"],
     integrity: ["missing_agencies","stale"],
   },
   "hate_crime::hate_crime_participation::hate_crime_participation(year)": {
     question: "Which years the hate crime participation figures cover.",
+    example: "What years of hate crime participation do you have?",
+    year: { recommend: "no", why: "This is itself the answer about which years exist." },
     processes: ["hate_crime"],
     integrity: ["stale","coverage_gap"],
   },
   "nibrs::agencies+agency_county_crosswalk+summary_arrestee_demographics::agencies(ori,year)|agency_county_crosswalk(county_key,ori,ori9,state)|summary_arrestee_demographics(arrestee_count,ori,race,ucr_arrest_offense,year)": {
     question: "Arrests by race and offence for the agencies in a given county.",
+    example: "How many arrests by race were there in Fulton County in 2022?",
+    year: { recommend: "yes", why: "Arrests are counted for a particular year, so a request can fall outside what we hold." },
     processes: ["nibrs_rebuild"],
     integrity: ["crosswalk","categories","missing_agencies"],
   },
   "nibrs::agencies+agency_county_crosswalk+summary_offender_demographics::agencies(ori,year)|agency_county_crosswalk(county_key,ori,ori9,state)|summary_offender_demographics(offender_count,ori,race,ucr_offense_code,year)": {
     question: "Offenders by race and offence for the agencies in a given county.",
+    example: "Who were the offenders, by race, in Wayne County in 2021?",
+    year: { recommend: "yes", why: "These counts belong to a particular year, so someone can ask for one we do not have." },
     processes: ["nibrs_rebuild"],
     integrity: ["crosswalk","categories","missing_agencies"],
   },
   "nibrs::agencies+agency_county_crosswalk+summary_victim_city_monthly::agencies(ori,year)|agency_county_crosswalk(county_key,ori,ori9,state)|summary_victim_city_monthly(ori,ucr_offense_code,victim_count,year)": {
     question: "Victim counts by offence for the agencies in a given county.",
+    example: "How many robbery victims were there in DeKalb County in 2022?",
+    year: { recommend: "yes", why: "Victim counts are reported for a particular year, so a request can fall outside the range we hold." },
     processes: ["nibrs_rebuild"],
     integrity: ["crosswalk","missing_agencies","double"],
   },
   "nibrs::agencies+agency_county_crosswalk+summary_victim_demographics::agencies(ori,year)|agency_county_crosswalk(county_key,ori,ori9,state)|summary_victim_demographics(ori,race,ucr_offense_code,victim_count,year)": {
     question: "Victims by race and offence for the agencies in a given county.",
+    example: "How many assault victims by race were there in Bexar County in 2020?",
+    year: { recommend: "yes", why: "These counts belong to a particular year, so someone can ask for one we do not have." },
     processes: ["nibrs_rebuild"],
     integrity: ["crosswalk","categories","missing_agencies"],
   },
   "nibrs::agencies+agency_county_crosswalk::agencies(ori)|agency_county_crosswalk(county_fips,county_key,ori,ori9,state)": {
     question: "Which NIBRS agencies police a given county.",
+    example: "Which departments in Hennepin County report to NIBRS?",
+    year: { recommend: "no", why: "This names which departments cover a county. It is a list of places, not a yearly figure." },
     processes: ["nibrs_rebuild"],
     integrity: ["crosswalk","missing_agencies"],
   },
   "nibrs::agencies+nibrs_agency_completeness+summary_city_monthly+summary_victim_city_monthly::agencies(ori,population,year)|nibrs_agency_completeness(months_reported,ori,year)|summary_city_monthly(month,offense_count,ori,ucr_offense_code,year)|summary_victim_city_monthly(ori,ucr_offense_code,victim_count,year)": {
     question: "Offence and victim counts for a city with per-population rates, counting only agencies that reported the whole year.",
+    example: "What was Denver's aggravated assault rate in 2022?",
+    year: { recommend: "yes", why: "These are yearly figures, and the whole-year reporting rule is itself about one year at a time." },
     processes: ["nibrs_rebuild","nibrs_rollup"],
     integrity: ["consistent_set","population","coverage_gap"],
   },
   "nibrs::agencies+nibrs_agency_completeness+summary_city_monthly+summary_victim_city_monthly::agencies(ori,population,year)|nibrs_agency_completeness(months_reported,ori,year)|summary_city_monthly(month,ori,year)|summary_victim_city_monthly(ori,ucr_offense_code,victim_count,year)": {
     question: "Victim counts for a city with per-population rates, alongside which months each agency actually reported.",
+    example: "How many victims did Portland report in 2021, and which months did its departments actually report?",
+    year: { recommend: "yes", why: "Both the counts and the months-reported picture belong to a particular year." },
     processes: ["nibrs_rebuild","nibrs_rollup"],
     integrity: ["consistent_set","population","coverage_gap"],
   },
   "nibrs::agencies+nibrs_agency_completeness+summary_city_monthly::nibrs_agency_completeness(months_reported,ori,year)|summary_city_monthly(month,offense_count,ori,ucr_offense_code,year)": {
     question: "Offence counts for a city, counting only agencies that reported all twelve months.",
+    example: "How many burglaries were reported in Mesa in 2023?",
+    year: { recommend: "yes", why: "These counts are for one year at a time, so a request can fall outside the years we hold." },
     processes: ["nibrs_rebuild","nibrs_rollup"],
     integrity: ["consistent_set","coverage_gap","double"],
   },
   "nibrs::agencies+summary_clearance_type::agencies(agency_type,city,ori,population,state,year)|summary_clearance_type(cleared_by_arrest,cleared_exceptional,ori,total_offenses,ucr_offense_code,year)": {
     question: "How often an agency's offences ended in an arrest or were closed another way.",
+    example: "What share of Cleveland's robberies ended in an arrest in 2022?",
+    year: { recommend: "yes", why: "This compares offences and outcomes within a particular year." },
     processes: ["nibrs_rebuild"],
     integrity: ["clearance","stale","missing_agencies"],
   },
   "nibrs::agencies::agencies(ori)": {
-    question: "Which agencies exist in NIBRS at all — the lookup behind naming a department.",
+    question: "Which agencies exist in NIBRS at all — the question behind naming a department.",
+    example: "Does Fresno PD report to NIBRS?",
+    year: { recommend: "no", why: "This answer lists which departments exist; it does not provide a yearly statistic." },
     processes: ["nibrs_rebuild"],
     integrity: ["missing_agencies","stale"],
   },
   "nibrs::agencies::agencies(state)": {
     question: "Which states have NIBRS agencies.",
+    example: "Which states have departments reporting to NIBRS?",
+    year: { recommend: "no", why: "This lists which states appear. It is a roster, not a yearly figure." },
     processes: ["nibrs_rebuild"],
     integrity: ["missing_agencies","stale"],
   },
   "nibrs::agencies::agencies(year)": {
     question: "Which years NIBRS agency data covers — what to say when someone asks for a year we may not have.",
+    example: "What years of NIBRS data do you have?",
+    year: { recommend: "no", why: "This is itself the answer about which years exist. Asking it about one particular year would go in a circle." },
     processes: ["nibrs_rebuild"],
     integrity: ["stale","coverage_gap"],
   },
   "nibrs::nibrs_agency_completeness+summary_arrestee_demographics::nibrs_agency_completeness(months_reported,ori,year)|summary_arrestee_demographics(arrestee_count,ori,race,ucr_arrest_offense,year)": {
     question: "Arrests by race, counting only agencies that reported the whole year.",
+    example: "How many people were arrested by race in 2022, counting only departments that reported all year?",
+    year: { recommend: "yes", why: "The counts are yearly, and \"reported the whole year\" is a statement about one year at a time." },
     processes: ["nibrs_rebuild"],
     integrity: ["consistent_set","categories","coverage_gap"],
   },
   "nibrs::nibrs_agency_completeness+summary_offender_demographics::nibrs_agency_completeness(months_reported,ori,year)|summary_offender_demographics(offender_count,ori,race,ucr_offense_code,year)": {
     question: "Offenders by race, counting only agencies that reported the whole year.",
+    example: "Who were the offenders by race in 2022, counting only departments that reported all year?",
+    year: { recommend: "yes", why: "The counts are yearly, and \"reported the whole year\" is a statement about one year at a time." },
     processes: ["nibrs_rebuild"],
     integrity: ["consistent_set","categories","coverage_gap"],
   },
   "nibrs::nibrs_agency_completeness+summary_victim_city_monthly::nibrs_agency_completeness(months_reported,ori,year)|summary_victim_city_monthly(month,ori,ucr_offense_code,victim_count,year)": {
     question: "Month-by-month victim counts for a city, counting only agencies that reported the whole year.",
+    example: "Show me month-by-month victim counts for Tucson in 2022.",
+    year: { recommend: "yes", why: "The months being counted sit inside a particular year, so a request can fall outside what we hold." },
     processes: ["nibrs_rebuild"],
     integrity: ["consistent_set","coverage_gap","double"],
   },
   "nibrs::nibrs_agency_completeness+summary_victim_demographics::nibrs_agency_completeness(months_reported,ori,year)|summary_victim_demographics(ori,race,ucr_offense_code,victim_count,year)": {
     question: "Victims by race, counting only agencies that reported the whole year.",
+    example: "How many victims by race were there in 2021, counting only departments that reported all year?",
+    year: { recommend: "yes", why: "The counts are yearly, and \"reported the whole year\" is a statement about one year at a time." },
     processes: ["nibrs_rebuild"],
     integrity: ["consistent_set","categories","coverage_gap"],
   },
   "nibrs::nibrs_consistent_reporters+summary_arrestee_demographics::nibrs_consistent_reporters(end_year,ori,start_year)|summary_arrestee_demographics(arrestee_count,ori,race,ucr_arrest_offense,year)": {
     question: "Arrests by race over several years, counting only agencies that reported consistently across the whole span.",
+    example: "How have arrests by race changed from 2018 to 2023 among departments that reported throughout?",
+    year: { recommend: "yes", why: "The whole point is a span of years, so a request can reach past either end of what we hold." },
     processes: ["nibrs_rebuild"],
     integrity: ["consistent_set","categories","disagree"],
   },
   "nibrs::nibrs_consistent_reporters+summary_offender_demographics::nibrs_consistent_reporters(end_year,ori,start_year)|summary_offender_demographics(offender_count,ori,race,ucr_offense_code,year)": {
     question: "Offenders by race over several years, counting only agencies that reported consistently across the whole span.",
+    example: "How have offender demographics changed from 2019 to 2023 among departments that reported throughout?",
+    year: { recommend: "yes", why: "The whole point is a span of years, so a request can reach past either end of what we hold." },
     processes: ["nibrs_rebuild"],
     integrity: ["consistent_set","categories","disagree"],
   },
   "nibrs::nibrs_consistent_reporters+summary_victim_city_monthly::nibrs_consistent_reporters(end_year,ori,start_year)|summary_victim_city_monthly(ori,ucr_offense_code,victim_count,year)": {
     question: "Victim counts over several years, counting only agencies that reported consistently across the whole span.",
+    example: "How have victim counts changed from 2018 to 2023 among departments that reported throughout?",
+    year: { recommend: "yes", why: "The whole point is a span of years, so a request can reach past either end of what we hold." },
     processes: ["nibrs_rebuild"],
     integrity: ["consistent_set","disagree","double"],
   },
   "nibrs::nibrs_consistent_reporters+summary_victim_demographics::nibrs_consistent_reporters(end_year,ori,start_year)|summary_victim_demographics(ori,race,ucr_offense_code,victim_count,year)": {
     question: "Victims by race over several years, counting only agencies that reported consistently across the whole span.",
+    example: "How have victims by race changed from 2018 to 2023 among departments that reported throughout?",
+    year: { recommend: "yes", why: "The whole point is a span of years, so a request can reach past either end of what we hold." },
     processes: ["nibrs_rebuild"],
     integrity: ["consistent_set","categories","disagree"],
   },
   "nibrs::rollup.national_summary_arrestee_demographics::rollup.national_summary_arrestee_demographics(age_group,arrestee_count,race,year)": {
     question: "National arrest totals broken down by age group and race.",
+    example: "Nationally, how many people under 18 were arrested in 2022, and of what race?",
+    year: { recommend: "yes", why: "These national totals are published one year at a time." },
     processes: ["nibrs_rollup"],
     integrity: ["rollup","categories","stale"],
   },
   "nibrs::rollup.national_summary_arrestee_demographics::rollup.national_summary_arrestee_demographics(arrestee_count,ucr_arrest_offense,year)": {
     question: "National arrest totals broken down by offence.",
+    example: "How many drug arrests were there nationally in 2022?",
+    year: { recommend: "yes", why: "These national totals are published one year at a time." },
     processes: ["nibrs_rollup"],
     integrity: ["rollup","categories","stale"],
   },
   "nibrs::rollup.state_summary_arrestee_demographics::rollup.state_summary_arrestee_demographics(age_group,arrestee_count,race,state,year)": {
     question: "State-level arrest totals broken down by age group and race.",
+    example: "How many people were arrested in Ohio in 2022, by age and race?",
+    year: { recommend: "yes", why: "These state totals are published one year at a time." },
     processes: ["nibrs_rollup"],
     integrity: ["rollup","categories","stale"],
   },
   "nibrs::summary_clearance_detail::summary_clearance_detail(cleared_A,cleared_B,cleared_C,cleared_D,cleared_E,cleared_by_arrest,state,total_offenses,ucr_offense_code,year)": {
     question: "How offences were closed in each state, split by the different ways a case can be cleared.",
+    example: "In Georgia in 2022, how many offences were closed by an arrest rather than some other way?",
+    year: { recommend: "yes", why: "Offences and how they were closed are counted within a particular year." },
     processes: ["nibrs_rebuild"],
     integrity: ["clearance","categories","stale"],
   },
   "nibrs::summary_clearance_type::summary_clearance_type(cleared_by_arrest,cleared_exceptional,ori,total_offenses,ucr_offense_code,year)": {
     question: "Whether an agency's offences were cleared by arrest or closed for another reason.",
+    example: "Were Wichita PD's 2022 offences closed by an arrest or some other way?",
+    year: { recommend: "yes", why: "Offences and how they were closed are counted within a particular year." },
     processes: ["nibrs_rebuild"],
     integrity: ["clearance","stale","double"],
   },
   "nibrs::summary_juvenile_offender_incidents::summary_juvenile_offender_incidents(incident_count,offense_scope,state,year)": {
     question: "Incidents involving juvenile offenders, by state.",
+    example: "How many incidents in Missouri in 2022 involved a juvenile offender?",
+    year: { recommend: "yes", why: "Incidents are counted for a particular year, so a request can fall outside what we hold." },
     processes: ["nibrs_rebuild"],
     integrity: ["categories","stale","double"],
   },
   "nibrs::summary_victim_circumstance+summary_victim_state_monthly::summary_victim_circumstance(circumstance_code,state,ucr_offense_code,victim_count,year)|summary_victim_state_monthly(state,ucr_offense_code,victim_count,year)": {
     question: "Victim counts by the circumstances of the offence, by state — for example how many homicides were domestic.",
+    example: "How many homicides in Louisiana in 2022 were domestic?",
+    year: { recommend: "yes", why: "These counts belong to a particular year, so someone can ask for one we do not have." },
     processes: ["nibrs_rebuild"],
     integrity: ["categories","disagree","double"],
   },
   "shr::agency_county_crosswalk+incidents::agency_county_crosswalk(county_fips,county_key,ori,state)|incidents(ori)": {
     question: "Homicide records for a given county.",
+    example: "How many homicides were there in Jefferson Parish in 2019?",
+    year: { recommend: "yes", why: "Homicides happen on a date, so someone can reasonably ask about a single year of them." },
     processes: ["shr"],
     integrity: ["crosswalk","missing_agencies","stale"],
   },
   "shr::incidents+shr_agency_alias+shr_agency_identity+victims::incidents(homicide_type,id,ori,weapon_group,year)|victims(incident_id)": {
     question: "Homicides for an agency broken down by weapon and type, with how many victims each incident had.",
+    example: "How many firearm homicides did Memphis PD report in 2021, and how many victims were involved?",
+    year: { recommend: "yes", why: "Homicides are recorded with the year they happened, so a request can fall outside the years we hold." },
     processes: ["shr"],
     integrity: ["double","categories","stale"],
   },
   "shr::incidents::incidents(ori)": {
     question: "Which agencies reported homicides.",
+    example: "Which departments report homicide records?",
+    year: { recommend: "no", why: "This lists which departments report at all; it is not a yearly count." },
     processes: ["shr"],
     integrity: ["missing_agencies","stale"],
   },
   "shr::incidents::incidents(state)": {
     question: "Which states have homicide records.",
+    example: "Which states have homicide records?",
+    year: { recommend: "no", why: "This lists which states appear. It is a roster, not a yearly figure." },
     processes: ["shr"],
     integrity: ["missing_agencies","stale"],
   },
   "shr::incidents::incidents(year)": {
     question: "Which years the homicide records cover.",
+    example: "What years of homicide data do you have?",
+    year: { recommend: "no", why: "This is itself the answer about which years exist." },
     processes: ["shr"],
     integrity: ["stale","coverage_gap"],
   },
@@ -5056,7 +5175,7 @@ function stage2bCapabilityCatalog() {
    * scenario or a different set of process choices left it untouched -- an old session still
    * loaded, and a restored answer still showed as confirmed under wording nobody had seen. What a
    * confirmation attaches to is the question as it was asked, so the question has to be in the
-   * identity.
+   * identity. The example and the year advice are read before answering too, so they are in it.
    *
    * FNV-1a over canonical JSON: deterministic, dependency-free, and identical in the page and at
    * the boundary.
@@ -5064,7 +5183,8 @@ function stage2bCapabilityCatalog() {
   function fingerprint() {
     const canonical = Object.keys(CATALOG).sort().map((id) => {
       const e = CATALOG[id];
-      return [id, e.question, e.processes.map((k) => PROCESSES[k] || k),
+      return [id, e.question, e.example, [e.year.recommend, e.year.why],
+        e.processes.map((k) => PROCESSES[k] || k),
         e.integrity.map((k) => [k, SCENARIOS[k] ? SCENARIOS[k].label : "", SCENARIOS[k] ? SCENARIOS[k].prose : ""])];
     });
     const text = JSON.stringify(canonical);
@@ -5084,6 +5204,15 @@ function stage2bCapabilityCatalog() {
     entry: (id) => CATALOG[id] || null,
     /** The question this capability answers, or null when it has none -- never a fallback. */
     question: (id) => (CATALOG[id] ? CATALOG[id].question : null),
+    /** One realistic asking of it, so the reader recognises the question rather than parsing it. */
+    example: (id) => (CATALOG[id] ? CATALOG[id].example : null),
+    /**
+     * Whether a year is a sensible thing to ask this about, and why in ordinary words.
+     *
+     * A RECOMMENDATION, never a selection. It is about the subject matter, so it stays honest even
+     * where the answer does not currently read a date -- that gap is engineering's to close.
+     */
+    yearAdvice: (id) => (CATALOG[id] ? CATALOG[id].year : null),
     /** Only the processes that could plausibly own THIS capability. */
     processLabels: (id) => (CATALOG[id] ? CATALOG[id].processes.map((k) => PROCESSES[k]).filter(Boolean) : []),
     /** Scenarios worth asking about for THIS data. */
@@ -5121,9 +5250,17 @@ if (typeof module !== "undefined" && module.exports) {
  * person confirms that specific proposal. Nothing here decides, and nothing here is pre-selected --
  * a recommendation that arrived already chosen would be an inference wearing a human's signature.
  *
- * Descriptions are derived from names, so they are approximations of meaning and are labelled as
- * such. The exact tables and columns are always one disclosure away, because the derivation is a
- * convenience and the structure is the fact.
+ * WHAT THE PERSON IS ASKED ABOUT IS THE SUBJECT MATTER, NEVER THE DATABASE. An earlier version of
+ * this asked which column bounded an answer's years, and made a person justify picking one whose
+ * name did not look like a year. That is not a judgment anybody outside engineering can make, and
+ * putting it in front of the one person whose judgment was actually needed was the defect: it
+ * turned a decision about crime data into a quiz about schemas. Choosing what to read is done
+ * automatically here, and where it cannot be, that is recorded as engineering's follow-up and said
+ * so plainly -- never handed back as a question.
+ *
+ * Every string a person reads lives in this file or in the catalog, so the decision contract's
+ * fingerprint covers it. A sentence rendered from the page template would be wording nobody's
+ * confirmation was ever checked against.
  */
 function createStage2bPlainLanguage(capabilityCatalog) {
   const UNSURE = "unsure";
@@ -5137,69 +5274,189 @@ function createStage2bPlainLanguage(capabilityCatalog) {
    */
   const CATALOG = capabilityCatalog || stage2bCapabilityCatalog();
 
-  /** What each artifact is, in the words someone asking a question would use. */
-  const ARTIFACTS = {
-    crime_data: "recent crime trends and the long-running FBI series",
-    nibrs: "detailed incident-level FBI data (NIBRS)",
-    shr: "homicide records (the Supplementary Homicide Reports)",
-    hate_crime: "hate crime records",
-  };
-
   /**
-   * The wording every capability shares: the question headings, the hints under them, and the
-   * labels on the recorded summary.
+   * EVERY WORD THE PERSON READS ON THE DECIDING PATH.
    *
-   * It lives HERE rather than in the page template so it is part of the decision contract that the
-   * workbook fingerprint covers. While it sat in the generator's HTML, a question could be reworded
-   * -- changing what someone was actually asked -- without invalidating a single confirmation.
+   * It lives here rather than in the page template so it is part of the decision contract that the
+   * workbook fingerprint covers. While headings sat in the generator's HTML, a question could be
+   * reworded -- changing what someone was actually asked -- without invalidating a confirmation.
    */
   const QUESTIONS = {
-    coverage: {
-      heading: "1. Do we know the first and last year this data covers?",
-      hint: "If someone asks about a year we do not have, should the system be able to say so?"
-        + " It can only check the first and last year — it will not notice a year missing in between,"
-        + " so please do not rely on it for that.",
-      reasonLabel: "If this is not about a time period, or you picked a column that is not named like a year, say why",
+    card: {
+      answersHeading: "What question will this help answer?",
+      exampleLabel: "Someone might ask:",
+      decisionHeading: "What decision are you making?",
+      choicesHeading: "What happens with each choice?",
+      recommendationLabel: "Our recommendation",
+      recommendationNote: "A recommendation, not a selection. Nothing is chosen until you choose it.",
+      technicalHeading: "Technical details",
+      technicalNote: "Nothing in here is yours to decide. It is what the code already does, kept"
+        + " visible so the answers above can be checked against it.",
+      followUpHeading: "Left with engineering",
+      unfinishedNote: "Saved as unfinished. Nothing is switched on.",
     },
-    integrity: {
-      heading: "2. What would make you stop trusting these numbers?",
-      hint: "Tick anything that would mean people should not rely on this. Your answers get written"
-        + " down in plain words as a description of what \"gone wrong\" looks like here —"
-        + " nothing here builds an automatic check.",
-      otherLabel: "Something else (optional)",
-      unsureLabel: "I’m not sure",
+    year: {
+      heading: "1. Can someone reasonably ask this question for a particular year?",
+      decision: "You are deciding whether the chatbot should turn down a request for a year this"
+        + " data does not go back to, or answer without looking at the year at all.",
+      options: {
+        years: {
+          label: "Yes — year matters for this answer.",
+          consequence: "The chatbot should refuse years earlier than the first available year or"
+            + " later than the last available year. This protection does not detect a missing year"
+            + " inside that range.",
+        },
+        "no-years": {
+          label: "No — this question is not about a particular year.",
+          consequence: "No year-range protection will be applied. Choose this for directories and"
+            + " lists such as “Which agencies exist?”",
+        },
+        unsure: {
+          label: "I’m not sure.",
+          consequence: "Your answer is saved as unfinished and nothing is enabled.",
+        },
+      },
+      /** Recorded when the person says a year matters and nothing dated is available to read. */
+      followUp: "You said a year matters here, and this answer does not currently read a date."
+        + " Working out what it should read is an engineering job, not yours. It has been written"
+        + " down as one, and no year check will run until it is done.",
+      /** The reason recorded when someone says the question is not about a year. */
+      noneReason: "Answered in the workbook: this question is not asked about a particular year.",
+    },
+    trust: {
+      heading: "2. Which problems would make you unwilling to show this answer without warning?",
+      decision: "You are identifying conditions that should eventually stop or qualify an answer."
+        + " These checks have not been implemented yet, so this records a requirement and does not"
+        + " activate anything.",
+      otherLabel: "Something else that would worry you (optional)",
+      unsureLabel: "I’m not sure.",
+      unsureConsequence: "Your answer is saved as unfinished and nothing is enabled.",
     },
     availability: {
-      heading: "3. Should this data always be there?",
-      hint: "Some data is legitimately missing sometimes. Saying so means we treat it as expected"
-        + " instead of raising it as a problem every time.",
-      whenLabel: "When is it fine for this to be missing?",
+      heading: "3. If this data is missing, does that mean something is broken?",
+      decision: "You are deciding how the chatbot should react when this data is not there at all.",
+      options: {
+        always: {
+          label: "Yes — it should normally be available.",
+          consequence: "Missing data should be treated as a problem that needs attention.",
+        },
+        sometimes: {
+          label: "No — it can legitimately be unavailable sometimes.",
+          consequence: "The chatbot should say the answer is unavailable, rather than reporting a"
+            + " system failure.",
+        },
+        unsure: {
+          label: "I’m not sure.",
+          consequence: "Your answer is saved as unfinished and nothing is enabled.",
+        },
+      },
+      whenLabel: "When is it fine for this to be unavailable?",
+      whenHint: "In ordinary words — for example, “only some states send this, so it is"
+        + " missing for the rest”.",
     },
-    owner: {
-      heading: "4. Who keeps this data up to date?",
-      hint: "If this stopped being refreshed, whose job would it be. Pick the update you would expect"
-        + " to have run.",
-      otherLabel: "What is it called?",
+    responsibility: {
+      heading: "4. Who should be contacted if this data is missing or out of date?",
+      decision: "You are recording who to go to. This is an accountability fact, not a technical"
+        + " ownership setting, and naming someone switches nothing on.",
+      otherLabel: "Someone else — who?",
+      otherOption: "Someone else",
+      unsureLabel: "I’m not sure.",
     },
     evidence: {
-      heading: "What are you basing this on?",
-      hint: "A sentence is enough: who you asked, what you read, or what you already know."
-        + " Someone reading this later will use it to judge whether the decision still holds.",
+      heading: "How do you know these answers are right?",
+      hint: "A sentence is enough. For example: confirmed with the person who runs the update;"
+        + " checked the written update procedure; verified against the published data schedule.",
     },
-    mapping: {
-      heading: "Check what gets written down",
-      hint: "This is exactly what your answers would record. Nothing is saved until you confirm it,"
-        + " and changing any answer above cancels the confirmation so you get to read the new version.",
+    summary: {
+      heading: "What your answers mean",
+      hint: "In ordinary words, this is what your answers would record. Nothing is saved until you"
+        + " confirm it, and changing an answer above cancels the confirmation so you get to read the"
+        + " new version.",
       confirmLabel: "I have read this — confirm it",
+      confirmedNote: "Confirmed. This is what your export will carry.",
+      beforeConfirm: "Before this can be confirmed:",
+      reworded: "You confirmed this before, but the wording has changed since. Your answer is still"
+        + " here — please read it again and confirm it.",
       labels: {
-        coverage: "Years",
-        integrity: "What \"gone wrong\" looks like",
-        availability: "Always there?",
-        receiptOwner: "Kept up to date by",
+        year: "Years",
+        trust: "When not to trust it",
+        availability: "If it is missing",
+        responsibility: "Who to contact",
       },
+      unanswered: "Not decided yet. Nothing will change, and this stays switched off.",
+      /**
+       * What a KEPT value says, instead of the value itself.
+       *
+       * Anything already recorded was written by someone else, possibly long before this workbook
+       * existed, in whatever words they used. One of them reads "this capability is unavailable in
+       * production ... the builder decides at runtime", and pasting it into the plain-language
+       * summary put exactly the vocabulary this page exists to remove back on the deciding path.
+       * Hiding it would be worse, so it is not hidden -- it is one disclosure away, and what the
+       * reader is told here is the thing that actually concerns them: their answer changes nothing.
+       */
+      keptDetail: "Something was recorded here before, and your answer leaves it exactly as it was."
+        + " You can read the wording that was used under Technical details.",
+      year: {
+        years: "If someone asks about a year outside what this data covers, the chatbot will say so"
+          + " instead of answering. It will not notice a year missing inside the range.",
+        "no-years": "The chatbot will not check the year before answering.",
+      },
+      trustPrefix: "You said the answer should not be trusted without warning if:",
+      trustNote: "Nothing checks these yet. They are recorded as requirements.",
+      availability: {
+        always: "If this data goes missing, that is treated as a problem worth raising.",
+        sometimes: "When this is missing because %s, the chatbot should say the answer is"
+          + " unavailable rather than report a fault.",
+      },
+      responsibility: "%s should be contacted if this goes missing or out of date.",
+    },
+    withdraw: {
+      heading: "Remove what was recorded for this question",
+      hint: "Something was already recorded here. Removing it is a separate, named action —"
+        + " leaving the questions above unanswered does NOT delete it.",
+      button: "Remove what was recorded…",
+      marked: "Marked for removal. Exporting and importing will remove what was recorded.",
+      confirm: "Remove what was recorded for this question?",
+      confirmDetail: "Exporting and importing will REMOVE it. This is not the same as leaving the"
+        + " questions unanswered.",
+    },
+    page: {
+      unsavedWarning: "Your answers live only in this tab until you press Export answers. Nothing"
+        + " here changes any system, switches anything on, or reaches the internet. Export every few"
+        + " answers — a closed tab or a browser crash takes unexported work with it.",
+      filters: {
+        all: "All questions",
+        unanswered: "Not yet answered",
+        unconfirmed: "Answered, not yet confirmed",
+        problems: "Needs something added",
+        followUp: "Waiting on engineering",
+      },
+      counts: { finished: "Finished", awaiting: "Awaiting confirmation", needsFixing: "Needs something added" },
+      buttons: {
+        load: "Load a saved session", exportAnswers: "Export answers",
+        prev: "Previous", next: "Next", nextUnanswered: "Next unanswered",
+        cluster: "Copy these answers to similar questions…",
+      },
+      dirty: { unsaved: "Unsaved — export to keep your answers", nothing: "Nothing to save yet", saved: "Saved: %s exported" },
+      cluster: {
+        heading: "Copy to similar questions",
+        note: "Every question that would change is named below. Each one keeps its own summary,"
+          + " which you will need to read and confirm separately. Nothing is copied until you confirm.",
+        none: "There are no answers here to copy yet.",
+        intro: "Copy your answers to %n other question(s) answered from %s.",
+        scope: {
+          sameRecords: "the same underlying records",
+          sameSource: "the same data source",
+        },
+        cancel: "Cancel", apply: "Copy to these",
+        overwrites: "replaces answers already given there",
+        cleared: "its confirmation will be cancelled, so you must read and confirm it again",
+      },
+      allAnswered: "Every question in this view has been answered.",
     },
   };
 
+  /** A readable phrase for a table name. An approximation of meaning, never a substitute for it. */
   const WORDS = {
     agency: "agency", agencies: "agencies", monthly: "monthly", victim: "victim", victims: "victim",
     state: "state", city: "city", national: "national", population: "population",
@@ -5210,8 +5467,6 @@ function createStage2bPlainLanguage(capabilityCatalog) {
     sample: "sample", staffing: "police staffing", crime: "crime", participation: "participation",
     detail: "detail", type: "type", summary: "counts", carjacking: "carjacking",
   };
-
-  /** A readable phrase for a table name. An approximation of meaning, never a substitute for it. */
   function tablePhrase(table) {
     const bare = String(table).replace(/^rollup\./, "").replace(/^(summary|historical)_/, "");
     const words = bare.split("_").map((w) => WORDS[w] || w).filter(Boolean);
@@ -5219,7 +5474,7 @@ function createStage2bPlainLanguage(capabilityCatalog) {
   }
 
   /**
-   * The user-facing question this capability answers.
+   * The user-facing question this capability answers, and one realistic asking of it.
    *
    * Read from the catalog, never paraphrased from table names. A capability with no catalog entry
    * gets no description at all rather than a generic one, and generation refuses to produce a
@@ -5231,102 +5486,80 @@ function createStage2bPlainLanguage(capabilityCatalog) {
     if (question) return question;
     return "NO DESCRIPTION: this capability is missing from the reviewed catalog.";
   }
+  function exampleAsking(cap) {
+    return CATALOG.example(cap.id) || "";
+  }
 
   /**
-   * The coverage question, asked as a question about the ANSWER rather than about a column.
+   * Which dated thing this answer would be bounded by, chosen AUTOMATICALLY.
    *
-   * The recommendation comes from an observation -- some column this capability reads is named like
-   * a year -- and says so. Every column stays reachable under technical details, because a year
-   * column whose name the pattern missed must not become unanswerable, and because the mark is a
-   * hint and hints are wrong sometimes.
+   * Only something whose name reads as a year is ever chosen, so nobody is asked to justify an
+   * unlikely-looking one -- the question that used to be put to the person, and never should have
+   * been. When there is nothing suitable, this returns null and the answer becomes an engineering
+   * follow-up rather than a problem for the person answering.
    */
-  function recommendedYearColumn(cap) {
+  function automaticYearBasis(cap) {
     const marked = cap.coverageCandidates.filter((o) => o.yearBearing);
     if (marked.length === 0) return null;
-    // Prefer a column on the first emitted table, so the basis sits on what the answer is read from.
+    // Prefer one on the first thing the answer is read from, so the bound sits on the main source.
     const primary = marked.find((o) => o.table === cap.reads[0]);
     return primary || marked[0];
   }
 
-  function coverageOptions(cap) {
-    const recommended = recommendedYearColumn(cap);
-    const options = [];
-    if (recommended) {
-      options.push({
-        value: "years",
-        label: "Yes — we know the first and last year it covers",
-        /**
-         * The narrower, TRUE consequence. The check this answer switches on compares the requested
-         * years against MIN and MAX of the column and nothing else, so it catches a request outside
-         * the range and cannot see a year missing inside it. The question said the system could
-         * notice "years this data does not cover", which promised gap detection that does not
-         * exist: with rows for 2020 and 2022 and none for 2021, a request for 2021 passes.
-         */
-        consequence: "If someone asks about a year before the first one or after the last one, the system"
-          + " can say we do not have it, instead of answering as though we did. It will NOT notice a year"
-          + " missing in between.",
-        recommended: true,
-        why: "We can see that this data has a column called " + recommended.table + "." + recommended.yearColumn
-          + ". The name looks like a year — but a name is not a promise about what is in it, which is"
-          + " why we are asking you rather than assuming.",
-      });
-    }
-    options.push({
-      value: "no-years",
-      label: "No — this is not about a time period at all",
-      consequence: "No year check will run here, and nothing will pretend one did.",
-      recommended: !recommended,
-      why: recommended
-        ? "Choose this if the year-looking column is not really what this answer is limited by."
-        : "None of the columns this uses looks like a year, so there may be nothing to check against.",
-    });
-    options.push({
-      value: UNSURE,
-      label: "I'm not sure",
-      consequence: "Written down as undecided. Nothing is assumed, and this stays switched off.",
-      recommended: false,
-      why: "Leaving it open is a real answer. A guess written down as a decision is not.",
-    });
-    return options;
+  /**
+   * The recommendation for the year question: capability-specific, reasoned, never selected.
+   *
+   * It comes from the catalog -- from what the question is ABOUT -- and not from whether a dated
+   * column happens to exist. Letting the data's shape drive it would dress a technical gap up as a
+   * human judgment, and the person would have no way to tell the two apart.
+   */
+  function yearRecommendation(cap) {
+    const advice = CATALOG.yearAdvice(cap.id);
+    if (!advice) return null;
+    const option = QUESTIONS.year.options[advice.recommend === "yes" ? "years" : "no-years"];
+    return { value: advice.recommend === "yes" ? "years" : "no-years", answer: advice.recommend === "yes" ? "Yes" : "No",
+      label: option.label, why: advice.why };
   }
 
-  /**
-   * Integrity asked as a scenario, because "what integrity rule applies" is not a question anyone
-   * can answer cold. Each choice becomes a sentence in the record; none becomes an executable check,
-   * and the workbook never asks for one.
-   */
+  function yearOptions(cap) {
+    const recommended = yearRecommendation(cap);
+    return ["years", "no-years", UNSURE].map((value) => ({
+      value: value,
+      label: QUESTIONS.year.options[value].label,
+      consequence: QUESTIONS.year.options[value].consequence,
+      recommended: !!recommended && recommended.value === value,
+    }));
+  }
+
   /** The failures worth asking about for THIS data, from the catalog rather than a generic set. */
-  function integrityScenarios(cap) {
+  function trustScenarios(cap) {
     return CATALOG.scenarios(cap.id);
   }
 
   function availabilityOptions() {
-    return [
-      { value: "always", label: "Yes — it should be there every time",
-        consequence: "If it ever goes missing, that gets treated as a problem worth flagging." },
-      { value: "sometimes", label: "No — there are good reasons it might be missing",
-        consequence: "When it is missing for the reason you give, that counts as expected rather than a problem." },
-      { value: UNSURE, label: "I'm not sure",
-        consequence: "Written down as undecided. Nothing is assumed either way." },
-    ];
+    return ["always", "sometimes", UNSURE].map((value) => ({
+      value: value,
+      label: QUESTIONS.availability.options[value].label,
+      consequence: QUESTIONS.availability.options[value].consequence,
+    }));
   }
 
   /**
-   * Only the update processes that could plausibly own THIS capability.
+   * Only the update processes that could plausibly be contacted about THIS answer.
    *
    * Offering every process for the data source meant a policy owner had to open the technical
    * details to work out which one applied, which defeated the whole human-facing layer.
    */
-  function ownerOptions(cap) {
+  function responsibilityOptions(cap) {
     const processes = CATALOG.processLabels(cap.id);
     return processes.map((label) => ({ value: label, label: label }))
-      .concat([{ value: "other", label: "Something else — tell us what" },
-        { value: UNSURE, label: "I'm not sure" }]);
+      .concat([{ value: "other", label: QUESTIONS.responsibility.otherOption },
+        { value: UNSURE, label: QUESTIONS.responsibility.unsureLabel }]);
   }
 
   function blankAnswer() {
     return {
-      coverage: null, coverageColumn: null, coverageReason: "",
+      coverage: null,
       integrity: [], integrityOther: "", integrityUnsure: false,
       availability: null, availabilityWhen: "",
       owner: null, ownerOther: "",
@@ -5343,29 +5576,27 @@ function createStage2bPlainLanguage(capabilityCatalog) {
    *
    * Returned for display and confirmation, never applied. "I'm not sure" produces null, which is the
    * fail-closed value: recorded as asked-and-open, authorising nothing.
+   *
+   * `followUps` names what is unresolved through no fault of the person answering. A year answer
+   * with nothing dated to read is engineering's to close, and it still produces no policy -- open
+   * either way, but the page must not tell someone they left a question open when they did not.
    */
   function proposeMapping(cap, human) {
     const h = human || blankAnswer();
     const proposed = { coverage: null, integrity: null, availability: null, receiptOwner: null, evidence: h.evidence || "" };
     const unresolved = [];
+    const followUps = [];
 
     if (h.coverage === "years") {
-      const chosen = h.coverageColumn
-        ? cap.coverageCandidates.find((o) => o.table === h.coverageColumn.table && o.yearColumn === h.coverageColumn.yearColumn)
-        : recommendedYearColumn(cap);
-      if (chosen) {
-        proposed.coverage = { kind: "column", table: chosen.table, yearColumn: chosen.yearColumn };
-        // An unmarked column chosen deliberately still has to say why; the sentence is the person's.
-        if (!chosen.yearBearing) {
-          proposed.coverage.justification = String(h.coverageReason || "").trim();
-        }
-      } else unresolved.push("coverage");
+      const basis = automaticYearBasis(cap);
+      if (basis) proposed.coverage = { kind: "column", table: basis.table, yearColumn: basis.yearColumn };
+      else { unresolved.push("coverage"); followUps.push("coverage"); }
     } else if (h.coverage === "no-years") {
-      proposed.coverage = { kind: "none", reason: String(h.coverageReason || "").trim() };
+      proposed.coverage = { kind: "none", reason: QUESTIONS.year.noneReason };
     } else unresolved.push("coverage");
 
     const rules = [];
-    const catalog = integrityScenarios(cap);
+    const catalog = trustScenarios(cap);
     for (const value of h.integrity || []) {
       const scenario = catalog.find((s) => s.value === value);
       if (scenario) rules.push(scenario.prose);
@@ -5385,7 +5616,7 @@ function createStage2bPlainLanguage(capabilityCatalog) {
     } else if (h.owner && h.owner !== UNSURE) proposed.receiptOwner = h.owner;
     else unresolved.push("receiptOwner");
 
-    return { proposed: proposed, unresolved: unresolved };
+    return { proposed: proposed, unresolved: unresolved, followUps: followUps };
   }
 
   /**
@@ -5420,6 +5651,54 @@ function createStage2bPlainLanguage(capabilityCatalog) {
   }
 
   /**
+   * What the answers MEAN, in the words someone would use to describe the behaviour.
+   *
+   * The technical mapping says `{ kind: "column", table, yearColumn }`; this says the chatbot will
+   * turn down a year it does not have. A person confirming the first is confirming a shape, not an
+   * outcome -- so the outcome is what is put in front of them, and the shape stays one disclosure
+   * away for whoever wants to check it.
+   */
+  function plainSummary(cap, human, merged, preserved, followUps) {
+    const h = human || blankAnswer();
+    const kept = preserved || [];
+    const S = QUESTIONS.summary;
+    const followed = (followUps || []).indexOf("coverage") >= 0;
+    const rows = [];
+
+    /**
+     * A kept value is described, never quoted. See `summary.keptDetail`: what is already recorded
+     * was written by someone else in their words, and pasting those words here is how database
+     * language got back onto the deciding path.
+     */
+    const row = (field, label, text) => {
+      const isKept = kept.indexOf(field) >= 0;
+      rows.push({ field: field, label: label, text: isKept ? S.keptDetail : text,
+        kept: isKept, followUp: false });
+    };
+
+    const yearText = followed ? QUESTIONS.year.followUp
+      : h.coverage === "years" && merged.coverage ? S.year.years
+      : h.coverage === "no-years" ? S.year["no-years"]
+      : merged.coverage ? S.year[merged.coverage.kind === "none" ? "no-years" : "years"]
+      : S.unanswered;
+    if (kept.indexOf("coverage") >= 0) row("coverage", S.labels.year, yearText);
+    else rows.push({ field: "coverage", label: S.labels.year, text: yearText, kept: false, followUp: followed });
+
+    row("integrity", S.labels.trust, merged.integrity && merged.integrity.length
+      ? S.trustPrefix + " " + merged.integrity.join(" ") + " " + S.trustNote
+      : S.unanswered);
+
+    row("availability", S.labels.availability, !merged.availability ? S.unanswered
+      : merged.availability.kind === "always" ? S.availability.always
+      : S.availability.sometimes.replace("%s", merged.availability.condition || "—"));
+
+    row("receiptOwner", S.labels.responsibility,
+      merged.receiptOwner ? S.responsibility.replace("%s", merged.receiptOwner) : S.unanswered);
+
+    return rows;
+  }
+
+  /**
    * A stable digest of a proposal, so a confirmation can be tied to the EXACT mapping confirmed.
    *
    * FNV-1a over canonical JSON: deterministic, dependency-free, and identical in the page and at
@@ -5446,29 +5725,33 @@ function createStage2bPlainLanguage(capabilityCatalog) {
     UNSURE: UNSURE,
     tablePhrase: tablePhrase,
     describeQuestion: describeQuestion,
-    recommendedYearColumn: recommendedYearColumn,
-    coverageOptions: coverageOptions,
-    integrityScenarios: integrityScenarios,
+    exampleAsking: exampleAsking,
+    automaticYearBasis: automaticYearBasis,
+    yearRecommendation: yearRecommendation,
+    yearOptions: yearOptions,
+    trustScenarios: trustScenarios,
     availabilityOptions: availabilityOptions,
-    ownerOptions: ownerOptions,
+    responsibilityOptions: responsibilityOptions,
     blankAnswer: blankAnswer,
     isAnswered: answered,
     questions: () => QUESTIONS,
+    plainSummary: plainSummary,
     /**
      * EVERYTHING a person would read for one capability, as data.
      *
      * The workbook fingerprint is taken over this for every capability, so any change to what is
-     * asked or to the consequence attached to an answer invalidates confirmations. Covering only
-     * the per-capability catalog left the shared headings, the option labels and the consequences
-     * outside the identity -- all of them things a person reads before deciding.
+     * asked, to the consequence attached to an answer, to the example, or to the recommendation and
+     * its reason invalidates confirmations. All of them are read before deciding.
      */
     contractFor: (cap) => ({
       id: cap.id,
       question: describeQuestion(cap),
-      coverage: coverageOptions(cap).map((o) => [o.value, o.label, o.consequence, o.why, !!o.recommended]),
-      integrity: integrityScenarios(cap).map((s) => [s.value, s.label, s.prose]),
+      example: exampleAsking(cap),
+      recommendation: (() => { const r = yearRecommendation(cap); return r ? [r.value, r.answer, r.why] : null; })(),
+      year: yearOptions(cap).map((o) => [o.value, o.label, o.consequence, !!o.recommended]),
+      trust: trustScenarios(cap).map((s) => [s.value, s.label, s.prose]),
       availability: availabilityOptions().map((o) => [o.value, o.label, o.consequence]),
-      owner: ownerOptions(cap).map((o) => [o.value, o.label]),
+      responsibility: responsibilityOptions(cap).map((o) => [o.value, o.label]),
     }),
     proposeMapping: proposeMapping,
     mergeWithExisting: mergeWithExisting,
@@ -5478,6 +5761,225 @@ function createStage2bPlainLanguage(capabilityCatalog) {
 
 if (typeof module !== "undefined" && module.exports) {
   module.exports = { createStage2bPlainLanguage: createStage2bPlainLanguage };
+}
+
+
+/**
+ * The decision card: what a person actually reads, as markup built from data.
+ *
+ * WHY THIS IS A MODULE. Every word on this card used to be concatenated inside the generator's HTML
+ * template, where the only thing a test could do was search the finished page for a substring. That
+ * is how sixteen assertions passed over a page that threw on load, and it is why "does the primary
+ * surface avoid database language?" was unanswerable: the page text and the inlined source code sat
+ * in one string, so any search hit the code. Here the card is a function. The suite calls it and
+ * reads back exactly what a person would see, with none of the machinery in the way.
+ *
+ * IT OWNS NO WORDING. Every sentence comes from `lib/stage2b-plain-language.js` or the reviewed
+ * catalog, both of which the decision contract's fingerprint covers. A string written here would be
+ * wording no confirmation was ever checked against.
+ *
+ * THE SPLIT THAT MATTERS. `primary` is the deciding path and speaks only about crime data and what
+ * the chatbot will do. `technical` is a collapsed disclosure that speaks about tables and columns,
+ * is never required to answer anything, and is marked so the regression can hold the two apart.
+ */
+function createStage2bCard(plainLanguage) {
+  const PL = plainLanguage;
+  const Q = PL.questions();
+
+  function esc(s) {
+    return String(s).replace(/[&<>"]/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[m]));
+  }
+
+  /** A question heading with the one-sentence statement of what is being decided under it. */
+  function ask(heading, decision) {
+    return '<h3>' + esc(heading) + '</h3>'
+      + '<p class="decide"><b>' + esc(Q.card.decisionHeading) + '</b> ' + esc(decision) + '</p>';
+  }
+
+  /**
+   * An option, with what it CAUSES under it.
+   *
+   * The consequence is not decoration. A label alone ("Yes — year matters") tells someone what they
+   * are ticking, not what the chatbot will then do, and the whole point of the exercise is the
+   * second thing.
+   */
+  function option(type, name, o, checked) {
+    return '<label class="opt"><input type="' + type + '" name="' + name + '" value="' + esc(o.value) + '"'
+      + (checked ? " checked" : "") + "/>" + esc(o.label)
+      + '<span class="why">' + esc(o.consequence) + "</span></label>";
+  }
+
+  /**
+   * The recommendation, in its own block and never on the option.
+   *
+   * Fusing them ("No — this question is not about a particular year  recommended") reads as one
+   * label and makes the recommendation look like part of the choice rather than advice about it.
+   * Kept apart, with its capability-specific reason, it can be disagreed with.
+   */
+  function recommendation(cap) {
+    const r = PL.yearRecommendation(cap);
+    if (!r) return "";
+    return '<div class="rec"><b>' + esc(Q.card.recommendationLabel) + ": " + esc(r.answer) + ".</b> "
+      + esc(r.why) + '<span class="recnote">' + esc(Q.card.recommendationNote) + "</span></div>";
+  }
+
+  /** What this question helps someone answer, and one realistic asking of it. */
+  function header(cap, position) {
+    return '<div class="head">'
+      + '<p class="eyebrow">' + esc(Q.card.answersHeading) + "</p>"
+      + "<h2>" + esc(PL.describeQuestion(cap)) + "</h2>"
+      + '<p class="example"><span>' + esc(Q.card.exampleLabel) + "</span> “"
+      + esc(PL.exampleAsking(cap)) + "”</p>"
+      + (position ? '<span class="observed">' + esc(position) + "</span>" : "")
+      + "</div>";
+  }
+
+  /** The deciding path. Nothing here requires knowing anything about how the data is stored. */
+  function primary(cap, S, position) {
+    const h = S.human(cap.id);
+    const years = PL.yearOptions(cap).map((o) => option("radio", "cov", o, h.coverage === o.value)).join("");
+    const scenarios = PL.trustScenarios(cap).map((s) =>
+      '<label class="opt"><input type="checkbox" name="integ" value="' + esc(s.value) + '"'
+      + ((h.integrity || []).indexOf(s.value) >= 0 ? " checked" : "") + "/>" + esc(s.label) + "</label>").join("");
+    const avail = PL.availabilityOptions().map((o) => option("radio", "avail", o, h.availability === o.value)).join("");
+    const who = PL.responsibilityOptions(cap).map((o) =>
+      '<label class="opt"><input type="radio" name="owner" value="' + esc(o.value) + '"'
+      + (h.owner === o.value ? " checked" : "") + "/>" + esc(o.label) + "</label>").join("");
+
+    return '<div class="card">'
+      + header(cap, position)
+
+      + '<div class="q">' + ask(Q.year.heading, Q.year.decision)
+        + '<p class="choices">' + esc(Q.card.choicesHeading) + "</p>"
+        + years + recommendation(cap)
+      + "</div>"
+
+      + '<div class="q">' + ask(Q.trust.heading, Q.trust.decision)
+        + scenarios
+        + '<label class="opt"><input type="checkbox" id="integUnsure"' + (h.integrityUnsure ? " checked" : "") + "/>"
+        + esc(Q.trust.unsureLabel) + '<span class="why">' + esc(Q.trust.unsureConsequence) + "</span></label>"
+        + "<label>" + esc(Q.trust.otherLabel) + "</label>"
+        + '<input type="text" id="integOther" value="' + esc(h.integrityOther || "") + '"/>'
+      + "</div>"
+
+      + '<div class="q">' + ask(Q.availability.heading, Q.availability.decision)
+        + '<p class="choices">' + esc(Q.card.choicesHeading) + "</p>"
+        + avail
+        + (h.availability === "sometimes"
+          ? "<label>" + esc(Q.availability.whenLabel) + "</label>"
+            + '<p class="hint">' + esc(Q.availability.whenHint) + "</p>"
+            + '<input type="text" id="availWhen" value="' + esc(h.availabilityWhen || "") + '"/>'
+          : "")
+      + "</div>"
+
+      + '<div class="q">' + ask(Q.responsibility.heading, Q.responsibility.decision)
+        + who
+        + (h.owner === "other"
+          ? "<label>" + esc(Q.responsibility.otherLabel) + '</label><input type="text" id="ownerOther" value="'
+            + esc(h.ownerOther || "") + '"/>'
+          : "")
+      + "</div>"
+
+      + '<div class="q"><h3>' + esc(Q.evidence.heading) + "</h3>"
+        + '<p class="hint">' + esc(Q.evidence.hint) + "</p>"
+        + '<textarea id="evidence">' + esc(h.evidence || "") + "</textarea></div>"
+
+      + '<div id="summary"></div>'
+
+      + (S.canWithdraw(cap.id)
+        ? '<div class="q"><h3>' + esc(Q.withdraw.heading) + "</h3>"
+          + '<p class="hint">' + esc(Q.withdraw.hint) + "</p>"
+          + (S.isWithdrawn(cap.id)
+            ? '<div class="alert">' + esc(Q.withdraw.marked) + "</div>"
+            : '<button id="withdraw">' + esc(Q.withdraw.button) + "</button>")
+          + "</div>"
+        : "")
+
+      + technical(cap, S)
+      + "</div>";
+  }
+
+  /**
+   * What your answers mean: the behaviour, before any confirmation.
+   *
+   * Repainted on its own as the person types, because it used to be rebuilt only when a radio
+   * changed -- so typing the missing sentence cleared the problem while the confirm button stayed
+   * greyed out, with nothing saying why.
+   */
+  function summaryPanel(cap, S) {
+    const rows = S.summary(cap.id);
+    const problems = S.problems(cap.id);
+    const confirmed = S.isMappingConfirmed(cap.id);
+    const answered = PL.isAnswered(S.human(cap.id));
+    const followUps = S.proposal(cap.id).followUps;
+
+    /** A kept row already says it is kept, in `summary.keptDetail`. Marking it again just repeats. */
+    const body = rows.map((row) =>
+      "<dt>" + esc(row.label) + "</dt><dd"
+      + (row.kept ? ' class="keptnote"' : "") + ">" + esc(row.text) + "</dd>").join("");
+
+    return '<div class="q"><h3>' + esc(Q.summary.heading) + "</h3>"
+      + '<p class="hint">' + esc(Q.summary.hint) + "</p>"
+      + '<div class="means"><dl>' + body + "</dl></div>"
+      + (followUps.length
+        ? '<div class="followup"><b>' + esc(Q.card.followUpHeading) + "</b> " + esc(Q.year.followUp) + "</div>"
+        : "")
+      + (problems.length
+        ? '<div class="alert">' + esc(Q.summary.beforeConfirm) + " " + problems.map(esc).join("; ") + "</div>"
+        : "")
+      + (S.needsReconfirmation(cap.id) ? '<div class="warn">' + esc(Q.summary.reworded) + "</div>" : "")
+      + (confirmed
+        ? '<div class="good">' + esc(Q.summary.confirmedNote) + "</div>"
+        : '<button class="primary" id="confirmMapping"' + (answered && !problems.length ? "" : " disabled") + ">"
+          + esc(Q.summary.confirmLabel) + "</button>")
+      + "</div>";
+  }
+
+  /**
+   * The collapsed disclosure. The ONLY place database language is allowed.
+   *
+   * `class="technical"` is load-bearing: the regression strips exactly this element and then holds
+   * the rest of the card to a vocabulary a non-technical reader can follow. Without a marked
+   * boundary the two surfaces are one string and the rule cannot be checked at all.
+   */
+  function technical(cap, S) {
+    const p = S.proposal(cap.id);
+    const m = p.merged;
+    const line = (label, value) => "<dt>" + esc(label) + "</dt><dd>" + value + "</dd>";
+    const rows = [
+      line("Coverage basis", m.coverage === null ? "<i>left open</i>"
+        : m.coverage.kind === "none" ? "no year dimension &mdash; " + esc(m.coverage.reason)
+        : "<code>" + esc(m.coverage.table + "." + m.coverage.yearColumn) + "</code>"),
+      line("Integrity rules", m.integrity === null ? "<i>left open</i>"
+        : '<ul style="margin:0;padding-left:16px">' + m.integrity.map((r) => "<li>" + esc(r) + "</li>").join("") + "</ul>"),
+      line("Availability", m.availability === null ? "<i>left open</i>"
+        : m.availability.kind === "always" ? "always expected"
+        : "conditional &mdash; " + esc(m.availability.condition)),
+      line("Receipt owner", m.receiptOwner === null ? "<i>left open</i>" : esc(m.receiptOwner)),
+    ].join("");
+
+    return '<details class="technical"><summary>' + esc(Q.card.technicalHeading) + "</summary>"
+      + '<div class="body">'
+      + "<p>" + esc(Q.card.technicalNote) + "</p>"
+      + "Identifier <code>" + esc(cap.id) + "</code><br/>"
+      + "Data source <code>" + esc(cap.artifact) + "</code><br/>"
+      + "Reads " + cap.reads.map((t) => "<code>" + esc(t) + "</code>").join(" ")
+      + "<br/>Columns: " + Object.keys(cap.columns).map((t) =>
+        esc(t) + " (" + cap.columns[t].map(esc).join(", ") + ")").join(" &middot; ")
+      + (cap.ownerCandidates.length
+        ? "<br/>Scripts mentioning every one of these tables (a filename search, not an answer): "
+          + cap.ownerCandidates.map((o) => "<code>" + esc(o) + "</code>").join(" ")
+        : "")
+      + (cap.conditionalHint ? '<p class="observed">Observed: ' + esc(cap.conditionalHint) + "</p>" : "")
+      + '<p class="observed">Recorded mapping</p><dl class="mapping">' + rows + "</dl>"
+      + "</div></details>";
+  }
+
+  return { primary: primary, summaryPanel: summaryPanel, technical: technical, esc: esc };
+}
+
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = { createStage2bCard: createStage2bCard };
 }
 
 
@@ -5579,7 +6081,13 @@ function createStage2bSession(DATA, plainLanguage) {
   function proposal(id) {
     const p = PL.proposeMapping(capabilityById[id], human[id]);
     const m = PL.mergeWithExisting(p.proposed, baseline[id]);
-    return { proposed: p.proposed, unresolved: p.unresolved, merged: m.merged, preserved: m.preserved };
+    return { proposed: p.proposed, unresolved: p.unresolved, followUps: p.followUps || [],
+      merged: m.merged, preserved: m.preserved };
+  }
+  /** The answers as behaviour, in ordinary words. What the person confirms is this, not the shape. */
+  function summary(id) {
+    const p = proposal(id);
+    return PL.plainSummary(capabilityById[id], human[id], p.merged, p.preserved, p.followUps);
   }
   /** Over the MERGED result, so the person confirms what will be written, not an intermediate. */
   function fingerprintOf(id) { return PL.mappingFingerprint(proposal(id).merged); }
@@ -5600,25 +6108,21 @@ function createStage2bSession(DATA, plainLanguage) {
     return true;
   }
 
-  /** Answers that cannot yet be turned into a coherent mapping. Same rules the importer applies. */
+  /**
+   * What is still missing FROM THE PERSON, phrased as the thing they would go and do.
+   *
+   * Only things they can actually supply. It used to ask them to justify a column whose name did
+   * not look like a year, which is not a judgment anyone outside engineering could make; a question
+   * with nothing dated to read is now engineering's follow-up and never appears here.
+   */
   function problems(id) {
-    const cap = capabilityById[id], h = human[id], found = [];
-    if (h.coverage === "no-years" && !String(h.coverageReason || "").trim()) {
-      found.push("say why this answer is not about a time period");
-    }
-    if (h.coverage === "years" && h.coverageColumn) {
-      const chosen = cap.coverageCandidates.find(
-        (o) => o.table === h.coverageColumn.table && o.yearColumn === h.coverageColumn.yearColumn);
-      if (chosen && !chosen.yearBearing && !String(h.coverageReason || "").trim()) {
-        found.push("that column is not named like a year, so say why it is the right basis");
-      }
-    }
+    const h = human[id], found = [];
     if (h.availability === "sometimes" && !String(h.availabilityWhen || "").trim()) {
-      found.push("say when it is legitimately absent");
+      found.push("say when it is fine for this to be unavailable");
     }
-    if (h.owner === "other" && !String(h.ownerOther || "").trim()) found.push("name the process");
+    if (h.owner === "other" && !String(h.ownerOther || "").trim()) found.push("say who should be contacted");
     if (PL.isAnswered(h) && String(h.evidence || "").trim().length <= 20) {
-      found.push("say what these answers rest on");
+      found.push("say how you know these answers are right");
     }
     return found;
   }
@@ -5789,7 +6293,12 @@ function createStage2bSession(DATA, plainLanguage) {
   function clusterPlan(id) {
     const cap = capabilityById[id];
     const targets = cap.tableCluster.length ? cap.tableCluster.slice() : cap.artifactCluster.slice();
-    const scope = cap.tableCluster.length ? "the same tables" : "the same data source";
+    /**
+     * A KEY, not a sentence. This returned "the same tables", which the copy dialog then showed to
+     * the person -- so the one bit of the deciding path that did not come from the contract was
+     * also the one still speaking about the database.
+     */
+    const scope = cap.tableCluster.length ? "sameRecords" : "sameSource";
     const detail = targets.map((t) => ({
       id: t,
       overwrites: PL.isAnswered(human[t]),
@@ -5807,15 +6316,12 @@ function createStage2bSession(DATA, plainLanguage) {
     const changed = [];
     if (!plan.answered) return { changed: changed };
     for (const entry of plan.detail) {
-      const copy = clone(human[id]);
-      /* Coverage is a column on a specific table: only carry it where the target reads that pair. */
-      if (copy.coverageColumn) {
-        const target = capabilityById[entry.id];
-        const fits = target.coverageCandidates.some(
-          (o) => o.table === copy.coverageColumn.table && o.yearColumn === copy.coverageColumn.yearColumn);
-        if (!fits) copy.coverageColumn = null;
-      }
-      human[entry.id] = copy;
+      /**
+       * The whole answer copies across. It carries no database choice any more -- what a year
+       * answer is bounded by is worked out for each question separately -- so there is nothing here
+       * that could be true of one question and false of the next.
+       */
+      human[entry.id] = clone(human[id]);
       confirmed[entry.id] = null;      // the mapping differs; it must be looked at again
       delete withdrawn[entry.id];
       changed.push(entry.id);
@@ -5830,6 +6336,7 @@ function createStage2bSession(DATA, plainLanguage) {
     human: (id) => human[id],
     update: update,
     proposal: proposal,
+    summary: summary,
     mappingFingerprint: fingerprintOf,
     isMappingConfirmed: isMappingConfirmed,
     /** True when the answer was restored but the question has been re-worded since. */
@@ -5858,12 +6365,31 @@ if (typeof module !== "undefined" && module.exports) module.exports = { createSt
 
 
 const PL = createStage2bPlainLanguage(stage2bCapabilityCatalog());
-/* Shared wording comes from the contract the fingerprint covers, never from this template. */
+/* Every word on the page comes from the contract the fingerprint covers, never from this template. */
 const Q = PL.questions();
+const P = Q.page;
+const Card = createStage2bCard(PL);
 const S = createStage2bSession(DATA, PL);
 let index = 0;
 
-function esc(s){ return String(s).replace(/[&<>"]/g, (m) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
+function esc(s){ return Card.esc(s); }
+
+/* Chrome text, from the contract like everything else. */
+document.getElementById("filter").innerHTML =
+  [["all",P.filters.all],["unanswered",P.filters.unanswered],["unconfirmed",P.filters.unconfirmed],
+   ["problems",P.filters.problems],["followUp",P.filters.followUp]]
+  .map(([v,l]) => '<option value="'+esc(v)+'">'+esc(l)+'</option>').join('');
+document.getElementById("import").textContent = P.buttons.load;
+document.getElementById("export").textContent = P.buttons.exportAnswers;
+document.getElementById("prev").textContent = P.buttons.prev;
+document.getElementById("next").textContent = P.buttons.next;
+document.getElementById("nextUnanswered").textContent = P.buttons.nextUnanswered;
+document.getElementById("cluster").textContent = P.buttons.cluster;
+document.getElementById("unsavedWarning").textContent = P.unsavedWarning;
+document.getElementById("clusterHeading").textContent = P.cluster.heading;
+document.getElementById("clusterNote").textContent = P.cluster.note;
+document.getElementById("cancelCluster").textContent = P.cluster.cancel;
+document.getElementById("applyCluster").textContent = P.cluster.apply;
 
 function matches(cap){
   const f = document.getElementById("filter").value;
@@ -5871,7 +6397,7 @@ function matches(cap){
   if (f === "unanswered") return !PL.isAnswered(S.human(cap.id));
   if (f === "unconfirmed") return PL.isAnswered(S.human(cap.id)) && !S.isMappingConfirmed(cap.id);
   if (f === "problems") return S.problems(cap.id).length > 0;
-  if (f === "conditional") return !!cap.conditionalHint;
+  if (f === "followUp") return S.proposal(cap.id).followUps.length > 0;
   return true;
 }
 function visible(){ const v = DATA.capabilities.filter(matches); return v.length ? v : DATA.capabilities; }
@@ -5879,169 +6405,43 @@ function visible(){ const v = DATA.capabilities.filter(matches); return v.length
 function status(){
   const c = S.counts();
   document.getElementById("counts").innerHTML =
-    '<span>Finished: <b>'+c.complete+'</b>/'+DATA.capabilities.length+'</span>'+
-    '<span>Awaiting confirmation: <b>'+c.unconfirmed+'</b></span>'+
-    (c.problems?'<span>Needs fixing: <b>'+c.problems+'</b></span>':'');
+    '<span>'+esc(P.counts.finished)+': <b>'+c.complete+'</b>/'+DATA.capabilities.length+'</span>'+
+    '<span>'+esc(P.counts.awaiting)+': <b>'+c.unconfirmed+'</b></span>'+
+    (c.problems?'<span>'+esc(P.counts.needsFixing)+': <b>'+c.problems+'</b></span>':'');
   const badge = document.getElementById("dirty");
   const changed = Object.keys(S.changeSet()).length;
-  if (S.isDirty()){ badge.className = "unsaved"; badge.textContent = "Unsaved — export to keep your answers"; }
-  else { badge.className = "saved"; badge.textContent = changed ? "Saved: "+changed+" exported" : "Nothing to save yet"; }
-}
-
-/* Renders the technical policy these answers WOULD produce. Shown, never applied unconfirmed. */
-function mappingPanel(cap){
-  const p = S.proposal(cap.id), m = p.merged;
-  /* Kept-not-set is marked, because a field shown blank would describe a different outcome. */
-  const kept = (field) => p.preserved.indexOf(field) >= 0
-    ? ' <b style="color:#8a5a00">— kept from what was already recorded; your answer left this open</b>' : '';
-  const line = (label, value, field) => '<dt>'+label+'</dt><dd>'+value+(field?kept(field):'')+'</dd>';
-  const rows = [
-    line(Q.mapping.labels.coverage, m.coverage === null ? '<i>left open</i>'
-      : m.coverage.kind === 'none' ? 'not about a time period — ' + esc(m.coverage.reason)
-      : 'first and last year read from <code>'+esc(m.coverage.table+'.'+m.coverage.yearColumn)+'</code>', 'coverage'),
-    line(Q.mapping.labels.integrity, m.integrity === null ? '<i>left open</i>'
-      : '<ul style="margin:0;padding-left:16px">'+m.integrity.map((r)=>'<li>'+esc(r)+'</li>').join('')+'</ul>', 'integrity'),
-    line(Q.mapping.labels.availability, m.availability === null ? '<i>left open</i>'
-      : m.availability.kind === 'always' ? 'yes, always expected'
-      : 'not always — ' + esc(m.availability.condition), 'availability'),
-    line(Q.mapping.labels.receiptOwner, m.receiptOwner === null ? '<i>left open</i>' : esc(m.receiptOwner), 'receiptOwner'),
-  ].join('');
-  const confirmed = S.isMappingConfirmed(cap.id);
-  const answered = PL.isAnswered(S.human(cap.id));
-  const problems = S.problems(cap.id);
-  return '<div class="q"><h3>'+esc(Q.mapping.heading)+'</h3>'+
-    '<p class="hint">'+esc(Q.mapping.hint)+'</p>'+
-    '<div class="mapping"><dl>'+rows+'</dl></div>'+
-    (problems.length ? '<div class="alert">Before this can be confirmed: '+problems.map(esc).join('; ')+'</div>' : '')+
-    (p.unresolved.length ? '<div class="warn">Left open: '+p.unresolved.map((f)=>esc(({coverage:'the years question',integrity:'what going wrong looks like',availability:'whether it is always there',receiptOwner:'who keeps it up to date'})[f]||f)).join(', ')+
-      '. That is a legitimate place to stop — it is recorded as undecided, and this lookup stays switched off.'+
-      (p.preserved.length ? ' Anything already recorded for those is kept as it was: leaving a question open never'
-        + ' deletes an existing decision. Removing one is the separate action at the bottom of this page.' : '')+
-      '</div>' : '')+
-    (S.needsReconfirmation(cap.id) ? '<div class="warn">You confirmed this before, but the question has been'+
-      ' re-worded since. Your answer is still here — please read the wording above and confirm it again.</div>' : '')+
-    (confirmed ? '<div class="good">Confirmed. This wording is what your export will carry.</div>'
-      : '<button class="primary" id="confirmMapping"'+(answered && !problems.length ? '' : ' disabled')+'>'+esc(Q.mapping.confirmLabel)+'</button>')+
-    '</div>';
+  if (S.isDirty()){ badge.className = "unsaved"; badge.textContent = P.dirty.unsaved; }
+  else { badge.className = "saved"; badge.textContent = changed ? P.dirty.saved.replace("%s", changed) : P.dirty.nothing; }
 }
 
 function render(){
   const list = visible();
   if (index >= list.length) index = 0;
-  const cap = list[index], h = S.human(cap.id);
+  const cap = list[index];
 
-  const covOpts = PL.coverageOptions(cap).map((o) =>
-    '<label class="opt"><input type="radio" name="cov" value="'+esc(o.value)+'"'+(h.coverage===o.value?' checked':'')+'/>'+
-      esc(o.label)+(o.recommended?'<span class="tag">recommended</span>':'')+
-      '<span class="why">'+esc(o.consequence)+'</span></label>').join('');
-  const covWhy = PL.coverageOptions(cap).map((o)=>'<li><b>'+esc(o.label)+'</b> — '+esc(o.why)+'</li>').join('');
-  const scenarios = PL.integrityScenarios(cap).map((s) =>
-    '<label class="opt"><input type="checkbox" name="integ" value="'+esc(s.value)+'"'+
-      ((h.integrity||[]).indexOf(s.value)>=0?' checked':'')+'/>'+esc(s.label)+'</label>').join('');
-  const availOpts = PL.availabilityOptions().map((o) =>
-    '<label class="opt"><input type="radio" name="avail" value="'+esc(o.value)+'"'+(h.availability===o.value?' checked':'')+'/>'+
-      esc(o.label)+'<span class="why">'+esc(o.consequence)+'</span></label>').join('');
-  const ownerOpts = PL.ownerOptions(cap).map((o) =>
-    '<label class="opt"><input type="radio" name="owner" value="'+esc(o.value)+'"'+(h.owner===o.value?' checked':'')+'/>'+
-      esc(o.label)+'</label>').join('');
-
-  document.getElementById("card").innerHTML =
-  '<div class="card">'+
-   '<div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap">'+
-     '<h2>'+esc(PL.describeQuestion(cap))+'</h2>'+
-     '<span class="observed">'+(index+1)+' of '+list.length+'</span></div>'+
-   '<p class="observed">That summary comes from the names used in the data, so read it as a rough'+
-     ' description rather than an exact one. Everything under "Technical details" is what the code'+
-     ' actually does — it is not up for decision. The four questions below are.</p>'+
-   '<details><summary>Technical details</summary><div class="body">'+
-     'Identifier <code>'+esc(cap.id)+'</code><br/>Data source <code>'+esc(cap.artifact)+'</code><br/>'+
-     'Reads '+cap.reads.map((t)=>'<code>'+esc(t)+'</code>').join(' ')+
-     '<br/>Columns: '+Object.keys(cap.columns).map((t)=>esc(t)+' ('+cap.columns[t].map(esc).join(', ')+')').join(' · ')+
-     (cap.ownerCandidates.length?'<br/>Scripts mentioning every one of these tables (a filename search, not an answer): '+
-       cap.ownerCandidates.map((o)=>'<code>'+esc(o)+'</code>').join(' '):'')+
-   '</div></details>'+
-   (cap.conditionalHint?'<div class="warn">Observed: '+esc(cap.conditionalHint)+'</div>':'')+
-
-   '<div class="q"><h3>'+esc(Q.coverage.heading)+'</h3>'+
-    '<p class="hint">'+esc(Q.coverage.hint)+'</p>'+covOpts+
-    '<details><summary>Why this is recommended</summary><div class="body"><ul style="margin:0;padding-left:16px">'+covWhy+'</ul>'+
-      '<div style="margin-top:8px">Every column this lookup reads is listed below. The recommendation comes from'+
-      ' a column NAME, which is a fact about the name and not a check of its contents — if the right column is a'+
-      ' different one, choose it here.</div>'+
-      '<div style="margin-top:6px"><label>Use a specific column instead</label><select id="covColumn" style="width:100%;padding:7px">'+
-        '<option value="">— use the recommended one —</option>'+
-        cap.coverageCandidates.map((o,i)=>'<option value="'+i+'"'+
-          (h.coverageColumn && h.coverageColumn.table===o.table && h.coverageColumn.yearColumn===o.yearColumn?' selected':'')+
-          '>'+esc(o.table+'.'+o.yearColumn)+(o.yearBearing?' — named like a year':'')+'</option>').join('')+
-      '</select></div></div></details>'+
-    '<label>'+esc(Q.coverage.reasonLabel)+'</label>'+
-    '<input type="text" id="covReason" value="'+esc(h.coverageReason||"")+'"/>'+
-   '</div>'+
-
-   '<div class="q"><h3>'+esc(Q.integrity.heading)+'</h3>'+
-    '<p class="hint">'+esc(Q.integrity.hint)+'</p>'+
-    scenarios+
-    '<label class="opt"><input type="checkbox" id="integUnsure"'+(h.integrityUnsure?' checked':'')+'/>'+esc(Q.integrity.unsureLabel)+'</label>'+
-    '<label>'+esc(Q.integrity.otherLabel)+'</label>'+
-    '<input type="text" id="integOther" value="'+esc(h.integrityOther||"")+'"/>'+
-   '</div>'+
-
-   '<div class="q"><h3>'+esc(Q.availability.heading)+'</h3>'+
-    '<p class="hint">'+esc(Q.availability.hint)+'</p>'+availOpts+
-    (h.availability==="sometimes"
-      ? '<label>'+esc(Q.availability.whenLabel)+'</label><input type="text" id="availWhen" value="'+esc(h.availabilityWhen||"")+'"/>'
-      : '')+
-   '</div>'+
-
-   '<div class="q"><h3>'+esc(Q.owner.heading)+'</h3>'+
-    '<p class="hint">'+esc(Q.owner.hint)+'</p>'+ownerOpts+
-    (h.owner==="other"
-      ? '<label>'+esc(Q.owner.otherLabel)+'</label><input type="text" id="ownerOther" value="'+esc(h.ownerOther||"")+'"/>'
-      : '')+
-   '</div>'+
-
-   '<div class="q"><h3>'+esc(Q.evidence.heading)+'</h3>'+
-    '<p class="hint">'+esc(Q.evidence.hint)+'</p>'+
-    '<textarea id="evidence">'+esc(h.evidence||"")+'</textarea></div>'+
-
-   '<div id="mapping"></div>'+
-
-   (S.canWithdraw(cap.id)
-     ? '<div class="q"><h3>Remove the existing policy for this lookup</h3>'+
-       '<p class="hint">Something was already recorded here. Removing it is a separate, named action —'+
-       ' leaving the questions above unanswered does NOT delete it.</p>'+
-       (S.isWithdrawn(cap.id)
-         ? '<div class="alert">Marked for removal. Exporting and importing will remove what was recorded.</div>'
-         : '<button id="withdraw">Remove the recorded policy…</button>')
-       +'</div>'
-     : '')+
-  '</div>';
+  document.getElementById("card").innerHTML = Card.primary(cap, S, (index+1)+' of '+list.length);
 
   const value = (id) => { const el = document.getElementById(id); return el ? el.value : ""; };
   /**
-   * The mapping panel repaints on every edit, in place.
+   * The summary repaints on every edit, in place.
    *
    * It used to be part of the card, which is only rebuilt when a radio changes -- so typing the
-   * missing reason cleared the problem, and the "confirm" button stayed greyed out with no way to
+   * missing sentence cleared the problem, and the confirm button stayed greyed out with no way to
    * press it. Repainting only this panel keeps the cursor where the person is typing.
    */
-  const renderMapping = () => {
-    const host = document.getElementById("mapping");
+  const renderSummary = () => {
+    const host = document.getElementById("summary");
     if (!host) return;
-    host.innerHTML = mappingPanel(cap);
+    host.innerHTML = Card.summaryPanel(cap, S);
     const button = document.getElementById("confirmMapping");
-    if (button) button.addEventListener("click", () => { S.confirmMapping(cap.id); status(); renderMapping(); });
+    if (button) button.addEventListener("click", () => { S.confirmMapping(cap.id); status(); renderSummary(); });
   };
   const save = () => {
     const covRadio = document.querySelector('input[name=cov]:checked');
     const availRadio = document.querySelector('input[name=avail]:checked');
     const ownerRadio = document.querySelector('input[name=owner]:checked');
-    const columnSel = document.getElementById("covColumn");
-    const picked = columnSel && columnSel.value !== "" ? cap.coverageCandidates[Number(columnSel.value)] : null;
     S.update(cap.id, {
       coverage: covRadio ? covRadio.value : null,
-      coverageColumn: picked ? { table: picked.table, yearColumn: picked.yearColumn } : null,
-      coverageReason: value("covReason"),
       integrity: Array.prototype.slice.call(document.querySelectorAll('input[name=integ]:checked')).map((e)=>e.value),
       integrityOther: value("integOther"),
       integrityUnsure: !!(document.getElementById("integUnsure") || {}).checked,
@@ -6052,7 +6452,7 @@ function render(){
       evidence: value("evidence"),
     });
     status();
-    renderMapping();
+    renderSummary();
   };
   /* Radios re-render, because which follow-up field is asked depends on the choice. */
   for (const name of ["cov","avail","owner"]){
@@ -6060,23 +6460,20 @@ function render(){
       el.addEventListener("change", () => { save(); render(); });
     });
   }
-  for (const id of ["covReason","integOther","availWhen","ownerOther","evidence"]){
+  for (const id of ["integOther","availWhen","ownerOther","evidence"]){
     const el = document.getElementById(id); if (el) el.addEventListener("input", save);
   }
-  const columnSel = document.getElementById("covColumn");
-  if (columnSel) columnSel.addEventListener("change", () => { save(); render(); });
   Array.prototype.slice.call(document.querySelectorAll('input[name=integ]')).forEach((el) => {
     el.addEventListener("change", () => { save(); render(); });
   });
   const unsure = document.getElementById("integUnsure");
   if (unsure) unsure.addEventListener("change", () => { save(); render(); });
 
-  renderMapping();
+  renderSummary();
 
   const withdrawButton = document.getElementById("withdraw");
   if (withdrawButton) withdrawButton.addEventListener("click", () => {
-    if (!confirm("Remove the recorded policy for this lookup?\n\n"+cap.id+
-      "\n\nExporting and importing will REMOVE it. This is not the same as leaving the questions unanswered.")) return;
+    if (!confirm(Q.withdraw.confirm+"\n\n"+PL.describeQuestion(cap)+"\n\n"+Q.withdraw.confirmDetail)) return;
     S.withdraw(cap.id); status(); render();
   });
   status();
@@ -6091,21 +6488,22 @@ document.getElementById("nextUnanswered").addEventListener("click", () => {
     const probe=(index+step)%l.length;
     if (!PL.isAnswered(S.human(l[probe].id))){ index=probe; render(); return; }
   }
-  alert("Every lookup in this view has been answered.");
+  alert(P.allAnswered);
 });
 
-/* Copying names EVERY affected lookup, and what it costs them, before anything changes. */
+/* Copying names EVERY affected question, and what it costs them, before anything changes. */
 document.getElementById("cluster").addEventListener("click", () => {
   const cap = visible()[index];
   const plan = S.clusterPlan(cap.id);
   document.getElementById("confirmIntro").textContent = plan.answered
-    ? 'Copy your answers to '+plan.targets.length+' lookup(s) reading '+plan.scope+'.'
-    : 'There are no answers here to copy yet.';
+    ? P.cluster.intro.replace("%n", plan.targets.length).replace("%s", P.cluster.scope[plan.scope])
+    : P.cluster.none;
   document.getElementById("affected").innerHTML = plan.detail.map((entry) => {
     const notes = [];
-    if (entry.overwrites) notes.push('replaces answers already given there');
-    if (entry.confirmationCleared) notes.push('its confirmation will be cancelled, so you must re-check its wording');
-    return '<li>'+esc(entry.id)+(notes.length?' <b style="color:#8a5a00">— '+esc(notes.join("; "))+'</b>':'')+'</li>';
+    if (entry.overwrites) notes.push(P.cluster.overwrites);
+    if (entry.confirmationCleared) notes.push(P.cluster.cleared);
+    const named = S.capability(entry.id);
+    return '<li>'+esc(PL.describeQuestion(named))+(notes.length?' <b style="color:#8a5a00">— '+esc(notes.join("; "))+'</b>':'')+'</li>';
   }).join('') || '<li>(none)</li>';
   document.getElementById("applyCluster").disabled = !plan.answered || !plan.targets.length;
   document.getElementById("confirm").showModal();
@@ -6140,8 +6538,8 @@ document.getElementById("file").addEventListener("change", (e) => {
     }
     if (!result.ok){ note.hidden = false; note.textContent = result.reason; index = 0; status(); render(); return; }
     note.hidden = result.unknown.length === 0;
-    if (result.unknown.length) note.textContent = "Loaded "+result.applied+" lookup(s). "+
-      result.unknown.length+" entry(ies) in that file are not lookups in this workbook and were ignored.";
+    if (result.unknown.length) note.textContent = "Loaded "+result.applied+" question(s). "+
+      result.unknown.length+" entry(ies) in that file are not questions in this workbook and were ignored.";
     index = 0; status(); render();
   };
   reader.readAsText(f);
