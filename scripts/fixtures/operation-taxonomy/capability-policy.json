@@ -8,7 +8,7 @@
   },
   "_generatedFrom": {
     "record": "da826a3b199357f8",
-    "contract": "b27e41f54a94b63c"
+    "contract": "4584c5dccd7c837e"
   },
   "hate_crime::agency_county_crosswalk+hate_crime_incidents::agency_county_crosswalk(county_fips,county_key,ori,ori9,state)|hate_crime_incidents(ori)": {
     "coverage": null,

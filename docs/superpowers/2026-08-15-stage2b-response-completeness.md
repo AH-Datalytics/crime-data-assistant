@@ -12,7 +12,7 @@ then the responses offered, then why they cover it.
 
 ---
 
-## 1. Can someone reasonably ask this question for a particular year?
+## 1. Should the chatbot be able to say “we don’t have that year”?
 
 **The real decision.** Should the chatbot turn down a request for a year this data does not go back
 to, or answer without looking at the year at all? This is a judgment about the subject matter — is
@@ -68,7 +68,7 @@ part of the system, and offering them would collect intent that nothing could ev
 
 ---
 
-## 3. If this data is missing, does that mean something is broken?
+## 3. If this data is missing, should the chatbot treat that as a problem?
 
 **The real decision.** When this data is not there at all, is that a fault to raise or an expected
 state to report plainly?
@@ -90,7 +90,7 @@ a different question from this one and is not asked here rather than being half-
 
 ---
 
-## 4. Who should be contacted if this data is missing or out of date?
+## 4. Who is responsible if this data goes missing or out of date?
 
 **The real decision.** Who does someone go to. An accountability fact, not a technical owner field.
 

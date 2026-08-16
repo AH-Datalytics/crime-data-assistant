@@ -441,8 +441,8 @@ check("the fingerprint covers everything a person reads, and the translation its
    * what the person READS changed, not merely because the file's bytes did.
    */
   const wordingCases: [string, string, string][] = [
-    ["a question heading", "1. Can someone reasonably ask this question for a particular year?",
-      "1. Could someone reasonably ask this question for a particular year?"],
+    ["a question heading", "1. Should the chatbot be able to say “we don’t have that year”?",
+      "1. Should the chatbot be able to say “we do not have that year”?"],
     ["the statement of what is being decided", "You are deciding how the chatbot should react when this data is not there at all.",
       "You are deciding how the chatbot ought to react when this data is not there at all."],
     ["what an answer is said to do", "Missing data should be treated as a problem that needs attention.",
@@ -507,8 +507,8 @@ check("the fingerprint covers everything a person reads, and the translation its
   const S = sessionFor();
   const otherContract = JSON.parse(exportWith(withYear.id, answers()));
   otherContract.contractFingerprint = fingerprintOf(realSource.replace(
-    "1. Can someone reasonably ask this question for a particular year?",
-    "1. Could someone reasonably ask this question for a particular year?"));
+    "1. Should the chatbot be able to say “we don’t have that year”?",
+    "1. Should the chatbot be able to say “we do not have that year”?"));
   const refused = S.loadSession(otherContract);
   assert.strictEqual(refused.ok, false, "a session authored against different wording loaded");
   assert.ok(refused.stale, "it was not refused as stale");
@@ -630,9 +630,9 @@ check("a generated policy is refused when the CONTRACT moves, even though the re
    * the two strings it is handed.
    */
   const realSource = fs.readFileSync(PLAIN_LANGUAGE_MODULE_FILE, "utf8");
-  const heading = "1. Can someone reasonably ask this question for a particular year?";
+  const heading = "1. Should the chatbot be able to say “we don’t have that year”?";
   assert.ok(realSource.includes(heading), "this test is stale: the module no longer asks that question");
-  const rewordedSource = realSource.replace(heading, "1. Could someone reasonably ask this question for a particular year?");
+  const rewordedSource = realSource.replace(heading, "1. Should the chatbot be able to say “we do not have that year”?");
   const plFrom = (source: string) =>
     (new Function(source + "\nreturn createStage2bPlainLanguage;")() as (c: unknown) => any)(CATALOG);
   const movedContract = workbookFingerprint(registry, CATALOG,
