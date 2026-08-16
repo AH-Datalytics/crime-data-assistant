@@ -414,6 +414,8 @@ header b{font-size:14px}
 main{max-width:820px;margin:0 auto;padding:22px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:20px 22px;margin-bottom:16px}
 .head{position:relative;padding-bottom:6px}
+.source{display:inline-block;font-size:13px;font-weight:600;color:#17513a;background:var(--okbg);border:1px solid #b9dcc9;border-radius:5px;padding:4px 10px;margin:0 0 12px}
+.source span{color:var(--ok);font-weight:700;margin-right:4px}
 .eyebrow{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin:0 0 4px;font-weight:600}
 h2{font-size:20px;line-height:1.35;margin:0 0 8px;font-weight:600}
 .example{margin:0;font-size:14.5px;color:#39435c;background:var(--sugbg);border-left:3px solid var(--sug);padding:8px 12px;border-radius:0 4px 4px 0}
@@ -421,8 +423,11 @@ h2{font-size:20px;line-height:1.35;margin:0 0 8px;font-weight:600}
 .head .observed{position:absolute;top:0;right:0}
 .q{border-top:1px solid var(--line);padding:16px 0;margin-top:14px}
 .q h3{font-size:16px;margin:0 0 6px}
-.decide{margin:0 0 10px;font-size:14px;color:#39435c}
+.decide{margin:0 0 4px;font-size:14px;color:#39435c}
 .decide b{color:var(--ink)}
+.decide.judgment{background:#fff8e8;border-left:3px solid var(--warn);padding:7px 11px;border-radius:0 4px 4px 0;color:#5c4413}
+.decide.judgment b{color:var(--warn)}
+.decide.controls{margin:0 0 10px;padding:2px 11px;font-size:13.5px;color:var(--dim)}
 .choices{margin:12px 0 4px;font-size:12.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--dim);font-weight:600}
 .q .hint{font-size:13.5px;color:var(--dim);margin:0 0 10px}
 label.opt{display:block;border:1px solid var(--line);border-radius:6px;padding:9px 12px;margin:6px 0;cursor:pointer}

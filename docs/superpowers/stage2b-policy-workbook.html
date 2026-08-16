@@ -11,6 +11,8 @@ header b{font-size:14px}
 main{max-width:820px;margin:0 auto;padding:22px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:20px 22px;margin-bottom:16px}
 .head{position:relative;padding-bottom:6px}
+.source{display:inline-block;font-size:13px;font-weight:600;color:#17513a;background:var(--okbg);border:1px solid #b9dcc9;border-radius:5px;padding:4px 10px;margin:0 0 12px}
+.source span{color:var(--ok);font-weight:700;margin-right:4px}
 .eyebrow{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin:0 0 4px;font-weight:600}
 h2{font-size:20px;line-height:1.35;margin:0 0 8px;font-weight:600}
 .example{margin:0;font-size:14.5px;color:#39435c;background:var(--sugbg);border-left:3px solid var(--sug);padding:8px 12px;border-radius:0 4px 4px 0}
@@ -18,8 +20,11 @@ h2{font-size:20px;line-height:1.35;margin:0 0 8px;font-weight:600}
 .head .observed{position:absolute;top:0;right:0}
 .q{border-top:1px solid var(--line);padding:16px 0;margin-top:14px}
 .q h3{font-size:16px;margin:0 0 6px}
-.decide{margin:0 0 10px;font-size:14px;color:#39435c}
+.decide{margin:0 0 4px;font-size:14px;color:#39435c}
 .decide b{color:var(--ink)}
+.decide.judgment{background:#fff8e8;border-left:3px solid var(--warn);padding:7px 11px;border-radius:0 4px 4px 0;color:#5c4413}
+.decide.judgment b{color:var(--warn)}
+.decide.controls{margin:0 0 10px;padding:2px 11px;font-size:13.5px;color:var(--dim)}
 .choices{margin:12px 0 4px;font-size:12.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--dim);font-weight:600}
 .q .hint{font-size:13.5px;color:var(--dim);margin:0 0 10px}
 label.opt{display:block;border:1px solid var(--line);border-radius:6px;padding:9px 12px;margin:6px 0;cursor:pointer}
@@ -90,7 +95,7 @@ code{font:12px ui-monospace,Menlo,monospace;background:#f2f3f7;padding:1px 4px;b
 <script>
 const DATA = {
  "v": 6,
- "contractFingerprint": "4584c5dccd7c837e",
+ "contractFingerprint": "b57f414941cec472",
  "capabilities": [
   {
    "id": "crime_data::agencies+agency_county_crosswalk::agencies(agency,national_sample,ori)|agency_county_crosswalk(county_fips,county_key,ori,ori9,state)",
@@ -4804,6 +4809,7 @@ function stage2bCapabilityCatalog() {
   const CATALOG = {
   "crime_data::agencies+agency_county_crosswalk::agencies(agency,national_sample,ori)|agency_county_crosswalk(county_fips,county_key,ori,ori9,state)": {
     question: "Which recent-trends agencies police a given county — the question behind \"crime in X County\".",
+    source: "Current Trends — the recent monthly crime data",
     example: "Which police departments cover Orleans Parish?",
     year: { recommend: "no", why: "This names which departments cover a county. It is a list of places, not a figure that is reported year by year." },
     processes: ["trends"],
@@ -4811,6 +4817,7 @@ function stage2bCapabilityCatalog() {
   },
   "crime_data::agencies+agency_monthly+historical_agency+historical_agency_clearance+historical_agency_crime+historical_agency_population::historical_agency(agency,ori,state,type)|historical_agency_clearance(assault_clr,burglary_clr,motor_vehicle_theft_clr,murder_clr,ori,property_clr,rape_clr,robbery_clr,theft_clr,violent_clr,year)|historical_agency_crime(assault,burglary,motor_vehicle_theft,murder,ori,property,rape,robbery,theft,violent,year)|historical_agency_population(ori,population,year)": {
     question: "One agency's whole record in the long FBI series: offences, how many were solved, and the population behind the rates, year by year.",
+    source: "Historical Library — the long-running FBI series",
     example: "Show me New Orleans PD's crime, how much of it was solved, and its population, for every year on record.",
     year: { recommend: "yes", why: "Every figure here belongs to a particular year, so someone can reasonably ask for a year we do not have." },
     processes: ["historical","population"],
@@ -4818,6 +4825,7 @@ function stage2bCapabilityCatalog() {
   },
   "crime_data::agencies::agencies(agency,national_sample,ori)": {
     question: "Which agencies are in the recent-trends sample, looked up by name — how \"Chicago\" becomes a specific police department.",
+    source: "Current Trends — the recent monthly crime data",
     example: "Is Chicago in the recent crime trends data?",
     year: { recommend: "no", why: "This turns a place name into a specific department. The answer is the same whichever year someone is interested in." },
     processes: ["trends"],
@@ -4825,6 +4833,7 @@ function stage2bCapabilityCatalog() {
   },
   "crime_data::agencies::agencies(national_sample,state)": {
     question: "Which states have agencies in the recent-trends sample, and how many.",
+    source: "Current Trends — the recent monthly crime data",
     example: "Which states are represented in the recent crime trends data?",
     year: { recommend: "no", why: "This lists which states appear at all. It is a roster, not a yearly statistic." },
     processes: ["trends"],
@@ -4832,6 +4841,7 @@ function stage2bCapabilityCatalog() {
   },
   "crime_data::agency_county_crosswalk+historical_agency::agency_county_crosswalk(county_fips,county_key,ori,ori9,state)|historical_agency(agency,ori)": {
     question: "Which agencies in the long FBI series police a given county.",
+    source: "Historical Library — the long-running FBI series",
     example: "Which departments in the long-running FBI series cover Cook County?",
     year: { recommend: "no", why: "This names which departments cover a county. It is a list of places, not a figure reported per year." },
     processes: ["historical"],
@@ -4839,6 +4849,7 @@ function stage2bCapabilityCatalog() {
   },
   "crime_data::agency_monthly+agency_population+sample_agencies::agency_monthly(count,offense,ori,year)|agency_population(ori,population,year)|sample_agencies(ori,state)": {
     question: "Recent monthly crime counts and per-population rates across the sample, grouped by state.",
+    source: "Current Trends — the recent monthly crime data",
     example: "How have robbery rates changed by state over the last three years?",
     year: { recommend: "yes", why: "These counts and rates are reported month by month within particular years, so a request can fall outside what we hold." },
     processes: ["trends","population"],
@@ -4846,6 +4857,7 @@ function stage2bCapabilityCatalog() {
   },
   "crime_data::agency_monthly+agency_population::agency_monthly(agency,count,offense,ori,state,type,year)|agency_population(ori,year)": {
     question: "Recent monthly crime counts and rates for one named agency.",
+    source: "Current Trends — the recent monthly crime data",
     example: "How many burglaries did Baltimore PD report in 2023?",
     year: { recommend: "yes", why: "This reports figures for a named year, so someone can ask for a year that is not in the data." },
     processes: ["trends","population"],
@@ -4853,6 +4865,7 @@ function stage2bCapabilityCatalog() {
   },
   "crime_data::agency_monthly::agency_monthly(year)": {
     question: "Which years the recent-trends data actually covers — what to say when someone asks for a year we may not have.",
+    source: "Current Trends — the recent monthly crime data",
     example: "What years of recent crime data do you have?",
     year: { recommend: "no", why: "This is itself the answer about which years exist. Asking it about one particular year would go in a circle." },
     processes: ["trends"],
@@ -4860,6 +4873,7 @@ function stage2bCapabilityCatalog() {
   },
   "crime_data::historical_agency+historical_agency_clearance+historical_agency_crime+historical_staffing::historical_agency(agency,ori,state,type)|historical_agency_clearance(ori,year)|historical_agency_crime(ori,year)|historical_staffing(ori,year)": {
     question: "Police staffing for an agency alongside its crime and clearance figures, year by year.",
+    source: "Historical Library — the long-running FBI series",
     example: "How many sworn officers did Detroit PD have in 2015, and what was its crime that year?",
     year: { recommend: "yes", why: "Staffing and crime are both reported for a particular year, so a request can fall outside the years we hold." },
     processes: ["historical"],
@@ -4867,6 +4881,7 @@ function stage2bCapabilityCatalog() {
   },
   "crime_data::historical_agency+historical_agency_crime+historical_agency_population::historical_agency(agency,ori,state,type)|historical_agency_crime(murder,ori,year)|historical_agency_population(ori,year)": {
     question: "Murder counts and murder rates for one agency across the long FBI series.",
+    source: "Historical Library — the long-running FBI series",
     example: "What was Philadelphia's murder rate in 1995?",
     year: { recommend: "yes", why: "Murder counts and rates belong to a particular year, so someone can ask for one we do not have." },
     processes: ["historical","population"],
@@ -4874,6 +4889,7 @@ function stage2bCapabilityCatalog() {
   },
   "crime_data::historical_agency+historical_agency_crime::historical_agency(agency,ori,state,type)|historical_agency_crime(ori,violent,year)": {
     question: "Violent crime for one agency across the long FBI series.",
+    source: "Historical Library — the long-running FBI series",
     example: "What was violent crime in Houston in 1988?",
     year: { recommend: "yes", why: "Violent crime is reported here one year at a time, so a request can fall outside the range we hold." },
     processes: ["historical"],
@@ -4881,6 +4897,7 @@ function stage2bCapabilityCatalog() {
   },
   "crime_data::historical_agency::historical_agency(agency,ori)": {
     question: "Which agency record does a department name refer to?",
+    source: "Historical Library — the long-running FBI series",
     example: "Which agency does “Tulsa PD” refer to in the FBI data?",
     year: { recommend: "no", why: "This answer matches a department name to an agency record. It does not answer whether that agency reported data in a particular year." },
     processes: ["historical"],
@@ -4888,6 +4905,7 @@ function stage2bCapabilityCatalog() {
   },
   "crime_data::historical_agency_crime+historical_state_national::historical_agency_crime(year)|historical_state_national(year)": {
     question: "Which years the long FBI series covers, for both agency-level and state/national figures.",
+    source: "Historical Library — the long-running FBI series",
     example: "How far back does the FBI series go?",
     year: { recommend: "no", why: "This is itself the answer about which years exist, so it is not asked about one year at a time." },
     processes: ["historical"],
@@ -4895,6 +4913,7 @@ function stage2bCapabilityCatalog() {
   },
   "crime_data::historical_state_national::historical_state_national(aggravated_assault,aggravated_assault_rate,auto_theft,auto_theft_rate,burglary,burglary_rate,murder,murder_rate,population,rape,rape_rate,robbery,robbery_rate,state,theft,theft_rate,year)": {
     question: "State and national crime counts and rates going back decades — the headline long-run series.",
+    source: "Historical Library — the long-running FBI series",
     example: "What was the national murder rate in 1991?",
     year: { recommend: "yes", why: "These are yearly figures, so someone can reasonably ask for a year we do not have." },
     processes: ["historical"],
@@ -4902,6 +4921,7 @@ function stage2bCapabilityCatalog() {
   },
   "crime_data::historical_state_national::historical_state_national(state)": {
     question: "Which states, plus the national total, exist in the long FBI series.",
+    source: "Historical Library — the long-running FBI series",
     example: "Which states are in the long-running FBI series?",
     year: { recommend: "no", why: "This lists which states appear. It is a roster, not a yearly figure." },
     processes: ["historical"],
@@ -4909,6 +4929,7 @@ function stage2bCapabilityCatalog() {
   },
   "crime_data::national_monthly::sweep": {
     question: "National monthly crime totals, used to check the recent-trends sample against the national picture.",
+    source: "Current Trends — the recent monthly crime data",
     example: "What were the national monthly crime totals last year?",
     year: { recommend: "yes", why: "These totals are reported month by month within particular years." },
     processes: ["trends"],
@@ -4916,6 +4937,7 @@ function stage2bCapabilityCatalog() {
   },
   "hate_crime::agency_county_crosswalk+hate_crime_incidents::agency_county_crosswalk(county_fips,county_key,ori,ori9,state)|hate_crime_incidents(ori)": {
     question: "Hate crime incidents for a given county.",
+    source: "Hate crime records",
     example: "How many hate crimes were reported in Maricopa County in 2022?",
     year: { recommend: "yes", why: "Hate crime incidents happen on a date, so someone can reasonably ask about one year of them." },
     processes: ["hate_crime"],
@@ -4923,6 +4945,7 @@ function stage2bCapabilityCatalog() {
   },
   "hate_crime::hate_crime_incidents::hate_crime_incidents(ori)": {
     question: "Which departments appear anywhere in the hate crime records.",
+    source: "Hate crime records",
     example: "Which departments appear in the hate crime records at all?",
     year: { recommend: "no", why: "This answer covers every year at once. It does not answer whether a department reported in a particular year." },
     processes: ["hate_crime"],
@@ -4930,6 +4953,7 @@ function stage2bCapabilityCatalog() {
   },
   "hate_crime::hate_crime_participation::hate_crime_participation(reporting_agencies,state)": {
     question: "How many agencies in each state take part in hate crime reporting — the context for \"only N agencies reported\".",
+    source: "Hate crime records",
     example: "How many departments in Texas take part in hate crime reporting?",
     year: { recommend: "no", why: "This is the standing count of who takes part, not a figure broken out year by year." },
     processes: ["hate_crime"],
@@ -4937,6 +4961,7 @@ function stage2bCapabilityCatalog() {
   },
   "hate_crime::hate_crime_participation::hate_crime_participation(year)": {
     question: "Which years the hate crime participation figures cover.",
+    source: "Hate crime records",
     example: "What years of hate crime participation do you have?",
     year: { recommend: "no", why: "This is itself the answer about which years exist." },
     processes: ["hate_crime"],
@@ -4944,6 +4969,7 @@ function stage2bCapabilityCatalog() {
   },
   "nibrs::agencies+agency_county_crosswalk+summary_arrestee_demographics::agencies(ori,year)|agency_county_crosswalk(county_key,ori,ori9,state)|summary_arrestee_demographics(arrestee_count,ori,race,ucr_arrest_offense,year)": {
     question: "Arrests by race and offence for the agencies in a given county.",
+    source: "NIBRS — detailed incident-level FBI data",
     example: "How many arrests by race were there in Fulton County in 2022?",
     year: { recommend: "yes", why: "Arrests are counted for a particular year, so a request can fall outside what we hold." },
     processes: ["nibrs_rebuild"],
@@ -4951,6 +4977,7 @@ function stage2bCapabilityCatalog() {
   },
   "nibrs::agencies+agency_county_crosswalk+summary_offender_demographics::agencies(ori,year)|agency_county_crosswalk(county_key,ori,ori9,state)|summary_offender_demographics(offender_count,ori,race,ucr_offense_code,year)": {
     question: "Offenders by race and offence for the agencies in a given county.",
+    source: "NIBRS — detailed incident-level FBI data",
     example: "Who were the offenders, by race, in Wayne County in 2021?",
     year: { recommend: "yes", why: "These counts belong to a particular year, so someone can ask for one we do not have." },
     processes: ["nibrs_rebuild"],
@@ -4958,6 +4985,7 @@ function stage2bCapabilityCatalog() {
   },
   "nibrs::agencies+agency_county_crosswalk+summary_victim_city_monthly::agencies(ori,year)|agency_county_crosswalk(county_key,ori,ori9,state)|summary_victim_city_monthly(ori,ucr_offense_code,victim_count,year)": {
     question: "Victim counts by offence for the agencies in a given county.",
+    source: "NIBRS — detailed incident-level FBI data",
     example: "How many robbery victims were there in DeKalb County in 2022?",
     year: { recommend: "yes", why: "Victim counts are reported for a particular year, so a request can fall outside the range we hold." },
     processes: ["nibrs_rebuild"],
@@ -4965,6 +4993,7 @@ function stage2bCapabilityCatalog() {
   },
   "nibrs::agencies+agency_county_crosswalk+summary_victim_demographics::agencies(ori,year)|agency_county_crosswalk(county_key,ori,ori9,state)|summary_victim_demographics(ori,race,ucr_offense_code,victim_count,year)": {
     question: "Victims by race and offence for the agencies in a given county.",
+    source: "NIBRS — detailed incident-level FBI data",
     example: "How many assault victims by race were there in Bexar County in 2020?",
     year: { recommend: "yes", why: "These counts belong to a particular year, so someone can ask for one we do not have." },
     processes: ["nibrs_rebuild"],
@@ -4972,6 +5001,7 @@ function stage2bCapabilityCatalog() {
   },
   "nibrs::agencies+agency_county_crosswalk::agencies(ori)|agency_county_crosswalk(county_fips,county_key,ori,ori9,state)": {
     question: "Which NIBRS agencies police a given county.",
+    source: "NIBRS — detailed incident-level FBI data",
     example: "Which departments in Hennepin County report to NIBRS?",
     year: { recommend: "no", why: "This names which departments cover a county. It is a list of places, not a yearly figure." },
     processes: ["nibrs_rebuild"],
@@ -4979,6 +5009,7 @@ function stage2bCapabilityCatalog() {
   },
   "nibrs::agencies+nibrs_agency_completeness+summary_city_monthly+summary_victim_city_monthly::agencies(ori,population,year)|nibrs_agency_completeness(months_reported,ori,year)|summary_city_monthly(month,offense_count,ori,ucr_offense_code,year)|summary_victim_city_monthly(ori,ucr_offense_code,victim_count,year)": {
     question: "Offence and victim counts for a city with per-population rates, counting only agencies that reported the whole year.",
+    source: "NIBRS — detailed incident-level FBI data",
     example: "What was Denver's aggravated assault rate in 2022?",
     year: { recommend: "yes", why: "These are yearly figures, and the whole-year reporting rule is itself about one year at a time." },
     processes: ["nibrs_rebuild","nibrs_rollup"],
@@ -4986,6 +5017,7 @@ function stage2bCapabilityCatalog() {
   },
   "nibrs::agencies+nibrs_agency_completeness+summary_city_monthly+summary_victim_city_monthly::agencies(ori,population,year)|nibrs_agency_completeness(months_reported,ori,year)|summary_city_monthly(month,ori,year)|summary_victim_city_monthly(ori,ucr_offense_code,victim_count,year)": {
     question: "Victim counts for a city with per-population rates, alongside which months each agency actually reported.",
+    source: "NIBRS — detailed incident-level FBI data",
     example: "How many victims did Portland report in 2021, and which months did its departments actually report?",
     year: { recommend: "yes", why: "Both the counts and the months-reported picture belong to a particular year." },
     processes: ["nibrs_rebuild","nibrs_rollup"],
@@ -4993,6 +5025,7 @@ function stage2bCapabilityCatalog() {
   },
   "nibrs::agencies+nibrs_agency_completeness+summary_city_monthly::nibrs_agency_completeness(months_reported,ori,year)|summary_city_monthly(month,offense_count,ori,ucr_offense_code,year)": {
     question: "Offence counts for a city, counting only agencies that reported all twelve months.",
+    source: "NIBRS — detailed incident-level FBI data",
     example: "How many burglaries were reported in Mesa in 2023?",
     year: { recommend: "yes", why: "These counts are for one year at a time, so a request can fall outside the years we hold." },
     processes: ["nibrs_rebuild","nibrs_rollup"],
@@ -5000,6 +5033,7 @@ function stage2bCapabilityCatalog() {
   },
   "nibrs::agencies+summary_clearance_type::agencies(agency_type,city,ori,population,state,year)|summary_clearance_type(cleared_by_arrest,cleared_exceptional,ori,total_offenses,ucr_offense_code,year)": {
     question: "How often an agency's offences ended in an arrest or were closed another way.",
+    source: "NIBRS — detailed incident-level FBI data",
     example: "What share of Cleveland's robberies ended in an arrest in 2022?",
     year: { recommend: "yes", why: "This compares offences and outcomes within a particular year." },
     processes: ["nibrs_rebuild"],
@@ -5007,6 +5041,7 @@ function stage2bCapabilityCatalog() {
   },
   "nibrs::agencies::agencies(ori)": {
     question: "Which departments have an agency record in NIBRS at all.",
+    source: "NIBRS — detailed incident-level FBI data",
     example: "Does Fresno PD have an agency record in NIBRS?",
     year: { recommend: "no", why: "This answer says whether a department has a record at all. It does not answer whether that agency reported data in a particular year." },
     processes: ["nibrs_rebuild"],
@@ -5014,6 +5049,7 @@ function stage2bCapabilityCatalog() {
   },
   "nibrs::agencies::agencies(state)": {
     question: "Which states have NIBRS agencies.",
+    source: "NIBRS — detailed incident-level FBI data",
     example: "Which states have departments reporting to NIBRS?",
     year: { recommend: "no", why: "This lists which states appear. It is a roster, not a yearly figure." },
     processes: ["nibrs_rebuild"],
@@ -5021,6 +5057,7 @@ function stage2bCapabilityCatalog() {
   },
   "nibrs::agencies::agencies(year)": {
     question: "Which years NIBRS agency data covers — what to say when someone asks for a year we may not have.",
+    source: "NIBRS — detailed incident-level FBI data",
     example: "What years of NIBRS data do you have?",
     year: { recommend: "no", why: "This is itself the answer about which years exist. Asking it about one particular year would go in a circle." },
     processes: ["nibrs_rebuild"],
@@ -5028,6 +5065,7 @@ function stage2bCapabilityCatalog() {
   },
   "nibrs::nibrs_agency_completeness+summary_arrestee_demographics::nibrs_agency_completeness(months_reported,ori,year)|summary_arrestee_demographics(arrestee_count,ori,race,ucr_arrest_offense,year)": {
     question: "Arrests by race, counting only agencies that reported the whole year.",
+    source: "NIBRS — detailed incident-level FBI data",
     example: "How many people were arrested by race in 2022, counting only departments that reported all year?",
     year: { recommend: "yes", why: "The counts are yearly, and \"reported the whole year\" is a statement about one year at a time." },
     processes: ["nibrs_rebuild"],
@@ -5035,6 +5073,7 @@ function stage2bCapabilityCatalog() {
   },
   "nibrs::nibrs_agency_completeness+summary_offender_demographics::nibrs_agency_completeness(months_reported,ori,year)|summary_offender_demographics(offender_count,ori,race,ucr_offense_code,year)": {
     question: "Offenders by race, counting only agencies that reported the whole year.",
+    source: "NIBRS — detailed incident-level FBI data",
     example: "Who were the offenders by race in 2022, counting only departments that reported all year?",
     year: { recommend: "yes", why: "The counts are yearly, and \"reported the whole year\" is a statement about one year at a time." },
     processes: ["nibrs_rebuild"],
@@ -5042,6 +5081,7 @@ function stage2bCapabilityCatalog() {
   },
   "nibrs::nibrs_agency_completeness+summary_victim_city_monthly::nibrs_agency_completeness(months_reported,ori,year)|summary_victim_city_monthly(month,ori,ucr_offense_code,victim_count,year)": {
     question: "Month-by-month victim counts for a city, counting only agencies that reported the whole year.",
+    source: "NIBRS — detailed incident-level FBI data",
     example: "Show me month-by-month victim counts for Tucson in 2022.",
     year: { recommend: "yes", why: "The months being counted sit inside a particular year, so a request can fall outside what we hold." },
     processes: ["nibrs_rebuild"],
@@ -5049,6 +5089,7 @@ function stage2bCapabilityCatalog() {
   },
   "nibrs::nibrs_agency_completeness+summary_victim_demographics::nibrs_agency_completeness(months_reported,ori,year)|summary_victim_demographics(ori,race,ucr_offense_code,victim_count,year)": {
     question: "Victims by race, counting only agencies that reported the whole year.",
+    source: "NIBRS — detailed incident-level FBI data",
     example: "How many victims by race were there in 2021, counting only departments that reported all year?",
     year: { recommend: "yes", why: "The counts are yearly, and \"reported the whole year\" is a statement about one year at a time." },
     processes: ["nibrs_rebuild"],
@@ -5056,6 +5097,7 @@ function stage2bCapabilityCatalog() {
   },
   "nibrs::nibrs_consistent_reporters+summary_arrestee_demographics::nibrs_consistent_reporters(end_year,ori,start_year)|summary_arrestee_demographics(arrestee_count,ori,race,ucr_arrest_offense,year)": {
     question: "Arrests by race over several years, counting only agencies that reported consistently across the whole span.",
+    source: "NIBRS — detailed incident-level FBI data",
     example: "How have arrests by race changed from 2018 to 2023 among departments that reported throughout?",
     year: { recommend: "yes", why: "The whole point is a span of years, so a request can reach past either end of what we hold." },
     processes: ["nibrs_rebuild"],
@@ -5063,6 +5105,7 @@ function stage2bCapabilityCatalog() {
   },
   "nibrs::nibrs_consistent_reporters+summary_offender_demographics::nibrs_consistent_reporters(end_year,ori,start_year)|summary_offender_demographics(offender_count,ori,race,ucr_offense_code,year)": {
     question: "Offenders by race over several years, counting only agencies that reported consistently across the whole span.",
+    source: "NIBRS — detailed incident-level FBI data",
     example: "How have offender demographics changed from 2019 to 2023 among departments that reported throughout?",
     year: { recommend: "yes", why: "The whole point is a span of years, so a request can reach past either end of what we hold." },
     processes: ["nibrs_rebuild"],
@@ -5070,6 +5113,7 @@ function stage2bCapabilityCatalog() {
   },
   "nibrs::nibrs_consistent_reporters+summary_victim_city_monthly::nibrs_consistent_reporters(end_year,ori,start_year)|summary_victim_city_monthly(ori,ucr_offense_code,victim_count,year)": {
     question: "Victim counts over several years, counting only agencies that reported consistently across the whole span.",
+    source: "NIBRS — detailed incident-level FBI data",
     example: "How have victim counts changed from 2018 to 2023 among departments that reported throughout?",
     year: { recommend: "yes", why: "The whole point is a span of years, so a request can reach past either end of what we hold." },
     processes: ["nibrs_rebuild"],
@@ -5077,6 +5121,7 @@ function stage2bCapabilityCatalog() {
   },
   "nibrs::nibrs_consistent_reporters+summary_victim_demographics::nibrs_consistent_reporters(end_year,ori,start_year)|summary_victim_demographics(ori,race,ucr_offense_code,victim_count,year)": {
     question: "Victims by race over several years, counting only agencies that reported consistently across the whole span.",
+    source: "NIBRS — detailed incident-level FBI data",
     example: "How have victims by race changed from 2018 to 2023 among departments that reported throughout?",
     year: { recommend: "yes", why: "The whole point is a span of years, so a request can reach past either end of what we hold." },
     processes: ["nibrs_rebuild"],
@@ -5084,6 +5129,7 @@ function stage2bCapabilityCatalog() {
   },
   "nibrs::rollup.national_summary_arrestee_demographics::rollup.national_summary_arrestee_demographics(age_group,arrestee_count,race,year)": {
     question: "National arrest totals broken down by age group and race.",
+    source: "NIBRS — detailed incident-level FBI data",
     example: "Nationally, how many people under 18 were arrested in 2022, and of what race?",
     year: { recommend: "yes", why: "These national totals are published one year at a time." },
     processes: ["nibrs_rollup"],
@@ -5091,6 +5137,7 @@ function stage2bCapabilityCatalog() {
   },
   "nibrs::rollup.national_summary_arrestee_demographics::rollup.national_summary_arrestee_demographics(arrestee_count,ucr_arrest_offense,year)": {
     question: "National arrest totals broken down by offence.",
+    source: "NIBRS — detailed incident-level FBI data",
     example: "How many drug arrests were there nationally in 2022?",
     year: { recommend: "yes", why: "These national totals are published one year at a time." },
     processes: ["nibrs_rollup"],
@@ -5098,6 +5145,7 @@ function stage2bCapabilityCatalog() {
   },
   "nibrs::rollup.state_summary_arrestee_demographics::rollup.state_summary_arrestee_demographics(age_group,arrestee_count,race,state,year)": {
     question: "State-level arrest totals broken down by age group and race.",
+    source: "NIBRS — detailed incident-level FBI data",
     example: "How many people were arrested in Ohio in 2022, by age and race?",
     year: { recommend: "yes", why: "These state totals are published one year at a time." },
     processes: ["nibrs_rollup"],
@@ -5105,6 +5153,7 @@ function stage2bCapabilityCatalog() {
   },
   "nibrs::summary_clearance_detail::summary_clearance_detail(cleared_A,cleared_B,cleared_C,cleared_D,cleared_E,cleared_by_arrest,state,total_offenses,ucr_offense_code,year)": {
     question: "How offences were closed in each state, split by the different ways a case can be cleared.",
+    source: "NIBRS — detailed incident-level FBI data",
     example: "In Georgia in 2022, how many offences were closed by an arrest rather than some other way?",
     year: { recommend: "yes", why: "Offences and how they were closed are counted within a particular year." },
     processes: ["nibrs_rebuild"],
@@ -5112,6 +5161,7 @@ function stage2bCapabilityCatalog() {
   },
   "nibrs::summary_clearance_type::summary_clearance_type(cleared_by_arrest,cleared_exceptional,ori,total_offenses,ucr_offense_code,year)": {
     question: "Whether an agency's offences were cleared by arrest or closed for another reason.",
+    source: "NIBRS — detailed incident-level FBI data",
     example: "Were Wichita PD's 2022 offences closed by an arrest or some other way?",
     year: { recommend: "yes", why: "Offences and how they were closed are counted within a particular year." },
     processes: ["nibrs_rebuild"],
@@ -5119,6 +5169,7 @@ function stage2bCapabilityCatalog() {
   },
   "nibrs::summary_juvenile_offender_incidents::summary_juvenile_offender_incidents(incident_count,offense_scope,state,year)": {
     question: "Incidents involving juvenile offenders, by state.",
+    source: "NIBRS — detailed incident-level FBI data",
     example: "How many incidents in Missouri in 2022 involved a juvenile offender?",
     year: { recommend: "yes", why: "Incidents are counted for a particular year, so a request can fall outside what we hold." },
     processes: ["nibrs_rebuild"],
@@ -5126,6 +5177,7 @@ function stage2bCapabilityCatalog() {
   },
   "nibrs::summary_victim_circumstance+summary_victim_state_monthly::summary_victim_circumstance(circumstance_code,state,ucr_offense_code,victim_count,year)|summary_victim_state_monthly(state,ucr_offense_code,victim_count,year)": {
     question: "Victim counts by the circumstances of the offence, by state — for example how many homicides were domestic.",
+    source: "NIBRS — detailed incident-level FBI data",
     example: "How many homicides in Louisiana in 2022 were domestic?",
     year: { recommend: "yes", why: "These counts belong to a particular year, so someone can ask for one we do not have." },
     processes: ["nibrs_rebuild"],
@@ -5133,6 +5185,7 @@ function stage2bCapabilityCatalog() {
   },
   "shr::agency_county_crosswalk+incidents::agency_county_crosswalk(county_fips,county_key,ori,state)|incidents(ori)": {
     question: "Homicide records for a given county.",
+    source: "Homicide Reports — the Supplementary Homicide Reports",
     example: "How many homicides were there in Jefferson Parish in 2019?",
     year: { recommend: "yes", why: "Homicides happen on a date, so someone can reasonably ask about a single year of them." },
     processes: ["shr"],
@@ -5140,6 +5193,7 @@ function stage2bCapabilityCatalog() {
   },
   "shr::incidents+shr_agency_alias+shr_agency_identity+victims::incidents(homicide_type,id,ori,weapon_group,year)|victims(incident_id)": {
     question: "Homicides for an agency broken down by weapon and type, with how many victims each incident had.",
+    source: "Homicide Reports — the Supplementary Homicide Reports",
     example: "How many firearm homicides did Memphis PD report in 2021, and how many victims were involved?",
     year: { recommend: "yes", why: "Homicides are recorded with the year they happened, so a request can fall outside the years we hold." },
     processes: ["shr"],
@@ -5147,6 +5201,7 @@ function stage2bCapabilityCatalog() {
   },
   "shr::incidents::incidents(ori)": {
     question: "Which departments appear anywhere in the homicide records.",
+    source: "Homicide Reports — the Supplementary Homicide Reports",
     example: "Which departments appear in the homicide records at all?",
     year: { recommend: "no", why: "This answer covers every year at once. It does not answer whether a department reported in a particular year." },
     processes: ["shr"],
@@ -5154,6 +5209,7 @@ function stage2bCapabilityCatalog() {
   },
   "shr::incidents::incidents(state)": {
     question: "Which states have homicide records.",
+    source: "Homicide Reports — the Supplementary Homicide Reports",
     example: "Which states have homicide records?",
     year: { recommend: "no", why: "This lists which states appear. It is a roster, not a yearly figure." },
     processes: ["shr"],
@@ -5161,6 +5217,7 @@ function stage2bCapabilityCatalog() {
   },
   "shr::incidents::incidents(year)": {
     question: "Which years the homicide records cover.",
+    source: "Homicide Reports — the Supplementary Homicide Reports",
     example: "What years of homicide data do you have?",
     year: { recommend: "no", why: "This is itself the answer about which years exist." },
     processes: ["shr"],
@@ -5183,7 +5240,7 @@ function stage2bCapabilityCatalog() {
   function fingerprint() {
     const canonical = Object.keys(CATALOG).sort().map((id) => {
       const e = CATALOG[id];
-      return [id, e.question, e.example, [e.year.recommend, e.year.why],
+      return [id, e.question, e.source, e.example, [e.year.recommend, e.year.why],
         e.yearBasis ? [e.yearBasis.table, e.yearBasis.yearColumn] : null,
         e.processes.map((k) => PROCESSES[k] || k),
         e.integrity.map((k) => [k, SCENARIOS[k] ? SCENARIOS[k].label : "", SCENARIOS[k] ? SCENARIOS[k].prose : ""])];
@@ -5207,6 +5264,16 @@ function stage2bCapabilityCatalog() {
     question: (id) => (CATALOG[id] ? CATALOG[id].question : null),
     /** One realistic asking of it, so the reader recognises the question rather than parsing it. */
     example: (id) => (CATALOG[id] ? CATALOG[id].example : null),
+    /**
+     * WHICH DATA this question is about, named the way a person would name it.
+     *
+     * Every one of the four decisions depends on it -- who is responsible, what can go wrong,
+     * whether years apply -- and it was only ever visible as `crime_data` inside the collapsed
+     * technical disclosure. The first thing the pilot had to ask was whether a county question
+     * applied to the Current Trends tab or somewhere else. That is the card's job to say, not the
+     * reader's job to work out.
+     */
+    source: (id) => (CATALOG[id] ? CATALOG[id].source : null),
     /**
      * Whether a year is a sensible thing to ask this about, and why in ordinary words.
      *
@@ -5298,8 +5365,27 @@ function createStage2bPlainLanguage(capabilityCatalog) {
   const QUESTIONS = {
     card: {
       answersHeading: "What question will this help answer?",
+      /**
+       * WHICH DATA, stated before anything is asked.
+       *
+       * All four decisions depend on it and none of them can be made without it: who is responsible
+       * differs by source, what can go wrong differs by source, and whether years apply differs by
+       * source. It used to appear only as `crime_data` inside the collapsed technical disclosure,
+       * so the first thing the pilot had to do was ask which tab a county question belonged to.
+       */
+      sourceLabel: "Which data:",
       exampleLabel: "Someone might ask:",
-      decisionHeading: "What decision are you making?",
+      /**
+       * TWO LABELS, NOT ONE, and the same two on every question.
+       *
+       * "What decision are you making?" described what would HAPPEN -- the mechanism -- and left
+       * the reader to infer what they knew that the system did not. Those are different things and
+       * only one of them is theirs. The judgment is the question nobody but the policy owner can
+       * answer; the control is what the system does as a result. Naming them separately, in the
+       * same order every time, means the reader never has to work out which is being asked for.
+       */
+      judgmentHeading: "Your judgment:",
+      controlsHeading: "What it controls:",
       choicesHeading: "What happens with each choice?",
       recommendationLabel: "Our recommendation",
       recommendationNote: "A recommendation, not a selection. Nothing is chosen until you choose it.",
@@ -5311,8 +5397,9 @@ function createStage2bPlainLanguage(capabilityCatalog) {
     },
     year: {
       heading: "1. Should the chatbot be able to say “we don’t have that year”?",
-      decision: "You are deciding whether the chatbot should turn down a request for a year this"
-        + " data does not go back to, or answer without looking at the year at all.",
+      judgment: "Is this answer about a period of time, or a standing fact?",
+      controls: "Whether the chatbot refuses a year we do not hold, or answers without looking at"
+        + " the year at all.",
       options: {
         years: {
           label: "Yes — year matters for this answer.",
@@ -5351,8 +5438,9 @@ function createStage2bPlainLanguage(capabilityCatalog) {
     },
     trust: {
       heading: "2. What should the chatbot do if one of these problems is detected?",
-      decision: "For each possible problem, choose the response the chatbot should take. You are"
-        + " setting the policy; this is not a test with a predetermined correct answer.",
+      judgment: "For each way this data can go wrong — how much does it matter?",
+      controls: "Whether the chatbot refuses to answer, answers with a warning, or carries on as"
+        + " normal. You are setting the policy; this is not a test with a predetermined correct answer.",
       note: "These checks have not been implemented yet, so this records a requirement and does not"
         + " activate anything.",
       /**
@@ -5399,7 +5487,8 @@ function createStage2bPlainLanguage(capabilityCatalog) {
     },
     availability: {
       heading: "3. If this data is missing, should the chatbot treat that as a problem?",
-      decision: "You are deciding how the chatbot should react when this data is not there at all.",
+      judgment: "Is it normal for this data to be missing sometimes?",
+      controls: "Whether missing data is reported as a fault, or as an answer we simply do not have.",
       options: {
         always: {
           label: "Yes — it should normally be available.",
@@ -5421,8 +5510,9 @@ function createStage2bPlainLanguage(capabilityCatalog) {
     },
     responsibility: {
       heading: "4. Who is responsible if this data goes missing or out of date?",
-      decision: "You are recording who to go to. This is an accountability fact, not a technical"
-        + " ownership setting, and naming someone switches nothing on.",
+      judgment: "Who owns keeping this current?",
+      controls: "Who gets named when this goes stale. An accountability fact, not a technical"
+        + " ownership setting — naming someone switches nothing on.",
       otherLabel: "Someone else — who?",
       otherOption: "Someone else",
       /**
@@ -5594,6 +5684,10 @@ function createStage2bPlainLanguage(capabilityCatalog) {
   }
   function exampleAsking(cap) {
     return CATALOG.example(cap.id) || "";
+  }
+  /** Which data this question is about, in the words someone would use for it. */
+  function sourceOf(cap) {
+    return CATALOG.source(cap.id) || "";
   }
 
   /**
@@ -5940,6 +6034,7 @@ function createStage2bPlainLanguage(capabilityCatalog) {
     tablePhrase: tablePhrase,
     describeQuestion: describeQuestion,
     exampleAsking: exampleAsking,
+    sourceOf: sourceOf,
     automaticYearBasis: automaticYearBasis,
     yearBasisStatus: yearBasisStatus,
     yearRecommendation: yearRecommendation,
@@ -5968,6 +6063,7 @@ function createStage2bPlainLanguage(capabilityCatalog) {
     contractFor: (cap) => ({
       id: cap.id,
       question: describeQuestion(cap),
+      source: sourceOf(cap),
       example: exampleAsking(cap),
       recommendation: (() => { const r = yearRecommendation(cap); return r ? [r.value, r.answer, r.why] : null; })(),
       year: yearOptions(cap).map((o) => [o.value, o.label, o.consequence, !!o.recommended]),
@@ -6013,10 +6109,17 @@ function createStage2bCard(plainLanguage) {
     return String(s).replace(/[&<>"]/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[m]));
   }
 
-  /** A question heading with the one-sentence statement of what is being decided under it. */
-  function ask(heading, decision) {
-    return '<h3>' + esc(heading) + '</h3>'
-      + '<p class="decide"><b>' + esc(Q.card.decisionHeading) + '</b> ' + esc(decision) + '</p>';
+  /**
+   * A question heading, then the two things a reader needs and must not confuse.
+   *
+   * `judgment` is what only they can answer -- the thing they know that the system does not.
+   * `controls` is what the system does as a result. One line each, same order every time, so the
+   * reader never has to work out which is being asked of them.
+   */
+  function ask(section) {
+    return '<h3>' + esc(section.heading) + "</h3>"
+      + '<p class="decide judgment"><b>' + esc(Q.card.judgmentHeading) + "</b> " + esc(section.judgment) + "</p>"
+      + '<p class="decide controls"><b>' + esc(Q.card.controlsHeading) + "</b> " + esc(section.controls) + "</p>";
   }
 
   /**
@@ -6046,9 +6149,17 @@ function createStage2bCard(plainLanguage) {
       + esc(r.why) + '<span class="recnote">' + esc(Q.card.recommendationNote) + "</span></div>";
   }
 
-  /** What this question helps someone answer, and one realistic asking of it. */
+  /**
+   * Which data this is about, what it helps someone answer, and one realistic asking of it.
+   *
+   * The source comes FIRST. Every decision below depends on which data this is -- who is
+   * responsible for it, what can go wrong with it, whether it is reported by year -- and none of
+   * them can be made without knowing. It used to be readable only as `crime_data` inside the
+   * collapsed disclosure.
+   */
   function header(cap, position) {
     return '<div class="head">'
+      + '<p class="source"><span>' + esc(Q.card.sourceLabel) + "</span> " + esc(PL.sourceOf(cap)) + "</p>"
       + '<p class="eyebrow">' + esc(Q.card.answersHeading) + "</p>"
       + "<h2>" + esc(PL.describeQuestion(cap)) + "</h2>"
       + '<p class="example"><span>' + esc(Q.card.exampleLabel) + "</span> “"
@@ -6096,17 +6207,17 @@ function createStage2bCard(plainLanguage) {
     return '<div class="card">'
       + header(cap, position)
 
-      + '<div class="q">' + ask(Q.year.heading, Q.year.decision)
+      + '<div class="q">' + ask(Q.year)
         + '<p class="choices">' + esc(Q.card.choicesHeading) + "</p>"
         + years + recommendation(cap)
       + "</div>"
 
-      + '<div class="q">' + ask(Q.trust.heading, Q.trust.decision)
+      + '<div class="q">' + ask(Q.trust)
         + '<p class="hint">' + esc(Q.trust.note) + "</p>"
         + scenarios
       + "</div>"
 
-      + '<div class="q">' + ask(Q.availability.heading, Q.availability.decision)
+      + '<div class="q">' + ask(Q.availability)
         + '<p class="choices">' + esc(Q.card.choicesHeading) + "</p>"
         + avail
         + (h.availability === "sometimes"
@@ -6116,7 +6227,7 @@ function createStage2bCard(plainLanguage) {
           : "")
       + "</div>"
 
-      + '<div class="q">' + ask(Q.responsibility.heading, Q.responsibility.decision)
+      + '<div class="q">' + ask(Q.responsibility)
         + who
         + (h.owner === "other"
           ? "<label>" + esc(Q.responsibility.otherLabel) + '</label><input type="text" id="ownerOther" value="'

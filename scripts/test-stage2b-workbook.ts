@@ -198,6 +198,7 @@ const catalogCovering = (ids: string[]) => ({
   entry: () => null,
   question: () => "a synthetic capability, described only for a structural test",
   example: () => "a synthetic asking of it",
+  source: () => "A synthetic data source",
   yearAdvice: () => ({ recommend: "no", why: "a synthetic reason, for a structural test" }),
   yearBasis: () => null,
   processLabels: () => ["A synthetic update process"],
@@ -443,8 +444,10 @@ check("the fingerprint covers everything a person reads, and the translation its
   const wordingCases: [string, string, string][] = [
     ["a question heading", "1. Should the chatbot be able to say “we don’t have that year”?",
       "1. Should the chatbot be able to say “we do not have that year”?"],
-    ["the statement of what is being decided", "You are deciding how the chatbot should react when this data is not there at all.",
-      "You are deciding how the chatbot ought to react when this data is not there at all."],
+    ["the judgment a question asks for", "Is it normal for this data to be missing sometimes?",
+      "Is it usual for this data to be missing sometimes?"],
+    ["what an answer is said to control", "Whether missing data is reported as a fault, or as an answer we simply do not have.",
+      "Whether missing data is reported as a fault, or as an answer we do not have."],
     ["what an answer is said to do", "Missing data should be treated as a problem that needs attention.",
       "Missing data should be treated as a problem that needs attention within a day."],
     ["an option label", "Yes — year matters for this answer.",
@@ -902,6 +905,47 @@ check("the deciding path never uses implementation language, on any of the quest
     "the technical disclosure names nothing technical, so the split is not real");
 });
 
+check("every card says WHICH DATA it is about, before it asks anything", () => {
+  /**
+   * The first thing the pilot had to do was ask whether a county question belonged to the Current
+   * Trends tab or somewhere else -- because the card never said. It was readable only as
+   * `crime_data` inside the collapsed disclosure, which is not an answer to that question and is
+   * not on the deciding path anyway.
+   *
+   * Every one of the four decisions depends on it. Who is responsible for hate crime records is
+   * not who is responsible for the recent trends sample. What can go wrong differs. Whether years
+   * apply differs. A person cannot answer any of them without knowing which data they are looking
+   * at, so the card states it first.
+   */
+  const sources = new Set<string>();
+  for (const cap of model) {
+    const source = CATALOG.source(cap.id);
+    assert.ok(source && source.length > 8, `${cap.id}: does not say which data it is about`);
+    assert.ok(!IMPLEMENTATION_WORDS.some((w) => source.toLowerCase().includes(w)),
+      `${cap.id}: names its data in implementation language: ${source}`);
+    assert.notStrictEqual(source, cap.artifact, `${cap.id}: names the artifact instead of the data`);
+    sources.add(source);
+
+    const text = visibleText(primarySurface(cap));
+    assert.ok(text.includes(`${PL.questions().card.sourceLabel} ${source}`),
+      `${cap.id}: the card does not say which data this is`);
+    /** Before the question, and long before anything is asked. */
+    assert.ok(text.indexOf(source) < text.indexOf(PL.describeQuestion(cap)),
+      `${cap.id}: the reader is asked what this answers before being told which data it is`);
+    assert.ok(text.indexOf(source) < text.indexOf(PL.questions().year.heading),
+      `${cap.id}: the first decision comes before the reader knows which data it is about`);
+  }
+  /**
+   * And the sources genuinely distinguish. Two questions reading the same county lookup in
+   * different data are different decisions, and naming them both "crime_data" hid exactly that.
+   */
+  assert.ok(sources.size >= 4, `only ${sources.size} distinct data sources are named across 52 questions`);
+  const counties = model.filter((c) => c.reads.some((t) => t.includes("crosswalk")));
+  assert.ok(counties.length >= 5, "this test is stale: the county questions are gone");
+  assert.ok(new Set(counties.map((c) => CATALOG.source(c.id))).size >= 4,
+    "the county questions do not say which data each one is about, so they read as duplicates");
+});
+
 check("every card states what it helps answer, with a realistic example", () => {
   for (const cap of model) {
     const text = visibleText(primarySurface(cap));
@@ -930,9 +974,27 @@ check("every choice says what it causes, and every question says what is being d
         assert.ok(text.includes(o.consequence), `${cap.id}: the consequence of "${o.label}" is not shown`);
       }
     }
-    for (const decision of [PL.questions().year.decision, PL.questions().trust.decision,
-      PL.questions().availability.decision, PL.questions().responsibility.decision]) {
-      assert.ok(text.includes(decision), `${cap.id}: a question never states what is being decided`);
+    /**
+     * Both halves, on every question, in that order.
+     *
+     * One label used to carry both, and what it actually described was the mechanism -- leaving the
+     * reader to infer what they knew that the system did not. The judgment is the thing only they
+     * can supply; the control is what happens as a result. Confusing them is how someone ends up
+     * answering a question about the software rather than about crime data.
+     */
+    const Q = PL.questions();
+    for (const section of [Q.year, Q.trust, Q.availability, Q.responsibility]) {
+      assert.ok(text.includes(`${Q.card.judgmentHeading} ${section.judgment}`),
+        `${cap.id}: a question never says what judgment is being asked of the reader`);
+      assert.ok(text.includes(`${Q.card.controlsHeading} ${section.controls}`),
+        `${cap.id}: a question never says what the answer controls`);
+      assert.ok(text.indexOf(section.judgment) < text.indexOf(section.controls),
+        `${cap.id}: what it controls is stated before what the reader is being asked`);
+      /** The judgment must be a question put to a person, not a description of the machine. */
+      assert.ok(/\?$/.test(section.judgment.trim()),
+        `${cap.id}: the judgment is phrased as a statement rather than a question: ${section.judgment}`);
+      assert.ok(!/chatbot|system|record/i.test(section.judgment),
+        `${cap.id}: the judgment describes the software rather than asking about the data: ${section.judgment}`);
     }
     // "I'm not sure" is offered on every question, and says it changes nothing.
     assert.ok(text.includes(PL.questions().year.options.unsure.consequence),
