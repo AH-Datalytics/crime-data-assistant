@@ -60,8 +60,14 @@ function check(name: string, fn: () => void) {
 /** What an answer is given against: the database structure AND the questions. */
 const FINGERPRINT = workbookFingerprint(registry, CATALOG);
 const model = buildWorkbookModel(registry);
-/** A capability with a genuinely year-bearing column, so the recommended answer exists. */
-const withYear = model.find((c) => c.coverageCandidates.some((o) => o.yearBearing))!;
+/**
+ * A question that reads EXACTLY ONE dated field, so its basis settles automatically.
+ *
+ * "Some dated field" is not enough any more: twenty-three questions read several, and for those
+ * nothing is chosen at all. A fixture with more than one would put most of this file on the
+ * engineering-follow-up path and stop exercising the resolved one.
+ */
+const withYear = model.find((c) => c.coverageCandidates.filter((o) => o.yearBearing).length === 1)!;
 const yearBasis = withYear.coverageCandidates.find((o) => o.yearBearing)!;
 /**
  * A question where a year genuinely matters and there is nothing dated to read.
@@ -188,6 +194,7 @@ const catalogCovering = (ids: string[]) => ({
   question: () => "a synthetic capability, described only for a structural test",
   example: () => "a synthetic asking of it",
   yearAdvice: () => ({ recommend: "no", why: "a synthetic reason, for a structural test" }),
+  yearBasis: () => null,
   processLabels: () => ["A synthetic update process"],
   scenarios: () => [{ value: "stale", label: "It stops being updated", prose: "It must not stop." }],
   PROCESSES: {},
@@ -1339,6 +1346,113 @@ check("saying the year matters, where nothing dated can be read, is engineering'
   assert.ok(result.ok, JSON.stringify(!result.ok && result.errors));
   if (!result.ok) return;
   assert.deepStrictEqual(result.eligible, [], "an unresolved year basis switched something on");
+});
+
+check("where an answer reads several dates, none is guessed", () => {
+  /**
+   * THE HIDDEN GUESS. The translation used to take whichever dated field it met first, which is a
+   * choice wearing a lookup's clothes. Twenty-three of the fifty-two questions read more than one.
+   * On a consistent-reporter question that meant bounding the answer by the END OF THE SPAN a
+   * department reported over -- `nibrs_consistent_reporters.end_year` -- instead of the year the
+   * counts belong to. The person would have confirmed a confident decision derived from the wrong
+   * data, and neither the page nor the record would have named the field it came from.
+   */
+  const spanned = model.find((c) => c.reads.includes("nibrs_consistent_reporters")
+    && c.reads.some((t) => t.startsWith("summary_")))!;
+  assert.ok(spanned, "this test is stale: no question reads a reported span alongside dated counts");
+  const dated = spanned.coverageCandidates.filter((o) => o.yearBearing).map((o) => `${o.table}.${o.yearColumn}`);
+  assert.ok(dated.includes("nibrs_consistent_reporters.start_year")
+    && dated.includes("nibrs_consistent_reporters.end_year"),
+    `this fixture cannot show anything: it has no start/end span — ${dated.join(", ")}`);
+  assert.ok(dated.some((d) => /^summary_.*\.year$/.test(d)),
+    `this fixture cannot show anything: it has no fact-table year — ${dated.join(", ")}`);
+  assert.ok(dated.length > 1, "this fixture is not ambiguous");
+
+  // Nothing is chosen, and the reason given is that there are several, not that there are none.
+  assert.strictEqual(PL.automaticYearBasis(spanned), null, "a basis was guessed from several candidates");
+  assert.strictEqual(PL.yearBasisStatus(spanned).status, "ambiguous", "the ambiguity is reported as something else");
+
+  const S = sessionFor();
+  S.update(spanned.id, answers(spanned, { coverage: "years" }));
+  const p = S.proposal(spanned.id);
+  assert.strictEqual(p.merged.coverage, null, "a basis was written from an unreviewed guess");
+  assert.deepStrictEqual(p.followUps, ["coverage"], "the ambiguity was not recorded as engineering's follow-up");
+  assert.strictEqual(p.followUpReason, "ambiguous", "the follow-up does not say WHY it is outstanding");
+
+  /** The specific wrong answer this defect produced, named so a regression cannot re-introduce it. */
+  assert.notDeepStrictEqual(p.merged.coverage,
+    { kind: "column", table: "nibrs_consistent_reporters", yearColumn: "end_year" },
+    "the answer is bounded by the end of a reporting span rather than the year its counts belong to");
+
+  // The person is told what is outstanding, is not asked to settle it, and nothing is switched on.
+  assert.deepStrictEqual(S.problems(spanned.id), [], "the person is asked to settle a technical question");
+  const shown = visibleText(CARD.summaryPanel(spanned, S));
+  assert.ok(shown.includes("This answer reads more than one date, and which of them it should be"
+    + " bounded by has not been reviewed."), `the card does not say what is outstanding: ${shown}`);
+  assert.ok(shown.includes("nothing will be guessed in the meantime"), "the card does not promise not to guess");
+  for (const word of IMPLEMENTATION_WORDS) {
+    assert.ok(!shown.toLowerCase().includes(word), `the follow-up wording says "${word}"`);
+  }
+  S.confirmMapping(spanned.id);
+  const result = importInto(S.serialize());
+  assert.ok(result.ok, JSON.stringify(!result.ok && result.errors));
+  if (!result.ok) return;
+  assert.deepStrictEqual(result.eligible, [], "an unsettled basis switched something on");
+  assert.strictEqual((result.policy[spanned.id] as { coverage: unknown }).coverage, null,
+    "an unsettled basis was written into the record as a decision");
+
+  /**
+   * And a basis someone HAS reviewed is used. Asserted through the same path with a catalog that
+   * declares one, so the mechanism is exercised rather than merely present -- no entry declares one
+   * today, and a capability that can never resolve would make the escape hatch untestable.
+   */
+  const declared = spanned.coverageCandidates.find((o) => o.yearBearing
+    && /^summary_/.test(o.table) && o.yearColumn === "year")!;
+  const reviewedCatalog = Object.assign(Object.create(null), CATALOG, {
+    yearBasis: (id: string) => (id === spanned.id ? { table: declared.table, yearColumn: declared.yearColumn } : null),
+  });
+  const reviewedPL = createStage2bPlainLanguage(reviewedCatalog);
+  assert.strictEqual(reviewedPL.yearBasisStatus(spanned).status, "reviewed",
+    "a reviewed basis is not honoured, so the ambiguity can never be resolved");
+  assert.deepStrictEqual(reviewedPL.proposeMapping(spanned, answers(spanned, { coverage: "years" })).proposed.coverage,
+    { kind: "column", table: declared.table, yearColumn: declared.yearColumn },
+    "a reviewed basis was not used");
+
+  // Nothing declares one today, so nothing in the checked-in record can be resolved by this path.
+  for (const cap of model) {
+    assert.strictEqual(CATALOG.yearBasis(cap.id), null,
+      `${cap.id}: a basis has been written into the catalog without an engineering review`);
+  }
+});
+
+check("where an answer reads exactly one date, it is chosen without asking anyone", () => {
+  /**
+   * The positive half. Fail-closed must not mean fail-always: where there is nothing to choose
+   * between, the basis is settled automatically and the person answers only the question that is
+   * theirs.
+   */
+  const single = model.find((c) => c.coverageCandidates.filter((o) => o.yearBearing).length === 1)!;
+  assert.ok(single, "this test is stale: no question reads exactly one dated field");
+  const only = single.coverageCandidates.find((o) => o.yearBearing)!;
+  assert.strictEqual(PL.yearBasisStatus(single).status, "unambiguous", "an unambiguous basis is reported otherwise");
+
+  const S = sessionFor();
+  S.update(single.id, answers(single, { coverage: "years" }));
+  const p = S.proposal(single.id);
+  assert.deepStrictEqual(p.merged.coverage, { kind: "column", table: only.table, yearColumn: only.yearColumn },
+    "the one available basis was not used");
+  assert.deepStrictEqual(p.followUps, [], "an unambiguous basis was sent to engineering anyway");
+  assert.deepStrictEqual(p.unresolved, [], "an unambiguous basis left the year question unresolved");
+  assert.deepStrictEqual(S.problems(single.id), [], "an unambiguous question still asks for something");
+  assert.ok(S.confirmMapping(single.id), "a fully answered, unambiguous question could not be confirmed");
+  assert.strictEqual(S.isComplete(single.id), true, "a fully answered, unambiguous question cannot be finished");
+
+  // And what the person reads is the protection, not the field it was worked out from.
+  const shown = visibleText(CARD.summaryPanel(single, S));
+  assert.ok(shown.includes("If someone asks about a year outside what this data covers"),
+    "the summary does not say what the protection does");
+  assert.ok(!shown.includes(only.yearColumn) || only.yearColumn === "year",
+    "the summary names the field rather than the behaviour");
 });
 
 check("\"not about a particular year\" is recorded as a decision, with no reason demanded", () => {
