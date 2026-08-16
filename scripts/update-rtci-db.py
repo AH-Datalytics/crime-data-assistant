@@ -149,7 +149,7 @@ def get_agency_info(db_path):
     ).fetchall()
     conn.close()
     agency_info = {
-        ori: (agency, state.upper(), typ)
+        ori: (agency, (state or ori[:2]).upper(), typ)
         for ori, agency, state, typ in historical_rows
     }
     agency_info.update({ori: (agency, state, typ) for ori, agency, state, typ in rows})

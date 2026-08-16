@@ -41,14 +41,19 @@ class AllAgencyImportTests(unittest.TestCase):
             conn.execute(
                 "CREATE TABLE historical_agency (ori TEXT, agency TEXT, state TEXT, type TEXT)"
             )
-            conn.execute(
-                "INSERT INTO historical_agency VALUES ('MI6367300', 'Pontiac', 'mi', 'city')"
+            conn.executemany(
+                "INSERT INTO historical_agency VALUES (?, ?, ?, ?)",
+                [
+                    ("MI6367300", "Pontiac", "mi", "city"),
+                    ("AA0000000", "Unknown State", None, "city"),
+                ],
             )
             conn.commit()
             conn.close()
 
             agency_info = UPDATE.get_agency_info(db_path)
             self.assertEqual(agency_info["MI6367300"], ("Pontiac", "MI", "city"))
+            self.assertEqual(agency_info["AA0000000"], ("Unknown State", "AA", "city"))
 
 
 if __name__ == "__main__":
