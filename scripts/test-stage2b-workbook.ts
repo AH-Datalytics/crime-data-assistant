@@ -290,7 +290,7 @@ check("owner choices are narrowed to the processes that could own this capabilit
    */
   const artifactWide = new Map<string, Set<string>>();
   for (const cap of model) {
-    const named = PL.responsibilityOptions(cap).filter((o: any) => o.value !== "other" && o.value !== PL.UNSURE);
+    const named = PL.responsibilityOptions(cap).filter((o: any) => !["other", "not-ours", PL.UNSURE].includes(o.value));
     assert.ok(named.length >= 1, `${cap.id}: offers no update process at all`);
     assert.ok(named.length <= 2, `${cap.id}: offers ${named.length} processes, which is a menu rather than a choice`);
     for (const o of named) {
@@ -303,7 +303,7 @@ check("owner choices are narrowed to the processes that could own this capabilit
   // crime_data has three processes overall; no single capability may offer all of them.
   assert.strictEqual(artifactWide.get("crime_data")!.size, 3, "expected three crime_data processes across the artifact");
   for (const cap of model.filter((c) => c.artifact === "crime_data")) {
-    const named = PL.responsibilityOptions(cap).filter((o: any) => o.value !== "other" && o.value !== PL.UNSURE);
+    const named = PL.responsibilityOptions(cap).filter((o: any) => !["other", "not-ours", PL.UNSURE].includes(o.value));
     assert.ok(named.length < 3, `${cap.id}: still offers every process for its data source`);
   }
   // "Something else" and "I'm not sure" remain everywhere, so narrowing never traps anyone.
@@ -462,8 +462,8 @@ check("the fingerprint covers everything a person reads, and the translation its
   const catalogCases: [string, string, string][] = [
     ["the example someone might ask", "Is Chicago in the recent crime trends data?",
       "Is Chicago in the recent crime-trends data?"],
-    ["a recommendation's reason", "This answer lists which departments exist; it does not provide a yearly statistic.",
-      "This answer lists which departments exist; it never provides a yearly statistic."],
+    ["a recommendation's reason", "This answer matches a department name to an agency record.",
+      "This answer maps a department name to an agency record."],
   ];
   for (const [what, from, to] of catalogCases) {
     assert.ok(realCatalogSource.includes(from), `this test is stale: the catalog no longer contains ${what}`);
@@ -946,11 +946,20 @@ check("a question that is a list recommends that the year does not matter, for a
    * something dated happens to sit beside it, so the recommendation has to come from what the
    * question IS -- and it has to say why in words that can be disagreed with.
    */
-  const directory = model.find((c) => /which agencies exist in the long fbi series/i.test(PL.describeQuestion(c)))!;
-  assert.ok(directory, "this test is stale: the agency directory question is gone");
+  const directory = model.find((c) => /which agency record does a department name refer to/i.test(PL.describeQuestion(c)))!;
+  assert.ok(directory, "this test is stale: the name-to-record question is gone");
   const advice = CATALOG.yearAdvice(directory.id);
-  assert.strictEqual(advice.recommend, "no", "a directory is recommended as though it were a yearly statistic");
-  assert.ok(/lists which departments exist/.test(advice.why), "the reason is not about what this question is");
+  assert.strictEqual(advice.recommend, "no", "a name lookup is recommended as though it were a yearly statistic");
+  assert.ok(/matches a department name to an agency record/.test(advice.why),
+    "the reason is not about what this question is");
+  /**
+   * And it draws the boundary that made the old wording contradictory. "Which agencies exist in the
+   * long FBI series?" reads as a question about history -- did Tulsa PD exist in 1995? -- which
+   * makes "the year does not matter" look wrong. Resolving a name to a record and reporting who
+   * took part in a given year are different questions, and only the first is asked here.
+   */
+  assert.ok(/does not answer whether that agency reported data in a particular year/.test(advice.why),
+    "the reason does not separate identity from participation, so recommending 'no' still looks contradictory");
   assert.ok(!/column|table|year-bearing|dated/i.test(advice.why),
     `the reason explains the data's shape rather than the question: ${advice.why}`);
 
@@ -1623,6 +1632,66 @@ check("an explicit \"no special handling\" is never mistaken for an unanswered f
     "a deliberate decision still reads as undecided");
 });
 
+check("\"nobody here\" is a position the question can express, not a sentence typed into a box", () => {
+  /**
+   * Found in the first capability of the pilot. The honest answer to "who should be contacted?" for
+   * data other organisations submit is "nobody here -- they are responsible, not us", and there was
+   * no way to say it: it had to go through "Something else", where the record then stored it as
+   * though it named someone to chase. A real position with no control is a control that records the
+   * wrong decision.
+   */
+  const values = PL.responsibilityOptions(withYear).map((o: any) => o.value);
+  assert.ok(values.includes("not-ours"), "there is still no way to say nobody here is responsible");
+  assert.ok(values.includes("other") && values.includes(PL.UNSURE), "the escape hatches were removed");
+
+  const S = sessionFor();
+  S.update(withYear.id, answers(withYear, { owner: "not-ours" }));
+  const p = S.proposal(withYear.id);
+  assert.deepStrictEqual(p.unanswered, [], "a deliberate \"nobody here\" was counted as unanswered");
+  assert.deepStrictEqual(S.problems(withYear.id), [], "it demanded a name anyway");
+  assert.strictEqual(p.merged.receiptOwner, PL.questions().responsibility.notOursOwner,
+    "the record does not say what was actually decided");
+
+  // It reads as a decision about responsibility, not as somebody to contact.
+  const shown = visibleText(CARD.summaryPanel(withYear, S));
+  assert.ok(shown.includes("Nobody here is responsible for chasing this"),
+    `the summary does not state the decision: ${shown}`);
+  assert.ok(!/investigate No internal owner/.test(shown),
+    "the summary reads the decision as though it named a process to investigate");
+
+  // And it survives the round trip.
+  S.confirmMapping(withYear.id);
+  const imported = importInto(S.serialize());
+  assert.ok(imported.ok, JSON.stringify(!imported.ok && imported.errors));
+  if (!imported.ok) return;
+  assert.strictEqual(
+    (imported.entries[withYear.id] as unknown as { human: { owner: string } }).human.owner, "not-ours",
+    "the position did not survive the import");
+  assert.deepStrictEqual(imported.eligible, [], "recording who is responsible switched something on");
+});
+
+check("what to do about stale data is phrased as something you can actually do", () => {
+  /**
+   * "The historical FBI series load should be contacted" -- a load cannot be contacted. The answer
+   * to "who do I go to" is a process to investigate, and the sentence now says that.
+   */
+  const S = sessionFor();
+  const process = PL.responsibilityOptions(withYear)[0].value;
+  S.update(withYear.id, answers(withYear, { owner: process }));
+  const shown = visibleText(CARD.summaryPanel(withYear, S));
+  assert.ok(shown.includes(`If this goes missing or becomes outdated, investigate ${process}.`),
+    `the summary does not say what to do: ${shown}`);
+  assert.ok(!/should be contacted/.test(shown), "a process is still described as something to contact");
+  // The label reads inside a sentence rather than starting one.
+  for (const cap of model) {
+    for (const option of PL.responsibilityOptions(cap)) {
+      if (["other", "not-ours", PL.UNSURE].includes(option.value)) continue;
+      assert.ok(/^the /.test(option.value),
+        `${cap.id}: "${option.value}" does not read inside a sentence`);
+    }
+  }
+});
+
 check("optional notes are optional: empty blocks nothing, and nothing is invented to fill them", () => {
   /**
    * It used to demand twenty characters saying how the person knew their own decision was right.
@@ -2043,9 +2112,17 @@ check("the response-completeness audit describes the responses that are actually
   for (const value of ["always", "sometimes"]) {
     assert.ok(audit.includes("`" + value + "`"), `the audit does not name the availability response ${value}`);
   }
-  // It states the known gap rather than claiming completeness everywhere.
-  assert.ok(/this is the known gap/i.test(audit), "the audit claims coverage it does not have");
-  assert.ok(/nobody here/.test(audit), "the audit does not name the position that cannot be expressed");
+  for (const value of ["not-ours", "other"]) {
+    assert.ok(audit.includes("`" + value + "`"), `the audit does not name the responsibility response ${value}`);
+  }
+  /**
+   * The audit must describe what the questions actually offer, including the position the pilot
+   * found missing. If `not-ours` is ever removed, this fails rather than leaving a document that
+   * claims a coverage the interface no longer has.
+   */
+  assert.ok(PL.responsibilityOptions(withYear).some((o: any) => o.value === "not-ours"),
+    "the audit claims a position the question no longer offers");
+  assert.ok(/nobody here/i.test(audit), "the audit does not describe the nobody-here position");
 });
 
 check("the authoritative plan documents the shape that is actually enforced", () => {

@@ -90,7 +90,7 @@ code{font:12px ui-monospace,Menlo,monospace;background:#f2f3f7;padding:1px 4px;b
 <script>
 const DATA = {
  "v": 6,
- "contractFingerprint": "6895a6e23d846d45",
+ "contractFingerprint": "b27e41f54a94b63c",
  "capabilities": [
   {
    "id": "crime_data::agencies+agency_county_crosswalk::agencies(agency,national_sample,ori)|agency_county_crosswalk(county_fips,county_key,ori,ori9,state)",
@@ -4740,13 +4740,13 @@ function stage2bCapabilityCatalog() {
    * evidence under technical details, where they are what they actually are -- a filename search.
    */
   const PROCESSES = {
-    trends: "The monthly crime-trends update",
-    historical: "The historical FBI series load",
-    population: "The agency population refresh",
-    nibrs_rebuild: "The annual NIBRS rebuild",
-    nibrs_rollup: "The NIBRS summary and rollup build",
-    shr: "The homicide (SHR) import",
-    hate_crime: "The hate crime import",
+    trends: "the monthly crime-trends update",
+    historical: "the historical FBI series load",
+    population: "the agency population refresh",
+    nibrs_rebuild: "the annual NIBRS rebuild",
+    nibrs_rollup: "the NIBRS summary and rollup build",
+    shr: "the homicide (SHR) import",
+    hate_crime: "the hate crime import",
   };
 
   /**
@@ -4880,9 +4880,9 @@ function stage2bCapabilityCatalog() {
     integrity: ["stale","disagree"],
   },
   "crime_data::historical_agency::historical_agency(agency,ori)": {
-    question: "Which agencies exist in the long FBI series, looked up by name.",
-    example: "Is Tulsa PD in the long-running FBI series?",
-    year: { recommend: "no", why: "This answer lists which departments exist; it does not provide a yearly statistic." },
+    question: "Which agency record does a department name refer to?",
+    example: "Which agency does “Tulsa PD” refer to in the FBI data?",
+    year: { recommend: "no", why: "This answer matches a department name to an agency record. It does not answer whether that agency reported data in a particular year." },
     processes: ["historical"],
     integrity: ["missing_agencies","stale"],
   },
@@ -4922,9 +4922,9 @@ function stage2bCapabilityCatalog() {
     integrity: ["crosswalk","missing_agencies","stale"],
   },
   "hate_crime::hate_crime_incidents::hate_crime_incidents(ori)": {
-    question: "Which agencies reported hate crime incidents at all.",
-    example: "Which departments report hate crimes?",
-    year: { recommend: "no", why: "This lists which departments report at all; it is not a yearly count." },
+    question: "Which departments appear anywhere in the hate crime records.",
+    example: "Which departments appear in the hate crime records at all?",
+    year: { recommend: "no", why: "This answer covers every year at once. It does not answer whether a department reported in a particular year." },
     processes: ["hate_crime"],
     integrity: ["missing_agencies","stale"],
   },
@@ -5006,9 +5006,9 @@ function stage2bCapabilityCatalog() {
     integrity: ["clearance","stale","missing_agencies"],
   },
   "nibrs::agencies::agencies(ori)": {
-    question: "Which agencies exist in NIBRS at all — the question behind naming a department.",
-    example: "Does Fresno PD report to NIBRS?",
-    year: { recommend: "no", why: "This answer lists which departments exist; it does not provide a yearly statistic." },
+    question: "Which departments have an agency record in NIBRS at all.",
+    example: "Does Fresno PD have an agency record in NIBRS?",
+    year: { recommend: "no", why: "This answer says whether a department has a record at all. It does not answer whether that agency reported data in a particular year." },
     processes: ["nibrs_rebuild"],
     integrity: ["missing_agencies","stale"],
   },
@@ -5146,9 +5146,9 @@ function stage2bCapabilityCatalog() {
     integrity: ["double","categories","stale"],
   },
   "shr::incidents::incidents(ori)": {
-    question: "Which agencies reported homicides.",
-    example: "Which departments report homicide records?",
-    year: { recommend: "no", why: "This lists which departments report at all; it is not a yearly count." },
+    question: "Which departments appear anywhere in the homicide records.",
+    example: "Which departments appear in the homicide records at all?",
+    year: { recommend: "no", why: "This answer covers every year at once. It does not answer whether a department reported in a particular year." },
     processes: ["shr"],
     integrity: ["missing_agencies","stale"],
   },
@@ -5425,6 +5425,18 @@ function createStage2bPlainLanguage(capabilityCatalog) {
         + " ownership setting, and naming someone switches nothing on.",
       otherLabel: "Someone else — who?",
       otherOption: "Someone else",
+      /**
+       * "Nobody here" is a REAL ANSWER, and there was no way to give it.
+       *
+       * Asked for the first county question in the pilot, the honest response was "the agencies are
+       * responsible for submitting their data, not us" -- which had to be typed into "Something
+       * else", where it was stored as though it named a contact to chase. It is a common position
+       * for anything sourced from outside, and it deserves stating positively rather than as an
+       * escape-hatch sentence that the record then misreads.
+       */
+      notOursOption: "Nobody here — whoever reports this data is responsible for it, not us.",
+      notOursOwner: "No internal owner: the organisations that report this data are responsible for"
+        + " submitting it.",
       unsureLabel: "I’m not sure.",
     },
     /**
@@ -5454,7 +5466,7 @@ function createStage2bPlainLanguage(capabilityCatalog) {
         year: "Years",
         trust: "When not to trust it",
         availability: "If it is missing",
-        responsibility: "Who to contact",
+        responsibility: "Who to go to",
       },
       unanswered: "Not decided yet. Nothing will change, and this stays switched off.",
       /**
@@ -5493,7 +5505,10 @@ function createStage2bPlainLanguage(capabilityCatalog) {
         sometimes: "When this is missing because %s, the chatbot should say the answer is"
           + " unavailable rather than report a fault.",
       },
-      responsibility: "%s should be contacted if this goes missing or out of date.",
+      /** A process cannot be contacted; it can be investigated. The label reads inside the sentence. */
+      responsibility: "If this goes missing or becomes outdated, investigate %s.",
+      responsibilityNotOurs: "Nobody here is responsible for chasing this — whoever reports the data"
+        + " is. If it goes missing or becomes outdated, that is theirs to put right, not ours.",
     },
     withdraw: {
       heading: "Remove what was recorded for this question",
@@ -5661,7 +5676,8 @@ function createStage2bPlainLanguage(capabilityCatalog) {
   function responsibilityOptions(cap) {
     const processes = CATALOG.processLabels(cap.id);
     return processes.map((label) => ({ value: label, label: label }))
-      .concat([{ value: "other", label: QUESTIONS.responsibility.otherOption },
+      .concat([{ value: "not-ours", label: QUESTIONS.responsibility.notOursOption },
+        { value: "other", label: QUESTIONS.responsibility.otherOption },
         { value: UNSURE, label: QUESTIONS.responsibility.unsureLabel }]);
   }
 
@@ -5776,6 +5792,9 @@ function createStage2bPlainLanguage(capabilityCatalog) {
       const named = String(h.ownerOther || "").trim();
       if (named) proposed.receiptOwner = named;
       else { unresolved.push("receiptOwner"); unanswered.push("receiptOwner"); }
+    } else if (h.owner === "not-ours") {
+      /** A decision, recorded as one. Not an absence, and not a sentence typed into "Something else". */
+      proposed.receiptOwner = QUESTIONS.responsibility.notOursOwner;
     } else if (h.owner && h.owner !== UNSURE) proposed.receiptOwner = h.owner;
     else { unresolved.push("receiptOwner"); unanswered.push("receiptOwner"); }
 
@@ -5872,7 +5891,9 @@ function createStage2bPlainLanguage(capabilityCatalog) {
       : S.availability.sometimes.replace("%s", merged.availability.condition || "—"));
 
     row("receiptOwner", S.labels.responsibility,
-      merged.receiptOwner ? S.responsibility.replace("%s", merged.receiptOwner) : S.unanswered);
+      h.owner === "not-ours" ? S.responsibilityNotOurs
+        : merged.receiptOwner ? S.responsibility.replace("%s", merged.receiptOwner)
+        : S.unanswered);
 
     return rows;
   }

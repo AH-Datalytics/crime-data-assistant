@@ -96,20 +96,22 @@ a different question from this one and is not asked here rather than being half-
 
 | Position | Offered as | Result |
 |---|---|---|
-| A named update process | one of the plausible processes for this answer | Recorded as the thing to investigate. |
+| A named update process | one of the plausible processes for this answer | "If this goes missing or becomes outdated, investigate *the monthly crime-trends update*." |
+| Nobody here | `not-ours` | Recorded as a decision: no internal owner, the reporting organisations are responsible. |
 | Someone or something else | `other` + free text | Recorded verbatim. |
 | Undecided | `unsure` | Unfinished. Nothing enabled. |
 
 - **Something else:** yes, free text, so no list can trap anyone.
-- **Not applicable:** **this is the known gap.** There is no positive way to say *nobody here — the
-  agencies are responsible for submitting their data, not us*, which is a real and probably common
-  answer. Today it must be typed into "Something else", where it is stored as though it named a
-  contact. Recorded as a known incompleteness rather than papered over; a `not-ours` position is the
-  obvious addition and was not made here because it is outside the requested change.
+- **Not applicable:** `not-ours`. This was the gap the pilot found in its first capability: the
+  honest answer for data other organisations submit is *nobody here — they are responsible, not us*,
+  and it had to be typed into "Something else", where the record stored it as though it named a
+  contact to chase. It is a position now, stated positively and recorded as a decision.
 - **I'm not sure:** offered.
-- **Engineering follow-up:** not needed; a named owner is representable today.
+- **Engineering follow-up:** not needed; every position here is representable today.
 
-**Coverage claim.** Incomplete in one identified way, stated above.
+**Coverage claim.** Complete. Note that the outcome is phrased as something a person can do —
+*investigate the historical FBI series load* — because a load cannot be contacted, and the earlier
+wording said it could.
 
 ---
 
