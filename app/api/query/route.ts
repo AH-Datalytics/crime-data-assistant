@@ -55,7 +55,7 @@ import { planFollowupSafe } from '@/lib/followup-planner';
 import { buildCrossSourceFollowupTransform } from '@/lib/cross-source-followup';
 import { plannerModeForSource } from '@/lib/followup-planner-mode';
 import { findVerifiedCurrentAgency } from '@/lib/current-agency-availability';
-import { classifyCurrentTrendsSqlAbsence } from "@/lib/current-trends-sql-absence";
+import { explainEmptyCurrentTrendsResult } from "@/lib/current-trends-empty-reason";
 import { neutralizeUnverifiedAvailabilityClaim } from "@/lib/refusal-safety";
 import { implausiblePopulationDenominator } from "@/lib/rate-denominator-safety";
 import { buildHistoricalScorecard } from "@/lib/historical-scorecard";
@@ -1872,17 +1872,29 @@ export async function POST(req: NextRequest) {
           const agencyName = extractAgencyName(sql);
           const requestedState = sql.match(/\b(?:\w+\.)?state\s*=\s*'([^']+)'/i)?.[1] ?? null;
           let emptyMsg: string;
-          const currentAbsence = isHistorical ? null : classifyCurrentTrendsSqlAbsence(db, sql, 0);
-          const currentAbsenceProven = currentAbsence?.state === "not_in_source_snapshot";
+          // Current Trends explains an empty result from its own tables: a place we do not
+          // carry, a period nobody has filed, a place that filed nothing for that period, an
+          // offense with no figure in a period it did file, or -- when none of those can be
+          // shown -- a plain decline. Historical keeps the probes below unchanged.
+          const currentEmpty = isHistorical ? null : explainEmptyCurrentTrendsResult(db, sql);
 
-          if (!isHistorical && !currentAbsenceProven) {
-            emptyMsg = "I couldn't verify the Current Trends data needed for this answer, so I can't tell whether there are no matching source records or our system has a data problem. Please try again later.";
+          if (currentEmpty) {
+            emptyMsg = currentEmpty.message;
+            // A near-miss on the name is a suggestion, not a claim about the data, so it can
+            // ride along with the one reason that is about the name.
+            if (currentEmpty.reason === "place_not_covered" && agencyName) {
+              const similar = findSimilarAgencies(db, agencyName, false, requestedState);
+              if (similar.length > 0) {
+                const suggestions = similar
+                  .map((s) => `${s.agency}, ${displayStateCode(s.state, false)}`)
+                  .join("; ");
+                emptyMsg += ` Did you mean: ${suggestions}?`;
+              }
+            }
           } else if (agencyName) {
             const similar = findSimilarAgencies(db, agencyName, isHistorical, requestedState);
             if (similar.length === 0) {
-              emptyMsg = isHistorical
-                ? `"${agencyName}" is not in our dataset. Try the [NIBRS](/test?tab=nibrs) tab, which has incident-level data from agencies nationwide, or the [Current Trends](/test?tab=current) tab for monthly data from ~${RTCI.agencyCount} major agencies.`
-                : `"${agencyName}" is not in our dataset of ~${RTCI.agencyCount} agencies. Try the [Historical Library](/test?tab=historical) tab for annual data covering more agencies back to the 1930s, or the [NIBRS](/test?tab=nibrs) tab for incident-level data from agencies nationwide.`;
+              emptyMsg = `"${agencyName}" is not in our dataset. Try the [NIBRS](/test?tab=nibrs) tab, which has incident-level data from agencies nationwide, or the [Current Trends](/test?tab=current) tab for monthly data from ~${RTCI.agencyCount} major agencies.`;
             } else {
               const exactMatch = similar.find(
                 (s) =>
@@ -1892,8 +1904,10 @@ export async function POST(req: NextRequest) {
                 // Query which offenses this agency actually reports
                 try {
                   let offenseList = "";
-                  if (isHistorical) {
-                    // Historical uses separate columns per offense in historical_agency_crime
+                  {
+                    // Only Historical reaches here now, so there is no longer a branch on the
+                    // tab; the block scopes the row. Historical uses separate columns per
+                    // offense in historical_agency_crime
                     const row = db
                       .prepare(
                         `SELECT
@@ -1920,17 +1934,6 @@ export async function POST(req: NextRequest) {
                       if (row.has_mvt) names.push("Motor Vehicle Theft");
                       if (names.length > 0) offenseList = names.join(", ");
                     }
-                  } else {
-                    const availableOffenses = db
-                      .prepare(
-                        `SELECT DISTINCT offense FROM agency_monthly
-                         WHERE agency = ? AND state = ? AND count > 0
-                         ORDER BY offense`
-                      )
-                      .all(exactMatch.agency, exactMatch.state) as { offense: string }[];
-                    if (availableOffenses.length > 0) {
-                      offenseList = availableOffenses.map((o) => o.offense).join(", ");
-                    }
                   }
                   if (offenseList) {
                     emptyMsg = `${exactMatch.agency}, ${displayStateCode(exactMatch.state, isHistorical)} is in our dataset, but no data was found for that specific query. This agency reports the following offenses: ${offenseList}. Try one of those instead, or adjust the date range.`;
@@ -1952,10 +1955,10 @@ export async function POST(req: NextRequest) {
               "This query returned no results. The data may not be available for the specified criteria. Try broadening your search or asking about a different topic.";
           }
 
-          // Current Trends may describe an empty result as source absence only when every build
-          // component used by the SQL has a reconciled receipt. A local database lookup alone is
-          // not source evidence. Historical retains its existing deterministic probes here.
-          const emptyIsSourceAbsence = isHistorical || currentAbsenceProven;
+          // Current Trends may say something about the published data only when the check
+          // above established which of the five situations this is. When it could not, the
+          // reply declines instead. Historical keeps its existing probes.
+          const emptyIsSourceAbsence = isHistorical || (currentEmpty?.establishedFromData ?? false);
           const emptyProof = finalizeExit({
             intendedAction: emptyIsSourceAbsence ? "decline_data" : "decline_capability",
             sql, columns, guardrails: firedGuardrails, db,
@@ -2059,13 +2062,23 @@ export async function POST(req: NextRequest) {
         {
           const { allNull: everyColNull, dataCols } = detectAllNullData(columns, rows);
           if (everyColNull) {
+            // Rows came back but carried no value, which is the same situation as no rows at
+            // all: nothing can be reported. Current Trends explains it the same deterministic
+            // way rather than assuming the published data is what is missing.
+            const currentAllNull = isHistorical ? null : explainEmptyCurrentTrendsResult(db, sql);
             // Detect if the issue is a failed agency/CTE lookup vs bad math
             const hasAgencyCte = /WITH\s+agency\s+AS/i.test(sql) || /historical_agency\s+ha/i.test(sql);
             const hasCountyOrCity = /\b(county|parish|agency\s*=)\b/i.test(question);
-            const emptyMsg = hasAgencyCte && hasCountyOrCity
+            const emptyMsg = currentAllNull
+              ? currentAllNull.message
+              : hasAgencyCte && hasCountyOrCity
               ? "I couldn't find a matching agency or county record for that query. The name may be stored differently in the database — try the exact agency name (e.g., 'Alameda County' not just 'Alameda'), or check the Historical Library tab which has county-level records."
               : "I ran that query but all the values came back empty — the math likely broke somewhere (like dividing by zero). Could you try asking that a different way?";
-            const allNullProof = finalizeExit({ intendedAction: "decline_data", sql, columns, guardrails: firedGuardrails, db });
+            const allNullIsSourceAbsence = isHistorical || (currentAllNull?.establishedFromData ?? false);
+            const allNullProof = finalizeExit({
+              intendedAction: allNullIsSourceAbsence ? "decline_data" : "decline_capability",
+              sql, columns, guardrails: firedGuardrails, db,
+            });
             writeLog(question, sql, 0, "all_null_columns", totalMs, emptyMsg, tab, firedGuardrails, "haiku-4.5", sessionId, null, allNullProof);
             controller.enqueue(
               encoder.encode(
