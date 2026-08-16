@@ -108,21 +108,21 @@ def filter_ori_rows(rows, year=None, month=None):
     return filtered
 
 
-def rows_to_records(ori_rows, sample_oris=None):
-    """Convert wide CSV rows to (ori, agency, state, type, year, month, offense, count) tuples.
-    If sample_oris is None, include all ORIs (for full rebuild before sample recalc)."""
+def rows_to_records(ori_rows, agency_info=None):
+    """Convert every source ORI row to monthly records.
+
+    sample_agencies is an aggregation cohort, not an import allowlist. Agency-level Current
+    Trends must retain source agencies outside that cohort; otherwise each incremental update makes
+    those places silently disappear. Directory metadata improves labels when available, while an
+    unknown ORI is retained under its source identifier rather than dropped.
+    """
     records = []
-    skipped = 0
     for r in ori_rows:
         ori = r["id"]
-        if sample_oris is not None and ori not in sample_oris:
-            skipped += 1
-            continue
-        if sample_oris is not None:
-            agency, state, typ = sample_oris[ori]
+        if agency_info is not None and ori in agency_info:
+            agency, state, typ = agency_info[ori]
         else:
-            # Extract agency info from CSV row (agency name not in CSV, use ORI prefix for state)
-            agency = ori  # placeholder, will be resolved from agencies table later
+            agency = ori
             state = ori[:2]
             typ = ""
         year = int(r["year"])
@@ -136,18 +136,24 @@ def rows_to_records(ori_rows, sample_oris=None):
             except ValueError:
                 continue
             records.append((ori, agency, state, typ, year, month, offense, count))
-    if skipped:
-        print(f"  {skipped} rows skipped (ORI not in sample_agencies)")
     print(f"  {len(records):,} records")
     return records
 
 
-def get_sample_oris(db_path):
-    """Load sample_agencies from local DB."""
+def get_agency_info(db_path):
+    """Load display metadata without using the national sample as an import filter."""
     conn = sqlite3.connect(db_path)
-    rows = conn.execute("SELECT ori, agency, state, type FROM sample_agencies").fetchall()
+    rows = conn.execute("SELECT ori, agency, state, type FROM agencies").fetchall()
+    historical_rows = conn.execute(
+        "SELECT ori, agency, state, type FROM historical_agency"
+    ).fetchall()
     conn.close()
-    return {ori: (agency, state, typ) for ori, agency, state, typ in rows}
+    agency_info = {
+        ori: (agency, state.upper(), typ)
+        for ori, agency, state, typ in historical_rows
+    }
+    agency_info.update({ori: (agency, state, typ) for ori, agency, state, typ in rows})
+    return agency_info
 
 
 def refresh_populations(db_path, pop_csv):
@@ -452,20 +458,13 @@ def main():
         print("ERROR: source contains no Current Trends agency rows for the requested scope")
         sys.exit(1)
 
-    # Convert to records
-    if args.full_rebuild:
-        # Import ALL agencies first, then recalculate sample in update_local_db
-        print("\nBuilding records (all agencies, sample will be recalculated)...")
-        records = rows_to_records(ori_rows, sample_oris=None)
-        excluded_rows = 0
-    else:
-        # Incremental: filter by existing sample
-        print("\nLoading sample_agencies from DB...")
-        sample_oris = get_sample_oris(db_path)
-        print(f"  {len(sample_oris)} agencies")
-        print("\nBuilding records...")
-        records = rows_to_records(ori_rows, sample_oris)
-        excluded_rows = sum(1 for row in ori_rows if row["id"] not in sample_oris)
+    # Convert every source agency. sample_agencies remains the national aggregation cohort only.
+    print("\nLoading agency directory from DB...")
+    agency_info = get_agency_info(db_path)
+    print(f"  {len(agency_info)} agencies")
+    print("\nBuilding records...")
+    records = rows_to_records(ori_rows, agency_info)
+    excluded_rows = 0
     if not records:
         print("ERROR: source conversion produced no importable Current Trends records")
         sys.exit(1)
