@@ -55,6 +55,7 @@ import { planFollowupSafe } from '@/lib/followup-planner';
 import { buildCrossSourceFollowupTransform } from '@/lib/cross-source-followup';
 import { plannerModeForSource } from '@/lib/followup-planner-mode';
 import { findVerifiedCurrentAgency } from '@/lib/current-agency-availability';
+import { classifyCurrentTrendsSqlAbsence } from "@/lib/current-trends-sql-absence";
 import { neutralizeUnverifiedAvailabilityClaim } from "@/lib/refusal-safety";
 import { implausiblePopulationDenominator } from "@/lib/rate-denominator-safety";
 import { buildHistoricalScorecard } from "@/lib/historical-scorecard";
@@ -1871,8 +1872,12 @@ export async function POST(req: NextRequest) {
           const agencyName = extractAgencyName(sql);
           const requestedState = sql.match(/\b(?:\w+\.)?state\s*=\s*'([^']+)'/i)?.[1] ?? null;
           let emptyMsg: string;
+          const currentAbsence = isHistorical ? null : classifyCurrentTrendsSqlAbsence(db, sql, 0);
+          const currentAbsenceProven = currentAbsence?.state === "not_in_source_snapshot";
 
-          if (agencyName) {
+          if (!isHistorical && !currentAbsenceProven) {
+            emptyMsg = "I couldn't verify the Current Trends data needed for this answer, so I can't tell whether there are no matching source records or our system has a data problem. Please try again later.";
+          } else if (agencyName) {
             const similar = findSimilarAgencies(db, agencyName, isHistorical, requestedState);
             if (similar.length === 0) {
               emptyMsg = isHistorical
@@ -1947,10 +1952,18 @@ export async function POST(req: NextRequest) {
               "This query returned no results. The data may not be available for the specified criteria. Try broadening your search or asking about a different topic.";
           }
 
-          // Legitimate empty result. decline_data because findSimilarAgencies() and
-          // the offense probe above establish deterministically what the source has.
-          const emptyProof = finalizeExit({ intendedAction: "decline_data", sql, columns, guardrails: firedGuardrails, db });
-          writeLog(question, sql, 0, "empty_result", totalMs, emptyMsg, tab, firedGuardrails, "haiku-4.5", sessionId, null, emptyProof);
+          // Current Trends may describe an empty result as source absence only when every build
+          // component used by the SQL has a reconciled receipt. A local database lookup alone is
+          // not source evidence. Historical retains its existing deterministic probes here.
+          const emptyIsSourceAbsence = isHistorical || currentAbsenceProven;
+          const emptyProof = finalizeExit({
+            intendedAction: emptyIsSourceAbsence ? "decline_data" : "decline_capability",
+            sql, columns, guardrails: firedGuardrails, db,
+          });
+          writeLog(
+            question, sql, 0, emptyIsSourceAbsence ? "empty_result" : "empty_result_unverified",
+            totalMs, emptyMsg, tab, firedGuardrails, "haiku-4.5", sessionId, null, emptyProof,
+          );
           controller.enqueue(
             encoder.encode(
               sseEvent(emitFactualPayload(emptyProof, {

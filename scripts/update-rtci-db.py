@@ -21,11 +21,14 @@ Usage:
 import argparse
 import csv
 import io
+import json
 import os
 import re
 import sqlite3
 import subprocess
 import sys
+
+from current_trends_build_receipt import sha256_file, sha256_text, write_complete_receipt
 
 GITHUB_REPO = "AH-Datalytics/crime-sample"
 VPS_HOST = "root@178.156.243.51"
@@ -71,7 +74,13 @@ def download_csv(month_str):
         sys.exit(1)
     url = result.stdout.strip()
     dl = subprocess.run(["curl", "-s", url], capture_output=True, text=True)
+    if dl.returncode != 0 or not dl.stdout.strip():
+        print(f"ERROR: source download failed: {dl.stderr.strip() or 'empty response'}")
+        sys.exit(1)
     rows = list(csv.DictReader(io.StringIO(dl.stdout)))
+    if not rows:
+        print("ERROR: source download contained no data rows")
+        sys.exit(1)
     print(f"  {len(rows):,} rows downloaded")
     return rows
 
@@ -80,6 +89,9 @@ def load_local_csv(path):
     print(f"Loading {path}...")
     with open(path, encoding="utf-8-sig") as f:
         rows = list(csv.DictReader(f))
+    if not rows:
+        print("ERROR: local source CSV contained no data rows")
+        sys.exit(1)
     print(f"  {len(rows):,} rows")
     return rows
 
@@ -150,8 +162,11 @@ def refresh_populations(db_path, pop_csv):
 
     updated = 0
     inserted = 0
+    source_rows = 0
+    expected = {}
     with open(pop_csv, encoding="utf-8-sig") as f:
         for r in csv.DictReader(f):
+            source_rows += 1
             if r["size"] != "all" or len(r["id"]) != 9:
                 continue
             ori = r["id"]
@@ -161,6 +176,7 @@ def refresh_populations(db_path, pop_csv):
             if yr < 2017:
                 continue
             pop = int(r["population"])
+            expected[(ori, yr)] = pop
             existing = conn.execute(
                 "SELECT population FROM agency_population WHERE ori=? AND year=?",
                 (ori, yr)
@@ -179,6 +195,22 @@ def refresh_populations(db_path, pop_csv):
                 )
                 inserted += 1
 
+    matched = sum(
+        1 for (ori, yr), pop in expected.items()
+        if conn.execute(
+            "SELECT population FROM agency_population WHERE ori=? AND year=?", (ori, yr)
+        ).fetchone() == (pop,)
+    )
+    write_complete_receipt(
+        conn,
+        component="current_trends_population",
+        source_version=os.path.basename(pop_csv),
+        source_sha256=sha256_file(pop_csv),
+        source_rows=source_rows,
+        expected_rows=len(expected),
+        actual_rows=matched,
+        excluded_rows=source_rows - len(expected),
+    )
     conn.commit()
     total_pop = conn.execute(
         "SELECT SUM(p.population) FROM agency_population p "
@@ -190,7 +222,8 @@ def refresh_populations(db_path, pop_csv):
     print(f"  Sample population (latest year): {total_pop:,}")
 
 
-def update_local_db(db_path, records, full_rebuild, year, month):
+def update_local_db(db_path, records, full_rebuild, year, month,
+                    source_rows, excluded_rows, source_sha256):
     """Insert records into local crime_data.db."""
     print(f"\nUpdating local DB: {db_path}")
     conn = sqlite3.connect(db_path)
@@ -250,6 +283,21 @@ def update_local_db(db_path, records, full_rebuild, year, month):
     latest = conn.execute("SELECT MAX(year*100+month) FROM national_monthly").fetchone()[0]
     nm_rows = conn.execute("SELECT COUNT(*) FROM national_monthly").fetchone()[0]
     sa_count = conn.execute("SELECT COUNT(*) FROM sample_agencies").fetchone()[0]
+    actual_rows = conn.execute(
+        "SELECT COUNT(*) FROM agency_monthly" if full_rebuild else
+        "SELECT COUNT(*) FROM agency_monthly WHERE year=? AND month=?",
+        () if full_rebuild else (year, month),
+    ).fetchone()[0]
+    write_complete_receipt(
+        conn,
+        component="current_trends_monthly",
+        source_version=f"{year:04d}-{month:02d}",
+        source_sha256=source_sha256,
+        source_rows=source_rows,
+        expected_rows=len(records),
+        actual_rows=actual_rows,
+        excluded_rows=excluded_rows,
+    )
     conn.commit()
     conn.close()
     print(f"  national_monthly: {nm_rows:,} rows, latest {latest // 100}-{latest % 100:02d}")
@@ -278,6 +326,12 @@ def ensure_crosswalk(db_path, source_path, cde_path):
         print(f"  ERROR: crosswalk build failed: {result.stderr.strip()[:500]}")
         sys.exit(1)
 
+    try:
+        build_summary = json.loads(result.stdout)
+    except (TypeError, ValueError) as error:
+        print(f"  ERROR: crosswalk builder returned no readable receipt evidence: {error}")
+        sys.exit(1)
+
     import sqlite3
     db = sqlite3.connect(db_path)
     try:
@@ -303,6 +357,24 @@ def ensure_crosswalk(db_path, source_path, cde_path):
         for f in failures:
             print(f"    - {f}")
         sys.exit(1)
+    db = sqlite3.connect(db_path)
+    try:
+        with db:
+            write_complete_receipt(
+                db,
+                component="current_trends_crosswalk",
+                source_version=os.path.basename(source_path),
+                source_sha256=sha256_file(source_path),
+                source_rows=int(build_summary["rows"]),
+                expected_rows=int(build_summary["rows"]),
+                actual_rows=count,
+                excluded_rows=0,
+            )
+    except (KeyError, TypeError, ValueError) as error:
+        print(f"  ERROR: crosswalk receipt could not be completed: {error}")
+        sys.exit(1)
+    finally:
+        db.close()
     print(f"  Crosswalk OK: {count:,} rows; INIPD00 -> {inipd[0]}/{inipd[1]}; Santa Clara CA agencies: {santa_clara}")
 
 
@@ -367,6 +439,7 @@ def main():
         all_rows = load_local_csv(args.csv)
     else:
         all_rows = download_csv(args.month)
+    source_digest = sha256_text(json.dumps(all_rows, sort_keys=True, separators=(",", ":")))
 
     # Filter rows
     if args.full_rebuild:
@@ -375,12 +448,16 @@ def main():
     else:
         ori_rows = filter_ori_rows(all_rows, year=year, month=month)
         year_filter, month_filter = year, month
+    if not ori_rows:
+        print("ERROR: source contains no Current Trends agency rows for the requested scope")
+        sys.exit(1)
 
     # Convert to records
     if args.full_rebuild:
         # Import ALL agencies first, then recalculate sample in update_local_db
         print("\nBuilding records (all agencies, sample will be recalculated)...")
         records = rows_to_records(ori_rows, sample_oris=None)
+        excluded_rows = 0
     else:
         # Incremental: filter by existing sample
         print("\nLoading sample_agencies from DB...")
@@ -388,9 +465,16 @@ def main():
         print(f"  {len(sample_oris)} agencies")
         print("\nBuilding records...")
         records = rows_to_records(ori_rows, sample_oris)
+        excluded_rows = sum(1 for row in ori_rows if row["id"] not in sample_oris)
+    if not records:
+        print("ERROR: source conversion produced no importable Current Trends records")
+        sys.exit(1)
 
     # Update local DB
-    update_local_db(db_path, records, args.full_rebuild, year, month)
+    update_local_db(
+        db_path, records, args.full_rebuild, year, month,
+        len(ori_rows), excluded_rows, source_digest,
+    )
 
     # Refresh agency populations from the authoritative populations.csv.
     #

@@ -4,13 +4,14 @@ import path from "node:path";
 import { artifactOf } from "./source-artifact";
 import { verifyPlanDerivation, type PlanDerivation } from "./plan-derivation";
 import { inspectNibrsRollupAvailability } from "./nibrs-rollup-router";
+import { currentTrendsReadiness, isCurrentTrendsCapability } from "./current-trends-readiness";
 import { isObserving, resolveMode, type ModeEnv } from "./proof-modes";
 import { specFor, type CapabilitySpec, type Db, type OpenedDatabase, type TableRequirement } from "./source-health-inventory";
 
 export type HealthBoundary =
   | "no_database" | "preflight_failed" | "artifact_mismatch" | "table_missing" | "column_missing"
   | "row_bounds" | "dependency" | "semantic_dependency" | "policy_incomplete" | "missing_receipt"
-  | "threw" | "budget_zero" | "budget_exceeded";
+  | "receipt_mismatch" | "threw" | "budget_zero" | "budget_exceeded";
 
 export type HealthTrace = {
   sourceId: SourceId;
@@ -682,6 +683,16 @@ export function evaluateCapability(
     // The mode is recorded, because "flags validated" and "coverage guaranteed" are different claims
     // and an undifferentiated entry would let the weaker one be read as the stronger.
     trace.semanticChecked.push(`${dep.table}~${dep.qualifies}(${dep.coverage})`);
+  }
+
+  if (isCurrentTrendsCapability(spec.capabilityId)) {
+    const readiness = currentTrendsReadiness(db, spec.capabilityId);
+    if (readiness.state === "unknown") {
+      return done("unknown", readiness.reason, "missing_receipt");
+    }
+    if (readiness.state === "local_failure") {
+      return done("degraded", readiness.reason, "receipt_mismatch");
+    }
   }
 
   /**
