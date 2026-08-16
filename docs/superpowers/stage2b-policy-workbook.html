@@ -89,8 +89,8 @@ code{font:12px ui-monospace,Menlo,monospace;background:#f2f3f7;padding:1px 4px;b
 </dialog>
 <script>
 const DATA = {
- "v": 5,
- "contractFingerprint": "e7015b47a9eb2365",
+ "v": 6,
+ "contractFingerprint": "6895a6e23d846d45",
  "capabilities": [
   {
    "id": "crime_data::agencies+agency_county_crosswalk::agencies(agency,national_sample,ori)|agency_county_crosswalk(county_fips,county_key,ori,ori9,state)",
@@ -5350,13 +5350,52 @@ function createStage2bPlainLanguage(capabilityCatalog) {
       noneReason: "Answered in the workbook: this question is not asked about a particular year.",
     },
     trust: {
-      heading: "2. Which problems would make you unwilling to show this answer without warning?",
-      decision: "You are identifying conditions that should eventually stop or qualify an answer."
-        + " These checks have not been implemented yet, so this records a requirement and does not"
+      heading: "2. What should the chatbot do if one of these problems is detected?",
+      decision: "For each possible problem, choose the response the chatbot should take. You are"
+        + " setting the policy; this is not a test with a predetermined correct answer.",
+      note: "These checks have not been implemented yet, so this records a requirement and does not"
         + " activate anything.",
-      otherLabel: "Something else that would worry you (optional)",
-      unsureLabel: "I’m not sure.",
-      unsureConsequence: "Your answer is saved as unfinished and nothing is enabled.",
+      /**
+       * FOUR COMPLETE RESPONSES, one required per problem.
+       *
+       * This was a row of checkboxes asking which problems "would make you unwilling to show this
+       * answer without warning". A tick conflated the problem with the response to it, and -- worse
+       * -- an untidied box was read as a decision that the problem did not matter. It could not
+       * express "warn but still answer", it could not express "this genuinely needs no special
+       * handling", and it could not tell either of those from "nobody has looked at this yet".
+       */
+      actions: {
+        refuse: {
+          label: "Do not answer.",
+          consequence: "The chatbot should refuse to provide the result when this problem is detected.",
+        },
+        warn: {
+          label: "Answer with a clear warning.",
+          consequence: "The chatbot may provide the result, but must prominently explain this problem.",
+        },
+        none: {
+          label: "No special handling.",
+          consequence: "This problem should not, by itself, change the answer.",
+        },
+        unsure: {
+          label: "I’m not sure.",
+          consequence: "Save this part as unfinished and enable nothing that depends on it.",
+        },
+      },
+      bulk: {
+        none: "Mark all as “No special handling”",
+        unsure: "Mark all as “I’m not sure”",
+        note: "A shortcut, not a default. Nothing is chosen until you press one.",
+      },
+      otherHeading: "Another problem not listed",
+      otherLabel: "Describe the problem",
+      otherHint: "Leave this empty if there is nothing to add. If you describe one, choose what the"
+        + " chatbot should do about it.",
+      /** Recorded when a chosen response is not something the system can carry out yet. */
+      followUp: "Some of what you chose describes behaviour the system cannot carry out yet —"
+        + " showing a warning, or deliberately leaving a problem alone. Your choices are recorded"
+        + " exactly as you made them and written down as an engineering job. Nothing here changes"
+        + " what the chatbot does until that is built.",
     },
     availability: {
       heading: "3. If this data is missing, does that mean something is broken?",
@@ -5388,17 +5427,25 @@ function createStage2bPlainLanguage(capabilityCatalog) {
       otherOption: "Someone else",
       unsureLabel: "I’m not sure.",
     },
-    evidence: {
-      heading: "How do you know these answers are right?",
-      hint: "A sentence is enough. For example: confirmed with the person who runs the update;"
-        + " checked the written update procedure; verified against the published data schedule.",
+    /**
+     * NOT "how do you know these answers are right?".
+     *
+     * That asked the policy owner to prove their own judgment, to an authority that does not exist:
+     * these are governance decisions, and the person answering IS the authority. It also blocked a
+     * perfectly good decision from being recorded until someone wrote a sentence about it. Notes
+     * are for a future reader, they are optional, and leaving them empty blocks nothing.
+     */
+    notes: {
+      heading: "Optional notes for future reviewers",
+      hint: "Add context only if it would help someone understand your decision later.",
     },
     summary: {
       heading: "What your answers mean",
       hint: "In ordinary words, this is what your answers would record. Nothing is saved until you"
         + " confirm it, and changing an answer above cancels the confirmation so you get to read the"
         + " new version.",
-      confirmLabel: "I have read this — confirm it",
+      confirmLabel: "I understand what these choices will make the chatbot do, and I am recording"
+        + " them as the policy owner",
       confirmedNote: "Confirmed. This is what your export will carry.",
       beforeConfirm: "Before this can be confirmed:",
       reworded: "You confirmed this before, but the wording has changed since. Your answer is still"
@@ -5427,8 +5474,20 @@ function createStage2bPlainLanguage(capabilityCatalog) {
           + " instead of answering. It will not notice a year missing inside the range.",
         "no-years": "The chatbot will not check the year before answering.",
       },
-      trustPrefix: "You said the answer should not be trusted without warning if:",
-      trustNote: "Nothing checks these yet. They are recorded as requirements.",
+      /**
+       * One sentence per problem, saying what the chatbot would DO. A list of rule prose describes
+       * the record; this describes the behaviour, which is the thing being decided.
+       */
+      trustAction: {
+        refuse: "Refuse to answer if %s.",
+        warn: "Show a clear warning if %s.",
+        none: "No special handling is required when %s.",
+        unsure: "Not decided yet: %s.",
+      },
+      trustNote: "Nothing checks any of these yet. They are recorded as requirements.",
+      trustFollowUp: "Engineering follow-up: %s recorded but not implemented.",
+      trustFollowUpWarn: "warning behaviour",
+      trustFollowUpNone: "deliberate no-special-handling",
       availability: {
         always: "If this data goes missing, that is treated as a problem worth raising.",
         sometimes: "When this is missing because %s, the chatbot should say the answer is"
@@ -5493,6 +5552,12 @@ function createStage2bPlainLanguage(capabilityCatalog) {
     sample: "sample", staffing: "police staffing", crime: "crime", participation: "participation",
     detail: "detail", type: "type", summary: "counts", carjacking: "carjacking",
   };
+  /** "It quietly stops being updated" -> "it quietly stops being updated", for "Refuse to answer if …". */
+  function lowerFirst(text) {
+    const s = String(text || "");
+    return s.charAt(0).toLowerCase() + s.slice(1);
+  }
+
   function tablePhrase(table) {
     const bare = String(table).replace(/^rollup\./, "").replace(/^(summary|historical)_/, "");
     const words = bare.split("_").map((w) => WORDS[w] || w).filter(Boolean);
@@ -5603,16 +5668,44 @@ function createStage2bPlainLanguage(capabilityCatalog) {
   function blankAnswer() {
     return {
       coverage: null,
-      integrity: [], integrityOther: "", integrityUnsure: false,
+      /** problem -> one of refuse / warn / none / unsure. An ABSENT key is not a decision. */
+      trust: {}, trustOther: "", trustOtherAction: null,
       availability: null, availabilityWhen: "",
       owner: null, ownerOther: "",
-      evidence: "",
+      notes: "",
     };
   }
 
+  const ACTIONS = ["refuse", "warn", "none", "unsure"];
+  /** Actions the technical policy can express today. Everything else is engineering's to build. */
+  const REPRESENTABLE = ["refuse"];
+
   const answered = (human) => !!human && (human.coverage !== null || human.availability !== null
-    || human.owner !== null || (human.integrity || []).length > 0 || human.integrityUnsure
-    || String(human.integrityOther || "").trim() !== "" || String(human.evidence || "").trim() !== "");
+    || human.owner !== null || Object.keys(human.trust || {}).length > 0
+    || String(human.trustOther || "").trim() !== "" || human.trustOtherAction !== null
+    || String(human.notes || "").trim() !== "");
+
+  /**
+   * What the person has said about each problem, as a list -- including the one they wrote.
+   *
+   * `action: null` means UNANSWERED. It is deliberately not the same value as "none", because an
+   * unticked box being read as "this does not matter" is the defect this replaced.
+   */
+  function trustRows(cap, human) {
+    const h = human || blankAnswer();
+    const chosen = h.trust || {};
+    const rows = trustScenarios(cap).map((s) => ({
+      value: s.value, label: s.label, prose: s.prose,
+      action: ACTIONS.indexOf(chosen[s.value]) >= 0 ? chosen[s.value] : null,
+      custom: false,
+    }));
+    const described = String(h.trustOther || "").trim();
+    if (described) {
+      rows.push({ value: "__other", label: described, prose: described,
+        action: ACTIONS.indexOf(h.trustOtherAction) >= 0 ? h.trustOtherAction : null, custom: true });
+    }
+    return rows;
+  }
 
   /**
    * The technical policy a set of human answers WOULD produce.
@@ -5626,9 +5719,19 @@ function createStage2bPlainLanguage(capabilityCatalog) {
    */
   function proposeMapping(cap, human) {
     const h = human || blankAnswer();
-    const proposed = { coverage: null, integrity: null, availability: null, receiptOwner: null, evidence: h.evidence || "" };
+    /**
+     * `evidence` carries the person's optional notes and NOTHING ELSE.
+     *
+     * Empty is a legitimate, complete answer. Nothing is synthesised into it -- no "verified", no
+     * "confirmed with", no restatement of their choices dressed up as a citation. A record that
+     * claims a decision was corroborated when nobody said so is worse than one that says nothing.
+     */
+    const proposed = { coverage: null, integrity: null, availability: null, receiptOwner: null,
+      evidence: String(h.notes || "") };
     const unresolved = [];
     const followUps = [];
+    /** What the PERSON has not decided, as opposed to what the system cannot yet express. */
+    const unanswered = [];
 
     let followUpReason = null;
     if (h.coverage === "years") {
@@ -5642,31 +5745,42 @@ function createStage2bPlainLanguage(capabilityCatalog) {
       }
     } else if (h.coverage === "no-years") {
       proposed.coverage = { kind: "none", reason: QUESTIONS.year.noneReason };
-    } else unresolved.push("coverage");
+    } else { unresolved.push("coverage"); unanswered.push("coverage"); }
 
-    const rules = [];
-    const catalog = trustScenarios(cap);
-    for (const value of h.integrity || []) {
-      const scenario = catalog.find((s) => s.value === value);
-      if (scenario) rules.push(scenario.prose);
+    /**
+     * EVERY listed problem needs an explicit response, and only "do not answer" can be expressed.
+     *
+     * A missing response is unanswered, never "no special handling" -- reading an untouched control
+     * as a decision is exactly what the checkboxes did. "I'm not sure" is unanswered too: it is
+     * human uncertainty, not work for engineering. "Warn" and a deliberate "no special handling"
+     * ARE decisions, and they are recorded as made; the technical policy simply cannot carry them
+     * out yet, which is engineering's problem and is named as one rather than quietly rewritten
+     * into a rule that means something else.
+     */
+    const rows = trustRows(cap, h);
+    const undecided = rows.filter((r) => r.action === null || r.action === UNSURE);
+    if (undecided.length) { unresolved.push("integrity"); unanswered.push("integrity"); }
+    else {
+      const rules = rows.filter((r) => r.action === "refuse").map((r) => r.prose);
+      if (rules.length) proposed.integrity = rules;
+      else unresolved.push("integrity");
+      if (rows.some((r) => REPRESENTABLE.indexOf(r.action) < 0)) followUps.push("integrity");
     }
-    if (String(h.integrityOther || "").trim()) rules.push(String(h.integrityOther).trim());
-    if (rules.length && !h.integrityUnsure) proposed.integrity = rules;
-    else unresolved.push("integrity");
 
     if (h.availability === "always") proposed.availability = { kind: "always" };
     else if (h.availability === "sometimes") {
       proposed.availability = { kind: "conditional", condition: String(h.availabilityWhen || "").trim() };
-    } else unresolved.push("availability");
+    } else { unresolved.push("availability"); unanswered.push("availability"); }
 
     if (h.owner === "other") {
       const named = String(h.ownerOther || "").trim();
-      if (named) proposed.receiptOwner = named; else unresolved.push("receiptOwner");
+      if (named) proposed.receiptOwner = named;
+      else { unresolved.push("receiptOwner"); unanswered.push("receiptOwner"); }
     } else if (h.owner && h.owner !== UNSURE) proposed.receiptOwner = h.owner;
-    else unresolved.push("receiptOwner");
+    else { unresolved.push("receiptOwner"); unanswered.push("receiptOwner"); }
 
-    return { proposed: proposed, unresolved: unresolved, followUps: followUps,
-      followUpReason: followUpReason };
+    return { proposed: proposed, unresolved: unresolved, unanswered: unanswered,
+      followUps: followUps, followUpReason: followUpReason };
   }
 
   /**
@@ -5734,9 +5848,24 @@ function createStage2bPlainLanguage(capabilityCatalog) {
     if (kept.indexOf("coverage") >= 0) row("coverage", S.labels.year, yearText);
     else rows.push({ field: "coverage", label: S.labels.year, text: yearText, kept: false, followUp: followed });
 
-    row("integrity", S.labels.trust, merged.integrity && merged.integrity.length
-      ? S.trustPrefix + " " + merged.integrity.join(" ") + " " + S.trustNote
-      : S.unanswered);
+    /**
+     * One sentence per problem, in the order they were asked, saying what the chatbot would DO.
+     *
+     * Built from the person's own answer rather than from the derived rules, because the derived
+     * rules only contain the refusals -- a summary built from those would silently drop every
+     * "warn" and every deliberate "no special handling", which is precisely the intent this is
+     * supposed to preserve.
+     */
+    const rows2 = trustRows(cap, h);
+    const decided = rows2.filter((r) => r.action !== null);
+    const trustText = !decided.length ? S.unanswered
+      : decided.map((r) => S.trustAction[r.action].replace("%s", lowerFirst(r.label))).join(" ")
+        + " " + S.trustNote
+        + (rows2.some((r) => r.action === "warn")
+          ? " " + S.trustFollowUp.replace("%s", S.trustFollowUpWarn) : "")
+        + (rows2.some((r) => r.action === "none")
+          ? " " + S.trustFollowUp.replace("%s", S.trustFollowUpNone) : "");
+    row("integrity", S.labels.trust, trustText);
 
     row("availability", S.labels.availability, !merged.availability ? S.unanswered
       : merged.availability.kind === "always" ? S.availability.always
@@ -5746,6 +5875,20 @@ function createStage2bPlainLanguage(capabilityCatalog) {
       merged.receiptOwner ? S.responsibility.replace("%s", merged.receiptOwner) : S.unanswered);
 
     return rows;
+  }
+
+  /**
+   * Everything currently sitting with engineering, in the person's terms.
+   *
+   * Kept apart from what the person has not decided. Mixing them would tell someone they had left
+   * work undone when the outstanding thing is a system that cannot yet do what they asked for.
+   */
+  function followUpMessages(followUps, followUpReason) {
+    const list = followUps || [];
+    const out = [];
+    if (list.indexOf("coverage") >= 0) out.push(QUESTIONS.year.followUp[followUpReason || "none"]);
+    if (list.indexOf("integrity") >= 0) out.push(QUESTIONS.trust.followUp);
+    return out;
   }
 
   /**
@@ -5781,6 +5924,13 @@ function createStage2bPlainLanguage(capabilityCatalog) {
     yearRecommendation: yearRecommendation,
     yearOptions: yearOptions,
     trustScenarios: trustScenarios,
+    trustRows: trustRows,
+    trustActions: () => ACTIONS.map((value) => ({
+      value: value,
+      label: QUESTIONS.trust.actions[value].label,
+      consequence: QUESTIONS.trust.actions[value].consequence,
+    })),
+    followUpMessages: followUpMessages,
     availabilityOptions: availabilityOptions,
     responsibilityOptions: responsibilityOptions,
     blankAnswer: blankAnswer,
@@ -5801,6 +5951,7 @@ function createStage2bPlainLanguage(capabilityCatalog) {
       recommendation: (() => { const r = yearRecommendation(cap); return r ? [r.value, r.answer, r.why] : null; })(),
       year: yearOptions(cap).map((o) => [o.value, o.label, o.consequence, !!o.recommended]),
       trust: trustScenarios(cap).map((s) => [s.value, s.label, s.prose]),
+      trustActions: ACTIONS.map((a) => [a, QUESTIONS.trust.actions[a].label, QUESTIONS.trust.actions[a].consequence]),
       availability: availabilityOptions().map((o) => [o.value, o.label, o.consequence]),
       responsibility: responsibilityOptions(cap).map((o) => [o.value, o.label]),
     }),
@@ -5889,9 +6040,33 @@ function createStage2bCard(plainLanguage) {
   function primary(cap, S, position) {
     const h = S.human(cap.id);
     const years = PL.yearOptions(cap).map((o) => option("radio", "cov", o, h.coverage === o.value)).join("");
-    const scenarios = PL.trustScenarios(cap).map((s) =>
-      '<label class="opt"><input type="checkbox" name="integ" value="' + esc(s.value) + '"'
-      + ((h.integrity || []).indexOf(s.value) >= 0 ? " checked" : "") + "/>" + esc(s.label) + "</label>").join("");
+    /**
+     * ONE ROW PER PROBLEM, each carrying the four complete responses.
+     *
+     * A row rather than a grid: the responses are sentences about behaviour, and a dense table
+     * would put the reader back in the position of decoding rather than deciding.
+     */
+    const actions = PL.trustActions();
+    const problemRow = (row) =>
+      '<div class="problem"><p class="problem-label">' + esc(row.label) + "</p>"
+      + actions.map((a) =>
+        '<label class="opt"><input type="radio" name="trust:' + esc(row.value) + '" value="' + esc(a.value) + '"'
+        + (row.action === a.value ? " checked" : "") + "/>" + esc(a.label)
+        + '<span class="why">' + esc(a.consequence) + "</span></label>").join("")
+      + "</div>";
+    const rows = PL.trustRows(cap, h);
+    const scenarios = rows.filter((r) => !r.custom).map(problemRow).join("")
+      + '<div class="bulk"><button type="button" id="trustAllNone">' + esc(Q.trust.bulk.none) + "</button>"
+      + '<button type="button" id="trustAllUnsure">' + esc(Q.trust.bulk.unsure) + "</button>"
+      + '<span class="why">' + esc(Q.trust.bulk.note) + "</span></div>"
+      + '<div class="q"><h4>' + esc(Q.trust.otherHeading) + "</h4>"
+      + '<p class="hint">' + esc(Q.trust.otherHint) + "</p>"
+      + "<label>" + esc(Q.trust.otherLabel) + "</label>"
+      + '<input type="text" id="trustOther" value="' + esc(h.trustOther || "") + '"/>'
+      + (String(h.trustOther || "").trim()
+        ? rows.filter((r) => r.custom).map(problemRow).join("")
+        : "")
+      + "</div>";
     const avail = PL.availabilityOptions().map((o) => option("radio", "avail", o, h.availability === o.value)).join("");
     const who = PL.responsibilityOptions(cap).map((o) =>
       '<label class="opt"><input type="radio" name="owner" value="' + esc(o.value) + '"'
@@ -5906,11 +6081,8 @@ function createStage2bCard(plainLanguage) {
       + "</div>"
 
       + '<div class="q">' + ask(Q.trust.heading, Q.trust.decision)
+        + '<p class="hint">' + esc(Q.trust.note) + "</p>"
         + scenarios
-        + '<label class="opt"><input type="checkbox" id="integUnsure"' + (h.integrityUnsure ? " checked" : "") + "/>"
-        + esc(Q.trust.unsureLabel) + '<span class="why">' + esc(Q.trust.unsureConsequence) + "</span></label>"
-        + "<label>" + esc(Q.trust.otherLabel) + "</label>"
-        + '<input type="text" id="integOther" value="' + esc(h.integrityOther || "") + '"/>'
       + "</div>"
 
       + '<div class="q">' + ask(Q.availability.heading, Q.availability.decision)
@@ -5931,9 +6103,9 @@ function createStage2bCard(plainLanguage) {
           : "")
       + "</div>"
 
-      + '<div class="q"><h3>' + esc(Q.evidence.heading) + "</h3>"
-        + '<p class="hint">' + esc(Q.evidence.hint) + "</p>"
-        + '<textarea id="evidence">' + esc(h.evidence || "") + "</textarea></div>"
+      + '<div class="q"><h3>' + esc(Q.notes.heading) + "</h3>"
+        + '<p class="hint">' + esc(Q.notes.hint) + "</p>"
+        + '<textarea id="notes">' + esc(h.notes || "") + "</textarea></div>"
 
       + '<div id="summary"></div>'
 
@@ -5963,7 +6135,7 @@ function createStage2bCard(plainLanguage) {
     const confirmed = S.isMappingConfirmed(cap.id);
     const answered = PL.isAnswered(S.human(cap.id));
     const p = S.proposal(cap.id);
-    const followUps = p.followUps;
+    const outstanding = S.followUps(cap.id);
 
     /** A kept row already says it is kept, in `summary.keptDetail`. Marking it again just repeats. */
     const body = rows.map((row) =>
@@ -5973,10 +6145,13 @@ function createStage2bCard(plainLanguage) {
     return '<div class="q"><h3>' + esc(Q.summary.heading) + "</h3>"
       + '<p class="hint">' + esc(Q.summary.hint) + "</p>"
       + '<div class="means"><dl>' + body + "</dl></div>"
-      + (followUps.length
-        ? '<div class="followup"><b>' + esc(Q.card.followUpHeading) + "</b> "
-          + esc(Q.year.followUp[p.followUpReason || "none"]) + "</div>"
-        : "")
+      /**
+       * Every outstanding engineering item, each said in its own terms. There can be more than one
+       * -- an unsettled year basis and a warning nobody can show yet are different problems -- and
+       * neither is something the person answering left undone.
+       */
+      + outstanding.map((text) =>
+        '<div class="followup"><b>' + esc(Q.card.followUpHeading) + "</b> " + esc(text) + "</div>").join("")
       + (problems.length
         ? '<div class="alert">' + esc(Q.summary.beforeConfirm) + " " + problems.map(esc).join("; ") + "</div>"
         : "")
@@ -6134,8 +6309,14 @@ function createStage2bSession(DATA, plainLanguage) {
   function proposal(id) {
     const p = PL.proposeMapping(capabilityById[id], human[id]);
     const m = PL.mergeWithExisting(p.proposed, baseline[id]);
-    return { proposed: p.proposed, unresolved: p.unresolved, followUps: p.followUps || [],
-      followUpReason: p.followUpReason || null, merged: m.merged, preserved: m.preserved };
+    return { proposed: p.proposed, unresolved: p.unresolved, unanswered: p.unanswered || [],
+      followUps: p.followUps || [], followUpReason: p.followUpReason || null,
+      merged: m.merged, preserved: m.preserved };
+  }
+  /** What is sitting with engineering, said in the person's terms. Never mixed with what they owe. */
+  function followUps(id) {
+    const p = proposal(id);
+    return PL.followUpMessages(p.followUps, p.followUpReason);
   }
   /** The answers as behaviour, in ordinary words. What the person confirms is this, not the shape. */
   function summary(id) {
@@ -6174,16 +6355,26 @@ function createStage2bSession(DATA, plainLanguage) {
       found.push("say when it is fine for this to be unavailable");
     }
     if (h.owner === "other" && !String(h.ownerOther || "").trim()) found.push("say who should be contacted");
-    if (PL.isAnswered(h) && String(h.evidence || "").trim().length <= 20) {
-      found.push("say how you know these answers are right");
+    /**
+     * A described problem needs a response, or it is a note rather than a decision. There is no
+     * requirement to describe one, and none at all to justify any answer: what used to sit here --
+     * "say how you know these answers are right" -- asked the policy owner to prove their own
+     * judgment to an authority that does not exist.
+     */
+    if (String(h.trustOther || "").trim() && !h.trustOtherAction) {
+      found.push("choose what the chatbot should do about the problem you described");
     }
     return found;
   }
 
-  /** Answered throughout, coherent, cited, and with the technical mapping confirmed. */
+  /**
+   * Finished: the person has decided everything that is theirs, the mapping is confirmed, and
+   * nothing is outstanding with engineering. Notes are optional and never counted.
+   */
   function isComplete(id) {
     const p = proposal(id);
-    return p.unresolved.length === 0 && problems(id).length === 0 && isMappingConfirmed(id);
+    return p.unanswered.length === 0 && p.followUps.length === 0
+      && problems(id).length === 0 && isMappingConfirmed(id);
   }
 
   function update(id, patch) {
@@ -6198,7 +6389,8 @@ function createStage2bSession(DATA, plainLanguage) {
     const c = { coverage: 0, integrity: 0, availability: 0, receiptOwner: 0, complete: 0, problems: 0, unconfirmed: 0 };
     for (const cap of DATA.capabilities) {
       const p = proposal(cap.id);
-      for (const f of POLICY_FIELDS) if (p.unresolved.indexOf(f) >= 0) c[f] += 1;
+      /** UNANSWERED, not unresolved: a deliberate "no special handling" is a decision, not a gap. */
+      for (const f of POLICY_FIELDS) if (p.unanswered.indexOf(f) >= 0) c[f] += 1;
       if (isComplete(cap.id)) c.complete += 1;
       if (problems(cap.id).length) c.problems += 1;
       if (PL.isAnswered(human[cap.id]) && !isMappingConfirmed(cap.id)) c.unconfirmed += 1;
@@ -6390,6 +6582,17 @@ function createStage2bSession(DATA, plainLanguage) {
     update: update,
     proposal: proposal,
     summary: summary,
+    followUps: followUps,
+    /** What the person has said about each listed problem, including one they described. */
+    trustRows: (id) => PL.trustRows(capabilityById[id], human[id]),
+    /** Set every listed problem to one action at once. A shortcut, never a default. */
+    setAllTrust: (id, action) => {
+      const next = {};
+      for (const s of PL.trustScenarios(capabilityById[id])) next[s.value] = action;
+      const patch = { trust: next };
+      if (String(human[id].trustOther || "").trim()) patch.trustOtherAction = action;
+      return update(id, patch);
+    },
     mappingFingerprint: fingerprintOf,
     isMappingConfirmed: isMappingConfirmed,
     /** True when the answer was restored but the question has been re-worded since. */
@@ -6493,16 +6696,23 @@ function render(){
     const covRadio = document.querySelector('input[name=cov]:checked');
     const availRadio = document.querySelector('input[name=avail]:checked');
     const ownerRadio = document.querySelector('input[name=owner]:checked');
+    /* Only what is actually checked. An untouched problem stays ABSENT, never "no special handling". */
+    const trust = {};
+    let trustOtherAction = null;
+    Array.prototype.slice.call(document.querySelectorAll('input[name^="trust:"]:checked')).forEach((el) => {
+      const key = el.name.slice("trust:".length);
+      if (key === "__other") trustOtherAction = el.value; else trust[key] = el.value;
+    });
     S.update(cap.id, {
       coverage: covRadio ? covRadio.value : null,
-      integrity: Array.prototype.slice.call(document.querySelectorAll('input[name=integ]:checked')).map((e)=>e.value),
-      integrityOther: value("integOther"),
-      integrityUnsure: !!(document.getElementById("integUnsure") || {}).checked,
+      trust: trust,
+      trustOther: value("trustOther"),
+      trustOtherAction: trustOtherAction,
       availability: availRadio ? availRadio.value : null,
       availabilityWhen: value("availWhen"),
       owner: ownerRadio ? ownerRadio.value : null,
       ownerOther: value("ownerOther"),
-      evidence: value("evidence"),
+      notes: value("notes"),
     });
     status();
     renderSummary();
@@ -6513,14 +6723,20 @@ function render(){
       el.addEventListener("change", () => { save(); render(); });
     });
   }
-  for (const id of ["integOther","availWhen","ownerOther","evidence"]){
+  for (const id of ["availWhen","ownerOther","notes"]){
     const el = document.getElementById(id); if (el) el.addEventListener("input", save);
   }
-  Array.prototype.slice.call(document.querySelectorAll('input[name=integ]')).forEach((el) => {
-    el.addEventListener("change", () => { save(); render(); });
+  /* Describing a problem re-renders, because a described problem then needs a response. */
+  const other = document.getElementById("trustOther");
+  if (other) other.addEventListener("change", () => { save(); render(); });
+  Array.prototype.slice.call(document.querySelectorAll('input[name^="trust:"]')).forEach((el) => {
+    el.addEventListener("change", save);
   });
-  const unsure = document.getElementById("integUnsure");
-  if (unsure) unsure.addEventListener("change", () => { save(); render(); });
+  /* Shortcuts, not defaults: they act only when pressed, and each is an explicit answer. */
+  for (const [id, action] of [["trustAllNone","none"],["trustAllUnsure","unsure"]]){
+    const button = document.getElementById(id);
+    if (button) button.addEventListener("click", () => { S.setAllTrust(cap.id, action); status(); render(); });
+  }
 
   renderSummary();
 

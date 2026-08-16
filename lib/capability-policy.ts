@@ -192,8 +192,19 @@ export function policyShapeErrors(policy: UnvalidatedPolicy): string[] {
   if (receiptOwner !== null && receiptOwner !== undefined && !nonEmptyString(receiptOwner)) {
     bad.push("receiptOwner must be a non-empty owner");
   }
-  if (!nonEmptyString(evidence) || String(evidence).trim().length <= 20) {
-    bad.push("evidence must cite what the authored values rest on");
+  /**
+   * `evidence` is OPTIONAL METADATA, and gates nothing.
+   *
+   * It used to be required, at least twenty characters, "citing what the authored values rest on".
+   * That is a demand for proof, and it was aimed at the one person whose judgment the whole
+   * exercise exists to capture: the policy owner does not have an external authority to cite,
+   * because they ARE the authority. Requiring it turned a governance decision into a quiz answer,
+   * and blocked a perfectly good decision from being recorded because nobody had written a sentence
+   * about it. It stays as a field so existing records keep their text, it is written only from
+   * whatever optional notes a person chose to leave, and nothing is ever synthesised into it.
+   */
+  if (evidence !== null && evidence !== undefined && typeof evidence !== "string") {
+    bad.push("evidence, when present, must be a string");
   }
   if (availabilityCondition !== undefined) {
     bad.push("availabilityCondition is not a field; the condition belongs inside availability");

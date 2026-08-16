@@ -39,7 +39,12 @@ export const CARD_MODULE_FILE = path.join(process.cwd(), "lib", "stage2b-card.js
 export const WORKBOOK_FILE = path.join(process.cwd(), "docs", "superpowers", "stage2b-policy-workbook.html");
 
 /**
- * 5: ONE fingerprint, named `contractFingerprint` from the record through the page to the importer,
+ * 6: the human answer changed shape. Trust is a RESPONSE PER PROBLEM -- refuse, warn, no special
+ * handling, or unsure -- rather than a set of ticked boxes, and `evidence` became optional `notes`.
+ * A version-5 file carries ticks that cannot be read as responses without inventing one, so it is
+ * refused by version rather than half-understood.
+ *
+ * 5 was: ONE fingerprint, named `contractFingerprint` from the record through the page to the importer,
  * and a per-entry baseline (`basedOnEntry`) naming the authored record rather than what it derives.
  * Version 4 carried two differently-computed fingerprints under two names and no record baseline,
  * so a v4 file cannot be read safely here and is refused by version.
@@ -50,7 +55,7 @@ export const WORKBOOK_FILE = path.join(process.cwd(), "docs", "superpowers", "st
  * 3 was: plain-language questions, with an entry carrying the HUMAN answer, the technical mapping
  * it proposes, and a confirmation of that exact mapping.
  */
-export const DECISIONS_VERSION = 5;
+export const DECISIONS_VERSION = 6;
 
 export type RegistryEntry = {
   artifact: string;
@@ -574,16 +579,23 @@ function render(){
     const covRadio = document.querySelector('input[name=cov]:checked');
     const availRadio = document.querySelector('input[name=avail]:checked');
     const ownerRadio = document.querySelector('input[name=owner]:checked');
+    /* Only what is actually checked. An untouched problem stays ABSENT, never "no special handling". */
+    const trust = {};
+    let trustOtherAction = null;
+    Array.prototype.slice.call(document.querySelectorAll('input[name^="trust:"]:checked')).forEach((el) => {
+      const key = el.name.slice("trust:".length);
+      if (key === "__other") trustOtherAction = el.value; else trust[key] = el.value;
+    });
     S.update(cap.id, {
       coverage: covRadio ? covRadio.value : null,
-      integrity: Array.prototype.slice.call(document.querySelectorAll('input[name=integ]:checked')).map((e)=>e.value),
-      integrityOther: value("integOther"),
-      integrityUnsure: !!(document.getElementById("integUnsure") || {}).checked,
+      trust: trust,
+      trustOther: value("trustOther"),
+      trustOtherAction: trustOtherAction,
       availability: availRadio ? availRadio.value : null,
       availabilityWhen: value("availWhen"),
       owner: ownerRadio ? ownerRadio.value : null,
       ownerOther: value("ownerOther"),
-      evidence: value("evidence"),
+      notes: value("notes"),
     });
     status();
     renderSummary();
@@ -594,14 +606,20 @@ function render(){
       el.addEventListener("change", () => { save(); render(); });
     });
   }
-  for (const id of ["integOther","availWhen","ownerOther","evidence"]){
+  for (const id of ["availWhen","ownerOther","notes"]){
     const el = document.getElementById(id); if (el) el.addEventListener("input", save);
   }
-  Array.prototype.slice.call(document.querySelectorAll('input[name=integ]')).forEach((el) => {
-    el.addEventListener("change", () => { save(); render(); });
+  /* Describing a problem re-renders, because a described problem then needs a response. */
+  const other = document.getElementById("trustOther");
+  if (other) other.addEventListener("change", () => { save(); render(); });
+  Array.prototype.slice.call(document.querySelectorAll('input[name^="trust:"]')).forEach((el) => {
+    el.addEventListener("change", save);
   });
-  const unsure = document.getElementById("integUnsure");
-  if (unsure) unsure.addEventListener("change", () => { save(); render(); });
+  /* Shortcuts, not defaults: they act only when pressed, and each is an explicit answer. */
+  for (const [id, action] of [["trustAllNone","none"],["trustAllUnsure","unsure"]]){
+    const button = document.getElementById(id);
+    if (button) button.addEventListener("click", () => { S.setAllTrust(cap.id, action); status(); render(); });
+  }
 
   renderSummary();
 

@@ -1595,7 +1595,11 @@ async function main() {
       { ...wellFormed, availability: { kind: "always", condition: "why?" } },
       { ...wellFormed, receiptOwner: false },
       { ...wellFormed, receiptOwner: "" },
-      { ...wellFormed, evidence: "too short" },
+      /**
+       * Evidence is optional metadata now, so its LENGTH is no longer a defect -- demanding that
+       * the policy owner prove their own judgment was the defect. Its TYPE still is.
+       */
+      { ...wellFormed, evidence: 42 },
       { coverage: {}, integrity: true, availability: 1, receiptOwner: false },
       // The condition must live inside availability, not beside it, or the pair can disagree.
       { ...wellFormed, availability: { kind: "conditional" }, availabilityCondition: "requires a crosswalk" },

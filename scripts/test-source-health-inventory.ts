@@ -267,7 +267,8 @@ check("a non-null but malformed policy authorizes nothing", () => {
     { ...base, integrity: [""] },
     { ...base, receiptOwner: "" },
     { ...base, availability: { kind: "conditional" } },
-    { ...base, evidence: "short" },
+    /** Optional metadata: a short note is fine, a non-string is not. */
+    { ...base, evidence: 42 },
   ]) {
     assert.strictEqual(policyIsComplete(malformed), false,
       `a malformed policy must NOT authorize: ${JSON.stringify(malformed)}`);

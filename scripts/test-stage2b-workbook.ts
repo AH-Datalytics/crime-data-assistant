@@ -145,12 +145,17 @@ const answers = (cap = withYear, over: Record<string, unknown> = {}) => ({
   ...PL.blankAnswer(),
   /** "Yes" only where something dated can actually be read; otherwise the honest answer resolves. */
   coverage: PL.automaticYearBasis(cap) ? "years" : "no-years",
-  integrity: [PL.trustScenarios(cap)[0].value],
+  /** Every listed problem answered, all with the one response the policy can express today. */
+  trust: Object.fromEntries(PL.trustScenarios(cap).map((s: any) => [s.value, "refuse"])),
   availability: "always",
   owner: PL.responsibilityOptions(cap)[0].value,
-  evidence: "checked with the analyst who owns this pipeline and confirmed against the monthly runbook",
+  /** Deliberately EMPTY: notes are optional, and a complete answer must not need them. */
+  notes: "",
   ...over,
 });
+/** All listed problems set to one response. Used where the action itself is what is being tested. */
+const allTrust = (cap: { id: string }, action: string) =>
+  Object.fromEntries(PL.trustScenarios(cap).map((s: any) => [s.value, action]));
 
 /** An export, produced the way the page produces one: answered, then the mapping confirmed. */
 function exportWith(capId: string, human: Record<string, unknown>, confirmIt = true) {
@@ -529,7 +534,7 @@ check("the page reads its shared wording from the contract, not from its own tem
     ["trust heading", wording.trust.heading],
     ["availability heading", wording.availability.heading],
     ["responsibility heading", wording.responsibility.heading],
-    ["evidence heading", wording.evidence.heading],
+    ["notes heading", wording.notes.heading],
     ["summary heading", wording.summary.heading],
     ["what-is-being-decided heading", wording.card.decisionHeading],
     ["what-this-answers heading", wording.card.answersHeading],
@@ -814,8 +819,20 @@ check("an interruption at any persistence boundary leaves the record wholly old 
  * a person who does not already know the system cannot act on any of them. They stay legal inside
  * the collapsed disclosure, where they describe what the code does rather than what is being asked.
  */
-const IMPLEMENTATION_WORDS = ["capability", "policy", "coverage basis", "integrity rule", "artifact",
+const IMPLEMENTATION_WORDS = ["capability", "coverage basis", "integrity rule", "artifact",
   "table", "column", "schema", "validator", "authorization", "receipt owner", "mapping", "lookup"];
+
+/**
+ * "Policy" is the exception, and only in the governance sense.
+ *
+ * It was on the banned list because "capability policy" is an artifact in this system. But the word
+ * is also the correct one for what the person is doing: they ARE the policy owner, and telling them
+ * so is the point of the question -- "You are setting the policy; this is not a test with a
+ * predetermined correct answer." Banning it outright would force a vaguer word onto the one
+ * sentence that establishes whose judgment this is. So it is allowed in exactly two phrasings, and
+ * every other use is still a defect.
+ */
+const SANCTIONED_POLICY_PHRASES = ["setting the policy", "as the policy owner"];
 
 check("the deciding path never uses implementation language, on any of the questions", () => {
   for (const cap of model) {
@@ -825,6 +842,13 @@ check("the deciding path never uses implementation language, on any of the quest
       assert.strictEqual(at, -1,
         `${cap.id}: the deciding path says "${word}" — ...${text.slice(Math.max(0, at - 60), at + 60)}...`);
     }
+    // "Policy" only where it names the reader's authority, never the artifact.
+    let scan = text;
+    for (const phrase of SANCTIONED_POLICY_PHRASES) scan = scan.split(phrase).join("");
+    const stray = scan.indexOf("policy");
+    assert.strictEqual(stray, -1,
+      `${cap.id}: the deciding path says "policy" outside the sanctioned phrasings — `
+      + `...${scan.slice(Math.max(0, stray - 60), stray + 60)}...`);
   }
   // The page's own chrome is on that path too: its buttons, filters, warnings and dialogs.
   const chrome = JSON.stringify(PL.questions().page).toLowerCase();
@@ -995,8 +1019,8 @@ check("no technical field is required to answer any question", () => {
    */
   const blank = PL.blankAnswer();
   assert.deepStrictEqual(Object.keys(blank).sort(),
-    ["availability", "availabilityWhen", "coverage", "evidence", "integrity", "integrityOther",
-      "integrityUnsure", "owner", "ownerOther"],
+    ["availability", "availabilityWhen", "coverage", "notes", "owner", "ownerOther",
+      "trust", "trustOther", "trustOtherAction"],
     "the human answer carries a field that is not one of the four questions and their follow-ups");
   for (const key of Object.keys(blank)) {
     assert.ok(!/column|table|basis/i.test(key), `the human answer still carries ${key}`);
@@ -1121,7 +1145,8 @@ check("a recommendation is shown but never pre-selected", () => {
     assert.strictEqual(h.coverage, null, `${cap.id}: coverage opens pre-answered`);
     assert.strictEqual(h.availability, null, `${cap.id}: availability opens pre-answered`);
     assert.strictEqual(h.owner, null, `${cap.id}: receipt owner opens pre-answered`);
-    assert.deepStrictEqual(h.integrity, [], `${cap.id}: integrity opens pre-answered`);
+    assert.deepStrictEqual(h.trust, {}, `${cap.id}: a problem opens with a response already chosen`);
+    assert.strictEqual(h.trustOtherAction, null, `${cap.id}: the custom problem opens pre-answered`);
     assert.ok(PL.yearOptions(cap).some((o: any) => o.recommended), `${cap.id}: no option is marked recommended`);
   }
   assert.strictEqual(S.counts().complete, 0, "a lookup counts as finished before anyone answered anything");
@@ -1258,12 +1283,14 @@ check("an export carries the human answer AND the mapping, never one without the
 
 check("draft integrity prose is preserved, and no binding is ever asked for", () => {
   const S = sessionFor();
-  const own = PL.trustScenarios(withYear).map((s: any) => s.value).slice(0, 2);
-  S.update(withYear.id, answers(withYear, { integrity: own, integrityOther: "the county lookup goes missing" }));
+  const described = "the set of agencies covering a parish changes without anyone noticing";
+  S.update(withYear.id, answers(withYear, {
+    trust: allTrust(withYear, "refuse"), trustOther: described, trustOtherAction: "refuse" }));
   const proposed = S.proposal(withYear.id).proposed;
-  assert.strictEqual(proposed.integrity.length, own.length + 1, "a chosen scenario or the free text was dropped");
+  assert.strictEqual(proposed.integrity.length, PL.trustScenarios(withYear).length + 1,
+    "a listed problem or the one the person described was dropped");
   assert.ok(proposed.integrity.every((r: unknown) => typeof r === "string"), "a rule was recorded as something other than prose");
-  assert.ok(proposed.integrity.some((r: string) => /county lookup goes missing/.test(r)), "the person's own words were lost");
+  assert.ok(proposed.integrity.some((r: string) => r.includes(described)), "the person's own words were lost");
   const surface = visibleText(primarySurface(withYear));
   assert.ok(!/boundTo/.test(renderedCard(withYear)), "the card asks the reader for a binding");
   assert.ok(surface.includes("These checks have not been implemented yet, so this records a requirement"
@@ -1453,6 +1480,186 @@ check("where an answer reads exactly one date, it is chosen without asking anyon
     "the summary does not say what the protection does");
   assert.ok(!shown.includes(only.yearColumn) || only.yearColumn === "year",
     "the summary names the field rather than the behaviour");
+});
+
+// ------------------------------------------- 4b. every problem gets a response, and it survives
+
+check("every listed problem needs exactly one explicit response", () => {
+  /**
+   * The checkboxes could not tell "leave this alone" from "nobody has looked at it", because both
+   * were an untouched box. Now an absent response is unanswered and says so, and a response is one
+   * of four -- never two, never inferred.
+   */
+  const S = sessionFor();
+  const scenarios = PL.trustScenarios(withYear);
+  assert.ok(scenarios.length >= 2, "this fixture cannot show anything: it lists fewer than two problems");
+
+  // Nothing chosen: unanswered, and NOT read as "no special handling".
+  S.update(withYear.id, answers(withYear, { trust: {} }));
+  assert.ok(S.proposal(withYear.id).unanswered.includes("integrity"), "an untouched problem was read as a decision");
+  assert.deepStrictEqual(S.trustRows(withYear.id).map((r: any) => r.action), scenarios.map(() => null),
+    "an untouched problem carries a response nobody chose");
+
+  // Answering all but one is still unanswered — a partial set is not a decision.
+  const partial: Record<string, string> = {};
+  for (const s of scenarios.slice(1)) partial[s.value] = "refuse";
+  S.update(withYear.id, { trust: partial });
+  assert.ok(S.proposal(withYear.id).unanswered.includes("integrity"),
+    "leaving one problem unanswered still counted as a complete response");
+
+  // One response per problem, and only ever one.
+  S.update(withYear.id, { trust: allTrust(withYear, "refuse") });
+  assert.deepStrictEqual(S.proposal(withYear.id).unanswered, [], "a full set of responses still counted as unanswered");
+  for (const row of S.trustRows(withYear.id)) {
+    assert.ok(["refuse", "warn", "none", "unsure"].includes(row.action), `${row.value}: not one of the four responses`);
+  }
+  // Every response is offered, each with what it causes.
+  const offered = PL.trustActions();
+  assert.deepStrictEqual(offered.map((a: any) => a.value), ["refuse", "warn", "none", "unsure"]);
+  for (const a of offered) assert.ok(a.consequence.length > 25, `${a.value} is offered with no consequence`);
+});
+
+check("different problems may get different responses, and all four survive a round trip", () => {
+  /**
+   * Export, import, and reopen the REAL page. A response that survives in memory but is flattened
+   * on the way to the record would be the same class of defect as the checkbox: the record would
+   * not say what the person decided.
+   */
+  /** Its own fixture: three problems are needed to give three different responses. */
+  const varying = model.find((c) => PL.trustScenarios(c).length >= 3 && PL.automaticYearBasis(c))
+    ?? model.find((c) => PL.trustScenarios(c).length >= 3)!;
+  assert.ok(varying, "this test is stale: no question lists three problems");
+  const scenarios = PL.trustScenarios(varying);
+  const varied: Record<string, string> = {};
+  varied[scenarios[0].value] = "refuse";
+  varied[scenarios[1].value] = "warn";
+  varied[scenarios[2].value] = "none";
+  const described = "a parish gains a brand-new department mid-year";
+
+  const S = sessionFor();
+  S.update(varying.id, answers(varying, {
+    trust: varied, trustOther: described, trustOtherAction: "unsure" }));
+  // "I'm not sure" anywhere keeps the whole section unfinished.
+  assert.ok(S.proposal(varying.id).unanswered.includes("integrity"),
+    "an \"I'm not sure\" response was treated as decided");
+
+  S.update(varying.id, { trustOtherAction: "refuse" });
+  assert.deepStrictEqual(S.proposal(varying.id).unanswered, [], "a fully answered section still counted as unanswered");
+  S.confirmMapping(varying.id);
+  const imported = importInto(S.serialize());
+  assert.ok(imported.ok, JSON.stringify(!imported.ok && imported.errors));
+  if (!imported.ok) return;
+
+  const stored = (imported.entries[varying.id] as unknown as { human: Record<string, any> }).human;
+  assert.deepStrictEqual(stored.trust, varied, "the per-problem responses did not survive the import");
+  assert.strictEqual(stored.trustOther, described, "the problem the person described was lost");
+  assert.strictEqual(stored.trustOtherAction, "refuse", "the response to their own problem was lost");
+
+  // And reopening the real page restores every one of them.
+  const reopened = workbookSession({ docs: imported.docs, entries: imported.entries });
+  const rows = reopened.trustRows(varying.id);
+  assert.strictEqual(rows.find((r: any) => r.value === scenarios[0].value).action, "refuse");
+  assert.strictEqual(rows.find((r: any) => r.value === scenarios[1].value).action, "warn");
+  assert.strictEqual(rows.find((r: any) => r.value === scenarios[2].value).action, "none");
+  const custom = rows.find((r: any) => r.custom);
+  assert.ok(custom, "the problem the person described did not reopen");
+  assert.strictEqual(custom.label, described, "their wording was not restored");
+  assert.strictEqual(custom.action, "refuse", "their response to it was not restored");
+});
+
+check("a response the system cannot carry out is recorded, named, and authorizes nothing", () => {
+  /**
+   * "Warn" and a deliberate "no special handling" are decisions. Neither can be expressed as a rule
+   * today, and neither may be quietly turned into one -- writing a refusal rule for a person who
+   * asked for a warning would record the opposite of what they said.
+   */
+  for (const [action, marker] of [["warn", "warning behaviour"], ["none", "deliberate no-special-handling"]] as [string, string][]) {
+    const S = sessionFor();
+    S.update(withYear.id, answers(withYear, { trust: allTrust(withYear, action) }));
+    const p = S.proposal(withYear.id);
+    assert.deepStrictEqual(p.unanswered, [], `${action}: a decision was reported as unanswered`);
+    assert.ok(p.followUps.includes("integrity"), `${action}: no engineering follow-up was raised`);
+    assert.strictEqual(p.merged.integrity, null, `${action}: it was turned into a rule that means something else`);
+
+    const shown = visibleText(CARD.summaryPanel(withYear, S));
+    assert.ok(shown.includes(marker), `${action}: the summary does not name what is outstanding — ${shown}`);
+    assert.ok(shown.includes(PL.questions().card.followUpHeading), `${action}: it is not shown as engineering's`);
+
+    S.confirmMapping(withYear.id);
+    const imported = importInto(S.serialize());
+    assert.ok(imported.ok, `${action}: ${JSON.stringify(!imported.ok && imported.errors)}`);
+    if (!imported.ok) return;
+    assert.deepStrictEqual(imported.eligible, [], `${action}: an unimplemented response switched something on`);
+    assert.strictEqual((imported.policy[withYear.id] as { integrity: unknown }).integrity, null,
+      `${action}: a rule was invented in the record`);
+    assert.deepStrictEqual(
+      (imported.entries[withYear.id] as unknown as { human: { trust: unknown } }).human.trust,
+      allTrust(withYear, action), `${action}: the human answer was not recorded as given`);
+  }
+});
+
+check("an explicit \"no special handling\" is never mistaken for an unanswered field", () => {
+  /**
+   * The precise defect of the old control: an untouched box and a deliberate "this needs nothing"
+   * were the same state. They are now different in the answer, in the counts, and on the page.
+   */
+  const blank = sessionFor();
+  blank.update(withYear.id, answers(withYear, { trust: {} }));
+  const decided = sessionFor();
+  decided.update(withYear.id, answers(withYear, { trust: allTrust(withYear, "none") }));
+
+  assert.ok(blank.proposal(withYear.id).unanswered.includes("integrity"), "an untouched section is not unanswered");
+  assert.ok(!decided.proposal(withYear.id).unanswered.includes("integrity"),
+    "a deliberate \"no special handling\" was counted as unanswered");
+  assert.strictEqual(blank.counts().integrity, decided.counts().integrity + 1,
+    "the counters cannot tell a decision from an untouched control");
+
+  const blankText = visibleText(CARD.summaryPanel(withYear, blank));
+  const decidedText = visibleText(CARD.summaryPanel(withYear, decided));
+  assert.ok(blankText.includes(PL.questions().summary.unanswered), "an untouched section does not read as undecided");
+  assert.ok(decidedText.includes("No special handling is required when"),
+    `a deliberate decision does not read as one: ${decidedText}`);
+  assert.ok(!decidedText.includes(PL.questions().summary.unanswered),
+    "a deliberate decision still reads as undecided");
+});
+
+check("optional notes are optional: empty blocks nothing, and nothing is invented to fill them", () => {
+  /**
+   * It used to demand twenty characters saying how the person knew their own decision was right.
+   * That is a demand for proof aimed at the authority itself, and it blocked good decisions from
+   * being recorded. Empty notes must reach the record, the confirmation and the import untouched.
+   */
+  const S = sessionFor();
+  S.update(withYear.id, answers(withYear, { notes: "" }));
+  assert.deepStrictEqual(S.problems(withYear.id), [], "an empty note blocked completion");
+  assert.ok(S.confirmMapping(withYear.id), "an empty note blocked confirmation");
+  const imported = importInto(S.serialize());
+  assert.ok(imported.ok, JSON.stringify(!imported.ok && imported.errors));
+  if (!imported.ok) return;
+  assert.strictEqual((imported.policy[withYear.id] as { evidence: string }).evidence, "",
+    "something was written into the record that nobody supplied");
+  assert.deepStrictEqual(policyShapeErrors(imported.policy[withYear.id] as never), [],
+    "an empty note makes the recorded policy malformed");
+  assert.strictEqual(policyIsComplete(imported.policy[withYear.id] as never), true,
+    "an empty note leaves the policy incomplete, so it could never become eligible");
+
+  // Nothing anywhere asks the expert to prove their judgment, or claims it was corroborated.
+  for (const cap of model) {
+    const text = visibleText(primarySurface(cap)).toLowerCase();
+    for (const phrase of ["how do you know", "how you know", "what are you basing", "evidence",
+      "verified", "proven", "cite"]) {
+      assert.ok(!text.includes(phrase), `${cap.id}: the deciding path says "${phrase}"`);
+    }
+  }
+  const record = JSON.stringify(imported.entries).toLowerCase();
+  for (const claim of ["verified", "confirmed with", "corroborat"]) {
+    assert.ok(!record.includes(claim), `the record asserts "${claim}" when nobody supplied it`);
+  }
+  // A note that IS written is carried verbatim, and still claims nothing.
+  const N = sessionFor();
+  const note = "the parish boundary changed in 2021, which is why this is worth revisiting";
+  N.update(withYear.id, answers(withYear, { notes: note }));
+  assert.strictEqual(N.proposal(withYear.id).merged.evidence, note, "the note was rewritten on its way to the record");
 });
 
 check("\"not about a particular year\" is recorded as a decision, with no reason demanded", () => {
@@ -1812,6 +2019,33 @@ check("the authored record documents what it is, and the generated file says it 
   const generated = JSON.parse(fs.readFileSync(GENERATED_POLICY_FILE, "utf8")) as any;
   assert.ok(/DO NOT EDIT BY HAND/.test(JSON.stringify(generated._README)), "the generated file does not warn against editing");
   assert.ok(/capability-answers\.json/.test(JSON.stringify(generated._README)), "the generated file does not name its source");
+});
+
+check("the response-completeness audit describes the responses that are actually offered", () => {
+  /**
+   * A document claiming a question covers every reasonable answer is worth nothing if it drifts
+   * from the question. This ties the two together: every response the audit lists must exist, and
+   * every response that exists must be in the audit.
+   */
+  const audit = fs.readFileSync(path.join(process.cwd(), "docs", "superpowers",
+    "2026-08-15-stage2b-response-completeness.md"), "utf8");
+  for (const heading of [PL.questions().year.heading, PL.questions().trust.heading,
+    PL.questions().availability.heading, PL.questions().responsibility.heading]) {
+    const asked = heading.replace(/^\d+\.\s*/, "");
+    assert.ok(audit.includes(asked), `the audit does not cover the question "${asked}"`);
+  }
+  for (const value of ["years", "no-years", "unsure"]) {
+    assert.ok(audit.includes("`" + value + "`"), `the audit does not name the year response ${value}`);
+  }
+  for (const a of PL.trustActions()) {
+    assert.ok(audit.includes("`" + a.value + "`"), `the audit does not name the response ${a.value}`);
+  }
+  for (const value of ["always", "sometimes"]) {
+    assert.ok(audit.includes("`" + value + "`"), `the audit does not name the availability response ${value}`);
+  }
+  // It states the known gap rather than claiming completeness everywhere.
+  assert.ok(/this is the known gap/i.test(audit), "the audit claims coverage it does not have");
+  assert.ok(/nobody here/.test(audit), "the audit does not name the position that cannot be expressed");
 });
 
 check("the authoritative plan documents the shape that is actually enforced", () => {
