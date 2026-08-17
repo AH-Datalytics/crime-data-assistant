@@ -1,0 +1,311 @@
+{
+  "version": 1,
+  "description": "Historical agency identities absorbed into a survivor. Every entry is checked against the agency directory before it is applied, and an identity_duplicate whose predecessor still carries crime values is refused rather than applied.",
+  "provenance": "Transcribed from the untracked reference scripts/merge-duplicate-oris.sql and re-validated against geographies.csv. The reference SQL also merges historical_staffing, which this pipeline does not build.",
+  "entries": [
+    {
+      "predecessor": "MI631900X",
+      "survivor": "MI6367300",
+      "name": "Pontiac",
+      "state": "mi",
+      "scope": "crime_transition",
+      "evidence": "geographies.csv lists MI631900X as \"Pontiac\" and MI6367300 as \"Pontiac\", both in MI; the annual series changes ORI between them"
+    },
+    {
+      "predecessor": "PA0020000",
+      "survivor": "PA0022800",
+      "name": "Allegheny",
+      "state": "pa",
+      "scope": "crime_transition",
+      "evidence": "geographies.csv lists PA0020000 as \"Allegheny\" and PA0022800 as \"Allegheny County Police Department\", both in PA; the annual series changes ORI between them"
+    },
+    {
+      "predecessor": "VA0210000",
+      "survivor": "VA0210100",
+      "name": "Chesterfield",
+      "state": "va",
+      "scope": "crime_transition",
+      "evidence": "geographies.csv lists VA0210000 as \"Chesterfield\" and VA0210100 as \"Chesterfield County Police Department\", both in VA; the annual series changes ORI between them"
+    },
+    {
+      "predecessor": "VA0470000",
+      "survivor": "VA0470100",
+      "name": "James City",
+      "state": "va",
+      "scope": "crime_transition",
+      "evidence": "geographies.csv lists VA0470000 as \"James City\" and VA0470100 as \"James City County Police Department\", both in VA; the annual series changes ORI between them"
+    },
+    {
+      "predecessor": "VA0800000",
+      "survivor": "VA0800300",
+      "name": "Roanoke",
+      "state": "va",
+      "scope": "crime_transition",
+      "evidence": "geographies.csv lists VA0800000 as \"Roanoke\" and VA0800300 as \"Roanoke County Police Department\", both in VA; the annual series changes ORI between them"
+    },
+    {
+      "predecessor": "VA0870100",
+      "survivor": "VA1085000",
+      "name": "Franklin",
+      "state": "va",
+      "scope": "crime_transition",
+      "evidence": "geographies.csv lists VA0870100 as \"Franklin\" and VA1085000 as \"Franklin\", both in VA; the annual series changes ORI between them"
+    },
+    {
+      "predecessor": "VA0740000",
+      "survivor": "VA0740100",
+      "name": "Prince George",
+      "state": "va",
+      "scope": "crime_transition",
+      "evidence": "geographies.csv lists VA0740000 as \"Prince George\" and VA0740100 as \"Prince George County Police Department\", both in VA; the annual series changes ORI between them"
+    },
+    {
+      "predecessor": "CO0070200",
+      "survivor": "CO0640100",
+      "name": "Broomfield",
+      "state": "co",
+      "scope": "crime_transition",
+      "evidence": "geographies.csv lists CO0070200 as \"Broomfield\" and CO0640100 as \"Broomfield\", both in CO; the annual series changes ORI between them"
+    },
+    {
+      "predecessor": "CA0160800",
+      "survivor": "CA016070X",
+      "name": "Avenal",
+      "state": "ca",
+      "scope": "identity_duplicate",
+      "evidence": "geographies.csv lists CA0160800 as \"Avenal\" and CA016070X as \"Avenal\", both in CA"
+    },
+    {
+      "predecessor": "NB0540500",
+      "survivor": "NB0540200",
+      "name": "Bloomfield",
+      "state": "nb",
+      "scope": "identity_duplicate",
+      "evidence": "geographies.csv lists NB0540500 as \"Bloomfield\" and NB0540200 as \"Bloomfield\", both in NB"
+    },
+    {
+      "predecessor": "MS0470300",
+      "survivor": "MS0470200",
+      "name": "Byhalia",
+      "state": "ms",
+      "scope": "identity_duplicate",
+      "evidence": "geographies.csv lists MS0470300 as \"Byhalia\" and MS0470200 as \"Byhalia\", both in MS"
+    },
+    {
+      "predecessor": "TX0640500",
+      "survivor": "TX0640100",
+      "name": "Carrizo Springs",
+      "state": "tx",
+      "scope": "identity_duplicate",
+      "evidence": "geographies.csv lists TX0640500 as \"Carrizo Springs\" and TX0640100 as \"Carrizo Springs\", both in TX"
+    },
+    {
+      "predecessor": "MI631820X",
+      "survivor": "MI6331500",
+      "name": "Clarkston",
+      "state": "mi",
+      "scope": "identity_duplicate",
+      "evidence": "geographies.csv lists MI631820X as \"Clarkston\" and MI6331500 as \"Clarkston\", both in MI"
+    },
+    {
+      "predecessor": "FL013960X",
+      "survivor": "FL0131100",
+      "name": "Doral",
+      "state": "fl",
+      "scope": "identity_duplicate",
+      "evidence": "geographies.csv lists FL013960X as \"Doral\" and FL0131100 as \"Doral\", both in FL"
+    },
+    {
+      "predecessor": "KY0400800",
+      "survivor": "KY0400000",
+      "name": "Garrard County Police Department",
+      "state": "ky",
+      "scope": "identity_duplicate",
+      "evidence": "geographies.csv lists KY0400800 as \"Garrard County Police Department\" and KY0400000 as \"Garrard\", both in KY"
+    },
+    {
+      "predecessor": "PA0264100",
+      "survivor": "PA0261400",
+      "name": "German Township",
+      "state": "pa",
+      "scope": "identity_duplicate",
+      "evidence": "geographies.csv lists PA0264100 as \"German Township\" and PA0261400 as \"German Township\", both in PA"
+    },
+    {
+      "predecessor": "NM0330100",
+      "survivor": "NM0320200",
+      "name": "Grants",
+      "state": "nm",
+      "scope": "identity_duplicate",
+      "evidence": "geographies.csv lists NM0330100 as \"Grants\" and NM0320200 as \"Grants\", both in NM"
+    },
+    {
+      "predecessor": "MT0020400",
+      "survivor": "MT0020100",
+      "name": "Hardin",
+      "state": "mt",
+      "scope": "identity_duplicate",
+      "evidence": "geographies.csv lists MT0020400 as \"Hardin\" and MT0020100 as \"Hardin\", both in MT"
+    },
+    {
+      "predecessor": "TX0970500",
+      "survivor": "TX0970200",
+      "name": "Hico",
+      "state": "tx",
+      "scope": "identity_duplicate",
+      "evidence": "geographies.csv lists TX0970500 as \"Hico\" and TX0970200 as \"Hico\", both in TX"
+    },
+    {
+      "predecessor": "MI631850X",
+      "survivor": "MI6331400",
+      "name": "Independence Township",
+      "state": "mi",
+      "scope": "identity_duplicate",
+      "evidence": "geographies.csv lists MI631850X as \"Independence Township\" and MI6331400 as \"Independence Township\", both in MI"
+    },
+    {
+      "predecessor": "INIPD0000",
+      "survivor": "IN0494900",
+      "name": "Indianapolis",
+      "state": "in",
+      "scope": "identity_duplicate",
+      "evidence": "geographies.csv lists INIPD0000 as \"Indianapolis\" and IN0494900 as \"Indianapolis\", both in IN"
+    },
+    {
+      "predecessor": "KY0600500",
+      "survivor": "KY0600000",
+      "name": "Knott County Police Department",
+      "state": "ky",
+      "scope": "identity_duplicate",
+      "evidence": "geographies.csv lists KY0600500 as \"Knott County Police Department\" and KY0600000 as \"Knott\", both in KY"
+    },
+    {
+      "predecessor": "CT0007200",
+      "survivor": "CT0007000",
+      "name": "Ledyard",
+      "state": "ct",
+      "scope": "identity_duplicate",
+      "evidence": "geographies.csv lists CT0007200 as \"Ledyard\" and CT0007000 as \"Ledyard\", both in CT"
+    },
+    {
+      "predecessor": "MI631860X",
+      "survivor": "MI7254200",
+      "name": "Lyon Township",
+      "state": "mi",
+      "scope": "identity_duplicate",
+      "evidence": "geographies.csv lists MI631860X as \"Lyon Township\" and MI7254200 as \"Lyon Township\", both in MI"
+    },
+    {
+      "predecessor": "CA0334900",
+      "survivor": "CA033780X",
+      "name": "Menifee",
+      "state": "ca",
+      "scope": "identity_duplicate",
+      "evidence": "geographies.csv lists CA0334900 as \"Menifee\" and CA033780X as \"Menifee\", both in CA"
+    },
+    {
+      "predecessor": "FL013940X",
+      "survivor": "FL0139700",
+      "name": "Miami Gardens",
+      "state": "fl",
+      "scope": "identity_duplicate",
+      "evidence": "geographies.csv lists FL013940X as \"Miami Gardens\" and FL0139700 as \"Miami Gardens\", both in FL"
+    },
+    {
+      "predecessor": "NM0330200",
+      "survivor": "NM0320400",
+      "name": "Milan",
+      "state": "nm",
+      "scope": "identity_duplicate",
+      "evidence": "geographies.csv lists NM0330200 as \"Milan\" and NM0320400 as \"Milan\", both in NM"
+    },
+    {
+      "predecessor": "TN0580400",
+      "survivor": "TN0310400",
+      "name": "Monteagle",
+      "state": "tn",
+      "scope": "identity_duplicate",
+      "evidence": "geographies.csv lists TN0580400 as \"Monteagle\" and TN0310400 as \"Monteagle\", both in TN"
+    },
+    {
+      "predecessor": "CT0060200",
+      "survivor": "CT0008600",
+      "name": "Montville",
+      "state": "ct",
+      "scope": "identity_duplicate",
+      "evidence": "geographies.csv lists CT0060200 as \"Montville\" and CT0008600 as \"Montville\", both in CT"
+    },
+    {
+      "predecessor": "KY0890700",
+      "survivor": "KY0890000",
+      "name": "Muhlenberg County Police Department",
+      "state": "ky",
+      "scope": "identity_duplicate",
+      "evidence": "geographies.csv lists KY0890700 as \"Muhlenberg County Police Department\" and KY0890000 as \"Muhlenberg\", both in KY"
+    },
+    {
+      "predecessor": "TN0760B00",
+      "survivor": "TN0760100",
+      "name": "Oneida",
+      "state": "tn",
+      "scope": "identity_duplicate",
+      "evidence": "geographies.csv lists TN0760B00 as \"Oneida\" and TN0760100 as \"Oneida\", both in TN"
+    },
+    {
+      "predecessor": "CT0011200",
+      "survivor": "CT0011300",
+      "name": "Portland",
+      "state": "ct",
+      "scope": "identity_duplicate",
+      "evidence": "geographies.csv lists CT0011200 as \"Portland\" and CT0011300 as \"Portland\", both in CT"
+    },
+    {
+      "predecessor": "KY1001400",
+      "survivor": "KY1000000",
+      "name": "Pulaski County Police Department",
+      "state": "ky",
+      "scope": "identity_duplicate",
+      "evidence": "geographies.csv lists KY1001400 as \"Pulaski County Police Department\" and KY1000000 as \"Pulaski\", both in KY"
+    },
+    {
+      "predecessor": "WI0561100",
+      "survivor": "WI0480100",
+      "name": "River Falls",
+      "state": "wi",
+      "scope": "identity_duplicate",
+      "evidence": "geographies.csv lists WI0561100 as \"River Falls\" and WI0480100 as \"River Falls\", both in WI"
+    },
+    {
+      "predecessor": "CA0074000",
+      "survivor": "CA007240X",
+      "name": "San Ramon",
+      "state": "ca",
+      "scope": "identity_duplicate",
+      "evidence": "geographies.csv lists CA0074000 as \"San Ramon\" and CA007240X as \"San Ramon\", both in CA"
+    },
+    {
+      "predecessor": "MO0922400",
+      "survivor": "MO0920000",
+      "name": "St. Charles County Police Department",
+      "state": "mo",
+      "scope": "identity_duplicate",
+      "evidence": "geographies.csv lists MO0922400 as \"St. Charles County Police Department\" and MO0920000 as \"St. Charles\", both in MO"
+    },
+    {
+      "predecessor": "PA060070X",
+      "survivor": "PA0633500",
+      "name": "Union Township",
+      "state": "pa",
+      "scope": "identity_duplicate",
+      "evidence": "geographies.csv lists PA060070X as \"Union Township\" and PA0633500 as \"Union Township\", both in PA"
+    },
+    {
+      "predecessor": "PA0371000",
+      "survivor": "PA0300600",
+      "name": "Wayne Township",
+      "state": "pa",
+      "scope": "identity_duplicate",
+      "evidence": "geographies.csv lists PA0371000 as \"Wayne Township\" and PA0300600 as \"Wayne Township\", both in PA"
+    }
+  ]
+}

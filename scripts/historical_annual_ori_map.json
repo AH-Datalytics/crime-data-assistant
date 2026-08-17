@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "description": "Seven-character annual-file ORIs whose nine-character Historical identity cannot be derived by padding or by a unique prefix. Each mapping is checked against the agency directory before any data is loaded: the target must exist, sit in the stated state, and carry a compatible name. A mapping that disagrees stops the build.",
+  "provenance": "Transcribed from the ORI_MAP in the untracked reference scripts/import_reta_2025.py and re-validated against geographies.csv. Pontiac is the mapping that matters most: without it, the annual year prefix-matches the predecessor ORI that the consolidation step then removes, and the year is lost.",
+  "mappings": [
+    {
+      "source_ori": "INIPD00",
+      "target_ori": "IN0494900",
+      "agency": "Indianapolis",
+      "state": "IN",
+      "evidence": "geographies.csv lists IN0494900 as \"Indianapolis\" in IN; INIPD0000 is the Unigov identifier for the same department"
+    },
+    {
+      "source_ori": "MI63190",
+      "target_ori": "MI6367300",
+      "agency": "Pontiac",
+      "state": "MI",
+      "evidence": "geographies.csv lists MI6367300 as \"Pontiac\" in MI and it is the survivor of the MI631900X consolidation"
+    },
+    {
+      "source_ori": "MI63185",
+      "target_ori": "MI6331400",
+      "agency": "Independence Township",
+      "state": "MI",
+      "evidence": "geographies.csv lists MI6331400 as \"Independence Township\" in MI"
+    },
+    {
+      "source_ori": "CA03349",
+      "target_ori": "CA0337800",
+      "agency": "Menifee",
+      "state": "CA",
+      "evidence": "geographies.csv lists CA0337800 as \"menifee\" in CA"
+    },
+    {
+      "source_ori": "CA00740",
+      "target_ori": "CA0072400",
+      "agency": "San Ramon",
+      "state": "CA",
+      "evidence": "geographies.csv lists CA0072400 as \"san ramon\" in CA"
+    }
+  ]
+}
