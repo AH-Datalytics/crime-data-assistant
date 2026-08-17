@@ -15,6 +15,8 @@ import sqlite3
 import pandas as pd
 import numpy as np
 
+import historical_core
+
 
 def parse_args(argv=None):
     """Both paths are supplied by the caller.
@@ -38,6 +40,11 @@ def main(argv=None):
     args = parse_args(argv)
     DB_PATH = args.db
     FINAL_DIR = args.source_dir
+    # Before anything opens a connection: sqlite3.connect creates the file it is pointed at,
+    # so a refusal that came afterwards would already have made one. This increment is offline,
+    # and this importer drops and rebuilds whole tables -- not something to aim at the real
+    # database by mistake.
+    historical_core.assert_not_canonical(DB_PATH)
     conn = sqlite3.connect(DB_PATH)
     cur = conn.cursor()
 

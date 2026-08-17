@@ -31,10 +31,10 @@ import sys
 import historical_core as core
 
 
-def read_csv(path):
+def read_csv(path, reverse=False):
     with open(path, newline="", encoding="utf-8-sig") as handle:
-        for row in csv.DictReader(handle):
-            yield row
+        rows = list(csv.DictReader(handle))
+    return reversed(rows) if reverse else iter(rows)
 
 
 def count_rows(path):
@@ -51,6 +51,11 @@ def load_ori_map(path):
 
 
 def build(args):
+    # No output may sit on top of a source file, and the two outputs must not be the same file.
+    core.assert_distinct_outputs(
+        [args.geographies, args.base_crime, args.annual, args.consolidations, args.ori_map],
+        [args.out, args.manifest],
+    )
     conn = core.open_build_database(args.out)
     manifest = {
         "tool": core.TOOL_VERSION,
@@ -72,7 +77,7 @@ def build(args):
 
     # ── 1. base sources ──────────────────────────────────────────────────────────────
     agency_rows = count_rows(args.geographies)
-    written = core.load_agencies(conn, read_csv(args.geographies))
+    written = core.load_agencies(conn, read_csv(args.geographies, args.reverse_input_order))
     record_input("agency_directory", args.geographies, agency_rows)
     manifest["steps"]["agencies"] = {
         "read": agency_rows,
@@ -81,7 +86,7 @@ def build(args):
     }
 
     base_rows = count_rows(args.base_crime)
-    base = core.load_base_crime(conn, read_csv(args.base_crime))
+    base = core.load_base_crime(conn, read_csv(args.base_crime, args.reverse_input_order))
     record_input("base_annual_crime", args.base_crime, base_rows)
     manifest["steps"]["base_crime"] = {
         "read": base["read"],
@@ -93,11 +98,13 @@ def build(args):
     # ── 2. annual year ───────────────────────────────────────────────────────────────
     if args.annual:
         mappings = load_ori_map(args.ori_map)
+        if args.ori_map:
+            record_input("annual_ori_map", args.ori_map, len(mappings))
         errors = core.validate_ori_mappings(mappings, conn)
         if errors:
             raise core.BuildError("ORI mappings disagree with the agency directory:\n  " + "\n  ".join(errors))
         annual_rows = count_rows(args.annual)
-        annual = core.load_annual(conn, read_csv(args.annual), mappings, args.annual_year)
+        annual = core.load_annual(conn, read_csv(args.annual, args.reverse_input_order), mappings, args.annual_year)
         record_input("annual_crime", args.annual, annual_rows)
         manifest["steps"]["annual_crime"] = {
             "year": args.annual_year,
@@ -105,6 +112,7 @@ def build(args):
             "written": annual["written"],
             "new_agencies": annual["new_agencies"],
             "excluded": annual["excluded"],
+            "ambiguity_count": len(annual["ambiguities"]),
             "resolutions": annual["resolutions"],
             "ambiguities": annual["ambiguities"],
             "validated_mappings": len(mappings),
@@ -118,23 +126,40 @@ def build(args):
     manifest["steps"]["consolidations"] = {
         "proposed": len(entries),
         "applied": applied["applied"],
-        "already_absent": applied["already_absent"],
         "refused": applied["refused"],
+        "survivor_rows_added": applied["survivor_rows_added"],
+        "predecessor_rows_removed": applied["predecessor_rows_removed"],
+        "predecessor_agencies_removed": applied["predecessor_agencies_removed"],
     }
 
     conn.commit()
 
-    for table in ("historical_agency", "historical_agency_crime"):
+    # Expected counts are stated from the steps, then compared with the tables themselves, so a
+    # row lost between two stages shows up as a mismatch rather than as a plausible total.
+    expected_crime = manifest["steps"]["base_crime"]["written"]
+    if args.annual:
+        expected_crime += manifest["steps"]["annual_crime"]["written"]
+    expected_crime += applied["survivor_rows_added"] - applied["predecessor_rows_removed"]
+    expected_agency = manifest["steps"]["agencies"]["written"]
+    if args.annual:
+        expected_agency += manifest["steps"]["annual_crime"]["new_agencies"]
+    expected_agency -= applied["predecessor_agencies_removed"]
+
+    for table, expected in (("historical_agency", expected_agency),
+                            ("historical_agency_crime", expected_crime)):
+        actual = conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
         manifest["tables"][table] = {
-            "rows": conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0],
+            "expected_rows": expected,
+            "rows": actual,
+            "reconciles": expected == actual,
             "content_sha256": core.table_digest(conn, table),
             "schema_sha256": core.table_schema_digest(conn, table),
         }
-
-    expected = manifest["steps"]["base_crime"]["written"]
-    if args.annual:
-        expected += manifest["steps"]["annual_crime"]["written"]
-    manifest["tables"]["historical_agency_crime"]["expected_rows_before_consolidation"] = expected
+        if expected != actual:
+            raise core.BuildError(
+                f"{table} holds {actual} rows but the steps account for {expected}; "
+                "rows appeared or vanished between stages"
+            )
 
     zero_rows = conn.execute(
         "SELECT COUNT(*) FROM historical_agency_crime WHERE " + " AND ".join(f"{m} = 0" for m in core.CRIME_MEASURES)
@@ -159,6 +184,8 @@ def main(argv=None):
     parser.add_argument("--base-crime", required=True, help="1930-2024 annual crime CSV")
     parser.add_argument("--annual", help="annual RETA CSV for one later year")
     parser.add_argument("--annual-year", type=int, default=2025)
+    parser.add_argument("--reverse-input-order", action="store_true",
+                        help="read every source in reverse row order; the build must not care")
     parser.add_argument("--consolidations", required=True, help="consolidation manifest JSON")
     parser.add_argument("--ori-map", help="validated annual ORI mapping JSON")
     parser.add_argument("--out", required=True, help="destination database; must not exist and must not be canonical")

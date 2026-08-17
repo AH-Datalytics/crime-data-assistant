@@ -162,15 +162,17 @@ class OriResolution(CoreBuildTestCase):
     def test_unique_prefix_resolves(self):
         ori, how = core.resolve_annual_ori("TX01111", [], self.index)
         self.assertEqual(ori, "TX0111100")
-        self.assertIn(how, (core.RESOLVED_PADDED, core.RESOLVED_PREFIX))
+        self.assertIn(how, (core.RESOLVED_PADDED, core.RESOLVED_PADDED_UNVERIFIED, core.RESOLVED_PREFIX))
 
     def test_canonical_padded_form_wins_over_its_own_variants(self):
         # PA0252400 sits beside the X and 9E variants the FBI issues for the same agency.
         # Preferring the canonical +00 form is a stated rule, not a pick among equals, and it
         # is what the reference importer did before its unordered fallback took over.
+        # With no name supplied there is nothing to confirm the choice against, so the
+        # resolution is labelled as the weaker class the manifest counts separately.
         ori, how = core.resolve_annual_ori("PA02524", [], self.index)
         self.assertEqual(ori, "PA0252400")
-        self.assertEqual(how, core.RESOLVED_PADDED)
+        self.assertEqual(how, core.RESOLVED_PADDED_UNVERIFIED)
 
     def test_ambiguous_prefix_with_no_canonical_form_refuses_instead_of_choosing(self):
         core.load_agencies(self.conn, [
@@ -312,13 +314,16 @@ class Consolidations(CoreBuildTestCase):
         core.apply_consolidations(self.conn, [self.transition()])
         self.assertEqual(self.crime("MI6367300", 1990)["murder"], 9)
 
-    def test_applying_twice_changes_nothing_further(self):
+    def test_reapplying_to_an_already_consolidated_build_fails_loudly(self):
+        # The build always starts from a new database, so a predecessor that has already gone
+        # means the manifest and the data disagree. Skipping quietly would let a stale entry
+        # sit there looking applied.
         core.load_base_crime(self.conn, [base_row("MI631900X", 1950, murder_total="4")])
         core.apply_consolidations(self.conn, [self.transition()])
-        first = core.table_digest(self.conn, "historical_agency_crime")
-        second_report = core.apply_consolidations(self.conn, [self.transition()])
-        self.assertEqual(core.table_digest(self.conn, "historical_agency_crime"), first)
-        self.assertEqual(second_report["applied"], 0)
+        before = core.table_digest(self.conn, "historical_agency_crime")
+        with self.assertRaises(core.BuildError):
+            core.apply_consolidations(self.conn, [self.transition()])
+        self.assertEqual(core.table_digest(self.conn, "historical_agency_crime"), before)
 
     def test_identity_duplicate_carrying_crime_is_left_unapplied(self):
         # The untracked SQL called these "zero-crime ORIs". Against the real source most of
@@ -351,6 +356,182 @@ class Consolidations(CoreBuildTestCase):
     def test_state_disagreement_is_a_hard_failure(self):
         with self.assertRaises(core.BuildError):
             core.apply_consolidations(self.conn, [self.transition(state="tx")])
+
+
+class OverlappingHistory(CoreBuildTestCase):
+    """A transition may only be applied where the two ORIs do not both hold the same years.
+
+    Copying the predecessor's rows in with INSERT OR IGNORE and then deleting the predecessor
+    silently discarded whichever years the survivor already had. Allegheny County is the worst
+    case in the real sources: 53 overlapping years, 48 of which differ. Losing 48 years of a
+    county's history to a merge nobody could see is not a consolidation.
+    """
+
+    def setUp(self):
+        super().setUp()
+        core.load_agencies(self.conn, [
+            agency_row("PA0020000", "Allegheny", "pa"),
+            agency_row("PA0022800", "Allegheny County Police Department", "pa"),
+        ])
+
+    def entry(self):
+        return core.Consolidation.from_dict({
+            "predecessor": "PA0020000", "survivor": "PA0022800", "name": "Allegheny",
+            "state": "pa", "scope": core.SCOPE_CRIME_TRANSITION, "evidence": "both listed in PA",
+        })
+
+    def test_conflicting_overlap_is_refused_and_both_agencies_survive(self):
+        core.load_base_crime(self.conn, [
+            base_row("PA0020000", 1975, murder_total="7"),
+            base_row("PA0022800", 1975, murder_total="9"),
+        ])
+        report = core.apply_consolidations(self.conn, [self.entry()])
+        self.assertEqual(report["applied"], 0)
+        self.assertEqual(len(report["refused"]), 1)
+        self.assertIn("overlap", report["refused"][0]["reason"].lower())
+        self.assertEqual(self.crime("PA0020000", 1975)["murder"], 7, "the predecessor's year was destroyed")
+        self.assertEqual(self.crime("PA0022800", 1975)["murder"], 9)
+        self.assertIsNotNone(self.conn.execute("SELECT 1 FROM historical_agency WHERE ori='PA0020000'").fetchone())
+
+    def test_overlap_the_predecessor_left_blank_is_not_a_conflict(self):
+        # Franklin and Broomfield look like this in the real sources: years in common, but the
+        # predecessor holds nothing for them, so the survivor loses nothing.
+        core.load_base_crime(self.conn, [
+            base_row("PA0020000", 1975),
+            base_row("PA0020000", 1950, murder_total="4"),
+            base_row("PA0022800", 1975, murder_total="9"),
+        ])
+        report = core.apply_consolidations(self.conn, [self.entry()])
+        self.assertEqual(report["applied"], 1)
+        self.assertEqual(self.crime("PA0022800", 1950)["murder"], 4)
+        self.assertEqual(self.crime("PA0022800", 1975)["murder"], 9)
+
+    def test_identical_overlapping_values_are_not_a_conflict(self):
+        core.load_base_crime(self.conn, [
+            base_row("PA0020000", 1975, murder_total="9"),
+            base_row("PA0022800", 1975, murder_total="9"),
+        ])
+        self.assertEqual(core.apply_consolidations(self.conn, [self.entry()])["applied"], 1)
+
+    def test_an_absent_predecessor_is_a_hard_failure(self):
+        entry = core.Consolidation.from_dict({
+            "predecessor": "ZZ9999999", "survivor": "PA0022800", "name": "Allegheny",
+            "state": "pa", "scope": core.SCOPE_CRIME_TRANSITION, "evidence": "x",
+        })
+        with self.assertRaises(core.BuildError):
+            core.apply_consolidations(self.conn, [entry])
+
+
+class IdentityFromStateAndName(CoreBuildTestCase):
+    """The canonical +00 form is a default, not a licence to contradict the row."""
+
+    def setUp(self):
+        super().setUp()
+        core.load_agencies(self.conn, [
+            agency_row("NY0511100", "Bellport Village", "ny"),
+            agency_row("NY05111TZ", "Port Jefferson", "ny"),
+            agency_row("AK0012600", "Fairbanks International Airport", "ak"),
+            agency_row("AL0013500", "norfolk southern railway", "al"),
+            agency_row("AL001359E", "Norfolk Southern Railway", "al"),
+            agency_row("MT0010100", "Elsewhere", "mt"),
+        ])
+
+    def resolve(self, ori7, agency, state, exact_map=()):
+        return core.resolve_annual_ori(
+            ori7, list(exact_map), core.build_prefix_index(self.conn),
+            agency_name=agency, state=state, name_index=core.build_prefix_name_index(self.conn),
+        )
+
+    def test_a_sibling_that_matches_the_row_beats_the_padded_form(self):
+        # PORT JEFFERSON was being filed as Bellport Village purely because Bellport holds the
+        # +00 ORI. The directory names Port Jefferson under the same prefix.
+        ori, how = self.resolve("NY05111", "PORT JEFFERSON", "NY")
+        self.assertEqual(ori, "NY05111TZ")
+        self.assertEqual(how, core.RESOLVED_NAME)
+
+    def test_an_abbreviated_name_still_reaches_the_padded_form(self):
+        # "FAIRBANKS INTRNL AIRPORT" does not contradict "Fairbanks International Airport";
+        # it abbreviates it, and no sibling fits better. Refusing this class would drop
+        # thousands of correct rows.
+        ori, how = self.resolve("AK00126", "FAIRBANKS INTRNL AIRPORT", "AK")
+        self.assertEqual(ori, "AK0012600")
+        self.assertEqual(how, core.RESOLVED_PADDED_UNVERIFIED)
+
+    def test_the_padded_form_wins_among_equally_matching_siblings(self):
+        ori, how = self.resolve("AL00135", "NORFOLK SOUTHERN RAILWAY", "AL")
+        self.assertEqual(ori, "AL0013500")
+        self.assertEqual(how, core.RESOLVED_PADDED)
+
+    def test_a_state_that_contradicts_the_row_is_refused(self):
+        with self.assertRaises(core.AmbiguousOri):
+            self.resolve("MT00101", "Elsewhere", "WY")
+
+    def test_a_numeric_state_code_is_absent_information_not_a_contradiction(self):
+        # Federal agencies are filed with State "98", which is not a state at all. Reading it
+        # as one refused 351 rows -- ATF and FBI field offices whose ORI resolves perfectly.
+        ori, how = self.resolve("MT00101", "Elsewhere", "98")
+        self.assertEqual(ori, "MT0010100")
+        self.assertIn(how, (core.RESOLVED_PADDED, core.RESOLVED_PADDED_UNVERIFIED))
+
+    def test_a_validated_mapping_still_outranks_every_name_rule(self):
+        core.load_agencies(self.conn, [agency_row("MI6367300", "Pontiac", "mi"),
+                                       agency_row("MI631900X", "Pontiac", "mi")])
+        ori, how = self.resolve("MI63190", "PONTIAC", "MI",
+                                exact_map=[core.OriMapping("MI63190", "MI6367300", "Pontiac", "MI")])
+        self.assertEqual(ori, "MI6367300")
+        self.assertEqual(how, core.RESOLVED_EXACT)
+
+
+class AnnualSourceChecks(CoreBuildTestCase):
+    def test_a_row_from_another_year_stops_the_build(self):
+        core.load_agencies(self.conn, [agency_row("AL0012000", "Lipscomb", "al")])
+        row = annual_row("AL00120", 12, agency="Lipscomb", state="AL")
+        row["Year"] = "2024"
+        with self.assertRaises(core.BuildError) as raised:
+            core.load_annual(self.conn, [row], exact_map=[], year=2025)
+        self.assertIn("2024", str(raised.exception))
+
+
+class OfflineSafety(unittest.TestCase):
+    """Neither entry point may be able to open a real database."""
+
+    FORBIDDEN = ("crime_data.db", "nibrs.db", "shr.db", "query_log.db",
+                 os.path.join("C:\\", "Users", "jeffm", "crime-data-assistant", "crime_data.db"),
+                 "/opt/nibrs/shared/crime_data.db")
+
+    def test_the_strict_destination_guard_refuses_canonical_names(self):
+        for path in self.FORBIDDEN:
+            with self.assertRaises(core.BuildError, msg=f"{path} was accepted"):
+                core.assert_safe_destination(path)
+
+    def test_the_importer_guard_refuses_canonical_names(self):
+        for path in self.FORBIDDEN:
+            with self.assertRaises(core.BuildError, msg=f"{path} was accepted"):
+                core.assert_not_canonical(path)
+
+    def test_the_importer_refuses_before_it_opens_anything(self):
+        # The guard has to run before sqlite3.connect, or a refused run still creates a file.
+        import import_historical
+        with tempfile.TemporaryDirectory() as tmp:
+            target = os.path.join(tmp, "crime_data.db")
+            with self.assertRaises(core.BuildError):
+                import_historical.main(["--db", target, "--source-dir", tmp])
+            self.assertFalse(os.path.exists(target), "a refused destination was still created")
+
+    def test_a_rebuildable_copy_is_accepted_by_the_importer_guard(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "historical_copy.db")
+            core.assert_not_canonical(path)
+            open(path, "wb").close()
+            core.assert_not_canonical(path)  # re-runnable, unlike the strict guard
+
+    def test_outputs_must_differ_from_every_input(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            source = os.path.join(tmp, "geographies.csv")
+            open(source, "w").close()
+            with self.assertRaises(core.BuildError):
+                core.assert_distinct_outputs([source], [source])
+            core.assert_distinct_outputs([source], [os.path.join(tmp, "out.db")])
 
 
 class Determinism(unittest.TestCase):

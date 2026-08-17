@@ -80,6 +80,7 @@ RESOLVED_PADDED = "canonical_padded"
 RESOLVED_PREFIX = "unique_prefix"
 RESOLVED_NEW = "new_agency"
 RESOLVED_NAME = "directory_name_match"
+RESOLVED_PADDED_UNVERIFIED = "canonical_padded_name_unconfirmed"
 
 SCOPE_CRIME_TRANSITION = "crime_transition"
 SCOPE_IDENTITY_DUPLICATE = "identity_duplicate"
@@ -219,23 +220,49 @@ def create_core_tables(conn):
     )
 
 
-def assert_safe_destination(path):
-    """Refuse to build anywhere that could be a real database.
+def assert_not_canonical(path):
+    """Refuse any destination that could be a real database.
 
-    The pipeline produces evidence, not production data. Every destination has to be a new
-    file the caller chose, and the canonical names are rejected wherever they appear.
+    Checked before anything opens a connection, because sqlite3.connect creates the file it
+    was pointed at: a refusal that happens afterwards has already done damage.
     """
     if not path:
         raise BuildError("a destination path is required")
     normalized = str(path).replace("\\", "/").lower()
     if os.path.basename(normalized) in _FORBIDDEN_BASENAMES:
-        raise BuildError(f"refusing to build into a canonical database: {path}")
+        raise BuildError(f"refusing to open a canonical database: {path}")
     for fragment in _FORBIDDEN_FRAGMENTS:
         if fragment.replace("\\", "/") in normalized:
-            raise BuildError(f"refusing to build into a production path: {path}")
+            raise BuildError(f"refusing to open a production path: {path}")
+    return path
+
+
+def assert_safe_destination(path):
+    """As above, and the file must not exist yet.
+
+    The offline build produces evidence, so it always writes somewhere new. Importers that
+    legitimately rebuild a copy in place use `assert_not_canonical` instead.
+    """
+    assert_not_canonical(path)
     if os.path.exists(path):
         raise BuildError(f"destination already exists; choose a new file: {path}")
     return path
+
+
+def assert_distinct_outputs(inputs, outputs):
+    """No output may be one of the inputs. Overwriting a source destroys the evidence."""
+    claimed = {os.path.abspath(p) for p in inputs if p}
+    for out in outputs:
+        if out and os.path.abspath(out) in claimed:
+            raise BuildError(f"refusing to write output over an input: {out}")
+    seen = set()
+    for out in outputs:
+        if not out:
+            continue
+        resolved = os.path.abspath(out)
+        if resolved in seen:
+            raise BuildError(f"two outputs point at the same file: {out}")
+        seen.add(resolved)
 
 
 # ── base era ─────────────────────────────────────────────────────────────────────────
@@ -322,11 +349,13 @@ def build_prefix_index(conn):
 
 
 def build_prefix_name_index(conn):
-    """Seven-character prefix to the (ORI, agency name) pairs under it, in a fixed order."""
+    """Seven-character prefix to the (ORI, name, state) triples under it, in a fixed order."""
     index = {}
-    for ori, agency in conn.execute("SELECT ori, agency FROM historical_agency ORDER BY ori"):
-        index.setdefault(ori[:7], []).append((ori, agency or ""))
-    return {prefix: tuple(pairs) for prefix, pairs in index.items()}
+    for ori, agency, state in conn.execute(
+        "SELECT ori, agency, state FROM historical_agency ORDER BY ori"
+    ):
+        index.setdefault(ori[:7], []).append((ori, agency or "", state or ""))
+    return {prefix: tuple(triples) for prefix, triples in index.items()}
 
 
 def match_by_name(ori7, agency_name, name_index):
@@ -337,7 +366,8 @@ def match_by_name(ori7, agency_name, name_index):
     holds the full nine-character identity for both. Returns None unless exactly one fits, so
     a near-miss never becomes a decision.
     """
-    matches = [ori for ori, agency in name_index.get(ori7, ()) if _names_compatible(agency, agency_name)]
+    matches = [ori for ori, agency, _ in name_index.get(ori7, ())
+               if _names_compatible(agency, agency_name)]
     return matches[0] if len(matches) == 1 else None
 
 
@@ -369,11 +399,24 @@ def validate_ori_mappings(mappings, conn):
     return errors
 
 
-def resolve_annual_ori(ori7, exact_map, index):
+def resolve_annual_ori(ori7, exact_map, index, agency_name=None, state=None, name_index=None):
     """Resolve a seven-character source ORI to a nine-character agency ORI, or refuse.
 
-    Order matters. The exact mapping wins first, which is what keeps Pontiac's 2025 year off
-    the predecessor ORI that consolidation later removes.
+    Order matters, and so does what counts as evidence.
+
+    A validated mapping wins outright: someone checked that identity by hand, and it is what
+    keeps Pontiac's 2025 year off the predecessor ORI that consolidation later removes.
+
+    Otherwise the row's own state and name decide between the agencies sharing the prefix. The
+    canonical `+00` form is only a default, never a licence to contradict the row: Port
+    Jefferson was being filed as Bellport Village purely because Bellport holds `NY0511100`,
+    while the directory names Port Jefferson under the same prefix. A sibling the row's name
+    actually fits beats the padded form.
+
+    Where no sibling fits, the padded form still wins, but as a weaker class the manifest
+    counts separately. "FAIRBANKS INTRNL AIRPORT" does not contradict "Fairbanks International
+    Airport", it abbreviates it, and refusing that whole class would drop thousands of correct
+    rows to protect against a handful of wrong ones.
     """
     ori7 = ori7.strip()
     for mapping in exact_map:
@@ -382,16 +425,50 @@ def resolve_annual_ori(ori7, exact_map, index):
 
     candidates = index.get(ori7, ())
     padded = ori7 + "00"
-    if padded in candidates:
-        return padded, RESOLVED_PADDED
-    if len(candidates) == 1:
-        return candidates[0], RESOLVED_PREFIX
-    if len(candidates) > 1:
+    if not candidates:
+        return padded, RESOLVED_NEW
+
+    known = name_index.get(ori7, ()) if name_index else ()
+    if not known:
+        known = tuple((ori, "", "") for ori in candidates)
+
+    # A state that disagrees is a contradiction, not a near miss: narrow to the agencies the
+    # row could actually be, and refuse if that leaves nothing.
+    # "98" is how federal agencies are filed, and it is not a state. A code that is not two
+    # letters carries no state information, so it cannot contradict anything.
+    stated = state.strip() if state else ""
+    if len(stated) == 2 and stated.isalpha():
+        wanted = stated.lower()
+        scoped = [(ori, name) for ori, name, st in known if (st or "").strip().lower() == wanted]
+        if not scoped and any((st or "").strip() for _, _, st in known):
+            raise AmbiguousOri(
+                f"{ori7} ({agency_name}) is filed in {state}, but every agency under that prefix "
+                "is in another state: " + ", ".join(f"{ori}:{st}" for ori, _, st in known)
+            )
+        if not scoped:
+            scoped = [(ori, name) for ori, name, _ in known]
+    else:
+        scoped = [(ori, name) for ori, name, _ in known]
+
+    fitting = [ori for ori, name in scoped if agency_name and _names_compatible(name, agency_name)]
+    if fitting:
+        if padded in fitting:
+            return padded, RESOLVED_PADDED
+        if len(fitting) == 1:
+            return fitting[0], RESOLVED_NAME
         raise AmbiguousOri(
-            f"{ori7} matches {len(candidates)} agencies and none is the canonical +00 form: "
-            + ", ".join(candidates)
+            f"{ori7} ({agency_name}) fits {len(fitting)} agencies equally well: " + ", ".join(sorted(fitting))
         )
-    return padded, RESOLVED_NEW
+
+    scoped_oris = [ori for ori, _ in scoped]
+    if padded in scoped_oris:
+        return padded, RESOLVED_PADDED_UNVERIFIED
+    if len(scoped_oris) == 1:
+        return scoped_oris[0], RESOLVED_PREFIX
+    raise AmbiguousOri(
+        f"{ori7} ({agency_name}) matches {len(scoped_oris)} agencies, none of them by name, "
+        "and none is the canonical +00 form: " + ", ".join(sorted(scoped_oris))
+    )
 
 
 # ── annual era ───────────────────────────────────────────────────────────────────────
@@ -405,19 +482,33 @@ def load_annual(conn, rows, exact_map, year, agency_type_for_new=None):
     looks the same here as it does in the base era.
     """
     index = build_prefix_index(conn)
-    excluded = {"ori_collision": 0, "ambiguous_ori": 0, "unusable_row": 0}
+    excluded = {"ambiguous_ori": 0, "ori_collision": 0, "unusable_row": 0}
     ambiguities = []
     by_target = {}
     resolutions = {RESOLVED_EXACT: 0, RESOLVED_PADDED: 0, RESOLVED_PREFIX: 0,
-                   RESOLVED_NEW: 0, RESOLVED_NAME: 0}
+                   RESOLVED_NEW: 0, RESOLVED_NAME: 0,
+                   RESOLVED_PADDED_UNVERIFIED: 0}
 
+    name_index = build_prefix_name_index(conn)
     for row in rows:
         ori7 = (row.get("ORI") or "").strip()
         if not ori7:
             excluded["unusable_row"] += 1
             continue
+        # A file that is not the year it was asked for would silently overwrite another year.
+        row_year = (str(row.get("Year") or "").strip() or None)
+        if row_year is not None and int(float(row_year)) != int(year):
+            raise BuildError(
+                f"{ori7} carries Year {row_year} but this build was told to load {year}; "
+                "the annual file and --annual-year disagree"
+            )
         try:
-            target, how = resolve_annual_ori(ori7, exact_map, index)
+            target, how = resolve_annual_ori(
+                ori7, exact_map, index,
+                agency_name=(row.get("Agency_Name") or "").strip(),
+                state=(row.get("State") or "").strip(),
+                name_index=name_index,
+            )
         except AmbiguousOri as ambiguous:
             excluded["ambiguous_ori"] += 1
             ambiguities.append(str(ambiguous))
@@ -429,7 +520,6 @@ def load_annual(conn, rows, exact_map, year, agency_type_for_new=None):
     # resolved from evidence rather than by dropping both. Only rows the directory cannot
     # place are set aside. Letting the later row win -- what the reference importer did --
     # replaced Huntsville's 2025 figures with another agency's zeroes.
-    name_index = build_prefix_name_index(conn)
     for target in [t for t, entries in by_target.items() if len(entries) > 1]:
         stays, moved, unplaceable = [], [], []
 
@@ -497,7 +587,7 @@ def load_annual(conn, rows, exact_map, year, agency_type_for_new=None):
         "new_agencies": len(new_agencies),
         "excluded": excluded,
         "resolutions": resolutions,
-        "ambiguities": ambiguities,
+        "ambiguities": sorted(ambiguities),
     }
 
 
@@ -535,7 +625,8 @@ def apply_consolidations(conn, entries):
     an identity-duplicate entry whose predecessor does carry crime -- is refused and reported,
     because applying it would destroy history the source still holds.
     """
-    applied, refused, skipped = 0, [], 0
+    applied, refused = 0, []
+    rows_removed, agencies_removed, rows_copied = 0, 0, 0
     for entry in entries:
         predecessor = conn.execute(
             "SELECT agency, state FROM historical_agency WHERE ori = ?", (entry.predecessor,)
@@ -547,8 +638,13 @@ def apply_consolidations(conn, entries):
         if survivor is None:
             raise BuildError(f"{entry.predecessor} -> {entry.survivor}: survivor is not in this build")
         if predecessor is None:
-            skipped += 1
-            continue
+            # The manifest names an agency this build does not have, so the manifest and the
+            # sources disagree about what exists. Skipping quietly would let a stale entry sit
+            # there indefinitely looking applied.
+            raise BuildError(
+                f"{entry.predecessor} -> {entry.survivor}: predecessor is not in this build, "
+                "so this entry no longer describes the data"
+            )
 
         for label, row in (("predecessor", predecessor), ("survivor", survivor)):
             if (row[1] or "").strip().lower() != entry.state.strip().lower():
@@ -579,17 +675,45 @@ def apply_consolidations(conn, entries):
             continue
 
         if entry.scope == SCOPE_CRIME_TRANSITION:
-            conn.execute(
+            # Both ORIs holding the same year, with different figures, means this is not one
+            # agency's history split in two. Copying with INSERT OR IGNORE and then deleting
+            # the predecessor threw the losing side away silently -- 48 years of Allegheny
+            # County in the real sources. Neither side is safe to discard, so nothing moves.
+            conflicts = conn.execute(
+                "SELECT p.year FROM historical_agency_crime p JOIN historical_agency_crime s "
+                "ON s.ori = ? AND s.year = p.year WHERE p.ori = ? AND ({}) AND ({}) "
+                "ORDER BY p.year".format(
+                    " OR ".join(f"p.{m} IS NOT NULL" for m in CRIME_MEASURES),
+                    " OR ".join(f"IFNULL(p.{m}, -1) <> IFNULL(s.{m}, -1)" for m in CRIME_MEASURES),
+                ),
+                (entry.survivor, entry.predecessor),
+            ).fetchall()
+            if conflicts:
+                years = [str(y[0]) for y in conflicts]
+                refused.append({
+                    "predecessor": entry.predecessor,
+                    "survivor": entry.survivor,
+                    "reason": f"both agencies hold different figures for {len(years)} overlapping "
+                              f"year(s) ({years[0]}-{years[-1]}); neither history can be discarded",
+                })
+                continue
+            rows_copied += conn.execute(
                 "INSERT OR IGNORE INTO historical_agency_crime "
                 "(ori, year, population, {0}) SELECT ?, year, population, {0} "
                 "FROM historical_agency_crime WHERE ori = ? ORDER BY year".format(", ".join(CRIME_MEASURES)),
                 (entry.survivor, entry.predecessor),
-            )
-        conn.execute("DELETE FROM historical_agency_crime WHERE ori = ?", (entry.predecessor,))
-        conn.execute("DELETE FROM historical_agency WHERE ori = ?", (entry.predecessor,))
+            ).rowcount
+        rows_removed += conn.execute(
+            "DELETE FROM historical_agency_crime WHERE ori = ?", (entry.predecessor,)).rowcount
+        agencies_removed += conn.execute(
+            "DELETE FROM historical_agency WHERE ori = ?", (entry.predecessor,)).rowcount
         applied += 1
 
-    return {"applied": applied, "refused": refused, "already_absent": skipped}
+    return {"applied": applied,
+            "refused": sorted(refused, key=lambda r: r["predecessor"]),
+            "survivor_rows_added": rows_copied,
+            "predecessor_rows_removed": rows_removed,
+            "predecessor_agencies_removed": agencies_removed}
 
 
 def load_consolidations(path):
