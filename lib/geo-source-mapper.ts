@@ -1,6 +1,7 @@
 import type Database from "better-sqlite3";
 import { agencySearchKey } from "./shr-agency-normalization";
 import { CONSOLIDATED_AGENCIES, findConsolidatedAgency } from "./agency-consolidations";
+import { countyKeyFromDisplayName } from "./historical-county-identity";
 import type { GeoPlaceCandidate, GeoPlaceResolution } from "./geo-place-resolver";
 
 export type GeoSource = "current" | "historical" | "nibrs" | "shr";
@@ -434,13 +435,15 @@ function historicalCityKeys(state: string, placeName: string): Set<string> {
   return aliases;
 }
 
-function countyKeyFromName(name: string): string {
-  return name
-    .replace(/\b(county|parish|borough|census area|municipality)\b/gi, "")
-    .replace(/\s+/g, " ")
-    .trim()
-    .toUpperCase();
-}
+/**
+ * The crosswalk's own spelling of a county key.
+ *
+ * This used to strip the county word and upper-case the rest, leaving punctuation in place,
+ * so `St. Louis County` produced `ST. LOUIS` while every key in `agency_county_crosswalk` is
+ * `[A-Z0-9 ]+` and the real key is `ST LOUIS`. Every St./Ste. county in the country failed to
+ * map. Shared with lib/historical-county-identity.ts so the two cannot drift apart.
+ */
+const countyKeyFromName = countyKeyFromDisplayName;
 
 function normalizePlaceKey(value: string): string {
   return (value || "")

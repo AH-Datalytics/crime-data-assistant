@@ -65,6 +65,7 @@ import {
   findConsolidatedAgency,
   normalizeConsolidatedDisplayRows,
 } from "@/lib/agency-consolidations";
+import { historicalCountyAgencyPredicate } from "@/lib/historical-county-identity";
 import {
   emitFactualPayload,
   finalizeProof,
@@ -407,7 +408,13 @@ function answerHistoricalPlaceLookup(
     WHERE UPPER(ha.state) = UPPER(${sqlQuote(sourceState)})
       ${consolidation
         ? `AND ha.ori = ${sqlQuote(consolidation.historicalOri)}`
-        : `AND LOWER(ha.type) = ${sqlQuote(type)}\n      AND UPPER(ha.agency) = UPPER(${sqlQuote(agency)})`}
+        : candidate.kind === "county"
+          // A county is addressed through the FIPS crosswalk, never by name. The importer
+          // this replaces renamed 3,126 county agencies -- `Jefferson` to `Jefferson County`,
+          // `Jacksonville Sheriff's Office` to `Jacksonville County` -- so a name predicate
+          // matches one database and not the other. The ORI is the same in both.
+          ? `AND ${historicalCountyAgencyPredicate(candidate.state, candidate.name)}`
+          : `AND LOWER(ha.type) = ${sqlQuote(type)}\n      AND UPPER(ha.agency) = UPPER(${sqlQuote(agency)})`}
     ORDER BY ha.agency
     LIMIT 20
   `.trim();

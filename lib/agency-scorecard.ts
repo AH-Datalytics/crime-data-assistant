@@ -1,6 +1,7 @@
 import type Database from "better-sqlite3";
 import { resolveGeoPlaces } from "./geo-place-resolver";
 import { consolidatedDisplayName, historicalAgencyTarget, consolidatedRtciAgency } from "./agency-consolidations";
+import { historicalCountyAgencyPredicate } from "./historical-county-identity";
 import { detectAgencyScorecardQuestion } from "./scorecard-format";
 import { evaluateAgencyYearFromDb, describeFindings } from "./agency-reliability";
 
@@ -143,9 +144,15 @@ export function buildAgencyScorecard(
   const agency = consolidatedDisplayName(candidate.state, candidate.name);
   const state = candidate.state!.toLowerCase();
   const target = historicalAgencyTarget(candidate.state, candidate.name, explicitTarget?.type ?? "city");
+  // A county agency is addressed through the FIPS crosswalk rather than by name. The two
+  // databases spell county agencies differently -- `Jefferson` against `Jefferson County`,
+  // `Riley County Police Department` against `Riley County` -- and a name predicate matches
+  // only one of them, while the ORI is the same in both.
   const where = target.ori
     ? `ha.ori = ${sqlQuote(target.ori)}`
-    : `ha.agency = ${sqlQuote(target.agency)} AND ha.state = ${sqlQuote(state)} AND ha.type = ${sqlQuote(target.type)}`;
+    : target.type === "county"
+      ? historicalCountyAgencyPredicate(candidate.state!, target.agency)
+      : `ha.agency = ${sqlQuote(target.agency)} AND ha.state = ${sqlQuote(state)} AND ha.type = ${sqlQuote(target.type)}`;
   const completeYears = (db.prepare(`
     SELECT hac.year AS year
     FROM historical_agency_crime hac

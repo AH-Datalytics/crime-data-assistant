@@ -11,6 +11,7 @@
 
 import type { QueryContext, Tab } from "./query-context";
 import { asksForCountsInsteadOfRates } from "./rate-intent";
+import { countyKeyFromDisplayName } from "./historical-county-identity";
 import {
   formatNibrsCodeList,
   NIBRS_UCR_PROPERTY_CODES,
@@ -2442,7 +2443,11 @@ const GUARDRAILS: Guardrail[] = [
     message: (ctx) => {
       const countyMatch = ctx.question.match(/\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2})\s+(County|Parish|Borough)\b/i);
       const countyName = countyMatch ? `${countyMatch[1]} ${countyMatch[2]}` : "the requested county";
-      return `The user asked about "${countyName}" but the SQL queries historical_state_national which has state-level data, not county-level. Use historical_agency_crime hac JOIN historical_agency ha ON ha.ori = hac.ori WHERE ha.agency = '${countyName}' AND ha.type = 'county' to get county-level data. Only fall back to state-level if the user explicitly asks for a state.`;
+      // Never hand back `ha.agency = '<County> County'`. Historical stores the agency's own
+      // name -- 'Cook', 'Riley County Police Department' -- so that predicate matches nothing
+      // and the empty result reads like an answer. The FIPS crosswalk does not depend on it.
+      const countyKey = countyKeyFromDisplayName(countyName);
+      return `The user asked about "${countyName}" but the SQL queries historical_state_national which has state-level data, not county-level. Resolve the county agency through the FIPS crosswalk, not by name: historical_agency_crime hac JOIN historical_agency ha ON ha.ori = hac.ori JOIN agency_county_crosswalk cw ON cw.ori9 = ha.ori WHERE cw.county_key = '${countyKey}' AND UPPER(cw.state) = '<STATE>' AND LOWER(ha.type) = 'county'. Do NOT write ha.agency = '${countyName}' — Historical stores the agency's own name ('Cook', 'Jacksonville Sheriff's Office'), so that returns nothing. Only fall back to state-level if the user explicitly asks for a state.`;
     },
   },
 
