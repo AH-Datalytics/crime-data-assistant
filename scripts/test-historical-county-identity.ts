@@ -235,14 +235,70 @@ function exercise(db: Database.Database, side: string): void {
     );
   }
 
-  // A real query shape, end to end.
-  const murders = db.prepare(`
-    SELECT hac.year AS year, hac.murder AS murder
-    FROM historical_agency_crime hac
-    JOIN historical_agency ha ON ha.ori = hac.ori
-    WHERE ${historicalCountyAgencyPredicate("IL", "Cook County")} AND hac.year = 2020
-  `).all() as { year: number; murder: number | null }[];
-  assert(murders.length === 1, `${side}: a Cook County count query returns one row (got ${murders.length})`);
+  // The real query shapes, end to end. Each must return exactly one row for one county
+  // agency: a count, a rate, a clearance and a staffing figure. A shape that returns two rows
+  // has quietly summed two departments; one that returns none has lost the agency.
+  const cookPredicate = historicalCountyAgencyPredicate("IL", "Cook County");
+  const shapes: { name: string; sql: string }[] = [
+    {
+      name: "count",
+      sql: `SELECT hac.year AS year, hac.murder AS value
+            FROM historical_agency_crime hac JOIN historical_agency ha ON ha.ori = hac.ori
+            WHERE ${cookPredicate} AND hac.year = 2020`,
+    },
+    {
+      name: "rate",
+      sql: `SELECT hac.year AS year, ROUND(hac.violent * 100000.0 / hap.population, 1) AS value
+            FROM historical_agency_crime hac
+            JOIN historical_agency ha ON ha.ori = hac.ori
+            JOIN historical_agency_population hap ON hap.ori = hac.ori AND hap.year = hac.year
+            WHERE ${cookPredicate} AND hac.year = 2020 AND hap.population > 0`,
+    },
+    {
+      name: "clearance",
+      sql: `SELECT hc.year AS year, ROUND(hc.murder_clr, 1) AS value
+            FROM historical_agency_clearance hc JOIN historical_agency ha ON ha.ori = hc.ori
+            WHERE ${cookPredicate} AND hc.year = 2020`,
+    },
+    {
+      name: "staffing",
+      sql: `SELECT hs.year AS year, COALESCE(hs.officer_total, hs.all_total) AS value
+            FROM historical_staffing hs JOIN historical_agency ha ON ha.ori = hs.ori
+            WHERE ${cookPredicate} AND hs.year = 2020`,
+    },
+  ];
+  for (const shape of shapes) {
+    const rows = db.prepare(shape.sql).all() as { year: number; value: number | null }[];
+    assert(
+      rows.length === 1,
+      `${side}: the Cook County ${shape.name} shape returns exactly one row (got ${rows.length})`
+    );
+    if (shape.name === "clearance" && side === "current") {
+      // Cook County reported 2 murders and 222 violent crimes in 2020 and cleared none of
+      // them. Every one of its nine rates came out zero, so the old importer blanked the whole
+      // row and the database now says it reported nothing. This is the clearance half of the
+      // zero-versus-missing defect, on a county of 75,747 people, and it is why the rebuilt
+      // database answers this question and the current one cannot.
+      assert(
+        rows.length === 1 && rows[0].value === null,
+        "current: Cook County's 2020 clearance is blank, which is the defect the rebuild fixes"
+      );
+      continue;
+    }
+    assert(
+      rows.length === 1 && rows[0].value !== null,
+      `${side}: the Cook County ${shape.name} shape returns a value, not a silent NULL`
+    );
+  }
+
+  // A countywide total must cover more than the sheriff, and must not be reachable by
+  // accident from the single-agency shape.
+  const countywide = db.prepare(`
+    SELECT COUNT(DISTINCT ha.ori) AS agencies, SUM(hac.murder) AS murders
+    FROM historical_agency_crime hac JOIN historical_agency ha ON ha.ori = hac.ori
+    WHERE ${historicalCountywidePredicate("IL", "Cook County")} AND hac.year = 2020
+  `).get() as { agencies: number; murders: number | null };
+  assert(countywide.agencies > 1, `${side}: Cook County countywide covers many agencies (got ${countywide.agencies})`);
 }
 
 const current = openReadonly(CURRENT_DB);
