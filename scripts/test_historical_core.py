@@ -46,7 +46,19 @@ def annual_row(ori7, months, **values):
     }
     for name in core.ANNUAL_MEASURE_COLUMNS:
         row[name] = values.pop(name, "0")
+    for name in core._ANNUAL_CLEARED_COLUMNS.values():
+        row[name] = values.pop(name, "0")
     assert not values, f"unknown value(s): {sorted(values)}"
+    return row
+
+
+def clearance_row(ori, year, **totals):
+    """A row shaped like historical_clearance_1960_2024.csv. Absent pair = blank cells."""
+    row = {"id": ori, "year": year}
+    for offences, cleared in core.CLEARANCE_SOURCE_PAIRS.values():
+        row[offences] = totals.pop(offences, "")
+        row[cleared] = totals.pop(cleared, "")
+    assert not totals, f"unknown column(s): {sorted(totals)}"
     return row
 
 
@@ -452,6 +464,357 @@ class Consolidations(CoreBuildTestCase):
             core.apply_consolidations(self.conn, [self.transition(state="tx")])
 
 
+class ClearanceSemantics(CoreBuildTestCase):
+    """A rate is a measurement or it is nothing. It is never a stand-in for silence.
+
+    The importer this replaces computed nine rates and then, if all nine came out zero,
+    blanked the row and called it non-reporting. An agency that reported offences and
+    cleared none of them was recorded as having reported nothing at all.
+    """
+
+    def clearance(self, ori, year):
+        row = self.conn.execute(
+            "SELECT " + ", ".join(core.CLEARANCE_COLUMNS)
+            + " FROM historical_agency_clearance WHERE ori=? AND year=?", (ori, year),
+        ).fetchone()
+        return None if row is None else dict(zip(core.CLEARANCE_COLUMNS, row))
+
+    def test_offences_with_no_clearances_is_zero_percent(self):
+        core.load_base_clearance(self.conn, [
+            clearance_row("X00000100", 1975, murder_all_total="8", murder_cleared_total="0"),
+        ])
+        self.assertEqual(self.clearance("X00000100", 1975)["murder_clr"], 0.0)
+
+    def test_no_offences_leaves_the_rate_undefined(self):
+        core.load_base_clearance(self.conn, [
+            clearance_row("X00000100", 1975, murder_all_total="0", murder_cleared_total="0"),
+        ])
+        self.assertIsNone(self.clearance("X00000100", 1975)["murder_clr"])
+
+    def test_a_missing_denominator_leaves_the_rate_undefined(self):
+        core.load_base_clearance(self.conn, [
+            clearance_row("X00000100", 1975, murder_cleared_total="3"),
+        ])
+        self.assertIsNone(self.clearance("X00000100", 1975)["murder_clr"])
+
+    def test_a_missing_numerator_leaves_the_rate_undefined(self):
+        core.load_base_clearance(self.conn, [
+            clearance_row("X00000100", 1975, murder_all_total="8"),
+        ])
+        self.assertIsNone(self.clearance("X00000100", 1975)["murder_clr"])
+
+    def test_a_row_of_zero_percent_survives_intact(self):
+        # The whole row reads zero. The importer this replaces would have blanked all nine
+        # columns here, and the agency would have become indistinguishable from one that
+        # filed nothing.
+        totals = {}
+        for offences, cleared in core.CLEARANCE_SOURCE_PAIRS.values():
+            totals[offences] = "5"
+            totals[cleared] = "0"
+        core.load_base_clearance(self.conn, [clearance_row("X00000100", 1975, **totals)])
+        rates = self.clearance("X00000100", 1975)
+        self.assertEqual(set(rates.values()), {0.0})
+
+    def test_a_rate_is_computed_per_measure_not_per_row(self):
+        core.load_base_clearance(self.conn, [
+            clearance_row("X00000100", 1975,
+                          murder_all_total="4", murder_cleared_total="1",
+                          robbery_all_total="0", robbery_cleared_total="0"),
+        ])
+        rates = self.clearance("X00000100", 1975)
+        self.assertEqual(rates["murder_clr"], 25.0)
+        self.assertIsNone(rates["robbery_clr"])
+
+    def test_annual_derived_totals_need_every_part(self):
+        # Violent is not on the annual file, so it is summed. A sum missing one of its parts
+        # is not a smaller total, it is an unknown one.
+        core.load_agencies(self.conn, [agency_row("AL0012000", "Lipscomb", "al")])
+        row = annual_row("AL00120", 12, agency="Lipscomb",
+                         Actual_Murder="2", Cleared_Murder="1", Actual_Rape_Total="")
+        core.load_annual(self.conn, [row], [], 2025)
+        rates = self.clearance("AL0012000", 2025)
+        self.assertEqual(rates["murder_clr"], 50.0)
+        self.assertIsNone(rates["violent_clr"])
+
+    def test_a_year_nobody_filed_carries_no_rates(self):
+        core.load_agencies(self.conn, [agency_row("AL0012000", "Lipscomb", "al")])
+        core.load_annual(self.conn, [annual_row("AL00120", 0, agency="Lipscomb")], [], 2025)
+        rates = self.clearance("AL0012000", 2025)
+        self.assertEqual(set(rates.values()), {None})
+
+
+class SiblingTableSemantics(CoreBuildTestCase):
+    """Population and staffing keep a zero apart from a blank, exactly as crime does."""
+
+    def test_a_population_of_zero_is_a_stated_population(self):
+        core.load_base_population(self.conn, [{"id": "X00000100", "year": 1975, "population": "0"}])
+        self.assertEqual(self.conn.execute(
+            "SELECT population FROM historical_agency_population WHERE ori='X00000100'").fetchone()[0], 0)
+
+    def test_a_blank_population_stays_missing(self):
+        core.load_base_population(self.conn, [{"id": "X00000100", "year": 1975, "population": ""}])
+        self.assertIsNone(self.conn.execute(
+            "SELECT population FROM historical_agency_population WHERE ori='X00000100'").fetchone()[0])
+
+    def test_zero_employees_is_a_count(self):
+        core.load_base_staffing(self.conn, [
+            {"id": "X00000100", "year": 1975, "all_total": "0", "officer_total": "0", "civilian_total": ""},
+        ])
+        row = self.conn.execute(
+            "SELECT all_total, officer_total, civilian_total FROM historical_staffing").fetchone()
+        self.assertEqual((row[0], row[1]), (0, 0))
+        self.assertIsNone(row[2], "a blank civilian count is not a zero")
+
+    def test_a_conflicting_duplicate_stops_the_build(self):
+        with self.assertRaises(core.BuildError):
+            core.load_base_staffing(self.conn, [
+                {"id": "X00000100", "year": 1975, "all_total": "5", "officer_total": "5", "civilian_total": "0"},
+                {"id": "X00000100", "year": 1975, "all_total": "9", "officer_total": "9", "civilian_total": "0"},
+            ])
+
+
+class PseudoIdentifiers(CoreBuildTestCase):
+    """`us` and the two-letter state rows are not agencies and are not written as agencies.
+
+    `historical_state_national` is the application's authority for state and national
+    questions -- `CLAUDE.md` and `lib/claude.ts` both say so, `lib/guardrails.ts` warns that
+    an unfiltered agency ranking can pick these rows up by accident, and the geo catalogue
+    generator already excludes them twice over. The clearance and staffing sources do not
+    carry them at all, so keeping them in the other three is what stops the five tables
+    describing the same world.
+    """
+
+    STATE_ROW = {"id": "al", "name": "Alabama", "state": "", "type": "state"}
+    NATION_ROW = {"id": "us", "name": "United States", "state": "", "type": "nation"}
+
+    def test_pseudo_rows_are_recognised_by_all_three_marks(self):
+        self.assertTrue(core.is_pseudo_directory_row(self.STATE_ROW))
+        self.assertTrue(core.is_pseudo_directory_row(self.NATION_ROW))
+        self.assertFalse(core.is_pseudo_directory_row(agency_row("AL0012000", "Lipscomb", "al")))
+        # A nine-character agency typed `state` is a state police force, not a state.
+        self.assertFalse(core.is_pseudo_directory_row(
+            {"id": "AL0010000", "name": "State Police", "state": "al", "type": "state"}))
+
+    def test_they_are_kept_out_of_the_agency_table_and_named(self):
+        result = core.load_agencies(self.conn, [
+            self.STATE_ROW, self.NATION_ROW, agency_row("AL0012000", "Lipscomb", "al"),
+        ])
+        self.assertEqual(result["written"], 1)
+        self.assertEqual(sorted(result["pseudo_identifiers"]), ["al", "us"])
+        self.assertIsNone(self.conn.execute("SELECT 1 FROM historical_agency WHERE ori='us'").fetchone())
+
+    def test_their_crime_and_population_rows_go_with_them(self):
+        pseudo = core.load_agencies(self.conn, [self.NATION_ROW, agency_row("AL0012000", "Lipscomb", "al")])
+        crime = core.load_base_crime(self.conn, [
+            base_row("us", 2021, murder_total="22536"), base_row("AL0012000", 2021, murder_total="0"),
+        ], pseudo["pseudo_identifiers"])
+        self.assertEqual(crime["pseudo_rows_excluded"], 1)
+        self.assertEqual(crime["written"], 1)
+        population = core.load_base_population(self.conn, [
+            {"id": "us", "year": 2021, "population": "331894354"},
+            {"id": "AL0012000", "year": 2021, "population": "2000"},
+        ], pseudo["pseudo_identifiers"])
+        self.assertEqual(population["pseudo_rows_excluded"], 1)
+        self.assertEqual(self.crime("us", 2021), None)
+
+    def test_an_unexplained_short_identifier_stops_the_build(self):
+        # Silently skipping it would be the same habit that let unexplained state be
+        # inherited from one rebuild to the next.
+        with self.assertRaises(core.BuildError):
+            core.load_base_crime(self.conn, [base_row("zz", 2021, murder_total="1")], {})
+
+
+class SourceNamesAreNotRewritten(CoreBuildTestCase):
+    """The directory's name is the source's name.
+
+    The importer this replaces rewrote 3,151 county names: `Jefferson` became
+    `Jefferson County`, and `Baltimore County Police Department` became `Baltimore County`.
+    Neither string appears in any source. Whether the application can still find a county by
+    name is a question about the application.
+    """
+
+    def test_a_bare_county_name_is_not_given_a_suffix(self):
+        core.load_agencies(self.conn, [agency_row("AL0010000", "Jefferson", "al", "county")])
+        self.assertEqual(self.conn.execute(
+            "SELECT agency FROM historical_agency WHERE ori='AL0010000'").fetchone()[0], "Jefferson")
+
+    def test_a_full_department_name_is_not_shortened(self):
+        core.load_agencies(self.conn, [
+            agency_row("MD0030000", "Baltimore County Police Department", "md", "county")])
+        self.assertEqual(self.conn.execute(
+            "SELECT agency FROM historical_agency WHERE ori='MD0030000'").fetchone()[0],
+            "Baltimore County Police Department")
+
+
+class AlignedIdentity(CoreBuildTestCase):
+    """One resolution, four tables. An agency restored in one must be restored in all.
+
+    A per-capita question joins crime to population. If the annual step resolved the same
+    seven-character ORI one way for crime and another way for population -- or wrote one and
+    not the other -- the join returns nothing and the answer is an empty result rather than
+    an error. Silence is the failure mode this class exists to prevent.
+    """
+
+    def setUp(self):
+        super().setUp()
+        core.load_agencies(self.conn, [agency_row("NV0020100", "Las Vegas Metropolitan Police Department", "nv")])
+
+    def test_the_annual_year_lands_in_crime_population_and_clearance_together(self):
+        row = annual_row("NV00201", 12, agency="LAS VEGAS METRO PD", state="NV",
+                         population="1712136", Actual_Murder="86", Cleared_Murder="43")
+        core.load_annual(self.conn, [row], [], 2025)
+        self.assertEqual(self.crime("NV0020100", 2025)["murder"], 86)
+        self.assertEqual(self.conn.execute(
+            "SELECT population FROM historical_agency_population WHERE ori='NV0020100' AND year=2025"
+        ).fetchone()[0], 1712136)
+        self.assertEqual(self.conn.execute(
+            "SELECT murder_clr FROM historical_agency_clearance WHERE ori='NV0020100' AND year=2025"
+        ).fetchone()[0], 50.0)
+
+    def test_a_row_the_directory_cannot_place_is_written_to_none_of_them(self):
+        # Both rows resolve to one agency and neither filed, so neither is loaded. The point
+        # is that all three tables agree about that, rather than one of them keeping a row.
+        rows = [annual_row("NV00201", 0, agency="LAS VEGAS METRO PD", state="NV"),
+                annual_row("NV00201", 0, agency="CITY OF LAS VEGAS DEPT O", state="NV")]
+        report = core.load_annual(self.conn, rows, [], 2025)
+        self.assertEqual(report["written"], 0)
+        self.assertEqual(report["population_written"], 0)
+        self.assertEqual(report["clearance_written"], 0)
+
+    def test_every_table_writes_the_same_number_of_annual_rows(self):
+        rows = [annual_row("NV00201", 12, agency="LAS VEGAS METRO PD", state="NV")]
+        report = core.load_annual(self.conn, rows, [], 2025)
+        self.assertEqual(report["written"], report["population_written"])
+        self.assertEqual(report["written"], report["clearance_written"])
+
+
+class UnknownStateCodes(CoreBuildTestCase):
+    """An alias is a claim that two sources spell one place differently. It needs evidence."""
+
+    def setUp(self):
+        super().setUp()
+        core.load_agencies(self.conn, [
+            agency_row("AM0010100", "dept of public safety, p", "am", "other"),
+            agency_row("AL0012000", "Lipscomb", "al"),
+        ])
+
+    def test_american_samoa_resolves_across_the_spelling(self):
+        # The annual row is filed under State `AS`; its own ORI is `AM00101` and the
+        # directory holds that agency under `AM`. Both sources agree on the identity.
+        row = annual_row("AM00101", 12, agency="DEPT OF PUBLIC SAFETY, P", state="AS",
+                         Actual_Murder="1")
+        report = core.load_annual(self.conn, [row], [], 2025)
+        self.assertEqual(report["written"], 1)
+        self.assertEqual(self.crime("AM0010100", 2025)["murder"], 1)
+        self.assertEqual(report["unknown_state_codes"], {})
+
+    def test_a_code_the_directory_never_uses_is_reported_not_mapped(self):
+        row = annual_row("AL00120", 12, agency="Lipscomb", state="ZQ")
+        report = core.load_annual(self.conn, [row], [], 2025)
+        self.assertEqual(report["unknown_state_codes"], {"ZQ": 1})
+
+    def test_a_numeric_code_carries_no_state_claim(self):
+        # `98` is how federal agencies are filed and `69` appears once. Neither is a state,
+        # so neither is reported as an unknown one nor allowed to contradict anything.
+        row = annual_row("AL00120", 12, agency="Lipscomb", state="98")
+        report = core.load_annual(self.conn, [row], [], 2025)
+        self.assertEqual(report["unknown_state_codes"], {})
+        self.assertEqual(report["written"], 1)
+
+    def test_an_exact_mapping_compares_normalized_states(self):
+        # The mapping says NE and the row says NB, or the other way about. Spelling is not
+        # evidence of a different place, and comparing the raw strings refused the row.
+        core.load_agencies(self.conn, [agency_row("NB0028000", "Omaha", "nb")])
+        mapping = core.OriMapping("NB00280", "NB0028000", "Omaha", "NE")
+        target, how = core.resolve_annual_ori(
+            "NB00280", [mapping], core.build_prefix_index(self.conn),
+            agency_name="Omaha", state="NB", name_index=core.build_prefix_name_index(self.conn))
+        self.assertEqual((target, how), ("NB0028000", core.RESOLVED_EXACT))
+
+
+class ConsolidationAcrossTables(CoreBuildTestCase):
+    """One identity cannot be half-absorbed.
+
+    Every keyed table is checked before anything moves in any of them, and the predecessor's
+    rows are copied before it is deleted. Both rules come from real entries: Pontiac's two
+    ORIs agree on every crime year and disagree on 2015's population, and Indianapolis's
+    `INIPD0000` was listed as an empty duplicate while holding the department's entire
+    staffing history on an ORI whose survivor has none.
+    """
+
+    def setUp(self):
+        super().setUp()
+        core.load_agencies(self.conn, [
+            agency_row("MI631900X", "Pontiac", "mi"),
+            agency_row("MI6367300", "Pontiac", "mi"),
+            agency_row("INIPD0000", "Indianapolis", "in"),
+            agency_row("IN0494900", "Indianapolis", "in"),
+        ])
+
+    def transition(self):
+        return core.Consolidation.from_dict({
+            "predecessor": "MI631900X", "survivor": "MI6367300", "name": "Pontiac", "state": "mi",
+            "scope": core.SCOPE_CRIME_TRANSITION, "evidence": "both listed as Pontiac, MI"})
+
+    def duplicate(self):
+        return core.Consolidation.from_dict({
+            "predecessor": "INIPD0000", "survivor": "IN0494900", "name": "Indianapolis", "state": "in",
+            "scope": core.SCOPE_IDENTITY_DUPLICATE, "evidence": "Unigov identifier for the same department"})
+
+    def test_a_population_conflict_refuses_a_transition_whose_crime_agrees(self):
+        core.load_base_crime(self.conn, [base_row("MI631900X", 1950, murder_total="4")])
+        core.load_base_population(self.conn, [
+            {"id": "MI631900X", "year": 2015, "population": "59888"},
+            {"id": "MI6367300", "year": 2015, "population": "72884"},
+        ])
+        report = core.apply_consolidations(self.conn, [self.transition()])
+        self.assertEqual(report["applied"], 0)
+        self.assertEqual(report["refused"][0]["tables"], {"historical_agency_population": 1})
+        self.assertEqual(self.crime("MI631900X", 1950)["murder"], 4, "the predecessor's crime survived")
+
+    def test_a_staffing_conflict_refuses_a_transition_too(self):
+        core.load_base_staffing(self.conn, [
+            {"id": "MI631900X", "year": 1958, "all_total": "40", "officer_total": "38", "civilian_total": "2"},
+            {"id": "MI6367300", "year": 1958, "all_total": "51", "officer_total": "48", "civilian_total": "3"},
+        ])
+        report = core.apply_consolidations(self.conn, [self.transition()])
+        self.assertEqual(report["applied"], 0)
+        self.assertIn("historical_staffing", report["refused"][0]["tables"])
+
+    def test_a_duplicate_carries_its_staffing_across_before_it_is_deleted(self):
+        core.load_base_staffing(self.conn, [
+            {"id": "INIPD0000", "year": 1975, "all_total": "1200", "officer_total": "1100", "civilian_total": "100"},
+        ])
+        report = core.apply_consolidations(self.conn, [self.duplicate()])
+        self.assertEqual(report["applied"], 1)
+        self.assertEqual(report["survivor_rows_added"]["historical_staffing"], 1)
+        self.assertEqual(self.conn.execute(
+            "SELECT officer_total FROM historical_staffing WHERE ori='IN0494900' AND year=1975"
+        ).fetchone()[0], 1100)
+        self.assertEqual(self.conn.execute(
+            "SELECT COUNT(*) FROM historical_staffing WHERE ori='INIPD0000'").fetchone()[0], 0)
+
+    def test_a_duplicate_whose_rows_the_survivor_already_holds_loses_nothing(self):
+        core.load_base_population(self.conn, [
+            {"id": "INIPD0000", "year": 1975, "population": "745000"},
+            {"id": "IN0494900", "year": 1975, "population": "745000"},
+        ])
+        report = core.apply_consolidations(self.conn, [self.duplicate()])
+        self.assertEqual(report["applied"], 1)
+        self.assertEqual(self.conn.execute(
+            "SELECT population FROM historical_agency_population WHERE ori='IN0494900' AND year=1975"
+        ).fetchone()[0], 745000)
+
+    def test_the_zero_crime_premise_is_still_tested_against_crime(self):
+        # 30 of the 38 entries claim an ORI carries no crime and are wrong about it. Widening
+        # the safety check to the sibling tables must not quietly turn those into copies.
+        core.load_base_crime(self.conn, [base_row("INIPD0000", 1975, murder_total="3")])
+        report = core.apply_consolidations(self.conn, [self.duplicate()])
+        self.assertEqual(report["applied"], 0)
+        self.assertIn("no crime", report["refused"][0]["reason"])
+        self.assertEqual(self.crime("INIPD0000", 1975)["murder"], 3)
+
+
 class OverlappingHistory(CoreBuildTestCase):
     """A transition may only be applied where the two ORIs do not both hold the same years.
 
@@ -689,7 +1052,8 @@ class OfflineSafety(unittest.TestCase):
             source = os.path.join(tmp, "geographies.csv")
             open(source, "w").close()
             args = argparse.Namespace(
-                geographies=source, base_crime=source, annual=None, annual_year=2025,
+                geographies=source, base_crime=source, populations=source, clearance=source,
+                staffing=source, annual=None, annual_year=2025,
                 consolidations=source, ori_map=None, out=os.path.join(tmp, "new.db"),
                 manifest=manifest, reverse_input_order=False,
             )

@@ -80,6 +80,47 @@ _PROPERTY_PARTS = ("burglary", "theft", "motor_vehicle_theft")
 AGENCY_COLUMNS = ("ori", "agency", "state", "type", "region", "division", "size",
                   "latitude", "longitude", "start", "end")
 
+#: The nine clearance columns, in the order the table declares them.
+CLEARANCE_MEASURES = ("murder", "rape", "robbery", "assault", "burglary", "theft",
+                      "motor_vehicle_theft", "violent", "property")
+CLEARANCE_COLUMNS = tuple(f"{measure}_clr" for measure in CLEARANCE_MEASURES)
+
+#: Each clearance measure's (offences, cleared) pair in historical_clearance_1960_2024.csv.
+CLEARANCE_SOURCE_PAIRS = {
+    "murder": ("murder_all_total", "murder_cleared_total"),
+    "rape": ("rape_all_total", "rape_cleared_total"),
+    "robbery": ("robbery_all_total", "robbery_cleared_total"),
+    "assault": ("assault_all_total", "assault_cleared_total"),
+    "burglary": ("burglary_all_total", "burglary_cleared_total"),
+    "theft": ("theft_all_total", "theft_cleared_total"),
+    "motor_vehicle_theft": ("motor_all_total", "motor_cleared_total"),
+    "violent": ("violent_all_total", "violent_cleared_total"),
+    "property": ("property_all_total", "property_cleared_total"),
+}
+
+#: The cleared counterpart of each annual actual-offence column.
+_ANNUAL_CLEARED_COLUMNS = {
+    "murder": "Cleared_Murder",
+    "rape": "Cleared_Rape_Total",
+    "robbery": "Cleared_Robbery_Total",
+    "assault": "Cleared_Aggravated_Assault",
+    "burglary": "Cleared_Burglary_Total",
+    "theft": "Cleared_Larceny_Total",
+    "motor_vehicle_theft": "Cleared_MV_Theft_Total",
+}
+
+STAFFING_MEASURES = ("all_total", "officer_total", "civilian_total")
+
+#: Every ORI-keyed table this pipeline builds, with the fields that make up one record.
+#: Consolidation compares all of them: a predecessor whose staffing disagrees with the
+#: survivor is no more absorbable than one whose crime disagrees.
+RECORD_FIELDS_BY_TABLE = {
+    "historical_agency_crime": RECORD_FIELDS,
+    "historical_agency_population": ("population",),
+    "historical_agency_clearance": CLEARANCE_COLUMNS,
+    "historical_staffing": STAFFING_MEASURES,
+}
+
 RESOLVED_EXACT = "exact_mapping"
 RESOLVED_PADDED = "canonical_padded"
 RESOLVED_PREFIX = "unique_prefix"
@@ -87,11 +128,22 @@ RESOLVED_NEW = "new_agency"
 RESOLVED_NAME = "directory_name_match"
 RESOLVED_PADDED_UNVERIFIED = "canonical_padded_name_unconfirmed"
 
-#: The two states the annual file and Historical spell differently. Named, not a general
-#: loosening of the state check -- the same pair the application already carries in
-#: lib/query-contract.ts. Read as contradictions, they rejected Omaha, Lincoln, Douglas
-#: County, Sarpy County and the Guam Police Department outright.
-STATE_ALIASES = {"NE": "NB", "GU": "GM"}
+#: The three states the annual file and Historical spell differently. Named one at a time,
+#: not a general loosening of the state check: each entry is a spelling the sources
+#: themselves show, never a guess about what a code might mean.
+#:
+#:   NE -> NB  Nebraska. Read as a contradiction it rejected Omaha, Lincoln, Douglas County
+#:             and Sarpy County outright. The application already carries this pair in
+#:             lib/query-contract.ts.
+#:   GU -> GM  Guam. Same, and it rejected the Guam Police Department.
+#:   AS -> AM  American Samoa. The annual row is filed under State `AS`, but its own ORI is
+#:             `AM00101` and geographies.csv holds exactly one agency in `AM`,
+#:             `AM0010100 dept of public safety, p` -- the same department. Both sources
+#:             agree on the identity and disagree only on how the territory is abbreviated.
+#:
+#: Anything not listed here is left alone. A two-letter code the directory does not use is
+#: reported as unknown rather than mapped onto whatever looks closest.
+STATE_ALIASES = {"NE": "NB", "GU": "GM", "AS": "AM"}
 
 SCOPE_CRIME_TRANSITION = "crime_transition"
 SCOPE_IDENTITY_DUPLICATE = "identity_duplicate"
@@ -233,6 +285,34 @@ def create_core_tables(conn):
             motor_vehicle_theft  INTEGER,
             PRIMARY KEY (ori, year)
         );
+        CREATE TABLE IF NOT EXISTS historical_agency_population (
+            ori        TEXT,
+            year       INTEGER,
+            population INTEGER,
+            PRIMARY KEY (ori, year)
+        );
+        CREATE TABLE IF NOT EXISTS historical_agency_clearance (
+            ori                    TEXT,
+            year                   INTEGER,
+            murder_clr             REAL,
+            rape_clr               REAL,
+            robbery_clr            REAL,
+            assault_clr            REAL,
+            burglary_clr           REAL,
+            theft_clr              REAL,
+            motor_vehicle_theft_clr REAL,
+            violent_clr            REAL,
+            property_clr           REAL,
+            PRIMARY KEY (ori, year)
+        );
+        CREATE TABLE IF NOT EXISTS historical_staffing (
+            ori            TEXT,
+            year           INTEGER,
+            all_total      INTEGER,
+            officer_total  INTEGER,
+            civilian_total INTEGER,
+            PRIMARY KEY (ori, year)
+        );
         """
     )
 
@@ -285,13 +365,43 @@ def assert_distinct_outputs(inputs, outputs):
 
 # ── base era ─────────────────────────────────────────────────────────────────────────
 
+def is_pseudo_directory_row(row):
+    """True for a directory row that names a state or the nation rather than an agency.
+
+    `geographies.csv` carries 53 of these -- `us United States` typed `nation`, and 52
+    two-letter rows like `ak Alaska` typed `state`. All 53 share the same three marks: an
+    identifier that is not nine characters, no state, and a type of `state` or `nation`.
+    Requiring all three means a real agency with an odd identifier is not swept up by
+    accident, and an unfamiliar short identifier stops the build instead of being assumed
+    to be a state.
+    """
+    ori = (row.get("id") or row.get("ori") or "").strip()
+    state = (row.get("state") or "").strip()
+    kind = (row.get("type") or "").strip().lower()
+    return len(ori) != 9 and not state and kind in ("state", "nation")
+
+
 def load_agencies(conn, rows):
-    """Load the agency directory from its source rows. Returns how many were written."""
+    """Load the agency directory, keeping agencies and setting the pseudo-rows aside.
+
+    Returns the count written and the identifiers that were withheld, because every other
+    table has to withhold the same ones or the five tables stop describing the same world.
+
+    Names arrive exactly as the source spells them. The importer this replaces rewrote
+    3,151 county names -- turning `Jefferson` into `Jefferson County` and
+    `Baltimore County Police Department` into `Baltimore County` -- so the database held
+    names no source ever stated. Whether the application can still find a county by name is
+    a question about the application, not a licence to edit the data.
+    """
     payload = []
     seen = {}
+    pseudo = {}
     for row in rows:
         ori = (row.get("id") or row.get("ori") or "").strip()
         if not ori:
+            continue
+        if is_pseudo_directory_row(row):
+            pseudo[ori] = (row.get("name") or row.get("agency") or "").strip()
             continue
         record = (
             ori,
@@ -316,7 +426,7 @@ def load_agencies(conn, rows):
         ),
         sorted(seen.values()),
     )
-    return len(seen)
+    return {"written": len(seen), "pseudo_identifiers": pseudo}
 
 
 def _optional_float(raw):
@@ -331,14 +441,34 @@ def _optional_float(raw):
         return None
 
 
-def load_base_crime(conn, rows):
+def assert_known_identifier(ori, pseudo, source):
+    """Every identifier is either an agency's or one the directory explained as a pseudo-row.
+
+    A third kind would mean the sources hold something this pipeline has no account of, and
+    writing it anyway is how unexplained rows get inherited from one rebuild to the next.
+    """
+    if ori in pseudo:
+        return False
+    if len(ori) != 9:
+        raise BuildError(
+            f"{source}: identifier {ori!r} is not a nine-character ORI and the agency "
+            "directory does not list it as a state or national pseudo-row"
+        )
+    return True
+
+
+def load_base_crime(conn, rows, pseudo=()):
     """Load the 1930-2024 annual series, preserving zero and blank as they arrive."""
     staged = {}
     read = 0
+    skipped_pseudo = 0
     for row in rows:
         ori = (row.get("id") or row.get("ori") or "").strip()
         year_raw = str(row.get("year") or "").strip()
         if not ori or not year_raw:
+            continue
+        if not assert_known_identifier(ori, pseudo, "historical crime"):
+            skipped_pseudo += 1
             continue
         read += 1
         year = int(float(year_raw))
@@ -353,7 +483,89 @@ def load_base_crime(conn, rows):
         "VALUES ({})".format(", ".join(CRIME_MEASURES), ", ".join("?" * (len(CRIME_MEASURES) + 3))),
         [staged[key] for key in sorted(staged)],
     )
-    return {"read": read, "written": len(staged), "duplicates_identical": read - len(staged)}
+    return {"read": read, "written": len(staged), "duplicates_identical": read - len(staged),
+            "pseudo_rows_excluded": skipped_pseudo}
+
+
+def _load_keyed_table(conn, rows, table, columns, build_record, pseudo, source_label):
+    """Load one ORI-and-year keyed table from its source rows.
+
+    Shared by population, clearance and staffing because the three differ only in which
+    values they carry: the identifier rules, the duplicate rule and the write are the same,
+    and having them the same is what lets the five tables agree about who exists.
+    """
+    staged = {}
+    read = 0
+    skipped_pseudo = 0
+    for row in rows:
+        ori = (row.get("id") or row.get("ori") or "").strip()
+        year_raw = str(row.get("year") or "").strip()
+        if not ori or not year_raw:
+            continue
+        if not assert_known_identifier(ori, pseudo, source_label):
+            skipped_pseudo += 1
+            continue
+        read += 1
+        year = int(float(year_raw))
+        record = (ori, year) + tuple(build_record(row))
+        key = (ori, year)
+        if key in staged and staged[key] != record:
+            raise BuildError(f"{source_label}: {ori} {year} appears twice with different values")
+        staged[key] = record
+    conn.executemany(
+        "INSERT OR REPLACE INTO {} (ori, year, {}) VALUES ({})".format(
+            table, ", ".join(columns), ", ".join("?" * (len(columns) + 2))
+        ),
+        [staged[key] for key in sorted(staged)],
+    )
+    return {"read": read, "written": len(staged), "duplicates_identical": read - len(staged),
+            "pseudo_rows_excluded": skipped_pseudo}
+
+
+def load_base_population(conn, rows, pseudo=()):
+    """Load the agency population series. A population of zero is a stated population."""
+    return _load_keyed_table(
+        conn, rows, "historical_agency_population", ("population",),
+        lambda row: (parse_measure(row.get("population")),),
+        pseudo, "historical population",
+    )
+
+
+def clearance_rate(offences, cleared):
+    """The share of reported offences that were cleared, as a percentage, or nothing.
+
+    A denominator of zero or nothing means there is no rate to state: an agency that
+    reported no burglaries did not fail to clear them. But offences with no clearances is a
+    measured outcome -- zero per cent -- and the importer this replaces threw exactly that
+    away, blanking every measure on any row where all nine rates came out zero. An agency
+    that solved none of what it reported was recorded as having reported nothing.
+    """
+    if offences is None or cleared is None or offences <= 0:
+        return None
+    return round(cleared / offences * 100.0, 1)
+
+
+def load_base_clearance(conn, rows, pseudo=()):
+    """Load the 1960-2024 clearance series, computing each rate from its own pair."""
+    def record(row):
+        return tuple(
+            clearance_rate(parse_measure(row.get(offences)), parse_measure(row.get(cleared)))
+            for offences, cleared in
+            (CLEARANCE_SOURCE_PAIRS[measure] for measure in CLEARANCE_MEASURES)
+        )
+    return _load_keyed_table(
+        conn, rows, "historical_agency_clearance", CLEARANCE_COLUMNS,
+        record, pseudo, "historical clearance",
+    )
+
+
+def load_base_staffing(conn, rows, pseudo=()):
+    """Load the 1930-2025 staffing series. Zero employees is a count, not a silence."""
+    return _load_keyed_table(
+        conn, rows, "historical_staffing", STAFFING_MEASURES,
+        lambda row: tuple(parse_measure(row.get(column)) for column in STAFFING_MEASURES),
+        pseudo, "historical staffing",
+    )
 
 
 # ── identity ─────────────────────────────────────────────────────────────────────────
@@ -442,9 +654,13 @@ def resolve_annual_ori(ori7, exact_map, index, agency_name=None, state=None, nam
             # The mapping file is checked against the directory, but that says nothing about
             # this row. A row carrying a mapped ORI under another name or another state is not
             # the agency the mapping is about, and filing it there would be an invention.
+            # Normalized on both sides, like every other state comparison in this module.
+            # Spelling is not evidence: a mapping that says NE and a row that says NB are
+            # the same state, and comparing the raw strings would have called that a
+            # contradiction and refused the row.
             row_state = (state or "").strip()
             if len(row_state) == 2 and row_state.isalpha() \
-                    and row_state.lower() != mapping.state.lower():
+                    and normalize_state(row_state) != normalize_state(mapping.state):
                 raise AmbiguousOri(
                     f"{ori7} is mapped to {mapping.target} in {mapping.state}, but this row is "
                     f"filed in {row_state}"
@@ -507,12 +723,21 @@ def resolve_annual_ori(ori7, exact_map, index, agency_name=None, state=None, nam
 # ── annual era ───────────────────────────────────────────────────────────────────────
 
 def load_annual(conn, rows, exact_map, year, agency_type_for_new=None):
-    """Load one annual RETA year.
+    """Load one annual RETA year into crime, population and clearance together.
 
     Reporting status comes from `Months_Reported` and from nothing else. Zero months means the
     measures are missing; one or more months means every supplied value is kept, including a
     year of zeroes. The row is written either way, so an agency-year with nothing to report
     looks the same here as it does in the base era.
+
+    All three tables are written from one pass over one set of resolved identities, rather
+    than by three importers each deciding for itself which agency a seven-character ORI meant.
+    Population and clearance are on this row already; taking them from anywhere else is how a
+    restored agency ends up with crime figures and no population to divide them by.
+
+    Staffing is deliberately absent: `historical_staffing_1930_2025.csv` already covers this
+    year, so there is nothing here to add and inventing an annual staffing path would create a
+    second writer for a table that has one.
     """
     index = build_prefix_index(conn)
     excluded = {"ambiguous_ori": 0, "ori_collision": 0, "unusable_row": 0}
@@ -523,11 +748,23 @@ def load_annual(conn, rows, exact_map, year, agency_type_for_new=None):
                    RESOLVED_PADDED_UNVERIFIED: 0}
 
     name_index = build_prefix_name_index(conn)
+    known_states = {normalize_state(s) for (s,) in conn.execute(
+        "SELECT DISTINCT state FROM historical_agency WHERE state IS NOT NULL AND TRIM(state) <> ''"
+    )}
+    unknown_states = {}
     for row in rows:
         ori7 = (row.get("ORI") or "").strip()
         if not ori7:
             excluded["unusable_row"] += 1
             continue
+        # A two-letter code the directory has never used is reported, not mapped onto
+        # whatever looks closest. Naming it is the point: an alias is a claim about two
+        # sources spelling one place differently, and that claim needs evidence.
+        stated_code = (row.get("State") or "").strip()
+        if len(stated_code) == 2 and stated_code.isalpha() \
+                and normalize_state(stated_code) not in known_states:
+            unknown_states.setdefault(stated_code.upper(), 0)
+            unknown_states[stated_code.upper()] += 1
         # A file that is not the year it was asked for would silently overwrite another year.
         row_year = (str(row.get("Year") or "").strip() or None)
         if row_year is not None and int(float(row_year)) != int(year):
@@ -598,6 +835,8 @@ def load_annual(conn, rows, exact_map, year, agency_type_for_new=None):
 
     new_agencies = []
     staged = []
+    staged_population = []
+    staged_clearance = []
     for target in sorted(by_target):
         entries = by_target[target]
         if not entries:
@@ -613,9 +852,15 @@ def load_annual(conn, rows, exact_map, year, agency_type_for_new=None):
         ori7, how, row = entries[0]
         resolutions[how] += 1
         if how == RESOLVED_NEW:
+            # Normalized, and lower-cased to match the directory's own spelling. An agency
+            # first seen in the annual file must be filed under the state code the rest of
+            # the directory uses, or the lookups that scope by state will not find it.
             new_agencies.append((target, (row.get("Agency_Name") or "").strip(),
-                                 (row.get("State") or "").strip().lower(), agency_type_for_new))
+                                 normalize_state(row.get("State")).lower() or None,
+                                 agency_type_for_new))
         staged.append(_annual_record(target, year, row))
+        staged_population.append((target, year, parse_measure(row.get("Population"))))
+        staged_clearance.append(_annual_clearance_record(target, year, row))
 
     if new_agencies:
         conn.executemany(
@@ -627,12 +872,25 @@ def load_annual(conn, rows, exact_map, year, agency_type_for_new=None):
         "VALUES ({})".format(", ".join(CRIME_MEASURES), ", ".join("?" * (len(CRIME_MEASURES) + 3))),
         sorted(staged),
     )
+    conn.executemany(
+        "INSERT OR REPLACE INTO historical_agency_population (ori, year, population) VALUES (?, ?, ?)",
+        sorted(staged_population),
+    )
+    conn.executemany(
+        "INSERT OR REPLACE INTO historical_agency_clearance (ori, year, {}) VALUES ({})".format(
+            ", ".join(CLEARANCE_COLUMNS), ", ".join("?" * (len(CLEARANCE_COLUMNS) + 2))
+        ),
+        sorted(staged_clearance),
+    )
     return {
         "written": len(staged),
+        "population_written": len(staged_population),
+        "clearance_written": len(staged_clearance),
         "new_agencies": len(new_agencies),
         "excluded": excluded,
         "resolutions": resolutions,
         "ambiguities": sorted(ambiguities),
+        "unknown_state_codes": dict(sorted(unknown_states.items())),
     }
 
 
@@ -650,6 +908,30 @@ def _annual_record(ori, year, row):
     values["violent"] = _sum_or_none(values, _VIOLENT_PARTS)
     values["property"] = _sum_or_none(values, _PROPERTY_PARTS)
     return (ori, year, population) + tuple(values[measure] for measure in CRIME_MEASURES)
+
+
+def _annual_clearance_record(ori, year, row):
+    """One year of clearance rates from an annual row, on the same terms as the base era.
+
+    The annual file states seven offence counts and their seven cleared counts. Violent and
+    property are not on it, so they are summed from their parts and only when every part is
+    a number -- the same rule the crime side uses, so a total is never a partial total
+    wearing a whole one's name.
+    """
+    months = parse_measure(row.get("Months_Reported")) or 0
+    if months <= 0:
+        return (ori, year) + (None,) * len(CLEARANCE_COLUMNS)
+
+    offences, cleared = {}, {}
+    for column, measure in _ANNUAL_TO_MEASURE.items():
+        offences[measure] = parse_measure(row.get(column))
+        cleared[measure] = parse_measure(row.get(_ANNUAL_CLEARED_COLUMNS[measure]))
+    for total, parts in (("violent", _VIOLENT_PARTS), ("property", _PROPERTY_PARTS)):
+        offences[total] = _sum_or_none(offences, parts)
+        cleared[total] = _sum_or_none(cleared, parts)
+    return (ori, year) + tuple(
+        clearance_rate(offences[measure], cleared[measure]) for measure in CLEARANCE_MEASURES
+    )
 
 
 def _sum_or_none(values, parts):
@@ -671,7 +953,9 @@ def apply_consolidations(conn, entries):
     because applying it would destroy history the source still holds.
     """
     applied, refused = 0, []
-    rows_removed, agencies_removed, rows_copied = 0, 0, 0
+    agencies_removed = 0
+    rows_copied = {table: 0 for table in RECORD_FIELDS_BY_TABLE}
+    rows_removed = {table: 0 for table in RECORD_FIELDS_BY_TABLE}
     for entry in entries:
         predecessor = conn.execute(
             "SELECT agency, state FROM historical_agency WHERE ori = ?", (entry.predecessor,)
@@ -692,7 +976,7 @@ def apply_consolidations(conn, entries):
             )
 
         for label, row in (("predecessor", predecessor), ("survivor", survivor)):
-            if (row[1] or "").strip().lower() != entry.state.strip().lower():
+            if normalize_state(row[1]) != normalize_state(entry.state):
                 raise BuildError(
                     f"{entry.predecessor} -> {entry.survivor}: entry says state {entry.state!r} "
                     f"but the {label} is in {row[1]!r}"
@@ -703,66 +987,90 @@ def apply_consolidations(conn, entries):
                 f"directory says {predecessor[0]!r} and {survivor[0]!r}"
             )
 
-        carried = conn.execute(
-            "SELECT COUNT(*) FROM historical_agency_crime WHERE ori = ? AND ({})".format(
-                " OR ".join(f"{m} IS NOT NULL" for m in RECORD_FIELDS)
-            ),
-            (entry.predecessor,),
-        ).fetchone()[0]
-
-        if entry.scope == SCOPE_IDENTITY_DUPLICATE and carried:
-            refused.append({
-                "predecessor": entry.predecessor,
-                "survivor": entry.survivor,
-                "reason": f"listed as a duplicate carrying no crime, but the source holds "
-                          f"{carried} agency-year(s) with crime values",
-            })
-            continue
-
-        if entry.scope == SCOPE_CRIME_TRANSITION:
-            # Both ORIs holding the same year, with different figures, means this is not one
-            # agency's history split in two. Copying with INSERT OR IGNORE and then deleting
-            # the predecessor threw the losing side away silently -- 48 years of Allegheny
-            # County in the real sources. Neither side is safe to discard, so nothing moves.
-            # Field by field, not field against row: a conflict is one field the predecessor
-            # fills where the survivor holds something else, or nothing. Comparing "holds any
-            # value" against "any field differs" flagged fields the predecessor left blank.
-            conflicts = conn.execute(
-                "SELECT p.year FROM historical_agency_crime p JOIN historical_agency_crime s "
-                "ON s.ori = ? AND s.year = p.year WHERE p.ori = ? AND ({}) "
-                "ORDER BY p.year".format(
-                    " OR ".join(
-                        f"(p.{f} IS NOT NULL AND (s.{f} IS NULL OR s.{f} <> p.{f}))"
-                        for f in RECORD_FIELDS
-                    ),
+        # An identity-duplicate entry claims the predecessor never carried crime. That claim
+        # is about crime, so it is tested against crime: 30 of the 38 entries turn out to be
+        # false, and applying one would delete history the source still holds.
+        if entry.scope == SCOPE_IDENTITY_DUPLICATE:
+            carried = conn.execute(
+                "SELECT COUNT(*) FROM historical_agency_crime WHERE ori = ? AND ({})".format(
+                    " OR ".join(f"{f} IS NOT NULL" for f in RECORD_FIELDS)
                 ),
-                (entry.survivor, entry.predecessor),
-            ).fetchall()
-            if conflicts:
-                years = [str(y[0]) for y in conflicts]
+                (entry.predecessor,),
+            ).fetchone()[0]
+            if carried:
                 refused.append({
                     "predecessor": entry.predecessor,
                     "survivor": entry.survivor,
-                    "reason": f"both agencies hold different figures for {len(years)} overlapping "
-                              f"year(s) ({years[0]}-{years[-1]}); neither history can be discarded",
+                    "reason": f"listed as a duplicate carrying no crime, but the source holds "
+                              f"{carried} agency-year(s) with crime values",
                 })
                 continue
-            rows_copied += conn.execute(
-                "INSERT OR IGNORE INTO historical_agency_crime "
-                "(ori, year, population, {0}) SELECT ?, year, population, {0} "
-                "FROM historical_agency_crime WHERE ori = ? ORDER BY year".format(", ".join(CRIME_MEASURES)),
+
+        # Both ORIs holding the same year, with different figures, means this is not one
+        # agency's history split in two. Copying with INSERT OR IGNORE and then deleting the
+        # predecessor threw the losing side away silently -- 48 years of Allegheny County in
+        # the real sources. Neither side is safe to discard, so nothing moves.
+        # Field by field, not field against row: a conflict is one field the predecessor
+        # fills where the survivor holds something else, or nothing. Comparing "holds any
+        # value" against "any field differs" flagged fields the predecessor left blank.
+        #
+        # Checked in every keyed table before anything moves in any of them, and for both
+        # scopes. One identity cannot be half-absorbed: if population disagrees where crime
+        # does not, moving crime alone would leave the two tables describing different
+        # agencies, and a rate built by joining them would be nonsense assembled from real
+        # numbers. Pontiac is the case -- its two ORIs agree on every crime year and disagree
+        # on 2015's population, 59,888 against 72,884.
+        conflicts = {}
+        for table, fields in sorted(RECORD_FIELDS_BY_TABLE.items()):
+            years = [str(year) for (year,) in conn.execute(
+                "SELECT p.year FROM {0} p JOIN {0} s ON s.ori = ? AND s.year = p.year "
+                "WHERE p.ori = ? AND ({1}) ORDER BY p.year".format(
+                    table,
+                    " OR ".join(
+                        f"(p.{f} IS NOT NULL AND (s.{f} IS NULL OR s.{f} <> p.{f}))"
+                        for f in fields
+                    ),
+                ),
+                (entry.survivor, entry.predecessor),
+            )]
+            if years:
+                conflicts[table] = years
+        if conflicts:
+            refused.append({
+                "predecessor": entry.predecessor,
+                "survivor": entry.survivor,
+                "reason": "both agencies hold different figures for overlapping year(s); "
+                          "neither history can be discarded -- "
+                          + "; ".join(f"{table}: {len(years)} year(s) {years[0]}-{years[-1]}"
+                                      for table, years in sorted(conflicts.items())),
+                "tables": {table: len(years) for table, years in sorted(conflicts.items())},
+            })
+            continue
+
+        # Copy first, in every table, then delete. The predecessor's rows are carried across
+        # whatever the entry calls the relationship, because the deletion is the same either
+        # way and so is what would otherwise be lost. Indianapolis is why: `INIPD0000` was
+        # listed as an empty duplicate, and it holds the department's entire staffing history,
+        # 1960-2025, on an ORI whose survivor has none. Deleting it without copying would have
+        # erased sixty-five years of officer counts to tidy up an identifier.
+        for table, fields in sorted(RECORD_FIELDS_BY_TABLE.items()):
+            columns = ", ".join(fields)
+            rows_copied[table] += conn.execute(
+                "INSERT OR IGNORE INTO {0} (ori, year, {1}) "
+                "SELECT ?, year, {1} FROM {0} WHERE ori = ? ORDER BY year".format(table, columns),
                 (entry.survivor, entry.predecessor),
             ).rowcount
-        rows_removed += conn.execute(
-            "DELETE FROM historical_agency_crime WHERE ori = ?", (entry.predecessor,)).rowcount
+        for table in sorted(RECORD_FIELDS_BY_TABLE):
+            rows_removed[table] += conn.execute(
+                f"DELETE FROM {table} WHERE ori = ?", (entry.predecessor,)).rowcount
         agencies_removed += conn.execute(
             "DELETE FROM historical_agency WHERE ori = ?", (entry.predecessor,)).rowcount
         applied += 1
 
     return {"applied": applied,
             "refused": sorted(refused, key=lambda r: r["predecessor"]),
-            "survivor_rows_added": rows_copied,
-            "predecessor_rows_removed": rows_removed,
+            "survivor_rows_added": dict(sorted(rows_copied.items())),
+            "predecessor_rows_removed": dict(sorted(rows_removed.items())),
             "predecessor_agencies_removed": agencies_removed}
 
 
@@ -777,7 +1085,15 @@ def load_consolidations(path):
 _DIGEST_ORDER = {
     "historical_agency": "ori",
     "historical_agency_crime": "ori, year",
+    "historical_agency_population": "ori, year",
+    "historical_agency_clearance": "ori, year",
+    "historical_staffing": "ori, year",
 }
+
+#: Every table a complete build produces. Naming them in one place is what stops a later
+#: change from adding a table the manifest, the digests and the comparison never hear about.
+BUILT_TABLES = ("historical_agency", "historical_agency_crime", "historical_agency_population",
+                "historical_agency_clearance", "historical_staffing")
 
 
 def table_digest(conn, table):
