@@ -20,7 +20,16 @@ import { classifyCurrentTrendsSqlAbsence } from "./current-trends-sql-absence";
  * that other places do have rows for that period, and the offense is only blamed once we
  * have confirmed the place has other rows for the same period.
  *
- * The second is that the query is read, not parsed. Only one shape is recognised: a
+ * The second is about identity, and it is where the first version was wrong three times.
+ * The agency directory is not the authority on who is carried -- the importer keeps
+ * monthly records whose ORI has no directory entry -- so both are consulted. Every place
+ * identifier the query supplies has to agree; an ORI used to win and the name beside it
+ * was dropped, which explained one place's silence as though it were another's. And a
+ * sentence naming a place has to hold for every record of that place, not for whichever
+ * ORI the query happened to name: Pontiac files under a replacement ORI now, and a check
+ * scoped to one of its two ORIs reports a month it did file as a month it missed.
+ *
+ * The third is that the query is read, not parsed. Only one shape is recognised: a
  * single-table read of the monthly table whose WHERE clause is AND-joined equality tests
  * on agency, state, ORI, offense, year and month. Joins, subqueries, ranges, functions,
  * OR, IN, LIKE, HAVING, aliases and any filter not on that list end the reading, and the
@@ -207,42 +216,85 @@ function periodIsOutsideCoverage(coverage: Coverage, year: number, month: number
   return requested < coverage.lo || requested > coverage.hi;
 }
 
-type CanonicalPlace = { ori: string; agency: string; state: string };
+type PlaceRecord = { ori: string; agency: string; state: string };
+type Predicate = { clause: string; params: string[] };
 
 /**
- * Establish the place named by the filters, if one is named at all.
+ * Who Current Trends carries, as far as identity goes.
  *
- * `missing` means the canonical agency list has no such place -- the one thing here that
- * may be stated as fact. `ambiguous` means the name matches more than one place and we
- * decline rather than pick.
+ * The agency directory alone is not the authority. The importer deliberately keeps
+ * monthly records whose ORI has no directory entry -- Pontiac files under MI6367300
+ * while the directory still lists MI631900X -- so a place present only in the monthly
+ * records is carried, and reading the directory alone called it uncarried. Both are
+ * consulted, and a name that spans two ORIs yields both of them.
  */
-function resolvePlace(
-  db: Database.Database,
-  filters: RecognizedFilters,
-): { kind: "none" } | { kind: "found"; place: CanonicalPlace } | { kind: "missing" } | { kind: "ambiguous" } {
-  if (filters.ori !== null) {
-    const rows = db.prepare("SELECT ori, agency, state FROM agencies WHERE upper(ori) = upper(?) LIMIT 2")
-      .all(filters.ori) as CanonicalPlace[];
-    if (rows.length === 0) return { kind: "missing" };
-    if (rows.length > 1) return { kind: "ambiguous" };
-    return { kind: "found", place: rows[0] };
-  }
+function lookupPlaces(db: Database.Database, predicate: Predicate): PlaceRecord[] {
+  // The clause is assembled from fixed strings below; every value is bound.
+  return db.prepare(`
+    SELECT DISTINCT ori, agency, state FROM (
+      SELECT ori, agency, state FROM agencies
+      UNION ALL
+      SELECT ori, agency, state FROM agency_monthly
+    ) WHERE ${predicate.clause}
+  `).all(...predicate.params) as PlaceRecord[];
+}
 
+/**
+ * The query's own place filters, as a predicate, plus the identity claims it makes.
+ *
+ * `all` is every place filter the query used, and it is what later row counts are scoped
+ * by, so those counts see exactly the records the query saw -- including records under a
+ * replacement ORI that a canonical lookup would have missed.
+ *
+ * `units` are the independent claims about which place this is: an ORI, and a name (which
+ * only identifies a place together with its state, when the query gave one). They exist to
+ * tell two different empty outcomes apart. If no unit matches anything, nothing in Current
+ * Trends answers to any identifier the query gave, and we may say the place is not carried.
+ * If some unit matches but their conjunction does not, the identifiers contradict each
+ * other; which one is wrong is not knowable, so no reason is offered.
+ */
+function placeFilters(filters: RecognizedFilters): { all: Predicate | null; units: Predicate[] } {
+  const supplied: Predicate[] = [];
+  if (filters.ori !== null) supplied.push({ clause: "upper(ori) = upper(?)", params: [filters.ori] });
+  if (filters.agency !== null) supplied.push({ clause: "upper(agency) = upper(?)", params: [filters.agency] });
+  if (filters.state !== null) supplied.push({ clause: "upper(state) = upper(?)", params: [filters.state] });
+  if (supplied.length === 0) return { all: null, units: [] };
+
+  const units: Predicate[] = [];
+  if (filters.ori !== null) units.push({ clause: "upper(ori) = upper(?)", params: [filters.ori] });
   if (filters.agency !== null) {
-    const rows = (filters.state === null
-      ? db.prepare("SELECT ori, agency, state FROM agencies WHERE upper(agency) = upper(?) LIMIT 2").all(filters.agency)
-      : db.prepare("SELECT ori, agency, state FROM agencies WHERE upper(agency) = upper(?) AND upper(state) = upper(?) LIMIT 2")
-          .all(filters.agency, filters.state)) as CanonicalPlace[];
-    if (rows.length === 0) return { kind: "missing" };
-    if (rows.length > 1) return { kind: "ambiguous" };
-    return { kind: "found", place: rows[0] };
+    units.push(filters.state === null
+      ? { clause: "upper(agency) = upper(?)", params: [filters.agency] }
+      : { clause: "upper(agency) = upper(?) AND upper(state) = upper(?)", params: [filters.agency, filters.state] });
+  }
+  if (units.length === 0 && filters.state !== null) {
+    units.push({ clause: "upper(state) = upper(?)", params: [filters.state] });
   }
 
-  if (filters.state !== null) {
-    const held = db.prepare("SELECT 1 FROM agencies WHERE upper(state) = upper(?) LIMIT 1").get(filters.state);
-    if (!held) return { kind: "missing" };
-  }
-  return { kind: "none" };
+  return {
+    all: {
+      clause: supplied.map((part) => `(${part.clause})`).join(" AND "),
+      params: supplied.flatMap((part) => part.params),
+    },
+    units,
+  };
+}
+
+/** How many monthly records a place has for a period, optionally narrowed to one offense. */
+function countRows(
+  db: Database.Database,
+  place: Predicate,
+  year: number,
+  month: number | null,
+  offense: string | null,
+): number {
+  const clauses = [`(${place.clause})`, "year = ?"];
+  const params: (string | number)[] = [...place.params, year];
+  if (month !== null) { clauses.push("month = ?"); params.push(month); }
+  if (offense !== null) { clauses.push("upper(offense) = upper(?)"); params.push(offense); }
+  const row = db.prepare(`SELECT COUNT(*) AS n FROM agency_monthly WHERE ${clauses.join(" AND ")}`)
+    .get(...params) as { n: number };
+  return Number(row.n);
 }
 
 function requestedPlaceLabel(filters: RecognizedFilters): string {
@@ -275,15 +327,29 @@ export function explainEmptyCurrentTrendsResult(
   if (!filters) return cannotDetermine("the query is not one of the shapes this check can read");
 
   try {
-    const place = resolvePlace(db, filters);
-    if (place.kind === "ambiguous") return cannotDetermine("the query names more than one place");
-    if (place.kind === "missing") {
-      const label = requestedPlaceLabel(filters);
-      return stated(
-        "place_not_covered",
-        `Current Trends does not include ${label}.`,
-        `no canonical agency matches ${label}`,
-      );
+    const { all: placeWhere, units } = placeFilters(filters);
+    let placeIdentity: { agency: string; state: string } | null = null;
+
+    if (placeWhere) {
+      const matches = lookupPlaces(db, placeWhere);
+      if (matches.length === 0) {
+        // Nothing answers to every identifier at once. Whether that is a place we do not
+        // carry or a query whose identifiers disagree depends on the identifiers alone.
+        const anyUnitMatches = units.some((unit) => lookupPlaces(db, unit).length > 0);
+        if (anyUnitMatches) {
+          return cannotDetermine("the place filters in the query do not agree with each other");
+        }
+        const requested = requestedPlaceLabel(filters);
+        return stated(
+          "place_not_covered",
+          `Current Trends does not include ${requested}.`,
+          `nothing carried matches ${requested}`,
+        );
+      }
+      // A name that spans two ORIs is still one place to name, so long as every record
+      // agrees on what to call it.
+      const names = new Set(matches.map((match) => `${match.agency}|${match.state}`));
+      if (names.size === 1) placeIdentity = { agency: matches[0].agency, state: matches[0].state };
     }
 
     if (filters.year === null) return cannotDetermine("the query does not fix a single year");
@@ -306,37 +372,44 @@ export function explainEmptyCurrentTrendsResult(
       );
     }
 
-    if (place.kind !== "found") return cannotDetermine("the query does not fix a single place");
-    const { ori, agency, state } = place.place;
-    const placeLabel = `${agency}, ${state}`;
+    // Naming one place requires that the query named one: a state on its own is a scope,
+    // and a name every record does not agree on cannot be put in a sentence.
+    const identifiesOnePlace = filters.ori !== null || filters.agency !== null;
+    if (!identifiesOnePlace || placeIdentity === null) {
+      return cannotDetermine("the query does not name one place to report on");
+    }
+    const placeLabel = `${placeIdentity.agency}, ${placeIdentity.state}`;
     const period = periodLabel(filters.year, filters.month);
 
-    const periodRows = filters.month === null
-      ? db.prepare("SELECT COUNT(*) AS n FROM agency_monthly WHERE ori = ? AND year = ?").get(ori, filters.year)
-      : db.prepare("SELECT COUNT(*) AS n FROM agency_monthly WHERE ori = ? AND year = ? AND month = ?")
-          .get(ori, filters.year, filters.month);
-    if (Number((periodRows as { n: number }).n) === 0) {
+    // Counted over the whole place, not over the query's filters. A sentence naming
+    // Pontiac has to be true of every Pontiac record: a query scoped to the replacement
+    // ORI returns nothing for April, but Pontiac did file April under the ORI it replaced,
+    // and "Pontiac filed no report for April" would be false. When the place did file what
+    // was asked for and the query still came back empty, the query was narrower than the
+    // place it named, and no reason is offered.
+    const wholePlace: Predicate = {
+      clause: "upper(agency) = upper(?) AND upper(state) = upper(?)",
+      params: [placeIdentity.agency, placeIdentity.state],
+    };
+    const periodRows = countRows(db, wholePlace, filters.year, filters.month, null);
+    if (periodRows === 0) {
       return stated(
         "no_report_for_period",
         `Current Trends has no report from ${placeLabel} for ${period}. A missing report is not the same as a count of zero.`,
-        `${ori} has no row for ${period}`,
+        `nothing matching the query's place filters has a row for ${period}`,
       );
     }
 
     // Only now, with other rows for the same place and period confirmed present, can the
     // gap be attributed to the offense that was asked about.
     if (filters.offense === null) return cannotDetermine("the query does not fix a single offense");
-    const offenseRows = filters.month === null
-      ? db.prepare("SELECT COUNT(*) AS n FROM agency_monthly WHERE ori = ? AND year = ? AND upper(offense) = upper(?)")
-          .get(ori, filters.year, filters.offense)
-      : db.prepare("SELECT COUNT(*) AS n FROM agency_monthly WHERE ori = ? AND year = ? AND month = ? AND upper(offense) = upper(?)")
-          .get(ori, filters.year, filters.month, filters.offense);
-    if (Number((offenseRows as { n: number }).n) === 0) {
+    const offenseRows = countRows(db, wholePlace, filters.year, filters.month, filters.offense);
+    if (offenseRows === 0) {
       const offense = safeLabel(filters.offense, 40).toLowerCase() || "requested";
       return stated(
         "offense_not_reported",
         `Current Trends has no ${offense} value from ${placeLabel} for ${period}. A missing value is not the same as a count of zero.`,
-        `${ori} filed for ${period} but supplied no ${offense} figure`,
+        `${placeLabel} filed for ${period} but supplied no ${offense} figure`,
       );
     }
 
