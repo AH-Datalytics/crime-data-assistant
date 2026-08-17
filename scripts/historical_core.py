@@ -441,34 +441,137 @@ def _optional_float(raw):
         return None
 
 
-def assert_known_identifier(ori, pseudo, source):
-    """Every identifier is either an agency's or one the directory explained as a pseudo-row.
+class IdentifierPolicy:
+    """Which source identifiers may be written, and why each of the rest may not.
 
-    A third kind would mean the sources hold something this pipeline has no account of, and
-    writing it anyway is how unexplained rows get inherited from one rebuild to the next.
+    Membership of the agency directory is deliberately *not* checked here. The base tables
+    load before the annual step, and the annual step creates agencies -- 323 of them -- so at
+    the moment a staffing row is read, an identifier that will be perfectly joinable by the
+    end of the build is not in the directory yet. Checking too early rejects real agencies;
+    the check that matters runs once, at the end, against the finished directory, in
+    `assert_no_orphan_rows`.
+
+    What is decidable at load time is shape. An identifier that is not nine characters and is
+    not one of the directory's own pseudo-rows is something this pipeline has no account of.
     """
-    if ori in pseudo:
-        return False
-    if len(ori) != 9:
-        raise BuildError(
-            f"{source}: identifier {ori!r} is not a nine-character ORI and the agency "
-            "directory does not list it as a state or national pseudo-row"
-        )
-    return True
+
+    __slots__ = ("pseudo", "excluded")
+
+    def __init__(self, pseudo=(), excluded=()):
+        self.pseudo = frozenset(pseudo)
+        self.excluded = frozenset(excluded)
+
+    def classify(self, ori, source):
+        if ori in self.pseudo:
+            return "pseudo"
+        if ori in self.excluded:
+            return "excluded"
+        if len(ori) != 9:
+            raise BuildError(
+                f"{source}: identifier {ori!r} is not a nine-character ORI and the agency "
+                "directory does not list it as a state or national pseudo-row"
+            )
+        return "agency"
 
 
-def load_base_crime(conn, rows, pseudo=()):
+def load_identifier_exclusions(path, conn=None):
+    """Read the tracked exclusion entries, and check them against the build before trusting.
+
+    An entry is a claim that the sources cannot place an identifier. If the directory turns
+    out to hold it after all, the claim is stale and continuing would silently discard rows
+    that now have somewhere to go.
+    """
+    if not path:
+        return {}
+    with open(path, encoding="utf-8") as handle:
+        payload = json.load(handle)
+    entries = {}
+    for raw in payload["exclusions"]:
+        try:
+            identifier, table = raw["identifier"], raw["table"]
+        except KeyError as missing:
+            raise BuildError(f"exclusion entry is missing {missing}") from None
+        if not raw.get("evidence"):
+            raise BuildError(f"{identifier}: an exclusion entry must carry its evidence")
+        if identifier in entries:
+            raise BuildError(f"{identifier}: listed twice")
+        entries[identifier] = raw
+    if conn is not None:
+        for identifier in entries:
+            if conn.execute("SELECT 1 FROM historical_agency WHERE ori = ?", (identifier,)).fetchone():
+                raise BuildError(
+                    f"{identifier} is excluded as unplaceable, but the directory holds it; "
+                    "the exclusion entry is stale"
+                )
+    return entries
+
+
+def verify_identifier_exclusions(conn, entries, tables):
+    """Every exclusion must still describe this build, and must have done some work.
+
+    Checked against the finished directory, not the one the base tables were loaded against,
+    because the annual step creates agencies. An entry naming an identifier the build now
+    holds is stale; an entry that excluded nothing is describing data that has moved on. Both
+    would sit in the file looking like evidence.
+    """
+    accounting = {}
+    for identifier, entry in sorted(entries.items()):
+        if conn.execute("SELECT 1 FROM historical_agency WHERE ori = ?", (identifier,)).fetchone():
+            raise BuildError(
+                f"{identifier} is excluded as unplaceable, but this build's directory holds "
+                "it; the exclusion entry is stale"
+            )
+        still_present = {
+            table: conn.execute(f"SELECT COUNT(*) FROM {table} WHERE ori = ?", (identifier,)).fetchone()[0]
+            for table in tables
+        }
+        if any(still_present.values()):
+            raise BuildError(
+                f"{identifier} is excluded but rows for it survived: "
+                + ", ".join(f"{t}={n}" for t, n in still_present.items() if n)
+            )
+        accounting[identifier] = {
+            "table": entry["table"],
+            "rows_excluded": entry.get("rows"),
+            "reason": entry["reason"],
+        }
+    return accounting
+
+
+def assert_no_orphan_rows(conn, tables):
+    """No output row may join to nothing. Checked after everything has been written.
+
+    The loaders already refuse an unaccounted identifier one row at a time. This is the
+    backstop for the ways a row can lose its agency later -- a consolidation that removes a
+    survivor, an annual step that files a year under an ORI it then fails to create.
+    """
+    for table in tables:
+        orphans = conn.execute(
+            f"SELECT t.ori, COUNT(*) FROM {table} t WHERE NOT EXISTS "
+            "(SELECT 1 FROM historical_agency a WHERE a.ori = t.ori) "
+            "GROUP BY t.ori ORDER BY t.ori"
+        ).fetchall()
+        if orphans:
+            named = ", ".join(f"{ori} ({count} row(s))" for ori, count in orphans[:10])
+            raise BuildError(
+                f"{table} holds rows for {len(orphans)} identifier(s) that join no agency: {named}"
+            )
+
+
+def load_base_crime(conn, rows, policy=None):
     """Load the 1930-2024 annual series, preserving zero and blank as they arrive."""
+    policy = policy or IdentifierPolicy()
     staged = {}
     read = 0
-    skipped_pseudo = 0
+    skipped = {"pseudo": 0, "excluded": 0}
     for row in rows:
         ori = (row.get("id") or row.get("ori") or "").strip()
         year_raw = str(row.get("year") or "").strip()
         if not ori or not year_raw:
             continue
-        if not assert_known_identifier(ori, pseudo, "historical crime"):
-            skipped_pseudo += 1
+        verdict = policy.classify(ori, "historical crime")
+        if verdict != "agency":
+            skipped[verdict] += 1
             continue
         read += 1
         year = int(float(year_raw))
@@ -484,26 +587,29 @@ def load_base_crime(conn, rows, pseudo=()):
         [staged[key] for key in sorted(staged)],
     )
     return {"read": read, "written": len(staged), "duplicates_identical": read - len(staged),
-            "pseudo_rows_excluded": skipped_pseudo}
+            "pseudo_rows_excluded": skipped["pseudo"],
+            "unplaceable_rows_excluded": skipped["excluded"]}
 
 
-def _load_keyed_table(conn, rows, table, columns, build_record, pseudo, source_label):
+def _load_keyed_table(conn, rows, table, columns, build_record, policy, source_label):
     """Load one ORI-and-year keyed table from its source rows.
 
     Shared by population, clearance and staffing because the three differ only in which
     values they carry: the identifier rules, the duplicate rule and the write are the same,
     and having them the same is what lets the five tables agree about who exists.
     """
+    policy = policy or IdentifierPolicy()
     staged = {}
     read = 0
-    skipped_pseudo = 0
+    skipped = {"pseudo": 0, "excluded": 0}
     for row in rows:
         ori = (row.get("id") or row.get("ori") or "").strip()
         year_raw = str(row.get("year") or "").strip()
         if not ori or not year_raw:
             continue
-        if not assert_known_identifier(ori, pseudo, source_label):
-            skipped_pseudo += 1
+        verdict = policy.classify(ori, source_label)
+        if verdict != "agency":
+            skipped[verdict] += 1
             continue
         read += 1
         year = int(float(year_raw))
@@ -519,15 +625,16 @@ def _load_keyed_table(conn, rows, table, columns, build_record, pseudo, source_l
         [staged[key] for key in sorted(staged)],
     )
     return {"read": read, "written": len(staged), "duplicates_identical": read - len(staged),
-            "pseudo_rows_excluded": skipped_pseudo}
+            "pseudo_rows_excluded": skipped["pseudo"],
+            "unplaceable_rows_excluded": skipped["excluded"]}
 
 
-def load_base_population(conn, rows, pseudo=()):
+def load_base_population(conn, rows, policy=None):
     """Load the agency population series. A population of zero is a stated population."""
     return _load_keyed_table(
         conn, rows, "historical_agency_population", ("population",),
         lambda row: (parse_measure(row.get("population")),),
-        pseudo, "historical population",
+        policy, "historical population",
     )
 
 
@@ -545,7 +652,7 @@ def clearance_rate(offences, cleared):
     return round(cleared / offences * 100.0, 1)
 
 
-def load_base_clearance(conn, rows, pseudo=()):
+def load_base_clearance(conn, rows, policy=None):
     """Load the 1960-2024 clearance series, computing each rate from its own pair."""
     def record(row):
         return tuple(
@@ -555,16 +662,16 @@ def load_base_clearance(conn, rows, pseudo=()):
         )
     return _load_keyed_table(
         conn, rows, "historical_agency_clearance", CLEARANCE_COLUMNS,
-        record, pseudo, "historical clearance",
+        record, policy, "historical clearance",
     )
 
 
-def load_base_staffing(conn, rows, pseudo=()):
+def load_base_staffing(conn, rows, policy=None):
     """Load the 1930-2025 staffing series. Zero employees is a count, not a silence."""
     return _load_keyed_table(
         conn, rows, "historical_staffing", STAFFING_MEASURES,
         lambda row: tuple(parse_measure(row.get(column)) for column in STAFFING_MEASURES),
-        pseudo, "historical staffing",
+        policy, "historical staffing",
     )
 
 
@@ -813,6 +920,25 @@ def load_annual(conn, rows, exact_map, year, agency_type_for_new=None):
                     unplaceable.append(entry)
         for placed, (ori7, _, row) in moved:
             by_target[placed] = [(ori7, RESOLVED_NAME, row)]
+
+        # A name that is the directory's name, character for character once normalized,
+        # outranks one that merely begins with it. Under IL04501 the annual file holds
+        # `AURORA` and `AURORA UNIVERSITY`, and the directory holds one agency, `Aurora`.
+        # Both names are prefix-compatible with it, so the heuristic could not separate them
+        # and both filed, which lost a city of 170,585 its year. Exactly one of them *is*
+        # Aurora. Applied before the reporting rule because being the named agency is
+        # stronger evidence than being the only one that filed, and only when exactly one
+        # competitor qualifies -- two identical names are still an ambiguity.
+        if len(stays) != 1:
+            competing = stays + unplaceable
+            directory_name = next((name for ori, name, _ in name_index.get(target[:7], ())
+                                   if ori == target), "")
+            wanted = _normalize_name(directory_name)
+            exact = [e for e in competing
+                     if wanted and _normalize_name(e[2].get("Agency_Name")) == wanted]
+            if len(exact) == 1:
+                stays = exact
+                unplaceable = [e for e in competing if e not in exact]
 
         # One row that filed and rivals that filed nothing is not an ambiguity. Las Vegas
         # Metropolitan Police Department reported twelve months under NV00201 beside a second

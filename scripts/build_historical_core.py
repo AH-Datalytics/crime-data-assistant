@@ -67,7 +67,7 @@ def load_ori_map(path):
 
 def build(args):
     sources = [args.geographies, args.base_crime, args.populations, args.clearance,
-               args.staffing, args.annual, args.consolidations, args.ori_map]
+               args.staffing, args.annual, args.consolidations, args.ori_map, args.exclusions]
     # No output may sit on top of a source file, and the two outputs must not be the same file.
     core.assert_distinct_outputs(sources, [args.out, args.manifest])
     # The manifest is evidence too: it has to be new, or a rerun quietly replaces the record
@@ -110,16 +110,25 @@ def build(args):
                 "replaces rewrote county names into forms no source states",
     }
 
+    # Everything a source identifier is allowed to be. Anything else stops the build, so an
+    # unplaceable row can only survive by being named in tracked evidence first.
+    exclusions = core.load_identifier_exclusions(args.exclusions, conn)
+    if args.exclusions:
+        record_input("identifier_exclusions", args.exclusions, len(exclusions))
+    policy = core.IdentifierPolicy(pseudo, exclusions)
+
     # ── 2. base sources ──────────────────────────────────────────────────────────────
     base_rows = count_rows(args.base_crime)
-    base = core.load_base_crime(conn, read_csv(args.base_crime, args.reverse_input_order), pseudo)
+    base = core.load_base_crime(conn, read_csv(args.base_crime, args.reverse_input_order), policy)
     record_input("base_annual_crime", args.base_crime, base_rows)
     manifest["steps"]["base_crime"] = {
         "read": base["read"],
         "written": base["written"],
         "excluded": {
-            "blank_identifier": base_rows - base["read"] - base["pseudo_rows_excluded"],
+            "blank_identifier": base_rows - base["read"] - base["pseudo_rows_excluded"]
+            - base["unplaceable_rows_excluded"],
             "pseudo_identifier": base["pseudo_rows_excluded"],
+            "unplaceable_identifier": base["unplaceable_rows_excluded"],
         },
         "note": "blank stays NULL and zero stays zero; no all-zero rewrite is applied",
     }
@@ -134,14 +143,16 @@ def build(args):
          "zero employees is a count, not a silence"),
     ):
         source_rows = count_rows(path)
-        result = loader(conn, read_csv(path, args.reverse_input_order), pseudo)
+        result = loader(conn, read_csv(path, args.reverse_input_order), policy)
         record_input(role, path, source_rows)
         manifest["steps"][step] = {
             "read": result["read"],
             "written": result["written"],
             "excluded": {
-                "blank_identifier": source_rows - result["read"] - result["pseudo_rows_excluded"],
+                "blank_identifier": source_rows - result["read"] - result["pseudo_rows_excluded"]
+                - result["unplaceable_rows_excluded"],
                 "pseudo_identifier": result["pseudo_rows_excluded"],
+                "unplaceable_identifier": result["unplaceable_rows_excluded"],
             },
             "note": note,
         }
@@ -254,14 +265,17 @@ def build(args):
     }
 
     # An agency-year whose ORI is in no directory row can never be joined to a name, so it is
-    # invisible to every reader. Counted rather than dropped: the rows are real source rows.
-    manifest["unjoinable_rows"] = {
-        table: conn.execute(
-            f"SELECT COUNT(*) FROM {table} t WHERE NOT EXISTS "
-            "(SELECT 1 FROM historical_agency a WHERE a.ori = t.ori)"
-        ).fetchone()[0]
-        for table in core.BUILT_TABLES if table != "historical_agency"
+    # invisible to every reader: it answers no question and appears in no total, while still
+    # counting towards the row totals the system prompt publishes. A build that produced one
+    # would be reporting a number it cannot stand behind, so it fails instead.
+    child_tables = [t for t in core.BUILT_TABLES if t != "historical_agency"]
+    manifest["steps"]["identifier_exclusions"] = {
+        "entries": core.verify_identifier_exclusions(conn, exclusions, child_tables),
+        "note": "checked against the finished directory, after the annual step has created "
+                "the agencies it creates",
     }
+    core.assert_no_orphan_rows(conn, child_tables)
+    manifest["unjoinable_rows"] = {table: 0 for table in child_tables}
 
     manifest["status"] = "complete"
     conn.close()
@@ -281,6 +295,7 @@ def main(argv=None):
                         help="read every source in reverse row order; the build must not care")
     parser.add_argument("--consolidations", required=True, help="consolidation manifest JSON")
     parser.add_argument("--ori-map", help="validated annual ORI mapping JSON")
+    parser.add_argument("--exclusions", help="tracked identifier-exclusion JSON")
     parser.add_argument("--out", required=True, help="destination database; must not exist and must not be canonical")
     parser.add_argument("--manifest", required=True, help="where to write the build manifest JSON")
     args = parser.parse_args(argv)

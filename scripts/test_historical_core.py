@@ -317,6 +317,39 @@ class ReportingBeatsNonReporting(CoreBuildTestCase):
         self.assertEqual(self.crime("NV0020100", 2025)["murder"], 86)
         self.assertEqual(report["excluded"]["ori_collision"], 1)
 
+    def test_the_agency_that_is_the_named_one_beats_a_name_that_merely_starts_with_it(self):
+        # `AURORA` and `AURORA UNIVERSITY` both file under IL04501 and both report, so the
+        # reporting rule cannot separate them and the city of 170,585 lost its year. One of
+        # them is the directory's `Aurora`; the other only begins with it.
+        core.load_agencies(self.conn, [agency_row("IL0450100", "Aurora", "il")])
+        rows = [annual_row("IL04501", 2, agency="AURORA", state="IL", population="109698",
+                           Actual_Murder="1"),
+                annual_row("IL04501", 12, agency="AURORA UNIVERSITY", state="IL", population="0")]
+        report = core.load_annual(self.conn, rows, [], 2025)
+        self.assertEqual(report["written"], 1)
+        self.assertEqual(self.crime("IL0450100", 2025)["murder"], 1)
+        self.assertEqual(report["excluded"]["ori_collision"], 1)
+
+    def test_two_competitors_with_the_same_exact_name_are_still_refused(self):
+        # The rule only fires when exactly one competitor is the named agency.
+        core.load_agencies(self.conn, [agency_row("IL0450100", "Aurora", "il")])
+        rows = [annual_row("IL04501", 12, agency="AURORA", state="IL", Actual_Murder="1"),
+                annual_row("IL04501", 12, agency="Aurora", state="IL", Actual_Murder="9")]
+        report = core.load_annual(self.conn, rows, [], 2025)
+        self.assertEqual(report["written"], 0)
+
+    def test_an_exact_name_does_not_override_a_row_nobody_can_place(self):
+        # Las Vegas still resolves by the reporting rule: neither abbreviation is the
+        # directory's full name, so the exact-name rule must decline rather than guess.
+        core.load_agencies(self.conn, [
+            agency_row("NV0020100", "Las Vegas Metropolitan Police Department", "nv")])
+        rows = [annual_row("NV00201", 12, agency="LAS VEGAS METRO PD", state="NV",
+                           Actual_Murder="86"),
+                annual_row("NV00201", 0, agency="CITY OF LAS VEGAS DEPT O", state="NV")]
+        report = core.load_annual(self.conn, rows, [], 2025)
+        self.assertEqual(report["written"], 1)
+        self.assertEqual(self.crime("NV0020100", 2025)["murder"], 86)
+
     def test_two_rows_that_both_filed_are_still_refused(self):
         report = core.load_annual(
             self.conn,
@@ -604,16 +637,17 @@ class PseudoIdentifiers(CoreBuildTestCase):
         self.assertIsNone(self.conn.execute("SELECT 1 FROM historical_agency WHERE ori='us'").fetchone())
 
     def test_their_crime_and_population_rows_go_with_them(self):
-        pseudo = core.load_agencies(self.conn, [self.NATION_ROW, agency_row("AL0012000", "Lipscomb", "al")])
+        loaded = core.load_agencies(self.conn, [self.NATION_ROW, agency_row("AL0012000", "Lipscomb", "al")])
+        policy = core.IdentifierPolicy(loaded["pseudo_identifiers"])
         crime = core.load_base_crime(self.conn, [
             base_row("us", 2021, murder_total="22536"), base_row("AL0012000", 2021, murder_total="0"),
-        ], pseudo["pseudo_identifiers"])
+        ], policy)
         self.assertEqual(crime["pseudo_rows_excluded"], 1)
         self.assertEqual(crime["written"], 1)
         population = core.load_base_population(self.conn, [
             {"id": "us", "year": 2021, "population": "331894354"},
             {"id": "AL0012000", "year": 2021, "population": "2000"},
-        ], pseudo["pseudo_identifiers"])
+        ], policy)
         self.assertEqual(population["pseudo_rows_excluded"], 1)
         self.assertEqual(self.crime("us", 2021), None)
 
@@ -621,7 +655,141 @@ class PseudoIdentifiers(CoreBuildTestCase):
         # Silently skipping it would be the same habit that let unexplained state be
         # inherited from one rebuild to the next.
         with self.assertRaises(core.BuildError):
-            core.load_base_crime(self.conn, [base_row("zz", 2021, murder_total="1")], {})
+            core.load_base_crime(self.conn, [base_row("zz", 2021, murder_total="1")])
+
+
+class OrphanIdentifiers(CoreBuildTestCase):
+    """A row that joins to no agency may not survive a build.
+
+    It answers no question, appears in no ranking and is reachable by nothing -- while still
+    counting towards the row totals `lib/dynamic-facts.ts` publishes into the system prompt.
+    Reporting the count in a manifest is not reconciliation; it is unexplained state being
+    inherited one layer down. `CA0349950` is the real case: 14 staffing rows, 1940-1959,
+    naming an agency no source holds.
+
+    The check runs at the end rather than at load time, because the annual step creates 323
+    agencies and a base row read before it would otherwise be judged against a directory that
+    is not finished yet.
+    """
+
+    def setUp(self):
+        super().setUp()
+        core.load_agencies(self.conn, [agency_row("CA0349900", "Highway Patrol:", "ca", "state_police")])
+        self.tables = [t for t in core.BUILT_TABLES if t != "historical_agency"]
+
+    def stage_orphan(self):
+        core.load_base_staffing(self.conn, [
+            {"id": "CA0349950", "year": 1959, "all_total": "17", "officer_total": "", "civilian_total": ""},
+        ])
+
+    def test_an_orphan_row_fails_the_build(self):
+        self.stage_orphan()
+        with self.assertRaises(core.BuildError) as raised:
+            core.assert_no_orphan_rows(self.conn, self.tables)
+        self.assertIn("CA0349950", str(raised.exception))
+
+    def test_a_prefix_sibling_is_not_a_join(self):
+        # CA0349950 and CA0349900 share seven characters. That is not identity, and the
+        # assertion must not be satisfied by it.
+        self.stage_orphan()
+        with self.assertRaises(core.BuildError):
+            core.assert_no_orphan_rows(self.conn, self.tables)
+
+    def test_every_child_table_is_covered(self):
+        for table, rows in (
+            ("historical_agency_crime", [base_row("ZZ9999999", 1990, murder_total="1")]),
+            ("historical_agency_population", [{"id": "ZZ9999999", "year": 1990, "population": "5"}]),
+            ("historical_agency_clearance", [clearance_row("ZZ9999999", 1990, murder_all_total="4",
+                                                           murder_cleared_total="1")]),
+            ("historical_staffing", [{"id": "ZZ9999999", "year": 1990, "all_total": "3",
+                                      "officer_total": "3", "civilian_total": "0"}]),
+        ):
+            with self.subTest(table=table):
+                self.conn.execute("DELETE FROM " + table)
+                loader = {"historical_agency_crime": core.load_base_crime,
+                          "historical_agency_population": core.load_base_population,
+                          "historical_agency_clearance": core.load_base_clearance,
+                          "historical_staffing": core.load_base_staffing}[table]
+                loader(self.conn, rows)
+                with self.assertRaises(core.BuildError):
+                    core.assert_no_orphan_rows(self.conn, self.tables)
+                self.conn.execute("DELETE FROM " + table)
+
+    def test_a_clean_build_passes(self):
+        core.load_base_staffing(self.conn, [
+            {"id": "CA0349900", "year": 1971, "all_total": "0", "officer_total": "0", "civilian_total": "0"},
+        ])
+        core.assert_no_orphan_rows(self.conn, self.tables)
+
+
+class IdentifierExclusions(CoreBuildTestCase):
+    """An exclusion is tracked evidence, and it is checked before it is trusted."""
+
+    ENTRY = {
+        "identifier": "CA0349950", "table": "historical_staffing", "rows": 14,
+        "reason": "no agency in any source that these rows can be shown to belong to",
+        "evidence": ["appears in one source file only"],
+    }
+
+    def write(self, entries, tmp):
+        path = os.path.join(tmp, "exclusions.json")
+        with open(path, "w", encoding="utf-8") as handle:
+            json.dump({"version": 1, "exclusions": entries}, handle)
+        return path
+
+    def test_an_entry_without_evidence_is_refused(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            bare = {k: v for k, v in self.ENTRY.items() if k != "evidence"}
+            with self.assertRaises(core.BuildError):
+                core.load_identifier_exclusions(self.write([bare], tmp))
+
+    def test_a_duplicate_entry_is_refused(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaises(core.BuildError):
+                core.load_identifier_exclusions(self.write([self.ENTRY, self.ENTRY], tmp))
+
+    def test_a_stale_entry_is_refused(self):
+        # The directory now holds the identifier, so the claim that it cannot be placed is
+        # false, and honouring it would discard rows that have somewhere to go.
+        core.load_agencies(self.conn, [agency_row("CA0349950", "Somewhere", "ca")])
+        with tempfile.TemporaryDirectory() as tmp:
+            entries = core.load_identifier_exclusions(self.write([self.ENTRY], tmp))
+            with self.assertRaises(core.BuildError):
+                core.verify_identifier_exclusions(
+                    self.conn, entries, [t for t in core.BUILT_TABLES if t != "historical_agency"])
+
+    def test_an_entry_whose_rows_survived_is_refused(self):
+        core.load_agencies(self.conn, [agency_row("CA0349900", "Highway Patrol:", "ca")])
+        core.load_base_staffing(self.conn, [
+            {"id": "CA0349950", "year": 1959, "all_total": "17", "officer_total": "", "civilian_total": ""},
+        ])
+        with tempfile.TemporaryDirectory() as tmp:
+            entries = core.load_identifier_exclusions(self.write([self.ENTRY], tmp))
+            with self.assertRaises(core.BuildError) as raised:
+                core.verify_identifier_exclusions(
+                    self.conn, entries, [t for t in core.BUILT_TABLES if t != "historical_agency"])
+            self.assertIn("survived", str(raised.exception))
+
+    def test_a_listed_identifier_is_kept_out_of_every_table(self):
+        core.load_agencies(self.conn, [agency_row("CA0349900", "Highway Patrol:", "ca")])
+        policy = core.IdentifierPolicy(pseudo=(), excluded={"CA0349950"})
+        report = core.load_base_staffing(self.conn, [
+            {"id": "CA0349950", "year": 1959, "all_total": "17", "officer_total": "", "civilian_total": ""},
+            {"id": "CA0349900", "year": 1971, "all_total": "0", "officer_total": "0", "civilian_total": "0"},
+        ], policy)
+        self.assertEqual(report["unplaceable_rows_excluded"], 1)
+        self.assertEqual(report["written"], 1)
+        core.assert_no_orphan_rows(self.conn, [t for t in core.BUILT_TABLES if t != "historical_agency"])
+
+    def test_the_tracked_file_describes_the_real_source(self):
+        # The file that ships with the pipeline, not a fixture: if someone edits it into
+        # something the loader will not accept, this fails rather than the next build.
+        here = os.path.dirname(os.path.abspath(__file__))
+        entries = core.load_identifier_exclusions(
+            os.path.join(here, "historical_identifier_exclusions.json"))
+        self.assertIn("CA0349950", entries)
+        self.assertEqual(entries["CA0349950"]["table"], "historical_staffing")
+        self.assertEqual(entries["CA0349950"]["rows"], 14)
 
 
 class SourceNamesAreNotRewritten(CoreBuildTestCase):
@@ -1054,7 +1222,8 @@ class OfflineSafety(unittest.TestCase):
             args = argparse.Namespace(
                 geographies=source, base_crime=source, populations=source, clearance=source,
                 staffing=source, annual=None, annual_year=2025,
-                consolidations=source, ori_map=None, out=os.path.join(tmp, "new.db"),
+                consolidations=source, ori_map=None, exclusions=None,
+                out=os.path.join(tmp, "new.db"),
                 manifest=manifest, reverse_input_order=False,
             )
             with self.assertRaises(core.BuildError):

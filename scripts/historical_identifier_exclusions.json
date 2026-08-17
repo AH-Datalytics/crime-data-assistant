@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "description": "Source identifiers that appear in a data file but name no agency the directory knows, and which the sources do not let us attach to one. Every entry is checked before the build trusts it: the identifier must be absent from geographies.csv, and it must actually appear in the table the entry names. Anything not listed here that fails to join the directory stops the build rather than being dropped.",
+  "provenance": "Traced through the five named source files in 'Crime and Staffing - HO Ready/final files' and the superseded staffing vintage in its deprecated/ subdirectory.",
+  "exclusions": [
+    {
+      "identifier": "CA0349950",
+      "table": "historical_staffing",
+      "rows": 14,
+      "years": "1940-1959",
+      "reason": "no agency in the directory, and no agency in any source, that these rows can be shown to belong to",
+      "evidence": [
+        "It appears in exactly one of the five sources. historical_staffing_1930_2025.csv holds 14 rows for it; geographies.csv, populations.csv, historical_crime_1930_2024.csv and historical_clearance_1960_2024.csv hold none. It is also present in the superseded deprecated/historical_staffing_1930_2024.csv, so it is a long-standing feature of that file rather than a new artifact.",
+        "It is the only one of 26,727 identifiers in the staffing file that does not join the directory. The other 248 identifiers with unusual suffixes all join.",
+        "The prefix match to CA0349900 is contradicted by the data on both sides. These rows carry a resident population rising from 3,053 in 1940 to 12,233 in 1959, with 3 to 17 employees -- a small municipal department. geographies.csv gives CA0349900 as 'Highway Patrol:', type state_police, starting 1968-01, and its staffing rows carry no population at all and 5,459 to 7,246 employees. A statewide highway patrol has no resident population, the two series do not overlap, and the directory dates the survivor nine years after these rows end.",
+        "No agency anywhere in populations.csv matches even one year of this population series, so the rows cannot be reattached by population either."
+      ],
+      "not_resolved_by": "prefix. CA0349950 and CA0349900 share seven characters and nothing else."
+    }
+  ]
+}
