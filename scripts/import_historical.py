@@ -10,16 +10,34 @@ Sources (all from "Crime and Staffing - HO Ready/final files"):
   - State_National_Historical.xlsx     → historical_state_national (unchanged)
 """
 
+import argparse
 import sqlite3
 import pandas as pd
 import numpy as np
 
-DB_PATH = r"C:\Users\jeffm\crime-data-assistant\crime_data.db"
-DATA_DIR = r"C:\OneDrive\OneDrive - ahdatalytics.com\Clients\Real Time Crime Index\Open Source Data\Historical Data - 1930-1959"
-FINAL_DIR = f"{DATA_DIR}/Crime and Staffing - HO Ready/final files"
+
+def parse_args(argv=None):
+    """Both paths are supplied by the caller.
+
+    They used to be module constants pointing at one person's machine, which meant the
+    importer could only ever be run one way and only ever by one person.
+    """
+    # Deliberately not the module docstring: it contains arrows that a cp1252 console
+    # refuses to print, which turns --help into a crash.
+    parser = argparse.ArgumentParser(description="Import historical crime data into a SQLite database.")
+    parser.add_argument("--db", required=True, help="destination SQLite database")
+    parser.add_argument(
+        "--source-dir", required=True,
+        help='directory holding geographies.csv, populations.csv and the historical_* CSVs '
+             '("Crime and Staffing - HO Ready/final files")',
+    )
+    return parser.parse_args(argv)
 
 
-def main():
+def main(argv=None):
+    args = parse_args(argv)
+    DB_PATH = args.db
+    FINAL_DIR = args.source_dir
     conn = sqlite3.connect(DB_PATH)
     cur = conn.cursor()
 
@@ -146,11 +164,17 @@ def main():
     df_crime = df_crime.replace("", np.nan)
     df_crime = df_crime.where(df_crime.notna(), None)
 
-    # NULL out rows where all crime columns are 0 (non-reporting)
+    # A zero in this file is a value, not an absence.
+    #
+    # This step used to overwrite every measure with NULL whenever they were all zero, and
+    # call the result "non-reporting". Against this source that erased 56,562 agency-years
+    # whose cells explicitly said zero, and left them identical to the 296,229 whose cells
+    # were blank -- Metlakatla Tribal reported zero across 2024 and Seldovia reported nothing,
+    # and the database said the same thing about both. The upstream R builder already blanks
+    # the rows where no months were reported, so anything still holding a zero here means it.
     crime_cols = ["violent", "murder", "rape", "robbery", "assault", "property", "burglary", "theft", "motor_vehicle_theft"]
-    all_zero = (df_crime[crime_cols] == 0).all(axis=1)
-    df_crime.loc[all_zero, crime_cols] = None
-    print(f"  {all_zero.sum():,} rows with all-zero crime data -> NULLed (non-reporting agencies)")
+    reported_zero = int((df_crime[crime_cols] == 0).all(axis=1).sum())
+    print(f"  {reported_zero:,} rows report zero across every measure -> kept as zero")
 
     insert_cols = list(col_map.values())
     cur.executemany(
