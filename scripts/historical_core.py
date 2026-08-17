@@ -87,6 +87,12 @@ RESOLVED_NEW = "new_agency"
 RESOLVED_NAME = "directory_name_match"
 RESOLVED_PADDED_UNVERIFIED = "canonical_padded_name_unconfirmed"
 
+#: The two states the annual file and Historical spell differently. Named, not a general
+#: loosening of the state check -- the same pair the application already carries in
+#: lib/query-contract.ts. Read as contradictions, they rejected Omaha, Lincoln, Douglas
+#: County, Sarpy County and the Guam Police Department outright.
+STATE_ALIASES = {"NE": "NB", "GU": "GM"}
+
 SCOPE_CRIME_TRANSITION = "crime_transition"
 SCOPE_IDENTITY_DUPLICATE = "identity_duplicate"
 
@@ -175,6 +181,12 @@ def parse_measure(raw):
     if value != int(value):
         raise BuildError(f"measure value {raw!r} is not a whole number")
     return int(value)
+
+
+def normalize_state(code):
+    """One spelling for a state, whichever source it came from."""
+    upper = (code or "").strip().upper()
+    return STATE_ALIASES.get(upper, upper)
 
 
 def _normalize_name(value):
@@ -392,7 +404,7 @@ def validate_ori_mappings(mappings, conn):
             errors.append(f"{mapping.source} -> {mapping.target}: target agency is not in the directory")
             continue
         agency, state = row
-        if (state or "").strip().lower() != mapping.state.strip().lower():
+        if normalize_state(state) != normalize_state(mapping.state):
             errors.append(
                 f"{mapping.source} -> {mapping.target}: mapping says state {mapping.state!r} "
                 f"but the directory says {state!r}"
@@ -459,8 +471,8 @@ def resolve_annual_ori(ori7, exact_map, index, agency_name=None, state=None, nam
     # letters carries no state information, so it cannot contradict anything.
     stated = state.strip() if state else ""
     if len(stated) == 2 and stated.isalpha():
-        wanted = stated.lower()
-        scoped = [(ori, name) for ori, name, st in known if (st or "").strip().lower() == wanted]
+        wanted = normalize_state(stated)
+        scoped = [(ori, name) for ori, name, st in known if normalize_state(st) == wanted]
         if not scoped and any((st or "").strip() for _, _, st in known):
             raise AmbiguousOri(
                 f"{ori7} ({agency_name}) is filed in {state}, but every agency under that prefix "
@@ -564,6 +576,18 @@ def load_annual(conn, rows, exact_map, year, agency_type_for_new=None):
                     unplaceable.append(entry)
         for placed, (ori7, _, row) in moved:
             by_target[placed] = [(ori7, RESOLVED_NAME, row)]
+
+        # One row that filed and rivals that filed nothing is not an ambiguity. Las Vegas
+        # Metropolitan Police Department reported twelve months under NV00201 beside a second
+        # entry reporting none, and neither abbreviation matched the directory's full name, so
+        # both were dropped -- 1.7 million people and 86 murders with them.
+        if len(stays) != 1:
+            competing = stays + unplaceable
+            reporting = [e for e in competing if (parse_measure(e[2].get("Months_Reported")) or 0) > 0]
+            if len(reporting) == 1:
+                stays = reporting
+                unplaceable = [e for e in competing if e not in reporting]
+
         by_target[target] = stays
         for ori7, _, row in unplaceable:
             excluded["ori_collision"] += 1

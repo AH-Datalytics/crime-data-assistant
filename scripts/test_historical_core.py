@@ -279,6 +279,99 @@ class OriResolution(CoreBuildTestCase):
         self.assertEqual(len(report["ambiguities"]), 2, "each dropped row is named on its own")
 
 
+class ReportingBeatsNonReporting(CoreBuildTestCase):
+    """One row that filed and one that did not is not an ambiguity.
+
+    Las Vegas is the case: `NV00201` carries both "LAS VEGAS METRO PD" with twelve months and
+    "CITY OF LAS VEGAS DEPT O" with none, and the directory holds only the Metropolitan Police
+    Department under that prefix. Neither abbreviation prefix-matches the directory's full name,
+    so both were dropped -- taking 1.7 million people and 86 murders with them.
+    """
+
+    def setUp(self):
+        super().setUp()
+        core.load_agencies(self.conn, [
+            agency_row("NV0020100", "Las Vegas Metropolitan Police Department", "nv"),
+        ])
+
+    def test_the_reporting_row_is_kept_when_its_rivals_filed_nothing(self):
+        report = core.load_annual(
+            self.conn,
+            [annual_row("NV00201", 12, agency="LAS VEGAS METRO PD", state="NV",
+                        population="1712136", Actual_Murder="86"),
+             annual_row("NV00201", 0, agency="CITY OF LAS VEGAS DEPT O", state="NV", population="0")],
+            exact_map=[], year=2025,
+        )
+        self.assertEqual(self.crime("NV0020100", 2025)["murder"], 86)
+        self.assertEqual(report["excluded"]["ori_collision"], 1)
+
+    def test_two_rows_that_both_filed_are_still_refused(self):
+        report = core.load_annual(
+            self.conn,
+            [annual_row("NV00201", 12, agency="ONE THING", state="NV", Actual_Murder="5"),
+             annual_row("NV00201", 11, agency="ANOTHER THING", state="NV", Actual_Murder="7")],
+            exact_map=[], year=2025,
+        )
+        self.assertIsNone(self.crime("NV0020100", 2025))
+        self.assertEqual(report["excluded"]["ori_collision"], 2)
+
+    def test_no_reporting_row_at_all_is_still_refused(self):
+        report = core.load_annual(
+            self.conn,
+            [annual_row("NV00201", 0, agency="ONE THING", state="NV"),
+             annual_row("NV00201", 0, agency="ANOTHER THING", state="NV")],
+            exact_map=[], year=2025,
+        )
+        self.assertIsNone(self.crime("NV0020100", 2025))
+        self.assertEqual(report["excluded"]["ori_collision"], 2)
+
+
+class StateCodeAliases(CoreBuildTestCase):
+    """The two sources spell two states differently, and the application already knows it.
+
+    The annual file writes Nebraska as NE and Guam as GU; Historical writes them nb and gm.
+    Read as a contradiction, that rejected Omaha, Lincoln, Douglas County, Sarpy County and the
+    Guam Police Department outright. `lib/query-contract.ts` carries the same two aliases.
+    """
+
+    def setUp(self):
+        super().setUp()
+        core.load_agencies(self.conn, [
+            agency_row("NB0280200", "Omaha", "nb"),
+            agency_row("GM0010000", "Guam Police Department", "gm"),
+            agency_row("MT0010100", "Elsewhere", "mt"),
+        ])
+
+    def resolve(self, ori7, agency, state):
+        return core.resolve_annual_ori(
+            ori7, [], core.build_prefix_index(self.conn),
+            agency_name=agency, state=state, name_index=core.build_prefix_name_index(self.conn),
+        )
+
+    def test_nebraska_resolves_across_the_spelling(self):
+        ori, _ = self.resolve("NB02802", "OMAHA", "NE")
+        self.assertEqual(ori, "NB0280200")
+
+    def test_guam_resolves_across_the_spelling(self):
+        ori, _ = self.resolve("GM00100", "GUAM POLICE DEPARTMENT", "GU")
+        self.assertEqual(ori, "GM0010000")
+
+    def test_a_genuinely_wrong_state_is_still_refused(self):
+        # The two aliases are named, not a general loosening of the check.
+        with self.assertRaises(core.AmbiguousOri):
+            self.resolve("MT00101", "Elsewhere", "WY")
+
+    def test_omaha_loads_through_the_annual_step(self):
+        report = core.load_annual(
+            self.conn,
+            [annual_row("NB02802", 12, agency="OMAHA", state="NE",
+                        population="488395", Actual_Murder="26")],
+            exact_map=[], year=2025,
+        )
+        self.assertEqual(report["excluded"]["ambiguous_ori"], 0)
+        self.assertEqual(self.crime("NB0280200", 2025)["murder"], 26)
+
+
 class Consolidations(CoreBuildTestCase):
     def setUp(self):
         super().setUp()
