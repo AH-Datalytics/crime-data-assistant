@@ -11,6 +11,7 @@ The rest is about determinism. The old annual importer chose among ORIs with an 
 SQLite's row order. Nothing here may depend on the order rows arrive in.
 """
 
+import argparse
 import json
 import os
 import sqlite3
@@ -413,6 +414,29 @@ class OverlappingHistory(CoreBuildTestCase):
         ])
         self.assertEqual(core.apply_consolidations(self.conn, [self.entry()])["applied"], 1)
 
+    def test_a_population_conflict_is_a_conflict(self):
+        # The comparison looked at crime and skipped population, so Franklin and Broomfield
+        # still applied while losing 25 and 23 differing predecessor populations. Broomfield's
+        # 2002 pair is 20,752 against 40,098: those are not one jurisdiction's history.
+        core.load_base_crime(self.conn, [
+            base_row("PA0020000", 2002, population="20752", murder_total="1"),
+            base_row("PA0022800", 2002, population="40098", murder_total="1"),
+        ])
+        report = core.apply_consolidations(self.conn, [self.entry()])
+        self.assertEqual(report["applied"], 0)
+        self.assertIn("overlap", report["refused"][0]["reason"].lower())
+        self.assertEqual(
+            self.conn.execute("SELECT population FROM historical_agency_crime WHERE ori='PA0020000'").fetchone()[0],
+            20752,
+        )
+
+    def test_a_population_the_predecessor_left_blank_is_not_a_conflict(self):
+        core.load_base_crime(self.conn, [
+            base_row("PA0020000", 2002, murder_total="1"),
+            base_row("PA0022800", 2002, population="40098", murder_total="1"),
+        ])
+        self.assertEqual(core.apply_consolidations(self.conn, [self.entry()])["applied"], 1)
+
     def test_an_absent_predecessor_is_a_hard_failure(self):
         entry = core.Consolidation.from_dict({
             "predecessor": "ZZ9999999", "survivor": "PA0022800", "name": "Allegheny",
@@ -473,6 +497,25 @@ class IdentityFromStateAndName(CoreBuildTestCase):
         self.assertEqual(ori, "MT0010100")
         self.assertIn(how, (core.RESOLVED_PADDED, core.RESOLVED_PADDED_UNVERIFIED))
 
+    def test_a_mapping_is_refused_when_the_row_contradicts_it(self):
+        # The mapping file is checked against the directory, but the row was never checked
+        # against the mapping. A Texas row named something else was being filed as Pontiac
+        # purely because it carried the mapped seven-character ORI.
+        core.load_agencies(self.conn, [agency_row("MI6367300", "Pontiac", "mi")])
+        mapping = [core.OriMapping("MI63190", "MI6367300", "Pontiac", "MI")]
+        with self.assertRaises(core.AmbiguousOri) as raised:
+            self.resolve("MI63190", "DIFFERENT AGENCY", "TX", exact_map=mapping)
+        message = str(raised.exception)
+        self.assertIn("MI63190", message)
+        self.assertTrue("TX" in message or "DIFFERENT AGENCY" in message.upper())
+
+    def test_a_mapping_survives_a_federal_state_code(self):
+        core.load_agencies(self.conn, [agency_row("MI6367300", "Pontiac", "mi")])
+        ori, how = self.resolve("MI63190", "PONTIAC", "98",
+                                exact_map=[core.OriMapping("MI63190", "MI6367300", "Pontiac", "MI")])
+        self.assertEqual(ori, "MI6367300")
+        self.assertEqual(how, core.RESOLVED_EXACT)
+
     def test_a_validated_mapping_still_outranks_every_name_rule(self):
         core.load_agencies(self.conn, [agency_row("MI6367300", "Pontiac", "mi"),
                                        agency_row("MI631900X", "Pontiac", "mi")])
@@ -532,6 +575,36 @@ class OfflineSafety(unittest.TestCase):
             with self.assertRaises(core.BuildError):
                 core.assert_distinct_outputs([source], [source])
             core.assert_distinct_outputs([source], [os.path.join(tmp, "out.db")])
+
+    def test_a_collision_hiding_behind_letter_case_is_still_a_collision(self):
+        # Windows paths are case-insensitive, so comparing them case-sensitively lets an output
+        # sit on an input under a different spelling.
+        with tempfile.TemporaryDirectory() as tmp:
+            source = os.path.join(tmp, "Geographies.csv")
+            open(source, "w").close()
+            with self.assertRaises(core.BuildError):
+                core.assert_distinct_outputs([source], [os.path.join(tmp, "geographies.csv")])
+
+    def test_an_existing_manifest_is_refused_before_anything_is_written(self):
+        # assert_distinct_outputs stopped inputs being clobbered, but the manifest was later
+        # opened with "w", so a build could quietly replace the evidence from an earlier run.
+        import build_historical_core
+        with tempfile.TemporaryDirectory() as tmp:
+            manifest = os.path.join(tmp, "manifest.json")
+            with open(manifest, "w", encoding="utf-8") as handle:
+                handle.write('{"status": "evidence from an earlier build"}')
+            source = os.path.join(tmp, "geographies.csv")
+            open(source, "w").close()
+            args = argparse.Namespace(
+                geographies=source, base_crime=source, annual=None, annual_year=2025,
+                consolidations=source, ori_map=None, out=os.path.join(tmp, "new.db"),
+                manifest=manifest, reverse_input_order=False,
+            )
+            with self.assertRaises(core.BuildError):
+                build_historical_core.build(args)
+            with open(manifest, encoding="utf-8") as handle:
+                self.assertIn("earlier build", handle.read(), "the earlier manifest was overwritten")
+            self.assertFalse(os.path.exists(args.out), "a database was created despite the refusal")
 
 
 class Determinism(unittest.TestCase):

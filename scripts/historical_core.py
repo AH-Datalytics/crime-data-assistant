@@ -69,6 +69,11 @@ _ANNUAL_TO_MEASURE = {
     "Actual_Larceny_Total": "theft",
     "Actual_MV_Theft_Total": "motor_vehicle_theft",
 }
+#: Everything an agency-year record carries. Population is part of the record, not context:
+#: leaving it out of the overlap comparison let Franklin and Broomfield merge while losing 25
+#: and 23 differing predecessor populations -- 20,752 against 40,098 for Broomfield in 2002.
+RECORD_FIELDS = ("population",) + CRIME_MEASURES
+
 _VIOLENT_PARTS = ("murder", "rape", "robbery", "assault")
 _PROPERTY_PARTS = ("burglary", "theft", "motor_vehicle_theft")
 
@@ -251,15 +256,16 @@ def assert_safe_destination(path):
 
 def assert_distinct_outputs(inputs, outputs):
     """No output may be one of the inputs. Overwriting a source destroys the evidence."""
-    claimed = {os.path.abspath(p) for p in inputs if p}
+    resolve = lambda p: os.path.normcase(os.path.realpath(os.path.abspath(p)))
+    claimed = {resolve(p) for p in inputs if p}
     for out in outputs:
-        if out and os.path.abspath(out) in claimed:
+        if out and resolve(out) in claimed:
             raise BuildError(f"refusing to write output over an input: {out}")
     seen = set()
     for out in outputs:
         if not out:
             continue
-        resolved = os.path.abspath(out)
+        resolved = resolve(out)
         if resolved in seen:
             raise BuildError(f"two outputs point at the same file: {out}")
         seen.add(resolved)
@@ -421,6 +427,21 @@ def resolve_annual_ori(ori7, exact_map, index, agency_name=None, state=None, nam
     ori7 = ori7.strip()
     for mapping in exact_map:
         if mapping.source == ori7:
+            # The mapping file is checked against the directory, but that says nothing about
+            # this row. A row carrying a mapped ORI under another name or another state is not
+            # the agency the mapping is about, and filing it there would be an invention.
+            row_state = (state or "").strip()
+            if len(row_state) == 2 and row_state.isalpha() \
+                    and row_state.lower() != mapping.state.lower():
+                raise AmbiguousOri(
+                    f"{ori7} is mapped to {mapping.target} in {mapping.state}, but this row is "
+                    f"filed in {row_state}"
+                )
+            if agency_name and not _names_compatible(mapping.agency, agency_name):
+                raise AmbiguousOri(
+                    f"{ori7} is mapped to {mapping.target} as {mapping.agency!r}, but this row "
+                    f"is named {agency_name!r}"
+                )
             return mapping.target, RESOLVED_EXACT
 
     candidates = index.get(ori7, ())
@@ -660,7 +681,7 @@ def apply_consolidations(conn, entries):
 
         carried = conn.execute(
             "SELECT COUNT(*) FROM historical_agency_crime WHERE ori = ? AND ({})".format(
-                " OR ".join(f"{m} IS NOT NULL" for m in CRIME_MEASURES)
+                " OR ".join(f"{m} IS NOT NULL" for m in RECORD_FIELDS)
             ),
             (entry.predecessor,),
         ).fetchone()[0]
@@ -679,12 +700,17 @@ def apply_consolidations(conn, entries):
             # agency's history split in two. Copying with INSERT OR IGNORE and then deleting
             # the predecessor threw the losing side away silently -- 48 years of Allegheny
             # County in the real sources. Neither side is safe to discard, so nothing moves.
+            # Field by field, not field against row: a conflict is one field the predecessor
+            # fills where the survivor holds something else, or nothing. Comparing "holds any
+            # value" against "any field differs" flagged fields the predecessor left blank.
             conflicts = conn.execute(
                 "SELECT p.year FROM historical_agency_crime p JOIN historical_agency_crime s "
-                "ON s.ori = ? AND s.year = p.year WHERE p.ori = ? AND ({}) AND ({}) "
+                "ON s.ori = ? AND s.year = p.year WHERE p.ori = ? AND ({}) "
                 "ORDER BY p.year".format(
-                    " OR ".join(f"p.{m} IS NOT NULL" for m in CRIME_MEASURES),
-                    " OR ".join(f"IFNULL(p.{m}, -1) <> IFNULL(s.{m}, -1)" for m in CRIME_MEASURES),
+                    " OR ".join(
+                        f"(p.{f} IS NOT NULL AND (s.{f} IS NULL OR s.{f} <> p.{f}))"
+                        for f in RECORD_FIELDS
+                    ),
                 ),
                 (entry.survivor, entry.predecessor),
             ).fetchall()

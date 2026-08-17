@@ -56,6 +56,10 @@ def build(args):
         [args.geographies, args.base_crime, args.annual, args.consolidations, args.ori_map],
         [args.out, args.manifest],
     )
+    # The manifest is evidence too: it has to be new, or a rerun quietly replaces the record
+    # of the previous build. Checked before the database is created, so a refusal leaves
+    # nothing behind.
+    core.assert_safe_destination(args.manifest)
     conn = core.open_build_database(args.out)
     manifest = {
         "tool": core.TOOL_VERSION,
