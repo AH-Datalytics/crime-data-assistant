@@ -396,7 +396,7 @@ export function explainEmptyCurrentTrendsResult(
       return stated(
         "no_report_for_period",
         `Current Trends has no report from ${placeLabel} for ${period}. A missing report is not the same as a count of zero.`,
-        `nothing matching the query's place filters has a row for ${period}`,
+        `no record of ${placeLabel}, under any of its ORIs, has a row for ${period}`,
       );
     }
 
