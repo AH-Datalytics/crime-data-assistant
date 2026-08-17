@@ -951,6 +951,16 @@ def apply_consolidations(conn, entries):
     data and continuing would be guessing. A premise that simply turns out to be false --
     an identity-duplicate entry whose predecessor does carry crime -- is refused and reported,
     because applying it would destroy history the source still holds.
+
+    Two rules make an application safe, and both are checked across every keyed table before
+    anything moves in any of them:
+
+    - Nothing may be discarded. A field the predecessor fills where the survivor holds
+      something else, or nothing, refuses the whole entry -- in crime, population, clearance
+      or staffing alike, because half an identity is worse than two.
+    - Nothing may be dropped on the floor. The predecessor's rows are copied into the
+      survivor before it is deleted, whatever the entry calls the relationship, since the
+      deletion is the same either way.
     """
     applied, refused = 0, []
     agencies_removed = 0
