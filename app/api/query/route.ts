@@ -66,7 +66,7 @@ import {
   normalizeConsolidatedDisplayRows,
 } from "@/lib/agency-consolidations";
 import { historicalCountyAgencyPredicate } from "@/lib/historical-county-identity";
-import { getHistoricalCountyAgencyChoice } from "@/lib/historical-county-choice";
+import { getHistoricalCountyAgencyDecision } from "@/lib/historical-county-choice";
 import {
   emitFactualPayload,
   finalizeProof,
@@ -751,22 +751,30 @@ export async function POST(req: NextRequest) {
   // both a sheriff's office and a county police department, under separate ORIs; running SQL
   // that matches both and taking the first is how one of them gets published as "the" county
   // agency. Detected here rather than left to the prompt, and before any factual SQL.
-  const countyAgencyChoice = tab === "historical" && !getBlockingGeoClarification(question)
-    ? getHistoricalCountyAgencyChoice(getDb(), question, body?.history)
+  const countyAgency = tab === "historical" && !getBlockingGeoClarification(question)
+    ? getHistoricalCountyAgencyDecision(getDb(), question, body?.history)
+    : { kind: "none" as const };
+  // A resolved choice is not a clarification -- it is the ORI every later query must use.
+  const requiredCountyOri = countyAgency.kind === "resolved" ? countyAgency.ori : null;
+  const countyAgencyStop = countyAgency.kind === "clarify" || countyAgency.kind === "unresolved"
+    ? countyAgency
     : null;
-  const countyScope = (getBlockingGeoClarification(question) || queryBearingFollowup || countyAgencyChoice)
+  const countyScope = (getBlockingGeoClarification(question) || queryBearingFollowup || countyAgencyStop)
     ? null
     : getCountyScopeClarification(question, body?.history);
-  if (countyAgencyChoice) {
+  if (countyAgencyStop) {
     const ms = Date.now() - totalStart;
-    const proof = finalizeExit({ intendedAction: "clarify", planFamily: `geo:${countyAgencyChoice.id}` });
-    writeLog(question, null, 0, null, ms, countyAgencyChoice.explanation, tab, [`geo:${countyAgencyChoice.id}`], "deterministic", sessionId, null, proof);
+    // `clarify` asks a question; `unresolved` reports that the data cannot answer the one
+    // already asked. Neither runs SQL, and they are logged apart so the difference is visible.
+    const intendedAction = countyAgencyStop.kind === "clarify" ? "clarify" : "decline_data";
+    const proof = finalizeExit({ intendedAction, planFamily: `geo:${countyAgencyStop.id}` });
+    writeLog(question, null, 0, null, ms, countyAgencyStop.explanation, tab, [`geo:${countyAgencyStop.id}`], "deterministic", sessionId, null, proof);
     const stream = new ReadableStream({
       start(controller) {
         controller.enqueue(encoder.encode(sseEvent(emitFactualPayload(proof, {
           type: "result",
           sql: null as unknown as string,
-          explanation: countyAgencyChoice.explanation,
+          explanation: countyAgencyStop.explanation,
           title: "",
           columns: [],
           rows: [],
@@ -1287,6 +1295,7 @@ export async function POST(req: NextRequest) {
           source: tab === "historical" ? "historical" : "current",
           sql: inputSql,
           routingMeta,
+          requiredOri: requiredCountyOri,
         });
         recordContractValidation(contractResult);
         return contractResult;
@@ -1356,6 +1365,15 @@ export async function POST(req: NextRequest) {
           ? [...history, { role: "user" as const, content: followupTransform.instruction }]
           : history;
         if (consolidationInstruction) promptHistory.push({ role: "user" as const, content: consolidationInstruction });
+        // The user chose one of a county's two law enforcement agencies. Tell the model which
+        // ORI that is -- and note that the contract validator checks the SQL actually uses it,
+        // so this is guidance in front of enforcement rather than instead of it.
+        if (requiredCountyOri) {
+          promptHistory.push({
+            role: "user" as const,
+            content: `[SYSTEM: The user selected one specific county law enforcement agency. Query historical_agency ORI '${requiredCountyOri}' and nothing else. Do not match the agency by name and do not include the other agency in that county.]`,
+          });
+        }
         const systemPrompt = isHistorical ? getHistoricalSystemPrompt() : undefined;
 
         // Check response cache (only standalone questions)

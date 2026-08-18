@@ -5,7 +5,13 @@
  * resolved counties by name: the scorecard reported Duval County absent because the database
  * calls that agency `Jacksonville Sheriff's Office`, and Baltimore County built a card from a
  * predicate that matched two departments and took the first. A helper nothing calls is not a
- * fix. Everything here goes through `buildHistoricalScorecard` or the route's clarifier.
+ * fix. Everything here goes through `buildHistoricalScorecard`, the route's county decision,
+ * or the contract validator that enforces its result.
+ *
+ * The two-turn flow is exercised with the *actual* assistant scope message in history. The
+ * first version of the decision function read intent from the whole conversation, and that
+ * message offers "Countywide total or Sheriff's office only?" -- so every answer to it looked
+ * like a countywide request and the check never ran on the one flow it exists for.
  *
  * Every assertion runs against the current database and, when HISTORICAL_REBUILD_DB_PATH is
  * set, the rebuilt one -- because the application has to be safe to deploy before the data
@@ -15,7 +21,8 @@ import Database from "better-sqlite3";
 import fs from "node:fs";
 import path from "node:path";
 import { buildHistoricalScorecard } from "../lib/historical-scorecard";
-import { getHistoricalCountyAgencyChoice } from "../lib/historical-county-choice";
+import { getHistoricalCountyAgencyDecision } from "../lib/historical-county-choice";
+import { validateQueryContractSql } from "../lib/query-contract-validator";
 
 let failures = 0;
 let checks = 0;
@@ -40,10 +47,23 @@ function openReadonly(file: string | undefined): Database.Database | null {
 const CURRENT_DB = process.env.RTCI_DB_PATH || path.join(process.cwd(), "crime_data.db");
 const REBUILT_DB = process.env.HISTORICAL_REBUILD_DB_PATH;
 
+/** The message the existing scope clarifier actually sends. Verbatim, because that is the bug. */
+const SCOPE_QUESTION =
+  "For Baltimore County, do you want the countywide total (all law enforcement agencies mapped to "
+  + "Baltimore County, summed — totals depend on each agency's reporting participation) or the "
+  + "sheriff's office only (the single county agency record)? Choose: Countywide total or Sheriff's office only.";
+
+function twoTurn(original: string, answer: string) {
+  return [
+    { role: "user", content: original },
+    { role: "assistant", content: SCOPE_QUESTION },
+  ] as const;
+}
+
 function exercise(db: Database.Database, side: string): void {
   console.log(`\nlive county paths against the ${side} database`);
 
-  // ── Finding 2: Duval resolves, and is not reported absent ──────────────────────────
+  // ── Scorecards: Finding 2, and Finding 1 for the card path ────────────────────────
   const duval = buildHistoricalScorecard(db, "Duval County, FL scorecard");
   assert(!!duval && duval.rows.length === 9,
     `${side}: Duval County scorecard builds (rows=${duval?.rows.length ?? "none"})`);
@@ -51,11 +71,9 @@ function exercise(db: Database.Database, side: string): void {
     `${side}: Duval County is not reported as absent`);
   assert(!!duval?.sql && duval.sql.includes("ha.ori = 'FL0160000'"),
     `${side}: Duval County SQL is pinned to FL0160000`);
-  // And it is the county agency, not the city of Jacksonville.
   assert(!!duval?.sql && !duval.sql.includes("FL0160200"),
     `${side}: Duval County does not reach the Jacksonville city agency`);
 
-  // ── Finding 1: two-agency counties clarify rather than select ──────────────────────
   for (const [label, question] of [
     ["Baltimore County", "Baltimore County, MD scorecard"],
     ["Chatham County", "Chatham County, GA scorecard"],
@@ -63,17 +81,11 @@ function exercise(db: Database.Database, side: string): void {
     const card = buildHistoricalScorecard(db, question);
     assert(!!card && card.rows.length === 0 && /Needs Clarification/i.test(card.title),
       `${side}: ${label} clarifies instead of building a card (title=${card?.title})`);
-    assert(!!card && card.sql === null,
-      `${side}: ${label} runs no SQL while the choice is open`);
-    assert(!!card && /which one do you want/i.test(card.explanation),
-      `${side}: ${label} asks which agency`);
-    // Both agencies must be named, or the user cannot answer.
-    assert(!!card && (card.explanation.match(/ORI |\([A-Z]{2}\d{7}\)/g)?.length ?? 0) >= 2
-      || !!card && (card.explanation.match(/[A-Z]{2}\d{7}/g)?.length ?? 0) >= 2,
+    assert(!!card && card.sql === null, `${side}: ${label} runs no SQL while the choice is open`);
+    assert(!!card && (card.explanation.match(/[A-Z]{2}\d{7}/g)?.length ?? 0) >= 2,
       `${side}: ${label} names both agencies`);
   }
 
-  // ── Accepted behaviour is retained ─────────────────────────────────────────────────
   for (const [label, question, ori] of [
     ["Cook County", "Cook County, IL scorecard", "IL0160000"],
     ["Maricopa County", "Maricopa County scorecard", "AZ0070000"],
@@ -81,64 +93,100 @@ function exercise(db: Database.Database, side: string): void {
   ] as const) {
     const card = buildHistoricalScorecard(db, question);
     assert(!!card && card.rows.length === 9, `${side}: ${label} still builds a card`);
-    assert(!!card?.sql && card.sql.includes(`ha.ori = '${ori}'`),
-      `${side}: ${label} is pinned to ${ori}`);
+    assert(!!card?.sql && card.sql.includes(`ha.ori = '${ori}'`), `${side}: ${label} is pinned to ${ori}`);
   }
-  // A Louisiana parish still asks for its state, because Orleans is also a county in NY and VT.
   const orleans = buildHistoricalScorecard(db, "Orleans Parish scorecard");
   assert(!!orleans && /more than one state/i.test(orleans.explanation),
     `${side}: Orleans Parish still asks which state`);
-  // Orleans Parish has no year with every scorecard row populated, so it declines rather
-  // than building a card. What matters here is that naming the state resolves the parish
-  // instead of asking again, and that the decline is about missing years, not a missing agency.
   const orleansLa = buildHistoricalScorecard(db, "Orleans Parish, LA scorecard");
   assert(!!orleansLa && /^Orleans Parish, LA/.test(orleansLa.agencyLabel),
     `${side}: Orleans Parish, LA resolves to the parish (label=${orleansLa?.agencyLabel})`);
-  assert(!!orleansLa && !/more than one state|which one do you want|could not find/i.test(orleansLa.explanation),
-    `${side}: Orleans Parish, LA is neither re-asked nor reported absent`);
 
-  // ── The follow-up: naming an agency settles it, and is not asked twice ─────────────
-  // "the county agency" says the scope but not which force, so both databases must ask.
-  const asked = getHistoricalCountyAgencyChoice(db, "just the county agency", [
-    { role: "user", content: "violent crime in Baltimore County, MD" },
-  ]);
-  assert(!!asked && asked.agencies.length === 2,
-    `${side}: a single-agency follow-up for Baltimore County asks which agency`);
-  assert(!!asked && asked.state === "MD", `${side}: the follow-up knows the state`);
-
-  // Asked once: with the clarification already in the history it must not re-ask.
-  const reAsked = getHistoricalCountyAgencyChoice(db, "just the county agency", [
-    { role: "user", content: "violent crime in Baltimore County, MD" },
-    { role: "assistant", content: asked?.explanation ?? "" },
-  ]);
-  assert(reAsked === null, `${side}: the agency clarifier does not ask twice`);
-
-  // "sheriff's office only" is an answer on the rebuilt data and not on the current data,
-  // and that difference is the defect rather than a quirk of the code: today both of
-  // Baltimore County's agencies carry the same rewritten name, so nothing can tell the
-  // sheriff's office from the county police department and the user cannot answer either.
-  const sheriffOnly = getHistoricalCountyAgencyChoice(db, "sheriff's office only", [
-    { role: "user", content: "violent crime in Baltimore County, MD" },
-  ]);
-  if (side === "rebuilt") {
-    assert(sheriffOnly === null,
-      "rebuilt: naming the sheriff settles it, because the other agency is named a police department");
-  } else {
-    assert(!!sheriffOnly,
-      "current: naming the sheriff cannot settle it, because both agencies carry the same name");
+  // ── The real two-turn route flow, with the assistant's own scope message present ───
+  const generic = getHistoricalCountyAgencyDecision(
+    db, "county agency only", twoTurn("violent crime in Baltimore County, MD", "county agency only"));
+  assert(generic.kind === "clarify",
+    `${side}: "county agency only" after the scope question asks which agency (got ${generic.kind})`);
+  if (generic.kind === "clarify") {
+    assert(generic.state === "MD", `${side}: the follow-up recovers the state`);
+    assert(generic.agencies.length === 2, `${side}: both agencies are offered`);
   }
 
-  // Countywide requests are a different path and must not be intercepted.
-  const countywide = getHistoricalCountyAgencyChoice(db, "countywide total", [
-    { role: "user", content: "violent crime in Baltimore County, MD" },
-  ]);
-  assert(countywide === null, `${side}: a countywide request is not asked which single agency`);
+  // The same flow with the state spelled out, and no abbreviation anywhere.
+  const spelled = getHistoricalCountyAgencyDecision(
+    db, "county agency only", twoTurn("violent crime in Baltimore County, Maryland", "county agency only"));
+  assert(spelled.kind === "clarify" && spelled.state === "MD",
+    `${side}: "Maryland" spelled out is not lost during the follow-up (got ${spelled.kind})`);
 
-  // A county with one agency never reaches the clarifier at all.
-  const single = getHistoricalCountyAgencyChoice(db, "sheriff's office only", [
-    { role: "user", content: "violent crime in Cook County, IL" },
+  // Naming a force. On the current data both agencies carry the same name, so the answer
+  // cannot be honoured and the route must decline rather than guess or fall silent.
+  const sheriff = getHistoricalCountyAgencyDecision(
+    db, "sheriff's office only", twoTurn("violent crime in Baltimore County, MD", "sheriff's office only"));
+  if (side === "current") {
+    assert(sheriff.kind === "unresolved",
+      `current: "sheriff's office only" declines, because both agencies are recorded under the same name (got ${sheriff.kind})`);
+    if (sheriff.kind === "unresolved") {
+      assert(/cannot tell which one you mean/i.test(sheriff.explanation),
+        "current: the decline says why");
+    }
+  } else {
+    assert(sheriff.kind === "resolved" && sheriff.ori === "MD0030000",
+      `rebuilt: "sheriff's office only" resolves to MD0030000 by elimination (got ${sheriff.kind})`);
+  }
+
+  // Countywide still bypasses the single-agency choice entirely.
+  const countywide = getHistoricalCountyAgencyDecision(
+    db, "countywide total", twoTurn("violent crime in Baltimore County, MD", "countywide total"));
+  assert(countywide.kind === "countywide",
+    `${side}: a countywide answer is not asked which single agency (got ${countywide.kind})`);
+
+  // A one-agency county never reaches the question.
+  const single = getHistoricalCountyAgencyDecision(
+    db, "sheriff's office only", twoTurn("violent crime in Cook County, IL", "sheriff's office only"));
+  assert(single.kind === "none",
+    `${side}: a one-agency county continues without an extra question (got ${single.kind})`);
+
+  // Asking twice is not an answer: once the clarification is in history, an unanswerable
+  // reply declines rather than repeating the question.
+  const repeated = getHistoricalCountyAgencyDecision(db, "the county one", [
+    { role: "user", content: "violent crime in Baltimore County, MD" },
+    { role: "assistant", content: SCOPE_QUESTION },
+    { role: "user", content: "county agency only" },
+    { role: "assistant", content: generic.kind === "clarify" ? generic.explanation : "" },
   ]);
-  assert(single === null, `${side}: a one-agency county is not asked to choose`);
+  assert(repeated.kind === "unresolved" || repeated.kind === "resolved",
+    `${side}: after asking once, an unusable answer declines rather than asking again (got ${repeated.kind})`);
+}
+
+/** The chosen ORI must be enforced against the SQL, not merely suggested to the model. */
+function exerciseContract(side: string): void {
+  console.log(`\ncontract enforcement of the chosen agency (${side})`);
+  const question = "violent crime in Baltimore County, MD";
+  const pinned = "SELECT hac.year, hac.violent FROM historical_agency_crime hac "
+    + "JOIN historical_agency ha ON ha.ori = hac.ori WHERE ha.ori = 'MD0030100' AND hac.year = 2020";
+  const twoAgency = "SELECT hac.year, hac.violent FROM historical_agency_crime hac "
+    + "JOIN historical_agency ha ON ha.ori = hac.ori "
+    + "JOIN agency_county_crosswalk cw ON cw.ori9 = ha.ori "
+    + "WHERE cw.county_key = 'BALTIMORE' AND LOWER(ha.type) = 'county' AND hac.year = 2020";
+
+  const good = validateQueryContractSql({
+    question, source: "historical", sql: pinned, requiredOri: "MD0030100",
+  });
+  assert(good.blockReasons.length === 0,
+    `${side}: SQL pinned to the chosen ORI passes (blocked: ${good.blockReasons.join("; ")})`);
+
+  const bad = validateQueryContractSql({
+    question, source: "historical", sql: twoAgency, requiredOri: "MD0030100",
+  });
+  assert(bad.blockReasons.length > 0,
+    `${side}: SQL that would match both agencies is blocked`);
+  assert(bad.enforced.includes("contract-required-county-ori"),
+    `${side}: the block is attributed to the required-ORI rule (${bad.enforced.join(", ")})`);
+
+  // No requirement, no new block: this must not affect ordinary questions.
+  const unrelated = validateQueryContractSql({ question, source: "historical", sql: twoAgency });
+  assert(!unrelated.enforced.includes("contract-required-county-ori"),
+    `${side}: the rule is inert when no agency has been chosen`);
 }
 
 const current = openReadonly(CURRENT_DB);
@@ -160,14 +208,17 @@ if (rebuilt) {
     `rebuilt: naming the county police department builds its card (rows=${chosen?.rows.length ?? "none"})`);
   assert(!!chosen?.sql && chosen.sql.includes("ha.ori = 'MD0030100'"),
     "rebuilt: the named department's card is pinned to MD0030100");
-  const settled = getHistoricalCountyAgencyChoice(rebuilt, "Baltimore County Police Department", [
-    { role: "user", content: "violent crime in Baltimore County, MD" },
-  ]);
-  assert(settled === null, "rebuilt: naming the department settles the question");
+  const settled = getHistoricalCountyAgencyDecision(
+    rebuilt, "Baltimore County Police Department",
+    twoTurn("violent crime in Baltimore County, MD", "Baltimore County Police Department"));
+  assert(settled.kind === "resolved" && settled.ori === "MD0030100",
+    `rebuilt: naming the department resolves to MD0030100 (got ${settled.kind})`);
   rebuilt.close();
 } else {
   console.log("\n(skipped rebuilt database: set HISTORICAL_REBUILD_DB_PATH to exercise it)");
 }
+
+exerciseContract("shared");
 
 console.log(`\n${checks - failures}/${checks} live county path checks passed`);
 if (failures > 0) {

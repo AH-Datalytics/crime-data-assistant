@@ -10,39 +10,70 @@ import {
  * The second county question: once the user has said they want the county's own agency
  * rather than a countywide total, *which* agency did they mean?
  *
- * `lib/county-clarifier.ts` asks the first question -- countywide or the county agency. For
- * about seventy counties the second answer is not a single agency: a sheriff's office and a
- * county police department both report, under separate ORIs, as separate forces. Chatham,
- * Cobb, DeKalb and Clayton in Georgia, Baltimore County in Maryland.
+ * `lib/county-clarifier.ts` asks the first question. For about seventy counties the second
+ * answer is not a single agency: a sheriff's office and a county police department both
+ * report, under separate ORIs, as separate forces.
  *
- * Until now nothing detected that. The system prompt was told to ask, which is not
- * enforcement -- the model cannot be the only thing standing between a user and a number
- * assembled from the wrong agency, and a name predicate matching two ORIs followed by
- * `LIMIT 1` publishes one of them with no signal that a choice was made. This runs
- * server-side, before any factual SQL, and returns a clarification naming both.
+ * WHERE INTENT COMES FROM
+ * -----------------------
+ * From the user, and only from the user. The first version of this read the whole
+ * conversation, which meant the scope clarifier's own text -- "Countywide total or Sheriff's
+ * office only?" -- was scanned for intent. It contains the words "countywide total", so every
+ * answer to it looked like a countywide request and this check never ran on the one flow it
+ * exists for. Assistant turns are read for structured state -- was the question already asked
+ * -- and for nothing else.
  *
- * It deliberately does not fire for countywide requests: those are an all-ORI path and have
- * no single agency to choose.
+ * WHY THREE OUTCOMES AND NOT ONE NULL
+ * -----------------------------------
+ * A single `null` for "resolved", "ask them" and "they answered and I cannot honour it" told
+ * the caller nothing, so the route could not pin the chosen ORI and could not decline when the
+ * answer was unusable -- leaving the model free to generate another two-agency query. Each
+ * outcome is now distinct, and `resolved` carries the ORI the executed SQL is required to use.
  */
-
-/** The user has asked for the county's own agency rather than a countywide total. */
-const SINGLE_AGENCY_RE =
-  /\b(sheriff|sheriffs?'?s?\s+(?:office|department)|county police|county agency|police department|pd\b|just the county|only the county)\b/i;
 
 /** The user has asked for everything inside the county. No single agency applies. */
 const COUNTYWIDE_RE =
   /\b(county\s*-?\s*wide|countywide total|all (?:law enforcement |reporting |mapped )?agencies|every agency|combined agencies)\b/i;
 
+/** The user has asked for the county's own agency rather than a countywide total. */
+const SINGLE_AGENCY_RE =
+  /\b(sheriff|county police|county agency|police department|pd\b|just the county|only the county)\b/i;
+
+/**
+ * The answer names a particular force rather than merely choosing the single-agency scope.
+ * "Sheriff's office only" is a claim about which department; "county agency only" is not.
+ */
+const NAMES_A_FORCE_RE = /\b(sheriff|police department|county police)\b/i;
+
 /** Signature used to notice this clarifier already ran in the session. */
 const CLARIFIER_SIGNATURE = "is served by more than one law enforcement agency";
 
-export type CountyAgencyChoice = {
-  id: string;
-  explanation: string;
-  county: string;
-  state: string;
-  agencies: { ori: string; agency: string }[];
-};
+export type CountyAgencyOption = { ori: string; agency: string };
+
+export type CountyAgencyDecision =
+  | { kind: "none" }
+  /** An all-ORI request. The single-agency choice does not apply. */
+  | { kind: "countywide" }
+  /** Two agencies and nothing yet says which. Ask, naming both. */
+  | {
+      kind: "clarify";
+      id: string;
+      explanation: string;
+      county: string;
+      state: string;
+      agencies: CountyAgencyOption[];
+    }
+  /** The user named one. The executed SQL must use this ORI. */
+  | { kind: "resolved"; county: string; state: string; ori: string; agency: string }
+  /** They answered and the data cannot honour it. Decline; run no factual SQL. */
+  | {
+      kind: "unresolved";
+      id: string;
+      explanation: string;
+      county: string;
+      state: string;
+      agencies: CountyAgencyOption[];
+    };
 
 type HistoryMessage = { role?: string; content?: unknown };
 
@@ -50,65 +81,104 @@ function asText(value: unknown): string {
   return typeof value === "string" ? value : JSON.stringify(value ?? "");
 }
 
-export function getHistoricalCountyAgencyChoice(
+const STATE_NAMES: Record<string, string> = {
+  AL: "Alabama", AK: "Alaska", AZ: "Arizona", AR: "Arkansas", CA: "California", CO: "Colorado",
+  CT: "Connecticut", DE: "Delaware", FL: "Florida", GA: "Georgia", HI: "Hawaii", ID: "Idaho",
+  IL: "Illinois", IN: "Indiana", IA: "Iowa", KS: "Kansas", KY: "Kentucky", LA: "Louisiana",
+  ME: "Maine", MD: "Maryland", MA: "Massachusetts", MI: "Michigan", MN: "Minnesota", MS: "Mississippi",
+  MO: "Missouri", MT: "Montana", NE: "Nebraska", NV: "Nevada", NH: "New Hampshire", NJ: "New Jersey",
+  NM: "New Mexico", NY: "New York", NC: "North Carolina", ND: "North Dakota", OH: "Ohio", OK: "Oklahoma",
+  OR: "Oregon", PA: "Pennsylvania", RI: "Rhode Island", SC: "South Carolina", SD: "South Dakota",
+  TN: "Tennessee", TX: "Texas", UT: "Utah", VT: "Vermont", VA: "Virginia", WA: "Washington",
+  WV: "West Virginia", WI: "Wisconsin", WY: "Wyoming", DC: "District of Columbia",
+};
+
+export function getHistoricalCountyAgencyDecision(
   db: Database.Database | null | undefined,
   question: string,
   rawHistory?: unknown,
-): CountyAgencyChoice | null {
-  if (!db) return null;
+): CountyAgencyDecision {
+  if (!db) return { kind: "none" };
   const history: HistoryMessage[] = Array.isArray(rawHistory) ? (rawHistory as HistoryMessage[]) : [];
+  const userTurns = history.filter((msg) => msg?.role === "user").map((msg) => asText(msg?.content));
+  const assistantTurns = history.filter((msg) => msg?.role !== "user").map((msg) => asText(msg?.content));
+
+  // Everything the user has said, and nothing an assistant offered them.
+  const said = [question, ...userTurns].filter(Boolean).join("\n");
 
   const countyName = countyNameFromQuestion(question)
-    ?? history.map((msg) => countyNameFromQuestion(asText(msg?.content))).find(Boolean)
+    ?? userTurns.map((text) => countyNameFromQuestion(text)).find(Boolean)
     ?? null;
-  if (!countyName) return null;
+  if (!countyName) return { kind: "none" };
   const countyKey = countyKeyFromDisplayName(countyName);
-  if (!countyKey) return null;
+  if (!countyKey) return { kind: "none" };
 
-  const conversation = [question, ...history.map((msg) => asText(msg?.content))].join("\n");
-  if (COUNTYWIDE_RE.test(conversation)) return null;
-  if (!SINGLE_AGENCY_RE.test(conversation)) return null;
+  if (COUNTYWIDE_RE.test(said)) return { kind: "countywide" };
+  if (!SINGLE_AGENCY_RE.test(said)) return { kind: "none" };
 
-  // Asked once. A user who answers "the sheriff" for a county whose agencies are not named
-  // that way would otherwise be asked the same question forever.
-  for (const msg of history) {
-    if (asText(msg?.content).toLowerCase().includes(CLARIFIER_SIGNATURE)) return null;
-  }
-
-  const state = stateFromConversation(db, countyKey, conversation);
-  if (!state) return null;
+  const state = stateFromUserTurns(db, countyKey, said);
+  if (!state) return { kind: "none" };
 
   const resolution = resolveHistoricalCountyAgency(db, state, countyName);
-  if (resolution.status !== "ambiguous") return null;
+  if (resolution.status !== "ambiguous") return { kind: "none" };
 
-  const candidates = resolution.agencies.map((entry) => ({ ori: entry.ori, agency: entry.agency }));
-  // The user may already have named one, in this message or in an earlier answer.
-  if (selectNamedCountyAgency(conversation, countyKey, candidates, countyName)) return null;
+  const agencies: CountyAgencyOption[] = resolution.agencies.map((entry) => ({
+    ori: entry.ori,
+    agency: entry.agency,
+  }));
 
-  const named = candidates.map((entry) => `${entry.agency} (ORI ${entry.ori})`).join(" and ");
+  const chosen = selectNamedCountyAgency(said, countyKey, agencies, countyName);
+  if (chosen) {
+    return { kind: "resolved", county: countyName, state, ori: chosen.ori, agency: chosen.agency };
+  }
+
+  const id = `county-agency-${countyKey.toLowerCase().replace(/\s+/g, "-")}-${state.toLowerCase()}`;
+  const named = agencies.map((entry) => `${entry.agency} (ORI ${entry.ori})`).join(" and ");
+
+  // They named a force and nothing in the data answers to it. On the database in production
+  // today both of Baltimore County's agencies are called `Baltimore County`, so "the sheriff's
+  // office" cannot be matched to either -- and asking again would put the same unanswerable
+  // question a second time. Say so, and run nothing.
+  const alreadyAsked = assistantTurns.some((text) => text.toLowerCase().includes(CLARIFIER_SIGNATURE));
+  if (NAMES_A_FORCE_RE.test(said) || alreadyAsked) {
+    return {
+      kind: "unresolved",
+      id: `${id}-indistinguishable`,
+      county: countyName,
+      state,
+      agencies,
+      explanation:
+        `${countyName}, ${state} has two county law enforcement agencies in the FBI Historical file and `
+        + `they are recorded under the same name, so I cannot tell which one you mean: ${named}. `
+        + `I did not answer from either, because attributing one department's figures to the other `
+        + `would be wrong. You can ask for one by its ORI code.`,
+    };
+  }
+
   return {
-    id: `county-agency-${countyKey.toLowerCase().replace(/\s+/g, "-")}-${state.toLowerCase()}`,
+    kind: "clarify",
+    id,
     county: countyName,
     state,
-    agencies: candidates,
+    agencies,
     explanation:
-      `${countyName}, ${state} ${CLARIFIER_SIGNATURE.replace("is served by", "is served by")}: ${named}. ` +
-      `They are separate departments that report separately, so I did not combine them and I did not pick one. ` +
-      `Which do you want?`,
+      `${countyName}, ${state} ${CLARIFIER_SIGNATURE}: ${named}. `
+      + `They are separate departments that report separately, so I did not combine them and I did `
+      + `not pick one. Which do you want?`,
   };
 }
 
 /**
- * The state this county question is about.
+ * The state this county question is about, from what the user typed.
  *
- * Only a state the crosswalk actually pairs with this county counts, and only when exactly
- * one does -- otherwise the state clarifier upstream has work to do first and guessing here
- * would pre-empt it.
+ * Both spellings count. A follow-up like "county agency only" carries no state at all, so the
+ * abbreviation *or* the name has to be recovered from the original question -- losing
+ * "Maryland" because only "MD" was looked for would drop the whole check.
  */
-function stateFromConversation(
+function stateFromUserTurns(
   db: Database.Database,
   countyKey: string,
-  conversation: string,
+  said: string,
 ): string | null {
   let states: string[];
   try {
@@ -123,6 +193,10 @@ function stateFromConversation(
   }
   if (states.length === 0) return null;
   if (states.length === 1) return states[0];
-  const mentioned = states.filter((state) => new RegExp(`\\b${state}\\b`).test(conversation));
+  const mentioned = states.filter((state) => {
+    if (new RegExp(`\\b${state}\\b`).test(said)) return true;
+    const name = STATE_NAMES[state];
+    return Boolean(name) && new RegExp(`\\b${name.replace(/\s+/g, "\\s+")}\\b`, "i").test(said);
+  });
   return mentioned.length === 1 ? mentioned[0] : null;
 }

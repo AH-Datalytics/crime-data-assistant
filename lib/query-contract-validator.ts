@@ -312,6 +312,12 @@ export function hasLiteralOriTargetJoin(sql: string): boolean {
   return new RegExp(`\\b(?:[A-Za-z_]\\w*\\.)?ori\\s*=\\s*${alias}\\.ori\\b|${alias}\\.ori\\s*=\\s*(?:[A-Za-z_]\\w*\\.)?ori\\b`, "i").test(sql);
 }
 
+function requiredOriBlockMessage(ori: string): string {
+  return `This question was resolved to one specific county law enforcement agency (ORI ${ori}), `
+    + `but the query did not target it. I did not run it, because a query matching more than one `
+    + `agency would report the wrong department's figures.`;
+}
+
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -369,7 +375,19 @@ export function validateQueryContractSql(opts: {
   source: QueryContractSource;
   sql: string;
   routingMeta?: RoutingLogMeta | null;
+  /**
+   * An agency the route has already resolved, which the SQL must actually target.
+   *
+   * Set when a county turns out to be policed by two departments and the user has named
+   * one. Telling the model which ORI to use is a hint; this is the check. Without it the
+   * model stays free to emit a query matching both agencies, and the answer would be
+   * attributed to whichever one the database happened to return.
+   */
+  requiredOri?: string | null;
 }): QueryContractSqlValidation {
+  const requiredOri = (opts.requiredOri || "").trim();
+  const missingRequiredOri = requiredOri
+    && !new RegExp(`'${escapeRegExp(requiredOri)}'`, "i").test(opts.sql);
   const contract = buildQueryContract(opts.question, opts.source, opts.routingMeta);
   if (!contract) {
     return {
@@ -378,8 +396,8 @@ export function validateQueryContractSql(opts: {
       warnings: [],
       capabilityFindings: [],
       retryIssues: [],
-      blockReasons: [],
-      enforced: [],
+      blockReasons: missingRequiredOri ? [requiredOriBlockMessage(requiredOri)] : [],
+      enforced: missingRequiredOri ? ["contract-required-county-ori"] : [],
     };
   }
 
@@ -476,6 +494,11 @@ export function validateQueryContractSql(opts: {
       retryIssues.push(capabilityRetryIssue(finding, contract));
       enforced.push(finding.ruleId);
     }
+  }
+
+  if (missingRequiredOri) {
+    blockReasons.push(requiredOriBlockMessage(requiredOri));
+    enforced.push("contract-required-county-ori");
   }
 
   const uniqueBlockReasons = [...new Set(blockReasons)];
