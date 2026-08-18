@@ -83,6 +83,31 @@ for (const [label, text] of [
     `${label}: the authoritative name appears (${fixed.text})`);
 }
 
+console.log("\nordinary prose keeps its grammar and its meaning");
+// Reported by review against the first version, which allowed six arbitrary preceding words and
+// so treated the sentence's own framing as part of the agency's name.
+for (const [input, expected] of [
+  ["Rates for the sheriff's office fell in 2024.",
+   "Rates for the Baltimore County Police Department fell in 2024."],
+  ["According to the sheriff's office, violent crime fell.",
+   "According to the Baltimore County Police Department, violent crime fell."],
+  ["The figures cover the sheriff's office only.",
+   "The figures cover the Baltimore County Police Department only."],
+] as const) {
+  const got = enforceAuthoritativeAgencyLabel(input, POLICE).text;
+  assert(got === expected, `prose preserved: ${JSON.stringify(input)}\n        got ${JSON.stringify(got)}`);
+}
+// The words around the label survive: nothing before the role phrase is consumed.
+for (const [label, input, mustKeep] of [
+  ["leading preposition", "Rates for the sheriff's office fell in 2024.", "Rates for"],
+  ["attribution", "According to the sheriff's office, violent crime fell.", "According to"],
+  ["verb", "The figures cover the sheriff's office only.", "The figures cover"],
+  ["trailing qualifier", "The figures cover the sheriff's office only.", "only."],
+] as const) {
+  const got = enforceAuthoritativeAgencyLabel(input, POLICE).text;
+  assert(got.includes(mustKeep), `${label} survives (${got})`);
+}
+
 console.log("\nwhat it must not do");
 {
   // The agency really is a police department: leave it alone.

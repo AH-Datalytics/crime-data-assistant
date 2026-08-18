@@ -131,14 +131,40 @@ export function enforceAuthoritativeAgencyLabel(
   });
 
   // 2. A kind of agency the authoritative name contradicts.
+  //
+  // Bounded on the left, which the first version was not. It allowed six arbitrary preceding
+  // words, so it treated the sentence's own framing as part of the agency's name:
+  // "Rates for the sheriff's office fell" became "Baltimore County Police Department fell",
+  // and "According to the sheriff's office," lost "According to". Meaning changed, grammar
+  // broke, and the production sentence only survived because pass 1 reached it first.
+  //
+  // Two shapes, and nothing else is touched:
+  //
+  //   a. a proper name immediately followed by the role -- "Baltimore County Sheriff's
+  //      Office" -- where the capitalised run really is part of the label. Adjacency is
+  //      required: a lowercase word between them means the capitals belong to the sentence,
+  //      not to the agency.
+  //   b. the bare role -- "the sheriff's office" -- where only the role words are replaced and
+  //      every surrounding word, determiner included, is left where it was.
   for (const phrase of ROLE_PHRASES) {
     if (authoritativeNormalized.includes(phrase)) continue;
-    const pattern = new RegExp(
-      `\\b(?:the\\s+)?[A-Za-z][\\w''’.\\-&/]*(?:\\s+[A-Za-z][\\w''’.\\-&/]*){0,5}\\s+${escapeRegExp(phrase).replace(/'/g, "['’]")}\\b|\\b(?:the\\s+)?${escapeRegExp(phrase).replace(/'/g, "['’]")}\\b`,
-      "gi",
-    );
-    out = out.replace(pattern, (match: string) => {
+    const role = escapeRegExp(phrase).replace(/'/g, "['’]");
+    const properWord = "[A-Z][\\w''’.\\-&/]*";
+
+    // a. a capitalised run directly against the role phrase
+    const named = new RegExp(`\\b((?:${properWord})(?:\\s+${properWord}){0,5})\\s+(${role})\\b`, "gi");
+    out = out.replace(named, (match: string, lead: string) => {
+      // The run has to be capitalised in the text itself; the pattern is case-insensitive so
+      // that the role words match either way, which would otherwise let lowercase prose in.
+      if (!/^[A-Z]/.test(lead) || !lead.split(/\s+/).every((w) => /^[A-Z]/.test(w))) return match;
       if (normalize(match) === authoritativeNormalized) return match;
+      corrections.push(`${match.trim()} -> ${authoritative}`);
+      return authoritative;
+    });
+
+    // b. the role phrase alone, with its grammatical context untouched
+    const bare = new RegExp(`\\b${role}\\b`, "gi");
+    out = out.replace(bare, (match: string) => {
       corrections.push(`${match.trim()} -> ${authoritative}`);
       return authoritative;
     });

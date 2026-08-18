@@ -1275,6 +1275,24 @@ export async function POST(req: NextRequest) {
     async start(controller) {
       let sql: string | null = null;
       let firedGuardrails: string[] = [];
+
+      // One place that makes a narrative agree with the resolved agency record, used at every
+      // factual boundary. It returns the corrected text rather than mutating, so each call site
+      // has to correct BEFORE the finalization that seals what the user reads -- the first
+      // version of this ran only where no SQL was produced, which is the one path the Baltimore
+      // regression never takes.
+      const authoritativeNarrative = (text: string | null | undefined): string => {
+        if (!requiredAgencyRecord || !text) return text ?? "";
+        const fixed = enforceAuthoritativeAgencyLabel(text, requiredAgencyRecord);
+        if (fixed.changed) {
+          if (!firedGuardrails.includes("authoritative-agency-label")) {
+            firedGuardrails.push("authoritative-agency-label");
+          }
+          console.log("[query][authoritative-label] " + requiredAgencyRecord.ori + ": "
+            + fixed.corrections.join("; "));
+        }
+        return fixed.text;
+      };
       let contractQuestion = question;
       let closed = false;
       /**
@@ -1520,17 +1538,8 @@ export async function POST(req: NextRequest) {
         // corrected here for the same reason. A user may say what they want and be wrong about
         // what it is called -- "sheriff's office only" reached the Baltimore County Police
         // Department -- and the answer must still say which agency the numbers belong to.
-        if (requiredAgencyRecord) {
-          const fixedExplanation = enforceAuthoritativeAgencyLabel(claude.explanation, requiredAgencyRecord);
-          const fixedTitle = enforceAuthoritativeAgencyLabel(claude.title, requiredAgencyRecord);
-          if (fixedExplanation.changed || fixedTitle.changed) {
-            claude.explanation = fixedExplanation.text;
-            claude.title = fixedTitle.text;
-            firedGuardrails.push("authoritative-agency-label");
-            console.log(`[query][authoritative-label] ${requiredAgencyRecord.ori}: `
-              + [...fixedExplanation.corrections, ...fixedTitle.corrections].join("; "));
-          }
-        }
+        claude.explanation = authoritativeNarrative(claude.explanation);
+        claude.title = authoritativeNarrative(claude.title);
           // No SQL was produced, so nothing factual is being asserted. Capability
           // framing, never a claim that the source lacks the data (handoff 2.4).
           const noSqlProof = finalizeExit({ intendedAction: "decline_capability", guardrails: firedGuardrails });
@@ -1954,6 +1963,11 @@ export async function POST(req: NextRequest) {
 
         const totalMs = Date.now() - totalStart;
         const executionTimeMs = totalMs;  // show total wall time (includes Claude API + DB)
+
+        // Before any factual emission on the answering path: the empty-result reply, the
+        // all-null reply and the initial result all read from these.
+        claude.explanation = authoritativeNarrative(claude.explanation);
+        claude.title = authoritativeNarrative(claude.title);
 
         // Step 4: Handle empty results
         if (rows.length === 0) {
@@ -2400,6 +2414,7 @@ export async function POST(req: NextRequest) {
             console.log(`[query][internal-scaffold] Stripping scaffold text from post-query explanation`);
             postExplanation = stripInternalScaffold(postExplanation) || claude.explanation;
           }
+          postExplanation = authoritativeNarrative(postExplanation);
           // The proof that describes what the user actually ended up reading. Starts as
           // the result event's finalization and is replaced when the narrative is.
           let deliveredFinalization = finalization;
@@ -2473,6 +2488,7 @@ export async function POST(req: NextRequest) {
               console.log(`[query][internal-scaffold] Stripping scaffold text from retry explanation`);
               retryExplanation = stripInternalScaffold(retryExplanation) || claude.explanation;
             }
+            retryExplanation = authoritativeNarrative(retryExplanation);
             let deliveredRetryFinalization = finalization;
             if (retryExplanation !== claude.explanation) {
               const retryFinalization = finalizeExit({
