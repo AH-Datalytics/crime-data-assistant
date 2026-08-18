@@ -1,7 +1,6 @@
 import type Database from "better-sqlite3";
 import { resolveGeoPlaces } from "./geo-place-resolver";
 import { consolidatedDisplayName, historicalAgencyTarget, consolidatedRtciAgency } from "./agency-consolidations";
-import { historicalCountyAgencyPredicate } from "./historical-county-identity";
 import { detectAgencyScorecardQuestion } from "./scorecard-format";
 import { evaluateAgencyYearFromDb, describeFindings } from "./agency-reliability";
 
@@ -53,6 +52,14 @@ export type AgencyScorecardTarget = {
   agency: string;
   state: string;
   type: "city" | "county";
+  /**
+   * The exact agency this card is about, when the caller has already resolved it.
+   *
+   * Counties always carry one. Their `agency` is a label -- "Duval County" for an agency the
+   * database calls "Jacksonville Sheriff's Office" -- so matching on it would find nothing,
+   * and where a county has two law-enforcement agencies a name predicate would match both.
+   */
+  ori?: string;
 };
 
 export const COUNTY_AGENCY_SCORECARD_NOTE =
@@ -144,15 +151,22 @@ export function buildAgencyScorecard(
   const agency = consolidatedDisplayName(candidate.state, candidate.name);
   const state = candidate.state!.toLowerCase();
   const target = historicalAgencyTarget(candidate.state, candidate.name, explicitTarget?.type ?? "city");
-  // A county agency is addressed through the FIPS crosswalk rather than by name. The two
-  // databases spell county agencies differently -- `Jefferson` against `Jefferson County`,
-  // `Riley County Police Department` against `Riley County` -- and a name predicate matches
-  // only one of them, while the ORI is the same in both.
-  const where = target.ori
-    ? `ha.ori = ${sqlQuote(target.ori)}`
-    : target.type === "county"
-      ? historicalCountyAgencyPredicate(candidate.state!, target.agency)
-      : `ha.agency = ${sqlQuote(target.agency)} AND ha.state = ${sqlQuote(state)} AND ha.type = ${sqlQuote(target.type)}`;
+  // An ORI the caller already resolved wins outright. A county always supplies one, because
+  // its `agency` is a label rather than a predicate and because a county with both a
+  // sheriff's office and a county police department would otherwise match two agencies and
+  // be resolved by whichever `LIMIT 1` happened to reach first.
+  const resolvedOri = explicitTarget?.ori ?? target.ori;
+  if (!resolvedOri && (explicitTarget?.type ?? target.type) === "county") {
+    // Refuse rather than fall back to a name. Callers resolve counties through
+    // lib/historical-county-identity.ts; arriving here without an ORI means one did not.
+    return unavailableScorecard(
+      "County Scorecard Unavailable",
+      `I could not resolve ${candidate.name} to a single county law-enforcement agency, so I did not build a scorecard from a name match.`,
+    );
+  }
+  const where = resolvedOri
+    ? `ha.ori = ${sqlQuote(resolvedOri)}`
+    : `ha.agency = ${sqlQuote(target.agency)} AND ha.state = ${sqlQuote(state)} AND ha.type = ${sqlQuote(target.type)}`;
   const completeYears = (db.prepare(`
     SELECT hac.year AS year
     FROM historical_agency_crime hac

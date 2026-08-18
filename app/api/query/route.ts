@@ -66,6 +66,7 @@ import {
   normalizeConsolidatedDisplayRows,
 } from "@/lib/agency-consolidations";
 import { historicalCountyAgencyPredicate } from "@/lib/historical-county-identity";
+import { getHistoricalCountyAgencyChoice } from "@/lib/historical-county-choice";
 import {
   emitFactualPayload,
   finalizeProof,
@@ -746,9 +747,40 @@ export async function POST(req: NextRequest) {
     return new Response(stream, { headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", Connection: "keep-alive", "X-RateLimit-Remaining": String(rateCheck.remaining) } });
   }
 
-  const countyScope = (getBlockingGeoClarification(question) || queryBearingFollowup)
+  // Which agency, once the scope question is settled. About seventy counties are policed by
+  // both a sheriff's office and a county police department, under separate ORIs; running SQL
+  // that matches both and taking the first is how one of them gets published as "the" county
+  // agency. Detected here rather than left to the prompt, and before any factual SQL.
+  const countyAgencyChoice = tab === "historical" && !getBlockingGeoClarification(question)
+    ? getHistoricalCountyAgencyChoice(getDb(), question, body?.history)
+    : null;
+  const countyScope = (getBlockingGeoClarification(question) || queryBearingFollowup || countyAgencyChoice)
     ? null
     : getCountyScopeClarification(question, body?.history);
+  if (countyAgencyChoice) {
+    const ms = Date.now() - totalStart;
+    const proof = finalizeExit({ intendedAction: "clarify", planFamily: `geo:${countyAgencyChoice.id}` });
+    writeLog(question, null, 0, null, ms, countyAgencyChoice.explanation, tab, [`geo:${countyAgencyChoice.id}`], "deterministic", sessionId, null, proof);
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(encoder.encode(sseEvent(emitFactualPayload(proof, {
+          type: "result",
+          sql: null as unknown as string,
+          explanation: countyAgencyChoice.explanation,
+          title: "",
+          columns: [],
+          rows: [],
+          rowCount: 0,
+          truncated: false,
+          chartConfig: null,
+          chartMeta: null,
+          executionTimeMs: ms,
+        }))));
+        controller.close();
+      },
+    });
+    return new Response(stream, { headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", Connection: "keep-alive", "X-RateLimit-Remaining": String(rateCheck.remaining) } });
+  }
   if (countyScope) {
     const ms = Date.now() - totalStart;
     const proof = finalizeExit({ intendedAction: "clarify", planFamily: `geo:${countyScope.id}` });

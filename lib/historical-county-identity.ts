@@ -153,6 +153,83 @@ export function resolveHistoricalCountyAgency(
   return { status: "unknown", countyKey };
 }
 
+function normalizedWords(value: string): string {
+  return ` ${(value || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim()} `;
+}
+
+/**
+ * The county phrase the user typed, e.g. `Duval County` or `Orleans Parish`.
+ *
+ * The capture takes up to three words before the suffix, which means it also swallows the
+ * words leading up to it: "violent crime in Baltimore County" yielded
+ * `violent crime in Baltimore County`, whose key matched no county and silently disabled
+ * every check downstream. Leading filler is dropped the same way lib/county-clarifier.ts
+ * does it, so the two agree about which county a sentence names.
+ */
+const COUNTY_FILLER_TOKEN_RE = /^(the|a|an|in|for|from|within|inside|across|covering|of|at|to|and|crime|crimes|violent|property|murder|murders|homicide|homicides|robbery|robberies|assault|assaults|burglary|burglaries|theft|thefts|gun|violence|data|stats|statistics|trend|trends|rate|rates|show|me|compare|changed|has|how|what|since|scorecard|about|give|us)$/i;
+
+export function countyNameFromQuestion(question: string): string | null {
+  const match = (question || "").match(
+    /\b([A-Za-z][A-Za-z.'-]*(?:\s+[A-Za-z][A-Za-z.'-]*){0,3})\s+(County|Parish|Borough)\b/i
+  );
+  if (!match) return null;
+  const tokens = match[1].split(/\s+/);
+  const lastFiller = tokens.reduce((last, token, index) => (COUNTY_FILLER_TOKEN_RE.test(token) ? index : last), -1);
+  const name = tokens.slice(lastFiller + 1).join(" ").trim();
+  if (!name) return null;
+  return `${name} ${match[2]}`;
+}
+
+/**
+ * The agency the question names, when it names one of the candidates.
+ *
+ * Three rules, each needing evidence, none guessing. Where none applies the caller asks.
+ *
+ * 0. A candidate whose name *is* the phrase the user typed, exactly -- unless another
+ *    candidate extends that name. On the current database St. Louis County has two
+ *    county-typed rows, `St. Louis County` and `St. Louis` (the city, mis-typed), and
+ *    "St. Louis County" names one and not the other. But in the rebuilt data Baltimore
+ *    County's two agencies are `Baltimore County` and `Baltimore County Police Department`,
+ *    and the shorter name matching says nothing about which of the two forces is meant.
+ * 1. A candidate whose own name says more than the bare county name and appears in the
+ *    question -- "Chatham County Police Department".
+ * 2. Where exactly one of two candidates is a named police department and the user asked for
+ *    the sheriff, the other is the answer by elimination.
+ */
+export function selectNamedCountyAgency(
+  question: string,
+  countyKey: string,
+  candidates: { ori: string; agency: string }[],
+  countyName = "",
+): { ori: string; agency: string } | null {
+  const asked = normalizedWords(question);
+
+  const typed = normalizedWords(countyName).trim();
+  if (typed) {
+    const exact = candidates.filter((entry) => normalizedWords(entry.agency).trim() === typed);
+    const extended = candidates.some((entry) => {
+      const name = normalizedWords(entry.agency).trim();
+      return name !== typed && name.startsWith(`${typed} `);
+    });
+    if (exact.length === 1 && !extended) return exact[0];
+  }
+
+  const distinctive = candidates.filter((entry) => {
+    const name = normalizedWords(entry.agency).trim();
+    return name && countyKeyFromDisplayName(entry.agency) !== countyKey && asked.includes(` ${name} `);
+  });
+  if (distinctive.length === 1) return distinctive[0];
+
+  if (/\bsheriff'?s?\b/i.test(question) && candidates.length === 2) {
+    const departments = candidates.filter((entry) => /police\s+department/i.test(entry.agency));
+    if (departments.length === 1) {
+      const other = candidates.find((entry) => entry.ori !== departments[0].ori);
+      if (other) return other;
+    }
+  }
+  return null;
+}
+
 /**
  * The label a county agency is shown under.
  *

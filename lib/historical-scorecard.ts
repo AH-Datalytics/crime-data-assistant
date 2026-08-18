@@ -5,6 +5,13 @@ import {
   buildAgencyScorecard, unavailableScorecard, STALE_SCORECARD_YEARS, SCORECARD_COLUMNS,
   type AgencyScorecardResult, type AgencyScorecardRow, type AgencyScorecardTarget,
 } from "./agency-scorecard";
+import {
+  countyKeyFromDisplayName,
+  countyNameFromQuestion,
+  historicalCountyLabel,
+  resolveHistoricalCountyAgency,
+  selectNamedCountyAgency,
+} from "./historical-county-identity";
 
 /**
  * Shared Historical scorecard entry point. Dispatches a scorecard question to the
@@ -27,6 +34,16 @@ export function buildHistoricalScorecard(db: Database.Database, question: string
     return unavailableScorecard(
       "County Scorecard Needs Clarification",
       `There is a ${countyResolution.agency} county agency in more than one state (${countyResolution.states.join(", ")}). Please name the state.`,
+    );
+  }
+  if (countyResolution.kind === "ambiguous_agency") {
+    // Two agencies police this county. Naming them is the answer: the user can pick one and
+    // the follow-up resolves to its ORI. Summing them would double-count and choosing one
+    // would publish a number nobody asked for.
+    const names = countyResolution.agencies.map((entry) => `${entry.agency} (${entry.ori})`);
+    return unavailableScorecard(
+      "County Scorecard Needs Clarification",
+      `${countyResolution.county}, ${countyResolution.state} is served by ${countyResolution.agencies.length} law enforcement agencies in the FBI Historical file: ${names.join(" and ")}. Which one do you want? I did not combine them, because they are separate agencies and a total would count some places twice.`,
     );
   }
   if (countyResolution.kind === "unavailable") {
@@ -87,6 +104,8 @@ export type CountyResolution =
   | { kind: "none" }
   | { kind: "resolved"; target: AgencyScorecardTarget }
   | { kind: "ambiguous"; agency: string; states: string[] }
+  /** One county, two law-enforcement agencies. The user has to say which. */
+  | { kind: "ambiguous_agency"; county: string; state: string; agencies: { ori: string; agency: string }[] }
   | { kind: "unavailable"; agency: string; state: string };
 
 function normalizedWords(value: string): string {
@@ -94,10 +113,16 @@ function normalizedWords(value: string): string {
 }
 
 /**
- * County scorecards are single FBI county-agency records. Resolve against the actual
- * historical agency catalog so unique counties that are not in the static geo catalog
- * (Maricopa, for example) remain reachable, while repeated names such as Cook County
- * require a state. The resulting card discloses that it is not a countywide rollup.
+ * County scorecards are single FBI county-agency records, resolved by identity.
+ *
+ * This used to start by scanning `historical_agency.agency` for a name that appeared in the
+ * question. That only worked while the database held a synthesised county name for every
+ * county agency. It does not: `FL0160000` is `Jacksonville Sheriff's Office`, so
+ * "Duval County scorecard" found nothing and reported the agency absent -- while the FIPS
+ * crosswalk knew exactly which ORI it was. Discovery now starts from the county the user
+ * named, through `agency_county_crosswalk`, and the agency's own name is only ever a label.
+ *
+ * The card discloses that it is not a countywide rollup.
  */
 export function resolveCountyAgencyScorecardTarget(
   db: Database.Database,
@@ -105,50 +130,86 @@ export function resolveCountyAgencyScorecardTarget(
 ): CountyResolution {
   if (!/\b(?:county|parish|borough)\b/i.test(question)) return { kind: "none" };
 
-  const questionWords = normalizedWords(question);
-  const rows = db.prepare(
-    "SELECT DISTINCT agency, state FROM historical_agency WHERE type = 'county' AND agency IS NOT NULL AND state IS NOT NULL"
-  ).all() as { agency: string; state: string }[];
-  let matches = rows.filter((row) => questionWords.includes(normalizedWords(row.agency)));
-  if (matches.length === 0) return { kind: "none" };
+  const countyName = countyNameFromQuestion(question);
+  if (!countyName) return { kind: "none" };
+  const countyKey = countyKeyFromDisplayName(countyName);
+  if (!countyKey) return { kind: "none" };
 
-  const longest = Math.max(...matches.map((row) => normalizedWords(row.agency).length));
-  matches = matches.filter((row) => normalizedWords(row.agency).length === longest);
-  const agencyName = matches[0].agency;
   // Remove the county name before looking for a spelled-out state. Otherwise
   // "Washington County" looks as if the user explicitly selected Washington state
   // and silently defeats the required multi-state clarification.
-  const stateContext = questionWords.replace(normalizedWords(agencyName), " ");
-
+  const stateContext = normalizedWords(question).replace(normalizedWords(countyName), " ");
   const explicitStates = new Set<string>();
   for (const [code, name] of Object.entries(STATE_CODE_TO_NAME)) {
     if (new RegExp(`\\b${code}\\b`).test(question) || stateContext.includes(normalizedWords(name))) {
-      explicitStates.add(code.toLowerCase());
-    }
-  }
-  if (explicitStates.size > 0) {
-    matches = matches.filter((row) => explicitStates.has(row.state.toLowerCase()));
-    if (matches.length === 0) {
-      const requested = [...explicitStates][0].toUpperCase();
-      return { kind: "unavailable", agency: agencyName, state: requested };
+      explicitStates.add(code.toUpperCase());
     }
   }
 
-  const unique = [...new Map(matches.map((row) => [`${row.agency.toLowerCase()}|${row.state.toLowerCase()}`, row])).values()];
-  if (unique.length === 1) {
+  const states = countyStatesForKey(db, countyKey);
+  if (states.length === 0) return { kind: "none" };
+
+  let scoped = states;
+  if (explicitStates.size > 0) {
+    scoped = states.filter((state) => explicitStates.has(state));
+    if (scoped.length === 0) {
+      return { kind: "unavailable", agency: countyName, state: [...explicitStates][0] };
+    }
+  }
+  if (scoped.length > 1) {
+    return { kind: "ambiguous", agency: countyName, states: [...scoped].sort() };
+  }
+
+  const state = scoped[0];
+  const resolution = resolveHistoricalCountyAgency(db, state, countyName);
+  if (resolution.status === "unknown") {
+    return { kind: "unavailable", agency: countyName, state };
+  }
+  if (resolution.status === "resolved") {
     return {
       kind: "resolved",
-      target: { agency: unique[0].agency, state: unique[0].state.toUpperCase(), type: "county" },
+      target: {
+        agency: historicalCountyLabel(resolution.agency),
+        state,
+        type: "county",
+        ori: resolution.agency.ori,
+      },
     };
   }
-  if (unique.length > 1) {
+
+  // Two law-enforcement agencies serve this county -- typically a sheriff's office and a
+  // county police department. If the question already names one of them, that is the answer
+  // and asking again would be a loop. Otherwise the choice belongs to the user: summing them
+  // would double-count and `LIMIT 1` would publish one of them as "the" county agency with
+  // no signal that a choice was made.
+  const chosen = selectNamedCountyAgency(question, countyKey, resolution.agencies, countyName);
+  if (chosen) {
     return {
-      kind: "ambiguous",
-      agency: unique[0].agency,
-      states: [...new Set(unique.map((row) => row.state.toUpperCase()))].sort(),
+      kind: "resolved",
+      target: { agency: chosen.agency, state, type: "county", ori: chosen.ori },
     };
   }
-  return { kind: "none" };
+  return {
+    kind: "ambiguous_agency",
+    county: countyName,
+    state,
+    agencies: resolution.agencies.map((entry) => ({ ori: entry.ori, agency: entry.agency })),
+  };
+}
+
+/** Every state whose crosswalk holds this county key with a county-typed agency. */
+function countyStatesForKey(db: Database.Database, countyKey: string): string[] {
+  try {
+    return (db.prepare(`
+      SELECT DISTINCT UPPER(cw.state) AS state
+      FROM agency_county_crosswalk cw
+      JOIN historical_agency ha ON ha.ori = cw.ori9
+      WHERE cw.county_key = ? AND LOWER(ha.type) = 'county'
+      ORDER BY state
+    `).all(countyKey) as { state: string }[]).map((row) => row.state);
+  } catch {
+    return [];
+  }
 }
 
 /**
