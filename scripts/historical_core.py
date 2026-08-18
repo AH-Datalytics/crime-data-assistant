@@ -455,16 +455,22 @@ class IdentifierPolicy:
     not one of the directory's own pseudo-rows is something this pipeline has no account of.
     """
 
-    __slots__ = ("pseudo", "excluded")
+    __slots__ = ("pseudo", "excluded", "observed")
 
     def __init__(self, pseudo=(), excluded=()):
         self.pseudo = frozenset(pseudo)
         self.excluded = frozenset(excluded)
+        #: {(identifier, destination table): rows actually withheld}. Counted while loading
+        #: rather than copied from the entry, because an entry that matches nothing would
+        #: otherwise sit in the file reporting its own declared total forever.
+        self.observed = {}
 
-    def classify(self, ori, source):
+    def classify(self, ori, source, table=None):
         if ori in self.pseudo:
             return "pseudo"
         if ori in self.excluded:
+            key = (ori, table or source)
+            self.observed[key] = self.observed.get(key, 0) + 1
             return "excluded"
         if len(ori) != 9:
             raise BuildError(
@@ -506,14 +512,27 @@ def load_identifier_exclusions(path, conn=None):
     return entries
 
 
-def verify_identifier_exclusions(conn, entries, tables):
-    """Every exclusion must still describe this build, and must have done some work.
+def verify_identifier_exclusions(conn, entries, tables, policy=None):
+    """Every exclusion must still describe this build, and must have done exactly the work it claims.
 
-    Checked against the finished directory, not the one the base tables were loaded against,
-    because the annual step creates agencies. An entry naming an identifier the build now
-    holds is stale; an entry that excluded nothing is describing data that has moved on. Both
-    would sit in the file looking like evidence.
+    An exclusion is a claim about data, so it is checked against data rather than trusted:
+
+    - the directory must not hold the identifier (checked against the *finished* directory,
+      because the annual step creates agencies of its own);
+    - no row for it may have survived into any table;
+    - it must have withheld rows -- an entry that matches nothing is describing a file that
+      has moved on, and would sit there reporting its own declared total forever;
+    - the rows it withheld must be in the table it names, and in no other. `CA0349950`'s
+      evidence is about staffing. If that identifier ever turned up in crime or population,
+      the evidence would not cover it, and excluding it anyway would be exactly the silent
+      drop this machinery exists to prevent;
+    - and the observed count must equal the declared one, so a source that gains or loses
+      rows for the identifier fails the build instead of quietly re-scoping the claim.
     """
+    observed_by_identifier = {}
+    for (identifier, table), count in (policy.observed if policy else {}).items():
+        observed_by_identifier.setdefault(identifier, {})[table] = count
+
     accounting = {}
     for identifier, entry in sorted(entries.items()):
         if conn.execute("SELECT 1 FROM historical_agency WHERE ori = ?", (identifier,)).fetchone():
@@ -530,11 +549,40 @@ def verify_identifier_exclusions(conn, entries, tables):
                 f"{identifier} is excluded but rows for it survived: "
                 + ", ".join(f"{t}={n}" for t, n in still_present.items() if n)
             )
-        accounting[identifier] = {
-            "table": entry["table"],
-            "rows_excluded": entry.get("rows"),
-            "reason": entry["reason"],
-        }
+
+        if policy is not None:
+            observed = observed_by_identifier.get(identifier, {})
+            if not observed:
+                raise BuildError(
+                    f"{identifier} is excluded but no source row was withheld for it; the "
+                    "entry describes data this build did not see"
+                )
+            elsewhere = sorted(table for table in observed if table != entry["table"])
+            if elsewhere:
+                raise BuildError(
+                    f"{identifier} is excluded on evidence about {entry['table']}, but rows "
+                    "for it were also withheld from " + ", ".join(elsewhere)
+                    + "; the evidence does not cover those"
+                )
+            declared = entry.get("rows")
+            actual = observed[entry["table"]]
+            if declared is not None and declared != actual:
+                raise BuildError(
+                    f"{identifier} is declared to exclude {declared} row(s) from "
+                    f"{entry['table']} but withheld {actual}"
+                )
+            accounting[identifier] = {
+                "table": entry["table"],
+                "rows_declared": declared,
+                "rows_observed": actual,
+                "reason": entry["reason"],
+            }
+        else:
+            accounting[identifier] = {
+                "table": entry["table"],
+                "rows_declared": entry.get("rows"),
+                "reason": entry["reason"],
+            }
     return accounting
 
 
@@ -569,7 +617,7 @@ def load_base_crime(conn, rows, policy=None):
         year_raw = str(row.get("year") or "").strip()
         if not ori or not year_raw:
             continue
-        verdict = policy.classify(ori, "historical crime")
+        verdict = policy.classify(ori, "historical crime", "historical_agency_crime")
         if verdict != "agency":
             skipped[verdict] += 1
             continue
@@ -607,7 +655,7 @@ def _load_keyed_table(conn, rows, table, columns, build_record, policy, source_l
         year_raw = str(row.get("year") or "").strip()
         if not ori or not year_raw:
             continue
-        verdict = policy.classify(ori, source_label)
+        verdict = policy.classify(ori, source_label, table)
         if verdict != "agency":
             skipped[verdict] += 1
             continue

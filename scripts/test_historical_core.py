@@ -748,6 +748,22 @@ class IdentifierExclusions(CoreBuildTestCase):
             with self.assertRaises(core.BuildError):
                 core.load_identifier_exclusions(self.write([self.ENTRY, self.ENTRY], tmp))
 
+    CHILD_TABLES = [t for t in core.BUILT_TABLES if t != "historical_agency"]
+
+    def staffing_row(self, ori, year):
+        return {"id": ori, "year": year, "all_total": "17", "officer_total": "", "civilian_total": ""}
+
+    def load_with_policy(self, rows, table="historical_staffing"):
+        """Run one source through the policy so the observed counts are real."""
+        policy = core.IdentifierPolicy(pseudo=(), excluded={"CA0349950"})
+        loader = {
+            "historical_staffing": core.load_base_staffing,
+            "historical_agency_population": core.load_base_population,
+            "historical_agency_crime": core.load_base_crime,
+        }[table]
+        loader(self.conn, rows, policy)
+        return policy
+
     def test_a_stale_entry_is_refused(self):
         # The directory now holds the identifier, so the claim that it cannot be placed is
         # false, and honouring it would discard rows that have somewhere to go.
@@ -755,8 +771,65 @@ class IdentifierExclusions(CoreBuildTestCase):
         with tempfile.TemporaryDirectory() as tmp:
             entries = core.load_identifier_exclusions(self.write([self.ENTRY], tmp))
             with self.assertRaises(core.BuildError):
-                core.verify_identifier_exclusions(
-                    self.conn, entries, [t for t in core.BUILT_TABLES if t != "historical_agency"])
+                core.verify_identifier_exclusions(self.conn, entries, self.CHILD_TABLES)
+
+    def test_an_entry_that_excluded_nothing_is_refused(self):
+        # The source no longer holds the identifier. The entry would sit in the file
+        # reporting its declared 14 forever, describing data nobody has.
+        policy = self.load_with_policy([self.staffing_row("CA0349900", 1971)])
+        with tempfile.TemporaryDirectory() as tmp:
+            entries = core.load_identifier_exclusions(self.write([self.ENTRY], tmp))
+            with self.assertRaises(core.BuildError) as raised:
+                core.verify_identifier_exclusions(self.conn, entries, self.CHILD_TABLES, policy)
+            self.assertIn("no source row was withheld", str(raised.exception))
+
+    def test_a_changed_row_count_is_refused(self):
+        # 14 is a measurement, not a label. A source that gains or loses rows for this
+        # identifier has changed what the evidence is about.
+        policy = self.load_with_policy([self.staffing_row("CA0349950", year) for year in (1940, 1946)])
+        with tempfile.TemporaryDirectory() as tmp:
+            entries = core.load_identifier_exclusions(self.write([self.ENTRY], tmp))
+            with self.assertRaises(core.BuildError) as raised:
+                core.verify_identifier_exclusions(self.conn, entries, self.CHILD_TABLES, policy)
+            self.assertIn("withheld 2", str(raised.exception))
+
+    def test_the_wrong_table_is_refused(self):
+        # The evidence is about staffing. Excluding population rows on the strength of it
+        # would be exactly the silent drop this machinery exists to prevent.
+        policy = self.load_with_policy(
+            [{"id": "CA0349950", "year": 1940, "population": "3053"}],
+            table="historical_agency_population",
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            entries = core.load_identifier_exclusions(self.write([self.ENTRY], tmp))
+            with self.assertRaises(core.BuildError) as raised:
+                core.verify_identifier_exclusions(self.conn, entries, self.CHILD_TABLES, policy)
+            self.assertIn("historical_agency_population", str(raised.exception))
+
+    def test_appearing_in_a_second_table_is_refused(self):
+        # Right count in the right table, and one stray row somewhere else. The entry does
+        # not cover that row, so the build stops rather than dropping it quietly.
+        policy = core.IdentifierPolicy(pseudo=(), excluded={"CA0349950"})
+        core.load_base_staffing(
+            self.conn, [self.staffing_row("CA0349950", 1940 + n) for n in range(14)], policy)
+        core.load_base_crime(self.conn, [base_row("CA0349950", 1940, murder_total="1")], policy)
+        with tempfile.TemporaryDirectory() as tmp:
+            entries = core.load_identifier_exclusions(self.write([self.ENTRY], tmp))
+            with self.assertRaises(core.BuildError) as raised:
+                core.verify_identifier_exclusions(self.conn, entries, self.CHILD_TABLES, policy)
+            self.assertIn("historical_agency_crime", str(raised.exception))
+
+    def test_the_real_fourteen_row_staffing_exclusion_passes(self):
+        policy = core.IdentifierPolicy(pseudo=(), excluded={"CA0349950"})
+        core.load_base_staffing(
+            self.conn, [self.staffing_row("CA0349950", 1940 + n) for n in range(14)], policy)
+        with tempfile.TemporaryDirectory() as tmp:
+            entries = core.load_identifier_exclusions(self.write([self.ENTRY], tmp))
+            accounting = core.verify_identifier_exclusions(
+                self.conn, entries, self.CHILD_TABLES, policy)
+        self.assertEqual(accounting["CA0349950"]["rows_observed"], 14)
+        self.assertEqual(accounting["CA0349950"]["rows_declared"], 14)
+        self.assertEqual(accounting["CA0349950"]["table"], "historical_staffing")
 
     def test_an_entry_whose_rows_survived_is_refused(self):
         core.load_agencies(self.conn, [agency_row("CA0349900", "Highway Patrol:", "ca")])

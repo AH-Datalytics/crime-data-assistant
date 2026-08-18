@@ -270,7 +270,7 @@ def build(args):
     # would be reporting a number it cannot stand behind, so it fails instead.
     child_tables = [t for t in core.BUILT_TABLES if t != "historical_agency"]
     manifest["steps"]["identifier_exclusions"] = {
-        "entries": core.verify_identifier_exclusions(conn, exclusions, child_tables),
+        "entries": core.verify_identifier_exclusions(conn, exclusions, child_tables, policy),
         "note": "checked against the finished directory, after the annual step has created "
                 "the agencies it creates",
     }
