@@ -420,7 +420,19 @@ export function sqlTargetsOri(sql: string, ori: string): boolean {
   const reversed = new RegExp(`'${target}'\\s*=\\s*\\b${ORI_COLUMN}\\b`, "i");
   const singletonIn = new RegExp(`\\b${ORI_COLUMN}\\s+IN\\s*\\(\\s*'${target}'\\s*\\)`, "i");
 
-  for (const region of topLevelFilterRegions(stripped)) {
+  if (statementPinsOri(stripped, ori, equals, reversed, singletonIn)) return true;
+
+  // The Historical house style pins the agency in a CTE and joins it, which is genuinely
+  // restrictive and which `lib/claude.ts` teaches by example. Refusing it made the whole
+  // county-selection path decline: query log 8595 is a correct query that this rule rejected.
+  return cteTargetsOri(stripped, ori, equals, reversed, singletonIn);
+}
+
+/** Is the required ORI pinned by a filter belonging to this statement itself? */
+function statementPinsOri(
+  text: string, ori: string, equals: RegExp, reversed: RegExp, singletonIn: RegExp,
+): boolean {
+  for (const region of topLevelFilterRegions(text)) {
     // Any disjunction can widen what the equality restricted, and proving otherwise needs a
     // parser. Refuse instead.
     if (/\bor\b/i.test(region)) continue;
@@ -434,6 +446,89 @@ export function sqlTargetsOri(sql: string, ori: string): boolean {
     if (equals.test(flat) || reversed.test(flat)) return true;
   }
   return false;
+}
+
+/** One `name AS ( body )` entry from a leading `WITH` clause. */
+type CommonTableExpression = { name: string; body: string };
+
+/**
+ * The CTEs a statement defines, and the query that follows them.
+ *
+ * Returns nothing when the statement does not open with `WITH`, so ordinary queries take the
+ * direct path and pay nothing for this.
+ */
+function splitCtes(sql: string): { ctes: CommonTableExpression[]; outer: string } | null {
+  const head = /^\s*WITH\s+(RECURSIVE\s+)?/i.exec(sql);
+  if (!head) return null;
+  const ctes: CommonTableExpression[] = [];
+  let i = head[0].length;
+  while (i < sql.length) {
+    const entry = /^\s*("?)([A-Za-z_]\w*)\1\s+AS\s*(?:MATERIALIZED\s+|NOT\s+MATERIALIZED\s+)?\(/i.exec(sql.slice(i));
+    if (!entry) break;
+    let depth = 1;
+    let j = i + entry[0].length;
+    const bodyStart = j;
+    while (j < sql.length && depth > 0) {
+      const char = sql[j];
+      if (char === "'") {
+        const end = sql.indexOf("'", j + 1);
+        j = end === -1 ? sql.length : end + 1;
+        continue;
+      }
+      if (char === "(") depth += 1;
+      if (char === ")") depth -= 1;
+      j += 1;
+    }
+    ctes.push({ name: entry[2], body: sql.slice(bodyStart, j - 1) });
+    i = j;
+    const comma = /^\s*,/.exec(sql.slice(i));
+    if (!comma) break;
+    i += comma[0].length;
+  }
+  return ctes.length > 0 ? { ctes, outer: sql.slice(i) } : null;
+}
+
+/**
+ * Is the required ORI pinned inside a CTE that the outer query actually joins on?
+ *
+ * Both halves are needed. A CTE restricted to one agency proves nothing if the query that
+ * follows never uses it, or uses it decoratively -- selecting a label from it, or cross-joining
+ * without ever tying its `ori` to the table the figures come from. What makes query log 8595
+ * safe is the second join: `LEFT JOIN historical_agency_crime hac ON hac.ori = a.ori`, where
+ * `a` is the pinned CTE. Every row of crime data is reached through that equality.
+ */
+function cteTargetsOri(
+  sql: string, ori: string, equals: RegExp, reversed: RegExp, singletonIn: RegExp,
+): boolean {
+  const split = splitCtes(sql);
+  if (!split) return false;
+  for (const cte of split.ctes) {
+    if (!statementPinsOri(cte.body, ori, equals, reversed, singletonIn)) continue;
+    // The CTE must expose the ORI for the outer query to join on; one that pins internally and
+    // returns only, say, a year range restricts nothing downstream.
+    if (!new RegExp(`\\b${ORI_COLUMN}\\b`, "i").test(cte.body)) continue;
+    for (const alias of cteReferences(split.outer, cte.name)) {
+      const escaped = escapeRegExp(alias);
+      const joined = new RegExp(
+        `\\b${ORI_COLUMN}\\s*=\\s*${escaped}\\.ori\\b|\\b${escaped}\\.ori\\s*=\\s*${ORI_COLUMN}\\b`,
+        "i",
+      );
+      if (joined.test(split.outer)) return true;
+    }
+  }
+  return false;
+}
+
+/** Every name the outer query refers to this CTE by -- its own name, and any alias. */
+function cteReferences(outer: string, name: string): string[] {
+  const found = new Set<string>();
+  const pattern = new RegExp(`\\b(?:FROM|JOIN)\\s+${escapeRegExp(name)}\\b(?:\\s+AS)?(?:\\s+([A-Za-z_]\\w*))?`, "gi");
+  const RESERVED = /^(on|where|group|order|limit|left|right|inner|full|cross|join|union|having|window|using)$/i;
+  for (const match of outer.matchAll(pattern)) {
+    found.add(name);
+    if (match[1] && !RESERVED.test(match[1])) found.add(match[1]);
+  }
+  return [...found];
 }
 
 /** The text outside every parenthesised group, which is where a top-level filter lives. */

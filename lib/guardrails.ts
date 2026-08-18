@@ -12,6 +12,11 @@
 import type { QueryContext, Tab } from "./query-context";
 import { asksForCountsInsteadOfRates } from "./rate-intent";
 import { countyKeyFromDisplayName } from "./historical-county-identity";
+
+/** An ORI is alphanumeric. Anything else is not one, and is not built into a pattern. */
+function safeOri(value: string | null | undefined): string | null {
+  return value && /^[A-Za-z0-9]+$/.test(value) ? value : null;
+}
 import {
   formatNibrsCodeList,
   NIBRS_UCR_PROPERTY_CODES,
@@ -2276,6 +2281,17 @@ const GUARDRAILS: Guardrail[] = [
       // Detect ori = 'XX...' without joining historical_agency by name
       const hasHardcodedOri = /\bori\s*=\s*'[A-Z]{2}\d+'/i.test(sql);
       const joinsAgencyByName = /historical_agency\s+\w+[\s\S]*?\.agency\s*=/i.test(sql);
+      // Not a guess when the server resolved it. Where a county has two law enforcement
+      // agencies the user picks one, and the application pins that ORI deliberately -- from
+      // the FIPS crosswalk, not from the model's memory. Firing here told the model to go
+      // back to a name lookup, which is exactly what cannot separate those two agencies.
+      const pinned = safeOri(ctx.requiredOri);
+      if (pinned) {
+        const required = new RegExp(`\\bori\\s*=\\s*'${pinned}'`, "i");
+        const otherHardcoded = [...sql.matchAll(/\bori\s*=\s*'([A-Z]{2}\d+)'/gi)]
+          .some((match) => match[1].toUpperCase() !== pinned.toUpperCase());
+        if (required.test(sql) && !otherHardcoded) return false;
+      }
       return hasHardcodedOri && !joinsAgencyByName;
     },
     message: () =>

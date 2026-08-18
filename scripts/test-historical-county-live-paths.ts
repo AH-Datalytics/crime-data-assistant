@@ -23,6 +23,8 @@ import path from "node:path";
 import { buildHistoricalScorecard } from "../lib/historical-scorecard";
 import { getHistoricalCountyAgencyDecision } from "../lib/historical-county-choice";
 import { validateQueryContractSql } from "../lib/query-contract-validator";
+import { extractQueryContext } from "../lib/query-context";
+import { runGuardrails } from "../lib/guardrails";
 
 let failures = 0;
 let checks = 0;
@@ -263,6 +265,73 @@ function exerciseContract(side: string): void {
   const unrelated = validateQueryContractSql({ question, source: "historical", sql: twoAgency });
   assert(!unrelated.enforced.includes("contract-required-county-ori"),
     `${side}: the rule is inert when no agency has been chosen`);
+
+  // ── The Historical house style: pin the agency in a CTE and join it ────────────────
+  // Verbatim from production query log 8595 — a correct query the first version of this rule
+  // refused, which made the whole county-selection path decline.
+  const LOG_8595 =
+    "WITH agency AS (SELECT ha.ori, MIN(hac.year) AS min_yr, MAX(hac.year) AS max_yr FROM historical_agency ha "
+    + "JOIN historical_agency_crime hac ON hac.ori = ha.ori WHERE ha.ori = 'MD0030100' GROUP BY ha.ori "
+    + "ORDER BY COUNT(*) DESC LIMIT 1), years AS (SELECT min_yr AS year FROM agency UNION ALL SELECT year + 1 "
+    + "FROM years WHERE year < (SELECT max_yr FROM agency)) SELECT y.year, hac.violent FROM years y "
+    + "LEFT JOIN agency a ON 1=1 LEFT JOIN historical_agency_crime hac ON hac.ori = a.ori AND hac.year = y.year "
+    + "ORDER BY y.year LIMIT 1000";
+  const houseStyle = validateQueryContractSql({
+    question, source: "historical", sql: LOG_8595, requiredOri: "MD0030100",
+  });
+  assert(houseStyle.blockReasons.length === 0,
+    `${side}: production query log 8595 passes (${houseStyle.blockReasons.join("; ")})`);
+
+  const UNSAFE_CTES: [string, string][] = [
+    ["a CTE that is never referenced",
+      "WITH agency AS (SELECT ha.ori FROM historical_agency ha WHERE ha.ori = 'MD0030100') "
+      + "SELECT hac.year, hac.violent FROM historical_agency_crime hac WHERE hac.year = 2020"],
+    ["a CTE referenced but never joined on its ORI",
+      "WITH agency AS (SELECT ha.ori FROM historical_agency ha WHERE ha.ori = 'MD0030100') "
+      + "SELECT hac.year, hac.violent, (SELECT ori FROM agency) AS picked FROM historical_agency_crime hac"],
+    ["a CTE cross-joined without tying the ORI",
+      "WITH agency AS (SELECT ha.ori FROM historical_agency ha WHERE ha.ori = 'MD0030100') "
+      + "SELECT hac.year, hac.violent FROM historical_agency_crime hac, agency a"],
+    ["a CTE admitting both agencies",
+      "WITH agency AS (SELECT ha.ori FROM historical_agency ha WHERE ha.ori IN ('MD0030100','MD0030000')) "
+      + "SELECT hac.year, hac.violent FROM historical_agency_crime hac JOIN agency a ON hac.ori = a.ori"],
+    ["a CTE broadened by OR",
+      "WITH agency AS (SELECT ha.ori FROM historical_agency ha WHERE ha.ori = 'MD0030100' OR 1 = 1) "
+      + "SELECT hac.year, hac.violent FROM historical_agency_crime hac JOIN agency a ON hac.ori = a.ori"],
+    ["a CTE whose county filter is not the required agency",
+      "WITH agency AS (SELECT ha.ori FROM historical_agency ha JOIN agency_county_crosswalk cw ON cw.ori9 = ha.ori "
+      + "WHERE cw.county_key = 'BALTIMORE' AND LOWER(ha.type) = 'county') "
+      + "SELECT hac.year, hac.violent FROM historical_agency_crime hac JOIN agency a ON hac.ori = a.ori"],
+  ];
+  for (const [label, sql] of UNSAFE_CTES) {
+    const result = validateQueryContractSql({ question, source: "historical", sql, requiredOri: "MD0030100" });
+    assert(result.blockReasons.length > 0, `${side}: blocked — ${label}`);
+  }
+
+  // ── The hardcoded-ORI guardrail must not fight the server's own choice ─────────────
+  const pinnedCtx = {
+    ...extractQueryContext(LOG_8595, question, "historical"),
+    requiredOri: "MD0030100",
+  };
+  assert(!runGuardrails(pinnedCtx).fired.includes("historical-hardcoded-ori"),
+    `${side}: historical-hardcoded-ori does not fire on the ORI the server required`);
+
+  // Still fires when the model invents one of its own.
+  const guessedCtx = extractQueryContext(
+    "SELECT hac.year FROM historical_agency_crime hac WHERE hac.ori = 'MD9999999' AND hac.year = 2020",
+    question, "historical");
+  assert(runGuardrails(guessedCtx).fired.includes("historical-hardcoded-ori"),
+    `${side}: historical-hardcoded-ori still fires on an unrequested ORI`);
+
+  // And still fires when a second, unrequested ORI rides along with the required one.
+  const smuggledCtx = {
+    ...extractQueryContext(
+      "SELECT hac.year FROM historical_agency_crime hac WHERE hac.ori = 'MD0030100' AND hac.ori = 'MD0030000'",
+      question, "historical"),
+    requiredOri: "MD0030100",
+  };
+  assert(runGuardrails(smuggledCtx).fired.includes("historical-hardcoded-ori"),
+    `${side}: historical-hardcoded-ori still fires when another ORI is smuggled alongside`);
 }
 
 const current = openReadonly(CURRENT_DB);

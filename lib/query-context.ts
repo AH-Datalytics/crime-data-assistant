@@ -34,6 +34,14 @@ export interface QueryContext {
   isPerCapita: boolean;
   /** Tables referenced in the SQL */
   tables: string[];
+  /**
+   * An ORI the server resolved and requires this query to target.
+   *
+   * Set when the user picked one of a county's two law enforcement agencies. Guardrails that
+   * treat a hardcoded ORI as a guess must not fire on it: the application chose it, from the
+   * FIPS crosswalk, and the contract validator checks the SQL actually filters on it.
+   */
+  requiredOri?: string | null;
   /** Raw SQL for guardrails that need pattern matching */
   sql: string;
 }

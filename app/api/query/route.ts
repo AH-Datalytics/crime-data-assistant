@@ -1526,7 +1526,7 @@ export async function POST(req: NextRequest) {
         }
 
         // Step 1b: Extract context and run guardrails
-        const ctx = extractQueryContext(claude.sql, guardrailQuestion, tab as "current" | "historical");
+        const ctx = { ...extractQueryContext(claude.sql, guardrailQuestion, tab as "current" | "historical"), requiredOri: requiredCountyOri };
         const guardrailResult = runGuardrails(ctx);
 
         // Also check yAxis/yAxisLabel issues that need ClaudeResponse fields
@@ -1621,7 +1621,7 @@ export async function POST(req: NextRequest) {
 
         // Post-retry guardrail re-check
         {
-          const postRetryCtx = extractQueryContext(claude.sql, guardrailQuestion, tab as "current" | "historical");
+          const postRetryCtx = { ...extractQueryContext(claude.sql, guardrailQuestion, tab as "current" | "historical"), requiredOri: requiredCountyOri };
           const postRetryResult = runGuardrails(postRetryCtx);
           if (postRetryResult.overrideResponse) {
             const postRetryOverrideProof = finalizeExit({ intendedAction: "decline_capability", sql: claude.sql, guardrails: postRetryResult.fired, planFamily: postRetryResult.overrideGuardrail ?? null });
@@ -2333,7 +2333,7 @@ export async function POST(req: NextRequest) {
 
         // Step 6: Generate refined explanation in background, send as update
         // Re-extract context from final SQL (may have been fixed by guardrails/retry)
-        const finalCtx = extractQueryContext(sql, guardrailQuestion, tab as "current" | "historical");
+        const finalCtx = { ...extractQueryContext(sql, guardrailQuestion, tab as "current" | "historical"), requiredOri: requiredCountyOri };
         try {
           let postExplanation = await generateExplanation({
             ctx: finalCtx,
