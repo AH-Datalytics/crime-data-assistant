@@ -67,6 +67,7 @@ import {
 } from "@/lib/agency-consolidations";
 import { historicalCountyAgencyPredicate } from "@/lib/historical-county-identity";
 import { getHistoricalCountyAgencyDecision } from "@/lib/historical-county-choice";
+import { enforceAuthoritativeAgencyLabel, lookupAuthoritativeAgency } from "@/lib/authoritative-agency-label";
 import {
   emitFactualPayload,
   finalizeProof,
@@ -756,9 +757,24 @@ export async function POST(req: NextRequest) {
     : { kind: "none" as const };
   // A resolved choice is not a clarification -- it is the ORI every later query must use.
   const requiredCountyOri = countyAgency.kind === "resolved" ? countyAgency.ori : null;
-  const countyAgencyStop = countyAgency.kind === "clarify" || countyAgency.kind === "unresolved"
-    ? countyAgency
+  // And the name that goes with it comes from the database, not from what anyone called it.
+  const requiredAgencyRecord = requiredCountyOri ? lookupAuthoritativeAgency(getDb(), requiredCountyOri) : null;
+  // A resolved ORI the Historical agency table does not hold has no authoritative name. Rather
+  // than answer and let the narrative call it whatever the conversation last called it, decline.
+  // Unreachable while resolution reads that same table -- kept because the alternative to an
+  // authoritative label must never be a plausible one.
+  const missingAuthoritativeIdentity = Boolean(requiredCountyOri) && !requiredAgencyRecord
+    ? {
+        kind: "unresolved" as const,
+        id: `county-agency-${String(requiredCountyOri).toLowerCase()}-unidentified`,
+        explanation:
+          `I resolved this question to one specific agency (ORI ${requiredCountyOri}), but the `
+          + `Historical agency file has no record for it, so I cannot say which agency the figures `
+          + `would belong to. I did not answer rather than label them from the conversation.`,
+      }
     : null;
+  const countyAgencyStop = missingAuthoritativeIdentity
+    ?? (countyAgency.kind === "clarify" || countyAgency.kind === "unresolved" ? countyAgency : null);
   const countyScope = (getBlockingGeoClarification(question) || queryBearingFollowup || countyAgencyStop)
     ? null
     : getCountyScopeClarification(question, body?.history);
@@ -1371,7 +1387,7 @@ export async function POST(req: NextRequest) {
         if (requiredCountyOri) {
           promptHistory.push({
             role: "user" as const,
-            content: `[SYSTEM: The user selected one specific county law enforcement agency. Restrict the query to ORI '${requiredCountyOri}' by putting the equality directly in the top-level WHERE clause, exactly like: WHERE ha.ori = '${requiredCountyOri}' AND ... . Do not match the agency by name, do not use OR, and do not hide the ORI in a CTE, a subquery, a CASE expression or a SELECT label — the query is checked for that filter before it runs and will be refused without it. Do not include the other agency in that county.]`,
+            content: `[SYSTEM: The user selected one specific county law enforcement agency${requiredAgencyRecord ? `, which the database records as "${requiredAgencyRecord.agency}" -- call it that in your explanation and title, whatever the user called it` : ""}. Restrict the query to ORI '${requiredCountyOri}' by putting the equality directly in the top-level WHERE clause, exactly like: WHERE ha.ori = '${requiredCountyOri}' AND ... . Do not match the agency by name, do not use OR, and do not hide the ORI in a CTE, a subquery, a CASE expression or a SELECT label — the query is checked for that filter before it runs and will be refused without it. Do not include the other agency in that county.]`,
           });
         }
         const systemPrompt = isHistorical ? getHistoricalSystemPrompt() : undefined;
@@ -1500,6 +1516,21 @@ export async function POST(req: NextRequest) {
           const ms = Date.now() - totalStart;
           if (!serverAuthoredNoSql && !containsInternalLeak(claude.explanation) && !containsInternalLeak(claude.title)) { claude.explanation = buildNoSqlFallbackMessage(tab === "historical" ? "historical" : "current"); firedGuardrails.push("no-sql-server-template"); }
         claude.explanation = neutralizeUnverifiedAvailabilityClaim(claude.explanation, tab === "historical" ? "Historical" : "Current Trends");
+        // The figures were restricted to one agency by the server; the name attached to them is
+        // corrected here for the same reason. A user may say what they want and be wrong about
+        // what it is called -- "sheriff's office only" reached the Baltimore County Police
+        // Department -- and the answer must still say which agency the numbers belong to.
+        if (requiredAgencyRecord) {
+          const fixedExplanation = enforceAuthoritativeAgencyLabel(claude.explanation, requiredAgencyRecord);
+          const fixedTitle = enforceAuthoritativeAgencyLabel(claude.title, requiredAgencyRecord);
+          if (fixedExplanation.changed || fixedTitle.changed) {
+            claude.explanation = fixedExplanation.text;
+            claude.title = fixedTitle.text;
+            firedGuardrails.push("authoritative-agency-label");
+            console.log(`[query][authoritative-label] ${requiredAgencyRecord.ori}: `
+              + [...fixedExplanation.corrections, ...fixedTitle.corrections].join("; "));
+          }
+        }
           // No SQL was produced, so nothing factual is being asserted. Capability
           // framing, never a claim that the source lacks the data (handoff 2.4).
           const noSqlProof = finalizeExit({ intendedAction: "decline_capability", guardrails: firedGuardrails });
