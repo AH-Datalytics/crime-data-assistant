@@ -178,8 +178,17 @@ check('"Cook County, IL scorecard" builds the county agency',
   cookCounty?.scope === "agency" && cookCounty.agencyLabel === "Cook County, IL"
   && cookCounty.rows.length === 9,
   `scope=${cookCounty?.scope} label=${cookCounty?.agencyLabel} rows=${cookCounty?.rows.length}`);
-check("Cook County SQL is explicitly type county",
-  /ha\.type = 'county'/.test(cookCounty?.sql ?? ""), cookCounty?.sql ?? "");
+// A county agency is scoped by identity now, not by its name: the FIPS crosswalk picks the
+// ORI and `type = 'county'` is enforced inside that lookup. The old assertion required the
+// literal `ha.type = 'county'` alongside `ha.agency = 'Cook County'`, a name the rebuilt
+// directory does not carry. What has to stay true is that the scope is a county and that it
+// is reached without matching on the agency's name.
+check("Cook County SQL scopes to a county agency through the FIPS crosswalk",
+  /agency_county_crosswalk/.test(cookCounty?.sql ?? "")
+  && /cw\.county_key = 'COOK'/.test(cookCounty?.sql ?? "")
+  && /LOWER\(cha\.type\) = 'county'/.test(cookCounty?.sql ?? ""), cookCounty?.sql ?? "");
+check("Cook County SQL does not match the agency by name",
+  !/ha\.agency\s*=/.test(cookCounty?.sql ?? ""), cookCounty?.sql ?? "");
 check("Cook County title identifies a county scorecard",
   /^Cook County, IL County Scorecard/.test(cookCounty?.title ?? ""), cookCounty?.title ?? "");
 check("Cook County discloses single lead agency, not countywide total",
