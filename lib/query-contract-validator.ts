@@ -321,33 +321,139 @@ export function hasLiteralOriTargetJoin(sql: string): boolean {
  * answer still comes from both departments. What has to be true is that a restrictive
  * predicate on an `ori` column names it, and that no other agency is admitted alongside.
  */
+const ORI_COLUMN = "(?:[A-Za-z_]\\w*\\.)?ori";
+
+/** Comments cannot restrict anything, so they are not evidence of anything either. */
+function stripSqlComments(sql: string): string {
+  return sql.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/--[^\n]*/g, " ");
+}
+
+/**
+ * The stretches of a statement that actually filter rows: each `WHERE` and each join `ON`,
+ * taken at the top level only.
+ *
+ * Top level matters. A `WHERE` inside a subquery restricts that subquery, not the rows the
+ * statement returns, and a comparison in `SELECT`, `CASE`, `GROUP BY` or `ORDER BY` restricts
+ * nothing at all -- `SELECT ha.ori = 'MD0030100' AS is_selected` is a boolean column, and it
+ * was passing as though it were a filter.
+ */
+function topLevelFilterRegions(sql: string): string[] {
+  const terminator = /^(?:group\s+by|order\s+by|having|limit|window|union|intersect|except|join|inner|left|right|full|cross|on|where)\b/i;
+  const regions: string[] = [];
+  let depth = 0;
+  let i = 0;
+  while (i < sql.length) {
+    const char = sql[i];
+    if (char === "'") {
+      const end = sql.indexOf("'", i + 1);
+      i = end === -1 ? sql.length : end + 1;
+      continue;
+    }
+    if (char === "(") { depth += 1; i += 1; continue; }
+    if (char === ")") { depth = Math.max(0, depth - 1); i += 1; continue; }
+    if (depth === 0) {
+      const rest = sql.slice(i);
+      const opener = /^(where|on)\b/i.exec(rest);
+      if (opener) {
+        let j = i + opener[0].length;
+        let innerDepth = 0;
+        const start = j;
+        while (j < sql.length) {
+          const c = sql[j];
+          if (c === "'") {
+            const end = sql.indexOf("'", j + 1);
+            j = end === -1 ? sql.length : end + 1;
+            continue;
+          }
+          if (c === "(") { innerDepth += 1; j += 1; continue; }
+          if (c === ")") {
+            if (innerDepth === 0) break;
+            innerDepth -= 1; j += 1; continue;
+          }
+          if (innerDepth === 0 && terminator.test(sql.slice(j))) break;
+          j += 1;
+        }
+        regions.push(sql.slice(start, j));
+        i = j;
+        continue;
+      }
+    }
+    i += 1;
+  }
+  return regions;
+}
+
+/**
+ * Does this SQL actually restrict returned rows to one agency's ORI?
+ *
+ * Requiring an ORI comparison was not enough: a comparison is not a restriction. These all
+ * contained the code and returned other agencies' data anyway --
+ * `SELECT ha.ori = 'X' AS is_selected` (a column, not a filter),
+ * `WHERE hac.ori = 'X' OR 1 = 1` (a tautology reopens everything), and
+ * `WHERE 'X' = hac.ori OR 'Y' = hac.ori` (the other-agency scan only knew column-first form).
+ *
+ * The rule is deliberately conservative, because these are queries the application itself
+ * caused by resolving a specific agency: one unambiguous equality, or a single-value `IN`, in
+ * a top-level `WHERE` or join `ON`, with no `OR` anywhere in that filter. Refusing a safe but
+ * convoluted query costs a retry. Admitting an unsafe one reports the wrong department's
+ * figures under the right department's name.
+ */
 export function sqlTargetsOri(sql: string, ori: string): boolean {
   if (!ori) return true;
-  // Comments cannot restrict anything.
-  const stripped = (sql || "")
-    .replace(/\/\*[\s\S]*?\*\//g, " ")
-    .replace(/--[^\n]*/g, " ");
+  const stripped = stripSqlComments(sql || "");
   const target = escapeRegExp(ori);
-  const column = "(?:[A-Za-z_]\\w*\\.)?ori";
+  const wanted = ori.toUpperCase();
 
-  // `ha.ori = 'X'` and `'X' = ha.ori`.
-  const equals = new RegExp(`\\b${column}\\s*=\\s*'${target}'`, "i");
-  const reversed = new RegExp(`'${target}'\\s*=\\s*\\b${column}\\b`, "i");
-  // `ha.ori IN ('X')` -- a single value only. A list naming another agency is not a pin.
-  const singletonIn = new RegExp(`\\b${column}\\s+IN\\s*\\(\\s*'${target}'\\s*\\)`, "i");
-
-  if (!equals.test(stripped) && !reversed.test(stripped) && !singletonIn.test(stripped)) {
-    return false;
-  }
-
-  // Another agency admitted by any ORI predicate defeats the pin, however the required one
-  // was matched -- `ori IN ('X','Y')`, or a second `ori = 'Y'` in an OR arm.
-  const otherOri = new RegExp(`\\b${column}\\s*(?:=|IN)\\s*\\(?\\s*((?:'[A-Z0-9]{5,12}'\\s*,?\\s*)+)\\)?`, "gi");
-  for (const match of stripped.matchAll(otherOri)) {
+  // Any ORI compared against a literal that is not the required one defeats the pin, wherever
+  // it sits and whichever way round it is written.
+  const columnFirst = new RegExp(`\\b${ORI_COLUMN}\\s*(?:=|IN)\\s*\\(?\\s*((?:'[A-Za-z0-9]{4,12}'\\s*,?\\s*)+)\\)?`, "gi");
+  for (const match of stripped.matchAll(columnFirst)) {
     const literals = (match[1].match(/'[^']*'/g) || []).map((value) => value.slice(1, -1).toUpperCase());
-    if (literals.some((value) => value !== ori.toUpperCase())) return false;
+    if (literals.some((value) => value !== wanted)) return false;
   }
-  return true;
+  const literalFirst = new RegExp(`'([A-Za-z0-9]{4,12})'\\s*=\\s*\\b${ORI_COLUMN}\\b`, "gi");
+  for (const match of stripped.matchAll(literalFirst)) {
+    if (match[1].toUpperCase() !== wanted) return false;
+  }
+
+  const equals = new RegExp(`\\b${ORI_COLUMN}\\s*=\\s*'${target}'`, "i");
+  const reversed = new RegExp(`'${target}'\\s*=\\s*\\b${ORI_COLUMN}\\b`, "i");
+  const singletonIn = new RegExp(`\\b${ORI_COLUMN}\\s+IN\\s*\\(\\s*'${target}'\\s*\\)`, "i");
+
+  for (const region of topLevelFilterRegions(stripped)) {
+    // Any disjunction can widen what the equality restricted, and proving otherwise needs a
+    // parser. Refuse instead.
+    if (/\bor\b/i.test(region)) continue;
+    // A single-value `IN` is an equality written differently. Normalise it before flattening
+    // so its parentheses are not mistaken for a subquery.
+    const normalised = region.replace(singletonIn, `ori = '${ori}'`);
+    // Then drop everything nested. A `WHERE` inside a subquery restricts that subquery, not
+    // the rows this statement returns: `WHERE hac.year IN (SELECT year FROM … WHERE ori = 'X')`
+    // filters years, and every agency comes back.
+    const flat = flattenParens(normalised);
+    if (equals.test(flat) || reversed.test(flat)) return true;
+  }
+  return false;
+}
+
+/** The text outside every parenthesised group, which is where a top-level filter lives. */
+function flattenParens(text: string): string {
+  let depth = 0;
+  let out = "";
+  for (let i = 0; i < text.length; i += 1) {
+    const char = text[i];
+    if (char === "'") {
+      const end = text.indexOf("'", i + 1);
+      const literal = text.slice(i, end === -1 ? text.length : end + 1);
+      if (depth === 0) out += literal;
+      i = (end === -1 ? text.length : end);
+      continue;
+    }
+    if (char === "(") { depth += 1; out += " "; continue; }
+    if (char === ")") { depth = Math.max(0, depth - 1); out += " "; continue; }
+    if (depth === 0) out += char;
+  }
+  return out;
 }
 
 function requiredOriBlockMessage(ori: string): string {

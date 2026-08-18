@@ -221,6 +221,18 @@ function exerciseContract(side: string): void {
     ["the two-agency query with the literal elsewhere", `${twoAgency} AND 'MD0030100' <> ''`],
     ["a list naming the other agency too", `SELECT hac.year FROM historical_agency_crime hac WHERE hac.ori IN ('MD0030100','MD0030000')`],
     ["an OR arm admitting the other agency", `SELECT hac.year FROM historical_agency_crime hac WHERE hac.ori = 'MD0030100' OR hac.ori = 'MD0030000'`],
+    // A comparison is not a restriction. Each of these compares the ORI somewhere that does
+    // not filter, or reopens the filter after making it.
+    ["a comparison in the SELECT list",
+      `SELECT ha.ori = 'MD0030100' AS is_selected, hac.violent FROM historical_agency_crime hac JOIN historical_agency ha ON ha.ori = hac.ori`],
+    ["a tautology reopening the filter",
+      `SELECT hac.violent FROM historical_agency_crime hac WHERE hac.ori = 'MD0030100' OR 1 = 1`],
+    ["reversed equality admitting the other agency",
+      `SELECT hac.violent FROM historical_agency_crime hac WHERE 'MD0030100' = hac.ori OR 'MD0030000' = hac.ori`],
+    ["a CASE expression rather than a filter",
+      `SELECT CASE WHEN ha.ori = 'MD0030100' THEN hac.violent END AS violent FROM historical_agency_crime hac JOIN historical_agency ha ON ha.ori = hac.ori`],
+    ["a subquery whose filter does not restrict the agency",
+      `SELECT hac.violent FROM historical_agency_crime hac WHERE hac.year IN (SELECT year FROM historical_agency_crime WHERE ori = 'MD0030100')`],
   ];
   for (const [label, sql] of NOT_TARGETING) {
     const result = validateQueryContractSql({ question, source: "historical", sql, requiredOri: "MD0030100" });

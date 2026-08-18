@@ -1371,7 +1371,7 @@ export async function POST(req: NextRequest) {
         if (requiredCountyOri) {
           promptHistory.push({
             role: "user" as const,
-            content: `[SYSTEM: The user selected one specific county law enforcement agency. Query historical_agency ORI '${requiredCountyOri}' and nothing else. Do not match the agency by name and do not include the other agency in that county.]`,
+            content: `[SYSTEM: The user selected one specific county law enforcement agency. Restrict the query to ORI '${requiredCountyOri}' by putting the equality directly in the top-level WHERE clause, exactly like: WHERE ha.ori = '${requiredCountyOri}' AND ... . Do not match the agency by name, do not use OR, and do not hide the ORI in a CTE, a subquery, a CASE expression or a SELECT label — the query is checked for that filter before it runs and will be refused without it. Do not include the other agency in that county.]`,
           });
         }
         const systemPrompt = isHistorical ? getHistoricalSystemPrompt() : undefined;
