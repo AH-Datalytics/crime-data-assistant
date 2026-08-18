@@ -312,6 +312,44 @@ export function hasLiteralOriTargetJoin(sql: string): boolean {
   return new RegExp(`\\b(?:[A-Za-z_]\\w*\\.)?ori\\s*=\\s*${alias}\\.ori\\b|${alias}\\.ori\\s*=\\s*(?:[A-Za-z_]\\w*\\.)?ori\\b`, "i").test(sql);
 }
 
+/**
+ * Does this SQL actually restrict to one agency's ORI?
+ *
+ * Mentioning the code is not targeting it. The first version of this test asked only whether
+ * the quoted literal appeared anywhere, which a two-agency query passes by putting the ORI in
+ * a comment, selecting it as a label, or naming it in an unrelated expression -- and then the
+ * answer still comes from both departments. What has to be true is that a restrictive
+ * predicate on an `ori` column names it, and that no other agency is admitted alongside.
+ */
+export function sqlTargetsOri(sql: string, ori: string): boolean {
+  if (!ori) return true;
+  // Comments cannot restrict anything.
+  const stripped = (sql || "")
+    .replace(/\/\*[\s\S]*?\*\//g, " ")
+    .replace(/--[^\n]*/g, " ");
+  const target = escapeRegExp(ori);
+  const column = "(?:[A-Za-z_]\\w*\\.)?ori";
+
+  // `ha.ori = 'X'` and `'X' = ha.ori`.
+  const equals = new RegExp(`\\b${column}\\s*=\\s*'${target}'`, "i");
+  const reversed = new RegExp(`'${target}'\\s*=\\s*\\b${column}\\b`, "i");
+  // `ha.ori IN ('X')` -- a single value only. A list naming another agency is not a pin.
+  const singletonIn = new RegExp(`\\b${column}\\s+IN\\s*\\(\\s*'${target}'\\s*\\)`, "i");
+
+  if (!equals.test(stripped) && !reversed.test(stripped) && !singletonIn.test(stripped)) {
+    return false;
+  }
+
+  // Another agency admitted by any ORI predicate defeats the pin, however the required one
+  // was matched -- `ori IN ('X','Y')`, or a second `ori = 'Y'` in an OR arm.
+  const otherOri = new RegExp(`\\b${column}\\s*(?:=|IN)\\s*\\(?\\s*((?:'[A-Z0-9]{5,12}'\\s*,?\\s*)+)\\)?`, "gi");
+  for (const match of stripped.matchAll(otherOri)) {
+    const literals = (match[1].match(/'[^']*'/g) || []).map((value) => value.slice(1, -1).toUpperCase());
+    if (literals.some((value) => value !== ori.toUpperCase())) return false;
+  }
+  return true;
+}
+
 function requiredOriBlockMessage(ori: string): string {
   return `This question was resolved to one specific county law enforcement agency (ORI ${ori}), `
     + `but the query did not target it. I did not run it, because a query matching more than one `
@@ -386,8 +424,7 @@ export function validateQueryContractSql(opts: {
   requiredOri?: string | null;
 }): QueryContractSqlValidation {
   const requiredOri = (opts.requiredOri || "").trim();
-  const missingRequiredOri = requiredOri
-    && !new RegExp(`'${escapeRegExp(requiredOri)}'`, "i").test(opts.sql);
+  const missingRequiredOri = Boolean(requiredOri) && !sqlTargetsOri(opts.sql, requiredOri);
   const contract = buildQueryContract(opts.question, opts.source, opts.routingMeta);
   if (!contract) {
     return {

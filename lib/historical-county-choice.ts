@@ -48,6 +48,9 @@ const NAMES_A_FORCE_RE = /\b(sheriff|police department|county police)\b/i;
 /** Signature used to notice this clarifier already ran in the session. */
 const CLARIFIER_SIGNATURE = "is served by more than one law enforcement agency";
 
+/** An FBI ORI code, which the decline offers as the way to pick between same-named agencies. */
+const ORI_CODE_RE = /\b[A-Z]{2}[A-Z0-9]{5,10}\b/;
+
 export type CountyAgencyOption = { ori: string; agency: string };
 
 export type CountyAgencyDecision =
@@ -79,6 +82,10 @@ type HistoryMessage = { role?: string; content?: unknown };
 
 function asText(value: unknown): string {
   return typeof value === "string" ? value : JSON.stringify(value ?? "");
+}
+
+function normalizedAgencyName(value: string): string {
+  return (value || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 }
 
 const STATE_NAMES: Record<string, string> = {
@@ -113,8 +120,19 @@ export function getHistoricalCountyAgencyDecision(
   const countyKey = countyKeyFromDisplayName(countyName);
   if (!countyKey) return { kind: "none" };
 
-  if (COUNTYWIDE_RE.test(said)) return { kind: "countywide" };
-  if (!SINGLE_AGENCY_RE.test(said)) return { kind: "none" };
+  // The newest answer wins. A user who asked for the countywide total and then changed their
+  // mind, or the reverse, must not be held to the older phrase still sitting in history.
+  const currentSaysCountywide = COUNTYWIDE_RE.test(question);
+  const currentSaysSingle = SINGLE_AGENCY_RE.test(question) || ORI_CODE_RE.test(question);
+  if (currentSaysSingle) {
+    // fall through to the single-agency path
+  } else if (currentSaysCountywide) {
+    return { kind: "countywide" };
+  } else if (COUNTYWIDE_RE.test(said)) {
+    return { kind: "countywide" };
+  } else if (!SINGLE_AGENCY_RE.test(said)) {
+    return { kind: "none" };
+  }
 
   const state = stateFromUserTurns(db, countyKey, said);
   if (!state) return { kind: "none" };
@@ -127,7 +145,8 @@ export function getHistoricalCountyAgencyDecision(
     agency: entry.agency,
   }));
 
-  const chosen = selectNamedCountyAgency(said, countyKey, agencies, countyName);
+  // `question` is passed separately so an ORI counts only when it is this turn's answer.
+  const chosen = selectNamedCountyAgency(said, countyKey, agencies, countyName, question);
   if (chosen) {
     return { kind: "resolved", county: countyName, state, ori: chosen.ori, agency: chosen.agency };
   }
@@ -141,17 +160,27 @@ export function getHistoricalCountyAgencyDecision(
   // question a second time. Say so, and run nothing.
   const alreadyAsked = assistantTurns.some((text) => text.toLowerCase().includes(CLARIFIER_SIGNATURE));
   if (NAMES_A_FORCE_RE.test(said) || alreadyAsked) {
+    // Why the answer could not be used depends on the data, and saying the wrong reason is its
+    // own kind of untruth. On the current database both of Baltimore County's agencies really
+    // are recorded as `Baltimore County`, and no wording could separate them. On the rebuilt
+    // database they have different names, so the honest report is that this particular reply
+    // did not identify one of them.
+    const sameName = new Set(agencies.map((entry) => normalizedAgencyName(entry.agency))).size === 1;
+    const reason = sameName
+      ? `they are recorded under the same name, so I cannot tell which one you mean: ${named}. `
+        + `I did not answer from either, because attributing one department's figures to the other `
+        + `would be wrong.`
+      : `your reply did not identify one of them: ${named}. I did not answer from either, because `
+        + `picking one would attribute its figures to the wrong department.`;
     return {
       kind: "unresolved",
-      id: `${id}-indistinguishable`,
+      id: `${id}-${sameName ? "indistinguishable" : "unidentified"}`,
       county: countyName,
       state,
       agencies,
       explanation:
         `${countyName}, ${state} has two county law enforcement agencies in the FBI Historical file and `
-        + `they are recorded under the same name, so I cannot tell which one you mean: ${named}. `
-        + `I did not answer from either, because attributing one department's figures to the other `
-        + `would be wrong. You can ask for one by its ORI code.`,
+        + `${reason} You can ask for one by its ORI code.`,
     };
   }
 

@@ -146,6 +146,43 @@ function exercise(db: Database.Database, side: string): void {
   assert(single.kind === "none",
     `${side}: a one-agency county continues without an extra question (got ${single.kind})`);
 
+  // The real current-database flow, all the way through: scope choice, decline because the
+  // names cannot separate the agencies, then the user picks by the ORI the decline offered.
+  const declined = getHistoricalCountyAgencyDecision(
+    db, "sheriff's office only", twoTurn("violent crime in Baltimore County, MD", "sheriff's office only"));
+  const offeredOri = "MD0030100";
+  if (declined.kind === "unresolved") {
+    assert(declined.explanation.includes(offeredOri),
+      `${side}: the decline offers the ORI codes it expects back`);
+  }
+  const byOri = getHistoricalCountyAgencyDecision(db, offeredOri, [
+    { role: "user", content: "violent crime in Baltimore County, MD" },
+    { role: "assistant", content: SCOPE_QUESTION },
+    { role: "user", content: "sheriff's office only" },
+    { role: "assistant", content: declined.kind === "unresolved" ? declined.explanation : "" },
+  ]);
+  assert(byOri.kind === "resolved" && byOri.ori === offeredOri,
+    `${side}: replying with an offered ORI resolves to it (got ${byOri.kind})`);
+
+  // Quoting both codes back is not a choice. Deliberately no earlier "sheriff" answer in this
+  // history: on the rebuilt data that *is* determinate evidence and would rightly resolve, so
+  // it would hide whether the ORI rule itself refused.
+  const bothOris = getHistoricalCountyAgencyDecision(db, "is it MD0030100 or MD0030000?", [
+    { role: "user", content: "violent crime in Baltimore County, MD" },
+    { role: "assistant", content: SCOPE_QUESTION },
+  ]);
+  assert(bothOris.kind !== "resolved",
+    `${side}: naming both ORIs does not resolve (got ${bothOris.kind})`);
+
+  // The newest answer wins over an older phrase still sitting in history.
+  const changedMind = getHistoricalCountyAgencyDecision(db, "actually, the countywide total", [
+    { role: "user", content: "violent crime in Baltimore County, MD" },
+    { role: "assistant", content: SCOPE_QUESTION },
+    { role: "user", content: "sheriff's office only" },
+  ]);
+  assert(changedMind.kind === "countywide",
+    `${side}: switching to countywide is honoured over the earlier answer (got ${changedMind.kind})`);
+
   // Asking twice is not an answer: once the clarification is in history, an unanswerable
   // reply declines rather than repeating the question.
   const repeated = getHistoricalCountyAgencyDecision(db, "the county one", [
@@ -174,6 +211,33 @@ function exerciseContract(side: string): void {
   });
   assert(good.blockReasons.length === 0,
     `${side}: SQL pinned to the chosen ORI passes (blocked: ${good.blockReasons.join("; ")})`);
+
+  // Mentioning the code is not targeting it. Each of these contains the required ORI and none
+  // of them restricts the query to that agency.
+  const NOT_TARGETING: [string, string][] = [
+    ["a comment only", `${twoAgency} -- required agency MD0030100`],
+    ["a block comment", `/* MD0030100 */ ${twoAgency}`],
+    ["a selected label", `SELECT 'MD0030100' AS ori, hac.year, hac.violent FROM historical_agency_crime hac WHERE hac.year = 2020`],
+    ["the two-agency query with the literal elsewhere", `${twoAgency} AND 'MD0030100' <> ''`],
+    ["a list naming the other agency too", `SELECT hac.year FROM historical_agency_crime hac WHERE hac.ori IN ('MD0030100','MD0030000')`],
+    ["an OR arm admitting the other agency", `SELECT hac.year FROM historical_agency_crime hac WHERE hac.ori = 'MD0030100' OR hac.ori = 'MD0030000'`],
+  ];
+  for (const [label, sql] of NOT_TARGETING) {
+    const result = validateQueryContractSql({ question, source: "historical", sql, requiredOri: "MD0030100" });
+    assert(result.blockReasons.length > 0, `${side}: blocked — ${label}`);
+    assert(result.enforced.includes("contract-required-county-ori"),
+      `${side}: ${label} is attributed to the required-ORI rule (${result.enforced.join(", ")})`);
+  }
+
+  // Forms that genuinely pin one agency.
+  const TARGETING: [string, string][] = [
+    ["reversed equality", `SELECT hac.year FROM historical_agency_crime hac WHERE 'MD0030100' = hac.ori`],
+    ["a single-value IN", `SELECT hac.year FROM historical_agency_crime hac WHERE hac.ori IN ('MD0030100')`],
+  ];
+  for (const [label, sql] of TARGETING) {
+    const result = validateQueryContractSql({ question, source: "historical", sql, requiredOri: "MD0030100" });
+    assert(result.blockReasons.length === 0, `${side}: allowed — ${label} (${result.blockReasons.join("; ")})`);
+  }
 
   const bad = validateQueryContractSql({
     question, source: "historical", sql: twoAgency, requiredOri: "MD0030100",

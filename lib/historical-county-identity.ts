@@ -196,13 +196,40 @@ export function countyNameFromQuestion(question: string): string | null {
  * 2. Where exactly one of two candidates is a named police department and the user asked for
  *    the sheriff, the other is the answer by elimination.
  */
+/**
+ * The candidate whose ORI the user typed back, when they named exactly one.
+ *
+ * The decline message offers these codes as the way to pick between two agencies recorded
+ * under the same name, so the code has to accept them: offering an affordance and then not
+ * honouring it leaves the user with no way through at all.
+ *
+ * Tokenised rather than matched with a word-boundary pattern, so an ORI embedded in a longer
+ * identifier cannot count as a mention.
+ */
+export function selectCountyAgencyByOri(
+  answer: string,
+  candidates: { ori: string; agency: string }[],
+): { ori: string; agency: string } | null {
+  const tokens = new Set((answer || "").toUpperCase().split(/[^A-Z0-9]+/).filter(Boolean));
+  const named = candidates.filter((entry) => tokens.has(entry.ori.toUpperCase()));
+  return named.length === 1 ? named[0] : null;
+}
+
 export function selectNamedCountyAgency(
   question: string,
   countyKey: string,
   candidates: { ori: string; agency: string }[],
   countyName = "",
+  currentAnswer = "",
 ): { ori: string; agency: string } | null {
   const asked = normalizedWords(question);
+
+  // An ORI code the user typed back is the strongest evidence there is: it is the exact
+  // identifier, and where two agencies share a name it is the only thing that separates them.
+  // Read from the current answer alone -- an ORI mentioned earlier in the conversation is
+  // context, not a choice -- and only when exactly one is named, so quoting both is not a pick.
+  const byOri = selectCountyAgencyByOri(currentAnswer || question, candidates);
+  if (byOri) return byOri;
 
   const typed = normalizedWords(countyName).trim();
   if (typed) {
