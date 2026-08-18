@@ -67,7 +67,7 @@ import {
 } from "@/lib/agency-consolidations";
 import { historicalCountyAgencyPredicate } from "@/lib/historical-county-identity";
 import { getHistoricalCountyAgencyDecision } from "@/lib/historical-county-choice";
-import { enforceAuthoritativeAgencyLabel, lookupAuthoritativeAgency } from "@/lib/authoritative-agency-label";
+import { applyAuthoritativeIdentity, lookupAuthoritativeAgency } from "@/lib/authoritative-agency-label";
 import {
   emitFactualPayload,
   finalizeProof,
@@ -1281,9 +1281,12 @@ export async function POST(req: NextRequest) {
       // has to correct BEFORE the finalization that seals what the user reads -- the first
       // version of this ran only where no SQL was produced, which is the one path the Baltimore
       // regression never takes.
-      const authoritativeNarrative = (text: string | null | undefined): string => {
-        if (!requiredAgencyRecord || !text) return text ?? "";
-        const fixed = enforceAuthoritativeAgencyLabel(text, requiredAgencyRecord);
+      const authoritativeIdentity = (
+        text: string | null | undefined,
+        title?: string | null,
+      ): { explanation: string; title: string } => {
+        if (!requiredAgencyRecord) return { explanation: text ?? "", title: title ?? "" };
+        const fixed = applyAuthoritativeIdentity(text, title, requiredAgencyRecord);
         if (fixed.changed) {
           if (!firedGuardrails.includes("authoritative-agency-label")) {
             firedGuardrails.push("authoritative-agency-label");
@@ -1291,8 +1294,11 @@ export async function POST(req: NextRequest) {
           console.log("[query][authoritative-label] " + requiredAgencyRecord.ori + ": "
             + fixed.corrections.join("; "));
         }
-        return fixed.text;
+        return { explanation: fixed.explanation, title: fixed.title };
       };
+      // Narrative-only sites (the refined and retry explanations carry their own title already).
+      const authoritativeNarrative = (text: string | null | undefined): string =>
+        authoritativeIdentity(text, null).explanation;
       let contractQuestion = question;
       let closed = false;
       /**
@@ -1538,8 +1544,8 @@ export async function POST(req: NextRequest) {
         // corrected here for the same reason. A user may say what they want and be wrong about
         // what it is called -- "sheriff's office only" reached the Baltimore County Police
         // Department -- and the answer must still say which agency the numbers belong to.
-        claude.explanation = authoritativeNarrative(claude.explanation);
-        claude.title = authoritativeNarrative(claude.title);
+        ({ explanation: claude.explanation, title: claude.title } =
+          authoritativeIdentity(claude.explanation, claude.title));
           // No SQL was produced, so nothing factual is being asserted. Capability
           // framing, never a claim that the source lacks the data (handoff 2.4).
           const noSqlProof = finalizeExit({ intendedAction: "decline_capability", guardrails: firedGuardrails });
@@ -1966,8 +1972,8 @@ export async function POST(req: NextRequest) {
 
         // Before any factual emission on the answering path: the empty-result reply, the
         // all-null reply and the initial result all read from these.
-        claude.explanation = authoritativeNarrative(claude.explanation);
-        claude.title = authoritativeNarrative(claude.title);
+        ({ explanation: claude.explanation, title: claude.title } =
+          authoritativeIdentity(claude.explanation, claude.title));
 
         // Step 4: Handle empty results
         if (rows.length === 0) {

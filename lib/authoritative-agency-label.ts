@@ -12,17 +12,26 @@ import type Database from "better-sqlite3";
  * County Sheriff's Office". `MD0030100` is the Baltimore County **Police Department**. The
  * sheriff's office is `MD0030000` — the other one.
  *
- * Nothing lied about the numbers. The identity attached to them was carried over from the
- * user's own earlier wording, and the query that produced them selected only year and violent
- * count, so there was no agency name in the result for the narrative to draw on. Intent and
- * identity are different things: a user may say what they want, and may be wrong about what it
- * is called, and the answer must still say which agency the figures belong to.
+ * Nothing lied about the numbers. The identity attached to them was carried over from the user's
+ * own earlier wording, and the query selected only year and violent count, so no agency name was
+ * in the result for the narrative to draw on. Intent and identity are different things.
  *
- * WHAT IT DOES
- * ------------
- * Deterministic and server-owned, rather than another line in the prompt. The model is told the
- * authoritative label, and then the label is enforced on the way out, because a prompt is a
- * request and this is a fact.
+ * WHY IT NO LONGER REWRITES PROSE
+ * -------------------------------
+ * Three attempts tried to correct the name in place, and each produced a new defect. Allowing a
+ * few preceding words swallowed the sentence: "Rates for the sheriff's office fell" became
+ * "Baltimore County Police Department fell". Requiring those words to be capitalised fixed that
+ * and broke lowercase text instead: "baltimore county sheriff's office reported" became
+ * "baltimore county Baltimore County Police Department reported" — two adjacent identities.
+ *
+ * The common cause is that **the span of a name in free prose cannot be discovered reliably**.
+ * Every regex is a guess about where the name starts, and a wrong guess either eats the sentence
+ * or leaves half a name behind. So this no longer guesses.
+ *
+ * It renders the label deterministically from the record, detects whether the narrative
+ * contradicts it, and on contradiction replaces the narrative with a short server-authored
+ * sentence rather than repairing it. A plainer true answer beats a richer one that might be
+ * wrong — which is the same trade the rest of this application makes.
  *
  * It never invents. If the resolved ORI is not in the Historical agency table there is no
  * authoritative name, and the caller declines rather than publishing a guess.
@@ -46,12 +55,7 @@ export function lookupAuthoritativeAgency(
       "SELECT ori, agency, state, type FROM historical_agency WHERE ori = ?",
     ).get(ori) as { ori: string; agency: string | null; state: string | null; type: string | null } | undefined;
     if (!row || !row.agency || !String(row.agency).trim()) return null;
-    return {
-      ori: row.ori,
-      agency: String(row.agency).trim(),
-      state: row.state,
-      type: row.type,
-    };
+    return { ori: row.ori, agency: String(row.agency).trim(), state: row.state, type: row.type };
   } catch {
     return null;
   }
@@ -60,18 +64,18 @@ export function lookupAuthoritativeAgency(
 /**
  * Descriptors that name what kind of law-enforcement body an agency is.
  *
- * Longest first, so "sheriff's office" is replaced whole rather than leaving a stray "office".
+ * Used only to *detect* a contradiction. Nothing is spliced in their place.
  */
 const ROLE_PHRASES = [
   "sheriff's department",
   "sheriffs department",
   "sheriff's office",
   "sheriffs office",
+  "sheriff",
   "county police department",
   "metropolitan police department",
   "police department",
   "county police",
-  "sheriff",
 ];
 
 function normalize(value: string): string {
@@ -82,97 +86,83 @@ function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-export type AuthoritativeLabelResult = {
-  text: string;
+/** The label the answer shows for this agency. Rendered, never extracted. */
+export function renderAuthoritativeAgencyLabel(record: AuthoritativeAgency): string {
+  const state = (record.state || "").trim().toUpperCase();
+  return state ? `${record.agency}, ${state}` : record.agency;
+}
+
+/**
+ * Does this narrative claim a kind of agency the record contradicts?
+ *
+ * Detection only. "Police department" in text about a police department is not a contradiction;
+ * "sheriff's office" is.
+ */
+export function narrativeContradictsRecord(
+  text: string | null | undefined,
+  record: AuthoritativeAgency,
+): { contradicts: boolean; phrases: string[] } {
+  if (!text) return { contradicts: false, phrases: [] };
+  const authoritative = normalize(record.agency);
+  const found: string[] = [];
+  for (const phrase of ROLE_PHRASES) {
+    if (authoritative.includes(phrase)) continue;
+    const pattern = new RegExp(`\\b${escapeRegExp(phrase).replace(/'/g, "['’]")}\\b`, "i");
+    if (pattern.test(text)) found.push(phrase);
+  }
+  return { contradicts: found.length > 0, phrases: found };
+}
+
+/** The sentence used when the model's own wording cannot be trusted about which agency this is. */
+export function authoritativeFallbackExplanation(record: AuthoritativeAgency): string {
+  return `These figures are for ${renderAuthoritativeAgencyLabel(record)} (ORI ${record.ori}), `
+    + "the agency selected for this question.";
+}
+
+export type AuthoritativeIdentityResult = {
+  explanation: string;
+  title: string;
   changed: boolean;
-  /** What was replaced, for logging and for tests to assert against. */
+  /** What was replaced and why, for logging and for tests to assert against. */
   corrections: string[];
 };
 
 /**
- * Make every agency label in a narrative agree with the resolved record.
+ * Make an answer's identity agree with the resolved record.
  *
- * Two passes, both conservative:
- *
- * 1. Anything presented as the name of this ORI -- `Something (ORI MD0030100)` -- is replaced
- *    with the authoritative name. This is the shape the defect actually took.
- * 2. A role descriptor that the authoritative name does not contain is replaced with the
- *    authoritative name. "Sheriff's office" cannot survive in an answer about a police
- *    department; "police department" is left alone when that is what the agency is.
- *
- * Text that says nothing about which agency this is comes back untouched.
+ * The title is rendered from the record whenever it would otherwise contradict it. The
+ * explanation is replaced wholesale on contradiction — not patched — because patching is what
+ * produced three rounds of malformed text. Narratives that say nothing contradictory are left
+ * exactly as they are, which is the common case.
  */
-export function enforceAuthoritativeAgencyLabel(
-  text: string | null | undefined,
+export function applyAuthoritativeIdentity(
+  explanation: string | null | undefined,
+  title: string | null | undefined,
   record: AuthoritativeAgency,
-): AuthoritativeLabelResult {
+): AuthoritativeIdentityResult {
   const corrections: string[] = [];
-  if (!text) return { text: text ?? "", changed: false, corrections };
-  const authoritative = record.agency;
-  const authoritativeNormalized = normalize(authoritative);
-  let out = text;
+  let nextExplanation = explanation ?? "";
+  let nextTitle = title ?? "";
 
-  // 1. A name presented as this ORI's.
-  //
-  // Only a run of capitalised words counts as the name. Matching any words at all swallowed
-  // the sentence around it -- "Annual violent crime counts for Baltimore County Sheriff's
-  // Office (ORI …)" became "Annual Baltimore County Police Department (ORI …)". A proper name
-  // is capitalised; the prose leading up to it is not.
-  const ori = escapeRegExp(record.ori);
-  const word = "[A-Z][\\w''’.\\-&/]*";
-  const labelled = new RegExp(
-    `((?:${word})(?:\\s+(?:of|and|the|for)\\s+${word}|\\s+${word})*)(\\s*\\(\\s*(?:ORI\\s*[:\\-]?\\s*)?${ori}\\s*\\))`,
-    "g",
-  );
-  out = out.replace(labelled, (whole, name: string, suffix: string) => {
-    if (normalize(name) === authoritativeNormalized) return whole;
-    corrections.push(`${name.trim()} -> ${authoritative}`);
-    return `${authoritative}${suffix}`;
-  });
-
-  // 2. A kind of agency the authoritative name contradicts.
-  //
-  // Bounded on the left, which the first version was not. It allowed six arbitrary preceding
-  // words, so it treated the sentence's own framing as part of the agency's name:
-  // "Rates for the sheriff's office fell" became "Baltimore County Police Department fell",
-  // and "According to the sheriff's office," lost "According to". Meaning changed, grammar
-  // broke, and the production sentence only survived because pass 1 reached it first.
-  //
-  // Two shapes, and nothing else is touched:
-  //
-  //   a. a proper name immediately followed by the role -- "Baltimore County Sheriff's
-  //      Office" -- where the capitalised run really is part of the label. Adjacency is
-  //      required: a lowercase word between them means the capitals belong to the sentence,
-  //      not to the agency.
-  //   b. the bare role -- "the sheriff's office" -- where only the role words are replaced and
-  //      every surrounding word, determiner included, is left where it was.
-  for (const phrase of ROLE_PHRASES) {
-    if (authoritativeNormalized.includes(phrase)) continue;
-    const role = escapeRegExp(phrase).replace(/'/g, "['’]");
-    const properWord = "[A-Z][\\w''’.\\-&/]*";
-
-    // a. a capitalised run directly against the role phrase
-    const named = new RegExp(`\\b((?:${properWord})(?:\\s+${properWord}){0,5})\\s+(${role})\\b`, "gi");
-    out = out.replace(named, (match: string, lead: string) => {
-      // The run has to be capitalised in the text itself; the pattern is case-insensitive so
-      // that the role words match either way, which would otherwise let lowercase prose in.
-      if (!/^[A-Z]/.test(lead) || !lead.split(/\s+/).every((w) => /^[A-Z]/.test(w))) return match;
-      if (normalize(match) === authoritativeNormalized) return match;
-      corrections.push(`${match.trim()} -> ${authoritative}`);
-      return authoritative;
-    });
-
-    // b. the role phrase alone, with its grammatical context untouched
-    const bare = new RegExp(`\\b${role}\\b`, "gi");
-    out = out.replace(bare, (match: string) => {
-      corrections.push(`${match.trim()} -> ${authoritative}`);
-      return authoritative;
-    });
+  const explanationCheck = narrativeContradictsRecord(nextExplanation, record);
+  if (explanationCheck.contradicts) {
+    corrections.push(
+      `explanation claimed ${explanationCheck.phrases.join(", ")}; replaced with a server-authored `
+      + `sentence naming ${record.agency}`,
+    );
+    nextExplanation = authoritativeFallbackExplanation(record);
   }
 
-  // Replacing a phrase that already sat beside the name can double it up.
-  const doubled = new RegExp(`(${escapeRegExp(authoritative)})(\\s+\\1)+`, "gi");
-  out = out.replace(doubled, "$1");
+  const titleCheck = narrativeContradictsRecord(nextTitle, record);
+  if (titleCheck.contradicts) {
+    corrections.push(`title claimed ${titleCheck.phrases.join(", ")}; rendered from the record`);
+    nextTitle = renderAuthoritativeAgencyLabel(record);
+  }
 
-  return { text: out, changed: out !== text, corrections };
+  return {
+    explanation: nextExplanation,
+    title: nextTitle,
+    changed: nextExplanation !== (explanation ?? "") || nextTitle !== (title ?? ""),
+    corrections,
+  };
 }

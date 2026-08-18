@@ -40,19 +40,23 @@ function allLinesOf(needle: string): number[] {
 }
 
 console.log("the correction is a single shared helper");
-const helperDef = lineOf("const authoritativeNarrative =");
-assert(helperDef !== -1, "a request-scoped authoritativeNarrative helper exists");
+const helperDef = lineOf("const authoritativeIdentity =");
+assert(helperDef !== -1, "a request-scoped authoritativeIdentity helper exists");
 // The raw function should be reached through the helper, not copied into branches.
-const rawCalls = allLinesOf("enforceAuthoritativeAgencyLabel(").filter((i) => !lines[i].includes("import"));
+const rawCalls = allLinesOf("applyAuthoritativeIdentity(").filter((i) => !lines[i].includes("import"));
 assert(rawCalls.length === 1,
   `the raw enforcement is called once, inside the helper (found ${rawCalls.length})`);
 assert(rawCalls.length === 1 && rawCalls[0] > helperDef && rawCalls[0] < helperDef + 12,
   "that one call is inside the helper");
 
 console.log("\nit is applied on the answering path, not only where no SQL was produced");
-const applications = allLinesOf("authoritativeNarrative(").filter((i) => i !== helperDef);
-assert(applications.length >= 5,
-  `the helper is applied at several boundaries (found ${applications.length})`);
+const applications = allLinesOf("authoritativeIdentity(").concat(allLinesOf("authoritativeNarrative(")).filter((i) => i > helperDef + 20);
+// Four narrative boundaries: the no-SQL path, the answering path (which covers the
+// empty-result, all-null and initial-result emissions), the refined explanation and the retry
+// explanation. Title and explanation travel through one call, so this counts boundaries rather
+// than corrections.
+assert(applications.length >= 4,
+  `the helper is applied at every narrative boundary (found ${applications.length}, expected 4)`);
 
 // The no-SQL branch. Everything at or before it would have satisfied the old, broken placement.
 const noSqlBranch = lineOf("if (!claude.sql) {");
@@ -81,8 +85,8 @@ for (const [label, variable, finalization] of [
 }
 
 // The title travels with every one of those payloads.
-assert(applications.some((i) => lines[i].includes("claude.title = authoritativeNarrative(claude.title)")),
-  "the title is corrected too, not only the explanation");
+assert(allLinesOf("authoritativeIdentity(claude.explanation, claude.title)").length >= 2,
+  "the title travels with the explanation through the same call, at both answering sites");
 
 console.log(`\n${checks - failures}/${checks} route placement checks passed`);
 if (failures > 0) {
