@@ -175,7 +175,17 @@ const shrFatalShootingTrendHistory: PromptHistoryMessage[] = [
   ]);
   assert(transform);
   assert.equal(transform.name, "resolve_county_scope");
-  assert.match(transform.instruction, /NOT "Cook County Sheriff"/);
+  // Historical is resolved through the FIPS crosswalk, not by agency name. The clause used
+  // to name "Cook County" as the canonical database name; the rebuilt directory spells that
+  // agency "Cook", so any instruction to match a name is an instruction to return nothing.
+  assert.match(transform.instruction, /agency_county_crosswalk/);
+  assert.match(transform.instruction, /cw\.county_key/);
+  assert.match(transform.instruction, /LOWER\(ha\.type\) = 'county'/);
+  // The synthesised name may only appear as something not to match on.
+  assert.match(transform.instruction, /do NOT match the county by agency name/);
+  assert.match(transform.instruction, /not a synthesised "Cook County"/);
+  // Two county agencies must be asked about, not summed.
+  assert.match(transform.instruction, /ask which one rather than summing/);
   assert.match(transform.instruction, /agency = 'Maricopa' AND type = 'County'/);
   assert.match(transform.instruction, /do not search agencies\.city = 'COOK COUNTY'/);
 }
