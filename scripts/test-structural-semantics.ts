@@ -281,13 +281,19 @@ check("an untraceable returned expression fails closed", () => {
 
 console.log("\n-- the four gaps from the 0d16004 review --");
 
-check("a compound query is refused rather than half-checked", () => {
+check("every arm of a compound query is checked, not just the first", () => {
   // Only the first arm was ever read, so a second arm returning robbery under the label "murders"
-  // passed unexamined.
-  const sql = "SELECT hac.year, hac.murder AS murders FROM historical_agency_crime hac WHERE hac.ori = 'IL0316000' "
+  // passed unexamined. Refusing all compounds fixed that but flagged 140 legitimate production
+  // queries -- mostly the documented NIBRS victim-plus-offense pattern -- so every arm is read
+  // instead, and the substitution is caught on its merits.
+  const q = "murders in Chicago by year since 2000";
+  const laundered = "SELECT hac.year, hac.murder AS murders FROM historical_agency_crime hac WHERE hac.ori = 'IL0316000' "
     + "UNION ALL SELECT h2.year, h2.robbery AS murders FROM historical_agency_crime h2 WHERE h2.ori = 'IL0316000'";
-  assert.ok(rules("murders in Chicago by year since 2000", "historical", sql)
-    .includes("structural-unsupported-sql-shape"));
+  const honest = laundered.replace("h2.robbery", "h2.murder");
+  assert.ok(rules(q, "historical", laundered).includes("structural-measure-substitution"),
+    "the second arm returning robbery must be caught");
+  assert.deepStrictEqual(rules(q, "historical", honest), [],
+    "a compound whose arms all return the requested measure stays allowed");
 });
 
 check("a wildcard projection is refused", () => {
@@ -322,6 +328,46 @@ check("a schema-qualified table resolves to the table, not the schema", () => {
     + "WHERE d.age_group = 'Under 18' GROUP BY d.race";
   assert.deepStrictEqual(rules("juvenile arrests by race nationally", "nibrs", sql), [],
     "a real deterministic NIBRS plan must not be refused because of its schema prefix");
+});
+
+console.log("\n-- the deeper gaps from the 24e251f review --");
+
+check("a compound inside a CTE body is checked arm by arm", () => {
+  // The compound check used to run only over the text AFTER the CTEs were removed, so a second arm
+  // hidden in a CTE laundered a different offense into the outer select with nothing to object to.
+  const sql = "WITH x AS (SELECT year, murder AS murders FROM historical_agency_crime "
+    + "UNION ALL SELECT year, robbery AS murders FROM historical_agency_crime) SELECT year, murders FROM x";
+  assert.ok(rules("murders in Chicago by year since 2000", "historical", sql)
+    .includes("structural-measure-substitution"),
+    "an arm hidden in a CTE is still an arm");
+});
+
+check("a recursive series generator is not mistaken for a laundering compound", () => {
+  // The SHR deterministic murder plan builds a month series this way. It reads no metric table and
+  // refusing it broke a real, correct plan.
+  const sql = "WITH RECURSIVE months(month) AS (SELECT 1 UNION ALL SELECT month + 1 FROM months WHERE month < 12) "
+    + "SELECT i.year, COUNT(*) AS murders FROM incidents i CROSS JOIN months m WHERE i.state = 'CA' GROUP BY i.year";
+  assert.deepStrictEqual(rules("murders in California by year", "shr", sql), []);
+});
+
+check("a wildcard is recognised after DISTINCT and when the alias is quoted", () => {
+  const q = "murders in Chicago by year since 2000";
+  const distinct = "SELECT DISTINCT * FROM historical_agency_crime WHERE ori = 'IL0316000'";
+  const quoted = 'SELECT "hac".* FROM historical_agency_crime AS "hac" WHERE "hac".ori = \'IL0316000\'';
+  assert.ok(rules(q, "historical", distinct).includes("structural-wildcard-projection"),
+    "a leading DISTINCT does not stop it being a wildcard");
+  assert.ok(rules(q, "historical", quoted).includes("structural-wildcard-projection"),
+    "a quoted alias does not stop it being a wildcard");
+});
+
+check("a nested CTE cannot launder a measure through declared columns", () => {
+  // cteOutputs() recursed without forwarding the declared column lists, so the positional mapping
+  // vanished one level down and `y.murders` resolved to nothing checkable.
+  const sql = "WITH x(m) AS (SELECT robbery FROM historical_agency_crime), "
+    + "y(murders) AS (SELECT x.m FROM x) SELECT y.murders FROM y";
+  assert.ok(rules("murders in Chicago by year since 2000", "historical", sql)
+    .includes("structural-measure-substitution"),
+    "robbery renamed twice is still robbery");
 });
 
 console.log("\n-- catalog --");

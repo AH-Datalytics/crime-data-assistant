@@ -167,6 +167,39 @@ function splitTopLevel(text: string, separator: string): string[] {
  * one that no offense check could match. Mapping the declared names positionally onto the body's
  * select list resolves it to `robbery`, which is the truth.
  */
+/**
+ * Split a query at its top-level compound operators.
+ *
+ * Refusing every compound was correct for safety and wrong in practice: it flagged 150 of 1,605
+ * sampled production queries, 140 of them legitimate -- mostly the documented NIBRS pattern of
+ * combining victim summaries (person crimes) with offense summaries (everything else). Each arm
+ * returns its own series, so the honest fix is to READ every arm rather than refuse the shape.
+ * That is what closes the original hole too: a first arm returning murder cannot authorise a
+ * second arm returning robbery, because the second arm is now checked.
+ */
+function compoundArms(query: string): string[] {
+  const arms: string[] = [];
+  let depth = 0;
+  let start = 0;
+  const re = /\b(?:UNION\s+ALL|UNION|INTERSECT|EXCEPT)\b/gi;
+  for (let i = 0; i < query.length; i += 1) {
+    const ch = query[i];
+    if (ch === "(") depth += 1;
+    else if (ch === ")") depth = Math.max(0, depth - 1);
+    else if (depth === 0) {
+      re.lastIndex = i;
+      const m = re.exec(query);
+      if (m && m.index === i) {
+        arms.push(query.slice(start, i));
+        start = i + m[0].length;
+        i = start - 1;
+      }
+    }
+  }
+  arms.push(query.slice(start));
+  return arms.map((arm) => arm.trim()).filter((arm) => arm.length > 0);
+}
+
 function extractCtes(sql: string): {
   names: Map<string, string>;
   columnLists: Map<string, string[]>;
@@ -262,28 +295,41 @@ function cteOutputs(
   const body = ctes.get(name);
   if (!body) return outputs;
 
-  const selectAt = findTopLevel(body, /\bSELECT\b/gi);
-  if (selectAt === -1) return outputs;
-  const afterSelect = body.slice(selectAt + "SELECT".length);
+  const declared = columnLists.get(name) ?? null;
+
+  // A CTE can itself be compound. Every arm contributes to the same output columns, so each arm's
+  // refs are merged into the entry for that position -- which is how a second arm returning a
+  // different offense becomes visible to the measure check.
+  for (const arm of compoundArms(body)) {
+  const selectAt = findTopLevel(arm, /\bSELECT\b/gi);
+  if (selectAt === -1) continue;
+  const afterSelect = arm.slice(selectAt + "SELECT".length);
   const fromAt = findTopLevel(afterSelect, /\bFROM\b/gi);
   const selectList = fromAt === -1 ? afterSelect : afterSelect.slice(0, fromAt);
   const fromClause = fromAt === -1 ? "" : afterSelect.slice(fromAt);
   const innerAliases = sourceAliases(fromClause);
 
-  const declared = columnLists.get(name) ?? null;
   const items = splitTopLevel(selectList, ",");
   items.forEach((raw, index) => {
     const aliasMatch = raw.match(/\s+(?:AS\s+)?([A-Za-z_][\w]*)\s*$/i);
     const alias = aliasMatch && !SQL_KEYWORDS.has(aliasMatch[1].toLowerCase()) ? aliasMatch[1] : null;
     const bodyExpr = alias ? raw.slice(0, raw.length - aliasMatch![0].length) : raw;
-    const { refs } = refsIn(bodyExpr, innerAliases, ctes, memo, seen);
+    // `columnLists` must be forwarded here. Without it a nested CTE lost its positional mapping,
+    // so `WITH x(m) AS (SELECT robbery ...), y(murders) AS (SELECT x.m FROM x)` laundered robbery
+    // into `y.murders` with nothing to object to.
+    const { refs } = refsIn(bodyExpr, innerAliases, ctes, memo, seen, columnLists);
     const bare = bodyExpr.trim().match(/^(?:[A-Za-z_][\w]*\.)?([A-Za-z_][\w]*)$/);
     const key = (alias ?? bare?.[1] ?? "").toLowerCase();
-    if (key) outputs.set(key, refs);
+    const merge = (k: string) => {
+      const existing = outputs.get(k) ?? [];
+      outputs.set(k, [...existing, ...refs]);
+    };
+    if (key) merge(key);
     // A declared column list renames by POSITION, so `x(murders)` over `SELECT robbery` means
     // `x.murders` IS `robbery`. Without this the declared name resolves to nothing real.
-    if (declared && index < declared.length) outputs.set(declared[index], refs);
+    if (declared && index < declared.length) merge(declared[index]);
   });
+  }
   return outputs;
 }
 
@@ -346,6 +392,20 @@ function refsIn(
     if (SQL_KEYWORDS.has(word)) continue;
     if (/^\d/.test(word)) continue;
     if (aliases.has(word)) continue;           // a table/alias name used bare
+
+    // An UNQUALIFIED column drawn from a CTE must still resolve through that CTE. Falling straight
+    // through to the single base table invented `historical_agency_crime.murders` for
+    // `SELECT year, murders FROM x`, which no offense check could match -- so a compound arm hidden
+    // in `x` stayed invisible even once the arms were being read.
+    const cteSources = [...new Set([...aliases.values()])].filter((table) => ctes.has(table));
+    if (cteSources.length === 1) {
+      const origin = cteOutputs(cteSources[0], ctes, memo, new Set(seen), columnLists).get(word);
+      if (origin && origin.length > 0) {
+        for (const ref of origin) refs.push({ ...ref });
+        continue;
+      }
+    }
+
     if (singleBase) refs.push({ table: singleBase, column: word });
     else {
       const candidates = [...new Set([...aliases.values()].flatMap(
@@ -389,27 +449,25 @@ export function analyzeSql(sql: string): SqlLineage {
   const selectAt = findTopLevel(rest, /\bSELECT\b/gi);
   if (selectAt === -1) return { parsed: false, unsupportedShape: null, items: [], baseTables: [] };
 
-  // A compound statement has more than one arm and this analyzer only reads the first. A second arm
-  // returning a different offense under the same label would pass unexamined, so refuse the shape
-  // rather than half-check it.
-  const compound = findTopLevel(rest.slice(selectAt), /\b(?:UNION|INTERSECT|EXCEPT)\b/gi);
-  if (compound !== -1) {
-    return { parsed: true, unsupportedShape: "compound (UNION/INTERSECT/EXCEPT)", items: [], baseTables: [] };
-  }
+  const memo = new Map<string, Map<string, ColumnRef[]>>();
+  const items: SelectItem[] = [];
+  const baseTables: string[] = [];
 
-  const afterSelect = rest.slice(selectAt + "SELECT".length);
+  // EVERY arm of a compound is read, not just the first.
+  const arms = compoundArms(rest.slice(selectAt));
+  for (const arm of arms) {
+  const armSelectAt = findTopLevel(arm, /\bSELECT\b/gi);
+  if (armSelectAt === -1) continue;
+  const afterSelect = arm.slice(armSelectAt + "SELECT".length);
   const fromAt = findTopLevel(afterSelect, /\bFROM\b/gi);
   const selectList = fromAt === -1 ? afterSelect : afterSelect.slice(0, fromAt);
   const fromClause = fromAt === -1 ? "" : afterSelect.slice(fromAt);
 
   const aliases = sourceAliases(fromClause);
-  const baseTables = baseTablesOf(fromClause, ctes);
-  if (baseTables.length === 0 && ctes.size === 0) {
-    return { parsed: false, unsupportedShape: null, items: [], baseTables: [] };
+  for (const table of baseTablesOf(fromClause, ctes)) {
+    if (!baseTables.includes(table)) baseTables.push(table);
   }
 
-  const memo = new Map<string, Map<string, ColumnRef[]>>();
-  const items: SelectItem[] = [];
   for (const raw of splitTopLevel(selectList, ",")) {
     const aliasMatch = raw.match(/\s+(?:AS\s+)?([A-Za-z_][\w]*)\s*$/i);
     const alias = aliasMatch && !SQL_KEYWORDS.has(aliasMatch[1].toLowerCase()) ? aliasMatch[1] : null;
@@ -429,11 +487,21 @@ export function analyzeSql(sql: string): SqlLineage {
 
     // A projection wildcard is the WHOLE item (`*`) or a qualified one (`alias.*`). Anything else
     // is the multiplication operator: `COUNT(*) * 100000.0 / population` is a rate, and an earlier
-    // draft of this check read that second `*` as a projection and flagged every rate.
-    const hasWildcard = body.trim() === "*" || /\b[A-Za-z_]\w*\s*\.\s*\*/.test(body);
+    // draft read that second `*` as a projection and flagged every rate.
+    //
+    // `SELECT DISTINCT *` puts a keyword in front of the item, and `"hac".*` quotes the alias.
+    // Both are ordinary SQL and both previously escaped this check entirely.
+    const withoutLeadingQuantifier = body.trim().replace(/^(?:DISTINCT|ALL)\s+/i, "").trim();
+    const hasWildcard = withoutLeadingQuantifier === "*" ||
+      /(?:"[^"]+"|\b[A-Za-z_]\w*)\s*\.\s*\*/.test(body);
 
     items.push({ alias, raw: raw.trim(), refs, denominatorRefs, countsRows, hasWildcard, resolved });
   }
+  }
 
-  return { parsed: items.length > 0, unsupportedShape: null, items, baseTables };
+  if (items.length === 0) return { parsed: false, unsupportedShape: null, items: [], baseTables: [] };
+  if (baseTables.length === 0 && ctes.size === 0) {
+    return { parsed: false, unsupportedShape: null, items: [], baseTables: [] };
+  }
+  return { parsed: true, unsupportedShape: null, items, baseTables };
 }

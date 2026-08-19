@@ -303,17 +303,26 @@ export function evaluateStructuralSemantics(opts: {
       // Enforced only where the selected COLUMN is itself the claim. Code and value predicates
       // (NIBRS `ucr_offense_code`, Current Trends `offense`) are left to the existing offense-code
       // validation rather than duplicated into a second vocabulary here.
-      const expected = topicColumns(entry, scope.topic);
-      if (expected && expected.length > 0) {
+      // Every offense the question asked for, not just the first. "murders and rapes" legitimately
+      // selects two columns, and judging against the primary topic alone would flag the second.
+      const requestedTopics = opts.contract.metric.offenses.length > 0
+        ? opts.contract.metric.offenses.map((offense) => offense.topic)
+        : [scope.topic];
+      const expected = [...new Set(
+        requestedTopics.flatMap((topic) => topicColumns(entry, topic) ?? [])
+      )];
+      if (expected.length > 0) {
         const everyTopicColumn = allTopicColumns(entry);
         const selectedTopicColumns = item.refs
           .filter((ref) => ref.table === entry.table && everyTopicColumn.has(ref.column))
           .map((ref) => ref.column);
-        if (selectedTopicColumns.length > 0 &&
-            !selectedTopicColumns.some((column) => expected.includes(column))) {
+        // Fire when a selected column belongs to a DIFFERENT offense. Requiring merely that one
+        // column matches let a compound arm smuggle robbery in beside murder under one label.
+        const foreign = selectedTopicColumns.filter((column) => !expected.includes(column));
+        if (foreign.length > 0) {
           add("structural-measure-substitution", "retry",
-            `"${label}" selects ${selectedTopicColumns.map((c) => `\`${c}\``).join(", ")} from ` +
-            `\`${entry.table}\`, but the question asks about ${scope.topic}, which is ` +
+            `"${label}" selects ${foreign.map((c) => `\`${c}\``).join(", ")} from ` +
+            `\`${entry.table}\`, but the question asks about ${requestedTopics.join(" and ")}, which is ` +
             `${expected.map((c) => `\`${c}\``).join(" or ")}. Select the requested measure; do not ` +
             "relabel a different one.", label);
         }
