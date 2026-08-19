@@ -2231,3 +2231,7 @@ check("owner candidates are evidence from a filename search, never presented as 
 });
 
 console.log(`\nstage2b workbook: ${passed} passed, ${failed} failed`);
+// Every check here catches its own assertion, so without this the script printed its failures
+// and exited zero -- the suite reported success while a check was failing, which is the one
+// thing a suite must never do.
+process.exit(failed > 0 ? 1 : 0);
