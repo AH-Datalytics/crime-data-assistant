@@ -1,0 +1,225 @@
+/**
+ * Increment C: a question's meaning must match what the chosen table can represent.
+ *
+ * Every SQL string in the "confirmed production" cases below is the SQL that actually ran, taken
+ * from the query log. Four of the five originally-named cases were already caught on HEAD by
+ * `source-capabilities.ts` rules added 2026-07-17 -- that was verified before any of this was
+ * written, and those cases are retained here as regressions against the new structural path rather
+ * than claimed as new fixes. Two shapes were NOT caught by anything and are the reason this exists:
+ * the Florida clearance question and "top 10 us cities".
+ */
+import assert from "node:assert";
+import { buildQueryContract, type QueryContractSource } from "../lib/query-contract";
+import { evaluateStructuralSemantics, requestedScope, catalogCoverage } from "../lib/structural-semantics";
+import { validateSourceCapabilities } from "../lib/source-capabilities";
+import { TABLE_SEMANTICS, tableSemantics } from "../lib/table-semantics";
+
+let passed = 0;
+let failed = 0;
+
+function check(name: string, fn: () => void): void {
+  try {
+    fn();
+    passed += 1;
+    console.log(`  PASS  ${name}`);
+  } catch (error) {
+    failed += 1;
+    console.log(`  FAIL  ${name}`);
+    console.log(`        ${(error as Error).message.split("\n")[0]}`);
+  }
+}
+
+function rules(question: string, source: QueryContractSource, sql: string): string[] {
+  const contract = buildQueryContract(question, source);
+  assert.ok(contract, "no contract built");
+  return evaluateStructuralSemantics({ question, source, contract: contract!, sql })
+    .map((finding) => finding.ruleId);
+}
+
+function severities(question: string, source: QueryContractSource, sql: string): string[] {
+  const contract = buildQueryContract(question, source)!;
+  return evaluateStructuralSemantics({ question, source, contract, sql }).map((f) => f.severity);
+}
+
+function capabilityRules(question: string, source: QueryContractSource, sql: string): string[] {
+  const contract = buildQueryContract(question, source)!;
+  return validateSourceCapabilities({ question, source, contract, sql }).map((f) => f.ruleId);
+}
+
+console.log("\n-- the two shapes nothing caught on HEAD --");
+
+check("Florida statewide clearance is blocked: the national table has no state column", () => {
+  const question = "What is the clearance rate for rape in Florida by year?";
+  const sql = "SELECT year, ROUND(rape_rate, 1) AS rape_clearance_rate FROM national_clearance_rate ORDER BY year LIMIT 1000";
+  assert.deepStrictEqual(capabilityRules(question, "historical", sql), [],
+    "precondition: HEAD's capability rules do not catch this");
+  assert.ok(rules(question, "historical", sql).includes("structural-row-level-substitution"),
+    "a state clearance question served from a national-only table must be blocked");
+  assert.ok(severities(question, "historical", sql).includes("block"), "it must block, not retry");
+});
+
+check("Florida cannot be rescued by averaging agency clearance percentages either", () => {
+  const question = "What is the clearance rate for rape in Florida by year?";
+  const sql = "SELECT hac.year, AVG(hac.rape_clr) AS rate FROM historical_agency_clearance hac " +
+    "JOIN historical_agency ha ON ha.ori = hac.ori WHERE ha.state = 'fl' GROUP BY hac.year";
+  assert.ok(rules(question, "historical", sql).includes("structural-clearance-not-aggregatable"),
+    "percentages with no cleared counts or denominators cannot be averaged into a statewide rate");
+});
+
+check("'top 10 us cities' is blocked when the SQL returns states", () => {
+  const question = "top 10 us cities by homicide rate in 2021";
+  const sql = "SELECT state, ROUND(murder_rate, 1) AS homicide_rate FROM historical_state_national " +
+    "WHERE year = 2021 AND state != 'United States' ORDER BY homicide_rate DESC LIMIT 10";
+  // The logged guardrail column for this query names `historical-state-national-rate-table`, which
+  // looks like an objection but is not: that rule only requires historical_state_national to be
+  // present, and it is. Evaluated against HEAD the finding list is empty.
+  assert.deepStrictEqual(capabilityRules(question, "historical", sql), [],
+    "precondition: HEAD raises nothing at all for this shape");
+  assert.ok(rules(question, "historical", sql).includes("structural-row-level-substitution"),
+    "a request for city rows cannot be answered with state rows");
+});
+
+check("the requested row level comes from the breakout, not the filtering geography", () => {
+  const question = "top 10 us cities by homicide rate in 2021";
+  const contract = buildQueryContract(question, "historical")!;
+  assert.strictEqual(contract.geography.kind, "national", "precondition: the contract reads this as national");
+  assert.strictEqual(requestedScope(question, contract).rowLevel, "city",
+    "every returned row must still be a city");
+});
+
+console.log("\n-- cases already caught on HEAD, retained as regressions --");
+
+for (const [name, question, sql] of [
+  ["Denver is not answered with Colorado rows",
+    "Denver crime rates over time",
+    "SELECT year, ROUND(murder_rate, 1) AS murder_rate FROM historical_state_national WHERE state = 'Colorado' ORDER BY year"],
+  ["New York City is not answered with New York State rows",
+    "Can you please show me the aggravated assault rates for New York City by year from 2019 to 2025?",
+    "SELECT year, ROUND(aggravated_assault_rate, 1) AS r FROM historical_state_national WHERE state = 'New York' AND year BETWEEN 2019 AND 2025"],
+  ["Alameda County is not answered with state aggregates",
+    "violent crime in Alameda County since 2008",
+    "SELECT hsn.year, (hsn.murder + hsn.rape + hsn.robbery + hsn.aggravated_assault) AS violent FROM historical_state_national hsn WHERE hsn.state = 'California'"],
+] as const) {
+  check(name, () => {
+    assert.ok(capabilityRules(question, "historical", sql).length > 0,
+      "precondition: HEAD already objects to this");
+    assert.ok(rules(question, "historical", sql).includes("structural-row-level-substitution"),
+      "and the structural path must object too");
+  });
+}
+
+check("a homicide count is not answered by counting agency directory rows", () => {
+  const question = "How many homicides have there been in the City of Los Angeles so far this year?";
+  const sql = "SELECT COUNT(DISTINCT ori) AS city_count FROM historical_agency WHERE type = 'city' AND agency IS NOT NULL";
+  assert.ok(capabilityRules(question, "historical", sql).includes("historical-agency-lookup-not-crime-data"),
+    "precondition: HEAD already objects");
+  assert.ok(rules(question, "historical", sql).includes("structural-identity-table-as-metric"),
+    "a directory cannot supply a measure");
+});
+
+console.log("\n-- the other three sources --");
+
+check("NIBRS: a city question cannot be served from the state summary", () => {
+  const question = "murders in Chicago in 2023";
+  const bad = "SELECT year, SUM(victim_count) FROM summary_victim_state_monthly WHERE state = 'IL' AND year = 2023 GROUP BY year";
+  const good = "SELECT year, SUM(victim_count) FROM summary_victim_city_monthly WHERE city = 'Chicago' AND state = 'IL' AND year = 2023 GROUP BY year";
+  assert.ok(rules(question, "nibrs", bad).includes("structural-row-level-substitution"), "state rows cannot answer a city");
+  assert.deepStrictEqual(rules(question, "nibrs", good), [], "the city summary must still pass");
+});
+
+check("SHR: an agency population column is not a statewide denominator", () => {
+  const question = "murder rate per 100k in California";
+  const bad = "SELECT year, COUNT(*) * 100000.0 / population AS rate FROM incidents WHERE state = 'CA' GROUP BY year";
+  const good = "SELECT i.year, COUNT(*) * 100000.0 / sp.population AS rate FROM incidents i " +
+    "JOIN state_population sp ON sp.state = i.state AND sp.year = i.year WHERE i.state = 'CA' GROUP BY i.year";
+  assert.ok(rules(question, "shr", bad).includes("structural-rate-denominator-missing"),
+    "incidents.population is per-agency and cannot serve a statewide rate");
+  assert.deepStrictEqual(rules(question, "shr", good), [], "state_population is the supported path");
+});
+
+check("SHR: a clearance request still declines through the existing rule", () => {
+  const question = "What is the homicide clearance rate in Texas?";
+  const sql = "SELECT year, COUNT(*) FROM incidents WHERE state = 'TX' GROUP BY year";
+  assert.ok(capabilityRules(question, "shr", sql).includes("shr-clearance-unsupported"),
+    "this is HEAD's mechanism and must be preserved, not replaced");
+});
+
+check("Hate Crime: a state question cannot use a table with no geography column", () => {
+  const question = "hate crimes in Texas by year";
+  const bad = "SELECT year, SUM(incident_count) FROM summary_hate_crime_bias_trend GROUP BY year";
+  const good = "SELECT year, SUM(incident_count) FROM summary_hate_crime_state WHERE state = 'TX' GROUP BY year";
+  assert.ok(rules(question, "hate_crime", bad).includes("structural-row-level-substitution"),
+    "summary_hate_crime_bias_trend has year/bias/counts and no place column");
+  assert.deepStrictEqual(rules(question, "hate_crime", good), [], "the state summary must pass");
+});
+
+check("Current Trends: a supported monthly agency count passes; a national table does not", () => {
+  const question = "monthly murders in Chicago in 2023";
+  const good = "SELECT year, month, SUM(count) FROM agency_monthly WHERE agency = 'Chicago' AND state = 'IL' AND offense = 'Murder' AND year = 2023 GROUP BY year, month";
+  const bad = "SELECT year, month, SUM(count) FROM national_monthly WHERE offense = 'Murder' AND year = 2023 GROUP BY year, month";
+  assert.deepStrictEqual(rules(question, "current", good), [], "the supported path must not be blocked");
+  assert.ok(rules(question, "current", bad).includes("structural-row-level-substitution"), "national rows cannot answer a city");
+});
+
+console.log("\n-- things that must NOT be blocked --");
+
+check("a state question served by the state table is correct, not a substitution", () => {
+  const question = "California murder rate over time";
+  const sql = "SELECT year, murder_rate FROM historical_state_national WHERE state = 'California' ORDER BY year";
+  assert.deepStrictEqual(rules(question, "historical", sql), [],
+    "state-named agencies must not make a state question look like a city question");
+});
+
+check("a national question served by the national table is correct", () => {
+  const question = "national murder rate 1960 to 2024";
+  const sql = "SELECT year, murder_rate FROM historical_state_national WHERE state = 'United States' ORDER BY year";
+  assert.deepStrictEqual(rules(question, "historical", sql), []);
+});
+
+check("a legitimate city-versus-national comparison stays allowed", () => {
+  const question = "Compare murders in Chicago to the national total since 2018";
+  const sql = "SELECT am.year, SUM(am.count) AS chicago, (SELECT SUM(nm.count) FROM national_monthly nm WHERE nm.year = am.year) AS national " +
+    "FROM agency_monthly am WHERE am.agency = 'Chicago' AND am.state = 'IL' GROUP BY am.year";
+  assert.deepStrictEqual(rules(question, "current", sql), [],
+    "several grains may appear as long as one metric table serves the requested level");
+});
+
+check("an uncatalogued table produces no finding rather than a guess", () => {
+  const question = "murders in Chicago in 2023";
+  assert.deepStrictEqual(rules(question, "current", "SELECT * FROM some_future_table WHERE year = 2023"), []);
+});
+
+check("Historical is annual-only, so a monthly request is declined not silently re-grained", () => {
+  const question = "monthly murders in Denver in 1990";
+  const sql = "SELECT hac.year, hac.murder FROM historical_agency_crime hac WHERE hac.year = 1990";
+  assert.ok(rules(question, "historical", sql).includes("structural-time-grain-unavailable"));
+});
+
+console.log("\n-- catalog --");
+
+check("every catalogued table declares a role, a row level and its measures", () => {
+  for (const entry of TABLE_SEMANTICS) {
+    assert.ok(entry.role, `${entry.table} has no role`);
+    assert.ok(entry.rowLevel, `${entry.table} has no rowLevel`);
+    assert.ok(entry.measures.length > 0, `${entry.table} declares no measures`);
+    assert.ok(entry.timeGrains.length > 0, `${entry.table} declares no time grains`);
+  }
+});
+
+check("all five sources are covered in this increment", () => {
+  for (const source of ["current", "historical", "nibrs", "shr", "hate_crime"] as QueryContractSource[]) {
+    const coverage = catalogCoverage(source);
+    assert.ok(coverage.tables > 0, `${source} has no catalogued tables`);
+    assert.ok(coverage.metric > 0, `${source} has no metric table`);
+  }
+});
+
+check("the tables whose semantics are uncertain say so", () => {
+  const clearance = tableSemantics("historical", "historical_agency_clearance");
+  assert.ok(clearance, "historical_agency_clearance must be catalogued");
+  assert.ok((clearance!.unknown ?? []).length > 0,
+    "its missing numerators and denominators must be recorded, not assumed");
+});
+
+console.log(`\nstructural semantics: ${passed} passed, ${failed} failed`);
+process.exit(failed > 0 ? 1 : 0);

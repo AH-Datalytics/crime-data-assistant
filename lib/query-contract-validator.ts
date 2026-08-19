@@ -2,6 +2,7 @@ import { buildQueryContract, type QueryContract, type QueryContractSource } from
 import { currentCalendarYear } from "./time-conventions";
 import type { RoutingLogMeta } from "./routing-log-meta";
 import { validateSourceCapabilities, type SourceCapabilityFinding } from "./source-capabilities";
+import { evaluateStructuralSemantics } from "./structural-semantics";
 import { DEMOGRAPHIC_RATE_UNSUPPORTED_MESSAGE, SUB_CITY_GEOGRAPHY_MESSAGE } from "./capability-overrides";
 
 export interface QueryContractSqlValidation {
@@ -717,6 +718,31 @@ export function validateQueryContractSql(opts: {
     retryIssues.push(trendFollowupIssue);
     enforced.push("contract-trend-followup-complete-years");
   }
+  // Structural semantics: does the chosen table's row level, measure and time grain actually match
+  // what was requested? This runs alongside the capability rules rather than replacing them --
+  // several of those rules already catch cases this would, and they carry source-specific wording
+  // worth keeping. What this adds is the property none of them model: the entity a returned ROW
+  // represents. Its severity is decided by the rule itself, not by a name in a set, so a new table
+  // in the catalog is enforced the day it is added.
+  for (const finding of evaluateStructuralSemantics({
+    question: opts.question,
+    source: opts.source,
+    contract,
+    sql,
+  })) {
+    warnings.push(`structural-${finding.ruleId}`);
+    if (finding.severity === "block") {
+      blockReasons.push(finding.message);
+    } else {
+      retryIssues.push(
+        `[SYSTEM: Query contract violation (${finding.ruleId}). ${finding.message} ` +
+        `Rewrite the SQL against a table whose rows are ${finding.requestedLevel}-level, or say plainly ` +
+        "that this source cannot answer the question. Do not substitute a different geography or measure.]"
+      );
+    }
+    enforced.push(finding.ruleId);
+  }
+
   const capabilityFindings = validateSourceCapabilities({
     question: opts.question,
     source: opts.source,
