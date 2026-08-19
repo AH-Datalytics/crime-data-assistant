@@ -20,7 +20,7 @@ import path from "node:path";
 import { createRequire } from "node:module";
 import {
   CARD_MODULE_FILE, CATALOG_MODULE_FILE, DECISIONS_VERSION, PLAIN_LANGUAGE_MODULE_FILE, SESSION_MODULE_FILE,
-  WORKBOOK_FILE, buildWorkbookModel, decidableRegistry, loadCatalog, registryFingerprint,
+  buildWorkbookModel, decidableRegistry, loadCatalog, registryFingerprint,
   renderWorkbook, workbookFingerprint,
   type RegistryEntry,
 } from "./generate-stage2b-workbook";
@@ -578,18 +578,20 @@ check("there is ONE authored source, and policy is derived from it", () => {
   assert.doesNotThrow(() => loadGeneratedPolicy(FINGERPRINT), "the canonical loader refuses the current pair");
 });
 
-check("the workbook a person opens is the workbook this suite exercises", () => {
-  /**
-   * Everything asserted here is asserted about `renderWorkbook()`. The file someone actually opens
-   * is a checked-in artifact of it, and nothing tied the two together: a change to the generator,
-   * the catalog or the inlined logic left a stale page on disk that every test above would still
-   * pass. The page is the product; a green suite over a page nobody is running is the exact shape
-   * of defect this file exists to stop.
-   */
-  assert.strictEqual(fs.readFileSync(WORKBOOK_FILE, "utf8"), renderWorkbook(),
-    `${path.relative(process.cwd(), WORKBOOK_FILE)} is not what the generator emits, so the page being `
-    + "opened is not the page these tests exercise. Run: npx tsx scripts/generate-stage2b-workbook.ts");
-});
+/**
+ * There was a check here that the checked-in workbook HTML matched what `renderWorkbook()` emits.
+ *
+ * The HTML questionnaire has been retired. It is no longer a release artifact, nobody opens it, and
+ * standing instruction is not to regenerate it -- so the check asserted that a dead file stayed in
+ * step with a generator nobody is permitted to run, and could only ever fail. It was removed rather
+ * than the file being regenerated.
+ *
+ * Only the page was retired. Everything else in this suite is still live and still guards shipping
+ * behaviour: the capability policy and its generated-from stamp, the fail-closed loader, source
+ * health, the registry/catalog agreement, and the re-wording rules. `renderWorkbook()` remains the
+ * driver for those assertions because it is the honest way to exercise them end to end -- what is
+ * gone is the claim about a file on disk, not the coverage.
+ */
 
 check("no consumer silently trusts a policy that lags its source", () => {
   /**
