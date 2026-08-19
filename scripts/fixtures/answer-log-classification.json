@@ -1,0 +1,133 @@
+[
+ {
+  "name": "no-SQL fallback is a failure, not a decline",
+  "question": "burglary in Example City",
+  "response": "I could not generate a database query for that request in the Historical Library source. Please restate it with the place, offense, and date range you want.",
+  "expect_verdict": "FAILURE"
+ },
+ {
+  "name": "a neutralized unverified-absence claim is a failure",
+  "question": "arson in Example City",
+  "response": "I couldn't verify that the requested data is unavailable because no database query was generated.",
+  "expect_verdict": "FAILURE"
+ },
+ {
+  "name": "the retired envelope/parse failure is a failure",
+  "question": "robbery in Example City",
+  "response": "I had trouble formatting my response. Here's what I generated: ```json {\"sql\": \"SELECT 1\"}```",
+  "expect_verdict": "FAILURE"
+ },
+ {
+  "name": "a timeout is a failure",
+  "question": "every offense for every agency for every year",
+  "response": "Query timed out after 30 seconds. Try a more specific query.",
+  "expect_verdict": "FAILURE"
+ },
+ {
+  "name": "the generic catch is a failure",
+  "question": "asdfghjkl",
+  "response": "Sorry, I wasn't able to process that request. Try rephrasing your question or asking something more specific.",
+  "expect_verdict": "FAILURE"
+ },
+ {
+  "name": "an empty response is a failure, not a silent success",
+  "question": "murder in Example City",
+  "response": "",
+  "expect_verdict": "FAILURE"
+ },
+ {
+  "name": "claiming a query ran when no SQL exists would be a false claim",
+  "question": "theft in Example City",
+  "response": "The query returned no results. Try broadening your search.",
+  "expect_verdict": "UNCLASSIFIED"
+ },
+ {
+  "name": "county scope clarification is the system asking, not failing",
+  "question": "violent crime in Example County",
+  "response": "For Example County, do you want the countywide total (all law enforcement agencies mapped to Example County, summed) or the county agency only?",
+  "expect_verdict": "CLARIFY"
+ },
+ {
+  "name": "ambiguous place clarification",
+  "question": "crime in Springfield",
+  "response": "There are multiple cities named Springfield in the United States. Add the state so the result is unambiguous.",
+  "expect_verdict": "CLARIFY"
+ },
+ {
+  "name": "measure/definition clarification",
+  "question": "violent crime last year",
+  "response": "There are two common definitions for violent crime. Did you mean the SRS definition or the revised one?",
+  "expect_verdict": "CLARIFY"
+ },
+ {
+  "name": "declining a place the sample does not cover",
+  "question": "robbery in Example Township",
+  "response": "\"Example Township\" is not in our dataset of ~700 agencies. Our data covers major U.S. cities and counties.",
+  "expect_verdict": "DECLINE"
+ },
+ {
+  "name": "declining a measure the dataset does not hold",
+  "question": "how many convictions followed those arrests",
+  "response": "This database does not contain conviction data. It tracks reported offenses and clearances only.",
+  "expect_verdict": "DECLINE"
+ },
+ {
+  "name": "declining because the method would be unsound",
+  "question": "per-capita homicide rate by race",
+  "response": "I can't calculate per-capita homicide rates by race because there is no reliable denominator for that population.",
+  "expect_verdict": "DECLINE"
+ },
+ {
+  "name": "declining a period the data does not reach",
+  "question": "murders in 2031",
+  "response": "2031 data is not yet available in this database.",
+  "expect_verdict": "DECLINE"
+ },
+ {
+  "name": "a failure marker outranks a decline marker in the same text",
+  "question": "auto theft in Example City",
+  "response": "I couldn't build a valid query for this question. Note that this database does not track attempted auto theft separately.",
+  "expect_verdict": "FAILURE"
+ },
+ {
+  "name": "unfamiliar wording stays UNCLASSIFIED rather than being folded into a verdict",
+  "question": "something entirely unlike any template",
+  "response": "Here is a sentence that matches no rule in this classifier at all.",
+  "expect_verdict": "UNCLASSIFIED"
+ },
+ {
+  "name": "shape: a top-N question is ranking",
+  "question": "Top 10 example cities by burglary in 2024",
+  "response": "",
+  "expect_verdict": "FAILURE",
+  "expect_shapes": ["ranking"]
+ },
+ {
+  "name": "shape: two places named is comparison",
+  "question": "Compare burglary in Example City and Sample City",
+  "response": "",
+  "expect_verdict": "FAILURE",
+  "expect_shapes": ["comparison"]
+ },
+ {
+  "name": "shape: a since-year question is change over time",
+  "question": "burglary in Example City since 2015",
+  "response": "",
+  "expect_verdict": "FAILURE",
+  "expect_shapes": ["change over time"]
+ },
+ {
+  "name": "shape: ranking and change can both apply to one question",
+  "question": "which cities had the largest decline in burglary since 2015",
+  "response": "",
+  "expect_verdict": "FAILURE",
+  "expect_shapes": ["ranking", "change over time"]
+ },
+ {
+  "name": "shape: a plain lookup is neither",
+  "question": "burglary in Example City",
+  "response": "",
+  "expect_verdict": "FAILURE",
+  "expect_shapes": ["neither"]
+ }
+]
