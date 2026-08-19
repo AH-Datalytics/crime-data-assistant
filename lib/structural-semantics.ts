@@ -5,8 +5,10 @@ import {
   allTopicColumns,
   catalogedTables,
   producesLevel,
+  requirementColumns,
+  requirementSatisfied,
   tableSemantics,
-  topicColumns,
+  topicRequirement,
   type EntityLevel,
   type TableSemantics,
 } from "./table-semantics";
@@ -216,6 +218,11 @@ export function evaluateStructuralSemantics(opts: {
   const factual = lineage.items.filter(isFactualSeries);
   if (factual.length === 0) return findings;
 
+  // Every offense the question asked for, not just the first.
+  const requestedTopics = opts.contract.metric.offenses.length > 0
+    ? opts.contract.metric.offenses.map((offense) => offense.topic)
+    : [scope.topic];
+
   const licensed = licensedLevels(opts.question);
   const someSeriesServesRequestedLevel = factual.some((item) => {
     const tables = item.refs.length > 0 ? tablesOf(item.refs, opts.source) : lineage.baseTables;
@@ -303,28 +310,24 @@ export function evaluateStructuralSemantics(opts: {
       // Enforced only where the selected COLUMN is itself the claim. Code and value predicates
       // (NIBRS `ucr_offense_code`, Current Trends `offense`) are left to the existing offense-code
       // validation rather than duplicated into a second vocabulary here.
-      // Every offense the question asked for, not just the first. "murders and rapes" legitimately
-      // selects two columns, and judging against the primary topic alone would flag the second.
-      const requestedTopics = opts.contract.metric.offenses.length > 0
-        ? opts.contract.metric.offenses.map((offense) => offense.topic)
-        : [scope.topic];
+      // MEMBERSHIP: is any selected column a DIFFERENT offense from the ones requested?
       const expected = [...new Set(
-        requestedTopics.flatMap((topic) => topicColumns(entry, topic) ?? [])
+        requestedTopics.flatMap((topic) => {
+          const requirement = topicRequirement(entry, topic);
+          return requirement ? requirementColumns(requirement) : [];
+        })
       )];
       if (expected.length > 0) {
         const everyTopicColumn = allTopicColumns(entry);
-        const selectedTopicColumns = item.refs
+        const foreign = item.refs
           .filter((ref) => ref.table === entry.table && everyTopicColumn.has(ref.column))
-          .map((ref) => ref.column);
-        // Fire when a selected column belongs to a DIFFERENT offense. Requiring merely that one
-        // column matches let a compound arm smuggle robbery in beside murder under one label.
-        const foreign = selectedTopicColumns.filter((column) => !expected.includes(column));
+          .map((ref) => ref.column)
+          .filter((column) => !expected.includes(column));
         if (foreign.length > 0) {
           add("structural-measure-substitution", "retry",
             `"${label}" selects ${foreign.map((c) => `\`${c}\``).join(", ")} from ` +
-            `\`${entry.table}\`, but the question asks about ${requestedTopics.join(" and ")}, which is ` +
-            `${expected.map((c) => `\`${c}\``).join(" or ")}. Select the requested measure; do not ` +
-            "relabel a different one.", label);
+            `\`${entry.table}\`, but the question asks about ${requestedTopics.join(" and ")}. ` +
+            "Select the requested measure; do not relabel a different one.", label);
         }
       }
       if (entry.measureBinding.kind === "fixed_topics" && scope.topic !== "unknown" &&
@@ -360,6 +363,42 @@ export function evaluateStructuralSemantics(opts: {
                item.countsRows && item.refs.length === 0) {
       add("structural-rate-denominator-unbound", "retry",
         `The rate "${label}" has no denominator expression at all.`, label);
+    }
+  }
+
+  // ---- COMPLETENESS, judged once per table across EVERY returned series -------------------------
+  // A multi-offense request legitimately puts each offense in its own select item, so this cannot be
+  // a per-item check. Membership above asks "is this column allowed"; this asks the different
+  // question "is what was asked for actually all here", which a flat allowed-set could never answer.
+  const selectedByTable = new Map<string, Set<string>>();
+  for (const item of factual) {
+    for (const ref of item.refs) {
+      if (!ref.table) continue;
+      const set = selectedByTable.get(ref.table) ?? new Set<string>();
+      set.add(ref.column);
+      selectedByTable.set(ref.table, set);
+    }
+  }
+  for (const [table, selected] of selectedByTable) {
+    const entry = tableSemantics(opts.source, table);
+    if (!entry || entry.role !== "metric" || entry.measureBinding.kind !== "topic_columns") continue;
+    // Only judge completeness when this table is actually being used for a measure.
+    const everyTopicColumn = allTopicColumns(entry);
+    if (![...selected].some((column) => everyTopicColumn.has(column))) continue;
+
+    for (const topic of requestedTopics) {
+      const requirement = topicRequirement(entry, topic);
+      if (!requirement) continue;
+      if (requirementSatisfied(requirement, selected)) continue;
+      const wanted = requirement.kind === "all"
+        ? requirement.columns.map((c) => `\`${c}\``).join(" and ")
+        : requirement.alternatives
+            .map((alt) => requirementColumns(alt).map((c) => `\`${c}\``).join(" and "))
+            .join(", or ");
+      add("structural-measure-incomplete", "retry",
+        `The question asks about ${topic}, which \`${table}\` expresses as ${wanted}, but the ` +
+        `returned columns are ${[...selected].map((c) => `\`${c}\``).join(", ")}. Return the whole ` +
+        "measure; a single component is not the total, and one offense is not two.", null);
     }
   }
 

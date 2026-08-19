@@ -56,8 +56,43 @@ export type TimeGrain = "annual" | "monthly" | "incident" | "none";
  * `value_column`  — a text value selects it (Current Trends `offense`).
  * `fixed_topics`  — the table only ever holds these topics (SHR is homicide-only).
  */
+/**
+ * What a table must actually return to satisfy a requested measure.
+ *
+ * A flat list of "allowed columns" could only ever answer "is this column permitted", which let two
+ * real defects through: a request for murders AND robberies satisfied by murder alone, and a
+ * request for violent crime satisfied by one of its four components. Completeness and alternatives
+ * are different questions from membership, so they get their own shapes.
+ *
+ *   all   every column is required -- the components of a composite, or a multi-column measure.
+ *   any   one alternative suffices -- a stored `violent` total OR its four components.
+ */
+export type MeasureRequirement =
+  | { kind: "all"; columns: string[] }
+  | { kind: "any"; alternatives: MeasureRequirement[] };
+
+export const allOf = (...columns: string[]): MeasureRequirement => ({ kind: "all", columns });
+export const anyOf = (...alternatives: MeasureRequirement[]): MeasureRequirement =>
+  ({ kind: "any", alternatives });
+
+/** Every column mentioned anywhere in a requirement -- the membership question. */
+export function requirementColumns(requirement: MeasureRequirement): string[] {
+  return requirement.kind === "all"
+    ? [...requirement.columns]
+    : requirement.alternatives.flatMap(requirementColumns);
+}
+
+/** Does this set of selected columns satisfy the requirement -- the completeness question. */
+export function requirementSatisfied(
+  requirement: MeasureRequirement, selected: Set<string>
+): boolean {
+  return requirement.kind === "all"
+    ? requirement.columns.every((column) => selected.has(column))
+    : requirement.alternatives.some((alternative) => requirementSatisfied(alternative, selected));
+}
+
 export type MeasureBinding =
-  | { kind: "topic_columns"; columns: Record<string, string[]> }
+  | { kind: "topic_columns"; columns: Record<string, MeasureRequirement> }
   | { kind: "code_column"; column: string }
   | { kind: "value_column"; column: string; values: Record<string, string> }
   | { kind: "fixed_topics"; topics: string[] }
@@ -88,22 +123,31 @@ const T = (entry: TableSemantics): TableSemantics => entry;
 const ALL_LOCAL: EntityLevel[] = ["agency", "city", "county", "state", "national"];
 
 /** Historical agency crime columns. Note `assault`, not `aggravated_assault`. */
-const HIST_CRIME_COLUMNS: Record<string, string[]> = {
-  murder: ["murder"], rape: ["rape"], robbery: ["robbery"], aggravated_assault: ["assault"],
-  burglary: ["burglary"], theft: ["theft"], motor_vehicle_theft: ["motor_vehicle_theft"],
-  violent_crime: ["violent", "murder", "rape", "robbery", "assault"],
-  property_crime: ["property", "burglary", "theft", "motor_vehicle_theft"],
+const HIST_CRIME_COLUMNS: Record<string, MeasureRequirement> = {
+  murder: allOf("murder"), rape: allOf("rape"), robbery: allOf("robbery"),
+  aggravated_assault: allOf("assault"), burglary: allOf("burglary"), theft: allOf("theft"),
+  motor_vehicle_theft: allOf("motor_vehicle_theft"),
+  // The stored total, or every component -- never one component standing in for the whole.
+  violent_crime: anyOf(allOf("violent"), allOf("murder", "rape", "robbery", "assault")),
+  property_crime: anyOf(allOf("property"), allOf("burglary", "theft", "motor_vehicle_theft")),
 };
 
 /** Historical state/national columns. Note `aggravated_assault` and `auto_theft`. */
-const HIST_STATE_COLUMNS: Record<string, string[]> = {
-  murder: ["murder", "murder_rate"], rape: ["rape", "rape_rate"], robbery: ["robbery", "robbery_rate"],
-  aggravated_assault: ["aggravated_assault", "aggravated_assault_rate"],
-  burglary: ["burglary", "burglary_rate"], theft: ["theft", "theft_rate"],
-  motor_vehicle_theft: ["auto_theft", "auto_theft_rate"],
-  violent_crime: ["murder", "rape", "robbery", "aggravated_assault", "murder_rate", "rape_rate", "robbery_rate", "aggravated_assault_rate"],
-  property_crime: ["burglary", "theft", "auto_theft", "burglary_rate", "theft_rate", "auto_theft_rate"],
-  crime: ["total_offenses", "total_offenses_rate"],
+const HIST_STATE_COLUMNS: Record<string, MeasureRequirement> = {
+  murder: anyOf(allOf("murder"), allOf("murder_rate")),
+  rape: anyOf(allOf("rape"), allOf("rape_rate")),
+  robbery: anyOf(allOf("robbery"), allOf("robbery_rate")),
+  aggravated_assault: anyOf(allOf("aggravated_assault"), allOf("aggravated_assault_rate")),
+  burglary: anyOf(allOf("burglary"), allOf("burglary_rate")),
+  theft: anyOf(allOf("theft"), allOf("theft_rate")),
+  motor_vehicle_theft: anyOf(allOf("auto_theft"), allOf("auto_theft_rate")),
+  violent_crime: anyOf(
+    allOf("murder", "rape", "robbery", "aggravated_assault"),
+    allOf("murder_rate", "rape_rate", "robbery_rate", "aggravated_assault_rate")),
+  property_crime: anyOf(
+    allOf("burglary", "theft", "auto_theft"),
+    allOf("burglary_rate", "theft_rate", "auto_theft_rate")),
+  crime: anyOf(allOf("total_offenses"), allOf("total_offenses_rate")),
 };
 
 const CURRENT_OFFENSE_VALUES: Record<string, string> = {
@@ -129,10 +173,10 @@ export const TABLE_SEMANTICS: TableSemantics[] = [
     measureBinding: {
       kind: "topic_columns",
       columns: {
-        murder: ["murder_rate"], rape: ["rape_rate"], robbery: ["robbery_rate"],
-        aggravated_assault: ["assault_rate"], burglary: ["burglary_rate"], theft: ["theft_rate"],
-        motor_vehicle_theft: ["auto_theft_rate"], violent_crime: ["violent_rate"],
-        property_crime: ["property_rate"],
+        murder: allOf("murder_rate"), rape: allOf("rape_rate"), robbery: allOf("robbery_rate"),
+        aggravated_assault: allOf("assault_rate"), burglary: allOf("burglary_rate"),
+        theft: allOf("theft_rate"), motor_vehicle_theft: allOf("auto_theft_rate"),
+        violent_crime: allOf("violent_rate"), property_crime: allOf("property_rate"),
       },
     },
     components: "absent", aggregation: "not-aggregatable",
@@ -153,10 +197,10 @@ export const TABLE_SEMANTICS: TableSemantics[] = [
     measureBinding: {
       kind: "topic_columns",
       columns: {
-        murder: ["murder_clr"], rape: ["rape_clr"], robbery: ["robbery_clr"],
-        aggravated_assault: ["assault_clr"], burglary: ["burglary_clr"], theft: ["theft_clr"],
-        motor_vehicle_theft: ["motor_vehicle_theft_clr"], violent_crime: ["violent_clr"],
-        property_crime: ["property_clr"],
+        murder: allOf("murder_clr"), rape: allOf("rape_clr"), robbery: allOf("robbery_clr"),
+        aggravated_assault: allOf("assault_clr"), burglary: allOf("burglary_clr"),
+        theft: allOf("theft_clr"), motor_vehicle_theft: allOf("motor_vehicle_theft_clr"),
+        violent_crime: allOf("violent_clr"), property_crime: allOf("property_clr"),
       },
     },
     components: "absent", aggregation: "not-aggregatable",
@@ -526,13 +570,18 @@ export function producesLevel(entry: TableSemantics, level: EntityLevel): boolea
  * Columns in this table that legitimately express `topic`, or null when the binding does not work
  * by column name (a code or value predicate, or a table that only ever holds one topic).
  */
-export function topicColumns(entry: TableSemantics, topic: string): string[] | null {
+export function topicRequirement(entry: TableSemantics, topic: string): MeasureRequirement | null {
   if (entry.measureBinding.kind !== "topic_columns") return null;
   return entry.measureBinding.columns[topic] ?? null;
+}
+
+export function topicColumns(entry: TableSemantics, topic: string): string[] | null {
+  const requirement = topicRequirement(entry, topic);
+  return requirement ? requirementColumns(requirement) : null;
 }
 
 /** Every column this table uses to express ANY offense topic. */
 export function allTopicColumns(entry: TableSemantics): Set<string> {
   if (entry.measureBinding.kind !== "topic_columns") return new Set();
-  return new Set(Object.values(entry.measureBinding.columns).flat());
+  return new Set(Object.values(entry.measureBinding.columns).flatMap(requirementColumns));
 }

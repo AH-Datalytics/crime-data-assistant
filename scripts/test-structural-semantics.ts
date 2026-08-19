@@ -370,6 +370,51 @@ check("a nested CTE cannot launder a measure through declared columns", () => {
     "robbery renamed twice is still robbery");
 });
 
+console.log("\n-- the blockers from the d4755ec review --");
+
+check("compound CTE arms align by position, not by each arm's alias", () => {
+  // The second arm's `robbery` belongs to output position 2 whatever it is called there. Merging
+  // by alias filed it under `anything` and `x.murders` never saw it.
+  const sql = "WITH x AS (SELECT year, murder AS murders FROM historical_agency_crime "
+    + "UNION ALL SELECT year, robbery AS anything FROM historical_agency_crime) SELECT year, murders FROM x";
+  assert.ok(rules("murders in Chicago by year since 2000", "historical", sql)
+    .includes("structural-measure-substitution"));
+});
+
+check("a multi-offense request must return every offense asked for", () => {
+  const q = "murders and robberies in Chicago by year";
+  const partial = "SELECT hac.year, hac.murder AS murders FROM historical_agency_crime hac WHERE hac.ori = 'IL0316000'";
+  const complete = "SELECT hac.year, hac.murder AS murders, hac.robbery AS robberies "
+    + "FROM historical_agency_crime hac WHERE hac.ori = 'IL0316000'";
+  assert.ok(rules(q, "historical", partial).includes("structural-measure-incomplete"),
+    "murder alone does not answer a question about murders AND robberies");
+  assert.deepStrictEqual(rules(q, "historical", complete), []);
+});
+
+check("a composite measure needs its total or ALL of its components", () => {
+  const q = "violent crime in Chicago by year";
+  const base = "FROM historical_agency_crime hac WHERE hac.ori = 'IL0316000'";
+  const oneComponent = `SELECT hac.year, hac.murder AS violent_crime ${base}`;
+  const storedTotal = `SELECT hac.year, hac.violent AS violent_crime ${base}`;
+  const allComponents = `SELECT hac.year, (hac.murder + hac.rape + hac.robbery + hac.assault) AS violent_crime ${base}`;
+  assert.ok(rules(q, "historical", oneComponent).includes("structural-measure-incomplete"),
+    "one component is not the total");
+  assert.deepStrictEqual(rules(q, "historical", storedTotal), [], "the stored total is one valid alternative");
+  assert.deepStrictEqual(rules(q, "historical", allComponents), [], "so is the complete component set");
+});
+
+check("every SQLite quoted-identifier form is recognised in a wildcard", () => {
+  const q = "murders in Chicago by year since 2000";
+  for (const [name, sql] of [
+    ["bracket", "SELECT [hac].* FROM historical_agency_crime AS [hac] WHERE [hac].ori = 'IL0316000'"],
+    ["backtick", "SELECT `hac`.* FROM historical_agency_crime AS `hac` WHERE `hac`.ori = 'IL0316000'"],
+    ["double-quote", 'SELECT "hac".* FROM historical_agency_crime AS "hac" WHERE "hac".ori = \'IL0316000\''],
+  ] as const) {
+    assert.ok(rules(q, "historical", sql).includes("structural-wildcard-projection"),
+      `${name}-quoted alias wildcard must be recognised`);
+  }
+});
+
 console.log("\n-- catalog --");
 
 check("every catalogued table separates physical row key from output levels", () => {

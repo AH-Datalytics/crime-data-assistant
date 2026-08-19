@@ -84,10 +84,17 @@ for (const route of ROUTES) {
       if (index + 1 < start) return;                    // module helpers: see the egress checks
       const m = line.match(EXECUTION_HELPER);
       if (!m) return;
-      const arg = (m[1] ?? "").trim();
+      let arg = (m[1] ?? "").trim();
 
-      // A literal, a template, or an expression continuing onto the next line. Literals carry no
-      // model input, and every current continuation is a multi-line literal.
+      // `db.prepare(\n  unguardedSql\n)` puts the argument on the NEXT line. Treating an empty
+      // same-line argument as a literal continuation accepted exactly the injection this test
+      // exists to catch, so look ahead instead.
+      if (arg === "") {
+        const next = lines.slice(index + 1, index + 3).find((l) => l.trim().length > 0) ?? "";
+        arg = next.trim().replace(/[,)].*$/, "").trim();
+      }
+
+      // A literal or a template carries no model input.
       if (arg === "" || /^[`'"]/.test(arg)) return;
 
       const inner = arg.replace(/^db\s*,\s*db\.prepare\(\s*/, "").replace(/\).*$/, "").trim();

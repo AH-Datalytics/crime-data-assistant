@@ -300,6 +300,12 @@ function cteOutputs(
   // A CTE can itself be compound. Every arm contributes to the same output columns, so each arm's
   // refs are merged into the entry for that position -- which is how a second arm returning a
   // different offense becomes visible to the measure check.
+  // SQL aligns compound arms by POSITION, not by name. An earlier version merged each arm under its
+  // own alias, so `SELECT murder AS murders ... UNION ALL SELECT robbery AS anything ...` filed the
+  // second arm under `anything` and `x.murders` never saw the robbery at position 2.
+  const refsByIndex: ColumnRef[][] = [];
+  const nameByIndex: (string | null)[] = [];
+
   for (const arm of compoundArms(body)) {
   const selectAt = findTopLevel(arm, /\bSELECT\b/gi);
   if (selectAt === -1) continue;
@@ -320,16 +326,18 @@ function cteOutputs(
     const { refs } = refsIn(bodyExpr, innerAliases, ctes, memo, seen, columnLists);
     const bare = bodyExpr.trim().match(/^(?:[A-Za-z_][\w]*\.)?([A-Za-z_][\w]*)$/);
     const key = (alias ?? bare?.[1] ?? "").toLowerCase();
-    const merge = (k: string) => {
-      const existing = outputs.get(k) ?? [];
-      outputs.set(k, [...existing, ...refs]);
-    };
-    if (key) merge(key);
-    // A declared column list renames by POSITION, so `x(murders)` over `SELECT robbery` means
-    // `x.murders` IS `robbery`. Without this the declared name resolves to nothing real.
-    if (declared && index < declared.length) merge(declared[index]);
+    refsByIndex[index] = [...(refsByIndex[index] ?? []), ...refs];
+    if (key && !nameByIndex[index]) nameByIndex[index] = key;   // the first arm names the column
   });
   }
+
+  refsByIndex.forEach((refs, index) => {
+    const name = nameByIndex[index];
+    if (name) outputs.set(name, refs);
+    // A declared column list renames by POSITION, so `x(murders)` over `SELECT robbery` means
+    // `x.murders` IS `robbery`. Without this the declared name resolves to nothing real.
+    if (declared && index < declared.length) outputs.set(declared[index], refs);
+  });
   return outputs;
 }
 
@@ -491,9 +499,11 @@ export function analyzeSql(sql: string): SqlLineage {
     //
     // `SELECT DISTINCT *` puts a keyword in front of the item, and `"hac".*` quotes the alias.
     // Both are ordinary SQL and both previously escaped this check entirely.
+    // SQLite accepts four identifier quotings: bare, "double", [bracket] and `backtick`. Recognising
+    // only bare and double-quoted let `[hac].*` and \`hac\`.* through untouched.
     const withoutLeadingQuantifier = body.trim().replace(/^(?:DISTINCT|ALL)\s+/i, "").trim();
     const hasWildcard = withoutLeadingQuantifier === "*" ||
-      /(?:"[^"]+"|\b[A-Za-z_]\w*)\s*\.\s*\*/.test(body);
+      /(?:"[^"]+"|\[[^\]]+\]|`[^`]+`|\b[A-Za-z_]\w*)\s*\.\s*\*/.test(body);
 
     items.push({ alias, raw: raw.trim(), refs, denominatorRefs, countsRows, hasWildcard, resolved });
   }
