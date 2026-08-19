@@ -184,9 +184,15 @@ check("a legitimate city-versus-national comparison stays allowed", () => {
     "several grains may appear as long as one metric table serves the requested level");
 });
 
-check("an uncatalogued table produces no finding rather than a guess", () => {
+check("an uncatalogued table fails closed rather than passing silently", () => {
+  // This assertion is inverted from the version written for 89c331b, which required SILENCE here.
+  // That was the third blocker: a table whose meaning is not established cannot authorise a
+  // factual answer, and the ordinary allowlist only proves the table exists.
   const question = "murders in Chicago in 2023";
-  assert.deepStrictEqual(rules(question, "current", "SELECT * FROM some_future_table WHERE year = 2023"), []);
+  assert.ok(
+    rules(question, "current", "SELECT t.year, t.total FROM some_future_table t WHERE t.year = 2023")
+      .includes("structural-uncatalogued-factual-source"),
+    "unknown semantics must fail closed");
 });
 
 check("Historical is annual-only, so a monthly request is declined not silently re-grained", () => {
@@ -271,6 +277,51 @@ check("an untraceable returned expression fails closed", () => {
   const findings = rules("murders in Chicago in 2023", "current", "SELECT 1 FROM");
   assert.ok(findings.includes("structural-returned-series-unresolved"),
     "an unparseable statement must not be treated as safe");
+});
+
+console.log("\n-- the four gaps from the 0d16004 review --");
+
+check("a compound query is refused rather than half-checked", () => {
+  // Only the first arm was ever read, so a second arm returning robbery under the label "murders"
+  // passed unexamined.
+  const sql = "SELECT hac.year, hac.murder AS murders FROM historical_agency_crime hac WHERE hac.ori = 'IL0316000' "
+    + "UNION ALL SELECT h2.year, h2.robbery AS murders FROM historical_agency_crime h2 WHERE h2.ori = 'IL0316000'";
+  assert.ok(rules("murders in Chicago by year since 2000", "historical", sql)
+    .includes("structural-unsupported-sql-shape"));
+});
+
+check("a wildcard projection is refused", () => {
+  const q = "murders in Chicago by year since 2000";
+  const qualified = "SELECT hac.* FROM historical_agency_crime hac JOIN historical_agency ha ON ha.ori = hac.ori WHERE ha.agency = 'Chicago'";
+  const bare = "SELECT * FROM historical_state_national WHERE state = 'Illinois'";
+  assert.ok(rules(q, "historical", qualified).includes("structural-wildcard-projection"),
+    "alias.* states nothing about which measure is returned");
+  assert.ok(rules(q, "historical", bare).includes("structural-wildcard-projection"));
+});
+
+check("multiplication is not mistaken for a wildcard", () => {
+  const good = "SELECT i.year, COUNT(*) * 100000.0 / sp.population AS rate FROM incidents i "
+    + "JOIN state_population sp ON sp.state = i.state AND sp.year = i.year WHERE i.state = 'CA' GROUP BY i.year";
+  assert.deepStrictEqual(rules("murder rate per 100k in California", "shr", good), [],
+    "the second * in COUNT(*) * 100000.0 is an operator");
+});
+
+check("a CTE column list is mapped positionally, not discarded", () => {
+  // `x(murders)` over `SELECT robbery` means x.murders IS robbery. Discarding the declared list
+  // invented a column that does not exist and no offense check could match.
+  const sql = "WITH x(murders) AS (SELECT robbery FROM historical_agency_crime WHERE ori = 'IL0316000') "
+    + "SELECT x.murders FROM x";
+  assert.ok(rules("murders in Chicago by year since 2000", "historical", sql)
+    .includes("structural-measure-substitution"),
+    "robbery relabelled through a CTE column list is still robbery");
+});
+
+check("a schema-qualified table resolves to the table, not the schema", () => {
+  // `rollup.national_summary_...` is one table in an ATTACHed database.
+  const sql = "SELECT d.race, SUM(d.arrestee_count) AS arrests FROM rollup.national_summary_arrestee_demographics d "
+    + "WHERE d.age_group = 'Under 18' GROUP BY d.race";
+  assert.deepStrictEqual(rules("juvenile arrests by race nationally", "nibrs", sql), [],
+    "a real deterministic NIBRS plan must not be refused because of its schema prefix");
 });
 
 console.log("\n-- catalog --");

@@ -692,7 +692,13 @@ export async function POST(req: NextRequest) {
   }
 
   const agencyScorecard = tab === "historical" ? buildHistoricalScorecard(getDb(), capabilityQuestion) : null;
-  if (agencyScorecard) {
+  const agencyScorecardRefusal = deterministicPlanRefusal({
+    question: capabilityQuestion, source: tab, sql: agencyScorecard?.sql,
+  });
+  if (agencyScorecardRefusal) {
+    console.log(`[structural] agency scorecard refused: ${agencyScorecardRefusal.ruleIds.join(", ")}`);
+  }
+  if (agencyScorecard && !agencyScorecardRefusal) {
     const ms = Date.now() - totalStart;
     // Scope-prefixed so agency cards keep their historical tag strings ("agency-scorecard-…")
     // and log analyses over them stay valid; state/national get their own partitions.
@@ -1180,7 +1186,13 @@ export async function POST(req: NextRequest) {
   const historicalPlace = tab === "historical" && !queryBearingFollowup && !shouldSkipHistoricalPlaceLookup(question, body?.history)
     ? answerHistoricalPlaceLookup(question, getDb())
     : null;
-  if (historicalPlace) {
+  const historicalPlaceRefusal = deterministicPlanRefusal({
+    question, source: tab, sql: historicalPlace?.sql,
+  });
+  if (historicalPlaceRefusal) {
+    console.log(`[structural] historical place lookup refused: ${historicalPlaceRefusal.ruleIds.join(", ")}`);
+  }
+  if (historicalPlace && !historicalPlaceRefusal) {
     const ms = Date.now() - totalStart;
     const proof = finalizeExit({
       intendedAction: "answer",

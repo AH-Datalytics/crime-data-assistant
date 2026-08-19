@@ -1,17 +1,16 @@
 /**
  * Increment C correction: no factual branch may execute SQL without a structural proof first.
  *
- * Counting `runContractValidation` call sites proved nothing, and the review was right to reject
- * it. In `app/api/query/route.ts` that helper is DEFINED at ~line 1332, while three deterministic
- * plans execute and return well before it:
+ * Counting `runContractValidation` call sites proved nothing. In `app/api/query/route.ts` that
+ * helper is DEFINED at ~1332 while three deterministic plans execute and return at ~942, ~1000 and
+ * ~1126; the NIBRS route executed `executeWithTimeout(deterministicQuery.sql)` with no structural
+ * validation at all.
  *
- *     indexed-state            ~936
- *     multi-city trend         ~992
- *     Historical city-change  ~1116
- *
- * These assertions read the route sources and check ordering and guarding, so removing a guard
- * fails here rather than in production. A unit test calling `validateQueryContractSql()` directly
- * cannot detect any of this.
+ * The first version of this file also inventoried only `db.prepare(<plan>.sql)` in one route, so it
+ * could not have seen the NIBRS gap. This version enumerates every factual execution helper across
+ * all four routes and classifies what each one executes: either a contract result (already
+ * validated), or a deterministic plan that must be guarded before its execution line. Anything else
+ * fails, which is what makes a NEW unguarded branch fail here rather than in production.
  */
 import assert from "node:assert";
 import fs from "node:fs";
@@ -38,64 +37,135 @@ function routeSource(name: string): string {
   return fs.readFileSync(path.join(process.cwd(), "app", "api", name, "route.ts"), "utf8");
 }
 
-function lineOf(source: string, needle: string | RegExp): number {
-  const lines = source.split("\n");
-  for (let i = 0; i < lines.length; i += 1) {
-    if (typeof needle === "string" ? lines[i].includes(needle) : needle.test(lines[i])) return i + 1;
-  }
-  return -1;
-}
+/** Every helper that can run answer-bearing SQL. */
+const EXECUTION_HELPERS = /(?:executeWithTimeoutSync|executeWithTimeout|(?:\w+\.)?prepare)\s*\(/;
 
-console.log("\n-- deterministic plans in the Current/Historical route --");
+/**
+ * Identifiers whose `.sql` is a CONTRACT RESULT -- validation already happened to produce them.
+ * These are the model path's own variables.
+ */
+const VALIDATED_CONTRACTS = new Set([
+  "contract", "contractResult", "executionContract", "preValidationContract", "postRetryContract",
+  "retryContract", "rollingContract", "initialContractResult",
+]);
 
-const query = routeSource("query");
+/** Deterministic plans, each of which must be refused-checked before it executes. */
+const GUARDED_PLANS: Record<string, string> = {
+  indexedStatePlan: "indexedStateRefusal",
+  multiCityTrend: "multiCityRefusal",
+  historicalCityChange: "historicalCityChangeRefusal",
+  deterministicQuery: "nibrsPlanRefusal",
+};
 
-for (const plan of ["indexedStatePlan", "multiCityTrend", "historicalCityChange"] as const) {
-  check(`${plan} cannot execute without a structural refusal check`, () => {
-    const guard = new RegExp(`if\\s*\\(\\s*${plan}\\s*&&\\s*!\\w*[Rr]efusal\\s*\\)`);
-    assert.ok(guard.test(query),
-      `${plan} must be guarded by its refusal check; found no "if (${plan} && !…Refusal)"`);
+/**
+ * Two deterministic answers build and run their SQL inside a helper, so the execution line sits in
+ * the builder rather than the branch. Their proof is at the DELIVERY boundary instead: a refused
+ * result is never sent. That is the property worth asserting, and it is what these check.
+ */
+const GUARDED_AT_DELIVERY: Record<string, string> = {
+  agencyScorecard: "agencyScorecardRefusal",
+  historicalPlace: "historicalPlaceRefusal",
+};
 
-    const refusalLine = lineOf(query, new RegExp(`deterministicPlanRefusal\\([^)]*sql:\\s*${plan}`));
-    const executeLine = lineOf(query, new RegExp(`db\\.prepare\\(${plan}\\.sql\\)`));
-    assert.ok(refusalLine > 0, `${plan} has no deterministicPlanRefusal call`);
-    assert.ok(executeLine > 0, `${plan} has no execution site to protect`);
-    assert.ok(refusalLine < executeLine,
-      `${plan} is validated at line ${refusalLine} but executes at ${executeLine}`);
+console.log("\n-- every factual execution helper, in every route --");
+
+for (const route of ROUTES) {
+  check(`${route}: every executed .sql is a contract result or a guarded plan`, () => {
+    const source = routeSource(route);
+    const lines = source.split("\n");
+    const unaccounted: string[] = [];
+
+    const handlerStart = lines.findIndex((line) => /export async function POST/.test(line)) + 1;
+    lines.forEach((line, index) => {
+      if (index + 1 < handlerStart) return;   // module-level helpers are proved at delivery
+      if (!EXECUTION_HELPERS.test(line)) return;
+      for (const m of line.matchAll(/\b(\w+)\.sql\b/g)) {
+        const name = m[1];
+        if (VALIDATED_CONTRACTS.has(name)) continue;
+        if (name in GUARDED_PLANS) continue;
+        unaccounted.push(`${route}:${index + 1} executes ${name}.sql`);
+      }
+    });
+
+    assert.deepStrictEqual(unaccounted, [],
+      `unaccounted factual executions:\n        ${unaccounted.join("\n        ")}`);
   });
 }
 
-check("the guard is imported rather than reimplemented in the route", () => {
-  assert.ok(/import \{ deterministicPlanRefusal \} from "@\/lib\/deterministic-plan-guard"/.test(query),
-    "the route must use the shared guard");
+console.log("\n-- each deterministic plan is refused-checked before it executes --");
+
+for (const [plan, refusal] of Object.entries(GUARDED_PLANS)) {
+  check(`${plan} is guarded before execution`, () => {
+    const route = plan === "deterministicQuery" ? "nibrs-query" : "query";
+    const lines = routeSource(route).split("\n");
+
+    const refusalLine = lines.findIndex((line) => line.includes(`${refusal} =`)) + 1;
+    const executeLine = lines.findIndex(
+      (line) => EXECUTION_HELPERS.test(line) && new RegExp(`\\b${plan}\\.sql\\b`).test(line)
+    ) + 1;
+    const guardLine = lines.findIndex((line) => new RegExp(`!\\s*${refusal}\\b`).test(line)) + 1;
+
+    assert.ok(refusalLine > 0, `${plan}: no ${refusal} is computed`);
+    assert.ok(executeLine > 0, `${plan}: no execution site found to protect`);
+    assert.ok(guardLine > 0, `${plan}: the branch does not test !${refusal}`);
+    assert.ok(refusalLine < executeLine,
+      `${plan}: refusal computed at ${refusalLine} but executes at ${executeLine}`);
+    assert.ok(guardLine < executeLine,
+      `${plan}: guard at ${guardLine} but executes at ${executeLine}`);
+  });
+}
+
+check("both routes with deterministic plans import the shared guard", () => {
+  for (const route of ["query", "nibrs-query"]) {
+    assert.ok(
+      /import \{ deterministicPlanRefusal \} from "@\/lib\/deterministic-plan-guard"/.test(routeSource(route)),
+      `${route} must use the shared guard rather than reimplementing it`);
+  }
 });
 
-check("every deterministic plan that executes SQL is covered", () => {
-  // Any `db.prepare(<something>Plan.sql)` or `db.prepare(<name>.sql)` in this route must belong to
-  // a variable we have guarded. A new deterministic branch fails this until it is added.
-  const executed = [...query.matchAll(/db\.prepare\((\w+)\.sql\)/g)].map((m) => m[1]);
-  const guarded = new Set(["indexedStatePlan", "multiCityTrend", "historicalCityChange"]);
-  const unguarded = executed.filter((name) => !guarded.has(name));
-  assert.deepStrictEqual(unguarded, [],
-    `these plan variables execute without a structural guard: ${unguarded.join(", ")}`);
-});
+console.log("\n-- deterministic answers built inside a helper are guarded at delivery --");
 
-console.log("\n-- the model path in every route --");
+for (const [plan, refusal] of Object.entries(GUARDED_AT_DELIVERY)) {
+  check(`${plan} is refused-checked before it is delivered`, () => {
+    const lines = routeSource("query").split("\n");
+    const refusalLine = lines.findIndex((line) => line.includes(`${refusal} = deterministicPlanRefusal`)) + 1;
+    const guardLine = lines.findIndex((line) => new RegExp(`${plan} && !${refusal}\\b`).test(line)) + 1;
+    assert.ok(refusalLine > 0, `${plan}: no ${refusal} is computed`);
+    assert.ok(guardLine > 0, `${plan}: the delivery branch does not test !${refusal}`);
+    assert.ok(refusalLine < guardLine, `${plan}: refusal computed after the branch it guards`);
+  });
+}
+
+console.log("\n-- the model path validates before executing, in every route --");
 
 for (const route of ROUTES) {
-  check(`${route}: SQL from the model is validated before execution`, () => {
-    const source = routeSource(route);
-    const validation = lineOf(source, /runContractValidation\(|validateQueryContractSql\(/);
-    assert.ok(validation > 0, "the route must validate model SQL at all");
-    const guardedExecution = /executionContract|preValidationContract|contractFailureResponse|runContractValidation/.test(source);
-    assert.ok(guardedExecution, "the route must gate execution on a contract result");
+  check(`${route}: model SQL is validated before the first execution`, () => {
+    const lines = routeSource(route).split("\n");
+    const firstValidation = lines.findIndex(
+      (line) => /runContractValidation\(|validateQueryContractSql\(|contractFailureResponse\(/.test(line)
+    ) + 1;
+    // Only executions INSIDE the request handler are the model path. Helpers defined above it --
+    // `answerHistoricalPlaceLookup` is the one that matters -- build their own SQL from server-side
+    // predicates and are proved at their delivery boundary instead, which the checks above assert.
+    const handlerStart = lines.findIndex((line) => /export async function POST/.test(line)) + 1;
+    assert.ok(handlerStart > 0, "the route must have a POST handler");
+    const firstModelExecution = lines.findIndex(
+      (line, i) => i + 1 > handlerStart
+        && EXECUTION_HELPERS.test(line)
+        && /\((?:\s*db\s*,\s*db\.prepare\()?\s*sql\s*\)/.test(line)
+    ) + 1;
+    assert.ok(firstValidation > 0, "the route must validate model SQL at all");
+    if (firstModelExecution > 0) {
+      assert.ok(firstValidation < firstModelExecution,
+        `validation first appears at ${firstValidation} but model SQL executes at ${firstModelExecution}`);
+    }
   });
 }
 
 check("the SHR deterministic murder plan still validates before it executes", () => {
-  const shr = routeSource("shr-query");
-  const validate = lineOf(shr, /contractFailureResponse\(contract/);
-  const execute = lineOf(shr, /murderDb\.prepare\(contract\.sql\)/);
+  const lines = routeSource("shr-query").split("\n");
+  const validate = lines.findIndex((line) => /contractFailureResponse\(contract/.test(line)) + 1;
+  const execute = lines.findIndex((line) => /murderDb\.prepare\(contract\.sql\)/.test(line)) + 1;
   assert.ok(validate > 0 && execute > 0, "both boundaries must exist");
   assert.ok(validate < execute, `validated at ${validate} but executes at ${execute}`);
 });

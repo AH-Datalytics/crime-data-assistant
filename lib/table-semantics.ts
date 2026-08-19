@@ -344,6 +344,42 @@ export const TABLE_SEMANTICS: TableSemantics[] = [
     measures: ["count"], measureBinding: { kind: "fixed_topics", topics: ["domestic_violence"] },
     components: "present", aggregation: "additive",
   }),
+  // The ATTACHed rollup database (`NIBRS_ROLLUP_DB_PATH`), referenced in SQL as `rollup.<table>`.
+  // Columns confirmed against the live schema: national tables carry `state` but are pre-aggregated
+  // nationally, so they produce national rows only.
+  ...([
+    "national_summary_arrestee_demographics", "national_summary_clearance_detail",
+    "national_summary_clearance_type", "national_summary_offender_demographics",
+    "national_summary_victim_circumstance", "national_summary_victim_demographics",
+    "national_summary_victim_relationship", "national_summary_victim_weapon",
+    "national_summary_victim_weapon_circumstance_demo",
+  ] as const).map((table) =>
+    T({
+      source: "nibrs", table, role: "metric",
+      rowKey: "national", outputLevels: ["national"], timeGrains: ["annual"], measures: ["count"],
+      measureBinding: { kind: "code_column", column: "ucr_offense_code" },
+      components: "present", aggregation: "additive",
+    })
+  ),
+  ...([
+    "state_summary_arrestee_demographics", "state_summary_clearance_detail",
+    "state_summary_clearance_type", "state_summary_offender_demographics",
+    "state_summary_victim_circumstance", "state_summary_victim_demographics",
+    "state_summary_victim_relationship", "state_summary_victim_weapon",
+    "state_summary_victim_weapon_circumstance_demo",
+  ] as const).map((table) =>
+    T({
+      source: "nibrs", table, role: "metric",
+      rowKey: "state", outputLevels: ["state", "national"], timeGrains: ["annual"], measures: ["count"],
+      measureBinding: { kind: "code_column", column: "ucr_offense_code" },
+      components: "present", aggregation: "additive",
+    })
+  ),
+  T({
+    source: "nibrs", table: "rollup_metadata", role: "support",
+    rowKey: "unknown", outputLevels: [], timeGrains: ["none"], measures: ["none"],
+    measureBinding: { kind: "none" }, components: "present", aggregation: "additive",
+  }),
   T({
     source: "nibrs", table: "state_population", role: "population",
     rowKey: "state", outputLevels: ["state", "national"], timeGrains: ["annual"],

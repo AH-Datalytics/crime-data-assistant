@@ -6,6 +6,7 @@ import { buildNoSqlFallbackMessage, neutralizeUnverifiedAvailabilityClaim } from
 import { validatePageToken } from "@/lib/page-token";
 import { translateToSql } from "@/lib/nibrs-claude";
 import { validateAndSanitize } from "@/lib/sql-safety";
+import { deterministicPlanRefusal } from "@/lib/deterministic-plan-guard";
 import { validateSqlSchema } from "@/lib/schema-validation";
 import { buildNibrsChartConfig } from "@/lib/nibrs-chart-config";
 import { generateExplanation, sanitizeExplanation } from "@/lib/explain";
@@ -519,7 +520,17 @@ export async function POST(req: NextRequest) {
       } as QueryResponse));
     }
 
-    if (nibrsPlan.kind === "deterministic") {
+    // Structural proof BEFORE execution. This branch runs and returns long before the model path's
+    // contract validation, so without it the plan executed with no proof at all. A refused plan is
+    // not used: the request falls through to the model path, which validates in full.
+    const nibrsPlanRefusal = nibrsPlan.kind === "deterministic"
+      ? deterministicPlanRefusal({ question, source: "nibrs", sql: nibrsPlan.query.sql })
+      : null;
+    if (nibrsPlanRefusal) {
+      console.log(`[structural] NIBRS deterministic plan refused: ${nibrsPlanRefusal.ruleIds.join(", ")}`);
+    }
+
+    if (nibrsPlan.kind === "deterministic" && !nibrsPlanRefusal) {
       const deterministicQuery = nibrsPlan.query;
       const deterministicStart = Date.now();
       try {

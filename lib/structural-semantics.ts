@@ -130,6 +130,9 @@ function licensedLevels(question: string): EntityLevel[] {
 /** Does this returned expression carry a measurement, as opposed to labelling the row? */
 function isFactualSeries(item: SelectItem): boolean {
   const real = item.refs.filter((ref) => ref.table !== LITERAL_SOURCE);
+  // A wildcard returns whatever the table holds. It carries measurements by definition, and none of
+  // them can be checked, so it must be treated as factual and then fail closed below.
+  if (item.hasWildcard) return true;
   if (item.countsRows) return true;
   if (real.length === 0) return false;
   return real.some((ref) => !DIMENSION_COLUMNS.has(ref.column));
@@ -194,6 +197,14 @@ export function evaluateStructuralSemantics(opts: {
     ruleId: string, severity: StructuralSeverity, message: string, series: string | null
   ) => { findings.push({ ruleId, severity, message, requestedLevel: scope.rowLevel, series }); };
 
+  if (lineage.unsupportedShape) {
+    add("structural-unsupported-sql-shape", "retry",
+      `This query is ${lineage.unsupportedShape}, and only its first branch can be traced. Each ` +
+      "returned series has to be checked against the request, so write it as a single SELECT over " +
+      "the supported tables.", null);
+    return findings;
+  }
+
   if (!lineage.parsed) {
     add("structural-returned-series-unresolved", "retry",
       "The returned columns could not be traced to their source tables, so nothing proves this " +
@@ -216,6 +227,13 @@ export function evaluateStructuralSemantics(opts: {
 
   for (const item of factual) {
     const label = item.alias ?? item.raw.slice(0, 40);
+
+    if (item.hasWildcard) {
+      add("structural-wildcard-projection", "retry",
+        `"${label}" selects every column, so nothing states which measure is being returned or ` +
+        "whether it matches the request. Name the columns the answer needs.", label);
+      continue;
+    }
 
     const narrowed = item.refs.length > 0 ? tablesOf(item.refs, opts.source) : [];
     if (!item.resolved || narrowed.includes(null)) {

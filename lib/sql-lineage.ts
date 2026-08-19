@@ -51,6 +51,12 @@ export type SelectItem = {
   denominatorRefs: ColumnRef[] | null;
   /** COUNT(*) and friends contribute a row count rather than a named column. */
   countsRows: boolean;
+  /**
+   * `SELECT *` or `SELECT alias.*`. The columns are whatever the table happens to hold, so nothing
+   * here can be checked against the request -- and an unchecked projection previously produced no
+   * column references at all, was classified as carrying no measurement, and passed.
+   */
+  hasWildcard: boolean;
   /** False when any part of the expression could not be traced. */
   resolved: boolean;
 };
@@ -58,6 +64,12 @@ export type SelectItem = {
 export type SqlLineage = {
   /** False when the statement shape defeated the analyzer. Callers must fail closed. */
   parsed: boolean;
+  /**
+   * A shape this analyzer does not support well enough to authorise an answer. Naming it lets the
+   * caller say which shape rather than emitting a generic refusal -- and makes the limitation
+   * visible instead of silently permissive.
+   */
+  unsupportedShape: string | null;
   items: SelectItem[];
   /** Every base table reachable from the outer query, including through CTEs. */
   baseTables: string[];
@@ -143,16 +155,38 @@ function splitTopLevel(text: string, separator: string): string[] {
   return parts.map((part) => part.trim()).filter((part) => part.length > 0);
 }
 
-/** `name AS ( ... )` pairs, with their bodies. */
-function extractCtes(sql: string): { names: Map<string, string>; rest: string } {
+/**
+ * `name AS ( ... )` pairs, with their bodies and any declared column list.
+ *
+ * The declared list is load-bearing and was previously discarded:
+ *
+ *     WITH x(murders) AS (SELECT robbery FROM historical_agency_crime) SELECT x.murders FROM x
+ *
+ * Looking up `murders` in the body finds nothing, so the old code fell back to the CTE's single
+ * base table and invented `historical_agency_crime.murders` -- a column that does not exist, and
+ * one that no offense check could match. Mapping the declared names positionally onto the body's
+ * select list resolves it to `robbery`, which is the truth.
+ */
+function extractCtes(sql: string): {
+  names: Map<string, string>;
+  columnLists: Map<string, string[]>;
+  rest: string;
+} {
   const names = new Map<string, string>();
-  if (!/^\s*WITH\b/i.test(sql)) return { names, rest: sql };
+  const columnLists = new Map<string, string[]>();
+  if (!/^\s*WITH\b/i.test(sql)) return { names, columnLists, rest: sql };
   let i = sql.search(/\bWITH\b/i);
   i += sql.slice(i).match(/\bWITH\s+(?:RECURSIVE\s+)?/i)?.[0].length ?? 4;
 
   while (i < sql.length) {
-    const header = sql.slice(i).match(/^\s*([A-Za-z_][\w]*)\s*(?:\([^)]*\)\s*)?AS\s*\(/i);
+    const header = sql.slice(i).match(/^\s*([A-Za-z_][\w]*)\s*(?:\(([^)]*)\)\s*)?AS\s*\(/i);
     if (!header) break;
+    if (header[2]) {
+      columnLists.set(
+        header[1].toLowerCase(),
+        header[2].split(",").map((part) => part.trim().toLowerCase()).filter(Boolean)
+      );
+    }
     const bodyStart = i + header[0].length;
     let depth = 1;
     let j = bodyStart;
@@ -167,17 +201,20 @@ function extractCtes(sql: string): { names: Map<string, string>; rest: string } 
     if (comma) { i += comma[0].length; continue; }
     break;
   }
-  return { names, rest: sql.slice(i) };
+  return { names, columnLists, rest: sql.slice(i) };
 }
 
 /** All `FROM`/`JOIN` sources in one query level: alias (or name) -> table name. */
 function sourceAliases(query: string): Map<string, string> {
   const aliases = new Map<string, string>();
-  const re = /\b(?:FROM|JOIN)\s+([A-Za-z_][\w]*)\s*(?:(?:AS\s+)?([A-Za-z_][\w]*))?/gi;
+  // `rollup.national_summary_...` is one table in an ATTACHed database. Reading only the part
+  // before the dot made the schema name look like the table, so a real deterministic NIBRS plan
+  // resolved to nothing and would have been refused.
+  const re = /\b(?:FROM|JOIN)\s+(?:([A-Za-z_][\w]*)\s*\.\s*)?([A-Za-z_][\w]*)\s*(?:(?:AS\s+)?([A-Za-z_][\w]*))?/gi;
   let m: RegExpExecArray | null;
   while ((m = re.exec(query)) !== null) {
-    const table = m[1].toLowerCase();
-    const maybeAlias = (m[2] ?? "").toLowerCase();
+    const table = m[2].toLowerCase();
+    const maybeAlias = (m[3] ?? "").toLowerCase();
     const alias = maybeAlias && !SQL_KEYWORDS.has(maybeAlias) ? maybeAlias : table;
     aliases.set(alias, table);
     if (!aliases.has(table)) aliases.set(table, table);
@@ -209,7 +246,11 @@ function baseTablesOf(query: string, ctes: Map<string, string>, seen = new Set<s
  * the truth and is what "lineage" has to mean.
  */
 function cteOutputs(
-  name: string, ctes: Map<string, string>, memo: Map<string, Map<string, ColumnRef[]>>, seen: Set<string>
+  name: string,
+  ctes: Map<string, string>,
+  memo: Map<string, Map<string, ColumnRef[]>>,
+  seen: Set<string>,
+  columnLists: Map<string, string[]> = new Map()
 ): Map<string, ColumnRef[]> {
   const cached = memo.get(name);
   if (cached) return cached;
@@ -229,7 +270,9 @@ function cteOutputs(
   const fromClause = fromAt === -1 ? "" : afterSelect.slice(fromAt);
   const innerAliases = sourceAliases(fromClause);
 
-  for (const raw of splitTopLevel(selectList, ",")) {
+  const declared = columnLists.get(name) ?? null;
+  const items = splitTopLevel(selectList, ",");
+  items.forEach((raw, index) => {
     const aliasMatch = raw.match(/\s+(?:AS\s+)?([A-Za-z_][\w]*)\s*$/i);
     const alias = aliasMatch && !SQL_KEYWORDS.has(aliasMatch[1].toLowerCase()) ? aliasMatch[1] : null;
     const bodyExpr = alias ? raw.slice(0, raw.length - aliasMatch![0].length) : raw;
@@ -237,7 +280,10 @@ function cteOutputs(
     const bare = bodyExpr.trim().match(/^(?:[A-Za-z_][\w]*\.)?([A-Za-z_][\w]*)$/);
     const key = (alias ?? bare?.[1] ?? "").toLowerCase();
     if (key) outputs.set(key, refs);
-  }
+    // A declared column list renames by POSITION, so `x(murders)` over `SELECT robbery` means
+    // `x.murders` IS `robbery`. Without this the declared name resolves to nothing real.
+    if (declared && index < declared.length) outputs.set(declared[index], refs);
+  });
   return outputs;
 }
 
@@ -246,7 +292,8 @@ function refsIn(
   aliases: Map<string, string>,
   ctes: Map<string, string>,
   memo: Map<string, Map<string, ColumnRef[]>> = new Map(),
-  seen: Set<string> = new Set()
+  seen: Set<string> = new Set(),
+  columnLists: Map<string, string[]> = new Map()
 ): {
   refs: ColumnRef[];
   countsRows: boolean;
@@ -271,7 +318,7 @@ function refsIn(
     if (table && ctes.has(table)) {
       // Resolve through the CTE to the column's own origin before falling back to table-level guesses.
       const column = m[2].toLowerCase();
-      const origin = cteOutputs(table, ctes, memo, new Set(seen)).get(column);
+      const origin = cteOutputs(table, ctes, memo, new Set(seen), columnLists).get(column);
       if (origin && origin.length > 0) {
         for (const ref of origin) refs.push({ ...ref });
         continue;
@@ -337,10 +384,18 @@ function denominatorExpression(expression: string): string | null {
 
 export function analyzeSql(sql: string): SqlLineage {
   const scrubbed = scrub(sql);
-  const { names: ctes, rest } = extractCtes(scrubbed);
+  const { names: ctes, columnLists, rest } = extractCtes(scrubbed);
 
   const selectAt = findTopLevel(rest, /\bSELECT\b/gi);
-  if (selectAt === -1) return { parsed: false, items: [], baseTables: [] };
+  if (selectAt === -1) return { parsed: false, unsupportedShape: null, items: [], baseTables: [] };
+
+  // A compound statement has more than one arm and this analyzer only reads the first. A second arm
+  // returning a different offense under the same label would pass unexamined, so refuse the shape
+  // rather than half-check it.
+  const compound = findTopLevel(rest.slice(selectAt), /\b(?:UNION|INTERSECT|EXCEPT)\b/gi);
+  if (compound !== -1) {
+    return { parsed: true, unsupportedShape: "compound (UNION/INTERSECT/EXCEPT)", items: [], baseTables: [] };
+  }
 
   const afterSelect = rest.slice(selectAt + "SELECT".length);
   const fromAt = findTopLevel(afterSelect, /\bFROM\b/gi);
@@ -349,7 +404,9 @@ export function analyzeSql(sql: string): SqlLineage {
 
   const aliases = sourceAliases(fromClause);
   const baseTables = baseTablesOf(fromClause, ctes);
-  if (baseTables.length === 0 && ctes.size === 0) return { parsed: false, items: [], baseTables: [] };
+  if (baseTables.length === 0 && ctes.size === 0) {
+    return { parsed: false, unsupportedShape: null, items: [], baseTables: [] };
+  }
 
   const memo = new Map<string, Map<string, ColumnRef[]>>();
   const items: SelectItem[] = [];
@@ -364,12 +421,19 @@ export function analyzeSql(sql: string): SqlLineage {
       for (const [alias, table] of sourceAliases(body)) itemAliases.set(alias, table);
     }
 
-    const { refs, countsRows, resolved } = refsIn(body, itemAliases, ctes, memo);
+    const { refs, countsRows, resolved } = refsIn(body, itemAliases, ctes, memo, new Set(), columnLists);
     const denomExpr = denominatorExpression(body);
-    const denominatorRefs = denomExpr === null ? null : refsIn(denomExpr, itemAliases, ctes, memo).refs;
+    const denominatorRefs = denomExpr === null
+      ? null
+      : refsIn(denomExpr, itemAliases, ctes, memo, new Set(), columnLists).refs;
 
-    items.push({ alias, raw: raw.trim(), refs, denominatorRefs, countsRows, resolved });
+    // A projection wildcard is the WHOLE item (`*`) or a qualified one (`alias.*`). Anything else
+    // is the multiplication operator: `COUNT(*) * 100000.0 / population` is a rate, and an earlier
+    // draft of this check read that second `*` as a projection and flagged every rate.
+    const hasWildcard = body.trim() === "*" || /\b[A-Za-z_]\w*\s*\.\s*\*/.test(body);
+
+    items.push({ alias, raw: raw.trim(), refs, denominatorRefs, countsRows, hasWildcard, resolved });
   }
 
-  return { parsed: items.length > 0, items, baseTables };
+  return { parsed: items.length > 0, unsupportedShape: null, items, baseTables };
 }
