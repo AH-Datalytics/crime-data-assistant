@@ -36,10 +36,32 @@
   "expect_verdict": "FAILURE"
  },
  {
-  "name": "claiming a query ran when no SQL exists would be a false claim",
+  "name": "claiming a query ran when no SQL exists is a false claim, and a failure",
   "question": "theft in Example City",
   "response": "The query returned no results. Try broadening your search.",
-  "expect_verdict": "UNCLASSIFIED"
+  "has_sql": false,
+  "expect_verdict": "FAILURE"
+ },
+ {
+  "name": "the same wording WITH SQL behind it is an honest empty result",
+  "question": "theft in Example City",
+  "response": "The query returned no results. Try broadening your search.",
+  "has_sql": true,
+  "expect_verdict": "EMPTY_RESULT"
+ },
+ {
+  "name": "a timeout that also says 'no results' stays a FAILURE, not an empty result",
+  "question": "every offense for every agency for every year",
+  "response": "Query timed out after 30 seconds. The query returned no results.",
+  "has_sql": true,
+  "expect_verdict": "FAILURE"
+ },
+ {
+  "name": "a failure marker outranks the query-ran phrase even with SQL present",
+  "question": "burglary in Example City",
+  "response": "I couldn't build a valid query for this question. The query returned no results.",
+  "has_sql": true,
+  "expect_verdict": "FAILURE"
  },
  {
   "name": "county scope clarification is the system asking, not failing",

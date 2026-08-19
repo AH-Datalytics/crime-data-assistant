@@ -1,17 +1,30 @@
 #!/usr/bin/env python3
 """Read-only diagnosis of the answer log: where do answers actually go wrong?
 
-Reproduces every count published in
-`docs/superpowers/2026-08-18-increment-b-answer-diagnosis.md`.
+    python scripts/diagnose-answer-log.py --snapshot PATH/query_log.db \
+        [--crime-db PATH/crime_data.db] [--json out.json]
+    python scripts/diagnose-answer-log.py --self-test
 
-This tool NEVER writes to the snapshot. It opens every database with `mode=ro`, and it takes the
+This tool NEVER writes to the snapshot. It opens every database with `mode=ro`, and takes the
 snapshot path as an argument rather than reaching for production, so a reviewer can point it at
 their own copy. No production question, response or database is committed with it -- the fixtures
-under `scripts/fixtures/answer-log-classification.json` are synthetic and exercise the rules.
+under `scripts/fixtures/answer-log-classification.json` are synthetic.
 
-    python scripts/diagnose-answer-log.py --snapshot PATH/query_log.db \
-        [--crime-db PATH/crime_data.db] [--seed 20260818] [--sample 400] [--json out.json]
-    python scripts/diagnose-answer-log.py --self-test
+WHAT THIS TOOL REPRODUCES, and what it does not. The report
+`docs/superpowers/2026-08-18-increment-b-answer-diagnosis.md` draws on three kinds of evidence, and
+only the first comes from here:
+
+  1. THIS TOOL -- the zero-row classification and its verdict totals, the question-shape by verdict
+     cross-tab, and the query-fidelity counts (place, period, wrong-level substitution). Deterministic:
+     same snapshot, same numbers. It prints the snapshot's sha256 so a result can be tied to its input.
+
+  2. MANUAL ADJUDICATION -- the precision of a mechanical flag. 25 place flags were read by hand and
+     9 judged genuine (~36%). A flag is not a finding, and no code here decides which flags are real.
+
+  3. READ-ONLY INSPECTION of production and of the crime database, which this tool does not touch.
+     Each such figure in the report carries the exact command that produced it: the proof-column and
+     proof-mode state, `chart_audit_artifacts` coverage and linkage, the `historical_agency_clearance`
+     value ranges, and the replay against both database vintages.
 
 Two things this tool deliberately does NOT claim:
 
@@ -21,13 +34,14 @@ Two things this tool deliberately does NOT claim:
     actually lives.
   * A classification is a lower bound. Rows that match no rule are reported as UNCLASSIFIED and are
     never folded into a verdict, so "genuine failures" is always "at least this many".
+
+It does not sample. Every count is over the full snapshot, which is why there is no seed argument.
 """
 import argparse
 import collections
 import hashlib
 import json
 import pathlib
-import random
 import re
 import sqlite3
 import sys
@@ -111,13 +125,34 @@ LOCAL_TABLE = re.compile(
 LOCAL_WORD = re.compile(r"\b(city|cities|county|counties|parish|department|pd\b|police)\b", re.I)
 
 
-def classify(text):
-    """Return (category, verdict). UNCLASSIFIED is never folded into a verdict."""
+def classify(text, has_sql=False):
+    """Return (category, verdict) for one row. UNCLASSIFIED is never folded into a verdict.
+
+    Failure precedence is the whole point of the ordering, and it has to hold in ONE decision.
+    An earlier version tested the rules here and then let a separate `CLAIMS_A_QUERY_RAN` check
+    overwrite the answer, so a row reading
+
+        "Query timed out after 30 seconds. The query returned no results."
+
+    was classified FAILURE and then downgraded to EMPTY_RESULT -- a failure counted as a healthy
+    empty result. The query-ran test now sits between the failure rules and the refusal rules, so
+    it can never replace a failure.
+    """
     body = re.sub(r"\s+", " ", (text or "")).strip()
     if not body:
         return ("empty response (an error with no prose)", "FAILURE")
+
     for key, verdict, pattern in RULES:
-        if re.search(pattern, body, re.I):
+        if verdict == "FAILURE" and re.search(pattern, body, re.I):
+            return (key, verdict)
+
+    if CLAIMS_A_QUERY_RAN.search(body):
+        if has_sql:
+            return ("honest empty result (a query really ran)", "EMPTY_RESULT")
+        return ("FALSE CLAIM: says a query ran, none was produced", "FAILURE")
+
+    for key, verdict, pattern in RULES:
+        if verdict != "FAILURE" and re.search(pattern, body, re.I):
             return (key, verdict)
     return ("UNCLASSIFIED", "UNCLASSIFIED")
 
@@ -142,7 +177,7 @@ def digest(path):
     return h.hexdigest()
 
 
-def analyse(snapshot, crime_db=None, seed=20260818, sample_size=400):
+def analyse(snapshot, crime_db=None):
     con = sqlite3.connect(f"file:{snapshot}?mode=ro", uri=True)
     con.row_factory = sqlite3.Row
     rows = con.execute(
@@ -151,7 +186,6 @@ def analyse(snapshot, crime_db=None, seed=20260818, sample_size=400):
     out = {
         "snapshot": str(snapshot),
         "snapshot_sha256": digest(snapshot),
-        "seed": seed,
         "total_questions": len(rows),
     }
 
@@ -160,13 +194,7 @@ def analyse(snapshot, crime_db=None, seed=20260818, sample_size=400):
     verdicts, cats = collections.Counter(), collections.Counter()
     per_row_verdict = {}
     for r in zero:
-        body = re.sub(r"\s+", " ", r["response"] or "").strip()
-        key, verdict = classify(body)
-        if CLAIMS_A_QUERY_RAN.search(body):
-            if (r["sql"] or "").strip():
-                key, verdict = ("honest empty result (a query really ran)", "EMPTY_RESULT")
-            else:
-                key, verdict = ("FALSE CLAIM: says a query ran, none was produced", "FAILURE")
+        key, verdict = classify(r["response"], has_sql=bool((r["sql"] or "").strip()))
         verdicts[verdict] += 1
         cats[key] += 1
         per_row_verdict[r["id"]] = verdict
@@ -203,8 +231,6 @@ def analyse(snapshot, crime_db=None, seed=20260818, sample_size=400):
     if crime_db:
         out["fidelity"] = fidelity(rows, crime_db)
 
-    out["sample_size_requested"] = sample_size
-    random.seed(seed)
     return out
 
 
@@ -278,7 +304,7 @@ def self_test():
     cases = json.loads(fixture.read_text(encoding="utf-8"))
     failed = 0
     for case in cases:
-        key, verdict = classify(case["response"])
+        key, verdict = classify(case["response"], has_sql=case.get("has_sql", False))
         got_shapes = sorted(shapes_of(case.get("question", "")))
         ok = verdict == case["expect_verdict"]
         if "expect_shapes" in case:
@@ -350,8 +376,6 @@ def main():
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--snapshot", help="read-only copy of query_log.db")
     ap.add_argument("--crime-db", help="read-only copy of crime_data.db, enables fidelity checks")
-    ap.add_argument("--seed", type=int, default=20260818)
-    ap.add_argument("--sample", type=int, default=400)
     ap.add_argument("--json", help="write the full result here")
     ap.add_argument("--self-test", action="store_true", help="run fixtures and exit")
     args = ap.parse_args()
@@ -361,7 +385,7 @@ def main():
     if not args.snapshot:
         ap.error("--snapshot is required unless --self-test is given")
 
-    result = analyse(pathlib.Path(args.snapshot), args.crime_db, args.seed, args.sample)
+    result = analyse(pathlib.Path(args.snapshot), args.crime_db)
 
     print(f"snapshot      : {result['snapshot']}")
     print(f"sha256        : {result['snapshot_sha256']}")
