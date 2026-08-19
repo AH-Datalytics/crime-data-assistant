@@ -1,35 +1,33 @@
 import type { QueryContract, QueryContractSource } from "./query-contract";
-import { extractReferencedTables } from "./table-allowlist";
+import { detectRequestedGrain } from "./requested-grain";
+import { analyzeSql, LITERAL_SOURCE, type SelectItem } from "./sql-lineage";
 import {
+  allTopicColumns,
   catalogedTables,
-  isFinerThan,
-  metricTables,
+  producesLevel,
   tableSemantics,
+  topicColumns,
   type EntityLevel,
   type TableSemantics,
 } from "./table-semantics";
 
 /**
- * Compare what was asked for against what the chosen tables can actually represent, before the SQL
- * runs.
+ * Prove that each returned factual series comes from a source that can actually represent the
+ * requested geography, offense, grain and denominator.
  *
- * `source-capabilities.ts` already pairs specific question shapes with forbidden tables, and those
- * rules do catch Denver, New York City, Alameda County and the Los Angeles measure substitution --
- * verified against HEAD before any of this was written. What they cannot catch is a shape nobody
- * wrote a rule for, and two such shapes are confirmed in production:
+ * The first version of this module compared the SET OF TABLES MENTIONED against the request, which
+ * is the "a literal appears somewhere, therefore safe" defect the county-ORI validator had to fix
+ * twice. Four shapes passed it, all reproduced before this rewrite:
  *
- *   "What is the clearance rate for rape in Florida by year?"
- *       -> national_clearance_rate, which has no state column. No rule fires. Asked three times,
- *          wrong three times.
+ *   decorative denominator   COUNT(*) * 100000.0 / i.population  with state_population joined and
+ *                            entirely unused -- the rate still divided by the per-agency column.
+ *   cross-offense            SELECT hac.robbery AS murders  for a murder question.
+ *   uncatalogued source      SELECT COUNT(*) AS murders FROM source_build_receipts.
+ *   mixed series             one compatible table authorising an incompatible second series.
  *
- *   "top 10 us cities by homicide rate in 2021"
- *       -> ten *states* from historical_state_national, captioned as such and still presented as
- *          the answer. No rule fires, because the contract reads "us" as a national geography and
- *          finds no breakdown, so nothing knows the user asked for a list of cities.
- *
- * Both are the same defect at a level the old rules do not model: the entity a returned ROW
- * represents. This module derives that from the request, reads it from the catalog for the tables
- * the SQL actually touches, and compares them.
+ * So this works from `sql-lineage.ts`, which resolves each returned expression to the base tables
+ * its columns actually come from, and evaluates every factual series independently. Anything that
+ * cannot be resolved is a finding, not a pass: a shape we cannot prove is not a shape we execute.
  */
 
 export type StructuralSeverity = "block" | "retry";
@@ -38,117 +36,131 @@ export type StructuralFinding = {
   ruleId: string;
   severity: StructuralSeverity;
   message: string;
-  /** What the user asked for, and what the chosen tables can give -- for the retry directive. */
   requestedLevel: EntityLevel;
-  tableLevels: { table: string; rowLevel: EntityLevel }[];
+  /** Which returned series produced this finding, for the retry directive. */
+  series: string | null;
 };
 
 export type RequestedScope = {
-  /** The entity one row of a correct answer would represent. */
   rowLevel: EntityLevel;
-  /** Why -- so a retry directive can quote it and a test can assert on it. */
   evidence: string;
   unit: QueryContract["metric"]["unit"];
+  topic: string;
   grain: "monthly" | "annual" | null;
 };
 
 /**
  * A request can name a place to filter by and a different level to break out by. "Top 10 US cities"
- * filters nationally and returns cities. The place is `contract.geography`; this finds the breakout.
- *
- * Ordered finest-first so "cities in California" reads as city, not state.
+ * filters nationally and returns cities. Ordered finest-first.
  */
 const ROW_LEVEL_CUES: { level: EntityLevel; pattern: RegExp; label: string }[] = [
   {
-    level: "agency",
-    label: "asks for a list of agencies or departments",
+    level: "agency", label: "asks for a list of agencies or departments",
     pattern: /\b(?:top|bottom|best|worst|highest|lowest|most|fewest|rank(?:ed|ing)?|list|which|every|all)\b[^.?!]{0,40}\b(?:agenc(?:y|ies)|police\s+departments?|sheriff'?s?\s+offices?)\b|\bby\s+agenc(?:y|ies)\b|\bagenc(?:y|ies)\s+(?:with|that|ranked)\b/i,
   },
   {
-    level: "city",
-    label: "asks for a list of cities",
+    level: "city", label: "asks for a list of cities",
     pattern: /\b(?:top|bottom|best|worst|highest|lowest|most|fewest|rank(?:ed|ing)?|list|which|every|all|safest|deadliest)\b[^.?!]{0,40}\bcit(?:y|ies)\b|\bby\s+cit(?:y|ies)\b|\bcit(?:y|ies)\s+(?:with|that|ranked|had|have)\b/i,
   },
   {
-    level: "county",
-    label: "asks for a list of counties",
+    level: "county", label: "asks for a list of counties",
     pattern: /\b(?:top|bottom|highest|lowest|most|fewest|rank(?:ed|ing)?|list|which|every|all)\b[^.?!]{0,40}\b(?:count(?:y|ies)|parish(?:es)?)\b|\bby\s+count(?:y|ies)\b|\bcount(?:y|ies)\s+(?:with|that|ranked)\b/i,
   },
   {
-    level: "state",
-    label: "asks for a list of states",
+    level: "state", label: "asks for a list of states",
     pattern: /\b(?:top|bottom|highest|lowest|most|fewest|rank(?:ed|ing)?|list|which|every|all)\b[^.?!]{0,40}\bstates?\b|\bby\s+state\b|\bstates?\s+(?:with|that|ranked)\b/i,
   },
 ];
 
 const GEOGRAPHY_TO_LEVEL: Record<QueryContract["geography"]["kind"], EntityLevel> = {
-  city: "city",
-  county: "county",
-  state: "state",
-  agency: "agency",
-  campus: "agency",
-  national: "national",
-  unknown: "unknown",
+  city: "city", county: "county", state: "state", agency: "agency", campus: "agency",
+  national: "national", unknown: "unknown",
 };
 
-export function requestedScope(question: string, contract: QueryContract): RequestedScope {
-  const grain = /\b(?:by|per|each)\s+month\b|\bmonthly\b/i.test(question)
-    ? "monthly"
-    : /\b(?:by|per|each)\s+year\b|\bannual(?:ly)?\b|\byearly\b/i.test(question)
-      ? "annual"
-      : null;
+/** Columns that describe a row rather than measure it. */
+const DIMENSION_COLUMNS = new Set([
+  "year", "month", "quarter", "data_year", "date", "incident_date", "state", "state_name", "ori",
+  "agency", "agency_name", "city", "county", "county_key", "type", "agency_type", "pop_group",
+  "ori9", "name", "division", "region", "start", "end", "id", "incident_number", "incident_num",
+  // A population column is a denominator or a context column beside the measure, not the measure.
+  // Selecting it is how several real queries show the rate's base.
+  "population",
+]);
 
-  // An explicit breakout beats the filtering geography. This is the "top 10 us cities" case:
-  // geography reads national, but every returned row must be a city.
+export function requestedScope(question: string, contract: QueryContract): RequestedScope {
+  // Reuse the existing detector so the pre-execution check and `validateGrain()` cannot disagree.
+  const grain = detectRequestedGrain(question);
+
   for (const cue of ROW_LEVEL_CUES) {
     if (cue.pattern.test(question)) {
-      return { rowLevel: cue.level, evidence: cue.label, unit: contract.metric.unit, grain };
+      return { rowLevel: cue.level, evidence: cue.label, unit: contract.metric.unit, topic: contract.metric.topic, grain };
     }
   }
   for (const breakdown of contract.breakdowns) {
     if (breakdown === "city" || breakdown === "state" || breakdown === "agency") {
       return {
-        rowLevel: breakdown as EntityLevel,
-        evidence: `contract breakdown "${breakdown}"`,
-        unit: contract.metric.unit,
-        grain,
+        rowLevel: breakdown as EntityLevel, evidence: `contract breakdown "${breakdown}"`,
+        unit: contract.metric.unit, topic: contract.metric.topic, grain,
       };
     }
   }
   return {
     rowLevel: GEOGRAPHY_TO_LEVEL[contract.geography.kind],
     evidence: `requested geography is ${contract.geography.kind}`,
-    unit: contract.metric.unit,
-    grain,
+    unit: contract.metric.unit, topic: contract.metric.topic, grain,
   };
 }
 
-function describe(entries: TableSemantics[]): { table: string; rowLevel: EntityLevel }[] {
-  return entries.map((entry) => ({ table: entry.table, rowLevel: entry.rowLevel }));
+/**
+ * Levels the question explicitly names in addition to the one it is about.
+ *
+ * "Compare murders in Chicago to the national total" legitimately returns a city series AND a
+ * national one. Licensing is deliberately narrow: a coarser series is allowed only when the
+ * question names that level in words AND another series in the same query actually serves the
+ * requested level. Without both, "top 10 us cities" would license `national` from the word "us"
+ * and a state-row answer would slip through again.
+ */
+function licensedLevels(question: string): EntityLevel[] {
+  const levels: EntityLevel[] = [];
+  if (/\b(?:national(?:ly|wide)?|united\s+states|countrywide)\b/i.test(question)) levels.push("national");
+  if (/\bstate(?:wide)?\b/i.test(question)) levels.push("state");
+  return levels;
 }
 
-/** Can this table be restricted to, or broken out at, the requested level? */
-function serves(entry: TableSemantics, level: EntityLevel): boolean {
-  if (level === "unknown") return true;
-  if (entry.filterLevels.includes(level)) return true;
-  return !isFinerThan(level, entry.rowLevel);
+/** Does this returned expression carry a measurement, as opposed to labelling the row? */
+function isFactualSeries(item: SelectItem): boolean {
+  const real = item.refs.filter((ref) => ref.table !== LITERAL_SOURCE);
+  if (item.countsRows) return true;
+  if (real.length === 0) return false;
+  return real.some((ref) => !DIMENSION_COLUMNS.has(ref.column));
 }
 
 /**
- * Can this table carry the requested measure at the requested level?
+ * Resolve each reference to a base table, narrowing a CTE shortlist by role.
  *
- * Level alone is not enough. `historical_agency_clearance` has agency rows, so by level it could be
- * rolled up to a state -- but it stores percentages with no components, so rolling it up is exactly
- * the invalid operation. And a count table can serve a rate as long as the source has a population
- * table, which is how Denver's rate is legitimately built.
+ * A deterministic multi-city plan builds a CTE that joins `historical_agency_crime` to
+ * `historical_agency`, so a column drawn from it could come from either. Exactly one of them is a
+ * metric table, and a measure can only have come from that one. Narrowing this way keeps real plans
+ * working without weakening the check: if the shortlist holds two metric tables it stays unresolved.
  */
-function canServe(entry: TableSemantics, scope: RequestedScope, source: QueryContractSource): boolean {
+function tablesOf(
+  refs: { table: string | null; candidates?: string[] }[],
+  source: QueryContractSource
+): (string | null)[] {
+  const resolved: (string | null)[] = [];
+  for (const ref of refs) {
+    if (ref.table === LITERAL_SOURCE) continue;   // supplied by the query, not read from a table
+    if (ref.table) { resolved.push(ref.table); continue; }
+    const metric = (ref.candidates ?? [])
+      .filter((table) => tableSemantics(source, table)?.role === "metric");
+    resolved.push(metric.length === 1 ? metric[0] : null);
+  }
+  return [...new Set(resolved)];
+}
+
+function serves(entry: TableSemantics, scope: RequestedScope, source: QueryContractSource): boolean {
   if (entry.role !== "metric") return false;
-  if (!serves(entry, scope.rowLevel)) return false;
-
-  const lacksComponents = (entry.unknown ?? []).some((item) => /denominator|cleared count/i.test(item));
-  if (lacksComponents && !entry.filterLevels.includes(scope.rowLevel)) return false;
-
+  if (!producesLevel(entry, scope.rowLevel)) return false;
   switch (scope.unit) {
     case "clearance_rate":
       return entry.measures.includes("clearance_rate");
@@ -156,24 +168,16 @@ function canServe(entry: TableSemantics, scope: RequestedScope, source: QueryCon
       if (entry.measures.includes("rate_per_100k")) return true;
       if (!entry.measures.includes("count")) return false;
       return catalogedTables(source).some(
-        (other) => other.role === "population" && serves(other, scope.rowLevel)
+        (other) => (other.denominatorLevels ?? []).includes(scope.rowLevel)
       );
     default:
       return entry.measures.includes("count") || entry.measures.includes("rate_per_100k");
   }
 }
 
-/**
- * Is the mismatch repairable -- does this source hold ANY table that could answer the request?
- *
- * This decides retry versus block, and the distinction matters. Denver asked for city rates and got
- * state rows, but `historical_agency_crime` joined to `historical_agency_population` answers it, so
- * the model deserves one chance to rewrite. Florida asked for a statewide clearance rate and no
- * table in the source can produce one at any level, so retrying only wastes a turn before the same
- * decline. Blocking a repairable case would cut answer coverage for no correctness gain.
- */
+/** Could ANY table in this source answer the request? Decides retry versus decline. */
 function repairable(scope: RequestedScope, source: QueryContractSource): boolean {
-  return catalogedTables(source).some((entry) => canServe(entry, scope, source));
+  return catalogedTables(source).some((entry) => serves(entry, scope, source));
 }
 
 export function evaluateStructuralSemantics(opts: {
@@ -183,130 +187,165 @@ export function evaluateStructuralSemantics(opts: {
   sql: string;
 }): StructuralFinding[] {
   const scope = requestedScope(opts.question, opts.contract);
-  const referenced = extractReferencedTables(opts.sql);
-  const known = referenced
-    .map((table) => tableSemantics(opts.source, table))
-    .filter((entry): entry is TableSemantics => entry !== null);
-
-  // An uncatalogued table is not evidence of a mismatch. Silence beats a guess.
-  if (known.length === 0) return [];
-
-  const metrics = metricTables(known);
+  const lineage = analyzeSql(opts.sql);
   const findings: StructuralFinding[] = [];
+  const canBeFixed = repairable(scope, opts.source);
+  const add = (
+    ruleId: string, severity: StructuralSeverity, message: string, series: string | null
+  ) => { findings.push({ ruleId, severity, message, requestedLevel: scope.rowLevel, series }); };
 
-  // ---- 1. The returned rows are a coarser entity than the request ------------------------------
-  // Guarded to metric tables: a state population table joined as a denominator is not the answer's
-  // grain. And if ANY metric table serves the level, a legitimate multi-level comparison passes.
-  if (metrics.length > 0 && scope.rowLevel !== "unknown") {
-    const serving = metrics.filter((entry) => serves(entry, scope.rowLevel));
-    if (serving.length === 0) {
-      const canBeFixed = repairable(scope, opts.source);
-      findings.push({
-        ruleId: "structural-row-level-substitution",
-        severity: canBeFixed ? "retry" : "block",
-        requestedLevel: scope.rowLevel,
-        tableLevels: describe(metrics),
-        message:
-          `The request is for ${scope.rowLevel}-level results (${scope.evidence}), but ` +
-          `${metrics.map((entry) => `${entry.table} has ${entry.rowLevel}-level rows`).join(" and ")}. ` +
-          "A coarser table cannot produce a finer result, and presenting its rows as the requested " +
-          "place would name the wrong geography." +
-          (canBeFixed
-            ? ""
-            : ` No table in this source carries ${scope.unit === "unknown" ? "that measure" : scope.unit} ` +
-              `at ${scope.rowLevel} level, so this cannot be rewritten -- say so plainly instead.`),
-      });
-    }
+  if (!lineage.parsed) {
+    add("structural-returned-series-unresolved", "retry",
+      "The returned columns could not be traced to their source tables, so nothing proves this " +
+      "query answers the question asked. Rewrite it as a plain SELECT over the supported tables.",
+      null);
+    return findings;
   }
 
-  // ---- 2. A clearance percentage cannot be averaged upward --------------------------------------
-  // Historical clearance is stored as per-agency percentages with no cleared counts and no offense
-  // denominators anywhere, and observed values run from -125.0 to 12250.0. There is no sound way to
-  // roll them into a state or national rate, so the honest outcome is a decline, not an aggregate.
-  if (scope.unit === "clearance_rate") {
-    for (const entry of metrics) {
-      const lacksComponents = (entry.unknown ?? []).some((item) => /denominator|cleared count/i.test(item));
-      // Filtering to a level the table supports is selection, not a rollup. Only a level it cannot
-      // be filtered to requires combining agencies, which is the invalid step.
-      if (lacksComponents && isFinerThan(entry.rowLevel, scope.rowLevel) &&
-          !entry.filterLevels.includes(scope.rowLevel)) {
-        findings.push({
-          ruleId: "structural-clearance-not-aggregatable",
-          severity: "block",
-          requestedLevel: scope.rowLevel,
-          tableLevels: describe([entry]),
-          message:
-            `${entry.table} stores ${entry.rowLevel}-level clearance percentages with no cleared counts ` +
-            `and no offense denominators, so they cannot be combined into a ${scope.rowLevel}-level ` +
-            "clearance rate. Report agency-level clearance, or decline.",
-        });
+  const factual = lineage.items.filter(isFactualSeries);
+  if (factual.length === 0) return findings;
+
+  const licensed = licensedLevels(opts.question);
+  const someSeriesServesRequestedLevel = factual.some((item) => {
+    const tables = item.refs.length > 0 ? tablesOf(item.refs, opts.source) : lineage.baseTables;
+    return tables.some((table) => {
+      const entry = table ? tableSemantics(opts.source, table) : null;
+      return Boolean(entry && entry.role === "metric" && producesLevel(entry, scope.rowLevel));
+    });
+  });
+
+  for (const item of factual) {
+    const label = item.alias ?? item.raw.slice(0, 40);
+
+    const narrowed = item.refs.length > 0 ? tablesOf(item.refs, opts.source) : [];
+    if (!item.resolved || narrowed.includes(null)) {
+      add("structural-returned-series-unresolved", "retry",
+        `The returned value "${label}" could not be traced to a source table, so nothing proves it ` +
+        "measures what was asked for. Qualify each column with its table.", label);
+      continue;
+    }
+
+    // COUNT(*) with no column refs takes its meaning from the FROM clause.
+    const refTables = item.refs.length > 0 ? tablesOf(item.refs, opts.source) : lineage.baseTables;
+    const entries: TableSemantics[] = [];
+    let sawUnknown = false;
+    for (const table of refTables) {
+      if (!table) { sawUnknown = true; continue; }
+      const entry = tableSemantics(opts.source, table);
+      if (!entry) {
+        sawUnknown = true;
+        add("structural-uncatalogued-factual-source", "retry",
+          `"${label}" is read from \`${table}\`, whose meaning is not established for this source. ` +
+          "An unverified table cannot authorise a factual answer. Use a supported table, or say " +
+          "plainly that this cannot be answered.", label);
+        continue;
+      }
+      entries.push(entry);
+    }
+    if (sawUnknown || entries.length === 0) continue;
+
+    // A directory referenced next to a metric table is a filter or a label -- deterministic plans
+    // legitimately write SUM(CASE WHEN ha.agency = 'Baltimore' THEN hac.murder END). It is only a
+    // defect when the measure has NO metric source at all.
+    const hasMetricSource = entries.some((entry) => entry.role === "metric");
+    for (const entry of entries) {
+      if (!hasMetricSource &&
+          (entry.role === "identity" || entry.role === "crosswalk" || entry.role === "support")) {
+        add("structural-non-factual-source", "retry",
+          `"${label}" is measured from \`${entry.table}\`, which is a ${entry.role} table and holds ` +
+          "no offense counts. Counting its rows answers a different question.", label);
+        continue;
+      }
+      if (entry.role !== "metric") continue;
+
+      // --- geography ---------------------------------------------------------------------
+      const licensedHere = someSeriesServesRequestedLevel &&
+        licensed.some((level) => producesLevel(entry, level));
+      if (scope.rowLevel !== "unknown" && !producesLevel(entry, scope.rowLevel) && !licensedHere) {
+        add("structural-row-level-substitution", canBeFixed ? "retry" : "block",
+          `"${label}" is ${scope.rowLevel}-level in the request (${scope.evidence}) but comes from ` +
+          `\`${entry.table}\`, which produces ${entry.outputLevels.join("/") || "no"}-level rows. ` +
+          (canBeFixed
+            ? "Use a table that can represent the requested place."
+            : `No table in this source carries this measure at ${scope.rowLevel} level, so this ` +
+              "cannot be rewritten -- say so plainly instead."),
+          label);
+      }
+
+      // --- aggregating a measure whose components are gone -------------------------------
+      if (entry.components === "absent" && entry.aggregation === "not-aggregatable" &&
+          scope.rowLevel !== "unknown" && !entry.outputLevels.includes(scope.rowLevel)) {
+        add("structural-clearance-not-aggregatable", "block",
+          `\`${entry.table}\` stores ${entry.rowKey}-level values without the components needed to ` +
+          `re-derive them, so they cannot be combined into a ${scope.rowLevel}-level figure. ` +
+          "Report it at a level the table supports, or decline.", label);
+      }
+
+      // --- offense ------------------------------------------------------------------------
+      // Enforced only where the selected COLUMN is itself the claim. Code and value predicates
+      // (NIBRS `ucr_offense_code`, Current Trends `offense`) are left to the existing offense-code
+      // validation rather than duplicated into a second vocabulary here.
+      const expected = topicColumns(entry, scope.topic);
+      if (expected && expected.length > 0) {
+        const everyTopicColumn = allTopicColumns(entry);
+        const selectedTopicColumns = item.refs
+          .filter((ref) => ref.table === entry.table && everyTopicColumn.has(ref.column))
+          .map((ref) => ref.column);
+        if (selectedTopicColumns.length > 0 &&
+            !selectedTopicColumns.some((column) => expected.includes(column))) {
+          add("structural-measure-substitution", "retry",
+            `"${label}" selects ${selectedTopicColumns.map((c) => `\`${c}\``).join(", ")} from ` +
+            `\`${entry.table}\`, but the question asks about ${scope.topic}, which is ` +
+            `${expected.map((c) => `\`${c}\``).join(" or ")}. Select the requested measure; do not ` +
+            "relabel a different one.", label);
+        }
+      }
+      if (entry.measureBinding.kind === "fixed_topics" && scope.topic !== "unknown" &&
+          !entry.measureBinding.topics.includes(scope.topic)) {
+        add("structural-measure-unavailable", canBeFixed ? "retry" : "block",
+          `\`${entry.table}\` only holds ${entry.measureBinding.topics.join(", ")}, but the question ` +
+          `asks about ${scope.topic}.`, label);
+      }
+
+      // --- time grain ---------------------------------------------------------------------
+      if (scope.grain && !entry.timeGrains.includes(scope.grain)) {
+        add("structural-time-grain-unavailable", canBeFixed ? "retry" : "block",
+          `${scope.grain} figures were requested, but \`${entry.table}\` carries ` +
+          `${entry.timeGrains.join("/")} data.`, label);
       }
     }
-  }
 
-  // ---- 3. A directory is not crime data ---------------------------------------------------------
-  if (metrics.length === 0 && scope.unit !== "unknown") {
-    const identities = known.filter((entry) => entry.role === "identity" || entry.role === "crosswalk");
-    if (identities.length > 0) {
-      findings.push({
-        ruleId: "structural-identity-table-as-metric",
-        severity: "retry",
-        requestedLevel: scope.rowLevel,
-        tableLevels: describe(identities),
-        message:
-          `The request asks for a ${scope.unit} figure, but the SQL only reads ` +
-          `${identities.map((entry) => entry.table).join(", ")}, which ${identities.length > 1 ? "are directories" : "is a directory"}. ` +
-          "Counting rows there answers how many agencies exist, not how many offenses occurred.",
-      });
-    }
-  }
-
-  // ---- 4. A rate needs a denominator that is actually present ------------------------------------
-  if (scope.unit === "rate_per_100k" && metrics.length > 0) {
-    const hasDenominator = known.some((entry) => entry.carriesRateDenominator);
-    if (!hasDenominator) {
-      findings.push({
-        ruleId: "structural-rate-denominator-missing",
-        severity: "retry",
-        requestedLevel: scope.rowLevel,
-        tableLevels: describe(metrics),
-        message:
-          "A per-capita rate was requested, but none of the referenced tables carries a population " +
-          "denominator. Join the population table for this source at the requested level.",
-      });
-    }
-  }
-
-  // ---- 5. The requested time grain has to exist --------------------------------------------------
-  if (scope.grain && metrics.length > 0) {
-    const supported = metrics.some((entry) => entry.timeGrains.includes(scope.grain as "monthly" | "annual"));
-    if (!supported) {
-      findings.push({
-        ruleId: "structural-time-grain-unavailable",
-        severity: "block",
-        requestedLevel: scope.rowLevel,
-        tableLevels: describe(metrics),
-        message:
-          `${scope.grain} figures were requested, but ` +
-          `${metrics.map((entry) => `${entry.table} carries ${entry.timeGrains.join("/")} data`).join(" and ")}. ` +
-          "Say plainly that this source does not hold that period, rather than presenting a different one.",
-      });
+    // --- rate denominator, traced rather than assumed --------------------------------------
+    if (scope.unit === "rate_per_100k" && scope.rowLevel !== "unknown" && item.denominatorRefs !== null) {
+      const denominatorTables = tablesOf(item.denominatorRefs, opts.source)
+        .map((table) => (table ? tableSemantics(opts.source, table) : null));
+      const approved = denominatorTables.some(
+        (entry) => entry && (entry.denominatorLevels ?? []).includes(scope.rowLevel)
+      );
+      if (!approved) {
+        const named = item.denominatorRefs.map((ref) => `${ref.table ?? "?"}.${ref.column}`).join(", ");
+        add("structural-rate-denominator-unbound", "retry",
+          `The rate "${label}" divides by ${named || "an expression that could not be traced"}, which ` +
+          `is not a population valid at ${scope.rowLevel} level. Joining a population table is not ` +
+          "enough -- the division itself has to use it.", label);
+      }
+    } else if (scope.unit === "rate_per_100k" && scope.rowLevel !== "unknown" &&
+               item.countsRows && item.refs.length === 0) {
+      add("structural-rate-denominator-unbound", "retry",
+        `The rate "${label}" has no denominator expression at all.`, label);
     }
   }
 
   return findings;
 }
 
-/** Coverage reporting for the catalog, used by the tests and the response document. */
 export function catalogCoverage(source: QueryContractSource): {
-  tables: number;
-  metric: number;
-  withUnknowns: number;
+  tables: number; metric: number; withAbsentComponents: number;
 } {
   const entries = catalogedTables(source);
   return {
     tables: entries.length,
     metric: entries.filter((entry) => entry.role === "metric").length,
-    withUnknowns: entries.filter((entry) => (entry.unknown ?? []).length > 0).length,
+    withAbsentComponents: entries.filter((entry) => entry.components === "absent").length,
   };
 }

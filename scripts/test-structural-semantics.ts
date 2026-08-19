@@ -113,7 +113,7 @@ check("a homicide count is not answered by counting agency directory rows", () =
   const sql = "SELECT COUNT(DISTINCT ori) AS city_count FROM historical_agency WHERE type = 'city' AND agency IS NOT NULL";
   assert.ok(capabilityRules(question, "historical", sql).includes("historical-agency-lookup-not-crime-data"),
     "precondition: HEAD already objects");
-  assert.ok(rules(question, "historical", sql).includes("structural-identity-table-as-metric"),
+  assert.ok(rules(question, "historical", sql).includes("structural-non-factual-source"),
     "a directory cannot supply a measure");
 });
 
@@ -132,7 +132,7 @@ check("SHR: an agency population column is not a statewide denominator", () => {
   const bad = "SELECT year, COUNT(*) * 100000.0 / population AS rate FROM incidents WHERE state = 'CA' GROUP BY year";
   const good = "SELECT i.year, COUNT(*) * 100000.0 / sp.population AS rate FROM incidents i " +
     "JOIN state_population sp ON sp.state = i.state AND sp.year = i.year WHERE i.state = 'CA' GROUP BY i.year";
-  assert.ok(rules(question, "shr", bad).includes("structural-rate-denominator-missing"),
+  assert.ok(rules(question, "shr", bad).includes("structural-rate-denominator-unbound"),
     "incidents.population is per-agency and cannot serve a statewide rate");
   assert.deepStrictEqual(rules(question, "shr", good), [], "state_population is the supported path");
 });
@@ -195,15 +195,103 @@ check("Historical is annual-only, so a monthly request is declined not silently 
   assert.ok(rules(question, "historical", sql).includes("structural-time-grain-unavailable"));
 });
 
+console.log("\n-- the four blockers from the 89c331b review --");
+
+check("a decorative denominator join is not proof: the division must use it", () => {
+  const question = "murder rate per 100k in California";
+  const bad = "SELECT i.year, COUNT(*) * 100000.0 / i.population AS rate FROM incidents i "
+    + "JOIN state_population sp ON sp.state = i.state AND sp.year = i.year WHERE i.state = 'CA' GROUP BY i.year";
+  const good = "SELECT i.year, COUNT(*) * 100000.0 / sp.population AS rate FROM incidents i "
+    + "JOIN state_population sp ON sp.state = i.state AND sp.year = i.year WHERE i.state = 'CA' GROUP BY i.year";
+  assert.ok(rules(question, "shr", bad).includes("structural-rate-denominator-unbound"),
+    "the approved table is joined but unused; the rate still divides by the per-agency column");
+  assert.deepStrictEqual(rules(question, "shr", good), [], "using it in the division is the fix");
+});
+
+check("a rate written through ROUND() is still traced", () => {
+  const question = "murder rate per 100k in Chicago by year";
+  const good = "SELECT am.year, ROUND(SUM(am.count) * 100000.0 / ap.population, 1) AS rate "
+    + "FROM agency_monthly am JOIN agency_population ap ON ap.ori = am.ori AND ap.year = am.year "
+    + "WHERE am.agency = 'Chicago' AND am.state = 'IL' AND am.offense = 'Murder' GROUP BY am.year";
+  assert.deepStrictEqual(rules(question, "current", good), []);
+});
+
+check("selecting a different offense and relabelling it is caught", () => {
+  const question = "murders in Chicago by year since 2000";
+  const bad = "SELECT hac.year, hac.robbery AS murders FROM historical_agency_crime hac "
+    + "JOIN historical_agency ha ON ha.ori = hac.ori WHERE ha.agency = 'Chicago' AND ha.state = 'il'";
+  const good = bad.replace("hac.robbery", "hac.murder");
+  assert.ok(rules(question, "historical", bad).includes("structural-measure-substitution"),
+    "robbery cannot be returned as murders");
+  assert.deepStrictEqual(rules(question, "historical", good), []);
+});
+
+check("aggravated assault maps to the column each table actually uses", () => {
+  const question = "aggravated assaults in Chicago by year";
+  const good = "SELECT hac.year, hac.assault AS aggravated_assaults FROM historical_agency_crime hac "
+    + "JOIN historical_agency ha ON ha.ori = hac.ori WHERE ha.agency = 'Chicago' AND ha.state = 'il'";
+  assert.deepStrictEqual(rules(question, "historical", good), [],
+    "historical_agency_crime spells it `assault`, not `aggravated_assault`");
+});
+
+check("an unrecognised table cannot authorise a factual answer", () => {
+  const question = "murders in Chicago in 2023";
+  const sql = "SELECT year, COUNT(*) AS murders FROM totally_unknown_table WHERE year = 2023 GROUP BY year";
+  assert.ok(rules(question, "current", sql).includes("structural-uncatalogued-factual-source"),
+    "unknown semantics must fail closed, not open");
+});
+
+check("a real but non-factual table cannot be counted as offenses", () => {
+  const question = "murders in Chicago in 2023";
+  const sql = "SELECT year, COUNT(*) AS murders FROM source_build_receipts WHERE year = 2023 GROUP BY year";
+  assert.ok(rules(question, "current", sql).includes("structural-non-factual-source"),
+    "source_build_receipts is build provenance, not crime data");
+});
+
+check("each returned series is judged on its own source", () => {
+  const question = "murders in Chicago in 2023";
+  const mixed = "SELECT nm.year, SUM(nm.count) AS chicago_murders FROM national_monthly nm "
+    + "JOIN agency_monthly am ON am.year = nm.year WHERE nm.offense = 'Murder' GROUP BY nm.year";
+  assert.ok(rules(question, "current", mixed).includes("structural-row-level-substitution"),
+    "joining a compatible table cannot authorise a series drawn from an incompatible one");
+});
+
+check("a series whose source cannot be narrowed fails closed", () => {
+  // The statement parses; it is one SERIES that cannot be traced. A CTE joining two metric tables
+  // leaves a column that role-narrowing cannot resolve, and a measure we cannot attribute must not
+  // be executed. This is a different path from an unparseable statement, and the mutation run
+  // showed the whole-statement case did not cover it.
+  const sql = "WITH joined AS (SELECT i.year, v.id FROM incidents i JOIN victims v ON v.incident_id = i.id) "
+    + "SELECT joined.year, SUM(joined.mystery_measure) AS murders FROM joined GROUP BY joined.year";
+  assert.ok(rules("murders in Chicago in 2023", "shr", sql).includes("structural-returned-series-unresolved"),
+    "a measure that cannot be attributed to a table must fail closed");
+});
+
+check("an untraceable returned expression fails closed", () => {
+  const findings = rules("murders in Chicago in 2023", "current", "SELECT 1 FROM");
+  assert.ok(findings.includes("structural-returned-series-unresolved"),
+    "an unparseable statement must not be treated as safe");
+});
+
 console.log("\n-- catalog --");
 
-check("every catalogued table declares a role, a row level and its measures", () => {
+check("every catalogued table separates physical row key from output levels", () => {
   for (const entry of TABLE_SEMANTICS) {
     assert.ok(entry.role, `${entry.table} has no role`);
-    assert.ok(entry.rowLevel, `${entry.table} has no rowLevel`);
+    assert.ok(entry.rowKey, `${entry.table} has no rowKey`);
+    assert.ok(Array.isArray(entry.outputLevels), `${entry.table} has no outputLevels`);
     assert.ok(entry.measures.length > 0, `${entry.table} declares no measures`);
     assert.ok(entry.timeGrains.length > 0, `${entry.table} declares no time grains`);
+    assert.ok(entry.components === "present" || entry.components === "absent",
+      `${entry.table} does not say whether its components are present`);
   }
+});
+
+check("a table keyed by ori is recorded as agency-keyed even when its name says city", () => {
+  const city = tableSemantics("nibrs", "summary_city_monthly");
+  assert.ok(city, "summary_city_monthly must be catalogued");
+  assert.strictEqual(city!.rowKey, "agency", "it carries ori, so one row is an agency");
+  assert.ok(city!.outputLevels.includes("city"), "it can still produce city output");
 });
 
 check("all five sources are covered in this increment", () => {
@@ -214,11 +302,13 @@ check("all five sources are covered in this increment", () => {
   }
 });
 
-check("the tables whose semantics are uncertain say so", () => {
+check("non-aggregatability is a typed property, not a sentence", () => {
   const clearance = tableSemantics("historical", "historical_agency_clearance");
   assert.ok(clearance, "historical_agency_clearance must be catalogued");
-  assert.ok((clearance!.unknown ?? []).length > 0,
-    "its missing numerators and denominators must be recorded, not assumed");
+  assert.strictEqual(clearance!.components, "absent", "no cleared counts or denominators exist");
+  assert.strictEqual(clearance!.aggregation, "not-aggregatable");
+  assert.ok(!clearance!.outputLevels.includes("state"),
+    "so it must not be able to produce a statewide figure");
 });
 
 console.log(`\nstructural semantics: ${passed} passed, ${failed} failed`);

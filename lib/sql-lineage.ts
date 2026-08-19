@@ -1,0 +1,375 @@
+/**
+ * Where does each returned value actually come from?
+ *
+ * The first version of increment C asked "is a compatible table mentioned anywhere in this SQL?".
+ * That is the same defect the county-ORI validator had to fix twice: a literal appearing somewhere
+ * is not proof that the returned rows are restricted by it. Reproduced against `89c331b`:
+ *
+ *     SELECT i.year, COUNT(*) * 100000.0 / i.population AS rate
+ *     FROM incidents i
+ *     JOIN state_population sp ON sp.state = i.state AND sp.year = i.year
+ *     WHERE i.state = 'CA'
+ *
+ * `state_population` is joined and entirely decorative. The rate still divides by the per-agency
+ * `incidents.population`. The old check saw an approved denominator table and passed it.
+ *
+ * So this resolves each returned expression to the base tables its columns actually come from, and
+ * for a division it does the same for the denominator side specifically.
+ *
+ * It is deliberately conservative. This is not a SQL parser and does not try to be: anything it
+ * cannot resolve is reported as unresolved, and the caller must fail closed rather than assume the
+ * query is safe. A shape we cannot prove is not a shape we may execute.
+ */
+
+/**
+ * A CTE built from `VALUES (...)` or a `SELECT` with no `FROM` reads no table at all. The SHR
+ * deterministic murder plan uses several -- `targets(city, ori, ...) AS (VALUES ('Oakland, CA', ...))`.
+ * Columns drawn from one are literals the query supplied itself, so they are neither a factual
+ * source nor an unresolved reference. Treating them as unresolved failed four real plans closed.
+ */
+export const LITERAL_SOURCE = "(values)";
+
+export type ColumnRef = {
+  /** The base table this column resolves to, or null when it could not be resolved. */
+  table: string | null;
+  column: string;
+  /**
+   * When a column comes through a CTE that reads several base tables, we know the shortlist even
+   * though we cannot pick one. The caller narrows it by role -- a CTE joining a metric table to a
+   * directory has exactly one table the measure can have come from. Without this, every real
+   * multi-table CTE was reported unresolved and would have failed closed.
+   */
+  candidates?: string[];
+};
+
+export type SelectItem = {
+  alias: string | null;
+  raw: string;
+  /** Every column reference in the expression, resolved to base tables where possible. */
+  refs: ColumnRef[];
+  /** Refs on the right-hand side of a top-level division, or null when there is no division. */
+  denominatorRefs: ColumnRef[] | null;
+  /** COUNT(*) and friends contribute a row count rather than a named column. */
+  countsRows: boolean;
+  /** False when any part of the expression could not be traced. */
+  resolved: boolean;
+};
+
+export type SqlLineage = {
+  /** False when the statement shape defeated the analyzer. Callers must fail closed. */
+  parsed: boolean;
+  items: SelectItem[];
+  /** Every base table reachable from the outer query, including through CTEs. */
+  baseTables: string[];
+};
+
+const SQL_KEYWORDS = new Set([
+  "select", "from", "where", "group", "by", "order", "having", "limit", "offset", "as", "on",
+  "join", "left", "right", "inner", "outer", "full", "cross", "union", "all", "distinct", "and",
+  "or", "not", "in", "is", "null", "case", "when", "then", "else", "end", "asc", "desc", "with",
+  "recursive", "between", "like", "exists", "cast", "over", "partition", "using", "nulls", "first",
+  "last", "filter", "within", "collate", "escape", "glob", "regexp", "match",
+]);
+
+/** Replace comments and string literals with blanks so they cannot be mistaken for identifiers. */
+function scrub(sql: string): string {
+  let out = "";
+  let i = 0;
+  while (i < sql.length) {
+    const two = sql.slice(i, i + 2);
+    if (two === "--") {
+      const end = sql.indexOf("\n", i);
+      const stop = end === -1 ? sql.length : end;
+      out += " ".repeat(stop - i);
+      i = stop;
+      continue;
+    }
+    if (two === "/*") {
+      const end = sql.indexOf("*/", i + 2);
+      const stop = end === -1 ? sql.length : end + 2;
+      out += " ".repeat(stop - i);
+      i = stop;
+      continue;
+    }
+    const ch = sql[i];
+    if (ch === "'" || ch === '"') {
+      let j = i + 1;
+      while (j < sql.length) {
+        if (sql[j] === ch && sql[j + 1] === ch) { j += 2; continue; }
+        if (sql[j] === ch) { j += 1; break; }
+        j += 1;
+      }
+      // Keep double-quoted identifiers readable; blank out string literals.
+      out += ch === '"' ? sql.slice(i, j) : " ".repeat(j - i);
+      i = j;
+      continue;
+    }
+    out += ch;
+    i += 1;
+  }
+  return out;
+}
+
+/** Index of the first match of `re` at paren depth 0, or -1. */
+function findTopLevel(text: string, re: RegExp): number {
+  let depth = 0;
+  for (let i = 0; i < text.length; i += 1) {
+    const ch = text[i];
+    if (ch === "(") depth += 1;
+    else if (ch === ")") depth = Math.max(0, depth - 1);
+    else if (depth === 0) {
+      re.lastIndex = i;
+      const m = re.exec(text);
+      if (m && m.index === i) return i;
+    }
+  }
+  return -1;
+}
+
+function splitTopLevel(text: string, separator: string): string[] {
+  const parts: string[] = [];
+  let depth = 0;
+  let start = 0;
+  for (let i = 0; i < text.length; i += 1) {
+    const ch = text[i];
+    if (ch === "(") depth += 1;
+    else if (ch === ")") depth = Math.max(0, depth - 1);
+    else if (ch === separator && depth === 0) {
+      parts.push(text.slice(start, i));
+      start = i + 1;
+    }
+  }
+  parts.push(text.slice(start));
+  return parts.map((part) => part.trim()).filter((part) => part.length > 0);
+}
+
+/** `name AS ( ... )` pairs, with their bodies. */
+function extractCtes(sql: string): { names: Map<string, string>; rest: string } {
+  const names = new Map<string, string>();
+  if (!/^\s*WITH\b/i.test(sql)) return { names, rest: sql };
+  let i = sql.search(/\bWITH\b/i);
+  i += sql.slice(i).match(/\bWITH\s+(?:RECURSIVE\s+)?/i)?.[0].length ?? 4;
+
+  while (i < sql.length) {
+    const header = sql.slice(i).match(/^\s*([A-Za-z_][\w]*)\s*(?:\([^)]*\)\s*)?AS\s*\(/i);
+    if (!header) break;
+    const bodyStart = i + header[0].length;
+    let depth = 1;
+    let j = bodyStart;
+    while (j < sql.length && depth > 0) {
+      if (sql[j] === "(") depth += 1;
+      else if (sql[j] === ")") depth -= 1;
+      j += 1;
+    }
+    names.set(header[1].toLowerCase(), sql.slice(bodyStart, j - 1));
+    i = j;
+    const comma = sql.slice(i).match(/^\s*,\s*/);
+    if (comma) { i += comma[0].length; continue; }
+    break;
+  }
+  return { names, rest: sql.slice(i) };
+}
+
+/** All `FROM`/`JOIN` sources in one query level: alias (or name) -> table name. */
+function sourceAliases(query: string): Map<string, string> {
+  const aliases = new Map<string, string>();
+  const re = /\b(?:FROM|JOIN)\s+([A-Za-z_][\w]*)\s*(?:(?:AS\s+)?([A-Za-z_][\w]*))?/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(query)) !== null) {
+    const table = m[1].toLowerCase();
+    const maybeAlias = (m[2] ?? "").toLowerCase();
+    const alias = maybeAlias && !SQL_KEYWORDS.has(maybeAlias) ? maybeAlias : table;
+    aliases.set(alias, table);
+    if (!aliases.has(table)) aliases.set(table, table);
+  }
+  return aliases;
+}
+
+function baseTablesOf(query: string, ctes: Map<string, string>, seen = new Set<string>()): string[] {
+  const found = new Set<string>();
+  for (const table of sourceAliases(query).values()) {
+    if (ctes.has(table)) {
+      if (seen.has(table)) continue;
+      seen.add(table);
+      for (const inner of baseTablesOf(ctes.get(table)!, ctes, seen)) found.add(inner);
+    } else {
+      found.add(table);
+    }
+  }
+  return [...found];
+}
+
+/**
+ * What each output column of a CTE is actually made of.
+ *
+ * Role-narrowing is not enough when a CTE reads two metric tables. The SHR deterministic murder
+ * plan has `counts AS (SELECT t.city, i.month, COUNT(v.id) AS murder_victims FROM targets t JOIN
+ * incidents i ... JOIN victims v ...)`, so `c.murder_victims` could come from `incidents` or
+ * `victims` by table alone. Reading the CTE's own select list resolves it to `victims`, which is
+ * the truth and is what "lineage" has to mean.
+ */
+function cteOutputs(
+  name: string, ctes: Map<string, string>, memo: Map<string, Map<string, ColumnRef[]>>, seen: Set<string>
+): Map<string, ColumnRef[]> {
+  const cached = memo.get(name);
+  if (cached) return cached;
+  const outputs = new Map<string, ColumnRef[]>();
+  memo.set(name, outputs);              // set first: a recursive CTE must not loop
+  if (seen.has(name)) return outputs;
+  seen.add(name);
+
+  const body = ctes.get(name);
+  if (!body) return outputs;
+
+  const selectAt = findTopLevel(body, /\bSELECT\b/gi);
+  if (selectAt === -1) return outputs;
+  const afterSelect = body.slice(selectAt + "SELECT".length);
+  const fromAt = findTopLevel(afterSelect, /\bFROM\b/gi);
+  const selectList = fromAt === -1 ? afterSelect : afterSelect.slice(0, fromAt);
+  const fromClause = fromAt === -1 ? "" : afterSelect.slice(fromAt);
+  const innerAliases = sourceAliases(fromClause);
+
+  for (const raw of splitTopLevel(selectList, ",")) {
+    const aliasMatch = raw.match(/\s+(?:AS\s+)?([A-Za-z_][\w]*)\s*$/i);
+    const alias = aliasMatch && !SQL_KEYWORDS.has(aliasMatch[1].toLowerCase()) ? aliasMatch[1] : null;
+    const bodyExpr = alias ? raw.slice(0, raw.length - aliasMatch![0].length) : raw;
+    const { refs } = refsIn(bodyExpr, innerAliases, ctes, memo, seen);
+    const bare = bodyExpr.trim().match(/^(?:[A-Za-z_][\w]*\.)?([A-Za-z_][\w]*)$/);
+    const key = (alias ?? bare?.[1] ?? "").toLowerCase();
+    if (key) outputs.set(key, refs);
+  }
+  return outputs;
+}
+
+function refsIn(
+  expression: string,
+  aliases: Map<string, string>,
+  ctes: Map<string, string>,
+  memo: Map<string, Map<string, ColumnRef[]>> = new Map(),
+  seen: Set<string> = new Set()
+): {
+  refs: ColumnRef[];
+  countsRows: boolean;
+  resolved: boolean;
+} {
+  const refs: ColumnRef[] = [];
+  let resolved = true;
+  const countsRows = /\bCOUNT\s*\(\s*(?:\*|DISTINCT\s+[\w.]+|[\w.]+)\s*\)/i.test(expression);
+
+  const singleBase = (() => {
+    const tables = [...new Set(aliases.values())].filter((t) => !ctes.has(t));
+    return tables.length === 1 ? tables[0] : null;
+  })();
+
+  const qualified = /\b([A-Za-z_][\w]*)\.([A-Za-z_][\w]*)\b/g;
+  const consumed: [number, number][] = [];
+  let m: RegExpExecArray | null;
+  while ((m = qualified.exec(expression)) !== null) {
+    consumed.push([m.index, m.index + m[0].length]);
+    const aliasKey = m[1].toLowerCase();
+    const table = aliases.get(aliasKey) ?? null;
+    if (table && ctes.has(table)) {
+      // Resolve through the CTE to the column's own origin before falling back to table-level guesses.
+      const column = m[2].toLowerCase();
+      const origin = cteOutputs(table, ctes, memo, new Set(seen)).get(column);
+      if (origin && origin.length > 0) {
+        for (const ref of origin) refs.push({ ...ref });
+        continue;
+      }
+      const inner = baseTablesOf(ctes.get(table)!, ctes);
+      if (inner.length === 1) refs.push({ table: inner[0], column });
+      else if (inner.length > 1) refs.push({ table: null, column, candidates: inner });
+      else refs.push({ table: LITERAL_SOURCE, column });
+    } else if (table) {
+      refs.push({ table, column: m[2].toLowerCase() });
+    } else {
+      refs.push({ table: null, column: m[2].toLowerCase() });
+      resolved = false;
+    }
+  }
+
+  const bare = /\b([A-Za-z_][\w]*)\b(\s*\()?/g;
+  while ((m = bare.exec(expression)) !== null) {
+    if (consumed.some(([s, e]) => m!.index >= s && m!.index < e)) continue;
+    const word = m[1].toLowerCase();
+    if (m[2]) continue;                        // a function call, not a column
+    // Only skip a function NAME when a paren follows it. `count` is a real column in
+    // agency_monthly, state_monthly and national_monthly, and skipping it by name meant
+    // `SUM(count)` resolved to nothing and the series escaped evaluation entirely.
+    if (SQL_KEYWORDS.has(word)) continue;
+    if (/^\d/.test(word)) continue;
+    if (aliases.has(word)) continue;           // a table/alias name used bare
+    if (singleBase) refs.push({ table: singleBase, column: word });
+    else {
+      const candidates = [...new Set([...aliases.values()].flatMap(
+        (table) => (ctes.has(table) ? baseTablesOf(ctes.get(table)!, ctes) : [table])
+      ))];
+      if (candidates.length > 1) refs.push({ table: null, column: word, candidates });
+      else if (candidates.length === 1) refs.push({ table: candidates[0], column: word });
+      else refs.push({ table: LITERAL_SOURCE, column: word });
+    }
+  }
+
+  return { refs, countsRows, resolved };
+}
+
+/** Right-hand side of the last top-level `/`, or null when the expression has no division. */
+function denominatorExpression(expression: string): string | null {
+  let depth = 0;
+  let cut = -1;
+  for (let i = 0; i < expression.length; i += 1) {
+    const ch = expression[i];
+    if (ch === "(") depth += 1;
+    else if (ch === ")") depth = Math.max(0, depth - 1);
+    else if (ch === "/" && depth === 0) cut = i;
+  }
+  if (cut === -1) {
+    // A rate is often written as ROUND(x / y, 1); look one level in when the whole item is a call.
+    const call = expression.match(/^\s*[A-Za-z_]\w*\s*\(([\s\S]*)\)\s*$/);
+    if (call) {
+      const inner = splitTopLevel(call[1], ",")[0];
+      if (inner && inner !== expression) return denominatorExpression(inner);
+    }
+    return null;
+  }
+  return expression.slice(cut + 1);
+}
+
+export function analyzeSql(sql: string): SqlLineage {
+  const scrubbed = scrub(sql);
+  const { names: ctes, rest } = extractCtes(scrubbed);
+
+  const selectAt = findTopLevel(rest, /\bSELECT\b/gi);
+  if (selectAt === -1) return { parsed: false, items: [], baseTables: [] };
+
+  const afterSelect = rest.slice(selectAt + "SELECT".length);
+  const fromAt = findTopLevel(afterSelect, /\bFROM\b/gi);
+  const selectList = fromAt === -1 ? afterSelect : afterSelect.slice(0, fromAt);
+  const fromClause = fromAt === -1 ? "" : afterSelect.slice(fromAt);
+
+  const aliases = sourceAliases(fromClause);
+  const baseTables = baseTablesOf(fromClause, ctes);
+  if (baseTables.length === 0 && ctes.size === 0) return { parsed: false, items: [], baseTables: [] };
+
+  const memo = new Map<string, Map<string, ColumnRef[]>>();
+  const items: SelectItem[] = [];
+  for (const raw of splitTopLevel(selectList, ",")) {
+    const aliasMatch = raw.match(/\s+(?:AS\s+)?([A-Za-z_][\w]*)\s*$/i);
+    const alias = aliasMatch && !SQL_KEYWORDS.has(aliasMatch[1].toLowerCase()) ? aliasMatch[1] : null;
+    const body = alias ? raw.slice(0, raw.length - aliasMatch![0].length) : raw;
+
+    // A scalar subquery carries its own FROM; merge those aliases so the expression can resolve.
+    const itemAliases = new Map(aliases);
+    if (/\bSELECT\b[\s\S]*\bFROM\b/i.test(body)) {
+      for (const [alias, table] of sourceAliases(body)) itemAliases.set(alias, table);
+    }
+
+    const { refs, countsRows, resolved } = refsIn(body, itemAliases, ctes, memo);
+    const denomExpr = denominatorExpression(body);
+    const denominatorRefs = denomExpr === null ? null : refsIn(denomExpr, itemAliases, ctes, memo).refs;
+
+    items.push({ alias, raw: raw.trim(), refs, denominatorRefs, countsRows, resolved });
+  }
+
+  return { parsed: items.length > 0, items, baseTables };
+}

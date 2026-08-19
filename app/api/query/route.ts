@@ -50,6 +50,7 @@ import { isFollowUp } from "@/lib/tab-suggest";
 import { buildHistoricalCityChangeRankingPlan, buildHistoricalLocalRecentChangePlan } from "@/lib/historical-deterministic-queries";
 import { buildMultiCityTrendPlan } from "@/lib/multi-city-deterministic";
 import { buildCurrentIndexedStatePlan } from "@/lib/current-indexed-state-deterministic";
+import { deterministicPlanRefusal } from "@/lib/deterministic-plan-guard";
 import { detectQueryBearingFollowup } from '@/lib/query-bearing-followup';
 import { planFollowupSafe } from '@/lib/followup-planner';
 import { buildCrossSourceFollowupTransform } from '@/lib/cross-source-followup';
@@ -930,7 +931,12 @@ export async function POST(req: NextRequest) {
   const indexedStatePlan = tab === "current"
     ? buildCurrentIndexedStatePlan(question, body?.history)
     : null;
-  if (indexedStatePlan) {
+  // Structural proof BEFORE execution. This branch returns long before runContractValidation is
+  // defined, so without this it executed with no proof at all. A refused plan is simply not used;
+  // the request falls through to the model path, which validates in full.
+  const indexedStateRefusal = deterministicPlanRefusal({ question, source: tab, sql: indexedStatePlan?.sql });
+  if (indexedStateRefusal) console.log(`[structural] indexed-state plan refused: ${indexedStateRefusal.ruleIds.join(", ")}`);
+  if (indexedStatePlan && !indexedStateRefusal) {
     try {
       const db = getDb();
       const rows = executeWithTimeoutSync<Record<string, unknown>>(db, db.prepare(indexedStatePlan.sql), 30000);
@@ -986,7 +992,9 @@ export async function POST(req: NextRequest) {
   const multiCityTrend = !planSaysQueryBearing && (tab === "current" || tab === "historical")
     ? buildMultiCityTrendPlan(question, tab)
     : null;
-  if (multiCityTrend) {
+  const multiCityRefusal = deterministicPlanRefusal({ question, source: tab, sql: multiCityTrend?.sql });
+  if (multiCityRefusal) console.log(`[structural] multi-city plan refused: ${multiCityRefusal.ruleIds.join(", ")}`);
+  if (multiCityTrend && !multiCityRefusal) {
     try {
       const db = getDb();
       const rows = executeWithTimeoutSync<Record<string, unknown>>(db, db.prepare(multiCityTrend.sql), 30000);
@@ -1068,7 +1076,9 @@ export async function POST(req: NextRequest) {
   const historicalCityChange = tab === "historical"
     ? buildHistoricalLocalRecentChangePlan(question, HISTORICAL.crimeMaxYear) ?? buildHistoricalCityChangeRankingPlan(question, body?.history)
     : null;
-  if (historicalCityChange) {
+  const historicalCityChangeRefusal = deterministicPlanRefusal({ question, source: tab, sql: historicalCityChange?.sql });
+  if (historicalCityChangeRefusal) console.log(`[structural] historical city-change plan refused: ${historicalCityChangeRefusal.ruleIds.join(", ")}`);
+  if (historicalCityChange && !historicalCityChangeRefusal) {
     const ms = Date.now() - totalStart;
     if (!historicalCityChange.sql) {
       // The planner produced no query, so there is no supported path for this

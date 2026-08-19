@@ -94,7 +94,7 @@ check("a missing rate denominator is a retry, not a block", () => {
   const result = validate("murder rate per 100k in California", "shr",
     "SELECT year, COUNT(*) * 100000.0 / population AS rate FROM incidents WHERE state = 'CA' GROUP BY year");
   assert.strictEqual(result.blockReasons.length, 0, "this is repairable");
-  assert.ok(result.retryIssues.some((issue) => /structural-rate-denominator-missing/.test(issue)));
+  assert.ok(result.retryIssues.some((issue) => /structural-rate-denominator-unbound/.test(issue)));
   assert.ok(result.retryIssues.some((issue) => /Do not substitute a different geography or measure/.test(issue)),
     "the directive must forbid substitution rather than inviting a different answer");
 });
@@ -102,7 +102,7 @@ check("a missing rate denominator is a retry, not a block", () => {
 check("counting a directory instead of offenses is a retry", () => {
   const result = validate("How many homicides have there been in the City of Los Angeles so far this year?",
     "historical", "SELECT COUNT(DISTINCT ori) AS city_count FROM historical_agency WHERE type = 'city' AND agency IS NOT NULL");
-  assert.ok(result.retryIssues.some((issue) => /structural-identity-table-as-metric/.test(issue)));
+  assert.ok(result.retryIssues.some((issue) => /structural-non-factual-source/.test(issue)));
 });
 
 console.log("\n-- correct queries are untouched --");
