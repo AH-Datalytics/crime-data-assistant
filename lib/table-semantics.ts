@@ -111,9 +111,29 @@ export type UnitRequirement = {
 
 export type UnitRequirements = Partial<Record<UnitKey, UnitRequirement>>;
 
-/** The contract's unit vocabulary is wider than the catalog's; anything else is a count. */
-export function unitKeyOf(unit: string): UnitKey {
-  return unit === "rate_per_100k" || unit === "clearance_rate" ? unit : "count";
+/**
+ * The contract's unit vocabulary is wider than the catalog's, and the difference matters.
+ *
+ * Folding everything unrecognised into `count` meant "What share of Chicago murders occurred in
+ * 2020?" -- classified `ratio` -- was satisfied by a raw murder count. A share needs a numerator AND
+ * a denominator, neither of which this catalog models, so the honest answer is that the request is
+ * not expressible here, not that a count will do.
+ *
+ *   modeled      the catalog states what this unit requires
+ *   unmodeled    a real unit the catalog cannot yet express -- fail closed
+ *   unspecified  no measure claim to check
+ */
+export type UnitResolution =
+  | { kind: "modeled"; unit: UnitKey }
+  | { kind: "unmodeled"; unit: string }
+  | { kind: "unspecified" };
+
+export function resolveUnit(unit: string): UnitResolution {
+  if (unit === "count" || unit === "rate_per_100k" || unit === "clearance_rate") {
+    return { kind: "modeled", unit };
+  }
+  if (unit === "unknown" || unit === "") return { kind: "unspecified" };
+  return { kind: "unmodeled", unit };
 }
 
 export type MeasureBinding =
@@ -626,9 +646,12 @@ export function topicUnitRequirement(
   entry: TableSemantics, topic: string, unit: string
 ): UnitRequirement | null {
   if (entry.measureBinding.kind !== "topic_columns") return null;
+  const resolved = resolveUnit(unit);
+  // An unmodeled unit has no requirement to satisfy -- and must never fall back to another unit's.
+  if (resolved.kind !== "modeled") return null;
   const forTopic = entry.measureBinding.columns[topic];
   if (!forTopic) return null;
-  return forTopic[unitKeyOf(unit)] ?? null;
+  return forTopic[resolved.unit] ?? null;
 }
 
 /** Is this topic expressible at all here, in any unit? */

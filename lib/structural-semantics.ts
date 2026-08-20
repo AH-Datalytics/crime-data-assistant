@@ -7,6 +7,7 @@ import {
   producesLevel,
   requirementColumns,
   requirementSatisfied,
+  resolveUnit,
   tableSemantics,
   topicColumns,
   topicIsKnown,
@@ -396,6 +397,21 @@ export function evaluateStructuralSemantics(opts: {
     const usesAMeasure = factual.some((item) =>
       item.refs.some((ref) => ref.table === table && everyTopicColumn.has(ref.column)));
     if (!usesAMeasure) continue;
+
+    // A unit the catalog does not model cannot be satisfied by another unit's columns. Until a
+    // share's numerator and denominator are represented, the honest outcome is a rewrite and then a
+    // decline -- never a count standing in for a proportion.
+    const resolvedUnit = resolveUnit(scope.unit);
+    if (resolvedUnit.kind === "unmodeled") {
+      if (requestedTopics.some((topic) => topicIsKnown(entry, topic))) {
+        add("structural-measure-unit-unmodeled", "retry",
+          `The question asks for a ${resolvedUnit.unit}, and \`${table}\` does not model one -- a ` +
+          "share needs a numerator and a denominator, and neither is established here. Return the " +
+          "underlying counts, or say plainly that this cannot be computed.", null);
+      }
+      continue;
+    }
+    if (resolvedUnit.kind === "unspecified") continue;
 
     for (const topic of requestedTopics) {
       if (!topicIsKnown(entry, topic)) continue;

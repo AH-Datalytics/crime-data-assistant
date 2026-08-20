@@ -12,7 +12,7 @@ import assert from "node:assert";
 import { buildQueryContract, type QueryContractSource } from "../lib/query-contract";
 import { evaluateStructuralSemantics, requestedScope, catalogCoverage } from "../lib/structural-semantics";
 import { validateSourceCapabilities } from "../lib/source-capabilities";
-import { TABLE_SEMANTICS, tableSemantics } from "../lib/table-semantics";
+import { TABLE_SEMANTICS, tableSemantics, topicUnitRequirement } from "../lib/table-semantics";
 
 let passed = 0;
 let failed = 0;
@@ -461,6 +461,48 @@ check("a multi-offense request may still use one expression per offense", () => 
     + "FROM historical_agency_crime hac WHERE hac.ori = 'IL0316000'";
   assert.deepStrictEqual(rules(q, "historical", sql), [],
     "each requested topic is satisfied by its own complete expression");
+});
+
+console.log("\n-- unmodeled units fail closed (from the e08c761 review) --");
+
+check("a share request is not satisfied by a raw count", () => {
+  // `ratio` used to fold into `count`, so a bare murder total answered "what share".
+  const rawCount = "SELECT hac.murder AS share FROM historical_agency_crime hac "
+    + "JOIN historical_agency ha ON ha.ori = hac.ori "
+    + "WHERE ha.agency = 'Chicago' AND ha.state = 'il' AND hac.year = 2020";
+  for (const question of [
+    "What share of Chicago murders occurred in 2020?",
+    "What percentage of Chicago murders occurred in 2020?",
+    "What percent of murders in Chicago were in 2020?",
+  ]) {
+    assert.ok(rules(question, "historical", rawCount).includes("structural-measure-unit-unmodeled"),
+      `"${question}" must not be answered with a count`);
+  }
+});
+
+check("an unmodeled unit never borrows another unit's columns", () => {
+  const question = "What share of Chicago murders occurred in 2020?";
+  const contract = buildQueryContract(question, "historical")!;
+  assert.strictEqual(contract.metric.unit, "ratio", "precondition: the contract reads this as a ratio");
+  const entry = tableSemantics("historical", "historical_agency_crime")!;
+  assert.strictEqual(topicUnitRequirement(entry, "murder", "ratio"), null,
+    "there is no ratio requirement, and the count requirement must not stand in for one");
+  assert.ok(topicUnitRequirement(entry, "murder", "count"), "the count requirement still exists");
+});
+
+check("the modeled units are unaffected", () => {
+  const cases: [string, string][] = [
+    ["How many murders in Chicago in 2020?",
+      "SELECT hac.year, hac.murder AS murders FROM historical_agency_crime hac "
+      + "JOIN historical_agency ha ON ha.ori = hac.ori WHERE ha.agency = 'Chicago' AND ha.state = 'il'"],
+    ["murder rate in Illinois by year",
+      "SELECT year, murder_rate FROM historical_state_national WHERE state = 'Illinois'"],
+    ["murder clearance rate in Chicago by year",
+      "SELECT hac.year, hac.murder_clr FROM historical_agency_clearance hac WHERE hac.ori = 'IL0316000'"],
+  ];
+  for (const [question, sql] of cases) {
+    assert.deepStrictEqual(rules(question, "historical", sql), [], question);
+  }
 });
 
 console.log("\n-- catalog --");
