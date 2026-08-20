@@ -184,7 +184,7 @@ function splitTopLevel(text: string, separator: string): string[] {
  * That is what closes the original hole too: a first arm returning murder cannot authorise a
  * second arm returning robbery, because the second arm is now checked.
  */
-function compoundArms(query: string): string[] {
+export function compoundArms(query: string): string[] {
   const arms: string[] = [];
   let depth = 0;
   let start = 0;

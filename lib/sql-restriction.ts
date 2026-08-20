@@ -20,7 +20,7 @@
  *     is supposed to filter are in the same place.
  */
 
-import { analyzeSql } from "./sql-lineage";
+import { analyzeSql, compoundArms } from "./sql-lineage";
 
 export type CommonTableExpression = { name: string; body: string };
 
@@ -426,10 +426,15 @@ export function sqlRestrictsColumnToValue(
   const split = splitCtes(stripped);
   const ctes = split ? split.ctes : [];
 
-  for (const scope of restrictingScopes(stripped)) {
-    // No `tableInScope(scope, countedTable)` precondition: the key equality below resolves through
-    // this scope's own alias map, so a scope that does not hold the counted rows cannot prove
-    // anything anyway. Mutation testing showed the extra gate changed no outcome.
+  // The proof has to happen where the rows being counted are, and that is the OUTERMOST scope
+  // holding the counted table -- the outer query when it selects from `victims` itself, otherwise
+  // the CTE that does. An inner CTE may also mention `victims` incidentally, and its filters
+  // restrict its own rows, not the ones the answer counts:
+  //   WITH m AS (SELECT i.id FROM incidents i JOIN victims x ON x.incident_id = i.id WHERE <murder>)
+  //   SELECT COUNT(v.id) FROM victims v JOIN m ON m.id = v.incident_id
+  // Proving inside `m` there would authorise a count of the outer `v`, which nothing restricted.
+  const scopes = restrictingScopes(stripped).filter((scope) => tableInScope(scope, opts.countedTable));
+  for (const scope of scopes.slice(0, 1)) {
     const aliases = aliasMap(scope);
 
     // Shape 1: the predicate is applied where the rows are counted, AND the two tables are
@@ -457,6 +462,9 @@ export function sqlRestrictsColumnToValue(
       // `scopeRestrictsOn` needs an alias resolving to the filter table, so a CTE that never
       // touches it cannot get past this line.
       if (!scopeRestrictsOn(cte.body, cteAliases, opts.filterTable, column, value)) continue;
+      // Restricting and projecting the key is not enough: the CTE must emit that key at most once,
+      // or the join multiplies the counted rows instead of filtering them.
+      if (!cteEmitsKeyAtMostOnce(cte.body, opts.filterTable)) continue;
       const withCte = new Map(aliases);
       for (const name of refs) withCte.set(name.toLowerCase(), cte.name.toLowerCase());
       for (const projected of projectionsOf(cte.body, opts.filterTable, opts.join.filterColumn)) {
@@ -477,6 +485,52 @@ export function sqlRestrictsColumnToValue(
  * found and a same-named column belonging to some other table is not. Fails closed: an
  * unparseable body projects nothing, so nothing can be proved through it.
  */
+/** Is this keyword present at the top level of a statement -- outside parentheses and strings? */
+function hasTopLevelKeyword(sql: string, keyword: RegExp): boolean {
+  let depth = 0;
+  for (let i = 0; i < sql.length; i += 1) {
+    const char = sql[i];
+    if (char === "'") {
+      const end = sql.indexOf("'", i + 1);
+      i = end === -1 ? sql.length : end;
+      continue;
+    }
+    if (char === "(") { depth += 1; continue; }
+    if (char === ")") { depth = Math.max(0, depth - 1); continue; }
+    if (depth === 0 && keyword.test(sql.slice(i)) && (i === 0 || /\W/.test(sql[i - 1]))) return true;
+  }
+  return false;
+}
+
+/**
+ * Does this CTE emit each value of the filter table's key AT MOST ONCE?
+ *
+ * Projecting the right key is not the same as emitting it once, and the difference multiplies the
+ * answer rather than filtering it. Both of these project `incidents.id` and join it correctly, and
+ * both count every victim two or more times:
+ *
+ *   WITH m AS (SELECT id FROM incidents WHERE homicide_type = 'Murder'
+ *              UNION ALL SELECT id FROM incidents WHERE homicide_type = 'Murder')
+ *   WITH m AS (SELECT i.id FROM incidents i JOIN victims x ON x.incident_id = i.id WHERE ...)
+ *
+ * Only the plain single-table projection is proved here: one row of `incidents` in, at most one row
+ * out, so the key is as unique as it is on the table. Every compound, joined, grouped or derived
+ * form fails closed -- uniqueness is NOT inferred from selecting the right column.
+ */
+function cteEmitsKeyAtMostOnce(cteBody: string, filterTable: string): boolean {
+  // A compound arm can repeat a key the other arm already emitted. `UNION ALL` plainly does; even
+  // `UNION` would need the whole projection compared, which is not proved here.
+  if (compoundArms(cteBody).length > 1) return false;
+  // Exactly one table, and it must be the filter table. Any join can repeat the left side's key --
+  // joining back to `victims` emits one row per victim, not one per incident.
+  const tables = new Set([...aliasMap(cteBody).values()]);
+  if (tables.size !== 1 || !tables.has(filterTable.toLowerCase())) return false;
+  // Grouping and windowing can synthesise rows whose key multiplicity this does not track.
+  if (hasTopLevelKeyword(cteBody, /^group\s+by\b/i)) return false;
+  if (hasTopLevelKeyword(cteBody, /^window\b/i)) return false;
+  return true;
+}
+
 export function projectionsOf(cteBody: string, table: string, column: string): string[] {
   const lineage = analyzeSql(cteBody);
   // Fail closed. Today this cannot change an outcome -- `analyzeSql` returns zero items whenever

@@ -680,6 +680,22 @@ check("mentioning the murder predicate is not applying it", () => {
     ["with the predicate's column left unqualified in a two-table scope",
       "SELECT COUNT(v.id) AS murders FROM victims v JOIN incidents i ON v.incident_id = i.id "
       + "WHERE homicide_type = 'Murder' AND v.state = 'CA'"],
+    // Projecting the right key is not emitting it once. Both of these restrict correctly, project
+    // `incidents.id`, and join it correctly -- and both count every victim more than once.
+    ["through a CTE whose compound arms repeat the key",
+      "WITH m AS (SELECT id FROM incidents WHERE homicide_type = 'Murder' "
+      + "UNION ALL SELECT id FROM incidents WHERE homicide_type = 'Murder') "
+      + "SELECT COUNT(v.id) AS murders FROM victims v JOIN m ON m.id = v.incident_id"],
+    ["through a CTE that joins victims and so repeats the key per victim",
+      "WITH m AS (SELECT i.id FROM incidents i JOIN victims x ON x.incident_id = i.id "
+      + "WHERE i.homicide_type = 'Murder') "
+      + "SELECT COUNT(v.id) AS murders FROM victims v JOIN m ON m.id = v.incident_id"],
+    // Fail-closed, not a claim of unsoundness: GROUP BY id would in fact yield one row per key,
+    // but uniqueness is proved only for the plain single-table projection, and the contract is
+    // explicit that grouped forms are not inferred to be unique.
+    ["through a CTE that groups, which is not proved unique",
+      "WITH m AS (SELECT id FROM incidents WHERE homicide_type = 'Murder' GROUP BY id) "
+      + "SELECT COUNT(v.id) AS murders FROM victims v JOIN m ON m.id = v.incident_id"],
     ["broadened by a multi-value IN",
       "SELECT COUNT(v.id) AS murders FROM incidents i JOIN victims v ON v.incident_id = i.id "
       + "WHERE i.homicide_type IN ('Murder', 'Manslaughter') AND v.state = 'CA'"],
@@ -729,6 +745,15 @@ check("the murder predicate applied to the counted rows is accepted", () => {
     ["in a CTE the counting query INNER joins",
       "WITH m AS (SELECT id FROM incidents WHERE homicide_type = 'Murder') "
       + "SELECT COUNT(v.id) AS murders FROM victims v JOIN m ON m.id = v.incident_id "
+      + "WHERE v.state = 'CA'"],
+    // Redundant parentheses around the equality itself change nothing about what it restricts.
+    ["wrapped in redundant parentheses",
+      "SELECT COUNT(v.id) AS murders FROM victims v JOIN incidents i ON (v.incident_id = i.id) "
+      + "WHERE (i.homicide_type = 'Murder') AND v.state = 'CA'"],
+    // The key may be projected under an alias; lineage resolves it, so the join still proves out.
+    ["in a CTE projecting the key under an alias",
+      "WITH m AS (SELECT id AS incident_key FROM incidents WHERE homicide_type = 'Murder') "
+      + "SELECT COUNT(v.id) AS murders FROM victims v JOIN m ON m.incident_key = v.incident_id "
       + "WHERE v.state = 'CA'"],
   ] as const) {
     assert.deepStrictEqual(rules("murders in California", "shr", sql), [],
