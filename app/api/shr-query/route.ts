@@ -50,12 +50,15 @@ import { classifyShootingQualifier } from "@/lib/shooting-qualifiers";
 import {
   queryContractFailureMessage,
   queryContractGuardrails,
-  validateQueryContractSql,
   type QueryContractSqlValidation,
 } from "@/lib/query-contract-validator";
 import { partialCoverageRetryPrompt, sourceYearOverlap } from "@/lib/source-year-overlap";
 import { buildShrCanonicalLabelCase, formatShrResolutionGuidance, resolveShrAgency, rewriteShrResolvedAgencyPredicates } from "@/lib/shr-place-resolver";
 import { buildShrMurderPlan } from "@/lib/shr-deterministic-murder";
+import {
+  validateDeterministicShrPlanSql, validateModelAuthoredShrSql,
+  type DeterministicShrPlanValidation, type ModelAuthoredShrValidation,
+} from "@/lib/shr-authority";
 import {
   emitFactualPayload,
   finalizeProof,
@@ -310,10 +313,30 @@ export async function POST(req: NextRequest) {
         console.log(`[shr][contract] Warnings: ${contractResult.warnings.join(", ")}`);
       }
     };
-    const runContractValidation = (inputSql: string): QueryContractSqlValidation => {
-      const contractResult = validateQueryContractSql({
+    /**
+     * SQL the MODEL wrote. The AST/fact prover owns the murder-victim licence here and there is no
+     * fallback: if it cannot prove the licence the query is refused, because falling back to the
+     * legacy text prover on failure would make the stronger authority optional.
+     */
+    const runModelAuthoredValidation = (inputSql: string): ModelAuthoredShrValidation => {
+      const contractResult = validateModelAuthoredShrSql({
         question: guardrailQuestion,
-        source: "shr",
+        sql: inputSql,
+        routingMeta,
+      });
+      recordContractValidation(contractResult);
+      if (contractResult.licenceRefusal) {
+        console.log(`[shr][licence] unproved: ${contractResult.licenceRefusal}`);
+      }
+      return contractResult;
+    };
+    /**
+     * SQL a DETERMINISTIC compiler assembled from a template. Legacy validation, unchanged: neither
+     * evaluated parser accepts the column-listed VALUES CTE these plans use.
+     */
+    const runDeterministicPlanValidation = (inputSql: string): DeterministicShrPlanValidation => {
+      const contractResult = validateDeterministicShrPlanSql({
+        question: guardrailQuestion,
         sql: inputSql,
         routingMeta,
       });
@@ -453,7 +476,7 @@ export async function POST(req: NextRequest) {
       }));
     }
     if (murderPlan?.kind === "query" && murderDb) {
-      const contract = runContractValidation(murderPlan.sql);
+      const contract = runDeterministicPlanValidation(murderPlan.sql);
       const contractFailure = contractFailureResponse(contract, `contract_deterministic_murder_failure:${contract.enforced.join(",")}`, ["deterministic-murder"]);
       if (contractFailure) return contractFailure;
       try {
@@ -708,7 +731,7 @@ export async function POST(req: NextRequest) {
       // exactly the tautology the token exists to avoid. The contract validator can
       // rewrite this query, and that rewrite is what must remain detectable.
       const plannedShootingSql = `${withClause}SELECT ${periodSelect}, ${selectPlace}COUNT(*) AS fatal_shootings FROM incidents i ${joinClauses} WHERE ${whereClauses.join(" AND ")} GROUP BY ${periodGroup}${groupPlace} ORDER BY ${periodOrder}${orderPlace} LIMIT 1000`;
-      const shootingContract = runContractValidation(plannedShootingSql);
+      const shootingContract = runDeterministicPlanValidation(plannedShootingSql);
       const shootingContractFailure = contractFailureResponse(shootingContract, `contract_deterministic_shooting_failure:${shootingContract.enforced.join(",")}`, ["deterministic-shooting"]);
       if (shootingContractFailure) return shootingContractFailure;
       const sql = shootingContract.sql;
@@ -939,7 +962,7 @@ export async function POST(req: NextRequest) {
       });
     }
     if (shrRewrite.rewritten) routeGuardrailsFired.push("shr-resolved-ori-rewritten");
-    let initialContract = runContractValidation(shrRewrite.sql);
+    let initialContract = runModelAuthoredValidation(shrRewrite.sql);
     let sql = initialContract.sql;
     const initialContractBlock = initialContract.blockReasons.length > 0
       ? contractFailureResponse(initialContract, `contract_block:${initialContract.enforced.join(",")}`)
@@ -967,7 +990,7 @@ export async function POST(req: NextRequest) {
         if (retryClaude?.sql) {
           const retryValidation = validateAndSanitize(retryClaude.sql as string);
           if (retryValidation.valid) {
-            initialContract = runContractValidation(retryValidation.sanitized!);
+            initialContract = runModelAuthoredValidation(retryValidation.sanitized!);
             sql = initialContract.sql;
             claude.explanation = (retryClaude.explanation as string) || claude.explanation;
             claude.title = (retryClaude.title as string) || claude.title;
@@ -1007,7 +1030,7 @@ export async function POST(req: NextRequest) {
             if (retryClaude?.sql) {
               const retryValidation = validateAndSanitize(retryClaude.sql as string);
               if (retryValidation.valid) {
-                const retryContract = runContractValidation(retryValidation.sanitized!);
+                const retryContract = runModelAuthoredValidation(retryValidation.sanitized!);
                 let retrySql = retryContract.sql;
                 const retryContractFailure = contractFailureResponse(retryContract, `contract_table_retry_failure:${retryContract.enforced.join(",")}`, tableCheck.fired);
                 if (retryContractFailure) return retryContractFailure;
@@ -1086,7 +1109,7 @@ export async function POST(req: NextRequest) {
         if (retryClaude?.sql) {
           const retryValidation = validateAndSanitize(retryClaude.sql as string);
           if (retryValidation.valid) {
-            const retryContract = runContractValidation(retryValidation.sanitized!);
+            const retryContract = runModelAuthoredValidation(retryValidation.sanitized!);
             sql = retryContract.sql;
             const retryContractFailure = contractFailureResponse(retryContract, `contract_guardrail_retry_failure:${retryContract.enforced.join(",")}`, guardrailResult.fired);
             if (retryContractFailure) return retryContractFailure;
@@ -1127,7 +1150,7 @@ export async function POST(req: NextRequest) {
         return jsonResp(emitFactualPayload(orPrecedenceProof, { success: true, question, sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - start }));
       }
       if (postRetryResult.sql !== sql) sql = postRetryResult.sql;
-      const postRetryContract = runContractValidation(sql);
+      const postRetryContract = runModelAuthoredValidation(sql);
       sql = postRetryContract.sql;
       const postRetryContractFailure = contractFailureResponse(postRetryContract, `contract_final_failure:${postRetryContract.enforced.join(",")}`, postRetryResult.fired);
       if (postRetryContractFailure) return postRetryContractFailure;
@@ -1140,7 +1163,7 @@ export async function POST(req: NextRequest) {
     }
     let rows: Record<string, unknown>[];
     try {
-      const executionContract = runContractValidation(sql);
+      const executionContract = runModelAuthoredValidation(sql);
       sql = executionContract.sql;
       const executionContractFailure = contractFailureResponse(executionContract, `contract_execution_failure:${executionContract.enforced.join(",")}`);
       if (executionContractFailure) return executionContractFailure;
@@ -1152,6 +1175,16 @@ export async function POST(req: NextRequest) {
       if (schemaCheck.corrected) {
         sql = schemaCheck.sql;
         routeGuardrailsFired.push("schema-column-corrected");
+        // The schema check REWRITES the statement, so everything proved a moment ago was proved
+        // about a different statement. Re-prove the corrected SQL before it runs: a licence
+        // established on text that is not the text executed is not a licence.
+        const correctedContract = runModelAuthoredValidation(sql);
+        const correctedFailure = contractFailureResponse(
+          correctedContract,
+          `contract_schema_corrected_failure:${correctedContract.enforced.join(",")}`,
+        );
+        if (correctedFailure) return correctedFailure;
+        sql = correctedContract.sql;
       }
       rows = db.prepare(sql).all() as Record<string, unknown>[];
       rows = normalizeShrDisplayRows(rows);
@@ -1422,14 +1455,14 @@ export async function POST(req: NextRequest) {
       rows,
       columns,
       truncated: rows.length >= 1000,
-      guardrails: finalizeGuardrailTags([...guardrailResult.fired, ...routeGuardrailsFired], queryContractGuardrails(runContractValidation(sql))),
+      guardrails: finalizeGuardrailTags([...guardrailResult.fired, ...routeGuardrailsFired], queryContractGuardrails(runModelAuthoredValidation(sql))),
       returnedEntities: returnedEntityKeys(rows),
       narrative: explanation,
       hasChart: Boolean(chartConfig),
       chartFromBindings: false,
       db,
     });
-    writeLog(question, sql, rows.length, null, totalMs, explanation, "shr", finalizeGuardrailTags([...guardrailResult.fired, ...routeGuardrailsFired], queryContractGuardrails(runContractValidation(sql))), "haiku-4.5", sessionId, serializeChartConfigForLog(chartConfig, columns, { source: "FBI SHR", agencyCount: 0, population: null }), finalization);
+    writeLog(question, sql, rows.length, null, totalMs, explanation, "shr", finalizeGuardrailTags([...guardrailResult.fired, ...routeGuardrailsFired], queryContractGuardrails(runModelAuthoredValidation(sql))), "haiku-4.5", sessionId, serializeChartConfigForLog(chartConfig, columns, { source: "FBI SHR", agencyCount: 0, population: null }), finalization);
 
     // Cache successful responses (only standalone questions)
     if (!cached && promptHistory.length === 0) {

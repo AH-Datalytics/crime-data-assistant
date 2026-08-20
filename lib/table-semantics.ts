@@ -161,6 +161,17 @@ export type TableSemantics = {
   /** For anything usable as a rate denominator: the levels its population is valid for. */
   denominatorLevels?: EntityLevel[];
   /**
+   * Columns that identify a row of this table, so a relation projecting one plainly emits each
+   * value at most once. Required before any key-multiplicity claim: projecting the right column is
+   * not the same as emitting it once, and the difference multiplies a count rather than filtering
+   * it.
+   *
+   * This is an engineering fact and must stay one. Every entry is backed by an actual
+   * `INTEGER PRIMARY KEY` in the schema, and `test-schema-catalog-agreement.ts` fails if the
+   * constraint stops matching, so the catalog cannot silently drift from the database.
+   */
+  uniqueKeys?: string[];
+  /**
    * Set only where ONE PHYSICAL ROW EQUALS ONE USER-FACING OCCURRENCE of these topics -- which is
    * what makes a bare `COUNT(*)` a valid measure.
    *
@@ -586,6 +597,7 @@ export const TABLE_SEMANTICS: TableSemantics[] = [
   // ----------------------------------------------------------------------------- SHR (shr.db)
   T({
     source: "shr", table: "incidents", role: "metric",
+    uniqueKeys: ["id"],
     rowKey: "agency", outputLevels: ALL_LOCAL, timeGrains: ["incident", "monthly", "annual"],
     measures: ["count"], measureBinding: { kind: "fixed_topics", topics: ["murder", "crime", "unknown"] },
     components: "present", aggregation: "additive",
@@ -598,6 +610,7 @@ export const TABLE_SEMANTICS: TableSemantics[] = [
   }),
   T({
     source: "shr", table: "victims", role: "metric",
+    uniqueKeys: ["id"],
     rowKey: "agency", outputLevels: ALL_LOCAL, timeGrains: ["incident", "annual"],
     measures: ["count"], measureBinding: { kind: "fixed_topics", topics: ["murder", "crime", "unknown"] },
     components: "present", aggregation: "additive",

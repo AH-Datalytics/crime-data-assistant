@@ -164,7 +164,7 @@ console.log("\n3. the SHR shooting derivation is sealed from PRE-validation SQL"
 
   check("the planner's SQL is held before the contract validator runs", () => {
     const planned = source.indexOf("const plannedShootingSql = `");
-    const validate = source.indexOf("runContractValidation(plannedShootingSql)");
+    const validate = source.indexOf("runDeterministicPlanValidation(plannedShootingSql)");
     assert.ok(planned > 0, "the pre-validation SQL must be held in a variable");
     assert.ok(validate > planned, "validation must consume that variable");
   });
