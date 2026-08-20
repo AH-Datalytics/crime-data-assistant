@@ -255,24 +255,89 @@ function aliasMap(scope: string): Map<string, string> {
   return map;
 }
 
+/** Strip redundant wrapping parentheses: `((x))` -> `x`, but never `(a) AND (b)`. */
+function unwrapParens(text: string): string {
+  let out = text.trim();
+  while (out.startsWith("(") && out.endsWith(")")) {
+    let depth = 0;
+    let wraps = true;
+    for (let i = 0; i < out.length; i += 1) {
+      const char = out[i];
+      if (char === "'") {
+        const end = out.indexOf("'", i + 1);
+        i = end === -1 ? out.length : end;
+        continue;
+      }
+      if (char === "(") depth += 1;
+      else if (char === ")") {
+        depth -= 1;
+        if (depth === 0 && i < out.length - 1) { wraps = false; break; }
+      }
+    }
+    if (!wraps) break;
+    out = out.slice(1, -1).trim();
+  }
+  return out;
+}
+
+/** The top-level `AND` conjuncts of a filter region, in source order. */
+function splitConjuncts(region: string): string[] {
+  const parts: string[] = [];
+  let depth = 0;
+  let start = 0;
+  let i = 0;
+  while (i < region.length) {
+    const char = region[i];
+    if (char === "'") {
+      const end = region.indexOf("'", i + 1);
+      i = end === -1 ? region.length : end + 1;
+      continue;
+    }
+    if (char === "(") { depth += 1; i += 1; continue; }
+    if (char === ")") { depth = Math.max(0, depth - 1); i += 1; continue; }
+    if (depth === 0 && /^and\b/i.test(region.slice(i)) && (i === 0 || /\W/.test(region[i - 1]))) {
+      parts.push(region.slice(start, i));
+      i += 3;
+      start = i;
+      continue;
+    }
+    i += 1;
+  }
+  parts.push(region.slice(start));
+
+  const out: string[] = [];
+  for (const part of parts) {
+    const bare = unwrapParens(part);
+    if (bare.length === 0) continue;
+    // Unwrapping can expose a further AND chain: `(a AND b) AND c` has to yield a, b and c, or a
+    // correct query whose predicate sits inside a bracketed group -- `WHERE (i.homicide_type =
+    // 'Murder' AND v.state = 'CA')` -- would be refused for the shape of its brackets.
+    if (bare !== part.trim() && bare.length < part.trim().length) out.push(...splitConjuncts(bare));
+    else out.push(bare);
+  }
+  return out;
+}
+
 /**
- * The regions of a scope that genuinely restrict it, flattened to their top level.
+ * Every conjunct that genuinely restricts this scope: the top-level `AND` terms of each `WHERE`
+ * and inner-join `ON`.
  *
- * The single owner of two rules, so they cannot drift apart between the restriction check and the
- * join check:
- *   - an OUTER join's `ON` keeps the preserved side, so it restricts nothing;
- *   - a disjunction at this level can widen what an equality narrowed, and proving otherwise needs
- *     a parser. The `OR` test runs AFTER flattening: a parenthesised `OR` is ANDed into the region
- *     and widens nothing. Checking the raw text refused real queries -- logged #157/#159 filter
- *     `homicide_type = 'Murder'` and then AND `(i.agency = 'New York' OR i.agency = 'New York City')`.
+ * Conjuncts, not regions. A required equality counts only when it IS one of these terms -- text
+ * matching inside a region accepted `CASE WHEN v.incident_id = i.id THEN 1 ELSE 1 END = 1`, which
+ * is always true and relates nothing. Matching whole conjuncts also removes the need for a growing
+ * list of exclusions for `CASE`, string contexts and the like, and it subsumes two earlier rules:
+ *   - a disjunction cannot slip through, because `a OR b` is a single conjunct that no exact
+ *     pattern matches -- while logged #157/#159 still pass, their murder predicate being its own
+ *     conjunct and the place aliases a separate parenthesised one;
+ *   - a filter inside a subquery cannot either, since `year IN (SELECT ...)` is one conjunct.
+ *
+ * An OUTER join's `ON` is excluded outright: it keeps the preserved side, so it restricts nothing.
  */
-function restrictingRegions(scope: string, normalize?: (text: string) => string): string[] {
+function restrictingConjuncts(scope: string): string[] {
   const kept: string[] = [];
   for (const region of topLevelFilterRegionsDetailed(scope)) {
     if (region.outerJoinOn) continue;
-    const flat = flattenParens(normalize ? normalize(region.text) : region.text);
-    if (/\bor\b/i.test(flat)) continue;
-    kept.push(flat);
+    kept.push(...splitConjuncts(region.text));
   }
   return kept;
 }
@@ -287,16 +352,19 @@ function equalityProved(
   left: string, leftColumn: string, right: string, rightColumn: string,
 ): boolean {
   const ref = "([A-Za-z_]\\w*)\\s*\\.\\s*([A-Za-z_]\\w*)";
-  const pattern = new RegExp(`${ref}\\s*=\\s*${ref}`, "gi");
-  for (const region of restrictingRegions(scope)) {
-    for (const m of region.matchAll(pattern)) {
-      const a = { table: aliases.get(m[1].toLowerCase()), column: m[2].toLowerCase() };
-      const b = { table: aliases.get(m[3].toLowerCase()), column: m[4].toLowerCase() };
-      const matches = (x: typeof a, table: string, column: string) =>
-        x.table === table.toLowerCase() && x.column === column.toLowerCase();
-      if (matches(a, left, leftColumn) && matches(b, right, rightColumn)) return true;
-      if (matches(b, left, leftColumn) && matches(a, right, rightColumn)) return true;
-    }
+  // Anchored, for the same reason as the restriction: the conjunct must BE the equality. An
+  // equality buried in `CASE WHEN v.incident_id = i.id THEN 1 ELSE 1 END = 1` is always true and
+  // relates nothing, so every victim row survives, multiplied by the incidents.
+  const exact = new RegExp(`^${ref}\\s*=\\s*${ref}$`, "i");
+  for (const conjunct of restrictingConjuncts(scope)) {
+    const m = exact.exec(conjunct);
+    if (!m) continue;
+    const a = { table: aliases.get(m[1].toLowerCase()), column: m[2].toLowerCase() };
+    const b = { table: aliases.get(m[3].toLowerCase()), column: m[4].toLowerCase() };
+    const matches = (x: typeof a, table: string, column: string) =>
+      x.table === table.toLowerCase() && x.column === column.toLowerCase();
+    if (matches(a, left, leftColumn) && matches(b, right, rightColumn)) return true;
+    if (matches(b, left, leftColumn) && matches(a, right, rightColumn)) return true;
   }
   return false;
 }
@@ -332,26 +400,17 @@ function scopeRestricts(scope: string, column: string, value: string, qualifier?
   const col = `${qualifier ?? "(?:[A-Za-z_]\\w*\\s*\\.\\s*)?"}${escapeRegExp(column)}`;
 
   // NOTE on multi-value `IN`: there is deliberately no "defeating literal" scan here, unlike
-  // `sqlTargetsOri`. Under this design it could not change any outcome -- a broader condition can
-  // only enter through an `OR` (the region is refused) or through a separate region (an `AND`,
-  // which narrows) -- while it COULD cause false refusals, because it would read
-  // `CASE WHEN homicide_type = 'Manslaughter'` in a SELECT list as though it widened the filter.
-  // `IN ('Murder', 'Manslaughter')` is refused by construction: it matches no equality, and the
-  // single-value normalisation below does not apply to it.
+  // `sqlTargetsOri`. It is refused by construction -- `IN ('Murder', 'Manslaughter')` is a
+  // conjunct that no pattern below matches -- while such a scan COULD cause false refusals by
+  // reading `CASE WHEN homicide_type = 'Manslaughter'` in a SELECT list as a widened filter.
   const literal = escapeRegExp(value);
-  const equals = new RegExp(`\\b${col}\\s*=\\s*'${literal}'`, "i");
-  const reversed = new RegExp(`'${literal}'\\s*=\\s*${col}\\b`, "i");
-  const singletonIn = new RegExp(`\\b${col}\\s+IN\\s*\\(\\s*'${literal}'\\s*\\)`, "i");
-
-  // A single-value `IN` is an equality written differently. Normalise it before flattening so its
-  // parentheses are not mistaken for a subquery, keeping the qualifier so a caller checking WHICH
-  // table owns the column is not handed an unqualified rewrite.
-  const normalize = (text: string) => text.replace(singletonIn,
-    (m) => m.replace(/\s+IN\s*\(\s*/i, " = ").replace(/\s*\)$/, ""));
-  for (const flat of restrictingRegions(scope, normalize)) {
-    if (equals.test(flat) || reversed.test(flat)) return true;
-  }
-  return false;
+  // Anchored: the conjunct must BE the comparison, not contain it. A single-value `IN` is an
+  // equality written differently, so it is spelled out here rather than rewritten in the text.
+  const exact = new RegExp(
+    `^(?:${col}\\s*=\\s*'${literal}'`
+    + `|'${literal}'\\s*=\\s*${col}`
+    + `|${col}\\s+IN\\s*\\(\\s*'${literal}'\\s*\\))$`, "i");
+  return restrictingConjuncts(scope).some((conjunct) => exact.test(conjunct));
 }
 
 

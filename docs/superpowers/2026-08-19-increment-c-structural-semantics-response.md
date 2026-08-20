@@ -1,10 +1,58 @@
 # Increment C: proving the returned value, not the FROM clause
 
-Twelve correction passes. `89c331b` through `1c290b4` are unchanged; the latest is **`abf1e2b`**.
+Thirteen correction passes. `89c331b` through `169113f` are unchanged; the latest is **`PENDING`**.
 **Not pushed, not deployed. No data, migration, proof mode or production configuration changed.**
 Production remains release `20260818_223123` running `e4a9acb`; `origin/dev` is `83a0cbb`. Jeff's
 `scripts/cde-discrepancy-check.py`, `scripts/watch-rtci.log`, his untracked files and `stash@{0}`
 are untouched; only owned paths were staged by exact name.
+
+---
+
+## Round 13: a conjunct, not text inside a region
+
+Correct. The prover matched the required equality anywhere inside a filtering region, so a
+decorative `CASE WHEN v.incident_id = i.id THEN 1 ELSE 1 END = 1` read as the join. It is always
+true: it relates nothing, restricts nothing, and every victim row survives.
+
+The fix is the bounded one, and it is a **simplification**. Each filter region is split into its
+top-level `AND` conjuncts, and a requirement counts only when a conjunct **is** the comparison —
+anchored `^…$`, not a substring. Both the restriction and the join equality use it.
+
+**This removed two rules rather than adding exclusions**, which was the point:
+
+- the `OR` guard is gone — `a OR b` is a single conjunct that no anchored pattern matches, and
+  logged #157/#159 still pass because their murder predicate is its own conjunct while the place
+  aliases sit in a separate bracketed one;
+- the paren-flattening guard against subquery filters is gone — `year IN (SELECT … WHERE …)` is
+  one conjunct, and it does not match either.
+
+`CASE`, string contexts and whatever comes next need no special handling: none of them can be a
+whole conjunct that reads as `col = 'value'`.
+
+### Chasing the mutations found a false refusal
+
+Two guarantees came back uncovered, and the first was uncovered because it was **wrong**: a
+bracketed AND-group, `WHERE (i.homicide_type = 'Murder' AND i.year >= 2022) AND v.state = 'CA'`,
+was never re-split, so a correct query would have been refused for the shape of its brackets.
+Splitting is now recursive after unwrapping. A positive case locks it.
+
+The second is a **deliberate conservatism, now written down**: with two tables in scope the prover
+will not guess which owns an unqualified column, so `WHERE homicide_type = 'Murder'` is refused
+even though SQLite would resolve it to `incidents`. Zero occurrences across the logged queries and
+every prompt example qualifies the column, so the refusal costs nothing measurable — but it is a
+refusal, and the test says so rather than implying the query is malformed.
+
+### Round 13 verification
+
+| | |
+|---|---|
+| `test-structural-semantics.ts` | **66 passed, 0 failed** (4 CASE regressions + 2 more) |
+| structural enforcement / route placement | **15** and **20**, 0 failed |
+| SHR deterministic murder, layer-3 corpus (86 cases), query contract, proof contract, county live paths, route egress | all pass |
+| `tsc --noEmit`, lint | clean |
+| **`npm test`** | **exit 0**, 2,625 lines, all **17** tallies `0 failed` |
+| **mutations** | **15 of 15 caught**, no skips, no ambiguous anchors |
+| logged-query impact | **7.3% flagged, unchanged**; the conditional-licence rule fires on **0** |
 
 ---
 

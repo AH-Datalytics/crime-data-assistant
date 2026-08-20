@@ -656,6 +656,30 @@ check("mentioning the murder predicate is not applying it", () => {
     ["across a join on the wrong column",
       "SELECT COUNT(v.id) AS murders FROM victims v JOIN incidents i ON v.incident_id = i.year "
       + "WHERE i.homicide_type = 'Murder' AND v.state = 'CA'"],
+    // Decorative CASE expressions. Each is always true, so it relates and restricts nothing while
+    // reading, as text, exactly like the real thing.
+    ["with the join equality buried in an always-true CASE",
+      "SELECT COUNT(v.id) AS murders FROM victims v JOIN incidents i "
+      + "ON CASE WHEN v.incident_id = i.id THEN 1 ELSE 1 END = 1 "
+      + "WHERE i.homicide_type = 'Murder' AND v.state = 'CA'"],
+    ["with the murder predicate buried in an always-true CASE",
+      "SELECT COUNT(v.id) AS murders FROM victims v JOIN incidents i ON v.incident_id = i.id "
+      + "WHERE CASE WHEN i.homicide_type = 'Murder' THEN 1 ELSE 1 END = 1 AND v.state = 'CA'"],
+    ["with both buried in always-true CASEs",
+      "SELECT COUNT(v.id) AS murders FROM victims v JOIN incidents i "
+      + "ON CASE WHEN v.incident_id = i.id THEN 1 ELSE 1 END = 1 "
+      + "WHERE CASE WHEN i.homicide_type = 'Murder' THEN 1 ELSE 1 END = 1 AND v.state = 'CA'"],
+    ["with the CTE join equality buried in an always-true CASE",
+      "WITH m AS (SELECT id FROM incidents WHERE homicide_type = 'Murder') "
+      + "SELECT COUNT(v.id) AS murders FROM victims v JOIN m "
+      + "ON CASE WHEN m.id = v.incident_id THEN 1 ELSE 1 END = 1 WHERE v.state = 'CA'"],
+    // Deliberately conservative: with two tables in scope the prover does not know which one owns
+    // an unqualified column, and it will not assume. SQLite would resolve this to `incidents` and
+    // the query is arguably correct, so this is a known refusal -- it costs nothing measurable
+    // (zero occurrences across the logged queries, and every prompt example qualifies the column).
+    ["with the predicate's column left unqualified in a two-table scope",
+      "SELECT COUNT(v.id) AS murders FROM victims v JOIN incidents i ON v.incident_id = i.id "
+      + "WHERE homicide_type = 'Murder' AND v.state = 'CA'"],
     ["broadened by a multi-value IN",
       "SELECT COUNT(v.id) AS murders FROM incidents i JOIN victims v ON v.incident_id = i.id "
       + "WHERE i.homicide_type IN ('Murder', 'Manslaughter') AND v.state = 'CA'"],
@@ -689,6 +713,11 @@ check("the murder predicate applied to the counted rows is accepted", () => {
       + "FROM incidents i JOIN victims v ON v.incident_id = i.id "
       + "WHERE i.state = 'CA' AND i.homicide_type = 'Murder' GROUP BY i.year) "
       + "SELECT year, murders FROM counts ORDER BY year"],
+    // A bracketed AND-group has to be split open, or a correct query is refused for the shape of
+    // its brackets rather than its meaning.
+    ["inside a bracketed AND group",
+      "SELECT COUNT(v.id) AS murders FROM victims v JOIN incidents i ON v.incident_id = i.id "
+      + "WHERE (i.homicide_type = 'Murder' AND i.year >= 2022) AND v.state = 'CA'"],
     // Logged queries #157/#159: a bracketed alias list is ANDed onto the murder filter. The OR is
     // parenthesised, so it widens nothing, and refusing this rejected two correct answers.
     ["alongside a parenthesised OR over place aliases",
