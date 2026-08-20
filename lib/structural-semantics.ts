@@ -384,34 +384,41 @@ export function evaluateStructuralSemantics(opts: {
   // satisfied WITHIN ONE expression. Pooling columns across unrelated series meant
   // `SELECT murder, rape, robbery, assault` -- four separate offense series -- counted as a violent
   // crime total, which it is not. A multi-offense request may still use one expression per offense.
+  // Derived with the SAME rule the item loop uses: column lineage where there is any, otherwise the
+  // statement's base tables. Populating this from column references alone meant `COUNT(*)` -- which
+  // has no refs -- contributed no table at all, so a bare row count escaped every check below.
   const tablesInPlay = new Set<string>();
   for (const item of factual) {
-    for (const ref of item.refs) if (ref.table) tablesInPlay.add(ref.table);
+    const tables = item.refs.length > 0 ? tablesOf(item.refs, opts.source) : lineage.baseTables;
+    for (const table of tables) if (table) tablesInPlay.add(table);
   }
+
+  const resolvedUnit = resolveUnit(scope.unit);
 
   for (const table of tablesInPlay) {
     const entry = tableSemantics(opts.source, table);
-    if (!entry || entry.role !== "metric" || entry.measureBinding.kind !== "topic_columns") continue;
+    if (!entry || entry.role !== "metric") continue;
+
+    // A unit the catalog does not model cannot be satisfied by another unit's columns, and that is
+    // true of EVERY factual source -- not only the ones whose offenses happen to be expressed as
+    // columns. Checking it after the `topic_columns` branch left Current Trends, SHR and NIBRS
+    // answering "what share" with a raw count.
+    if (resolvedUnit.kind === "unmodeled") {
+      add("structural-measure-unit-unmodeled", "retry",
+        `The question asks for a ${resolvedUnit.unit}, and \`${table}\` does not model one -- a ` +
+        "share needs a numerator and a denominator, and neither is established here. Return the " +
+        "underlying counts, or say plainly that this cannot be computed.", null);
+      continue;
+    }
+    if (resolvedUnit.kind === "unspecified") continue;
+
+    // Topic/unit completeness is specific to tables that express offenses as columns.
+    if (entry.measureBinding.kind !== "topic_columns") continue;
 
     const everyTopicColumn = allTopicColumns(entry);
     const usesAMeasure = factual.some((item) =>
       item.refs.some((ref) => ref.table === table && everyTopicColumn.has(ref.column)));
     if (!usesAMeasure) continue;
-
-    // A unit the catalog does not model cannot be satisfied by another unit's columns. Until a
-    // share's numerator and denominator are represented, the honest outcome is a rewrite and then a
-    // decline -- never a count standing in for a proportion.
-    const resolvedUnit = resolveUnit(scope.unit);
-    if (resolvedUnit.kind === "unmodeled") {
-      if (requestedTopics.some((topic) => topicIsKnown(entry, topic))) {
-        add("structural-measure-unit-unmodeled", "retry",
-          `The question asks for a ${resolvedUnit.unit}, and \`${table}\` does not model one -- a ` +
-          "share needs a numerator and a denominator, and neither is established here. Return the " +
-          "underlying counts, or say plainly that this cannot be computed.", null);
-      }
-      continue;
-    }
-    if (resolvedUnit.kind === "unspecified") continue;
 
     for (const topic of requestedTopics) {
       if (!topicIsKnown(entry, topic)) continue;

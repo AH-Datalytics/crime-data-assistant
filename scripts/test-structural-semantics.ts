@@ -465,6 +465,46 @@ check("a multi-offense request may still use one expression per offense", () => 
 
 console.log("\n-- unmodeled units fail closed (from the e08c761 review) --");
 
+check("a raw count cannot answer a share in ANY source", () => {
+  // The rule first landed only on `topic_columns` tables, so Current Trends, SHR and NIBRS kept
+  // answering "what share" with a bare total. `COUNT(*)` made it worse: with no column references
+  // it contributed no table at all, so the check never even considered it.
+  const question = "What share of Chicago murders occurred in 2020?";
+  const perSource: [QueryContractSource, string][] = [
+    ["current", "SELECT SUM(count) AS share FROM agency_monthly WHERE agency = 'Chicago' AND state = 'IL' AND offense = 'Murder' AND year = 2020"],
+    ["shr", "SELECT COUNT(*) AS share FROM incidents WHERE state = 'IL' AND year = 2020"],
+    ["nibrs", "SELECT SUM(victim_count) AS share FROM summary_victim_city_monthly WHERE state = 'IL' AND year = 2020"],
+    ["hate_crime", "SELECT SUM(incident_count) AS share FROM summary_hate_crime_state WHERE state = 'TX'"],
+    ["historical", "SELECT hac.murder AS share FROM historical_agency_crime hac WHERE hac.ori = 'IL0316000'"],
+  ];
+  for (const [source, sql] of perSource) {
+    assert.ok(rules(question, source, sql).includes("structural-measure-unit-unmodeled"),
+      `${source} must not answer a share with a raw count`);
+  }
+});
+
+check("a bare COUNT(*) still resolves to its statement's base tables", () => {
+  // The completeness pass derived its tables from column references only, so `COUNT(*)` was
+  // invisible to it. It now uses the same rule as the per-item loop.
+  const sql = "SELECT COUNT(*) AS share FROM incidents WHERE state = 'IL' AND year = 2020";
+  assert.ok(rules("What share of Chicago murders occurred in 2020?", "shr", sql).length > 0,
+    "a row count with no column references must still be attributed to a source");
+});
+
+check("modeled units are unaffected in every source", () => {
+  const cases: [QueryContractSource, string, string][] = [
+    ["current", "monthly murders in Chicago in 2023",
+      "SELECT am.year, am.month, SUM(am.count) AS murders FROM agency_monthly am WHERE am.agency = 'Chicago' AND am.state = 'IL' AND am.offense = 'Murder' AND am.year = 2023 GROUP BY am.year, am.month"],
+    ["shr", "murders in California by year",
+      "SELECT i.year, COUNT(*) AS murders FROM incidents i WHERE i.state = 'CA' GROUP BY i.year"],
+    ["nibrs", "murders in Chicago in 2023",
+      "SELECT year, SUM(victim_count) FROM summary_victim_city_monthly WHERE state = 'IL' AND year = 2023 GROUP BY year"],
+  ];
+  for (const [source, question, sql] of cases) {
+    assert.deepStrictEqual(rules(question, source, sql), [], `${source} count question`);
+  }
+});
+
 check("a share request is not satisfied by a raw count", () => {
   // `ratio` used to fold into `count`, so a bare murder total answered "what share".
   const rawCount = "SELECT hac.murder AS share FROM historical_agency_crime hac "
