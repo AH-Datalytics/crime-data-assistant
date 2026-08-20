@@ -545,6 +545,63 @@ check("the modeled units are unaffected", () => {
   }
 });
 
+console.log("\n-- a row count is a measure only where one row IS the occurrence --");
+
+check("a number with no column behind it cannot be an offense count", () => {
+  // historical_agency_crime has one row per agency-YEAR, so none of these returns a murder count.
+  const q = "murders in Chicago by year since 2000";
+  for (const [name, sql] of [
+    ["COUNT(*)", "SELECT COUNT(*) AS murders FROM historical_agency_crime WHERE ori = 'IL0316000'"],
+    ["a constant", "SELECT 5 AS murders FROM historical_agency_crime WHERE ori = 'IL0316000'"],
+    ["SUM(1)", "SELECT SUM(1) AS murders FROM historical_agency_crime WHERE ori = 'IL0316000'"],
+  ] as const) {
+    const found = rules(q, "historical", sql);
+    assert.ok(found.includes("structural-row-count-not-a-measure"),
+      `${name} must not pass as a murder count`);
+    // And it must fail COMPLETENESS too: none of these selects the required measure column, so the
+    // topic is not satisfied by any expression. The two rules are separate guarantees.
+    assert.ok(found.includes("structural-measure-incomplete"),
+      `${name} must also fail completeness: no expression selects the murder column`);
+  }
+});
+
+check("counting rows IS the measure where the catalog says so", () => {
+  // SHR incidents is one homicide per row; hate_crime_incidents is one incident per row.
+  assert.deepStrictEqual(
+    rules("murders in California by year", "shr",
+      "SELECT i.year, COUNT(*) AS murders FROM incidents i WHERE i.state = 'CA' GROUP BY i.year"),
+    [], "SHR incident rows are homicides");
+  assert.deepStrictEqual(
+    rules("hate crimes in Texas by year", "hate_crime",
+      "SELECT h.year, COUNT(*) AS incidents FROM hate_crime_incidents h WHERE h.state = 'TX' GROUP BY h.year"),
+    [], "hate crime incident rows are incidents");
+});
+
+check("a pre-aggregated table's rows are buckets, not occurrences", () => {
+  // agency_monthly is one agency-month-offense bucket per row with a `count` column.
+  const q = "monthly murders in Chicago in 2023";
+  const bucketCount = "SELECT am.year, COUNT(*) AS murders FROM agency_monthly am "
+    + "WHERE am.agency = 'Chicago' AND am.state = 'IL' GROUP BY am.year";
+  const realCount = "SELECT am.year, am.month, SUM(am.count) AS murders FROM agency_monthly am "
+    + "WHERE am.agency = 'Chicago' AND am.state = 'IL' AND am.offense = 'Murder' AND am.year = 2023 "
+    + "GROUP BY am.year, am.month";
+  assert.ok(rules(q, "current", bucketCount).includes("structural-row-count-not-a-measure"),
+    "counting buckets is not counting murders");
+  assert.deepStrictEqual(rules(q, "current", realCount), [], "summing the count column is");
+});
+
+check("only tables whose rows are occurrences declare eventRow", () => {
+  for (const [source, table] of [["shr", "incidents"], ["shr", "victims"],
+    ["hate_crime", "hate_crime_incidents"]] as const) {
+    assert.ok(tableSemantics(source, table)?.eventRow, `${source}.${table} should declare eventRow`);
+  }
+  for (const [source, table] of [["historical", "historical_agency_crime"],
+    ["current", "agency_monthly"], ["nibrs", "summary_victim_city_monthly"]] as const) {
+    assert.ok(!tableSemantics(source, table)?.eventRow,
+      `${source}.${table} is pre-aggregated and must NOT declare eventRow`);
+  }
+});
+
 console.log("\n-- catalog --");
 
 check("every catalogued table separates physical row key from output levels", () => {

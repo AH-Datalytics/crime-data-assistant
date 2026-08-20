@@ -138,6 +138,10 @@ function isFactualSeries(item: SelectItem): boolean {
   // A wildcard returns whatever the table holds. It carries measurements by definition, and none of
   // them can be checked, so it must be treated as factual and then fail closed below.
   if (item.hasWildcard) return true;
+  // `COUNT(*)`, `SUM(1)` and bare constants all claim to be a measure while referencing nothing.
+  // Only `COUNT(*)` used to reach this point; `SUM(1) AS murders` was classified as carrying no
+  // measurement at all and skipped.
+  if (item.numericWithoutColumns) return true;
   if (item.countsRows) return true;
   if (real.length === 0) return false;
   return real.some((ref) => !DIMENSION_COLUMNS.has(ref.column));
@@ -287,6 +291,24 @@ export function evaluateStructuralSemantics(opts: {
     // legitimately write SUM(CASE WHEN ha.agency = 'Baltimore' THEN hac.murder END). It is only a
     // defect when the measure has NO metric source at all.
     const hasMetricSource = entries.some((entry) => entry.role === "metric");
+    // A number with no column lineage can only be checked against what one ROW means. Being a
+    // metric table is not enough: `historical_agency_crime` is one agency-year per row, so
+    // `COUNT(*) AS murders` counts agency-years. SHR `incidents` is one homicide per row, so there
+    // it is a real murder count -- and the catalog is what distinguishes them.
+    if (item.numericWithoutColumns) {
+      const metricEntries = entries.filter((entry) => entry.role === "metric");
+      const licensed = metricEntries.some((entry) =>
+        (entry.eventRow?.topics ?? []).some((topic) =>
+          requestedTopics.includes(topic) || requestedTopics.includes("unknown")));
+      if (metricEntries.length > 0 && !licensed) {
+        add("structural-row-count-not-a-measure", "retry",
+          `"${label}" returns a number with no column behind it, and one row of ` +
+          `${metricEntries.map((e) => `\`${e.table}\``).join(", ")} is not one ` +
+          `${requestedTopics.join(" or ")}. Select the column that holds the measure.`, label);
+        continue;
+      }
+    }
+
     for (const entry of entries) {
       if (!hasMetricSource &&
           (entry.role === "identity" || entry.role === "crosswalk" || entry.role === "support")) {
@@ -415,10 +437,14 @@ export function evaluateStructuralSemantics(opts: {
     // Topic/unit completeness is specific to tables that express offenses as columns.
     if (entry.measureBinding.kind !== "topic_columns") continue;
 
-    const everyTopicColumn = allTopicColumns(entry);
-    const usesAMeasure = factual.some((item) =>
-      item.refs.some((ref) => ref.table === table && everyTopicColumn.has(ref.column)));
-    if (!usesAMeasure) continue;
+    // Run whenever a factual series is attributed to this table -- not only when it happens to
+    // select a topic column. Gating on "a topic column was selected" meant `COUNT(*) AS murders`
+    // and `SELECT 5 AS murders` exited before completeness could object to them.
+    const attributed = factual.some((item) => {
+      const tables = item.refs.length > 0 ? tablesOf(item.refs, opts.source) : lineage.baseTables;
+      return tables.includes(table);
+    });
+    if (!attributed) continue;
 
     for (const topic of requestedTopics) {
       if (!topicIsKnown(entry, topic)) continue;
@@ -430,6 +456,10 @@ export function evaluateStructuralSemantics(opts: {
       }
 
       const satisfiedBySome = factual.some((item) => {
+        // A row count satisfies the topic only where one row IS one occurrence of it.
+        if (item.numericWithoutColumns) {
+          return (entry.eventRow?.topics ?? []).includes(topic);
+        }
         const columns = new Set(
           item.refs.filter((ref) => ref.table === table).map((ref) => ref.column));
         if (requirement.direct && requirementSatisfied(requirement.direct, columns)) return true;

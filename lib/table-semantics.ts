@@ -160,6 +160,13 @@ export type TableSemantics = {
   aggregation: "additive" | "not-aggregatable";
   /** For anything usable as a rate denominator: the levels its population is valid for. */
   denominatorLevels?: EntityLevel[];
+  /**
+   * Set only where ONE ROW IS ONE OCCURRENCE of these topics, which is what makes `COUNT(*)` a
+   * valid measure. SHR `incidents` is one homicide per row, so counting rows counts homicides.
+   * `historical_agency_crime` is one agency-YEAR per row, so counting rows counts agency-years --
+   * and a bare `COUNT(*) AS murders` there is simply wrong. Being a metric table is not enough.
+   */
+  eventRow?: { topics: string[] };
   note?: string;
 };
 
@@ -458,6 +465,8 @@ export const TABLE_SEMANTICS: TableSemantics[] = [
     rowKey: "agency", outputLevels: ALL_LOCAL, timeGrains: ["incident", "annual"],
     measures: ["count"], measureBinding: { kind: "fixed_topics", topics: ["domestic_violence"] },
     components: "present", aggregation: "additive",
+    // One row per victim-offense, confirmed from the live schema (incident_num, victim_sequence).
+    eventRow: { topics: ["domestic_violence"] },
   }),
   // The ATTACHed rollup database (`NIBRS_ROLLUP_DB_PATH`), referenced in SQL as `rollup.<table>`.
   // Columns confirmed against the live schema: national tables carry `state` but are pre-aggregated
@@ -539,6 +548,7 @@ export const TABLE_SEMANTICS: TableSemantics[] = [
     rowKey: "agency", outputLevels: ALL_LOCAL, timeGrains: ["incident", "monthly", "annual"],
     measures: ["count"], measureBinding: { kind: "fixed_topics", topics: ["murder", "crime", "unknown"] },
     components: "present", aggregation: "additive",
+    eventRow: { topics: ["murder", "crime", "unknown"] },
     denominatorLevels: ["agency", "city"],
     note:
       "Homicide incidents. Its `population` column is the reporting AGENCY's population, repeated " +
@@ -549,6 +559,7 @@ export const TABLE_SEMANTICS: TableSemantics[] = [
     rowKey: "agency", outputLevels: ALL_LOCAL, timeGrains: ["incident", "annual"],
     measures: ["count"], measureBinding: { kind: "fixed_topics", topics: ["murder", "crime", "unknown"] },
     components: "present", aggregation: "additive",
+    eventRow: { topics: ["murder", "crime", "unknown"] },
   }),
   T({
     source: "shr", table: "state_population", role: "population",
@@ -583,6 +594,7 @@ export const TABLE_SEMANTICS: TableSemantics[] = [
     rowKey: "agency", outputLevels: ALL_LOCAL, timeGrains: ["incident", "annual"], measures: ["count"],
     measureBinding: { kind: "fixed_topics", topics: ["hate_crime", "crime", "unknown"] },
     components: "present", aggregation: "additive", denominatorLevels: ["agency", "city"],
+    eventRow: { topics: ["hate_crime", "crime", "unknown"] },
   }),
   T({
     source: "hate_crime", table: "summary_hate_crime_state", role: "metric",

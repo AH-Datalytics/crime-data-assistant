@@ -52,6 +52,13 @@ export type SelectItem = {
   /** COUNT(*) and friends contribute a row count rather than a named column. */
   countsRows: boolean;
   /**
+   * An answer-bearing number with no column lineage at all: `COUNT(*)`, `SUM(1)`, a bare constant.
+   * It claims to be a measure while referencing nothing, so it can only be checked against what the
+   * catalog says one ROW of the table means. Previously a non-COUNT case here was classified as
+   * carrying no measurement and skipped entirely.
+   */
+  numericWithoutColumns: boolean;
+  /**
    * `SELECT *` or `SELECT alias.*`. The columns are whatever the table happens to hold, so nothing
    * here can be checked against the request -- and an unchecked projection previously produced no
    * column references at all, was classified as carrying no measurement, and passed.
@@ -505,7 +512,15 @@ export function analyzeSql(sql: string): SqlLineage {
     const hasWildcard = withoutLeadingQuantifier === "*" ||
       /(?:"[^"]+"|\[[^\]]+\]|`[^`]+`|\b[A-Za-z_]\w*)\s*\.\s*\*/.test(body);
 
-    items.push({ alias, raw: raw.trim(), refs, denominatorRefs, countsRows, hasWildcard, resolved });
+    const aggregateOrConstant = countsRows
+      || /\b(?:SUM|AVG|MIN|MAX|TOTAL|COUNT)\s*\(/i.test(body)
+      || /^\s*[-+]?[0-9][0-9_.]*\s*$/.test(body);
+    const numericWithoutColumns = refs.length === 0 && aggregateOrConstant;
+
+    items.push({
+      alias, raw: raw.trim(), refs, denominatorRefs, countsRows, hasWildcard,
+      numericWithoutColumns, resolved,
+    });
   }
   }
 
