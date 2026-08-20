@@ -268,9 +268,10 @@ async function main() {
   {
     const db = new Database(paths.hc);
     db.pragma("journal_mode = WAL");
-    // `ori` is required because a guardrail rewrites an aliased COUNT(*) into
-    // COUNT(DISTINCT ori); without it, schema validation failed and the route went back
-    // to the model for a recovery retry -- an extra call unrelated to proof.
+    // `ori` and `incident_number` are required by the default incident-count pattern, and by the
+    // guardrail that rewrites an aliased COUNT(*) into COUNT(DISTINCT ori); without them, schema
+    // validation failed and the route went back to the model for a recovery retry -- an extra call
+    // unrelated to proof.
     db.exec(`CREATE TABLE hate_crime_incidents (
       incident_number TEXT, ori TEXT, year INTEGER, state_abbr TEXT, bias_motivation TEXT, offense_name TEXT, victim_count INTEGER)`);
     const ins = db.prepare("INSERT INTO hate_crime_incidents VALUES (?,?,?,?,?,?,?)");
@@ -343,7 +344,10 @@ async function main() {
       question: "how many anti-Black hate crime incidents in Texas each year from 2019 to 2022",
       coldCalls: ["translate"],
       reply: {
-        sql: "SELECT year, COUNT(*) AS incidents FROM hate_crime_incidents WHERE state_abbr = 'TX' AND bias_motivation = 'Anti-Black' AND year BETWEEN 2019 AND 2022 GROUP BY year ORDER BY year",
+        // hc-claude.ts:23 defines the DEFAULT hate-crime measure as
+        // COUNT(DISTINCT incident_number || ori || year); a bare COUNT(*) here is `offense_count`.
+        // This fixture is about cache equivalence, so it uses the product's own default pattern.
+        sql: "SELECT year, COUNT(DISTINCT incident_number || '|' || ori || '|' || year) AS incidents FROM hate_crime_incidents WHERE state_abbr = 'TX' AND bias_motivation = 'Anti-Black' AND year BETWEEN 2019 AND 2022 GROUP BY year ORDER BY year",
         explanation: "Anti-Black hate crime incidents in Texas by year.",
         title: "Anti-Black hate crimes in Texas",
         chartHint: "line",

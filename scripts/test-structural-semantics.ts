@@ -346,8 +346,8 @@ check("a recursive series generator is not mistaken for a laundering compound", 
   // The SHR deterministic murder plan builds a month series this way. It reads no metric table and
   // refusing it broke a real, correct plan.
   const sql = "WITH RECURSIVE months(month) AS (SELECT 1 UNION ALL SELECT month + 1 FROM months WHERE month < 12) "
-    + "SELECT i.year, COUNT(*) AS murders FROM incidents i CROSS JOIN months m WHERE i.state = 'CA' GROUP BY i.year";
-  assert.deepStrictEqual(rules("murders in California by year", "shr", sql), []);
+    + "SELECT v.year, COUNT(*) AS murder_victims FROM victims v CROSS JOIN months m WHERE v.state = 'CA' GROUP BY v.year";
+  assert.deepStrictEqual(rules("murder victims in California by year", "shr", sql), []);
 });
 
 check("a wildcard is recognised after DISTINCT and when the alias is quoted", () => {
@@ -495,8 +495,8 @@ check("modeled units are unaffected in every source", () => {
   const cases: [QueryContractSource, string, string][] = [
     ["current", "monthly murders in Chicago in 2023",
       "SELECT am.year, am.month, SUM(am.count) AS murders FROM agency_monthly am WHERE am.agency = 'Chicago' AND am.state = 'IL' AND am.offense = 'Murder' AND am.year = 2023 GROUP BY am.year, am.month"],
-    ["shr", "murders in California by year",
-      "SELECT i.year, COUNT(*) AS murders FROM incidents i WHERE i.state = 'CA' GROUP BY i.year"],
+    ["shr", "murder victims in California by year",
+      "SELECT v.year, COUNT(*) AS murder_victims FROM victims v WHERE v.state = 'CA' GROUP BY v.year"],
     ["nibrs", "murders in Chicago in 2023",
       "SELECT year, SUM(victim_count) FROM summary_victim_city_monthly WHERE state = 'IL' AND year = 2023 GROUP BY year"],
   ];
@@ -565,16 +565,50 @@ check("a number with no column behind it cannot be an offense count", () => {
   }
 });
 
-check("counting rows IS the measure where the catalog says so", () => {
-  // SHR incidents is one homicide per row; hate_crime_incidents is one incident per row.
+check("counting rows IS the measure only where the PRODUCT says so", () => {
+  // Only SHR `victims` survives this test. One row per victim, and the SHR default measure is
+  // "murder victim counts" (shr-claude.ts:17). Three other tables looked occurrence-shaped and were
+  // wrong, each contradicting an existing metric definition -- see the negatives below.
   assert.deepStrictEqual(
-    rules("murders in California by year", "shr",
-      "SELECT i.year, COUNT(*) AS murders FROM incidents i WHERE i.state = 'CA' GROUP BY i.year"),
-    [], "SHR incident rows are homicides");
+    rules("murder victims in California by year", "shr",
+      "SELECT v.year, COUNT(*) AS murder_victims FROM victims v WHERE v.state = 'CA' GROUP BY v.year"),
+    [], "one victim row is one murder victim");
+});
+
+check("a row count is refused where the product defines the measure differently", () => {
+  // Each of these contradicts an established definition in the application itself.
+  const negatives: [QueryContractSource, string, string, string][] = [
+    ["shr", "murders in California by year",
+      "SELECT i.year, COUNT(*) AS murders FROM incidents i WHERE i.state = 'CA' GROUP BY i.year",
+      "one incident can have many victims; the SHR measure is victims"],
+    ["hate_crime", "hate crimes in Texas by year",
+      "SELECT h.year, COUNT(*) AS incidents FROM hate_crime_incidents h WHERE h.state = 'TX' GROUP BY h.year",
+      "hc-claude.ts:23 calls COUNT(*) here `offense_count`, not the default incident count"],
+    ["nibrs", "domestic violence incidents in Texas in 2025",
+      "SELECT state, COUNT(*) AS dv_incidents FROM summary_domestic_violence WHERE data_year = 2025 GROUP BY state",
+      "the product counts DISTINCT incidents, not victim-offense rows"],
+  ];
+  for (const [source, question, sql, why] of negatives) {
+    assert.ok(rules(question, source, sql).includes("structural-row-count-not-a-measure"), why);
+  }
+});
+
+check("the established distinct-key queries still pass", () => {
+  assert.deepStrictEqual(
+    rules("domestic violence incidents in Texas in 2025", "nibrs",
+      "SELECT state, COUNT(DISTINCT ori || ':' || data_year || ':' || incident_num) AS dv_incidents "
+      + "FROM summary_domestic_violence WHERE data_year = 2025 GROUP BY state"),
+    [], "the guardrail's own DV pattern must not be flagged");
   assert.deepStrictEqual(
     rules("hate crimes in Texas by year", "hate_crime",
-      "SELECT h.year, COUNT(*) AS incidents FROM hate_crime_incidents h WHERE h.state = 'TX' GROUP BY h.year"),
-    [], "hate crime incident rows are incidents");
+      "SELECT year, COUNT(DISTINCT incident_number || '|' || ori || '|' || year) AS incidents "
+      + "FROM hate_crime_incidents WHERE state = 'TX' GROUP BY year"),
+    [], "the prompt's own default hate-crime pattern must not be flagged");
+  assert.deepStrictEqual(
+    rules("murders in California by year", "shr",
+      "SELECT i.year, COUNT(v.id) AS murder_victims FROM incidents i JOIN victims v ON v.incident_id = i.id "
+      + "WHERE i.state = 'CA' AND i.homicide_type = 'Murder' GROUP BY i.year"),
+    [], "the deterministic murder plan's own measure must not be flagged");
 });
 
 check("a pre-aggregated table's rows are buckets, not occurrences", () => {
@@ -590,15 +624,19 @@ check("a pre-aggregated table's rows are buckets, not occurrences", () => {
   assert.deepStrictEqual(rules(q, "current", realCount), [], "summing the count column is");
 });
 
-check("only tables whose rows are occurrences declare eventRow", () => {
-  for (const [source, table] of [["shr", "incidents"], ["shr", "victims"],
-    ["hate_crime", "hate_crime_incidents"]] as const) {
-    assert.ok(tableSemantics(source, table)?.eventRow, `${source}.${table} should declare eventRow`);
-  }
-  for (const [source, table] of [["historical", "historical_agency_crime"],
-    ["current", "agency_monthly"], ["nibrs", "summary_victim_city_monthly"]] as const) {
-    assert.ok(!tableSemantics(source, table)?.eventRow,
-      `${source}.${table} is pre-aggregated and must NOT declare eventRow`);
+check("eventRow is declared only where the PRODUCT's measure is one row", () => {
+  // Exactly one table passes. Three others were declared and removed after review, each because it
+  // contradicted a definition already in the application.
+  assert.ok(tableSemantics("shr", "victims")?.eventRow, "shr.victims is one victim per row");
+  for (const [source, table, why] of [
+    ["shr", "incidents", "one incident, many victims; the measure is victims"],
+    ["hate_crime", "hate_crime_incidents", "COUNT(*) here is offense_count, not the default"],
+    ["nibrs", "summary_domestic_violence", "the product counts DISTINCT incidents"],
+    ["historical", "historical_agency_crime", "one agency-year per row"],
+    ["current", "agency_monthly", "one agency-month-offense bucket per row"],
+    ["nibrs", "summary_victim_city_monthly", "pre-aggregated"],
+  ] as const) {
+    assert.ok(!tableSemantics(source, table)?.eventRow, `${source}.${table}: ${why}`);
   }
 });
 

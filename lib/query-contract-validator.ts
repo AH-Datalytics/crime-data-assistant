@@ -730,7 +730,7 @@ export function validateQueryContractSql(opts: {
     contract,
     sql,
   })) {
-    warnings.push(`structural-${finding.ruleId}`);
+    warnings.push(finding.ruleId);   // ruleIds already begin with `structural-`
     if (finding.severity === "block") {
       blockReasons.push(finding.message);
     } else {

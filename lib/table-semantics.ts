@@ -161,10 +161,18 @@ export type TableSemantics = {
   /** For anything usable as a rate denominator: the levels its population is valid for. */
   denominatorLevels?: EntityLevel[];
   /**
-   * Set only where ONE ROW IS ONE OCCURRENCE of these topics, which is what makes `COUNT(*)` a
-   * valid measure. SHR `incidents` is one homicide per row, so counting rows counts homicides.
-   * `historical_agency_crime` is one agency-YEAR per row, so counting rows counts agency-years --
-   * and a bare `COUNT(*) AS murders` there is simply wrong. Being a metric table is not enough.
+   * Set only where ONE PHYSICAL ROW EQUALS ONE USER-FACING OCCURRENCE of these topics -- which is
+   * what makes a bare `COUNT(*)` a valid measure.
+   *
+   * "The row describes something occurrence-related" is NOT enough, and reading it that way put this
+   * field on three tables that contradict the application's own metric definitions:
+   *   summary_domestic_violence  one victim-offense per row; the product counts DISTINCT incidents
+   *                              (query-contract.ts:165, guardrails.ts:3198)
+   *   hate_crime_incidents       COUNT(*) is explicitly `offense_count`; the DEFAULT is
+   *                              COUNT(DISTINCT incident_number || ori || year) (hc-claude.ts:23)
+   *   shr.incidents              one homicide INCIDENT per row, but the user-facing SHR measure is
+   *                              murder VICTIMS (shr-claude.ts:17), and one incident can have many
+   * The test is the product's definition of the measure, not the table's subject matter.
    */
   eventRow?: { topics: string[] };
   note?: string;
@@ -465,8 +473,9 @@ export const TABLE_SEMANTICS: TableSemantics[] = [
     rowKey: "agency", outputLevels: ALL_LOCAL, timeGrains: ["incident", "annual"],
     measures: ["count"], measureBinding: { kind: "fixed_topics", topics: ["domestic_violence"] },
     components: "present", aggregation: "additive",
-    // One row per victim-offense, confirmed from the live schema (incident_num, victim_sequence).
-    eventRow: { topics: ["domestic_violence"] },
+    // One row per victim-offense in the live schema (incident_num, victim_sequence), but the
+    // product counts DISTINCT incidents -- COUNT(DISTINCT ori || data_year || incident_num).
+    // No eventRow.
   }),
   // The ATTACHed rollup database (`NIBRS_ROLLUP_DB_PATH`), referenced in SQL as `rollup.<table>`.
   // Columns confirmed against the live schema: national tables carry `state` but are pre-aggregated
@@ -548,17 +557,22 @@ export const TABLE_SEMANTICS: TableSemantics[] = [
     rowKey: "agency", outputLevels: ALL_LOCAL, timeGrains: ["incident", "monthly", "annual"],
     measures: ["count"], measureBinding: { kind: "fixed_topics", topics: ["murder", "crime", "unknown"] },
     components: "present", aggregation: "additive",
-    eventRow: { topics: ["murder", "crime", "unknown"] },
     denominatorLevels: ["agency", "city"],
     note:
-      "Homicide incidents. Its `population` column is the reporting AGENCY's population, repeated " +
-      "per row, so it is never a statewide or national denominator -- state_population is.",
+      "Homicide incidents, ONE PER ROW -- so counting rows counts incidents, not murders: the " +
+      "user-facing SHR measure is murder VICTIMS and `situation` records multi-victim incidents " +
+      "explicitly. No eventRow. Its `population` column is the reporting AGENCY's population, " +
+      "repeated per row, so it is never a statewide or national denominator -- state_population is.",
   }),
   T({
     source: "shr", table: "victims", role: "metric",
     rowKey: "agency", outputLevels: ALL_LOCAL, timeGrains: ["incident", "annual"],
     measures: ["count"], measureBinding: { kind: "fixed_topics", topics: ["murder", "crime", "unknown"] },
     components: "present", aggregation: "additive",
+    // The ONE table that survives the test: one row per victim, and the SHR default measure is
+    // "murder victim counts" (shr-claude.ts:17), which the deterministic plan computes as
+    // COUNT(v.id). Known limit: an unfiltered count here is homicide victims, of which murder is a
+    // subset -- `homicide_type` is a filter concern, not a row-grain one, and is not modelled.
     eventRow: { topics: ["murder", "crime", "unknown"] },
   }),
   T({
@@ -594,7 +608,8 @@ export const TABLE_SEMANTICS: TableSemantics[] = [
     rowKey: "agency", outputLevels: ALL_LOCAL, timeGrains: ["incident", "annual"], measures: ["count"],
     measureBinding: { kind: "fixed_topics", topics: ["hate_crime", "crime", "unknown"] },
     components: "present", aggregation: "additive", denominatorLevels: ["agency", "city"],
-    eventRow: { topics: ["hate_crime", "crime", "unknown"] },
+    // No eventRow: hc-claude.ts:23 defines COUNT(*) here as `offense_count`, and the DEFAULT
+    // measure as COUNT(DISTINCT incident_number || ori || year).
   }),
   T({
     source: "hate_crime", table: "summary_hate_crime_state", role: "metric",
