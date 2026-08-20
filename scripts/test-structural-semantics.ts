@@ -346,7 +346,8 @@ check("a recursive series generator is not mistaken for a laundering compound", 
   // The SHR deterministic murder plan builds a month series this way. It reads no metric table and
   // refusing it broke a real, correct plan.
   const sql = "WITH RECURSIVE months(month) AS (SELECT 1 UNION ALL SELECT month + 1 FROM months WHERE month < 12) "
-    + "SELECT v.year, COUNT(*) AS murder_victims FROM victims v CROSS JOIN months m WHERE v.state = 'CA' GROUP BY v.year";
+    + "SELECT i.year, COUNT(*) AS murder_victims FROM incidents i JOIN victims v ON v.incident_id = i.id "
+    + "CROSS JOIN months m WHERE i.state = 'CA' AND i.homicide_type = 'Murder' GROUP BY i.year";
   assert.deepStrictEqual(rules("murder victims in California by year", "shr", sql), []);
 });
 
@@ -496,7 +497,8 @@ check("modeled units are unaffected in every source", () => {
     ["current", "monthly murders in Chicago in 2023",
       "SELECT am.year, am.month, SUM(am.count) AS murders FROM agency_monthly am WHERE am.agency = 'Chicago' AND am.state = 'IL' AND am.offense = 'Murder' AND am.year = 2023 GROUP BY am.year, am.month"],
     ["shr", "murder victims in California by year",
-      "SELECT v.year, COUNT(*) AS murder_victims FROM victims v WHERE v.state = 'CA' GROUP BY v.year"],
+      "SELECT i.year, COUNT(*) AS murder_victims FROM incidents i JOIN victims v ON v.incident_id = i.id "
+      + "WHERE i.state = 'CA' AND i.homicide_type = 'Murder' GROUP BY i.year"],
     ["nibrs", "murders in Chicago in 2023",
       "SELECT year, SUM(victim_count) FROM summary_victim_city_monthly WHERE state = 'IL' AND year = 2023 GROUP BY year"],
   ];
@@ -571,8 +573,21 @@ check("counting rows IS the measure only where the PRODUCT says so", () => {
   // wrong, each contradicting an existing metric definition -- see the negatives below.
   assert.deepStrictEqual(
     rules("murder victims in California by year", "shr",
-      "SELECT v.year, COUNT(*) AS murder_victims FROM victims v WHERE v.state = 'CA' GROUP BY v.year"),
-    [], "one victim row is one murder victim");
+      "SELECT i.year, COUNT(*) AS murder_victims FROM incidents i JOIN victims v ON v.incident_id = i.id "
+      + "WHERE i.state = 'CA' AND i.homicide_type = 'Murder' GROUP BY i.year"),
+    [], "one victim row is one MURDER victim only under the join and the homicide_type filter");
+});
+
+check("an SHR row count without the murder predicate is refused", () => {
+  // The licence is conditional. shr-claude.ts:123 requires the victims join, and every example in
+  // that prompt filters i.homicide_type = 'Murder'; victims rows are homicides, murder is a subset.
+  for (const [name, sql] of [
+    ["unfiltered COUNT(*)", "SELECT v.year, COUNT(*) AS murders FROM victims v WHERE v.state = 'CA' GROUP BY v.year"],
+    ["unfiltered COUNT(v.id)", "SELECT v.year, COUNT(v.id) AS murders FROM victims v WHERE v.state = 'CA' GROUP BY v.year"],
+  ] as const) {
+    assert.ok(rules("murders in California by year", "shr", sql).includes("structural-row-count-unqualified"),
+      `${name} counts homicide victims, not murder victims`);
+  }
 });
 
 check("a row count is refused where the product defines the measure differently", () => {

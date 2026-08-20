@@ -132,6 +132,38 @@ function licensedLevels(question: string): EntityLevel[] {
   return levels;
 }
 
+/**
+ * Is this value produced by COUNTING ROWS rather than by reading a measure column?
+ *
+ * `numericWithoutColumns` alone was too narrow: `COUNT(v.id)` names a column, so it escaped the
+ * check entirely even though `id` is an identifier and the value is still a row count.
+ */
+function isRowCount(item: SelectItem): boolean {
+  // A division is a RATE, and the denominator rule owns it. `COUNT(*) * 100000.0 / population` uses
+  // a row count as its numerator but is not itself a row count, and claiming it here short-circuited
+  // the denominator check that actually governs it.
+  if (item.denominatorRefs !== null) return false;
+  if (item.numericWithoutColumns) return true;
+  if (!item.countsRows) return false;
+  // COUNT(<identifier>) is a row count; COUNT over a real measure column is not.
+  return item.refs.every((ref) => DIMENSION_COLUMNS.has(ref.column) || ref.table === LITERAL_SOURCE);
+}
+
+/** Is every filter this licence depends on actually present in the SQL? */
+function requiredFiltersPresent(
+  entry: TableSemantics, sql: string
+): { ok: boolean; missing: string[] } {
+  const required = entry.eventRow?.requiresFilters ?? [];
+  const missing = required
+    .filter(({ column, value }) => {
+      const pattern = new RegExp(
+        `\\b${column}\\b\\s*(?:=|IN\\s*\\()\\s*'?${value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}'?`, "i");
+      return !pattern.test(sql);
+    })
+    .map(({ column, value }) => `${column} = '${value}'`);
+  return { ok: missing.length === 0, missing };
+}
+
 /** Does this returned expression carry a measurement, as opposed to labelling the row? */
 function isFactualSeries(item: SelectItem): boolean {
   const real = item.refs.filter((ref) => ref.table !== LITERAL_SOURCE);
@@ -295,16 +327,27 @@ export function evaluateStructuralSemantics(opts: {
     // metric table is not enough: `historical_agency_crime` is one agency-year per row, so
     // `COUNT(*) AS murders` counts agency-years. SHR `incidents` is one homicide per row, so there
     // it is a real murder count -- and the catalog is what distinguishes them.
-    if (item.numericWithoutColumns) {
+    if (isRowCount(item)) {
       const metricEntries = entries.filter((entry) => entry.role === "metric");
-      const licensed = metricEntries.some((entry) =>
+      const topicLicensed = metricEntries.filter((entry) =>
         (entry.eventRow?.topics ?? []).some((topic) =>
           requestedTopics.includes(topic) || requestedTopics.includes("unknown")));
-      if (metricEntries.length > 0 && !licensed) {
+
+      if (metricEntries.length > 0 && topicLicensed.length === 0) {
         add("structural-row-count-not-a-measure", "retry",
-          `"${label}" returns a number with no column behind it, and one row of ` +
+          `"${label}" is a row count, and one row of ` +
           `${metricEntries.map((e) => `\`${e.table}\``).join(", ")} is not one ` +
           `${requestedTopics.join(" or ")}. Select the column that holds the measure.`, label);
+        continue;
+      }
+      // A licence can be conditional. SHR victims are one row per HOMICIDE victim, so the count is
+      // a MURDER count only with the product's own join and predicate.
+      if (topicLicensed.length > 0 && !topicLicensed.some((entry) => requiredFiltersPresent(entry, opts.sql).ok)) {
+        const missing = [...new Set(topicLicensed.flatMap((entry) => requiredFiltersPresent(entry, opts.sql).missing))];
+        add("structural-row-count-unqualified", "retry",
+          `"${label}" counts rows of ${topicLicensed.map((e) => `\`${e.table}\``).join(", ")}, which is ` +
+          `one row per occurrence only when ${missing.join(" and ")} is applied. Without it the count ` +
+          "includes occurrences the question did not ask for.", label);
         continue;
       }
     }
@@ -457,8 +500,9 @@ export function evaluateStructuralSemantics(opts: {
 
       const satisfiedBySome = factual.some((item) => {
         // A row count satisfies the topic only where one row IS one occurrence of it.
-        if (item.numericWithoutColumns) {
-          return (entry.eventRow?.topics ?? []).includes(topic);
+        if (isRowCount(item)) {
+          return (entry.eventRow?.topics ?? []).includes(topic)
+            && requiredFiltersPresent(entry, opts.sql).ok;
         }
         const columns = new Set(
           item.refs.filter((ref) => ref.table === table).map((ref) => ref.column));

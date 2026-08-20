@@ -174,7 +174,16 @@ export type TableSemantics = {
    *                              murder VICTIMS (shr-claude.ts:17), and one incident can have many
    * The test is the product's definition of the measure, not the table's subject matter.
    */
-  eventRow?: { topics: string[] };
+  eventRow?: {
+    topics: string[];
+    /**
+     * One row equals one occurrence ONLY when these filters are present. Declared as data, not as a
+     * hand-written rule: SHR `victims` is one row per HOMICIDE victim, and murder is a subset, so
+     * an unfiltered count there is not a murder count. Writing that down as a note while still
+     * authorizing the unfiltered form is not a limitation -- it is a hole with a comment attached.
+     */
+    requiresFilters?: { column: string; value: string }[];
+  };
   note?: string;
 };
 
@@ -569,11 +578,14 @@ export const TABLE_SEMANTICS: TableSemantics[] = [
     rowKey: "agency", outputLevels: ALL_LOCAL, timeGrains: ["incident", "annual"],
     measures: ["count"], measureBinding: { kind: "fixed_topics", topics: ["murder", "crime", "unknown"] },
     components: "present", aggregation: "additive",
-    // The ONE table that survives the test: one row per victim, and the SHR default measure is
-    // "murder victim counts" (shr-claude.ts:17), which the deterministic plan computes as
-    // COUNT(v.id). Known limit: an unfiltered count here is homicide victims, of which murder is a
-    // subset -- `homicide_type` is a filter concern, not a row-grain one, and is not modelled.
-    eventRow: { topics: ["murder", "crime", "unknown"] },
+    // The one table that survives -- but only under the product's own contract. shr-claude.ts:123:
+    // "Always JOIN to the victims table and count victims ... Use COUNT(*) on the joined result",
+    // and every example in that prompt filters `i.homicide_type = 'Murder'`. `homicide_type` lives
+    // on `incidents`, so requiring the filter also requires the join.
+    eventRow: {
+      topics: ["murder", "crime", "unknown"],
+      requiresFilters: [{ column: "homicide_type", value: "Murder" }],
+    },
   }),
   T({
     source: "shr", table: "state_population", role: "population",
