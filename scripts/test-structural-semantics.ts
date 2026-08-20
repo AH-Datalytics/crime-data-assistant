@@ -415,6 +415,54 @@ check("every SQLite quoted-identifier form is recognised in a wildcard", () => {
   }
 });
 
+console.log("\n-- the unit dimension, from the 3ba2d2e review --");
+
+check("a count question is not answered with a rate column", () => {
+  const q = "How many murders in Illinois by year?";
+  const wrong = "SELECT year, murder_rate AS murders FROM historical_state_national WHERE state = 'Illinois'";
+  const right = "SELECT year, murder FROM historical_state_national WHERE state = 'Illinois'";
+  const found = rules(q, "historical", wrong);
+  assert.ok(found.includes("structural-measure-substitution") || found.includes("structural-measure-incomplete"),
+    "murder_rate is a different measure from murder, not an alternative spelling");
+  assert.deepStrictEqual(rules(q, "historical", right), []);
+});
+
+check("a rate question is not answered with a bare count", () => {
+  const q = "murder rate in Illinois by year";
+  const wrong = "SELECT year, murder AS murder_rate FROM historical_state_national WHERE state = 'Illinois'";
+  const right = "SELECT year, murder_rate FROM historical_state_national WHERE state = 'Illinois'";
+  assert.ok(rules(q, "historical", wrong).includes("structural-measure-incomplete"),
+    "a count relabelled as a rate has no denominator behind it");
+  assert.deepStrictEqual(rules(q, "historical", right), [], "the stored rate answers it directly");
+});
+
+check("a rate DERIVED from counts passes when the denominator is bound", () => {
+  const q = "murder rate per 100k in Chicago by year";
+  const sql = "SELECT am.year, ROUND(SUM(am.count) * 100000.0 / ap.population, 1) AS rate "
+    + "FROM agency_monthly am JOIN agency_population ap ON ap.ori = am.ori AND ap.year = am.year "
+    + "WHERE am.agency = 'Chicago' AND am.state = 'IL' AND am.offense = 'Murder' GROUP BY am.year";
+  assert.deepStrictEqual(rules(q, "current", sql), [],
+    "counts plus an approved denominator are a valid derivation");
+});
+
+check("a composite must be complete WITHIN one expression, not pooled across series", () => {
+  const q = "violent crime in Chicago by year";
+  const base = "FROM historical_agency_crime hac WHERE hac.ori = 'IL0316000'";
+  const pooled = `SELECT hac.year, hac.murder, hac.rape, hac.robbery, hac.assault ${base}`;
+  const summed = `SELECT hac.year, (hac.murder + hac.rape + hac.robbery + hac.assault) AS violent_crime ${base}`;
+  assert.ok(rules(q, "historical", pooled).includes("structural-measure-incomplete"),
+    "four separate offense series are not a violent-crime total");
+  assert.deepStrictEqual(rules(q, "historical", summed), [], "one expression combining them is");
+});
+
+check("a multi-offense request may still use one expression per offense", () => {
+  const q = "murders and robberies in Chicago by year";
+  const sql = "SELECT hac.year, hac.murder AS murders, hac.robbery AS robberies "
+    + "FROM historical_agency_crime hac WHERE hac.ori = 'IL0316000'";
+  assert.deepStrictEqual(rules(q, "historical", sql), [],
+    "each requested topic is satisfied by its own complete expression");
+});
+
 console.log("\n-- catalog --");
 
 check("every catalogued table separates physical row key from output levels", () => {

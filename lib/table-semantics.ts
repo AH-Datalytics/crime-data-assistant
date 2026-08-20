@@ -91,8 +91,33 @@ export function requirementSatisfied(
     : requirement.alternatives.some((alternative) => requirementSatisfied(alternative, selected));
 }
 
+/**
+ * A measure is a topic AND a unit, and conflating them let two substitutions through:
+ * `murder_rate AS murders` answering a count, and `murder AS murder_rate` answering a rate. The
+ * state/national catalog listed them as interchangeable alternatives of one topic, which they are
+ * not -- they are different measures that happen to share a name stem.
+ *
+ * `direct` columns express the measure themselves. `derivedFrom` columns can produce it only when
+ * something else supplies the missing part: a per-capita rate derived from counts is valid exactly
+ * when the division binds an approved denominator, which `structural-rate-denominator-unbound`
+ * already proves separately.
+ */
+export type UnitKey = "count" | "rate_per_100k" | "clearance_rate";
+
+export type UnitRequirement = {
+  direct?: MeasureRequirement;
+  derivedFrom?: MeasureRequirement;
+};
+
+export type UnitRequirements = Partial<Record<UnitKey, UnitRequirement>>;
+
+/** The contract's unit vocabulary is wider than the catalog's; anything else is a count. */
+export function unitKeyOf(unit: string): UnitKey {
+  return unit === "rate_per_100k" || unit === "clearance_rate" ? unit : "count";
+}
+
 export type MeasureBinding =
-  | { kind: "topic_columns"; columns: Record<string, MeasureRequirement> }
+  | { kind: "topic_columns"; columns: Record<string, UnitRequirements> }
   | { kind: "code_column"; column: string }
   | { kind: "value_column"; column: string; values: Record<string, string> }
   | { kind: "fixed_topics"; topics: string[] }
@@ -122,32 +147,52 @@ const T = (entry: TableSemantics): TableSemantics => entry;
 
 const ALL_LOCAL: EntityLevel[] = ["agency", "city", "county", "state", "national"];
 
+/** A table holding counts only: a rate must be derived from them, with a bound denominator. */
+function countsOnly(requirement: MeasureRequirement): UnitRequirements {
+  return { count: { direct: requirement }, rate_per_100k: { derivedFrom: requirement } };
+}
+
+/** A table holding both counts and stored rates: each unit has its own direct columns. */
+function countsAndRates(counts: MeasureRequirement, rates: MeasureRequirement): UnitRequirements {
+  return {
+    count: { direct: counts },
+    rate_per_100k: { direct: rates, derivedFrom: counts },
+  };
+}
+
+const clearanceOnly = (requirement: MeasureRequirement): UnitRequirements =>
+  ({ clearance_rate: { direct: requirement } });
+
 /** Historical agency crime columns. Note `assault`, not `aggravated_assault`. */
-const HIST_CRIME_COLUMNS: Record<string, MeasureRequirement> = {
-  murder: allOf("murder"), rape: allOf("rape"), robbery: allOf("robbery"),
-  aggravated_assault: allOf("assault"), burglary: allOf("burglary"), theft: allOf("theft"),
-  motor_vehicle_theft: allOf("motor_vehicle_theft"),
+const HIST_CRIME_COLUMNS: Record<string, UnitRequirements> = {
+  murder: countsOnly(allOf("murder")),
+  rape: countsOnly(allOf("rape")),
+  robbery: countsOnly(allOf("robbery")),
+  aggravated_assault: countsOnly(allOf("assault")),
+  burglary: countsOnly(allOf("burglary")),
+  theft: countsOnly(allOf("theft")),
+  motor_vehicle_theft: countsOnly(allOf("motor_vehicle_theft")),
   // The stored total, or every component -- never one component standing in for the whole.
-  violent_crime: anyOf(allOf("violent"), allOf("murder", "rape", "robbery", "assault")),
-  property_crime: anyOf(allOf("property"), allOf("burglary", "theft", "motor_vehicle_theft")),
+  violent_crime: countsOnly(anyOf(allOf("violent"), allOf("murder", "rape", "robbery", "assault"))),
+  property_crime: countsOnly(anyOf(allOf("property"), allOf("burglary", "theft", "motor_vehicle_theft"))),
 };
 
 /** Historical state/national columns. Note `aggravated_assault` and `auto_theft`. */
-const HIST_STATE_COLUMNS: Record<string, MeasureRequirement> = {
-  murder: anyOf(allOf("murder"), allOf("murder_rate")),
-  rape: anyOf(allOf("rape"), allOf("rape_rate")),
-  robbery: anyOf(allOf("robbery"), allOf("robbery_rate")),
-  aggravated_assault: anyOf(allOf("aggravated_assault"), allOf("aggravated_assault_rate")),
-  burglary: anyOf(allOf("burglary"), allOf("burglary_rate")),
-  theft: anyOf(allOf("theft"), allOf("theft_rate")),
-  motor_vehicle_theft: anyOf(allOf("auto_theft"), allOf("auto_theft_rate")),
-  violent_crime: anyOf(
+const HIST_STATE_COLUMNS: Record<string, UnitRequirements> = {
+  murder: countsAndRates(allOf("murder"), allOf("murder_rate")),
+  rape: countsAndRates(allOf("rape"), allOf("rape_rate")),
+  robbery: countsAndRates(allOf("robbery"), allOf("robbery_rate")),
+  aggravated_assault: countsAndRates(allOf("aggravated_assault"), allOf("aggravated_assault_rate")),
+  burglary: countsAndRates(allOf("burglary"), allOf("burglary_rate")),
+  theft: countsAndRates(allOf("theft"), allOf("theft_rate")),
+  motor_vehicle_theft: countsAndRates(allOf("auto_theft"), allOf("auto_theft_rate")),
+  violent_crime: countsAndRates(
     allOf("murder", "rape", "robbery", "aggravated_assault"),
     allOf("murder_rate", "rape_rate", "robbery_rate", "aggravated_assault_rate")),
-  property_crime: anyOf(
+  property_crime: countsAndRates(
     allOf("burglary", "theft", "auto_theft"),
     allOf("burglary_rate", "theft_rate", "auto_theft_rate")),
-  crime: anyOf(allOf("total_offenses"), allOf("total_offenses_rate")),
+  crime: countsAndRates(allOf("total_offenses"), allOf("total_offenses_rate")),
 };
 
 const CURRENT_OFFENSE_VALUES: Record<string, string> = {
@@ -173,10 +218,13 @@ export const TABLE_SEMANTICS: TableSemantics[] = [
     measureBinding: {
       kind: "topic_columns",
       columns: {
-        murder: allOf("murder_rate"), rape: allOf("rape_rate"), robbery: allOf("robbery_rate"),
-        aggravated_assault: allOf("assault_rate"), burglary: allOf("burglary_rate"),
-        theft: allOf("theft_rate"), motor_vehicle_theft: allOf("auto_theft_rate"),
-        violent_crime: allOf("violent_rate"), property_crime: allOf("property_rate"),
+        murder: clearanceOnly(allOf("murder_rate")), rape: clearanceOnly(allOf("rape_rate")),
+        robbery: clearanceOnly(allOf("robbery_rate")),
+        aggravated_assault: clearanceOnly(allOf("assault_rate")),
+        burglary: clearanceOnly(allOf("burglary_rate")), theft: clearanceOnly(allOf("theft_rate")),
+        motor_vehicle_theft: clearanceOnly(allOf("auto_theft_rate")),
+        violent_crime: clearanceOnly(allOf("violent_rate")),
+        property_crime: clearanceOnly(allOf("property_rate")),
       },
     },
     components: "absent", aggregation: "not-aggregatable",
@@ -197,10 +245,13 @@ export const TABLE_SEMANTICS: TableSemantics[] = [
     measureBinding: {
       kind: "topic_columns",
       columns: {
-        murder: allOf("murder_clr"), rape: allOf("rape_clr"), robbery: allOf("robbery_clr"),
-        aggravated_assault: allOf("assault_clr"), burglary: allOf("burglary_clr"),
-        theft: allOf("theft_clr"), motor_vehicle_theft: allOf("motor_vehicle_theft_clr"),
-        violent_crime: allOf("violent_clr"), property_crime: allOf("property_clr"),
+        murder: clearanceOnly(allOf("murder_clr")), rape: clearanceOnly(allOf("rape_clr")),
+        robbery: clearanceOnly(allOf("robbery_clr")),
+        aggravated_assault: clearanceOnly(allOf("assault_clr")),
+        burglary: clearanceOnly(allOf("burglary_clr")), theft: clearanceOnly(allOf("theft_clr")),
+        motor_vehicle_theft: clearanceOnly(allOf("motor_vehicle_theft_clr")),
+        violent_crime: clearanceOnly(allOf("violent_clr")),
+        property_crime: clearanceOnly(allOf("property_clr")),
       },
     },
     components: "absent", aggregation: "not-aggregatable",
@@ -570,18 +621,42 @@ export function producesLevel(entry: TableSemantics, level: EntityLevel): boolea
  * Columns in this table that legitimately express `topic`, or null when the binding does not work
  * by column name (a code or value predicate, or a table that only ever holds one topic).
  */
-export function topicRequirement(entry: TableSemantics, topic: string): MeasureRequirement | null {
+/** What this table needs returned for `topic` measured in `unit`. */
+export function topicUnitRequirement(
+  entry: TableSemantics, topic: string, unit: string
+): UnitRequirement | null {
   if (entry.measureBinding.kind !== "topic_columns") return null;
-  return entry.measureBinding.columns[topic] ?? null;
+  const forTopic = entry.measureBinding.columns[topic];
+  if (!forTopic) return null;
+  return forTopic[unitKeyOf(unit)] ?? null;
 }
 
-export function topicColumns(entry: TableSemantics, topic: string): string[] | null {
-  const requirement = topicRequirement(entry, topic);
-  return requirement ? requirementColumns(requirement) : null;
+/** Is this topic expressible at all here, in any unit? */
+export function topicIsKnown(entry: TableSemantics, topic: string): boolean {
+  return entry.measureBinding.kind === "topic_columns" &&
+    entry.measureBinding.columns[topic] !== undefined;
+}
+
+/** Columns acceptable for `topic` in `unit` -- the membership question, unit included. */
+export function topicColumns(entry: TableSemantics, topic: string, unit: string): string[] | null {
+  const requirement = topicUnitRequirement(entry, topic, unit);
+  if (!requirement) return null;
+  return [
+    ...(requirement.direct ? requirementColumns(requirement.direct) : []),
+    ...(requirement.derivedFrom ? requirementColumns(requirement.derivedFrom) : []),
+  ];
 }
 
 /** Every column this table uses to express ANY offense topic. */
+/** Every column this table uses to express ANY topic in ANY unit. */
 export function allTopicColumns(entry: TableSemantics): Set<string> {
   if (entry.measureBinding.kind !== "topic_columns") return new Set();
-  return new Set(Object.values(entry.measureBinding.columns).flatMap(requirementColumns));
+  const columns = new Set<string>();
+  for (const units of Object.values(entry.measureBinding.columns)) {
+    for (const requirement of Object.values(units)) {
+      if (requirement.direct) requirementColumns(requirement.direct).forEach((c) => columns.add(c));
+      if (requirement.derivedFrom) requirementColumns(requirement.derivedFrom).forEach((c) => columns.add(c));
+    }
+  }
+  return columns;
 }

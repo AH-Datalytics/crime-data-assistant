@@ -8,7 +8,9 @@ import {
   requirementColumns,
   requirementSatisfied,
   tableSemantics,
-  topicRequirement,
+  topicColumns,
+  topicIsKnown,
+  topicUnitRequirement,
   type EntityLevel,
   type TableSemantics,
 } from "./table-semantics";
@@ -185,6 +187,17 @@ function repairable(scope: RequestedScope, source: QueryContractSource): boolean
   return catalogedTables(source).some((entry) => serves(entry, scope, source));
 }
 
+/** Does this expression's division bind a population valid at the requested level? */
+function denominatorApproved(
+  item: SelectItem, scope: RequestedScope, source: QueryContractSource
+): boolean {
+  if (item.denominatorRefs === null) return false;
+  return item.denominatorRefs.some((ref) => {
+    const entry = ref.table ? tableSemantics(source, ref.table) : null;
+    return Boolean(entry && (entry.denominatorLevels ?? []).includes(scope.rowLevel));
+  });
+}
+
 export function evaluateStructuralSemantics(opts: {
   question: string;
   source: QueryContractSource;
@@ -311,11 +324,10 @@ export function evaluateStructuralSemantics(opts: {
       // (NIBRS `ucr_offense_code`, Current Trends `offense`) are left to the existing offense-code
       // validation rather than duplicated into a second vocabulary here.
       // MEMBERSHIP: is any selected column a DIFFERENT offense from the ones requested?
+      // The unit is part of the measure: `murder_rate` does not answer "how many murders", and
+      // `murder` does not answer "what is the murder rate" unless a denominator is bound.
       const expected = [...new Set(
-        requestedTopics.flatMap((topic) => {
-          const requirement = topicRequirement(entry, topic);
-          return requirement ? requirementColumns(requirement) : [];
-        })
+        requestedTopics.flatMap((topic) => topicColumns(entry, topic, scope.unit) ?? [])
       )];
       if (expected.length > 0) {
         const everyTopicColumn = allTopicColumns(entry);
@@ -326,8 +338,8 @@ export function evaluateStructuralSemantics(opts: {
         if (foreign.length > 0) {
           add("structural-measure-substitution", "retry",
             `"${label}" selects ${foreign.map((c) => `\`${c}\``).join(", ")} from ` +
-            `\`${entry.table}\`, but the question asks about ${requestedTopics.join(" and ")}. ` +
-            "Select the requested measure; do not relabel a different one.", label);
+            `\`${entry.table}\`, but the question asks about ${requestedTopics.join(" and ")} ` +
+            `measured as ${scope.unit}. Select the requested measure; do not relabel a different one.`, label);
         }
       }
       if (entry.measureBinding.kind === "fixed_topics" && scope.topic !== "unknown" &&
@@ -366,39 +378,53 @@ export function evaluateStructuralSemantics(opts: {
     }
   }
 
-  // ---- COMPLETENESS, judged once per table across EVERY returned series -------------------------
-  // A multi-offense request legitimately puts each offense in its own select item, so this cannot be
-  // a per-item check. Membership above asks "is this column allowed"; this asks the different
-  // question "is what was asked for actually all here", which a flat allowed-set could never answer.
-  const selectedByTable = new Map<string, Set<string>>();
+  // ---- COMPLETENESS ---------------------------------------------------------------------------
+  // Each requested topic is looked for across all returned expressions, but a composite must be
+  // satisfied WITHIN ONE expression. Pooling columns across unrelated series meant
+  // `SELECT murder, rape, robbery, assault` -- four separate offense series -- counted as a violent
+  // crime total, which it is not. A multi-offense request may still use one expression per offense.
+  const tablesInPlay = new Set<string>();
   for (const item of factual) {
-    for (const ref of item.refs) {
-      if (!ref.table) continue;
-      const set = selectedByTable.get(ref.table) ?? new Set<string>();
-      set.add(ref.column);
-      selectedByTable.set(ref.table, set);
-    }
+    for (const ref of item.refs) if (ref.table) tablesInPlay.add(ref.table);
   }
-  for (const [table, selected] of selectedByTable) {
+
+  for (const table of tablesInPlay) {
     const entry = tableSemantics(opts.source, table);
     if (!entry || entry.role !== "metric" || entry.measureBinding.kind !== "topic_columns") continue;
-    // Only judge completeness when this table is actually being used for a measure.
+
     const everyTopicColumn = allTopicColumns(entry);
-    if (![...selected].some((column) => everyTopicColumn.has(column))) continue;
+    const usesAMeasure = factual.some((item) =>
+      item.refs.some((ref) => ref.table === table && everyTopicColumn.has(ref.column)));
+    if (!usesAMeasure) continue;
 
     for (const topic of requestedTopics) {
-      const requirement = topicRequirement(entry, topic);
-      if (!requirement) continue;
-      if (requirementSatisfied(requirement, selected)) continue;
-      const wanted = requirement.kind === "all"
-        ? requirement.columns.map((c) => `\`${c}\``).join(" and ")
-        : requirement.alternatives
-            .map((alt) => requirementColumns(alt).map((c) => `\`${c}\``).join(" and "))
-            .join(", or ");
+      if (!topicIsKnown(entry, topic)) continue;
+      const requirement = topicUnitRequirement(entry, topic, scope.unit);
+      if (!requirement) {
+        add("structural-measure-unavailable", canBeFixed ? "retry" : "block",
+          `\`${table}\` does not express ${topic} as ${scope.unit}.`, null);
+        continue;
+      }
+
+      const satisfiedBySome = factual.some((item) => {
+        const columns = new Set(
+          item.refs.filter((ref) => ref.table === table).map((ref) => ref.column));
+        if (requirement.direct && requirementSatisfied(requirement.direct, columns)) return true;
+        // Counts can produce a rate only when the division binds an approved denominator.
+        return Boolean(requirement.derivedFrom
+          && requirementSatisfied(requirement.derivedFrom, columns)
+          && denominatorApproved(item, scope, opts.source));
+      });
+      if (satisfiedBySome) continue;
+
+      const describe = (req: typeof requirement.direct) =>
+        req ? requirementColumns(req).map((c) => `\`${c}\``).join(" and ") : null;
+      const wanted = [describe(requirement.direct), describe(requirement.derivedFrom)]
+        .filter(Boolean).join(", or derived from ");
       add("structural-measure-incomplete", "retry",
-        `The question asks about ${topic}, which \`${table}\` expresses as ${wanted}, but the ` +
-        `returned columns are ${[...selected].map((c) => `\`${c}\``).join(", ")}. Return the whole ` +
-        "measure; a single component is not the total, and one offense is not two.", null);
+        `The question asks for ${topic} as ${scope.unit}, which \`${table}\` expresses as ` +
+        `${wanted || "no supported column"}. No single returned expression provides it. A component ` +
+        "is not the total, and separate offense series are not a combined measure.", null);
     }
   }
 
