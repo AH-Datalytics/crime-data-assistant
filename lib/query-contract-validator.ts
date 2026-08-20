@@ -1,7 +1,7 @@
 import { buildQueryContract, type QueryContract, type QueryContractSource } from "./query-contract";
 import {
   cteReferences, escapeRegExp, flattenParens, splitCtes, stripSqlComments,
-  topLevelFilterRegions, type CommonTableExpression,
+  topLevelFilterRegions,
 } from "./sql-restriction";
 import { currentCalendarYear } from "./time-conventions";
 import type { RoutingLogMeta } from "./routing-log-meta";

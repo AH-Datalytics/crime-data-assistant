@@ -10,6 +10,7 @@
  */
 import assert from "node:assert";
 import { buildQueryContract, type QueryContractSource } from "../lib/query-contract";
+import { projectionsOf } from "../lib/sql-restriction";
 import { evaluateStructuralSemantics, requestedScope, catalogCoverage } from "../lib/structural-semantics";
 import { validateSourceCapabilities } from "../lib/source-capabilities";
 import { TABLE_SEMANTICS, tableSemantics, topicUnitRequirement } from "../lib/table-semantics";
@@ -630,6 +631,31 @@ check("mentioning the murder predicate is not applying it", () => {
     ["in an inner-joined CTE that restricts the wrong table",
       "WITH m AS (SELECT id FROM victims WHERE homicide_type = 'Murder') "
       + "SELECT COUNT(v.id) AS murders FROM victims v JOIN m ON m.id = v.id WHERE v.state = 'CA'"],
+    // Co-presence is not a relationship. Each of these puts `incidents` in scope and restricts it
+    // while counting EVERY victim -- the first two multiplied by the incident rows.
+    ["across a CROSS JOIN, which relates nothing",
+      "SELECT COUNT(v.id) AS murders FROM victims v CROSS JOIN incidents i "
+      + "WHERE i.homicide_type = 'Murder' AND v.state = 'CA'"],
+    ["across a join whose ON relates nothing",
+      "SELECT COUNT(v.id) AS murders FROM victims v JOIN incidents i ON 1=1 "
+      + "WHERE i.homicide_type = 'Murder' AND v.state = 'CA'"],
+    ["attributed to victims while incidents merely appears elsewhere",
+      "SELECT COUNT(v.id) AS murders FROM victims v JOIN incidents i ON v.incident_id = i.id "
+      + "WHERE v.homicide_type = 'Murder' AND v.state = 'CA'"],
+    ["through a filtered CTE joined on nothing",
+      "WITH m AS (SELECT id FROM incidents WHERE homicide_type = 'Murder') "
+      + "SELECT COUNT(v.id) AS murders FROM victims v JOIN m ON 1=1 WHERE v.state = 'CA'"],
+    // The CTE restricts incidents but projects `year`, not the incident key, so joining on it
+    // relates the victim to a year rather than to its own incident.
+    ["through a filtered CTE that projects the wrong key",
+      "WITH m AS (SELECT year FROM incidents WHERE homicide_type = 'Murder') "
+      + "SELECT COUNT(v.id) AS murders FROM victims v JOIN m ON m.year = v.incident_id "
+      + "WHERE v.state = 'CA'"],
+    // The join exists and relates the right two tables, but not on the key: matching a victim's
+    // incident to an incident's YEAR relates each victim to every incident in that year.
+    ["across a join on the wrong column",
+      "SELECT COUNT(v.id) AS murders FROM victims v JOIN incidents i ON v.incident_id = i.year "
+      + "WHERE i.homicide_type = 'Murder' AND v.state = 'CA'"],
     ["broadened by a multi-value IN",
       "SELECT COUNT(v.id) AS murders FROM incidents i JOIN victims v ON v.incident_id = i.id "
       + "WHERE i.homicide_type IN ('Murder', 'Manslaughter') AND v.state = 'CA'"],
@@ -743,6 +769,32 @@ check("eventRow is declared only where the PRODUCT's measure is one row", () => 
     ["nibrs", "summary_victim_city_monthly", "pre-aggregated"],
   ] as const) {
     assert.ok(!tableSemantics(source, table)?.eventRow, `${source}.${table}: ${why}`);
+  }
+});
+
+check("a CTE whose body defeats the analyzer projects nothing", () => {
+  // Fail-closed. If the lineage analyzer cannot read the body, nothing can be proved THROUGH that
+  // body -- returning its apparent output names would let an unreadable CTE authorise a join.
+  assert.deepStrictEqual(projectionsOf("this is not a select statement", "incidents", "id"), []);
+  assert.deepStrictEqual(projectionsOf("SELECT id FROM incidents", "incidents", "id"), ["id"]);
+  assert.deepStrictEqual(projectionsOf("SELECT id AS k FROM incidents", "incidents", "id"), ["k"]);
+  assert.deepStrictEqual(projectionsOf("SELECT id FROM victims", "incidents", "id"), [],
+    "a same-named column on another table is not the incident key");
+});
+
+check("a conditional licence declares the relationship it depends on", () => {
+  // A filter on another table is only reachable through a join, and co-presence in a FROM clause
+  // is not a join. Without a declared key the licence cannot be proved, so it must not be granted:
+  // `requiredFiltersPresent` refuses outright, and this keeps a future catalog entry from
+  // quietly relying on that refusal instead of declaring the relationship.
+  for (const entry of TABLE_SEMANTICS) {
+    const filters = entry.eventRow?.requiresFilters ?? [];
+    const foreign = filters.filter((f) => f.onTable !== entry.table);
+    if (foreign.length === 0) continue;
+    const join = entry.eventRow?.requiresJoin;
+    assert.ok(join, `${entry.source}.${entry.table} filters on ${foreign[0].onTable} with no requiresJoin`);
+    assert.ok(foreign.some((f) => f.onTable === join!.toTable),
+      `${entry.source}.${entry.table}: requiresJoin points at ${join!.toTable}, which owns no required filter`);
   }
 });
 

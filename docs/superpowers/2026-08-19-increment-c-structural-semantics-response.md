@@ -1,10 +1,70 @@
 # Increment C: proving the returned value, not the FROM clause
 
-Eleven correction passes. `89c331b` through `06e9fe4` are unchanged; the latest is **`f32e437`**.
+Twelve correction passes. `89c331b` through `1c290b4` are unchanged; the latest is **`PENDING`**.
 **Not pushed, not deployed. No data, migration, proof mode or production configuration changed.**
 Production remains release `20260818_223123` running `e4a9acb`; `origin/dev` is `83a0cbb`. Jeff's
 `scripts/cde-discrepancy-check.py`, `scripts/watch-rtci.log`, his untracked files and `stash@{0}`
 are untouched; only owned paths were staged by exact name.
+
+---
+
+## Round 12: co-presence is not a relationship
+
+Correct, and it is the same error one level further in. Round 11 replaced "the predicate's text
+appears" with "the predicate restricts a scope holding both tables" — and **both tables being
+present is not the same as the rows being related.** `CROSS JOIN incidents` and `JOIN incidents
+ON 1=1` satisfy co-presence while counting every victim, multiplied by the incident rows.
+
+The relationship is now **catalog data**, declared next to the filter it carries:
+
+```ts
+requiresFilters: [{ column: "homicide_type", value: "Murder", onTable: "incidents" }],
+requiresJoin:    { column: "incident_id", toTable: "incidents", toColumn: "id" },
+```
+
+The prover resolves aliases (`aliasMap`) and requires the key equality itself, in a region that
+genuinely restricts. Two shapes are accepted, both unchanged in intent from round 11: the predicate
+applied where the rows are counted, or a CTE that restricts `incidents` **and projects its key**,
+INNER joined to `victims.incident_id`. Which columns a CTE projects is resolved through the
+existing lineage analyzer, so `SELECT id AS k` is found and a same-named column on another table
+is not.
+
+Alias resolution also closes your third case directly: `v.homicide_type = 'Murder'` now resolves to
+`victims`, not to `incidents`, so it no longer counts as a restriction on the filter table.
+
+### A licence that cannot be proved is not granted
+
+`requiredFiltersPresent` refuses outright when a conditional licence declares no relationship, and
+a catalog test asserts the invariant, so a future entry cannot quietly inherit the refusal instead
+of declaring its join.
+
+### What mutation testing said about the older guards
+
+Adding the relationship checks made **four round-11 guards stop mattering**: an explicit
+outer-joined-CTE check, a `tableInScope(countedTable)` precondition, a `tableInScope(cte.body,
+filterTable)` check, and a duplicated `OR`/outer-join test. Each was subsumed — removing it changed
+no outcome. Rather than leave guards that cannot fail, I gave those rules a single owner
+(`restrictingRegions`) and deleted the rest, on the same reasoning as round 11's `IN` scan:
+a safeguard that cannot fail invites belief in a protection that is not doing the work.
+
+Two survive as **documented non-guarantees**, honestly labelled rather than counted as coverage:
+an `owners.length === 0` precondition (it prevents a degenerate empty-alternation regex), and the
+`!lineage.parsed` fail-closed return — `analyzeSql` returns zero items whenever `parsed` is false,
+which I measured rather than assumed, so it is defence against a future analyzer change.
+
+### Round 12 verification
+
+| | |
+|---|---|
+| `test-structural-semantics.ts` | **66 passed, 0 failed** (6 new negatives, 2 new checks) |
+| structural enforcement / route placement | **15** and **20**, 0 failed |
+| SHR deterministic murder, layer-3 corpus (86 cases), query contract, proof contract, county identity, route egress | all pass |
+| `tsc --noEmit`, lint | clean |
+| **mutations** | **13 of 13 caught**, no skips, no ambiguous anchors |
+| logged-query impact | **7.3% flagged, unchanged**; the conditional-licence rule fires on **0** |
+
+The four unsafe queries you replayed are now refused, and the valid direct and CTE queries remain
+positive cases — including logged #157/#159, which the stricter join requirement does **not** cost.
 
 ---
 

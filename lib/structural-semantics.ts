@@ -155,12 +155,21 @@ function requiredFiltersPresent(
   entry: TableSemantics, sql: string
 ): { ok: boolean; missing: string[] } {
   const required = entry.eventRow?.requiresFilters ?? [];
+  const join = entry.eventRow?.requiresJoin;
+  // A conditional licence with no declared relationship cannot be proved, so it is not granted.
+  // Anything else would let co-presence in a FROM clause stand in for the join.
+  if (required.length > 0 && !join) {
+    return { ok: false, missing: required.map(({ column, value }) => `${column} = '${value}'`) };
+  }
   const missing = required
     // Not "does the text appear" -- `sqlRestrictsColumnToValue` proves the predicate restricts the
-    // rows being counted. A hit in a comment, in an unused CTE, beside an `OR`, or inside a
-    // multi-value `IN` is a mention, not a filter, and this licence is only as good as the filter.
+    // rows being counted THROUGH the declared relationship. A hit in a comment, in an unused CTE,
+    // beside an `OR`, inside a multi-value `IN`, on the wrong table, or across a CROSS JOIN is a
+    // mention, not a filter, and this licence is only as good as the filter.
     .filter(({ column, value, onTable }) => !sqlRestrictsColumnToValue(sql, column, value, {
-      countedTable: entry.table, filterTable: onTable,
+      countedTable: entry.table,
+      filterTable: onTable,
+      join: { countedColumn: join!.column, filterColumn: join!.toColumn },
     }))
     .map(({ column, value }) => `${column} = '${value}'`);
   return { ok: missing.length === 0, missing };

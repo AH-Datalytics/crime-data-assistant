@@ -192,6 +192,20 @@ export type TableSemantics = {
        */
       onTable: string;
     }[];
+    /**
+     * The relationship that must actually be established between this table's rows and the filter
+     * table's, as catalog data rather than a hand-written rule.
+     *
+     * Co-presence in a FROM clause is NOT the relationship. `victims CROSS JOIN incidents` and
+     * `JOIN incidents ON 1=1` both put the filter table in scope while counting every victim, often
+     * multiplied by the incident rows -- so the key equality itself has to be proved.
+     */
+    requiresJoin?: {
+      /** Column on THIS table. */
+      column: string;
+      toTable: string;
+      toColumn: string;
+    };
   };
   note?: string;
 };
@@ -594,6 +608,7 @@ export const TABLE_SEMANTICS: TableSemantics[] = [
     eventRow: {
       topics: ["murder", "crime", "unknown"],
       requiresFilters: [{ column: "homicide_type", value: "Murder", onTable: "incidents" }],
+      requiresJoin: { column: "incident_id", toTable: "incidents", toColumn: "id" },
     },
   }),
   T({
