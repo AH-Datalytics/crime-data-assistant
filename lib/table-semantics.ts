@@ -182,7 +182,16 @@ export type TableSemantics = {
      * an unfiltered count there is not a murder count. Writing that down as a note while still
      * authorizing the unfiltered form is not a limitation -- it is a hole with a comment attached.
      */
-    requiresFilters?: { column: string; value: string }[];
+    requiresFilters?: {
+      column: string;
+      value: string;
+      /**
+       * The table the filter column lives on. It must be in scope alongside this table, which is
+       * how "the predicate restricts the rows being counted" is proved rather than assumed:
+       * `homicide_type` is on `incidents`, so requiring it also requires the join.
+       */
+      onTable: string;
+    }[];
   };
   note?: string;
 };
@@ -584,7 +593,7 @@ export const TABLE_SEMANTICS: TableSemantics[] = [
     // on `incidents`, so requiring the filter also requires the join.
     eventRow: {
       topics: ["murder", "crime", "unknown"],
-      requiresFilters: [{ column: "homicide_type", value: "Murder" }],
+      requiresFilters: [{ column: "homicide_type", value: "Murder", onTable: "incidents" }],
     },
   }),
   T({

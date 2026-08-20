@@ -1,4 +1,8 @@
 import { buildQueryContract, type QueryContract, type QueryContractSource } from "./query-contract";
+import {
+  cteReferences, escapeRegExp, flattenParens, splitCtes, stripSqlComments,
+  topLevelFilterRegions, type CommonTableExpression,
+} from "./sql-restriction";
 import { currentCalendarYear } from "./time-conventions";
 import type { RoutingLogMeta } from "./routing-log-meta";
 import { validateSourceCapabilities, type SourceCapabilityFinding } from "./source-capabilities";
@@ -324,65 +328,7 @@ export function hasLiteralOriTargetJoin(sql: string): boolean {
  */
 const ORI_COLUMN = "(?:[A-Za-z_]\\w*\\.)?ori";
 
-/** Comments cannot restrict anything, so they are not evidence of anything either. */
-function stripSqlComments(sql: string): string {
-  return sql.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/--[^\n]*/g, " ");
-}
 
-/**
- * The stretches of a statement that actually filter rows: each `WHERE` and each join `ON`,
- * taken at the top level only.
- *
- * Top level matters. A `WHERE` inside a subquery restricts that subquery, not the rows the
- * statement returns, and a comparison in `SELECT`, `CASE`, `GROUP BY` or `ORDER BY` restricts
- * nothing at all -- `SELECT ha.ori = 'MD0030100' AS is_selected` is a boolean column, and it
- * was passing as though it were a filter.
- */
-function topLevelFilterRegions(sql: string): string[] {
-  const terminator = /^(?:group\s+by|order\s+by|having|limit|window|union|intersect|except|join|inner|left|right|full|cross|on|where)\b/i;
-  const regions: string[] = [];
-  let depth = 0;
-  let i = 0;
-  while (i < sql.length) {
-    const char = sql[i];
-    if (char === "'") {
-      const end = sql.indexOf("'", i + 1);
-      i = end === -1 ? sql.length : end + 1;
-      continue;
-    }
-    if (char === "(") { depth += 1; i += 1; continue; }
-    if (char === ")") { depth = Math.max(0, depth - 1); i += 1; continue; }
-    if (depth === 0) {
-      const rest = sql.slice(i);
-      const opener = /^(where|on)\b/i.exec(rest);
-      if (opener) {
-        let j = i + opener[0].length;
-        let innerDepth = 0;
-        const start = j;
-        while (j < sql.length) {
-          const c = sql[j];
-          if (c === "'") {
-            const end = sql.indexOf("'", j + 1);
-            j = end === -1 ? sql.length : end + 1;
-            continue;
-          }
-          if (c === "(") { innerDepth += 1; j += 1; continue; }
-          if (c === ")") {
-            if (innerDepth === 0) break;
-            innerDepth -= 1; j += 1; continue;
-          }
-          if (innerDepth === 0 && terminator.test(sql.slice(j))) break;
-          j += 1;
-        }
-        regions.push(sql.slice(start, j));
-        i = j;
-        continue;
-      }
-    }
-    i += 1;
-  }
-  return regions;
-}
 
 /**
  * Does this SQL actually restrict returned rows to one agency's ORI?
@@ -450,44 +396,7 @@ function statementPinsOri(
 }
 
 /** One `name AS ( body )` entry from a leading `WITH` clause. */
-type CommonTableExpression = { name: string; body: string };
 
-/**
- * The CTEs a statement defines, and the query that follows them.
- *
- * Returns nothing when the statement does not open with `WITH`, so ordinary queries take the
- * direct path and pay nothing for this.
- */
-function splitCtes(sql: string): { ctes: CommonTableExpression[]; outer: string } | null {
-  const head = /^\s*WITH\s+(RECURSIVE\s+)?/i.exec(sql);
-  if (!head) return null;
-  const ctes: CommonTableExpression[] = [];
-  let i = head[0].length;
-  while (i < sql.length) {
-    const entry = /^\s*("?)([A-Za-z_]\w*)\1\s+AS\s*(?:MATERIALIZED\s+|NOT\s+MATERIALIZED\s+)?\(/i.exec(sql.slice(i));
-    if (!entry) break;
-    let depth = 1;
-    let j = i + entry[0].length;
-    const bodyStart = j;
-    while (j < sql.length && depth > 0) {
-      const char = sql[j];
-      if (char === "'") {
-        const end = sql.indexOf("'", j + 1);
-        j = end === -1 ? sql.length : end + 1;
-        continue;
-      }
-      if (char === "(") depth += 1;
-      if (char === ")") depth -= 1;
-      j += 1;
-    }
-    ctes.push({ name: entry[2], body: sql.slice(bodyStart, j - 1) });
-    i = j;
-    const comma = /^\s*,/.exec(sql.slice(i));
-    if (!comma) break;
-    i += comma[0].length;
-  }
-  return ctes.length > 0 ? { ctes, outer: sql.slice(i) } : null;
-}
 
 /**
  * Is the required ORI pinned inside a CTE that the outer query actually joins on?
@@ -520,37 +429,7 @@ function cteTargetsOri(
   return false;
 }
 
-/** Every name the outer query refers to this CTE by -- its own name, and any alias. */
-function cteReferences(outer: string, name: string): string[] {
-  const found = new Set<string>();
-  const pattern = new RegExp(`\\b(?:FROM|JOIN)\\s+${escapeRegExp(name)}\\b(?:\\s+AS)?(?:\\s+([A-Za-z_]\\w*))?`, "gi");
-  const RESERVED = /^(on|where|group|order|limit|left|right|inner|full|cross|join|union|having|window|using)$/i;
-  for (const match of outer.matchAll(pattern)) {
-    found.add(name);
-    if (match[1] && !RESERVED.test(match[1])) found.add(match[1]);
-  }
-  return [...found];
-}
 
-/** The text outside every parenthesised group, which is where a top-level filter lives. */
-function flattenParens(text: string): string {
-  let depth = 0;
-  let out = "";
-  for (let i = 0; i < text.length; i += 1) {
-    const char = text[i];
-    if (char === "'") {
-      const end = text.indexOf("'", i + 1);
-      const literal = text.slice(i, end === -1 ? text.length : end + 1);
-      if (depth === 0) out += literal;
-      i = (end === -1 ? text.length : end);
-      continue;
-    }
-    if (char === "(") { depth += 1; out += " "; continue; }
-    if (char === ")") { depth = Math.max(0, depth - 1); out += " "; continue; }
-    if (depth === 0) out += char;
-  }
-  return out;
-}
 
 function requiredOriBlockMessage(ori: string): string {
   return `This question was resolved to one specific county law enforcement agency (ORI ${ori}), `
@@ -558,9 +437,6 @@ function requiredOriBlockMessage(ori: string): string {
     + `agency would report the wrong department's figures.`;
 }
 
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
 
 function normalizeSqlLiteral(value: string, template: string): string {
   const compact = value.replace(/\s+/g, " ").trim();

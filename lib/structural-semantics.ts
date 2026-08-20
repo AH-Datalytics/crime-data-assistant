@@ -1,6 +1,7 @@
 import type { QueryContract, QueryContractSource } from "./query-contract";
 import { detectRequestedGrain } from "./requested-grain";
 import { analyzeSql, LITERAL_SOURCE, type SelectItem } from "./sql-lineage";
+import { sqlRestrictsColumnToValue } from "./sql-restriction";
 import {
   allTopicColumns,
   catalogedTables,
@@ -155,11 +156,12 @@ function requiredFiltersPresent(
 ): { ok: boolean; missing: string[] } {
   const required = entry.eventRow?.requiresFilters ?? [];
   const missing = required
-    .filter(({ column, value }) => {
-      const pattern = new RegExp(
-        `\\b${column}\\b\\s*(?:=|IN\\s*\\()\\s*'?${value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}'?`, "i");
-      return !pattern.test(sql);
-    })
+    // Not "does the text appear" -- `sqlRestrictsColumnToValue` proves the predicate restricts the
+    // rows being counted. A hit in a comment, in an unused CTE, beside an `OR`, or inside a
+    // multi-value `IN` is a mention, not a filter, and this licence is only as good as the filter.
+    .filter(({ column, value, onTable }) => !sqlRestrictsColumnToValue(sql, column, value, {
+      countedTable: entry.table, filterTable: onTable,
+    }))
     .map(({ column, value }) => `${column} = '${value}'`);
   return { ok: missing.length === 0, missing };
 }

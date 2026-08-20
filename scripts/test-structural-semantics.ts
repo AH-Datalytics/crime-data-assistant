@@ -590,6 +590,97 @@ check("an SHR row count without the murder predicate is refused", () => {
   }
 });
 
+check("mentioning the murder predicate is not applying it", () => {
+  // The first version of this licence searched the statement text for `homicide_type = 'Murder'`
+  // and accepted a hit. All four of these contain that text and none of them restricts the rows
+  // being counted -- the same mention-versus-enforcement error the ORI pin had to fix.
+  const joined = "FROM incidents i JOIN victims v ON v.incident_id = i.id WHERE v.state = 'CA'";
+  for (const [name, sql] of [
+    ["in a line comment",
+      `SELECT COUNT(v.id) AS murders ${joined} -- and i.homicide_type = 'Murder'`],
+    ["in a block comment",
+      `SELECT COUNT(v.id) AS murders ${joined} /* i.homicide_type = 'Murder' */`],
+    // The CTE holds BOTH tables and a real restriction. Only the fact that nothing references it
+    // makes this unsafe, so this case pins the used-CTE gate and nothing else.
+    ["in a CTE the query never uses",
+      "WITH m AS (SELECT v.id FROM incidents i JOIN victims v ON v.incident_id = i.id "
+      + "WHERE i.homicide_type = 'Murder') "
+      + `SELECT COUNT(v.id) AS murders ${joined}`],
+    // Unparenthesised, so paren-flattening cannot be what refuses it -- the OR guard must.
+    ["broadened by OR",
+      "SELECT COUNT(v.id) AS murders FROM incidents i JOIN victims v ON v.incident_id = i.id "
+      + "WHERE i.homicide_type = 'Murder' OR v.state = 'CA'"],
+    // An outer join preserves every victim row and blanks the incident columns for non-murders,
+    // so its ON restricts nothing. This over-counted by exactly the rows it looked like it excluded.
+    ["on a LEFT JOIN's ON, which preserves unmatched victims",
+      "SELECT COUNT(v.id) AS murders FROM victims v LEFT JOIN incidents i "
+      + "ON v.incident_id = i.id AND i.homicide_type = 'Murder' WHERE v.state = 'CA'"],
+    ["in a CTE the query only LEFT JOINs",
+      "WITH m AS (SELECT id FROM incidents WHERE homicide_type = 'Murder') "
+      + "SELECT COUNT(v.id) AS murders FROM victims v LEFT JOIN m ON m.id = v.incident_id "
+      + "WHERE v.state = 'CA'"],
+    ["in a used CTE that never touches the filter table",
+      "WITH m AS (SELECT 'Murder' AS homicide_type) "
+      + "SELECT COUNT(v.id) AS murders FROM victims v JOIN m ON 1=1 WHERE v.state = 'CA'"],
+    // `homicide_type` lives on `incidents`, not on `victims`. Attributing it to the victims table
+    // skips the join, and the join is half of what makes the count a murder count.
+    ["attributed to the victims table, with no join to incidents",
+      "SELECT COUNT(v.id) AS murders FROM victims v "
+      + "WHERE v.homicide_type = 'Murder' AND v.state = 'CA'"],
+    ["in an inner-joined CTE that restricts the wrong table",
+      "WITH m AS (SELECT id FROM victims WHERE homicide_type = 'Murder') "
+      + "SELECT COUNT(v.id) AS murders FROM victims v JOIN m ON m.id = v.id WHERE v.state = 'CA'"],
+    ["broadened by a multi-value IN",
+      "SELECT COUNT(v.id) AS murders FROM incidents i JOIN victims v ON v.incident_id = i.id "
+      + "WHERE i.homicide_type IN ('Murder', 'Manslaughter') AND v.state = 'CA'"],
+    ["restricting only an unrelated subquery",
+      "SELECT COUNT(v.id) AS murders FROM incidents i JOIN victims v ON v.incident_id = i.id "
+      + "WHERE v.state = 'CA' AND i.year IN (SELECT year FROM incidents WHERE homicide_type = 'Murder')"],
+  ] as const) {
+    assert.ok(rules("murders in California", "shr", sql).includes("structural-row-count-unqualified"),
+      `the predicate ${name} does not restrict the victims being counted`);
+  }
+});
+
+check("the murder predicate applied to the counted rows is accepted", () => {
+  for (const [name, sql] of [
+    ["directly in the WHERE",
+      "SELECT COUNT(v.id) AS murders FROM incidents i JOIN victims v ON v.incident_id = i.id "
+      + "WHERE v.state = 'CA' AND i.homicide_type = 'Murder'"],
+    ["written the other way round",
+      "SELECT COUNT(v.id) AS murders FROM incidents i JOIN victims v ON v.incident_id = i.id "
+      + "WHERE v.state = 'CA' AND 'Murder' = i.homicide_type"],
+    ["as a single-value IN",
+      "SELECT COUNT(v.id) AS murders FROM incidents i JOIN victims v ON v.incident_id = i.id "
+      + "WHERE v.state = 'CA' AND i.homicide_type IN ('Murder')"],
+    ["on the join condition",
+      "SELECT COUNT(v.id) AS murders FROM victims v JOIN incidents i "
+      + "ON v.incident_id = i.id AND i.homicide_type = 'Murder' WHERE v.state = 'CA'"],
+    // The product's own deterministic plan pins the predicate inside a CTE that the outer query
+    // really uses. Refusing this shape would refuse the shipped query.
+    ["inside a CTE the query does use",
+      "WITH counts AS (SELECT i.year AS year, COUNT(v.id) AS murders "
+      + "FROM incidents i JOIN victims v ON v.incident_id = i.id "
+      + "WHERE i.state = 'CA' AND i.homicide_type = 'Murder' GROUP BY i.year) "
+      + "SELECT year, murders FROM counts ORDER BY year"],
+    // Logged queries #157/#159: a bracketed alias list is ANDed onto the murder filter. The OR is
+    // parenthesised, so it widens nothing, and refusing this rejected two correct answers.
+    ["alongside a parenthesised OR over place aliases",
+      "SELECT i.year, COUNT(v.id) AS murders FROM incidents i JOIN victims v ON v.incident_id = i.id "
+      + "WHERE i.homicide_type = 'Murder' AND i.year >= 2022 "
+      + "AND (i.agency = 'New York' OR i.agency = 'New York City') GROUP BY i.year"],
+    // The house idiom: the CTE pins the predicate and the counting query INNER joins it, so every
+    // counted victim is reached through the restriction. `cteTargetsOri` accepts the same shape.
+    ["in a CTE the counting query INNER joins",
+      "WITH m AS (SELECT id FROM incidents WHERE homicide_type = 'Murder') "
+      + "SELECT COUNT(v.id) AS murders FROM victims v JOIN m ON m.id = v.incident_id "
+      + "WHERE v.state = 'CA'"],
+  ] as const) {
+    assert.deepStrictEqual(rules("murders in California", "shr", sql), [],
+      `the predicate ${name} restricts the victims being counted`);
+  }
+});
+
 check("a row count is refused where the product defines the measure differently", () => {
   // Each of these contradicts an established definition in the application itself.
   const negatives: [QueryContractSource, string, string, string][] = [
