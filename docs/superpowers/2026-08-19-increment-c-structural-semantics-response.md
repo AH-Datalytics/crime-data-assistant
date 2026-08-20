@@ -1,6 +1,6 @@
 # Increment C: proving the returned value, not the FROM clause
 
-Eleven correction passes. `89c331b` through `06e9fe4` are unchanged; the latest is **`PENDING`**.
+Eleven correction passes. `89c331b` through `06e9fe4` are unchanged; the latest is **`f32e437`**.
 **Not pushed, not deployed. No data, migration, proof mode or production configuration changed.**
 Production remains release `20260818_223123` running `e4a9acb`; `origin/dev` is `83a0cbb`. Jeff's
 `scripts/cde-discrepancy-check.py`, `scripts/watch-rtci.log`, his untracked files and `stash@{0}`
