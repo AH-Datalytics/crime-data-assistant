@@ -60,6 +60,7 @@ which I measured rather than assumed, so it is defence against a future analyzer
 | structural enforcement / route placement | **15** and **20**, 0 failed |
 | SHR deterministic murder, layer-3 corpus (86 cases), query contract, proof contract, county identity, route egress | all pass |
 | `tsc --noEmit`, lint | clean |
+| **`npm test`** | **exit 0**, 2,625 lines, all **17** tallies `0 failed` |
 | **mutations** | **13 of 13 caught**, no skips, no ambiguous anchors |
 | logged-query impact | **7.3% flagged, unchanged**; the conditional-licence rule fires on **0** |
 
