@@ -19,8 +19,8 @@
  * Anything unproved is a refusal, including a parse failure. The verdict never throws.
  */
 import {
-  analyzeSqlFacts, keyMultiplicity, restrictingPredicates, scopeAliases,
-  type ExprFact, type QueryFacts, type RelationFact,
+  analyzeSqlFacts, keyMultiplicity, resolveReferences, restrictingPredicates, scopeAliases,
+  type ExprFact, type QueryFacts, type RelationFact, type RowsetRef,
 } from "./sql-facts";
 import { tableSemantics } from "./table-semantics";
 
@@ -86,56 +86,47 @@ function keyJoinProved(rel: RelationFact, aliases: Map<string, string>): boolean
 }
 
 /**
- * The relations that actually contribute to the returned result, outermost first.
+ * Every row count a returned expression traces to, with the rowset each one counted.
  *
- * Reachability matters in BOTH directions. A dead CTE that counts victims must not force a refusal
- * of a statement whose answer never uses it -- that is a false refusal, and the unused-CTE class is
- * an accepted one. Equally, the same CTE when reachable must engage. Following references
- * transitively is what separates the two, so a nested chain is not mistaken for dead code.
+ * There is deliberately NO "first counting relation". A statement can return several factual series
+ * -- one per column, one per compound arm, one per subquery -- and each is a separate claim that
+ * must stand on its own evidence. Picking one relation and stopping is what let
+ * `SELECT c.n FROM c CROSS JOIN victims v` pass: the outer relation contained `victims` but returned
+ * no count, so the unsafe count that `c.n` actually is was never examined.
  */
-function reachableRelations(facts: Extract<QueryFacts, { parsed: true }>): RelationFact[] {
-  const ordered: RelationFact[] = [facts.outer];
-  const seen = new Set<string>([""]);
-  const queue: RelationFact[] = [facts.outer];
-  while (queue.length > 0) {
-    const rel = queue.shift()!;
-    for (const source of rel.sources) {
-      const name = source.table?.toLowerCase();
-      if (!name || !source.isRelation || seen.has(name)) continue;
-      const referenced = facts.relations.get(name);
-      if (!referenced) continue;
-      seen.add(name);
-      ordered.push(referenced);
-      queue.push(referenced);
-    }
+function returnedRowCounts(fact: ExprFact, out: { rowset: RowsetRef }[] = [], unresolved: string[] = []): {
+  counts: { rowset: RowsetRef }[]; unresolved: string[];
+} {
+  switch (fact.kind) {
+    case "rowcount":
+      // A windowed count is a value computed per row, not the count the answer reports.
+      if (!fact.windowed) out.push({ rowset: fact.rowset });
+      returnedRowCounts(fact.target, out, unresolved);
+      break;
+    case "aggregate":
+    case "derived":
+      for (const input of fact.inputs) returnedRowCounts(input, out, unresolved);
+      break;
+    case "unknown":
+      // Unresolved provenance could be hiding a victim count. It never falls back to a name search.
+      unresolved.push(fact.reason);
+      break;
+    default:
+      break;
   }
-  return ordered;
+  return { counts: out, unresolved };
 }
 
-/** The relation whose rows the answer counts: the outermost REACHABLE one holding `victims`. */
-function countingRelation(facts: Extract<QueryFacts, { parsed: true }>): RelationFact | null {
-  for (const rel of reachableRelations(facts)) {
-    if (rel.sources.some((s) => s.table?.toLowerCase() === COUNTED_TABLE)) return rel;
-  }
-  return null;
-}
-
-/** Does this relation return a row count of its own rows (not of some other rowset)? */
-function returnsRowCount(rel: RelationFact): boolean {
-  for (const fact of rel.outputs.values()) {
-    if (containsRowCount(fact)) return true;
-  }
-  return false;
-}
-
-function containsRowCount(fact: ExprFact): boolean {
-  if (fact.kind === "rowcount") return !fact.windowed;
-  if (fact.kind === "aggregate" || fact.kind === "derived") return fact.inputs.some(containsRowCount);
-  return false;
+/** The arm scope a rowset refers to, or null when it cannot be identified. */
+function rowsetScope(rowset: RowsetRef, facts: Extract<QueryFacts, { parsed: true }>): RelationFact | null {
+  const relation = facts.relations.get(rowset.relation);
+  if (!relation) return null;
+  if (relation.armScopes.length === 0) return relation;
+  return relation.armScopes[rowset.arm] ?? null;
 }
 
 /**
- * Decide the licence for model-authored SHR SQL.
+ * Decide the licence for model-authored SQL.
  *
  * Returns `proved: false` with a reason for anything it cannot establish, including unparseable
  * input. The caller must treat that as a refusal, never as a reason to consult another authority.
@@ -144,26 +135,47 @@ export function proveShrMurderLicence(sql: string): LicenceVerdict {
   const facts = analyzeSqlFacts(sql);
   if (!facts.parsed) return { proved: false, reason: facts.reason };
 
-  const counting = countingRelation(facts);
-  if (!counting) return { proved: true };   // nothing reachable counts victims; not engaged
+  // Only what the statement RETURNS is authorized, which is also what keeps a dead CTE out of it:
+  // a relation nothing returns from contributes no returned expression to enumerate.
+  const outerScopes = facts.outer.armScopes.length > 0 ? facts.outer.armScopes : [facts.outer];
+  for (const [armIndex, scope] of outerScopes.entries()) {
+    for (const [column, raw] of scope.outputs) {
+      // One returned column can denote several facts -- one per compound arm of the relation it
+      // references, or every column a `*` expands to. Each is its own claim.
+      const counts: { rowset: RowsetRef }[] = [];
+      const unresolved: string[] = [];
+      for (const resolved of resolveReferences(raw, scope, facts.relations)) {
+        returnedRowCounts(resolved, counts, unresolved);
+      }
 
-  // EVERY compound arm that returns a victim row count must prove itself. Evidence is never pooled:
-  // one arm supplying a valid key join while another supplies the Murder predicate proves nothing
-  // about either, and the union of two unlicensed series is not a licensed series.
-  const scopes = counting.armScopes.length > 0 ? counting.armScopes : [counting];
-  for (const [index, scope] of scopes.entries()) {
-    if (!returnsRowCount(scope)) continue;   // this arm returns a stored measure, not a row count
-    // An arm that counts something else entirely -- incidents, say -- is not this licence's
-    // question, and refusing it here would refuse a legitimate mixed compound.
-    if (!scope.sources.some((s) => s.table?.toLowerCase() === COUNTED_TABLE)) continue;
-    if (!armProves(scope, facts)) {
-      return {
-        proved: false,
-        reason: scopes.length > 1
-          ? `arm ${index + 1} of ${scopes.length} counts victims that were not proved to be `
-            + "restricted to murders through incidents"
-          : "the victims counted were not proved to be restricted to murders through incidents",
-      };
+      if (unresolved.length > 0 && counts.length === 0) {
+        // Something is returned whose provenance could not be traced. It may or may not be a victim
+        // count; unknown fails closed rather than being assumed harmless.
+        const victimsAnywhere = [...facts.relations.values()]
+          .some((rel) => rel.sources.some((s) => s.table?.toLowerCase() === COUNTED_TABLE));
+        if (victimsAnywhere) {
+          return { proved: false, reason: `unresolved provenance for "${column}": ${unresolved[0]}` };
+        }
+      }
+
+      for (const { rowset } of counts) {
+        const counted = rowsetScope(rowset, facts);
+        if (!counted) {
+          return { proved: false, reason: `the rowset behind "${column}" could not be identified` };
+        }
+        // A count over something other than victims is not this licence's question.
+        if (!counted.sources.some((s) => s.table?.toLowerCase() === COUNTED_TABLE)) continue;
+        if (!armProves(counted, facts)) {
+          return {
+            proved: false,
+            reason: outerScopes.length > 1
+              ? `arm ${armIndex + 1} of ${outerScopes.length} returns "${column}", a count of victims `
+                + "that was not proved to be restricted to murders through incidents"
+              : `"${column}" counts victims that were not proved to be restricted to murders `
+                + "through incidents",
+          };
+        }
+      }
     }
   }
   return { proved: true };

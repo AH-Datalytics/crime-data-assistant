@@ -1,19 +1,21 @@
 /**
  * Typed provenance facts for model-authored SQL, produced from a real SQL AST.
  *
- * WHY THIS EXISTS. The hand-rolled analyzer in `sql-lineage.ts` reduces a CTE output to
- * `ColumnRef[]`, discarding whether the value was a row count, an aggregate, a transformation or a
- * literal. That loss is what let a count hidden behind a CTE, `MIN(id) AS id`, `id + 1 AS id`, a
- * comma join and a windowed projection all pass the murder-victim licence: each of them still
- * *referenced* the right column. Referencing a key is not projecting it, and counting rows of a
- * relation is not the same as counting rows of the relation it was derived from.
+ * WHY THIS EXISTS. The hand-rolled analyzer reduced a CTE output to `ColumnRef[]`, discarding
+ * whether the value was a row count, an aggregate, a transformation or a literal. That loss let a
+ * count hidden behind a CTE, `MIN(id) AS id`, `id + 1 AS id`, a comma join and a windowed
+ * projection all pass the murder-victim licence: each of them still *referenced* the right column.
  *
- * The rule here is that facts must survive every boundary -- alias, CTE, compound arm -- or become
- * an explicit `unknown` that fails closed. Nothing is inferred from a column merely being present.
+ * The same class then recurred one level up. A reference to a CTE output -- `c.n` -- was still only
+ * a column, so a returned row count could be laundered through a CTE while the verdict searched
+ * relations by name and stopped at the first one containing `victims`. The fix is not a cleverer
+ * search: **a reference to a relation's output resolves into that output's own fact**, recursively,
+ * and every row count carries the ROWSET it counted. What a returned expression IS survives every
+ * alias, CTE, subquery and compound boundary, or it becomes an explicit `unknown` that fails closed.
  *
  * SCOPE. This module owns parsing for the SHR conditional murder-victim licence and nothing else in
- * this increment. It never throws: a parse failure is a fact (`unknown`), not an exception, because
- * an exception on the request path is an outage and a refusal is an answer.
+ * this increment. It never throws: a parse failure is a fact, not an exception, because an exception
+ * on the request path is an outage and a refusal is an answer.
  */
 import { Parser } from "node-sql-parser/build/postgresql";
 
@@ -24,13 +26,16 @@ export type Provenance = "proved" | "unknown";
 
 export type ColumnRef = { source: string | null; column: string };
 
+/** Which relation, and which compound arm of it, a counted or aggregated value came from. */
+export type RowsetRef = { relation: string; arm: number };
+
 /** What a returned value IS, recursively. `column` is the ONLY identity form. */
 export type ExprFact =
   | { kind: "column"; refs: ColumnRef[]; provenance: Provenance }
   | { kind: "star"; provenance: Provenance }
   | { kind: "literal"; value: string | number | boolean | null; provenance: Provenance }
-  | { kind: "rowcount"; target: ExprFact; distinct: boolean; windowed: boolean; provenance: Provenance }
-  | { kind: "aggregate"; fn: string; inputs: ExprFact[]; windowed: boolean; provenance: Provenance }
+  | { kind: "rowcount"; target: ExprFact; distinct: boolean; windowed: boolean; rowset: RowsetRef; provenance: Provenance }
+  | { kind: "aggregate"; fn: string; inputs: ExprFact[]; windowed: boolean; rowset: RowsetRef; provenance: Provenance }
   | { kind: "derived"; op: string; inputs: ExprFact[]; windowed: boolean; provenance: Provenance }
   | { kind: "unknown"; reason: string; provenance: "unknown" };
 
@@ -46,7 +51,7 @@ export type SourceFact = {
   alias: string | null;
   /** "BASE", "COMMA", or the join keyword ("INNER JOIN", "LEFT JOIN", ...). */
   join: string;
-  /** True when this source is a CTE reference rather than a base table. */
+  /** True when this source is a CTE or subquery reference rather than a base table. */
   isRelation: boolean;
 };
 
@@ -81,6 +86,12 @@ export type RelationFact = {
    * and the union of two unlicensed series is not a licensed series.
    */
   armScopes: RelationFact[];
+  /**
+   * Why nothing may be proved through this relation, when that is so -- a name defined more than
+   * once, say. Explicit, because a sentinel output made an ambiguous relation report as a missing
+   * column, which is a true refusal for a false reason.
+   */
+  unresolvable?: string;
 };
 
 export type QueryFacts =
@@ -101,7 +112,15 @@ function columnName(c: unknown): string | null {
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-function exprFact(e: any): ExprFact {
+/** Shared state while building one statement's facts. */
+type BuildContext = {
+  cteNames: Set<string>;
+  /** Every relation built so far, including inline subqueries under synthetic names. */
+  relations: Map<string, RelationFact>;
+  nextSubquery: { value: number };
+};
+
+function exprFact(e: any, ctx: BuildContext, rowset: RowsetRef): ExprFact {
   if (e == null) return UNKNOWN("null expression");
   switch (e.type) {
     case "column_ref": {
@@ -116,11 +135,13 @@ function exprFact(e: any): ExprFact {
       const inner = e.args?.expr;
       const target: ExprFact = !inner || inner.type === "star" || columnName(inner.column) === "*"
         ? { kind: "star", provenance: "proved" }
-        : exprFact(inner);
+        : exprFact(inner, ctx, rowset);
       if (fn === "COUNT") {
-        return { kind: "rowcount", target, distinct: Boolean(e.args?.distinct), windowed, provenance: "proved" };
+        // The rowset is part of the fact. Without it a count that travels through a CTE cannot be
+        // traced back to the rows it counted, and the verdict has to guess which relation it meant.
+        return { kind: "rowcount", target, distinct: Boolean(e.args?.distinct), windowed, rowset, provenance: "proved" };
       }
-      return { kind: "aggregate", fn, inputs: inner ? [exprFact(inner)] : [], windowed, provenance: "proved" };
+      return { kind: "aggregate", fn, inputs: inner ? [exprFact(inner, ctx, rowset)] : [], windowed, rowset, provenance: "proved" };
     }
     // ROW_NUMBER()/RANK() are a DISTINCT node type from an aggregate carrying OVER. Missing this
     // made a windowed CTE resolve to `unknown`: still refused, but for the wrong reason.
@@ -131,38 +152,48 @@ function exprFact(e: any): ExprFact {
       const args = e.args?.value ?? [];
       return {
         kind: "derived", op: String(name ?? "FN").toUpperCase(),
-        inputs: args.map(exprFact), windowed: e.over != null, provenance: "proved",
+        inputs: args.map((a: any) => exprFact(a, ctx, rowset)), windowed: e.over != null, provenance: "proved",
       };
     }
     case "binary_expr":
-      return { kind: "derived", op: String(e.operator), inputs: [exprFact(e.left), exprFact(e.right)], windowed: false, provenance: "proved" };
+      return {
+        kind: "derived", op: String(e.operator),
+        inputs: [exprFact(e.left, ctx, rowset), exprFact(e.right, ctx, rowset)],
+        windowed: false, provenance: "proved",
+      };
     // A CASE hides its inputs from a shallow reader; walking them is what keeps a predicate buried
     // in a CASE from being mistaken for a restriction, and keeps its columns in the lineage.
     case "case": {
       const inputs: ExprFact[] = [];
       for (const arm of e.args ?? []) {
-        if (arm.cond) inputs.push(exprFact(arm.cond));
-        if (arm.result) inputs.push(exprFact(arm.result));
+        if (arm.cond) inputs.push(exprFact(arm.cond, ctx, rowset));
+        if (arm.result) inputs.push(exprFact(arm.result, ctx, rowset));
       }
       return { kind: "derived", op: "CASE", inputs, windowed: false, provenance: "proved" };
     }
     case "cast":
-      return { kind: "derived", op: "CAST", inputs: [exprFact(e.expr)], windowed: false, provenance: "proved" };
+      return { kind: "derived", op: "CAST", inputs: [exprFact(e.expr, ctx, rowset)], windowed: false, provenance: "proved" };
     case "unary_expr":
-      return { kind: "derived", op: String(e.operator ?? "UNARY"), inputs: [exprFact(e.expr)], windowed: false, provenance: "proved" };
+      return { kind: "derived", op: String(e.operator ?? "UNARY"), inputs: [exprFact(e.expr, ctx, rowset)], windowed: false, provenance: "proved" };
     case "expr_list":
-      return { kind: "derived", op: "LIST", inputs: (e.value ?? []).map(exprFact), windowed: false, provenance: "proved" };
+      return { kind: "derived", op: "LIST", inputs: (e.value ?? []).map((v: any) => exprFact(v, ctx, rowset)), windowed: false, provenance: "proved" };
     case "number": case "single_quote_string": case "double_quote_string":
     case "bool": case "null": case "origin": case "param":
       // The VALUE is part of the fact. Recording only "this is a literal" forced the verdict to
       // search the statement text for the constant, which cannot tell `homicide_type = 'Murder'`
       // from `agency = 'Murder'` or from an unrelated `'Murder' AS label`.
       return { kind: "literal", value: (e.value ?? null) as string | number | boolean | null, provenance: "proved" };
-    default:
-      // A scalar subquery in the select list carries its own statement. It is a different rowset,
-      // so its facts must not be attributed to this one.
-      if (e.ast) return UNKNOWN("scalar subquery");
+    default: {
+      // A scalar subquery is its own rowset. Registering it as a relation keeps its facts -- and any
+      // row count inside it -- visible to the caller instead of collapsing to `unknown`.
+      if (e.ast) {
+        const name = `(subquery#${ctx.nextSubquery.value++})`;
+        ctx.relations.set(name, relationFact(e.ast, name, ctx));
+        const first = [...ctx.relations.get(name)!.outputs.values()][0];
+        return first ?? UNKNOWN("subquery projects nothing");
+      }
       return UNKNOWN(`unsupported expression node: ${String(e.type)}`);
+    }
   }
 }
 
@@ -178,36 +209,34 @@ function conjuncts(node: any, out: any[] = []): any[] {
   return out;
 }
 
-function predicateFact(node: any, position: "where" | "on", joinKind: string | null): PredicateFact {
+function predicateFact(
+  node: any, position: "where" | "on", joinKind: string | null, ctx: BuildContext, rowset: RowsetRef,
+): PredicateFact {
   const op = String(node.operator ?? node.type ?? "").toUpperCase();
   if (node.type !== "binary_expr") {
     return { op, left: null, right: null, position, joinKind, restrictive: false };
   }
   // NOTE: there is deliberately no special case for `OR`. A disjunction can widen what an equality
   // narrowed, but it is already non-restrictive by construction -- only `=` is restrictive below,
-  // and `conjuncts` never descends into an OR, so its operands are not conjuncts of anything. A
-  // separate guard here could not change an outcome, and a guard that cannot fail invites belief in
-  // a protection that is not doing the work.
+  // and `conjuncts` never descends into an OR, so its operands are not conjuncts of anything.
   if (op === "IN") {
     const list = node.right?.value ?? [];
     const single = Array.isArray(list) && list.length === 1;
     return {
       op, position, joinKind, restrictive: single,
-      left: exprFact(node.left),
-      right: single ? exprFact(list[0]) : UNKNOWN(`IN with ${Array.isArray(list) ? list.length : "?"} values`),
+      left: exprFact(node.left, ctx, rowset),
+      right: single ? exprFact(list[0], ctx, rowset) : UNKNOWN(`IN with ${Array.isArray(list) ? list.length : "?"} values`),
     };
   }
   return {
     op, position, joinKind, restrictive: op === "=",
-    left: exprFact(node.left), right: exprFact(node.right),
+    left: exprFact(node.left, ctx, rowset), right: exprFact(node.right, ctx, rowset),
   };
 }
 
 /** Merge two facts for the same output position across compound arms. Conflict becomes unknown. */
 function mergeArmFacts(a: ExprFact, b: ExprFact): ExprFact {
   if (a.kind !== b.kind) return UNKNOWN("compound arms disagree on kind");
-  // Kind-sensitive, not value-sensitive: two arms labelling rows 'Chicago' and 'Houston' agree that
-  // the column is a literal. Only differing KINDS or referents are a real disagreement.
   if (a.kind === "star") return a;
   // Deliberately value-INSENSITIVE: two arms labelling rows 'Chicago' and 'Houston' agree that the
   // column is a literal. Authorization never reads a merged fact -- it reads the arm's own.
@@ -229,40 +258,65 @@ function mergeArmFacts(a: ExprFact, b: ExprFact): ExprFact {
   return UNKNOWN("compound arms disagree");
 }
 
-function relationFact(stmt: any, name: string, cteNames: Set<string>): RelationFact {
+function relationFact(stmt: any, name: string, ctx: BuildContext): RelationFact {
   const arms: any[] = [];
   for (let s = stmt; s; s = s._next) arms.push(s);
-
-  const empty = (armName: string): RelationFact => ({
-    name: armName, arms: 1, sources: [], predicates: [],
-    outputs: new Map(), grouped: false, windowed: false, distinct: false, armScopes: [],
-  });
 
   const armScopes: RelationFact[] = [];
 
   arms.forEach((arm, armIndex) => {
     // Each arm is built as its own complete scope. Authorization reads THESE, never the merge.
-    const scope = empty(arms.length === 1 ? name : `${name}#${armIndex}`);
+    const rowset: RowsetRef = { relation: name, arm: armIndex };
+    const scope: RelationFact = {
+      name: arms.length === 1 ? name : `${name}#${armIndex}`,
+      arms: 1, sources: [], predicates: [],
+      outputs: new Map(), grouped: false, windowed: false, distinct: false, armScopes: [],
+    };
     if (arm.groupby) scope.grouped = true;
     if (arm.distinct?.type) scope.distinct = true;
 
+    // node-sql-parser mis-parses `FROM a CROSS JOIN b` when `a` has no explicit alias: it consumes
+    // the join keyword AS the alias and downgrades the join to "INNER JOIN". With an alias present
+    // it is correct. Both halves matter here -- the bogus alias broke reference resolution, and
+    // reading a CROSS JOIN as an inner join would misreport how the rows were combined -- so the
+    // keyword is stripped and the following join is restored to what was written.
+    let pendingJoin: string | null = null;
     (arm.from ?? []).forEach((f: any, i: number) => {
-      const table = f.table ?? null;
+      let table: string | null = f.table ?? null;
+      let isRelation = Boolean(table && ctx.cteNames.has(String(table).toLowerCase()));
+      let alias: string | null = f.as ?? null;
+      const swallowed = alias && /^(cross|natural|inner|left|right|full|outer)$/i.test(alias) ? alias : null;
+      if (swallowed) {
+        alias = null;
+        pendingJoin = `${swallowed.toUpperCase()} JOIN`;
+      }
+      // A derived table in FROM is its own rowset too.
+      if (!table && f.expr?.ast) {
+        const sub = `(subquery#${ctx.nextSubquery.value++})`;
+        ctx.relations.set(sub, relationFact(f.expr.ast, sub, ctx));
+        table = sub;
+        isRelation = true;
+      }
+      const declaredJoin = f.join ?? (i === 0 ? "BASE" : "COMMA");
       scope.sources.push({
         index: scope.sources.length,
         arm: armIndex,
         table,
-        alias: f.as ?? null,
+        alias,
         // A second arm's first table is a BASE of that arm, not a comma join of the first.
-        join: f.join ?? (i === 0 ? "BASE" : "COMMA"),
-        isRelation: Boolean(table && cteNames.has(String(table).toLowerCase())),
+        // `pendingJoin` restores a join keyword the parser swallowed as the previous alias.
+        join: pendingJoin && i > 0 ? pendingJoin : declaredJoin,
+        isRelation,
       });
-      if (f.on) for (const c of conjuncts(f.on)) scope.predicates.push(predicateFact(c, "on", f.join ?? "INNER JOIN"));
+      if (i > 0) pendingJoin = null;
+      if (f.on) {
+        for (const c of conjuncts(f.on)) scope.predicates.push(predicateFact(c, "on", f.join ?? "INNER JOIN", ctx, rowset));
+      }
     });
-    for (const c of conjuncts(arm.where)) scope.predicates.push(predicateFact(c, "where", null));
+    for (const c of conjuncts(arm.where)) scope.predicates.push(predicateFact(c, "where", null, ctx, rowset));
 
     (arm.columns ?? []).forEach((col: any, i: number) => {
-      const fact = exprFact(col.expr);
+      const fact = exprFact(col.expr, ctx, rowset);
       if ("windowed" in fact && fact.windowed) scope.windowed = true;
       const key = col.as ?? (fact.kind === "column" ? fact.refs[0]?.column : null) ?? `#${i}`;
       scope.outputs.set(String(key).toLowerCase(), fact);
@@ -295,6 +349,85 @@ function relationFact(stmt: any, name: string, cteNames: Set<string>): RelationF
 }
 
 /**
+ * Resolve a reference to a relation's output into the facts that output actually IS.
+ *
+ * Returns a LIST, because one reference can denote several facts and authorizing only the first is
+ * the same lost-provenance mistake one level down:
+ *   - a compound relation exports one fact PER ARM at each position, and
+ *     `WITH c AS (safe UNION ALL unsafe) SELECT n FROM c` returns both;
+ *   - `SELECT * FROM c` returns everything `c` exports, not nothing.
+ *
+ * Resolution is recursive, so a nested chain resolves through every link. Cycles, missing exports
+ * and references that cannot be attributed to one relation become `unknown`, which callers must
+ * treat as a refusal rather than falling back to searching relations by name.
+ */
+export function resolveReferences(
+  fact: ExprFact, scope: RelationFact, relations: Map<string, RelationFact>, seen: Set<string> = new Set(),
+): ExprFact[] {
+  const relationSources = scope.sources.filter((s) => s.isRelation && s.table);
+
+  if (fact.kind === "column") {
+    const ref = fact.refs[0];
+    if (!ref) return [fact];
+    let source: SourceFact | undefined;
+    if (ref.source) {
+      const wanted = ref.source.toLowerCase();
+      source = relationSources.find((s) => (s.alias ?? s.table ?? "").toLowerCase() === wanted);
+      if (!source) return [fact];               // a base-table column is already its own fact
+    } else {
+      // Unqualified against more than one relation cannot be attributed to either.
+      if (relationSources.length > 1) return [UNKNOWN("unqualified reference to more than one relation")];
+      if (relationSources.length === 0) return [fact];
+      source = relationSources[0];
+    }
+    const target = relations.get(String(source.table).toLowerCase());
+    if (!target) return [UNKNOWN(`reference to an undefined relation: ${source.table}`)];
+    if (target.unresolvable) return [UNKNOWN(target.unresolvable)];
+    const key = `${String(source.table).toLowerCase()}.${ref.column.toLowerCase()}`;
+    if (seen.has(key)) return [UNKNOWN("cyclic output provenance")];
+    const next = new Set([...seen, key]);
+    // EVERY arm exports a fact at this position, and each is a separate claim.
+    const armScopes = target.armScopes.length > 0 ? target.armScopes : [target];
+    const out: ExprFact[] = [];
+    for (const arm of armScopes) {
+      const inner = arm.outputs.get(ref.column.toLowerCase());
+      if (!inner) { out.push(UNKNOWN(`relation ${source.table} does not export ${ref.column}`)); continue; }
+      out.push(...resolveReferences(inner, arm, relations, next));
+    }
+    return out;
+  }
+
+  if (fact.kind === "star") {
+    // A star over a relation returns everything that relation exports. Treating it as carrying no
+    // facts would hide exactly what the caller receives.
+    if (relationSources.length === 0) return [fact];
+    const out: ExprFact[] = [];
+    for (const s of relationSources) {
+      const target = relations.get(String(s.table).toLowerCase());
+      if (!target) { out.push(UNKNOWN(`reference to an undefined relation: ${s.table}`)); continue; }
+      if (target.unresolvable) { out.push(UNKNOWN(target.unresolvable)); continue; }
+      const armScopes = target.armScopes.length > 0 ? target.armScopes : [target];
+      for (const arm of armScopes) {
+        for (const [column, inner] of arm.outputs) {
+          const key = `${String(s.table).toLowerCase()}.${column}`;
+          if (seen.has(key)) { out.push(UNKNOWN("cyclic output provenance")); continue; }
+          out.push(...resolveReferences(inner, arm, relations, new Set([...seen, key])));
+        }
+      }
+    }
+    return out.length > 0 ? out : [fact];
+  }
+
+  if (fact.kind === "aggregate" || fact.kind === "derived") {
+    return [{ ...fact, inputs: fact.inputs.flatMap((i) => resolveReferences(i, scope, relations, seen)) }];
+  }
+  if (fact.kind === "rowcount") {
+    return [{ ...fact, target: resolveReferences(fact.target, scope, relations, seen)[0] ?? fact.target }];
+  }
+  return [fact];
+}
+
+/**
  * Parse SQL into facts. Never throws.
  *
  * Over-length input is refused before parsing: parsing is synchronous and cannot be interrupted, so
@@ -315,20 +448,32 @@ export function analyzeSqlFacts(sql: string): QueryFacts {
   if (!ast || ast.type !== "select") return { parsed: false, reason: "not a single SELECT statement" };
 
   const cteNames = new Set<string>();
+  const duplicated = new Set<string>();
   for (const c of ast.with ?? []) {
     const n = String(c.name?.value ?? c.name ?? "").toLowerCase();
-    if (n) cteNames.add(n);
+    if (!n) continue;
+    if (cteNames.has(n)) duplicated.add(n);
+    cteNames.add(n);
   }
 
-  const relations = new Map<string, RelationFact>();
+  const ctx: BuildContext = { cteNames, relations: new Map(), nextSubquery: { value: 0 } };
   for (const c of ast.with ?? []) {
     const n = String(c.name?.value ?? c.name ?? "").toLowerCase();
     if (!n || !c.stmt) continue;
-    relations.set(n, relationFact(c.stmt, n, cteNames));
+    if (duplicated.has(n)) {
+      // A name defined twice cannot be resolved to one rowset, so nothing may be proved through it.
+      ctx.relations.set(n, {
+        name: n, arms: 1, sources: [], predicates: [], outputs: new Map(),
+        grouped: false, windowed: false, distinct: false, armScopes: [],
+        unresolvable: `relation ${n} is defined more than once`,
+      });
+      continue;
+    }
+    ctx.relations.set(n, relationFact(c.stmt, n, ctx));
   }
-  const outer = relationFact(ast, "", cteNames);
-  relations.set("", outer);
-  return { parsed: true, relations, outer };
+  const outer = relationFact(ast, "", ctx);
+  ctx.relations.set("", outer);
+  return { parsed: true, relations: ctx.relations, outer };
 }
 
 /**

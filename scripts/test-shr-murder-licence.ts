@@ -10,7 +10,7 @@
  * clause order, so no complete SQL string is special-cased.
  */
 import assert from "node:assert";
-import { analyzeSqlFacts, keyMultiplicity, MAX_SQL_LENGTH } from "../lib/sql-facts";
+import { analyzeSqlFacts, keyMultiplicity, resolveReferences, MAX_SQL_LENGTH } from "../lib/sql-facts";
 import { proveShrMurderLicence } from "../lib/shr-murder-licence";
 import { tableSemantics } from "../lib/table-semantics";
 
@@ -85,6 +85,28 @@ const ACCEPTED: [string, string][] = [
   ["a nested chain of unused CTEs does not engage the licence",
     "WITH a AS (SELECT COUNT(v.id) AS n FROM victims v), b AS (SELECT n FROM a) "
     + "SELECT i.year FROM incidents i"],
+  // Positive controls for returned-value provenance: a count laundered through a CTE is still
+  // authorized when the CTE itself proves the licence, at every depth.
+  ["a proved count returned through a CTE reference",
+    `WITH c AS (SELECT COUNT(v.id) AS n ${JOINED} WHERE i.homicide_type = 'Murder') `
+    + "SELECT c.n FROM c CROSS JOIN victims v"],
+  ["a proved count returned through a nested CTE chain",
+    `WITH a AS (SELECT COUNT(v.id) AS n ${JOINED} WHERE i.homicide_type = 'Murder'), `
+    + "b AS (SELECT n FROM a) SELECT b.n FROM b"],
+  ["two returned columns, both proved",
+    `WITH c AS (SELECT COUNT(v.id) AS n ${JOINED} WHERE i.homicide_type = 'Murder') `
+    + `SELECT c.n AS a, (SELECT COUNT(v2.id) FROM victims v2 JOIN incidents i2 `
+    + "ON v2.incident_id = i2.id WHERE i2.homicide_type = 'Murder') AS b FROM c"],
+  ["a star over a fully proved CTE",
+    `WITH c AS (SELECT COUNT(v.id) AS n ${JOINED} WHERE i.homicide_type = 'Murder') SELECT * FROM c`],
+  ["a compound CTE whose every arm is proved",
+    `WITH c AS (SELECT COUNT(v.id) AS n ${JOINED} WHERE i.homicide_type = 'Murder' AND i.state = 'CA' `
+    + `UNION ALL SELECT COUNT(v.id) AS n ${JOINED} WHERE i.homicide_type = 'Murder' AND i.state = 'TX') `
+    + "SELECT n FROM c"],
+  ["a compound where both returned arms are proved, one through a CTE",
+    `WITH c AS (SELECT COUNT(v.id) AS n ${JOINED} WHERE i.homicide_type = 'Murder') `
+    + "SELECT n FROM c UNION ALL "
+    + `SELECT COUNT(v.id) AS n ${JOINED} WHERE i.homicide_type = 'Murder'`],
 ];
 
 for (const [name, sql] of ACCEPTED) {
@@ -231,6 +253,43 @@ const REFUSED: [string, string, string][] = [
     "WITH used AS (SELECT COUNT(v.id) AS n FROM victims v) SELECT n FROM used"],
   ["a reachable unsafe CTE still refuses", "reached through a nested chain",
     "WITH a AS (SELECT COUNT(v.id) AS n FROM victims v), b AS (SELECT n FROM a) SELECT n FROM b"],
+
+  // A returned count must be traced to the rowset it counted. Choosing one "counting relation" and
+  // stopping let the outer `victims` source mask the unsafe count that `c.n` actually is.
+  ["every returned series is authorized", "an unsafe count masked by an outer victims source",
+    "WITH c AS (SELECT COUNT(x.id) AS n FROM victims x) "
+    + "SELECT c.n FROM c CROSS JOIN victims v LIMIT 1"],
+  ["every returned series is authorized", "the same sources in the opposite order",
+    "WITH c AS (SELECT COUNT(x.id) AS n FROM victims x) "
+    + "SELECT c.n FROM victims v CROSS JOIN c LIMIT 1"],
+  ["every returned series is authorized", "masked through a nested CTE chain",
+    "WITH a AS (SELECT COUNT(x.id) AS n FROM victims x), b AS (SELECT n FROM a) "
+    + "SELECT b.n FROM b CROSS JOIN victims v"],
+  ["every returned series is authorized", "one safe and one unsafe returned column",
+    "WITH bad AS (SELECT COUNT(x.id) AS n FROM victims x) "
+    + `SELECT (SELECT COUNT(v2.id) FROM victims v2 JOIN incidents i2 ON v2.incident_id = i2.id `
+    + "WHERE i2.homicide_type = 'Murder') AS ok, bad.n AS notok FROM bad"],
+  ["every returned series is authorized", "a compound with one unsafe returned arm",
+    `SELECT COUNT(v.id) AS n ${JOINED} WHERE i.homicide_type = 'Murder' `
+    + "UNION ALL SELECT COUNT(x.id) AS n FROM victims x"],
+  ["unresolved provenance fails closed", "a reference to a relation that exports no such column",
+    "WITH c AS (SELECT COUNT(x.id) AS n FROM victims x) SELECT c.missing FROM c"],
+  // Found by the adversarial matrix, not by review: a reference into a compound relation denotes
+  // one fact PER ARM, and resolving only the first hid the unsafe arm entirely.
+  ["every arm a reference denotes is authorized", "a compound CTE with one unsafe arm",
+    "WITH c AS (SELECT COUNT(v.id) AS n FROM victims v JOIN incidents i ON v.incident_id = i.id "
+    + "WHERE i.homicide_type = 'Murder' UNION ALL SELECT COUNT(x.id) AS n FROM victims x) "
+    + "SELECT n FROM c"],
+  // Likewise a star: it returns everything the relation exports, so it cannot carry no facts.
+  ["a star returns what the relation exports", "SELECT * over an unsafe CTE",
+    "WITH c AS (SELECT COUNT(x.id) AS n FROM victims x) SELECT * FROM c"],
+  ["cyclic provenance fails closed", "a recursive CTE counting victims",
+    "WITH RECURSIVE r AS (SELECT COUNT(v.id) AS n FROM victims v UNION ALL SELECT n FROM r) "
+    + "SELECT n FROM r"],
+  ["a star returns what the relation exports", "SELECT * over an unsafe compound CTE",
+    "WITH c AS (SELECT COUNT(v.id) AS n FROM victims v JOIN incidents i ON v.incident_id = i.id "
+    + "WHERE i.homicide_type = 'Murder' UNION ALL SELECT COUNT(x.id) AS n FROM victims x) "
+    + "SELECT * FROM c"],
 ];
 
 for (const [property, name, sql] of REFUSED) {
@@ -311,6 +370,61 @@ check("every compound arm keeps its own fact scope", () => {
   assert.ok(literalsOf(first).includes("Manslaughter"), "arm 1 owns its predicate");
   assert.ok(!literalsOf(first).includes("Murder"), "arm 1 must not see arm 2's predicate");
   assert.ok(literalsOf(second).includes("Murder"), "arm 2 owns its predicate");
+});
+
+check("a reference to a relation output resolves into that output's own fact", () => {
+  const facts = analyzeSqlFacts(
+    "WITH c AS (SELECT COUNT(x.id) AS n FROM victims x) SELECT c.n FROM c CROSS JOIN victims v");
+  assert.ok(facts.parsed);
+  const parsed = facts as Extract<typeof facts, { parsed: true }>;
+  const scope = parsed.outer.armScopes[0] ?? parsed.outer;
+  const raw = scope.outputs.get("n")!;
+  assert.strictEqual(raw.kind, "column", "unresolved, it is only a column reference");
+  const resolved = resolveReferences(raw, scope, parsed.relations)[0];
+  assert.strictEqual(resolved.kind, "rowcount", "resolved, it is the count the CTE exports");
+  assert.deepStrictEqual(resolved.kind === "rowcount" ? resolved.rowset : null, { relation: "c", arm: 0 },
+    "and it carries the rowset it counted");
+});
+
+check("unresolvable provenance becomes unknown rather than a column", () => {
+  const parsed = (sql: string) => {
+    const f = analyzeSqlFacts(sql);
+    assert.ok(f.parsed, `did not parse: ${sql}`);
+    return f as Extract<typeof f, { parsed: true }>;
+  };
+  const missing = parsed("WITH c AS (SELECT 1 AS n FROM victims x) SELECT c.absent FROM c");
+  const scope = missing.outer.armScopes[0] ?? missing.outer;
+  const resolved = resolveReferences(scope.outputs.get("absent")!, scope, missing.relations)[0];
+  assert.strictEqual(resolved.kind, "unknown", "a missing export cannot resolve to anything");
+
+  const duplicated = parsed(
+    "WITH c AS (SELECT 1 AS n FROM victims x), c AS (SELECT 2 AS n FROM victims y) SELECT c.n FROM c");
+  const dupScope = duplicated.outer.armScopes[0] ?? duplicated.outer;
+  const dup = resolveReferences(dupScope.outputs.get("n")!, dupScope, duplicated.relations)[0];
+  assert.strictEqual(dup.kind, "unknown", "a name defined twice resolves to no single rowset");
+  // The REASON matters: a duplicate must be refused as a duplicate, not incidentally because the
+  // second definition happened to hide the first's export.
+  assert.match(dup.kind === "unknown" ? dup.reason : "", /defined more than once/,
+    "a duplicated relation name must be reported as such");
+
+  // A self-referencing CTE cannot be unwound, so its provenance is unknown rather than a column.
+  const cyclic = parsed(
+    "WITH RECURSIVE r AS (SELECT COUNT(v.id) AS n FROM victims v UNION ALL SELECT n FROM r) SELECT n FROM r");
+  const cycScope = cyclic.outer.armScopes[0] ?? cyclic.outer;
+  const resolvedCycle = resolveReferences(cycScope.outputs.get("n")!, cycScope, cyclic.relations);
+  assert.ok(resolvedCycle.some((f) => f.kind === "unknown" && /cyclic/.test(f.reason)),
+    "a cycle must be reported as a cycle");
+});
+
+check("a join keyword swallowed as an alias is repaired", () => {
+  // node-sql-parser reads `FROM c CROSS JOIN v` as table `c` aliased "CROSS", and downgrades the
+  // join to INNER. Both halves are corrected, or a reference cannot resolve and a cross join reads
+  // as an inner join.
+  const facts = analyzeSqlFacts("SELECT 1 FROM c CROSS JOIN victims v");
+  assert.ok(facts.parsed);
+  const scope = (facts as Extract<typeof facts, { parsed: true }>).outer.armScopes[0]!;
+  assert.strictEqual(scope.sources[0].alias, null, "the join keyword is not an alias");
+  assert.match(scope.sources[1].join, /CROSS JOIN/i, "the join kind is restored");
 });
 
 check("sources are instances, so comma joins and self-joins cannot collapse", () => {
