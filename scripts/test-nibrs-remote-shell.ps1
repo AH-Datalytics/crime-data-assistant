@@ -5,11 +5,13 @@
 #
 # A LIMITATION WORTH KNOWING, because it shapes every assertion below. The failure being regressed
 # is Linux bash rejecting a CR inside a command (`set: -\r: invalid option`). The MSYS bash shipped
-# with Git for Windows strips CR unconditionally and does not even expose the `igncr` option, so no
-# Bash on a Windows host can be made to reproduce the rejection. The parse check below is therefore
-# a one-directional positive: it proves a normalised payload is accepted, and it becomes genuinely
-# CR-sensitive on Linux. What holds the property on Windows is the byte-level assertions -- a CR is
-# 0x0D, and its presence or absence in the encoded bytes is exactly what the remote shell reacts to.
+# with Git for Windows -- which is what `Get-UsableBash` finds on this machine -- strips CR
+# unconditionally and does not even expose the `igncr` option, so it cannot reproduce the rejection.
+# A genuine Linux bash would (including one under a working WSL distribution, but none is installed
+# here). The parse check below is therefore a one-directional positive: it proves a normalised
+# payload is accepted, and it becomes CR-sensitive only where the Bash it found is a real Linux one.
+# What holds the property here is the byte-level assertions -- a CR is 0x0D, and its presence or
+# absence in the encoded bytes is exactly what the remote shell reacts to.
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
@@ -19,6 +21,7 @@ $ErrorActionPreference = "Stop"
 $script:Passed = 0
 $script:Failed = 0
 $script:Skipped = 0
+$script:BashUsed = $null
 
 function Assert-True {
   param([bool]$Condition, [string]$Message)
@@ -69,6 +72,76 @@ function Assert-NoCarriageReturn {
   param([byte[]]$Bytes, [string]$What)
   $index = [Array]::IndexOf($Bytes, [byte]13)
   Assert-True ($index -lt 0) "$What still carries a carriage return at byte $index"
+}
+
+# Ask one Bash to parse-check one script file, and return its exit code and output.
+#
+# This exists because of a bug the mutation matrix caught in the first version of the fix. This file
+# sets `$ErrorActionPreference = "Stop"`, and under that setting a native command writing to stderr
+# raises a TERMINATING error in PowerShell 5.1. So an unusable candidate did not get skipped -- it
+# threw out of discovery and the case reported FAIL, which is the very thing this correction is meant
+# to eliminate. Anything a candidate says on stderr must be data here, never control flow.
+function Invoke-BashParse {
+  param(
+    [Parameter(Mandatory = $true)][string]$Bash,
+    [Parameter(Mandatory = $true)][string]$ScriptPath
+  )
+  $previous = $ErrorActionPreference
+  $ErrorActionPreference = "Continue"
+  try {
+    $output = & $Bash "-n" $ScriptPath 2>&1
+    return [pscustomobject]@{ ExitCode = $LASTEXITCODE; Output = @($output) }
+  } catch {
+    # A candidate that cannot even be launched is simply unusable, not a test failure.
+    return [pscustomobject]@{ ExitCode = -1; Output = @($_.Exception.Message) }
+  } finally {
+    $ErrorActionPreference = $previous
+  }
+}
+
+# Find a Bash that can actually parse a script file at a Windows path -- the one capability this
+# suite needs from it.
+#
+# `Get-Command bash` is not good enough and produced a false failure. On this machine a normal
+# PowerShell environment resolves `bash` to C:\Windows\System32\bash.exe, the WSL launcher, with no
+# WSL distribution installed: the lookup succeeds, the launcher starts, and it dies with
+# `execvpe(/bin/bash) failed: No such file or directory`. The earlier run only passed because it was
+# launched from a shell that had already put Git's bin ahead of System32 on PATH.
+#
+# So every candidate is PROVED before it is used, by asking it to do the real thing. That also
+# handles the inverse case: a working WSL Bash would pass the probe only if it can read a Windows
+# path, which is exactly the condition under which this suite could use it.
+function Get-UsableBash {
+  $candidates = New-Object System.Collections.Generic.List[string]
+  # An explicit override wins, so a host with an unusual layout can point the suite at a Bash.
+  if ($env:CDA_TEST_BASH) { $candidates.Add($env:CDA_TEST_BASH) }
+  # Known-good locations before PATH, so the WSL launcher is never the first thing tried.
+  $candidates.Add((Join-Path $env:ProgramFiles "Git\bin\bash.exe"))
+  $programFilesX86 = [Environment]::GetEnvironmentVariable("ProgramFiles(x86)")
+  if ($programFilesX86) { $candidates.Add((Join-Path $programFilesX86 "Git\bin\bash.exe")) }
+  # Git's own install, wherever it is: <root>\cmd\git.exe -> <root>\bin\bash.exe.
+  $git = Get-Command git -ErrorAction SilentlyContinue
+  if ($git) { $candidates.Add((Join-Path (Split-Path -Parent (Split-Path -Parent $git.Source)) "bin\bash.exe")) }
+  # Then anything named bash on PATH, the WSL launcher included -- it simply fails its probe.
+  foreach ($found in @(Get-Command bash -All -ErrorAction SilentlyContinue)) {
+    if ($found.Source) { $candidates.Add($found.Source) }
+  }
+
+  $probe = Join-Path ([System.IO.Path]::GetTempPath()) ("nibrs-bash-probe-" + [Guid]::NewGuid().ToString("N") + ".sh")
+  try {
+    [System.IO.File]::WriteAllBytes($probe, [Text.Encoding]::UTF8.GetBytes("exit 0`n"))
+    $seen = New-Object System.Collections.Generic.HashSet[string]
+    foreach ($candidate in $candidates) {
+      if ([string]::IsNullOrWhiteSpace($candidate)) { continue }
+      if (-not $seen.Add($candidate.ToLowerInvariant())) { continue }
+      if (-not (Test-Path -LiteralPath $candidate)) { continue }
+      # -n is parse-only, so the probe cannot run anything even if the candidate is unexpected.
+      if ((Invoke-BashParse -Bash $candidate -ScriptPath $probe).ExitCode -eq 0) { return $candidate }
+    }
+  } finally {
+    Remove-Item -LiteralPath $probe -Force -ErrorAction SilentlyContinue
+  }
+  return $null
 }
 
 # The shipped preflight, read out of the script that actually runs in production.
@@ -143,15 +216,17 @@ Test-Case "the shipped preflight still says what it used to say" {
 
 Test-Case "bash parses the normalised shipped preflight" {
   # One-directional: see the limitation note at the top of this file.
-  $bash = Get-Command bash -ErrorAction SilentlyContinue
-  if (-not $bash) { throw "SKIP: no bash on this host to parse the payload with" }
+  $bash = Get-UsableBash
+  if (-not $bash) { throw "SKIP: no Bash on this host could parse a script file, so the payload was not parse-checked" }
   $bytes = Get-EncodedBytes -Command (ConvertTo-RemoteBashCommand -Payload (Get-ShippedPreflightPayload))
   $path = Join-Path ([System.IO.Path]::GetTempPath()) ("nibrs-payload-" + [Guid]::NewGuid().ToString("N") + ".sh")
   try {
     [System.IO.File]::WriteAllBytes($path, $bytes)
     # -n is parse-only. Nothing in the payload runs.
-    $output = & $bash.Source "-n" $path 2>&1
-    Assert-True ($LASTEXITCODE -eq 0) "bash rejected the normalised payload (exit $LASTEXITCODE): $($output -join '; ')"
+    $result = Invoke-BashParse -Bash $bash -ScriptPath $path
+    Assert-True ($result.ExitCode -eq 0) "$bash rejected the normalised payload (exit $($result.ExitCode)): $($result.Output -join '; ')"
+    # Named in the summary, so the evidence says WHICH Bash accepted it rather than just "bash did".
+    $script:BashUsed = $bash
   } finally {
     Remove-Item -LiteralPath $path -Force -ErrorAction SilentlyContinue
   }
@@ -185,5 +260,6 @@ Test-Case "a second remote payload cannot skip normalisation unnoticed" {
 }
 
 $suffix = if ($script:Skipped -gt 0) { ", $script:Skipped skipped" } else { "" }
+if ($script:BashUsed) { Write-Host "`nparse-checked with $script:BashUsed" }
 Write-Host "`nNIBRS remote shell payload: $script:Passed passed, $script:Failed failed$suffix"
 if ($script:Failed -gt 0) { exit 1 }
