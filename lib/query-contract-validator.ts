@@ -14,9 +14,14 @@ export interface QueryContractSqlValidation {
   blockReasons: string[];
   enforced: string[];
   /**
-   * OBSERVATION ONLY. Recorded so the Historical state-clearance property can be measured before it
-   * is enforced. It deliberately does not appear in fired, warnings, retryIssues, blockReasons or
-   * enforced, so setting it cannot change any user-facing outcome.
+   * The Historical clearance-grain finding, recorded on every validation so the property stays
+   * measurable.
+   *
+   * Recording is not acting. Only a finding whose `enforceable` flag is set -- today, a state-grain
+   * clearance request whose state resolved with HIGH confidence -- ALSO lands in `blockReasons` and
+   * `enforced`. A medium/low-confidence state, and every `historical-clearance-measure-absent`
+   * finding, appear here and nowhere else, so they can be measured without changing any user-facing
+   * outcome.
    */
   clearanceGrainObservation: ClearanceGrainObservation | null;
 }
