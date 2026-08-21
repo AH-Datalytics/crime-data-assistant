@@ -1,14 +1,14 @@
 // Historical state-clearance property: Historical carries clearance nationally and per agency, and
 // nothing in between, so a state-grain clearance request has no correct answer.
 //
-// OBSERVATION ONLY in this increment. These tests assert what is OBSERVED, and one of them asserts
-// that observing changes nothing a caller acts on.
+// OBSERVE WIDELY, ENFORCE NARROWLY. These tests assert what is observed, which subset of that is
+// allowed to decline a request, and -- for the enforced shape -- that no factual SQL runs.
 //
 // Both directions are equally binding. A rule that declines "the rape rate in Florida" -- a crime
 // rate, not a clearance rate -- has failed, not over-delivered.
 
 import { buildQueryContract } from "../lib/query-contract";
-import { validateQueryContractSql } from "../lib/query-contract-validator";
+import { queryContractFailureMessage, validateQueryContractSql } from "../lib/query-contract-validator";
 import {
   clearanceMeasureColumn,
   observeHistoricalClearanceGrain,
@@ -395,35 +395,119 @@ check("the observation is computed inside contract validation, before execution"
   assert(validateAt < executeAt, "contract validation does not precede execution");
 });
 
-check("OBSERVATION ONLY: the finding reaches no field the route acts on", () => {
+check("a confidently resolved state BLOCKS, with its own reason code and no retry", () => {
   const result = validateQueryContractSql({
     question: "What is the rape clearance rate in Florida by year?",
     source: "historical",
     sql: "SELECT year, rape_rate FROM national_clearance_rate ORDER BY year",
     routingMeta: null,
   });
-  assert(result.clearanceGrainObservation !== null, "the observation was not recorded at all");
-  assert(result.clearanceGrainObservation!.reason === "historical-state-clearance-no-aggregate",
-    `unexpected reason: ${result.clearanceGrainObservation!.reason}`);
+  const o = result.clearanceGrainObservation;
+  assert(o !== null, "the observation was not recorded at all");
+  assert(o!.reason === "historical-state-clearance-no-aggregate", `unexpected reason: ${o!.reason}`);
+  assert(o!.stateConfidence === "high", `expected high confidence, got ${o!.stateConfidence}`);
+  assert(o!.enforceable, "a high-confidence state finding was not marked enforceable");
 
-  const leaked: string[] = [];
-  for (const field of ["fired", "warnings", "retryIssues", "blockReasons", "enforced"] as const) {
-    for (const entry of result[field]) {
-      if (/clearance-grain|state-clearance|clearance-measure-absent/i.test(entry)) leaked.push(`${field}: ${entry}`);
-    }
-  }
-  assert(leaked.length === 0, `the observation leaked into enforcing fields: ${leaked.join("; ")}`);
+  // The block is what stops the route before it executes anything.
+  assert(result.blockReasons.includes(o!.message), "the decline text is not among blockReasons");
+  assert(result.enforced.includes("historical-state-clearance-no-aggregate"),
+    `the reason code was not recorded in enforced: ${result.enforced.join(",")}`);
+  // A block must not also ask the model to retry.
+  assert(result.retryIssues.length === 0, `a blocked request also carries retry issues: ${result.retryIssues.join("; ")}`);
+  // This is the exact string the route sends to the user.
+  assert(queryContractFailureMessage(result) === o!.message, "the route would not send the authored decline text");
+  assert(!/[0-9]/.test(o!.message), `the decline text contains a digit: ${o!.message}`);
 });
 
-check("an allowed question records no observation through the validator", () => {
+check("a MEDIUM- or LOW-confidence state is observed but never enforced", () => {
+  // Constructed rather than found: every state clearance question in the replay corpus resolved with
+  // high confidence, so this branch has no corpus example to lean on. Declining on a guess about
+  // which place was meant is exactly what this gate exists to prevent.
+  const base = buildQueryContract("What is the rape clearance rate in Florida by year?", "historical", null)!;
+  for (const confidence of ["medium", "low"] as const) {
+    const geography = { ...base.geography, confidence };
+    const contract = { ...base, geography, geographies: [geography] };
+    const o = observeHistoricalClearanceGrain(contract);
+    assert(o !== null, `a ${confidence}-confidence state should still be OBSERVED`);
+    assert(o!.stateConfidence === confidence, `expected ${confidence}, got ${o!.stateConfidence}`);
+    assert(!o!.enforceable, `a ${confidence}-confidence state was marked enforceable`);
+  }
+});
+
+check("a measure-absent finding is observed but never enforced in this increment", () => {
+  const o = expectReason("What is the hate crime clearance rate in Florida?", "historical-clearance-measure-absent");
+  assert(!o.enforceable, "measure-absent was marked enforceable; only the state-grain rule was authorized");
   const result = validateQueryContractSql({
-    question: "What is the rape rate in Florida by year?",
+    question: "What is the hate crime clearance rate in Florida?",
     source: "historical",
-    sql: "SELECT year, rape_rate FROM historical_state_national WHERE state = 'Florida' ORDER BY year",
+    sql: "SELECT year, rape_rate FROM national_clearance_rate ORDER BY year",
     routingMeta: null,
   });
-  assert(result.clearanceGrainObservation === null,
-    `a state crime-rate question was observed as ${result.clearanceGrainObservation?.reason}`);
+  assert(!result.enforced.includes("historical-clearance-measure-absent"), "measure-absent reached enforced");
+  assert(!result.blockReasons.some((b) => /clearance measure at any level/.test(b)), "measure-absent produced a block");
+});
+
+check("allowed questions record no observation and no block through the validator", () => {
+  const cases: Array<[string, string]> = [
+    ["What is the rape rate in Florida by year?",
+      "SELECT year, rape_rate FROM historical_state_national WHERE state = 'Florida' ORDER BY year"],
+    ["How many rapes were reported in Florida in 2023?",
+      "SELECT rape FROM historical_state_national WHERE state = 'Florida' AND year = 2023"],
+    ["What is the national rape clearance rate by year?",
+      "SELECT year, rape_rate FROM national_clearance_rate ORDER BY year"],
+    ["What is the rape clearance rate in Gainesville, Florida?",
+      "SELECT c.year, c.rape_clr FROM historical_agency_clearance c JOIN historical_agency a ON a.ori = c.ori WHERE a.ori = 'FL0010100' ORDER BY c.year"],
+  ];
+  for (const [question, sql] of cases) {
+    const result = validateQueryContractSql({ question, source: "historical", sql, routingMeta: null });
+    assert(result.clearanceGrainObservation === null,
+      `"${question}" was observed as ${result.clearanceGrainObservation?.reason}`);
+    assert(!result.enforced.includes("historical-state-clearance-no-aggregate"),
+      `"${question}" was blocked by the state-clearance rule`);
+  }
+});
+
+/* ---------------------------------------------------------------- */
+/*  Route level: a block returns before any SQL executes             */
+/* ---------------------------------------------------------------- */
+
+console.log("\n-- at route level, a block returns before any SQL executes --");
+
+const ROUTE = fs.readFileSync(path.join(__dirname, "..", "app", "api", "query", "route.ts"), "utf8");
+
+check("the last contract gate precedes the statement that executes SQL", () => {
+  const gateAt = ROUTE.indexOf("emitContractFailure(executionContract");
+  const prepareAt = ROUTE.indexOf("const stmt = db.prepare(sql)");
+  assert(gateAt >= 0, "the pre-execution contract gate is gone; this check is stale");
+  assert(prepareAt >= 0, "the SQL execution site is gone; this check is stale");
+  assert(gateAt < prepareAt, "SQL is prepared before the final contract gate runs");
+});
+
+check("EVERY contract-failure call site returns immediately, so no block can fall through", () => {
+  // A block that is computed and then ignored is worse than no block. Each call site must be an
+  // early-return guard; a bare call would let execution continue past a decline.
+  const sites = [...ROUTE.matchAll(/emitContractFailure\(/g)].map((m) => m.index!);
+  assert(sites.length >= 6, `expected several call sites, found ${sites.length}`);
+  const bad: string[] = [];
+  for (const at of sites) {
+    const before = ROUTE.slice(Math.max(0, at - 70), at);
+    if (/const emitContractFailure\s*=\s*$/.test(before)) continue; // the definition itself
+    const after = ROUTE.slice(at, at + 220);
+    const guarded = /^emitContractFailure\([^;]*\)\)\s*return;/.test(after) && /if\s*\($/.test(before.trimEnd());
+    if (!guarded) bad.push(ROUTE.slice(Math.max(0, at - 20), at + 120).replace(/\s+/g, " ").trim());
+  }
+  assert(bad.length === 0, `call sites that do not return immediately:\n        ${bad.join("\n        ")}`);
+});
+
+check("the decline path emits no rows and no SQL, then closes the stream", () => {
+  const bodyStart = ROUTE.indexOf("const emitContractFailure");
+  assert(bodyStart >= 0, "emitContractFailure is gone; this check is stale");
+  const body = ROUTE.slice(bodyStart, bodyStart + 1800);
+  assert(/sql:\s*null as unknown as string/.test(body), "the decline payload still carries SQL");
+  assert(/rows:\s*\[\]/.test(body), "the decline payload still carries rows");
+  assert(/rowCount:\s*0/.test(body), "the decline payload does not report zero rows");
+  assert(/close\(\)/.test(body), "the decline path does not close the stream");
+  assert(!/db\.prepare/.test(body), "the decline path prepares a statement");
 });
 
 console.log(`\nHistorical clearance grain: ${passed} passed, ${failed} failed, ${gaps} known gaps recorded`);

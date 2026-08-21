@@ -20,10 +20,17 @@
 // Verified against C:\tmp\hist9\crime_data.replacement.db,
 // sha256 a890fa1f5f6e01185534770ef5efe5b2532f3729378570f02ae8665cf34f3444.
 //
-// OBSERVATION ONLY in this increment. This module decides nothing; it reports. Nothing here reaches
-// blockReasons, retryIssues, enforced, warnings or fired, and no user-facing behaviour changes.
+// OBSERVE WIDELY, ENFORCE NARROWLY. This module reports every finding it can see, and marks only a
+// subset `enforceable`. Exactly one shape declines today: a state-grain clearance request whose state
+// was resolved with HIGH confidence. Everything else -- a medium/low-confidence state, and every
+// `historical-clearance-measure-absent` finding -- is recorded and measured but never acts.
+//
+// That gap is deliberate. Observation has to stay wide enough to keep measuring the property; a
+// decline has to be narrow enough that it is never a guess. The first version of this file failed
+// exactly there: it inferred "measure absent" from an unresolved offense and would have declined ten
+// legitimate questions in the replay corpus.
 
-import type { QueryContract, QueryContractGeography } from "./query-contract";
+import type { ContractConfidence, QueryContract, QueryContractGeography } from "./query-contract";
 
 /** Two different facts. Both decline, but they are not the same finding and never share a code. */
 export type ClearanceGrainReason =
@@ -39,6 +46,20 @@ export type ClearanceGrainObservation = {
   topic: string;
   /** The state that cannot be served, when that is the finding. */
   stateName: string | null;
+  /** Confidence of the state geography this finding is about; null when it is not about a state. */
+  stateConfidence: ContractConfidence | null;
+  /**
+   * May this finding stop a request?
+   *
+   * Observation is deliberately WIDER than enforcement. Everything observable stays recorded so the
+   * property can keep being measured, but only a CONFIDENTLY resolved state may decline: a
+   * medium/low-confidence state resolution is a guess about what the user meant, and declining on a
+   * guess is how a correctness rule turns into a false-refusal generator.
+   *
+   * `historical-clearance-measure-absent` is never enforceable in this increment. It is a real
+   * finding and it is recorded, but only the state-grain rule was authorized to decline.
+   */
+  enforceable: boolean;
 };
 
 /**
@@ -140,7 +161,15 @@ export function observeHistoricalClearanceGrain(contract: QueryContract): Cleara
   // such clearance column at all, the grain question never arises. It can only be asserted about an
   // offense that was actually resolved.
   if (resolvedOffense && !clearanceMeasureColumn(resolvedOffense)) {
-    return { reason: "historical-clearance-measure-absent", message: measureAbsentMessage(resolvedOffense), topic, stateName: null };
+    return {
+      reason: "historical-clearance-measure-absent",
+      message: measureAbsentMessage(resolvedOffense),
+      topic,
+      stateName: null,
+      stateConfidence: null,
+      // Recorded, never enforced in this increment: only the state-grain rule was authorized.
+      enforceable: false,
+    };
   }
 
   // Grain is independent of measure: a statewide clearance rate does not exist for ANY offense, so
@@ -156,5 +185,8 @@ export function observeHistoricalClearanceGrain(contract: QueryContract): Cleara
     message: stateDeclineMessage(resolvedOffense ? CLEARANCE_MEASURES[resolvedOffense].phrase : null, stateName),
     topic,
     stateName,
+    stateConfidence: state.confidence,
+    // Only a confidently resolved state declines. See the field's doc comment.
+    enforceable: state.confidence === "high",
   };
 }

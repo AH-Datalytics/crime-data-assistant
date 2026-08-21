@@ -748,9 +748,20 @@ export function validateQueryContractSql(opts: {
     enforced.push("contract-required-county-ori");
   }
 
-  // Observation only: computed here, at the same pre-execution point every other contract finding
-  // is decided, and deliberately NOT pushed into any field the route acts on.
+  // Computed here, at the same pre-execution point every other contract finding is decided.
+  //
+  // Observation is recorded in full. Only an `enforceable` finding -- today, a state-grain clearance
+  // request whose state resolved with HIGH confidence -- becomes a block. A medium/low-confidence
+  // state and every measure-absent finding are still returned for measurement and still act on
+  // nothing, which is what keeps a decline from ever resting on a guess about what was meant.
   const clearanceGrainObservation = observeHistoricalClearanceGrain(contract);
+  if (clearanceGrainObservation?.enforceable) {
+    // The message is server-authored and carries no clearance number, so the offer of the national
+    // and individual-agency alternatives cannot become an answer. Neither alternative is queried:
+    // blocking here returns before any factual SQL runs.
+    blockReasons.push(clearanceGrainObservation.message);
+    enforced.push(clearanceGrainObservation.reason);
+  }
 
   const uniqueBlockReasons = [...new Set(blockReasons)];
   return {

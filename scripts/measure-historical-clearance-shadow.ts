@@ -23,6 +23,8 @@ type Hit = {
   question: string;
   reason: string;
   stateName: string | null;
+  stateConfidence: string | null;
+  enforceable: boolean;
   topic: string;
   succeeded: boolean;
   returnedRows: number | null;
@@ -45,6 +47,8 @@ for (const r of rows) {
     question: r.question,
     reason: o.reason,
     stateName: o.stateName,
+    stateConfidence: o.stateConfidence,
+    enforceable: o.enforceable,
     topic: o.topic,
     succeeded: r.error === null && (r.rows ?? 0) > 0,
     returnedRows: r.rows,
@@ -57,6 +61,9 @@ for (const r of rows) {
 
 const byReason: Record<string, number> = {};
 for (const h of hits) byReason[h.reason] = (byReason[h.reason] ?? 0) + 1;
+// Observation is wider than enforcement; report both so the gap is visible rather than assumed.
+const enforced = hits.filter((h) => h.enforceable);
+const observedNotEnforced = hits.filter((h) => !h.enforceable);
 
 const succeeded = hits.filter((h) => h.succeeded);
 const wrongAnswerShipped = succeeded.filter((h) => h.reason === "historical-state-clearance-no-aggregate" && h.usedNationalTable);
@@ -68,6 +75,10 @@ console.log(JSON.stringify({
   contractless,
   observed: hits.length,
   byReason,
+  wouldEnforce: enforced.length,
+  observedButNotEnforced: observedNotEnforced.map((h) => ({
+    id: h.id, reason: h.reason, stateConfidence: h.stateConfidence, question: h.question.slice(0, 90),
+  })),
   observedAndPreviouslySucceeded: succeeded.length,
   ofThoseAnsweredFromNationalTable: wrongAnswerShipped.length,
   ofThoseAnsweredByAggregatingAgencies: aggregatedAgencies.length,
@@ -76,7 +87,8 @@ console.log(JSON.stringify({
        new Date(Math.max(...rows.map((r) => Number(r.ts)))).toISOString().slice(0, 10)]
     : [],
   everyObservedQuestion: hits.map((h) => ({
-    id: h.id, date: h.date, reason: h.reason, state: h.stateName, topic: h.topic,
+    id: h.id, date: h.date, reason: h.reason, state: h.stateName,
+    stateConfidence: h.stateConfidence, enforceable: h.enforceable, topic: h.topic,
     succeeded: h.succeeded, rows: h.returnedRows,
     source: h.usedNationalTable ? "national_clearance_rate"
       : h.usedAgencyClearance ? "historical_agency_clearance"
