@@ -114,8 +114,60 @@ function installModelStub(initial: ModelReply) {
   };
 }
 
+const TEMP_PREFIX = "histclearance-";
+
+/**
+ * Remove one fixture directory, best effort.
+ *
+ * Best effort is not laziness here. The route caches its database handles at module scope and never
+ * closes them, so on Windows the fixture files are still open when this process finishes -- an
+ * unlink can legitimately fail with EBUSY. A cleanup failure must never turn a passing suite red, so
+ * this swallows the error and leaves the directory for the sweep below to collect next run.
+ */
+function removeQuietly(dir: string): boolean {
+  try {
+    fs.rmSync(dir, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 });
+    return !fs.existsSync(dir);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Collect fixture directories that earlier runs could not delete.
+ *
+ * This is the half of the cleanup that actually works on Windows: by the time the next run starts,
+ * the previous process has exited and released its handles.
+ *
+ * The five-minute floor is a courtesy to a concurrently running copy of this suite, not the real
+ * safeguard. The real safeguard is that a directory whose files are still open CANNOT be deleted --
+ * `removeQuietly` fails and skips it -- so being slightly too eager here is harmless, while being too
+ * conservative is how the directories accumulated.
+ */
+function sweepStaleFixtures(): number {
+  const cutoff = Date.now() - 5 * 60 * 1000;
+  let swept = 0;
+  try {
+    for (const entry of fs.readdirSync(os.tmpdir())) {
+      if (!entry.startsWith(TEMP_PREFIX)) continue;
+      const full = path.join(os.tmpdir(), entry);
+      try {
+        if (fs.statSync(full).mtimeMs > cutoff) continue;
+      } catch { continue; }
+      if (removeQuietly(full)) swept += 1;
+    }
+  } catch { /* the temp directory is unreadable; nothing to sweep */ }
+  return swept;
+}
+
+/** Module scope so the failure path can clean up too, not just the normal exit. */
+let fixtureDir: string | null = null;
+
 async function main() {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "histclearance-"));
+  const swept = sweepStaleFixtures();
+  if (swept > 0) console.log(`  (swept ${swept} stale fixture director${swept === 1 ? "y" : "ies"} from earlier runs)`);
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), TEMP_PREFIX));
+  fixtureDir = dir;
   const paths = {
     rtci: path.join(dir, "crime_data.db"),
     log: path.join(dir, "query_log.db"),
@@ -302,11 +354,20 @@ async function main() {
   });
 
   stub.restore();
+  // Best effort, and reported either way: a silent failure here is how the temp directory quietly
+  // accumulated in the first place. Whatever cannot be removed now is collected by the sweep on the
+  // next run, once this process has released its handles.
+  if (!removeQuietly(dir)) {
+    console.log(`  (fixtures still held by open handles, left for the next run to sweep: ${dir})`);
+  }
   console.log(`\nHistorical clearance route: ${passed} passed, ${failed} failed`);
   if (failed > 0) process.exit(1);
 }
 
 main().catch((error) => {
   console.error(error);
+  // The suite failed before its normal cleanup, so the fixtures would otherwise be left behind on
+  // exactly the runs someone is most likely to repeat.
+  if (fixtureDir) removeQuietly(fixtureDir);
   process.exit(1);
 });
