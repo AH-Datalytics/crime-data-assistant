@@ -2,6 +2,7 @@ import { buildQueryContract, type QueryContract, type QueryContractSource } from
 import { currentCalendarYear } from "./time-conventions";
 import type { RoutingLogMeta } from "./routing-log-meta";
 import { validateSourceCapabilities, type SourceCapabilityFinding } from "./source-capabilities";
+import { observeHistoricalClearanceGrain, type ClearanceGrainObservation } from "./historical-clearance-grain";
 import { DEMOGRAPHIC_RATE_UNSUPPORTED_MESSAGE, SUB_CITY_GEOGRAPHY_MESSAGE } from "./capability-overrides";
 
 export interface QueryContractSqlValidation {
@@ -12,6 +13,12 @@ export interface QueryContractSqlValidation {
   retryIssues: string[];
   blockReasons: string[];
   enforced: string[];
+  /**
+   * OBSERVATION ONLY. Recorded so the Historical state-clearance property can be measured before it
+   * is enforced. It deliberately does not appear in fired, warnings, retryIssues, blockReasons or
+   * enforced, so setting it cannot change any user-facing outcome.
+   */
+  clearanceGrainObservation: ClearanceGrainObservation | null;
 }
 
 const CONTRACT_SECOND_FAILURE_MESSAGE =
@@ -636,6 +643,8 @@ export function validateQueryContractSql(opts: {
       retryIssues: [],
       blockReasons: missingRequiredOri ? [requiredOriBlockMessage(requiredOri)] : [],
       enforced: missingRequiredOri ? ["contract-required-county-ori"] : [],
+      // No contract was built, so there is no typed measure or geography to observe.
+      clearanceGrainObservation: null,
     };
   }
 
@@ -739,6 +748,10 @@ export function validateQueryContractSql(opts: {
     enforced.push("contract-required-county-ori");
   }
 
+  // Observation only: computed here, at the same pre-execution point every other contract finding
+  // is decided, and deliberately NOT pushed into any field the route acts on.
+  const clearanceGrainObservation = observeHistoricalClearanceGrain(contract);
+
   const uniqueBlockReasons = [...new Set(blockReasons)];
   return {
     sql,
@@ -748,5 +761,6 @@ export function validateQueryContractSql(opts: {
     retryIssues: uniqueBlockReasons.length > 0 ? [] : [...new Set(retryIssues)],
     blockReasons: uniqueBlockReasons,
     enforced: [...new Set(enforced)],
+    clearanceGrainObservation,
   };
 }
