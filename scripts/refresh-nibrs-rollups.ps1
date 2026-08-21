@@ -12,6 +12,7 @@ param(
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
 $repoRoot = Split-Path -Parent $PSScriptRoot
+. (Join-Path $PSScriptRoot "nibrs-refresh-cleanup.ps1")
 $stamp = (Get-Date).ToUniversalTime().ToString("yyyyMMdd_HHmmss")
 New-Item -ItemType Directory -Force -Path $Workspace | Out-Null
 $logPath = Join-Path $Workspace "refresh-$stamp.log"
@@ -67,8 +68,16 @@ printf '%s|%s|%s\n' "$generation" "$size" "$active_generation"
 $lockPath = Join-Path $Workspace "refresh.lock"
 $lock = $null
 $snapshot = $null
+$partial = $null
+$completed = $false
 try {
   $lock = [System.IO.File]::Open($lockPath, "OpenOrCreate", "ReadWrite", "None")
+
+  # Holding the lock means no other refresh is mid-copy, so any source partial still here is the
+  # residue of a run that died. Removing it BEFORE the free-space check is the whole point: on
+  # 2026-08-20 a 119 GiB orphan made the preflight fail, and the preflight failing meant the code
+  # that would have deleted it was never reached.
+  Remove-StaleSourcePartials -Root $Workspace | Out-Null
   Write-Host "[rollup-refresh] Checking production source state..."
   $before = Get-RemoteState
   Write-Host "[rollup-refresh] source generation=$($before.Generation) bytes=$($before.SourceBytes)"
@@ -87,7 +96,8 @@ try {
   $generationKey = $before.Generation.Replace(":", "_")
   $snapshot = Join-Path $Workspace "nibrs-source-$generationKey.db"
   $partial = "$snapshot.partial"
-  if (Test-Path $partial) { Remove-Item -LiteralPath $partial -Force }
+  # No per-generation delete here any more: `Remove-StaleSourcePartials` above already removed every
+  # orphaned partial, including ones from other generations, which this line could never see.
 
   Write-Host "[rollup-refresh] Copying the quiescent source snapshot off production..."
   Invoke-Streaming "scp" @("${WebHost}:$RemoteDb", $partial)
@@ -181,7 +191,18 @@ try {
       }
     }
   Write-Host "[rollup-refresh] Activated $basename for generation $($before.Generation)."
+  $completed = $true
 } finally {
+  # Failure path only. A successful run has already removed its snapshot and applied its retention
+  # policy; re-running cleanup there could only delete something it meant to keep.
+  if (-not $completed) {
+    try {
+      Remove-FailedRunArtifacts -Root $Workspace -Partial $partial -Snapshot $snapshot | Out-Null
+    } catch {
+      # Never let cleanup replace the original refresh error -- that would hide why the run failed.
+      Write-Host "[rollup-refresh] Cleanup after failure did not complete: $($_.Exception.Message)"
+    }
+  }
   if ($lock) { $lock.Dispose() }
   Stop-Transcript | Out-Null
 }
