@@ -67,6 +67,24 @@ const ACCEPTED: [string, string][] = [
   // A windowed count is a value computed per row, not the count the answer reports.
   ["a windowed count is not the answer's row count",
     "SELECT v.id, COUNT(*) OVER () AS running FROM victims v"],
+  // Positive control for literal binding: an unrelated 'Murder' literal must not change a verdict
+  // that is already proved on its own evidence.
+  ["an unrelated 'Murder' literal alongside a genuinely proved count",
+    `SELECT COUNT(v.id) AS m, 'Murder' AS label ${JOINED} WHERE i.homicide_type = 'Murder'`],
+  // Positive control for arm isolation: EVERY arm proves itself.
+  ["a compound where both arms prove themselves",
+    `SELECT COUNT(v.id) AS m ${JOINED} WHERE i.homicide_type = 'Murder' AND i.state = 'CA' `
+    + `UNION ALL SELECT COUNT(v.id) AS m ${JOINED} WHERE i.homicide_type = 'Murder' AND i.state = 'TX'`],
+  ["a compound arm returning a non-victim value need not prove this licence",
+    `SELECT COUNT(v.id) AS m ${JOINED} WHERE i.homicide_type = 'Murder' `
+    + "UNION ALL SELECT COUNT(*) AS m FROM incidents i WHERE i.homicide_type = 'Murder'"],
+  // Positive controls for reachability: dead SQL is not this licence's business.
+  ["an unused victim-count CTE does not engage the licence",
+    "WITH dead AS (SELECT COUNT(v.id) AS n FROM victims v) "
+    + "SELECT i.year FROM incidents i WHERE i.homicide_type = 'Murder'"],
+  ["a nested chain of unused CTEs does not engage the licence",
+    "WITH a AS (SELECT COUNT(v.id) AS n FROM victims v), b AS (SELECT n FROM a) "
+    + "SELECT i.year FROM incidents i"],
 ];
 
 for (const [name, sql] of ACCEPTED) {
@@ -183,6 +201,36 @@ const REFUSED: [string, string, string][] = [
     + "SELECT COUNT(v.id) AS n FROM victims v JOIN m ON 1=1"],
   ["unparseable input fails closed", "SQL the parser cannot read",
     "SELECT COUNT(v.id) AS m FROM victims v WHERE ((("],
+
+  // The literal must be read from the other side of the PROVED predicate. A statement-wide text
+  // search for 'Murder' authorized both of these while the actual filter said Manslaughter.
+  ["the literal is bound to the proved predicate", "'Murder' appears only as an unrelated alias",
+    `SELECT COUNT(v.id) AS m, 'Murder' AS label ${JOINED} WHERE i.homicide_type = 'Manslaughter'`],
+  ["the literal is bound to the proved predicate", "'Murder' appears only in an unrelated predicate",
+    `SELECT COUNT(v.id) AS m ${JOINED} WHERE i.homicide_type = 'Manslaughter' AND i.agency = 'Murder'`],
+  ["the literal is bound to the proved predicate", "a reversed comparison to the wrong literal",
+    `SELECT COUNT(v.id) AS m ${JOINED} WHERE 'Manslaughter' = i.homicide_type AND i.agency = 'Murder'`],
+  ["the literal is bound to the proved predicate", "a singleton IN of the wrong literal",
+    `SELECT COUNT(v.id) AS m ${JOINED} WHERE i.homicide_type IN ('Manslaughter') AND i.agency = 'Murder'`],
+
+  // Authorization evidence must never be pooled across compound arms: one arm supplying the join
+  // while another supplies the predicate proves nothing about either.
+  ["every arm proves itself", "join in arm 1, murder predicate in arm 2",
+    `SELECT COUNT(v.id) AS m ${JOINED} WHERE i.homicide_type = 'Manslaughter' `
+    + "UNION ALL SELECT COUNT(v.id) AS m FROM victims v JOIN incidents i ON 1 = 1 "
+    + "WHERE i.homicide_type = 'Murder'"],
+  ["every arm proves itself", "the inverse cross-arm arrangement",
+    "SELECT COUNT(v.id) AS m FROM victims v JOIN incidents i ON 1 = 1 WHERE i.homicide_type = 'Murder' "
+    + `UNION ALL SELECT COUNT(v.id) AS m ${JOINED} WHERE i.homicide_type = 'Manslaughter'`],
+  ["every arm proves itself", "one proved arm beside one unproved victim count",
+    `SELECT COUNT(v.id) AS m ${JOINED} WHERE i.homicide_type = 'Murder' `
+    + "UNION ALL SELECT COUNT(v.id) AS m FROM victims v"],
+
+  // Reachability cuts both ways: the same CTE that is ignored when dead must refuse when used.
+  ["a reachable unsafe CTE still refuses", "the victim-count CTE is selected from",
+    "WITH used AS (SELECT COUNT(v.id) AS n FROM victims v) SELECT n FROM used"],
+  ["a reachable unsafe CTE still refuses", "reached through a nested chain",
+    "WITH a AS (SELECT COUNT(v.id) AS n FROM victims v), b AS (SELECT n FROM a) SELECT n FROM b"],
 ];
 
 for (const [property, name, sql] of REFUSED) {
@@ -230,6 +278,39 @@ check("a CTE output keeps what it is, rather than collapsing to a column", () =>
   assert.strictEqual(cte.outputs.get("bumped")!.kind, "derived");
   assert.strictEqual(cte.outputs.get("n")!.kind, "rowcount");
   assert.strictEqual(cte.outputs.get("label")!.kind, "literal");
+});
+
+check("a literal fact carries its decoded value", () => {
+  const facts = analyzeSqlFacts("SELECT 'Murder' AS a, 42 AS b FROM incidents");
+  assert.ok(facts.parsed);
+  const outputs = (facts as Extract<typeof facts, { parsed: true }>).outer.outputs;
+  const a = outputs.get("a")!;
+  const b = outputs.get("b")!;
+  assert.strictEqual(a.kind, "literal");
+  assert.strictEqual(a.kind === "literal" ? a.value : null, "Murder",
+    "the value is part of the fact, so no caller has to read the statement text");
+  assert.strictEqual(b.kind === "literal" ? Number(b.value) : null, 42);
+});
+
+check("every compound arm keeps its own fact scope", () => {
+  const facts = analyzeSqlFacts(
+    "SELECT COUNT(v.id) AS m FROM victims v JOIN incidents i ON v.incident_id = i.id "
+    + "WHERE i.homicide_type = 'Manslaughter' "
+    + "UNION ALL SELECT COUNT(v.id) AS m FROM victims v JOIN incidents i ON 1 = 1 "
+    + "WHERE i.homicide_type = 'Murder'");
+  assert.ok(facts.parsed);
+  const outer = (facts as Extract<typeof facts, { parsed: true }>).outer;
+  assert.strictEqual(outer.armScopes.length, 2, "two arms, two scopes");
+  const [first, second] = outer.armScopes;
+  // Each arm holds only its own evidence; neither can borrow the other's.
+  assert.ok(first.predicates.length > 0 && second.predicates.length > 0);
+  const literalsOf = (rel: typeof first) => rel.predicates
+    .flatMap((p) => [p.left, p.right])
+    .filter((f) => f && f.kind === "literal")
+    .map((f) => (f as { value: unknown }).value);
+  assert.ok(literalsOf(first).includes("Manslaughter"), "arm 1 owns its predicate");
+  assert.ok(!literalsOf(first).includes("Murder"), "arm 1 must not see arm 2's predicate");
+  assert.ok(literalsOf(second).includes("Murder"), "arm 2 owns its predicate");
 });
 
 check("sources are instances, so comma joins and self-joins cannot collapse", () => {

@@ -81,16 +81,30 @@ export function validateModelAuthoredShrSql(opts: {
 }
 
 /** The legacy text-prover rules that decide this same licence, removed so facts alone decide it. */
-const LEGACY_LICENCE_RULES = ["structural-row-count-unqualified"];
+export const LEGACY_LICENCE_RULES = ["structural-row-count-unqualified"];
 
-function withoutLegacyLicence(result: QueryContractSqlValidation): QueryContractSqlValidation {
-  if (!result.enforced.some((rule) => LEGACY_LICENCE_RULES.includes(rule))) return result;
-  const mentionsLegacy = (text: string) => LEGACY_LICENCE_RULES.some((rule) => text.includes(rule));
+/**
+ * Strip the legacy verdict from EVERY field it is recorded in.
+ *
+ * `validateQueryContractSql` records a structural finding in three places -- `warnings` (the bare
+ * rule id), `retryIssues` (a message quoting the rule id) and `enforced` (the tag) -- and a block
+ * severity would add a fourth. There is deliberately no early return keyed on one of them: gating
+ * the removal on `enforced` coupled this to an implementation detail of the validator, so a finding
+ * that ever landed only in `warnings` and `retryIssues` would have been left in place while the
+ * function still claimed to have removed it.
+ *
+ * Everything not belonging to this licence must survive untouched, which is what the behavioural
+ * test asserts -- a source-level check could not tell removal from the appearance of it.
+ */
+export function withoutLegacyLicence(result: QueryContractSqlValidation): QueryContractSqlValidation {
+  const isLegacyTag = (value: string) => LEGACY_LICENCE_RULES.includes(value);
+  const quotesLegacy = (text: string) => LEGACY_LICENCE_RULES.some((rule) => text.includes(rule));
   return {
     ...result,
-    warnings: result.warnings.filter((w) => !LEGACY_LICENCE_RULES.includes(w)),
-    enforced: result.enforced.filter((e) => !LEGACY_LICENCE_RULES.includes(e)),
-    retryIssues: result.retryIssues.filter((issue) => !mentionsLegacy(issue)),
+    warnings: result.warnings.filter((w) => !isLegacyTag(w)),
+    enforced: result.enforced.filter((e) => !isLegacyTag(e)),
+    retryIssues: result.retryIssues.filter((issue) => !quotesLegacy(issue)),
+    blockReasons: result.blockReasons.filter((reason) => !quotesLegacy(reason)),
   };
 }
 

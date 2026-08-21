@@ -28,7 +28,7 @@ export type ColumnRef = { source: string | null; column: string };
 export type ExprFact =
   | { kind: "column"; refs: ColumnRef[]; provenance: Provenance }
   | { kind: "star"; provenance: Provenance }
-  | { kind: "literal"; provenance: Provenance }
+  | { kind: "literal"; value: string | number | boolean | null; provenance: Provenance }
   | { kind: "rowcount"; target: ExprFact; distinct: boolean; windowed: boolean; provenance: Provenance }
   | { kind: "aggregate"; fn: string; inputs: ExprFact[]; windowed: boolean; provenance: Provenance }
   | { kind: "derived"; op: string; inputs: ExprFact[]; windowed: boolean; provenance: Provenance }
@@ -73,6 +73,14 @@ export type RelationFact = {
   grouped: boolean;
   windowed: boolean;
   distinct: boolean;
+  /**
+   * One scope per compound arm, each holding ONLY its own sources, predicates and outputs.
+   *
+   * Merged fields describe the returned TYPE; they must never be used as authorization evidence.
+   * Pooling arms let one arm supply a valid key join while another supplied the Murder predicate,
+   * and the union of two unlicensed series is not a licensed series.
+   */
+  armScopes: RelationFact[];
 };
 
 export type QueryFacts =
@@ -146,7 +154,10 @@ function exprFact(e: any): ExprFact {
       return { kind: "derived", op: "LIST", inputs: (e.value ?? []).map(exprFact), windowed: false, provenance: "proved" };
     case "number": case "single_quote_string": case "double_quote_string":
     case "bool": case "null": case "origin": case "param":
-      return { kind: "literal", provenance: "proved" };
+      // The VALUE is part of the fact. Recording only "this is a literal" forced the verdict to
+      // search the statement text for the constant, which cannot tell `homicide_type = 'Murder'`
+      // from `agency = 'Murder'` or from an unrelated `'Murder' AS label`.
+      return { kind: "literal", value: (e.value ?? null) as string | number | boolean | null, provenance: "proved" };
     default:
       // A scalar subquery in the select list carries its own statement. It is a different rowset,
       // so its facts must not be attributed to this one.
@@ -197,7 +208,10 @@ function mergeArmFacts(a: ExprFact, b: ExprFact): ExprFact {
   if (a.kind !== b.kind) return UNKNOWN("compound arms disagree on kind");
   // Kind-sensitive, not value-sensitive: two arms labelling rows 'Chicago' and 'Houston' agree that
   // the column is a literal. Only differing KINDS or referents are a real disagreement.
-  if (a.kind === "literal" || a.kind === "star") return a;
+  if (a.kind === "star") return a;
+  // Deliberately value-INSENSITIVE: two arms labelling rows 'Chicago' and 'Houston' agree that the
+  // column is a literal. Authorization never reads a merged fact -- it reads the arm's own.
+  if (a.kind === "literal") return a;
   if (a.kind === "column" && b.kind === "column") {
     const key = (f: ColumnRef) => `${f.source ?? ""}.${f.column}`.toLowerCase();
     const same = a.refs.length === b.refs.length && a.refs.every((r, i) => key(r) === key(b.refs[i]));
@@ -219,47 +233,65 @@ function relationFact(stmt: any, name: string, cteNames: Set<string>): RelationF
   const arms: any[] = [];
   for (let s = stmt; s; s = s._next) arms.push(s);
 
-  const rel: RelationFact = {
-    name, arms: arms.length, sources: [], predicates: [],
-    outputs: new Map(), grouped: false, windowed: false, distinct: false,
-  };
+  const empty = (armName: string): RelationFact => ({
+    name: armName, arms: 1, sources: [], predicates: [],
+    outputs: new Map(), grouped: false, windowed: false, distinct: false, armScopes: [],
+  });
+
+  const armScopes: RelationFact[] = [];
 
   arms.forEach((arm, armIndex) => {
-    if (arm.groupby) rel.grouped = true;
-    if (arm.distinct?.type) rel.distinct = true;
+    // Each arm is built as its own complete scope. Authorization reads THESE, never the merge.
+    const scope = empty(arms.length === 1 ? name : `${name}#${armIndex}`);
+    if (arm.groupby) scope.grouped = true;
+    if (arm.distinct?.type) scope.distinct = true;
 
-    // Sources are per-arm: a second arm's first table is a BASE of that arm, not a comma join of
-    // the first. Flattening across arms mislabels it.
     (arm.from ?? []).forEach((f: any, i: number) => {
-      const table = f.table ?? (f.expr ? null : null);
-      rel.sources.push({
-        index: rel.sources.length,
+      const table = f.table ?? null;
+      scope.sources.push({
+        index: scope.sources.length,
         arm: armIndex,
-        table: table ?? null,
+        table,
         alias: f.as ?? null,
+        // A second arm's first table is a BASE of that arm, not a comma join of the first.
         join: f.join ?? (i === 0 ? "BASE" : "COMMA"),
         isRelation: Boolean(table && cteNames.has(String(table).toLowerCase())),
       });
-      if (f.on) for (const c of conjuncts(f.on)) rel.predicates.push(predicateFact(c, "on", f.join ?? "INNER JOIN"));
+      if (f.on) for (const c of conjuncts(f.on)) scope.predicates.push(predicateFact(c, "on", f.join ?? "INNER JOIN"));
     });
-    for (const c of conjuncts(arm.where)) rel.predicates.push(predicateFact(c, "where", null));
+    for (const c of conjuncts(arm.where)) scope.predicates.push(predicateFact(c, "where", null));
 
-    const names: string[] = [];
     (arm.columns ?? []).forEach((col: any, i: number) => {
       const fact = exprFact(col.expr);
-      if ("windowed" in fact && fact.windowed) rel.windowed = true;
+      if ("windowed" in fact && fact.windowed) scope.windowed = true;
       const key = col.as ?? (fact.kind === "column" ? fact.refs[0]?.column : null) ?? `#${i}`;
-      if (armIndex === 0) {
-        rel.outputs.set(String(key).toLowerCase(), fact);
-        names.push(String(key).toLowerCase());
-      } else {
-        // SQL aligns compound arms by POSITION, not by each arm's own alias.
-        const first = [...rel.outputs.keys()][i];
-        if (first) rel.outputs.set(first, mergeArmFacts(rel.outputs.get(first)!, fact));
-      }
+      scope.outputs.set(String(key).toLowerCase(), fact);
+    });
+    armScopes.push(scope);
+  });
+
+  // The merged relation describes the RETURNED TYPE of the whole statement: what a caller selecting
+  // from it receives. It carries no authorization weight.
+  const merged: RelationFact = {
+    name,
+    arms: arms.length,
+    sources: armScopes.flatMap((s) => s.sources),
+    predicates: armScopes.flatMap((s) => s.predicates),
+    outputs: new Map(),
+    grouped: armScopes.some((s) => s.grouped),
+    windowed: armScopes.some((s) => s.windowed),
+    distinct: armScopes.some((s) => s.distinct),
+    armScopes,
+  };
+  armScopes.forEach((scope, armIndex) => {
+    [...scope.outputs.entries()].forEach(([key, fact], position) => {
+      if (armIndex === 0) { merged.outputs.set(key, fact); return; }
+      // SQL aligns compound arms by POSITION, not by each arm's own alias.
+      const first = [...merged.outputs.keys()][position];
+      if (first) merged.outputs.set(first, mergeArmFacts(merged.outputs.get(first)!, fact));
     });
   });
-  return rel;
+  return merged;
 }
 
 /**
