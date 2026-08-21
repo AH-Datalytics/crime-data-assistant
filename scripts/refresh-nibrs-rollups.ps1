@@ -13,6 +13,7 @@ $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
 $repoRoot = Split-Path -Parent $PSScriptRoot
 . (Join-Path $PSScriptRoot "nibrs-refresh-cleanup.ps1")
+. (Join-Path $PSScriptRoot "nibrs-remote-shell.ps1")
 $stamp = (Get-Date).ToUniversalTime().ToString("yyyyMMdd_HHmmss")
 New-Item -ItemType Directory -Force -Path $Workspace | Out-Null
 $logPath = Join-Path $Workspace "refresh-$stamp.log"
@@ -54,8 +55,12 @@ active=$(readlink -f /opt/nibrs/shared/nibrs_rollups.db 2>/dev/null || true)
 if test -n "$active" && test -s "$active.generation"; then active_generation=$(tr -d '\r\n' < "$active.generation"); fi
 printf '%s|%s|%s\n' "$generation" "$size" "$active_generation"
 '@
-  $encoded = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($script))
-  $raw = Invoke-Captured "ssh" @($WebHost, "echo $encoded | base64 -d | bash")
+  # The here-string above carries this file's on-disk line endings, so encoding it directly shipped
+  # a CR at the end of every line the moment a CRLF copy of this script was scheduled. Remote bash
+  # read `set -e<CR>` as an invalid option and the 2026-08-21 03:00 run died here in two seconds.
+  # `ConvertTo-RemoteBashCommand` normalises to LF before encoding, so the payload no longer depends
+  # on how this file happens to be checked out.
+  $raw = Invoke-Captured "ssh" @($WebHost, (ConvertTo-RemoteBashCommand -Payload $script))
   $parts = $raw.Split("|")
   if ($parts.Count -ne 3 -or $parts[0] -notmatch "^\d+:\d+$") { throw "Unexpected remote state: $raw" }
   return [pscustomobject]@{
