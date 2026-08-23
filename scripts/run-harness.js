@@ -46,8 +46,9 @@ const { spawnSync } = require("node:child_process");
 
 const { planHarness, ENTRY_POINTS, GATING_ENTRY, GATED_ENTRY } = require("./lib/harness-plan.js");
 const { buildFixtures, fixtureEnv, DATABASE_NAMES } = require("./lib/fixture-db.js");
-const { loadManifest, reconcile, corpusAvailability } = require("./lib/tier-manifest.js");
+const { loadManifest, reconcile } = require("./lib/tier-manifest.js");
 const { SEED_PROFILES } = require("./lib/fixture-seeds.js");
+const { verifyCorpusSet, createVerificationCache } = require("./lib/corpus-verification.js");
 
 const REPO = path.join(__dirname, "..");
 const DEFAULT_TIMEOUT_MS = 300000;
@@ -193,12 +194,25 @@ function runCommand(command, env, timeout) {
   };
 }
 
-function childEnv(fixtureDir) {
+/**
+ * The environment one command runs with.
+ *
+ * `corpusEnv` REDIRECTS SOME DATABASES AWAY FROM FIXTURES, and it is applied AFTER `fixtureEnv` for
+ * that reason: every database starts pointed at this command's fixture, and only a corpus that passed
+ * `verifyCorpusSet` moves. A Tier C command declaring RTCI therefore gets the verified RTCI snapshot
+ * and fixtures for everything else -- not a half-real environment assembled by accident.
+ *
+ * The order is the whole safety property, so it is asserted by test rather than left to read order: if
+ * `fixtureEnv` came last it would silently overwrite verified corpus paths with fixture paths, and the
+ * Tier C command would pass against an empty fixture while the run reported `corpus_certified`.
+ */
+function childEnv(fixtureDir, corpusEnv) {
   return {
     ...process.env,
     // node_modules/.bin is what makes `tsx` resolvable; npm adds it, a bare spawn does not.
     PATH: path.join(REPO, "node_modules", ".bin") + path.delimiter + process.env.PATH,
     ...fixtureEnv(fixtureDir),
+    ...(corpusEnv || {}),
     // Tests must never reach a real corpus by accident, and several read this to stay offline.
     CI: "1",
   };
@@ -265,6 +279,9 @@ function main(argv) {
 
   const workDir = fs.mkdtempSync(path.join(os.tmpdir(), "harness-fixtures-"));
   const results = [];
+  // Run-scoped, so the active set is resolved once and each corpus is hashed and opened once, however
+  // many Tier C commands declare it. Caching the VERIFICATION, never the per-command decision.
+  const corpusCache = createVerificationCache();
   let pretestFailed = false;
   // Exception 2, declared: a manifest entry's `blocks` list names the ids it gates. Populated only
   // when that entry actually fails, so a passing prerequisite gates nothing.
@@ -308,18 +325,37 @@ function main(argv) {
       continue;
     }
 
-    // Tier C abstains only for its one declared reason.
+    // Tier C abstains unless its DECLARED corpus set is PROVEN. This is the reachability gate: not
+    // "is a database present" but "did every corpus this command declares verify against reviewed
+    // registry expectation, out of one active snapshot set".
+    //
+    // Every command's own declared set is evaluated, even though the verification behind it is cached
+    // per corpus -- otherwise a command could inherit a neighbour's permission.
+    //
+    // `corpusEnv` stays empty unless the whole set verified, so there is no branch where an
+    // unverified corpus contributes a path. That is what makes unverified execution unreachable
+    // rather than merely discouraged.
+    let corpusEnv = {};
     if (tier === "C") {
-      const availability = corpusAvailability(entry);
-      if (!availability.available) {
+      const verification = verifyCorpusSet(entry.corpus.corpus_ids, { cache: corpusCache });
+      if (!verification.ok) {
         results.push({
           ...record,
           state: SKIPPED,
-          reason: availability.reason,
+          reason: verification.summary,
           corpus_requirement: entry.corpus.description,
+          corpus_ids: entry.corpus.corpus_ids,
+          corpus_reasons: verification.corpora.map((c) => ({ id: c.id, ok: c.ok, reason: c.reason,
+            detail: c.detail })),
+          corpus_set_id: verification.set ? verification.set.id : null,
         });
         continue;
       }
+      corpusEnv = verification.env;
+      record.corpus_ids = entry.corpus.corpus_ids;
+      record.corpus_set_id = verification.set.id;
+      record.corpus_verified = true;
+      record.corpus_reasons = verification.corpora.map((c) => ({ id: c.id, ok: true, reason: null }));
     }
 
     let fixtures;
@@ -343,7 +379,8 @@ function main(argv) {
       }
     }
 
-    const run = runCommand(command.command, childEnv(path.dirname(fixtures.rtci)), options.timeout);
+    const run = runCommand(command.command, childEnv(path.dirname(fixtures.rtci), corpusEnv),
+      options.timeout);
     const announcedSkip = run.code === SKIP_PROTOCOL_EXIT || SKIP_PROTOCOL_LINE.test(run.stdout);
     const skipProse = !announcedSkip && SKIP_PROSE_HINTS.some((re) => re.test(run.stdout));
     const state = run.code === 0 ? PASSED : FAILED;
@@ -411,11 +448,18 @@ function report(results, plan, options, fatal, advisories) {
     console.log(`\nblocked: ${tally.blocked} command(s) never ran because a prerequisite failed`);
   }
   if (tally.skipped) {
-    console.log("\nskipped (Tier C, corpus unavailable):");
+    console.log("\nskipped (Tier C, declared corpus set not verified):");
     for (const r of results.filter((x) => x.state === SKIPPED)) {
       console.log(`  ${r.id}  [tier ${r.tier}]`);
-      console.log(`      requires: ${r.corpus_requirement}`);
-      console.log(`      reason:   ${r.reason}`);
+      console.log(`      requires:  ${r.corpus_requirement}`);
+      console.log(`      declares:  ${(r.corpus_ids || []).join(", ") || "(none)"}`);
+      console.log(`      active set: ${r.corpus_set_id || "(none resolved)"}`);
+      // PER CORPUS, never collapsed to the first failure. "rtci verified, shr stale" and "both
+      // stale" are different situations and a single reason line reports them identically.
+      for (const c of r.corpus_reasons || []) {
+        console.log(`      ${c.id.padEnd(8)} ${c.ok ? "verified" : c.reason}` +
+          `${c.ok || !c.detail ? "" : `  -- ${c.detail}`}`);
+      }
     }
   }
 
@@ -434,16 +478,37 @@ function report(results, plan, options, fatal, advisories) {
   const tierF = results.filter((r) => r.tier === "F");
   const fixtureVerdict = tierF.some((r) => r.state === FAILED || r.state === BLOCKED)
     ? "fixture_failed" : "fixture_passed";
-  const skippedC = results.filter((r) => r.tier === "C" && r.state === SKIPPED);
-  const corpusVerdict = skippedC.length ? "corpus_not_certified" : "corpus_certified";
+  const tierC = results.filter((r) => r.tier === "C");
+  const skippedC = tierC.filter((r) => r.state === SKIPPED);
+
+  // THE THIRD CORPUS VERDICT, added by P1.2. A Tier C command that failed against a corpus set which
+  // VERIFIED is not an absent corpus and must never be reported as one -- it is a real assertion
+  // failing against real data, which is the most informative result this harness can produce. Before
+  // this, the only two outcomes were "certified" and "not certified", and a failure here would have
+  // been counted as a plain failure with the corpus verdict left saying `corpus_certified`.
+  //
+  // `corpus_verified` is required on the record, so this can only be reached by a command that passed
+  // the reachability gate.
+  const failedC = tierC.filter((r) => r.state === FAILED && r.corpus_verified);
+  const corpusVerdict = failedC.length
+    ? "tier_c_failed"
+    : (skippedC.length ? "corpus_not_certified" : "corpus_certified");
 
   console.log("");
   console.log(`verdict  fixture: ${fixtureVerdict}   (${tierF.length} Tier F command(s))`);
   console.log(`verdict  corpus:  ${corpusVerdict}` +
-    (skippedC.length ? `   (${skippedC.length} Tier C command(s) skipped)` : ""));
+    (skippedC.length ? `   (${skippedC.length} of ${tierC.length} Tier C command(s) skipped)` : "") +
+    (failedC.length ? `   (${failedC.length} Tier C command(s) FAILED against verified corpora)` : ""));
   if (corpusVerdict === "corpus_not_certified") {
     console.log("         This run did NOT certify data integrity. It must not be described as " +
       "\"passed\".");
+  }
+  if (corpusVerdict === "tier_c_failed") {
+    console.log("         Tier C assertions failed against VERIFIED corpora. This is a data or code " +
+      "defect, not an absent corpus, and it exits non-zero.");
+    for (const r of failedC) {
+      console.log(`         ${r.id}  set=${r.corpus_set_id}  declares=${(r.corpus_ids || []).join(",")}`);
+    }
   }
 
   if (advisories && advisories.length) {
@@ -457,8 +522,12 @@ function report(results, plan, options, fatal, advisories) {
     for (const problem of fatal) console.log("  " + problem);
   }
 
-  const ok = fixtureVerdict === "fixture_passed" && tally.failed === 0 && tally.blocked === 0
-    && fatal.length === 0;
+  // `tier_c_failed` is named in the exit condition rather than left to `tally.failed` to carry. It is
+  // implied today -- a failed Tier C command increments `tally.failed` -- but the requirement is that
+  // this verdict exits non-zero, and a requirement that holds only as a side effect of another clause
+  // is one refactor away from silently becoming a skip.
+  const ok = fixtureVerdict === "fixture_passed" && corpusVerdict !== "tier_c_failed"
+    && tally.failed === 0 && tally.blocked === 0 && fatal.length === 0;
   return ok ? 0 : 1;
 }
 
@@ -470,6 +539,9 @@ function raiseExit(code) {
   process.exitCode = code;
 }
 
-module.exports = { main, report, checkRequires, parseArgs, seedFor,
+// `childEnv` is exported so the reachability tests can assert the ORDER its comment describes: that a
+// verified corpus path survives `fixtureEnv` rather than being overwritten by it. That ordering is a
+// safety property, and a safety property held only by line order needs a test.
+module.exports = { main, report, checkRequires, parseArgs, seedFor, childEnv,
   SKIP_PROTOCOL_EXIT, SKIP_PROTOCOL_LINE, SKIP_PROSE_HINTS,
   PASSED, FAILED, SKIPPED, BLOCKED };

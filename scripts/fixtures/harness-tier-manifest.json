@@ -183,13 +183,7 @@
       "requires": [],
       "corpus": {
         "description": "canonical RTCI crime_data.db with county-agency rows (Cook County clearance and staffing, countywide coverage)",
-        "detect": [
-          "data/crime_data.db",
-          "data/nibrs.db",
-          "data/shr.db",
-          "/opt/nibrs/crime_data.db",
-          "/opt/nibrs/nibrs.db"
-        ]
+        "corpus_ids": ["rtci"]
       },
       "note": "47 checks assert Cook County's real clearance and staffing shapes, including that its 2020 clearance is blank -- the specific defect the rebuild fixes. Seeding that would be seeding the answer.",
       "observed_databases": [
@@ -205,13 +199,7 @@
       "requires": [],
       "corpus": {
         "description": "canonical RTCI crime_data.db with county agencies sharing a name (Cook County, Maryland sheriff/police pairs)",
-        "detect": [
-          "data/crime_data.db",
-          "data/nibrs.db",
-          "data/shr.db",
-          "/opt/nibrs/crime_data.db",
-          "/opt/nibrs/nibrs.db"
-        ]
+        "corpus_ids": ["rtci"]
       },
       "note": "20 checks walk real follow-up conversations whose outcomes depend on two real agencies being recorded under the same name.",
       "observed_databases": [
@@ -227,13 +215,7 @@
       "requires": [],
       "corpus": {
         "description": "canonical RTCI crime_data.db containing ORIs MD0030100 and MD0030000",
-        "detect": [
-          "data/crime_data.db",
-          "data/nibrs.db",
-          "data/shr.db",
-          "/opt/nibrs/crime_data.db",
-          "/opt/nibrs/nibrs.db"
-        ]
+        "corpus_ids": ["rtci"]
       },
       "note": "asserts specific ORIs have authoritative records; seeding those ORIs would assert only that the seed contains them.",
       "observed_databases": [
@@ -670,13 +652,7 @@
       "requires": [],
       "corpus": {
         "description": "canonical SHR shr.db plus RTCI crime_data.db",
-        "detect": [
-          "data/crime_data.db",
-          "data/nibrs.db",
-          "data/shr.db",
-          "/opt/nibrs/crime_data.db",
-          "/opt/nibrs/nibrs.db"
-        ]
+        "corpus_ids": ["rtci", "shr"]
       },
       "note": "deterministic SHR shooting queries are checked against the corpus's real incident counts.",
       "observed_databases": [
@@ -764,16 +740,10 @@
       "seed_profile": "empty",
       "requires": [],
       "corpus": {
-        "description": "canonical RTCI and SHR databases covering the named regression cities",
-        "detect": [
-          "data/crime_data.db",
-          "data/nibrs.db",
-          "data/shr.db",
-          "/opt/nibrs/crime_data.db",
-          "/opt/nibrs/nibrs.db"
-        ]
+        "description": "canonical RTCI crime_data.db covering the named regression cities",
+        "corpus_ids": ["rtci"]
       },
-      "note": "a regression battery over real cities; its whole value is that the corpus still answers them the same way.",
+      "note": "a regression battery over real cities; its whole value is that the corpus still answers them the same way. CORPUS SCOPE, measured: it queries SHR but passes with SHR empty, so SHR is not a requirement and it stays Tier C on RTCI alone (decision 5.4). Its description said 'RTCI and SHR' until 2026-08-23; that was prose inherited from P1.1 and never a measurement.",
       "observed_databases": [
         "rtci",
         "shr"
@@ -805,16 +775,10 @@
       "seed_profile": "empty",
       "requires": [],
       "corpus": {
-        "description": "canonical RTCI, SHR and NIBRS databases with their real year ranges",
-        "detect": [
-          "data/crime_data.db",
-          "data/nibrs.db",
-          "data/shr.db",
-          "/opt/nibrs/crime_data.db",
-          "/opt/nibrs/nibrs.db"
-        ]
+        "description": "canonical RTCI crime_data.db and SHR shr.db with their real year ranges",
+        "corpus_ids": ["rtci", "shr"]
       },
-      "note": "asserts which years each source can answer, which is a property of the corpus's coverage, not of a schema.",
+      "note": "asserts which years each source can answer, which is a property of the corpus's coverage, not of a schema. CORPUS SCOPE, measured: RTCI and SHR only. NIBRS is not required by this or any Tier C command (decision 5.5), which is why 176 GB is out of scope. Its description claimed NIBRS until 2026-08-23; that was prose inherited from P1.1 and contradicted the measurement.",
       "observed_databases": [
         "rtci",
         "shr"
@@ -1126,13 +1090,7 @@
       "requires": [],
       "corpus": {
         "description": "canonical RTCI crime_data.db containing every agency named in the consolidation registry",
-        "detect": [
-          "data/crime_data.db",
-          "data/nibrs.db",
-          "data/shr.db",
-          "/opt/nibrs/crime_data.db",
-          "/opt/nibrs/nibrs.db"
-        ]
+        "corpus_ids": ["rtci"]
       },
       "note": "exists to catch a registry row naming an agency that does not exist in the data -- against a fixture it could only check the fixture.",
       "observed_databases": [
@@ -1148,13 +1106,7 @@
       "requires": [],
       "corpus": {
         "description": "canonical RTCI crime_data.db with complete recent years for Las Vegas, Charlotte and Nashville",
-        "detect": [
-          "data/crime_data.db",
-          "data/nibrs.db",
-          "data/shr.db",
-          "/opt/nibrs/crime_data.db",
-          "/opt/nibrs/nibrs.db"
-        ]
+        "corpus_ids": ["rtci"]
       },
       "note": "asserts named cities have one recent year with complete crime, population and clearance.",
       "observed_databases": [
@@ -1170,13 +1122,7 @@
       "requires": [],
       "corpus": {
         "description": "canonical RTCI crime_data.db with Los Angeles, San Diego, Santa Clara and county-agency rows",
-        "detect": [
-          "data/crime_data.db",
-          "data/nibrs.db",
-          "data/shr.db",
-          "/opt/nibrs/crime_data.db",
-          "/opt/nibrs/nibrs.db"
-        ]
+        "corpus_ids": ["rtci"]
       },
       "note": "asserts real cities keep their newest year despite persistent murder gaps -- a fact about the corpus.",
       "observed_databases": [
@@ -1192,13 +1138,7 @@
       "requires": [],
       "corpus": {
         "description": "canonical RTCI crime_data.db with Louisville and New Orleans partial-year data",
-        "detect": [
-          "data/crime_data.db",
-          "data/nibrs.db",
-          "data/shr.db",
-          "/opt/nibrs/crime_data.db",
-          "/opt/nibrs/nibrs.db"
-        ]
+        "corpus_ids": ["rtci"]
       },
       "note": "asserts specific partial years are caveated; the caveat depends on the corpus's actual gaps.",
       "observed_databases": [
@@ -1575,6 +1515,24 @@
       "seed_profile": "empty",
       "requires": [],
       "note": "reached via the nested npm run test:chart-audit. Was NOT run by npm test before this increment."
+    },
+    {
+      "id": "test-corpus-acquisition",
+      "tier": "F",
+      "script": "scripts/test-corpus-acquisition.js",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "builds throwaway SQLite databases standing in for production; needs no fixture and no corpus. Local fake sources only -- production acquisition is separately gated."
+    },
+    {
+      "id": "test-corpus-reachability",
+      "tier": "F",
+      "script": "scripts/test-corpus-reachability.js",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "proves the verifier GOVERNS Tier C execution rather than sitting beside it: one positive control that a child process reaches a verified published set, then eleven attempts to reach a corpus without verification (bootstrap-pending, stale, hash-mismatched, absent, unknown, path-escaping, mixed-set, no pointer, identity mismatch, unverified-at-acquisition, empty declaration), each required to yield NO environment. Also certifies the strengthened schema fingerprint. Tier F: builds its own throwaway SQLite databases and its own local registry, needs no corpus, and never contacts production."
     }
   ]
 }

@@ -37,6 +37,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 const { DATABASE_NAMES } = require("./fixture-db.js");
+const { loadRegistry } = require("./corpus-registry.js");
 
 const REPO = path.join(__dirname, "..", "..");
 const MANIFEST_PATH = path.join(REPO, "scripts", "fixtures", "harness-tier-manifest.json");
@@ -53,11 +54,24 @@ function loadManifest(file) {
   return parsed;
 }
 
-function validateManifest(manifest) {
+/**
+ * Validate the manifest.
+ *
+ * `options.knownCorpusIds` exists for tests, which build one-entry manifests and should not have to
+ * stand up a registry to do it. Left unset, the REVIEWED registry is the authority -- and a broken
+ * registry throws here rather than being caught and treated as "no known corpora", because the second
+ * would turn every Tier C declaration into an unknown-id problem and bury the real cause.
+ */
+function validateManifest(manifest, options) {
+  const opts = options || {};
   const problems = [];
   if (!manifest || typeof manifest !== "object" || !Array.isArray(manifest.entries)) {
     return ["manifest must be an object with an `entries` array"];
   }
+
+  const knownCorpusIds = opts.knownCorpusIds
+    ? new Set(opts.knownCorpusIds)
+    : new Set(loadRegistry(opts.registryPath).corpora.map((c) => c.id));
 
   const seenIds = new Set();
   const seenScripts = new Set();
@@ -113,13 +127,38 @@ function validateManifest(manifest) {
 
     // Tier C's whole licence to skip is its corpus declaration. Without it a skip has no stated
     // reason, and an unexplained skip is indistinguishable from a silently disabled test.
+    //
+    // P1.2 CHANGED WHAT A DECLARATION IS. It used to be `detect`: a list of candidate paths the runner
+    // searched. That is rejected outright now rather than merely ignored -- a lingering `detect` would
+    // otherwise read like a working declaration to anyone editing this file, and a path list is exactly
+    // the thing that let a command run against an unidentified database. The declaration is now
+    // `corpus_ids`: named entries in the reviewed registry, resolved through one active snapshot set.
     if (entry.tier === "C") {
       if (!entry.corpus || typeof entry.corpus !== "object") {
         problems.push(`${label}: tier C requires a corpus declaration`);
       } else {
         if (!entry.corpus.description) problems.push(`${label}: corpus needs a description`);
-        if (!Array.isArray(entry.corpus.detect) || entry.corpus.detect.length === 0) {
-          problems.push(`${label}: corpus needs a non-empty detect list of candidate paths`);
+        if (entry.corpus.detect !== undefined) {
+          problems.push(`${label}: corpus.detect is the legacy path-search form and is no longer ` +
+            `honoured; declare corpus_ids naming registry entries instead`);
+        }
+        if (!Array.isArray(entry.corpus.corpus_ids) || entry.corpus.corpus_ids.length === 0) {
+          problems.push(`${label}: corpus needs a non-empty corpus_ids array naming registry entries`);
+        } else {
+          const seenCorpora = new Set();
+          for (const id of entry.corpus.corpus_ids) {
+            if (typeof id !== "string" || !id) {
+              problems.push(`${label}: corpus_ids entries must be non-empty strings`);
+            } else if (seenCorpora.has(id)) {
+              problems.push(`${label}: corpus_ids names ${id} twice`);
+            } else {
+              seenCorpora.add(id);
+              if (!knownCorpusIds.has(id)) {
+                problems.push(`${label}: corpus_ids names ${JSON.stringify(id)}, which is not in the ` +
+                  `corpus registry (known: ${[...knownCorpusIds].join(", ") || "none"})`);
+              }
+            }
+          }
         }
       }
     } else if (entry.corpus) {
@@ -203,30 +242,21 @@ function reconcile(manifest, commands) {
   return { matched, undeclared, stale };
 }
 
-/** Is a Tier C entry's canonical corpus present? Returns {available, found, reason}. */
-function corpusAvailability(entry) {
-  const detect = (entry.corpus && entry.corpus.detect) || [];
-  for (const candidate of detect) {
-    const resolved = path.isAbsolute(candidate) ? candidate : path.join(REPO, candidate);
-    if (!fs.existsSync(resolved)) continue;
-    // A zero-byte stub resolves as a real database through `fs.existsSync` alone -- the recorded
-    // cause of detector D6 silently never firing. Treat it as absent here rather than certifying
-    // against it. This is the preflight's own judgement and changes no production behaviour.
-    if (fs.statSync(resolved).size === 0) {
-      return {
-        available: false,
-        found: resolved,
-        reason: `canonical corpus candidate ${candidate} exists but is 0 bytes`,
-      };
-    }
-    return { available: true, found: resolved, reason: null };
-  }
-  return {
-    available: false,
-    found: null,
-    reason: `no canonical corpus present (looked for: ${detect.join(", ") || "nothing declared"})`,
-  };
-}
+/**
+ * `corpusAvailability()` USED TO LIVE HERE and was deleted by P1.2, deliberately rather than left
+ * unused. It answered "does a non-empty file exist at one of these candidate paths?" -- a detector that
+ * could not distinguish a reviewed snapshot from a leftover, and whose "available" verdict was enough
+ * to run a Tier C command against it.
+ *
+ * Its replacement is `verifyCorpusSet()` in `./corpus-verification.js`, which resolves ONE active set
+ * through `CDA_CORPUS_DIR/active.json` and returns database paths only after a passed verification
+ * against reviewed registry expectation.
+ *
+ * It is deleted rather than deprecated because a permissive fallback that still exports cleanly is a
+ * fallback something will eventually call. The zero-byte lesson it encoded -- a 0-byte file resolves as
+ * a real database through `fs.existsSync` alone, which is why detector D6 silently never fired -- is
+ * preserved as `REASON.EMPTY` in `verifyArtifact`, where it now rejects rather than merely reports.
+ */
 
 module.exports = {
   MANIFEST_PATH,
@@ -235,5 +265,4 @@ module.exports = {
   validateManifest,
   validateRequires,
   reconcile,
-  corpusAvailability,
 };

@@ -25,6 +25,7 @@ const runner = require("./run-harness.js");
 const manifestModule = require("./lib/tier-manifest.js");
 const { buildFixtures, DATABASE_NAMES } = require("./lib/fixture-db.js");
 const { planHarness, ENTRY_POINTS } = require("./lib/harness-plan.js");
+const { loadRegistry } = require("./lib/corpus-registry.js");
 
 const { PASSED, FAILED, SKIPPED, BLOCKED } = runner;
 
@@ -123,15 +124,38 @@ check("tier C without a corpus declaration is rejected", () => {
   expectProblem([entryWith({ tier: "C" })], "tier C requires a corpus declaration");
 });
 
-check("tier C with an empty detect list is rejected", () => {
+check("tier C with an empty corpus_ids list is rejected", () => {
   expectProblem(
-    [entryWith({ tier: "C", corpus: { description: "d", detect: [] } })],
-    "non-empty detect list");
+    [entryWith({ tier: "C", corpus: { description: "d", corpus_ids: [] } })],
+    "non-empty corpus_ids array");
+});
+
+// ITEM 9, CASE 1. The legacy form must be REJECTED, not ignored. An entry still carrying `detect`
+// after P1.2 reads to a maintainer like a working declaration, and the runner would silently treat the
+// command as having declared nothing -- so the failure mode is a Tier C command that can never run,
+// for a reason nobody can see in the manifest.
+check("a lingering legacy `detect` array is rejected outright", () => {
+  expectProblem(
+    [entryWith({ tier: "C", corpus: { description: "d", detect: ["data/crime_data.db"],
+      corpus_ids: ["rtci"] } })],
+    "legacy path-search form");
+});
+
+check("a corpus_ids entry naming an unknown corpus is rejected", () => {
+  expectProblem(
+    [entryWith({ tier: "C", corpus: { description: "d", corpus_ids: ["nibrs"] } })],
+    "not in the corpus registry");
+});
+
+check("corpus_ids naming the same corpus twice is rejected", () => {
+  expectProblem(
+    [entryWith({ tier: "C", corpus: { description: "d", corpus_ids: ["rtci", "rtci"] } })],
+    "names rtci twice");
 });
 
 check("tier F may not declare a corpus", () => {
   expectProblem(
-    [entryWith({ corpus: { description: "d", detect: ["data/x.db"] } })],
+    [entryWith({ corpus: { description: "d", corpus_ids: ["rtci"] } })],
     "only tier C may declare a corpus");
 });
 
@@ -153,39 +177,106 @@ check("reconcile reports undeclared commands and stale entries in both direction
   assert.deepEqual(stale, ["ghost"]);
 });
 
-// ------------------------------------------------------------------ corpus availability
+// ------------------------------------------------------------------ corpus reachability
 
-check("an absent corpus is unavailable, with the reason naming what was looked for", () => {
-  const result = manifestModule.corpusAvailability({
-    corpus: { description: "canonical RTCI", detect: ["data/definitely-absent.db"] },
-  });
-  assert.equal(result.available, false);
-  assert.match(result.reason, /no canonical corpus present/);
-  assert.match(result.reason, /definitely-absent\.db/);
+// `corpusAvailability()` was deleted by P1.2 and its two tests are replaced here. It answered "does a
+// non-empty file exist at one of these paths?", which is a detector rather than a proof: it could not
+// tell a reviewed snapshot from a leftover, nor which set two corpora came from. The behaviour that
+// replaces it is proven in `scripts/test-corpus-reachability.js`, which stands up real published sets.
+//
+// What belongs HERE is the narrow structural claim this file owns: the permissive entry point is gone,
+// so nothing can reach a corpus without going through verification.
+
+check("the permissive corpusAvailability entry point no longer exists", () => {
+  assert.equal(manifestModule.corpusAvailability, undefined,
+    "corpusAvailability must be deleted, not merely unused: a permissive fallback that still exports " +
+    "cleanly is one someone will eventually call");
 });
 
-check("a ZERO-BYTE database counts as absent, not as a corpus", () => {
-  // The recorded incident: `resolveDbPath` uses fs.existsSync only, so a 0-byte shr.db resolved as a
-  // real database and detector D6 "silently cannot fire". Certifying against that file would be worse
-  // than skipping.
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "corpus-zero-"));
-  try {
-    const stub = path.join(dir, "stub.db");
-    fs.writeFileSync(stub, "");
-    assert.equal(fs.statSync(stub).size, 0);
-    const result = manifestModule.corpusAvailability({
-      corpus: { description: "canonical", detect: [stub] },
-    });
-    assert.equal(result.available, false);
-    assert.match(result.reason, /0 bytes/);
-
-    fs.writeFileSync(stub, "not empty");
-    assert.equal(manifestModule.corpusAvailability({
-      corpus: { description: "canonical", detect: [stub] },
-    }).available, true);
-  } finally {
-    fs.rmSync(dir, { recursive: true, force: true });
+check("the manifest's own Tier C entries all declare registry corpora, and none declare detect", () => {
+  const manifest = manifestModule.loadManifest();
+  const tierC = manifest.entries.filter((e) => e.tier === "C");
+  assert.ok(tierC.length > 0, "the manifest should declare Tier C commands");
+  const known = new Set(loadRegistry().corpora.map((c) => c.id));
+  for (const entry of tierC) {
+    assert.equal(entry.corpus.detect, undefined, `${entry.id} still carries a legacy detect array`);
+    assert.ok(Array.isArray(entry.corpus.corpus_ids) && entry.corpus.corpus_ids.length > 0,
+      `${entry.id} declares no corpus_ids`);
+    for (const id of entry.corpus.corpus_ids) {
+      assert.ok(known.has(id), `${entry.id} declares unknown corpus ${id}`);
+    }
   }
+});
+
+/**
+ * The corpora a description NAMES, by the words a human would write for each.
+ *
+ * `nibrs` is listed even though no corpus is registered for it, precisely because that is the mistake
+ * worth catching: `test-year-availability`'s description claimed NIBRS while decision 5.5 measured that
+ * no Tier C command needs it. A vocabulary limited to registered ids could not have seen that.
+ */
+const CORPUS_WORDS = {
+  rtci: [/\bRTCI\b/i, /\bcrime_data\b/i],
+  shr: [/\bSHR\b/i, /\bshr\.db\b/i],
+  nibrs: [/\bNIBRS\b/i, /\bnibrs\.db\b/i],
+};
+
+/** Disagreements between one entry's description prose and its declared corpus_ids. */
+function describeMismatches(entry) {
+  const declared = new Set(entry.corpus.corpus_ids);
+  const description = entry.corpus.description;
+  const problems = [];
+  for (const [id, patterns] of Object.entries(CORPUS_WORDS)) {
+    const named = patterns.some((re) => re.test(description));
+    if (named && !declared.has(id)) {
+      problems.push(`${entry.id}: description names ${id} but corpus_ids is ` +
+        `[${[...declared].join(", ")}] -- move a negative scope fact to \`note\``);
+    }
+    if (!named && declared.has(id)) {
+      problems.push(`${entry.id}: declares ${id} but the description never mentions it`);
+    }
+  }
+  return problems;
+}
+
+check("every Tier C description names EXACTLY the corpora it declares", () => {
+  // The prose and the declaration are two statements of the same fact, so a disagreement is a defect
+  // in one of them -- and it is the prose that misled a reader for a whole increment. Measured scope
+  // that is NEGATIVE ("SHR is queried but not required") belongs in `note`, which is not scanned:
+  // encoding a negation in the description would need this check to parse English.
+  const manifest = manifestModule.loadManifest();
+  const problems = manifest.entries
+    .filter((e) => e.tier === "C")
+    .flatMap((entry) => describeMismatches(entry));
+  assert.deepEqual(problems, [], problems.join("\n  "));
+});
+
+check("the description scanner would have CAUGHT both corrected descriptions", () => {
+  // A scanner that never fires proves nothing, so it is run against the exact prose it was written
+  // for: the two descriptions as they stood before 2026-08-23.
+  const battery = describeMismatches({
+    id: "test-regression-battery",
+    corpus: { corpus_ids: ["rtci"],
+      description: "canonical RTCI and SHR databases covering the named regression cities" },
+  });
+  assert.equal(battery.length, 1, `expected exactly one problem, got ${JSON.stringify(battery)}`);
+  assert.match(battery[0], /description names shr but corpus_ids is \[rtci\]/);
+
+  const years = describeMismatches({
+    id: "test-year-availability",
+    corpus: { corpus_ids: ["rtci", "shr"],
+      description: "canonical RTCI, SHR and NIBRS databases with their real year ranges" },
+  });
+  assert.equal(years.length, 1, `expected exactly one problem, got ${JSON.stringify(years)}`);
+  assert.match(years[0], /description names nibrs but corpus_ids is \[rtci, shr\]/);
+
+  // And the other direction: a declared corpus the prose forgets.
+  const silent = describeMismatches({
+    id: "synthetic",
+    corpus: { corpus_ids: ["rtci", "shr"], description: "canonical RTCI crime_data.db only" },
+  });
+  assert.equal(silent.length, 1);
+  assert.match(silent[0], /declares shr but the description never mentions it/);
 });
 
 // ------------------------------------------------------------------ preflight
@@ -333,7 +424,10 @@ check("Tier C skips give corpus_not_certified while Tier F can still be fixture_
   // A Tier C skip is not a failure -- it is an uncertified run that still reports its Tier F result.
   assert.equal(value, 0);
   // The skip carries the metadata P1.2 needs, without reclassifying anything.
-  assert.match(output, /requires: canonical RTCI with 2017-2024/);
+  // Whitespace-tolerant: the skip block is column-aligned now that it also prints the declared corpus
+  // ids and the active set, and the claim under test is that the requirement is stated, not how it is
+  // padded.
+  assert.match(output, /requires:\s+canonical RTCI with 2017-2024/);
 });
 
 check("the two verdicts never merge into one", () => {
