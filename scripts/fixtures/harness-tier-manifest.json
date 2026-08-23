@@ -1,0 +1,1580 @@
+{
+  "_README": [
+    "Generated from measured evidence, then edited by hand. See the P1.1 session document.",
+    "Mechanically derived: `databases` is which fixture databases the command ACTUALLY queried at",
+    "runtime (observed by patching better-sqlite3's prepare), not which env vars its imports mention.",
+    "Static reference proved useless as a proxy: env-var names gave 30 database-dependent commands and",
+    "broad signals gave 84, where reading imports had suggested 42. None of those is a dependency.",
+    "Judgement calls -- every Tier C classification -- carry their own `note` explaining why a fixture",
+    "cannot honestly satisfy that test.",
+    "`python` and `powershell` commands are marked measured-by-outcome: the observer only instruments",
+    "better-sqlite3, so for those the evidence is that they PASS in a clean clone with no database",
+    "present, which is exactly what Tier F requires of them."
+  ],
+  "entries": [
+    {
+      "id": "check-control-characters",
+      "tier": "F",
+      "script": "scripts/check-control-characters.py",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test_escape_integrity_gate",
+      "tier": "F",
+      "script": "scripts/test_escape_integrity_gate.py",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-checkout-determinism",
+      "tier": "F",
+      "script": "scripts/test-checkout-determinism.js",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-harness-plan",
+      "tier": "F",
+      "script": "scripts/test-harness-plan.js",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-replay-fanout-boundaries",
+      "tier": "F",
+      "script": "scripts/test-replay-fanout-boundaries.js",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test_historical_core_digest_delimiter",
+      "tier": "F",
+      "script": "scripts/test_historical_core_digest_delimiter.py",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "audit-test-exit-codes",
+      "tier": "F",
+      "script": "scripts/audit-test-exit-codes.py",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "diagnose-answer-log",
+      "tier": "F",
+      "script": "scripts/diagnose-answer-log.py",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-current-trends-readiness",
+      "tier": "F",
+      "script": "scripts/test-current-trends-readiness.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "builds and seeds its own :memory: database; needs no fixture (measured: statements against :memory: only, none against any fixture file)"
+    },
+    {
+      "id": "test-current-trends-source-health",
+      "tier": "F",
+      "script": "scripts/test-current-trends-source-health.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "builds and seeds its own :memory: database; needs no fixture (measured: statements against :memory: only, none against any fixture file)"
+    },
+    {
+      "id": "test-current-trends-sql-absence",
+      "tier": "F",
+      "script": "scripts/test-current-trends-sql-absence.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "builds and seeds its own :memory: database; needs no fixture (measured: statements against :memory: only, none against any fixture file)"
+    },
+    {
+      "id": "test-current-trends-empty-reason",
+      "tier": "F",
+      "script": "scripts/test-current-trends-empty-reason.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "builds and seeds its own :memory: database; needs no fixture (measured: statements against :memory: only, none against any fixture file)"
+    },
+    {
+      "id": "test-current-trends-empty-egress",
+      "tier": "F",
+      "script": "scripts/test-current-trends-empty-egress.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test_historical_core",
+      "tier": "F",
+      "script": "scripts/test_historical_core.py",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test_current_trends_build_receipt",
+      "tier": "F",
+      "script": "scripts/test_current_trends_build_receipt.py",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test_current_trends_nonempty_receipt",
+      "tier": "F",
+      "script": "scripts/test_current_trends_nonempty_receipt.py",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test_update_rtci_all_agencies",
+      "tier": "F",
+      "script": "scripts/test_update_rtci_all_agencies.py",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test_update_rtci_receipts",
+      "tier": "F",
+      "script": "scripts/test_update_rtci_receipts.py",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-historical-county-identity",
+      "tier": "C",
+      "script": "scripts/test-historical-county-identity.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "corpus": {
+        "description": "canonical RTCI crime_data.db with county-agency rows (Cook County clearance and staffing, countywide coverage)",
+        "detect": [
+          "data/crime_data.db",
+          "data/nibrs.db",
+          "data/shr.db",
+          "/opt/nibrs/crime_data.db",
+          "/opt/nibrs/nibrs.db"
+        ]
+      },
+      "note": "47 checks assert Cook County's real clearance and staffing shapes, including that its 2020 clearance is blank -- the specific defect the rebuild fixes. Seeding that would be seeding the answer.",
+      "observed_databases": [
+        "rtci"
+      ]
+    },
+    {
+      "id": "test-historical-county-live-paths",
+      "tier": "C",
+      "script": "scripts/test-historical-county-live-paths.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "corpus": {
+        "description": "canonical RTCI crime_data.db with county agencies sharing a name (Cook County, Maryland sheriff/police pairs)",
+        "detect": [
+          "data/crime_data.db",
+          "data/nibrs.db",
+          "data/shr.db",
+          "/opt/nibrs/crime_data.db",
+          "/opt/nibrs/nibrs.db"
+        ]
+      },
+      "note": "20 checks walk real follow-up conversations whose outcomes depend on two real agencies being recorded under the same name.",
+      "observed_databases": [
+        "rtci"
+      ]
+    },
+    {
+      "id": "test-authoritative-agency-label",
+      "tier": "C",
+      "script": "scripts/test-authoritative-agency-label.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "corpus": {
+        "description": "canonical RTCI crime_data.db containing ORIs MD0030100 and MD0030000",
+        "detect": [
+          "data/crime_data.db",
+          "data/nibrs.db",
+          "data/shr.db",
+          "/opt/nibrs/crime_data.db",
+          "/opt/nibrs/nibrs.db"
+        ]
+      },
+      "note": "asserts specific ORIs have authoritative records; seeding those ORIs would assert only that the seed contains them.",
+      "observed_databases": [
+        "rtci"
+      ]
+    },
+    {
+      "id": "test-authoritative-label-route-placement",
+      "tier": "F",
+      "script": "scripts/test-authoritative-label-route-placement.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-nibrs-place-resolver",
+      "tier": "F",
+      "script": "scripts/test-nibrs-place-resolver.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "builds and seeds its own :memory: database; needs no fixture (measured: statements against :memory: only, none against any fixture file)"
+    },
+    {
+      "id": "test-nibrs-query-planner",
+      "tier": "F",
+      "script": "scripts/test-nibrs-query-planner.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "builds and seeds its own :memory: database; needs no fixture (measured: statements against :memory: only, none against any fixture file)"
+    },
+    {
+      "id": "test-nibrs-rollup-router",
+      "tier": "F",
+      "script": "scripts/test-nibrs-rollup-router.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-nibrs-rollup-freshness",
+      "tier": "F",
+      "script": "scripts/test-nibrs-rollup-freshness.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-nibrs-rollup-deterministic",
+      "tier": "F",
+      "script": "scripts/test-nibrs-rollup-deterministic.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-nibrs-scope-deterministic",
+      "tier": "F",
+      "script": "scripts/test-nibrs-scope-deterministic.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-multi-city-deterministic",
+      "tier": "F",
+      "script": "scripts/test-multi-city-deterministic.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-current-indexed-state-deterministic",
+      "tier": "F",
+      "script": "scripts/test-current-indexed-state-deterministic.ts",
+      "databases": [
+        "rtci"
+      ],
+      "seed_profile": "state_index_baseline",
+      "requires": [
+        {
+          "database": "rtci",
+          "table": "agency_monthly",
+          "min_rows": 2,
+          "_why": "the test asserts rows.length > 1, so the series must span more than one year"
+        },
+        {
+          "database": "rtci",
+          "table": "agency_monthly",
+          "where": "year = 2017 AND offense = 'Aggravated Assault'",
+          "min_rows": 1,
+          "_why": "the baseline row the test looks up by year === 2017; the plan filters this offense"
+        },
+        {
+          "database": "rtci",
+          "table": "sample_agencies",
+          "min_rows": 1,
+          "_why": "an INNER JOIN in the plan's first CTE -- an agency absent here contributes nothing"
+        },
+        {
+          "database": "rtci",
+          "table": "agency_population",
+          "where": "year = 2017",
+          "min_rows": 1,
+          "non_null": [
+            "population"
+          ],
+          "_why": "THE clause that makes this test non-vacuous. Its final loop is guarded by `if (base[column] !== null)`, and the plan's series CTE filters `population IS NOT NULL` and divides by SUM(population). With no non-null 2017 population every indexed column is NULL, the guard never opens, and the test passes having evaluated no equality at all."
+        }
+      ],
+      "note": "the contract's worked example. Repaired and now fixture-backed: measured as reaching no database only because it could not OPEN one.",
+      "finding": "FINDING (repaired here): this was the only harness test hardcoding a database path (new Database(\"crime_data.db\")), so no env var could point it at a fixture and it died with SQLITE_CANTOPEN before its first assertion. It now resolves RTCI_DB_PATH, and the state_index_baseline seed plus the requires clauses above make its assertions actually evaluate."
+    },
+    {
+      "id": "test-latency-scoreboard",
+      "tier": "F",
+      "script": "scripts/test-latency-scoreboard.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-shr-deterministic-murder",
+      "tier": "F",
+      "script": "scripts/test-shr-deterministic-murder.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "builds and seeds its own :memory: database; needs no fixture (measured: statements against :memory: only, none against any fixture file)"
+    },
+    {
+      "id": "test-shr-annual-coverage",
+      "tier": "F",
+      "script": "scripts/test-shr-annual-coverage.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-resolver-warning-classification",
+      "tier": "F",
+      "script": "scripts/test-resolver-warning-classification.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-build-shr-return-a-comparison",
+      "tier": "F",
+      "script": "scripts/test-build-shr-return-a-comparison.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-nibrs-rollup-worker",
+      "tier": "F",
+      "script": "scripts/test-nibrs-rollup-worker.js",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-agency-scorecard",
+      "tier": "F",
+      "script": "scripts/test-agency-scorecard.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "builds and seeds its own :memory: database; needs no fixture (measured: statements against :memory: only, none against any fixture file)"
+    },
+    {
+      "id": "test-nibrs-rollup-context",
+      "tier": "F",
+      "script": "scripts/test-nibrs-rollup-context.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "builds and seeds its own :memory: database; needs no fixture (measured: statements against :memory: only, none against any fixture file)"
+    },
+    {
+      "id": "test-guardrails",
+      "tier": "F",
+      "script": "scripts/test-guardrails.js",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-encoding",
+      "tier": "F",
+      "script": "scripts/test-encoding.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-new-guardrails",
+      "tier": "F",
+      "script": "scripts/test-new-guardrails.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-rate-fanout",
+      "tier": "F",
+      "script": "scripts/test-rate-fanout.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "builds and seeds its own :memory: database; needs no fixture (measured: statements against :memory: only, none against any fixture file)"
+    },
+    {
+      "id": "test-rate-denominator",
+      "tier": "F",
+      "script": "scripts/test-rate-denominator.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-sql-guardrails",
+      "tier": "F",
+      "script": "scripts/test-sql-guardrails.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-nibrs-capability-overrides",
+      "tier": "F",
+      "script": "scripts/test-nibrs-capability-overrides.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-chart-customization",
+      "tier": "F",
+      "script": "scripts/test-chart-customization.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-geo-resolver",
+      "tier": "F",
+      "script": "scripts/test-geo-resolver.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-geo-place-resolver",
+      "tier": "F",
+      "script": "scripts/test-geo-place-resolver.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-geo-fuzzy",
+      "tier": "F",
+      "script": "scripts/test-geo-fuzzy.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-geo-correction",
+      "tier": "F",
+      "script": "scripts/test-geo-correction.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-explain-entity-preservation",
+      "tier": "F",
+      "script": "scripts/test-explain-entity-preservation.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-geo-source-mapper",
+      "tier": "F",
+      "script": "scripts/test-geo-source-mapper.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "builds and seeds its own :memory: database; needs no fixture (measured: statements against :memory: only, none against any fixture file)"
+    },
+    {
+      "id": "test-geo-source-canaries",
+      "tier": "F",
+      "script": "scripts/test-geo-source-canaries.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "builds and seeds its own :memory: database; needs no fixture (measured: statements against :memory: only, none against any fixture file)"
+    },
+    {
+      "id": "test-query-guidance",
+      "tier": "F",
+      "script": "scripts/test-query-guidance.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-query-guidance-log",
+      "tier": "F",
+      "script": "scripts/test-query-guidance-log.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-query-plan",
+      "tier": "F",
+      "script": "scripts/test-query-plan.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-query-contract",
+      "tier": "F",
+      "script": "scripts/test-query-contract.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-source-capabilities",
+      "tier": "F",
+      "script": "scripts/test-source-capabilities.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-sqlite-db",
+      "tier": "F",
+      "script": "scripts/test-sqlite-db.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-nibrs-city-aliases",
+      "tier": "F",
+      "script": "scripts/test-nibrs-city-aliases.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-nibrs-agency-aliases",
+      "tier": "F",
+      "script": "scripts/test-nibrs-agency-aliases.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "builds and seeds its own :memory: database; needs no fixture (measured: statements against :memory: only, none against any fixture file)"
+    },
+    {
+      "id": "test-nibrs-deterministic-queries",
+      "tier": "F",
+      "script": "scripts/test-nibrs-deterministic-queries.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "builds and seeds its own :memory: database; needs no fixture (measured: statements against :memory: only, none against any fixture file)"
+    },
+    {
+      "id": "test-nibrs-sql-optimizer",
+      "tier": "F",
+      "script": "scripts/test-nibrs-sql-optimizer.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone",
+      "finding": "FINDING (open, needs a product decision): this test asserts a NATIONAL query is left unrewritten. That holds only on a machine with NO rollup database. With any rollup database present -- including an empty fixture, and including production -- optimizeNibrsSql rewrites summary_clearance_type to rollup.national_summary_clearance_type and the assertion fails. So the test currently passes because of what is ABSENT from the developer's disk. Whether the optimizer or the expectation is wrong is a product call and is not decided here."
+    },
+    {
+      "id": "test-historical-deterministic-queries",
+      "tier": "F",
+      "script": "scripts/test-historical-deterministic-queries.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-shr-deterministic-shooting",
+      "tier": "C",
+      "script": "scripts/test-shr-deterministic-shooting.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "corpus": {
+        "description": "canonical SHR shr.db plus RTCI crime_data.db",
+        "detect": [
+          "data/crime_data.db",
+          "data/nibrs.db",
+          "data/shr.db",
+          "/opt/nibrs/crime_data.db",
+          "/opt/nibrs/nibrs.db"
+        ]
+      },
+      "note": "deterministic SHR shooting queries are checked against the corpus's real incident counts.",
+      "observed_databases": [
+        "rtci",
+        "shr"
+      ]
+    },
+    {
+      "id": "test-shr-firearm-trend-intent",
+      "tier": "F",
+      "script": "scripts/test-shr-firearm-trend-intent.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-shooting-qualifiers",
+      "tier": "F",
+      "script": "scripts/test-shooting-qualifiers.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-subcity-geography",
+      "tier": "F",
+      "script": "scripts/test-subcity-geography.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-layer3-contract-corpus",
+      "tier": "F",
+      "script": "scripts/test-layer3-contract-corpus.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-table-allowlist",
+      "tier": "F",
+      "script": "scripts/test-table-allowlist.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "builds and seeds its own :memory: database; needs no fixture (measured: statements against :memory: only, none against any fixture file)"
+    },
+    {
+      "id": "test-result-disclosure",
+      "tier": "F",
+      "script": "scripts/test-result-disclosure.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-requested-grain",
+      "tier": "F",
+      "script": "scripts/test-requested-grain.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-schema-validation",
+      "tier": "F",
+      "script": "scripts/test-schema-validation.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "builds and seeds its own :memory: database; needs no fixture (measured: statements against :memory: only, none against any fixture file)"
+    },
+    {
+      "id": "test-regression-battery",
+      "tier": "C",
+      "script": "scripts/test-regression-battery.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "corpus": {
+        "description": "canonical RTCI and SHR databases covering the named regression cities",
+        "detect": [
+          "data/crime_data.db",
+          "data/nibrs.db",
+          "data/shr.db",
+          "/opt/nibrs/crime_data.db",
+          "/opt/nibrs/nibrs.db"
+        ]
+      },
+      "note": "a regression battery over real cities; its whole value is that the corpus still answers them the same way.",
+      "observed_databases": [
+        "rtci",
+        "shr"
+      ]
+    },
+    {
+      "id": "test-completeness-intent",
+      "tier": "F",
+      "script": "scripts/test-completeness-intent.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-explain",
+      "tier": "F",
+      "script": "scripts/test-explain.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-year-availability",
+      "tier": "C",
+      "script": "scripts/test-year-availability.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "corpus": {
+        "description": "canonical RTCI, SHR and NIBRS databases with their real year ranges",
+        "detect": [
+          "data/crime_data.db",
+          "data/nibrs.db",
+          "data/shr.db",
+          "/opt/nibrs/crime_data.db",
+          "/opt/nibrs/nibrs.db"
+        ]
+      },
+      "note": "asserts which years each source can answer, which is a property of the corpus's coverage, not of a schema.",
+      "observed_databases": [
+        "rtci",
+        "shr"
+      ]
+    },
+    {
+      "id": "test-shr-agency-probe",
+      "tier": "F",
+      "script": "scripts/test-shr-agency-probe.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-nibrs-agency-probe",
+      "tier": "F",
+      "script": "scripts/test-nibrs-agency-probe.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "builds and seeds its own :memory: database; needs no fixture (measured: statements against :memory: only, none against any fixture file)"
+    },
+    {
+      "id": "test-shr-agency-normalization",
+      "tier": "F",
+      "script": "scripts/test-shr-agency-normalization.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-shr-state-population",
+      "tier": "F",
+      "script": "scripts/test-shr-state-population.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-chat-history",
+      "tier": "F",
+      "script": "scripts/test-chat-history.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-router",
+      "tier": "F",
+      "script": "scripts/test-router.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-time-conventions",
+      "tier": "F",
+      "script": "scripts/test-time-conventions.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-followup-planner-mode",
+      "tier": "F",
+      "script": "scripts/test-followup-planner-mode.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-followup-planner",
+      "tier": "F",
+      "script": "scripts/test-followup-planner.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-query-bearing-followup",
+      "tier": "F",
+      "script": "scripts/test-query-bearing-followup.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-followup-transform",
+      "tier": "F",
+      "script": "scripts/test-followup-transform.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-cross-source-followup",
+      "tier": "F",
+      "script": "scripts/test-cross-source-followup.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-chart-config",
+      "tier": "F",
+      "script": "scripts/test-chart-config.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-chart-panel-ticks",
+      "tier": "F",
+      "script": "scripts/test-chart-panel-ticks.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-metadata-coverage",
+      "tier": "F",
+      "script": "scripts/test-metadata-coverage.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "builds and seeds its own :memory: database; needs no fixture (measured: statements against :memory: only, none against any fixture file)"
+    },
+    {
+      "id": "validate-nibrs-prompt-sql",
+      "tier": "F",
+      "script": "scripts/validate-nibrs-prompt-sql.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "builds and seeds its own :memory: database; needs no fixture (measured: statements against :memory: only, none against any fixture file)"
+    },
+    {
+      "id": "test-scaffold-helpers",
+      "tier": "F",
+      "script": "scripts/test-scaffold-helpers.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-refusal-safety",
+      "tier": "F",
+      "script": "scripts/test-refusal-safety.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-no-sql-retry",
+      "tier": "F",
+      "script": "scripts/test-no-sql-retry.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-current-agency-availability",
+      "tier": "F",
+      "script": "scripts/test-current-agency-availability.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "builds and seeds its own :memory: database; needs no fixture (measured: statements against :memory: only, none against any fixture file)"
+    },
+    {
+      "id": "test-internal-leak-adversarial",
+      "tier": "F",
+      "script": "scripts/test-internal-leak-adversarial.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-route-egress-contract",
+      "tier": "F",
+      "script": "scripts/test-route-egress-contract.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-query-audit-detectors",
+      "tier": "F",
+      "script": "scripts/test-query-audit-detectors.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-audit-provenance",
+      "tier": "F",
+      "script": "scripts/test-audit-provenance.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-contract-tag-namespace",
+      "tier": "F",
+      "script": "scripts/test-contract-tag-namespace.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-chart-config-log",
+      "tier": "F",
+      "script": "scripts/test-chart-config-log.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-chart-config-migration",
+      "tier": "F",
+      "script": "scripts/test-chart-config-migration.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-model-response-migration",
+      "tier": "F",
+      "script": "scripts/test-model-response-migration.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-chart-capture-wiring",
+      "tier": "F",
+      "script": "scripts/test-chart-capture-wiring.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test_refresh_agency_populations",
+      "tier": "F",
+      "script": "scripts/test_refresh_agency_populations.py",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test_shr_incident_populations",
+      "tier": "F",
+      "script": "scripts/test_shr_incident_populations.py",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-scorecard-format",
+      "tier": "F",
+      "script": "scripts/test-scorecard-format.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-scorecard-wiring",
+      "tier": "F",
+      "script": "scripts/test-scorecard-wiring.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-agency-consolidations",
+      "tier": "C",
+      "script": "scripts/test-agency-consolidations.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "corpus": {
+        "description": "canonical RTCI crime_data.db containing every agency named in the consolidation registry",
+        "detect": [
+          "data/crime_data.db",
+          "data/nibrs.db",
+          "data/shr.db",
+          "/opt/nibrs/crime_data.db",
+          "/opt/nibrs/nibrs.db"
+        ]
+      },
+      "note": "exists to catch a registry row naming an agency that does not exist in the data -- against a fixture it could only check the fixture.",
+      "observed_databases": [
+        "rtci"
+      ]
+    },
+    {
+      "id": "test-scorecard-reliability",
+      "tier": "C",
+      "script": "scripts/test-scorecard-reliability.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "corpus": {
+        "description": "canonical RTCI crime_data.db with complete recent years for Las Vegas, Charlotte and Nashville",
+        "detect": [
+          "data/crime_data.db",
+          "data/nibrs.db",
+          "data/shr.db",
+          "/opt/nibrs/crime_data.db",
+          "/opt/nibrs/nibrs.db"
+        ]
+      },
+      "note": "asserts named cities have one recent year with complete crime, population and clearance.",
+      "observed_databases": [
+        "rtci"
+      ]
+    },
+    {
+      "id": "test-historical-scorecard",
+      "tier": "C",
+      "script": "scripts/test-historical-scorecard.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "corpus": {
+        "description": "canonical RTCI crime_data.db with Los Angeles, San Diego, Santa Clara and county-agency rows",
+        "detect": [
+          "data/crime_data.db",
+          "data/nibrs.db",
+          "data/shr.db",
+          "/opt/nibrs/crime_data.db",
+          "/opt/nibrs/nibrs.db"
+        ]
+      },
+      "note": "asserts real cities keep their newest year despite persistent murder gaps -- a fact about the corpus.",
+      "observed_databases": [
+        "rtci"
+      ]
+    },
+    {
+      "id": "test-agency-reliability",
+      "tier": "C",
+      "script": "scripts/test-agency-reliability.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "corpus": {
+        "description": "canonical RTCI crime_data.db with Louisville and New Orleans partial-year data",
+        "detect": [
+          "data/crime_data.db",
+          "data/nibrs.db",
+          "data/shr.db",
+          "/opt/nibrs/crime_data.db",
+          "/opt/nibrs/nibrs.db"
+        ]
+      },
+      "note": "asserts specific partial years are caveated; the caveat depends on the corpus's actual gaps.",
+      "observed_databases": [
+        "rtci"
+      ]
+    },
+    {
+      "id": "test-daily-query-analysis",
+      "tier": "F",
+      "script": "scripts/test-daily-query-analysis.js",
+      "databases": [
+        "query_log"
+      ],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: queried query_log and passed"
+    },
+    {
+      "id": "test-proof-contract",
+      "tier": "F",
+      "script": "scripts/test-proof-contract.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-proof-modes",
+      "tier": "F",
+      "script": "scripts/test-proof-modes.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-audit-health",
+      "tier": "F",
+      "script": "scripts/test-audit-health.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-chart-audit-pipeline",
+      "tier": "F",
+      "script": "scripts/test-chart-audit-pipeline.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-stage0-operational-guards",
+      "tier": "F",
+      "script": "scripts/test-stage0-operational-guards.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-query-log-columns",
+      "tier": "F",
+      "script": "scripts/test-query-log-columns.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "builds and seeds its own :memory: database; needs no fixture (measured: statements against :memory: only, none against any fixture file)"
+    },
+    {
+      "id": "test-proof-log-migration",
+      "tier": "F",
+      "script": "scripts/test-proof-log-migration.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-result-digest",
+      "tier": "F",
+      "script": "scripts/test-result-digest.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-result-digest-null-sentinel",
+      "tier": "F",
+      "script": "scripts/test-result-digest-null-sentinel.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-proof-checks",
+      "tier": "F",
+      "script": "scripts/test-proof-checks.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-omission-attribution",
+      "tier": "F",
+      "script": "scripts/test-omission-attribution.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-proof-finalize",
+      "tier": "F",
+      "script": "scripts/test-proof-finalize.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-proof-egress-inventory",
+      "tier": "F",
+      "script": "scripts/test-proof-egress-inventory.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-plan-derivation",
+      "tier": "F",
+      "script": "scripts/test-plan-derivation.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-proof-round3-regressions",
+      "tier": "F",
+      "script": "scripts/test-proof-round3-regressions.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-omission-wording",
+      "tier": "F",
+      "script": "scripts/test-omission-wording.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-proof-route-integration",
+      "tier": "F",
+      "script": "scripts/test-proof-route-integration.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-proof-cache-validity",
+      "tier": "F",
+      "script": "scripts/test-proof-cache-validity.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-embed-origin",
+      "tier": "F",
+      "script": "scripts/test-embed-origin.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-embed-proof",
+      "tier": "F",
+      "script": "scripts/test-embed-proof.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-chart-meta-binding",
+      "tier": "F",
+      "script": "scripts/test-chart-meta-binding.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-proof-shadow-report",
+      "tier": "F",
+      "script": "scripts/test-proof-shadow-report.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-shadow-equivalence",
+      "tier": "F",
+      "script": "scripts/test-shadow-equivalence.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-shadow-route-equivalence",
+      "tier": "F",
+      "script": "scripts/test-shadow-route-equivalence.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-operation-taxonomy",
+      "tier": "F",
+      "script": "scripts/test-operation-taxonomy.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-nibrs-refresh-cleanup",
+      "tier": "F",
+      "script": "scripts/test-nibrs-refresh-cleanup.ps1",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-nibrs-refresh-logging",
+      "tier": "F",
+      "script": "scripts/test-nibrs-refresh-logging.ps1",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-nibrs-refresh-lifecycle",
+      "tier": "F",
+      "script": "scripts/test-nibrs-refresh-lifecycle.ps1",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-nibrs-remote-shell",
+      "tier": "F",
+      "script": "scripts/test-nibrs-remote-shell.ps1",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-source-health-inventory",
+      "tier": "F",
+      "script": "scripts/test-source-health-inventory.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-source-health",
+      "tier": "F",
+      "script": "scripts/test-source-health.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "builds and seeds its own :memory: database; needs no fixture (measured: statements against :memory: only, none against any fixture file)"
+    },
+    {
+      "id": "test-stage2b-workbook",
+      "tier": "F",
+      "script": "scripts/test-stage2b-workbook.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-historical-clearance-grain",
+      "tier": "F",
+      "script": "scripts/test-historical-clearance-grain.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-historical-clearance-route",
+      "tier": "F",
+      "script": "scripts/test-historical-clearance-route.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "measured: prepared no SQLite statement at all in a clean clone"
+    },
+    {
+      "id": "test-harness-contract",
+      "tier": "F",
+      "script": "scripts/test-harness-contract.js",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "asserts the runner contract with synthetic manifests and temp fixtures it builds itself; needs no harness fixture"
+    },
+    {
+      "id": "test-harness-mutations",
+      "tier": "F",
+      "script": "scripts/test-harness-mutations.js",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "mutates real test files in place and restores them; runs those tests as subprocesses, needs no fixture of its own"
+    },
+    {
+      "id": "test-harness-preflight-mutations",
+      "tier": "F",
+      "script": "scripts/test-harness-preflight-mutations.js",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "drives run-harness.js with doctored manifests; the fixtures it exercises are built by that inner run"
+    },
+    {
+      "id": "test-harness-canonical-path",
+      "tier": "F",
+      "script": "scripts/test-harness-canonical-path.js",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "reads package.json and mutates in-memory copies of its scripts; touches no database"
+    },
+    {
+      "id": "test-chart-audit",
+      "tier": "F",
+      "script": "scripts/test-chart-audit.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "reached via the nested npm run test:chart-audit. Was NOT run by npm test before this increment -- the bypass the canonical-path check found."
+    },
+    {
+      "id": "test-chart-audit-migration",
+      "tier": "F",
+      "script": "scripts/test-chart-audit-migration.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "reached via the nested npm run test:chart-audit. Was NOT run by npm test before this increment."
+    }
+  ]
+}

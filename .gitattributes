@@ -1,1 +1,21 @@
 *.db filter=lfs diff=lfs merge=lfs -text
+
+# Byte-hashed provenance inputs must check out identically on every platform.
+#
+# `recordDigest()` in lib/stage2b-authored-record.ts hashes this file's RAW BYTES
+# (fs.readFileSync with no encoding). That digest is stamped into the generated
+# capability-policy.json as `_generatedFrom.record` and asserted by
+# scripts/test-stage2b-workbook.ts. On a CRLF checkout the recomputed digest is
+# 352cc55022a23d76 instead of the committed da826a3b199357f8, so the assertion
+# fails for a reason that has nothing to do with the policy being wrong.
+#
+# Pinning the input to LF makes that digest checkout-invariant. The fix belongs
+# HERE and never in regenerating capability-policy.json: regenerating would bake
+# one machine's line endings into a committed artifact and break it for everyone
+# whose checkout differs.
+#
+# Deliberately scoped to the single file the byte-hash inventory found, rather
+# than a repo-wide `* text=auto`, which would rewrite 579 index entries for a
+# defect that lives in one. The inventory is reproducible: exactly one call site
+# hashes raw file bytes, lib/stage2b-authored-record.ts:209.
+scripts/fixtures/operation-taxonomy/capability-answers.json text eol=lf
