@@ -1,0 +1,458 @@
+# Hosted certification of the canonical test harness.
+#
+# WHAT THIS IS FOR. P1.1-R made the canonical suite produce identical results in LF and CRLF checkouts;
+# P1.3-R made every test-shaped file either registered exactly once or declared in the exclusion
+# registry. Both were measured on one workstation, twice. This workflow turns that into "green on a
+# machine no developer configured", which is the remaining precondition for S2-3 alongside P1.4.
+#
+# WHY windows-latest AND NOT UBUNTU. Four commands in the derived plan are invoked as
+# `powershell -NoProfile -ExecutionPolicy Bypass -File ...`. `powershell` is the Windows PowerShell 5.1
+# executable; GitHub's Ubuntu images ship PowerShell 7 as `pwsh` and have no `powershell` on PATH. On
+# top of that, scripts/test-nibrs-remote-shell.ps1 needs a real `bash` for `bash -n`, and
+# test-harness-plan.js / test-harness-mutations.js assert on the `powershell` runner token. So Linux
+# would require editing the harness -- and CI must certify the harness that exists, not a variant
+# authored for CI.
+#
+# WHY `shell: bash` FOR THE STEPS. Every step's script below was executed locally, byte-for-byte, in the
+# same Git bash that windows-latest ships and that the harness already depends on. Choosing a shell whose
+# behaviour could not be validated here would have put unverified logic into the one place that is
+# supposed to be the check.
+#
+# WHAT THIS DOES NOT CLAIM. GitHub-hosted runners have general outbound internet access and nibrsai.com
+# is publicly reachable, so this workflow does not make production unreachable. It configures no
+# production URL, credential, database, corpus, or secret, and the canonical plan contains no known
+# network-dependent test -- enforced through manifest/exclusion accounting and review. That does not
+# prove arbitrary test code cannot initiate outbound traffic. Enforced egress isolation is recorded as
+# later security hardening, deliberately not a prerequisite for this workflow.
+
+name: canonical harness
+
+on:
+  push:
+    # A workflow is read from the ref being built, so listing `master` here has no effect on `master`
+    # until this file exists on that branch. Until then these are forward declarations and every claim
+    # about CI coverage applies to `dev` alone.
+    branches: [dev, master]
+  pull_request:
+    branches: [dev, master]
+  workflow_dispatch:
+
+# No `paths-ignore`, and that is measured rather than lazy: four registered commands read tracked files
+# under docs/ (test-operation-taxonomy, test-stage2b-workbook, test-stage2b-decision-readiness-audit,
+# test-stage2b-v2-prototype), so a docs-only commit can legitimately break the suite.
+
+permissions: {}
+
+concurrency:
+  group: canonical-harness-${{ github.ref }}
+  # Cancel superseded pull-request runs only. Cancelling a push run on a branch that may later carry a
+  # required check would leave a commit with no completed check, which is worse than a duplicate run.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  canonical-harness:
+    name: canonical harness (windows, LF)
+    runs-on: windows-latest
+    timeout-minutes: 45
+    permissions:
+      # GITHUB_TOKEN is used by actions/checkout to read the repository, and for nothing else. The job
+      # has no write permission of any kind, and `persist-credentials: false` removes the token from the
+      # local Git configuration immediately after checkout, so no later step can use it.
+      contents: read
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      # ---------------------------------------------------------------- LF, before anything is written
+      - name: Configure an LF checkout before any file is written
+        run: |
+          set -euo pipefail
+          # Only 4 of 611 tracked files carry an `eol=lf` attribute, so what lands on disk for the other
+          # 607 is decided by core.autocrlf AT CHECKOUT TIME. This must be set before actions/checkout
+          # runs, and it must be asserted afterwards rather than trusted -- the runner image's git
+          # defaults are not a repository fact.
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+          echo "core.autocrlf = $(git config --global core.autocrlf)"
+          echo "core.eol      = $(git config --global core.eol)"
+
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The token is needed to read this private repository and must not outlive that need.
+          persist-credentials: false
+          # Measured: zero tracked *.db files and zero LFS objects, so there is nothing to fetch.
+          lfs: false
+          # Measured: no command in the derived plan reads git history. Five read the INDEX
+          # (check-control-characters, test_escape_integrity_gate, test-checkout-determinism,
+          # test-analytics-credential-containment, test-result-digest-null-sentinel), which a depth-1
+          # checkout provides in full.
+          fetch-depth: 1
+
+      - name: Assert the working tree really is LF
+        run: |
+          set -euo pipefail
+          eol="$(mktemp)"
+          git ls-files --eol > "$eol"
+
+          tracked=$(wc -l < "$eol" | tr -d '[:space:]')
+          lf=$(grep -c 'w/lf' "$eol" || true)
+          crlf=$(grep -c 'w/crlf' "$eol" || true)
+          mixed=$(grep -c 'w/mixed' "$eol" || true)
+          echo "tracked=$tracked  w/lf=$lf  w/crlf=$crlf  w/mixed=$mixed"
+
+          # Non-vacuity, both directions: an empty enumeration or a run where nothing is classified as
+          # LF text would satisfy the CRLF check while measuring nothing at all.
+          if [ "$tracked" -eq 0 ]; then
+            echo "::error::git ls-files --eol enumerated no tracked files; this assertion would be vacuous"
+            exit 1
+          fi
+          if [ "$lf" -eq 0 ]; then
+            echo "::error::no tracked file is classified w/lf; this assertion is not measuring what it claims"
+            exit 1
+          fi
+
+          if [ "$crlf" -ne 0 ] || [ "$mixed" -ne 0 ]; then
+            echo "::error::the checkout is not LF: $crlf file(s) w/crlf, $mixed w/mixed"
+            grep -E 'w/(crlf|mixed)' "$eol" | head -20
+            exit 1
+          fi
+          echo "the checkout is uniformly LF across $tracked tracked paths"
+
+      # ---------------------------------------------------------------- pinned toolchain
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          # The exact version that produced the measured green suite. Not a floor, not a range.
+          node-version: 24.14.0
+          # Caches npm's DOWNLOAD cache only. `node_modules` is never cached: a stale tree is exactly
+          # the "green for the wrong reason" this whole increment exists to remove.
+          cache: npm
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: 3.14.3
+
+      - name: Assert the interpreters are exactly the known-green versions
+        run: |
+          set -euo pipefail
+          node_actual="$(node -v)"
+          npm_actual="$(npm -v)"
+          py_actual="$(python --version 2>&1)"
+          echo "node   = $node_actual"
+          echo "npm    = $npm_actual"
+          echo "python = $py_actual"
+          {
+            echo "### Toolchain"
+            echo ""
+            echo "| tool | resolved |"
+            echo "|---|---|"
+            echo "| node | \`$node_actual\` |"
+            echo "| npm | \`$npm_actual\` |"
+            echo "| python | \`$py_actual\` |"
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          # Stop condition, made executable. Relaxing a pin to whatever the image offers would swap a
+          # known-green environment for an unmeasured one, which is the opposite of the point.
+          if [ "$node_actual" != "v24.14.0" ]; then
+            echo "::error::Node resolved to $node_actual, not v24.14.0 -- stop condition, do not relax the pin"
+            exit 1
+          fi
+          if [ "$py_actual" != "Python 3.14.3" ]; then
+            echo "::error::Python resolved to '$py_actual', not 'Python 3.14.3' -- stop condition, do not relax the pin"
+            exit 1
+          fi
+
+      # ---------------------------------------------------------------- install
+      - name: Install from the lockfile only
+        run: |
+          set -uo pipefail
+          npm ci --no-audit --no-fund || exit 1
+
+          # `npm ci` must leave the TRACKED TREE AND THE INDEX untouched -- not merely
+          # package-lock.json. Checking one file was too narrow: an install that rewrote any other
+          # tracked path, or staged something, would have passed while the run stopped being a
+          # measurement of the committed tree.
+          #
+          # `--untracked-files=no` is what makes this correct rather than merely strict: node_modules
+          # and any other untracked or ignored output is expected and must be ignored. Only tracked
+          # modifications fail. Paths are printed because a path is not a secret.
+          changed="$(git status --porcelain --untracked-files=no)"
+          if [ -n "$changed" ]; then
+            echo "::error::npm ci modified tracked content; the install is not lockfile-only"
+            printf '%s\n' "$changed"
+            exit 1
+          fi
+
+          # The same claim from the two directions git can compare, so "unchanged" covers the working
+          # tree and the index separately rather than resting on one formulation.
+          if ! git diff --quiet; then
+            echo "::error::the working tree differs from the index after npm ci"
+            git diff --name-only
+            exit 1
+          fi
+          if ! git diff --cached --quiet; then
+            echo "::error::the index differs from HEAD after npm ci"
+            git diff --cached --name-only
+            exit 1
+          fi
+          echo "tracked tree and index both unchanged by npm ci (untracked output ignored)"
+
+      # ---------------------------------------------------------------- the one canonical invocation
+      - name: Run the canonical harness
+        id: harness
+        timeout-minutes: 30
+        run: |
+          set -euo pipefail
+          # The single canonical entry point. No --only (it disables whole-run coverage checks, so a
+          # scoped run certifies nothing), no second test step, no per-suite invocation.
+          npm test -- --json harness-report.json 2>&1 | tee harness-run.log
+
+      # ---------------------------------------------------------------- derived reconciliation
+      - name: Reconcile the derived tally
+        if: success()
+        run: |
+          set -euo pipefail
+          node -e '
+            const fs = require("node:fs");
+            const r = JSON.parse(fs.readFileSync("harness-report.json", "utf8"));
+            const t = r.tally;
+            const sum = t.passed + t.failed + t.skipped + t.blocked;
+            console.log(`passed=${t.passed} failed=${t.failed} skipped=${t.skipped} blocked=${t.blocked}`);
+            console.log(`sum=${sum} total=${r.total} expected=${r.expected}`);
+            // NO EXPECTED TOTAL IS WRITTEN HERE. A literal count in CI would rebuild exactly the defect
+            // the derived plan removed, and would fail a correctly registered new test for the sole
+            // reason that a second number was not incremented. Only internal consistency is asserted.
+            if (!Number.isInteger(r.total) || r.total <= 0) {
+              console.error("::error::report total is not a positive integer");
+              process.exit(1);
+            }
+            if (sum !== r.total || r.total !== r.expected) {
+              console.error("::error::the derived tally does not reconcile: "
+                + `sum=${sum} total=${r.total} expected=${r.expected}`);
+              process.exit(1);
+            }
+            if (!Array.isArray(r.results) || r.results.length !== r.total) {
+              console.error("::error::the report lists "
+                + `${Array.isArray(r.results) ? r.results.length : "no"} results for a total of ${r.total}`);
+              process.exit(1);
+            }
+            console.log("the derived tally reconciles");
+          '
+
+      # ---------------------------------------------------------------- both verdicts, verbatim
+      - name: Report both verdicts
+        if: always()
+        run: |
+          set -uo pipefail
+          # WHY THIS STEP ASSERTS BEFORE IT PUBLISHES. The first version ended every grep with
+          # `|| true`, so a run that produced no verdict lines at all -- a truncated log, a reworded
+          # runner, a crash after the tally -- would have published an empty block and passed. A
+          # reporting step that cannot fail is not reporting, it is decoration. Every required line is
+          # now counted, required to appear EXACTLY ONCE, and only then copied verbatim.
+          #
+          # The verdict rule itself is NOT reimplemented here. Whether the run passed is decided by the
+          # runner's exit code; this step only checks that the runner SAID so, once, and quotes it.
+
+          if [ ! -f harness-run.log ]; then
+            echo "::error::no harness log was produced, so no verdict can be reported"
+            exit 1
+          fi
+
+          fail=0
+
+          # grep -c prints 0 and exits 1 when there is no match, and exits >=2 on a real scanner
+          # failure. Those two must not be conflated, which is the same distinction the redaction step
+          # makes.
+          need_exactly_one() {
+            label="$1"; ere="$2"
+            # Same `-e` hazard as the redaction scanner: grep -c exits 1 when the count is zero, which
+            # would abort the step before this function could distinguish "absent" from "unreadable".
+            # Capturing the status keeps the zero-count and scanner-failure branches both reachable.
+            rc=0
+            n=$(grep -cE -- "$ere" harness-run.log) || rc=$?
+            n=${n:-0}
+            if [ "$rc" -ge 2 ]; then
+              echo "::error::scanner failure (grep exit $rc) while counting the $label line"
+              fail=1
+              return
+            fi
+            if [ "$n" -ne 1 ]; then
+              echo "::error::expected exactly one $label line in the harness log, found $n"
+              fail=1
+              return
+            fi
+            echo "  ok: exactly one $label line"
+          }
+
+          need_exactly_one "derived plan"    '^harness plan: '
+          need_exactly_one "tally"           '^tally: '
+          need_exactly_one "fixture verdict" '^verdict[[:space:]]+fixture:'
+          need_exactly_one "corpus verdict"  '^verdict[[:space:]]+corpus:'
+
+          # When the runner says the corpus was not certified it also prints the sentence that stops a
+          # green tick being read as data certification. If it said the first and not the second, the
+          # summary would be misleading in exactly the way that sentence exists to prevent.
+          # `|| corpus_line=""` for the same reason: if the corpus verdict is missing, the requirement
+          # above has already recorded the failure, and this capture must not abort before it is reported.
+          corpus_line="$(grep -E '^verdict[[:space:]]+corpus:' harness-run.log)" || corpus_line=""
+          case "$corpus_line" in
+            *corpus_not_certified*)
+              need_exactly_one "not-certified warning" 'This run did NOT certify data integrity'
+              ;;
+          esac
+
+          if [ "$fail" -ne 0 ]; then
+            echo "::error::the harness log does not carry the required verdict reporting; nothing was published"
+            exit 1
+          fi
+
+          # Only now, and taken VERBATIM from the runner's own output.
+          {
+            echo "### Canonical harness"
+            echo ""
+            echo '```'
+            grep -E '^harness plan: |^manifest: |^tally: ' harness-run.log
+            grep -E '^verdict[[:space:]]+(fixture|corpus):' harness-run.log
+            grep -E 'This run did NOT certify data integrity' harness-run.log || true
+            echo '```'
+            echo ""
+            echo "_\`fixture_passed\` is required. \`corpus_not_certified\` is an accepted honest outcome:"
+            echo "no corpus is configured in CI, so Tier C is skipped by design and this run certifies"
+            echo "fixture behaviour only, not data integrity._"
+          } >> "$GITHUB_STEP_SUMMARY"
+          # The one remaining `|| true` is on the warning sentence, whose presence has ALREADY been
+          # required above when it applies; on a certified run it is legitimately absent.
+
+      # ---------------------------------------------------------------- redaction gates publication
+      - name: Redact-check the diagnostics
+        id: redact
+        if: always()
+        run: |
+          set -uo pipefail
+          # Runs under always() precisely because a FAILED harness is when captured stdout is most
+          # likely to reach the log. The upload below is conditioned on this step succeeding, so a
+          # bundle that fails its own leak check is never published.
+          #
+          # THIS STEP NEVER PRINTS A MATCH. The first version used `grep -n`, which printed the
+          # offending line straight into the job log -- so the artifact was withheld while the secret
+          # was disclosed anyway, to a wider audience than the artifact would have reached. Every grep
+          # now runs with -q and all output discarded, so only the EXIT STATUS crosses back, and the
+          # report names the pattern CATEGORY and the FILE and nothing else.
+          #
+          # THREE OUTCOMES, NEVER TWO. grep exits 0 on a match, 1 on a clean file, and >=2 on a real
+          # failure to read or scan. Collapsing the third into "no match" is a fail-open, so a scanner
+          # failure fails redaction and therefore blocks the upload.
+
+          hits=0
+          errors=0
+          checks=0
+
+          files=""
+          for f in harness-report.json harness-run.log; do
+            [ -e "$f" ] || continue
+            if [ ! -r "$f" ]; then
+              echo "::error::redaction: scanner failure -- $f exists but is not readable"
+              errors=$((errors + 1))
+              continue
+            fi
+            # A file containing NUL bytes is treated by `grep -I` as binary and silently SKIPPED, which
+            # would read as "clean". That is a fail-open, so it is a scanner failure instead.
+            total_bytes="$(wc -c < "$f" | tr -d '[:space:]')"
+            text_bytes="$(tr -d '\000' < "$f" | wc -c | tr -d '[:space:]')"
+            if [ "$total_bytes" != "$text_bytes" ]; then
+              echo "::error::redaction: scanner failure -- $f contains NUL bytes and cannot be text-scanned"
+              errors=$((errors + 1))
+              continue
+            fi
+            files="$files $f"
+          done
+
+          if [ -n "$files" ]; then echo "scanning:$files"; fi
+
+          # The obsolete tracked credential, assembled from character codes so this workflow does not
+          # become a new occurrence of it.
+          obsolete="$(node -e 'process.stdout.write(String.fromCharCode(78,73,66,82,83,65,72,68))')"
+          if [ -z "$obsolete" ]; then
+            echo "::error::redaction: scanner failure -- could not construct the obsolete-literal probe"
+            errors=$((errors + 1))
+          fi
+
+          # WHY THESE PATTERNS AND NOT A BARE HEX RULE. The production analytics key is 64 hex
+          # characters -- and so is any sha256 digest, several of which this suite legitimately prints.
+          # A `[0-9a-f]{64}` rule would fire on honest provenance digests, and a security gate that
+          # cries wolf is one that gets ignored. So the patterns below target credential SHAPES:
+          # an assignment with a value, a Bearer value, or a known key prefix.
+          scan() {
+            category="$1"; mode="$2"; pattern="$3"; file="$4"
+            # `|| rc=$?` is load-bearing, not idiom. GitHub runs `shell: bash` as `bash -eo pipefail`,
+            # and a CLEAN file makes grep exit 1 -- which under `-e` would abort this step before any
+            # verdict was reached. An earlier draft of this function had exactly that defect: it failed
+            # the whole redaction on a clean log. Capturing the status explicitly keeps all three
+            # outcomes reachable.
+            rc=0
+            if [ "$mode" = "fixed" ]; then
+              grep -qIF -e "$pattern" -- "$file" >/dev/null 2>&1 || rc=$?
+            else
+              grep -qIE -e "$pattern" -- "$file" >/dev/null 2>&1 || rc=$?
+            fi
+            checks=$((checks + 1))
+            case "$rc" in
+              0)
+                # Category and filename only. The matched text is deliberately not reported anywhere.
+                echo "::error::redaction: category '$category' matched in $file (matched text withheld)"
+                hits=$((hits + 1))
+                ;;
+              1)
+                echo "  clean: $category in $file"
+                ;;
+              *)
+                # grep's own stderr is withheld too: it is not guaranteed to be free of file content.
+                echo "::error::redaction: scanner failure (grep exit $rc) for category '$category' on $file"
+                errors=$((errors + 1))
+                ;;
+            esac
+          }
+
+          for f in $files; do
+            if [ -n "$obsolete" ]; then scan "obsolete-literal" fixed "$obsolete" "$f"; fi
+            scan "credential-assignment" ere '(ANALYTICS_PASSWORD|QUERY_LOG_KEY|AUTH_PASSWORD|TEST_PASSWORD|RESEND_API_KEY|ANTHROPIC_API_KEY)[[:space:]]*[:=][[:space:]]*[^[:space:]"'"'"',}]+' "$f"
+            scan "bearer-credential" ere 'Bearer[[:space:]]+[A-Za-z0-9._~+/-]{8,}' "$f"
+            scan "provider-key-prefix" ere '(sk-ant-|re_[A-Za-z0-9]{16,}|ghp_|gho_|github_pat_)' "$f"
+          done
+
+          if [ "$errors" -ne 0 ]; then
+            echo "::error::redaction could not complete ($errors scanner failure(s)); failing closed, no artifact will be uploaded"
+            exit 1
+          fi
+          if [ "$hits" -ne 0 ]; then
+            echo "::error::redaction FAILED ($hits categor(ies) matched); no artifact will be uploaded"
+            exit 1
+          fi
+          if [ -z "$files" ]; then
+            echo "no diagnostic files were produced; nothing to redact-check"
+            exit 0
+          fi
+          if [ "$checks" -eq 0 ]; then
+            echo "::error::redaction: files were present but no check ran; failing closed"
+            exit 1
+          fi
+          echo "redaction passed across $checks check(s); the diagnostics may be published"
+
+      - name: Upload diagnostics
+        # Conditioned on the redaction step's own outcome, never on always(). A bundle that failed its
+        # leak check must not be published: it would be retained and downloadable by anyone with read
+        # access. Losing diagnosis on that run is the correct trade -- the job log still records that
+        # redaction failed and why.
+        if: always() && steps.redact.outcome == 'success'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: canonical-harness-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            harness-report.json
+            harness-run.log
+          retention-days: 14
+          if-no-files-found: warn
