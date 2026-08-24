@@ -166,6 +166,111 @@ jobs:
             exit 1
           fi
 
+      # ---------------------------------------------------------------- isolated python environment
+      - name: Create an isolated CI virtual environment and prove it is isolated
+        run: |
+          set -euo pipefail
+          # WHY A VENV AND NOT THE TOOL-CACHE INTERPRETER. Installing into whatever `setup-python`
+          # provides would leave the run's outcome depending on what that image happens to contain --
+          # which is the exact defect this correction exists to fix, just relocated from a laptop to a
+          # hosted image. The environment the harness runs under has to be one this workflow built.
+          python -m venv .ci-venv
+
+          VENV_PY=".ci-venv/Scripts/python.exe"
+          [ -x "$VENV_PY" ] || { echo "::error::the venv interpreter was not created"; exit 1; }
+
+          echo "--- proving isolation ---"
+          if ! grep -q 'include-system-site-packages = false' .ci-venv/pyvenv.cfg; then
+            echo "::error::the venv does not exclude system site-packages"
+            grep -i 'site-packages' .ci-venv/pyvenv.cfg || true
+            exit 1
+          fi
+          "$VENV_PY" -c "import sys; assert sys.prefix != sys.base_prefix, 'not a venv'; print('prefix     =', sys.prefix); print('base_prefix=', sys.base_prefix)"
+          venv_version="$("$VENV_PY" --version)"
+          echo "venv interpreter: $venv_version"
+          if [ "$venv_version" != "Python 3.14.3" ]; then
+            echo "::error::the venv interpreter is $venv_version, not Python 3.14.3 -- stop condition"
+            exit 1
+          fi
+
+          echo "--- the declared direct packages must be ABSENT before any install ---"
+          # Read the names from the declaration so this loop cannot drift from it, and so no package
+          # name has to be written into this workflow.
+          direct="$(grep -vE '^\s*#' requirements-harness.in | grep -oE '^[A-Za-z0-9._-]+' | tr '\n' ' ')"
+          [ -n "$direct" ] || { echo "::error::could not read the declaration"; exit 1; }
+          for pkg in $direct; do
+            if "$VENV_PY" -c "import $pkg" >/dev/null 2>&1; then
+              echo "::error::$pkg is already importable in a fresh venv; isolation is not what it claims"
+              exit 1
+            fi
+            echo "  absent before install: $pkg"
+          done
+
+          # Put the venv first on PATH for every later step, in the Windows form the runner needs, so
+          # the harness's bare `python` is this interpreter and not the tool-cache one.
+          cygpath -w "$PWD/.ci-venv/Scripts" >> "$GITHUB_PATH"
+
+      - name: Install the locked Python environment
+        run: |
+          set -euo pipefail
+          # Exclusively from the lock, hashes required. No package name and no version appears in this
+          # workflow: the declaration owns them, and scripts/test-python-dependency-closure.js fails if
+          # one leaks in here.
+          python -m pip install --require-hashes -r requirements-harness.txt
+          python -m pip check
+
+          echo "--- early consistency check: the installed set matches the lock ---"
+          # NOT a reachability check, and it must not be described as one. `pip freeze` proves only that
+          # everything in the lock got installed; a package added to the lock with a forged `# via`
+          # comment is installed too, appears in both lists, and passes. It is kept because it is cheap
+          # and gives a clearer message than the authoritative check when an install went wrong.
+          # Both sides are canonicalized before comparing. `pip freeze` prints each DISTRIBUTION's own
+          # name, which may be mixed-case or use underscores, while a pip-compile lock is canonical --
+          # so a literal diff would report a difference where there is none the first time such a
+          # package is locked. Only the name is folded; versions keep their dots. (No package name is
+          # written here, not even as an example: the closure test forbids one, and an example would be
+          # indistinguishable from a real reference.)
+          canon() { awk -F'==' 'NF==2 { name=tolower($1); gsub(/[-_.]+/, "-", name); print name "==" $2 }'; }
+          python -m pip freeze --local | tr -d '\r' | sed 's/[[:space:]]*$//' | canon | sort > installed.txt
+          grep -oE '^[A-Za-z0-9._-]+==[^ \\]+' requirements-harness.txt | canon | sort > locked.txt
+          if ! diff -u locked.txt installed.txt; then
+            echo "::error::the installed set differs from the lock"
+            exit 1
+          fi
+          echo "installed set matches the lock: $(wc -l < locked.txt) package(s)"
+          rm -f installed.txt locked.txt
+
+      - name: Verify reverse containment against real dependency metadata
+        run: |
+          set -euo pipefail
+          # THE AUTHORITATIVE reverse-containment check, and the only one that can see a forged `# via`.
+          # It reads the direct roots from the declaration, traverses the INSTALLED distributions' own
+          # metadata through importlib.metadata, evaluates each requirement's markers for this
+          # Windows/CPython environment, canonicalizes names, and requires
+          #
+          #     declared roots  subset-of  metadata-reachable  ==  locked  ==  installed
+          #
+          # so a locked package nothing actually requires has no path and fails, whatever a comment in
+          # the lock claims about it.
+          python scripts/verify_python_environment.py
+
+      - name: Assert the harness interpreter is the venv
+        run: |
+          set -euo pipefail
+          # The decisive check: the bare `python` the harness will spawn resolves to the venv we built.
+          python -c "import sys, pathlib; p = pathlib.Path(sys.prefix).resolve(); expected = pathlib.Path('.ci-venv').resolve(); assert sys.prefix != sys.base_prefix, 'harness python is not a venv'; assert p == expected, f'harness python is {p}, not {expected}'; print('the harness interpreter is the venv:', p)"
+
+          # Each declared package must now import from that interpreter. The names are READ FROM THE
+          # DECLARATION rather than written here -- this workflow must not contain a package name, and
+          # scripts/test-python-dependency-closure.js fails if one appears. (It caught exactly that
+          # mistake in the first draft of this step.)
+          direct="$(grep -vE '^\s*#' requirements-harness.in | grep -oE '^[A-Za-z0-9._-]+' | tr '\n' ' ')"
+          [ -n "$direct" ] || { echo "::error::could not read the declaration"; exit 1; }
+          for pkg in $direct; do
+            python -c "import $pkg" || { echo "::error::$pkg does not import from the venv after install"; exit 1; }
+            echo "  imports from the venv: $pkg"
+          done
+
       # ---------------------------------------------------------------- install
       - name: Install from the lockfile only
         run: |

@@ -1650,6 +1650,15 @@
       "seed_profile": "empty",
       "requires": [],
       "note": "P1.3-R registration. Rollup builder unittest; builds its own source.db and rollups.db. Tier F: self-fixturing."
+    },
+    {
+      "id": "test-python-dependency-closure",
+      "tier": "F",
+      "script": "scripts/test-python-dependency-closure.js",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "P1.2b dependency closure. Proves the harness Python environment is declared in the repository and cannot drift. Measures the third-party closure from source -- following local-module imports TRANSITIVELY, reading FUNCTION-LEVEL imports through a full AST walk, and including scripts that plan commands SPAWN, discovered dynamically from command source rather than from any hard-coded list, because the four tools carrying `import requests` are network-optional exclusions that nothing reasoning about the plan can see. Requires FORWARD containment (everything imported is declared or reasonably excluded) and REVERSE containment (every locked distribution is reachable from the declaration through the lock's own `# via` provenance, so an extra pinned-and-hashed package fails). The anthropic exclusion is CALL-PATH specific and re-checked every run: it holds only while every harness-reachable invocation of the two tools importing it passes --print-target. Also asserts the lock is fully pinned and hashed and records its generating interpreter and pip-tools version, and that the workflow builds an isolated venv, proves the direct packages absent before installing, installs exclusively from the lock with --require-hashes, runs pip check, compares the installed set to the lock, and names no package or version itself. Tier F: reads source, the declaration, the lock and the workflow; installs nothing, contacts no index, and imports no third-party package."
     }
   ]
 }
