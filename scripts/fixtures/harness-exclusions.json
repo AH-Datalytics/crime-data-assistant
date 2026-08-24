@@ -1,0 +1,40 @@
+{
+  "entries": [
+    {
+      "path": "scripts/audit-test-routing-log.ts",
+      "kind": "diagnostic",
+      "reason_code": "no_success_criterion",
+      "detail": "Grades routing choices for an exported production query log and writes a CSV report. It has no pass/fail contract at all -- it throws on a missing input and otherwise emits grades -- so there is no verdict for the harness to collect. Its DEFAULT_FILE is an absolute path into a developer's Downloads directory for an export that is not in the repository, so it cannot run offline in a clean checkout, and DEFAULT_OUT writes into audit/. Discovered only because the rule matches `test` as a MIDDLE basename segment; the four globs revision 1 proposed would all have missed it.",
+      "owner": "harness/accounting increment"
+    },
+    {
+      "path": "scripts/smoke-test.py",
+      "kind": "network-optional",
+      "reason_code": "contacts_deployment",
+      "detail": "Post-deploy smoke checks against a running deployment. Since the credential containment increment a bare invocation resolves http://localhost:3000 and production must be named explicitly, but either way it requires a live server, so it cannot be a default-run offline correctness command. Retries before failing, which is right for a smoke check and wrong for a deterministic test.",
+      "owner": "harness/accounting increment"
+    },
+    {
+      "path": "scripts/test-explanations.js",
+      "kind": "network-optional",
+      "reason_code": "model_nondeterministic",
+      "detail": "Explanation-quality suite that needs a live endpoint AND grades model output, so two independent reasons put it outside the deterministic chain: it contacts a deployment, and the same input can legitimately produce a different answer on the next run. Registering it would make the correctness verdict depend on a model sample.",
+      "owner": "harness/accounting increment"
+    },
+    {
+      "path": "scripts/eval/stress-test.py",
+      "kind": "network-optional",
+      "reason_code": "wallclock_threshold",
+      "detail": "Stress tool: generates roughly a hundred natural-language queries with Claude, runs them against a live API, and flags anything over a ten-second wall-clock threshold, writing reports to scripts/eval/results/. Non-deterministic input, a timing threshold, report output, and a network dependency -- four separate reasons it is a diagnostic rather than a correctness test. The only nested candidate recursion found beneath scripts/; a top-level-only scan would have missed it entirely.",
+      "owner": "harness/accounting increment"
+    },
+    {
+      "path": "scripts/test-session-replay.ts",
+      "kind": "quarantined",
+      "reason_code": "pending_product_decision",
+      "detail": "A genuine offline correctness test -- 15 sessions, 71 steps of multi-turn routing over lib/tab-suggest -- that is RED today, and is quarantined rather than registered, deleted, or quietly edited. Three failures with the hate-crime flag on, two with it off. One is a demonstrably stale expectation: `hate crimes in New York City since 2019` expects nibrs, from before hate_crime was routable, and it disappears when the flag is off, which is what proves it is the flag. The other two are flag-independent -- a Baltimore/DC chart comparison and a rape-clearance share, both classified as follow-ups where the test expects a fresh route -- and deciding whether the router or the follow-up semantics is wrong is a product judgement. Registering it as-is would turn the suite red inside an accounting increment; deleting it would discard 68 passing steps; editing the expectations would answer the product question by fiat.",
+      "owner": "harness/accounting increment",
+      "follow_up": "Bounded decision increment: rule on the two flag-independent follow-up disagreements (Baltimore/DC chart comparison, rape-clearance share) -- router defect or stale follow-up semantics -- then correct the one stale hate_crime expectation and register this file as Tier F, removing this entry. Blocked on the product judgement, not on harness work."
+    }
+  ]
+}

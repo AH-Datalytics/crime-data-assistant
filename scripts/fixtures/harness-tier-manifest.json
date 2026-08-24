@@ -1551,6 +1551,105 @@
       "seed_profile": "empty",
       "requires": [],
       "note": "handler-level wiring and database-boundary evidence for /api/session-analytics. Sets QUERY_LOG_DB_PATH to its own temporary SQLite fixture and ANALYTICS_PASSWORD/QUERY_LOG_KEY before importing the route, patches Database.prototype.prepare and .exec before that import, then invokes the REAL exported GET: no header, absent and empty analytics key, malformed and wrong Bearer values, the obsolete literal, a distinct query-log-shaped key, and every governed URL credential name alongside the correct Bearer key -- all 401 with an identical body and ZERO recorded database operations, which also means no handle was opened. The correct dedicated Bearer key then returns 200 carrying rows that exist only in the fixture, which is the recorder's positive control, and that response emits no allow-origin header while the module exports no OPTIONS handler. Tier F: builds its own throwaway SQLite fixture, needs no corpus, and never contacts production."
+    },
+    {
+      "id": "test-harness-discovery",
+      "tier": "F",
+      "script": "scripts/test-harness-discovery.js",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "P1.3-R: closes the accounting gap reconcile() structurally cannot see. Walks scripts/ recursively for test-shaped basenames (a segment exactly `test`, split on - and _, extensions ts/js/py/ps1, .d.ts excluded), then requires discovered == registered (+) excluded as a DISJOINT UNION with all three sets derived at run time -- filesystem, derived plan, exclusion registry -- and no expected total asserted anywhere. Also validates the exclusion registry against closed kind and reason_code sets, refuses a corpus declaration on an excluded file, requires a non-empty follow_up on any quarantine, refuses a file present in both homes, and requires each registered discovered file to be reachable exactly once. Carries the false-refusal controls too: directory names, `latest`/`contest`/`testing` substrings, .d.ts files and non-governed extensions must all stay out. Tier F: reads package.json, the manifest, the registry and the filesystem; no database, no corpus, no network."
+    },
+    {
+      "id": "test-text-sanitize",
+      "tier": "F",
+      "script": "scripts/test-text-sanitize.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "P1.3-R registration. Layer-1 sanitisation stress tests over the regex fixes; states outright that it needs no database. Was an unregistered orphan at 15e4801. Tier F: no database, no corpus, no network."
+    },
+    {
+      "id": "test-source-registry",
+      "tier": "F",
+      "script": "scripts/test-source-registry.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "P1.3-R registration. Source-registry and feature-flag regressions over lib/sources and lib/tab-suggest; adapts to NEXT_PUBLIC_ENABLE_HATE_CRIME rather than assuming it. 22 assertions. Tier F: no database, no corpus, no network."
+    },
+    {
+      "id": "test-shr-place-resolver",
+      "tier": "F",
+      "script": "scripts/test-shr-place-resolver.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "P1.3-R registration. SHR place-resolution assertions. Builds its OWN throwaway SQLite fixture, which is why databases is empty and requires is empty -- declaring a canonical corpus it never reads would be a false declaration. Tier F."
+    },
+    {
+      "id": "test-stage2b-decision-readiness-audit",
+      "tier": "F",
+      "script": "scripts/test-stage2b-decision-readiness-audit.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "P1.3-R registration. Six readiness checks over committed Stage 2B material. Deterministic and offline. Tier F: no database, no corpus, no network."
+    },
+    {
+      "id": "test-stage2b-v2-prototype",
+      "tier": "F",
+      "script": "scripts/test-stage2b-v2-prototype.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "P1.3-R registration. Guards the user-facing wording of the tracked Stage 2B pause page, docs/superpowers/stage2b-interview-v2-prototype.html. `prototype` in the filename misleads: it asserts on committed wording, so it is a regression test. Reads a tracked file, no database. Tier F."
+    },
+    {
+      "id": "test-nibrs-consistent-reporters",
+      "tier": "F",
+      "script": "scripts/test-nibrs-consistent-reporters.py",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "P1.3-R registration. Consistent-reporter logic; builds its own fixture.db. Tier F: self-fixturing, no corpus, no network."
+    },
+    {
+      "id": "test_benchmark_nibrs_rollups",
+      "tier": "F",
+      "script": "scripts/test_benchmark_nibrs_rollups.py",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "P1.3-R registration. A deterministic correctness test OF the benchmark tool, not a benchmark: unittest builds temp source, rollup and query-log databases, runs scripts/benchmark-nibrs-rollups.py as a subprocess with check=True, and asserts the report it produces. No wall-clock threshold is asserted, which is what keeps it out of the benchmark exclusion. Tier F: self-fixturing."
+    },
+    {
+      "id": "test_builders",
+      "tier": "F",
+      "script": "scripts/test_builders.py",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "P1.3-R registration. Builder-module tests; creates a small NIBRS fixture database of its own. Tier F: self-fixturing, no corpus, no network."
+    },
+    {
+      "id": "test_build_juvenile_offender_incident_summary",
+      "tier": "F",
+      "script": "scripts/test_build_juvenile_offender_incident_summary.py",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "P1.3-R registration. Juvenile offender incident summary builder tests; builds its own source.db and work.db. Tier F: self-fixturing."
+    },
+    {
+      "id": "test_build_nibrs_rollups",
+      "tier": "F",
+      "script": "scripts/test_build_nibrs_rollups.py",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "P1.3-R registration. Rollup builder unittest; builds its own source.db and rollups.db. Tier F: self-fixturing."
     }
   ]
 }
