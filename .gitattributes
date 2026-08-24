@@ -14,8 +14,38 @@
 # one machine's line endings into a committed artifact and break it for everyone
 # whose checkout differs.
 #
-# Deliberately scoped to the single file the byte-hash inventory found, rather
-# than a repo-wide `* text=auto`, which would rewrite 579 index entries for a
-# defect that lives in one. The inventory is reproducible: exactly one call site
-# hashes raw file bytes, lib/stage2b-authored-record.ts:209.
+# Deliberately scoped to the files the inventory found, rather than a repo-wide
+# `* text=auto`, which would rewrite 579 index entries for a defect that lives in
+# a handful. The inventory is reproducible and asserted by
+# scripts/test-checkout-determinism.js.
 scripts/fixtures/operation-taxonomy/capability-answers.json text eol=lf
+
+# --- P1.1-R: the SECOND class of checkout-sensitive file ----------------------
+#
+# The pin above covers a RAW-BYTE hash. It does not cover two other ways a
+# tracked text file decides a test result, and both were measured failing at
+# 3e3fd55 in a `core.autocrlf=true` checkout while passing under LF:
+#
+#   (a) BYTE-IDENTITY COMPARISON of a committed generated artifact against what
+#       its generator emits right now. The generator writes "\n"; a CRLF checkout
+#       puts "\r\n" on disk; the comparison fails with nothing wrong.
+#         capability-policy.json     test-stage2b-workbook.ts:569
+#         lib/source-health-inventory.ts  test-source-health-inventory.ts:284
+#
+#   (b) A `readFileSync(path, "utf8")` whose STRING is hashed. Reading as utf8
+#       does NOT normalise line endings, so the hash still moves. This one feeds
+#       the decision-contract fingerprint, which is stamped into
+#       capability-policy.json as `_generatedFrom.contract`, so a CRLF checkout
+#       also makes the policy loader refuse a policy that is in fact current.
+#         lib/stage2b-plain-language.js   generate-stage2b-workbook.ts:120,130
+#
+# Measured digests for (b): 7eb6972e3eca8e9c under LF, 5103c29914f31f82 under
+# CRLF. The three commands that failed were test-operation-taxonomy,
+# test-source-health-inventory and test-stage2b-workbook.
+#
+# THE FIX IS THE PIN, NEVER REGENERATION. Regenerating any artifact below would
+# bake one machine's line endings into a committed file and break the assertion
+# for everyone whose checkout differs -- the same trap the pin above records.
+scripts/fixtures/operation-taxonomy/capability-policy.json text eol=lf
+lib/source-health-inventory.ts text eol=lf
+lib/stage2b-plain-language.js text eol=lf
