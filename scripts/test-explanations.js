@@ -8,8 +8,19 @@
  * Usage: node scripts/test-explanations.js
  */
 
-const BASE = process.env.TEST_URL || "https://nibrsai.com";
-const PASSWORD = process.env.TEST_PASSWORD || "NIBRSAHD";
+// PRODUCTION IS OPT-IN. `TEST_URL` used to fall back to https://nibrsai.com, so a bare invocation sent
+// live traffic there. It now falls back to localhost; production must be named via TEST_URL.
+//
+// The site password is removed rather than re-homed. The site is intentionally public: with
+// AUTH_PASSWORD absent, middleware skips the gate and /api/auth accepts any password, so the login step
+// authorized nothing.
+const BASE = process.env.TEST_URL || "http://localhost:3000";
+
+if (process.argv.includes("--print-target")) {
+  // Resolve and exit without contacting anything, so the default is testable offline.
+  console.log(BASE);
+  process.exit(0);
+}
 
 // ── Test queries ──────────────────────────────────────────────────────
 const QUERIES = [
@@ -118,19 +129,15 @@ const RULES = [
 // ── Helpers ───────────────────────────────────────────────────────────
 let authCookie = "";
 
+/**
+ * No login step: the site is public.
+ *
+ * This used to POST a tracked password to /api/auth and carry the returned `nibrs_auth` cookie. With
+ * AUTH_PASSWORD absent that endpoint issues a cookie for any password, so the exchange authorized
+ * nothing -- and the cookie it produced was not what the query routes gate on.
+ */
 async function authenticate() {
-  const res = await fetch(`${BASE}/api/auth`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ password: PASSWORD }),
-  });
-  if (!res.ok) throw new Error(`Auth failed: ${res.status}`);
-  // Extract Set-Cookie
-  const setCookie = res.headers.get("set-cookie") || "";
-  const match = setCookie.match(/nibrs_auth=([^;]+)/);
-  if (match) authCookie = `nibrs_auth=${match[1]}`;
-  else throw new Error("No auth cookie returned");
-  console.log("Authenticated successfully\n");
+  authCookie = "";
 }
 
 async function queryCurrentOrHistorical(question, mode) {

@@ -33,8 +33,16 @@ import time
 
 import requests
 
-BASE = sys.argv[1] if len(sys.argv) > 1 else "https://nibrsai.com"
-PASS = "NIBRSAHD"
+# PRODUCTION IS OPT-IN -- see the note in scripts/smoke-test.py. A bare invocation targets localhost.
+# The site password is removed rather than re-homed: the site is intentionally public.
+DEFAULT_BASE = "http://localhost:3000"
+_args = [a for a in sys.argv[1:] if a != "--print-target"]
+BASE = _args[0] if _args else DEFAULT_BASE
+
+if "--print-target" in sys.argv:
+    print(BASE)
+    sys.exit(0)
+
 CAVEAT = "may be incomplete"
 ATTEMPTS = 3
 
@@ -66,12 +74,9 @@ CANARIES = [
 
 
 def session():
-    s = requests.Session()
-    r = s.post(f"{BASE}/api/auth", json={"password": PASS}, timeout=30)
-    if r.status_code != 200:
-        print(f"AUTH FAILED {r.status_code}: {r.text[:200]}")
-        sys.exit(1)
-    return s
+    """A plain session. The site is public, so there is no login step -- the page token below is what
+    the query routes actually require."""
+    return requests.Session()
 
 
 def page_token(s):

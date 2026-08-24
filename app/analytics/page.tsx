@@ -44,7 +44,17 @@ export default function AnalyticsPage() {
   const fetchData = async (password: string, numDays: number) => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/session-analytics?pw=${password}&days=${numDays}`);
+      /**
+       * The operator's key travels in the Authorization header, never in the URL.
+       *
+       * It used to be `?pw=${password}`, which put a live credential everywhere a URL goes: server and
+       * proxy access logs, browser history, and the `Referer` of anything the page later linked to. The
+       * route now refuses any credential-shaped query parameter outright, so this is not merely the
+       * preferred form -- the old form no longer works.
+       */
+      const res = await fetch(`/api/session-analytics?days=${numDays}`, {
+        headers: { Authorization: `Bearer ${password}` },
+      });
       if (res.status === 401) {
         setAuthed(false);
         return;

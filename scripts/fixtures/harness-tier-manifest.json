@@ -1533,6 +1533,24 @@
       "seed_profile": "empty",
       "requires": [],
       "note": "proves the verifier GOVERNS Tier C execution rather than sitting beside it: one positive control that a child process reaches a verified published set, then eleven attempts to reach a corpus without verification (bootstrap-pending, stale, hash-mismatched, absent, unknown, path-escaping, mixed-set, no pointer, identity mismatch, unverified-at-acquisition, empty declaration), each required to yield NO environment. Also certifies the strengthened schema fingerprint. Tier F: builds its own throwaway SQLite databases and its own local registry, needs no corpus, and never contacts production."
+    },
+    {
+      "id": "test-analytics-credential-containment",
+      "tier": "F",
+      "script": "scripts/test-analytics-credential-containment.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "session-analytics credential containment. Imports lib/analytics-auth.ts and CALLS the authorization decision for every rejection case -- no header, malformed header, the obsolete tracked literal, an unrelated key, and any credential in a query string including a correct one -- plus fail-closed on absent/empty ANALYTICS_PASSWORD and the single Bearer accept. Also spawns all five stress/eval/smoke/canary tools with --print-target, with every ambient target variable scrubbed for bare controls and set to production for the env-independence controls, to prove a bare invocation resolves to localhost and an explicit production URL is still honoured, without contacting anything. The two unavoidable source-placement assertions read BOTH the index blob and the tracked working tree and name the failing view. Tier F: no database, no corpus, no network."
+    },
+    {
+      "id": "test-analytics-handler-boundary",
+      "tier": "F",
+      "script": "scripts/test-analytics-handler-boundary.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "handler-level wiring and database-boundary evidence for /api/session-analytics. Sets QUERY_LOG_DB_PATH to its own temporary SQLite fixture and ANALYTICS_PASSWORD/QUERY_LOG_KEY before importing the route, patches Database.prototype.prepare and .exec before that import, then invokes the REAL exported GET: no header, absent and empty analytics key, malformed and wrong Bearer values, the obsolete literal, a distinct query-log-shaped key, and every governed URL credential name alongside the correct Bearer key -- all 401 with an identical body and ZERO recorded database operations, which also means no handle was opened. The correct dedicated Bearer key then returns 200 carrying rows that exist only in the fixture, which is the recorder's positive control, and that response emits no allow-origin header while the module exports no OPTIONS handler. Tier F: builds its own throwaway SQLite fixture, needs no corpus, and never contacts production."
     }
   ]
 }
