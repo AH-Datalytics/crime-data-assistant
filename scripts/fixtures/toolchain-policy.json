@@ -1,0 +1,24 @@
+{
+  "_README": [
+    "The DECLARED alignment contract for L6. It names the toolchain this repository intends to certify,",
+    "build and run on -- deliberately the INTENDED one, from the moment the verifier exists, rather than",
+    "the status quo. That makes L6 fail truthfully today: CI certifies on Node 24.14.0 while production",
+    "builds and runs on v22.22.1, a major-version gap sitting in the middle of the identity invariant.",
+    "",
+    "P1.4b does NOT edit this file. P1.4b changes production until production matches it.",
+    "",
+    "CROSS-PLATFORM HONESTY. L6 has two halves and they compare different things:",
+    "  half A  certified <-> build: VERSIONS only. CI runs on windows-latest and production builds on",
+    "          Linux x86-64, so Node 24.14.0 for Windows and Node 24.14.0 for Linux are different",
+    "          executables with different digests, necessarily and forever. Comparing them would be a",
+    "          check that can only ever fail.",
+    "  half B  build <-> workers: the exact Linux executable -- path, version and SHA-256 read through",
+    "          /proc/<pid>/exe, which is the running image even if the on-disk binary was replaced.",
+    "",
+    "npm is not pinned by the workflow -- it ships with the Node distribution -- so ci_npm is recorded as",
+    "unpinned and is not compared. The declared npm is compared against the BUILD npm only."
+  ],
+  "policy_version": 1,
+  "node": "24.14.0",
+  "npm": "11.9.0"
+}

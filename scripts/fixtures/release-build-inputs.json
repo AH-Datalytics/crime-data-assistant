@@ -1,0 +1,29 @@
+{
+  "_README": [
+    "The CLOSED set of build inputs the release may consume from shared mutable state.",
+    "",
+    "next build bakes NEXT_PUBLIC_* into the client bundle, so the same commit can produce different",
+    "artifacts depending on what those variables held at build time. Binding them is what makes",
+    "'same commit' imply 'same artifact'. Their VALUES are already public by construction -- they ship to",
+    "every browser -- so recording them discloses nothing that is not already shipped.",
+    "",
+    "WHAT IS READ, PRECISELY. The generator parses the release's env files, selects ONLY assignments whose",
+    "name begins NEXT_PUBLIC_, and records nothing else. No other variable name and no other value enters",
+    "the receipt, any log, or any error message.",
+    "",
+    "The set is CLOSED: a NEXT_PUBLIC_* variable present at build time but absent from this allowlist",
+    "blocks publication, so a new build input cannot appear silently. An allowlisted name that is absent",
+    "at build time is not an error -- these are permissions, not requirements."
+  ],
+  "policy_version": 1,
+  "allowed": [
+    {
+      "name": "NEXT_PUBLIC_ENABLE_HATE_CRIME",
+      "detail": "Feature flag for the Hate Crime source. The deploy already refuses to build unless it is exactly true or false, because a missing flag silently produces wrong client behaviour. Baked into the client bundle."
+    },
+    {
+      "name": "NEXT_PUBLIC_BASE_URL",
+      "detail": "Public base URL used by client-side code. Baked into the client bundle."
+    }
+  ]
+}

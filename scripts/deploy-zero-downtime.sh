@@ -19,14 +19,27 @@
 # scripts/fixtures/release-allowed-extras.json now stops the deploy BEFORE the
 # symlink switch.
 #
-# BOOTSTRAP NOTE -- READ BEFORE THE FIRST DEPLOYMENT AFTER P1.4a.
+# BOOTSTRAP NOTE -- READ BEFORE THE FIRST DEPLOYMENT AFTER P1.4a/P1.4c.
+#
 # This script, scripts/lib/release-export.sh and scripts/fixtures/release-allowed-extras.json are read
-# from whatever checkout invokes them, and the deploy now refuses to run unless all three match their
-# blobs at the target SHA. Because the deploy no longer checks anything out, /opt/nibrs/repo's working
-# tree stays wherever it was, so invoking this from there will correctly refuse the moment those files
-# differ from the commit being deployed. The bundle must be taken FROM THE TARGET COMMIT -- for
-# example by exporting it to a scratch directory with `git archive <sha>` and running it from there.
-# P1.4c owns providing or documenting that exact invocation before any production authorization.
+# from whatever checkout invokes them, and the deploy refuses to run unless all three match their blobs
+# at the target SHA. Because the deploy no longer checks anything out, /opt/nibrs/repo's working tree
+# stays wherever it was, so invoking this from there will correctly refuse the moment those files
+# differ from the commit being deployed.
+#
+# THE EXACT INVOCATION. Export the bundle from the target commit and run it from there:
+#
+#   SHA=<40-char-sha>
+#   git -C /opt/nibrs/repo fetch origin
+#   rm -rf /tmp/deploy-$SHA && mkdir -p /tmp/deploy-$SHA
+#   git -C /opt/nibrs/repo archive "$SHA" | tar -x -C /tmp/deploy-$SHA
+#   bash /tmp/deploy-$SHA/scripts/deploy-zero-downtime.sh "$SHA" dev
+#
+# The scratch copy is only the BUNDLE. Everything P1.4c adds -- the receipt generator, the verifier,
+# the manifest, toolchain and build-input policies, and the receipt schema -- runs from
+# $RELEASE_DIR/scripts/... instead, i.e. from the release exported and blob-verified inside this run.
+# That is deliberate: the release IS the target commit's tree, proven path by path, so its rules are
+# that commit's rules by construction, and no drifted operations checkout can supply them.
 #
 # Usage:
 #   bash scripts/deploy-zero-downtime.sh <40-char-sha>           # assert against dev
@@ -303,11 +316,64 @@ RELEASE_INFO_FILE="$RELEASE_DIR/RELEASE_INFO"
 } > "$RELEASE_INFO_FILE" || die "Could not write $RELEASE_INFO_FILE; refusing to build an unidentifiable release."
 log "  Release provenance: $(tr '\n' ' ' < "$RELEASE_INFO_FILE")"
 
-log "Building Next.js app..."
-trap cleanup_on_failure ERR
-npm run build
-trap - ERR
+# ── Bind the build inputs BEFORE building ──────────────────────────────
+#
+# `next build` bakes NEXT_PUBLIC_* into the client bundle, so those values decide what the artifact
+# IS. They come from .env/.env.local, which are symlinks into mutable shared storage, and from this
+# process's own environment -- so reading them AFTER the build would record whatever shared state held
+# at that later moment, not necessarily what Next compiled.
+#
+# So: capture the effective set now, refuse any undeclared name before a single file is built, then
+# pass the captured values into the build EXPLICITLY. Next gives the process environment precedence
+# over the env files, so exporting them pins exactly what was captured even if the shared files change
+# underneath the build.
+BUILD_INPUTS_SNAPSHOT="$(mktemp)"
+# Removed on EVERY path -- success, die, an unexpected error, or a signal. An earlier version removed
+# it only on the paths it happened to think of.
+trap 'rm -f "$BUILD_INPUTS_SNAPSHOT"' EXIT
+
+# ── Step 4: Build, with its inputs bound in the SAME PROCESS ───────────
+#
+# `next build` bakes NEXT_PUBLIC_* into the client bundle, so those values decide what the artifact IS.
+# They come from .env/.env.local, which are symlinks into mutable shared storage, and from this
+# process's environment.
+#
+# The build therefore runs INSIDE the capture step. That wrapper loads Next's own environment, refuses
+# any undeclared public name before a single file is built, and then launches `npm run build` from that
+# same environment -- so the values recorded are the values Next compiled against, by construction.
+#
+# WHAT THIS REPLACED, AND WHY. The previous shape captured in one process, marshalled the values through
+# a NUL-delimited stream, exported them here, built, and then "verified" nothing had changed. That last
+# check read back its own exports: it was self-fulfilling in this exact code path and only ever detected
+# drift in tests, which inject an environment explicitly. One process removes the transport and the
+# misleading assertion together.
+log "Binding build inputs and building Next.js app..."
+if ! node "$RELEASE_DIR/scripts/generate-release-receipt.js" \
+      --release "$RELEASE_DIR" --capture-build-inputs "$BUILD_INPUTS_SNAPSHOT" --run-build true; then
+  cd "$BASE_DIR"
+  rm -rf "$RELEASE_DIR"
+  log "Live app at $CURRENT_LINK is unchanged."
+  die "Build failed, or refused to run against undeclared public build inputs."
+fi
 log "Build succeeded."
+
+# The preflight assertions below must test the flag THE BUILD ACTUALLY USED. The grep at step 2b is a
+# coarse early gate and cannot see an inherited value, quoting, expansion, or .env.production* -- so the
+# authoritative value is re-read here from the snapshot the wrapper wrote, which is Next's own effective
+# result. The comparison is done inside node and reported as a token, so command substitution cannot
+# turn "true\n" into an accepted "true".
+HC_FLAG=$(node -e '
+const snap = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
+const value = snap.present.NEXT_PUBLIC_ENABLE_HATE_CRIME;
+process.stdout.write(value === "true" ? "true" : value === "false" ? "false" : "not-exactly-true-or-false");
+' "$BUILD_INPUTS_SNAPSHOT")
+if [[ "$HC_FLAG" != "true" && "$HC_FLAG" != "false" ]]; then
+  cd "$BASE_DIR"
+  rm -rf "$RELEASE_DIR"
+  log "Live app at $CURRENT_LINK is unchanged."
+  die "The build's effective NEXT_PUBLIC_ENABLE_HATE_CRIME is $HC_FLAG; it must be exactly 'true' or 'false'."
+fi
+log "  effective NEXT_PUBLIC_ENABLE_HATE_CRIME=$HC_FLAG (from the environment the build compiled against)"
 
 # ── Step 4b: Preflight — smoke-test the build before going live ────────
 PREFLIGHT_PORT=3099
@@ -386,6 +452,31 @@ kill "$PREFLIGHT_PID" 2>/dev/null || true
 wait "$PREFLIGHT_PID" 2>/dev/null || true
 log "Preflight passed."
 
+# ── Step 4b2: Receipt — the artifact's identity, recorded after the build ──
+#
+# `.next` is NOT reproducible: Next leaves generateBuildId at its default, which falls back to nanoid,
+# and the five live releases carry five distinct random ids. `next build` also embeds the absolute
+# release path in its output. So nothing here compares two builds; the bytes are digested ONCE, now,
+# and every later check proves the running bytes are still these bytes.
+#
+# EVERYTHING RUNS FROM THE EXPORTED RELEASE, not from this checkout: the generator, the manifest
+# policy, the toolchain policy, the build-input allowlist and the receipt schema. The export was
+# already proven blob-equal to $DEPLOY_SHA, so those are that commit's rules by construction. Using
+# $SCRIPT_DIR here would reintroduce exactly the drift the bundle binding exists to prevent.
+log "Generating the release receipt from the exported tree..."
+RECEIPT_BUILT_AT_START=$(grep -m1 '^built_at=' "$RELEASE_INFO_FILE" | cut -d= -f2- || echo unknown)
+# The receipt is generated from the PRE-BUILD snapshot, and the generator additionally recomputes the
+# effective set and refuses if it drifted -- the artifact was compiled against the earlier values, so a
+# receipt describing later ones would be describing something that was never built.
+if ! node "$RELEASE_DIR/scripts/generate-release-receipt.js" \
+      --release "$RELEASE_DIR" --repo "$REPO_DIR" --sha "$DEPLOY_SHA" --branch "$BRANCH" \
+      --built-at-start "$RECEIPT_BUILT_AT_START" --build-inputs "$BUILD_INPUTS_SNAPSHOT"; then
+  cd "$BASE_DIR"
+  rm -rf "$RELEASE_DIR"
+  log "Live app at $CURRENT_LINK is unchanged."
+  die "Could not generate the release receipt; refusing to publish an unidentifiable artifact."
+fi
+
 # ── Step 4c: Closed-set gate — the LAST check before publication ───────
 #
 # Everything a release may contain beyond the commit's tracked tree is named in
@@ -407,6 +498,21 @@ if ! UNEXPLAINED=$(release_export_unexplained "$REPO_DIR" "$DEPLOY_SHA" "$RELEAS
   die "The release contains content that is neither tracked at $DEPLOY_SHA nor a permitted addition; refusing to publish."
 fi
 log "  Nothing unexplained: every path is tracked at $DEPLOY_SHA or a declared addition."
+
+# ── Step 4d: Pre-switch verification — gates L2 and L3 ─────────────────
+#
+# Source exactness and artifact-vs-receipt agreement, checked while a failure still costs nothing: the
+# incomplete release is removed and `current` never moves. L1 (a qualifying hosted run) and L6
+# (toolchain alignment) are REPORTED here, never gated -- L6 fails on every deploy until the Node
+# alignment lands, and a gate that blocked every deploy would be switched off within a day.
+log "Verifying the artifact against its receipt (pre-switch: gates L2 and L3)..."
+if ! node "$RELEASE_DIR/scripts/verify-deployed-artifact.js" \
+      --release "$RELEASE_DIR" --repo "$REPO_DIR" --stage pre-switch; then
+  cd "$BASE_DIR"
+  rm -rf "$RELEASE_DIR"
+  log "Live app at $CURRENT_LINK is unchanged."
+  die "Pre-switch verification failed; refusing to publish."
+fi
 
 # ── Step 5: Atomic symlink switch ──────────────────────────────────────
 log "Switching symlink: $CURRENT_LINK -> $RELEASE_DIR"
@@ -476,6 +582,25 @@ else
     log ""
     log "WARNING: Health check failed. The new release is live but may not be serving correctly."
     log "To rollback:  bash scripts/rollback.sh"
+    log ""
+  fi
+
+  # ── Step 7b: Post-reload verification — reports L4 and L5 ────────────
+  #
+  # Did the symlink land on the receipted release, and did EVERY worker load it? Worker identity comes
+  # from /proc/<pid>/cwd -- resolved by the kernel at chdir time, so it does not re-follow a symlink
+  # that has since moved -- and from the absolute paths of natively mapped code, which is loaded code
+  # rather than a claim. Disagreement is reported per pid, because a partial reload is a split.
+  #
+  # NO AUTOMATIC ROLLBACK, ever. A verifier that moves production is a verifier that can take the site
+  # down over its own bug. This reports, exits non-zero, and leaves the decision to a person.
+  log "Verifying the published release and its workers (post-reload: reports L4 and L5)..."
+  if ! node "$CURRENT_LINK/scripts/verify-deployed-artifact.js" \
+        --release "$CURRENT_LINK" --repo "$REPO_DIR" --current "$CURRENT_LINK" \
+        --app "$PM2_APP" --stage post-reload; then
+    log ""
+    log "WARNING: post-reload verification reported a problem. The release IS live."
+    log "Nothing was rolled back automatically. To roll back:  bash scripts/rollback.sh"
     log ""
   fi
 fi

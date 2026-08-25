@@ -1553,6 +1553,33 @@
       "note": "handler-level wiring and database-boundary evidence for /api/session-analytics. Sets QUERY_LOG_DB_PATH to its own temporary SQLite fixture and ANALYTICS_PASSWORD/QUERY_LOG_KEY before importing the route, patches Database.prototype.prepare and .exec before that import, then invokes the REAL exported GET: no header, absent and empty analytics key, malformed and wrong Bearer values, the obsolete literal, a distinct query-log-shaped key, and every governed URL credential name alongside the correct Bearer key -- all 401 with an identical body and ZERO recorded database operations, which also means no handle was opened. The correct dedicated Bearer key then returns 200 carrying rows that exist only in the fixture, which is the recorder's positive control, and that response emits no allow-origin header while the module exports no OPTIONS handler. Tier F: builds its own throwaway SQLite fixture, needs no corpus, and never contacts production."
     },
     {
+      "id": "test-artifact-manifest",
+      "tier": "F",
+      "script": "scripts/test-artifact-manifest.js",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "P1.4c: the artifact manifest. buildRecord is a PURE function over a stat-like object, so the symlink and executable-bit branches are exercised on any platform; walkRelease is the only filesystem-dependent part. Covers determinism (order-independent, sorted by raw bytes not locale, path-independent), the exclusion policy closed at both document and entry level, that no default exclusion set exists to fall back on, and that a change to an excluded path leaves the digest still while a change to an included path moves it and names the path. Real symlink and executable-bit behaviour runs in a Linux container when one is available and is otherwise reported as a MANDATORY PRE-DEPLOYMENT PROBE rather than claimed. Tier F: no database, no corpus, no network, temp directories only."
+    },
+    {
+      "id": "test-release-receipt",
+      "tier": "F",
+      "script": "scripts/test-release-receipt.js",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "P1.4c: the receipt. Builds a throwaway git repository, exports the commit blob by blob, adds what a build produces, then drives the SHIPPED generator and verifier. Covers the closed receipt schema, the closed NEXT_PUBLIC_ build-input set (and that no other env name or value reaches the receipt or even an error message), node_modules and the native module being digested, artifact change with source unchanged, a receipt being unable to widen its own exclusions in either direction, a forged policy digest, missing git objects and an absent policy both yielding unverified, and the BOOTSTRAP composition: the generator and verifier executing from the exported release rather than the operations checkout. Tier F: temp directories only."
+    },
+    {
+      "id": "test-deployed-artifact-verifier",
+      "tier": "F",
+      "script": "scripts/test-deployed-artifact-verifier.js",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "P1.4c: the verifier. /proc readers are injected so per-pid reporting -- where a partial reload is either surfaced or lost -- is exercised without /proc. Covers the verdict lattice (fail dominates unverified), L1 never inferred, the two distinct refusal sentences, L4 symlink resolution, a split reload reported per pid with healthy workers unblamed, worker-count disagreement, executable-digest and DELETED-image reporting including the PM2-daemon hazard where versions agree but binaries differ, that half A never compares a digest across platforms, that a receiptless legacy release is unverified and never blocks a rollback, and that only L2 and L3 gate publication with no automatic rollback anywhere. Tier F: temp directories only."
+    },
+    {
       "id": "test-release-export",
       "tier": "F",
       "script": "scripts/test-release-export.js",

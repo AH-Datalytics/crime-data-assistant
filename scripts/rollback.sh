@@ -107,6 +107,27 @@ else
   log "WARNING: Health check returned $STATUS — investigate immediately"
 fi
 
+# ── Verify what we rolled back TO ──────────────────────────────────────
+#
+# Identity lives INSIDE each release -- never in PM2's environment, never at a global path -- which is
+# what makes a rollback self-correcting: the release just published carries its own receipt, so it
+# reports its own identity rather than the newer one's. Putting identity anywhere else would make a
+# rollback keep reporting the release it rolled away from.
+#
+# A RELEASE WITH NO RECEIPT IS `unverified`, NEVER `failed`, AND NEVER BLOCKS A ROLLBACK. Every release
+# built before P1.4c is in exactly that state, and a verifier that refused to roll back to one would be
+# strictly worse than no verifier during the incident it exists for. This runs after the switch,
+# reports, and undoes nothing.
+if [[ -f "$CURRENT_LINK/scripts/verify-deployed-artifact.js" ]]; then
+  log "Verifying the rolled-back release (reports only; nothing is undone)..."
+  node "$CURRENT_LINK/scripts/verify-deployed-artifact.js" \
+    --release "$CURRENT_LINK" --repo "$BASE_DIR/repo" --current "$CURRENT_LINK" \
+    --app "$PM2_APP" --stage rollback ||
+    log "  verification reported a problem; the rollback STANDS and nothing was undone."
+else
+  log "This release predates the artifact verifier: identity is UNVERIFIED, which is not a failure."
+fi
+
 log ""
 log "Rollback complete."
 log "  Now serving: $TARGET_NAME"

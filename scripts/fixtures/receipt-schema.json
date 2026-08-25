@@ -1,0 +1,41 @@
+{
+  "_README": [
+    "The CLOSED schema for RELEASE_RECEIPT.json. Unknown fields are refused rather than ignored, so a",
+    "receipt cannot smuggle in a field a future reader might trust.",
+    "",
+    "manifest_exclusions is RECORDED here for auditability and is never authoritative: the verifier loads",
+    "scripts/fixtures/artifact-manifest-policy.json from the exported release and requires exact equality",
+    "with what the receipt claims. manifest_policy_digest binds which policy was in force.",
+    "",
+    "harness_lock_sha256 is NULLABLE by design: requirements-harness.txt does not exist before 8bf966e,",
+    "so a receipt for an older commit must be able to say so rather than fail."
+  ],
+  "schema_version": 1,
+  "fields": {
+    "schema_version": "integer",
+    "release": "string",
+    "release_path": "string",
+    "commit": "sha1",
+    "commit_tree": "sha1",
+    "branch": "string",
+    "ref_resolution": "object",
+    "tracked_path_count": "integer",
+    "tracked_source_verdict": "string",
+    "package_lock_sha256": "sha256",
+    "harness_lock_sha256": "sha256|null",
+    "next_version": "string",
+    "build_id": "string",
+    "build_node": "object",
+    "build_npm": "object",
+    "certified_toolchain": "object",
+    "manifest_algorithm": "string",
+    "manifest_digest": "sha256",
+    "manifest_record_count": "integer",
+    "manifest_exclusions": "array",
+    "manifest_policy_digest": "sha256",
+    "build_inputs": "object",
+    "pm2_expected_instances": "integer",
+    "built_at_start": "string",
+    "built_at_end": "string"
+  }
+}

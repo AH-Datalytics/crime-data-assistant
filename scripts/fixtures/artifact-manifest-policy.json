@@ -1,0 +1,63 @@
+{
+  "_README": [
+    "THE AUTHORITY for what the artifact manifest digests. Committed, closed, and bound to the deployed",
+    "commit through L2: the verifier loads this file from the exported release, and its authority comes",
+    "from L2 having proven that blob equal to the commit tree in the object store -- not from the file",
+    "merely sitting there.",
+    "",
+    "The receipt RECORDS the exclusion list and this file's digest for auditability, and may never define",
+    "them. A receipt that could name its own exclusions could exempt node_modules and then verify itself,",
+    "which is the circularity this file exists to break.",
+    "",
+    "WHAT IS DIGESTED: every behaviour-bearing byte in the release -- the exported source, next-env.d.ts,",
+    ".next/** and node_modules/** INCLUDING every native .node. Excluding node_modules was a real defect:",
+    "the two files that prove which release a worker loaded are better_sqlite3.node and next-swc, both of",
+    "which live there, so excluding it would have excluded the only native code in the process.",
+    "",
+    "SHARED SYMLINK TARGETS are not listed below and must never be. They are excluded BEHAVIOURALLY: the",
+    "walker records a link by its target text and never follows it, so no .env line and no database byte",
+    "can enter the manifest. Adding them here would imply the walker had looked.",
+    "",
+    "If the verifier cannot load this policy, the result is `unverified`. It has no built-in defaults, on",
+    "purpose: a verifier with defaults passes when its policy is missing."
+  ],
+  "policy_version": 1,
+  "exclusions": [
+    {
+      "path": ".next/cache",
+      "scope": "tree",
+      "reason": "runtime_cache",
+      "detail": "Next's own runtime cache (ISR, fetch, image optimizer). Measured on release 20260824_134957 as three files last written inside the build window, with no runtime write in the following 5h45m -- but it is the location Next writes to at runtime, so it is excluded on principle rather than on that observation."
+    },
+    {
+      "path": ".next/trace",
+      "scope": "path",
+      "reason": "build_profiling",
+      "detail": "Build profiling output written as the build completes. Carries no behaviour."
+    },
+    {
+      "path": ".next/trace-build",
+      "scope": "path",
+      "reason": "build_profiling",
+      "detail": "Build profiling output written as the build completes. Carries no behaviour."
+    },
+    {
+      "path": ".next/diagnostics",
+      "scope": "tree",
+      "reason": "build_telemetry",
+      "detail": "Build telemetry written at build completion. Carries no behaviour."
+    },
+    {
+      "path": "RELEASE_INFO",
+      "scope": "path",
+      "reason": "self_reference",
+      "detail": "The provenance stamp, written BEFORE the build so an aborted build still leaves an identifiable directory. That ordering is exactly why it cannot carry a digest of the build output, and why the receipt is a separate post-build file."
+    },
+    {
+      "path": "RELEASE_RECEIPT.json",
+      "scope": "path",
+      "reason": "self_reference",
+      "detail": "The receipt cannot digest itself: its own manifest_digest field is not known until the digest is computed."
+    }
+  ]
+}

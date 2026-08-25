@@ -649,10 +649,53 @@ check("the shipped fixture validates, and covers every addition the deploy makes
   ]) {
     assert.ok(paths.includes(required), `the fixture must permit ${required}`);
   }
-  assert.ok(
-    !paths.includes("RELEASE_RECEIPT.json"),
-    "the receipt belongs to P1.4c and must not be pre-permitted here"
+  // RETARGETED, NOT REMOVED. Until P1.4c was reviewed this asserted the receipt was absent, and that
+  // guard fired for real: the first attempt to implement P1.4c was stopped by this gate refusing to
+  // publish a release carrying an unreviewed path. The entry was then added under explicit
+  // authorization. What must now hold is that it is present EXACTLY ONCE with the precise kind and
+  // scope -- a weaker assertion would let the entry drift into permitting a tree.
+  const receiptEntries = REAL_ALLOWED.entries.filter((e) => e.path === "RELEASE_RECEIPT.json");
+  assert.equal(receiptEntries.length, 1, "RELEASE_RECEIPT.json must be permitted exactly once");
+  assert.equal(receiptEntries[0].kind, "deploy_stamp", "the receipt is a deploy stamp");
+  assert.equal(receiptEntries[0].scope, "path", "the receipt is a single path, never a tree");
+  assert.ok(receiptEntries[0].produced_by.length > 0, "the entry must name what produces it");
+  assert.ok(receiptEntries[0].detail.length > 0, "the entry must carry a reviewed explanation");
+});
+
+check("A13 a regular RELEASE_RECEIPT.json file is accepted; a wrong object type is refused by name", () => {
+  const { dir, sha, dest } = releaseWithTracked();
+  fs.writeFileSync(path.join(dest, "RELEASE_INFO"), "release=t\n");
+
+  // The shape P1.4c actually produces.
+  fs.writeFileSync(path.join(dest, "RELEASE_RECEIPT.json"), '{"schema_version":1}\n');
+  const ok = unexplained(dir, sha, dest, ALLOWED);
+  assert.equal(ok.status, 0, `a regular receipt file must be accepted: ${ok.stdout}${ok.stderr}`);
+
+  // A directory at that path is a different object and must be named as such.
+  fs.rmSync(path.join(dest, "RELEASE_RECEIPT.json"));
+  fs.mkdirSync(path.join(dest, "RELEASE_RECEIPT.json"));
+  const asDir = unexplained(dir, sha, dest, ALLOWED);
+  assert.equal(asDir.status, 1, "a directory at the receipt path must be refused");
+  assert.match(
+    asDir.stdout,
+    /^wrong-type RELEASE_RECEIPT\.json expected=file actual=directory$/m,
+    "both types must be named"
   );
+  fs.rmdirSync(path.join(dest, "RELEASE_RECEIPT.json"));
+
+  if (process.platform !== "win32") {
+    // A symlink at the receipt path would let the "receipt" live outside the release entirely.
+    const elsewhere = makeTempDir("receipt-elsewhere");
+    fs.writeFileSync(path.join(elsewhere, "r.json"), '{"schema_version":1}\n');
+    fs.symlinkSync(path.join(elsewhere, "r.json"), path.join(dest, "RELEASE_RECEIPT.json"));
+    const asLink = unexplained(dir, sha, dest, ALLOWED);
+    assert.equal(asLink.status, 1, "a symlink at the receipt path must be refused");
+    assert.match(
+      asLink.stdout,
+      /^wrong-type RELEASE_RECEIPT\.json expected=file actual=symlink$/m,
+      "both types must be named, and the link must not be followed"
+    );
+  }
 });
 
 // ---------------------------------------------------------------------------
@@ -1019,9 +1062,12 @@ check("the export and its two refusals run before the build", () => {
     const exportAt = code.indexOf("release_export_tree");
     const equality = code.indexOf("release_export_verify_blobs");
     const lfs = code.indexOf("release_export_refuse_lfs");
-    const build = code.indexOf("npm run build");
+    // The build is no longer a bare `npm run build` line here: it happens inside the wrapper that
+    // captures its inputs, so `--run-build` is the point in the deploy where building begins.
+    const build = code.indexOf("--run-build true");
     assert.ok(exportAt > 0 && equality > exportAt, "equality must follow the export");
     assert.ok(lfs > exportAt, "the LFS refusal must follow the export");
+    assert.ok(build > 0, "the deploy must build through the capture-and-build wrapper");
     assert.ok(build > equality && build > lfs, "both refusals must precede the build");
   });
 });
