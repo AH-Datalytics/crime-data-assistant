@@ -1553,6 +1553,15 @@
       "note": "handler-level wiring and database-boundary evidence for /api/session-analytics. Sets QUERY_LOG_DB_PATH to its own temporary SQLite fixture and ANALYTICS_PASSWORD/QUERY_LOG_KEY before importing the route, patches Database.prototype.prepare and .exec before that import, then invokes the REAL exported GET: no header, absent and empty analytics key, malformed and wrong Bearer values, the obsolete literal, a distinct query-log-shaped key, and every governed URL credential name alongside the correct Bearer key -- all 401 with an identical body and ZERO recorded database operations, which also means no handle was opened. The correct dedicated Bearer key then returns 200 carrying rows that exist only in the fixture, which is the recorder's positive control, and that response emits no allow-origin header while the module exports no OPTIONS handler. Tier F: builds its own throwaway SQLite fixture, needs no corpus, and never contacts production."
     },
     {
+      "id": "test-release-export",
+      "tier": "F",
+      "script": "scripts/test-release-export.js",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "P1.4a: the release input must be an exact commit exported from Git objects. Builds throwaway repositories in a temp directory and drives the SHIPPED scripts/lib/release-export.sh, the same file the deploy sources -- the prune-releases.sh precedent, so the test cannot pass against a drifted copy. Covers full-SHA-only input, ancestry against origin/<branch>, per-path blob equality against the commit tree with export-ignore and export-subst as the decisive mutations, a whole-file Git LFS pointer refusal proven to fire while blob equality still passes on the same blob, near-miss and quoted-format controls so the refusal is structural rather than a grep, and the closed post-export allowlist with its schema mutations. Dual-view (index blob and worktree) source assertions confirm the deploy sources the library and that rsync, chmod and cp -al are gone. Tier F: no database, no corpus, no network, no state outside its own temp directories; needs a POSIX bash, located explicitly from git.exe on Windows."
+    },
+    {
       "id": "test-harness-discovery",
       "tier": "F",
       "script": "scripts/test-harness-discovery.js",
