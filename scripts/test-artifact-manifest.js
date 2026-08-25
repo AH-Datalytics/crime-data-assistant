@@ -7,8 +7,12 @@
  * including the symlink and executable-bit branches -- is exercised here on any platform. `walkRelease`
  * touches the filesystem, and NTFS has no executable bit while creating a symlink on Windows needs a
  * privilege this workstation does not have (measured: fs.symlinkSync returns EPERM). The behavioural
- * filesystem controls for links and exec bits therefore run in a Linux container, driven by
- * scripts/test-release-receipt.js; what runs here is the record layer and the policy.
+ * filesystem controls for links and exec bits therefore run in a Linux container where the Docker
+ * daemon actually serves Linux containers; what runs here on every platform is the record layer and the
+ * policy.
+ *
+ * Where no Linux kernel is reachable the controls are reported as NOT EXERCISED and are counted as
+ * neither passed nor failed -- see the OSType classification below, and the CI failure that forced it.
  */
 "use strict";
 
@@ -26,9 +30,20 @@ const POLICY_FILE = path.join(REPO, "scripts", "fixtures", "artifact-manifest-po
 
 let passed = 0;
 const failures = [];
+// A probe that did not run is neither a pass nor a failure, and must not be counted as either. The
+// summary line reports it as its own state so no reader can take "N passed, 0 failed" to mean the
+// Linux filesystem controls were exercised.
+const notExercised = [];
 function check(name, fn) {
+  const before = notExercised.length;
   try {
     fn();
+    // A check that recorded a not-exercised probe is NOT a pass. Counting it as one is exactly how a
+    // suite comes to report "22 passed, 0 failed" for controls that never ran.
+    if (notExercised.length > before) {
+      console.log(`skip  ${name}  (NOT EXERCISED -- see above)`);
+      return;
+    }
     passed += 1;
     console.log(`ok    ${name}`);
   } catch (error) {
@@ -325,19 +340,114 @@ check("tree scope excludes the subtree; path scope excludes exactly one entry", 
 // claimed. The structural guarantees above (a link is recorded by target text, never followed; the
 // exec bit is a recorded field) hold on every platform.
 
-function dockerAvailable() {
-  const r = spawnSync("docker", ["version", "--format", "{{.Server.Version}}"], {
-    encoding: "utf8",
-    timeout: 20000
-  });
-  return r.status === 0 && /\d+\./.test(r.stdout || "");
+const DOCKER_LINUX = "linux";
+const DOCKER_WINDOWS_CONTAINERS = "windows-containers";
+const DOCKER_DAEMON_UNAVAILABLE = "daemon-unavailable";
+const DOCKER_ABSENT = "absent";
+const HOST_LINUX = "host-linux";
+
+/**
+ * Classify the Docker daemon by the OS its containers actually run.
+ *
+ * WHAT THIS REPLACED, AND WHY. The previous check asked `docker version` for a Server.Version and
+ * treated any answer as "a Linux container is available". The hosted Windows runner has Docker, and its
+ * daemon answers with a version -- while serving WINDOWS containers. So the probe launched a Linux image
+ * against it and got `no matching manifest for windows(10.0.26100)/amd64`, exit 125, which failed the
+ * suite and blocked 127 downstream commands. Presence of a CLI is not a capability; OSType is.
+ *
+ * `run` is a seam for the focused controls below, which have to cover daemon states this machine is not
+ * in. The shipped path passes nothing and spawns docker itself.
+ */
+function classifyDocker(run) {
+  const exec = run || ((args) => spawnSync("docker", args, { encoding: "utf8", timeout: 30000 }));
+  const r = exec(["info", "--format", "{{.OSType}}"]);
+  if (!r || r.error) {
+    return r && r.error && r.error.code === "ENOENT" ? DOCKER_ABSENT : DOCKER_DAEMON_UNAVAILABLE;
+  }
+  if (r.status !== 0) return DOCKER_DAEMON_UNAVAILABLE;
+  const osType = String(r.stdout || "").trim().toLowerCase();
+  if (osType === "linux") return DOCKER_LINUX;
+  if (osType === "windows") return DOCKER_WINDOWS_CONTAINERS;
+  // An answer we do not understand is not a capability. Guessing here is how the last defect happened.
+  return DOCKER_DAEMON_UNAVAILABLE;
 }
 
+/** The report for a classification that cannot run the controls. It never claims coverage. */
+function probeNotExercisedReport(classification) {
+  const why = {
+    [DOCKER_WINDOWS_CONTAINERS]:
+      "the Docker daemon here serves WINDOWS containers, so a Linux image cannot start against it",
+    [DOCKER_DAEMON_UNAVAILABLE]:
+      "the Docker daemon did not answer, so no container of any kind can start",
+    [DOCKER_ABSENT]:
+      "Docker is not installed on this machine"
+  }[classification] || `the Docker classification ${classification} is not one this suite understands`;
+  return [
+    `NOT EXERCISED HERE: ${why}.`,
+    "Windows cannot create a symlink or express an executable bit, so these controls ran in no form at",
+    "all -- not here, and not in a container. This remains a MANDATORY PRE-DEPLOYMENT PROBE, it is NOT",
+    "covered by this run, and this run is not evidence about it either way."
+  ];
+}
+
+/** The Linux path's acceptance. Separated so a control can prove a failing probe really fails. */
+function assertProbeOutput(out, text) {
+  assert.equal(out.status, 0, `the Linux probe must pass:\n${text}`);
+  assert.match(text, /C5 repointed symlink detected/, "C5 must have run");
+  assert.match(text, /C6 exec bit flip detected/, "C6 must have run");
+  assert.match(text, /link target never read/, "the target-not-followed control must have run");
+}
+
+check("the Linux probe is classified by the daemon's OSType, not by the CLI's presence", () => {
+  assert.equal(classifyDocker(() => ({ status: 0, stdout: "linux\n" })), DOCKER_LINUX);
+  assert.equal(classifyDocker(() => ({ status: 0, stdout: "windows\r\n" })), DOCKER_WINDOWS_CONTAINERS,
+    "a daemon serving Windows containers is not a Linux capability -- this is the case that failed CI");
+  assert.equal(classifyDocker(() => ({ status: 1, stderr: "error during connect: daemon not running" })),
+    DOCKER_DAEMON_UNAVAILABLE);
+  assert.equal(classifyDocker(() => ({ error: Object.assign(new Error("spawn docker ENOENT"), { code: "ENOENT" }) })),
+    DOCKER_ABSENT);
+  assert.equal(classifyDocker(() => ({ error: Object.assign(new Error("timed out"), { code: "ETIMEDOUT" }) })),
+    DOCKER_DAEMON_UNAVAILABLE, "a hung daemon is unavailable, not absent");
+  assert.equal(classifyDocker(() => ({ status: 0, stdout: "freebsd\n" })), DOCKER_DAEMON_UNAVAILABLE,
+    "an OSType this suite does not understand must never be treated as runnable");
+  assert.equal(classifyDocker(() => ({ status: 0, stdout: "" })), DOCKER_DAEMON_UNAVAILABLE,
+    "an empty answer is not Linux");
+
+  // The classification must come from the OSType query specifically, so no version string can supply it.
+  const asked = [];
+  classifyDocker((args) => { asked.push(args.join(" ")); return { status: 0, stdout: "linux\n" }; });
+  assert.deepEqual(asked, ["info --format {{.OSType}}"], "one query, and it asks for OSType");
+});
+
+check("every classification that cannot run the controls is reported as NOT EXERCISED", () => {
+  const reasons = new Set();
+  for (const c of [DOCKER_WINDOWS_CONTAINERS, DOCKER_DAEMON_UNAVAILABLE, DOCKER_ABSENT]) {
+    const text = probeNotExercisedReport(c).join("\n");
+    assert.match(text, /NOT EXERCISED HERE/, `${c} must say the controls did not run`);
+    assert.match(text, /MANDATORY PRE-DEPLOYMENT PROBE/, `${c} must retain the standing warning`);
+    assert.doesNotMatch(text, /all controls passed/,
+      `${c} must not carry the probe's own success marker`);
+    reasons.add(text.split("\n")[0]);
+  }
+  assert.equal(reasons.size, 3, "each classification must state its own distinct reason");
+});
+
+check("on a Linux daemon a failing probe FAILS; it is never downgraded to a skip", () => {
+  assert.throws(() => assertProbeOutput({ status: 125 },
+    "docker: no matching manifest for windows(10.0.26100)/amd64\n"),
+    /the Linux probe must pass/, "the exact CI failure must still be a failure where Linux IS available");
+  assert.throws(() => assertProbeOutput({ status: 0 },
+    "linux probe: all controls passed on linux v24.19.0\n"),
+    /C5 must have run/, "a zero exit with no control output is a failure, not a pass");
+});
+
 check("C5/C6 real symlink and executable-bit behaviour on Linux", () => {
-  if (process.platform !== "linux" && !dockerAvailable()) {
-    console.log("      NOT EXERCISED HERE: no Linux filesystem available (Windows cannot create a symlink");
-    console.log("      or express an exec bit). This remains a MANDATORY PRE-DEPLOYMENT PROBE and must not");
-    console.log("      be reported as covered by this run.");
+  // The ordinary record-layer and policy assertions above run on every platform and never consult
+  // Docker. Only these filesystem controls need a Linux kernel.
+  const classification = process.platform === "linux" ? HOST_LINUX : classifyDocker();
+  if (classification !== HOST_LINUX && classification !== DOCKER_LINUX) {
+    for (const line of probeNotExercisedReport(classification)) console.log(`      ${line}`);
+    notExercised.push(`C5/C6 Linux filesystem controls (${classification})`);
     return;
   }
 
@@ -348,7 +458,7 @@ check("C5/C6 real symlink and executable-bit behaviour on Linux", () => {
   fs.writeFileSync(path.join(work, "probe.js"), probeSource());
 
   let out;
-  if (process.platform === "linux") {
+  if (classification === HOST_LINUX) {
     out = spawnSync(process.execPath, [path.join(work, "probe.js")], { encoding: "utf8", cwd: work });
   } else {
     // --network none, and only this throwaway directory is mounted: no credentials, no databases, no
@@ -361,10 +471,8 @@ check("C5/C6 real symlink and executable-bit behaviour on Linux", () => {
   }
   const text = (out.stdout || "") + (out.stderr || "");
   for (const line of text.split(/\r?\n/).filter(Boolean)) console.log(`      ${line}`);
-  assert.equal(out.status, 0, `the Linux probe must pass:\n${text}`);
-  assert.match(text, /C5 repointed symlink detected/, "C5 must have run");
-  assert.match(text, /C6 exec bit flip detected/, "C6 must have run");
-  assert.match(text, /link target never read/, "the target-not-followed control must have run");
+  // A Linux daemon WAS available, so anything short of a clean pass is a real failure of this suite.
+  assertProbeOutput(out, text);
 });
 
 function probeSource() { return `
@@ -431,7 +539,10 @@ for (const d of temps) {
 }
 
 console.log("");
-console.log(`artifact manifest: ${passed} passed, ${failures.length} failed`);
+const tally = `artifact manifest: ${passed} passed, ${failures.length} failed` +
+  (notExercised.length ? `, ${notExercised.length} NOT EXERCISED` : "");
+console.log(tally);
+for (const n of notExercised) console.log(`  NOT EXERCISED ${n} -- mandatory pre-deployment probe, not evidence`);
 if (failures.length) {
   for (const f of failures) console.log(`  FAILED ${f.name}: ${f.message}`);
   process.exit(1);
