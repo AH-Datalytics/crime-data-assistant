@@ -53,7 +53,16 @@ jobs:
   canonical-harness:
     name: canonical harness (windows, LF)
     runs-on: windows-latest
-    timeout-minutes: 45
+    # OUTER cap. It must stay STRICTLY GREATER than the harness step's own cap below, because a step
+    # timeout only kills that step -- the job still has to redact, publish the artifact and run the
+    # diagnostics that say WHAT timed out. If the two were equal the job would be killed at the same
+    # instant as the step, and a hung harness would produce no evidence of having hung, which is the
+    # failure mode that cost a whole run to diagnose on 2026-08-26.
+    #
+    # 60 = 45 for the harness + ~15 for setup (checkout, Node/Python pinning, venv, npm ci) and the
+    # post-harness safety steps. Green runs are unaffected: billing stops when the work finishes, so
+    # headroom is free unless it is used.
+    timeout-minutes: 60
     permissions:
       # GITHUB_TOKEN is used by actions/checkout to read the repository, and for nothing else. The job
       # has no write permission of any kind, and `persist-credentials: false` removes the token from the
@@ -309,7 +318,18 @@ jobs:
       # ---------------------------------------------------------------- the one canonical invocation
       - name: Run the canonical harness
         id: harness
-        timeout-minutes: 30
+        # INNER cap: the bounded ceiling for a genuinely hung harness.
+        #
+        # MEASURED, not guessed. The suite runs 25-30 minutes on this runner -- 28m08s and 24m59s on
+        # two consecutive pull-request checks -- so a 30-minute cap sat inside the observed range and
+        # which side a run landed on was runner variance. On 2026-08-26 the SAME commit passed as a
+        # pull-request check at 28m08s and was killed as a push run at 30m: run 33006411596 died with
+        # "has timed out after 30 minutes" having logged 169 of 175 commands `ok`, with no tally and
+        # no verdict. Nothing was wrong with the code; the cap was.
+        #
+        # 45 gives 50% headroom over the observed boundary. It does NOT slow a green run, and it does
+        # not weaken anything: the suite is unchanged, and a harness that truly hangs is still killed.
+        timeout-minutes: 45
         run: |
           set -euo pipefail
           # The single canonical entry point. No --only (it disables whole-run coverage checks, so a
