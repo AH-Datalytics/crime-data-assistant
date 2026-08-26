@@ -148,6 +148,15 @@
       "note": "measured: prepared no SQLite statement at all in a clean clone"
     },
     {
+      "id": "test_check_rtci_refresh",
+      "tier": "F",
+      "script": "scripts/test_check_rtci_refresh.py",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "offline by construction: every fetch is injected, so it needs no network and no credentials. It builds its own throwaway SQLite fixtures and asserts the checker never writes them."
+    },
+    {
       "id": "test_current_trends_nonempty_receipt",
       "tier": "F",
       "script": "scripts/test_current_trends_nonempty_receipt.py",
