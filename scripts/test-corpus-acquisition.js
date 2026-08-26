@@ -19,6 +19,7 @@
 "use strict";
 
 const assert = require("node:assert/strict");
+const { spawnSync } = require("node:child_process");
 const crypto = require("node:crypto");
 const fs = require("node:fs");
 const os = require("node:os");
@@ -712,6 +713,74 @@ async function registryForFakes(dir, fakeDir, present) {
   }
   return { corpora };
 }
+
+/**
+ * REG-5: the committed registry's receipt expectation must be a value the REAL builder produces.
+ *
+ * WHAT WENT WRONG WITHOUT IT. The registry declared `require_status: "ok"` while
+ * scripts/current_trends_build_receipt.py declares the column as
+ * `status TEXT NOT NULL CHECK(status = 'complete')` -- so `"ok"` is not a value that column can ever
+ * hold, and crossCheckReceipts() would report one problem per receipt, rejecting every receipt this
+ * repository's builder can produce.
+ *
+ * WHEN IT WOULD HAVE BITTEN, precisely. Not on the first acquisition. verifyArtifact() gates in order
+ * -- exists, bytes, artifact hash, integrity, SCHEMA FINGERPRINT, required tables, row floors, receipts
+ * -- and while a corpus is `bootstrap_pending` it returns at the fingerprint gate, which is UPSTREAM of
+ * the receipt check. So the mismatch is unreachable until a fingerprint has been reviewed and
+ * committed, and would then reject every builder-produced receipt on the acquisition after that -- with
+ * a full snapshot and transfer already paid for.
+ *
+ * This test reaches the receipt check directly, by calling crossCheckReceipts() against a
+ * builder-written database. A --local-fake rehearsal does NOT exercise it: that run stops at the
+ * bootstrap fingerprint gate and reports `receipt_diagnostics: null`.
+ *
+ * Nothing caught it because the tests above build their own receipt tables and assert against their own
+ * `"ok"`: the test and the registry agreed with each other, and both disagreed with the builder.
+ *
+ * WHY THIS TEST SPAWNS PYTHON RATHER THAN RESTATING THE DDL. A JS copy of the CREATE TABLE, or a regex
+ * over the builder's source for its CHECK clause, would be a SECOND COPY OF THE CONSTRAINT -- free to
+ * drift with the thing it is supposed to pin, which is the defect being fixed, one level up. So the
+ * receipt table is created and populated BY the builder, through its own `ensure_receipt_table()` and
+ * its own INSERT, and the committed registry's own receipts block is then run against the result.
+ */
+tests.push(["REG-5  the committed registry accepts a receipt written by the REAL builder", async (dir) => {
+  const built = path.join(dir, "built-by-builder.db");
+  const scriptsDir = path.join(__dirname);
+  // `current_trends_crosswalk` is the cheapest component: one required table, one row.
+  const program = [
+    "import sqlite3, sys",
+    `sys.path.insert(0, ${JSON.stringify(scriptsDir)})`,
+    "from current_trends_build_receipt import write_complete_receipt",
+    `conn = sqlite3.connect(${JSON.stringify(built)})`,
+    "conn.execute('CREATE TABLE agency_county_crosswalk (ori TEXT NOT NULL)')",
+    "conn.execute(\"INSERT INTO agency_county_crosswalk VALUES ('AL0010200')\")",
+    "write_complete_receipt(conn, component='current_trends_crosswalk',",
+    "                       source_version='drift-control', source_sha256='0' * 64,",
+    "                       source_rows=1, expected_rows=1, actual_rows=1)",
+    "conn.commit()",
+    "conn.close()",
+  ].join("\n");
+  const python = process.env.PYTHON || "python";
+  const run = spawnSync(python, ["-c", program], { encoding: "utf8" });
+  assert.equal(run.status, 0,
+    `the real builder could not write a receipt: ${(run.stderr || run.stdout || "").trim()}`);
+
+  const rtci = loadRegistry().corpora.find((corpus) => corpus.id === "rtci");
+  assert.ok(rtci && rtci.receipts, "the committed registry must declare RTCI receipt rules");
+
+  // The positive direction: what the builder wrote satisfies what the registry demands.
+  const accepted = snapshot.crossCheckReceipts(built, rtci.receipts);
+  assert.equal(accepted.checked, true, "the receipts table must be readable");
+  assert.deepEqual(accepted.problems, [],
+    `the committed require_status ${JSON.stringify(rtci.receipts.require_status)} does not match what ` +
+    `the builder writes: ${accepted.problems.join("; ")}`);
+
+  // The teeth. Without this, the assertion above would also pass for a check that never compares
+  // anything -- and a status rule that accepts every value is the same as no rule.
+  const rejected = snapshot.crossCheckReceipts(built, { ...rtci.receipts, require_status: "ok" });
+  assert.ok(rejected.problems.some((problem) => /status/.test(problem)),
+    `a wrong require_status must be rejected, got: ${JSON.stringify(rejected.problems)}`);
+}]);
 
 tests.push(["E2E-1  a complete verified set publishes and becomes active", async (dir) => {
   const { fakeDir } = makeFakeProduction(dir);

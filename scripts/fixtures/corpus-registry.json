@@ -62,7 +62,7 @@
       },
       "receipts": {
         "table": "source_build_receipts",
-        "require_status": "ok",
+        "require_status": "complete",
         "counts_column": "table_counts_json",
         "diagnostic_columns": ["source_version", "built_at"]
       }
