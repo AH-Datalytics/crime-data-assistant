@@ -487,7 +487,7 @@ function main(argv) {
     fs.writeFileSync(out, JSON.stringify(receipt, null, 2) + "\n");
     console.log(`receipt written: ${out}`);
     console.log(`  commit            ${receipt.commit}`);
-    console.log(`  source            ${receipt.source_verdict} (${receipt.tracked_path_count} tracked paths)`);
+    console.log(`  source            ${receipt.tracked_source_verdict} (${receipt.tracked_path_count} tracked paths)`);
     console.log(`  manifest          ${records.length} records, digest ${receipt.manifest_digest}`);
     console.log(`  exclusions        ${receipt.manifest_exclusions.length} from policy ${receipt.manifest_policy_digest.slice(0, 16)}…`);
     console.log(`  build node        ${receipt.build_node.version} (${receipt.build_node.path})`);
