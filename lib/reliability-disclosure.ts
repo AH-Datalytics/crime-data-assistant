@@ -97,7 +97,14 @@ export function reliabilityDisclosureNote(
       if (!sql || /agency_county_crosswalk/i.test(sql)) return null;
       if (/\bcounty-?wide\b|\ball (?:law enforcement )?agencies\b|\bevery agency\b|\bagencies (?:in|across|within)\b/i.test(question)) return null;
       if (!/type\s*=\s*'county'/i.test(sql) && !/\bori\s*=\s*'/i.test(sql)) return null;
-      target = { agency: county.target.agency, type: "county" };
+      // CARRY THE ORI. The resolver has already identified the exact agency; dropping its `ori`
+      // here sent the flag lookup below down its name-matching branch, which matched nothing once
+      // the Historical rebuild stopped appending " County" to county agency names. Measured on the
+      // served database 2026-08-27: 'Marshall County' + al + county returned 0 flag rows while
+      // AL0500000 returned 13, and 1,815 of 1,815 flagged county agencies were missed. Every
+      // flagged county silently lost its caveat -- the behaviour this function's own comment
+      // promises: "a flagged county year gets the same caveat a flagged city year does".
+      target = { agency: county.target.agency, type: "county", ori: county.target.ori };
       state = county.target.state.toLowerCase();
       label = `${county.target.agency}, ${county.target.state.toUpperCase()}`;
     } else {
