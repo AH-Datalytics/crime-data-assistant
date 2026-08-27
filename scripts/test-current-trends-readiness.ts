@@ -5,8 +5,10 @@ import Database from "better-sqlite3";
 import {
   COMPONENT_TABLES,
   CURRENT_TRENDS_CAPABILITIES,
+  STATE_MONTHLY_REQUIRED_FROM,
   classifyCurrentTrendsAbsence,
   currentTrendsReadiness,
+  requiredTablesForReceipt,
 } from "../lib/current-trends-readiness";
 
 let passed = 0;
@@ -115,6 +117,89 @@ check("unknown capability and invalid observation never become absence", () => {
   db.close();
 });
 
+// ---------------------------------------------------------------------------------------------
+// Backward compatibility across the state_monthly transition.
+//
+// An application release deploys independently of the database it reads, so this release has to
+// accept the database production is serving TODAY -- whose monthly receipt predates state_monthly
+// and therefore records four counts, not five -- while refusing a June-or-later receipt that omits
+// it. Both directions are asserted, because either one failing is an outage: leniency in the wrong
+// direction loses the new requirement permanently, and strictness in the wrong direction takes
+// Current Trends down until a swap this release cannot itself perform.
+// ---------------------------------------------------------------------------------------------
+
+const legacyMonthlyCounts = { agency_monthly: 1, agencies: 1, sample_agencies: 1, national_monthly: 1 };
+
+check("a pre-June receipt without state_monthly is still ready (production today)", () => {
+  const db = fixture();
+  addReceipt(db, "current_trends_monthly", legacyMonthlyCounts, { source_version: "2026-05" });
+  for (const id of [
+    CURRENT_TRENDS_CAPABILITIES.agencyDirectory,
+    CURRENT_TRENDS_CAPABILITIES.yearCoverage,
+    CURRENT_TRENDS_CAPABILITIES.nationalSweep,
+  ]) {
+    const result = currentTrendsReadiness(db, id);
+    assert.equal(result.state, "ready", `${id}: ${result.reason}`);
+  }
+  db.close();
+});
+
+check("a pre-June receipt still reconciles the four tables it does declare", () => {
+  const db = fixture();
+  addReceipt(db, "current_trends_monthly", legacyMonthlyCounts, { source_version: "2026-05" });
+  db.exec("DELETE FROM agency_monthly");
+  const result = currentTrendsReadiness(db, CURRENT_TRENDS_CAPABILITIES.yearCoverage);
+  assert.equal(result.state, "local_failure");
+  assert.match(result.reason, /now has 0 rows/);
+  db.close();
+});
+
+check("a June receipt WITHOUT state_monthly is refused", () => {
+  const db = fixture();
+  addReceipt(db, "current_trends_monthly", legacyMonthlyCounts, { source_version: "2026-06" });
+  const result = currentTrendsReadiness(db, CURRENT_TRENDS_CAPABILITIES.yearCoverage);
+  assert.equal(result.state, "local_failure", result.reason);
+  assert.match(result.reason, /state_monthly/);
+  db.close();
+});
+
+check("a June receipt WITH state_monthly is ready", () => {
+  const db = fixture();
+  addReceipt(db, "current_trends_monthly", monthlyCounts, { source_version: "2026-06" });
+  assert.equal(currentTrendsReadiness(db, CURRENT_TRENDS_CAPABILITIES.yearCoverage).state, "ready");
+  db.close();
+});
+
+check("every period after June also requires state_monthly", () => {
+  for (const version of ["2026-07", "2026-12", "2027-01", "2030-05"]) {
+    const db = fixture();
+    addReceipt(db, "current_trends_monthly", legacyMonthlyCounts, { source_version: version });
+    assert.equal(currentTrendsReadiness(db, CURRENT_TRENDS_CAPABILITIES.yearCoverage).state,
+      "local_failure", `${version} must require state_monthly`);
+    db.close();
+  }
+});
+
+check("an unreadable monthly period fails rather than taking the lenient path", () => {
+  for (const version of ["2026-6", "june 2026", "202606", "", "2026-06-01"]) {
+    const db = fixture();
+    addReceipt(db, "current_trends_monthly", legacyMonthlyCounts, { source_version: version });
+    const result = currentTrendsReadiness(db, CURRENT_TRENDS_CAPABILITIES.yearCoverage);
+    assert.equal(result.state, "local_failure", `${JSON.stringify(version)} must not be ready`);
+    db.close();
+  }
+});
+
+check("the cutover is the first month that could satisfy it", () => {
+  assert.equal(STATE_MONTHLY_REQUIRED_FROM, "2026-06");
+  assert.ok(!requiredTablesForReceipt("current_trends_monthly", "2026-05")!.includes("state_monthly"));
+  assert.ok(requiredTablesForReceipt("current_trends_monthly", "2026-06")!.includes("state_monthly"));
+  assert.equal(requiredTablesForReceipt("current_trends_monthly", "nonsense"), null);
+  // Non-monthly components are unaffected by the period rule.
+  assert.deepEqual(requiredTablesForReceipt("current_trends_population", "populations.csv"),
+    COMPONENT_TABLES.current_trends_population);
+});
+
 // The component-table map has two homes -- this module and scripts/current_trends_build_receipt.py.
 // The Python side decides what a receipt RECORDS; this side decides what it is CHECKED against, so a
 // table added to one and not the other either goes unenforced or fails every reconciliation. Parsing
@@ -138,4 +223,4 @@ check("the component-table map matches its Python source of truth", () => {
   );
 });
 
-console.log(`current trends readiness: ${passed}/8 passed`);
+console.log(`current trends readiness: ${passed}/15 passed`);
