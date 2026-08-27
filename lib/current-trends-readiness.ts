@@ -32,8 +32,16 @@ export const CURRENT_TRENDS_CAPABILITIES = {
   nationalSweep: "crime_data::national_monthly::sweep",
 } as const;
 
-const COMPONENT_TABLES: Record<CurrentTrendsComponent, readonly string[]> = {
-  current_trends_monthly: ["agency_monthly", "agencies", "sample_agencies", "national_monthly"],
+// Mirrors COMPONENT_TABLES in scripts/current_trends_build_receipt.py. The two are asserted equal
+// by scripts/test-current-trends-readiness.ts, which parses the Python rather than restating the
+// list a third time -- a third copy would drift exactly the way these two can.
+//
+// DEPLOYMENT ORDER MATTERS. The loop below fails a component whose receipt records no count for a
+// listed table. Shipping state_monthly here ahead of a database whose receipt records it turns
+// Current Trends into `local_failure` ("receipt has no valid count for state_monthly"). This line
+// must reach production with, or after, the database that carries the new receipt -- never before.
+export const COMPONENT_TABLES: Record<CurrentTrendsComponent, readonly string[]> = {
+  current_trends_monthly: ["agency_monthly", "agencies", "sample_agencies", "national_monthly", "state_monthly"],
   current_trends_population: ["agency_population"],
   current_trends_crosswalk: ["agency_county_crosswalk"],
 };

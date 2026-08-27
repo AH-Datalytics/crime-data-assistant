@@ -228,6 +228,47 @@ def refresh_populations(db_path, pop_csv):
     print(f"  Sample population (latest year): {total_pop:,}")
 
 
+MONTHLY_PROJECTIONS = ("agency_monthly", "national_monthly", "state_monthly")
+
+
+def assert_monthly_projections_aligned(conn, year, month):
+    """All three monthly projections must agree before a receipt may claim completeness.
+
+    Row counts are not alignment: every table can be non-empty while one of them still ends a
+    month behind, which is exactly the defect that shipped unnoticed. This raises instead of
+    returning a flag, and it is called before ``write_complete_receipt`` and before the single
+    ``commit()``, so a misaligned write leaves no partial state to clean up.
+
+    Two properties, not one:
+
+      1. the imported period exists in ALL three tables -- catches "the month I asked for did
+         not land in one of them";
+      2. the three maxima are EQUAL -- catches "one projection lags the others".
+
+    Deliberately NOT "every maximum equals the imported month": re-importing an older month into
+    a database that already holds later ones is legitimate, and that stricter rule would reject
+    it while catching nothing extra.
+    """
+    period = year * 100 + month
+    maxima = {}
+    absent = []
+    for table in MONTHLY_PROJECTIONS:
+        maxima[table] = conn.execute(f"SELECT MAX(year*100+month) FROM {table}").fetchone()[0]
+        found = conn.execute(
+            f"SELECT 1 FROM {table} WHERE year=? AND month=? LIMIT 1", (year, month)
+        ).fetchone()
+        if found is None:
+            absent.append(table)
+    if absent:
+        raise RuntimeError(
+            f"cannot receipt {period}: imported period missing from {', '.join(absent)}"
+        )
+    if len(set(maxima.values())) != 1:
+        detail = ", ".join(f"{table}={maxima[table]}" for table in MONTHLY_PROJECTIONS)
+        raise RuntimeError(f"monthly projections disagree on their newest period: {detail}")
+    return maxima
+
+
 def update_local_db(db_path, records, full_rebuild, year, month,
                     source_rows, excluded_rows, source_sha256):
     """Insert records into local crime_data.db."""
@@ -286,27 +327,63 @@ def update_local_db(db_path, records, full_rebuild, year, month,
         GROUP BY am.year, am.month, am.offense
     """)
 
+    # Rebuild state_monthly -- the THIRD monthly projection, in this same transaction.
+    #
+    # This used to be left out entirely, so a monthly update advanced agency_monthly and
+    # national_monthly to the new month and left state_monthly on the previous one. A
+    # state-scoped question then answered through May while an agency or national question
+    # answered through June, with nothing disclosing the gap. Measured 2026-08-27 against a
+    # backup of production: baseline aligned at 202605, candidate agency/national 202606 with
+    # state_monthly still 202605.
+    #
+    # The cohort is EVERY agency, not the national sample and not "complete reporters".
+    # scripts/build_db.py aggregates state_monthly from complete reporters only; that rule
+    # reproduces just 13,338 of production's 36,725 rows. This rule reproduces all 36,725
+    # exactly, so it -- not build_db.py's -- is the series production actually serves.
+    # Changing it would silently rewrite nine years of state history.
+    if full_rebuild:
+        conn.execute("DELETE FROM state_monthly")
+    else:
+        conn.execute("DELETE FROM state_monthly WHERE year=? AND month=?", (year, month))
+
+    conn.execute("""
+        INSERT INTO state_monthly (state, year, month, offense, count, agency_count)
+        SELECT am.state, am.year, am.month, am.offense, SUM(am.count), COUNT(DISTINCT am.ori)
+        FROM agency_monthly am
+        """ + ("" if full_rebuild else f"WHERE am.year={year} AND am.month={month}") + """
+        GROUP BY am.state, am.year, am.month, am.offense
+    """)
+
     latest = conn.execute("SELECT MAX(year*100+month) FROM national_monthly").fetchone()[0]
     nm_rows = conn.execute("SELECT COUNT(*) FROM national_monthly").fetchone()[0]
+    sm_rows = conn.execute("SELECT COUNT(*) FROM state_monthly").fetchone()[0]
     sa_count = conn.execute("SELECT COUNT(*) FROM sample_agencies").fetchone()[0]
     actual_rows = conn.execute(
         "SELECT COUNT(*) FROM agency_monthly" if full_rebuild else
         "SELECT COUNT(*) FROM agency_monthly WHERE year=? AND month=?",
         () if full_rebuild else (year, month),
     ).fetchone()[0]
-    write_complete_receipt(
-        conn,
-        component="current_trends_monthly",
-        source_version=f"{year:04d}-{month:02d}",
-        source_sha256=source_sha256,
-        source_rows=source_rows,
-        expected_rows=len(records),
-        actual_rows=actual_rows,
-        excluded_rows=excluded_rows,
-    )
-    conn.commit()
-    conn.close()
+    # Both calls below raise on a refused import, and neither had been closing the connection.
+    # On Windows an open handle also keeps the file locked, so a refusal used to leave the
+    # database un-deletable as well as uncommitted. The refusal itself is the correct behaviour;
+    # leaking the handle while refusing is not.
+    try:
+        assert_monthly_projections_aligned(conn, year, month)
+        write_complete_receipt(
+            conn,
+            component="current_trends_monthly",
+            source_version=f"{year:04d}-{month:02d}",
+            source_sha256=source_sha256,
+            source_rows=source_rows,
+            expected_rows=len(records),
+            actual_rows=actual_rows,
+            excluded_rows=excluded_rows,
+        )
+        conn.commit()
+    finally:
+        conn.close()
     print(f"  national_monthly: {nm_rows:,} rows, latest {latest // 100}-{latest % 100:02d}")
+    print(f"  state_monthly: {sm_rows:,} rows")
     print(f"  sample: {sa_count} agencies")
 
 

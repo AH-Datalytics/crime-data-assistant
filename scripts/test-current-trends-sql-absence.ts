@@ -10,12 +10,14 @@ db.exec(`
   CREATE TABLE agencies (ori TEXT);
   CREATE TABLE sample_agencies (ori TEXT);
   CREATE TABLE national_monthly (year INTEGER);
+  CREATE TABLE state_monthly (state TEXT);
   CREATE TABLE agency_population (ori TEXT);
   CREATE TABLE agency_county_crosswalk (ori TEXT);
   INSERT INTO agency_monthly VALUES ('A');
   INSERT INTO agencies VALUES ('A');
   INSERT INTO sample_agencies VALUES ('A');
   INSERT INTO national_monthly VALUES (2025);
+  INSERT INTO state_monthly VALUES ('AA');
   INSERT INTO agency_population VALUES ('A');
   INSERT INTO agency_county_crosswalk VALUES ('A');
   CREATE TABLE source_build_receipts (
@@ -28,7 +30,7 @@ const insert = db.prepare("INSERT INTO source_build_receipts VALUES (?,?,?,?,?,?
 function receipt(component: string, counts: Record<string, number>): void {
   insert.run(component, "2025-01", digest, 1, 1, 1, 0, JSON.stringify(counts), "complete");
 }
-receipt("current_trends_monthly", { agency_monthly: 1, agencies: 1, sample_agencies: 1, national_monthly: 1 });
+receipt("current_trends_monthly", { agency_monthly: 1, agencies: 1, sample_agencies: 1, national_monthly: 1, state_monthly: 1 });
 
 assert.equal(
   classifyCurrentTrendsSqlAbsence(db, "SELECT * FROM agency_monthly WHERE ori='Z'", 0).state,

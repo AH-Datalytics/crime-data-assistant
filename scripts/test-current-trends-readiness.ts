@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
 import Database from "better-sqlite3";
 import {
+  COMPONENT_TABLES,
   CURRENT_TRENDS_CAPABILITIES,
   classifyCurrentTrendsAbsence,
   currentTrendsReadiness,
@@ -18,12 +20,14 @@ function fixture(): Database.Database {
     CREATE TABLE agencies (ori TEXT);
     CREATE TABLE sample_agencies (ori TEXT);
     CREATE TABLE national_monthly (year INTEGER);
+    CREATE TABLE state_monthly (state TEXT);
     CREATE TABLE agency_population (ori TEXT, year INTEGER);
     CREATE TABLE agency_county_crosswalk (ori TEXT);
     INSERT INTO agency_monthly VALUES ('A', 2025);
     INSERT INTO agencies VALUES ('A');
     INSERT INTO sample_agencies VALUES ('A');
     INSERT INTO national_monthly VALUES (2025);
+    INSERT INTO state_monthly VALUES ('AA');
     INSERT INTO agency_population VALUES ('A', 2025);
     INSERT INTO agency_county_crosswalk VALUES ('A');
   `);
@@ -45,7 +49,7 @@ function addReceipt(db: Database.Database, component: string, counts: Record<str
     (@component,@source_version,@source_sha256,@source_rows,@expected_rows,@actual_rows,@excluded_rows,@table_counts_json,@status)`).run(row);
 }
 
-const monthlyCounts = { agency_monthly: 1, agencies: 1, sample_agencies: 1, national_monthly: 1 };
+const monthlyCounts = { agency_monthly: 1, agencies: 1, sample_agencies: 1, national_monthly: 1, state_monthly: 1 };
 
 check("a legacy database is unknown, not silently healthy", () => {
   const db = fixture();
@@ -111,4 +115,27 @@ check("unknown capability and invalid observation never become absence", () => {
   db.close();
 });
 
-console.log(`current trends readiness: ${passed}/7 passed`);
+// The component-table map has two homes -- this module and scripts/current_trends_build_receipt.py.
+// The Python side decides what a receipt RECORDS; this side decides what it is CHECKED against, so a
+// table added to one and not the other either goes unenforced or fails every reconciliation. Parsing
+// the Python binds them to each other; a third hand-written copy here would drift the same way.
+check("the component-table map matches its Python source of truth", () => {
+  const python = readFileSync(new URL("./current_trends_build_receipt.py", import.meta.url), "utf8");
+  const block = python.slice(python.indexOf("COMPONENT_TABLES = {"));
+  const parsed: Record<string, string[]> = {};
+  for (const entry of block.slice(0, block.indexOf("\n}")).matchAll(/"(current_trends_\w+)":\s*\(([^)]*)\)/g)) {
+    parsed[entry[1]] = [...entry[2].matchAll(/"(\w+)"/g)].map((m) => m[1]);
+  }
+  assert.ok(Object.keys(parsed).length > 0, "could not parse COMPONENT_TABLES from the Python module");
+  for (const [component, tables] of Object.entries(parsed)) {
+    const here = COMPONENT_TABLES[component as keyof typeof COMPONENT_TABLES];
+    assert.ok(here, `${component} is declared in Python but not in current-trends-readiness.ts`);
+    assert.deepEqual([...here].sort(), [...tables].sort(), `${component} tables differ between the two homes`);
+  }
+  assert.deepEqual(
+    Object.keys(COMPONENT_TABLES).sort(), Object.keys(parsed).sort(),
+    "the two homes declare different components",
+  );
+});
+
+console.log(`current trends readiness: ${passed}/8 passed`);

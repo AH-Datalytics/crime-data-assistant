@@ -34,6 +34,7 @@ function buildDb(options: { receipts?: boolean; drift?: boolean } = {}): Databas
     CREATE TABLE agencies (ori TEXT, agency TEXT, state TEXT, type TEXT);
     CREATE TABLE sample_agencies (ori TEXT, agency TEXT, state TEXT, type TEXT);
     CREATE TABLE national_monthly (year INTEGER, month INTEGER, offense TEXT, count INTEGER);
+    CREATE TABLE state_monthly (state TEXT, year INTEGER, month INTEGER, offense TEXT, count INTEGER);
     CREATE TABLE agency_monthly (
       ori TEXT, agency TEXT, state TEXT, type TEXT,
       year INTEGER, month INTEGER, offense TEXT, count INTEGER
@@ -67,7 +68,7 @@ function buildDb(options: { receipts?: boolean; drift?: boolean } = {}): Databas
     // Counted from the fixture rather than written by hand, so adding a row to the
     // fixture cannot silently turn every case into "the records do not reconcile".
     const counts = Object.fromEntries(
-      ["agency_monthly", "agencies", "sample_agencies", "national_monthly"].map((table) => [
+      ["agency_monthly", "agencies", "sample_agencies", "national_monthly", "state_monthly"].map((table) => [
         table,
         Number((db.prepare(`SELECT COUNT(*) AS n FROM ${table}`).get() as { n: number }).n),
       ]),

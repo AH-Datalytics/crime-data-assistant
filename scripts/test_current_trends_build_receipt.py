@@ -12,10 +12,12 @@ class CurrentTrendsBuildReceiptTests(unittest.TestCase):
             CREATE TABLE agencies (ori TEXT);
             CREATE TABLE sample_agencies (ori TEXT);
             CREATE TABLE national_monthly (year INTEGER);
+            CREATE TABLE state_monthly (state TEXT);
             INSERT INTO agency_monthly VALUES ('A');
             INSERT INTO agencies VALUES ('A');
             INSERT INTO sample_agencies VALUES ('A');
             INSERT INTO national_monthly VALUES (2025);
+            INSERT INTO state_monthly VALUES ('AA');
         """)
 
     def tearDown(self):
@@ -39,7 +41,7 @@ class CurrentTrendsBuildReceiptTests(unittest.TestCase):
         self.assertEqual(row[0], "complete")
         self.assertEqual(
             row[1],
-            '{"agencies":1,"agency_monthly":1,"national_monthly":1,"sample_agencies":1}',
+            '{"agencies":1,"agency_monthly":1,"national_monthly":1,"sample_agencies":1,"state_monthly":1}',
         )
 
     def test_refuses_expected_actual_mismatch(self):
