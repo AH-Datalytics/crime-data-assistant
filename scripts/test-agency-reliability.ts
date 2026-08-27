@@ -147,31 +147,74 @@ if (tableExists) {
     note("Murders in Louisville in 2025", "2025", [{ murder: 19 }], "current") === null);
   {
     // County disclosure, end-to-end, data-driven: any recent county partial-year flag.
+    //
+    // THE QUESTION IS BUILT FROM THE COUNTY NAME, NOT `ha.agency`. This used to interpolate
+    // `ha.agency` directly, which the county resolver cannot match: since the 2026-08-18 Historical
+    // rebuild, county agencies are filed without a " County" suffix ('Marshall', not 'Marshall
+    // County'), and a bare name resolves to nothing. The case then reported "not caveated" for a
+    // question no user would ask, which masked the real defect -- the disclosure path was dropping
+    // the resolver's ORI and matching flags by name, missing 1,815 of 1,815 flagged counties.
     const countyFlag = db.prepare(`
-      SELECT ha.agency AS agency, ha.state AS state, r.year AS year
-      FROM agency_year_reliability r JOIN historical_agency ha ON ha.ori = r.ori
+      SELECT x.county_name AS county, ha.state AS state, r.year AS year
+      FROM agency_year_reliability r
+      JOIN historical_agency ha ON ha.ori = r.ori
+      JOIN agency_county_crosswalk x ON x.ori9 = r.ori
       WHERE ha.type = 'county' AND r.kind = 'partial-year'
-      ORDER BY r.year DESC LIMIT 1`).get() as { agency: string; state: string; year: number } | undefined;
+        AND x.county_name IS NOT NULL AND x.county_name <> ''
+      ORDER BY r.year DESC LIMIT 1`).get() as { county: string; state: string; year: number } | undefined;
     if (countyFlag) {
-      const q = `How many murders in ${countyFlag.agency}, ${countyFlag.state.toUpperCase()} in ${countyFlag.year}?`;
+      const countyFlagLabel = `${countyFlag.county} County, ${countyFlag.state.toUpperCase()}`;
+      const q = `How many murders in ${countyFlagLabel} in ${countyFlag.year}?`;
       // The caveat requires POSITIVE evidence of a single county-agency query.
       const sheriffSql = `WHERE ha.type = 'county' AND hac.year = ${countyFlag.year}`;
       const countyNote = note(q, sheriffSql, [{ murder: 5 }]);
-      check(`a flagged county partial-year is caveated (${countyFlag.agency}, ${countyFlag.state.toUpperCase()} ${countyFlag.year})`,
+      check(`a flagged county partial-year is caveated (${countyFlagLabel} ${countyFlag.year})`,
         countyNote != null && countyNote.includes("may be incomplete"), countyNote ?? "(none)");
       // Countywide answers must NEVER inherit the sheriff's flag: a crosswalk sum over
       // every agency in the county is not the lead agency's data.
       check("a crosswalk (countywide) query is never caveated",
         note(q, `JOIN agency_county_crosswalk acc ON ... WHERE hac.year = ${countyFlag.year}`, [{ murder: 5 }]) === null);
       check("explicit countywide phrasing fails open even with county-agency SQL",
-        note(`Countywide murders in ${countyFlag.agency}, ${countyFlag.state.toUpperCase()} in ${countyFlag.year}`, sheriffSql, [{ murder: 5 }]) === null);
+        note(`Countywide murders in ${countyFlagLabel} in ${countyFlag.year}`, sheriffSql, [{ murder: 5 }]) === null);
       check("all-agencies phrasing fails open",
-        note(`Murders across all agencies in ${countyFlag.agency}, ${countyFlag.state.toUpperCase()} in ${countyFlag.year}`, sheriffSql, [{ murder: 5 }]) === null);
+        note(`Murders across all agencies in ${countyFlagLabel} in ${countyFlag.year}`, sheriffSql, [{ murder: 5 }]) === null);
       check("county SQL without single-agency evidence fails open",
         note(q, `WHERE hac.year = ${countyFlag.year}`, [{ murder: 5 }]) === null);
     }
     check("an ambiguous bare county name fails open",
       note("Murders in Washington County in 2024", "ha.type = 'county' AND year = 2024", [{ murder: 5 }]) === null);
+
+    // COUNTY CAVEATS MUST NOT BE OVERBROAD. Restoring the county path is only correct if it stays
+    // offence-scoped the way the city path already is. A partial-year flag is deliberately
+    // offence-agnostic -- a partial reporting year affects every count -- so the discriminating
+    // case is a column-collapse: the collapsed column is caveated and a column the flag does not
+    // name stays silent. Without this, "carry the ORI" could have turned every county answer into
+    // a warning, which is over-disclosure rather than a fix.
+    const collapse = db.prepare(`
+      SELECT x.county_name AS county, ha.state AS state, r.year AS year, r.columns_json AS columns
+      FROM agency_year_reliability r
+      JOIN historical_agency ha ON ha.ori = r.ori
+      JOIN agency_county_crosswalk x ON x.ori9 = r.ori
+      WHERE ha.type = 'county' AND r.kind = 'column-collapse'
+        AND x.county_name IS NOT NULL AND x.county_name <> ''
+        AND r.ori NOT IN (SELECT ori FROM agency_year_reliability
+                          WHERE kind IN ('partial-year', 'systemic'))
+      ORDER BY r.year DESC LIMIT 1`).get() as
+      { county: string; state: string; year: number; columns: string } | undefined;
+    if (collapse) {
+      const flagged = (JSON.parse(collapse.columns) as string[])[0];
+      const unflagged = ["murder", "robbery", "theft", "burglary", "assault"]
+        .find((c) => !(JSON.parse(collapse.columns) as string[]).includes(c))!;
+      const label = `${collapse.county} County, ${collapse.state.toUpperCase()}`;
+      const sql = `WHERE ha.type = 'county' AND hac.year = ${collapse.year}`;
+      check(`a flagged county column IS caveated (${label} ${collapse.year} ${flagged})`,
+        note(`How many ${flagged} in ${label} in ${collapse.year}?`, sql, [{ [flagged]: 5 }]) != null);
+      check(`an unflagged county column stays silent (${label} ${collapse.year} ${unflagged})`,
+        note(`How many ${unflagged} in ${label} in ${collapse.year}?`, sql, [{ [unflagged]: 5 }]) === null);
+    } else {
+      check("a county column-collapse case exists to test offence scoping with", false,
+        "no county column-collapse flag without a broad flag on the same ORI");
+    }
   }
   check("no crime measure in the result means no caveat",
     note("Population of Louisville in 2025", "WHERE year = 2025", [{ population: 691630 }]) === null);
