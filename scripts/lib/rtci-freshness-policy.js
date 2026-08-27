@@ -38,6 +38,81 @@ function describeBinding(binding) {
 }
 
 /**
+ * Compare a database identity snapshot taken before a detector run with one taken after it.
+ *
+ * THIS IS THE GUARD ITSELF, not a description of one. An earlier revision stated the rule in a
+ * frozen object of prose and tested the prose, which proves only that the sentence still reads the
+ * same way -- a detector that rewrote the database would have passed every one of those assertions.
+ *
+ * The main file and the WAL are gated on existence, size, SHA-256 and nanosecond mtime, and any
+ * sidecar appearing that was not there before is a violation. `-shm` is the deliberate exception: it
+ * is reader-coordination state that legitimately moves while workers answer queries, so it is
+ * recorded on both sides and reported, and never on its own a failure.
+ *
+ * A snapshot is { main, wal, shm, siblings[] }, each of the first three being
+ * { exists:false } or { exists:true, regular, size, mtimeNs, sha256 }.
+ */
+/** A digest we are willing to call an identity: exactly 64 lowercase hex characters, and nothing else. */
+function isDigest(value) {
+  return typeof value === "string" && /^[0-9a-f]{64}$/.test(value);
+}
+
+function compareDatabaseSnapshots(before, after) {
+  const violations = [];
+  if (!before || !after) return { ok: true, violations, shmNote: null };
+
+  for (const [key, label] of [["main", "main file"], ["wal", "-wal"]]) {
+    const b = before[key] || { exists: false };
+    const a = after[key] || { exists: false };
+    if (b.exists !== a.exists) {
+      violations.push(`${label} existence changed: ${b.exists ? "present" : "absent"} -> ${a.exists ? "present" : "absent"}`);
+      continue;
+    }
+    if (!a.exists) continue;
+    if (a.regular === false || b.regular === false) {
+      violations.push(`${label} is not a regular file`);
+      continue;
+    }
+    if (b.size !== a.size) violations.push(`${label} size changed: ${b.size} -> ${a.size}`);
+    // A file that is present but cannot be read yields a null digest, and two nulls compare equal.
+    // Without this, an unreadable database would pass the guard by being equally unreadable on both
+    // sides -- the strongest possible reading of "nothing changed", drawn from no evidence at all.
+    const bDigest = isDigest(b.sha256);
+    const aDigest = isDigest(a.sha256);
+    if (!bDigest || !aDigest) {
+      const when = !bDigest && !aDigest ? "before or after" : (!bDigest ? "before" : "after");
+      violations.push(`${label} has no readable digest ${when} the run; an unhashable file is not a ` +
+        "stable identity and is never treated as unchanged");
+    } else if (b.sha256 !== a.sha256) {
+      violations.push(`${label} sha256 changed: ${b.sha256.slice(0, 12)} -> ${a.sha256.slice(0, 12)}`);
+    }
+    if (b.mtimeNs !== a.mtimeNs) violations.push(`${label} mtime changed: ${b.mtimeNs} -> ${a.mtimeNs}`);
+  }
+
+  // Anything new beside the database. -wal is already covered above by name; -shm is the exception.
+  const seen = new Set(before.siblings || []);
+  for (const name of after.siblings || []) {
+    if (seen.has(name)) continue;
+    if (/-shm$/.test(name) || /-wal$/.test(name)) continue;
+    violations.push(`unexpected sidecar created: ${name}`);
+  }
+
+  const bShm = before.shm || { exists: false };
+  const aShm = after.shm || { exists: false };
+  let shmNote = null;
+  if (!bShm.exists && aShm.exists) {
+    shmNote = "shm_created: -shm appeared during the run (recorded, not gated -- it is reader state)";
+  } else if (bShm.exists && !aShm.exists) {
+    shmNote = "shm_removed: -shm disappeared during the run (recorded, not gated -- it is reader state)";
+  } else if (bShm.exists && aShm.exists &&
+      (bShm.size !== aShm.size || bShm.sha256 !== aShm.sha256 || bShm.mtimeNs !== aShm.mtimeNs)) {
+    shmNote = "shm_changed: -shm moved during the run (recorded, not gated -- it is reader state)";
+  }
+
+  return { ok: violations.length === 0, violations, shmNote };
+}
+
+/**
  * Decide everything from one observation.
  *
  * `kind` is "check" (the detector ran), "locked" (another run held the lock) or "heartbeat".
@@ -51,11 +126,13 @@ function classify(observation) {
     detectorStderr = "",
     lastSuccessAgeMs = null,
     binding = null,
+    dbGuard = null,
     nowIso = new Date().toISOString(),
     recentOutcomes = [],
   } = observation;
 
   const notes = describeBinding(binding);
+  if (dbGuard && dbGuard.shmNote) notes.push(dbGuard.shmNote);
   const noteSuffix = notes.length ? ` [${notes.join("; ")}]` : "";
   const upstream = status && status.upstream_max_period != null ? status.upstream_max_period : "?";
   const database = status && status.database_max_period != null ? status.database_max_period : "?";
@@ -121,6 +198,33 @@ function classify(observation) {
     };
   }
 
+  // A database that moved under a read-only check outranks whatever the detector concluded. Nothing
+  // scheduled here may write production data, so if the bytes changed, the verdict is not "fresh" --
+  // it is "something wrote to the database while we were reading it".
+  if (kind === "check" && dbGuard && dbGuard.ok === false) {
+    const violations = dbGuard.violations || [];
+    return {
+      outcome: "database_mutated",
+      logLine: `${nowIso} FAIL database_mutated ${violations.join("; ")}${noteSuffix}`,
+      exitCode: 1,
+      alert: {
+        send: true,
+        subject: "RTCI freshness monitor: THE DATABASE CHANGED DURING A READ-ONLY CHECK",
+        body: [
+          "The served database did not have the same identity before and after the freshness check.",
+          "The check is read-only, so this was not the monitor -- something else wrote to the file,",
+          "or a swap happened underneath the run.",
+          "",
+          ...violations.map((v) => `  ${v}`),
+          "",
+          "The freshness verdict for this run is being discarded: it describes a database that no",
+          "longer exists in the state it was read in. Nothing was imported and nothing was written.",
+          ...(notes.length ? ["", ...notes] : []),
+        ].join("\n"),
+      },
+    };
+  }
+
   if (detectorExit === EXIT_UP_TO_DATE) {
     return {
       outcome: "up_to_date",
@@ -182,29 +286,56 @@ function lastSuccessAgeMs(statusRecord, now = Date.now()) {
 }
 
 /**
- * What the observational run may gate on, and what it may only record.
+ * The one part of the sidecar rule that is a human procedure rather than code.
  *
- * SQLite's -shm is reader-coordination state. While workers answer queries it can legitimately
- * change without anything having written the database, so gating on it would make a healthy monitor
- * look like a production write. The main file and the WAL are different: a change there really would
- * mean the database moved under the check.
- *
- * The FIRST controlled observational run may additionally require exact equality across all three,
- * because it is run deliberately and its concurrency is known. That is a stricter one-off gate, not
- * the standing rule, and it is recorded as such.
+ * The standing rule is compareDatabaseSnapshots() above and is proved by mutation tests. What cannot
+ * live in code is the stricter one-off gate the FIRST controlled observational run is held to: an
+ * operator running the check by hand knows the host's concurrency, so exact equality across main,
+ * -wal and -shm is a reasonable demand of that run and an unreasonable one of every run afterwards.
  */
 const OBSERVATIONAL_SIDECAR_POLICY = Object.freeze({
-  main: "gated: size, sha256 and mtime must be unchanged",
-  wal: "gated: size, sha256 and mtime must be unchanged",
-  shm: "recorded before and after, NOT gated -- a concurrent change is not evidence of a write",
-  creation: "gated: no unexpected sidecar may be created",
+  standingRule:
+    "implemented in compareDatabaseSnapshots(): main and -wal gated on existence, size, sha256 and " +
+    "nanosecond mtime; unexpected sidecars gated; -shm recorded and never gated",
   firstControlledRun:
-    "may require exact equality across main, -wal and -shm, because its concurrency is known",
+    "operator procedure, not code: the first hand-run check may additionally require exact equality " +
+    "across main, -wal and -shm, because its concurrency is known",
+});
+
+/**
+ * The reviewed crontab entries, verbatim and in one place.
+ *
+ * CRON REDIRECTS NOWHERE. Structured logging is internal to the Node process, which is the log's only
+ * writer. An earlier revision had cron append stderr to the same file, which was wrong twice over:
+ * it made cron a second writer, and it made the log a **launch-time dependency**. cron opens its
+ * redirection target before the job runs, so a missing directory, a full disk or a bad mode on
+ * /var/log/rtci-freshness.log would have stopped the check from starting at all -- a monitor
+ * defeated by its own logging, which is the failure this whole increment exists to prevent.
+ *
+ * Both streams therefore go to /dev/null. Nothing is lost that could have reached a human anyway:
+ * this host has no MTA, so cron's own output is discarded regardless, and the alerting path is
+ * Resend. Whatever the process could not record is reported by the weekly heartbeat, which reads the
+ * log and the status record rather than depending on cron having captured anything.
+ *
+ * TIMES ARE LOCAL, NOT UTC. The crontab declares CRON_TZ=America/Chicago, so `17 7` is 07:17
+ * America/Chicago. Reading these as UTC would put the check in the middle of the night and adjacent
+ * to jobs it was placed to avoid. The installation procedure verifies CRON_TZ before installing.
+ *
+ * The installation procedure emits these from here rather than transcribing them, so the crontab and
+ * the reviewed code cannot drift.
+ */
+const CRON_PREFIX = "RTCI_FRESHNESS_PINNED_DIR=/opt/nibrs/tools/rtci-detector " +
+  "bash /opt/nibrs/tools/rtci-freshness/current/rtci-freshness.sh";
+const CRON_ENTRIES = Object.freeze({
+  check: `17 7 * * * ${CRON_PREFIX} check >/dev/null 2>&1`,
+  heartbeat: `37 7 * * 1 ${CRON_PREFIX} heartbeat >/dev/null 2>&1`,
 });
 
 module.exports = {
   classify,
+  compareDatabaseSnapshots,
   OBSERVATIONAL_SIDECAR_POLICY,
+  CRON_ENTRIES,
   lastSuccessAgeMs,
   describeBinding,
   STALE_AFTER_MS,

@@ -52,12 +52,71 @@ function readJson(file) {
   }
 }
 
+/** Returns whether the line was actually recorded. */
 function appendLog(line) {
   try {
     fs.appendFileSync(LOG, mailer.redactSecrets(line) + "\n");
-  } catch (err) {
-    process.stderr.write(`could not write ${LOG}: ${err.message}\n`);
+    return true;
+  } catch {
+    return false;
   }
+}
+
+/**
+ * ONE WRITER. This process is the log's only writer. cron redirects neither stream into it -- both
+ * go to /dev/null -- because a cron redirection would make the log a launch-time dependency: cron
+ * opens its target before the job runs, so an unwritable log would stop the check from starting at
+ * all. stdout is for a human running the wrapper by hand, and stderr is reserved for the one case
+ * the log cannot cover: a line this process failed to record.
+ */
+function report(line) {
+  if (!appendLog(line)) process.stderr.write(mailer.redactSecrets(line) + "\n");
+}
+
+/** Existence, size, SHA-256 and nanosecond mtime -- the four things a silent rewrite cannot fake. */
+function fileIdentity(file) {
+  try {
+    const st = fs.statSync(file, { bigint: true });
+    if (!st.isFile()) return { exists: true, regular: false };
+    return {
+      exists: true,
+      regular: true,
+      size: Number(st.size),
+      mtimeNs: st.mtimeNs.toString(),
+      sha256: sha256(file),
+    };
+  } catch {
+    return { exists: false };
+  }
+}
+
+/**
+ * The database's identity, and every file sitting beside it, at one instant.
+ *
+ * Taken immediately before and immediately after the detector runs. The detector opens the database
+ * `mode=ro` and its whole CLI is --db and --status, so these two snapshots must agree; if they do
+ * not, either something else wrote to the file or the file was swapped mid-check, and either way the
+ * run's freshness verdict describes a database that no longer exists in the state it was read in.
+ *
+ * Hashing the main file costs a full read on each side -- about a gigabyte of IO per daily run
+ * against a ~500 MiB database. That is the price of being able to say the bytes did not move, rather
+ * than asserting it in a comment.
+ */
+function snapshotDatabase(dbPath) {
+  const dir = path.dirname(dbPath);
+  const base = path.basename(dbPath);
+  let siblings = [];
+  try {
+    siblings = fs.readdirSync(dir).filter((f) => f.startsWith(base + "-")).sort();
+  } catch {
+    siblings = [];
+  }
+  return {
+    main: fileIdentity(dbPath),
+    wal: fileIdentity(dbPath + "-wal"),
+    shm: fileIdentity(dbPath + "-shm"),
+    siblings,
+  };
 }
 
 /** The pinned detector and how it compares to whatever the current release carries. */
@@ -98,7 +157,7 @@ function recentOutcomes(limit = 8) {
 }
 
 async function emit(result) {
-  appendLog(result.logLine);
+  report(result.logLine);
   process.stdout.write(result.logLine + "\n");
   if (result.alert.send) {
     try {
@@ -107,12 +166,10 @@ async function emit(result) {
         body: result.alert.body,
         dryRun: DRY_RUN,
       });
-      appendLog(`  alert ${sent.dryRun ? "rendered (dry run)" : "sent"}: ${result.alert.subject}`);
+      report(`  alert ${sent.dryRun ? "rendered (dry run)" : "sent"}: ${result.alert.subject}`);
     } catch (err) {
       // An alert that cannot be delivered must not be swallowed: the run fails loudly instead.
-      const msg = mailer.redactSecrets(`  ALERT DELIVERY FAILED: ${err.message}`);
-      appendLog(msg);
-      process.stderr.write(msg + "\n");
+      report(mailer.redactSecrets(`  ALERT DELIVERY FAILED: ${err.message}`));
       process.exitCode = 1;
       return;
     }
@@ -158,15 +215,17 @@ async function main() {
     }));
   }
 
+  const dbBefore = snapshotDatabase(DB);
   const run = spawnSync(PYTHON, [binding.pinnedScript, "--db", DB, "--status", STATUS],
     { encoding: "utf8", timeout: 15 * 60 * 1000 });
+  const dbAfter = snapshotDatabase(DB);
   const detectorExit = run.status === null ? -1 : run.status;
 
   // The reviewed mode, set explicitly rather than inherited from mkstemp's 0600.
   try {
     if (fs.existsSync(STATUS)) fs.chmodSync(STATUS, STATUS_MODE);
   } catch (err) {
-    process.stderr.write(`could not set the status mode: ${err.message}\n`);
+    report(`  could not set the status mode: ${err.message}`);
   }
 
   return emit(policy.classify({
@@ -176,14 +235,15 @@ async function main() {
     detectorStderr: run.stderr || (run.error ? run.error.message : ""),
     lastSuccessAgeMs: ageBefore,
     binding,
+    dbGuard: policy.compareDatabaseSnapshots(dbBefore, dbAfter),
   }));
 }
 
 if (require.main === module) {
   main().catch((err) => {
-    process.stderr.write(mailer.redactSecrets(String(err && err.stack ? err.stack : err)) + "\n");
+    report(mailer.redactSecrets(String(err && err.stack ? err.stack : err)));
     process.exitCode = 1;
   });
 }
 
-module.exports = { readBinding, recentOutcomes, STATUS_MODE };
+module.exports = { readBinding, recentOutcomes, snapshotDatabase, STATUS_MODE };
