@@ -24,9 +24,12 @@ import io
 import json
 import os
 import re
+import shutil
 import sqlite3
+import stat
 import subprocess
 import sys
+import tempfile
 
 from current_trends_build_receipt import sha256_file, sha256_text, write_complete_receipt
 
@@ -213,7 +216,51 @@ def authorize_input_digest(conn, component, path, flag_name, expect_sha256=None)
     return observed
 
 
-def refresh_populations(db_path, pop_csv, expect_sha256=None):
+def make_staging_dir():
+    """A run-owned directory for verified input copies."""
+    return tempfile.mkdtemp(prefix="rtci-inputs-")
+
+
+def remove_staging_dir(path):
+    """Remove a staging directory whose files were deliberately made read-only.
+
+    Restoring write permission first rather than relying on an rmtree error callback, whose keyword
+    changed name across Python versions -- the cleanup of a verification step is a poor place to
+    depend on that.
+    """
+    for entry in os.scandir(path) if os.path.isdir(path) else ():
+        if entry.is_file():
+            os.chmod(entry.path, stat.S_IWRITE | stat.S_IREAD)
+    shutil.rmtree(path, ignore_errors=True)
+
+
+def verified_input_copy(path, expected_digest, staging_dir):
+    """Copy an authorized input into a run-owned read-only file and prove the copy's bytes.
+
+    THE GAP THIS CLOSES. Authorization hashes a path. The parser then opens that path again, and
+    the crosswalk builder opens it in a *separate process*. Between those opens the bytes can
+    change -- a OneDrive sync lands, an export is regenerated -- so "the file I authorized" and
+    "the file I parsed" were never provably the same object, and the digest written into the
+    receipt was a third independent read. A receipt that records bytes nobody parsed is worse than
+    no receipt, because it looks like provenance.
+
+    Everything downstream consumes the returned copy, and the receipt records the returned digest,
+    so the digest in the receipt is the digest of the bytes actually consumed.
+    """
+    destination = os.path.join(staging_dir, os.path.basename(path))
+    shutil.copyfile(path, destination)
+    observed = sha256_file(destination)
+    if observed != expected_digest:
+        print(f"ERROR: {os.path.basename(path)} changed while it was being staged.")
+        print(f"  authorized digest : {expected_digest}")
+        print(f"  staged copy       : {observed}")
+        sys.exit(1)
+    # Read-only so nothing in this process can rewrite what the receipt is about to describe.
+    os.chmod(destination, stat.S_IREAD)
+    return destination, observed
+
+
+def refresh_populations(db_path, pop_csv, expect_sha256=None, staging_dir=None):
     """Refresh agency_population from the FBI populations CSV for sample agencies."""
     if not os.path.exists(pop_csv):
         # This used to warn and return, so a wrong path degraded to a skipped refresh and a stale
@@ -225,12 +272,25 @@ def refresh_populations(db_path, pop_csv, expect_sha256=None):
     # the working connection is open leaves the file locked on Windows as well as unwritten.
     gate = sqlite3.connect(db_path)
     try:
-        authorize_input_digest(gate, "current_trends_population", pop_csv,
-                               "--expect-population-sha256", expect_sha256)
+        authorized = authorize_input_digest(gate, "current_trends_population", pop_csv,
+                                            "--expect-population-sha256", expect_sha256)
     finally:
         gate.close()
 
-    print(f"\nRefreshing agency_population from {os.path.basename(pop_csv)}...")
+    owns_staging = staging_dir is None
+    staging_dir = staging_dir or make_staging_dir()
+    try:
+        verified, consumed_digest = verified_input_copy(pop_csv, authorized, staging_dir)
+        _refresh_populations_from_verified(db_path, verified, consumed_digest)
+    finally:
+        if owns_staging:
+            remove_staging_dir(staging_dir)
+
+
+def _refresh_populations_from_verified(db_path, pop_csv, consumed_digest):
+    """The write itself, against a copy whose bytes are already proven."""
+    print(f"\nRefreshing agency_population from {os.path.basename(pop_csv)}"
+          f" (consumed {consumed_digest[:16]}...)...")
     conn = sqlite3.connect(db_path)
     sample_oris = set(r[0] for r in conn.execute("SELECT ori FROM sample_agencies"))
 
@@ -279,7 +339,7 @@ def refresh_populations(db_path, pop_csv, expect_sha256=None):
         conn,
         component="current_trends_population",
         source_version=os.path.basename(pop_csv),
-        source_sha256=sha256_file(pop_csv),
+        source_sha256=consumed_digest,
         source_rows=source_rows,
         expected_rows=len(expected),
         actual_rows=matched,
@@ -455,26 +515,68 @@ def update_local_db(db_path, records, full_rebuild, year, month,
     print(f"  sample: {sa_count} agencies")
 
 
-def ensure_crosswalk(db_path, source_path, cde_path, expect_sha256=None):
+def ensure_crosswalk(db_path, source_path, cde_path, expect_sha256=None,
+                     expect_cde_sha256=None, staging_dir=None):
     """Rebuild agency_county_crosswalk in the local DB and verify it.
 
     crime_data.db is wholesale-replaced on the VPS at deploy time, so any
     derived table must exist in the LOCAL file before scp or it regresses
     Current/Historical county support (see docs/query-audit-2026-06-09-proposals.md).
     Aborts (sys.exit) on failure so a bad DB is never deployed.
+
+    Both inputs reach a SEPARATE PROCESS, so both are staged as verified read-only copies first and
+    the builder is given the copies. Hashing a path and then handing that path to a subprocess
+    proves nothing about the bytes the subprocess read.
     """
     print("\nRebuilding agency_county_crosswalk (derived table)...")
     if not os.path.exists(source_path):
         print(f"  ERROR: crosswalk source not found: {source_path}")
         sys.exit(1)
+    if not os.path.exists(cde_path):
+        print(f"  ERROR: crosswalk CDE input not found: {cde_path}")
+        sys.exit(1)
+
+    # The CDE input is bound by NO receipt -- there is no reviewed digest for it anywhere in the
+    # repository -- so it cannot be checked against stored provenance the way the workbook can.
+    # For this update it must therefore be named explicitly: the operator states the digest, and
+    # the observed bytes must equal it exactly. Extending the receipt schema to carry it is
+    # deliberately a separate piece of work; the digest is recorded in the run's evidence instead.
+    observed_cde = sha256_file(cde_path)
+    if expect_cde_sha256 is None:
+        print(f"ERROR: the CDE crosswalk input is not bound by any receipt, so its digest must be named.")
+        print(f"  observed: {observed_cde}")
+        print(f"  pass: --expect-cde-sha256 {observed_cde}")
+        sys.exit(1)
+    if expect_cde_sha256.lower() != observed_cde.lower():
+        print(f"ERROR: --expect-cde-sha256 does not describe {os.path.basename(cde_path)}.")
+        print(f"  observed  : {observed_cde}")
+        print(f"  you named : {expect_cde_sha256.lower()}")
+        sys.exit(1)
+
     # Gate BEFORE the builder runs: it rewrites agency_county_crosswalk wholesale with --apply,
     # so checking afterwards would be checking a table that had already been replaced.
     gate = sqlite3.connect(db_path)
     try:
-        authorize_input_digest(gate, "current_trends_crosswalk", source_path,
-                               "--expect-crosswalk-sha256", expect_sha256)
+        authorized = authorize_input_digest(gate, "current_trends_crosswalk", source_path,
+                                            "--expect-crosswalk-sha256", expect_sha256)
     finally:
         gate.close()
+
+    owns_staging = staging_dir is None
+    staging_dir = staging_dir or make_staging_dir()
+    try:
+        _ensure_crosswalk_from_verified(db_path, source_path, cde_path, authorized,
+                                        observed_cde, staging_dir)
+    finally:
+        if owns_staging:
+            remove_staging_dir(staging_dir)
+
+
+def _ensure_crosswalk_from_verified(db_path, source_path, cde_path, authorized_source,
+                                    authorized_cde, staging_dir):
+    source_path, consumed_source = verified_input_copy(source_path, authorized_source, staging_dir)
+    cde_path, consumed_cde = verified_input_copy(cde_path, authorized_cde, staging_dir)
+    print(f"  consumed workbook {consumed_source[:16]}...  CDE {consumed_cde[:16]}...")
     result = subprocess.run(
         [sys.executable, CROSSWALK_BUILDER,
          "--source", source_path, "--cde", cde_path,
@@ -522,7 +624,8 @@ def ensure_crosswalk(db_path, source_path, cde_path, expect_sha256=None):
                 db,
                 component="current_trends_crosswalk",
                 source_version=os.path.basename(source_path),
-                source_sha256=sha256_file(source_path),
+                # The digest of the bytes the BUILDER read, not a later read of the original path.
+                source_sha256=consumed_source,
                 source_rows=int(build_summary["rows"]),
                 expected_rows=int(build_summary["rows"]),
                 actual_rows=count,
@@ -582,6 +685,9 @@ def main():
     parser.add_argument("--expect-crosswalk-sha256", type=hex_digest_argument, default=None,
                         help="SHA-256 of a crosswalk workbook that deliberately differs from the "
                              "one the current receipt records. Must equal the supplied file.")
+    parser.add_argument("--expect-cde-sha256", type=hex_digest_argument, default=None,
+                        help="REQUIRED SHA-256 of the CDE participation CSV. No receipt binds this "
+                             "input, so it must be named explicitly and must equal the file.")
     args = parser.parse_args()
 
     if not re.match(r"^\d{6}$", args.month):
@@ -651,13 +757,21 @@ def main():
     # agency_population (this in-line step only covers sample_agencies) and adds
     # preflight plus post-write validation. Prefer it for repairs; this call
     # keeps routine updates from drifting between runs.
-    refresh_populations(db_path, args.pop_csv, args.expect_population_sha256)
+    # One run-owned staging directory holds every verified input copy, so the digests recorded in
+    # the receipts and printed as evidence all describe files this run created and nothing else
+    # could touch.
+    staging_dir = make_staging_dir()
+    print(f"\nVerified-input staging: {staging_dir}")
+    try:
+        refresh_populations(db_path, args.pop_csv, args.expect_population_sha256, staging_dir)
 
-    # Rebuild + verify derived tables BEFORE any deploy — the scp wholesale-
-    # replaces the VPS file, so missing derived tables would regress
-    # Current/Historical county support.
-    ensure_crosswalk(db_path, args.crosswalk_source, args.crosswalk_cde,
-                     args.expect_crosswalk_sha256)
+        # Rebuild + verify derived tables BEFORE any deploy — the scp wholesale-
+        # replaces the VPS file, so missing derived tables would regress
+        # Current/Historical county support.
+        ensure_crosswalk(db_path, args.crosswalk_source, args.crosswalk_cde,
+                         args.expect_crosswalk_sha256, args.expect_cde_sha256, staging_dir)
+    finally:
+        remove_staging_dir(staging_dir)
 
     # Refresh query-planner statistics BEFORE deploy — the scp wholesale-replaces
     # the VPS file, and a statistics-less database makes SQLite pick
