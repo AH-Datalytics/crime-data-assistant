@@ -1,6 +1,7 @@
 import argparse
 import csv
 import importlib.util
+import pathlib
 import sqlite3
 import tempfile
 import unittest
@@ -352,7 +353,7 @@ class InputDigestAuthorizationTests(unittest.TestCase):
 
     # -- the crosswalk gate runs before the builder ------------------------------------------
 
-    def test_a_differing_crosswalk_is_refused_before_the_builder_runs(self):
+    def seed_crosswalk_receipt(self, digest):
         db = sqlite3.connect(self.db_path)
         db.executescript("""
             CREATE TABLE IF NOT EXISTS source_build_receipts (
@@ -364,22 +365,109 @@ class InputDigestAuthorizationTests(unittest.TestCase):
         """)
         db.execute(
             "INSERT OR REPLACE INTO source_build_receipts VALUES (?,?,?,?,?,?,?,?,?,?)",
-            ("current_trends_crosswalk", "Participation Crosswalk.xlsx", "c" * 64, 1, 1, 1, 0,
+            ("current_trends_crosswalk", "Participation Crosswalk.xlsx", digest, 1, 1, 1, 0,
              '{"agency_county_crosswalk":1}', "complete", "2026-08-16T17:46:30.542Z"),
         )
         db.commit()
         db.close()
+
+    def crosswalk_inputs(self):
         workbook = self.dir / "Participation Crosswalk.xlsx"
         workbook.write_bytes(b"not the reviewed workbook")
-        with self.assertRaises(SystemExit) as caught:
-            UPDATE.ensure_crosswalk(str(self.db_path), str(workbook), str(self.dir / "cde.csv"))
-        self.assertNotEqual(caught.exception.code, 0)
+        cde = self.dir / "CDE Participation 2000-2023.csv"
+        cde.write_bytes(b"id,county\n")
+        return workbook, cde
+
+    def builder_ran(self):
         db = sqlite3.connect(self.db_path)
         built = db.execute(
             "SELECT 1 FROM sqlite_master WHERE type='table' AND name='agency_county_crosswalk'"
         ).fetchone()
         db.close()
-        self.assertIsNone(built, "the builder must not have run")
+        return built is not None
+
+    def test_an_unnamed_cde_digest_is_refused_before_the_builder_runs(self):
+        """The CDE input is bound by no receipt, so it must be named explicitly."""
+        self.seed_crosswalk_receipt("c" * 64)
+        workbook, cde = self.crosswalk_inputs()
+        with self.assertRaises(SystemExit) as caught:
+            UPDATE.ensure_crosswalk(str(self.db_path), str(workbook), str(cde))
+        self.assertNotEqual(caught.exception.code, 0)
+        self.assertFalse(self.builder_ran(), "the builder must not have run")
+
+    def test_a_wrongly_named_cde_digest_is_refused(self):
+        self.seed_crosswalk_receipt("c" * 64)
+        workbook, cde = self.crosswalk_inputs()
+        with self.assertRaises(SystemExit) as caught:
+            UPDATE.ensure_crosswalk(str(self.db_path), str(workbook), str(cde),
+                                    expect_cde_sha256="d" * 64)
+        self.assertNotEqual(caught.exception.code, 0)
+        self.assertFalse(self.builder_ran())
+
+    def test_a_differing_crosswalk_is_refused_before_the_builder_runs(self):
+        """With the CDE correctly named, the workbook gate is what refuses -- the right reason."""
+        self.seed_crosswalk_receipt("c" * 64)
+        workbook, cde = self.crosswalk_inputs()
+        with self.assertRaises(SystemExit) as caught:
+            UPDATE.ensure_crosswalk(str(self.db_path), str(workbook), str(cde),
+                                    expect_cde_sha256=sha256_file(str(cde)))
+        self.assertNotEqual(caught.exception.code, 0)
+        self.assertFalse(self.builder_ran(), "the builder must not have run")
+
+    # -- the copies the parser and the builder actually consume ------------------------------
+
+    def test_a_verified_copy_is_read_only_and_matches_its_authorized_digest(self):
+        source = self.write_pop_csv(12345)
+        digest = sha256_file(str(source))
+        staging = UPDATE.make_staging_dir()
+        try:
+            copy, consumed = UPDATE.verified_input_copy(str(source), digest, staging)
+            self.assertEqual(consumed, digest)
+            self.assertEqual(sha256_file(copy), digest)
+            self.assertNotEqual(pathlib.Path(copy).resolve(), source.resolve())
+            self.assertEqual(pathlib.Path(copy).name, source.name,
+                             "the basename must survive: the receipt records it as source_version")
+            with self.assertRaises(PermissionError):
+                open(copy, "ab").close()
+        finally:
+            UPDATE.remove_staging_dir(staging)
+        self.assertFalse(pathlib.Path(staging).exists(), "staging must be removable despite read-only files")
+
+    def test_a_copy_whose_bytes_do_not_match_is_refused(self):
+        source = self.write_pop_csv(12345)
+        staging = UPDATE.make_staging_dir()
+        try:
+            with self.assertRaises(SystemExit) as caught:
+                UPDATE.verified_input_copy(str(source), "e" * 64, staging)
+            self.assertNotEqual(caught.exception.code, 0)
+        finally:
+            UPDATE.remove_staging_dir(staging)
+
+    def test_the_population_receipt_records_the_bytes_that_were_parsed(self):
+        """Time-of-check/time-of-use: the receipt digest must describe the consumed copy.
+
+        The path is deliberately rewritten AFTER authorization and before the receipt would once
+        have re-read it. The recorded digest must still be the authorized bytes, because those are
+        the bytes that were parsed -- a receipt describing a file nobody read is worse than none.
+        """
+        source = self.write_pop_csv(12345)
+        authorized = sha256_file(str(source))
+        staging = UPDATE.make_staging_dir()
+        try:
+            verified, consumed = UPDATE.verified_input_copy(str(source), authorized, staging)
+            # The original moves underneath us, exactly as a sync or a regenerated export would.
+            with source.open("w", newline="", encoding="utf-8") as handle:
+                writer = csv.DictWriter(handle, fieldnames=["size", "id", "year", "population"])
+                writer.writeheader()
+                writer.writerow({"size": "all", "id": "AA0000001", "year": 2025, "population": 99999})
+            self.assertNotEqual(sha256_file(str(source)), authorized, "the original really did change")
+            UPDATE._refresh_populations_from_verified(str(self.db_path), verified, consumed)
+        finally:
+            UPDATE.remove_staging_dir(staging)
+        self.assertEqual(self.population_rows(), [("AA0000001", 2025, 12345)],
+                         "the value parsed must come from the verified copy, not the rewritten original")
+        self.assertEqual(self.stored_digest(), authorized,
+                         "the receipt must record the consumed bytes")
 
 
 if __name__ == "__main__":
