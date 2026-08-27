@@ -18,6 +18,7 @@ flag, and why that specific property is asserted here rather than assumed.
 Usage: python scripts/test_refresh_agency_populations.py
 """
 
+import ast
 import os
 import re
 import sqlite3
@@ -185,23 +186,56 @@ with tempfile.TemporaryDirectory() as tmp:
 print("\n5. Routine updates refresh populations WITHOUT --full-rebuild")
 source_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "update-rtci-db.py")
 source = open(source_path, encoding="utf-8").read()
-call_match = re.search(r"^([ \t]*)refresh_populations\(db_path, args\.pop_csv\)", source, re.M)
-check("update-rtci-db.py still calls refresh_populations", call_match is not None)
-if call_match:
-    indent = len(call_match.group(1).expandtabs(4))
-    # The original defect was this call sitting inside `if args.full_rebuild:`.
-    # A guarded call is indented deeper than the function body's 4 spaces.
+
+# ASSERTED FROM THE SYNTAX TREE, NOT FROM INDENTATION.
+#
+# This used to regex the literal text `refresh_populations(db_path, args.pop_csv)` and require it to
+# sit exactly four spaces deep, on the reasoning that a deeper indent meant a conditional. Both
+# halves were proxies rather than the invariant. The call legitimately gained required arguments
+# (the expected-digest authorization) and legitimately moved inside a `try:` whose `finally` removes
+# the verified-input staging directory -- neither of which makes it conditional, and both of which
+# broke a text match that was never checking what it claimed to check.
+#
+# The invariant is: main() calls refresh_populations UNCONDITIONALLY. That is what is checked now,
+# by walking the tree and confirming no `if` encloses the call. try/finally, with, and for are not
+# conditionals; `if` is, and `if args.full_rebuild:` was the original defect.
+tree = ast.parse(source)
+main_fn = next((n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == "main"), None)
+check("update-rtci-db.py defines main()", main_fn is not None)
+
+
+def enclosing_conditionals(root, target_name):
+    """Every `if` test that encloses a call to `target_name`, as source text."""
+    found = []
+
+    def walk(node, guards):
+        if isinstance(node, ast.Call):
+            fn = node.func
+            if isinstance(fn, ast.Name) and fn.id == target_name:
+                found.append(list(guards))
+        for child in ast.iter_child_nodes(node):
+            if isinstance(node, ast.If) and child in node.body + node.orelse:
+                walk(child, guards + [ast.unparse(node.test)])
+            else:
+                walk(child, guards)
+
+    if root is not None:
+        walk(root, [])
+    return found
+
+calls = enclosing_conditionals(main_fn, "refresh_populations")
+check("main() calls refresh_populations", len(calls) >= 1, f"found {len(calls)} calls")
+for guards in calls:
     check(
         "the call is NOT nested inside a conditional",
-        indent == 4,
-        f"indented {indent} spaces, which means it is inside a block -- the --full-rebuild gate is back",
+        not guards,
+        f"guarded by: {guards} -- a --full-rebuild style gate is back",
     )
-    preceding = source[: call_match.start()].rstrip().splitlines()[-1] if source[: call_match.start()].strip() else ""
-    check(
-        "the immediately preceding line is not a full_rebuild guard",
-        "full_rebuild" not in preceding,
-        f"preceding line was: {preceding.strip()!r}",
-    )
+
+# The same invariant for the crosswalk rebuild, which has always been unconditional and whose
+# absence would silently regress county support the same way.
+for guards in enclosing_conditionals(main_fn, "ensure_crosswalk"):
+    check("ensure_crosswalk is NOT nested inside a conditional", not guards, f"guarded by: {guards}")
 
 print(f"\n{'FAILURES present.' if FAILED else f'All {PASSED} population repair checks passed.'}")
 sys.exit(1 if FAILED else 0)
