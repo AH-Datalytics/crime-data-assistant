@@ -1481,6 +1481,15 @@
       "note": "asserts the runner contract with synthetic manifests and temp fixtures it builds itself; needs no harness fixture"
     },
     {
+      "id": "test-rtci-freshness",
+      "tier": "F",
+      "script": "scripts/test-rtci-freshness.js",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "the freshness monitor's own failure modes: exit mapping, lock staleness, an independent heartbeat, secret redaction, detector drift and absence, the reviewed status mode, and the sidecar gating policy. Builds temp dirs and a stub detector; touches no real database."
+    },
+    {
       "id": "test-harness-mutations",
       "tier": "F",
       "script": "scripts/test-harness-mutations.js",
