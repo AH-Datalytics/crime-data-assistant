@@ -120,21 +120,17 @@ function exercise(db: Database.Database, side: string): void {
   assert(spelled.kind === "clarify" && spelled.state === "MD",
     `${side}: "Maryland" spelled out is not lost during the follow-up (got ${spelled.kind})`);
 
-  // Naming a force. On the current data both agencies carry the same name, so the answer
-  // cannot be honoured and the route must decline rather than guess or fall silent.
+  // Naming a force. CORRECTED EXPECTATION, 2026-08-27: this used to branch, asserting that the
+  // served database must DECLINE because both Baltimore County agencies carried one rewritten
+  // name, while only the rebuilt directory could answer. The rebuild was swapped into production
+  // on 2026-08-18 (release 20260818_223123; crime_data.db mtime 2026-08-18 20:06:45Z), and the
+  // served database now files MD0030000 as 'Baltimore County' and MD0030100 as 'Baltimore County
+  // Police Department'. Distinct names, so the answer is honourable on both sides and the branch
+  // was asserting a property of a database that is no longer served.
   const sheriff = getHistoricalCountyAgencyDecision(
     db, "sheriff's office only", twoTurn("violent crime in Baltimore County, MD", "sheriff's office only"));
-  if (side === "current") {
-    assert(sheriff.kind === "unresolved",
-      `current: "sheriff's office only" declines, because both agencies are recorded under the same name (got ${sheriff.kind})`);
-    if (sheriff.kind === "unresolved") {
-      assert(/cannot tell which one you mean/i.test(sheriff.explanation),
-        "current: the decline says why");
-    }
-  } else {
-    assert(sheriff.kind === "resolved" && sheriff.ori === "MD0030000",
-      `rebuilt: "sheriff's office only" resolves to MD0030000 by elimination (got ${sheriff.kind})`);
-  }
+  assert(sheriff.kind === "resolved" && sheriff.ori === "MD0030000",
+    `${side}: "sheriff's office only" resolves to MD0030000 by elimination (got ${sheriff.kind})`);
 
   // Countywide still bypasses the single-agency choice entirely.
   const countywide = getHistoricalCountyAgencyDecision(
