@@ -1,3 +1,4 @@
+import argparse
 import csv
 import importlib.util
 import sqlite3
@@ -5,7 +6,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from current_trends_build_receipt import sha256_text
+from current_trends_build_receipt import sha256_file, sha256_text
 
 
 SPEC = importlib.util.spec_from_file_location("update_rtci_db", Path(__file__).with_name("update-rtci-db.py"))
@@ -231,6 +232,154 @@ class MonthlyProjectionAlignmentTests(unittest.TestCase):
         self.assertIn('"state_monthly"', counts)
         self.assertIn('"national_monthly"', counts)
         self.assertIn('"agency_monthly"', counts)
+
+
+class InputDigestAuthorizationTests(unittest.TestCase):
+    """A monthly update adds a month. It must not change reviewed inputs as a side effect.
+
+    The live case: the updater's default populations.csv had been replaced four days after the
+    database it was about to update was built, so a routine June import would also have rewritten
+    every population denominator, silently.
+    """
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.dir = Path(self.temp.name)
+        self.db_path = self.dir / "crime.db"
+        db = sqlite3.connect(self.db_path)
+        db.executescript("""
+            CREATE TABLE sample_agencies (ori TEXT, agency TEXT, state TEXT, type TEXT);
+            CREATE TABLE agency_population (ori TEXT, year INTEGER, population INTEGER);
+            INSERT INTO sample_agencies VALUES ('AA0000001', 'Alpha', 'AA', 'City');
+        """)
+        db.commit()
+        db.close()
+
+    def tearDown(self):
+        self.temp.cleanup()
+
+    def write_pop_csv(self, population):
+        source = self.dir / "populations.csv"
+        with source.open("w", newline="", encoding="utf-8") as handle:
+            writer = csv.DictWriter(handle, fieldnames=["size", "id", "year", "population"])
+            writer.writeheader()
+            writer.writerow({"size": "all", "id": "AA0000001", "year": 2025, "population": population})
+        return source
+
+    def seed_receipt(self, digest):
+        db = sqlite3.connect(self.db_path)
+        db.executescript("""
+            CREATE TABLE IF NOT EXISTS source_build_receipts (
+              component TEXT PRIMARY KEY, source_version TEXT NOT NULL, source_sha256 TEXT NOT NULL,
+              source_rows INTEGER NOT NULL, expected_rows INTEGER NOT NULL, actual_rows INTEGER NOT NULL,
+              excluded_rows INTEGER NOT NULL, table_counts_json TEXT NOT NULL, status TEXT NOT NULL,
+              built_at TEXT NOT NULL
+            )
+        """)
+        db.execute(
+            "INSERT OR REPLACE INTO source_build_receipts VALUES (?,?,?,?,?,?,?,?,?,?)",
+            ("current_trends_population", "populations.csv", digest, 1, 1, 1, 0,
+             '{"agency_population":1}', "complete", "2026-08-16T17:46:20.407Z"),
+        )
+        db.commit()
+        db.close()
+
+    def population_rows(self):
+        db = sqlite3.connect(self.db_path)
+        rows = db.execute("SELECT ori, year, population FROM agency_population ORDER BY 1,2").fetchall()
+        db.close()
+        return rows
+
+    def stored_digest(self):
+        db = sqlite3.connect(self.db_path)
+        row = db.execute(
+            "SELECT source_sha256 FROM source_build_receipts WHERE component='current_trends_population'"
+        ).fetchone()
+        db.close()
+        return row[0] if row else None
+
+    # -- the flag's own grammar -------------------------------------------------------------
+
+    def test_the_expected_digest_flag_takes_a_digest_and_nothing_else(self):
+        for junk in ("yes", "true", "", "abc", "z" * 64, "A" * 63):
+            with self.subTest(junk=junk):
+                with self.assertRaises(argparse.ArgumentTypeError):
+                    UPDATE.hex_digest_argument(junk)
+        self.assertEqual(UPDATE.hex_digest_argument("AB" * 32), "ab" * 32)
+
+    # -- the four population outcomes -------------------------------------------------------
+
+    def test_a_missing_population_input_fails_instead_of_skipping(self):
+        with self.assertRaises(SystemExit) as caught:
+            UPDATE.refresh_populations(str(self.db_path), str(self.dir / "absent.csv"))
+        self.assertNotEqual(caught.exception.code, 0)
+        self.assertEqual(self.population_rows(), [])
+
+    def test_a_differing_input_without_authorization_is_refused(self):
+        self.seed_receipt("a" * 64)
+        source = self.write_pop_csv(12345)
+        with self.assertRaises(SystemExit) as caught:
+            UPDATE.refresh_populations(str(self.db_path), str(source))
+        self.assertNotEqual(caught.exception.code, 0)
+        self.assertEqual(self.population_rows(), [], "a refused input must write nothing")
+        self.assertEqual(self.stored_digest(), "a" * 64, "the reviewed receipt must survive")
+
+    def test_naming_the_wrong_digest_is_refused(self):
+        self.seed_receipt("a" * 64)
+        source = self.write_pop_csv(12345)
+        with self.assertRaises(SystemExit) as caught:
+            UPDATE.refresh_populations(str(self.db_path), str(source), "b" * 64)
+        self.assertNotEqual(caught.exception.code, 0)
+        self.assertEqual(self.population_rows(), [])
+        self.assertEqual(self.stored_digest(), "a" * 64)
+
+    def test_naming_the_observed_digest_authorizes_the_change(self):
+        self.seed_receipt("a" * 64)
+        source = self.write_pop_csv(12345)
+        observed = sha256_file(str(source))
+        UPDATE.refresh_populations(str(self.db_path), str(source), observed)
+        self.assertEqual(self.population_rows(), [("AA0000001", 2025, 12345)])
+        self.assertEqual(self.stored_digest(), observed, "the receipt records what was adopted")
+
+    def test_a_receipt_matched_input_needs_no_flag_and_changes_no_data(self):
+        source = self.write_pop_csv(12345)
+        UPDATE.refresh_populations(str(self.db_path), str(source))   # first build, no prior receipt
+        before = self.population_rows()
+        digest = self.stored_digest()
+        UPDATE.refresh_populations(str(self.db_path), str(source))   # same input, second run
+        self.assertEqual(self.population_rows(), before, "matching input must not change data")
+        self.assertEqual(self.stored_digest(), digest, "matching input keeps the reviewed digest")
+
+    # -- the crosswalk gate runs before the builder ------------------------------------------
+
+    def test_a_differing_crosswalk_is_refused_before_the_builder_runs(self):
+        db = sqlite3.connect(self.db_path)
+        db.executescript("""
+            CREATE TABLE IF NOT EXISTS source_build_receipts (
+              component TEXT PRIMARY KEY, source_version TEXT NOT NULL, source_sha256 TEXT NOT NULL,
+              source_rows INTEGER NOT NULL, expected_rows INTEGER NOT NULL, actual_rows INTEGER NOT NULL,
+              excluded_rows INTEGER NOT NULL, table_counts_json TEXT NOT NULL, status TEXT NOT NULL,
+              built_at TEXT NOT NULL
+            )
+        """)
+        db.execute(
+            "INSERT OR REPLACE INTO source_build_receipts VALUES (?,?,?,?,?,?,?,?,?,?)",
+            ("current_trends_crosswalk", "Participation Crosswalk.xlsx", "c" * 64, 1, 1, 1, 0,
+             '{"agency_county_crosswalk":1}', "complete", "2026-08-16T17:46:30.542Z"),
+        )
+        db.commit()
+        db.close()
+        workbook = self.dir / "Participation Crosswalk.xlsx"
+        workbook.write_bytes(b"not the reviewed workbook")
+        with self.assertRaises(SystemExit) as caught:
+            UPDATE.ensure_crosswalk(str(self.db_path), str(workbook), str(self.dir / "cde.csv"))
+        self.assertNotEqual(caught.exception.code, 0)
+        db = sqlite3.connect(self.db_path)
+        built = db.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='agency_county_crosswalk'"
+        ).fetchone()
+        db.close()
+        self.assertIsNone(built, "the builder must not have run")
 
 
 if __name__ == "__main__":
