@@ -39,14 +39,46 @@ const agencyProbe = db.prepare(`
   GROUP BY ha.ori ORDER BY lastReal DESC LIMIT 1
 `);
 
+// THE PREDICATE IS THE ORI, NOT THE NAME.
+//
+// This used to locate the survivor with `WHERE state = ? AND agency = ? AND type = ?` using
+// `historicalAgency`. That predicate broke on 2026-08-18, when the Historical rebuild was swapped
+// into production and began filing agency names exactly as the source spells them rather than
+// appending " County": the registry says 'Bibb County', the database says 'Bibb', and six
+// county-typed entries reported "successor does not exist" while every one of their ORIs held a
+// complete 1960-2025 history. The name was never the identity -- scripts/test-historical-county-
+// identity.ts asserts the two deliberately diverge, which is why the ORI has to be authoritative
+// here too. Keying on the ORI also makes the check stronger: it proves the exact row the registry
+// promises, where a name match could land on a different row that happened to share a name.
+const oriProbe = db.prepare(`
+  SELECT ha.ori, ha.agency, ha.type,
+    MAX(CASE WHEN hac.violent IS NOT NULL OR hac.property IS NOT NULL THEN hac.year END) AS lastReal
+  FROM historical_agency ha
+  JOIN historical_agency_crime hac ON hac.ori = ha.ori
+  WHERE ha.ori = ?
+  GROUP BY ha.ori
+`);
+
 for (const entry of CONSOLIDATED_AGENCIES) {
   const label = `${entry.alias}, ${entry.state}`;
-  const hit = agencyProbe.get(entry.state.toLowerCase(), entry.historicalAgency, entry.historicalType) as
-    | { ori: string; lastReal: number | null } | undefined;
+  const hit = oriProbe.get(entry.historicalOri) as
+    | { ori: string; agency: string; type: string; lastReal: number | null } | undefined;
 
-  check(`${label}: successor "${entry.historicalAgency}" [${entry.historicalType}] exists`, Boolean(hit),
-    "no historical_agency row matches that name and type");
+  check(`${label}: successor ORI ${entry.historicalOri} exists and carries crime history`, Boolean(hit),
+    "no historical_agency row with crime rows for that ORI");
   if (!hit) continue;
+
+  // The registry's declared type must be the row's actual type -- a county entry pointing at a
+  // city row would resolve and answer with the wrong jurisdiction.
+  check(`${label}: ORI ${entry.historicalOri} is typed ${entry.historicalType}`,
+    hit.type === entry.historicalType, `data says ${hit.type}`);
+
+  // The name the database actually files must be recorded, so a rename is a visible registry
+  // change rather than a silent divergence. `historicalAgency` is the formal searchable label and
+  // is allowed to differ; `sourceDisplayNames` is where the filed value lives.
+  check(`${label}: the filed name ${JSON.stringify(hit.agency)} is recorded in sourceDisplayNames`,
+    (entry.sourceDisplayNames ?? []).includes(hit.agency),
+    `sourceDisplayNames=${JSON.stringify(entry.sourceDisplayNames ?? [])}`);
 
   // The whole point of the registry is to land on an agency that still reports.
   check(`${label}: successor still reporting`, (hit.lastReal ?? 0) >= maxYear - 1,
@@ -64,8 +96,18 @@ for (const entry of CONSOLIDATED_AGENCIES) {
   const target = historicalAgencyTarget(entry.state, entry.alias);
   check(`${label}: SQL target is the successor`,
     target.agency === entry.historicalAgency && target.type === entry.historicalType && target.ori === entry.historicalOri);
-  check(`${label}: verified ORI matches the named survivor`, hit.ori === entry.historicalOri,
-    `registry ${entry.historicalOri}, data ${hit.ori}`);
+  check(`${label}: the SQL target carries the ORI, so no caller has to match on the name`,
+    target.ori === entry.historicalOri, `got ${target.ori}`);
+
+  // County-style search aliases stay resolvable. A user types "Bibb County"; the database files
+  // 'Bibb'. Dropping the county-style spelling to match the data would make the spelling people
+  // actually use unresolvable, which is why the registry keeps it.
+  if (entry.historicalType === "county") {
+    check(`${label}: county-style spelling ${JSON.stringify(entry.historicalAgency)} still resolves`,
+      findConsolidatedAgency(entry.state, entry.historicalAgency)?.alias === entry.alias);
+    check(`${label}: county-style spelling still displays as the alias`,
+      consolidatedDisplayValue(entry.state, entry.historicalAgency) === entry.alias);
+  }
   for (const sourceLabel of entry.sourceDisplayNames ?? []) {
     check(`${label}: source label "${sourceLabel}" displays as the alias`,
       consolidatedDisplayValue(entry.state, sourceLabel) === entry.alias);

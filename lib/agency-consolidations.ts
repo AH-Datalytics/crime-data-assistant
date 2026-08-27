@@ -46,7 +46,17 @@ export type ConsolidatedAgency = {
   alias: string;
   /** USPS state code, upper case. Keys are state-scoped: Santa Clara UT is a merged agency, Santa Clara CA is not. */
   state: string;
-  /** Exact `historical_agency.agency` for the surviving agency. */
+  /**
+   * The formal successor name -- a SEARCHABLE, DESCRIPTIVE label, never a query key.
+   *
+   * It used to be documented as the exact `historical_agency.agency` value, and for the six
+   * county-typed entries that stopped being true on 2026-08-18, when the Historical rebuild began
+   * filing agency names exactly as the source spells them instead of appending " County". The
+   * database says 'Bibb'; this says 'Bibb County'. Both are wanted: the county-style spelling is
+   * what a user types and is deliberately kept resolvable, while `historicalOri` is what any query
+   * must key on. The name a row actually carries is recorded in `sourceDisplayNames` and asserted
+   * against the database by scripts/test-agency-consolidations.ts.
+   */
   historicalAgency: string;
   /** Exact `historical_agency.type` for the survivor -- several are 'county', not 'city'. */
   historicalType: "city" | "county";
@@ -60,7 +70,11 @@ export type ConsolidatedAgency = {
   shrPredecessorOri?: string;
   /** Exact `agencies.agency` (RTCI) when RTCI covers it. RTCI carries only ~700 large agencies. */
   currentAgency?: string;
-  /** Verified labels emitted by source identity tables; presentation-only, never query keys. */
+  /**
+   * Verified labels emitted by source identity tables; presentation-only, never query keys.
+   * MUST include the name `historical_agency` files this ORI under, which is what makes the
+   * divergence between that name and `historicalAgency` a checked fact rather than a surprise.
+   */
   sourceDisplayNames?: string[];
   /** The defunct predecessor still present in historical_agency, when one exists. */
   predecessor?: string;
@@ -76,13 +90,14 @@ export const CONSOLIDATED_AGENCIES: ConsolidatedAgency[] = [
     historicalAgency: "Las Vegas Metropolitan Police Department", historicalType: "city",
     historicalOri: "NV0020100", nibrsOri: "NV0020100", shrOri: "NV00201",
     currentAgency: "Las Vegas",
-    sourceDisplayNames: ["Las Vegas Metro Police Department"],
+    sourceDisplayNames: ["Las Vegas Metro Police Department", "Las Vegas Metropolitan Police Department"],
     note: "LVMPD (Las Vegas PD + Clark County Sheriff, 1973). No 'Las Vegas' agency row exists at all, so the bare name resolved to nothing. Survivor 1958-2025, pop 1,712,136.",
   },
   {
     alias: "Charlotte", state: "NC",
     historicalAgency: "Charlotte-Mecklenburg", historicalType: "city",
     historicalOri: "NC0600100", nibrsOri: "NC0600100", shrOri: "NC06001",
+    sourceDisplayNames: ["Charlotte-Mecklenburg"],
     currentAgency: "Charlotte",
     note: "Charlotte PD + Mecklenburg County Police merged 1993. No 'Charlotte' agency row exists. Survivor 1930-2025, pop 1,035,037.",
   },
@@ -90,6 +105,7 @@ export const CONSOLIDATED_AGENCIES: ConsolidatedAgency[] = [
     alias: "Nashville", state: "TN",
     historicalAgency: "Metropolitan Nashville Police Department", historicalType: "city",
     historicalOri: "TN0190100", nibrsOri: "TN0190100", shrOri: "TN01901",
+    sourceDisplayNames: ["Metropolitan Nashville Police Department"],
     currentAgency: "Nashville",
     note: "Metro Nashville-Davidson consolidated 1963. No 'Nashville' agency row exists. Survivor 1932-2025, pop 718,499.",
   },
@@ -97,6 +113,7 @@ export const CONSOLIDATED_AGENCIES: ConsolidatedAgency[] = [
     alias: "Louisville", state: "KY",
     historicalAgency: "Louisville Metro", historicalType: "city",
     historicalOri: "KY0568000", nibrsOri: "KY0568000", shrOri: "KY05680", shrPredecessorOri: "KY05602",
+    sourceDisplayNames: ["Louisville Metro"],
     currentAgency: "Louisville",
     predecessor: "Louisville", predecessorLastYear: 2003,
     note: "Louisville PD + Jefferson County PD merged Jan 2003. Predecessor KY0560200 keeps NULL rows through 2024 with pop frozen at 300,404; survivor KY0568000 runs to 2025 at pop 691,630. 2003 is split across both ORIs, so it is not a usable year for either.",
@@ -121,14 +138,14 @@ export const CONSOLIDATED_AGENCIES: ConsolidatedAgency[] = [
     alias: "Athens", state: "GA",
     historicalAgency: "Athens-Clarke County", historicalType: "city",
     historicalOri: "GA0290100", nibrsOri: "GA0290100", shrOri: "GA02901",
-    sourceDisplayNames: ["Athens-Clarke"],
+    sourceDisplayNames: ["Athens-Clarke", "Athens-Clarke County"],
     note: "Athens + Clarke County consolidated 1991. Separate failure mode: there is no GA entry for 'Athens' in the geo catalog at all, so 'Athens, GA' collided with Athens in AL/IL/OH/PA/TN/TX/WI/WV and returned a clarification request instead of an answer. Survivor 1950-2025, pop 129,208.",
   },
   {
     alias: "Butte", state: "MT",
     historicalAgency: "Butte-Silver Bow County", historicalType: "county",
     historicalOri: "MT0470000", nibrsOri: "MT0470000", shrOri: "MT04700",
-    sourceDisplayNames: ["Silver Bow"],
+    sourceDisplayNames: ["Silver Bow", "Butte-Silver Bow"],
     predecessor: "Butte-Silver Bow", predecessorLastYear: 1981,
     note: "Butte + Silver Bow County consolidated 1977. 'Butte' is not in the geo catalog under any spelling; the catalog holds 'Butte-Silver Bow', which is itself the dead city ORI (last real 1981). Survivor 1960-2025, pop 36,189.",
   },
@@ -136,7 +153,7 @@ export const CONSOLIDATED_AGENCIES: ConsolidatedAgency[] = [
     alias: "Hartsville", state: "TN",
     historicalAgency: "Hartsville/Trousdale County", historicalType: "county",
     historicalOri: "TN0850000", nibrsOri: "TN0850000", shrOri: "TN08500",
-    sourceDisplayNames: ["Trousdale"],
+    sourceDisplayNames: ["Trousdale", "Hartsville/Trousdale"],
     predecessor: "Hartsville", predecessorLastYear: 2000,
     note: "Hartsville + Trousdale County consolidated. Predecessor last real 2000 (pop 2,410); survivor 1963-2025 at pop 12,310.",
   },
@@ -144,7 +161,7 @@ export const CONSOLIDATED_AGENCIES: ConsolidatedAgency[] = [
     alias: "Santa Clara", state: "UT",
     historicalAgency: "Santa Clara/Ivins", historicalType: "city",
     historicalOri: "UT0271500", nibrsOri: "UT0271500", shrOri: "UT02715",
-    sourceDisplayNames: ["Santa Clara/ivins"],
+    sourceDisplayNames: ["Santa Clara/ivins", "Santa Clara/Ivins"],
     predecessor: "Santa Clara", predecessorLastYear: 2011,
     note: "Santa Clara + Ivins combined PD. UT-scoped ONLY -- Santa Clara, CA is a separate live agency and must not be rewritten.",
   },
@@ -160,7 +177,7 @@ export const CONSOLIDATED_AGENCIES: ConsolidatedAgency[] = [
     alias: "Saugatuck", state: "MI",
     historicalAgency: "Saugatuck-Douglas", historicalType: "city",
     historicalOri: "MI0335300", nibrsOri: "MI0335300", shrOri: "MI03353",
-    sourceDisplayNames: ["Douglas"],
+    sourceDisplayNames: ["Douglas", "Saugatuck-Douglas"],
     predecessor: "Saugatuck", predecessorLastYear: 1997,
     note: "Saugatuck + Douglas combined PD. Predecessor last real 1997 (pop 877); survivor 1971-2025 at pop 2,305.",
   },
@@ -168,6 +185,7 @@ export const CONSOLIDATED_AGENCIES: ConsolidatedAgency[] = [
     alias: "Grand Beach", state: "MI",
     historicalAgency: "Grand Beach/Michiana", historicalType: "city",
     historicalOri: "MI1160100", nibrsOri: "MI1160100",
+    sourceDisplayNames: ["Grand Beach/Michiana"],
     predecessor: "Grand Beach", predecessorLastYear: 2019,
     note: "Grand Beach + Michiana combined PD. Predecessor last real 2019 (pop 221); survivor reports 2025 at pop 504.",
   },
@@ -183,7 +201,7 @@ export const CONSOLIDATED_AGENCIES: ConsolidatedAgency[] = [
     alias: "Anaconda", state: "MT",
     historicalAgency: "Anaconda-Deer Lodge County", historicalType: "county",
     historicalOri: "MT0120000", nibrsOri: "MT0120000", shrOri: "MT01200",
-    sourceDisplayNames: ["Deer Lodge"],
+    sourceDisplayNames: ["Deer Lodge", "Anaconda-Deer Lodge"],
     predecessor: "Anaconda", predecessorLastYear: 1979,
     note: "Anaconda and Deer Lodge County consolidated in 1977. Transition-era population rows overlap, so official consolidation and the matching source ORIs provide the identity evidence.",
   },
