@@ -36,8 +36,10 @@ import {
   PROOF_OVERRUN_LIMIT,
   MAX_PROOF_MANIFEST_CHARS,
   type ProofFinalizationInput,
+  outcomeLogFields,
+  decisionRecord,
 } from "../lib/proof-finalize";
-import { satisfiesFactualDelivery, PROOF_CHECKS } from "../lib/proof-contract";
+import { OUTCOMES, satisfiesFactualDelivery, PROOF_CHECKS } from "../lib/proof-contract";
 import { sealPlanDerivation } from "../lib/plan-derivation";
 import { noEnforcementActive } from "../lib/proof-modes";
 
@@ -65,7 +67,7 @@ function baseInput(overrides: Partial<ProofFinalizationInput> = {}): ProofFinali
     columns: ["year", "agency", "murders"],
     truncated: false,
     planFamily: null,
-    intendedAction: "answer",
+    outcome: OUTCOMES.deterministic_plan,
     env: {},
     ...overrides,
   };
@@ -166,9 +168,11 @@ console.log("\nshadow is invisible");
   });
 
   check("shadow persists proof columns", () => {
-    const fields = proofLogFields(finalizeProof(baseInput({ env: SHADOW_ENV })));
+    const shadowFinalization = finalizeProof(baseInput({ env: SHADOW_ENV }));
+    const fields = proofLogFields(shadowFinalization);
     assert.strictEqual(fields.proof_mode, "shadow");
-    assert.strictEqual(fields.delivery_action, "answer");
+    // delivery_action moved to the OUTCOME projector; shadow implies outcome logging.
+    assert.strictEqual(outcomeLogFields(decisionRecord(shadowFinalization)).delivery_action, "answer");
     assert.strictEqual(fields.proof_schema_version, PROOF_SCHEMA_VERSION);
     assert.ok(fields.proof_manifest, "manifest JSON must be persisted");
     assert.ok(fields.result_digest, "digest JSON must be persisted");
@@ -270,17 +274,18 @@ console.log("\nhypothetical action separates what was delivered from what was pr
     // `answer` encoded the missing counterfactual as correct behavior. Both facts
     // are needed -- shadow must not change delivery, AND §14.1 requires
     // would-answer/would-decline counts.
-    const finalization = finalizeProof(baseInput({ env: SHADOW_ENV, intendedAction: "answer" }));
+    const finalization = finalizeProof(baseInput({ env: SHADOW_ENV, outcome: OUTCOMES.deterministic_plan }));
     assert.ok(finalization.blocker, "a legacy answer must be blocked");
     assert.strictEqual(finalization.decision.action, "answer", "shadow must not change what was delivered");
     assert.strictEqual(finalization.hypotheticalAction, "decline_capability", "the counterfactual must be recorded");
-    assert.strictEqual(proofLogFields(finalization).delivery_action, "answer");
+    assert.strictEqual(outcomeLogFields(decisionRecord(finalization), { OUTCOME_LOG: "on" }).delivery_action, "answer");
     assert.strictEqual(JSON.parse(proofLogFields(finalization).proof_manifest!).hypotheticalAction, "decline_capability");
   });
 
   check("a non-factual intent is unchanged by a blocker", () => {
-    for (const action of ["clarify", "decline_capability", "decline_data"] as const) {
-      const finalization = finalizeProof(baseInput({ env: SHADOW_ENV, intendedAction: action, rows: [], columns: [] }));
+    for (const outcome of [OUTCOMES.geography_ambiguous, OUTCOMES.guardrail_block, OUTCOMES.no_rows_in_source] as const) {
+      const action = outcome.action;
+      const finalization = finalizeProof(baseInput({ env: SHADOW_ENV, outcome, rows: [], columns: [] }));
       assert.strictEqual(finalization.hypotheticalAction, action, `${action} should be unaffected`);
     }
   });
@@ -611,10 +616,13 @@ console.log("\ndelivery decision accounting");
   });
 
   check("the intended terminal action is preserved for non-factual exits", () => {
-    for (const action of ["clarify", "decline_capability", "decline_data", "decline_source_health"] as const) {
-      const finalization = finalizeProof(baseInput({ env: SHADOW_ENV, intendedAction: action, rows: [], columns: [] }));
+    for (const outcome of [OUTCOMES.geography_ambiguous, OUTCOMES.guardrail_block,
+                           OUTCOMES.no_rows_in_source, OUTCOMES.required_component_unavailable] as const) {
+      const action = outcome.action;
+      const finalization = finalizeProof(baseInput({ env: SHADOW_ENV, outcome, rows: [], columns: [] }));
       assert.strictEqual(finalization.decision.action, action);
-      assert.strictEqual(proofLogFields(finalization).delivery_action, action);
+      assert.strictEqual(finalization.decision.reason, outcome.reason, "the reason must survive finalization");
+      assert.strictEqual(outcomeLogFields(decisionRecord(finalization)).delivery_action, action);
     }
   });
 

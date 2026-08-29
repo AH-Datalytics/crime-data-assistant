@@ -13,7 +13,12 @@ import {
   warningWhitelistMatch,
 } from "./resolver-warning-classification";
 import { buildQueryLogInsert, queryLogHasColumn } from "./query-log-columns";
-import { EMPTY_PROOF_LOG_FIELDS, type ProofLogFields } from "./proof-finalize";
+import {
+  EMPTY_PROOF_LOG_FIELDS,
+  EMPTY_OUTCOME_LOG_FIELDS,
+  type ProofLogFields,
+  type OutcomeLogFields,
+} from "./proof-finalize";
 
 const state = {
   db: null as Database.Database | null,
@@ -116,6 +121,12 @@ export function getWriteDb(): Database.Database | null {
         origin_proof_mode TEXT,
         origin_state TEXT,
         last_read_delivery_action TEXT,
+        -- Paired with the action above (P2.1 §4.3.3). Declared in the CREATE TABLE, which only
+        -- runs for a database that does not yet have the table, so this cannot implicitly migrate
+        -- an existing one -- unlike the query_log ALTER loop, which must never gain these columns.
+        -- Without it a fresh database fails sharedChartsHasProof and the rolling summary is
+        -- silently off.
+        last_read_reason_code TEXT,
         last_read_at INTEGER
       )
     `);
@@ -263,7 +274,15 @@ export function logQuery(
    * Defaults to all-null, which is exactly what `off` mode produces — so an
    * off-mode deployment writes query_log rows identical to the baseline release's.
    */
-  proofFields: ProofLogFields = EMPTY_PROOF_LOG_FIELDS
+  proofFields: ProofLogFields = EMPTY_PROOF_LOG_FIELDS,
+  /**
+   * The three outcome-owned columns from lib/proof-finalize's outcomeLogFields().
+   *
+   * A SECOND projector with a column set disjoint from proofFields, so "which switch writes
+   * this column" has a structural answer rather than a procedural one. Defaults to all-null,
+   * which is what a gate-off deployment produces — byte-identical to the baseline release.
+   */
+  outcomeFields: OutcomeLogFields = EMPTY_OUTCOME_LOG_FIELDS
 ): number | null {
   const db = getWriteDb();
   if (db) {
@@ -294,6 +313,7 @@ export function logQuery(
         request_id: requestId ? requestId.slice(0, 64) : null,
         model_response: modelResponseJson ? modelResponseJson.slice(0, 4000) : null,
         ...proofFields,
+        ...outcomeFields,
       });
       if (!insert) return null;
       const result = db.prepare(insert.sql).run(...insert.values);

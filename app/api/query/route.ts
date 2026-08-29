@@ -75,10 +75,15 @@ import {
   type ProofFinalization,
   type ProofFinalizationInput,
   type SealedPayload,
+  outcomeLogFields,
+  asOutcomeRecord,
+  decisionFinalization,
+  OPERATIONAL_RECORD,
+  type OutcomeLogRecord,
 } from "@/lib/proof-finalize";
 import { sealPlanDerivation } from "@/lib/plan-derivation";
 import { cacheValiditySignature } from "@/lib/proof-cache-validity";
-import type { DeliveryAction, SourceId } from "@/lib/proof-contract";
+import { OUTCOMES, type QueryLogOutcome, SourceId } from "@/lib/proof-contract";
 
 /**
  * Events that assert no facts: status pings and error notices. These need no proof.
@@ -548,11 +553,11 @@ export async function POST(req: NextRequest) {
      * release writes. So an exit that has not yet been instrumented logs as it
      * always did rather than logging something misleading.
      */
-    proof: ProofFinalization | null = null,
+    proof: ProofFinalization | OutcomeLogRecord | null = null,
     /** Bounded raw model text on no-SQL failures; diagnostic only, never user-visible. */
     modelResponseJson: string | null = null
   ) => {
-    chartAuditQueryLogId = logQuery(q, sqlText, rowCount, logError, ms, logResponse, tabName, guardrails, model, sid, routingMeta, chartConfigJson, chartAuditRequestId, modelResponseJson, proofLogFields(proof));
+    chartAuditQueryLogId = logQuery(q, sqlText, rowCount, logError, ms, logResponse, tabName, guardrails, model, sid, routingMeta, chartConfigJson, chartAuditRequestId, modelResponseJson, proofLogFields(decisionFinalization(proof)), outcomeLogFields(asOutcomeRecord(proof)));
     return chartAuditQueryLogId;
   };
 
@@ -595,7 +600,7 @@ export async function POST(req: NextRequest) {
    */
   let proofQuestion = question;
   const finalizeExit = (
-    opts: Partial<ProofFinalizationInput> & { intendedAction: DeliveryAction },
+    opts: Partial<ProofFinalizationInput> & { outcome: QueryLogOutcome },
   ): ProofFinalization =>
     finalizeProof({
       sourceId: proofSourceId,
@@ -623,7 +628,7 @@ export async function POST(req: NextRequest) {
     const ms = Date.now() - totalStart;
     const explanation = "This follow-up is a better fit for the " + followupPlan.source + " source. Rerunning it there as: " + followupPlan.reconstructedQuestion;
     // Redirecting to another source asserts no facts, so this is a clarify.
-    const proof = finalizeExit({ intendedAction: "clarify", planFamily: "followup-source-switch" });
+    const proof = finalizeExit({ outcome: OUTCOMES.source_switch, planFamily: "followup-source-switch" });
     writeLog(question, null, 0, null, ms, explanation, tab, ["followup-source-switch"], "followup-planner", sessionId, null, proof);
     const stream = new ReadableStream({
       start(controller) {
@@ -652,7 +657,7 @@ export async function POST(req: NextRequest) {
     // A capability override is the product saying it has no supported path. §2.4
     // requires that framing rather than a claim that the source lacks the data.
     const proof = finalizeExit({
-      intendedAction: "decline_capability",
+      outcome: OUTCOMES.capability_path_unavailable,
       planFamily: capabilityOverride.guardrail,
     });
     writeLog(question, null, 0, null, ms, capabilityOverride.explanation, tab, [capabilityOverride.guardrail], "deterministic", sessionId, null, proof);
@@ -700,7 +705,7 @@ export async function POST(req: NextRequest) {
       : `${agencyScorecard.scope}-scorecard-unavailable`;
     // Factual deterministic exit: finalized BEFORE the event is constructed.
     const proof = finalizeExit({
-      intendedAction: agencyScorecard.rows.length > 0 ? "answer" : "decline_data",
+      outcome: agencyScorecard.rows.length > 0 ? OUTCOMES.deterministic_plan : OUTCOMES.no_rows_in_source,
       sql: agencyScorecard.sql ?? null,
       rows: agencyScorecard.rows,
       columns: agencyScorecard.columns,
@@ -736,7 +741,7 @@ export async function POST(req: NextRequest) {
     // Factual: it states coverage facts about the source, deterministically derived
     // from the completeness tables even though it returns no result rows.
     const proof = finalizeExit({
-      intendedAction: "answer",
+      outcome: OUTCOMES.deterministic_plan,
       planFamily: "completeness-deterministic",
       guardrails: ["completeness-deterministic"],
     });
@@ -782,8 +787,8 @@ export async function POST(req: NextRequest) {
     const ms = Date.now() - totalStart;
     // `clarify` asks a question; `unresolved` reports that the data cannot answer the one
     // already asked. Neither runs SQL, and they are logged apart so the difference is visible.
-    const intendedAction = countyAgencyStop.kind === "clarify" ? "clarify" : "decline_data";
-    const proof = finalizeExit({ intendedAction, planFamily: `geo:${countyAgencyStop.id}` });
+    const outcome = countyAgencyStop.kind === "clarify" ? OUTCOMES.place_unresolved : OUTCOMES.agency_identity_unavailable;
+    const proof = finalizeExit({ outcome, planFamily: `geo:${countyAgencyStop.id}` });
     writeLog(question, null, 0, null, ms, countyAgencyStop.explanation, tab, [`geo:${countyAgencyStop.id}`], "deterministic", sessionId, null, proof);
     const stream = new ReadableStream({
       start(controller) {
@@ -807,7 +812,7 @@ export async function POST(req: NextRequest) {
   }
   if (countyScope) {
     const ms = Date.now() - totalStart;
-    const proof = finalizeExit({ intendedAction: "clarify", planFamily: `geo:${countyScope.id}` });
+    const proof = finalizeExit({ outcome: OUTCOMES.geography_scope_ambiguous, planFamily: `geo:${countyScope.id}` });
     writeLog(question, null, 0, null, ms, countyScope.explanation, tab, [`geo:${countyScope.id}`], "deterministic", sessionId, null, proof);
 
     const stream = new ReadableStream({
@@ -846,7 +851,7 @@ export async function POST(req: NextRequest) {
   const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing") ? (followupPlan.chartOnly ? null : getBlockingGeoClarification(followupPlan.reconstructedQuestion)) : getBlockingGeoClarification(question);
   if (geoClarification) {
     const ms = Date.now() - totalStart;
-    const proof = finalizeExit({ intendedAction: "clarify", planFamily: `geo:${geoClarification.issue.id}` });
+    const proof = finalizeExit({ outcome: OUTCOMES.geography_ambiguous, planFamily: `geo:${geoClarification.issue.id}` });
     writeLog(question, null, 0, null, ms, geoClarification.explanation, tab, [`geo:${geoClarification.issue.id}`], "deterministic", sessionId, null, proof);
 
     const stream = new ReadableStream({
@@ -889,7 +894,7 @@ export async function POST(req: NextRequest) {
     // deterministically that the source does not cover the requested year, which is
     // the evidence §2.4 requires before stating a source limitation.
     const proof = finalizeExit({
-      intendedAction: "decline_data",
+      outcome: OUTCOMES.outside_source_years,
       planFamily: "historical-year-unavailable",
     });
     writeLog(question, null, 0, null, ms, historicalAvailability.explanation, tab, ["historical-year-unavailable"], "deterministic", sessionId, null, proof);
@@ -937,7 +942,7 @@ export async function POST(req: NextRequest) {
       const columns = rows.length > 0 ? Object.keys(rows[0]) : indexedStatePlan.columns;
       const ms = Date.now() - totalStart;
       const proof = finalizeExit({
-        intendedAction: rows.length > 0 ? "answer" : "decline_data",
+        outcome: rows.length > 0 ? OUTCOMES.deterministic_plan : OUTCOMES.no_rows_in_source,
         sql: indexedStatePlan.sql,
         rows,
         columns,
@@ -998,7 +1003,7 @@ export async function POST(req: NextRequest) {
       // exists AND carries at least one non-null value -- an all-null column is the
       // exact shape of the silent drop.
       const proof = finalizeExit({
-        intendedAction: rows.length > 0 ? "answer" : "decline_data",
+        outcome: rows.length > 0 ? OUTCOMES.deterministic_plan : OUTCOMES.no_rows_in_source,
         sql: multiCityTrend.sql,
         rows,
         columns,
@@ -1074,7 +1079,7 @@ export async function POST(req: NextRequest) {
       // The planner produced no query, so there is no supported path for this
       // request -- a capability limitation, not a statement about the data.
       const proof = finalizeExit({
-        intendedAction: "decline_capability",
+        outcome: OUTCOMES.consolidation_mapping,
         planFamily: historicalCityChange.guardrail,
         guardrails: [historicalCityChange.guardrail],
       });
@@ -1116,7 +1121,7 @@ export async function POST(req: NextRequest) {
       const rows = executeWithTimeoutSync<Record<string, unknown>>(db, db.prepare(historicalCityChange.sql), 30000);
       const columns = rows.length > 0 ? Object.keys(rows[0]) : historicalCityChange.columns;
       const proof = finalizeExit({
-        intendedAction: rows.length > 0 ? "answer" : "decline_data",
+        outcome: rows.length > 0 ? OUTCOMES.deterministic_plan : OUTCOMES.no_rows_in_source,
         sql: historicalCityChange.sql,
         rows,
         columns,
@@ -1173,7 +1178,7 @@ export async function POST(req: NextRequest) {
   if (historicalPlace) {
     const ms = Date.now() - totalStart;
     const proof = finalizeExit({
-      intendedAction: "answer",
+      outcome: OUTCOMES.deterministic_plan,
       sql: historicalPlace.sql,
       rows: historicalPlace.rows,
       columns: historicalPlace.columns,
@@ -1221,7 +1226,7 @@ export async function POST(req: NextRequest) {
   if (metadata) {
     const ms = Date.now() - totalStart;
     const proof = finalizeExit({
-      intendedAction: "answer",
+      outcome: OUTCOMES.deterministic_plan,
       sql: metadata.sql,
       rows: metadata.rows ?? [],
       columns: metadata.columns ?? [],
@@ -1344,7 +1349,7 @@ export async function POST(req: NextRequest) {
         const msg = queryContractFailureMessage(contractResult);
         if (!msg) return false;
         const proof = finalizeExit({
-          intendedAction: "decline_capability",
+          outcome: OUTCOMES.query_contract_failed,
           sql: contractResult.sql,
           guardrails: firedGuardrails,
         });
@@ -1548,7 +1553,7 @@ export async function POST(req: NextRequest) {
           authoritativeIdentity(claude.explanation, claude.title));
           // No SQL was produced, so nothing factual is being asserted. Capability
           // framing, never a claim that the source lacks the data (handoff 2.4).
-          const noSqlProof = finalizeExit({ intendedAction: "decline_capability", guardrails: firedGuardrails });
+          const noSqlProof = finalizeExit({ outcome: OUTCOMES.model_produced_no_sql, guardrails: firedGuardrails });
           writeLog(question, null, 0, null, ms, claude.explanation, tab, firedGuardrails, "haiku-4.5", sessionId, null, noSqlProof, boundedModelResponseJson(rawFirstNoSql, rawRetryNoSql));
           controller.enqueue(
             encoder.encode(
@@ -1621,7 +1626,7 @@ export async function POST(req: NextRequest) {
         // Hard override — skip retry, return deterministic response
         if (guardrailResult.overrideResponse) {
           const overrideExplanation = guardrailResult.overrideResponse;
-          const overrideProof = finalizeExit({ intendedAction: "decline_capability", sql, guardrails: firedGuardrails, planFamily: guardrailResult.overrideGuardrail ?? null });
+          const overrideProof = finalizeExit({ outcome: OUTCOMES.guardrail_block, sql, guardrails: firedGuardrails, planFamily: guardrailResult.overrideGuardrail ?? null });
           writeLog(question, sql, 0, `guardrail_override:${guardrailResult.overrideGuardrail}`, Date.now() - totalStart, overrideExplanation, tab, firedGuardrails, "haiku-4.5", sessionId, null, overrideProof);
           controller.enqueue(
             encoder.encode(
@@ -1670,7 +1675,7 @@ export async function POST(req: NextRequest) {
           const postRetryCtx = { ...extractQueryContext(claude.sql, guardrailQuestion, tab as "current" | "historical"), requiredOri: requiredCountyOri };
           const postRetryResult = runGuardrails(postRetryCtx);
           if (postRetryResult.overrideResponse) {
-            const postRetryOverrideProof = finalizeExit({ intendedAction: "decline_capability", sql: claude.sql, guardrails: postRetryResult.fired, planFamily: postRetryResult.overrideGuardrail ?? null });
+            const postRetryOverrideProof = finalizeExit({ outcome: OUTCOMES.guardrail_block, sql: claude.sql, guardrails: postRetryResult.fired, planFamily: postRetryResult.overrideGuardrail ?? null });
             writeLog(question, claude.sql, 0, `guardrail_override:${postRetryResult.overrideGuardrail}`, Date.now() - totalStart, postRetryResult.overrideResponse, tab, postRetryResult.fired, "haiku-4.5", sessionId, null, postRetryOverrideProof);
             controller.enqueue(encoder.encode(sseEvent(emitFactualPayload(postRetryOverrideProof, { type: "result", sql: null as unknown as string, explanation: postRetryResult.overrideResponse, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - totalStart }))));
             close(); return;
@@ -1678,7 +1683,7 @@ export async function POST(req: NextRequest) {
           const rateStillBad = postRetryResult.fired.some(f => f.includes("rate-no-population"));
           if (rateStillBad && /\b(rates?|per\s*capita|per\s*100)/i.test(question) && !asksForCountsInsteadOfRates(question) && !/\b(not rates?|raw|counts?\s+not\s+rates?)\b/i.test(question)) {
             const msg = "I wasn't able to calculate a valid per-capita rate for this query. Try asking for raw counts, or use the [Historical Library](/test?tab=historical) tab for state/national rates.";
-            const rateFailureProof = finalizeExit({ intendedAction: "decline_capability", sql: claude.sql, guardrails: postRetryResult.fired, planFamily: "rate-no-population" });
+            const rateFailureProof = finalizeExit({ outcome: OUTCOMES.rate_denominator_unavailable, sql: claude.sql, guardrails: postRetryResult.fired, planFamily: "rate-no-population" });
             writeLog(question, claude.sql, 0, "rate_second_failure", Date.now() - totalStart, msg, tab, postRetryResult.fired, "haiku-4.5", sessionId, null, rateFailureProof);
             controller.enqueue(encoder.encode(sseEvent(emitFactualPayload(rateFailureProof, { type: "result", sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - totalStart }))));
             close(); return;
@@ -1686,7 +1691,7 @@ export async function POST(req: NextRequest) {
           const orPrecedenceStillBad = postRetryResult.fired.includes("or-and-precedence");
           if (orPrecedenceStillBad) {
             const msg = "I couldn't build a reliable multi-place query after correcting the SQL structure. Try asking for fewer places or restating the comparison.";
-            const orPrecedenceProof = finalizeExit({ intendedAction: "decline_capability", sql: claude.sql, guardrails: postRetryResult.fired, planFamily: "or-and-precedence" });
+            const orPrecedenceProof = finalizeExit({ outcome: OUTCOMES.sql_shape_rejected, sql: claude.sql, guardrails: postRetryResult.fired, planFamily: "or-and-precedence" });
             writeLog(question, claude.sql, 0, "or_precedence_second_failure", Date.now() - totalStart, msg, tab, postRetryResult.fired, "haiku-4.5", sessionId, null, orPrecedenceProof);
             controller.enqueue(encoder.encode(sseEvent(emitFactualPayload(orPrecedenceProof, { type: "result", sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - totalStart }))));
             close(); return;
@@ -1697,7 +1702,7 @@ export async function POST(req: NextRequest) {
           );
           if (geoContractViolation) {
             const msg = "I couldn't build a reliable query for that specific geography. The data may be available under a different agency name — try searching for the county sheriff or a specific city within the county.";
-            const geographyFailureProof = finalizeExit({ intendedAction: "decline_capability", sql: claude.sql, guardrails: postRetryResult.fired, planFamily: "contract-geography" });
+            const geographyFailureProof = finalizeExit({ outcome: OUTCOMES.geography_contract_violation, sql: claude.sql, guardrails: postRetryResult.fired, planFamily: "contract-geography" });
             writeLog(question, claude.sql, 0, "geography_second_failure", Date.now() - totalStart, msg, tab, postRetryResult.fired, "haiku-4.5", sessionId, null, geographyFailureProof);
             controller.enqueue(encoder.encode(sseEvent(emitFactualPayload(geographyFailureProof, { type: "result", sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - totalStart }))));
             close(); return;
@@ -1715,7 +1720,7 @@ export async function POST(req: NextRequest) {
         const missingFinalTargets = missingConsolidationTargets(claude.sql);
         if (missingFinalTargets.length > 0) {
           const msg = `I couldn't safely resolve ${missingFinalTargets.map((entry) => `${entry.alias}, ${entry.state}`).join("; ")} to the verified post-consolidation agency. Please retry.`;
-          const consolidationProof = finalizeExit({ intendedAction: "decline_capability", sql: claude.sql, guardrails: firedGuardrails, planFamily: "consolidation-mapping" });
+          const consolidationProof = finalizeExit({ outcome: OUTCOMES.consolidation_mapping, sql: claude.sql, guardrails: firedGuardrails, planFamily: "consolidation-mapping" });
           writeLog(question, claude.sql, 0, "consolidation_target_missing", Date.now() - totalStart, msg, tab, firedGuardrails, "haiku-4.5", sessionId, null, consolidationProof);
           controller.enqueue(encoder.encode(sseEvent(emitFactualPayload(consolidationProof, { type: "result", sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - totalStart }))));
           close();
@@ -1745,7 +1750,7 @@ export async function POST(req: NextRequest) {
             "haiku-4.5",
             sessionId,
             null,
-            finalizeExit({ intendedAction: "decline_capability", sql: claude.sql, guardrails: firedGuardrails, retries: proofRetries() })
+            OPERATIONAL_RECORD
           );
           controller.enqueue(
             encoder.encode(
@@ -1791,7 +1796,7 @@ export async function POST(req: NextRequest) {
                     applyRetryMeta(claude, retry);
                   } else {
                     const msg = "I couldn't build a valid query for this data source. Try switching tabs or rephrasing the question for the active dataset.";
-                    const retryAllowlistProof = finalizeExit({ intendedAction: "decline_capability", sql: retrySql, guardrails: [...firedGuardrails, ...retryTableCheck.fired], planFamily: "table-allowlist", retries: 1 });
+                    const retryAllowlistProof = finalizeExit({ outcome: OUTCOMES.table_not_allowlisted, sql: retrySql, guardrails: [...firedGuardrails, ...retryTableCheck.fired], planFamily: "table-allowlist", retries: 1 });
                     writeLog(question, retrySql, 0, `table_allowlist_second_failure:${retryTableCheck.unknown.join(",")}`, Date.now() - totalStart, msg, tab, [...firedGuardrails, ...retryTableCheck.fired], "haiku-4.5", sessionId, null, retryAllowlistProof);
                     controller.enqueue(encoder.encode(sseEvent(emitFactualPayload(retryAllowlistProof, { type: "result", sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - totalStart }))));
                     close();
@@ -1802,7 +1807,7 @@ export async function POST(req: NextRequest) {
             }
 
             const msg = "I couldn't build a valid query for this data source. Try switching tabs or rephrasing the question for the active dataset.";
-            const allowlistProof = finalizeExit({ intendedAction: "decline_capability", sql, guardrails: firedGuardrails, planFamily: "table-allowlist" });
+            const allowlistProof = finalizeExit({ outcome: OUTCOMES.table_not_allowlisted, sql, guardrails: firedGuardrails, planFamily: "table-allowlist" });
             writeLog(question, sql, 0, `table_allowlist:${tableCheck.unknown.join(",")}`, Date.now() - totalStart, msg, tab, firedGuardrails, "haiku-4.5", sessionId, null, allowlistProof);
             controller.enqueue(encoder.encode(sseEvent(emitFactualPayload(allowlistProof, { type: "result", sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - totalStart }))));
             close();
@@ -1840,7 +1845,7 @@ export async function POST(req: NextRequest) {
           // Retry: tell Claude about the error and ask for a corrected query (if budget allows)
           if (isOverBudget()) {
             const ms = Date.now() - totalStart;
-            writeLog(question, sql, 0, `DB: ${msg} (over budget)`, ms, null, tab, firedGuardrails, "haiku-4.5", sessionId, null, finalizeExit({ intendedAction: "decline_capability", sql, guardrails: firedGuardrails, retries: proofRetries() }));
+            writeLog(question, sql, 0, `DB: ${msg} (over budget)`, ms, null, tab, firedGuardrails, "haiku-4.5", sessionId, null, OPERATIONAL_RECORD);
             controller.enqueue(encoder.encode(sseEvent({ type: "error", text: "That query took too long. Try simplifying your question." })));
             close();
             return;
@@ -1911,7 +1916,7 @@ export async function POST(req: NextRequest) {
                   "haiku-4.5",
                   sessionId,
                   null,
-                  finalizeExit({ intendedAction: "decline_capability", sql, guardrails: firedGuardrails, retries: proofRetries() })
+                  OPERATIONAL_RECORD
                 );
                 controller.enqueue(
                   encoder.encode(
@@ -1938,7 +1943,7 @@ export async function POST(req: NextRequest) {
                 "haiku-4.5",
                 sessionId,
                 null,
-                finalizeExit({ intendedAction: "decline_capability", sql, guardrails: firedGuardrails, retries: proofRetries() })
+                OPERATIONAL_RECORD
               );
               controller.enqueue(
                 encoder.encode(
@@ -1953,7 +1958,7 @@ export async function POST(req: NextRequest) {
             }
           } else {
             const ms = Date.now() - totalStart;
-            writeLog(question, sql, 0, `DB: ${msg}`, ms, null, tab, firedGuardrails, "haiku-4.5", sessionId, null, finalizeExit({ intendedAction: "decline_capability", sql, guardrails: firedGuardrails, retries: proofRetries() }));
+            writeLog(question, sql, 0, `DB: ${msg}`, ms, null, tab, firedGuardrails, "haiku-4.5", sessionId, null, OPERATIONAL_RECORD);
             controller.enqueue(
               encoder.encode(
                 sseEvent({
@@ -2068,7 +2073,7 @@ export async function POST(req: NextRequest) {
           // reply declines instead. Historical keeps its existing probes.
           const emptyIsSourceAbsence = isHistorical || (currentEmpty?.establishedFromData ?? false);
           const emptyProof = finalizeExit({
-            intendedAction: emptyIsSourceAbsence ? "decline_data" : "decline_capability",
+            outcome: emptyIsSourceAbsence ? OUTCOMES.no_rows_in_source : OUTCOMES.empty_reason_not_established,
             sql, columns, guardrails: firedGuardrails, db,
           });
           writeLog(
@@ -2184,7 +2189,7 @@ export async function POST(req: NextRequest) {
               : "I ran that query but all the values came back empty — the math likely broke somewhere (like dividing by zero). Could you try asking that a different way?";
             const allNullIsSourceAbsence = isHistorical || (currentAllNull?.establishedFromData ?? false);
             const allNullProof = finalizeExit({
-              intendedAction: allNullIsSourceAbsence ? "decline_data" : "decline_capability",
+              outcome: allNullIsSourceAbsence ? OUTCOMES.all_values_null : OUTCOMES.empty_reason_not_established,
               sql, columns, guardrails: firedGuardrails, db,
             });
             writeLog(question, sql, 0, "all_null_columns", totalMs, emptyMsg, tab, firedGuardrails, "haiku-4.5", sessionId, null, allNullProof);
@@ -2344,7 +2349,7 @@ export async function POST(req: NextRequest) {
         // the SQL that dropped a city also defines what was "requested", so
         // entityCompleteness passes on a silent omission. See lib/requested-entities.
         const finalization = finalizeExit({
-          intendedAction: "answer",
+          outcome: OUTCOMES.model_sql_validated,
           sql,
           rows,
           columns,
@@ -2429,7 +2434,7 @@ export async function POST(req: NextRequest) {
             // gated the result event: this narrative is different, and the difference
             // is exactly what needs proving. A grain override replaces it wholesale.
             const postFinalization = finalizeExit({
-              intendedAction: "answer",
+              outcome: OUTCOMES.model_sql_validated,
               question: guardrailQuestion,
               sql,
               rows,
@@ -2498,7 +2503,7 @@ export async function POST(req: NextRequest) {
             let deliveredRetryFinalization = finalization;
             if (retryExplanation !== claude.explanation) {
               const retryFinalization = finalizeExit({
-                intendedAction: "answer",
+                outcome: OUTCOMES.model_sql_validated,
                 question: guardrailQuestion,
                 sql,
                 rows,
@@ -2532,7 +2537,7 @@ export async function POST(req: NextRequest) {
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         const ms = Date.now() - totalStart;
-        writeLog(question, sql, 0, msg, ms, null, tab, finalizeGuardrailTags(firedGuardrails, queryContractGuardrails(runContractValidation(sql || ""))), "haiku-4.5", sessionId, null, finalizeExit({ intendedAction: "decline_capability", sql, guardrails: firedGuardrails, retries: proofRetries() }));
+        writeLog(question, sql, 0, msg, ms, null, tab, finalizeGuardrailTags(firedGuardrails, queryContractGuardrails(runContractValidation(sql || ""))), "haiku-4.5", sessionId, null, OPERATIONAL_RECORD);
         console.error("Query API error:", msg);
         controller.enqueue(
           encoder.encode(

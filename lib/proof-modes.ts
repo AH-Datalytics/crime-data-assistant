@@ -38,6 +38,14 @@ export const DEFAULT_MODE: ProofMode = "off";
  */
 export const ENV_KILL_SWITCH = "PROOF_KILL_SWITCH";
 export const ENV_GLOBAL_MODE = "PROOF_MODE";
+/**
+ * Outcome logging. A SEPARATE approval from proof observation, and deliberately NOT a fourth
+ * `ProofMode` value: `ProofMode` keeps its three values and its meaning, because persisting a
+ * value the route already computed is not proof work. Today the only switch that populates
+ * `delivery_action` is `PROOF_MODE`, which also starts the digest builder, ten checks, omission
+ * probes and a per-request budget — far more than observability needs.
+ */
+export const ENV_OUTCOME_LOG = "OUTCOME_LOG";
 /** Per-source override, e.g. PROOF_MODE_NIBRS=shadow. */
 export function envKeyForSource(sourceId: SourceId): string {
   return `PROOF_MODE_${sourceId.toUpperCase()}`;
@@ -80,6 +88,39 @@ export function parseKillSwitch(raw: string | undefined | null): boolean {
 
 export interface ModeEnv {
   [key: string]: string | undefined;
+}
+
+/** Truthy values for outcome logging. Unset, empty or unparseable resolves to OFF. */
+export function parseOutcomeLog(raw: string | undefined | null): boolean {
+  if (typeof raw !== "string") return false;
+  const value = raw.trim().toLowerCase();
+  return value === "1" || value === "true" || value === "on" || value === "yes";
+}
+
+/**
+ * The one predicate that answers "what can cause an outcome to be written?".
+ *
+ * Default off, failing toward off on anything unparseable, matching this module's doctrine.
+ * `PROOF_KILL_SWITCH` disengages outcome logging as well as proof observation, so there is exactly
+ * one stop-everything lever. That is a fail-safe, not a coupling: it does not make the proof
+ * columns part of outcome activation.
+ */
+export function outcomeLoggingEnabled(env: ModeEnv = process.env): boolean {
+  if (parseKillSwitch(env[ENV_KILL_SWITCH])) return false;
+  return parseOutcomeLog(env[ENV_OUTCOME_LOG]);
+}
+
+/**
+ * Whether the outcome columns may be written for a row.
+ *
+ * Shadow implies outcome logging — an observing deployment already persists the action today, and
+ * withdrawing it when `PROOF_MODE=shadow` would be a regression. The converse does not hold:
+ * outcome logging never enables proof work.
+ */
+export function outcomeWritesEnabled(env: ModeEnv = process.env, mode: ProofMode | null = null): boolean {
+  if (parseKillSwitch(env[ENV_KILL_SWITCH])) return false;
+  if (mode !== null && isObserving(mode)) return true;
+  return parseOutcomeLog(env[ENV_OUTCOME_LOG]);
 }
 
 export interface ModeResolution {

@@ -106,6 +106,164 @@ export const DELIVERY_ACTIONS: readonly DeliveryAction[] = [
 /** The two actions that deliver factual content and therefore require full proof. */
 export const FACTUAL_DELIVERY_ACTIONS: readonly DeliveryAction[] = ["answer", "answer_limited_scope"] as const;
 
+/* ────────────────────────────────────────────────────────────────────────────────────────────
+ * The typed-outcome vocabulary (P2.1 §4.2).
+ *
+ * `DeliveryAction` answers "what did we do". `ReasonCode` answers "why", in a closed set that is
+ * admissible *per action*. The pair is what P2 persists; neither half is ever derived from prose,
+ * from `error`, from `guardrails`, or from `plan_family`.
+ *
+ * WHY ONE CATALOG. An earlier draft carried the action/reason relation in a union and the
+ * store relation in a second, hand-maintained list. That is the same "two carriers for one fact"
+ * defect that produced the header warning on `lib/query-log-columns.ts`, where three hand-kept
+ * sequences desynchronized and every log write was silently lost. Here the action, the reason and
+ * the stores that may hold the pair are one row, written once. `ReasonCode`, the per-store outcome
+ * types and the runtime admissible-pair sets are all DERIVED. Adding a second membership table,
+ * switch, array or validation list re-creates the defect and is rejected by T1c.
+ * ──────────────────────────────────────────────────────────────────────────────────────────── */
+
+/** The two stores that may hold a typed outcome. */
+export type OutcomeStore = "query_log" | "shared_charts";
+
+export const OUTCOME_STORES: readonly OutcomeStore[] = ["query_log", "shared_charts"] as const;
+
+/**
+ * A catalog row. `stores` is a NON-EMPTY tuple on purpose: a reason with no store assignment is
+ * a reason nothing can ever persist, and it fails to compile rather than sitting in the vocabulary
+ * looking usable.
+ */
+interface CatalogEntry {
+  readonly action: DeliveryAction;
+  readonly reason: string;
+  readonly stores: readonly [OutcomeStore, ...OutcomeStore[]];
+}
+
+/**
+ * THE authority for action, reason and store. Every reason appears exactly once.
+ *
+ * 24 rows. `answer_limited_scope` deliberately has none: it stays a full member of
+ * `DeliveryAction` — the persisted action vocabulary is six — and is simply not producible. Giving
+ * it a speculative reason so an exhaustiveness assertion could pass would be inventing a product
+ * path, so the assertion is stated over *producible* actions instead (T1).
+ *
+ * Four reasons are the IDENTICAL STRING as an `OmissionReason` member, so a future join is a join
+ * and not a translation table. They stay distinct types with different admissible sets, because a
+ * request-level reason and a per-entity omission reason answer different questions. T2 asserts the
+ * strings equal, so a rename on either side fails instead of silently forking the vocabulary.
+ */
+export const OUTCOME_CATALOG = [
+  // ── answer (3) ────────────────────────────────────────────────────────────────────────────
+  { action: "answer", reason: "deterministic_plan", stores: ["query_log"] },
+  { action: "answer", reason: "model_sql_validated", stores: ["query_log"] },
+  { action: "answer", reason: "stored_artifact_replay", stores: ["shared_charts"] },
+
+  // ── clarify (4) ───────────────────────────────────────────────────────────────────────────
+  { action: "clarify", reason: "geography_ambiguous", stores: ["query_log"] },
+  { action: "clarify", reason: "geography_scope_ambiguous", stores: ["query_log"] },
+  { action: "clarify", reason: "place_unresolved", stores: ["query_log"] },
+  { action: "clarify", reason: "source_switch", stores: ["query_log"] },
+
+  // ── decline_data (5) ──────────────────────────────────────────────────────────────────────
+  { action: "decline_data", reason: "no_rows_in_source", stores: ["query_log", "shared_charts"] },
+  { action: "decline_data", reason: "all_values_null", stores: ["query_log"] },
+  { action: "decline_data", reason: "outside_source_years", stores: ["query_log"] },       // ∗
+  { action: "decline_data", reason: "not_in_source", stores: ["query_log"] },              // ∗
+  { action: "decline_data", reason: "agency_identity_unavailable", stores: ["query_log"] },
+
+  // ── decline_capability (11) ───────────────────────────────────────────────────────────────
+  { action: "decline_capability", reason: "capability_path_unavailable", stores: ["query_log"] }, // ∗
+  { action: "decline_capability", reason: "guardrail_block", stores: ["query_log"] },
+  { action: "decline_capability", reason: "table_not_allowlisted", stores: ["query_log"] },
+  { action: "decline_capability", reason: "query_contract_failed", stores: ["query_log"] },
+  { action: "decline_capability", reason: "sql_shape_rejected", stores: ["query_log"] },
+  { action: "decline_capability", reason: "rate_denominator_unavailable", stores: ["query_log"] },
+  { action: "decline_capability", reason: "geography_contract_violation", stores: ["query_log"] },
+  { action: "decline_capability", reason: "consolidation_mapping", stores: ["query_log"] },       // ∗
+  { action: "decline_capability", reason: "continuous_reporting_required", stores: ["query_log"] },
+  { action: "decline_capability", reason: "model_produced_no_sql", stores: ["query_log"] },
+  { action: "decline_capability", reason: "empty_reason_not_established", stores: ["query_log"] },
+
+  // ── decline_source_health (1) ─────────────────────────────────────────────────────────────
+  // Producible today at two sites, each carrying its own local prerequisite probe. The probe is
+  // the evidence; no global source-health registry is needed for these two.
+  { action: "decline_source_health", reason: "required_component_unavailable", stores: ["query_log"] },
+] as const satisfies readonly CatalogEntry[];
+
+/* ── everything below is DERIVED from the catalog. Nothing here is hand-maintained. ────────── */
+
+type CatalogRow = (typeof OUTCOME_CATALOG)[number];
+
+/** The closed reason vocabulary. */
+export type ReasonCode = CatalogRow["reason"];
+
+type RowsFor<S extends OutcomeStore> =
+  CatalogRow extends infer E
+    ? E extends { stores: readonly (infer T)[] } ? (S extends T ? E : never) : never
+    : never;
+type ToOutcome<E> = E extends { action: infer A; reason: infer R }
+  ? { readonly action: A; readonly reason: R }
+  : never;
+
+/** The outcomes a given store may hold, as a discriminated union of whole pairs. */
+export type OutcomeFor<S extends OutcomeStore> = ToOutcome<RowsFor<S>>;
+
+/** What the four question routes may supply. */
+export type QueryLogOutcome = OutcomeFor<"query_log">;
+/** What the embed read may supply. */
+export type EmbedReadOutcome = OutcomeFor<"shared_charts">;
+/** Any producible outcome. */
+export type Outcome = QueryLogOutcome | EmbedReadOutcome;
+
+/** Every reason in the catalog, derived. */
+export const REASON_CODES: readonly ReasonCode[] =
+  OUTCOME_CATALOG.map((e) => e.reason) as readonly ReasonCode[];
+
+/** The actions that at least one catalog row can produce. */
+export const PRODUCIBLE_DELIVERY_ACTIONS: readonly DeliveryAction[] =
+  Array.from(new Set(OUTCOME_CATALOG.map((e) => e.action)));
+
+/**
+ * The runtime admissible-pair set behind both coverage queries. Generated from the one catalog,
+ * so neither store's membership can drift from the other's.
+ */
+export function admissiblePairs(store: OutcomeStore): { action: DeliveryAction; reason: ReasonCode }[] {
+  return OUTCOME_CATALOG
+    .filter((e) => (e.stores as readonly OutcomeStore[]).includes(store))
+    .map((e) => ({ action: e.action as DeliveryAction, reason: e.reason as ReasonCode }));
+}
+
+/** Whether a runtime action/reason pair is admissible in a store. Fails closed on anything odd. */
+export function isAdmissiblePair(store: OutcomeStore, action: unknown, reason: unknown): boolean {
+  if (typeof action !== "string" || typeof reason !== "string") return false;
+  return admissiblePairs(store).some((p) => p.action === action && p.reason === reason);
+}
+
+/**
+ * The producible outcomes as named constants, DERIVED from the catalog.
+ *
+ * Exit sites select between these rather than writing object literals, so a computed site is a
+ * choice between two whole `Outcome` values and cannot decay into parallel action/reason ternaries
+ * (T7b asserts this over the AST). Each constant's type is narrowed to its own row, so
+ * `OUTCOMES.stored_artifact_replay` is assignable to `EmbedReadOutcome` and NOT to
+ * `QueryLogOutcome` — the store partition is enforced at every use site, from the one catalog.
+ */
+export const OUTCOMES = Object.freeze(
+  Object.fromEntries(
+    OUTCOME_CATALOG.map((e) => [e.reason, Object.freeze({ action: e.action, reason: e.reason })]),
+  ),
+) as { [E in CatalogRow as E["reason"]]: { readonly action: E["action"]; readonly reason: E["reason"] } };
+
+/**
+ * The four reasons that are deliberately the same string as an `OmissionReason`. Declared here so
+ * T2 can assert the equality from one place rather than restating the list in the test.
+ */
+export const OUTCOME_OMISSION_SHARED_STRINGS = [
+  "outside_source_years",
+  "not_in_source",
+  "consolidation_mapping",
+  "capability_path_unavailable",
+] as const;
+
 /**
  * Closed omission reason set (handoff 7).
  *
@@ -355,6 +513,21 @@ export function assertOmissionEvidence(omission: Omission): void {
  */
 export interface DeliveryDecision {
   action: DeliveryAction;
+  /**
+   * Why the action was taken, from the closed catalog.
+   *
+   * This field is what carries the reason from the exit that supplied it to the projector that
+   * persists it. Without it the reason has no carrier: the exit supplies a whole `Outcome`, but
+   * `finalizeProof` returns a `ProofFinalization`, and the projector can only read what the
+   * finalization kept. The action was already preserved here; the reason now travels beside it,
+   * including through `inertFinalization` in `off` mode and on the degraded path.
+   *
+   * NOT a proof-schema change. `serializeProofEnvelope` does not serialize `decision`, and
+   * `lib/result-digest.ts` never references the decision or the action, so extending this
+   * interface changes no persisted proof shape and `PROOF_SCHEMA_VERSION` is unchanged. Adding the
+   * reason to the envelope or the digest later WOULD be a version bump.
+   */
+  reason: ReasonCode;
   /** Count of canonical entities requested and returned, when applicable. */
   requested: number | null;
   included: number | null;

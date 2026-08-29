@@ -16,10 +16,13 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import Database from "better-sqlite3";
+import { OUTCOMES } from "../lib/proof-contract";
 import {
   finalizeProof,
   proofLogFields,
   __resetProofBudgetStateForTests,
+  outcomeLogFields,
+  decisionRecord,
 } from "../lib/proof-finalize";
 import {
   sealPlanDerivation,
@@ -55,7 +58,7 @@ function base(overrides: Record<string, unknown> = {}) {
     columns: ["year", "agency", "murders"],
     truncated: false,
     planFamily: null as string | null,
-    intendedAction: "answer" as const,
+    outcome: OUTCOMES.deterministic_plan,
     env: SHADOW,
     ...overrides,
   };
@@ -607,7 +610,7 @@ console.log("\n8. enforcement identity cannot be borrowed by a failed token");
   check("a route label with no token is still kept for reporting", () => {
     // Clarify and decline exits use descriptive families and assert no derivation.
     const finalization = finalizeProof(base({
-      intendedAction: "clarify",
+      outcome: OUTCOMES.geography_ambiguous,
       planFamily: "geo:ambiguous-state",
       rows: [],
       columns: [],
