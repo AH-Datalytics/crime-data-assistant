@@ -56,6 +56,24 @@ const fs = require("node:fs");
  * it, because each column is added independently.
  */
 const COLUMNS = [
+  // Outcome layer (P2.1 §4.1). Extending this array rather than authoring a second migration is
+  // deliberate: one projector pair writes these columns, and two scripts would create two owners
+  // of "which outcome columns exist". The script is already per-column idempotent, so the added
+  // entries are safe against a database where the others already exist.
+  //
+  // TEXT, not integers: the values are read by humans in the digest email and in ad-hoc SQL, and
+  // an integer would need a lookup table that can drift from the vocabulary.
+  //
+  // No CHECK constraint, deliberately. SQLite permits one on ADD COLUMN, but a rejected value
+  // fails the whole INSERT and both loggers swallow insert failures — so an out-of-vocabulary
+  // value would silently destroy the entire log row. Losing the row loses strictly more than
+  // losing the outcome. The closed sets are unrepresentable in TypeScript instead, and an escaped
+  // value degrades these columns to NULL, which surfaces as a coverage violation.
+  //
+  // No index on either. The queries that would use them are ts-range plus equality, or a full
+  // GROUP BY; a single-column partial index on a low-cardinality column is chosen for neither.
+  { name: "record_kind", type: "TEXT" },
+  { name: "reason_code", type: "TEXT" },
   { name: "delivery_action", type: "TEXT" },
   { name: "proof_manifest", type: "TEXT" },
   { name: "result_digest", type: "TEXT" },

@@ -48,6 +48,10 @@ const BASE_DDL = `CREATE TABLE query_log (
   routing_confidence TEXT, routing_mode TEXT, routing_reason TEXT, query_guidance TEXT, query_contract TEXT)`;
 
 const PROOF_COLUMNS = [
+  // The outcome layer (P2.2) shares this migration's apply/rollback unit, so a "fully migrated"
+  // fixture carries all eight columns.
+  "record_kind TEXT",
+  "reason_code TEXT",
   "delivery_action TEXT",
   "proof_manifest TEXT",
   "result_digest TEXT",
@@ -67,6 +71,10 @@ function makeDb(extraColumns: string[] = []): { db: Database.Database; dir: stri
 /** A full logical row as the Stage 1 loggers now build it. */
 function fullRow(): Record<string, unknown> {
   return {
+    // Outcome layer (P2.2). Declared here so the drop-and-continue assertion covers them too:
+    // a column the application may write must be exercised by this builder's tests.
+    record_kind: "decision",
+    reason_code: "deterministic_plan",
     ts: 1_786_000_000_000,
     tab: "current",
     question: "murders in Baton Rouge 2024",

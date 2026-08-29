@@ -52,7 +52,12 @@ check("the explanation comes from the deterministic check, for Current Trends on
 
 check("only an established reason is delivered as a statement about the data", () => {
   assert.match(emptyBranch, /const emptyIsSourceAbsence = isHistorical \|\| \(currentEmpty\?\.establishedFromData \?\? false\)/);
-  assert.match(emptyBranch, /emptyIsSourceAbsence \? "decline_data" : "decline_capability"/);
+  // P2.2: the site now selects between two WHOLE outcome constants from the same predicate, so
+  // the action and its reason cannot desynchronize. The distinction this check defends is
+  // unchanged: an established source absence declines on the data, everything else declines on
+  // capability and says the reason was not established.
+  assert.match(emptyBranch,
+    /emptyIsSourceAbsence \? OUTCOMES\.no_rows_in_source : OUTCOMES\.empty_reason_not_established/);
   assert.match(emptyBranch, /empty_result_unverified/);
 });
 
@@ -86,8 +91,9 @@ check("blank values go through the same deterministic check", () => {
 
 check("blank values no longer claim the published data is missing by default", () => {
   assert.match(allNullBranch, /const allNullIsSourceAbsence = isHistorical \|\| \(currentAllNull\?\.establishedFromData \?\? false\)/);
-  assert.match(allNullBranch, /intendedAction: allNullIsSourceAbsence \? "decline_data" : "decline_capability"/);
-  assert.doesNotMatch(allNullBranch, /intendedAction: "decline_data"/);
+  assert.match(allNullBranch,
+    /outcome: allNullIsSourceAbsence \? OUTCOMES\.all_values_null : OUTCOMES\.empty_reason_not_established/);
+  assert.doesNotMatch(allNullBranch, /outcome: OUTCOMES\.all_values_null,/);
 });
 
 check("Historical keeps its broken-math wording", () => {

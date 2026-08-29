@@ -154,12 +154,21 @@ console.log("\nno factual exit constructs a payload without the wrap");
     }
   });
 
-  check("every route's log closure carries the proof columns", () => {
+  check("every route's log closure carries both projectors", () => {
+    // Two projectors with disjoint column sets, not one. The closure normalizes whatever the exit
+    // handed it into the discriminated carrier first: an operational row yields no finalization,
+    // so its proof columns stay NULL without the closure having to remember to null them.
     for (const file of INTEGRATED_ROUTES) {
+      const source = read(file);
       assert.match(
-        read(file),
-        /proofLogFields\(proof\)/,
-        `${file}: the log closure must persist proof columns`,
+        source,
+        /proofLogFields\(decisionFinalization\(proof\)\)/,
+        `${file}: the log closure must persist proof columns from the finalization it carries`,
+      );
+      assert.match(
+        source,
+        /outcomeLogFields\(asOutcomeRecord\(proof\)\)/,
+        `${file}: the log closure must persist the outcome columns from the same carrier`,
       );
     }
   });
@@ -338,13 +347,25 @@ console.log("\nshared charts and the response cache are inside the contract");
     assert.match(source, /hypotheticalAction/, "proof must come from the envelope, not delivery_action");
   });
 
-  check("the embed read summary is gated on observation, not just on schema", () => {
-    // `off` has no effect, which includes not writing a bookkeeping row.
+  check("the embed read summary is gated on outcome activation AND the schema probe", () => {
+    // CORRECTED IN ROUND 1. This assertion used to pin `isObserving(finalization.mode)` -- the
+    // proof-owned boundary -- and so helped keep the rolling summary inert under the intended
+    // P2.4 state, OUTCOME_LOG=on with proof mode off. The summary writes outcome-owned columns,
+    // so it follows outcome activation.
+    //
+    // The behaviour this defends -- an unactivated deployment leaves shared_charts untouched --
+    // is asserted for real by the activation matrix in scripts/test-embed-proof.ts. This check
+    // only pins that both the predicate and the complete-schema probe are still present.
     const source = read("app/api/embed/route.ts");
     assert.match(
       source,
+      /if \(withProof && outcomeWritesEnabled\(process\.env, finalization\.mode\)\)/,
+      "the rolling summary must follow the outcome-write predicate and the complete-schema probe",
+    );
+    assert.doesNotMatch(
+      source,
       /if \(withProof && isObserving\(finalization\.mode\)\)/,
-      "an off-mode read must leave shared_charts untouched",
+      "gating the outcome summary on proof observation is the defect round 1 found",
     );
   });
 
@@ -407,6 +428,39 @@ console.log("\nall four sources are integrated");
     assert.ok(capture > 0 && template > 0, "both sites must exist");
     assert.ok(capture < template, "the raw text must be captured before it is replaced");
     assert.match(source, /boundedModelResponseJson\(rawNoSqlText, null\)/);
+  });
+
+  // ── typed-outcome layer (P2.2) ─────────────────────────────────────────────────────────────
+  check("the outcome columns never reach a user-visible payload", () => {
+    // The outcome layer is observability. A closed code is low-risk to store and still has no
+    // business in a response: it names an internal decision, not something the reader asked for.
+    for (const file of [...INTEGRATED_ROUTES, "app/api/embed/route.ts"]) {
+      const source = read(file);
+      for (const column of ["record_kind", "reason_code"]) {
+        const emitted = new RegExp(
+          `(sseEvent|jsonResp|embedResp|NextResponse\\.json)\\([^;]{0,400}${column}`);
+        assert.doesNotMatch(source, emitted, `${file} must not put ${column} into a response`);
+      }
+    }
+  });
+
+  check("no route reads an outcome column back as proof", () => {
+    // The defect this family of tests exists for: delivery_action was once read as if it were
+    // evidence that a claim had been proven. reason_code must never acquire the same habit.
+    for (const file of ["app/api/embed/route.ts", "lib/embed-origin.ts"]) {
+      assert.doesNotMatch(read(file), /SELECT[^;]{0,160}reason_code[^;]{0,160}FROM query_log/i,
+        `${file} must not read reason_code as proof`);
+    }
+  });
+
+  check("the embed read stores the served action and its reason together", () => {
+    const source = read("app/api/embed/route.ts");
+    assert.match(source, /last_read_delivery_action = \?, last_read_reason_code = \?/,
+      "action and reason are written in one statement, so a latest summary cannot carry an " +
+      "action from one path and a reason from another");
+    assert.doesNotMatch(source, /\.run\(\s*finalization\.hypotheticalAction/,
+      "a column named for the action that was SERVED must not carry what the contract would " +
+      "merely have permitted");
   });
 }
 

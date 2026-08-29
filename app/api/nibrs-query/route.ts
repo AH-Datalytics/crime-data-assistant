@@ -33,10 +33,15 @@ import {
   type ProofFinalization,
   type ProofFinalizationInput,
   type SealedPayload,
+  outcomeLogFields,
+  asOutcomeRecord,
+  decisionFinalization,
+  OPERATIONAL_RECORD,
+  type OutcomeLogRecord,
 } from "@/lib/proof-finalize";
 import { sealPlanDerivation } from "@/lib/plan-derivation";
 import { cacheValiditySignature } from "@/lib/proof-cache-validity";
-import type { DeliveryAction } from "@/lib/proof-contract";
+import { OUTCOMES, type QueryLogOutcome } from "@/lib/proof-contract";
 import { validateGrain } from "@/lib/requested-grain";
 import { buildCompletenessAnswer, detectCompletenessQuestion, loadCompletenessRows } from "@/lib/completeness-intent";
 import { normalizeHistoryForTab } from "@/lib/chat-history";
@@ -221,6 +226,9 @@ function resolveNibrsModel(sessionId: string | null, canaryFlag: boolean): strin
 }
 
 export async function POST(req: NextRequest) {
+  // Measured before the outer try so the operational row in its catch can record an
+  // elapsed time; everything declared inside the try is out of scope there.
+  const outerStart = Date.now();
   const routeStart = Date.now();
   // Rate limiting
   const ip =
@@ -273,7 +281,7 @@ export async function POST(req: NextRequest) {
      * applyResultDisclosures() already runs before delivery here (handoff §4).
      */
     const finalizeExit = (
-      opts: Partial<ProofFinalizationInput> & { intendedAction: DeliveryAction },
+      opts: Partial<ProofFinalizationInput> & { outcome: QueryLogOutcome },
     ): ProofFinalization =>
       finalizeProof({
         sourceId: "nibrs",
@@ -301,9 +309,9 @@ export async function POST(req: NextRequest) {
       /** Bounded raw model text on no-SQL failures; diagnostic only, never user-visible. */
       modelResponseJson: string | null = null,
       /** Proof finalization for this exit; null yields baseline-identical columns. */
-      proof: ProofFinalization | null = null
+      proof: ProofFinalization | OutcomeLogRecord | null = null
     ) => {
-      chartAuditQueryLogId = logNibrsQuery(q, sqlText, rowCount, logError, ms, logResponse, guardrails, model, sid, routingMeta, chartConfigJson, modelResponseJson, chartAuditRequestId, proofLogFields(proof));
+      chartAuditQueryLogId = logNibrsQuery(q, sqlText, rowCount, logError, ms, logResponse, guardrails, model, sid, routingMeta, chartConfigJson, modelResponseJson, chartAuditRequestId, proofLogFields(decisionFinalization(proof)), outcomeLogFields(asOutcomeRecord(proof)));
       return chartAuditQueryLogId;
     };
 
@@ -365,7 +373,7 @@ export async function POST(req: NextRequest) {
     const capabilityOverride = detectNibrsCapabilityOverride(capabilityQuestion);
     if (capabilityOverride) {
       const executionMs = Date.now() - capabilityStart;
-      const capabilityProof = finalizeExit({ intendedAction: "decline_capability", planFamily: capabilityOverride.guardrail, narrative: capabilityOverride.explanation });
+      const capabilityProof = finalizeExit({ outcome: OUTCOMES.capability_path_unavailable, planFamily: capabilityOverride.guardrail, narrative: capabilityOverride.explanation });
       writeNibrsLog(question, null, 0, null, executionMs, capabilityOverride.explanation, [capabilityOverride.guardrail], "deterministic", sessionId, null, null, capabilityProof);
       return jsonResp(emitFactualPayload(capabilityProof, {
         success: true,
@@ -386,14 +394,14 @@ export async function POST(req: NextRequest) {
     if (completenessIntent) {
       const completenessAnswer = buildCompletenessAnswer("nibrs", loadCompletenessRows("nibrs", getNibrsDb()), new Date().getFullYear(), completenessIntent.year);
       const executionMs = Date.now() - routeStart;
-      const completenessProof = finalizeExit({ intendedAction: "answer", planFamily: "completeness-deterministic", guardrails: ["completeness-deterministic"], narrative: completenessAnswer });
+      const completenessProof = finalizeExit({ outcome: OUTCOMES.deterministic_plan, planFamily: "completeness-deterministic", guardrails: ["completeness-deterministic"], narrative: completenessAnswer });
       writeNibrsLog(question, null, 0, null, executionMs, completenessAnswer, ["completeness-deterministic"], "deterministic", sessionId, null, null, completenessProof);
       return jsonResp(emitFactualPayload(completenessProof, { success: true, question, sql: null as unknown as string, explanation: completenessAnswer, title: "Data completeness", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: executionMs } as QueryResponse));
     }
     if (plannerMode === "authoritative" && followupPlan?.sourceChanged) {
       const executionMs = Date.now() - routeStart;
       const explanation = "This follow-up is a better fit for the " + followupPlan.source + " source. Rerunning it there as: " + followupPlan.reconstructedQuestion;
-      const switchProof = finalizeExit({ intendedAction: "clarify", planFamily: "followup-source-switch", narrative: explanation });
+      const switchProof = finalizeExit({ outcome: OUTCOMES.source_switch, planFamily: "followup-source-switch", narrative: explanation });
       writeNibrsLog(question, null, 0, null, executionMs, explanation, ["followup-source-switch"], "followup-planner", sessionId, null, null, switchProof);
       return jsonResp(emitFactualPayload(switchProof, {
         success: true, question, sql: null, explanation, title: "Source switch", columns: [], rows: [],
@@ -406,7 +414,7 @@ export async function POST(req: NextRequest) {
       : getBlockingGeoClarification(question);
     if (geoClarification) {
       const executionMs = Date.now() - routeStart;
-      const geoProof = finalizeExit({ intendedAction: "clarify", planFamily: `geo:${geoClarification.issue.id}`, narrative: geoClarification.explanation });
+      const geoProof = finalizeExit({ outcome: OUTCOMES.geography_ambiguous, planFamily: `geo:${geoClarification.issue.id}`, narrative: geoClarification.explanation });
       writeNibrsLog(question, null, 0, null, executionMs, geoClarification.explanation, [`geo:${geoClarification.issue.id}`], "deterministic", sessionId, null, null, geoProof);
       return jsonResp(emitFactualPayload(geoProof, {
         success: true,
@@ -427,7 +435,7 @@ export async function POST(req: NextRequest) {
     const countyScope = planSaysQueryBearing ? null : getCountyScopeClarification(question, body?.history);
     if (countyScope) {
       const executionMs = Date.now() - routeStart;
-      const countyProof = finalizeExit({ intendedAction: "clarify", planFamily: `geo:${countyScope.id}`, narrative: countyScope.explanation });
+      const countyProof = finalizeExit({ outcome: OUTCOMES.geography_scope_ambiguous, planFamily: `geo:${countyScope.id}`, narrative: countyScope.explanation });
       writeNibrsLog(question, null, 0, null, executionMs, countyScope.explanation, [`geo:${countyScope.id}`], "deterministic", sessionId, null, null, countyProof);
       return jsonResp(emitFactualPayload(countyProof, {
         success: true,
@@ -481,7 +489,7 @@ export async function POST(req: NextRequest) {
     if (nibrsPlan.kind === "blocked" && deterministicResolution) {
       const executionMs = Date.now() - routeStart;
       const explanation = nibrsPlan.explanation;
-      const placeBlockProof = finalizeExit({ intendedAction: "clarify", planFamily: "nibrs-place-resolution-block", narrative: explanation });
+      const placeBlockProof = finalizeExit({ outcome: OUTCOMES.place_unresolved, planFamily: "nibrs-place-resolution-block", narrative: explanation });
       writeNibrsLog(question, null, 0, null, executionMs, explanation, ["nibrs-place-resolution-block"], "deterministic", sessionId, null, null, placeBlockProof);
       return jsonResp(emitFactualPayload(placeBlockProof, {
         success: true,
@@ -501,7 +509,7 @@ export async function POST(req: NextRequest) {
 
     if (nibrsPlan.kind === "unavailable") {
       const executionMs = Date.now() - routeStart;
-      const juvenileProof = finalizeExit({ intendedAction: "decline_capability", planFamily: "nibrs-juvenile-offender-incident-summary-unavailable", narrative: nibrsPlan.explanation });
+      const juvenileProof = finalizeExit({ outcome: OUTCOMES.required_component_unavailable, planFamily: "nibrs-juvenile-offender-incident-summary-unavailable", narrative: nibrsPlan.explanation });
       writeNibrsLog(question, null, 0, null, executionMs, nibrsPlan.explanation, ["nibrs-juvenile-offender-incident-summary-unavailable"], "deterministic", sessionId, null, null, juvenileProof);
       return jsonResp(emitFactualPayload(juvenileProof, {
         success: true,
@@ -548,7 +556,7 @@ export async function POST(req: NextRequest) {
         const chartConfig = buildNibrsChartConfig(deterministicQuery, columns, rows, question);
 
         const deterministicProof = finalizeExit({
-          intendedAction: rows.length > 0 ? "answer" : "decline_data",
+          outcome: rows.length > 0 ? OUTCOMES.deterministic_plan : OUTCOMES.no_rows_in_source,
           sql: deterministicQuery.sql,
           rows,
           columns,
@@ -606,7 +614,7 @@ export async function POST(req: NextRequest) {
           sessionId,
           null,
           null,
-          finalizeExit({ intendedAction: "decline_capability", sql: deterministicQuery.sql, planFamily: deterministicQuery.guardrail })
+          OPERATIONAL_RECORD
         );
         if (msg.includes("timed out")) {
           return jsonResp(
@@ -622,7 +630,7 @@ export async function POST(req: NextRequest) {
     const metadata = planSaysQueryBearing ? null : answerMetadataQuestion("nibrs", question, getNibrsDb());
     if (metadata) {
       const executionMs = Date.now() - metadataStart;
-      const metadataProof = finalizeExit({ intendedAction: "answer", sql: metadata.sql, rows: metadata.rows ?? [], columns: metadata.columns ?? [], truncated: Boolean(metadata.truncated), derivation: metadata.sql ? sealPlanDerivation("metadata-coverage-answer", metadata.sql) : null, planFamily: "metadata-coverage-answer", guardrails: ["deterministic-metadata", "metadata-coverage-answer"], hasChart: Boolean(metadata.chartConfig), narrative: metadata.explanation });
+      const metadataProof = finalizeExit({ outcome: OUTCOMES.deterministic_plan, sql: metadata.sql, rows: metadata.rows ?? [], columns: metadata.columns ?? [], truncated: Boolean(metadata.truncated), derivation: metadata.sql ? sealPlanDerivation("metadata-coverage-answer", metadata.sql) : null, planFamily: "metadata-coverage-answer", guardrails: ["deterministic-metadata", "metadata-coverage-answer"], hasChart: Boolean(metadata.chartConfig), narrative: metadata.explanation });
       writeNibrsLog(question, metadata.sql, metadata.rowCount, null, executionMs, metadata.explanation, ["deterministic-metadata", "metadata-coverage-answer"], "deterministic", sessionId, serializeChartConfigForLog(metadata.chartConfig, metadata.columns, metadata.chartMeta), null, metadataProof);
       return jsonResp(emitFactualPayload(metadataProof, attachChartAuditToPayload({
         success: true,
@@ -757,7 +765,7 @@ export async function POST(req: NextRequest) {
         if (internalLeak) { claude.explanation = INTERNAL_LEAK_SAFE_MESSAGE; claude.title = "Results"; }
         if (!serverAuthoredNoSql && !internalLeak) claude.explanation = buildNoSqlFallbackMessage("nibrs");
         claude.explanation = neutralizeUnverifiedAvailabilityClaim(claude.explanation, "NIBRS");
-        const noSqlProof = finalizeExit({ intendedAction: "decline_capability", guardrails: internalLeak ? ["internal-leak-firewall"] : ["no-sql-server-template"], narrative: claude.explanation });
+        const noSqlProof = finalizeExit({ outcome: OUTCOMES.model_produced_no_sql, guardrails: internalLeak ? ["internal-leak-firewall"] : ["no-sql-server-template"], narrative: claude.explanation });
         writeNibrsLog(question, null, 0, null, Date.now() - claudeStart, claude.explanation, internalLeak ? ["internal-leak-firewall"] : ["no-sql-server-template"], activeModelLabel, sessionId, null, boundedModelResponseJson(rawFirstNoSql, rawRetryNoSql), noSqlProof);
         return jsonResp(emitFactualPayload(noSqlProof, {
           success: true,
@@ -853,7 +861,7 @@ export async function POST(req: NextRequest) {
     const contractFailureResponse = (contractResult: QueryContractSqlValidation, logError: string) => {
       const msg = queryContractFailureMessage(contractResult);
       if (!msg) return null;
-      const contractProof = finalizeExit({ intendedAction: "decline_capability", sql: contractResult.sql, guardrails: [...guardrailResult.fired, ...routeGuardrailsFired] });
+      const contractProof = finalizeExit({ outcome: OUTCOMES.query_contract_failed, sql: contractResult.sql, guardrails: [...guardrailResult.fired, ...routeGuardrailsFired] });
       writeNibrsLog(question, contractResult.sql, 0, logError, Date.now() - claudeStart, msg, [...guardrailResult.fired, ...routeGuardrailsFired], activeModelLabel, sessionId, null, null, contractProof);
       return jsonResp(emitFactualPayload(contractProof, {
         success: true,
@@ -893,7 +901,7 @@ export async function POST(req: NextRequest) {
     // Hard override — skip retry, return deterministic response
     if (guardrailResult.overrideResponse) {
       const overrideExplanation = guardrailResult.overrideResponse;
-      const overrideProof = finalizeExit({ intendedAction: "decline_capability", sql, guardrails: guardrailResult.fired, planFamily: guardrailResult.overrideGuardrail ?? null, narrative: overrideExplanation });
+      const overrideProof = finalizeExit({ outcome: OUTCOMES.guardrail_block, sql, guardrails: guardrailResult.fired, planFamily: guardrailResult.overrideGuardrail ?? null, narrative: overrideExplanation });
       writeNibrsLog(question, sql, 0, `guardrail_override:${guardrailResult.overrideGuardrail}`, Date.now() - claudeStart, overrideExplanation, guardrailResult.fired, activeModelLabel, sessionId, null, null, overrideProof);
       return jsonResp(emitFactualPayload(overrideProof, {
         success: true,
@@ -940,7 +948,7 @@ export async function POST(req: NextRequest) {
       // Hard override on second failure
       if (postRetryResult.overrideResponse) {
         const msg = postRetryResult.overrideResponse;
-        const postRetryOverrideProof = finalizeExit({ intendedAction: "decline_capability", sql, guardrails: postRetryResult.fired, planFamily: postRetryResult.overrideGuardrail ?? null, narrative: msg });
+        const postRetryOverrideProof = finalizeExit({ outcome: OUTCOMES.guardrail_block, sql, guardrails: postRetryResult.fired, planFamily: postRetryResult.overrideGuardrail ?? null, narrative: msg });
         writeNibrsLog(question, sql, 0, `guardrail_override:${postRetryResult.overrideGuardrail}`, Date.now() - claudeStart, msg, postRetryResult.fired, activeModelLabel, sessionId, null, null, postRetryOverrideProof);
         return jsonResp(emitFactualPayload(postRetryOverrideProof, { success: true, question, sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - claudeStart } as QueryResponse));
       }
@@ -948,7 +956,7 @@ export async function POST(req: NextRequest) {
       const rateStillBad = postRetryResult.fired.some(f => f.includes("rate-no-population"));
       if (rateStillBad && /\b(rates?|per\s*capita|per\s*100)/i.test(question) && !asksForCountsInsteadOfRates(question)) {
         const msg = "I wasn't able to calculate a valid per-capita rate for this query. Try asking for raw counts instead, or use the [Historical Library](/test?tab=historical) tab for state/national rates.";
-        const rateFailureProof = finalizeExit({ intendedAction: "decline_capability", sql, guardrails: postRetryResult.fired, planFamily: "rate-no-population", narrative: msg });
+        const rateFailureProof = finalizeExit({ outcome: OUTCOMES.rate_denominator_unavailable, sql, guardrails: postRetryResult.fired, planFamily: "rate-no-population", narrative: msg });
         writeNibrsLog(question, sql, 0, "rate_second_failure", Date.now() - claudeStart, msg, postRetryResult.fired, activeModelLabel, sessionId, null, null, rateFailureProof);
         return jsonResp(emitFactualPayload(rateFailureProof, { success: true, question, sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - claudeStart } as QueryResponse));
       }
@@ -956,7 +964,7 @@ export async function POST(req: NextRequest) {
       const rawStillBad = postRetryResult.fired.some(f => f === "nibrs-raw-table-for-counts" || f === "nibrs-raw-victims");
       if (rawStillBad) {
         const msg = "I wasn't able to build a valid query for this question using the available summary tables. The data needed may not be available in a pre-aggregated form. Try rephrasing your question or asking about a specific offense type, city, or time period.";
-        const rawTableProof = finalizeExit({ intendedAction: "decline_capability", sql, guardrails: postRetryResult.fired, planFamily: "raw-table", narrative: msg });
+        const rawTableProof = finalizeExit({ outcome: OUTCOMES.sql_shape_rejected, sql, guardrails: postRetryResult.fired, planFamily: "raw-table", narrative: msg });
         writeNibrsLog(question, sql, 0, "raw_table_second_failure", Date.now() - claudeStart, msg, postRetryResult.fired, activeModelLabel, sessionId, null, null, rawTableProof);
         return jsonResp(emitFactualPayload(rawTableProof, { success: true, question, sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - claudeStart } as QueryResponse));
       }
@@ -965,14 +973,14 @@ export async function POST(req: NextRequest) {
       const oriStillBad = resolvedOriEnforcementIssue(resolutionPlan, sql);
       if (oriStillBad) {
         const msg = `I matched ${oriStillBad.labels.join(", ")} to specific law-enforcement agencies, but I couldn't build a query that uses them. Rather than fall back to matching agencies by city name — which mixes in unrelated departments that share a mailing city — I stopped. Try asking for fewer cities at once, or one city at a time.`;
-        const resolvedOriProof = finalizeExit({ intendedAction: "decline_capability", sql, guardrails: [...postRetryResult.fired, "nibrs-resolved-ori-enforced"], planFamily: "resolved-ori", narrative: msg });
+        const resolvedOriProof = finalizeExit({ outcome: OUTCOMES.sql_shape_rejected, sql, guardrails: [...postRetryResult.fired, "nibrs-resolved-ori-enforced"], planFamily: "resolved-ori", narrative: msg });
         writeNibrsLog(question, sql, 0, "resolved_ori_second_failure", Date.now() - claudeStart, msg, [...postRetryResult.fired, "nibrs-resolved-ori-enforced"], activeModelLabel, sessionId, null, null, resolvedOriProof);
         return jsonResp(emitFactualPayload(resolvedOriProof, { success: true, question, sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - claudeStart } as QueryResponse));
       }
       const orPrecedenceStillBad = postRetryResult.fired.includes("or-and-precedence");
       if (orPrecedenceStillBad) {
         const msg = "I couldn't build a reliable multi-place query after correcting the SQL structure. Try asking for fewer places or restating the comparison.";
-        const orPrecedenceProof = finalizeExit({ intendedAction: "decline_capability", sql, guardrails: postRetryResult.fired, planFamily: "or-and-precedence", narrative: msg });
+        const orPrecedenceProof = finalizeExit({ outcome: OUTCOMES.sql_shape_rejected, sql, guardrails: postRetryResult.fired, planFamily: "or-and-precedence", narrative: msg });
         writeNibrsLog(question, sql, 0, "or_precedence_second_failure", Date.now() - claudeStart, msg, postRetryResult.fired, activeModelLabel, sessionId, null, null, orPrecedenceProof);
         return jsonResp(emitFactualPayload(orPrecedenceProof, { success: true, question, sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - claudeStart } as QueryResponse));
       }
@@ -982,13 +990,13 @@ export async function POST(req: NextRequest) {
       );
       if (geoContractBad) {
         const msg = "I couldn't build a reliable query for that specific geography. Try asking for a specific city or state instead.";
-        const geographyFailureProof = finalizeExit({ intendedAction: "decline_capability", sql, guardrails: postRetryResult.fired, planFamily: "contract-geography", narrative: msg });
+        const geographyFailureProof = finalizeExit({ outcome: OUTCOMES.geography_contract_violation, sql, guardrails: postRetryResult.fired, planFamily: "contract-geography", narrative: msg });
         writeNibrsLog(question, sql, 0, "geography_second_failure", Date.now() - claudeStart, msg, postRetryResult.fired, activeModelLabel, sessionId, null, null, geographyFailureProof);
         return jsonResp(emitFactualPayload(geographyFailureProof, { success: true, question, sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - claudeStart } as QueryResponse));
       }
       if (continuousReporterRouteIssue(sql, question)) {
         const msg = "I couldn't build a reliable continuous-reporter query for that request. Try asking for the same offense and year range without the continuous-reporting filter, or narrow it to a specific city or state.";
-        const continuousReporterProof = finalizeExit({ intendedAction: "decline_capability", sql, guardrails: [...postRetryResult.fired, "nibrs-continuous-reporting-required-route"], planFamily: "continuous-reporting", narrative: msg });
+        const continuousReporterProof = finalizeExit({ outcome: OUTCOMES.continuous_reporting_required, sql, guardrails: [...postRetryResult.fired, "nibrs-continuous-reporting-required-route"], planFamily: "continuous-reporting", narrative: msg });
         writeNibrsLog(question, sql, 0, "continuous_reporter_second_failure", Date.now() - claudeStart, msg, [...postRetryResult.fired, "nibrs-continuous-reporting-required-route"], activeModelLabel, sessionId, null, null, continuousReporterProof);
         return jsonResp(emitFactualPayload(continuousReporterProof, { success: true, question, sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - claudeStart } as QueryResponse));
       }
@@ -999,7 +1007,7 @@ export async function POST(req: NextRequest) {
       if (postRetryLocalIssues.issues.length > 0) {
         const msg = "I couldn't build a valid query after correcting the SQL structure. Try rephrasing your question or asking for a simpler breakdown.";
         console.log(`[nibrs][sql-guardrails] Still failing after retry: ${postRetryLocalIssues.fired.join(", ")}`);
-        const sqlGuardrailProof = finalizeExit({ intendedAction: "decline_capability", sql, guardrails: [...postRetryResult.fired, ...postRetryLocalIssues.fired], planFamily: "sql-guardrail", narrative: msg });
+        const sqlGuardrailProof = finalizeExit({ outcome: OUTCOMES.sql_shape_rejected, sql, guardrails: [...postRetryResult.fired, ...postRetryLocalIssues.fired], planFamily: "sql-guardrail", narrative: msg });
         writeNibrsLog(question, sql, 0, `sql_guardrail_second_failure:${postRetryLocalIssues.fired.join(",")}`, Date.now() - claudeStart, msg, [...postRetryResult.fired, ...postRetryLocalIssues.fired], activeModelLabel, sessionId, null, null, sqlGuardrailProof);
         return jsonResp(emitFactualPayload(sqlGuardrailProof, { success: true, question, sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - claudeStart } as QueryResponse));
       }
@@ -1037,7 +1045,7 @@ export async function POST(req: NextRequest) {
               applyRetryMeta(claude, retry);
             } else {
               const msg = "I couldn't build a valid query for the NIBRS database. Try the Historical or Current Trends tab for broad state-level crime totals, or rephrase for NIBRS incident-level details.";
-              const retryAllowlistProof = finalizeExit({ intendedAction: "decline_capability", sql: retrySql, guardrails: [...guardrailResult.fired, ...tableCheck.fired, ...retryTableCheck.fired], planFamily: "table-allowlist", retries: 1, narrative: msg });
+              const retryAllowlistProof = finalizeExit({ outcome: OUTCOMES.table_not_allowlisted, sql: retrySql, guardrails: [...guardrailResult.fired, ...tableCheck.fired, ...retryTableCheck.fired], planFamily: "table-allowlist", retries: 1, narrative: msg });
               writeNibrsLog(question, retrySql, 0, `table_allowlist_second_failure:${retryTableCheck.unknown.join(",")}`, Date.now() - claudeStart, msg, [...guardrailResult.fired, ...tableCheck.fired, ...retryTableCheck.fired], activeModelLabel, sessionId, null, null, retryAllowlistProof);
               return jsonResp(emitFactualPayload(retryAllowlistProof, { success: true, question, sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - claudeStart } as QueryResponse));
             }
@@ -1045,7 +1053,7 @@ export async function POST(req: NextRequest) {
         }
 
         const msg = "I couldn't build a valid query for the NIBRS database. Try the Historical or Current Trends tab for broad state-level crime totals, or rephrase for NIBRS incident-level details.";
-        const allowlistProof = finalizeExit({ intendedAction: "decline_capability", sql, guardrails: [...guardrailResult.fired, ...tableCheck.fired], planFamily: "table-allowlist", narrative: msg });
+        const allowlistProof = finalizeExit({ outcome: OUTCOMES.table_not_allowlisted, sql, guardrails: [...guardrailResult.fired, ...tableCheck.fired], planFamily: "table-allowlist", narrative: msg });
         writeNibrsLog(question, sql, 0, `table_allowlist:${tableCheck.unknown.join(",")}`, Date.now() - claudeStart, msg, [...guardrailResult.fired, ...tableCheck.fired], activeModelLabel, sessionId, null, null, allowlistProof);
         return jsonResp(emitFactualPayload(allowlistProof, { success: true, question, sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - claudeStart } as QueryResponse));
       }
@@ -1173,7 +1181,7 @@ export async function POST(req: NextRequest) {
               console.log(`[nibrs][error-recovery] Retry succeeded`);
             } catch (retryErr) {
               const retryMsg = retryErr instanceof Error ? retryErr.message : String(retryErr);
-              const dbRetryProof = finalizeExit({ intendedAction: "decline_capability", sql, guardrails: [...guardrailResult.fired, ...routeGuardrailsFired], retries: 1 });
+              const dbRetryProof = OPERATIONAL_RECORD;
               writeNibrsLog(question, sql, 0, `DB retry failed: ${retryMsg}`, Date.now() - claudeStart, null, [...guardrailResult.fired, ...routeGuardrailsFired], activeModelLabel, sessionId, null, null, dbRetryProof);
               const userError = isTimeout
                 ? `This query is too complex for the database. Try narrowing your request — for example, ask about a specific city, state, or shorter time range instead of a broad national query.`
@@ -1186,7 +1194,7 @@ export async function POST(req: NextRequest) {
               );
             }
           } else {
-            const dbRetryValidationProof = finalizeExit({ intendedAction: "decline_capability", sql, guardrails: [...guardrailResult.fired, ...routeGuardrailsFired], retries: 1 });
+            const dbRetryValidationProof = OPERATIONAL_RECORD;
             writeNibrsLog(question, sql, 0, `DB: ${msg} (retry validation failed)`, Date.now() - claudeStart, null, [...guardrailResult.fired, ...routeGuardrailsFired], activeModelLabel, sessionId, null, null, dbRetryValidationProof);
             return jsonResp(
               { success: false, error: `I had trouble with that query. Try rephrasing your question.`, sql } as QueryError,
@@ -1194,7 +1202,7 @@ export async function POST(req: NextRequest) {
             );
           }
         } else {
-          const dbErrorProof = finalizeExit({ intendedAction: "decline_capability", sql, guardrails: [...guardrailResult.fired, ...routeGuardrailsFired] });
+          const dbErrorProof = OPERATIONAL_RECORD;
           writeNibrsLog(question, sql, 0, `DB: ${msg}`, Date.now() - claudeStart, null, [...guardrailResult.fired, ...routeGuardrailsFired], activeModelLabel, sessionId, null, null, dbErrorProof);
           return jsonResp(
             { success: false, error: isTimeout ? `This query is too complex for the database. Try asking about a specific city, state, or shorter time range.` : `Database error: ${msg}`, sql } as QueryError,
@@ -1247,7 +1255,7 @@ export async function POST(req: NextRequest) {
       const { allNull } = detectAllNullData(columns, rows);
       if (allNull) {
         const emptyMsg = "I ran that query but all the values came back empty — the math likely broke somewhere (like dividing by zero). Could you try asking that a different way?";
-        const allNullProof = finalizeExit({ intendedAction: "decline_data", sql, guardrails: [...guardrailResult.fired, ...routeGuardrailsFired], narrative: emptyMsg });
+        const allNullProof = finalizeExit({ outcome: OUTCOMES.all_values_null, sql, guardrails: [...guardrailResult.fired, ...routeGuardrailsFired], narrative: emptyMsg });
         writeNibrsLog(question, sql, 0, "all_null_columns", Date.now() - claudeStart, emptyMsg, [...guardrailResult.fired, ...routeGuardrailsFired], activeModelLabel, sessionId, null, null, allNullProof);
         return jsonResp(emitFactualPayload(allNullProof, {
           success: true,
@@ -1574,7 +1582,7 @@ export async function POST(req: NextRequest) {
       // An empty result asserts no facts, so it is not an `answer`. decline_data
       // rather than decline_capability: the query ran and the source returned
       // nothing, which is a statement about the data, not about our path.
-      intendedAction: rows.length > 0 ? "answer" : "decline_data",
+      outcome: rows.length > 0 ? OUTCOMES.model_sql_validated : OUTCOMES.no_rows_in_source,
       sql,
       rows,
       columns,
@@ -1613,6 +1621,17 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("[nibrs] Query API error:", msg);
+    // OPERATIONAL ROW (P2.1 §4.3.2 X10 condition 2). Before P2.2 this catch logged nothing, so the
+    // four routes recorded the same class of event three different ways and the operational
+    // failure rate was unmeasurable. It writes `record_kind='operational'` and no decision: an
+    // error before a decision exists is not a product decision, and fabricating one here is
+    // exactly what the 16 sites that used to claim `decline_capability` were doing.
+    //
+    // The route-local closures are declared inside this try, so the module logger is called
+    // directly — the same shape the source-switch exits already use. The write is inside the
+    // logger's own swallow-on-failure boundary, so it cannot turn a 500 into anything worse.
+    logNibrsQuery("", null, 0, msg.slice(0, 500), Date.now() - outerStart, null, [], null, null,
+      null, null, null, null, proofLogFields(null), outcomeLogFields(OPERATIONAL_RECORD));
     return jsonResp(
       { success: false, error: `Server error: ${msg}` } as QueryError,
       500

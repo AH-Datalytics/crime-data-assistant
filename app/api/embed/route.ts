@@ -10,7 +10,7 @@ import {
   type ProofFinalization,
   type SealedPayload,
 } from "@/lib/proof-finalize";
-import { isObserving, resolveMode } from "@/lib/proof-modes";
+import { isObserving, outcomeWritesEnabled, resolveMode } from "@/lib/proof-modes";
 import {
   embedPlanFamily,
   originIsVerified,
@@ -20,7 +20,7 @@ import {
 } from "@/lib/embed-origin";
 import { serializeChartConfigForLog } from "@/lib/chart-config-log";
 import { returnedEntityKeys } from "@/lib/result-disclosure";
-import type { SourceId } from "@/lib/proof-contract";
+import { OUTCOMES, type SourceId } from "@/lib/proof-contract";
 
 /**
  * A shared chart is a factual surface with no expiry.
@@ -264,24 +264,44 @@ export async function GET(req: NextRequest) {
       // A chart whose originating answer was never proven cannot have chart data
       // proven now: the bindings it was drawn from are gone.
       chartFromBindings: false,
-      intendedAction: rows.length > 0 ? "answer" : "decline_data",
+      // ONE whole outcome selected from the SAME predicate that determines the behaviour, not an
+      // action and, separately, a reason. `stored_artifact_replay` is the only truthful reason
+      // here: this read replays SQL authored earlier by either path and has no derivation token of
+      // its own, so neither `deterministic_plan` nor `model_sql_validated` describes it.
+      outcome: rows.length > 0 ? OUTCOMES.stored_artifact_replay : OUTCOMES.no_rows_in_source,
       db: null,
     });
 
-    // GATED ON OBSERVATION, NOT JUST ON THE SCHEMA. §9.1 says `off` "performs no
-    // request-path work and has no effect", and an UPDATE is an effect -- an
-    // off-mode deployment must leave shared_charts byte-identical to what the
-    // baseline release writes, exactly as proofLogFields() does for query_log.
-    if (withProof && isObserving(finalization.mode)) {
+    // GATED ON THE OUTCOME-WRITE PREDICATE, NOT ON PROOF OBSERVATION.
+    //
+    // This UPDATE writes outcome-owned columns only, so it must follow outcome activation. The
+    // earlier condition was `isObserving(finalization.mode)`, the proof-owned boundary, which
+    // meant the intended P2.4 state -- OUTCOME_LOG=on with proof mode off -- never updated the
+    // summary at all. `outcomeWritesEnabled` is the same exported predicate the query_log
+    // outcomes use, so "what can cause an outcome to be written?" still has one answer, and it
+    // fails closed on the kill switch under either activation.
+    //
+    // The complete-schema probe stays: an unmigrated shared_charts must not be written at all,
+    // partially or otherwise. `off` with no activation still leaves the table byte-identical to
+    // what the baseline release writes.
+    if (withProof && outcomeWritesEnabled(process.env, finalization.mode)) {
       // Rolling summary rather than a row per read -- see the migration script for why
       // this does not go to query_log. Best-effort: a failed bookkeeping write must
       // never cost a viewer their chart.
       try {
+        // STORE decision.action, never hypotheticalAction. The column is named for the action
+        // that was SERVED; hypotheticalAction is what the contract would have permitted, which is
+        // a different fact and was the defect here.
+        //
+        // The action and its reason are written in ONE statement, so a latest summary can never
+        // carry an action from one path and a reason from another.
         writeDb
-          .prepare("UPDATE shared_charts SET last_read_delivery_action = ?, last_read_at = ? WHERE id = ?")
-          .run(finalization.hypotheticalAction, Date.now(), id);
+          .prepare(
+            "UPDATE shared_charts SET last_read_delivery_action = ?, last_read_reason_code = ?, last_read_at = ? WHERE id = ?",
+          )
+          .run(finalization.decision.action, finalization.decision.reason, Date.now(), id);
       } catch (error) {
-        console.warn("[embed] last-read proof summary not recorded:", error instanceof Error ? error.message : String(error));
+        console.warn("[embed] last-read outcome summary not recorded:", error instanceof Error ? error.message : String(error));
       }
     }
 

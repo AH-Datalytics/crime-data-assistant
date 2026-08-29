@@ -1283,6 +1283,33 @@
       "note": "measured: prepared no SQLite statement at all in a clean clone"
     },
     {
+      "id": "test-outcome-inventory",
+      "tier": "F",
+      "script": "scripts/test-outcome-inventory.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "AST assertions over route source; opens no SQLite database"
+    },
+    {
+      "id": "test-outcome-coverage",
+      "tier": "F",
+      "script": "scripts/test-outcome-coverage.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "migration and coverage cases run against fresh temp-directory fixtures only"
+    },
+    {
+      "id": "test-outcome-mutations",
+      "tier": "F",
+      "script": "scripts/test-outcome-mutations.js",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "mutates source in place, runs the paired suite as a child, restores the bytes and re-verifies each target's sha256"
+    },
+    {
       "id": "test-plan-derivation",
       "tier": "F",
       "script": "scripts/test-plan-derivation.ts",

@@ -310,15 +310,22 @@ async function main() {
       assert.deepStrictEqual(body.chartConfig, CHART.chartConfig);
     });
 
-    await check("the read records what it would have delivered", async () => {
+    await check("the read records what it ACTUALLY served, with its reason", async () => {
       await get(provenId);
       const db = new Database(dbPath);
-      const row = db.prepare("SELECT last_read_delivery_action, last_read_at FROM shared_charts WHERE id = ?")
-        .get(provenId) as { last_read_delivery_action: string | null; last_read_at: number | null };
+      const row = db.prepare(
+        "SELECT last_read_delivery_action, last_read_reason_code, last_read_at " +
+        "FROM shared_charts WHERE id = ?")
+        .get(provenId) as { last_read_delivery_action: string | null;
+                            last_read_reason_code: string | null; last_read_at: number | null };
       db.close();
-      // Blocked, because an embed replays SQL it did not author and has no derivation
-      // of its own -- which is the honest state, not a defect.
-      assert.strictEqual(row.last_read_delivery_action, "decline_capability");
+      // CORRECTED IN P2.2. This column is named for the action that was SERVED, and it used to
+      // store hypotheticalAction -- what the contract would have permitted -- which is a
+      // different fact. The rows came back, so the read served an answer.
+      assert.strictEqual(row.last_read_delivery_action, "answer");
+      // The only truthful reason for this path: the SQL was authored earlier, by either path, and
+      // this read has no derivation token of its own.
+      assert.strictEqual(row.last_read_reason_code, "stored_artifact_replay");
       assert.ok((row.last_read_at ?? 0) > 0, "a read timestamp must be recorded");
     });
 
@@ -332,7 +339,10 @@ async function main() {
         .get(legacyId) as Record<string, unknown>;
       db.close();
       assert.strictEqual(row.origin_delivery_action, null);
-      assert.strictEqual(row.last_read_delivery_action, "decline_capability");
+      // An unproved ORIGIN does not change what this READ served: the stored artifact replayed
+      // and returned rows. Origin provenance and the served action are different facts, and
+      // conflating them is what storing hypotheticalAction here used to do.
+      assert.strictEqual(row.last_read_delivery_action, "answer");
     });
 
     await check("a missing chart is still a 404", async () => {
@@ -407,11 +417,153 @@ async function main() {
     await check("a shadow read then records it again", async () => {
       await get(provenId);
       const db = new Database(dbPath);
-      const row = db.prepare("SELECT last_read_delivery_action FROM shared_charts WHERE id = ?")
-        .get(provenId) as { last_read_delivery_action: string | null };
+      const row = db.prepare(
+        "SELECT last_read_delivery_action, last_read_reason_code FROM shared_charts WHERE id = ?")
+        .get(provenId) as { last_read_delivery_action: string | null;
+                            last_read_reason_code: string | null };
       db.close();
-      assert.strictEqual(row.last_read_delivery_action, "decline_capability");
+      assert.strictEqual(row.last_read_delivery_action, "answer");
+      assert.strictEqual(row.last_read_reason_code, "stored_artifact_replay");
     });
+
+  // ── the outcome-activation matrix ──────────────────────────────────────────────────────────
+  //
+  // The rolling summary writes OUTCOME-owned columns, so it must follow outcome activation, not
+  // proof observation. The first implementation gated it on `isObserving(finalization.mode)` --
+  // the proof boundary -- which meant the intended P2.4 state, OUTCOME_LOG=on with proof mode
+  // off, never updated the summary at all. The structural T7d check verified the UPDATE's shape
+  // and values but not the predicate that decides whether it runs, so it accepted an inert path.
+  //
+  // These cases assert BEHAVIOUR: what is in the table after a real GET under each combination.
+  {
+    console.log("\noutcome-activation matrix for the rolling summary");
+
+    async function readUnder(env: Record<string, string | undefined>) {
+      const keys = ["PROOF_MODE", "OUTCOME_LOG", "PROOF_KILL_SWITCH"];
+      const saved: Record<string, string | undefined> = {};
+      for (const key of keys) {
+        saved[key] = process.env[key];
+        if (env[key] === undefined) delete process.env[key];
+        else process.env[key] = env[key];
+      }
+      const clear = new Database(dbPath);
+      clear.prepare(
+        "UPDATE shared_charts SET last_read_delivery_action = NULL, " +
+        "last_read_reason_code = NULL, last_read_at = NULL WHERE id = ?").run(provenId);
+      clear.close();
+      try {
+        const res = await get(provenId);
+        assert.strictEqual(res.status, 200, "the chart must still be served under every gate");
+      } finally {
+        for (const key of keys) {
+          if (saved[key] === undefined) delete process.env[key];
+          else process.env[key] = saved[key];
+        }
+      }
+      const db = new Database(dbPath);
+      const row = db.prepare(
+        "SELECT last_read_delivery_action AS action, last_read_reason_code AS reason, " +
+        "last_read_at AS at FROM shared_charts WHERE id = ?").get(provenId) as
+        { action: string | null; reason: string | null; at: number | null };
+      db.close();
+      return row;
+    }
+
+    await check("OUTCOME_LOG=on with proof OFF writes action, reason and timestamp", async () => {
+      const row = await readUnder({ OUTCOME_LOG: "on", PROOF_MODE: undefined });
+      assert.strictEqual(row.action, "answer", "this is the intended P2.4 state and it must write");
+      assert.strictEqual(row.reason, "stored_artifact_replay");
+      assert.ok((row.at ?? 0) > 0, "a read timestamp must be recorded");
+    });
+
+    await check("both gates off writes nothing", async () => {
+      const row = await readUnder({ OUTCOME_LOG: undefined, PROOF_MODE: undefined });
+      assert.deepStrictEqual(row, { action: null, reason: null, at: null },
+        "an unactivated deployment must leave shared_charts byte-identical to the baseline's");
+    });
+
+    await check("proof shadow alone still writes", async () => {
+      const row = await readUnder({ OUTCOME_LOG: undefined, PROOF_MODE: "shadow" });
+      assert.strictEqual(row.action, "answer", "shadow implies outcome logging");
+      assert.strictEqual(row.reason, "stored_artifact_replay");
+    });
+
+    await check("the kill switch stops the write under either activation", async () => {
+      const viaOutcome = await readUnder(
+        { OUTCOME_LOG: "on", PROOF_MODE: undefined, PROOF_KILL_SWITCH: "1" });
+      assert.deepStrictEqual(viaOutcome, { action: null, reason: null, at: null },
+        "the kill switch must beat OUTCOME_LOG");
+      const viaShadow = await readUnder(
+        { OUTCOME_LOG: undefined, PROOF_MODE: "shadow", PROOF_KILL_SWITCH: "1" });
+      assert.deepStrictEqual(viaShadow, { action: null, reason: null, at: null },
+        "the kill switch must beat shadow");
+    });
+
+    await check("action and reason are written together or not at all", async () => {
+      for (const env of [{ OUTCOME_LOG: "on", PROOF_MODE: undefined },
+                         { OUTCOME_LOG: undefined, PROOF_MODE: "shadow" },
+                         { OUTCOME_LOG: undefined, PROOF_MODE: undefined }]) {
+        const row = await readUnder(env);
+        assert.strictEqual(row.action === null, row.reason === null,
+          `action and reason disagreed under ${JSON.stringify(env)}`);
+      }
+    });
+
+    await check("an incomplete schema writes nothing and attempts nothing", async () => {
+      // The complete-schema probe is all-or-nothing on purpose: a partially migrated table must
+      // not be written at all, partially or otherwise.
+      //
+      // ASSERTING THE ABSENCE OF A WRITE IS NOT ENOUGH. The UPDATE is best-effort and swallows
+      // its own failure, so removing the probe entirely still leaves the columns NULL -- the
+      // statement just throws against the missing column and the catch logs a warning. That is
+      // why this also asserts no ATTEMPT was made: the warning is the only observable difference
+      // between "did not try" and "tried and failed", and without it the probe could be deleted
+      // with every test still green.
+      const warnings: string[] = [];
+      const realWarn = console.warn;
+      console.warn = (...args: unknown[]) => { warnings.push(args.join(" ")); };
+      const drop = new Database(dbPath);
+      drop.exec("ALTER TABLE shared_charts DROP COLUMN last_read_reason_code");
+      drop.close();
+      try {
+        for (const mode of [{ OUTCOME_LOG: "on", PROOF_MODE: undefined },
+                            { OUTCOME_LOG: undefined, PROOF_MODE: "shadow" }]) {
+          const savedProof = process.env.PROOF_MODE;
+          const savedOutcome = process.env.OUTCOME_LOG;
+          if (mode.PROOF_MODE === undefined) delete process.env.PROOF_MODE;
+          else process.env.PROOF_MODE = mode.PROOF_MODE;
+          if (mode.OUTCOME_LOG === undefined) delete process.env.OUTCOME_LOG;
+          else process.env.OUTCOME_LOG = mode.OUTCOME_LOG;
+          try {
+            const res = await get(provenId);
+            assert.strictEqual(res.status, 200, "an unmigrated table must not stop serving");
+          } finally {
+            if (savedProof === undefined) delete process.env.PROOF_MODE;
+            else process.env.PROOF_MODE = savedProof;
+            if (savedOutcome === undefined) delete process.env.OUTCOME_LOG;
+            else process.env.OUTCOME_LOG = savedOutcome;
+          }
+          const probe = new Database(dbPath);
+          const row = probe.prepare(
+            "SELECT last_read_delivery_action AS action FROM shared_charts WHERE id = ?")
+            .get(provenId) as { action: string | null };
+          probe.close();
+          assert.strictEqual(row.action, null,
+            `an incomplete schema must not be written under ${JSON.stringify(mode)}`);
+        }
+        assert.deepStrictEqual(
+          warnings.filter((w) => w.includes("last-read outcome summary not recorded")), [],
+          "an incomplete schema must not even be written to: a swallowed failure means the " +
+          "complete-schema probe was skipped");
+      } finally {
+        console.warn = realWarn;
+        const restore = new Database(dbPath);
+        restore.exec("ALTER TABLE shared_charts ADD COLUMN last_read_reason_code TEXT");
+        restore.close();
+      }
+    });
+  }
+
   }
 
   console.log(`\nembed proof tests: ${passed} passed`);

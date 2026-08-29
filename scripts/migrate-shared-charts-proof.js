@@ -50,6 +50,15 @@ const COLUMNS = [
   { name: "origin_proof_mode", type: "TEXT" },
   { name: "origin_state", type: "TEXT" },
   { name: "last_read_delivery_action", type: "TEXT" },
+  // Paired with the action above and written in the SAME statement (P2.1 §4.3.3). An action
+  // stored without its reason is exactly the "two carriers for one fact" defect, and a latest
+  // summary carrying an action from one path and a reason from another must not pass.
+  //
+  // Additive and NOT backfilled, so every chart read before activation keeps a NULL reason while
+  // already having an action and a last_read_at. That is why the validity query is bounded by
+  // `last_read_at >= :activation_ts`: an unbounded non-NULL check would turn the whole existing
+  // population into violations the moment the column was added.
+  { name: "last_read_reason_code", type: "TEXT" },
   { name: "last_read_at", type: "INTEGER" },
 ];
 
