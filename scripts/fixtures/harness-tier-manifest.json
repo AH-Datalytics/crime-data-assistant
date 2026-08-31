@@ -1301,6 +1301,15 @@
       "note": "migration and coverage cases run against fresh temp-directory fixtures only"
     },
     {
+      "id": "test-route-eligibility",
+      "tier": "F",
+      "script": "scripts/test-route-eligibility.js",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "reads route source and builds throwaway fixture trees; prepares no SQLite statement"
+    },
+    {
       "id": "test-outcome-mutations",
       "tier": "F",
       "script": "scripts/test-outcome-mutations.js",
