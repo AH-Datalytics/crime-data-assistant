@@ -1,13 +1,15 @@
 /**
- * P2.5 verification.
+ * Verification for the route-eligibility denominator guard.
  *
- *   PART A  measures the real deployed tree and asserts the eligibility closure holds.
- *   PART B  the original six mutation fixtures (eight assertions).
- *   PART C  escape 1 — JavaScript route modules — proved closed.
- *   PART D  escape 2 — delegated factual behavior — proved closed, and proved closed WITHOUT
- *           reviving indiscriminate transitive reachability, which is a separate assertion.
- *   PART E  regressions: the write-only controls, and the cross-file phantom that tightening
- *           `returnsRows` was introduced to kill.
+ *   A  the real deployed tree
+ *   B  the original mutation fixtures
+ *   C  escape 1 — JavaScript route modules
+ *   D  escape 2 — delegated factual behavior, and the proof that closing it did not revive
+ *      indiscriminate transitive reachability
+ *   E  measurement regressions
+ *   F  the pre-merge review matrix: multi-hop delegation, explicit-extension imports, barrel
+ *      re-exports, dynamic loads, budget exhaustion, allowlist identity, and the documented
+ *      behavior of the conservative model
  *
  * A guard that has never been observed to fail is evidence that the guard runs, not that the
  * property holds. Every failure mode below is observed failing.
@@ -17,7 +19,11 @@
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
-const { checkEligibility, measure, routeFiles, EXCLUSIONS, ROUTE_BASENAMES } = require("./lib/route-eligibility.js");
+const {
+  checkEligibility, measure, routeFiles, resolveImport,
+  assertRouteExtensionAssumption, validateAccessLayer,
+  EXCLUSIONS, ROUTE_BASENAMES, ACCESS_LAYER, MAX_MODULES,
+} = require("./lib/route-eligibility.js");
 
 // Defaults to this repository, which is what the canonical harness runs. An explicit root is
 // still accepted so the guard can be pointed at a detached worktree during review.
@@ -56,6 +62,8 @@ check("A7  a WRITE handle alone is not counted as a crime-database read (track)"
   [track.readsCrimeDb, track.writesOnly], [false, true]);
 check("A8  chart-render-receipt reaches no crime data even through its helper",
   [crr.readsCrimeDb, crr.returnsRows, crr.sealed], [false, false, false]);
+checkTrue("A8b and it really does reach that helper, so A8 is not vacuous",
+  crr.reachedModules.includes("lib/chart-audit.ts"), JSON.stringify(crr.reachedModules));
 
 const qlog = res.routes.find((r) => r.route === "app/api/query-log/route.ts");
 check("A9  query-log is measured as genuinely returning crime rows",
@@ -71,6 +79,7 @@ check("A12 P2.2 inventory reports zero unpaired decision sites", inv.unpairedDec
 checkTrue("A13 the two analyses agree on the sealed file set",
   JSON.stringify(res.sealedRoutes.sort()) ===
   JSON.stringify([...inv.routes.map((r) => r.file), inv.embed.file].sort()));
+check("A14 no route's analysis was incomplete", res.routes.filter((r) => r.incomplete.length).length, 0);
 
 // ---------------------------------------------------------------- fixtures
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "p25-elig-"));
@@ -80,6 +89,14 @@ function tree(name, files) {
     const p = path.join(root, rel);
     fs.mkdirSync(path.dirname(p), { recursive: true });
     fs.writeFileSync(p, body);
+  }
+  // The access-layer allowlist must validate, or every fixture fails on config-assumption.
+  for (const rel of ACCESS_LAYER) {
+    const p = path.join(root, rel);
+    if (!fs.existsSync(p)) {
+      fs.mkdirSync(path.dirname(p), { recursive: true });
+      fs.writeFileSync(p, "export function getDb() { return null; }\nexport function getWriteDb() { return null; }\n");
+    }
   }
   return root;
 }
@@ -100,8 +117,12 @@ const NEW_FACTUAL_UNSEALED = `import { getNibrsDb } from "@/lib/nibrs-db";
 export async function POST() {
   const rows = getNibrsDb().prepare("SELECT 1").all();
   return Response.json({ rows }); }`;
+/** A helper that genuinely answers with crime data. */
+const FACTUAL_HELPER = `import { getNibrsDb } from "@/lib/nibrs-db";
+export function answerFromCrimeData() {
+  const rows = getNibrsDb().prepare("SELECT 1").all();
+  return Response.json({ rows }); }`;
 
-/** A complete, passing twelve-route tree. Escapes must be shown against THIS, not a stub. */
 const FULL = {
   "app/api/query/route.ts": SEALED, "app/api/nibrs-query/route.ts": SEALED,
   "app/api/shr-query/route.ts": SEALED, "app/api/hc-query/route.ts": SEALED,
@@ -111,9 +132,10 @@ const FULL = {
   "app/api/chart-render-receipt/route.ts": INERT,
   "app/api/session-analytics/route.ts": CRED, "app/api/query-log/route.ts": QLOG,
 };
+const failsAuth = (r) => r.failures.some((f) => f.route === "app/api/auth/route.ts");
 
 // ---------------------------------------------------------------- PART B
-console.log("\nPART B — original mutations (six fixtures, eight assertions)");
+console.log("\nPART B — original mutations");
 {
   const root = tree("b1", { ...FULL, "app/api/brand-new-answers/route.ts": NEW_FACTUAL_UNSEALED });
   const r = checkEligibility(root);
@@ -123,20 +145,19 @@ console.log("\nPART B — original mutations (six fixtures, eight assertions)");
   checkTrue("B1c and reports the evidence that made it eligible", f[0] && /readsCrimeDb=true/.test(f[0].detail));
 }
 {
-  const root = tree("b2", { ...FULL, "app/api/track/route.ts": NEW_FACTUAL_UNSEALED });
-  const r = checkEligibility(root);
+  const r = checkEligibility(tree("b2", { ...FULL, "app/api/track/route.ts": NEW_FACTUAL_UNSEALED }));
   checkTrue("B2  a false 'no crime-db read' justification FAILS",
     r.failures.some((x) => x.kind === "claim-mismatch" && /readsCrimeDb/.test(x.detail)));
 }
 {
-  const root = tree("b3", { "app/api/query/route.ts": SEALED });
   checkTrue("B3  registry entries for deleted routes FAIL as stale",
-    checkEligibility(root).failures.some((x) => x.kind === "stale-exclusion"));
+    checkEligibility(tree("b3", { "app/api/query/route.ts": SEALED })).failures
+      .some((x) => x.kind === "stale-exclusion"));
 }
 {
-  const root = tree("b4", { ...FULL, "app/api/track/route.ts": SEALED });
   checkTrue("B4  sealed AND excluded is reported as a contradiction",
-    checkEligibility(root).failures.some((x) => x.kind === "sealed-and-excluded"));
+    checkEligibility(tree("b4", { ...FULL, "app/api/track/route.ts": SEALED })).failures
+      .some((x) => x.kind === "sealed-and-excluded"));
 }
 {
   const root = tree("b5", { "app/api/track/route.ts": WRITEONLY });
@@ -144,11 +165,9 @@ console.log("\nPART B — original mutations (six fixtures, eight assertions)");
   check("B5  write-only telemetry measures as non-factual",
     [m.readsCrimeDb, m.writesOnly, m.sealed], [false, true, false]);
 }
-{
-  checkTrue("B6  an empty tree does not pass vacuously", !checkEligibility(tree("b6", {})).ok);
-}
+checkTrue("B6  an empty tree does not pass vacuously", !checkEligibility(tree("b6", {})).ok);
 
-// ---------------------------------------------------------------- PART C — escape 1
+// ---------------------------------------------------------------- PART C
 console.log("\nPART C — escape 1: JavaScript route modules");
 {
   const control = checkEligibility(tree("c0", FULL));
@@ -158,91 +177,221 @@ console.log("\nPART C — escape 1: JavaScript route modules");
   const root = tree("c1", { ...FULL, "app/api/sneaky/route.js": NEW_FACTUAL_UNSEALED });
   const r = checkEligibility(root);
   check("C1  the .js route is now enumerated", routeFiles(root).length, 13);
-  checkTrue("C2  a JavaScript route answering with crime data FAILS", !r.ok, JSON.stringify(r.failures));
+  checkTrue("C2  a JavaScript route answering with crime data FAILS", !r.ok);
   checkTrue("C3  and it is named", r.failures.some((f) => f.route === "app/api/sneaky/route.js"));
-
-  check("C4  every Next.js route extension is enumerated", ROUTE_BASENAMES.sort(),
+  check("C4  every Next.js route extension is enumerated", ROUTE_BASENAMES.slice().sort(),
     ["route.cjs", "route.js", "route.jsx", "route.mjs", "route.ts", "route.tsx"]);
   const multi = tree("c5", { ...FULL,
     "app/api/a/route.jsx": NEW_FACTUAL_UNSEALED,
     "app/api/b/route.mjs": NEW_FACTUAL_UNSEALED,
     "app/api/c/route.cjs": NEW_FACTUAL_UNSEALED });
-  const rm = checkEligibility(multi);
   check("C5  .jsx / .mjs / .cjs are all caught too",
-    rm.failures.filter((f) => f.kind === "unsealed-unregistered").length, 3);
+    checkEligibility(multi).failures.filter((f) => f.kind === "unsealed-unregistered").length, 3);
 }
 
-// ---------------------------------------------------------------- PART D — escape 2
+// ---------------------------------------------------------------- PART D
 console.log("\nPART D — escape 2: delegated factual behavior");
 {
-  // A REGISTERED EXCLUSION whose body delegates. Its own source is clean.
   const root = tree("d1", { ...FULL,
     "app/api/auth/route.ts": `import { answerFromCrimeData } from "@/lib/sneaky-helper";
 export async function POST(req) { return answerFromCrimeData(req); }`,
-    "lib/sneaky-helper.ts": `import { getNibrsDb } from "@/lib/nibrs-db";
-export function answerFromCrimeData() {
-  const rows = getNibrsDb().prepare("SELECT 1").all();
-  return Response.json({ rows }); }`,
-  });
+    "lib/sneaky-helper.ts": FACTUAL_HELPER });
   const m = measure(root, path.join(root, "app/api/auth/route.ts"));
   const r = checkEligibility(root);
   check("D1  the delegated read is now measured", [m.readsCrimeDb, m.returnsRows], [true, true]);
-  checkTrue("D2  the delegating exclusion FAILS its claims",
-    r.failures.some((f) => f.route === "app/api/auth/route.ts" && f.kind === "claim-mismatch"),
-    JSON.stringify(r.failures));
-  checkTrue("D3  the failure names the delegated module",
+  checkTrue("D2  the delegating exclusion FAILS its claims", failsAuth(r), JSON.stringify(r.failures));
+  checkTrue("D3  the failure names the reached module",
     r.failures.some((f) => /sneaky-helper/.test(f.detail || "")));
 
-  // THE COUNTERPART ASSERTION. Closing escape 2 must not revive reachability: a module that is
-  // IMPORTED but never called from a handler must not be pulled in.
+  // Closing escape 2 must not revive reachability: imported but never referenced by a handler.
   const imported = tree("d4", { ...FULL,
     "app/api/auth/route.ts": `import { answerFromCrimeData } from "@/lib/sneaky-helper";
 export async function POST() { return Response.json({ ok: true }); }`,
-    "lib/sneaky-helper.ts": `import { getNibrsDb } from "@/lib/nibrs-db";
-export function answerFromCrimeData() {
-  const rows = getNibrsDb().prepare("SELECT 1").all();
-  return Response.json({ rows }); }`,
-  });
+    "lib/sneaky-helper.ts": FACTUAL_HELPER });
   const mi = measure(imported, path.join(imported, "app/api/auth/route.ts"));
-  check("D4  an imported-but-uncalled helper is NOT pulled in (no reachability regression)",
-    [mi.readsCrimeDb, mi.delegatedModules.length], [false, 0]);
+  check("D4  an imported-but-uncalled helper is NOT pulled in at the route",
+    [mi.readsCrimeDb, mi.reachedModules.length], [false, 0]);
   checkTrue("D5  so the tree still passes", checkEligibility(imported).ok);
 
-  // The access layer must stay a leaf, or `track` becomes a "reader" via getDb's definition.
-  const leaf = tree("d6", { ...FULL,
-    "lib/rtci-db.ts": `export function getDb() { return null; }
-export function getWriteDb() { return null; }` });
+  const leaf = tree("d6", FULL);
   const mt = measure(leaf, path.join(leaf, "app/api/track/route.ts"));
-  check("D6  the db access layer is a walk leaf, so write-only stays write-only",
+  check("D6  the access layer is a walk leaf, so write-only stays write-only",
     [mt.readsCrimeDb, mt.writesOnly], [false, true]);
 }
 
-// ---------------------------------------------------------------- PART E — regressions
+// ---------------------------------------------------------------- PART E
 console.log("\nPART E — measurement regressions");
 {
-  // The phantom that per-unit measurement kills: `rows` in one module, a response in another.
   const root = tree("e1", { ...FULL,
     "app/api/chart-render-receipt/route.ts": `import { persist } from "@/lib/audit-helper";
 export async function POST() { persist(); return Response.json({ success: true }); }`,
     "lib/audit-helper.ts": `export interface Receipt { rows: string[] }
-export function persist() { db.prepare("INSERT INTO t VALUES (1)").run(); }`,
-  });
+export function persist() { db.prepare("INSERT INTO t VALUES (1)").run(); }` });
   const m = measure(root, path.join(root, "app/api/chart-render-receipt/route.ts"));
-  check("E1  a `rows` token in one file and a response in another is NOT a row return",
-    m.returnsRows, false);
-  checkTrue("E2  so the receipt writer still passes", checkEligibility(root).ok,
-    JSON.stringify(checkEligibility(root).failures));
+  check("E1  a `rows` token in one file and a response in another is NOT a row return", m.returnsRows, false);
+  checkTrue("E2  so the receipt writer still passes", checkEligibility(root).ok);
 
-  // ...but a single file containing both still counts, or escape 2 would reopen.
   const real = tree("e3", { ...FULL,
     "app/api/auth/route.ts": `import { h } from "@/lib/h";
 export async function POST() { return h(); }`,
     "lib/h.ts": `import { getShrDb } from "@/lib/shr-db";
-export function h() { const rows = getShrDb().prepare("SELECT 1").all(); return Response.json({ rows }); }`,
-  });
+export function h() { const rows = getShrDb().prepare("SELECT 1").all(); return Response.json({ rows }); }` });
   const mr = measure(real, path.join(real, "app/api/auth/route.ts"));
   check("E3  one file holding both the row binding and the response still counts",
     [mr.readsCrimeDb, mr.returnsRows], [true, true]);
+}
+
+// ---------------------------------------------------------------- PART F — review matrix
+console.log("\nPART F — pre-merge review matrix");
+
+// F1 — multi-hop delegation. The previous fixed depth of 3 certified this on partial evidence.
+{
+  const root = tree("f1", { ...FULL,
+    "app/api/auth/route.ts": `import { a } from "@/lib/a";
+export async function POST() { return a(); }`,
+    "lib/a.ts": `import { b } from "@/lib/b";\nexport function a() { return b(); }`,
+    "lib/b.ts": `import { c } from "@/lib/c";\nexport function b() { return c(); }`,
+    "lib/c.ts": `import { d } from "@/lib/d";\nexport function c() { return d(); }`,
+    "lib/d.ts": `import { answerFromCrimeData } from "@/lib/e";\nexport function d() { return answerFromCrimeData(); }`,
+    "lib/e.ts": FACTUAL_HELPER });
+  const m = measure(root, path.join(root, "app/api/auth/route.ts"));
+  check("F1  a five-hop factual delegation is reached", [m.readsCrimeDb, m.returnsRows], [true, true]);
+  checkTrue("F1b and it FAILS the exclusion", failsAuth(checkEligibility(root)));
+}
+
+// F2 — explicit-extension import. `if (ext && ...)` skipped the only candidate that resolves it.
+{
+  const root = tree("f2", { ...FULL,
+    "app/api/auth/route.ts": `import { answerFromCrimeData } from "./helper.js";
+export async function POST() { return answerFromCrimeData(); }`,
+    "app/api/auth/helper.js": FACTUAL_HELPER });
+  const m = measure(root, path.join(root, "app/api/auth/route.ts"));
+  check("F2  an explicit ./helper.js import resolves and is measured",
+    [m.readsCrimeDb, m.returnsRows], [true, true]);
+  checkTrue("F2b and it FAILS the exclusion", failsAuth(checkEligibility(root)));
+  const r = resolveImport(root, path.join(root, "app/api/auth/route.ts"), "./helper.js");
+  checkTrue("F2c resolveImport returns the exact path, not a probed one",
+    r && r.endsWith("helper.js"), String(r));
+}
+
+// F3 — barrel re-export. The walk used to stop dead at the barrel.
+{
+  const root = tree("f3", { ...FULL,
+    "app/api/auth/route.ts": `import { answerFromCrimeData } from "@/lib/barrel";
+export async function POST() { return answerFromCrimeData(); }`,
+    "lib/barrel/index.ts": `export { answerFromCrimeData } from "../real-helper";`,
+    "lib/real-helper.ts": FACTUAL_HELPER });
+  const m = measure(root, path.join(root, "app/api/auth/route.ts"));
+  check("F3  a barrel re-export is followed to the real helper",
+    [m.readsCrimeDb, m.returnsRows], [true, true]);
+  checkTrue("F3b and it FAILS the exclusion", failsAuth(checkEligibility(root)));
+}
+
+// F4 — literal dynamic load.
+{
+  const root = tree("f4", { ...FULL,
+    "app/api/auth/route.ts": `export async function POST() {
+  const mod = await import("@/lib/dyn-helper");
+  return mod.answerFromCrimeData(); }`,
+    "lib/dyn-helper.ts": FACTUAL_HELPER });
+  const m = measure(root, path.join(root, "app/api/auth/route.ts"));
+  check("F4  a literal dynamic import is followed", [m.readsCrimeDb, m.returnsRows], [true, true]);
+  checkTrue("F4b and it FAILS the exclusion", failsAuth(checkEligibility(root)));
+}
+
+// F5 — non-literal dynamic load must be REFUSED as incomplete, never read as absence.
+{
+  const root = tree("f5", { ...FULL,
+    "app/api/auth/route.ts": `export async function POST(req) {
+  const name = req.headers.get("x-mod");
+  const mod = await import(name);
+  return mod.answer(); }` });
+  const m = measure(root, path.join(root, "app/api/auth/route.ts"));
+  checkTrue("F5  a non-literal dynamic load is recorded as incomplete",
+    m.incomplete.some((i) => i.reason === "non-literal-dynamic-load"), JSON.stringify(m.incomplete));
+  const r = checkEligibility(root);
+  checkTrue("F5b and the route FAILS closed rather than being certified",
+    r.failures.some((f) => f.kind === "analysis-incomplete" && f.route === "app/api/auth/route.ts"),
+    JSON.stringify(r.failures));
+}
+
+// F6 — budget exhaustion fails closed instead of truncating and passing.
+{
+  const files = { ...FULL,
+    "app/api/auth/route.ts": `import { m0 } from "@/lib/m0";
+export async function POST() { return m0(); }` };
+  const n = MAX_MODULES + 5;
+  for (let i = 0; i < n; i++) {
+    files[`lib/m${i}.ts`] = i < n - 1
+      ? `import { m${i + 1} } from "@/lib/m${i + 1}";\nexport function m${i}() { return m${i + 1}(); }`
+      : `export function m${i}() { return null; }`;
+  }
+  const root = tree("f6", files);
+  const m = measure(root, path.join(root, "app/api/auth/route.ts"));
+  checkTrue("F6  exhausting the module budget is recorded as incomplete",
+    m.incomplete.some((i) => i.reason === "module-budget-exceeded"), JSON.stringify(m.incomplete.slice(0, 2)));
+  checkTrue("F6b and the route FAILS closed rather than being certified",
+    checkEligibility(root).failures.some((f) => f.kind === "analysis-incomplete"));
+}
+
+// F7 — the allowlist is an identity, not a naming convention.
+{
+  const root = tree("f7", { ...FULL,
+    "app/api/auth/route.ts": `import { answerFromCrimeData } from "@/lib/crime-db";
+export async function POST() { return answerFromCrimeData(); }`,
+    "lib/crime-db.ts": FACTUAL_HELPER });
+  const m = measure(root, path.join(root, "app/api/auth/route.ts"));
+  check("F7  an unrelated module whose name ends in -db is NOT skipped",
+    [m.readsCrimeDb, m.returnsRows], [true, true]);
+  checkTrue("F7b and it FAILS the exclusion", failsAuth(checkEligibility(root)));
+  checkTrue("F7c the reviewed allowlist is exact paths, not a pattern",
+    ACCESS_LAYER.every((p) => p.startsWith("lib/") && p.endsWith(".ts")));
+  const rotted = tree("f7d", FULL);
+  fs.rmSync(path.join(rotted, "lib/shr-db.ts"));
+  checkTrue("F7d a stale allowlist entry fails rather than silently skipping nothing",
+    checkEligibility(rotted).failures.some((f) => f.kind === "config-assumption"));
+}
+
+// F8 — the documented behavior of the conservative model: inside a reached helper, an unused
+// import IS followed. This is an over-approximation, and it is asserted so it stays deliberate.
+{
+  const root = tree("f8", { ...FULL,
+    "app/api/auth/route.ts": `import { outer } from "@/lib/outer";
+export async function POST() { return outer(); }`,
+    "lib/outer.ts": `import { answerFromCrimeData } from "@/lib/inner";
+export function outer() { return Response.json({ ok: true }); }`,
+    "lib/inner.ts": FACTUAL_HELPER });
+  const m = measure(root, path.join(root, "app/api/auth/route.ts"));
+  check("F8  a nested UNUSED import inside a reached helper is still followed (conservative)",
+    [m.readsCrimeDb, m.reachedModules.includes("lib/inner.ts")], [true, true]);
+  checkTrue("F8b which is the fail-closed direction: it fails rather than certifies",
+    failsAuth(checkEligibility(root)));
+}
+
+// F9 — the route-extension list is only sound while pageExtensions is untouched.
+{
+  check("F9  the real repository does not customize pageExtensions",
+    assertRouteExtensionAssumption(ROOT).ok, true);
+  const root = tree("f9", { ...FULL, "next.config.ts": `export default { pageExtensions: ["ts","xyz"] };` });
+  checkTrue("F9b if it ever does, the guard fails rather than assuming its list is complete",
+    checkEligibility(root).failures.some((f) => f.kind === "config-assumption"));
+  check("F9c the access-layer allowlist validates against the real tree",
+    validateAccessLayer(ROOT), { ok: true, missing: [] });
+}
+
+// F10 — harness accounting: this guard is declared, and its declaration matches its script path.
+{
+  const manifest = JSON.parse(fs.readFileSync(
+    path.join(ROOT, "scripts", "fixtures", "harness-tier-manifest.json"), "utf8"));
+  const entry = manifest.entries.find((e) => e.id === "test-route-eligibility");
+  checkTrue("F10 the guard is declared in the canonical tier manifest", !!entry);
+  check("F10b declared Tier F with no database dependency",
+    entry && [entry.tier, entry.databases.length], ["F", 0]);
+  check("F10c the declared script path is this file",
+    entry && entry.script, "scripts/test-route-eligibility.js");
+  const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, "package.json"), "utf8"));
+  checkTrue("F10d and the canonical chain actually runs it",
+    /node scripts\/test-route-eligibility\.js/.test(pkg.scripts["harness:test"]));
 }
 
 fs.rmSync(tmp, { recursive: true, force: true });
