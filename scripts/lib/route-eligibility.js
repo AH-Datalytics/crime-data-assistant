@@ -30,6 +30,21 @@
  *   - barrel re-exports (`export ... from`) and literal dynamic loads were invisible entirely.
  *   - the access-layer skip was a regular expression over basenames, so a future factual helper
  *     named `crime-db.ts` would have been skipped because of what it was called.
+ *
+ * A second review found five more, all variations on one wrong idea -- that a SEALED route is
+ * self-certifying. `sealed` means the file contains one of three primitive names. It says nothing
+ * about a path the analysis never saw, or a delivery that never touched a seal:
+ *
+ *   - incompleteness was ignored on sealed routes, so a sealed route with a non-literal dynamic
+ *     load was certified. Incompleteness now fails closed for EVERY route.
+ *   - a sealed route could delegate terminal delivery to a helper outside the five inventoried
+ *     files, where nothing proves sealing or pairing. Reached helpers may compute and return data;
+ *     constructing a response is now a named `delegated-response-exit` failure.
+ *   - a sealed route could keep every existing finalization -- leaving the pinned 96-site
+ *     inventory unchanged -- and add one raw `Response.json({ rows })` branch beside them.
+ *   - a bindless side-effect import could never be selected by a handler-reference test, so it was
+ *     skipped rather than followed.
+ *   - a selected local specifier that failed to resolve was read as absence.
  */
 const fs = require("fs");
 const path = require("path");
@@ -71,10 +86,24 @@ const ACCESS_LAYER = [
   "lib/shr-db.ts",
   "lib/hc-db.ts",
   "lib/sqlite-db.ts",
-  "lib/proof-finalize.ts",
-  "lib/proof-contract.ts",
-  "lib/proof-modes.ts",
 ];
+
+/**
+ * Response constructors. A helper that builds one of these is making a terminal delivery, which
+ * is the thing the typed-outcome inventory exists to cover.
+ */
+const RESPONSE_CTORS = /new NextResponse\b|NextResponse\.json\b|new Response\b|Response\.json\b/;
+
+/**
+ * Reached helpers permitted to construct a response, with machine-checked claims.
+ *
+ * EMPTY ON PURPOSE. Measured across the deployed tree: 115 distinct helper modules are reached
+ * from the twelve routes and NONE constructs a response. Terminal delivery happens in the route
+ * files, which is exactly the invariant that makes the five-file exit inventory meaningful. An
+ * entry here would be a deliberate, reviewed hole, so the list starts empty and any new delegated
+ * response exit fails until someone justifies it.
+ */
+const HELPER_RESPONSE_ALLOWLIST = [];
 
 /** Module budget per route. Exhausting it FAILS CLOSED; it never truncates and reports success. */
 const MAX_MODULES = 400;
@@ -99,10 +128,38 @@ function assertRouteExtensionAssumption(root) {
   return { ok: true, detail: null };
 }
 
-/** Every allowlisted access-layer module must exist, or the allowlist has rotted. */
+/**
+ * Validate the PROPERTY that justifies skipping each leaf, not merely that the path exists.
+ *
+ * Existence-only validation does not prove a leaf is still definition-only. The justification for
+ * skipping is narrow: the module DEFINES the crime-database accessors, so walking into it would
+ * match the accessor-call criterion against a definition. The checkable invariant is therefore:
+ *
+ *   a leaf must define at least one crime-database accessor, AND must construct no response.
+ *
+ * Note the invariant is deliberately NOT "performs no read operation". `lib/nibrs-db.ts` legitimately
+ * reads inside the access layer; that is what an access layer does. Reading is not what makes
+ * skipping safe — being the definition site of the accessors is.
+ *
+ * The three proof modules (`proof-finalize`, `proof-contract`, `proof-modes`) were previously on
+ * this list and define no accessor at all, so they never satisfied the rationale. They are removed
+ * and are now traversed like any other helper.
+ */
 function validateAccessLayer(root) {
-  const missing = ACCESS_LAYER.filter((rel) => !fs.existsSync(path.join(root, rel)));
-  return { ok: missing.length === 0, missing };
+  const missing = [];
+  const violations = [];
+  for (const rel of ACCESS_LAYER) {
+    const p = path.join(root, rel);
+    if (!fs.existsSync(p)) { missing.push(rel); continue; }
+    const src = fs.readFileSync(p, "utf8");
+    if (!/export\s+(async\s+)?function\s+get\w*Db\b/.test(src)) {
+      violations.push(rel + ": defines no crime-database accessor, so leaf status is unjustified");
+    }
+    if (RESPONSE_CTORS.test(src)) {
+      violations.push(rel + ": constructs an HTTP response, so it is a delivery site, not a leaf");
+    }
+  }
+  return { ok: missing.length === 0 && violations.length === 0, missing, violations };
 }
 
 /**
@@ -244,6 +301,10 @@ function reachableModules(root, routeFile, ts) {
 
     const specs = [];
     for (const [spec, names] of loads.named) {
+      // A SIDE-EFFECT import (`import "@/lib/x"`) binds no name, so a handler-reference test can
+      // never select it — it was skipped rather than followed or refused, while the handler could
+      // still consume state the module established. Bindless imports are now always followed.
+      if (names.size === 0) { specs.push(spec); continue; }
       // At the route, follow only what the handlers reference. Inside a helper, follow everything.
       if (!atRoute || [...names].some((n) => handlerIds.has(n))) specs.push(spec);
     }
@@ -251,15 +312,109 @@ function reachableModules(root, routeFile, ts) {
 
     for (const spec of specs) {
       const resolved = resolveImport(root, file, spec);
-      if (!resolved || seen.has(resolved)) continue;
+      if (!resolved) {
+        // A SELECTED local specifier that will not resolve is not absence — it is a path the
+        // analysis cannot see. Treating it as absence is what made the explicit-extension defect
+        // silent, and any future alias or extension convention would recreate it.
+        if (spec.startsWith(".") || spec.startsWith("@/")) {
+          incomplete.push({ reason: "unresolved-local-load", detail: rel(file) + " -> " + spec });
+        }
+        continue;
+      }
+      if (seen.has(resolved)) continue;
       seen.add(resolved);
       if (access.has(resolved)) continue;   // reviewed access layer: already measured at the caller
       const text = fs.readFileSync(resolved, "utf8");
-      out.push({ file: rel(resolved), text });
+      out.push({ file: rel(resolved), text, constructsResponse: RESPONSE_CTORS.test(text) });
       queue.push({ file: resolved, sf: ts.createSourceFile(resolved, text, ts.ScriptTarget.Latest, true), atRoute: false });
     }
   }
   return { modules: out, incomplete };
+}
+
+/**
+ * Raw factual responses returned from a route file WITHOUT passing through a seal.
+ *
+ * A route counts as `sealed` when its source contains one of three primitive names. That says
+ * nothing about whether EVERY delivery in the file goes through one. A file can keep all of its
+ * existing finalizations — leaving the pinned 96-site inventory unchanged — and add one branch
+ * that returns `Response.json({ rows })` directly. Both guards previously passed.
+ *
+ * Detection is deliberately narrow, because route files legitimately return raw responses on
+ * operational paths (validation failures, errors) and flagging those would be noise:
+ *
+ *   1. collect bindings initialised from a crime-database read — an accessor call plus a read op;
+ *   2. find returned response constructors whose arguments reference one of those bindings;
+ *   3. ignore any whose returned expression is a seal call.
+ *
+ * So an operational `NextResponse.json({ error })` is untouched, while a returned response
+ * carrying crime-derived rows must be sealed.
+ */
+function unsealedFactualResponses(root, file, ts) {
+  const src = fs.readFileSync(file, "utf8");
+  const sf = ts.createSourceFile(file, src, ts.ScriptTarget.Latest, true);
+  const crimeBindings = new Set();
+  const hits = [];
+
+  const textOf = (n) => { try { return n.getText(sf); } catch { return ""; } };
+  const isCrimeRead = (t) =>
+    CRIME_DB_READERS.some((a) => new RegExp("\\b" + a + "\\s*\\(").test(t)) &&
+    READ_OPS.some((op) => t.includes(op));
+
+  // The initializer must BE a read, not merely CONTAIN one. Without this, the SSE route's
+  // `const stream = new ReadableStream({ async start(controller) { ...entire handler... } })`
+  // matched: the closure body contains every accessor call and read op in the route, so `stream`
+  // was treated as crime-derived and all fifteen of its sealed deliveries were reported unsealed.
+  // A binding that holds rows has no function body between the declaration and the read.
+  const containsFunctionLike = (n) => {
+    let found = false;
+    const scan = (x) => {
+      if (found) return;
+      if (ts.isFunctionDeclaration(x) || ts.isFunctionExpression(x) || ts.isArrowFunction(x) ||
+          ts.isMethodDeclaration(x) || ts.isGetAccessor(x) || ts.isSetAccessor(x)) { found = true; return; }
+      ts.forEachChild(x, scan);
+    };
+    ts.forEachChild(n, scan);
+    return found;
+  };
+
+  const collect = (n) => {
+    if (ts.isVariableDeclaration(n) && ts.isIdentifier(n.name) && n.initializer &&
+        !containsFunctionLike(n.initializer) && isCrimeRead(textOf(n.initializer))) {
+      crimeBindings.add(n.name.text);
+    }
+    ts.forEachChild(n, collect);
+  };
+  collect(sf);
+  if (!crimeBindings.size) return hits;
+
+  const isSealCall = (e) => {
+    const t = textOf(e);
+    return SEAL_PRIMITIVES.some((p) => new RegExp("\\b" + p + "\\s*\\(").test(t));
+  };
+
+  const walk = (n) => {
+    if (ts.isReturnStatement(n) && n.expression) {
+      const t = textOf(n.expression);
+      if (RESPONSE_CTORS.test(t) && !isSealCall(n.expression)) {
+        const refs = [];
+        const scan = (x) => {
+          if (ts.isIdentifier(x) && crimeBindings.has(x.text)) refs.push(x.text);
+          ts.forEachChild(x, scan);
+        };
+        scan(n.expression);
+        if (refs.length) {
+          hits.push({
+            line: sf.getLineAndCharacterOfPosition(n.getStart(sf)).line + 1,
+            binding: refs[0],
+          });
+        }
+      }
+    }
+    ts.forEachChild(n, walk);
+  };
+  walk(sf);
+  return hits;
 }
 
 const EXCLUSIONS = [
@@ -378,6 +533,13 @@ function measure(root, file, ts) {
     requiresCredential: /LOG_KEY|authorizeAnalytics|Unauthorized/.test(union),
     writesOnly: writeOpIn(own) && !readOpIn(own),
     reachedModules: modules.map((m) => m.file),
+    // B2: a reached helper that constructs a response is making a terminal delivery outside the
+    // five inventoried route files, where nothing proves sealing or pairing.
+    helperResponseExits: modules
+      .filter((m) => m.constructsResponse && !HELPER_RESPONSE_ALLOWLIST.includes(m.file))
+      .map((m) => m.file),
+    // B2, same file: a returned response carrying crime-derived rows that never passes a seal.
+    unsealedFactualResponses: unsealedFactualResponses(root, file, ts),
     incomplete,
   };
 }
@@ -402,7 +564,9 @@ function checkEligibility(root) {
   if (!acc.ok) {
     failures.push({
       kind: "config-assumption", route: "(access-layer)",
-      detail: "allowlisted access-layer modules missing: " + acc.missing.join(", "),
+      detail: [acc.missing.length ? "missing: " + acc.missing.join(", ") : "",
+               acc.violations.length ? "leaf invariant violated -> " + acc.violations.join("; ") : ""]
+              .filter(Boolean).join(" | "),
     });
   }
 
@@ -412,15 +576,37 @@ function checkEligibility(root) {
   for (const m of measured) {
     const ex = EXCLUSIONS.find((e) => e.route === m.route);
 
-    // Fail closed. A sealed route is covered by its seal, so incomplete analysis cannot hide a
-    // hole there; for anything else, an unseeable path is a refusal to certify, not a pass.
-    if (!m.sealed && m.incomplete.length) {
+    // Fail closed for EVERY route, sealed included. An earlier version exempted sealed routes on
+    // the reasoning that the seal already covers them. That was unsound: `sealed` means the file
+    // contains one of three primitive names, which says nothing about whether an unseen
+    // dynamically-loaded or delegated path passes through one.
+    if (m.incomplete.length) {
       for (const inc of m.incomplete) {
         failures.push({
           kind: "analysis-incomplete", route: m.route,
           detail: inc.reason + ": " + inc.detail + " — refusing to certify this route",
         });
       }
+    }
+
+    // B2: delegated terminal delivery. Applies to sealed routes too - that is the point.
+    for (const h of m.helperResponseExits) {
+      failures.push({
+        kind: "delegated-response-exit", route: m.route,
+        detail: "reached helper " + h + " constructs an HTTP response outside the terminal-exit " +
+                "inventory, so nothing proves that delivery is sealed or paired - review required",
+      });
+    }
+    // Only meaningful for SEALED routes. A registered exclusion that returns crime rows is doing
+    // so under a written, machine-checked justification -- query-log is exactly that -- and an
+    // unregistered route is already caught as unsealed-unregistered. Applying it everywhere put
+    // the excluded routes in double jeopardy with their own registry.
+    for (const u of (m.sealed ? m.unsealedFactualResponses : [])) {
+      failures.push({
+        kind: "unsealed-factual-response", route: m.route,
+        detail: "line " + u.line + " returns a response carrying crime-derived binding '" +
+                u.binding + "' without passing through a seal",
+      });
     }
 
     if (!m.sealed && !ex) {
@@ -477,5 +663,7 @@ function checkEligibility(root) {
 module.exports = {
   checkEligibility, measure, routeFiles, reachableModules, resolveImport,
   assertRouteExtensionAssumption, validateAccessLayer,
-  EXCLUSIONS, CRIME_DB_READERS, SEAL_PRIMITIVES, ROUTE_BASENAMES, ACCESS_LAYER, MAX_MODULES,
+  unsealedFactualResponses,
+  EXCLUSIONS, CRIME_DB_READERS, SEAL_PRIMITIVES, ROUTE_BASENAMES, ACCESS_LAYER,
+  MAX_MODULES, RESPONSE_CTORS, HELPER_RESPONSE_ALLOWLIST,
 };

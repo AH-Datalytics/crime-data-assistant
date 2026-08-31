@@ -22,7 +22,7 @@ const path = require("path");
 const {
   checkEligibility, measure, routeFiles, resolveImport,
   assertRouteExtensionAssumption, validateAccessLayer,
-  EXCLUSIONS, ROUTE_BASENAMES, ACCESS_LAYER, MAX_MODULES,
+  EXCLUSIONS, ROUTE_BASENAMES, ACCESS_LAYER, MAX_MODULES, HELPER_RESPONSE_ALLOWLIST,
 } = require("./lib/route-eligibility.js");
 
 // Defaults to this repository, which is what the canonical harness runs. An explicit root is
@@ -89,6 +89,13 @@ function tree(name, files) {
     const p = path.join(root, rel);
     fs.mkdirSync(path.dirname(p), { recursive: true });
     fs.writeFileSync(p, body);
+  }
+  // proof-finalize is no longer an access-layer leaf, so SEALED fixtures must be able to resolve
+  // it or every one of them reports unresolved-local-load.
+  const pf = path.join(root, "lib/proof-finalize.ts");
+  if (!fs.existsSync(pf)) {
+    fs.mkdirSync(path.dirname(pf), { recursive: true });
+    fs.writeFileSync(pf, "export function emitFactualPayload() { return null; }");
   }
   // The access-layer allowlist must validate, or every fixture fails on config-assumption.
   for (const rel of ACCESS_LAYER) {
@@ -376,7 +383,7 @@ export function outer() { return Response.json({ ok: true }); }`,
   checkTrue("F9b if it ever does, the guard fails rather than assuming its list is complete",
     checkEligibility(root).failures.some((f) => f.kind === "config-assumption"));
   check("F9c the access-layer allowlist validates against the real tree",
-    validateAccessLayer(ROOT), { ok: true, missing: [] });
+    validateAccessLayer(ROOT), { ok: true, missing: [], violations: [] });
 }
 
 // F10 — harness accounting: this guard is declared, and its declaration matches its script path.
@@ -392,6 +399,141 @@ export function outer() { return Response.json({ ok: true }); }`,
   const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, "package.json"), "utf8"));
   checkTrue("F10d and the canonical chain actually runs it",
     /node scripts\/test-route-eligibility\.js/.test(pkg.scripts["harness:test"]));
+}
+
+// ---------------------------------------------------------------- PART G — round-2 review matrix
+// Every case here escaped or was ignored under 721a6fd. The shared theme: a SEALED route is not
+// self-certifying. `sealed` means the file contains one of three primitive names; it proves
+// nothing about a path the analysis never saw, or a delivery that never touched a seal.
+console.log("\nPART G — round-2 review matrix");
+const failsQuery = (r) => r.failures.some((f) => f.route === "app/api/query/route.ts");
+
+// G1 — a SEALED route with a non-literal dynamic load. Previously exempted from incompleteness.
+{
+  const root = tree("g1", { ...FULL,
+    "app/api/query/route.ts": `import { emitFactualPayload } from "@/lib/proof-finalize";
+export async function POST(req) {
+  const name = req.headers.get("x-mod");
+  const mod = await import(name);
+  if (mod) return mod.answer();
+  return emitFactualPayload(); }` });
+  const m = measure(root, path.join(root, "app/api/query/route.ts"));
+  check("G1  a sealed route is still measured as sealed", m.sealed, true);
+  checkTrue("G1b but its unseen dynamic path is recorded incomplete",
+    m.incomplete.some((i) => i.reason === "non-literal-dynamic-load"));
+  checkTrue("G1c and it FAILS closed rather than riding on its seal",
+    checkEligibility(root).failures.some(
+      (f) => f.kind === "analysis-incomplete" && f.route === "app/api/query/route.ts"),
+    JSON.stringify(checkEligibility(root).failures));
+}
+
+// G2 — a SEALED route delegating terminal delivery to a helper outside the exit inventory.
+{
+  const root = tree("g2", { ...FULL,
+    "app/api/query/route.ts": `import { emitFactualPayload } from "@/lib/proof-finalize";
+import { helperThatReturns } from "@/lib/deliverer";
+export async function POST(req) {
+  if (req) return helperThatReturns();
+  return emitFactualPayload(); }`,
+    "lib/deliverer.ts": FACTUAL_HELPER.replace("answerFromCrimeData", "helperThatReturns") });
+  const m = measure(root, path.join(root, "app/api/query/route.ts"));
+  check("G2  the delegated response exit is detected", m.helperResponseExits, ["lib/deliverer.ts"]);
+  const r = checkEligibility(root);
+  checkTrue("G2b and the sealed route FAILS", failsQuery(r), JSON.stringify(r.failures));
+  checkTrue("G2c named as a delegated-response-exit requiring review",
+    r.failures.some((f) => f.kind === "delegated-response-exit" && /deliverer/.test(f.detail)));
+  checkTrue("G2d the deployed tree has no such exit, so G2 is not the normal state",
+    res.routes.every((x) => x.helperResponseExits.length === 0));
+}
+
+// G3 — a SEALED route that keeps its seal and adds a raw factual branch in the SAME file.
+// The pinned 96-site inventory is unchanged by this shape, which is why P2.2 alone cannot see it.
+{
+  const root = tree("g3", { ...FULL,
+    "app/api/query/route.ts": `import { emitFactualPayload } from "@/lib/proof-finalize";
+import { getNibrsDb } from "@/lib/nibrs-db";
+export async function POST(req) {
+  if (req.fast) {
+    const rows = getNibrsDb().prepare("SELECT 1").all();
+    return Response.json({ rows });
+  }
+  return emitFactualPayload(); }` });
+  const m = measure(root, path.join(root, "app/api/query/route.ts"));
+  check("G3  the route still contains a seal", m.sealed, true);
+  check("G3b the raw factual branch is found", m.unsealedFactualResponses.length, 1);
+  checkTrue("G3c and it FAILS as an unsealed factual response",
+    checkEligibility(root).failures.some((f) => f.kind === "unsealed-factual-response"));
+  check("G3d an operational raw response is NOT flagged",
+    measure(tree("g3d", { ...FULL,
+      "app/api/query/route.ts": `import { emitFactualPayload } from "@/lib/proof-finalize";
+export async function POST(req) {
+  if (!req.ok) return Response.json({ error: "bad request" });
+  return emitFactualPayload(); }` }),
+      path.join(tmp, "g3d", "app/api/query/route.ts")).unsealedFactualResponses.length, 0);
+}
+
+// G4 — a route-level side-effect import binds no name, so a handler-reference test cannot select it.
+{
+  const root = tree("g4", { ...FULL,
+    "app/api/auth/route.ts": `import "@/lib/side-effect";
+export async function POST() { return Response.json({ ok: true }); }`,
+    "lib/side-effect.ts": FACTUAL_HELPER });
+  const m = measure(root, path.join(root, "app/api/auth/route.ts"));
+  checkTrue("G4  a bindless side-effect import is followed, not skipped",
+    m.reachedModules.includes("lib/side-effect.ts"), JSON.stringify(m.reachedModules));
+  checkTrue("G4b so its factual behavior FAILS the exclusion", failsAuth(checkEligibility(root)));
+}
+
+// G5 — a selected local specifier that will not resolve is a blind spot, not an absence.
+{
+  const root = tree("g5", { ...FULL,
+    "app/api/auth/route.ts": `import { gone } from "@/lib/does-not-exist";
+export async function POST() { return gone(); }` });
+  const m = measure(root, path.join(root, "app/api/auth/route.ts"));
+  checkTrue("G5  an unresolved local import is recorded incomplete",
+    m.incomplete.some((i) => i.reason === "unresolved-local-load"), JSON.stringify(m.incomplete));
+  checkTrue("G5b and the route FAILS closed",
+    checkEligibility(root).failures.some((f) => f.kind === "analysis-incomplete"));
+  checkTrue("G5c a bare package import is NOT treated as unresolved",
+    measure(tree("g5c", { ...FULL,
+      "app/api/auth/route.ts": `import { z } from "zod";
+export async function POST() { return Response.json({ ok: !!z }); }` }),
+      path.join(tmp, "g5c", "app/api/auth/route.ts")).incomplete.length === 0);
+}
+
+// G6 — the proof modules were never access-layer leaves: they define no accessor.
+{
+  const root = tree("g6", { ...FULL,
+    "app/api/auth/route.ts": `import { answerFromCrimeData } from "@/lib/proof-contract";
+export async function POST() { return answerFromCrimeData(); }`,
+    "lib/proof-contract.ts": FACTUAL_HELPER });
+  const m = measure(root, path.join(root, "app/api/auth/route.ts"));
+  checkTrue("G6  a proof module is traversed, not skipped",
+    m.reachedModules.includes("lib/proof-contract.ts"), JSON.stringify(m.reachedModules));
+  checkTrue("G6b so factual behavior placed there FAILS", failsAuth(checkEligibility(root)));
+  check("G6c the leaf list is the database accessors only", ACCESS_LAYER.slice().sort(),
+    ["lib/hc-db.ts", "lib/nibrs-db.ts", "lib/rtci-db.ts", "lib/shr-db.ts", "lib/sqlite-db.ts"]);
+}
+
+// G7 — leaf status is validated by the property that justifies it, not by existence.
+{
+  const noAccessor = tree("g7a", FULL);
+  fs.writeFileSync(path.join(noAccessor, "lib/shr-db.ts"), "export const x = 1;");
+  checkTrue("G7  a leaf that stops defining an accessor FAILS configuration",
+    checkEligibility(noAccessor).failures.some(
+      (f) => f.kind === "config-assumption" && /defines no crime-database accessor/.test(f.detail)));
+
+  const delivers = tree("g7b", FULL);
+  fs.writeFileSync(path.join(delivers, "lib/shr-db.ts"),
+    "export function getShrDb() { return null; }\nexport function send() { return Response.json({ rows: [] }); }");
+  checkTrue("G7b a leaf that starts constructing a response FAILS configuration",
+    checkEligibility(delivers).failures.some(
+      (f) => f.kind === "config-assumption" && /constructs an HTTP response/.test(f.detail)));
+
+  check("G7c reading inside a leaf is NOT a violation - that is what an access layer does",
+    validateAccessLayer(ROOT).violations, []);
+  check("G7d the helper-response allowlist is empty, so no delegated exit is pre-approved",
+    HELPER_RESPONSE_ALLOWLIST, []);
 }
 
 fs.rmSync(tmp, { recursive: true, force: true });
