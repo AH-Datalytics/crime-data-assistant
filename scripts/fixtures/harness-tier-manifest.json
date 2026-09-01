@@ -1310,6 +1310,15 @@
       "note": "reads route source and builds throwaway fixture trees; prepares no SQLite statement"
     },
     {
+      "id": "test-request-decision-observer",
+      "tier": "F",
+      "script": "scripts/test-request-decision-observer.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "evaluates production capability predicates against hand-specified contracts; prepares no SQLite statement"
+    },
+    {
       "id": "test-outcome-mutations",
       "tier": "F",
       "script": "scripts/test-outcome-mutations.js",
