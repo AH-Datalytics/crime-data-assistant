@@ -440,13 +440,19 @@ the same probe, five different applicability claims.
 
 ## Step 4 — CANDIDATE implemented, controls proved, identity FROZEN
 
-**Frozen CANDIDATE identity — no evidence run may precede this.**
+> **SUPERSEDED IDENTITY — historical record.** The identity below is the FIRST candidate. It was
+> superseded by review round 1 (`9a19e10…`) and again by round 2 (`c163a0e…`). The governing
+> candidate is in **Pinned trees** above; the evidence run is gated on that one. This block is kept
+> because the controls described beneath it were designed against this tree, and deleting it would
+> erase why they look the way they do.
+
+**First CANDIDATE identity, superseded twice.**
 
 | | |
 |---|---|
 | Branch | `feat/p3-1a-request-decision-observer` |
-| **Commit** | `c567f4aea31d0f4c5d1c0928b1a2687a8d10955b` |
-| **Tree** | `26083c066d572898533af3c9a4ff7ee7dc770448` |
+| **Commit** | `c567f4aea31d0f4c5d1c0928b1a2687a8d10955b` — **superseded** |
+| **Tree** | `26083c066d572898533af3c9a4ff7ee7dc770448` — **superseded** |
 | Base | `e2d24acd37027f436590ed8eae58bb5b30414ffb` |
 | Diff | 4 files, +372 / -1 |
 | Frozen cases | v3 `2535cbd934a4766a7f9ff8570f5b0e60d04b7c37430283b48e52b206c75a0b91` |

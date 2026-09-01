@@ -20,8 +20,16 @@ Superseded candidates are preserved unmodified and remain reachable.
 | **Candidate tree** | `f0b32cebd85d11478c68ec3fd35d6bd0e8363ab2` |
 | **Runner sha256** | `6ab1f354b00b4103486b279fff2819bada439c265dcdbf9fcd9f345891253634` |
 | Superseded | `9a19e1045ad051afc60cb53efd8d56bd93f952b7`, `c567f4aea31d0f4c5d1c0928b1a2687a8d10955b` |
+| Last CODE commit | `c163a0ecc6fab8be4e5d32b9071464c6f0b87b2b` |
 | BASE | `e2d24acd37027f436590ed8eae58bb5b30414ffb` |
 | Worktree | clean |
+
+**On the tip moving after this document was written.** Committing this response necessarily changes
+the tree, so the branch tip is one or two commits ahead of the identity table above. Those commits
+are **documentation only** — verify with `git diff --numstat c163a0e HEAD`, which touches nothing
+outside `docs/superpowers/`. The identity to review is the branch tip; the identity `--run` will
+demand is whatever HEAD resolves to at authorization time, which is exactly why the runner takes it
+as an argument instead of hard-coding it.
 
 Those first three values are not decoration. `--run` refuses unless the operator passes
 `--candidate`, `--tree` and `--runner-sha` and all three match what is actually on disk, and unless
