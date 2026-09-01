@@ -333,88 +333,183 @@ function reachableModules(root, routeFile, ts) {
 }
 
 /**
- * Raw factual responses returned from a route file WITHOUT passing through a seal.
+ * STRUCTURAL TERMINAL-EGRESS INVENTORY.
  *
- * A route counts as `sealed` when its source contains one of three primitive names. That says
- * nothing about whether EVERY delivery in the file goes through one. A file can keep all of its
- * existing finalizations — leaving the pinned 96-site inventory unchanged — and add one branch
- * that returns `Response.json({ rows })` directly. Both guards previously passed.
+ * Replaces `unsealedFactualResponses()`, which asked the wrong question. That check tried to
+ * decide whether a returned payload *contained crime data*, by matching tokens. Review found
+ * three one-line spellings that defeat it — splitting the accessor from the read, binding the
+ * response before returning it, or passing the rows through any transform — and adding a token
+ * case per spelling is an unwinnable game.
  *
- * Detection is deliberately narrow, because route files legitimately return raw responses on
- * operational paths (validation failures, errors) and flagging those would be noise:
+ * This asks the question the property actually needs: **is every terminal exit classified?**
+ * Payload contents are never inspected. An exit is acceptable only if it is
  *
- *   1. collect bindings initialised from a crime-database read — an accessor call plus a read op;
- *   2. find returned response constructors whose arguments reference one of those bindings;
- *   3. ignore any whose returned expression is a seal call.
+ *   chokepoint  - constructed inside a function whose payload parameter is typed `SealedPayload`.
+ *                 This is the architecture the routes already use: `jsonResp(data: SealedPayload
+ *                 <...> | QueryError)` and `embedResp(data: SealedPayload<object> | EmbedError)`.
+ *                 The type is the enforcement; factual content cannot reach the response without
+ *                 having been sealed.
+ *   sse-envelope - `new Response(<ReadableStream>, ...text/event-stream...)`. The envelope carries
+ *                 no facts itself; the facts are the sealed payloads enqueued into the stream,
+ *                 which is exactly what P2.2's 96/96 site inventory proves.
+ *   operational - registered in OPERATIONAL_EXITS with a written reason and a structural
+ *                 fingerprint. Error bodies, CORS preflights, captcha challenges: they assert no
+ *                 facts, so they need no proof.
  *
- * So an operational `NextResponse.json({ error })` is untouched, while a returned response
- * carrying crime-derived rows must be sealed.
+ * Anything else fails as `unclassified-terminal-exit`. A new `return Response.json({ rows })`
+ * anywhere in a sealed route is a new unregistered construction site and fails REGARDLESS of how
+ * the data reached it — which is why the three false acceptances die by construction rather than
+ * by another token rule.
+ *
+ * FINGERPRINTS CARRY PAYLOAD SHAPE, NOT LINE NUMBERS. Line-keyed entries break on their own first
+ * commit. Shape is included so that REPLACING a classified exit with a raw factual one fails even
+ * though the exit count is unchanged: `obj{error,success}` and `id:rows` are different keys.
  */
-function unsealedFactualResponses(root, file, ts) {
-  const src = fs.readFileSync(file, "utf8");
-  const sf = ts.createSourceFile(file, src, ts.ScriptTarget.Latest, true);
-  const crimeBindings = new Set();
-  const hits = [];
 
-  const textOf = (n) => { try { return n.getText(sf); } catch { return ""; } };
-  const isCrimeRead = (t) =>
-    CRIME_DB_READERS.some((a) => new RegExp("\\b" + a + "\\s*\\(").test(t)) &&
-    READ_OPS.some((op) => t.includes(op));
+const RESPONSE_CTOR_NAMES = new Set(["Response", "NextResponse"]);
+const SEAL_CALL = /\b(emitFactualPayload|finalizeExit|finalizeProof)\s*\(/;
 
-  // The initializer must BE a read, not merely CONTAIN one. Without this, the SSE route's
-  // `const stream = new ReadableStream({ async start(controller) { ...entire handler... } })`
-  // matched: the closure body contains every accessor call and read op in the route, so `stream`
-  // was treated as crime-derived and all fifteen of its sealed deliveries were reported unsealed.
-  // A binding that holds rows has no function body between the declaration and the read.
-  const containsFunctionLike = (n) => {
-    let found = false;
-    const scan = (x) => {
-      if (found) return;
-      if (ts.isFunctionDeclaration(x) || ts.isFunctionExpression(x) || ts.isArrowFunction(x) ||
-          ts.isMethodDeclaration(x) || ts.isGetAccessor(x) || ts.isSetAccessor(x)) { found = true; return; }
-      ts.forEachChild(x, scan);
-    };
-    ts.forEachChild(n, scan);
-    return found;
-  };
+/**
+ * Reviewed operational exits: they assert no facts, so they carry no typed outcome.
+ * Each entry is `route::enclosingChain::ctor::payloadShape`.
+ */
+const OPERATIONAL_EXITS = [
+  // --- app/api/query/route.ts : rate limiting, validation and captcha, all pre-answer ---
+  { fp: "app/api/query/route.ts::POST::new Response::call:JSON.stringify",
+    reason: "Pre-answer refusals in the SSE route: rate limit, payload validation and captcha. " +
+            "Every body is {success:false,...}; none asserts a fact, so none needs a typed outcome.",
+    count: 7 },
+  // --- CORS preflight ---
+  { fp: "app/api/nibrs-query/route.ts::OPTIONS::new NextResponse::literal",
+    reason: "CORS preflight. 204 with a null body; asserts nothing.", count: 1 },
+  // --- captcha / source-availability refusals on the JSON routes ---
+  { fp: "app/api/nibrs-query/route.ts::POST::NextResponse.json::obj{captchaRequired,success}",
+    reason: "Captcha challenge issued before any query runs.", count: 1 },
+  { fp: "app/api/shr-query/route.ts::POST::NextResponse.json::obj{captchaRequired,success}",
+    reason: "Captcha challenge issued before any query runs.", count: 1 },
+  { fp: "app/api/hc-query/route.ts::POST::NextResponse.json::obj{captchaRequired,success}",
+    reason: "Captcha challenge issued before any query runs.", count: 1 },
+  { fp: "app/api/hc-query/route.ts::POST::NextResponse.json::obj{error,success}",
+    reason: "The hate-crime source is unavailable in this deployment. A refusal, not an answer.",
+    count: 1 },
+];
 
-  const collect = (n) => {
-    if (ts.isVariableDeclaration(n) && ts.isIdentifier(n.name) && n.initializer &&
-        !containsFunctionLike(n.initializer) && isCrimeRead(textOf(n.initializer))) {
-      crimeBindings.add(n.name.text);
+function enclosingChain(node, sf, ts) {
+  const names = [];
+  let n = node.parent;
+  while (n) {
+    if (ts.isFunctionDeclaration(n) && n.name) names.push(n.name.text);
+    else if (ts.isMethodDeclaration(n) && n.name) names.push(n.name.getText(sf));
+    else if (ts.isVariableDeclaration(n) && ts.isIdentifier(n.name)) names.push(n.name.text);
+    n = n.parent;
+  }
+  return names.reverse().join(">") || "<module>";
+}
+
+/** Stable description of what is being sent, without inspecting whether it holds crime data. */
+function payloadShape(arg, sf, ts) {
+  if (!arg) return "none";
+  if (ts.isObjectLiteralExpression(arg)) {
+    const keys = arg.properties
+      .map((p) => (p.name && ts.isIdentifier(p.name) ? p.name.text : "?"))
+      .sort();
+    return "obj{" + keys.join(",") + "}";
+  }
+  if (ts.isIdentifier(arg)) return "id:" + arg.text;
+  if (ts.isCallExpression(arg)) return "call:" + arg.expression.getText(sf);
+  if (arg.kind === ts.SyntaxKind.NullKeyword) return "literal";
+  if (ts.isStringLiteral(arg) || ts.isNumericLiteral(arg)) return "literal";
+  return "expr";
+}
+
+function responseCtorOf(e, sf, ts) {
+  if (!e) return null;
+  if (ts.isNewExpression(e) && RESPONSE_CTOR_NAMES.has(e.expression.getText(sf))) {
+    return "new " + e.expression.getText(sf);
+  }
+  if (ts.isCallExpression(e)) {
+    const t = e.expression.getText(sf);
+    if (t === "Response.json" || t === "NextResponse.json") return t;
+  }
+  return null;
+}
+
+/**
+ * A function is a chokepoint when one of its parameters is typed with `SealedPayload`. That type
+ * is what makes it impossible to deliver factual content without sealing it first, so a response
+ * constructed inside such a function is covered by the type system rather than by this guard.
+ */
+function chokepointFunctions(sf, ts) {
+  const names = new Set();
+  const visit = (n) => {
+    const params = n.parameters;
+    if (params && params.length) {
+      const sealed = params.some((p) => p.type && /SealedPayload/.test(p.type.getText(sf)));
+      if (sealed) {
+        if (ts.isFunctionDeclaration(n) && n.name) names.add(n.name.text);
+        else if (ts.isVariableDeclaration(n.parent) && ts.isIdentifier(n.parent.name)) {
+          names.add(n.parent.name.text);
+        }
+      }
     }
-    ts.forEachChild(n, collect);
+    ts.forEachChild(n, visit);
   };
-  collect(sf);
-  if (!crimeBindings.size) return hits;
+  visit(sf);
+  return names;
+}
 
-  const isSealCall = (e) => {
-    const t = textOf(e);
-    return SEAL_PRIMITIVES.some((p) => new RegExp("\\b" + p + "\\s*\\(").test(t));
+/** Enumerate and classify every terminal HTTP egress in one route file. */
+function terminalEgress(file, src, ts) {
+  const sf = ts.createSourceFile(file, src, ts.ScriptTarget.Latest, true);
+  const chokepoints = chokepointFunctions(sf, ts);
+
+  // one-hop-plus alias map, so a response built into a binding and returned later is still seen
+  const binding = new Map();
+  const collectBindings = (n) => {
+    if (ts.isVariableDeclaration(n) && ts.isIdentifier(n.name) && n.initializer) {
+      binding.set(n.name.text, n.initializer);
+    }
+    ts.forEachChild(n, collectBindings);
+  };
+  collectBindings(sf);
+  const deref = (e) => {
+    let cur = e, hops = 0;
+    while (cur && ts.isIdentifier(cur) && binding.has(cur.text) && hops < 6) {
+      cur = binding.get(cur.text); hops++;
+    }
+    return cur;
   };
 
+  const exits = [];
   const walk = (n) => {
     if (ts.isReturnStatement(n) && n.expression) {
-      const t = textOf(n.expression);
-      if (RESPONSE_CTORS.test(t) && !isSealCall(n.expression)) {
-        const refs = [];
-        const scan = (x) => {
-          if (ts.isIdentifier(x) && crimeBindings.has(x.text)) refs.push(x.text);
-          ts.forEachChild(x, scan);
-        };
-        scan(n.expression);
-        if (refs.length) {
-          hits.push({
-            line: sf.getLineAndCharacterOfPosition(n.getStart(sf)).line + 1,
-            binding: refs[0],
-          });
-        }
+      const resolved = deref(n.expression);
+      const ctor = responseCtorOf(resolved, sf, ts);
+      if (ctor) {
+        const chain = enclosingChain(n, sf, ts);
+        const args = resolved.arguments || [];
+        const first = args[0];
+        const firstResolved = deref(first);
+        const whole = resolved.getText(sf);
+        const firstText = firstResolved ? firstResolved.getText(sf) : "";
+
+        let kind;
+        if (chokepoints.has(chain.split(">").pop())) kind = "chokepoint";
+        else if (/ReadableStream/.test(firstText) || /text\/event-stream/.test(whole)) kind = "sse-envelope";
+        else if (SEAL_CALL.test(whole) || SEAL_CALL.test(firstText)) kind = "sealed";
+        else kind = "unclassified";
+
+        exits.push({
+          line: sf.getLineAndCharacterOfPosition(n.getStart(sf)).line + 1,
+          ctor, kind, chain,
+          shape: payloadShape(first, sf, ts),
+        });
       }
     }
     ts.forEachChild(n, walk);
   };
   walk(sf);
-  return hits;
+  return exits;
 }
 
 const EXCLUSIONS = [
@@ -538,8 +633,10 @@ function measure(root, file, ts) {
     helperResponseExits: modules
       .filter((m) => m.constructsResponse && !HELPER_RESPONSE_ALLOWLIST.includes(m.file))
       .map((m) => m.file),
-    // B2, same file: a returned response carrying crime-derived rows that never passes a seal.
-    unsealedFactualResponses: unsealedFactualResponses(root, file, ts),
+    // B2, same file: STRUCTURAL. Every terminal HTTP egress in this file, classified. Payload
+    // contents are never inspected - see the terminalEgress header for why that question was
+    // the wrong one.
+    terminalExits: terminalEgress(file, own, ts),
     incomplete,
   };
 }
@@ -597,16 +694,43 @@ function checkEligibility(root) {
                 "inventory, so nothing proves that delivery is sealed or paired - review required",
       });
     }
-    // Only meaningful for SEALED routes. A registered exclusion that returns crime rows is doing
-    // so under a written, machine-checked justification -- query-log is exactly that -- and an
-    // unregistered route is already caught as unsealed-unregistered. Applying it everywhere put
-    // the excluded routes in double jeopardy with their own registry.
-    for (const u of (m.sealed ? m.unsealedFactualResponses : [])) {
-      failures.push({
-        kind: "unsealed-factual-response", route: m.route,
-        detail: "line " + u.line + " returns a response carrying crime-derived binding '" +
-                u.binding + "' without passing through a seal",
-      });
+    // Only meaningful for SEALED routes: those are the files the exit inventory covers. A
+    // registered exclusion delivering rows is governed by its own written claims, and an
+    // unregistered route is already caught as unsealed-unregistered.
+    if (m.sealed) {
+      const registry = new Map(OPERATIONAL_EXITS.map((e) => [e.fp, e]));
+      const seen = new Map();
+      for (const x of m.terminalExits) {
+        if (x.kind !== "unclassified") continue;
+        const fp = m.route + "::" + x.chain + "::" + x.ctor + "::" + x.shape;
+        seen.set(fp, (seen.get(fp) || 0) + 1);
+      }
+      for (const [fp, n] of seen) {
+        const entry = registry.get(fp);
+        if (!entry) {
+          failures.push({
+            kind: "unclassified-terminal-exit", route: m.route,
+            detail: n + " terminal exit(s) matching " + fp + " are neither a chokepoint, an SSE " +
+                    "envelope, nor a reviewed operational exit - classify or seal them",
+          });
+        } else if (entry.count !== n) {
+          failures.push({
+            kind: "unclassified-terminal-exit", route: m.route,
+            detail: "operational exit " + fp + " is registered " + entry.count + " time(s) but " +
+                    "found " + n + " - the registry must be updated deliberately",
+          });
+        }
+      }
+      // A registry entry that matches nothing is rot, and rot hides the next real change.
+      for (const e of OPERATIONAL_EXITS) {
+        if (!e.fp.startsWith(m.route + "::")) continue;
+        if (!seen.has(e.fp)) {
+          failures.push({
+            kind: "stale-operational-exit", route: m.route,
+            detail: "registered operational exit no longer exists: " + e.fp,
+          });
+        }
+      }
     }
 
     if (!m.sealed && !ex) {
@@ -663,7 +787,7 @@ function checkEligibility(root) {
 module.exports = {
   checkEligibility, measure, routeFiles, reachableModules, resolveImport,
   assertRouteExtensionAssumption, validateAccessLayer,
-  unsealedFactualResponses,
+  terminalEgress, OPERATIONAL_EXITS, chokepointFunctions,
   EXCLUSIONS, CRIME_DB_READERS, SEAL_PRIMITIVES, ROUTE_BASENAMES, ACCESS_LAYER,
   MAX_MODULES, RESPONSE_CTORS, HELPER_RESPONSE_ALLOWLIST,
 };

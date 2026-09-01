@@ -80,6 +80,8 @@ checkTrue("A13 the two analyses agree on the sealed file set",
   JSON.stringify(res.sealedRoutes.sort()) ===
   JSON.stringify([...inv.routes.map((r) => r.file), inv.embed.file].sort()));
 check("A14 no route's analysis was incomplete", res.routes.filter((r) => r.incomplete.length).length, 0);
+check("A15 no sealed route has an unclassified terminal exit outside the registry",
+  res.failures.filter((f) => f.kind === "unclassified-terminal-exit" || f.kind === "stale-operational-exit").length, 0);
 
 // ---------------------------------------------------------------- fixtures
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "p25-elig-"));
@@ -130,9 +132,35 @@ export function answerFromCrimeData() {
   const rows = getNibrsDb().prepare("SELECT 1").all();
   return Response.json({ rows }); }`;
 
+// The sealed fixtures carry the SAME registered operational exits as the real routes. Stub
+// bodies made the registry read as stale in every fixture, and a fixture that cannot represent
+// the thing being guarded cannot test it. `SEAL_TAIL` is appended so each file also seals.
+const SEAL_TAIL = `
+  return emitFactualPayload(); }`;
+const SEALED_QUERY = `import { emitFactualPayload } from "@/lib/proof-finalize";
+export async function POST(req) {
+  if (req.a) return new Response(JSON.stringify({ success: false }), { status: 429 });
+  if (req.b) return new Response(JSON.stringify({ success: false }), { status: 400 });
+  if (req.c) return new Response(JSON.stringify({ success: false }), { status: 400 });
+  if (req.d) return new Response(JSON.stringify({ success: false }), { status: 403 });
+  if (req.e) return new Response(JSON.stringify({ success: false }), { status: 400 });
+  if (req.f) return new Response(JSON.stringify({ success: false }), { status: 400 });
+  if (req.g) return new Response(JSON.stringify({ success: false }), { status: 500 });` + SEAL_TAIL;
+const SEALED_NIBRS = `import { emitFactualPayload } from "@/lib/proof-finalize";
+export async function OPTIONS() { return new NextResponse(null, { status: 204 }); }
+export async function POST(req) {
+  if (req.c) return NextResponse.json({ success: false, captchaRequired: true });` + SEAL_TAIL;
+const SEALED_SHR = `import { emitFactualPayload } from "@/lib/proof-finalize";
+export async function POST(req) {
+  if (req.c) return NextResponse.json({ success: false, captchaRequired: true });` + SEAL_TAIL;
+const SEALED_HC = `import { emitFactualPayload } from "@/lib/proof-finalize";
+export async function POST(req) {
+  if (req.c) return NextResponse.json({ success: false, captchaRequired: true });
+  if (req.s) return NextResponse.json({ success: false, error: "source unavailable" });` + SEAL_TAIL;
+
 const FULL = {
-  "app/api/query/route.ts": SEALED, "app/api/nibrs-query/route.ts": SEALED,
-  "app/api/shr-query/route.ts": SEALED, "app/api/hc-query/route.ts": SEALED,
+  "app/api/query/route.ts": SEALED_QUERY, "app/api/nibrs-query/route.ts": SEALED_NIBRS,
+  "app/api/shr-query/route.ts": SEALED_SHR, "app/api/hc-query/route.ts": SEALED_HC,
   "app/api/embed/route.ts": SEALED,
   "app/api/auth/route.ts": INERT, "app/api/page-token/route.ts": INERT,
   "app/api/verify-captcha/route.ts": INERT, "app/api/track/route.ts": WRITEONLY,
@@ -448,28 +476,108 @@ export async function POST(req) {
 
 // G3 — a SEALED route that keeps its seal and adds a raw factual branch in the SAME file.
 // The pinned 96-site inventory is unchanged by this shape, which is why P2.2 alone cannot see it.
+//
+// EVERY SPELLING BELOW IS THE SAME FAILURE, and that is the whole point of the structural rule.
+// The previous token check asked whether the returned payload *contained crime data* and could be
+// defeated by splitting the accessor from the read, aliasing the payload, or binding the response
+// first. This check never inspects the payload: it asks whether the exit is CLASSIFIED. So all of
+// these fail identically, without a rule per spelling.
 {
-  const root = tree("g3", { ...FULL,
-    "app/api/query/route.ts": `import { emitFactualPayload } from "@/lib/proof-finalize";
-import { getNibrsDb } from "@/lib/nibrs-db";
-export async function POST(req) {
+  const SPELLINGS = {
+    "G3   direct - the original shape": `
   if (req.fast) {
     const rows = getNibrsDb().prepare("SELECT 1").all();
     return Response.json({ rows });
-  }
-  return emitFactualPayload(); }` });
-  const m = measure(root, path.join(root, "app/api/query/route.ts"));
-  check("G3  the route still contains a seal", m.sealed, true);
-  check("G3b the raw factual branch is found", m.unsealedFactualResponses.length, 1);
-  checkTrue("G3c and it FAILS as an unsealed factual response",
-    checkEligibility(root).failures.some((f) => f.kind === "unsealed-factual-response"));
-  check("G3d an operational raw response is NOT flagged",
-    measure(tree("g3d", { ...FULL,
+  }`,
+    "G3b  accessor and read in separate statements": `
+  if (req.fast) {
+    const db = getNibrsDb();
+    const rows = db.prepare("SELECT 1").all();
+    return Response.json({ rows });
+  }`,
+    "G3c  one-hop payload alias": `
+  if (req.fast) {
+    const rows = getNibrsDb().prepare("SELECT 1").all();
+    const payload = rows;
+    return Response.json({ payload });
+  }`,
+    "G3d  multi-hop transform": `
+  if (req.fast) {
+    const rows = getNibrsDb().prepare("SELECT 1").all();
+    const a = transform(rows);
+    const b = wrap(a);
+    return Response.json({ b });
+  }`,
+    "G3e  response constructed into a binding, returned later": `
+  if (req.fast) {
+    const rows = getNibrsDb().prepare("SELECT 1").all();
+    const reply = Response.json({ rows });
+    return reply;
+  }`,
+    "G3f  destructured database result": `
+  if (req.fast) {
+    const { rows } = getNibrsDb().prepare("SELECT 1").all();
+    return Response.json({ rows });
+  }`,
+  };
+  let i = 0;
+  for (const [label, branch] of Object.entries(SPELLINGS)) {
+    const root = tree("g3_" + (i++), { ...FULL,
       "app/api/query/route.ts": `import { emitFactualPayload } from "@/lib/proof-finalize";
+import { getNibrsDb } from "@/lib/nibrs-db";
+export async function POST(req) {` + branch + `
+  return emitFactualPayload(); }` });
+    const m = measure(root, path.join(root, "app/api/query/route.ts"));
+    const r = checkEligibility(root);
+    checkTrue(label + " -> unclassified terminal exit",
+      m.sealed && r.failures.some((f) => f.kind === "unclassified-terminal-exit" &&
+                                         f.route === "app/api/query/route.ts"),
+      "sealed=" + m.sealed + " " + JSON.stringify(r.failures.map((f) => f.kind)));
+  }
+}
+
+// G3g — operational exits stay accepted, and the registry is what accepts them.
+{
+  const clean = checkEligibility(tree("g3g", FULL));
+  checkTrue("G3g the registered operational exits are accepted", clean.ok,
+    JSON.stringify(clean.failures.slice(0, 3)));
+
+  // Replacing a CLASSIFIED exit with a raw factual one must fail even though the exit COUNT is
+  // unchanged - which is why the fingerprint carries payload shape rather than a position.
+  const swapped = tree("g3h", { ...FULL,
+    "app/api/hc-query/route.ts": `import { emitFactualPayload } from "@/lib/proof-finalize";
+import { getNibrsDb } from "@/lib/nibrs-db";
 export async function POST(req) {
-  if (!req.ok) return Response.json({ error: "bad request" });
-  return emitFactualPayload(); }` }),
-      path.join(tmp, "g3d", "app/api/query/route.ts")).unsealedFactualResponses.length, 0);
+  if (req.c) return NextResponse.json({ success: false, captchaRequired: true });
+  if (req.s) { const rows = getNibrsDb().prepare("SELECT 1").all(); return NextResponse.json({ rows }); }
+  return emitFactualPayload(); }` });
+  const before = measure(tree("g3g2", FULL), path.join(tmp, "g3g2", "app/api/hc-query/route.ts"));
+  const after = measure(swapped, path.join(swapped, "app/api/hc-query/route.ts"));
+  check("G3h the exit count is unchanged by the swap",
+    after.terminalExits.length, before.terminalExits.length);
+  checkTrue("G3i but swapping a classified exit for a raw one still FAILS",
+    checkEligibility(swapped).failures.some((f) => f.kind === "unclassified-terminal-exit"),
+    JSON.stringify(checkEligibility(swapped).failures.map((f) => f.kind)));
+
+  // A registry entry that no longer matches anything is rot and must be reported.
+  const removed = tree("g3j", { ...FULL,
+    "app/api/shr-query/route.ts": `import { emitFactualPayload } from "@/lib/proof-finalize";
+export async function POST() { return emitFactualPayload(); }` });
+  checkTrue("G3j a registered operational exit that vanished is reported stale",
+    checkEligibility(removed).failures.some((f) => f.kind === "stale-operational-exit"));
+}
+
+// G3k — the classification of the real tree, asserted rather than assumed.
+{
+  const kinds = {};
+  for (const m of res.routes.filter((x) => x.sealed)) {
+    for (const x of m.terminalExits) kinds[x.kind] = (kinds[x.kind] || 0) + 1;
+  }
+  check("G3k every real terminal exit is a chokepoint, an SSE envelope, or registered",
+    [kinds.chokepoint, kinds["sse-envelope"], kinds.sealed || 0], [4, 15, 0]);
+  checkTrue("G3l and the unclassified ones are exactly the registered operational exits",
+    kinds.unclassified === 12 && res.failures.length === 0,
+    "unclassified=" + kinds.unclassified + " failures=" + res.failures.length);
 }
 
 // G4 — a route-level side-effect import binds no name, so a handler-reference test cannot select it.
