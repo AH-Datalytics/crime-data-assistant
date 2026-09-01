@@ -4,6 +4,7 @@ import type { RoutingLogMeta } from "./routing-log-meta";
 import { validateSourceCapabilities, type SourceCapabilityFinding } from "./source-capabilities";
 import { observeHistoricalClearanceGrain, type ClearanceGrainObservation } from "./historical-clearance-grain";
 import { DEMOGRAPHIC_RATE_UNSUPPORTED_MESSAGE, SUB_CITY_GEOGRAPHY_MESSAGE } from "./capability-overrides";
+import { BLOCK_CAPABILITY_RULES, RETRY_CAPABILITY_RULES } from "./capability-decision";
 
 export interface QueryContractSqlValidation {
   sql: string;
@@ -29,48 +30,13 @@ export interface QueryContractSqlValidation {
 const CONTRACT_SECOND_FAILURE_MESSAGE =
   "I couldn't build a reliable query that matched the requested source, geography, metric, and time period. Try narrowing the question or choosing one of the suggested alternatives.";
 
-const RETRY_CAPABILITY_RULES = new Set([
-  "current-countywide-crosswalk",
-  "current-rate-population",
-  "nibrs-weapon-person-crime-table",
-  "nibrs-weapon-demographic-person-crime-table",
-  "nibrs-weapon-circumstance-person-crime-table",
-  "nibrs-weapon-circumstance-demographic-person-crime-table",
-  "nibrs-carjacking-clearance-table",
-  "nibrs-clearance-type-table",
-  "nibrs-dv-assault-share-table",
-  "nibrs-campus-agency-resolution",
-  "nibrs-countywide-crosswalk",
-  "nibrs-continuous-reporters-range-table",
-  "nibrs-demographic-breakdown-table",
-  "nibrs-specific-drug-offense-table",
-  "nibrs-specific-drug-arrest-table",
-  "nibrs-local-geography-state-table",
-  "nibrs-agency-lookup-not-crime-data",
-  "historical-countywide-crosswalk",
-  "historical-clearance-table",
-  "historical-state-national-rate-table",
-  "historical-local-rate-population",
-  "historical-rate-null-gaps",
-  "historical-local-geography-state-table",
-  "historical-parish-type-city",
-  "historical-agency-lookup-not-crime-data",
-  "shr-campus-agency-resolution",
-  "shr-countywide-crosswalk",
-  "shr-state-rate-population",
-]);
 
-const BLOCK_CAPABILITY_RULES = new Set([
-  "unsupported-sub-city-geography",
-  "unsupported-court-policy-topic",
-  "demographic-rate-unsupported",
-  "nibrs-clearance-weapon-unsupported",
-  "nibrs-countywide-demographics-unsupported",
-  "nibrs-shooting-category-unsupported",
-  "shr-non-homicide-unsupported",
-  "shr-clearance-unsupported",
-  "shr-demographic-rate-unsupported",
-]);
+/**
+ * BLOCK_CAPABILITY_RULES and RETRY_CAPABILITY_RULES moved to `lib/capability-decision.ts` so the
+ * post-SQL validator and the P3.1a request-decision observer share ONE classification authority.
+ * Membership and branch order are unchanged. A second block list living beside the observer is
+ * exactly the drift the extraction prevents.
+ */
 
 const BLOCK_MESSAGES: Record<string, string> = {
   "unsupported-sub-city-geography":

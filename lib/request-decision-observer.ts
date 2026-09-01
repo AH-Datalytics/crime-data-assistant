@@ -35,6 +35,7 @@
  * The full validator is never invoked, so no dummy SQL is ever fabricated.
  */
 import { SOURCE_CAPABILITY_RULES } from "./source-capabilities";
+import { classifyCapabilityRule, type CapabilityClassification } from "./capability-decision";
 import type { QueryContract, QueryContractSource } from "./query-contract";
 
 /** Declarations that make a rule SQL/table dependent and therefore not pre-answer eligible. */
@@ -51,6 +52,16 @@ export type ObservationRecord = {
   state: ObservationState;
   /** The severity the production rule declares; carried so a report never re-derives it. */
   severity: string;
+  /**
+   * The typed decision this finding WOULD carry, taken from the shared classification authority in
+   * `capability-decision.ts` - the same one the post-SQL validator uses. Never re-authored here.
+   *
+   * `null` when the rule did not fire or the analysis was incomplete: a rule that does not fire
+   * contributes no action/reason pair, which is exactly what the frozen negatives expect.
+   */
+  outcome: { action: string; reason: string } | null;
+  /** How the shared authority classifies this rule, carried so a report never re-derives it. */
+  classification: CapabilityClassification["kind"];
   /** Set only when `state` is `analysis_incomplete`. */
   incompleteReason?: string;
 };
@@ -135,11 +146,16 @@ export function observeRequestDecision(opts: {
     denominator.push(rule.id);
     try {
       const fired = rule.when(ctx);
+      const classification = classifyCapabilityRule(rule.id);
       records.push({
         ruleId: rule.id,
         source: rule.source,
         state: fired ? "fired" : "did_not_fire",
         severity: rule.severity,
+        // The typed pair comes from the shared authority, so a catalog or block-set change moves
+        // the observer and the post-SQL validator together rather than letting them drift.
+        outcome: fired && classification.kind === "block" ? classification.outcome : null,
+        classification: classification.kind,
       });
     } catch (err) {
       records.push({
@@ -147,6 +163,8 @@ export function observeRequestDecision(opts: {
         source: rule.source,
         state: "analysis_incomplete",
         severity: rule.severity,
+        outcome: null,
+        classification: classifyCapabilityRule(rule.id).kind,
         incompleteReason: err instanceof Error ? err.message : String(err),
       });
     }

@@ -1,16 +1,31 @@
 /**
  * P3.1a — Tier F controls for the request-decision observer.
  *
- * Proves the properties the stage-placement ruling requires BEFORE any frozen case is executed:
- * production reuse, SQL independence, mutation coupling, structural exclusion, denominator
- * integrity, and flags-off equivalence.
+ * Proves, BEFORE any evidence run, the properties the stage-placement ruling and candidate review
+ * round 1 require: production reuse, ONE shared typed decision authority, BASE parity for the
+ * extracted classification, SQL independence exercised on the FROZEN triggering and negative
+ * boundaries of every pair, mutation coupling across ALL 21 applicability pairs, structural
+ * exclusion, denominator integrity, and flags-off equivalence.
  *
- * Deterministic. No database, no model, no network, no production. Builds no contract from a
- * parser - every contract here is hand-specified from the schema, so the parser is never its own
- * oracle.
+ * THIS IS NOT THE EVIDENCE RUN, AND THE DISTINCTION IS THE POINT.
+ * It never calls `buildQueryContract`, never writes an observation to any artifact, and never
+ * compares expected-versus-observed applicability. It reads the frozen questions and the frozen
+ * EXPECTED contract projections purely as control INPUTS, because a single generic question cannot
+ * reach a conditional branch only a triggering input reaches — an independence proof run solely on
+ * inputs that never trigger anything proves nothing. Executing the case set as evidence is
+ * `scripts/run-p3-1a-frozen-cases.ts`, which is authorized separately.
+ *
+ * Deterministic. No database, no model, no network, no production.
  */
+import fs from "node:fs";
+import path from "node:path";
+import crypto from "node:crypto";
 import { SOURCE_CAPABILITY_RULES, validateSourceCapabilities } from "../lib/source-capabilities";
 import { observeRequestDecision, isSqlDependent } from "../lib/request-decision-observer";
+import {
+  BLOCK_CAPABILITY_RULES, RETRY_CAPABILITY_RULES, classifyCapabilityRule,
+} from "../lib/capability-decision";
+import { OUTCOMES } from "../lib/proof-contract";
 import type { QueryContract, QueryContractSource } from "../lib/query-contract";
 
 let pass = 0, fail = 0;
@@ -25,15 +40,14 @@ function checkTrue(name: string, cond: boolean, detail?: string) {
 }
 
 /**
- * A hand-specified contract, complete against the QueryContract SCHEMA.
+ * A hand-specified contract, complete against the QueryContract SCHEMA, with dotted-path overrides.
  *
- * Complete rather than minimal because C3 exercises the FULL validator, which evaluates every rule
- * for the source - including SQL/table-dependent ones the observer excludes. Those read fields the
- * observer never touches (`comparability.continuousReporters`, `time`, `geographies`), and a
- * partial fixture made the validator throw. That was the fixture being inadequate, not a finding.
+ * Complete rather than minimal because the mutation control exercises the FULL validator, which
+ * evaluates SQL/table-dependent rules reading fields the observer never touches; a partial fixture
+ * made the validator throw, which was the fixture being inadequate, not a finding.
  *
- * Every value is written here by hand from the type declaration. `buildQueryContract` is never
- * called, so the parser is never its own oracle.
+ * Every value is written by hand from the type declaration. `buildQueryContract` is never called
+ * here, so the parser is never its own oracle.
  */
 function contractOf(over: Record<string, unknown> = {}): QueryContract {
   const base = {
@@ -62,144 +76,245 @@ function contractOf(over: Record<string, unknown> = {}): QueryContract {
 
 const SOURCES: QueryContractSource[] = ["current", "historical", "nibrs", "shr", "hate_crime"];
 
+// ── the frozen oracle, read only ────────────────────────────────────────────────────────────
+const P31A = path.join(__dirname, "..", "docs", "superpowers", "p3-1a");
+const V3_PATH = path.join(P31A, "frozen-cases-v3.json");
+const V3_SHA = "2535cbd934a4766a7f9ff8570f5b0e60d04b7c37430283b48e52b206c75a0b91";
+const v3Bytes = fs.readFileSync(V3_PATH);
+const v3: any = JSON.parse(v3Bytes.toString("utf8"));
+
+/** The control contract for a frozen case, from that case's OWN frozen expected projection. */
+function contractForCase(c: any): QueryContract {
+  const over: Record<string, unknown> = { source: c.source };
+  if (c.expected_contract) for (const [k, v] of Object.entries(c.expected_contract)) over[k] = v;
+  return contractOf(over);
+}
+const ruleFor = (id: string, source: string) =>
+  SOURCE_CAPABILITY_RULES.find((r) => r.id === id && r.source === source)!;
+
+const sqlIndependentIds = [...new Set(
+  SOURCE_CAPABILITY_RULES.filter((r) => !isSqlDependent(r)).map((r) => r.id),
+)].sort();
+
 // ── C1 — the observer evaluates the EXACT production rule objects ───────────────────────────
 console.log("C1 — production reuse");
 {
   const ids = new Set<string>();
+  let pairs = 0;
   for (const s of SOURCES) {
-    for (const id of observeRequestDecision({ question: "x", source: s, contract: contractOf(), enabled: true }).denominator) {
-      ids.add(id);
-    }
+    const d = observeRequestDecision({ question: "x", source: s, contract: contractOf(), enabled: true }).denominator;
+    d.forEach((id) => ids.add(id));
+    pairs += d.length;
   }
-  const declared = new Set(
-    SOURCE_CAPABILITY_RULES.filter((r) => !isSqlDependent(r)).map((r) => r.id),
-  );
-  check("C1  the observed denominator is exactly the SQL-independent production rule set",
-    [...ids].sort(), [...declared].sort());
-  check("C1b nine definitions", ids.size, 9);
-  const pairs = SOURCES.reduce((n, s) =>
-    n + observeRequestDecision({ question: "x", source: s, contract: contractOf(), enabled: true }).denominator.length, 0);
-  check("C1c twenty-one applicability pairs", pairs, 21);
+  check("C1  the denominator is exactly the SQL-independent production rule set",
+    [...ids].sort(), sqlIndependentIds);
+  check("C1b nine definitions across twenty-one applicability pairs", [ids.size, pairs], [9, 21]);
 }
 
-// ── C2 — SQL independence, proved two ways ──────────────────────────────────────────────────
-console.log("\nC2 — SQL independence");
+// ── C2 — ONE shared typed decision authority ────────────────────────────────────────────────
+console.log("\nC2 — shared typed decision authority");
 {
-  // (a) The observer's context makes ctx.sql/ctx.tables throw. If a selected predicate read
-  //     either, it would be recorded analysis_incomplete rather than returning a value.
-  let incomplete = 0;
-  for (const s of SOURCES) {
-    const r = observeRequestDecision({ question: "how many murders in Chicago in June 2026?", source: s, contract: contractOf(), enabled: true });
-    incomplete += r.records.filter((x) => x.state === "analysis_incomplete").length;
-  }
-  check("C2  no selected predicate reads ctx.sql or ctx.tables", incomplete, 0);
+  check("C2  the block set is exactly the nine question-only definitions",
+    [...BLOCK_CAPABILITY_RULES].sort(), sqlIndependentIds);
+  checkTrue("C2b block and retry sets are disjoint",
+    [...BLOCK_CAPABILITY_RULES].every((id) => !RETRY_CAPABILITY_RULES.has(id)));
 
-  // (b) The same rule objects, evaluated directly with two MATERIALLY DIFFERENT SQL inputs,
-  //     produce identical results. This is the ruling's explicit control.
+  const fired = observeRequestDecision({
+    question: "How many robberies were reported in Los Angeles, CA in 2021?",
+    source: "shr", contract: contractOf({ source: "shr" }), enabled: true,
+  }).records.find((x) => x.ruleId === "shr-non-homicide-unsupported")!;
+  check("C2c a fired block rule carries the shared catalog outcome",
+    [fired.state, fired.classification, fired.outcome],
+    ["fired", "block", OUTCOMES.query_contract_failed]);
+  checkTrue("C2d it is the catalog OBJECT, not a locally re-authored pair",
+    (fired.outcome as unknown) === (OUTCOMES.query_contract_failed as unknown));
+
+  const notFired = observeRequestDecision({
+    question: "How many homicides were reported in Los Angeles, CA in 2021?",
+    source: "shr", contract: contractOf({ source: "shr" }), enabled: true,
+  }).records.find((x) => x.ruleId === "shr-non-homicide-unsupported")!;
+  check("C2e a rule that does not fire carries NO action/reason pair",
+    [notFired.state, notFired.outcome], ["did_not_fire", null]);
+}
+
+// ── C3 — BASE parity for the extracted classification ───────────────────────────────────────
+console.log("\nC3 — BASE parity of the extracted authority");
+{
+  // Membership captured from the BASE tree before the extraction. If the file is absent the sizes
+  // are still pinned, so this control can never silently degrade to asserting nothing.
+  const basePath = path.join(__dirname, "..", "docs", "superpowers", "p3-1a", "base-capability-sets.json");
+  if (fs.existsSync(basePath)) {
+    const base = JSON.parse(fs.readFileSync(basePath, "utf8"));
+    check("C3  block membership identical to BASE", [...BLOCK_CAPABILITY_RULES], base.block);
+    check("C3b retry membership identical to BASE", [...RETRY_CAPABILITY_RULES], base.retry);
+  } else {
+    fail++; console.log("  FAIL  C3  BASE membership snapshot missing; parity cannot be asserted");
+  }
+  check("C3c sizes unchanged from BASE",
+    [BLOCK_CAPABILITY_RULES.size, RETRY_CAPABILITY_RULES.size], [9, 28]);
+  check("C3d branch order: block wins",
+    classifyCapabilityRule("shr-non-homicide-unsupported").kind, "block");
+  check("C3e a retry rule classifies as retry",
+    classifyCapabilityRule("historical-clearance-table").kind, "retry");
+  check("C3f an unknown rule is observe_only, never a block by default",
+    classifyCapabilityRule("no-such-rule").kind, "observe_only");
+}
+
+// ── C4 — SQL independence on the FROZEN triggering and negative boundaries ──────────────────
+console.log("\nC4 — SQL independence on frozen boundaries");
+{
+  checkTrue("C4  the frozen v3 oracle is present and byte-identical",
+    crypto.createHash("sha256").update(v3Bytes).digest("hex") === V3_SHA);
+
   const sqlA = "SELECT COUNT(*) FROM summary_state_monthly WHERE state='IL'";
   const sqlB = "WITH x AS (SELECT 1) SELECT murders, robberies FROM historical_agency_clearance JOIN x";
-  let compared = 0, differed = 0;
-  for (const s of SOURCES) {
-    for (const rule of SOURCE_CAPABILITY_RULES) {
-      if (rule.source !== s || isSqlDependent(rule)) continue;
-      const mk = (sql: string) => ({ question: "how many murders in Chicago in June 2026?", source: s, contract: contractOf(), sql, tables: new Set<string>() });
-      const a = rule.when(mk(sqlA) as any);
-      const b = rule.when(mk(sqlB) as any);
-      compared++;
-      if (a !== b) differed++;
+  let evaluated = 0, differed = 0, incomplete = 0, projected = 0;
+  const pairsSeen = new Set<string>(), rolesSeen = new Set<string>();
+  const diffs: string[] = [];
+
+  for (const c of v3.cases) {
+    const rule = ruleFor(c.rule_id, c.source);
+    const contract = contractForCase(c);
+    pairsSeen.add(c.pair); rolesSeen.add(c.role);
+    if (c.expected_contract) projected++;
+
+    // (a) throwing context — a hidden ctx.sql / ctx.tables read becomes analysis_incomplete
+    const rec = observeRequestDecision({ question: c.question, source: c.source, contract, enabled: true })
+      .records.find((x) => x.ruleId === c.rule_id);
+    if (rec?.state === "analysis_incomplete") incomplete++;
+
+    // (b) the same production rule object under two materially different SQL inputs
+    const withSql = (sql: string) =>
+      ({ question: c.question, source: c.source, contract, sql, tables: new Set<string>() });
+    if (rule.when(withSql(sqlA) as any) !== rule.when(withSql(sqlB) as any)) {
+      differed++; diffs.push(c.id + " " + c.pair);
     }
+    evaluated++;
   }
-  check("C2b all 21 pairs give identical results under two materially different SQL inputs",
-    [compared, differed], [21, 0]);
+
+  check("C4b every frozen case exercised across both SQL inputs", evaluated, v3.cases.length);
+  check("C4c all 21 pairs and all three roles covered",
+    [pairsSeen.size, [...rolesSeen].sort()],
+    [21, ["false_acceptance", "false_refusal", "positive"]]);
+  check("C4d the 27 contract-dependent cases used their frozen projections", projected, 27);
+  checkTrue("C4e no SQL-dependent difference on any frozen input", differed === 0, diffs.slice(0, 3).join(" | "));
+  check("C4f no analysis_incomplete on any frozen input", incomplete, 0);
 }
 
-// ── C3 — mutation coupling: one predicate, both paths ───────────────────────────────────────
-console.log("\nC3 — mutation coupling");
+// ── C5 — mutation coupling across ALL 21 applicability pairs ────────────────────────────────
+console.log("\nC5 — mutation coupling, all 21 pairs");
 {
-  const rule = SOURCE_CAPABILITY_RULES.find((r) => r.id === "nibrs-shooting-category-unsupported")!;
-  const original = rule.when;
-  const q = "how many shootings were there in Phoenix, AZ in 2022?";
-  const contract = contractOf({ "metric.topic": "aggravated_assault" });
+  const positives = v3.cases.filter((c: any) => c.role === "positive");
+  let coupled = 0, outcomeMoved = 0, restored = 0, sourcePinned = 0, isolated = 0;
+  const failures: string[] = [];
+  const otherFor = (s: string) => SOURCES.find((x) => x !== s)!;
 
-  const observeFired = () =>
-    observeRequestDecision({ question: q, source: "nibrs", contract, enabled: true })
-      .records.find((r) => r.ruleId === rule.id)!.state === "fired";
-  const validatorFired = () =>
-    validateSourceCapabilities({ question: q, source: "nibrs", contract, sql: "SELECT 1 FROM summary_state_monthly" })
-      .some((f: any) => f.id === rule.id || f.ruleId === rule.id);
+  for (const c of positives) {
+    const rule = ruleFor(c.rule_id, c.source);
+    const contract = contractForCase(c);
+    const original = rule.when;
+    if (rule.source === c.source) sourcePinned++;
 
-  const beforeObs = observeFired(), beforeVal = validatorFired();
-  check("C3  before mutation both paths agree the rule fires", [beforeObs, beforeVal], [true, true]);
+    const observe = () => {
+      const r = observeRequestDecision({ question: c.question, source: c.source, contract, enabled: true })
+        .records.find((x) => x.ruleId === c.rule_id);
+      return { fired: r?.state === "fired", outcome: r?.outcome ?? null };
+    };
+    const validated = () =>
+      validateSourceCapabilities({
+        question: c.question, source: c.source, contract,
+        sql: "SELECT 1 FROM summary_state_monthly",
+      }).some((f: any) => f.id === c.rule_id || f.ruleId === c.rule_id);
 
-  try {
-    // Mutate the UNDERLYING production predicate that both paths share.
-    (rule as any).when = () => false;
-    const afterObs = observeFired(), afterVal = validatorFired();
-    check("C3b mutating the shared predicate flips BOTH paths", [afterObs, afterVal], [false, false]);
-    checkTrue("C3c so the observer cannot be a private copy of the predicate",
-      beforeObs !== afterObs && beforeVal !== afterVal);
-  } finally {
-    (rule as any).when = original;
+    // An unrelated source's full observation, to prove the mutation is not global.
+    const other = otherFor(c.source);
+    const otherBefore = JSON.stringify(observeRequestDecision({
+      question: c.question, source: other, contract: contractOf({ source: other }), enabled: true,
+    }));
+
+    const beforeObs = observe(), beforeVal = validated();
+    let afterObs = { fired: true, outcome: null as unknown }, afterVal = true, otherAfter = "";
+    try {
+      (rule as any).when = () => false;   // mutate the SHARED production predicate
+      afterObs = observe(); afterVal = validated();
+      otherAfter = JSON.stringify(observeRequestDecision({
+        question: c.question, source: other, contract: contractOf({ source: other }), enabled: true,
+      }));
+    } finally {
+      (rule as any).when = original;
+    }
+
+    if (beforeObs.fired && beforeVal && !afterObs.fired && !afterVal) coupled++;
+    else failures.push(`${c.id} ${c.pair}: before(obs=${beforeObs.fired},val=${beforeVal}) after(obs=${afterObs.fired},val=${afterVal})`);
+    if (beforeObs.outcome !== null && afterObs.outcome === null) outcomeMoved++;
+    if (otherBefore === otherAfter) isolated++;
+    // reference identity, stronger than a source-text comparison, plus behavioural restoration
+    if (rule.when === original && observe().fired === beforeObs.fired) restored++;
   }
-  check("C3d the predicate is restored", observeFired(), true);
+
+  check("C5  twenty-one distinct pairs mutated", new Set(positives.map((c: any) => c.pair)).size, 21);
+  checkTrue("C5b every positive fires through BOTH paths before mutation and both flip after",
+    coupled === positives.length, failures.slice(0, 3).join(" | "));
+  check("C5c the typed outcome moves with the decision on every pair", outcomeMoved, positives.length);
+  check("C5d each mutated rule carried its frozen source identity", sourcePinned, positives.length);
+  check("C5e mutating one rule changes nothing for an inapplicable source", isolated, positives.length);
+  check("C5f every predicate restored by reference identity and behaviour", restored, positives.length);
 }
 
-// ── C4 — structural exclusion of SQL/table-dependent rules ──────────────────────────────────
-console.log("\nC4 — structural exclusion");
+// ── C6 — structural exclusion ───────────────────────────────────────────────────────────────
+console.log("\nC6 — structural exclusion");
 {
-  const excludedIds = new Set<string>();
+  const excluded = new Set<string>();
   for (const s of SOURCES) {
-    for (const e of observeRequestDecision({ question: "x", source: s, contract: contractOf(), enabled: true }).excluded) {
-      excludedIds.add(e.ruleId);
-    }
+    observeRequestDecision({ question: "x", source: s, contract: contractOf(), enabled: true })
+      .excluded.forEach((e) => excluded.add(e.ruleId));
   }
-  const declaredDependent = SOURCE_CAPABILITY_RULES.filter((r) => isSqlDependent(r));
-  check("C4  every SQL/table-dependent rule is excluded, none evaluated",
-    excludedIds.size, new Set(declaredDependent.map((r) => r.id)).size);
-  check("C4b thirty dependent definitions excluded", excludedIds.size, 30);
+  check("C6  every SQL/table-dependent definition is excluded, none evaluated",
+    excluded.size, new Set(SOURCE_CAPABILITY_RULES.filter((r) => isSqlDependent(r)).map((r) => r.id)).size);
+  check("C6b thirty dependent definitions", excluded.size, 30);
 
-  // A rule that gains a SQL/table declaration must leave the denominator.
-  const victim = SOURCE_CAPABILITY_RULES.find((r) => r.id === "shr-non-homicide-unsupported")!;
-  const before = observeRequestDecision({ question: "x", source: "shr", contract: contractOf(), enabled: true }).denominator.includes(victim.id);
+  const victim = ruleFor("shr-non-homicide-unsupported", "shr");
+  const inDenom = () => observeRequestDecision({
+    question: "x", source: "shr", contract: contractOf({ source: "shr" }), enabled: true,
+  }).denominator.includes(victim.id);
+  const before = inDenom();
   (victim as any).requiresAnyTables = ["shr_incidents"];
-  const after = observeRequestDecision({ question: "x", source: "shr", contract: contractOf(), enabled: true }).denominator.includes(victim.id);
+  const after = inDenom();
   delete (victim as any).requiresAnyTables;
-  const restored = observeRequestDecision({ question: "x", source: "shr", contract: contractOf(), enabled: true }).denominator.includes(victim.id);
-  check("C4c adding a table dependency removes a rule from the pre-answer denominator",
-    [before, after, restored], [true, false, true]);
+  check("C6c gaining a table dependency removes a rule from the pre-answer denominator",
+    [before, after, inDenom()], [true, false, true]);
 }
 
-// ── C5 — denominator integrity: nothing enters silently ─────────────────────────────────────
-console.log("\nC5 — denominator integrity");
+// ── C7 — denominator integrity and production source order ──────────────────────────────────
+console.log("\nC7 — denominator integrity");
 {
-  const FROZEN_NINE = [
-    "demographic-rate-unsupported", "nibrs-clearance-weapon-unsupported",
-    "nibrs-countywide-demographics-unsupported", "nibrs-shooting-category-unsupported",
-    "shr-clearance-unsupported", "shr-demographic-rate-unsupported",
-    "shr-non-homicide-unsupported", "unsupported-court-policy-topic",
-    "unsupported-sub-city-geography",
-  ];
   const seen = new Set<string>();
   for (const s of SOURCES) {
-    for (const id of observeRequestDecision({ question: "x", source: s, contract: contractOf(), enabled: true }).denominator) seen.add(id);
+    observeRequestDecision({ question: "x", source: s, contract: contractOf(), enabled: true })
+      .denominator.forEach((id) => seen.add(id));
   }
-  check("C5  the denominator is exactly the frozen nine", [...seen].sort(), FROZEN_NINE);
-
-  // Source filtering must precede evaluation, in production order.
-  const shrOnly = observeRequestDecision({ question: "how many robberies in Los Angeles, CA in 2021?", source: "current", contract: contractOf(), enabled: true });
-  checkTrue("C5b a shr-only rule is never evaluated for a current request",
-    !shrOnly.denominator.includes("shr-non-homicide-unsupported") &&
-    !shrOnly.records.some((r) => r.ruleId === "shr-non-homicide-unsupported"));
+  check("C7  the denominator is exactly the shared block set",
+    [...seen].sort(), [...BLOCK_CAPABILITY_RULES].sort());
+  const cur = observeRequestDecision({
+    question: "How many robberies were reported in Los Angeles, CA in 2021?",
+    source: "current", contract: contractOf(), enabled: true,
+  });
+  checkTrue("C7b a shr-only rule is never evaluated for a current request",
+    !cur.denominator.includes("shr-non-homicide-unsupported") &&
+    !cur.records.some((r) => r.ruleId === "shr-non-homicide-unsupported"));
 }
 
-// ── C6 — flags-off equivalence ──────────────────────────────────────────────────────────────
-console.log("\nC6 — flags-off equivalence");
+// ── C8 — flags-off equivalence ──────────────────────────────────────────────────────────────
+console.log("\nC8 — flags-off equivalence");
 {
-  const off = observeRequestDecision({ question: "how many shootings in Phoenix?", source: "nibrs", contract: contractOf() });
-  check("C6  disabled by default: no records, no denominator, no exclusions",
+  const off = observeRequestDecision({
+    question: "how many shootings in Phoenix?", source: "nibrs", contract: contractOf({ source: "nibrs" }),
+  });
+  check("C8  disabled by default: nothing observed",
     [off.enabled, off.records.length, off.denominator.length, off.excluded.length], [false, 0, 0, 0]);
-  const explicitOff = observeRequestDecision({ question: "x", source: "nibrs", contract: contractOf(), enabled: false });
-  check("C6b explicitly disabled behaves identically", explicitOff, off);
+  check("C8b explicit disable is identical",
+    observeRequestDecision({ question: "x", source: "nibrs", contract: contractOf({ source: "nibrs" }), enabled: false }),
+    off);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);
