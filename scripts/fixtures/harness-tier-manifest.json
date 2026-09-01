@@ -1328,6 +1328,15 @@
       "note": "drives the frozen-case runner with synthetic broken inputs; executes no frozen case, writes no run artifact, prepares no SQLite statement"
     },
     {
+      "id": "test-p3-1a-base-parity",
+      "tier": "F",
+      "script": "scripts/test-p3-1a-base-parity.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "reruns a 225-row post-SQL grid and compares it to a baseline captured at BASE e2d24ac; mutates the shared classification in-process to prove the comparison can go red, then restores it; prepares no SQLite statement"
+    },
+    {
       "id": "test-outcome-mutations",
       "tier": "F",
       "script": "scripts/test-outcome-mutations.js",
