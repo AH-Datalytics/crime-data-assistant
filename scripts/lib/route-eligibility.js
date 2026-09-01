@@ -48,6 +48,7 @@
  */
 const fs = require("fs");
 const path = require("path");
+const crypto = require("crypto");
 
 /**
  * Route-module extensions Next.js accepts. `pageExtensions` can widen this, so
@@ -369,7 +370,9 @@ const NORM_DEPTH = 4;
  */
 function normalizeExpr(n, sf, ts, depth) {
   depth = depth || 0;
-  if (!n || depth > NORM_DEPTH) return "expr";
+  // A collapsed tail is not an identity: two different payloads would share a fingerprint.
+  if (!n) return "none";
+  if (depth > NORM_DEPTH) return "TRUNCATED";
   if (ts.isObjectLiteralExpression(n)) {
     return "obj{" + n.properties.map((p) => {
       const k = p.name && ts.isIdentifier(p.name) ? p.name.text
@@ -421,27 +424,77 @@ function chokepointCarriers(sf, ts) {
   return out;
 }
 
-/** Does `expr` mention the carrier, directly or through a local binding chain? */
-function derivesFromCarrier(expr, carrier, bindings, sf, ts) {
-  const seen = new Set();
-  const scan = (n, hops) => {
-    if (!n || hops > 6) return false;
-    let found = false;
-    const walk = (x) => {
-      if (found) return;
-      if (ts.isIdentifier(x)) {
-        if (x.text === carrier) { found = true; return; }
-        if (bindings.has(x.text) && !seen.has(x.text)) {
-          seen.add(x.text);
-          if (scan(bindings.get(x.text), hops + 1)) { found = true; return; }
-        }
-      }
-      ts.forEachChild(x, walk);
-    };
-    walk(n);
-    return found;
+/**
+ * A POSITIONAL carrier rule was implemented here and then REMOVED, deliberately.
+ *
+ * It required the delivered payload to be exactly the carrier identifier, which is the natural
+ * answer to "the carrier is only mentioned, not delivered". It rejected all three PRODUCTION
+ * helpers: the real `jsonResp` spreads the carrier, sanitizes narrative text, normalizes rows and
+ * attaches chart audit before delivering. A rule that fails on correct code is not a control.
+ *
+ * The control for a JSON chokepoint is therefore its REVIEWED BODY IDENTITY (see
+ * `deliveryBodies`): the transformation is accepted because a human reviewed it, and any edit
+ * fails until re-reviewed. The SSE side keeps a positional rule below, because there the seal
+ * genuinely is the direct payload in all 29 production sites.
+ */
+
+/**
+ * A sealed SSE delivery must have the seal call as the DIRECT argument of the event formatter:
+ * `encoder.encode(sseEvent(emitFactualPayload(...)))`. All 29 sealed enqueues in the deployed
+ * tree have exactly this shape. `sseEvent({ ...rows, _p: emitFactualPayload(x) })` does not, and
+ * a containment test would have accepted it for the same reason the carrier test did.
+ */
+function sealIsDirectPayload(arg, ts, sf) {
+  if (!arg || !ts.isCallExpression(arg)) return false;          // encoder.encode(...)
+  const inner = arg.arguments[0];
+  if (!inner || !ts.isCallExpression(inner)) return false;      // sseEvent(...)
+  const sealed = inner.arguments[0];
+  if (!sealed || !ts.isCallExpression(sealed)) return false;    // emitFactualPayload(...)
+  const callee = sealed.expression.getText(sf);
+  return SEAL_PRIMITIVES.includes(callee) && inner.arguments.length === 1;
+}
+
+/**
+ * REVIEWED-BODY IDENTITY — a change-control invariant, and deliberately not a claim of data-flow
+ * proof.
+ *
+ * The positional rules above are strict but narrow: they constrain the delivery EXPRESSION. They
+ * say nothing about the rest of a delivery helper's body. This records a complete normalized
+ * identity of each chokepoint body so that ANY edit to a delivery helper fails until it is
+ * deliberately reviewed and re-registered.
+ *
+ * What this is: change control. A human must look at every change to the code that performs
+ * factual delivery. What this is NOT: a proof that a registered body is correct. A wrong body,
+ * once registered, stays registered — the registry records that someone reviewed it, nothing more.
+ * Five review rounds established that syntactic recognizers close one spelling and leave the next
+ * one open; this stops trying to out-guess the spellings and requires review instead.
+ *
+ * Normalization is whitespace-collapsed complete source text. There is no depth fallback, because
+ * a truncated identity is not an identity — two different bodies would share a fingerprint.
+ */
+function deliveryBodies(file, src, ts) {
+  const sf = ts.createSourceFile(file, src, ts.ScriptTarget.Latest, true);
+  const carriers = chokepointCarriers(sf, ts);
+  const out = [];
+  const walk = (n) => {
+    let name = null;
+    if (ts.isFunctionDeclaration(n) && n.name) name = n.name.text;
+    else if ((ts.isFunctionExpression(n) || ts.isArrowFunction(n)) &&
+             n.parent && ts.isVariableDeclaration(n.parent) && ts.isIdentifier(n.parent.name)) {
+      name = n.parent.name.text;
+    }
+    if (name && carriers.has(name) && n.body) {
+      const normalized = n.body.getText(sf).replace(/\s+/g, " ").trim();
+      out.push({
+        name,
+        sha256: crypto.createHash("sha256").update(normalized).digest("hex"),
+        bytes: normalized.length,
+      });
+    }
+    ts.forEachChild(n, walk);
   };
-  return scan(expr, 0);
+  walk(sf);
+  return out;
 }
 
 function responseCtorOf(e, sf, ts) {
@@ -496,9 +549,13 @@ function streamEvents(sf, ts) {
         resolved = bindings.get(resolved.text); hops++;
       }
       const text = resolved ? resolved.getText(sf) : "";
+      // A seal ANYWHERE in the expression is presence, not delivery. It must be the direct
+      // payload of the event formatter, or the seal is decorative.
+      const mentionsSeal = SEAL_CALL.test(text);
+      const direct = sealIsDirectPayload(resolved, ts, sf);
       events.push({
         line: sf.getLineAndCharacterOfPosition(n.getStart(sf)).line + 1,
-        kind: SEAL_CALL.test(text) ? "sealed" : "unclassified",
+        kind: direct ? "sealed" : (mentionsSeal ? "decorative-seal" : "unclassified"),
         shape: normalizeExpr(resolved, sf, ts, 0),
       });
     }
@@ -544,8 +601,16 @@ function terminalEgress(file, src, ts) {
         let kind;
         if (carriers.has(fnName)) {
           // A typed parameter is not proof. The response must actually deliver that carrier.
-          kind = derivesFromCarrier(first, carriers.get(fnName), bindings, sf, ts)
-            ? "chokepoint" : "detached-carrier";
+          // The response inside a chokepoint is NOT checked positionally, because the real
+          // helpers legitimately transform the carrier: jsonResp spreads it, sanitizes narrative
+          // text, normalizes rows and attaches chart audit before delivering. Requiring the
+          // payload to BE the carrier identifier rejected all three production helpers.
+          //
+          // The control on a chokepoint is therefore its REVIEWED BODY IDENTITY, checked in
+          // checkEligibility. A decorative carrier -- `NextResponse.json({ ...raw, _proof:
+          // sealed })` -- changes the body hash and fails there. That is change control, not a
+          // proof that the carrier flows through, and it is not claimed to be one.
+          kind = "chokepoint";
         } else if (hasStreamBody && hasEventStream) kind = "sse-envelope";
         else if (SEAL_CALL.test(whole) || SEAL_CALL.test(firstText)) kind = "sealed";
         else kind = "unclassified";
@@ -562,6 +627,39 @@ function terminalEgress(file, src, ts) {
   walk(sf);
   return exits;
 }
+
+const REVIEWED_DELIVERY_BODIES = [
+  {
+    fp: "app/api/query/route.ts::sseEvent",
+    sha256: "bf71926c512d7a241be8af0d9ff6ec8b45fb78a345990d327cc29726cec4f49c",
+    bytes: 1629,
+    reason: "Formats one SSE event from a sealed payload. The SSE delivery helper for the streaming route.",
+  },
+  {
+    fp: "app/api/nibrs-query/route.ts::jsonResp",
+    sha256: "3e0c409d3a3797df908721366ccfe2f2bdf60c2a5af8e7fcf40fce027b07f91d",
+    bytes: 1174,
+    reason: "The JSON delivery chokepoint: accepts a SealedPayload or a typed error and returns it verbatim.",
+  },
+  {
+    fp: "app/api/shr-query/route.ts::jsonResp",
+    sha256: "7eda4baa8a7df2a87b9236636105e720358d95bec1a551d20eb4de1902439287",
+    bytes: 1139,
+    reason: "The JSON delivery chokepoint: accepts a SealedPayload or a typed error and returns it verbatim.",
+  },
+  {
+    fp: "app/api/hc-query/route.ts::jsonResp",
+    sha256: "294ba76ed5721e9baaf20da43971bb6f88d84b14ba9d37773e92570d63417a23",
+    bytes: 809,
+    reason: "The JSON delivery chokepoint: accepts a SealedPayload or a typed error and returns it verbatim.",
+  },
+  {
+    fp: "app/api/embed/route.ts::embedResp",
+    sha256: "9b4b4d301a258682fd4193711be3c0dfaf16a4f274be27ac108f81382d077b7a",
+    bytes: 47,
+    reason: "The embed delivery chokepoint: accepts a SealedPayload or a typed error and returns it verbatim.",
+  },
+];
 
 const OPERATIONAL_EXITS = [
   {
@@ -811,6 +909,7 @@ function measure(root, file, ts) {
     terminalExits: terminalEgress(file, own, ts),
     // The envelope is transport. These are the operations that actually deliver facts.
     streamEvents: streamEvents(ts.createSourceFile(file, own, ts.ScriptTarget.Latest, true), ts),
+    deliveryBodies: deliveryBodies(file, own, ts),
     incomplete,
   };
 }
@@ -915,6 +1014,57 @@ function checkEligibility(root, opts) {
         }
       }
 
+      // Reviewed-body identity: any edit to a delivery helper fails until re-reviewed.
+      const bodyReg = new Map((opts.reviewedDeliveryBodies || REVIEWED_DELIVERY_BODIES)
+        .map((e) => [e.fp, e]));
+      const bodySeen = new Set();
+      for (const b of m.deliveryBodies) {
+        const fp = m.route + "::" + b.name;
+        bodySeen.add(fp);
+        const entry = bodyReg.get(fp);
+        if (!entry) {
+          failures.push({
+            kind: "unreviewed-delivery-body", route: m.route,
+            detail: "delivery helper " + b.name + " has no reviewed body identity - register it",
+          });
+        } else if (entry.sha256 !== b.sha256) {
+          failures.push({
+            kind: "unreviewed-delivery-body", route: m.route,
+            detail: "delivery helper " + b.name + " changed (" + entry.sha256.slice(0, 12) +
+                    " -> " + b.sha256.slice(0, 12) + "); review the change and re-register it",
+          });
+        }
+      }
+      for (const e of (opts.reviewedDeliveryBodies || REVIEWED_DELIVERY_BODIES)) {
+        if (!e.fp.startsWith(m.route + "::")) continue;
+        if (!bodySeen.has(e.fp)) {
+          failures.push({
+            kind: "stale-operational-exit", route: m.route,
+            detail: "reviewed delivery body no longer exists: " + e.fp,
+          });
+        }
+      }
+
+      // A seal present but not delivered is decorative.
+      for (const ev of m.streamEvents) {
+        if (ev.kind !== "decorative-seal") continue;
+        failures.push({
+          kind: "decorative-seal", route: m.route,
+          detail: "line " + ev.line + " enqueues an expression that MENTIONS a seal but does not " +
+                  "deliver it as the event payload",
+        });
+      }
+
+      // A truncated fingerprint is not an identity; two payloads could share it.
+      for (const x of m.terminalExits) {
+        if (!/TRUNCATED/.test(x.shape)) continue;
+        failures.push({
+          kind: "analysis-incomplete", route: m.route,
+          detail: "the payload at line " + x.line + " exceeds the normalizer depth, so its " +
+                  "fingerprint is not a unique identity - refusing to certify",
+        });
+      }
+
       // A typed parameter is not proof of delivery. If a chokepoint responds from anything other
       // than its sealed carrier, the seal is decorative.
       for (const x of m.terminalExits) {
@@ -1017,7 +1167,7 @@ function checkEligibility(root, opts) {
 module.exports = {
   checkEligibility, measure, routeFiles, reachableModules, resolveImport,
   assertRouteExtensionAssumption, validateAccessLayer,
-  terminalEgress, streamEvents, chokepointCarriers, derivesFromCarrier, normalizeExpr,
+  terminalEgress, streamEvents, chokepointCarriers, sealIsDirectPayload, normalizeExpr, deliveryBodies, REVIEWED_DELIVERY_BODIES,
   OPERATIONAL_EXITS, OPERATIONAL_STREAM_EVENTS,
   EXCLUSIONS, CRIME_DB_READERS, SEAL_PRIMITIVES, ROUTE_BASENAMES, ACCESS_LAYER,
   MAX_MODULES, RESPONSE_CTORS, HELPER_RESPONSE_ALLOWLIST,

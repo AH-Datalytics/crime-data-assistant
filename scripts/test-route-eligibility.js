@@ -171,7 +171,7 @@ const FULL = {
 // Fixtures supply their own registries. The real ones are keyed by value-aware fingerprints
 // containing production literal text; a fixture that reproduced them would be a copy of
 // production, not a test. Part A above uses the real registries.
-const FX = { operationalExits: [], operationalStreamEvents: [] };
+const FX = { operationalExits: [], operationalStreamEvents: [], reviewedDeliveryBodies: [] };
 const elig = (root) => checkEligibility(root, FX);
 const failsAuth = (r) => r.failures.some((f) => f.route === "app/api/auth/route.ts");
 
@@ -550,7 +550,7 @@ export async function POST(req) {
   return emitFactualPayload(); }`;
   const FP = 'app/api/query/route.ts::POST::NextResponse.json::obj{error:str:nope,success:false}';
   const withEntry = { operationalExits: [{ fp: FP, count: 1, reason: "reviewed refusal fixture" }],
-                      operationalStreamEvents: [] };
+                      operationalStreamEvents: [], reviewedDeliveryBodies: [] };
 
   const root = tree("g3g", { ...FULL, "app/api/query/route.ts": OP_ROUTE });
   checkTrue("G3g a registered operational exit is accepted",
@@ -590,54 +590,78 @@ export async function POST(req) {
 console.log("\nPART H — round-3 review matrix: carrier identity");
 const failsQ = (r) => r.failures.some((f) => f.route === "app/api/query/route.ts");
 
-// H1 — a sealed parameter is present but the response is built from a second, raw parameter.
+// H1-H3 — carrier identity, enforced by REVIEWED BODY IDENTITY rather than by guessing at flow.
+//
+// Five rounds established that syntactic recognizers close one spelling and leave the next open.
+// The positional rule tried first here was strict enough to reject all three PRODUCTION helpers:
+// the real jsonResp legitimately spreads the carrier, sanitizes narrative text, normalizes rows
+// and attaches chart audit before delivering. So the control is change control: the reviewed body
+// is registered, and ANY edit fails until re-reviewed. This is not a data-flow proof and is not
+// described as one.
 {
-  const root = tree("h1", { ...FULL,
-    "app/api/query/route.ts": `import { emitFactualPayload } from "@/lib/proof-finalize";
+  const GOOD = `import { emitFactualPayload } from "@/lib/proof-finalize";
 import type { SealedPayload } from "@/lib/proof-finalize";
-function jsonResp(_sealed: SealedPayload<object>, raw: object) {
-  return NextResponse.json(raw);
+function jsonResp(data: SealedPayload<object>, status = 200) {
+  return NextResponse.json(data, { status });
 }
-export async function POST(req) { return jsonResp(emitFactualPayload(req), req.rows); }` });
-  const m = measure(root, path.join(root, "app/api/query/route.ts"));
-  check("H1  the detached carrier is detected",
-    m.terminalExits.map((x) => x.kind), ["detached-carrier"]);
-  checkTrue("H1b and it FAILS rather than counting as a chokepoint",
-    elig(root).failures.some((f) => f.kind === "detached-carrier"),
-    JSON.stringify(elig(root).failures.map((f) => f.kind)));
-}
+export async function POST(req) { return jsonResp(emitFactualPayload(req)); }`;
 
-// H2 — a sealed parameter is present but the response is built from an unrelated local binding.
-{
-  const root = tree("h2", { ...FULL,
-    "app/api/query/route.ts": `import { emitFactualPayload } from "@/lib/proof-finalize";
+  // The decorative carrier from the review: the seal is present and the payload is `raw`.
+  const DECORATIVE = `import { emitFactualPayload } from "@/lib/proof-finalize";
+import type { SealedPayload } from "@/lib/proof-finalize";
+function jsonResp(sealed: SealedPayload<object>, raw: object) {
+  return NextResponse.json({ ...raw, _proof: sealed });
+}
+export async function POST(req) { return jsonResp(emitFactualPayload(req), req.rows); }`;
+
+  const UNRELATED = `import { emitFactualPayload } from "@/lib/proof-finalize";
 import type { SealedPayload } from "@/lib/proof-finalize";
 import { getNibrsDb } from "@/lib/nibrs-db";
 function jsonResp(data: SealedPayload<object>) {
   const rows = getNibrsDb().prepare("SELECT 1").all();
   return NextResponse.json({ rows });
 }
-export async function POST(req) { return jsonResp(emitFactualPayload(req)); }` });
-  checkTrue("H2  a response from an unrelated local binding FAILS",
-    elig(root).failures.some((f) => f.kind === "detached-carrier"));
-}
+export async function POST(req) { return jsonResp(emitFactualPayload(req)); }`;
 
-// H3 — the genuine shape still passes: the response derives from the sealed carrier.
-{
-  const root = tree("h3", { ...FULL,
-    "app/api/query/route.ts": `import { emitFactualPayload } from "@/lib/proof-finalize";
-import type { SealedPayload } from "@/lib/proof-finalize";
-function jsonResp(data: SealedPayload<object>, status = 200) {
-  return NextResponse.json(data, { status });
-}
-export async function POST(req) { return jsonResp(emitFactualPayload(req)); }` });
-  const m = measure(root, path.join(root, "app/api/query/route.ts"));
-  check("H3  delivering the sealed carrier IS a chokepoint",
-    m.terminalExits.map((x) => x.kind), ["chokepoint"]);
-  checkTrue("H3b so the tree passes", elig(root).ok, JSON.stringify(elig(root).failures));
-  check("H3c and the real jsonResp/embedResp are chokepoints, not detached",
-    res.routes.filter((x) => x.sealed)
-      .flatMap((x) => x.terminalExits).filter((x) => x.kind === "detached-carrier").length, 0);
+  const goodRoot = tree("h3", { ...FULL, "app/api/query/route.ts": GOOD });
+  const goodBody = measure(goodRoot, path.join(goodRoot, "app/api/query/route.ts")).deliveryBodies[0];
+  const REG = { operationalExits: [], operationalStreamEvents: [],
+                reviewedDeliveryBodies: [{ fp: "app/api/query/route.ts::jsonResp",
+                                           sha256: goodBody.sha256, bytes: goodBody.bytes,
+                                           reason: "reviewed delivery helper fixture" }] };
+
+  check("H3  the reviewed delivery body is registered and the tree passes",
+    [checkEligibility(goodRoot, REG).ok, goodBody.name], [true, "jsonResp"]);
+  checkTrue("H3b the SAME body unregistered fails, so H3 is not vacuous",
+    elig(goodRoot).failures.some((f) => f.kind === "unreviewed-delivery-body"));
+
+  // THE REVIEW'S CASE: a decorative carrier. The seal is referenced; the payload is `raw`.
+  const decRoot = tree("h1", { ...FULL, "app/api/query/route.ts": DECORATIVE });
+  const decBody = measure(decRoot, path.join(decRoot, "app/api/query/route.ts")).deliveryBodies[0];
+  checkTrue("H1  a decorative carrier changes the reviewed body identity",
+    decBody.sha256 !== goodBody.sha256);
+  checkTrue("H1b so it FAILS against the reviewed registration",
+    checkEligibility(decRoot, REG).failures.some((f) => f.kind === "unreviewed-delivery-body"),
+    JSON.stringify(checkEligibility(decRoot, REG).failures.map((f) => f.kind)));
+  checkTrue("H1c and the failure names the change rather than guessing at flow",
+    checkEligibility(decRoot, REG).failures.some((f) => /changed \(/.test(f.detail || "")));
+
+  const unrRoot = tree("h2", { ...FULL, "app/api/query/route.ts": UNRELATED });
+  checkTrue("H2  responding from an unrelated local binding also FAILS",
+    checkEligibility(unrRoot, REG).failures.some((f) => f.kind === "unreviewed-delivery-body"));
+
+  // The production helpers are registered and pass; that is asserted on the real tree, not here.
+  check("H2b the real tree's five delivery bodies are all registered and unchanged",
+    res.failures.filter((f) => f.kind === "unreviewed-delivery-body").length, 0);
+  check("H2c and there are exactly five of them",
+    res.routes.filter((x) => x.sealed).reduce((n, x) => n + x.deliveryBodies.length, 0), 5);
+
+  // The honest limit, asserted so it cannot be quietly forgotten: this is change control. A body
+  // that was WRONG when registered stays registered. The registry records review, not truth.
+  checkTrue("H2d a wrong-but-registered body is accepted - the limit is stated, not hidden",
+    checkEligibility(decRoot, { operationalExits: [], operationalStreamEvents: [],
+      reviewedDeliveryBodies: [{ fp: "app/api/query/route.ts::jsonResp", sha256: decBody.sha256,
+                                 bytes: decBody.bytes, reason: "deliberately wrong registration" }] }).ok);
 }
 
 // H4 — a raw enqueue beside the sealed ones. P2.2's counts are untouched by this.
@@ -676,7 +700,7 @@ export async function POST() {
   });
   return new Response(stream, { headers: { "Content-Type": "text/event-stream" } }); }` });
   const FP = 'app/api/query/route.ts::call:sseEvent(obj{text:str:Working...,type:str:status})';
-  const opts = { operationalExits: [],
+  const opts = { operationalExits: [], reviewedDeliveryBodies: [],
                  operationalStreamEvents: [{ fp: FP, count: 1, reason: "progress status fixture" }] };
   checkTrue("H5  a registered operational stream event is accepted",
     checkEligibility(root, opts).ok,
@@ -726,6 +750,74 @@ export async function POST(req) {
   check("H7e and those fingerprints cover 24 occurrences in the tree",
     [OPERATIONAL_EXITS.reduce((n, e) => n + e.count, 0),
      OPERATIONAL_STREAM_EVENTS.reduce((n, e) => n + e.count, 0)], [12, 12]);
+}
+
+// ---------------------------------------------------------------- PART I — round-5 corrections
+console.log("\nPART I — round-5: decorative seals and truncated identities");
+
+// I1 — a seal MENTIONED inside an enqueue payload is decorative, not a delivery.
+{
+  const root = tree("i1", { ...FULL,
+    "app/api/query/route.ts": `import { emitFactualPayload } from "@/lib/proof-finalize";
+import { getNibrsDb } from "@/lib/nibrs-db";
+export async function POST() {
+  const stream = new ReadableStream({
+    async start(controller) {
+      const rows = getNibrsDb().prepare("SELECT 1").all();
+      controller.enqueue(encoder.encode(sseEvent({ ...rows, _p: emitFactualPayload(proof, {}) })));
+    },
+  });
+  return new Response(stream, { headers: { "Content-Type": "text/event-stream" } }); }` });
+  const m = measure(root, path.join(root, "app/api/query/route.ts"));
+  check("I1  a seal buried in the payload is classified decorative, not sealed",
+    m.streamEvents.map((e) => e.kind), ["decorative-seal"]);
+  checkTrue("I1b and it FAILS", elig(root).failures.some((f) => f.kind === "decorative-seal"),
+    JSON.stringify(elig(root).failures.map((f) => f.kind)));
+}
+
+// I2 — the genuine enqueue shape, with the seal as the direct payload, still passes.
+{
+  const root = tree("i2", { ...FULL,
+    "app/api/query/route.ts": `import { emitFactualPayload } from "@/lib/proof-finalize";
+export async function POST() {
+  const stream = new ReadableStream({
+    async start(controller) {
+      controller.enqueue(encoder.encode(sseEvent(emitFactualPayload(proof, { a: 1 }))));
+    },
+  });
+  return new Response(stream, { headers: { "Content-Type": "text/event-stream" } }); }` });
+  const m = measure(root, path.join(root, "app/api/query/route.ts"));
+  check("I2  the seal as the direct event payload IS a sealed delivery",
+    m.streamEvents.map((e) => e.kind), ["sealed"]);
+  checkTrue("I2b so the tree passes", elig(root).ok, JSON.stringify(elig(root).failures));
+  check("I2c and all 29 real sealed enqueues have this exact shape",
+    res.routes.filter((x) => x.sealed)
+      .reduce((n, x) => n + x.streamEvents.filter((e) => e.kind === "sealed").length, 0), 29);
+  check("I2d with zero decorative seals in the real tree",
+    res.failures.filter((f) => f.kind === "decorative-seal").length, 0);
+}
+
+// I3 — a truncated fingerprint is not an identity, so it must fail rather than be shared.
+{
+  const deep = "{ a: { b: { c: { d: { e: { f: rows } } } } } }";
+  const root = tree("i3", { ...FULL,
+    "app/api/query/route.ts": `import { emitFactualPayload } from "@/lib/proof-finalize";
+import { getNibrsDb } from "@/lib/nibrs-db";
+export async function POST(req) {
+  if (req.deep) {
+    const rows = getNibrsDb().prepare("SELECT 1").all();
+    return NextResponse.json(` + deep + `);
+  }
+  return emitFactualPayload(); }` });
+  const m = measure(root, path.join(root, "app/api/query/route.ts"));
+  checkTrue("I3  a payload deeper than the normalizer is marked TRUNCATED",
+    m.terminalExits.some((x) => /TRUNCATED/.test(x.shape)), JSON.stringify(m.terminalExits.map(x=>x.shape)));
+  checkTrue("I3b and it FAILS closed rather than sharing a fingerprint",
+    elig(root).failures.some((f) => f.kind === "analysis-incomplete"),
+    JSON.stringify(elig(root).failures.map((f) => f.kind)));
+  check("I3c no real payload is truncated",
+    res.routes.filter((x) => x.sealed)
+      .flatMap((x) => x.terminalExits).filter((x) => /TRUNCATED/.test(x.shape)).length, 0);
 }
 
 fs.rmSync(tmp, { recursive: true, force: true });
