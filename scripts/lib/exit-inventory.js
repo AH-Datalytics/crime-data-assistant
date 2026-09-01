@@ -96,6 +96,79 @@ function stringProp(objectLiteral, name, sf, ts) {
   return "<expr>";
 }
 
+
+/**
+ * The one indirection the outcome vocabulary is allowed to travel through.
+ *
+ * WHY THIS EXISTS. Every finalization used to name `OUTCOMES.<reason>` at the call site, so reading
+ * the argument was enough to know the reason. P3.1a changed four contract-failure sites to READ the
+ * classifier's decision off the validation result instead of looking the catalog up again - which
+ * is the point: it makes the classification actually travel to finalization instead of merely
+ * matching there. Without this resolver those four sites become shape "other", and `query_contract_failed`
+ * looks like vocabulary nobody produces.
+ *
+ * WHY IT IS DERIVED AND NOT HARD-CODED. Writing `capabilityFinalizationOutcome -> query_contract_failed`
+ * here would put a second, unverified copy of the mapping in the guard that is supposed to be
+ * checking it. Instead the helper's own declaration is parsed: every `OUTCOMES.<x>` reachable from
+ * its body, unioned with every `OUTCOMES.<x>` in the declared type of the carrier it returns. If
+ * that ever yields more than one reason - because the carrier widened, or the fallback changed -
+ * the site is reported as "parallel", which the existing guards already treat as a violation. A
+ * widening therefore fails loudly instead of being absorbed.
+ */
+const DELIVERY_HELPERS = {
+  capabilityFinalizationOutcome: {
+    rel: "lib/query-contract-validator.ts",
+    carrierType: "CapabilityBlockOutcome",
+  },
+};
+
+const deliveryHelperCache = new Map();
+
+function outcomesNamedIn(node, sf, ts) {
+  const found = new Set();
+  walk(node, (n) => {
+    // Value position: `OUTCOMES.query_contract_failed`
+    if (ts.isPropertyAccessExpression(n) && ts.isIdentifier(n.expression) &&
+        n.expression.text === "OUTCOMES") found.add(n.name.text);
+    // TYPE position: `typeof OUTCOMES.query_contract_failed` parses as a QualifiedName, not a
+    // property access. Missing this made the carrier-type half of the derivation silently read
+    // nothing, so a widening of the carrier's declared type would have gone unnoticed while the
+    // helper body still named a single outcome.
+    if (ts.isQualifiedName(n) && ts.isIdentifier(n.left) && n.left.text === "OUTCOMES") {
+      found.add(n.right.text);
+    }
+  }, ts);
+  return found;
+}
+
+/** Reasons a delivery helper can produce, derived from its declaration and its carrier's type. */
+function deliveryHelperReasons(repoRoot, name, ts) {
+  const key = repoRoot + "::" + name;
+  if (deliveryHelperCache.has(key)) return deliveryHelperCache.get(key);
+  const spec = DELIVERY_HELPERS[name];
+  if (!spec) return null;
+  const file = path.join(repoRoot, spec.rel);
+  if (!fs.existsSync(file)) return null;
+  const sf = ts.createSourceFile(file, fs.readFileSync(file, "utf8"),
+    ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+
+  const reasons = new Set();
+  let sawDeclaration = false;
+  walk(sf, (n) => {
+    if (ts.isFunctionDeclaration(n) && n.name && n.name.text === name && n.body) {
+      sawDeclaration = true;
+      for (const r of outcomesNamedIn(n.body, sf, ts)) reasons.add(r);
+    }
+    if (ts.isTypeAliasDeclaration(n) && n.name.text === spec.carrierType) {
+      for (const r of outcomesNamedIn(n.type, sf, ts)) reasons.add(r);
+    }
+  }, ts);
+
+  const result = sawDeclaration ? [...reasons].sort() : null;
+  deliveryHelperCache.set(key, result);
+  return result;
+}
+
 /**
  * How the site supplies its outcome.
  *   literal   — `outcome: OUTCOMES.<reason>`
@@ -104,7 +177,7 @@ function stringProp(objectLiteral, name, sf, ts) {
  *   absent    — no `outcome` property at all
  *   parallel  — a conditional whose arms are NOT whole outcome constants (the shape T7b forbids)
  */
-function outcomeShape(call, sf, ts) {
+function outcomeShape(call, sf, ts, repoRoot) {
   const arg = call.arguments[0];
   if (!arg || !ts.isObjectLiteralExpression(arg)) return { form: "absent" };
   const prop = arg.properties.find((p) => p.name && p.name.getText(sf) === "outcome");
@@ -127,6 +200,16 @@ function outcomeShape(call, sf, ts) {
                  predicate: expr.condition.getText(sf) };
       }
       return { form: "parallel", predicate: expr.condition.getText(sf), via };
+    }
+    // The delivery-helper indirection: one reason derived from the helper is a literal site; more
+    // than one is "parallel", which the guards reject.
+    if (ts.isCallExpression(expr) && ts.isIdentifier(expr.expression) &&
+        Object.prototype.hasOwnProperty.call(DELIVERY_HELPERS, expr.expression.text)) {
+      const reasons = deliveryHelperReasons(repoRoot, expr.expression.text, ts);
+      if (reasons && reasons.length === 1) {
+        return { form: "literal", reason: reasons[0], via: expr.expression.text + "()" };
+      }
+      return { form: "parallel", predicate: expr.expression.text + "()", via };
     }
     return null;
   };
@@ -452,7 +535,7 @@ function inventoryFile(repoRoot, spec, ts) {
     while (q && !ts.isCallExpression(q)) q = q.parent;
     if (q && calleeName(q, ts) === SEAL) inlineSealed = true;
 
-    const shape = outcomeShape(call, sf, ts);
+    const shape = outcomeShape(call, sf, ts, repoRoot);
     const planFamily = stringProp(arg, "planFamily", sf, ts);
     const guardrails = stringProp(arg, "guardrails", sf, ts);
     return {
@@ -572,4 +655,5 @@ function buildInventory(repoRoot) {
   };
 }
 
-module.exports = { buildInventory, inventoryFile, ROUTE_FILES, EMBED_FILE, loadTypeScript };
+module.exports = { buildInventory, inventoryFile, ROUTE_FILES, EMBED_FILE, loadTypeScript,
+  DELIVERY_HELPERS, deliveryHelperReasons };

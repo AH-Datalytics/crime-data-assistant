@@ -12,7 +12,7 @@
  */
 import {
   executeFrozenCases, accountFor, deriveCaseVerdict, projectFrozenContract, CONTRACT_SHELL,
-  type CaseResult, type PredicateAgreement, type ParserAgreement,
+  type CaseResult, type PredicateAgreement, type ParserAgreement, type ParserExecution,
 } from "./run-p3-1a-frozen-cases";
 
 let pass = 0, fail = 0;
@@ -58,36 +58,130 @@ console.log("M0 — healthy baseline");
     [r.predicateCounts.agreed, r.verdictCounts.conformant, r.verdictCounts.nonconformant], [3, 3, 0]);
   check("M0c parser agreement is recorded on its own axis",
     r.parserCounts, { agreed: 2, not_applicable: 1 });
+  check("M0d and parser EXECUTION is recorded separately from what it concluded",
+    r.parserExecutionCounts, { not_run: 0, completed: 3, error: 0 });
+  check("M0e every case was parser-visited exactly once",
+    r.parserVisits, { A1: 1, A2: 1, A3: 1 });
 }
 
 // ── M1 — a skipped case is never a passing case ─────────────────────────────────────────────
 console.log("\nM1 — skipped case");
 {
-  const mk = (predicateAgreement: PredicateAgreement): CaseResult => ({
-    id: "X", pair: "p", role: "positive", predicateAgreement, parserAgreement: "agreed",
-    caseVerdict: "conformant", observed: null,
+  const ran: CaseResult = {
+    id: "X", pair: "p", role: "positive", predicateAgreement: "agreed", parserAgreement: "agreed",
+    parserExecution: "completed", caseVerdict: "conformant", observed: null,
     expected: { applies: true, action: null, reason: null },
     parserDetail: null, predicateDetail: null,
-  });
-  const ran = mk("agreed"), skipped = { ...mk("not_run"), id: "Y" };
+  };
+  const skipped: CaseResult = { ...ran, id: "Y", predicateAgreement: "not_run",
+    caseVerdict: "not_established" };
+  const diverged: CaseResult = { ...ran, id: "Z", predicateAgreement: "not_run",
+    parserAgreement: "disagreed", caseVerdict: "nonconformant" };
+  const ledger = (...rs: CaseResult[]) => Object.fromEntries(rs.map((r) => [r.id, 1]));
 
   check("M1  complete when nothing is skipped",
-    accountFor([ran], 1, [], "completed").accountingVerdict, "complete");
-  const s = accountFor([ran, skipped], 2, [], "completed");
-  check("M1b one unexecuted case makes the whole run incomplete", s.accountingVerdict, "incomplete");
-  checkTrue("M1c and it says which rule caught it",
-    (s.accountingDetail ?? "").includes("never executed"), s.accountingDetail ?? "");
-  check("M1d a short result list is caught even with no not_run",
-    accountFor([ran], 3, [], "completed").accountingVerdict, "incomplete");
+    accountFor({ list: [ran], entryCount: 1, duplicates: [], runState: "completed",
+      parserVisits: ledger(ran) }).accountingVerdict, "complete");
 
-  // The inverse: after a deliberate stop, every case MUST be not_run.
-  check("M1e a stopped run with all cases un-run accounts as complete",
-    accountFor([skipped], 1, [], "stopped_parser_divergence").accountingVerdict, "complete");
-  const halfStopped = accountFor([ran, skipped], 2, [], "stopped_parser_divergence");
+  const one = accountFor({ list: [ran, skipped], entryCount: 2, duplicates: [],
+    runState: "completed", parserVisits: ledger(ran, skipped) });
+  check("M1b one unexecuted case makes the whole run incomplete", one.accountingVerdict, "incomplete");
+  checkTrue("M1c and it says which rule caught it",
+    (one.accountingDetail ?? "").includes("never executed"), one.accountingDetail ?? "");
+
+  check("M1d a short result list is caught even with no not_run",
+    accountFor({ list: [ran], entryCount: 3, duplicates: [], runState: "completed",
+      parserVisits: ledger(ran) }).accountingVerdict, "incomplete");
+
+  // The inverse: after a deliberate stop, every case MUST be not_run - and something must have
+  // actually diverged.
+  check("M1e a stopped run, all cases un-run, with a real divergence, accounts as complete",
+    accountFor({ list: [diverged], entryCount: 1, duplicates: [],
+      runState: "stopped_parser_divergence", parserVisits: ledger(diverged) }).accountingVerdict,
+    "complete");
+  const halfStopped = accountFor({ list: [ran, diverged], entryCount: 2, duplicates: [],
+    runState: "stopped_parser_divergence", parserVisits: ledger(ran, diverged) });
   check("M1f a 'stopped' run that executed cases anyway is incomplete",
     halfStopped.accountingVerdict, "incomplete");
   checkTrue("M1g and it says the stop did not stop anything",
     (halfStopped.accountingDetail ?? "").includes("executed anyway"), halfStopped.accountingDetail ?? "");
+}
+
+// ── M9 — the parser phase is accounted for independently ────────────────────────────────────
+//
+// Round 3 found the escape these close. Accounting counted only `predicateAgreement`, so once one
+// case diverged and the run entered `stopped_parser_divergence`, "every predicate is not_run" was
+// the only rule left - and a parser case that was never visited satisfied it. Worse,
+// `parserAgreement: "not_applicable"` is both the initial value and a legitimate result, so the
+// skipped case was indistinguishable from a parsed one.
+console.log("\nM9 — parser-phase accounting");
+{
+  const base: CaseResult = {
+    id: "A", pair: "p", role: "positive", predicateAgreement: "not_run",
+    parserAgreement: "not_applicable", parserExecution: "completed",
+    caseVerdict: "not_established", observed: null,
+    expected: { applies: true, action: null, reason: null },
+    parserDetail: null, predicateDetail: null,
+  };
+  const divergedCase: CaseResult = { ...base, id: "B", parserAgreement: "disagreed",
+    caseVerdict: "nonconformant" };
+  const ledgerOf = (rs: CaseResult[], over: Record<string, number> = {}) =>
+    ({ ...Object.fromEntries(rs.map((r) => [r.id, 1])), ...over });
+
+  // The baseline these four deviate from: a legitimate stop.
+  const good = [base, divergedCase];
+  check("M9  baseline - a legitimate stop accounts as complete",
+    accountFor({ list: good, entryCount: 2, duplicates: [],
+      runState: "stopped_parser_divergence", parserVisits: ledgerOf(good) }).accountingVerdict,
+    "complete");
+
+  // (1) a skipped parser case, hidden behind another case's divergence
+  const skippedParser = [{ ...base, parserExecution: "not_run" as ParserExecution }, divergedCase];
+  const r1 = accountFor({ list: skippedParser, entryCount: 2, duplicates: [],
+    runState: "stopped_parser_divergence", parserVisits: ledgerOf([divergedCase]) });
+  check("M9b a case the parser never visited makes the run incomplete", r1.accountingVerdict, "incomplete");
+  checkTrue("M9c and it names both the state and the missing ledger entry",
+    (r1.accountingDetail ?? "").includes("never parser-processed") &&
+    (r1.accountingDetail ?? "").includes("no parser visit recorded"), r1.accountingDetail ?? "");
+
+  // (2) a duplicate parser visit
+  const r2 = accountFor({ list: good, entryCount: 2, duplicates: [],
+    runState: "stopped_parser_divergence", parserVisits: ledgerOf(good, { A: 2 }) });
+  check("M9d a case parsed twice makes the run incomplete", r2.accountingVerdict, "incomplete");
+  checkTrue("M9e and it says which case and how many times",
+    (r2.accountingDetail ?? "").includes("A x2"), r2.accountingDetail ?? "");
+
+  // (3) a fabricated stop state with nothing actually diverged
+  const noDivergence = [base, { ...base, id: "B" }];
+  const r3 = accountFor({ list: noDivergence, entryCount: 2, duplicates: [],
+    runState: "stopped_parser_divergence", parserVisits: ledgerOf(noDivergence) });
+  check("M9f a stop with no recorded divergence makes the run incomplete", r3.accountingVerdict, "incomplete");
+  checkTrue("M9g and it says the stop is unexplained",
+    (r3.accountingDetail ?? "").includes("no parser divergence was recorded"), r3.accountingDetail ?? "");
+
+  // (4) a divergence followed by one predicate execution
+  const leaked = [{ ...base, predicateAgreement: "agreed" as PredicateAgreement,
+    caseVerdict: "conformant" as const }, divergedCase];
+  const r4 = accountFor({ list: leaked, entryCount: 2, duplicates: [],
+    runState: "stopped_parser_divergence", parserVisits: ledgerOf(leaked) });
+  check("M9h a predicate that ran after the stop makes the run incomplete", r4.accountingVerdict, "incomplete");
+  checkTrue("M9i and it says the stop did not stop anything",
+    (r4.accountingDetail ?? "").includes("executed anyway"), r4.accountingDetail ?? "");
+
+  // A skipped parser case in a COMPLETED run is equally a defect - checking only the stopped
+  // branch would leave the ordinary path able to hide one.
+  const completedSkip = [{ ...base, predicateAgreement: "agreed" as PredicateAgreement,
+    parserExecution: "not_run" as ParserExecution, caseVerdict: "conformant" as const }];
+  check("M9j a skipped parser case is a defect in a COMPLETED run too",
+    accountFor({ list: completedSkip, entryCount: 1, duplicates: [], runState: "completed",
+      parserVisits: {} }).accountingVerdict, "incomplete");
+
+  // A ledger entry for a case that does not exist is a defect in the ledger itself.
+  const r5 = accountFor({ list: good, entryCount: 2, duplicates: [],
+    runState: "stopped_parser_divergence", parserVisits: ledgerOf(good, { GHOST: 1 }) });
+  check("M9k a ledger entry for an unknown case makes the run incomplete", r5.accountingVerdict, "incomplete");
+  checkTrue("M9l and it names the ghost",
+    (r5.accountingDetail ?? "").includes("GHOST"), r5.accountingDetail ?? "");
 }
 
 // ── M2 — duplicate case ids ─────────────────────────────────────────────────────────────────
@@ -163,6 +257,12 @@ console.log("\nM4 — parser divergence stops the run");
     [thrown.parserCounts.parser_error, thrown.runState, thrown.evidenceVerdict],
     [3, "stopped_parser_divergence", "nonconformant"]);
   check("M4i and no case is conformant", thrown.verdictCounts.conformant, 0);
+  check("M4j a throwing parser still counts as VISITED, on the execution axis",
+    [thrown.parserExecutionCounts.error, thrown.parserExecutionCounts.not_run,
+     Object.values(thrown.parserVisits).every((n) => n === 1)],
+    [3, 0, true]);
+  check("M4k a stopped run still visited every case exactly once",
+    drifted.parserVisits, { A1: 1, A2: 1, A3: 1 });
 }
 
 // ── M5 — analysis_incomplete never collapses into anything else ─────────────────────────────

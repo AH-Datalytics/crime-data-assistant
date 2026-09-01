@@ -75,6 +75,20 @@ export type PredicateAgreement =
 
 export type ParserAgreement = "agreed" | "disagreed" | "not_applicable" | "parser_error";
 
+/**
+ * Whether the parser phase actually VISITED this case - independent of what it concluded.
+ *
+ * Round 3 found the escape this closes. `parserAgreement: "not_applicable"` is both a legitimate
+ * final state (a case with no frozen projection) and the initial value before parsing. So a skipped
+ * parser iteration was indistinguishable from a case that was parsed and had nothing to compare -
+ * and if some other case diverged, the run entered `stopped_parser_divergence`, where the only
+ * accounting rule was "every predicate is not_run". A skipped case sailed through.
+ *
+ * Execution and conclusion are therefore separate axes. This one answers "was it processed", which
+ * is the question accounting needs and the one `parserAgreement` cannot answer.
+ */
+export type ParserExecution = "not_run" | "completed" | "error";
+
 export type CaseVerdict = "conformant" | "nonconformant" | "not_established";
 
 export type RunState = "completed" | "stopped_parser_divergence";
@@ -87,6 +101,8 @@ export type CaseResult = {
   predicateAgreement: PredicateAgreement;
   /** Did the real parser reproduce the frozen projection? Never mixed with the predicate axis. */
   parserAgreement: ParserAgreement;
+  /** Was this case visited by the parser phase at all? Not the same question as the line above. */
+  parserExecution: ParserExecution;
   /** The single unambiguous answer for this case, derived from both axes. */
   caseVerdict: CaseVerdict;
   observed: {
@@ -120,6 +136,9 @@ export type RunReport = {
   caseCount: number;
   predicateCounts: Record<PredicateAgreement, number>;
   parserCounts: Record<string, number>;
+  parserExecutionCounts: Record<ParserExecution, number>;
+  /** How many times the parser phase visited each case id. Every value must be exactly 1. */
+  parserVisits: Record<string, number>;
   verdictCounts: Record<CaseVerdict, number>;
   accountingVerdict: "complete" | "incomplete";
   accountingDetail: string | null;
@@ -132,6 +151,7 @@ const PREDICATE_STATES: PredicateAgreement[] = [
   "not_run", "agreed", "disagreed", "analysis_incomplete", "harness_error",
 ];
 const VERDICTS: CaseVerdict[] = ["conformant", "nonconformant", "not_established"];
+const PARSER_EXECUTIONS: ParserExecution[] = ["not_run", "completed", "error"];
 
 /** Apply a case's frozen dotted-path projection onto a complete hand-specified contract shell. */
 export function projectFrozenContract(
@@ -176,22 +196,66 @@ export function deriveCaseVerdict(
  * inverts — EVERY case must be `not_run`, because a half-processed set would mean the stop did not
  * actually stop anything.
  */
-export function accountFor(
-  list: CaseResult[], entryCount: number, duplicates: string[], runState: RunState,
-): { accountingVerdict: "complete" | "incomplete"; accountingDetail: string | null } {
+export function accountFor(opts: {
+  list: CaseResult[];
+  entryCount: number;
+  duplicates: string[];
+  runState: RunState;
+  /** Visits per case id recorded by the parser phase. Every entry must be exactly 1. */
+  parserVisits: Record<string, number>;
+}): { accountingVerdict: "complete" | "incomplete"; accountingDetail: string | null } {
+  const { list, entryCount, duplicates, runState, parserVisits } = opts;
   const counts = Object.fromEntries(PREDICATE_STATES.map((d) => [d, 0])) as Record<PredicateAgreement, number>;
   for (const r of list) counts[r.predicateAgreement]++;
+  const execCounts = Object.fromEntries(PARSER_EXECUTIONS.map((d) => [d, 0])) as Record<ParserExecution, number>;
+  for (const r of list) execCounts[r.parserExecution]++;
 
   const problems: string[] = [];
   if (duplicates.length) problems.push(`duplicate case ids: ${[...new Set(duplicates)].join(", ")}`);
   if (list.length !== entryCount) {
     problems.push(`processed ${list.length} distinct cases from ${entryCount} entries`);
   }
+
+  // ── the parser phase is accounted for on its own, in EVERY run state ─────────────────────
+  // A skipped parser case is a defect whether the run finished or stopped. Checking it only in the
+  // stopped branch would leave a completed run able to hide one.
+  if (execCounts.not_run > 0) {
+    problems.push(`${execCounts.not_run} case(s) were never parser-processed`);
+  }
+  const execSummed = PARSER_EXECUTIONS.reduce((n, d) => n + execCounts[d], 0);
+  if (execSummed !== list.length) {
+    problems.push(`parser execution states sum to ${execSummed}, not ${list.length}`);
+  }
+  const ids = new Set(list.map((r) => r.id));
+  const badVisits = Object.entries(parserVisits).filter(([, n]) => n !== 1);
+  if (badVisits.length) {
+    problems.push(
+      `parser visited ${badVisits.map(([id, n]) => `${id} x${n}`).join(", ")}; ` +
+      "each case must be visited exactly once");
+  }
+  const unledgered = [...ids].filter((id) => !(id in parserVisits));
+  if (unledgered.length) problems.push(`no parser visit recorded for: ${unledgered.join(", ")}`);
+  const strayLedger = Object.keys(parserVisits).filter((id) => !ids.has(id));
+  if (strayLedger.length) {
+    problems.push(`parser visits recorded for unknown case(s): ${strayLedger.join(", ")}`);
+  }
+
+  // ── the predicate phase, whose rule inverts after a deliberate stop ───────────────────────
   if (runState === "completed") {
     if (counts.not_run > 0) problems.push(`${counts.not_run} case(s) were never executed`);
-  } else if (counts.not_run !== list.length) {
-    problems.push(
-      `run stopped on parser divergence but ${list.length - counts.not_run} case(s) were executed anyway`);
+  } else {
+    if (counts.not_run !== list.length) {
+      problems.push(
+        `run stopped on parser divergence but ${list.length - counts.not_run} case(s) were executed anyway`);
+    }
+    // A stop must be EXPLAINED. Without this, a fabricated `stopped_parser_divergence` with no
+    // divergence anywhere would satisfy "every predicate is not_run" and account as complete -
+    // reporting a clean stop over a run that simply never did its work.
+    const diverged = list.filter(
+      (r) => r.parserAgreement === "disagreed" || r.parserAgreement === "parser_error").length;
+    if (diverged === 0) {
+      problems.push("run state is stopped_parser_divergence but no parser divergence was recorded");
+    }
   }
   const summed = PREDICATE_STATES.reduce((n, d) => n + counts[d], 0);
   if (summed !== list.length) problems.push(`predicate states sum to ${summed}, not ${list.length}`);
@@ -231,6 +295,7 @@ export function executeFrozenCases(opts: {
       id: c.id, pair: c.pair, role: c.role,
       predicateAgreement: "not_run",
       parserAgreement: "not_applicable",
+      parserExecution: "not_run",
       caseVerdict: "not_established",
       observed: null,
       expected: {
@@ -244,9 +309,16 @@ export function executeFrozenCases(opts: {
   }
 
   // ── phase 1: the parser, for every case, recorded on its own axis ──────────────────────────
+  //
+  // The visit ledger is kept separately from the conclusion. `parserAgreement` cannot tell a
+  // skipped case from a legitimately not-applicable one, because "not_applicable" is both the
+  // initial value and a valid result; the ledger and `parserExecution` can.
+  const parserVisits: Record<string, number> = {};
   for (const c of cases) {
     const r = results.get(c.id);
-    if (!r || r.parserAgreement !== "not_applicable" || r.parserDetail !== null) continue;
+    // A duplicate entry is already a defect via `duplicates`; it must not be parsed twice.
+    if (!r || r.parserExecution !== "not_run") continue;
+    parserVisits[c.id] = (parserVisits[c.id] ?? 0) + 1;
     try {
       const parsed = buildContract(c);
       if (!c.expected_contract) {
@@ -268,8 +340,11 @@ export function executeFrozenCases(opts: {
       }
     } catch (err) {
       r.parserAgreement = "parser_error";
+      r.parserExecution = "error";
       r.parserDetail = err instanceof Error ? err.message : String(err);
+      continue;
     }
+    r.parserExecution = "completed";
   }
 
   const diverged = [...results.values()].filter(
@@ -326,7 +401,10 @@ export function executeFrozenCases(opts: {
   const verdictCounts = Object.fromEntries(VERDICTS.map((v) => [v, 0])) as Record<CaseVerdict, number>;
   for (const r of list) verdictCounts[r.caseVerdict]++;
 
-  const acct = accountFor(list, cases.length, duplicates, runState);
+  const execCounts = Object.fromEntries(PARSER_EXECUTIONS.map((d) => [d, 0])) as Record<ParserExecution, number>;
+  for (const r of list) execCounts[r.parserExecution]++;
+
+  const acct = accountFor({ list, entryCount: cases.length, duplicates, runState, parserVisits });
 
   let evidenceVerdict: CaseVerdict;
   let evidenceDetail: string | null = null;
@@ -347,6 +425,8 @@ export function executeFrozenCases(opts: {
     caseCount: cases.length,
     predicateCounts,
     parserCounts,
+    parserExecutionCounts: execCounts,
+    parserVisits,
     verdictCounts,
     accountingVerdict: acct.accountingVerdict,
     accountingDetail: acct.accountingDetail,
@@ -573,6 +653,7 @@ async function main() {
   console.log(`  EVIDENCE          ${full.evidenceVerdict}${full.evidenceDetail ? " - " + full.evidenceDetail : ""}`);
   for (const s of PREDICATE_STATES) console.log(`    predicate ${s.padEnd(20)} ${full.predicateCounts[s]}`);
   console.log(`    parser    ${JSON.stringify(full.parserCounts)}`);
+  console.log(`    parser run ${JSON.stringify(full.parserExecutionCounts)}`);
   console.log(`    verdicts  ${JSON.stringify(full.verdictCounts)}`);
 
   if (full.accountingVerdict === "incomplete") process.exit(2);

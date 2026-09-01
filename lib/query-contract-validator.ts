@@ -102,6 +102,29 @@ export function queryContractFailureMessage(result: QueryContractSqlValidation):
   return result.blockReasons[0] ?? (result.retryIssues.length > 0 ? CONTRACT_SECOND_FAILURE_MESSAGE : null);
 }
 
+/**
+ * The typed outcome a route must finalize a contract failure with.
+ *
+ * WHY A HELPER AND NOT A LITERAL AT EACH ROUTE. Before this, every route looked the catalog member
+ * up for itself. Both ends named the same thing, so a test could prove they were equal today - but
+ * equality is not delivery. The classifier's decision never actually travelled to finalization, and
+ * a later catalog or routing change could strand the carrier while each route still found a valid
+ * literal. Round 3 named that exactly: the requirement is causal delivery, not present equality.
+ *
+ * So the classification is DELIVERED. When a capability block fired, this returns the very object
+ * `classifyCapabilityRule()` produced and the validator carried on the result. The fallback covers
+ * contract failures that no capability rule caused - a missing required ORI, a clearance-grain
+ * block, the second-failure message - which have no capability classification to deliver and keep
+ * the catalog member they always used.
+ *
+ * Behaviour is unchanged either way: the carrier IS `OUTCOMES.query_contract_failed`, so both
+ * branches return the same object today. What changes is where the value comes from, which is the
+ * thing that has to be true for the linkage to survive a refactor.
+ */
+export function capabilityFinalizationOutcome(result: QueryContractSqlValidation) {
+  return result.capabilityOutcome ?? OUTCOMES.query_contract_failed;
+}
+
 export function queryContractGuardrails(result: QueryContractSqlValidation): string[] {
   return [...new Set([...result.fired, ...result.enforced])];
 }

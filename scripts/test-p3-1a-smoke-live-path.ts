@@ -138,13 +138,18 @@ console.log("\nS1 — success: the whole live path, end to end");
     check("S1f all three cases conformed", art.verdictCounts, { conformant: 3, nonconformant: 0, not_established: 0 });
     check("S1g the real parser ran and agreed where a projection existed",
       art.parserCounts, { not_applicable: 2, agreed: 1 });
+    // Execution is recorded separately from conclusion, and the ledger proves each case was
+    // visited exactly once - the property that closes the round-3 skipped-parser-case escape.
+    check("S1g2 parser EXECUTION is recorded separately, and every case was visited once",
+      [art.parserExecutionCounts, art.parserVisits],
+      [{ not_run: 0, completed: 3, error: 0 }, { "SMOKE-1": 1, "SMOKE-2": 1, "SMOKE-3": 1 }]);
     check("S1h provenance carries the runner, input and candidate identities",
       [art.provenance.runnerSha256 === RUNNER_SHA, art.provenance.inputSha256 === sha,
        typeof art.provenance.candidateCommit === "string", art.provenance.node === process.version],
       [true, true, true, true]);
     check("S1i it verified all three frozen sets before and after",
       [art.provenance.frozenSetsBefore, art.provenance.frozenSetsAfter], [FROZEN_SETS, FROZEN_SETS]);
-  } else { fail += 7; console.log("  FAIL  S1c-S1i  no artifact to inspect"); }
+  } else { fail += 8; console.log("  FAIL  S1c-S1i  no artifact to inspect"); }
 }
 
 // ── S2 — the immutable write refuses to overwrite ───────────────────────────────────────────

@@ -9,7 +9,15 @@
  *       -> classifyCapabilityRule() returns { kind: "block", outcome }        (shared authority)
  *       -> the validator pushes a block reason and carries `capabilityOutcome`
  *       -> queryContractFailureMessage() returns a message, so the route takes its failure branch
- *       -> the route calls finalizeExit({ outcome: OUTCOMES.query_contract_failed, ... })
+ *       -> the route calls finalizeExit({ outcome: capabilityFinalizationOutcome(contractResult) })
+ *
+ * DELIVERY, NOT EQUALITY. Round 3 found the earlier version of this suite proved only that the
+ * classifier's outcome and the routes' outcome were the same object *today*: each route looked the
+ * catalog member up for itself, so the classification never actually travelled, and a later catalog
+ * or routing change could strand the carrier while every route still found a valid literal. The
+ * routes now READ the validation result, and the controls below prove the value flows - with a
+ * sentinel that is deliberately NOT the catalog member, so a re-lookup would fail where a delivery
+ * succeeds.
  *
  * The last hop is the one that cannot be checked by calling a function, because it lives inside a
  * route handler that needs a request, a model and a database. It is checked STRUCTURALLY instead,
@@ -26,8 +34,11 @@
  */
 import fs from "node:fs";
 import path from "node:path";
+import os from "node:os";
 import ts from "typescript";
-import { validateQueryContractSql, queryContractFailureMessage } from "../lib/query-contract-validator";
+import {
+  validateQueryContractSql, queryContractFailureMessage, capabilityFinalizationOutcome,
+} from "../lib/query-contract-validator";
 import { BLOCK_CAPABILITY_RULES, classifyCapabilityRule } from "../lib/capability-decision";
 import { SOURCE_CAPABILITY_RULES } from "../lib/source-capabilities";
 import { OUTCOMES, isAdmissiblePair } from "../lib/proof-contract";
@@ -104,6 +115,28 @@ console.log("R1 — the runtime chain from a fired rule to a finalizable failure
       return c.kind === "block" && c.outcome === OUTCOMES.query_contract_failed;
     }));
 
+  // DELIVERY: for a real triggering question, what the routes will finalize with is the object the
+  // classifier produced, obtained by reading the result rather than by looking the catalog up again.
+  checkTrue("R1f the finalization helper delivers the classifier's object for every block rule",
+    TRIGGERS.every((t) => {
+      const r = validateQueryContractSql({ question: t.question, source: t.source, sql });
+      const c = classifyCapabilityRule(t.ruleId);
+      return c.kind === "block" && capabilityFinalizationOutcome(r) === c.outcome;
+    }));
+
+  // The sentinel: a carrier that is NOT the catalog member. A helper that re-looked the catalog up
+  // would return query_contract_failed here and this would fail. Only actual delivery passes.
+  const SENTINEL = { action: "sentinel_action", reason: "sentinel_reason" } as unknown as
+    typeof OUTCOMES.query_contract_failed;
+  const carried = capabilityFinalizationOutcome(
+    { capabilityOutcome: SENTINEL } as unknown as ReturnType<typeof validateQueryContractSql>);
+  checkTrue("R1g the helper returns the CARRIED value, not a fresh catalog lookup",
+    carried === SENTINEL);
+  check("R1h and falls back to the catalog only when nothing was carried",
+    capabilityFinalizationOutcome(
+      { capabilityOutcome: null } as unknown as ReturnType<typeof validateQueryContractSql>),
+    OUTCOMES.query_contract_failed);
+
   // And the pair is admissible for the store the routes log to.
   check("R1d the pair is admissible in query_log",
     isAdmissiblePair("query_log", OUTCOMES.query_contract_failed.action, OUTCOMES.query_contract_failed.reason),
@@ -162,27 +195,103 @@ console.log("\nR2 — every route finalizes a contract failure with that same ou
     if (outs.length) byFile.set(path.relative(ROOT, f).replace(/\\/g, "/"), outs);
   }
 
+  const DELIVERED = "capabilityFinalizationOutcome(contractResult)";
   const contractFailureRoutes = [...byFile.entries()]
-    .filter(([, outs]) => outs.includes("OUTCOMES.query_contract_failed"))
+    .filter(([, outs]) => outs.includes(DELIVERED))
     .map(([f]) => f).sort();
 
-  check("R2b the routes finalizing a contract failure are the four expected ones",
+  check("R2b all four routes finalize a contract failure by READING the validation result",
     contractFailureRoutes,
     ["app/api/hc-query/route.ts", "app/api/nibrs-query/route.ts",
      "app/api/query/route.ts", "app/api/shr-query/route.ts"]);
 
+  // The old shape must be gone: a route that still looks the catalog up for itself is not being
+  // delivered to, however equal the value happens to be.
+  check("R2c no route finalizes a contract failure from a bare catalog lookup",
+    [...byFile.entries()]
+      .filter(([, outs]) => outs.includes("OUTCOMES.query_contract_failed"))
+      .map(([f]) => f).sort(),
+    []);
+
   // Anti-vacuity: the analyser must actually be finding calls, and finding more than one kind of
   // outcome - otherwise "they all use query_contract_failed" would be true of an empty set.
   const allOutcomes = new Set([...byFile.values()].flat());
-  checkTrue("R2c the AST analyser found finalizeExit calls carrying several distinct outcomes",
+  checkTrue("R2d the AST analyser found finalizeExit calls carrying several distinct outcomes",
     allOutcomes.size > 1 && [...byFile.values()].flat().length >= 4,
     `outcomes seen: ${[...allOutcomes].sort().join(", ")}`);
 
-  checkTrue("R2d every contract-failure finalization names the catalog member, never a literal",
-    [...byFile.values()].flat()
-      .filter((o) => /query_contract_failed/.test(o))
-      .every((o) => o === "OUTCOMES.query_contract_failed"),
-    [...byFile.values()].flat().filter((o) => /query_contract_failed/.test(o)).join(" | "));
+  // Anti-vacuity for the delivery check itself: the analyser must be reading real call arguments,
+  // so the delivered form has to appear exactly four times - once per route - and never as a string
+  // or comment, which is why this is an AST walk rather than a text search.
+  check("R2e the delivered form appears exactly once per route",
+    [...byFile.values()].flat().filter((o) => o === DELIVERED).length, 4);
+  // Every other finalization in the app names catalog members - including via a ternary, which is
+  // fine - and none writes an inline {action, reason} object. A hand-written pair is the thing that
+  // would put a second author back into the outcome vocabulary.
+  const others = [...byFile.values()].flat().filter((o) => o !== DELIVERED);
+  checkTrue("R2f no finalization anywhere builds an inline action/reason object",
+    others.every((o) => o.includes("OUTCOMES.") && !o.includes("{")),
+    others.filter((o) => !o.includes("OUTCOMES.") || o.includes("{")).join(" | "));
+  checkTrue("R2g and there are many such calls, so R2f is not vacuous",
+    others.length >= 20, `${others.length} other finalizations`);
+}
+
+// ── R2b — the inventory resolves the delivery helper, and a widening would fail loudly ──────
+console.log("\nR2h — the exit inventory follows the delivery indirection");
+{
+  const inventory = require("./lib/exit-inventory.js") as {
+    buildInventory: (root: string) => { decisionSites: { file: string; line: number; outcome: any }[] };
+    deliveryHelperReasons: (root: string, name: string, ts: unknown) => string[] | null;
+    loadTypeScript: (root: string) => unknown;
+    DELIVERY_HELPERS: Record<string, { rel: string; carrierType: string }>;
+  };
+
+  // Changing the four routes to read the carrier made them shape "other" to the inventory, and
+  // `query_contract_failed` briefly looked like vocabulary nobody produces - which is precisely
+  // what test-outcome-coverage caught. The inventory now follows the one indirection, deriving the
+  // reason from the helper's own declaration rather than from a mapping written into the guard.
+  const sites = inventory.buildInventory(ROOT).decisionSites
+    .filter((s) => String(s.outcome?.via ?? "").includes("capabilityFinalizationOutcome"));
+  check("R2h  all four delivered sites resolve to one literal reason", sites.length, 4);
+  check("R2i  and that reason is the one the classifier supplies",
+    [...new Set(sites.map((s) => `${s.outcome.form}:${s.outcome.reason}`))],
+    ["literal:query_contract_failed"]);
+
+  const tsMod = inventory.loadTypeScript(ROOT);
+  check("R2j  derived from the helper's own source, not a mapping in the guard",
+    inventory.deliveryHelperReasons(ROOT, "capabilityFinalizationOutcome", tsMod),
+    ["query_contract_failed"]);
+  check("R2k  exactly one helper is allowed to carry an outcome",
+    Object.keys(inventory.DELIVERY_HELPERS), ["capabilityFinalizationOutcome"]);
+
+  // ANTI-VACUITY. Point the same derivation at a synthetic tree whose helper names TWO outcomes.
+  // It must report both - which is what makes the site "parallel" and fails the existing guards.
+  // Without this, "the derivation returns one reason" could be true because it can only ever
+  // return one.
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "p31a-helper-"));
+  try {
+    const spec = inventory.DELIVERY_HELPERS.capabilityFinalizationOutcome;
+    fs.mkdirSync(path.join(tmp, path.dirname(spec.rel)), { recursive: true });
+    fs.writeFileSync(path.join(tmp, spec.rel), [
+      `export type ${spec.carrierType} = typeof OUTCOMES.query_contract_failed | null;`,
+      "export function capabilityFinalizationOutcome(result: any) {",
+      "  return result.capabilityOutcome ?? OUTCOMES.guardrail_block;",
+      "}",
+    ].join("\n"));
+    check("R2l  a helper naming two outcomes derives two, so a widening cannot pass as one",
+      inventory.deliveryHelperReasons(tmp, "capabilityFinalizationOutcome", tsMod),
+      ["guardrail_block", "query_contract_failed"]);
+
+    // And a tree with no such helper derives nothing, rather than defaulting to something.
+    const empty = fs.mkdtempSync(path.join(os.tmpdir(), "p31a-nohelper-"));
+    fs.mkdirSync(path.join(empty, path.dirname(spec.rel)), { recursive: true });
+    fs.writeFileSync(path.join(empty, spec.rel), "export const nothing = 1;\n");
+    check("R2m  an absent helper derives null, never a silent default",
+      inventory.deliveryHelperReasons(empty, "capabilityFinalizationOutcome", tsMod), null);
+    fs.rmSync(empty, { recursive: true, force: true });
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
 }
 
 // ── R3 — the classification has exactly one author ──────────────────────────────────────────
