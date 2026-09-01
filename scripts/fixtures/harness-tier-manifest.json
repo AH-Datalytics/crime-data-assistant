@@ -1355,6 +1355,15 @@
       "note": "follows a fired capability rule to the outcome every route finalizes with; TypeScript-AST source analysis plus runtime validator calls; prepares no SQLite statement"
     },
     {
+      "id": "test-p3-1a-inventory-binding",
+      "tier": "F",
+      "script": "scripts/test-p3-1a-inventory-binding.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "points the real exit inventory at throwaway trees to prove a same-named shadow, wrong-module import or alias is not the reviewed carrier; then widens the carrier type in place, requires the existing T7b guard to fail in a fresh process, and restores by sha256; prepares no SQLite statement"
+    },
+    {
       "id": "test-outcome-mutations",
       "tier": "F",
       "script": "scripts/test-outcome-mutations.js",
