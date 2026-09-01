@@ -23,6 +23,7 @@ const {
   checkEligibility, measure, routeFiles, resolveImport,
   assertRouteExtensionAssumption, validateAccessLayer,
   EXCLUSIONS, ROUTE_BASENAMES, ACCESS_LAYER, MAX_MODULES, HELPER_RESPONSE_ALLOWLIST,
+  OPERATIONAL_EXITS, OPERATIONAL_STREAM_EVENTS,
 } = require("./lib/route-eligibility.js");
 
 // Defaults to this repository, which is what the canonical harness runs. An explicit root is
@@ -159,39 +160,44 @@ export async function POST(req) {
   if (req.s) return NextResponse.json({ success: false, error: "source unavailable" });` + SEAL_TAIL;
 
 const FULL = {
-  "app/api/query/route.ts": SEALED_QUERY, "app/api/nibrs-query/route.ts": SEALED_NIBRS,
-  "app/api/shr-query/route.ts": SEALED_SHR, "app/api/hc-query/route.ts": SEALED_HC,
+  "app/api/query/route.ts": SEALED, "app/api/nibrs-query/route.ts": SEALED,
+  "app/api/shr-query/route.ts": SEALED, "app/api/hc-query/route.ts": SEALED,
   "app/api/embed/route.ts": SEALED,
   "app/api/auth/route.ts": INERT, "app/api/page-token/route.ts": INERT,
   "app/api/verify-captcha/route.ts": INERT, "app/api/track/route.ts": WRITEONLY,
   "app/api/chart-render-receipt/route.ts": INERT,
   "app/api/session-analytics/route.ts": CRED, "app/api/query-log/route.ts": QLOG,
 };
+// Fixtures supply their own registries. The real ones are keyed by value-aware fingerprints
+// containing production literal text; a fixture that reproduced them would be a copy of
+// production, not a test. Part A above uses the real registries.
+const FX = { operationalExits: [], operationalStreamEvents: [] };
+const elig = (root) => checkEligibility(root, FX);
 const failsAuth = (r) => r.failures.some((f) => f.route === "app/api/auth/route.ts");
 
 // ---------------------------------------------------------------- PART B
 console.log("\nPART B — original mutations");
 {
   const root = tree("b1", { ...FULL, "app/api/brand-new-answers/route.ts": NEW_FACTUAL_UNSEALED });
-  const r = checkEligibility(root);
+  const r = elig(root);
   const f = r.failures.filter((x) => x.kind === "unsealed-unregistered");
   checkTrue("B1  a new unsealed factual route FAILS the closure", !r.ok && f.length === 1, JSON.stringify(r.failures));
   checkTrue("B1b it names the offending route", f[0] && f[0].route === "app/api/brand-new-answers/route.ts");
   checkTrue("B1c and reports the evidence that made it eligible", f[0] && /readsCrimeDb=true/.test(f[0].detail));
 }
 {
-  const r = checkEligibility(tree("b2", { ...FULL, "app/api/track/route.ts": NEW_FACTUAL_UNSEALED }));
+  const r = elig(tree("b2", { ...FULL, "app/api/track/route.ts": NEW_FACTUAL_UNSEALED }));
   checkTrue("B2  a false 'no crime-db read' justification FAILS",
     r.failures.some((x) => x.kind === "claim-mismatch" && /readsCrimeDb/.test(x.detail)));
 }
 {
   checkTrue("B3  registry entries for deleted routes FAIL as stale",
-    checkEligibility(tree("b3", { "app/api/query/route.ts": SEALED })).failures
+    elig(tree("b3", { "app/api/query/route.ts": SEALED })).failures
       .some((x) => x.kind === "stale-exclusion"));
 }
 {
   checkTrue("B4  sealed AND excluded is reported as a contradiction",
-    checkEligibility(tree("b4", { ...FULL, "app/api/track/route.ts": SEALED })).failures
+    elig(tree("b4", { ...FULL, "app/api/track/route.ts": SEALED })).failures
       .some((x) => x.kind === "sealed-and-excluded"));
 }
 {
@@ -200,17 +206,17 @@ console.log("\nPART B — original mutations");
   check("B5  write-only telemetry measures as non-factual",
     [m.readsCrimeDb, m.writesOnly, m.sealed], [false, true, false]);
 }
-checkTrue("B6  an empty tree does not pass vacuously", !checkEligibility(tree("b6", {})).ok);
+checkTrue("B6  an empty tree does not pass vacuously", !elig(tree("b6", {})).ok);
 
 // ---------------------------------------------------------------- PART C
 console.log("\nPART C — escape 1: JavaScript route modules");
 {
-  const control = checkEligibility(tree("c0", FULL));
+  const control = elig(tree("c0", FULL));
   checkTrue("C0  control: the complete tree passes (so C1 is not vacuous)", control.ok,
     JSON.stringify(control.failures));
 
   const root = tree("c1", { ...FULL, "app/api/sneaky/route.js": NEW_FACTUAL_UNSEALED });
-  const r = checkEligibility(root);
+  const r = elig(root);
   check("C1  the .js route is now enumerated", routeFiles(root).length, 13);
   checkTrue("C2  a JavaScript route answering with crime data FAILS", !r.ok);
   checkTrue("C3  and it is named", r.failures.some((f) => f.route === "app/api/sneaky/route.js"));
@@ -221,7 +227,7 @@ console.log("\nPART C — escape 1: JavaScript route modules");
     "app/api/b/route.mjs": NEW_FACTUAL_UNSEALED,
     "app/api/c/route.cjs": NEW_FACTUAL_UNSEALED });
   check("C5  .jsx / .mjs / .cjs are all caught too",
-    checkEligibility(multi).failures.filter((f) => f.kind === "unsealed-unregistered").length, 3);
+    elig(multi).failures.filter((f) => f.kind === "unsealed-unregistered").length, 3);
 }
 
 // ---------------------------------------------------------------- PART D
@@ -232,7 +238,7 @@ console.log("\nPART D — escape 2: delegated factual behavior");
 export async function POST(req) { return answerFromCrimeData(req); }`,
     "lib/sneaky-helper.ts": FACTUAL_HELPER });
   const m = measure(root, path.join(root, "app/api/auth/route.ts"));
-  const r = checkEligibility(root);
+  const r = elig(root);
   check("D1  the delegated read is now measured", [m.readsCrimeDb, m.returnsRows], [true, true]);
   checkTrue("D2  the delegating exclusion FAILS its claims", failsAuth(r), JSON.stringify(r.failures));
   checkTrue("D3  the failure names the reached module",
@@ -246,7 +252,7 @@ export async function POST() { return Response.json({ ok: true }); }`,
   const mi = measure(imported, path.join(imported, "app/api/auth/route.ts"));
   check("D4  an imported-but-uncalled helper is NOT pulled in at the route",
     [mi.readsCrimeDb, mi.reachedModules.length], [false, 0]);
-  checkTrue("D5  so the tree still passes", checkEligibility(imported).ok);
+  checkTrue("D5  so the tree still passes", elig(imported).ok);
 
   const leaf = tree("d6", FULL);
   const mt = measure(leaf, path.join(leaf, "app/api/track/route.ts"));
@@ -264,7 +270,7 @@ export async function POST() { persist(); return Response.json({ success: true }
 export function persist() { db.prepare("INSERT INTO t VALUES (1)").run(); }` });
   const m = measure(root, path.join(root, "app/api/chart-render-receipt/route.ts"));
   check("E1  a `rows` token in one file and a response in another is NOT a row return", m.returnsRows, false);
-  checkTrue("E2  so the receipt writer still passes", checkEligibility(root).ok);
+  checkTrue("E2  so the receipt writer still passes", elig(root).ok);
 
   const real = tree("e3", { ...FULL,
     "app/api/auth/route.ts": `import { h } from "@/lib/h";
@@ -291,7 +297,7 @@ export async function POST() { return a(); }`,
     "lib/e.ts": FACTUAL_HELPER });
   const m = measure(root, path.join(root, "app/api/auth/route.ts"));
   check("F1  a five-hop factual delegation is reached", [m.readsCrimeDb, m.returnsRows], [true, true]);
-  checkTrue("F1b and it FAILS the exclusion", failsAuth(checkEligibility(root)));
+  checkTrue("F1b and it FAILS the exclusion", failsAuth(elig(root)));
 }
 
 // F2 — explicit-extension import. `if (ext && ...)` skipped the only candidate that resolves it.
@@ -303,7 +309,7 @@ export async function POST() { return answerFromCrimeData(); }`,
   const m = measure(root, path.join(root, "app/api/auth/route.ts"));
   check("F2  an explicit ./helper.js import resolves and is measured",
     [m.readsCrimeDb, m.returnsRows], [true, true]);
-  checkTrue("F2b and it FAILS the exclusion", failsAuth(checkEligibility(root)));
+  checkTrue("F2b and it FAILS the exclusion", failsAuth(elig(root)));
   const r = resolveImport(root, path.join(root, "app/api/auth/route.ts"), "./helper.js");
   checkTrue("F2c resolveImport returns the exact path, not a probed one",
     r && r.endsWith("helper.js"), String(r));
@@ -319,7 +325,7 @@ export async function POST() { return answerFromCrimeData(); }`,
   const m = measure(root, path.join(root, "app/api/auth/route.ts"));
   check("F3  a barrel re-export is followed to the real helper",
     [m.readsCrimeDb, m.returnsRows], [true, true]);
-  checkTrue("F3b and it FAILS the exclusion", failsAuth(checkEligibility(root)));
+  checkTrue("F3b and it FAILS the exclusion", failsAuth(elig(root)));
 }
 
 // F4 — literal dynamic load.
@@ -331,7 +337,7 @@ export async function POST() { return answerFromCrimeData(); }`,
     "lib/dyn-helper.ts": FACTUAL_HELPER });
   const m = measure(root, path.join(root, "app/api/auth/route.ts"));
   check("F4  a literal dynamic import is followed", [m.readsCrimeDb, m.returnsRows], [true, true]);
-  checkTrue("F4b and it FAILS the exclusion", failsAuth(checkEligibility(root)));
+  checkTrue("F4b and it FAILS the exclusion", failsAuth(elig(root)));
 }
 
 // F5 — non-literal dynamic load must be REFUSED as incomplete, never read as absence.
@@ -344,7 +350,7 @@ export async function POST() { return answerFromCrimeData(); }`,
   const m = measure(root, path.join(root, "app/api/auth/route.ts"));
   checkTrue("F5  a non-literal dynamic load is recorded as incomplete",
     m.incomplete.some((i) => i.reason === "non-literal-dynamic-load"), JSON.stringify(m.incomplete));
-  const r = checkEligibility(root);
+  const r = elig(root);
   checkTrue("F5b and the route FAILS closed rather than being certified",
     r.failures.some((f) => f.kind === "analysis-incomplete" && f.route === "app/api/auth/route.ts"),
     JSON.stringify(r.failures));
@@ -366,7 +372,7 @@ export async function POST() { return m0(); }` };
   checkTrue("F6  exhausting the module budget is recorded as incomplete",
     m.incomplete.some((i) => i.reason === "module-budget-exceeded"), JSON.stringify(m.incomplete.slice(0, 2)));
   checkTrue("F6b and the route FAILS closed rather than being certified",
-    checkEligibility(root).failures.some((f) => f.kind === "analysis-incomplete"));
+    elig(root).failures.some((f) => f.kind === "analysis-incomplete"));
 }
 
 // F7 — the allowlist is an identity, not a naming convention.
@@ -378,13 +384,13 @@ export async function POST() { return answerFromCrimeData(); }`,
   const m = measure(root, path.join(root, "app/api/auth/route.ts"));
   check("F7  an unrelated module whose name ends in -db is NOT skipped",
     [m.readsCrimeDb, m.returnsRows], [true, true]);
-  checkTrue("F7b and it FAILS the exclusion", failsAuth(checkEligibility(root)));
+  checkTrue("F7b and it FAILS the exclusion", failsAuth(elig(root)));
   checkTrue("F7c the reviewed allowlist is exact paths, not a pattern",
     ACCESS_LAYER.every((p) => p.startsWith("lib/") && p.endsWith(".ts")));
   const rotted = tree("f7d", FULL);
   fs.rmSync(path.join(rotted, "lib/shr-db.ts"));
   checkTrue("F7d a stale allowlist entry fails rather than silently skipping nothing",
-    checkEligibility(rotted).failures.some((f) => f.kind === "config-assumption"));
+    elig(rotted).failures.some((f) => f.kind === "config-assumption"));
 }
 
 // F8 — the documented behavior of the conservative model: inside a reached helper, an unused
@@ -400,7 +406,7 @@ export function outer() { return Response.json({ ok: true }); }`,
   check("F8  a nested UNUSED import inside a reached helper is still followed (conservative)",
     [m.readsCrimeDb, m.reachedModules.includes("lib/inner.ts")], [true, true]);
   checkTrue("F8b which is the fail-closed direction: it fails rather than certifies",
-    failsAuth(checkEligibility(root)));
+    failsAuth(elig(root)));
 }
 
 // F9 — the route-extension list is only sound while pageExtensions is untouched.
@@ -409,7 +415,7 @@ export function outer() { return Response.json({ ok: true }); }`,
     assertRouteExtensionAssumption(ROOT).ok, true);
   const root = tree("f9", { ...FULL, "next.config.ts": `export default { pageExtensions: ["ts","xyz"] };` });
   checkTrue("F9b if it ever does, the guard fails rather than assuming its list is complete",
-    checkEligibility(root).failures.some((f) => f.kind === "config-assumption"));
+    elig(root).failures.some((f) => f.kind === "config-assumption"));
   check("F9c the access-layer allowlist validates against the real tree",
     validateAccessLayer(ROOT), { ok: true, missing: [], violations: [] });
 }
@@ -450,9 +456,9 @@ export async function POST(req) {
   checkTrue("G1b but its unseen dynamic path is recorded incomplete",
     m.incomplete.some((i) => i.reason === "non-literal-dynamic-load"));
   checkTrue("G1c and it FAILS closed rather than riding on its seal",
-    checkEligibility(root).failures.some(
+    elig(root).failures.some(
       (f) => f.kind === "analysis-incomplete" && f.route === "app/api/query/route.ts"),
-    JSON.stringify(checkEligibility(root).failures));
+    JSON.stringify(elig(root).failures));
 }
 
 // G2 — a SEALED route delegating terminal delivery to a helper outside the exit inventory.
@@ -466,7 +472,7 @@ export async function POST(req) {
     "lib/deliverer.ts": FACTUAL_HELPER.replace("answerFromCrimeData", "helperThatReturns") });
   const m = measure(root, path.join(root, "app/api/query/route.ts"));
   check("G2  the delegated response exit is detected", m.helperResponseExits, ["lib/deliverer.ts"]);
-  const r = checkEligibility(root);
+  const r = elig(root);
   checkTrue("G2b and the sealed route FAILS", failsQuery(r), JSON.stringify(r.failures));
   checkTrue("G2c named as a delegated-response-exit requiring review",
     r.failures.some((f) => f.kind === "delegated-response-exit" && /deliverer/.test(f.detail)));
@@ -528,7 +534,7 @@ import { getNibrsDb } from "@/lib/nibrs-db";
 export async function POST(req) {` + branch + `
   return emitFactualPayload(); }` });
     const m = measure(root, path.join(root, "app/api/query/route.ts"));
-    const r = checkEligibility(root);
+    const r = elig(root);
     checkTrue(label + " -> unclassified terminal exit",
       m.sealed && r.failures.some((f) => f.kind === "unclassified-terminal-exit" &&
                                          f.route === "app/api/query/route.ts"),
@@ -536,112 +542,190 @@ export async function POST(req) {` + branch + `
   }
 }
 
-// G3g — operational exits stay accepted, and the registry is what accepts them.
+// G3g — the operational registry accepts what it registers, and only that.
 {
-  const clean = checkEligibility(tree("g3g", FULL));
-  checkTrue("G3g the registered operational exits are accepted", clean.ok,
-    JSON.stringify(clean.failures.slice(0, 3)));
+  const OP_ROUTE = `import { emitFactualPayload } from "@/lib/proof-finalize";
+export async function POST(req) {
+  if (req.bad) return NextResponse.json({ success: false, error: "nope" });
+  return emitFactualPayload(); }`;
+  const FP = 'app/api/query/route.ts::POST::NextResponse.json::obj{error:str:nope,success:false}';
+  const withEntry = { operationalExits: [{ fp: FP, count: 1, reason: "reviewed refusal fixture" }],
+                      operationalStreamEvents: [] };
 
-  // Replacing a CLASSIFIED exit with a raw factual one must fail even though the exit COUNT is
-  // unchanged - which is why the fingerprint carries payload shape rather than a position.
+  const root = tree("g3g", { ...FULL, "app/api/query/route.ts": OP_ROUTE });
+  checkTrue("G3g a registered operational exit is accepted",
+    checkEligibility(root, withEntry).ok,
+    JSON.stringify(checkEligibility(root, withEntry).failures.slice(0, 2)));
+  checkTrue("G3g2 the same exit UNregistered fails, so G3g is not vacuous",
+    elig(root).failures.some((f) => f.kind === "unclassified-terminal-exit"));
+
+  // THE B3 CASE: same keys, same count, one value becomes crime-derived.
   const swapped = tree("g3h", { ...FULL,
-    "app/api/hc-query/route.ts": `import { emitFactualPayload } from "@/lib/proof-finalize";
+    "app/api/query/route.ts": `import { emitFactualPayload } from "@/lib/proof-finalize";
 import { getNibrsDb } from "@/lib/nibrs-db";
 export async function POST(req) {
-  if (req.c) return NextResponse.json({ success: false, captchaRequired: true });
-  if (req.s) { const rows = getNibrsDb().prepare("SELECT 1").all(); return NextResponse.json({ rows }); }
-  return emitFactualPayload(); }` });
-  const before = measure(tree("g3g2", FULL), path.join(tmp, "g3g2", "app/api/hc-query/route.ts"));
-  const after = measure(swapped, path.join(swapped, "app/api/hc-query/route.ts"));
-  check("G3h the exit count is unchanged by the swap",
-    after.terminalExits.length, before.terminalExits.length);
-  checkTrue("G3i but swapping a classified exit for a raw one still FAILS",
-    checkEligibility(swapped).failures.some((f) => f.kind === "unclassified-terminal-exit"),
-    JSON.stringify(checkEligibility(swapped).failures.map((f) => f.kind)));
-
-  // A registry entry that no longer matches anything is rot and must be reported.
-  const removed = tree("g3j", { ...FULL,
-    "app/api/shr-query/route.ts": `import { emitFactualPayload } from "@/lib/proof-finalize";
-export async function POST() { return emitFactualPayload(); }` });
-  checkTrue("G3j a registered operational exit that vanished is reported stale",
-    checkEligibility(removed).failures.some((f) => f.kind === "stale-operational-exit"));
-}
-
-// G3k — the classification of the real tree, asserted rather than assumed.
-{
-  const kinds = {};
-  for (const m of res.routes.filter((x) => x.sealed)) {
-    for (const x of m.terminalExits) kinds[x.kind] = (kinds[x.kind] || 0) + 1;
+  if (req.bad) {
+    const rows = getNibrsDb().prepare("SELECT 1").all();
+    return NextResponse.json({ success: false, error: JSON.stringify(rows) });
   }
-  check("G3k every real terminal exit is a chokepoint, an SSE envelope, or registered",
-    [kinds.chokepoint, kinds["sse-envelope"], kinds.sealed || 0], [4, 15, 0]);
-  checkTrue("G3l and the unclassified ones are exactly the registered operational exits",
-    kinds.unclassified === 12 && res.failures.length === 0,
-    "unclassified=" + kinds.unclassified + " failures=" + res.failures.length);
+  return emitFactualPayload(); }` });
+  const before = measure(root, path.join(root, "app/api/query/route.ts"));
+  const after = measure(swapped, path.join(swapped, "app/api/query/route.ts"));
+  check("G3h the key set and exit count are unchanged by the swap",
+    [after.terminalExits.length, Object.keys(JSON.parse('{"error":0,"success":0}')).length],
+    [before.terminalExits.length, 2]);
+  checkTrue("G3i but the fingerprint follows the VALUE, so the swap still FAILS",
+    checkEligibility(swapped, withEntry).failures.some((f) => f.kind === "unclassified-terminal-exit"),
+    JSON.stringify(checkEligibility(swapped, withEntry).failures.map((f) => f.kind)));
+
+  // stale: the registered exit no longer exists at all
+  const gone = tree("g3j", { ...FULL });
+  checkTrue("G3j a registered operational exit that vanished is reported stale",
+    checkEligibility(gone, withEntry).failures.some((f) => f.kind === "stale-operational-exit"));
 }
 
-// G4 — a route-level side-effect import binds no name, so a handler-reference test cannot select it.
+// ---------------------------------------------------------------- PART H — round-3 review matrix
+// Carrier identity. Round 3 classified exits but did not attach the classification to the value
+// actually delivered, so a seal could be present and decorative.
+console.log("\nPART H — round-3 review matrix: carrier identity");
+const failsQ = (r) => r.failures.some((f) => f.route === "app/api/query/route.ts");
+
+// H1 — a sealed parameter is present but the response is built from a second, raw parameter.
 {
-  const root = tree("g4", { ...FULL,
-    "app/api/auth/route.ts": `import "@/lib/side-effect";
-export async function POST() { return Response.json({ ok: true }); }`,
-    "lib/side-effect.ts": FACTUAL_HELPER });
-  const m = measure(root, path.join(root, "app/api/auth/route.ts"));
-  checkTrue("G4  a bindless side-effect import is followed, not skipped",
-    m.reachedModules.includes("lib/side-effect.ts"), JSON.stringify(m.reachedModules));
-  checkTrue("G4b so its factual behavior FAILS the exclusion", failsAuth(checkEligibility(root)));
+  const root = tree("h1", { ...FULL,
+    "app/api/query/route.ts": `import { emitFactualPayload } from "@/lib/proof-finalize";
+import type { SealedPayload } from "@/lib/proof-finalize";
+function jsonResp(_sealed: SealedPayload<object>, raw: object) {
+  return NextResponse.json(raw);
+}
+export async function POST(req) { return jsonResp(emitFactualPayload(req), req.rows); }` });
+  const m = measure(root, path.join(root, "app/api/query/route.ts"));
+  check("H1  the detached carrier is detected",
+    m.terminalExits.map((x) => x.kind), ["detached-carrier"]);
+  checkTrue("H1b and it FAILS rather than counting as a chokepoint",
+    elig(root).failures.some((f) => f.kind === "detached-carrier"),
+    JSON.stringify(elig(root).failures.map((f) => f.kind)));
 }
 
-// G5 — a selected local specifier that will not resolve is a blind spot, not an absence.
+// H2 — a sealed parameter is present but the response is built from an unrelated local binding.
 {
-  const root = tree("g5", { ...FULL,
-    "app/api/auth/route.ts": `import { gone } from "@/lib/does-not-exist";
-export async function POST() { return gone(); }` });
-  const m = measure(root, path.join(root, "app/api/auth/route.ts"));
-  checkTrue("G5  an unresolved local import is recorded incomplete",
-    m.incomplete.some((i) => i.reason === "unresolved-local-load"), JSON.stringify(m.incomplete));
-  checkTrue("G5b and the route FAILS closed",
-    checkEligibility(root).failures.some((f) => f.kind === "analysis-incomplete"));
-  checkTrue("G5c a bare package import is NOT treated as unresolved",
-    measure(tree("g5c", { ...FULL,
-      "app/api/auth/route.ts": `import { z } from "zod";
-export async function POST() { return Response.json({ ok: !!z }); }` }),
-      path.join(tmp, "g5c", "app/api/auth/route.ts")).incomplete.length === 0);
+  const root = tree("h2", { ...FULL,
+    "app/api/query/route.ts": `import { emitFactualPayload } from "@/lib/proof-finalize";
+import type { SealedPayload } from "@/lib/proof-finalize";
+import { getNibrsDb } from "@/lib/nibrs-db";
+function jsonResp(data: SealedPayload<object>) {
+  const rows = getNibrsDb().prepare("SELECT 1").all();
+  return NextResponse.json({ rows });
+}
+export async function POST(req) { return jsonResp(emitFactualPayload(req)); }` });
+  checkTrue("H2  a response from an unrelated local binding FAILS",
+    elig(root).failures.some((f) => f.kind === "detached-carrier"));
 }
 
-// G6 — the proof modules were never access-layer leaves: they define no accessor.
+// H3 — the genuine shape still passes: the response derives from the sealed carrier.
 {
-  const root = tree("g6", { ...FULL,
-    "app/api/auth/route.ts": `import { answerFromCrimeData } from "@/lib/proof-contract";
-export async function POST() { return answerFromCrimeData(); }`,
-    "lib/proof-contract.ts": FACTUAL_HELPER });
-  const m = measure(root, path.join(root, "app/api/auth/route.ts"));
-  checkTrue("G6  a proof module is traversed, not skipped",
-    m.reachedModules.includes("lib/proof-contract.ts"), JSON.stringify(m.reachedModules));
-  checkTrue("G6b so factual behavior placed there FAILS", failsAuth(checkEligibility(root)));
-  check("G6c the leaf list is the database accessors only", ACCESS_LAYER.slice().sort(),
-    ["lib/hc-db.ts", "lib/nibrs-db.ts", "lib/rtci-db.ts", "lib/shr-db.ts", "lib/sqlite-db.ts"]);
+  const root = tree("h3", { ...FULL,
+    "app/api/query/route.ts": `import { emitFactualPayload } from "@/lib/proof-finalize";
+import type { SealedPayload } from "@/lib/proof-finalize";
+function jsonResp(data: SealedPayload<object>, status = 200) {
+  return NextResponse.json(data, { status });
+}
+export async function POST(req) { return jsonResp(emitFactualPayload(req)); }` });
+  const m = measure(root, path.join(root, "app/api/query/route.ts"));
+  check("H3  delivering the sealed carrier IS a chokepoint",
+    m.terminalExits.map((x) => x.kind), ["chokepoint"]);
+  checkTrue("H3b so the tree passes", elig(root).ok, JSON.stringify(elig(root).failures));
+  check("H3c and the real jsonResp/embedResp are chokepoints, not detached",
+    res.routes.filter((x) => x.sealed)
+      .flatMap((x) => x.terminalExits).filter((x) => x.kind === "detached-carrier").length, 0);
 }
 
-// G7 — leaf status is validated by the property that justifies it, not by existence.
+// H4 — a raw enqueue beside the sealed ones. P2.2's counts are untouched by this.
 {
-  const noAccessor = tree("g7a", FULL);
-  fs.writeFileSync(path.join(noAccessor, "lib/shr-db.ts"), "export const x = 1;");
-  checkTrue("G7  a leaf that stops defining an accessor FAILS configuration",
-    checkEligibility(noAccessor).failures.some(
-      (f) => f.kind === "config-assumption" && /defines no crime-database accessor/.test(f.detail)));
+  const root = tree("h4", { ...FULL,
+    "app/api/query/route.ts": `import { emitFactualPayload } from "@/lib/proof-finalize";
+import { getNibrsDb } from "@/lib/nibrs-db";
+export async function POST() {
+  const stream = new ReadableStream({
+    async start(controller) {
+      controller.enqueue(encoder.encode(sseEvent(emitFactualPayload(proof, { a: 1 }))));
+      const rows = getNibrsDb().prepare("SELECT 1").all();
+      controller.enqueue(JSON.stringify({ rows }));
+    },
+  });
+  return new Response(stream, { headers: { "Content-Type": "text/event-stream" } }); }` });
+  const m = measure(root, path.join(root, "app/api/query/route.ts"));
+  check("H4  the envelope is still an envelope",
+    m.terminalExits.map((x) => x.kind), ["sse-envelope"]);
+  check("H4b one enqueue is sealed and one is not",
+    m.streamEvents.map((e) => e.kind).sort(), ["sealed", "unclassified"]);
+  checkTrue("H4c the raw enqueue FAILS even though the envelope is valid",
+    elig(root).failures.some((f) => f.kind === "unclassified-stream-event"),
+    JSON.stringify(elig(root).failures.map((f) => f.kind)));
+}
 
-  const delivers = tree("g7b", FULL);
-  fs.writeFileSync(path.join(delivers, "lib/shr-db.ts"),
-    "export function getShrDb() { return null; }\nexport function send() { return Response.json({ rows: [] }); }");
-  checkTrue("G7b a leaf that starts constructing a response FAILS configuration",
-    checkEligibility(delivers).failures.some(
-      (f) => f.kind === "config-assumption" && /constructs an HTTP response/.test(f.detail)));
+// H5 — a reviewed operational stream event is accepted when registered, and only then.
+{
+  const root = tree("h5", { ...FULL,
+    "app/api/query/route.ts": `import { emitFactualPayload } from "@/lib/proof-finalize";
+export async function POST() {
+  const stream = new ReadableStream({
+    async start(controller) {
+      controller.enqueue(sseEvent({ type: "status", text: "Working..." }));
+    },
+  });
+  return new Response(stream, { headers: { "Content-Type": "text/event-stream" } }); }` });
+  const FP = 'app/api/query/route.ts::call:sseEvent(obj{text:str:Working...,type:str:status})';
+  const opts = { operationalExits: [],
+                 operationalStreamEvents: [{ fp: FP, count: 1, reason: "progress status fixture" }] };
+  checkTrue("H5  a registered operational stream event is accepted",
+    checkEligibility(root, opts).ok,
+    JSON.stringify(checkEligibility(root, opts).failures.slice(0, 2)));
+  checkTrue("H5b the same event UNregistered fails, so H5 is not vacuous",
+    elig(root).failures.some((f) => f.kind === "unclassified-stream-event"));
+  checkTrue("H5c a registered event that vanished is reported stale",
+    checkEligibility(tree("h5c", FULL), opts).failures
+      .some((f) => f.kind === "stale-operational-exit"));
+}
 
-  check("G7c reading inside a leaf is NOT a violation - that is what an access layer does",
-    validateAccessLayer(ROOT).violations, []);
-  check("G7d the helper-response allowlist is empty, so no delegated exit is pre-approved",
-    HELPER_RESPONSE_ALLOWLIST, []);
+// H6 — the envelope test is an AND. A raw body with an event-stream header is not transport.
+{
+  const root = tree("h6", { ...FULL,
+    "app/api/query/route.ts": `import { emitFactualPayload } from "@/lib/proof-finalize";
+import { getNibrsDb } from "@/lib/nibrs-db";
+export async function POST(req) {
+  if (req.raw) {
+    const rows = getNibrsDb().prepare("SELECT 1").all();
+    return new Response(JSON.stringify({ rows }), { headers: { "Content-Type": "text/event-stream" } });
+  }
+  return emitFactualPayload(); }` });
+  const m = measure(root, path.join(root, "app/api/query/route.ts"));
+  check("H6  a raw body with an event-stream header is NOT an envelope",
+    m.terminalExits.map((x) => x.kind), ["unclassified"]);
+  checkTrue("H6b so it FAILS", elig(root).failures.some((f) => f.kind === "unclassified-terminal-exit"));
+}
+
+// H7 — the real tree's classification, asserted rather than assumed.
+{
+  const ek = {}, sk = {};
+  for (const m of res.routes.filter((x) => x.sealed)) {
+    for (const x of m.terminalExits) ek[x.kind] = (ek[x.kind] || 0) + 1;
+    for (const e of m.streamEvents) sk[e.kind] = (sk[e.kind] || 0) + 1;
+  }
+  check("H7  real terminal exits: 4 chokepoint, 15 envelope, 0 detached, 0 sealed-by-fallback",
+    [ek.chokepoint, ek["sse-envelope"], ek["detached-carrier"] || 0, ek.sealed || 0], [4, 15, 0, 0]);
+  check("H7b real stream events: 29 sealed", sk.sealed, 29);
+  check("H7c and every unclassified one is registered, so the tree is green",
+    [ek.unclassified, sk.unclassified, res.failures.length], [12, 12, 0]);
+  // The registries are load-bearing: emptying them must fail loudly.
+  // One failure per distinct FINGERPRINT: 12 exit + 10 stream. Those 10 stream entries cover 12
+  // occurrences, because one progress message is enqueued three times.
+  const empty = checkEligibility(ROOT, { operationalExits: [], operationalStreamEvents: [] });
+  check("H7d emptying the registries fails on every registered fingerprint",
+    [empty.ok, empty.failures.length], [false, 22]);
+  check("H7e and those fingerprints cover 24 occurrences in the tree",
+    [OPERATIONAL_EXITS.reduce((n, e) => n + e.count, 0),
+     OPERATIONAL_STREAM_EVENTS.reduce((n, e) => n + e.count, 0)], [12, 12]);
 }
 
 fs.rmSync(tmp, { recursive: true, force: true });

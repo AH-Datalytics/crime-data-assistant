@@ -333,93 +333,115 @@ function reachableModules(root, routeFile, ts) {
 }
 
 /**
- * STRUCTURAL TERMINAL-EGRESS INVENTORY.
+ * STRUCTURAL TERMINAL-EGRESS INVENTORY, with carrier identity.
  *
- * Replaces `unsealedFactualResponses()`, which asked the wrong question. That check tried to
- * decide whether a returned payload *contained crime data*, by matching tokens. Review found
- * three one-line spellings that defeat it — splitting the accessor from the read, binding the
- * response before returning it, or passing the rows through any transform — and adding a token
- * case per spelling is an unwinnable game.
+ * Round 3 replaced payload-token tainting with exit classification, which was the right move but
+ * an incomplete one: the classifications were not attached to the value actually delivered.
+ * Review found three concrete false acceptances, all the same defect —
  *
- * This asks the question the property actually needs: **is every terminal exit classified?**
- * Payload contents are never inspected. An exit is acceptable only if it is
+ *   1. a function was marked a chokepoint because SOME parameter was typed `SealedPayload`, and
+ *      then EVERY response inside it was called sealed. `jsonResp(_sealed: SealedPayload<object>,
+ *      raw: object) { return NextResponse.json(raw); }` passed while delivering `raw`.
+ *   2. `sse-envelope` proved the transport framing and nothing about what the stream enqueued. A
+ *      raw `controller.enqueue(JSON.stringify({ rows }))` beside all 96 existing finalizations
+ *      passed, and P2.2's counts were unchanged because a raw enqueue is not a finalization site.
+ *      The envelope test was also an OR, so a non-stream body with an event-stream header passed.
+ *   3. operational fingerprints used sorted KEY NAMES only, so a reviewed refusal could be
+ *      changed to a factual delivery without changing its fingerprint:
+ *      `{ success: false, error: JSON.stringify(rows) }` still keyed as `obj{error,success}`.
  *
- *   chokepoint  - constructed inside a function whose payload parameter is typed `SealedPayload`.
- *                 This is the architecture the routes already use: `jsonResp(data: SealedPayload
- *                 <...> | QueryError)` and `embedResp(data: SealedPayload<object> | EmbedError)`.
- *                 The type is the enforcement; factual content cannot reach the response without
- *                 having been sealed.
- *   sse-envelope - `new Response(<ReadableStream>, ...text/event-stream...)`. The envelope carries
- *                 no facts itself; the facts are the sealed payloads enqueued into the stream,
- *                 which is exactly what P2.2's 96/96 site inventory proves.
- *   operational - registered in OPERATIONAL_EXITS with a written reason and a structural
- *                 fingerprint. Error bodies, CORS preflights, captcha challenges: they assert no
- *                 facts, so they need no proof.
- *
- * Anything else fails as `unclassified-terminal-exit`. A new `return Response.json({ rows })`
- * anywhere in a sealed route is a new unregistered construction site and fails REGARDLESS of how
- * the data reached it — which is why the three false acceptances die by construction rather than
- * by another token rule.
- *
- * FINGERPRINTS CARRY PAYLOAD SHAPE, NOT LINE NUMBERS. Line-keyed entries break on their own first
- * commit. Shape is included so that REPLACING a classified exit with a raw factual one fails even
- * though the exit count is unchanged: `obj{error,success}` and `id:rows` are different keys.
+ * P2.2 hit this defect class already: proving that the right wrapper exists and that a carrier
+ * exists is not proof that the wrapper RECEIVED that carrier. The fix is carrier identity at the
+ * three narrow egress mechanisms — not a return to crime-data tainting.
  */
 
 const RESPONSE_CTOR_NAMES = new Set(["Response", "NextResponse"]);
 const SEAL_CALL = /\b(emitFactualPayload|finalizeExit|finalizeProof)\s*\(/;
+const NORM_DEPTH = 4;
 
 /**
- * Reviewed operational exits: they assert no facts, so they carry no typed outcome.
- * Each entry is `route::enclosingChain::ctor::payloadShape`.
+ * Normalized structural fingerprint of an expression: KEYS AND VALUES, recursively.
+ *
+ * Key-only fingerprints let a reviewed refusal become a factual delivery in place. Recursing into
+ * values means `obj{error:str:...,success:false}` and `obj{error:call:JSON.stringify(...),
+ * success:false}` are different keys, so replacing an inline value fails even though the key set
+ * and the exit count are unchanged.
  */
-const OPERATIONAL_EXITS = [
-  // --- app/api/query/route.ts : rate limiting, validation and captcha, all pre-answer ---
-  { fp: "app/api/query/route.ts::POST::new Response::call:JSON.stringify",
-    reason: "Pre-answer refusals in the SSE route: rate limit, payload validation and captcha. " +
-            "Every body is {success:false,...}; none asserts a fact, so none needs a typed outcome.",
-    count: 7 },
-  // --- CORS preflight ---
-  { fp: "app/api/nibrs-query/route.ts::OPTIONS::new NextResponse::literal",
-    reason: "CORS preflight. 204 with a null body; asserts nothing.", count: 1 },
-  // --- captcha / source-availability refusals on the JSON routes ---
-  { fp: "app/api/nibrs-query/route.ts::POST::NextResponse.json::obj{captchaRequired,success}",
-    reason: "Captcha challenge issued before any query runs.", count: 1 },
-  { fp: "app/api/shr-query/route.ts::POST::NextResponse.json::obj{captchaRequired,success}",
-    reason: "Captcha challenge issued before any query runs.", count: 1 },
-  { fp: "app/api/hc-query/route.ts::POST::NextResponse.json::obj{captchaRequired,success}",
-    reason: "Captcha challenge issued before any query runs.", count: 1 },
-  { fp: "app/api/hc-query/route.ts::POST::NextResponse.json::obj{error,success}",
-    reason: "The hate-crime source is unavailable in this deployment. A refusal, not an answer.",
-    count: 1 },
-];
-
-function enclosingChain(node, sf, ts) {
-  const names = [];
-  let n = node.parent;
-  while (n) {
-    if (ts.isFunctionDeclaration(n) && n.name) names.push(n.name.text);
-    else if (ts.isMethodDeclaration(n) && n.name) names.push(n.name.getText(sf));
-    else if (ts.isVariableDeclaration(n) && ts.isIdentifier(n.name)) names.push(n.name.text);
-    n = n.parent;
+function normalizeExpr(n, sf, ts, depth) {
+  depth = depth || 0;
+  if (!n || depth > NORM_DEPTH) return "expr";
+  if (ts.isObjectLiteralExpression(n)) {
+    return "obj{" + n.properties.map((p) => {
+      const k = p.name && ts.isIdentifier(p.name) ? p.name.text
+              : p.name && ts.isStringLiteral(p.name) ? p.name.text : "?";
+      const v = p.initializer ? normalizeExpr(p.initializer, sf, ts, depth + 1)
+              : (ts.isShorthandPropertyAssignment(p) ? "id:" + k : "shorthand");
+      return k + ":" + v;
+    }).sort().join(",") + "}";
   }
-  return names.reverse().join(">") || "<module>";
+  if (ts.isCallExpression(n)) {
+    return "call:" + n.expression.getText(sf) +
+      "(" + n.arguments.map((a) => normalizeExpr(a, sf, ts, depth + 1)).join(",") + ")";
+  }
+  if (ts.isIdentifier(n)) return "id:" + n.text;
+  if (n.kind === ts.SyntaxKind.TrueKeyword) return "true";
+  if (n.kind === ts.SyntaxKind.FalseKeyword) return "false";
+  if (n.kind === ts.SyntaxKind.NullKeyword) return "null";
+  if (ts.isStringLiteral(n)) return "str:" + n.text.slice(0, 24);
+  if (ts.isNumericLiteral(n)) return "num";
+  if (ts.isTemplateExpression(n) || ts.isNoSubstitutionTemplateLiteral(n)) return "tpl";
+  if (ts.isArrayLiteralExpression(n)) return "arr";
+  if (ts.isPropertyAccessExpression(n)) return "prop:" + n.getText(sf).slice(0, 30);
+  if (ts.isAwaitExpression(n)) return "await:" + normalizeExpr(n.expression, sf, ts, depth + 1);
+  if (ts.isConditionalExpression(n)) return "cond";
+  if (ts.isBinaryExpression(n)) return "binop";
+  return "expr";
 }
 
-/** Stable description of what is being sent, without inspecting whether it holds crime data. */
-function payloadShape(arg, sf, ts) {
-  if (!arg) return "none";
-  if (ts.isObjectLiteralExpression(arg)) {
-    const keys = arg.properties
-      .map((p) => (p.name && ts.isIdentifier(p.name) ? p.name.text : "?"))
-      .sort();
-    return "obj{" + keys.join(",") + "}";
-  }
-  if (ts.isIdentifier(arg)) return "id:" + arg.text;
-  if (ts.isCallExpression(arg)) return "call:" + arg.expression.getText(sf);
-  if (arg.kind === ts.SyntaxKind.NullKeyword) return "literal";
-  if (ts.isStringLiteral(arg) || ts.isNumericLiteral(arg)) return "literal";
-  return "expr";
+/**
+ * Chokepoint functions AND the sealed carrier parameter each one must deliver.
+ * Returns Map<functionName, carrierParamName>.
+ */
+function chokepointCarriers(sf, ts) {
+  const out = new Map();
+  const record = (name, params) => {
+    if (!name || !params) return;
+    const carrier = params.find((p) => p.type && /SealedPayload/.test(p.type.getText(sf)));
+    if (carrier && ts.isIdentifier(carrier.name)) out.set(name, carrier.name.text);
+  };
+  const visit = (n) => {
+    if (ts.isFunctionDeclaration(n) && n.name) record(n.name.text, n.parameters);
+    else if ((ts.isFunctionExpression(n) || ts.isArrowFunction(n)) &&
+             n.parent && ts.isVariableDeclaration(n.parent) && ts.isIdentifier(n.parent.name)) {
+      record(n.parent.name.text, n.parameters);
+    }
+    ts.forEachChild(n, visit);
+  };
+  visit(sf);
+  return out;
+}
+
+/** Does `expr` mention the carrier, directly or through a local binding chain? */
+function derivesFromCarrier(expr, carrier, bindings, sf, ts) {
+  const seen = new Set();
+  const scan = (n, hops) => {
+    if (!n || hops > 6) return false;
+    let found = false;
+    const walk = (x) => {
+      if (found) return;
+      if (ts.isIdentifier(x)) {
+        if (x.text === carrier) { found = true; return; }
+        if (bindings.has(x.text) && !seen.has(x.text)) {
+          seen.add(x.text);
+          if (scan(bindings.get(x.text), hops + 1)) { found = true; return; }
+        }
+      }
+      ts.forEachChild(x, walk);
+    };
+    walk(n);
+    return found;
+  };
+  return scan(expr, 0);
 }
 
 function responseCtorOf(e, sf, ts) {
@@ -434,48 +456,67 @@ function responseCtorOf(e, sf, ts) {
   return null;
 }
 
-/**
- * A function is a chokepoint when one of its parameters is typed with `SealedPayload`. That type
- * is what makes it impossible to deliver factual content without sealing it first, so a response
- * constructed inside such a function is covered by the type system rather than by this guard.
- */
-function chokepointFunctions(sf, ts) {
-  const names = new Set();
-  const visit = (n) => {
-    const params = n.parameters;
-    if (params && params.length) {
-      const sealed = params.some((p) => p.type && /SealedPayload/.test(p.type.getText(sf)));
-      if (sealed) {
-        if (ts.isFunctionDeclaration(n) && n.name) names.add(n.name.text);
-        else if (ts.isVariableDeclaration(n.parent) && ts.isIdentifier(n.parent.name)) {
-          names.add(n.parent.name.text);
-        }
-      }
+function enclosingChain(node, sf, ts) {
+  const names = [];
+  let n = node.parent;
+  while (n) {
+    if (ts.isFunctionDeclaration(n) && n.name) names.push(n.name.text);
+    else if (ts.isMethodDeclaration(n) && n.name) names.push(n.name.getText(sf));
+    else if (ts.isVariableDeclaration(n) && ts.isIdentifier(n.name)) names.push(n.name.text);
+    n = n.parent;
+  }
+  return names.reverse().join(">") || "<module>";
+}
+
+function localBindings(sf, ts) {
+  const binding = new Map();
+  const collect = (n) => {
+    if (ts.isVariableDeclaration(n) && ts.isIdentifier(n.name) && n.initializer) {
+      binding.set(n.name.text, n.initializer);
     }
-    ts.forEachChild(n, visit);
+    ts.forEachChild(n, collect);
   };
-  visit(sf);
-  return names;
+  collect(sf);
+  return binding;
+}
+
+/**
+ * Every SSE delivery operation, classified. The outer envelope is transport; THIS is where facts
+ * actually leave the process, so it is inventoried in its own right.
+ */
+function streamEvents(sf, ts) {
+  const bindings = localBindings(sf, ts);
+  const events = [];
+  const walk = (n) => {
+    if (ts.isCallExpression(n) && ts.isPropertyAccessExpression(n.expression) &&
+        n.expression.name.text === "enqueue") {
+      const arg = n.arguments[0];
+      let resolved = arg, hops = 0;
+      while (resolved && ts.isIdentifier(resolved) && bindings.has(resolved.text) && hops < 6) {
+        resolved = bindings.get(resolved.text); hops++;
+      }
+      const text = resolved ? resolved.getText(sf) : "";
+      events.push({
+        line: sf.getLineAndCharacterOfPosition(n.getStart(sf)).line + 1,
+        kind: SEAL_CALL.test(text) ? "sealed" : "unclassified",
+        shape: normalizeExpr(resolved, sf, ts, 0),
+      });
+    }
+    ts.forEachChild(n, walk);
+  };
+  walk(sf);
+  return events;
 }
 
 /** Enumerate and classify every terminal HTTP egress in one route file. */
 function terminalEgress(file, src, ts) {
   const sf = ts.createSourceFile(file, src, ts.ScriptTarget.Latest, true);
-  const chokepoints = chokepointFunctions(sf, ts);
-
-  // one-hop-plus alias map, so a response built into a binding and returned later is still seen
-  const binding = new Map();
-  const collectBindings = (n) => {
-    if (ts.isVariableDeclaration(n) && ts.isIdentifier(n.name) && n.initializer) {
-      binding.set(n.name.text, n.initializer);
-    }
-    ts.forEachChild(n, collectBindings);
-  };
-  collectBindings(sf);
+  const carriers = chokepointCarriers(sf, ts);
+  const bindings = localBindings(sf, ts);
   const deref = (e) => {
     let cur = e, hops = 0;
-    while (cur && ts.isIdentifier(cur) && binding.has(cur.text) && hops < 6) {
-      cur = binding.get(cur.text); hops++;
+    while (cur && ts.isIdentifier(cur) && bindings.has(cur.text) && hops < 6) {
+      cur = bindings.get(cur.text); hops++;
     }
     return cur;
   };
@@ -487,22 +528,32 @@ function terminalEgress(file, src, ts) {
       const ctor = responseCtorOf(resolved, sf, ts);
       if (ctor) {
         const chain = enclosingChain(n, sf, ts);
+        const fnName = chain.split(">").pop();
         const args = resolved.arguments || [];
         const first = args[0];
         const firstResolved = deref(first);
         const whole = resolved.getText(sf);
         const firstText = firstResolved ? firstResolved.getText(sf) : "";
 
+        // The envelope requires BOTH an actual stream body AND the event-stream content type.
+        // An OR let a raw body with an event-stream header pass as transport framing.
+        const hasStreamBody = /ReadableStream/.test(firstText) ||
+          (first && ts.isIdentifier(first) && /Stream/.test(firstText));
+        const hasEventStream = /text\/event-stream/.test(whole);
+
         let kind;
-        if (chokepoints.has(chain.split(">").pop())) kind = "chokepoint";
-        else if (/ReadableStream/.test(firstText) || /text\/event-stream/.test(whole)) kind = "sse-envelope";
+        if (carriers.has(fnName)) {
+          // A typed parameter is not proof. The response must actually deliver that carrier.
+          kind = derivesFromCarrier(first, carriers.get(fnName), bindings, sf, ts)
+            ? "chokepoint" : "detached-carrier";
+        } else if (hasStreamBody && hasEventStream) kind = "sse-envelope";
         else if (SEAL_CALL.test(whole) || SEAL_CALL.test(firstText)) kind = "sealed";
         else kind = "unclassified";
 
         exits.push({
           line: sf.getLineAndCharacterOfPosition(n.getStart(sf)).line + 1,
           ctor, kind, chain,
-          shape: payloadShape(first, sf, ts),
+          shape: normalizeExpr(first, sf, ts, 0),
         });
       }
     }
@@ -511,6 +562,127 @@ function terminalEgress(file, src, ts) {
   walk(sf);
   return exits;
 }
+
+const OPERATIONAL_EXITS = [
+  {
+    fp: "app/api/query/route.ts::POST::new Response::call:JSON.stringify(obj{error:tpl,success:false})",
+    count: 1,
+    reason: "Rate-limit refusal with an interpolated retry hint. No query runs.",
+  },
+  {
+    fp: "app/api/query/route.ts::POST::new Response::call:JSON.stringify(obj{error:str:Please refresh the page ,success:false})",
+    count: 1,
+    reason: "Stale page token. The caller is asked to refresh; no query runs.",
+  },
+  {
+    fp: "app/api/query/route.ts::POST::new Response::call:JSON.stringify(obj{error:str:You've reached the daily,success:false})",
+    count: 1,
+    reason: "Daily quota exhausted. A refusal issued before any query runs.",
+  },
+  {
+    fp: "app/api/query/route.ts::POST::new Response::call:JSON.stringify(obj{captchaRequired:true,success:false})",
+    count: 1,
+    reason: "Captcha challenge issued before any query runs.",
+  },
+  {
+    fp: "app/api/query/route.ts::POST::new Response::call:JSON.stringify(obj{error:str:Invalid request,success:false})",
+    count: 1,
+    reason: "Malformed request body rejected before any query runs.",
+  },
+  {
+    fp: "app/api/query/route.ts::POST::new Response::call:JSON.stringify(obj{error:str:Please provide a questio,success:false})",
+    count: 1,
+    reason: "Empty question rejected before any query runs.",
+  },
+  {
+    fp: "app/api/query/route.ts::POST::new Response::call:JSON.stringify(obj{error:str:Question too long (max 2,success:false})",
+    count: 1,
+    reason: "Over-length question rejected before any query runs.",
+  },
+  {
+    fp: "app/api/nibrs-query/route.ts::OPTIONS::new NextResponse::null",
+    count: 1,
+    reason: "CORS preflight: 204 with a null body. Asserts nothing.",
+  },
+  {
+    fp: "app/api/nibrs-query/route.ts::POST::NextResponse.json::obj{captchaRequired:true,success:false}",
+    count: 1,
+    reason: "Captcha challenge issued before any query runs.",
+  },
+  {
+    fp: "app/api/shr-query/route.ts::POST::NextResponse.json::obj{captchaRequired:true,success:false}",
+    count: 1,
+    reason: "Captcha challenge issued before any query runs.",
+  },
+  {
+    fp: "app/api/hc-query/route.ts::POST::NextResponse.json::obj{error:str:Hate Crime source is not,success:false}",
+    count: 1,
+    reason: "The hate-crime source is unavailable in this deployment. A refusal, not an answer.",
+  },
+  {
+    fp: "app/api/hc-query/route.ts::POST::NextResponse.json::obj{captchaRequired:true,success:false}",
+    count: 1,
+    reason: "Captcha challenge issued before any query runs.",
+  },
+];
+
+/**
+ * Reviewed operational SSE events. The outer envelope is transport; these are the actual
+ * delivery operations, so they are inventoried in their own right. Every other enqueue must
+ * carry a sealed payload.
+ */
+const OPERATIONAL_STREAM_EVENTS = [
+  {
+    fp: "app/api/query/route.ts::call:encoder.encode(call:sseEvent(obj{text:str:Analyzing your question.,type:str:status}))",
+    count: 1,
+    reason: "Progress status event with literal text. Carries no data from any query.",
+  },
+  {
+    fp: "app/api/query/route.ts::call:encoder.encode(call:sseEvent(obj{text:str:Refining query...,type:str:status}))",
+    count: 1,
+    reason: "Progress status event with literal text. Carries no data from any query.",
+  },
+  {
+    fp: "app/api/query/route.ts::call:encoder.encode(call:sseEvent(obj{text:str:Running query...,type:str:status}))",
+    count: 1,
+    reason: "Progress status event with literal text. Carries no data from any query.",
+  },
+  {
+    fp: "app/api/query/route.ts::call:encoder.encode(call:sseEvent(obj{sql:prop:claude.sql,text:str:I had trouble generating,type:str:error}))",
+    count: 1,
+    reason: "SQL-generation failure notice. Reports the attempted SQL, not query results.",
+  },
+  {
+    fp: "app/api/query/route.ts::call:encoder.encode(call:sseEvent(obj{text:str:Switching to the right t,type:str:status}))",
+    count: 1,
+    reason: "Progress status event with literal text. Carries no data from any query.",
+  },
+  {
+    fp: "app/api/query/route.ts::call:encoder.encode(call:sseEvent(obj{text:str:That query took too long,type:str:error}))",
+    count: 1,
+    reason: "Error notice with literal text. Reports a failure, not an answer.",
+  },
+  {
+    fp: "app/api/query/route.ts::call:encoder.encode(call:sseEvent(obj{text:str:Retrying with corrected ,type:str:status}))",
+    count: 1,
+    reason: "Progress status event with literal text. Carries no data from any query.",
+  },
+  {
+    fp: "app/api/query/route.ts::call:encoder.encode(call:sseEvent(obj{text:str:I had trouble running th,type:str:error}))",
+    count: 3,
+    reason: "Error notice with literal text. Reports a failure, not an answer.",
+  },
+  {
+    fp: "app/api/query/route.ts::call:encoder.encode(call:sseEvent(obj{text:str:Switching to rolling 12-,type:str:status}))",
+    count: 1,
+    reason: "Progress status event with literal text. Carries no data from any query.",
+  },
+  {
+    fp: "app/api/query/route.ts::call:encoder.encode(call:sseEvent(obj{text:str:Something went wrong pro,type:str:error}))",
+    count: 1,
+    reason: "Error notice with literal text. Reports a failure, not an answer.",
+  },
+];
 
 const EXCLUSIONS = [
   {
@@ -637,6 +809,8 @@ function measure(root, file, ts) {
     // contents are never inspected - see the terminalEgress header for why that question was
     // the wrong one.
     terminalExits: terminalEgress(file, own, ts),
+    // The envelope is transport. These are the operations that actually deliver facts.
+    streamEvents: streamEvents(ts.createSourceFile(file, own, ts.ScriptTarget.Latest, true), ts),
     incomplete,
   };
 }
@@ -650,7 +824,16 @@ function measure(root, file, ts) {
  *   analysis-incomplete   — the walk could not see everything, so nothing is certified
  *   config-assumption     — pageExtensions customized, or the access-layer allowlist has rotted
  */
-function checkEligibility(root) {
+/**
+ * `opts.operationalExits` / `opts.operationalStreamEvents` override the reviewed registries. The
+ * real ones are the default and are what guards this repository; fixtures supply their own,
+ * because the registries are keyed by value-aware fingerprints containing real literal text and a
+ * fixture cannot reproduce those without becoming a copy of production.
+ */
+function checkEligibility(root, opts) {
+  opts = opts || {};
+  const OP_EXITS = opts.operationalExits || OPERATIONAL_EXITS;
+  const OP_EVENTS = opts.operationalStreamEvents || OPERATIONAL_STREAM_EVENTS;
   const ts = loadTs(root);
   const failures = [];
 
@@ -698,7 +881,7 @@ function checkEligibility(root) {
     // registered exclusion delivering rows is governed by its own written claims, and an
     // unregistered route is already caught as unsealed-unregistered.
     if (m.sealed) {
-      const registry = new Map(OPERATIONAL_EXITS.map((e) => [e.fp, e]));
+      const registry = new Map(OP_EXITS.map((e) => [e.fp, e]));
       const seen = new Map();
       for (const x of m.terminalExits) {
         if (x.kind !== "unclassified") continue;
@@ -722,12 +905,59 @@ function checkEligibility(root) {
         }
       }
       // A registry entry that matches nothing is rot, and rot hides the next real change.
-      for (const e of OPERATIONAL_EXITS) {
+      for (const e of OP_EXITS) {
         if (!e.fp.startsWith(m.route + "::")) continue;
         if (!seen.has(e.fp)) {
           failures.push({
             kind: "stale-operational-exit", route: m.route,
             detail: "registered operational exit no longer exists: " + e.fp,
+          });
+        }
+      }
+
+      // A typed parameter is not proof of delivery. If a chokepoint responds from anything other
+      // than its sealed carrier, the seal is decorative.
+      for (const x of m.terminalExits) {
+        if (x.kind !== "detached-carrier") continue;
+        failures.push({
+          kind: "detached-carrier", route: m.route,
+          detail: "the exit in " + x.chain + " sits in a function with a SealedPayload parameter " +
+                  "but responds from " + x.shape + ", which does not derive from that carrier",
+        });
+      }
+
+      // SSE: the envelope is transport. Every delivery operation must carry a sealed payload or
+      // be a reviewed operational event. A raw enqueue leaves the P2.2 counts untouched, which is
+      // precisely why it needs an inventory of its own.
+      const evRegistry = new Map(OP_EVENTS.map((e) => [e.fp, e]));
+      const evSeen = new Map();
+      for (const ev of m.streamEvents) {
+        if (ev.kind !== "unclassified") continue;
+        const fp = m.route + "::" + ev.shape;
+        evSeen.set(fp, (evSeen.get(fp) || 0) + 1);
+      }
+      for (const [fp, n] of evSeen) {
+        const entry = evRegistry.get(fp);
+        if (!entry) {
+          failures.push({
+            kind: "unclassified-stream-event", route: m.route,
+            detail: n + " SSE delivery operation(s) matching " + fp + " carry no sealed payload " +
+                    "and are not a reviewed operational event - seal or classify them",
+          });
+        } else if (entry.count !== n) {
+          failures.push({
+            kind: "unclassified-stream-event", route: m.route,
+            detail: "operational stream event " + fp + " is registered " + entry.count +
+                    " time(s) but found " + n + " - the registry must be updated deliberately",
+          });
+        }
+      }
+      for (const e of OP_EVENTS) {
+        if (!e.fp.startsWith(m.route + "::")) continue;
+        if (!evSeen.has(e.fp)) {
+          failures.push({
+            kind: "stale-operational-exit", route: m.route,
+            detail: "registered operational stream event no longer exists: " + e.fp,
           });
         }
       }
@@ -787,7 +1017,8 @@ function checkEligibility(root) {
 module.exports = {
   checkEligibility, measure, routeFiles, reachableModules, resolveImport,
   assertRouteExtensionAssumption, validateAccessLayer,
-  terminalEgress, OPERATIONAL_EXITS, chokepointFunctions,
+  terminalEgress, streamEvents, chokepointCarriers, derivesFromCarrier, normalizeExpr,
+  OPERATIONAL_EXITS, OPERATIONAL_STREAM_EVENTS,
   EXCLUSIONS, CRIME_DB_READERS, SEAL_PRIMITIVES, ROUTE_BASENAMES, ACCESS_LAYER,
   MAX_MODULES, RESPONSE_CTORS, HELPER_RESPONSE_ALLOWLIST,
 };
