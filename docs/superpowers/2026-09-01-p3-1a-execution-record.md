@@ -1,9 +1,10 @@
 # P3.1a — execution record
 
 **Started:** 2026-09-01
-**Status:** IN PROGRESS — steps 1–4 complete; **review round 2 corrections applied**.
+**Status:** IN PROGRESS — steps 1–4 complete; **review round 3 corrections applied**.
 Frozen cases at v3. Candidate corrected and re-frozen at
-`c163a0ecc6fab8be4e5d32b9071464c6f0b87b2b`, superseding `9a19e10…` and `c567f4a…`, both preserved.
+`189efc618956439b98ea3c70081127558356f2a2` (tree `80fdab29…`, runner sha256 `aaeb1dd2…`),
+superseding `e40555f…`, `c163a0e…`, `9a19e10…` and `c567f4a…` — all preserved.
 
 **No frozen case has been executed.** `docs/superpowers/p3-1a/runs/` does not exist. The runner
 refuses to execute without `--run` plus a matching candidate commit, tree, clean worktree and its
@@ -21,8 +22,8 @@ No replacement case set is required for P3.1a; a separately sequestered set woul
 a later certification claim required holdout performance, and that claim must not be retrofitted
 here.
 
-**Read with this record:** `2026-09-01-p3-1a-candidate-review-round2-response.md` (current) and
-`…-round1-response.md`. Both carry a section stating what is *not* proved.
+**Read with this record:** `2026-09-01-p3-1a-candidate-review-round3-response.md` (current), then
+the round-2 and round-1 responses. Each carries a section stating what is *not* proved.
 
 **Rulings governing this record**
 
@@ -54,14 +55,20 @@ preserved unmodified and remain reachable in that branch's history; none is dele
 | Tree | Identity | Role |
 |---|---|---|
 | BASE | `e2d24acd37027f436590ed8eae58bb5b30414ffb` | inventory of existing production predicates; flags-off equivalence reference |
-| CANDIDATE — **governing** | **`c163a0ecc6fab8be4e5d32b9071464c6f0b87b2b`** (tree `f0b32cebd85d11478c68ec3fd35d6bd0e8363ab2`) | observation stage + five Tier F suites; the tree any evidence run must match |
+| CANDIDATE — **governing** | **`189efc618956439b98ea3c70081127558356f2a2`** (tree `80fdab292f43822323fe993e4cdf518251696564`) | observation stage + five Tier F suites; round-3 corrections |
+| candidate, superseded | `c163a0ecc6fab8be4e5d32b9071464c6f0b87b2b` | round-2 corrections |
 | candidate, superseded | `9a19e1045ad051afc60cb53efd8d56bd93f952b7` | round-1 corrections |
 | candidate, superseded | `c567f4aea31d0f4c5d1c0928b1a2687a8d10955b` (tree `26083c066d572898533af3c9a4ff7ee7dc770448`) | original observation stage |
 
 **The evidence run is gated on these exact values.** `scripts/run-p3-1a-frozen-cases.ts --run`
 refuses unless `--candidate`, `--tree` and `--runner-sha` are supplied and match HEAD, the HEAD
-tree, and the runner file on disk, and unless the worktree is clean. Runner sha256:
-`6ab1f354b00b4103486b279fff2819bada439c265dcdbf9fcd9f345891253634`.
+tree, and the runner file on disk, and unless the worktree is clean. Runner sha256 at this
+candidate: `aaeb1dd29694df52b878da73fe878dde6fbc94dc9a4ab278dc0b6b5878b92f77`.
+
+**These are not the values the evidence run will use.** Round 3 §7.4 requires the authorization to
+name the FINAL MERGED commit, its tree, and a freshly measured runner hash — the landing sequence
+(squash, qualify, merge, qualify again) changes all three. Any authorization quoting the identities
+above is quoting a superseded tree.
 
 This table originally named `c567f4a` as *the* candidate with no supersession column; it is
 corrected here for the same reason the frozen-set identity table was corrected in round 1 — a stale
