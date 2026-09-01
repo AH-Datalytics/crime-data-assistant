@@ -26,6 +26,7 @@ import {
   BLOCK_CAPABILITY_RULES, RETRY_CAPABILITY_RULES, classifyCapabilityRule,
 } from "../lib/capability-decision";
 import { OUTCOMES } from "../lib/proof-contract";
+import { CONTRACT_SHELL, projectFrozenContract } from "./run-p3-1a-frozen-cases";
 import type { QueryContract, QueryContractSource } from "../lib/query-contract";
 
 let pass = 0, fail = 0;
@@ -40,38 +41,23 @@ function checkTrue(name: string, cond: boolean, detail?: string) {
 }
 
 /**
- * A hand-specified contract, complete against the QueryContract SCHEMA, with dotted-path overrides.
+ * The contract shell and its dotted-path projection come from the RUNNER, not from a second copy
+ * here. Two hand-written shells that are supposed to be the same shell are the same drift class
+ * this candidate exists to remove: they would agree today and diverge the first time one is edited,
+ * and every control below would still pass while measuring a different fixture than the run does.
  *
- * Complete rather than minimal because the mutation control exercises the FULL validator, which
- * evaluates SQL/table-dependent rules reading fields the observer never touches; a partial fixture
- * made the validator throw, which was the fixture being inadequate, not a finding.
- *
- * Every value is written by hand from the type declaration. `buildQueryContract` is never called
- * here, so the parser is never its own oracle.
+ * The shell is complete against the QueryContract type declaration rather than minimal, because the
+ * mutation control exercises the FULL validator, which evaluates SQL/table-dependent rules reading
+ * fields the observer never touches. `buildQueryContract` is never called, so the parser is never
+ * its own oracle.
  */
 function contractOf(over: Record<string, unknown> = {}): QueryContract {
-  const base = {
-    source: "current",
-    geography: { kind: "city", name: "Chicago", state: "IL" },
-    geographies: [{ kind: "city", name: "Chicago", state: "IL" }],
-    metric: {
-      topic: "murder", offenseCodes: [], offenses: [],
-      unit: "count", numerator: null, denominator: null, unsupportedReason: null,
-    },
-    time: { startYear: 2026, endYear: 2026, partialYear: false, returnedPeriodRequired: false },
-    breakdowns: [] as string[],
-    comparability: { continuousReporters: false, partialYearDisclosure: false },
-    followup: { isFollowup: false, operation: null },
-    warnings: [] as string[],
-  };
-  const out: any = JSON.parse(JSON.stringify(base));
-  for (const [k, v] of Object.entries(over)) {
-    const parts = k.split(".");
-    let cur = out;
-    while (parts.length > 1) cur = cur[parts.shift() as string];
-    cur[parts[0]] = v;
-  }
-  return out as QueryContract;
+  const { source, ...rest } = over as { source?: string };
+  return projectFrozenContract(
+    CONTRACT_SHELL,
+    (source as string) ?? "current",
+    Object.keys(rest).length ? (rest as Record<string, unknown>) : null,
+  );
 }
 
 const SOURCES: QueryContractSource[] = ["current", "historical", "nibrs", "shr", "hate_crime"];
@@ -85,9 +71,8 @@ const v3: any = JSON.parse(v3Bytes.toString("utf8"));
 
 /** The control contract for a frozen case, from that case's OWN frozen expected projection. */
 function contractForCase(c: any): QueryContract {
-  const over: Record<string, unknown> = { source: c.source };
-  if (c.expected_contract) for (const [k, v] of Object.entries(c.expected_contract)) over[k] = v;
-  return contractOf(over);
+  // Exactly what the runner will project for this case - the same function, the same shell.
+  return projectFrozenContract(CONTRACT_SHELL, c.source, c.expected_contract ?? null);
 }
 const ruleFor = (id: string, source: string) =>
   SOURCE_CAPABILITY_RULES.find((r) => r.id === id && r.source === source)!;
