@@ -1,16 +1,28 @@
 # P3.1a — execution record
 
 **Started:** 2026-09-01
-**Status:** IN PROGRESS — steps 1–4 complete; **candidate review round 1 corrections applied**.
-Frozen cases at v3. The candidate was corrected and re-frozen at
-`9a19e1045ad051afc60cb53efd8d56bd93f952b7` (superseding `c567f4a…`, which is preserved).
+**Status:** IN PROGRESS — steps 1–4 complete; **review round 2 corrections applied**.
+Frozen cases at v3. Candidate corrected and re-frozen at
+`c163a0ecc6fab8be4e5d32b9071464c6f0b87b2b`, superseding `9a19e10…` and `c567f4a…`, both preserved.
 
-**No frozen case has been executed.** `docs/superpowers/p3-1a/runs/` does not exist. The 63-case
-runner is written and frozen but has never produced a result, and executing it needs its own
-authorization. Next: narrow Codex review of the corrected candidate.
+**No frozen case has been executed.** `docs/superpowers/p3-1a/runs/` does not exist. The runner
+refuses to execute without `--run` plus a matching candidate commit, tree, clean worktree and its
+own digest. Its live path HAS now been exercised, against synthetic cases only, under the round-2
+§7 authorization.
 
-**Read with this record:** `2026-09-01-p3-1a-candidate-review-round1-response.md` — the
-finding-to-file map, the test and mutation accounting, and §6, which states what is *not* proved.
+### What the 63-case run may and may not claim — ruling, round 2 §6
+
+The controls evaluate the frozen questions, so the case set is **no longer an unseen holdout**. It
+remains an independently adjudicated, pre-frozen **deterministic conformance set**: expected
+outcomes were authored and frozen before any candidate execution, production did not write them,
+and nothing rewrites them. The formal run may establish exact agreement on those 63 predeclared
+cases. It may **not** be described as an unbiased estimate of generalization or production accuracy.
+No replacement case set is required for P3.1a; a separately sequestered set would be needed only if
+a later certification claim required holdout performance, and that claim must not be retrofitted
+here.
+
+**Read with this record:** `2026-09-01-p3-1a-candidate-review-round2-response.md` (current) and
+`…-round1-response.md`. Both carry a section stating what is *not* proved.
 
 **Rulings governing this record**
 
