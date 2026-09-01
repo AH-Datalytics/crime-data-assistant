@@ -48,10 +48,24 @@ Execution proceeds under this exact contract. Any change to it invalidates this 
 
 ## Pinned trees
 
+Branch for every candidate: `feat/p3-1a-request-decision-observer`. Superseded candidates are
+preserved unmodified and remain reachable in that branch's history; none is deleted or rewritten.
+
 | Tree | Identity | Role |
 |---|---|---|
 | BASE | `e2d24acd37027f436590ed8eae58bb5b30414ffb` | inventory of existing production predicates; flags-off equivalence reference |
-| CANDIDATE | **`c567f4aea31d0f4c5d1c0928b1a2687a8d10955b`** (tree `26083c066d572898533af3c9a4ff7ee7dc770448`), branch `feat/p3-1a-request-decision-observer` | observation stage + Tier F tests; all evidence runs |
+| CANDIDATE — **governing** | **`c163a0ecc6fab8be4e5d32b9071464c6f0b87b2b`** (tree `f0b32cebd85d11478c68ec3fd35d6bd0e8363ab2`) | observation stage + five Tier F suites; the tree any evidence run must match |
+| candidate, superseded | `9a19e1045ad051afc60cb53efd8d56bd93f952b7` | round-1 corrections |
+| candidate, superseded | `c567f4aea31d0f4c5d1c0928b1a2687a8d10955b` (tree `26083c066d572898533af3c9a4ff7ee7dc770448`) | original observation stage |
+
+**The evidence run is gated on these exact values.** `scripts/run-p3-1a-frozen-cases.ts --run`
+refuses unless `--candidate`, `--tree` and `--runner-sha` are supplied and match HEAD, the HEAD
+tree, and the runner file on disk, and unless the worktree is clean. Runner sha256:
+`6ab1f354b00b4103486b279fff2819bada439c265dcdbf9fcd9f345891253634`.
+
+This table originally named `c567f4a` as *the* candidate with no supersession column; it is
+corrected here for the same reason the frozen-set identity table was corrected in round 1 — a stale
+governing identity points every later verification at the wrong tree.
 
 ---
 
