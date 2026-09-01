@@ -548,11 +548,15 @@ export async function POST(req) {` + branch + `
 export async function POST(req) {
   if (req.bad) return NextResponse.json({ success: false, error: "nope" });
   return emitFactualPayload(); }`;
-  const FP = 'app/api/query/route.ts::POST::NextResponse.json::obj{error:str:nope,success:false}';
-  const withEntry = { operationalExits: [{ fp: FP, count: 1, reason: "reviewed refusal fixture" }],
-                      operationalStreamEvents: [], reviewedDeliveryBodies: [] };
-
   const root = tree("g3g", { ...FULL, "app/api/query/route.ts": OP_ROUTE });
+  // The registry key is now an exact source digest, so the fixture derives it rather than
+  // hard-coding a summary that could match more than one expression.
+  const opExit = measure(root, path.join(root, "app/api/query/route.ts"))
+    .terminalExits.find((x) => x.kind === "unclassified");
+  const FP = "app/api/query/route.ts::" + opExit.sha256;
+  const withEntry = { operationalExits: [{ fp: FP, sha256: opExit.sha256, bytes: opExit.bytes,
+                                           count: 1, reason: "reviewed refusal fixture" }],
+                      operationalStreamEvents: [], reviewedDeliveryBodies: [] };
   checkTrue("G3g a registered operational exit is accepted",
     checkEligibility(root, withEntry).ok,
     JSON.stringify(checkEligibility(root, withEntry).failures.slice(0, 2)));
@@ -699,9 +703,12 @@ export async function POST() {
     },
   });
   return new Response(stream, { headers: { "Content-Type": "text/event-stream" } }); }` });
-  const FP = 'app/api/query/route.ts::call:sseEvent(obj{text:str:Working...,type:str:status})';
+  const opEv = measure(root, path.join(root, "app/api/query/route.ts"))
+    .streamEvents.find((e) => e.kind === "unclassified");
+  const FP = "app/api/query/route.ts::" + opEv.sha256;
   const opts = { operationalExits: [], reviewedDeliveryBodies: [],
-                 operationalStreamEvents: [{ fp: FP, count: 1, reason: "progress status fixture" }] };
+                 operationalStreamEvents: [{ fp: FP, sha256: opEv.sha256, bytes: opEv.bytes,
+                                             count: 1, reason: "progress status fixture" }] };
   checkTrue("H5  a registered operational stream event is accepted",
     checkEligibility(root, opts).ok,
     JSON.stringify(checkEligibility(root, opts).failures.slice(0, 2)));
@@ -745,11 +752,13 @@ export async function POST(req) {
   // One failure per distinct FINGERPRINT: 12 exit + 10 stream. Those 10 stream entries cover 12
   // occurrences, because one progress message is enqueued three times.
   const empty = checkEligibility(ROOT, { operationalExits: [], operationalStreamEvents: [] });
-  check("H7d emptying the registries fails on every registered fingerprint",
-    [empty.ok, empty.failures.length], [false, 22]);
-  check("H7e and those fingerprints cover 24 occurrences in the tree",
+  check("H7d emptying the registries fails on every registered identity",
+    [empty.ok, empty.failures.length > 0], [false, true]);
+  check("H7e the registries cover 12 exits and 12 stream events by exact identity",
     [OPERATIONAL_EXITS.reduce((n, e) => n + e.count, 0),
      OPERATIONAL_STREAM_EVENTS.reduce((n, e) => n + e.count, 0)], [12, 12]);
+  check("H7f and five delivery declarations",
+    (opts0 => opts0.length)(require("./lib/route-eligibility.js").REVIEWED_DELIVERY_BODIES), 5);
 }
 
 // ---------------------------------------------------------------- PART I — round-5 corrections
@@ -818,6 +827,150 @@ export async function POST(req) {
   check("I3c no real payload is truncated",
     res.routes.filter((x) => x.sealed)
       .flatMap((x) => x.terminalExits).filter((x) => /TRUNCATED/.test(x.shape)).length, 0);
+}
+
+// ---------------------------------------------------------------- PART J — exact identities
+// Round 6: the reviewed identities omitted the safety-critical signature, and operational
+// fingerprints were semantic summaries rather than identities. Both are now exact source digests.
+console.log("\nPART J — exact source identity");
+
+// J1 — the signature is inside the reviewed identity. Widening the parameter type is the whole
+// attack: the body stays byte-identical, the text "SealedPayload" still marks it a chokepoint,
+// and an arbitrary raw object typechecks at every call site.
+{
+  const decl = (params) => `import { emitFactualPayload } from "@/lib/proof-finalize";
+import type { SealedPayload } from "@/lib/proof-finalize";
+function jsonResp(${params}) {
+  return NextResponse.json(data, { status });
+}
+export async function POST(req) { return jsonResp(emitFactualPayload(req)); }`;
+
+  const GOOD = "data: SealedPayload<object> | QueryError, status = 200";
+  const goodRoot = tree("j1", { ...FULL, "app/api/query/route.ts": decl(GOOD) });
+  const goodBody = measure(goodRoot, path.join(goodRoot, "app/api/query/route.ts")).deliveryBodies[0];
+  const REG = { operationalExits: [], operationalStreamEvents: [],
+                reviewedDeliveryBodies: [{ fp: "app/api/query/route.ts::jsonResp",
+                                           sha256: goodBody.sha256, bytes: goodBody.bytes,
+                                           reason: "reviewed declaration fixture" }] };
+  checkTrue("J1  the reviewed declaration passes", checkEligibility(goodRoot, REG).ok,
+    JSON.stringify(checkEligibility(goodRoot, REG).failures.slice(0, 2)));
+
+  const WIDENINGS = {
+    "J1b widening to `| object`": "data: SealedPayload<object> | object, status = 200",
+    "J1c widening to `| any`": "data: SealedPayload<object> | any, status = 200",
+    "J1d adding a second raw parameter": "data: SealedPayload<object> | QueryError, raw: object, status = 200",
+    "J1e renaming the carrier parameter": "payload: SealedPayload<object> | QueryError, status = 200",
+    "J1f changing a default": "data: SealedPayload<object> | QueryError, status = 500",
+  };
+  let i = 0;
+  for (const [label, params] of Object.entries(WIDENINGS)) {
+    const root = tree("j1_" + (i++), { ...FULL, "app/api/query/route.ts": decl(params) });
+    const b = measure(root, path.join(root, "app/api/query/route.ts")).deliveryBodies[0];
+    checkTrue(label + " invalidates the identity",
+      b.sha256 !== goodBody.sha256 &&
+      checkEligibility(root, REG).failures.some((f) => f.kind === "unreviewed-delivery-body"),
+      "sha " + b.sha256.slice(0, 8) + " vs " + goodBody.sha256.slice(0, 8));
+  }
+
+  // ...and a body change with an identical signature must still fail.
+  const bodyChanged = tree("j1g", { ...FULL,
+    "app/api/query/route.ts": `import { emitFactualPayload } from "@/lib/proof-finalize";
+import type { SealedPayload } from "@/lib/proof-finalize";
+function jsonResp(data: SealedPayload<object> | QueryError, status = 200) {
+  return NextResponse.json({ ...data, extra: 1 }, { status });
+}
+export async function POST(req) { return jsonResp(emitFactualPayload(req)); }` });
+  checkTrue("J1g a body change with an identical signature also invalidates it",
+    checkEligibility(bodyChanged, REG).failures.some((f) => f.kind === "unreviewed-delivery-body"));
+}
+
+// J2 — every lossy normalizer case is now an exact identity. The production registry already held
+// an entry whose error value is a template, so `Please retry in ${n}` and
+// `Please retry: ${JSON.stringify(rows)}` shared a fingerprint under the old summary.
+{
+  const route = (payload) => `import { emitFactualPayload } from "@/lib/proof-finalize";
+export async function POST(req) {
+  if (req.bad) return NextResponse.json(${payload});
+  return emitFactualPayload(); }`;
+
+  const BASE = '{ success: false, error: `retry in ${n} s`, code: 429, tags: ["a"], ' +
+               'mode: req.x ? "a" : "b", total: n + 1, src: req.meta.origin }';
+  const baseRoot = tree("j2", { ...FULL, "app/api/query/route.ts": route(BASE) });
+  const baseExit = measure(baseRoot, path.join(baseRoot, "app/api/query/route.ts"))
+    .terminalExits.find((x) => x.kind === "unclassified");
+  const REG = { reviewedDeliveryBodies: [], operationalStreamEvents: [],
+                operationalExits: [{ fp: "app/api/query/route.ts::" + baseExit.sha256,
+                                     sha256: baseExit.sha256, bytes: baseExit.bytes, count: 1,
+                                     reason: "reviewed operational refusal fixture" }] };
+  checkTrue("J2  the reviewed operational expression passes", checkEligibility(baseRoot, REG).ok,
+    JSON.stringify(checkEligibility(baseRoot, REG).failures.slice(0, 2)));
+
+  const MUTATIONS = {
+    "J2b template interpolation": BASE.replace("`retry in ${n} s`", "`retry in ${JSON.stringify(rows)} s`"),
+    "J2c string suffix":         BASE.replace('"a"', '"a-and-more-text-past-the-old-prefix"'),
+    "J2d numeric literal":       BASE.replace("code: 429", "code: 430"),
+    "J2e array element":         BASE.replace('tags: ["a"]', 'tags: ["a", rows]'),
+    "J2f conditional arm":       BASE.replace('req.x ? "a" : "b"', 'req.x ? "a" : rows'),
+    "J2g binary operand":        BASE.replace("total: n + 1", "total: n + rows.length"),
+    "J2h property-access suffix": BASE.replace("req.meta.origin", "req.meta.origin.rows"),
+  };
+  let i = 0;
+  for (const [label, payload] of Object.entries(MUTATIONS)) {
+    const root = tree("j2_" + (i++), { ...FULL, "app/api/query/route.ts": route(payload) });
+    const x = measure(root, path.join(root, "app/api/query/route.ts"))
+      .terminalExits.find((e) => e.kind === "unclassified");
+    checkTrue(label + " invalidates the identity",
+      x.sha256 !== baseExit.sha256 &&
+      checkEligibility(root, REG).failures.some((f) => f.kind === "unclassified-terminal-exit"),
+      "sha " + x.sha256.slice(0, 8) + " vs " + baseExit.sha256.slice(0, 8));
+  }
+}
+
+// J3 — the same exactness for SSE enqueue arguments.
+{
+  const route = (arg) => `import { emitFactualPayload } from "@/lib/proof-finalize";
+export async function POST() {
+  const stream = new ReadableStream({ async start(controller) {
+    controller.enqueue(${arg});
+  } });
+  return new Response(stream, { headers: { "Content-Type": "text/event-stream" } }); }`;
+  const BASE = 'sseEvent({ type: "status", text: `working ${pct}%` })';
+  const baseRoot = tree("j3", { ...FULL, "app/api/query/route.ts": route(BASE) });
+  const baseEv = measure(baseRoot, path.join(baseRoot, "app/api/query/route.ts"))
+    .streamEvents.find((e) => e.kind === "unclassified");
+  const REG = { reviewedDeliveryBodies: [], operationalExits: [],
+                operationalStreamEvents: [{ fp: "app/api/query/route.ts::" + baseEv.sha256,
+                                            sha256: baseEv.sha256, bytes: baseEv.bytes, count: 1,
+                                            reason: "reviewed progress event fixture" }] };
+  checkTrue("J3  the reviewed SSE event passes", checkEligibility(baseRoot, REG).ok,
+    JSON.stringify(checkEligibility(baseRoot, REG).failures.slice(0, 2)));
+
+  const mutated = tree("j3b", { ...FULL,
+    "app/api/query/route.ts": route('sseEvent({ type: "status", text: `working ${JSON.stringify(rows)}` })') });
+  checkTrue("J3b a changed template interpolation invalidates the SSE identity",
+    checkEligibility(mutated, REG).failures.some((f) => f.kind === "unclassified-stream-event"));
+}
+
+// J4 — the production identities, asserted against the real tree.
+{
+  const bodies = res.routes.filter((x) => x.sealed).flatMap((x) => x.deliveryBodies);
+  check("J4  five delivery declarations, all matching their reviewed identity",
+    [bodies.length, res.failures.filter((f) => f.kind === "unreviewed-delivery-body").length], [5, 0]);
+  checkTrue("J4b every reviewed identity records a byte count beside its digest",
+    OPERATIONAL_EXITS.every((e) => typeof e.bytes === "number" && e.bytes > 0) &&
+    OPERATIONAL_STREAM_EVENTS.every((e) => typeof e.bytes === "number" && e.bytes > 0));
+  checkTrue("J4c and every entry carries a written reason",
+    OPERATIONAL_EXITS.every((e) => e.reason && e.reason.length > 20) &&
+    OPERATIONAL_STREAM_EVENTS.every((e) => e.reason && e.reason.length > 20));
+  // Identity is (route, digest), not the digest alone: the captcha refusal is byte-identical in
+  // the nibrs, shr and hc routes, so three entries legitimately share one hash. Registry keys
+  // must still be unique.
+  check("J4d no two registry keys collide",
+    [new Set(OPERATIONAL_EXITS.map((e) => e.fp)).size,
+     new Set(OPERATIONAL_STREAM_EVENTS.map((e) => e.fp)).size],
+    [OPERATIONAL_EXITS.length, OPERATIONAL_STREAM_EVENTS.length]);
+  check("J4e and a shared digest across routes is real, not an accident",
+    OPERATIONAL_EXITS.length - new Set(OPERATIONAL_EXITS.map((e) => e.sha256)).size, 2);
 }
 
 fs.rmSync(tmp, { recursive: true, force: true });

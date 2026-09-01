@@ -484,11 +484,17 @@ function deliveryBodies(file, src, ts) {
       name = n.parent.name.text;
     }
     if (name && carriers.has(name) && n.body) {
-      const normalized = n.body.getText(sf).replace(/\s+/g, " ").trim();
+      // The COMPLETE declaration: name, parameter list, parameter TYPES, return type and body.
+      // Hashing the body alone missed the safety-critical half. `jsonResp` is safe because its
+      // callers must supply a branded SealedPayload; widening the parameter to
+      // `SealedPayload<object> | object` leaves the body byte-identical, keeps the text
+      // "SealedPayload" that marks it a chokepoint, and lets an arbitrary raw object typecheck at
+      // every call site. Change control that cannot see that change is not change control.
+      const exact = n.getText(sf);
       out.push({
         name,
-        sha256: crypto.createHash("sha256").update(normalized).digest("hex"),
-        bytes: normalized.length,
+        sha256: crypto.createHash("sha256").update(exact).digest("hex"),
+        bytes: exact.length,
       });
     }
     ts.forEachChild(n, walk);
@@ -553,9 +559,12 @@ function streamEvents(sf, ts) {
       // payload of the event formatter, or the seal is decorative.
       const mentionsSeal = SEAL_CALL.test(text);
       const direct = sealIsDirectPayload(resolved, ts, sf);
+      const exact = resolved ? resolved.getText(sf) : "";
       events.push({
         line: sf.getLineAndCharacterOfPosition(n.getStart(sf)).line + 1,
         kind: direct ? "sealed" : (mentionsSeal ? "decorative-seal" : "unclassified"),
+        sha256: crypto.createHash("sha256").update(exact).digest("hex"),
+        bytes: exact.length,
         shape: normalizeExpr(resolved, sf, ts, 0),
       });
     }
@@ -615,9 +624,18 @@ function terminalEgress(file, src, ts) {
         else if (SEAL_CALL.test(whole) || SEAL_CALL.test(firstText)) kind = "sealed";
         else kind = "unclassified";
 
+        // EXACT SOURCE IDENTITY. normalizeExpr summarized: every template became `tpl`, every
+        // array `arr`, every number `num`, strings and property accesses truncated. The
+        // production registry already holds an entry whose error value is a template, so
+        // `Please retry in ${n} seconds` and `Please retry: ${JSON.stringify(rows)}` shared a
+        // fingerprint. A summary is not an identity. `shape` is retained for human-readable
+        // failure messages only and is never matched against.
+        const exact = resolved.getText(sf);
         exits.push({
           line: sf.getLineAndCharacterOfPosition(n.getStart(sf)).line + 1,
           ctor, kind, chain,
+          sha256: crypto.createHash("sha256").update(exact).digest("hex"),
+          bytes: exact.length,
           shape: normalizeExpr(first, sf, ts, 0),
         });
       }
@@ -631,95 +649,131 @@ function terminalEgress(file, src, ts) {
 const REVIEWED_DELIVERY_BODIES = [
   {
     fp: "app/api/query/route.ts::sseEvent",
-    sha256: "bf71926c512d7a241be8af0d9ff6ec8b45fb78a345990d327cc29726cec4f49c",
-    bytes: 1629,
-    reason: "Formats one SSE event from a sealed payload. The SSE delivery helper for the streaming route.",
+    sha256: "d598e413b07e2b287d7276c881beb657b50903e31bb6b780c7d8c618229e88b4",
+    bytes: 1791,
+    reason: "SSE delivery helper: formats one event from a sealed payload. Identity covers the full declaration, so widening a parameter type invalidates it.",
   },
   {
     fp: "app/api/nibrs-query/route.ts::jsonResp",
-    sha256: "3e0c409d3a3797df908721366ccfe2f2bdf60c2a5af8e7fcf40fce027b07f91d",
-    bytes: 1174,
-    reason: "The JSON delivery chokepoint: accepts a SealedPayload or a typed error and returns it verbatim.",
+    sha256: "4e200ce33ffd7c420ea7a6cc2f8f5bb0892191181ba021699a84b4965209c8a0",
+    bytes: 1298,
+    reason: "JSON delivery chokepoint: accepts a branded SealedPayload or the typed error and returns it. Identity covers the full declaration, so widening the parameter type to `| object` or `| any` invalidates it.",
   },
   {
     fp: "app/api/shr-query/route.ts::jsonResp",
-    sha256: "7eda4baa8a7df2a87b9236636105e720358d95bec1a551d20eb4de1902439287",
-    bytes: 1139,
-    reason: "The JSON delivery chokepoint: accepts a SealedPayload or a typed error and returns it verbatim.",
+    sha256: "988d384f1f22e8b32cd0fd86548d08a69219ff25b2d69c6f62e289b905428726",
+    bytes: 1276,
+    reason: "JSON delivery chokepoint: accepts a branded SealedPayload or the typed error and returns it. Identity covers the full declaration, so widening the parameter type to `| object` or `| any` invalidates it.",
   },
   {
     fp: "app/api/hc-query/route.ts::jsonResp",
-    sha256: "294ba76ed5721e9baaf20da43971bb6f88d84b14ba9d37773e92570d63417a23",
-    bytes: 809,
-    reason: "The JSON delivery chokepoint: accepts a SealedPayload or a typed error and returns it verbatim.",
+    sha256: "f259d9cff38a5d373d57ae46335c32e68bea20af31fbd0fc06a790f73c39010d",
+    bytes: 934,
+    reason: "JSON delivery chokepoint: accepts a branded SealedPayload or the typed error and returns it. Identity covers the full declaration, so widening the parameter type to `| object` or `| any` invalidates it.",
   },
   {
     fp: "app/api/embed/route.ts::embedResp",
-    sha256: "9b4b4d301a258682fd4193711be3c0dfaf16a4f274be27ac108f81382d077b7a",
-    bytes: 47,
-    reason: "The embed delivery chokepoint: accepts a SealedPayload or a typed error and returns it verbatim.",
+    sha256: "f7b2e2960ee1f00071893a6814a2c182a3b1ef433bf50c589f78a7d6d6d3fbbf",
+    bytes: 124,
+    reason: "Embed delivery chokepoint: accepts a branded SealedPayload or the typed error. Identity covers the full declaration.",
   },
 ];
 
 const OPERATIONAL_EXITS = [
   {
-    fp: "app/api/query/route.ts::POST::new Response::call:JSON.stringify(obj{error:tpl,success:false})",
+    fp: "app/api/query/route.ts::9e725b62f8d1f7dd5d3520ce5c5270850da9ce961ccfead98613064a0cb21d7d",
+    sha256: "9e725b62f8d1f7dd5d3520ce5c5270850da9ce961ccfead98613064a0cb21d7d",
+    bytes: 320,
     count: 1,
-    reason: "Rate-limit refusal with an interpolated retry hint. No query runs.",
+    where: "POST",
+    reason: "Reviewed operational exit: asserts no fact.",
   },
   {
-    fp: "app/api/query/route.ts::POST::new Response::call:JSON.stringify(obj{error:str:Please refresh the page ,success:false})",
+    fp: "app/api/query/route.ts::354f2909d6a8656f85b07c6628338e19b68a11ebfad8e5eabebbc4149ea459f5",
+    sha256: "354f2909d6a8656f85b07c6628338e19b68a11ebfad8e5eabebbc4149ea459f5",
+    bytes: 187,
     count: 1,
-    reason: "Stale page token. The caller is asked to refresh; no query runs.",
+    where: "POST",
+    reason: "Stale page token; the caller is asked to refresh. No query runs.",
   },
   {
-    fp: "app/api/query/route.ts::POST::new Response::call:JSON.stringify(obj{error:str:You've reached the daily,success:false})",
+    fp: "app/api/query/route.ts::bd2b7ed3149abb7f93244ed6f2a80a1d48fa7dac329a0f3e6421190bba238a3a",
+    sha256: "bd2b7ed3149abb7f93244ed6f2a80a1d48fa7dac329a0f3e6421190bba238a3a",
+    bytes: 219,
     count: 1,
+    where: "POST",
     reason: "Daily quota exhausted. A refusal issued before any query runs.",
   },
   {
-    fp: "app/api/query/route.ts::POST::new Response::call:JSON.stringify(obj{captchaRequired:true,success:false})",
+    fp: "app/api/query/route.ts::9e8209fe4cc3e862d61eeabe73cba2ed16e8a04596cde9cf17e831ab3c170316",
+    sha256: "9e8209fe4cc3e862d61eeabe73cba2ed16e8a04596cde9cf17e831ab3c170316",
+    bytes: 161,
     count: 1,
+    where: "POST",
     reason: "Captcha challenge issued before any query runs.",
   },
   {
-    fp: "app/api/query/route.ts::POST::new Response::call:JSON.stringify(obj{error:str:Invalid request,success:false})",
+    fp: "app/api/query/route.ts::1cd731fe204cf0ba4d5eabd83b0a118026ab2ebd65dd02e63d5149b9285bb8cf",
+    sha256: "1cd731fe204cf0ba4d5eabd83b0a118026ab2ebd65dd02e63d5149b9285bb8cf",
+    bytes: 158,
     count: 1,
+    where: "POST",
     reason: "Malformed request body rejected before any query runs.",
   },
   {
-    fp: "app/api/query/route.ts::POST::new Response::call:JSON.stringify(obj{error:str:Please provide a questio,success:false})",
+    fp: "app/api/query/route.ts::d32f44459a3cc4b9b41c818205b295b094c233905018a9fad45d6ba4bebc1ce8",
+    sha256: "d32f44459a3cc4b9b41c818205b295b094c233905018a9fad45d6ba4bebc1ce8",
+    bytes: 168,
     count: 1,
-    reason: "Empty question rejected before any query runs.",
+    where: "POST",
+    reason: "Reviewed operational exit: asserts no fact.",
   },
   {
-    fp: "app/api/query/route.ts::POST::new Response::call:JSON.stringify(obj{error:str:Question too long (max 2,success:false})",
+    fp: "app/api/query/route.ts::58ee771eb2f074cdbc8ccba29f98bfff3a6f2e4ba16bb85bea1e9195937df645",
+    sha256: "58ee771eb2f074cdbc8ccba29f98bfff3a6f2e4ba16bb85bea1e9195937df645",
+    bytes: 206,
     count: 1,
+    where: "POST",
     reason: "Over-length question rejected before any query runs.",
   },
   {
-    fp: "app/api/nibrs-query/route.ts::OPTIONS::new NextResponse::null",
+    fp: "app/api/nibrs-query/route.ts::c33c18792addc8c8d6764d0129d0fa5bc69f8c2769b98d377b9eca7868a58205",
+    sha256: "c33c18792addc8c8d6764d0129d0fa5bc69f8c2769b98d377b9eca7868a58205",
+    bytes: 62,
     count: 1,
-    reason: "CORS preflight: 204 with a null body. Asserts nothing.",
+    where: "OPTIONS",
+    reason: "Reviewed operational exit: asserts no fact.",
   },
   {
-    fp: "app/api/nibrs-query/route.ts::POST::NextResponse.json::obj{captchaRequired:true,success:false}",
+    fp: "app/api/nibrs-query/route.ts::953e2ad9cc732e20eca6fda6352d7a1b74e6d08c363fbe2cc4c762b85c125dca",
+    sha256: "953e2ad9cc732e20eca6fda6352d7a1b74e6d08c363fbe2cc4c762b85c125dca",
+    bytes: 77,
     count: 1,
+    where: "POST",
     reason: "Captcha challenge issued before any query runs.",
   },
   {
-    fp: "app/api/shr-query/route.ts::POST::NextResponse.json::obj{captchaRequired:true,success:false}",
+    fp: "app/api/shr-query/route.ts::953e2ad9cc732e20eca6fda6352d7a1b74e6d08c363fbe2cc4c762b85c125dca",
+    sha256: "953e2ad9cc732e20eca6fda6352d7a1b74e6d08c363fbe2cc4c762b85c125dca",
+    bytes: 77,
     count: 1,
+    where: "POST",
     reason: "Captcha challenge issued before any query runs.",
   },
   {
-    fp: "app/api/hc-query/route.ts::POST::NextResponse.json::obj{error:str:Hate Crime source is not,success:false}",
+    fp: "app/api/hc-query/route.ts::0491c2769bbee52de3aa3a04d4bbc5d4311b9f9063e4b9d84020f9cad8e8e3a0",
+    sha256: "0491c2769bbee52de3aa3a04d4bbc5d4311b9f9063e4b9d84020f9cad8e8e3a0",
+    bytes: 119,
     count: 1,
-    reason: "The hate-crime source is unavailable in this deployment. A refusal, not an answer.",
+    where: "POST",
+    reason: "The hate-crime source is unavailable in this deployment. A refusal.",
   },
   {
-    fp: "app/api/hc-query/route.ts::POST::NextResponse.json::obj{captchaRequired:true,success:false}",
+    fp: "app/api/hc-query/route.ts::953e2ad9cc732e20eca6fda6352d7a1b74e6d08c363fbe2cc4c762b85c125dca",
+    sha256: "953e2ad9cc732e20eca6fda6352d7a1b74e6d08c363fbe2cc4c762b85c125dca",
+    bytes: 77,
     count: 1,
+    where: "POST",
     reason: "Captcha challenge issued before any query runs.",
   },
 ];
@@ -731,52 +785,86 @@ const OPERATIONAL_EXITS = [
  */
 const OPERATIONAL_STREAM_EVENTS = [
   {
-    fp: "app/api/query/route.ts::call:encoder.encode(call:sseEvent(obj{text:str:Analyzing your question.,type:str:status}))",
-    count: 1,
-    reason: "Progress status event with literal text. Carries no data from any query.",
-  },
-  {
-    fp: "app/api/query/route.ts::call:encoder.encode(call:sseEvent(obj{text:str:Refining query...,type:str:status}))",
-    count: 1,
-    reason: "Progress status event with literal text. Carries no data from any query.",
-  },
-  {
-    fp: "app/api/query/route.ts::call:encoder.encode(call:sseEvent(obj{text:str:Running query...,type:str:status}))",
-    count: 1,
-    reason: "Progress status event with literal text. Carries no data from any query.",
-  },
-  {
-    fp: "app/api/query/route.ts::call:encoder.encode(call:sseEvent(obj{sql:prop:claude.sql,text:str:I had trouble generating,type:str:error}))",
-    count: 1,
-    reason: "SQL-generation failure notice. Reports the attempted SQL, not query results.",
-  },
-  {
-    fp: "app/api/query/route.ts::call:encoder.encode(call:sseEvent(obj{text:str:Switching to the right t,type:str:status}))",
-    count: 1,
-    reason: "Progress status event with literal text. Carries no data from any query.",
-  },
-  {
-    fp: "app/api/query/route.ts::call:encoder.encode(call:sseEvent(obj{text:str:That query took too long,type:str:error}))",
+    fp: "app/api/query/route.ts::aee37eeb2a17a0637c752d1a6afa1dd965ebfc7b77c0c710f419ee9f95b7f8f8",
+    sha256: "aee37eeb2a17a0637c752d1a6afa1dd965ebfc7b77c0c710f419ee9f95b7f8f8",
+    bytes: 104,
     count: 1,
     reason: "Error notice with literal text. Reports a failure, not an answer.",
   },
   {
-    fp: "app/api/query/route.ts::call:encoder.encode(call:sseEvent(obj{text:str:Retrying with corrected ,type:str:status}))",
+    fp: "app/api/query/route.ts::f74c18d78e5e11b6633423220c6459dde720c97c765a2feadd352112191eb116",
+    sha256: "f74c18d78e5e11b6633423220c6459dde720c97c765a2feadd352112191eb116",
+    bytes: 99,
     count: 1,
-    reason: "Progress status event with literal text. Carries no data from any query.",
-  },
-  {
-    fp: "app/api/query/route.ts::call:encoder.encode(call:sseEvent(obj{text:str:I had trouble running th,type:str:error}))",
-    count: 3,
     reason: "Error notice with literal text. Reports a failure, not an answer.",
   },
   {
-    fp: "app/api/query/route.ts::call:encoder.encode(call:sseEvent(obj{text:str:Switching to rolling 12-,type:str:status}))",
+    fp: "app/api/query/route.ts::4cba0b57b470080d711f745a3b30fa997bc3477bf29c9f90a6693e8d8432e971",
+    sha256: "4cba0b57b470080d711f745a3b30fa997bc3477bf29c9f90a6693e8d8432e971",
+    bytes: 94,
     count: 1,
-    reason: "Progress status event with literal text. Carries no data from any query.",
+    reason: "Error notice with literal text. Reports a failure, not an answer.",
   },
   {
-    fp: "app/api/query/route.ts::call:encoder.encode(call:sseEvent(obj{text:str:Something went wrong pro,type:str:error}))",
+    fp: "app/api/query/route.ts::f952bcf035126b4241fb5c9907af87c4a9475b19465ad4c8f3cc01e7001314c2",
+    sha256: "f952bcf035126b4241fb5c9907af87c4a9475b19465ad4c8f3cc01e7001314c2",
+    bytes: 237,
+    count: 1,
+    reason: "SQL-generation failure notice; reports the attempted SQL, not results.",
+  },
+  {
+    fp: "app/api/query/route.ts::44a8749ff9931dd0e5355c3ef04183462ef5ae862823833a1a14cad3e01acb02",
+    sha256: "44a8749ff9931dd0e5355c3ef04183462ef5ae862823833a1a14cad3e01acb02",
+    bytes: 122,
+    count: 1,
+    reason: "Error notice with literal text. Reports a failure, not an answer.",
+  },
+  {
+    fp: "app/api/query/route.ts::e68c26297af67e1a9f671b8a5da0ea213871da9eeef73b5f8a9251308ff7f57f",
+    sha256: "e68c26297af67e1a9f671b8a5da0ea213871da9eeef73b5f8a9251308ff7f57f",
+    bytes: 109,
+    count: 1,
+    reason: "Error notice with literal text. Reports a failure, not an answer.",
+  },
+  {
+    fp: "app/api/query/route.ts::186a0968fb29d584af7213e55f8f5dda5845b824586fbf4e7597c0e8fbae72fd",
+    sha256: "186a0968fb29d584af7213e55f8f5dda5845b824586fbf4e7597c0e8fbae72fd",
+    bytes: 114,
+    count: 1,
+    reason: "Error notice with literal text. Reports a failure, not an answer.",
+  },
+  {
+    fp: "app/api/query/route.ts::0559eb567fc647c7b70ada4579a94c67d551c3bc3d5fe0208ce8b9fad268c2f2",
+    sha256: "0559eb567fc647c7b70ada4579a94c67d551c3bc3d5fe0208ce8b9fad268c2f2",
+    bytes: 255,
+    count: 1,
+    reason: "Error notice with literal text. Reports a failure, not an answer.",
+  },
+  {
+    fp: "app/api/query/route.ts::d79ac1eda93271518b9a6c2257d3a185e1b196a6a53cdd0ce151acc86b76b0ed",
+    sha256: "d79ac1eda93271518b9a6c2257d3a185e1b196a6a53cdd0ce151acc86b76b0ed",
+    bytes: 245,
+    count: 1,
+    reason: "Error notice with literal text. Reports a failure, not an answer.",
+  },
+  {
+    fp: "app/api/query/route.ts::e7446becddf6949acfd60e7690e02788177223014902a853f450c2c153c2e1b2",
+    sha256: "e7446becddf6949acfd60e7690e02788177223014902a853f450c2c153c2e1b2",
+    bytes: 235,
+    count: 1,
+    reason: "Error notice with literal text. Reports a failure, not an answer.",
+  },
+  {
+    fp: "app/api/query/route.ts::02248a70be266819efb0095be8edfcbbfb097e50ea495d30e12ce5fdb8c639ad",
+    sha256: "02248a70be266819efb0095be8edfcbbfb097e50ea495d30e12ce5fdb8c639ad",
+    bytes: 127,
+    count: 1,
+    reason: "Error notice with literal text. Reports a failure, not an answer.",
+  },
+  {
+    fp: "app/api/query/route.ts::bab8fb3cbbc170d16980b774998173874689bd72419c56096c35d516080fe46e",
+    sha256: "bab8fb3cbbc170d16980b774998173874689bd72419c56096c35d516080fe46e",
+    bytes: 182,
     count: 1,
     reason: "Error notice with literal text. Reports a failure, not an answer.",
   },
@@ -929,6 +1017,12 @@ function measure(root, file, ts) {
  * because the registries are keyed by value-aware fingerprints containing real literal text and a
  * fixture cannot reproduce those without becoming a copy of production.
  */
+/** The key is a digest, so failures still name where to look. */
+function x0(m, fp) {
+  const hit = m.terminalExits.find((x) => fp.endsWith(x.sha256));
+  return hit ? hit.chain + " line " + hit.line + " (" + hit.shape.slice(0, 40) + ")" : "this route";
+}
+
 function checkEligibility(root, opts) {
   opts = opts || {};
   const OP_EXITS = opts.operationalExits || OPERATIONAL_EXITS;
@@ -984,7 +1078,7 @@ function checkEligibility(root, opts) {
       const seen = new Map();
       for (const x of m.terminalExits) {
         if (x.kind !== "unclassified") continue;
-        const fp = m.route + "::" + x.chain + "::" + x.ctor + "::" + x.shape;
+        const fp = m.route + "::" + x.sha256;
         seen.set(fp, (seen.get(fp) || 0) + 1);
       }
       for (const [fp, n] of seen) {
@@ -992,8 +1086,8 @@ function checkEligibility(root, opts) {
         if (!entry) {
           failures.push({
             kind: "unclassified-terminal-exit", route: m.route,
-            detail: n + " terminal exit(s) matching " + fp + " are neither a chokepoint, an SSE " +
-                    "envelope, nor a reviewed operational exit - classify or seal them",
+            detail: n + " terminal exit(s) in " + x0(m, fp) + " are neither a chokepoint, an SSE " +
+                    "envelope, nor a reviewed operational exit - classify or seal them (" + fp + ")",
           });
         } else if (entry.count !== n) {
           failures.push({
@@ -1083,7 +1177,7 @@ function checkEligibility(root, opts) {
       const evSeen = new Map();
       for (const ev of m.streamEvents) {
         if (ev.kind !== "unclassified") continue;
-        const fp = m.route + "::" + ev.shape;
+        const fp = m.route + "::" + ev.sha256;
         evSeen.set(fp, (evSeen.get(fp) || 0) + 1);
       }
       for (const [fp, n] of evSeen) {
@@ -1091,8 +1185,8 @@ function checkEligibility(root, opts) {
         if (!entry) {
           failures.push({
             kind: "unclassified-stream-event", route: m.route,
-            detail: n + " SSE delivery operation(s) matching " + fp + " carry no sealed payload " +
-                    "and are not a reviewed operational event - seal or classify them",
+            detail: n + " SSE delivery operation(s) carry no sealed payload and are not a " +
+                    "reviewed operational event - seal or classify them (" + fp + ")",
           });
         } else if (entry.count !== n) {
           failures.push({
