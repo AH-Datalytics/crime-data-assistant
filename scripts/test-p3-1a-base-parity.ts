@@ -23,6 +23,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { runPostSqlGrid, GRID_SOURCES, GRID_QUESTIONS, GRID_SQLS, type GridRow } from "./lib-p3-1a-postsql-grid";
 import { BLOCK_CAPABILITY_RULES, RETRY_CAPABILITY_RULES } from "../lib/capability-decision";
+import { OUTCOMES } from "../lib/proof-contract";
 
 const BASE_TREE = "e2d24acd37027f436590ed8eae58bb5b30414ffb";
 const BASELINE = path.join(__dirname, "fixtures", "p3-1a-base-postsql-baseline.json");
@@ -38,8 +39,32 @@ function checkTrue(name: string, cond: boolean, detail?: string) {
   else { fail++; console.log(`  FAIL  ${name}${detail ? "\n          " + detail : ""}`); }
 }
 
+/**
+ * Keys the candidate ADDS to the BASE result shape. Declared here, one line, deliberately awkward
+ * to extend.
+ *
+ * The baseline is NOT regenerated when a field is added — regenerating would destroy the only
+ * evidence that BASE behaviour is unchanged, which is the whole point of the file. Instead every
+ * BASE key is compared exactly, the key-set difference must equal this list, and the added key gets
+ * its own assertions below. Adding a key to this list without those assertions is how the
+ * regression would quietly stop meaning anything.
+ *
+ * `capabilityOutcome` carries the typed catalog pair that `classifyCapabilityRule()` returns for a
+ * fired block rule, so the shared classification is observable at runtime instead of only by
+ * reading four route files.
+ */
+const ADDED_KEYS = ["capabilityOutcome"] as const;
+
 const baseline: GridRow[] = JSON.parse(fs.readFileSync(BASELINE, "utf8"));
 const current = runPostSqlGrid();
+
+/** A row's result restricted to the keys BASE had, for exact comparison. */
+function baseKeysOnly(result: Record<string, unknown> | undefined, baseKeys: string[]) {
+  const out: Record<string, unknown> = {};
+  for (const k of baseKeys) out[k] = result?.[k];
+  return out;
+}
+const BASE_KEYS = Object.keys(baseline[0].result).sort();
 
 console.log(`P3.1a flags-off regression against BASE ${BASE_TREE.slice(0, 12)}`);
 
@@ -73,19 +98,20 @@ check("the current run produces the same number of rows", current.length, baseli
   const firstDiffs: string[] = [];
   for (let i = 0; i < Math.max(baseline.length, current.length); i++) {
     const b = baseline[i], c = current[i];
-    const bs = JSON.stringify(b), cs = JSON.stringify(c);
+    // Compared on BASE's key set only; the added key is asserted separately below.
+    const bs = JSON.stringify({ ...b, result: baseKeysOnly(b?.result, BASE_KEYS) });
+    const cs = JSON.stringify({ ...c, result: baseKeysOnly(c?.result, BASE_KEYS) });
     if (bs === cs) continue;
     differing++;
     if (firstDiffs.length < 3) {
-      const keys = new Set([...Object.keys(b?.result ?? {}), ...Object.keys(c?.result ?? {})]);
-      const changed = [...keys].filter(
+      const changed = BASE_KEYS.filter(
         (k) => JSON.stringify(b?.result?.[k]) !== JSON.stringify(c?.result?.[k]));
       firstDiffs.push(
         `row ${i} [${c?.source ?? b?.source}] "${(c?.question ?? b?.question ?? "").slice(0, 48)}…" ` +
         `changed: ${changed.join(", ") || "row identity"}`);
     }
   }
-  checkTrue("every post-SQL result is identical to BASE, key for key",
+  checkTrue("every post-SQL result is identical to BASE on every key BASE had",
     differing === 0, `${differing} row(s) differ\n          ` + firstDiffs.join("\n          "));
 }
 
@@ -103,8 +129,27 @@ check("the current run produces the same number of rows", current.length, baseli
   for (const key of ["warnings", "blockReasons", "retryIssues", "enforced", "capabilityFindings"]) {
     check(`inventory of ${key} unchanged from BASE`, inventory(current, key), inventory(baseline, key));
   }
-  check("the set of result keys is unchanged from BASE",
-    Object.keys(current[0].result).sort(), Object.keys(baseline[0].result).sort());
+  check("the result gained exactly the declared keys and lost none",
+    Object.keys(current[0].result).sort(),
+    [...BASE_KEYS, ...ADDED_KEYS].sort());
+}
+
+// ── the added key: asserted, never merely permitted ─────────────────────────────────────────
+{
+  const withOutcome = current.filter((r) => r.result.capabilityOutcome != null);
+  const withCapabilityBlock = current.filter((r) =>
+    ((r.result.enforced as string[]) ?? []).some((id) => BLOCK_CAPABILITY_RULES.has(id)));
+
+  check("capabilityOutcome is non-null on exactly the rows a capability BLOCK rule enforced",
+    [withOutcome.length, withCapabilityBlock.length, withOutcome.length > 0],
+    [withCapabilityBlock.length, withCapabilityBlock.length, true]);
+  checkTrue("every non-null capabilityOutcome is the shared catalog OBJECT, not a copy",
+    withOutcome.every((r) => r.result.capabilityOutcome === OUTCOMES.query_contract_failed));
+  checkTrue("a row carrying capabilityOutcome always carries a block reason too",
+    withOutcome.every((r) => ((r.result.blockReasons as string[]) ?? []).length > 0));
+  checkTrue("a row with no capability block carries null, not an empty object",
+    current.filter((r) => !withCapabilityBlock.includes(r))
+      .every((r) => r.result.capabilityOutcome === null));
 }
 
 // ── ANTI-VACUITY: the comparison must be able to go red ─────────────────────────────────────
@@ -119,7 +164,9 @@ check("the current run produces the same number of rows", current.length, baseli
     const now = runPostSqlGrid();
     let n = 0;
     for (let i = 0; i < baseline.length; i++) {
-      if (JSON.stringify(baseline[i]) !== JSON.stringify(now[i])) n++;
+      const b = JSON.stringify(baseKeysOnly(baseline[i]?.result, BASE_KEYS));
+      const c = JSON.stringify(baseKeysOnly(now[i]?.result, BASE_KEYS));
+      if (b !== c) n++;
     }
     return n;
   };

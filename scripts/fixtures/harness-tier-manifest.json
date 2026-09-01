@@ -1337,6 +1337,24 @@
       "note": "reruns a 225-row post-SQL grid and compares it to a baseline captured at BASE e2d24ac; mutates the shared classification in-process to prove the comparison can go red, then restores it; prepares no SQLite statement"
     },
     {
+      "id": "test-p3-1a-smoke-live-path",
+      "tier": "F",
+      "script": "scripts/test-p3-1a-smoke-live-path.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "spawns the frozen-case runner CLI against synthetic cases in an OS temp directory; executes no frozen case, writes nothing under docs/superpowers/p3-1a/runs; prepares no SQLite statement"
+    },
+    {
+      "id": "test-p3-1a-route-finalization",
+      "tier": "F",
+      "script": "scripts/test-p3-1a-route-finalization.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "follows a fired capability rule to the outcome every route finalizes with; TypeScript-AST source analysis plus runtime validator calls; prepares no SQLite statement"
+    },
+    {
       "id": "test-outcome-mutations",
       "tier": "F",
       "script": "scripts/test-outcome-mutations.js",

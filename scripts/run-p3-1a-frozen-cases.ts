@@ -1,131 +1,137 @@
 /**
- * P3.1a — the frozen-case RUNNER. Authored and frozen here; execution is authorized separately.
+ * P3.1a — the frozen-case RUNNER. Authored and frozen here; the evidence run is authorized
+ * separately and has not occurred.
  *
- * WHAT IT DOES. Executes the 63 frozen cases of `docs/superpowers/p3-1a/frozen-cases-v3.json`
- * against the request-decision observer and records, per case, what was observed versus what the
- * frozen set expects. It is the evidence run. The Tier F controls in
- * `scripts/test-request-decision-observer.ts` are NOT the evidence run and never write here.
+ * WHAT IT DOES. Executes a declared case set against the request-decision observer and records, per
+ * case, what was observed versus what the set expects. In `--run` mode the case set is the governing
+ * `docs/superpowers/p3-1a/frozen-cases-v3.json` and the result is evidence. In `--smoke` mode the
+ * case set is a small synthetic file and the result is explicitly NOT evidence. Both modes run the
+ * SAME orchestration; only the input path, its expected hash, the output directory and the run kind
+ * are parameterized. A second smoke-only implementation would prove the smoke path works and say
+ * nothing about the path that produces evidence.
  *
- * ── THE FIVE PROPERTIES IT IS BUILT AROUND ──────────────────────────────────────────────────
+ * ── FOUR SEPARATE QUESTIONS, FOUR SEPARATE ANSWERS ──────────────────────────────────────────
  *
- * 1. THE ORACLE IS IMMUTABLE. `frozen-cases-v3.json` is verified by sha256 before the run and
- *    again after it, and this file never opens it for writing. Observations go to a SEPARATE
- *    run artifact under `docs/superpowers/p3-1a/runs/`, named by run id, written once with a
- *    wx flag so a second run can never overwrite a first. An oracle a run can edit is not an
- *    oracle, and a result file that overwrites its predecessor destroys the disagreement it was
- *    meant to record.
+ * Round 2 found these collapsed into one another. They are now distinct, per case and per run:
  *
- * 2. EVERY CASE IS ACCOUNTED FOR EXACTLY ONCE. Each case begins as `not_run` and leaves that
- *    state only by being processed. The dispositions are disjoint and the run refuses to report a
- *    verdict unless they sum to the case count with zero `not_run`. A case that was never executed
- *    is never a passing case — the failure mode this rule exists to prevent is a silently skipped
- *    case reported as agreement.
+ *   1. PARSER AGREEMENT — did the real `buildQueryContract` reproduce the case's independently
+ *      frozen contract projection? Recorded on its own axis, and a divergence STOPS the run: the
+ *      frozen projections are what the observation is made against, so if production's parser no
+ *      longer agrees with them, the premise of the measurement is gone and continuing would produce
+ *      a confident number about a stale assumption.
+ *   2. PREDICATE AGREEMENT — did the observed applicability/action/reason match what the case
+ *      expects? `agreed | disagreed | analysis_incomplete | harness_error | not_run`, never
+ *      collapsed: an unmeasurable case is not a clean negative, and a runner defect is not a
+ *      finding about the system.
+ *   3. CASE VERDICT — the two above combined into one unambiguous per-case answer:
+ *      `conformant | nonconformant | not_established`. A case cannot be conformant while its parser
+ *      axis disagrees.
+ *   4. RUN VERDICTS — `accountingVerdict` says whether the RUN is trustworthy (every case
+ *      accounted for exactly once); `evidenceVerdict` says whether the SYSTEM conformed. A complete
+ *      run of a nonconforming system is a successful run reporting a failure, and the exit code
+ *      says so rather than reporting zero.
  *
- * 3. THE PARSER IS RECORDED, NEVER TRUSTED AS THE ORACLE. The real `buildQueryContract` runs for
- *    every case, and its projection is compared against the case's independently frozen
- *    `expected_contract`. A disagreement is recorded in its OWN field and never rewrites the
- *    applicability comparison: the observation is always made against the frozen expected
- *    contract, so a parser regression shows up as a parser disagreement rather than silently
- *    moving the measured result.
+ * ── EXIT CODES ──────────────────────────────────────────────────────────────────────────────
  *
- * 4. FAILURE KINDS DO NOT COLLAPSE INTO EACH OTHER. `analysis_incomplete` (a predicate read
- *    ctx.sql/ctx.tables), `harness_error` (the runner itself threw) and `disagreed` (the system
- *    decided differently from the frozen expectation) are three different facts. Collapsing
- *    incomplete into `did_not_fire` would convert an unmeasurable case into a clean negative,
- *    which is the specific way a coverage claim becomes false.
+ *   0  accounting complete AND evidence conformant
+ *   1  the run is trustworthy but the evidence is not conformant or not established
+ *      (parser divergence, any disagreement, any incomplete analysis, any harness error)
+ *   2  refused before running, or the accounting itself is incomplete - a defect in the RUN
  *
- * 5. THE ENGINE IS INJECTABLE, SO IT CAN BE MUTATION-TESTED. `executeFrozenCases` is pure and
- *    takes its observer and contract builder as arguments. `scripts/test-p3-1a-case-runner.ts`
- *    drives it with deliberately broken inputs to prove the accounting actually catches skipped
- *    cases, duplicate ids, substituted expectations, missing parser disagreements, and collapsed
- *    incompletes. Without that, the accounting would be an assertion about itself.
+ * ── IMMUTABILITY ────────────────────────────────────────────────────────────────────────────
+ *
+ * The case set is verified by sha256 before the run and again after, and is never opened for
+ * writing. Results go to a separate artifact written with the `wx` flag, so no run can overwrite an
+ * earlier run's evidence. `--smoke` refuses any input that resolves to v1/v2/v3 by path or by hash,
+ * and refuses to write inside the evidence directory. `--run` refuses unless the governing v3
+ * identity is exact.
  */
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
+import { execFileSync } from "node:child_process";
 import { observeRequestDecision } from "../lib/request-decision-observer";
 import type { QueryContract, QueryContractSource } from "../lib/query-contract";
 
-export const P31A_DIR = path.join(__dirname, "..", "docs", "superpowers", "p3-1a");
+export const ROOT = path.join(__dirname, "..");
+export const P31A_DIR = path.join(ROOT, "docs", "superpowers", "p3-1a");
+export const EVIDENCE_RUNS_DIR = path.join(P31A_DIR, "runs");
 export const FROZEN_V3 = path.join(P31A_DIR, "frozen-cases-v3.json");
-export const FROZEN_V3_SHA256 =
-  "2535cbd934a4766a7f9ff8570f5b0e60d04b7c37430283b48e52b206c75a0b91";
 
-export type Disposition =
-  | "not_run"            // never processed - never a pass
-  | "agreed"             // observation matched the frozen expectation in full
-  | "disagreed"          // the system decided differently from the frozen expectation
-  | "analysis_incomplete" // a predicate could not be evaluated pre-answer
-  | "harness_error";     // the runner threw; a defect in the run, not a finding about the system
+/** Every frozen set, pinned. All three are verified before and after every run, in both modes. */
+export const FROZEN_SETS: Record<string, string> = {
+  "frozen-cases-v1.json": "2a2739cc9dcab7872537d6c22880d70ee5ec0e012362d2c6fb47f8346d69cc78",
+  "frozen-cases-v2.json": "7114d95c6c3a84c7da1f8e786915825436994085dfcc924477e26924203f391f",
+  "frozen-cases-v3.json": "2535cbd934a4766a7f9ff8570f5b0e60d04b7c37430283b48e52b206c75a0b91",
+};
+export const FROZEN_V3_SHA256 = FROZEN_SETS["frozen-cases-v3.json"];
+
+export type PredicateAgreement =
+  | "not_run"
+  | "agreed"
+  | "disagreed"
+  | "analysis_incomplete"
+  | "harness_error";
+
+export type ParserAgreement = "agreed" | "disagreed" | "not_applicable" | "parser_error";
+
+export type CaseVerdict = "conformant" | "nonconformant" | "not_established";
+
+export type RunState = "completed" | "stopped_parser_divergence";
 
 export type CaseResult = {
   id: string;
   pair: string;
   role: string;
-  disposition: Disposition;
-  /** What the observer produced. `null` only when the case never produced an observation. */
+  /** Did the observed decision match the frozen expectation? Never mixed with the parser axis. */
+  predicateAgreement: PredicateAgreement;
+  /** Did the real parser reproduce the frozen projection? Never mixed with the predicate axis. */
+  parserAgreement: ParserAgreement;
+  /** The single unambiguous answer for this case, derived from both axes. */
+  caseVerdict: CaseVerdict;
   observed: {
     inDenominator: boolean;
     state: string | null;
     action: string | null;
     reason: string | null;
   } | null;
-  /** What the frozen set expects, echoed so the artifact is readable without the oracle. */
-  expected: {
-    applies: boolean;
-    action: string | null;
-    reason: string | null;
-  };
-  /** Recorded independently of `disposition`; NEVER allowed to rewrite it. */
-  parserAgreement: "agreed" | "disagreed" | "not_applicable" | "parser_error";
+  expected: { applies: boolean; action: string | null; reason: string | null };
   parserDetail: string | null;
-  detail: string | null;
+  predicateDetail: string | null;
 };
 
 export type RunReport = {
+  runKind: "evidence" | "synthetic_smoke_not_evidence";
   runId: string;
-  frozenSetSha256: string;
+  runState: RunState;
+  provenance: {
+    candidateCommit: string | null;
+    candidateTree: string | null;
+    worktreeClean: boolean | null;
+    runnerPath: string;
+    runnerSha256: string;
+    inputPath: string;
+    inputSha256: string;
+    frozenSetsBefore: Record<string, string>;
+    frozenSetsAfter: Record<string, string> | null;
+    node: string;
+    startedAt: string;
+  };
   caseCount: number;
-  counts: Record<Disposition, number>;
+  predicateCounts: Record<PredicateAgreement, number>;
   parserCounts: Record<string, number>;
-  /** `complete` only when every case was processed exactly once. Never a pass on its own. */
-  accounting: "complete" | "incomplete";
+  verdictCounts: Record<CaseVerdict, number>;
+  accountingVerdict: "complete" | "incomplete";
   accountingDetail: string | null;
+  evidenceVerdict: CaseVerdict;
+  evidenceDetail: string | null;
   results: CaseResult[];
 };
 
-const DISPOSITIONS: Disposition[] = [
+const PREDICATE_STATES: PredicateAgreement[] = [
   "not_run", "agreed", "disagreed", "analysis_incomplete", "harness_error",
 ];
-
-/**
- * Decide whether a set of results may be reported at all.
- *
- * Exported and separate from the loop so the mutation suite can drive it with a result set that
- * contains a `not_run` case. Inside the current loop every non-duplicate case is processed, so a
- * `not_run` guard tested only through the loop would pass without ever being able to fail — which
- * is the "guard never observed failing" trap. Testing it directly keeps it honest.
- */
-export function accountFor(
-  list: CaseResult[], entryCount: number, duplicates: string[],
-): { accounting: "complete" | "incomplete"; accountingDetail: string | null } {
-  const counts = Object.fromEntries(DISPOSITIONS.map((d) => [d, 0])) as Record<Disposition, number>;
-  for (const r of list) counts[r.disposition]++;
-
-  const problems: string[] = [];
-  if (duplicates.length) problems.push(`duplicate case ids: ${[...new Set(duplicates)].join(", ")}`);
-  if (list.length !== entryCount) {
-    problems.push(`processed ${list.length} distinct cases from ${entryCount} entries`);
-  }
-  if (counts.not_run > 0) problems.push(`${counts.not_run} case(s) were never executed`);
-  const summed = DISPOSITIONS.reduce((n, d) => n + counts[d], 0);
-  if (summed !== list.length) problems.push(`dispositions sum to ${summed}, not ${list.length}`);
-
-  return {
-    accounting: problems.length === 0 ? "complete" : "incomplete",
-    accountingDetail: problems.length ? problems.join("; ") : null,
-  };
-}
+const VERDICTS: CaseVerdict[] = ["conformant", "nonconformant", "not_established"];
 
 /** Apply a case's frozen dotted-path projection onto a complete hand-specified contract shell. */
 export function projectFrozenContract(
@@ -145,49 +151,102 @@ export function projectFrozenContract(
 }
 
 /**
- * Execute the frozen cases. Pure: no file IO, no clock, no production. Everything it touches
+ * The single unambiguous per-case answer.
+ *
+ * A parser divergence can never leave a case conformant — that was the round-2 finding. An
+ * unmeasurable or un-run case is `not_established`, which is neither a pass nor a system failure.
+ */
+export function deriveCaseVerdict(
+  predicate: PredicateAgreement, parser: ParserAgreement,
+): CaseVerdict {
+  if (parser === "disagreed" || parser === "parser_error") return "nonconformant";
+  if (predicate === "disagreed") return "nonconformant";
+  if (predicate === "agreed") return "conformant";
+  return "not_established"; // not_run, analysis_incomplete, harness_error
+}
+
+/**
+ * Decide whether a set of results may be reported at all.
+ *
+ * Exported and separate from the loop so the mutation suite can drive it with a result set that
+ * contains a `not_run` case. Inside the loop every non-duplicate case is processed, so a `not_run`
+ * guard tested only through the loop would pass without ever being able to fail.
+ *
+ * A deliberate stop is not a defect: when the run stopped on parser divergence, the requirement
+ * inverts — EVERY case must be `not_run`, because a half-processed set would mean the stop did not
+ * actually stop anything.
+ */
+export function accountFor(
+  list: CaseResult[], entryCount: number, duplicates: string[], runState: RunState,
+): { accountingVerdict: "complete" | "incomplete"; accountingDetail: string | null } {
+  const counts = Object.fromEntries(PREDICATE_STATES.map((d) => [d, 0])) as Record<PredicateAgreement, number>;
+  for (const r of list) counts[r.predicateAgreement]++;
+
+  const problems: string[] = [];
+  if (duplicates.length) problems.push(`duplicate case ids: ${[...new Set(duplicates)].join(", ")}`);
+  if (list.length !== entryCount) {
+    problems.push(`processed ${list.length} distinct cases from ${entryCount} entries`);
+  }
+  if (runState === "completed") {
+    if (counts.not_run > 0) problems.push(`${counts.not_run} case(s) were never executed`);
+  } else if (counts.not_run !== list.length) {
+    problems.push(
+      `run stopped on parser divergence but ${list.length - counts.not_run} case(s) were executed anyway`);
+  }
+  const summed = PREDICATE_STATES.reduce((n, d) => n + counts[d], 0);
+  if (summed !== list.length) problems.push(`predicate states sum to ${summed}, not ${list.length}`);
+
+  return {
+    accountingVerdict: problems.length === 0 ? "complete" : "incomplete",
+    accountingDetail: problems.length ? problems.join("; ") : null,
+  };
+}
+
+/**
+ * Execute a case set. Pure: no file IO, no clock, no git, no production. Everything it touches
  * arrives as an argument, which is what lets the mutation suite break it on purpose.
+ *
+ * Two phases, deliberately. The parser runs for EVERY case first; only if none diverged are
+ * predicates evaluated. Stopping at the first divergence would hide how widespread the divergence
+ * is, and continuing past one would report conformance against projections production no longer
+ * produces.
  */
 export function executeFrozenCases(opts: {
   cases: any[];
-  /** Returns the observation for one case. Injected so the mutation suite can misbehave. */
   observe: (c: any) => {
     inDenominator: boolean;
     state: string | null;
     action: string | null;
     reason: string | null;
   };
-  /** The REAL parser in a live run. Returns its own contract projection, or throws. */
   buildContract: (c: any) => Record<string, unknown> | null;
-}): Omit<RunReport, "runId" | "frozenSetSha256"> {
+}): Omit<RunReport, "runKind" | "runId" | "provenance"> {
   const { cases, observe, buildContract } = opts;
 
-  // Every case starts unaccounted for. Nothing may reach a verdict without leaving this map.
   const results = new Map<string, CaseResult>();
   const duplicates: string[] = [];
-
   for (const c of cases) {
     if (results.has(c.id)) { duplicates.push(c.id); continue; }
     results.set(c.id, {
       id: c.id, pair: c.pair, role: c.role,
-      disposition: "not_run",
+      predicateAgreement: "not_run",
+      parserAgreement: "not_applicable",
+      caseVerdict: "not_established",
       observed: null,
       expected: {
         applies: c.expected_outcome?.applies === true,
         action: c.expected_outcome?.action ?? null,
         reason: c.expected_outcome?.reason ?? null,
       },
-      parserAgreement: "not_applicable",
       parserDetail: null,
-      detail: null,
+      predicateDetail: null,
     });
   }
 
+  // ── phase 1: the parser, for every case, recorded on its own axis ──────────────────────────
   for (const c of cases) {
     const r = results.get(c.id);
-    if (!r || r.disposition !== "not_run") continue; // a duplicate never overwrites a result
-
-    // (a) the parser runs for every case, and is recorded on its own axis
+    if (!r || r.parserAgreement !== "not_applicable" || r.parserDetail !== null) continue;
     try {
       const parsed = buildContract(c);
       if (!c.expected_contract) {
@@ -211,57 +270,88 @@ export function executeFrozenCases(opts: {
       r.parserAgreement = "parser_error";
       r.parserDetail = err instanceof Error ? err.message : String(err);
     }
+  }
 
-    // (b) the observation is ALWAYS made against the frozen expected contract, never the parser's
-    try {
-      const obs = observe(c);
-      r.observed = obs;
+  const diverged = [...results.values()].filter(
+    (r) => r.parserAgreement === "disagreed" || r.parserAgreement === "parser_error");
+  const runState: RunState = diverged.length ? "stopped_parser_divergence" : "completed";
 
-      if (obs.state === "analysis_incomplete") {
-        // Never folded into did_not_fire: an unmeasurable case is not a clean negative.
-        r.disposition = "analysis_incomplete";
-        r.detail = "predicate could not be evaluated before SQL exists";
-        continue;
-      }
+  // ── phase 2: the predicates - only if the parser premise still holds ───────────────────────
+  if (runState === "completed") {
+    for (const c of cases) {
+      const r = results.get(c.id);
+      if (!r || r.predicateAgreement !== "not_run") continue;
+      try {
+        const obs = observe(c);
+        r.observed = obs;
 
-      const observedApplies = obs.inDenominator && obs.state === "fired";
-      const mismatches: string[] = [];
-      if (observedApplies !== r.expected.applies) {
-        mismatches.push(`applicability: observed=${observedApplies} expected=${r.expected.applies}`);
-      }
-      if (r.expected.applies) {
-        if (obs.action !== r.expected.action) {
-          mismatches.push(`action: observed=${obs.action} expected=${r.expected.action}`);
+        if (obs.state === "analysis_incomplete") {
+          r.predicateAgreement = "analysis_incomplete";
+          r.predicateDetail = "predicate could not be evaluated before SQL exists";
+          continue;
         }
-        if (obs.reason !== r.expected.reason) {
-          mismatches.push(`reason: observed=${obs.reason} expected=${r.expected.reason}`);
-        }
-      } else if (obs.action !== null || obs.reason !== null) {
-        mismatches.push(`a non-applying case carried a typed pair: ${obs.action}/${obs.reason}`);
-      }
 
-      r.disposition = mismatches.length === 0 ? "agreed" : "disagreed";
-      r.detail = mismatches.length ? mismatches.join("; ") : null;
-    } catch (err) {
-      r.disposition = "harness_error";
-      r.detail = err instanceof Error ? err.message : String(err);
+        const observedApplies = obs.inDenominator && obs.state === "fired";
+        const mismatches: string[] = [];
+        if (observedApplies !== r.expected.applies) {
+          mismatches.push(`applicability: observed=${observedApplies} expected=${r.expected.applies}`);
+        }
+        if (r.expected.applies) {
+          if (obs.action !== r.expected.action) {
+            mismatches.push(`action: observed=${obs.action} expected=${r.expected.action}`);
+          }
+          if (obs.reason !== r.expected.reason) {
+            mismatches.push(`reason: observed=${obs.reason} expected=${r.expected.reason}`);
+          }
+        } else if (obs.action !== null || obs.reason !== null) {
+          mismatches.push(`a non-applying case carried a typed pair: ${obs.action}/${obs.reason}`);
+        }
+
+        r.predicateAgreement = mismatches.length === 0 ? "agreed" : "disagreed";
+        r.predicateDetail = mismatches.length ? mismatches.join("; ") : null;
+      } catch (err) {
+        r.predicateAgreement = "harness_error";
+        r.predicateDetail = err instanceof Error ? err.message : String(err);
+      }
     }
   }
 
   const list = [...results.values()];
-  const counts = Object.fromEntries(DISPOSITIONS.map((d) => [d, 0])) as Record<Disposition, number>;
-  for (const r of list) counts[r.disposition]++;
+  for (const r of list) r.caseVerdict = deriveCaseVerdict(r.predicateAgreement, r.parserAgreement);
+
+  const predicateCounts = Object.fromEntries(PREDICATE_STATES.map((d) => [d, 0])) as Record<PredicateAgreement, number>;
+  for (const r of list) predicateCounts[r.predicateAgreement]++;
   const parserCounts: Record<string, number> = {};
   for (const r of list) parserCounts[r.parserAgreement] = (parserCounts[r.parserAgreement] ?? 0) + 1;
+  const verdictCounts = Object.fromEntries(VERDICTS.map((v) => [v, 0])) as Record<CaseVerdict, number>;
+  for (const r of list) verdictCounts[r.caseVerdict]++;
 
-  const acct = accountFor(list, cases.length, duplicates);
+  const acct = accountFor(list, cases.length, duplicates, runState);
+
+  let evidenceVerdict: CaseVerdict;
+  let evidenceDetail: string | null = null;
+  if (verdictCounts.nonconformant > 0) {
+    evidenceVerdict = "nonconformant";
+    evidenceDetail = runState === "stopped_parser_divergence"
+      ? `run stopped: ${diverged.length} case(s) diverged from their frozen contract projection`
+      : `${verdictCounts.nonconformant} case(s) did not conform`;
+  } else if (verdictCounts.not_established > 0 || acct.accountingVerdict === "incomplete") {
+    evidenceVerdict = "not_established";
+    evidenceDetail = `${verdictCounts.not_established} case(s) could not be established`;
+  } else {
+    evidenceVerdict = "conformant";
+  }
 
   return {
+    runState,
     caseCount: cases.length,
-    counts,
+    predicateCounts,
     parserCounts,
-    accounting: acct.accounting,
+    verdictCounts,
+    accountingVerdict: acct.accountingVerdict,
     accountingDetail: acct.accountingDetail,
+    evidenceVerdict,
+    evidenceDetail,
     results: list,
   };
 }
@@ -300,30 +390,139 @@ export function liveObserve(c: any) {
   };
 }
 
-const sha256Of = (p: string) => crypto.createHash("sha256").update(fs.readFileSync(p)).digest("hex");
+export const sha256Of = (p: string) =>
+  crypto.createHash("sha256").update(fs.readFileSync(p)).digest("hex");
+
+/** All three frozen sets, digested. Used before and after every run in both modes. */
+export function digestFrozenSets(): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const name of Object.keys(FROZEN_SETS)) out[name] = sha256Of(path.join(P31A_DIR, name));
+  return out;
+}
+
+function arg(name: string): string | null {
+  const i = process.argv.indexOf(name);
+  return i >= 0 && i + 1 < process.argv.length ? process.argv[i + 1] : null;
+}
+
+class Refusal extends Error {}
+const refuse = (msg: string): never => { throw new Refusal(msg); };
 
 /**
- * CLI entry. Verifies the oracle before and after, runs, then writes ONE immutable artifact.
- * Requires --run to execute, so importing this module can never start an evidence run.
+ * CLI. One orchestration, two kinds.
+ *
+ * `--run` produces evidence from the governing v3 set. `--smoke` produces a labelled non-evidence
+ * artifact from a synthetic set, to exercise this exact code path before the real run happens.
  */
 async function main() {
-  if (!process.argv.includes("--run")) {
-    console.log("p3-1a frozen-case runner. Execution requires --run and its own authorization.");
-    console.log(`  oracle: ${FROZEN_V3}`);
-    console.log(`  pinned: ${FROZEN_V3_SHA256}`);
+  const wantsRun = process.argv.includes("--run");
+  const smokeInput = arg("--smoke");
+
+  if (!wantsRun && !smokeInput) {
+    console.log("p3-1a case runner. Nothing runs without --run or --smoke.");
+    console.log(`  evidence oracle : ${FROZEN_V3}`);
+    console.log(`  pinned          : ${FROZEN_V3_SHA256}`);
+    console.log("  --run    --candidate <sha> --tree <sha> --runner-sha <sha>");
+    console.log("  --smoke <input.json> --expect-hash <sha> --out <dir> --runner-sha <sha>");
     process.exit(0);
   }
+  if (wantsRun && smokeInput) refuse("--run and --smoke are mutually exclusive");
 
-  const before = sha256Of(FROZEN_V3);
-  if (before !== FROZEN_V3_SHA256) {
-    console.error(`REFUSING: frozen set sha256 is ${before}, expected ${FROZEN_V3_SHA256}`);
-    process.exit(2);
+  const runKind = wantsRun ? "evidence" : "synthetic_smoke_not_evidence";
+  const startedAt = new Date().toISOString();
+
+  // ── identity gate: the runner itself ──────────────────────────────────────────────────────
+  const runnerPath = path.join(__dirname, path.basename(__filename));
+  const runnerSha = sha256Of(runnerPath);
+  const expectedRunnerSha = arg("--runner-sha");
+  if (!expectedRunnerSha) refuse("--runner-sha is required: the runner must be pinned by whoever authorized the run");
+  if (expectedRunnerSha !== runnerSha) {
+    refuse(`runner identity mismatch: file is ${runnerSha}, authorization named ${expectedRunnerSha}`);
   }
-  const frozen = JSON.parse(fs.readFileSync(FROZEN_V3, "utf8"));
+
+  // ── identity gate: the candidate ──────────────────────────────────────────────────────────
+  let candidateCommit: string | null = null;
+  let candidateTree: string | null = null;
+  let worktreeClean: boolean | null = null;
+  const git = (args: string[]) =>
+    execFileSync("git", args, { cwd: ROOT, encoding: "utf8" }).trim();
+  try {
+    candidateCommit = git(["rev-parse", "HEAD"]);
+    candidateTree = git(["rev-parse", "HEAD^{tree}"]);
+    worktreeClean = git(["status", "--porcelain"]).length === 0;
+  } catch {
+    candidateCommit = candidateTree = null;
+    worktreeClean = null;
+  }
+
+  if (wantsRun) {
+    // Evidence must be attributable to an exact, clean, authorized tree. A smoke run is not
+    // evidence, so it records what it saw instead of refusing on a dirty development checkout -
+    // and the refusal path itself is exercised by a negative control.
+    const expectedCommit = arg("--candidate");
+    const expectedTree = arg("--tree");
+    if (!expectedCommit || !expectedTree) {
+      refuse("--run requires --candidate <sha> and --tree <sha>; evidence must name the tree that produced it");
+    }
+    if (candidateCommit === null) refuse("--run requires a git checkout to attribute the evidence to");
+    if (candidateCommit !== expectedCommit) {
+      refuse(`candidate mismatch: HEAD is ${candidateCommit}, authorization named ${expectedCommit}`);
+    }
+    if (candidateTree !== expectedTree) {
+      refuse(`tree mismatch: HEAD tree is ${candidateTree}, authorization named ${expectedTree}`);
+    }
+    if (!worktreeClean) refuse("--run requires a clean worktree; evidence from a dirty checkout is unattributable");
+  }
+
+  // ── identity gate: the input ──────────────────────────────────────────────────────────────
+  const inputPath = wantsRun ? FROZEN_V3 : path.resolve(smokeInput!);
+  if (!fs.existsSync(inputPath)) refuse(`input not found: ${inputPath}`);
+  const inputSha = sha256Of(inputPath);
+
+  if (wantsRun) {
+    if (inputSha !== FROZEN_V3_SHA256) {
+      refuse(`governing set sha256 is ${inputSha}, expected ${FROZEN_V3_SHA256}`);
+    }
+  } else {
+    const expectHash = arg("--expect-hash");
+    if (!expectHash) refuse("--smoke requires --expect-hash");
+    if (expectHash !== inputSha) {
+      refuse(`smoke input sha256 is ${inputSha}, authorization named ${expectHash}`);
+    }
+    // A smoke run must never read a frozen set, by path or by content.
+    if (path.resolve(inputPath).startsWith(path.resolve(P31A_DIR) + path.sep) &&
+        Object.keys(FROZEN_SETS).includes(path.basename(inputPath))) {
+      refuse("--smoke refuses a frozen case set as input");
+    }
+    if (Object.values(FROZEN_SETS).includes(inputSha)) {
+      refuse("--smoke refuses input whose content is a frozen case set");
+    }
+  }
+
+  const outDir = wantsRun ? EVIDENCE_RUNS_DIR : (arg("--out") ?? refuse("--smoke requires --out <dir>"));
+  if (!wantsRun) {
+    const resolvedOut = path.resolve(outDir as string);
+    if (resolvedOut === path.resolve(EVIDENCE_RUNS_DIR) ||
+        resolvedOut.startsWith(path.resolve(EVIDENCE_RUNS_DIR) + path.sep)) {
+      refuse("--smoke refuses to write into the evidence run directory");
+    }
+  }
+
+  const frozenSetsBefore = digestFrozenSets();
+  for (const [name, expected] of Object.entries(FROZEN_SETS)) {
+    if (frozenSetsBefore[name] !== expected) {
+      refuse(`frozen set ${name} is ${frozenSetsBefore[name]}, expected ${expected}`);
+    }
+  }
+
+  // ── run ───────────────────────────────────────────────────────────────────────────────────
+  const input = JSON.parse(fs.readFileSync(inputPath, "utf8"));
+  const cases = input.cases;
+  if (!Array.isArray(cases)) refuse("input has no `cases` array");
 
   const { buildQueryContract } = await import("../lib/query-contract");
   const report = executeFrozenCases({
-    cases: frozen.cases,
+    cases,
     observe: liveObserve,
     // Positional (question, source), matching the production declaration at
     // lib/query-contract.ts:280. It returns QueryContract | null; null is recorded as a parser
@@ -332,26 +531,61 @@ async function main() {
       buildQueryContract(c.question, c.source as QueryContractSource) as Record<string, unknown> | null,
   });
 
-  const after = sha256Of(FROZEN_V3);
-  if (after !== before) {
-    console.error(`REFUSING TO REPORT: the frozen set changed during the run (${before} -> ${after})`);
-    process.exit(2);
+  const frozenSetsAfter = digestFrozenSets();
+  for (const [name, expected] of Object.entries(FROZEN_SETS)) {
+    if (frozenSetsAfter[name] !== expected) {
+      refuse(`REFUSING TO REPORT: frozen set ${name} changed during the run ` +
+             `(${frozenSetsBefore[name]} -> ${frozenSetsAfter[name]})`);
+    }
   }
 
-  const runId = new Date().toISOString().replace(/[-:]/g, "").replace(/\..+/, "").replace("T", "_");
-  const full: RunReport = { runId, frozenSetSha256: after, ...report };
-  const runsDir = path.join(P31A_DIR, "runs");
-  fs.mkdirSync(runsDir, { recursive: true });
-  const out = path.join(runsDir, `run-${runId}.json`);
-  // wx: a run never overwrites an earlier run's evidence.
+  const runId = startedAt.replace(/[-:]/g, "").replace(/\..+/, "").replace("T", "_");
+  const full: RunReport = {
+    runKind,
+    runId,
+    provenance: {
+      candidateCommit, candidateTree, worktreeClean,
+      runnerPath: path.relative(ROOT, runnerPath).replace(/\\/g, "/"),
+      runnerSha256: runnerSha,
+      inputPath: path.relative(ROOT, inputPath).replace(/\\/g, "/"),
+      inputSha256: inputSha,
+      frozenSetsBefore,
+      frozenSetsAfter,
+      node: process.version,
+      startedAt,
+    },
+    ...report,
+  };
+
+  fs.mkdirSync(outDir as string, { recursive: true });
+  const prefix = wantsRun ? "run" : "smoke_not_evidence";
+  const out = path.join(outDir as string, `${prefix}-${runId}.json`);
+  // wx: a run never overwrites an earlier run's artifact.
   fs.writeFileSync(out, JSON.stringify(full, null, 2) + "\n", { flag: "wx" });
 
-  console.log(`run ${runId} -> ${out}`);
-  console.log(`  frozen set: ${after} (unchanged before and after)`);
-  console.log(`  accounting: ${full.accounting}${full.accountingDetail ? " - " + full.accountingDetail : ""}`);
-  for (const d of DISPOSITIONS) console.log(`  ${d.padEnd(20)} ${full.counts[d]}`);
-  console.log(`  parser: ${JSON.stringify(full.parserCounts)}`);
-  process.exit(full.accounting === "complete" ? 0 : 1);
+  console.log(`${runKind} run ${runId} -> ${out}`);
+  console.log(`  runner            ${runnerSha}`);
+  console.log(`  candidate         ${candidateCommit ?? "n/a"} (clean=${worktreeClean})`);
+  console.log(`  input             ${path.basename(inputPath)} ${inputSha}`);
+  console.log(`  frozen sets       unchanged before and after`);
+  console.log(`  run state         ${full.runState}`);
+  console.log(`  accounting        ${full.accountingVerdict}${full.accountingDetail ? " - " + full.accountingDetail : ""}`);
+  console.log(`  EVIDENCE          ${full.evidenceVerdict}${full.evidenceDetail ? " - " + full.evidenceDetail : ""}`);
+  for (const s of PREDICATE_STATES) console.log(`    predicate ${s.padEnd(20)} ${full.predicateCounts[s]}`);
+  console.log(`    parser    ${JSON.stringify(full.parserCounts)}`);
+  console.log(`    verdicts  ${JSON.stringify(full.verdictCounts)}`);
+
+  if (full.accountingVerdict === "incomplete") process.exit(2);
+  process.exit(full.evidenceVerdict === "conformant" ? 0 : 1);
 }
 
-if (require.main === module) void main();
+if (require.main === module) {
+  void main().catch((err) => {
+    if (err instanceof Refusal) {
+      console.error(`REFUSED: ${err.message}`);
+      process.exit(2);
+    }
+    console.error(`RUNNER ERROR: ${err instanceof Error ? err.stack : String(err)}`);
+    process.exit(2);
+  });
+}

@@ -189,6 +189,26 @@ console.log("\nC4 — SQL independence on frozen boundaries");
 // ── C5 — mutation coupling across ALL 21 applicability pairs ────────────────────────────────
 console.log("\nC5 — mutation coupling, all 21 pairs");
 {
+  /**
+   * The production artifacts the mutation touches, digested before and after.
+   *
+   * C5 mutates live rule objects in memory. It is *obvious* that an in-memory assignment cannot
+   * rewrite a file — and that obviousness is exactly why it should be measured rather than asserted.
+   * A future control that reached for `fs` to force a predicate, or a mutation helper that wrote a
+   * temporary variant to disk, would leave production altered and every downstream suite in the
+   * same process would then be measuring the mutated tree.
+   */
+  const GUARDED_SOURCES = [
+    path.join(__dirname, "..", "lib", "source-capabilities.ts"),
+    path.join(__dirname, "..", "lib", "capability-decision.ts"),
+    path.join(__dirname, "..", "lib", "request-decision-observer.ts"),
+    path.join(__dirname, "..", "lib", "query-contract-validator.ts"),
+  ];
+  const digestSources = () =>
+    GUARDED_SOURCES.map((f) =>
+      `${path.basename(f)}:${crypto.createHash("sha256").update(fs.readFileSync(f)).digest("hex")}`);
+  const sourcesBefore = digestSources();
+
   const positives = v3.cases.filter((c: any) => c.role === "positive");
   let coupled = 0, outcomeMoved = 0, restored = 0, sourcePinned = 0, isolated = 0;
   const failures: string[] = [];
@@ -244,6 +264,18 @@ console.log("\nC5 — mutation coupling, all 21 pairs");
   check("C5d each mutated rule carried its frozen source identity", sourcePinned, positives.length);
   check("C5e mutating one rule changes nothing for an inapplicable source", isolated, positives.length);
   check("C5f every predicate restored by reference identity and behaviour", restored, positives.length);
+
+  // The explicitly requested post-mutation identity checks: the production source artifacts holding
+  // the mutated rule objects, and the governing oracle, are byte-identical after all of C4 and C5.
+  check("C5g every production source artifact is byte-identical after the mutation loop",
+    digestSources(), sourcesBefore);
+  check("C5h the governing frozen set is byte-identical after C4 and C5",
+    crypto.createHash("sha256").update(fs.readFileSync(V3_PATH)).digest("hex"), V3_SHA);
+  check("C5i the superseded sets are byte-identical too",
+    ["v1", "v2"].map((v) => crypto.createHash("sha256")
+      .update(fs.readFileSync(path.join(P31A, `frozen-cases-${v}.json`))).digest("hex")),
+    ["2a2739cc9dcab7872537d6c22880d70ee5ec0e012362d2c6fb47f8346d69cc78",
+     "7114d95c6c3a84c7da1f8e786915825436994085dfcc924477e26924203f391f"]);
 }
 
 // ── C6 — structural exclusion ───────────────────────────────────────────────────────────────

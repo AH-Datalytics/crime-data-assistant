@@ -4,7 +4,11 @@ import type { RoutingLogMeta } from "./routing-log-meta";
 import { validateSourceCapabilities, type SourceCapabilityFinding } from "./source-capabilities";
 import { observeHistoricalClearanceGrain, type ClearanceGrainObservation } from "./historical-clearance-grain";
 import { DEMOGRAPHIC_RATE_UNSUPPORTED_MESSAGE, SUB_CITY_GEOGRAPHY_MESSAGE } from "./capability-overrides";
-import { BLOCK_CAPABILITY_RULES, RETRY_CAPABILITY_RULES } from "./capability-decision";
+import { classifyCapabilityRule } from "./capability-decision";
+import { OUTCOMES } from "./proof-contract";
+
+/** The typed pair a capability block finalizes with; null when no block rule fired. */
+export type CapabilityBlockOutcome = typeof OUTCOMES.query_contract_failed | null;
 
 export interface QueryContractSqlValidation {
   sql: string;
@@ -14,6 +18,13 @@ export interface QueryContractSqlValidation {
   retryIssues: string[];
   blockReasons: string[];
   enforced: string[];
+  /**
+   * The typed catalog outcome a fired capability BLOCK rule carries, or null when none fired.
+   *
+   * Supplied by `classifyCapabilityRule()` in `lib/capability-decision.ts` - the same call the
+   * P3.1a request-decision observer makes - so the block classification has exactly one author.
+   */
+  capabilityOutcome: CapabilityBlockOutcome;
   /**
    * The Historical clearance-grain finding, recorded on every validation so the property stays
    * measurable.
@@ -32,10 +43,12 @@ const CONTRACT_SECOND_FAILURE_MESSAGE =
 
 
 /**
- * BLOCK_CAPABILITY_RULES and RETRY_CAPABILITY_RULES moved to `lib/capability-decision.ts` so the
- * post-SQL validator and the P3.1a request-decision observer share ONE classification authority.
- * Membership and branch order are unchanged. A second block list living beside the observer is
- * exactly the drift the extraction prevents.
+ * The block/retry membership sets AND the classification that reads them both live in
+ * `lib/capability-decision.ts`. This file used to declare the two Sets privately and test them with
+ * its own `if/else if`. Sharing only the Sets was not enough: membership was then common while the
+ * *consequence* was still decided in two places, so branch order or the typed outcome could change
+ * for the observer without changing production. `classifyCapabilityRule()` is now the only thing
+ * that decides what a fired capability finding means, and this file consumes its result.
  */
 
 const BLOCK_MESSAGES: Record<string, string> = {
@@ -614,6 +627,9 @@ export function validateQueryContractSql(opts: {
       retryIssues: [],
       blockReasons: missingRequiredOri ? [requiredOriBlockMessage(requiredOri)] : [],
       enforced: missingRequiredOri ? ["contract-required-county-ori"] : [],
+      // No contract was built, so no capability rule was classified. A missing-ORI block is a
+      // different finding with its own message and is not a capability outcome.
+      capabilityOutcome: null,
       // No contract was built, so there is no typed measure or geography to observe.
       clearanceGrainObservation: null,
     };
@@ -624,6 +640,15 @@ export function validateQueryContractSql(opts: {
   const warnings: string[] = [];
   const retryIssues: string[] = [];
   const blockReasons: string[] = [];
+  /**
+   * The typed catalog outcome a capability block finalizes with, taken from the shared classifier.
+   *
+   * Exposed rather than kept local so the linkage from "a question-only rule fired" to "the route
+   * finalizes `decline_capability / query_contract_failed`" is testable at runtime instead of only
+   * by reading four route files. The routes still pass `OUTCOMES.query_contract_failed` directly;
+   * `scripts/test-p3-1a-route-finalization.ts` asserts the two are the same object.
+   */
+  let capabilityOutcome: CapabilityBlockOutcome = null;
   const enforced: string[] = [];
 
   const requestedState = contract.geography.state;
@@ -705,12 +730,33 @@ export function validateQueryContractSql(opts: {
   });
   for (const finding of capabilityFindings) {
     warnings.push(`capability-${finding.ruleId}`);
-    if (BLOCK_CAPABILITY_RULES.has(finding.ruleId)) {
-      blockReasons.push(BLOCK_MESSAGES[finding.ruleId] ?? finding.message);
-      enforced.push(finding.ruleId);
-    } else if (RETRY_CAPABILITY_RULES.has(finding.ruleId)) {
-      retryIssues.push(capabilityRetryIssue(finding, contract));
-      enforced.push(finding.ruleId);
+    // ONE classification authority. Membership tests used to live here as a second `if/else if`
+    // beside the observer's; sharing the two Sets made the membership common but left the
+    // *consequence* decided in two places, so a change to branch order or to the typed outcome
+    // could move the observer without moving production. The switch is exhaustive on purpose: a
+    // new classification kind becomes a compile error here rather than silently falling through
+    // to "neither blocks nor retries".
+    const decision = classifyCapabilityRule(finding.ruleId);
+    switch (decision.kind) {
+      case "block":
+        // The typed pair the route will finalize with, taken from the shared catalog rather than
+        // re-decided here. The human-facing message is a separate mapping applied AFTER the
+        // classification, never a substitute for it.
+        capabilityOutcome = decision.outcome;
+        blockReasons.push(BLOCK_MESSAGES[finding.ruleId] ?? finding.message);
+        enforced.push(finding.ruleId);
+        break;
+      case "retry":
+        retryIssues.push(capabilityRetryIssue(finding, contract));
+        enforced.push(finding.ruleId);
+        break;
+      case "observe_only":
+        // Recorded as a warning above and nowhere else: observed, not acted on.
+        break;
+      default: {
+        const unreachable: never = decision;
+        throw new Error(`unhandled capability classification: ${JSON.stringify(unreachable)}`);
+      }
     }
   }
 
@@ -743,6 +789,7 @@ export function validateQueryContractSql(opts: {
     retryIssues: uniqueBlockReasons.length > 0 ? [] : [...new Set(retryIssues)],
     blockReasons: uniqueBlockReasons,
     enforced: [...new Set(enforced)],
+    capabilityOutcome,
     clearanceGrainObservation,
   };
 }
