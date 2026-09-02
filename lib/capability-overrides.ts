@@ -29,8 +29,97 @@ export function detectCurrentYearClearanceOverride(question: string): Capability
   };
 }
 
-export const SUB_CITY_GEOGRAPHY_RE =
-  /\b(zip\s*code|zip\s*\d|neighborhoods?|precincts?|police districts?|census tracts?|block groups?|wards?|community areas?|apartment\s+complex(?:es)?|housing\s+complex(?:es)?)\b/i;
+/**
+ * Sub-city geography detection. ONE predicate, both enforcement stages.
+ *
+ * `asksSubCityGeography` is the only entry point. The pre-SQL override
+ * (`detectSubCityGeographyOverride`, called by the query/shr/hc routes and the NIBRS
+ * wrapper), the post-SQL capability rule (`lib/source-capabilities.ts`) and the
+ * guardrail predicate (`lib/guardrails.ts`) all call it, so a change cannot repair one
+ * stage and leave the other. The raw regex is deliberately NOT exported.
+ *
+ * The alternatives fall into two classes, and keeping them apart is the point:
+ *
+ *  - UNAMBIGUOUS — multi-word phrases ("zip code", "census tract", "block group",
+ *    "police district", "community area", "apartment complex") and bare nouns that are
+ *    not United States place names ("neighborhood", "precinct"). The token alone
+ *    decides, exactly as before; their coverage is unchanged.
+ *
+ *  - PLACE-COLLIDING — a bare token that is also a real place name, so the token alone
+ *    cannot decide. "Ward, AR" is an incorporated city of ~7,300 (`city:AR:ward` in
+ *    lib/generated/geo-cities.ts) and "Ward County" is a county in ND and TX
+ *    (lib/generated/ambiguous-counties.ts), while "the 5th ward of New Orleans" is a
+ *    sub-city geography. Matching the word refused both. These terms therefore require
+ *    adjoining sub-city STRUCTURE — an ordinal or identifier, a plural, a distributive
+ *    or determiner, a grain phrase, or an explicit "of" relation. A bare token in
+ *    place-name position is a place, not a sub-city geography.
+ *
+ * The split is surveyed, not asserted: scripts/test-subcity-geography.ts scans both
+ * generated place catalogs for every alternative below and fails if one that appears
+ * there is classified unambiguous. "Ward" is the only term that appears in either —
+ * independently the same conclusion scripts/generate-geo-city-catalog.ts reached when
+ * it put WARD in EXCLUDED_BARE_NAMES. That survey covers this application's own place
+ * inventory; it is not an exhaustive national gazetteer study.
+ */
+export const UNAMBIGUOUS_SUB_CITY_ALTERNATIVES = [
+  String.raw`zip\s*code`,
+  String.raw`zip\s*\d`,
+  String.raw`neighborhoods?`,
+  String.raw`precincts?`,
+  String.raw`police districts?`,
+  String.raw`census tracts?`,
+  String.raw`block groups?`,
+  String.raw`community areas?`,
+  String.raw`apartment\s+complex(?:es)?`,
+  String.raw`housing\s+complex(?:es)?`,
+] as const;
+
+/** Bare tokens that are also real place names. See the class note above. */
+export const PLACE_COLLIDING_SUB_CITY_TERMS = ["ward"] as const;
+
+const UNAMBIGUOUS_SUB_CITY_RE = new RegExp(
+  `\\b(?:${UNAMBIGUOUS_SUB_CITY_ALTERNATIVES.join("|")})\\b`,
+  "i"
+);
+
+/**
+ * Sub-city structure adjoining a place-colliding term. Each alternative is a shape a
+ * place name does not take: a place name is singular, is not numbered, is not
+ * distributed over, and is not the left side of an "of" relation.
+ */
+function placeCollidingSubCityRe(term: string): RegExp {
+  const t = `${term}s?`;
+  return new RegExp(
+    [
+      // plural — "how many wards", "the wards of New Orleans"
+      String.raw`\b${term}s\b`,
+      // ordinal in front — "5th ward", "ninth ward"
+      String.raw`\b(?:\d+(?:st|nd|rd|th)|first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth|eleventh|twelfth)\s+${term}\b`,
+      // identifier behind — "ward 9", "ward #9", "ward no. 9". Bounded to three digits
+      // so a bare year ("Ward 2022") stays a place name.
+      String.raw`\b${term}\s*(?:#|nos?\.?\s*|numbers?\s*)?\d{1,3}\b`,
+      // distributive or determiner — "by ward", "per-ward", "each ward", "the ward".
+      // The lookahead keeps "the Ward, AR police department" and "the Ward County
+      // sheriff" as places: a determiner in front does not make a place name a geography.
+      String.raw`\b(?:by|per|across|within|among|amongst|between|each|every|the|this|that|these|those|its|their)[-\s]+${t}\b(?!\s*(?:,\s*[A-Za-z]{2}\b|(?:city|town|village|township|borough|county)\b))`,
+      // grain phrasing — "ward level", "ward-level", "ward boundaries", "ward map"
+      String.raw`\b${t}[-\s](?:levels?|boundar(?:y|ies)|maps?|lines?)\b`,
+      // explicit partitive relation — "ward of New Orleans"
+      String.raw`\b${t}\s+of\b`,
+    ].join("|"),
+    "i"
+  );
+}
+
+const PLACE_COLLIDING_SUB_CITY_RES = PLACE_COLLIDING_SUB_CITY_TERMS.map(placeCollidingSubCityRe);
+
+/**
+ * The shared structural predicate both enforcement stages consult.
+ */
+export function asksSubCityGeography(question: string): boolean {
+  if (UNAMBIGUOUS_SUB_CITY_RE.test(question)) return true;
+  return PLACE_COLLIDING_SUB_CITY_RES.some((re) => re.test(question));
+}
 
 export const SUB_CITY_GEOGRAPHY_MESSAGE =
   "The FBI does not report crime data below the city/county/agency level. The available FBI datasets are organized by reporting agency, city, county, state, or national totals; they do not support ZIP code, neighborhood, precinct, ward, census tract, block group, apartment-complex, or other sub-city geography.";
@@ -38,7 +127,7 @@ export const DEMOGRAPHIC_RATE_UNSUPPORTED_MESSAGE =
   "I can't calculate a reliable per-capita rate for a demographic group because the FBI data does not include matching population denominators by age, race, or sex for the requested place and year. I can show raw demographic counts, the group's share of reported victims, offenders, or arrestees, or an overall crime rate using the total population.";
 
 export function detectSubCityGeographyOverride(question: string): CapabilityOverride | null {
-  if (!SUB_CITY_GEOGRAPHY_RE.test(question)) return null;
+  if (!asksSubCityGeography(question)) return null;
 
   return {
     title: "Geography Not Available",

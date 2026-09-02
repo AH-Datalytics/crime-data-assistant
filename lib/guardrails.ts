@@ -31,7 +31,7 @@ import {
 } from "./time-conventions";
 import { explicitStateSubstateMismatch } from "./explicit-state-intent";
 import { stateNameToAbbr } from "./state-population";
-import { GROUP_RATE_INTENT_RE, SUB_CITY_GEOGRAPHY_MESSAGE, SUB_CITY_GEOGRAPHY_RE } from "./capability-overrides";
+import { GROUP_RATE_INTENT_RE, SUB_CITY_GEOGRAPHY_MESSAGE, asksSubCityGeography } from "./capability-overrides";
 
 const STATE_NAMES_RE = /\b(alabama|alaska|arizona|arkansas|california|colorado|connecticut|delaware|florida|georgia|hawaii|idaho|illinois|indiana|iowa|kansas|kentucky|louisiana|maine|maryland|massachusetts|michigan|minnesota|mississippi|missouri|montana|nebraska|nevada|new hampshire|new jersey|new mexico|new york|north carolina|north dakota|ohio|oklahoma|oregon|pennsylvania|rhode island|south carolina|south dakota|tennessee|texas|utah|vermont|virginia|washington state|west virginia|wisconsin|wyoming|district of columbia|united states)\b/i;
 
@@ -3006,7 +3006,7 @@ const GUARDRAILS: Guardrail[] = [
   {
     name: "sub-city-geography-override",
     tabs: ["current", "historical", "nibrs", "shr"],
-    match: (ctx) => SUB_CITY_GEOGRAPHY_RE.test(ctx.question),
+    match: (ctx) => asksSubCityGeography(ctx.question),
     override: () => SUB_CITY_GEOGRAPHY_MESSAGE,
   },
 
