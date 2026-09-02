@@ -1,11 +1,11 @@
 # P3.1a — execution record
 
 **Started:** 2026-09-01
-**Status:** IN PROGRESS — steps 1–4 complete; **review round 5 corrections applied**.
+**Status:** IN PROGRESS — steps 1–4 complete; **review round 6 corrections applied**.
 Frozen cases at v3. Candidate corrected and re-frozen at
-`49292fc8b3965db05ad701802c2f20c1917b6aec` (tree `0a3fba56…`, runner sha256 `aaeb1dd2…`),
-superseding `538caf4…`, `189efc6…`, `e40555f…`, `c163a0e…`, `9a19e10…` and `c567f4a…` — all
-preserved. Rounds 4 and 5 ACCEPTED the parser accounting; only the inventory binding changed.
+`5b30bd4acaab940d3b7ce26b956ed3aebbfa1ef5` (tree `94f1841884aa3e0cf36f4c80fc82c37def91d9a4`, runner sha256 `aaeb1dd2…`),
+superseding `49292fc…`, `538caf4…`, `189efc6…`, `e40555f…`, `c163a0e…`, `9a19e10…` and `c567f4a…` —
+all preserved. Rounds 4–6 ACCEPTED the parser accounting; only the inventory binding changed.
 
 **No frozen case has been executed.** `docs/superpowers/p3-1a/runs/` does not exist. The runner
 refuses to execute without `--run` plus a matching candidate commit, tree, clean worktree and its
@@ -23,10 +23,48 @@ No replacement case set is required for P3.1a; a separately sequestered set woul
 a later certification claim required holdout performance, and that claim must not be retrofitted
 here.
 
-**Read with this record:** `2026-09-01-p3-1a-candidate-review-round5-response.md` (current) — whose
-§5 records that a control's own hazard fired and damaged the shared checkout, and how it was
-repaired — then the round-4, round-3, round-2 and round-1 responses. Each carries a section stating
-what is *not* proved.
+**Read with this record:** `2026-09-01-p3-1a-candidate-review-round6-response.md` (current), then
+the round-5 response — whose §5 records that a control's own hazard fired and damaged the shared
+checkout — and the round-4 through round-1 responses. Each carries a section stating what is *not*
+proved.
+
+### Incident residual — dependency directory, 2026-09-01
+
+Recorded here at the direction of review round 6 §5.2, because it is a limitation of the record
+rather than of the code, and a later reader must not mistake "repaired" for "proved identical".
+
+**What happened.** A control written to isolate a mutation gave a disposable tree a filesystem
+junction to the shared checkout's `node_modules`; its recursive teardown followed the junction and
+deleted `node_modules/.bin` and 22 packages from `C:\Users\jeffm\crime-data-assistant`.
+
+**Classification.** Test-infrastructure defect affecting an untracked build directory. No tracked
+file, no database, no production system, and no frozen artifact was involved.
+
+**Repaired and verified.** `npm rebuild` restored `node_modules/.bin`; `npm install` restored the
+missing packages. `npm ls --depth=0` completes; `@anthropic-ai/sdk`, `typescript` and
+`better-sqlite3` are present; `.bin` holds 72 entries; the candidate's TypeScript check and focused
+guards pass against the repaired installation.
+
+**RESIDUAL — the exact pre-incident state is NOT provable.** No byte or path inventory of the
+untracked `node_modules` tree existed before the incident. The declared dependency graph and the
+required toolchain are restored; **whether every pre-incident file was restored exactly cannot be
+established.** `npm ls --depth=0` reports 5 extraneous transitive packages; there is no evidence
+they are damage, and their prior state is simply unknown. No further package mutation was performed
+to make an unprovable claim look cleaner.
+
+**`package-lock.json` — status versus content.** npm rewrote its line endings; the committed bytes
+were restored after proving the content was identical ignoring line endings. Its content is
+restored: `git diff package-lock.json` is empty and its sha256
+`a15b272f6ada4cac930cc1055e869946ea29042d66637248204ebd3d005b66c2` equals `HEAD:package-lock.json`.
+**But `git status` still shows ` M package-lock.json`** in the main checkout. Describe the bytes and
+content as restored; do not describe the main checkout as clean. That checkout carries other
+pre-existing modifications (`package.json`, four `scripts/*.ps1`, `scripts/cde-discrepancy-check.py`,
+`scripts/watch-rtci.log`) on branch `feature/verified-answer-only` that are unrelated to this work.
+
+**Prevention.** No control in this candidate creates a link of any kind, and none mutates the source
+repository's Git metadata. `scripts/test-p3-1a-inventory-binding.ts` builds an independent clone in
+an OS temp directory, stubs exactly two modules by re-export, and asserts before deleting that no
+symlink exists — plus that the source repository's worktree registry is unchanged.
 
 **Rulings governing this record**
 
@@ -58,7 +96,8 @@ preserved unmodified and remain reachable in that branch's history; none is dele
 | Tree | Identity | Role |
 |---|---|---|
 | BASE | `e2d24acd37027f436590ed8eae58bb5b30414ffb` | inventory of existing production predicates; flags-off equivalence reference |
-| CANDIDATE — **governing** | **`49292fc8b3965db05ad701802c2f20c1917b6aec`** (tree `0a3fba562d216a1f0eca55a390516fee7c6a7ea9`) | observation stage + six Tier F suites; round-5 corrections |
+| CANDIDATE — **governing** | **`5b30bd4acaab940d3b7ce26b956ed3aebbfa1ef5`** (tree `94f1841884aa3e0cf36f4c80fc82c37def91d9a4`) | observation stage + six Tier F suites; round-6 corrections |
+| candidate, superseded | `49292fc8b3965db05ad701802c2f20c1917b6aec` | round-5 corrections |
 | candidate, superseded | `538caf4ba9dbf4d69c5a98f2b0ff25c05d996a5d` | round-4 corrections |
 | candidate, superseded | `189efc618956439b98ea3c70081127558356f2a2` | round-3 corrections |
 | candidate, superseded | `c163a0ecc6fab8be4e5d32b9071464c6f0b87b2b` | round-2 corrections |
