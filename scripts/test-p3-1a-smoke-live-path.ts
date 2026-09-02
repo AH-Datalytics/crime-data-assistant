@@ -338,6 +338,75 @@ function snapshotDir(
   return { state: "present", entries };
 }
 
+/**
+ * Safe accessors for a `DirSnapshot`.
+ *
+ * WHY THESE EXIST. The suite used to write `snapshotDir(dir) as { entries: string[] }`, asserting a
+ * shape the function is explicitly not obliged to return: three of its four variants — `absent`,
+ * `root_link`, `root_unsupported` — carry no `entries` field at all. On 2026-09-02 CI that cast
+ * turned a legitimate non-`present` state into `TypeError: Cannot read properties of undefined`,
+ * thrown at module load, which the harness reported as a crash rather than a failed assertion.
+ *
+ * A cast is a promise the compiler stops checking. These accessors make the same access a CHECK: an
+ * unexpected variant produces an informative failure naming what was received, and evaluation
+ * continues so the rest of the suite still reports.
+ */
+type FailureSink = (message: string) => void;
+
+/** The default sink: a real failed assertion in this suite's tally. */
+const recordFailure: FailureSink = (message) => {
+  fail++;
+  console.log(`  FAIL  ${message}`);
+};
+
+function entriesOf(snap: DirSnapshot, label: string, sink: FailureSink = recordFailure): string[] {
+  if (snap.state === "present") return snap.entries;
+  sink(`${label}\n          expected a 'present' snapshot, got ${JSON.stringify(snap)}`);
+  return [];
+}
+
+/** One tab-separated field of one entry, or an explicit marker. Never throws, never crashes. */
+function entryField(
+  snap: DirSnapshot, index: number, field: number, label: string,
+  sink: FailureSink = recordFailure,
+): string {
+  if (snap.state !== "present") {
+    sink(`${label}\n          expected a 'present' snapshot, got ${JSON.stringify(snap)}`);
+    return `<not present: ${snap.state}>`;
+  }
+  const row = snap.entries[index];
+  if (row === undefined) {
+    sink(`${label}\n          expected at least ${index + 1} entry(ies), got ${snap.entries.length}`);
+    return `<no entry ${index}>`;
+  }
+  const parts = row.split("\t");
+  if (field >= parts.length) {
+    sink(`${label}\n          entry ${index} has no field ${field}: ${JSON.stringify(row)}`);
+    return `<no field ${field}>`;
+  }
+  return parts[field];
+}
+
+/**
+ * A disposable fixture root whose lexical path already equals its canonical path.
+ *
+ * `snapshotDir` refuses a root whose canonical identity differs from its lexical one, which is the
+ * intended fail-closed behaviour and is NOT being relaxed. A fixture must therefore satisfy that
+ * precondition rather than depend on how `os.tmpdir()` happens to be spelled on a given machine —
+ * a runner may expose it through an alias or an 8.3 short name whose `realpath` expansion differs.
+ *
+ * Canonicalising the fixture root is the correct fix on the test's side: it tests the guard on a
+ * directory the guard is meant to accept, instead of accidentally testing the refusal path.
+ */
+function makeCanonicalFixtureRoot(prefix: string): string {
+  const created = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
+  try {
+    return fs.realpathSync.native(created);
+  } catch {
+    return created; // the guard will refuse it, and the assertion below will say so
+  }
+}
+
 /** Captured BEFORE any smoke subprocess is started. */
 const frozenBefore = digestFrozen();
 const evidenceDirBefore = snapshotDir(EVIDENCE_RUNS_DIR);
@@ -563,9 +632,16 @@ console.log("\nS5 — the oracle is untouched");
 // shared dependency directory. A fixture that cannot be built is a failure here.
 console.log("\nS6 — the snapshot helper detects every kind of change");
 {
-  const fx = fs.mkdtempSync(path.join(os.tmpdir(), "p31a-snap-"));
+  const fx = makeCanonicalFixtureRoot("p31a-snap-");
   const dir = path.join(fx, "runs");
   try {
+    // The guard refuses a root whose canonical identity differs from its lexical one. That
+    // behaviour is deliberate and unchanged; the FIXTURE is what must satisfy it. Asserted rather
+    // than assumed, because a runner whose temp directory is an alias or an 8.3 short name would
+    // otherwise send every S6 case down the refusal path and look like a defect in the guard.
+    check("S6- the fixture root is canonical, so the guard's precondition holds",
+      sameCanonical(fs.realpathSync.native(fx), path.resolve(fx)), true);
+
     check("S6  absent is distinguished from present-but-empty",
       [snapshotDir(dir).state, (fs.mkdirSync(dir), snapshotDir(dir))],
       ["absent", { state: "present", entries: [] }]);
@@ -581,8 +657,8 @@ console.log("\nS6 — the snapshot helper detects every kind of change");
     checkTrue("S6c a same-name, same-size byte modification changes the snapshot",
       JSON.stringify(modified) !== JSON.stringify(one));
     check("S6d and the size is unchanged, so only the hash could have caught it",
-      (one as { entries: string[] }).entries[0].split("\t")[2],
-      (modified as { entries: string[] }).entries[0].split("\t")[2]);
+      entryField(one, 0, 2, "S6d (before)"),
+      entryField(modified, 0, 2, "S6d (after)"));
 
     fs.writeFileSync(path.join(dir, "run-b.json"), "{}\n");
     const two = snapshotDir(dir);
@@ -594,7 +670,7 @@ console.log("\nS6 — the snapshot helper detects every kind of change");
     // Nesting, so the recursion and the sort are both exercised.
     fs.mkdirSync(path.join(dir, "nested"));
     fs.writeFileSync(path.join(dir, "nested", "deep.json"), "{}\n");
-    const nested = snapshotDir(dir) as { entries: string[] };
+    const nested = { entries: entriesOf(snapshotDir(dir), "S6g snapshot") };
     checkTrue("S6g nested paths are recorded relative, slash-normalised and sorted",
       nested.entries.some((e) => e.startsWith("nested\tdir")) &&
       nested.entries.some((e) => e.startsWith("nested/deep.json\tfile")) &&
@@ -612,7 +688,7 @@ console.log("\nS6 — the snapshot helper detects every kind of change");
     checkTrue("S6h a real link/junction fixture can be created on this platform",
       linkError === null, linkError ?? "");
     if (linkError === null) {
-      const withLink = snapshotDir(dir) as { entries: string[] };
+      const withLink = { entries: entriesOf(snapshotDir(dir), "S6i/S6j snapshot") };
       checkTrue("S6i a child link is recorded as a link, with its target",
         withLink.entries.some((e) => e.includes("\tlink\t")));
       checkTrue("S6j and the snapshot does NOT traverse it",
@@ -652,6 +728,18 @@ console.log("\nS6 — the snapshot helper detects every kind of change");
       fs.unlinkSync(dangling);
     }
 
+    // ── a root whose canonical identity differs from its lexical path ───────────────────────
+    // Injected, because producing a real aliased root is not portable. This pins the refusal the
+    // guard is supposed to make. It is NOT a claim about what any particular CI runner does: the
+    // 2026-09-02 failure is consistent with this state but its actual variant was never observed.
+    const redirectedRoot = snapshotDir(dir, {
+      realPath: (p) => (p === dir ? path.join(fx, "somewhere-else") : fs.realpathSync.native(p)),
+    });
+    check("S6y a root whose canonical identity differs from its lexical path is refused",
+      redirectedRoot, { state: "root_unsupported", kind: "root_redirects" });
+    checkTrue("S6z and the refusal carries no entries, which is what the old cast crashed on",
+      !Object.prototype.hasOwnProperty.call(redirectedRoot, "entries"));
+
     // ── the readlink-throws branch, deterministically ────────────────────────────────────────
     const link2 = path.join(dir, "linked2");
     let link2Error: string | null = null;
@@ -659,9 +747,9 @@ console.log("\nS6 — the snapshot helper detects every kind of change");
     checkTrue("S6v the unreadable-link fixture can be created on this platform",
       link2Error === null, link2Error ?? "");
     if (link2Error === null) {
-      const unreadable = snapshotDir(dir, {
+      const unreadable = { entries: entriesOf(snapshotDir(dir, {
         readLink: () => { throw new Error("simulated readlink failure"); },
-      }) as { entries: string[] };
+      }), "S6w/S6x snapshot") };
       checkTrue("S6w an unreadable link target is recorded as <unreadable>",
         unreadable.entries.some((e) => e.endsWith("\tlink\t<unreadable>")));
       checkTrue("S6x and it is still not traversed",
@@ -671,6 +759,67 @@ console.log("\nS6 — the snapshot helper detects every kind of change");
   } finally {
     fs.rmSync(fx, { recursive: true, force: true });
   }
+}
+
+// ── S9 — an unexpected snapshot variant fails informatively, and never crashes ───────────────
+//
+// This is the defect that broke CI on 2026-09-02: `snapshotDir(dir) as { entries: string[] }` cast
+// past a four-variant union, so a legitimate non-`present` state became
+// `TypeError: Cannot read properties of undefined` thrown at MODULE LOAD — reported by the harness
+// as a crash, not as a failed assertion, and therefore far harder to place.
+//
+// The accessors now CHECK where the cast used to promise. Each case below is driven through a local
+// sink so the behaviour can be asserted without reddening this suite's own tally.
+console.log("\nS9 — an unexpected snapshot variant fails informatively");
+{
+  const drive = (snap: DirSnapshot, index = 0, field = 2) => {
+    const captured: string[] = [];
+    let threw: string | null = null;
+    let value = "";
+    try {
+      value = entryField(snap, index, field, "S9 probe", (m) => captured.push(m));
+    } catch (e) {
+      threw = e instanceof Error ? e.message : String(e);
+    }
+    return { captured, threw, value };
+  };
+
+  for (const [name, snap] of [
+    ["root_unsupported", { state: "root_unsupported", kind: "root_redirects" }],
+    ["absent", { state: "absent" }],
+    ["root_link", { state: "root_link", target: "C:/elsewhere" }],
+  ] as [string, DirSnapshot][]) {
+    const r = drive(snap);
+    checkTrue(`S9 a '${name}' snapshot does not throw`, r.threw === null, r.threw ?? "");
+    checkTrue(`S9 a '${name}' snapshot records exactly one informative failure`,
+      r.captured.length === 1 && r.captured[0].includes("expected a 'present' snapshot") &&
+      r.captured[0].includes(name),
+      JSON.stringify(r.captured));
+    checkTrue(`S9 a '${name}' snapshot yields a marker value, not undefined`,
+      r.value === `<not present: ${name}>`, r.value);
+  }
+
+  // A present-but-too-short snapshot is the other way the old cast could have crashed.
+  const short = drive({ state: "present", entries: [] });
+  checkTrue("S9d an empty 'present' snapshot does not throw on an absent index", short.threw === null);
+  checkTrue("S9e and it says how many entries there actually were",
+    short.captured.length === 1 && short.captured[0].includes("expected at least 1 entry(ies), got 0"),
+    JSON.stringify(short.captured));
+
+  // A row lacking the requested field is the third.
+  const thin = drive({ state: "present", entries: ["only-one-field"] }, 0, 2);
+  checkTrue("S9f a row without the requested field does not throw", thin.threw === null);
+  checkTrue("S9g and it names the row it could not read",
+    thin.captured.length === 1 && thin.captured[0].includes("has no field 2"),
+    JSON.stringify(thin.captured));
+
+  // entriesOf behaves the same way, since S6/S8 narrow through it.
+  const captured: string[] = [];
+  const entries = entriesOf({ state: "root_unsupported", kind: "lstat_failed" }, "S9 probe",
+    (m) => captured.push(m));
+  checkTrue("S9h entriesOf returns an empty list and records the variant it got",
+    entries.length === 0 && captured.length === 1 && captured[0].includes("lstat_failed"),
+    JSON.stringify(captured));
 }
 
 // ── S7 — the descent gate: exact expected identity, decided on injected canonical paths ─────
@@ -753,7 +902,7 @@ console.log("\nS7 — the descent gate refuses every redirection, not only escap
 // shape cannot be created portably.
 console.log("\nS8 — a redirected directory is refused before readdir");
 {
-  const fx = fs.mkdtempSync(path.join(os.tmpdir(), "p31a-gate-"));
+  const fx = makeCanonicalFixtureRoot("p31a-gate-");
   const dir = path.join(fx, "runs");
   try {
     fs.mkdirSync(dir);
@@ -762,16 +911,16 @@ console.log("\nS8 — a redirected directory is refused before readdir");
     fs.mkdirSync(path.join(dir, "beta"));
     fs.writeFileSync(path.join(dir, "beta", "beta-only.json"), "{}\n");
 
-    const honest = snapshotDir(dir) as { entries: string[] };
+    const honest = { entries: entriesOf(snapshotDir(dir), "S8 baseline snapshot") };
     checkTrue("S8  baseline - both subtrees are read when nothing is redirected",
       honest.entries.some((e) => e.startsWith("alpha/alpha-only.json\tfile")) &&
       honest.entries.some((e) => e.startsWith("beta/beta-only.json\tfile")));
 
     // INSIDE-ROOT redirect: alpha claims to be beta. Under the old prefix test this was "contained"
     // and would have been read.
-    const insideRoot = snapshotDir(dir, {
+    const insideRoot = { entries: entriesOf(snapshotDir(dir, {
       realPath: (p) => (p.endsWith("alpha") ? path.join(dir, "beta") : fs.realpathSync.native(p)),
-    }) as { entries: string[] };
+    }), "S8b/S8c snapshot") };
     checkTrue("S8b an inside-root redirect is refused and its target is not read through it",
       insideRoot.entries.includes("alpha\tdir_identity_refused") &&
       !insideRoot.entries.some((e) => e.startsWith("alpha/")));
@@ -780,26 +929,26 @@ console.log("\nS8 — a redirected directory is refused before readdir");
 
     // ANCESTOR redirect: alpha claims to be the root. A prefix test accepts it and the walker
     // recurses forever; the identity gate refuses it and the snapshot terminates.
-    const ancestor = snapshotDir(dir, {
+    const ancestor = { entries: entriesOf(snapshotDir(dir, {
       realPath: (p) => (p.endsWith("alpha") ? dir : fs.realpathSync.native(p)),
-    }) as { entries: string[] };
+    }), "S8d/S8e snapshot") };
     checkTrue("S8d an ancestor redirect is refused, and the snapshot terminates",
       ancestor.entries.includes("alpha\tdir_identity_refused"));
     check("S8e with no repeated traversal of the root's own entries",
       ancestor.entries.filter((e) => e.startsWith("beta\tdir")).length, 1);
 
     // OUTSIDE-root redirect still refused, now by the same single invariant.
-    const outside = snapshotDir(dir, {
+    const outside = { entries: entriesOf(snapshotDir(dir, {
       realPath: (p) => (p.endsWith("alpha") ? path.join(fx, "elsewhere") : fs.realpathSync.native(p)),
-    }) as { entries: string[] };
+    }), "S8f snapshot") };
     checkTrue("S8f an outside-root redirect is refused by the same invariant",
       outside.entries.includes("alpha\tdir_identity_refused") &&
       !outside.entries.some((e) => e.startsWith("alpha/")));
 
     // A realpath that throws must also refuse rather than fall through.
-    const throwing = snapshotDir(dir, {
+    const throwing = { entries: entriesOf(snapshotDir(dir, {
       realPath: (p) => { if (p.endsWith("alpha")) throw new Error("simulated realpath failure"); return fs.realpathSync.native(p); },
-    }) as { entries: string[] };
+    }), "S8g snapshot") };
     checkTrue("S8g a directory whose canonical identity cannot be read is refused, not descended",
       throwing.entries.includes("alpha\tdir_identity_refused") &&
       !throwing.entries.some((e) => e.startsWith("alpha/")));
