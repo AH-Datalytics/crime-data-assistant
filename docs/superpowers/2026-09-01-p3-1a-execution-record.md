@@ -1,11 +1,11 @@
 # P3.1a — execution record
 
 **Started:** 2026-09-01
-**Status:** IN PROGRESS — steps 1–4 complete; **review round 4 corrections applied**.
+**Status:** IN PROGRESS — steps 1–4 complete; **review round 5 corrections applied**.
 Frozen cases at v3. Candidate corrected and re-frozen at
-`538caf4ba9dbf4d69c5a98f2b0ff25c05d996a5d` (tree `e0553d69…`, runner sha256 `aaeb1dd2…`),
-superseding `189efc6…`, `e40555f…`, `c163a0e…`, `9a19e10…` and `c567f4a…` — all preserved.
-Round 4 ACCEPTED the parser accounting; only the inventory binding changed.
+`49292fc8b3965db05ad701802c2f20c1917b6aec` (tree `0a3fba56…`, runner sha256 `aaeb1dd2…`),
+superseding `538caf4…`, `189efc6…`, `e40555f…`, `c163a0e…`, `9a19e10…` and `c567f4a…` — all
+preserved. Rounds 4 and 5 ACCEPTED the parser accounting; only the inventory binding changed.
 
 **No frozen case has been executed.** `docs/superpowers/p3-1a/runs/` does not exist. The runner
 refuses to execute without `--run` plus a matching candidate commit, tree, clean worktree and its
@@ -23,8 +23,10 @@ No replacement case set is required for P3.1a; a separately sequestered set woul
 a later certification claim required holdout performance, and that claim must not be retrofitted
 here.
 
-**Read with this record:** `2026-09-01-p3-1a-candidate-review-round4-response.md` (current), then
-the round-3, round-2 and round-1 responses. Each carries a section stating what is *not* proved.
+**Read with this record:** `2026-09-01-p3-1a-candidate-review-round5-response.md` (current) — whose
+§5 records that a control's own hazard fired and damaged the shared checkout, and how it was
+repaired — then the round-4, round-3, round-2 and round-1 responses. Each carries a section stating
+what is *not* proved.
 
 **Rulings governing this record**
 
@@ -56,7 +58,8 @@ preserved unmodified and remain reachable in that branch's history; none is dele
 | Tree | Identity | Role |
 |---|---|---|
 | BASE | `e2d24acd37027f436590ed8eae58bb5b30414ffb` | inventory of existing production predicates; flags-off equivalence reference |
-| CANDIDATE — **governing** | **`538caf4ba9dbf4d69c5a98f2b0ff25c05d996a5d`** (tree `e0553d69c74cd823e3cdbc41b3cb3aadd5c83b3a`) | observation stage + six Tier F suites; round-4 corrections |
+| CANDIDATE — **governing** | **`49292fc8b3965db05ad701802c2f20c1917b6aec`** (tree `0a3fba562d216a1f0eca55a390516fee7c6a7ea9`) | observation stage + six Tier F suites; round-5 corrections |
+| candidate, superseded | `538caf4ba9dbf4d69c5a98f2b0ff25c05d996a5d` | round-4 corrections |
 | candidate, superseded | `189efc618956439b98ea3c70081127558356f2a2` | round-3 corrections |
 | candidate, superseded | `c163a0ecc6fab8be4e5d32b9071464c6f0b87b2b` | round-2 corrections |
 | candidate, superseded | `9a19e1045ad051afc60cb53efd8d56bd93f952b7` | round-1 corrections |
