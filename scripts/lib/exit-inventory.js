@@ -155,10 +155,20 @@ function deliveryHelperBinding(sf, ts, name, spec) {
     if (ts.isImportDeclaration(n) && n.importClause && n.importClause.namedBindings &&
         ts.isNamedImports(n.importClause.namedBindings)) {
       const from = ts.isStringLiteral(n.moduleSpecifier) ? n.moduleSpecifier.text : null;
+      // `import type { x } from ...` - the whole clause is erased at emit.
+      const clauseTypeOnly = n.importClause.isTypeOnly === true;
       for (const el of n.importClause.namedBindings.elements) {
         const local = el.name.text;
         const imported = el.propertyName ? el.propertyName.text : local;
         if (local !== name && imported !== name) continue;
+        // TYPE-ONLY IS NOT A BINDING. Both `import type { x }` and `import { type x }` are erased
+        // at emit, so no runtime value binding exists for the call to reach. A call would usually
+        // fail typechecking - but the inventory must prove identity itself rather than outsource it
+        // to a separate gate that a suppression comment can silence.
+        if (clauseTypeOnly || el.isTypeOnly === true) {
+          problems.push("type-only import creates no runtime binding");
+          continue;
+        }
         if (el.propertyName) {
           // `{ x as name }` or `{ name as y }` - either direction breaks the exact binding.
           problems.push("aliased import (" + imported + " as " + local + ")");

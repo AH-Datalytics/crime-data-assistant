@@ -1,29 +1,31 @@
 /**
  * P3.1a — the inventory's delivery-helper binding, and the widening chain, end to end.
  *
- * WHAT ROUND 4 FOUND. The inventory recognised the delivery indirection by identifier text alone.
- * A route could declare its own `function capabilityFinalizationOutcome()`, or import that name
- * from a different module, and the inventory would hand it the canonical helper's derived reason —
+ * WHAT ROUND 4 FOUND. The inventory recognised the delivery indirection by identifier text alone. A
+ * route could declare its own `function capabilityFinalizationOutcome()`, or import that name from
+ * a different module, and the inventory would hand it the canonical helper's derived reason —
  * turning an exact reviewed carrier into an allowlisted spelling, which is the class of escape
  * P2.5's source-identity work exists to close.
  *
- * It also found that R2l proved only half a chain: that the resolver returns two reasons when the
- * helper widens. It did not prove that two reasons actually make the four sites `parallel` and that
- * `parallel` actually fails the existing guard. Two individually tested halves becoming
- * disconnected is a failure this workstream has produced more than once.
+ * WHAT ROUND 5 FOUND. Two things. A type-only import (`import type { x }` or `import { type x }`)
+ * still satisfied the binding check although it creates no runtime value binding at all — the
+ * inventory was implicitly relying on typechecking, a separate gate that a suppression comment can
+ * silence. And the widening control rewrote the real `lib/query-contract-validator.ts` in the
+ * SHARED checkout: hash-verified restoration only holds if the process reaches the restore, which
+ * says nothing about a killed process, a concurrent reader, or two harness runs racing the path.
  *
- * So this suite proves both, against the REAL inventory rather than a helper-specific unit
- * assertion:
+ * So:
  *
- *   B1-B5  a shadow, a wrong-module import, and an alias each stop the sites resolving, and the
- *          coverage criterion the real guard applies then reports `query_contract_failed` as
- *          vocabulary nobody produces. Run through `buildInventory()` on a throwaway tree.
- *   W1-W5  the canonical carrier type is widened IN THE REAL TREE, the existing T7b guard is run in
- *          a FRESH PROCESS and must fail, the source is restored and verified by sha256, and the
- *          guard must return to green.
- *
- * The widening mutation edits a production file and restores it. That is the established pattern in
- * this repo (`test-outcome-mutations.js`), and restoration is proved by hash, not by assumption.
+ *   B1–B9  every non-canonical form — a local shadow, a wrong-module import, an alias, and both
+ *          type-only spellings — stops the sites resolving, and the criterion the real coverage
+ *          guard applies then reports `query_contract_failed` as vocabulary nobody produces. Run
+ *          through `buildInventory()` on complete throwaway trees, never against the resolver
+ *          in isolation.
+ *   W1–W7  the widening chain, executed entirely inside a DISPOSABLE GIT WORKTREE: the real source
+ *          is checked out there, proved clean, mutated in exactly one declared way, and the actual
+ *          T7b guard is run against that isolated root in a fresh process. The shared checkout's
+ *          production file is hashed before and after purely to ASSERT it was never touched — not
+ *          as a restore mechanism, because there is nothing to restore.
  *
  * Deterministic. No database, no model, no network, no production service.
  */
@@ -53,18 +55,47 @@ const inventory = require("./lib/exit-inventory.js") as {
   ROUTE_FILES: { rel: string }[];
   EMBED_FILE: { rel: string };
   DELIVERY_HELPERS: Record<string, { rel: string; module: string; carrierType: string }>;
-  deliveryHelperBinding: (sf: unknown, ts: unknown, name: string, spec: unknown) => string;
 };
 const HELPER = "capabilityFinalizationOutcome";
 const SPEC = inventory.DELIVERY_HELPERS[HELPER];
-const VALIDATOR = path.join(ROOT, SPEC.rel);
+const SHARED_VALIDATOR = path.join(ROOT, SPEC.rel);
 const sha256Of = (p: string) => crypto.createHash("sha256").update(fs.readFileSync(p)).digest("hex");
 
+/** The shared checkout's production file, hashed up front. Nothing here may change it. */
+const SHARED_VALIDATOR_SHA_BEFORE = sha256Of(SHARED_VALIDATOR);
+
 /**
- * A throwaway tree the real inventory can be pointed at: the files it reads, plus a shim so
- * `loadTypeScript(root)` resolves. A shim rather than a symlink because directory symlinks need
- * privileges on Windows that a test must not assume.
+ * Give a disposable root the modules it needs, as REAL re-export stubs. Never a link.
+ *
+ * `loadTypeScript(root)` resolves `<root>/node_modules/typescript` by explicit path, and the guard
+ * reaches `scripts/migrate-query-log-proof.js`, which requires `better-sqlite3` — resolved by
+ * Node walking up from the file, so a stub at the disposable root satisfies it.
+ *
+ * WHY NOT A JUNCTION TO THE REAL node_modules. That is what this suite did first, and it caused
+ * real damage: the teardown's recursive delete followed the junction and removed `node_modules/.bin`
+ * and 22 packages from the shared checkout. Sequencing the unlink before the delete would close
+ * that particular window and leave another one open — a process killed between creating the link
+ * and removing it. A tree that contains no link cannot be escaped from at all, so there is nothing
+ * to sequence and nothing to get wrong.
+ *
+ * A missing module is not silently tolerated: the W2 baseline requires the unmutated guard to PASS
+ * against the disposable root, so an unstubbed dependency shows up as a failing baseline rather
+ * than as a widening control that "passed" for the wrong reason.
  */
+const STUBBED_MODULES = ["typescript", "better-sqlite3"];
+
+function installModuleStubs(root: string, names: string[] = STUBBED_MODULES) {
+  for (const name of names) {
+    const dir = path.join(root, "node_modules", ...name.split("/"));
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, "package.json"),
+      JSON.stringify({ name, version: "0.0.0-stub", main: "index.js" }));
+    fs.writeFileSync(path.join(dir, "index.js"),
+      `module.exports = require(${JSON.stringify(path.join(ROOT, "node_modules", name))});\n`);
+  }
+}
+
+/** A throwaway copy of just the files the inventory reads. Used for the B-series edits. */
 function makeTree(): string {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "p31a-bind-"));
   const rels = [...inventory.ROUTE_FILES.map((r) => r.rel), inventory.EMBED_FILE.rel, SPEC.rel];
@@ -73,15 +104,10 @@ function makeTree(): string {
     fs.mkdirSync(path.dirname(dest), { recursive: true });
     fs.copyFileSync(path.join(ROOT, rel), dest);
   }
-  const shim = path.join(tmp, "node_modules", "typescript");
-  fs.mkdirSync(shim, { recursive: true });
-  fs.writeFileSync(path.join(shim, "package.json"), JSON.stringify({ name: "typescript", main: "index.js" }));
-  fs.writeFileSync(path.join(shim, "index.js"),
-    `module.exports = require(${JSON.stringify(path.join(ROOT, "node_modules", "typescript"))});\n`);
+  installModuleStubs(tmp, ["typescript"]);
   return tmp;
 }
 
-/** The four contract-failure sites, as the real inventory resolves them in a given tree. */
 function deliveredSites(root: string) {
   return inventory.buildInventory(root).decisionSites.filter((s) =>
     String(s.outcome.via ?? "").includes(HELPER) || String(s.outcome.text ?? "").includes(HELPER));
@@ -110,12 +136,16 @@ function editRoutes(root: string, edit: (src: string) => string) {
   }
 }
 
-// ── B — binding: a same-named thing is not the reviewed carrier ─────────────────────────────
+/** Drop the canonical name from the route's existing value import list. */
+const dropFromValueImport = (src: string) =>
+  src.replace(new RegExp(`^\\s*${HELPER},\\s*$`, "m"), "");
+
+// ── B — binding: only the exact reviewed form is the reviewed carrier ───────────────────────
 console.log("B — the inventory binds by declaration, not by spelling");
 {
   const baseline = makeTree();
   try {
-    check("B1  baseline - all four sites resolve to the canonical reason in a copied tree",
+    check("B1  baseline - a plain value import resolves all four sites",
       deliveredSites(baseline).map((s) => `${s.outcome.form}:${s.outcome.reason}`),
       Array(4).fill("literal:query_contract_failed"));
     checkTrue("B1b and the coverage criterion sees the reason as producible",
@@ -132,17 +162,29 @@ console.log("B — the inventory binds by declaration, not by spelling");
     },
     {
       name: "a same-named import from ANOTHER module",
-      edit: (src) => src
-        .replace(new RegExp(`^\\s*${HELPER},\\s*$`, "m"), "")
-        .replace(/^import /m, `import { ${HELPER} } from "@/lib/proof-contract";\nimport `),
+      edit: (src) => dropFromValueImport(src).replace(
+        /^import /m, `import { ${HELPER} } from "@/lib/proof-contract";\nimport `),
       expect: /imported from/,
     },
     {
       name: "an ALIASED import of the canonical helper",
       edit: (src) => src.replace(
-        new RegExp(`^(\\s*)${HELPER},\\s*$`, "m"),
-        `$1somethingElse as ${HELPER},`),
+        new RegExp(`^(\\s*)${HELPER},\\s*$`, "m"), `$1somethingElse as ${HELPER},`),
       expect: /aliased import/,
+    },
+    {
+      // Round 5: erased at emit, so there is no runtime value to call.
+      name: "a whole-clause TYPE-ONLY import",
+      edit: (src) => dropFromValueImport(src).replace(
+        /^import /m,
+        `import type { ${HELPER} } from "${SPEC.module}";\nimport `),
+      expect: /type-only import/,
+    },
+    {
+      name: "a per-specifier TYPE-ONLY import",
+      edit: (src) => src.replace(
+        new RegExp(`^(\\s*)${HELPER},\\s*$`, "m"), `$1type ${HELPER},`),
+      expect: /type-only import/,
     },
   ];
 
@@ -161,75 +203,129 @@ console.log("B — the inventory binds by declaration, not by spelling");
     } finally { fs.rmSync(tree, { recursive: true, force: true }); }
   }
 
-  // Localisation: shadowing ONE route must break exactly that one, not all four.
+  // Localisation: breaking ONE route must break exactly that one.
   const one = makeTree();
   try {
     const target = path.join(one, inventory.ROUTE_FILES[0].rel);
     fs.writeFileSync(target, fs.readFileSync(target, "utf8").replace(
-      /^import /m, `function ${HELPER}(_r: any) { return OUTCOMES.guardrail_block; }\nimport `));
-    const forms = deliveredSites(one).map((s) => s.outcome.form).sort();
-    check("B5  shadowing one route breaks exactly that route",
-      forms, ["literal", "literal", "literal", "other"]);
+      new RegExp(`^(\\s*)${HELPER},\\s*$`, "m"), `$1type ${HELPER},`));
+    check("B8  a type-only import in one route breaks exactly that route",
+      deliveredSites(one).map((s) => s.outcome.form).sort(),
+      ["literal", "literal", "literal", "other"]);
   } finally { fs.rmSync(one, { recursive: true, force: true }); }
 
-  check("B6  the allowlist is still exactly one reviewed indirection",
-    Object.keys(inventory.DELIVERY_HELPERS), [HELPER]);
-  check("B7  and it pins the module it must be imported from",
-    [SPEC.module, SPEC.rel, SPEC.carrierType],
-    ["@/lib/query-contract-validator", "lib/query-contract-validator.ts", "CapabilityBlockOutcome"]);
+  check("B9  the allowlist is still exactly one reviewed indirection, fully pinned",
+    [Object.keys(inventory.DELIVERY_HELPERS), SPEC.module, SPEC.rel, SPEC.carrierType],
+    [[HELPER], "@/lib/query-contract-validator", "lib/query-contract-validator.ts",
+     "CapabilityBlockOutcome"]);
 }
 
-// ── W — the widening chain, end to end, in a fresh process ──────────────────────────────────
-console.log("\nW — widening the carrier fails the existing T7b guard, and restoration returns it");
+// ── W — the widening chain, entirely inside a disposable git worktree ───────────────────────
+console.log("\nW — widening fails the existing T7b guard, in an isolated tree");
 {
-  const GUARD = "scripts/test-outcome-inventory.ts";
-  const runGuard = () => {
+  const git = (args: string[], cwd = ROOT) =>
+    execFileSync("git", args, { cwd, encoding: "utf8" }).trim();
+
+  /** Run the ACTUAL guard against a given root, in a fresh process. */
+  const runGuardAt = (root: string) => {
+    const script = path.join(root, "scripts", "test-outcome-inventory.ts");
     try {
-      execFileSync("npx", ["tsx", GUARD], {
+      const out = execFileSync("npx", ["tsx", script], {
         cwd: ROOT, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], shell: true,
       });
-      return { code: 0, out: "" };
+      return { code: 0, out };
     } catch (e: any) {
       return { code: typeof e.status === "number" ? e.status : -1,
                out: `${e.stdout ?? ""}${e.stderr ?? ""}` };
     }
   };
 
-  const before = sha256Of(VALIDATOR);
-  const original = fs.readFileSync(VALIDATOR);
-
-  const green = runGuard();
-  check("W1  baseline - the existing guard passes on the unmodified tree", green.code, 0);
-
-  let widened = { code: -1, out: "" };
-  let sitesUnderMutation: string[] = [];
+  const disposable = path.join(
+    fs.mkdtempSync(path.join(os.tmpdir(), "p31a-widen-")), "tree");
+  let created = false;
   try {
-    // Widen the CARRIER TYPE - the half whose derivation was silently reading nothing until round
-    // 3's control caught it. Two reasons must make every delivered site `parallel`.
-    const src = original.toString("utf8");
+    // A git worktree at the candidate's own HEAD: the real source, not a copy of selected files
+    // and not a reimplementation. `node_modules` is gitignored, so the TypeScript shim does not
+    // show up as a change to the tree.
+    git(["worktree", "add", "--detach", "--quiet", disposable, "HEAD"]);
+    created = true;
+    installModuleStubs(disposable);
+
+    check("W1  the disposable tree is the real source, with nothing modified",
+      git(["status", "--porcelain"], disposable), "");
+    check("W1b and its validator is byte-identical to the shared checkout's",
+      sha256Of(path.join(disposable, SPEC.rel)), SHARED_VALIDATOR_SHA_BEFORE);
+
+    const green = runGuardAt(disposable);
+    check("W2  baseline - the actual T7b guard passes against the isolated root", green.code, 0);
+    check("W2b and all four sites resolve to exactly one reason there",
+      deliveredSites(disposable).map((s) => `${s.outcome.form}:${s.outcome.reason}`),
+      Array(4).fill("literal:query_contract_failed"));
+
+    // The one declared mutation: widen the carrier type. This is the half whose derivation was
+    // silently reading nothing until round 3's control caught it.
+    const target = path.join(disposable, SPEC.rel);
+    const src = fs.readFileSync(target, "utf8");
     const decl = `export type ${SPEC.carrierType} = typeof OUTCOMES.query_contract_failed | null;`;
     if (!src.includes(decl)) throw new Error("carrier type declaration not found: " + decl);
-    fs.writeFileSync(VALIDATOR, src.replace(decl,
+    fs.writeFileSync(target, src.replace(decl,
       `export type ${SPEC.carrierType} = typeof OUTCOMES.query_contract_failed | ` +
       "typeof OUTCOMES.guardrail_block | null;"));
 
-    sitesUnderMutation = deliveredSites(ROOT).map((s) => s.outcome.form);
-    widened = runGuard();
+    // `git()` trims, so the porcelain status arrives without its leading unstaged-column space.
+    check("W3  the tree now differs by exactly one file",
+      git(["status", "--porcelain"], disposable), `M ${SPEC.rel}`);
+    const diff = git(["diff", "--numstat"], disposable);
+    check("W3b and by exactly one changed line", diff, `1\t1\t${SPEC.rel}`);
+
+    check("W4  a widened carrier makes all four delivered sites parallel",
+      deliveredSites(disposable).map((s) => s.outcome.form), Array(4).fill("parallel"));
+
+    const widened = runGuardAt(disposable);
+    checkTrue("W5  the actual T7b guard FAILS against the widened isolated root",
+      widened.code !== 0, `exit ${widened.code}`);
+    // T7b reports site FINGERPRINTS, not the helper's name. Assert on what it actually prints: its
+    // own message, and all four contract-failure sites now carrying `::parallel`.
+    // DISTINCT fingerprints: Node prints the actual array twice (once in the diff, once in the
+    // `actual:` dump), so counting occurrences reads 8 for four sites.
+    const fingerprints = [...new Set(
+      (widened.out.match(/'[a-z-]+::POST[^']*::parallel'/g) || []).map((f) => f.slice(1, -1)))];
+    checkTrue("W5b failing at T7b, naming all four contract-failure sites as parallel",
+      /whole OUTCOMES constants/.test(widened.out) && fingerprints.length === 4 &&
+      fingerprints.some((f) => f.includes("emitContractFailure")) &&
+      fingerprints.filter((f) => f.includes("contractFailureResponse")).length === 3,
+      `${fingerprints.length} distinct: ${fingerprints.join(" | ").slice(0, 300)}`);
   } finally {
-    fs.writeFileSync(VALIDATOR, original);
+    // Nothing here is a link, so a recursive delete cannot escape the temp directory. Asserted
+    // rather than assumed, because the first version of this suite DID use a junction and its
+    // teardown deleted node_modules/.bin and 22 packages out of the shared checkout.
+    const nm = path.join(disposable, "node_modules");
+    if (fs.existsSync(nm) && fs.lstatSync(nm).isSymbolicLink()) {
+      fail++; console.log("  FAIL  teardown: the disposable tree contains a link; refusing to delete");
+      fs.unlinkSync(nm);
+    }
+    if (created) {
+      try { git(["worktree", "remove", "--force", disposable]); } catch { /* prune below */ }
+      try { git(["worktree", "prune"]); } catch { /* nothing further to do */ }
+    }
+    fs.rmSync(path.dirname(disposable), { recursive: true, force: true });
   }
 
-  check("W2  a widened carrier makes all four delivered sites parallel",
-    sitesUnderMutation, Array(4).fill("parallel"));
-  checkTrue("W3  and the existing T7b guard FAILS in a fresh process", widened.code !== 0,
-    `exit ${widened.code}`);
-  checkTrue("W3b naming T7b as the assertion that caught it",
-    /T7b|parallel/.test(widened.out), widened.out.slice(0, 200));
+  // The teardown must leave nothing behind, in git's bookkeeping or on disk.
+  check("W5c the disposable worktree is gone from git's records",
+    execFileSync("git", ["worktree", "list"], { cwd: ROOT, encoding: "utf8" })
+      .split("\n").filter((l) => l.includes("p31a-widen")).length, 0);
+  check("W5d and the repository's real node_modules is untouched",
+    [fs.existsSync(path.join(ROOT, "node_modules", "typescript")),
+     fs.existsSync(path.join(ROOT, "node_modules", "better-sqlite3")),
+     fs.existsSync(path.join(ROOT, "node_modules", ".bin"))],
+    [true, true, true]);
 
-  check("W4  the production file is restored byte-for-byte", sha256Of(VALIDATOR), before);
-  const restored = runGuard();
-  check("W5  and the guard is green again", restored.code, 0);
-  check("W5b with all four sites resolving as before",
+  // The point of the whole restructuring: the shared checkout was never written, so there is
+  // nothing to restore and nothing a killed process could have left behind.
+  check("W6  the SHARED checkout's production file was never modified",
+    sha256Of(SHARED_VALIDATOR), SHARED_VALIDATOR_SHA_BEFORE);
+  check("W7  and the shared checkout still resolves all four sites",
     deliveredSites(ROOT).map((s) => `${s.outcome.form}:${s.outcome.reason}`),
     Array(4).fill("literal:query_contract_failed"));
 }
