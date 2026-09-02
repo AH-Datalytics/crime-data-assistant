@@ -546,6 +546,95 @@ check("the manifest covers every atomic command the harness runs", () => {
   assert.deepEqual(stale, [], "manifest entries for commands the harness no longer runs");
 });
 
+
+// ── diagnostic excerpt ────────────────────────────────────────────────────────────────────────
+//
+// THE FAILURE THIS EXISTS FOR. On 2026-09-02 a Tier F suite failed ONCE in CI by crashing at
+// MODULE LOAD. The captured stderr was a Node stack trace; the harness kept its last six lines,
+// which were four frames of loader internals, a blank line, and `Node.js v24.14.0`. The first line
+// — the one naming what could not be loaded — was discarded, so the failure was undiagnosable from
+// the record. It did NOT reproduce locally: two reproductions under the harness's own fixture
+// environment, one in a disposable fresh checkout, both passed. It stands as a single unexplained,
+// non-reproduced occurrence. What is established is narrower and sufficient: six lines demonstrably
+// lost the message.
+//
+// THE BOUND IS THE PROBLEM, NOT ITS SIZE. An exception message sits at the TOP of a trace, so ANY
+// tail-only window loses it whenever a trace exceeds that window. The actual length of the
+// 2026-09-02 trace is unknowable, because that output was discarded. These assertions therefore pin
+// the general property — that BOTH ends survive, and that the reader is told when the middle was
+// dropped — rather than anything about that particular trace.
+
+check("excerpt keeps output shorter than the limit verbatim", () => {
+  const short = ["Error: boom", "    at one", "    at two"].join("\n");
+  assert.equal(runner.diagnosticExcerpt(short), short);
+});
+
+check("excerpt keeps output exactly at the limit verbatim", () => {
+  const exact = Array.from({ length: runner.EXCERPT_LINES }, (_, i) => `line ${i}`).join("\n");
+  assert.equal(runner.diagnosticExcerpt(exact), exact);
+  assert.equal(runner.diagnosticExcerpt(exact).split("\n").length, runner.EXCERPT_LINES);
+});
+
+check("excerpt of a long module-load trace keeps the exception MESSAGE", () => {
+  // A SYNTHETIC trace in the shape a module-load failure takes: message first, many frames, runner
+  // epilogue last. It is not the recovered 2026-09-02 output, which no longer exists; its length is
+  // chosen to exceed any plausible tail-only bound so the property is exercised, not to model a
+  // measured trace.
+  const trace = [
+    "node:internal/modules/cjs/loader:1210",
+    "  throw err;",
+    "  ^",
+    "",
+    "Error: Cannot find module 'some-module'",
+    "Require stack:",
+    "- D:\\a\\repo\\repo\\scripts\\thing.ts",
+    ...Array.from({ length: 200 }, (_, i) => `    at frame${i} (node:internal/x:${i}:1)`),
+    "",
+    "Node.js v24.14.0",
+  ].join("\n");
+  const out = runner.diagnosticExcerpt(trace);
+  assert.ok(out.includes("Error: Cannot find module 'some-module'"),
+    "the exception message must survive; a tail-only window is what lost the CI message");
+  assert.ok(out.includes("Require stack:"), "the context under the message must survive too");
+});
+
+check("excerpt of the same trace keeps the TERMINAL frames and epilogue", () => {
+  const trace = [
+    "Error: Cannot find module 'some-module'",
+    ...Array.from({ length: 200 }, (_, i) => `    at frame${i} (node:internal/x:${i}:1)`),
+    "",
+    "Node.js v24.14.0",
+  ].join("\n");
+  const out = runner.diagnosticExcerpt(trace);
+  assert.ok(out.includes("Node.js v24.14.0"), "the epilogue must survive");
+  assert.ok(out.includes("at frame199"), "the last frame must survive");
+});
+
+check("excerpt never exceeds its declared line budget", () => {
+  for (const n of [65, 100, 500, 5000]) {
+    const text = Array.from({ length: n }, (_, i) => `line ${i}`).join("\n");
+    const lines = runner.diagnosticExcerpt(text).split("\n");
+    assert.ok(lines.length <= runner.EXCERPT_LINES,
+      `an excerpt of ${n} lines produced ${lines.length}, over the ${runner.EXCERPT_LINES} budget`);
+  }
+});
+
+check("excerpt marks the elision rather than presenting a false contiguous view", () => {
+  const text = Array.from({ length: 300 }, (_, i) => `line ${i}`).join("\n");
+  const out = runner.diagnosticExcerpt(text);
+  const marker = out.split("\n").find((l) => l.includes("elided"));
+  assert.ok(marker, "a truncated excerpt must say so");
+  // The count must be honest: kept + elided === total.
+  const kept = out.split("\n").length - 1;
+  const elided = Number((marker.match(/(\d+) line\(s\) elided/) || [])[1]);
+  assert.equal(kept + elided, 300, "the elision count must reconcile with what was kept");
+});
+
+check("the excerpt budget is larger than the six lines that lost the 2026-09-02 message", () => {
+  assert.ok(runner.EXCERPT_LINES >= 64,
+    "the budget was raised deliberately after a module-load message was truncated away");
+});
+
 console.log(`harness contract tests: ${passed} passed, ${failures.length} failed`);
 if (failures.length) {
   for (const failure of failures) console.log("  " + failure);

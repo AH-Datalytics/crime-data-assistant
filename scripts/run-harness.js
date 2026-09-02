@@ -171,6 +171,49 @@ function checkRequires(entry, fixturePaths) {
   return problems.length ? problems : null;
 }
 
+/** Lines a diagnostic excerpt may occupy, marker included. */
+const EXCERPT_LINES = 64;
+
+/**
+ * The diagnostic excerpt kept for a command that did not pass.
+ *
+ * WHY THIS IS NOT `slice(-6)`. It was, and on 2026-09-02 that demonstrably lost the only line that
+ * mattered. A Tier F suite failed ONCE in CI by crashing at MODULE LOAD; the captured stderr was a
+ * Node stack trace, and keeping its last six lines preserved four frames of loader internals, the
+ * blank line, and `Node.js v24.14.0` — while discarding the first line, the one naming what could
+ * not be loaded. The failure did NOT reproduce locally: two reproductions under the harness's own
+ * fixture environment, one in a disposable fresh checkout, both passed. So it is recorded as a
+ * single unexplained, non-reproduced occurrence — not as deterministic, and not as transient. What
+ * IS established is that six lines demonstrably lost the message.
+ *
+ * THE BOUND IS THE PROBLEM, NOT ITS SIZE. An exception message sits at the TOP of a stack trace, so
+ * ANY tail-only window loses it whenever a trace exceeds that window. How long the 2026-09-02 trace
+ * actually was cannot be known — that output was discarded — so this is a general property of
+ * tail-only excerpting rather than a claim about that trace. The excerpt therefore keeps both ends:
+ * the head, where the exception message lives, and the tail, where the terminal frames and any
+ * runner epilogue live, with an explicit marker naming how many lines were elided so a reader is
+ * never misled into thinking they are looking at contiguous output.
+ *
+ * @param {string} text  captured stderr, or stdout when stderr is empty
+ * @param {number} limit total lines the excerpt may occupy, marker included
+ */
+function diagnosticExcerpt(text, limit = EXCERPT_LINES) {
+  const lines = String(text == null ? "" : text).trim().split(/\r?\n/);
+  if (lines.length <= limit) return lines.join("\n");
+
+  // One line is spent on the marker, so head + tail = limit - 1. The head is the larger half:
+  // the message and the frames nearest the throw site are what identify a failure.
+  const budget = limit - 1;
+  const head = Math.ceil(budget / 2);
+  const tail = budget - head;
+  const elided = lines.length - head - tail;
+  return [
+    ...lines.slice(0, head),
+    `    ... ${elided} line(s) elided ...`,
+    ...lines.slice(lines.length - tail),
+  ].join("\n");
+}
+
 function runCommand(command, env, timeout) {
   const started = Date.now();
   const result = spawnSync(command, {
@@ -190,7 +233,7 @@ function runCommand(command, env, timeout) {
     durationMs: Date.now() - started,
     stdout,
     stderr,
-    tail: (stderr.trim() || stdout.trim()).split(/\r?\n/).slice(-6).join("\n"),
+    tail: diagnosticExcerpt(stderr.trim() || stdout.trim()),
   };
 }
 
@@ -543,5 +586,6 @@ function raiseExit(code) {
 // verified corpus path survives `fixtureEnv` rather than being overwritten by it. That ordering is a
 // safety property, and a safety property held only by line order needs a test.
 module.exports = { main, report, checkRequires, parseArgs, seedFor, childEnv,
+  diagnosticExcerpt, EXCERPT_LINES,
   SKIP_PROTOCOL_EXIT, SKIP_PROTOCOL_LINE, SKIP_PROSE_HINTS,
   PASSED, FAILED, SKIPPED, BLOCKED };
