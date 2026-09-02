@@ -52,6 +52,7 @@ import {
   queryContractGuardrails,
   validateQueryContractSql,
   type QueryContractSqlValidation,
+  capabilityFinalizationOutcome,
 } from "@/lib/query-contract-validator";
 import { partialCoverageRetryPrompt, sourceYearOverlap } from "@/lib/source-year-overlap";
 import { buildShrCanonicalLabelCase, formatShrResolutionGuidance, resolveShrAgency, rewriteShrResolvedAgencyPredicates } from "@/lib/shr-place-resolver";
@@ -334,7 +335,7 @@ export async function POST(req: NextRequest) {
     const contractFailureResponse = (contractResult: QueryContractSqlValidation, logError: string, guardrails: string[] = []) => {
       const msg = queryContractFailureMessage(contractResult);
       if (!msg) return null;
-      const contractProof = finalizeExit({ outcome: OUTCOMES.query_contract_failed, sql: contractResult.sql, guardrails: [...new Set([...guardrails, ...routeGuardrailsFired])] });
+      const contractProof = finalizeExit({ outcome: capabilityFinalizationOutcome(contractResult), sql: contractResult.sql, guardrails: [...new Set([...guardrails, ...routeGuardrailsFired])] });
       writeLog(question, contractResult.sql, 0, logError, Date.now() - start, msg, "shr", [...new Set([...guardrails, ...routeGuardrailsFired])], "haiku-4.5", sessionId, null, contractProof);
       return jsonResp(emitFactualPayload(contractProof, {
         success: true,
