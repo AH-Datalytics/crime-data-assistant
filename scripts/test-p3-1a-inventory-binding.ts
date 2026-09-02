@@ -21,20 +21,28 @@
  *          guard applies then reports `query_contract_failed` as vocabulary nobody produces. Run
  *          through `buildInventory()` on complete throwaway trees, never against the resolver
  *          in isolation.
- *   W1–W9  the widening chain, executed inside an INDEPENDENT TEMPORARY REPOSITORY: the exact
- *          committed tree is exported with `git archive`, extracted to an OS temp directory, and
- *          given its own fresh `git init` solely so `status` and `diff --numstat` can measure the
- *          declared mutation. The actual T7b guard runs against that isolated root in a fresh
- *          process. The shared checkout's production file is hashed before and after purely to
- *          ASSERT it was never touched — not as a restore mechanism, because there is nothing to
- *          restore.
+ *   W1–W8  the widening chain, executed inside an INDEPENDENT CLONE: `git clone --no-hardlinks`
+ *          into an OS temp directory, checked out detached at the exact commit this invocation is
+ *          running from. The clone has its own refs, index, config and object store, so `status`
+ *          and `diff --numstat` can measure the declared mutation without any shared namespace
+ *          being involved. The carrier type is widened ONLY in that clone; the actual T7b guard
+ *          runs against that isolated root in a fresh process; teardown deletes the temp directory
+ *          and nothing else. The shared checkout's production file is hashed before and after
+ *          purely to ASSERT it was never touched — never as a restore mechanism, because it is
+ *          never written.
  *
- * WHAT ROUND 6 FOUND. The previous version used `git worktree add`, which writes registration state
+ * WHAT ROUND 6 FOUND. An earlier version used `git worktree add`, which writes registration state
  * into the SOURCE repository's common `.git/worktrees`, and called a repository-wide
  * `git worktree prune` that could act on stale records this test does not own. A unique filesystem
- * path does not make the shared Git metadata unique. `git archive` is read-only against the source
- * repository, and the temp repository's metadata is its own — so an interrupted run leaves nothing
- * but a temp directory, and nothing this test does can affect another checkout or harness run.
+ * path does not make the shared Git metadata unique. `git clone` only READS the source repository,
+ * and the clone's metadata is its own — so an interrupted run leaves nothing but a temp directory,
+ * and nothing this suite does can affect another checkout or another harness run. The only
+ * `git worktree` verb that survives anywhere here is the read-only `list`, used as evidence in W6.
+ *
+ * NOT `git archive` PIPED TO `tar`. The `tar` on PATH in this environment is GNU tar, which reads a
+ * `C:\...` argument as a remote host spec and fails with "Cannot connect to C: resolve failed". A
+ * control whose result depends on which `tar` is installed fails for a reason unrelated to the
+ * property it tests.
  *
  * Deterministic. No database, no model, no network, no production service.
  */
@@ -229,8 +237,8 @@ console.log("B — the inventory binds by declaration, not by spelling");
      "CapabilityBlockOutcome"]);
 }
 
-// ── W — the widening chain, entirely inside a disposable git worktree ───────────────────────
-console.log("\nW — widening fails the existing T7b guard, in an isolated tree");
+// ── W — the widening chain, entirely inside an independent clone ────────────────────────────
+console.log("\nW — widening fails the existing T7b guard, inside an independent clone");
 {
   const git = (args: string[], cwd = ROOT) =>
     execFileSync("git", args, { cwd, encoding: "utf8" }).trim();

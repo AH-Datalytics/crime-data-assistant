@@ -1361,7 +1361,7 @@
       "databases": [],
       "seed_profile": "empty",
       "requires": [],
-      "note": "points the real exit inventory at throwaway trees to prove a same-named shadow, wrong-module import or alias is not the reviewed carrier; then widens the carrier type in place, requires the existing T7b guard to fail in a fresh process, and restores by sha256; prepares no SQLite statement"
+      "note": "points the real exit inventory at throwaway trees to prove a same-named shadow, wrong-module import, alias or type-only import is not the reviewed carrier; then clones an independent repository into an OS temp directory, widens the carrier type ONLY in that clone, and requires the existing T7b guard to fail there in a fresh process. It never writes the shared checkout's source and never restores it - the shared validator is only verified by sha256 - and it never registers, removes or prunes a git worktree in the source repository; teardown deletes the temp directory alone. Prepares no SQLite statement"
     },
     {
       "id": "test-outcome-mutations",
