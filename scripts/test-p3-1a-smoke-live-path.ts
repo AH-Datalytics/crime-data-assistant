@@ -30,7 +30,14 @@
  * which stopped being true the moment the first legitimate artifact was committed. It now
  * compares a deterministic content-addressed snapshot of that directory before and after the
  * whole suite, so it is valid in every state and detects modification of an artifact that was
- * already there. S6 proves the snapshot can actually see each kind of change.
+ * already there.
+ *
+ * NOTHING IS FOLLOWED, INCLUDING THE ROOT. `snapshotDir` classifies the root with `lstat` before
+ * any following operation, records a root link/junction without reading through it, keeps a
+ * dangling root link distinct from `absent`, and proves canonical containment before every
+ * `readdir` so a reparse point surfaced as an ordinary directory cannot be walked. S6 exercises
+ * each of those, and a platform that cannot build a real link fixture FAILS the suite rather than
+ * crediting assertions it never ran.
  */
 import fs from "node:fs";
 import os from "node:os";
@@ -110,36 +117,118 @@ function writeCases(name: string, mutate?: (o: any) => void): { file: string; sh
 }
 
 /**
+ * The state of the evidence directory, as a value that can be compared.
+ *
+ * Every variant is distinct on purpose. `absent` and a DANGLING ROOT LINK are different facts, and
+ * an earlier version conflated them because `existsSync` follows the link and reports false when
+ * its target is missing.
+ */
+type DirSnapshot =
+  | { state: "absent" }
+  | { state: "root_link"; target: string }
+  | { state: "root_unsupported"; kind: string }
+  | { state: "present"; entries: string[] };
+
+/** Compare canonical paths the way the platform does: case-insensitively on Windows. */
+function samePath(a: string, b: string): boolean {
+  const norm = (p: string) => (process.platform === "win32" ? p.toLowerCase() : p);
+  return norm(a) === norm(b);
+}
+
+/**
+ * Does `candidateReal` fall outside `rootReal`?
+ *
+ * Pure, and exported to the controls, because the redirect it defends against cannot be constructed
+ * portably: a Windows name-surrogate reparse point that Node surfaces as a directory rather than a
+ * symlink would enter the directory branch and be walked. The boundary decision is therefore tested
+ * directly with injected canonical identities, alongside real link fixtures for the platform's
+ * actual `lstat` behaviour.
+ *
+ * The trailing separator is load-bearing. A bare `startsWith(rootReal)` would accept `/runs-evil`
+ * as inside `/runs`.
+ */
+function escapesRoot(rootReal: string, candidateReal: string): boolean {
+  if (samePath(rootReal, candidateReal)) return false;
+  const prefix = rootReal.endsWith(path.sep) ? rootReal : rootReal + path.sep;
+  const norm = (p: string) => (process.platform === "win32" ? p.toLowerCase() : p);
+  return !norm(candidateReal).startsWith(norm(prefix));
+}
+
+/**
  * A deterministic, content-addressed snapshot of the evidence directory.
  *
  * WHY THIS REPLACED AN ABSENCE CHECK. S5c used to assert `fs.existsSync(EVIDENCE_RUNS_DIR) ===
  * false`. That baked in a premise — "no evidence run has ever happened" — which was true when it
  * was written and which the first legitimate evidence artifact falsifies. The assertion then failed
- * for the one reason that is not a defect: the system had progressed exactly as intended. PR #12's
- * qualification caught it, which is the assertion doing its job on the way out.
+ * for the one reason that is not a defect: the system had progressed exactly as intended.
  *
  * A filename listing would not have been enough either: it cannot see a BYTE MODIFICATION of an
  * artifact that was already present, which is the worst thing this suite could do and the thing an
  * absence check could never have detected once absence stopped holding.
  *
- * So the invariant is now the strongest form that is true in every state: the complete evidence
- * directory is byte-for-byte identical before and after the whole suite. It distinguishes absent
- * from present-but-empty, records every recursively contained relative path with its entry type,
- * size and sha256 for regular files, and a link's TARGET without following it. Paths are relative
- * and slash-normalised and the list is sorted, so the comparison carries no timestamp and no
+ * So the invariant is the strongest form true in every state: the complete evidence directory is
+ * byte-for-byte identical before and after the whole suite. It distinguishes absent from
+ * present-but-empty, records every recursively contained relative path with its entry type, size
+ * and sha256 for regular files, and a link's TARGET without following it. Paths are relative and
+ * slash-normalised and the list is sorted, so the comparison carries no timestamp and no
  * platform-dependent absolute path.
  *
- * LINKS ARE NEVER TRAVERSED. `lstat` classifies, `readlink` records the target, and recursion stops
- * there. That is deliberate beyond determinism: a recursive walk that followed a link out of the
- * tree is exactly how an earlier version of the P3.1a inventory suite deleted 22 packages out of the
- * shared checkout. A snapshot that cannot leave the directory cannot repeat it.
+ * ── NOTHING IS FOLLOWED, INCLUDING THE ROOT ────────────────────────────────────────────────
+ *
+ * Three guards, because the first two each leave a gap the next one closes:
+ *
+ *   1. THE ROOT IS CLASSIFIED BY `lstat` FIRST. An earlier version called `existsSync` and then
+ *      `readdirSync` on the root, so a root that was itself a junction was walked through before
+ *      the child-link guard could ever run, and a dangling root link was reported as `absent`.
+ *   2. CHILD LINKS ARE RECORDED, NEVER TRAVERSED. `lstat` classifies, the injected reader records
+ *      the target, and an unconditional `continue` stops recursion — including when the reader
+ *      throws, which is recorded as `<unreadable>` rather than swallowed.
+ *   3. CANONICAL CONTAINMENT IS PROVED BEFORE EVERY `readdir`. Guards 1 and 2 only cover what Node
+ *      reports as a symbolic link. A Windows reparse point surfaced as an ordinary directory would
+ *      pass both. So every directory's canonical path — the root's included — must resolve beneath
+ *      the root's own canonical path, checked BEFORE it is read. A directory that escapes is
+ *      recorded as refused and is not descended into.
+ *
+ * This is deliberate beyond determinism: a recursive walk that followed a link out of its tree is
+ * exactly how an earlier version of the P3.1a inventory suite deleted `node_modules/.bin` and 22
+ * packages out of the shared checkout. Fail-closed refusal is the correct direction here even
+ * though it can reject unusual but harmless configurations.
  */
-type DirSnapshot =
-  | { state: "absent" }
-  | { state: "present"; entries: string[] };
+function snapshotDir(
+  dir: string,
+  opts: { readLink?: (p: string) => string; realPath?: (p: string) => string } = {},
+): DirSnapshot {
+  const readLink = opts.readLink ?? ((p: string) => fs.readlinkSync(p));
+  const realPath = opts.realPath ?? ((p: string) => fs.realpathSync.native(p));
 
-function snapshotDir(dir: string): DirSnapshot {
-  if (!fs.existsSync(dir)) return { state: "absent" };
+  // ── guard 1: classify the root without following it ──────────────────────────────────────
+  let rootStat: fs.Stats;
+  try {
+    rootStat = fs.lstatSync(dir); // lstat, never stat or existsSync: neither follows a link
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return { state: "absent" };
+    return { state: "root_unsupported", kind: "lstat_failed" };
+  }
+  if (rootStat.isSymbolicLink()) {
+    // Recorded, never read through — and a DANGLING root link lands here too, rather than
+    // masquerading as `absent`.
+    let target = "<unreadable>";
+    try { target = readLink(dir).replace(/\\/g, "/"); } catch { /* recorded as unreadable */ }
+    return { state: "root_link", target };
+  }
+  if (!rootStat.isDirectory()) return { state: "root_unsupported", kind: "not_a_directory" };
+
+  // ── guard 3, for the root: its canonical identity must be its own lexical identity ────────
+  let rootReal: string;
+  try {
+    rootReal = realPath(dir);
+  } catch {
+    return { state: "root_unsupported", kind: "realpath_failed" };
+  }
+  if (!samePath(rootReal, path.resolve(dir))) {
+    return { state: "root_unsupported", kind: "root_redirects" };
+  }
+
   const entries: string[] = [];
 
   const walk = (abs: string, rel: string) => {
@@ -148,17 +237,28 @@ function snapshotDir(dir: string): DirSnapshot {
       const childRel = (rel ? rel + "/" : "") + d.name;
       // lstat, never stat: a link must be classified as a link, not as whatever it points at.
       const st = fs.lstatSync(childAbs);
+
+      // ── guard 2 ──
       if (st.isSymbolicLink()) {
         let target = "<unreadable>";
-        try { target = fs.readlinkSync(childAbs).replace(/\\/g, "/"); } catch { /* recorded above */ }
+        try { target = readLink(childAbs).replace(/\\/g, "/"); } catch { /* recorded above */ }
         entries.push(`${childRel}\tlink\t${target}`);
         continue; // NOT traversed
       }
+
       if (st.isDirectory()) {
+        // ── guard 3, before the readdir that would descend ──
+        let childReal: string | null = null;
+        try { childReal = realPath(childAbs); } catch { childReal = null; }
+        if (childReal === null || escapesRoot(rootReal, childReal)) {
+          entries.push(`${childRel}\tdir_containment_refused`);
+          continue; // NOT descended into
+        }
         entries.push(`${childRel}\tdir`);
         walk(childAbs, childRel);
         continue;
       }
+
       if (st.isFile()) {
         const bytes = fs.readFileSync(childAbs);
         entries.push(
@@ -392,6 +492,11 @@ console.log("\nS5 — the oracle is untouched");
 // S5c is only as good as `snapshotDir`. A helper that returned a constant would make S5c pass
 // forever, so each difference it must catch is exercised against a disposable fixture. Nothing here
 // touches the real evidence directory.
+//
+// PLATFORM CAPABILITY IS A PRECONDITION, NOT AN EXCUSE. An earlier version credited two passes when
+// link creation threw. That reported success for properties the environment never exercised — and
+// these controls exist because a previous P3.1a test followed a junction and destroyed part of a
+// shared dependency directory. A fixture that cannot be built is a failure here.
 console.log("\nS6 — the snapshot helper detects every kind of change");
 {
   const fx = fs.mkdtempSync(path.join(os.tmpdir(), "p31a-snap-"));
@@ -431,29 +536,100 @@ console.log("\nS6 — the snapshot helper detects every kind of change");
       nested.entries.some((e) => e.startsWith("nested/deep.json\tfile")) &&
       JSON.stringify(nested.entries) === JSON.stringify([...nested.entries].sort()));
 
-    // A link is RECORDED, never followed. The target is a throwaway directory inside this same
-    // fixture, so even a mistaken traversal could not reach anything that matters.
+    // ── a real CHILD link: recorded, never followed ──────────────────────────────────────────
+    // The target is a throwaway directory inside this same fixture, so even a mistaken traversal
+    // could not reach anything that matters.
     const outside = path.join(fx, "outside");
     fs.mkdirSync(outside);
     fs.writeFileSync(path.join(outside, "must-not-appear.json"), "{}\n");
     const link = path.join(dir, "linked");
-    let linkMade = true;
-    try { fs.symlinkSync(outside, link, "junction"); } catch { linkMade = false; }
-    if (linkMade) {
+    let linkError: string | null = null;
+    try { fs.symlinkSync(outside, link, "junction"); } catch (e) { linkError = String(e); }
+    checkTrue("S6h a real link/junction fixture can be created on this platform",
+      linkError === null, linkError ?? "");
+    if (linkError === null) {
       const withLink = snapshotDir(dir) as { entries: string[] };
-      checkTrue("S6h a link is recorded as a link, with its target",
+      checkTrue("S6i a child link is recorded as a link, with its target",
         withLink.entries.some((e) => e.includes("\tlink\t")));
-      checkTrue("S6i and the snapshot does NOT traverse it",
+      checkTrue("S6j and the snapshot does NOT traverse it",
         !withLink.entries.some((e) => e.includes("must-not-appear.json")));
       // Unlink explicitly: never let a recursive delete near a link.
       fs.unlinkSync(link);
-    } else {
-      pass += 2;
-      console.log("  ok    S6h/S6i link recording skipped: this platform refused to create one");
+    }
+    checkTrue("S6k the fixture holds no link before it is deleted", !fs.existsSync(link));
+
+    // ── the ROOT itself is a link: recorded, never walked ────────────────────────────────────
+    const rootLink = path.join(fx, "runs-as-link");
+    let rootLinkError: string | null = null;
+    try { fs.symlinkSync(outside, rootLink, "junction"); } catch (e) { rootLinkError = String(e); }
+    checkTrue("S6l a root link/junction fixture can be created on this platform",
+      rootLinkError === null, rootLinkError ?? "");
+    if (rootLinkError === null) {
+      const rootSnap = snapshotDir(rootLink);
+      check("S6m a root link is recorded as root_link, not walked and not 'present'",
+        rootSnap.state, "root_link");
+      checkTrue("S6n and the sentinel behind it never appears",
+        !JSON.stringify(rootSnap).includes("must-not-appear.json"));
+      fs.unlinkSync(rootLink);
     }
 
-    checkTrue("S6j the fixture contains no link before it is deleted",
-      !fs.existsSync(link));
+    // ── a DANGLING root link is not 'absent' ─────────────────────────────────────────────────
+    const gone = path.join(fx, "gone");
+    fs.mkdirSync(gone);
+    const dangling = path.join(fx, "runs-dangling");
+    let danglingError: string | null = null;
+    try { fs.symlinkSync(gone, dangling, "junction"); } catch (e) { danglingError = String(e); }
+    checkTrue("S6o a dangling-root fixture can be created on this platform",
+      danglingError === null, danglingError ?? "");
+    if (danglingError === null) {
+      fs.rmSync(gone, { recursive: true, force: true }); // target removed; the link remains
+      const danglingSnap = snapshotDir(dangling);
+      check("S6p a DANGLING root link is root_link, never 'absent'", danglingSnap.state, "root_link");
+      fs.unlinkSync(dangling);
+    }
+
+    // ── the containment boundary, decided on injected canonical identities ───────────────────
+    // The redirect this defends against — a reparse point Node surfaces as an ordinary directory —
+    // cannot be constructed portably, so the pure decision is tested directly. The real link
+    // fixtures above cover the platform's actual lstat behaviour.
+    const root = path.join("C:", "runs");
+    check("S6q the boundary: same path is inside",
+      escapesRoot(root, root), false);
+    check("S6r a child is inside",
+      escapesRoot(root, path.join(root, "nested")), false);
+    check("S6s an unrelated path is outside",
+      escapesRoot(root, path.join("C:", "elsewhere")), true);
+    check("S6t a SIBLING-PREFIX path is outside, which a bare startsWith would have accepted",
+      escapesRoot(root, root + "-evil"), true);
+
+    // ── the refusal actually reaches the snapshot, via an injected realPath ──────────────────
+    const escaping = path.join(dir, "escaping");
+    fs.mkdirSync(escaping);
+    fs.writeFileSync(path.join(escaping, "must-not-be-read.json"), "{}\n");
+    const refused = snapshotDir(dir, {
+      realPath: (p) => (p.endsWith("escaping") ? path.join("C:", "somewhere-else") : fs.realpathSync.native(p)),
+    }) as { entries: string[] };
+    checkTrue("S6u a directory whose canonical identity escapes is REFUSED, not descended into",
+      refused.entries.some((e) => e === "escaping\tdir_containment_refused") &&
+      !refused.entries.some((e) => e.includes("must-not-be-read.json")));
+    fs.rmSync(escaping, { recursive: true, force: true });
+
+    // ── the readlink-throws branch, deterministically ────────────────────────────────────────
+    const link2 = path.join(dir, "linked2");
+    let link2Error: string | null = null;
+    try { fs.symlinkSync(outside, link2, "junction"); } catch (e) { link2Error = String(e); }
+    checkTrue("S6v the unreadable-link fixture can be created on this platform",
+      link2Error === null, link2Error ?? "");
+    if (link2Error === null) {
+      const unreadable = snapshotDir(dir, {
+        readLink: () => { throw new Error("simulated readlink failure"); },
+      }) as { entries: string[] };
+      checkTrue("S6w an unreadable link target is recorded as <unreadable>",
+        unreadable.entries.some((e) => e.endsWith("\tlink\t<unreadable>")));
+      checkTrue("S6x and it is still not traversed",
+        !unreadable.entries.some((e) => e.includes("must-not-appear.json")));
+      fs.unlinkSync(link2);
+    }
   } finally {
     fs.rmSync(fx, { recursive: true, force: true });
   }
