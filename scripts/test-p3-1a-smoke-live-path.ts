@@ -35,9 +35,13 @@
  * NOTHING IS FOLLOWED, INCLUDING THE ROOT. `snapshotDir` classifies the root with `lstat` before
  * any following operation, records a root link/junction without reading through it, keeps a
  * dangling root link distinct from `absent`, and proves canonical containment before every
- * `readdir` so a reparse point surfaced as an ordinary directory cannot be walked. S6 exercises
- * each of those, and a platform that cannot build a real link fixture FAILS the suite rather than
- * crediting assertions it never ran.
+ * `readdir` so a reparse point surfaced as an ordinary directory cannot be walked. Descent is
+ * gated on the directory's canonical identity being EXACTLY `rootReal/childRel` — prefix
+ * containment was not enough, because it admitted a redirect to a sibling inside the root, to an
+ * already visited subtree, or to the root itself, the last of which makes a recursive walker
+ * loop forever. S6 exercises the real link fixtures, S7 the boundary predicate on injected
+ * canonical identities, and S8 that the walker obeys it. A platform that cannot build a real link
+ * fixture FAILS the suite rather than crediting assertions it never ran.
  */
 import fs from "node:fs";
 import os from "node:os";
@@ -129,29 +133,83 @@ type DirSnapshot =
   | { state: "root_unsupported"; kind: string }
   | { state: "present"; entries: string[] };
 
-/** Compare canonical paths the way the platform does: case-insensitively on Windows. */
-function samePath(a: string, b: string): boolean {
-  const norm = (p: string) => (process.platform === "win32" ? p.toLowerCase() : p);
-  return norm(a) === norm(b);
+/**
+ * Path comparison flavour. Parameterised so the pure boundary controls can decide Windows path
+ * forms deterministically on any platform instead of being skipped off win32 — an assertion that
+ * does not execute is the thing this suite is not allowed to have.
+ */
+type PathFlavor = { p: path.PlatformPath; foldCase: boolean };
+const NATIVE_FLAVOR: PathFlavor = { p: path, foldCase: process.platform === "win32" };
+const WIN32_FLAVOR: PathFlavor = { p: path.win32, foldCase: true };
+const POSIX_FLAVOR: PathFlavor = { p: path.posix, foldCase: false };
+
+/**
+ * Normalise a canonical path for comparison.
+ *
+ * Explicit rather than incidental, so the contract does not rest on one observation of how
+ * `realpath` happens to format its output today: separators are normalised, a trailing separator is
+ * stripped UNLESS the path is a structural root (`C:\`, `\\server\share\`, `/`), where it is part of
+ * the identity, and case is folded only on Windows flavours.
+ *
+ * Extended-length forms (`\\?\C:\x`) are deliberately NOT rewritten to their ordinary equivalent.
+ * They therefore compare unequal and are refused. That is fail closed: proving two namespace
+ * representations denote the same object is exactly the kind of assumption this guard exists to
+ * avoid making.
+ */
+function normalizeCanonical(raw: string, flavor: PathFlavor = NATIVE_FLAVOR): string {
+  let out = flavor.p.normalize(raw);
+  const isStructuralRoot = flavor.p.parse(out).root === out;
+  while (out.length > 1 && !isStructuralRoot && out.endsWith(flavor.p.sep)) {
+    out = out.slice(0, -1);
+  }
+  return flavor.foldCase ? out.toLowerCase() : out;
+}
+
+/** Do two canonical paths denote the same object, after explicit normalisation? */
+function sameCanonical(a: string, b: string, flavor: PathFlavor = NATIVE_FLAVOR): boolean {
+  return normalizeCanonical(a, flavor) === normalizeCanonical(b, flavor);
 }
 
 /**
- * Does `candidateReal` fall outside `rootReal`?
+ * THE ONLY PREDICATE THAT GATES RECURSION.
  *
- * Pure, and exported to the controls, because the redirect it defends against cannot be constructed
- * portably: a Windows name-surrogate reparse point that Node surfaces as a directory rather than a
- * symlink would enter the directory branch and be walked. The boundary decision is therefore tested
- * directly with injected canonical identities, alongside real link fixtures for the platform's
- * actual `lstat` behaviour.
+ * A directory may be descended into only if its canonical identity is *exactly* the identity
+ * expected at its relative path: `rootReal / childRel`.
  *
- * The trailing separator is load-bearing. A bare `startsWith(rootReal)` would accept `/runs-evil`
- * as inside `/runs`.
+ * WHY PREFIX CONTAINMENT WAS NOT ENOUGH. The previous version asked whether the resolved child was
+ * somewhere beneath the root. That is a weaker question than "is this the ordinary directory at the
+ * expected place", and it admits an arbitrary reparse directory that redirects:
+ *
+ *   - to a SIBLING or ancestor INSIDE the root — canonical target still under the root, so it passed;
+ *   - back to the ROOT ITSELF — which a recursive walker will then descend forever;
+ *   - into an ALREADY VISITED subtree — silently double-counting or looping.
+ *
+ * Exact expected-identity equality refuses outside-root, inside-root, sibling, ancestor, alias and
+ * cyclic redirection with a single invariant, and needs no cycle bookkeeping to do it.
  */
-function escapesRoot(rootReal: string, candidateReal: string): boolean {
-  if (samePath(rootReal, candidateReal)) return false;
-  const prefix = rootReal.endsWith(path.sep) ? rootReal : rootReal + path.sep;
-  const norm = (p: string) => (process.platform === "win32" ? p.toLowerCase() : p);
-  return !norm(candidateReal).startsWith(norm(prefix));
+function isExpectedChildIdentity(
+  rootReal: string, childRel: string, childReal: string, flavor: PathFlavor = NATIVE_FLAVOR,
+): boolean {
+  const expected = flavor.p.join(rootReal, ...childRel.split("/"));
+  return sameCanonical(expected, childReal, flavor);
+}
+
+/**
+ * Lexical containment, kept for DIAGNOSTICS ONLY.
+ *
+ * It no longer gates recursion — `isExpectedChildIdentity` does. It is retained because "escaped
+ * the root entirely" and "redirected somewhere else inside the root" are different facts worth
+ * telling apart in a refusal record.
+ *
+ * The trailing separator is load-bearing: a bare `startsWith(rootReal)` would accept `runs-evil` as
+ * inside `runs`.
+ */
+function escapesRoot(rootReal: string, candidateReal: string, flavor: PathFlavor = NATIVE_FLAVOR): boolean {
+  const root = normalizeCanonical(rootReal, flavor);
+  const cand = normalizeCanonical(candidateReal, flavor);
+  if (root === cand) return false;
+  const prefix = root.endsWith(flavor.p.sep) ? root : root + flavor.p.sep;
+  return !cand.startsWith(prefix);
 }
 
 /**
@@ -225,7 +283,7 @@ function snapshotDir(
   } catch {
     return { state: "root_unsupported", kind: "realpath_failed" };
   }
-  if (!samePath(rootReal, path.resolve(dir))) {
+  if (!sameCanonical(rootReal, path.resolve(dir))) {
     return { state: "root_unsupported", kind: "root_redirects" };
   }
 
@@ -248,10 +306,16 @@ function snapshotDir(
 
       if (st.isDirectory()) {
         // ── guard 3, before the readdir that would descend ──
+        //
+        // EXACT EXPECTED IDENTITY, not prefix containment. Asking only "is the target still under
+        // the root" admitted a reparse directory that redirected to a sibling inside the root, to
+        // an already visited subtree, or to the root itself - and an ancestor redirect makes a
+        // recursive walker loop forever. Requiring the canonical identity to BE `rootReal/childRel`
+        // refuses all of those with one invariant, and needs no cycle bookkeeping to do it.
         let childReal: string | null = null;
         try { childReal = realPath(childAbs); } catch { childReal = null; }
-        if (childReal === null || escapesRoot(rootReal, childReal)) {
-          entries.push(`${childRel}\tdir_containment_refused`);
+        if (childReal === null || !isExpectedChildIdentity(rootReal, childRel, childReal)) {
+          entries.push(`${childRel}\tdir_identity_refused`);
           continue; // NOT descended into
         }
         entries.push(`${childRel}\tdir`);
@@ -588,32 +652,6 @@ console.log("\nS6 — the snapshot helper detects every kind of change");
       fs.unlinkSync(dangling);
     }
 
-    // ── the containment boundary, decided on injected canonical identities ───────────────────
-    // The redirect this defends against — a reparse point Node surfaces as an ordinary directory —
-    // cannot be constructed portably, so the pure decision is tested directly. The real link
-    // fixtures above cover the platform's actual lstat behaviour.
-    const root = path.join("C:", "runs");
-    check("S6q the boundary: same path is inside",
-      escapesRoot(root, root), false);
-    check("S6r a child is inside",
-      escapesRoot(root, path.join(root, "nested")), false);
-    check("S6s an unrelated path is outside",
-      escapesRoot(root, path.join("C:", "elsewhere")), true);
-    check("S6t a SIBLING-PREFIX path is outside, which a bare startsWith would have accepted",
-      escapesRoot(root, root + "-evil"), true);
-
-    // ── the refusal actually reaches the snapshot, via an injected realPath ──────────────────
-    const escaping = path.join(dir, "escaping");
-    fs.mkdirSync(escaping);
-    fs.writeFileSync(path.join(escaping, "must-not-be-read.json"), "{}\n");
-    const refused = snapshotDir(dir, {
-      realPath: (p) => (p.endsWith("escaping") ? path.join("C:", "somewhere-else") : fs.realpathSync.native(p)),
-    }) as { entries: string[] };
-    checkTrue("S6u a directory whose canonical identity escapes is REFUSED, not descended into",
-      refused.entries.some((e) => e === "escaping\tdir_containment_refused") &&
-      !refused.entries.some((e) => e.includes("must-not-be-read.json")));
-    fs.rmSync(escaping, { recursive: true, force: true });
-
     // ── the readlink-throws branch, deterministically ────────────────────────────────────────
     const link2 = path.join(dir, "linked2");
     let link2Error: string | null = null;
@@ -630,6 +668,141 @@ console.log("\nS6 — the snapshot helper detects every kind of change");
         !unreadable.entries.some((e) => e.includes("must-not-appear.json")));
       fs.unlinkSync(link2);
     }
+  } finally {
+    fs.rmSync(fx, { recursive: true, force: true });
+  }
+}
+
+// ── S7 — the descent gate: exact expected identity, decided on injected canonical paths ─────
+//
+// The redirects this refuses cannot be manufactured portably, so the boundary decision is exercised
+// directly. The real link/junction fixtures in S6 cover the platform's actual `lstat` behaviour;
+// these cover the predicate that decides whether a directory is descended into at all.
+//
+// Every control runs on every platform: the flavour is injected, so Windows path forms are decided
+// deterministically off Windows too, rather than being skipped.
+console.log("\nS7 — the descent gate refuses every redirection, not only escapes");
+{
+  const W = WIN32_FLAVOR;
+  const wroot = "C:\\evidence\\runs";
+
+  // 1. the exact expected identity is the only thing accepted
+  check("S7  the expected child identity is accepted",
+    isExpectedChildIdentity(wroot, "nested", "C:\\evidence\\runs\\nested", W), true);
+  check("S7b a deeper expected identity is accepted",
+    isExpectedChildIdentity(wroot, "a/b/c", "C:\\evidence\\runs\\a\\b\\c", W), true);
+  check("S7c case differences are accepted on a Windows flavour",
+    isExpectedChildIdentity(wroot, "nested", "C:\\EVIDENCE\\RUNS\\NESTED", W), true);
+  check("S7d and are NOT accepted on a POSIX flavour",
+    isExpectedChildIdentity("/evidence/runs", "nested", "/Evidence/Runs/Nested", POSIX_FLAVOR), false);
+
+  // 2. outside-root redirect
+  check("S7e an outside-root redirect is refused",
+    isExpectedChildIdentity(wroot, "nested", "C:\\elsewhere\\nested", W), false);
+
+  // 3. sibling-prefix redirect — the case a bare startsWith would have accepted
+  check("S7f a sibling-prefix redirect is refused",
+    isExpectedChildIdentity(wroot, "nested", "C:\\evidence\\runs-evil\\nested", W), false);
+
+  // 4. INSIDE-root redirect to a different subtree — passed the old prefix test
+  check("S7g an inside-root redirect to a different subtree is refused",
+    isExpectedChildIdentity(wroot, "nested", "C:\\evidence\\runs\\other", W), false);
+  checkTrue("S7h and the old prefix test would have ACCEPTED it, which is why it was replaced",
+    !escapesRoot(wroot, "C:\\evidence\\runs\\other", W));
+
+  // 5. redirect to the root itself or an ancestor — the infinite-recursion case
+  check("S7i a redirect to the root itself is refused",
+    isExpectedChildIdentity(wroot, "nested", wroot, W), false);
+  checkTrue("S7j and the old prefix test would have ACCEPTED the root redirect too",
+    !escapesRoot(wroot, wroot, W));
+  check("S7k a redirect to an ancestor is refused",
+    isExpectedChildIdentity(wroot, "nested", "C:\\evidence", W), false);
+
+  // 6. UNC root and child identities
+  const unc = "\\\\server\\share\\runs";
+  check("S7l a UNC expected child identity is accepted",
+    isExpectedChildIdentity(unc, "nested", "\\\\server\\share\\runs\\nested", W), true);
+  check("S7m a UNC redirect to another share is refused",
+    isExpectedChildIdentity(unc, "nested", "\\\\server\\other\\runs\\nested", W), false);
+  check("S7n a UNC share root keeps its structural trailing separator",
+    normalizeCanonical("\\\\server\\share\\", W), "\\\\server\\share\\");
+
+  // 7. extended-length vs ordinary namespace — refused, deliberately not rewritten
+  check("S7o an extended-length child against an ordinary root is refused",
+    isExpectedChildIdentity(wroot, "nested", "\\\\?\\C:\\evidence\\runs\\nested", W), false);
+  check("S7p and an ordinary child against an extended-length root is refused",
+    isExpectedChildIdentity("\\\\?\\C:\\evidence\\runs", "nested", "C:\\evidence\\runs\\nested", W), false);
+
+  // 8. trailing-separator equivalence after normalisation
+  check("S7q a trailing separator on the root does not change the decision",
+    isExpectedChildIdentity(wroot + "\\", "nested", "C:\\evidence\\runs\\nested", W), true);
+  check("S7r a trailing separator on the candidate does not change the decision",
+    isExpectedChildIdentity(wroot, "nested", "C:\\evidence\\runs\\nested\\", W), true);
+  check("S7s a drive root keeps its structural separator",
+    normalizeCanonical("C:\\", W), "c:\\");
+  check("S7t a POSIX root keeps its structural separator",
+    normalizeCanonical("/", POSIX_FLAVOR), "/");
+  check("S7u a non-root trailing separator is stripped",
+    normalizeCanonical("/evidence/runs/", POSIX_FLAVOR), "/evidence/runs");
+}
+
+// ── S8 — the gate reaches the snapshot: no redirected directory is ever read ─────────────────
+//
+// S7 decides the predicate; these prove the walker obeys it, including the two cases the old prefix
+// test admitted. Redirection is injected through `realPath` because a real reparse point of this
+// shape cannot be created portably.
+console.log("\nS8 — a redirected directory is refused before readdir");
+{
+  const fx = fs.mkdtempSync(path.join(os.tmpdir(), "p31a-gate-"));
+  const dir = path.join(fx, "runs");
+  try {
+    fs.mkdirSync(dir);
+    fs.mkdirSync(path.join(dir, "alpha"));
+    fs.writeFileSync(path.join(dir, "alpha", "alpha-only.json"), "{}\n");
+    fs.mkdirSync(path.join(dir, "beta"));
+    fs.writeFileSync(path.join(dir, "beta", "beta-only.json"), "{}\n");
+
+    const honest = snapshotDir(dir) as { entries: string[] };
+    checkTrue("S8  baseline - both subtrees are read when nothing is redirected",
+      honest.entries.some((e) => e.startsWith("alpha/alpha-only.json\tfile")) &&
+      honest.entries.some((e) => e.startsWith("beta/beta-only.json\tfile")));
+
+    // INSIDE-ROOT redirect: alpha claims to be beta. Under the old prefix test this was "contained"
+    // and would have been read.
+    const insideRoot = snapshotDir(dir, {
+      realPath: (p) => (p.endsWith("alpha") ? path.join(dir, "beta") : fs.realpathSync.native(p)),
+    }) as { entries: string[] };
+    checkTrue("S8b an inside-root redirect is refused and its target is not read through it",
+      insideRoot.entries.includes("alpha\tdir_identity_refused") &&
+      !insideRoot.entries.some((e) => e.startsWith("alpha/")));
+    checkTrue("S8c and the honest sibling is still read normally",
+      insideRoot.entries.some((e) => e.startsWith("beta/beta-only.json\tfile")));
+
+    // ANCESTOR redirect: alpha claims to be the root. A prefix test accepts it and the walker
+    // recurses forever; the identity gate refuses it and the snapshot terminates.
+    const ancestor = snapshotDir(dir, {
+      realPath: (p) => (p.endsWith("alpha") ? dir : fs.realpathSync.native(p)),
+    }) as { entries: string[] };
+    checkTrue("S8d an ancestor redirect is refused, and the snapshot terminates",
+      ancestor.entries.includes("alpha\tdir_identity_refused"));
+    check("S8e with no repeated traversal of the root's own entries",
+      ancestor.entries.filter((e) => e.startsWith("beta\tdir")).length, 1);
+
+    // OUTSIDE-root redirect still refused, now by the same single invariant.
+    const outside = snapshotDir(dir, {
+      realPath: (p) => (p.endsWith("alpha") ? path.join(fx, "elsewhere") : fs.realpathSync.native(p)),
+    }) as { entries: string[] };
+    checkTrue("S8f an outside-root redirect is refused by the same invariant",
+      outside.entries.includes("alpha\tdir_identity_refused") &&
+      !outside.entries.some((e) => e.startsWith("alpha/")));
+
+    // A realpath that throws must also refuse rather than fall through.
+    const throwing = snapshotDir(dir, {
+      realPath: (p) => { if (p.endsWith("alpha")) throw new Error("simulated realpath failure"); return fs.realpathSync.native(p); },
+    }) as { entries: string[] };
+    checkTrue("S8g a directory whose canonical identity cannot be read is refused, not descended",
+      throwing.entries.includes("alpha\tdir_identity_refused") &&
+      !throwing.entries.some((e) => e.startsWith("alpha/")));
   } finally {
     fs.rmSync(fx, { recursive: true, force: true });
   }
