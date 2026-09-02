@@ -74,6 +74,8 @@ const BLOCK_CASES = [
   "Break murders in New Orleans down to the ward level for 2022.",
   "What were New Orleans's murders per ward in 2022?",
   "Give me a ward-by-ward breakdown of murders in New Orleans in 2022.",
+  "Which ward of New Orleans had the most murders in 2022?",
+  "How many murders were reported in the Uptown ward of New Orleans in 2022?",
   // Genuine precinct structures named in the correction contract.
   "How many aggravated assaults were reported in the Uptown precinct of Denver, CO in 2022?",
   "How many robberies were reported in precinct 12 in Chicago, IL in 2022?",

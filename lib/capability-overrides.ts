@@ -98,10 +98,13 @@ function placeCollidingSubCityRe(term: string): RegExp {
       // identifier behind — "ward 9", "ward #9", "ward no. 9". Bounded to three digits
       // so a bare year ("Ward 2022") stays a place name.
       String.raw`\b${term}\s*(?:#|nos?\.?\s*|numbers?\s*)?\d{1,3}\b`,
-      // distributive or determiner — "by ward", "per-ward", "each ward", "the ward".
-      // The lookahead keeps "the Ward, AR police department" and "the Ward County
-      // sheriff" as places: a determiner in front does not make a place name a geography.
-      String.raw`\b(?:by|per|across|within|among|amongst|between|each|every|the|this|that|these|those|its|their)[-\s]+${t}\b(?!\s*(?:,\s*[A-Za-z]{2}\b|(?:city|town|village|township|borough|county)\b))`,
+      // distributive or determiner — "by ward", "per-ward", "each ward", "which ward",
+      // and with one naming word between them, "the Uptown ward". The intervening word
+      // may not be a preposition or conjunction, or "each OF Ward's murders" would read
+      // as a geography. The trailing lookahead keeps "the Ward, AR police department"
+      // and "the Ward County sheriff" as places: a determiner in front of a place name
+      // does not make it a geography.
+      String.raw`\b(?:by|per|across|within|among|amongst|between|each|every|the|this|that|these|those|its|their|which|what)[-\s]+(?:(?!(?:of|in|on|from|at|to|and|or|for|by|with)\b)[A-Za-z][\w'-]*[-\s]+)?${t}\b(?!\s*(?:,\s*[A-Za-z]{2}\b|(?:city|town|village|township|borough|county)\b))`,
       // grain phrasing — "ward level", "ward-level", "ward boundaries", "ward map"
       String.raw`\b${t}[-\s](?:levels?|boundar(?:y|ies)|maps?|lines?)\b`,
       // explicit partitive relation — "ward of New Orleans"
