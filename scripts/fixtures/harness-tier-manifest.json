@@ -1310,6 +1310,60 @@
       "note": "reads route source and builds throwaway fixture trees; prepares no SQLite statement"
     },
     {
+      "id": "test-request-decision-observer",
+      "tier": "F",
+      "script": "scripts/test-request-decision-observer.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "evaluates production capability predicates against hand-specified contracts; prepares no SQLite statement"
+    },
+    {
+      "id": "test-p3-1a-case-runner",
+      "tier": "F",
+      "script": "scripts/test-p3-1a-case-runner.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "drives the frozen-case runner with synthetic broken inputs; executes no frozen case, writes no run artifact, prepares no SQLite statement"
+    },
+    {
+      "id": "test-p3-1a-base-parity",
+      "tier": "F",
+      "script": "scripts/test-p3-1a-base-parity.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "reruns a 225-row post-SQL grid and compares it to a baseline captured at BASE e2d24ac; mutates the shared classification in-process to prove the comparison can go red, then restores it; prepares no SQLite statement"
+    },
+    {
+      "id": "test-p3-1a-smoke-live-path",
+      "tier": "F",
+      "script": "scripts/test-p3-1a-smoke-live-path.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "spawns the frozen-case runner CLI against synthetic cases in an OS temp directory; executes no frozen case, writes nothing under docs/superpowers/p3-1a/runs; prepares no SQLite statement"
+    },
+    {
+      "id": "test-p3-1a-route-finalization",
+      "tier": "F",
+      "script": "scripts/test-p3-1a-route-finalization.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "follows a fired capability rule to the outcome every route finalizes with; TypeScript-AST source analysis plus runtime validator calls; prepares no SQLite statement"
+    },
+    {
+      "id": "test-p3-1a-inventory-binding",
+      "tier": "F",
+      "script": "scripts/test-p3-1a-inventory-binding.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "points the real exit inventory at throwaway trees to prove a same-named shadow, wrong-module import, alias or type-only import is not the reviewed carrier; then clones an independent repository into an OS temp directory, widens the carrier type ONLY in that clone, and requires the existing T7b guard to fail there in a fresh process. It never writes the shared checkout's source and never restores it - the shared validator is only verified by sha256 - and it never registers, removes or prunes a git worktree in the source repository; teardown deletes the temp directory alone. Prepares no SQLite statement"
+    },
+    {
       "id": "test-outcome-mutations",
       "tier": "F",
       "script": "scripts/test-outcome-mutations.js",

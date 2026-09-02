@@ -32,6 +32,7 @@
  */
 const fs = require("fs");
 const path = require("path");
+const crypto = require("crypto");
 
 function loadTypeScript(repoRoot) {
   return require(path.join(repoRoot, "node_modules", "typescript"));
@@ -96,6 +97,164 @@ function stringProp(objectLiteral, name, sf, ts) {
   return "<expr>";
 }
 
+
+/**
+ * The one indirection the outcome vocabulary is allowed to travel through.
+ *
+ * WHY THIS EXISTS. Every finalization used to name `OUTCOMES.<reason>` at the call site, so reading
+ * the argument was enough to know the reason. P3.1a changed four contract-failure sites to READ the
+ * classifier's decision off the validation result instead of looking the catalog up again - which
+ * is the point: it makes the classification actually travel to finalization instead of merely
+ * matching there. Without this resolver those four sites become shape "other", and `query_contract_failed`
+ * looks like vocabulary nobody produces.
+ *
+ * WHY IT IS DERIVED AND NOT HARD-CODED. Writing `capabilityFinalizationOutcome -> query_contract_failed`
+ * here would put a second, unverified copy of the mapping in the guard that is supposed to be
+ * checking it. Instead the helper's own declaration is parsed: every `OUTCOMES.<x>` reachable from
+ * its body, unioned with every `OUTCOMES.<x>` in the declared type of the carrier it returns. If
+ * that ever yields more than one reason - because the carrier widened, or the fallback changed -
+ * the site is reported as "parallel", which the existing guards already treat as a violation. A
+ * widening therefore fails loudly instead of being absorbed.
+ */
+const DELIVERY_HELPERS = {
+  capabilityFinalizationOutcome: {
+    rel: "lib/query-contract-validator.ts",
+    /** The exact specifier a route must import it from. Any other module is not this helper. */
+    module: "@/lib/query-contract-validator",
+    carrierType: "CapabilityBlockOutcome",
+  },
+};
+
+const deliveryHelperCache = new Map();
+
+/**
+ * Prove a call named like a delivery helper is actually BOUND to the canonical export.
+ *
+ * WHY NAME MATCHING WAS NOT ENOUGH. Round 4: recognising the indirection by identifier text alone
+ * turns an exact reviewed carrier into an allowlisted SPELLING. A route could declare its own
+ * `function capabilityFinalizationOutcome()`, or import that name from some other module, and the
+ * inventory would hand it the canonical helper's derived reason - recreating precisely the class of
+ * escape P2.5's source-identity work exists to close.
+ *
+ * The proof is lexical and deliberately narrow, because the approved route syntax is exact:
+ *
+ *   BOUND requires a named, UNALIASED import of the identifier from the approved module specifier.
+ *   Anything else fails closed - a different module, either direction of aliasing, no import at
+ *   all, or ANY local declaration of that name anywhere in the file (function, variable, class,
+ *   parameter, catch binding, or a second import). A file that both imports the canonical helper
+ *   and declares something else by that name is rejected rather than adjudicated: the ambiguity is
+ *   the finding.
+ *
+ * Returns "bound", or a reason string naming why it is not. Never throws.
+ */
+function deliveryHelperBinding(sf, ts, name, spec) {
+  let importedCorrectly = false;
+  const problems = [];
+
+  walk(sf, (n) => {
+    if (ts.isImportDeclaration(n) && n.importClause && n.importClause.namedBindings &&
+        ts.isNamedImports(n.importClause.namedBindings)) {
+      const from = ts.isStringLiteral(n.moduleSpecifier) ? n.moduleSpecifier.text : null;
+      // `import type { x } from ...` - the whole clause is erased at emit.
+      const clauseTypeOnly = n.importClause.isTypeOnly === true;
+      for (const el of n.importClause.namedBindings.elements) {
+        const local = el.name.text;
+        const imported = el.propertyName ? el.propertyName.text : local;
+        if (local !== name && imported !== name) continue;
+        // TYPE-ONLY IS NOT A BINDING. Both `import type { x }` and `import { type x }` are erased
+        // at emit, so no runtime value binding exists for the call to reach. A call would usually
+        // fail typechecking - but the inventory must prove identity itself rather than outsource it
+        // to a separate gate that a suppression comment can silence.
+        if (clauseTypeOnly || el.isTypeOnly === true) {
+          problems.push("type-only import creates no runtime binding");
+          continue;
+        }
+        if (el.propertyName) {
+          // `{ x as name }` or `{ name as y }` - either direction breaks the exact binding.
+          problems.push("aliased import (" + imported + " as " + local + ")");
+          continue;
+        }
+        if (from !== spec.module) {
+          problems.push("imported from " + JSON.stringify(from) + ", not " + JSON.stringify(spec.module));
+          continue;
+        }
+        importedCorrectly = true;
+      }
+      return;
+    }
+    // Any LOCAL declaration of the name shadows or replaces the import.
+    const declares =
+      (ts.isFunctionDeclaration(n) && n.name && n.name.text === name) ||
+      (ts.isClassDeclaration(n) && n.name && n.name.text === name) ||
+      (ts.isVariableDeclaration(n) && ts.isIdentifier(n.name) && n.name.text === name) ||
+      (ts.isParameter(n) && ts.isIdentifier(n.name) && n.name.text === name) ||
+      (ts.isFunctionExpression(n) && n.name && n.name.text === name) ||
+      (ts.isBindingElement(n) && ts.isIdentifier(n.name) && n.name.text === name) ||
+      (ts.isCatchClause(n) && n.variableDeclaration && ts.isIdentifier(n.variableDeclaration.name) &&
+       n.variableDeclaration.name.text === name);
+    if (declares) problems.push("locally declared, shadowing the import");
+  }, ts);
+
+  if (problems.length) return problems[0];
+  return importedCorrectly ? "bound" : "no exact import of " + name + " from " + spec.module;
+}
+
+
+function outcomesNamedIn(node, sf, ts) {
+  const found = new Set();
+  walk(node, (n) => {
+    // Value position: `OUTCOMES.query_contract_failed`
+    if (ts.isPropertyAccessExpression(n) && ts.isIdentifier(n.expression) &&
+        n.expression.text === "OUTCOMES") found.add(n.name.text);
+    // TYPE position: `typeof OUTCOMES.query_contract_failed` parses as a QualifiedName, not a
+    // property access. Missing this made the carrier-type half of the derivation silently read
+    // nothing, so a widening of the carrier's declared type would have gone unnoticed while the
+    // helper body still named a single outcome.
+    if (ts.isQualifiedName(n) && ts.isIdentifier(n.left) && n.left.text === "OUTCOMES") {
+      found.add(n.right.text);
+    }
+  }, ts);
+  return found;
+}
+
+/** Reasons a delivery helper can produce, derived from its declaration and its carrier's type. */
+function deliveryHelperReasons(repoRoot, name, ts) {
+  const spec = DELIVERY_HELPERS[name];
+  if (!spec) return null;
+  const file = path.join(repoRoot, spec.rel);
+  if (!fs.existsSync(file)) return null;
+  const source = fs.readFileSync(file);
+  // Keyed by CONTENT, not by path. A path-keyed cache made the derivation stale the moment the
+  // helper changed inside one process - which is exactly what an end-to-end widening mutation
+  // does, so the control that mutates and restores would have measured the pre-mutation answer
+  // both times and reported a chain it never exercised.
+  const key = repoRoot + "::" + name + "::" +
+    crypto.createHash("sha256").update(source).digest("hex");
+  if (deliveryHelperCache.has(key)) return deliveryHelperCache.get(key);
+  const sf = ts.createSourceFile(file, source.toString("utf8"),
+    ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+
+  const reasons = new Set();
+  let sawDeclaration = false;
+  walk(sf, (n) => {
+    if (ts.isFunctionDeclaration(n) && n.name && n.name.text === name && n.body) {
+      // It must be EXPORTED. A private function by that name is not what the routes import, so
+      // deriving from it would describe something the approved binding cannot reach.
+      const exported = (n.modifiers || []).some((m) => m.kind === ts.SyntaxKind.ExportKeyword);
+      if (!exported) return;
+      sawDeclaration = true;
+      for (const r of outcomesNamedIn(n.body, sf, ts)) reasons.add(r);
+    }
+    if (ts.isTypeAliasDeclaration(n) && n.name.text === spec.carrierType) {
+      for (const r of outcomesNamedIn(n.type, sf, ts)) reasons.add(r);
+    }
+  }, ts);
+
+  const result = sawDeclaration ? [...reasons].sort() : null;
+  deliveryHelperCache.set(key, result);
+  return result;
+}
+
 /**
  * How the site supplies its outcome.
  *   literal   — `outcome: OUTCOMES.<reason>`
@@ -104,7 +263,7 @@ function stringProp(objectLiteral, name, sf, ts) {
  *   absent    — no `outcome` property at all
  *   parallel  — a conditional whose arms are NOT whole outcome constants (the shape T7b forbids)
  */
-function outcomeShape(call, sf, ts) {
+function outcomeShape(call, sf, ts, repoRoot) {
   const arg = call.arguments[0];
   if (!arg || !ts.isObjectLiteralExpression(arg)) return { form: "absent" };
   const prop = arg.properties.find((p) => p.name && p.name.getText(sf) === "outcome");
@@ -127,6 +286,29 @@ function outcomeShape(call, sf, ts) {
                  predicate: expr.condition.getText(sf) };
       }
       return { form: "parallel", predicate: expr.condition.getText(sf), via };
+    }
+    // The delivery-helper indirection: one reason derived from the helper is a literal site; more
+    // than one is "parallel", which the guards reject.
+    if (ts.isCallExpression(expr) && ts.isIdentifier(expr.expression) &&
+        Object.prototype.hasOwnProperty.call(DELIVERY_HELPERS, expr.expression.text)) {
+      const helperName = expr.expression.text;
+      const spec = DELIVERY_HELPERS[helperName];
+      // BINDING FIRST. A same-named local function or a same-named import from another module is
+      // not the reviewed carrier, and must never inherit its derived reason.
+      const binding = deliveryHelperBinding(sf, ts, helperName, spec);
+      if (binding !== "bound") {
+        return { form: "other", text: helperName + "() - unbound: " + binding };
+      }
+      const reasons = deliveryHelperReasons(repoRoot, helperName, ts);
+      if (reasons && reasons.length === 1) {
+        return { form: "literal", reason: reasons[0], via: helperName + "()" };
+      }
+      // Zero reasons (no exported declaration) and more than one (a widened carrier or fallback)
+      // are both rejected: "parallel" is what T7b requires to be empty. `via` names the helper so a
+      // rejected site is still identifiable as this indirection - without it the site is reported
+      // as parallel with no indication of what produced it.
+      return { form: "parallel", predicate: helperName + "()", via: helperName + "()",
+               reasons: reasons || [] };
     }
     return null;
   };
@@ -452,7 +634,7 @@ function inventoryFile(repoRoot, spec, ts) {
     while (q && !ts.isCallExpression(q)) q = q.parent;
     if (q && calleeName(q, ts) === SEAL) inlineSealed = true;
 
-    const shape = outcomeShape(call, sf, ts);
+    const shape = outcomeShape(call, sf, ts, repoRoot);
     const planFamily = stringProp(arg, "planFamily", sf, ts);
     const guardrails = stringProp(arg, "guardrails", sf, ts);
     return {
@@ -572,4 +754,5 @@ function buildInventory(repoRoot) {
   };
 }
 
-module.exports = { buildInventory, inventoryFile, ROUTE_FILES, EMBED_FILE, loadTypeScript };
+module.exports = { buildInventory, inventoryFile, ROUTE_FILES, EMBED_FILE, loadTypeScript,
+  DELIVERY_HELPERS, deliveryHelperReasons, deliveryHelperBinding };

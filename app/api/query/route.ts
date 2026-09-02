@@ -43,6 +43,7 @@ import {
   queryContractGuardrails,
   validateQueryContractSql,
   type QueryContractSqlValidation,
+  capabilityFinalizationOutcome,
 } from "@/lib/query-contract-validator";
 import { partialCoverageRetryPrompt } from "@/lib/source-year-overlap";
 import { resolveGeoPlaces } from "@/lib/geo-place-resolver";
@@ -1349,7 +1350,7 @@ export async function POST(req: NextRequest) {
         const msg = queryContractFailureMessage(contractResult);
         if (!msg) return false;
         const proof = finalizeExit({
-          outcome: OUTCOMES.query_contract_failed,
+          outcome: capabilityFinalizationOutcome(contractResult),
           sql: contractResult.sql,
           guardrails: firedGuardrails,
         });
