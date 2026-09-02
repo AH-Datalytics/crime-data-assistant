@@ -13,10 +13,13 @@
  *
  * WHY THERE IS A SURVEY. Fixing the one reported question would have been a Ward-shaped
  * patch. The survey below runs the real predicate over every place name in this
- * application's own two generated catalogs and requires zero of them to be read as a
- * sub-city request. It is a control against a term-specific fix, and its limit is stated
- * plainly: it covers the catalogs this repo generates, not an exhaustive national
- * gazetteer.
+ * application's own two generated catalogs, in six sentence shapes each, and requires zero
+ * of them to be read as a sub-city request. It is a control against a term-specific fix,
+ * and its limits are stated plainly: it covers the catalogs this repo generates, not an
+ * exhaustive national gazetteer, and six templated contexts, not every phrasing a person
+ * can write. Its first version used one shape — `Name, ST` — which was the very shape the
+ * predicate special-cased, and it therefore missed three false refusals that a review
+ * found by hand.
  *
  * Deterministic. No database, no model, no network, no server, no production request.
  *
@@ -76,6 +79,19 @@ const BLOCK_CASES = [
   "Give me a ward-by-ward breakdown of murders in New Orleans in 2022.",
   "Which ward of New Orleans had the most murders in 2022?",
   "How many murders were reported in the Uptown ward of New Orleans in 2022?",
+  // Codex review 2026-09-02: weak determiners the first revision missed entirely. A place
+  // name takes none of these, and in each the term is the head of its noun phrase. Each
+  // names a real city as well, because an unresolvable place phrase costs `buildQueryContract`
+  // seconds of fuzzy matching per source and the determiner is what is under test here.
+  "How many murders were reported in a ward of New Orleans, LA in 2022?",
+  "How many murders were reported in our ward in New Orleans, LA in 2022?",
+  "How many murders were reported in your ward in New Orleans, LA in 2022?",
+  "How many murders were reported in my ward in New Orleans, LA in 2022?",
+  "How many murders were reported in an Uptown ward in New Orleans, LA in 2022?",
+  // A named ward longer than one naming word. Bounded disposition: up to two naming words
+  // between the determiner and the term are recognised, and a longer name is not — a
+  // deliberate stopping point, recorded rather than extended indefinitely.
+  "How many murders were reported in the French Quarter ward in New Orleans, LA in 2022?",
   // Genuine precinct structures named in the correction contract.
   "How many aggravated assaults were reported in the Uptown precinct of Denver, CO in 2022?",
   "How many robberies were reported in precinct 12 in Chicago, IL in 2022?",
@@ -106,9 +122,17 @@ const ALLOW_CASES = [
   "How many murders were reported in Ward County, ND in 2022?",
   "What was the murder rate in Ward, Arkansas in 2022?",
   "Compare murders in Ward, AR and Little Rock, AR in 2022.",
-  // A determiner in front of the place name does not make it a geography.
+  // A determiner in front of the place name does not make it a geography. The first three
+  // are the false refusals the Codex review of 2026-09-02 found in the first revision:
+  // the state spelled out, no state at all, and the name used adjectivally. None of them
+  // is rescued by a place-qualifier list, which is why the predicate tests the term's
+  // syntactic role instead.
+  "How many murders did the Ward, Arkansas police department report in 2022?",
+  "How many murders did the Ward police department report in 2022?",
+  "What was the Ward murder rate in 2022?",
   "How many murders did the Ward, AR police department report in 2022?",
   "How many murders were reported in the Ward County, ND area in 2022?",
+  "How many murders did the Ward sheriff's office report in 2022?",
   // Frozen v3 ordinary-city controls (P31A-003 / P31A-009), so an over-broad correction that
   // began refusing plain city questions would fail here too.
   "How many murders were reported in Chicago, IL in June 2026?",
@@ -138,17 +162,56 @@ function sourceCapabilityIds(question: string, source: QueryContractSource): str
 
 /**
  * The guardrail stage. runGuardrails() logs for every guardrail that fires, which would bury
- * this test's own output under unrelated rules; the logger is muted for the sweep only.
+ * this test's own output under unrelated rules; the logger is muted for the calls below.
  */
-function guardrailFired(question: string, tab: Tab): boolean {
+function muted<T>(fn: () => T): T {
   const originalLog = console.log;
   console.log = () => {};
   try {
-    const ctx = extractQueryContext("SELECT 1", question, tab);
-    return runGuardrails(ctx).fired.includes("sub-city-geography-override");
+    return fn();
   } finally {
     console.log = originalLog;
   }
+}
+
+/**
+ * WHY THE SWEEP DOES NOT RE-EXTRACT PER CASE. `extractQueryContext` fuzzy-resolves an
+ * unfamiliar place-like phrase against ~14k catalog names — 423 ms for a single adversarial
+ * case here, and the sweep is 54 cases × 4 tabs. The sub-city guardrail's `match` reads
+ * exactly one field, `ctx.question`, so the sweep substitutes that field into a context
+ * extracted once per tab, and `assertRealExtractionPath()` below pays for the real thing on
+ * the cases where fidelity actually matters.
+ */
+const GUARDRAIL_BASE_CTX = new Map(
+  GUARDRAIL_TABS.map((tab) => [
+    tab,
+    muted(() =>
+      extractQueryContext("SELECT 1", "How many murders were reported in Chicago, IL in 2022?", tab)
+    ),
+  ])
+);
+
+function guardrailFired(question: string, tab: Tab): boolean {
+  const base = GUARDRAIL_BASE_CTX.get(tab);
+  assert(base, `no base context for ${tab}`);
+  return muted(() =>
+    runGuardrails({ ...base, question }).fired.includes("sub-city-geography-override")
+  );
+}
+
+/**
+ * The unsubstituted path: a real `extractQueryContext` for the reported false refusal and
+ * for a genuine sub-city request, on every tab. This is what proves the question reaches the
+ * guardrail unchanged, so the substitution above is an optimisation and not a different test.
+ */
+function assertRealExtractionPath(question: string, tab: Tab, expected: boolean) {
+  const ctx = muted(() => extractQueryContext("SELECT 1", question, tab));
+  check(ctx.question === question, `${tab}: extraction should carry the question through unchanged`);
+  const fired = muted(() => runGuardrails(ctx).fired.includes("sub-city-geography-override"));
+  check(
+    fired === expected,
+    `${tab}: real extraction path should ${expected ? "block" : "allow"}: ${question}`
+  );
 }
 
 /**
@@ -210,6 +273,39 @@ function assertAllStagesAgree(question: string, expected: boolean) {
 for (const question of BLOCK_CASES) assertAllStagesAgree(question, true);
 for (const question of ALLOW_CASES) assertAllStagesAgree(question, false);
 
+/**
+ * The Codex review's nine adversarial strings, verbatim as it reported them. Their
+ * city-named twins in BLOCK_CASES carry the full four-stage matrix; these are asserted at
+ * the shared predicate only, because an unresolvable place phrase costs seconds per source
+ * in `buildQueryContract` and what is under test here is the predicate's reading. Keeping
+ * the exact strings means a future revision is measured against what was actually reported,
+ * not against a paraphrase of it.
+ */
+const CODEX_REVIEW_CASES: Array<[string, boolean]> = [
+  ["How many murders did the Ward, Arkansas police department report in 2022?", false],
+  ["How many murders did the Ward police department report in 2022?", false],
+  ["What was the Ward murder rate in 2022?", false],
+  ["crime in a ward", true],
+  ["crime in our ward", true],
+  ["crime in your ward", true],
+  ["crime in my ward", true],
+  ["crime in an Uptown ward", true],
+  ["crime in the French Quarter ward", true],
+];
+for (const [question, expected] of CODEX_REVIEW_CASES) {
+  check(
+    asksSubCityGeography(question) === expected,
+    `Codex review case should ${expected ? "block" : "allow"}: ${question}`
+  );
+}
+
+for (const tab of GUARDRAIL_TABS) {
+  assertRealExtractionPath("How many murders were reported in Ward, AR in 2022?", tab, false);
+  assertRealExtractionPath("How many murders did the Ward police department report in 2022?", tab, false);
+  assertRealExtractionPath("How many murders were reported in the 5th ward of New Orleans, LA in 2022?", tab, true);
+  assertRealExtractionPath("How many murders were reported in the French Quarter ward in New Orleans, LA in 2022?", tab, true);
+}
+
 /* ------------------------------------------------------------------ */
 /*  One predicate: no consumer may re-implement or bypass it           */
 /* ------------------------------------------------------------------ */
@@ -263,14 +359,40 @@ for (const file of BYPASS_SCAN_FILES) {
  */
 type SurveyRow = { alternative: string; klass: "unambiguous" | "place-colliding"; hits: string[] };
 
-const PLACE_NAMES: Array<{ name: string; qualified: string }> = [
+/**
+ * SIX SENTENCE SHAPES, NOT ONE. The first revision surveyed only `${name}, ${state}`,
+ * which always put a comma and a two-letter abbreviation immediately after the token —
+ * precisely the form its own lookahead exempted. A survey that only exercises the shape
+ * the predicate special-cases proves nothing about the others, and the Codex review of
+ * 2026-09-02 found three false refusals hiding in the shapes it never tried.
+ *
+ * These templates cover: the catalog's own alias forms (comma or space, abbreviation or
+ * full state name), the unqualified name, the name in front of an agency noun, the name
+ * used adjectivally, and the name after a determiner. They are still templates — see the
+ * limit recorded below.
+ */
+function placeContexts(name: string, aliases: string[]): string[] {
+  return [
+    ...aliases.map((alias) => `How many murders were reported in ${alias} in 2022?`),
+    `How many murders were reported in ${name} in 2022?`,
+    `How many murders did the ${name} police department report in 2022?`,
+    `What was the ${name} murder rate in 2022?`,
+    `How many murders were reported in the ${name} area in 2022?`,
+    `Compare murders in ${name} and Chicago in 2022.`,
+  ];
+}
+
+const PLACE_NAMES: Array<{ name: string; contexts: string[] }> = [
   ...GENERATED_GEO_CITIES.map((c) => ({
     name: c.name,
-    qualified: `How many murders were reported in ${c.name}, ${c.state} in 2022?`,
+    contexts: placeContexts(c.name, c.aliases),
   })),
   ...GENERATED_AMBIGUOUS_COUNTIES.map((c) => ({
     name: c.name,
-    qualified: `How many murders were reported in ${c.name} County, ${c.states[0]} in 2022?`,
+    contexts: placeContexts(`${c.name} County`, [
+      `${c.name} County, ${c.states[0]}`,
+      `${c.name} County ${c.states[0]}`,
+    ]),
   })),
 ];
 
@@ -315,17 +437,34 @@ check(
   "survey found no place-name collision at all — the scan is not reaching the catalogs"
 );
 
-// The whole inventory, through the real predicate: no place name may read as a sub-city
-// request in ordinary place-name position.
-const falseRefusals = PLACE_NAMES.filter((place) => asksSubCityGeography(place.qualified));
+// The whole inventory, through the real predicate, in all six shapes: no place name may
+// read as a sub-city request in any of them.
+const falseRefusals: string[] = [];
+let contextsScanned = 0;
+for (const place of PLACE_NAMES) {
+  for (const context of place.contexts) {
+    contextsScanned++;
+    if (asksSubCityGeography(context)) falseRefusals.push(context);
+  }
+}
 check(
   falseRefusals.length === 0,
-  `place names read as sub-city requests: ${falseRefusals.slice(0, 10).map((p) => p.name).join(", ")}`
+  `${falseRefusals.length} place references read as sub-city requests, e.g. ` +
+    falseRefusals.slice(0, 5).map((q) => `"${q}"`).join("; ")
+);
+
+// The templates must actually be able to fail, or "zero false refusals" is a statement
+// about the template rather than about the predicate. A genuine sub-city phrase poured
+// through the same shapes has to come back refused.
+const TEMPLATE_CONTROL = placeContexts("5th ward", ["5th ward, LA"]);
+check(
+  TEMPLATE_CONTROL.every((context) => asksSubCityGeography(context)),
+  "survey templates cannot detect a sub-city phrase — the scan proves nothing"
 );
 
 console.log(
   `\nsub-city geography tests passed: ${checks} assertions — ` +
     `${BLOCK_CASES.length} blockers, ${ALLOW_CASES.length} negative controls, ` +
     `${SOURCES.length} sources, ${GUARDRAIL_TABS.length} guardrail tabs, ` +
-    `${PLACE_NAMES.length} catalog place names surveyed`
+    `${PLACE_NAMES.length} catalog place names surveyed in ${contextsScanned} sentence contexts`
 );

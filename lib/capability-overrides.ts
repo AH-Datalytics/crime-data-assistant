@@ -50,9 +50,10 @@ export function detectCurrentYearClearanceOverride(question: string): Capability
  *    lib/generated/geo-cities.ts) and "Ward County" is a county in ND and TX
  *    (lib/generated/ambiguous-counties.ts), while "the 5th ward of New Orleans" is a
  *    sub-city geography. Matching the word refused both. These terms therefore require
- *    adjoining sub-city STRUCTURE — an ordinal or identifier, a plural, a distributive
- *    or determiner, a grain phrase, or an explicit "of" relation. A bare token in
- *    place-name position is a place, not a sub-city geography.
+ *    adjoining sub-city STRUCTURE, in two classes: strong operators that decide alone —
+ *    an ordinal or identifier, a plural, a grain phrase, an explicit "of" relation — and
+ *    weak determiners, which decide only when the term is the head of its noun phrase.
+ *    A bare token in place-name position is a place, not a sub-city geography.
  *
  * The split is surveyed, not asserted: scripts/test-subcity-geography.ts scans both
  * generated place catalogs for every alternative below and fails if one that appears
@@ -83,14 +84,52 @@ const UNAMBIGUOUS_SUB_CITY_RE = new RegExp(
 );
 
 /**
- * Sub-city structure adjoining a place-colliding term. Each alternative is a shape a
- * place name does not take: a place name is singular, is not numbered, is not
- * distributed over, and is not the left side of an "of" relation.
+ * A determiner leaves the reading open, so the term's SYNTACTIC ROLE decides.
+ *
+ * WHY NOT A LIST OF PLACE QUALIFIERS. The first revision let a determiner alone count as
+ * structure and tried to rescue place uses with a trailing list — a comma plus a
+ * two-letter state, or `city`/`county`. That list is a place-name parser in disguise and
+ * it was incomplete in exactly the way such lists are: "the Ward, Arkansas police
+ * department" spells the state out, "the Ward police department" and "the Ward murder
+ * rate" name no state at all, and all three were wrongly refused (Codex review,
+ * 2026-09-02).
+ *
+ * The real distinction is grammatical, not geographic. In the sub-city reading the term
+ * is the HEAD of its noun phrase — "crime in the ward", "which ward had the most
+ * murders", "the Uptown ward of New Orleans" — and what follows it is a preposition, a
+ * verb, a conjunction, or nothing. In the place reading the term MODIFIES a following
+ * noun: "the Ward police department", "the Ward murder rate", "the Ward County sheriff".
+ *
+ * So a determiner fires only when the term is followed by a known non-noun continuation.
+ * Anything unrecognised — which is what a modified noun looks like — falls through to the
+ * place reading. That default is deliberate: an unknown word after the term resolves
+ * toward answering, never toward a false refusal.
+ *
+ * A comma is not a continuation. ", AR", ", Arkansas" and ", Louisiana's 9th ward" are
+ * all qualifier position, and treating a comma as phrase-final is what let the two-letter
+ * check be load-bearing in the first place.
+ */
+const HEAD_POSITION_FOLLOWER = String.raw`(?=[?!.;:]|\s*$|\s+(?:of|in|on|for|during|with|without|from|since|through|until|between|versus|vs\.?|compared|than|and|or|but|had|has|have|is|are|was|were|be|been|saw|see|sees|report|reports|reported|experienced|recorded|got|rank|ranks|ranked|lead|leads|led|contain|contains|include|includes|do|does|did|will|would|should|could|might|that|which|who|when|where|last|this|each|every|per)\b)`;
+
+/**
+ * Sub-city structure adjoining a place-colliding term, in two classes.
+ *
+ * STRONG OPERATORS decide on their own, because a place name does not take them: it is
+ * singular, it is not numbered, it is not the left side of an "of" relation, and it has
+ * no grain. WEAK DETERMINERS do not decide on their own and are gated by head position
+ * above. Keeping the two apart is what the Codex review required, and it is why no place
+ * qualifier appears anywhere below.
  */
 function placeCollidingSubCityRe(term: string): RegExp {
   const t = `${term}s?`;
+  // A naming word may sit between a determiner and the term ("the Uptown ward", "the
+  // French Quarter ward"). It may not be a function word, or "each OF Ward's murders"
+  // would read as a geography.
+  const namingWord = String.raw`(?!(?:of|in|on|from|at|to|and|or|for|by|with|the|a|an)\b)[A-Za-z][\w'-]*[-\s]+`;
+  const determiner = String.raw`(?:by|per|across|within|throughout|among|amongst|between|each|every|all|a|an|the|this|that|these|those|which|what|my|our|your|its|their|his|her)`;
   return new RegExp(
     [
+      // ── strong operators ───────────────────────────────────────────────────────────
       // plural — "how many wards", "the wards of New Orleans"
       String.raw`\b${term}s\b`,
       // ordinal in front — "5th ward", "ninth ward"
@@ -98,30 +137,41 @@ function placeCollidingSubCityRe(term: string): RegExp {
       // identifier behind — "ward 9", "ward #9", "ward no. 9". Bounded to three digits
       // so a bare year ("Ward 2022") stays a place name.
       String.raw`\b${term}\s*(?:#|nos?\.?\s*|numbers?\s*)?\d{1,3}\b`,
-      // distributive or determiner — "by ward", "per-ward", "each ward", "which ward",
-      // and with one naming word between them, "the Uptown ward". The intervening word
-      // may not be a preposition or conjunction, or "each OF Ward's murders" would read
-      // as a geography. The trailing lookahead keeps "the Ward, AR police department"
-      // and "the Ward County sheriff" as places: a determiner in front of a place name
-      // does not make it a geography.
-      String.raw`\b(?:by|per|across|within|among|amongst|between|each|every|the|this|that|these|those|its|their|which|what)[-\s]+(?:(?!(?:of|in|on|from|at|to|and|or|for|by|with)\b)[A-Za-z][\w'-]*[-\s]+)?${t}\b(?!\s*(?:,\s*[A-Za-z]{2}\b|(?:city|town|village|township|borough|county)\b))`,
-      // grain phrasing — "ward level", "ward-level", "ward boundaries", "ward map"
+      // grain phrasing — "ward level", "ward-level", "ward boundaries", "ward-by-ward"
       String.raw`\b${t}[-\s](?:levels?|boundar(?:y|ies)|maps?|lines?)\b`,
+      String.raw`\b${term}[-\s]by[-\s]${term}\b`,
       // explicit partitive relation — "ward of New Orleans"
       String.raw`\b${t}\s+of\b`,
+      // ── weak determiners, gated by head position ───────────────────────────────────
+      // "crime in the ward", "by ward in DC", "which ward had the most murders",
+      // "a ward", "our ward", "the Uptown ward", "the French Quarter ward" — but not
+      // "the Ward police department", "the Ward, Arkansas sheriff", "the Ward County".
+      String.raw`\b${determiner}[-\s]+(?:${namingWord}){0,2}${t}\b${HEAD_POSITION_FOLLOWER}`,
     ].join("|"),
     "i"
   );
 }
 
-const PLACE_COLLIDING_SUB_CITY_RES = PLACE_COLLIDING_SUB_CITY_TERMS.map(placeCollidingSubCityRe);
+/**
+ * Each place-colliding term is paired with a cheap gate: every structural alternative
+ * above contains the term itself, so a question without the bare word cannot match any of
+ * them. Testing the word first keeps the branching structural pattern off the ~99.99% of
+ * questions it can only reject, which matters because the catalog survey runs the
+ * predicate over 144,780 sentences.
+ */
+const PLACE_COLLIDING_SUB_CITY_RES = PLACE_COLLIDING_SUB_CITY_TERMS.map((term) => ({
+  gate: new RegExp(String.raw`\b${term}s?\b`, "i"),
+  structure: placeCollidingSubCityRe(term),
+}));
 
 /**
  * The shared structural predicate both enforcement stages consult.
  */
 export function asksSubCityGeography(question: string): boolean {
   if (UNAMBIGUOUS_SUB_CITY_RE.test(question)) return true;
-  return PLACE_COLLIDING_SUB_CITY_RES.some((re) => re.test(question));
+  return PLACE_COLLIDING_SUB_CITY_RES.some(
+    ({ gate, structure }) => gate.test(question) && structure.test(question)
+  );
 }
 
 export const SUB_CITY_GEOGRAPHY_MESSAGE =
