@@ -21,11 +21,20 @@
  *          guard applies then reports `query_contract_failed` as vocabulary nobody produces. Run
  *          through `buildInventory()` on complete throwaway trees, never against the resolver
  *          in isolation.
- *   W1–W7  the widening chain, executed entirely inside a DISPOSABLE GIT WORKTREE: the real source
- *          is checked out there, proved clean, mutated in exactly one declared way, and the actual
- *          T7b guard is run against that isolated root in a fresh process. The shared checkout's
- *          production file is hashed before and after purely to ASSERT it was never touched — not
- *          as a restore mechanism, because there is nothing to restore.
+ *   W1–W9  the widening chain, executed inside an INDEPENDENT TEMPORARY REPOSITORY: the exact
+ *          committed tree is exported with `git archive`, extracted to an OS temp directory, and
+ *          given its own fresh `git init` solely so `status` and `diff --numstat` can measure the
+ *          declared mutation. The actual T7b guard runs against that isolated root in a fresh
+ *          process. The shared checkout's production file is hashed before and after purely to
+ *          ASSERT it was never touched — not as a restore mechanism, because there is nothing to
+ *          restore.
+ *
+ * WHAT ROUND 6 FOUND. The previous version used `git worktree add`, which writes registration state
+ * into the SOURCE repository's common `.git/worktrees`, and called a repository-wide
+ * `git worktree prune` that could act on stale records this test does not own. A unique filesystem
+ * path does not make the shared Git metadata unique. `git archive` is read-only against the source
+ * repository, and the temp repository's metadata is its own — so an interrupted run leaves nothing
+ * but a temp directory, and nothing this test does can affect another checkout or harness run.
  *
  * Deterministic. No database, no model, no network, no production service.
  */
@@ -240,19 +249,36 @@ console.log("\nW — widening fails the existing T7b guard, in an isolated tree"
     }
   };
 
-  const disposable = path.join(
-    fs.mkdtempSync(path.join(os.tmpdir(), "p31a-widen-")), "tree");
-  let created = false;
+  const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), "p31a-widen-"));
+  const disposable = path.join(tmpRoot, "tree");
+
+  // The source repository's worktree registry, captured to prove this test never alters it.
+  const worktreesBefore = git(["worktree", "list"]);
+
   try {
-    // A git worktree at the candidate's own HEAD: the real source, not a copy of selected files
-    // and not a reimplementation. `node_modules` is gitignored, so the TypeScript shim does not
-    // show up as a change to the tree.
-    git(["worktree", "add", "--detach", "--quiet", disposable, "HEAD"]);
-    created = true;
+    // An INDEPENDENT CLONE. `git clone` only reads the source repository - it writes no refs, no
+    // config, and nothing under .git/worktrees - and the result carries its own metadata, so
+    // `status` and `diff --numstat` can measure the declared mutation without any shared namespace
+    // being involved. `--no-hardlinks` keeps the object stores separate on disk as well.
+    //
+    // Not `git archive` piped to tar: the tar on PATH here is GNU tar, which reads a `C:\...`
+    // argument as a remote host spec and fails with "Cannot connect to C:". A control that depends
+    // on which tar is installed is a control that will fail for a reason unrelated to the property.
+    //
+    // core.autocrlf=false so the checkout records the committed bytes rather than a re-encoding,
+    // which would make every file look modified and hide the single change this is looking for.
+    const headSha = git(["rev-parse", "HEAD"]);
+    execFileSync("git", ["-c", "core.autocrlf=false", "clone", "--quiet", "--no-hardlinks",
+                         ROOT, disposable], { encoding: "utf8" });
+    const tgit = (args: string[]) =>
+      execFileSync("git", ["-c", "core.autocrlf=false", ...args],
+        { cwd: disposable, encoding: "utf8" }).trim();
+    tgit(["checkout", "--quiet", "--detach", headSha]);
+
     installModuleStubs(disposable);
 
-    check("W1  the disposable tree is the real source, with nothing modified",
-      git(["status", "--porcelain"], disposable), "");
+    check("W1  the independent clone is at the exact candidate commit, with nothing modified",
+      [tgit(["rev-parse", "HEAD"]), tgit(["status", "--porcelain"])], [headSha, ""]);
     check("W1b and its validator is byte-identical to the shared checkout's",
       sha256Of(path.join(disposable, SPEC.rel)), SHARED_VALIDATOR_SHA_BEFORE);
 
@@ -274,8 +300,8 @@ console.log("\nW — widening fails the existing T7b guard, in an isolated tree"
 
     // `git()` trims, so the porcelain status arrives without its leading unstaged-column space.
     check("W3  the tree now differs by exactly one file",
-      git(["status", "--porcelain"], disposable), `M ${SPEC.rel}`);
-    const diff = git(["diff", "--numstat"], disposable);
+      tgit(["status", "--porcelain"]), `M ${SPEC.rel}`);
+    const diff = tgit(["diff", "--numstat"]);
     check("W3b and by exactly one changed line", diff, `1\t1\t${SPEC.rel}`);
 
     check("W4  a widened carrier makes all four delivered sites parallel",
@@ -297,25 +323,25 @@ console.log("\nW — widening fails the existing T7b guard, in an isolated tree"
       `${fingerprints.length} distinct: ${fingerprints.join(" | ").slice(0, 300)}`);
   } finally {
     // Nothing here is a link, so a recursive delete cannot escape the temp directory. Asserted
-    // rather than assumed, because the first version of this suite DID use a junction and its
+    // rather than assumed, because an earlier version of this suite DID use a junction and its
     // teardown deleted node_modules/.bin and 22 packages out of the shared checkout.
     const nm = path.join(disposable, "node_modules");
     if (fs.existsSync(nm) && fs.lstatSync(nm).isSymbolicLink()) {
       fail++; console.log("  FAIL  teardown: the disposable tree contains a link; refusing to delete");
       fs.unlinkSync(nm);
     }
-    if (created) {
-      try { git(["worktree", "remove", "--force", disposable]); } catch { /* prune below */ }
-      try { git(["worktree", "prune"]); } catch { /* nothing further to do */ }
-    }
-    fs.rmSync(path.dirname(disposable), { recursive: true, force: true });
+    // Deleting an independently rooted temp directory is the whole teardown. There is no
+    // registration to remove and no repository-wide prune to run.
+    fs.rmSync(tmpRoot, { recursive: true, force: true });
   }
 
-  // The teardown must leave nothing behind, in git's bookkeeping or on disk.
-  check("W5c the disposable worktree is gone from git's records",
-    execFileSync("git", ["worktree", "list"], { cwd: ROOT, encoding: "utf8" })
-      .split("\n").filter((l) => l.includes("p31a-widen")).length, 0);
-  check("W5d and the repository's real node_modules is untouched",
+  // The teardown leaves nothing behind, on disk OR in the source repository's Git metadata.
+  check("W6  the source repository's worktree registry is unchanged",
+    git(["worktree", "list"]), worktreesBefore);
+  check("W6b no p31a worktree was ever registered",
+    git(["worktree", "list"]).split("\n").filter((l) => l.includes("p31a-")).length, 0);
+  check("W6c the temp directory is gone", fs.existsSync(tmpRoot), false);
+  check("W6d and the repository's real node_modules is untouched",
     [fs.existsSync(path.join(ROOT, "node_modules", "typescript")),
      fs.existsSync(path.join(ROOT, "node_modules", "better-sqlite3")),
      fs.existsSync(path.join(ROOT, "node_modules", ".bin"))],
@@ -323,9 +349,9 @@ console.log("\nW — widening fails the existing T7b guard, in an isolated tree"
 
   // The point of the whole restructuring: the shared checkout was never written, so there is
   // nothing to restore and nothing a killed process could have left behind.
-  check("W6  the SHARED checkout's production file was never modified",
+  check("W7  the SHARED checkout's production file was never modified",
     sha256Of(SHARED_VALIDATOR), SHARED_VALIDATOR_SHA_BEFORE);
-  check("W7  and the shared checkout still resolves all four sites",
+  check("W8  and the shared checkout still resolves all four sites",
     deliveredSites(ROOT).map((s) => `${s.outcome.form}:${s.outcome.reason}`),
     Array(4).fill("literal:query_contract_failed"));
 }
