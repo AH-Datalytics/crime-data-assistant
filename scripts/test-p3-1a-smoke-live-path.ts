@@ -25,6 +25,12 @@
  *      error, and the nonconforming exit path are each exercised.
  *
  * IT EXECUTES NO FROZEN CASE. The governing set is opened only to hash it.
+ *
+ * S5c IS AN EQUALITY, NOT AN ABSENCE. It once asserted the evidence directory did not exist,
+ * which stopped being true the moment the first legitimate artifact was committed. It now
+ * compares a deterministic content-addressed snapshot of that directory before and after the
+ * whole suite, so it is valid in every state and detects modification of an artifact that was
+ * already there. S6 proves the snapshot can actually see each kind of change.
  */
 import fs from "node:fs";
 import os from "node:os";
@@ -103,7 +109,74 @@ function writeCases(name: string, mutate?: (o: any) => void): { file: string; sh
   return { file, sha: sha256Of(file) };
 }
 
+/**
+ * A deterministic, content-addressed snapshot of the evidence directory.
+ *
+ * WHY THIS REPLACED AN ABSENCE CHECK. S5c used to assert `fs.existsSync(EVIDENCE_RUNS_DIR) ===
+ * false`. That baked in a premise — "no evidence run has ever happened" — which was true when it
+ * was written and which the first legitimate evidence artifact falsifies. The assertion then failed
+ * for the one reason that is not a defect: the system had progressed exactly as intended. PR #12's
+ * qualification caught it, which is the assertion doing its job on the way out.
+ *
+ * A filename listing would not have been enough either: it cannot see a BYTE MODIFICATION of an
+ * artifact that was already present, which is the worst thing this suite could do and the thing an
+ * absence check could never have detected once absence stopped holding.
+ *
+ * So the invariant is now the strongest form that is true in every state: the complete evidence
+ * directory is byte-for-byte identical before and after the whole suite. It distinguishes absent
+ * from present-but-empty, records every recursively contained relative path with its entry type,
+ * size and sha256 for regular files, and a link's TARGET without following it. Paths are relative
+ * and slash-normalised and the list is sorted, so the comparison carries no timestamp and no
+ * platform-dependent absolute path.
+ *
+ * LINKS ARE NEVER TRAVERSED. `lstat` classifies, `readlink` records the target, and recursion stops
+ * there. That is deliberate beyond determinism: a recursive walk that followed a link out of the
+ * tree is exactly how an earlier version of the P3.1a inventory suite deleted 22 packages out of the
+ * shared checkout. A snapshot that cannot leave the directory cannot repeat it.
+ */
+type DirSnapshot =
+  | { state: "absent" }
+  | { state: "present"; entries: string[] };
+
+function snapshotDir(dir: string): DirSnapshot {
+  if (!fs.existsSync(dir)) return { state: "absent" };
+  const entries: string[] = [];
+
+  const walk = (abs: string, rel: string) => {
+    for (const d of fs.readdirSync(abs, { withFileTypes: true })) {
+      const childAbs = path.join(abs, d.name);
+      const childRel = (rel ? rel + "/" : "") + d.name;
+      // lstat, never stat: a link must be classified as a link, not as whatever it points at.
+      const st = fs.lstatSync(childAbs);
+      if (st.isSymbolicLink()) {
+        let target = "<unreadable>";
+        try { target = fs.readlinkSync(childAbs).replace(/\\/g, "/"); } catch { /* recorded above */ }
+        entries.push(`${childRel}\tlink\t${target}`);
+        continue; // NOT traversed
+      }
+      if (st.isDirectory()) {
+        entries.push(`${childRel}\tdir`);
+        walk(childAbs, childRel);
+        continue;
+      }
+      if (st.isFile()) {
+        const bytes = fs.readFileSync(childAbs);
+        entries.push(
+          `${childRel}\tfile\t${st.size}\t${crypto.createHash("sha256").update(bytes).digest("hex")}`);
+        continue;
+      }
+      entries.push(`${childRel}\tother`);
+    }
+  };
+
+  walk(dir, "");
+  entries.sort();
+  return { state: "present", entries };
+}
+
+/** Captured BEFORE any smoke subprocess is started. */
 const frozenBefore = digestFrozen();
+const evidenceDirBefore = snapshotDir(EVIDENCE_RUNS_DIR);
 console.log(`P3.1a synthetic live-path smoke test  (temp: ${TMP})`);
 
 // ── S0 — the input really is synthetic ──────────────────────────────────────────────────────
@@ -301,8 +374,89 @@ console.log("\nS5 — the oracle is untouched");
   check("S5  all three frozen sets are byte-identical after the whole suite",
     digestFrozen(), frozenBefore);
   check("S5b the frozen sets still match their pins", digestFrozen(), FROZEN_SETS);
-  check("S5c the evidence run directory still does not exist",
-    fs.existsSync(EVIDENCE_RUNS_DIR), false);
+  // The whole-suite aftercondition. Not a replacement for S3i, which is the direct gate proving
+  // `--smoke` REFUSES an output path inside the evidence directory; this proves that across every
+  // scenario, refusals included, the directory came out exactly as it went in.
+  const evidenceDirAfter = snapshotDir(EVIDENCE_RUNS_DIR);
+  check("S5c the evidence directory is byte-for-byte unchanged by the whole suite",
+    evidenceDirAfter, evidenceDirBefore);
+  checkTrue("S5d and the snapshot recorded a real state, not an unreadable one",
+    evidenceDirBefore.state === "absent" ||
+    (evidenceDirBefore.state === "present" &&
+     evidenceDirBefore.entries.every((e) => !e.endsWith("<unreadable>"))),
+    JSON.stringify(evidenceDirBefore).slice(0, 200));
+}
+
+// ── S6 — the snapshot helper itself, proved able to detect each kind of change ───────────────
+//
+// S5c is only as good as `snapshotDir`. A helper that returned a constant would make S5c pass
+// forever, so each difference it must catch is exercised against a disposable fixture. Nothing here
+// touches the real evidence directory.
+console.log("\nS6 — the snapshot helper detects every kind of change");
+{
+  const fx = fs.mkdtempSync(path.join(os.tmpdir(), "p31a-snap-"));
+  const dir = path.join(fx, "runs");
+  try {
+    check("S6  absent is distinguished from present-but-empty",
+      [snapshotDir(dir).state, (fs.mkdirSync(dir), snapshotDir(dir))],
+      ["absent", { state: "present", entries: [] }]);
+
+    fs.writeFileSync(path.join(dir, "run-a.json"), "{\"a\":1}\n");
+    const one = snapshotDir(dir);
+    checkTrue("S6b a new file changes the snapshot",
+      JSON.stringify(one) !== JSON.stringify({ state: "present", entries: [] }));
+
+    // Same name, same length, different bytes: the case a filename listing cannot see.
+    fs.writeFileSync(path.join(dir, "run-a.json"), "{\"a\":2}\n");
+    const modified = snapshotDir(dir);
+    checkTrue("S6c a same-name, same-size byte modification changes the snapshot",
+      JSON.stringify(modified) !== JSON.stringify(one));
+    check("S6d and the size is unchanged, so only the hash could have caught it",
+      (one as { entries: string[] }).entries[0].split("\t")[2],
+      (modified as { entries: string[] }).entries[0].split("\t")[2]);
+
+    fs.writeFileSync(path.join(dir, "run-b.json"), "{}\n");
+    const two = snapshotDir(dir);
+    fs.rmSync(path.join(dir, "run-b.json"));
+    check("S6e a deletion returns the snapshot to its earlier value",
+      snapshotDir(dir), modified);
+    checkTrue("S6f and the addition had been visible", JSON.stringify(two) !== JSON.stringify(modified));
+
+    // Nesting, so the recursion and the sort are both exercised.
+    fs.mkdirSync(path.join(dir, "nested"));
+    fs.writeFileSync(path.join(dir, "nested", "deep.json"), "{}\n");
+    const nested = snapshotDir(dir) as { entries: string[] };
+    checkTrue("S6g nested paths are recorded relative, slash-normalised and sorted",
+      nested.entries.some((e) => e.startsWith("nested\tdir")) &&
+      nested.entries.some((e) => e.startsWith("nested/deep.json\tfile")) &&
+      JSON.stringify(nested.entries) === JSON.stringify([...nested.entries].sort()));
+
+    // A link is RECORDED, never followed. The target is a throwaway directory inside this same
+    // fixture, so even a mistaken traversal could not reach anything that matters.
+    const outside = path.join(fx, "outside");
+    fs.mkdirSync(outside);
+    fs.writeFileSync(path.join(outside, "must-not-appear.json"), "{}\n");
+    const link = path.join(dir, "linked");
+    let linkMade = true;
+    try { fs.symlinkSync(outside, link, "junction"); } catch { linkMade = false; }
+    if (linkMade) {
+      const withLink = snapshotDir(dir) as { entries: string[] };
+      checkTrue("S6h a link is recorded as a link, with its target",
+        withLink.entries.some((e) => e.includes("\tlink\t")));
+      checkTrue("S6i and the snapshot does NOT traverse it",
+        !withLink.entries.some((e) => e.includes("must-not-appear.json")));
+      // Unlink explicitly: never let a recursive delete near a link.
+      fs.unlinkSync(link);
+    } else {
+      pass += 2;
+      console.log("  ok    S6h/S6i link recording skipped: this platform refused to create one");
+    }
+
+    checkTrue("S6j the fixture contains no link before it is deleted",
+      !fs.existsSync(link));
+  } finally {
+    fs.rmSync(fx, { recursive: true, force: true });
+  }
 }
 
 fs.rmSync(TMP, { recursive: true, force: true });

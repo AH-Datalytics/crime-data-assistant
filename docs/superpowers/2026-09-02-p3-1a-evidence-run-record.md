@@ -117,7 +117,35 @@ were nevertheless authored and frozen before any candidate execution and nothing
 | Written by the run at | `C:/Users/jeffm/cda-evidence/p3-1a-evidence-run-20260902-lf/docs/superpowers/p3-1a/runs/` |
 | On `dev` | **not yet** — `docs/superpowers/p3-1a/runs/` remains absent on `dev` |
 
-## 7. Open, for decision
+## 7. Correction note — the first attempt to land this record failed CI
+
+Recorded for an honest audit trail rather than quietly amended away.
+
+The first qualification of the records-only PR (#12) **failed**: GitHub Actions run `33636266206`,
+`tally: 176 passed, 1 failed, 10 skipped, 0 blocked = 187`, verdict `fixture_failed` /
+`corpus_not_certified`. One command failed —
+`scripts/test-p3-1a-smoke-live-path.ts`, assertion **S5c**.
+
+S5c asserted `fs.existsSync(EVIDENCE_RUNS_DIR) === false`. That encoded a premise — *no evidence
+run has ever happened* — which was true when the assertion was written and which committing the
+first legitimate evidence artifact **correctly falsifies**. The test was stale; the record change
+was not wrong.
+
+It was corrected under
+`docs/superpowers/2026-09-02-p3-1a-record-landing-smoke-invariant-amendment-handoff.md`, which
+amended the records-only path restriction to permit exactly that one file. S5c now compares a
+deterministic, content-addressed recursive snapshot of the evidence directory before and after the
+whole suite — relative paths, entry types, sizes, sha256, and link targets recorded without
+traversal — so it holds in every state and, unlike a filename listing, detects byte modification of
+an artifact that is already present. S6 exercises the snapshot helper against a disposable fixture
+to prove it detects addition, deletion, same-name same-size modification, and absent versus
+present-but-empty. The direct gate S3i, proving `--smoke` refuses an output path inside the evidence
+directory, is unchanged.
+
+The failed run remains visible and was not re-run unchanged, bypassed, or worked around by weakening
+harness accounting or CI configuration.
+
+## 8. Open, for decision
 
 1. **Land this record**, the round-8 review and the authorization together in one follow-up change,
    per the authorization's documentation disposition. Costs two CI runs. Not done.
