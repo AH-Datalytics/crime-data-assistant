@@ -1,0 +1,241 @@
+# Native Linux x64 release build — the production build path, exercised before production contact.
+#
+# WHAT THIS IS FOR. The canonical harness (canonical-harness.yml) runs on windows-latest and certifies
+# the behavioural test suite. It is Windows-only by design and never executes the production release
+# build. On 2026-09-03 a candidate that was green there twice failed inside deploy-zero-downtime.sh
+# on the VPS: Tailwind crashed on a committed document (docs/superpowers/2026-09-03-p3-1a-ff23c0-
+# ablation-result.md). The deploy failed safely, but the defect was found on deployment day, on
+# production hardware. This workflow finds that class of failure on a two-minute runner instead.
+#
+# WHAT IT CERTIFIES. That the tree at the built SHA, exported exactly as the deploy exports it
+# (`git archive`), installs its lockfile with exact `npm ci` and completes `next build` on native
+# Linux x64 with the pinned Node 24.14.0 image; that the CSS pipeline does not crash; that
+# TypeScript passes; that every route registers; and that the Tailwind source boundary holds
+# against the emitted stylesheets (scripts/test-tailwind-source-boundary.ts --emitted).
+#
+# WHAT IT DOES NOT CERTIFY. Runtime correctness against real databases (none are present here);
+# the deploy script's other guards (release-allowed-extras, blob binding, LFS pointers, the NIBRS
+# index preflight, pre-switch L2/L3, post-switch L4/L5); PM2 or HTTP health on the VPS; anything
+# the canonical harness certifies; Tier C corpus behaviour; or that production will serve the
+# build. The deploy still owns all of that.
+#
+# WHICH SHA IS BUILT. On pull_request, github.sha is GitHub's SYNTHETIC MERGE COMMIT of the PR head
+# onto its base — the merge result is what would land, so that is what is built; the PR head and
+# base SHAs are recorded alongside it. On push to dev/master, github.sha is the pushed commit. The
+# checkout is asserted to equal github.sha before anything is exported.
+#
+# RERUNS. A "setup / infrastructure" verdict (image pull, runner loss, missing marker) may be rerun,
+# and the rerun is recorded as such in the step summary. A genuine build or boundary failure is a
+# finding and is never rerun merely to obtain green.
+#
+# This workflow is NON-REQUIRED at Stage 0. Making `linux release build (x64)` a required context on
+# dev is a separate branch-protection decision (Proposal B, Stage 2), after at least three organic
+# PR + dev-push observation pairs with no unexplained setup/infrastructure result.
+name: linux release build
+
+on:
+  push:
+    branches: [dev, master]
+  pull_request:
+    branches: [dev, master]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: linux-release-build-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  IMAGE: node@sha256:1698b8f453a36aa5b2545a0ab21b1781bef5c62a4626a2e8d2a01e7cde4fad45   # node:24.14.0 linux/amd64
+  NODE_WANT: v24.14.0
+  NPM_WANT: 11.9.0
+
+jobs:
+  linux-release-build:
+    name: linux release build (x64)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Write the classification library
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          cat > "$RUNNER_TEMP/lib.sh" <<'LIB'
+          # Turns grep's three-way outcome -- 0 match, 1 no match, >=2 scanner error -- into a value,
+          # so a crashing grep is reported as a failure and never silently read as "no".
+          has () { local s=0; grep -qF -- "$2" "$1" || s=$?
+                   case "$s" in 0) echo yes ;; 1) echo no ;; *) echo "error:$s" ;; esac; }
+          count_lines () { local s=0 n; n=$(grep -cE -- "$2" "$1") || s=$?
+                           case "$s" in 0|1) echo "${n:-0}" ;; *) echo error ;; esac; }
+          # A run is interpretable ONLY if the container completed (exactly one DOCKER_EXIT=0), the
+          # install succeeded (exactly one NPM_CI_EXIT=0), the build reached a recorded status
+          # (exactly one numeric BUILD_EXIT) and nothing was asserted-out or skipped. Anything else
+          # is a setup/infrastructure failure, reported as such and never as a build result.
+          run_validity () {
+            local L="$1" dz dn iz in bz bn a k v
+            [ -s "$L" ] || { echo "invalid:log_missing"; return 0; }
+            dz=$(count_lines "$L" '^DOCKER_EXIT=0$');     dn=$(count_lines "$L" '^DOCKER_EXIT=')
+            iz=$(count_lines "$L" '^NPM_CI_EXIT=0$');     in=$(count_lines "$L" '^NPM_CI_EXIT=')
+            bz=$(count_lines "$L" '^BUILD_EXIT=[0-9]+$'); bn=$(count_lines "$L" '^BUILD_EXIT=')
+            a=$(count_lines  "$L" '^ASSERT_FAIL=');       k=$(count_lines  "$L" '^BUILD_SKIPPED=')
+            for v in "$dz" "$dn" "$iz" "$in" "$bz" "$bn" "$a" "$k"; do
+              [ "$v" = error ] && { echo "invalid:grep_error"; return 0; }
+            done
+            [ "$dn" = 1 ] && [ "$dz" = 1 ] || { echo "invalid:docker_exit(lines=$dn,zero=$dz)";   return 0; }
+            [ "$in" = 1 ] && [ "$iz" = 1 ] || { echo "invalid:npm_ci_exit(lines=$in,zero=$iz)";   return 0; }
+            [ "$bn" = 1 ] && [ "$bz" = 1 ] || { echo "invalid:build_exit(lines=$bn,numeric=$bz)"; return 0; }
+            [ "$a" = 0 ]  || { echo "invalid:assert_fail";   return 0; }
+            [ "$k" = 0 ]  || { echo "invalid:build_skipped"; return 0; }
+            echo valid
+          }
+          marker () { grep -E "^$2=[0-9]+\$" "$1" | cut -d= -f2; }
+          LIB
+          bash -n "$RUNNER_TEMP/lib.sh"
+          cp "$RUNNER_TEMP/lib.sh" evidence/lib.sh
+
+      - name: Record which SHA this run builds
+        run: |
+          set -euo pipefail
+          {
+            echo "event=${{ github.event_name }}"
+            echo "built_sha=${{ github.sha }}"
+            if [ "${{ github.event_name }}" = "pull_request" ]; then
+              echo "built_sha_meaning=synthetic merge of PR head onto base (refs/pull/${{ github.event.pull_request.number }}/merge)"
+              echo "pr_number=${{ github.event.pull_request.number }}"
+              echo "pr_head_sha=${{ github.event.pull_request.head.sha }}"
+              echo "pr_base_ref=${{ github.event.pull_request.base.ref }}"
+              echo "pr_base_sha=${{ github.event.pull_request.base.sha }}"
+            else
+              echo "built_sha_meaning=pushed commit on ${{ github.ref_name }}"
+              echo "before_sha=${{ github.event.before }}"
+            fi
+          } | tee evidence/built-sha.txt
+
+      - name: Host identity (outside any container)
+        run: |
+          set -euo pipefail
+          { uname -a; echo "host arch: $(uname -m)"; echo "nproc: $(nproc)"; grep -E '^PRETTY_NAME' /etc/os-release
+            lscpu | grep -E 'Architecture|Model name|^CPU\(s\)'
+            echo "--- binfmt_misc handlers (informational) ---"; ls -1 /proc/sys/fs/binfmt_misc 2>/dev/null || echo "(none)"
+            docker version --format 'docker {{.Server.Version}} {{.Server.Os}}/{{.Server.Arch}}'
+          } | tee evidence/host-identity.txt
+          test "$(uname -m)" = x86_64 || { echo "INFRA: host is not x86_64"; exit 2; }
+
+      - name: Check out the SHA under test
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: repo
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Export the tree exactly as the deploy does
+        run: |
+          set -euo pipefail
+          cd repo
+          head="$(git rev-parse HEAD)"
+          test "$head" = "${{ github.sha }}" || { echo "INFRA: checkout HEAD $head != github.sha ${{ github.sha }}"; exit 2; }
+          mkdir -p ../build && git archive HEAD | tar -x -C ../build
+          cd ..
+          hash_of () { sha256sum "$1" | cut -d' ' -f1; }
+          { echo "tree=$(git -C repo rev-parse 'HEAD^{tree}')"
+            echo "files=$(find build -type f | wc -l)"
+            echo "app/globals.css=$(hash_of build/app/globals.css)"
+            echo "package-lock.json=$(hash_of build/package-lock.json)"
+          } | tee evidence/export-identity.txt
+
+      - name: Install, build, and check the source boundary — in the pinned image, natively
+        run: |
+          set -euo pipefail
+          set +e     # ONLY around the captured Docker call: a failed build is data for classification
+          docker run --rm -v "$PWD/build":/work -w /work \
+            -e NEXT_PUBLIC_ENABLE_HATE_CRIME=true -e NEXT_TELEMETRY_DISABLED=1 -e CI=1 \
+            -e NODE_WANT="$NODE_WANT" -e NPM_WANT="$NPM_WANT" "$IMAGE" sh -c '
+              set -u
+              echo "node: $(node -v)"; echo "npm: $(npm -v)"; echo "container arch: $(uname -m)"
+              [ "$(node -v)" = "$NODE_WANT" ] || { echo "ASSERT_FAIL=node"; exit 0; }
+              [ "$(npm -v)"  = "$NPM_WANT"  ] || { echo "ASSERT_FAIL=npm";  exit 0; }
+              echo "--- npm ci ---"
+              npm ci; NPM_CI_EXIT=$?; echo "NPM_CI_EXIT=$NPM_CI_EXIT"
+              [ "$NPM_CI_EXIT" -eq 0 ] || { echo "BUILD_SKIPPED=install_failed"; exit 0; }
+              echo "--- installed versions (recorded; the lockfile is the authority) ---"
+              for p in next tailwindcss @tailwindcss/postcss @tailwindcss/oxide @tailwindcss/oxide-linux-x64-gnu; do
+                node -p "try{\"$p = \"+require(\"/work/node_modules/$p/package.json\").version}catch(e){\"$p = (absent)\"}"
+              done
+              echo "--- next build ---"
+              npm run build; BUILD_EXIT=$?; echo "BUILD_EXIT=$BUILD_EXIT"
+              if [ "$BUILD_EXIT" -eq 0 ]; then
+                echo "--- tailwind source boundary against the emitted stylesheets ---"
+                node_modules/.bin/tsx scripts/test-tailwind-source-boundary.ts --emitted .next/static
+                BOUNDARY_EXIT=$?; echo "BOUNDARY_EXIT=$BOUNDARY_EXIT"
+              else
+                echo "BOUNDARY_SKIPPED=build_failed"
+              fi
+              exit 0      # completed run: the container exit reflects INFRASTRUCTURE only
+            ' > evidence/build.log 2>&1
+          echo "DOCKER_EXIT=$?" | tee -a evidence/build.log
+          set -e
+          sed 's/\x1b\[[0-9;]*m//g' evidence/build.log | tail -40
+
+      - name: Classify and summarise — exactly one verdict
+        if: always()
+        run: |
+          set -uo pipefail
+          source "$RUNNER_TEMP/lib.sh" || { echo "SETUP / INFRASTRUCTURE FAILURE - classification library missing" | tee evidence/verdict.txt; exit 1; }
+          L=evidence/build.log
+          v=$(run_validity "$L")
+          if [ "$v" != valid ]; then
+            verdict="SETUP / INFRASTRUCTURE FAILURE ($v) - not a build result. A rerun is permitted for this verdict and must be recorded as an infrastructure rerun."
+            status=infra
+          else
+            be=$(marker "$L" BUILD_EXIT)
+            if [ "$be" != 0 ]; then
+              verdict="BUILD FAILED (BUILD_EXIT=$be) on native Linux x64 with the pinned toolchain. This is a finding, not a flake: do not rerun for green."
+              status=build_failed
+            else
+              bx=$(marker "$L" BOUNDARY_EXIT || true)
+              if [ -z "$bx" ]; then verdict="SETUP / INFRASTRUCTURE FAILURE - build succeeded but the boundary check recorded no exit marker."; status=infra
+              elif [ "$bx" != 0 ]; then verdict="BUILD SUCCEEDED but the TAILWIND SOURCE BOUNDARY CHECK FAILED (BOUNDARY_EXIT=$bx): the emitted CSS disagrees with the app/ + components/ contract. A finding; do not rerun for green."; status=boundary_failed
+              else verdict="BUILD SUCCEEDED and the source boundary holds (BUILD_EXIT=0, BOUNDARY_EXIT=0) on native Linux x64, Node $NODE_WANT, npm $NPM_WANT."; status=ok
+              fi
+            fi
+          fi
+          echo "$verdict" | tee evidence/verdict.txt
+          {
+            echo "## linux release build (x64) — $status"
+            echo
+            echo "**$verdict**"
+            echo
+            cat evidence/built-sha.txt | sed 's/^/- /'
+            echo
+            echo '```'; cat evidence/export-identity.txt; echo '```'
+            echo
+            echo "Certifies: the tree at the built SHA exports, installs (exact npm ci) and completes next build on native Linux x64 with the pinned toolchain, and the Tailwind source boundary holds against the emitted CSS."
+            echo "Does not certify: runtime behaviour against real databases (absent here), the deploy script's other guards, PM2/HTTP health, or anything the canonical harness certifies."
+            echo
+            echo "<details><summary>build log tail (ANSI stripped)</summary>"; echo; echo '```'
+            sed 's/\x1b\[[0-9;]*m//g' "$L" | grep -vE '^\s+at ' | tail -60
+            echo '```'; echo "</details>"
+          } >> "$GITHUB_STEP_SUMMARY"
+          [ "$status" = ok ]
+
+      - name: Redaction sweep — three-way grep status gates upload
+        id: redact
+        if: always()
+        run: |
+          set -uo pipefail
+          [ -d evidence ] || { echo "REFUSING upload: no evidence directory"; exit 1; }
+          s=0
+          grep -rEq -- 'gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|-----BEGIN [A-Z ]*PRIVATE KEY-----' evidence/ || s=$?
+          case "$s" in
+            0) echo "REFUSING upload: credential-shaped content found (not printed)"; exit 1 ;;
+            1) echo "redaction sweep clean" ;;
+            *) echo "REFUSING upload: scanner error (grep exit $s)"; exit 1 ;;
+          esac
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always() && steps.redact.outcome == 'success'
+        with:
+          name: linux-release-build-${{ github.event_name }}-${{ github.run_id }}
+          path: evidence/
+          retention-days: 30
