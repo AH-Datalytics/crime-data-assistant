@@ -706,6 +706,15 @@
       "note": "P3.1a remedy registration (2026-09-03). Runs Tailwind's own compiler and oxide scanner in-process: asserts app/globals.css declares source(none) with roots exactly app/ + components/, proves a docs canary is excluded and a components canary included, reproduces the production RangeError (code point 16720832) by scanning a docs file with a synthetic out-of-range escape, and accounts statically for every compilable utility in the roots (516 at cec0cbc, 0 unresolved) with the dropped non-runtime set listed. postcss for selectors, never regex. Measured: no SQLite statement, no network; ~1.5 s. Tier F."
     },
     {
+      "id": "test-timing-gate-inventory",
+      "tier": "F",
+      "script": "scripts/test-timing-gate-inventory.js",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "Timing-gate repair registration (2026-09-03). Derives the harness plan with scripts/lib/harness-plan.js, scans every plan script plus scripts/lib for clock reads and duration comparisons, and requires each file with a hit to be inventoried with exact counts and a class (2 observation / 3 injected clock / 4 structural; class 1, a wall-clock pass/fail gate, is not permitted). Exists because the required Windows check went red twice on unchanged trees (runs 32970500509, 33801327126) from such gates. Reads source text only: no SQLite statement, no network, no subprocess."
+    },
+    {
       "id": "test-layer3-contract-corpus",
       "tier": "F",
       "script": "scripts/test-layer3-contract-corpus.ts",

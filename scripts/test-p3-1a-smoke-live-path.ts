@@ -69,17 +69,31 @@ const digestFrozen = () =>
 
 const TMP = fs.mkdtempSync(path.join(os.tmpdir(), "p31a-smoke-"));
 
-/** Run the real runner as a subprocess and capture exit code plus output. */
-function runCli(args: string[]): { code: number; out: string } {
+/**
+ * Run the real runner as a subprocess and capture exit code plus output.
+ *
+ * `frozenNowMs` pins the child's clock through the scripts/fixtures/frozen-clock.cjs preload, so a
+ * test that must predict a filename the runner derives from "now" can predict it exactly instead
+ * of racing the child's start-up. The runner file itself is untouched either way -- its identity
+ * is pinned by RUNNER_SHA.
+ */
+function runCli(args: string[], options: { frozenNowMs?: number } = {}): { code: number; out: string } {
+  const frozen = options.frozenNowMs !== undefined;
+  const command = frozen ? process.execPath : "npx";
+  const argv = frozen
+    ? ["--require", FROZEN_CLOCK, "--import", "tsx", RUNNER, ...args]
+    : ["tsx", RUNNER, ...args];
   try {
-    const out = execFileSync("npx", ["tsx", RUNNER, ...args], {
-      cwd: ROOT, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], shell: true,
+    const out = execFileSync(command, argv, {
+      cwd: ROOT, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], shell: !frozen,
+      env: frozen ? { ...process.env, FROZEN_CLOCK_EPOCH_MS: String(options.frozenNowMs) } : process.env,
     });
     return { code: 0, out };
   } catch (e: any) {
     return { code: typeof e.status === "number" ? e.status : -1, out: `${e.stdout ?? ""}${e.stderr ?? ""}` };
   }
 }
+const FROZEN_CLOCK = path.join(__dirname, "fixtures", "frozen-clock.cjs");
 
 /**
  * The synthetic cases. Authored here, present in no frozen set.
@@ -464,17 +478,17 @@ console.log("\nS2 — an existing artifact is never overwritten");
   const { file, sha } = writeCases("conformant2.json");
   const out = path.join(TMP, "out-collision");
   fs.mkdirSync(out, { recursive: true });
-  // Pre-create every filename the next run could choose. runId is the UTC start time to the
-  // second, so seeding the current second plus the next few makes the collision deterministic
-  // rather than a race the test would sometimes lose.
-  const now = Date.now();
-  for (let i = 0; i < 8; i++) {
-    const id = new Date(now + i * 1000).toISOString()
-      .replace(/[-:]/g, "").replace(/\..+/, "").replace("T", "_");
-    fs.writeFileSync(path.join(out, `smoke_not_evidence-${id}.json`), "{\"pre-existing\":true}\n");
-  }
+  // runId is the UTC start time to the second, so the child's clock is frozen at one predeclared
+  // instant and exactly that filename is pre-created. (This used to seed "the current second plus
+  // the next seven" and rely on the child reading its clock within 8 s of the parent -- a race
+  // against start-up latency, not a property of the runner.)
+  const frozenNowMs = Date.UTC(2026, 8, 3, 12, 0, 0);
+  const id = new Date(frozenNowMs).toISOString()
+    .replace(/[-:]/g, "").replace(/\..+/, "").replace("T", "_");
+  fs.writeFileSync(path.join(out, `smoke_not_evidence-${id}.json`), "{\"pre-existing\":true}\n");
   const seeded = fs.readdirSync(out).length;
-  const r = runCli(["--smoke", file, "--expect-hash", sha, "--out", out, "--runner-sha", RUNNER_SHA]);
+  check("S2a exactly one collision fixture is seeded", seeded, 1);
+  const r = runCli(["--smoke", file, "--expect-hash", sha, "--out", out, "--runner-sha", RUNNER_SHA], { frozenNowMs });
 
   check("S2  a collision is a run defect, exit 2", r.code, 2);
   check("S2b nothing new was written", fs.readdirSync(out).length, seeded);

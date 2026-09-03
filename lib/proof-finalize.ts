@@ -103,6 +103,18 @@ export function __resetProofBudgetStateForTests(): void {
   budgetState.announced = false;
 }
 
+/**
+ * The clock the budget is measured against. Production always reads `Date.now`; the seam exists
+ * so the budget accounting and the circuit breaker can be tested against a deterministic clock
+ * instead of against how fast the test machine happened to be.
+ */
+let now: () => number = Date.now;
+
+/** Test seam. Pass nothing to restore the real clock. Not exported for production use. */
+export function __setProofClockForTests(clock?: () => number): void {
+  now = clock ?? Date.now;
+}
+
 export function proofSelfDisabled(): boolean {
   return budgetState.selfDisabled;
 }
@@ -390,7 +402,7 @@ export function finalizeProof(input: ProofFinalizationInput): ProofFinalization 
     );
   }
 
-  const startedAt = Date.now();
+  const startedAt = now();
   try {
     const contract = buildQueryContract(input.question, contractSourceFor(input.sourceId), null);
 
@@ -561,7 +573,7 @@ export function finalizeProof(input: ProofFinalizationInput): ProofFinalization 
       }
     }
 
-    const elapsedMs = Date.now() - startedAt;
+    const elapsedMs = now() - startedAt;
     recordElapsed(elapsedMs);
 
     return brandFinalization({
@@ -582,7 +594,7 @@ export function finalizeProof(input: ProofFinalizationInput): ProofFinalization 
       checkReasons: checks.reasons,
     });
   } catch (error) {
-    const elapsedMs = Date.now() - startedAt;
+    const elapsedMs = now() - startedAt;
     recordElapsed(elapsedMs);
     const reason = error instanceof Error ? error.message : String(error);
     console.warn(`[proof] finalization degraded (response unaffected): ${reason}`);
