@@ -102,8 +102,19 @@ const UNAMBIGUOUS_SUB_CITY_RE = new RegExp(
  *
  * So a determiner fires only when the term is followed by a known non-noun continuation.
  * Anything unrecognised — which is what a modified noun looks like — falls through to the
- * place reading. That default is deliberate: an unknown word after the term resolves
- * toward answering, never toward a false refusal.
+ * place reading.
+ *
+ * TWO CLAIMS, AND ONLY THE FIRST IS ABSOLUTE. Incompleteness in the follower list below
+ * costs a MISSED refusal, never a false one: an unrecognised word falls through to the
+ * place reading, so a continuation nobody thought of can only let a sub-city request
+ * through. But that is a property of the LIST, not of the branch. A determiner plus the
+ * term in head position stays genuinely ambiguous, and a RECOGNISED continuation resolves
+ * it toward the sub-city reading — so an unusually phrased reference to the place can
+ * still be refused: "How many murders had the Ward reported by 2022?", "Crime in the Ward
+ * is down", "Compare the Ward with Little Rock" (Codex review, 2026-09-02, revision 2).
+ * Those readings are less natural than their common-noun twins, which is why this bounded
+ * lexical correction leaves them rather than reaching for another place parser — but they
+ * are a recorded residual, not an impossibility.
  *
  * A comma is not a continuation. ", AR", ", Arkansas" and ", Louisiana's 9th ward" are
  * all qualifier position, and treating a comma as phrase-final is what let the two-letter
