@@ -1,6 +1,6 @@
 import type { QueryContract, QueryContractSource } from "./query-contract";
 import { extractReferencedTables } from "./table-allowlist";
-import { SUB_CITY_GEOGRAPHY_MESSAGE, SUB_CITY_GEOGRAPHY_RE } from "./capability-overrides";
+import { SUB_CITY_GEOGRAPHY_MESSAGE, asksSubCityGeography } from "./capability-overrides";
 import { asksClearanceTypeBreakdown } from "./clearance-type-intent";
 
 export type SourceCapabilitySeverity = "warning" | "unsupported";
@@ -142,10 +142,6 @@ function asksDomesticViolenceAggravatedAssaultShare(question: string, contract: 
   const asksDv = /\bdomestic\s+violence\b|\bintimate\s+partner\b|\b(?<![a-z])dv(?![a-z])\b/i.test(question);
   return asksShare && asksAggAssault && asksDv;
 }
-function asksSubCityGeography(question: string): boolean {
-  return SUB_CITY_GEOGRAPHY_RE.test(question);
-}
-
 function asksOutOfScopeTopic(question: string): boolean {
   return /\b(prosecution|convicted|conviction|sentence[ds]?|incarcerat|prison population|jail population|fine[ds]?\b|fee[ds]?\b|bail|immigration status|illegal immigrant|undocumented|GARS|GVRS|gun violence restraining|red flag law|defendants?)\b/i.test(question);
 }
