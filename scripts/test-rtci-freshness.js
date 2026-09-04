@@ -590,16 +590,22 @@ asyncChecks.push(["the key never appears in an error raised from a response body
 
 asyncChecks.push(["the send is bounded by a timeout", async () => {
   process.env.RESEND_API_KEY = "re_testkey_0123456789";
-  const started = Date.now();
+  // The fetch below never settles on its own: the ONLY way this check can complete is for the
+  // mailer's timer to abort it. So the rejection carrying the timeout message is the whole proof
+  // that the timeout bounds the call; a fetch the mailer failed to abort would hang this command
+  // until the harness's per-command timeout failed it. (An earlier wall-clock assertion here --
+  // "finished in under 5 s" -- added nothing structural and could fail on a slow runner.)
+  let aborted = false;
   await expectReject(mailer.sendPlainMail({
     subject: "s", body: "b", timeoutMs: 150,
     fetchImpl: (url, opts) => new Promise((_, reject) => {
       opts.signal.addEventListener("abort", () => {
+        aborted = true;
         const e = new Error("aborted"); e.name = "AbortError"; reject(e);
       });
     }),
   }), /timed out after 150ms/, "timeout");
-  assert.ok(Date.now() - started < 5000, "the timeout must actually bound the call");
+  assert.ok(aborted, "the mailer must abort the in-flight fetch through its signal");
 }]);
 
 asyncChecks.push(["a transport failure is reported, redacted, and not swallowed", async () => {
@@ -1030,14 +1036,16 @@ console.log("\n11. bounded response body");
 
 asyncChecks.push(["a response whose headers arrive but whose body hangs still times out", async () => {
   process.env.RESEND_API_KEY = "re_testkey_0123456789";
-  const started = Date.now();
+  // The body promise never settles, so this check can only complete if the mailer's timer still
+  // bounds body consumption. The timeout rejection IS the proof; a mailer that cleared its timer
+  // on headers would hang this command until the harness's per-command timeout failed it. (An
+  // earlier "finished in under 5 s" wall-clock assertion added nothing structural.)
   await expectReject(mailer.sendPlainMail({
     subject: "s", body: "b", timeoutMs: 200,
     // Headers land immediately; the body never does. Clearing the timeout at this point -- which is
     // what the pre-amendment code did -- would hang the scheduled run forever.
     fetchImpl: async () => ({ status: 200, text: () => new Promise(() => {}) }),
   }), /timed out after 200ms/, "hanging body");
-  assert.ok(Date.now() - started < 5000, "the timeout must bound body consumption, not just the headers");
 }]);
 
 asyncChecks.push(["a hanging streamed body times out as well", async () => {
