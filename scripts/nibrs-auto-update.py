@@ -273,6 +273,24 @@ def sint(line, start, end):
     return None
 
 
+def bh_population(line):
+    """Population from the BH batch header, with the federal placeholder zeroed.
+
+    The FBI writes 100,000,000 when an agency has no resident population of
+    its own -- federal ORIs such as US Marshals offices and US Park Police.
+    It is not a population: it is over 11x the largest real agency (NYPD,
+    ~8.5M). The 8 such rows in the 2025 master file contributed 800,000,000
+    to the agency-population sum, pushing the 2025 total to 1,151,428,438,
+    roughly 3.4x the US population. Zero matches the covered-by convention
+    already used for every other agency whose residents are counted under a
+    different ORI.
+    """
+    v = sint(line, 105, 114)
+    if v is not None and v >= 100_000_000:
+        return 0
+    return v
+
+
 def sha256_file(path):
     h = hashlib.sha256()
     with open(path, 'rb') as f:
@@ -548,7 +566,7 @@ def import_year(year, zip_path, conn):
                 batches['agencies'].append((
                     ori, year, sc, sa,
                     s(line, 41, 71), s(line, 73, 75),
-                    s(line, 75, 76), s(line, 78, 79), s(line, 95, 96), sint(line, 105, 114),
+                    s(line, 75, 76), s(line, 78, 79), s(line, 95, 96), bh_population(line),
                 ))
                 if len(batches['agencies']) >= BATCH_SIZE:
                     flush_batch('agencies')
