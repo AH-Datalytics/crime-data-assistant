@@ -9,6 +9,7 @@ import { serializeQueryContractLogMeta } from "./query-contract";
 import { ensureNibrsRollupAttached, nibrsRollupContextForDb } from "./nibrs-rollup-router";
 import { buildQueryLogInsert } from "./query-log-columns";
 import { EMPTY_PROOF_LOG_FIELDS, type ProofLogFields } from "./proof-finalize";
+import { nibrsExecutionAuthorityIssue, nibrsSqlSha256, type NibrsExecutionAuthority } from "./nibrs-execution-binding";
 
 const state = {
   db: null as Database.Database | null,
@@ -64,6 +65,29 @@ export function executeWithTimeout(
   sql: string,
   timeoutMs: number = QUERY_TIMEOUT_MS
 ): Promise<{ rows: Record<string, unknown>[]; columns: string[] }> {
+  return runNibrsStatement(sql, timeoutMs, null);
+}
+
+/**
+ * P4.1: execute exactly the statement that passed the final checks on a NIBRS model path. Only an
+ * authority issued by `finalizeNibrsStatement` is accepted, and its SQL identity is verified again
+ * immediately before prepare -- in the worker, or before the synchronous fallback prepares it. Other
+ * callers (owned/deterministic builders, the application fallback) keep `executeWithTimeout`.
+ */
+export function executeBoundNibrsStatement(
+  authority: NibrsExecutionAuthority,
+  timeoutMs: number = QUERY_TIMEOUT_MS
+): Promise<{ rows: Record<string, unknown>[]; columns: string[] }> {
+  const issue = nibrsExecutionAuthorityIssue(authority);
+  if (issue) return Promise.reject(new Error(`NIBRS execution refused: ${issue}`));
+  return runNibrsStatement(authority.sql, timeoutMs, authority.sha256);
+}
+
+function runNibrsStatement(
+  sql: string,
+  timeoutMs: number,
+  expectedSha256: string | null
+): Promise<{ rows: Record<string, unknown>[]; columns: string[] }> {
   return new Promise((resolve, reject) => {
     const workerScript = resolveWorkerScriptPath();
     const dbPath = resolveDbPath(process.env.NIBRS_DB_PATH, [
@@ -84,6 +108,11 @@ export function executeWithTimeout(
     // Fall back to sync if worker script missing
     if (!workerScript) {
       console.warn("[nibrs] Worker script not found, falling back to sync execution");
+      // The same identity check the worker applies, before prepare. No hard timeout is claimed here.
+      if (expectedSha256 && nibrsSqlSha256(sql) !== expectedSha256) {
+        reject(new Error("NIBRS execution refused: the statement to prepare differs from the one that passed the final checks"));
+        return;
+      }
       try {
         const stmt = db.prepare(sql);
         const rows = stmt.all() as Record<string, unknown>[];
@@ -97,7 +126,7 @@ export function executeWithTimeout(
 
     execFile(
       process.execPath,
-      [workerScript, dbPath, rollupContext?.path ?? "", sql],
+      [workerScript, dbPath, rollupContext?.path ?? "", sql, ...(expectedSha256 ? [expectedSha256] : [])],
       { timeout: timeoutMs, maxBuffer: 50 * 1024 * 1024 },
       (err, stdout, stderr) => {
         if (err) {

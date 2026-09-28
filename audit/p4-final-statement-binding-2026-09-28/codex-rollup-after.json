@@ -1,0 +1,120 @@
+{
+ "kind": "codex-rollup-candidate",
+ "at": "2026-09-28T02:16:34.898Z",
+ "expected": {
+  "murder2025": 600,
+  "robbery2025": 7800,
+  "robberyOffenseTable2025": null
+ },
+ "boundaries": {
+  "networkProbe": [
+   {
+    "api": "https.request",
+    "blocked": true
+   },
+   {
+    "api": "http.get",
+    "blocked": true
+   },
+   {
+    "api": "net.connect",
+    "blocked": true
+   },
+   {
+    "api": "fetch",
+    "blocked": true
+   }
+  ],
+  "databaseProbe": [
+   {
+    "path": "C:\\Users\\jeffm\\crime-data-assistant\\crime_data.db",
+    "blocked": true
+   },
+   {
+    "path": "C:\\Users\\jeffm\\crime-data-assistant\\nibrs.db",
+    "blocked": true
+   },
+   {
+    "path": "C:\\Users\\jeffm\\crime-data-assistant\\shr.db",
+    "blocked": true
+   },
+   {
+    "path": "/opt/nibrs/nibrs.db",
+    "blocked": true
+   }
+  ],
+  "outboundNetworkAttempts": 4,
+  "refusedDatabaseOpens": 4,
+  "substitutedModules": [
+   "better-sqlite3",
+   "@anthropic-ai/sdk"
+  ]
+ },
+ "checks": {
+  "passed": 0,
+  "failed": 0,
+  "list": []
+ },
+ "changesFromBaseline": null,
+ "results": [
+  {
+   "id": "state-clearance",
+   "question": "How many rapes were cleared by arrest in Illinois in 2025?",
+   "expect": "observe",
+   "status": 200,
+   "threw": null,
+   "modelCalls": 1,
+   "modelSql": [
+    "SELECT SUM(cleared_by_arrest) AS rapes_cleared_by_arrest FROM summary_clearance_detail WHERE state = 'IL' AND year = 2025 AND ucr_offense_code = '11A'"
+   ],
+   "responseSql": null,
+   "workerLaunches": [],
+   "rows": [],
+   "columns": [],
+   "explanation": "I couldn't build a reliable query that matched the requested source, geography, metric, and time period. Try narrowing the question or choosing one of the suggested alternatives.",
+   "errors": []
+  },
+  {
+   "id": "national-clearance",
+   "question": "How many rapes were cleared by arrest nationwide in 2025?",
+   "expect": "observe",
+   "status": 200,
+   "threw": null,
+   "modelCalls": 1,
+   "modelSql": [
+    "SELECT SUM(cleared_by_arrest) AS rapes_cleared_by_arrest FROM summary_clearance_detail WHERE year = 2025 AND ucr_offense_code = '11A'"
+   ],
+   "responseSql": null,
+   "workerLaunches": [
+    {
+     "received": "SELECT\n  d.year,\n  SUM(d.arrestee_count) AS arrests\nFROM rollup.national_summary_arrestee_demographics d\nWHERE d.year BETWEEN 2025 AND 2025\n  AND d.ucr_arrest_offense IN ('11A', '11B', '11C')\nGROUP BY d.year\nORDER BY d.year\nLIMIT 1000",
+     "sha": null,
+     "shaOfReceived": "26881ed4e63e0bb05b75544d16c2f1ec603850852e676064a897533e894d2105",
+     "altered": false
+    }
+   ],
+   "rows": [],
+   "columns": [],
+   "explanation": "I couldn't build a reliable query that matched the requested source, geography, metric, and time period. Try narrowing the question or choosing one of the suggested alternatives.",
+   "errors": []
+  },
+  {
+   "id": "state-clearance-retry",
+   "question": "How many rapes were cleared by arrest in Illinois in 2025?",
+   "expect": "observe",
+   "status": 200,
+   "threw": null,
+   "modelCalls": 2,
+   "modelSql": [
+    "SELECT SUM(nonexistent_count) AS rapes_cleared_by_arrest FROM summary_clearance_detail WHERE state = 'IL' AND year = 2025 AND ucr_offense_code = '11A'",
+    "SELECT SUM(cleared_by_arrest) AS rapes_cleared_by_arrest FROM summary_clearance_detail WHERE state = 'IL' AND year = 2025 AND ucr_offense_code = '11A'"
+   ],
+   "responseSql": null,
+   "workerLaunches": [],
+   "rows": [],
+   "columns": [],
+   "explanation": "I couldn't build a reliable query that matched the requested source, geography, metric, and time period. Try narrowing the question or choosing one of the suggested alternatives.",
+   "errors": []
+  }
+ ]
+}

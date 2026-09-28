@@ -163,6 +163,24 @@ function stripSqlStrings(sql: string): string {
 }
 
 /** Route only aggregation-safe state/national shapes. */
+/**
+ * The planner rollup tables a statement reads, identified by this router's OWN declarations: exactly
+ * `rollup.state_<source>` or `rollup.national_<source>` for a source in ROLLUP_SOURCES, the only names
+ * `routeNibrsRollupSql` produces. Each keeps its source table (its measure family) and its level (its
+ * grain). A `rollup.` name outside that finite set is not recognized and gets no family.
+ */
+export function nibrsRollupTablesIn(sql: string): { table: string; level: "state" | "national"; sourceTable: string }[] {
+  const found: { table: string; level: "state" | "national"; sourceTable: string }[] = [];
+  for (const match of stripSqlStrings(sql).matchAll(/\b(?:FROM|JOIN)\s+rollup\.(state|national)_([a-z0-9_]+)\b/gi)) {
+    const level = match[1].toLowerCase() as "state" | "national";
+    const sourceTable = match[2].toLowerCase();
+    if (!(ROLLUP_SOURCES as readonly string[]).includes(sourceTable)) continue;
+    const table = `rollup.${level}_${sourceTable}`;
+    if (!found.some((f) => f.table === table)) found.push({ table, level, sourceTable });
+  }
+  return found;
+}
+
 export function routeNibrsRollupSql(sql: string, rollupAvailable = resolveNibrsRollupPath() !== null): NibrsRollupRoute {
   if (!rollupAvailable) return { sql, routed: false, level: null, sourceTable: null, reason: "rollup-unavailable" };
   if (/\brollup\./i.test(sql)) return { sql, routed: false, level: null, sourceTable: null, reason: "already-routed" };

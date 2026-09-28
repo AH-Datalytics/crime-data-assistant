@@ -1,0 +1,10 @@
+8bc5a32f3eb11c09751814dfdd3a07e274b5c82cf1a38301355df5f241f4d80a *./app/api/nibrs-query/route.ts
+d3fa6471659676e12bcdc40d57a1418e1c998c25240ac00ef0a0982b55bf361c *./audit/binding-witness.cjs
+95a8e8c573d99121beab0f19de53fe91036dd09d2a46a2d67fe605e65c19133e *./audit/mutations.cjs
+0793478ceed08719ecb062cc75eff92f0ce012ffceaba495243661797fe58e5f *./lib/nibrs-db.ts
+33ac3e0a52d492cd59e0e60fe072e6590a4898617add58c0a92897a7a8f81fa5 *./lib/nibrs-execution-binding.ts
+0c42346f88100a52d6102e4e625b3bb9c76e10f73bbca079e5d639547f6a9aea *./lib/nibrs-query-worker.js
+1b32a5f30bd7f4d79150ead3bc68f1c9ac86744e2358d4703a8d146b4764b22d *./lib/nibrs-rollup-router.ts
+e7975394acdf7c2762aa10b267976a78c0ed21ea9aedb78e6062a977470eaa23 *./lib/source-capabilities.ts
+7fee4bca0871c840453dc7fc5f11c7ecb649b9f0168559dfd0e6bf9390dcc78c *./package.json
+27ffb4a022ce5b8661b0adf6615c29cea4a2efdbd0874c3b5a9a10014450ee29 *./scripts/test-nibrs-execution-binding.ts

@@ -1,0 +1,312 @@
+{
+ "kind": "p4-final-statement-binding-witness",
+ "at": "2026-09-28T01:46:24.336Z",
+ "expected": {
+  "murder2025": 600,
+  "robbery2025": 7800,
+  "robberyOffenseTable2025": null
+ },
+ "boundaries": {
+  "networkProbe": [
+   {
+    "api": "https.request",
+    "blocked": true
+   },
+   {
+    "api": "http.get",
+    "blocked": true
+   },
+   {
+    "api": "net.connect",
+    "blocked": true
+   },
+   {
+    "api": "fetch",
+    "blocked": true
+   }
+  ],
+  "databaseProbe": [
+   {
+    "path": "C:\\Users\\jeffm\\crime-data-assistant\\crime_data.db",
+    "blocked": true
+   },
+   {
+    "path": "C:\\Users\\jeffm\\crime-data-assistant\\nibrs.db",
+    "blocked": true
+   },
+   {
+    "path": "C:\\Users\\jeffm\\crime-data-assistant\\shr.db",
+    "blocked": true
+   },
+   {
+    "path": "/opt/nibrs/nibrs.db",
+    "blocked": true
+   }
+  ],
+  "outboundNetworkAttempts": 4,
+  "refusedDatabaseOpens": 4,
+  "substitutedModules": [
+   "better-sqlite3",
+   "@anthropic-ai/sdk"
+  ]
+ },
+ "checks": {
+  "passed": 7,
+  "failed": 0,
+  "list": [
+   {
+    "name": "initial path: an unchanged useful answer (600) from the statement that passed the final checks, prepared with its identity",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "initial path: a statement rewritten upstream to the offense table (pre-existing) still runs as that checked statement, bound (null)",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "initial path: a legitimate schema correction still runs, and the CORRECTED statement is the one checked and prepared",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "retry path: after a schema failure the retried statement delivers 600, prepared with its identity",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "initial-altered-in-transit: an alteration after the final check reaches the worker and is refused at prepare (no rows, not the altered statement's figure)",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "retry-altered-in-transit: an alteration after the final check reaches the worker and is refused at prepare (no rows, not the altered statement's figure)",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "name": "a final-check refusal never reaches the worker (no launch, no rows)",
+    "ok": true,
+    "detail": ""
+   }
+  ]
+ },
+ "changesFromBaseline": [
+  {
+   "id": "initial-altered-in-transit",
+   "before": "1 rows {\"murder_victims\":7800}, launches 1 unbound",
+   "after": "0 rows null, launches 2 bound/bound"
+  },
+  {
+   "id": "retry-altered-in-transit",
+   "before": "1 rows {\"murder_victims\":7800}, launches 1 unbound",
+   "after": "0 rows null, launches 1 bound"
+  },
+  {
+   "id": "final-check-refusal",
+   "before": "1 rows {\"murder_victims\":600}, launches 1 unbound",
+   "after": "0 rows null, launches 0 "
+  }
+ ],
+ "results": [
+  {
+   "id": "initial-plain",
+   "question": "Using the victim summary, add up the 09A victim_count for ORI ILCPD0000 in 2025",
+   "expect": "murder",
+   "status": 200,
+   "threw": null,
+   "modelCalls": 2,
+   "modelSql": [
+    "SELECT SUM(victim_count) AS murder_victims FROM summary_victim_city_monthly WHERE ori = 'ILCPD0000' AND year = 2025 AND ucr_offense_code = '09A'"
+   ],
+   "responseSql": "SELECT SUM(victim_count) AS murder_victims FROM summary_victim_city_monthly INDEXED BY idx_svcm_ori WHERE ori = 'ILCPD0000' AND year = 2025 AND ucr_offense_code = '09A' LIMIT 1000",
+   "workerLaunches": [
+    {
+     "received": "SELECT SUM(victim_count) AS murder_victims FROM summary_victim_city_monthly INDEXED BY idx_svcm_ori WHERE ori = 'ILCPD0000' AND year = 2025 AND ucr_offense_code = '09A' LIMIT 1000",
+     "sha": "32a925542a8411abcb1718380fd92da720fbd5d3fdb61d68cebe0bfafe345066",
+     "shaOfReceived": "32a925542a8411abcb1718380fd92da720fbd5d3fdb61d68cebe0bfafe345066",
+     "altered": false
+    }
+   ],
+   "rows": [
+    {
+     "murder_victims": 600
+    }
+   ],
+   "columns": [
+    "murder_victims"
+   ],
+   "explanation": "The requested results are shown above.",
+   "errors": []
+  },
+  {
+   "id": "initial-robbery",
+   "question": "Using the victim summary, add up the 120 victim_count for ORI ILCPD0000 in 2025",
+   "expect": "robbery",
+   "status": 200,
+   "threw": null,
+   "modelCalls": 2,
+   "modelSql": [
+    "SELECT SUM(victim_count) AS robbery_victims FROM summary_victim_city_monthly WHERE ori = 'ILCPD0000' AND year = 2025 AND ucr_offense_code = '120'"
+   ],
+   "responseSql": "SELECT SUM(offense_count) AS robbery_victims FROM summary_city_monthly INDEXED BY idx_scm_ori_year WHERE ori = 'ILCPD0000' AND year = 2025 AND ucr_offense_code = '120' LIMIT 1000",
+   "workerLaunches": [
+    {
+     "received": "SELECT SUM(offense_count) AS robbery_victims FROM summary_city_monthly INDEXED BY idx_scm_ori_year WHERE ori = 'ILCPD0000' AND year = 2025 AND ucr_offense_code = '120' LIMIT 1000",
+     "sha": "cffcce5d7629f34db1ca3c3f14788d1ce26e1c1db889d331f626b38a5cd340bc",
+     "shaOfReceived": "cffcce5d7629f34db1ca3c3f14788d1ce26e1c1db889d331f626b38a5cd340bc",
+     "altered": false
+    }
+   ],
+   "rows": [
+    {
+     "robbery_victims": null
+    }
+   ],
+   "columns": [
+    "robbery_victims"
+   ],
+   "explanation": "The requested results are shown above.",
+   "errors": []
+  },
+  {
+   "id": "initial-schema-corrected",
+   "question": "Using the arrestee summary, add up the arrest count for ORI ILCPD0000 in 2025",
+   "expect": "arrests-corrected",
+   "status": 200,
+   "threw": null,
+   "modelCalls": 2,
+   "modelSql": [
+    "SELECT SUM(arrest_count) AS arrests FROM summary_arrestee_demographics WHERE ori = 'ILCPD0000' AND year = 2025"
+   ],
+   "responseSql": "SELECT SUM(arrestee_count) AS arrests FROM summary_arrestee_demographics WHERE ori = 'ILCPD0000' AND year = 2025 LIMIT 1000",
+   "workerLaunches": [
+    {
+     "received": "SELECT SUM(arrestee_count) AS arrests FROM summary_arrestee_demographics WHERE ori = 'ILCPD0000' AND year = 2025 LIMIT 1000",
+     "sha": "ceb6193205b9286abfed1ae30cde1f7cfc4c3c11c7f78c1327934e48ff9c1567",
+     "shaOfReceived": "ceb6193205b9286abfed1ae30cde1f7cfc4c3c11c7f78c1327934e48ff9c1567",
+     "altered": false
+    }
+   ],
+   "rows": [
+    {
+     "arrests": null
+    }
+   ],
+   "columns": [
+    "arrests"
+   ],
+   "explanation": "The requested results are shown above.",
+   "errors": []
+  },
+  {
+   "id": "retry-after-schema-failure",
+   "question": "Using the victim summary, add up the 09A victim_count for ORI ILCPD0000 in 2025",
+   "expect": "murder-retry",
+   "status": 200,
+   "threw": null,
+   "modelCalls": 3,
+   "modelSql": [
+    "SELECT SUM(victim_total) AS murder_victims FROM summary_victim_city_monthly WHERE ori = 'ILCPD0000' AND year = 2025 AND ucr_offense_code = '09A'",
+    "SELECT SUM(victim_count) AS murder_victims FROM summary_victim_city_monthly WHERE ori = 'ILCPD0000' AND year = 2025 AND ucr_offense_code = '09A'"
+   ],
+   "responseSql": "SELECT SUM(victim_count) AS murder_victims FROM summary_victim_city_monthly INDEXED BY idx_svcm_ori WHERE ori = 'ILCPD0000' AND year = 2025 AND ucr_offense_code = '09A' LIMIT 1000",
+   "workerLaunches": [
+    {
+     "received": "SELECT SUM(victim_count) AS murder_victims FROM summary_victim_city_monthly INDEXED BY idx_svcm_ori WHERE ori = 'ILCPD0000' AND year = 2025 AND ucr_offense_code = '09A' LIMIT 1000",
+     "sha": "32a925542a8411abcb1718380fd92da720fbd5d3fdb61d68cebe0bfafe345066",
+     "shaOfReceived": "32a925542a8411abcb1718380fd92da720fbd5d3fdb61d68cebe0bfafe345066",
+     "altered": false
+    }
+   ],
+   "rows": [
+    {
+     "murder_victims": 600
+    }
+   ],
+   "columns": [
+    "murder_victims"
+   ],
+   "explanation": "The requested results are shown above.",
+   "errors": []
+  },
+  {
+   "id": "initial-altered-in-transit",
+   "question": "Using the victim summary, add up the 09A victim_count for ORI ILCPD0000 in 2025",
+   "expect": "refused-at-prepare",
+   "status": 500,
+   "threw": null,
+   "modelCalls": 2,
+   "modelSql": [
+    "SELECT SUM(victim_count) AS murder_victims FROM summary_victim_city_monthly WHERE ori = 'ILCPD0000' AND year = 2025 AND ucr_offense_code = '09A'"
+   ],
+   "responseSql": "SELECT SUM(victim_count) AS murder_victims FROM summary_victim_city_monthly INDEXED BY idx_svcm_ori WHERE ori = 'ILCPD0000' AND year = 2025 AND ucr_offense_code = '09A' LIMIT 1000",
+   "workerLaunches": [
+    {
+     "received": "SELECT SUM(victim_count) AS murder_victims FROM summary_victim_city_monthly INDEXED BY idx_svcm_ori WHERE ori = 'ILCPD0000' AND year = 2025 AND ucr_offense_code = '120' LIMIT 1000",
+     "sha": "32a925542a8411abcb1718380fd92da720fbd5d3fdb61d68cebe0bfafe345066",
+     "shaOfReceived": "8b37124f8a965759ab14f83a00aeb491ad1bb222094c104e8c1587ae09cff6e9",
+     "altered": true
+    },
+    {
+     "received": "SELECT SUM(victim_count) AS murder_victims FROM summary_victim_city_monthly INDEXED BY idx_svcm_ori WHERE ori = 'ILCPD0000' AND year = 2025 AND ucr_offense_code = '120' LIMIT 1000",
+     "sha": "32a925542a8411abcb1718380fd92da720fbd5d3fdb61d68cebe0bfafe345066",
+     "shaOfReceived": "8b37124f8a965759ab14f83a00aeb491ad1bb222094c104e8c1587ae09cff6e9",
+     "altered": true
+    }
+   ],
+   "rows": [],
+   "columns": [],
+   "explanation": "",
+   "errors": [
+    "I couldn't complete this request. That's a failure on our side, not a statement about the data."
+   ]
+  },
+  {
+   "id": "retry-altered-in-transit",
+   "question": "Using the victim summary, add up the 09A victim_count for ORI ILCPD0000 in 2025",
+   "expect": "refused-at-prepare",
+   "status": 500,
+   "threw": null,
+   "modelCalls": 2,
+   "modelSql": [
+    "SELECT SUM(victim_total) AS murder_victims FROM summary_victim_city_monthly WHERE ori = 'ILCPD0000' AND year = 2025 AND ucr_offense_code = '09A'",
+    "SELECT SUM(victim_count) AS murder_victims FROM summary_victim_city_monthly WHERE ori = 'ILCPD0000' AND year = 2025 AND ucr_offense_code = '09A'"
+   ],
+   "responseSql": "SELECT SUM(victim_total) AS murder_victims FROM summary_victim_city_monthly INDEXED BY idx_svcm_ori WHERE ori = 'ILCPD0000' AND year = 2025 AND ucr_offense_code = '09A' LIMIT 1000",
+   "workerLaunches": [
+    {
+     "received": "SELECT SUM(victim_count) AS murder_victims FROM summary_victim_city_monthly INDEXED BY idx_svcm_ori WHERE ori = 'ILCPD0000' AND year = 2025 AND ucr_offense_code = '120' LIMIT 1000",
+     "sha": "32a925542a8411abcb1718380fd92da720fbd5d3fdb61d68cebe0bfafe345066",
+     "shaOfReceived": "8b37124f8a965759ab14f83a00aeb491ad1bb222094c104e8c1587ae09cff6e9",
+     "altered": true
+    }
+   ],
+   "rows": [],
+   "columns": [],
+   "explanation": "",
+   "errors": [
+    "I couldn't complete this request. That's a failure on our side, not a statement about the data."
+   ]
+  },
+  {
+   "id": "final-check-refusal",
+   "question": "Using the victim summary, add up the 09A victim_count for ORI ILCPD0000 in 2025",
+   "expect": "refused-before-prepare",
+   "status": 500,
+   "threw": null,
+   "modelCalls": 2,
+   "modelSql": [
+    "SELECT SUM(victim_count) AS murder_victims FROM summary_victim_city_monthly WHERE ori = 'ILCPD0000' AND year = 2025 AND ucr_offense_code = '09A'"
+   ],
+   "responseSql": "SELECT SUM(victim_count) AS murder_victims FROM summary_victim_city_monthly INDEXED BY idx_svcm_ori WHERE ori = 'ILCPD0000' AND year = 2025 AND ucr_offense_code = '09A' LIMIT 1000",
+   "workerLaunches": [],
+   "rows": [],
+   "columns": [],
+   "explanation": "",
+   "errors": [
+    "I couldn't complete this request. That's a failure on our side, not a statement about the data."
+   ]
+  }
+ ]
+}

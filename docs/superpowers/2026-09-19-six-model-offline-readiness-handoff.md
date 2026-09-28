@@ -24991,3 +24991,520 @@ Claude preserved the working candidate, fixed the lost clarification and checked
 <!-- progress-update
 {"kind":"focus","phase":3,"at":"2026-09-27T23:12:00Z","latest":"The preserved candidate, clarification repair and combined local checks are accepted. No further repair round is requested.","next":"Jeff decides the scoped local preservation commit and the bounded continuation toward Phase 4. Keep remaining Phase 3 answer-quality obligations visible; no paid rerun or deployment.","work":{"id":"P3.3","title":"Decide Phase 3 closeout and what comes next","owner":"Jeff","state":"Local batch accepted; continuation decision ready","next":"Approve the scoped preservation commit if desired; subsequent implementation stays within a bounded Phase 4 scope."}}
 -->
+
+## Preservation commit made - 15baa42 on local branch phase3-candidate-c
+
+2026-09-28T00:42:19Z, Claude, under Jeff's approval of the scoped local preservation commit ("Approved"), following
+"Codex candidate C ruling" (`:24921`).
+
+- **Commit `15baa42`** on a new local branch **`phase3-candidate-c`**, created at `74b09b7`. Creating
+  the branch changed no working-tree file; porcelain status was hashed before and after.
+- **Staged by explicit paths only**, from `audit/phase3-closeout-2026-09-27/proposed-commit-paths.txt`
+  (121 paths):
+  - the 113 candidate paths;
+  - `audit/current-yoy-group-verification-2-2026-09-10/identity-gate.ts`;
+  - the six governing documents;
+  - `pre-mutation-cr1.sha256`.
+- **120 files are in the commit.** `package-lock.json` showed as modified, but its content is identical to
+  HEAD (no diff), so it adds nothing.
+- The staged set matched the dry run exactly. Nothing matching databases, env files, credentials or logs
+  was included. LFS tracks only `*.db`.
+- Before committing I checked the staged content against the accepted hashes. The CR1 product and suite
+  match `pre-mutation-cr1.sha256`. `lib/shr-count-plan.ts`, `scripts/test-shr-count-plan.ts` and the SHR
+  route match `pre-mutation-numeric.sha256`. The helper is `767721a4…`.
+- After committing, all 121 listed paths show no difference from HEAD.
+- The commit message names `lib/historical-ranking-request.ts` as the **disclosed deferred draft**,
+  preserved, not accepted as a finished feature.
+- Not done: **no push, merge or deployment**. The existing stash (1 entry) is untouched. The 89
+  outside-candidate paths, the `audit/` evidence and stray files remain uncommitted in the tree.
+- The external snapshot is unchanged: `candidate-c-snapshot.tar`, `fa1adbad…`, 2,075 members.
+- Still standing: `npm test` stops at the two taxonomy findings (16 !== 12). Phase 3 remains partial.
+- Next decisions are Jeff's: whether to push this branch for an off-machine copy, and the bounded Phase 4
+  scope.
+
+<!-- progress-update
+{"kind":"focus","phase":3,"at":"2026-09-28T00:42:19Z","latest":"The accepted Phase 3 candidate is committed locally (15baa42 on branch phase3-candidate-c); nothing pushed or deployed.","next":"Jeff decides whether to push the branch for an off-machine copy, and the bounded Phase 4 continuation scope.","work":{"id":"P3.3","title":"Decide Phase 3 closeout and what comes next","owner":"Jeff","state":"Preservation commit made locally","next":"Decide push and the bounded Phase 4 scope."}}
+-->
+
+## Preservation branch pushed - proposed bounded Phase 4 final-statement binding
+
+2026-09-27 local date. Jeff said "Ok, go" after the recommendation to push the preservation branch and define the next bounded scope. Codex announced that interpretation before acting: push and scope definition, not merge, deployment or new product implementation.
+
+### Completed operation
+
+Pushed `phase3-candidate-c` to the existing `origin`, `https://github.com/AH-Datalytics/crime-data-assistant.git`, with an explicit branch ref and without force. GitHub's `ls-remote` independently returned:
+
+`15baa422e21c77867edf6e6fb1faee5e8986d738 refs/heads/phase3-candidate-c`
+
+The local branch now tracks that remote branch. No PR was created; no merge or deployment was performed. This establishes an off-machine copy of the committed 120-file change, **not** a copy of the remaining uncommitted audit evidence or the external snapshot. This new handoff entry is also not in that already-pushed commit.
+
+### Next recommendation: one exact-statement portion of P4.1
+
+**Recommend a bounded local implementation of final-statement validation and execution binding on the NIBRS model initial and database-error retry paths.** Implementation is not started or newly authorized by this scope definition. Jeff can approve this concrete task as one outcome; no separate feasibility or proposal-only submission is requested.
+
+The rule is simple: **the SQL that receives the final applicable checks must be the SQL actually prepared for execution.** This is the first invariant in the accepted architecture's section 5.2 and P4.1, not a new architecture. The source-version invariant remains deferred and must not be represented by a path, size, timestamp or dummy version.
+
+The present code still has this ordering:
+
+- Initial: `app/api/nibrs-query/route.ts:1455` checks the contract, then optimization and schema correction can change the statement, then `:1480` executes it.
+- Retry: `:1514` checks the contract, then optimization and schema correction can change it, then `:1534` executes it.
+- `lib/nibrs-db.ts` forwards text to the worker; the worker prepares its argument without a separately checked statement identity.
+
+**This is a directly observed ordering/binding gap, not a newly measured wrong answer.** Do not claim that every rewrite is harmful, that this causes the remaining refusal families, or that hashing establishes semantic correctness. The earlier reporting-table substitution defect was already repaired and accepted under P4.1.SUBSTITUTION. That work stays closed. This proposal explicitly revisits only the remaining exact-statement invariant; the larger gateway/source-version migration stays deferred.
+
+If approved, Claude owns this one local task:
+
+1. Reuse existing planning, schema handling, request-contract checks and worker execution. Put the final applicable checks after the permitted transformations, and bind execution to the resulting checked statement. If a check itself rewrites the statement, the final executed form must receive the applicable checks; no unbounded rewrite/revalidation loop. A small private validated-plan carrier is sufficient—no generic framework or all-route migration.
+2. Carry the exact SQL identity to the real execution boundary and check it immediately before preparing the answer SQL. Only successful final validation may issue the execution authority; a caller-made hash or a frozen but unvalidated object is not that authority. Use the existing process boundary and preserve its limits. Keep ordinary passing SQL, legitimate planning/schema corrections, rows, columns and supported errors working. Preserve the accepted optimizer fix and owned builders.
+3. Exercise **both** initial and retry paths using the existing isolated route fixtures and the actual worker over disposable databases. Name pre-transformation SQL, finally validated SQL and prepared SQL separately. Prove useful unchanged results and a legitimate corrected statement; inject an after-validation alteration and show it cannot be prepared. A mutation bypassing the binding must make the relevant witness fail. A final-validator refusal must not reach answer execution. Compare the complete declared small regression corpus before/after and explain any newly refused supported request.
+4. Keep normal legacy paths outside this slice explicitly named: deterministic/owned builders, the application-generated fallback, other tabs, helpers and embeds are not migrated. Tests must distinguish the covered model initial/retry paths from these exclusions, rather than claiming all NIBRS execution is now covered. If a shared execution function supports both modes, the covered callers must demonstrably use the bound mode.
+
+The known missing-worker synchronous fallback remains a timeout limitation, not a separate repair project here. If it is used for a bound execution, the SQL identity requirement still applies before prepare; do not certify a hard timeout for that fallback. Keep fixture processes windowless and do not launch PowerShell.
+
+**Stop and review:** one integrated local submission, with at most one bounded correction pass only if included in Jeff's approval. If this cannot preserve supported behavior without a wider parser, source-version system or route migration, stop and recommend the smaller alternative; do not silently widen the work or relabel another round. No paid comparison, real-source read, new dependency, server, production access, commit/push of new code or deployment belongs to this proposed implementation.
+
+This is an infrastructure increment that helps keep checks effective. It does not supply missing population/coverage facts or release the CTE/comma-alias/catalogue refusals. Phase 3 stays partial, with useful-ranking, coverage, identity and answer-delivery obligations retained. The accepted combined candidate is the baseline, and existing evidence is reused. No broad audit or rebuild is proposed.
+
+### Short Claude prompt
+
+> Read "Preservation branch pushed - proposed bounded Phase 4 final-statement binding." Commit 15baa422 is verified on origin/phase3-candidate-c; no merge or deployment. Codex has defined the next P4.1 slice: the NIBRS model initial/retry paths must execute exactly the statement that passed the final applicable checks, with identity checked at prepare, preserving useful fixture answers and supported rewrites. The optimizer substitution repair stays closed. No full gateway/source-version project or all-route migration. This is an implementation-ready recommendation awaiting Jeff's approval, not authority to start. If approved, execute the scope directly with the stated fixtures, exclusions and correction limit; no new proposal-only handoff. Codex review: Needed for the resulting execution-boundary implementation; scope recommendation supplied here, build not reviewed.
+
+Claude saved the reviewed application changes locally, and Codex has now verified their copy on GitHub. The proposed next task makes an existing correctness check govern the calculation actually run, while leaving unfinished answer capabilities visible and avoiding a wholesale redesign.
+
+**Necessity check:** preservation is complete for the committed candidate. Final-statement binding addresses a concrete gap in the planned Phase 4 invariant; it is not a prerequisite for accepting the completed Phase 3 repairs and is not a claim that those repairs fix the whole app. No repeat optimizer investigation, new paid test, general timeout repair or source-version project is needed for this bounded task. Its product edits await the owner's implementation decision.
+
+<!-- progress-update
+{"kind":"focus","phase":4,"at":"2026-09-28T00:49:00Z","latest":"The accepted Phase 3 candidate is saved on GitHub at 15baa422. A bounded Phase 4 task is defined: run exactly the NIBRS model statement that passed final checks.","next":"Jeff decides the bounded local initial/retry statement-binding implementation and its one correction allowance. Phase 3 obligations remain open; no deployment or paid test.","work":{"id":"P4.1","title":"Run the statement that passed the final checks","owner":"Jeff decision; Claude implementation if approved","state":"Concrete bounded scope proposed; not started","next":"Approve or decline the defined local implementation; no separate feasibility round."}}
+-->
+
+## P4.1 final-statement binding built - NIBRS model initial and retry paths run exactly the checked statement
+
+2026-09-28T02:12:35Z, Claude. This implements the scope defined at `:25029`, which Jeff approved ("approved").
+- **The optional correction pass was not explicitly approved, so none is claimed.**
+- Local only: no source database, provider call, spend, new dependency, commit, push or deployment.
+- **No PowerShell was launched**, and every child process was windowless. The witness forces
+  `windowsHide` at the worker boundary; the product launcher is unchanged in that respect.
+- Evidence: `audit/p4-final-statement-binding-2026-09-28/`. Backups: `backup-before/` with
+  `backup-before.sha256`.
+- The accepted optimizer substitution repair (P4.1.SUBSTITUTION) was not touched.
+
+### What changed
+
+- **New `lib/nibrs-execution-binding.ts`.**
+  - `finalizeNibrsStatement` runs the final applicable checks on the statement that will execute, in
+    order:
+    - SQL safety (`validateAndSanitize`);
+    - schema validity (the route's `validateSqlSchema`, with its correction);
+    - the request contract (the route's `runContractValidation`).
+  - A check that rewrites the statement (the sanitizer's LIMIT, a schema correction, a contract rewrite)
+    makes its output the candidate, which must pass every check **unchanged** in a second round. There
+    are two rounds and no loop; a statement that keeps changing is refused as "unsettled".
+  - Only a passing final check issues an execution authority: `{sql, sha256, path, rounds}`, frozen and
+    registered in a module-private WeakMap.
+  - A copy, a caller-made frozen object with the correct hash, or an in-place change is not authority.
+- **`lib/nibrs-db.ts`.** The new `executeBoundNibrsStatement(authority)`:
+  - refuses an unissued or altered authority **before any database is touched**;
+  - then passes the SQL and its SHA-256 to the worker.
+  - If the worker is missing, the synchronous fallback applies the same identity check before
+    `prepare`. No hard timeout is claimed for that fallback; its limitation is unchanged.
+  - `executeWithTimeout(sql)` keeps its exact legacy behavior for the excluded callers.
+- **`lib/nibrs-query-worker.js`.** When an expected SHA-256 is supplied, the worker hashes the statement
+  it received and **refuses before prepare** if it differs. With no hash, it runs in the legacy mode.
+- **`app/api/nibrs-query/route.ts`.**
+  - **Initial path:** after planning and schema correction, `finalizeNibrsStatement` issues the
+    authority, and `executeBoundNibrsStatement` runs it.
+  - **Retry path:** the same.
+  - A final contract failure returns the route's existing owned contract message
+    (`contract_final_statement_failure…`). Other final-check failures raise, as schema failures already
+    did, and never reach execution.
+  - The retry path's rollup-availability check now also runs on the final statement. The September 15
+    feasibility check had found it tested the text from before optimization.
+  - The existing early contract check on the model's statement is kept, so its owned messages are
+    unchanged.
+- **Excluded, and named in code and tests.** These keep `executeWithTimeout`:
+  - the owned builder (`ownedQuery.sql`);
+  - the deterministic builder (`deterministicQuery.sql`);
+  - the application-generated fallback (`fallbackSql`);
+  - other tabs, helpers and embeds.
+
+  No source-version identity is represented.
+
+### Evidence
+
+- **Real NIBRS route with the real worker, over disposable fixtures** (`binding-witness.cjs`): **7/7**
+  (`witness-after.json`). For each scenario the witness records three statements separately:
+  - the model's pre-transformation statement(s);
+  - the route's reported (finally validated) statement;
+  - what the worker process actually received, with the identity it was sent.
+
+  | Scenario | Before (`witness-before.json`) | After |
+  |---|---|---|
+  | Initial: murder victims, optimizer adds `INDEXED BY` | 600, worker **unbound** | **600**, worker bound, received = reported |
+  | Initial: a statement the route rewrites to the offense table before the execution block (pre-existing) | NULL, unbound | **same NULL**, bound; the checked rewritten text is what ran |
+  | Initial: `arrest_count` corrected to `arrestee_count` | ran, unbound | **ran, bound**; the corrected text is what was checked and prepared |
+  | Retry after a schema failure | 600, unbound | **600, bound**, one model call more than the initial path |
+  | Initial: statement altered after it left the route (`'09A'` → `'120'`) | **7,800 delivered, the altered statement's figure** | **refused at prepare**, no rows |
+  | Retry: the same alteration | **7,800 delivered** | **refused at prepare**, no rows |
+  | Final check forced to refuse | 600 (no binding existed) | **no worker launch**, no rows |
+
+  Only the three refusal scenarios changed. **The four useful scenarios have identical rows, SQL and
+  explanation.** The fixture figures are derived from its rows (murder 600). Isolation: network 4/4
+  blocked, real sources 4/4 refused.
+- **Unit suite `scripts/test-nibrs-execution-binding.ts`: 22/22**, added to the `npm test` chain after
+  the optimizer suite. It covers:
+  - single- and two-round issue; LIMIT, schema and contract rewrites; the unsettled refusal;
+  - no authority on contract, retry-issue, safety or schema failure;
+  - copies, forged objects and in-place changes refused;
+  - the bound executor refusing an unissued authority with zero database opens;
+  - the **real worker run directly** on a disposable database: the right identity runs, an altered
+    statement with the original identity is refused, no identity is legacy;
+  - placement: exactly two bound callers, and the three named legacy callers.
+- **Mutations: 6 of 7 red, all restored byte-identically** (`mutations.json`):
+  - B1/B2: initial or retry bypasses the binding. **This is the required bypass mutation; the witness
+    fails.**
+  - B3: the worker skips the identity check.
+  - B4: the executor accepts an unissued authority.
+  - B5: a contract failure still issues authority.
+  - B6: a rewritten statement is issued without re-checking.
+  - **B7 did not go red, and is recorded as an equivalent mutation, not a gap.** It fed the initial final
+    check the text from before schema correction. The final check runs the schema step itself, so it
+    reached the same corrected, checked statement. That is the intended property of putting schema
+    validation inside the final check.
+- **Declared regression corpus, before and after:**
+  - the 7 witness scenarios above;
+  - a re-run of every accepted Phase 3 witness through `combined-offline.cjs` (a copy writing into this
+    folder, so the accepted receipts are untouched):
+    - GC-084/098 45/45, **20/20 identical**;
+    - GC-057 21/21, **8/8 identical**;
+    - GC-080 48/48 and 17/17, **all identical**;
+    - CR1 9/9 and 5/5;
+    - controls 12/12.
+
+  **No supported request is newly refused.**
+- **Test chain** (`npm-chain.log`): 131 steps passed, then it stopped at `test-operation-taxonomy` with
+  **the same FAIL lines as the accepted combined run, still 16 !== 12**. This change adds no sealed plan
+  family. After the taxonomy step: all exit 0. **Type check:** zero type-error lines under `app/`, `lib/`
+  and `scripts/`; the full `tsc` exits 2 on audit/backup material only. The PowerShell suites were not
+  run.
+- Candidate hashes: `pre-mutation.sha256` (6 files), all matching after every run.
+
+### What this does not establish
+
+- It **does not show that any rewrite was harmful**, that this causes a refusal family, or that a hash
+  proves semantic correctness. It enforces one ordering and identity invariant on two paths.
+- The upstream rewrite that turns the robbery statement into an offense-table statement happens before
+  the execution block. It was not investigated or changed; it is now simply checked and bound as the
+  text that runs.
+- Not covered: the excluded callers above, the Current, SHR and hate-crime routes, and source-version
+  identity.
+- Carried and unchanged:
+  - the worker still receives SQL as a process argument (its existing limit);
+  - the synchronous fallback has no hard timeout;
+  - Phase 3 stays partial, with its answer-quality obligations owned;
+  - the frozen scores are unchanged.
+
+### Self-review
+
+- **The main risk is an extra contract pass on optimizer output.** The contract now also sees
+  planner-rewritten text (`INDEXED BY`, rollup routing). On this corpus no request was newly refused.
+  The known `rollup.`-qualified alias limit (`correctness-backlog.md:313`) could make a
+  rollup-planned statement fail its final contract check in cases the fixture does not exercise. If so,
+  it would now refuse rather than run unchecked. That is safe, but it could cost a supported answer.
+  **I have not measured rollup-routed statements; the fixture has no rollup plan for these scenarios.**
+- **The early contract check is kept**, so contract rules run twice on unchanged text. That is harmless,
+  and it preserves the existing owned messages.
+- **B7's non-red result is explained, not dismissed.** If Codex wants a mutation that proves the final
+  check is placed after correction, it needs a case where correcting after the check would change
+  meaning. The current corrector only fixes `arrest_count`.
+
+### Paste-ready prompt for Codex
+
+> Read "P4.1 final-statement binding built - NIBRS model initial and retry paths run exactly the checked statement" at the end of docs/superpowers/2026-09-19-six-model-offline-readiness-handoff.md, with audit/p4-final-statement-binding-2026-09-28/. New lib/nibrs-execution-binding.ts runs the final safety/schema/contract checks on the post-planning statement (two rounds for rewrites, then refuse) and issues a registered, frozen authority; executeBoundNibrsStatement and the worker verify its SHA-256 before prepare; only the two model paths are bound, and the owned, deterministic and fallback callers are named as legacy. Real route plus real worker 7/7: useful answers unchanged; statements altered in transit, which delivered 7,800 before, are now refused at prepare on both paths; a forced final refusal never launches the worker. Unit 22/22; mutations 6/7 red, with B7 explained as equivalent (the final check includes schema correction); accepted Phase 3 witnesses all identical; chain unchanged (16 !== 12). Disclosed: rollup-planned statements are unmeasured under the new final contract pass. No correction allowance claimed; no source, provider, spend, commit or deployment. Codex review: Needed — the execution-boundary implementation.
+
+<!-- progress-update
+{"kind":"step","phase":4,"id":"P4.1","title":"Run the statement that passed the final checks","status":"review","at":"2026-09-28T02:12:35Z","note":"Built locally for the NIBRS model first-try and retry paths: the final checks now run on the exact statement that will execute, and the query worker refuses anything that differs from it. Normal answers are unchanged; a statement altered after checking, which used to run, is now refused. Other paths are named and unchanged. Awaiting Codex review."}
+-->
+
+<!-- progress-update
+{"kind":"focus","phase":4,"at":"2026-09-28T02:12:35Z","latest":"NIBRS model queries now run exactly the statement that passed the final checks; everything else unchanged.","next":"Codex reviews the P4.1 binding. No commit, deployment or paid test.","work":{"id":"P4.1","title":"Run the statement that passed the final checks","owner":"Codex","state":"Implementation submitted","next":"Review the binding, the equivalent B7 mutation and the unmeasured rollup-planned case."}}
+-->
+
+## Codex P4.1 ruling - binding credited, supported rollup answers newly refused
+
+2026-09-28T02:20:17Z. **Credit the execution binding, but do not accept the completed increment yet. One material preservation regression is reproduced on both covered paths.** This is the consolidated review of the submission at :25080. The submission expressly says the optional correction pass was not approved; no automatic repair is authorized here.
+
+### Verified and retained
+
+- Independent unit execution: **22/22**, exit 0.
+- Independent real-route/real-worker replay: **7/7**, exit 0, retained separately as `audit/p4-final-statement-binding-2026-09-28/codex-witness.json`. All four declared unchanged scenarios retain rows/SQL/explanation; only the three intended refusal scenarios change relative to the saved baseline.
+- **6/6 candidate hashes and 4/4 preserved backup hashes match**, in `codex-audit.json`. No product file was edited or temporarily replaced by this review.
+- Recomputed the submitted combined receipts against the accepted receipts: **20 + 8 + 48 + 17 = 93** matching result identities and declared output signatures, no missing cases. Existing Phase 3 credit remains intact. Unchanged full suites and mutation scripts were not rerun.
+- The issued/frozen authority, parent admission, worker identity comparison and two bound route callers are credited. Other callers remain named legacy paths. No source-version or general semantic-correctness guarantee is claimed.
+- **B7 is equivalent for the supplied case.** Supplying pre-correction text to a finalizer that itself performs the same schema correction can produce the same checked statement. Keep the honest tally of six detected mutations and one equivalent mutation; no artificial seventh kill or separate mutation round is required. B1/B2/B3 provide the material bypass controls.
+
+The `initial-robbery` NULL scenario establishes preserved behavior, not a useful correct answer to its victim-count request. Likewise, preserving the schema-correction scenario is narrower than independently validating every figure it could return. This wording qualification does not reopen those upstream behaviors in this task.
+
+### R1 - the new final check rejects the planner's legitimate clearance rollups
+
+**Concrete before/after:**
+
+| Synthetic question/path | Prior route | Submitted route |
+|---|---|---|
+| How many rapes were cleared by arrest in Illinois in 2025? Initial model path | Returns `rapes_cleared_by_arrest: 300` | Owned contract refusal, no answer rows and no worker launch |
+| Same question, database-error retry after an intentionally nonexistent column | Returns **300** after correction | Owned contract refusal, no answer rows and no worker launch |
+| How many rapes were cleared by arrest nationwide in 2025? Model path | Returns **500** | Owned contract refusal, no answer rows |
+
+The 300 and 500 are independently summed from the retained **synthetic fixture rows**, not US/Illinois source observations. The national fixture first attempts an excluded deterministic arrestee query, whose rollup table is absent, then enters the model path in both versions. Its one remaining excluded worker launch must not be reported as zero total execution. The two Illinois witnesses establish the regression without that fixture-dependent preliminary branch.
+
+Reproducer: `codex-rollup-probe.cjs`, with separate `codex-rollup-before.json` and `codex-rollup-after.json`. It reuses the submitted isolated route driver. Before mode loads the preserved pre-change route and database-module bytes in memory at their original module identities; it does not change checkout files. The current worker's unchanged legacy/no-hash behavior serves those prior calls. Both processes demonstrated network 4/4 blocked and real-source opens 4/4 refused. `codex-audit.ts` / `codex-audit.json` retain independently derived figures, the exact SQL, identity checks, and the contract cause.
+
+Cause:
+
+1. The original `summary_clearance_detail` statement passes the real contract (`enforced: []`).
+2. The existing optimizer legitimately chooses `rollup.state_summary_clearance_detail` or `rollup.national_summary_clearance_detail`.
+3. `lib/source-capabilities.ts:395-401` requires the recognized clearance-table family, but its list does not recognize these planner-emitted names. `lib/query-contract-validator.ts:29-38` promotes `nibrs-clearance-type-table` to a retry/refusal issue.
+4. The newly inserted final check at the initial/retry execution boundary now makes that false finding terminal. The previous route prepared the actual rollup query and returned the fixture's correct count.
+
+This is **not** a bad model query stopped for safety. The unsafe counterpart—using `summary_state_monthly.offense_count` as an arrest-clearance count—also triggers that rule and should continue to fail. The repair must distinguish it from the legitimate clearance rollup. A refusal preventing an answer that was correctly supported violates the explicit preservation requirement, even though it does not fabricate a number.
+
+"No supported request is newly refused" holds only for the submitted corpus. Withdraw the unqualified claim. The previously disclosed rollup gap now has measured consequences; calling it a limitation is not sufficient to accept the increment.
+
+### One bounded correction recommended, awaiting Jeff
+
+**Recommend Jeff approve one local correction submission for R1, keeping the credited binding.** There is no need to redesign the gateway or repeat feasibility.
+
+- Make the final capability checks recognize the **finite, already-supported planner rollup representations**, preserving both their clearance/measure family and their actual state/national grain. Use the existing router/producer declarations as the authority; do not generally trust a table because its name has a familiar suffix. Preserve real geography, column and forbidden-table checks.
+- Do not skip final validation for rollup SQL, disable the clearance rule, rewrite back to the unoptimized raw tables, or solve preservation by refusing more questions. Do not revive the repaired completeness-table substitution.
+- Extend the existing route witness with the retained initial/retry rollup cases and the unsafe ordinary-offense-table counterpart. The corrected rollup SQL must reach the bound worker and return the independent fixture figure; wrong-table requests and after-validation alterations must still be refused. Include state and national scope, and the existing planner forms affected by whatever shared recognition code actually changes. No open-ended language corpus is requested.
+- Preserve the six submitted candidate identities as the reviewed version, write a versioned correction receipt, and compare changed outcomes to both the submitted and pre-change baseline. Reuse accepted Phase 3 evidence for unaffected paths; rerun only checks justified by the actual shared-code change. Report once for consolidated disposition; no automatic further correction is included by this recommendation.
+
+No new source database, provider, paid test, dependency, server, PowerShell, commit, push or deployment is requested. Broader source identity, missing-worker timeout, other route migrations and remaining Phase 3 answer families keep their existing dispositions. The already-pushed preservation commit remains untouched.
+
+### Short Claude prompt
+
+> Read "Codex P4.1 ruling - binding credited, supported rollup answers newly refused." Independent 22/22 and route 7/7 pass; six candidate/four backup identities match and 93 accepted outputs remain unchanged. B7 is accepted as equivalent, not a required extra kill. One blocker R1: the new final check rejects the planner's state/national clearance rollup names; reviewer real-route probes lose correct synthetic 300/500 counts, including the retry path. Keep the binding. Codex recommends one local correction to recognize the existing planner table families without losing their scope or weakening wrong-table checks, with the retained positive/negative route witnesses. The optional correction allowance was not approved, so await Jeff before implementation. No new proposal-only handoff, paid run, source access or deployment. Codex review: Needed for the resulting correction; current increment not accepted complete.
+
+Claude built the protection that keeps the executed statement identical to the checked statement. Codex reproduced that protection but found it also blocks legitimate existing answers, so the next proposed work is one precise compatibility correction rather than another architecture project.
+
+**Necessity check:** R1 must be resolved before accepting this increment because it removes supported answers on the two paths being changed. Existing fixtures already prove the regression; no paid or source investigation is needed. Keep the accepted binding and Phase 3 work, accept the equivalent mutation explanation, and defer unrelated robustness and broad certification. The correction is recommended, not started or automatically authorized.
+
+<!-- progress-update
+{"kind":"step","phase":4,"id":"P4.1","title":"Run the statement that passed the final checks","status":"partial","at":"2026-09-28T02:20:17Z","note":"Binding credited: independent unit 22/22, real-route/worker 7/7; six candidate and four backup hashes verified, 93 accepted outputs unchanged. One preservation regression: final checks refuse existing planner clearance rollups, losing synthetic 300/500 answers including retry. One bounded local correction recommended, awaiting Jeff; no automatic allowance, paid run or deployment."}
+-->
+
+<!-- progress-update
+{"kind":"focus","phase":4,"at":"2026-09-28T02:20:17Z","latest":"The execution binding works on its submitted cases, but its final check newly refuses legitimate rollup answers. The regression is reproduced offline.","next":"Jeff decides one narrow rollup-recognition correction, preserving binding and unsafe-query checks. No new source or model run is needed.","work":{"id":"P4.1","title":"Run the statement that passed the final checks","owner":"Jeff decision; Claude correction if approved","state":"Binding credited; R1 preservation regression remains","next":"Approve the single local correction submission; no broader gateway redesign."}}
+-->
+
+## P4.1 R1 corrected - the final capability checks recognize the planner's rollup families
+
+2026-09-28T11:16:44Z, Claude. This is the one bounded correction Jeff approved ("approved") for R1 in "Codex P4.1 ruling
+- binding credited, supported rollup answers newly refused" (`:25232`).
+- Local only: no source database, provider call, spend, dependency, commit, push or deployment.
+- **No PowerShell was launched**; every child process was windowless.
+- **The credited binding is unchanged.** The six reviewed identities are preserved in
+  `audit/p4-final-statement-binding-2026-09-28/backup-before-r1/` (`backup-before-r1.sha256`) and still
+  match `pre-mutation.sha256`.
+- **Withdrawn, as Codex asked:** my earlier "no supported request is newly refused" held only for my
+  corpus. Clearance rollups were newly refused.
+
+### What changed (29 lines added, 3 changed, two files)
+
+- **`lib/nibrs-rollup-router.ts`: `nibrsRollupTablesIn(sql)`.**
+  - It returns the planner rollup tables a statement reads, identified by the router's **own
+    declarations**: exactly `rollup.state_<source>` or `rollup.national_<source>` for its nine
+    `ROLLUP_SOURCES`, the only names `routeNibrsRollupSql` produces.
+  - Each keeps its source table (the measure family) and its level (the grain).
+  - Any other `rollup.` name, any other level, and names inside string literals are not recognized.
+- **`lib/source-capabilities.ts`: `validateSourceCapabilities`.**
+  - The shared extractor reports a `rollup.<table>` reference only as `rollup`, the schema, so a rollup's
+    family was invisible.
+  - For NIBRS, a recognized planner rollup now counts as its source table's family for **both** the
+    required and the forbidden lists.
+  - The real rollup name is kept in `actualTables` and in the rule context, so grain is not
+    misreported.
+- **Not done, as ruled:**
+  - skipping final validation for rollups;
+  - disabling or loosening the clearance rule;
+  - rewriting back to the raw tables;
+  - trusting a name by its suffix;
+  - changing the shared table extractor (the allowlist also uses it);
+  - reopening the completeness-table substitution.
+
+### Evidence (`audit/p4-final-statement-binding-2026-09-28/`)
+
+- **Real NIBRS route with the real worker: 12/12** (`witness-r1.json`). The seven submitted scenarios
+  plus Codex's three retained rollup cases (from `codex-rollup-probe.cjs`), a rollup altered in transit,
+  and the unsafe counterpart. **The three-way comparison is `r1-three-way.json`:**
+
+  | Scenario | Pre-change (`witness-r1-prechange.json`) | Submitted (`witness-r1-submitted.json`) | Corrected |
+  |---|---|---|---|
+  | Initial: murder victims | 600, unbound | 600, bound | **600, bound** |
+  | Initial: upstream offense-table rewrite | NULL | NULL, bound | **NULL, bound** |
+  | Initial: schema-corrected statement | NULL (empty fixture table) | bound | **bound** |
+  | Retry after a schema failure | 600 | 600, bound | **600, bound** |
+  | Altered in transit, initial / retry | 7,800 / 7,800 | refused at prepare | **refused at prepare** |
+  | Final check forced to refuse | 600 | no launch | **no launch** |
+  | **"Rapes cleared by arrest in Illinois in 2025"** | 300 (state rollup, unbound) | **lost** | **300**, `rollup.state_summary_clearance_detail`, bound |
+  | **The same, nationwide** | 500 | **lost** | **500**, `rollup.national_summary_clearance_detail`, bound |
+  | **Illinois, retry after a schema failure** | 300 | **lost** | **300**, bound |
+  | Clearance rollup altered in transit (`'IL'`→`'CA'`) | 200 (the altered figure) | refused (never checked) | **refused at prepare** |
+  | **Unsafe: `summary_state_monthly.offense_count` as a clearance count** | refused | refused | **refused**, never executed |
+
+  - The figures are derived from the fixture rows: Illinois 300, national 500 = California 200 +
+    Illinois 300.
+  - The national question first runs the **excluded** deterministic arrestee query (its rollup table is
+    absent in the fixture), which is one unbound launch in every version. Only the final, answering
+    launch is required to be bound, and it is.
+  - Pre-change mode loads the preserved route and database-module bytes in memory, as Codex's probe
+    does. No checkout file was swapped.
+  - Isolation: network 4/4 blocked, real sources 4/4 refused.
+- **New suite `scripts/test-nibrs-rollup-capability-family.ts`: 14/14**, in the `npm test` chain after the
+  binding suite.
+  - It checks recognition by declaration: unknown source, unknown level and string-literal names get no
+    family.
+  - **The property test:** for every one of the **9 NIBRS rules** whose required or forbidden list
+    includes a rollup-able table, 12 questions × 9 sources × both levels give **216 comparisons with
+    identical findings** between the base table and its rollup.
+    - Every rule a rollup reference can reach fires somewhere in the set, so the equality is not vacuous.
+    - The ninth, `nibrs-agency-lookup-not-crime-data`, fires only on agencies-only SQL, which no rollup
+      can take part in. It is tested directly.
+  - The unsafe counterparts stay findings: the ordinary offense table, and a rollup of a non-rollup
+    source.
+  - With the required weapon table present, a forbidden demographic family fires in its rollup form just
+    as in its base form.
+- **Mutations: 3/3 red, all restored** (`r1-mutations.json`):
+  - M1: required families checked against raw names again (the submitted behavior). The suite **and the
+    route witness** fail.
+  - M2: any rollup name trusted.
+  - M3: forbidden families allowed in rollup form.
+  - The **first run was 2/3** (`r1-mutations-run1-M3-not-red.json`). M3 exposed a real gap in my test:
+    forbidding only decides the outcome once the required table is present too. I added that case, and
+    the test now catches M3. The seven binding mutations target unchanged code and were not re-run; the
+    six credited red results stand.
+- **Unaffected paths, rerun because shared code changed** (`r1/`):
+  - binding suite 22/22;
+  - every accepted Phase 3 witness through `r1-combined-offline.cjs`: GC-084/098 **20/20 identical**,
+    GC-057 **8/8**, GC-080 **48/48** and **17/17**, CR1 9/9 and 5/5, controls 12/12;
+  - **test chain** (`r1/npm-chain.log`): 132 steps passed, then it stopped at `test-operation-taxonomy`
+    with **the same FAIL lines, 16 !== 12**;
+  - after the taxonomy step: all exit 0;
+  - **type check:** zero lines under `app/`, `lib/` and `scripts/`; the full `tsc` exits 2 on
+    audit/backup material only.
+- Candidate identities: `pre-mutation-r1.sha256` (9 files), all matching after every run.
+
+### Limits and self-review
+
+- **Route-level delivery is shown for clearance rollups only.** For the other eight rollup-source
+  families (arrestee, victim and offender demographics, relationship, weapon, circumstance), the
+  equivalence is proven at the capability-check level by the 216-comparison property. It is not proven
+  by a delivered route answer, because the fixture has no rows for them. Other structural/contract rules
+  on rollup SQL were not changed; the witness shows the clearance rollups pass the whole final contract.
+- **One behavior change that could look like a new refusal:** a rollup form of a *forbidden* family was
+  previously invisible, and now counts. That can only matter for a statement the optimizer produced
+  from a base statement that already used the forbidden table. That base statement is refused by the
+  early contract check, so no supported answer depends on it. It is covered by M3 and the new test.
+- **Carried, unchanged:**
+  - the excluded callers;
+  - worker argument passing;
+  - the synchronous-fallback timeout;
+  - source-version identity;
+  - Phase 3's remaining answer-quality obligations.
+
+### Paste-ready prompt for Codex
+
+> Read "P4.1 R1 corrected - the final capability checks recognize the planner's rollup families" at the end of docs/superpowers/2026-09-19-six-model-offline-readiness-handoff.md, with audit/p4-final-statement-binding-2026-09-28/. nibrsRollupTablesIn (router) identifies exactly rollup.state_/national_<source> for the router's nine sources, and validateSourceCapabilities treats each as its source family for required and forbidden tables; the binding is unchanged. Route plus worker 12/12: your Illinois 300 (initial and retry) and national 500 are restored through the bound worker on the state/national rollups; the wrong-table counterpart and in-transit alterations are still refused; three-way pre-change/submitted/corrected table in r1-three-way.json. Family property 216/216 identical across the 9 affected rules; suite 14/14; R1 mutations 3/3 (first run 2/3 exposed a test gap, fixed); accepted Phase 3 witnesses identical; chain unchanged (16 !== 12). The withdrawn "nothing newly refused" claim is corrected. No source, provider, spend, commit or deployment. Codex review: Needed — the approved R1 correction.
+
+<!-- progress-update
+{"kind":"step","phase":4,"id":"P4.1","title":"Run the statement that passed the final checks","status":"review","at":"2026-09-28T11:16:44Z","note":"R1 corrected locally: the final checks now recognize the summary rollup tables the planner legitimately uses, so the lost clearance answers (Illinois 300, national 500, including the retry) come back through the bound worker, while the wrong-table case and statements altered after checking are still refused. Earlier accepted answers unchanged. Awaiting Codex review."}
+-->
+
+<!-- progress-update
+{"kind":"focus","phase":4,"at":"2026-09-28T11:16:44Z","latest":"The P4.1 rollup regression is fixed locally; the statement binding and every accepted answer are unchanged.","next":"Codex reviews the R1 correction. No commit, deployment or paid test.","work":{"id":"P4.1","title":"Run the statement that passed the final checks","owner":"Codex","state":"R1 correction submitted","next":"Review rollup-family recognition and the three-way evidence."}}
+-->
+
+## Codex R1 acceptance - clearance answers restored, final-statement binding retained
+
+2026-09-28, following the approved single R1 correction. **Accepted locally. R1 is closed; no further correction requested.** This accepts the exact-statement subset of P4.1 on the NIBRS model initial/retry paths, not all of Phase 4 or completion of Phase 3. No product file changed in this review; no source database, provider, spend, commit, push or deployment.
+
+### Independent verification
+
+- `scripts/test-nibrs-rollup-capability-family.ts`: **14/14**, including 216 base/rollup capability comparisons. The reachable rules have firing controls. These are capability comparisons, not 216 delivered answers.
+- `scripts/test-nibrs-execution-binding.ts`: **22/22**, including the real disposable worker's identity check.
+- Expanded real-route/worker witness: **12/12**, saved separately as `audit/p4-final-statement-binding-2026-09-28/codex-witness-r1.json`. Synthetic Illinois **300**, national **500**, and Illinois retry **300** all reach the answering worker with the final checked SQL identity. The wrong-table clearance request never executes; altered clearance SQL is refused at prepare. Network probes blocked 4/4; real-source probes refused 4/4.
+- Compared with the submitted broken version, three delivered clearance answers are restored. The altered clearance probe now reaches the worker and is refused there, rather than being refused earlier for the rollup-recognition defect. That is the intended change of refusal location, not an unsafe answer.
+- `codex-r1-integrity.cjs` / `codex-r1-integrity.json`: **9/9 candidate hashes**, **10/10 preserved backup hashes**, and all five binding/route/worker/test identities unchanged from the pre-R1 backup. Independently recomputed the saved regression comparisons: **20 + 8 + 48 + 17 = 93**, no missing or changed outputs. These comparisons reuse Claude's saved regression executions; the broad suites were not rerun by Codex.
+- The submitted three R1 mutation results are retained as supporting evidence, including the disclosed initial 2/3 run. No mutation script was rerun or product file swapped in this review. Earlier credited binding evidence remains applicable because those files are unchanged.
+
+### Ruling and limits
+
+The correction uses the router's finite source declarations, recognizes state/national forms explicitly, and retains the real table names. Only required/forbidden family matching receives the equivalent source family. It does not remove the final checks, infer trust from arbitrary suffixes, or rewrite SQL to hide its execution grain. This closes the demonstrated preservation regression while keeping execution binding intact.
+
+The required-plus-forbidden control is material: recognition must enforce prohibitions as well as satisfy requirements. Its added witness addresses the disclosed M3 test gap. Other rollup families are credited at the capability-check level only; no new route-delivery claim is made for them.
+
+One reporting qualification is carried here without requiring another submission: the statement that forbidden-family recognition can matter **only** after optimizer rewriting is too broad, since supplied SQL can itself name a rollup. The supported conclusion is the demonstrated family equivalence plus preservation of the retained answers and unsafe controls. The broader causal claim is unnecessary to acceptance.
+
+The national witness's preliminary deterministic launch remains an excluded legacy caller; only its answering model statement is claimed bound. Source-version identity, excluded callers, synchronous-fallback timeout and general answer correctness remain outside this increment. The two standing taxonomy findings and audit/backup type errors remain recorded; this is not an all-green build or production qualification. Phase 3 remains partial; no frozen scores change.
+
+### Short prompt for Claude
+
+> Read "Codex R1 acceptance - clearance answers restored, final-statement binding retained" in this handoff. R1 and the bounded NIBRS initial/retry exact-statement increment are accepted locally: independent route/worker 12/12, family 14/14, binding 22/22, 93 saved outputs unchanged. Preserve the accepted code and receipts; no further R1 repair or acknowledgment-only submission. Carry the stated coverage and reporting limits into the next already-authorized roadmap work. This ruling grants no new implementation scope, source/provider access, paid run, commit, push or deployment. Codex review: completed for this increment; a future change needs review only under the standing triggers.
+
+Claude restored legitimate clearance answers without weakening the final checked-statement binding. Codex's response closes this correction and prevents another review loop around the same accepted evidence.
+
+**Necessity check:** No additional change is needed to accept this bounded increment. The lost answers and unsafe counterparts have been exercised through the actual route and worker. Broader route coverage, source-version binding and remaining Phase 3 answer-quality work stay in their existing scopes; none is a new prerequisite to closing R1.
+
+<!-- progress-update
+{"kind":"step","phase":4,"id":"P4.1","title":"Run the statement that passed the final checks","status":"local","at":"2026-09-28T11:26:00Z","note":"Codex accepted the bounded NIBRS model initial/retry exact-statement increment after R1: independent route/worker 12/12, capability family 14/14, binding 22/22. Illinois 300 initial/retry and national 500 restored; wrong-table and altered statements refused; 93 saved accepted outputs unchanged. Source-version identity and excluded paths remain outside this local acceptance. No deployment or Phase 3 completion."}
+-->
+
+<!-- progress-update
+{"kind":"focus","phase":4,"at":"2026-09-28T11:26:00Z","latest":"R1 is closed and the bounded P4.1 exact-statement increment is accepted locally.","next":"Preserve the accepted increment and continue only existing authorized roadmap work; no further R1 correction or paid rerun.","work":{"id":"P4.1","title":"Run the statement that passed the final checks","owner":"Claude / Codex","state":"Accepted locally; correction closed","next":"Broader execution/source identity and Phase 3 useful-answer obligations remain separately scoped."}}
+-->
+
+## Next-step recommendation - preserve P4.1, return to useful answers
+
+2026-09-28. Claude has paused after acceptance and asks which scope Jeff wants next. **Recommend a scoped preservation commit/push, then a bounded Phase 3 answer-quality repair rather than another Phase 4 infrastructure expansion.** This is a recommendation for Jeff's approval; no commit, push or implementation performed or authorized by this note.
+
+The next concrete target is the retained NIBRS comma-separated FROM alias false positive, already recorded in the nine-case diagnosis and correctness backlog. It has an existing minimal statement and unsafe control; it does not need a new paid run or source investigation. Do not fold the larger CTE operand/lineage repair into this increment or revive the inactive candidate. Since the application has changed since that diagnosis, first replay the retained witness against the accepted tree; only a still-reproduced defect justifies a repair.
+
+If Jeff approves, the task is: preserve only the reviewed P4.1/R1 files, essential evidence and handoff in a scoped commit on the existing preservation branch; inspect the staged diff, exclude unrelated files and secrets, push without force to the existing origin branch, and verify the remote commit. No merge or deployment. Then replay the existing comma-join alias witness locally. If still failing, make the smallest shared recognition correction that preserves the undeclared-alias refusal, and prove the supported query passes that gate while its unsafe counterpart still fails. Exercise the existing fixture route if available; distinguish removing this refusal from delivering a correct answer if another rule still blocks it. Reuse accepted regression evidence, running only checks affected by the change. One integrated submission, no automatic correction round. If already fixed or wider work is required, report that result without substituting a new task or building a framework.
+
+### Suggested owner approval to send Claude
+
+> Approved: commit and push the accepted P4.1/R1 increment and its essential review evidence to the existing preservation branch, with a scoped staged diff and verified remote commit; no merge or deployment. Then resume Phase 3 on the saved comma-join alias false positive, following "Next-step recommendation - preserve P4.1, return to useful answers." Reproduce first; if still present, fix that bounded recognition defect and retain the unsafe control. One integrated local submission, no automatic correction. No source access, provider calls, spend, new Phase 4 expansion or CTE redesign. End with whether Codex review is needed and why.
+
+Claude has finished the accepted statement-binding increment and is correctly holding unapproved operations. This recommendation preserves that progress and directs the next bounded effort toward an existing failure that withholds useful answers.
+
+**Necessity check:** Preserve the accepted work off-machine and address a retained user-visible refusal. A new Phase 4 slice, broad audit, paid comparison or expanded parser project is not needed for this next decision and is deferred. Replay of the existing witness is necessary only to avoid repairing a stale finding; it is part of the task, not a separate proposal round.
+
+## Overall phase status - Phase 3 remains incomplete after the P4.1 increment
+
+2026-09-28. Jeff asks whether Phase 3 is really done and whether the overall position was reviewed before choosing more work. **No, Phase 3 is not complete. Yes, an overall continuation review exists at :24658, followed by the combined candidate evidence at :24719 and local acceptance at :24921. Those decisions permitted selected later-phase work while retaining Phase 3 obligations; they did not certify a phase exit.** Today's review re-read those dispositions and the grouped correctness backlog, without new product execution, source access or measurement.
+
+Codex's immediate comma-join recommendation was too narrow as an explanation of overall direction. It is a concrete candidate repair, not evidence that it is the sole remaining blocker or that completing it will finish Phase 3. The suggested approval in the preceding section has not been treated as Jeff's approval. This clarification does not revoke completed P4.1 work or reopen accepted repairs.
+
+| Area | What the retained evidence supports | What still matters for completion |
+| --- | --- | --- |
+| Accepted repair batches | Scoped clarification, refusal, follow-up, identity/measure and owned-count improvements accepted locally; 93 saved accepted outputs preserved together. | Local fixture success is not a refreshed whole-product qualification or evidence of deployment. |
+| Current follow-ups | Structured request carriage and CR1's waiting clarification accepted. | Broad numerical follow-up correctness remains unqualified; the frozen GC-070 conversation remains inconclusive under its setup rule. |
+| Useful rankings and comparisons | Several owned families improved; exact GC-064 unsafe path contained by a limitation. | GC-064's promised useful city-rate ranking remains unmet. GC-065 coverage/category meaning and exclusion disclosure remain unresolved. Refusal alone does not fulfill them. |
+| Legitimate SQL acceptance | P4.1 prevents checked and executed model SQL diverging; R1 restores its clearance regressions. | Recorded CTE, comma-alias and catalogue-related useful-answer defects remain in the backlog. The R1 family fix is not blanket closure of that group. |
+| Reference/identity evidence | Retained source observations and limited identities support specific claims. | GC-049 identity, GC-003 geography and Stage B coverage/agency-versus-city limits remain carried. Another paid run cannot by itself resolve these facts. |
+| Integration and operations | Combined offline preservation checks accepted; the one-time rollup recovery is closed. | Required merge/release checks need their actual dispositions; production freshness and recurring refresh are separate operational matters, not freshly checked here. No deployment readiness claim. |
+
+The September 14 **64 pass / 50 fail / 6 inconclusive** remains a historical frozen measurement, not the current repaired candidate's measured score. No percentage-complete estimate is justified from the repair counts. The remaining groups are not 50 independent bugs or a demand to answer every conceivable question.
+
+### Direction and changes needed
+
+Keep Phase 3 explicitly partial. Preserve the accepted P4.1 increment when Jeff authorizes the scoped commit/push. Select subsequent work by the remaining promised answer outcome it will establish, rather than by advancing a phase number or taking the next small bug in isolation. The existing comma-alias witness is a plausible bounded start within legitimate-query acceptance; it does not replace ranking, coverage or identity obligations. Related fixes should be batched only where they share a demonstrated mechanism and fit the existing allowance; the failed CTE attempt does not receive a new allowance through this note.
+
+Use the existing closeout disposition as the finish line: known serious errors corrected or demonstrably prevented, promised useful families demonstrated, the combined candidate checked against adequate references, and every residual given an honest disposition. An essential unmet requirement still blocks completion. A selected Phase 4 mechanism may help deliver an outcome, but merely assigning the obligation to Phase 4 cannot close it. No full rebuild, new evaluator, comprehensive audit or immediate paid rerun is warranted by this status review.
+
+### Short prompt for Claude
+
+> Read "Overall phase status - Phase 3 remains incomplete after the P4.1 increment." Phase 3 remains partial; P4.1 acceptance is a bounded improvement, not a phase exit or deployment approval. Preserve accepted work and the existing grouped obligations. The comma-alias proposal is a candidate next repair, not the whole closeout plan and not yet owner-approved. Any next scope must identify the promised answer outcome it closes and reuse the September 27 residual dispositions; do not restart an audit, testing campaign or acknowledgment-only submission. No new implementation, commit/push, source access or spend is authorized by this status clarification.
+
+Claude's accepted work improves specific application behavior. Codex's overall assessment keeps those gains credited while making clear that remaining useful-answer and qualification requirements still prevent declaring Phase 3 done.
+
+**Necessity check:** Correct the phase-status interpretation now and use the existing overall disposition to select work. No new build or investigation is needed to establish that Phase 3 remains incomplete. Do not add a planning loop or a blanket all-tests/all-questions gate; remaining essential answer outcomes and their evidence, not a phase label, govern completion.

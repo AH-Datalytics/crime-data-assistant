@@ -1,5 +1,6 @@
 import type { QueryContract, QueryContractSource } from "./query-contract";
 import { extractReferencedTables } from "./table-allowlist";
+import { nibrsRollupTablesIn } from "./nibrs-rollup-router";
 import { SUB_CITY_GEOGRAPHY_MESSAGE, asksSubCityGeography, scopedToNamedAgency } from "./capability-overrides";
 import { asksClearanceTypeBreakdown } from "./clearance-type-intent";
 import { requestedScope } from "./structural-semantics";
@@ -656,8 +657,15 @@ export function validateSourceCapabilities(opts: {
   contract: QueryContract;
   sql: string;
 }): SourceCapabilityFinding[] {
-  const actualTables = extractReferencedTables(opts.sql).map((table) => table.toLowerCase());
+  // A planner rollup table (`rollup.state_<source>` / `rollup.national_<source>`, exactly as the NIBRS
+  // rollup router declares and produces them) is its source table's measure family at state or national
+  // grain. The table extractor reports only the schema name "rollup", so it is identified here from the
+  // router's own declarations: it satisfies a rule's required family, and is forbidden, exactly as its
+  // source table would be. Its real name is kept for reporting. Other `rollup.` names get no family.
+  const rollups = opts.source === "nibrs" ? nibrsRollupTablesIn(opts.sql) : [];
+  const actualTables = [...extractReferencedTables(opts.sql).map((table) => table.toLowerCase()), ...rollups.map((r) => r.table)];
   const tables = new Set(actualTables);
+  const families = new Set([...tables, ...rollups.map((r) => r.sourceTable)]);
   const findings: SourceCapabilityFinding[] = [];
 
   for (const rule of SOURCE_CAPABILITY_RULES) {
@@ -671,8 +679,8 @@ export function validateSourceCapabilities(opts: {
     };
     if (!rule.when(ctx)) continue;
 
-    const missingRequired = rule.requiresAnyTables && !hasAnyTable(tables, rule.requiresAnyTables);
-    const hasForbidden = rule.forbidsTables && hasForbiddenTable(tables, rule.forbidsTables);
+    const missingRequired = rule.requiresAnyTables && !hasAnyTable(families, rule.requiresAnyTables);
+    const hasForbidden = rule.forbidsTables && hasForbiddenTable(families, rule.forbidsTables);
     const forbiddenSql = usesForbiddenSql(opts.sql, rule.forbiddenSql)
       || Boolean(rule.forbiddenSqlShape && rule.forbiddenSqlShape(opts.sql));
     const unsupported = rule.severity === "unsupported";

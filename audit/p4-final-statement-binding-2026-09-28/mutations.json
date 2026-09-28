@@ -1,0 +1,175 @@
+{
+ "at": "2026-09-28T01:56:05.349Z",
+ "total": 7,
+ "red": 6,
+ "allRestored": true,
+ "results": [
+  {
+   "id": "B1-initial-bypasses-binding",
+   "file": "app/api/nibrs-query/route.ts",
+   "what": "the initial path executes the text without its bound authority",
+   "applied": true,
+   "occurrences": 1,
+   "checks": [
+    {
+     "check": "scripts/test-nibrs-execution-binding.ts",
+     "exitCode": 1,
+     "red": true,
+     "failing": [
+      "FAIL  the model initial and retry paths execute through the bound executor, from their final checks",
+      "FAIL  the excluded callers keep the legacy executor: owned, deterministic and the application fallback (ownedQuery.sql, deterministicQuery.sql, sql, fallbackSql)",
+      "FAIL  on the initial path the final check follows planning and schema correction, and precedes execution"
+     ]
+    },
+    {
+     "check": "binding-witness --assert",
+     "exitCode": 1,
+     "red": true,
+     "failing": [
+      "FAIL  initial path: an unchanged useful answer (600) from the statement that passed the final checks, prepared with its identity  -- {\"rows\":[{\"murder_victims\":600}],\"launches\":[{\"received\":\"SELECT SU",
+      "FAIL  initial path: a statement rewritten upstream to the offense table (pre-existing) still runs as that checked statement, bound (null)  -- {\"rows\":[{\"robbery_victims\":null}],\"launches\":[{\"received\"",
+      "FAIL  initial path: a legitimate schema correction still runs, and the CORRECTED statement is the one checked and prepared  -- {\"model\":\"SELECT SUM(arrest_count) AS arrests FROM summary_arrestee_demog"
+     ]
+    }
+   ],
+   "restored": true,
+   "red": true
+  },
+  {
+   "id": "B2-retry-bypasses-binding",
+   "file": "app/api/nibrs-query/route.ts",
+   "what": "the retry path executes the text without its bound authority",
+   "applied": true,
+   "occurrences": 1,
+   "checks": [
+    {
+     "check": "scripts/test-nibrs-execution-binding.ts",
+     "exitCode": 1,
+     "red": true,
+     "failing": [
+      "FAIL  the model initial and retry paths execute through the bound executor, from their final checks",
+      "FAIL  the excluded callers keep the legacy executor: owned, deterministic and the application fallback (ownedQuery.sql, deterministicQuery.sql, retrySql, fallbackSql)",
+      "FAIL  on the retry path the final check follows planning and schema correction, and precedes execution"
+     ]
+    },
+    {
+     "check": "binding-witness --assert",
+     "exitCode": 1,
+     "red": true,
+     "failing": [
+      "FAIL  retry path: after a schema failure the retried statement delivers 600, prepared with its identity  -- {\"calls\":3,\"rows\":[{\"murder_victims\":600}],\"launches\":[{\"received\":\"SELECT SUM(victim_count)",
+      "FAIL  initial-altered-in-transit: an alteration after the final check reaches the worker and is refused at prepare (no rows, not the altered statement's figure)  -- {\"rows\":[{\"murder_victims\":7800}],\"",
+      "FAIL  retry-altered-in-transit: an alteration after the final check reaches the worker and is refused at prepare (no rows, not the altered statement's figure)  -- {\"rows\":[{\"murder_victims\":7800}],\"la"
+     ]
+    }
+   ],
+   "restored": true,
+   "red": true
+  },
+  {
+   "id": "B3-worker-skips-identity",
+   "file": "lib/nibrs-query-worker.js",
+   "what": "the worker prepares whatever it receives, ignoring the identity",
+   "applied": true,
+   "occurrences": 1,
+   "checks": [
+    {
+     "check": "scripts/test-nibrs-execution-binding.ts",
+     "exitCode": 1,
+     "red": true,
+     "failing": [
+      "FAIL  an altered statement with the original identity is refused before prepare"
+     ]
+    },
+    {
+     "check": "binding-witness --assert",
+     "exitCode": 1,
+     "red": true,
+     "failing": [
+      "FAIL  initial-altered-in-transit: an alteration after the final check reaches the worker and is refused at prepare (no rows, not the altered statement's figure)  -- {\"rows\":[{\"murder_victims\":7800}],\"",
+      "FAIL  retry-altered-in-transit: an alteration after the final check reaches the worker and is refused at prepare (no rows, not the altered statement's figure)  -- {\"rows\":[{\"murder_victims\":7800}],\"la"
+     ]
+    }
+   ],
+   "restored": true,
+   "red": true
+  },
+  {
+   "id": "B4-executor-skips-authority",
+   "file": "lib/nibrs-db.ts",
+   "what": "the bound executor accepts an unissued authority",
+   "applied": true,
+   "occurrences": 1,
+   "checks": [
+    {
+     "check": "scripts/test-nibrs-execution-binding.ts",
+     "exitCode": 1,
+     "red": true,
+     "failing": [
+      "FAIL  executeBoundNibrsStatement refuses an unissued authority before touching any database"
+     ]
+    }
+   ],
+   "restored": true,
+   "red": true
+  },
+  {
+   "id": "B5-refusal-issues-authority",
+   "file": "lib/nibrs-execution-binding.ts",
+   "what": "a contract failure still issues an authority",
+   "applied": true,
+   "occurrences": 1,
+   "checks": [
+    {
+     "check": "scripts/test-nibrs-execution-binding.ts",
+     "exitCode": 1,
+     "red": true,
+     "failing": [
+      "FAIL  a contract failure issues no authority",
+      "FAIL  a contract retry issue is a failure too: no authority"
+     ]
+    }
+   ],
+   "restored": true,
+   "red": true
+  },
+  {
+   "id": "B6-rewrite-not-rechecked",
+   "file": "lib/nibrs-execution-binding.ts",
+   "what": "a statement rewritten by a check is issued without passing the checks unchanged",
+   "applied": true,
+   "occurrences": 1,
+   "checks": [
+    {
+     "check": "scripts/test-nibrs-execution-binding.ts",
+     "exitCode": 1,
+     "red": true,
+     "failing": [
+      "FAIL  the sanitizer's LIMIT is a rewrite: the rewritten form passes unchanged in a second round",
+      "FAIL  a contract rewrite is re-checked once and issued only when it settles",
+      "FAIL  a statement the checks keep rewriting is refused (two rounds, no loop)"
+     ]
+    }
+   ],
+   "restored": true,
+   "red": true
+  },
+  {
+   "id": "B7-check-before-schema",
+   "file": "app/api/nibrs-query/route.ts",
+   "what": "the initial final check runs on the text before schema correction",
+   "applied": true,
+   "occurrences": 1,
+   "checks": [
+    {
+     "check": "binding-witness --assert",
+     "exitCode": 0,
+     "red": false,
+     "failing": []
+    }
+   ],
+   "restored": true,
+   "red": false
+  }
+ ]
+}

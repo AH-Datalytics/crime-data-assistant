@@ -1,0 +1,136 @@
+{
+  "at": "2026-09-28T11:25:17.763Z",
+  "candidate": [
+    {
+      "file": "app/api/nibrs-query/route.ts",
+      "match": true
+    },
+    {
+      "file": "lib/nibrs-db.ts",
+      "match": true
+    },
+    {
+      "file": "lib/nibrs-query-worker.js",
+      "match": true
+    },
+    {
+      "file": "lib/nibrs-execution-binding.ts",
+      "match": true
+    },
+    {
+      "file": "lib/source-capabilities.ts",
+      "match": true
+    },
+    {
+      "file": "lib/nibrs-rollup-router.ts",
+      "match": true
+    },
+    {
+      "file": "scripts/test-nibrs-execution-binding.ts",
+      "match": true
+    },
+    {
+      "file": "package.json",
+      "match": true
+    },
+    {
+      "file": "scripts/test-nibrs-rollup-capability-family.ts",
+      "match": true
+    }
+  ],
+  "backups": [
+    {
+      "file": "app/api/nibrs-query/route.ts",
+      "match": true
+    },
+    {
+      "file": "audit/binding-witness.cjs",
+      "match": true
+    },
+    {
+      "file": "audit/mutations.cjs",
+      "match": true
+    },
+    {
+      "file": "lib/nibrs-db.ts",
+      "match": true
+    },
+    {
+      "file": "lib/nibrs-execution-binding.ts",
+      "match": true
+    },
+    {
+      "file": "lib/nibrs-query-worker.js",
+      "match": true
+    },
+    {
+      "file": "lib/nibrs-rollup-router.ts",
+      "match": true
+    },
+    {
+      "file": "lib/source-capabilities.ts",
+      "match": true
+    },
+    {
+      "file": "package.json",
+      "match": true
+    },
+    {
+      "file": "scripts/test-nibrs-execution-binding.ts",
+      "match": true
+    }
+  ],
+  "bindingUnchanged": [
+    {
+      "file": "app/api/nibrs-query/route.ts",
+      "match": true
+    },
+    {
+      "file": "lib/nibrs-db.ts",
+      "match": true
+    },
+    {
+      "file": "lib/nibrs-query-worker.js",
+      "match": true
+    },
+    {
+      "file": "lib/nibrs-execution-binding.ts",
+      "match": true
+    },
+    {
+      "file": "scripts/test-nibrs-execution-binding.ts",
+      "match": true
+    }
+  ],
+  "comparisons": [
+    {
+      "id": "GC-084/098",
+      "old": 20,
+      "now": 20,
+      "missing": [],
+      "changed": []
+    },
+    {
+      "id": "GC-057",
+      "old": 8,
+      "now": 8,
+      "missing": [],
+      "changed": []
+    },
+    {
+      "id": "GC-080 owned count",
+      "old": 48,
+      "now": 48,
+      "missing": [],
+      "changed": []
+    },
+    {
+      "id": "GC-080 periods",
+      "old": 17,
+      "now": 17,
+      "missing": [],
+      "changed": []
+    }
+  ],
+  "limit": "Saved regression outputs independently compared; broad regression suites not rerun by this script."
+}

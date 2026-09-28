@@ -1,0 +1,76 @@
+{
+ "at": "2026-09-28T02:50:53.169Z",
+ "total": 3,
+ "red": 3,
+ "allRestored": true,
+ "results": [
+  {
+   "id": "R1-M1-rollup-family-ignored",
+   "file": "lib/source-capabilities.ts",
+   "what": "required families are checked against raw table names again (the submitted behavior)",
+   "applied": true,
+   "occurrences": 1,
+   "checks": [
+    {
+     "check": "scripts/test-nibrs-rollup-capability-family.ts",
+     "exitCode": 1,
+     "red": true,
+     "failing": [
+      "FAIL  identical findings for every question x source x level (216 comparisons): How many rapes were cleared by arrest in Illinois in 2025? | summary_clearance_type | state:  vs nibrs-clearance-type-ta",
+      "FAIL  the planner's state clearance rollup satisfies the clearance family"
+     ]
+    },
+    {
+     "check": "binding-witness --assert",
+     "exitCode": 1,
+     "red": true,
+     "failing": [
+      "FAIL  R1 initial: \"rapes cleared by arrest in Illinois\" is planned to the state clearance rollup and delivers 300, bound  -- {\"rows\":[],\"launches\":[],\"explanation\":\"I couldn't build a reliable query t",
+      "FAIL  R1 initial: the national question is planned to the national clearance rollup and delivers 500, bound  -- {\"rows\":[],\"launches\":[{\"received\":\"SELECT\\n  d.year,\\n  SUM(d.arrestee_count) AS arrest",
+      "FAIL  R1 retry: after a schema failure the retried clearance rollup delivers 300, bound  -- {\"rows\":[],\"launches\":[],\"explanation\":\"I couldn't build a reliable query that matched the requested source,"
+     ]
+    }
+   ],
+   "restored": true,
+   "red": true
+  },
+  {
+   "id": "R1-M2-any-rollup-name-trusted",
+   "file": "lib/nibrs-rollup-router.ts",
+   "what": "any rollup.state_/national_ name is trusted as a family, not only the router sources",
+   "applied": true,
+   "occurrences": 1,
+   "checks": [
+    {
+     "check": "scripts/test-nibrs-rollup-capability-family.ts",
+     "exitCode": 1,
+     "red": true,
+     "failing": [
+      "FAIL  a rollup name outside the router's nine sources gets no family"
+     ]
+    }
+   ],
+   "restored": true,
+   "red": true
+  },
+  {
+   "id": "R1-M3-forbidden-rollup-allowed",
+   "file": "lib/source-capabilities.ts",
+   "what": "a forbidden family is not forbidden in its rollup form",
+   "applied": true,
+   "occurrences": 1,
+   "checks": [
+    {
+     "check": "scripts/test-nibrs-rollup-capability-family.ts",
+     "exitCode": 1,
+     "red": true,
+     "failing": [
+      "FAIL  with the required weapon table present, the forbidden demographic family fires in its rollup form exactly as in its base form"
+     ]
+    }
+   ],
+   "restored": true,
+   "red": true
+  }
+ ]
+}

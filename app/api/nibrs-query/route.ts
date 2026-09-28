@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getNibrsDb, executeWithTimeout, logNibrsQuery } from "@/lib/nibrs-db";
+import { getNibrsDb, executeWithTimeout, executeBoundNibrsStatement, logNibrsQuery } from "@/lib/nibrs-db";
+import { finalizeNibrsStatement } from "@/lib/nibrs-execution-binding";
 import { isZeroResult } from "@/lib/shr-agency-probe";
 import { appendNibrsAgencyProbeCaveat, runNibrsAgencyProbe } from "@/lib/nibrs-agency-probe";
 import { buildNoSqlFallbackMessage, courtProcessNoSqlIsTerminal, neutralizeUnverifiedAvailabilityClaim, selectNoSqlRefusal } from "@/lib/refusal-safety";
@@ -1477,7 +1478,23 @@ export async function POST(req: NextRequest) {
         sql = schemaCheck.sql;
         routeGuardrailsFired.push("schema-column-corrected");
       }
-      const result = await executeWithTimeout(sql);
+      // P4.1: the final checks run on the statement that will execute (after planning and schema
+      // correction), and only that statement -- bound by identity -- reaches the worker.
+      const finalCheck = finalizeNibrsStatement({
+        sql, path: "model-initial",
+        schema: (candidate) => validateSqlSchema(validationDb, candidate),
+        contract: (candidate) => runContractValidation(candidate),
+      });
+      if (!finalCheck.ok) {
+        routeGuardrailsFired.push("nibrs-final-statement-refused");
+        if (finalCheck.stage === "contract" && finalCheck.contract) {
+          const finalContractFailure = contractFailureResponse(finalCheck.contract, `contract_final_statement_failure:${finalCheck.contract.enforced.join(",")}`);
+          if (finalContractFailure) return finalContractFailure;
+        }
+        throw new Error(`Final statement check failed (${finalCheck.stage}): ${finalCheck.reason}`);
+      }
+      sql = finalCheck.authority.sql;
+      const result = await executeBoundNibrsStatement(finalCheck.authority);
       rows = result.rows;
       columns = result.columns;
       rows = normalizeNibrsDisplayRows(rows);
@@ -1531,7 +1548,25 @@ export async function POST(req: NextRequest) {
                 retrySql = retrySchemaCheck.sql;
                 routeGuardrailsFired.push("schema-column-corrected");
               }
-              const retryResult = await executeWithTimeout(retrySql);
+              // P4.1: the same final-statement binding as the initial path.
+              const retryFinalCheck = finalizeNibrsStatement({
+                sql: retrySql, path: "model-retry",
+                schema: (candidate) => validateSqlSchema(retryValidationDb, candidate),
+                contract: (candidate) => runContractValidation(candidate),
+              });
+              if (!retryFinalCheck.ok) {
+                routeGuardrailsFired.push("nibrs-final-statement-refused");
+                if (retryFinalCheck.stage === "contract" && retryFinalCheck.contract) {
+                  const retryFinalContractFailure = contractFailureResponse(retryFinalCheck.contract, `contract_final_statement_retry_failure:${retryFinalCheck.contract.enforced.join(",")}`);
+                  if (retryFinalContractFailure) return retryFinalContractFailure;
+                }
+                throw new Error(`Final statement check failed (${retryFinalCheck.stage}): ${retryFinalCheck.reason}`);
+              }
+              retrySql = retryFinalCheck.authority.sql;
+              if (routeNibrsRollupSql(retrySql, true).routed && !retryRollupContext?.available) {
+                throw new Error("NIBRS rollup is unavailable");
+              }
+              const retryResult = await executeBoundNibrsStatement(retryFinalCheck.authority);
               rows = retryResult.rows;
               columns = retryResult.columns;
               rows = normalizeNibrsDisplayRows(rows);
