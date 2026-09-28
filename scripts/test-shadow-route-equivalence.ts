@@ -327,7 +327,9 @@ async function main() {
     {
       label: "app/api/shr-query",
       importPath: "../app/api/shr-query/route",
-      question: "how many homicide victims in Texas each year from 2019 to 2022 by weapon",
+      // GC-080 (owner ruling): "homicide" now selects the all-homicide licence, and this stub is
+      // murder-restricted, so the question says murder. The suite tests caching, not the measure.
+      question: "how many murder victims in Texas each year from 2019 to 2022 by weapon",
       coldCalls: ["translate"],
       reply: {
         sql: "SELECT year, SUM(victim_count) AS victims FROM incidents WHERE state = 'TX' AND homicide_type = 'Murder' AND year BETWEEN 2019 AND 2022 GROUP BY year ORDER BY year",

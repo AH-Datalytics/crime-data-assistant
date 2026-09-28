@@ -152,6 +152,37 @@ export type TableSemantics = {
   /** The levels this table may legitimately produce. */
   outputLevels: EntityLevel[];
   timeGrains: TimeGrain[];
+  /**
+   * The PERIOD one row covers, where the schema establishes it.
+   *
+   * Separate from `timeGrains` on purpose, and for the same reason `rowKey` is separate from
+   * `outputLevels`: `timeGrains` says which grains a table may legitimately SERVE, which is a
+   * statement about answers. This says what one row IS. A table can serve annual figures precisely
+   * because its monthly rows can be summed -- so reading "monthly is available" as "a row is a
+   * month" would be inferring a physical fact from a permission.
+   *
+   * It exists because `SELECT s.offense_count ... GROUP BY s.year` over `summary_city_monthly`
+   * returned one arbitrary month as a year's total and nothing could object: `offense_count` is a
+   * real column of a table the request may legitimately use at annual grain.
+   *
+   * DECLARED ONLY FROM RETAINED SCHEMA. Every entry below is a table whose `CREATE TABLE` in
+   * `scripts/fixtures/operation-taxonomy/*.ddl.sql` carries a `month` column beside its recorded
+   * counts. Absent means unestablished, and the annual-aggregation rule then says nothing -- so
+   * adding a table here is a deliberate act backed by the DDL, never a default.
+   */
+  rowPeriod?: "month";
+  /**
+   * The table whose row carries this one's period, where this one has none of its own.
+   *
+   * SHR counts victims, and the product's own contract says to always join `victims` to
+   * `incidents`. A victim row has no year: its year IS its incident's. Without this, requiring a
+   * year predicate on every metric table refused the shipped SHR ratio plan, which pins
+   * `i.year = 2023` exactly where it belongs.
+   *
+   * A period proved through this edge must be proved IN THE SAME SCOPE, so it stays a statement
+   * about the rows being counted rather than about the statement's text.
+   */
+  periodFrom?: { table: string; column: string; foreignColumn: string };
   measures: MeasureKind[];
   measureBinding: MeasureBinding;
   /** Are the components needed to re-derive the measure at another level present? */
@@ -171,6 +202,20 @@ export type TableSemantics = {
    * constraint stops matching, so the catalog cannot silently drift from the database.
    */
   uniqueKeys?: string[];
+  /**
+   * Columns that carry a RECORDED COUNT on this table, so summing one is a measure of the thing the
+   * table is about.
+   *
+   * WHY THIS EXISTS. `measures` states the kind (`count`) and `measureBinding` points at the offense
+   * code; neither says which column holds the number. Without that, a weighted operand could only be
+   * checked by its column NAME, and matching two suffixes establishes nothing about the source (see
+   * `structural-semantics.ts` and the 2026-09-08 reviews).
+   *
+   * DELIBERATELY SPARSE. Declared only where the approved positive families actually read a recorded
+   * measure and the column is evidenced by a saved capture. Absent means unresolved, which the ratio
+   * check refuses rather than guesses — so adding a table here is a deliberate act, not a default.
+   */
+  recordedMeasures?: string[];
   /**
    * Set only where ONE PHYSICAL ROW EQUALS ONE USER-FACING OCCURRENCE of these topics -- which is
    * what makes a bare `COUNT(*)` a valid measure.
@@ -223,6 +268,21 @@ export type TableSemantics = {
 
 const T = (entry: TableSemantics): TableSemantics => entry;
 
+/**
+ * Tables whose retained `CREATE TABLE` carries a `month` column beside its recorded counts, so one
+ * row is one month: `scripts/fixtures/operation-taxonomy/nibrs.ddl.sql` and `crime_data.ddl.sql`.
+ *
+ * Deliberately only these. Other tables the catalog marks `monthly` -- `summary_drug_monthly`,
+ * `summary_carjacking_monthly`, `state_monthly` -- are almost certainly month-grained too, but
+ * their DDL is not retained here, and a physical claim about a schema should rest on the schema.
+ * An absent entry costs coverage, never safety.
+ */
+const MONTH_ROW_TABLES = new Set<string>([
+  "summary_city_monthly", "summary_victim_city_monthly", "summary_victim_state_monthly",
+  "summary_clearance_type", "summary_juvenile_offender_incidents",
+  "agency_monthly", "national_monthly",
+]);
+
 const ALL_LOCAL: EntityLevel[] = ["agency", "city", "county", "state", "national"];
 
 /** A table holding counts only: a rate must be derived from them, with a bound denominator. */
@@ -271,6 +331,10 @@ const HIST_STATE_COLUMNS: Record<string, UnitRequirements> = {
     allOf("burglary", "theft", "auto_theft"),
     allOf("burglary_rate", "theft_rate", "auto_theft_rate")),
   crime: countsAndRates(allOf("total_offenses"), allOf("total_offenses_rate")),
+};
+
+const NIBRS_RECORDED_MEASURES: Partial<Record<string, string[]>> = {
+  summary_offender_demographics: ["offender_count"],
 };
 
 const CURRENT_OFFENSE_VALUES: Record<string, string> = {
@@ -366,7 +430,8 @@ export const TABLE_SEMANTICS: TableSemantics[] = [
   // ------------------------------------------------------------- Current Trends (crime_data.db)
   T({
     source: "current", table: "agency_monthly", role: "metric",
-    rowKey: "agency", outputLevels: ALL_LOCAL, timeGrains: ["monthly", "annual"], measures: ["count"],
+    rowKey: "agency", outputLevels: ALL_LOCAL, timeGrains: ["monthly", "annual"],
+    rowPeriod: "month", measures: ["count"],
     measureBinding: { kind: "value_column", column: "offense", values: CURRENT_OFFENSE_VALUES },
     components: "present", aggregation: "additive",
     note: "Reported zero and missing row are distinct; a zero count is a value, not an absence.",
@@ -387,7 +452,7 @@ export const TABLE_SEMANTICS: TableSemantics[] = [
   T({
     source: "current", table: "national_monthly", role: "metric",
     rowKey: "national", outputLevels: ["national"], timeGrains: ["monthly", "annual"],
-    measures: ["count"],
+    rowPeriod: "month", measures: ["count"],
     measureBinding: { kind: "value_column", column: "offense", values: CURRENT_OFFENSE_VALUES },
     components: "present", aggregation: "additive",
     note: "A sample of reporting agencies, not a national total.",
@@ -422,6 +487,11 @@ export const TABLE_SEMANTICS: TableSemantics[] = [
 
   // ------------------------------------------------------------------------- NIBRS (nibrs.db)
   // Every summary keyed by `ori` has rowKey "agency" even where its name says city.
+  //
+  // RECORDED MEASURE COLUMNS, declared only where evidenced. `summary_offender_demographics.offender_count`
+  // is the column the approved GC-032 offender-share query actually sums (saved capture,
+  // audit/correctness-candidate-2026-09-08). Other summaries are intentionally absent: a weighted
+  // operand on them is unresolved and refused, which is the fail-closed behaviour, not an oversight.
   ...([
     ["summary_city_monthly", ["monthly", "annual"], "agency", ALL_LOCAL],
     ["summary_victim_city_monthly", ["monthly", "annual"], "agency", ALL_LOCAL],
@@ -451,9 +521,12 @@ export const TABLE_SEMANTICS: TableSemantics[] = [
     T({
       source: "nibrs", table, role: "metric",
       rowKey: key as EntityLevel, outputLevels: out as EntityLevel[],
-      timeGrains: [...grains] as TimeGrain[], measures: ["count"],
+      timeGrains: [...grains] as TimeGrain[],
+      ...(MONTH_ROW_TABLES.has(table) ? { rowPeriod: "month" as const } : {}),
+      measures: ["count"],
       measureBinding: { kind: "code_column", column: "ucr_offense_code" },
       components: "present", aggregation: "additive",
+      recordedMeasures: NIBRS_RECORDED_MEASURES[table],
     })
   ),
   T({
@@ -493,7 +566,7 @@ export const TABLE_SEMANTICS: TableSemantics[] = [
   T({
     source: "nibrs", table: "summary_clearance_type", role: "metric",
     rowKey: "agency", outputLevels: ALL_LOCAL, timeGrains: ["monthly", "annual"],
-    measures: ["clearance_rate", "count"],
+    rowPeriod: "month", measures: ["clearance_rate", "count"],
     measureBinding: { kind: "code_column", column: "ucr_offense_code" },
     components: "present", aggregation: "additive",
     note: "total_offenses, cleared_by_arrest and cleared_exceptional are counts, so rollups are sound.",
@@ -612,6 +685,7 @@ export const TABLE_SEMANTICS: TableSemantics[] = [
     source: "shr", table: "victims", role: "metric",
     uniqueKeys: ["id"],
     rowKey: "agency", outputLevels: ALL_LOCAL, timeGrains: ["incident", "annual"],
+    periodFrom: { table: "incidents", column: "incident_id", foreignColumn: "id" },
     measures: ["count"], measureBinding: { kind: "fixed_topics", topics: ["murder", "crime", "unknown"] },
     components: "present", aggregation: "additive",
     // The one table that survives -- but only under the product's own contract. shr-claude.ts:123:

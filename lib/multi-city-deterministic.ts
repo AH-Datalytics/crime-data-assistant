@@ -1,5 +1,6 @@
 import { resolveGeoPlaces } from "./geo-place-resolver";
 import { buildQueryContract } from "./query-contract";
+import { asksToIncludeCurrentYear, relativeYearRangeForQuestion } from "./time-conventions";
 import type { ChartConfig, ChartMeta } from "./types";
 import { consolidatedDisplayName, findConsolidatedAgency } from "./agency-consolidations";
 
@@ -21,6 +22,32 @@ export interface MultiCityTrendPlan {
    * lib/proof-checks' entityCompleteness check needs both halves to detect it.
    */
   requestedCities: { label: string; alias: string }[];
+  /**
+   * The years a RELATIVE request ("past 10 years") resolved to on the Historical path, so the exit
+   * can say when the returned rows stop short of them rather than silently shortening the period.
+   * Absent for explicit years and for Current, whose behavior is unchanged.
+   */
+  relativePeriod?: { start: number; end: number };
+}
+
+/**
+ * GC-098 correction C1: the sentence that keeps a relative Historical period from being silently
+ * shortened to the years the source happens to hold. Null when the rows cover the resolved period.
+ */
+export function relativePeriodShortfallNote(plan: Pick<MultiCityTrendPlan, "relativePeriod">, rows: Record<string, unknown>[]): string | null {
+  const period = plan.relativePeriod;
+  if (!period) return null;
+  const years = rows.map((row) => Number(row.year)).filter((year) => Number.isFinite(year));
+  if (years.length === 0) return null;
+  const first = Math.min(...years);
+  const last = Math.max(...years);
+  if (first <= period.start && last >= period.end) return null;
+  const range = (a: number, b: number) => a === b ? String(a) : `${a}-${b}`;
+  const missing = [
+    ...(first > period.start ? [range(period.start, first - 1)] : []),
+    ...(last < period.end ? [range(last + 1, period.end)] : []),
+  ];
+  return `The requested period is ${period.start}-${period.end}; the rows returned cover ${range(first, last)}, so ${missing.join(" and ")} ${missing.length === 1 && !missing[0].includes("-") ? "is" : "are"} not included.`;
 }
 
 type City = { name: string; state: string; alias: string; label: string; historicalOri?: string; currentName: string };
@@ -113,10 +140,18 @@ export function buildMultiCityTrendPlan(
   if (!selectedOffense) return null;
   const contract = buildQueryContract(question, source);
   if (!contract) return null;
-  const { startYear, endYear } = contract.time;
+  const contractYears = contract.time;
+  if (source === "current" && !(contractYears.startYear !== null && contractYears.endYear !== null && contractYears.startYear !== contractYears.endYear)) return null;
+  if ((contractYears.startYear === null) !== (contractYears.endYear === null) || (contractYears.startYear !== null && contractYears.startYear === contractYears.endYear)) return null;
+  // GC-098 correction C1, Historical only: the contract carries explicit years alone, so "past 10
+  // years" used to reach `WHERE 1 = 1` and return every year. The shared relative-year convention
+  // resolves it; explicit years and the Current branch are untouched.
+  const relative = source === "historical" && contractYears.startYear === null
+    ? relativeYearRangeForQuestion(question)
+    : null;
+  const startYear = relative?.start ?? contractYears.startYear;
+  const endYear = relative?.end ?? contractYears.endYear;
   const hasRange = startYear !== null && endYear !== null && startYear !== endYear;
-  if (source === "current" && !hasRange) return null;
-  if ((startYear === null) !== (endYear === null) || (startYear !== null && startYear === endYear)) return null;
   if (!["count", "rate_per_100k"].includes(contract.metric.unit)) return null;
   const allowedBreakdowns = new Set(["year", "month", "city"]);
   if (contract.breakdowns.some((item) => !allowedBreakdowns.has(item))) return null;
@@ -178,7 +213,12 @@ ORDER BY hac.year`;
     ? " Current data use the RTCI sample and are not a nationally representative trend series."
     : "";
   const rangeLabel = hasRange ? `${startYear}-${endYear}` : "All Available Years";
-  const rangeText = hasRange ? `from ${startYear} through ${endYear}` : "for all available years";
+  const relativeText = relative
+    ? asksToIncludeCurrentYear(question)
+      ? ` (the requested last ${endYear! - startYear! + 1} years, including ${endYear}, which is partial)`
+      : ` (the requested last ${endYear! - startYear! + 1} complete calendar years)`
+    : "";
+  const rangeText = hasRange ? `from ${startYear} through ${endYear}${relativeText}` : "for all available years";
   return {
     sql,
     title: `${selectedOffense.label[0].toUpperCase()}${selectedOffense.label.slice(1)} ${rate ? "Rates" : "Counts"} by City, ${rangeLabel}`,
@@ -198,5 +238,6 @@ ORDER BY hac.year`;
     },
     guardrail: `deterministic-${source}-multi-city-trend`,
     requestedCities: places.map((city) => ({ label: city.label, alias: city.alias })),
+    ...(relative ? { relativePeriod: { start: relative.start, end: relative.end } } : {}),
   };
 }

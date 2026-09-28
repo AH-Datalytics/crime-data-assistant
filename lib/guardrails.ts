@@ -12,6 +12,7 @@
 import type { QueryContext, Tab } from "./query-context";
 import { asksForCountsInsteadOfRates } from "./rate-intent";
 import { countyKeyFromDisplayName } from "./historical-county-identity";
+import { zeroFillsHistoricalRate } from "./historical-rate-zero-fill";
 
 /** An ORI is alphanumeric. Anything else is not one, and is not built into a pattern. */
 function safeOri(value: string | null | undefined): string | null {
@@ -31,7 +32,10 @@ import {
 } from "./time-conventions";
 import { explicitStateSubstateMismatch } from "./explicit-state-intent";
 import { stateNameToAbbr } from "./state-population";
-import { GROUP_RATE_INTENT_RE, SUB_CITY_GEOGRAPHY_MESSAGE, SUB_CITY_GEOGRAPHY_RE } from "./capability-overrides";
+import { GROUP_RATE_INTENT_RE, SUB_CITY_GEOGRAPHY_MESSAGE, asksSubCityGeography } from "./capability-overrides";
+import { buildCourtProcessExplanation, mayRefuseAsCourtProcess } from "./clearance-referent";
+import { shrCountyRequest } from "./shr-county-request";
+import { shrRequestedMeasure } from "./shr-murder-licence";
 
 const STATE_NAMES_RE = /\b(alabama|alaska|arizona|arkansas|california|colorado|connecticut|delaware|florida|georgia|hawaii|idaho|illinois|indiana|iowa|kansas|kentucky|louisiana|maine|maryland|massachusetts|michigan|minnesota|mississippi|missouri|montana|nebraska|nevada|new hampshire|new jersey|new mexico|new york|north carolina|north dakota|ohio|oklahoma|oregon|pennsylvania|rhode island|south carolina|south dakota|tennessee|texas|utah|vermont|virginia|washington state|west virginia|wisconsin|wyoming|district of columbia|united states)\b/i;
 
@@ -369,12 +373,20 @@ function hasHistoricalRateZeroFill(sql: string): boolean {
   const looksLikeRate = /\b(?:rate|per_100k|per\s*100000)\b/i.test(sql) || /\*\s*100000(?:\.0)?\b/i.test(sql);
   if (!looksLikeRate) return false;
 
-  const zeroFilledHistoricalMeasure = /\b(?:COALESCE|IFNULL)\s*\(\s*(?:\w+\.)?(?:murder|rape|robbery|assault|violent|property|burglary|theft|motor_vehicle_theft|population|all_total|officer_total|civilian_total)\s*,\s*(?:0|0\.0|1|1\.0)\s*\)/i;
-  return zeroFilledHistoricalMeasure.test(sql);
+  // Both observed shapes live in lib/historical-rate-zero-fill.ts, shared with the contract rule
+  // `historical-rate-null-gaps`. They were two copies of one regular expression that recognized a
+  // bare measure column only, so `COALESCE(ROUND(<rate>, 1), 0)` passed both and delivered a rate
+  // of zero for years nobody reported. Sharing the detector is what keeps the retry and the final
+  // enforcement from disagreeing about the same statement.
+  return zeroFillsHistoricalRate(sql);
 }
 
 function countywideCrosswalkMismatch(ctx: QueryContext): boolean {
   if (!isCountywideGeographyQuestion(ctx.question)) return false;
+  // GC-080: on SHR the route binds a named county itself -- the sheriff by default, the county's
+  // agencies only when asked -- and enforces that ORI scope on the executed statement. Retrying the
+  // model toward a crosswalk join here would steer it into the answer the scope check refuses.
+  if (ctx.tab === "shr" && shrCountyRequest(ctx.question)) return false;
   const sql = ctx.sql;
   const usesCrosswalk = /\bagency_county_crosswalk\b/i.test(sql);
   const narrowsToCountyAgency = /\b(?:\w+\.)?(?:type|agency_type)\s*=\s*'county'/i.test(sql);
@@ -687,7 +699,8 @@ function sqlQuotedCodes(sql: string): Set<string> {
 }
 
 function asksBareViolentCrime(question: string): boolean {
-  return /\bviolent crime\b/i.test(question) &&
+  // Plural too (GC-084 correction C2): "violent crimes" gets the same UCR-aligned category guard.
+  return /\bviolent crimes?\b/i.test(question) &&
     !/\b(crimes against persons|nibrs definition|nibrs taxonomy|simple assault|intimidation|kidnapping|human trafficking|all person crimes|persons crimes)\b/i.test(question);
 }
 
@@ -2309,8 +2322,47 @@ const GUARDRAILS: Guardrail[] = [
       const isSingleAgency = /agency\s*=\s*'/i.test(sql) && !/GROUP\s+BY.*agency/i.test(sql);
       return usesAgencyData && hasYearRange && isSingleAgency && !hasGapFill;
     },
+    /*
+     * WHAT THIS MESSAGE USED TO DO (GC-048). It opened "for a single agency" about a query naming
+     * two, and it showed a skeleton with two ellipses -- `SELECT y.year, ... FROM years y LEFT
+     * JOIN ...`. The retry filled the first ellipsis with a correlated scalar subquery per column,
+     * which the lineage analyzer cannot trace to a source table, and the request died on
+     * `structural-returned-series-unresolved` instead of being answered. The model satisfied the
+     * rule it was shown and broke one it was not.
+     *
+     * The two rules are jointly satisfiable, and the form below is a worked example of that:
+     * measured guardrail-clean, contract-clean, traceable, and correct on a fixture with a year
+     * neither agency reported, a year one agency missed, a missing population denominator and a
+     * genuine recorded zero. Recursion is not the blocker.
+     */
     message: () =>
-      "Your query retrieves historical data for a single agency over a year range but does not use a recursive CTE to fill missing years. Many agencies have gaps in reporting — without gap-fill, the chart will misleadingly connect data across missing years. Use: WITH years AS (SELECT <start> AS year UNION ALL SELECT year + 1 FROM years WHERE year < <end>) SELECT y.year, ... FROM years y LEFT JOIN ... This ensures missing years appear as NULL/gaps in the chart.",
+      "Your query retrieves historical agency data over a year range without filling missing years. "
+      + "Many agencies have gaps in reporting, and without gap-fill the chart connects data straight "
+      + "across a year nobody reported.\n\n"
+      + "One supported form, for example — build the year spine from the range the QUESTION asked "
+      + "for, not from these placeholders:\n"
+      + "  WITH RECURSIVE years AS (\n"
+      + "    SELECT <first year requested> AS year\n"
+      + "    UNION ALL SELECT year + 1 FROM years WHERE year < <last year requested>\n"
+      + "  )\n"
+      + "  SELECT y.year AS year,\n"
+      + "    ROUND(SUM(CASE WHEN ha.ori = '<ori>' THEN hac.murder END) * 100000.0\n"
+      + "          / NULLIF(MAX(CASE WHEN ha.ori = '<ori>' THEN hap.population END), 0), 1) AS <label>\n"
+      + "  FROM years y\n"
+      + "  LEFT JOIN historical_agency_crime hac ON hac.year = y.year AND hac.ori IN (...)\n"
+      + "  LEFT JOIN historical_agency ha ON ha.ori = hac.ori\n"
+      + "  LEFT JOIN historical_agency_population hap ON hap.ori = hac.ori AND hap.year = hac.year\n"
+      + "  GROUP BY y.year ORDER BY y.year\n\n"
+      + "Each returned measure has to be traceable to the joined source tables — a conditional "
+      + "aggregate over the LEFT JOINed rows, one column per agency. Do NOT write a correlated "
+      + "scalar subquery in the SELECT list: a returned column that is its own query cannot be "
+      + "traced to a table, and it will be rejected.\n\n"
+      + "Preserve what is missing. A year with no reported crime, and a year whose population is "
+      + "absent, must come back NULL — do not COALESCE either the columns or the finished rate to "
+      + "zero, because a rate of zero says the place recorded none. A zero the source actually "
+      + "recorded stays zero.\n\n"
+      + "This is one supported shape, not the only valid SQL; any statement that fills the years "
+      + "and keeps each returned measure traceable will do.",
   },
   {
     name: "historical-rate-zero-fill",
@@ -2535,6 +2587,9 @@ const GUARDRAILS: Guardrail[] = [
     name: "shr-homicide-type-missing",
     tabs: ["shr"],
     match: (ctx) => {
+      // GC-080 (owner ruling): "homicides" means ALL homicide victims, so a missing Murder filter is
+      // correct for that request; the request-selected homicide licence enforces it.
+      if (shrRequestedMeasure(ctx.question) !== "murder") return false;
       const sql = ctx.sql;
       const q = ctx.question.toLowerCase();
       const asksMurder = /\b(murder|homicide|homicides|killing|killings)\b/i.test(q) &&
@@ -3006,7 +3061,7 @@ const GUARDRAILS: Guardrail[] = [
   {
     name: "sub-city-geography-override",
     tabs: ["current", "historical", "nibrs", "shr"],
-    match: (ctx) => SUB_CITY_GEOGRAPHY_RE.test(ctx.question),
+    match: (ctx) => asksSubCityGeography(ctx.question),
     override: () => SUB_CITY_GEOGRAPHY_MESSAGE,
   },
 
@@ -3085,12 +3140,15 @@ const GUARDRAILS: Guardrail[] = [
   {
     name: "out-of-scope-override",
     tabs: ["current", "historical", "nibrs", "shr"],
-    match: (ctx) => /\b(prosecution|convicted|conviction|sentence[ds]?|incarcerat|prison population|jail population|fine[ds]?\b|fee[ds]?\b|bail|immigration status|illegal immigrant|undocumented|GARS|GVRS|gun violence restraining|red flag law|defendants?)\b/i.test(ctx.question),
-    override: (ctx) => {
-      const match = ctx.question.match(/\b(prosecution|conviction|sentence|incarceration|prison population|jail population|fines|fees|bail|immigration status|GARS|GVRS|gun violence restraining|red flag law|defendants?)\b/i);
-      const topic = match ? match[1] : "that topic";
-      return `This database tracks reported crime incidents, not court outcomes or policy data. It does not contain information about ${topic}. The data covers crime reports filed by law enforcement agencies — not what happens after arrest. I can provide clearance rates (whether a case was resolved by arrest or exceptional means), but not convictions, sentences, or other court outcomes.`;
-    },
+    // Decision 1: decided by REFERENT, never by keyword. "Prosecution declined" is a
+    // NIBRS exceptional-clearance reason, so the bare word must not refuse a question
+    // about our own police records. This guard previously fired on the word alone and
+    // would have re-refused questions the capability rule had just allowed through.
+    match: (ctx) => mayRefuseAsCourtProcess(ctx.question)
+      || /\b(immigration status|illegal immigrant|undocumented|GARS|GVRS|gun violence restraining|red flag law)\b/i.test(ctx.question),
+    // One copy of this wording, owned by the referent module, because the routes' no-SQL exits
+    // need the same sentence and return before this guardrail runs.
+    override: (ctx) => buildCourtProcessExplanation(ctx.question),
   },
 
   // --- Clearance evidence type queries (unsupported) ---

@@ -59,6 +59,8 @@ import { runGuardrails } from "@/lib/guardrails";
 import { finalizeGuardrailTags } from "@/lib/guardrail-tag-state";
 import { serializeChartConfigForLog } from "@/lib/chart-config-log";
 import { attachChartAuditToPayload, createChartAuditRequestId } from "@/lib/chart-audit";
+import { genericResultState } from "@/lib/result-state-adapters";
+import { governFactualNarrative } from "@/lib/result-state";
 
 /**
  * THE CHOKEPOINT. Factual content is accepted only as a SealedPayload, which
@@ -760,7 +762,10 @@ export async function POST(req: NextRequest) {
     const executionMs = Date.now() - start;
 
     if (rows.length === 0) {
-      const emptyExplanation = hateCrimeCaveats(sql, claude.explanation || "The query returned no results.");
+      // F3 (Decision 13): govern the empty narrative before it is finalized or sent.
+      const emptyExplanation = governFactualNarrative(
+        hateCrimeCaveats(sql, claude.explanation || "The query returned no results."),
+        genericResultState({ sql, rows }));
       // No columns: this branch returns before `columns` is derived from rows[0],
       // and an empty result has none to describe.
       const emptyProof = finalizeExit({ intendedAction: "decline_data", sql });
@@ -778,7 +783,9 @@ export async function POST(req: NextRequest) {
     {
       const { allNull } = detectAllNullData(columns, rows);
       if (allNull) {
-        const emptyMsg = "I ran that query but all the values came back empty - the math likely broke somewhere. Could you try asking that a different way?";
+        const emptyMsg = governFactualNarrative(
+          "I ran that query but all the values came back empty - the math likely broke somewhere. Could you try asking that a different way?",
+          genericResultState({ sql, rows }));
         const allNullProof = finalizeExit({ intendedAction: "decline_data", sql, columns });
         writeLog(question, sql, 0, "all_null_columns", executionMs, emptyMsg, "hate_crime", [], "haiku-4.5", sessionId, null, allNullProof);
         return jsonResp(emitFactualPayload(allNullProof, {
@@ -806,7 +813,7 @@ export async function POST(req: NextRequest) {
     // Apply mandatory caveats
     let explanation = sanitizeExplanation(claude.explanation || "");
     explanation = hateCrimeCaveats(sql, explanation);
-    explanation = applyResultDisclosures({ explanation, question, sql, rows, tab: "hate_crime" });
+    explanation = applyResultDisclosures({ explanation, question, sql, rows, tab: "hate_crime", resultState: genericResultState({ sql, rows }) });
     if (missingLowerBoundNote(question, sql, rows)) routeGuardrailsFired.push("lower-bound-disclosed");
     const grainCheck = validateGrain(question, rows, sql);
     if (!grainCheck.ok && grainCheck.message) {

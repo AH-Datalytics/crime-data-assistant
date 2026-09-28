@@ -54,7 +54,7 @@ import { resolveMode, isObserving, mayAlterDelivery, type ProofMode } from "./pr
 import { buildResultDigest, serializeResultDigest, type DigestPlanDeclaration, type ResultDigest } from "./result-digest";
 import { runProofChecks, type NumericClaim } from "./proof-checks";
 import { attributeOmissions, type OmittedCandidate } from "./omission-attribution";
-import { buildQueryContract, type QueryContractSource } from "./query-contract";
+import { buildQueryContract, type QueryContract, type QueryContractSource } from "./query-contract";
 import { verifyPlanDerivation, type PlanDerivation } from "./plan-derivation";
 import { narrativeDisclosesOmissions } from "./omission-wording";
 import {
@@ -281,6 +281,12 @@ export interface ProofFinalizationInput {
   sourceYearRange?: { min: number; max: number } | null;
   /** Terminal action the route intends. Factual actions require full proof. */
   intendedAction: DeliveryAction;
+  /**
+   * The effective request, when the route built it by amendment. Proof then reasons about the same
+   * requested places and years the validator checked, instead of re-parsing `question`. A contract
+   * for a different source is ignored.
+   */
+  contract?: QueryContract | null;
   /** Override for tests. Defaults to process.env. */
   env?: Record<string, string | undefined>;
 }
@@ -374,7 +380,9 @@ export function finalizeProof(input: ProofFinalizationInput): ProofFinalization 
 
   const startedAt = Date.now();
   try {
-    const contract = buildQueryContract(input.question, contractSourceFor(input.sourceId), null);
+    const contract = input.contract && input.contract.source === contractSourceFor(input.sourceId)
+      ? input.contract
+      : buildQueryContract(input.question, contractSourceFor(input.sourceId), null);
 
     // Source health is Stage 2 scope (§9.1). Until the per-capability registry
     // exists, health is honestly `unknown` -- which blocks factual delivery. That

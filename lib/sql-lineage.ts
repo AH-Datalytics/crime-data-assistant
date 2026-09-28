@@ -40,6 +40,26 @@ export type ColumnRef = {
    * multi-table CTE was reported unresolved and would have failed closed.
    */
   candidates?: string[];
+  /**
+   * This column was already combined by an aggregate where it was produced.
+   *
+   * A CTE that writes `SUM(s.offense_count) AS total` hands its consumer an ANNUAL figure, even
+   * though the lineage still points at a monthly table. Without this mark a consumer reading
+   * `c.total` looks identical to one reading a bare monthly column, and the annual check refused a
+   * correct answer for aggregating in the wrong place rather than not at all.
+   */
+  aggregated?: true;
+  /**
+   * The RELATION INSTANCE this column was read from -- the alias as written, or the table name when
+   * the source carried no alias.
+   *
+   * `table` alone cannot answer "did this number come from the same records as that identifier",
+   * because one table can appear twice. `FROM x d1 JOIN x d2 ON d2.year = d1.year` gives `d1.ori` and
+   * `d2.offender_count` identical `table` values while the count belongs to a different set of rows
+   * than the identifier. The alias is what separates them, and it was already known here -- it was
+   * simply being discarded at resolution.
+   */
+  sourceAlias?: string;
 };
 
 export type SelectItem = {
@@ -49,6 +69,16 @@ export type SelectItem = {
   refs: ColumnRef[];
   /** Refs on the right-hand side of a top-level division, or null when there is no division. */
   denominatorRefs: ColumnRef[] | null;
+  /**
+   * The denominator's own expression TEXT, or null when there is no division.
+   *
+   * WHY THE TEXT AND NOT ONLY THE REFS. `COUNT(*)` and a bare constant both reference no columns, so
+   * `denominatorRefs` is an empty array for both and cannot tell them apart. A share divided by a
+   * real row count is a share; the same numerator divided by `2.0` is not. That distinction is
+   * invisible to the refs alone, and reading it from the refs is what let a literal denominator pass
+   * as a computed share (review 2026-09-08, R1).
+   */
+  denominatorRaw: string | null;
   /** COUNT(*) and friends contribute a row count rather than a named column. */
   countsRows: boolean;
   /**
@@ -64,6 +94,19 @@ export type SelectItem = {
    * column references at all, was classified as carrying no measurement, and passed.
    */
   hasWildcard: boolean;
+  /**
+   * The references this expression reads WITHOUT an aggregate around them.
+   *
+   * `SUM(s.offense_count)` combines the rows a group holds; a bare `s.offense_count` beside
+   * `GROUP BY s.year` reports one arbitrary row of that group and SQLite says nothing about it.
+   * When the rows are months and the answer is titled "by year", that difference is the whole
+   * defect, and `refs` alone cannot see it -- both forms reference the same column.
+   *
+   * A reference is counted here when it appears outside every aggregate call in the expression, so
+   * `SUM(a) - b` reports `b` and `SUM(a) - SUM(b)` reports nothing. That is deliberate: an
+   * aggregate over one operand proves nothing about the others.
+   */
+  unaggregatedRefs: ColumnRef[];
   /** False when any part of the expression could not be traced. */
   resolved: boolean;
 };
@@ -331,8 +374,44 @@ function cteOutputs(
     // so `WITH x(m) AS (SELECT robbery ...), y(murders) AS (SELECT x.m FROM x)` laundered robbery
     // into `y.murders` with nothing to object to.
     const { refs } = refsIn(bodyExpr, innerAliases, ctes, memo, seen, columnLists);
+    // What this arm hands on: a reference it only ever reads inside an aggregate arrives at the
+    // consumer already combined, and must not be mistaken there for a raw row value.
+    const stillBare = new Set(
+      refsIn(withoutAggregateCalls(bodyExpr), innerAliases, ctes, memo, new Set(seen), columnLists)
+        .refs.map((ref) => `${ref.table ?? "?"}.${ref.column}`));
+    for (const ref of refs) {
+      if (!stillBare.has(`${ref.table ?? "?"}.${ref.column}`)) ref.aggregated = true;
+    }
     const bare = bodyExpr.trim().match(/^(?:[A-Za-z_][\w]*\.)?([A-Za-z_][\w]*)$/);
     const key = (alias ?? bare?.[1] ?? "").toLowerCase();
+    /*
+     * A SUPPLIED NUMBER BESIDE A REAL TABLE IS NOT THAT TABLE'S MEASUREMENT.
+     *
+     * `SELECT v.year, 7 AS murders FROM summary_victim_city_monthly AS v` used to be accepted. The
+     * constant contributes no refs, so the caller's origin lookup came back empty, fell through to
+     * the single-base-table fallback, and `murders` was attributed to whichever table the CTE
+     * happened to read. Nothing downstream could then tell the invented number from a measurement.
+     * (The two-table form was refused only incidentally: two metric candidates cannot be narrowed.)
+     *
+     * Recording the constant as an UNRESOLVED reference is what the arm actually knows -- the value
+     * came from no column -- and the established `structural-returned-series-unresolved` rule
+     * refuses any returned series carrying it. This removes an inference rather than adding a rule,
+     * and it trusts nothing the query supplies.
+     *
+     * Two limits are deliberate, because both are what keep real plans working:
+     *  - NUMERIC only. `scrub` blanks string literals, so a supplied LABEL (`'place_1' AS
+     *    place_key`) is indistinguishable here from any other quoted text, and the deterministic
+     *    comparison builder's `target_places` legitimately supplies one beside `agencies`. A label
+     *    is not the answer-bearing value; a number is.
+     *  - The arm must READ a table. `requested_years(year) AS (SELECT 2020 ...)` supplies a
+     *    dimension from nothing at all, and that stays `LITERAL_SOURCE` through the caller.
+     */
+    const suppliedNumber =
+      refs.length === 0 && /[0-9]/.test(bodyExpr) && !bodyExpr.includes("'")
+      && [...new Set(innerAliases.values())].some(
+        (source) => (ctes.has(source) ? baseTablesOf(ctes.get(source)!, ctes).length > 0 : true)
+      );
+    if (key && suppliedNumber) refs.push({ table: null, column: key });
     refsByIndex[index] = [...(refsByIndex[index] ?? []), ...refs];
     if (key && !nameByIndex[index]) nameByIndex[index] = key;   // the first arm names the column
   });
@@ -369,6 +448,36 @@ function refsIn(
     return tables.length === 1 ? tables[0] : null;
   })();
 
+  /**
+   * The ONE relation instance an unqualified column can only have come from, or null.
+   *
+   * `singleBase` answers a weaker question -- "is one table read here" -- and two aliases of that one
+   * table satisfy it while leaving a bare column genuinely ambiguous. `sourceAliases` also records
+   * each table under its own name beside its alias, so the map's size cannot be counted directly;
+   * an entry whose key differs from its value is an explicitly aliased instance, and more than one of
+   * those means the bare column is not uniquely attributable. Nothing is guessed: the ambiguous case
+   * falls through to the unattributed push below and stays unproved.
+   */
+  const soleInstance = (() => {
+    if (!singleBase) return null;
+    const explicit = [...aliases.entries()].filter(([alias, table]) => alias !== table);
+    if (explicit.length > 1) return null;
+    return { alias: explicit[0]?.[0] ?? singleBase, table: singleBase };
+  })();
+
+  /**
+   * Carry a ref out of the CTE that produced it WITHOUT carrying the CTE's private alias as if it
+   * were the outer statement's.
+   *
+   * Two CTEs may each read the fact table as `d`. Those are different relation instances, and a
+   * consumer comparing the propagated alias strings saw one instance and treated a figure computed
+   * over every agency as tied to an identifier selected for one -- the scoped_alias_collision
+   * witness. Qualifying the alias by the CTE it came from keeps `ids>d` and `totals>d` distinct, so
+   * an equality proved inside one scope can no longer be borrowed by another.
+   */
+  const throughCte = (cte: string, ref: ColumnRef): ColumnRef =>
+    ref.sourceAlias ? { ...ref, sourceAlias: `${cte}>${ref.sourceAlias}` } : { ...ref };
+
   const qualified = /\b([A-Za-z_][\w]*)\.([A-Za-z_][\w]*)\b/g;
   const consumed: [number, number][] = [];
   let m: RegExpExecArray | null;
@@ -381,7 +490,7 @@ function refsIn(
       const column = m[2].toLowerCase();
       const origin = cteOutputs(table, ctes, memo, new Set(seen), columnLists).get(column);
       if (origin && origin.length > 0) {
-        for (const ref of origin) refs.push({ ...ref });
+        for (const ref of origin) refs.push(throughCte(table, ref));
         continue;
       }
       const inner = baseTablesOf(ctes.get(table)!, ctes);
@@ -389,7 +498,7 @@ function refsIn(
       else if (inner.length > 1) refs.push({ table: null, column, candidates: inner });
       else refs.push({ table: LITERAL_SOURCE, column });
     } else if (table) {
-      refs.push({ table, column: m[2].toLowerCase() });
+      refs.push({ table, column: m[2].toLowerCase(), sourceAlias: aliasKey });
     } else {
       refs.push({ table: null, column: m[2].toLowerCase() });
       resolved = false;
@@ -416,12 +525,16 @@ function refsIn(
     if (cteSources.length === 1) {
       const origin = cteOutputs(cteSources[0], ctes, memo, new Set(seen), columnLists).get(word);
       if (origin && origin.length > 0) {
-        for (const ref of origin) refs.push({ ...ref });
+        for (const ref of origin) refs.push(throughCte(cteSources[0], ref));
         continue;
       }
     }
 
-    if (singleBase) refs.push({ table: singleBase, column: word });
+    // A bare column in a single-instance statement HAS a relation instance -- the only one there is.
+    // Attaching it here is what keeps the ordinary unqualified spelling answerable; withholding it
+    // made qualification syntax a new requirement for a query that was already readable and correct.
+    if (soleInstance) refs.push({ table: soleInstance.table, column: word, sourceAlias: soleInstance.alias });
+    else if (singleBase) refs.push({ table: singleBase, column: word });
     else {
       const candidates = [...new Set([...aliases.values()].flatMap(
         (table) => (ctes.has(table) ? baseTablesOf(ctes.get(table)!, ctes) : [table])
@@ -455,6 +568,160 @@ function denominatorExpression(expression: string): string | null {
     return null;
   }
   return expression.slice(cut + 1);
+}
+
+const AGGREGATE_CALL = /\b(?:SUM|TOTAL|AVG|COUNT|MIN|MAX|GROUP_CONCAT)\s*\(/gi;
+
+/**
+ * The same expression with every aggregate CALL blanked out, arguments included.
+ *
+ * Blanked rather than removed so the remaining text keeps its offsets and stays parseable by the
+ * same reader. `SUM(a) - b` becomes `        - b`, which reports `b` and nothing else.
+ */
+function withoutAggregateCalls(expression: string): string {
+  let out = expression;
+  for (;;) {
+    AGGREGATE_CALL.lastIndex = 0;
+    const match = AGGREGATE_CALL.exec(out);
+    if (!match) return out;
+    let depth = 0;
+    let end = match.index + match[0].length - 1;   // sits on the opening paren
+    for (let i = end; i < out.length; i += 1) {
+      const char = out[i];
+      if (char === "'") {
+        const close = out.indexOf("'", i + 1);
+        i = close === -1 ? out.length : close;
+        continue;
+      }
+      if (char === "(") depth += 1;
+      else if (char === ")") {
+        depth -= 1;
+        if (depth === 0) { end = i; break; }
+      }
+      if (i === out.length - 1) end = i;           // unbalanced: blank to the end
+    }
+    out = out.slice(0, match.index) + " ".repeat(end - match.index + 1) + out.slice(end + 1);
+  }
+}
+
+/**
+ * The columns this statement groups by, at the top level of its outer query.
+ *
+ * A grouped column is the one thing a bare reference beside an aggregate is safe to be: it holds
+ * the same value for every row of the group by construction.
+ */
+/*
+ * Depth-aware scanning, exported for callers that need to read one clause of one query level.
+ *
+ * These wrap the private helpers above rather than re-implementing them. The level-ranking
+ * eligibility rule needs exactly this and nothing more: a query's own clause text, and the bodies of
+ * its CTEs, with parenthesised subqueries skipped. A second copy of a paren scanner is how two
+ * callers end up disagreeing about what "top level" means, so there is one.
+ */
+
+/** Comments and quoted text blanked, so keyword scanning cannot be fooled by a string literal. */
+export function scrubSql(sql: string): string {
+  return scrub(sql);
+}
+
+/** CTE name -> body, plus the trailing query, for one `WITH` prefix. */
+export function cteBodies(sql: string): { bodies: Map<string, string>; rest: string } {
+  const { names, rest } = extractCtes(sql);
+  return { bodies: names, rest };
+}
+
+/**
+ * The text of `keyword`'s clause at this query level, up to the next clause keyword, or null.
+ *
+ * The terminator list includes WHERE deliberately: without it a wrapping form's FROM clause
+ * swallows its own WHERE (`FROM ( ... ) t WHERE offenses > 0`) and the query reads as having no
+ * filter at all.
+ */
+export function topLevelClause(query: string, keyword: RegExp): string | null {
+  const at = findTopLevel(query, keyword);
+  if (at === -1) return null;
+  const after = query.slice(at).replace(new RegExp(`^${keyword.source}`, "i"), "");
+  let end = after.length;
+  for (const next of [
+    /\bWHERE\b/gi, /\bGROUP\s+BY\b/gi, /\bHAVING\b/gi,
+    /\bORDER\s+BY\b/gi, /\bLIMIT\b/gi, /\bWINDOW\b/gi, /\bUNION\b/gi,
+  ]) {
+    const found = findTopLevel(after, next);
+    if (found !== -1 && found < end) end = found;
+  }
+  return after.slice(0, end).trim() || null;
+}
+
+/** True when `keyword` appears at this query level. */
+export function hasTopLevelKeyword(query: string, keyword: RegExp): boolean {
+  return findTopLevel(query, keyword) !== -1;
+}
+
+/** Split a boolean clause on top-level `AND`. */
+export function splitTopLevelAnd(clause: string): string[] {
+  const parts: string[] = [];
+  let depth = 0;
+  let start = 0;
+  const scan = /\bAND\b|[()]/gi;
+  let m: RegExpExecArray | null;
+  while ((m = scan.exec(clause)) !== null) {
+    if (m[0] === "(") depth += 1;
+    else if (m[0] === ")") depth = Math.max(0, depth - 1);
+    else if (depth === 0) {
+      parts.push(clause.slice(start, m.index));
+      start = m.index + m[0].length;
+    }
+  }
+  parts.push(clause.slice(start));
+  return parts.map((part) => part.trim()).filter(Boolean);
+}
+
+/** Returned by `governingRowLimit` when the outer limit cannot be established safely. */
+export const LIMIT_INCONCLUSIVE = Symbol("limit-inconclusive");
+
+/**
+ * The single limit governing rows returned to the reader: the one `LIMIT` at paren depth 0.
+ *
+ * A CTE's own limit is not it, no limit is `null`, and two top-level limits are inconclusive rather
+ * than a guess. `LIMIT offset, count` yields the count. This is the same contract the frozen
+ * correctness evaluator applies when it reads a capture, deliberately so -- but it is implemented
+ * here rather than imported, because the evaluator carries a test transport that has no business in
+ * product code.
+ */
+export function governingRowLimit(sql: string): number | null | typeof LIMIT_INCONCLUSIVE {
+  const text = scrub(sql);
+  let depth = 0;
+  const hits: number[] = [];
+  const re = /[()]|\bLIMIT\b/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    if (m[0] === "(") depth += 1;
+    else if (m[0] === ")") { depth -= 1; if (depth < 0) return LIMIT_INCONCLUSIVE; }
+    else if (depth === 0) hits.push(m.index + m[0].length);
+  }
+  if (depth !== 0) return LIMIT_INCONCLUSIVE;
+  if (hits.length === 0) return null;
+  if (hits.length > 1) return LIMIT_INCONCLUSIVE;
+  const tail = text.slice(hits[0]);
+  const offsetForm = /^\s*(\d+)\s*,\s*(\d+)/.exec(tail);
+  if (offsetForm) return parseInt(offsetForm[2], 10);
+  const plain = /^\s*(\d+)/.exec(tail);
+  return plain ? parseInt(plain[1], 10) : LIMIT_INCONCLUSIVE;
+}
+
+export function groupByColumns(sql: string): string[] {
+  const { rest } = extractCtes(scrub(sql));
+  const at = findTopLevel(rest, /\bGROUP\s+BY\b/gi);
+  if (at === -1) return [];
+  const after = rest.slice(at + "GROUP BY".length);
+  let end = after.length;
+  for (const keyword of [/\bHAVING\b/gi, /\bORDER\s+BY\b/gi, /\bLIMIT\b/gi, /\bWINDOW\b/gi]) {
+    const found = findTopLevel(after, keyword);
+    if (found !== -1 && found < end) end = found;
+  }
+  return splitTopLevel(after.slice(0, end), ",")
+    .map((part) => part.trim().replace(/^.*\./, "").toLowerCase())
+    .filter((part) => /^[a-z_]\w*$/.test(part));
 }
 
 export function analyzeSql(sql: string): SqlLineage {
@@ -517,15 +784,41 @@ export function analyzeSql(sql: string): SqlLineage {
       || /^\s*[-+]?[0-9][0-9_.]*\s*$/.test(body);
     const numericWithoutColumns = refs.length === 0 && aggregateOrConstant;
 
+    const bare = withoutAggregateCalls(body);
+    const unaggregatedRefs = (bare.trim() === body.trim()
+      ? refs                                        // no aggregate here: every ref is bare HERE
+      : refsIn(bare, itemAliases, ctes, memo, new Set(), columnLists).refs)
+      // ...but a reference combined further down the lineage is not bare anywhere.
+      .filter((ref) => ref.aggregated !== true);
+
     items.push({
-      alias, raw: raw.trim(), refs, denominatorRefs, countsRows, hasWildcard,
-      numericWithoutColumns, resolved,
+      alias, raw: raw.trim(), refs, denominatorRefs, denominatorRaw: denomExpr, countsRows,
+      hasWildcard, numericWithoutColumns, unaggregatedRefs, resolved,
     });
   }
   }
 
   if (items.length === 0) return { parsed: false, unsupportedShape: null, items: [], baseTables: [] };
-  if (baseTables.length === 0 && ctes.size === 0) {
+  /*
+   * A STATEMENT THAT REACHES NO TABLE CANNOT BE TRACED, AND A CTE DOES NOT CHANGE THAT.
+   *
+   * This used to read `baseTables.length === 0 && ctes.size === 0`, which refused
+   * `SELECT 2020 AS year, 500 AS murders` and accepted the identical literals the moment they were
+   * wrapped: `WITH t AS (SELECT 2020 AS year, 500 AS murders) SELECT t.year, t.murders FROM t`.
+   * Every outer column then resolved to `LITERAL_SOURCE`, `isFactualSeries` was left with nothing
+   * real, and a made-up total was delivered as an answer with no finding against it.
+   *
+   * `baseTables` is already collected THROUGH the CTEs -- `baseTablesOf(fromClause, ctes)` above
+   * follows a CTE source to the tables it reads -- so an empty list means this statement's own FROM
+   * reaches no table anywhere. Dropping the second condition removes the exemption rather than
+   * adding a rule, and the boundary now applies wherever it already applied.
+   *
+   * It is a conservative treatment, not a proof of every source the engine could reach. A statement
+   * whose outer query has no FROM and touches its table only inside a scalar subquery is refused
+   * here too; that shape is already refused today when it carries no CTE, and it is asserted
+   * deliberately in `scripts/test-structural-semantics.ts` rather than left to be discovered.
+   */
+  if (baseTables.length === 0) {
     return { parsed: false, unsupportedShape: null, items: [], baseTables: [] };
   }
   return { parsed: true, unsupportedShape: null, items, baseTables };

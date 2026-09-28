@@ -420,7 +420,11 @@ function assertDoesNotFind(name: string, ids: string[], unexpected: string) {
      WHERE i.agency = 'Cook County'
      GROUP BY i.year`
   );
-  assertFinds("SHR countywide geography needs crosswalk", ids, "shr-countywide-crosswalk");
+  // GC-080 (owner ruling, 2026-09-26): on SHR a named county means the sheriff agency. The route binds
+  // it (or, for an explicit countywide request, the county's agencies) as an ORI list and enforces that
+  // scope on the executed statement, so the crosswalk join is no longer required for a named county.
+  // The statement above is still refused -- by the scope check, which this capability rule never was.
+  assertDoesNotFind("GC-080: SHR named county no longer requires the crosswalk (the route binds the scope)", ids, "shr-countywide-crosswalk");
 }
 
 {
@@ -455,6 +459,99 @@ function assertDoesNotFind(name: string, ids: string[], unexpected: string) {
   });
   assert(result.warnings.includes("capability-nibrs-weapon-person-crime-table"));
   assert.equal(result.capabilityFindings[0]?.ruleId, "nibrs-weapon-person-crime-table");
+}
+
+/*
+ * A NAMED AGENCY IS NOT A COUNTYWIDE REQUEST — at the capability rule as well as the early override.
+ *
+ * `asksCountywideGeography` already excluded named agencies; `asksCountywide` did not, so the
+ * demographics rule treated "Worcester County Sheriff's Office" as a whole county and refused a
+ * question about a single ORI. Removing only the early override would have re-exposed the same
+ * misclassification here, one stage later.
+ */
+{
+  const demographicSql =
+    "SELECT d.age_group, SUM(d.offender_count) AS offenders FROM summary_offender_demographics d " +
+    "WHERE d.ori = 'MD0240000' AND d.ucr_offense_code = '09A' GROUP BY d.age_group";
+
+  for (const place of [
+    "worcester county, md sheriff's office",
+    "bernalillo county sheriff",
+    "nassau county police department",
+  ]) {
+    const ids = findingIds(`show me murders by offender age for ${place}`, "nibrs", demographicSql);
+    assert(!ids.includes("nibrs-countywide-demographics-unsupported"),
+      `a named agency must not be refused as countywide: ${place}, got ${JSON.stringify(ids)}`);
+  }
+
+  // A bare county name must still be refused for demographics.
+  assertFinds(
+    "a bare county demographic request is still unsupported",
+    findingIds("show me murders by offender age for worcester county, md", "nibrs", demographicSql),
+    "nibrs-countywide-demographics-unsupported"
+  );
+
+  /*
+   * A MENTION IS NOT A SCOPE. A whole-county request may name a sheriff as an inclusion or a
+   * contrast, and an earlier form of this exclusion let that remove the demographics refusal. The
+   * contract decides first: a county geography is a county request however many agencies it names.
+   */
+  for (const [name, q] of [
+    ["countywide, including the sheriff's office",
+     "show countywide murder offenders by age for Worcester County, MD, including the sheriff's office from 2022 to 2025"],
+    ["all agencies, not just the sheriff's office",
+     "show murder offenders by age for all agencies in Worcester County, MD, not just the sheriff's office, from 2022 to 2025"],
+  ] as const) {
+    const contract = buildQueryContract(q, "nibrs");
+    assert(contract, `expected contract for ${name}`);
+    assert.equal(contract!.geography.kind, "county", `${name}: the contract resolves a county`);
+    assertFinds(`a whole-county request keeps its demographics refusal: ${name}`,
+      findingIds(q, "nibrs", demographicSql), "nibrs-countywide-demographics-unsupported");
+  }
+
+  /*
+   * THE CONTRACT IS THE BACKSTOP, and it carries cases the wording check cannot.
+   *
+   * The two witnesses above are caught by the whole-county wording alone. These are not: they name
+   * a sheriff with no inclusion or contrast marker, and only the resolved county geography
+   * distinguishes them from a request scoped to that sheriff. Without the contract test they lose
+   * the demographics refusal.
+   */
+  for (const q of [
+    "show murder offenders by age for Worcester County, MD and its sheriff from 2022 to 2025",
+    "murder offenders by age across Worcester County, MD with the sheriff",
+    "show me murder offenders by age for Worcester County, MD (sheriff)",
+  ]) {
+    const contract = buildQueryContract(q, "nibrs");
+    assert(contract, `expected contract for ${q}`);
+    assert.equal(contract!.geography.kind, "county",
+      `this witness only works if the contract resolves a county: ${q}`);
+    assertFinds(`a county contract keeps its refusal despite an agency mention: ${q}`,
+      findingIds(q, "nibrs", demographicSql), "nibrs-countywide-demographics-unsupported");
+  }
+
+  /*
+   * THE STEERING RULE, BOTH DIRECTIONS, for the supported named agency. It now reaches named
+   * agencies because they are correctly not countywide; that must mean correcting a wrong table,
+   * not objecting to the right one.
+   */
+  const agencyQ = "show me murders by offender age for worcester county, md sheriff's office from 2022 to 2025";
+  assertFinds(
+    "a named agency asking for demographics from a non-demographic table is corrected",
+    findingIds(agencyQ, "nibrs",
+      "SELECT s.year, SUM(s.victim_count) FROM summary_victim_city_monthly s WHERE s.ori = 'MD0240000' GROUP BY s.year"),
+    "nibrs-demographic-breakdown-table"
+  );
+  assert(!findingIds(agencyQ, "nibrs", demographicSql).includes("nibrs-demographic-breakdown-table"),
+    "and the demographic-capable table does not trigger that correction");
+
+  // And a countywide COUNT is unaffected by this rule either way.
+  const countIds = findingIds(
+    "how many murders in worcester county, md in 2023", "nibrs",
+    "SELECT SUM(s.offense_count) FROM summary_city_monthly s JOIN agency_county_crosswalk ac ON ac.ori9 = s.ori WHERE ac.county_key = 'WORCESTER'"
+  );
+  assert(!countIds.includes("nibrs-countywide-demographics-unsupported"),
+    `a countywide count is not a demographics refusal, got ${JSON.stringify(countIds)}`);
 }
 
 console.log("source capability tests passed");

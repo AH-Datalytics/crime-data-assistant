@@ -1,7 +1,11 @@
 import type { QueryContract, QueryContractSource } from "./query-contract";
 import { extractReferencedTables } from "./table-allowlist";
-import { SUB_CITY_GEOGRAPHY_MESSAGE, SUB_CITY_GEOGRAPHY_RE } from "./capability-overrides";
+import { SUB_CITY_GEOGRAPHY_MESSAGE, asksSubCityGeography, scopedToNamedAgency } from "./capability-overrides";
 import { asksClearanceTypeBreakdown } from "./clearance-type-intent";
+import { requestedScope } from "./structural-semantics";
+import { mayRefuseAsCourtProcess } from "./clearance-referent";
+import { BARE_MEASURE_ZERO_FILL, zeroFillsFinishedRate } from "./historical-rate-zero-fill";
+import { shrCountyRequest } from "./shr-county-request";
 
 export type SourceCapabilitySeverity = "warning" | "unsupported";
 
@@ -32,6 +36,14 @@ type SourceCapabilityRule = {
   requiresAnyTables?: string[];
   forbidsTables?: string[];
   forbiddenSql?: RegExp[];
+  /**
+   * A forbidden SQL shape a regular expression cannot express.
+   *
+   * Added for the zero-filled finished rate, whose first argument is four levels of nested
+   * parentheses; a pattern loose enough to span it is loose enough to catch things it should not.
+   * The predicate is consulted exactly where `forbiddenSql` is, so a rule can use either or both.
+   */
+  forbiddenSqlShape?: (sql: string) => boolean;
 };
 
 const ALL_QUERY_SOURCES: QueryContractSource[] = ["current", "historical", "nibrs", "shr", "hate_crime"];
@@ -71,14 +83,33 @@ function hasCircumstanceBreakdown(question: string, contract: QueryContract): bo
     /\b(?:domestic\s+violence|intimate\s+partner|gang(?:land)?|juvenile\s+gang|argument|circumstance|justifiable|police\s+shooting)\b/i.test(question);
 }
 
+/*
+ * A NAMED AGENCY IS NOT A COUNTYWIDE REQUEST, even when its own name contains "County".
+ *
+ * The exclusion below already lived in `asksCountywideGeography`. `asksCountywide` did not apply
+ * it, so every rule reading the broader predicate treated "Worcester County Sheriff's Office" as a
+ * whole county — including the demographics rule, which refused a question about one agency that
+ * the contract had already resolved to one ORI.
+ *
+ * Applied here rather than at one call site, because "is this a countywide request" is what this
+ * predicate answers, and leaving one caller with a different answer is exactly how the divergence
+ * arose. Its effect on each caller is covered by test: `asksCountywideGeography` already excluded
+ * named agencies and is unchanged; the demographics rule stops refusing them; and the
+ * demographic-table steering rule, which applies when NOT countywide, now correctly reaches them.
+ */
 function asksCountywide(question: string, contract: QueryContract): boolean {
+  // The CONTRACT decides first. A high-confidence county geography is a county request however
+  // many agencies it names, and letting a mention override it removed the demographics refusal
+  // from 'countywide … including the sheriff's office'. Only when the resolved scope is NOT a
+  // county does a named agency exclude the request, and `scopedToNamedAgency` additionally
+  // withdraws that exclusion for whole-county wording.
+  if (contract.geography.kind !== "county" && scopedToNamedAgency(question)) return false;
   return contract.geography.kind === "county" ||
     /\b[A-Za-z][A-Za-z.'-]*(?:\s+[A-Za-z][A-Za-z.'-]*){0,4}\s+(?:county|parish|borough)\b/i.test(question);
 }
 
 function asksCountywideGeography(question: string, contract: QueryContract): boolean {
   if (!asksCountywide(question, contract)) return false;
-  if (/\b(?:sheriff'?s?\s+office|sheriff|county\s+police|county\s+agency|police\s+department)\b/i.test(question)) return false;
   return /\b(?:countywide|county-wide|all\s+(?:agencies|cities)|cities\s+(?:in|within)|agencies\s+(?:in|within)|crime\s+(?:in|within|for)|murders?\s+(?:in|within|for)|homicides?\s+(?:in|within|for)|shootings?\s+(?:in|within|for)|rates?\s+(?:in|within|for))\b/i.test(question) ||
     contract.geography.kind === "county";
 }
@@ -101,11 +132,38 @@ function asksHistoricalRate(contract: QueryContract, question: string): boolean 
     /\brates?\b|\bper\s*(?:100\s*k|100,?000|capita)\b/i.test(question);
 }
 
-function isHistoricalStateOrNational(contract: QueryContract): boolean {
+/**
+ * THE LEVEL OF THE REQUESTED ANSWER, NOT THE AREA IT IS DRAWN FROM.
+ *
+ * Both predicates below read `requestedScope().rowLevel`, which the structural checker already
+ * computes from the question, and fall back to the geography only when the question says nothing
+ * about the level.
+ *
+ * WHY. They used to test `contract.geography.kind` alone, which is the area a request FILTERS BY.
+ * "Which cities in Louisiana had the highest violent crime rate" resolves geography `state`, and
+ * "top 10 us cities by homicide rate" resolves `national` -- yet both ask for a list of CITIES.
+ * The state/national rate rule therefore fired on two city-rate requests (GC-058, GC-059) and
+ * demanded `historical_state_national`, a table that cannot answer either one; the model's SQL
+ * aggregated the agency tables correctly and was rejected twice, and the user saw a generic
+ * "I couldn't build a reliable query" message. A genuine state-rate request has row level `state`
+ * and still requires the state table, which the fixtures in
+ * `audit/historical-city-rate-2026-09-19/` check in both directions.
+ *
+ * The local-rate rule is corrected with it, in the same direction. A city-row rate under a state
+ * filter is a local rate and needs `historical_agency_population` for its denominator; reading the
+ * geography alone exempted exactly those requests from the denominator requirement.
+ */
+function isHistoricalStateOrNational(contract: QueryContract, question: string): boolean {
+  const level = requestedScope(question, contract).rowLevel;
+  if (level === "state" || level === "national") return true;
+  if (level !== "unknown") return false;
   return contract.geography.kind === "state" || contract.geography.kind === "national";
 }
 
-function isHistoricalLocalRate(contract: QueryContract): boolean {
+function isHistoricalLocalRate(contract: QueryContract, question: string): boolean {
+  const level = requestedScope(question, contract).rowLevel;
+  if (level === "city" || level === "agency" || level === "county") return true;
+  if (level !== "unknown") return false;
   return contract.geography.kind === "city" || contract.geography.kind === "agency" || contract.geography.kind === "county";
 }
 
@@ -142,12 +200,24 @@ function asksDomesticViolenceAggravatedAssaultShare(question: string, contract: 
   const asksDv = /\bdomestic\s+violence\b|\bintimate\s+partner\b|\b(?<![a-z])dv(?![a-z])\b/i.test(question);
   return asksShare && asksAggAssault && asksDv;
 }
-function asksSubCityGeography(question: string): boolean {
-  return SUB_CITY_GEOGRAPHY_RE.test(question);
+
+/**
+ * Topics no dataset here carries, other than the court-process family.
+ *
+ * "prosecution", "convicted", "sentenced", "defendants" and the rest of the court
+ * vocabulary deliberately do NOT appear in this list any more. They are decided by
+ * referent in lib/clearance-referent.ts, because "prosecution declined" is a police
+ * exceptional-clearance reason recorded in NIBRS — refusing on the word alone made every
+ * Decision 1 case fail. See that module's header.
+ */
+function asksNonCourtOutOfScopeTopic(question: string): boolean {
+  return /\b(immigration status|illegal immigrant|undocumented|GARS|GVRS|gun violence restraining|red flag law)\b/i.test(question);
 }
 
 function asksOutOfScopeTopic(question: string): boolean {
-  return /\b(prosecution|convicted|conviction|sentence[ds]?|incarcerat|prison population|jail population|fine[ds]?\b|fee[ds]?\b|bail|immigration status|illegal immigrant|undocumented|GARS|GVRS|gun violence restraining|red flag law|defendants?)\b/i.test(question);
+  if (asksNonCourtOutOfScopeTopic(question)) return true;
+  // Decision 1: decide by referent, never by keyword.
+  return mayRefuseAsCourtProcess(question);
 }
 
 function asksAgencyMetadata(question: string): boolean {
@@ -433,7 +503,7 @@ export const SOURCE_CAPABILITY_RULES: SourceCapabilityRule[] = [
     source: "historical",
     severity: "warning",
     requiresAnyTables: ["historical_state_national"],
-    when: ({ contract, question }) => contract.metric.unit !== "clearance_rate" && asksHistoricalRate(contract, question) && isHistoricalStateOrNational(contract),
+    when: ({ contract, question }) => contract.metric.unit !== "clearance_rate" && asksHistoricalRate(contract, question) && isHistoricalStateOrNational(contract, question),
     message: "Historical state or national rate questions should use historical_state_national, not agency aggregation.",
   },
   {
@@ -443,7 +513,7 @@ export const SOURCE_CAPABILITY_RULES: SourceCapabilityRule[] = [
     requiresAnyTables: ["historical_agency_population"],
     when: ({ contract, question, tables }) =>
       asksHistoricalRate(contract, question) &&
-      isHistoricalLocalRate(contract) &&
+      isHistoricalLocalRate(contract, question) &&
       hasAnyTable(tables, ["historical_agency_crime", "historical_staffing"]),
     message: "Historical local rate questions need historical_agency_population for the denominator.",
   },
@@ -451,9 +521,14 @@ export const SOURCE_CAPABILITY_RULES: SourceCapabilityRule[] = [
     id: "historical-rate-null-gaps",
     source: "historical",
     severity: "warning",
-    forbiddenSql: [/\b(?:COALESCE|IFNULL)\s*\(\s*(?:\w+\.)?(?:murder|rape|robbery|assault|violent|property|burglary|theft|motor_vehicle_theft|population|all_total|officer_total|civilian_total)\s*,\s*(?:0|0\.0|1|1\.0)\s*\)/i],
+    // The bare measure column, and the finished rate. Both come from the one shared detector in
+    // lib/historical-rate-zero-fill.ts, so this rule and the `historical-rate-zero-fill` guardrail
+    // cannot disagree about the same statement — which is what would let a retry return a query
+    // the first pass had already refused.
+    forbiddenSql: [BARE_MEASURE_ZERO_FILL],
+    forbiddenSqlShape: zeroFillsFinishedRate,
     when: ({ contract, question }) => asksHistoricalRate(contract, question),
-    message: "Historical rate time series should preserve missing values as NULL rather than zero-filling numerator or denominator fields.",
+    message: "Historical rate time series should preserve missing values as NULL rather than zero-filling numerator or denominator fields, or the finished rate itself. A year nobody reported must stay blank; a rate of zero says the place recorded none.",
   },
   {
     id: "historical-local-geography-state-table",
@@ -504,7 +579,10 @@ export const SOURCE_CAPABILITY_RULES: SourceCapabilityRule[] = [
     source: "shr",
     severity: "warning",
     requiresAnyTables: ["agency_county_crosswalk"],
-    when: ({ question, contract }) => asksCountywideGeography(question, contract),
+    // GC-080: when the route binds a named county itself (the sheriff by default, or the county's
+    // agencies as an explicit ORI list), the crosswalk join is not required -- the bound ORIs are
+    // enforced on the executed statement instead. Shapes it does not bind ("by county") keep the rule.
+    when: ({ question, contract }) => asksCountywideGeography(question, contract) && !shrCountyRequest(question),
     message: "SHR countywide geography should use agency_county_crosswalk; a county sheriff agency is not a countywide rollup.",
   },
   {
@@ -515,6 +593,24 @@ export const SOURCE_CAPABILITY_RULES: SourceCapabilityRule[] = [
     when: ({ contract }) => contract.metric.topic === "murder" || contract.metric.topic === "unknown",
     message: "SHR answers should be homicide-specific and count victims through incidents joined to victims.",
   },
+  /*
+   * ONLY NIBRS SEPARATES A THEFT FROM A VEHICLE FROM A BURGLARY.
+   *
+   * The contract now reads "vehicle burglaries" as NIBRS `23F`, Theft From Motor Vehicle, which is
+   * the crime the phrase names. Current Trends and Historical carry a `Burglary` value and a
+   * `burglary` column and nothing corresponding to `23F` at all -- so on those tabs the honest
+   * answer is that this measure is not available here, not a burglary figure wearing the question's
+   * label. Without this the corrected wording would simply move the wrong answer to another tab.
+   */
+  ...(["current", "historical"] as const).map((source) => ({
+    id: "vehicle-burglary-unsupported",
+    source,
+    severity: "unsupported" as const,
+    when: ({ contract }: RuleContext) => contract.metric.topic === "vehicle_burglary",
+    message:
+      "Thefts from vehicles are a separate NIBRS offense and this source does not carry them; it " +
+      "holds only the broader burglary category.",
+  })),
   {
     id: "shr-non-homicide-unsupported",
     source: "shr",
@@ -577,7 +673,8 @@ export function validateSourceCapabilities(opts: {
 
     const missingRequired = rule.requiresAnyTables && !hasAnyTable(tables, rule.requiresAnyTables);
     const hasForbidden = rule.forbidsTables && hasForbiddenTable(tables, rule.forbidsTables);
-    const forbiddenSql = usesForbiddenSql(opts.sql, rule.forbiddenSql);
+    const forbiddenSql = usesForbiddenSql(opts.sql, rule.forbiddenSql)
+      || Boolean(rule.forbiddenSqlShape && rule.forbiddenSqlShape(opts.sql));
     const unsupported = rule.severity === "unsupported";
 
     if (unsupported || missingRequired || hasForbidden || forbiddenSql) {

@@ -43,7 +43,14 @@ import { alignTitleYearRange, applyResultDisclosures, laggedAnnualRecentYearNote
       { year: 2026, month: 5, victims: 2 },
     ],
   });
-  assert.match(explanation, /Returned period: January-May 2026\./);
+  /*
+   * CORRECTED 2026-09-09. This previously asserted "January-May 2026" for rows containing ONLY
+   * January and May — the endpoint smoothing that hides missing interior months, which the period
+   * ruling forbids. February, March and April returned nothing, so they are not claimed. The SQL's
+   * `month <= 5` shows what was REQUESTED; it does not establish that every selected month produced
+   * observations.
+   */
+  assert.match(explanation, /Returned period: January and May 2026\./);
 }
 
 {

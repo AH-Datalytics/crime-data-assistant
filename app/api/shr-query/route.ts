@@ -32,7 +32,7 @@ import { appendShrAgencyProbeCaveat, isZeroResult, runShrAgencyProbe } from "@/l
 import { neutralizeUnverifiedAvailabilityClaim } from "@/lib/refusal-safety";
 import { normalizeHistoryAllSources, normalizeHistoryForTab } from "@/lib/chat-history";
 import { containsInternalLeak, INTERNAL_LEAK_SAFE_MESSAGE, sanitizeUserFacingNarrative, sanitizeChartConfigTitle} from "@/lib/scaffold-helpers";
-import { buildNoSqlFallbackMessage } from "@/lib/refusal-safety";
+import { buildNoSqlFallbackMessage, limitationReply, selectNoSqlRefusal } from "@/lib/refusal-safety";
 import { detectFollowupTransform } from "@/lib/followup-transform";
 import { applyGeoCorrection, geoCorrectionHint } from "@/lib/geo-correction";
 import { applyChartCustomizations } from "@/lib/chart-customization";
@@ -48,17 +48,26 @@ import { asksSimpleFirearmHomicideTrend } from "@/lib/shr-firearm-trend-intent";
 import { displayPlace, shootingCityIntents, shootingYearIntent, stateMention } from "@/lib/shr-deterministic-shooting";
 import { classifyShootingQualifier } from "@/lib/shooting-qualifiers";
 import {
+  ASKS_SHOOTING_WORDING,
+  STATES_NONFATAL,
+  resolveShootingScopeFollowup,
+  shouldAskShootingScope,
+} from "@/lib/shooting-scope-clarification";
+import {
   queryContractFailureMessage,
   queryContractGuardrails,
   type QueryContractSqlValidation,
 } from "@/lib/query-contract-validator";
 import { partialCoverageRetryPrompt, sourceYearOverlap } from "@/lib/source-year-overlap";
 import { buildShrCanonicalLabelCase, formatShrResolutionGuidance, resolveShrAgency, rewriteShrResolvedAgencyPredicates } from "@/lib/shr-place-resolver";
+import { shrCountyRequest, resolveShrCountyScope, withShrScopeAndMeasureDisclosures, allHomicideTitle, type ShrScopeBinding, type ShrCountyScopeResolution } from "@/lib/shr-county-scope";
+import { shrRequestedMeasure, SHR_MEASURE_CONFLICT_MESSAGE } from "@/lib/shr-murder-licence";
 import { buildShrMurderPlan } from "@/lib/shr-deterministic-murder";
 import {
-  validateDeterministicShrPlanSql, validateModelAuthoredShrSql,
-  type DeterministicShrPlanValidation, type ModelAuthoredShrValidation,
+  validateDeterministicShrPlanSql, validateModelAuthoredShrSql, validateCompiledShrCount,
+  type DeterministicShrPlanValidation, type ModelAuthoredShrValidation, type CompiledShrCountValidation,
 } from "@/lib/shr-authority";
+import { shrOwnedCountFamily, planShrOwnedCount, compileShrCountPlan, executeCompiledShrCount, shrCountNarrative, type CompiledShrCount } from "@/lib/shr-count-plan";
 import {
   emitFactualPayload,
   finalizeProof,
@@ -74,6 +83,9 @@ import { returnedEntityKeys } from "@/lib/result-disclosure";
 import { boundedModelResponseJson } from "@/lib/no-sql-retry";
 import { consolidatedDisplayText, normalizeConsolidatedDisplayRows } from "@/lib/agency-consolidations";
 import { selectShrPivotMetric } from "@/lib/shr-category-pivot";
+import { genericResultState } from "@/lib/result-state-adapters";
+import { governFactualNarrative } from "@/lib/result-state";
+import { shouldAskCrimeType } from "@/lib/crime-type-clarification";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 /**
@@ -301,6 +313,9 @@ export async function POST(req: NextRequest) {
       chartAuditQueryLogId = logQuery(q, sqlText, rowCount, logError, ms, logResponse, tabName, guardrails, model, sid, routingMeta, chartConfigJson, chartAuditRequestId, modelResponseJson, proofLogFields(proof));
       return chartAuditQueryLogId;
     };
+    // GC-080: the county scope bound for this request (sheriff by default, countywide only when asked).
+    // Every validation below -- including the final pre-execution re-proof -- enforces it.
+    let shrCountyScope: ShrScopeBinding | null = null;
     const routeGuardrailsFired: string[] = [];
     const recordContractValidation = (contractResult: QueryContractSqlValidation) => {
       const contractGuardrails = queryContractGuardrails(contractResult);
@@ -323,6 +338,7 @@ export async function POST(req: NextRequest) {
         question: guardrailQuestion,
         sql: inputSql,
         routingMeta,
+        scope: shrCountyScope,
       });
       recordContractValidation(contractResult);
       if (contractResult.licenceRefusal) {
@@ -339,9 +355,26 @@ export async function POST(req: NextRequest) {
         question: guardrailQuestion,
         sql: inputSql,
         routingMeta,
+        scope: shrCountyScope,
       });
       recordContractValidation(contractResult);
       return contractResult;
+    };
+    /** GC-080: an OWNED COUNT the application compiled. Takes the compilation, never loose SQL. */
+    const runCompiledCountValidation = (compiled: CompiledShrCount): CompiledShrCountValidation => {
+      const contractResult = validateCompiledShrCount({ question: guardrailQuestion, compiled, routingMeta });
+      recordContractValidation(contractResult);
+      return contractResult;
+    };
+    const countyScopeExit =(resolution: Exclude<ShrCountyScopeResolution, { status: "resolved" }>, planFamily: string | null) => {
+      const tags = [...(planFamily ? [planFamily] : []), `shr-county-${resolution.reason}`];
+      const scopeProof = finalizeExit({ intendedAction: resolution.status === "clarify" ? "clarify" : "decline_capability", planFamily, guardrails: tags, narrative: resolution.explanation });
+      writeLog(question, null, 0, `shr_county_${resolution.reason}`, Date.now() - start, resolution.explanation, "shr", tags, planFamily ? "deterministic" : null, sessionId, null, scopeProof);
+      return jsonResp(emitFactualPayload(scopeProof, {
+        success: true, question, sql: null as unknown as string, explanation: resolution.explanation,
+        title: "", columns: [], rows: [], rowCount: 0, truncated: false,
+        chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - start,
+      }));
     };
     const contractFailureResponse = (contractResult: QueryContractSqlValidation, logError: string, guardrails: string[] = []) => {
       const msg = queryContractFailureMessage(contractResult);
@@ -398,7 +431,26 @@ export async function POST(req: NextRequest) {
       return jsonResp(emitFactualPayload(completenessProof, { success: true, question, sql: null, explanation: completenessAnswer, title: "Data completeness", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: executionMs }));
     }
 
-    const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing") ? (followupPlan.chartOnly ? null : getBlockingGeoClarification(followupPlan.reconstructedQuestion)) : getBlockingGeoClarification(question);
+        // ── Increment 3 (Decision 9): violent / property / both ──────────────────
+    // Same gate as the Current/Historical route. Geography is resolved first, so we
+    // never stack two questions on one turn.
+    // See the Current/Historical route: a query-bearing follow-up is judged on its
+    // RECONSTRUCTED question rather than skipped, so a resolved place ambiguity cannot
+    // carry an unchosen crime type past the gate.
+    const crimeTypeQuestion = (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing" && !followupPlan.chartOnly)
+      ? followupPlan.reconstructedQuestion
+      : question;
+    const crimeTypeAsk = getBlockingGeoClarification(crimeTypeQuestion)
+      ? null
+      : shouldAskCrimeType(crimeTypeQuestion, normalizeHistoryAllSources(body?.history));
+    if (crimeTypeAsk?.needsClarification) {
+      const executionMs = Date.now() - start;
+      const ctProof = finalizeExit({ intendedAction: "clarify", planFamily: "crime-type:violent-property-both" });
+      writeLog(question, null, 0, null, executionMs, crimeTypeAsk.clarificationQuestion, "shr", ["crime-type:violent-property-both"], "deterministic", sessionId, null, ctProof);
+      return jsonResp(emitFactualPayload(ctProof, { success: true, question, sql: null, explanation: crimeTypeAsk.clarificationQuestion, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: executionMs }));
+    }
+
+const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing") ? (followupPlan.chartOnly ? null : getBlockingGeoClarification(followupPlan.reconstructedQuestion)) : getBlockingGeoClarification(question);
     if (geoClarification) {
       const executionMs = Date.now() - start;
       const geoProof = finalizeExit({ intendedAction: "clarify", planFamily: `geo:${geoClarification.issue.id}` });
@@ -461,9 +513,17 @@ export async function POST(req: NextRequest) {
       }, { source: "shr", requestId: chartAuditRequestId, queryLogId: chartAuditQueryLogId })));
     }
 
+    // GC-080 G80-3: competing measures (murders AND all homicides, or an excluded type) get an owned
+    // question before ANY builder or model call -- deliberately ahead of the city murder plan, the
+    // shooting section and the owned count, so none of them can answer a guessed measure.
+    if (shrRequestedMeasure(guardrailQuestion) === "conflict") {
+      return countyScopeExit({ status: "clarify", reason: "measure-conflict", explanation: SHR_MEASURE_CONFLICT_MESSAGE }, null);
+    }
+
     // Exact-year city murder totals and monthly series use canonical SHR ORIs,
     // victim rows, and explicit zeroes instead of model-generated alias LIKEs.
-    const murderDb = planSaysQueryBearing ? null : getShrDb();
+    // GC-080: only for a murder request; "all homicides including murders" is the owned count's.
+    const murderDb = planSaysQueryBearing || shrRequestedMeasure(guardrailQuestion) !== "murder" ? null : getShrDb();
     const murderPlan = murderDb ? buildShrMurderPlan(question, murderDb) : null;
     if (murderPlan?.kind === "blocked") {
       const executionMs = Date.now() - start;
@@ -508,21 +568,83 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // ── Cause B (Decision 14): the request this shooting section is actually about ──────────
+    //
+    // A bare "fatal" or "nonfatal" is the ANSWER to the question asked below, not a new request.
+    // Read on its own it carries no place, no years and no subject, so every predicate in this
+    // section would see a different question from the one the reader asked. `shootingRequest` is
+    // the original request with the chosen word in it; it differs from `question` ONLY on that
+    // one turn, and `question` is still what gets logged and echoed, because that is what the
+    // user typed. Nothing is inherited from the mere existence of history: the assistant's last
+    // turn has to have been the question.
+    const shootingScopeFollowup = resolveShootingScopeFollowup(question, normalizeHistoryAllSources(body?.history));
+    const shootingRequest = shootingScopeFollowup?.reconstructedQuestion ?? question;
+
     // Deterministic nonfatal shooting refusal
     const asksCityFirearmHomicideTrend =
-      asksSimpleFirearmHomicideTrend(question) && shootingCityIntents(question).length > 0;
+      asksSimpleFirearmHomicideTrend(shootingRequest) && shootingCityIntents(shootingRequest).length > 0;
+    /*
+     * The nonfatal wording and its reply now live in `lib/refusal-safety.ts`, so this branch and
+     * the model no-SQL exit below cannot drift apart. The old reply was right that the data is not
+     * collected and then sent the reader to two outside websites, offering fatal homicides as the
+     * in-product alternative -- a different measure of a different thing.
+     *
+     * `asksCityFirearmHomicideTrend` stays in the test because it is this route's own intent
+     * signal: a city firearm-homicide trend phrased as nonfatal still belongs here.
+     */
+    // Both literals now live in `lib/shooting-scope-clarification.ts`, so the gate that ASKS
+    // which of the two the reader meant and the branch that ANSWERS the nonfatal one read the
+    // same definition of a nonfatal request.
     const asksShooting =
-      /\b(shootings?|shot\b|gunshot|people\s+shot|gun\s+violence)\b/i.test(question) ||
+      ASKS_SHOOTING_WORDING.test(shootingRequest) ||
       asksCityFirearmHomicideTrend;
-    const wantsNonfatal = /\b(nonfatal|non-fatal|non fatal|shooting incidents?|people\s+shot|gunshot (wound|victim)|shot and (survived|wounded|injured))\b/i.test(question);
+    const wantsNonfatal = STATES_NONFATAL.test(shootingRequest);
     if (asksShooting && wantsNonfatal) {
-      const refusal = "This database does not track nonfatal shootings. The SHR (Supplementary Homicide Reports) only covers fatal outcomes - murders and manslaughters. For nonfatal shooting data, sources like the Gun Violence Archive or CDC WISQARS may be more appropriate. I can show you fatal shootings (firearm homicides) if that would be helpful.";
-      const nonfatalProof = finalizeExit({ intendedAction: "decline_capability", planFamily: "nonfatal-shooting-capability-limit", narrative: refusal });
-      writeLog(question, null, 0, null, Date.now() - start, refusal, "shr", ["nonfatal-shooting-capability-limit"], "deterministic", sessionId, null, nonfatalProof);
+      // One shared reply, one shared shape. The wording, the logged reason and the empty-answer
+      // state all come from `limitationReply`, so this exit and the model no-SQL exit below cannot
+      // tell the reader different things about the same limitation.
+      const reply = limitationReply(shootingRequest, "shr");
+      const nonfatalProof = finalizeExit({ intendedAction: "decline_capability", planFamily: "nonfatal-shooting-capability-limit", narrative: reply.explanation });
+      writeLog(question, null, 0, null, Date.now() - start, reply.explanation, "shr", ["nonfatal-shooting-capability-limit", reply.reason], "deterministic", sessionId, null, nonfatalProof);
       return jsonResp(emitFactualPayload(nonfatalProof, {
-        success: true, question, sql: null, explanation: refusal,
-        title: "", columns: [], rows: [], rowCount: 0, truncated: false,
-        chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - start,
+        success: true, question, sql: reply.sql, explanation: reply.explanation,
+        title: reply.title, columns: reply.columns, rows: reply.rows, rowCount: reply.rowCount,
+        truncated: reply.truncated, chartConfig: reply.chartConfig, chartMeta: reply.chartMeta,
+        executionTimeMs: Date.now() - start,
+      }));
+    }
+
+    // ── Cause B (Decision 14): ask which shootings, before answering with either ────────────
+    //
+    // THE DEFECT. "shootings in Chicago since 2015" (GC-110) fell straight through to the
+    // deterministic path below, which returned twelve years of firearm homicides and appended
+    // "nonfatal shootings are not tracked in this database". A note under a number is not a
+    // resolution — the reader has the number by then. Decision 14 requires the ambiguity to be
+    // resolved BEFORE an answer, and the product had already classified this exact request as a
+    // blocking `shooting-scope` ambiguity in `lib/query-guidance.ts`; nothing acted on it.
+    //
+    // ORDERING. Geography and crime type have already asked above if they needed to, so this is
+    // still one question per turn. Query-bearing follow-ups keep their existing model path
+    // untouched: this gate is not a place to redesign follow-up routing.
+    //
+    // WHAT IT DELIVERS. A question. No SQL, no rows, no model call — the point is that nothing
+    // has been decided yet.
+    const shootingScopeAsk = shouldAskShootingScope(shootingRequest, normalizeHistoryAllSources(body?.history));
+    if (asksShooting && !wantsNonfatal && shootingScopeAsk.needsClarification
+        && !(plannerMode === "authoritative" && followupPlan?.kind === "query_bearing")) {
+      const scopeMs = Date.now() - start;
+      const scopeProof = finalizeExit({
+        intendedAction: "clarify",
+        planFamily: "shooting-scope-clarification",
+        narrative: shootingScopeAsk.clarificationQuestion,
+      });
+      writeLog(question, null, 0, null, scopeMs, shootingScopeAsk.clarificationQuestion, "shr",
+        ["shooting-scope-clarification"], "deterministic", sessionId, null, scopeProof);
+      return jsonResp(emitFactualPayload(scopeProof, {
+        success: true, question, sql: null,
+        explanation: shootingScopeAsk.clarificationQuestion, title: "",
+        columns: [], rows: [], rowCount: 0, truncated: false,
+        chartConfig: null, chartMeta: null, executionTimeMs: scopeMs,
       }));
     }
 
@@ -533,15 +655,15 @@ export async function POST(req: NextRequest) {
     // this path fires on any mention of "shooting" and has no notion of
     // qualifiers. Police is now expressible; anything else it cannot express
     // must fall through to the model rather than answer a different question.
-    const shootingQualifier = classifyShootingQualifier(question);
+    const shootingQualifier = classifyShootingQualifier(shootingRequest);
     if (asksShooting && !wantsNonfatal && shootingQualifier.kind === "unsupported") {
       console.log(`[shr][deterministic-shooting] declining: unsupported qualifier(s) ${shootingQualifier.ids.join(",")} — routing to model`);
     }
     if (asksShooting && !wantsNonfatal && shootingQualifier.kind !== "unsupported" && !(plannerMode === "authoritative" && followupPlan?.kind === "query_bearing")) {
-      const stateMatch = question.match(/\b([A-Z]{2})\b/) || question.match(/\bin\s+(\w+)\b/i);
-      const yearIntent = shootingYearIntent(question);
-      const wantsMonthly = /\b(?:monthly|per\s+month|by\s+month)\b/i.test(question);
-      const yearOverlap = sourceYearOverlap("shr", question);
+      const stateMatch = shootingRequest.match(/\b([A-Z]{2})\b/) || shootingRequest.match(/\bin\s+(\w+)\b/i);
+      const yearIntent = shootingYearIntent(shootingRequest);
+      const wantsMonthly = /\b(?:monthly|per\s+month|by\s+month)\b/i.test(shootingRequest);
+      const yearOverlap = sourceYearOverlap("shr", shootingRequest);
       if (yearOverlap && !yearOverlap.hasOverlap) {
         const explanation = `SHR homicide data covers ${yearOverlap.sourceStartYear}-${yearOverlap.sourceEndYear}, so it cannot answer the requested year range. Ask for fatal shootings from ${yearOverlap.sourceStartYear} onward.`;
         const yearOverlapProof = finalizeExit({ intendedAction: "decline_data", planFamily: "deterministic-shooting", guardrails: ["deterministic-shooting", "shr-year-no-overlap"], narrative: explanation });
@@ -565,7 +687,9 @@ export async function POST(req: NextRequest) {
         ? `Requested years outside SHR coverage (${yearOverlap.sourceStartYear}-${yearOverlap.sourceEndYear}) were omitted; returned years ${yearOverlap.overlapStartYear}-${yearOverlap.overlapEndYear}.`
         : "";
 
-      const whereClauses = ["i.homicide_type = 'Murder'", "i.weapon_group = 'Firearm'", effectiveYearClause];
+      // GC-080: an explicit all-homicide request drops the Murder restriction; "shootings" keeps it.
+      const shootingAllHomicides = shrRequestedMeasure(guardrailQuestion) === "homicide";
+      const whereClauses = [...(shootingAllHomicides ? [] : ["i.homicide_type = 'Murder'"]), "i.weapon_group = 'Firearm'", effectiveYearClause];
       // All 18,697 'Felon Killed by Police' incidents are homicide_type='Murder',
       // so the Murder filter above stays valid alongside this predicate.
       if (shootingQualifier.kind === "supported" && shootingQualifier.qualifier.clause) {
@@ -576,14 +700,26 @@ export async function POST(req: NextRequest) {
       let titlePlace = "Nationally";
       let cityCount = 0;
       let cityLabelExpression = "i.agency";
-      const explicitOri = question.match(/\bORI\s*(?:[:#=]|is)?\s*((?=[A-Z0-9]*\d)[A-Z]{2}[A-Z0-9]{3,7})\b/i)?.[1]?.toUpperCase() || null;
-      const county = countyIntent(question);
-      const mentionedState = stateMention(question);
+      const explicitOri = shootingRequest.match(/\bORI\s*(?:[:#=]|is)?\s*((?=[A-Z0-9]*\d)[A-Z]{2}[A-Z0-9]{3,7})\b/i)?.[1]?.toUpperCase() || null;
+      // GC-080: a county name means the sheriff agency; the crosswalk total only when asked for.
+      const countyRequest = shrCountyRequest(shootingRequest);
+      const county = countyRequest?.scope === "countywide" ? { key: countyRequest.countyKey, display: countyRequest.countyDisplay } : null;
+      const mentionedState = stateMention(shootingRequest);
 
       // Explicit state-level wording ("New York State", "statewide in Washington")
       // must resolve to a state filter, never a same-named city agency (F18 / #4155).
-      const stateIntent = explicitStateIntent(question);
-      if (county) {
+      const stateIntent = explicitStateIntent(shootingRequest);
+      if (countyRequest?.scope === "sheriff") {
+        const db = getShrDb();
+        if (!db) {
+          return jsonResp({ success: false, error: "SHR database not available." } as QueryError, 500);
+        }
+        const resolution = resolveShrCountyScope(db, countyRequest);
+        if (resolution.status !== "resolved") return countyScopeExit(resolution, "deterministic-shooting");
+        shrCountyScope = resolution.binding;
+        whereClauses.push(`i.ori IN (${resolution.binding.oris.map((ori) => `'${ori.replace(/'/g, "''")}'`).join(", ")})`);
+        titlePlace = resolution.binding.label;
+      } else if (county) {
         const db = getShrDb();
         if (!db) {
           return jsonResp({ success: false, error: "SHR database not available." } as QueryError, 500);
@@ -654,7 +790,7 @@ export async function POST(req: NextRequest) {
         }
         titlePlace = `ORI ${explicitOri} - ${identity.canonical_agency || "identified agency"}`;
         whereClauses.push(`i.ori = '${explicitOri.replace(/'/g, "''")}'`);
-      } else if (ambiguousKansasCityIntent(question)) {
+      } else if (ambiguousKansasCityIntent(shootingRequest)) {
         const explanation = "Please specify Kansas City, Missouri (KCMO) or Kansas City, Kansas (KCK). Both exist in the SHR data, and I should not combine or choose between them without that state.";
         const ambiguousCityProof = finalizeExit({ intendedAction: "clarify", planFamily: "deterministic-shooting", narrative: explanation });
         writeLog(question, null, 0, "ambiguous_city", Date.now() - start, explanation, "shr", ["deterministic-shooting"], "deterministic", sessionId, null, ambiguousCityProof);
@@ -664,7 +800,7 @@ export async function POST(req: NextRequest) {
           chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - start,
         }));
       } else {
-        const cities = shootingCityIntents(question);
+        const cities = shootingCityIntents(shootingRequest);
         cityCount = cities.length;
         if (cities.length > 0) {
           titlePlace = cities.map((city) => city.display).join(" and ");
@@ -775,6 +911,8 @@ export async function POST(req: NextRequest) {
           }
         }
 
+        // GC-080: which agency was queried, and which victims counted, stated by the application.
+        totalExplanation = withShrScopeAndMeasureDisclosures(totalExplanation, shrCountyScope, shootingAllHomicides);
         const displayTitle = normalizeShrAgencyText(title);
         const chartConfig = applyChartCustomizations({ type: "line", xAxis: wantsMonthly ? "month" : "year", yAxis: ["fatal_shootings"], yAxisLabel: "Fatal Shootings", title: displayTitle }, question);
         const shootingProof = finalizeExit({ intendedAction: rows.length > 0 ? "answer" : "decline_data", sql, rows, columns, derivation: sealPlanDerivation("deterministic-shooting", plannedShootingSql), planFamily: "deterministic-shooting", guardrails: detGuardrails, returnedEntities: returnedEntityKeys(rows), narrative: totalExplanation, hasChart: true, db });
@@ -790,6 +928,55 @@ export async function POST(req: NextRequest) {
         const msg = dbErr instanceof Error ? dbErr.message : String(dbErr);
         const shootingDbProof = finalizeExit({ intendedAction: "decline_capability", sql, planFamily: "deterministic-shooting" });
         writeLog(question, sql, 0, `DB: ${msg}`, Date.now() - start, null, "shr", ["deterministic-shooting"], "deterministic", sessionId, null, shootingDbProof);
+        return jsonResp({ success: false, error: `Database error: ${msg}` } as QueryError, 500);
+      }
+    }
+
+    // GC-080 owned count (Codex reassessment ruling). A county-bound or all-homicide request is
+    // answered ONLY by the count the application compiles here, before the response cache and before
+    // any model call. The model never authors SQL for this family, and there is no murder fallback:
+    // what the plan cannot express gets an owned limitation or clarification. The conflict question
+    // above and the deterministic shooting section run first, deliberately.
+    if (shrOwnedCountFamily(guardrailQuestion)) {
+      const countDb = getShrDb();
+      if (!countDb) {
+        return jsonResp({ success: false, error: "SHR database not available." } as QueryError, 500);
+      }
+      const owned = planShrOwnedCount(guardrailQuestion, countDb);
+      if (owned.kind === "county-exit") return countyScopeExit(owned.resolution, "owned-shr-count");
+      if (owned.kind === "limitation") {
+        return countyScopeExit({ status: owned.status, reason: owned.reason, explanation: owned.explanation }, "owned-shr-count");
+      }
+      shrCountyScope = owned.plan.geography.kind === "county" ? owned.plan.geography.binding : null;
+      const compiled = compileShrCountPlan(owned.plan);
+      const contract = runCompiledCountValidation(compiled);
+      const contractFailure = contractFailureResponse(contract, `contract_owned_count_failure:${contract.enforced.join(",")}`, ["owned-shr-count"]);
+      if (contractFailure) return contractFailure;
+      try {
+        const rows = normalizeShrDisplayRows(executeCompiledShrCount(countDb, contract.compiled));
+        const explanation = shrCountNarrative(contract.compiled, rows);
+        const executionMs = Date.now() - start;
+        const recorded = rows.some((row) => row[contract.compiled.valueColumn] != null);
+        const countTags = ["owned-shr-count", ...(rows.some((row) => row[contract.compiled.valueColumn] == null) ? ["shr-owned-count-unknown-periods"] : [])];
+        const chartConfig = applyChartCustomizations({
+          type: contract.compiled.chartType, xAxis: contract.compiled.xAxis, yAxis: [contract.compiled.valueColumn],
+          yAxisLabel: contract.compiled.yAxisLabel, title: contract.compiled.title,
+        }, question);
+        const columns = [...contract.compiled.columns];
+        const countProof = finalizeExit({ intendedAction: recorded ? "answer" : "decline_data", sql: contract.compiled.sql, rows, columns, derivation: sealPlanDerivation("owned-shr-count", contract.compiled.sql), planFamily: "owned-shr-count", guardrails: [...countTags, ...routeGuardrailsFired], returnedEntities: returnedEntityKeys(rows), narrative: explanation, hasChart: true, db: countDb });
+        writeLog(question, contract.compiled.sql, rows.length, null, executionMs, explanation, "shr", [...countTags, ...routeGuardrailsFired], "deterministic", sessionId, serializeChartConfigForLog(chartConfig, columns, { source: "FBI SHR", agencyCount: 0, population: null }), countProof);
+        return jsonResp(emitFactualPayload(countProof, attachChartAuditToPayload({
+          success: true, question, sql: contract.compiled.sql, explanation,
+          title: contract.compiled.title, columns, rows,
+          rowCount: rows.length, truncated: false,
+          chartConfig,
+          chartMeta: { source: "FBI SHR", agencyCount: 0, population: null },
+          executionTimeMs: executionMs,
+        }, { source: "shr", requestId: chartAuditRequestId, queryLogId: chartAuditQueryLogId })));
+      } catch (dbErr) {
+        const msg = dbErr instanceof Error ? dbErr.message : String(dbErr);
+        const countDbProof = finalizeExit({ intendedAction: "decline_capability", sql: contract.compiled.sql, planFamily: "owned-shr-count" });
+        writeLog(question, contract.compiled.sql, 0, `DB: ${msg}`, Date.now() - start, null, "shr", ["owned-shr-count"], "deterministic", sessionId, null, countDbProof);
         return jsonResp({ success: false, error: `Database error: ${msg}` } as QueryError, 500);
       }
     }
@@ -919,7 +1106,7 @@ export async function POST(req: NextRequest) {
         const rawNoSqlText = claude.explanation || null;
         const serverAuthoredNoSql = false;
         if (containsInternalLeak(claude.explanation) || containsInternalLeak(claude.title)) { claude.explanation = INTERNAL_LEAK_SAFE_MESSAGE; claude.title = "Results"; routeGuardrailsFired.push("internal-leak-firewall"); }
-        if (!serverAuthoredNoSql && !containsInternalLeak(claude.explanation) && !containsInternalLeak(claude.title)) { claude.explanation = buildNoSqlFallbackMessage("shr"); routeGuardrailsFired.push("no-sql-server-template"); }
+        if (!serverAuthoredNoSql && !containsInternalLeak(claude.explanation) && !containsInternalLeak(claude.title)) { const noSqlRefusal = selectNoSqlRefusal(question, "shr"); claude.explanation = noSqlRefusal.explanation; routeGuardrailsFired.push(noSqlRefusal.reason); }
         claude.explanation = neutralizeUnverifiedAvailabilityClaim(claude.explanation, "SHR");
         const noSqlProof = finalizeExit({ intendedAction: "decline_capability", guardrails: routeGuardrailsFired });
         writeLog(question, null, 0, null, claudeMs, claude.explanation, "shr", routeGuardrailsFired, "haiku-4.5", sessionId, null, noSqlProof, boundedModelResponseJson(rawNoSqlText, null));
@@ -1210,6 +1397,9 @@ export async function POST(req: NextRequest) {
         explanation = appendShrAgencyProbeCaveat(explanation, probeResult.probe.agency);
         guardrails.push("shr-agency-zero-probe");
       }
+      // F3 (Decision 13): govern the empty narrative before it is finalized or sent.
+      explanation = governFactualNarrative(explanation, genericResultState({ sql, rows }));
+      explanation = withShrScopeAndMeasureDisclosures(explanation, shrCountyScope, shrRequestedMeasure(guardrailQuestion) === "homicide");
       const emptyProof = finalizeExit({ intendedAction: "decline_data", sql, guardrails, narrative: explanation, db });
       writeLog(question, sql, 0, "empty_result", executionMs, explanation, "shr", guardrails, "haiku-4.5", sessionId, null, emptyProof);
       return jsonResp(emitFactualPayload(emptyProof, {
@@ -1235,7 +1425,9 @@ export async function POST(req: NextRequest) {
     {
       const { allNull } = detectAllNullData(columns, rows);
       if (allNull) {
-        const emptyMsg = "I ran that query but all the values came back empty — the math likely broke somewhere (like dividing by zero). Could you try asking that a different way?";
+        const emptyMsg = governFactualNarrative(
+          "I ran that query but all the values came back empty — the math likely broke somewhere (like dividing by zero). Could you try asking that a different way?",
+          genericResultState({ sql, rows }));
         const allNullProof = finalizeExit({ intendedAction: "decline_data", sql, guardrails: guardrailResult.fired, narrative: emptyMsg, db });
         writeLog(question, sql, 0, "all_null_columns", executionMs, emptyMsg, "shr", guardrailResult.fired, "haiku-4.5", sessionId, null, allNullProof);
         return jsonResp(emitFactualPayload(allNullProof, {
@@ -1421,7 +1613,7 @@ export async function POST(req: NextRequest) {
 
     // Fix hallucinated counts using distinct entity detection
     explanation = validateExplanationCount(explanation, rows as Record<string, unknown>[], columns);
-    explanation = applyResultDisclosures({ explanation, question, sql, rows, tab: "shr", comparisonLabels });
+    explanation = applyResultDisclosures({ explanation, question, sql, rows, tab: "shr", comparisonLabels, resultState: genericResultState({ sql, rows }) });
     if (missingLowerBoundNote(question, sql, rows)) routeGuardrailsFired.push("lower-bound-disclosed");
     const grainCheck = validateGrain(question, rows, sql);
     if (!grainCheck.ok && grainCheck.message) {
@@ -1432,6 +1624,11 @@ export async function POST(req: NextRequest) {
 
     // Sanitize any leaked SQL/JSON
     explanation = sanitizeExplanation(explanation);
+    // GC-080: the application states which agency was queried and which victims counted, last,
+    // after the agency-name tidying above could shorten "Sheriff's Office" away.
+    const allHomicides = shrRequestedMeasure(guardrailQuestion) === "homicide";
+    explanation = withShrScopeAndMeasureDisclosures(explanation, shrCountyScope, allHomicides);
+    if (allHomicides) claude.title = allHomicideTitle(claude.title);
 
     const finalNarrative = sanitizeUserFacingNarrative(explanation, claude.title);
     if (finalNarrative.blocked) {

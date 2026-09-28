@@ -83,9 +83,43 @@ for (const [file, builder] of Object.entries(chartBuilder)) {
   assert.ok(align >= 0, `${file} must align the title year range`);
   assert.ok(chart >= 0 && align < chart, `${file} must align the title BEFORE building the main-path chart (${builder})`);
   if (file === "app/api/nibrs-query/route.ts") {
-    const deterministicAlign = source.indexOf("deterministicQuery.title = alignTitleYearRange(");
-    const deterministicChart = source.indexOf("buildNibrsChartConfig(");
-    assert.ok(deterministicAlign >= 0 && deterministicChart >= 0 && deterministicAlign < deterministicChart, "NIBRS deterministic title must align before its chart is built");
+    /*
+     * EACH CHART'S OWN TITLE, not "some alignment happened earlier in the file".
+     *
+     * Two versions of this check have now been wrong in opposite directions. The first pinned one
+     * alignment line against the FIRST `buildNibrsChartConfig(`, which held only while there was a
+     * single deterministic path; adding the owned yearly-clearance path ahead of it failed a route
+     * that aligns correctly. My replacement then asked only whether ANY alignment preceded a chart
+     * build -- so the owned path's alignment licensed the later deterministic chart, and deleting
+     * the deterministic alignment still passed. That is exactly the regression this exists to catch.
+     *
+     * So the title each chart is actually given is read out of the call and matched to its own
+     * alignment. A plan passed by name (`buildNibrsChartConfig(deterministicQuery, ...)`) needs
+     * `deterministicQuery.title = alignTitleYearRange(`; a plan passed as an object literal with
+     * `title: ownedTitle` needs `ownedTitle` bound from `alignTitleYearRange(`. An argument shape
+     * this cannot read fails rather than passing quietly.
+     */
+    const charts = [...source.matchAll(/buildNibrsChartConfig\(/g)].map((match) => match.index ?? -1);
+    assert.ok(charts.length > 0, "NIBRS must build charts");
+    for (const chartAt of charts) {
+      const call = source.slice(chartAt, chartAt + 400);
+      const before = source.slice(0, chartAt);
+      const named = call.match(/buildNibrsChartConfig\(\s*([A-Za-z_$][\w$]*)\s*,/);
+      const literal = call.match(/buildNibrsChartConfig\(\s*\{[\s\S]*?\btitle:\s*([A-Za-z_$][\w$]*)/);
+      if (named) {
+        const plan = named[1];
+        assert.ok(
+          new RegExp(`\\b${plan}\\.title\\s*=\\s*alignTitleYearRange\\(`).test(before),
+          `NIBRS chart at ${chartAt} is given ${plan}, whose title is never aligned before it`);
+      } else if (literal) {
+        const title = literal[1];
+        assert.ok(
+          new RegExp(`\\b(?:const|let|var)\\s+${title}\\s*=\\s*alignTitleYearRange\\(`).test(before),
+          `NIBRS chart at ${chartAt} is given ${title}, which is not bound from alignTitleYearRange`);
+      } else {
+        assert.fail(`NIBRS chart at ${chartAt} passes a title this check cannot read: ${call.slice(0, 120)}`);
+      }
+    }
   }
 }
 

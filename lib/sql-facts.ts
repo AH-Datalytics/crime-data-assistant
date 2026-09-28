@@ -65,6 +65,13 @@ export type PredicateFact = {
   joinKind: string | null;
   /** True only for a top-level AND conjunct that is itself a restrictive comparison. */
   restrictive: boolean;
+  /**
+   * For `x IN (...)`, the list's literal values when EVERY item is a literal; absent otherwise.
+   * Evidence only: it does not change `restrictive`, which stays true only for a single-value list,
+   * so every existing verdict built on `restrictive` is unchanged. Added for the SHR county-scope
+   * check (GC-080), which needs to know which ORIs an IN list admits.
+   */
+  inValues?: (string | number | boolean | null)[];
 };
 
 export type Multiplicity = "at_most_one" | "may_repeat" | "unknown";
@@ -222,10 +229,13 @@ function predicateFact(
   if (op === "IN") {
     const list = node.right?.value ?? [];
     const single = Array.isArray(list) && list.length === 1;
+    const items = Array.isArray(list) ? list.map((item: any) => exprFact(item, ctx, rowset)) : [];
+    const allLiteral = items.length > 0 && items.every((item: ExprFact) => item.kind === "literal");
     return {
       op, position, joinKind, restrictive: single,
       left: exprFact(node.left, ctx, rowset),
       right: single ? exprFact(list[0], ctx, rowset) : UNKNOWN(`IN with ${Array.isArray(list) ? list.length : "?"} values`),
+      ...(allLiteral ? { inValues: items.map((item: ExprFact) => (item as Extract<ExprFact, { kind: "literal" }>).value) } : {}),
     };
   }
   return {

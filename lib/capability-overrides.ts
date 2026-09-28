@@ -29,8 +29,161 @@ export function detectCurrentYearClearanceOverride(question: string): Capability
   };
 }
 
-export const SUB_CITY_GEOGRAPHY_RE =
-  /\b(zip\s*code|zip\s*\d|neighborhoods?|precincts?|police districts?|census tracts?|block groups?|wards?|community areas?|apartment\s+complex(?:es)?|housing\s+complex(?:es)?)\b/i;
+/**
+ * Sub-city geography detection. ONE predicate, both enforcement stages.
+ *
+ * `asksSubCityGeography` is the only entry point. The pre-SQL override
+ * (`detectSubCityGeographyOverride`, called by the query/shr/hc routes and the NIBRS
+ * wrapper), the post-SQL capability rule (`lib/source-capabilities.ts`) and the
+ * guardrail predicate (`lib/guardrails.ts`) all call it, so a change cannot repair one
+ * stage and leave the other. The raw regex is deliberately NOT exported.
+ *
+ * The alternatives fall into two classes, and keeping them apart is the point:
+ *
+ *  - UNAMBIGUOUS — multi-word phrases ("zip code", "census tract", "block group",
+ *    "police district", "community area", "apartment complex") and bare nouns that are
+ *    not United States place names ("neighborhood", "precinct"). The token alone
+ *    decides, exactly as before; their coverage is unchanged.
+ *
+ *  - PLACE-COLLIDING — a bare token that is also a real place name, so the token alone
+ *    cannot decide. "Ward, AR" is an incorporated city of ~7,300 (`city:AR:ward` in
+ *    lib/generated/geo-cities.ts) and "Ward County" is a county in ND and TX
+ *    (lib/generated/ambiguous-counties.ts), while "the 5th ward of New Orleans" is a
+ *    sub-city geography. Matching the word refused both. These terms therefore require
+ *    adjoining sub-city STRUCTURE, in two classes: strong operators that decide alone —
+ *    an ordinal or identifier, a plural, a grain phrase, an explicit "of" relation — and
+ *    weak determiners, which decide only when the term is the head of its noun phrase.
+ *    A bare token in place-name position is a place, not a sub-city geography.
+ *
+ * The split is surveyed, not asserted: scripts/test-subcity-geography.ts scans both
+ * generated place catalogs for every alternative below and fails if one that appears
+ * there is classified unambiguous. "Ward" is the only term that appears in either —
+ * independently the same conclusion scripts/generate-geo-city-catalog.ts reached when
+ * it put WARD in EXCLUDED_BARE_NAMES. That survey covers this application's own place
+ * inventory; it is not an exhaustive national gazetteer study.
+ */
+export const UNAMBIGUOUS_SUB_CITY_ALTERNATIVES = [
+  String.raw`zip\s*code`,
+  String.raw`zip\s*\d`,
+  String.raw`neighborhoods?`,
+  String.raw`precincts?`,
+  String.raw`police districts?`,
+  String.raw`census tracts?`,
+  String.raw`block groups?`,
+  String.raw`community areas?`,
+  String.raw`apartment\s+complex(?:es)?`,
+  String.raw`housing\s+complex(?:es)?`,
+] as const;
+
+/** Bare tokens that are also real place names. See the class note above. */
+export const PLACE_COLLIDING_SUB_CITY_TERMS = ["ward"] as const;
+
+const UNAMBIGUOUS_SUB_CITY_RE = new RegExp(
+  `\\b(?:${UNAMBIGUOUS_SUB_CITY_ALTERNATIVES.join("|")})\\b`,
+  "i"
+);
+
+/**
+ * A determiner leaves the reading open, so the term's SYNTACTIC ROLE decides.
+ *
+ * WHY NOT A LIST OF PLACE QUALIFIERS. The first revision let a determiner alone count as
+ * structure and tried to rescue place uses with a trailing list — a comma plus a
+ * two-letter state, or `city`/`county`. That list is a place-name parser in disguise and
+ * it was incomplete in exactly the way such lists are: "the Ward, Arkansas police
+ * department" spells the state out, "the Ward police department" and "the Ward murder
+ * rate" name no state at all, and all three were wrongly refused (Codex review,
+ * 2026-09-02).
+ *
+ * The real distinction is grammatical, not geographic. In the sub-city reading the term
+ * is the HEAD of its noun phrase — "crime in the ward", "which ward had the most
+ * murders", "the Uptown ward of New Orleans" — and what follows it is a preposition, a
+ * verb, a conjunction, or nothing. In the place reading the term MODIFIES a following
+ * noun: "the Ward police department", "the Ward murder rate", "the Ward County sheriff".
+ *
+ * So a determiner fires only when the term is followed by a known non-noun continuation.
+ * Anything unrecognised — which is what a modified noun looks like — falls through to the
+ * place reading.
+ *
+ * TWO CLAIMS, AND ONLY THE FIRST IS ABSOLUTE. Incompleteness in the follower list below
+ * costs a MISSED refusal, never a false one: an unrecognised word falls through to the
+ * place reading, so a continuation nobody thought of can only let a sub-city request
+ * through. But that is a property of the LIST, not of the branch. A determiner plus the
+ * term in head position stays genuinely ambiguous, and a RECOGNISED continuation resolves
+ * it toward the sub-city reading — so an unusually phrased reference to the place can
+ * still be refused: "How many murders had the Ward reported by 2022?", "Crime in the Ward
+ * is down", "Compare the Ward with Little Rock" (Codex review, 2026-09-02, revision 2).
+ * Those readings are less natural than their common-noun twins, which is why this bounded
+ * lexical correction leaves them rather than reaching for another place parser — but they
+ * are a recorded residual, not an impossibility.
+ *
+ * A comma is not a continuation. ", AR", ", Arkansas" and ", Louisiana's 9th ward" are
+ * all qualifier position, and treating a comma as phrase-final is what let the two-letter
+ * check be load-bearing in the first place.
+ */
+const HEAD_POSITION_FOLLOWER = String.raw`(?=[?!.;:]|\s*$|\s+(?:of|in|on|for|during|with|without|from|since|through|until|between|versus|vs\.?|compared|than|and|or|but|had|has|have|is|are|was|were|be|been|saw|see|sees|report|reports|reported|experienced|recorded|got|rank|ranks|ranked|lead|leads|led|contain|contains|include|includes|do|does|did|will|would|should|could|might|that|which|who|when|where|last|this|each|every|per)\b)`;
+
+/**
+ * Sub-city structure adjoining a place-colliding term, in two classes.
+ *
+ * STRONG OPERATORS decide on their own, because a place name does not take them: it is
+ * singular, it is not numbered, it is not the left side of an "of" relation, and it has
+ * no grain. WEAK DETERMINERS do not decide on their own and are gated by head position
+ * above. Keeping the two apart is what the Codex review required, and it is why no place
+ * qualifier appears anywhere below.
+ */
+function placeCollidingSubCityRe(term: string): RegExp {
+  const t = `${term}s?`;
+  // A naming word may sit between a determiner and the term ("the Uptown ward", "the
+  // French Quarter ward"). It may not be a function word, or "each OF Ward's murders"
+  // would read as a geography.
+  const namingWord = String.raw`(?!(?:of|in|on|from|at|to|and|or|for|by|with|the|a|an)\b)[A-Za-z][\w'-]*[-\s]+`;
+  const determiner = String.raw`(?:by|per|across|within|throughout|among|amongst|between|each|every|all|a|an|the|this|that|these|those|which|what|my|our|your|its|their|his|her)`;
+  return new RegExp(
+    [
+      // ── strong operators ───────────────────────────────────────────────────────────
+      // plural — "how many wards", "the wards of New Orleans"
+      String.raw`\b${term}s\b`,
+      // ordinal in front — "5th ward", "ninth ward"
+      String.raw`\b(?:\d+(?:st|nd|rd|th)|first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth|eleventh|twelfth)\s+${term}\b`,
+      // identifier behind — "ward 9", "ward #9", "ward no. 9". Bounded to three digits
+      // so a bare year ("Ward 2022") stays a place name.
+      String.raw`\b${term}\s*(?:#|nos?\.?\s*|numbers?\s*)?\d{1,3}\b`,
+      // grain phrasing — "ward level", "ward-level", "ward boundaries", "ward-by-ward"
+      String.raw`\b${t}[-\s](?:levels?|boundar(?:y|ies)|maps?|lines?)\b`,
+      String.raw`\b${term}[-\s]by[-\s]${term}\b`,
+      // explicit partitive relation — "ward of New Orleans"
+      String.raw`\b${t}\s+of\b`,
+      // ── weak determiners, gated by head position ───────────────────────────────────
+      // "crime in the ward", "by ward in DC", "which ward had the most murders",
+      // "a ward", "our ward", "the Uptown ward", "the French Quarter ward" — but not
+      // "the Ward police department", "the Ward, Arkansas sheriff", "the Ward County".
+      String.raw`\b${determiner}[-\s]+(?:${namingWord}){0,2}${t}\b${HEAD_POSITION_FOLLOWER}`,
+    ].join("|"),
+    "i"
+  );
+}
+
+/**
+ * Each place-colliding term is paired with a cheap gate: every structural alternative
+ * above contains the term itself, so a question without the bare word cannot match any of
+ * them. Testing the word first keeps the branching structural pattern off the ~99.99% of
+ * questions it can only reject, which matters because the catalog survey runs the
+ * predicate over 144,780 sentences.
+ */
+const PLACE_COLLIDING_SUB_CITY_RES = PLACE_COLLIDING_SUB_CITY_TERMS.map((term) => ({
+  gate: new RegExp(String.raw`\b${term}s?\b`, "i"),
+  structure: placeCollidingSubCityRe(term),
+}));
+
+/**
+ * The shared structural predicate both enforcement stages consult.
+ */
+export function asksSubCityGeography(question: string): boolean {
+  if (UNAMBIGUOUS_SUB_CITY_RE.test(question)) return true;
+  return PLACE_COLLIDING_SUB_CITY_RES.some(
+    ({ gate, structure }) => gate.test(question) && structure.test(question)
+  );
+}
 
 export const SUB_CITY_GEOGRAPHY_MESSAGE =
   "The FBI does not report crime data below the city/county/agency level. The available FBI datasets are organized by reporting agency, city, county, state, or national totals; they do not support ZIP code, neighborhood, precinct, ward, census tract, block group, apartment-complex, or other sub-city geography.";
@@ -38,7 +191,7 @@ export const DEMOGRAPHIC_RATE_UNSUPPORTED_MESSAGE =
   "I can't calculate a reliable per-capita rate for a demographic group because the FBI data does not include matching population denominators by age, race, or sex for the requested place and year. I can show raw demographic counts, the group's share of reported victims, offenders, or arrestees, or an overall crime rate using the total population.";
 
 export function detectSubCityGeographyOverride(question: string): CapabilityOverride | null {
-  if (!SUB_CITY_GEOGRAPHY_RE.test(question)) return null;
+  if (!asksSubCityGeography(question)) return null;
 
   return {
     title: "Geography Not Available",
@@ -143,12 +296,55 @@ export function detectDemographicRateDenominatorFollowup(
   return null;
 }
 
+/**
+ * Does the text MENTION a law-enforcement agency? A phrase test, and nothing more.
+ *
+ * "Worcester County Sheriff's Office" contains the word `county` and is not a county: it is one
+ * agency with one ORI, which the contract resolves as `kind: "agency"`. Two decisions used to test
+ * only for the county token and refuse it as countywide, so the same question was answered for a
+ * city police department and refused for a sheriff's office.
+ *
+ * **This says an agency is mentioned. It does NOT say the request is SCOPED to that agency** — a
+ * whole-county question can mention a sheriff as an inclusion or a contrast ("countywide …
+ * including the sheriff's office", "all agencies, not just the sheriff's office"). Treating a
+ * mention as a scope removed a necessary refusal from those requests. Callers must establish scope
+ * themselves: from the contract where they have one, and from `asksWholeCountyScope` where they
+ * do not.
+ */
+export function mentionsLawEnforcementAgency(question: string): boolean {
+  return /\b(?:sheriff'?s?\s+office|sheriff|county\s+police|county\s+agency|police\s+department)\b/i.test(question);
+}
+
+/**
+ * Does the request ask for the WHOLE county, whatever else it happens to mention?
+ *
+ * Two shapes: explicit countywide/all-agency wording, and an inclusion or contrast marker, which is
+ * how a county request names an agency without being about it.
+ *
+ * **The asymmetry is deliberate.** This only ever withdraws the agency exclusion, so over-matching
+ * returns a request to the established countywide refusal — the behaviour that shipped for months.
+ * Under-matching is the residual risk, and it is the direction that fails closed.
+ */
+export function asksWholeCountyScope(question: string): boolean {
+  return /\b(?:county-?wide|all\s+(?:law\s+enforcement\s+|reporting\s+|mapped\s+)?agencies|every\s+agency|combined\s+agencies|rest\s+of\s+the\s+county)\b/i.test(question) ||
+    /\b(?:including|not\s+just|besides|as\s+well\s+as|in\s+addition\s+to|apart\s+from|other\s+than|along\s+with|together\s+with)\b/i.test(question);
+}
+
+/** A request scoped to a named agency: one is mentioned, and the whole county is not being asked for. */
+export function scopedToNamedAgency(question: string): boolean {
+  return mentionsLawEnforcementAgency(question) && !asksWholeCountyScope(question);
+}
+
 const COUNTY_SCOPE_RE = /\b[A-Za-z][A-Za-z.'-]*(?:\s+[A-Za-z][A-Za-z.'-]*){0,4}\s+(?:county|parish|borough)\b/i;
 const COUNTY_METADATA_RE = /\b(?:which|what|list|show)\b[\s\S]{0,40}\b(?:agencies|agency|cities|city|jurisdictions|departments)\b/i;
 const NIBRS_DEMOGRAPHIC_BREAKDOWN_RE = /\b(?:offenders?|victims?|arrestees?|suspects?|demographics?|demographic|age|ages|age\s+group|race|racial|ethnicity|ethnic|sex|gender|male|female|men|women|juvenile|juveniles?|adult|adults?)\b/i;
 
 export function detectNibrsCountywideDemographicsOverride(question: string): CapabilityOverride | null {
   if (!COUNTY_SCOPE_RE.test(question)) return null;
+  // A named agency is not a countywide request, however its own name is spelled. Without this the
+  // refusal fired before the contract was even built, so nothing downstream ever saw that the
+  // request had resolved to a single ORI.
+  if (scopedToNamedAgency(question)) return null;
   // Explicit countywide requests have a deterministic agency-crosswalk route
   // with a participation disclosure. Keep refusing ambiguous county wording.
   if (/\bcountywide\b/i.test(question)) return null;

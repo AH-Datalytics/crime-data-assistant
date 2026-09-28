@@ -1,5 +1,6 @@
 ﻿import { GEO_PLACE_CATALOG, type GeoPlaceCatalogEntry, type GeoPlaceKind } from "./geo-place-catalog";
 import { fuzzyResolvePlace } from "./geo-fuzzy";
+import { isCommonEnglishWord } from "./english-common-words";
 
 export type GeoPlaceCandidate = {
   id: string;
@@ -90,7 +91,7 @@ const LEADING_SKIP = new Set([
   "find", "see", "display", "the", "a", "an", "me", "us", "i", "want", "whats", "wheres",
 ]);
 
-type FuzzySpan = { start: number; end: number; text: string; strict: boolean };
+type FuzzySpan = { start: number; end: number; text: string; strict: boolean; keys: string[] };
 
 /**
  * Preposition-anchored + place-at-start fuzzy fallback (Task 21). No broad
@@ -105,7 +106,15 @@ function fuzzyFallbackMention(input: string): GeoPlaceMention | null {
   const addSpan = (i: number, len: number, strict: boolean) => {
     const last = tokens[i + len - 1];
     if (!last) return;
-    spans.push({ start: tokens[i].start, end: last.end, text: input.slice(tokens[i].start, last.end), strict });
+    spans.push({
+      start: tokens[i].start,
+      end: last.end,
+      text: input.slice(tokens[i].start, last.end),
+      strict,
+      // The resolver's own token keys, so the ordinary-language check below cannot drift from the
+      // normalization used everywhere else here.
+      keys: tokens.slice(i, i + len).map((token) => token.key),
+    });
   };
 
   for (let i = 0; i < tokens.length; i += 1) {
@@ -135,6 +144,22 @@ function fuzzyFallbackMention(input: string): GeoPlaceMention | null {
   for (const span of spans) {
     const trimmed = span.text.trim();
     if (/^\d+$/.test(trimmed)) continue;
+    /*
+     * Ordinary English is not a spelling correction. Hundreds of small towns sit one edit from a
+     * common word, so "the share of ALL rape clearances" resolved to Ball, LA and "a graph of THE
+     * violent crime rate" to Tye, TX -- and because a lone distance-1 hit with no differently-named
+     * near rival counts as `confident`, those spans also bypassed the short-span noise guard below.
+     * The phantom then became the query contract's geography and the sentence appended to the
+     * model's prompt naming the town to use.
+     *
+     * This declines the fuzzy inference when every token of the span is ordinary language. It does
+     * NOT assert the user meant no place -- "over" could be an ordinary word or a mistyped Dover --
+     * and the trade-off is deliberate: silently answering about an unrequested city is worse than
+     * withholding a weak spelling correction. Exact place matching runs BEFORE this fallback and is
+     * untouched, so a town whose name is an English word (Early TX, Reading PA, Mobile AL) still
+     * resolves from an explicit reference.
+     */
+    if (span.keys.length > 0 && span.keys.every((key) => isCommonEnglishWord(key))) continue;
     const result = fuzzyResolvePlace(span.text);
     if (!result.best) continue;
     const cap = span.strict ? 1 : 2; // place-at-start must be within one typo

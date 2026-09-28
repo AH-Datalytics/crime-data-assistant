@@ -164,6 +164,11 @@ assert.ok(mention.reason.includes("3 possible places"));
   // A single leading adjective must not fuzzy-collide with a city ("large" -> "Largo").
   assert.equal(resolveGeoPlaces("large cities with the most murders 2023").mentions.length, 0, "large cities is a scope, not Largo");
   assert.equal(resolveGeoPlaces("biggest cities by violent crime").mentions.length, 0, "biggest cities is a scope, not a place");
+  // The same intent, behind a preposition. The two assertions above passed only because their
+  // fixtures have no preposition: the preposition-anchored path had none of the protections the
+  // place-at-start path has, so this line resolved to Largo, FL until the common-word guard.
+  assert.equal(resolveGeoPlaces("murders in large cities in 2024").mentions.length, 0, "large cities is a scope after a preposition too");
+  assert.equal(resolveGeoPlaces("show murders in all cities in 2024").mentions.length, 0, "all cities is a scope, not Ball, LA");
 }
 
 console.log("geo place resolver tests passed");

@@ -1,6 +1,7 @@
-import type { QueryContract, QueryContractSource } from "./query-contract";
+import { requestWindowGrain, type QueryContract, type QueryContractSource } from "./query-contract";
 import { detectRequestedGrain } from "./requested-grain";
-import { analyzeSql, LITERAL_SOURCE, type SelectItem } from "./sql-lineage";
+import { analyzeSql, groupByColumns, LITERAL_SOURCE, type SelectItem } from "./sql-lineage";
+import { restrictingScopes, stripSqlComments } from "./sql-restriction";
 import { sqlRestrictsColumnToValue } from "./sql-restriction";
 import {
   allTopicColumns,
@@ -45,6 +46,13 @@ export type StructuralFinding = {
   requestedLevel: EntityLevel;
   /** Which returned series produced this finding, for the retry directive. */
   series: string | null;
+  /**
+   * When true the message is the whole retry instruction and the caller must not append its own
+   * advice. The generic wrapper tells the model to rewrite against a table of a different row
+   * level, which is right for a wrong-table finding and wrong for a finding about one added filter
+   * on the correct table -- it would ask for an unrelated source change.
+   */
+  selfContainedInstruction?: boolean;
 };
 
 export type RequestedScope = {
@@ -84,18 +92,24 @@ const GEOGRAPHY_TO_LEVEL: Record<QueryContract["geography"]["kind"], EntityLevel
 };
 
 /** Columns that describe a row rather than measure it. */
-const DIMENSION_COLUMNS = new Set([
+export const DIMENSION_COLUMNS = new Set([
   "year", "month", "quarter", "data_year", "date", "incident_date", "state", "state_name", "ori",
   "agency", "agency_name", "city", "county", "county_key", "type", "agency_type", "pop_group",
   "ori9", "name", "division", "region", "start", "end", "id", "incident_number", "incident_num",
   // A population column is a denominator or a context column beside the measure, not the measure.
   // Selecting it is how several real queries show the rate's base.
   "population",
+  // Coverage columns say how much of a period the figure beside them rests on. Same argument as
+  // `population`: context for the measure, never the measure itself. A controlled path returns them
+  // so its answer can state its own basis instead of asserting one, and reading them as a crime
+  // figure would refuse a query for showing its working.
+  "months_reported", "months_with_data",
 ]);
 
 export function requestedScope(question: string, contract: QueryContract): RequestedScope {
   // Reuse the existing detector so the pre-execution check and `validateGrain()` cannot disagree.
-  const grain = detectRequestedGrain(question);
+  // An amended request carries its series form; its question text is only the reader's fragment.
+  const grain = contract.request ? requestWindowGrain(contract.request.window) : detectRequestedGrain(question);
 
   for (const cue of ROW_LEVEL_CUES) {
     if (cue.pattern.test(question)) {
@@ -176,6 +190,80 @@ function requiredFiltersPresent(
 }
 
 /** Does this returned expression carry a measurement, as opposed to labelling the row? */
+/**
+ * A MONTH REPORTED AS A YEAR -- CHECKED WHERE THE GROUPING ACTUALLY HAPPENS.
+ *
+ * GC-043: `SELECT s.year, s.offense_count AS total_offenses ... FROM summary_city_monthly s
+ * GROUP BY s.year`, delivered as "by Year". No aggregate anywhere in that select list, and
+ * `summary_city_monthly` holds one row per month, so each year returned one arbitrary month.
+ *
+ * SCOPE IS THE WHOLE DIFFICULTY, and looking only at the outer query got it wrong twice:
+ *  - the same bad grouping moved inside a used CTE, with the outer query merely projecting it, has
+ *    no outer GROUP BY at all -- so every scope the statement actually uses is checked, each
+ *    against its own grouping;
+ *  - a CTE that sums correctly and an outer query that regroups its ANNUAL results by year was
+ *    refused for aggregating in the wrong place rather than not at all. `ColumnRef.aggregated`
+ *    carries that fact out of the CTE, and `unaggregatedRefs` drops such references.
+ *
+ * Three exclusions keep real answers working: grouped columns (constant within their group),
+ * dimension columns, and the column that SELECTS the offense -- GC-043's own corrected query
+ * returns `s.ucr_offense_code` beside its sums. The test is per REFERENCE, so `SUM(a) - b` is
+ * still reported on `b`: an aggregate over one operand proves nothing about the others.
+ *
+ * A CTE body that reads another CTE resolves no base table here and is therefore skipped. That is
+ * a coverage limit, not a licence -- the scope that reads the monthly table itself is still checked.
+ */
+function monthlyRowsNotAggregated(
+  sql: string, source: QueryContractSource
+): { message: string; series: string }[] {
+  const findings: { message: string; series: string }[] = [];
+  const seen = new Set<string>();
+  // `restrictingScopes` returns the outer query followed by every CTE the statement really uses,
+  // transitively -- the same "actually contributes" walk the year proof relies on. It returns the
+  // outer query WITHOUT its `WITH` clause, so the outer scope is read from the whole statement
+  // instead: a column arriving through a CTE must resolve to the table behind it, and must carry
+  // the CTE's aggregation with it. Reading the bare outer text resolved `annual.total_offenses` to
+  // an unknown relation and quietly checked nothing at all.
+  const scopes = restrictingScopes(stripSqlComments(sql));
+  for (const [index, scope] of scopes.entries()) {
+    const text = index === 0 ? sql : scope;
+    const grouped = new Set(groupByColumns(text));
+    if (!((grouped.has("year") || grouped.has("data_year")) && !grouped.has("month"))) continue;
+    const lineage = analyzeSql(text);
+    if (!lineage.parsed) continue;
+    for (const item of lineage.items.filter(isFactualSeries)) {
+      const label = item.alias ?? item.raw.slice(0, 40);
+      const bare = item.unaggregatedRefs.filter((ref) => {
+        if (!ref.table || ref.table === LITERAL_SOURCE) return false;
+        if (DIMENSION_COLUMNS.has(ref.column) || grouped.has(ref.column)) return false;
+        const entry = tableSemantics(source, ref.table);
+        if (entry?.rowPeriod !== "month") return false;
+        return ref.column !== selectorColumn(entry);
+      });
+      if (bare.length === 0) continue;
+      const named = [...new Set(bare.map((ref) => `\`${ref.table}.${ref.column}\``))];
+      const key = label + "|" + named.join(",");
+      if (seen.has(key)) continue;
+      seen.add(key);
+      findings.push({
+        series: label,
+        message: `"${label}" returns ${named.join(", ")} without combining it, while grouping by ` +
+          "year. One row of that table is one month, so this reports a single month as the year's " +
+          "figure. Wrap each monthly measure in SUM(), and derive any rate from the summed " +
+          "operands rather than from one month's.",
+      });
+    }
+  }
+  return findings;
+}
+
+/** The column that picks which offense a row is about, where the binding names one. */
+function selectorColumn(entry: TableSemantics): string | null {
+  const binding = entry.measureBinding;
+  if (binding.kind === "code_column" || binding.kind === "value_column") return binding.column;
+  return null;
+}
+
 function isFactualSeries(item: SelectItem): boolean {
   const real = item.refs.filter((ref) => ref.table !== LITERAL_SOURCE);
   // A wildcard returns whatever the table holds. It carries measurements by definition, and none of
@@ -235,6 +323,614 @@ function repairable(scope: RequestedScope, source: QueryContractSource): boolean
   return catalogedTables(source).some((entry) => serves(entry, scope, source));
 }
 
+/**
+ * Is a share actually COMPUTED by one of the returned expressions?
+ *
+ * WHY THIS EXISTS. `resolveUnit` reports that no catalogued table models a `ratio` COLUMN, and that
+ * stays true. But a share of recorded counts does not need a ratio column -- it needs a numerator
+ * and a denominator, both of which the counts already supply. Rejecting on the unit label alone
+ * refused questions the expert decision permits: Decision 3 prohibits unsupported demographic
+ * PER-CAPITA rates, not arithmetic shares of recorded counts. That over-refusal is the measured
+ * GC-032/033/034/035 failure.
+ *
+ * WHAT COUNTS AS PROOF, and why it is deliberately narrow. One returned expression must actually
+ * DIVIDE -- `denominatorRefs` is non-null only for a division -- and the denominator must trace to a
+ * catalogued METRIC table in this statement. Two counts sitting side by side are ingredients, not a
+ * share, and they must keep failing: that is the distinction this guard exists to preserve, and it
+ * is what separates the saved GC-033/035 statements from their completed variants.
+ *
+ * A denominator with no column references at all (`COUNT(*)`) falls back to the statement's base
+ * tables, the same rule the completeness loop below uses -- otherwise `COUNT(*)` would contribute no
+ * table and a legitimate share over a counted row set would be refused.
+ *
+ * This does NOT approve a per-capita rate. Population denominators are governed by
+ * `denominatorApproved` and the rate-denominator check, both untouched.
+ */
+/** Does the first `(` in this string close at its very last character? */
+function parenSpansWhole(s: string): boolean {
+  let depth = 0;
+  for (let i = 0; i < s.length; i++) {
+    if (s[i] === "(") depth++;
+    else if (s[i] === ")") {
+      depth--;
+      if (depth === 0) return i === s.length - 1;
+    }
+  }
+  return false;
+}
+
+/** Split on a separator that is not inside parentheses or a quoted literal. */
+function splitTopLevel(s: string, sep: string): string[] {
+  const out: string[] = [];
+  let depth = 0, quote: string | null = null, start = 0;
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (quote) { if (c === quote) quote = null; continue; }
+    if (c === "'" || c === '"') { quote = c; continue; }
+    if (c === "(") depth++;
+    else if (c === ")") depth--;
+    else if (c === sep && depth === 0) { out.push(s.slice(start, i)); start = i + 1; }
+  }
+  out.push(s.slice(start));
+  return out;
+}
+
+/**
+ * Is this expression exactly ONE aggregate call, and nothing else?
+ *
+ * `COUNT(*)` yes. `NULLIF(SUM(x), 0)` yes -- the established zero-denominator form. `COUNT(*) * 2.0`
+ * NO, and that is the point: a substring test for "COUNT(" accepted it while it silently halved the
+ * percentage (review 2026-09-08 §3). Extra arithmetic means the divisor is no longer the total the
+ * share is taken of, and we cannot establish what it is.
+ */
+function asSingleAggregate(text: string): { fn: string; inner: string } | null {
+  let s = text.trim();
+  while (s.startsWith("(") && s.endsWith(")") && parenSpansWhole(s)) s = s.slice(1, -1).trim();
+
+  if (/^NULLIF\s*\(/i.test(s)) {
+    const open = s.indexOf("(");
+    if (!parenSpansWhole(s.slice(open))) return null;
+    const parts = splitTopLevel(s.slice(open + 1, s.length - 1), ",");
+    if (parts.length !== 2 || !/^\s*0(?:\.0*)?\s*$/.test(parts[1])) return null;
+    return asSingleAggregate(parts[0]);
+  }
+
+  const m = s.match(/^(COUNT|SUM|TOTAL)\s*\(/i);
+  if (!m) return null;
+  const open = s.indexOf("(");
+  if (!parenSpansWhole(s.slice(open))) return null;
+  return { fn: m[1].toUpperCase(), inner: s.slice(open + 1, s.length - 1) };
+}
+
+/**
+ * Does this column's NAME claim to be a share, rate or ratio?
+ *
+ * SUPPLEMENTARY ONLY. A series that calls itself a percentage while computing a bare count is
+ * claiming something it did not calculate, and that claim is what the reader sees. But a label can
+ * never be what distinguishes acceptance: renaming the column restored acceptance of identical
+ * wrong arithmetic (review 2026-09-08 §3). `requestedOperandsEstablished` is the check that
+ * actually decides; this only adds a second reason to refuse.
+ */
+const RATIO_ALIAS_RE = /\b(?:pct|percent(?:age)?|share|ratio|rate|proportion)\b|_pct$|^pct_/i;
+
+/** Every single-quoted literal in an expression, unescaped. */
+function quotedLiterals(expression: string): string[] {
+  const out: string[] = [];
+  const re = /'((?:[^']|'')*)'/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(expression)) !== null) out.push(m[1].replace(/''/g, "'"));
+  return out;
+}
+
+/** Index of the first `SELECT` at paren depth zero, skipping quoted text. */
+function outerSelectList(sql: string): string | null {
+  let depth = 0, quote: string | null = null, selectEnd = -1;
+  const upper = sql.toUpperCase();
+  for (let i = 0; i < sql.length; i += 1) {
+    const c = sql[i];
+    if (quote) { if (c === quote) quote = null; continue; }
+    if (c === "'" || c === '"') { quote = c; continue; }
+    if (c === "(") { depth += 1; continue; }
+    if (c === ")") { depth = Math.max(0, depth - 1); continue; }
+    if (depth === 0 && selectEnd === -1 && upper.startsWith("SELECT", i) &&
+        !/\w/.test(sql[i - 1] ?? " ") && !/\w/.test(sql[i + 6] ?? " ")) {
+      selectEnd = i + 6;
+    }
+  }
+  if (selectEnd === -1) return null;
+
+  depth = 0; quote = null;
+  for (let i = selectEnd; i < sql.length; i += 1) {
+    const c = sql[i];
+    if (quote) { if (c === quote) quote = null; continue; }
+    if (c === "'" || c === '"') { quote = c; continue; }
+    if (c === "(") { depth += 1; continue; }
+    if (c === ")") { depth = Math.max(0, depth - 1); continue; }
+    if (depth === 0 && upper.startsWith("FROM", i) &&
+        !/\w/.test(sql[i - 1] ?? " ") && !/\w/.test(sql[i + 4] ?? " ")) {
+      return sql.slice(selectEnd, i);
+    }
+  }
+  return sql.slice(selectEnd);
+}
+
+/**
+ * Words that end an expression but are not a column alias.
+ *
+ * `CASE WHEN … END` ends in a bare word, so stripping "the last identifier" unconditionally would
+ * amputate the expression and hide its division. That is exactly the bug that let a female share
+ * labelled `pct_male` through after the first attempt at this check.
+ */
+const NOT_AN_ALIAS = new Set([
+  "end", "null", "asc", "desc", "distinct", "all", "and", "or", "not", "is", "then", "else",
+  "when", "case", "like", "in", "between", "escape",
+]);
+
+/** An expression with any trailing column alias removed, so the operands can be read. */
+function withoutTrailingAlias(item: string): string {
+  const m = item.match(/\s+(?:AS\s+)?(?:"([^"]+)"|\[([^\]]+)\]|`([^`]+)`|([A-Za-z_]\w*))\s*$/i);
+  if (!m) return item;
+  const name = (m[1] ?? m[2] ?? m[3] ?? m[4] ?? "").toLowerCase();
+  if (!name || NOT_AN_ALIAS.has(name)) return item;
+  return item.slice(0, item.length - m[0].length);
+}
+
+/** Both sides of the last top-level `/`, descending through one wrapping call. */
+function divisionOperands(expression: string): { numerator: string; denominator: string } | null {
+  let depth = 0, cut = -1, quote: string | null = null;
+  for (let i = 0; i < expression.length; i += 1) {
+    const c = expression[i];
+    if (quote) { if (c === quote) quote = null; continue; }
+    if (c === "'" || c === '"') { quote = c; continue; }
+    if (c === "(") depth += 1;
+    else if (c === ")") depth = Math.max(0, depth - 1);
+    else if (c === "/" && depth === 0) cut = i;
+  }
+  if (cut === -1) {
+    const call = expression.match(/^\s*[A-Za-z_]\w*\s*\(([\s\S]*)\)\s*$/);
+    if (call) {
+      const inner = splitTopLevel(call[1], ",")[0];
+      if (inner && inner !== expression) return divisionOperands(inner);
+    }
+    return null;
+  }
+  return { numerator: expression.slice(0, cut), denominator: expression.slice(cut + 1) };
+}
+
+/**
+ * Does every returned division actually compute the comparison the QUESTION asked for?
+ *
+ * WHY THIS READS THE ORIGINAL SQL. `analyzeSql` calls `scrub()`, which blanks quoted literals, so a
+ * male share and a female share reduce to identical text there. The literals are still in the input,
+ * and this is the narrow companion extraction that keeps them -- lineage behaviour is untouched.
+ *
+ * THE CHECK. For each returned expression containing a division, if its numerator names literal
+ * values then at least one must be evidenced in the question; likewise for a denominator that names
+ * values, which is what binds "male to female" to a male numerator over a female denominator rather
+ * than over a total. A numerator carrying no literals is not decided here -- its subject comes from
+ * the measure column, which the topic and completeness checks already govern.
+ *
+ * WHAT IT DELIBERATELY IS NOT. Not natural-language-to-SQL equivalence, no question strings, no case
+ * ids, no value allowlist. It asks one thing: do the values this calculation compares appear in the
+ * request? An unresolved relationship keeps the existing refusal.
+ */
+/**
+ * What does the request ask to divide by what?
+ *
+ * Two supported forms, and the difference decides the denominator's ROLE:
+ *   ordered - "ratio of A to B": A over B, and B is a SUBSET, not the total.
+ *   share   - "what share/percentage of X were Y": Y over the matching TOTAL.
+ * Anything else is unresolved and proves nothing.
+ */
+type RequestedComparison =
+  | { form: "ordered"; numeratorPhrase: string; denominatorPhrase: string }
+  | { form: "percentage" }
+  | { form: "share" }
+  | { form: "unresolved" };
+
+function describeRequestedComparison(question: string): RequestedComparison {
+  const asked = question.toLowerCase();
+  const ordered = asked.match(
+    /\bratios?\s+of\s+(.+?)\s+to\s+(.+?)(?=\s+\b(?:in|by|since|for|from|during|between|over|per)\b|[,.?!;]|$)/
+  );
+  if (ordered) {
+    return { form: "ordered", numeratorPhrase: ordered[1], denominatorPhrase: ordered[2] };
+  }
+  // "percentage" names the conversion; "share"/"proportion" leave it to the wording, so both a
+  // percentage and a fraction are legitimate renderings of those.
+  if (/\b(?:percentages?|percent|pct)\b/.test(asked)) return { form: "percentage" };
+  if (/\b(?:share|proportion)\b/.test(asked)) return { form: "share" };
+  return { form: "unresolved" };
+}
+
+/**
+ * Is one of these values named in that phrase, as a WORD?
+ *
+ * Substring matching is wrong here and quietly so: `"female".includes("male")` is true, which would
+ * accept a male numerator for a female-to-male request. Boundaries are what make the direction check
+ * mean anything.
+ */
+function namedIn(literals: string[], phrase: string): boolean {
+  const hay = phrase.toLowerCase();
+  return literals.some((literal) => {
+    const needle = literal.trim().toLowerCase();
+    if (needle.length === 0) return false;
+    const escaped = needle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return new RegExp(`(?:^|[^a-z0-9])${escaped}(?:[^a-z0-9]|$)`).test(hay);
+  });
+}
+
+/**
+ * What a single operand actually COUNTS.
+ *
+ * `total`      - every in-scope row, optionally weighted by a measure column.
+ * `subset`     - only rows matching a RECOGNISED predicate, with a known contribution.
+ * `unresolved` - anything this finite recogniser does not understand.
+ *
+ * WHY THE PREVIOUS VERSION WAS NOT ENOUGH. It recorded only whether a conditional KEYWORD appeared
+ * and which values were quoted. So `SUM(CASE WHEN v.sex = 'Female' THEN 0 ELSE 1 END)` was read as a
+ * female count when it counts every NON-female, and `COUNT(*)` next to a quoted value elsewhere
+ * proved nothing at all (review 2026-09-08 §3). Naming a value is not counting it.
+ *
+ * DELIBERATELY FINITE. Only the shapes the approved positive families actually use are recognised.
+ * Everything else is `unresolved` and refused rather than guessed — including an inverted
+ * contribution, an unfamiliar predicate, or a missing `ELSE`. No general SQL equivalence.
+ */
+type OperandCount =
+  | { kind: "total"; measure: MeasuredQuantity; scale: number }
+  | { kind: "subset"; values: string[]; measure: MeasuredQuantity; scale: number }
+  | { kind: "unresolved" };
+
+/**
+ * WHAT `measure` IS. The quantity being counted: `"rows"` for a row count, or the resolved measure
+ * column for a weighted sum. Recording it is not enough — the previous version recorded a weight and
+ * never compared it, so a sum of recorded offenders and a count of summary ROWS were interchangeable
+ * totals. On the GC-032 fixture that turns 20% into 1000% or 1% (review 2026-09-08 §3).
+ *
+ * WHAT `scale` IS. The permitted numeric multiplier, retained rather than discarded. Stripping it to
+ * find the inner aggregate is necessary; treating every multiplier as equivalent is not, and a 200
+ * multiplier silently doubled the percentage while keeping a `pct_` label.
+ */
+
+/** A bare column reference, e.g. `d.offender_count`. */
+const BARE_COLUMN_RE = /^[A-Za-z_][\w]*(?:\s*\.\s*[A-Za-z_][\w]*)?$/;
+
+/**
+ * Which values does this predicate SELECT?
+ *
+ * Recognised, because the approved families use exactly these:
+ *   `col = 'v'`                          -> selects v
+ *   `col = 'v' OR col IS NULL`           -> selects v (GC-034's equality-or-null)
+ * A complement such as `col != 'v' AND col IS NOT NULL` is deliberately NOT recognised as selecting
+ * `v`: it selects everything else, and letting it borrow `v`'s meaning is the defect above. It is
+ * unresolved here, which does not affect GC-034's complementary supporting count — that column is
+ * not a division operand and is never described.
+ */
+function selectedValues(predicate: string): string[] | null {
+  const p = predicate.trim().replace(/\s+/g, " ");
+  const eq = p.match(/^[\w.]+\s*=\s*'((?:[^']|'')*)'$/);
+  if (eq) return [eq[1].replace(/''/g, "'")];
+  const eqOrNull = p.match(/^([\w.]+)\s*=\s*'((?:[^']|'')*)'\s+OR\s+([\w.]+)\s+IS\s+NULL$/i);
+  if (eqOrNull && eqOrNull[1].toLowerCase() === eqOrNull[3].toLowerCase()) {
+    return [eqOrNull[2].replace(/''/g, "'")];
+  }
+  return null;
+}
+
+/**
+ * Strip the established percentage/ratio scale factor.
+ *
+ * The approved shapes write `100.0 * SUM(...)` and `1.0 * SUM(...)`, and `divisionOperands` returns
+ * everything left of the `/`, so the scale factor arrives attached to the numerator. Leaving it
+ * there made every positive family unresolved on the first attempt at this recogniser. Only a plain
+ * numeric multiplier is removed; anything else stays and will be judged as it is.
+ */
+function splitScaling(text: string): { expression: string; scale: number } {
+  let s = text.trim();
+  while (s.startsWith("(") && s.endsWith(")") && parenSpansWhole(s)) s = s.slice(1, -1).trim();
+  const factors = splitTopLevel(s, "*");
+  if (factors.length === 2) {
+    const left = factors[0].trim();
+    const right = factors[1].trim();
+    const numeric = /^[-+]?[0-9][0-9_.]*$/;
+    if (numeric.test(left)) return { expression: right, scale: Number(left) };
+    if (numeric.test(right)) return { expression: left, scale: Number(right) };
+  }
+  return { expression: s, scale: 1 };
+}
+
+/**
+ * A measured quantity, keeping the REFERENCE rather than only its final name.
+ *
+ * `measureName` used to reduce `d.offender_count` to `offender_count`, which is normalization and
+ * not source resolution: two matching suffixes establish nothing about which table supplied them
+ * (review 2026-09-08). The qualifier is retained so it can be resolved against the FROM clause.
+ */
+type MeasuredQuantity =
+  | { kind: "rows"; qualifiers: string[] }
+  | { kind: "column"; qualifier: string | null; column: string };
+
+/** Alias-or-table references appearing as `x.y` in an expression. */
+function qualifiersIn(expression: string): string[] {
+  const out = new Set<string>();
+  for (const m of expression.matchAll(/\b([A-Za-z_]\w*)\s*\.\s*[A-Za-z_]\w*/g)) out.add(m[1].toLowerCase());
+  return [...out];
+}
+
+/** `FROM`/`JOIN` sources of the outer statement, as alias -> table and table -> table. */
+function outerSourceAliases(sql: string): Map<string, string> {
+  const map = new Map<string, string>();
+  const fromAt = sql.search(/\bFROM\b/i);
+  if (fromAt === -1) return map;
+  const clause = sql.slice(fromAt);
+  for (const m of clause.matchAll(/\b(?:FROM|JOIN)\s+([A-Za-z_]\w*)(?:\s+(?:AS\s+)?([A-Za-z_]\w*))?/gi)) {
+    const table = m[1].toLowerCase();
+    const alias = (m[2] ?? "").toLowerCase();
+    map.set(table, table);
+    if (alias && !/^(on|where|group|order|inner|left|right|full|cross|join|using|limit)$/.test(alias)) {
+      map.set(alias, table);
+    }
+  }
+  return map;
+}
+
+/**
+ * A measure resolved to its CANONICAL SOURCE IDENTITY, or `null` for unresolved.
+ *
+ * WHY IDENTITY AND NOT A BOOLEAN. The previous version returned only "does this resolve", and
+ * equality was compared separately from the raw references. So `offender_count` and
+ * `d.offender_count` — the same column, one source table — compared unequal because a qualifier was
+ * matched against `null`, and an approved calculation was falsely refused (review 2026-09-08 §3).
+ * Resolving first and comparing identities afterwards removes that whole class of mismatch.
+ */
+type ResolvedMeasure =
+  | { kind: "rows" }
+  | { kind: "column"; table: string; column: string };
+
+/**
+ * Resolve one operand to a supported measure identity, or `null`.
+ *
+ * `rows`      - some base table must declare `eventRow`, the catalog's own statement that one row is
+ *               one occurrence. A stated limit, not a proof that a join's result rows are the
+ *               requested entity.
+ * qualified   - the alias must resolve through the FROM clause to a catalogued metric table that
+ *               DECLARES the column. An UNKNOWN alias stays unresolved and deliberately does NOT
+ *               fall back to the unqualified search, or a typo'd alias would silently acquire
+ *               whatever meaning some other joined table happened to offer.
+ * unqualified - exactly ONE base table may declare the column. Zero is undeclared, more than one is
+ *               ambiguous; both are unresolved. `null` is never a wildcard.
+ */
+function resolveMeasure(
+  quantity: MeasuredQuantity, aliases: Map<string, string>, baseTables: string[],
+  source: QueryContractSource
+): ResolvedMeasure | null {
+  const declares = (table: string, column: string) => {
+    const entry = tableSemantics(source, table);
+    return Boolean(entry && entry.role === "metric" && (entry.recordedMeasures ?? []).includes(column));
+  };
+
+  if (quantity.kind === "rows") {
+    const countable = baseTables.some((table) => {
+      const entry = tableSemantics(source, table);
+      return Boolean(entry && entry.role === "metric" && entry.eventRow);
+    });
+    return countable ? { kind: "rows" } : null;
+  }
+
+  if (quantity.qualifier !== null) {
+    const table = aliases.get(quantity.qualifier);
+    if (!table) return null;
+    return declares(table, quantity.column) ? { kind: "column", table, column: quantity.column } : null;
+  }
+
+  const owners = baseTables.filter((table) => declares(table, quantity.column));
+  if (owners.length !== 1) return null;
+  return { kind: "column", table: owners[0], column: quantity.column };
+}
+
+/** Do two RESOLVED identities denote the same measure? */
+function sameResolvedMeasure(a: ResolvedMeasure, b: ResolvedMeasure): boolean {
+  if (a.kind !== b.kind) return false;
+  if (a.kind === "rows") return true;
+  const other = b as { table: string; column: string };
+  return a.table === other.table && a.column === other.column;
+}
+
+/**
+ * What a single operand actually COUNTS: a known total, a known subset with its real predicate and
+ * row contribution, or unresolved.
+ *
+ * DELIBERATELY FINITE. Only the shapes the approved positive families use are recognised. An
+ * inverted contribution (`THEN 0 ELSE 1`), a non-zero `ELSE`, an unfamiliar predicate or an
+ * unrecognised expression is `unresolved` and refused rather than guessed — naming a value is not
+ * counting it.
+ */
+function describeOperand(text: string): OperandCount {
+  const scaled = splitScaling(text);
+  const scale = scaled.scale;
+  const aggregate = asSingleAggregate(scaled.expression);
+  if (!aggregate) return { kind: "unresolved" };
+  const inner = aggregate.inner.trim();
+
+  if (aggregate.fn === "COUNT") {
+    // `COUNT(*)` and `COUNT(col)` count ROWS. Neither can establish a named group, and neither is
+    // interchangeable with a sum of a recorded measure.
+    if (inner === "*" || BARE_COLUMN_RE.test(inner)) {
+      return { kind: "total", measure: { kind: "rows", qualifiers: [] }, scale };
+    }
+    return { kind: "unresolved" };
+  }
+
+  // SUM / TOTAL over a plain column is the matching total OF THAT MEASURE.
+  if (BARE_COLUMN_RE.test(inner)) {
+    const parts = inner.split(".").map((x) => x.trim().toLowerCase());
+    const column = parts[parts.length - 1];
+    const qualifier = parts.length > 1 ? parts[0] : null;
+    return { kind: "total", measure: { kind: "column", qualifier, column }, scale };
+  }
+
+  const conditional = inner.match(
+    /^CASE\s+WHEN\s+([\s\S]+?)\s+THEN\s+([\s\S]+?)\s+ELSE\s+([\s\S]+?)\s+END$/i
+  );
+  if (!conditional) return { kind: "unresolved" };
+  const [, predicate, matched, unmatched] = conditional;
+
+  // Non-matching rows must contribute nothing. `THEN 0 ELSE 1` counts the opposite set, and that is
+  // exactly the construction that borrowed a value's meaning while counting its complement.
+  if (!/^0(?:\.0*)?$/.test(unmatched.trim())) return { kind: "unresolved" };
+
+  // Matching rows contribute one row, or the recorded measure for the approved offender-share shape.
+  const contribution = matched.trim();
+  let measure: MeasuredQuantity;
+  if (/^1(?:\.0*)?$/.test(contribution)) {
+    // NOT the predicate's qualifier. The predicate says what is FILTERED, not what is COUNTED:
+    // GC-034 filters on `incidents.relationship` while counting join rows that are victims, and
+    // binding row meaning to the filter's table refused that approved positive. Row grain belongs
+    // to the statement, so it resolves against the base tables in `resolveMeasure`.
+    measure = { kind: "rows", qualifiers: [] };
+  } else if (BARE_COLUMN_RE.test(contribution)) {
+    const parts = contribution.split(".").map((x) => x.trim().toLowerCase());
+    measure = { kind: "column", qualifier: parts.length > 1 ? parts[0] : null, column: parts[parts.length - 1] };
+  } else return { kind: "unresolved" };
+
+  const values = selectedValues(predicate);
+  if (values === null) return { kind: "unresolved" };
+  return { kind: "subset", values, measure, scale };
+}
+
+function requestedOperandsEstablished(
+  sql: string, question: string, baseTables: string[], source: QueryContractSource
+): boolean {
+  const selectList = outerSelectList(sql);
+  if (selectList === null) return false;
+  const requested = describeRequestedComparison(question);
+  const aliases = outerSourceAliases(sql);
+
+  for (const rawItem of splitTopLevel(selectList, ",")) {
+    const operands = divisionOperands(withoutTrailingAlias(rawItem));
+    if (!operands) continue;
+
+    const numerator = describeOperand(operands.numerator);
+    const denominator = describeOperand(operands.denominator);
+
+    // NO SKIP PATH. The previous version skipped role checking whenever the numerator named no
+    // values and used no conditional, which is how `COUNT(*) / COUNT(*)` established neither
+    // requested subset. I had claimed other checks governed that case; the full-validator result
+    // showed they did not. Every division must now resolve on both sides.
+    if (requested.form === "unresolved") return false;
+    if (numerator.kind === "unresolved" || denominator.kind === "unresolved") return false;
+
+    // MATCHING QUANTITIES. Both sides must count the SAME measure, or the division compares unlike
+    // things: recorded offenders over summary ROWS is not a share of anything.
+    // RESOLVE BOTH SIDES FIRST, then compare the identities. Order matters: comparing raw
+    // references before resolution is what refused `offender_count / d.offender_count`.
+    const resolvedNumerator = resolveMeasure(numerator.measure, aliases, baseTables, source);
+    const resolvedDenominator = resolveMeasure(denominator.measure, aliases, baseTables, source);
+    if (!resolvedNumerator || !resolvedDenominator) return false;
+
+    // Agreement establishes that two quantities are alike, never that either is the requested one —
+    // which is why resolution above is against the source, not against each other.
+    if (!sameResolvedMeasure(resolvedNumerator, resolvedDenominator)) return false;
+
+    // RESULT FORM. The retained scale must match what the request asks to produce. A percentage
+    // conversion is 100; an ordered ratio is unscaled. A `pct_` label cannot authorise a different
+    // multiplier, and 200 sits inside any plausible range so no range test would catch it.
+    // Only the numerator carries a scale in the supported shapes; a scaled divisor is unresolved.
+    if (denominator.scale !== 1) return false;
+
+    if (requested.form === "ordered") {
+      // "A to B" needs a KNOWN SUBSET on each side, in the requested order. A total on either side
+      // cannot establish a named group.
+      if (numerator.scale !== 1) return false;
+      if (numerator.kind !== "subset" || !namedIn(numerator.values, requested.numeratorPhrase)) return false;
+      if (denominator.kind !== "subset" || !namedIn(denominator.values, requested.denominatorPhrase)) return false;
+      continue;
+    }
+
+    // A share is a known subset over the matching total. "percentage" must convert by 100; "share"
+    // and "proportion" may be delivered either as a percentage or as a fraction, and the delivered
+    // text names which. Anything else is not the requested result form.
+    const permittedScales = requested.form === "percentage" ? [100] : [1, 100];
+    if (!permittedScales.includes(numerator.scale)) return false;
+    if (numerator.kind !== "subset" || !namedIn(numerator.values, question)) return false;
+    if (denominator.kind !== "total") return false;
+  }
+  return true;
+}
+
+function shareIsComputed(item: SelectItem, source: QueryContractSource): boolean {
+  // No top-level division: whatever this expression is, it is not a computed share.
+  if (item.denominatorRefs === null || item.denominatorRaw === null) return false;
+
+  // The numerator must itself measure something. `resolved` false means part of the expression
+  // could not be traced, and an untraceable share is not a proved one.
+  if (!item.resolved) return false;
+
+  // The numerator has to measure something. A share of nothing is not a share.
+  if (item.refs.length === 0 && !item.countsRows) return false;
+
+  // The DIVISOR must be exactly one aggregate, with no arithmetic wrapped around it. This is what
+  // separates `COUNT(*)` from `COUNT(*) * 2.0`, which a substring test could not.
+  const divisor = asSingleAggregate(item.denominatorRaw);
+  if (!divisor) return false;
+
+  // A row count over the set the numerator was selected from is the total a share is taken of.
+  if (divisor.fn === "COUNT") return true;
+
+  // SUM/TOTAL must add up a MEASURE, on a table that holds measures. This rules out, without
+  // naming any table:
+  //   - a population or identity column (`AVG(i.population)`, and `incidents` IS a metric table,
+  //     so a table-role check alone accepted it);
+  //   - `SUM(1)` and other ref-less sums, which are not the total either.
+  if (item.denominatorRefs.length === 0) return false;
+  return item.denominatorRefs.every((ref) => {
+    if (DIMENSION_COLUMNS.has(ref.column)) return false;
+    const entry = ref.table ? tableSemantics(source, ref.table) : null;
+    return Boolean(entry && entry.role === "metric");
+  });
+}
+
+/**
+ * Is the RATIO the answer this statement returns, rather than something a helper column happens to
+ * contain?
+ *
+ * WHY THE CALLER NEEDED THIS TOO. Binding the proof to one expression was necessary but not
+ * sufficient: the caller still waived the requirement whenever ANY returned expression was a valid
+ * share. So a raw count aliased `pct_male` shipped as the answer while a genuine female percentage
+ * sat beside it in a helper column (review 2026-09-08 §3).
+ *
+ * WHY OPERAND MEMBERSHIP DOES NOT WORK, measured rather than assumed. `sql-lineage` strips quoted
+ * literals before analysis, so `SUM(CASE WHEN v.sex = 'Male' …)` and the female equivalent reduce to
+ * the SAME text. Comparing a supporting count against the share's expression therefore cannot tell a
+ * genuine operand from an unrelated one. It also fails in the other direction: GC-034 legitimately
+ * returns a complementary "known relationship" count that is not an operand of its percentage, so an
+ * operand rule rejects a positive that must stay answerable.
+ *
+ * THE RULE, which uses only what is establishable. At least one returned series must be a proved
+ * share, and no returned series may CLAIM to be a share while computing a bare count. Supporting
+ * counts stay permitted -- GC-032 returns its numerator and denominator, GC-034 also returns the
+ * complement -- because they do not claim to be the ratio. The alias is used solely to detect a
+ * false label, never to authorise a calculation.
+ */
+function ratioIsTheAnswer(
+  factual: SelectItem[], source: QueryContractSource, sql: string, question: string,
+  baseTables: string[]
+): boolean {
+  const shares = factual.filter((item) => shareIsComputed(item, source));
+  if (shares.length === 0) return false;
+
+  // THE DECIDING CHECK: the values being compared must be the ones the question asked about. This
+  // is what refuses a female share for a male question, and it is unaffected by any column name.
+  if (!requestedOperandsEstablished(sql, question, baseTables, source)) return false;
+
+  // Supplementary: a series that names itself a percentage must have computed one. Kept because a
+  // false label is itself a defect, but it is no longer what distinguishes acceptance.
+  const mislabelled = factual.some(
+    (item) => !shares.includes(item) && item.alias !== null && RATIO_ALIAS_RE.test(item.alias)
+  );
+  return !mislabelled;
+}
+
 /** Does this expression's division bind a population valid at the requested level? */
 function denominatorApproved(
   item: SelectItem, scope: RequestedScope, source: QueryContractSource
@@ -257,8 +953,31 @@ export function evaluateStructuralSemantics(opts: {
   const findings: StructuralFinding[] = [];
   const canBeFixed = repairable(scope, opts.source);
   const add = (
-    ruleId: string, severity: StructuralSeverity, message: string, series: string | null
-  ) => { findings.push({ ruleId, severity, message, requestedLevel: scope.rowLevel, series }); };
+    ruleId: string, severity: StructuralSeverity, message: string, series: string | null,
+    selfContainedInstruction = false
+  ) => {
+    findings.push({ ruleId, severity, message, requestedLevel: scope.rowLevel, series, selfContainedInstruction });
+  };
+
+  /*
+   * RETIRED: `structural-unrequested-eligibility-floor` no longer fires here.
+   *
+   * It tried to decide, from the request text and the model's SQL, whether an eligibility threshold
+   * had been asked for. That premise failed on a quantity it could not see: "at least 100
+   * shoplifting offenses" and a floor of `rate_per_100k >= 100` share the source column, the crime
+   * noun and the numeral, so the checker authorized a rate floor the request never mentioned and a
+   * city with 200 offenses vanished from its own ranking.
+   *
+   * City rankings are now CONSTRUCTED from a declared request instead (lib/city-ranking.ts), where
+   * the eligibility quantity and the sort quantity are separate typed fields and an unrequested
+   * floor has nothing to originate from. The matcher's module is retained for its helpers and its
+   * record; what is withdrawn is its enforcement.
+   *
+   * BEHAVIOUR THIS REMOVES: model-written rankings outside the constructed family no longer receive
+   * an eligibility retry. They did not have a sound one -- it accepted a rate floor for a count
+   * request -- but they now have none at all, and that is stated rather than implied.
+   * BEHAVIOUR THIS KEEPS: the truthful, family-gated limit sentence in lib/result-disclosure.ts.
+   */
 
   if (lineage.unsupportedShape) {
     add("structural-unsupported-sql-shape", "retry",
@@ -283,6 +1002,10 @@ export function evaluateStructuralSemantics(opts: {
   const requestedTopics = opts.contract.metric.offenses.length > 0
     ? opts.contract.metric.offenses.map((offense) => offense.topic)
     : [scope.topic];
+
+  for (const finding of monthlyRowsNotAggregated(opts.sql, opts.source)) {
+    add("structural-monthly-rows-not-aggregated", "retry", finding.message, finding.series);
+  }
 
   const licensed = licensedLevels(opts.question);
   const someSeriesServesRequestedLevel = factual.some((item) => {
@@ -329,6 +1052,8 @@ export function evaluateStructuralSemantics(opts: {
       entries.push(entry);
     }
     if (sawUnknown || entries.length === 0) continue;
+
+    // The annual-aggregation rule is scope-aware and runs once per statement, below.
 
     // A directory referenced next to a metric table is a filter or a label -- deterministic plans
     // legitimately write SUM(CASE WHEN ha.agency = 'Baltimore' THEN hac.murder END). It is only a
@@ -480,6 +1205,21 @@ export function evaluateStructuralSemantics(opts: {
     // columns. Checking it after the `topic_columns` branch left Current Trends, SHR and NIBRS
     // answering "what share" with a raw count.
     if (resolvedUnit.kind === "unmodeled") {
+      // A share the statement actually computes is answerable, even though no table models a
+      // ratio COLUMN. Narrow on purpose: a division whose denominator traces to a metric table
+      // here. Counts side by side still fall through and are still refused below.
+      // Bound to a RETURNED EXPRESSION, and the proof is the DENOMINATOR'S MEANING rather than
+      // "a division exists somewhere". That is what rejects a decorative `COUNT(*) / 1.0` helper
+      // trying to authorise a raw count aliased `pct_male` (review 2026-09-08, R1).
+      //
+      // NOT bound to the table this loop is on. A share over a join computes once -- GC-033's
+      // `SUM(CASE WHEN v.sex...) / COUNT(*)` references `victims` only -- while `tablesInPlay`
+      // also holds `incidents`. Requiring each table to carry its own share rejected valid joined
+      // shares, which is how an over-strict first attempt at this fix broke GC-033 and GC-034.
+      if (resolvedUnit.unit === "ratio" &&
+          ratioIsTheAnswer(factual, opts.source, opts.sql, opts.question, lineage.baseTables)) {
+        continue;
+      }
       add("structural-measure-unit-unmodeled", "retry",
         `The question asks for a ${resolvedUnit.unit}, and \`${table}\` does not model one -- a ` +
         "share needs a numerator and a denominator, and neither is established here. Return the " +

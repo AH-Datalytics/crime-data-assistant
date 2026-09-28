@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getNibrsDb, executeWithTimeout, logNibrsQuery } from "@/lib/nibrs-db";
 import { isZeroResult } from "@/lib/shr-agency-probe";
 import { appendNibrsAgencyProbeCaveat, runNibrsAgencyProbe } from "@/lib/nibrs-agency-probe";
-import { buildNoSqlFallbackMessage, neutralizeUnverifiedAvailabilityClaim } from "@/lib/refusal-safety";
+import { buildNoSqlFallbackMessage, courtProcessNoSqlIsTerminal, neutralizeUnverifiedAvailabilityClaim, selectNoSqlRefusal } from "@/lib/refusal-safety";
 import { validatePageToken } from "@/lib/page-token";
 import { translateToSql } from "@/lib/nibrs-claude";
 import { validateAndSanitize } from "@/lib/sql-safety";
@@ -44,6 +44,7 @@ import { normalizeHistoryForTab } from "@/lib/chat-history";
 import { applyGeoCorrection, geoCorrectionHint } from "@/lib/geo-correction";
 import { pastCompleteCalendarYearsRange } from "@/lib/time-conventions";
 import { detectFollowupTransform } from "@/lib/followup-transform";
+import { resolveClearanceRefinement } from "@/lib/clearance-refinement-followup";
 import { detectNibrsCapabilityOverride } from "@/lib/nibrs-capability-overrides";
 import { getBlockingGeoClarification } from "@/lib/geo-resolver";
 import { boundedModelResponseJson, shouldRetryUnexplainedNoSql, UNEXPLAINED_NO_SQL_RETRY_PROMPT } from "@/lib/no-sql-retry";
@@ -54,6 +55,7 @@ import { buildCrossSourceFollowupTransform } from '@/lib/cross-source-followup';
 import { plannerModeForSource } from '@/lib/followup-planner-mode';
 import { asksCampusAgency, buildCampusAgencySummarySql, campusAgencyChartAxesFromSql, campusAgencyDisplayName, knownCampusAgencyResolution, resolveCampusAgencyOris, shouldResolveCampusAgencySql } from "@/lib/nibrs-campus-agency";
 import { planNibrsQuery } from "@/lib/nibrs-query-planner";
+import { NIBRS_DATA_CUTOFF } from "@/lib/dynamic-facts";
 import { optimizeNibrsSql } from "@/lib/nibrs-sql-optimizer";
 import { nibrsRollupContextForDb, routeNibrsRollupSql } from "@/lib/nibrs-rollup-router";
 import { buildQueryContract } from "@/lib/query-contract";
@@ -68,11 +70,31 @@ import { removedDemographicPlaceToken } from "@/lib/demographic-rate-intent";
 import {
   auditNibrsResolvedOriUsage,
   resolvedOriEnforcementIssue,
+  omittedMemberEnforcementIssue,
+  unresolvedMemberDisclosure,
   formatNibrsResolutionGuidance,
   resolveNibrsPlaces,
 } from "@/lib/nibrs-place-resolver";
+import { agencyFigureFailure, memberRefusalText, mapAgencyFigures } from "@/lib/nibrs-member-figures";
+import {
+  isOwnedMultiAgencyRequest,
+  ownedMemberDeclaration,
+  memberCoverage,
+  coverageTitle,
+  coverageNote,
+  unsupportedOwnedComparisonText,
+} from "@/lib/agency-answer-ownership";
+import { inheritedMultiAgencyRequest } from "@/lib/followup-agency-continuation";
 import { logResolverWarnings } from "@/lib/rtci-db";
 import { consolidatedDisplayText, normalizeConsolidatedDisplayRows } from "@/lib/agency-consolidations";
+import { genericResultState } from "@/lib/result-state-adapters";
+import { governFactualNarrative } from "@/lib/result-state";
+import { verifyPeerMembership } from "@/lib/peer-comparison";
+import { decideDeterministicFailure, decideDatabaseFailure, buildNibrsRecoveryContext, runsAnnualClearanceFlow } from "@/lib/nibrs-recovery";
+import { NIBRS_CITY_RANKING_GUARDRAIL, CITY_RANKING_FAILURE_TEXT } from "@/lib/city-ranking-nibrs";
+import { runOwnedAnnualClearance } from "@/lib/nibrs-owned-family";
+import { shouldAskCrimeType } from "@/lib/crime-type-clarification";
+import { normalizeHistoryAllSources } from "@/lib/chat-history";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -402,6 +424,36 @@ export async function POST(req: NextRequest) {
         sourceSwitch: { source: followupPlan.source, question: followupPlan.reconstructedQuestion },
       }));
     }
+    // ── Increment 3 (Decision 9): violent / property / both ──────────────────
+    // The shared gate, on the reconstructed question for follow-ups. The frozen NIBRS
+    // case ("total crime ... broken down by vilont vs nonvilont") asks for a breakdown BY
+    // type, so the core returns answer-direct and this gate stays silent for it.
+    const crimeTypeQuestion = (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing" && !followupPlan.chartOnly)
+      ? followupPlan.reconstructedQuestion
+      : question;
+    const crimeTypeAsk = getBlockingGeoClarification(crimeTypeQuestion)
+      ? null
+      : shouldAskCrimeType(crimeTypeQuestion, normalizeHistoryAllSources(body?.history));
+    if (crimeTypeAsk?.needsClarification) {
+      const executionMs = Date.now() - routeStart;
+      const ctProof = finalizeExit({ intendedAction: "clarify", planFamily: "crime-type:violent-property-both", narrative: crimeTypeAsk.clarificationQuestion });
+      writeNibrsLog(question, null, 0, null, executionMs, crimeTypeAsk.clarificationQuestion, ["crime-type:violent-property-both"], "deterministic", sessionId, null, null, ctProof);
+      return jsonResp(emitFactualPayload(ctProof, {
+        success: true,
+        question,
+        sql: null as unknown as string,
+        explanation: crimeTypeAsk.clarificationQuestion,
+        title: "",
+        columns: [],
+        rows: [],
+        rowCount: 0,
+        truncated: false,
+        chartConfig: null,
+        chartMeta: null,
+        executionTimeMs: executionMs,
+      }));
+    }
+
     const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing")
       ? (followupPlan.chartOnly ? null : getBlockingGeoClarification(followupPlan.reconstructedQuestion))
       : getBlockingGeoClarification(question);
@@ -450,9 +502,19 @@ export async function POST(req: NextRequest) {
     const followupTransform = (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing")
       ? followupPlan.transform
       : (detectFollowupTransform(question, history) ?? buildCrossSourceFollowupTransform(question, body?.history, "nibrs"));
+    // ── Cause C/D: an explicit police-clearance refinement carries its request forward ──────
+    //
+    // "Now what about just the share that's prosecution declined" settles nothing on its own, so
+    // every consumer below — the contract, the place resolver, the query context and the proof —
+    // was reasoning about a fragment, and GC-004's statement was refused for computing a share
+    // the contract had no way to recognize. This restores the PRIOR request's offense, geography
+    // and period with the newly asked reason in place of the old one, and only when the turn
+    // names a clearance reason and settles nothing of its own. An explicit new request is left
+    // exactly as the reader wrote it.
+    const clearanceRefinement = resolveClearanceRefinement(question, body?.history, "nibrs");
     const guardrailQuestion = (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing")
       ? followupPlan.reconstructedQuestion
-      : (followupTransform?.contextQuestion ?? question);
+      : (clearanceRefinement?.refinedQuestion ?? followupTransform?.contextQuestion ?? question);
     // Proof reasons about the reconstructed question from here on; a bare follow-up
     // fragment names no entities and would silently lose its completeness check.
     proofQuestion = guardrailQuestion;
@@ -478,6 +540,15 @@ export async function POST(req: NextRequest) {
     const nibrsPlan = planNibrsQuery(question, deterministicResolution, {
       allowDeterministic: (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing") ? false : !followupTransform,
       juvenileIncidentRollupAvailable: juvenileIncidentRollupAvailable(),
+      // Injected so the city-ranking builder can resolve "latest year with data" without the
+      // planner importing a module that probes the databases at load time.
+      // `observed` travels with the date. Dropping it let a clock-based fallback be delivered as
+      // "the latest year with data" when the startup probe of the NIBRS database had failed.
+      dataCutoff: {
+        year: NIBRS_DATA_CUTOFF.year,
+        month: NIBRS_DATA_CUTOFF.month,
+        observed: NIBRS_DATA_CUTOFF.observed,
+      },
     });
     if (nibrsPlan.kind === "blocked" && deterministicResolution) {
       const executionMs = Date.now() - routeStart;
@@ -530,6 +601,122 @@ export async function POST(req: NextRequest) {
       console.log(`[structural] NIBRS deterministic plan refused: ${nibrsPlanRefusal.ruleIds.join(", ")}`);
     }
 
+    /*
+     * A REFUSED PLAN FROM AN OWNED FAMILY IS THAT FAMILY'S FAILURE, NOT A REASON TO GENERATE SQL.
+     *
+     * The branch below deliberately skips a refused plan and lets the request continue to the model
+     * path, which validates in full -- correct for the general builders. It was wrong for the city
+     * ranking: the request that reached the model was the SAME one, and answering it with generated
+     * SQL restores exactly the eligibility-versus-measure confusion the constructed family removed.
+     * The comment on that branch described the fall-through plainly, and it applied here too.
+     */
+    if (nibrsPlan.kind === "deterministic"
+        && nibrsPlan.query.guardrail === NIBRS_CITY_RANKING_GUARDRAIL
+        && nibrsPlanRefusal) {
+      const refusedMs = Date.now() - routeStart;
+      const refusedGuardrails = [NIBRS_CITY_RANKING_GUARDRAIL, "city-ranking-structural-refusal"];
+      const refusedProof = finalizeExit({
+        intendedAction: "decline_capability", sql: nibrsPlan.query.sql,
+        planFamily: NIBRS_CITY_RANKING_GUARDRAIL, guardrails: refusedGuardrails,
+        narrative: CITY_RANKING_FAILURE_TEXT,
+      });
+      writeNibrsLog(question, nibrsPlan.query.sql, 0, "city_ranking_structural_refusal", refusedMs,
+        CITY_RANKING_FAILURE_TEXT, refusedGuardrails, "deterministic", sessionId, null, null, refusedProof);
+      return jsonResp(emitFactualPayload(refusedProof, {
+        success: true, question, sql: null as unknown as string,
+        explanation: CITY_RANKING_FAILURE_TEXT, title: "Ranking Not Available",
+        columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null,
+        executionTimeMs: refusedMs,
+      } as QueryResponse));
+    }
+
+    /*
+     * THE OWNED FAMILY'S WHOLE FLOW IS ONE PRODUCTION FUNCTION.
+     *
+     * `runOwnedAnnualClearance` decides refusal, execution, per-year evidence and wording, and the
+     * route hands it the same bounded executor every other plan uses. Keeping it out of the handler
+     * is what lets a test run these exact branches with a counting executor, instead of matching
+     * regexes against this file.
+     */
+    if (nibrsPlan.kind === "deterministic" && runsAnnualClearanceFlow(nibrsPlan.query.guardrail)) {
+      const ownedQuery = nibrsPlan.query;
+      const ownedStart = Date.now();
+      const outcome = await runOwnedAnnualClearance({
+        question,
+        place: deterministicResolution?.places[0]?.label ?? "the requested agency",
+        query: ownedQuery,
+        refusal: nibrsPlanRefusal,
+        // The parameter is deliberately NOT called `sql`: that name means model-generated SQL in
+        // this handler, and an execution site holding it is exactly what the placement scan hunts
+        // for. Refusing anything but the planned statement makes the distinction a guarantee rather
+        // than a naming convention.
+        execute: async (plannedSql) => {
+          if (!nibrsPlanRefusal && plannedSql === ownedQuery.sql) {
+            const result = await executeWithTimeout(ownedQuery.sql);
+            return { rows: normalizeNibrsDisplayRows(result.rows) as unknown[], columns: result.columns };
+          }
+          throw new Error("owned family attempted to execute a refused or unplanned statement");
+        },
+      });
+      const ownedGuardrails = deterministicGuardrails(ownedQuery.guardrail);
+      const ownedMs = Date.now() - ownedStart;
+
+      if (outcome.kind === "decline") {
+        const ownedProof = finalizeExit({
+          intendedAction: outcome.reason === "no-supportable-year" ? "decline_data" : "decline_capability",
+          sql: outcome.sql ?? ownedQuery.sql,
+          planFamily: ownedQuery.guardrail,
+          guardrails: ownedGuardrails,
+          narrative: outcome.explanation,
+        });
+        writeNibrsLog(question, outcome.sql ?? ownedQuery.sql, 0, `owned_family_${outcome.reason}`,
+          ownedMs, outcome.explanation, ownedGuardrails, "deterministic", sessionId, null, null, ownedProof);
+        return jsonResp(emitFactualPayload(ownedProof, {
+          success: true, question, sql: outcome.sql as unknown as string,
+          explanation: outcome.explanation, title: outcome.title,
+          columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null,
+          executionTimeMs: ownedMs,
+        } as QueryResponse));
+      }
+
+      /*
+       * The figures go through the ordinary disclosure chokepoint; the withholding reasons are
+       * appended AFTER it. They are established by evidence this query fetched and checked, not by
+       * the rows being returned, so the chokepoint cannot see what supports them and replaced them
+       * with a generic omission notice -- losing exactly the sentence that tells the reader why a
+       * year is missing. Appending narrows to this family's own established decision and exempts no
+       * other narrative.
+       */
+      const ownedExplanation = [
+        applyResultDisclosures({
+          explanation: outcome.explanation, question, sql: outcome.sql, rows: outcome.rows,
+          tab: "nibrs", resultState: genericResultState({ sql: outcome.sql, rows: outcome.rows }),
+        }),
+        outcome.withheldNote,
+      ].filter(Boolean).join("\n\n");
+      const ownedTitle = alignTitleYearRange(outcome.title, outcome.rows);
+      const ownedChart = buildNibrsChartConfig(
+        { ...ownedQuery, title: ownedTitle }, outcome.columns, outcome.rows, question);
+      const ownedProof = finalizeExit({
+        intendedAction: "answer", sql: outcome.sql, rows: outcome.rows, columns: outcome.columns,
+        truncated: false, derivation: sealPlanDerivation(ownedQuery.guardrail, outcome.sql),
+        planFamily: ownedQuery.guardrail, guardrails: ownedGuardrails,
+        returnedEntities: returnedEntityKeys(outcome.rows), narrative: ownedExplanation,
+        hasChart: Boolean(ownedChart),
+      });
+      writeNibrsLog(question, outcome.sql, outcome.rows.length, null, ownedMs, ownedExplanation,
+        ownedGuardrails, "deterministic", sessionId,
+        serializeChartConfigForLog(ownedChart, outcome.columns, { source: "FBI NIBRS", agencyCount: 0, population: null }),
+        null, ownedProof);
+      return jsonResp(emitFactualPayload(ownedProof, attachChartAuditToPayload({
+        success: true, question, sql: outcome.sql, explanation: ownedExplanation, title: ownedTitle,
+        columns: outcome.columns, rows: outcome.rows, rowCount: outcome.rows.length,
+        truncated: false, chartConfig: ownedChart,
+        chartMeta: { source: "FBI NIBRS", agencyCount: 0, population: null },
+        executionTimeMs: ownedMs,
+      } as QueryResponse, { source: "nibrs", requestId: chartAuditRequestId, queryLogId: chartAuditQueryLogId })));
+    }
+
     if (nibrsPlan.kind === "deterministic" && !nibrsPlanRefusal) {
       const deterministicQuery = nibrsPlan.query;
       const deterministicStart = Date.now();
@@ -537,16 +724,37 @@ export async function POST(req: NextRequest) {
         const result = await executeWithTimeout(deterministicQuery.sql);
         const rows = normalizeNibrsDisplayRows(result.rows);
         const columns = result.columns;
+
         const executionMs = Date.now() - deterministicStart;
         const deterministicExplanation = rows.length === 0 && deterministicQuery.guardrail === "deterministic-nibrs-comparable-agency-clearance"
           ? `No NIBRS clearance data was found for ${deterministicResolution?.places[0]?.label ?? "the named target agency"} in the requested period. A peer comparison was not returned because showing peer agencies without the requested target would be misleading.`
           : deterministicQuery.explanation;
+        // R1 (Decision 16): compare the SELECTED peer membership with the evidence that
+        // came back. The query inner-joins clearance rows, so a selected peer with no data
+        // silently disappears while the explanation still names it. Disclose that; never
+        // substitute another agency, because selection is on population alone.
+        let membershipNote = "";
+        if (deterministicQuery.selectedPeers?.length) {
+          // Review 2B: membership is decided on the SOURCE ID the selection carried and the
+          // executed result returned, not on the display label. The result labels agencies
+          // "SEATTLE, WA" while selection recorded "SEATTLE"; matching those as strings
+          // reported peers missing that were present in the comparison all along.
+          const membership = verifyPeerMembership(
+            deterministicQuery.selectedPeers,
+            rows.map((r) => {
+              const row = r as Record<string, unknown>;
+              return { id: row.ori == null ? null : String(row.ori), label: String(row.place_label ?? "") };
+            }),
+          );
+          if (!membership.complete) membershipNote = ` ${membership.disclosure}`;
+        }
         let explanation = applyResultDisclosures({
-          explanation: deterministicExplanation,
+          explanation: deterministicExplanation + membershipNote,
           question,
           sql: deterministicQuery.sql,
           rows,
           tab: "nibrs",
+          resultState: genericResultState({ sql: deterministicQuery.sql, rows }),
         });
         const deterministicFiredGuardrails = deterministicGuardrails(deterministicQuery.guardrail);
         const deterministicGrainCheck = validateGrain(question, rows, deterministicQuery.sql);
@@ -555,7 +763,62 @@ export async function POST(req: NextRequest) {
           explanation = deterministicGrainCheck.message;
           deterministicFiredGuardrails.push("grain-mismatch");
         }
-        deterministicQuery.title = alignTitleYearRange(deterministicQuery.title, rows);
+        // The same membership gate as the model path. It was previously only on the model side, so a
+        // supported builder that dropped a requested agency returned without ever being asked. The
+        // mapping reads the pivoted comparison columns as identity, so GC-083-shaped answers pass on
+        // their own evidence rather than being exempted.
+        // The declaration is trusted only where it is BOUND to the statement that ran. Reading
+        // `memberColumns` directly would let a declaration survive a rewrite of the query it
+        // describes, which is the same mistake as trusting query text: a property that was true when
+        // it was written, asserted about something else.
+        //
+        // Stated honestly: on THIS path the executed statement is `deterministicQuery.sql` itself, so
+        // the two arguments coincide here and the comparison cannot fail at this call site. Its force
+        // is that every site must now present the SQL it actually ran, and that
+        // `test-structural-route-placement` independently pins this branch to executing that same
+        // expression. The refusal of an altered or forged declaration is proved against the function
+        // directly in `test-agency-answer-ownership`, not inferred from this line.
+        const ownedDeclaration = ownedMemberDeclaration(deterministicQuery, deterministicQuery.sql);
+        const deterministicMembers = agencyFigureFailure(resolutionPlan, columns, rows, ownedDeclaration);
+        if (deterministicMembers) {
+          const msg = memberRefusalText(deterministicMembers);
+          const detMemberProof = finalizeExit({ intendedAction: "decline_capability", sql: deterministicQuery.sql, rows: [], columns: [], guardrails: [...deterministicFiredGuardrails, "nibrs-agency-figures-incomplete"], planFamily: "delivered-member", narrative: msg });
+          writeNibrsLog(question, deterministicQuery.sql, 0, "delivered_member_incomplete", Date.now() - deterministicStart, msg, [...deterministicFiredGuardrails, "nibrs-agency-figures-incomplete"], "deterministic", sessionId, null, null, detMemberProof);
+          return jsonResp(emitFactualPayload(detMemberProof, { success: true, question, sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - deterministicStart } as QueryResponse));
+        }
+        // A named agency the source has no record of cannot be queried, so the supported answer has to
+        // say which one is missing rather than describe itself as covering both. This branch returns
+        // without reaching the model path, so the disclosure has to be made here too -- it was only on
+        // the model side, and a supported comparison that silently dropped a member said nothing.
+        // Composed after every replacement above, so a grain rewrite cannot remove it, and the tag is
+        // recorded only if the note is in the text that will be sent.
+        //
+        // The coverage state is computed ONCE, and both the note and the title are derived from it,
+        // so the two cannot disagree. Previously the note was read from the resolution plan while the
+        // title was the producer's requested-member list, which is how an answer covering one of two
+        // agencies shipped under a title naming both.
+        const deterministicCoverage = memberCoverage(
+          resolutionPlan,
+          mapAgencyFigures(resolutionPlan, columns, rows, ownedDeclaration)
+        );
+        const deterministicMissing = coverageNote(resolutionPlan, deterministicCoverage)
+          ?? unresolvedMemberDisclosure(resolutionPlan);
+        if (deterministicMissing && !explanation.includes(deterministicMissing.note)) {
+          explanation = [explanation, deterministicMissing.note].filter(Boolean).join("\n\n");
+        }
+        if (deterministicMissing && explanation.includes(deterministicMissing.note)) {
+          deterministicFiredGuardrails.push("nibrs-unresolved-member-disclosed");
+        }
+        // Coverage first, then the year alignment, so the year range is applied to the title that
+        // will actually ship rather than to one the coverage clause then replaces.
+        deterministicQuery.title = alignTitleYearRange(
+          coverageTitle(deterministicQuery.title, deterministicCoverage),
+          rows
+        );
+        if (deterministicCoverage.length >= 2
+          && deterministicCoverage.some((entry) => entry.state !== "figures")) {
+          deterministicFiredGuardrails.push("nibrs-partial-coverage-title");
+        }
         const chartConfig = buildNibrsChartConfig(deterministicQuery, columns, rows, question);
 
         const deterministicProof = finalizeExit({
@@ -619,13 +882,26 @@ export async function POST(req: NextRequest) {
           null,
           finalizeExit({ intendedAction: "decline_capability", sql: deterministicQuery.sql, planFamily: deterministicQuery.guardrail })
         );
-        if (msg.includes("timed out")) {
-          return jsonResp(
-            { success: false, error: "That NIBRS query timed out. Try a smaller date range or a more specific question.", sql: deterministicQuery.sql } as QueryError,
-            500
-          );
+        // Review 2C: the recovery decision is `decideDeterministicFailure` in
+        // lib/nibrs-recovery.ts, not a branch written out here. A timeout stops; a peer
+        // comparison stops rather than abandoning a population-chosen selection to the
+        // model; anything else recovers through the guarded model path.
+        // G1: the context comes from what the RESOLVER and the CONTRACT actually
+        // established -- never re-parsed from the question at failure time. This was an
+        // inline expression here, which is exactly how two defects hid: it dropped
+        // `metric.unit` (so a clearance-rate request suggested a plain count) and it
+        // pre-filtered places to the resolved ones (which cannot show that EVERY requested
+        // place resolved). It now calls the same production function the tests exercise.
+        const recoveryContext = buildNibrsRecoveryContext({
+          resolutionPlan,
+          contract: promptContract,
+          query: deterministicQuery,
+        });
+        const recovery = decideDeterministicFailure(deterministicQuery, msg, recoveryContext);
+        if (recovery.outcome === "stop") {
+          return jsonResp({ success: false, error: recovery.error, sql: deterministicQuery.sql } as QueryError, 500);
         }
-        console.warn("[nibrs] Deterministic query failed; continuing through guarded model path:", msg);
+        console.warn("[nibrs] Deterministic query failed; continuing through guarded model path:", msg, recovery.reason);
       }
     }
 
@@ -649,6 +925,48 @@ export async function POST(req: NextRequest) {
         chartMeta: metadata.chartMeta,
         executionTimeMs: executionMs,
       } as QueryResponse, { source: "nibrs", requestId: chartAuditRequestId, queryLogId: chartAuditQueryLogId })));
+    }
+
+    // OWNERSHIP RESTRICTION for the bounded named-multi-agency family.
+    //
+    // Reaching this line means no application-owned producer answered the request. For a
+    // single-agency question that is ordinary and the model path continues untouched. For a request
+    // naming several agencies it is the case this milestone exists for: the answer would be a
+    // comparison whose agency attribution nothing can establish. Three successive attempts to prove
+    // that attribution from generated SQL were each defeated by wrapping the same substitution one
+    // level further, so the request stops HERE -- before a comparison is generated or executed --
+    // rather than being judged after the fact.
+    //
+    // This withholds correct model-written comparisons as well as wrong ones. That cost is the
+    // approved trade, and the message says it is our limitation rather than a claim about the source.
+    // ...and the same restriction when this turn CONTINUES such a request without restating it.
+    //
+    // The gate above reads the plan resolved for this turn. "now do it for 2024" names no place, so
+    // the resolver returns nothing and the restriction cannot fire — while the model still answers
+    // from the conversation it can see. That is how GC-073's correctly refused 36-city comparison
+    // came back one turn later with 35 agencies and no attribution. The preceding refusal carried no
+    // SQL, so the query-bearing follow-up detector does not see it either.
+    //
+    // Narrow on purpose: only a bare change of period, only when this turn establishes no scope of
+    // its own, and only while the chain back to that request is unbroken. A new scope — another
+    // city, a nationwide request, a different topic — stops it, so single-agency follow-ups and
+    // genuinely new questions are untouched.
+    const inheritedOwnedRequest = isOwnedMultiAgencyRequest(resolutionPlan)
+      ? null
+      : inheritedMultiAgencyRequest(question, body?.history, "nibrs");
+    if (isOwnedMultiAgencyRequest(resolutionPlan) || inheritedOwnedRequest) {
+      const ownedMs = Date.now() - routeStart;
+      const ownedMsg = unsupportedOwnedComparisonText();
+      const ownedGuardrails = inheritedOwnedRequest
+        ? ["nibrs-unowned-multi-agency-stopped", "nibrs-unowned-multi-agency-continuation"]
+        : ["nibrs-unowned-multi-agency-stopped"];
+      const ownedProof = finalizeExit({ intendedAction: "decline_capability", sql: null, rows: [], columns: [], guardrails: ownedGuardrails, planFamily: "owned-member", narrative: ownedMsg });
+      writeNibrsLog(question, null, 0, "unowned_multi_agency", ownedMs, ownedMsg, ownedGuardrails, "deterministic", sessionId, null, null, ownedProof);
+      return jsonResp(emitFactualPayload(ownedProof, {
+        success: true, question, sql: null as unknown as string, explanation: ownedMsg, title: "",
+        columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null,
+        executionTimeMs: ownedMs,
+      } as QueryResponse));
     }
 
     // Step 1: Translate to SQL via Claude (with conversation history for context)
@@ -694,6 +1012,11 @@ export async function POST(req: NextRequest) {
 
       if (!claude.sql) {
         rawFirstNoSql = claude.explanation || null;
+        // Cause A: a court-process request is settled by the REQUEST policy, not by whatever the
+        // model wrote. No second call can turn a police record into a court record, and on GC-009
+        // the second call answered with arrestees instead of defendants. Terminate here and let the
+        // terminal exit below deliver the policy explanation.
+        const courtProcessTerminal = courtProcessNoSqlIsTerminal(question);
         // Retry if model incorrectly claims data isn't available
         const refusalPatterns = /not (appear|be represented)|doesn't appear|not (in|included in) (this|the|our) (dataset|data|sample|library)|no data (for|available|found)|does not (have|include|cover)|not available in this|isn't (in|included)|not found in/i;
         // Retry if model asks for year range instead of defaulting
@@ -701,7 +1024,9 @@ export async function POST(req: NextRequest) {
         const falseDemographicRefusal = hasDemographicPlaceDisambiguation &&
           /population.*(?:race|ethnicity|sex|age)|group-specific per-capita|demographic group/i.test(claude.explanation || "");
         const coverageRetryPrompt = partialCoverageRetryPrompt("nibrs", question, claude.explanation);
-        const retryPrompt = falseDemographicRefusal
+        const retryPrompt = courtProcessTerminal
+          ? null
+          : falseDemographicRefusal
           ? "[SYSTEM: Incorrect refusal. The query contract confirms this is an overall rate for a resolved place and offense, not a demographic-group rate. Generate the SQL now using total jurisdiction population.]"
           : coverageRetryPrompt
           ? coverageRetryPrompt
@@ -766,10 +1091,15 @@ export async function POST(req: NextRequest) {
         const serverAuthoredNoSql = false;
         const internalLeak = containsInternalLeak(claude.explanation) || containsInternalLeak(claude.title);
         if (internalLeak) { claude.explanation = INTERNAL_LEAK_SAFE_MESSAGE; claude.title = "Results"; }
-        if (!serverAuthoredNoSql && !internalLeak) claude.explanation = buildNoSqlFallbackMessage("nibrs");
+        // Decision 1: same terminal-exit defect as the Current/Historical route - this returns
+        // before `runGuardrails`, so the court-process explanation is selected here instead.
+        const noSqlRefusal = selectNoSqlRefusal(question, "nibrs");
+        if (!serverAuthoredNoSql && !internalLeak) claude.explanation = noSqlRefusal.explanation;
+        // The recorded reason names the branch actually taken, not the generic template.
+        const noSqlReason = internalLeak ? "internal-leak-firewall" : (serverAuthoredNoSql ? "no-sql-server-template" : noSqlRefusal.reason);
         claude.explanation = neutralizeUnverifiedAvailabilityClaim(claude.explanation, "NIBRS");
-        const noSqlProof = finalizeExit({ intendedAction: "decline_capability", guardrails: internalLeak ? ["internal-leak-firewall"] : ["no-sql-server-template"], narrative: claude.explanation });
-        writeNibrsLog(question, null, 0, null, Date.now() - claudeStart, claude.explanation, internalLeak ? ["internal-leak-firewall"] : ["no-sql-server-template"], activeModelLabel, sessionId, null, boundedModelResponseJson(rawFirstNoSql, rawRetryNoSql), noSqlProof);
+        const noSqlProof = finalizeExit({ intendedAction: "decline_capability", guardrails: [noSqlReason], narrative: claude.explanation });
+        writeNibrsLog(question, null, 0, null, Date.now() - claudeStart, claude.explanation, [noSqlReason], activeModelLabel, sessionId, null, boundedModelResponseJson(rawFirstNoSql, rawRetryNoSql), noSqlProof);
         return jsonResp(emitFactualPayload(noSqlProof, {
           success: true,
           question,
@@ -802,10 +1132,19 @@ export async function POST(req: NextRequest) {
 
     let sql = validation.sanitized!;
     const resolvedOriWarnings = auditNibrsResolvedOriUsage(resolutionPlan, sql);
-    // Enforced only for the city-name bypass; every other shape stays warn-only.
+    // Enforced for the city-name bypass; other shapes stay warn-only unless the omitted-member rule
+    // below promotes one of them.
     const oriEnforcement = resolvedOriEnforcementIssue(resolutionPlan, sql);
+    // A second, narrower enforcement over the SAME detection. `auditNibrsResolvedOriUsage` already
+    // finds every resolved member missing from the SQL -- it has no city_police filter -- and that
+    // finding was printed as "[warn-only]" whenever the city-name bypass could not reach it. Where
+    // several agencies were named and only some are answered for, warn-only is not enough: the result
+    // is not a visibly poor answer but a confident one about a subset, reported as the whole. So this
+    // promotes an already-detected warning to enforcement rather than adding a new detection.
+    const memberEnforcement = omittedMemberEnforcementIssue(resolutionPlan, sql);
+    const oriFindingEnforced = Boolean(oriEnforcement || memberEnforcement);
     if (resolvedOriWarnings.length > 0) {
-      console.warn(`[nibrs][resolved-ori]${oriEnforcement ? "[enforced]" : "[warn-only]"} ${resolvedOriWarnings.join("; ")}`);
+      console.warn(`[nibrs][resolved-ori]${oriFindingEnforced ? "[enforced]" : "[warn-only]"} ${resolvedOriWarnings.join("; ")}`);
       logResolverWarnings({
         source: "nibrs", question, sql, warnings: resolvedOriWarnings, sessionId,
       });
@@ -825,12 +1164,19 @@ export async function POST(req: NextRequest) {
     }
 
     const routeGuardrailIssues: string[] = [];
+    // The label must not contradict itself: the same finding cannot be reported as warn-only while it
+    // is being enforced, which is what happened when the omitted-member rule fired on ORIs the
+    // city-name rule could not reach.
     const routeGuardrailsFired: string[] = oriEnforcement
       ? ["nibrs-resolved-ori-enforced"]
-      : resolvedOriWarnings.length > 0
+      : resolvedOriWarnings.length > 0 && !memberEnforcement
       ? ["nibrs-resolved-ori-warn-only"]
       : [];
     if (oriEnforcement) routeGuardrailIssues.push(oriEnforcement.issue);
+    if (memberEnforcement) {
+      routeGuardrailsFired.push("nibrs-omitted-member-enforced");
+      routeGuardrailIssues.push(memberEnforcement.issue);
+    }
     if (geoCorrectionApplied) routeGuardrailsFired.push("geo-typo-corrected");
     const recordContractValidation = (contractResult: QueryContractSqlValidation, collectRetryIssues = false) => {
       const contractGuardrails = queryContractGuardrails(contractResult);
@@ -973,6 +1319,16 @@ export async function POST(req: NextRequest) {
       }
       // Resolved-ORI second-failure block — the retried SQL still selects by city
       // name. Running it would return the broadened, wrong-agency result silently.
+      // Omitted-member second failure: the retry still answers for a subset of the agencies the
+      // question named. Delivering it would report one agency's figures as all of them, so stop and
+      // say which agencies were asked for -- a named refusal, not a silent narrowing.
+      const memberStillBad = omittedMemberEnforcementIssue(resolutionPlan, sql);
+      if (memberStillBad) {
+        const msg = `That question asks about ${memberStillBad.requested} agencies, but I could only build a query covering ${memberStillBad.covered} of them — ${memberStillBad.labels.join(", ")} would have been left out. Rather than report a partial figure as though it covered every agency you named, I stopped. Ask for them one at a time and I can answer each.`;
+        const omittedMemberProof = finalizeExit({ intendedAction: "decline_capability", sql, guardrails: [...postRetryResult.fired, "nibrs-omitted-member-enforced"], planFamily: "omitted-member", narrative: msg });
+        writeNibrsLog(question, sql, 0, "omitted_member_second_failure", Date.now() - claudeStart, msg, [...postRetryResult.fired, "nibrs-omitted-member-enforced"], activeModelLabel, sessionId, null, null, omittedMemberProof);
+        return jsonResp(emitFactualPayload(omittedMemberProof, { success: true, question, sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - claudeStart } as QueryResponse));
+      }
       const oriStillBad = resolvedOriEnforcementIssue(resolutionPlan, sql);
       if (oriStillBad) {
         const msg = `I matched ${oriStillBad.labels.join(", ")} to specific law-enforcement agencies, but I couldn't build a query that uses them. Rather than fall back to matching agencies by city name — which mixes in unrelated departments that share a mailing city — I stopped. Try asking for fewer cities at once, or one city at a time.`;
@@ -1186,31 +1542,20 @@ export async function POST(req: NextRequest) {
               const retryMsg = retryErr instanceof Error ? retryErr.message : String(retryErr);
               const dbRetryProof = finalizeExit({ intendedAction: "decline_capability", sql, guardrails: [...guardrailResult.fired, ...routeGuardrailsFired], retries: 1 });
               writeNibrsLog(question, sql, 0, `DB retry failed: ${retryMsg}`, Date.now() - claudeStart, null, [...guardrailResult.fired, ...routeGuardrailsFired], activeModelLabel, sessionId, null, null, dbRetryProof);
-              const userError = isTimeout
-                ? `This query is too complex for the database. Try narrowing your request — for example, ask about a specific city, state, or shorter time range instead of a broad national query.`
-                : msg.includes("no such column") || msg.includes("ambiguous")
-                  ? `I had trouble building that query — the data may not support that exact breakdown. Try simplifying your question or asking about a broader category.`
-                  : `I had trouble with that query. Try rephrasing your question or asking about a different aspect of the data.`;
-              return jsonResp(
-                { success: false, error: userError, sql } as QueryError,
-                500
-              );
+              const retryFailed = decideDatabaseFailure({ stage: "retry_failed", sql, originalMessage: msg });
+              return jsonResp({ success: false, error: retryFailed.outcome === "stop" ? retryFailed.error : "", sql } as QueryError, 500);
             }
           } else {
             const dbRetryValidationProof = finalizeExit({ intendedAction: "decline_capability", sql, guardrails: [...guardrailResult.fired, ...routeGuardrailsFired], retries: 1 });
             writeNibrsLog(question, sql, 0, `DB: ${msg} (retry validation failed)`, Date.now() - claudeStart, null, [...guardrailResult.fired, ...routeGuardrailsFired], activeModelLabel, sessionId, null, null, dbRetryValidationProof);
-            return jsonResp(
-              { success: false, error: `I had trouble with that query. Try rephrasing your question.`, sql } as QueryError,
-              500
-            );
+            const validationFailed = decideDatabaseFailure({ stage: "retry_validation_failed", sql, originalMessage: msg });
+            return jsonResp({ success: false, error: validationFailed.outcome === "stop" ? validationFailed.error : "", sql } as QueryError, 500);
           }
         } else {
           const dbErrorProof = finalizeExit({ intendedAction: "decline_capability", sql, guardrails: [...guardrailResult.fired, ...routeGuardrailsFired] });
           writeNibrsLog(question, sql, 0, `DB: ${msg}`, Date.now() - claudeStart, null, [...guardrailResult.fired, ...routeGuardrailsFired], activeModelLabel, sessionId, null, null, dbErrorProof);
-          return jsonResp(
-            { success: false, error: isTimeout ? `This query is too complex for the database. Try asking about a specific city, state, or shorter time range.` : `Database error: ${msg}`, sql } as QueryError,
-            500
-          );
+          const dbFailed = decideDatabaseFailure({ stage: "no_retry", sql, originalMessage: msg });
+          return jsonResp({ success: false, error: dbFailed.outcome === "stop" ? dbFailed.error : "", sql } as QueryError, 500);
         }
       }
     }
@@ -1275,6 +1620,19 @@ export async function POST(req: NextRequest) {
           executionTimeMs,
         } as QueryResponse));
       }
+    }
+
+    // Delivery gate for the bounded multi-agency family, placed here because this is where the rows
+    // are final: after the model query, after any error-recovery retry, after any fallback and after
+    // display normalization. Checking the ROWS rather than the SQL is what makes one gate cover every
+    // execution path -- an identifier in query text can be removed by a HAVING, a LIMIT, an unused
+    // CTE or plain omission, and none of those reach the answer.
+    const deliveredMembers = agencyFigureFailure(resolutionPlan, columns, rows, null, sql);
+    if (deliveredMembers) {
+      const msg = memberRefusalText(deliveredMembers);
+      const membershipProof = finalizeExit({ intendedAction: "decline_capability", sql, rows: [], columns: [], guardrails: [...routeGuardrailsFired, "nibrs-agency-figures-incomplete"], planFamily: "delivered-member", narrative: msg });
+      writeNibrsLog(question, sql, 0, "delivered_member_incomplete", Date.now() - claudeStart, msg, [...routeGuardrailsFired, "nibrs-agency-figures-incomplete"], activeModelLabel, sessionId, null, null, membershipProof);
+      return jsonResp(emitFactualPayload(membershipProof, { success: true, question, sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - claudeStart } as QueryResponse));
     }
 
     // Step 4: Server-side CDE audit check — append disclaimer if anomalous underreporting detected
@@ -1476,7 +1834,15 @@ export async function POST(req: NextRequest) {
     explanation = containsInternalScaffold(postExplanation)
       ? (stripInternalScaffold(postExplanation) || explanation)
       : postExplanation;
-    explanation = applyResultDisclosures({ explanation, question, sql, rows, tab: "nibrs" });
+    explanation = applyResultDisclosures({ explanation, question, sql, rows, tab: "nibrs", resultState: genericResultState({ sql, rows }) });
+    // A named agency that never resolved has no SQL fix -- there is nothing in the source to query,
+    // so the answer must say which agency is missing rather than quietly narrowing to the ones that
+    // worked. Computed here but deliberately NOT appended here: `validateGrain` below can replace the
+    // whole explanation, which silently removed this note while the route went on recording the
+    // disclosure tag. Delivered text and recorded account disagreeing is a corrupted measurement on
+    // this project, not a cosmetic bug. It is appended at the end of the pipeline instead, and the
+    // tag is recorded only if it survives into what is actually delivered.
+    const missingMembers = unresolvedMemberDisclosure(resolutionPlan);
     const grainCheck = validateGrain(question, rows, sql);
     if (missingLowerBoundNote(question, sql, rows) && !routeGuardrailsFired.includes("lower-bound-disclosed")) routeGuardrailsFired.push("lower-bound-disclosed");
     if (!grainCheck.ok && grainCheck.message) {
@@ -1573,6 +1939,18 @@ export async function POST(req: NextRequest) {
     explanation = finalNarrative.explanation || "";
     claude.title = finalNarrative.title || claude.title || "Results";
     claude.title = alignTitleYearRange(claude.title, rows);
+    // The missing-member note is composed AFTER the internal-leak firewall, not before it. Appending
+    // earlier was not enough: a model title mentioning a table name makes the firewall replace the
+    // whole explanation with its safe message, which removed the note while the route went on
+    // recording the disclosure. The firewall is preserved, not bypassed -- the note is re-applied to
+    // whatever text it produced, and the tag is recorded from the text that will actually be sent.
+    if (missingMembers && !explanation.includes(missingMembers.note)) {
+      explanation = [explanation, missingMembers.note].filter(Boolean).join("\n\n");
+    }
+    if (missingMembers && explanation.includes(missingMembers.note)
+        && !routeGuardrailsFired.includes("nibrs-unresolved-member-disclosed")) {
+      routeGuardrailsFired.push("nibrs-unresolved-member-disclosed");
+    }
     const totalMs = Date.now() - claudeStart;
     const firedGuardrails = finalizeGuardrailTags([...guardrailResult.fired, ...routeGuardrailsFired], queryContractGuardrails(runContractValidation(sql)));
     console.log(`[nibrs][result] model=${activeModelLabel} rows=${rows.length} retries=${retryCount} scaffold_stripped=${scaffoldStripped} guardrails=[${firedGuardrails.join(",")}] total_ms=${totalMs} db_ms=${executionTimeMs}${canaryFlag ? " CANARY" : ""}`);
@@ -1625,7 +2003,7 @@ export async function POST(req: NextRequest) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("[nibrs] Query API error:", msg);
     return jsonResp(
-      { success: false, error: `Server error: ${msg}` } as QueryError,
+      { success: false, error: governFactualNarrative(`Server error: ${msg}`, genericResultState({ sql: null, rows: [], productError: msg })) } as QueryError,
       500
     );
   }

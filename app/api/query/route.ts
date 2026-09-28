@@ -4,7 +4,7 @@ import { validatePageToken } from "@/lib/page-token";
 import { translateToSql, getHistoricalSystemPrompt } from "@/lib/claude";
 import { validateAndSanitize } from "@/lib/sql-safety";
 import { validateSqlSchema } from "@/lib/schema-validation";
-import { executeWithTimeoutSync } from "@/lib/query-timeout";
+import { executeWithTimeoutSync, executeManyWithTimeoutSync } from "@/lib/query-timeout";
 import { buildChartConfig } from "@/lib/chart-config";
 import { serializeChartConfigForLog } from "@/lib/chart-config-log";
 import { attachChartAuditToPayload, createChartAuditRequestId } from "@/lib/chart-audit";
@@ -17,7 +17,7 @@ import { runGuardrails } from "@/lib/guardrails";
 import { finalizeGuardrailTags, mergeGuardrailTags } from "@/lib/guardrail-tag-state";
 import { asksForCountsInsteadOfRates } from "@/lib/rate-intent";
 import { applyRetryMeta } from "@/lib/types";
-import type { StreamEvent, ChartMeta } from "@/lib/types";
+import type { StreamEvent, ChartMeta, ChartConfig } from "@/lib/types";
 import { getCached, setCache } from "@/lib/response-cache";
 import { detectAllNullData } from "@/lib/all-null-detection";
 import { checkSingleRowTrend } from "@/lib/single-row-trend";
@@ -25,16 +25,22 @@ import { parseRoutingLogMeta } from "@/lib/routing-log-meta";
 import { answerMetadataQuestion } from "@/lib/metadata-coverage";
 import { validateTablesForTab } from "@/lib/table-allowlist";
 import { alignTitleYearRange, applyResultDisclosures, missingLowerBoundNote, returnedEntityKeys, trimTrailingEmptyYearRows } from "@/lib/result-disclosure";
+import { withholdUnverifiedChange, appendWithheldChangeNote, applyPeriodDisclosure } from "@/lib/period-comparison";
 import { validateGrain } from "@/lib/requested-grain";
 import { normalizeHistoryAllSources, normalizeHistoryForTab } from "@/lib/chat-history";
 import { applyGeoCorrection, geoCorrectionHint } from "@/lib/geo-correction";
 import { containsInternalLeak, INTERNAL_LEAK_SAFE_MESSAGE, sanitizeUserFacingNarrative, sanitizeChartConfigTitle} from "@/lib/scaffold-helpers";
-import { buildNoSqlFallbackMessage } from "@/lib/refusal-safety";
+import { buildNoSqlFallbackMessage, courtProcessNoSqlIsTerminal, selectNoSqlRefusal } from "@/lib/refusal-safety";
 import { boundedModelResponseJson } from "@/lib/no-sql-retry";
 import { buildCompletenessAnswer, detectCompletenessQuestion, loadCompletenessRows } from "@/lib/completeness-intent";
 import { detectFollowupTransform } from "@/lib/followup-transform";
+import { resolveCurrentFollowupAmendment } from "@/lib/current-followup-amendment";
 import { getBlockingGeoClarification } from "@/lib/geo-resolver";
 import { getCountyScopeClarification } from "@/lib/county-clarifier";
+import { currentTrendsResultState, genericResultState } from "@/lib/result-state-adapters";
+import { governFactualNarrative } from "@/lib/result-state";
+import type { ResolvedAgency } from "@/lib/agency-disclosure";
+import { shouldAskCrimeType } from "@/lib/crime-type-clarification";
 import { detectCurrentYearClearanceOverride, detectDemographicRateDenominatorFollowup, detectDemographicHomicideRateOverride, detectSubCityGeographyOverride } from "@/lib/capability-overrides";
 import { historicalYearAvailability } from "@/lib/year-availability";
 import { reliabilityDisclosureNote } from "@/lib/reliability-disclosure";
@@ -48,8 +54,26 @@ import { partialCoverageRetryPrompt } from "@/lib/source-year-overlap";
 import { resolveGeoPlaces } from "@/lib/geo-place-resolver";
 import { isFollowUp } from "@/lib/tab-suggest";
 import { buildHistoricalCityChangeRankingPlan, buildHistoricalLocalRecentChangePlan } from "@/lib/historical-deterministic-queries";
-import { buildMultiCityTrendPlan } from "@/lib/multi-city-deterministic";
+import { buildHistoricalPeerComparisonPlan } from "@/lib/historical-peer-comparison";
+import { verifyPeerMembership } from "@/lib/peer-comparison";
+import { fetchHistoricalPeerCandidates, resolveHistoricalSubjectPopulation } from "@/lib/peer-adapters";
+import { buildMultiCityTrendPlan, relativePeriodShortfallNote } from "@/lib/multi-city-deterministic";
+import { historicalBaltimoreComparisonDefault, withBaltimoreDisclosure, withoutBaltimoreDisclosure } from "@/lib/historical-baltimore-comparison";
 import { buildCurrentIndexedStatePlan } from "@/lib/current-indexed-state-deterministic";
+import { recognizeCityRanking } from "@/lib/city-ranking";
+import { buildCityRanking } from "@/lib/city-ranking-builder";
+import { RTCI_DATA_CUTOFF } from "@/lib/dynamic-facts";
+import {
+  buildCurrentYoyComparisonPlan,
+  buildCurrentYoyComparisonAnswer,
+  buildCurrentYoyGroup,
+  answerCoversRequiredCells,
+  type CurrentYoyAnswerRow,
+  type CurrentYoyPeriodRow,
+  type CurrentYoyMembershipRow,
+  type CurrentYoySampleRow,
+  type CurrentYoyGroup,
+} from "@/lib/current-yoy-comparison-deterministic";
 import { deterministicPlanRefusal } from "@/lib/deterministic-plan-guard";
 import { detectQueryBearingFollowup } from '@/lib/query-bearing-followup';
 import { planFollowupSafe } from '@/lib/followup-planner';
@@ -80,6 +104,7 @@ import {
 import { sealPlanDerivation } from "@/lib/plan-derivation";
 import { cacheValiditySignature } from "@/lib/proof-cache-validity";
 import type { DeliveryAction, SourceId } from "@/lib/proof-contract";
+import type { QueryContract } from "@/lib/query-contract";
 
 /**
  * Events that assert no facts: status pings and error notices. These need no proof.
@@ -525,6 +550,9 @@ export async function POST(req: NextRequest) {
   }
 
   const routingMeta = parseRoutingLogMeta(body);
+  // What the user typed. The Baltimore comparison default below replaces `question` for every
+  // consumer; the query log keeps this.
+  const recordedQuestion = question;
   const writeLog = (
     q: string,
     sqlText: string | null,
@@ -553,11 +581,19 @@ export async function POST(req: NextRequest) {
     /** Bounded raw model text on no-SQL failures; diagnostic only, never user-visible. */
     modelResponseJson: string | null = null
   ) => {
-    chartAuditQueryLogId = logQuery(q, sqlText, rowCount, logError, ms, logResponse, tabName, guardrails, model, sid, routingMeta, chartConfigJson, chartAuditRequestId, modelResponseJson, proofLogFields(proof));
+    chartAuditQueryLogId = logQuery(q === question ? recordedQuestion : q, sqlText, rowCount, logError, ms, logResponse, tabName, guardrails, model, sid, routingMeta, chartConfigJson, chartAuditRequestId, modelResponseJson, proofLogFields(proof));
     return chartAuditQueryLogId;
   };
 
   const tab = body?.mode === "historical" ? "historical" : "current";
+
+  // GC-098 (Codex design ruling 2026-09-26, option A, Historical only): bare "Baltimore" compared
+  // with one other unambiguous city means Baltimore city. The city-qualified request replaces
+  // `question` here, before any consumer reads it -- the geographic gate, deterministic builders,
+  // model instruction, contract validation and proof all see the same request -- and every exit
+  // that can answer it carries the application-owned disclosure. Standalone "Baltimore" still asks.
+  const baltimoreDefault = tab === "historical" ? historicalBaltimoreComparisonDefault(question) : null;
+  if (baltimoreDefault) question = baltimoreDefault.effectiveQuestion;
 
   /**
    * Proof finalization for one terminal exit of this route.
@@ -595,12 +631,16 @@ export async function POST(req: NextRequest) {
    * the reviewer still sees what the user actually typed.
    */
   let proofQuestion = question;
+  // The effective request, when a Current follow-up was built by amendment. Set beside
+  // proofQuestion so every later exit reasons about the same request the validator checked.
+  let proofContract: QueryContract | null = null;
   const finalizeExit = (
     opts: Partial<ProofFinalizationInput> & { intendedAction: DeliveryAction },
   ): ProofFinalization =>
     finalizeProof({
       sourceId: proofSourceId,
       question: proofQuestion,
+      contract: proofContract,
       sql: null,
       rows: [],
       columns: [],
@@ -850,6 +890,46 @@ export async function POST(req: NextRequest) {
     });
   }
 
+  // ── Increment 3 (Decision 9): violent / property / both ──────────────────────
+  // A bare "crime" question is answered by silently choosing a definition, and violent
+  // and property crime move in different directions. Ask once, then proceed. Geographic
+  // ambiguity is resolved first (above), so we never stack two questions on one turn.
+  // A query-bearing follow-up must NOT skip the gate. If the first turn resolved a place
+  // ambiguity ("which Kansas City?"), the crime type is still unchosen, and skipping here
+  // let the next turn proceed without ever asking. Evaluate the RECONSTRUCTED question so
+  // the follow-up is judged with its inherited context. Geography still asks first, so
+  // only one question is ever put to the user in a turn.
+  const crimeTypeQuestion = (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing" && !followupPlan.chartOnly)
+    ? followupPlan.reconstructedQuestion
+    : question;
+  const crimeTypeAsk = getBlockingGeoClarification(crimeTypeQuestion)
+    ? null
+    : shouldAskCrimeType(crimeTypeQuestion, normalizeHistoryAllSources(body?.history));
+  if (crimeTypeAsk?.needsClarification) {
+    const ms = Date.now() - totalStart;
+    const proof = finalizeExit({ intendedAction: "clarify", planFamily: "crime-type:violent-property-both" });
+    writeLog(question, null, 0, null, ms, crimeTypeAsk.clarificationQuestion, tab, ["crime-type:violent-property-both"], "deterministic", sessionId, null, proof);
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(encoder.encode(sseEvent(emitFactualPayload(proof, {
+          type: "result",
+          sql: null as unknown as string,
+          explanation: crimeTypeAsk.clarificationQuestion,
+          title: "",
+          columns: [],
+          rows: [],
+          rowCount: 0,
+          truncated: false,
+          chartConfig: null,
+          chartMeta: null,
+          executionTimeMs: ms,
+        }))));
+        controller.close();
+      },
+    });
+    return new Response(stream, { headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", Connection: "keep-alive", "X-RateLimit-Remaining": String(rateCheck.remaining) } });
+  }
+
   const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing") ? (followupPlan.chartOnly ? null : getBlockingGeoClarification(followupPlan.reconstructedQuestion)) : getBlockingGeoClarification(question);
   if (geoClarification) {
     const ms = Date.now() - totalStart;
@@ -887,6 +967,32 @@ export async function POST(req: NextRequest) {
         "X-RateLimit-Remaining": String(rateCheck.remaining),
       },
     });
+  }
+
+  // ── GC-070: an amendment this turn cannot safely be composed onto ──────────────────────
+  //
+  // The composition below carries the reader's established request forward. When one of the turns
+  // between the anchor and now cannot be resolved — a year the parser cannot read, or a word with
+  // more than one plausible meaning — it is NOT stepped over to reach the older topic. Asking
+  // costs a turn; guessing changes the question. Placed after the geographic and crime-type gates,
+  // so a turn still puts at most one question to the reader.
+  const currentAmendment = resolveCurrentFollowupAmendment(question, body?.history, tab === "historical" ? "historical" : "current");
+  if (currentAmendment.kind === "clarify") {
+    const ms = Date.now() - totalStart;
+    const planFamily = `current-amendment:${currentAmendment.reason}`;
+    const proof = finalizeExit({ intendedAction: "clarify", planFamily });
+    writeLog(question, null, 0, null, ms, currentAmendment.question, tab, [planFamily], "deterministic", sessionId, null, proof);
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(encoder.encode(sseEvent(emitFactualPayload(proof, {
+          type: "result", sql: null as unknown as string, explanation: currentAmendment.question,
+          title: "", columns: [], rows: [], rowCount: 0, truncated: false,
+          chartConfig: null, chartMeta: null, executionTimeMs: ms,
+        }))));
+        controller.close();
+      },
+    });
+    return new Response(stream, { headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", Connection: "keep-alive", "X-RateLimit-Remaining": String(rateCheck.remaining) } });
   }
 
   const historicalAvailability = tab === "historical" ? historicalYearAvailability(question) : null;
@@ -930,6 +1036,155 @@ export async function POST(req: NextRequest) {
         "Cache-Control": "no-cache",
         Connection: "keep-alive",
         "X-RateLimit-Remaining": String(rateCheck.remaining),
+      },
+    });
+  }
+
+  /*
+   * City rankings on Current are CONSTRUCTED from a declared request (lib/city-ranking.ts), for the
+   * same reason as on NIBRS: the eligibility quantity and the sort quantity are separate fields, so
+   * an unrequested floor has nothing to originate from.
+   *
+   * THIS FAMILY OWNS ITS FAILURES. Unlike the deterministic branches below it, a recognised request
+   * that cannot be planned or executed does NOT fall through to the model path. Falling through is
+   * how a request with these guarantees quietly becomes generated SQL that has none of them.
+   */
+  const cityRanking = tab === "current" ? recognizeCityRanking(question, "current") : null;
+  if (cityRanking) {
+    const built = cityRanking.kind === "ranking"
+      ? buildCityRanking(cityRanking, {
+          year: RTCI_DATA_CUTOFF.year,
+          month: RTCI_DATA_CUTOFF.month,
+          // Carried, not dropped: a heuristic cutoff must not become a claim about the data.
+          observed: RTCI_DATA_CUTOFF.observed,
+        })
+      : null;
+    const limitation = cityRanking.kind === "unsupported"
+      ? cityRanking.explanation
+      : built
+        ? null
+        : "I couldn't establish which year to rank for that request. Name the year and I can build the ranking.";
+
+    const ms0 = Date.now() - totalStart;
+    // `!built` is carried in the condition as well as `limitation` so the narrowing below is real
+    // rather than implied: after this block the plan is non-null by the type system, not by reading.
+    if (limitation || !built) {
+      const proof = finalizeExit({ intendedAction: "decline_capability", sql: null, guardrails: ["city-ranking-unavailable"] });
+      writeLog(question, null, 0, "city_ranking_unavailable", ms0, limitation ?? "I couldn't build that ranking.", tab, ["city-ranking-unavailable"], "deterministic", sessionId, null, proof);
+      const stream = new ReadableStream({
+        start(controller) {
+          controller.enqueue(encoder.encode(sseEvent(emitFactualPayload(proof, {
+            type: "result", sql: null as unknown as string, explanation: limitation ?? "I couldn't build that ranking.",
+            title: "Ranking Not Available", columns: [], rows: [], rowCount: 0,
+            truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: ms0,
+          }))));
+          controller.close();
+        },
+      });
+      return new Response(stream, {
+        headers: {
+          "Content-Type": "text/event-stream", "Cache-Control": "no-cache",
+          Connection: "keep-alive", "X-RateLimit-Remaining": String(rateCheck.remaining),
+        },
+      });
+    }
+
+    // Named so the execution site reads `cityRankingPlan.sql`: the route-placement accounting
+    // classifies executions by that shape, and a `cityRankingPlan.sql` written inline is unrecognisable to it.
+    const cityRankingPlan: NonNullable<typeof built> = built;
+    const cityRankingRefusal = deterministicPlanRefusal({ question, source: tab, sql: cityRankingPlan.sql });
+    let rows: Record<string, unknown>[] = [];
+    let columns: string[] = cityRankingPlan.columns;
+    let failure: string | null = cityRankingRefusal ? "structural-refusal" : null;
+    if (!cityRankingRefusal) {
+      try {
+        const db = getDb();
+        rows = executeWithTimeoutSync<Record<string, unknown>>(db, db.prepare(cityRankingPlan.sql), 30000);
+        columns = rows.length > 0 ? Object.keys(rows[0]) : cityRankingPlan.columns;
+      } catch (err) {
+        console.warn("[city-ranking] execution failed", err);
+        failure = "execution-failed";
+      }
+    }
+    const ms = Date.now() - totalStart;
+    if (failure) {
+      // Owned failure: an honest limitation about OUR failure, never a claim about the data.
+      const explanation =
+        "I couldn't complete that ranking. That's a failure on our side, not a statement about what " +
+        "the data contains. Try naming the year, or ask for a single city's figures instead.";
+      const proof = finalizeExit({ intendedAction: "decline_capability", sql: cityRankingPlan.sql, guardrails: [`city-ranking-${failure}`] });
+      writeLog(question, cityRankingPlan.sql, 0, `city_ranking_${failure}`, ms, explanation, tab, [`city-ranking-${failure}`], "deterministic", sessionId, null, proof);
+      const stream = new ReadableStream({
+        start(controller) {
+          controller.enqueue(encoder.encode(sseEvent(emitFactualPayload(proof, {
+            type: "result", sql: null as unknown as string, explanation,
+            title: "Ranking Not Available", columns: [], rows: [], rowCount: 0,
+            truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: ms,
+          }))));
+          controller.close();
+        },
+      });
+      return new Response(stream, {
+        headers: {
+          "Content-Type": "text/event-stream", "Cache-Control": "no-cache",
+          Connection: "keep-alive", "X-RateLimit-Remaining": String(rateCheck.remaining),
+        },
+      });
+    }
+
+    /*
+     * DELIVERY MEETS THE SAME OBLIGATIONS AS EVERY OTHER DETERMINISTIC BRANCH.
+     *
+     * This exit returns long before the model path's disclosure and charting run, and the first
+     * version simply emitted its own title and sentences with `chartConfig: null` -- so a ranking
+     * that came back empty said only what the builder had composed before it ran, and a ranking
+     * that came back full was the one deterministic answer on this tab with no chart. Being
+     * hand-built is not an exemption; it just means the obligations have to be met here.
+     */
+    const cityRankingState = currentTrendsResultState(getDb(), { sql: cityRankingPlan.sql, rows });
+    const explanation = applyResultDisclosures({
+      explanation: [`${cityRankingPlan.title}.`, ...cityRankingPlan.caveats].join(" "),
+      question, sql: cityRankingPlan.sql, rows, tab, resultState: cityRankingState,
+    });
+    const cityRankingChart: ChartConfig | null = rows.length > 0
+      ? {
+          type: "bar",
+          // From the plan: a reporting-jurisdiction ranking charts its distinct label (GC-057).
+          xAxis: cityRankingPlan.entityColumn,
+          yAxis: [cityRankingPlan.sortColumn],
+          title: cityRankingPlan.title,
+          xAxisLabel: cityRankingPlan.entityLabel,
+          yAxisLabel: cityRankingPlan.sortColumn === "rate_per_100k" ? "Rate per 100,000" : "Offenses",
+        }
+      : null;
+    const cityRankingChartMeta = { source: "RTCI", agencyCount: rows.length, population: null };
+    const proof = finalizeExit({
+      intendedAction: rows.length > 0 ? "answer" : "decline_data",
+      sql: cityRankingPlan.sql, rows, columns,
+      derivation: sealPlanDerivation(cityRankingPlan.guardrail, cityRankingPlan.sql),
+      planFamily: cityRankingPlan.guardrail, guardrails: [cityRankingPlan.guardrail],
+      narrative: explanation,
+      hasChart: Boolean(cityRankingChart), db: getDb(),
+    });
+    writeLog(question, cityRankingPlan.sql, rows.length, null, ms, explanation, tab, [cityRankingPlan.guardrail], "deterministic", sessionId, serializeChartConfigForLog(cityRankingChart, columns, cityRankingChartMeta), proof);
+    attachChartAuditToPayload({ chartConfig: cityRankingChart, columns, rows }, { source: tab, requestId: chartAuditRequestId, queryLogId: chartAuditQueryLogId });
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(encoder.encode(sseEvent(emitFactualPayload(proof, {
+          type: "result", requestId: chartAuditRequestId, chartAuditSource: tab,
+          sql: cityRankingPlan.sql, explanation, title: cityRankingPlan.title,
+          columns, rows, rowCount: rows.length, truncated: false,
+          chartConfig: cityRankingChart,
+          chartMeta: cityRankingChartMeta,
+          executionTimeMs: ms,
+        }))));
+        controller.close();
+      },
+    });
+    return new Response(stream, {
+      headers: {
+        "Content-Type": "text/event-stream", "Cache-Control": "no-cache",
+        Connection: "keep-alive", "X-RateLimit-Remaining": String(rateCheck.remaining),
       },
     });
   }
@@ -995,6 +1250,178 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  /*
+   * Decision 17, owned by the request rather than by the answer's column names.
+   *
+   * GC-055 asked "did violent crime decrease every year from 2023 to 2026?" and was delivered
+   * `decreased: "Yes"` for a five-month 2026 against a full-year 2025 — the run before, the same
+   * question produced `pct_change: -61.9`. The presentation control caught the numeric shape and
+   * not the categorical one, because it had to guess the operation from what came back. Here the
+   * contract declares the comparison, and this plan owns the periods, the coverage evidence, the
+   * arithmetic and the delivered text.
+   *
+   * The plan's own SQL is gated below like its siblings. Its paired coverage read is deliberately
+   * NOT presented as an answer: it projects a contributor count rather than a measure, it exists
+   * only to decide matched/unequal/unestablished, and it shares its scope clause verbatim with the
+   * gated statement.
+   */
+  const yoyComparisonPlan = !planSaysQueryBearing && tab === "current"
+    ? buildCurrentYoyComparisonPlan(question)
+    : null;
+  const yoyComparisonRefusal = deterministicPlanRefusal({ question, source: tab, sql: yoyComparisonPlan?.sql });
+  if (yoyComparisonRefusal) console.log(`[structural] current yoy comparison plan refused: ${yoyComparisonRefusal.ruleIds.join(", ")}`);
+  if (yoyComparisonPlan && !yoyComparisonRefusal) {
+    /*
+     * A failure in here is an INTERNAL failure, and must not be reported as unknown coverage or
+     * handed to the model path as an ordinary question. Falling through would put the comparison
+     * back in front of the model with nothing owning it, which is the defect this branch exists to
+     * remove.
+     */
+    let comparisonFailed = false;
+    let answerRows: CurrentYoyAnswerRow[] = [];
+    let comparisonGroup: CurrentYoyGroup | null = null;
+    let db: ReturnType<typeof getDb> | null = null;
+    try {
+      db = getDb();
+      /*
+       * ONE snapshot, not three calls. Each `executeWithTimeoutSync` spawns its own worker process
+       * with its own connection, so reading the periods, the membership and the totals separately
+       * would let them describe the database at three different moments — and a group selected in
+       * one snapshot cannot license totals read from another.
+       * `executeManyWithTimeoutSync` runs all three statements in one worker inside one read
+       * transaction, and refuses outright when bounded execution is unavailable. Membership is
+       * decided by the SQL itself, so no round trip is needed between the reads.
+       */
+      const [periodResult, sampleResult, membershipResult, answerResult] = executeManyWithTimeoutSync<Record<string, unknown>>(
+        db,
+        [
+          yoyComparisonPlan.periodSql,
+          // The starting sample size is its own statement so it survives an empty group; reading it
+          // off the membership rows made a nonempty sample look empty when nobody qualified.
+          yoyComparisonPlan.sampleSql,
+          yoyComparisonPlan.membershipSql,
+          yoyComparisonPlan.sql,
+        ],
+        30000,
+      );
+      comparisonGroup = buildCurrentYoyGroup(
+        yoyComparisonPlan.years,
+        periodResult as unknown as CurrentYoyPeriodRow[],
+        membershipResult as unknown as CurrentYoyMembershipRow[],
+        sampleResult as unknown as CurrentYoySampleRow[],
+        yoyComparisonPlan.offenses.length,
+      );
+      answerRows = answerResult as unknown as CurrentYoyAnswerRow[];
+      /*
+       * The delivered totals must describe exactly the required cells for exactly the selected
+       * group. Selection is supposed to guarantee it, so a mismatch is an internal fault rather
+       * than a coverage result — an empty group legitimately returns no cells.
+       */
+      if (!answerCoversRequiredCells(answerRows, comparisonGroup, yoyComparisonPlan.offenses)) {
+        console.error("[current-yoy] the answer read does not cover exactly the required group cells");
+        comparisonFailed = true;
+      }
+    } catch (err) {
+      console.error("[current-yoy] comparison read failed", err);
+      comparisonFailed = true;
+    }
+
+    if (comparisonFailed) {
+      const ms = Date.now() - totalStart;
+      const message = "I could not read the reporting coverage needed to compare those years, so I am not showing a comparison. This is a problem on my side, not a statement about the data.";
+      // Logged as an ERROR with a null proof. No proof is finalized because no factual payload is
+      // delivered, and recording this as a data decline would misfile an internal fault as an
+      // absence of coverage.
+      writeLog(question, yoyComparisonPlan.sql, 0, "current-yoy comparison read failed", ms, message, tab, [`${yoyComparisonPlan.guardrail}-internal-failure`], "deterministic", sessionId, null, null);
+      const stream = new ReadableStream({
+        start(controller) {
+          controller.enqueue(encoder.encode(sseEvent({ type: "error", text: message })));
+          controller.close();
+        },
+      });
+      return new Response(stream, {
+        headers: {
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache",
+          Connection: "keep-alive",
+          "X-RateLimit-Remaining": String(rateCheck.remaining),
+        },
+      });
+    }
+
+    const answer = buildCurrentYoyComparisonAnswer(yoyComparisonPlan, answerRows, comparisonGroup!);
+    const executedColumns = answerRows.length > 0 ? Object.keys(answerRows[0]) : yoyComparisonPlan.columns;
+    const ms = Date.now() - totalStart;
+    if (answer.withheld.length > 0) {
+      console.log(`[current-yoy] withheld ${JSON.stringify(answer.withheld)}`);
+    }
+    // Group size and exclusions are logged; the identifiers stay out of the log and the answer.
+    console.log(`[current-yoy] group ${answer.group.includedCount}/${answer.group.startingSampleSize}` +
+      ` excluded=${answer.group.excludedCount} requiredCells=${answer.group.requiredCellsPerAgency}`);
+    const proof = finalizeExit({
+      intendedAction: answerRows.length > 0 ? "answer" : "decline_data",
+      sql: yoyComparisonPlan.sql,
+      // The executed evidence, exactly as returned. The delivered rows are the presentation below.
+      rows: answerRows as unknown as Record<string, unknown>[],
+      columns: executedColumns,
+      derivation: sealPlanDerivation(yoyComparisonPlan.guardrail, yoyComparisonPlan.sql),
+      planFamily: yoyComparisonPlan.guardrail,
+      guardrails: [yoyComparisonPlan.guardrail],
+      narrative: answer.explanation,
+      hasChart: false,
+      db: db ?? undefined,
+    });
+    writeLog(
+      question,
+      yoyComparisonPlan.sql,
+      answerRows.length,
+      null,
+      ms,
+      answer.explanation,
+      tab,
+      [yoyComparisonPlan.guardrail, ...(answer.withheld.length > 0 ? ["unverified-change-withheld"] : [])],
+      "deterministic",
+      sessionId,
+      // No chart: a withheld change must not survive as a plotted series, and the delivered table
+      // is the whole answer.
+      serializeChartConfigForLog(null, executedColumns, yoyComparisonPlan.chartMeta),
+      proof
+    );
+    attachChartAuditToPayload({ chartConfig: null, columns: executedColumns, rows: answerRows as unknown as Record<string, unknown>[] }, { source: tab, requestId: chartAuditRequestId, queryLogId: chartAuditQueryLogId });
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(
+          encoder.encode(
+            sseEvent(emitFactualPayload(proof, {
+              type: "result",
+              requestId: chartAuditRequestId,
+              chartAuditSource: tab,
+              sql: yoyComparisonPlan.sql,
+              explanation: answer.explanation,
+              title: answer.title,
+              columns: answer.columns,
+              rows: answer.rows,
+              rowCount: answer.rows.length,
+              truncated: false,
+              chartConfig: null,
+              chartMeta: yoyComparisonPlan.chartMeta,
+              executionTimeMs: ms,
+            }))
+          )
+        );
+        controller.close();
+      },
+    });
+    return new Response(stream, {
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive",
+        "X-RateLimit-Remaining": String(rateCheck.remaining),
+      },
+    });
+  }
+
   const multiCityTrend = !planSaysQueryBearing && (tab === "current" || tab === "historical")
     ? buildMultiCityTrendPlan(question, tab)
     : null;
@@ -1005,6 +1432,24 @@ export async function POST(req: NextRequest) {
       const db = getDb();
       const rows = executeWithTimeoutSync<Record<string, unknown>>(db, db.prepare(multiCityTrend.sql), 30000);
       const columns = rows.length > 0 ? Object.keys(rows[0]) : multiCityTrend.columns;
+      /*
+       * This deterministic exit emits its own payload and never reaches applyResultDisclosures, so
+       * the presentation result has to be built here too — otherwise an unverified change would be
+       * delivered on the very path that produces GC-042's `period`-shaped rows.
+       */
+      const presentation = withholdUnverifiedChange({
+        rows, columns, sql: multiCityTrend.sql,
+        explanation: multiCityTrend.explanation, title: multiCityTrend.title,
+        question,
+      });
+      const deliveredRows = presentation.rows;
+      const deliveredColumns = presentation.columns;
+      // This exit never reaches applyResultDisclosures, so the prepared narrative is used here.
+      // GC-098 correction C1: a relative Historical period is never silently shortened to the years
+      // the source holds; the rows are checked against the resolved period and any gap is stated.
+      const periodShortfall = relativePeriodShortfallNote(multiCityTrend, rows);
+      const periodExplanation = periodShortfall ? `${presentation.explanation.trimEnd()} ${periodShortfall}` : presentation.explanation;
+      multiCityTrend.explanation = withBaltimoreDisclosure(periodExplanation, baltimoreDefault);
       const ms = Date.now() - totalStart;
       // Multi-city comparison is the family that produced the 31-of-32 failure, so
       // it supplies requested/returned entity sets to the completeness check. The
@@ -1051,13 +1496,17 @@ export async function POST(req: NextRequest) {
                 requestId: chartAuditRequestId,
                 chartAuditSource: tab,
                 sql: multiCityTrend.sql,
-                explanation: multiCityTrend.explanation,
+                // From the presentation result: this exit never reaches applyResultDisclosures, so
+                // the period sentences and any withholding must already be in what it sends. The
+                // fallback is the deterministic plan's own text, if the presentation produced none.
+                explanation: multiCityTrend.explanation || presentation.explanation,
                 title: multiCityTrend.title,
-                columns,
-                rows,
-                rowCount: rows.length,
+                // Presentation result, not the executed rows.
+                columns: deliveredColumns,
+                rows: deliveredRows,
+                rowCount: deliveredRows.length,
                 truncated: false,
-                chartConfig: rows.length > 0 ? multiCityTrend.chartConfig : null,
+                chartConfig: deliveredRows.length > 0 ? multiCityTrend.chartConfig : null,
                 chartMeta: multiCityTrend.chartMeta,
                 executionTimeMs: ms,
               }))
@@ -1079,9 +1528,19 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const historicalCityChange = tab === "historical"
-    ? buildHistoricalLocalRecentChangePlan(question, HISTORICAL.crimeMaxYear) ?? buildHistoricalCityChangeRankingPlan(question, body?.history)
+  // Increment 5 (Decision 16): the deterministic Historical peer path. Peers are chosen
+  // by the shared population core from real candidates, and the national series stays a
+  // separately labelled series rather than being folded into the peer average.
+  const historicalPeer = tab === "historical"
+    ? buildHistoricalPeerComparisonPlan(question, {
+        candidateSource: (q) => fetchHistoricalPeerCandidates(getDb() as unknown as Parameters<typeof fetchHistoricalPeerCandidates>[0], q),
+        resolveSubject: (name, state) => resolveHistoricalSubjectPopulation(getDb(), name, state),
+      })
     : null;
+  const historicalCityChange = tab === "historical"
+    ? historicalPeer ?? buildHistoricalLocalRecentChangePlan(question, HISTORICAL.crimeMaxYear) ?? buildHistoricalCityChangeRankingPlan(question, body?.history)
+    : null;
+  if (historicalCityChange && baltimoreDefault) historicalCityChange.explanation = withBaltimoreDisclosure(historicalCityChange.explanation, baltimoreDefault);
   const historicalCityChangeRefusal = deterministicPlanRefusal({ question, source: tab, sql: historicalCityChange?.sql });
   if (historicalCityChangeRefusal) console.log(`[structural] historical city-change plan refused: ${historicalCityChangeRefusal.ruleIds.join(", ")}`);
   if (historicalCityChange && !historicalCityChangeRefusal) {
@@ -1131,6 +1590,21 @@ export async function POST(req: NextRequest) {
       const db = getDb();
       const rows = executeWithTimeoutSync<Record<string, unknown>>(db, db.prepare(historicalCityChange.sql), 30000);
       const columns = rows.length > 0 ? Object.keys(rows[0]) : historicalCityChange.columns;
+      // R1 (Decision 16): compare the SELECTED peer membership with the evidence that came
+      // back. A named peer that returned no rows must be disclosed, not silently dropped —
+      // and never replaced, because selection is on population alone.
+      if (historicalPeer && historicalPeer === historicalCityChange && historicalPeer.selectedPeers.length > 0) {
+        // Review 2B: identities, not bare labels. The Historical result carries no id
+        // column, so this degrades to exact place-and-kind label matching — which is
+        // correct here because both sides read `historical_agency.agency`.
+        const returned = rows
+          .filter((r) => String(r.series) !== "National")
+          .map((r) => ({ id: r.ori == null ? null : String(r.ori), label: String(r.place) }));
+        const membership = verifyPeerMembership(historicalPeer.selectedPeers, returned);
+        if (!membership.complete) {
+          historicalCityChange.explanation = `${historicalCityChange.explanation} ${membership.disclosure}`;
+        }
+      }
       const proof = finalizeExit({
         intendedAction: rows.length > 0 ? "answer" : "decline_data",
         sql: historicalCityChange.sql,
@@ -1322,6 +1796,8 @@ export async function POST(req: NextRequest) {
       const authoritativeNarrative = (text: string | null | undefined): string =>
         authoritativeIdentity(text, null).explanation;
       let contractQuestion = question;
+      // The effective request for an amended Current follow-up; null on every other path.
+      let contractOverride: QueryContract | null = null;
       let closed = false;
       /**
        * Model calls made for this request. Every call goes through translate(), so
@@ -1358,6 +1834,7 @@ export async function POST(req: NextRequest) {
           sql: inputSql,
           routingMeta,
           requiredOri: requiredCountyOri,
+          contract: contractOverride,
         });
         recordContractValidation(contractResult);
         return contractResult;
@@ -1402,15 +1879,34 @@ export async function POST(req: NextRequest) {
 
         const isHistorical = body?.mode === "historical";
         const history = normalizeHistoryForTab(body?.history, isHistorical ? "historical" : "current");
-        const followupTransform = (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing") ? followupPlan.transform : (detectFollowupTransform(question, history) ?? buildCrossSourceFollowupTransform(question, body?.history, isHistorical ? "historical" : "current"));
+        // ── GC-070: an explicit amendment, carried as the effective request ─────────────────────
+        //
+        // "now detroit" settled nothing on its own, so every consumer below saw a fragment and the
+        // rolling-12 per-capita series the reader had built was lost. `currentAmendment` builds the
+        // effective request as a contract, field by field, from a full user anchor plus the explicit
+        // amendments that followed it, reading only the bounded history the client already sends.
+        // It sits AFTER the transforms the product already recognizes, so "what about Detroit" keeps
+        // its existing behavior, and no planner mode is changed to make it fire.
+        const followupTransform = (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing") ? followupPlan.transform : (detectFollowupTransform(question, history) ?? (currentAmendment.kind === "composed" ? currentAmendment.transform : null) ?? buildCrossSourceFollowupTransform(question, body?.history, isHistorical ? "historical" : "current"));
+        // The contract travels only when the amendment's own transform is the one in force.
+        const amendedContract = (currentAmendment.kind === "composed" && followupTransform === currentAmendment.transform) ? currentAmendment.contract : null;
         // Bare clarifier answers ("Countywide total") carry no county name — use
-        // the transform's reconstructed question so guardrails see the geography
+        // the transform's reconstructed question so guardrails see the geography.
+        // For an amendment this is the contract's rendering, which the amendment has already
+        // verified reads back to the same request; the text-only guardrails below read it.
         const guardrailQuestion = (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing") ? followupPlan.reconstructedQuestion : (followupTransform?.contextQuestion ?? question);
-        contractQuestion = guardrailQuestion;
+        // The validator checks the SQL against the contract itself. Its question stays the reader's
+        // own words, for the rules about meaning an amendment does not carry.
+        contractQuestion = amendedContract ? question : guardrailQuestion;
+        contractOverride = amendedContract;
         // The guardrail question is the most complete reconstruction available -- it
-        // is what extractQueryContext and the contract validator see -- so proof uses
-        // it for every exit from here on.
+        // is what extractQueryContext sees -- so proof uses it, and the amended contract,
+        // for every exit from here on.
         proofQuestion = guardrailQuestion;
+        proofContract = amendedContract;
+        // The post-execution grain and disclosure checks read a sentence. For an amendment the
+        // reader's fragment says nothing about grain or period, so they read the rendering too.
+        const deliveryQuestion = amendedContract ? guardrailQuestion : question;
         const consolidationTargets = isHistorical
           ? [...new Map(resolveGeoPlaces(guardrailQuestion).mentions
               .flatMap((mention) => mention.candidates)
@@ -1457,13 +1953,19 @@ export async function POST(req: NextRequest) {
           );
 
           if (!claude.sql && !isOverBudget()) {
+            // Cause A: a court-process request is settled by the REQUEST policy, not by whatever the
+            // model wrote. No second call can turn a police record into a court record, so this
+            // request goes straight to the terminal exit and its policy explanation.
+            const courtProcessTerminal = courtProcessNoSqlIsTerminal(guardrailQuestion);
             // Retry if model incorrectly claims data isn't available
             const coverageRetryPrompt = partialCoverageRetryPrompt(tab, question, claude.explanation);
             const refusalPatterns = /not (appear|be represented)|doesn't appear|not (in|included in) (this|the|our) (dataset|data|sample|library)|no data (for|available|found)|does not (have|include|cover)|not available in this|isn't (in|included)|not found in/i;
             const genericRetryPrompt = tab === "historical"
               ? "[SYSTEM: Your previous response claimed the data was not available, but this may be incorrect. The Historical Library contains ~24,937 agencies including many small towns. NEVER assume an agency is missing - always generate a SQL query. Try: SELECT DISTINCT ori, agency, state FROM historical_agency WHERE agency LIKE '%[city]%' AND state = '[st]'. Then generate the main query.]"
               : "[SYSTEM: Your previous response claimed the data was not available, but this may be incorrect. The database contains agencies from many states. Please try generating a SQL query - search for the agency/state in the data rather than assuming it doesn't exist. Use sample_agencies or agency_monthly to check.]";
-            const retryPrompt = coverageRetryPrompt ?? (refusalPatterns.test(claude.explanation || "") ? genericRetryPrompt : null);
+            const retryPrompt = courtProcessTerminal
+              ? null
+              : coverageRetryPrompt ?? (refusalPatterns.test(claude.explanation || "") ? genericRetryPrompt : null);
             if (retryPrompt) {
               try {
                 const retryResult = await translate(
@@ -1527,7 +2029,11 @@ export async function POST(req: NextRequest) {
         if (!claude.sql) rawFirstNoSql = claude.explanation || null;
 
         let serverAuthoredNoSql = false;
-        if (!claude.sql && tab === "current" && !isOverBudget()) {
+        // Cause A: the verified-agency forcing retry answers "is this agency present?", which is the
+        // wrong question for a court-process request. Confirming that Houston is in Current Trends
+        // does not make a conviction rate available, so this second call is skipped for the same
+        // established family rather than pressing the model to produce a statement it should not.
+        if (!claude.sql && tab === "current" && !isOverBudget() && !courtProcessNoSqlIsTerminal(guardrailQuestion)) {
 
           const verifiedAgency = findVerifiedCurrentAgency(question, getDb());
           if (verifiedAgency) {
@@ -1560,7 +2066,10 @@ export async function POST(req: NextRequest) {
         if (!claude.sql) {
         if (containsInternalLeak(claude.explanation) || containsInternalLeak(claude.title)) { claude.explanation = INTERNAL_LEAK_SAFE_MESSAGE; claude.title = "Results"; firedGuardrails.push("internal-leak-firewall"); }
           const ms = Date.now() - totalStart;
-          if (!serverAuthoredNoSql && !containsInternalLeak(claude.explanation) && !containsInternalLeak(claude.title)) { claude.explanation = buildNoSqlFallbackMessage(tab === "historical" ? "historical" : "current"); firedGuardrails.push("no-sql-server-template"); }
+          // Decision 1: this branch RETURNS before `runGuardrails`, so `out-of-scope-override`
+          // never ran and a court-process request was told to restate itself with a place,
+          // offense and date range - advice that can never succeed. Ask the referent policy here.
+          if (!serverAuthoredNoSql && !containsInternalLeak(claude.explanation) && !containsInternalLeak(claude.title)) { const noSqlRefusal = selectNoSqlRefusal(guardrailQuestion, tab === "historical" ? "historical" : "current"); claude.explanation = noSqlRefusal.explanation; firedGuardrails.push(noSqlRefusal.reason); }
         claude.explanation = neutralizeUnverifiedAvailabilityClaim(claude.explanation, tab === "historical" ? "Historical" : "Current Trends");
         // The figures were restricted to one agency by the server; the name attached to them is
         // corrected here for the same reason. A user may say what they want and be wrong about
@@ -2089,6 +2598,13 @@ export async function POST(req: NextRequest) {
           // above established which of the five situations this is. When it could not, the
           // reply declines instead. Historical keeps its existing probes.
           const emptyIsSourceAbsence = isHistorical || (currentEmpty?.establishedFromData ?? false);
+          // F3 (Decision 13): the empty-result exit is one of the paths Decision 13
+          // governs, and it returns long before applyResultDisclosures. Classify here and
+          // let the shared guard replace any claim the evidence does not support.
+          const emptyState = isHistorical
+            ? genericResultState({ sql, rows })
+            : currentTrendsResultState(db, { sql, rows });
+          emptyMsg = governFactualNarrative(emptyMsg, emptyState);
           const emptyProof = finalizeExit({
             intendedAction: emptyIsSourceAbsence ? "decline_data" : "decline_capability",
             sql, columns, guardrails: firedGuardrails, db,
@@ -2205,17 +2721,22 @@ export async function POST(req: NextRequest) {
               ? "I couldn't find a matching agency or county record for that query. The name may be stored differently in the database — try the exact agency name (e.g., 'Alameda County' not just 'Alameda'), or check the Historical Library tab which has county-level records."
               : "I ran that query but all the values came back empty — the math likely broke somewhere (like dividing by zero). Could you try asking that a different way?";
             const allNullIsSourceAbsence = isHistorical || (currentAllNull?.establishedFromData ?? false);
+            // F3 (Decision 13): the all-null exit is likewise a Decision 13 path.
+            const allNullState = isHistorical
+              ? genericResultState({ sql, rows })
+              : currentTrendsResultState(db, { sql, rows });
+            const governedAllNullMsg = governFactualNarrative(emptyMsg, allNullState);
             const allNullProof = finalizeExit({
               intendedAction: allNullIsSourceAbsence ? "decline_data" : "decline_capability",
               sql, columns, guardrails: firedGuardrails, db,
             });
-            writeLog(question, sql, 0, "all_null_columns", totalMs, emptyMsg, tab, firedGuardrails, "haiku-4.5", sessionId, null, allNullProof);
+            writeLog(question, sql, 0, "all_null_columns", totalMs, governedAllNullMsg, tab, firedGuardrails, "haiku-4.5", sessionId, null, allNullProof);
             controller.enqueue(
               encoder.encode(
                 sseEvent(emitFactualPayload(allNullProof, {
                   type: "result",
                   sql,
-                  explanation: emptyMsg,
+                  explanation: governedAllNullMsg,
                   title: claude.title || "No Results",
                   columns,
                   rows: [],
@@ -2308,8 +2829,33 @@ export async function POST(req: NextRequest) {
 
         claude.title = alignTitleYearRange(claude.title, rows);
 
-        // Step 5: Build chart config + metadata
-        const chartConfig = buildChartConfig(claude, columns, rows, question);
+        /*
+         * Decision 17: withhold an unverified year-over-year change BEFORE anything is delivered.
+         *
+         * GC-055 returned `pct_change: -61.9` for partial 2026 against complete 2025 — a value the
+         * query's own LAG() computed, so no wording change removes it. The presentation result is
+         * built here, ahead of the chart and the first emit, and `rows` (the executed evidence) is
+         * left exactly as the query returned it.
+         */
+        const presentation = withholdUnverifiedChange({
+          rows, columns, sql,
+          explanation: claude.explanation || "", title: claude.title || "",
+          // `question` is already in scope here (it is passed to buildChartConfig below), so the
+          // relevance signal reaches the FIRST answer rather than only the later explanation.
+          question,
+        });
+        const deliveredRows = presentation.rows;
+        const deliveredColumns = presentation.columns;
+        // ONE presentation decision. `presentation.explanation` already has the offending claim
+        // removed, the withholding stated and the period sentences applied, so the first answer
+        // carries them -- the later explanation cannot un-send what has gone out.
+        claude.explanation = presentation.explanation;
+        claude.title = presentation.title || claude.title;
+        if (presentation.note) firedGuardrails.push("unverified-change-withheld");
+
+        // Step 5: Build chart config + metadata — from the presentation result, so a withheld
+        // change cannot survive as a charted series.
+        const chartConfig = presentation.cleanChart(buildChartConfig(claude, deliveredColumns, deliveredRows, question));
         const chartMeta = isHistorical ? getHistoricalChartMeta(db, sql) : getChartMeta(db, sql);
         if (tab === "current" && implausiblePopulationDenominator(rows, chartMeta?.population, RTCI.latestSamplePopulation)) {
           firedGuardrails.push("implausible-population-denominator");
@@ -2348,6 +2894,9 @@ export async function POST(req: NextRequest) {
           claude.explanation = withReliabilityNote(claude.explanation || "");
           if (!firedGuardrails.includes("reliability-disclosed")) firedGuardrails.push("reliability-disclosed");
         }
+        // GC-098: the Baltimore default is disclosed by the application, before the first factual
+        // event, and reapplied after each rewrite below, so a model omission or retry cannot drop it.
+        if (baltimoreDefault) claude.explanation = withBaltimoreDisclosure(claude.explanation || "", baltimoreDefault);
 
         // Step 5a2: PROOF FINALIZATION FOR THE FIRST FACTUAL EVENT.
         //
@@ -2365,6 +2914,19 @@ export async function POST(req: NextRequest) {
         // from the parsed request. Deriving it from `sql` -- as this line did -- means
         // the SQL that dropped a city also defines what was "requested", so
         // entityCompleteness passes on a silent omission. See lib/requested-entities.
+        // F3 (Decision 13): the STREAMING route sends this factual narrative before
+        // applyResultDisclosures ever runs, and a later corrected explanation cannot
+        // un-send unsafe wording. Govern it here, so the proof narrative and the bytes
+        // the user receives are the same governed text.
+        const initialState = isHistorical
+          ? genericResultState({ sql, rows })
+          : currentTrendsResultState(db, { sql, rows });
+        // Row presence is forwarded so a populated streamed answer is not discarded here —
+        // this call sends before applyResultDisclosures runs, and a later correction cannot
+        // un-send it. Argument plumbing only; the branch and stream protocol are unchanged.
+        claude.explanation = governFactualNarrative(
+          claude.explanation || "", initialState, null, { hasFigures: rows.length > 0 });
+
         const finalization = finalizeExit({
           intendedAction: "answer",
           sql,
@@ -2391,11 +2953,18 @@ export async function POST(req: NextRequest) {
               requestId: chartAuditRequestId,
               chartAuditSource: tab,
               sql,
+              /*
+               * The FINAL checked narrative, not the earlier presentation snapshot.
+               * `claude.explanation` already carries the presentation decision AND the single-row,
+               * sample and reliability caveats and the governor that runs after it — sending the
+               * snapshot dropped those caveats and restored a claim the safeguard had removed.
+               * This is also the text handed to finalizeExit, so proof and payload agree.
+               */
               explanation: claude.explanation,
               title: claude.title || "Results",
-              columns,
-              rows,
-              rowCount: rows.length,
+              columns: deliveredColumns,
+              rows: deliveredRows,
+              rowCount: deliveredRows.length,
               truncated,
               chartConfig,
               chartMeta,
@@ -2414,7 +2983,7 @@ export async function POST(req: NextRequest) {
             rows,
             rowCount: rows.length,
             disclaimers: "",  // let buildDisclaimers handle all disclaimers deterministically
-            preQueryExplanation: claude.explanation,
+            preQueryExplanation: withoutBaltimoreDisclosure(claude.explanation, baltimoreDefault),
           });
           // Fix national vs cities wording mismatch (e.g., national_clearance_rate described as "across cities")
           if (/\bnational_/i.test(sql) && !/\bagency\s*=/i.test(sql)) {
@@ -2427,15 +2996,38 @@ export async function POST(req: NextRequest) {
           if (!isHistorical && postExplanation && !postExplanation.includes("sample")) {
             postExplanation += "\n\nNote: Current Trends data comes from a sample of agencies with consistent reporting — it does not represent complete state or national totals. For comprehensive state-level estimates, try the Historical Library tab.";
           }
-          postExplanation = applyResultDisclosures({ explanation: postExplanation, question, sql, rows, tab });
-          if (missingLowerBoundNote(question, sql, rows) && !firedGuardrails.includes("lower-bound-disclosed")) firedGuardrails.push("lower-bound-disclosed");
-          const grainCheck = validateGrain(question, rows, sql);
+          // Increment 1 (Decision 13): classify the result state from this source's own
+          // evidence, then let the shared chokepoint refuse any empty-state claim the
+          // evidence does not support. Unknown stays unknown.
+          const resultState = isHistorical
+            ? genericResultState({ sql, rows })
+            : currentTrendsResultState(getDb(), { sql, rows });
+          // Increment 4 (Decision 10): when a county name was answered with a sheriff's
+          // agency, say so. The resolver above already made the choice; this only
+          // discloses it, so the two cannot drift apart.
+          const resolvedAgency: ResolvedAgency | undefined = countyAgency.kind === "resolved"
+            ? {
+                requested: `${countyAgency.county} County, ${countyAgency.state}`,
+                agencyName: countyAgency.agency,
+                state: countyAgency.state,
+                kind: /sheriff/i.test(countyAgency.agency) ? "county_sheriff" : "other",
+              }
+            : undefined;
+          postExplanation = applyResultDisclosures({ explanation: postExplanation, question: deliveryQuestion, sql, rows, tab, resultState, resolvedAgency });
+          // A later explanation must not quietly drop the withholding the first answer carried.
+          postExplanation = appendWithheldChangeNote(presentation.strip(postExplanation), presentation.note);
+          if (missingLowerBoundNote(deliveryQuestion, sql, rows) && !firedGuardrails.includes("lower-bound-disclosed")) firedGuardrails.push("lower-bound-disclosed");
+          const grainCheck = validateGrain(deliveryQuestion, rows, sql);
           if (!grainCheck.ok && grainCheck.message) {
             postExplanation = grainCheck.message;
             if (!firedGuardrails.includes("grain-mismatch")) firedGuardrails.push("grain-mismatch");
+            // This replacement discards everything above it. The change cells are still unavailable,
+            // so the explanation for that has to be restated here rather than lost.
+            postExplanation = appendWithheldChangeNote(presentation.strip(postExplanation), presentation.note);
           }
           // The grain override REPLACES the text, so the caveat is reapplied (dedup-guarded).
           postExplanation = withReliabilityNote(postExplanation);
+          postExplanation = withBaltimoreDisclosure(postExplanation, baltimoreDefault);
           const safePost = sanitizeUserFacingNarrative(postExplanation, claude.title || "Results");
           postExplanation = safePost.explanation || "";
           if (containsInternalScaffold(postExplanation)) {
@@ -2490,7 +3082,7 @@ export async function POST(req: NextRequest) {
               rows,
               rowCount: rows.length,
               disclaimers: "",
-              preQueryExplanation: claude.explanation,
+              preQueryExplanation: withoutBaltimoreDisclosure(claude.explanation, baltimoreDefault),
             });
             // Fix national vs cities wording mismatch
             if (/\bnational_/i.test(sql) && !/\bagency\s*=/i.test(sql)) {
@@ -2502,14 +3094,22 @@ export async function POST(req: NextRequest) {
             if (!isHistorical && retryExplanation && !retryExplanation.includes("sample")) {
               retryExplanation += "\n\nNote: Current Trends data comes from a sample of agencies with consistent reporting — it does not represent complete state or national totals. For comprehensive state-level estimates, try the Historical Library tab.";
             }
-            retryExplanation = applyResultDisclosures({ explanation: retryExplanation, question, sql, rows, tab });
-            if (missingLowerBoundNote(question, sql, rows) && !firedGuardrails.includes("lower-bound-disclosed")) firedGuardrails.push("lower-bound-disclosed");
-            const retryGrainCheck = validateGrain(question, rows, sql);
+            // F3: the retry narrative is a factual narrative too and must be governed.
+            const retryState = isHistorical
+              ? genericResultState({ sql, rows })
+              : currentTrendsResultState(db, { sql, rows });
+            retryExplanation = applyResultDisclosures({ explanation: retryExplanation, question: deliveryQuestion, sql, rows, tab, resultState: retryState });
+            retryExplanation = appendWithheldChangeNote(presentation.strip(retryExplanation), presentation.note);
+            if (missingLowerBoundNote(deliveryQuestion, sql, rows) && !firedGuardrails.includes("lower-bound-disclosed")) firedGuardrails.push("lower-bound-disclosed");
+            const retryGrainCheck = validateGrain(deliveryQuestion, rows, sql);
             if (!retryGrainCheck.ok && retryGrainCheck.message) {
               retryExplanation = retryGrainCheck.message;
               if (!firedGuardrails.includes("grain-mismatch")) firedGuardrails.push("grain-mismatch");
+              // Same as the post path: the replacement discards the withholding, so restate it.
+              retryExplanation = appendWithheldChangeNote(presentation.strip(retryExplanation), presentation.note);
             }
             retryExplanation = withReliabilityNote(retryExplanation);
+            retryExplanation = withBaltimoreDisclosure(retryExplanation, baltimoreDefault);
             const safeRetry = sanitizeUserFacingNarrative(retryExplanation, claude.title || "Results");
             retryExplanation = safeRetry.explanation || "";
             if (containsInternalScaffold(retryExplanation)) {

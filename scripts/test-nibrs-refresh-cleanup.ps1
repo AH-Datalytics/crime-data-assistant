@@ -107,8 +107,12 @@ Test-Case "a failure after the move removes the source snapshot" {
 
 Test-Case "a missing file is not an error" {
   param($root)
-  $removed = @(Remove-FailedRunArtifacts -Root $root -Partial (Join-Path $root "absent.db.partial") -Snapshot $null)
-  Assert-True ($removed.Count -eq 0) "nothing should have been removed"
+  $result = Remove-FailedRunArtifacts -Root $root -Partial (Join-Path $root "absent.db.partial") -Snapshot $null
+  Assert-True (@($result.Removed).Count -eq 0) "nothing should have been removed"
+  # A file that was never there is not a retained file. Cleanup now distinguishes "nothing to do" from
+  # "could not delete", and reporting the first as the second would be its own kind of false alarm.
+  Assert-True (@($result.Retained).Count -eq 0) "an absent file was reported as retained"
+  Assert-True ($result.Complete) "cleanup with nothing to do should be complete"
 }
 
 Write-Host "`n-- everything else survives --"
@@ -231,6 +235,149 @@ Test-Case "the failure path cleans up only when the run did not complete" {
   $finallyAt = $source.IndexOf('} finally {')
   $catchAfter = $source.IndexOf('Cleanup after failure did not complete', $finallyAt)
   Assert-True ($catchAfter -gt $finallyAt) "a cleanup failure is not caught and logged"
+}
+
+Write-Host "`n-- a failed run also removes its own rollup artifact and SQLite sidecars --"
+
+Test-Case "a failure during the build removes the run's own partial rollup" {
+  param($root)
+  # The 2026-08-22 leftovers: cleanup reclaimed the 176 GB snapshot but left a 1.6 MB partial
+  # `nibrs_rollups-20260822_080002.db` behind, which no later run would ever activate.
+  $artifact = Join-Path $root "nibrs_rollups-20260822_080002.db"
+  New-File $artifact 1024
+  Remove-FailedRunArtifacts -Root $root -Partial $null -Snapshot $null -Artifact $artifact | Out-Null
+  Assert-True (-not (Test-Path -LiteralPath $artifact)) "the run's own partial rollup survived"
+}
+
+Test-Case "a failure removes the run artifact's SQLite sidecars and generation file" {
+  param($root)
+  $artifact = Join-Path $root "nibrs_rollups-20260822_080002.db"
+  $sidecars = @("$artifact-journal", "$artifact-wal", "$artifact-shm", "$artifact.generation")
+  New-File $artifact 1024
+  $sidecars | ForEach-Object { New-File $_ 64 }
+  Remove-FailedRunArtifacts -Root $root -Partial $null -Snapshot $null -Artifact $artifact | Out-Null
+  foreach ($path in $sidecars) {
+    Assert-True (-not (Test-Path -LiteralPath $path)) "$([System.IO.Path]::GetFileName($path)) survived"
+  }
+}
+
+Test-Case "a failure removes the source snapshot's SQLite sidecars" {
+  param($root)
+  # Observed after the 2026-08-22 run: a 32 KB `-shm` and an empty `-wal` next to the snapshot,
+  # opened by the build reading the snapshot. The snapshot went; these stayed.
+  $snapshot = Join-Path $root "nibrs-source-176727072768_1786871106929227623.db"
+  $sidecars = @("$snapshot-shm", "$snapshot-wal", "$snapshot-journal")
+  New-File $snapshot 4096
+  $sidecars | ForEach-Object { New-File $_ 32 }
+  Remove-FailedRunArtifacts -Root $root -Partial $null -Snapshot $snapshot | Out-Null
+  Assert-True (-not (Test-Path -LiteralPath $snapshot)) "the snapshot survived"
+  foreach ($path in $sidecars) {
+    Assert-True (-not (Test-Path -LiteralPath $path)) "$([System.IO.Path]::GetFileName($path)) survived"
+  }
+}
+
+Test-Case "an empty sidecar is still removed" {
+  param($root)
+  # The observed `-wal` was zero bytes. A cleanup that skips empty files would have left it.
+  $snapshot = Join-Path $root "nibrs-source-gen.db"
+  $wal = "$snapshot-wal"
+  New-File $snapshot 32
+  New-File $wal 0
+  Remove-FailedRunArtifacts -Root $root -Partial $null -Snapshot $snapshot | Out-Null
+  Assert-True (-not (Test-Path -LiteralPath $wal)) "the empty -wal sidecar survived"
+}
+
+Write-Host "`n-- cleanup is exact-path, so no other run is collateral --"
+
+Test-Case "another run's retained artifact and its sidecars survive" {
+  param($root)
+  # Retention is a success-path policy. A failed run must never reach into the retained set.
+  $keep = Join-Path $root "nibrs_rollups-20260819_120000.db"
+  $keepSidecars = @("$keep.generation", "$keep-wal", "$keep-shm")
+  New-File $keep 512
+  $keepSidecars | ForEach-Object { New-File $_ 64 }
+  $mine = Join-Path $root "nibrs_rollups-20260822_080002.db"
+  New-File $mine 512
+
+  Remove-FailedRunArtifacts -Root $root -Partial $null -Snapshot $null -Artifact $mine | Out-Null
+
+  Assert-True (-not (Test-Path -LiteralPath $mine)) "the run's own artifact survived"
+  Assert-True (Test-Path -LiteralPath $keep) "another run's retained artifact was deleted"
+  foreach ($path in $keepSidecars) {
+    Assert-True (Test-Path -LiteralPath $path) "another run's $([System.IO.Path]::GetFileName($path)) was deleted"
+  }
+}
+
+Test-Case "a run artifact outside the workspace is refused" {
+  param($root)
+  $outsideDir = Join-Path ([System.IO.Path]::GetTempPath()) ("nibrs-outside-" + [Guid]::NewGuid().ToString("N"))
+  New-Item -ItemType Directory -Force -Path $outsideDir | Out-Null
+  $outside = Join-Path $outsideDir "nibrs_rollups-20260822_080002.db"
+  New-File $outside 64
+  try {
+    Remove-FailedRunArtifacts -Root $root -Partial $null -Snapshot $null -Artifact $outside | Out-Null
+    Assert-True (Test-Path -LiteralPath $outside) "an artifact outside the workspace was deleted"
+  } finally {
+    Remove-Item -LiteralPath $outsideDir -Recurse -Force -ErrorAction SilentlyContinue
+  }
+}
+
+Test-Case "logs, state and the lock still survive the wider cleanup" {
+  param($root)
+  $keep = @(
+    (Join-Path $root "refresh-20260822_080002.log"),
+    (Join-Path $root "last-success.json"),
+    (Join-Path $root "refresh.lock"),
+    (Join-Path $root "benchmark-20260822_080002.json"),
+    (Join-Path $root "query_log-20260822_080002.db")
+  )
+  $keep | ForEach-Object { New-File $_ 32 }
+  $artifact = Join-Path $root "nibrs_rollups-20260822_080002.db"
+  New-File $artifact 32
+  Remove-FailedRunArtifacts -Root $root -Partial $null -Snapshot $null -Artifact $artifact | Out-Null
+  foreach ($path in $keep) {
+    Assert-True (Test-Path -LiteralPath $path) "cleanup deleted $([System.IO.Path]::GetFileName($path))"
+  }
+}
+
+Write-Host "`n-- a cleanup that cannot finish never replaces the original failure --"
+
+Test-Case "a locked target does not make cleanup throw" {
+  param($root)
+  # The build error is the one a human needs. If cleanup threw on a file the build still had open,
+  # the transcript would end with a file-permission error and the real cause would be gone.
+  $artifact = Join-Path $root "nibrs_rollups-20260822_080002.db"
+  New-File $artifact 128
+  $held = [System.IO.File]::Open($artifact, "Open", "ReadWrite", "None")
+  try {
+    $result = Remove-FailedRunArtifacts -Root $root -Partial $null -Snapshot $null -Artifact $artifact
+    Assert-True (@($result.Removed).Count -eq 0) "a locked file was reported as removed"
+    Assert-True (Test-Path -LiteralPath $artifact) "a locked file was somehow deleted"
+    # It is not enough that cleanup survived: the file is still on disk, so the run must SAY so with
+    # the path and its size. Silence here is how a maintenance run claims space it never recovered.
+    Assert-True (-not $result.Complete) "cleanup reported itself complete while a file remained"
+    $retainedArtifact = @($result.Retained | Where-Object { $_.Path -eq $artifact })
+    Assert-True ($retainedArtifact.Count -eq 1) "the locked file was not recorded as retained"
+    Assert-True ($retainedArtifact[0].Bytes -eq 128) "the retained record lost the file size"
+    Assert-True (-not [string]::IsNullOrWhiteSpace($retainedArtifact[0].Reason)) "the retained record has no reason"
+  } finally {
+    $held.Dispose()
+  }
+}
+
+Test-Case "a locked sidecar does not stop the other targets being removed" {
+  param($root)
+  $artifact = Join-Path $root "nibrs_rollups-20260822_080002.db"
+  $journal = "$artifact-journal"
+  New-File $artifact 128
+  New-File $journal 64
+  $held = [System.IO.File]::Open($journal, "Open", "ReadWrite", "None")
+  try {
+    Remove-FailedRunArtifacts -Root $root -Partial $null -Snapshot $null -Artifact $artifact | Out-Null
+    Assert-True (-not (Test-Path -LiteralPath $artifact)) "a locked sidecar aborted the whole cleanup"
+  } finally {
+    $held.Dispose()
+  }
 }
 
 Write-Host "`nNIBRS refresh cleanup: $script:Passed passed, $script:Failed failed"

@@ -11,7 +11,7 @@
  * user has specified a scope.
  */
 
-const COUNTY_MENTION_RE = /\b([A-Za-z][A-Za-z.'-]*(?:\s+[A-Za-z][A-Za-z.'-]*){0,3})\s+(County|Parish|Borough)\b/i;
+export const COUNTY_MENTION_RE = /\b([A-Za-z][A-Za-z.'-]*(?:\s+[A-Za-z][A-Za-z.'-]*){0,3})\s+(County|Parish|Borough)\b/i;
 
 const FILLER_TOKEN_RE = /^(the|a|an|in|for|from|within|inside|across|covering|of|at|to|and|crime|crimes|violent|property|murder|murders|homicide|homicides|robbery|robberies|assault|assaults|burglary|burglaries|theft|thefts|gun|violence|data|stats|statistics|trend|trends|rate|rates|show|me|compare|changed|has|how|what|since)$/i;
 
@@ -31,10 +31,27 @@ export type CountyScopeClarification = {
 
 type HistoryMessage = { role?: string; content?: unknown };
 
+/**
+ * SUPERSEDED by frozen Decision 10 (2026-09-05).
+ *
+ * The 2026-07-05 ruling above made every county question ask "countywide total or the
+ * sheriff's office?". Decision 10 replaces that: an unqualified county name RESOLVES to
+ * the sheriff's agency, and the answer says so, so the reader can ask for the wider
+ * figure if that is what they wanted. Asking first is now the wrong behaviour — it puts
+ * the old clarification in front of the approved default, which the Batch 1 review (F4)
+ * calls out explicitly.
+ *
+ * The detection logic is retained, unused by the default path, because the disclosure in
+ * lib/agency-disclosure.ts reuses the same county-mention shape. Set
+ * COUNTY_SCOPE_CLARIFIER_ENABLED to true only to restore the old behaviour deliberately.
+ */
+export const COUNTY_SCOPE_CLARIFIER_ENABLED = false;
+
 export function getCountyScopeClarification(
   question: string,
   rawHistory?: unknown
 ): CountyScopeClarification | null {
+  if (!COUNTY_SCOPE_CLARIFIER_ENABLED) return null;
   const history: HistoryMessage[] = Array.isArray(rawHistory) ? (rawHistory as HistoryMessage[]) : [];
   const match = question.match(COUNTY_MENTION_RE);
   if (!match) return null;

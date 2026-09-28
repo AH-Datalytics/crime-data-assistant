@@ -58,13 +58,38 @@ function addIndexHint(sql: string, table: string, index: string): string {
   return sql.replace(withoutAlias, `$1 $2 INDEXED BY ${index}`);
 }
 
+/*
+ * REMOVED: a reporting-table substitution that swapped the requested calculation.
+ *
+ * This function used to rewrite
+ *   SELECT ori, COUNT(DISTINCT month) AS months_reported FROM summary_city_monthly WHERE year = Y GROUP BY ori
+ * into
+ *   SELECT ori, months_reported FROM nibrs_agency_completeness WHERE year = Y
+ * on the grounds that the precomputed table saves a monthly rescan.
+ *
+ * That is only true if the two sources agree, and nothing on this path asserts that they do. The
+ * rewrite ran unconditionally and AFTER contract validation, so the statement that executed was not
+ * the statement that was checked -- and re-checking the executed text would not have caught it,
+ * because the substituted text validates just as cleanly as the original.
+ *
+ * The rewrite was also not anchored to a whole statement. Its pattern matches inside a CTE or a
+ * derived relation, where a reporting-completeness filter selects WHICH AGENCIES a genuine offense
+ * aggregate covers. On a fixture where the two sources disagree, "murders in 2024 by agencies
+ * reporting all 12 months" changed from 12 to 78 -- a different population, silently, from a
+ * rewrite the producer never asked for. Both the original and the substituted form pass validation,
+ * so the earlier belief that the validator blocked this shape was wrong: it refuses the bare month
+ * count presented as an answer's measure, not the same text used as a filter.
+ *
+ * So the calculation the producer asked for is now the calculation that runs. The completeness table
+ * is still available and still used -- lib/nibrs-completeness.ts and the deterministic queries read
+ * it directly, and the NIBRS system prompt teaches it as the denominator form -- but it is chosen by
+ * the producer rather than swapped in here. Index hints and rollup routing are unaffected: they are
+ * meaning-preserving, and this was not.
+ *
+ * Removing a shortcut can cost time. No speed claim is made or implied by this change.
+ */
 export function optimizeNibrsSql(sql: string, rollupAvailable?: boolean): string {
   let optimized = sql;
-  // Use the precomputed completeness table instead of rescanning monthly rollups.
-  optimized = optimized.replace(
-    /SELECT\s+ori\s*,\s*COUNT\s*\(\s*DISTINCT\s+month\s*\)\s+AS\s+months_reported\s+FROM\s+summary_city_monthly\s+WHERE\s+year\s*=\s*(\d{4})\s+GROUP\s+BY\s+ori/gi,
-    "SELECT ori, months_reported FROM nibrs_agency_completeness WHERE year = $1"
-  );
   for (const rule of ORI_SCOPED_RULES) optimized = addIndexHint(optimized, rule.table, rule.oriIndex);
   return routeNibrsRollupSql(optimized, rollupAvailable ?? undefined).sql;
 }

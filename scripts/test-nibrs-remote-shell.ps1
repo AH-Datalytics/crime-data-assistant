@@ -152,6 +152,17 @@ function Get-ShippedPreflightPayload {
   return $match.Groups[1].Value
 }
 
+<#
+.SYNOPSIS
+Every here-string payload in the shipped script, not just the first.
+#>
+function Get-ShippedPayloads {
+  $source = Get-Content -LiteralPath (Join-Path $PSScriptRoot "refresh-nibrs-rollups.ps1") -Raw
+  $matches = [regex]::Matches($source, "@'(.*?)'@", [System.Text.RegularExpressions.RegexOptions]::Singleline)
+  Assert-True ($matches.Count -ge 1) "no here-string payload found in refresh-nibrs-rollups.ps1"
+  return @($matches | ForEach-Object { $_.Groups[1].Value })
+}
+
 Write-Host "`n-- line endings are normalised at the encoding boundary --"
 
 Test-Case "a CRLF payload encodes with no carriage return" {
@@ -232,6 +243,40 @@ Test-Case "bash parses the normalised shipped preflight" {
   }
 }
 
+Test-Case "bash parses every normalised shipped payload" {
+  # The preflight is checked above by name. This covers the others -- currently the atomic-swap
+  # capability probe -- so a new payload cannot be added without its Bash being proved too.
+  $bash = Get-UsableBash
+  if (-not $bash) { throw "SKIP: no Bash on this host could parse a script file, so the payloads were not parse-checked" }
+  $payloads = @(Get-ShippedPayloads)
+  Assert-True ($payloads.Count -ge 2) "expected the preflight and the capability probe, found $($payloads.Count) payload(s)"
+  $index = 0
+  foreach ($payload in $payloads) {
+    $index++
+    $bytes = Get-EncodedBytes -Command (ConvertTo-RemoteBashCommand -Payload $payload)
+    $path = Join-Path ([System.IO.Path]::GetTempPath()) ("nibrs-payload-$index-" + [Guid]::NewGuid().ToString("N") + ".sh")
+    try {
+      [System.IO.File]::WriteAllBytes($path, $bytes)
+      # -n is parse-only. Nothing in the payload runs, so the probe never creates a directory here.
+      $result = Invoke-BashParse -Bash $bash -ScriptPath $path
+      Assert-True ($result.ExitCode -eq 0) `
+        "$bash rejected payload $index (exit $($result.ExitCode)): $($result.Output -join '; ')"
+    } finally {
+      Remove-Item -LiteralPath $path -Force -ErrorAction SilentlyContinue
+    }
+  }
+  $script:BashUsed = $bash
+}
+
+Test-Case "the capability probe stays inside a throwaway directory" {
+  # It must prove the swap mechanism without touching anything under /opt/nibrs.
+  $probe = @(Get-ShippedPayloads) | Where-Object { $_.Contains("mv -T") }
+  Assert-True ($null -ne $probe) "the atomic-swap capability probe is gone"
+  Assert-True ($probe.Contains("mktemp -d")) "the probe does not work in a temporary directory"
+  Assert-True (-not $probe.Contains("/opt/nibrs")) "the probe references a production path"
+  Assert-True ($probe.Contains("trap")) "the probe does not clean up its temporary directory"
+}
+
 Write-Host "`n-- the shipped script cannot encode a payload any other way --"
 
 Test-Case "the preflight is encoded through the normalising helper" {
@@ -255,7 +300,9 @@ Test-Case "a second remote payload cannot skip normalisation unnoticed" {
   $hereStrings = ([regex]::Matches($source, "@['`"]")).Count
   # Matched with its parameter so a mention of the helper in a comment is not counted as a call.
   $helperCalls = ([regex]::Matches($source, "ConvertTo-RemoteBashCommand\s+-Payload")).Count
-  Assert-True ($hereStrings -eq 1) "expected exactly one here-string in the refresh script, found $hereStrings"
+  # At least one, so the tripwire is live -- but never a fixed count: pinning the number just means
+  # this fails on every legitimately added payload. The property is that they MATCH.
+  Assert-True ($hereStrings -ge 1) "no here-string payloads left in the refresh script; this tripwire is stale"
   Assert-True ($helperCalls -eq $hereStrings) "$hereStrings here-string payload(s) but $helperCalls normalising call(s)"
 }
 

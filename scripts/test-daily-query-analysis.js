@@ -140,6 +140,9 @@ assert.equal(limitationIncidents.length, 0);
 const limitationEmail = buildHumanEmail(limitationReview.stats, limitationIncidents, [limitationQuery], null);
 assert.match(limitationEmail, /Supported data limitation explained correctly/);
 assert.doesNotMatch(limitationEmail, /Failed before alignment could be established/);
+// The tag must lead the guardrail list and the outcome must be "deterministic", which is what the
+// daily analysis reads. The list carries the specific limitation's reason after the tag, so match
+// the binding rather than one exact rendering of it.
 const shrRouteSource = require("node:fs").readFileSync("app/api/shr-query/route.ts", "utf8");
-assert.ok(shrRouteSource.includes('["nonfatal-shooting-capability-limit"], "deterministic"'));
+assert.match(shrRouteSource, /\["nonfatal-shooting-capability-limit"(?:,[^\]]*)?\],\s*"deterministic"/);
 console.log("daily reliability tag tests passed");
