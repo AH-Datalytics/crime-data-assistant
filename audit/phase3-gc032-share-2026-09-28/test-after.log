@@ -1,0 +1,50 @@
+
+1 - the retained two-CTE share is judged by the existing share proof
+  PASS  the retained GC-032 statement, as written
+  PASS  with the LIMIT the route appends
+  PASS  after the planner routes both CTEs to the state rollup
+  PASS  CROSS JOIN form
+  PASS  JOIN ON 1 = 1 form
+  PASS  unrounded percentage
+
+2 - wrong answers stay refused
+  PASS  refused by the share rule: denominator drops the state filter
+  PASS  refused by the share rule: denominator counts summary rows
+  PASS  refused by the share rule: numerator counts summary rows
+  PASS  refused by the share rule: numerator is a different age group than asked
+  PASS  refused by the share rule: scale 200 doubles the percentage
+  PASS  refused by the share rule: numerator narrowed to one year
+  PASS  refused by the share rule: inverted ratio
+  PASS  refused by the share rule: numerator over fewer offenses
+  PASS  refused by the share rule: subset over subset
+  PASS  refused by the share rule: two extra conjuncts on the numerator
+  PASS  refused by the share rule: an OR in a CTE filter
+  PASS  refused by the share rule: a GROUP BY makes a CTE many rows
+  PASS  refused by the share rule: both CTEs grouped by year (many rows each, cross-joined)
+  PASS  refused by the share rule: both CTEs with the same HAVING
+  PASS  refused by the share rule: numerator from the state rollup, denominator from the base table
+  PASS  refused by the share rule: denominator from another table
+  PASS  refused by the share rule: measures differ
+  PASS  refused by the share rule: outer join condition other than 1 = 1
+  PASS  refused by the share rule: outer WHERE
+  PASS  refused by the share rule: outer reads a column the CTE does not return
+  PASS  still refused: a share computed inside a CTE and projected out (not this repair)
+  PASS  still refused: counts side by side without a computed share
+
+3 - the routed approved single-SELECT share is judged, not refused
+  PASS  control: as written
+  PASS  after routing to rollup.state_summary_offender_demographics
+  PASS  the planner's rollups carry the source's evidenced recorded measure
+  PASS  a rollup of an undeclared source declares nothing
+  PASS  routed: offenders over summary rows is still refused
+
+4 - the delivered text states the unit
+  PASS  a "% of crimes" unit is re-labelled: Youth under 18 accounted for 8.0% of recorded offenders in serious violent crimes in California from 2021 to 2025.
+  PASS  the unit is stated, with unknown ages named as part of the total
+  PASS  the route's later wording step leaves the stated unit unchanged
+  PASS  unknown ages are not claimed when the statement filters them
+  PASS  stated once, not repeated
+  PASS  not added to a count question
+  PASS  not added to a share from another table
+
+40/40 passed; offline guard: 0 denied database opens, 0 network calls

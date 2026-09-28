@@ -1,0 +1,161 @@
+=== tsx scripts/test-shr-murder-licence.ts
+
+-- accepted families --
+  PASS  direct count with the relationship and the murder filter
+  PASS  COUNT(*) on the joined result, the prompt's own form
+  PASS  reversed equality
+  PASS  singleton IN
+  PASS  redundant parentheses around both conjuncts
+  PASS  the join written the other way round
+  PASS  the murder filter carried on the ON of an inner join
+  PASS  logged query 157/159: a bracketed place-alias OR beside the murder filter
+  PASS  the count computed inside a CTE and selected outside
+  PASS  a restricted identity-key CTE joined to the counted rows
+  PASS  the same key projected under an alias
+  PASS  a stored measure rather than a row count is not this licence's business
+  PASS  a query that never counts victims is not engaged
+  PASS  a windowed count is not the answer's row count
+  PASS  an unrelated 'Murder' literal alongside a genuinely proved count
+  PASS  a compound where both arms prove themselves
+  PASS  a compound arm returning a non-victim value need not prove this licence
+  PASS  an unused victim-count CTE does not engage the licence
+  PASS  a nested chain of unused CTEs does not engage the licence
+  PASS  a proved count returned through a CTE reference
+  PASS  a proved count returned through a nested CTE chain
+  PASS  two returned columns, both proved
+  PASS  a star over a fully proved CTE
+  PASS  a compound CTE whose every arm is proved
+  PASS  a compound where both returned arms are proved, one through a CTE
+  PASS  accepted shapes survive alias, quoting, whitespace and clause-order variation
+
+-- refused: each mapped to the property that must refuse it --
+  PASS  the wrapped unqualified count  [row count survives the CTE boundary]
+  PASS  a wrapped COUNT(*)  [row count survives the CTE boundary]
+  PASS  no filter at all  [the murder predicate must restrict the counted rows]
+  PASS  CROSS JOIN relates nothing  [the relationship must be the real key]
+  PASS  ON 1=1 relates nothing  [the relationship must be the real key]
+  PASS  a comma join relates nothing  [the relationship must be the real key]
+  PASS  joined on the wrong column  [the relationship must be the real key]
+  PASS  LEFT JOIN preserves unmatched victims  [an outer join's ON restricts nothing]
+  PASS  buried in an always-true CASE  [the predicate must be a top-level conjunct]
+  PASS  the relationship buried in a CASE  [the join equality must be a top-level conjunct]
+  PASS  a top-level broadening OR  [a disjunction can widen an equality]
+  PASS  IN ('Murder','Manslaughter')  [a multi-value IN is broader than the licence]
+  PASS  the predicate confined to a subquery  [a subquery restricts only itself]
+  PASS  attributed to the victims table  [the predicate must be owned by incidents]
+  PASS  the filter names victims while incidents is joined  [the predicate must be owned by incidents]
+  PASS  the filter column left unqualified  [an unqualified column is ambiguous with two tables in scope]
+  PASS  an unused decorative CTE  [only a referenced CTE can restrict]
+  PASS  compound arms repeat the key  [the CTE key must be emitted at most once]
+  PASS  the CTE joins victims and repeats per victim  [the CTE key must be emitted at most once]
+  PASS  the CTE comma-joins and repeats the key  [the CTE key must be emitted at most once]
+  PASS  a grouped CTE is not proved unique  [the CTE key must be emitted at most once]
+  PASS  a windowed CTE is not proved unique  [the CTE key must be emitted at most once]
+  PASS  MIN(id) AS id  [a key identity is not an aggregate of a key]
+  PASS  id + 1 AS id  [a key identity is not a transformation of a key]
+  PASS  a literal standing in for the key  [a key identity is not a literal]
+  PASS  a CASE standing in for the key  [a key identity is not a CASE]
+  PASS  the CTE is LEFT JOINed  [an outer-joined CTE preserves unmatched victims]
+  PASS  LEFT JOINed with the key equality in WHERE  [an outer-joined CTE preserves unmatched victims]
+  PASS  a CTE restricting the wrong table  [the CTE must restrict the filter table]
+  PASS  joined on nothing  [the CTE must be joined on the projected key]
+  PASS  SQL the parser cannot read  [unparseable input fails closed]
+  PASS  'Murder' appears only as an unrelated alias  [the literal is bound to the proved predicate]
+  PASS  'Murder' appears only in an unrelated predicate  [the literal is bound to the proved predicate]
+  PASS  a reversed comparison to the wrong literal  [the literal is bound to the proved predicate]
+  PASS  a singleton IN of the wrong literal  [the literal is bound to the proved predicate]
+  PASS  join in arm 1, murder predicate in arm 2  [every arm proves itself]
+  PASS  the inverse cross-arm arrangement  [every arm proves itself]
+  PASS  one proved arm beside one unproved victim count  [every arm proves itself]
+  PASS  the victim-count CTE is selected from  [a reachable unsafe CTE still refuses]
+  PASS  reached through a nested chain  [a reachable unsafe CTE still refuses]
+  PASS  an unsafe count masked by an outer victims source  [every returned series is authorized]
+  PASS  the same sources in the opposite order  [every returned series is authorized]
+  PASS  masked through a nested CTE chain  [every returned series is authorized]
+  PASS  one safe and one unsafe returned column  [every returned series is authorized]
+  PASS  a compound with one unsafe returned arm  [every returned series is authorized]
+  PASS  a reference to a relation that exports no such column  [unresolved provenance fails closed]
+  PASS  a compound CTE with one unsafe arm  [every arm a reference denotes is authorized]
+  PASS  SELECT * over an unsafe CTE  [a star returns what the relation exports]
+  PASS  a recursive CTE counting victims  [cyclic provenance fails closed]
+  PASS  SELECT * over an unsafe compound CTE  [a star returns what the relation exports]
+
+-- fail-closed boundaries --
+  PASS  SQL over the length cap is refused before parsing
+  PASS  a parser exception never escapes
+  PASS  an unreadable statement yields unknown, never a silent pass
+
+-- fact model --
+  PASS  a CTE output keeps what it is, rather than collapsing to a column
+  PASS  a literal fact carries its decoded value
+  PASS  every compound arm keeps its own fact scope
+  PASS  a reference to a relation output resolves into that output's own fact
+  PASS  unresolvable provenance becomes unknown rather than a column
+  PASS  a join keyword swallowed as an alias is repaired
+  PASS  sources are instances, so comma joins and self-joins cannot collapse
+  PASS  compound arms merge by position and by kind, not by value
+  PASS  multiplicity is proved only for a plain unique-key projection
+
+SHR murder licence: 88 passed, 0 failed
+
+=== exit 0
+=== tsx scripts/test-shr-authority-placement.ts
+  PASS  every SQL execution in the route runs validated SQL, not raw model output
+  PASS  a statement rewritten after validation is re-proved before it runs
+  PASS  model-authored SQL reaches the fact-based authority
+  PASS  the deterministic plans stay on their own bounded path
+  PASS  the two authorities cannot be interchanged by accident
+  PASS  an unproved fact verdict cannot fall through to the legacy prover
+  PASS  a parse failure is a refusal, never an exception or a silent pass
+  PASS  a new unclassified execution helper fails this test rather than inheriting authority
+
+SHR authority placement: 8 passed, 0 failed
+
+=== exit 0
+=== tsx scripts/test-shr-legacy-licence-removal.ts
+        (recorded in: warnings, enforced, retryIssues)
+  PASS  the legacy rule really is produced by the validator, so this test is not vacuous
+  PASS  the legacy verdict is removed from every field it is recorded in
+  PASS  everything unrelated survives byte-for-byte
+  PASS  removal does not depend on the tag appearing in `enforced`
+  PASS  end to end, the model-authored result carries the fact verdict and not the legacy one
+
+SHR legacy licence removal: 5 passed, 0 failed
+
+=== exit 0
+=== tsx scripts/test-schema-catalog-agreement.ts
+  PASS  every catalogued unique key is a real primary key in the SHR schema
+  PASS  the tables this licence depends on still declare their key
+
+schema/catalog agreement: 2 passed, 0 failed
+
+=== exit 0
+=== tsx scripts/test-source-health-inventory.ts
+
+source health inventory: 22 passed, 0 failed
+capabilities 52 (registry 51 + sweep-only 1)
+
+=== exit 0
+=== tsx scripts/test-source-health.ts
+
+source health tests: 77 passed, 0 failed
+
+=== exit 0
+=== tsx scripts/test-stage2b-workbook.ts
+
+stage2b workbook: 71 passed, 0 failed
+
+=== exit 0
+=== summary
+scripts/test-shr-murder-licence.ts -> exit 0, FAIL lines 0; tail: SHR murder licence: 88 passed, 0 failed
+scripts/test-shr-authority-placement.ts -> exit 0, FAIL lines 0; tail: SHR authority placement: 8 passed, 0 failed
+scripts/test-shr-legacy-licence-removal.ts -> exit 0, FAIL lines 0; tail: SHR legacy licence removal: 5 passed, 0 failed
+scripts/test-schema-catalog-agreement.ts -> exit 0, FAIL lines 0; tail: schema/catalog agreement: 2 passed, 0 failed
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/test-nibrs-refresh-cleanup.ps1 -> not launched (powershell)
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/test-nibrs-refresh-logging.ps1 -> not launched (powershell)
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/test-nibrs-refresh-lifecycle.ps1 -> not launched (powershell)
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/test-nibrs-remote-shell.ps1 -> not launched (powershell)
+scripts/test-source-health-inventory.ts -> exit 0, FAIL lines 0; tail: capabilities 52 (registry 51 + sweep-only 1)
+scripts/test-source-health.ts -> exit 0, FAIL lines 0; tail: source health tests: 77 passed, 0 failed
+scripts/test-stage2b-workbook.ts -> exit 0, FAIL lines 0; tail: stage2b workbook: 71 passed, 0 failed
+tsc -> exit 2; error lines 861; under app/lib/scripts 0

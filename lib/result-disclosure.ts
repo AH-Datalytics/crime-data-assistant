@@ -11,6 +11,7 @@ import { monthCoverageFromRows, describeMonths, monthPointsFromRows, returnedMon
 import {
   explicitStateSubstateMismatch,
   filteredEntityLabel,
+  stateNameForAbbr,
 } from "./explicit-state-intent";
 
 const MONTH_NAMES = [
@@ -722,6 +723,114 @@ export function laggedAnnualRecentYearNote(
 }
 
 
+/**
+ * A share computed from `summary_offender_demographics.offender_count` (or its planner rollup) is a
+ * share of RECORDED OFFENDERS, not of crimes: GC-032 asks "what share of serious violent crimes ...
+ * are committed by youth", and the only answer the data supports counts offender records. A model
+ * writing "8.0% of serious violent crimes" silently changes the unit, so that phrase is re-labelled
+ * and the unit is stated once. "Share of crimes" is deliberately not used in the sentence: the
+ * route's later offender-wording step rewrites that phrase. Offenders of unknown age are named as
+ * part of the total only when the statement does not filter them.
+ */
+function offenderShareUnit(explanation: string, question: string, sql: string, rows: Record<string, unknown>[]): string {
+  const delivery = offenderShareDelivery(question, sql, rows);
+  if (!delivery) return explanation;
+  // The model's sentence is NOT kept (Codex G32-2): "8.4% of all reported serious violent crimes were
+  // committed by youth" asserts a share the database did not measure, and no rewrite of its wording
+  // can be shown complete. The product states what the verified row and the SQL's scope establish.
+  return delivery.join("\n\n");
+}
+
+/**
+ * The owned answer for a proved offender share: [statement, unit note], or null when the statement is
+ * not one. Every part is read from the returned row or the statement's own filters, and a part that
+ * cannot be read unambiguously is left out rather than guessed:
+ *   - the share is the ONE returned column computed by a division, scaled as the SQL scales it;
+ *   - a count pair is quoted only when it reproduces that share to the SQL's rounding;
+ *   - the group, place and period come from single, unambiguous equality/BETWEEN filters.
+ * Exported so the route can re-apply it after the internal-leak firewall.
+ */
+export function offenderShareDelivery(question: string, sql: string, rows: Record<string, unknown>[]): [string, string] | null {
+  const note = offenderShareUnitNote(question, sql);
+  if (!note) return null;
+  const text = sql.replace(/\s+LIMIT\s+\d+\s*;?\s*$/i, "");
+  const plain = text.replace(/'(?:''|[^'])*'/g, "''");
+
+  // The share column: the outer select item holding a top-level division, with an alias.
+  const outer = plain.slice(plain.search(/\bSELECT\b(?![\s\S]*\bSELECT\b[\s\S]*\bFROM\b[\s\S]*$)/i));
+  const selectList = outer.replace(/^\s*SELECT\s+/i, "").replace(/\s+FROM\s[\s\S]*$/i, "");
+  const items: string[] = [];
+  let depth = 0; let start = 0;
+  for (let i = 0; i < selectList.length; i++) {
+    const c = selectList[i];
+    if (c === "(") depth++;
+    else if (c === ")") depth--;
+    else if (c === "," && depth === 0) { items.push(selectList.slice(start, i)); start = i + 1; }
+  }
+  items.push(selectList.slice(start));
+  const shares = items.map((item) => item.trim()).map((item) => ({ item, alias: item.match(/\s+AS\s+([A-Za-z_]\w*)\s*$/i)?.[1] ?? null }))
+    .filter(({ item, alias }) => alias && /\//.test(item));
+  const row = rows.length === 1 ? rows[0] : null;
+  // Only an actual finite number is a share. SQL NULL (a zero denominator, or no rows summed) is an
+  // UNAVAILABLE share, and `Number(null)` is 0 -- coercing it stated 0.0% (Codex, G32 review). A real
+  // numeric 0 stays 0%.
+  const raw = shares.length === 1 && row ? row[shares[0].alias!] : undefined;
+  const value = typeof raw === "number" && Number.isFinite(raw) ? raw : NaN;
+  const unavailable = shares.length === 1 && row !== null && !Number.isFinite(value);
+
+  let figure: string | null = null;
+  let counts = "";
+  if (Number.isFinite(value)) {
+    const item = shares[0].item;
+    const percentScaled = /(?:^|[^\w.])100(?:\.0*)?\s*\*|\*\s*100(?:\.0*)?(?![\w.])/.test(item);
+    const round = item.match(/ROUND\s*\([\s\S]*,\s*(\d+)\s*\)\s+AS\s/i);
+    const digits = round ? Math.max(0, Number(round[1]) - (percentScaled ? 0 : 2)) : 1;
+    const percent = percentScaled ? value : value * 100;
+    figure = `${percent.toFixed(digits)}%`;
+    const numbers = Object.entries(row!).filter(([key, v]) => key !== shares[0].alias && typeof v === "number" && Number.isInteger(v)) as [string, number][];
+    const tolerance = 0.5 * 10 ** -digits + 1e-9;
+    const pairs = numbers.flatMap(([, a]) => numbers.map(([, b]) => [a, b] as const))
+      .filter(([a, b]) => b > 0 && a >= 0 && a <= b && Math.abs((100 * a) / b - percent) <= tolerance);
+    if (pairs.length === 1) counts = ` (${pairs[0][0].toLocaleString("en-US")} of ${pairs[0][1].toLocaleString("en-US")})`;
+  }
+
+  const distinct = <T,>(values: T[]) => [...new Set(values.map((v) => JSON.stringify(v)))].map((v) => JSON.parse(v) as T);
+  const LABELS: Record<string, string> = { age_group: "age group", sex: "sex", race: "race", ethnicity: "ethnicity" };
+  const groups = distinct([...text.matchAll(/\b(?:\w+\.)?(age_group|sex|race|ethnicity)\s*=\s*'([^']+)'/gi)].map((m) => [m[1].toLowerCase(), m[2]]));
+  const states = distinct([...text.matchAll(/\b(?:\w+\.)?state\s*=\s*'([A-Za-z]{2})'/gi)].map((m) => m[1].toUpperCase()));
+  const ranges = distinct([...text.matchAll(/\b(?:\w+\.)?(?:data_)?year\s+BETWEEN\s+(\d{4})\s+AND\s+(\d{4})/gi)].map((m) => `${m[1]}–${m[2]}`));
+  const singles = distinct([...text.matchAll(/\b(?:\w+\.)?(?:data_)?year\s*=\s*(\d{4})\b/gi)].map((m) => m[1]));
+  const place = states.length === 1 ? stateNameForAbbr(states[0]) : null;
+  const period = ranges.length + singles.length === 1 ? (ranges[0] ?? singles[0]) : null;
+  const scope = `Of the offenders recorded in NIBRS reports for the requested offenses${place ? ` in ${place}` : ""}${period ? `, ${period}` : ""}`;
+  const group = groups.length === 1 ? `had a recorded ${LABELS[groups[0][0]]} of ${groups[0][1]}` : "were in the requested group";
+  // The cause is named only when the returned row establishes it: every returned count is zero.
+  const otherValues = row && shares.length === 1 ? Object.entries(row).filter(([key]) => key !== shares[0].alias).map(([, v]) => v) : [];
+  const noOffenders = otherValues.length > 0 && otherValues.every((v) => v === 0);
+  const statement = figure
+    ? `${scope}, ${figure}${counts} ${group}.`
+    : unavailable
+      ? `${scope}, the share that ${group} is unavailable: ${noOffenders
+        ? "the result contains no recorded offenders in this scope, so no percentage can be computed."
+        : "the query returned no value for it, so no percentage is stated."}`
+      : `${scope}, the share that ${group} is shown in the results above.`;
+  return [statement, note];
+}
+
+/**
+ * The unit sentence for an offender share, or null when the statement is not one. Exported so the
+ * route can re-apply it after the internal-leak firewall, which replaces a leaking narrative whole
+ * (the same reason the missing-member note is composed after it).
+ */
+export function offenderShareUnitNote(question: string, sql: string): string | null {
+  if (!/\bsummary_offender_demographics\b|\b(?:state|national)_summary_offender_demographics\b/i.test(sql)) return null;
+  if (!/\boffender_count\b/i.test(sql) || !/\//.test(sql)) return null;
+  if (!/\b(?:share|percent(?:age)?|proportion|fraction|what\s+part)\b|%/i.test(question)) return null;
+  const unknown = /'unknown'/i.test(sql) ? "" : " (including offenders recorded with an unknown age)";
+  return `Unit: this percentage is of offenders recorded in NIBRS reports${unknown}, not of crimes or incidents; ` +
+    "one incident can list several offenders, and not every offender is identified or recorded.";
+}
+
 export function applyResultDisclosures(opts: {
   explanation: string;
   question: string;
@@ -782,6 +891,7 @@ export function applyResultDisclosures(opts: {
 
   if (opts.tab === "nibrs") {
     explanation = normalizeUngroundedNibrsStatewideExplanation(explanation, opts.sql, opts.rows);
+    explanation = offenderShareUnit(explanation, opts.question, opts.sql, opts.rows);
 
     if (asksBareViolentCrime(opts.question)) {
       explanation = appendSentence(

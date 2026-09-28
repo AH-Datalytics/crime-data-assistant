@@ -25827,3 +25827,494 @@ Claude owns approved implementation and an integrated submission; Codex owns the
 Claude has closed the bounded comma defect while preserving valid answers. This plan makes the next increment deliver the previously blocked answer and reconnects individual repairs to the overall Phase 3 exit decision.
 
 **Necessity check:** Preserve accepted progress, complete a demonstrated useful answer, then address the retained essential outcomes and test the combined candidate when the evidence can support a decision. Defer unrelated architecture, speculative edge cases, another model contest and per-fix paid testing. No new planning artifact or qualification framework is required beyond this existing handoff.
+
+## Comma batch preserved (b3b20fa); GC-032 youth share delivered - 8.0% of recorded offenders, labeled as such, wrong shares still refused
+
+2026-09-28, under Jeff's approval: "(1) Commit and push the accepted comma/CMA1 work and essential evidence ... No merge or deployment. (2) Complete the bounded GC-032 repair using the existing fixture and saved query. Verify that the data supports the requested share; do not merely suppress the validator. Demonstrate the correct numerator, denominator, unit and delivered explanation, while retaining wrong-answer controls. One consolidated submission, with one bounded correction pass if necessary ... No catalog redesign, broader CTE work, source access, paid calls or deployment." **Submitted for one consolidated review. Phase 3 remains incomplete.** The GC-032 repair is uncommitted. No source database, provider call, spend, merge or deployment.
+
+### Part 1 - comma/CMA1 batch preserved
+
+- Commit **`b3b20fa`** on `phase3-candidate-c`, fast-forward from `f8370cc`. **66 files**:
+  - the 7 accepted product files (all matched `cma1/candidate-cma1.sha256` before staging);
+  - this handoff and `docs/roadmap/current.md`;
+  - 57 small receipts from `audit/phase3-comma-alias-2026-09-28/` and its `cma1/` (`.json`, `.cjs`, `.ts`, `.sha256`, `.txt`, the post-taxonomy logs), including every Codex review file and the `mutations.json.OVERWRITTEN.txt` tombstone.
+- Path list: `audit/phase3-comma-alias-2026-09-28/proposed-commit-paths.txt`, staged with `--pathspec-from-file` after a dry run (66/66; a duplicate line was removed first).
+- Left out:
+  - `before-tree/`, `before-cma1-tree/`, the backup folders, the `r1/` output folders, the two 2.4 MB handoff copies and the other logs;
+  - every unrelated modified file, including `docs/roadmap/correctness-backlog.md`, which is not mine.
+- The only secret-scan hits are the offline witness placeholders.
+- Pushed without force; `git ls-remote` reports `b3b20face33fc149a27bbe30a3c124e4d8b71cf6`, equal to local HEAD. No PR, merge or deployment.
+
+### Part 2 - what the data supports, and what stopped it
+
+**The supported share.** `summary_offender_demographics` counts offender records by age group, so the answer the data supports is "the share of **recorded offenders** in serious violent offenses who were under 18". It is not the share of crimes, and the delivered text must say so (the frozen `mustLabel`). The retained statement computes exactly that. Its denominator counts every recorded offender in scope, including those recorded with an unknown age.
+
+**Reproduced on the accepted tree (`b3b20fa`), two separate blockers** (`probe.ts` / `probe-before.json`, `route-before.json`):
+
+1. **The approved single-SELECT share is refused on the real route too, once routed.** It passes as written (`SUM(CASE WHEN d.age_group = 'Under 18' THEN d.offender_count ELSE 0 END) / SUM(d.offender_count)`, the shape `test-ratio-support.ts` and `test-delivered-answer.ts` accept). But the planner routes it to `rollup.state_summary_offender_demographics`, and the final check (which runs on the routed statement) refuses it with `structural-measure-unit-unmodeled`. There are two reasons:
+   - the rollup catalog entries declare no recorded measure;
+   - `outerSourceAliases` read `FROM rollup.state_... d` as table `rollup` with no alias, so `d.offender_count` resolved to nothing.
+   
+   The earlier offline tests never exercised the routed form. Whether this predates P4.1's final checks is not established here.
+2. **The retained two-CTE statement is refused even as written.** The existing share proof requires the divisor to be one aggregate. GC-032 divides two one-row CTE outputs (`100.0 * y.youth_count / t.total_count`).
+
+### The repair (176 changed lines in 4 files, plus a new test)
+
+- `lib/table-semantics.ts`: `rollupRecordedMeasures()` gives each planner rollup (`state_`/`national_` + source) its source's evidenced recorded measures. The evidence is `scripts/build-nibrs-rollups.py:36`/`:109`, which builds `offender_count` as `SUM(COALESCE(offender_count,0))` of the source, grouped by the same dimensions, including `age_group`. A rollup of an undeclared source still declares nothing. This derives a declaration, not a catalog redesign.
+- `lib/structural-semantics.ts`:
+  - `outerSourceAliases` skips a schema prefix. It is used only by the share proof.
+  - New `twoCteShareEquivalent` / `twoCteShareIsTheAnswer`, consulted only where the unit rule already waives a proved share. The two-CTE statement counts as equivalent to the approved single-SELECT share only when **all** of the following hold:
+    - both CTEs use the same table, aggregate (`SUM`/`TOTAL`) and measure;
+    - each returns one row: a single aggregate projection, and no GROUP BY, HAVING, ORDER, LIMIT, JOIN, UNION, OR or subquery in its filter;
+    - every qualified name in each filter is that CTE's own alias;
+    - the filter sets are identical except for **exactly one** extra conjunct on one side;
+    - the outer query only cross-joins the two (comma, `CROSS JOIN`, `JOIN` with no condition or `ON 1 = 1`, optionally the route's `LIMIT n`) and reads only their two outputs.
+    
+    The equivalent is then judged by the **existing** `ratioIsTheAnswer`: subset named in the question, matching total, matching measure, permitted scale. It is a proof for the checker only; the executed statement is unchanged. No `SelectItem` field becomes CTE-transitive, and a share computed *inside* a CTE is still refused (tested).
+- `lib/result-disclosure.ts`: `offenderShareUnit` and the exported `offenderShareUnitNote`. They apply only to a share question over an offender-demographics `offender_count` division. They relabel "N% of <up to 3 words> crimes/offenses/incidents" as "N% of recorded offenders in …" and append one unit sentence. The sentence names unknown-age offenders as part of the total only when the statement does not filter them, and avoids the phrase the route's later offender-wording step (4c) rewrites.
+- `app/api/nibrs-query/route.ts` (7 lines): the unit note is re-applied after the internal-leak firewall when rows were returned. This is the same reason and pattern as the missing-member note: the firewall replaces a leaking narrative whole. The firewall itself is unchanged.
+- `scripts/test-gc032-share.ts` (40 checks), added to the `test` chain after `test-ratio-support`.
+
+### Evidence (`audit/phase3-gc032-share-2026-09-28/`)
+
+**Real route and worker** (`route-witness-gc032.cjs`, reusing the submitted comma driver in memory). The fixture gets synthetic rows so that a dropped filter changes the number:
+- a Texas row (state filter);
+- a 2019 row (period);
+- a larceny `23H` row (offense list);
+- an in-scope "Unknown" age row, which the correct total must include.
+
+**Expected, derived from the rows alone: 1,200 youth of 15,000 recorded offenders = 8.0%.** For the explanation call, the scripted model returns the wrong-unit sentence a model plausibly writes ("…8.0% of serious violent crimes…").
+
+| Scenario | Before (`route-before.json`, pre-change tree) | After (`route-after.json`) |
+| --- | --- | --- |
+| retained GC-032 statement | refused | **8.0 / 1,200 / 15,000**, unit stated |
+| same, `CROSS JOIN` / `JOIN ... ON 1 = 1` | refused | **8.0 / 1,200 / 15,000**, unit stated |
+| approved single-SELECT control | refused (routed) | **8.0 / 1,200 / 15,000**, unit stated |
+| retained, explanation leaks internal JSON (firewall replaces the narrative) | refused | **8.0**, safe message + unit sentence |
+| denominator drops the state filter (would be 7.5) | refused | refused, never executed |
+| denominator counts summary rows | refused | refused, never executed |
+| numerator counts summary rows | refused | refused, never executed |
+| numerator is 18-24 (would be 32.0) | refused | refused, never executed |
+| scale 200 (would be 16.0) | refused | refused, never executed |
+| numerator narrowed to 2025 | refused | refused, never executed |
+| inverted ratio (would be 1,250) | refused | refused, never executed |
+| numerator over 09A only (would be 2.0) | refused | refused, never executed |
+
+19/19 after, 9/19 before. Isolation in both runs: network blocked 4/4, real sources refused 4/4.
+
+Delivered text after, retained statement: *"Youth under 18 accounted for 8.0% of recorded offenders in serious violent crimes in California from 2021 to 2025. Unit: this percentage is of offenders recorded in NIBRS reports (including offenders recorded with an unknown age), not of crimes or incidents; one incident can list several offenders, and not every offender is identified or recorded."* The existing UCR violent-crime definition and NIBRS coverage notes follow it.
+
+**On the unmodified fixture** (the submitted comma witness, `comma-route.json`), GC-032's comma and JOIN forms now deliver the frozen **8.6% = 1,200 / 14,000**. There the scripted explanation leaks JSON, and the delivered text is the firewall's safe message plus the unit sentence.
+
+**Unit test and mutations.** `test-gc032-share.ts`:
+- **40/40** (`test-after.log`); **29/40** on the pre-change copy (mutation G0).
+- Section 2's 20 wrong shapes must each be refused by the share rule itself (`structural-measure-unit-unmodeled`), not by any incidental rule.
+- `mutations-gc032.json`: **11/11 change points caught**: rollup measure, schema alias, CTE equivalence, route LIMIT, unit disclosure, relabel, unknown-age condition, one-extra-conjunct, one-row keywords, outputs-only, same table/aggregate/measure.
+- On the first run, G9 (one-row keywords) and G11 (same table/measure) survived. I added cases that only those guards can refuse (both CTEs grouped or with a HAVING, subset first so the filters line up; numerator from the rollup and denominator from the base table), and both are now caught. The first G6 mutant crashed Node instead of being caught; it was replaced with a real mutant, which is caught.
+- The route re-application has its own mutant: route witness 18/19 with it removed (`route-mutant-G12.json`).
+
+**Regressions** (every runner copied into this folder first):
+- 93 accepted outputs **identical** (20/20, 8/8, 48/48, 17/17); CR1 9/9, 5/5; controls 12/12.
+- P4.1 binding witness **12/12, no changed result**; CMA1 route 9/9; comma route 5/5.
+- The `test` chain: 134 steps pass, then it stops at `test-operation-taxonomy` on the standing two findings (16 !== 12, `comparable_agency_clearance`). The new test reports 40/40 and the comma test 54/54 in the chain.
+- Post-taxonomy suites all pass (SHR murder licence 88/88).
+- All 24 `pretest` steps match the pre-change tree; the only failure is still `test-structural-route-placement`, 24/1, unchanged. That test reads `route.ts` from the working tree in both runs, so it was confirmed separately: same single failure.
+- Zero type-error lines under app/lib/scripts; the full tsc exits 2 on audit/backup material (804 lines, grown by the staged copies).
+
+### Adversarial self-review
+
+- *Is the validator merely suppressed?* No. The proof only rewrites a strictly equivalent statement for the **existing** share rules to judge, and 20 wrong shapes stay refused by that rule. No table name or question is exempted.
+- *Could the equivalence admit a different number?* It demands one table, one measure, one-row CTEs, identical filters plus exactly one subset conjunct, and nothing else read by the outer query. Each of those conditions has a mutant that the test catches.
+- *The rollup declaration widens acceptance for every routed offender-demographics share,* not just GC-032. It is bounded by the same share proof, and by the builder evidence that the rollup measure is the source measure summed.
+- *Delivered wording is scripted, not a real model's.* No paid call was allowed. The relabel covers only "N% of … crimes/offenses/incidents" within three words; other phrasings rely on the appended unit sentence alone.
+- *Unmeasured claims in the unit sentence:*
+  - "not every offender is identified or recorded" is a general limitation, not measured here;
+  - "including offenders recorded with an unknown age" describes what the total admits, and appears even when a fixture has no such rows.
+- *Not established:* the real-data value, whether the routed-share refusal predates P4.1, and any claim of general CTE support.
+- *Scratch copies:* `before-tree/` and `mutant-route-tree/` in this folder are uncommitted working copies.
+
+### Paste-ready Codex prompt
+
+> Read "Comma batch preserved (b3b20fa); GC-032 youth share delivered" at the end of `docs/superpowers/2026-09-19-six-model-offline-readiness-handoff.md`. The comma batch is pushed (`b3b20fa`, remote verified). GC-032 had two blockers: the approved single-SELECT share was refused once routed to the state rollup (no recorded measure on the rollup entry; schema-prefixed alias unresolved), and the retained two-CTE form lacked a share proof. The fix adds rollup measure derivation from the builder's definition, a schema-safe alias, a strict two-CTE equivalence judged by the existing share rules, and a recorded-offender unit label (re-applied after the leak firewall). Real route 19/19 (9/19 before): 8.0% = 1,200 / 15,000, unit stated; eight wrong numerator/denominator/scale/scope shapes refused, never executed; the frozen fixture gives 8.6% = 1,200 / 14,000. Test 40/40 (29/40 before), 11/11 mutants and the route mutant caught, 93 accepted outputs and P4.1 12/12 unchanged. Uncommitted; no source, provider, spend, merge or deploy. Codex review: Needed — new acceptance path in the share proof plus a delivered-text change on the NIBRS route.
+
+<!-- progress-update
+{"kind":"step","phase":3,"id":"P3.GC032-SHARE","title":"Answer the youth-share question as a share of recorded offenders","status":"review","at":"2026-09-28T18:29:39Z","note":"The comma batch is saved on GitHub (b3b20fa). GC-032 now answers on the local test data: youth under 18 were 8.0% (1,200 of 15,000) of recorded offenders, and the answer says it is a share of recorded offenders, not of crimes. Two things had blocked it: the approved form of the question was refused once the planner used the faster state summary, and the model's two-step form had no way to be checked. Eight wrong versions (missing a filter, counting rows, wrong age group, doubled percentage, inverted, fewer offenses, narrower years) are still refused and never run. 93 accepted answers unchanged. Uncommitted, awaiting Codex review."}
+-->
+
+<!-- progress-update
+{"kind":"focus","phase":3,"at":"2026-09-28T18:29:39Z","latest":"GC-032's youth share is delivered on local test data with the correct numerator, denominator and recorded-offender unit; the comma batch is saved on GitHub.","next":"Codex reviews the GC-032 repair once. Remaining Phase 3 outcomes (GC-064 ranking, GC-065 disclosure, identity limits, follow-ups) stay on the closeout path; Phase 3 remains incomplete.","work":{"id":"P3.GC032-SHARE","title":"Answer the youth-share question as a share of recorded offenders","owner":"Claude built; Codex reviews","state":"Submitted for review, uncommitted","next":"Codex ruling; at most one bounded correction pass if Jeff approves."}}
+-->
+
+## Codex GC-032 ruling - retain the recovered answer, correct arithmetic and delivered meaning
+
+2026-09-28. **The intended recovery is credited; completion is held for G32-1 and G32-2 below. Use the one bounded correction pass Jeff already authorized at the start of this submission. No new approval request or separate proposal is needed.** The progress note above saying "if Jeff approves" is superseded by the explicit existing authorization at :25833. Phase 3 remains incomplete.
+
+### What is established
+
+- Independently reproduced `scripts/test-gc032-share.ts` **40/40** and the submitted real-route/worker witness **19/19**, with the latter saved as `audit/phase3-gc032-share-2026-09-28/codex-route.json`. The intended expanded-fixture answer is **8.0% = 1,200 / 15,000 recorded offenders**, with the submitted wrong-shape controls refused.
+- Read the rollup builder: the offender measure and age grouping support the bounded declaration. The schema-qualified alias repair and the narrowly scoped two-CTE acceptance are sensible parts of this useful-answer repair. They do not establish general CTE support or a real-data value.
+- Verified all **6 candidate and 5 backup hashes**. Independently compared the saved regression receipts: **93 accepted outputs unchanged**, and **12 P4.1 outputs unchanged**. These are saved-output comparisons, not a fresh replay of every broad suite. The submitted mutations were read, not rerun by this review.
+- Independently verified the remote `phase3-candidate-c` at **b3b20face33fc149a27bbe30a3c124e4d8b71cf6**. Comma preservation is complete; this does not authorize committing the unaccepted GC-032 repair.
+- General checks remain accurately qualified: actual npm pretest still has its structural-placement failure; the direct test chain retains the two taxonomy failures; full tsc is not green. Those existing findings do not create a new GC-032 prerequisite.
+
+### G32-1 - the admitted division can truncate the requested share
+
+`lib/structural-semantics.ts` routes the new CTE equivalent into the existing ratio proof. That proof establishes operands and scale but does not establish floating-point division for these integer sums.
+
+The reviewer fixture adds 60 in-scope youth to the submitted fixture. Its rows independently require **1,260 / 15,060**, or **8.4%** rounded to one decimal. Through the actual route and bound worker:
+
+| Outer expression (same CTEs and filters) | Submitted tree | Accepted pre-change tree |
+| --- | --- | --- |
+| `ROUND(100.0 * y.youth_count / t.total_count, 1)` | **8.4**, correct numerical control | refused, zero execution |
+| `ROUND(100 * y.youth_count / t.total_count, 1)` | **8**, wrong: integer division | refused, zero execution |
+| `ROUND(y.youth_count / t.total_count, 1)` with the retained percentage alias | **0**, also admitted | refused, zero execution |
+
+The second row is sufficient to establish the finding: only `100.0` changed to `100`, and SQLite executed a different mathematical result. The third additionally changes scale, so it is corroboration, not an isolated coercion control. No claim is made that the old single-SELECT ratio proof was generally safe; the measured regression is new delivery on this route from a previously refused CTE.
+
+**Correction required:** the admitted share must establish non-truncating arithmetic at the division, not merely an algebraic scale. Keep the supported floating-point statement working; refuse an unproved form with the existing retry opportunity, or normalize only before final validation/binding if that remains genuinely bounded. Do not silently change the executed statement after its authority is issued. Cover the routed single-SELECT sibling as well as the new CTE form, since this submission restores both through the same proof. A non-integral fixture is necessary: the original 8.0% fixture hides truncation. This is not a request for a general arithmetic parser or more CTE support.
+
+**Consequence if left:** an accepted share query executes and delivers the wrong percentage, directly defeating the approved numerator/denominator/value outcome.
+
+### G32-2 - the delivered answer still asserts the wrong unit
+
+`lib/result-disclosure.ts:734` rewrites only up to three words between the percentage and crimes/offenses/incidents. The following scripted explanation survives the real route unchanged before the appended disclaimer:
+
+> In California from 2021 to 2025, 8.4% of all reported serious violent crimes were committed by youth under 18.
+
+The correct float control returns **8.4** in its row, yet its prose still asserts a share of crimes. A later sentence saying "not of crimes or incidents" leaves contradictory claims; it does not meet the frozen recorded-offender labeling obligation. Claude disclosed the limited regex, but that limitation is incompatible with the required delivered meaning rather than an acceptable reduction in coverage.
+
+**Correction required:** for this proved offender-share path, deliver a factual recorded-offender statement tied to the verified result and its scope, without preserving a conflicting crime-share claim. Prefer a small owned statement using established values/meaning over lengthening a word-count regex. Preserve the figure, place, period, unknown-age inclusion when established, and the unit note after the firewall. Do not build a general prose adjudicator or silently claim the share is a share of crimes. Prove correct and conflicting scripted narratives through delivery, including the retained firewall control.
+
+**Consequence if left:** the answer tells the user a fact the database did not measure, even when the number itself is correct. This is the same correctness requirement Jeff authorized, not extra polish.
+
+### Evidence and review limits
+
+New reviewer files, all under `audit/phase3-gc032-share-2026-09-28/`:
+
+- `codex-adversarial.cjs`, `codex-adversarial-before.json`, `codex-adversarial-after.json`: three real-route fixture probes, provider/network blocked 4/4 and real source opens refused 4/4 in each run. Before: all refused, no worker execution. After: all three execute. The script modifies the submitted witness in memory; no product file or submitted witness was edited.
+- `codex-integrity.cjs` / `codex-integrity.json`: manifests, saved-output comparisons, concrete rows and complete delivered explanations.
+- Reviewer error disclosed: the first probe attempts executed their scenarios but threw while assembling the receipt because I renamed the control while the submitted summary still required `retained-gc032`. I corrected the wrapper and reran both sides. Only the completed receipts support this ruling. The probe's failed answer checks record the intended counterexamples; its process exit 0 is not an acceptance result.
+
+No product change, production connection, source database read, provider call, spending, commit or deployment occurred. Synthetic scripted model replies prove route behavior, not provider tendencies. Do not repeat a paid screen to decide these local defects.
+
+### One correction, then one consolidated review
+
+Preserve this submission and receipts before editing. Correct G32-1 and G32-2 together, retain the recovered GC-032 answer, wrong subset/denominator/scope controls, final-statement binding and accepted outputs. Extend the existing tests rather than creating another framework. Report which newly refused forms were previously accepted and whether the same useful question still has its supported answer. Do not advertise a universal SQL or prose guarantee. If the bounded approach cannot do this within the allowance, stop and recommend a materially simpler route; do not start an automatic further version.
+
+**Necessity check:** both corrections are necessary now because the next decision is accepting a correct, correctly described youth share. Existing receipts establish the intended path, but do not excuse the observed wrong value or conflicting unit. Broader CTE/catalog work, general narrative certification, baseline cleanup, source remeasurement and paid evaluation are deferred.
+
+### Short prompt for Claude
+
+> Read "Codex GC-032 ruling - retain the recovered answer, correct arithmetic and delivered meaning" in this handoff, with `audit/phase3-gc032-share-2026-09-28/codex-adversarial-after.json` and `codex-integrity.json`. Use the one correction pass Jeff already approved: G32-1 must prevent integer-truncated shares (1260/15060 currently delivers 8 instead of 8.4 when 100.0 becomes 100); G32-2 must prevent a surviving claim of "8.4% of all reported serious violent crimes" beside an offender-unit disclaimer. Preserve supported CTE and routed single-SELECT answers, wrong-answer controls, binding and accepted outputs. One consolidated offline submission; no broader CTE/catalog work, source/provider access, spend, commit or deployment. Codex review: needed after the correction; no automatic further round.
+
+Claude's next action is the already-authorized bounded correction, not another permission proposal. Codex credited the intended recovery and identified two concrete answer defects; it did not accept the batch or close Phase 3.
+
+<!-- progress-update
+{"kind":"step","phase":3,"id":"P3.GC032-SHARE","title":"Answer the youth-share question as a share of recorded offenders","status":"review","at":"2026-09-28T20:07:57Z","note":"Codex reproduced 40/40 and real-route 19/19; 93 accepted and 12 P4.1 saved outputs unchanged. Intended recovery credited. Two route counterexamples hold acceptance: integer arithmetic yields 8 rather than 8.4, and a crime-share claim survives beside the unit disclaimer. Use the one correction pass already approved, offline; no new permission proposal or paid run."}
+-->
+
+<!-- progress-update
+{"kind":"focus","phase":3,"at":"2026-09-28T20:07:57Z","latest":"GC-032's intended answer is restored on fixtures, but arithmetic and delivered-unit counterexamples need the authorized correction.","next":"Claude corrects the two observed GC-032 defects together, then Codex reviews once. Preserve accepted work; Phase 3 remains incomplete.","work":{"id":"P3.GC032-SHARE","title":"Answer the youth-share question as a share of recorded offenders","owner":"Claude corrects; Codex reviews","state":"One authorized correction pass","next":"Prevent truncation and contradictory unit claims, retaining supported answers and prior receipts."}}
+-->
+
+## G32-1 and G32-2 corrected - truncating shares refused, owned recorded-offender statement replaces the model's wording
+
+2026-09-28, the one correction pass Jeff approved at `:25833`, directed by "Codex GC-032 ruling" (`:25948`). **Both corrections submitted together for one consolidated review. Phase 3 remains incomplete.** Uncommitted. No source database, provider call, spend, commit, merge or deployment.
+
+### Preserved first, reproduced second
+
+- The submitted files matched `candidate.sha256` (6/6). They are backed up to `backup-before-g32/` (`backup-before-g32.sha256`).
+- 13 prior receipts, including all Codex review files, were hashed to `receipts-before-g32.sha256`; all 13 are unchanged at the end.
+- Codex's `codex-adversarial.cjs` was rerun into a new receipt (`g32/reproduce-codex-adversarial.json`). **Both counterexamples reproduce:**
+  - `100 *` delivers **8** instead of 8.4;
+  - the uncoerced fraction delivers **0**;
+  - "8.4% of all reported serious violent crimes were committed by youth under 18" survives in every case.
+- New evidence is in `g32/`, and every runner was copied there first. The submitted `mutations-gc032.json` was hashed before the new mutation run and verified unchanged afterwards.
+
+### G32-1 - the division must be proved real (`lib/structural-semantics.ts`, 17 changed lines)
+
+`requestedOperandsEstablished` (the share proof both the two-CTE equivalent and the single-SELECT form go through) now also requires `divisionIsReal(numerator, denominator)`. The existing scale value is 100 for both `100` and `100.0`, so it could not tell them apart. The numerator is everything left of the last top-level `/`, so a factor there is applied before the division.
+
+The division is proved real only by either:
+- a decimal literal factor on the numerator (`100.0 *`, `1.0 *`, `100.00 *`); or
+- a `TOTAL()` operand (always real in SQLite).
+
+Otherwise the proof fails, and the query gets the existing retry and refusal. No statement is rewritten or normalized.
+
+| Form (reviewer fixture: 1,260 / 15,060 = 8.37%) | Submitted tree | Corrected |
+| --- | --- | --- |
+| CTE, `ROUND(100 * y/t, 1)` | **8** delivered | refused, never executed |
+| CTE, `ROUND(y/t, 1)` under the percentage alias | **0** delivered | refused, never executed |
+| single-SELECT, `ROUND(100 * SUM(CASE…)/SUM(…), 1)` (routed sibling) | **8** delivered | refused, never executed |
+| single-SELECT, `… / SUM(…) * 100.0` (real factor after the integer division) | refused | refused |
+| CTE `100.0 *`, CROSS JOIN, `JOIN ON 1 = 1`, single-SELECT `100.0 *` | 8.4 | **8.4** |
+| CTE with `TOTAL()` operands and `100 *` | 8.4 | **8.4** |
+| CTE fraction `ROUND(1.0 * y/t, 3)` | 0.084 | **0.084**, stated as 8.4% |
+
+Newly refused forms that were previously accepted: the three truncating rows above. The same useful question keeps its supported answer in every real-arithmetic form. The existing ratio suites (`test-ratio-support`, `test-delivered-answer`, `test-structural-semantics`, `test-regression-battery`, `test-structural-enforcement`) all pass unchanged, so every previously accepted share positive already used a real literal.
+
+### G32-2 - an owned statement replaces the model's sentence (`lib/result-disclosure.ts`, `route.ts`)
+
+On the proved offender-share path (the same gate as the unit note: an offender-demographics `offender_count` division answering a share question), the model's sentence is **not kept**. The submission's word-count relabel is removed. `offenderShareDelivery(question, sql, rows)` returns [statement, unit note]. Each part is read from the returned row or the statement's own filters; a part that cannot be read unambiguously is left out, never guessed:
+
+- **figure:** the one returned column computed by a division, scaled as the SQL scales it (a fraction is multiplied by 100), and rounded to the SQL's own `ROUND` digits;
+- **counts:** quoted only when a pair of returned integers reproduces that figure within the rounding;
+- **group, place and period:** each from a single, unambiguous `age_group`/`sex`/`race`/`ethnicity` equality, `state` equality and year `BETWEEN`/equality. Two states, two group filters or more than one row each drop that part.
+
+The route re-applies both parts after the internal-leak firewall; before, it re-applied only the note.
+
+Delivered text on the real route, reviewer fixture, for the conflicting, correct and leaky model wording alike:
+
+> Of the offenders recorded in NIBRS reports for the requested offenses in California, 2021–2025, 8.4% (1,260 of 15,060) had a recorded age group of Under 18.
+>
+> Unit: this percentage is of offenders recorded in NIBRS reports (including offenders recorded with an unknown age), not of crimes or incidents; one incident can list several offenders, and not every offender is identified or recorded.
+
+The existing UCR violent-crime definition and NIBRS coverage notes follow it. On the frozen fixture (the comma witness), GC-032 reads "8.6% (1,200 of 14,000)".
+
+### Evidence (`audit/phase3-gc032-share-2026-09-28/g32/`)
+
+- **Real route and worker:** `route-witness-g32.cjs`, reusing the submitted GC-032 witness in memory, with Codex's extra 60 youth.
+  - After: **41/41** (`route-after.json`).
+  - Submitted tree: **23/41** (`route-before.json`, `--root before-tree`).
+  - Covers eight supported forms × three conditions (figure/counts, owned statement, no crime claim with the unit note), and four G32-1 forms.
+  - Covers the eight retained wrong-answer controls: all still refused, never executed.
+  - Includes a **leaky-title control**: a title naming an internal table makes the firewall replace the narrative. That control is verified to have gone through the firewall, and the owned statement and note survive it.
+  - The route mutant with the post-firewall re-application removed fails that control (`route-mutant-reapply.json`, 39/41).
+  - Isolation, every run: network blocked 4/4, real sources refused 4/4.
+- **Unit test:** `scripts/test-gc032-share.ts`, **56/56** (`test-after.log`). New sections cover the owned statement, reading-or-omitting each part, and real division.
+- **Mutations:** `mutations-g32.json`, **20/20 caught**. A crash does not count as a catch; only a completed run with FAIL lines does.
+  - H0 is the submitted lib: 42/56.
+  - Nine new change points: real division skipped, integer literal treated as real, TOTAL not real, model sentence kept, any count pair quoted, first state guessed, first group guessed, fraction not scaled, first of many rows.
+  - All ten still-applicable submission mutants repeated against the corrected code.
+- **Regressions:**
+  - 93 accepted outputs **identical**; CR1 9/9, 5/5; controls 12/12.
+  - P4.1 binding witness **12/12, no changed result**; CMA1 route 9/9; comma route 5/5; the submitted GC-032 witness 19/19 (`gc032-submitted-witness.json`).
+  - `test` chain: 134 steps pass, then it stops on the standing taxonomy findings (16 !== 12, `comparable_agency_clearance`). The new test reports 56/56 in the chain.
+  - Post-taxonomy suites all pass. The runner finished and wrote its summary; my 590-second shell timeout then fired, exit 124.
+  - All 23 runnable `pretest` steps match the submitted tree; the only failure is still route-placement, 24/1.
+  - Zero type-error lines under app/lib/scripts; the full tsc exits 2 on audit/backup material (861 lines).
+
+### Adversarial self-review
+
+- *Could G32-1 still admit a truncating share?* Only if a numerator factor with a decimal point or a `TOTAL()` operand fails to make SQLite's division real; neither can. A `CAST(… AS REAL)` form is not recognized, so it is refused, not wrongly admitted.
+- *Could the owned statement misstate the result?* Its figure is the returned value, scaled only by the factor the SQL shows. Counts are quoted only when they reproduce that value. "Requested offenses" deliberately names no offense set; the existing Definition sentence describes it.
+  - Group, place and period rely on those filters being the proved scope. The share proof already requires matching scopes, but the statement builder reads the filters by pattern, not from the proof.
+- *Wider effect:* every delivered offender-share answer on this gate now carries owned wording, and truncating shares over any source are refused. Both are intended by the ruling. No other answer family's text changes (the gate's negative tests pass).
+- *Not established:* real-model phrasing (scripted only), the real-data value, and general CTE or prose guarantees. The unit sentence's "not every offender is identified or recorded" remains a general, unmeasured limitation.
+- Scratch copies (`g32/before-tree/`, `g32/mutant-route-tree/`, `before-tree/`, `mutant-route-tree/`) are uncommitted working copies.
+
+### Paste-ready Codex prompt
+
+> Read "G32-1 and G32-2 corrected" at the end of `docs/superpowers/2026-09-19-six-model-offline-readiness-handoff.md`. G32-1: the share proof now requires a real division (a decimal factor on the numerator or a TOTAL() operand), so the CTE `100 *` (8), the uncoerced fraction (0) and the routed single-SELECT `100 *` sibling (8) are refused; the real forms still deliver 8.4. G32-2: on the offender-share path the model's sentence is replaced by an owned statement read from the row and filters ("8.4% (1,260 of 15,060) had a recorded age group of Under 18"), plus the unit note, both re-applied after the firewall. Real route 41/41 (23/41 on the submitted tree), including a verified firewall control. Test 56/56, 20/20 mutants caught, 93 accepted outputs and P4.1 12/12 unchanged, 13 prior receipts unchanged. Uncommitted; no source, provider, spend, merge or deploy. Codex review: Needed — correction to the share proof and to delivered NIBRS wording; no automatic further round.
+
+<!-- progress-update
+{"kind":"step","phase":3,"id":"P3.GC032-SHARE","title":"Answer the youth-share question as a share of recorded offenders","status":"review","at":"2026-09-28T21:34:26Z","note":"Both review findings corrected in the one approved pass. A share whose division would drop the decimals (8 instead of 8.4, or 0) is now refused, while the correctly written forms still give 8.4%. The answer's wording is now written by the application from the result itself: '8.4% (1,260 of 15,060) had a recorded age group of Under 18', of offenders recorded in NIBRS reports, and never 'of crimes'. It survives the safety filter that replaces leaked text. Real-route check 41/41, test 56/56, all 20 deliberate breakages caught, 93 accepted answers unchanged. Uncommitted, awaiting Codex review."}
+-->
+
+<!-- progress-update
+{"kind":"focus","phase":3,"at":"2026-09-28T21:34:26Z","latest":"GC-032's youth share is correct to the decimal and described as a share of recorded offenders, with the reviewer's counterexamples refused.","next":"Codex reviews the correction once; no automatic further round. Phase 3 remains incomplete.","work":{"id":"P3.GC032-SHARE","title":"Answer the youth-share question as a share of recorded offenders","owner":"Claude corrected; Codex reviews","state":"Correction submitted, uncommitted","next":"Codex ruling; no further correction without Jeff."}}
+-->
+
+## Codex G32 correction review - retained failures closed, an undefined share becomes zero in the new wording
+
+2026-09-28. **Credit and preserve both corrections against the retained counterexamples. The batch is not accepted because the new owned wording turns a SQL NULL percentage into a claimed 0.0%. The one correction allowance has been used; no further implementation is authorized by this ruling.** This is one consolidated review, not a request for broader certification or another automatic round.
+
+### Independently verified
+
+- `scripts/test-gc032-share.ts`: **56/56**.
+- `g32/route-witness-g32.cjs --out g32/codex-route.json --assert`: **41/41** through the real route and worker, with network blocked 4/4 and real source opens refused 4/4.
+- G32-1's integer CTE, uncoerced fraction and routed single-SELECT sibling are refused without execution. The supported real-arithmetic forms still return 8.4; the fraction is correctly described as the equivalent percentage. This closes the retained arithmetic witnesses, not a claim of universal SQL arithmetic support.
+- G32-2's conflicting sentence is replaced by the owned recorded-offender statement. Correct, conflicting and leaky narratives, including the actual firewall control, retain the intended figure, counts, place, period and unit. The prior crime-share wording witness is closed.
+- All **6 corrected candidate hashes, 6 preserved first-submission hashes and 13 protected receipt hashes match**.
+- Saved regression outputs independently compared: **93 accepted answers unchanged** and **12 P4.1 outputs unchanged**. These are comparisons of the saved receipts, not fresh reruns of every broad suite. Mutations and the whole npm chain were not rerun. The disclosed shell exit 124 after the post-taxonomy summary is not converted into an exit-0 claim. Existing pretest/taxonomy/full-tsc limitations remain separate.
+
+### One remaining blocker: NULL is not a zero percentage
+
+The new `offenderShareDelivery` uses `Number(row[shareAlias])` before checking `Number.isFinite`. JavaScript converts SQL `null` to numeric zero. A valid query with a zero denominator therefore gets a false percentage asserted by the application.
+
+Reviewer fixture: keep the submitted tables, question, statements and scope, but set in-scope recorded offender counts to zero. Execute the retained SUM CTE, the single-SELECT SUM sibling and the TOTAL CTE. In **all three cases**, the bound worker returns:
+
+```json
+{"youth_share_pct":null,"youth_count":0,"total_count":0}
+```
+
+The scripted model accurately says:
+
+> The percentage cannot be calculated because there are no recorded offenders in the requested scope.
+
+On the first-submission tree (`g32/before-tree`) that statement is retained, with the unit note. On the correction tree the new owned wording replaces it with:
+
+> Of the offenders recorded in NIBRS reports for the requested offenses in California, 2021–2025, 0.0% had a recorded age group of Under 18.
+
+Both trees execute the same three queries and return the same rows; the new error is in delivery, not SQL, the provider or source identity. A zero denominator makes the share undefined, not 0%. This is not an argument for treating an actual numeric zero as missing.
+
+Evidence under `audit/phase3-gc032-share-2026-09-28/g32/`:
+
+- `codex-null-share.cjs`: the submitted isolated fixture wrapper, with changes in memory only; no product or submitted proof edits.
+- `codex-null-before.json`: three correct non-zero-claim controls, 3/3.
+- `codex-null-after.json`: the same three now make the false claim, 0/3. The observation script exits 0 without `--assert`; the failed checks and complete answers, not the process exit, establish the defect.
+- `codex-integrity.cjs` / `codex-integrity.json`: hashes, saved-output comparisons, executed rows, worker counts and complete explanations.
+
+**Concrete consequence for acceptance:** a sparse or empty eligible population can become an authoritative-looking zero percentage, even when the database and model both correctly identify the result as unavailable. A generic coverage disclaimer, human reading of the NULL row or a disclosed testing limitation does not make that delivered assertion correct.
+
+### Reassessment and the smallest recommended next action
+
+The owned-statement approach closes the original wording defect and should be kept. This does not warrant redesigning the share proof, catalog, SQL parser or narration system. The materially smaller completion is an explicit value boundary in that existing helper: **format only an actual finite numeric share; otherwise deliver an owned unavailable-share sentence rather than coercing or inferring a number.** Keep true numeric zero, the valid 8.4% answer and fraction handling. Do not return to untrusted model prose for unavailable values. State a specific zero-denominator cause only when the returned evidence establishes it.
+
+If Jeff approves, limit implementation to that value/unknown handling and its regression evidence. Prove undefined share versus genuine zero and positive share, with the existing real-route witness, and reuse unchanged acceptance/binding evidence. Missing/non-numeric values can be checked at the same helper boundary without new infrastructure. No general SQL/prose project, real-source work, provider call, paid test, commit or deployment. Return one focused result; no automatic further repair. **Await Jeff's approval because the expressly authorized correction pass is consumed; this recommendation does not reset it under a new label.**
+
+**Necessity check:** preserving NULL as unavailable is necessary to accept correct delivered answers; the new zero claim is reproduced through the actual route. Broader parser completeness, additional SQL forms, baseline test cleanup and real-data/model remeasurement are deferred. The original corrections and preserved accepted work remain credited. Phase 3 is still incomplete.
+
+### Short prompt for Claude, after Jeff approves the limited completion
+
+> Read "Codex G32 correction review - retained failures closed, an undefined share becomes zero in the new wording" and `g32/codex-null-after.json`. Preserve the credited G32-1/G32-2 work. Implement only an explicit numeric/unknown boundary in the owned offender-share statement: SQL NULL must produce an unavailable share, never 0.0%; genuine zero and the supported positive/fraction answers must remain. Prove those distinctions through the existing fixture path and preserve receipts. No broader parsing/catalog work, source/provider access, spend, commit or deployment. Codex review needed on the focused result; no automatic further round. This prompt takes effect only with Jeff's approval.
+
+Claude's submitted correction closes the two retained failures and preserves prior evidence. Codex found one new delivery regression, recommends the smaller value-boundary completion, and has neither implemented nor authorized another pass.
+
+<!-- progress-update
+{"kind":"step","phase":3,"id":"P3.GC032-SHARE","title":"Answer the youth-share question as a share of recorded offenders","status":"review","at":"2026-09-28T21:40:53Z","note":"Independent 56/56 and route 41/41; both retained failures closed, 93 accepted and 12 P4.1 saved outputs unchanged. One new delivery regression: SQL NULL becomes a claimed 0.0% in the owned wording, reproduced in three real-route forms. Correction allowance consumed. Recommend only a numeric/unknown value boundary and its controls, awaiting Jeff; no automatic repair or paid run."}
+-->
+
+<!-- progress-update
+{"kind":"focus","phase":3,"at":"2026-09-28T21:40:53Z","latest":"GC-032's arithmetic and conflicting-unit witnesses are fixed. The new wording must preserve an undefined percentage instead of claiming zero.","next":"Jeff decides on the limited value-boundary completion; preserve the successful correction and reuse its evidence. No broader redesign or paid test.","work":{"id":"P3.GC032-SHARE","title":"Answer the youth-share question as a share of recorded offenders","owner":"Jeff decides; Claude implements if approved; Codex reviews","state":"One reproduced delivery regression; correction allowance used","next":"Approval for numeric/unknown handling only, preserving genuine zero and positive answers."}}
+-->
+
+## Owned-statement value boundary - an undefined share is delivered as unavailable, never 0.0%
+
+2026-09-28, under Jeff's approval: "Preserve the credited G32 corrections. Fix only the owned statement's numeric/unknown boundary: NULL must remain unavailable, never become 0%. Verify unavailable, genuine-zero and positive results using existing fixtures. No broader work, source/provider access, spend, commit or deployment." **Submitted for Codex review. Phase 3 remains incomplete.** Uncommitted.
+
+### Preserved and reproduced
+
+- The G32 candidate matched `g32/candidate-g32.sha256` (6/6) before the edit. The two files touched here are backed up in `g32/value-boundary/backup-before/`. 10 receipts (Codex's G32 review files, the G32 route/mutation/test receipts) are hashed in `value-boundary/receipts-before.sha256`; all 10 are unchanged afterwards.
+- Afterwards, the four G32 files not touched here still match their G32 hashes.
+- Codex's `codex-null-share.cjs` was rerun into a new receipt (`value-boundary/reproduce-codex-null.json`). **Reproduced in all three forms:** the row is `{"youth_share_pct":null,"youth_count":0,"total_count":0}`, and the delivered text is "…, 0.0% had a recorded age group of Under 18."
+
+### The fix (`lib/result-disclosure.ts` `offenderShareDelivery`, 16 changed lines)
+
+- **Only an actual finite number is formatted.** The share value must be `typeof "number"` and finite. SQL NULL, a missing column or a non-numeric value marks the share **unavailable**, and no percentage is formed. A real numeric 0 is still a share: "0.0% (0 of N)".
+- **The unavailable sentence is owned, not the model's.** The cause "no recorded offenders" is stated only when every other returned value in the row is 0. Otherwise the sentence says only that no value was returned. The multi-row "shown in the results above" fallback is unchanged.
+
+The unit note, the post-firewall re-application and every G32-1/G32-2 path are untouched.
+
+Delivered on the real route, unavailable fixture, for both the accurate and a false ("0.0% of serious violent crimes…") scripted sentence:
+
+> Of the offenders recorded in NIBRS reports for the requested offenses in California, 2021–2025, the share that had a recorded age group of Under 18 is unavailable: the result contains no recorded offenders in this scope, so no percentage can be computed.
+
+### Evidence (`audit/phase3-gc032-share-2026-09-28/g32/value-boundary/`)
+
+`route-witness-value.cjs` wraps the existing GC-032 witness exactly as Codex's null probe does. It covers Codex's three forms (the retained SUM CTE, the single-SELECT SUM sibling, the TOTAL CTE), each with an accurate and a false scripted sentence (6 scenarios per mode). Each scenario checks one bound-worker execution, the exact row, and the exact owned sentence. In the unavailable mode it also checks that no "N%" appears anywhere in the delivered text.
+
+| Mode (existing fixture, changed in memory) | Row | Before (G32 tree) | After |
+| --- | --- | --- | --- |
+| **unavailable**: Codex's fixture, all in-scope counts 0 | `null / 0 / 0` | **12/18**: all 6 said "0.0%" | **18/18**: unavailable, no percentage |
+| **genuine zero**: in-scope Under 18 counts 0, total unchanged | `0 / 0 / 13,800` | 18/18 | **18/18**: "0.0% (0 of 13,800)" |
+| **positive**: the unchanged `g32/route-witness-g32.cjs` | `8.4 / 1,260 / 15,060` | (41/41 at G32) | **41/41** (`route-positive-g32.json`) |
+
+Isolation in every run: network blocked 4/4, real sources refused 4/4. The genuine-zero mode already passed before, which confirms the defect was only NULL-to-number coercion, not zero handling.
+
+- **Unit test:** `scripts/test-gc032-share.ts` **63/63**. New section 5b covers:
+  - NULL with zero counts: unavailable, cause stated;
+  - NULL with no counts returned, and NULL beside non-zero counts: unavailable, no cause claimed;
+  - a non-numeric value and a missing column: unavailable;
+  - genuine 0: "0.0% (0 of 15,060)";
+  - the positive answer, unchanged.
+- **Mutations** (`mutations-value.json`), all caught by the unit test:
+  - V1, restores `Number()` coercion: 4 failing;
+  - V2, always claims the zero-offender cause: 2 failing;
+  - V3, never distinguishes unavailable: 5 failing.
+- **Regressions:**
+  - 93 accepted outputs **identical**; CR1 9/9, 5/5; controls 12/12.
+  - P4.1 binding witness **12/12, no changed result**; comma route 5/5 (GC-032 delivered); CMA1 route 9/9; the submitted GC-032 witness 19/19.
+  - The `test` chain: 134 steps pass, then it stops on the standing taxonomy findings (16 !== 12, `comparable_agency_clearance`). The new test reports 63/63 in the chain.
+  - Zero type-error lines under app/lib/scripts.
+  - The pretest and post-taxonomy suites were not rerun: this change touches only the owned-statement helper, and the retained G32 receipts for them are unchanged.
+
+### Adversarial self-review
+
+- *Could a NULL still become a number?* Only a value that is already a finite JavaScript number is formatted. better-sqlite3 returns SQL NULL as `null`, which is now unavailable; V1 shows the test catches the old coercion.
+- *Could "no recorded offenders" be claimed wrongly?* Only when every other returned value in the row is exactly 0. Without returned counts, or with a non-zero or NULL count, the sentence claims no cause (tested).
+- *Could a genuine zero be hidden?* No. A numeric 0 formats as "0.0% (0 of N)" on the real route and in the unit test.
+- *Limits:* the unit sentence after an unavailable share still begins "Unit: this percentage is of…". It describes the measure, not a value, and was left unchanged to stay in scope. Real-model phrasing and real-data values are still unmeasured. `value-boundary/before-tree/` and `value-boundary/mut/` are uncommitted scratch copies.
+
+### Paste-ready Codex prompt
+
+> Read "Owned-statement value boundary - an undefined share is delivered as unavailable, never 0.0%" at the end of `docs/superpowers/2026-09-19-six-model-offline-readiness-handoff.md`. `offenderShareDelivery` now formats only a finite numeric share; NULL, a missing column or a non-number gets an owned unavailable sentence, and "no recorded offenders" is claimed only when every returned count is 0. Real route: Codex's zero-denominator fixture in all three forms, with accurate and false wording, goes from 12/18 to 18/18 (no percentage anywhere); a genuine zero gives "0.0% (0 of 13,800)" (18/18); the positive 8.4% witness is 41/41. Test 63/63, 3/3 new mutants caught, 93 accepted outputs and P4.1 12/12 unchanged, G32 receipts unchanged. Uncommitted; no source, provider, spend, merge or deploy. Codex review: Needed — focused change to delivered NIBRS wording; no automatic further round.
+
+<!-- progress-update
+{"kind":"step","phase":3,"id":"P3.GC032-SHARE","title":"Answer the youth-share question as a share of recorded offenders","status":"review","at":"2026-09-28T22:38:34Z","note":"When there are no recorded offenders to divide by, the answer now says the share is unavailable instead of claiming 0.0%, whatever the model wrote. A real zero is still reported as 0.0% (0 of 13,800), and the normal 8.4% answer is unchanged. Real-route checks 18/18 unavailable (12/18 before), 18/18 zero, 41/41 positive; test 63/63; 93 accepted answers unchanged. Uncommitted, awaiting Codex review."}
+-->
+
+<!-- progress-update
+{"kind":"focus","phase":3,"at":"2026-09-28T22:38:34Z","latest":"GC-032's owned answer now keeps an undefined share unavailable, a real zero as zero, and the 8.4% answer intact.","next":"Codex reviews this focused change; no automatic further round. Phase 3 remains incomplete.","work":{"id":"P3.GC032-SHARE","title":"Answer the youth-share question as a share of recorded offenders","owner":"Claude built; Codex reviews","state":"Value-boundary fix submitted, uncommitted","next":"Codex ruling."}}
+-->
+
+## Codex GC-032 acceptance - unavailable, zero and positive shares remain distinct
+
+2026-09-28. **Accept the value-boundary correction and close the bounded GC-032 repair locally. No further correction or resubmission is requested.** G32-1's arithmetic protection and G32-2's recorded-offender wording remain credited; the NULL-to-zero delivery regression is closed. This is local acceptance of the supported answer family, not deployment, a real-data reference value, general SQL certification or Phase 3 completion.
+
+### Independent verification
+
+- `node node_modules/tsx/dist/cli.mjs scripts/test-gc032-share.ts`: **63/63**, exit 0.
+- The submitted `value-boundary/route-witness-value.cjs`, run with `--assert` in each mode: **18/18 unavailable** and **18/18 genuine zero**, both exit 0. All three SQL forms run through the real route and bound worker with both accurate and misleading scripted model wording. SQL NULL remains unavailable with no numerical percentage; genuine zero is **0.0% (0 of 13,800)**.
+- The retained `g32/route-witness-g32.cjs --assert`: **41/41**, exit 0. Positive and fraction answers, arithmetic refusals, wrong-answer controls and the post-firewall statement are preserved.
+- Both changed candidate hashes, both backup hashes, all **10 protected receipt hashes** and the **four untouched G32 candidate hashes** match.
+- Independently compared the saved regression outputs: **93 accepted outputs unchanged**, and **12 P4.1 binding outputs unchanged**. These are saved-result comparisons, not a new broad-suite run. Mutations, npm pretest, the whole test chain and post-taxonomy suites were not rerun for this focused review. Existing baseline failures and the prior full-tsc limitation remain; no green whole-repository claim is made.
+
+Reviewer receipts under `audit/phase3-gc032-share-2026-09-28/g32/value-boundary/`:
+
+- `codex-unavailable.json`, `codex-zero.json`, `codex-positive.json`;
+- `codex-integrity.cjs` and `codex-integrity.json`, including direct checks of the retained complete answers as well as hash and saved-output comparisons.
+
+The real-route runs each report network blocked 4/4 and real source opens refused 4/4. Scripted replies and disposable fixture databases establish application behavior; they do not measure model quality or current crime statistics. No source database, provider, spend, product edit, commit or deployment occurred in this review. No PowerShell was launched.
+
+### Ruling and limits
+
+The changed helper now requires a finite numeric result before formatting a percentage. An unavailable result gets an owned unavailable sentence, so a false model-written zero cannot leak back into the answer. Genuine zero is not hidden. The retained nonzero share remains correctly described as a share of recorded offenders, not crimes.
+
+The unavailable unit note's wording ("this percentage") describes the measure without asserting a numerical value. That is not a blocker or a reason for another edit. The cause sentence is accepted on the tested zero-count result; this ruling does not promote checking other returned values into a general proof of arbitrary SQL denominator lineage. Broader expressions and narratives remain outside the bounded claim.
+
+GC-032 is now a completed local useful-answer increment. Historical frozen failure counts and verdicts are not rewritten. The repair remains uncommitted and undeployed. Preserve the code and evidence as accepted; commit/push or starting another implementation slice needs the applicable owner approval, not another GC-032 review round.
+
+Return to the existing Phase 3 closeout plan: the outstanding ranking, coverage/exclusion, identity and follow-up outcomes remain. This acceptance does not start a paid comparison, a general catalog/CTE redesign or a new overall audit. No acknowledgment-only handoff is needed.
+
+**Necessity check:** the concrete wrong-percentage, wrong-unit and NULL-as-zero failures have been addressed with executed evidence, and the supported answer remains. No additional change is necessary to accept this batch. General robustness, unit-note polish, baseline cleanup and real-data remeasurement are deferred; accept and stop this repair.
+
+### Short prompt for Claude
+
+> Read "Codex GC-032 acceptance - unavailable, zero and positive shares remain distinct." GC-032 is accepted locally: independent 63/63 unit checks, 18/18 unavailable, 18/18 genuine zero and 41/41 retained positive/control route checks; hashes verified, 93 accepted and 12 P4.1 saved outputs unchanged. Close this repair and preserve its evidence. No further correction, rerun or acknowledgment-only submission. Commit/push and new implementation remain separately subject to Jeff's approval; no source/provider access, spend or deployment. Codex review: completed for this bounded batch. Phase 3 remains incomplete.
+
+Claude has delivered the approved useful-answer repair and its focused completion. Codex accepts the local batch and returns attention to the existing Phase 3 outcomes without adding another prerequisite.
+
+<!-- progress-update
+{"kind":"step","phase":3,"id":"P3.GC032-SHARE","title":"Answer the youth-share question as a share of recorded offenders","status":"complete","at":"2026-09-28T23:04:41Z","note":"Accepted locally by Codex. Independent 63/63 unit checks and real-route 18/18 unavailable, 18/18 genuine zero, 41/41 positive/control checks. NULL stays unavailable, real zero remains zero, the positive share is labeled as recorded offenders, and wrong-answer controls hold. Candidate/preserved hashes verified; 93 accepted and 12 P4.1 saved outputs unchanged. No further correction. Uncommitted, undeployed; Phase 3 remains incomplete."}
+-->
+
+<!-- progress-update
+{"kind":"focus","phase":3,"at":"2026-09-28T23:04:41Z","latest":"GC-032 is accepted locally: the useful offender-share answer works, and unknown, zero and positive values remain distinct.","next":"Preserve the accepted batch and return to the existing Phase 3 ranking, coverage, identity and follow-up closeout plan. No further GC-032 repair or paid rerun.","work":{"id":"P3.GC032-SHARE","title":"Answer the youth-share question as a share of recorded offenders","owner":"Claude implemented; Codex accepted","state":"Accepted locally; uncommitted and undeployed","next":"Owner decision on preservation and the next existing Phase 3 outcome; no automatic implementation."}}
+-->
+
+## Next Phase 3 outcome - GC-064 useful city homicide-rate ranking
+
+2026-09-28. Jeff asks which remaining outcome should follow GC-032. **Recommend GC-064 next**, with only the identity and coverage obligations necessary to support that ranking included in the same task. This follows the existing outcome-based closeout plan at :25795 and residual table at :24683. It is a recommendation, not approval to implement, access sources, commit/push, spend or deploy.
+
+### Why this outcome next
+
+The exact old GC-064 failure is contained by an owned limitation, but users still do not get the useful city homicide-rate ranking Phase 3 promises. Restoring that capability is more valuable than another isolated checker change. It also makes the immediate identity/coverage questions concrete: which entities belong in this ranking, what population the rate uses, and what reporting periods support it. That does not require settling every agency in every source first.
+
+GC-065 follows as its own coverage/exclusion and comparison outcome. Reuse any shared evidence established for GC-064, but do not assume they use the same coverage rule or that a ranking repair settles absent-category meaning. GC-049, GC-003 geography and Stage B stay owned; resolve a particular fact early only if it blocks the selected answer, otherwise schedule their residual qualification together. GC-070's numerical continuation belongs in the later combined check as a separately declared responsive-user supplement; its frozen inconclusive case remains inconclusive. Do not rerun a frozen conversation that cannot answer its clarification and expect a different qualification result.
+
+### Recommended bounded task, if Jeff approves
+
+Use the exact saved GC-064 question, accepted interpretation, existing ranking/count components, receipts and fixture runners. The outcome is a useful delivered city ranking, with the requested homicide unit and period, matched population denominator, valid city/agency identity, eligibility and transparent coverage. Do not substitute reporting agencies for verified cities, merge duplicate names, silently discard NULL agency types, infer zero from absent reports, or insert a new minimum-victim/completeness filter merely to make the answer easy. Follow the accepted question's rules; a changed evaluation or eligibility policy needs an explicit decision.
+
+Start from retained evidence and the current path, then implement the smallest supported local change within this task if the required facts are established. Prove actual delivered rows, order, rates and labels on fixtures, with the corresponding wrong-identity/denominator/period or exclusion controls that address the mechanism changed. Reuse accepted regression evidence and runners; no new framework or broad survey. Preserve the accepted GC-032 and prior repairs. Recommend one integrated submission and at most one expressly included correction pass; no separate feasibility round by default and no automatic extension after the allowance.
+
+If a missing fact prevents a truthful city ranking, stop at that specific fact and state what already-retained evidence fails to establish. Request only the bounded read or owner meaning decision that would resolve it. Do not invent identity, certify a city ranking from an agency list, quietly reduce the promised scope, or initiate a new source operation under this recommendation. Existing source permissions are not presumed reusable.
+
+The two separate decisions remain scoped: preserving accepted GC-032 with a commit/push, and authorizing this next implementation. Preparing or running GC-064 fixture work need not wait on a remote commit if local accepted changes have been accounted for; this is not a new commit gate. No per-fix paid run, new model comparison, full rebuild or whole-application audit is proposed.
+
+### Short prompt for Claude, if Jeff approves GC-064
+
+> GC-032 stays accepted. Take GC-064 next: deliver the requested city homicide-rate ranking using the existing question, rules, components, retained evidence and fixture runners. Include only the identity, population and coverage work required for that answer; do not turn agencies into cities or silently add exclusions. Build the smallest supported local repair and submit one integrated fixture proof with preservation controls; at most one bounded correction pass. If a missing source fact blocks it, name that fact and the smallest evidence request instead of guessing or broadening the task. No source/provider access, spend, commit or deployment is authorized. Keep GC-065 and other residuals owned, and do not reopen GC-032. Codex review: needed for the ranking/eligibility change. This prompt takes effect only with Jeff's approval.
+
+**Necessity check:** a useful, correctly identified ranking is an unmet Phase 3 outcome; its immediate identity/population/coverage requirements are necessary. Settling every identity issue first, fixing GC-065 as an unrelated extra, repeating the model test and adding a new audit are deferred. This is the next recommendation, not a claim that one ranking repair completes Phase 3.

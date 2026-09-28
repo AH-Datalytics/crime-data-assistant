@@ -1,0 +1,40 @@
+{
+ "at": "2026-09-28T22:12:09.347Z",
+ "results": [
+  {
+   "id": "V1-null-coerced-to-number",
+   "applied": true,
+   "killed": true,
+   "failing": [
+    "FAIL  NULL with zero counts: unavailable, cause stated, no percentage: Of the offenders recorded in NIBRS reports for the requested offenses in California, 2021–2025, 0.0% had a recorded age group of Under 18.",
+    "FAIL  NULL with no counts returned: unavailable, no cause claimed",
+    "FAIL  NULL beside non-zero counts: no zero-offender cause claimed",
+    "FAIL  a non-numeric value is not formatted as a share"
+   ],
+   "tail": "59/63 passed; offline guard: 0 denied database opens, 0 network calls"
+  },
+  {
+   "id": "V2-cause-always-claimed",
+   "applied": true,
+   "killed": true,
+   "failing": [
+    "FAIL  NULL with no counts returned: unavailable, no cause claimed",
+    "FAIL  NULL beside non-zero counts: no zero-offender cause claimed"
+   ],
+   "tail": "61/63 passed; offline guard: 0 denied database opens, 0 network calls"
+  },
+  {
+   "id": "V3-unavailable-not-distinguished",
+   "applied": true,
+   "killed": true,
+   "failing": [
+    "FAIL  NULL with zero counts: unavailable, cause stated, no percentage: Of the offenders recorded in NIBRS reports for the requested offenses in California, 2021–2025, the share that had a recorded age group of Under 18 is shown in the results above.",
+    "FAIL  NULL with no counts returned: unavailable, no cause claimed",
+    "FAIL  NULL beside non-zero counts: no zero-offender cause claimed",
+    "FAIL  a non-numeric value is not formatted as a share",
+    "FAIL  a missing share column is unavailable, not zero"
+   ],
+   "tail": "58/63 passed; offline guard: 0 denied database opens, 0 network calls"
+  }
+ ]
+}

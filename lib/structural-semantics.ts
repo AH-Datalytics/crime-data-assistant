@@ -1,7 +1,7 @@
 import { requestWindowGrain, type QueryContract, type QueryContractSource } from "./query-contract";
 import { detectRequestedGrain } from "./requested-grain";
 import { analyzeSql, groupByColumns, LITERAL_SOURCE, type SelectItem } from "./sql-lineage";
-import { restrictingScopes, stripSqlComments } from "./sql-restriction";
+import { restrictingScopes, splitCtes, stripSqlComments } from "./sql-restriction";
 import { sqlRestrictsColumnToValue } from "./sql-restriction";
 import {
   allTopicColumns,
@@ -663,7 +663,9 @@ function outerSourceAliases(sql: string): Map<string, string> {
   const fromAt = sql.search(/\bFROM\b/i);
   if (fromAt === -1) return map;
   const clause = sql.slice(fromAt);
-  for (const m of clause.matchAll(/\b(?:FROM|JOIN)\s+([A-Za-z_]\w*)(?:\s+(?:AS\s+)?([A-Za-z_]\w*))?/gi)) {
+  // A schema prefix (`rollup.state_summary_...`, as the planner writes it) is not the table: reading
+  // `rollup` as the table left the alias unresolved, so the routed approved share was refused.
+  for (const m of clause.matchAll(/\b(?:FROM|JOIN)\s+(?:[A-Za-z_]\w*\s*\.\s*)?([A-Za-z_]\w*)(?:\s+(?:AS\s+)?([A-Za-z_]\w*))?/gi)) {
     const table = m[1].toLowerCase();
     const alias = (m[2] ?? "").toLowerCase();
     map.set(table, table);
@@ -798,6 +800,16 @@ function describeOperand(text: string): OperandCount {
   return { kind: "subset", values, measure, scale };
 }
 
+/** Is `numerator / denominator` evaluated as a real division in SQLite? (see G32-1 above) */
+function divisionIsReal(numerator: string, denominator: string): boolean {
+  let s = numerator.trim();
+  while (s.startsWith("(") && s.endsWith(")") && parenSpansWhole(s)) s = s.slice(1, -1).trim();
+  const REAL_LITERAL = /^[-+]?(?:\d+\.\d*|\.\d+|\d+(?:\.\d*)?[eE][-+]?\d+)$/;
+  if (splitTopLevel(s, "*").some((factor) => REAL_LITERAL.test(factor.trim()))) return true;
+  const total = (text: string) => asSingleAggregate(splitScaling(text).expression)?.fn === "TOTAL";
+  return total(numerator) || total(denominator);
+}
+
 function requestedOperandsEstablished(
   sql: string, question: string, baseTables: string[], source: QueryContractSource
 ): boolean {
@@ -837,6 +849,13 @@ function requestedOperandsEstablished(
     // multiplier, and 200 sits inside any plausible range so no range test would catch it.
     // Only the numerator carries a scale in the supported shapes; a scaled divisor is unresolved.
     if (denominator.scale !== 1) return false;
+
+    // NON-TRUNCATING ARITHMETIC (Codex G32-1). SUM and COUNT of integer columns are integers, and
+    // SQLite divides two integers as integers: `100 * 1260 / 15060` is 8, not 8.37. The scale above is
+    // the same number for `100` and `100.0`, so it cannot tell them apart. The division must be proved
+    // real: a decimal literal factor on the numerator side (applied before the division, since the
+    // numerator is everything left of the last top-level `/`) or a TOTAL(), which is always real.
+    if (!divisionIsReal(operands.numerator, operands.denominator)) return false;
 
     if (requested.form === "ordered") {
       // "A to B" needs a KNOWN SUBSET on each side, in the requested order. A total on either side
@@ -929,6 +948,121 @@ function ratioIsTheAnswer(
     (item) => !shares.includes(item) && item.alias !== null && RATIO_ALIAS_RE.test(item.alias)
   );
   return !mislabelled;
+}
+
+/**
+ * GC-032's retained statement computes its share from two one-row CTEs:
+ *
+ *   WITH y AS (SELECT SUM(d.m) AS a FROM t d WHERE <scope> AND <subset>),
+ *        z AS (SELECT SUM(d.m) AS b FROM t d WHERE <scope>)
+ *   SELECT 100.0 * y.a / z.b ... FROM y, z
+ *
+ * That is the same number as the approved single-SELECT share
+ *
+ *   SELECT 100.0 * SUM(CASE WHEN <subset> THEN d.m ELSE 0 END) / SUM(d.m) FROM t d WHERE <scope>
+ *
+ * when, and only when: both CTEs read the same table and the same measure with the same aggregate;
+ * each returns exactly one row (one aggregate, no GROUP BY/HAVING/JOIN/LIMIT/OR/subquery); their
+ * filters are identical except for ONE extra conjunct on one side; and the outer query only
+ * cross-joins the two and reads nothing but their two outputs. This returns that single-SELECT
+ * statement so the EXISTING share proof judges it -- subset named in the question, matching total,
+ * matching measure, permitted scale. Anything else returns null and gets no allowance.
+ *
+ * It proves an equivalence for the checker only; the statement that runs is unchanged. It is not the
+ * CTE-decomposition change (2026-09-22): no `SelectItem` field becomes CTE-transitive, and a share
+ * computed INSIDE a CTE and projected out is still not recognized.
+ */
+function twoCteShareEquivalent(sql: string): string | null {
+  const text = stripSqlComments(sql).trim().replace(/;\s*$/, "");
+  const split = splitCtes(text);
+  if (!split || split.ctes.length !== 2) return null;
+
+  const lowerOutsideLiterals = (s: string) =>
+    s.replace(/'(?:''|[^'])*'|[^']+/g, (part) => (part.startsWith("'") ? part : part.toLowerCase()));
+  const withoutLiterals = (s: string) => s.replace(/'(?:''|[^'])*'/g, "''");
+  const BODY = /^\s*SELECT\s+(SUM|TOTAL)\s*\(\s*([A-Za-z_]\w*)\s*\.\s*([A-Za-z_]\w*)\s*\)\s+AS\s+([A-Za-z_]\w*)\s+FROM\s+((?:[A-Za-z_]\w*\s*\.\s*)?[A-Za-z_]\w*)\s+(?:AS\s+)?(?!WHERE\b)([A-Za-z_]\w*)\s+WHERE\s+([\s\S]+?)\s*$/i;
+
+  const bodies = split.ctes.map((cte) => {
+    const m = BODY.exec(cte.body);
+    if (!m) return null;
+    const [, fn, qualifier, measure, output, table, alias, where] = m;
+    if (qualifier.toLowerCase() !== alias.toLowerCase()) return null;
+    const bare = withoutLiterals(where);
+    if (/\b(?:GROUP|HAVING|ORDER|LIMIT|UNION|INTERSECT|EXCEPT|JOIN|WINDOW|SELECT|OR)\b/i.test(bare)) return null;
+    // Every qualified name in the filter must be this CTE's own alias.
+    for (const ref of bare.matchAll(/\b([A-Za-z_]\w*)\s*\.\s*[A-Za-z_]\w*/g)) {
+      if (ref[1].toLowerCase() !== alias.toLowerCase()) return null;
+    }
+    // Top-level AND, keeping `BETWEEN x AND y` whole.
+    const parts: string[] = [];
+    let depth = 0; let start = 0;
+    for (const tok of where.matchAll(/'(?:''|[^'])*'|[()]|\bAND\b/gi)) {
+      if (tok[0] === "(") depth++;
+      else if (tok[0] === ")") depth--;
+      else if (depth === 0 && /^AND$/i.test(tok[0])) {
+        const piece = where.slice(start, tok.index);
+        if (/\bBETWEEN\s+\S+\s*$/i.test(withoutLiterals(piece))) continue;
+        parts.push(piece); start = (tok.index ?? 0) + tok[0].length;
+      }
+    }
+    parts.push(where.slice(start));
+    const aliasRe = new RegExp(`\\b${alias}\\s*\\.\\s*`, "gi");
+    const conjuncts = parts.map((p) => p.trim()).filter(Boolean);
+    const normal = conjuncts.map((c) => lowerOutsideLiterals(c.replace(aliasRe, "@.")).replace(/\s+/g, " "));
+    if (new Set(normal).size !== normal.length) return null;
+    return { name: cte.name.toLowerCase(), fn: fn.toUpperCase(), measure: measure.toLowerCase(), output: output.toLowerCase(),
+      table: table.replace(/\s+/g, "").toLowerCase(), alias, where, conjuncts, normal };
+  });
+  const [a, b] = bodies;
+  if (!a || !b || a.table !== b.table || a.fn !== b.fn || a.measure !== b.measure) return null;
+
+  // Which one is the subset: exactly one extra conjunct, everything else identical.
+  const extraIn = (x: typeof a, y: typeof a) =>
+    x!.normal.length === y!.normal.length + 1 && y!.normal.every((c) => x!.normal.includes(c))
+      ? x!.conjuncts[x!.normal.findIndex((c) => !y!.normal.includes(c))] : null;
+  const subset = extraIn(a, b) !== null ? a : extraIn(b, a) !== null ? b : null;
+  if (!subset) return null;
+  const total = subset === a ? b : a;
+  const predicate = (extraIn(subset, total) as string).replace(new RegExp(`\\b${subset.alias}\\s*\\.`, "gi"), `${total.alias}.`);
+
+  // The outer query: a cross join of exactly these two CTEs, reading only their outputs.
+  const OUTER = /^\s*SELECT\s+([\s\S]+?)\s+FROM\s+([A-Za-z_]\w*)(?:\s+(?:AS\s+)?(?!(?:CROSS|INNER|JOIN|ON)\b)([A-Za-z_]\w*))?\s*(?:,|\bCROSS\s+JOIN\b|\b(?:INNER\s+)?JOIN\b)\s*([A-Za-z_]\w*)(?:\s+(?:AS\s+)?(?!ON\b)([A-Za-z_]\w*))?(?:\s+ON\s+1\s*=\s*1)?(?:\s+LIMIT\s+([1-9]\d*))?\s*$/i;
+  // The trailing LIMIT is the one the route appends (`LIMIT 1000`); on a one-row cross join any
+  // positive limit returns the same row.
+  const o = OUTER.exec(split.outer);
+  if (!o) return null;
+  const refs = new Map<string, typeof a>();
+  for (const [name, alias] of [[o[2], o[3]], [o[4], o[5]]]) {
+    const body = bodies.find((x) => x!.name === name.toLowerCase());
+    if (!body) return null;
+    refs.set((alias ?? name).toLowerCase(), body);
+  }
+  if (new Set([...refs.values()]).size !== 2) return null;
+
+  let failed = false;
+  const select = o[1].replace(/\b([A-Za-z_]\w*)\s*\.\s*([A-Za-z_]\w*)\b/g, (whole, q: string, col: string) => {
+    const body = refs.get(q.toLowerCase());
+    if (!body || body.output !== col.toLowerCase()) { failed = true; return whole; }
+    return body === subset
+      ? `${body.fn}(CASE WHEN ${predicate} THEN ${total.alias}.${body.measure} ELSE 0 END)`
+      : `${body.fn}(${total.alias}.${body.measure})`;
+  });
+  if (failed) return null;
+  // No bare reference to a CTE output or name may remain.
+  const leftover = withoutLiterals(select).toLowerCase();
+  for (const word of [a.output, b.output, a.name, b.name]) {
+    if (new RegExp(`(?<![\\w.])${word}(?![\\w])`).test(leftover.replace(/\bas\s+[a-z_]\w*/g, ""))) return null;
+  }
+  return `SELECT ${select} FROM ${total.table} ${total.alias} WHERE ${total.where}`;
+}
+
+/** Is the two-CTE share (see `twoCteShareEquivalent`) the answer, judged by the existing share proof? */
+function twoCteShareIsTheAnswer(sql: string, source: QueryContractSource, question: string): boolean {
+  const equivalent = twoCteShareEquivalent(sql);
+  if (!equivalent) return false;
+  const lineage = analyzeSql(equivalent);
+  if (!lineage.parsed || lineage.unsupportedShape) return false;
+  return ratioIsTheAnswer(lineage.items.filter(isFactualSeries), source, equivalent, question, lineage.baseTables);
 }
 
 /** Does this expression's division bind a population valid at the requested level? */
@@ -1217,7 +1351,8 @@ export function evaluateStructuralSemantics(opts: {
       // also holds `incidents`. Requiring each table to carry its own share rejected valid joined
       // shares, which is how an over-strict first attempt at this fix broke GC-033 and GC-034.
       if (resolvedUnit.unit === "ratio" &&
-          ratioIsTheAnswer(factual, opts.source, opts.sql, opts.question, lineage.baseTables)) {
+          (ratioIsTheAnswer(factual, opts.source, opts.sql, opts.question, lineage.baseTables)
+            || twoCteShareIsTheAnswer(opts.sql, opts.source, opts.question))) {
         continue;
       }
       add("structural-measure-unit-unmodeled", "retry",

@@ -337,6 +337,18 @@ const NIBRS_RECORDED_MEASURES: Partial<Record<string, string[]>> = {
   summary_offender_demographics: ["offender_count"],
 };
 
+/**
+ * A planner rollup (`state_<source>` / `national_<source>`) carries its source's recorded measures:
+ * scripts/build-nibrs-rollups.py builds each measure as SUM(COALESCE(measure, 0)) of the source column,
+ * grouped by the same dimensions. Without this, the final check -- which runs on the ROUTED statement
+ * -- could not resolve `offender_count` and refused the approved GC-032 share once it was routed.
+ * Derived only from the source declaration, so a rollup of an undeclared source still declares nothing.
+ */
+function rollupRecordedMeasures(table: string): string[] | undefined {
+  const source = table.replace(/^(?:state|national)_/, "");
+  return source === table ? undefined : NIBRS_RECORDED_MEASURES[source];
+}
+
 const CURRENT_OFFENSE_VALUES: Record<string, string> = {
   murder: "Murder", rape: "Rape", robbery: "Robbery", aggravated_assault: "Aggravated Assault",
   burglary: "Burglary", theft: "Theft", motor_vehicle_theft: "Motor Vehicle Theft",
@@ -606,6 +618,7 @@ export const TABLE_SEMANTICS: TableSemantics[] = [
     T({
       source: "nibrs", table, role: "metric",
       rowKey: "national", outputLevels: ["national"], timeGrains: ["annual"], measures: ["count"],
+      recordedMeasures: rollupRecordedMeasures(table),
       measureBinding: { kind: "code_column", column: "ucr_offense_code" },
       components: "present", aggregation: "additive",
     })
@@ -620,6 +633,7 @@ export const TABLE_SEMANTICS: TableSemantics[] = [
     T({
       source: "nibrs", table, role: "metric",
       rowKey: "state", outputLevels: ["state", "national"], timeGrains: ["annual"], measures: ["count"],
+      recordedMeasures: rollupRecordedMeasures(table),
       measureBinding: { kind: "code_column", column: "ucr_offense_code" },
       components: "present", aggregation: "additive",
     })

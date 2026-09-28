@@ -1,0 +1,490 @@
+{
+ "kind": "phase3-comma-alias-route-witness",
+ "at": "2026-09-28T17:56:53.481Z",
+ "root": "audit\\phase3-gc032-share-2026-09-28\\mutant-route-tree",
+ "expected": {
+  "youth_count": 1200,
+  "total_count": 15000,
+  "youth_share_pct": 8,
+  "rapes_cleared_by_arrest": 300
+ },
+ "boundaries": {
+  "networkProbe": [
+   {
+    "api": "https.request",
+    "blocked": true
+   },
+   {
+    "api": "http.get",
+    "blocked": true
+   },
+   {
+    "api": "net.connect",
+    "blocked": true
+   },
+   {
+    "api": "fetch",
+    "blocked": true
+   }
+  ],
+  "databaseProbe": [
+   {
+    "path": "C:\\Users\\jeffm\\crime-data-assistant\\crime_data.db",
+    "blocked": true
+   },
+   {
+    "path": "C:\\Users\\jeffm\\crime-data-assistant\\nibrs.db",
+    "blocked": true
+   },
+   {
+    "path": "C:\\Users\\jeffm\\crime-data-assistant\\shr.db",
+    "blocked": true
+   },
+   {
+    "path": "/opt/nibrs/nibrs.db",
+    "blocked": true
+   }
+  ],
+  "outboundNetworkAttempts": 4,
+  "refusedDatabaseOpens": 4,
+  "substitutedModules": [
+   "better-sqlite3",
+   "@anthropic-ai/sdk"
+  ]
+ },
+ "gc032Delivery": {
+  "delivered": true,
+  "retryRules": [],
+  "expected": {
+   "youthN": 1200,
+   "totalN": 15000,
+   "pct": 8
+  }
+ },
+ "checks": {
+  "passed": 18,
+  "failed": 1,
+  "list": [
+   {
+    "name": "retained-gc032: delivers 8% = 1200 / 15000",
+    "ok": true,
+    "detail": "[{\"youth_share_pct\":8,\"youth_count\":1200,\"total_count\":15000}]"
+   },
+   {
+    "name": "retained-gc032: delivered text names the unit as recorded offenders, not crimes, and keeps the figure, place and period",
+    "ok": true,
+    "detail": "Youth under 18 accounted for 8.0% of recorded offenders in serious violent crimes in California from 2021 to 2025.\n\nUnit: this percentage is of offenders recorded in NIBRS reports (including offenders recorded with an unknown age), not of crimes or incidents; one incident can list several offenders, and not every offender is identified or recorded.\n\nDefinition: NIBRS violent crime is reported here"
+   },
+   {
+    "name": "cross-join-form: delivers 8% = 1200 / 15000",
+    "ok": true,
+    "detail": "[{\"youth_share_pct\":8,\"youth_count\":1200,\"total_count\":15000}]"
+   },
+   {
+    "name": "cross-join-form: delivered text names the unit as recorded offenders, not crimes, and keeps the figure, place and period",
+    "ok": true,
+    "detail": "Youth under 18 accounted for 8.0% of recorded offenders in serious violent crimes in California from 2021 to 2025.\n\nUnit: this percentage is of offenders recorded in NIBRS reports (including offenders recorded with an unknown age), not of crimes or incidents; one incident can list several offenders, and not every offender is identified or recorded.\n\nDefinition: NIBRS violent crime is reported here"
+   },
+   {
+    "name": "join-on-1-form: delivers 8% = 1200 / 15000",
+    "ok": true,
+    "detail": "[{\"youth_share_pct\":8,\"youth_count\":1200,\"total_count\":15000}]"
+   },
+   {
+    "name": "join-on-1-form: delivered text names the unit as recorded offenders, not crimes, and keeps the figure, place and period",
+    "ok": true,
+    "detail": "Youth under 18 accounted for 8.0% of recorded offenders in serious violent crimes in California from 2021 to 2025.\n\nUnit: this percentage is of offenders recorded in NIBRS reports (including offenders recorded with an unknown age), not of crimes or incidents; one incident can list several offenders, and not every offender is identified or recorded.\n\nDefinition: NIBRS violent crime is reported here"
+   },
+   {
+    "name": "single-select-control: delivers 8% = 1200 / 15000",
+    "ok": true,
+    "detail": "[{\"youth_share_pct\":8,\"youth_count\":1200,\"total_count\":15000}]"
+   },
+   {
+    "name": "single-select-control: delivered text names the unit as recorded offenders, not crimes, and keeps the figure, place and period",
+    "ok": true,
+    "detail": "Youth under 18 accounted for 8.0% of recorded offenders in serious violent crimes in California from 2021 to 2025.\n\nUnit: this percentage is of offenders recorded in NIBRS reports (including offenders recorded with an unknown age), not of crimes or incidents; one incident can list several offenders, and not every offender is identified or recorded.\n\nDefinition: NIBRS violent crime is reported here"
+   },
+   {
+    "name": "retained-gc032-leaky-explanation: delivers 8% = 1200 / 15000",
+    "ok": true,
+    "detail": "[{\"youth_share_pct\":8,\"youth_count\":1200,\"total_count\":15000}]"
+   },
+   {
+    "name": "retained-gc032-leaky-explanation: the firewall replaced the leaking narrative and the unit sentence survived it",
+    "ok": false,
+    "detail": "The requested results are shown above."
+   },
+   {
+    "name": "wrong-denominator-drops-state: no figure delivered, never executed",
+    "ok": true,
+    "detail": "{\"rows\":[],\"worker\":0}"
+   },
+   {
+    "name": "wrong-denominator-counts-rows: no figure delivered, never executed",
+    "ok": true,
+    "detail": "{\"rows\":[],\"worker\":0}"
+   },
+   {
+    "name": "wrong-numerator-counts-rows: no figure delivered, never executed",
+    "ok": true,
+    "detail": "{\"rows\":[],\"worker\":0}"
+   },
+   {
+    "name": "wrong-subset-18-24: no figure delivered, never executed",
+    "ok": true,
+    "detail": "{\"rows\":[],\"worker\":0}"
+   },
+   {
+    "name": "wrong-scale-200: no figure delivered, never executed",
+    "ok": true,
+    "detail": "{\"rows\":[],\"worker\":0}"
+   },
+   {
+    "name": "wrong-numerator-period: no figure delivered, never executed",
+    "ok": true,
+    "detail": "{\"rows\":[],\"worker\":0}"
+   },
+   {
+    "name": "wrong-inverted: no figure delivered, never executed",
+    "ok": true,
+    "detail": "{\"rows\":[],\"worker\":0}"
+   },
+   {
+    "name": "wrong-numerator-offenses: no figure delivered, never executed",
+    "ok": true,
+    "detail": "{\"rows\":[],\"worker\":0}"
+   },
+   {
+    "name": "expected figure is derived from rows: 1200 / 15000 = 8.0%",
+    "ok": true,
+    "detail": "{\"youthN\":1200,\"totalN\":15000,\"pct\":8}"
+   }
+  ]
+ },
+ "results": [
+  {
+   "id": "retained-gc032",
+   "question": "what share of serious violent crimes in California are committed by youth under 18?",
+   "expect": "answer",
+   "status": 200,
+   "threw": null,
+   "modelCalls": 2,
+   "retryPrompts": [
+    "User question: \"what share of serious violent crimes in California are committed by youth under 18?\"\n\nResults metadata:\n- Rows: 1\n- Metrics: youth_share_pct, youth_count, total_count\n- Offense/topic: murder, rape, robbery, aggravated assault\n- Year range: unknown\n- Geographies: California\n- Scope: state\n\nDescribe what these results contain in one sentence (metric, geography, time range). ONLY ment"
+   ],
+   "modelSql": "WITH youth_offenders AS (SELECT SUM(d.offender_count) AS youth_count FROM summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.age_group = 'Under 18' AND d.year BETWEEN 2021 AND 2025), total_offenders AS (SELECT SUM(d.offender_count) AS total_count FROM summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.year BETWEEN 2021 AND 2025) SELECT ROUND(100.0 * y.youth_count / t.total_count, 1) AS youth_share_pct, y.youth_count, t.total_count FROM youth_offenders y, total_offenders t",
+   "responseSql": "WITH youth_offenders AS (SELECT SUM(d.offender_count) AS youth_count FROM rollup.state_summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.age_group = 'Under 18' AND d.year BETWEEN 2021 AND 2025), total_offenders AS (SELECT SUM(d.offender_count) AS total_count FROM rollup.state_summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.year BETWEEN 2021 AND 2025) SELECT ROUND(100.0 * y.youth_count / t.total_count, 1) AS youth_share_pct, y.youth_count, t.total_count FROM youth_offenders y, total_offenders t LIMIT 1000",
+   "workerReceived": [
+    "WITH youth_offenders AS (SELECT SUM(d.offender_count) AS youth_count FROM rollup.state_summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.age_group = 'Under 18' AND d.year BETWEEN 2021 AND 2025), total_offenders AS (SELECT SUM(d.offender_count) AS total_count FROM rollup.state_summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.year BETWEEN 2021 AND 2025) SELECT ROUND(100.0 * y.youth_count / t.total_count, 1) AS youth_share_pct, y.youth_count, t.total_count FROM youth_offenders y, total_offenders t LIMIT 1000"
+   ],
+   "rows": [
+    {
+     "youth_share_pct": 8,
+     "youth_count": 1200,
+     "total_count": 15000
+    }
+   ],
+   "columns": [
+    "youth_share_pct",
+    "youth_count",
+    "total_count"
+   ],
+   "explanation": "Youth under 18 accounted for 8.0% of recorded offenders in serious violent crimes in California from 2021 to 2025.\n\nUnit: this percentage is of offenders recorded in NIBRS reports (including offenders recorded with an unknown age), not of crimes or incidents; one incident can list several offenders, and not every offender is identified or recorded.\n\nDefinition: NIBRS violent crime is reported here using the UCR-aligned set: murder/nonnegligent manslaughter, rape, robbery, and aggravated assault.\n\nNote: This data comes from the FBI's NIBRS program. Not all agencies report to this system, and some may have incomplete data — especially in their first year of NIBRS reporting or for recent months of data. Always verify that reported offenses are not impacted by incomplete coverage.",
+   "errors": [],
+   "retryRules": []
+  },
+  {
+   "id": "cross-join-form",
+   "question": "what share of serious violent crimes in California are committed by youth under 18?",
+   "expect": "answer",
+   "status": 200,
+   "threw": null,
+   "modelCalls": 2,
+   "retryPrompts": [
+    "User question: \"what share of serious violent crimes in California are committed by youth under 18?\"\n\nResults metadata:\n- Rows: 1\n- Metrics: youth_share_pct, youth_count, total_count\n- Offense/topic: murder, rape, robbery, aggravated assault\n- Year range: unknown\n- Geographies: California\n- Scope: state\n\nDescribe what these results contain in one sentence (metric, geography, time range). ONLY ment"
+   ],
+   "modelSql": "WITH youth_offenders AS (SELECT SUM(d.offender_count) AS youth_count FROM summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.year BETWEEN 2021 AND 2025 AND d.age_group = 'Under 18'), total_offenders AS (SELECT SUM(d.offender_count) AS total_count FROM summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.year BETWEEN 2021 AND 2025) SELECT ROUND(100.0 * y.youth_count / t.total_count, 1) AS youth_share_pct, y.youth_count, t.total_count FROM youth_offenders y CROSS JOIN total_offenders t",
+   "responseSql": "WITH youth_offenders AS (SELECT SUM(d.offender_count) AS youth_count FROM rollup.state_summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.year BETWEEN 2021 AND 2025 AND d.age_group = 'Under 18'), total_offenders AS (SELECT SUM(d.offender_count) AS total_count FROM rollup.state_summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.year BETWEEN 2021 AND 2025) SELECT ROUND(100.0 * y.youth_count / t.total_count, 1) AS youth_share_pct, y.youth_count, t.total_count FROM youth_offenders y CROSS JOIN total_offenders t LIMIT 1000",
+   "workerReceived": [
+    "WITH youth_offenders AS (SELECT SUM(d.offender_count) AS youth_count FROM rollup.state_summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.year BETWEEN 2021 AND 2025 AND d.age_group = 'Under 18'), total_offenders AS (SELECT SUM(d.offender_count) AS total_count FROM rollup.state_summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.year BETWEEN 2021 AND 2025) SELECT ROUND(100.0 * y.youth_count / t.total_count, 1) AS youth_share_pct, y.youth_count, t.total_count FROM youth_offenders y CROSS JOIN total_offenders t LIMIT 1000"
+   ],
+   "rows": [
+    {
+     "youth_share_pct": 8,
+     "youth_count": 1200,
+     "total_count": 15000
+    }
+   ],
+   "columns": [
+    "youth_share_pct",
+    "youth_count",
+    "total_count"
+   ],
+   "explanation": "Youth under 18 accounted for 8.0% of recorded offenders in serious violent crimes in California from 2021 to 2025.\n\nUnit: this percentage is of offenders recorded in NIBRS reports (including offenders recorded with an unknown age), not of crimes or incidents; one incident can list several offenders, and not every offender is identified or recorded.\n\nDefinition: NIBRS violent crime is reported here using the UCR-aligned set: murder/nonnegligent manslaughter, rape, robbery, and aggravated assault.\n\nNote: This data comes from the FBI's NIBRS program. Not all agencies report to this system, and some may have incomplete data — especially in their first year of NIBRS reporting or for recent months of data. Always verify that reported offenses are not impacted by incomplete coverage.",
+   "errors": [],
+   "retryRules": []
+  },
+  {
+   "id": "join-on-1-form",
+   "question": "what share of serious violent crimes in California are committed by youth under 18?",
+   "expect": "answer",
+   "status": 200,
+   "threw": null,
+   "modelCalls": 2,
+   "retryPrompts": [
+    "User question: \"what share of serious violent crimes in California are committed by youth under 18?\"\n\nResults metadata:\n- Rows: 1\n- Metrics: youth_share_pct, youth_count, total_count\n- Offense/topic: murder, rape, robbery, aggravated assault\n- Year range: unknown\n- Geographies: California\n- Scope: state\n\nDescribe what these results contain in one sentence (metric, geography, time range). ONLY ment"
+   ],
+   "modelSql": "WITH youth_offenders AS (SELECT SUM(d.offender_count) AS youth_count FROM summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.year BETWEEN 2021 AND 2025 AND d.age_group = 'Under 18'), total_offenders AS (SELECT SUM(d.offender_count) AS total_count FROM summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.year BETWEEN 2021 AND 2025) SELECT ROUND(100.0 * y.youth_count / t.total_count, 1) AS youth_share_pct, y.youth_count, t.total_count FROM youth_offenders y JOIN total_offenders t ON 1 = 1",
+   "responseSql": "WITH youth_offenders AS (SELECT SUM(d.offender_count) AS youth_count FROM rollup.state_summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.year BETWEEN 2021 AND 2025 AND d.age_group = 'Under 18'), total_offenders AS (SELECT SUM(d.offender_count) AS total_count FROM rollup.state_summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.year BETWEEN 2021 AND 2025) SELECT ROUND(100.0 * y.youth_count / t.total_count, 1) AS youth_share_pct, y.youth_count, t.total_count FROM youth_offenders y JOIN total_offenders t ON 1 = 1 LIMIT 1000",
+   "workerReceived": [
+    "WITH youth_offenders AS (SELECT SUM(d.offender_count) AS youth_count FROM rollup.state_summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.year BETWEEN 2021 AND 2025 AND d.age_group = 'Under 18'), total_offenders AS (SELECT SUM(d.offender_count) AS total_count FROM rollup.state_summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.year BETWEEN 2021 AND 2025) SELECT ROUND(100.0 * y.youth_count / t.total_count, 1) AS youth_share_pct, y.youth_count, t.total_count FROM youth_offenders y JOIN total_offenders t ON 1 = 1 LIMIT 1000"
+   ],
+   "rows": [
+    {
+     "youth_share_pct": 8,
+     "youth_count": 1200,
+     "total_count": 15000
+    }
+   ],
+   "columns": [
+    "youth_share_pct",
+    "youth_count",
+    "total_count"
+   ],
+   "explanation": "Youth under 18 accounted for 8.0% of recorded offenders in serious violent crimes in California from 2021 to 2025.\n\nUnit: this percentage is of offenders recorded in NIBRS reports (including offenders recorded with an unknown age), not of crimes or incidents; one incident can list several offenders, and not every offender is identified or recorded.\n\nDefinition: NIBRS violent crime is reported here using the UCR-aligned set: murder/nonnegligent manslaughter, rape, robbery, and aggravated assault.\n\nNote: This data comes from the FBI's NIBRS program. Not all agencies report to this system, and some may have incomplete data — especially in their first year of NIBRS reporting or for recent months of data. Always verify that reported offenses are not impacted by incomplete coverage.",
+   "errors": [],
+   "retryRules": []
+  },
+  {
+   "id": "single-select-control",
+   "question": "what share of serious violent crimes in California are committed by youth under 18?",
+   "expect": "answer",
+   "status": 200,
+   "threw": null,
+   "modelCalls": 2,
+   "retryPrompts": [
+    "User question: \"what share of serious violent crimes in California are committed by youth under 18?\"\n\nResults metadata:\n- Rows: 1\n- Metrics: youth_share_pct, youth_count, total_count\n- Offense/topic: murder, rape, robbery, aggravated assault\n- Year range: unknown\n- Geographies: California\n- Scope: state\n\nDescribe what these results contain in one sentence (metric, geography, time range). ONLY ment"
+   ],
+   "modelSql": "SELECT ROUND(100.0 * SUM(CASE WHEN d.age_group = 'Under 18' THEN d.offender_count ELSE 0 END) / SUM(d.offender_count), 1) AS youth_share_pct, SUM(CASE WHEN d.age_group = 'Under 18' THEN d.offender_count ELSE 0 END) AS youth_count, SUM(d.offender_count) AS total_count FROM summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.year BETWEEN 2021 AND 2025",
+   "responseSql": "SELECT ROUND(100.0 * SUM(CASE WHEN d.age_group = 'Under 18' THEN d.offender_count ELSE 0 END) / SUM(d.offender_count), 1) AS youth_share_pct, SUM(CASE WHEN d.age_group = 'Under 18' THEN d.offender_count ELSE 0 END) AS youth_count, SUM(d.offender_count) AS total_count FROM rollup.state_summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.year BETWEEN 2021 AND 2025 LIMIT 1000",
+   "workerReceived": [
+    "SELECT ROUND(100.0 * SUM(CASE WHEN d.age_group = 'Under 18' THEN d.offender_count ELSE 0 END) / SUM(d.offender_count), 1) AS youth_share_pct, SUM(CASE WHEN d.age_group = 'Under 18' THEN d.offender_count ELSE 0 END) AS youth_count, SUM(d.offender_count) AS total_count FROM rollup.state_summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.year BETWEEN 2021 AND 2025 LIMIT 1000"
+   ],
+   "rows": [
+    {
+     "youth_share_pct": 8,
+     "youth_count": 1200,
+     "total_count": 15000
+    }
+   ],
+   "columns": [
+    "youth_share_pct",
+    "youth_count",
+    "total_count"
+   ],
+   "explanation": "Youth under 18 accounted for 8.0% of recorded offenders in serious violent crimes in California from 2021 to 2025.\n\nUnit: this percentage is of offenders recorded in NIBRS reports (including offenders recorded with an unknown age), not of crimes or incidents; one incident can list several offenders, and not every offender is identified or recorded.\n\nDefinition: NIBRS violent crime is reported here using the UCR-aligned set: murder/nonnegligent manslaughter, rape, robbery, and aggravated assault.\n\nNote: This data comes from the FBI's NIBRS program. Not all agencies report to this system, and some may have incomplete data — especially in their first year of NIBRS reporting or for recent months of data. Always verify that reported offenses are not impacted by incomplete coverage.",
+   "errors": [],
+   "retryRules": []
+  },
+  {
+   "id": "retained-gc032-leaky-explanation",
+   "question": "what share of serious violent crimes in California are committed by youth under 18?",
+   "expect": "answer",
+   "status": 200,
+   "threw": null,
+   "modelCalls": 2,
+   "retryPrompts": [
+    "User question: \"what share of serious violent crimes in California are committed by youth under 18?\"\n\nResults metadata:\n- Rows: 1\n- Metrics: youth_share_pct, youth_count, total_count\n- Offense/topic: murder, rape, robbery, aggravated assault\n- Year range: unknown\n- Geographies: California\n- Scope: state\n\nDescribe what these results contain in one sentence (metric, geography, time range). ONLY ment"
+   ],
+   "modelSql": "WITH youth_offenders AS (SELECT SUM(d.offender_count) AS youth_count FROM summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.age_group = 'Under 18' AND d.year BETWEEN 2021 AND 2025), total_offenders AS (SELECT SUM(d.offender_count) AS total_count FROM summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.year BETWEEN 2021 AND 2025) SELECT ROUND(100.0 * y.youth_count / t.total_count, 1) AS youth_share_pct, y.youth_count, t.total_count FROM youth_offenders y, total_offenders t",
+   "responseSql": "WITH youth_offenders AS (SELECT SUM(d.offender_count) AS youth_count FROM rollup.state_summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.age_group = 'Under 18' AND d.year BETWEEN 2021 AND 2025), total_offenders AS (SELECT SUM(d.offender_count) AS total_count FROM rollup.state_summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.year BETWEEN 2021 AND 2025) SELECT ROUND(100.0 * y.youth_count / t.total_count, 1) AS youth_share_pct, y.youth_count, t.total_count FROM youth_offenders y, total_offenders t LIMIT 1000",
+   "workerReceived": [
+    "WITH youth_offenders AS (SELECT SUM(d.offender_count) AS youth_count FROM rollup.state_summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.age_group = 'Under 18' AND d.year BETWEEN 2021 AND 2025), total_offenders AS (SELECT SUM(d.offender_count) AS total_count FROM rollup.state_summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.year BETWEEN 2021 AND 2025) SELECT ROUND(100.0 * y.youth_count / t.total_count, 1) AS youth_share_pct, y.youth_count, t.total_count FROM youth_offenders y, total_offenders t LIMIT 1000"
+   ],
+   "rows": [
+    {
+     "youth_share_pct": 8,
+     "youth_count": 1200,
+     "total_count": 15000
+    }
+   ],
+   "columns": [
+    "youth_share_pct",
+    "youth_count",
+    "total_count"
+   ],
+   "explanation": "The requested results are shown above.",
+   "errors": [],
+   "retryRules": []
+  },
+  {
+   "id": "wrong-denominator-drops-state",
+   "question": "what share of serious violent crimes in California are committed by youth under 18?",
+   "expect": "refuse",
+   "status": 200,
+   "threw": null,
+   "modelCalls": 2,
+   "retryPrompts": [
+    "what share of serious violent crimes in California are committed by youth under 18?\n\n[SYSTEM: Query contract violation (structural-measure-unit-unmodeled). The question asks for a ratio, and `summary_offender_demographics` does not model one -- a share needs a numerator and a denominator, and neither is established here. Return the underlying counts, or say plainly that this cannot be computed. Re"
+   ],
+   "modelSql": "WITH youth_offenders AS (SELECT SUM(d.offender_count) AS youth_count FROM summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.year BETWEEN 2021 AND 2025 AND d.age_group = 'Under 18'), total_offenders AS (SELECT SUM(d.offender_count) AS total_count FROM summary_offender_demographics d WHERE d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.year BETWEEN 2021 AND 2025) SELECT ROUND(100.0 * y.youth_count / t.total_count, 1) AS youth_share_pct, y.youth_count, t.total_count FROM youth_offenders y, total_offenders t",
+   "responseSql": null,
+   "workerReceived": [],
+   "rows": [],
+   "columns": [],
+   "explanation": "I couldn't build a reliable query that matched the requested source, geography, metric, and time period. Try narrowing the question or choosing one of the suggested alternatives.",
+   "errors": [],
+   "retryRules": [
+    "structural-measure-unit-unmodeled"
+   ]
+  },
+  {
+   "id": "wrong-denominator-counts-rows",
+   "question": "what share of serious violent crimes in California are committed by youth under 18?",
+   "expect": "refuse",
+   "status": 200,
+   "threw": null,
+   "modelCalls": 2,
+   "retryPrompts": [
+    "what share of serious violent crimes in California are committed by youth under 18?\n\n[SYSTEM: Query contract violation (structural-measure-unit-unmodeled). The question asks for a ratio, and `summary_offender_demographics` does not model one -- a share needs a numerator and a denominator, and neither is established here. Return the underlying counts, or say plainly that this cannot be computed. Re"
+   ],
+   "modelSql": "WITH youth_offenders AS (SELECT SUM(d.offender_count) AS youth_count FROM summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.year BETWEEN 2021 AND 2025 AND d.age_group = 'Under 18'), total_offenders AS (SELECT COUNT(*) AS total_count FROM summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.year BETWEEN 2021 AND 2025) SELECT ROUND(100.0 * y.youth_count / t.total_count, 1) AS youth_share_pct, y.youth_count, t.total_count FROM youth_offenders y, total_offenders t",
+   "responseSql": null,
+   "workerReceived": [],
+   "rows": [],
+   "columns": [],
+   "explanation": "I couldn't build a reliable query that matched the requested source, geography, metric, and time period. Try narrowing the question or choosing one of the suggested alternatives.",
+   "errors": [],
+   "retryRules": [
+    "structural-measure-unit-unmodeled"
+   ]
+  },
+  {
+   "id": "wrong-numerator-counts-rows",
+   "question": "what share of serious violent crimes in California are committed by youth under 18?",
+   "expect": "refuse",
+   "status": 200,
+   "threw": null,
+   "modelCalls": 2,
+   "retryPrompts": [
+    "what share of serious violent crimes in California are committed by youth under 18?\n\n[SYSTEM: Query contract violation (structural-measure-unit-unmodeled). The question asks for a ratio, and `summary_offender_demographics` does not model one -- a share needs a numerator and a denominator, and neither is established here. Return the underlying counts, or say plainly that this cannot be computed. Re"
+   ],
+   "modelSql": "WITH youth_offenders AS (SELECT COUNT(*) AS youth_count FROM summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.year BETWEEN 2021 AND 2025 AND d.age_group = 'Under 18'), total_offenders AS (SELECT SUM(d.offender_count) AS total_count FROM summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.year BETWEEN 2021 AND 2025) SELECT ROUND(100.0 * y.youth_count / t.total_count, 1) AS youth_share_pct, y.youth_count, t.total_count FROM youth_offenders y, total_offenders t",
+   "responseSql": null,
+   "workerReceived": [],
+   "rows": [],
+   "columns": [],
+   "explanation": "I couldn't build a reliable query that matched the requested source, geography, metric, and time period. Try narrowing the question or choosing one of the suggested alternatives.",
+   "errors": [],
+   "retryRules": [
+    "structural-measure-unit-unmodeled"
+   ]
+  },
+  {
+   "id": "wrong-subset-18-24",
+   "question": "what share of serious violent crimes in California are committed by youth under 18?",
+   "expect": "refuse",
+   "status": 200,
+   "threw": null,
+   "modelCalls": 2,
+   "retryPrompts": [
+    "what share of serious violent crimes in California are committed by youth under 18?\n\n[SYSTEM: Query contract violation (structural-measure-unit-unmodeled). The question asks for a ratio, and `summary_offender_demographics` does not model one -- a share needs a numerator and a denominator, and neither is established here. Return the underlying counts, or say plainly that this cannot be computed. Re"
+   ],
+   "modelSql": "WITH youth_offenders AS (SELECT SUM(d.offender_count) AS youth_count FROM summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.year BETWEEN 2021 AND 2025 AND d.age_group = '18-24'), total_offenders AS (SELECT SUM(d.offender_count) AS total_count FROM summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.year BETWEEN 2021 AND 2025) SELECT ROUND(100.0 * y.youth_count / t.total_count, 1) AS youth_share_pct, y.youth_count, t.total_count FROM youth_offenders y, total_offenders t",
+   "responseSql": null,
+   "workerReceived": [],
+   "rows": [],
+   "columns": [],
+   "explanation": "I couldn't build a reliable query that matched the requested source, geography, metric, and time period. Try narrowing the question or choosing one of the suggested alternatives.",
+   "errors": [],
+   "retryRules": [
+    "structural-measure-unit-unmodeled"
+   ]
+  },
+  {
+   "id": "wrong-scale-200",
+   "question": "what share of serious violent crimes in California are committed by youth under 18?",
+   "expect": "refuse",
+   "status": 200,
+   "threw": null,
+   "modelCalls": 2,
+   "retryPrompts": [
+    "what share of serious violent crimes in California are committed by youth under 18?\n\n[SYSTEM: Query contract violation (structural-measure-unit-unmodeled). The question asks for a ratio, and `summary_offender_demographics` does not model one -- a share needs a numerator and a denominator, and neither is established here. Return the underlying counts, or say plainly that this cannot be computed. Re"
+   ],
+   "modelSql": "WITH youth_offenders AS (SELECT SUM(d.offender_count) AS youth_count FROM summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.year BETWEEN 2021 AND 2025 AND d.age_group = 'Under 18'), total_offenders AS (SELECT SUM(d.offender_count) AS total_count FROM summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.year BETWEEN 2021 AND 2025) SELECT ROUND(200.0 * y.youth_count / t.total_count, 1) AS youth_share_pct, y.youth_count, t.total_count FROM youth_offenders y, total_offenders t",
+   "responseSql": null,
+   "workerReceived": [],
+   "rows": [],
+   "columns": [],
+   "explanation": "I couldn't build a reliable query that matched the requested source, geography, metric, and time period. Try narrowing the question or choosing one of the suggested alternatives.",
+   "errors": [],
+   "retryRules": [
+    "structural-measure-unit-unmodeled"
+   ]
+  },
+  {
+   "id": "wrong-numerator-period",
+   "question": "what share of serious violent crimes in California are committed by youth under 18?",
+   "expect": "refuse",
+   "status": 200,
+   "threw": null,
+   "modelCalls": 2,
+   "retryPrompts": [
+    "what share of serious violent crimes in California are committed by youth under 18?\n\n[SYSTEM: Query contract violation (structural-measure-unit-unmodeled). The question asks for a ratio, and `summary_offender_demographics` does not model one -- a share needs a numerator and a denominator, and neither is established here. Return the underlying counts, or say plainly that this cannot be computed. Re"
+   ],
+   "modelSql": "WITH youth_offenders AS (SELECT SUM(d.offender_count) AS youth_count FROM summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.year = 2025 AND d.age_group = 'Under 18'), total_offenders AS (SELECT SUM(d.offender_count) AS total_count FROM summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.year BETWEEN 2021 AND 2025) SELECT ROUND(100.0 * y.youth_count / t.total_count, 1) AS youth_share_pct, y.youth_count, t.total_count FROM youth_offenders y, total_offenders t",
+   "responseSql": null,
+   "workerReceived": [],
+   "rows": [],
+   "columns": [],
+   "explanation": "I couldn't build a reliable query that matched the requested source, geography, metric, and time period. Try narrowing the question or choosing one of the suggested alternatives.",
+   "errors": [],
+   "retryRules": [
+    "structural-measure-unit-unmodeled"
+   ]
+  },
+  {
+   "id": "wrong-inverted",
+   "question": "what share of serious violent crimes in California are committed by youth under 18?",
+   "expect": "refuse",
+   "status": 200,
+   "threw": null,
+   "modelCalls": 2,
+   "retryPrompts": [
+    "what share of serious violent crimes in California are committed by youth under 18?\n\n[SYSTEM: Query contract violation (structural-measure-unit-unmodeled). The question asks for a ratio, and `summary_offender_demographics` does not model one -- a share needs a numerator and a denominator, and neither is established here. Return the underlying counts, or say plainly that this cannot be computed. Re"
+   ],
+   "modelSql": "WITH youth_offenders AS (SELECT SUM(d.offender_count) AS youth_count FROM summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.year BETWEEN 2021 AND 2025 AND d.age_group = 'Under 18'), total_offenders AS (SELECT SUM(d.offender_count) AS total_count FROM summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.year BETWEEN 2021 AND 2025) SELECT ROUND(100.0 * t.total_count / y.youth_count, 1) AS youth_share_pct, y.youth_count, t.total_count FROM youth_offenders y, total_offenders t",
+   "responseSql": null,
+   "workerReceived": [],
+   "rows": [],
+   "columns": [],
+   "explanation": "I couldn't build a reliable query that matched the requested source, geography, metric, and time period. Try narrowing the question or choosing one of the suggested alternatives.",
+   "errors": [],
+   "retryRules": [
+    "structural-measure-unit-unmodeled"
+   ]
+  },
+  {
+   "id": "wrong-numerator-offenses",
+   "question": "what share of serious violent crimes in California are committed by youth under 18?",
+   "expect": "refuse",
+   "status": 200,
+   "threw": null,
+   "modelCalls": 2,
+   "retryPrompts": [
+    "what share of serious violent crimes in California are committed by youth under 18?\n\n[SYSTEM: Query contract violation (structural-measure-unit-unmodeled). The question asks for a ratio, and `summary_offender_demographics` does not model one -- a share needs a numerator and a denominator, and neither is established here. Return the underlying counts, or say plainly that this cannot be computed. Re"
+   ],
+   "modelSql": "WITH youth_offenders AS (SELECT SUM(d.offender_count) AS youth_count FROM summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A') AND d.year BETWEEN 2021 AND 2025 AND d.age_group = 'Under 18'), total_offenders AS (SELECT SUM(d.offender_count) AS total_count FROM summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.year BETWEEN 2021 AND 2025) SELECT ROUND(100.0 * y.youth_count / t.total_count, 1) AS youth_share_pct, y.youth_count, t.total_count FROM youth_offenders y, total_offenders t",
+   "responseSql": null,
+   "workerReceived": [],
+   "rows": [],
+   "columns": [],
+   "explanation": "I couldn't build a reliable query that matched the requested source, geography, metric, and time period. Try narrowing the question or choosing one of the suggested alternatives.",
+   "errors": [],
+   "retryRules": [
+    "structural-measure-unit-unmodeled"
+   ]
+  }
+ ]
+}

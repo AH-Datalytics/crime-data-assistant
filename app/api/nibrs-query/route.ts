@@ -27,7 +27,7 @@ import { checkSingleRowTrend } from "@/lib/single-row-trend";
 import { parseRoutingLogMeta } from "@/lib/routing-log-meta";
 import { answerMetadataQuestion } from "@/lib/metadata-coverage";
 import { validateTablesForTab } from "@/lib/table-allowlist";
-import { alignTitleYearRange, applyResultDisclosures, missingLowerBoundNote, returnedEntityKeys } from "@/lib/result-disclosure";
+import { alignTitleYearRange, applyResultDisclosures, missingLowerBoundNote, offenderShareDelivery, returnedEntityKeys } from "@/lib/result-disclosure";
 import {
   emitFactualPayload,
   finalizeProof,
@@ -1985,6 +1985,11 @@ export async function POST(req: NextRequest) {
     if (missingMembers && explanation.includes(missingMembers.note)
         && !routeGuardrailsFired.includes("nibrs-unresolved-member-disclosed")) {
       routeGuardrailsFired.push("nibrs-unresolved-member-disclosed");
+    }
+    // Same reason: an offender share's owned statement and unit must survive a replaced narrative (GC-032).
+    const shareDelivery = rows.length > 0 ? offenderShareDelivery(question, sql, rows) : null;
+    for (const part of shareDelivery ?? []) {
+      if (!explanation.includes(part)) explanation = [explanation, part].filter(Boolean).join("\n\n");
     }
     const totalMs = Date.now() - claudeStart;
     const firedGuardrails = finalizeGuardrailTags([...guardrailResult.fired, ...routeGuardrailsFired], queryContractGuardrails(runContractValidation(sql)));

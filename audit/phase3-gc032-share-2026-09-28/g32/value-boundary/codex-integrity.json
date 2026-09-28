@@ -1,0 +1,930 @@
+{
+  "at": "2026-09-28T23:04:41.293Z",
+  "manifests": [
+    {
+      "file": "C:\\Users\\jeffm\\crime-data-assistant\\audit\\phase3-gc032-share-2026-09-28\\g32\\value-boundary\\candidate-value.sha256",
+      "entries": [
+        {
+          "file": "lib/result-disclosure.ts",
+          "expected": "6489ee71d8ff7cdbd1f25b8189d4ea8221b85536c33e984fa5d4565d5874cc29",
+          "match": true
+        },
+        {
+          "file": "scripts/test-gc032-share.ts",
+          "expected": "70e3547538f7aa04f03cd406e0aa158d4956e5de803afae6ea36957de6c20372",
+          "match": true
+        }
+      ]
+    },
+    {
+      "file": "C:\\Users\\jeffm\\crime-data-assistant\\audit\\phase3-gc032-share-2026-09-28\\g32\\value-boundary\\backup-before.sha256",
+      "entries": [
+        {
+          "file": "result-disclosure.ts",
+          "expected": "6eaea649ea3be201675d5c5561ad74a76a2a0a2446252eea5abaac62d46ab66a",
+          "match": true
+        },
+        {
+          "file": "test-gc032-share.ts",
+          "expected": "4a287b9e970da90d957e6f9e3e41f95f28921e6a99f87d6658de6a65483a89ac",
+          "match": true
+        }
+      ]
+    },
+    {
+      "file": "C:\\Users\\jeffm\\crime-data-assistant\\audit\\phase3-gc032-share-2026-09-28\\g32\\value-boundary\\receipts-before.sha256",
+      "entries": [
+        {
+          "file": "audit/phase3-gc032-share-2026-09-28/g32/codex-integrity.cjs",
+          "expected": "4b26f2e0c955913912ae485febbdef9649c854dca797768088266b971e3cbf88",
+          "match": true
+        },
+        {
+          "file": "audit/phase3-gc032-share-2026-09-28/g32/codex-integrity.json",
+          "expected": "dffbe6bb2f20d510a3d9b184d05e1d44c1ebd3baf8f13dd681d176552c5ca98b",
+          "match": true
+        },
+        {
+          "file": "audit/phase3-gc032-share-2026-09-28/g32/codex-null-after.json",
+          "expected": "fe440c2e2e2bc58629649a80efdcd853d888bf2cad1441fdfe114679de43d518",
+          "match": true
+        },
+        {
+          "file": "audit/phase3-gc032-share-2026-09-28/g32/codex-null-before.json",
+          "expected": "b0ee0b9ad3be9a0248c7f9a31e1008202b95e9dd701fc04e244d44cd33849da9",
+          "match": true
+        },
+        {
+          "file": "audit/phase3-gc032-share-2026-09-28/g32/codex-null-share.cjs",
+          "expected": "90a7b7180807dc4fdc166e4b288e76a9b3420d458a0f185d7ae638253702aaf3",
+          "match": true
+        },
+        {
+          "file": "audit/phase3-gc032-share-2026-09-28/g32/codex-route.json",
+          "expected": "d710e08597c140563fa23574f18d91ea5f800c8174c144974e9eb12eade148bb",
+          "match": true
+        },
+        {
+          "file": "audit/phase3-gc032-share-2026-09-28/g32/route-after.json",
+          "expected": "c6b7b31480ef8a9847b4100369cdf844e63ba29f54b7a043eb863506504108a7",
+          "match": true
+        },
+        {
+          "file": "audit/phase3-gc032-share-2026-09-28/g32/route-before.json",
+          "expected": "ee6807583e7ab919a1cd7e25ff21a5fce6b31ab13ec92465110e1344f2412fae",
+          "match": true
+        },
+        {
+          "file": "audit/phase3-gc032-share-2026-09-28/g32/mutations-g32.json",
+          "expected": "aaa740319ec7207521d7e0f1811f169dd0ba2396b435e1990e42e76ca9f6c832",
+          "match": true
+        },
+        {
+          "file": "audit/phase3-gc032-share-2026-09-28/g32/test-after.log",
+          "expected": "6f717928c436e337c82bbb7a11ef96075bf9c941a4c9d9533e0d7c9c810423af",
+          "match": true
+        }
+      ]
+    },
+    {
+      "file": "C:\\Users\\jeffm\\crime-data-assistant\\audit\\phase3-gc032-share-2026-09-28\\g32\\candidate-g32.sha256",
+      "entries": [
+        {
+          "file": "lib/structural-semantics.ts",
+          "expected": "24a3304d825c3f6a1270d8a1f07540165f621a32390bb8baa8acfeed1697ea91",
+          "match": true
+        },
+        {
+          "file": "lib/table-semantics.ts",
+          "expected": "8d5ab0b1d70e461ec0e5d47a1893cde0f1be2b986f295cf11d63e16fb254fda2",
+          "match": true
+        },
+        {
+          "file": "app/api/nibrs-query/route.ts",
+          "expected": "5f3d4bd5cf325849b878beaed9cb8910b24ed9702b6f37fbcc695f4ede35a9c0",
+          "match": true
+        },
+        {
+          "file": "package.json",
+          "expected": "2e714a05783d01b6a3bd6796868b141080a9c2554a37cd55e08d206df0d356d9",
+          "match": true
+        }
+      ]
+    }
+  ],
+  "comparisons": [
+    {
+      "id": "GC-084/098",
+      "old": 20,
+      "now": 20,
+      "missing": [],
+      "changed": []
+    },
+    {
+      "id": "GC-057",
+      "old": 8,
+      "now": 8,
+      "missing": [],
+      "changed": []
+    },
+    {
+      "id": "GC-080 owned count",
+      "old": 48,
+      "now": 48,
+      "missing": [],
+      "changed": []
+    },
+    {
+      "id": "GC-080 periods",
+      "old": 17,
+      "now": 17,
+      "missing": [],
+      "changed": []
+    }
+  ],
+  "p4": {
+    "before": 12,
+    "after": 12,
+    "changed": []
+  },
+  "observations": [
+    {
+      "mode": "unavailable",
+      "checks": {
+        "passed": 18,
+        "failed": 0,
+        "list": [
+          {
+            "name": "retained-gc032: executed once by the bound worker",
+            "ok": true,
+            "detail": "{\"rows\":[{\"youth_share_pct\":null,\"youth_count\":0,\"total_count\":0}],\"worker\":1}"
+          },
+          {
+            "name": "retained-gc032: the row holds NULL for the share and zero counts",
+            "ok": true,
+            "detail": "[{\"youth_share_pct\":null,\"youth_count\":0,\"total_count\":0}]"
+          },
+          {
+            "name": "retained-gc032: delivered as unavailable, with no percentage anywhere",
+            "ok": true,
+            "detail": "Of the offenders recorded in NIBRS reports for the requested offenses in California, 2021–2025, the share that had a recorded age group of Under 18 is unavailable: the result contains no recorded offenders in this scope, so no percentage can be computed.\n\nUnit: this percentage is of offenders recorded in NIBRS reports (including offenders recorded with an unknown age), not of crimes or incidents; "
+          },
+          {
+            "name": "retained-cte-false-wording: executed once by the bound worker",
+            "ok": true,
+            "detail": "{\"rows\":[{\"youth_share_pct\":null,\"youth_count\":0,\"total_count\":0}],\"worker\":1}"
+          },
+          {
+            "name": "retained-cte-false-wording: the row holds NULL for the share and zero counts",
+            "ok": true,
+            "detail": "[{\"youth_share_pct\":null,\"youth_count\":0,\"total_count\":0}]"
+          },
+          {
+            "name": "retained-cte-false-wording: delivered as unavailable, with no percentage anywhere",
+            "ok": true,
+            "detail": "Of the offenders recorded in NIBRS reports for the requested offenses in California, 2021–2025, the share that had a recorded age group of Under 18 is unavailable: the result contains no recorded offenders in this scope, so no percentage can be computed.\n\nUnit: this percentage is of offenders recorded in NIBRS reports (including offenders recorded with an unknown age), not of crimes or incidents; "
+          },
+          {
+            "name": "single-select: executed once by the bound worker",
+            "ok": true,
+            "detail": "{\"rows\":[{\"youth_share_pct\":null,\"youth_count\":0,\"total_count\":0}],\"worker\":1}"
+          },
+          {
+            "name": "single-select: the row holds NULL for the share and zero counts",
+            "ok": true,
+            "detail": "[{\"youth_share_pct\":null,\"youth_count\":0,\"total_count\":0}]"
+          },
+          {
+            "name": "single-select: delivered as unavailable, with no percentage anywhere",
+            "ok": true,
+            "detail": "Of the offenders recorded in NIBRS reports for the requested offenses in California, 2021–2025, the share that had a recorded age group of Under 18 is unavailable: the result contains no recorded offenders in this scope, so no percentage can be computed.\n\nUnit: this percentage is of offenders recorded in NIBRS reports (including offenders recorded with an unknown age), not of crimes or incidents; "
+          },
+          {
+            "name": "single-select-false-wording: executed once by the bound worker",
+            "ok": true,
+            "detail": "{\"rows\":[{\"youth_share_pct\":null,\"youth_count\":0,\"total_count\":0}],\"worker\":1}"
+          },
+          {
+            "name": "single-select-false-wording: the row holds NULL for the share and zero counts",
+            "ok": true,
+            "detail": "[{\"youth_share_pct\":null,\"youth_count\":0,\"total_count\":0}]"
+          },
+          {
+            "name": "single-select-false-wording: delivered as unavailable, with no percentage anywhere",
+            "ok": true,
+            "detail": "Of the offenders recorded in NIBRS reports for the requested offenses in California, 2021–2025, the share that had a recorded age group of Under 18 is unavailable: the result contains no recorded offenders in this scope, so no percentage can be computed.\n\nUnit: this percentage is of offenders recorded in NIBRS reports (including offenders recorded with an unknown age), not of crimes or incidents; "
+          },
+          {
+            "name": "total-cte: executed once by the bound worker",
+            "ok": true,
+            "detail": "{\"rows\":[{\"youth_share_pct\":null,\"youth_count\":0,\"total_count\":0}],\"worker\":1}"
+          },
+          {
+            "name": "total-cte: the row holds NULL for the share and zero counts",
+            "ok": true,
+            "detail": "[{\"youth_share_pct\":null,\"youth_count\":0,\"total_count\":0}]"
+          },
+          {
+            "name": "total-cte: delivered as unavailable, with no percentage anywhere",
+            "ok": true,
+            "detail": "Of the offenders recorded in NIBRS reports for the requested offenses in California, 2021–2025, the share that had a recorded age group of Under 18 is unavailable: the result contains no recorded offenders in this scope, so no percentage can be computed.\n\nUnit: this percentage is of offenders recorded in NIBRS reports (including offenders recorded with an unknown age), not of crimes or incidents; "
+          },
+          {
+            "name": "total-cte-false-wording: executed once by the bound worker",
+            "ok": true,
+            "detail": "{\"rows\":[{\"youth_share_pct\":null,\"youth_count\":0,\"total_count\":0}],\"worker\":1}"
+          },
+          {
+            "name": "total-cte-false-wording: the row holds NULL for the share and zero counts",
+            "ok": true,
+            "detail": "[{\"youth_share_pct\":null,\"youth_count\":0,\"total_count\":0}]"
+          },
+          {
+            "name": "total-cte-false-wording: delivered as unavailable, with no percentage anywhere",
+            "ok": true,
+            "detail": "Of the offenders recorded in NIBRS reports for the requested offenses in California, 2021–2025, the share that had a recorded age group of Under 18 is unavailable: the result contains no recorded offenders in this scope, so no percentage can be computed.\n\nUnit: this percentage is of offenders recorded in NIBRS reports (including offenders recorded with an unknown age), not of crimes or incidents; "
+          }
+        ]
+      },
+      "results": [
+        {
+          "id": "retained-gc032",
+          "rows": [
+            {
+              "youth_share_pct": null,
+              "youth_count": 0,
+              "total_count": 0
+            }
+          ],
+          "workerExecutions": 1,
+          "firstSentence": "Of the offenders recorded in NIBRS reports for the requested offenses in California, 2021–2025, the share that had a recorded age group of Under 18 is unavailable: the result contains no recorded offenders in this scope, so no percentage can be computed.",
+          "numericPercentClaim": false
+        },
+        {
+          "id": "retained-cte-false-wording",
+          "rows": [
+            {
+              "youth_share_pct": null,
+              "youth_count": 0,
+              "total_count": 0
+            }
+          ],
+          "workerExecutions": 1,
+          "firstSentence": "Of the offenders recorded in NIBRS reports for the requested offenses in California, 2021–2025, the share that had a recorded age group of Under 18 is unavailable: the result contains no recorded offenders in this scope, so no percentage can be computed.",
+          "numericPercentClaim": false
+        },
+        {
+          "id": "single-select",
+          "rows": [
+            {
+              "youth_share_pct": null,
+              "youth_count": 0,
+              "total_count": 0
+            }
+          ],
+          "workerExecutions": 1,
+          "firstSentence": "Of the offenders recorded in NIBRS reports for the requested offenses in California, 2021–2025, the share that had a recorded age group of Under 18 is unavailable: the result contains no recorded offenders in this scope, so no percentage can be computed.",
+          "numericPercentClaim": false
+        },
+        {
+          "id": "single-select-false-wording",
+          "rows": [
+            {
+              "youth_share_pct": null,
+              "youth_count": 0,
+              "total_count": 0
+            }
+          ],
+          "workerExecutions": 1,
+          "firstSentence": "Of the offenders recorded in NIBRS reports for the requested offenses in California, 2021–2025, the share that had a recorded age group of Under 18 is unavailable: the result contains no recorded offenders in this scope, so no percentage can be computed.",
+          "numericPercentClaim": false
+        },
+        {
+          "id": "total-cte",
+          "rows": [
+            {
+              "youth_share_pct": null,
+              "youth_count": 0,
+              "total_count": 0
+            }
+          ],
+          "workerExecutions": 1,
+          "firstSentence": "Of the offenders recorded in NIBRS reports for the requested offenses in California, 2021–2025, the share that had a recorded age group of Under 18 is unavailable: the result contains no recorded offenders in this scope, so no percentage can be computed.",
+          "numericPercentClaim": false
+        },
+        {
+          "id": "total-cte-false-wording",
+          "rows": [
+            {
+              "youth_share_pct": null,
+              "youth_count": 0,
+              "total_count": 0
+            }
+          ],
+          "workerExecutions": 1,
+          "firstSentence": "Of the offenders recorded in NIBRS reports for the requested offenses in California, 2021–2025, the share that had a recorded age group of Under 18 is unavailable: the result contains no recorded offenders in this scope, so no percentage can be computed.",
+          "numericPercentClaim": false
+        }
+      ]
+    },
+    {
+      "mode": "zero",
+      "checks": {
+        "passed": 18,
+        "failed": 0,
+        "list": [
+          {
+            "name": "retained-gc032: executed once by the bound worker",
+            "ok": true,
+            "detail": "{\"rows\":[{\"youth_share_pct\":0,\"youth_count\":0,\"total_count\":13800}],\"worker\":1}"
+          },
+          {
+            "name": "retained-gc032: the row holds a real 0 share over 13800 recorded offenders",
+            "ok": true,
+            "detail": "[{\"youth_share_pct\":0,\"youth_count\":0,\"total_count\":13800}]"
+          },
+          {
+            "name": "retained-gc032: delivered as 0.0% with its counts, not as unavailable, no crime claim",
+            "ok": true,
+            "detail": "Of the offenders recorded in NIBRS reports for the requested offenses in California, 2021–2025, 0.0% (0 of 13,800) had a recorded age group of Under 18.\n\nUnit: this percentage is of offenders recorded in NIBRS reports (including offenders recorded with an unknown age), not of crimes or incidents; one incident can list several offenders, and not every offender is identified or recorded.\n\nDefinition"
+          },
+          {
+            "name": "retained-cte-false-wording: executed once by the bound worker",
+            "ok": true,
+            "detail": "{\"rows\":[{\"youth_share_pct\":0,\"youth_count\":0,\"total_count\":13800}],\"worker\":1}"
+          },
+          {
+            "name": "retained-cte-false-wording: the row holds a real 0 share over 13800 recorded offenders",
+            "ok": true,
+            "detail": "[{\"youth_share_pct\":0,\"youth_count\":0,\"total_count\":13800}]"
+          },
+          {
+            "name": "retained-cte-false-wording: delivered as 0.0% with its counts, not as unavailable, no crime claim",
+            "ok": true,
+            "detail": "Of the offenders recorded in NIBRS reports for the requested offenses in California, 2021–2025, 0.0% (0 of 13,800) had a recorded age group of Under 18.\n\nUnit: this percentage is of offenders recorded in NIBRS reports (including offenders recorded with an unknown age), not of crimes or incidents; one incident can list several offenders, and not every offender is identified or recorded.\n\nDefinition"
+          },
+          {
+            "name": "single-select: executed once by the bound worker",
+            "ok": true,
+            "detail": "{\"rows\":[{\"youth_share_pct\":0,\"youth_count\":0,\"total_count\":13800}],\"worker\":1}"
+          },
+          {
+            "name": "single-select: the row holds a real 0 share over 13800 recorded offenders",
+            "ok": true,
+            "detail": "[{\"youth_share_pct\":0,\"youth_count\":0,\"total_count\":13800}]"
+          },
+          {
+            "name": "single-select: delivered as 0.0% with its counts, not as unavailable, no crime claim",
+            "ok": true,
+            "detail": "Of the offenders recorded in NIBRS reports for the requested offenses in California, 2021–2025, 0.0% (0 of 13,800) had a recorded age group of Under 18.\n\nUnit: this percentage is of offenders recorded in NIBRS reports (including offenders recorded with an unknown age), not of crimes or incidents; one incident can list several offenders, and not every offender is identified or recorded.\n\nDefinition"
+          },
+          {
+            "name": "single-select-false-wording: executed once by the bound worker",
+            "ok": true,
+            "detail": "{\"rows\":[{\"youth_share_pct\":0,\"youth_count\":0,\"total_count\":13800}],\"worker\":1}"
+          },
+          {
+            "name": "single-select-false-wording: the row holds a real 0 share over 13800 recorded offenders",
+            "ok": true,
+            "detail": "[{\"youth_share_pct\":0,\"youth_count\":0,\"total_count\":13800}]"
+          },
+          {
+            "name": "single-select-false-wording: delivered as 0.0% with its counts, not as unavailable, no crime claim",
+            "ok": true,
+            "detail": "Of the offenders recorded in NIBRS reports for the requested offenses in California, 2021–2025, 0.0% (0 of 13,800) had a recorded age group of Under 18.\n\nUnit: this percentage is of offenders recorded in NIBRS reports (including offenders recorded with an unknown age), not of crimes or incidents; one incident can list several offenders, and not every offender is identified or recorded.\n\nDefinition"
+          },
+          {
+            "name": "total-cte: executed once by the bound worker",
+            "ok": true,
+            "detail": "{\"rows\":[{\"youth_share_pct\":0,\"youth_count\":0,\"total_count\":13800}],\"worker\":1}"
+          },
+          {
+            "name": "total-cte: the row holds a real 0 share over 13800 recorded offenders",
+            "ok": true,
+            "detail": "[{\"youth_share_pct\":0,\"youth_count\":0,\"total_count\":13800}]"
+          },
+          {
+            "name": "total-cte: delivered as 0.0% with its counts, not as unavailable, no crime claim",
+            "ok": true,
+            "detail": "Of the offenders recorded in NIBRS reports for the requested offenses in California, 2021–2025, 0.0% (0 of 13,800) had a recorded age group of Under 18.\n\nUnit: this percentage is of offenders recorded in NIBRS reports (including offenders recorded with an unknown age), not of crimes or incidents; one incident can list several offenders, and not every offender is identified or recorded.\n\nDefinition"
+          },
+          {
+            "name": "total-cte-false-wording: executed once by the bound worker",
+            "ok": true,
+            "detail": "{\"rows\":[{\"youth_share_pct\":0,\"youth_count\":0,\"total_count\":13800}],\"worker\":1}"
+          },
+          {
+            "name": "total-cte-false-wording: the row holds a real 0 share over 13800 recorded offenders",
+            "ok": true,
+            "detail": "[{\"youth_share_pct\":0,\"youth_count\":0,\"total_count\":13800}]"
+          },
+          {
+            "name": "total-cte-false-wording: delivered as 0.0% with its counts, not as unavailable, no crime claim",
+            "ok": true,
+            "detail": "Of the offenders recorded in NIBRS reports for the requested offenses in California, 2021–2025, 0.0% (0 of 13,800) had a recorded age group of Under 18.\n\nUnit: this percentage is of offenders recorded in NIBRS reports (including offenders recorded with an unknown age), not of crimes or incidents; one incident can list several offenders, and not every offender is identified or recorded.\n\nDefinition"
+          }
+        ]
+      },
+      "results": [
+        {
+          "id": "retained-gc032",
+          "rows": [
+            {
+              "youth_share_pct": 0,
+              "youth_count": 0,
+              "total_count": 13800
+            }
+          ],
+          "workerExecutions": 1,
+          "firstSentence": "Of the offenders recorded in NIBRS reports for the requested offenses in California, 2021–2025, 0.0% (0 of 13,800) had a recorded age group of Under 18.",
+          "numericPercentClaim": true
+        },
+        {
+          "id": "retained-cte-false-wording",
+          "rows": [
+            {
+              "youth_share_pct": 0,
+              "youth_count": 0,
+              "total_count": 13800
+            }
+          ],
+          "workerExecutions": 1,
+          "firstSentence": "Of the offenders recorded in NIBRS reports for the requested offenses in California, 2021–2025, 0.0% (0 of 13,800) had a recorded age group of Under 18.",
+          "numericPercentClaim": true
+        },
+        {
+          "id": "single-select",
+          "rows": [
+            {
+              "youth_share_pct": 0,
+              "youth_count": 0,
+              "total_count": 13800
+            }
+          ],
+          "workerExecutions": 1,
+          "firstSentence": "Of the offenders recorded in NIBRS reports for the requested offenses in California, 2021–2025, 0.0% (0 of 13,800) had a recorded age group of Under 18.",
+          "numericPercentClaim": true
+        },
+        {
+          "id": "single-select-false-wording",
+          "rows": [
+            {
+              "youth_share_pct": 0,
+              "youth_count": 0,
+              "total_count": 13800
+            }
+          ],
+          "workerExecutions": 1,
+          "firstSentence": "Of the offenders recorded in NIBRS reports for the requested offenses in California, 2021–2025, 0.0% (0 of 13,800) had a recorded age group of Under 18.",
+          "numericPercentClaim": true
+        },
+        {
+          "id": "total-cte",
+          "rows": [
+            {
+              "youth_share_pct": 0,
+              "youth_count": 0,
+              "total_count": 13800
+            }
+          ],
+          "workerExecutions": 1,
+          "firstSentence": "Of the offenders recorded in NIBRS reports for the requested offenses in California, 2021–2025, 0.0% (0 of 13,800) had a recorded age group of Under 18.",
+          "numericPercentClaim": true
+        },
+        {
+          "id": "total-cte-false-wording",
+          "rows": [
+            {
+              "youth_share_pct": 0,
+              "youth_count": 0,
+              "total_count": 13800
+            }
+          ],
+          "workerExecutions": 1,
+          "firstSentence": "Of the offenders recorded in NIBRS reports for the requested offenses in California, 2021–2025, 0.0% (0 of 13,800) had a recorded age group of Under 18.",
+          "numericPercentClaim": true
+        }
+      ]
+    },
+    {
+      "mode": "positive",
+      "checks": {
+        "passed": 41,
+        "failed": 0,
+        "list": [
+          {
+            "name": "retained-gc032: row delivers 8.4% = 1260 / 15060",
+            "ok": true,
+            "detail": "[{\"youth_share_pct\":8.4,\"youth_count\":1260,\"total_count\":15060}]"
+          },
+          {
+            "name": "retained-gc032: delivered text is the owned recorded-offender statement with figure, counts, place and period",
+            "ok": true,
+            "detail": "Of the offenders recorded in NIBRS reports for the requested offenses in California, 2021–2025, 8.4% (1,260 of 15,060) had a recorded age group of Under 18.\n\nUnit: this percentage is of offenders recorded in NIBRS reports (including offenders recorded with an unknown age), not of crimes or incidents; one incident can list several offenders, and not every offender is identified or recorded.\n\nDefinition: NIBRS violent "
+          },
+          {
+            "name": "retained-gc032: no crime-share claim survives, and the unit note (with unknown ages) is present",
+            "ok": true,
+            "detail": "Of the offenders recorded in NIBRS reports for the requested offenses in California, 2021–2025, 8.4% (1,260 of 15,060) had a recorded age group of Under 18.\n\nUnit: this percentage is of offenders recorded in NIBRS reports (including offenders recorded with an unknown age), not of crimes or incidents; one incident can list several offenders, and not every offender is identified or recorded.\n\nDefinition: NIBRS violent "
+          },
+          {
+            "name": "retained-gc032-recorded-wording: row delivers 8.4% = 1260 / 15060",
+            "ok": true,
+            "detail": "[{\"youth_share_pct\":8.4,\"youth_count\":1260,\"total_count\":15060}]"
+          },
+          {
+            "name": "retained-gc032-recorded-wording: delivered text is the owned recorded-offender statement with figure, counts, place and period",
+            "ok": true,
+            "detail": "Of the offenders recorded in NIBRS reports for the requested offenses in California, 2021–2025, 8.4% (1,260 of 15,060) had a recorded age group of Under 18.\n\nUnit: this percentage is of offenders recorded in NIBRS reports (including offenders recorded with an unknown age), not of crimes or incidents; one incident can list several offenders, and not every offender is identified or recorded.\n\nDefinition: NIBRS violent "
+          },
+          {
+            "name": "retained-gc032-recorded-wording: no crime-share claim survives, and the unit note (with unknown ages) is present",
+            "ok": true,
+            "detail": "Of the offenders recorded in NIBRS reports for the requested offenses in California, 2021–2025, 8.4% (1,260 of 15,060) had a recorded age group of Under 18.\n\nUnit: this percentage is of offenders recorded in NIBRS reports (including offenders recorded with an unknown age), not of crimes or incidents; one incident can list several offenders, and not every offender is identified or recorded.\n\nDefinition: NIBRS violent "
+          },
+          {
+            "name": "retained-gc032-leaky-explanation: row delivers 8.4% = 1260 / 15060",
+            "ok": true,
+            "detail": "[{\"youth_share_pct\":8.4,\"youth_count\":1260,\"total_count\":15060}]"
+          },
+          {
+            "name": "retained-gc032-leaky-explanation: delivered text is the owned recorded-offender statement with figure, counts, place and period",
+            "ok": true,
+            "detail": "Of the offenders recorded in NIBRS reports for the requested offenses in California, 2021–2025, 8.4% (1,260 of 15,060) had a recorded age group of Under 18.\n\nUnit: this percentage is of offenders recorded in NIBRS reports (including offenders recorded with an unknown age), not of crimes or incidents; one incident can list several offenders, and not every offender is identified or recorded.\n\nDefinition: NIBRS violent "
+          },
+          {
+            "name": "retained-gc032-leaky-explanation: no crime-share claim survives, and the unit note (with unknown ages) is present",
+            "ok": true,
+            "detail": "Of the offenders recorded in NIBRS reports for the requested offenses in California, 2021–2025, 8.4% (1,260 of 15,060) had a recorded age group of Under 18.\n\nUnit: this percentage is of offenders recorded in NIBRS reports (including offenders recorded with an unknown age), not of crimes or incidents; one incident can list several offenders, and not every offender is identified or recorded.\n\nDefinition: NIBRS violent "
+          },
+          {
+            "name": "retained-gc032-leaky-title: row delivers 8.4% = 1260 / 15060",
+            "ok": true,
+            "detail": "[{\"youth_share_pct\":8.4,\"youth_count\":1260,\"total_count\":15060}]"
+          },
+          {
+            "name": "retained-gc032-leaky-title: delivered text is the owned recorded-offender statement with figure, counts, place and period",
+            "ok": true,
+            "detail": "The requested results are shown above.\n\nOf the offenders recorded in NIBRS reports for the requested offenses in California, 2021–2025, 8.4% (1,260 of 15,060) had a recorded age group of Under 18.\n\nUnit: this percentage is of offenders recorded in NIBRS reports (including offenders recorded with an unknown age), not of crimes or incidents; one incident can list several offenders, and not every offender is identified "
+          },
+          {
+            "name": "retained-gc032-leaky-title: no crime-share claim survives, and the unit note (with unknown ages) is present",
+            "ok": true,
+            "detail": "The requested results are shown above.\n\nOf the offenders recorded in NIBRS reports for the requested offenses in California, 2021–2025, 8.4% (1,260 of 15,060) had a recorded age group of Under 18.\n\nUnit: this percentage is of offenders recorded in NIBRS reports (including offenders recorded with an unknown age), not of crimes or incidents; one incident can list several offenders, and not every offender is identified "
+          },
+          {
+            "name": "cross-join-form: row delivers 8.4% = 1260 / 15060",
+            "ok": true,
+            "detail": "[{\"youth_share_pct\":8.4,\"youth_count\":1260,\"total_count\":15060}]"
+          },
+          {
+            "name": "cross-join-form: delivered text is the owned recorded-offender statement with figure, counts, place and period",
+            "ok": true,
+            "detail": "Of the offenders recorded in NIBRS reports for the requested offenses in California, 2021–2025, 8.4% (1,260 of 15,060) had a recorded age group of Under 18.\n\nUnit: this percentage is of offenders recorded in NIBRS reports (including offenders recorded with an unknown age), not of crimes or incidents; one incident can list several offenders, and not every offender is identified or recorded.\n\nDefinition: NIBRS violent "
+          },
+          {
+            "name": "cross-join-form: no crime-share claim survives, and the unit note (with unknown ages) is present",
+            "ok": true,
+            "detail": "Of the offenders recorded in NIBRS reports for the requested offenses in California, 2021–2025, 8.4% (1,260 of 15,060) had a recorded age group of Under 18.\n\nUnit: this percentage is of offenders recorded in NIBRS reports (including offenders recorded with an unknown age), not of crimes or incidents; one incident can list several offenders, and not every offender is identified or recorded.\n\nDefinition: NIBRS violent "
+          },
+          {
+            "name": "join-on-1-form: row delivers 8.4% = 1260 / 15060",
+            "ok": true,
+            "detail": "[{\"youth_share_pct\":8.4,\"youth_count\":1260,\"total_count\":15060}]"
+          },
+          {
+            "name": "join-on-1-form: delivered text is the owned recorded-offender statement with figure, counts, place and period",
+            "ok": true,
+            "detail": "Of the offenders recorded in NIBRS reports for the requested offenses in California, 2021–2025, 8.4% (1,260 of 15,060) had a recorded age group of Under 18.\n\nUnit: this percentage is of offenders recorded in NIBRS reports (including offenders recorded with an unknown age), not of crimes or incidents; one incident can list several offenders, and not every offender is identified or recorded.\n\nDefinition: NIBRS violent "
+          },
+          {
+            "name": "join-on-1-form: no crime-share claim survives, and the unit note (with unknown ages) is present",
+            "ok": true,
+            "detail": "Of the offenders recorded in NIBRS reports for the requested offenses in California, 2021–2025, 8.4% (1,260 of 15,060) had a recorded age group of Under 18.\n\nUnit: this percentage is of offenders recorded in NIBRS reports (including offenders recorded with an unknown age), not of crimes or incidents; one incident can list several offenders, and not every offender is identified or recorded.\n\nDefinition: NIBRS violent "
+          },
+          {
+            "name": "single-select-control: row delivers 8.4% = 1260 / 15060",
+            "ok": true,
+            "detail": "[{\"youth_share_pct\":8.4,\"youth_count\":1260,\"total_count\":15060}]"
+          },
+          {
+            "name": "single-select-control: delivered text is the owned recorded-offender statement with figure, counts, place and period",
+            "ok": true,
+            "detail": "Of the offenders recorded in NIBRS reports for the requested offenses in California, 2021–2025, 8.4% (1,260 of 15,060) had a recorded age group of Under 18.\n\nUnit: this percentage is of offenders recorded in NIBRS reports (including offenders recorded with an unknown age), not of crimes or incidents; one incident can list several offenders, and not every offender is identified or recorded.\n\nDefinition: NIBRS violent "
+          },
+          {
+            "name": "single-select-control: no crime-share claim survives, and the unit note (with unknown ages) is present",
+            "ok": true,
+            "detail": "Of the offenders recorded in NIBRS reports for the requested offenses in California, 2021–2025, 8.4% (1,260 of 15,060) had a recorded age group of Under 18.\n\nUnit: this percentage is of offenders recorded in NIBRS reports (including offenders recorded with an unknown age), not of crimes or incidents; one incident can list several offenders, and not every offender is identified or recorded.\n\nDefinition: NIBRS violent "
+          },
+          {
+            "name": "total-aggregates-integer-100: row delivers 8.4% = 1260 / 15060",
+            "ok": true,
+            "detail": "[{\"youth_share_pct\":8.4,\"youth_count\":1260,\"total_count\":15060}]"
+          },
+          {
+            "name": "total-aggregates-integer-100: delivered text is the owned recorded-offender statement with figure, counts, place and period",
+            "ok": true,
+            "detail": "Of the offenders recorded in NIBRS reports for the requested offenses in California, 2021–2025, 8.4% (1,260 of 15,060) had a recorded age group of Under 18.\n\nUnit: this percentage is of offenders recorded in NIBRS reports (including offenders recorded with an unknown age), not of crimes or incidents; one incident can list several offenders, and not every offender is identified or recorded.\n\nDefinition: NIBRS violent "
+          },
+          {
+            "name": "total-aggregates-integer-100: no crime-share claim survives, and the unit note (with unknown ages) is present",
+            "ok": true,
+            "detail": "Of the offenders recorded in NIBRS reports for the requested offenses in California, 2021–2025, 8.4% (1,260 of 15,060) had a recorded age group of Under 18.\n\nUnit: this percentage is of offenders recorded in NIBRS reports (including offenders recorded with an unknown age), not of crimes or incidents; one incident can list several offenders, and not every offender is identified or recorded.\n\nDefinition: NIBRS violent "
+          },
+          {
+            "name": "fraction-with-1.0: row delivers 8.4% = 1260 / 15060",
+            "ok": true,
+            "detail": "[{\"youth_share_pct\":0.084,\"youth_count\":1260,\"total_count\":15060}]"
+          },
+          {
+            "name": "fraction-with-1.0: delivered text is the owned recorded-offender statement with figure, counts, place and period",
+            "ok": true,
+            "detail": "Of the offenders recorded in NIBRS reports for the requested offenses in California, 2021–2025, 8.4% (1,260 of 15,060) had a recorded age group of Under 18.\n\nUnit: this percentage is of offenders recorded in NIBRS reports (including offenders recorded with an unknown age), not of crimes or incidents; one incident can list several offenders, and not every offender is identified or recorded.\n\nDefinition: NIBRS violent "
+          },
+          {
+            "name": "fraction-with-1.0: no crime-share claim survives, and the unit note (with unknown ages) is present",
+            "ok": true,
+            "detail": "Of the offenders recorded in NIBRS reports for the requested offenses in California, 2021–2025, 8.4% (1,260 of 15,060) had a recorded age group of Under 18.\n\nUnit: this percentage is of offenders recorded in NIBRS reports (including offenders recorded with an unknown age), not of crimes or incidents; one incident can list several offenders, and not every offender is identified or recorded.\n\nDefinition: NIBRS violent "
+          },
+          {
+            "name": "integer-percentage-cte: no figure delivered, never executed",
+            "ok": true,
+            "detail": "{\"rows\":[],\"worker\":0}"
+          },
+          {
+            "name": "fraction-no-coercion-cte: no figure delivered, never executed",
+            "ok": true,
+            "detail": "{\"rows\":[],\"worker\":0}"
+          },
+          {
+            "name": "integer-percentage-single: no figure delivered, never executed",
+            "ok": true,
+            "detail": "{\"rows\":[],\"worker\":0}"
+          },
+          {
+            "name": "scale-after-division-single: no figure delivered, never executed",
+            "ok": true,
+            "detail": "{\"rows\":[],\"worker\":0}"
+          },
+          {
+            "name": "wrong-denominator-drops-state: no figure delivered, never executed",
+            "ok": true,
+            "detail": "{\"rows\":[],\"worker\":0}"
+          },
+          {
+            "name": "wrong-denominator-counts-rows: no figure delivered, never executed",
+            "ok": true,
+            "detail": "{\"rows\":[],\"worker\":0}"
+          },
+          {
+            "name": "wrong-numerator-counts-rows: no figure delivered, never executed",
+            "ok": true,
+            "detail": "{\"rows\":[],\"worker\":0}"
+          },
+          {
+            "name": "wrong-subset-18-24: no figure delivered, never executed",
+            "ok": true,
+            "detail": "{\"rows\":[],\"worker\":0}"
+          },
+          {
+            "name": "wrong-scale-200: no figure delivered, never executed",
+            "ok": true,
+            "detail": "{\"rows\":[],\"worker\":0}"
+          },
+          {
+            "name": "wrong-numerator-period: no figure delivered, never executed",
+            "ok": true,
+            "detail": "{\"rows\":[],\"worker\":0}"
+          },
+          {
+            "name": "wrong-inverted: no figure delivered, never executed",
+            "ok": true,
+            "detail": "{\"rows\":[],\"worker\":0}"
+          },
+          {
+            "name": "wrong-numerator-offenses: no figure delivered, never executed",
+            "ok": true,
+            "detail": "{\"rows\":[],\"worker\":0}"
+          },
+          {
+            "name": "the leaky-title control really went through the firewall (safe message present)",
+            "ok": true,
+            "detail": "The requested results are shown above.\n\nOf the offenders recorded in NIBRS reports for the requested offenses in California, 2021–2025, 8.4% (1,260 of 15,060) had a recorded age group of Under 18.\n\nUn"
+          },
+          {
+            "name": "expected figure is derived from rows: 1260 / 15060 = 8.4% (non-integral)",
+            "ok": true,
+            "detail": "{\"youthN\":1260,\"totalN\":15060,\"pct\":8.4}"
+          }
+        ]
+      },
+      "results": [
+        {
+          "id": "retained-gc032",
+          "rows": [
+            {
+              "youth_share_pct": 8.4,
+              "youth_count": 1260,
+              "total_count": 15060
+            }
+          ],
+          "workerExecutions": 1,
+          "firstSentence": "Of the offenders recorded in NIBRS reports for the requested offenses in California, 2021–2025, 8.4% (1,260 of 15,060) had a recorded age group of Under 18.",
+          "numericPercentClaim": true
+        },
+        {
+          "id": "retained-gc032-recorded-wording",
+          "rows": [
+            {
+              "youth_share_pct": 8.4,
+              "youth_count": 1260,
+              "total_count": 15060
+            }
+          ],
+          "workerExecutions": 1,
+          "firstSentence": "Of the offenders recorded in NIBRS reports for the requested offenses in California, 2021–2025, 8.4% (1,260 of 15,060) had a recorded age group of Under 18.",
+          "numericPercentClaim": true
+        },
+        {
+          "id": "retained-gc032-leaky-explanation",
+          "rows": [
+            {
+              "youth_share_pct": 8.4,
+              "youth_count": 1260,
+              "total_count": 15060
+            }
+          ],
+          "workerExecutions": 1,
+          "firstSentence": "Of the offenders recorded in NIBRS reports for the requested offenses in California, 2021–2025, 8.4% (1,260 of 15,060) had a recorded age group of Under 18.",
+          "numericPercentClaim": true
+        },
+        {
+          "id": "retained-gc032-leaky-title",
+          "rows": [
+            {
+              "youth_share_pct": 8.4,
+              "youth_count": 1260,
+              "total_count": 15060
+            }
+          ],
+          "workerExecutions": 1,
+          "firstSentence": "The requested results are shown above.",
+          "numericPercentClaim": true
+        },
+        {
+          "id": "cross-join-form",
+          "rows": [
+            {
+              "youth_share_pct": 8.4,
+              "youth_count": 1260,
+              "total_count": 15060
+            }
+          ],
+          "workerExecutions": 1,
+          "firstSentence": "Of the offenders recorded in NIBRS reports for the requested offenses in California, 2021–2025, 8.4% (1,260 of 15,060) had a recorded age group of Under 18.",
+          "numericPercentClaim": true
+        },
+        {
+          "id": "join-on-1-form",
+          "rows": [
+            {
+              "youth_share_pct": 8.4,
+              "youth_count": 1260,
+              "total_count": 15060
+            }
+          ],
+          "workerExecutions": 1,
+          "firstSentence": "Of the offenders recorded in NIBRS reports for the requested offenses in California, 2021–2025, 8.4% (1,260 of 15,060) had a recorded age group of Under 18.",
+          "numericPercentClaim": true
+        },
+        {
+          "id": "single-select-control",
+          "rows": [
+            {
+              "youth_share_pct": 8.4,
+              "youth_count": 1260,
+              "total_count": 15060
+            }
+          ],
+          "workerExecutions": 1,
+          "firstSentence": "Of the offenders recorded in NIBRS reports for the requested offenses in California, 2021–2025, 8.4% (1,260 of 15,060) had a recorded age group of Under 18.",
+          "numericPercentClaim": true
+        },
+        {
+          "id": "total-aggregates-integer-100",
+          "rows": [
+            {
+              "youth_share_pct": 8.4,
+              "youth_count": 1260,
+              "total_count": 15060
+            }
+          ],
+          "workerExecutions": 1,
+          "firstSentence": "Of the offenders recorded in NIBRS reports for the requested offenses in California, 2021–2025, 8.4% (1,260 of 15,060) had a recorded age group of Under 18.",
+          "numericPercentClaim": true
+        },
+        {
+          "id": "fraction-with-1.0",
+          "rows": [
+            {
+              "youth_share_pct": 0.084,
+              "youth_count": 1260,
+              "total_count": 15060
+            }
+          ],
+          "workerExecutions": 1,
+          "firstSentence": "Of the offenders recorded in NIBRS reports for the requested offenses in California, 2021–2025, 8.4% (1,260 of 15,060) had a recorded age group of Under 18.",
+          "numericPercentClaim": true
+        },
+        {
+          "id": "integer-percentage-cte",
+          "rows": [],
+          "workerExecutions": 0,
+          "firstSentence": "I couldn't build a reliable query that matched the requested source, geography, metric, and time period. Try narrowing the question or choosing one of the suggested alternatives.",
+          "numericPercentClaim": false
+        },
+        {
+          "id": "fraction-no-coercion-cte",
+          "rows": [],
+          "workerExecutions": 0,
+          "firstSentence": "I couldn't build a reliable query that matched the requested source, geography, metric, and time period. Try narrowing the question or choosing one of the suggested alternatives.",
+          "numericPercentClaim": false
+        },
+        {
+          "id": "integer-percentage-single",
+          "rows": [],
+          "workerExecutions": 0,
+          "firstSentence": "I couldn't build a reliable query that matched the requested source, geography, metric, and time period. Try narrowing the question or choosing one of the suggested alternatives.",
+          "numericPercentClaim": false
+        },
+        {
+          "id": "scale-after-division-single",
+          "rows": [],
+          "workerExecutions": 0,
+          "firstSentence": "I couldn't build a reliable query that matched the requested source, geography, metric, and time period. Try narrowing the question or choosing one of the suggested alternatives.",
+          "numericPercentClaim": false
+        },
+        {
+          "id": "wrong-denominator-drops-state",
+          "rows": [],
+          "workerExecutions": 0,
+          "firstSentence": "I couldn't build a reliable query that matched the requested source, geography, metric, and time period. Try narrowing the question or choosing one of the suggested alternatives.",
+          "numericPercentClaim": false
+        },
+        {
+          "id": "wrong-denominator-counts-rows",
+          "rows": [],
+          "workerExecutions": 0,
+          "firstSentence": "I couldn't build a reliable query that matched the requested source, geography, metric, and time period. Try narrowing the question or choosing one of the suggested alternatives.",
+          "numericPercentClaim": false
+        },
+        {
+          "id": "wrong-numerator-counts-rows",
+          "rows": [],
+          "workerExecutions": 0,
+          "firstSentence": "I couldn't build a reliable query that matched the requested source, geography, metric, and time period. Try narrowing the question or choosing one of the suggested alternatives.",
+          "numericPercentClaim": false
+        },
+        {
+          "id": "wrong-subset-18-24",
+          "rows": [],
+          "workerExecutions": 0,
+          "firstSentence": "I couldn't build a reliable query that matched the requested source, geography, metric, and time period. Try narrowing the question or choosing one of the suggested alternatives.",
+          "numericPercentClaim": false
+        },
+        {
+          "id": "wrong-scale-200",
+          "rows": [],
+          "workerExecutions": 0,
+          "firstSentence": "I couldn't build a reliable query that matched the requested source, geography, metric, and time period. Try narrowing the question or choosing one of the suggested alternatives.",
+          "numericPercentClaim": false
+        },
+        {
+          "id": "wrong-numerator-period",
+          "rows": [],
+          "workerExecutions": 0,
+          "firstSentence": "I couldn't build a reliable query that matched the requested source, geography, metric, and time period. Try narrowing the question or choosing one of the suggested alternatives.",
+          "numericPercentClaim": false
+        },
+        {
+          "id": "wrong-inverted",
+          "rows": [],
+          "workerExecutions": 0,
+          "firstSentence": "I couldn't build a reliable query that matched the requested source, geography, metric, and time period. Try narrowing the question or choosing one of the suggested alternatives.",
+          "numericPercentClaim": false
+        },
+        {
+          "id": "wrong-numerator-offenses",
+          "rows": [],
+          "workerExecutions": 0,
+          "firstSentence": "I couldn't build a reliable query that matched the requested source, geography, metric, and time period. Try narrowing the question or choosing one of the suggested alternatives.",
+          "numericPercentClaim": false
+        }
+      ]
+    }
+  ],
+  "noFalseZero": true,
+  "realZeroKept": true,
+  "limits": "Independent unit 63/63 and route 18/18 unavailable, 18/18 genuine zero, 41/41 positive replay. Broad regression results compared from saved receipts, not rerun. No mutations, whole-chain rerun, product changes, source database or provider access."
+}
