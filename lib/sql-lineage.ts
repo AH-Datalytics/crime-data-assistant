@@ -21,6 +21,8 @@
  * query is safe. A shape we cannot prove is not a shape we may execute.
  */
 
+import { commaFromItems } from "./table-allowlist";
+
 /**
  * A CTE built from `VALUES (...)` or a `SELECT` with no `FROM` reads no table at all. The SHR
  * deterministic murder plan uses several -- `targets(city, ori, ...) AS (VALUES ('Oakland, CA', ...))`.
@@ -298,6 +300,16 @@ function sourceAliases(query: string): Map<string, string> {
   while ((m = re.exec(query)) !== null) {
     const table = m[2].toLowerCase();
     const maybeAlias = (m[3] ?? "").toLowerCase();
+    const alias = maybeAlias && !SQL_KEYWORDS.has(maybeAlias) ? maybeAlias : table;
+    aliases.set(alias, table);
+    if (!aliases.has(table)) aliases.set(table, table);
+  }
+  // Comma-separated FROM items (`FROM youth y, totals t`) are sources too; a parenthesised item is
+  // left out, exactly as a parenthesised FROM/JOIN source is above.
+  for (const item of commaFromItems(query)) {
+    if (!item.table) continue;
+    const table = item.table.toLowerCase();
+    const maybeAlias = (item.alias ?? "").toLowerCase();
     const alias = maybeAlias && !SQL_KEYWORDS.has(maybeAlias) ? maybeAlias : table;
     aliases.set(alias, table);
     if (!aliases.has(table)) aliases.set(table, table);

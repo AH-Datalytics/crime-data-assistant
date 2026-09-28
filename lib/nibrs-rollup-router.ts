@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { clearSchemaValidationCache } from "./schema-validation";
+import { commaFromItems } from "./table-allowlist";
 
 type AttachableDb = {
   // better-sqlite3 has overloaded parameter tuples; this adapter is only used
@@ -171,7 +172,14 @@ function stripSqlStrings(sql: string): string {
  */
 export function nibrsRollupTablesIn(sql: string): { table: string; level: "state" | "national"; sourceTable: string }[] {
   const found: { table: string; level: "state" | "national"; sourceTable: string }[] = [];
-  for (const match of stripSqlStrings(sql).matchAll(/\b(?:FROM|JOIN)\s+rollup\.(state|national)_([a-z0-9_]+)\b/gi)) {
+  const cleaned = stripSqlStrings(sql);
+  const named = [
+    ...[...cleaned.matchAll(/\b(?:FROM|JOIN)\s+rollup\.([a-z0-9_]+)\b/gi)].map((match) => match[1]),
+    ...commaFromItems(cleaned).filter((item) => item.schema?.toLowerCase() === "rollup" && item.table).map((item) => item.table!),
+  ];
+  for (const name of named) {
+    const match = /^(state|national)_([a-z0-9_]+)$/i.exec(name);
+    if (!match) continue;
     const level = match[1].toLowerCase() as "state" | "national";
     const sourceTable = match[2].toLowerCase();
     if (!(ROLLUP_SOURCES as readonly string[]).includes(sourceTable)) continue;
@@ -184,6 +192,11 @@ export function nibrsRollupTablesIn(sql: string): { table: string; level: "state
 export function routeNibrsRollupSql(sql: string, rollupAvailable = resolveNibrsRollupPath() !== null): NibrsRollupRoute {
   if (!rollupAvailable) return { sql, routed: false, level: null, sourceTable: null, reason: "rollup-unavailable" };
   if (/\brollup\./i.test(sql)) return { sql, routed: false, level: null, sourceTable: null, reason: "already-routed" };
+  // The rewrite below only reaches tables named right after FROM/JOIN; a comma-joined source table
+  // would stay at agency grain beside a rewritten one, so such a statement stays on base tables.
+  if (commaFromItems(stripSqlStrings(sql)).some((item) => item.table && (ROLLUP_SOURCES as readonly string[]).includes(item.table.toLowerCase()))) {
+    return { sql, routed: false, level: null, sourceTable: null, reason: "comma-joined-source" };
+  }
   const sources = ROLLUP_SOURCES.filter((table) => new RegExp(`\\b(?:FROM|JOIN)\\s+(?:main\\.)?${table}\\b`, "i").test(sql));
   if (sources.length !== 1) {
     return { sql, routed: false, level: null, sourceTable: null, reason: sources.length ? "multiple-rollup-sources" : "unsupported-table" };

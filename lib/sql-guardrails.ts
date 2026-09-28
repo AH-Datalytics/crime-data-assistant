@@ -7,6 +7,8 @@
  * Tested by: scripts/test-sql-guardrails.ts
  */
 
+import { commaFromItems } from "./table-allowlist";
+
 /** Strip string literals so regexes don't match inside quoted values. */
 function stripSqlStrings(sql: string): string {
   return sql.replace(/'(?:''|[^'])*'/g, "''").replace(/"(?:""|[^"])*"/g, '""');
@@ -132,6 +134,13 @@ function findUndeclaredAliases(sql: string): string[] {
         }
       }
     }
+  }
+
+  // Comma-separated FROM items: FROM t1 a, t2 b, (SELECT ...) s
+  for (const item of commaFromItems(sql)) {
+    if (item.table) declared.add(item.table.toLowerCase());
+    const alias = item.alias?.toLowerCase();
+    if (alias && !SQL_KEYWORDS.has(alias)) declared.add(alias);
   }
 
   // Find all qualifier.column references and check against declared set

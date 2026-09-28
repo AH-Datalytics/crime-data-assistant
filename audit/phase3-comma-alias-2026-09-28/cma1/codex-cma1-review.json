@@ -1,0 +1,188 @@
+{
+  "at": "2026-09-28T16:43:56.408Z",
+  "manifests": [
+    {
+      "file": "candidate-cma1.sha256",
+      "entries": [
+        {
+          "file": "lib/sql-restriction.ts",
+          "match": true
+        },
+        {
+          "file": "lib/table-allowlist.ts",
+          "match": true
+        },
+        {
+          "file": "lib/sql-guardrails.ts",
+          "match": true
+        },
+        {
+          "file": "lib/nibrs-rollup-router.ts",
+          "match": true
+        },
+        {
+          "file": "lib/sql-lineage.ts",
+          "match": true
+        },
+        {
+          "file": "scripts/test-comma-from-items.ts",
+          "match": true
+        },
+        {
+          "file": "package.json",
+          "match": true
+        }
+      ]
+    },
+    {
+      "file": "codex-receipts-before.sha256",
+      "entries": [
+        {
+          "file": "audit/phase3-comma-alias-2026-09-28/codex-period-after-v2.json",
+          "match": true
+        },
+        {
+          "file": "audit/phase3-comma-alias-2026-09-28/codex-period-after.json",
+          "match": true
+        },
+        {
+          "file": "audit/phase3-comma-alias-2026-09-28/codex-period-before-v2.json",
+          "match": true
+        },
+        {
+          "file": "audit/phase3-comma-alias-2026-09-28/codex-period-before.json",
+          "match": true
+        },
+        {
+          "file": "audit/phase3-comma-alias-2026-09-28/codex-period-probe.json",
+          "match": true
+        },
+        {
+          "file": "audit/phase3-comma-alias-2026-09-28/codex-review.json",
+          "match": true
+        }
+      ]
+    },
+    {
+      "file": "submitted-receipts.sha256",
+      "entries": [
+        {
+          "file": "audit/phase3-comma-alias-2026-09-28/r1/combined-offline.json",
+          "match": true
+        },
+        {
+          "file": "audit/phase3-comma-alias-2026-09-28/post-taxonomy-hidden.log",
+          "match": true
+        },
+        {
+          "file": "audit/phase3-comma-alias-2026-09-28/pretest-each.json",
+          "match": true
+        },
+        {
+          "file": "audit/phase3-comma-alias-2026-09-28/route-after.json",
+          "match": true
+        },
+        {
+          "file": "audit/phase3-comma-alias-2026-09-28/p41-binding-witness.json",
+          "match": true
+        }
+      ]
+    }
+  ],
+  "probes": [
+    {
+      "name": "wrong second year",
+      "sql": "SELECT SUM(b.cleared_by_arrest) AS rapes_cleared_by_arrest FROM summary_clearance_detail a, summary_clearance_detail b WHERE a.ori = b.ori AND a.ucr_offense_code = b.ucr_offense_code AND a.year = 2025 AND b.state = 'IL' AND b.ucr_offense_code = '11A' AND b.year = 2024",
+      "expectedPeriodRefusal": true,
+      "periodRefusal": true,
+      "enforced": [
+        "contract-single-year-temporal-scope"
+      ],
+      "pass": true
+    },
+    {
+      "name": "open second year",
+      "sql": "SELECT SUM(b.cleared_by_arrest) AS rapes_cleared_by_arrest FROM summary_clearance_detail a, summary_clearance_detail b WHERE a.ori = b.ori AND a.ucr_offense_code = b.ucr_offense_code AND a.year = 2025 AND b.state = 'IL' AND b.ucr_offense_code = '11A'",
+      "expectedPeriodRefusal": true,
+      "periodRefusal": true,
+      "enforced": [
+        "contract-single-year-temporal-scope"
+      ],
+      "pass": true
+    },
+    {
+      "name": "requested second year",
+      "sql": "SELECT SUM(b.cleared_by_arrest) AS rapes_cleared_by_arrest FROM summary_clearance_detail a, summary_clearance_detail b WHERE a.ori = b.ori AND a.ucr_offense_code = b.ucr_offense_code AND a.year = 2025 AND b.state = 'IL' AND b.ucr_offense_code = '11A' AND b.year = 2025",
+      "expectedPeriodRefusal": false,
+      "periodRefusal": false,
+      "enforced": [],
+      "pass": true
+    },
+    {
+      "name": "tautology reopens year",
+      "sql": "SELECT SUM(b.cleared_by_arrest) AS rapes_cleared_by_arrest FROM summary_clearance_detail a, summary_clearance_detail b WHERE a.ori = b.ori AND a.ucr_offense_code = b.ucr_offense_code AND a.year = 2025 AND b.state = 'IL' AND b.ucr_offense_code = '11A' AND (b.year = 2025 OR 1 = 1)",
+      "expectedPeriodRefusal": true,
+      "periodRefusal": true,
+      "enforced": [
+        "contract-single-year-temporal-scope"
+      ],
+      "pass": true
+    },
+    {
+      "name": "scalar year mention is not a pin",
+      "sql": "SELECT SUM(b.cleared_by_arrest) + (SELECT 0 WHERE 2025 = 2025) AS rapes_cleared_by_arrest FROM summary_clearance_detail a, summary_clearance_detail b WHERE a.ori = b.ori AND a.ucr_offense_code = b.ucr_offense_code AND a.year = 2025 AND b.state = 'IL' AND b.ucr_offense_code = '11A'",
+      "expectedPeriodRefusal": true,
+      "periodRefusal": true,
+      "enforced": [
+        "contract-single-year-temporal-scope"
+      ],
+      "pass": true
+    },
+    {
+      "name": "unused pinned CTE cannot pin used comma CTE",
+      "sql": "WITH pin AS (SELECT SUM(cleared_by_arrest) c FROM summary_clearance_detail WHERE year = 2025), y AS (SELECT 1 n), t AS (SELECT SUM(cleared_by_arrest) c FROM summary_clearance_detail WHERE state = 'IL' AND ucr_offense_code = '11A') SELECT t.c AS rapes_cleared_by_arrest FROM y, t",
+      "expectedPeriodRefusal": true,
+      "periodRefusal": true,
+      "enforced": [
+        "contract-single-year-temporal-scope"
+      ],
+      "pass": true
+    }
+  ],
+  "comparisons": [
+    {
+      "id": "GC-084/098",
+      "old": 20,
+      "now": 20,
+      "missing": [],
+      "changed": []
+    },
+    {
+      "id": "GC-057",
+      "old": 8,
+      "now": 8,
+      "missing": [],
+      "changed": []
+    },
+    {
+      "id": "GC-080 owned count",
+      "old": 48,
+      "now": 48,
+      "missing": [],
+      "changed": []
+    },
+    {
+      "id": "GC-080 periods",
+      "old": 17,
+      "now": 17,
+      "missing": [],
+      "changed": []
+    }
+  ],
+  "p4": {
+    "before": 12,
+    "after": 12,
+    "changed": []
+  },
+  "limit": "Pure contract probes and saved-output comparison; broad suites and mutations not rerun."
+}

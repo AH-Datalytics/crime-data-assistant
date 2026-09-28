@@ -21,6 +21,7 @@
  */
 
 import { analyzeSql, compoundArms } from "./sql-lineage";
+import { commaFromItems } from "./table-allowlist";
 
 export type CommonTableExpression = { name: string; body: string };
 
@@ -193,7 +194,34 @@ export function cteReferences(outer: string, name: string): string[] {
     found.add(name);
     if (match[1] && !RESERVED.test(match[1])) found.add(match[1]);
   }
+  // A CTE read only through a comma (`FROM y, t`) is used too; missing it left its filters unchecked.
+  for (const source of commaSources(outer)) {
+    if (source.table !== name.toLowerCase()) continue;
+    found.add(name);
+    if (source.name !== source.table) found.add(source.name);
+  }
   return [...found];
+}
+
+/**
+ * The comma-joined row sources of this text -- `FROM a x, b y` yields b as y -- which the
+ * FROM/JOIN patterns in this file cannot see. Without them a second, comma-joined instance of a
+ * counted table was never asked for ITS OWN year: `FROM t a, t b WHERE a.year = 2025` summed every
+ * year of `b` (Codex CMA1). Quoted identifiers are unquoted first so `"t" b` is still `t`; string
+ * literals are blanked so a quoted `'FROM x, y'` lists nothing.
+ */
+function commaSources(text: string): { table: string; name: string }[] {
+  const plain = text
+    .replace(/'(?:''|[^'])*'/g, "''")
+    .replace(/"([A-Za-z_]\w*)"|\[([A-Za-z_]\w*)\]|`([A-Za-z_]\w*)`/g, (_m, a, b, c) => a ?? b ?? c);
+  const sources: { table: string; name: string }[] = [];
+  for (const item of commaFromItems(plain)) {
+    if (!item.table || ALIAS_RESERVED.test(item.table)) continue;
+    const table = item.table.toLowerCase();
+    const alias = item.alias && !ALIAS_RESERVED.test(item.alias) ? item.alias.toLowerCase() : null;
+    sources.push({ table, name: alias ?? table });
+  }
+  return sources;
 }
 
 /**
@@ -230,7 +258,8 @@ function tableInScope(scope: string, table: string): boolean {
   // Any of SQLite's identifier quotings, optionally schema-qualified.
   const pattern = new RegExp(
     `\\b(?:FROM|JOIN)\\s+(?:[A-Za-z_]\\w*\\s*\\.\\s*)?(?:"${name}"|\\[${name}\\]|\`${name}\`|${name})\\b`, "i");
-  return pattern.test(flattenParens(scope));
+  const flat = flattenParens(scope);
+  return pattern.test(flat) || commaSources(flat).some((source) => source.table === table.toLowerCase());
 }
 
 const ALIAS_RESERVED = /^(on|where|group|order|limit|left|right|inner|full|cross|join|union|having|window|using|as|natural|intersect|except)$/i;
@@ -245,12 +274,17 @@ const ALIAS_RESERVED = /^(on|where|group|order|limit|left|right|inner|full|cross
 function aliasMap(scope: string): Map<string, string> {
   const map = new Map<string, string>();
   const pattern = /\b(?:FROM|JOIN)\s+(?:[A-Za-z_]\w*\s*\.\s*)?(?:"([^"]+)"|\[([^\]]+)\]|`([^`]+)`|([A-Za-z_]\w*))\s*(?:\bAS\b\s*)?([A-Za-z_]\w*)?/gi;
-  for (const match of flattenParens(scope).matchAll(pattern)) {
+  const flat = flattenParens(scope);
+  for (const match of flat.matchAll(pattern)) {
     const table = match[1] ?? match[2] ?? match[3] ?? match[4];
     if (!table || ALIAS_RESERVED.test(table)) continue;
     map.set(table.toLowerCase(), table.toLowerCase());
     const alias = match[5];
     if (alias && !ALIAS_RESERVED.test(alias)) map.set(alias.toLowerCase(), table.toLowerCase());
+  }
+  for (const source of commaSources(flat)) {
+    map.set(source.table, source.table);
+    map.set(source.name, source.table);
   }
   return map;
 }
@@ -482,11 +516,16 @@ export type MetricTableYear = {
 function tableOccurrences(scope: string, table: string): string[] {
   const names: string[] = [];
   const pattern = /\b(?:FROM|JOIN)\s+(?:[A-Za-z_]\w*\s*\.\s*)?(?:"([^"]+)"|\[([^\]]+)\]|`([^`]+)`|([A-Za-z_]\w*))\s*(?:\bAS\b\s*)?([A-Za-z_]\w*)?/gi;
-  for (const match of flattenParens(scope).matchAll(pattern)) {
+  const flat = flattenParens(scope);
+  for (const match of flat.matchAll(pattern)) {
     const found = match[1] ?? match[2] ?? match[3] ?? match[4];
     if (!found || found.toLowerCase() !== table.toLowerCase()) continue;
     const alias = match[5];
     names.push(alias && !ALIAS_RESERVED.test(alias) ? alias.toLowerCase() : found.toLowerCase());
+  }
+  // Each comma-joined instance is its own row source and must prove its own period.
+  for (const source of commaSources(flat)) {
+    if (source.table === table.toLowerCase()) names.push(source.name);
   }
   return [...new Set(names)];
 }

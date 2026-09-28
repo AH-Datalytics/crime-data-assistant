@@ -13,6 +13,64 @@ function stripSqlStrings(sql: string): string {
   return sql.replace(/'(?:''|[^'])*'/g, "''").replace(/"(?:""|[^"])*"/g, '""');
 }
 
+// A FROM clause ends at the next clause, not at a JOIN: `FROM a JOIN b ON ..., c` still lists `c`.
+const FROM_CLAUSE_END =
+  /^(?:WHERE|GROUP|ORDER|HAVING|LIMIT|WINDOW|UNION|INTERSECT|EXCEPT|SELECT|FROM|VALUES)\b/i;
+// Words that can follow an item's name without being its alias (`t2 JOIN t3 ON ...`).
+const NOT_AN_ALIAS = String.raw`(?!(?:JOIN|INNER|LEFT|RIGHT|FULL|OUTER|CROSS|NATURAL|ON|USING|WHERE|GROUP|ORDER|HAVING|LIMIT|WINDOW|UNION|INTERSECT|EXCEPT)\b)`;
+const COMMA_TABLE_ITEM = new RegExp(String.raw`^(?:([A-Za-z_]\w*)\s*\.\s*)?([A-Za-z_]\w*)(?:\s+(?:AS\s+)?${NOT_AN_ALIAS}([A-Za-z_]\w*))?`, "i");
+const COMMA_SUBQUERY_ALIAS = new RegExp(String.raw`^\s*(?:AS\s+)?${NOT_AN_ALIAS}([A-Za-z_]\w*)`, "i");
+
+/**
+ * The items after the first in each comma-separated FROM list (the FROM/JOIN patterns already see the
+ * first). `FROM t1 a, main.t2 b, (SELECT ...) s` yields `{schema:"main", table:"t2", alias:"b"}` and
+ * `{schema:null, table:null, alias:"s"}`.
+ * Those patterns only read the name right after the keyword, so without this a comma-joined table
+ * is invisible to the table checks and its declared alias looks undeclared. Pass SQL with string
+ * literals already stripped. Each FROM is scanned at its own paren depth until its clause ends,
+ * including commas that follow a JOIN (`FROM a JOIN b ON a.id = b.id, c`).
+ */
+export function commaFromItems(sql: string): { schema: string | null; table: string | null; alias: string | null }[] {
+  const items: { schema: string | null; table: string | null; alias: string | null }[] = [];
+  const fromRe = /\bFROM\b/gi;
+  let m: RegExpExecArray | null;
+  while ((m = fromRe.exec(sql)) !== null) {
+    // `a IS [NOT] DISTINCT FROM b` is a comparison, not a FROM clause.
+    if (/\bDISTINCT\s*$/i.test(sql.slice(0, m.index))) continue;
+    const parts: string[] = [];
+    let depth = 0;
+    let start = m.index + m[0].length;
+    let i = start;
+    for (; i < sql.length; i++) {
+      const ch = sql[i];
+      if (ch === "(") { depth++; continue; }
+      if (ch === ")") { if (depth === 0) break; depth--; continue; }
+      if (depth > 0) continue;
+      if (ch === ";") break;
+      if (ch === ",") { parts.push(sql.slice(start, i)); start = i + 1; continue; }
+      if (/[A-Za-z]/.test(ch) && !/\w/.test(sql[i - 1]) && FROM_CLAUSE_END.test(sql.slice(i, i + 12))) break;
+    }
+    parts.push(sql.slice(start, i));
+    for (const part of parts.slice(1)) {
+      const item = part.trim();
+      if (item.startsWith("(")) {
+        // The alias follows the paren that closes THIS item, not the last paren of a later JOIN's ON.
+        let close = 0;
+        for (let d = 0; close < item.length; close++) {
+          if (item[close] === "(") d++;
+          else if (item[close] === ")" && --d === 0) break;
+        }
+        const alias = item.slice(close + 1).match(COMMA_SUBQUERY_ALIAS)?.[1] ?? null;
+        items.push({ schema: null, table: null, alias });
+        continue;
+      }
+      const t = item.match(COMMA_TABLE_ITEM);
+      if (t) items.push({ schema: t[1] ?? null, table: t[2], alias: t[3] ?? null });
+    }
+  }
+  return items;
+}
+
 function extractCteNames(sql: string): Set<string> {
   const names = new Set<string>();
   const cleaned = stripSqlStrings(sql);
@@ -74,6 +132,16 @@ export function extractReferencedTables(sql: string): string[] {
 
   while ((m = tableRe.exec(cleaned)) !== null) {
     const table = m[1].toLowerCase();
+    if (ctes.has(table) || BUILTIN_TABLE_LIKE.has(table)) continue;
+    tables.add(table);
+  }
+
+  // Comma-joined items, reported as the FROM/JOIN pattern above would: a main/temp prefix is dropped,
+  // any other schema prefix is what gets reported (e.g. "rollup").
+  for (const item of commaFromItems(cleaned)) {
+    if (!item.table) continue;
+    const schema = item.schema?.toLowerCase();
+    const table = schema && schema !== "main" && schema !== "temp" ? schema : item.table.toLowerCase();
     if (ctes.has(table) || BUILTIN_TABLE_LIKE.has(table)) continue;
     tables.add(table);
   }

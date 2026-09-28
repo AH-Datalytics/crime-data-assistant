@@ -25508,3 +25508,322 @@ Use the existing closeout disposition as the finish line: known serious errors c
 Claude's accepted work improves specific application behavior. Codex's overall assessment keeps those gains credited while making clear that remaining useful-answer and qualification requirements still prevent declaring Phase 3 done.
 
 **Necessity check:** Correct the phase-status interpretation now and use the existing overall disposition to select work. No new build or investigation is needed to establish that Phase 3 remains incomplete. Do not add a planning loop or a blanket all-tests/all-questions gate; remaining essential answer outcomes and their evidence, not a phase label, govern completion.
+
+## P4.1 preserved and pushed; comma-join alias repair built - comma and JOIN forms now judged alike, GC-032 still stopped by a separate share rule
+
+2026-09-28, under Jeff's approval: "scoped commit and push of accepted P4.1/R1, with staged-diff inspection and remote verification; no merge or deployment. Then reproduce and fix the retained comma-join alias false positive, preserving unsafe-query rejection. One consolidated local submission; no automatic correction round, broader CTE work, source access or paid calls." **Submitted for review. Phase 3 remains incomplete.** No source database, provider call, spend, merge or deployment. The repair is uncommitted.
+
+### Part 1 - P4.1/R1 preserved
+
+- Commit **`f8370cc`** on `phase3-candidate-c`, fast-forward from `15baa42`. **42 files**: the 9 accepted candidate files (all 9 matched `pre-mutation-r1.sha256` before staging), this handoff, `docs/roadmap/current.md`, and 31 small review receipts from `audit/p4-final-statement-binding-2026-09-28/` (top-level `.json`/`.cjs`/`.ts`/`.sha256` plus `post-taxonomy.log`). The path list is `audit/p4-final-statement-binding-2026-09-28/proposed-commit-paths.txt`, staged with `git add --pathspec-from-file` after a dry run (42/42).
+- Left out: backup folders, the two 2.3 MB handoff copies, `npm-chain.log`, the `r1/`, `combined/` and `mutation-witness/` output folders, and every unrelated modified file (`CLAUDE.md`, `scripts/*.ps1`, `cde-discrepancy-check.py`, `test-structural-*.ts`, `watch-rtci.log`) and untracked file.
+- Secret scan of the staged diff: the only matches are the offline witness's placeholder page-token secret and `offline-witness-placeholder-not-a-key`.
+- Pushed without force; `git ls-remote` reports `refs/heads/phase3-candidate-c` = `f8370cc5d20aa40d76c04e69a3d8669414647f47`, equal to local HEAD. No PR, merge or deployment.
+
+### Part 2 - reproduced first
+
+`audit/phase3-comma-alias-2026-09-28/replay.ts` replays the three saved minimal statements (text identical to `diagnose-independent-witnesses.json`), GC-032's retained 620-character SQL, and 11 added shapes against the accepted tree (`f8370cc`). **Still reproduced: 7/15 as expected; all 8 legitimate comma shapes, including GC-032, fire `nibrs-undeclared-table-alias`; all 7 unsafe controls fire** (`replay-before.json`).
+
+### What reproduction showed beyond the alias rule
+
+The alias rule was not the only reader blind to comma-separated FROM items. Every reader that looks only right after `FROM`/`JOIN` missed them, and the alias false positive was hiding two unsafe paths:
+
+1. **Table list** (`extractReferencedTables`, which feeds the allowlist and the capability required/forbidden families) never saw a comma-joined table. A forbidden family joined with a comma was not forbidden. This was already true for unqualified comma joins; fixing the alias rule alone would have extended it to qualified ones.
+2. **Rollup router:** with two source tables comma-joined, it counted one, routed as `state-rollup`, and rewrote only the table after `FROM`. The result mixes a state rollup with an agency-grain table.
+3. **Lineage** (`sql-lineage.ts` `sourceAliases`): the second reason GC-032 was refused. `lineage-probe.json` shows the same GC-032 statement with the comma replaced by `CROSS JOIN` or `JOIN ... ON 1 = 1` traces every returned value, while the comma form leaves `t.total_count` untraced (`structural-returned-series-unresolved`). **This is the comma defect, not CTE arithmetic.** The CTE lineage already works.
+
+### The repair - one shared helper, five call sites (92 changed lines in 4 lib files)
+
+- `lib/table-allowlist.ts`: new `commaFromItems(sql)` returns the second and later items of each comma-separated FROM list (`{schema, table, alias}`; a parenthesized item gives only its alias). It scans each FROM at its own parenthesis depth until the clause ends and skips `IS [NOT] DISTINCT FROM`. It expects strings already stripped. `extractReferencedTables` now also reports those tables, reading a schema prefix the way the existing FROM/JOIN pattern does (`main`/`temp` dropped, `rollup` reported by schema; CTE names and table-valued builtins excluded).
+- `lib/sql-guardrails.ts`: `findUndeclaredAliases` declares comma items' tables and aliases.
+- `lib/nibrs-rollup-router.ts` (an accepted P4.1 file): `nibrsRollupTablesIn` also recognizes a comma-joined `rollup.state_*`/`rollup.national_*` table from the same finite nine-source list. `routeNibrsRollupSql` leaves any statement with a comma-joined source table on base tables (`reason: "comma-joined-source"`).
+- `lib/sql-lineage.ts`: `sourceAliases` adds comma items, skipping parenthesized items exactly as parenthesized FROM/JOIN sources are skipped today.
+- `scripts/test-comma-from-items.ts` (new, 38 checks), added to the `test` chain after `test-sql-guardrails` in `package.json`.
+
+No rule was loosened, no check removed, and no SQL is rewritten to pass. Every change makes a reader see a table that was already in the statement.
+
+### Evidence (`audit/phase3-comma-alias-2026-09-28/`)
+
+| Check | Before (pre-change copy) | After |
+| --- | --- | --- |
+| `test-comma-from-items.ts` (`test-before-change.log` / `test-after-change.log`) | **20/38** | **38/38** |
+| Saved-witness replay (`replay-before.json` / `replay-after.json`) | 7/15 | 15/15 |
+| Call-site mutations (`mutations.json`): each of the 5 call sites fed `""` in a scratch copy | - | **5/5 caught** (9, 4, 2, 1, 2 failing checks) |
+| Real route + worker, disposable fixture (`route-witness.cjs`, `route-before/after.json` + `.log`) | 3/5 | **5/5** |
+| Accepted P4.1 binding witness vs `codex-witness-r1.json` (`p41-binding-witness.json`) | - | **12/12, no changed result** |
+| 93 accepted outputs (`combined-offline.cjs`, copied runner; outputs in this folder's `r1/`) | - | GC-084/098 20/20, GC-057 8/8, GC-080 48/48 + 17/17 **identical**; CR1 9/9 and 5/5; controls 12/12 |
+
+The route witness is the P4.1 driver's prelude (seam, fixtures, reading the answer stream) with five scripted scenarios. The scripted model returns the same statement on every call, so an outcome belongs to the gate, not to a model rewrite. The before run loads the route from `before-tree/`, a copy of the working tree with the four lib files restored from `backup-before/`. It differs from the working tree only in those four files (hashes match `backup-before.sha256`) and from `HEAD` only in line endings.
+
+- **GC-032 comma form:** before, refused as a structure failure ("I couldn't build a valid query after correcting the SQL structure"), the 09-22 outcome. After, neither comma-sensitive rule fires, and **its outcome is identical to the explicit-JOIN form's** (rows, reply, retry rules, execution).
+- **Genuinely undeclared alias** (`zz.youth_count` in the same statement): refused as a structure failure and never executed, both before and after. The log shows `Still failing after retry: nibrs-undeclared-table-alias`.
+- **Comma-joined wrong-table clearance** (`agencies a, summary_state_monthly s`): no figure and no execution both before and after. Before, the alias rule stopped it. After, the clearance-family path does (`capability-nibrs-clearance-type-table` and `nibrs-person-crime-offense-table` in the log).
+- **Control** (single-table Illinois clearance): delivers the fixture figure 300 both before and after.
+- Isolation, both runs: network blocked 4/4, real sources refused 4/4.
+
+**Suites.** `npm test` chain (windowless `npm-chain-hidden.cjs`): 133 steps pass, then it stops at `test-operation-taxonomy` on exactly the standing two findings (**16 !== 12**, `comparable_agency_clearance`). That is two steps more than P4.1's 131, one from R1's new test and one from this. Post-taxonomy suites all pass (copied runner, so the accepted GC-080 log is untouched; its hash `05fd72d1…` was checked before and after). Zero type-error lines under app/lib/scripts; the full tsc exits 2 on audit/backup material (726 lines, 721 at R1). Every `pretest` step run individually on both trees (`pretest-each.json`) gives identical exits and FAIL counts before and after, including `test-nibrs-rollup-router`, `test-structural-semantics`, `test-structural-enforcement`, the rollup deterministic/freshness/planner suites and `test-nibrs-rollup-worker.js`.
+
+### What this does NOT establish - GC-032 still gets no answer
+
+GC-032's comma false positive is removed, but **the answer is still not delivered.** Once the comma is recognized, the statement reaches `structural-measure-unit-unmodeled`: the table catalog says `summary_offender_demographics` has no modeled share. The JOIN form gets that refusal both before and after, so this rule is independent of the comma. It belongs to the recorded catalog-related useful-answer group, not to this repair, and I did not touch it. **The repair makes comma and JOIN forms equal; it does not close GC-032's useful-answer outcome.**
+
+### Found, not fixed
+
+- **`test-structural-route-placement` fails, and `npm test` runs it first.** npm runs `pretest` automatically, and this `pretest` step fails: on the working tree ("nibrs-query: every assignment to the executed SQL has a recognised source", with an empty list), identically on the pre-change copy, and with the **committed** version of the test (3 failures, `route-placement-HEAD-version.log`). It reads only `app/api/*/route.ts`, which this repair does not touch, so it is independent of this change. It does mean the standing "npm test stops at taxonomy" baseline was measured by runners that skip `pretest`; a real `npm test` stops earlier, here. The test file also carries a large uncommitted local edit that is not mine.
+
+### Adversarial self-review
+
+- *Could the new test pass if the fix were absent?* No. 18 of its 38 checks fail on the pre-change copy, and each of the five call sites is independently caught by a mutation.
+- *Could a green route check pass if the repair failed?* The GC-032 check compares against the JOIN form, which was different before (`structural-returned-series-unresolved` vs `structural-measure-unit-unmodeled`); the before run fails it. The undeclared-alias check requires the structure-refusal text, zero rows and zero worker launches. My first version checked only the first retry prompt, which never shows the alias message, and failed on correct behavior; I corrected the check, not the product.
+- *Does accepting more comma joins open unsafe paths elsewhere?* Four more readers still see only FROM/JOIN, and none is exercised with comma joins here: `sql-restriction.ts` (`aliasMap`, `cteReferences`: which scopes' filters restrict the result), `structural-semantics.ts` `outerSourceAliases`, `query-contract-validator.ts` `hasLiteralOriTargetJoin`, and two table-specific heuristics in `guardrails.ts` (`:1862` state table with ORI, `:3434` domestic-violence alias). Whether each fails closed or open on a qualified comma join is **unverified**. Before this change the alias rule refused qualified comma joins before most of them mattered; unqualified comma joins already reached them. Codex should rule whether any must be covered before acceptance.
+- *Known helper limit:* a comma item after a `JOIN` (`FROM a JOIN b ON ..., c`) is not recognized, because the scan stops at `JOIN`. Its alias still triggers the alias refusal (fails closed); an unqualified table there is still missing from the table list, as before.
+- *Performance:* statements with a comma-joined source table now stay on base summary tables instead of a half-rewritten rollup. That is correct but can be slower on the production database; not measured.
+- *Evidence ordering:* the npm-chain run used the 35-check version of the new test; section 5 (lineage, 3 checks) was added afterward and verified separately (38/38 after, mutations on the final version). The chain was not rerun for it.
+- *Touched an accepted file:* `lib/nibrs-rollup-router.ts` is P4.1-accepted; hence the P4.1 witness rerun (12/12, unchanged) and the unchanged capability-family (14/14) and binding (22/22) suites in the chain.
+
+### Paste-ready Codex prompt
+
+> Read "P4.1 preserved and pushed; comma-join alias repair built" at the end of `docs/superpowers/2026-09-19-six-model-offline-readiness-handoff.md`. P4.1/R1 is pushed as `f8370cc` (remote verified). The comma-join alias false positive reproduced, and it had two hidden unsafe siblings (a comma-joined forbidden family went unseen; the router half-rewrote comma joins). One shared helper now feeds 5 readers (alias rule, table list, rollup families, router, lineage); evidence in `audit/phase3-comma-alias-2026-09-28/`. GC-032 is still refused, by `structural-measure-unit-unmodeled`, identically to its JOIN form, so the repair makes the forms equal but does not deliver the answer. Please rule on: whether the added lineage and router call sites stay inside the approved scope; whether any of the four unverified FROM/JOIN-only readers must be covered first; and the pre-existing `pretest` failure that a real `npm test` hits first. Uncommitted; no source, provider, spend, merge or deploy. Codex review: Needed — shared SQL-recognition change on the safety path plus an edit to an accepted P4.1 file.
+
+<!-- progress-update
+{"kind":"step","phase":3,"id":"P3.COMMA-ALIAS","title":"Accept correct comma-joined queries without letting unsafe ones through","status":"review","at":"2026-09-28T14:34:27Z","note":"Reproduced on the accepted tree: all 8 legitimate comma-joined shapes, including GC-032, were refused as undeclared aliases. The same blind spot also let a comma-joined forbidden table go unseen and made the rollup planner half-rewrite comma joins. One shared helper now feeds five checks. New test 20/38 before and 38/38 after; all 5 call-site mutations caught; route witness 5/5; P4.1 witness 12/12 unchanged; 93 accepted outputs identical. GC-032 is still not answered: a separate share rule stops it exactly as it stops the JOIN form. Uncommitted, awaiting Codex review."}
+-->
+
+<!-- progress-update
+{"kind":"focus","phase":3,"at":"2026-09-28T14:34:27Z","latest":"P4.1/R1 is pushed (f8370cc, remote verified). The comma-join repair is built and submitted: comma and JOIN forms are now judged alike, and unsafe comma joins stay refused.","next":"Codex rules on the repair's scope, the unverified FROM/JOIN-only readers, and the pre-existing pretest failure. GC-032's answer still waits on the separate share-catalog rule. Phase 3 remains incomplete.","work":{"id":"P3.COMMA-ALIAS","title":"Accept correct comma-joined queries without letting unsafe ones through","owner":"Claude built; Codex reviews","state":"Submitted for review, uncommitted","next":"Codex ruling; no commit, correction round, CTE or catalog work until then."}}
+-->
+
+## Codex comma-join ruling - recognition credited, a newly admitted wrong-year answer blocks acceptance
+
+2026-09-28T15:00:03Z. **Preservation verified; comma-join submission not accepted yet. One concrete blocker, CMA1: a newly admitted comma join bypasses the per-instance year restriction and delivers 400 where the fixture's requested-year answer is 300.** No product file edited, source database opened, provider called, spend, commit, merge or deployment in this review. The approved task allowed no automatic correction; this ruling recommends a narrow follow-up for Jeff's decision, not permission to implement it.
+
+### Credit and independent checks
+
+- Local HEAD and a fresh read of `origin/refs/heads/phase3-candidate-c` both identify **f8370cc5d20aa40d76c04e69a3d8669414647f47**. P4.1/R1 preservation is verified; its acceptance remains closed.
+- New suite **38/38**, submitted real-route/worker witness **5/5**, with network probes blocked 4/4 and real-source probes refused 4/4. Reviewer replay is `audit/phase3-comma-alias-2026-09-28/codex-route.json`.
+- **6/6 candidate hashes and 8/8 backup hashes** match. Independently recomputed the saved 20 + 8 + 48 + 17 output comparisons: **93 unchanged, none missing**. Broad suites and mutations were reused from retained evidence, not rerun or product-swapped in this review.
+- GC-032 now gets the same separate `structural-measure-unit-unmodeled` refusal as its JOIN form. This credits removal of the comma-sensitive alias and lineage failures, not delivery of its answer or closure of the share-catalog issue.
+
+### CMA1 — actual route delivers a prior year's count
+
+Question: **How many rapes were cleared by arrest in Illinois in 2025?**
+
+```sql
+SELECT SUM(b.cleared_by_arrest) AS rapes_cleared_by_arrest
+FROM summary_clearance_detail a, summary_clearance_detail b
+WHERE a.ori = b.ori
+  AND a.ucr_offense_code = b.ucr_offense_code
+  AND a.year = 2025
+  AND b.state = 'IL'
+  AND b.ucr_offense_code = '11A'
+```
+
+The fixture has the retained Illinois 2025 total of 300, plus one added synthetic 2024 row of 100. The query restricts `a.year` but sums **b**, whose year is unrestricted. This is valid SQL with the wrong scope, precisely what the period check must reject.
+
+| Witness | Before submission | Submitted code |
+| --- | --- | --- |
+| Comma query above, `b` year unrestricted | Refused; no worker execution | **400 delivered; one real worker execution** |
+| Same query expressed as explicit JOIN | `contract-single-year-temporal-scope`; no execution | Same refusal; no execution |
+| Comma query with `AND b.year = 2025` | Refused by old comma handling | **300 delivered** |
+| Original single-table 2025 clearance control | 300 | **300** |
+
+Cause: the new alias recognition and lineage allow the second instance through, while `lib/sql-restriction.ts:440` uses `tableOccurrences` at :482, which reads only FROM/JOIN. It never checks counted instance `b`. The related `aliasMap`/scope discovery still share that blind spot. The initial and final contract checks both miss it; P4.1 faithfully executes the wrongly approved SQL. Binding is working, not a remedy for a semantic check that has missed a source instance.
+
+Evidence and reproduction (all fixture-only):
+
+- `codex-period-probe.ts` / `.json`: before/current guardrail and contract comparison, including the explicit JOIN control.
+- `node audit/phase3-comma-alias-2026-09-28/codex-period-route-v2.cjs --out <new-review-receipt.json>`; add `--root audit/phase3-comma-alias-2026-09-28/before-tree` for the before replay. Do not overwrite the retained receipts.
+- `codex-period-before-v2.json`, `codex-period-after-v2.json`: complete route outcomes, SQL sent to the real worker, and isolation probes.
+- `codex-review.cjs` / `.json`: explicit assertions on the 400/300 difference and refusals, identity verification and saved regression comparisons.
+
+Reviewer correction disclosed: my first route probe mistakenly joined on `month`, which this annual table does not have. That probe failed schema validation and proves no wrong delivered value. Its code and receipts are preserved. V2 removes that invalid predicate and is the decisive execution evidence. The receipt-reading helper also initially assumed nested backup paths; the submitted backups use basenames, and the corrected verifier checks that actual layout.
+
+### Rulings on the requested questions
+
+1. **The additional lineage and router call sites fit the approved scope.** They address the same source-recognition defect, prevent a half-rewritten query and preserve table-family checks. They are not an unapproved CTE arithmetic redesign. A reasonable scope addition does not establish the complete change is safe; CMA1 is the missing preservation obligation.
+2. **One of the unverified readers must be addressed before acceptance: restriction/period source-instance discovery.** This is demonstrated wrong delivery, not hypothetical robustness. Recommend one bounded correction that makes the period/restriction proof account for the admitted comma source instances and their actual scopes, with the unpinned comma query refused, the pinned comma query delivering 300 and explicit JOIN behavior unchanged. Do not copy a global alias list into a per-scope proof or let one pinned instance vouch for another. Keep undeclared aliases, wrong tables, forbidden families, mixed-grain routing and P4.1 controls. Unsupported shapes may remain refused; no blanket re-refusal of the supported pinned form as a substitute for the promised repair.
+3. **No blanket rewrite of every listed reader is requested.** `outerSourceAliases` and `hasLiteralOriTargetJoin` can fail to establish a proof when a name is missed; their incompleteness is not by itself a demonstrated unsafe acceptance. The two table-specific heuristics and mixed JOIN/comma limit are not certified by this review. Keep those limits explicit, and do not claim universal comma/JOIN equivalence. I am not adding independent blockers for them without a concrete necessary failure. If the bounded restriction correction exposes a wider architecture need, stop and recommend a smaller admission boundary instead of starting that redesign.
+4. **The pretest reporting correction is accepted, including against my earlier wording.** I reproduced `test-structural-route-placement.ts`: **24 passed / 1 failed**, NIBRS executed-SQL assignment classification. The saved before comparison has the same result; the product routes are untouched in this batch. The manually driven test chain reaches the two taxonomy failures, but **actual `npm test` stops earlier in pretest**. It is not accurate to call taxonomy its only failure. Do not disable or repair the unowned edited test as part of CMA1. Its cause and required-check disposition remain necessary before merge/release, not an additional comma-repair scope now.
+
+### Decision and short prompt for Claude
+
+Recommend Jeff approve **one narrowly bounded restriction-reader correction and one consolidated review**, preserving this submission and all accepted work. No automatic subsequent round. This is a proposed extension because the completed task expressly excluded automatic corrections. No paid run, source query, CTE arithmetic, share-catalog repair, commit/push of the unaccepted change or deployment is included.
+
+> Read "Codex comma-join ruling - recognition credited, a newly admitted wrong-year answer blocks acceptance." P4.1 push verified; comma suite 38/38 and route 5/5 reproduced. CMA1 remains: the unpinned second comma instance delivers synthetic 400 instead of 300, while explicit JOIN is correctly refused. Use codex-period-route-v2.cjs and the before/after receipts; the first month-bearing reviewer probe was invalid and is not delivery evidence. Keep the scoped lineage/router credit and GC-032's remaining catalog refusal. Codex recommends only the bounded per-instance restriction correction described here, awaiting Jeff because no automatic correction was authorized. Do not implement or create an acknowledgment-only resubmission before that decision. Codex review: completed for this submission; acceptance held on CMA1.
+
+Claude removed a real false refusal and preserved the previously accepted answers. Codex found that one newly admitted query can nevertheless include an extra year's data, so the correction must preserve the existing period guarantee before this batch can be accepted.
+
+**Necessity check:** CMA1 must be resolved before accepting this change because it changes an old refusal into an observed wrong answer. This is not a demand for general SQL certification. All-reader redesign, CTE/share-catalog work, pretest repair, new live testing and deployment remain outside the proposed follow-up. No additional verification-only or acknowledgment round is needed.
+
+<!-- progress-update
+{"kind":"step","phase":3,"id":"P3.COMMA-ALIAS","title":"Accept correct comma-joined queries without letting unsafe ones through","status":"blocked","at":"2026-09-28T15:00:03Z","note":"Codex replayed 38/38 and route 5/5; preservation push f8370cc verified, 93 saved outputs unchanged. Acceptance held on CMA1: counted second comma instance escapes the year check and delivers synthetic 400 instead of 300; equivalent JOIN refused, pinned comma returns 300. One bounded restriction-reader correction recommended, awaiting owner approval; no automatic correction. Actual npm test stops in pretest, before the known taxonomy failures."}
+-->
+
+<!-- progress-update
+{"kind":"focus","phase":3,"at":"2026-09-28T15:00:03Z","latest":"Comma recognition improves, but a new route-level wrong-year answer prevents acceptance. P4.1 remains accepted and preserved remotely.","next":"Jeff decides the narrow CMA1 correction; no broader parser, catalog, paid test or deployment work.","work":{"id":"P3.COMMA-ALIAS","title":"Preserve the requested year when admitting comma joins","owner":"Jeff decision; Claude implementation if approved","state":"One demonstrated blocker; no automatic correction","next":"Make the restriction proof account for the counted comma instance; retain 300 control and refuse the 400 query."}}
+-->
+
+## CMA1 corrected - every counted comma-joined instance now proves its own year; 400 refused, 300 kept
+
+2026-09-28, under Jeff's approval of the single bounded CMA1 correction ("CMA1 requires the period proof to account for the counted comma-joined instance: refuse the unbounded 400 query while preserving the correctly restricted 300 answer. No broader CTE/catalog work."). **Submitted for one consolidated review. Phase 3 remains incomplete.** No source database, provider call, spend, commit, push, merge or deployment. The whole comma batch, including this correction, is uncommitted.
+
+### Reproduced first, then widened to the same mechanism
+
+Before any edit, the submission was confirmed intact (6/6 hashes in `candidate.sha256`), and Codex's driver was run into a new receipt (`cma1/route-reproduce.json`): **comma-unpinned 400**, JOIN-unpinned refused, comma-pinned 300, single-table 300. Codex's receipts were hashed first (`cma1/codex-receipts-before.sha256`, 6/6 unchanged afterwards).
+
+A new CMA1 route witness (`cma1/route-witness-cma1.cjs`) reuses the submitted driver in memory, as Codex's does, with the same synthetic 2024 row of 100. Its 9 scenarios put Codex's four beside the other ways a counted instance can reach the answer without being seen by the period proof. It ran on three trees:
+
+| Scenario (Illinois rape clearances, 2025) | Before the comma batch (`before-tree`) | Submitted batch | After CMA1 |
+| --- | --- | --- | --- |
+| comma, second instance unpinned (Codex CMA1) | refused (alias rule) | **400** | refused |
+| comma, second instance pinned `b.year = 2025` | refused (alias false positive) | 300 | **300** |
+| JOIN, second instance unpinned | refused | refused | refused |
+| JOIN, second instance pinned | 300 | 300 | 300 |
+| comma, quoted `"summary_clearance_detail" b`, unpinned | refused | refused | refused |
+| `FROM t a JOIN agencies g ON ..., t` (comma after a JOIN), unpinned | **400** | **400** | refused |
+| CTE read only through a comma (`FROM y, t`), `t` unpinned | refused | **400** | refused |
+| same CTEs, both pinned | refused | 300 | **300** |
+| single-table control | 300 | 300 | 300 |
+
+Receipts: `cma1/route-presubmission.json`, `route-before-cma1.json`, `route-after-cma1.json` (9/9, `--assert`), each with its `.log`. Isolation in every run: network blocked 4/4, real sources refused 4/4. **Every refused comma case after CMA1 is refused by the same rule as the JOIN form, `contract-single-year-temporal-scope`**, and none reaches the worker.
+
+Two findings beyond Codex's case:
+
+- **The comma-referenced CTE was newly admitted by the submission, like CMA1.** `restrictingScopes` follows a CTE only when `cteReferences` finds it after FROM/JOIN, so `t`'s unfiltered body was never examined.
+- **Comma-after-JOIN delivered 400 before the comma batch existed.** It is pre-existing, not a regression. It is the same mechanism (a counted instance the proof cannot see), so it is closed here rather than left open.
+
+### The correction (65 changed lines in 2 lib files; the other three submitted lib files unchanged)
+
+- `lib/sql-restriction.ts`: new private `commaSources(text)` returns each comma-joined row source as `{table, name}`. It is built on the shared `commaFromItems`, with string literals blanked and simple quoted identifiers (`"t"`, `[t]`, `` `t` ``) unquoted first. It is used **per scope** (on that scope's `flattenParens` text, exactly like the existing FROM/JOIN pattern next to it) in four readers:
+  - `tableOccurrences`: each comma instance is its own occurrence, so `b` must prove `b`'s year. This is the CMA1 fix. No global alias list, and one pinned instance cannot vouch for another.
+  - `cteReferences`: a CTE read through a comma is a used scope.
+  - `aliasMap` and `tableInScope`: a comma alias resolves to its table, and a comma-joined table is in scope. Without these, the comma form of the SHR idiom (`FROM victims v, incidents i WHERE v.incident_id = i.id AND i.homicide_type = 'Murder'`) fails both the relation-carried period proof and the murder-filter proof that the JOIN form passes.
+- `lib/table-allowlist.ts` `commaFromItems`: a FROM clause now ends at the next clause (WHERE/GROUP/ORDER/HAVING/LIMIT/WINDOW/UNION/INTERSECT/EXCEPT/SELECT/FROM/VALUES), not at a JOIN, so `FROM a JOIN b ON ..., c` lists `c`. Join keywords can no longer be read as an alias (`t2 JOIN t3` does not alias `t2` as `JOIN`). A parenthesized item's alias is read after the paren that closes that item, not after a later JOIN's last paren; that was not needed before, because the scan used to stop at the JOIN.
+- `scripts/test-comma-from-items.ts`: now 54 checks. Section 6 covers CMA1 through the contract validator's period rule with JOIN controls; section 7 covers relation-carried proofs through a comma, with co-presence still refused.
+
+No rule was loosened and no check removed. Every change makes the period/restriction proof see a row source that was already in the statement.
+
+### Evidence (`audit/phase3-comma-alias-2026-09-28/cma1/`)
+
+| Check | Pre-CMA1 copy | After |
+| --- | --- | --- |
+| `test-comma-from-items.ts` (`test-before-cma1.log` / `test-after-cma1.log`) | 46/54 (the 8 new CMA1/relation checks fail; JOIN controls pass) | **54/54** |
+| CMA1 route witness | 6/9 (the three 400s) | **9/9** |
+| CMA1 mutations (`mutations-cma1.json`): each of 7 new call sites undone in a scratch copy | - | **7/7 caught** |
+| Submitted comma mutations, rerun on the final test (`mutations-submitted-rerun.json`) | - | 5/5 caught |
+| Submitted comma route witness (`route-comma-rerun.json`) | - | **5/5**, GC-032 still `structural-measure-unit-unmodeled` |
+| Accepted P4.1 binding witness vs `codex-witness-r1.json` (`p41-binding-witness.json`) | - | **12/12, no changed result** |
+| 93 accepted outputs (runner copied to `cma1/`, outputs in `cma1/r1/`) | - | 20/20, 8/8, 48/48, 17/17 **identical**; CR1 9/9, 5/5; controls 12/12 |
+
+On the first mutation run, the `aliasMap` and `tableInScope` additions survived: no check could see them. I did not drop them. Section 7 was added to show what they carry, and both are now caught (2 failing checks each).
+
+**Suites.** The `test` chain (windowless, `cma1/npm-chain.log`): 133 steps pass, then it stops at `test-operation-taxonomy` on the standing two findings (16 !== 12, `comparable_agency_clearance`); the comma test in the chain reports 54/54. Post-taxonomy suites all pass, including SHR murder licence 88/88, which uses `sqlRestrictsColumnToValue`. Zero type-error lines under app/lib/scripts; the full tsc exits 2 on audit/backup material (750 lines; the growth is the staged copies under `audit/`). All 24 `pretest` steps (`cma1/pretest-each.json`) give the same exit and FAIL count as on the pre-CMA1 copy. The only failing step is the known `test-structural-route-placement`, and a real `npm test` still stops there first.
+
+### Disclosure - one submitted receipt was overwritten by me
+
+Rerunning the submitted `mutations.cjs` wrote over `audit/phase3-comma-alias-2026-09-28/mutations.json`, because that runner writes next to itself. That file was never committed or hashed, so its original bytes are gone. What I did:
+
+- moved the overwriting output to `cma1/mutations-submitted-rerun.json`;
+- reproduced the submitted state separately (`cma1/mutations-submission-state.cjs`: lib = the pre-CMA1 copy, test = the 38-check backup). It gives **9, 4, 2, 1, 2 failing, all caught**, the result reported at `:25551`. It is a reproduction, not the original file;
+- left `mutations.json.OVERWRITTEN.txt` at the original path saying so.
+
+Every other runner for this correction was copied into `cma1/` first. The hashes of `r1/combined-offline.json`, `post-taxonomy-hidden.log`, `pretest-each.json`, `route-after.json` and `p41-binding-witness.json` are unchanged (`cma1/submitted-receipts.sha256`).
+
+### Adversarial self-review
+
+- *Could the CMA1 checks pass if the fix were absent?* No. The CMA1 route witness fails 3/9 on the submitted tree, the unit section fails 8 checks on the pre-CMA1 copy, and all 7 call sites are individually caught by mutations.
+- *Did I refuse the pinned form to make the 400 go away?* No. Comma-pinned and CTE-pinned deliver 300 through the real worker, exactly as the JOIN-pinned control does.
+- *Could the refusal be incidental rather than the period proof?* Each refused comma case names `contract-single-year-temporal-scope` in its retry, the same rule as the JOIN form.
+- *Does reading past JOIN mis-read anything?* Commas inside ON/USING are inside parentheses and skipped. The first part of each list, which holds the JOIN chain, is still left to the FROM/JOIN patterns. Join keywords cannot become aliases. The submitted checks on select-list, IN, GROUP BY and ORDER BY commas still pass.
+- *Remaining limits, not certified:* a quoted identifier that is not a simple name (spaces, punctuation) is not unquoted. `outerSourceAliases` (structural-semantics), `hasLiteralOriTargetJoin` and the two table-specific `guardrails.ts` heuristics are unchanged, as the ruling allowed. I claim no universal comma/JOIN equivalence. The performance of comma-joined sources kept on base tables is still unmeasured.
+- *Scope:* no CTE arithmetic, share-catalog or pretest change. GC-032 is still refused by the separate share rule. The unowned test edit is untouched.
+
+### Paste-ready Codex prompt
+
+> Read "CMA1 corrected - every counted comma-joined instance now proves its own year" at the end of `docs/superpowers/2026-09-19-six-model-offline-readiness-handoff.md`. The period/restriction readers in `lib/sql-restriction.ts` now see comma-joined sources per scope (occurrences, used CTEs, alias resolution, in-scope tables), and `commaFromItems` reads commas that follow a JOIN. Real route: the unpinned comma query and two siblings (a comma-referenced CTE, newly admitted; a comma after a JOIN, pre-existing 400) are refused by `contract-single-year-temporal-scope` like the JOIN form, while the pinned comma forms deliver 300; 9/9 (`cma1/route-after-cma1.json`). Test 54/54 (46/54 pre-CMA1), 7/7 new mutations caught, 93 accepted outputs identical, P4.1 12/12 unchanged. Disclosed: I overwrote the submitted `mutations.json`; it is reproduced separately, not restored. Uncommitted; no source, provider, spend, merge or deploy. Codex review: Needed — correction to the year/restriction proof on the safety path, closing CMA1 for the consolidated comma batch.
+
+<!-- progress-update
+{"kind":"step","phase":3,"id":"P3.COMMA-ALIAS","title":"Accept correct comma-joined queries without letting unsafe ones through","status":"review","at":"2026-09-28T16:30:48Z","note":"CMA1 corrected under Jeff's approval. The year check now examines every comma-joined copy of a counted table, a summary read only through a comma, and a table listed after a JOIN. On the real route, the 400 answer and two similar wrong-year answers are refused by the same year rule as the JOIN form, and the correctly restricted comma queries still give 300 (9/9). New test 54/54, all 7 new change points caught by mutation, 93 accepted outputs unchanged, P4.1 witness 12/12. One earlier mutation receipt was overwritten by mistake and is reproduced, not restored. Uncommitted, awaiting Codex review."}
+-->
+
+<!-- progress-update
+{"kind":"focus","phase":3,"at":"2026-09-28T16:30:48Z","latest":"The comma-join batch's wrong-year blocker (CMA1) is corrected: 400 refused, 300 kept, and the JOIN form unchanged.","next":"Codex reviews the consolidated comma batch. GC-032 still waits on the separate share-catalog rule; Phase 3 remains incomplete.","work":{"id":"P3.COMMA-ALIAS","title":"Preserve the requested year when admitting comma joins","owner":"Claude built; Codex reviews","state":"CMA1 correction submitted, uncommitted","next":"Codex ruling; no further correction, commit, CTE or catalog work until then."}}
+-->
+
+## Codex CMA1 acceptance - wrong-year comma answers refused, supported forms retained
+
+2026-09-28T16:44:26Z. **CMA1 is closed and the consolidated bounded comma-join repair is accepted locally. No further correction requested.** The single approved correction has met its demonstrated requirement. Phase 3 remains incomplete; the batch is uncommitted and not deployed. No product edits, source access, provider calls, spend, commit or push in this review.
+
+### Independent evidence
+
+- `scripts/test-comma-from-items.ts`: **54/54**.
+- `cma1/route-witness-cma1.cjs`: **9/9**, real route and worker over disposable fixtures. The unsafe second comma instance, comma-used CTE and comma-after-JOIN query no longer deliver 400. Correctly restricted comma, explicit JOIN, CTE and single-table forms each deliver **300**. Refused cases execute no worker statement. Receipt: `cma1/codex-route-cma1.json`.
+- Original comma route witness: **5/5**, saved as `cma1/codex-original-route.json`. Undeclared aliases and wrong-table clearance queries remain refused; GC-032's comma and explicit JOIN forms still receive the same separate share-rule refusal. Both fixture replays block network 4/4 and real-source opens 4/4.
+- Six independent contract controls pass: a wrong year, missing year, tautology reopening the year, scalar year mention and unused pinned CTE do not establish the counted instance's period; the properly restricted form passes. `cma1/codex-cma1-review.ts` and `.json` retain these controls.
+- The same reviewer artifact verifies **7/7 candidate hashes, 6/6 prior Codex receipts and 5/5 named submitted receipts**. It independently recomputes the saved **93/93 unchanged accepted outputs** and **12/12 unchanged P4.1 outputs**. These are comparisons of retained broad regression executions, not claims that Codex reran those whole suites. No mutation replay or product-file swapping.
+
+### Ruling and evidence qualifications
+
+Per-scope source-instance discovery is the appropriate correction: a counted instance is now visible to its own period proof, and a comma-used CTE is followed rather than treated as dead code. Supporting alias resolution and in-scope relationship checks avoids losing the legitimate relation-carried forms. Reading past JOIN addresses the same missed-source mechanism; the disclosed comma-after-JOIN 400 was pre-existing and is credited as such, not represented as a regression from the initial comma batch. No CTE arithmetic or share-catalog implementation is credited here.
+
+Every refused scenario has `contract-single-year-temporal-scope` in the observed retry. Narrow the quoted-table claim: that case also ends with the existing structural-refusal text, so the route evidence does not establish that the period rule is its sole terminal refusal. The three demonstrated 400 cases now take the period refusal, and the valid controls execute. This reporting distinction requires no code change or resubmission.
+
+The overwritten original `mutations.json` is **lost**, not restored by reproducing its result. The tombstone and separately labeled reproduction are the correct record. Do not claim all historical receipts are intact. This does not block acceptance: independent before/after wrong-answer evidence, current execution controls and the preserved receipts establish the correction without relying on that missing original. No replacement evidence system or replay campaign is requested.
+
+Keep the limits already recorded: no universal SQL-form certification, no measured production performance of base-table comma queries, no all-reader migration, and no live-data qualification. Actual `npm test` still stops at the known structural-placement pretest failure; the separately driven test chain reaches taxonomy. Neither is an all-green build. Required integration/merge checks retain their own disposition, without becoming another repair round here.
+
+### Overall placement and next useful outcome
+
+This closes the comma-recognition blocker and its period regression; it does **not** deliver GC-032's youth-share answer. The next useful target within the existing legitimate-query acceptance group is that retained `structural-measure-unit-unmodeled` refusal, now isolated from the comma issue. Recommend selecting a bounded supported-share outcome from its existing fixture/query evidence, rather than broadening comma syntax or restarting the older failed CTE candidate. This is prioritization, not authorization for a catalog edit, new parser or paid run. GC-064/065 and the other Phase 3 obligations remain owned; no frozen score changes and no Phase 3 closeout.
+
+### Short prompt for Claude
+
+> Read "Codex CMA1 acceptance - wrong-year comma answers refused, supported forms retained." The bounded comma batch is accepted locally: independent 54/54, CMA1 route 9/9, original route 5/5 and six contract controls; saved 93 Phase 3 and 12 P4.1 outputs unchanged. Close CMA1 with no further correction or acknowledgment-only submission. Preserve the lost-receipt disclosure and narrow the quoted-table refusal claim as recorded. GC-032's separate share-rule refusal remains the next recommended useful-answer target, not an authorized catalog/CTE build. No commit/push, source access, provider calls or deployment is authorized by this acceptance. Codex review: completed for the consolidated batch.
+
+Claude made the period checks recognize the same comma-joined sources as the other checks while retaining valid answers. Codex's acceptance closes the bounded repair and directs attention back to the separate rule still preventing the user's useful answer.
+
+**Necessity check:** No additional change is needed to accept the demonstrated comma repair. The wrong 400 answers are stopped and the correct 300 answers still execute. Wider syntax, the separate share-catalog issue, live performance and merge-check repairs stay in their own scopes; the lost mutation receipt does not justify another evidence round.
+
+<!-- progress-update
+{"kind":"step","phase":3,"id":"P3.COMMA-ALIAS","title":"Accept correct comma-joined queries without letting unsafe ones through","status":"local","at":"2026-09-28T16:44:26Z","note":"Codex accepted the bounded comma batch and closed CMA1: independent 54/54, CMA1 real route 9/9, original route 5/5 and six contract controls. Wrong-year 400s refused; valid comma/JOIN/CTE forms deliver 300. Saved 93 Phase 3 and 12 P4.1 outputs unchanged. Lost original mutation receipt disclosed, not restored. GC-032 share-rule refusal remains; uncommitted, no deployment or Phase 3 closeout."}
+-->
+
+<!-- progress-update
+{"kind":"focus","phase":3,"at":"2026-09-28T16:44:26Z","latest":"The comma-join repair is accepted locally; the demonstrated wrong-year regression is closed without losing correctly restricted answers.","next":"Preserve the accepted batch. Next recommended useful-answer target is GC-032's separate share-rule refusal; no new implementation or operational authority.","work":{"id":"P3.COMMA-ALIAS","title":"Preserve the requested year when admitting comma joins","owner":"Claude / Codex","state":"Accepted locally; correction closed","next":"No further comma correction. Separate scope/approval for the remaining share outcome and preservation commit."}}
+-->
+
+## Forward plan - finish useful Phase 3 outcomes, then judge the combined application
+
+2026-09-28. Jeff asks for the gameplan after CMA1 acceptance. **Keep the focus on Phase 3's useful-answer requirements. Keep Gemini as the provisional model choice; no renewed model comparison, whole-app rebuild or database rebuild is proposed.** P4.1 is an accepted supporting mechanism, not a Phase 3 exit. This plan recommends future scope; it authorizes no implementation, source access, spend, commit/push or deployment.
+
+### 1. Preserve the accepted comma batch and finish the next useful share answer
+
+The next owner approval recommended is one task: a scoped preservation commit/push of the accepted comma/CMA1 batch and essential evidence to the existing preservation branch, followed by a bounded **GC-032 supported-share repair** using the retained query, fixture, requested measure and controls. No merge or deployment. Classify the actual staged diff; exclude unrelated changes and credentials. Keep the lost-mutation-receipt disclosure rather than describing a reconstructed receipt as original.
+
+The product outcome is an actual correctly labelled youth-share answer, not merely disappearance of `structural-measure-unit-unmodeled`. The comma/lineage blocker is now closed, so start from the exact retained statement on the accepted tree and its independent fixture operands. Establish what the existing share proof lacks; implement only the necessary supported-measure recognition while retaining numerator/denominator, unit, geography, period and wrong-table checks. An unconditional table-name exemption or a catalog entry that merely suppresses the rule does not establish the outcome. Demonstrate delivered rows AND text, a wrong denominator/measure counterpart, and preservation of the accepted controls. Use existing runners and saved evidence.
+
+If this requires the broader CTE decomposition change from the earlier failed attempt, stop with that concrete limitation and a smaller alternative; do not restart the inactive candidate or treat this recommendation as a renewed CTE allowance. Recommend one integrated submission and at most one explicitly approved bounded correction pass. Do not insert a separate feasibility/proposal round by default. Related fixes belong together only when the same demonstrated mechanism and controls cover them.
+
+### 2. Address the remaining ranking, coverage and identity outcomes in dependency order
+
+Use the existing residual table at :24683, not a new inventory. GC-064 must eventually provide a useful city homicide-victim rate ranking with valid city/agency identity, population and eligibility; an owned refusal contains the old error but does not fulfill the request. GC-065 must accurately disclose coverage and exclusions without inventing absent-category meaning. Resolve shared reference/identity facts once where they actually serve those outcomes; carry GC-049, GC-003 geography and Stage B limitations explicitly. Existing evidence comes first. If a missing source fact truly blocks the next outcome, request one bounded read-only operation for the named fact; no speculative source survey, database rebuild or large download.
+
+This is a workstream ordering, not a claim that GC-064 and GC-065 share one code fix or that all identity work must finish before any useful answer. Broader valid-CTE/calculation and follow-up obligations remain assigned; schedule them by the supported outcome they unlock, without silently dropping them or converting them to routine refusals.
+
+### 3. Measure the combined candidate after a coherent repair batch
+
+Do not pay for a live test after every fix. Use fixture execution, retained failure traces, unsafe counterparts and comparisons against accepted outputs during repairs. Then use the existing combined-checkpoint machinery under a separately approved bounded run only when adequate references exist and fresh model/source behavior will resolve a concrete remaining decision. Report the user's actual delivered answer, not merely whether SQL ran or a guard stopped firing. Distinguish answer-required, clarification and refusal outcomes, and product-owned versus model-generated behavior. Keep GC-070's frozen inconclusive result; any responsive-user numerical continuation is separately declared. No new evaluator or silent replacement of historical scores.
+
+### 4. Make one explicit phase-exit decision
+
+Phase 3 finishes when known serious errors are corrected or demonstrably prevented, promised useful answer families are demonstrated, the combined candidate has appropriate evidence, and every remaining requirement has an honest disposition. An essential unmet outcome still blocks completion; assigning it to a later phase does not waive it. This does not demand perfect answers to every imaginable question or 120/120. Required merge/release checks and operational exceptions need concrete decisions before integration/deployment, which are separate approvals. Later-phase execution, maintainability and operations work then proceeds with completed slices credited once; a supporting mechanism may be brought forward only for a named outcome.
+
+### Ownership and short prompt for Claude
+
+Claude owns approved implementation and an integrated submission; Codex owns the consolidated review, overall priorities and an explicit closure or changed-approach recommendation. Jeff decides material access, spend, scope and deployment. Routine reversible work within an approved slice should not keep returning to Jeff. No dates or number of repair rounds to overall completion are promised without evidence.
+
+> Read "Forward plan - finish useful Phase 3 outcomes, then judge the combined application." CMA1 stays closed; Phase 3 remains partial. The next recommended combined task is scoped preservation of the accepted comma batch and an end-to-end GC-032 supported-share repair from retained evidence, with wrong-denominator/measure controls and one consolidated review. This is awaiting Jeff's approval, not authority to start. Do not restart the broader failed CTE candidate, reopen model selection, or add a new harness/paid run. Keep ranking, coverage, identity and numerical follow-up obligations on the existing closeout path. No acknowledgment-only submission.
+
+Claude has closed the bounded comma defect while preserving valid answers. This plan makes the next increment deliver the previously blocked answer and reconnects individual repairs to the overall Phase 3 exit decision.
+
+**Necessity check:** Preserve accepted progress, complete a demonstrated useful answer, then address the retained essential outcomes and test the combined candidate when the evidence can support a decision. Defer unrelated architecture, speculative edge cases, another model contest and per-fix paid testing. No new planning artifact or qualification framework is required beyond this existing handoff.
