@@ -18,6 +18,7 @@ import { selectPopulationPeers, type PeerCandidate } from "./peer-comparison";
 import { fetchNibrsPeerCandidates, type PeerCandidateSource } from "./peer-adapters";
 import { getNibrsDb } from "./nibrs-db";
 import type { EstablishedIdentity } from "./answer-evidence";
+import type { CompletenessPlan } from "./city-ranking-completeness";
 
 export interface DeterministicNibrsQuery {
   sql: string;
@@ -49,6 +50,8 @@ export interface DeterministicNibrsQuery {
   xAxisLabel?: string;
   yAxisLabel?: string;
   guardrail: string;
+  /** City rankings only: the shared S1 completeness plan (lib/city-ranking-completeness.ts). */
+  completeness?: CompletenessPlan;
 }
 
 function sqlString(value: string): string {

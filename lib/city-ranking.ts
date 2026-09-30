@@ -43,15 +43,21 @@
 import { buildQueryContract } from "./query-contract";
 import { resolveGeoPlaces } from "./geo-place-resolver";
 import { UCR_CODES } from "./nibrs-codes";
+import { SHR_ALL_HOMICIDE_DISCLOSURE, SHR_MEASURE_CONFLICT_MESSAGE, shrRequestedMeasure } from "./shr-murder-licence";
 
-export type CityRankingSource = "current" | "nibrs";
+export type CityRankingSource = "current" | "nibrs" | "shr";
 
-/** How an offense is identified in a given source. The two are not interchangeable. */
+/** How an offense is identified in a given source. They are not interchangeable. */
 export type OffenseIdentity =
   | { kind: "current_offense"; value: string }
-  | { kind: "nibrs_codes"; codes: string[] };
+  | { kind: "nibrs_codes"; codes: string[] }
+  // SHR counts VICTIM records: "homicide" is every homicide type, "murder" is homicide_type 'Murder'
+  // (the owned-count definitions in lib/shr-murder-licence.ts, unchanged).
+  | { kind: "shr_victims"; measure: "homicide" | "murder" };
 
-export type RankingQuantity = "count" | "rate_per_100k";
+// "share_pct": the percentage of the ranked offense's victims that meet a stated subset (SHR firearm
+// share, GC-061). Only SHR builds it; it is declined elsewhere.
+export type RankingQuantity = "count" | "rate_per_100k" | "share_pct";
 export type PopulationComparison = ">=" | ">" | "<=" | "<";
 export type CountComparison = ">=" | ">";
 
@@ -143,6 +149,8 @@ export type Production =
   | { field: "denominator"; basis: number }
   | { field: "geography"; name: string }
   | { field: "period"; year: number }
+  // "currently", "right now": the request names the latest period rather than omitting one (GC-064).
+  | { field: "recency"; latest: true }
   | { field: "population"; comparison: PopulationComparison; value: number }
   | { field: "count"; comparison: CountComparison; value: number; crimeToken: string | null }
   | { field: "relationship"; relation: "all" | "any" }
@@ -475,7 +483,7 @@ const POPULATION_NOUN_BEFORE =
   /\b(populations?|pop\.?|min\.?|minimum|max\.?|maximum)\s*(?:of\s+)?(at\s+least|at\s+most|no\s+fewer\s+than|no\s+less\s+than|no\s+more\s+than|greater\s+than|larger\s+than|less\s+than|fewer\s+than|smaller\s+than|more\s+than|over|above|under|below|>=|>|<=|<|,|:)?\s*$/i;
 
 const COUNT_COMPARISON: [RegExp, CountComparison][] = [
-  [/\b(?:at\s+least|no\s+fewer\s+than|no\s+less\s+than|minimum\s+of)\s*$/i, ">="],
+  [/\b(?:at\s+least|no\s+fewer\s+than|no\s+less\s+than|minimum\s+of|minimum|min\.?)\s*$/i, ">="],
   [/\b(?:more\s+than|over)\s*$/i, ">"],
 ];
 
@@ -511,6 +519,19 @@ const RANK_ASC_WORD = /\bbottom\b/gi;
 const RANK_DESC_WORD = /\btop\b/gi;
 const RANK_VERB = /\brank(?:ed|ing|s)?\b/gi;
 const RATE_WORD = /\brates?\b|\bper\s+capita\b/gi;
+/*
+ * "Currently" names the most recent period. It PRODUCES the same latest-with-observed-data period the
+ * omitted-year default uses, so the answer still names the year it used and marks a partial year; it
+ * is not filler, and it cannot be combined with an explicit year.
+ */
+const RECENCY_WORD = /\b(?:currently|right\s+now|at\s+present|presently|these\s+days)\b/gi;
+/*
+ * A SHARE BY WEAPON is one measure, claimed whole: "share via firearm", "percentage of murders with a
+ * gun", "firearm share". It is the ranked measure (a crime-field claim), so no separate unit word has
+ * to find an owner; the offense it is a share OF comes from the words inside it or, when they name
+ * none, from the stated count condition ("min 30 murders"). SHR only (GC-061).
+ */
+const FIREARM_SHARE = /\b(?:shares?|percent(?:ages?)?|proportions?)\s+(?:of\s+(?:(?:murder|homicide)\s+victims|murders?|homicides?)\s+)?(?:(?:via|by|with|using|committed\s+with)\s+(?:a\s+)?)(?:firearms?|guns?)\b|\b(?:firearm|gun)\s+(?:shares?|percent(?:ages?)?|proportions?)(?:\s+of\s+(?:(?:murder|homicide)\s+victims|murders?|homicides?))?\b/gi;
 const COUNT_WORD = /\bcounts?\b|\bnumbers?\b|\btotals?\b/gi;
 
 /* ================================================================== *
@@ -627,16 +648,33 @@ function currentOffense(claimText: string): { offense: OffenseIdentity; label: s
   return null;
 }
 
+/**
+ * SHR: the owned-count measure words, unchanged. "homicide(s)" is every homicide victim and carries the
+ * application's all-homicide sentence; "murder(s)" is murder and nonnegligent manslaughter victims.
+ * "killings" names neither measure, so it is not resolved here.
+ */
+function shrOffense(claimText: string): { offense: OffenseIdentity; label: string; caveats: string[] } | null {
+  if (/\bhomicides?\b/i.test(claimText)) {
+    return { offense: { kind: "shr_victims", measure: "homicide" }, label: "Homicide", caveats: [SHR_ALL_HOMICIDE_DISCLOSURE] };
+  }
+  if (/\bmurders?\b/i.test(claimText)) {
+    return { offense: { kind: "shr_victims", measure: "murder" }, label: "Murder", caveats: [] };
+  }
+  return null;
+}
+
 function resolveOffense(
   claimText: string, source: CityRankingSource
 ): { offense: OffenseIdentity; label: string; caveats: string[] } | null {
   if (source === "nibrs") {
     return nibrsOffense(claimText, buildQueryContract(claimText, source)?.metric.offenseCodes ?? []);
   }
+  if (source === "shr") return shrOffense(claimText);
   return currentOffense(claimText);
 }
 
 const sameIdentity = (a: OffenseIdentity, b: OffenseIdentity): boolean => {
+  if (a.kind === "shr_victims" && b.kind === "shr_victims") return a.measure === b.measure;
   if (a.kind === "current_offense" && b.kind === "current_offense") return a.value === b.value;
   if (a.kind === "nibrs_codes" && b.kind === "nibrs_codes") {
     return a.codes.length === b.codes.length && a.codes.every((code, i) => code === b.codes[i]);
@@ -757,7 +795,16 @@ function classifyNumber(question: string, token: NumericToken): ClauseOutcome | 
 
   // (b) a population condition: the number sits with a population noun, either side.
   const popAfter = POPULATION_AFTER.exec(after);
-  const popBefore = POPULATION_NOUN_BEFORE.exec(before);
+  let popBefore = POPULATION_NOUN_BEFORE.exec(before);
+  /*
+   * "min"/"minimum"/"max" are population nouns only when nothing else owns the number. "minimum of
+   * 30 murders" names a COUNT: read as a population condition it set population >= 30 and left the
+   * offense word stranded (GC-061). When the words after the number complete a count form, the count
+   * branch below reads it instead.
+   */
+  if (popBefore && !popAfter && /^(?:min\.?|minimum|max\.?|maximum)$/i.test(popBefore[1]) && parseCountTail(after)) {
+    popBefore = null;
+  }
   if (popAfter || popBefore) {
     if (token.fractional) return { kind: "malformed", span: token.span, why: "fractional" };
     if (!token.wellFormed) return { kind: "malformed", span: token.span, why: "grouping" };
@@ -861,8 +908,9 @@ function classifyNumber(question: string, token: NumericToken): ClauseOutcome | 
       states: ["period"], produces: { field: "period", year: token.value } };
   }
 
-  // (e) the requested result size: "Top 10", "Bottom 2".
-  if (SIZE_BEFORE.test(before) && !token.suffix && !token.fractional && token.wellFormed) {
+  // (e) the requested result size: "Top 10", "Bottom 2", and "Which 10 cities" (GC-061).
+  const whichSize = /\b(?:which|what)\s+$/i.test(before) && /^\s*(?:cit(?:y|ies)|towns?)\b/i.test(after);
+  if ((SIZE_BEFORE.test(before) || whichSize) && !token.suffix && !token.fractional && token.wellFormed) {
     return { kind: "claim", span: token.span, explains: [token.span], rule: "result-size",
       states: ["size"], produces: { field: "size", count: token.value } };
   }
@@ -1174,7 +1222,10 @@ export function recognizeCityRanking(question: string, source: CityRankingSource
    * the scope are still assembled from productions below. A gate that can only refuse is not a
    * second source for a field.
    */
-  if (!["count", "rate_per_100k", "unknown"].includes(contract.metric.unit)) {
+  // An SHR firearm share (GC-061) is the one ratio this family builds; its meaning is still assembled
+  // from its own claim below, not from this gate.
+  const shrShareRequest = source === "shr" && contract.metric.unit === "ratio" && new RegExp(FIREARM_SHARE.source, "i").test(question);
+  if (!["count", "rate_per_100k", "unknown"].includes(contract.metric.unit) && !shrShareRequest) {
     return decline(`unit-${contract.metric.unit}`,
       "I can rank cities by a count or by a rate per 100,000, but not by that measure. Ask for the " +
       "number of offenses or the rate per 100,000 and I can build the ranking.");
@@ -1232,11 +1283,14 @@ export function recognizeCityRanking(question: string, source: CityRankingSource
   claimWords(ledger, question, RANK_ASC_WORD, "rank-bottom", () => ({ field: "direction", direction: "asc", strength: "position" }), ["direction"]);
   claimWords(ledger, question, RANK_DESC_WORD, "rank-top", () => ({ field: "direction", direction: "desc", strength: "position" }), ["direction"]);
   claimWords(ledger, question, RANK_VERB, "rank-verb", () => ({ field: "direction", direction: "desc", strength: "position" }), ["direction"]);
+  // Claimed before the offense nouns, so "share of murders via firearm" is one measure, not two.
+  claimWords(ledger, question, FIREARM_SHARE, "firearm-share", () => ({ field: "crime", token: "firearm_share" }), ["crime", "unit"]);
   for (const [pattern, token] of OFFENSE_TOKENS) {
     claimWords(ledger, question, new RegExp(pattern.source, "gi"), "offense-noun", () => ({ field: "crime", token }), ["crime"]);
   }
   claimWords(ledger, question, RATE_WORD, "unit-rate", () => ({ field: "unit", quantity: "rate_per_100k" }), ["unit"]);
   claimWords(ledger, question, COUNT_WORD, "unit-count", () => ({ field: "unit", quantity: "count" }), ["unit"]);
+  claimWords(ledger, question, RECENCY_WORD, "latest-period", () => ({ field: "recency", latest: true }), ["period"]);
 
   const stateGeos = contract.geographies.filter((geo) => geo.kind === "state");
   for (const geo of stateGeos) {
@@ -1341,6 +1395,12 @@ function assemble(
       "I can rank city agencies if you ask for that narrower comparison — for example \"which cities " +
       "had the highest murder rates in 2024\".");
   }
+  if (entityLevel === "jurisdiction" && source === "shr") {
+    // GC-064 builds SHR CITY rankings only; a ranking of all reporting agencies is not substituted.
+    return decline("jurisdiction-unavailable-shr",
+      "I can rank cities by homicide or murder victims in SHR, but not every reporting jurisdiction. Ask " +
+      "which cities had the highest homicide rates and I can build it.");
+  }
   origins.push({ field: "entityLevel", from: "production", detail: entityLevel });
 
   /* ---- direction: superlatives govern; position words decide only without one ---- */
@@ -1420,8 +1480,22 @@ function assemble(
    * cross-checked; a stated-and-failed basis never reaches here, because it declined above.
    */
   const contractUnit = contract.metric.unit;
+  const shareRanked = ledger.producing("crime").some((c) => c.token === "firearm_share");
   let unit: RankingQuantity;
-  if (statedUnit === null) {
+  if (shareRanked) {
+    if (source !== "shr") {
+      return decline("share-source-unsupported",
+        "I can rank cities by the share of murders committed with a firearm in the Homicide Reports tab, " +
+        "but not in this source. Ask there, or ask for a count or a rate here.");
+    }
+    if (statedUnit !== null || bases.length > 0) {
+      return decline("unit-contradiction",
+        "I read that request as asking for a share and another measure at once, and I won't pick one for " +
+        "you. Ask for the firearm share, or for a count or rate, and I can build the ranking.");
+    }
+    unit = "share_pct";
+    origins.push({ field: "sort.quantity", from: "production", detail: "firearm-share" });
+  } else if (statedUnit === null) {
     if (contractUnit !== "count" && contractUnit !== "rate_per_100k") {
       return decline(`unit-${contractUnit}`,
         "I can rank cities by a count or by a rate per 100,000, but not by that measure. Ask for the " +
@@ -1458,11 +1532,52 @@ function assemble(
       "ranked and I can build it.");
   }
   const rankedCrimeClaim = crimeClaims[0];
-  const offense = resolveOffense(rankedCrimeClaim.text, source);
+  /*
+   * A firearm share is a share OF an offense. When its own words name none ("share via firearm"), the
+   * one stated count condition does ("min 30 murders"); with no such condition the request is declined
+   * rather than defaulted to murders.
+   */
+  let offenseText = rankedCrimeClaim.text;
+  if (shareRanked && !/\b(?:murders?|homicides?)\b/i.test(offenseText)) {
+    const countClaims = ledger.of("count");
+    if (countClaims.length !== 1) {
+      return decline("share-base-unstated",
+        "A firearm share needs the offense it is a share of. Ask, for example, for \"the share of murders " +
+        "committed with a firearm\" and I can build the ranking.");
+    }
+    offenseText = countClaims[0].text;
+  }
+  const offense = resolveOffense(offenseText, source);
   if (!offense) {
     return decline("offense-unresolved",
       `I couldn't work out which offense "${rankedCrimeClaim.text}" means in this source. Name the offense — ` +
       "for example murder, rape, or shoplifting — and I can build the ranking.");
+  }
+  /*
+   * SHR: the whole question's measure must agree with the ranked word. "murders" and "homicides" are
+   * different counts here and share one crime token, so the owned conflict reply decides; a request
+   * about homicide INCIDENTS asks for a unit this ranking does not count.
+   */
+  if (source === "shr" && offense.offense.kind === "shr_victims") {
+    const measure = shrRequestedMeasure(question);
+    if (measure === "conflict") return decline("shr-measure-conflict", SHR_MEASURE_CONFLICT_MESSAGE);
+    if (measure === "homicide_incident") {
+      return decline("shr-incident-unit",
+        "I rank cities by homicide victims recorded in SHR, not by incidents. Ask for homicide victims — " +
+        "or just homicide rates — and I can build the ranking.");
+    }
+    if (measure !== offense.offense.measure) return decline("shr-measure-conflict", SHR_MEASURE_CONFLICT_MESSAGE);
+    /*
+     * The all-homicide victim licence proves a victim count and refuses any other aggregate over the
+     * counted rows, so the firearm numerator of an all-homicide share cannot be proved. Declined here, in
+     * words that say so, rather than built and then refused as an unverified count.
+     */
+    if (shareRanked && offense.offense.measure === "homicide") {
+      return decline("share-homicide-unsupported",
+        "I can rank cities by the share of MURDER victims killed with a firearm, but I can't yet check that " +
+        "share for all homicides (which also include negligent manslaughter). Ask for the firearm share of " +
+        "murders and I can build the ranking.");
+    }
   }
   /*
    * Cross-check, not substitution. The claim supplies the meaning; the whole-question contract may
@@ -1515,10 +1630,16 @@ function assemble(
       `I can only rank cities over a single year, and that request covers ${sorted[0]} to ${sorted[sorted.length - 1]}. ` +
       "Name one year and I can build the ranking.");
   }
+  const recency = ledger.producing("recency").length > 0;
+  if (recency && years.length > 0) {
+    return decline("period-conflict",
+      `That asks for the current period and for ${years[0]}, and I can rank one year. Name the year, or ask ` +
+      "for the latest, and I can build the ranking.");
+  }
   const period: CityRankingRequest["period"] = years.length === 1
     ? { kind: "explicit", year: years[0] }
     : { kind: "latest_with_data" };
-  origins.push({ field: "period", from: years.length === 1 ? "production" : "declared-default", detail: period.kind });
+  origins.push({ field: "period", from: years.length === 1 || recency ? "production" : "declared-default", detail: recency ? "latest-stated" : period.kind });
 
   /* ---- eligibility, and the relationship between conditions ---- */
   const populations = ledger.producing("population");
@@ -1544,7 +1665,9 @@ function assemble(
   }
   const rankedToken = (rankedCrimeClaim.produces as Extract<Production, { field: "crime" }>).token;
   for (const count of counts) {
-    if (count.crimeToken && count.crimeToken !== rankedToken) {
+    // A firearm share's count condition is stated about the offense it is a share of ("min 30 murders").
+    const sameBase = rankedToken === "firearm_share" && count.crimeToken === "murder";
+    if (count.crimeToken && count.crimeToken !== rankedToken && !sameBase) {
       return decline("cross-offense-eligibility",
         "That asks me to rank cities by one crime while keeping only cities that clear a threshold on " +
         "a different crime, and I can't build that condition. I can apply the threshold to the same " +

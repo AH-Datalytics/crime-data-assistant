@@ -36,6 +36,10 @@ import { buildNoSqlFallbackMessage, limitationReply, selectNoSqlRefusal } from "
 import { detectFollowupTransform } from "@/lib/followup-transform";
 import { applyGeoCorrection, geoCorrectionHint } from "@/lib/geo-correction";
 import { applyChartCustomizations } from "@/lib/chart-customization";
+import { planShrCityRanking, runShrCityRanking, SHR_CITY_RANKING_GUARDRAIL, type ValidatedStatement } from "@/lib/city-ranking-shr";
+import { loadShrTypeEvidence } from "@/lib/shr-agency-classification";
+import { CITY_RANKING_FAILURE_TEXT } from "@/lib/city-ranking-nibrs";
+import { SHR_DATA_CUTOFF } from "@/lib/dynamic-facts";
 import { getBlockingGeoClarification } from "@/lib/geo-resolver";
 import { getCountyScopeClarification } from "@/lib/county-clarifier";
 import { detectQueryBearingFollowup } from '@/lib/query-bearing-followup';
@@ -930,6 +934,65 @@ const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind 
         writeLog(question, sql, 0, `DB: ${msg}`, Date.now() - start, null, "shr", ["deterministic-shooting"], "deterministic", sessionId, null, shootingDbProof);
         return jsonResp({ success: false, error: `Database error: ${msg}` } as QueryError, 500);
       }
+    }
+
+    // GC-064 city ranking. A recognised ranking of cities is built by the application, validated as a
+    // deterministic plan and run here -- before the owned count, whose limitation would otherwise
+    // refuse a rate ranking -- and a recognised ranking it cannot build is an owned limitation, never
+    // model-written SQL.
+    const shrRanking = planShrCityRanking(guardrailQuestion, {
+      year: SHR_DATA_CUTOFF.year, month: SHR_DATA_CUTOFF.month, observed: SHR_DATA_CUTOFF.observed,
+    });
+    if (shrRanking?.kind === "unavailable") {
+      return countyScopeExit({ status: "unavailable", reason: "city-ranking-unavailable", explanation: shrRanking.explanation }, SHR_CITY_RANKING_GUARDRAIL);
+    }
+    if (shrRanking?.kind === "deterministic") {
+      const rankingDb = getShrDb();
+      if (!rankingDb) {
+        return jsonResp({ success: false, error: "SHR database not available." } as QueryError, 500);
+      }
+      // Every answer statement the flow runs is validated here first; a refusal ends the flow with the
+      // route's ordinary contract-failure reply, never the model path.
+      let refusedContract: DeterministicShrPlanValidation | null = null;
+      const validateRankingStatement = (statement: string): ValidatedStatement | null => {
+        const contract = runDeterministicPlanValidation(statement);
+        if (queryContractFailureMessage(contract)) { refusedContract = contract; return null; }
+        return { sql: contract.sql, rows: () => normalizeShrDisplayRows(rankingDb.prepare(contract.sql).all() as Record<string, unknown>[]) };
+      };
+      let outcome: ReturnType<typeof runShrCityRanking>;
+      try {
+        outcome = runShrCityRanking(shrRanking, { validate: validateRankingStatement, typeEvidence: (year) => loadShrTypeEvidence(rankingDb, year) });
+      } catch (dbErr) {
+        const msg = dbErr instanceof Error ? dbErr.message : String(dbErr);
+        const rankingDbProof = finalizeExit({ intendedAction: "decline_capability", sql: shrRanking.built.sql, planFamily: SHR_CITY_RANKING_GUARDRAIL });
+        writeLog(question, shrRanking.built.sql, 0, `DB: ${msg}`, Date.now() - start, null, "shr", [SHR_CITY_RANKING_GUARDRAIL], "deterministic", sessionId, null, rankingDbProof);
+        return jsonResp({ success: false, error: `Database error: ${msg}` } as QueryError, 500);
+      }
+      if (outcome.kind === "refused" && refusedContract) {
+        const contractFailure = contractFailureResponse(refusedContract, `contract_city_ranking_failure:${(refusedContract as DeterministicShrPlanValidation).enforced.join(",")}`, [SHR_CITY_RANKING_GUARDRAIL]);
+        if (contractFailure) return contractFailure;
+      }
+      if (outcome.kind !== "answer") {
+        return countyScopeExit({ status: "unavailable", reason: "city-ranking-refused", explanation: CITY_RANKING_FAILURE_TEXT }, SHR_CITY_RANKING_GUARDRAIL);
+      }
+      const rows = outcome.rows;
+      const executionMs = Date.now() - start;
+      const explanation = outcome.explanation;
+      const rankingTags = [SHR_CITY_RANKING_GUARDRAIL, ...(outcome.complete ? [] : ["city-ranking-partial"]), ...routeGuardrailsFired];
+      const chartConfig = applyChartCustomizations({
+        type: "bar", xAxis: "city", yAxis: [shrRanking.built.sortColumn], yAxisLabel: shrRanking.yAxisLabel, title: outcome.title,
+      }, question);
+      const columns = [...shrRanking.built.columns];
+      const rankingProof = finalizeExit({ intendedAction: rows.length > 0 ? "answer" : "decline_data", sql: outcome.sql, rows, columns, derivation: sealPlanDerivation(SHR_CITY_RANKING_GUARDRAIL, outcome.sql), planFamily: SHR_CITY_RANKING_GUARDRAIL, guardrails: rankingTags, returnedEntities: returnedEntityKeys(rows), narrative: explanation, hasChart: true, db: rankingDb });
+      writeLog(question, outcome.sql, rows.length, null, executionMs, explanation, "shr", rankingTags, "deterministic", sessionId, serializeChartConfigForLog(chartConfig, columns, { source: "FBI SHR", agencyCount: rows.length, population: null }), rankingProof);
+      return jsonResp(emitFactualPayload(rankingProof, attachChartAuditToPayload({
+        success: true, question, sql: outcome.sql, explanation,
+        title: outcome.title, columns, rows,
+        rowCount: rows.length, truncated: false,
+        chartConfig,
+        chartMeta: { source: "FBI SHR", agencyCount: rows.length, population: null },
+        executionTimeMs: executionMs,
+      }, { source: "shr", requestId: chartAuditRequestId, queryLogId: chartAuditQueryLogId })));
     }
 
     // GC-080 owned count (Codex reassessment ruling). A county-bound or all-homicide request is

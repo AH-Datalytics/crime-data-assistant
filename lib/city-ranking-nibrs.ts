@@ -88,6 +88,7 @@ export function planNibrsCityRanking(question: string, cutoff: SourceCutoff | nu
       xAxisLabel: "City",
       yAxisLabel: built.sortColumn === "rate_per_100k" ? "Rate per 100,000" : "Offenses",
       guardrail: built.guardrail,
+      completeness: built.completeness,
     },
   };
 }

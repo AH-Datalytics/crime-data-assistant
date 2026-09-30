@@ -94,6 +94,9 @@ import { verifyPeerMembership } from "@/lib/peer-comparison";
 import { decideDeterministicFailure, decideDatabaseFailure, buildNibrsRecoveryContext, runsAnnualClearanceFlow } from "@/lib/nibrs-recovery";
 import { NIBRS_CITY_RANKING_GUARDRAIL, CITY_RANKING_FAILURE_TEXT } from "@/lib/city-ranking-nibrs";
 import { runOwnedAnnualClearance } from "@/lib/nibrs-owned-family";
+import { NIBRS_CATEGORY_CHANGE_GUARDRAIL, planCategoryChange, recognizeCategoryChange, runOwnedCategoryChange } from "@/lib/nibrs-category-change";
+import { pendingWhereLevelReask, whereLevelClarification } from "@/lib/where-level-clarification";
+import { completenessOf, decideCandidates } from "@/lib/city-ranking-completeness";
 import { shouldAskCrimeType } from "@/lib/crime-type-clarification";
 import { normalizeHistoryAllSources } from "@/lib/chat-history";
 
@@ -538,6 +541,95 @@ export async function POST(req: NextRequest) {
         : []),
     ];
 
+    /*
+     * GC-065: an owned violent-category comparison for one named place (lib/nibrs-category-change.ts).
+     * The place is resolved again over BOTH compared years -- the contract's window is only the year
+     * asked about -- so the exclusion universe is defined before anything is compared. Every statement
+     * it runs is refused or accepted by the same structural proof as the other deterministic plans, and
+     * a refused one ends here: it never falls through to model-written SQL.
+     */
+    // GC-003: "where" that names no level (state, city or agency) is asked about, in owned wording
+    // (lib/where-level-clarification.ts), for as long as it stays unanswered. Read from the
+    // reconstructed request, so a level carried in from valid context -- including the reply to this
+    // question, resolved by lib/followup-transform.ts -- counts as stated.
+    // CR-2: while the question is pending, a turn that neither chooses a level nor makes a new request
+    // ("Not by state", "I don't know") asks it again instead of reaching a path that could guess.
+    const whereLevel = pendingWhereLevelReask({ question, contract: buildQueryContract(question, "nibrs"), history: body?.history })
+      ?? whereLevelClarification({ question: guardrailQuestion, contract: promptContract });
+    if (whereLevel) {
+      const executionMs = Date.now() - routeStart;
+      const whereProof = finalizeExit({ intendedAction: "clarify", planFamily: whereLevel.id, narrative: whereLevel.explanation });
+      writeNibrsLog(question, null, 0, null, executionMs, whereLevel.explanation, [whereLevel.id], "deterministic", sessionId, null, null, whereProof);
+      return jsonResp(emitFactualPayload(whereProof, {
+        success: true, question, sql: null as unknown as string, explanation: whereLevel.explanation, title: "",
+        columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: executionMs,
+      } as QueryResponse));
+    }
+
+    /*
+     * The executor for the application-built statements an owned family runs beside (or instead of) a
+     * plan: GC-065's comparison and the NIBRS city ranking's S1 candidates read. The structural proof
+     * is repeated at the execution itself, so nothing reaches the database on a family's word that it
+     * checked: a refused statement throws here and runs nothing.
+     */
+    const runOwnedStatement = async (statement: string): Promise<Record<string, unknown>[]> => {
+      const ownedStatement = { sql: statement };
+      const ownedStatementRefusal = deterministicPlanRefusal({ question, source: "nibrs", sql: ownedStatement.sql });
+      if (!ownedStatementRefusal) {
+        return normalizeNibrsDisplayRows((await executeWithTimeout(ownedStatement.sql)).rows) as Record<string, unknown>[];
+      }
+      throw new Error("an owned family attempted to execute a refused statement");
+    };
+
+    const categoryChange = deterministicResolution ? recognizeCategoryChange(question) : null;
+    if (categoryChange && promptContract) {
+      const changeStart = Date.now();
+      const changeGuardrails = deterministicGuardrails(NIBRS_CATEGORY_CHANGE_GUARDRAIL);
+      const changePlan = categoryChange.kind === "request"
+        ? planCategoryChange(categoryChange, resolveNibrsPlaces(getNibrsDb(), guardrailQuestion, {
+            ...promptContract,
+            time: { ...promptContract.time, startYear: categoryChange.prior, endYear: categoryChange.year },
+          }))
+        : categoryChange;
+      const outcome = changePlan.kind === "plan"
+        ? await runOwnedCategoryChange({
+            plan: changePlan,
+            refusal: (statement) => deterministicPlanRefusal({ question, source: "nibrs", sql: statement }),
+            execute: runOwnedStatement,
+          })
+        : { kind: "decline" as const, reason: "unsupported" as const, sql: null, explanation: changePlan.explanation };
+      const changeMs = Date.now() - changeStart;
+      if (outcome.kind === "decline") {
+        const changeProof = finalizeExit({
+          intendedAction: outcome.reason === "no-complete-reporter" ? "decline_data" : "decline_capability",
+          sql: outcome.sql, planFamily: NIBRS_CATEGORY_CHANGE_GUARDRAIL, guardrails: changeGuardrails,
+          narrative: outcome.explanation,
+        });
+        writeNibrsLog(question, outcome.sql, 0, `category_change_${outcome.reason}`, changeMs, outcome.explanation,
+          changeGuardrails, "deterministic", sessionId, null, null, changeProof);
+        return jsonResp(emitFactualPayload(changeProof, {
+          success: true, question, sql: outcome.sql as unknown as string,
+          explanation: outcome.explanation, title: "Comparison Not Available",
+          columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null,
+          executionTimeMs: changeMs,
+        } as QueryResponse));
+      }
+      const changeProof = finalizeExit({
+        intendedAction: "answer", sql: outcome.sql, rows: outcome.rows, columns: outcome.columns,
+        truncated: false, derivation: sealPlanDerivation(NIBRS_CATEGORY_CHANGE_GUARDRAIL, outcome.sql),
+        planFamily: NIBRS_CATEGORY_CHANGE_GUARDRAIL, guardrails: changeGuardrails,
+        returnedEntities: returnedEntityKeys(outcome.rows), narrative: outcome.explanation,
+        hasChart: false,
+      });
+      writeNibrsLog(question, outcome.sql, outcome.rows.length, null, changeMs, outcome.explanation,
+        changeGuardrails, "deterministic", sessionId, null, null, changeProof);
+      return jsonResp(emitFactualPayload(changeProof, {
+        success: true, question, sql: outcome.sql, explanation: outcome.explanation, title: outcome.title,
+        columns: outcome.columns, rows: outcome.rows, rowCount: outcome.rows.length,
+        truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: changeMs,
+      } as QueryResponse));
+    }
+
     const nibrsPlan = planNibrsQuery(question, deterministicResolution, {
       allowDeterministic: (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing") ? false : !followupTransform,
       juvenileIncidentRollupAvailable: juvenileIncidentRollupAvailable(),
@@ -726,10 +818,31 @@ export async function POST(req: NextRequest) {
         const rows = normalizeNibrsDisplayRows(result.rows);
         const columns = result.columns;
 
+        /*
+         * S1 for the NIBRS city ranking (lib/city-ranking-completeness.ts; Codex combined review): the
+         * agencies with no recorded type under the same eligibility are read through the owned-statement
+         * executor, and the shared decision says whether the confirmed cities are the whole answer. An
+         * answer that is complete is delivered exactly as before; a failed or inconsistent read throws
+         * into the owned-failure path below, never into model SQL.
+         */
+        let rankingPartialLead: string | null = null;
+        if (deterministicQuery.guardrail === NIBRS_CITY_RANKING_GUARDRAIL && deterministicQuery.completeness) {
+          const rankingPlan = deterministicQuery.completeness;
+          const rankingDecision = decideCandidates(rankingPlan, await runOwnedStatement(rankingPlan.candidatesSql));
+          if (rankingDecision.kind === "inconsistent") throw new Error(`city ranking candidates inconsistent: ${rankingDecision.reason}`);
+          const rankingResult = completenessOf(rankingPlan, rankingDecision, rows, deterministicQuery.title);
+          if (!rankingResult.complete) {
+            const plainLead = `${deterministicQuery.title}. `;
+            if (!deterministicQuery.explanation.startsWith(plainLead)) throw new Error("city ranking explanation does not begin with its title");
+            rankingPartialLead = [`${rankingResult.title}.`, ...rankingResult.sentences, deterministicQuery.explanation.slice(plainLead.length)].join(" ");
+            deterministicQuery.title = rankingResult.title;
+          }
+        }
+
         const executionMs = Date.now() - deterministicStart;
         const deterministicExplanation = rows.length === 0 && deterministicQuery.guardrail === "deterministic-nibrs-comparable-agency-clearance"
           ? `No NIBRS clearance data was found for ${deterministicResolution?.places[0]?.label ?? "the named target agency"} in the requested period. A peer comparison was not returned because showing peer agencies without the requested target would be misleading.`
-          : deterministicQuery.explanation;
+          : rankingPartialLead ?? deterministicQuery.explanation;
         // R1 (Decision 16): compare the SELECTED peer membership with the evidence that
         // came back. The query inner-joins clearance rows, so a selected peer with no data
         // silently disappears while the explanation still names it. Disclose that; never

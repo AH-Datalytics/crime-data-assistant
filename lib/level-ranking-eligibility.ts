@@ -83,6 +83,11 @@ function withoutClearanceTypePhrases(text: string): string {
   return text.replace(/\bprosecution\s+(?:(?:being|was|were|is|has\s+been)\s+)?declined\b|\bdeclined\s+(?:to\s+)?prosecut\w*/gi, " ");
 }
 
+/** Does the request ask "where" as a question about location (not a relative "where")? */
+export function asksWhere(question: string): boolean {
+  return WHERE_PLACE.test((question ?? "").trim());
+}
+
 /** Does the request ask for places - by naming a kind of place, or by asking where? */
 export function asksForPlaces(question: string): boolean {
   const text = (question ?? "").trim();

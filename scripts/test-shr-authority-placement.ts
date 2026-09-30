@@ -89,9 +89,14 @@ check("model-authored SQL reaches the fact-based authority", () => {
 check("the deterministic plans stay on their own bounded path", () => {
   assert.match(source, /const contract = runDeterministicPlanValidation\(murderPlan\.sql\)/,
     "the deterministic murder plan no longer uses the deterministic validator");
+  // GC-064 adds the application-built city ranking: its victim join and any murder filter are literal
+  // in the builder's template, which is what this path is for (lib/shr-authority.ts). Named, so an
+  // unnamed extra caller still fails the count.
+  assert.match(source, /const validateRankingStatement = \(statement: string\): ValidatedStatement \| null => \{\s*const contract = runDeterministicPlanValidation\(statement\)/,
+    "the SHR city ranking no longer uses the deterministic validator");
   const deterministic = [...source.matchAll(/runDeterministicPlanValidation\(/g)].length;
-  assert.strictEqual(deterministic, 2,
-    `expected exactly the murder and shooting plans on the legacy path, found ${deterministic}`);
+  assert.strictEqual(deterministic, 3,
+    `expected exactly the murder, shooting and city-ranking plans on the legacy path, found ${deterministic}`);
 });
 
 check("the two authorities cannot be interchanged by accident", () => {

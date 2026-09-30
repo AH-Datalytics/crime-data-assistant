@@ -2,11 +2,12 @@ import type { PromptHistoryMessage } from "./chat-history";
 import { asksForCountsInsteadOfRates } from "./rate-intent";
 import { resolveGeoPlaces } from "./geo-place-resolver";
 import { OFFENSE_NOUN_RE } from "./query-bearing-followup";
+import { isLevelNonAnswer, pendingWhereLevel, whereLevelReply, WHERE_LEVEL_SIGNATURE } from "./where-level-clarification";
 
 export type FollowupBreakdown = "state" | "city" | "agency";
 
 export interface FollowupTransform {
-  name: "add_breakdown" | "add_continuous_reporting_filter" | "replace_with_dv_victim_demographics" | "replace_rate_with_count" | "resolve_county_scope" | "assess_trend" | "compare_geographies" | "replace_geography" | "change_time_range" | "change_granularity" | "change_offense" | "replace_count_with_rate" | "carry_cross_source_context" | "restrict_scope";
+  name: "add_breakdown" | "add_continuous_reporting_filter" | "replace_with_dv_victim_demographics" | "replace_rate_with_count" | "resolve_county_scope" | "resolve_where_level" | "assess_trend" | "compare_geographies" | "replace_geography" | "change_time_range" | "change_granularity" | "change_offense" | "replace_count_with_rate" | "carry_cross_source_context" | "restrict_scope";
   dimension?: FollowupBreakdown;
   instruction: string;
   /** When set, routes should use this instead of the raw question for guardrail
@@ -62,6 +63,44 @@ function detectCountyScopeResolution(question: string, history: PromptHistoryMes
     return null;
   }
   return null;
+}
+
+/**
+ * The user answered the where-level clarification ("by state" / "cities" / "individual agencies")
+ * (lib/where-level-clarification.ts, GC-003; Codex combined review CL2). Same pending-choice shape as
+ * the county-scope answer above: the clarification must be the MOST RECENT assistant turn, the reply
+ * must name exactly one level, and the original request is recovered from the user turn before the
+ * question, with the chosen level stated in words the level readers already recognise ("by state").
+ */
+function detectWhereLevelResolution(question: string, history: PromptHistoryMessage[]): FollowupTransform | null {
+  const level = whereLevelReply(question);
+  if (!level || !pendingWhereLevel(history)) return null;
+  let asked = -1;
+  for (let i = history.length - 1; i >= 0; i--) if (history[i].role === "assistant") { asked = i; break; }
+  // CR-2: the question may have been asked again after a non-answer ("I don't know"). The original
+  // request is the user turn that first prompted the question, so walk back past each re-ask and the
+  // non-answer that preceded it. AR-1: ONLY past a non-answer. A user turn that is itself a new request
+  // ("Where did murders rise the most in 2024?") owns the clarification that follows it, so the walk
+  // stops there and an older, abandoned request is never revived.
+  const userBefore = (index: number) => { for (let j = index - 1; j >= 0; j--) if (history[j].role === "user") return j; return -1; };
+  const assistantBefore = (index: number) => { for (let k = index - 1; k >= 0; k--) if (history[k].role === "assistant") return k; return -1; };
+  let prompted = userBefore(asked);
+  while (prompted >= 0 && isLevelNonAnswer(history[prompted].content)) {
+    const earlier = assistantBefore(prompted);
+    if (earlier < 0 || !history[earlier].content.includes(WHERE_LEVEL_SIGNATURE)) break;
+    prompted = userBefore(earlier);
+  }
+  if (prompted < 0) return null;
+  const original = history[prompted].content.trim().replace(/\?+\s*$/, "");
+  const by = level === "state" ? "by state" : level === "city" ? "by city" : "by agency";
+  const noun = level === "state" ? "states" : level === "city" ? "cities" : "individual police agencies";
+  return {
+    name: "resolve_where_level",
+    contextQuestion: `${original}, ranked ${by}?`,
+    instruction:
+      `[SYSTEM: The user answered the where-level clarification: they want their original question "${original}" ranked ${by}. ` +
+      `Rank ${noun} only; do not return another level and do not ask again which level they meant.]`,
+  };
 }
 
 function requestedBreakdown(question: string): FollowupBreakdown | null {
@@ -153,6 +192,8 @@ function restrictiveFragment(question: string): string | null {
 export function detectFollowupTransform(question: string, history: PromptHistoryMessage[]): FollowupTransform | null {
   const countyScope = detectCountyScopeResolution(question, history);
   if (countyScope) return countyScope;
+  const whereLevel = detectWhereLevelResolution(question, history);
+  if (whereLevel) return whereLevel;
 
   // "what about <place>?" REPLACES the prior geography — same question, new
   // place (MS06). Users who want both say "compare to <place>", handled below.

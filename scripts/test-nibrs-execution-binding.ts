@@ -134,8 +134,11 @@ async function main() {
     && route.includes("await executeBoundNibrsStatement(finalCheck.authority)") && route.includes("await executeBoundNibrsStatement(retryFinalCheck.authority)"),
     "the model initial and retry paths execute through the bound executor, from their final checks");
   const legacyCalls = [...route.matchAll(/await executeWithTimeout\(([^)]*)\)/g)].map((m) => m[1]);
-  check(JSON.stringify(legacyCalls) === JSON.stringify(["ownedQuery.sql", "deterministicQuery.sql", "fallbackSql"]),
-    `the excluded callers keep the legacy executor: owned, deterministic and the application fallback (${legacyCalls.join(", ")})`);
+  // The owned-statement executor (GC-065's comparison, the NIBRS city ranking's S1 candidates read) is
+  // application-built like the owned and deterministic plans, and re-proves each statement immediately
+  // before this executor runs it.
+  check(JSON.stringify(legacyCalls) === JSON.stringify(["ownedStatement.sql", "ownedQuery.sql", "deterministicQuery.sql", "fallbackSql"]),
+    `the excluded callers keep the legacy executor: owned statements, owned, deterministic and the application fallback (${legacyCalls.join(", ")})`);
   const initialFinal = route.indexOf('path: "model-initial"');
   check(initialFinal > route.indexOf("const schemaCheck = validateSqlSchema(validationDb, sql);") && initialFinal < route.indexOf("await executeBoundNibrsStatement(finalCheck.authority)"),
     "on the initial path the final check follows planning and schema correction, and precedes execution");

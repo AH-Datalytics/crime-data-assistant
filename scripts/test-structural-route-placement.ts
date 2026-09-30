@@ -48,8 +48,58 @@ function handlerLines(name: string): { lines: string[]; start: number } {
   return { lines, start };
 }
 
+/*
+ * Every helper that can run SQL from a route.
+ *
+ * `executeManyWithTimeoutSync` had to be added here: the name does not contain
+ * `executeWithTimeout`, so when the paired snapshot read was introduced this scan stopped seeing
+ * that execution site altogether — an execution helper invisible to the accounting is worse than
+ * an unaccounted call, because it reports success. A new helper must be listed.
+ */
+/*
+ * A GENERIC TYPE ARGUMENT used to hide the call. `\s*\(` cannot match
+ * `executeWithTimeoutSync<Record<string, unknown>>(`, so those lines were only ever matched by the
+ * `db.prepare(` inside them. A paired call has no `prepare` at all, so it matched nothing and this
+ * scan reported success over an execution it could not see. The type argument is skipped now.
+ */
 const EXECUTION_HELPER =
-  /(?:executeWithTimeoutSync|executeWithTimeout|(?:\w+\.)?prepare)\s*\(\s*([^)]*)/;
+  /(?:executeManyWithTimeoutSync|executeWithTimeoutSync|executeWithTimeout|(?:\w+\.)?prepare)\s*(?:<[^(\n]*>)?\s*\(\s*([^)]*)/;
+
+/** Helpers that take an ARRAY of statements rather than one prepared statement. */
+const MULTI_STATEMENT_HELPER = /executeManyWithTimeoutSync\s*(?:<[^(\n]*>)?\s*\(/;
+
+/**
+ * Strip `//` line comments so comment prose is never parsed as an argument.
+ *
+ * No `$` anchor: these lines can still carry a trailing `\r`, and `$` without the `m` flag matches
+ * only at the end of the whole string, so an anchored pattern silently stripped nothing. `.*` stops
+ * at the line terminator by itself.
+ */
+function stripLineComments(text: string): string {
+  return text.split("\n").map((l) => l.replace(/\/\/.*/, "")).join("\n");
+}
+
+/**
+ * The full text of a call starting on `startIndex`, read to its balanced closing parenthesis.
+ *
+ * A fixed line window silently truncated a multi-line call and made the accounting report a missing
+ * statement array. Bounded to 40 lines so a malformed file cannot make this run away.
+ */
+function callText(lines: string[], startIndex: number): string {
+  const collected: string[] = [];
+  let depth = 0;
+  let started = false;
+  for (let i = startIndex; i < Math.min(lines.length, startIndex + 40); i += 1) {
+    const line = stripLineComments(lines[i]);
+    collected.push(lines[i]);
+    for (const ch of line) {
+      if (ch === "(") { depth += 1; started = true; }
+      else if (ch === ")") depth -= 1;
+    }
+    if (started && depth <= 0) break;
+  }
+  return collected.join("\n");
+}
 
 /** Deterministic plans: each must be refused-checked before its execution line. */
 const GUARDED_PLANS: Record<string, string> = {
@@ -57,7 +107,39 @@ const GUARDED_PLANS: Record<string, string> = {
   multiCityTrend: "multiCityRefusal",
   historicalCityChange: "historicalCityChangeRefusal",
   deterministicQuery: "nibrsPlanRefusal",
+  // The owned yearly-clearance family plans into its own variable and hands the same refusal to
+  // `runOwnedAnnualClearance`; its executor runs only when that refusal is absent.
+  ownedQuery: "nibrsPlanRefusal",
+  yoyComparisonPlan: "yoyComparisonRefusal",
+  // City rankings are constructed from a declared request (lib/city-ranking.ts) and refused-
+  // checked like every other deterministic plan before they execute.
+  cityRankingPlan: "cityRankingRefusal",
+  // The NIBRS owned-statement executor: GC-065's category comparison and the city ranking's S1
+  // candidates read (lib/nibrs-category-change.ts, lib/city-ranking-completeness.ts). It re-proves each
+  // application-built statement immediately before running it.
+  ownedStatement: "ownedStatementRefusal",
+  // The Current city ranking's S1 candidates read, refused-checked like the ranked statement it precedes.
+  cityRankingEvidence: "cityRankingEvidenceRefusal",
 };
+
+/**
+ * Paired evidence reads: a `<plan>.<field>` execution that is NOT the answer-bearing statement.
+ *
+ * `yoyComparisonPlan.periodSql` returns the required year/month periods and
+ * `yoyComparisonPlan.membershipSql` the selected agency identifiers and starting sample size.
+ * Neither projects a measure and neither result is delivered as a figure: they establish which
+ * periods are required and which agencies form the comparison group. Both share their `WITH` prefix
+ * verbatim with the guarded `.sql` — the plan builds all three from one `withClause` string, and
+ * `test-period-correctness` asserts that identity. They carry no model input.
+ *
+ * Listed individually, and only for a plan that is already in GUARDED_PLANS, so a new evidence read
+ * cannot join this exception silently.
+ */
+const PLAN_EVIDENCE_READS = new Set([
+  "yoyComparisonPlan.periodSql",
+  "yoyComparisonPlan.sampleSql",
+  "yoyComparisonPlan.membershipSql",
+]);
 
 /** `<name>.sql` values that are contract results -- validation produced them. */
 const VALIDATED_CONTRACTS = new Set(["contract"]);
@@ -72,6 +154,20 @@ const MODEL_SQL_VARIABLES = new Set(["sql", "retrySql", "rollingSql", "fallbackS
  */
 const APPLICATION_BUILT_LOOKUPS = new Set(["oriQuery", "cdeQuery"]);
 
+/**
+ * Already-prepared statements passed to an execution helper by variable.
+ *
+ * `executeWithTimeoutSync(db, stmt, 30000)` was invisible to this scan until the generic-type fix
+ * above, because the line carries no `prepare(` of its own. Both are prepared one line earlier from
+ * a MODEL_SQL_VARIABLE, so the model-SQL validation checks below govern them; they are named here
+ * so a new prepared-statement variable cannot appear unnoticed. The map records what each is
+ * prepared from, and that pairing is asserted against the source rather than trusted.
+ */
+const PREPARED_STATEMENT_VARIABLES: Record<string, string> = {
+  stmt: "sql",
+  retryStmt: "retrySql",
+};
+
 console.log("\n-- every execution inside every handler is accounted for --");
 
 for (const route of ROUTES) {
@@ -84,6 +180,50 @@ for (const route of ROUTES) {
       if (index + 1 < start) return;                    // module helpers: see the egress checks
       const m = line.match(EXECUTION_HELPER);
       if (!m) return;
+
+      /*
+       * A multi-statement call takes an ARRAY of SQL strings, so its statements are not the first
+       * argument and can sit on their own lines. Every entry of that array must be accountable in
+       * exactly the same way a single execution is: a guarded plan's `.sql`, or a named paired
+       * evidence read of a guarded plan. Anything else is unaccounted.
+       */
+      if (MULTI_STATEMENT_HELPER.test(line)) {
+        /*
+         * Read to the END of the call rather than a fixed number of lines. A four-statement call
+         * with an explanatory comment inside its array overran an 8-line window, and the scan then
+         * reported "no statement array found" — a false negative in the accounting, which is worse
+         * than a false positive. Line comments are stripped before splitting so comment text cannot
+         * be mistaken for a statement.
+         */
+        const call = callText(lines, index);
+        const body = stripLineComments(call.slice(call.indexOf("(")));
+        const arrayMatch = body.match(/\[([^\]]*)\]/);
+        if (!arrayMatch) {
+          unaccounted.push(`${route}:${index + 1} multi-statement call with no statement array found`);
+          return;
+        }
+        const entries = arrayMatch[1].split(",").map((entry) => entry.trim()).filter(Boolean);
+        if (entries.length === 0) {
+          unaccounted.push(`${route}:${index + 1} multi-statement call with an empty statement array`);
+          return;
+        }
+        for (const entry of entries) {
+          if (/^[`'"]/.test(entry)) continue;                       // a literal carries no model input
+          const owner = entry.match(/^(\w+)\.(\w+)$/);
+          if (!owner) {
+            unaccounted.push(`${route}:${index + 1} executes unrecognised statement ${entry.slice(0, 60)}`);
+            continue;
+          }
+          const accountedAsAnswer = owner[2] === "sql" &&
+            (owner[1] in GUARDED_PLANS || VALIDATED_CONTRACTS.has(owner[1]));
+          const accountedAsEvidence = owner[1] in GUARDED_PLANS && PLAN_EVIDENCE_READS.has(entry);
+          if (!accountedAsAnswer && !accountedAsEvidence) {
+            unaccounted.push(`${route}:${index + 1} executes ${entry} (unknown plan/contract)`);
+          }
+        }
+        return;
+      }
+
       let arg = (m[1] ?? "").trim();
 
       // `db.prepare(\n  unguardedSql\n)` puts the argument on the NEXT line. Treating an empty
@@ -97,6 +237,14 @@ for (const route of ROUTES) {
       // A literal or a template carries no model input.
       if (arg === "" || /^[`'"]/.test(arg)) return;
 
+      // `executeWithTimeoutSync(db, <preparedStatement>, 30000)`: the statement arrives by name.
+      const byVariable = arg.match(/^db\s*,\s*(\w+)\s*,/);
+      if (byVariable) {
+        if (byVariable[1] in PREPARED_STATEMENT_VARIABLES) return;
+        unaccounted.push(`${route}:${index + 1} executes prepared statement ${byVariable[1]} (unlisted)`);
+        return;
+      }
+
       const inner = arg.replace(/^db\s*,\s*db\.prepare\(\s*/, "").replace(/\).*$/, "").trim();
       if (inner === "" || /^[`'"]/.test(inner)) return;
 
@@ -106,6 +254,10 @@ for (const route of ROUTES) {
         unaccounted.push(`${route}:${index + 1} executes ${inner} (unknown plan/contract)`);
         return;
       }
+      // A named evidence read belonging to an already-guarded plan. Nothing else may take this
+      // route: the plan must be in GUARDED_PLANS and the exact field must be listed above.
+      const evidence = inner.match(/^(\w+)\.(\w+)$/);
+      if (evidence && evidence[1] in GUARDED_PLANS && PLAN_EVIDENCE_READS.has(inner)) return;
       const bare = inner.match(/^(\w+)$/);
       if (bare) {
         if (MODEL_SQL_VARIABLES.has(bare[1]) || APPLICATION_BUILT_LOOKUPS.has(bare[1])) return;
@@ -115,8 +267,25 @@ for (const route of ROUTES) {
       unaccounted.push(`${route}:${index + 1} executes unrecognised expression ${inner.slice(0, 60)}`);
     });
 
+    // One line: `check` prints only the first line of a failure, so a multi-line list was invisible.
     assert.deepStrictEqual(unaccounted, [],
-      `unaccounted executions:\n        ${unaccounted.join("\n        ")}`);
+      `unaccounted executions: ${unaccounted.join(" | ")}`);
+  });
+}
+
+console.log("\n-- prepared-statement variables are prepared from validated model SQL --");
+
+for (const [variable, source] of Object.entries(PREPARED_STATEMENT_VARIABLES)) {
+  check(`${variable} is prepared from ${source}`, () => {
+    const found = ROUTES.map((route) => {
+      const { lines } = handlerLines(route);
+      return lines.some((line) =>
+        new RegExp(`\\b(?:const|let)\\s+${variable}\\s*=\\s*db\\.prepare\\(\\s*${source}\\s*\\)`).test(line));
+    });
+    assert.ok(found.some(Boolean),
+      `${variable}: no \`db.prepare(${source})\` assignment found in any route`);
+    assert.ok(MODEL_SQL_VARIABLES.has(source),
+      `${variable}: ${source} is not a listed model-SQL variable, so validation is not established`);
   });
 }
 
@@ -124,13 +293,30 @@ console.log("\n-- each deterministic plan is refused-checked before it executes 
 
 for (const [plan, refusal] of Object.entries(GUARDED_PLANS)) {
   check(`${plan} is guarded before execution`, () => {
-    const route = plan === "deterministicQuery" ? "nibrs-query" : "query";
+    /*
+     * Find the route that actually declares this plan rather than mapping names by hand. The
+     * hand-written ternary said "deterministicQuery means nibrs-query, everything else means
+     * query", so a second NIBRS plan was checked against the wrong file and reported as unguarded
+     * while its real guard sat in the other route.
+     */
+    const route = ["nibrs-query", "query"].find((candidate) =>
+      new RegExp(`(?:const|let|var)\\s+${plan}\\b`).test(routeSource(candidate))) ?? "query";
     const { lines } = handlerLines(route);
     const refusalLine = lines.findIndex((line) => line.includes(`${refusal} =`)) + 1;
     const guardLine = lines.findIndex((line) => new RegExp(`!\\s*${refusal}\\b`).test(line)) + 1;
-    const executeLine = lines.findIndex(
-      (line) => EXECUTION_HELPER.test(line) && new RegExp(`\\b${plan}\\.sql\\b`).test(line)
-    ) + 1;
+    /*
+     * The execution site is the line that INVOKES an execution helper with this plan's SQL. A
+     * multi-statement call puts its statement array on a following line, so the helper line and
+     * the `<plan>.sql` mention can differ — look within the call, not only on one line, or a
+     * guarded plan appears unprotected merely for being formatted across lines.
+     */
+    const executeLine = lines.findIndex((line, i) => {
+      if (!EXECUTION_HELPER.test(line)) return false;
+      const call = callText(lines, i);
+      const callBody = stripLineComments(call.slice(call.indexOf("(")));
+      return new RegExp(`\\b${plan}\\.sql\\b`).test(
+        MULTI_STATEMENT_HELPER.test(line) ? callBody : line);
+    }) + 1;
     assert.ok(refusalLine > 0, `${plan}: no ${refusal} is computed`);
     assert.ok(guardLine > 0, `${plan}: the branch does not test !${refusal}`);
     assert.ok(executeLine > 0, `${plan}: no execution site found to protect`);

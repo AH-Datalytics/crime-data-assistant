@@ -23,6 +23,9 @@
  * eligibility restriction, which is the exact defect this family exists to remove.
  */
 import type { CityRankingRequest, CityRankingSource, EligibilityCondition, OffenseIdentity } from "./city-ranking";
+import { CURRENT_CITY_AUTHORITY, NIBRS_CITY_AUTHORITY, SHR_CITY_AUTHORITY } from "./entity-authority";
+import type { CompletenessPlan } from "./city-ranking-completeness";
+import { coverageOf } from "./source-coverage";
 
 export type BuiltCityRanking = {
   sql: string;
@@ -38,6 +41,11 @@ export type BuiltCityRanking = {
   /** The column that names each ranked entity, and its axis label, for delivery and charting. */
   entityColumn: string;
   entityLabel: string;
+  /**
+   * City rankings (every source; not reporting jurisdictions): what the shared S1 completeness decision
+   * needs (lib/city-ranking-completeness.ts). The ranked statement is `sql` when nothing is excluded.
+   */
+  completeness?: CompletenessPlan;
 };
 
 const quote = (value: string): string => `'${value.replace(/'/g, "''")}'`;
@@ -90,8 +98,11 @@ function safeMonth(month: number): number {
  * database. Confirming that the live `agencies` and `agency_population` tables carry these keys is a
  * QUALIFICATION REQUIREMENT recorded for the later source-data gate, not something established here.
  */
+// SHR has no entry: its branch joins no identity table (population is on the incident rows), so there
+// is no identity fan-out to guard. Its own identity risk, one agency split across two population or
+// type values within a year, is checked on the returned rows by the SHR adapter.
 export const IDENTITY_UNIQUENESS: Record<
-  CityRankingSource,
+  Exclude<CityRankingSource, "shr">,
   { table: string; key: [string, string]; declaredIn: string }
 > = {
   nibrs: { table: "agencies", key: ["ori", "year"], declaredIn: "scripts/fixtures/operation-taxonomy/nibrs.ddl.sql" },
@@ -111,6 +122,7 @@ function populationPredicates(conditions: EligibilityCondition[], column: string
 }
 
 function sameOffense(a: OffenseIdentity, b: OffenseIdentity): boolean {
+  if (a.kind === "shr_victims" && b.kind === "shr_victims") return a.measure === b.measure;
   if (a.kind === "current_offense" && b.kind === "current_offense") return a.value === b.value;
   if (a.kind === "nibrs_codes" && b.kind === "nibrs_codes") {
     return a.codes.length === b.codes.length && a.codes.every((code, i) => code === b.codes[i]);
@@ -209,9 +221,13 @@ export function buildCityRanking(
   if (!period) return null;
 
   const rate = request.sort.quantity === "rate_per_100k";
+  const share = request.sort.quantity === "share_pct";
+  if (share && request.source !== "shr") return null;   // recognition declines this; a hand-built request must not slip through
   const direction = request.sort.direction === "asc" ? "ASC" : "DESC";
   const limit = safeCount(request.resultCount);
-  const sortColumn = rate ? "rate_per_100k" : "offenses";
+  const sortColumn = rate ? "rate_per_100k"
+    : share ? "firearm_share_pct"
+    : request.source === "shr" ? "victims" : "offenses";
   const populationConditions = request.eligibility.filter((condition) => condition.kind === "population");
   /*
    * Population is joined ONLY where the request needs it: as the denominator of a rate, or because
@@ -222,9 +238,92 @@ export function buildCityRanking(
 
   let sql: string;
   let columns: string[];
+  let completeness: CompletenessPlan | undefined;
+  // The request's own conditions, for the shared decision to apply to the candidates in code. The
+  // count conditions are the ones `countHaving` has already checked against the ranked offense.
+  const decisionConditions = {
+    populationConditions: request.eligibility
+      .filter((c): c is Extract<EligibilityCondition, { kind: "population" }> => c.kind === "population")
+      .map((c) => ({ comparison: c.comparison, value: safeCount(c.value) })),
+    countConditions: request.eligibility
+      .filter((c): c is Extract<EligibilityCondition, { kind: "count" }> => c.kind === "count")
+      .map((c) => ({ comparison: c.comparison, value: safeCount(c.value) })),
+    quantity: request.sort.quantity,
+    limit,
+    direction: (request.sort.direction === "asc" ? "asc" : "desc") as "asc" | "desc",
+  };
+  const notIn = (column: string, excluded: string[]) => (excluded.length ? [`${column} NOT IN (${excluded.map(quote).join(", ")})`] : []);
 
   const jurisdiction = request.entityLevel === "jurisdiction";
-  if (request.source === "nibrs") {
+  if (request.source === "shr") {
+    if (jurisdiction) throw new Error("city-ranking: refusing to build an SHR jurisdiction ranking as a city ranking");
+    if (request.offense.kind !== "shr_victims") return null;
+    /*
+     * GC-064 / GC-061. SHR counts VICTIM records (the victims join; one incident can have several
+     * victims); the only population on the source is the reporting agency's own, on its incident rows.
+     *
+     * MEMBERSHIP IS DECIDED BY S1 (lib/entity-authority.ts, lib/city-ranking-completeness.ts), before
+     * any LIMIT and before any eligibility filter (Codex combined review, CL3). The candidates statement
+     * reads the SCOPE only -- year, months, state, and the murder filter that defines the measure -- with
+     * no type, population or count condition, grouped by name, state and (where the request uses
+     * population) population, so an agency whose own records disagree comes back as two rows before any
+     * filter can remove one of them. Membership comes from the evidence-backed classification, not from
+     * the rows; eligibility is applied in code; the ranked statement names exactly the confirmed agencies
+     * by ORI and must equal the ranking the candidates predict. County and Other agencies are not cities.
+     *
+     * No first/last month columns: the all-homicide victim licence refuses any other aggregate over
+     * the counted rows, and SHR months with incidents are event presence, not reporting evidence
+     * (S2, lib/source-coverage.ts). The coverage limit is stated in words instead.
+     */
+    const scopeWhere = [`i.year = ${period.year}`];
+    if (request.offense.measure === "murder") scopeWhere.push("i.homicide_type = 'Murder'");
+    if (period.throughMonth !== null) scopeWhere.push(`i.month <= ${period.throughMonth}`);
+    if (request.scope.kind === "state") scopeWhere.push(`i.state = ${quote(request.scope.code)}`);
+    const measureWhere = [...populationPredicates(request.eligibility, "i.population"), ...(rate ? ["i.population > 0"] : [])];
+    const having = countHaving(request, "COUNT(v.id)");
+    const firearm = "SUM(CASE WHEN i.weapon_group = 'Firearm' THEN 1 ELSE 0 END)";
+    const measureSelect = rate
+      ? ", i.population AS population, ROUND(COUNT(v.id) * 100000.0 / i.population, 2) AS rate_per_100k"
+      : share ? `, ${firearm} AS firearm_victims, ROUND(100.0 * ${firearm} / COUNT(v.id), 1) AS firearm_share_pct` : "";
+    const exactOrder = rate ? "COUNT(v.id) * 1.0 / i.population" : share ? `${firearm} * 1.0 / COUNT(v.id)` : "COUNT(v.id)";
+    /*
+     * Membership is NOT a column (Jeff's classification policy, 2026-09-30): SHR records no agency type,
+     * and `incidents.agency_type` holds normalizer-derived and legacy values of unknown origin. The adapter
+     * decides each candidate from the evidence-backed classification (lib/shr-agency-classification.ts)
+     * and this statement ranks exactly the agencies it confirmed, by ORI -- which also leaves out every
+     * disagreeing agency, since none of them is confirmed. With none confirmed the list is `(NULL)`, which
+     * matches nothing.
+     */
+    const rankedConfirmed = (oris: string[]) =>
+      "SELECT i.agency AS city, i.state AS state, i.ori AS ori" +
+      ", COUNT(v.id) AS victims" + measureSelect +
+      " FROM incidents i JOIN victims v ON v.incident_id = i.id" +
+      ` WHERE ${[...scopeWhere, `i.ori IN (${oris.length > 0 ? oris.map(quote).join(", ") : "NULL"})`, ...measureWhere].join(" AND ")}` +
+      " GROUP BY i.ori, i.agency, i.state" + (rate ? ", i.population" : "") +
+      (having.length > 0 ? ` HAVING ${having.join(" AND ")}` : "") +
+      ` ORDER BY ${exactOrder} ${direction}, i.ori LIMIT ${limit}`;
+    columns = ["city", "state", "ori", "victims",
+      ...(rate ? ["population", "rate_per_100k"] : share ? ["firearm_victims", "firearm_share_pct"] : [])];
+    sql = rankedConfirmed([]);
+    // Population is part of the request's identity only where the request uses it; a firearm-share
+    // ranking with no population condition is not made partial by an agency's two population values.
+    const population = needsPopulation ? ", i.population" : "";
+    completeness = {
+      source: "shr", authority: SHR_CITY_AUTHORITY, typeSource: "SHR", candidateScope: "scope-only",
+      candidatesSql:
+        "SELECT i.ori AS ori, i.agency AS city, i.state AS state" +
+        (needsPopulation ? ", i.population AS population" : "") + ", COUNT(v.id) AS victims" +
+        // A share request's statements must carry the share itself (structural-measure-unit-unmodeled).
+        (share ? `, ${firearm} AS firearm_victims, ROUND(100.0 * ${firearm} / COUNT(v.id), 1) AS firearm_share_pct` : "") +
+        " FROM incidents i JOIN victims v ON v.incident_id = i.id" +
+        ` WHERE ${scopeWhere.join(" AND ")}` +
+        ` GROUP BY i.ori, i.agency, i.state${population} ORDER BY i.ori`,
+      ranked: () => { throw new Error("city-ranking: an SHR ranking names its confirmed agencies (rankedConfirmed)"); },
+      rankedConfirmed, amountColumn: "victims", verifiable: true,
+      unresolvedPhrase: "no evidence-backed agency type", splitFields: "name, population or state",
+      ...decisionConditions,
+    };
+  } else if (request.source === "nibrs") {
     // Recognition declines this (Codex GC-057 ruling, option B); a hand-built request must not
     // quietly become a city ranking either.
     if (jurisdiction) throw new Error("city-ranking: refusing to build a NIBRS jurisdiction ranking as a city ranking");
@@ -260,6 +359,31 @@ export function buildCityRanking(
       " GROUP BY a.ori, a.city, a.state" + (rate ? ", a.population" : "") +
       (having.length > 0 ? ` HAVING ${having.join(" AND ")}` : "") +
       ` ORDER BY ${sortColumn} ${direction} LIMIT ${limit}`;
+    /*
+     * S1 for NIBRS: the same eligibility, over agencies whose type `agencies` does not record. The
+     * identity table's declared key (ori, year) means an agency-year cannot carry two types, names or
+     * populations here, so no filter can hide a disagreement; a second row for one agency is refused
+     * by the shared decision as a broken premise. The ranked statement is unchanged.
+     */
+    const rankedNibrs = sql;
+    const unresolvedWhere = where.map((clause) => (clause === NIBRS_CITY_AUTHORITY.eligibleSql("a") ? NIBRS_CITY_AUTHORITY.unresolvedSql("a") : clause));
+    if (unresolvedWhere.join() === where.join()) throw new Error("city-ranking: the NIBRS membership predicate was not found");
+    completeness = {
+      source: "nibrs", authority: NIBRS_CITY_AUTHORITY, typeSource: "NIBRS", candidateScope: "unresolved-only",
+      candidatesSql:
+        "SELECT a.ori AS ori, a.city AS city, a.state AS state, a.agency_type AS recorded_type, a.population AS population" +
+        ", SUM(s.offense_count) AS offenses" +
+        " FROM summary_city_monthly s JOIN agencies a ON a.ori = s.ori AND a.year = s.year" +
+        ` WHERE ${unresolvedWhere.join(" AND ")}` +
+        " GROUP BY a.ori, a.city, a.state, a.agency_type, a.population" +
+        (having.length > 0 ? ` HAVING ${having.join(" AND ")}` : "") +
+        " ORDER BY a.ori",
+      ranked: (excluded) => {
+        if (excluded.length > 0) throw new Error("city-ranking: a NIBRS agency-year cannot disagree with itself; nothing to exclude");
+        return rankedNibrs;
+      },
+      amountColumn: "offenses", verifiable: false, ...decisionConditions,
+    };
   } else if (jurisdiction) {
     /*
      * GC-057: REPORTING JURISDICTIONS, not cities. The Current source's reporting agencies of any
@@ -297,36 +421,65 @@ export function buildCityRanking(
       ` ORDER BY ${exactOrder} ${direction}, am.ori LIMIT ${limit}`;
   } else {
     if (request.offense.kind !== "current_offense") return null;
-    const where = [
+    const scope = [
       `am.offense = ${quote(request.offense.value)}`,
       `am.year = ${period.year}`,
-      "am.type = 'City'",
     ];
-    if (needsPopulation) where.push(...populationPredicates(request.eligibility, "ap.population"));
-    if (period.throughMonth !== null) where.push(`am.month <= ${period.throughMonth}`);
-    if (request.scope.kind === "state") where.push(`am.state = ${quote(request.scope.code)}`);
-    if (rate) where.push("ap.population > 0");
+    if (period.throughMonth !== null) scope.push(`am.month <= ${period.throughMonth}`);
+    if (request.scope.kind === "state") scope.push(`am.state = ${quote(request.scope.code)}`);
     const having = countHaving(request, "SUM(am.count)");
     columns = rate
       ? ["city", "state", "offenses", "population", "rate_per_100k", "first_month", "last_month"]
       : ["city", "state", "offenses", "first_month", "last_month"];
-    sql =
-      "SELECT am.agency AS city, am.state AS state, SUM(am.count) AS offenses" +
-      (rate ? ", ap.population AS population, ROUND(SUM(am.count) * 100000.0 / ap.population, 2) AS rate_per_100k" : "") +
-      ", MIN(am.month) AS first_month, MAX(am.month) AS last_month" +
-      " FROM agency_monthly am" +
-      (needsPopulation ? " JOIN agency_population ap ON ap.ori = am.ori AND ap.year = am.year" : "") +
-      ` WHERE ${where.join(" AND ")}` +
-      " GROUP BY am.ori, am.agency, am.state" + (rate ? ", ap.population" : "") +
-      (having.length > 0 ? ` HAVING ${having.join(" AND ")}` : "") +
-      ` ORDER BY ${sortColumn} ${direction} LIMIT ${limit}`;
+    // The clause order is the branch's long-standing one, so an answer with nothing to exclude is the
+    // same statement it always was.
+    const ranked = (excluded: string[]) => {
+      const where = [scope[0], scope[1], CURRENT_CITY_AUTHORITY.eligibleSql("am")];
+      if (needsPopulation) where.push(...populationPredicates(request.eligibility, "ap.population"));
+      where.push(...scope.slice(2));
+      if (rate) where.push("ap.population > 0");
+      where.push(...notIn("am.ori", excluded));
+      return "SELECT am.agency AS city, am.state AS state, SUM(am.count) AS offenses" +
+        (rate ? ", ap.population AS population, ROUND(SUM(am.count) * 100000.0 / ap.population, 2) AS rate_per_100k" : "") +
+        ", MIN(am.month) AS first_month, MAX(am.month) AS last_month" +
+        " FROM agency_monthly am" +
+        (needsPopulation ? " JOIN agency_population ap ON ap.ori = am.ori AND ap.year = am.year" : "") +
+        ` WHERE ${where.join(" AND ")}` +
+        " GROUP BY am.ori, am.agency, am.state" + (rate ? ", ap.population" : "") +
+        (having.length > 0 ? ` HAVING ${having.join(" AND ")}` : "") +
+        ` ORDER BY ${sortColumn} ${direction} LIMIT ${limit}`;
+    };
+    sql = ranked([]);
+    /*
+     * S1 for Current: `agency_monthly` carries the type and name on every MONTH row, so one agency can
+     * be recorded as City in some months and as nothing (or another type) in others -- and the ranked
+     * statement's type filter would silently drop the other months. The candidates statement therefore
+     * reads the scope only, grouped by name, state and recorded type; population comes from
+     * `agency_population`, whose declared key (ori, year) gives one value per agency-year.
+     */
+    completeness = {
+      source: "current", authority: CURRENT_CITY_AUTHORITY, typeSource: "the Current source", candidateScope: "scope-only",
+      candidatesSql:
+        "SELECT am.ori AS ori, am.agency AS city, am.state AS state, am.type AS recorded_type" +
+        (needsPopulation ? ", ap.population AS population" : "") + ", SUM(am.count) AS offenses" +
+        " FROM agency_monthly am" +
+        (needsPopulation ? " LEFT JOIN agency_population ap ON ap.ori = am.ori AND ap.year = am.year" : "") +
+        ` WHERE ${scope.join(" AND ")}` +
+        " GROUP BY am.ori, am.agency, am.state, am.type" + (needsPopulation ? ", ap.population" : "") +
+        " ORDER BY am.ori",
+      ranked, amountColumn: "offenses", verifiable: false, ...decisionConditions,
+    };
   }
 
   const scopeLabel = request.scope.kind === "state" ? ` in ${request.scope.name}` : "";
-  const measureLabel = rate ? "Rate per 100,000" : "Count";
+  const shr = request.source === "shr";
+  const measureLabel = shr
+    ? (rate ? "Victim Rate per 100,000" : share ? "Victims: Firearm Share (%)" : "Victim Count")
+    : (rate ? "Rate per 100,000" : "Count");
   const order = request.sort.direction === "asc" ? "Lowest" : "Highest";
-  const entities = jurisdiction ? "reporting jurisdictions" : "cities";
-  const entity = jurisdiction ? "jurisdiction" : "city";
+  // SHR rows are reporting agencies, some without a recorded type, so the limits describe agencies.
+  const entities = jurisdiction ? "reporting jurisdictions" : shr ? "agencies" : "cities";
+  const entity = jurisdiction ? "jurisdiction" : shr ? "agency" : "city";
   const title = `${jurisdiction ? "Reporting jurisdictions" : "Cities"} by ${request.offenseLabel} ${measureLabel}${scopeLabel}, ${periodPhrase(period)}`;
 
   const caveats = [...request.caveats];
@@ -337,6 +490,26 @@ export function buildCityRanking(
       "These are the reporting jurisdictions in the Current source's sample: each row is one reporting " +
       "agency of whatever type (the agency_type column shows it), identified by its ORI, not a complete " +
       "city total and not every jurisdiction in the country. Agencies with the same name are listed separately."
+    );
+  }
+  if (shr) {
+    caveats.push(
+      "These are homicide victim records reported to the FBI's Supplementary Homicide Reports: one incident " +
+      "can have several victims, so this counts victims, not incidents.",
+      "SHR records no agency type. An agency is ranked as a city only by the NIBRS database's classification of the " +
+      `one NIBRS agency its identifier matches in its state, from NIBRS years up to ${period.year}: every year with a type ` +
+      "must say City, years with no type are not counted, and when the latest typed year is earlier, that City is carried " +
+      "forward. Where the FBI's NIBRS file gives no type, this project's NIBRS pipeline derives one from the agency's " +
+      "population group (groups 1 to 7 City, 8 and 9 County). Agencies classified otherwise are not included, and an agency " +
+      "without that evidence is not counted as a city.",
+      ...(share ? ["The firearm share is the agency's firearm victims divided by all its victims of that offense; " +
+        "victims whose weapon was not recorded as a firearm are in the total, not the firearm count."] : []),
+      ...(rate ? ["Each rate uses the population SHR records for that agency. Agencies that submitted no SHR " +
+        "records are not in this ranking, and an agency that reported only part of the period has a lower count."] : []),
+      ...(populationConditions.length > 0 ? ["An agency with no population recorded in SHR cannot be placed against " +
+        "the population limit, so it is not ranked."] : []),
+      `SHR here does not show which months each agency reported: ${coverageOf("shr.incidents").absentMeaning}, ` +
+      "so this ranking does not certify complete reporting.",
     );
   }
   if (period.throughMonth !== null) {
@@ -357,7 +530,7 @@ export function buildCityRanking(
    * in a gated statement, because it cannot tell a declared evidence column from a row count posing
    * as the measure. Boundary months are what this family can return without changing that rule.
    */
-  caveats.push(
+  if (!shr) caveats.push(
     "`first_month` and `last_month` are the earliest and latest month each " + entity + " has records for " +
     `here. ${entities[0].toUpperCase()}${entities.slice(1)} with different spans are not comparable on a count, and these two numbers do not ` +
     "rule out missing months in between."
@@ -387,6 +560,7 @@ export function buildCityRanking(
     period,
     entityColumn: jurisdiction ? "jurisdiction_label" : "city",
     entityLabel: jurisdiction ? "Reporting jurisdiction" : "City",
+    ...(completeness ? { completeness } : {}),
   };
 }
 

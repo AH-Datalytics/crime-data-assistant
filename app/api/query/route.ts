@@ -62,6 +62,7 @@ import { historicalBaltimoreComparisonDefault, withBaltimoreDisclosure, withoutB
 import { buildCurrentIndexedStatePlan } from "@/lib/current-indexed-state-deterministic";
 import { recognizeCityRanking } from "@/lib/city-ranking";
 import { buildCityRanking } from "@/lib/city-ranking-builder";
+import { completenessOf, decideCandidates } from "@/lib/city-ranking-completeness";
 import { RTCI_DATA_CUTOFF } from "@/lib/dynamic-facts";
 import {
   buildCurrentYoyComparisonPlan,
@@ -1089,14 +1090,43 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    /*
+     * S1 FIRST (lib/city-ranking-completeness.ts; Codex combined review, CL3). A city ranking reads its
+     * scope-only candidates before the ranked statement: Current carries the type and name on every
+     * month row, so an agency recorded as City in some months and as nothing in others would otherwise
+     * lose those months to the ranked statement's filter. Disagreeing agencies are excluded from the
+     * ranked statement and named; the shared decision says whether the confirmed cities are complete.
+     * A reporting-jurisdiction ranking (GC-057) has no completeness plan and is unchanged.
+     */
+    const cityRankingEvidence = built.completeness ? { sql: built.completeness.candidatesSql } : null;
+    const cityRankingEvidenceRefusal = cityRankingEvidence
+      ? deterministicPlanRefusal({ question, source: tab, sql: cityRankingEvidence.sql })
+      : null;
+    let cityRankingDecision: ReturnType<typeof decideCandidates> | null = null;
+    let failure: string | null = cityRankingEvidenceRefusal ? "structural-refusal" : null;
+    if (cityRankingEvidence && !cityRankingEvidenceRefusal) {
+      try {
+        const db = getDb();
+        cityRankingDecision = decideCandidates(built.completeness!,
+          executeWithTimeoutSync<Record<string, unknown>>(db, db.prepare(cityRankingEvidence.sql), 30000));
+        if (cityRankingDecision.kind === "inconsistent") failure = "candidates-inconsistent";
+      } catch (err) {
+        console.warn("[city-ranking] candidates read failed", err);
+        failure = "execution-failed";
+      }
+    }
+    const excludedAgencies = cityRankingDecision?.kind === "decided" ? cityRankingDecision.conflicted : [];
+
     // Named so the execution site reads `cityRankingPlan.sql`: the route-placement accounting
     // classifies executions by that shape, and a `cityRankingPlan.sql` written inline is unrecognisable to it.
-    const cityRankingPlan: NonNullable<typeof built> = built;
+    const cityRankingPlan: NonNullable<typeof built> = excludedAgencies.length > 0 && built.completeness
+      ? { ...built, sql: built.completeness.ranked(excludedAgencies) }
+      : built;
     const cityRankingRefusal = deterministicPlanRefusal({ question, source: tab, sql: cityRankingPlan.sql });
     let rows: Record<string, unknown>[] = [];
     let columns: string[] = cityRankingPlan.columns;
-    let failure: string | null = cityRankingRefusal ? "structural-refusal" : null;
-    if (!cityRankingRefusal) {
+    if (!failure && cityRankingRefusal) failure = "structural-refusal";
+    if (!failure && !cityRankingRefusal) {
       try {
         const db = getDb();
         rows = executeWithTimeoutSync<Record<string, unknown>>(db, db.prepare(cityRankingPlan.sql), 30000);
@@ -1106,6 +1136,13 @@ export async function POST(req: NextRequest) {
         failure = "execution-failed";
       }
     }
+    const cityRankingCompleteness = !failure && cityRankingDecision?.kind === "decided" && cityRankingPlan.completeness
+      ? completenessOf(cityRankingPlan.completeness, cityRankingDecision, rows, cityRankingPlan.title)
+      : null;
+    const cityRankingTitle = cityRankingCompleteness?.title ?? cityRankingPlan.title;
+    const cityRankingLead = cityRankingCompleteness && !cityRankingCompleteness.complete
+      ? [`${cityRankingTitle}.`, ...cityRankingCompleteness.sentences]
+      : [`${cityRankingPlan.title}.`];
     const ms = Date.now() - totalStart;
     if (failure) {
       // Owned failure: an honest limitation about OUR failure, never a claim about the data.
@@ -1143,7 +1180,7 @@ export async function POST(req: NextRequest) {
      */
     const cityRankingState = currentTrendsResultState(getDb(), { sql: cityRankingPlan.sql, rows });
     const explanation = applyResultDisclosures({
-      explanation: [`${cityRankingPlan.title}.`, ...cityRankingPlan.caveats].join(" "),
+      explanation: [...cityRankingLead, ...cityRankingPlan.caveats].join(" "),
       question, sql: cityRankingPlan.sql, rows, tab, resultState: cityRankingState,
     });
     const cityRankingChart: ChartConfig | null = rows.length > 0
@@ -1152,7 +1189,7 @@ export async function POST(req: NextRequest) {
           // From the plan: a reporting-jurisdiction ranking charts its distinct label (GC-057).
           xAxis: cityRankingPlan.entityColumn,
           yAxis: [cityRankingPlan.sortColumn],
-          title: cityRankingPlan.title,
+          title: cityRankingTitle,
           xAxisLabel: cityRankingPlan.entityLabel,
           yAxisLabel: cityRankingPlan.sortColumn === "rate_per_100k" ? "Rate per 100,000" : "Offenses",
         }
@@ -1172,7 +1209,7 @@ export async function POST(req: NextRequest) {
       start(controller) {
         controller.enqueue(encoder.encode(sseEvent(emitFactualPayload(proof, {
           type: "result", requestId: chartAuditRequestId, chartAuditSource: tab,
-          sql: cityRankingPlan.sql, explanation, title: cityRankingPlan.title,
+          sql: cityRankingPlan.sql, explanation, title: cityRankingTitle,
           columns, rows, rowCount: rows.length, truncated: false,
           chartConfig: cityRankingChart,
           chartMeta: cityRankingChartMeta,
