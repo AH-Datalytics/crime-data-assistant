@@ -37,6 +37,7 @@ import { buildQueryContract, type QueryContract } from "../lib/query-contract";
 import { validateQueryContractSql } from "../lib/query-contract-validator";
 import { requestedScope } from "../lib/structural-semantics";
 import { finalizeProof } from "../lib/proof-finalize";
+import { OUTCOMES } from "../lib/proof-contract";
 import { validateGrain } from "../lib/requested-grain";
 import { detectFollowupTransform } from "../lib/followup-transform";
 import { detectQueryBearingFollowup } from "../lib/query-bearing-followup";
@@ -558,7 +559,7 @@ console.log("\n  proof finalization:");
   const seattleRows = [{ year: 2026, month: 1, agency: "Seattle", rolling_rate_per_100k: 5.1 }];
   const common = {
     sourceId: "current" as const, sql: ROLLING_RATE_SQL, rows: seattleRows, columns: Object.keys(seattleRows[0]),
-    truncated: false, planFamily: null, returnedEntities: ["seattle"], intendedAction: "answer" as const, env: shadow,
+    truncated: false, planFamily: null, returnedEntities: ["seattle"], outcome: OUTCOMES.model_sql_validated, env: shadow,
   };
   const withContract = finalizeProof({ ...common, question: "per capita", contract: carried });
   const fromFragment = finalizeProof({ ...common, question: "per capita" });
@@ -625,7 +626,7 @@ console.log("\n=== 8  the fixture, with monthly and rolling deliberately differe
   const proof = finalizeProof({
     sourceId: "current", question: CLEAN.effectiveQuestion, contract: carried, sql: ROLLING_RATE_SQL,
     rows: detroitRows, columns: Object.keys(detroitRows[0]), truncated: false, planFamily: null,
-    returnedEntities: ["detroit"], intendedAction: "answer", env: { PROOF_MODE: "shadow" },
+    returnedEntities: ["detroit"], outcome: OUTCOMES.model_sql_validated, env: { PROOF_MODE: "shadow" },
   });
   check("that query passes validation and proof finds the requested place present",
     validated.blockReasons.length === 0 && validated.retryIssues.length === 0

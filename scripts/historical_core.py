@@ -1287,7 +1287,7 @@ def table_digest(conn, table):
     columns = [row[1] for row in conn.execute(f"PRAGMA table_info({table})")]
     digest.update(("|".join(columns) + "\n").encode("utf-8"))
     for row in conn.execute(f"SELECT {', '.join(columns)} FROM {table} ORDER BY {order}"):
-        digest.update(("".join("" if v is None else str(v) for v in row) + "\n").encode("utf-8"))
+        digest.update(("\x1f".join("" if v is None else str(v) for v in row) + "\n").encode("utf-8"))
     return digest.hexdigest()
 
 

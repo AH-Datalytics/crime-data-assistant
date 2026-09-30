@@ -3,16 +3,54 @@
 # then atomically switch the /opt/nibrs/current symlink and reload PM2.
 # If the build fails the live app is never touched.
 #
+# THE RELEASE INPUT IS AN EXACT COMMIT, NOT A BRANCH. The first argument is a
+# full 40-character SHA; the optional second names the branch that SHA must be an
+# ancestor of (default dev). Naming a branch meant the operator never named the
+# artifact they received -- the tip could move between deciding to deploy and
+# fetching -- and an identity claim about "the tested commit" cannot rest on an
+# input that moves.
+#
+# THE RELEASE IS EXPORTED FROM GIT OBJECTS, never copied from this repo's working
+# tree. `git reset --hard` restores tracked files but removes neither untracked
+# nor ignored ones, and no `git clean` ever ran, so whatever sat in the operations
+# tree shipped: release 20260824_134957 carried three such paths, one of them a
+# gitignored .pyc that `git status -uall` cannot even see. Anything in a release
+# that is neither tracked at the deployed commit nor named in
+# scripts/fixtures/release-allowed-extras.json now stops the deploy BEFORE the
+# symlink switch.
+#
+# BOOTSTRAP NOTE -- READ BEFORE THE FIRST DEPLOYMENT AFTER P1.4a/P1.4c.
+#
+# This script, scripts/lib/release-export.sh and scripts/fixtures/release-allowed-extras.json are read
+# from whatever checkout invokes them, and the deploy refuses to run unless all three match their blobs
+# at the target SHA. Because the deploy no longer checks anything out, /opt/nibrs/repo's working tree
+# stays wherever it was, so invoking this from there will correctly refuse the moment those files
+# differ from the commit being deployed.
+#
+# THE EXACT INVOCATION. Export the bundle from the target commit and run it from there:
+#
+#   SHA=<40-char-sha>
+#   git -C /opt/nibrs/repo fetch origin
+#   rm -rf /tmp/deploy-$SHA && mkdir -p /tmp/deploy-$SHA
+#   git -C /opt/nibrs/repo archive "$SHA" | tar -x -C /tmp/deploy-$SHA
+#   bash /tmp/deploy-$SHA/scripts/deploy-zero-downtime.sh "$SHA" dev
+#
+# The scratch copy is only the BUNDLE. Everything P1.4c adds -- the receipt generator, the verifier,
+# the manifest, toolchain and build-input policies, and the receipt schema -- runs from
+# $RELEASE_DIR/scripts/... instead, i.e. from the release exported and blob-verified inside this run.
+# That is deliberate: the release IS the target commit's tree, proven path by path, so its rules are
+# that commit's rules by construction, and no drifted operations checkout can supply them.
+#
 # Usage:
-#   bash scripts/deploy-zero-downtime.sh          # deploy HEAD of dev
-#   bash scripts/deploy-zero-downtime.sh <branch>  # deploy a specific branch/tag
-#   RUN_SCOREBOARD=1 bash scripts/deploy-zero-downtime.sh dev
+#   bash scripts/deploy-zero-downtime.sh <40-char-sha>           # assert against dev
+#   bash scripts/deploy-zero-downtime.sh <40-char-sha> <branch>  # assert against another branch
+#   RUN_SCOREBOARD=1 bash scripts/deploy-zero-downtime.sh <40-char-sha>
 #     # optional post-deploy quick scoreboard
-#   RUN_SCOREBOARD=1 SCOREBOARD_MODE=full bash scripts/deploy-zero-downtime.sh dev
+#   RUN_SCOREBOARD=1 SCOREBOARD_MODE=full bash scripts/deploy-zero-downtime.sh <40-char-sha>
 #     # optional post-deploy full scoreboard
 #
 # Bootstrap mode (first migration only — PM2 not yet registered):
-#   BOOTSTRAP=1 bash scripts/deploy-zero-downtime.sh dev
+#   BOOTSTRAP=1 bash scripts/deploy-zero-downtime.sh <40-char-sha>
 #   Builds and preflight-tests the release, switches the symlink,
 #   but skips pm2 reload and post-deploy health checks.
 #
@@ -37,11 +75,22 @@ PINNED_FILE="$RELEASES_DIR/.pinned"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=scripts/lib/prune-releases.sh
 source "$SCRIPT_DIR/lib/prune-releases.sh"
+# Release input: SHA validation, ancestry, object-store export, blob equality, the
+# LFS-pointer refusal and the closed-extras gate. Shared with
+# scripts/test-release-export.js for the same reason as the pruning helper: a test
+# against a copy asserts that the copy is correct, not that the rule ships.
+# shellcheck source=scripts/lib/release-export.sh
+source "$SCRIPT_DIR/lib/release-export.sh"
+# The allowlist the GATE uses is the one exported from the deployed commit, assigned after the export.
+# This is only the executing bundle's own copy, used to prove the bundle matches that commit.
+SELF_ALLOWED_EXTRAS="$SCRIPT_DIR/fixtures/release-allowed-extras.json"
+ALLOWED_EXTRAS_FILE=""
 HEALTH_URL="http://localhost:3000"
 HEALTH_TIMEOUT=15                   # seconds to wait for health check
 HEALTH_RETRIES="${HEALTH_RETRIES:-8}" # post-reload attempts; app can need ~45s to warm
 HEALTH_RETRY_SLEEP="${HEALTH_RETRY_SLEEP:-8}"
-BRANCH="${1:-dev}"
+DEPLOY_SHA="${1:-}"
+BRANCH="${2:-dev}"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 RELEASE_DIR="$RELEASES_DIR/$TIMESTAMP"
 BOOTSTRAP="${BOOTSTRAP:-0}"
@@ -67,7 +116,15 @@ cleanup_on_failure() {
 if [[ "$BOOTSTRAP" == "1" ]]; then
   log "BOOTSTRAP mode — will skip pm2 reload and post-deploy health checks"
 fi
-log "Starting zero-downtime deploy  branch=$BRANCH  release=$TIMESTAMP"
+log "Starting zero-downtime deploy  sha=$DEPLOY_SHA  branch=$BRANCH  release=$TIMESTAMP"
+
+# Refuse a bad input before touching the filesystem. A missing argument used to
+# mean "deploy dev"; it now means nothing at all, on purpose.
+if [[ -z "$DEPLOY_SHA" ]]; then
+  die "No commit given. Usage: bash scripts/deploy-zero-downtime.sh <40-char-sha> [branch]"
+fi
+release_export_validate_sha "$DEPLOY_SHA" ||
+  die "Refusing to deploy: the first argument must be a full 40-character commit SHA, not a branch or an abbreviation."
 
 [[ -d "$SHARED_DIR" ]]  || die "$SHARED_DIR does not exist. Run the one-time migration first."
 [[ -d "$RELEASES_DIR" ]] || die "$RELEASES_DIR does not exist. Run the one-time migration first."
@@ -81,41 +138,76 @@ for db in crime_data.db query_log.db; do
   [[ -f "$SHARED_DIR/$db" ]] || log "WARNING: $SHARED_DIR/$db not found"
 done
 
-# ── Step 1: Update repo and create release directory ───────────────────
-cd "$REPO_DIR"
+# ── Step 1: Fetch objects, prove the commit, export the release ────────
+#
+# The operations working tree is no longer an input. Nothing is checked out and
+# nothing is reset; only the object store is read.
 if [[ "$SKIP_GIT" == "1" ]]; then
-  log "SKIP_GIT=1 — using existing repo working tree without fetch/reset"
+  log "SKIP_GIT=1 — not fetching; $DEPLOY_SHA must already be in the object store"
 else
   log "Fetching latest from origin..."
-  git fetch origin
-  git checkout "$BRANCH"
-  git reset --hard "origin/$BRANCH"
+  git -C "$REPO_DIR" fetch origin || die "git fetch failed; cannot prove the commit is on $BRANCH"
 fi
 
-# Capture provenance HERE, while the working directory is still $REPO_DIR and a
-# .git exists. The release directory is a copy that deliberately excludes .git,
-# so reading the commit after `cd "$RELEASE_DIR"` yields nothing and the stamp
-# silently records commit=unknown -- which is worse than no stamp, because it
-# looks like provenance while carrying none.
-DEPLOY_COMMIT=$(git -C "$REPO_DIR" rev-parse HEAD 2>/dev/null || echo unknown)
-DEPLOY_COMMIT_SUBJECT=$(git -C "$REPO_DIR" log -1 --format=%s 2>/dev/null || echo unknown)
-if [[ "$DEPLOY_COMMIT" == "unknown" ]]; then
-  die "Could not read HEAD from $REPO_DIR; refusing to build a release with no provenance."
-fi
+# The object must exist and be a commit, and it must be reachable from the branch
+# named. The ancestry assertion is what stops an arbitrary pasted hash -- a side
+# branch, an abandoned experiment, a reverted change -- becoming a release.
+release_export_assert_commit "$REPO_DIR" "$DEPLOY_SHA" ||
+  die "Refusing to deploy: $DEPLOY_SHA is not a commit in $REPO_DIR."
+release_export_assert_ancestor "$REPO_DIR" "$DEPLOY_SHA" "$BRANCH" ||
+  die "Refusing to deploy: $DEPLOY_SHA is not on origin/$BRANCH."
+
+DEPLOY_COMMIT="$DEPLOY_SHA"
+DEPLOY_COMMIT_SUBJECT=$(git --no-optional-locks -C "$REPO_DIR" log -1 --format=%s "$DEPLOY_SHA" 2>/dev/null || echo unknown)
 log "  Deploying commit: $DEPLOY_COMMIT ($DEPLOY_COMMIT_SUBJECT)"
+log "  Proven an ancestor of: origin/$BRANCH"
+
+# THE RULES MUST COME FROM THE COMMIT BEING DEPLOYED. This script, its helper and its allowlist are
+# read from whatever checkout the operator invoked, and since the deploy no longer checks anything out,
+# that checkout drifts. Without this, a release could be built from SHA X while the rules deciding what
+# may be inside it come from SHA Y -- and the gap widens with every future deployment.
+log "Binding the deploy bundle to $DEPLOY_COMMIT..."
+if ! BUNDLE_PROBLEMS=$(release_export_assert_self_matches "$REPO_DIR" "$DEPLOY_SHA" "$SCRIPT_DIR"); then
+  while IFS= read -r line; do [[ -n "$line" ]] && log "  $line"; done <<< "$BUNDLE_PROBLEMS"
+  die "The executing deploy bundle does not match $DEPLOY_SHA. Invoke the deploy script, its helper and its allowlist FROM THE TARGET COMMIT (see the bootstrap note at the top of this file). Nothing was created."
+fi
+log "  deploy script, helper and allowlist all match their blobs at $DEPLOY_COMMIT."
 
 log "Creating release directory: $RELEASE_DIR"
 mkdir -p "$RELEASE_DIR"
 
-# Copy app files (exclude .git, node_modules, db files, .next build cache)
-rsync -a \
-  --exclude='.git' \
-  --exclude='node_modules' \
-  --exclude='.next' \
-  --exclude='*.db' \
-  --exclude='*.db-shm' \
-  --exclude='*.db-wal' \
-  "$REPO_DIR/" "$RELEASE_DIR/"
+# Export the tracked tree of exactly that commit. `git archive` reads objects, so
+# an untracked or ignored file in $REPO_DIR cannot be emitted -- the contamination
+# channel is removed rather than reported.
+log "Exporting the tracked tree of $DEPLOY_COMMIT..."
+release_export_tree "$REPO_DIR" "$DEPLOY_SHA" "$RELEASE_DIR" ||
+  { rm -rf "$RELEASE_DIR"; die "Export failed; live app untouched."; }
+
+# Byte equality per path, not "the archive extracted cleanly": `export-ignore`
+# omits a path and `export-subst` rewrites one, both while git exits 0.
+log "Verifying every exported path against the commit tree..."
+if ! EXPORT_PROBLEMS=$(release_export_verify_blobs "$REPO_DIR" "$DEPLOY_SHA" "$RELEASE_DIR"); then
+  while IFS= read -r line; do [[ -n "$line" ]] && log "  EXPORT MISMATCH: $line"; done <<< "$EXPORT_PROBLEMS"
+  rm -rf "$RELEASE_DIR"
+  die "The export does not match the commit tree; live app untouched."
+fi
+log "  Export matches the commit tree on every tracked path."
+
+# A committed LFS pointer IS the blob, so the equality check above passes on it and
+# a release would publish a 130-byte text file where a database was expected.
+if ! LFS_PROBLEMS=$(release_export_refuse_lfs "$REPO_DIR" "$DEPLOY_SHA" "$RELEASE_DIR"); then
+  while IFS= read -r line; do [[ -n "$line" ]] && log "  $line"; done <<< "$LFS_PROBLEMS"
+  rm -rf "$RELEASE_DIR"
+  die "Refusing to publish a Git LFS pointer as file content; materialized LFS exports are not supported."
+fi
+
+# From here on the AUTHORITATIVE allowlist is the one exported from the deployed commit, whose bytes
+# were just proven equal to that commit's blob. The executing bundle's copy is not consulted again.
+ALLOWED_EXTRAS_FILE="$RELEASE_DIR/scripts/fixtures/release-allowed-extras.json"
+[[ -f "$ALLOWED_EXTRAS_FILE" ]] || {
+  rm -rf "$RELEASE_DIR"
+  die "The exported tree of $DEPLOY_SHA has no scripts/fixtures/release-allowed-extras.json; refusing to judge a release with no closed set."
+}
 
 # ── Step 2: Symlink shared files into release ──────────────────────────
 log "Linking shared files..."
@@ -154,15 +246,11 @@ fi
 log "Installing dependencies..."
 cd "$RELEASE_DIR"
 
-# Reuse node_modules from the previous release if package-lock hasn't changed
-PREV_RELEASE=$(readlink -f "$CURRENT_LINK" 2>/dev/null || true)
-if [[ -n "$PREV_RELEASE" && -d "$PREV_RELEASE/node_modules" ]]; then
-  if diff -q "$PREV_RELEASE/package-lock.json" "$RELEASE_DIR/package-lock.json" >/dev/null 2>&1; then
-    log "package-lock.json unchanged — copying node_modules from previous release"
-    cp -al "$PREV_RELEASE/node_modules" "$RELEASE_DIR/node_modules"
-  fi
-fi
-
+# A hardlink pre-copy of the previous release's node_modules used to sit here, on
+# the theory that an unchanged package-lock made it reusable. `npm ci` removes and
+# recreates node_modules unconditionally, so the copy was discarded moments later:
+# it bought nothing and it put 26,798 files into the release before the closed-set
+# gate could describe them. Removed.
 npm ci --production=false || die "npm ci failed"
 
 # Cron scripts run from this release dir — verify their runtime deps resolve
@@ -228,11 +316,64 @@ RELEASE_INFO_FILE="$RELEASE_DIR/RELEASE_INFO"
 } > "$RELEASE_INFO_FILE" || die "Could not write $RELEASE_INFO_FILE; refusing to build an unidentifiable release."
 log "  Release provenance: $(tr '\n' ' ' < "$RELEASE_INFO_FILE")"
 
-log "Building Next.js app..."
-trap cleanup_on_failure ERR
-npm run build
-trap - ERR
+# ── Bind the build inputs BEFORE building ──────────────────────────────
+#
+# `next build` bakes NEXT_PUBLIC_* into the client bundle, so those values decide what the artifact
+# IS. They come from .env/.env.local, which are symlinks into mutable shared storage, and from this
+# process's own environment -- so reading them AFTER the build would record whatever shared state held
+# at that later moment, not necessarily what Next compiled.
+#
+# So: capture the effective set now, refuse any undeclared name before a single file is built, then
+# pass the captured values into the build EXPLICITLY. Next gives the process environment precedence
+# over the env files, so exporting them pins exactly what was captured even if the shared files change
+# underneath the build.
+BUILD_INPUTS_SNAPSHOT="$(mktemp)"
+# Removed on EVERY path -- success, die, an unexpected error, or a signal. An earlier version removed
+# it only on the paths it happened to think of.
+trap 'rm -f "$BUILD_INPUTS_SNAPSHOT"' EXIT
+
+# ── Step 4: Build, with its inputs bound in the SAME PROCESS ───────────
+#
+# `next build` bakes NEXT_PUBLIC_* into the client bundle, so those values decide what the artifact IS.
+# They come from .env/.env.local, which are symlinks into mutable shared storage, and from this
+# process's environment.
+#
+# The build therefore runs INSIDE the capture step. That wrapper loads Next's own environment, refuses
+# any undeclared public name before a single file is built, and then launches `npm run build` from that
+# same environment -- so the values recorded are the values Next compiled against, by construction.
+#
+# WHAT THIS REPLACED, AND WHY. The previous shape captured in one process, marshalled the values through
+# a NUL-delimited stream, exported them here, built, and then "verified" nothing had changed. That last
+# check read back its own exports: it was self-fulfilling in this exact code path and only ever detected
+# drift in tests, which inject an environment explicitly. One process removes the transport and the
+# misleading assertion together.
+log "Binding build inputs and building Next.js app..."
+if ! node "$RELEASE_DIR/scripts/generate-release-receipt.js" \
+      --release "$RELEASE_DIR" --capture-build-inputs "$BUILD_INPUTS_SNAPSHOT" --run-build true; then
+  cd "$BASE_DIR"
+  rm -rf "$RELEASE_DIR"
+  log "Live app at $CURRENT_LINK is unchanged."
+  die "Build failed, or refused to run against undeclared public build inputs."
+fi
 log "Build succeeded."
+
+# The preflight assertions below must test the flag THE BUILD ACTUALLY USED. The grep at step 2b is a
+# coarse early gate and cannot see an inherited value, quoting, expansion, or .env.production* -- so the
+# authoritative value is re-read here from the snapshot the wrapper wrote, which is Next's own effective
+# result. The comparison is done inside node and reported as a token, so command substitution cannot
+# turn "true\n" into an accepted "true".
+HC_FLAG=$(node -e '
+const snap = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
+const value = snap.present.NEXT_PUBLIC_ENABLE_HATE_CRIME;
+process.stdout.write(value === "true" ? "true" : value === "false" ? "false" : "not-exactly-true-or-false");
+' "$BUILD_INPUTS_SNAPSHOT")
+if [[ "$HC_FLAG" != "true" && "$HC_FLAG" != "false" ]]; then
+  cd "$BASE_DIR"
+  rm -rf "$RELEASE_DIR"
+  log "Live app at $CURRENT_LINK is unchanged."
+  die "The build's effective NEXT_PUBLIC_ENABLE_HATE_CRIME is $HC_FLAG; it must be exactly 'true' or 'false'."
+fi
+log "  effective NEXT_PUBLIC_ENABLE_HATE_CRIME=$HC_FLAG (from the environment the build compiled against)"
 
 # ── Step 4b: Preflight — smoke-test the build before going live ────────
 PREFLIGHT_PORT=3099
@@ -311,6 +452,84 @@ kill "$PREFLIGHT_PID" 2>/dev/null || true
 wait "$PREFLIGHT_PID" 2>/dev/null || true
 log "Preflight passed."
 
+# ── Step 4b2: Receipt — the artifact's identity, recorded after the build ──
+#
+# `.next` is NOT reproducible: Next leaves generateBuildId at its default, which falls back to nanoid,
+# and the five live releases carry five distinct random ids. `next build` also embeds the absolute
+# release path in its output. So nothing here compares two builds; the bytes are digested ONCE, now,
+# and every later check proves the running bytes are still these bytes.
+#
+# EVERYTHING RUNS FROM THE EXPORTED RELEASE, not from this checkout: the generator, the manifest
+# policy, the toolchain policy, the build-input allowlist and the receipt schema. The export was
+# already proven blob-equal to $DEPLOY_SHA, so those are that commit's rules by construction. Using
+# $SCRIPT_DIR here would reintroduce exactly the drift the bundle binding exists to prevent.
+log "Generating the release receipt from the exported tree..."
+RECEIPT_BUILT_AT_START=$(grep -m1 '^built_at=' "$RELEASE_INFO_FILE" | cut -d= -f2- || echo unknown)
+# The receipt is generated from the PRE-BUILD snapshot, and the generator additionally recomputes the
+# effective set and refuses if it drifted -- the artifact was compiled against the earlier values, so a
+# receipt describing later ones would be describing something that was never built.
+if ! node "$RELEASE_DIR/scripts/generate-release-receipt.js" \
+      --release "$RELEASE_DIR" --repo "$REPO_DIR" --sha "$DEPLOY_SHA" --branch "$BRANCH" \
+      --built-at-start "$RECEIPT_BUILT_AT_START" --build-inputs "$BUILD_INPUTS_SNAPSHOT"; then
+  cd "$BASE_DIR"
+  rm -rf "$RELEASE_DIR"
+  log "Live app at $CURRENT_LINK is unchanged."
+  die "Could not generate the release receipt; refusing to publish an unidentifiable artifact."
+fi
+
+# ── Step 4c: Closed-set gate — the LAST check before publication ───────
+#
+# Everything a release may contain beyond the commit's tracked tree is named in
+# scripts/fixtures/release-allowed-extras.json: four shared symlinks, RELEASE_INFO,
+# next-env.d.ts, and the .next and node_modules trees. Anything else stops the
+# deploy HERE, before the symlink moves, because recording an unexplained path is
+# not an identity proof -- the three that shipped in release 20260824_134957 sat in
+# production for weeks and one of them was invisible to `git status -uall`.
+#
+# This runs after the build so it sees the release exactly as it will be published.
+log "Checking the release contains nothing unexplained..."
+if ! UNEXPLAINED=$(release_export_unexplained "$REPO_DIR" "$DEPLOY_SHA" "$RELEASE_DIR" "$ALLOWED_EXTRAS_FILE"); then
+  while IFS= read -r line; do [[ -n "$line" ]] && log "  $line"; done <<< "$UNEXPLAINED"
+  # Step 3 left the working directory inside the release; leave it before removing
+  # the release, or the remaining commands run from a directory that no longer exists.
+  cd "$BASE_DIR"
+  rm -rf "$RELEASE_DIR"
+  log "Live app at $CURRENT_LINK is unchanged."
+  die "The release contains content that is neither tracked at $DEPLOY_SHA nor a permitted addition; refusing to publish."
+fi
+log "  Nothing unexplained: every path is tracked at $DEPLOY_SHA or a declared addition."
+
+# ── Step 4d: Pre-switch verification — gates L2 and L3 ─────────────────
+#
+# Source exactness and artifact-vs-receipt agreement, checked while a failure still costs nothing: the
+# incomplete release is removed and `current` never moves. L1 (a qualifying hosted run) and L6
+# (toolchain alignment) are REPORTED here, never gated -- L6 fails on every deploy until the Node
+# alignment lands, and a gate that blocked every deploy would be switched off within a day.
+log "Verifying the artifact against its receipt (pre-switch: gates L2 and L3)..."
+if ! node "$RELEASE_DIR/scripts/verify-deployed-artifact.js" \
+      --release "$RELEASE_DIR" --repo "$REPO_DIR" --stage pre-switch; then
+  cd "$BASE_DIR"
+  rm -rf "$RELEASE_DIR"
+  log "Live app at $CURRENT_LINK is unchanged."
+  die "Pre-switch verification failed; refusing to publish."
+fi
+
+# ── Step 4e: Switch admission deadline (optional) ──────────────────────
+#
+# A window that must keep time for a rollback cannot let a slow build consume it: past this epoch
+# second the switch is refused and the new release is discarded exactly as a pre-switch failure is.
+# Unset (the default) changes nothing. Added for the Phase 3 activation window, 2026-09-30.
+if [[ -n "${SWITCH_NOT_AFTER_EPOCH:-}" ]]; then
+  [[ "$SWITCH_NOT_AFTER_EPOCH" =~ ^[0-9]+$ ]] || die "SWITCH_NOT_AFTER_EPOCH must be an integer epoch second."
+  if (( $(date +%s) > SWITCH_NOT_AFTER_EPOCH )); then
+    cd "$BASE_DIR"
+    rm -rf "$RELEASE_DIR"
+    log "Live app at $CURRENT_LINK is unchanged."
+    die "Switch admission deadline passed; refusing to publish."
+  fi
+  log "  Switch admitted: $(( SWITCH_NOT_AFTER_EPOCH - $(date +%s) ))s before the admission deadline."
+fi
+
 # ── Step 5: Atomic symlink switch ──────────────────────────────────────
 log "Switching symlink: $CURRENT_LINK -> $RELEASE_DIR"
 
@@ -328,7 +547,14 @@ mkdir -p "$BASE_DIR/scripts"
 if [[ ! -f "$CURRENT_LINK/scripts/nibrs-auto-update.py" ]]; then
   die "Missing scripts/nibrs-auto-update.py in current release."
 fi
-chmod +x "$CURRENT_LINK/scripts/nibrs-auto-update.py"
+# A `chmod +x` on that path used to sit here. It was the only mode mutation in the
+# deploy, and it ran AFTER publication, so an exact export was still being altered
+# once live. The bit is also unnecessary: the script's own documented cron line is
+# `/usr/bin/python3 /opt/nibrs/scripts/nibrs-auto-update.py`, which names the
+# interpreter, and the only other consumer -- test_build_juvenile_offender_incident
+# _summary.py -- imports it as a module through spec_from_file_location. Every
+# tracked file in this repository is mode 100644, so committing 100755 would have
+# added the tree's sole executable to grant a permission nothing uses. Removed.
 ln -sfn "$CURRENT_LINK/scripts/nibrs-auto-update.py" "$BASE_DIR/scripts/nibrs-auto-update.py"
 log "  $BASE_DIR/scripts/nibrs-auto-update.py -> $CURRENT_LINK/scripts/nibrs-auto-update.py"
 
@@ -372,6 +598,25 @@ else
     log ""
     log "WARNING: Health check failed. The new release is live but may not be serving correctly."
     log "To rollback:  bash scripts/rollback.sh"
+    log ""
+  fi
+
+  # ── Step 7b: Post-reload verification — reports L4 and L5 ────────────
+  #
+  # Did the symlink land on the receipted release, and did EVERY worker load it? Worker identity comes
+  # from /proc/<pid>/cwd -- resolved by the kernel at chdir time, so it does not re-follow a symlink
+  # that has since moved -- and from the absolute paths of natively mapped code, which is loaded code
+  # rather than a claim. Disagreement is reported per pid, because a partial reload is a split.
+  #
+  # NO AUTOMATIC ROLLBACK, ever. A verifier that moves production is a verifier that can take the site
+  # down over its own bug. This reports, exits non-zero, and leaves the decision to a person.
+  log "Verifying the published release and its workers (post-reload: reports L4 and L5)..."
+  if ! node "$CURRENT_LINK/scripts/verify-deployed-artifact.js" \
+        --release "$CURRENT_LINK" --repo "$REPO_DIR" --current "$CURRENT_LINK" \
+        --app "$PM2_APP" --stage post-reload; then
+    log ""
+    log "WARNING: post-reload verification reported a problem. The release IS live."
+    log "Nothing was rolled back automatically. To roll back:  bash scripts/rollback.sh"
     log ""
   fi
 fi

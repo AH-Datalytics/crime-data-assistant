@@ -32,7 +32,9 @@ function check(name: string, fn: () => void): void {
   } catch (error) {
     failed += 1;
     console.log(`  FAIL  ${name}`);
-    console.log(`        ${(error as Error).message.split("\n")[0]}`);
+    // Every line of the message: a multi-line diagnostic (for example the list of unrecognised
+    // assignments) must show the offending line, not only its first line.
+    console.log(`        ${(error as Error).message.split("\n").join("\n        ")}`);
   }
 }
 
@@ -398,22 +400,63 @@ const RECOGNISED_SQL_SOURCES = [
   /^buildCampusAgencySummarySql\(/,    // server-composed campus rollup
 ];
 
+/**
+ * The accepted P4.1 final-statement authority (lib/nibrs-execution-binding.ts). `sql = finalCheck.authority.sql`
+ * is recognised ONLY where the same handler also (1) builds `finalCheck` with `finalizeNibrsStatement(`,
+ * (2) refuses on `!finalCheck.ok`, and (3) executes exactly `executeBoundNibrsStatement(finalCheck.authority)`.
+ * The binding module registers and freezes that authority, and its own behavioural tests reject forged or
+ * altered authorities; this source-reading test only admits the assignment inside that shape. It is not a
+ * general `.sql` allowance: any other right-hand side, including an altered expression of the authority, stays
+ * unrecognised.
+ */
+const FINAL_AUTHORITY_ASSIGNMENT = /^finalCheck\.authority\.sql$/;
+function finalAuthorityShapeHolds(handler: string): boolean {
+  return /\bconst finalCheck = finalizeNibrsStatement\(/.test(handler)
+    && /\bif \(!finalCheck\.ok\)/.test(handler)
+    && /\bexecuteBoundNibrsStatement\(finalCheck\.authority\)/.test(handler);
+}
+function unrecognisedAssignments(route: string, lines: string[], start: number): string[] {
+  const handler = lines.slice(Math.max(0, start - 1)).join("\n");
+  const authorityAdmitted = finalAuthorityShapeHolds(handler);
+  const unrecognised: string[] = [];
+  lines.forEach((line, i) => {
+    if (i + 1 < start) return;
+    const m = line.match(/\b(?:sql|claude\.sql)\s*=\s*([^;]+);/);
+    if (!m) return;
+    const rhs = m[1].trim();
+    if (RECOGNISED_SQL_SOURCES.some((pattern) => pattern.test(rhs))) return;
+    if (authorityAdmitted && FINAL_AUTHORITY_ASSIGNMENT.test(rhs)) return;
+    unrecognised.push(`${route}:${i + 1} assigns ${rhs.slice(0, 60)}`);
+  });
+  return unrecognised;
+}
+
 for (const route of ROUTES) {
   check(`${route}: every assignment to the executed SQL has a recognised source`, () => {
     const { lines, start } = handlerLines(route);
-    const unrecognised: string[] = [];
-    lines.forEach((line, i) => {
-      if (i + 1 < start) return;
-      const m = line.match(/\b(?:sql|claude\.sql)\s*=\s*([^;]+);/);
-      if (!m) return;
-      const rhs = m[1].trim();
-      if (RECOGNISED_SQL_SOURCES.some((pattern) => pattern.test(rhs))) return;
-      unrecognised.push(`${route}:${i + 1} assigns ${rhs.slice(0, 60)}`);
-    });
+    const unrecognised = unrecognisedAssignments(route, lines, start);
     assert.deepStrictEqual(unrecognised, [],
       `unrecognised SQL sources:\n        ${unrecognised.join("\n        ")}`);
   });
 }
+
+check("negative control: a raw or altered replacement is still unrecognised, and the authority needs its whole shape", () => {
+  const shaped = [
+    "      const finalCheck = finalizeNibrsStatement({ sql });",
+    "      if (!finalCheck.ok) { throw new Error(\"refused\"); }",
+    "      sql = finalCheck.authority.sql;",
+    "      const result = await executeBoundNibrsStatement(finalCheck.authority);",
+  ];
+  assert.deepStrictEqual(unrecognisedAssignments("fixture", shaped, 1), [], "the accepted shape is admitted");
+  const altered = [...shaped.slice(0, 2), "      sql = finalCheck.authority.sql + \" OR 1=1\";", shaped[3]];
+  assert.strictEqual(unrecognisedAssignments("fixture", altered, 1).length, 1, "an altered authority expression is refused");
+  const raw = [...shaped, "      sql = userSuppliedStatement;"];
+  assert.strictEqual(unrecognisedAssignments("fixture", raw, 1).length, 1, "a raw replacement is refused");
+  const unbound = [shaped[0], shaped[1], shaped[2], "      const result = db.prepare(sql).all();"];
+  assert.strictEqual(unrecognisedAssignments("fixture", unbound, 1).length, 1, "without executeBoundNibrsStatement(finalCheck.authority) it is refused");
+  const unrefused = [shaped[0], shaped[2], shaped[3]];
+  assert.strictEqual(unrecognisedAssignments("fixture", unrefused, 1).length, 1, "without the !finalCheck.ok refusal it is refused");
+});
 
 console.log("\n-- egress-only exceptions, stated rather than implied --");
 

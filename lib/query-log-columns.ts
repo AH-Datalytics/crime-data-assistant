@@ -60,6 +60,8 @@ export const QUERY_LOG_MIGRATED_COLUMNS: readonly string[] = [
   "chart_config",
   "model_response",
   "request_id",
+  "record_kind",
+  "reason_code",
   "delivery_action",
   "proof_manifest",
   "result_digest",

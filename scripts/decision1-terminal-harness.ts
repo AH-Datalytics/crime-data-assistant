@@ -30,6 +30,7 @@ import {
 import { partialCoverageRetryPrompt } from "../lib/source-year-overlap";
 import { shouldRetryUnexplainedNoSql, UNEXPLAINED_NO_SQL_RETRY_PROMPT } from "../lib/no-sql-retry";
 import { pastCompleteCalendarYearsRange } from "../lib/time-conventions";
+import { OUTCOMES } from "../lib/proof-contract";
 
 export type RouteKey = "query" | "nibrs" | "shr";
 
@@ -63,7 +64,10 @@ export function extractNoSqlBranch(route: RouteKey, source?: string): ExtractedB
       // Pinned by the terminal exit's own proof intent, NOT by the selector: the mutation check
       // removes the selector from its in-memory copy and must still locate this same statement.
       // The other `if (!claude.sql)` blocks are model-retry blocks and carry no such exit.
-      if (cond === "!claude.sql" && node.getText(sf).includes('intendedAction: "decline_capability"')) {
+      // Integration 2026-09-30: dev's typed outcome layer replaced `intendedAction: "decline_capability"`
+      // with the catalog outcome `model_produced_no_sql`, whose action is decline_capability (asserted
+      // in test-outcome-coverage). Same exit, same pin, new spelling.
+      if (cond === "!claude.sql" && node.getText(sf).includes("outcome: OUTCOMES.model_produced_no_sql")) {
         found = node;
         return;
       }
@@ -200,6 +204,7 @@ export function runBranch(
     containsInternalLeak,
     buildNoSqlFallbackMessage,
     INTERNAL_LEAK_SAFE_MESSAGE,
+    OUTCOMES,
     // stubbed I/O
     writeLog: captureLog,
     writeNibrsLog: captureLog,

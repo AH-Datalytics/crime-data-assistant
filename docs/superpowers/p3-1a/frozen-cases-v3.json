@@ -1,0 +1,2396 @@
+{
+  "version": "v3",
+  "supersedes": {
+    "v1": {
+      "file": "frozen-cases-v1.json",
+      "sha256": "2a2739cc9dcab7872537d6c22880d70ee5ec0e012362d2c6fb47f8346d69cc78"
+    },
+    "v2": {
+      "file": "frozen-cases-v2.json",
+      "sha256": "7114d95c6c3a84c7da1f8e786915825436994085dfcc924477e26924203f391f"
+    },
+    "note": "v1 and v2 preserved unchanged. v3 amends the Ward evidence only: the system-catalog record is re-scoped as system/parser evidence and an independent Census incorporated-place record is added. No case question, role, applicability, family, expected outcome or contract projection changed."
+  },
+  "contract": "2026-09-01-p3-1a-contract.md Revision 3",
+  "contract_sha256": "2896d1c5e6575f7f9715e1a6f1f7d1000950afad0fa9188ab0362fb716282468",
+  "pins": {
+    "base_tree": "e2d24acd37027f436590ed8eae58bb5b30414ffb",
+    "rule_source_file": "lib/source-capabilities.ts",
+    "inventory": "21 applicability pairs from 9 question-only definitions",
+    "authored": "2026-09-01"
+  },
+  "family_vocabulary": [
+    "count_by_place_period",
+    "sub_city_geography_request",
+    "court_or_policy_outcome",
+    "arrest_activity",
+    "demographic_rate",
+    "demographic_count",
+    "overall_rate",
+    "clearance_rate",
+    "clearance_rate_by_weapon",
+    "weapon_specific_count",
+    "shooting_category",
+    "firearm_assault_proxy",
+    "countywide_demographic_breakdown",
+    "agency_demographic_breakdown",
+    "countywide_count",
+    "non_homicide_offense",
+    "homicide_circumstance",
+    "homicide_case_resolution",
+    "homicide_offender_relationship"
+  ],
+  "evidence": {
+    "EV-WARD-AR-CITY": {
+      "id": "EV-WARD-AR-CITY",
+      "claim": "This application's own place catalog classifies Ward, AR as a city-level place, so the parser is expected to treat it as a city.",
+      "authority": "lib/generated/geo-cities.ts (GENERATED_GEO_CITIES), the catalog the geo place resolver consumes",
+      "stable_identity": "city:AR:ward",
+      "entry": {
+        "id": "city:AR:ward",
+        "name": "Ward",
+        "state": "AR",
+        "aliases": [
+          "Ward, AR",
+          "Ward AR",
+          "Ward, Arkansas",
+          "Ward Arkansas"
+        ],
+        "sources": [
+          "historical"
+        ],
+        "dominancePopulation": 7277,
+        "dominancePopulationYear": 2025,
+        "dominancePopulationSource": "historical"
+      },
+      "artifact_sha256": "f4c6bdfc934ee7257b1b96dff7fb9982dc5ec14311669e801844e79270a7e2ac",
+      "artifact_bytes": 4155216,
+      "retrieved_at": "2026-09-01",
+      "retrieved_from_tree": "e2d24acd37027f436590ed8eae58bb5b30414ffb",
+      "kind": "system_parser",
+      "scope_note": "SYSTEM/PARSER EVIDENCE ONLY. This is the artifact the geo place resolver consumes and is therefore evidence about the system under test. It does NOT independently establish that Ward is an incorporated city; EV-WARD-AR-CENSUS carries that premise."
+    },
+    "EV-WARD-AR-CENSUS": {
+      "id": "EV-WARD-AR-CENSUS",
+      "kind": "independent_external",
+      "claim": "Ward, Arkansas is an incorporated place (a city) recognised by the U.S. Census Bureau, independently of this application.",
+      "authority": "U.S. Census Bureau — TIGERweb, State of Arkansas Incorporated Places (BAS 2026 / ACS 2025 vintage)",
+      "url": "https://tigerweb.geo.census.gov/tigerwebmain/Files/bas26/tigerweb_bas26_incplace_2025_acs25_ar.html",
+      "data_as_of": "2025-01-01",
+      "retrieved_at": "2026-09-01",
+      "retained_artifact": "docs/superpowers/p3-1a/evidence/tigerweb_bas26_incplace_2025_acs25_ar.html",
+      "retained_artifact_sha256": "265621a9368cf110a325d8c61efcbff8ea24bc7e3b142a4e6e5968ca2283c48e",
+      "retained_artifact_bytes": 398745,
+      "exact_source_row_sha256": "db57f64f3780f178a597d687d2ddec99737390a6122a942124a535f079df178f",
+      "exact_source_row_bytes": 785,
+      "record": {
+        "GEOID": "0573130",
+        "STATE": "05",
+        "PLACE": "73130",
+        "BASENAME": "Ward",
+        "NAME": "Ward city",
+        "LSADC": "25",
+        "LSADC_meaning": "city",
+        "FUNCSTAT": "A",
+        "FUNCSTAT_meaning": "active",
+        "MTFCC": "G4110",
+        "MTFCC_meaning": "incorporated place",
+        "OID": "27855323510160"
+      },
+      "verification_note": "Every field above was read from the retained artifact by the amendment itself, not transcribed from the review. The page contains exactly one row matching GEOID 0573130 out of 502 rows."
+    }
+  },
+  "outcome_catalog_binding": {
+    "store": "query_log",
+    "decline_pair": {
+      "action": "decline_capability",
+      "reason": "query_contract_failed"
+    },
+    "verified": "isAdmissiblePair('query_log','decline_capability','query_contract_failed') === true on BASE e2d24ac"
+  },
+  "pair_count": 21,
+  "case_count": 63,
+  "cases": [
+    {
+      "id": "P31A-001",
+      "rule_id": "unsupported-sub-city-geography",
+      "source": "current",
+      "pair": "unsupported-sub-city-geography x current",
+      "role": "positive",
+      "question": "How many murders were reported in the Englewood neighborhood of Chicago, IL in June 2026?",
+      "expected_applicability": "applies",
+      "expected_disposition": "decline_capability",
+      "adjudication_basis": "Explicitly requests a neighborhood, which the stated scope names as unavailable.",
+      "rule_stated_scope": "The FBI does not report crime data below the city/county/agency level: no ZIP code, neighborhood, precinct, ward, census tract, block group, or apartment-complex geography.",
+      "probe_basis": null,
+      "dual_purpose": null,
+      "observed_base_result": null,
+      "pins": {
+        "base_tree": "e2d24acd37027f436590ed8eae58bb5b30414ffb",
+        "rule_source_file": "lib/source-capabilities.ts",
+        "inventory": "21 applicability pairs from 9 question-only definitions",
+        "authored": "2026-09-01"
+      },
+      "question_family": "sub_city_geography_request",
+      "expected_outcome": {
+        "store": "query_log",
+        "action": "decline_capability",
+        "reason": "query_contract_failed",
+        "applies": true
+      },
+      "contract_projection_required": false,
+      "expected_contract": null,
+      "contract_fields_read_by_predicate": [],
+      "contract_disjunctive_with_question": null,
+      "evidence_refs": [],
+      "observed_contract": null
+    },
+    {
+      "id": "P31A-002",
+      "rule_id": "unsupported-sub-city-geography",
+      "source": "current",
+      "pair": "unsupported-sub-city-geography x current",
+      "role": "false_acceptance",
+      "question": "How many murders were reported in Ward, AR in 2022?",
+      "expected_applicability": "does_not_apply",
+      "expected_disposition": "not_declined_by_this_rule",
+      "adjudication_basis": "Ward, Arkansas is a real incorporated city. The question is city-level and answerable; the stated scope excludes only geography BELOW city level.",
+      "rule_stated_scope": "The FBI does not report crime data below the city/county/agency level: no ZIP code, neighborhood, precinct, ward, census tract, block group, or apartment-complex geography.",
+      "probe_basis": "Designed against the pattern edge: the sub-city detector matches the standalone token 'ward'. A city legitimately named Ward should not be refused as a sub-city request.",
+      "dual_purpose": "Also carries the false-refusal role for the predicate-over-match failure mode: if the rule applies here, the user is wrongly declined.",
+      "observed_base_result": null,
+      "pins": {
+        "base_tree": "e2d24acd37027f436590ed8eae58bb5b30414ffb",
+        "rule_source_file": "lib/source-capabilities.ts",
+        "inventory": "21 applicability pairs from 9 question-only definitions",
+        "authored": "2026-09-01"
+      },
+      "question_family": "count_by_place_period",
+      "expected_outcome": {
+        "applies": false,
+        "action": null,
+        "reason": null,
+        "note": "This rule contributes no action/reason pair for this case. Another rule or data limitation may still apply and remains separately accountable."
+      },
+      "contract_projection_required": false,
+      "expected_contract": null,
+      "contract_fields_read_by_predicate": [],
+      "contract_disjunctive_with_question": null,
+      "evidence_refs": [
+        "EV-WARD-AR-CITY",
+        "EV-WARD-AR-CENSUS"
+      ],
+      "observed_contract": null
+    },
+    {
+      "id": "P31A-003",
+      "rule_id": "unsupported-sub-city-geography",
+      "source": "current",
+      "pair": "unsupported-sub-city-geography x current",
+      "role": "false_refusal",
+      "question": "How many murders were reported in Chicago, IL in June 2026?",
+      "expected_applicability": "does_not_apply",
+      "expected_disposition": "not_declined_by_this_rule",
+      "adjudication_basis": "An ordinary city-level question of exactly the kind this source exists to answer.",
+      "rule_stated_scope": "The FBI does not report crime data below the city/county/agency level: no ZIP code, neighborhood, precinct, ward, census tract, block group, or apartment-complex geography.",
+      "probe_basis": null,
+      "dual_purpose": null,
+      "observed_base_result": null,
+      "pins": {
+        "base_tree": "e2d24acd37027f436590ed8eae58bb5b30414ffb",
+        "rule_source_file": "lib/source-capabilities.ts",
+        "inventory": "21 applicability pairs from 9 question-only definitions",
+        "authored": "2026-09-01"
+      },
+      "question_family": "count_by_place_period",
+      "expected_outcome": {
+        "applies": false,
+        "action": null,
+        "reason": null,
+        "note": "This rule contributes no action/reason pair for this case. Another rule or data limitation may still apply and remains separately accountable."
+      },
+      "contract_projection_required": false,
+      "expected_contract": null,
+      "contract_fields_read_by_predicate": [],
+      "contract_disjunctive_with_question": null,
+      "evidence_refs": [],
+      "observed_contract": null
+    },
+    {
+      "id": "P31A-004",
+      "rule_id": "unsupported-sub-city-geography",
+      "source": "historical",
+      "pair": "unsupported-sub-city-geography x historical",
+      "role": "positive",
+      "question": "How many murders were reported in the Englewood neighborhood of Chicago, IL in 2019?",
+      "expected_applicability": "applies",
+      "expected_disposition": "decline_capability",
+      "adjudication_basis": "Explicitly requests a neighborhood, which the stated scope names as unavailable.",
+      "rule_stated_scope": "The FBI does not report crime data below the city/county/agency level: no ZIP code, neighborhood, precinct, ward, census tract, block group, or apartment-complex geography.",
+      "probe_basis": null,
+      "dual_purpose": null,
+      "observed_base_result": null,
+      "pins": {
+        "base_tree": "e2d24acd37027f436590ed8eae58bb5b30414ffb",
+        "rule_source_file": "lib/source-capabilities.ts",
+        "inventory": "21 applicability pairs from 9 question-only definitions",
+        "authored": "2026-09-01"
+      },
+      "question_family": "sub_city_geography_request",
+      "expected_outcome": {
+        "store": "query_log",
+        "action": "decline_capability",
+        "reason": "query_contract_failed",
+        "applies": true
+      },
+      "contract_projection_required": false,
+      "expected_contract": null,
+      "contract_fields_read_by_predicate": [],
+      "contract_disjunctive_with_question": null,
+      "evidence_refs": [],
+      "observed_contract": null
+    },
+    {
+      "id": "P31A-005",
+      "rule_id": "unsupported-sub-city-geography",
+      "source": "historical",
+      "pair": "unsupported-sub-city-geography x historical",
+      "role": "false_acceptance",
+      "question": "How many murders were reported in Ward, AR in 2022?",
+      "expected_applicability": "does_not_apply",
+      "expected_disposition": "not_declined_by_this_rule",
+      "adjudication_basis": "Ward, Arkansas is a real incorporated city. The question is city-level and answerable; the stated scope excludes only geography BELOW city level.",
+      "rule_stated_scope": "The FBI does not report crime data below the city/county/agency level: no ZIP code, neighborhood, precinct, ward, census tract, block group, or apartment-complex geography.",
+      "probe_basis": "Designed against the pattern edge: the sub-city detector matches the standalone token 'ward'. A city legitimately named Ward should not be refused as a sub-city request.",
+      "dual_purpose": "Also carries the false-refusal role for the predicate-over-match failure mode: if the rule applies here, the user is wrongly declined.",
+      "observed_base_result": null,
+      "pins": {
+        "base_tree": "e2d24acd37027f436590ed8eae58bb5b30414ffb",
+        "rule_source_file": "lib/source-capabilities.ts",
+        "inventory": "21 applicability pairs from 9 question-only definitions",
+        "authored": "2026-09-01"
+      },
+      "question_family": "count_by_place_period",
+      "expected_outcome": {
+        "applies": false,
+        "action": null,
+        "reason": null,
+        "note": "This rule contributes no action/reason pair for this case. Another rule or data limitation may still apply and remains separately accountable."
+      },
+      "contract_projection_required": false,
+      "expected_contract": null,
+      "contract_fields_read_by_predicate": [],
+      "contract_disjunctive_with_question": null,
+      "evidence_refs": [
+        "EV-WARD-AR-CITY",
+        "EV-WARD-AR-CENSUS"
+      ],
+      "observed_contract": null
+    },
+    {
+      "id": "P31A-006",
+      "rule_id": "unsupported-sub-city-geography",
+      "source": "historical",
+      "pair": "unsupported-sub-city-geography x historical",
+      "role": "false_refusal",
+      "question": "How many murders were reported in Chicago, IL in 2019?",
+      "expected_applicability": "does_not_apply",
+      "expected_disposition": "not_declined_by_this_rule",
+      "adjudication_basis": "An ordinary city-level question of exactly the kind this source exists to answer.",
+      "rule_stated_scope": "The FBI does not report crime data below the city/county/agency level: no ZIP code, neighborhood, precinct, ward, census tract, block group, or apartment-complex geography.",
+      "probe_basis": null,
+      "dual_purpose": null,
+      "observed_base_result": null,
+      "pins": {
+        "base_tree": "e2d24acd37027f436590ed8eae58bb5b30414ffb",
+        "rule_source_file": "lib/source-capabilities.ts",
+        "inventory": "21 applicability pairs from 9 question-only definitions",
+        "authored": "2026-09-01"
+      },
+      "question_family": "count_by_place_period",
+      "expected_outcome": {
+        "applies": false,
+        "action": null,
+        "reason": null,
+        "note": "This rule contributes no action/reason pair for this case. Another rule or data limitation may still apply and remains separately accountable."
+      },
+      "contract_projection_required": false,
+      "expected_contract": null,
+      "contract_fields_read_by_predicate": [],
+      "contract_disjunctive_with_question": null,
+      "evidence_refs": [],
+      "observed_contract": null
+    },
+    {
+      "id": "P31A-007",
+      "rule_id": "unsupported-sub-city-geography",
+      "source": "nibrs",
+      "pair": "unsupported-sub-city-geography x nibrs",
+      "role": "positive",
+      "question": "How many aggravated assaults were reported in the Englewood neighborhood of Phoenix, AZ in 2022?",
+      "expected_applicability": "applies",
+      "expected_disposition": "decline_capability",
+      "adjudication_basis": "Explicitly requests a neighborhood, which the stated scope names as unavailable.",
+      "rule_stated_scope": "The FBI does not report crime data below the city/county/agency level: no ZIP code, neighborhood, precinct, ward, census tract, block group, or apartment-complex geography.",
+      "probe_basis": null,
+      "dual_purpose": null,
+      "observed_base_result": null,
+      "pins": {
+        "base_tree": "e2d24acd37027f436590ed8eae58bb5b30414ffb",
+        "rule_source_file": "lib/source-capabilities.ts",
+        "inventory": "21 applicability pairs from 9 question-only definitions",
+        "authored": "2026-09-01"
+      },
+      "question_family": "sub_city_geography_request",
+      "expected_outcome": {
+        "store": "query_log",
+        "action": "decline_capability",
+        "reason": "query_contract_failed",
+        "applies": true
+      },
+      "contract_projection_required": false,
+      "expected_contract": null,
+      "contract_fields_read_by_predicate": [],
+      "contract_disjunctive_with_question": null,
+      "evidence_refs": [],
+      "observed_contract": null
+    },
+    {
+      "id": "P31A-008",
+      "rule_id": "unsupported-sub-city-geography",
+      "source": "nibrs",
+      "pair": "unsupported-sub-city-geography x nibrs",
+      "role": "false_acceptance",
+      "question": "How many murders were reported in Ward, AR in 2022?",
+      "expected_applicability": "does_not_apply",
+      "expected_disposition": "not_declined_by_this_rule",
+      "adjudication_basis": "Ward, Arkansas is a real incorporated city. The question is city-level and answerable; the stated scope excludes only geography BELOW city level.",
+      "rule_stated_scope": "The FBI does not report crime data below the city/county/agency level: no ZIP code, neighborhood, precinct, ward, census tract, block group, or apartment-complex geography.",
+      "probe_basis": "Designed against the pattern edge: the sub-city detector matches the standalone token 'ward'. A city legitimately named Ward should not be refused as a sub-city request.",
+      "dual_purpose": "Also carries the false-refusal role for the predicate-over-match failure mode: if the rule applies here, the user is wrongly declined.",
+      "observed_base_result": null,
+      "pins": {
+        "base_tree": "e2d24acd37027f436590ed8eae58bb5b30414ffb",
+        "rule_source_file": "lib/source-capabilities.ts",
+        "inventory": "21 applicability pairs from 9 question-only definitions",
+        "authored": "2026-09-01"
+      },
+      "question_family": "count_by_place_period",
+      "expected_outcome": {
+        "applies": false,
+        "action": null,
+        "reason": null,
+        "note": "This rule contributes no action/reason pair for this case. Another rule or data limitation may still apply and remains separately accountable."
+      },
+      "contract_projection_required": false,
+      "expected_contract": null,
+      "contract_fields_read_by_predicate": [],
+      "contract_disjunctive_with_question": null,
+      "evidence_refs": [
+        "EV-WARD-AR-CITY",
+        "EV-WARD-AR-CENSUS"
+      ],
+      "observed_contract": null
+    },
+    {
+      "id": "P31A-009",
+      "rule_id": "unsupported-sub-city-geography",
+      "source": "nibrs",
+      "pair": "unsupported-sub-city-geography x nibrs",
+      "role": "false_refusal",
+      "question": "How many aggravated assaults were reported in Phoenix, AZ in 2022?",
+      "expected_applicability": "does_not_apply",
+      "expected_disposition": "not_declined_by_this_rule",
+      "adjudication_basis": "An ordinary city-level question of exactly the kind this source exists to answer.",
+      "rule_stated_scope": "The FBI does not report crime data below the city/county/agency level: no ZIP code, neighborhood, precinct, ward, census tract, block group, or apartment-complex geography.",
+      "probe_basis": null,
+      "dual_purpose": null,
+      "observed_base_result": null,
+      "pins": {
+        "base_tree": "e2d24acd37027f436590ed8eae58bb5b30414ffb",
+        "rule_source_file": "lib/source-capabilities.ts",
+        "inventory": "21 applicability pairs from 9 question-only definitions",
+        "authored": "2026-09-01"
+      },
+      "question_family": "count_by_place_period",
+      "expected_outcome": {
+        "applies": false,
+        "action": null,
+        "reason": null,
+        "note": "This rule contributes no action/reason pair for this case. Another rule or data limitation may still apply and remains separately accountable."
+      },
+      "contract_projection_required": false,
+      "expected_contract": null,
+      "contract_fields_read_by_predicate": [],
+      "contract_disjunctive_with_question": null,
+      "evidence_refs": [],
+      "observed_contract": null
+    },
+    {
+      "id": "P31A-010",
+      "rule_id": "unsupported-sub-city-geography",
+      "source": "shr",
+      "pair": "unsupported-sub-city-geography x shr",
+      "role": "positive",
+      "question": "How many homicides were reported in the Englewood neighborhood of Los Angeles, CA in 2021?",
+      "expected_applicability": "applies",
+      "expected_disposition": "decline_capability",
+      "adjudication_basis": "Explicitly requests a neighborhood, which the stated scope names as unavailable.",
+      "rule_stated_scope": "The FBI does not report crime data below the city/county/agency level: no ZIP code, neighborhood, precinct, ward, census tract, block group, or apartment-complex geography.",
+      "probe_basis": null,
+      "dual_purpose": null,
+      "observed_base_result": null,
+      "pins": {
+        "base_tree": "e2d24acd37027f436590ed8eae58bb5b30414ffb",
+        "rule_source_file": "lib/source-capabilities.ts",
+        "inventory": "21 applicability pairs from 9 question-only definitions",
+        "authored": "2026-09-01"
+      },
+      "question_family": "sub_city_geography_request",
+      "expected_outcome": {
+        "store": "query_log",
+        "action": "decline_capability",
+        "reason": "query_contract_failed",
+        "applies": true
+      },
+      "contract_projection_required": false,
+      "expected_contract": null,
+      "contract_fields_read_by_predicate": [],
+      "contract_disjunctive_with_question": null,
+      "evidence_refs": [],
+      "observed_contract": null
+    },
+    {
+      "id": "P31A-011",
+      "rule_id": "unsupported-sub-city-geography",
+      "source": "shr",
+      "pair": "unsupported-sub-city-geography x shr",
+      "role": "false_acceptance",
+      "question": "How many murders were reported in Ward, AR in 2022?",
+      "expected_applicability": "does_not_apply",
+      "expected_disposition": "not_declined_by_this_rule",
+      "adjudication_basis": "Ward, Arkansas is a real incorporated city. The question is city-level and answerable; the stated scope excludes only geography BELOW city level.",
+      "rule_stated_scope": "The FBI does not report crime data below the city/county/agency level: no ZIP code, neighborhood, precinct, ward, census tract, block group, or apartment-complex geography.",
+      "probe_basis": "Designed against the pattern edge: the sub-city detector matches the standalone token 'ward'. A city legitimately named Ward should not be refused as a sub-city request.",
+      "dual_purpose": "Also carries the false-refusal role for the predicate-over-match failure mode: if the rule applies here, the user is wrongly declined.",
+      "observed_base_result": null,
+      "pins": {
+        "base_tree": "e2d24acd37027f436590ed8eae58bb5b30414ffb",
+        "rule_source_file": "lib/source-capabilities.ts",
+        "inventory": "21 applicability pairs from 9 question-only definitions",
+        "authored": "2026-09-01"
+      },
+      "question_family": "count_by_place_period",
+      "expected_outcome": {
+        "applies": false,
+        "action": null,
+        "reason": null,
+        "note": "This rule contributes no action/reason pair for this case. Another rule or data limitation may still apply and remains separately accountable."
+      },
+      "contract_projection_required": false,
+      "expected_contract": null,
+      "contract_fields_read_by_predicate": [],
+      "contract_disjunctive_with_question": null,
+      "evidence_refs": [
+        "EV-WARD-AR-CITY",
+        "EV-WARD-AR-CENSUS"
+      ],
+      "observed_contract": null
+    },
+    {
+      "id": "P31A-012",
+      "rule_id": "unsupported-sub-city-geography",
+      "source": "shr",
+      "pair": "unsupported-sub-city-geography x shr",
+      "role": "false_refusal",
+      "question": "How many homicides were reported in Los Angeles, CA in 2021?",
+      "expected_applicability": "does_not_apply",
+      "expected_disposition": "not_declined_by_this_rule",
+      "adjudication_basis": "An ordinary city-level question of exactly the kind this source exists to answer.",
+      "rule_stated_scope": "The FBI does not report crime data below the city/county/agency level: no ZIP code, neighborhood, precinct, ward, census tract, block group, or apartment-complex geography.",
+      "probe_basis": null,
+      "dual_purpose": null,
+      "observed_base_result": null,
+      "pins": {
+        "base_tree": "e2d24acd37027f436590ed8eae58bb5b30414ffb",
+        "rule_source_file": "lib/source-capabilities.ts",
+        "inventory": "21 applicability pairs from 9 question-only definitions",
+        "authored": "2026-09-01"
+      },
+      "question_family": "count_by_place_period",
+      "expected_outcome": {
+        "applies": false,
+        "action": null,
+        "reason": null,
+        "note": "This rule contributes no action/reason pair for this case. Another rule or data limitation may still apply and remains separately accountable."
+      },
+      "contract_projection_required": false,
+      "expected_contract": null,
+      "contract_fields_read_by_predicate": [],
+      "contract_disjunctive_with_question": null,
+      "evidence_refs": [],
+      "observed_contract": null
+    },
+    {
+      "id": "P31A-013",
+      "rule_id": "unsupported-sub-city-geography",
+      "source": "hate_crime",
+      "pair": "unsupported-sub-city-geography x hate_crime",
+      "role": "positive",
+      "question": "How many hate crimes were reported in the Englewood neighborhood of Seattle, WA in 2022?",
+      "expected_applicability": "applies",
+      "expected_disposition": "decline_capability",
+      "adjudication_basis": "Explicitly requests a neighborhood, which the stated scope names as unavailable.",
+      "rule_stated_scope": "The FBI does not report crime data below the city/county/agency level: no ZIP code, neighborhood, precinct, ward, census tract, block group, or apartment-complex geography.",
+      "probe_basis": null,
+      "dual_purpose": null,
+      "observed_base_result": null,
+      "pins": {
+        "base_tree": "e2d24acd37027f436590ed8eae58bb5b30414ffb",
+        "rule_source_file": "lib/source-capabilities.ts",
+        "inventory": "21 applicability pairs from 9 question-only definitions",
+        "authored": "2026-09-01"
+      },
+      "question_family": "sub_city_geography_request",
+      "expected_outcome": {
+        "store": "query_log",
+        "action": "decline_capability",
+        "reason": "query_contract_failed",
+        "applies": true
+      },
+      "contract_projection_required": false,
+      "expected_contract": null,
+      "contract_fields_read_by_predicate": [],
+      "contract_disjunctive_with_question": null,
+      "evidence_refs": [],
+      "observed_contract": null
+    },
+    {
+      "id": "P31A-014",
+      "rule_id": "unsupported-sub-city-geography",
+      "source": "hate_crime",
+      "pair": "unsupported-sub-city-geography x hate_crime",
+      "role": "false_acceptance",
+      "question": "How many murders were reported in Ward, AR in 2022?",
+      "expected_applicability": "does_not_apply",
+      "expected_disposition": "not_declined_by_this_rule",
+      "adjudication_basis": "Ward, Arkansas is a real incorporated city. The question is city-level and answerable; the stated scope excludes only geography BELOW city level.",
+      "rule_stated_scope": "The FBI does not report crime data below the city/county/agency level: no ZIP code, neighborhood, precinct, ward, census tract, block group, or apartment-complex geography.",
+      "probe_basis": "Designed against the pattern edge: the sub-city detector matches the standalone token 'ward'. A city legitimately named Ward should not be refused as a sub-city request.",
+      "dual_purpose": "Also carries the false-refusal role for the predicate-over-match failure mode: if the rule applies here, the user is wrongly declined.",
+      "observed_base_result": null,
+      "pins": {
+        "base_tree": "e2d24acd37027f436590ed8eae58bb5b30414ffb",
+        "rule_source_file": "lib/source-capabilities.ts",
+        "inventory": "21 applicability pairs from 9 question-only definitions",
+        "authored": "2026-09-01"
+      },
+      "question_family": "count_by_place_period",
+      "expected_outcome": {
+        "applies": false,
+        "action": null,
+        "reason": null,
+        "note": "This rule contributes no action/reason pair for this case. Another rule or data limitation may still apply and remains separately accountable."
+      },
+      "contract_projection_required": false,
+      "expected_contract": null,
+      "contract_fields_read_by_predicate": [],
+      "contract_disjunctive_with_question": null,
+      "evidence_refs": [
+        "EV-WARD-AR-CITY",
+        "EV-WARD-AR-CENSUS"
+      ],
+      "observed_contract": null
+    },
+    {
+      "id": "P31A-015",
+      "rule_id": "unsupported-sub-city-geography",
+      "source": "hate_crime",
+      "pair": "unsupported-sub-city-geography x hate_crime",
+      "role": "false_refusal",
+      "question": "How many hate crimes were reported in Seattle, WA in 2022?",
+      "expected_applicability": "does_not_apply",
+      "expected_disposition": "not_declined_by_this_rule",
+      "adjudication_basis": "An ordinary city-level question of exactly the kind this source exists to answer.",
+      "rule_stated_scope": "The FBI does not report crime data below the city/county/agency level: no ZIP code, neighborhood, precinct, ward, census tract, block group, or apartment-complex geography.",
+      "probe_basis": null,
+      "dual_purpose": null,
+      "observed_base_result": null,
+      "pins": {
+        "base_tree": "e2d24acd37027f436590ed8eae58bb5b30414ffb",
+        "rule_source_file": "lib/source-capabilities.ts",
+        "inventory": "21 applicability pairs from 9 question-only definitions",
+        "authored": "2026-09-01"
+      },
+      "question_family": "count_by_place_period",
+      "expected_outcome": {
+        "applies": false,
+        "action": null,
+        "reason": null,
+        "note": "This rule contributes no action/reason pair for this case. Another rule or data limitation may still apply and remains separately accountable."
+      },
+      "contract_projection_required": false,
+      "expected_contract": null,
+      "contract_fields_read_by_predicate": [],
+      "contract_disjunctive_with_question": null,
+      "evidence_refs": [],
+      "observed_contract": null
+    },
+    {
+      "id": "P31A-016",
+      "rule_id": "unsupported-court-policy-topic",
+      "source": "current",
+      "pair": "unsupported-court-policy-topic x current",
+      "role": "positive",
+      "question": "How many people were convicted and sentenced for murders in Chicago, IL in June 2026?",
+      "expected_applicability": "applies",
+      "expected_disposition": "decline_capability",
+      "adjudication_basis": "Asks for convictions and sentencing - court outcomes, named explicitly in the stated scope as out of scope.",
+      "rule_stated_scope": "The datasets track reported crime and law-enforcement reporting, not court outcomes, incarceration, fines, immigration status, or policy registries.",
+      "probe_basis": null,
+      "dual_purpose": null,
+      "observed_base_result": null,
+      "pins": {
+        "base_tree": "e2d24acd37027f436590ed8eae58bb5b30414ffb",
+        "rule_source_file": "lib/source-capabilities.ts",
+        "inventory": "21 applicability pairs from 9 question-only definitions",
+        "authored": "2026-09-01"
+      },
+      "question_family": "court_or_policy_outcome",
+      "expected_outcome": {
+        "store": "query_log",
+        "action": "decline_capability",
+        "reason": "query_contract_failed",
+        "applies": true
+      },
+      "contract_projection_required": false,
+      "expected_contract": null,
+      "contract_fields_read_by_predicate": [],
+      "contract_disjunctive_with_question": null,
+      "evidence_refs": [],
+      "observed_contract": null
+    },
+    {
+      "id": "P31A-017",
+      "rule_id": "unsupported-court-policy-topic",
+      "source": "current",
+      "pair": "unsupported-court-policy-topic x current",
+      "role": "false_acceptance",
+      "question": "How many arrests were made for murders in Chicago, IL in June 2026?",
+      "expected_applicability": "does_not_apply",
+      "expected_disposition": "not_declined_by_this_rule",
+      "adjudication_basis": "Arrests are law-enforcement reporting, which the stated scope places explicitly IN scope. Availability in a given source is a separate question from topic scope.",
+      "rule_stated_scope": "The datasets track reported crime and law-enforcement reporting, not court outcomes, incarceration, fines, immigration status, or policy registries.",
+      "probe_basis": "Adjacent vocabulary: arrests sit next to the criminal-justice topics the rule excludes, without being one of them.",
+      "dual_purpose": "Also carries the false-refusal role for the predicate-over-match failure mode: if the rule applies here, the user is wrongly declined.",
+      "observed_base_result": null,
+      "pins": {
+        "base_tree": "e2d24acd37027f436590ed8eae58bb5b30414ffb",
+        "rule_source_file": "lib/source-capabilities.ts",
+        "inventory": "21 applicability pairs from 9 question-only definitions",
+        "authored": "2026-09-01"
+      },
+      "question_family": "arrest_activity",
+      "expected_outcome": {
+        "applies": false,
+        "action": null,
+        "reason": null,
+        "note": "This rule contributes no action/reason pair for this case. Another rule or data limitation may still apply and remains separately accountable."
+      },
+      "contract_projection_required": false,
+      "expected_contract": null,
+      "contract_fields_read_by_predicate": [],
+      "contract_disjunctive_with_question": null,
+      "evidence_refs": [],
+      "observed_contract": null
+    },
+    {
+      "id": "P31A-018",
+      "rule_id": "unsupported-court-policy-topic",
+      "source": "current",
+      "pair": "unsupported-court-policy-topic x current",
+      "role": "false_refusal",
+      "question": "How many murders were reported in Chicago, IL in June 2026?",
+      "expected_applicability": "does_not_apply",
+      "expected_disposition": "not_declined_by_this_rule",
+      "adjudication_basis": "A plain reported-crime count, the centre of the in-scope domain.",
+      "rule_stated_scope": "The datasets track reported crime and law-enforcement reporting, not court outcomes, incarceration, fines, immigration status, or policy registries.",
+      "probe_basis": null,
+      "dual_purpose": null,
+      "observed_base_result": null,
+      "pins": {
+        "base_tree": "e2d24acd37027f436590ed8eae58bb5b30414ffb",
+        "rule_source_file": "lib/source-capabilities.ts",
+        "inventory": "21 applicability pairs from 9 question-only definitions",
+        "authored": "2026-09-01"
+      },
+      "question_family": "count_by_place_period",
+      "expected_outcome": {
+        "applies": false,
+        "action": null,
+        "reason": null,
+        "note": "This rule contributes no action/reason pair for this case. Another rule or data limitation may still apply and remains separately accountable."
+      },
+      "contract_projection_required": false,
+      "expected_contract": null,
+      "contract_fields_read_by_predicate": [],
+      "contract_disjunctive_with_question": null,
+      "evidence_refs": [],
+      "observed_contract": null
+    },
+    {
+      "id": "P31A-019",
+      "rule_id": "unsupported-court-policy-topic",
+      "source": "historical",
+      "pair": "unsupported-court-policy-topic x historical",
+      "role": "positive",
+      "question": "How many people were convicted and sentenced for murders in Chicago, IL in 2019?",
+      "expected_applicability": "applies",
+      "expected_disposition": "decline_capability",
+      "adjudication_basis": "Asks for convictions and sentencing - court outcomes, named explicitly in the stated scope as out of scope.",
+      "rule_stated_scope": "The datasets track reported crime and law-enforcement reporting, not court outcomes, incarceration, fines, immigration status, or policy registries.",
+      "probe_basis": null,
+      "dual_purpose": null,
+      "observed_base_result": null,
+      "pins": {
+        "base_tree": "e2d24acd37027f436590ed8eae58bb5b30414ffb",
+        "rule_source_file": "lib/source-capabilities.ts",
+        "inventory": "21 applicability pairs from 9 question-only definitions",
+        "authored": "2026-09-01"
+      },
+      "question_family": "court_or_policy_outcome",
+      "expected_outcome": {
+        "store": "query_log",
+        "action": "decline_capability",
+        "reason": "query_contract_failed",
+        "applies": true
+      },
+      "contract_projection_required": false,
+      "expected_contract": null,
+      "contract_fields_read_by_predicate": [],
+      "contract_disjunctive_with_question": null,
+      "evidence_refs": [],
+      "observed_contract": null
+    },
+    {
+      "id": "P31A-020",
+      "rule_id": "unsupported-court-policy-topic",
+      "source": "historical",
+      "pair": "unsupported-court-policy-topic x historical",
+      "role": "false_acceptance",
+      "question": "How many arrests were made for murders in Chicago, IL in 2019?",
+      "expected_applicability": "does_not_apply",
+      "expected_disposition": "not_declined_by_this_rule",
+      "adjudication_basis": "Arrests are law-enforcement reporting, which the stated scope places explicitly IN scope. Availability in a given source is a separate question from topic scope.",
+      "rule_stated_scope": "The datasets track reported crime and law-enforcement reporting, not court outcomes, incarceration, fines, immigration status, or policy registries.",
+      "probe_basis": "Adjacent vocabulary: arrests sit next to the criminal-justice topics the rule excludes, without being one of them.",
+      "dual_purpose": "Also carries the false-refusal role for the predicate-over-match failure mode: if the rule applies here, the user is wrongly declined.",
+      "observed_base_result": null,
+      "pins": {
+        "base_tree": "e2d24acd37027f436590ed8eae58bb5b30414ffb",
+        "rule_source_file": "lib/source-capabilities.ts",
+        "inventory": "21 applicability pairs from 9 question-only definitions",
+        "authored": "2026-09-01"
+      },
+      "question_family": "arrest_activity",
+      "expected_outcome": {
+        "applies": false,
+        "action": null,
+        "reason": null,
+        "note": "This rule contributes no action/reason pair for this case. Another rule or data limitation may still apply and remains separately accountable."
+      },
+      "contract_projection_required": false,
+      "expected_contract": null,
+      "contract_fields_read_by_predicate": [],
+      "contract_disjunctive_with_question": null,
+      "evidence_refs": [],
+      "observed_contract": null
+    },
+    {
+      "id": "P31A-021",
+      "rule_id": "unsupported-court-policy-topic",
+      "source": "historical",
+      "pair": "unsupported-court-policy-topic x historical",
+      "role": "false_refusal",
+      "question": "How many murders were reported in Chicago, IL in 2019?",
+      "expected_applicability": "does_not_apply",
+      "expected_disposition": "not_declined_by_this_rule",
+      "adjudication_basis": "A plain reported-crime count, the centre of the in-scope domain.",
+      "rule_stated_scope": "The datasets track reported crime and law-enforcement reporting, not court outcomes, incarceration, fines, immigration status, or policy registries.",
+      "probe_basis": null,
+      "dual_purpose": null,
+      "observed_base_result": null,
+      "pins": {
+        "base_tree": "e2d24acd37027f436590ed8eae58bb5b30414ffb",
+        "rule_source_file": "lib/source-capabilities.ts",
+        "inventory": "21 applicability pairs from 9 question-only definitions",
+        "authored": "2026-09-01"
+      },
+      "question_family": "count_by_place_period",
+      "expected_outcome": {
+        "applies": false,
+        "action": null,
+        "reason": null,
+        "note": "This rule contributes no action/reason pair for this case. Another rule or data limitation may still apply and remains separately accountable."
+      },
+      "contract_projection_required": false,
+      "expected_contract": null,
+      "contract_fields_read_by_predicate": [],
+      "contract_disjunctive_with_question": null,
+      "evidence_refs": [],
+      "observed_contract": null
+    },
+    {
+      "id": "P31A-022",
+      "rule_id": "unsupported-court-policy-topic",
+      "source": "nibrs",
+      "pair": "unsupported-court-policy-topic x nibrs",
+      "role": "positive",
+      "question": "How many people were convicted and sentenced for aggravated assaults in Phoenix, AZ in 2022?",
+      "expected_applicability": "applies",
+      "expected_disposition": "decline_capability",
+      "adjudication_basis": "Asks for convictions and sentencing - court outcomes, named explicitly in the stated scope as out of scope.",
+      "rule_stated_scope": "The datasets track reported crime and law-enforcement reporting, not court outcomes, incarceration, fines, immigration status, or policy registries.",
+      "probe_basis": null,
+      "dual_purpose": null,
+      "observed_base_result": null,
+      "pins": {
+        "base_tree": "e2d24acd37027f436590ed8eae58bb5b30414ffb",
+        "rule_source_file": "lib/source-capabilities.ts",
+        "inventory": "21 applicability pairs from 9 question-only definitions",
+        "authored": "2026-09-01"
+      },
+      "question_family": "court_or_policy_outcome",
+      "expected_outcome": {
+        "store": "query_log",
+        "action": "decline_capability",
+        "reason": "query_contract_failed",
+        "applies": true
+      },
+      "contract_projection_required": false,
+      "expected_contract": null,
+      "contract_fields_read_by_predicate": [],
+      "contract_disjunctive_with_question": null,
+      "evidence_refs": [],
+      "observed_contract": null
+    },
+    {
+      "id": "P31A-023",
+      "rule_id": "unsupported-court-policy-topic",
+      "source": "nibrs",
+      "pair": "unsupported-court-policy-topic x nibrs",
+      "role": "false_acceptance",
+      "question": "How many arrests were made for aggravated assaults in Phoenix, AZ in 2022?",
+      "expected_applicability": "does_not_apply",
+      "expected_disposition": "not_declined_by_this_rule",
+      "adjudication_basis": "Arrests are law-enforcement reporting, which the stated scope places explicitly IN scope. Availability in a given source is a separate question from topic scope.",
+      "rule_stated_scope": "The datasets track reported crime and law-enforcement reporting, not court outcomes, incarceration, fines, immigration status, or policy registries.",
+      "probe_basis": "Adjacent vocabulary: arrests sit next to the criminal-justice topics the rule excludes, without being one of them.",
+      "dual_purpose": "Also carries the false-refusal role for the predicate-over-match failure mode: if the rule applies here, the user is wrongly declined.",
+      "observed_base_result": null,
+      "pins": {
+        "base_tree": "e2d24acd37027f436590ed8eae58bb5b30414ffb",
+        "rule_source_file": "lib/source-capabilities.ts",
+        "inventory": "21 applicability pairs from 9 question-only definitions",
+        "authored": "2026-09-01"
+      },
+      "question_family": "arrest_activity",
+      "expected_outcome": {
+        "applies": false,
+        "action": null,
+        "reason": null,
+        "note": "This rule contributes no action/reason pair for this case. Another rule or data limitation may still apply and remains separately accountable."
+      },
+      "contract_projection_required": false,
+      "expected_contract": null,
+      "contract_fields_read_by_predicate": [],
+      "contract_disjunctive_with_question": null,
+      "evidence_refs": [],
+      "observed_contract": null
+    },
+    {
+      "id": "P31A-024",
+      "rule_id": "unsupported-court-policy-topic",
+      "source": "nibrs",
+      "pair": "unsupported-court-policy-topic x nibrs",
+      "role": "false_refusal",
+      "question": "How many aggravated assaults were reported in Phoenix, AZ in 2022?",
+      "expected_applicability": "does_not_apply",
+      "expected_disposition": "not_declined_by_this_rule",
+      "adjudication_basis": "A plain reported-crime count, the centre of the in-scope domain.",
+      "rule_stated_scope": "The datasets track reported crime and law-enforcement reporting, not court outcomes, incarceration, fines, immigration status, or policy registries.",
+      "probe_basis": null,
+      "dual_purpose": null,
+      "observed_base_result": null,
+      "pins": {
+        "base_tree": "e2d24acd37027f436590ed8eae58bb5b30414ffb",
+        "rule_source_file": "lib/source-capabilities.ts",
+        "inventory": "21 applicability pairs from 9 question-only definitions",
+        "authored": "2026-09-01"
+      },
+      "question_family": "count_by_place_period",
+      "expected_outcome": {
+        "applies": false,
+        "action": null,
+        "reason": null,
+        "note": "This rule contributes no action/reason pair for this case. Another rule or data limitation may still apply and remains separately accountable."
+      },
+      "contract_projection_required": false,
+      "expected_contract": null,
+      "contract_fields_read_by_predicate": [],
+      "contract_disjunctive_with_question": null,
+      "evidence_refs": [],
+      "observed_contract": null
+    },
+    {
+      "id": "P31A-025",
+      "rule_id": "unsupported-court-policy-topic",
+      "source": "shr",
+      "pair": "unsupported-court-policy-topic x shr",
+      "role": "positive",
+      "question": "How many people were convicted and sentenced for homicides in Los Angeles, CA in 2021?",
+      "expected_applicability": "applies",
+      "expected_disposition": "decline_capability",
+      "adjudication_basis": "Asks for convictions and sentencing - court outcomes, named explicitly in the stated scope as out of scope.",
+      "rule_stated_scope": "The datasets track reported crime and law-enforcement reporting, not court outcomes, incarceration, fines, immigration status, or policy registries.",
+      "probe_basis": null,
+      "dual_purpose": null,
+      "observed_base_result": null,
+      "pins": {
+        "base_tree": "e2d24acd37027f436590ed8eae58bb5b30414ffb",
+        "rule_source_file": "lib/source-capabilities.ts",
+        "inventory": "21 applicability pairs from 9 question-only definitions",
+        "authored": "2026-09-01"
+      },
+      "question_family": "court_or_policy_outcome",
+      "expected_outcome": {
+        "store": "query_log",
+        "action": "decline_capability",
+        "reason": "query_contract_failed",
+        "applies": true
+      },
+      "contract_projection_required": false,
+      "expected_contract": null,
+      "contract_fields_read_by_predicate": [],
+      "contract_disjunctive_with_question": null,
+      "evidence_refs": [],
+      "observed_contract": null
+    },
+    {
+      "id": "P31A-026",
+      "rule_id": "unsupported-court-policy-topic",
+      "source": "shr",
+      "pair": "unsupported-court-policy-topic x shr",
+      "role": "false_acceptance",
+      "question": "How many arrests were made for homicides in Los Angeles, CA in 2021?",
+      "expected_applicability": "does_not_apply",
+      "expected_disposition": "not_declined_by_this_rule",
+      "adjudication_basis": "Arrests are law-enforcement reporting, which the stated scope places explicitly IN scope. Availability in a given source is a separate question from topic scope.",
+      "rule_stated_scope": "The datasets track reported crime and law-enforcement reporting, not court outcomes, incarceration, fines, immigration status, or policy registries.",
+      "probe_basis": "Adjacent vocabulary: arrests sit next to the criminal-justice topics the rule excludes, without being one of them.",
+      "dual_purpose": "Also carries the false-refusal role for the predicate-over-match failure mode: if the rule applies here, the user is wrongly declined.",
+      "observed_base_result": null,
+      "pins": {
+        "base_tree": "e2d24acd37027f436590ed8eae58bb5b30414ffb",
+        "rule_source_file": "lib/source-capabilities.ts",
+        "inventory": "21 applicability pairs from 9 question-only definitions",
+        "authored": "2026-09-01"
+      },
+      "question_family": "arrest_activity",
+      "expected_outcome": {
+        "applies": false,
+        "action": null,
+        "reason": null,
+        "note": "This rule contributes no action/reason pair for this case. Another rule or data limitation may still apply and remains separately accountable."
+      },
+      "contract_projection_required": false,
+      "expected_contract": null,
+      "contract_fields_read_by_predicate": [],
+      "contract_disjunctive_with_question": null,
+      "evidence_refs": [],
+      "observed_contract": null
+    },
+    {
+      "id": "P31A-027",
+      "rule_id": "unsupported-court-policy-topic",
+      "source": "shr",
+      "pair": "unsupported-court-policy-topic x shr",
+      "role": "false_refusal",
+      "question": "How many homicides were reported in Los Angeles, CA in 2021?",
+      "expected_applicability": "does_not_apply",
+      "expected_disposition": "not_declined_by_this_rule",
+      "adjudication_basis": "A plain reported-crime count, the centre of the in-scope domain.",
+      "rule_stated_scope": "The datasets track reported crime and law-enforcement reporting, not court outcomes, incarceration, fines, immigration status, or policy registries.",
+      "probe_basis": null,
+      "dual_purpose": null,
+      "observed_base_result": null,
+      "pins": {
+        "base_tree": "e2d24acd37027f436590ed8eae58bb5b30414ffb",
+        "rule_source_file": "lib/source-capabilities.ts",
+        "inventory": "21 applicability pairs from 9 question-only definitions",
+        "authored": "2026-09-01"
+      },
+      "question_family": "count_by_place_period",
+      "expected_outcome": {
+        "applies": false,
+        "action": null,
+        "reason": null,
+        "note": "This rule contributes no action/reason pair for this case. Another rule or data limitation may still apply and remains separately accountable."
+      },
+      "contract_projection_required": false,
+      "expected_contract": null,
+      "contract_fields_read_by_predicate": [],
+      "contract_disjunctive_with_question": null,
+      "evidence_refs": [],
+      "observed_contract": null
+    },
+    {
+      "id": "P31A-028",
+      "rule_id": "unsupported-court-policy-topic",
+      "source": "hate_crime",
+      "pair": "unsupported-court-policy-topic x hate_crime",
+      "role": "positive",
+      "question": "How many people were convicted and sentenced for hate crimes in Seattle, WA in 2022?",
+      "expected_applicability": "applies",
+      "expected_disposition": "decline_capability",
+      "adjudication_basis": "Asks for convictions and sentencing - court outcomes, named explicitly in the stated scope as out of scope.",
+      "rule_stated_scope": "The datasets track reported crime and law-enforcement reporting, not court outcomes, incarceration, fines, immigration status, or policy registries.",
+      "probe_basis": null,
+      "dual_purpose": null,
+      "observed_base_result": null,
+      "pins": {
+        "base_tree": "e2d24acd37027f436590ed8eae58bb5b30414ffb",
+        "rule_source_file": "lib/source-capabilities.ts",
+        "inventory": "21 applicability pairs from 9 question-only definitions",
+        "authored": "2026-09-01"
+      },
+      "question_family": "court_or_policy_outcome",
+      "expected_outcome": {
+        "store": "query_log",
+        "action": "decline_capability",
+        "reason": "query_contract_failed",
+        "applies": true
+      },
+      "contract_projection_required": false,
+      "expected_contract": null,
+      "contract_fields_read_by_predicate": [],
+      "contract_disjunctive_with_question": null,
+      "evidence_refs": [],
+      "observed_contract": null
+    },
+    {
+      "id": "P31A-029",
+      "rule_id": "unsupported-court-policy-topic",
+      "source": "hate_crime",
+      "pair": "unsupported-court-policy-topic x hate_crime",
+      "role": "false_acceptance",
+      "question": "How many arrests were made for hate crimes in Seattle, WA in 2022?",
+      "expected_applicability": "does_not_apply",
+      "expected_disposition": "not_declined_by_this_rule",
+      "adjudication_basis": "Arrests are law-enforcement reporting, which the stated scope places explicitly IN scope. Availability in a given source is a separate question from topic scope.",
+      "rule_stated_scope": "The datasets track reported crime and law-enforcement reporting, not court outcomes, incarceration, fines, immigration status, or policy registries.",
+      "probe_basis": "Adjacent vocabulary: arrests sit next to the criminal-justice topics the rule excludes, without being one of them.",
+      "dual_purpose": "Also carries the false-refusal role for the predicate-over-match failure mode: if the rule applies here, the user is wrongly declined.",
+      "observed_base_result": null,
+      "pins": {
+        "base_tree": "e2d24acd37027f436590ed8eae58bb5b30414ffb",
+        "rule_source_file": "lib/source-capabilities.ts",
+        "inventory": "21 applicability pairs from 9 question-only definitions",
+        "authored": "2026-09-01"
+      },
+      "question_family": "arrest_activity",
+      "expected_outcome": {
+        "applies": false,
+        "action": null,
+        "reason": null,
+        "note": "This rule contributes no action/reason pair for this case. Another rule or data limitation may still apply and remains separately accountable."
+      },
+      "contract_projection_required": false,
+      "expected_contract": null,
+      "contract_fields_read_by_predicate": [],
+      "contract_disjunctive_with_question": null,
+      "evidence_refs": [],
+      "observed_contract": null
+    },
+    {
+      "id": "P31A-030",
+      "rule_id": "unsupported-court-policy-topic",
+      "source": "hate_crime",
+      "pair": "unsupported-court-policy-topic x hate_crime",
+      "role": "false_refusal",
+      "question": "How many hate crimes were reported in Seattle, WA in 2022?",
+      "expected_applicability": "does_not_apply",
+      "expected_disposition": "not_declined_by_this_rule",
+      "adjudication_basis": "A plain reported-crime count, the centre of the in-scope domain.",
+      "rule_stated_scope": "The datasets track reported crime and law-enforcement reporting, not court outcomes, incarceration, fines, immigration status, or policy registries.",
+      "probe_basis": null,
+      "dual_purpose": null,
+      "observed_base_result": null,
+      "pins": {
+        "base_tree": "e2d24acd37027f436590ed8eae58bb5b30414ffb",
+        "rule_source_file": "lib/source-capabilities.ts",
+        "inventory": "21 applicability pairs from 9 question-only definitions",
+        "authored": "2026-09-01"
+      },
+      "question_family": "count_by_place_period",
+      "expected_outcome": {
+        "applies": false,
+        "action": null,
+        "reason": null,
+        "note": "This rule contributes no action/reason pair for this case. Another rule or data limitation may still apply and remains separately accountable."
+      },
+      "contract_projection_required": false,
+      "expected_contract": null,
+      "contract_fields_read_by_predicate": [],
+      "contract_disjunctive_with_question": null,
+      "evidence_refs": [],
+      "observed_contract": null
+    },
+    {
+      "id": "P31A-031",
+      "rule_id": "demographic-rate-unsupported",
+      "source": "current",
+      "pair": "demographic-rate-unsupported x current",
+      "role": "positive",
+      "question": "What was the murder rate per 100,000 for Black residents of Chicago, IL in June 2026?",
+      "expected_applicability": "applies",
+      "expected_disposition": "decline_capability",
+      "adjudication_basis": "Requests a per-capita RATE for a demographic group, which requires the missing denominator.",
+      "rule_stated_scope": "No matching population denominators by age, race, or sex, so a per-capita rate for a demographic group cannot be computed. Counts and shares remain available.",
+      "probe_basis": null,
+      "dual_purpose": null,
+      "observed_base_result": null,
+      "pins": {
+        "base_tree": "e2d24acd37027f436590ed8eae58bb5b30414ffb",
+        "rule_source_file": "lib/source-capabilities.ts",
+        "inventory": "21 applicability pairs from 9 question-only definitions",
+        "authored": "2026-09-01"
+      },
+      "question_family": "demographic_rate",
+      "expected_outcome": {
+        "store": "query_log",
+        "action": "decline_capability",
+        "reason": "query_contract_failed",
+        "applies": true
+      },
+      "contract_projection_required": true,
+      "expected_contract": {
+        "metric.unsupportedReason": "demographic_rate_denominator_unavailable"
+      },
+      "contract_fields_read_by_predicate": [
+        "metric.unsupportedReason"
+      ],
+      "contract_disjunctive_with_question": false,
+      "evidence_refs": [],
+      "observed_contract": null
+    },
+    {
+      "id": "P31A-032",
+      "rule_id": "demographic-rate-unsupported",
+      "source": "current",
+      "pair": "demographic-rate-unsupported x current",
+      "role": "false_acceptance",
+      "question": "How many murders in Chicago, IL in June 2026 had Black victims?",
+      "expected_applicability": "does_not_apply",
+      "expected_disposition": "not_declined_by_this_rule",
+      "adjudication_basis": "A demographic COUNT, which the stated scope explicitly says remains available. Only the rate is unsupported.",
+      "rule_stated_scope": "No matching population denominators by age, race, or sex, so a per-capita rate for a demographic group cannot be computed. Counts and shares remain available.",
+      "probe_basis": "Adjacent: same demographic breakdown, no denominator required.",
+      "dual_purpose": "Also carries the false-refusal role for the predicate-over-match failure mode: if the rule applies here, the user is wrongly declined.",
+      "observed_base_result": null,
+      "pins": {
+        "base_tree": "e2d24acd37027f436590ed8eae58bb5b30414ffb",
+        "rule_source_file": "lib/source-capabilities.ts",
+        "inventory": "21 applicability pairs from 9 question-only definitions",
+        "authored": "2026-09-01"
+      },
+      "question_family": "demographic_count",
+      "expected_outcome": {
+        "applies": false,
+        "action": null,
+        "reason": null,
+        "note": "This rule contributes no action/reason pair for this case. Another rule or data limitation may still apply and remains separately accountable."
+      },
+      "contract_projection_required": true,
+      "expected_contract": {
+        "metric.unsupportedReason": null
+      },
+      "contract_fields_read_by_predicate": [
+        "metric.unsupportedReason"
+      ],
+      "contract_disjunctive_with_question": false,
+      "evidence_refs": [],
+      "observed_contract": null
+    },
+    {
+      "id": "P31A-033",
+      "rule_id": "demographic-rate-unsupported",
+      "source": "current",
+      "pair": "demographic-rate-unsupported x current",
+      "role": "false_refusal",
+      "question": "What was the overall murder rate per 100,000 in Chicago, IL in June 2026?",
+      "expected_applicability": "does_not_apply",
+      "expected_disposition": "not_declined_by_this_rule",
+      "adjudication_basis": "An overall rate using total population, which the stated scope explicitly offers as the supported alternative.",
+      "rule_stated_scope": "No matching population denominators by age, race, or sex, so a per-capita rate for a demographic group cannot be computed. Counts and shares remain available.",
+      "probe_basis": null,
+      "dual_purpose": null,
+      "observed_base_result": null,
+      "pins": {
+        "base_tree": "e2d24acd37027f436590ed8eae58bb5b30414ffb",
+        "rule_source_file": "lib/source-capabilities.ts",
+        "inventory": "21 applicability pairs from 9 question-only definitions",
+        "authored": "2026-09-01"
+      },
+      "question_family": "overall_rate",
+      "expected_outcome": {
+        "applies": false,
+        "action": null,
+        "reason": null,
+        "note": "This rule contributes no action/reason pair for this case. Another rule or data limitation may still apply and remains separately accountable."
+      },
+      "contract_projection_required": true,
+      "expected_contract": {
+        "metric.unsupportedReason": null
+      },
+      "contract_fields_read_by_predicate": [
+        "metric.unsupportedReason"
+      ],
+      "contract_disjunctive_with_question": false,
+      "evidence_refs": [],
+      "observed_contract": null
+    },
+    {
+      "id": "P31A-034",
+      "rule_id": "demographic-rate-unsupported",
+      "source": "historical",
+      "pair": "demographic-rate-unsupported x historical",
+      "role": "positive",
+      "question": "What was the murder rate per 100,000 for Black residents of Chicago, IL in 2019?",
+      "expected_applicability": "applies",
+      "expected_disposition": "decline_capability",
+      "adjudication_basis": "Requests a per-capita RATE for a demographic group, which requires the missing denominator.",
+      "rule_stated_scope": "No matching population denominators by age, race, or sex, so a per-capita rate for a demographic group cannot be computed. Counts and shares remain available.",
+      "probe_basis": null,
+      "dual_purpose": null,
+      "observed_base_result": null,
+      "pins": {
+        "base_tree": "e2d24acd37027f436590ed8eae58bb5b30414ffb",
+        "rule_source_file": "lib/source-capabilities.ts",
+        "inventory": "21 applicability pairs from 9 question-only definitions",
+        "authored": "2026-09-01"
+      },
+      "question_family": "demographic_rate",
+      "expected_outcome": {
+        "store": "query_log",
+        "action": "decline_capability",
+        "reason": "query_contract_failed",
+        "applies": true
+      },
+      "contract_projection_required": true,
+      "expected_contract": {
+        "metric.unsupportedReason": "demographic_rate_denominator_unavailable"
+      },
+      "contract_fields_read_by_predicate": [
+        "metric.unsupportedReason"
+      ],
+      "contract_disjunctive_with_question": false,
+      "evidence_refs": [],
+      "observed_contract": null
+    },
+    {
+      "id": "P31A-035",
+      "rule_id": "demographic-rate-unsupported",
+      "source": "historical",
+      "pair": "demographic-rate-unsupported x historical",
+      "role": "false_acceptance",
+      "question": "How many murders in Chicago, IL in 2019 had Black victims?",
+      "expected_applicability": "does_not_apply",
+      "expected_disposition": "not_declined_by_this_rule",
+      "adjudication_basis": "A demographic COUNT, which the stated scope explicitly says remains available. Only the rate is unsupported.",
+      "rule_stated_scope": "No matching population denominators by age, race, or sex, so a per-capita rate for a demographic group cannot be computed. Counts and shares remain available.",
+      "probe_basis": "Adjacent: same demographic breakdown, no denominator required.",
+      "dual_purpose": "Also carries the false-refusal role for the predicate-over-match failure mode: if the rule applies here, the user is wrongly declined.",
+      "observed_base_result": null,
+      "pins": {
+        "base_tree": "e2d24acd37027f436590ed8eae58bb5b30414ffb",
+        "rule_source_file": "lib/source-capabilities.ts",
+        "inventory": "21 applicability pairs from 9 question-only definitions",
+        "authored": "2026-09-01"
+      },
+      "question_family": "demographic_count",
+      "expected_outcome": {
+        "applies": false,
+        "action": null,
+        "reason": null,
+        "note": "This rule contributes no action/reason pair for this case. Another rule or data limitation may still apply and remains separately accountable."
+      },
+      "contract_projection_required": true,
+      "expected_contract": {
+        "metric.unsupportedReason": null
+      },
+      "contract_fields_read_by_predicate": [
+        "metric.unsupportedReason"
+      ],
+      "contract_disjunctive_with_question": false,
+      "evidence_refs": [],
+      "observed_contract": null
+    },
+    {
+      "id": "P31A-036",
+      "rule_id": "demographic-rate-unsupported",
+      "source": "historical",
+      "pair": "demographic-rate-unsupported x historical",
+      "role": "false_refusal",
+      "question": "What was the overall murder rate per 100,000 in Chicago, IL in 2019?",
+      "expected_applicability": "does_not_apply",
+      "expected_disposition": "not_declined_by_this_rule",
+      "adjudication_basis": "An overall rate using total population, which the stated scope explicitly offers as the supported alternative.",
+      "rule_stated_scope": "No matching population denominators by age, race, or sex, so a per-capita rate for a demographic group cannot be computed. Counts and shares remain available.",
+      "probe_basis": null,
+      "dual_purpose": null,
+      "observed_base_result": null,
+      "pins": {
+        "base_tree": "e2d24acd37027f436590ed8eae58bb5b30414ffb",
+        "rule_source_file": "lib/source-capabilities.ts",
+        "inventory": "21 applicability pairs from 9 question-only definitions",
+        "authored": "2026-09-01"
+      },
+      "question_family": "overall_rate",
+      "expected_outcome": {
+        "applies": false,
+        "action": null,
+        "reason": null,
+        "note": "This rule contributes no action/reason pair for this case. Another rule or data limitation may still apply and remains separately accountable."
+      },
+      "contract_projection_required": true,
+      "expected_contract": {
+        "metric.unsupportedReason": null
+      },
+      "contract_fields_read_by_predicate": [
+        "metric.unsupportedReason"
+      ],
+      "contract_disjunctive_with_question": false,
+      "evidence_refs": [],
+      "observed_contract": null
+    },
+    {
+      "id": "P31A-037",
+      "rule_id": "demographic-rate-unsupported",
+      "source": "nibrs",
+      "pair": "demographic-rate-unsupported x nibrs",
+      "role": "positive",
+      "question": "What was the aggravated assault rate per 100,000 for Black residents of Phoenix, AZ in 2022?",
+      "expected_applicability": "applies",
+      "expected_disposition": "decline_capability",
+      "adjudication_basis": "Requests a per-capita RATE for a demographic group, which requires the missing denominator.",
+      "rule_stated_scope": "No matching population denominators by age, race, or sex, so a per-capita rate for a demographic group cannot be computed. Counts and shares remain available.",
+      "probe_basis": null,
+      "dual_purpose": null,
+      "observed_base_result": null,
+      "pins": {
+        "base_tree": "e2d24acd37027f436590ed8eae58bb5b30414ffb",
+        "rule_source_file": "lib/source-capabilities.ts",
+        "inventory": "21 applicability pairs from 9 question-only definitions",
+        "authored": "2026-09-01"
+      },
+      "question_family": "demographic_rate",
+      "expected_outcome": {
+        "store": "query_log",
+        "action": "decline_capability",
+        "reason": "query_contract_failed",
+        "applies": true
+      },
+      "contract_projection_required": true,
+      "expected_contract": {
+        "metric.unsupportedReason": "demographic_rate_denominator_unavailable"
+      },
+      "contract_fields_read_by_predicate": [
+        "metric.unsupportedReason"
+      ],
+      "contract_disjunctive_with_question": false,
+      "evidence_refs": [],
+      "observed_contract": null
+    },
+    {
+      "id": "P31A-038",
+      "rule_id": "demographic-rate-unsupported",
+      "source": "nibrs",
+      "pair": "demographic-rate-unsupported x nibrs",
+      "role": "false_acceptance",
+      "question": "How many aggravated assaults in Phoenix, AZ in 2022 had Black victims?",
+      "expected_applicability": "does_not_apply",
+      "expected_disposition": "not_declined_by_this_rule",
+      "adjudication_basis": "A demographic COUNT, which the stated scope explicitly says remains available. Only the rate is unsupported.",
+      "rule_stated_scope": "No matching population denominators by age, race, or sex, so a per-capita rate for a demographic group cannot be computed. Counts and shares remain available.",
+      "probe_basis": "Adjacent: same demographic breakdown, no denominator required.",
+      "dual_purpose": "Also carries the false-refusal role for the predicate-over-match failure mode: if the rule applies here, the user is wrongly declined.",
+      "observed_base_result": null,
+      "pins": {
+        "base_tree": "e2d24acd37027f436590ed8eae58bb5b30414ffb",
+        "rule_source_file": "lib/source-capabilities.ts",
+        "inventory": "21 applicability pairs from 9 question-only definitions",
+        "authored": "2026-09-01"
+      },
+      "question_family": "demographic_count",
+      "expected_outcome": {
+        "applies": false,
+        "action": null,
+        "reason": null,
+        "note": "This rule contributes no action/reason pair for this case. Another rule or data limitation may still apply and remains separately accountable."
+      },
+      "contract_projection_required": true,
+      "expected_contract": {
+        "metric.unsupportedReason": null
+      },
+      "contract_fields_read_by_predicate": [
+        "metric.unsupportedReason"
+      ],
+      "contract_disjunctive_with_question": false,
+      "evidence_refs": [],
+      "observed_contract": null
+    },
+    {
+      "id": "P31A-039",
+      "rule_id": "demographic-rate-unsupported",
+      "source": "nibrs",
+      "pair": "demographic-rate-unsupported x nibrs",
+      "role": "false_refusal",
+      "question": "What was the overall aggravated assault rate per 100,000 in Phoenix, AZ in 2022?",
+      "expected_applicability": "does_not_apply",
+      "expected_disposition": "not_declined_by_this_rule",
+      "adjudication_basis": "An overall rate using total population, which the stated scope explicitly offers as the supported alternative.",
+      "rule_stated_scope": "No matching population denominators by age, race, or sex, so a per-capita rate for a demographic group cannot be computed. Counts and shares remain available.",
+      "probe_basis": null,
+      "dual_purpose": null,
+      "observed_base_result": null,
+      "pins": {
+        "base_tree": "e2d24acd37027f436590ed8eae58bb5b30414ffb",
+        "rule_source_file": "lib/source-capabilities.ts",
+        "inventory": "21 applicability pairs from 9 question-only definitions",
+        "authored": "2026-09-01"
+      },
+      "question_family": "overall_rate",
+      "expected_outcome": {
+        "applies": false,
+        "action": null,
+        "reason": null,
+        "note": "This rule contributes no action/reason pair for this case. Another rule or data limitation may still apply and remains separately accountable."
+      },
+      "contract_projection_required": true,
+      "expected_contract": {
+        "metric.unsupportedReason": null
+      },
+      "contract_fields_read_by_predicate": [
+        "metric.unsupportedReason"
+      ],
+      "contract_disjunctive_with_question": false,
+      "evidence_refs": [],
+      "observed_contract": null
+    },
+    {
+      "id": "P31A-040",
+      "rule_id": "demographic-rate-unsupported",
+      "source": "shr",
+      "pair": "demographic-rate-unsupported x shr",
+      "role": "positive",
+      "question": "What was the homicide rate per 100,000 for Black residents of Los Angeles, CA in 2021?",
+      "expected_applicability": "applies",
+      "expected_disposition": "decline_capability",
+      "adjudication_basis": "Requests a per-capita RATE for a demographic group, which requires the missing denominator.",
+      "rule_stated_scope": "No matching population denominators by age, race, or sex, so a per-capita rate for a demographic group cannot be computed. Counts and shares remain available.",
+      "probe_basis": null,
+      "dual_purpose": null,
+      "observed_base_result": null,
+      "pins": {
+        "base_tree": "e2d24acd37027f436590ed8eae58bb5b30414ffb",
+        "rule_source_file": "lib/source-capabilities.ts",
+        "inventory": "21 applicability pairs from 9 question-only definitions",
+        "authored": "2026-09-01"
+      },
+      "question_family": "demographic_rate",
+      "expected_outcome": {
+        "store": "query_log",
+        "action": "decline_capability",
+        "reason": "query_contract_failed",
+        "applies": true
+      },
+      "contract_projection_required": true,
+      "expected_contract": {
+        "metric.unsupportedReason": "demographic_rate_denominator_unavailable"
+      },
+      "contract_fields_read_by_predicate": [
+        "metric.unsupportedReason"
+      ],
+      "contract_disjunctive_with_question": false,
+      "evidence_refs": [],
+      "observed_contract": null
+    },
+    {
+      "id": "P31A-041",
+      "rule_id": "demographic-rate-unsupported",
+      "source": "shr",
+      "pair": "demographic-rate-unsupported x shr",
+      "role": "false_acceptance",
+      "question": "How many homicides in Los Angeles, CA in 2021 had Black victims?",
+      "expected_applicability": "does_not_apply",
+      "expected_disposition": "not_declined_by_this_rule",
+      "adjudication_basis": "A demographic COUNT, which the stated scope explicitly says remains available. Only the rate is unsupported.",
+      "rule_stated_scope": "No matching population denominators by age, race, or sex, so a per-capita rate for a demographic group cannot be computed. Counts and shares remain available.",
+      "probe_basis": "Adjacent: same demographic breakdown, no denominator required.",
+      "dual_purpose": "Also carries the false-refusal role for the predicate-over-match failure mode: if the rule applies here, the user is wrongly declined.",
+      "observed_base_result": null,
+      "pins": {
+        "base_tree": "e2d24acd37027f436590ed8eae58bb5b30414ffb",
+        "rule_source_file": "lib/source-capabilities.ts",
+        "inventory": "21 applicability pairs from 9 question-only definitions",
+        "authored": "2026-09-01"
+      },
+      "question_family": "demographic_count",
+      "expected_outcome": {
+        "applies": false,
+        "action": null,
+        "reason": null,
+        "note": "This rule contributes no action/reason pair for this case. Another rule or data limitation may still apply and remains separately accountable."
+      },
+      "contract_projection_required": true,
+      "expected_contract": {
+        "metric.unsupportedReason": null
+      },
+      "contract_fields_read_by_predicate": [
+        "metric.unsupportedReason"
+      ],
+      "contract_disjunctive_with_question": false,
+      "evidence_refs": [],
+      "observed_contract": null
+    },
+    {
+      "id": "P31A-042",
+      "rule_id": "demographic-rate-unsupported",
+      "source": "shr",
+      "pair": "demographic-rate-unsupported x shr",
+      "role": "false_refusal",
+      "question": "What was the overall homicide rate per 100,000 in Los Angeles, CA in 2021?",
+      "expected_applicability": "does_not_apply",
+      "expected_disposition": "not_declined_by_this_rule",
+      "adjudication_basis": "An overall rate using total population, which the stated scope explicitly offers as the supported alternative.",
+      "rule_stated_scope": "No matching population denominators by age, race, or sex, so a per-capita rate for a demographic group cannot be computed. Counts and shares remain available.",
+      "probe_basis": null,
+      "dual_purpose": null,
+      "observed_base_result": null,
+      "pins": {
+        "base_tree": "e2d24acd37027f436590ed8eae58bb5b30414ffb",
+        "rule_source_file": "lib/source-capabilities.ts",
+        "inventory": "21 applicability pairs from 9 question-only definitions",
+        "authored": "2026-09-01"
+      },
+      "question_family": "overall_rate",
+      "expected_outcome": {
+        "applies": false,
+        "action": null,
+        "reason": null,
+        "note": "This rule contributes no action/reason pair for this case. Another rule or data limitation may still apply and remains separately accountable."
+      },
+      "contract_projection_required": true,
+      "expected_contract": {
+        "metric.unsupportedReason": null
+      },
+      "contract_fields_read_by_predicate": [
+        "metric.unsupportedReason"
+      ],
+      "contract_disjunctive_with_question": false,
+      "evidence_refs": [],
+      "observed_contract": null
+    },
+    {
+      "id": "P31A-043",
+      "rule_id": "demographic-rate-unsupported",
+      "source": "hate_crime",
+      "pair": "demographic-rate-unsupported x hate_crime",
+      "role": "positive",
+      "question": "What was the hate crime rate per 100,000 for Black residents of Seattle, WA in 2022?",
+      "expected_applicability": "applies",
+      "expected_disposition": "decline_capability",
+      "adjudication_basis": "Requests a per-capita RATE for a demographic group, which requires the missing denominator.",
+      "rule_stated_scope": "No matching population denominators by age, race, or sex, so a per-capita rate for a demographic group cannot be computed. Counts and shares remain available.",
+      "probe_basis": null,
+      "dual_purpose": null,
+      "observed_base_result": null,
+      "pins": {
+        "base_tree": "e2d24acd37027f436590ed8eae58bb5b30414ffb",
+        "rule_source_file": "lib/source-capabilities.ts",
+        "inventory": "21 applicability pairs from 9 question-only definitions",
+        "authored": "2026-09-01"
+      },
+      "question_family": "demographic_rate",
+      "expected_outcome": {
+        "store": "query_log",
+        "action": "decline_capability",
+        "reason": "query_contract_failed",
+        "applies": true
+      },
+      "contract_projection_required": true,
+      "expected_contract": {
+        "metric.unsupportedReason": "demographic_rate_denominator_unavailable"
+      },
+      "contract_fields_read_by_predicate": [
+        "metric.unsupportedReason"
+      ],
+      "contract_disjunctive_with_question": false,
+      "evidence_refs": [],
+      "observed_contract": null
+    },
+    {
+      "id": "P31A-044",
+      "rule_id": "demographic-rate-unsupported",
+      "source": "hate_crime",
+      "pair": "demographic-rate-unsupported x hate_crime",
+      "role": "false_acceptance",
+      "question": "How many hate crimes in Seattle, WA in 2022 had Black victims?",
+      "expected_applicability": "does_not_apply",
+      "expected_disposition": "not_declined_by_this_rule",
+      "adjudication_basis": "A demographic COUNT, which the stated scope explicitly says remains available. Only the rate is unsupported.",
+      "rule_stated_scope": "No matching population denominators by age, race, or sex, so a per-capita rate for a demographic group cannot be computed. Counts and shares remain available.",
+      "probe_basis": "Adjacent: same demographic breakdown, no denominator required.",
+      "dual_purpose": "Also carries the false-refusal role for the predicate-over-match failure mode: if the rule applies here, the user is wrongly declined.",
+      "observed_base_result": null,
+      "pins": {
+        "base_tree": "e2d24acd37027f436590ed8eae58bb5b30414ffb",
+        "rule_source_file": "lib/source-capabilities.ts",
+        "inventory": "21 applicability pairs from 9 question-only definitions",
+        "authored": "2026-09-01"
+      },
+      "question_family": "demographic_count",
+      "expected_outcome": {
+        "applies": false,
+        "action": null,
+        "reason": null,
+        "note": "This rule contributes no action/reason pair for this case. Another rule or data limitation may still apply and remains separately accountable."
+      },
+      "contract_projection_required": true,
+      "expected_contract": {
+        "metric.unsupportedReason": null
+      },
+      "contract_fields_read_by_predicate": [
+        "metric.unsupportedReason"
+      ],
+      "contract_disjunctive_with_question": false,
+      "evidence_refs": [],
+      "observed_contract": null
+    },
+    {
+      "id": "P31A-045",
+      "rule_id": "demographic-rate-unsupported",
+      "source": "hate_crime",
+      "pair": "demographic-rate-unsupported x hate_crime",
+      "role": "false_refusal",
+      "question": "What was the overall hate crime rate per 100,000 in Seattle, WA in 2022?",
+      "expected_applicability": "does_not_apply",
+      "expected_disposition": "not_declined_by_this_rule",
+      "adjudication_basis": "An overall rate using total population, which the stated scope explicitly offers as the supported alternative.",
+      "rule_stated_scope": "No matching population denominators by age, race, or sex, so a per-capita rate for a demographic group cannot be computed. Counts and shares remain available.",
+      "probe_basis": null,
+      "dual_purpose": null,
+      "observed_base_result": null,
+      "pins": {
+        "base_tree": "e2d24acd37027f436590ed8eae58bb5b30414ffb",
+        "rule_source_file": "lib/source-capabilities.ts",
+        "inventory": "21 applicability pairs from 9 question-only definitions",
+        "authored": "2026-09-01"
+      },
+      "question_family": "overall_rate",
+      "expected_outcome": {
+        "applies": false,
+        "action": null,
+        "reason": null,
+        "note": "This rule contributes no action/reason pair for this case. Another rule or data limitation may still apply and remains separately accountable."
+      },
+      "contract_projection_required": true,
+      "expected_contract": {
+        "metric.unsupportedReason": null
+      },
+      "contract_fields_read_by_predicate": [
+        "metric.unsupportedReason"
+      ],
+      "contract_disjunctive_with_question": false,
+      "evidence_refs": [],
+      "observed_contract": null
+    },
+    {
+      "id": "P31A-046",
+      "rule_id": "nibrs-clearance-weapon-unsupported",
+      "source": "nibrs",
+      "pair": "nibrs-clearance-weapon-unsupported x nibrs",
+      "role": "positive",
+      "question": "What is the clearance rate for firearm aggravated assaults in Phoenix, AZ in 2022?",
+      "expected_applicability": "applies",
+      "expected_disposition": "decline_capability",
+      "adjudication_basis": "Requests a clearance rate broken down by weapon type - exactly the combination the stated scope excludes.",
+      "rule_stated_scope": "NIBRS cannot calculate clearance rates broken down by weapon type. Overall clearance rates and weapon-specific counts are available.",
+      "probe_basis": null,
+      "dual_purpose": null,
+      "observed_base_result": null,
+      "pins": {
+        "base_tree": "e2d24acd37027f436590ed8eae58bb5b30414ffb",
+        "rule_source_file": "lib/source-capabilities.ts",
+        "inventory": "21 applicability pairs from 9 question-only definitions",
+        "authored": "2026-09-01"
+      },
+      "question_family": "clearance_rate_by_weapon",
+      "expected_outcome": {
+        "store": "query_log",
+        "action": "decline_capability",
+        "reason": "query_contract_failed",
+        "applies": true
+      },
+      "contract_projection_required": true,
+      "expected_contract": {
+        "metric.unit": "clearance_rate",
+        "metric.topic": "aggravated_assault"
+      },
+      "contract_fields_read_by_predicate": [
+        "metric.unit",
+        "metric.topic"
+      ],
+      "contract_disjunctive_with_question": true,
+      "evidence_refs": [],
+      "observed_contract": null
+    },
+    {
+      "id": "P31A-047",
+      "rule_id": "nibrs-clearance-weapon-unsupported",
+      "source": "nibrs",
+      "pair": "nibrs-clearance-weapon-unsupported x nibrs",
+      "role": "false_acceptance",
+      "question": "How many firearm aggravated assaults were reported in Phoenix, AZ in 2022?",
+      "expected_applicability": "does_not_apply",
+      "expected_disposition": "not_declined_by_this_rule",
+      "adjudication_basis": "A weapon-specific COUNT, which the stated scope explicitly offers as available.",
+      "rule_stated_scope": "NIBRS cannot calculate clearance rates broken down by weapon type. Overall clearance rates and weapon-specific counts are available.",
+      "probe_basis": "Adjacent: same weapon qualifier, no clearance metric.",
+      "dual_purpose": "Also carries the false-refusal role for the predicate-over-match failure mode: if the rule applies here, the user is wrongly declined.",
+      "observed_base_result": null,
+      "pins": {
+        "base_tree": "e2d24acd37027f436590ed8eae58bb5b30414ffb",
+        "rule_source_file": "lib/source-capabilities.ts",
+        "inventory": "21 applicability pairs from 9 question-only definitions",
+        "authored": "2026-09-01"
+      },
+      "question_family": "weapon_specific_count",
+      "expected_outcome": {
+        "applies": false,
+        "action": null,
+        "reason": null,
+        "note": "This rule contributes no action/reason pair for this case. Another rule or data limitation may still apply and remains separately accountable."
+      },
+      "contract_projection_required": true,
+      "expected_contract": {
+        "metric.unit": "count",
+        "metric.topic": "aggravated_assault"
+      },
+      "contract_fields_read_by_predicate": [
+        "metric.unit",
+        "metric.topic"
+      ],
+      "contract_disjunctive_with_question": true,
+      "evidence_refs": [],
+      "observed_contract": null
+    },
+    {
+      "id": "P31A-048",
+      "rule_id": "nibrs-clearance-weapon-unsupported",
+      "source": "nibrs",
+      "pair": "nibrs-clearance-weapon-unsupported x nibrs",
+      "role": "false_refusal",
+      "question": "What is the overall clearance rate for aggravated assaults in Phoenix, AZ in 2022?",
+      "expected_applicability": "does_not_apply",
+      "expected_disposition": "not_declined_by_this_rule",
+      "adjudication_basis": "An overall clearance rate, the stated supported alternative.",
+      "rule_stated_scope": "NIBRS cannot calculate clearance rates broken down by weapon type. Overall clearance rates and weapon-specific counts are available.",
+      "probe_basis": null,
+      "dual_purpose": null,
+      "observed_base_result": null,
+      "pins": {
+        "base_tree": "e2d24acd37027f436590ed8eae58bb5b30414ffb",
+        "rule_source_file": "lib/source-capabilities.ts",
+        "inventory": "21 applicability pairs from 9 question-only definitions",
+        "authored": "2026-09-01"
+      },
+      "question_family": "clearance_rate",
+      "expected_outcome": {
+        "applies": false,
+        "action": null,
+        "reason": null,
+        "note": "This rule contributes no action/reason pair for this case. Another rule or data limitation may still apply and remains separately accountable."
+      },
+      "contract_projection_required": true,
+      "expected_contract": {
+        "metric.unit": "clearance_rate",
+        "metric.topic": "aggravated_assault"
+      },
+      "contract_fields_read_by_predicate": [
+        "metric.unit",
+        "metric.topic"
+      ],
+      "contract_disjunctive_with_question": true,
+      "evidence_refs": [],
+      "observed_contract": null
+    },
+    {
+      "id": "P31A-049",
+      "rule_id": "nibrs-shooting-category-unsupported",
+      "source": "nibrs",
+      "pair": "nibrs-shooting-category-unsupported x nibrs",
+      "role": "positive",
+      "question": "How many shootings were there in Phoenix, AZ in 2022?",
+      "expected_applicability": "applies",
+      "expected_disposition": "decline_capability",
+      "adjudication_basis": "Asks for a shooting category the FBI does not systematically track.",
+      "rule_stated_scope": "The FBI does not systematically track all shootings. Fatal shootings are available in SHR; firearm aggravated assaults are a broader NIBRS measure.",
+      "probe_basis": null,
+      "dual_purpose": null,
+      "observed_base_result": null,
+      "pins": {
+        "base_tree": "e2d24acd37027f436590ed8eae58bb5b30414ffb",
+        "rule_source_file": "lib/source-capabilities.ts",
+        "inventory": "21 applicability pairs from 9 question-only definitions",
+        "authored": "2026-09-01"
+      },
+      "question_family": "shooting_category",
+      "expected_outcome": {
+        "store": "query_log",
+        "action": "decline_capability",
+        "reason": "query_contract_failed",
+        "applies": true
+      },
+      "contract_projection_required": false,
+      "expected_contract": null,
+      "contract_fields_read_by_predicate": [],
+      "contract_disjunctive_with_question": null,
+      "evidence_refs": [],
+      "observed_contract": null
+    },
+    {
+      "id": "P31A-050",
+      "rule_id": "nibrs-shooting-category-unsupported",
+      "source": "nibrs",
+      "pair": "nibrs-shooting-category-unsupported x nibrs",
+      "role": "false_acceptance",
+      "question": "How many aggravated assaults involving a firearm were reported in Phoenix, AZ in 2022?",
+      "expected_applicability": "does_not_apply",
+      "expected_disposition": "not_declined_by_this_rule",
+      "adjudication_basis": "The stated scope names firearm aggravated assault as the available broader NIBRS measure.",
+      "rule_stated_scope": "The FBI does not systematically track all shootings. Fatal shootings are available in SHR; firearm aggravated assaults are a broader NIBRS measure.",
+      "probe_basis": "Designed against the pattern edge: the detector suppresses when the question already names the firearm-assault proxy.",
+      "dual_purpose": "Also carries the false-refusal role for the predicate-over-match failure mode: if the rule applies here, the user is wrongly declined.",
+      "observed_base_result": null,
+      "pins": {
+        "base_tree": "e2d24acd37027f436590ed8eae58bb5b30414ffb",
+        "rule_source_file": "lib/source-capabilities.ts",
+        "inventory": "21 applicability pairs from 9 question-only definitions",
+        "authored": "2026-09-01"
+      },
+      "question_family": "firearm_assault_proxy",
+      "expected_outcome": {
+        "applies": false,
+        "action": null,
+        "reason": null,
+        "note": "This rule contributes no action/reason pair for this case. Another rule or data limitation may still apply and remains separately accountable."
+      },
+      "contract_projection_required": false,
+      "expected_contract": null,
+      "contract_fields_read_by_predicate": [],
+      "contract_disjunctive_with_question": null,
+      "evidence_refs": [],
+      "observed_contract": null
+    },
+    {
+      "id": "P31A-051",
+      "rule_id": "nibrs-shooting-category-unsupported",
+      "source": "nibrs",
+      "pair": "nibrs-shooting-category-unsupported x nibrs",
+      "role": "false_refusal",
+      "question": "How many aggravated assaults were reported in Phoenix, AZ in 2022?",
+      "expected_applicability": "does_not_apply",
+      "expected_disposition": "not_declined_by_this_rule",
+      "adjudication_basis": "An ordinary NIBRS offense count with no shooting framing.",
+      "rule_stated_scope": "The FBI does not systematically track all shootings. Fatal shootings are available in SHR; firearm aggravated assaults are a broader NIBRS measure.",
+      "probe_basis": null,
+      "dual_purpose": null,
+      "observed_base_result": null,
+      "pins": {
+        "base_tree": "e2d24acd37027f436590ed8eae58bb5b30414ffb",
+        "rule_source_file": "lib/source-capabilities.ts",
+        "inventory": "21 applicability pairs from 9 question-only definitions",
+        "authored": "2026-09-01"
+      },
+      "question_family": "count_by_place_period",
+      "expected_outcome": {
+        "applies": false,
+        "action": null,
+        "reason": null,
+        "note": "This rule contributes no action/reason pair for this case. Another rule or data limitation may still apply and remains separately accountable."
+      },
+      "contract_projection_required": false,
+      "expected_contract": null,
+      "contract_fields_read_by_predicate": [],
+      "contract_disjunctive_with_question": null,
+      "evidence_refs": [],
+      "observed_contract": null
+    },
+    {
+      "id": "P31A-052",
+      "rule_id": "nibrs-countywide-demographics-unsupported",
+      "source": "nibrs",
+      "pair": "nibrs-countywide-demographics-unsupported x nibrs",
+      "role": "positive",
+      "question": "What was the age breakdown of aggravated assault victims across Maricopa County, AZ in 2022?",
+      "expected_applicability": "applies",
+      "expected_disposition": "decline_capability",
+      "adjudication_basis": "Countywide NIBRS aggregate with a demographic breakdown - both conditions the stated scope names.",
+      "rule_stated_scope": "Countywide NIBRS demographic breakdowns are unsupported because county totals combine agencies with varying participation and completeness.",
+      "probe_basis": null,
+      "dual_purpose": null,
+      "observed_base_result": null,
+      "pins": {
+        "base_tree": "e2d24acd37027f436590ed8eae58bb5b30414ffb",
+        "rule_source_file": "lib/source-capabilities.ts",
+        "inventory": "21 applicability pairs from 9 question-only definitions",
+        "authored": "2026-09-01"
+      },
+      "question_family": "countywide_demographic_breakdown",
+      "expected_outcome": {
+        "store": "query_log",
+        "action": "decline_capability",
+        "reason": "query_contract_failed",
+        "applies": true
+      },
+      "contract_projection_required": true,
+      "expected_contract": {
+        "geography.kind": "county",
+        "breakdowns": [
+          "age_group"
+        ]
+      },
+      "contract_fields_read_by_predicate": [
+        "geography.kind",
+        "breakdowns"
+      ],
+      "contract_disjunctive_with_question": true,
+      "evidence_refs": [],
+      "observed_contract": null
+    },
+    {
+      "id": "P31A-053",
+      "rule_id": "nibrs-countywide-demographics-unsupported",
+      "source": "nibrs",
+      "pair": "nibrs-countywide-demographics-unsupported x nibrs",
+      "role": "false_acceptance",
+      "question": "What was the age breakdown of aggravated assault victims in Phoenix, AZ in 2022?",
+      "expected_applicability": "does_not_apply",
+      "expected_disposition": "not_declined_by_this_rule",
+      "adjudication_basis": "Same demographic breakdown at AGENCY level, where participation is not aggregated across agencies. The stated reason does not apply.",
+      "rule_stated_scope": "Countywide NIBRS demographic breakdowns are unsupported because county totals combine agencies with varying participation and completeness.",
+      "probe_basis": "Adjacent: identical demographic request, one geography level down.",
+      "dual_purpose": "Also carries the false-refusal role for the predicate-over-match failure mode: if the rule applies here, the user is wrongly declined.",
+      "observed_base_result": null,
+      "pins": {
+        "base_tree": "e2d24acd37027f436590ed8eae58bb5b30414ffb",
+        "rule_source_file": "lib/source-capabilities.ts",
+        "inventory": "21 applicability pairs from 9 question-only definitions",
+        "authored": "2026-09-01"
+      },
+      "question_family": "agency_demographic_breakdown",
+      "expected_outcome": {
+        "applies": false,
+        "action": null,
+        "reason": null,
+        "note": "This rule contributes no action/reason pair for this case. Another rule or data limitation may still apply and remains separately accountable."
+      },
+      "contract_projection_required": true,
+      "expected_contract": {
+        "geography.kind": "city",
+        "breakdowns": [
+          "age_group"
+        ]
+      },
+      "contract_fields_read_by_predicate": [
+        "geography.kind",
+        "breakdowns"
+      ],
+      "contract_disjunctive_with_question": true,
+      "evidence_refs": [],
+      "observed_contract": null
+    },
+    {
+      "id": "P31A-054",
+      "rule_id": "nibrs-countywide-demographics-unsupported",
+      "source": "nibrs",
+      "pair": "nibrs-countywide-demographics-unsupported x nibrs",
+      "role": "false_refusal",
+      "question": "How many aggravated assaults were reported across Maricopa County, AZ in 2022?",
+      "expected_applicability": "does_not_apply",
+      "expected_disposition": "not_declined_by_this_rule",
+      "adjudication_basis": "A countywide count with no demographic breakdown - the county caveat applies, but this rule's condition does not.",
+      "rule_stated_scope": "Countywide NIBRS demographic breakdowns are unsupported because county totals combine agencies with varying participation and completeness.",
+      "probe_basis": null,
+      "dual_purpose": null,
+      "observed_base_result": null,
+      "pins": {
+        "base_tree": "e2d24acd37027f436590ed8eae58bb5b30414ffb",
+        "rule_source_file": "lib/source-capabilities.ts",
+        "inventory": "21 applicability pairs from 9 question-only definitions",
+        "authored": "2026-09-01"
+      },
+      "question_family": "countywide_count",
+      "expected_outcome": {
+        "applies": false,
+        "action": null,
+        "reason": null,
+        "note": "This rule contributes no action/reason pair for this case. Another rule or data limitation may still apply and remains separately accountable."
+      },
+      "contract_projection_required": true,
+      "expected_contract": {
+        "geography.kind": "county",
+        "breakdowns": []
+      },
+      "contract_fields_read_by_predicate": [
+        "geography.kind",
+        "breakdowns"
+      ],
+      "contract_disjunctive_with_question": true,
+      "evidence_refs": [],
+      "observed_contract": null
+    },
+    {
+      "id": "P31A-055",
+      "rule_id": "shr-non-homicide-unsupported",
+      "source": "shr",
+      "pair": "shr-non-homicide-unsupported x shr",
+      "role": "positive",
+      "question": "How many robberies were reported in Los Angeles, CA in 2021?",
+      "expected_applicability": "applies",
+      "expected_disposition": "decline_capability",
+      "adjudication_basis": "A non-homicide offense asked of a homicide-only dataset.",
+      "rule_stated_scope": "The Homicide Reports dataset contains only homicide data and cannot answer non-homicide offense, arrest, staffing, or broad crime-category questions.",
+      "probe_basis": null,
+      "dual_purpose": null,
+      "observed_base_result": null,
+      "pins": {
+        "base_tree": "e2d24acd37027f436590ed8eae58bb5b30414ffb",
+        "rule_source_file": "lib/source-capabilities.ts",
+        "inventory": "21 applicability pairs from 9 question-only definitions",
+        "authored": "2026-09-01"
+      },
+      "question_family": "non_homicide_offense",
+      "expected_outcome": {
+        "store": "query_log",
+        "action": "decline_capability",
+        "reason": "query_contract_failed",
+        "applies": true
+      },
+      "contract_projection_required": false,
+      "expected_contract": null,
+      "contract_fields_read_by_predicate": [],
+      "contract_disjunctive_with_question": null,
+      "evidence_refs": [],
+      "observed_contract": null
+    },
+    {
+      "id": "P31A-056",
+      "rule_id": "shr-non-homicide-unsupported",
+      "source": "shr",
+      "pair": "shr-non-homicide-unsupported x shr",
+      "role": "false_acceptance",
+      "question": "How many homicides occurred during a robbery in Los Angeles, CA in 2021?",
+      "expected_applicability": "does_not_apply",
+      "expected_disposition": "not_declined_by_this_rule",
+      "adjudication_basis": "A HOMICIDE question that names a robbery circumstance. The dataset records homicide circumstances, so this is in scope.",
+      "rule_stated_scope": "The Homicide Reports dataset contains only homicide data and cannot answer non-homicide offense, arrest, staffing, or broad crime-category questions.",
+      "probe_basis": "Designed against the pattern edge: the detector suppresses when a homicide term co-occurs with the non-homicide term.",
+      "dual_purpose": "Also carries the false-refusal role for the predicate-over-match failure mode: if the rule applies here, the user is wrongly declined.",
+      "observed_base_result": null,
+      "pins": {
+        "base_tree": "e2d24acd37027f436590ed8eae58bb5b30414ffb",
+        "rule_source_file": "lib/source-capabilities.ts",
+        "inventory": "21 applicability pairs from 9 question-only definitions",
+        "authored": "2026-09-01"
+      },
+      "question_family": "homicide_circumstance",
+      "expected_outcome": {
+        "applies": false,
+        "action": null,
+        "reason": null,
+        "note": "This rule contributes no action/reason pair for this case. Another rule or data limitation may still apply and remains separately accountable."
+      },
+      "contract_projection_required": false,
+      "expected_contract": null,
+      "contract_fields_read_by_predicate": [],
+      "contract_disjunctive_with_question": null,
+      "evidence_refs": [],
+      "observed_contract": null
+    },
+    {
+      "id": "P31A-057",
+      "rule_id": "shr-non-homicide-unsupported",
+      "source": "shr",
+      "pair": "shr-non-homicide-unsupported x shr",
+      "role": "false_refusal",
+      "question": "How many homicides were reported in Los Angeles, CA in 2021?",
+      "expected_applicability": "does_not_apply",
+      "expected_disposition": "not_declined_by_this_rule",
+      "adjudication_basis": "The central in-scope question for this dataset.",
+      "rule_stated_scope": "The Homicide Reports dataset contains only homicide data and cannot answer non-homicide offense, arrest, staffing, or broad crime-category questions.",
+      "probe_basis": null,
+      "dual_purpose": null,
+      "observed_base_result": null,
+      "pins": {
+        "base_tree": "e2d24acd37027f436590ed8eae58bb5b30414ffb",
+        "rule_source_file": "lib/source-capabilities.ts",
+        "inventory": "21 applicability pairs from 9 question-only definitions",
+        "authored": "2026-09-01"
+      },
+      "question_family": "count_by_place_period",
+      "expected_outcome": {
+        "applies": false,
+        "action": null,
+        "reason": null,
+        "note": "This rule contributes no action/reason pair for this case. Another rule or data limitation may still apply and remains separately accountable."
+      },
+      "contract_projection_required": false,
+      "expected_contract": null,
+      "contract_fields_read_by_predicate": [],
+      "contract_disjunctive_with_question": null,
+      "evidence_refs": [],
+      "observed_contract": null
+    },
+    {
+      "id": "P31A-058",
+      "rule_id": "shr-clearance-unsupported",
+      "source": "shr",
+      "pair": "shr-clearance-unsupported x shr",
+      "role": "positive",
+      "question": "What share of homicides in Los Angeles, CA in 2021 were solved?",
+      "expected_applicability": "applies",
+      "expected_disposition": "decline_capability",
+      "adjudication_basis": "Asks whether cases were cleared, which the stated scope says this dataset does not track.",
+      "rule_stated_scope": "The Homicide Reports dataset does not track whether cases were solved or cleared. Clearance questions should use Historical or NIBRS.",
+      "probe_basis": null,
+      "dual_purpose": null,
+      "observed_base_result": null,
+      "pins": {
+        "base_tree": "e2d24acd37027f436590ed8eae58bb5b30414ffb",
+        "rule_source_file": "lib/source-capabilities.ts",
+        "inventory": "21 applicability pairs from 9 question-only definitions",
+        "authored": "2026-09-01"
+      },
+      "question_family": "homicide_case_resolution",
+      "expected_outcome": {
+        "store": "query_log",
+        "action": "decline_capability",
+        "reason": "query_contract_failed",
+        "applies": true
+      },
+      "contract_projection_required": true,
+      "expected_contract": {
+        "metric.unit": "clearance_rate"
+      },
+      "contract_fields_read_by_predicate": [
+        "metric.unit"
+      ],
+      "contract_disjunctive_with_question": true,
+      "evidence_refs": [],
+      "observed_contract": null
+    },
+    {
+      "id": "P31A-059",
+      "rule_id": "shr-clearance-unsupported",
+      "source": "shr",
+      "pair": "shr-clearance-unsupported x shr",
+      "role": "false_acceptance",
+      "question": "How many homicides in Los Angeles, CA in 2021 involved a known offender relationship?",
+      "expected_applicability": "does_not_apply",
+      "expected_disposition": "not_declined_by_this_rule",
+      "adjudication_basis": "Offender-relationship is recorded in SHR and is not a clearance measure, though it is adjacent to solvedness.",
+      "rule_stated_scope": "The Homicide Reports dataset does not track whether cases were solved or cleared. Clearance questions should use Historical or NIBRS.",
+      "probe_basis": "Adjacent: a field that correlates with case resolution without being a clearance metric.",
+      "dual_purpose": "Also carries the false-refusal role for the predicate-over-match failure mode: if the rule applies here, the user is wrongly declined.",
+      "observed_base_result": null,
+      "pins": {
+        "base_tree": "e2d24acd37027f436590ed8eae58bb5b30414ffb",
+        "rule_source_file": "lib/source-capabilities.ts",
+        "inventory": "21 applicability pairs from 9 question-only definitions",
+        "authored": "2026-09-01"
+      },
+      "question_family": "homicide_offender_relationship",
+      "expected_outcome": {
+        "applies": false,
+        "action": null,
+        "reason": null,
+        "note": "This rule contributes no action/reason pair for this case. Another rule or data limitation may still apply and remains separately accountable."
+      },
+      "contract_projection_required": true,
+      "expected_contract": {
+        "metric.unit": "count"
+      },
+      "contract_fields_read_by_predicate": [
+        "metric.unit"
+      ],
+      "contract_disjunctive_with_question": true,
+      "evidence_refs": [],
+      "observed_contract": null
+    },
+    {
+      "id": "P31A-060",
+      "rule_id": "shr-clearance-unsupported",
+      "source": "shr",
+      "pair": "shr-clearance-unsupported x shr",
+      "role": "false_refusal",
+      "question": "How many homicides were reported in Los Angeles, CA in 2021?",
+      "expected_applicability": "does_not_apply",
+      "expected_disposition": "not_declined_by_this_rule",
+      "adjudication_basis": "The central in-scope question for this dataset.",
+      "rule_stated_scope": "The Homicide Reports dataset does not track whether cases were solved or cleared. Clearance questions should use Historical or NIBRS.",
+      "probe_basis": null,
+      "dual_purpose": null,
+      "observed_base_result": null,
+      "pins": {
+        "base_tree": "e2d24acd37027f436590ed8eae58bb5b30414ffb",
+        "rule_source_file": "lib/source-capabilities.ts",
+        "inventory": "21 applicability pairs from 9 question-only definitions",
+        "authored": "2026-09-01"
+      },
+      "question_family": "count_by_place_period",
+      "expected_outcome": {
+        "applies": false,
+        "action": null,
+        "reason": null,
+        "note": "This rule contributes no action/reason pair for this case. Another rule or data limitation may still apply and remains separately accountable."
+      },
+      "contract_projection_required": true,
+      "expected_contract": {
+        "metric.unit": "count"
+      },
+      "contract_fields_read_by_predicate": [
+        "metric.unit"
+      ],
+      "contract_disjunctive_with_question": true,
+      "evidence_refs": [],
+      "observed_contract": null
+    },
+    {
+      "id": "P31A-061",
+      "rule_id": "shr-demographic-rate-unsupported",
+      "source": "shr",
+      "pair": "shr-demographic-rate-unsupported x shr",
+      "role": "positive",
+      "question": "What was the homicide victimization rate per 100,000 for Black residents of Los Angeles, CA in 2021?",
+      "expected_applicability": "applies",
+      "expected_disposition": "decline_capability",
+      "adjudication_basis": "A per-capita rate for a demographic group, requiring the missing denominator.",
+      "rule_stated_scope": "SHR demographic rates are unsupported because matching demographic population denominators are not available.",
+      "probe_basis": null,
+      "dual_purpose": null,
+      "observed_base_result": null,
+      "pins": {
+        "base_tree": "e2d24acd37027f436590ed8eae58bb5b30414ffb",
+        "rule_source_file": "lib/source-capabilities.ts",
+        "inventory": "21 applicability pairs from 9 question-only definitions",
+        "authored": "2026-09-01"
+      },
+      "question_family": "demographic_rate",
+      "expected_outcome": {
+        "store": "query_log",
+        "action": "decline_capability",
+        "reason": "query_contract_failed",
+        "applies": true
+      },
+      "contract_projection_required": true,
+      "expected_contract": {
+        "metric.unsupportedReason": "demographic_rate_denominator_unavailable"
+      },
+      "contract_fields_read_by_predicate": [
+        "metric.unsupportedReason"
+      ],
+      "contract_disjunctive_with_question": false,
+      "evidence_refs": [],
+      "observed_contract": null
+    },
+    {
+      "id": "P31A-062",
+      "rule_id": "shr-demographic-rate-unsupported",
+      "source": "shr",
+      "pair": "shr-demographic-rate-unsupported x shr",
+      "role": "false_acceptance",
+      "question": "How many homicide victims in Los Angeles, CA in 2021 were Black?",
+      "expected_applicability": "does_not_apply",
+      "expected_disposition": "not_declined_by_this_rule",
+      "adjudication_basis": "A demographic count, not a rate. No denominator required.",
+      "rule_stated_scope": "SHR demographic rates are unsupported because matching demographic population denominators are not available.",
+      "probe_basis": "Adjacent: same demographic dimension without the per-capita framing.",
+      "dual_purpose": "Also carries the false-refusal role for the predicate-over-match failure mode: if the rule applies here, the user is wrongly declined.",
+      "observed_base_result": null,
+      "pins": {
+        "base_tree": "e2d24acd37027f436590ed8eae58bb5b30414ffb",
+        "rule_source_file": "lib/source-capabilities.ts",
+        "inventory": "21 applicability pairs from 9 question-only definitions",
+        "authored": "2026-09-01"
+      },
+      "question_family": "demographic_count",
+      "expected_outcome": {
+        "applies": false,
+        "action": null,
+        "reason": null,
+        "note": "This rule contributes no action/reason pair for this case. Another rule or data limitation may still apply and remains separately accountable."
+      },
+      "contract_projection_required": true,
+      "expected_contract": {
+        "metric.unsupportedReason": null
+      },
+      "contract_fields_read_by_predicate": [
+        "metric.unsupportedReason"
+      ],
+      "contract_disjunctive_with_question": false,
+      "evidence_refs": [],
+      "observed_contract": null
+    },
+    {
+      "id": "P31A-063",
+      "rule_id": "shr-demographic-rate-unsupported",
+      "source": "shr",
+      "pair": "shr-demographic-rate-unsupported x shr",
+      "role": "false_refusal",
+      "question": "What was the overall homicide rate per 100,000 in Los Angeles, CA in 2021?",
+      "expected_applicability": "does_not_apply",
+      "expected_disposition": "not_declined_by_this_rule",
+      "adjudication_basis": "An overall rate using total population.",
+      "rule_stated_scope": "SHR demographic rates are unsupported because matching demographic population denominators are not available.",
+      "probe_basis": null,
+      "dual_purpose": null,
+      "observed_base_result": null,
+      "pins": {
+        "base_tree": "e2d24acd37027f436590ed8eae58bb5b30414ffb",
+        "rule_source_file": "lib/source-capabilities.ts",
+        "inventory": "21 applicability pairs from 9 question-only definitions",
+        "authored": "2026-09-01"
+      },
+      "question_family": "overall_rate",
+      "expected_outcome": {
+        "applies": false,
+        "action": null,
+        "reason": null,
+        "note": "This rule contributes no action/reason pair for this case. Another rule or data limitation may still apply and remains separately accountable."
+      },
+      "contract_projection_required": true,
+      "expected_contract": {
+        "metric.unsupportedReason": null
+      },
+      "contract_fields_read_by_predicate": [
+        "metric.unsupportedReason"
+      ],
+      "contract_disjunctive_with_question": false,
+      "evidence_refs": [],
+      "observed_contract": null
+    }
+  ]
+}

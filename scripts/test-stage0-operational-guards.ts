@@ -198,23 +198,57 @@ function toBashPath(value: string): string {
 // release directory, which is a copy that deliberately excludes .git. Reading it
 // there yields commit=unknown: a file that looks like provenance while carrying
 // none, which is worse than no file at all.
+//
+// P1.4a MOVED THE SOURCE OF PROVENANCE, so the literals below moved with it. The
+// deploy no longer derives the commit from the repo's HEAD: HEAD is whatever a
+// branch tip happens to be at fetch time, which is an input that can move between
+// deciding to deploy and fetching. The operator now supplies an immutable
+// 40-character SHA and the deploy proves three things about it before building --
+// that it is well formed, that it is a commit present in the object store, and
+// that it is an ancestor of origin/<branch>. That is strictly more provenance than
+// reading HEAD ever gave, and it is asserted here rather than assumed.
 {
   const deploy = fs.readFileSync(path.join(repoRoot, "scripts", "deploy-zero-downtime.sh"), "utf8");
 
-  assert.match(deploy, /DEPLOY_COMMIT=\$\(git -C "\$REPO_DIR" rev-parse HEAD/, "commit must be read from REPO_DIR");
-  assert.match(deploy, /refusing to build a release with no provenance/, "an unreadable HEAD must abort the deploy");
+  assert.match(deploy, /DEPLOY_COMMIT="\$DEPLOY_SHA"/, "the stamped commit must be the immutable input, not a resolved tip");
+  assert.match(deploy, /DEPLOY_SHA="\$\{1:-\}"/, "the first argument must be the commit itself");
+  assert.match(deploy, /release_export_validate_sha "\$DEPLOY_SHA"/, "the SHA must be validated before anything is built");
+  assert.match(deploy, /release_export_assert_commit "\$REPO_DIR" "\$DEPLOY_SHA"/, "the object must be proven to exist and be a commit");
+  assert.match(deploy, /release_export_assert_ancestor "\$REPO_DIR" "\$DEPLOY_SHA" "\$BRANCH"/, "the commit must be proven to be on the branch");
+  assert.match(deploy, /is not a commit in/, "a SHA that is not a commit must abort the deploy");
+  assert.match(deploy, /is not on origin\//, "a commit off the branch must abort the deploy");
   assert.match(deploy, /echo "commit=\$DEPLOY_COMMIT"/, "RELEASE_INFO must use the captured commit");
   assert.match(deploy, /refusing to build an unidentifiable release/, "an unwritable RELEASE_INFO must abort the deploy");
 
-  // The capture must happen before the working directory moves to the release.
-  // Anchored to a line start so a mention inside a comment cannot satisfy or
-  // break the ordering check -- an unanchored search matched this file's own
-  // explanatory comment on the first run.
-  const captureAt = deploy.indexOf("DEPLOY_COMMIT=$(git -C");
+  // The old HEAD-derived form must be gone, not merely unused.
+  assert.ok(
+    !/DEPLOY_COMMIT=\$\(git .*rev-parse HEAD/.test(deploy),
+    "provenance must not be derived from a branch tip that can move"
+  );
+
+  // Ordering: the commit must be bound and proven BEFORE the release directory is
+  // created and exported into, so a bad input costs nothing. Anchored to line
+  // starts so a mention inside a comment can neither satisfy nor break the check
+  // -- an unanchored search matched this file's own explanatory comment once.
+  const validateAt = deploy.search(/^release_export_validate_sha "\$DEPLOY_SHA"/m);
+  const assignAt = deploy.search(/^DEPLOY_COMMIT="\$DEPLOY_SHA"/m);
+  const ancestorAt = deploy.search(/^release_export_assert_ancestor /m);
+  const mkReleaseAt = deploy.search(/^mkdir -p "\$RELEASE_DIR"/m);
+  const exportAt = deploy.search(/^release_export_tree /m);
   const firstReleaseCd = deploy.search(/^cd "\$RELEASE_DIR"/m);
-  assert.ok(captureAt > 0, "the provenance capture must exist");
+
+  assert.ok(validateAt > 0, "the SHA validation must exist");
+  assert.ok(assignAt > 0, "the provenance assignment must exist");
+  assert.ok(ancestorAt > 0, "the ancestry assertion must exist");
+  assert.ok(mkReleaseAt > 0, "the release-directory creation must exist");
+  assert.ok(exportAt > 0, "the export must exist");
   assert.ok(firstReleaseCd > 0, "the release-directory cd must exist");
-  assert.ok(captureAt < firstReleaseCd, "provenance must be captured before cd into the release directory");
+
+  assert.ok(validateAt < mkReleaseAt, "the SHA must be validated before the release directory is created");
+  assert.ok(ancestorAt < mkReleaseAt, "ancestry must be proven before the release directory is created");
+  assert.ok(assignAt < mkReleaseAt, "provenance must be bound before the release directory is created");
+  assert.ok(assignAt < exportAt, "provenance must be bound before the export runs");
+  assert.ok(assignAt < firstReleaseCd, "provenance must be bound before cd into the release directory");
 
   // And the old form -- reading git from inside the release -- must be gone.
   assert.ok(

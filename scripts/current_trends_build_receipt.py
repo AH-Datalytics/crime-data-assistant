@@ -14,8 +14,17 @@ from pathlib import Path
 from typing import Mapping
 
 
+# ``current_trends_monthly`` covers ALL THREE monthly projections -- agency, state and national.
+# There is deliberately no separate state_monthly receipt: three receipts for one import would let
+# two of them be complete while the third described a different month, which is the disagreement the
+# receipt exists to make impossible. Listing state_monthly here makes ``live_table_counts`` record it
+# in ``table_counts_json`` and refuse to complete while it is empty, at no extra cost.
+#
+# THIS MAP HAS A SECOND HOME: lib/current-trends-readiness.ts. The validator there loops the same
+# list demanding a recorded count per table, so the two drift silently unless both are changed.
 COMPONENT_TABLES = {
-    "current_trends_monthly": ("agency_monthly", "agencies", "sample_agencies", "national_monthly"),
+    "current_trends_monthly": ("agency_monthly", "agencies", "sample_agencies", "national_monthly",
+                               "state_monthly"),
     "current_trends_population": ("agency_population",),
     "current_trends_crosswalk": ("agency_county_crosswalk",),
 }

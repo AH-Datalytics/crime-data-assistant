@@ -61,6 +61,7 @@ import {
   queryContractFailureMessage,
   queryContractGuardrails,
   type QueryContractSqlValidation,
+  capabilityFinalizationOutcome,
 } from "@/lib/query-contract-validator";
 import { partialCoverageRetryPrompt, sourceYearOverlap } from "@/lib/source-year-overlap";
 import { buildShrCanonicalLabelCase, formatShrResolutionGuidance, resolveShrAgency, rewriteShrResolvedAgencyPredicates } from "@/lib/shr-place-resolver";
@@ -79,10 +80,15 @@ import {
   type ProofFinalization,
   type ProofFinalizationInput,
   type SealedPayload,
+  outcomeLogFields,
+  asOutcomeRecord,
+  decisionFinalization,
+  OPERATIONAL_RECORD,
+  type OutcomeLogRecord,
 } from "@/lib/proof-finalize";
 import { sealPlanDerivation } from "@/lib/plan-derivation";
 import { cacheValiditySignature } from "@/lib/proof-cache-validity";
-import type { DeliveryAction } from "@/lib/proof-contract";
+import { OUTCOMES, type QueryLogOutcome } from "@/lib/proof-contract";
 import { returnedEntityKeys } from "@/lib/result-disclosure";
 import { boundedModelResponseJson } from "@/lib/no-sql-retry";
 import { consolidatedDisplayText, normalizeConsolidatedDisplayRows } from "@/lib/agency-consolidations";
@@ -161,6 +167,9 @@ function ambiguousKansasCityIntent(question: string): boolean {
 }
 
 export async function POST(req: NextRequest) {
+  // Measured before the outer try so the operational row in its catch can record an
+  // elapsed time; everything declared inside the try is out of scope there.
+  const outerStart = Date.now();
   const ip =
     req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
     req.headers.get("x-real-ip") ||
@@ -241,7 +250,7 @@ export async function POST(req: NextRequest) {
      * `off` mode this is a near-free sentinel.
      */
     const finalizeExit = (
-      opts: Partial<ProofFinalizationInput> & { intendedAction: DeliveryAction },
+      opts: Partial<ProofFinalizationInput> & { outcome: QueryLogOutcome },
     ): ProofFinalization =>
       finalizeProof({
         sourceId: "shr",
@@ -266,8 +275,11 @@ export async function POST(req: NextRequest) {
     }
     if (plannerMode === "authoritative" && followupPlan?.sourceChanged && !demographicRateFollowup) {
       const explanation = "This follow-up is a better fit for the " + followupPlan.source + " source. Rerunning it there as: " + followupPlan.reconstructedQuestion;
-      const switchProof = finalizeExit({ intendedAction: "clarify", planFamily: "followup-source-switch", narrative: explanation });
-      logQuery(question, null, 0, null, 0, explanation, "shr", ["followup-source-switch"], "followup-planner", sessionId, null, null, null, null, proofLogFields(switchProof));
+      const switchProof = finalizeExit({ outcome: OUTCOMES.source_switch, planFamily: "followup-source-switch", narrative: explanation });
+      // Both projectors, from the SAME finalization. This exit bypasses the route-local closure,
+      // so the outcome projector has to be supplied explicitly; omitting it left this decision row
+      // unclassified after activation while every route-level test still passed.
+      logQuery(question, null, 0, null, 0, explanation, "shr", ["followup-source-switch"], "followup-planner", sessionId, null, null, null, null, proofLogFields(decisionFinalization(switchProof)), outcomeLogFields(asOutcomeRecord(switchProof)));
       return jsonResp(emitFactualPayload(switchProof, { success: true, question, sql: null, explanation, title: "Source switch", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: 0, sourceSwitch: { source: followupPlan.source, question: followupPlan.reconstructedQuestion } }));
     }
     const followupTransform = (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing") ? followupPlan.transform : (detectFollowupTransform(question, history) ?? buildCrossSourceFollowupTransform(question, body?.history, "shr"));
@@ -310,11 +322,11 @@ export async function POST(req: NextRequest) {
       /** Phase 3 chart capture; pre-serialized via the allowlist in lib/chart-config-log. */
       chartConfigJson: string | null = null,
       /** Proof finalization for this exit; null yields baseline-identical columns. */
-      proof: ProofFinalization | null = null,
+      proof: ProofFinalization | OutcomeLogRecord | null = null,
       /** Bounded raw model text on no-SQL failures; diagnostic only, never user-visible. */
       modelResponseJson: string | null = null
     ) => {
-      chartAuditQueryLogId = logQuery(q, sqlText, rowCount, logError, ms, logResponse, tabName, guardrails, model, sid, routingMeta, chartConfigJson, chartAuditRequestId, modelResponseJson, proofLogFields(proof));
+      chartAuditQueryLogId = logQuery(q, sqlText, rowCount, logError, ms, logResponse, tabName, guardrails, model, sid, routingMeta, chartConfigJson, chartAuditRequestId, modelResponseJson, proofLogFields(decisionFinalization(proof)), outcomeLogFields(asOutcomeRecord(proof)));
       return chartAuditQueryLogId;
     };
     // GC-080: the county scope bound for this request (sheriff by default, countywide only when asked).
@@ -372,7 +384,7 @@ export async function POST(req: NextRequest) {
     };
     const countyScopeExit =(resolution: Exclude<ShrCountyScopeResolution, { status: "resolved" }>, planFamily: string | null) => {
       const tags = [...(planFamily ? [planFamily] : []), `shr-county-${resolution.reason}`];
-      const scopeProof = finalizeExit({ intendedAction: resolution.status === "clarify" ? "clarify" : "decline_capability", planFamily, guardrails: tags, narrative: resolution.explanation });
+      const scopeProof = finalizeExit({ outcome: resolution.status === "clarify" ? OUTCOMES.geography_scope_ambiguous : OUTCOMES.capability_path_unavailable, planFamily, guardrails: tags, narrative: resolution.explanation });
       writeLog(question, null, 0, `shr_county_${resolution.reason}`, Date.now() - start, resolution.explanation, "shr", tags, planFamily ? "deterministic" : null, sessionId, null, scopeProof);
       return jsonResp(emitFactualPayload(scopeProof, {
         success: true, question, sql: null as unknown as string, explanation: resolution.explanation,
@@ -383,7 +395,7 @@ export async function POST(req: NextRequest) {
     const contractFailureResponse = (contractResult: QueryContractSqlValidation, logError: string, guardrails: string[] = []) => {
       const msg = queryContractFailureMessage(contractResult);
       if (!msg) return null;
-      const contractProof = finalizeExit({ intendedAction: "decline_capability", sql: contractResult.sql, guardrails: [...new Set([...guardrails, ...routeGuardrailsFired])] });
+      const contractProof = finalizeExit({ outcome: capabilityFinalizationOutcome(contractResult), sql: contractResult.sql, guardrails: [...new Set([...guardrails, ...routeGuardrailsFired])] });
       writeLog(question, contractResult.sql, 0, logError, Date.now() - start, msg, "shr", [...new Set([...guardrails, ...routeGuardrailsFired])], "haiku-4.5", sessionId, null, contractProof);
       return jsonResp(emitFactualPayload(contractProof, {
         success: true,
@@ -408,7 +420,7 @@ export async function POST(req: NextRequest) {
       detectShrGroupRateOverride(question);
     if (capabilityOverride) {
       const executionMs = Date.now() - start;
-      const capabilityProof = finalizeExit({ intendedAction: "decline_capability", planFamily: capabilityOverride.guardrail });
+      const capabilityProof = finalizeExit({ outcome: OUTCOMES.capability_path_unavailable, planFamily: capabilityOverride.guardrail });
       writeLog(question, null, 0, null, executionMs, capabilityOverride.explanation, "shr", [capabilityOverride.guardrail], "deterministic", sessionId, null, capabilityProof);
       return jsonResp(emitFactualPayload(capabilityProof, {
         success: true,
@@ -430,7 +442,7 @@ export async function POST(req: NextRequest) {
     if (completenessIntent) {
       const completenessAnswer = buildCompletenessAnswer("shr", loadCompletenessRows("shr", getShrDb()), new Date().getFullYear(), completenessIntent.year);
       const executionMs = Date.now() - start;
-      const completenessProof = finalizeExit({ intendedAction: "answer", planFamily: "completeness-deterministic", guardrails: ["completeness-deterministic"] });
+      const completenessProof = finalizeExit({ outcome: OUTCOMES.deterministic_plan, planFamily: "completeness-deterministic", guardrails: ["completeness-deterministic"] });
       writeLog(question, null, 0, null, executionMs, completenessAnswer, "shr", ["completeness-deterministic"], "deterministic", sessionId, null, completenessProof);
       return jsonResp(emitFactualPayload(completenessProof, { success: true, question, sql: null, explanation: completenessAnswer, title: "Data completeness", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: executionMs }));
     }
@@ -449,7 +461,7 @@ export async function POST(req: NextRequest) {
       : shouldAskCrimeType(crimeTypeQuestion, normalizeHistoryAllSources(body?.history));
     if (crimeTypeAsk?.needsClarification) {
       const executionMs = Date.now() - start;
-      const ctProof = finalizeExit({ intendedAction: "clarify", planFamily: "crime-type:violent-property-both" });
+      const ctProof = finalizeExit({ outcome: OUTCOMES.measure_ambiguous, planFamily: "crime-type:violent-property-both" });
       writeLog(question, null, 0, null, executionMs, crimeTypeAsk.clarificationQuestion, "shr", ["crime-type:violent-property-both"], "deterministic", sessionId, null, ctProof);
       return jsonResp(emitFactualPayload(ctProof, { success: true, question, sql: null, explanation: crimeTypeAsk.clarificationQuestion, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: executionMs }));
     }
@@ -457,7 +469,7 @@ export async function POST(req: NextRequest) {
 const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing") ? (followupPlan.chartOnly ? null : getBlockingGeoClarification(followupPlan.reconstructedQuestion)) : getBlockingGeoClarification(question);
     if (geoClarification) {
       const executionMs = Date.now() - start;
-      const geoProof = finalizeExit({ intendedAction: "clarify", planFamily: `geo:${geoClarification.issue.id}` });
+      const geoProof = finalizeExit({ outcome: OUTCOMES.geography_ambiguous, planFamily: `geo:${geoClarification.issue.id}` });
       writeLog(question, null, 0, null, executionMs, geoClarification.explanation, "shr", [`geo:${geoClarification.issue.id}`], "deterministic", sessionId, null, geoProof);
       return jsonResp(emitFactualPayload(geoProof, {
         success: true,
@@ -478,7 +490,7 @@ const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind 
     const countyScope = planSaysQueryBearing ? null : getCountyScopeClarification(question, body?.history);
     if (countyScope) {
       const executionMs = Date.now() - start;
-      const countyProof = finalizeExit({ intendedAction: "clarify", planFamily: `geo:${countyScope.id}` });
+      const countyProof = finalizeExit({ outcome: OUTCOMES.geography_scope_ambiguous, planFamily: `geo:${countyScope.id}` });
       writeLog(question, null, 0, null, executionMs, countyScope.explanation, "shr", [`geo:${countyScope.id}`], "deterministic", sessionId, null, countyProof);
       return jsonResp(emitFactualPayload(countyProof, {
         success: true,
@@ -499,7 +511,7 @@ const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind 
     const metadata = planSaysQueryBearing ? null : answerMetadataQuestion("shr", question, getShrDb());
     if (metadata) {
       const executionMs = Date.now() - start;
-      const metadataProof = finalizeExit({ intendedAction: "answer", sql: metadata.sql, rows: metadata.rows ?? [], columns: metadata.columns ?? [], truncated: Boolean(metadata.truncated), derivation: metadata.sql ? sealPlanDerivation("metadata-coverage-answer", metadata.sql) : null, planFamily: "metadata-coverage-answer", guardrails: ["deterministic-metadata", "metadata-coverage-answer"], hasChart: Boolean(metadata.chartConfig), narrative: metadata.explanation });
+      const metadataProof = finalizeExit({ outcome: OUTCOMES.deterministic_plan, sql: metadata.sql, rows: metadata.rows ?? [], columns: metadata.columns ?? [], truncated: Boolean(metadata.truncated), derivation: metadata.sql ? sealPlanDerivation("metadata-coverage-answer", metadata.sql) : null, planFamily: "metadata-coverage-answer", guardrails: ["deterministic-metadata", "metadata-coverage-answer"], hasChart: Boolean(metadata.chartConfig), narrative: metadata.explanation });
       writeLog(question, metadata.sql, metadata.rowCount, null, executionMs, metadata.explanation, "shr", ["deterministic-metadata", "metadata-coverage-answer"], "deterministic", sessionId, serializeChartConfigForLog(metadata.chartConfig, metadata.columns, metadata.chartMeta), metadataProof);
       return jsonResp(emitFactualPayload(metadataProof, attachChartAuditToPayload({
         success: true,
@@ -531,7 +543,7 @@ const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind 
     const murderPlan = murderDb ? buildShrMurderPlan(question, murderDb) : null;
     if (murderPlan?.kind === "blocked") {
       const executionMs = Date.now() - start;
-      const placeBlockProof = finalizeExit({ intendedAction: "clarify", planFamily: "deterministic-murder", guardrails: ["deterministic-murder", "shr-place-resolution-block"], narrative: murderPlan.explanation });
+      const placeBlockProof = finalizeExit({ outcome: OUTCOMES.place_unresolved, planFamily: "deterministic-murder", guardrails: ["deterministic-murder", "shr-place-resolution-block"], narrative: murderPlan.explanation });
       writeLog(question, null, 0, "shr_place_not_resolved", executionMs, murderPlan.explanation, "shr", ["deterministic-murder", "shr-place-resolution-block"], "deterministic", sessionId, null, placeBlockProof);
       return jsonResp(emitFactualPayload(placeBlockProof, {
         success: true, question, sql: null, explanation: murderPlan.explanation,
@@ -554,7 +566,7 @@ const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind 
           type: murderPlan.chartType, xAxis: murderPlan.xAxis, yAxis: murderPlan.yAxis,
           yAxisLabel: "Murder Victims", title: murderPlan.title,
         }, question);
-        const murderProof = finalizeExit({ intendedAction: rows.length > 0 ? "answer" : "decline_data", sql: contract.sql, rows, columns: murderPlan.columns, derivation: sealPlanDerivation("deterministic-murder", murderPlan.sql), planFamily: "deterministic-murder", guardrails: ["deterministic-murder", ...coverageTags, ...routeGuardrailsFired], returnedEntities: returnedEntityKeys(rows), narrative: explanation, hasChart: true, db: murderDb });
+        const murderProof = finalizeExit({ outcome: rows.length > 0 ? OUTCOMES.deterministic_plan : OUTCOMES.no_rows_in_source, sql: contract.sql, rows, columns: murderPlan.columns, derivation: sealPlanDerivation("deterministic-murder", murderPlan.sql), planFamily: "deterministic-murder", guardrails: ["deterministic-murder", ...coverageTags, ...routeGuardrailsFired], returnedEntities: returnedEntityKeys(rows), narrative: explanation, hasChart: true, db: murderDb });
         writeLog(question, contract.sql, rows.length, null, executionMs, explanation, "shr", ["deterministic-murder", ...coverageTags, ...routeGuardrailsFired], "deterministic", sessionId, serializeChartConfigForLog(chartConfig, murderPlan.columns, { source: "FBI SHR", agencyCount: 0, population: null }), murderProof);
         return jsonResp(emitFactualPayload(murderProof, attachChartAuditToPayload({
           success: true, question, sql: contract.sql, explanation,
@@ -566,7 +578,7 @@ const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind 
         }, { source: "shr", requestId: chartAuditRequestId, queryLogId: chartAuditQueryLogId })));
       } catch (dbErr) {
         const msg = dbErr instanceof Error ? dbErr.message : String(dbErr);
-        const murderDbProof = finalizeExit({ intendedAction: "decline_capability", sql: contract.sql, planFamily: "deterministic-murder" });
+        const murderDbProof = OPERATIONAL_RECORD;
         writeLog(question, contract.sql, 0, `DB: ${msg}`, Date.now() - start, null, "shr", ["deterministic-murder"], "deterministic", sessionId, null, murderDbProof);
         return jsonResp({ success: false, error: `Database error: ${msg}` } as QueryError, 500);
       }
@@ -608,7 +620,7 @@ const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind 
       // state all come from `limitationReply`, so this exit and the model no-SQL exit below cannot
       // tell the reader different things about the same limitation.
       const reply = limitationReply(shootingRequest, "shr");
-      const nonfatalProof = finalizeExit({ intendedAction: "decline_capability", planFamily: "nonfatal-shooting-capability-limit", narrative: reply.explanation });
+      const nonfatalProof = finalizeExit({ outcome: OUTCOMES.capability_path_unavailable, planFamily: "nonfatal-shooting-capability-limit", narrative: reply.explanation });
       writeLog(question, null, 0, null, Date.now() - start, reply.explanation, "shr", ["nonfatal-shooting-capability-limit", reply.reason], "deterministic", sessionId, null, nonfatalProof);
       return jsonResp(emitFactualPayload(nonfatalProof, {
         success: true, question, sql: reply.sql, explanation: reply.explanation,
@@ -638,7 +650,7 @@ const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind 
         && !(plannerMode === "authoritative" && followupPlan?.kind === "query_bearing")) {
       const scopeMs = Date.now() - start;
       const scopeProof = finalizeExit({
-        intendedAction: "clarify",
+        outcome: OUTCOMES.measure_ambiguous,
         planFamily: "shooting-scope-clarification",
         narrative: shootingScopeAsk.clarificationQuestion,
       });
@@ -670,7 +682,7 @@ const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind 
       const yearOverlap = sourceYearOverlap("shr", shootingRequest);
       if (yearOverlap && !yearOverlap.hasOverlap) {
         const explanation = `SHR homicide data covers ${yearOverlap.sourceStartYear}-${yearOverlap.sourceEndYear}, so it cannot answer the requested year range. Ask for fatal shootings from ${yearOverlap.sourceStartYear} onward.`;
-        const yearOverlapProof = finalizeExit({ intendedAction: "decline_data", planFamily: "deterministic-shooting", guardrails: ["deterministic-shooting", "shr-year-no-overlap"], narrative: explanation });
+        const yearOverlapProof = finalizeExit({ outcome: OUTCOMES.outside_source_years, planFamily: "deterministic-shooting", guardrails: ["deterministic-shooting", "shr-year-no-overlap"], narrative: explanation });
         writeLog(question, null, 0, "year_range_no_overlap", Date.now() - start, explanation, "shr", ["deterministic-shooting", "shr-year-no-overlap"], "deterministic", sessionId, null, yearOverlapProof);
         return jsonResp(emitFactualPayload(yearOverlapProof, {
           success: true, question, sql: null, explanation,
@@ -731,7 +743,7 @@ const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind 
         const hasCrosswalk = Boolean(db.prepare("SELECT name FROM sqlite_master WHERE type IN ('table','view') AND name = 'agency_county_crosswalk'").get());
         if (!hasCrosswalk) {
           const explanation = "I do not currently have the agency-by-county crosswalk needed to answer countywide SHR geography questions. I should not infer county membership from agency names.";
-          const crosswalkProof = finalizeExit({ intendedAction: "decline_capability", planFamily: "deterministic-shooting", narrative: explanation });
+          const crosswalkProof = finalizeExit({ outcome: OUTCOMES.required_component_unavailable, planFamily: "deterministic-shooting", narrative: explanation });
           writeLog(question, null, 0, "missing_agency_county_crosswalk", Date.now() - start, explanation, "shr", ["deterministic-shooting"], "deterministic", sessionId, null, crosswalkProof);
           return jsonResp(emitFactualPayload(crosswalkProof, {
             success: true, question, sql: null, explanation,
@@ -751,7 +763,7 @@ const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind 
 
         if (countyStates.length === 0) {
           const explanation = `I could not find ${county.display} County in the SHR agency county crosswalk${mentionedState ? ` for ${mentionedState}` : ""}.`;
-          const countyNotFoundProof = finalizeExit({ intendedAction: "decline_data", planFamily: "deterministic-shooting", narrative: explanation });
+          const countyNotFoundProof = finalizeExit({ outcome: OUTCOMES.not_in_source, planFamily: "deterministic-shooting", narrative: explanation });
           writeLog(question, null, 0, "county_not_found", Date.now() - start, explanation, "shr", ["deterministic-shooting"], "deterministic", sessionId, null, countyNotFoundProof);
           return jsonResp(emitFactualPayload(countyNotFoundProof, {
             success: true, question, sql: null, explanation,
@@ -762,7 +774,7 @@ const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind 
 
         if (!mentionedState && countyStates.length > 1) {
           const explanation = `${county.display} County matches multiple states in the agency county crosswalk: ${countyStates.map((row) => row.state).join(", ")}. Please specify a state.`;
-          const ambiguousCountyProof = finalizeExit({ intendedAction: "clarify", planFamily: "deterministic-shooting", narrative: explanation });
+          const ambiguousCountyProof = finalizeExit({ outcome: OUTCOMES.geography_ambiguous, planFamily: "deterministic-shooting", narrative: explanation });
           writeLog(question, null, 0, "ambiguous_county", Date.now() - start, explanation, "shr", ["deterministic-shooting"], "deterministic", sessionId, null, ambiguousCountyProof);
           return jsonResp(emitFactualPayload(ambiguousCountyProof, {
             success: true, question, sql: null, explanation,
@@ -788,7 +800,7 @@ const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind 
         ).get(explicitOri) as { canonical_agency?: string } | undefined;
         if (!identity) {
           const explanation = `I could not find ORI ${explicitOri} in the SHR agency identity data, so I cannot return a reliable result.`;
-          const oriNotInSourceProof = finalizeExit({ intendedAction: "decline_data", planFamily: "deterministic-shooting", guardrails: ["deterministic-shooting", "shr-place-resolution-block", "shr-ori-not-in-source"], narrative: explanation });
+          const oriNotInSourceProof = finalizeExit({ outcome: OUTCOMES.not_in_source, planFamily: "deterministic-shooting", guardrails: ["deterministic-shooting", "shr-place-resolution-block", "shr-ori-not-in-source"], narrative: explanation });
           writeLog(question, null, 0, "shr_ori_not_in_source", Date.now() - start, explanation, "shr", ["deterministic-shooting", "shr-place-resolution-block", "shr-ori-not-in-source"], "deterministic", sessionId, null, oriNotInSourceProof);
           return jsonResp(emitFactualPayload(oriNotInSourceProof, { success: true, question, sql: null, explanation, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - start }));
         }
@@ -796,7 +808,7 @@ const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind 
         whereClauses.push(`i.ori = '${explicitOri.replace(/'/g, "''")}'`);
       } else if (ambiguousKansasCityIntent(shootingRequest)) {
         const explanation = "Please specify Kansas City, Missouri (KCMO) or Kansas City, Kansas (KCK). Both exist in the SHR data, and I should not combine or choose between them without that state.";
-        const ambiguousCityProof = finalizeExit({ intendedAction: "clarify", planFamily: "deterministic-shooting", narrative: explanation });
+        const ambiguousCityProof = finalizeExit({ outcome: OUTCOMES.geography_ambiguous, planFamily: "deterministic-shooting", narrative: explanation });
         writeLog(question, null, 0, "ambiguous_city", Date.now() - start, explanation, "shr", ["deterministic-shooting"], "deterministic", sessionId, null, ambiguousCityProof);
         return jsonResp(emitFactualPayload(ambiguousCityProof, {
           success: true, question, sql: null, explanation,
@@ -823,7 +835,7 @@ const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind 
               const explanation = blockedCity.status === "ambiguous"
                 ? `I cannot safely identify ${blockedCity.requestedName}, ${blockedCity.state}${comparisonNote} in the SHR agency identity data. Please specify a more precise agency.`
                 : `I cannot provide a reliable SHR result for ${blockedCity.requestedName}, ${blockedCity.state}${comparisonNote} because that agency is not represented for the requested source. I will not substitute another agency.`;
-              const blockedCityProof = finalizeExit({ intendedAction: "clarify", planFamily: "deterministic-shooting", guardrails: ["deterministic-shooting", "shr-place-resolution-block"], narrative: explanation });
+              const blockedCityProof = finalizeExit({ outcome: OUTCOMES.place_unresolved, planFamily: "deterministic-shooting", guardrails: ["deterministic-shooting", "shr-place-resolution-block"], narrative: explanation });
               writeLog(question, null, 0, `shr_place_${blockedCity.status}`, Date.now() - start, explanation, "shr", ["deterministic-shooting", "shr-place-resolution-block"], "deterministic", sessionId, null, blockedCityProof);
               return jsonResp(emitFactualPayload(blockedCityProof, {
                 success: true, question, sql: null, explanation,
@@ -919,7 +931,7 @@ const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind 
         totalExplanation = withShrScopeAndMeasureDisclosures(totalExplanation, shrCountyScope, shootingAllHomicides);
         const displayTitle = normalizeShrAgencyText(title);
         const chartConfig = applyChartCustomizations({ type: "line", xAxis: wantsMonthly ? "month" : "year", yAxis: ["fatal_shootings"], yAxisLabel: "Fatal Shootings", title: displayTitle }, question);
-        const shootingProof = finalizeExit({ intendedAction: rows.length > 0 ? "answer" : "decline_data", sql, rows, columns, derivation: sealPlanDerivation("deterministic-shooting", plannedShootingSql), planFamily: "deterministic-shooting", guardrails: detGuardrails, returnedEntities: returnedEntityKeys(rows), narrative: totalExplanation, hasChart: true, db });
+        const shootingProof = finalizeExit({ outcome: rows.length > 0 ? OUTCOMES.deterministic_plan : OUTCOMES.no_rows_in_source, sql, rows, columns, derivation: sealPlanDerivation("deterministic-shooting", plannedShootingSql), planFamily: "deterministic-shooting", guardrails: detGuardrails, returnedEntities: returnedEntityKeys(rows), narrative: totalExplanation, hasChart: true, db });
         writeLog(question, sql, rows.length, null, Date.now() - start, totalExplanation, "shr", detGuardrails, "deterministic", sessionId, serializeChartConfigForLog(chartConfig, columns.slice(), { source: "FBI SHR", agencyCount: 0, population: null }), shootingProof);
         return jsonResp(emitFactualPayload(shootingProof, attachChartAuditToPayload({
           success: true, question, sql, explanation: totalExplanation,
@@ -930,7 +942,7 @@ const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind 
         }, { source: "shr", requestId: chartAuditRequestId, queryLogId: chartAuditQueryLogId })));
       } catch (dbErr) {
         const msg = dbErr instanceof Error ? dbErr.message : String(dbErr);
-        const shootingDbProof = finalizeExit({ intendedAction: "decline_capability", sql, planFamily: "deterministic-shooting" });
+        const shootingDbProof = OPERATIONAL_RECORD;
         writeLog(question, sql, 0, `DB: ${msg}`, Date.now() - start, null, "shr", ["deterministic-shooting"], "deterministic", sessionId, null, shootingDbProof);
         return jsonResp({ success: false, error: `Database error: ${msg}` } as QueryError, 500);
       }
@@ -964,7 +976,7 @@ const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind 
         outcome = runShrCityRanking(shrRanking, { validate: validateRankingStatement, typeEvidence: (year) => loadShrTypeEvidence(rankingDb, year) });
       } catch (dbErr) {
         const msg = dbErr instanceof Error ? dbErr.message : String(dbErr);
-        const rankingDbProof = finalizeExit({ intendedAction: "decline_capability", sql: shrRanking.built.sql, planFamily: SHR_CITY_RANKING_GUARDRAIL });
+        const rankingDbProof = OPERATIONAL_RECORD;
         writeLog(question, shrRanking.built.sql, 0, `DB: ${msg}`, Date.now() - start, null, "shr", [SHR_CITY_RANKING_GUARDRAIL], "deterministic", sessionId, null, rankingDbProof);
         return jsonResp({ success: false, error: `Database error: ${msg}` } as QueryError, 500);
       }
@@ -983,7 +995,7 @@ const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind 
         type: "bar", xAxis: "city", yAxis: [shrRanking.built.sortColumn], yAxisLabel: shrRanking.yAxisLabel, title: outcome.title,
       }, question);
       const columns = [...shrRanking.built.columns];
-      const rankingProof = finalizeExit({ intendedAction: rows.length > 0 ? "answer" : "decline_data", sql: outcome.sql, rows, columns, derivation: sealPlanDerivation(SHR_CITY_RANKING_GUARDRAIL, outcome.sql), planFamily: SHR_CITY_RANKING_GUARDRAIL, guardrails: rankingTags, returnedEntities: returnedEntityKeys(rows), narrative: explanation, hasChart: true, db: rankingDb });
+      const rankingProof = finalizeExit({ outcome: rows.length > 0 ? OUTCOMES.deterministic_plan : OUTCOMES.no_rows_in_source, sql: outcome.sql, rows, columns, derivation: sealPlanDerivation(SHR_CITY_RANKING_GUARDRAIL, outcome.sql), planFamily: SHR_CITY_RANKING_GUARDRAIL, guardrails: rankingTags, returnedEntities: returnedEntityKeys(rows), narrative: explanation, hasChart: true, db: rankingDb });
       writeLog(question, outcome.sql, rows.length, null, executionMs, explanation, "shr", rankingTags, "deterministic", sessionId, serializeChartConfigForLog(chartConfig, columns, { source: "FBI SHR", agencyCount: rows.length, population: null }), rankingProof);
       return jsonResp(emitFactualPayload(rankingProof, attachChartAuditToPayload({
         success: true, question, sql: outcome.sql, explanation,
@@ -1026,7 +1038,7 @@ const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind 
           yAxisLabel: contract.compiled.yAxisLabel, title: contract.compiled.title,
         }, question);
         const columns = [...contract.compiled.columns];
-        const countProof = finalizeExit({ intendedAction: recorded ? "answer" : "decline_data", sql: contract.compiled.sql, rows, columns, derivation: sealPlanDerivation("owned-shr-count", contract.compiled.sql), planFamily: "owned-shr-count", guardrails: [...countTags, ...routeGuardrailsFired], returnedEntities: returnedEntityKeys(rows), narrative: explanation, hasChart: true, db: countDb });
+        const countProof = finalizeExit({ outcome: recorded ? OUTCOMES.deterministic_plan : OUTCOMES.all_values_null, sql: contract.compiled.sql, rows, columns, derivation: sealPlanDerivation("owned-shr-count", contract.compiled.sql), planFamily: "owned-shr-count", guardrails: [...countTags, ...routeGuardrailsFired], returnedEntities: returnedEntityKeys(rows), narrative: explanation, hasChart: true, db: countDb });
         writeLog(question, contract.compiled.sql, rows.length, null, executionMs, explanation, "shr", [...countTags, ...routeGuardrailsFired], "deterministic", sessionId, serializeChartConfigForLog(chartConfig, columns, { source: "FBI SHR", agencyCount: 0, population: null }), countProof);
         return jsonResp(emitFactualPayload(countProof, attachChartAuditToPayload({
           success: true, question, sql: contract.compiled.sql, explanation,
@@ -1038,7 +1050,7 @@ const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind 
         }, { source: "shr", requestId: chartAuditRequestId, queryLogId: chartAuditQueryLogId })));
       } catch (dbErr) {
         const msg = dbErr instanceof Error ? dbErr.message : String(dbErr);
-        const countDbProof = finalizeExit({ intendedAction: "decline_capability", sql: contract.compiled.sql, planFamily: "owned-shr-count" });
+        const countDbProof = OPERATIONAL_RECORD;
         writeLog(question, contract.compiled.sql, 0, `DB: ${msg}`, Date.now() - start, null, "shr", ["owned-shr-count"], "deterministic", sessionId, null, countDbProof);
         return jsonResp({ success: false, error: `Database error: ${msg}` } as QueryError, 500);
       }
@@ -1171,7 +1183,7 @@ const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind 
         if (containsInternalLeak(claude.explanation) || containsInternalLeak(claude.title)) { claude.explanation = INTERNAL_LEAK_SAFE_MESSAGE; claude.title = "Results"; routeGuardrailsFired.push("internal-leak-firewall"); }
         if (!serverAuthoredNoSql && !containsInternalLeak(claude.explanation) && !containsInternalLeak(claude.title)) { const noSqlRefusal = selectNoSqlRefusal(question, "shr"); claude.explanation = noSqlRefusal.explanation; routeGuardrailsFired.push(noSqlRefusal.reason); }
         claude.explanation = neutralizeUnverifiedAvailabilityClaim(claude.explanation, "SHR");
-        const noSqlProof = finalizeExit({ intendedAction: "decline_capability", guardrails: routeGuardrailsFired });
+        const noSqlProof = finalizeExit({ outcome: OUTCOMES.model_produced_no_sql, guardrails: routeGuardrailsFired });
         writeLog(question, null, 0, null, claudeMs, claude.explanation, "shr", routeGuardrailsFired, "haiku-4.5", sessionId, null, noSqlProof, boundedModelResponseJson(rawNoSqlText, null));
         return jsonResp(emitFactualPayload(noSqlProof, {
           success: true,
@@ -1193,7 +1205,7 @@ const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind 
     // Step 2: Validate SQL
     const validation = validateAndSanitize(claude.sql!);
     if (!validation.valid) {
-      const validationProof = finalizeExit({ intendedAction: "decline_capability", sql: claude.sql, guardrails: routeGuardrailsFired });
+      const validationProof = OPERATIONAL_RECORD;
       writeLog(question, claude.sql, 0, `Validation: ${validation.error}`, Date.now() - start, null, "shr", [], "haiku-4.5", sessionId, null, validationProof);
       return jsonResp(
         { success: false, error: "I generated an invalid query. Please try rephrasing your question.", sql: claude.sql } as QueryError,
@@ -1294,7 +1306,7 @@ const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind 
                   claude.yAxis = (retryClaude.yAxis as string[]) || claude.yAxis;
                 } else {
                   const msg = "I couldn't build a valid query for the SHR database. Try rephrasing for homicide-specific data or switching to a different tab for broader crime totals.";
-                  const retryAllowlistProof = finalizeExit({ intendedAction: "decline_capability", sql: retrySql, guardrails: [...tableCheck.fired, ...retryTableCheck.fired], planFamily: "table-allowlist", retries: 1, narrative: msg });
+                  const retryAllowlistProof = finalizeExit({ outcome: OUTCOMES.table_not_allowlisted, sql: retrySql, guardrails: [...tableCheck.fired, ...retryTableCheck.fired], planFamily: "table-allowlist", retries: 1, narrative: msg });
                   writeLog(question, retrySql, 0, `table_allowlist_second_failure:${retryTableCheck.unknown.join(",")}`, Date.now() - start, msg, "shr", [...tableCheck.fired, ...retryTableCheck.fired], "haiku-4.5", sessionId, null, retryAllowlistProof);
                   return jsonResp(emitFactualPayload(retryAllowlistProof, { success: true, question, sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - start }));
                 }
@@ -1303,7 +1315,7 @@ const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind 
           } catch { /* fall through to friendly failure */ }
 
           const msg = "I couldn't build a valid query for the SHR database. Try rephrasing for homicide-specific data or switching to a different tab for broader crime totals.";
-          const allowlistProof = finalizeExit({ intendedAction: "decline_capability", sql, guardrails: tableCheck.fired, planFamily: "table-allowlist", narrative: msg });
+          const allowlistProof = finalizeExit({ outcome: OUTCOMES.table_not_allowlisted, sql, guardrails: tableCheck.fired, planFamily: "table-allowlist", narrative: msg });
           writeLog(question, sql, 0, `table_allowlist:${tableCheck.unknown.join(",")}`, Date.now() - start, msg, "shr", tableCheck.fired, "haiku-4.5", sessionId, null, allowlistProof);
           return jsonResp(emitFactualPayload(allowlistProof, { success: true, question, sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - start }));
         }
@@ -1319,7 +1331,7 @@ const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind 
     // Hard override — skip retry, return deterministic response
     if (guardrailResult.overrideResponse) {
       const overrideExplanation = guardrailResult.overrideResponse;
-      const overrideProof = finalizeExit({ intendedAction: "decline_capability", sql, guardrails: guardrailResult.fired, planFamily: guardrailResult.overrideGuardrail ?? null, narrative: overrideExplanation });
+      const overrideProof = finalizeExit({ outcome: OUTCOMES.guardrail_block, sql, guardrails: guardrailResult.fired, planFamily: guardrailResult.overrideGuardrail ?? null, narrative: overrideExplanation });
       writeLog(question, sql, 0, `guardrail_override:${guardrailResult.overrideGuardrail}`, Date.now() - start, overrideExplanation, "shr", guardrailResult.fired, "haiku-4.5", sessionId, null, overrideProof);
       return jsonResp(emitFactualPayload(overrideProof, {
         success: true,
@@ -1381,21 +1393,21 @@ const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind 
       const postRetryResult = runGuardrails(postRetryCtx);
       if (postRetryResult.overrideResponse) {
         const msg = postRetryResult.overrideResponse;
-        const postRetryOverrideProof = finalizeExit({ intendedAction: "decline_capability", sql, guardrails: postRetryResult.fired, planFamily: postRetryResult.overrideGuardrail ?? null, narrative: msg });
+        const postRetryOverrideProof = finalizeExit({ outcome: OUTCOMES.guardrail_block, sql, guardrails: postRetryResult.fired, planFamily: postRetryResult.overrideGuardrail ?? null, narrative: msg });
         writeLog(question, sql, 0, `guardrail_override:${postRetryResult.overrideGuardrail}`, Date.now() - start, msg, "shr", postRetryResult.fired, "haiku-4.5", sessionId, null, postRetryOverrideProof);
         return jsonResp(emitFactualPayload(postRetryOverrideProof, { success: true, question, sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - start }));
       }
       const rateStillBad = postRetryResult.fired.some(f => f.includes("rate-no-population"));
       if (rateStillBad && /\b(rates?|per\s*capita|per\s*100)/i.test(question) && !asksForCountsInsteadOfRates(question)) {
         const msg = "I wasn't able to calculate a valid per-capita rate for this query. For murder rates, try the [Historical Library](/test?tab=historical) tab which has FBI statewide estimates.";
-        const rateFailureProof = finalizeExit({ intendedAction: "decline_capability", sql, guardrails: postRetryResult.fired, planFamily: "rate-no-population", narrative: msg });
+        const rateFailureProof = finalizeExit({ outcome: OUTCOMES.rate_denominator_unavailable, sql, guardrails: postRetryResult.fired, planFamily: "rate-no-population", narrative: msg });
         writeLog(question, sql, 0, "rate_second_failure", Date.now() - start, msg, "shr", postRetryResult.fired, "haiku-4.5", sessionId, null, rateFailureProof);
         return jsonResp(emitFactualPayload(rateFailureProof, { success: true, question, sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - start }));
       }
       const orPrecedenceStillBad = postRetryResult.fired.includes("or-and-precedence");
       if (orPrecedenceStillBad) {
         const msg = "I couldn't build a reliable multi-place query after correcting the SQL structure. Try asking for fewer places or restating the comparison.";
-        const orPrecedenceProof = finalizeExit({ intendedAction: "decline_capability", sql, guardrails: postRetryResult.fired, planFamily: "or-and-precedence", narrative: msg });
+        const orPrecedenceProof = finalizeExit({ outcome: OUTCOMES.sql_shape_rejected, sql, guardrails: postRetryResult.fired, planFamily: "or-and-precedence", narrative: msg });
         writeLog(question, sql, 0, "or_precedence_second_failure", Date.now() - start, msg, "shr", postRetryResult.fired, "haiku-4.5", sessionId, null, orPrecedenceProof);
         return jsonResp(emitFactualPayload(orPrecedenceProof, { success: true, question, sql: null as unknown as string, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - start }));
       }
@@ -1440,7 +1452,7 @@ const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind 
       rows = normalizeShrDisplayRows(rows);
     } catch (dbErr) {
       const msg = dbErr instanceof Error ? dbErr.message : String(dbErr);
-      const dbErrorProof = finalizeExit({ intendedAction: "decline_capability", sql, guardrails: routeGuardrailsFired });
+      const dbErrorProof = OPERATIONAL_RECORD;
       writeLog(question, sql, 0, `DB: ${msg}`, Date.now() - start, null, "shr", [], "haiku-4.5", sessionId, null, dbErrorProof);
       return jsonResp(
         { success: false, error: `Database error: ${msg}`, sql } as QueryError,
@@ -1463,7 +1475,7 @@ const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind 
       // F3 (Decision 13): govern the empty narrative before it is finalized or sent.
       explanation = governFactualNarrative(explanation, genericResultState({ sql, rows }));
       explanation = withShrScopeAndMeasureDisclosures(explanation, shrCountyScope, shrRequestedMeasure(guardrailQuestion) === "homicide");
-      const emptyProof = finalizeExit({ intendedAction: "decline_data", sql, guardrails, narrative: explanation, db });
+      const emptyProof = finalizeExit({ outcome: OUTCOMES.no_rows_in_source, sql, guardrails, narrative: explanation, db });
       writeLog(question, sql, 0, "empty_result", executionMs, explanation, "shr", guardrails, "haiku-4.5", sessionId, null, emptyProof);
       return jsonResp(emitFactualPayload(emptyProof, {
         success: true,
@@ -1491,7 +1503,7 @@ const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind 
         const emptyMsg = governFactualNarrative(
           "I ran that query but all the values came back empty — the math likely broke somewhere (like dividing by zero). Could you try asking that a different way?",
           genericResultState({ sql, rows }));
-        const allNullProof = finalizeExit({ intendedAction: "decline_data", sql, guardrails: guardrailResult.fired, narrative: emptyMsg, db });
+        const allNullProof = finalizeExit({ outcome: OUTCOMES.all_values_null, sql, guardrails: guardrailResult.fired, narrative: emptyMsg, db });
         writeLog(question, sql, 0, "all_null_columns", executionMs, emptyMsg, "shr", guardrailResult.fired, "haiku-4.5", sessionId, null, allNullProof);
         return jsonResp(emitFactualPayload(allNullProof, {
           success: true,
@@ -1710,7 +1722,7 @@ const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind 
     // The main model path. Model-authored, so no derivation is sealed and the answer
     // cannot satisfy the contract -- recorded honestly rather than softened.
     const finalization = finalizeExit({
-      intendedAction: "answer",
+      outcome: OUTCOMES.model_sql_validated,
       sql,
       rows,
       columns,
@@ -1746,6 +1758,17 @@ const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind 
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("SHR query error:", msg);
+    // OPERATIONAL ROW (P2.1 §4.3.2 X10 condition 2). Before P2.2 this catch logged nothing, so the
+    // four routes recorded the same class of event three different ways and the operational
+    // failure rate was unmeasurable. It writes `record_kind='operational'` and no decision: an
+    // error before a decision exists is not a product decision, and fabricating one here is
+    // exactly what the 16 sites that used to claim `decline_capability` were doing.
+    //
+    // The route-local closures are declared inside this try, so the module logger is called
+    // directly — the same shape the source-switch exits already use. The write is inside the
+    // logger's own swallow-on-failure boundary, so it cannot turn a 500 into anything worse.
+    logQuery("", null, 0, msg.slice(0, 500), Date.now() - outerStart, null, "shr", [], null, null,
+      null, null, null, null, proofLogFields(null), outcomeLogFields(OPERATIONAL_RECORD));
     return jsonResp(
       { success: false, error: "An error occurred. Please try again." } as QueryError,
       500

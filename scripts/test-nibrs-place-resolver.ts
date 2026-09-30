@@ -232,11 +232,36 @@ db.exec(`
 }
 
 {
-  const started = performance.now();
-  for (let i = 0; i < 500; i += 1) {
-    resolveNibrsPlaces(db, "Chicago murders from 2021 to 2025");
+  // The resolver cache is proved structurally: after the first resolution of a question, repeat
+  // resolutions must prepare no SQL at all. The previous form of this check timed 500 iterations
+  // against a 100 ms wall-clock budget, which fired twice on unchanged code on shared runners
+  // (runs 32970500509 and 33801327126) -- it measured the machine, not the cache.
+  // A year range no earlier assertion in this file has resolved, so the first call here is cold.
+  const question = "Chicago murders from 2019 to 2023";
+  const realPrepare = db.prepare.bind(db);
+  let prepared = 0;
+  (db as { prepare: typeof db.prepare }).prepare = ((sql: string) => {
+    prepared += 1;
+    return realPrepare(sql);
+  }) as typeof db.prepare;
+  try {
+    const first = resolveNibrsPlaces(db, question);
+    assert.ok(first && first.places.length > 0, "the warm-up resolution must resolve a place");
+    const warmUpPrepared = prepared;
+    assert.ok(warmUpPrepared > 0, "a cold resolution must actually consult the database");
+    for (let i = 0; i < 500; i += 1) {
+      const again = resolveNibrsPlaces(db, question);
+      assert.deepEqual(
+        again!.places.map((place) => ({ ...place, contractIndex: 0 })),
+        first!.places.map((place) => ({ ...place, contractIndex: 0 })),
+        "a cached resolution must return the same places"
+      );
+    }
+    assert.equal(prepared, warmUpPrepared, "500 cached resolutions must prepare no further SQL statements");
+    console.log(`  resolver cache: cold resolution prepared ${warmUpPrepared} statement(s); 500 warm resolutions prepared 0`);
+  } finally {
+    (db as { prepare: typeof db.prepare }).prepare = realPrepare;
   }
-  assert.ok(performance.now() - started < 100, "500 cached resolutions should complete under 100ms");
 }
 
 db.close();

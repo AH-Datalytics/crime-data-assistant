@@ -32,8 +32,23 @@ import sys
 import time
 import requests
 
-BASE_URL = sys.argv[1] if len(sys.argv) > 1 else "https://nibrsai.com"
-PASS = "NIBRSAHD"
+# PRODUCTION IS OPT-IN. A bare invocation targets localhost; production requires naming it.
+#
+# This used to default to https://nibrsai.com, so `python scripts/smoke-test.py` with no argument sent
+# live traffic to production -- easy to do by reflex, and invisible in the command.
+#
+# The site password is gone rather than moved. The site is intentionally public: `AUTH_PASSWORD` is
+# absent in production, so `middleware.ts` skips the gate and `/api/auth` issues a cookie for ANY
+# password. The literal this file used to send was therefore already inert here, and re-homing it into
+# an env var would have preserved a login step that authorizes nothing.
+DEFAULT_BASE = "http://localhost:3000"
+_args = [a for a in sys.argv[1:] if a != "--print-target"]
+BASE_URL = _args[0] if _args else DEFAULT_BASE
+
+if "--print-target" in sys.argv:
+    # Resolve the target and exit without contacting anything, so the default is testable offline.
+    print(BASE_URL)
+    sys.exit(0)
 
 # SQL is model-generated, so an occasional run produces no usable query for a question
 # that succeeds on the next attempt. Retry before calling it a failure — otherwise the
@@ -81,13 +96,13 @@ TESTS = [
 
 
 def get_session():
-    """Get an authenticated session."""
-    s = requests.Session()
-    r = s.post(f"{BASE_URL}/api/auth", json={"password": PASS})
-    if r.status_code != 200:
-        print(f"  AUTH FAILED: {r.status_code} {r.text[:200]}")
-        sys.exit(1)
-    return s
+    """A plain session. The site is public, so there is no login step.
+
+    This used to POST a tracked password to /api/auth and keep the cookie. With AUTH_PASSWORD absent
+    that endpoint accepts any password, so the step proved nothing; and the page-token flow below is
+    what the query routes actually require.
+    """
+    return requests.Session()
 
 
 def get_page_token(session):

@@ -273,6 +273,24 @@ def sint(line, start, end):
     return None
 
 
+def bh_population(line):
+    """Population from the BH batch header, with the federal placeholder zeroed.
+
+    The FBI writes 100,000,000 when an agency has no resident population of
+    its own -- federal ORIs such as US Marshals offices and US Park Police.
+    It is not a population: it is over 11x the largest real agency (NYPD,
+    ~8.5M). The 8 such rows in the 2025 master file contributed 800,000,000
+    to the agency-population sum, pushing the 2025 total to 1,151,428,438,
+    roughly 3.4x the US population. Zero matches the covered-by convention
+    already used for every other agency whose residents are counted under a
+    different ORI.
+    """
+    v = sint(line, 105, 114)
+    if v is not None and v >= 100_000_000:
+        return 0
+    return v
+
+
 def sha256_file(path):
     h = hashlib.sha256()
     with open(path, 'rb') as f:
@@ -282,6 +300,81 @@ def sha256_file(path):
                 break
             h.update(chunk)
     return h.hexdigest()
+
+
+BASELINE_FILE = "/opt/nibrs/import_baselines.json"
+# A republished year may legitimately shrink a little. It should not halve.
+MIN_RATIO = 0.90
+
+
+def load_baselines():
+    if os.path.exists(BASELINE_FILE):
+        try:
+            with open(BASELINE_FILE) as f:
+                return json.load(f)
+        except Exception as e:
+            log(f"  WARNING: cannot read {BASELINE_FILE} ({e}); "
+                f"shrink guard inactive this run")
+    return {}
+
+
+def save_baselines(baselines):
+    tmp = BASELINE_FILE + ".tmp"
+    with open(tmp, "w") as f:
+        json.dump(baselines, f, indent=2, sort_keys=True)
+    os.replace(tmp, BASELINE_FILE)
+
+
+def count_incident_segments(zip_path, entry):
+    """Level 01 records in the zip. One per incident, so it is directly
+    comparable to COUNT(*) FROM incidents WHERE year = Y."""
+    n = 0
+    with zipfile.ZipFile(zip_path) as zf, zf.open(entry) as f:
+        for raw in f:
+            if raw[0:2] == b"01":
+                n += 1
+    return n
+
+
+def shrink_guard(year, zip_path, entry, baselines):
+    """True if this year is safe to delete and reimport.
+
+    Refuses when the published file carries materially fewer incidents than
+    the data already loaded, because reimport deletes first and a smaller
+    file silently destroys coverage.
+    """
+    key = str(year)
+    prior = (baselines.get(key) or {}).get("incidents")
+    t0 = time.time()
+    new_count = count_incident_segments(zip_path, entry)
+    log(f"  {year}: file holds {new_count:,} incident records "
+        f"({time.time() - t0:.0f}s to count)")
+
+    if not prior:
+        log(f"  {year}: no baseline recorded yet; allowing and will store "
+            f"{new_count:,} after import")
+        return True
+
+    ratio = new_count / prior if prior else 0
+    log(f"  {year}: baseline {prior:,} -> {ratio:.1%} of previously imported")
+    if ratio >= MIN_RATIO:
+        return True
+
+    if os.environ.get("NIBRS_ALLOW_SHRINK") == "1":
+        log(f"  {year}: SHRINK OVERRIDDEN by NIBRS_ALLOW_SHRINK=1, proceeding")
+        return True
+
+    log(f"  {year}: *** REFUSING TO REIMPORT ***")
+    log(f"  {year}: the published file has {new_count:,} incidents but "
+        f"{prior:,} are already loaded ({ratio:.1%}).")
+    log(f"  {year}: reimport deletes before it inserts, so this would drop "
+        f"roughly {prior - new_count:,} incidents and everything derived "
+        f"from them.")
+    log(f"  {year}: existing data left untouched and the checksum NOT "
+        f"updated, so this will be re-checked next run.")
+    log(f"  {year}: if the smaller file is correct, rerun with "
+        f"NIBRS_ALLOW_SHRINK=1")
+    return False
 
 
 def load_checksums():
@@ -548,7 +641,7 @@ def import_year(year, zip_path, conn):
                 batches['agencies'].append((
                     ori, year, sc, sa,
                     s(line, 41, 71), s(line, 73, 75),
-                    s(line, 75, 76), s(line, 78, 79), s(line, 95, 96), sint(line, 105, 114),
+                    s(line, 75, 76), s(line, 78, 79), s(line, 95, 96), bh_population(line),
                 ))
                 if len(batches['agencies']) >= BATCH_SIZE:
                     flush_batch('agencies')
@@ -1920,6 +2013,7 @@ def main():
         return
 
     checksums = load_checksums()
+    baselines = load_baselines()
     years_to_process = []
 
     # Download and check for changes
@@ -1954,6 +2048,14 @@ def main():
             continue
 
         log(f"  {year}: CHANGED (new data detected)")
+
+        # A changed hash is not automatically an improvement. Reimport deletes
+        # the year first, so refuse a file that carries materially less data
+        # than what is already loaded.
+        if not shrink_guard(year, zip_path, entry, baselines):
+            os.remove(zip_path)
+            continue
+
         years_to_process.append((year, zip_path, new_hash))
 
     if not years_to_process:
@@ -1989,6 +2091,16 @@ def main():
         success = retry(import_year, year, zip_path, conn, label=f"import {year}")
         if success:
             checksums[str(year)] = new_hash
+            try:
+                loaded = conn.execute(
+                    "SELECT COUNT(*) FROM incidents WHERE year = ?", (year,)
+                ).fetchone()[0]
+                baselines[str(year)] = {"incidents": loaded,
+                                        "sha256": new_hash}
+                save_baselines(baselines)
+                log(f"  {year}: baseline recorded at {loaded:,} incidents")
+            except Exception as e:
+                log(f"  {year}: WARNING could not record baseline ({e})")
             log(f"  {year}: import complete")
         else:
             log(f"  {year}: IMPORT FAILED")

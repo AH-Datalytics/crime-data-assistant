@@ -1,0 +1,50 @@
+# Third-party Python packages the CANONICAL TEST HARNESS needs.
+#
+# THIS FILE IS THE DECLARATION. `requirements-harness.txt` beside it is the generated, fully pinned and
+# hashed lock. Neither a package name nor a version may appear in `.github/workflows/`: the workflow
+# installs from the lock and nothing else, which is asserted by
+# `scripts/test-python-dependency-closure.js`.
+#
+# WHY THIS FILE EXISTS. The first hosted CI run (32752370139) failed on `ModuleNotFoundError` for
+# `requests` and `pandas`. The suite had been green on the developer's workstation for one reason only:
+# that machine carried those packages in its global interpreter. Nothing in the repository declared them.
+#
+# HOW THE CLOSURE IS MEASURED, since the first attempt got it wrong three ways. The checker follows
+# local-module imports TRANSITIVELY, reads FUNCTION-LEVEL imports through a full AST walk, and includes
+# Python scripts that plan commands SPAWN -- discovered dynamically from command source, never from a
+# hard-coded list.
+#
+# Regenerate the lock with:
+#
+#   pip-compile --generate-hashes --strip-extras \
+#       --output-file=requirements-harness.txt requirements-harness.in
+#
+# Lock provenance, recorded so a regeneration is comparable: generated with CPython 3.14.3,
+# pip-tools 7.6.1, pip 25.3, on win32. The workflow pins the same interpreter version.
+#
+# scripts/verify_python_environment.py parses requirement markers with pip's VENDORED packaging
+# (pip._vendor.packaging), because adding a `packaging` distribution to the lock in order to check
+# the lock would be circular. That is a coupling to a private module path, so the verifier refuses
+# to run unless the interpreter's pip is exactly the version on the next line. Moving this line is
+# how that coupling gets re-reviewed on purpose instead of discovered by a broken run.
+# harness-env: pip==25.3
+
+# scripts/test-analytics-credential-containment.ts SPAWNS four tools -- smoke-test.py:33,
+# canary-reliability-disclosures.py:34, eval/stress-test.py:26, eval/run-eval.py:27 -- each importing
+# requests at MODULE level, above the --print-target early exit. Those tools are `network-optional`
+# exclusions, but a REGISTERED test executes them, so the import must resolve.
+requests
+
+# scripts/test_historical_core.py imports historical_core, and its tests import import_historical at
+# FUNCTION level (test_historical_core.py:1254); import_historical.py:15-16 imports pandas and numpy.
+pandas
+numpy
+
+# DELIBERATELY ABSENT: anthropic.
+#
+# eval/stress-test.py:112 and eval/run-eval.py:288 import it INSIDE functions that the --print-target
+# path never reaches; measured, all four tools resolve --print-target with anthropic absent. The
+# exclusion is therefore CALL-PATH SPECIFIC, not a blanket judgement about the file: it holds only while
+# every harness-reachable invocation of those two tools passes --print-target. The closure checker
+# enforces exactly that, so a reachable invocation without the flag invalidates the exclusion and makes
+# anthropic required.

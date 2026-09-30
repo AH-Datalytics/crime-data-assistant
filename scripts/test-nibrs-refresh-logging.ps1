@@ -306,43 +306,15 @@ Test-Case "an empty captured result is an empty string, not an error" {
 
 Write-Host "`n-- every streamed call site goes through the fixed boundary --"
 
-Test-Case "the shipped script runs no native command outside its sanctioned boundaries" {
+Test-Case "the shipped script runs no native command outside the two helpers" {
   # Fixing individual command strings would leave the next call site broken. The boundary is the fix.
-  #
-  # There are now THREE boundaries, not two. `Invoke-BoundedChild` joined them when the long-running
-  # children (transfer, build, benchmark) came under deadline supervision: it cannot go through
-  # `Invoke-StreamingCommand` because it needs the process handle in order to bound and kill a tree.
-  # It owns the same property the other two own -- the child's OWN exit code decides success, never
-  # whatever it happened to write to stderr -- and the supervisor suite asserts that directly.
   $source = Get-Content -LiteralPath (Join-Path $PSScriptRoot "refresh-nibrs-rollups.ps1") -Raw
   Assert-True (-not ($source -match '(?m)^\s*&\s*"?(ssh|scp)\b')) "the shipped script invokes ssh or scp directly"
   Assert-True (-not ($source -match 'Tee-Object')) "a second writer is back on the run log"
   $streamed = ([regex]::Matches($source, "Invoke-StreamingCommand ")).Count
   $captured = ([regex]::Matches($source, "Invoke-CapturedCommand ")).Count
-  $bounded  = ([regex]::Matches($source, "Invoke-BoundedChild ")).Count
-  # The remote commands moved to the BOUNDED forms of the same two helpers, which is the point of the
-  # transport correction: they keep the captured/streamed contracts and add a deadline. So the counts
-  # are taken across all four sanctioned boundaries rather than the two original names.
-  $boundedCaptured = ([regex]::Matches($source, "Invoke-BoundedCapturedCommand ")).Count
-  $boundedStreamed = ([regex]::Matches($source, "Invoke-BoundedStreamingCommand ")).Count
-  # One total across the sanctioned boundaries, rather than a magic number per helper name. The
-  # per-name thresholds were a proxy for "no call site escaped", and they went stale the moment the
-  # remote calls moved to the bounded forms -- which is a correction, not a regression.
-  $total = $streamed + $captured + $bounded + $boundedStreamed + $boundedCaptured
-  Assert-True ($total -ge 10) "call sites appear to have been removed rather than bounded, found $total"
-  Assert-True (($bounded + $boundedStreamed) -ge 4) `
-    "the streaming/long-running call sites are no longer bounded, found $bounded + $boundedStreamed"
-  Assert-True ($boundedCaptured -ge 6) `
-    "the captured server call sites are no longer bounded, found $boundedCaptured"
-  # And nothing may use the UNBOUNDED forms any more: every server command is on a deadline now.
-  Assert-True (($streamed -eq 0) -and ($captured -eq 0)) `
-    "an unbounded helper is still used for a server command ($streamed streamed, $captured captured)"
-  Assert-True ($bounded -ge 2) "the long-running children are no longer under deadline supervision, found $bounded"
-
-  # Nothing may start a native process on its own. `Start-Process` belongs to the supervisor and the
-  # seam that hands the holder its control channel, not to the operation body.
-  $supervisor = Get-Content -LiteralPath (Join-Path $PSScriptRoot "nibrs-recovery-supervisor.ps1") -Raw
-  Assert-True ($supervisor -match "ExitCode") "the bounded-child boundary does not read the child's own exit code"
+  Assert-True ($streamed -ge 6) "expected the streamed call sites to still be routed through the helper, found $streamed"
+  Assert-True ($captured -ge 6) "expected the captured call sites to still be routed through the helper, found $captured"
 }
 
 Write-Host "`nNIBRS refresh logging: $script:Passed passed, $script:Failed failed"

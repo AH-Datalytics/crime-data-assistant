@@ -46,6 +46,7 @@ export const REQUIRED_SHARED_CHART_COLUMNS = [
   "origin_proof_mode",
   "origin_state",
   "last_read_delivery_action",
+  "last_read_reason_code",
   "last_read_at",
 ] as const;
 

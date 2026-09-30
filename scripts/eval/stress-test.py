@@ -28,8 +28,11 @@ import requests
 SCRIPT_DIR = Path(__file__).parent
 RESULTS_DIR = SCRIPT_DIR / "results"
 QUERIES_PATH = SCRIPT_DIR / "stress-queries.json"
-DEFAULT_BASE = "https://nibrsai.com"
-PASSWORD = "NIBRSAHD"
+# PRODUCTION IS OPT-IN. This defaulted to https://nibrsai.com, so a bare `python
+# scripts/eval/stress-test.py` sent ~100 model-generated queries at production. Now `--base` must name
+# it. The site password is removed rather than re-homed: the site is intentionally public, so the login
+# step authorized nothing. ANTHROPIC_API_KEY is a genuine non-site credential and is untouched.
+DEFAULT_BASE = "http://localhost:3000"
 SLOW_THRESHOLD_S = 10
 
 # Categories of queries to stress-test, designed to hit every table and dimension
@@ -141,12 +144,8 @@ def generate_queries(count=100):
 
 
 def get_session(base_url):
-    s = requests.Session()
-    r = s.post(f"{base_url}/api/auth", json={"password": PASSWORD})
-    if r.status_code != 200:
-        print(f"AUTH FAILED: {r.status_code} {r.text[:200]}")
-        sys.exit(1)
-    return s
+    """A plain session. The site is public, so there is no login step."""
+    return requests.Session()
 
 
 def run_query(session, base_url, question):
@@ -300,10 +299,16 @@ def print_report(results):
 
 def main():
     parser = argparse.ArgumentParser(description="NIBRS Stress Test")
-    parser.add_argument("--base", default=DEFAULT_BASE, help="Base URL")
+    parser.add_argument("--base", default=DEFAULT_BASE, help="Base URL (default: localhost; production must be named explicitly)")
     parser.add_argument("--count", type=int, default=100, help="Number of queries to generate")
     parser.add_argument("--skip-generate", action="store_true", help="Reuse previous queries file")
+    parser.add_argument("--print-target", action="store_true",
+                        help="Print the resolved base URL and exit without contacting it")
     args = parser.parse_args()
+
+    if args.print_target:
+        print(args.base)
+        return
 
     # Step 1: Generate or load queries
     if args.skip_generate and QUERIES_PATH.exists():

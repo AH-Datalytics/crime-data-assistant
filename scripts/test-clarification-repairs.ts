@@ -67,6 +67,7 @@ import { applyResultDisclosures } from "../lib/result-disclosure";
 import { runGuardrails } from "../lib/guardrails";
 import { validateSourceCapabilities } from "../lib/source-capabilities";
 import { buildQueryContract } from "../lib/query-contract";
+import { OUTCOMES } from "../lib/proof-contract";
 import {
   branchCondition, extractBranch, extractDeclaration, runRouteBranch, runRouteExpression,
 } from "./decision1-terminal-harness";
@@ -547,6 +548,8 @@ function harness(request: string, userTurn: string) {
       serializeChartConfigForLog: () => null,
       attachChartAuditToPayload: (p: unknown) => p,
       chartAuditRequestId: "fixture", chartAuditQueryLogId: null,
+      // the real catalog constants: the migrated exits name their outcome (integration 2026-09-30)
+      OUTCOMES,
       finalizeExit: (o: Record<string, unknown>) => ({ proof: o }),
       writeLog: (...args: unknown[]) => { logged.push(args); return 1; },
       jsonResp: (p: unknown) => p,

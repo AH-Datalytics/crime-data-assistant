@@ -288,20 +288,32 @@ console.log("\nbatching");
     assert.strictEqual(result.probesRun, 0);
   });
 
-  check("batched attribution completes well inside the latency budget", () => {
-    // §11 allows <50 ms median for the whole proof step, of which attribution is
-    // one part. Generous bound; the point is to catch an accidental per-candidate
-    // query, which would show up here as orders of magnitude.
+  check("attribution of many candidates is one batched probe, never one query per candidate", () => {
+    // §11 allows <50 ms median for the whole proof step, of which attribution is one part. The
+    // thing that would blow that budget is an accidental per-candidate query, so that is what is
+    // asserted -- structurally, by counting prepared statements and the probe accounting the
+    // library itself reports -- rather than by timing 32 candidates against a wall-clock bound,
+    // which measured the runner instead of the code.
     const candidates: OmittedCandidate[] = Array.from({ length: 32 }, (_, i) => ({
       entityId: `c${i}`,
       label: `City ${i}`,
       state: "LA",
       requestedYears: [2020],
     }));
-    const started = Date.now();
-    attributeOmissions(candidates, { sourceId: "current", db, sourceYearRange: null, sourceHealth: "healthy" });
-    const elapsed = Date.now() - started;
-    assert.ok(elapsed < 200, `attribution of 32 candidates took ${elapsed}ms`);
+    const realPrepare = db.prepare.bind(db);
+    let prepared = 0;
+    (db as { prepare: typeof db.prepare }).prepare = ((sql: string) => {
+      prepared += 1;
+      return realPrepare(sql);
+    }) as typeof db.prepare;
+    try {
+      const result = attributeOmissions(candidates, { sourceId: "current", db, sourceYearRange: null, sourceHealth: "healthy" });
+      assert.strictEqual(result.probesRun, 1, "32 candidates must be attributed by exactly one probe");
+      assert.strictEqual(prepared, 1, `32 candidates must prepare exactly one statement, not ${prepared}`);
+      assert.strictEqual(result.omissions.length, 32, "every candidate is still attributed");
+    } finally {
+      (db as { prepare: typeof db.prepare }).prepare = realPrepare;
+    }
   });
 
   db.close();

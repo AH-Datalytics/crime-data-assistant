@@ -11,7 +11,13 @@ import { validateSourceCapabilities, type SourceCapabilityFinding } from "./sour
 import { findHistoricalRankingIssues } from "./historical-ranking-request";
 import { findNibrsClearanceRankingIssues } from "./nibrs-clearance-ranking-request";
 import { DIMENSION_COLUMNS, evaluateStructuralSemantics } from "./structural-semantics";
+import { observeHistoricalClearanceGrain, type ClearanceGrainObservation } from "./historical-clearance-grain";
 import { DEMOGRAPHIC_RATE_UNSUPPORTED_MESSAGE, SUB_CITY_GEOGRAPHY_MESSAGE } from "./capability-overrides";
+import { classifyCapabilityRule } from "./capability-decision";
+import { OUTCOMES } from "./proof-contract";
+
+/** The typed pair a capability block finalizes with; null when no block rule fired. */
+export type CapabilityBlockOutcome = typeof OUTCOMES.query_contract_failed | null;
 
 export interface QueryContractSqlValidation {
   sql: string;
@@ -21,54 +27,38 @@ export interface QueryContractSqlValidation {
   retryIssues: string[];
   blockReasons: string[];
   enforced: string[];
+  /**
+   * The typed catalog outcome a fired capability BLOCK rule carries, or null when none fired.
+   *
+   * Supplied by `classifyCapabilityRule()` in `lib/capability-decision.ts` - the same call the
+   * P3.1a request-decision observer makes - so the block classification has exactly one author.
+   */
+  capabilityOutcome: CapabilityBlockOutcome;
+  /**
+   * The Historical clearance-grain finding, recorded on every validation so the property stays
+   * measurable.
+   *
+   * Recording is not acting. Only a finding whose `enforceable` flag is set -- today, a state-grain
+   * clearance request whose state resolved with HIGH confidence -- ALSO lands in `blockReasons` and
+   * `enforced`. A medium/low-confidence state, and every `historical-clearance-measure-absent`
+   * finding, appear here and nowhere else, so they can be measured without changing any user-facing
+   * outcome.
+   */
+  clearanceGrainObservation: ClearanceGrainObservation | null;
 }
 
 const CONTRACT_SECOND_FAILURE_MESSAGE =
   "I couldn't build a reliable query that matched the requested source, geography, metric, and time period. Try narrowing the question or choosing one of the suggested alternatives.";
 
-const RETRY_CAPABILITY_RULES = new Set([
-  "current-countywide-crosswalk",
-  "current-rate-population",
-  "nibrs-weapon-person-crime-table",
-  "nibrs-weapon-demographic-person-crime-table",
-  "nibrs-weapon-circumstance-person-crime-table",
-  "nibrs-weapon-circumstance-demographic-person-crime-table",
-  "nibrs-carjacking-clearance-table",
-  "nibrs-clearance-type-table",
-  "nibrs-dv-assault-share-table",
-  "nibrs-campus-agency-resolution",
-  "nibrs-countywide-crosswalk",
-  "nibrs-continuous-reporters-range-table",
-  "nibrs-demographic-breakdown-table",
-  "nibrs-specific-drug-offense-table",
-  "nibrs-specific-drug-arrest-table",
-  "nibrs-local-geography-state-table",
-  "nibrs-agency-lookup-not-crime-data",
-  "historical-countywide-crosswalk",
-  "historical-clearance-table",
-  "historical-state-national-rate-table",
-  "historical-local-rate-population",
-  "historical-rate-null-gaps",
-  "historical-local-geography-state-table",
-  "historical-parish-type-city",
-  "historical-agency-lookup-not-crime-data",
-  "shr-campus-agency-resolution",
-  "shr-countywide-crosswalk",
-  "shr-state-rate-population",
-]);
 
-const BLOCK_CAPABILITY_RULES = new Set([
-  "unsupported-sub-city-geography",
-  "vehicle-burglary-unsupported",
-  "unsupported-court-policy-topic",
-  "demographic-rate-unsupported",
-  "nibrs-clearance-weapon-unsupported",
-  "nibrs-countywide-demographics-unsupported",
-  "nibrs-shooting-category-unsupported",
-  "shr-non-homicide-unsupported",
-  "shr-clearance-unsupported",
-  "shr-demographic-rate-unsupported",
-]);
+/**
+ * The block/retry membership sets AND the classification that reads them both live in
+ * `lib/capability-decision.ts`. This file used to declare the two Sets privately and test them with
+ * its own `if/else if`. Sharing only the Sets was not enough: membership was then common while the
+ * *consequence* was still decided in two places, so branch order or the typed outcome could change
+ * for the observer without changing production. `classifyCapabilityRule()` is now the only thing
+ * that decides what a fired capability finding means, and this file consumes its result.
+ */
 
 const BLOCK_MESSAGES: Record<string, string> = {
   "unsupported-sub-city-geography":
@@ -121,6 +111,29 @@ function capabilityRetryIssue(finding: SourceCapabilityFinding, contract: Return
 
 export function queryContractFailureMessage(result: QueryContractSqlValidation): string | null {
   return result.blockReasons[0] ?? (result.retryIssues.length > 0 ? CONTRACT_SECOND_FAILURE_MESSAGE : null);
+}
+
+/**
+ * The typed outcome a route must finalize a contract failure with.
+ *
+ * WHY A HELPER AND NOT A LITERAL AT EACH ROUTE. Before this, every route looked the catalog member
+ * up for itself. Both ends named the same thing, so a test could prove they were equal today - but
+ * equality is not delivery. The classifier's decision never actually travelled to finalization, and
+ * a later catalog or routing change could strand the carrier while each route still found a valid
+ * literal. Round 3 named that exactly: the requirement is causal delivery, not present equality.
+ *
+ * So the classification is DELIVERED. When a capability block fired, this returns the very object
+ * `classifyCapabilityRule()` produced and the validator carried on the result. The fallback covers
+ * contract failures that no capability rule caused - a missing required ORI, a clearance-grain
+ * block, the second-failure message - which have no capability classification to deliver and keep
+ * the catalog member they always used.
+ *
+ * Behaviour is unchanged either way: the carrier IS `OUTCOMES.query_contract_failed`, so both
+ * branches return the same object today. What changes is where the value comes from, which is the
+ * thing that has to be true for the linkage to survive a refactor.
+ */
+export function capabilityFinalizationOutcome(result: QueryContractSqlValidation) {
+  return result.capabilityOutcome ?? OUTCOMES.query_contract_failed;
 }
 
 export function queryContractGuardrails(result: QueryContractSqlValidation): string[] {
@@ -583,6 +596,11 @@ export function validateQueryContractSql(opts: {
       retryIssues: [],
       blockReasons: missingRequiredOri ? [requiredOriBlockMessage(requiredOri)] : [],
       enforced: missingRequiredOri ? ["contract-required-county-ori"] : [],
+      // No contract was built, so no capability rule was classified. A missing-ORI block is a
+      // different finding with its own message and is not a capability outcome.
+      capabilityOutcome: null,
+      // No contract was built, so there is no typed measure or geography to observe.
+      clearanceGrainObservation: null,
     };
   }
 
@@ -591,6 +609,15 @@ export function validateQueryContractSql(opts: {
   const warnings: string[] = [];
   const retryIssues: string[] = [];
   const blockReasons: string[] = [];
+  /**
+   * The typed catalog outcome a capability block finalizes with, taken from the shared classifier.
+   *
+   * Exposed rather than kept local so the linkage from "a question-only rule fired" to "the route
+   * finalizes `decline_capability / query_contract_failed`" is testable at runtime instead of only
+   * by reading four route files. The routes still pass `OUTCOMES.query_contract_failed` directly;
+   * `scripts/test-p3-1a-route-finalization.ts` asserts the two are the same object.
+   */
+  let capabilityOutcome: CapabilityBlockOutcome = null;
   const enforced: string[] = [];
 
   const requestedState = contract.geography.state;
@@ -670,6 +697,12 @@ export function validateQueryContractSql(opts: {
   // worth keeping. What this adds is the property none of them model: the entity a returned ROW
   // represents. Its severity is decided by the rule itself, not by a name in a set, so a new table
   // in the catalog is enforced the day it is added.
+  // Integration 2026-09-30: a structural block's message is generic ("... comes from `table`, which
+  // produces national-level rows"), so it is delivered only when no source-specific block fired. It is
+  // collected here and appended after every other block reason below -- the capability messages, the
+  // required-ORI message and the authored clearance-grain decline keep the order they have on dev, and
+  // the structural finding is still recorded in `enforced` either way.
+  const structuralBlockReasons: string[] = [];
   for (const finding of evaluateStructuralSemantics({
     question: opts.question,
     source: opts.source,
@@ -678,7 +711,7 @@ export function validateQueryContractSql(opts: {
   })) {
     warnings.push(finding.ruleId);   // ruleIds already begin with `structural-`
     if (finding.severity === "block") {
-      blockReasons.push(finding.message);
+      structuralBlockReasons.push(finding.message);
     } else {
       // A finding may carry its whole instruction. The row-level advice below is right for a
       // wrong-table finding and wrong for one about a single added filter on the correct table --
@@ -700,12 +733,33 @@ export function validateQueryContractSql(opts: {
   });
   for (const finding of capabilityFindings) {
     warnings.push(`capability-${finding.ruleId}`);
-    if (BLOCK_CAPABILITY_RULES.has(finding.ruleId)) {
-      blockReasons.push(BLOCK_MESSAGES[finding.ruleId] ?? finding.message);
-      enforced.push(finding.ruleId);
-    } else if (RETRY_CAPABILITY_RULES.has(finding.ruleId)) {
-      retryIssues.push(capabilityRetryIssue(finding, contract));
-      enforced.push(finding.ruleId);
+    // ONE classification authority. Membership tests used to live here as a second `if/else if`
+    // beside the observer's; sharing the two Sets made the membership common but left the
+    // *consequence* decided in two places, so a change to branch order or to the typed outcome
+    // could move the observer without moving production. The switch is exhaustive on purpose: a
+    // new classification kind becomes a compile error here rather than silently falling through
+    // to "neither blocks nor retries".
+    const decision = classifyCapabilityRule(finding.ruleId);
+    switch (decision.kind) {
+      case "block":
+        // The typed pair the route will finalize with, taken from the shared catalog rather than
+        // re-decided here. The human-facing message is a separate mapping applied AFTER the
+        // classification, never a substitute for it.
+        capabilityOutcome = decision.outcome;
+        blockReasons.push(BLOCK_MESSAGES[finding.ruleId] ?? finding.message);
+        enforced.push(finding.ruleId);
+        break;
+      case "retry":
+        retryIssues.push(capabilityRetryIssue(finding, contract));
+        enforced.push(finding.ruleId);
+        break;
+      case "observe_only":
+        // Recorded as a warning above and nowhere else: observed, not acted on.
+        break;
+      default: {
+        const unreachable: never = decision;
+        throw new Error(`unhandled capability classification: ${JSON.stringify(unreachable)}`);
+      }
     }
   }
 
@@ -744,6 +798,22 @@ export function validateQueryContractSql(opts: {
     enforced.push("contract-required-county-ori");
   }
 
+  // Computed here, at the same pre-execution point every other contract finding is decided.
+  //
+  // Observation is recorded in full. Only an `enforceable` finding -- today, a state-grain clearance
+  // request whose state resolved with HIGH confidence -- becomes a block. A medium/low-confidence
+  // state and every measure-absent finding are still returned for measurement and still act on
+  // nothing, which is what keeps a decline from ever resting on a guess about what was meant.
+  const clearanceGrainObservation = observeHistoricalClearanceGrain(contract);
+  if (clearanceGrainObservation?.enforceable) {
+    // The message is server-authored and carries no clearance number, so the offer of the national
+    // and individual-agency alternatives cannot become an answer. Neither alternative is queried:
+    // blocking here returns before any factual SQL runs.
+    blockReasons.push(clearanceGrainObservation.message);
+    enforced.push(clearanceGrainObservation.reason);
+  }
+  blockReasons.push(...structuralBlockReasons);
+
   const uniqueBlockReasons = [...new Set(blockReasons)];
   return {
     sql,
@@ -753,5 +823,7 @@ export function validateQueryContractSql(opts: {
     retryIssues: uniqueBlockReasons.length > 0 ? [] : [...new Set(retryIssues)],
     blockReasons: uniqueBlockReasons,
     enforced: [...new Set(enforced)],
+    capabilityOutcome,
+    clearanceGrainObservation,
   };
 }

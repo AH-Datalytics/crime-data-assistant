@@ -49,6 +49,11 @@ function check(name: string, fn: () => void) {
 }
 
 const EXPECTED_COLUMNS = [
+  // The outcome layer joined this migration in P2.2. One apply/rollback unit, because one
+  // projector pair writes these columns and two scripts would create two owners of "which
+  // outcome columns exist".
+  "record_kind",
+  "reason_code",
   "delivery_action",
   "proof_manifest",
   "result_digest",
@@ -159,8 +164,8 @@ console.log("\npartially-applied migration completes");
     assert.strictEqual(result.changed, true);
     assert.deepStrictEqual(
       result.columnsChanged.sort(),
-      ["plan_family", "proof_mode", "proof_schema_version"],
-      "should have added exactly the three missing columns",
+      ["plan_family", "proof_mode", "proof_schema_version", "reason_code", "record_kind"].sort(),
+      "should have added exactly the missing columns",
     );
   });
 

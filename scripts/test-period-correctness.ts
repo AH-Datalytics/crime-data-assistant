@@ -935,7 +935,7 @@ console.log("13 - the delivered group-only answer");
   check(answer.title === `Violent Crime Counts, Comparison Group of ${GROUP_SIZE} Agencies, 2023-2026`,
     `the title names the comparison group (got ${JSON.stringify(answer.title)})`);
   check(!/National Sample/i.test(answer.title), "and does not say National Sample");
-  check(!/(?:decreased|increased|fell|rose)/i.test(answer.title), "the title asserts no direction");
+  check(!/\b(?:decreased|increased|fell|rose)\b/i.test(answer.title), "the title asserts no direction");
   check(answer.group.includedCount === GROUP_SIZE && answer.group.excludedCount === STARTING_SAMPLE - GROUP_SIZE,
     "the group is returned with the answer for local evidence");
 

@@ -17,7 +17,12 @@ assert.match(plan.sql, /year = 2017/);
 assert.match(plan.explanation, /not full-state population/);
 assert.equal(buildCurrentIndexedStatePlan("2017 is good", []), null);
 
-const db = new Database("crime_data.db", { readonly: true });
+// Resolve the database the same way every other test and all of lib/ does. The literal
+// "crime_data.db" that used to be here was the ONLY hardcoded database path left in the harness, and
+// it meant no environment variable could point this test at a fixture: in a clean clone it failed
+// with SQLITE_CANTOPEN before reaching a single assertion. The fallback keeps the previous behaviour
+// for anyone who has that file in the working directory.
+const db = new Database(process.env.RTCI_DB_PATH || "crime_data.db", { readonly: true });
 const rows = db.prepare(plan.sql).all() as Record<string, number | null>[];
 assert.ok(rows.length > 1);
 const base = rows.find((row) => row.year === 2017);

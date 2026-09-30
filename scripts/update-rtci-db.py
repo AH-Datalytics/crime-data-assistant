@@ -24,9 +24,12 @@ import io
 import json
 import os
 import re
+import shutil
 import sqlite3
+import stat
 import subprocess
 import sys
+import tempfile
 
 from current_trends_build_receipt import sha256_file, sha256_text, write_complete_receipt
 
@@ -156,13 +159,138 @@ def get_agency_info(db_path):
     return agency_info
 
 
-def refresh_populations(db_path, pop_csv):
+def hex_digest_argument(value):
+    """An expected-digest flag takes a SHA-256 and nothing else.
+
+    There is deliberately no value meaning "whatever is there". A boolean bypass records that
+    somebody wanted to proceed; a named digest records what they believed they were adopting, and
+    is wrong out loud when they were mistaken.
+    """
+    digest = value.strip().lower()
+    if not re.fullmatch(r"[0-9a-f]{64}", digest):
+        raise argparse.ArgumentTypeError(f"expected a 64-character SHA-256 digest, got {value!r}")
+    return digest
+
+
+def authorize_input_digest(conn, component, path, flag_name, expect_sha256=None):
+    """Refuse to change a reviewed build input unless the operator names its new digest.
+
+    A monthly update is supposed to add a month. It is not supposed to quietly re-import the
+    population denominators or rebuild the crosswalk from a different workbook because a file on
+    disk moved underneath a default path -- which is exactly what was live: the updater's default
+    populations.csv had been replaced four days after the database it was about to update was
+    built, and nothing would have said so. Population is a denominator, so a changed one produces
+    confidently wrong rates rather than a visible failure.
+
+    Returns the observed digest. Exits non-zero rather than writing anything it cannot justify.
+    """
+    observed = sha256_file(path)
+    has_receipts = conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='source_build_receipts'"
+    ).fetchone()
+    row = conn.execute(
+        "SELECT source_sha256 FROM source_build_receipts WHERE component=?", (component,)
+    ).fetchone() if has_receipts else None
+    stored = row[0].lower() if row and row[0] else None
+
+    if stored is None:
+        print(f"  no existing {component} receipt to protect; recording {observed[:16]}...")
+        return observed
+    if observed.lower() == stored:
+        return observed
+
+    if expect_sha256 is None:
+        print(f"ERROR: {os.path.basename(path)} is not the input the {component} receipt records.")
+        print(f"  receipt records : {stored}")
+        print(f"  supplied input  : {observed}")
+        print(f"  Refusing to change reviewed data as a side effect of a monthly update.")
+        print(f"  To adopt this input deliberately, pass: {flag_name} {observed}")
+        sys.exit(1)
+    if expect_sha256.lower() != observed.lower():
+        print(f"ERROR: {flag_name} does not describe the supplied {os.path.basename(path)}.")
+        print(f"  receipt records : {stored}")
+        print(f"  supplied input  : {observed}")
+        print(f"  you named       : {expect_sha256.lower()}")
+        sys.exit(1)
+    print(f"  {component}: authorized input change to {observed[:16]}... (was {stored[:16]}...)")
+    return observed
+
+
+def make_staging_dir():
+    """A run-owned directory for verified input copies."""
+    return tempfile.mkdtemp(prefix="rtci-inputs-")
+
+
+def remove_staging_dir(path):
+    """Remove a staging directory whose files were deliberately made read-only.
+
+    Restoring write permission first rather than relying on an rmtree error callback, whose keyword
+    changed name across Python versions -- the cleanup of a verification step is a poor place to
+    depend on that.
+    """
+    for entry in os.scandir(path) if os.path.isdir(path) else ():
+        if entry.is_file():
+            os.chmod(entry.path, stat.S_IWRITE | stat.S_IREAD)
+    shutil.rmtree(path, ignore_errors=True)
+
+
+def verified_input_copy(path, expected_digest, staging_dir):
+    """Copy an authorized input into a run-owned read-only file and prove the copy's bytes.
+
+    THE GAP THIS CLOSES. Authorization hashes a path. The parser then opens that path again, and
+    the crosswalk builder opens it in a *separate process*. Between those opens the bytes can
+    change -- a OneDrive sync lands, an export is regenerated -- so "the file I authorized" and
+    "the file I parsed" were never provably the same object, and the digest written into the
+    receipt was a third independent read. A receipt that records bytes nobody parsed is worse than
+    no receipt, because it looks like provenance.
+
+    Everything downstream consumes the returned copy, and the receipt records the returned digest,
+    so the digest in the receipt is the digest of the bytes actually consumed.
+    """
+    destination = os.path.join(staging_dir, os.path.basename(path))
+    shutil.copyfile(path, destination)
+    observed = sha256_file(destination)
+    if observed != expected_digest:
+        print(f"ERROR: {os.path.basename(path)} changed while it was being staged.")
+        print(f"  authorized digest : {expected_digest}")
+        print(f"  staged copy       : {observed}")
+        sys.exit(1)
+    # Read-only so nothing in this process can rewrite what the receipt is about to describe.
+    os.chmod(destination, stat.S_IREAD)
+    return destination, observed
+
+
+def refresh_populations(db_path, pop_csv, expect_sha256=None, staging_dir=None):
     """Refresh agency_population from the FBI populations CSV for sample agencies."""
     if not os.path.exists(pop_csv):
-        print(f"  WARNING: populations CSV not found at {pop_csv}, skipping population refresh")
-        return
+        # This used to warn and return, so a wrong path degraded to a skipped refresh and a stale
+        # receipt instead of an error -- the quietest possible way to ship stale denominators.
+        print(f"ERROR: populations CSV not found at {pop_csv}")
+        sys.exit(1)
 
-    print(f"\nRefreshing agency_population from {os.path.basename(pop_csv)}...")
+    # Gate on a short-lived connection: authorize_input_digest exits on refusal, and an exit while
+    # the working connection is open leaves the file locked on Windows as well as unwritten.
+    gate = sqlite3.connect(db_path)
+    try:
+        authorized = authorize_input_digest(gate, "current_trends_population", pop_csv,
+                                            "--expect-population-sha256", expect_sha256)
+    finally:
+        gate.close()
+
+    owns_staging = staging_dir is None
+    staging_dir = staging_dir or make_staging_dir()
+    try:
+        verified, consumed_digest = verified_input_copy(pop_csv, authorized, staging_dir)
+        _refresh_populations_from_verified(db_path, verified, consumed_digest)
+    finally:
+        if owns_staging:
+            remove_staging_dir(staging_dir)
+
+
+def _refresh_populations_from_verified(db_path, pop_csv, consumed_digest):
+    """The write itself, against a copy whose bytes are already proven."""
+    print(f"\nRefreshing agency_population from {os.path.basename(pop_csv)}"
+          f" (consumed {consumed_digest[:16]}...)...")
     conn = sqlite3.connect(db_path)
     sample_oris = set(r[0] for r in conn.execute("SELECT ori FROM sample_agencies"))
 
@@ -211,7 +339,7 @@ def refresh_populations(db_path, pop_csv):
         conn,
         component="current_trends_population",
         source_version=os.path.basename(pop_csv),
-        source_sha256=sha256_file(pop_csv),
+        source_sha256=consumed_digest,
         source_rows=source_rows,
         expected_rows=len(expected),
         actual_rows=matched,
@@ -226,6 +354,47 @@ def refresh_populations(db_path, pop_csv):
     conn.close()
     print(f"  Updated: {updated}, Inserted: {inserted}")
     print(f"  Sample population (latest year): {total_pop:,}")
+
+
+MONTHLY_PROJECTIONS = ("agency_monthly", "national_monthly", "state_monthly")
+
+
+def assert_monthly_projections_aligned(conn, year, month):
+    """All three monthly projections must agree before a receipt may claim completeness.
+
+    Row counts are not alignment: every table can be non-empty while one of them still ends a
+    month behind, which is exactly the defect that shipped unnoticed. This raises instead of
+    returning a flag, and it is called before ``write_complete_receipt`` and before the single
+    ``commit()``, so a misaligned write leaves no partial state to clean up.
+
+    Two properties, not one:
+
+      1. the imported period exists in ALL three tables -- catches "the month I asked for did
+         not land in one of them";
+      2. the three maxima are EQUAL -- catches "one projection lags the others".
+
+    Deliberately NOT "every maximum equals the imported month": re-importing an older month into
+    a database that already holds later ones is legitimate, and that stricter rule would reject
+    it while catching nothing extra.
+    """
+    period = year * 100 + month
+    maxima = {}
+    absent = []
+    for table in MONTHLY_PROJECTIONS:
+        maxima[table] = conn.execute(f"SELECT MAX(year*100+month) FROM {table}").fetchone()[0]
+        found = conn.execute(
+            f"SELECT 1 FROM {table} WHERE year=? AND month=? LIMIT 1", (year, month)
+        ).fetchone()
+        if found is None:
+            absent.append(table)
+    if absent:
+        raise RuntimeError(
+            f"cannot receipt {period}: imported period missing from {', '.join(absent)}"
+        )
+    if len(set(maxima.values())) != 1:
+        detail = ", ".join(f"{table}={maxima[table]}" for table in MONTHLY_PROJECTIONS)
+        raise RuntimeError(f"monthly projections disagree on their newest period: {detail}")
+    return maxima
 
 
 def update_local_db(db_path, records, full_rebuild, year, month,
@@ -286,42 +455,128 @@ def update_local_db(db_path, records, full_rebuild, year, month,
         GROUP BY am.year, am.month, am.offense
     """)
 
+    # Rebuild state_monthly -- the THIRD monthly projection, in this same transaction.
+    #
+    # This used to be left out entirely, so a monthly update advanced agency_monthly and
+    # national_monthly to the new month and left state_monthly on the previous one. A
+    # state-scoped question then answered through May while an agency or national question
+    # answered through June, with nothing disclosing the gap. Measured 2026-08-27 against a
+    # backup of production: baseline aligned at 202605, candidate agency/national 202606 with
+    # state_monthly still 202605.
+    #
+    # The cohort is EVERY agency, not the national sample and not "complete reporters".
+    # scripts/build_db.py aggregates state_monthly from complete reporters only; that rule
+    # reproduces just 13,338 of production's 36,725 rows. This rule reproduces all 36,725
+    # exactly, so it -- not build_db.py's -- is the series production actually serves.
+    # Changing it would silently rewrite nine years of state history.
+    if full_rebuild:
+        conn.execute("DELETE FROM state_monthly")
+    else:
+        conn.execute("DELETE FROM state_monthly WHERE year=? AND month=?", (year, month))
+
+    conn.execute("""
+        INSERT INTO state_monthly (state, year, month, offense, count, agency_count)
+        SELECT am.state, am.year, am.month, am.offense, SUM(am.count), COUNT(DISTINCT am.ori)
+        FROM agency_monthly am
+        """ + ("" if full_rebuild else f"WHERE am.year={year} AND am.month={month}") + """
+        GROUP BY am.state, am.year, am.month, am.offense
+    """)
+
     latest = conn.execute("SELECT MAX(year*100+month) FROM national_monthly").fetchone()[0]
     nm_rows = conn.execute("SELECT COUNT(*) FROM national_monthly").fetchone()[0]
+    sm_rows = conn.execute("SELECT COUNT(*) FROM state_monthly").fetchone()[0]
     sa_count = conn.execute("SELECT COUNT(*) FROM sample_agencies").fetchone()[0]
     actual_rows = conn.execute(
         "SELECT COUNT(*) FROM agency_monthly" if full_rebuild else
         "SELECT COUNT(*) FROM agency_monthly WHERE year=? AND month=?",
         () if full_rebuild else (year, month),
     ).fetchone()[0]
-    write_complete_receipt(
-        conn,
-        component="current_trends_monthly",
-        source_version=f"{year:04d}-{month:02d}",
-        source_sha256=source_sha256,
-        source_rows=source_rows,
-        expected_rows=len(records),
-        actual_rows=actual_rows,
-        excluded_rows=excluded_rows,
-    )
-    conn.commit()
-    conn.close()
+    # Both calls below raise on a refused import, and neither had been closing the connection.
+    # On Windows an open handle also keeps the file locked, so a refusal used to leave the
+    # database un-deletable as well as uncommitted. The refusal itself is the correct behaviour;
+    # leaking the handle while refusing is not.
+    try:
+        assert_monthly_projections_aligned(conn, year, month)
+        write_complete_receipt(
+            conn,
+            component="current_trends_monthly",
+            source_version=f"{year:04d}-{month:02d}",
+            source_sha256=source_sha256,
+            source_rows=source_rows,
+            expected_rows=len(records),
+            actual_rows=actual_rows,
+            excluded_rows=excluded_rows,
+        )
+        conn.commit()
+    finally:
+        conn.close()
     print(f"  national_monthly: {nm_rows:,} rows, latest {latest // 100}-{latest % 100:02d}")
+    print(f"  state_monthly: {sm_rows:,} rows")
     print(f"  sample: {sa_count} agencies")
 
 
-def ensure_crosswalk(db_path, source_path, cde_path):
+def ensure_crosswalk(db_path, source_path, cde_path, expect_sha256=None,
+                     expect_cde_sha256=None, staging_dir=None):
     """Rebuild agency_county_crosswalk in the local DB and verify it.
 
     crime_data.db is wholesale-replaced on the VPS at deploy time, so any
     derived table must exist in the LOCAL file before scp or it regresses
     Current/Historical county support (see docs/query-audit-2026-06-09-proposals.md).
     Aborts (sys.exit) on failure so a bad DB is never deployed.
+
+    Both inputs reach a SEPARATE PROCESS, so both are staged as verified read-only copies first and
+    the builder is given the copies. Hashing a path and then handing that path to a subprocess
+    proves nothing about the bytes the subprocess read.
     """
     print("\nRebuilding agency_county_crosswalk (derived table)...")
     if not os.path.exists(source_path):
         print(f"  ERROR: crosswalk source not found: {source_path}")
         sys.exit(1)
+    if not os.path.exists(cde_path):
+        print(f"  ERROR: crosswalk CDE input not found: {cde_path}")
+        sys.exit(1)
+
+    # The CDE input is bound by NO receipt -- there is no reviewed digest for it anywhere in the
+    # repository -- so it cannot be checked against stored provenance the way the workbook can.
+    # For this update it must therefore be named explicitly: the operator states the digest, and
+    # the observed bytes must equal it exactly. Extending the receipt schema to carry it is
+    # deliberately a separate piece of work; the digest is recorded in the run's evidence instead.
+    observed_cde = sha256_file(cde_path)
+    if expect_cde_sha256 is None:
+        print(f"ERROR: the CDE crosswalk input is not bound by any receipt, so its digest must be named.")
+        print(f"  observed: {observed_cde}")
+        print(f"  pass: --expect-cde-sha256 {observed_cde}")
+        sys.exit(1)
+    if expect_cde_sha256.lower() != observed_cde.lower():
+        print(f"ERROR: --expect-cde-sha256 does not describe {os.path.basename(cde_path)}.")
+        print(f"  observed  : {observed_cde}")
+        print(f"  you named : {expect_cde_sha256.lower()}")
+        sys.exit(1)
+
+    # Gate BEFORE the builder runs: it rewrites agency_county_crosswalk wholesale with --apply,
+    # so checking afterwards would be checking a table that had already been replaced.
+    gate = sqlite3.connect(db_path)
+    try:
+        authorized = authorize_input_digest(gate, "current_trends_crosswalk", source_path,
+                                            "--expect-crosswalk-sha256", expect_sha256)
+    finally:
+        gate.close()
+
+    owns_staging = staging_dir is None
+    staging_dir = staging_dir or make_staging_dir()
+    try:
+        _ensure_crosswalk_from_verified(db_path, source_path, cde_path, authorized,
+                                        observed_cde, staging_dir)
+    finally:
+        if owns_staging:
+            remove_staging_dir(staging_dir)
+
+
+def _ensure_crosswalk_from_verified(db_path, source_path, cde_path, authorized_source,
+                                    authorized_cde, staging_dir):
+    source_path, consumed_source = verified_input_copy(source_path, authorized_source, staging_dir)
+    cde_path, consumed_cde = verified_input_copy(cde_path, authorized_cde, staging_dir)
+    print(f"  consumed workbook {consumed_source[:16]}...  CDE {consumed_cde[:16]}...")
     result = subprocess.run(
         [sys.executable, CROSSWALK_BUILDER,
          "--source", source_path, "--cde", cde_path,
@@ -338,7 +593,6 @@ def ensure_crosswalk(db_path, source_path, cde_path):
         print(f"  ERROR: crosswalk builder returned no readable receipt evidence: {error}")
         sys.exit(1)
 
-    import sqlite3
     db = sqlite3.connect(db_path)
     try:
         count = db.execute("SELECT COUNT(*) FROM agency_county_crosswalk").fetchone()[0]
@@ -370,7 +624,8 @@ def ensure_crosswalk(db_path, source_path, cde_path):
                 db,
                 component="current_trends_crosswalk",
                 source_version=os.path.basename(source_path),
-                source_sha256=sha256_file(source_path),
+                # The digest of the bytes the BUILDER read, not a later read of the original path.
+                source_sha256=consumed_source,
                 source_rows=int(build_summary["rows"]),
                 expected_rows=int(build_summary["rows"]),
                 actual_rows=count,
@@ -424,6 +679,15 @@ def main():
                         help="Participation Crosswalk.xlsx for agency_county_crosswalk rebuild")
     parser.add_argument("--crosswalk-cde", default=CROSSWALK_CDE_DEFAULT,
                         help="CDE Participation CSV for agency_county_crosswalk rebuild")
+    parser.add_argument("--expect-population-sha256", type=hex_digest_argument, default=None,
+                        help="SHA-256 of a population CSV that deliberately differs from the "
+                             "one the current receipt records. Must equal the supplied file.")
+    parser.add_argument("--expect-crosswalk-sha256", type=hex_digest_argument, default=None,
+                        help="SHA-256 of a crosswalk workbook that deliberately differs from the "
+                             "one the current receipt records. Must equal the supplied file.")
+    parser.add_argument("--expect-cde-sha256", type=hex_digest_argument, default=None,
+                        help="REQUIRED SHA-256 of the CDE participation CSV. No receipt binds this "
+                             "input, so it must be named explicitly and must equal the file.")
     args = parser.parse_args()
 
     if not re.match(r"^\d{6}$", args.month):
@@ -493,12 +757,21 @@ def main():
     # agency_population (this in-line step only covers sample_agencies) and adds
     # preflight plus post-write validation. Prefer it for repairs; this call
     # keeps routine updates from drifting between runs.
-    refresh_populations(db_path, args.pop_csv)
+    # One run-owned staging directory holds every verified input copy, so the digests recorded in
+    # the receipts and printed as evidence all describe files this run created and nothing else
+    # could touch.
+    staging_dir = make_staging_dir()
+    print(f"\nVerified-input staging: {staging_dir}")
+    try:
+        refresh_populations(db_path, args.pop_csv, args.expect_population_sha256, staging_dir)
 
-    # Rebuild + verify derived tables BEFORE any deploy — the scp wholesale-
-    # replaces the VPS file, so missing derived tables would regress
-    # Current/Historical county support.
-    ensure_crosswalk(db_path, args.crosswalk_source, args.crosswalk_cde)
+        # Rebuild + verify derived tables BEFORE any deploy — the scp wholesale-
+        # replaces the VPS file, so missing derived tables would regress
+        # Current/Historical county support.
+        ensure_crosswalk(db_path, args.crosswalk_source, args.crosswalk_cde,
+                         args.expect_crosswalk_sha256, args.expect_cde_sha256, staging_dir)
+    finally:
+        remove_staging_dir(staging_dir)
 
     # Refresh query-planner statistics BEFORE deploy — the scp wholesale-replaces
     # the VPS file, and a statistics-less database makes SQLite pick

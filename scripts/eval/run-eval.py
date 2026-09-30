@@ -29,8 +29,10 @@ import requests
 SCRIPT_DIR = Path(__file__).parent
 DATASET_PATH = SCRIPT_DIR / "golden-dataset.json"
 RESULTS_DIR = SCRIPT_DIR / "results"
-DEFAULT_BASE = "https://nibrsai.com"
-PASSWORD = "NIBRSAHD"
+# PRODUCTION IS OPT-IN -- see the note in scripts/eval/stress-test.py. `--base` must name production.
+# The site password is removed rather than re-homed: the site is intentionally public.
+# ANTHROPIC_API_KEY, used by the optional Claude judge, is a genuine non-site credential and is untouched.
+DEFAULT_BASE = "http://localhost:3000"
 
 
 def load_dataset(filter_prefix=None):
@@ -43,12 +45,8 @@ def load_dataset(filter_prefix=None):
 
 
 def get_session(base_url):
-    s = requests.Session()
-    r = s.post(f"{base_url}/api/auth", json={"password": PASSWORD})
-    if r.status_code != 200:
-        print(f"AUTH FAILED: {r.status_code} {r.text[:200]}")
-        sys.exit(1)
-    return s
+    """A plain session. The site is public, so there is no login step."""
+    return requests.Session()
 
 
 def query_rtci(session, base_url, question, mode):
@@ -397,12 +395,18 @@ def print_summary(results):
 
 def main():
     parser = argparse.ArgumentParser(description="Evaluate Crime Data Assistant")
-    parser.add_argument("--base", default=DEFAULT_BASE, help="Base URL")
+    parser.add_argument("--base", default=DEFAULT_BASE, help="Base URL (default: localhost; production must be named explicitly)")
+    parser.add_argument("--print-target", action="store_true",
+                        help="Print the resolved base URL and exit without contacting it")
     parser.add_argument("--filter", help="Filter tests by ID prefix (rtci, hist, nibrs)")
     parser.add_argument("--judge", action="store_true", help="Use Claude to grade responses")
     parser.add_argument("--diff", help="Path to previous results JSON for comparison")
     parser.add_argument("--id", help="Run a single test by ID")
     args = parser.parse_args()
+
+    if args.print_target:
+        print(args.base)
+        return
 
     tests = load_dataset(args.filter)
     if args.id:

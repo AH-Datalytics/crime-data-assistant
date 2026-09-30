@@ -44,13 +44,15 @@ import {
   createProofManifest,
   factualDeliveryBlocker,
   blockingChecks,
+  isAdmissiblePair,
   type DeliveryAction,
   type DeliveryDecision,
+  type Outcome,
   type Derivation,
   type ProofManifest,
   type SourceId,
 } from "./proof-contract";
-import { resolveMode, isObserving, mayAlterDelivery, type ProofMode } from "./proof-modes";
+import { resolveMode, isObserving, mayAlterDelivery, outcomeWritesEnabled, type ProofMode } from "./proof-modes";
 import { buildResultDigest, serializeResultDigest, type DigestPlanDeclaration, type ResultDigest } from "./result-digest";
 import { runProofChecks, type NumericClaim } from "./proof-checks";
 import { attributeOmissions, type OmittedCandidate } from "./omission-attribution";
@@ -99,6 +101,18 @@ export function __resetProofBudgetStateForTests(): void {
   budgetState.consecutiveOverruns = 0;
   budgetState.selfDisabled = false;
   budgetState.announced = false;
+}
+
+/**
+ * The clock the budget is measured against. Production always reads `Date.now`; the seam exists
+ * so the budget accounting and the circuit breaker can be tested against a deterministic clock
+ * instead of against how fast the test machine happened to be.
+ */
+let now: () => number = Date.now;
+
+/** Test seam. Pass nothing to restore the real clock. Not exported for production use. */
+export function __setProofClockForTests(clock?: () => number): void {
+  now = clock ?? Date.now;
 }
 
 export function proofSelfDisabled(): boolean {
@@ -279,8 +293,14 @@ export interface ProofFinalizationInput {
   /** Read handle for omission probes. Null disables them, yielding `unknown`. */
   db?: Database.Database | null;
   sourceYearRange?: { min: number; max: number } | null;
-  /** Terminal action the route intends. Factual actions require full proof. */
-  intendedAction: DeliveryAction;
+  /**
+   * The whole typed outcome the exit supplies: action AND reason, as one value.
+   *
+   * Replaces `intendedAction`. A pair cannot desynchronize the way two parallel properties can,
+   * and a computed site selects between two whole `Outcome` constants rather than between an
+   * action and, separately, a reason.
+   */
+  outcome: Outcome;
   /**
    * The effective request, when the route built it by amendment. Proof then reasons about the same
    * requested places and years the validator checked, instead of re-parsing `question`. A contract
@@ -308,7 +328,7 @@ function contractSourceFor(sourceId: SourceId): QueryContractSource {
 function inertFinalization(
   sourceId: SourceId,
   mode: ProofMode,
-  intendedAction: DeliveryAction,
+  outcome: Outcome,
   elapsedMs: number,
   degradedReason: string | null,
 ): ProofFinalization {
@@ -318,14 +338,24 @@ function inertFinalization(
     sourceId,
     manifest,
     digest: null,
-    decision: { action: intendedAction, requested: null, included: null, omissions: [], retries: 0 },
+    // Both halves of the outcome survive the inert path. The reason costs nothing to carry and
+    // dropping it here would make `off`-mode and degraded rows silently reason-less, which is the
+    // one place a missing carrier would be hardest to notice.
+    decision: {
+      action: outcome.action,
+      reason: outcome.reason,
+      requested: null,
+      included: null,
+      omissions: [],
+      retries: 0,
+    },
     blocker: factualDeliveryBlocker(manifest),
     mayAlterDelivery: false,
     elapsedMs,
     degradedReason,
     // An inert finalization proves nothing, so the contract could not have
     // authorized a factual answer regardless of what the route intended.
-    hypotheticalAction: hypotheticalFor(intendedAction, factualDeliveryBlocker(manifest)),
+    hypotheticalAction: hypotheticalFor(outcome.action, factualDeliveryBlocker(manifest)),
     checkReasons: null,
     enforcementWithheldReason: null,
   });
@@ -362,7 +392,7 @@ export function finalizeProof(input: ProofFinalizationInput): ProofFinalization 
 
   // OFF IS FREE. No digest, no checks, no probes, no database access.
   if (!isObserving(provisional.mode)) {
-    return inertFinalization(input.sourceId, provisional.mode, input.intendedAction, 0, null);
+    return inertFinalization(input.sourceId, provisional.mode, input.outcome, 0, null);
   }
   const mode = provisional.mode;
 
@@ -372,13 +402,13 @@ export function finalizeProof(input: ProofFinalizationInput): ProofFinalization 
     return inertFinalization(
       input.sourceId,
       mode,
-      input.intendedAction,
+      input.outcome,
       0,
       `shadow proof work self-disabled after ${PROOF_OVERRUN_LIMIT} consecutive budget overruns`,
     );
   }
 
-  const startedAt = Date.now();
+  const startedAt = now();
   try {
     const contract = input.contract && input.contract.source === contractSourceFor(input.sourceId)
       ? input.contract
@@ -495,7 +525,8 @@ export function finalizeProof(input: ProofFinalizationInput): ProofFinalization 
     const decision: DeliveryDecision = {
       // What the user ACTUALLY receives. In shadow this is always the route's
       // intent; hypotheticalAction below carries what the contract would require.
-      action: input.intendedAction,
+      action: input.outcome.action,
+      reason: input.outcome.reason,
       requested: requestedEntities.length > 0 ? requestedEntities.length : null,
       // REQUESTED ENTITIES SUCCESSFULLY MATCHED -- not returnedEntities.length.
       // returnedEntities holds alias-expanded row values across city, agency, and
@@ -550,7 +581,7 @@ export function finalizeProof(input: ProofFinalizationInput): ProofFinalization 
       }
     }
 
-    const elapsedMs = Date.now() - startedAt;
+    const elapsedMs = now() - startedAt;
     recordElapsed(elapsedMs);
 
     return brandFinalization({
@@ -567,15 +598,15 @@ export function finalizeProof(input: ProofFinalizationInput): ProofFinalization 
       elapsedMs,
       degradedReason: null,
       enforcementWithheldReason: enforcementWithheld,
-      hypotheticalAction: hypotheticalFor(input.intendedAction, blocker),
+      hypotheticalAction: hypotheticalFor(input.outcome.action, blocker),
       checkReasons: checks.reasons,
     });
   } catch (error) {
-    const elapsedMs = Date.now() - startedAt;
+    const elapsedMs = now() - startedAt;
     recordElapsed(elapsedMs);
     const reason = error instanceof Error ? error.message : String(error);
     console.warn(`[proof] finalization degraded (response unaffected): ${reason}`);
-    return inertFinalization(input.sourceId, mode, input.intendedAction, elapsedMs, reason);
+    return inertFinalization(input.sourceId, mode, input.outcome, elapsedMs, reason);
   }
 }
 
@@ -586,7 +617,6 @@ export function finalizeProof(input: ProofFinalizationInput): ProofFinalization 
  * an INSERT without further sanitization.
  */
 export interface ProofLogFields {
-  delivery_action: string | null;
   proof_manifest: string | null;
   result_digest: string | null;
   proof_schema_version: number | null;
@@ -670,7 +700,6 @@ function serializeProofEnvelope(finalization: ProofFinalization): string | null 
 
 /** Nothing to persist -- used in `off` mode so the logger writes exactly what it always did. */
 export const EMPTY_PROOF_LOG_FIELDS: ProofLogFields = {
-  delivery_action: null,
   proof_manifest: null,
   result_digest: null,
   proof_schema_version: null,
@@ -690,13 +719,119 @@ export function proofLogFields(finalization: ProofFinalization | null): ProofLog
   if (!finalization || !isObserving(finalization.mode)) return EMPTY_PROOF_LOG_FIELDS;
   const digestJson = finalization.digest ? serializeResultDigest(finalization.digest) : null;
   return {
-    delivery_action: finalization.decision.action,
     proof_manifest: serializeProofEnvelope(finalization),
     result_digest: digestJson,
     proof_schema_version: PROOF_SCHEMA_VERSION,
     proof_mode: finalization.mode,
     plan_family: finalization.manifest.planFamily,
   };
+}
+
+/* ────────────────────────────────────────────────────────────────────────────────────────────
+ * The OUTCOME projector (P2.1 §4.4).
+ *
+ * Two projectors with DISJOINT column sets, so the outcome/proof boundary is structural rather
+ * than procedural. `outcomeLogFields` owns record_kind, delivery_action and reason_code;
+ * `proofLogFields` owns the five proof-owned columns and nothing else. Under outcome-only
+ * activation every proof-owned column stays NULL — including proof_schema_version, whose presence
+ * would be the first quiet claim that proof material had been persisted.
+ * ──────────────────────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * What the row is, supplied by the exit rather than inferred.
+ *
+ * Discriminated on purpose. A positional `(finalization, recordKind)` pair lets a `decision`
+ * arrive with no finalization and an `operational` record arrive carrying one — the same
+ * parallel-carrier defect the `Outcome` union removes for action and reason, one layer up. Here
+ * neither mismatch is expressible.
+ *
+ * Never inferred from `error IS NULL` or from a NULL outcome: `nibrs-query`'s mid-flight
+ * diagnostic writes an operational row on a request that then continues to a real decision exit,
+ * so inference would mislabel it.
+ */
+export type OutcomeLogRecord =
+  | { kind: "decision"; finalization: ProofFinalization }
+  | { kind: "operational" };
+
+/** The three outcome-owned columns. */
+export interface OutcomeLogFields {
+  record_kind: string | null;
+  delivery_action: string | null;
+  reason_code: string | null;
+}
+
+export const EMPTY_OUTCOME_LOG_FIELDS: OutcomeLogFields = {
+  record_kind: null,
+  delivery_action: null,
+  reason_code: null,
+};
+
+/** Wrap a finalization as a decision record. The only way a decision row is expressed. */
+export function decisionRecord(finalization: ProofFinalization): OutcomeLogRecord {
+  return { kind: "decision", finalization };
+}
+
+/** The single operational marker. An operational row asserts no product decision. */
+export const OPERATIONAL_RECORD: OutcomeLogRecord = Object.freeze({ kind: "operational" as const });
+
+/**
+ * Normalize what an exit hands the route-local logger into the discriminated carrier.
+ *
+ * The two inputs are structurally disjoint: a `ProofFinalization` is branded and has no `kind`,
+ * and an `OutcomeLogRecord` has nothing else. So a decision exit cannot express "operational" and
+ * an operational exit cannot smuggle in a finalization — which is the mismatch the discriminated
+ * record exists to prevent. `null` means "this exit is not instrumented yet" and yields the
+ * baseline all-NULL row.
+ */
+export function asOutcomeRecord(
+  value: ProofFinalization | OutcomeLogRecord | null,
+): OutcomeLogRecord | null {
+  if (value === null) return null;
+  return "kind" in value ? value : { kind: "decision", finalization: value };
+}
+
+/** The finalization a row carries, if any. Operational rows carry none, so proof columns stay NULL. */
+export function decisionFinalization(
+  value: ProofFinalization | OutcomeLogRecord | null,
+): ProofFinalization | null {
+  const record = asOutcomeRecord(value);
+  return record && record.kind === "decision" ? record.finalization : null;
+}
+
+/**
+ * Project the outcome columns.
+ *
+ * Gate-off returns all-NULL, so a row built with outcome logging disabled is byte-identical to
+ * what the baseline release writes.
+ *
+ * DEGRADES RATHER THAN THROWS on an out-of-vocabulary value. There is deliberately no CHECK
+ * constraint on these columns: both loggers swallow insert failures, so a rejected value would
+ * destroy the whole log row — question, SQL, response, timing — and losing the row loses strictly
+ * more than losing the outcome. An escaped value nulls only these three columns and logs an error,
+ * which surfaces as a coverage violation: visible and failing, never an accepted bad code.
+ */
+export function outcomeLogFields(
+  record: OutcomeLogRecord | null,
+  env: Record<string, string | undefined> = process.env,
+): OutcomeLogFields {
+  if (record === null) return EMPTY_OUTCOME_LOG_FIELDS;
+  const mode = record.kind === "decision" ? record.finalization.mode : null;
+  if (!outcomeWritesEnabled(env, mode)) return EMPTY_OUTCOME_LOG_FIELDS;
+
+  if (record.kind === "operational") {
+    return { record_kind: "operational", delivery_action: null, reason_code: null };
+  }
+
+  const { action, reason } = record.finalization.decision;
+  if (!isAdmissiblePair("query_log", action, reason)) {
+    console.error(
+      `[outcome] refusing an inadmissible query_log pair; the row is written with NULL outcome ` +
+        `columns and will surface as a coverage violation. action=${JSON.stringify(action)} ` +
+        `reason=${JSON.stringify(reason)}`,
+    );
+    return { record_kind: "decision", delivery_action: null, reason_code: null };
+  }
+  return { record_kind: "decision", delivery_action: action, reason_code: reason };
 }
 
 /**

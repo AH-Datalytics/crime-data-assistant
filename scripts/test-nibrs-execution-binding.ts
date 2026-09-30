@@ -36,7 +36,8 @@ function check(cond: boolean, message: string) {
 }
 
 const contractOf = (sql: string, extra: Partial<QueryContractSqlValidation> = {}): QueryContractSqlValidation =>
-  ({ sql, fired: [], warnings: [], capabilityFindings: [], retryIssues: [], blockReasons: [], enforced: [], ...extra });
+  ({ sql, fired: [], warnings: [], capabilityFindings: [], retryIssues: [], blockReasons: [], enforced: [],
+    capabilityOutcome: null, clearanceGrainObservation: null, ...extra });   // the two fields dev's validator added
 const passContract = (sql: string) => contractOf(sql);
 const passSchema = (sql: string) => ({ ok: true, sql, corrected: false });
 const SQL = "SELECT SUM(victim_count) AS v FROM summary_victim_city_monthly WHERE ori = 'X' LIMIT 1000";

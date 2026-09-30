@@ -16,10 +16,12 @@ function fixture(receipt: boolean): Database.Database {
     CREATE TABLE agencies (ori TEXT);
     CREATE TABLE sample_agencies (ori TEXT);
     CREATE TABLE national_monthly (year INTEGER);
+    CREATE TABLE state_monthly (state TEXT);
     INSERT INTO agency_monthly VALUES ('A', 2025);
     INSERT INTO agencies VALUES ('A');
     INSERT INTO sample_agencies VALUES ('A');
     INSERT INTO national_monthly VALUES (2025);
+    INSERT INTO state_monthly VALUES ('AA');
   `);
   if (receipt) {
     db.exec(`CREATE TABLE source_build_receipts (
@@ -29,7 +31,7 @@ function fixture(receipt: boolean): Database.Database {
     )`);
     db.prepare("INSERT INTO source_build_receipts VALUES (?,?,?,?,?,?,?,?,?)").run(
       "current_trends_monthly", "2025-01", digest, 1, 1, 1, 0,
-      JSON.stringify({ agency_monthly: 1, agencies: 1, sample_agencies: 1, national_monthly: 1 }),
+      JSON.stringify({ agency_monthly: 1, agencies: 1, sample_agencies: 1, national_monthly: 1, state_monthly: 1 }),
       "complete",
     );
   }

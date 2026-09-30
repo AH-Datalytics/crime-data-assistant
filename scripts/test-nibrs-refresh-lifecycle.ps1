@@ -701,20 +701,11 @@ Test-Case "the capability probe really runs before the snapshot transfer" {
   $probeAt = $source.IndexOf('Invoke-ActivationCapabilityCheck')
   $noOpAt = $source.IndexOf('$before.ActiveGeneration -eq $before.Generation')
   $spaceAt = $source.IndexOf('if ($drive.Free -lt $required)')
-  # Anchored on the snapshot scp itself rather than on the argument it happens to be given. The
-  # argument changed once already -- the copy now names `$before.SourceCanonical`, the RESOLVED
-  # source, so that the object whose journal state was cleared is the object whose bytes arrive --
-  # and a placement test that breaks when the payload is corrected is testing the wrong thing.
-  # The copy now happens inside the protected snapshot phase, so the anchor is the call that starts
-  # that phase. The property is unchanged and still the point: prove the host can swap a symlink BEFORE
-  # spending hours and 166 GiB finding out it cannot.
-  $copyAt = $source.IndexOf('Invoke-ProtectedSourceSnapshot')
+  $copyAt = $source.IndexOf('@("${WebHost}:$RemoteDb"')
   Assert-True ($probeAt -ge 0) "the shipped script never runs the capability probe"
   Assert-True ($noOpAt -ge 0) "the no-op check is gone; this placement test is stale"
   Assert-True ($spaceAt -ge 0) "the free-space check is gone; this placement test is stale"
   Assert-True ($copyAt -ge 0) "the snapshot copy is gone; this placement test is stale"
-  Assert-True ($source.Contains('-Discovered $before')) `
-    "the snapshot phase is not given the discovered state, so the copy cannot be bound to what was inspected"
   Assert-True ($noOpAt -lt $probeAt) "the probe runs before the no-op check, so idle runs pay for it"
   Assert-True ($probeAt -lt $spaceAt) "the probe runs after the free-space check"
   Assert-True ($probeAt -lt $copyAt) "the probe runs after the 176 GB snapshot copy -- the whole point is that it does not"

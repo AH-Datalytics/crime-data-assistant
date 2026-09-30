@@ -90,26 +90,55 @@ function Remove-StaleSourcePartials {
   return $removed
 }
 
+# SQLite leaves these next to any database it opened. On 2026-08-22 the failed run's snapshot was
+# reclaimed but its `-shm` and `-wal` stayed behind, because cleanup only knew about the `.db` path.
+$script:SqliteSidecarSuffixes = @("-wal", "-shm", "-journal")
+
 <#
 .SYNOPSIS
 Best-effort removal of the current run's own working files after a failure.
 
-Only the run's partial and its completed source snapshot. Retained rollup artifacts, generation
-sidecars, logs, last-success.json, the lock and anything unrelated are left alone: this runs on the
-failure path, where deleting more than the run's own leftovers would turn one failed refresh into a
-lost retention set.
+.DESCRIPTION
+Exactly three things the run owns: its partial, its source snapshot, and -- when the caller passes
+one -- the rollup artifact this run was building. Each is removed by EXACT PATH, together with the
+SQLite sidecars and generation file that hang off that same path. Nothing is matched by wildcard, so
+a failed run can never reach another run's retained artifact.
+
+Retained rollup artifacts, logs, `last-success.json`, the lock and anything unrelated are left
+alone: this runs on the failure path, where deleting more than the run's own leftovers would turn one
+failed refresh into a lost retention set.
+
+`$Artifact` is expected to be $null once the run has uploaded and activated that artifact. A
+completed upload must not have its local copy deleted by a later step's failure.
 #>
 function Remove-FailedRunArtifacts {
   param(
     [Parameter(Mandatory = $true)][string]$Root,
     [string]$Partial,
-    [string]$Snapshot
+    [string]$Snapshot,
+    [string]$Artifact
   )
+  $targets = @()
+  $targets += @{ Path = $Partial; Reason = "partial snapshot from the failed run" }
+  $targets += @{ Path = $Snapshot; Reason = "source snapshot from the failed run" }
+  foreach ($suffix in $script:SqliteSidecarSuffixes) {
+    if (-not [string]::IsNullOrWhiteSpace($Snapshot)) {
+      $targets += @{ Path = "$Snapshot$suffix"; Reason = "source snapshot $suffix sidecar" }
+    }
+  }
+  $targets += @{ Path = $Artifact; Reason = "partial rollup artifact from the failed run" }
+  if (-not [string]::IsNullOrWhiteSpace($Artifact)) {
+    foreach ($suffix in $script:SqliteSidecarSuffixes) {
+      $targets += @{ Path = "$Artifact$suffix"; Reason = "partial rollup $suffix sidecar" }
+    }
+    $targets += @{ Path = "$Artifact.generation"; Reason = "generation sidecar of the partial rollup" }
+  }
+
   $removed = @()
-  foreach ($entry in @(
-      @{ Path = $Partial;  Reason = "partial snapshot from the failed run" },
-      @{ Path = $Snapshot; Reason = "source snapshot from the failed run" })) {
+  foreach ($entry in $targets) {
     if ([string]::IsNullOrWhiteSpace($entry.Path)) { continue }
+    # `Remove-WorkspaceFile` never throws and never leaves the workspace, so one locked or refused
+    # target cannot stop the rest -- or replace the error that caused this cleanup.
     if (Remove-WorkspaceFile -Path $entry.Path -Root $Root -Reason $entry.Reason) {
       $removed += $entry.Path
     }

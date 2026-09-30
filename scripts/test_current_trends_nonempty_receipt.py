@@ -12,6 +12,7 @@ class NonemptyReceiptTests(unittest.TestCase):
             CREATE TABLE agencies (ori TEXT);
             CREATE TABLE sample_agencies (ori TEXT);
             CREATE TABLE national_monthly (year INTEGER);
+            CREATE TABLE state_monthly (state TEXT);
         """)
         with self.assertRaisesRegex(ValueError, "requires nonempty source and imported rows"):
             write_complete_receipt(
@@ -35,6 +36,7 @@ class NonemptyReceiptTests(unittest.TestCase):
             CREATE TABLE agencies (ori TEXT);
             CREATE TABLE sample_agencies (ori TEXT);
             CREATE TABLE national_monthly (year INTEGER);
+            CREATE TABLE state_monthly (state TEXT);
         """)
         with self.assertRaisesRegex(ValueError, "required table.*empty"):
             write_complete_receipt(

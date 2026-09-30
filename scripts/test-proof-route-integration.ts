@@ -15,6 +15,7 @@
 import assert from "node:assert";
 import fs from "node:fs";
 import { finalizeProof } from "../lib/proof-finalize";
+import { OUTCOMES } from "../lib/proof-contract";
 import { sealPlanDerivation, fingerprintSql } from "../lib/plan-derivation";
 
 let passed = 0;
@@ -82,7 +83,7 @@ console.log("\n1. NIBRS early exits reason about the reconstructed question");
       truncated: false,
       planFamily: null,
       returnedEntities: ["Austin"],
-      intendedAction: "answer",
+      outcome: OUTCOMES.deterministic_plan,
       env: SHADOW,
     });
     const reconstructed = finalizeProof({
@@ -94,7 +95,7 @@ console.log("\n1. NIBRS early exits reason about the reconstructed question");
       truncated: false,
       planFamily: null,
       returnedEntities: ["Austin"],
-      intendedAction: "answer",
+      outcome: OUTCOMES.deterministic_plan,
       env: SHADOW,
     });
     assert.strictEqual(fragment.decision.requested, null, "the raw fragment names nobody");
@@ -114,7 +115,7 @@ console.log("\n2. an empty NIBRS model result is not an answer");
   check("the main model path classifies on row count", () => {
     assert.match(
       source,
-      /intendedAction: rows\.length > 0 \? "answer" : "decline_data",/,
+      /outcome: rows\.length > 0 \? OUTCOMES\.deterministic_plan : OUTCOMES\.no_rows_in_source,/,
       "an unconditional `answer` would label an empty result as a factual answer",
     );
   });
@@ -128,7 +129,7 @@ console.log("\n2. an empty NIBRS model result is not an answer");
       columns: ["year", "n"],
       truncated: false,
       planFamily: null,
-      intendedAction: "decline_data",
+      outcome: OUTCOMES.no_rows_in_source,
       env: SHADOW,
     });
     assert.strictEqual(empty.decision.action, "decline_data");
@@ -145,7 +146,7 @@ console.log("\n2. an empty NIBRS model result is not an answer");
       columns: ["year", "n"],
       truncated: false,
       planFamily: null,
-      intendedAction: "answer",
+      outcome: OUTCOMES.deterministic_plan,
       env: SHADOW,
     });
     assert.strictEqual(full.decision.action, "answer");
@@ -154,7 +155,7 @@ console.log("\n2. an empty NIBRS model result is not an answer");
   });
 
   check("the deterministic NIBRS path already classified on row count", () => {
-    assert.match(source, /intendedAction: rows\.length > 0 \? "answer" : "decline_data",[\s\S]{0,200}deterministicQuery\.sql/);
+    assert.match(source, /outcome: rows\.length > 0 \? OUTCOMES\.deterministic_plan : OUTCOMES\.no_rows_in_source,[\s\S]{0,200}deterministicQuery\.sql/);
   });
 }
 
@@ -197,7 +198,7 @@ console.log("\n3. the SHR shooting derivation is sealed from PRE-validation SQL"
       truncated: false,
       planFamily: "deterministic-shooting",
       derivation: sealPlanDerivation("deterministic-shooting", rewritten),
-      intendedAction: "answer",
+      outcome: OUTCOMES.deterministic_plan,
       env: SHADOW,
     });
     assert.strictEqual(
@@ -219,7 +220,7 @@ console.log("\n3. the SHR shooting derivation is sealed from PRE-validation SQL"
       truncated: false,
       planFamily: "deterministic-shooting",
       derivation: sealPlanDerivation("deterministic-shooting", planned),
-      intendedAction: "answer",
+      outcome: OUTCOMES.deterministic_plan,
       env: SHADOW,
     });
     assert.strictEqual(honest.manifest.checks.semanticPlan, "unknown");
@@ -238,7 +239,7 @@ console.log("\n3. the SHR shooting derivation is sealed from PRE-validation SQL"
       truncated: false,
       planFamily: "deterministic-shooting",
       derivation: sealPlanDerivation("deterministic-shooting", planned),
-      intendedAction: "answer",
+      outcome: OUTCOMES.deterministic_plan,
       env: SHADOW,
     });
     assert.strictEqual(unchanged.manifest.checks.semanticPlan, "passed");

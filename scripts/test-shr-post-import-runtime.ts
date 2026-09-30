@@ -302,8 +302,9 @@ async function main() {
       assert.throws(() => runSteps(resolveRuntime({ releaseLink: rel.link, manifestPath: rel.manifest, sqliteBin: SQLITE }), steps, createDeadline(8000), { statusPath, log: () => {} }),
         /normalize-shr-agencies failed/);
     } finally { delete process.env.SHR_TEST_STALL; }
-    const elapsed = Date.now() - t0;
-    assert.ok(elapsed < 8000 + 2000, `whole run bounded by the 8 s budget (took ${elapsed} ms)`);
+    // Observation only (dev's timing-gate rule: no wall-clock pass/fail gate). The kill is proved structurally
+    // below: the recorded bound is within the budget, the step ended in ETIMEDOUT, and the process is gone.
+    console.log(`        (observed: the stalled run returned after ${Date.now() - t0} ms against an 8000 ms budget)`);
     const status = JSON.parse(fs.readFileSync(statusPath, "utf8"));
     const s = status.steps[0];
     assert.deepStrictEqual([status.outcome, status.steps.length, s.outcome, s.exit], ["failed", 1, "failed", null]);
@@ -326,7 +327,9 @@ async function main() {
   });
 
   console.log("\n2 - the reviewed importer, through its own code");
-  const SERVED = path.join(REPO, "audit", "phase3-shr-runtime-repair-2026-09-30", "shr-auto-update.served.js");
+  // The served bytes, read from production 2026-09-29 (git blob d41197bf, identical to the local audit
+  // copy). Committed as a fixture on integration so the comparison runs in a clean checkout.
+  const SERVED = path.join(REPO, "scripts", "fixtures", "shr-auto-update.served.js");
   await check("the reviewed importer differs from the served one only in the listed runtime and deadline lines", () => {
     const served = fs.readFileSync(SERVED, "utf8").split("\n");
     const reviewed = fs.readFileSync(path.join(REPO, "scripts", "ops", "shr-auto-update.js"), "utf8").split("\n");
@@ -475,9 +478,10 @@ async function main() {
         return childProcess.execFileSync(process.execPath, ["-e", "setInterval(() => {}, 1000)"], { ...opts, windowsHide: true }) as unknown as Buffer;   // no encoding passed: a Buffer at run time
       } }),
     });
-    const elapsed = Date.now() - t0;
+    // Observation only (no wall-clock pass/fail gate). Structurally: the unzip ran under a timeout no larger than
+    // the budget (so a real never-ending child was killed there), and the next dispatch was refused for time.
+    console.log(`        (observed: the importer returned after ${Date.now() - t0} ms against a 9000 ms budget)`);
     assert.ok(unzipTimeout > 0 && unzipTimeout <= 9000, `unzip bounded by the remaining time (${unzipTimeout})`);
-    assert.ok(elapsed < 9000 + 3000, `whole invocation bounded by its 9 s budget (took ${elapsed} ms)`);
     assert.ok(out.error instanceof PostImportRefusal && /not dispatched/.test((out.error as Error).message), String(out.error));
     assert.deepStrictEqual(counts(db, 2026), { incidents: 3, victims: 3 });
     assert.strictEqual(JSON.parse(fs.readFileSync(out.status, "utf8")).outcome, "failed");

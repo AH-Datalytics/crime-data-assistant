@@ -567,6 +567,27 @@ async function ownedFlowChecks() {
     assert.match(result.explanation, /No year in the requested range can be reported/);
     assert.match(result.explanation, /No figure is given for 2019: this source has no record/);
   });
+
+  // Integration (Codex Gate A vocabulary ruling): an IN-RANGE withholding -- 2018 lacks its figures and 2019's
+  // monthly and yearly records disagree, the fixture of "when no year is supportable" above -- declines through the
+  // owned flow as `no-supportable-year`, and the route records that reason as `annual_result_not_supported`,
+  // never `outside_source_years`: the years are inside the source, they just cannot be reported.
+  const inRangeRows = [baseRow(2018, { total_offenses: null, cleared: null }), baseRow(2019, { monthly_offenses: 1 })];
+  const inRange = await runOwnedAnnualClearance({
+    question: HOUSTON, place: "Houston, TX", query: buildNibrsAnnualClearanceQuery(HOUSTON, planFor("TXHPD0000", "Houston, TX", [2018, 2019]))!,
+    refusal: null, execute: async () => ({ rows: inRangeRows as unknown[], columns: [] as string[] }),
+  });
+  check("an in-range withholding declines as no-supportable-year, recorded as annual_result_not_supported (not outside_source_years)", () => {
+    assert.equal(inRange.kind, "decline");
+    assert.equal((inRange as Extract<typeof inRange, { kind: "decline" }>).reason, "no-supportable-year");
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { buildInventory } = require("./lib/exit-inventory.js") as { buildInventory: (root: string) => { decisionSites: { route: string; outcome: { form: string; whenTrue?: string; whenFalse?: string; predicate?: string } }[] } };
+    const sites = buildInventory(path.resolve(__dirname, "..")).decisionSites
+      .filter((s) => s.route === "nibrs-query" && (s.outcome.predicate ?? "").includes("no-supportable-year"));
+    assert.equal(sites.length, 1, "exactly one route exit records the annual family's decline");
+    assert.equal(sites[0].outcome.whenTrue, "annual_result_not_supported");
+    assert.notEqual(sites[0].outcome.whenTrue, "outside_source_years");
+  });
 }
 
 ownedFlowChecks().then(() => {

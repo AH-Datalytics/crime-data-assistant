@@ -52,6 +52,7 @@ check("the legacy verdict is removed from every field it is recorded in", () => 
     ],
     blockReasons: [`blocked because ${LEGACY} applied`, "blocked for an unrelated reason"],
     enforced: [LEGACY, "contract-required-county-ori"],
+    capabilityOutcome: null, clearanceGrainObservation: null,   // added by dev's validator
   };
   const stripped = withoutLegacyLicence(constructed);
 
@@ -71,6 +72,7 @@ check("everything unrelated survives byte-for-byte", () => {
     retryIssues: ["[SYSTEM: unrelated retry]"],
     blockReasons: ["an unrelated block"],
     enforced: ["contract-required-county-ori", "structural-measure-substitution"],
+    capabilityOutcome: null, clearanceGrainObservation: null,   // added by dev's validator
   };
   const stripped = withoutLegacyLicence(untouched);
   assert.deepStrictEqual(stripped, untouched,
@@ -88,6 +90,7 @@ check("removal does not depend on the tag appearing in `enforced`", () => {
     retryIssues: [`[SYSTEM: Query contract violation (${LEGACY}). Rewrite it.]`],
     blockReasons: [],
     enforced: [],
+    capabilityOutcome: null, clearanceGrainObservation: null,   // added by dev's validator
   };
   const stripped = withoutLegacyLicence(partial);
   assert.deepStrictEqual(stripped.warnings, []);

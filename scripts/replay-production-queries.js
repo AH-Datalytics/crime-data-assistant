@@ -169,7 +169,7 @@ const REPLAYS = [
       // An earlier version of this assertion flagged idiom 3 as a failure
       // (production log 7892), which was a false positive in the test.
       const joinsMonthlyToPopulation =
-        /agency_monthly[\s\S]{0,600}JOIN\s+agency_population/i.test(row.sql);
+        /\bagency_monthly\b[\s\S]{0,600}\bJOIN\s+agency_population\b/i.test(row.sql);
       const sumsPopulation = /SUM\s*\(\s*\w*\.?population\s*\)/i.test(row.sql);
       const deduped =
         /DISTINCT[\s\S]{0,120}population|MAX\s*\(\s*CASE[\s\S]{0,120}population/i.test(row.sql);

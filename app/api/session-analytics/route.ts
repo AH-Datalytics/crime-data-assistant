@@ -1,26 +1,54 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getWriteDb } from "@/lib/rtci-db";
+import { authorizeAnalytics, URL_CREDENTIAL_PARAMS } from "@/lib/analytics-auth";
 
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, OPTIONS",
-  "Access-Control-Allow-Headers": "*",
-};
+/**
+ * PRIVATE OPERATOR ENDPOINT. It returns query-log-derived session detail -- session ids, per-session
+ * timing, and the questions people asked -- so it is not public even though the site is.
+ *
+ * WHAT THIS REPLACED, AND WHY EACH PART WENT.
+ *
+ *   `?pw=` QUERY PARAMETER. A credential in a URL is retained by server logs, proxy logs, browser
+ *   history and `Referer` headers. It is now REFUSED OUTRIGHT -- including when it carries the correct
+ *   key -- because accepting it would keep teaching callers to leak it.
+ *
+ *   A HARDCODED LITERAL. The previous check accepted a password committed to this repository, on a route
+ *   that `middleware.ts` always-allows. Anyone who could read the repo could read session analytics.
+ *
+ *   `QUERY_LOG_KEY`. Accepting a second, unrelated credential widened the blast radius of that key for
+ *   no benefit. `/api/query-log` already requires its own key with no fallback; this route now does the
+ *   same with its own.
+ *
+ *   WILDCARD CORS. `Access-Control-Allow-Origin: *` let any origin read the response from a browser.
+ *   The only consumer is the same-origin `/analytics` page, so no CORS headers are emitted and the
+ *   public preflight is gone.
+ *
+ * FAIL CLOSED. With `ANALYTICS_PASSWORD` absent or empty there is no way in. The 401 body is identical
+ * for every rejection reason, so a caller cannot learn from it whether the server is unconfigured, sent
+ * the wrong header shape, or simply guessed wrong.
+ *
+ * The decision itself lives in `lib/analytics-auth.ts` so the acceptance tests can EXERCISE every
+ * rejection case directly instead of asserting on this file's source text. This route is its only
+ * caller and still owns the fail-closed behaviour.
+ */
 
-export function OPTIONS() {
-  return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
+/** Every rejection looks the same from outside. The reason stays server-side. */
+function unauthorized(): NextResponse {
+  return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 }
 
 export async function GET(req: NextRequest) {
-  // Simple password check
-  const pw = req.nextUrl.searchParams.get("pw");
-  if (pw !== process.env.ANALYTICS_PASSWORD && pw !== "NIBRSAHD" && pw !== process.env.QUERY_LOG_KEY) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: CORS_HEADERS });
-  }
+  const params = req.nextUrl.searchParams;
+  const auth = authorizeAnalytics({
+    authorization: req.headers.get("authorization"),
+    hasUrlCredential: URL_CREDENTIAL_PARAMS.some((p) => params.has(p)),
+    analyticsPassword: process.env.ANALYTICS_PASSWORD,
+  });
+  if (!auth.ok) return unauthorized();
 
   const db = getWriteDb();
   if (!db) {
-    return NextResponse.json({ error: "No database" }, { status: 500, headers: CORS_HEADERS });
+    return NextResponse.json({ error: "No database" }, { status: 500 });
   }
 
   const days = parseInt(req.nextUrl.searchParams.get("days") || "30");
@@ -110,5 +138,5 @@ export async function GET(req: NextRequest) {
     referrers,
     devices,
     visitorsPerDay,
-  }, { headers: CORS_HEADERS });
+  });
 }

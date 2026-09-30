@@ -1,4 +1,14 @@
-@import "tailwindcss";
+/*
+ * Utility candidates come from the two directories that carry runtime markup, and nothing else.
+ * Automatic source detection is OFF. Left on, it scanned docs/, scripts/ and root text, and a
+ * committed handoff was read as a CSS custom property with an out-of-range escape, which crashed
+ * the Linux release build (docs/superpowers/2026-09-03-p3-1a-ff23c0-ablation-result.md, ROW C1).
+ * Adding a runtime root here is a reviewed contract change guarded by
+ * scripts/test-tailwind-source-boundary.ts.
+ */
+@import "tailwindcss" source(none);
+@source "../app";
+@source "../components";
 
 :root {
   --background: #ffffff;

@@ -1,0 +1,1505 @@
+{
+  "runKind": "evidence",
+  "runId": "20260902_130744",
+  "provenance": {
+    "candidateCommit": "e986dac6a0e5537b1a699ec01d9acb45bb3aa634",
+    "candidateTree": "9d3b2f9969520dac13ef3ede00ec6a36628edd00",
+    "worktreeClean": true,
+    "runnerPath": "scripts/run-p3-1a-frozen-cases.ts",
+    "runnerSha256": "aaeb1dd29694df52b878da73fe878dde6fbc94dc9a4ab278dc0b6b5878b92f77",
+    "inputPath": "docs/superpowers/p3-1a/frozen-cases-v3.json",
+    "inputSha256": "2535cbd934a4766a7f9ff8570f5b0e60d04b7c37430283b48e52b206c75a0b91",
+    "frozenSetsBefore": {
+      "frozen-cases-v1.json": "2a2739cc9dcab7872537d6c22880d70ee5ec0e012362d2c6fb47f8346d69cc78",
+      "frozen-cases-v2.json": "7114d95c6c3a84c7da1f8e786915825436994085dfcc924477e26924203f391f",
+      "frozen-cases-v3.json": "2535cbd934a4766a7f9ff8570f5b0e60d04b7c37430283b48e52b206c75a0b91"
+    },
+    "frozenSetsAfter": {
+      "frozen-cases-v1.json": "2a2739cc9dcab7872537d6c22880d70ee5ec0e012362d2c6fb47f8346d69cc78",
+      "frozen-cases-v2.json": "7114d95c6c3a84c7da1f8e786915825436994085dfcc924477e26924203f391f",
+      "frozen-cases-v3.json": "2535cbd934a4766a7f9ff8570f5b0e60d04b7c37430283b48e52b206c75a0b91"
+    },
+    "node": "v24.14.0",
+    "startedAt": "2026-09-02T13:07:44.494Z"
+  },
+  "runState": "completed",
+  "caseCount": 63,
+  "predicateCounts": {
+    "not_run": 0,
+    "agreed": 58,
+    "disagreed": 5,
+    "analysis_incomplete": 0,
+    "harness_error": 0
+  },
+  "parserCounts": {
+    "not_applicable": 36,
+    "agreed": 27
+  },
+  "parserExecutionCounts": {
+    "not_run": 0,
+    "completed": 63,
+    "error": 0
+  },
+  "parserVisits": {
+    "P31A-001": 1,
+    "P31A-002": 1,
+    "P31A-003": 1,
+    "P31A-004": 1,
+    "P31A-005": 1,
+    "P31A-006": 1,
+    "P31A-007": 1,
+    "P31A-008": 1,
+    "P31A-009": 1,
+    "P31A-010": 1,
+    "P31A-011": 1,
+    "P31A-012": 1,
+    "P31A-013": 1,
+    "P31A-014": 1,
+    "P31A-015": 1,
+    "P31A-016": 1,
+    "P31A-017": 1,
+    "P31A-018": 1,
+    "P31A-019": 1,
+    "P31A-020": 1,
+    "P31A-021": 1,
+    "P31A-022": 1,
+    "P31A-023": 1,
+    "P31A-024": 1,
+    "P31A-025": 1,
+    "P31A-026": 1,
+    "P31A-027": 1,
+    "P31A-028": 1,
+    "P31A-029": 1,
+    "P31A-030": 1,
+    "P31A-031": 1,
+    "P31A-032": 1,
+    "P31A-033": 1,
+    "P31A-034": 1,
+    "P31A-035": 1,
+    "P31A-036": 1,
+    "P31A-037": 1,
+    "P31A-038": 1,
+    "P31A-039": 1,
+    "P31A-040": 1,
+    "P31A-041": 1,
+    "P31A-042": 1,
+    "P31A-043": 1,
+    "P31A-044": 1,
+    "P31A-045": 1,
+    "P31A-046": 1,
+    "P31A-047": 1,
+    "P31A-048": 1,
+    "P31A-049": 1,
+    "P31A-050": 1,
+    "P31A-051": 1,
+    "P31A-052": 1,
+    "P31A-053": 1,
+    "P31A-054": 1,
+    "P31A-055": 1,
+    "P31A-056": 1,
+    "P31A-057": 1,
+    "P31A-058": 1,
+    "P31A-059": 1,
+    "P31A-060": 1,
+    "P31A-061": 1,
+    "P31A-062": 1,
+    "P31A-063": 1
+  },
+  "verdictCounts": {
+    "conformant": 58,
+    "nonconformant": 5,
+    "not_established": 0
+  },
+  "accountingVerdict": "complete",
+  "accountingDetail": null,
+  "evidenceVerdict": "nonconformant",
+  "evidenceDetail": "5 case(s) did not conform",
+  "results": [
+    {
+      "id": "P31A-001",
+      "pair": "unsupported-sub-city-geography x current",
+      "role": "positive",
+      "predicateAgreement": "agreed",
+      "parserAgreement": "not_applicable",
+      "parserExecution": "completed",
+      "caseVerdict": "conformant",
+      "observed": {
+        "inDenominator": true,
+        "state": "fired",
+        "action": "decline_capability",
+        "reason": "query_contract_failed"
+      },
+      "expected": {
+        "applies": true,
+        "action": "decline_capability",
+        "reason": "query_contract_failed"
+      },
+      "parserDetail": null,
+      "predicateDetail": null
+    },
+    {
+      "id": "P31A-002",
+      "pair": "unsupported-sub-city-geography x current",
+      "role": "false_acceptance",
+      "predicateAgreement": "disagreed",
+      "parserAgreement": "not_applicable",
+      "parserExecution": "completed",
+      "caseVerdict": "nonconformant",
+      "observed": {
+        "inDenominator": true,
+        "state": "fired",
+        "action": "decline_capability",
+        "reason": "query_contract_failed"
+      },
+      "expected": {
+        "applies": false,
+        "action": null,
+        "reason": null
+      },
+      "parserDetail": null,
+      "predicateDetail": "applicability: observed=true expected=false; a non-applying case carried a typed pair: decline_capability/query_contract_failed"
+    },
+    {
+      "id": "P31A-003",
+      "pair": "unsupported-sub-city-geography x current",
+      "role": "false_refusal",
+      "predicateAgreement": "agreed",
+      "parserAgreement": "not_applicable",
+      "parserExecution": "completed",
+      "caseVerdict": "conformant",
+      "observed": {
+        "inDenominator": true,
+        "state": "did_not_fire",
+        "action": null,
+        "reason": null
+      },
+      "expected": {
+        "applies": false,
+        "action": null,
+        "reason": null
+      },
+      "parserDetail": null,
+      "predicateDetail": null
+    },
+    {
+      "id": "P31A-004",
+      "pair": "unsupported-sub-city-geography x historical",
+      "role": "positive",
+      "predicateAgreement": "agreed",
+      "parserAgreement": "not_applicable",
+      "parserExecution": "completed",
+      "caseVerdict": "conformant",
+      "observed": {
+        "inDenominator": true,
+        "state": "fired",
+        "action": "decline_capability",
+        "reason": "query_contract_failed"
+      },
+      "expected": {
+        "applies": true,
+        "action": "decline_capability",
+        "reason": "query_contract_failed"
+      },
+      "parserDetail": null,
+      "predicateDetail": null
+    },
+    {
+      "id": "P31A-005",
+      "pair": "unsupported-sub-city-geography x historical",
+      "role": "false_acceptance",
+      "predicateAgreement": "disagreed",
+      "parserAgreement": "not_applicable",
+      "parserExecution": "completed",
+      "caseVerdict": "nonconformant",
+      "observed": {
+        "inDenominator": true,
+        "state": "fired",
+        "action": "decline_capability",
+        "reason": "query_contract_failed"
+      },
+      "expected": {
+        "applies": false,
+        "action": null,
+        "reason": null
+      },
+      "parserDetail": null,
+      "predicateDetail": "applicability: observed=true expected=false; a non-applying case carried a typed pair: decline_capability/query_contract_failed"
+    },
+    {
+      "id": "P31A-006",
+      "pair": "unsupported-sub-city-geography x historical",
+      "role": "false_refusal",
+      "predicateAgreement": "agreed",
+      "parserAgreement": "not_applicable",
+      "parserExecution": "completed",
+      "caseVerdict": "conformant",
+      "observed": {
+        "inDenominator": true,
+        "state": "did_not_fire",
+        "action": null,
+        "reason": null
+      },
+      "expected": {
+        "applies": false,
+        "action": null,
+        "reason": null
+      },
+      "parserDetail": null,
+      "predicateDetail": null
+    },
+    {
+      "id": "P31A-007",
+      "pair": "unsupported-sub-city-geography x nibrs",
+      "role": "positive",
+      "predicateAgreement": "agreed",
+      "parserAgreement": "not_applicable",
+      "parserExecution": "completed",
+      "caseVerdict": "conformant",
+      "observed": {
+        "inDenominator": true,
+        "state": "fired",
+        "action": "decline_capability",
+        "reason": "query_contract_failed"
+      },
+      "expected": {
+        "applies": true,
+        "action": "decline_capability",
+        "reason": "query_contract_failed"
+      },
+      "parserDetail": null,
+      "predicateDetail": null
+    },
+    {
+      "id": "P31A-008",
+      "pair": "unsupported-sub-city-geography x nibrs",
+      "role": "false_acceptance",
+      "predicateAgreement": "disagreed",
+      "parserAgreement": "not_applicable",
+      "parserExecution": "completed",
+      "caseVerdict": "nonconformant",
+      "observed": {
+        "inDenominator": true,
+        "state": "fired",
+        "action": "decline_capability",
+        "reason": "query_contract_failed"
+      },
+      "expected": {
+        "applies": false,
+        "action": null,
+        "reason": null
+      },
+      "parserDetail": null,
+      "predicateDetail": "applicability: observed=true expected=false; a non-applying case carried a typed pair: decline_capability/query_contract_failed"
+    },
+    {
+      "id": "P31A-009",
+      "pair": "unsupported-sub-city-geography x nibrs",
+      "role": "false_refusal",
+      "predicateAgreement": "agreed",
+      "parserAgreement": "not_applicable",
+      "parserExecution": "completed",
+      "caseVerdict": "conformant",
+      "observed": {
+        "inDenominator": true,
+        "state": "did_not_fire",
+        "action": null,
+        "reason": null
+      },
+      "expected": {
+        "applies": false,
+        "action": null,
+        "reason": null
+      },
+      "parserDetail": null,
+      "predicateDetail": null
+    },
+    {
+      "id": "P31A-010",
+      "pair": "unsupported-sub-city-geography x shr",
+      "role": "positive",
+      "predicateAgreement": "agreed",
+      "parserAgreement": "not_applicable",
+      "parserExecution": "completed",
+      "caseVerdict": "conformant",
+      "observed": {
+        "inDenominator": true,
+        "state": "fired",
+        "action": "decline_capability",
+        "reason": "query_contract_failed"
+      },
+      "expected": {
+        "applies": true,
+        "action": "decline_capability",
+        "reason": "query_contract_failed"
+      },
+      "parserDetail": null,
+      "predicateDetail": null
+    },
+    {
+      "id": "P31A-011",
+      "pair": "unsupported-sub-city-geography x shr",
+      "role": "false_acceptance",
+      "predicateAgreement": "disagreed",
+      "parserAgreement": "not_applicable",
+      "parserExecution": "completed",
+      "caseVerdict": "nonconformant",
+      "observed": {
+        "inDenominator": true,
+        "state": "fired",
+        "action": "decline_capability",
+        "reason": "query_contract_failed"
+      },
+      "expected": {
+        "applies": false,
+        "action": null,
+        "reason": null
+      },
+      "parserDetail": null,
+      "predicateDetail": "applicability: observed=true expected=false; a non-applying case carried a typed pair: decline_capability/query_contract_failed"
+    },
+    {
+      "id": "P31A-012",
+      "pair": "unsupported-sub-city-geography x shr",
+      "role": "false_refusal",
+      "predicateAgreement": "agreed",
+      "parserAgreement": "not_applicable",
+      "parserExecution": "completed",
+      "caseVerdict": "conformant",
+      "observed": {
+        "inDenominator": true,
+        "state": "did_not_fire",
+        "action": null,
+        "reason": null
+      },
+      "expected": {
+        "applies": false,
+        "action": null,
+        "reason": null
+      },
+      "parserDetail": null,
+      "predicateDetail": null
+    },
+    {
+      "id": "P31A-013",
+      "pair": "unsupported-sub-city-geography x hate_crime",
+      "role": "positive",
+      "predicateAgreement": "agreed",
+      "parserAgreement": "not_applicable",
+      "parserExecution": "completed",
+      "caseVerdict": "conformant",
+      "observed": {
+        "inDenominator": true,
+        "state": "fired",
+        "action": "decline_capability",
+        "reason": "query_contract_failed"
+      },
+      "expected": {
+        "applies": true,
+        "action": "decline_capability",
+        "reason": "query_contract_failed"
+      },
+      "parserDetail": null,
+      "predicateDetail": null
+    },
+    {
+      "id": "P31A-014",
+      "pair": "unsupported-sub-city-geography x hate_crime",
+      "role": "false_acceptance",
+      "predicateAgreement": "disagreed",
+      "parserAgreement": "not_applicable",
+      "parserExecution": "completed",
+      "caseVerdict": "nonconformant",
+      "observed": {
+        "inDenominator": true,
+        "state": "fired",
+        "action": "decline_capability",
+        "reason": "query_contract_failed"
+      },
+      "expected": {
+        "applies": false,
+        "action": null,
+        "reason": null
+      },
+      "parserDetail": null,
+      "predicateDetail": "applicability: observed=true expected=false; a non-applying case carried a typed pair: decline_capability/query_contract_failed"
+    },
+    {
+      "id": "P31A-015",
+      "pair": "unsupported-sub-city-geography x hate_crime",
+      "role": "false_refusal",
+      "predicateAgreement": "agreed",
+      "parserAgreement": "not_applicable",
+      "parserExecution": "completed",
+      "caseVerdict": "conformant",
+      "observed": {
+        "inDenominator": true,
+        "state": "did_not_fire",
+        "action": null,
+        "reason": null
+      },
+      "expected": {
+        "applies": false,
+        "action": null,
+        "reason": null
+      },
+      "parserDetail": null,
+      "predicateDetail": null
+    },
+    {
+      "id": "P31A-016",
+      "pair": "unsupported-court-policy-topic x current",
+      "role": "positive",
+      "predicateAgreement": "agreed",
+      "parserAgreement": "not_applicable",
+      "parserExecution": "completed",
+      "caseVerdict": "conformant",
+      "observed": {
+        "inDenominator": true,
+        "state": "fired",
+        "action": "decline_capability",
+        "reason": "query_contract_failed"
+      },
+      "expected": {
+        "applies": true,
+        "action": "decline_capability",
+        "reason": "query_contract_failed"
+      },
+      "parserDetail": null,
+      "predicateDetail": null
+    },
+    {
+      "id": "P31A-017",
+      "pair": "unsupported-court-policy-topic x current",
+      "role": "false_acceptance",
+      "predicateAgreement": "agreed",
+      "parserAgreement": "not_applicable",
+      "parserExecution": "completed",
+      "caseVerdict": "conformant",
+      "observed": {
+        "inDenominator": true,
+        "state": "did_not_fire",
+        "action": null,
+        "reason": null
+      },
+      "expected": {
+        "applies": false,
+        "action": null,
+        "reason": null
+      },
+      "parserDetail": null,
+      "predicateDetail": null
+    },
+    {
+      "id": "P31A-018",
+      "pair": "unsupported-court-policy-topic x current",
+      "role": "false_refusal",
+      "predicateAgreement": "agreed",
+      "parserAgreement": "not_applicable",
+      "parserExecution": "completed",
+      "caseVerdict": "conformant",
+      "observed": {
+        "inDenominator": true,
+        "state": "did_not_fire",
+        "action": null,
+        "reason": null
+      },
+      "expected": {
+        "applies": false,
+        "action": null,
+        "reason": null
+      },
+      "parserDetail": null,
+      "predicateDetail": null
+    },
+    {
+      "id": "P31A-019",
+      "pair": "unsupported-court-policy-topic x historical",
+      "role": "positive",
+      "predicateAgreement": "agreed",
+      "parserAgreement": "not_applicable",
+      "parserExecution": "completed",
+      "caseVerdict": "conformant",
+      "observed": {
+        "inDenominator": true,
+        "state": "fired",
+        "action": "decline_capability",
+        "reason": "query_contract_failed"
+      },
+      "expected": {
+        "applies": true,
+        "action": "decline_capability",
+        "reason": "query_contract_failed"
+      },
+      "parserDetail": null,
+      "predicateDetail": null
+    },
+    {
+      "id": "P31A-020",
+      "pair": "unsupported-court-policy-topic x historical",
+      "role": "false_acceptance",
+      "predicateAgreement": "agreed",
+      "parserAgreement": "not_applicable",
+      "parserExecution": "completed",
+      "caseVerdict": "conformant",
+      "observed": {
+        "inDenominator": true,
+        "state": "did_not_fire",
+        "action": null,
+        "reason": null
+      },
+      "expected": {
+        "applies": false,
+        "action": null,
+        "reason": null
+      },
+      "parserDetail": null,
+      "predicateDetail": null
+    },
+    {
+      "id": "P31A-021",
+      "pair": "unsupported-court-policy-topic x historical",
+      "role": "false_refusal",
+      "predicateAgreement": "agreed",
+      "parserAgreement": "not_applicable",
+      "parserExecution": "completed",
+      "caseVerdict": "conformant",
+      "observed": {
+        "inDenominator": true,
+        "state": "did_not_fire",
+        "action": null,
+        "reason": null
+      },
+      "expected": {
+        "applies": false,
+        "action": null,
+        "reason": null
+      },
+      "parserDetail": null,
+      "predicateDetail": null
+    },
+    {
+      "id": "P31A-022",
+      "pair": "unsupported-court-policy-topic x nibrs",
+      "role": "positive",
+      "predicateAgreement": "agreed",
+      "parserAgreement": "not_applicable",
+      "parserExecution": "completed",
+      "caseVerdict": "conformant",
+      "observed": {
+        "inDenominator": true,
+        "state": "fired",
+        "action": "decline_capability",
+        "reason": "query_contract_failed"
+      },
+      "expected": {
+        "applies": true,
+        "action": "decline_capability",
+        "reason": "query_contract_failed"
+      },
+      "parserDetail": null,
+      "predicateDetail": null
+    },
+    {
+      "id": "P31A-023",
+      "pair": "unsupported-court-policy-topic x nibrs",
+      "role": "false_acceptance",
+      "predicateAgreement": "agreed",
+      "parserAgreement": "not_applicable",
+      "parserExecution": "completed",
+      "caseVerdict": "conformant",
+      "observed": {
+        "inDenominator": true,
+        "state": "did_not_fire",
+        "action": null,
+        "reason": null
+      },
+      "expected": {
+        "applies": false,
+        "action": null,
+        "reason": null
+      },
+      "parserDetail": null,
+      "predicateDetail": null
+    },
+    {
+      "id": "P31A-024",
+      "pair": "unsupported-court-policy-topic x nibrs",
+      "role": "false_refusal",
+      "predicateAgreement": "agreed",
+      "parserAgreement": "not_applicable",
+      "parserExecution": "completed",
+      "caseVerdict": "conformant",
+      "observed": {
+        "inDenominator": true,
+        "state": "did_not_fire",
+        "action": null,
+        "reason": null
+      },
+      "expected": {
+        "applies": false,
+        "action": null,
+        "reason": null
+      },
+      "parserDetail": null,
+      "predicateDetail": null
+    },
+    {
+      "id": "P31A-025",
+      "pair": "unsupported-court-policy-topic x shr",
+      "role": "positive",
+      "predicateAgreement": "agreed",
+      "parserAgreement": "not_applicable",
+      "parserExecution": "completed",
+      "caseVerdict": "conformant",
+      "observed": {
+        "inDenominator": true,
+        "state": "fired",
+        "action": "decline_capability",
+        "reason": "query_contract_failed"
+      },
+      "expected": {
+        "applies": true,
+        "action": "decline_capability",
+        "reason": "query_contract_failed"
+      },
+      "parserDetail": null,
+      "predicateDetail": null
+    },
+    {
+      "id": "P31A-026",
+      "pair": "unsupported-court-policy-topic x shr",
+      "role": "false_acceptance",
+      "predicateAgreement": "agreed",
+      "parserAgreement": "not_applicable",
+      "parserExecution": "completed",
+      "caseVerdict": "conformant",
+      "observed": {
+        "inDenominator": true,
+        "state": "did_not_fire",
+        "action": null,
+        "reason": null
+      },
+      "expected": {
+        "applies": false,
+        "action": null,
+        "reason": null
+      },
+      "parserDetail": null,
+      "predicateDetail": null
+    },
+    {
+      "id": "P31A-027",
+      "pair": "unsupported-court-policy-topic x shr",
+      "role": "false_refusal",
+      "predicateAgreement": "agreed",
+      "parserAgreement": "not_applicable",
+      "parserExecution": "completed",
+      "caseVerdict": "conformant",
+      "observed": {
+        "inDenominator": true,
+        "state": "did_not_fire",
+        "action": null,
+        "reason": null
+      },
+      "expected": {
+        "applies": false,
+        "action": null,
+        "reason": null
+      },
+      "parserDetail": null,
+      "predicateDetail": null
+    },
+    {
+      "id": "P31A-028",
+      "pair": "unsupported-court-policy-topic x hate_crime",
+      "role": "positive",
+      "predicateAgreement": "agreed",
+      "parserAgreement": "not_applicable",
+      "parserExecution": "completed",
+      "caseVerdict": "conformant",
+      "observed": {
+        "inDenominator": true,
+        "state": "fired",
+        "action": "decline_capability",
+        "reason": "query_contract_failed"
+      },
+      "expected": {
+        "applies": true,
+        "action": "decline_capability",
+        "reason": "query_contract_failed"
+      },
+      "parserDetail": null,
+      "predicateDetail": null
+    },
+    {
+      "id": "P31A-029",
+      "pair": "unsupported-court-policy-topic x hate_crime",
+      "role": "false_acceptance",
+      "predicateAgreement": "agreed",
+      "parserAgreement": "not_applicable",
+      "parserExecution": "completed",
+      "caseVerdict": "conformant",
+      "observed": {
+        "inDenominator": true,
+        "state": "did_not_fire",
+        "action": null,
+        "reason": null
+      },
+      "expected": {
+        "applies": false,
+        "action": null,
+        "reason": null
+      },
+      "parserDetail": null,
+      "predicateDetail": null
+    },
+    {
+      "id": "P31A-030",
+      "pair": "unsupported-court-policy-topic x hate_crime",
+      "role": "false_refusal",
+      "predicateAgreement": "agreed",
+      "parserAgreement": "not_applicable",
+      "parserExecution": "completed",
+      "caseVerdict": "conformant",
+      "observed": {
+        "inDenominator": true,
+        "state": "did_not_fire",
+        "action": null,
+        "reason": null
+      },
+      "expected": {
+        "applies": false,
+        "action": null,
+        "reason": null
+      },
+      "parserDetail": null,
+      "predicateDetail": null
+    },
+    {
+      "id": "P31A-031",
+      "pair": "demographic-rate-unsupported x current",
+      "role": "positive",
+      "predicateAgreement": "agreed",
+      "parserAgreement": "agreed",
+      "parserExecution": "completed",
+      "caseVerdict": "conformant",
+      "observed": {
+        "inDenominator": true,
+        "state": "fired",
+        "action": "decline_capability",
+        "reason": "query_contract_failed"
+      },
+      "expected": {
+        "applies": true,
+        "action": "decline_capability",
+        "reason": "query_contract_failed"
+      },
+      "parserDetail": null,
+      "predicateDetail": null
+    },
+    {
+      "id": "P31A-032",
+      "pair": "demographic-rate-unsupported x current",
+      "role": "false_acceptance",
+      "predicateAgreement": "agreed",
+      "parserAgreement": "agreed",
+      "parserExecution": "completed",
+      "caseVerdict": "conformant",
+      "observed": {
+        "inDenominator": true,
+        "state": "did_not_fire",
+        "action": null,
+        "reason": null
+      },
+      "expected": {
+        "applies": false,
+        "action": null,
+        "reason": null
+      },
+      "parserDetail": null,
+      "predicateDetail": null
+    },
+    {
+      "id": "P31A-033",
+      "pair": "demographic-rate-unsupported x current",
+      "role": "false_refusal",
+      "predicateAgreement": "agreed",
+      "parserAgreement": "agreed",
+      "parserExecution": "completed",
+      "caseVerdict": "conformant",
+      "observed": {
+        "inDenominator": true,
+        "state": "did_not_fire",
+        "action": null,
+        "reason": null
+      },
+      "expected": {
+        "applies": false,
+        "action": null,
+        "reason": null
+      },
+      "parserDetail": null,
+      "predicateDetail": null
+    },
+    {
+      "id": "P31A-034",
+      "pair": "demographic-rate-unsupported x historical",
+      "role": "positive",
+      "predicateAgreement": "agreed",
+      "parserAgreement": "agreed",
+      "parserExecution": "completed",
+      "caseVerdict": "conformant",
+      "observed": {
+        "inDenominator": true,
+        "state": "fired",
+        "action": "decline_capability",
+        "reason": "query_contract_failed"
+      },
+      "expected": {
+        "applies": true,
+        "action": "decline_capability",
+        "reason": "query_contract_failed"
+      },
+      "parserDetail": null,
+      "predicateDetail": null
+    },
+    {
+      "id": "P31A-035",
+      "pair": "demographic-rate-unsupported x historical",
+      "role": "false_acceptance",
+      "predicateAgreement": "agreed",
+      "parserAgreement": "agreed",
+      "parserExecution": "completed",
+      "caseVerdict": "conformant",
+      "observed": {
+        "inDenominator": true,
+        "state": "did_not_fire",
+        "action": null,
+        "reason": null
+      },
+      "expected": {
+        "applies": false,
+        "action": null,
+        "reason": null
+      },
+      "parserDetail": null,
+      "predicateDetail": null
+    },
+    {
+      "id": "P31A-036",
+      "pair": "demographic-rate-unsupported x historical",
+      "role": "false_refusal",
+      "predicateAgreement": "agreed",
+      "parserAgreement": "agreed",
+      "parserExecution": "completed",
+      "caseVerdict": "conformant",
+      "observed": {
+        "inDenominator": true,
+        "state": "did_not_fire",
+        "action": null,
+        "reason": null
+      },
+      "expected": {
+        "applies": false,
+        "action": null,
+        "reason": null
+      },
+      "parserDetail": null,
+      "predicateDetail": null
+    },
+    {
+      "id": "P31A-037",
+      "pair": "demographic-rate-unsupported x nibrs",
+      "role": "positive",
+      "predicateAgreement": "agreed",
+      "parserAgreement": "agreed",
+      "parserExecution": "completed",
+      "caseVerdict": "conformant",
+      "observed": {
+        "inDenominator": true,
+        "state": "fired",
+        "action": "decline_capability",
+        "reason": "query_contract_failed"
+      },
+      "expected": {
+        "applies": true,
+        "action": "decline_capability",
+        "reason": "query_contract_failed"
+      },
+      "parserDetail": null,
+      "predicateDetail": null
+    },
+    {
+      "id": "P31A-038",
+      "pair": "demographic-rate-unsupported x nibrs",
+      "role": "false_acceptance",
+      "predicateAgreement": "agreed",
+      "parserAgreement": "agreed",
+      "parserExecution": "completed",
+      "caseVerdict": "conformant",
+      "observed": {
+        "inDenominator": true,
+        "state": "did_not_fire",
+        "action": null,
+        "reason": null
+      },
+      "expected": {
+        "applies": false,
+        "action": null,
+        "reason": null
+      },
+      "parserDetail": null,
+      "predicateDetail": null
+    },
+    {
+      "id": "P31A-039",
+      "pair": "demographic-rate-unsupported x nibrs",
+      "role": "false_refusal",
+      "predicateAgreement": "agreed",
+      "parserAgreement": "agreed",
+      "parserExecution": "completed",
+      "caseVerdict": "conformant",
+      "observed": {
+        "inDenominator": true,
+        "state": "did_not_fire",
+        "action": null,
+        "reason": null
+      },
+      "expected": {
+        "applies": false,
+        "action": null,
+        "reason": null
+      },
+      "parserDetail": null,
+      "predicateDetail": null
+    },
+    {
+      "id": "P31A-040",
+      "pair": "demographic-rate-unsupported x shr",
+      "role": "positive",
+      "predicateAgreement": "agreed",
+      "parserAgreement": "agreed",
+      "parserExecution": "completed",
+      "caseVerdict": "conformant",
+      "observed": {
+        "inDenominator": true,
+        "state": "fired",
+        "action": "decline_capability",
+        "reason": "query_contract_failed"
+      },
+      "expected": {
+        "applies": true,
+        "action": "decline_capability",
+        "reason": "query_contract_failed"
+      },
+      "parserDetail": null,
+      "predicateDetail": null
+    },
+    {
+      "id": "P31A-041",
+      "pair": "demographic-rate-unsupported x shr",
+      "role": "false_acceptance",
+      "predicateAgreement": "agreed",
+      "parserAgreement": "agreed",
+      "parserExecution": "completed",
+      "caseVerdict": "conformant",
+      "observed": {
+        "inDenominator": true,
+        "state": "did_not_fire",
+        "action": null,
+        "reason": null
+      },
+      "expected": {
+        "applies": false,
+        "action": null,
+        "reason": null
+      },
+      "parserDetail": null,
+      "predicateDetail": null
+    },
+    {
+      "id": "P31A-042",
+      "pair": "demographic-rate-unsupported x shr",
+      "role": "false_refusal",
+      "predicateAgreement": "agreed",
+      "parserAgreement": "agreed",
+      "parserExecution": "completed",
+      "caseVerdict": "conformant",
+      "observed": {
+        "inDenominator": true,
+        "state": "did_not_fire",
+        "action": null,
+        "reason": null
+      },
+      "expected": {
+        "applies": false,
+        "action": null,
+        "reason": null
+      },
+      "parserDetail": null,
+      "predicateDetail": null
+    },
+    {
+      "id": "P31A-043",
+      "pair": "demographic-rate-unsupported x hate_crime",
+      "role": "positive",
+      "predicateAgreement": "agreed",
+      "parserAgreement": "agreed",
+      "parserExecution": "completed",
+      "caseVerdict": "conformant",
+      "observed": {
+        "inDenominator": true,
+        "state": "fired",
+        "action": "decline_capability",
+        "reason": "query_contract_failed"
+      },
+      "expected": {
+        "applies": true,
+        "action": "decline_capability",
+        "reason": "query_contract_failed"
+      },
+      "parserDetail": null,
+      "predicateDetail": null
+    },
+    {
+      "id": "P31A-044",
+      "pair": "demographic-rate-unsupported x hate_crime",
+      "role": "false_acceptance",
+      "predicateAgreement": "agreed",
+      "parserAgreement": "agreed",
+      "parserExecution": "completed",
+      "caseVerdict": "conformant",
+      "observed": {
+        "inDenominator": true,
+        "state": "did_not_fire",
+        "action": null,
+        "reason": null
+      },
+      "expected": {
+        "applies": false,
+        "action": null,
+        "reason": null
+      },
+      "parserDetail": null,
+      "predicateDetail": null
+    },
+    {
+      "id": "P31A-045",
+      "pair": "demographic-rate-unsupported x hate_crime",
+      "role": "false_refusal",
+      "predicateAgreement": "agreed",
+      "parserAgreement": "agreed",
+      "parserExecution": "completed",
+      "caseVerdict": "conformant",
+      "observed": {
+        "inDenominator": true,
+        "state": "did_not_fire",
+        "action": null,
+        "reason": null
+      },
+      "expected": {
+        "applies": false,
+        "action": null,
+        "reason": null
+      },
+      "parserDetail": null,
+      "predicateDetail": null
+    },
+    {
+      "id": "P31A-046",
+      "pair": "nibrs-clearance-weapon-unsupported x nibrs",
+      "role": "positive",
+      "predicateAgreement": "agreed",
+      "parserAgreement": "agreed",
+      "parserExecution": "completed",
+      "caseVerdict": "conformant",
+      "observed": {
+        "inDenominator": true,
+        "state": "fired",
+        "action": "decline_capability",
+        "reason": "query_contract_failed"
+      },
+      "expected": {
+        "applies": true,
+        "action": "decline_capability",
+        "reason": "query_contract_failed"
+      },
+      "parserDetail": null,
+      "predicateDetail": null
+    },
+    {
+      "id": "P31A-047",
+      "pair": "nibrs-clearance-weapon-unsupported x nibrs",
+      "role": "false_acceptance",
+      "predicateAgreement": "agreed",
+      "parserAgreement": "agreed",
+      "parserExecution": "completed",
+      "caseVerdict": "conformant",
+      "observed": {
+        "inDenominator": true,
+        "state": "did_not_fire",
+        "action": null,
+        "reason": null
+      },
+      "expected": {
+        "applies": false,
+        "action": null,
+        "reason": null
+      },
+      "parserDetail": null,
+      "predicateDetail": null
+    },
+    {
+      "id": "P31A-048",
+      "pair": "nibrs-clearance-weapon-unsupported x nibrs",
+      "role": "false_refusal",
+      "predicateAgreement": "agreed",
+      "parserAgreement": "agreed",
+      "parserExecution": "completed",
+      "caseVerdict": "conformant",
+      "observed": {
+        "inDenominator": true,
+        "state": "did_not_fire",
+        "action": null,
+        "reason": null
+      },
+      "expected": {
+        "applies": false,
+        "action": null,
+        "reason": null
+      },
+      "parserDetail": null,
+      "predicateDetail": null
+    },
+    {
+      "id": "P31A-049",
+      "pair": "nibrs-shooting-category-unsupported x nibrs",
+      "role": "positive",
+      "predicateAgreement": "agreed",
+      "parserAgreement": "not_applicable",
+      "parserExecution": "completed",
+      "caseVerdict": "conformant",
+      "observed": {
+        "inDenominator": true,
+        "state": "fired",
+        "action": "decline_capability",
+        "reason": "query_contract_failed"
+      },
+      "expected": {
+        "applies": true,
+        "action": "decline_capability",
+        "reason": "query_contract_failed"
+      },
+      "parserDetail": null,
+      "predicateDetail": null
+    },
+    {
+      "id": "P31A-050",
+      "pair": "nibrs-shooting-category-unsupported x nibrs",
+      "role": "false_acceptance",
+      "predicateAgreement": "agreed",
+      "parserAgreement": "not_applicable",
+      "parserExecution": "completed",
+      "caseVerdict": "conformant",
+      "observed": {
+        "inDenominator": true,
+        "state": "did_not_fire",
+        "action": null,
+        "reason": null
+      },
+      "expected": {
+        "applies": false,
+        "action": null,
+        "reason": null
+      },
+      "parserDetail": null,
+      "predicateDetail": null
+    },
+    {
+      "id": "P31A-051",
+      "pair": "nibrs-shooting-category-unsupported x nibrs",
+      "role": "false_refusal",
+      "predicateAgreement": "agreed",
+      "parserAgreement": "not_applicable",
+      "parserExecution": "completed",
+      "caseVerdict": "conformant",
+      "observed": {
+        "inDenominator": true,
+        "state": "did_not_fire",
+        "action": null,
+        "reason": null
+      },
+      "expected": {
+        "applies": false,
+        "action": null,
+        "reason": null
+      },
+      "parserDetail": null,
+      "predicateDetail": null
+    },
+    {
+      "id": "P31A-052",
+      "pair": "nibrs-countywide-demographics-unsupported x nibrs",
+      "role": "positive",
+      "predicateAgreement": "agreed",
+      "parserAgreement": "agreed",
+      "parserExecution": "completed",
+      "caseVerdict": "conformant",
+      "observed": {
+        "inDenominator": true,
+        "state": "fired",
+        "action": "decline_capability",
+        "reason": "query_contract_failed"
+      },
+      "expected": {
+        "applies": true,
+        "action": "decline_capability",
+        "reason": "query_contract_failed"
+      },
+      "parserDetail": null,
+      "predicateDetail": null
+    },
+    {
+      "id": "P31A-053",
+      "pair": "nibrs-countywide-demographics-unsupported x nibrs",
+      "role": "false_acceptance",
+      "predicateAgreement": "agreed",
+      "parserAgreement": "agreed",
+      "parserExecution": "completed",
+      "caseVerdict": "conformant",
+      "observed": {
+        "inDenominator": true,
+        "state": "did_not_fire",
+        "action": null,
+        "reason": null
+      },
+      "expected": {
+        "applies": false,
+        "action": null,
+        "reason": null
+      },
+      "parserDetail": null,
+      "predicateDetail": null
+    },
+    {
+      "id": "P31A-054",
+      "pair": "nibrs-countywide-demographics-unsupported x nibrs",
+      "role": "false_refusal",
+      "predicateAgreement": "agreed",
+      "parserAgreement": "agreed",
+      "parserExecution": "completed",
+      "caseVerdict": "conformant",
+      "observed": {
+        "inDenominator": true,
+        "state": "did_not_fire",
+        "action": null,
+        "reason": null
+      },
+      "expected": {
+        "applies": false,
+        "action": null,
+        "reason": null
+      },
+      "parserDetail": null,
+      "predicateDetail": null
+    },
+    {
+      "id": "P31A-055",
+      "pair": "shr-non-homicide-unsupported x shr",
+      "role": "positive",
+      "predicateAgreement": "agreed",
+      "parserAgreement": "not_applicable",
+      "parserExecution": "completed",
+      "caseVerdict": "conformant",
+      "observed": {
+        "inDenominator": true,
+        "state": "fired",
+        "action": "decline_capability",
+        "reason": "query_contract_failed"
+      },
+      "expected": {
+        "applies": true,
+        "action": "decline_capability",
+        "reason": "query_contract_failed"
+      },
+      "parserDetail": null,
+      "predicateDetail": null
+    },
+    {
+      "id": "P31A-056",
+      "pair": "shr-non-homicide-unsupported x shr",
+      "role": "false_acceptance",
+      "predicateAgreement": "agreed",
+      "parserAgreement": "not_applicable",
+      "parserExecution": "completed",
+      "caseVerdict": "conformant",
+      "observed": {
+        "inDenominator": true,
+        "state": "did_not_fire",
+        "action": null,
+        "reason": null
+      },
+      "expected": {
+        "applies": false,
+        "action": null,
+        "reason": null
+      },
+      "parserDetail": null,
+      "predicateDetail": null
+    },
+    {
+      "id": "P31A-057",
+      "pair": "shr-non-homicide-unsupported x shr",
+      "role": "false_refusal",
+      "predicateAgreement": "agreed",
+      "parserAgreement": "not_applicable",
+      "parserExecution": "completed",
+      "caseVerdict": "conformant",
+      "observed": {
+        "inDenominator": true,
+        "state": "did_not_fire",
+        "action": null,
+        "reason": null
+      },
+      "expected": {
+        "applies": false,
+        "action": null,
+        "reason": null
+      },
+      "parserDetail": null,
+      "predicateDetail": null
+    },
+    {
+      "id": "P31A-058",
+      "pair": "shr-clearance-unsupported x shr",
+      "role": "positive",
+      "predicateAgreement": "agreed",
+      "parserAgreement": "agreed",
+      "parserExecution": "completed",
+      "caseVerdict": "conformant",
+      "observed": {
+        "inDenominator": true,
+        "state": "fired",
+        "action": "decline_capability",
+        "reason": "query_contract_failed"
+      },
+      "expected": {
+        "applies": true,
+        "action": "decline_capability",
+        "reason": "query_contract_failed"
+      },
+      "parserDetail": null,
+      "predicateDetail": null
+    },
+    {
+      "id": "P31A-059",
+      "pair": "shr-clearance-unsupported x shr",
+      "role": "false_acceptance",
+      "predicateAgreement": "agreed",
+      "parserAgreement": "agreed",
+      "parserExecution": "completed",
+      "caseVerdict": "conformant",
+      "observed": {
+        "inDenominator": true,
+        "state": "did_not_fire",
+        "action": null,
+        "reason": null
+      },
+      "expected": {
+        "applies": false,
+        "action": null,
+        "reason": null
+      },
+      "parserDetail": null,
+      "predicateDetail": null
+    },
+    {
+      "id": "P31A-060",
+      "pair": "shr-clearance-unsupported x shr",
+      "role": "false_refusal",
+      "predicateAgreement": "agreed",
+      "parserAgreement": "agreed",
+      "parserExecution": "completed",
+      "caseVerdict": "conformant",
+      "observed": {
+        "inDenominator": true,
+        "state": "did_not_fire",
+        "action": null,
+        "reason": null
+      },
+      "expected": {
+        "applies": false,
+        "action": null,
+        "reason": null
+      },
+      "parserDetail": null,
+      "predicateDetail": null
+    },
+    {
+      "id": "P31A-061",
+      "pair": "shr-demographic-rate-unsupported x shr",
+      "role": "positive",
+      "predicateAgreement": "agreed",
+      "parserAgreement": "agreed",
+      "parserExecution": "completed",
+      "caseVerdict": "conformant",
+      "observed": {
+        "inDenominator": true,
+        "state": "fired",
+        "action": "decline_capability",
+        "reason": "query_contract_failed"
+      },
+      "expected": {
+        "applies": true,
+        "action": "decline_capability",
+        "reason": "query_contract_failed"
+      },
+      "parserDetail": null,
+      "predicateDetail": null
+    },
+    {
+      "id": "P31A-062",
+      "pair": "shr-demographic-rate-unsupported x shr",
+      "role": "false_acceptance",
+      "predicateAgreement": "agreed",
+      "parserAgreement": "agreed",
+      "parserExecution": "completed",
+      "caseVerdict": "conformant",
+      "observed": {
+        "inDenominator": true,
+        "state": "did_not_fire",
+        "action": null,
+        "reason": null
+      },
+      "expected": {
+        "applies": false,
+        "action": null,
+        "reason": null
+      },
+      "parserDetail": null,
+      "predicateDetail": null
+    },
+    {
+      "id": "P31A-063",
+      "pair": "shr-demographic-rate-unsupported x shr",
+      "role": "false_refusal",
+      "predicateAgreement": "agreed",
+      "parserAgreement": "agreed",
+      "parserExecution": "completed",
+      "caseVerdict": "conformant",
+      "observed": {
+        "inDenominator": true,
+        "state": "did_not_fire",
+        "action": null,
+        "reason": null
+      },
+      "expected": {
+        "applies": false,
+        "action": null,
+        "reason": null
+      },
+      "parserDetail": null,
+      "predicateDetail": null
+    }
+  ]
+}

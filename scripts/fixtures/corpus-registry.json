@@ -1,0 +1,87 @@
+{
+  "_README": [
+    "Declared, reviewed truth about the Tier C canonical corpora. Two entries, because measurement",
+    "showed only two are needed: no Tier C command requires NIBRS (decision 5.5).",
+    "",
+    "expected_schema_fingerprint is REVIEWED MATERIAL and lives here rather than in a snapshot",
+    "manifest. Comparing a database against a fingerprint recorded during its own acquisition is",
+    "circular: it restates the file hash and cannot reject a wrong schema.",
+    "",
+    "Both entries are bootstrap_pending. The fingerprints below are NOT filled in from the first",
+    "database that happened to be observed -- doing that would manufacture an expectation out of the",
+    "thing being checked and call it independent knowledge. Observed fingerprints are reported for",
+    "review; once approved they are committed here, and only then can a corpus verify.",
+    "",
+    "While bootstrap_pending is true, verification yields corpus_unidentified. That is the honest",
+    "state, not a reason to leave the field permissive.",
+    "",
+    "row_floors are REJECTION THRESHOLDS for a truncated or wrong-shaped database, deliberately well",
+    "below observed counts. They describe nothing and carry no authority as a measure of the corpus."
+  ],
+  "corpora": [
+    {
+      "id": "rtci",
+      "env": "RTCI_DB_PATH",
+      "authoritative_remote": "/opt/nibrs/shared/crime_data.db",
+      "forbidden_remote": [
+        "/opt/nibrs/app/crime_data.db",
+        "/opt/nibrs/crime_data.db",
+        "/opt/nibrs/current/crime_data.db"
+      ],
+      "forbidden_remote_reason": "docs/query-audit-2026-06-10-codex-fixes.md:96 records /opt/nibrs/app/crime_data.db as the stale path that caused a divergence; production reads /opt/nibrs/shared/crime_data.db under the release-based layout. ecosystem.config.js:10 is the baseline.",
+      "bootstrap_pending": true,
+      "expected_schema_fingerprint": null,
+      "required_tables": [
+        "agencies",
+        "agency_county_crosswalk",
+        "agency_monthly",
+        "agency_population",
+        "agency_year_reliability",
+        "historical_agency",
+        "historical_agency_clearance",
+        "historical_agency_crime",
+        "historical_agency_population",
+        "historical_staffing",
+        "historical_state_national",
+        "national_clearance_rate"
+      ],
+      "required_tables_evidence": "measured by uncapped SQL observation of all ten Tier C commands; 12 of the corpus's 17 tables. sqlite_master excluded as schema introspection. sample_agencies, state_monthly, national_monthly, sqlite_stat1 and source_build_receipts are touched by no Tier C command.",
+      "row_floors": {
+        "agencies": 500,
+        "agency_county_crosswalk": 20000,
+        "agency_monthly": 400000,
+        "agency_population": 5000,
+        "agency_year_reliability": 15000,
+        "historical_agency": 20000,
+        "historical_agency_clearance": 900000,
+        "historical_agency_crime": 900000,
+        "historical_agency_population": 700000,
+        "historical_staffing": 600000,
+        "historical_state_national": 2500,
+        "national_clearance_rate": 50
+      },
+      "receipts": {
+        "table": "source_build_receipts",
+        "require_status": "complete",
+        "counts_column": "table_counts_json",
+        "diagnostic_columns": ["source_version", "built_at"]
+      }
+    },
+    {
+      "id": "shr",
+      "env": "SHR_DB_PATH",
+      "authoritative_remote": "/opt/nibrs/shr.db",
+      "forbidden_remote": [],
+      "bootstrap_pending": true,
+      "expected_schema_fingerprint": null,
+      "required_tables": ["incidents"],
+      "required_tables_evidence": "PROVISIONAL. Measured against SHR-Dashboard/data/shr.db, used for observation only and explicitly NOT adopted (decision 5.1). Must be re-measured against the authoritative snapshot of production /opt/nibrs/shr.db.",
+      "row_floors": {
+        "incidents": 100000
+      },
+      "row_floors_provisional": true,
+      "schema_discrepancy_note": "The committed shr.ddl.sql declares agency_county_crosswalk; the observation-only database does not contain it. Whether production's shr.db contains it is UNKNOWN and is not guessed. The authoritative snapshot's fingerprint answers it. If absent there too, that is a DDL-versus-production finding to report, not a table to create.",
+      "receipts": null
+    }
+  ]
+}

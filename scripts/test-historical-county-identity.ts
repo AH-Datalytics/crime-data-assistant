@@ -87,16 +87,19 @@ const EXPECTATIONS: Expectation[] = [
   { label: "Riley County, KS", state: "KS", county: "Riley County", ori: "KS0810000" },
   { label: "Bibb County, GA", state: "GA", county: "Bibb County", ori: "GA0110000", notOri: "GA1060300" },
   {
+    // RETIRED EXPECTATION, 2026-08-27. This carried a `currentlyAmbiguous` block asserting that
+    // the served database typed MO0956800 'St. Louis' as a county, colliding with MO0950000.
+    // The Historical rebuild was swapped into production on 2026-08-18 (release 20260818_223123;
+    // crime_data.db mtime 2026-08-18 20:06:45Z; the pre-swap file kept as
+    // crime_data.db.backup-20260818_200736), and the served database now types MO0956800 'city'
+    // and MO0950000 'St. Louis County Police Department' 'county'. The collision the block
+    // described belongs to a database that is no longer served, so the county resolves cleanly on
+    // both sides. The invariant that remains: the county must reach MO0950000 and never the city.
     label: "St. Louis County, MO",
     state: "MO",
     county: "St. Louis County",
     ori: "MO0950000",
     notOri: "MOSPD0000",
-    currentlyAmbiguous: {
-      oris: ["MO0950000", "MO0956800"],
-      because: "the current database types MO0956800 'St. Louis' as a county; it is the city, "
-        + "and the rebuilt directory types it city",
-    },
   },
 ];
 
@@ -273,15 +276,21 @@ function exercise(db: Database.Database, side: string): void {
       rows.length === 1,
       `${side}: the Cook County ${shape.name} shape returns exactly one row (got ${rows.length})`
     );
-    if (shape.name === "clearance" && side === "current") {
-      // Cook County reported 2 murders and 222 violent crimes in 2020 and cleared none of
-      // them. Every one of its nine rates came out zero, so the old importer blanked the whole
-      // row and the database now says it reported nothing. This is the clearance half of the
-      // zero-versus-missing defect, on a county of 75,747 people, and it is why the rebuilt
-      // database answers this question and the current one cannot.
+    if (shape.name === "clearance") {
+      // CORRECTED EXPECTATION, 2026-08-27. Cook County IL reported 2 murders and 222 violent
+      // crimes in 2020 on a population of 75,747, and cleared none of them. The old importer
+      // blanked the whole row because every rate came out zero, so this asserted `value === null`
+      // for the served database -- the clearance half of the zero-versus-missing defect.
+      //
+      // The rebuild landed in production on 2026-08-18 and the served database now stores 0.0.
+      // What this protects now is the DISTINCTION, which is the thing that was actually broken:
+      // offences reported with none cleared is 0.0, and a zero or missing denominator is NULL.
+      // Measured on the served database the same day: 44,638 agency-years hold 0.0 with offences
+      // present and 667,120 hold NULL with none, so the two are still separate values and were
+      // not collapsed into each other.
       assert(
-        rows.length === 1 && rows[0].value === null,
-        "current: Cook County's 2020 clearance is blank, which is the defect the rebuild fixes"
+        rows.length === 1 && rows[0].value === 0,
+        `${side}: Cook County's 2020 clearance is a real zero, not a blank (got ${rows[0]?.value})`
       );
       continue;
     }

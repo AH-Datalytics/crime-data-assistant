@@ -32,11 +32,55 @@ export const CURRENT_TRENDS_CAPABILITIES = {
   nationalSweep: "crime_data::national_monthly::sweep",
 } as const;
 
-const COMPONENT_TABLES: Record<CurrentTrendsComponent, readonly string[]> = {
-  current_trends_monthly: ["agency_monthly", "agencies", "sample_agencies", "national_monthly"],
+// Mirrors COMPONENT_TABLES in scripts/current_trends_build_receipt.py. The two are asserted equal
+// by scripts/test-current-trends-readiness.ts, which parses the Python rather than restating the
+// list a third time -- a third copy would drift exactly the way these two can.
+export const COMPONENT_TABLES: Record<CurrentTrendsComponent, readonly string[]> = {
+  current_trends_monthly: ["agency_monthly", "agencies", "sample_agencies", "national_monthly", "state_monthly"],
   current_trends_population: ["agency_population"],
   current_trends_crosswalk: ["agency_county_crosswalk"],
 };
+
+/**
+ * The monthly table set a receipt is judged against, chosen by the period it describes.
+ *
+ * WHY THIS IS VERSIONED RATHER THAN JUST WIDENED. The reconciliation loop below fails any component
+ * whose receipt records no count for a listed table. `state_monthly` became a monthly projection on
+ * 2026-08-27, so a receipt written before that carries four counts and not five. An application
+ * release is deployed independently of the database it reads -- a Git release cannot ship a .db --
+ * so an unversioned requirement would make this release refuse the database production is serving
+ * right now: Current Trends would report `local_failure` ("receipt has no valid count for
+ * state_monthly") for a database that is entirely healthy, until a swap it cannot itself perform.
+ * That is a self-inflicted outage sitting in a deployment-order trap.
+ *
+ * Judging by the receipt's own period removes the ordering constraint in both directions. A May
+ * receipt is measured against what a May build could produce; a June-or-later receipt must carry
+ * `state_monthly`, so the new requirement is permanent from the first month that can satisfy it and
+ * cannot be silently lost later. The release is therefore safe to deploy before the swap, and no
+ * leniency survives the swap.
+ */
+const MONTHLY_TABLES_BEFORE_STATE_PROJECTION: readonly string[] =
+  ["agency_monthly", "agencies", "sample_agencies", "national_monthly"];
+
+/** First `source_version` (YYYY-MM) whose build wrote state_monthly in the same transaction. */
+export const STATE_MONTHLY_REQUIRED_FROM = "2026-06";
+
+/**
+ * Required tables for one receipt, or null when its period cannot be read.
+ *
+ * An unreadable monthly period is a failure, never a reason to fall back to the smaller set: that
+ * would make a malformed receipt the cheapest way to escape the new requirement.
+ */
+export function requiredTablesForReceipt(
+  component: CurrentTrendsComponent,
+  sourceVersion: string,
+): readonly string[] | null {
+  if (component !== "current_trends_monthly") return COMPONENT_TABLES[component];
+  if (!/^\d{4}-\d{2}$/.test(sourceVersion.trim())) return null;
+  return sourceVersion.trim() >= STATE_MONTHLY_REQUIRED_FROM
+    ? COMPONENT_TABLES.current_trends_monthly
+    : MONTHLY_TABLES_BEFORE_STATE_PROJECTION;
+}
 
 const REQUIRED_COMPONENTS = new Map<string, CurrentTrendsComponent[]>([
   [CURRENT_TRENDS_CAPABILITIES.countyDirectory, ["current_trends_monthly", "current_trends_crosswalk"]],
@@ -124,7 +168,16 @@ export function currentTrendsReadiness(
     } catch {
       return { state: "local_failure", reason: `${component} receipt has invalid table counts`, components, dataVersions: versions };
     }
-    for (const table of COMPONENT_TABLES[component]) {
+    const requiredTables = requiredTablesForReceipt(component, row.source_version);
+    if (!requiredTables) {
+      return {
+        state: "local_failure",
+        reason: `${component} receipt has an unreadable source version ${JSON.stringify(row.source_version)}`,
+        components,
+        dataVersions: versions,
+      };
+    }
+    for (const table of requiredTables) {
       if (!tableExists(db, table)) {
         return { state: "local_failure", reason: `${component} requires missing table ${table}`, components, dataVersions: versions };
       }

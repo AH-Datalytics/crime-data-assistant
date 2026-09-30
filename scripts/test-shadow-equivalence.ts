@@ -25,6 +25,7 @@ import os from "node:os";
 import path from "node:path";
 import Database from "better-sqlite3";
 import { finalizeProof, emitFactualPayload, __resetProofBudgetStateForTests } from "../lib/proof-finalize";
+import { OUTCOMES } from "../lib/proof-contract";
 import { serializeChartConfigForLog } from "../lib/chart-config-log";
 
 let passed = 0;
@@ -220,7 +221,7 @@ async function main() {
       const finalization = finalizeProof({
         sourceId: "current", question: "q", sql: "SELECT n FROM t",
         rows: [hostile], columns: ["n"], truncated: false, planFamily: null,
-        intendedAction: "answer", env: { PROOF_MODE: "shadow" },
+        outcome: OUTCOMES.deterministic_plan, env: { PROOF_MODE: "shadow" },
       });
       assert.strictEqual(emitFactualPayload(finalization, payload), payload, "same object reference");
     });
@@ -230,7 +231,7 @@ async function main() {
       const payload = { rows: [], columns: [] };
       const finalization = finalizeProof({
         sourceId: "current", question: "q", sql: null, rows: [], columns: [],
-        truncated: false, planFamily: null, intendedAction: "answer",
+        truncated: false, planFamily: null, outcome: OUTCOMES.deterministic_plan,
         env: { PROOF_MODE: "shadow" },
       });
       assert.strictEqual(emitFactualPayload(finalization, payload), payload);
@@ -269,7 +270,7 @@ async function main() {
         const finalization = finalizeProof({
           sourceId: "current", question: "murders in Austin 2020",
           sql: "SELECT 1", rows: [{ year: 2020 }], columns: ["year"],
-          truncated: false, planFamily: null, intendedAction: "answer", env,
+          truncated: false, planFamily: null, outcome: OUTCOMES.deterministic_plan, env,
         });
         assert.strictEqual(
           emitFactualPayload(finalization, payload),

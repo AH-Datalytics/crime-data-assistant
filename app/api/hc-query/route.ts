@@ -25,11 +25,16 @@ import {
   proofLogFields,
   type ProofFinalization,
   type ProofFinalizationInput,
+  outcomeLogFields,
+  asOutcomeRecord,
+  decisionFinalization,
+  OPERATIONAL_RECORD,
+  type OutcomeLogRecord,
 } from "@/lib/proof-finalize";
 import { sealPlanDerivation } from "@/lib/plan-derivation";
 import { cacheValiditySignature } from "@/lib/proof-cache-validity";
 import type { SealedPayload } from "@/lib/proof-finalize";
-import type { DeliveryAction } from "@/lib/proof-contract";
+import { OUTCOMES, type QueryLogOutcome } from "@/lib/proof-contract";
 import { returnedEntityKeys } from "@/lib/result-disclosure";
 import { validateGrain } from "@/lib/requested-grain";
 import { buildCompletenessAnswer, detectCompletenessQuestion, loadCompletenessRows } from "@/lib/completeness-intent";
@@ -52,6 +57,7 @@ import {
   queryContractGuardrails,
   validateQueryContractSql,
   type QueryContractSqlValidation,
+  capabilityFinalizationOutcome,
 } from "@/lib/query-contract-validator";
 import { partialCoverageRetryPrompt } from "@/lib/source-year-overlap";
 import { extractQueryContext } from "@/lib/query-context";
@@ -149,6 +155,9 @@ function hateCrimeCaveats(sql: string, explanation: string): string {
 }
 
 export async function POST(req: NextRequest) {
+  // Measured before the outer try so the operational row in its catch can record an
+  // elapsed time; everything declared inside the try is out of scope there.
+  const outerStart = Date.now();
   if (!isSourceEnabled("hate_crime")) {
     return NextResponse.json(
       { success: false, error: "Hate Crime source is not available." },
@@ -235,7 +244,7 @@ export async function POST(req: NextRequest) {
     const cacheValidity = cacheValiditySignature("hate_crime", null);
 
     const finalizeExit = (
-      opts: Partial<ProofFinalizationInput> & { intendedAction: DeliveryAction },
+      opts: Partial<ProofFinalizationInput> & { outcome: QueryLogOutcome },
     ): ProofFinalization =>
       finalizeProof({
         sourceId: "hate_crime",
@@ -250,8 +259,10 @@ export async function POST(req: NextRequest) {
 
     if (plannerMode === "authoritative" && followupPlan?.sourceChanged) {
       const explanation = "This follow-up is a better fit for the " + followupPlan.source + " source. Rerunning it there as: " + followupPlan.reconstructedQuestion;
-      const switchProof = finalizeExit({ intendedAction: "clarify", planFamily: "followup-source-switch" });
-      logQuery(question, null, 0, null, 0, explanation, "hate_crime", ["followup-source-switch"], "followup-planner", sessionId, null, null, null, null, proofLogFields(switchProof));
+      const switchProof = finalizeExit({ outcome: OUTCOMES.source_switch, planFamily: "followup-source-switch" });
+      // Both projectors, from the SAME finalization. See the SHR counterpart: a direct logger
+      // call has to supply the outcome projector itself.
+      logQuery(question, null, 0, null, 0, explanation, "hate_crime", ["followup-source-switch"], "followup-planner", sessionId, null, null, null, null, proofLogFields(decisionFinalization(switchProof)), outcomeLogFields(asOutcomeRecord(switchProof)));
       return jsonResp(emitFactualPayload(switchProof, { success: true, question, sql: null, explanation, title: "Source switch", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: 0, sourceSwitch: { source: followupPlan.source, question: followupPlan.reconstructedQuestion } }));
     }
     const followupTransform = (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing") ? followupPlan.transform : (detectFollowupTransform(question, history) ?? buildCrossSourceFollowupTransform(question, body?.history, "hate_crime"));
@@ -276,11 +287,11 @@ export async function POST(req: NextRequest) {
       /** Phase 3 chart capture; pre-serialized via the allowlist in lib/chart-config-log. */
       chartConfigJson: string | null = null,
       /** Proof finalization for this exit; null yields baseline-identical columns. */
-      proof: ProofFinalization | null = null,
+      proof: ProofFinalization | OutcomeLogRecord | null = null,
       /** Bounded raw model text on no-SQL failures; diagnostic only, never user-visible. */
       modelResponseJson: string | null = null
     ) => {
-      chartAuditQueryLogId = logQuery(q, sqlText, rowCount, logError, ms, logResponse, tabName, guardrails, model, sid, routingMeta, chartConfigJson, chartAuditRequestId, modelResponseJson, proofLogFields(proof));
+      chartAuditQueryLogId = logQuery(q, sqlText, rowCount, logError, ms, logResponse, tabName, guardrails, model, sid, routingMeta, chartConfigJson, chartAuditRequestId, modelResponseJson, proofLogFields(decisionFinalization(proof)), outcomeLogFields(asOutcomeRecord(proof)));
       return chartAuditQueryLogId;
     };
     const routeGuardrailsFired: string[] = [];
@@ -308,7 +319,7 @@ export async function POST(req: NextRequest) {
     const contractFailureResponse = (contractResult: QueryContractSqlValidation, logError: string, guardrails: string[] = []) => {
       const msg = queryContractFailureMessage(contractResult);
       if (!msg) return null;
-      const contractProof = finalizeExit({ intendedAction: "decline_capability", sql: contractResult.sql, guardrails: [...new Set([...guardrails, ...routeGuardrailsFired])] });
+      const contractProof = finalizeExit({ outcome: capabilityFinalizationOutcome(contractResult), sql: contractResult.sql, guardrails: [...new Set([...guardrails, ...routeGuardrailsFired])] });
       writeLog(question, contractResult.sql, 0, logError, Date.now() - start, msg, "hate_crime", [...new Set([...guardrails, ...routeGuardrailsFired])], "haiku-4.5", sessionId, null, contractProof);
       return jsonResp(emitFactualPayload(contractProof, {
         success: true,
@@ -330,7 +341,7 @@ export async function POST(req: NextRequest) {
   const capabilityOverride = detectSubCityGeographyOverride(question);
     if (capabilityOverride) {
       const executionMs = Date.now() - start;
-      const capabilityProof = finalizeExit({ intendedAction: "decline_capability", planFamily: capabilityOverride.guardrail });
+      const capabilityProof = finalizeExit({ outcome: OUTCOMES.capability_path_unavailable, planFamily: capabilityOverride.guardrail });
       writeLog(question, null, 0, null, executionMs, capabilityOverride.explanation, "hate_crime", [capabilityOverride.guardrail], "deterministic", sessionId, null, capabilityProof);
       return jsonResp(emitFactualPayload(capabilityProof, {
         success: true,
@@ -352,7 +363,7 @@ export async function POST(req: NextRequest) {
     if (completenessIntent) {
       const completenessAnswer = buildCompletenessAnswer("hate_crime", loadCompletenessRows("hate_crime", getHateCrimeDb()), new Date().getFullYear(), completenessIntent.year);
       const executionMs = Date.now() - start;
-      const completenessProof = finalizeExit({ intendedAction: "answer", planFamily: "completeness-deterministic", guardrails: ["completeness-deterministic"] });
+      const completenessProof = finalizeExit({ outcome: OUTCOMES.deterministic_plan, planFamily: "completeness-deterministic", guardrails: ["completeness-deterministic"] });
       writeLog(question, null, 0, null, executionMs, completenessAnswer, "hate_crime", ["completeness-deterministic"], "deterministic", sessionId, null, completenessProof);
       return jsonResp(emitFactualPayload(completenessProof, { success: true, question, sql: null, explanation: completenessAnswer, title: "Data completeness", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: executionMs }));
     }
@@ -360,7 +371,7 @@ export async function POST(req: NextRequest) {
     const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing") ? (followupPlan.chartOnly ? null : getBlockingGeoClarification(followupPlan.reconstructedQuestion)) : getBlockingGeoClarification(question);
     if (geoClarification) {
       const executionMs = Date.now() - start;
-      const geoProof = finalizeExit({ intendedAction: "clarify", planFamily: `geo:${geoClarification.issue.id}` });
+      const geoProof = finalizeExit({ outcome: OUTCOMES.geography_ambiguous, planFamily: `geo:${geoClarification.issue.id}` });
       writeLog(question, null, 0, null, executionMs, geoClarification.explanation, "hate_crime", [`geo:${geoClarification.issue.id}`], "deterministic", sessionId, null, geoProof);
       return jsonResp(emitFactualPayload(geoProof, {
         success: true,
@@ -381,7 +392,7 @@ export async function POST(req: NextRequest) {
     const countyScope = planSaysQueryBearing ? null : getCountyScopeClarification(question, body?.history);
     if (countyScope) {
       const executionMs = Date.now() - start;
-      const countyProof = finalizeExit({ intendedAction: "clarify", planFamily: `geo:${countyScope.id}` });
+      const countyProof = finalizeExit({ outcome: OUTCOMES.geography_scope_ambiguous, planFamily: `geo:${countyScope.id}` });
       writeLog(question, null, 0, null, executionMs, countyScope.explanation, "hate_crime", [`geo:${countyScope.id}`], "deterministic", sessionId, null, countyProof);
       return jsonResp(emitFactualPayload(countyProof, {
         success: true,
@@ -402,7 +413,7 @@ export async function POST(req: NextRequest) {
     const metadata = planSaysQueryBearing ? null : answerMetadataQuestion("hate_crime", question, getHateCrimeDb());
     if (metadata) {
       const executionMs = Date.now() - start;
-      const metadataProof = finalizeExit({ intendedAction: "answer", sql: metadata.sql, rows: metadata.rows ?? [], columns: metadata.columns ?? [], truncated: Boolean(metadata.truncated), derivation: metadata.sql ? sealPlanDerivation("metadata-coverage-answer", metadata.sql) : null, planFamily: "metadata-coverage-answer", guardrails: ["deterministic-metadata", "metadata-coverage-answer"], hasChart: Boolean(metadata.chartConfig) });
+      const metadataProof = finalizeExit({ outcome: OUTCOMES.deterministic_plan, sql: metadata.sql, rows: metadata.rows ?? [], columns: metadata.columns ?? [], truncated: Boolean(metadata.truncated), derivation: metadata.sql ? sealPlanDerivation("metadata-coverage-answer", metadata.sql) : null, planFamily: "metadata-coverage-answer", guardrails: ["deterministic-metadata", "metadata-coverage-answer"], hasChart: Boolean(metadata.chartConfig) });
       writeLog(question, metadata.sql, metadata.rowCount, null, executionMs, metadata.explanation, "hate_crime", ["deterministic-metadata", "metadata-coverage-answer"], "deterministic", sessionId, serializeChartConfigForLog(metadata.chartConfig, metadata.columns, metadata.chartMeta), metadataProof);
       return jsonResp(emitFactualPayload(metadataProof, attachChartAuditToPayload({
         success: true,
@@ -512,7 +523,7 @@ export async function POST(req: NextRequest) {
         if (!serverAuthoredNoSql && !containsInternalLeak(claude.explanation) && !containsInternalLeak(claude.title)) { claude.explanation = buildNoSqlFallbackMessage("hate_crime"); routeGuardrailsFired.push("no-sql-server-template"); }
         claude.explanation = neutralizeUnverifiedAvailabilityClaim(claude.explanation, "Hate Crime");
         const textExplanation = hateCrimeCaveats("", claude.explanation);
-        const noSqlProof = finalizeExit({ intendedAction: "decline_capability", guardrails: routeGuardrailsFired });
+        const noSqlProof = finalizeExit({ outcome: OUTCOMES.model_produced_no_sql, guardrails: routeGuardrailsFired });
         writeLog(question, null, 0, null, claudeMs, textExplanation, "hate_crime", routeGuardrailsFired, "haiku-4.5", sessionId, null, noSqlProof, boundedModelResponseJson(rawNoSqlText, null));
         return jsonResp(emitFactualPayload(noSqlProof, {
           success: true, question, sql: null, explanation: textExplanation,
@@ -525,7 +536,7 @@ export async function POST(req: NextRequest) {
     // Step 2: Validate SQL
     const validation = validateAndSanitize(claude.sql!);
     if (!validation.valid) {
-      writeLog(question, claude.sql, 0, `Validation: ${validation.error}`, Date.now() - start, null, "hate_crime", [], "haiku-4.5", sessionId, null, finalizeExit({ intendedAction: "decline_capability", sql: claude.sql }));
+      writeLog(question, claude.sql, 0, `Validation: ${validation.error}`, Date.now() - start, null, "hate_crime", [], "haiku-4.5", sessionId, null, OPERATIONAL_RECORD);
       return jsonResp(
         { success: false, error: "I generated an invalid query. Please try rephrasing your question.", sql: claude.sql } as QueryError,
         400
@@ -608,7 +619,7 @@ export async function POST(req: NextRequest) {
                   claude.yAxis = (retryClaude.yAxis as string[]) || claude.yAxis;
                 } else {
                   const msg = "I couldn't build a valid query for the Hate Crime database. Try rephrasing for hate-crime-specific data or switching tabs for general crime totals.";
-                  const retryAllowlistProof = finalizeExit({ intendedAction: "decline_capability", sql: retrySql, guardrails: [...tableCheck.fired, ...retryTableCheck.fired], planFamily: "table-allowlist", retries: 1 });
+                  const retryAllowlistProof = finalizeExit({ outcome: OUTCOMES.table_not_allowlisted, sql: retrySql, guardrails: [...tableCheck.fired, ...retryTableCheck.fired], planFamily: "table-allowlist", retries: 1 });
                   writeLog(question, retrySql, 0, `table_allowlist_second_failure:${retryTableCheck.unknown.join(",")}`, Date.now() - start, msg, "hate_crime", [...tableCheck.fired, ...retryTableCheck.fired], "haiku-4.5", sessionId, null, retryAllowlistProof);
                   return jsonResp(emitFactualPayload(retryAllowlistProof, { success: true, question, sql: null, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - start }));
                 }
@@ -617,7 +628,7 @@ export async function POST(req: NextRequest) {
           } catch { /* fall through to friendly failure */ }
 
           const msg = "I couldn't build a valid query for the Hate Crime database. Try rephrasing for hate-crime-specific data or switching tabs for general crime totals.";
-          const allowlistProof = finalizeExit({ intendedAction: "decline_capability", sql, guardrails: tableCheck.fired, planFamily: "table-allowlist" });
+          const allowlistProof = finalizeExit({ outcome: OUTCOMES.table_not_allowlisted, sql, guardrails: tableCheck.fired, planFamily: "table-allowlist" });
           writeLog(question, sql, 0, `table_allowlist:${tableCheck.unknown.join(",")}`, Date.now() - start, msg, "hate_crime", tableCheck.fired, "haiku-4.5", sessionId, null, allowlistProof);
           return jsonResp(emitFactualPayload(allowlistProof, { success: true, question, sql: null, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - start }));
         }
@@ -635,13 +646,13 @@ export async function POST(req: NextRequest) {
       sql = guardrailResult.sql;
       if (guardrailResult.overrideResponse) {
         const msg = guardrailResult.overrideResponse;
-        const overrideProof = finalizeExit({ intendedAction: "decline_capability", sql, guardrails: routeGuardrailsFired, planFamily: guardrailResult.overrideGuardrail ?? null });
+        const overrideProof = finalizeExit({ outcome: OUTCOMES.guardrail_block, sql, guardrails: routeGuardrailsFired, planFamily: guardrailResult.overrideGuardrail ?? null });
         writeLog(question, sql, 0, `guardrail_override:${guardrailResult.overrideGuardrail}`, Date.now() - start, msg, "hate_crime", routeGuardrailsFired, "haiku-4.5", sessionId, null, overrideProof);
         return jsonResp(emitFactualPayload(overrideProof, { success: true, question, sql: null, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - start }));
       }
       if (guardrailResult.needsFix) {
         const msg = "I generated a rolling query at the wrong time grain. Please try the request again.";
-        const blockProof = finalizeExit({ intendedAction: "decline_capability", sql, guardrails: routeGuardrailsFired, planFamily: "guardrail-block" });
+        const blockProof = finalizeExit({ outcome: OUTCOMES.guardrail_block, sql, guardrails: routeGuardrailsFired, planFamily: "guardrail-block" });
         writeLog(question, sql, 0, `guardrail_block:${guardrailResult.fired.join(",")}`, Date.now() - start, msg, "hate_crime", routeGuardrailsFired, "haiku-4.5", sessionId, null, blockProof);
         return jsonResp(emitFactualPayload(blockProof, { success: true, question, sql: null, explanation: msg, title: "", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - start }));
       }
@@ -752,7 +763,7 @@ export async function POST(req: NextRequest) {
       } catch { /* retry also failed */ }
 
       if (!rows!) {
-        writeLog(question, sql, 0, `DB: ${msg}`, Date.now() - start, null, "hate_crime", [], "haiku-4.5", sessionId, null, finalizeExit({ intendedAction: "decline_capability", sql }));
+        writeLog(question, sql, 0, `DB: ${msg}`, Date.now() - start, null, "hate_crime", [], "haiku-4.5", sessionId, null, OPERATIONAL_RECORD);
         return jsonResp(
           { success: false, error: `Database error: ${msg}`, sql } as QueryError, 500
         );
@@ -768,7 +779,7 @@ export async function POST(req: NextRequest) {
         genericResultState({ sql, rows }));
       // No columns: this branch returns before `columns` is derived from rows[0],
       // and an empty result has none to describe.
-      const emptyProof = finalizeExit({ intendedAction: "decline_data", sql });
+      const emptyProof = finalizeExit({ outcome: OUTCOMES.no_rows_in_source, sql });
       writeLog(question, sql, 0, "empty_result", executionMs, emptyExplanation, "hate_crime", [], "haiku-4.5", sessionId, null, emptyProof);
       return jsonResp(emitFactualPayload(emptyProof, {
         success: true, question, sql, explanation: emptyExplanation,
@@ -786,7 +797,7 @@ export async function POST(req: NextRequest) {
         const emptyMsg = governFactualNarrative(
           "I ran that query but all the values came back empty - the math likely broke somewhere. Could you try asking that a different way?",
           genericResultState({ sql, rows }));
-        const allNullProof = finalizeExit({ intendedAction: "decline_data", sql, columns });
+        const allNullProof = finalizeExit({ outcome: OUTCOMES.all_values_null, sql, columns });
         writeLog(question, sql, 0, "all_null_columns", executionMs, emptyMsg, "hate_crime", [], "haiku-4.5", sessionId, null, allNullProof);
         return jsonResp(emitFactualPayload(allNullProof, {
           success: true, question, sql, explanation: emptyMsg, title: "",
@@ -837,7 +848,7 @@ export async function POST(req: NextRequest) {
       chartConfig = { ...chartConfig, title: claude.title };
     }
     const finalization = finalizeExit({
-      intendedAction: "answer",
+      outcome: OUTCOMES.model_sql_validated,
       sql,
       rows,
       columns,
@@ -867,6 +878,17 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("[hate_crime] Query API error:", msg);
+    // OPERATIONAL ROW (P2.1 §4.3.2 X10 condition 2). Before P2.2 this catch logged nothing, so the
+    // four routes recorded the same class of event three different ways and the operational
+    // failure rate was unmeasurable. It writes `record_kind='operational'` and no decision: an
+    // error before a decision exists is not a product decision, and fabricating one here is
+    // exactly what the 16 sites that used to claim `decline_capability` were doing.
+    //
+    // The route-local closures are declared inside this try, so the module logger is called
+    // directly — the same shape the source-switch exits already use. The write is inside the
+    // logger's own swallow-on-failure boundary, so it cannot turn a 500 into anything worse.
+    logQuery("", null, 0, msg.slice(0, 500), Date.now() - outerStart, null, "hate_crime", [], null,
+      null, null, null, null, null, proofLogFields(null), outcomeLogFields(OPERATIONAL_RECORD));
     return jsonResp(
       { success: false, error: "An error occurred. Please try again." } as QueryError, 500
     );

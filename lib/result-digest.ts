@@ -248,7 +248,7 @@ function buildColumn(
     const seen = new Set<string>();
     const kept: (string | number | boolean | null)[] = [];
     for (const value of values) {
-      const key = value === null || value === undefined ? " null" : String(value);
+      const key = value === null || value === undefined ? "\u0000null" : String(value);
       if (seen.has(key)) continue;
       seen.add(key);
       if (kept.length < MAX_DISTINCT_VALUES) kept.push(truncateValue(value));

@@ -30,14 +30,17 @@ import {
   emitFactualPayload,
   proofSelfDisabled,
   __resetProofBudgetStateForTests,
+  __setProofClockForTests,
   EMPTY_PROOF_LOG_FIELDS,
   PROOF_SCHEMA_VERSION,
   PROOF_BUDGET_MS,
   PROOF_OVERRUN_LIMIT,
   MAX_PROOF_MANIFEST_CHARS,
   type ProofFinalizationInput,
+  outcomeLogFields,
+  decisionRecord,
 } from "../lib/proof-finalize";
-import { satisfiesFactualDelivery, PROOF_CHECKS } from "../lib/proof-contract";
+import { OUTCOMES, satisfiesFactualDelivery, PROOF_CHECKS } from "../lib/proof-contract";
 import { sealPlanDerivation } from "../lib/plan-derivation";
 import { noEnforcementActive } from "../lib/proof-modes";
 
@@ -65,7 +68,7 @@ function baseInput(overrides: Partial<ProofFinalizationInput> = {}): ProofFinali
     columns: ["year", "agency", "murders"],
     truncated: false,
     planFamily: null,
-    intendedAction: "answer",
+    outcome: OUTCOMES.deterministic_plan,
     env: {},
     ...overrides,
   };
@@ -166,9 +169,11 @@ console.log("\nshadow is invisible");
   });
 
   check("shadow persists proof columns", () => {
-    const fields = proofLogFields(finalizeProof(baseInput({ env: SHADOW_ENV })));
+    const shadowFinalization = finalizeProof(baseInput({ env: SHADOW_ENV }));
+    const fields = proofLogFields(shadowFinalization);
     assert.strictEqual(fields.proof_mode, "shadow");
-    assert.strictEqual(fields.delivery_action, "answer");
+    // delivery_action moved to the OUTCOME projector; shadow implies outcome logging.
+    assert.strictEqual(outcomeLogFields(decisionRecord(shadowFinalization)).delivery_action, "answer");
     assert.strictEqual(fields.proof_schema_version, PROOF_SCHEMA_VERSION);
     assert.ok(fields.proof_manifest, "manifest JSON must be persisted");
     assert.ok(fields.result_digest, "digest JSON must be persisted");
@@ -270,17 +275,18 @@ console.log("\nhypothetical action separates what was delivered from what was pr
     // `answer` encoded the missing counterfactual as correct behavior. Both facts
     // are needed -- shadow must not change delivery, AND §14.1 requires
     // would-answer/would-decline counts.
-    const finalization = finalizeProof(baseInput({ env: SHADOW_ENV, intendedAction: "answer" }));
+    const finalization = finalizeProof(baseInput({ env: SHADOW_ENV, outcome: OUTCOMES.deterministic_plan }));
     assert.ok(finalization.blocker, "a legacy answer must be blocked");
     assert.strictEqual(finalization.decision.action, "answer", "shadow must not change what was delivered");
     assert.strictEqual(finalization.hypotheticalAction, "decline_capability", "the counterfactual must be recorded");
-    assert.strictEqual(proofLogFields(finalization).delivery_action, "answer");
+    assert.strictEqual(outcomeLogFields(decisionRecord(finalization), { OUTCOME_LOG: "on" }).delivery_action, "answer");
     assert.strictEqual(JSON.parse(proofLogFields(finalization).proof_manifest!).hypotheticalAction, "decline_capability");
   });
 
   check("a non-factual intent is unchanged by a blocker", () => {
-    for (const action of ["clarify", "decline_capability", "decline_data"] as const) {
-      const finalization = finalizeProof(baseInput({ env: SHADOW_ENV, intendedAction: action, rows: [], columns: [] }));
+    for (const outcome of [OUTCOMES.geography_ambiguous, OUTCOMES.guardrail_block, OUTCOMES.no_rows_in_source] as const) {
+      const action = outcome.action;
+      const finalization = finalizeProof(baseInput({ env: SHADOW_ENV, outcome, rows: [], columns: [] }));
       assert.strictEqual(finalization.hypotheticalAction, action, `${action} should be unaffected`);
     }
   });
@@ -517,17 +523,47 @@ console.log("\nbudget circuit breaker");
     assert.strictEqual(proofSelfDisabled(), false);
   });
 
-  check("an ordinary finalization stays within budget", () => {
-    const finalization = finalizeProof(baseInput({ env: SHADOW_ENV }));
-    assert.ok(
-      finalization.elapsedMs <= PROOF_BUDGET_MS,
-      `finalization took ${finalization.elapsedMs}ms against a ${PROOF_BUDGET_MS}ms budget`,
-    );
-    assert.strictEqual(proofSelfDisabled(), false);
+  // The budget and its breaker are tested against an injected clock. Each finalization reads the
+  // clock exactly twice -- once at start, once at end -- so a clock that advances by a fixed step
+  // per read makes every call take exactly `step` milliseconds by construction. The earlier form
+  // of these checks compared the REAL elapsed time with the budget, which asserted how fast the
+  // test machine was rather than how the accounting behaves, and could fail with no code change.
+  function steppingClock(stepMs: number): () => number {
+    let t = 1_000_000;
+    return () => (t += stepMs);
+  }
+
+  check("elapsed time is measured from the injected clock and stays within budget", () => {
+    __resetProofBudgetStateForTests();
+    __setProofClockForTests(steppingClock(42));
+    try {
+      const finalization = finalizeProof(baseInput({ env: SHADOW_ENV }));
+      assert.strictEqual(finalization.elapsedMs, 42, "elapsedMs must be the clock's start-to-end delta");
+      assert.strictEqual(proofSelfDisabled(), false);
+    } finally {
+      __setProofClockForTests();
+    }
   });
 
-  check("a large result still finalizes inside the budget", () => {
-    // §11: <50 ms median, <100 ms p95 added. 5,000 rows is the route's maxLimit.
+  check("a call that lands exactly on the budget is not an overrun", () => {
+    __resetProofBudgetStateForTests();
+    __setProofClockForTests(steppingClock(PROOF_BUDGET_MS));
+    try {
+      for (let attempt = 0; attempt < PROOF_OVERRUN_LIMIT + 2; attempt++) {
+        const finalization = finalizeProof(baseInput({ env: SHADOW_ENV }));
+        assert.strictEqual(finalization.elapsedMs, PROOF_BUDGET_MS);
+        assert.strictEqual(finalization.degradedReason, null, "an in-budget call must not degrade");
+      }
+      assert.strictEqual(proofSelfDisabled(), false, "calls at the budget boundary must never trip the breaker");
+    } finally {
+      __setProofClockForTests();
+    }
+  });
+
+  check("a large result still finalizes completely (elapsed time reported, not gated)", () => {
+    // §11: <50 ms median, <100 ms p95 added. 5,000 rows is the route's maxLimit. What is gated
+    // here is that the finalization completes with a digest and without degrading; how long it
+    // took on this machine is printed for information and is deliberately not a pass/fail condition.
     __resetProofBudgetStateForTests();
     const rows = Array.from({ length: 5000 }, (_, i) => ({
       year: 2000 + (i % 25),
@@ -542,44 +578,61 @@ console.log("\nbudget circuit breaker");
         plan: { additiveMeasures: ["murders"], categoricalColumns: ["agency"] },
       }),
     );
-    assert.ok(
-      finalization.elapsedMs <= PROOF_BUDGET_MS,
-      `5,000-row finalization took ${finalization.elapsedMs}ms`,
-    );
+    assert.ok(finalization.digest, "a 5,000-row result must still produce a digest");
+    assert.strictEqual(finalization.degradedReason, null, "a 5,000-row result must not degrade");
+    console.log(`        (5,000-row finalization took ${finalization.elapsedMs}ms on this machine; informational)`);
+    __resetProofBudgetStateForTests();
   });
 
   check("consecutive overruns trip the breaker and it then does no work", () => {
-    // Simulated by exceeding the budget through sheer size is unreliable on fast
-    // hardware, so the breaker is driven through its own accounting: a tripped
-    // breaker must produce the same inert shape as `off`.
+    // Driven through the injected clock: every call overruns the budget by one millisecond, so
+    // the breaker's own accounting -- not the size of the input or the speed of the machine --
+    // decides when it trips. A tripped breaker must produce the same inert shape as `off`.
     __resetProofBudgetStateForTests();
-    const wide = Array.from({ length: 24 }, (_, i) => `c${i}`);
-    const rows = Array.from({ length: 20000 }, () => {
-      const row: Record<string, unknown> = {};
-      for (const column of wide) row[column] = Math.random();
-      return row;
-    });
-    let tripped = false;
-    for (let attempt = 0; attempt < PROOF_OVERRUN_LIMIT + 2; attempt++) {
-      finalizeProof(
-        baseInput({ env: SHADOW_ENV, rows, columns: wide, plan: { categoricalColumns: wide } }),
-      );
-      if (proofSelfDisabled()) {
-        tripped = true;
-        break;
+    __setProofClockForTests(steppingClock(PROOF_BUDGET_MS + 1));
+    try {
+      for (let attempt = 1; attempt < PROOF_OVERRUN_LIMIT; attempt++) {
+        const finalization = finalizeProof(baseInput({ env: SHADOW_ENV }));
+        assert.strictEqual(finalization.elapsedMs, PROOF_BUDGET_MS + 1);
+        assert.strictEqual(proofSelfDisabled(), false, `the breaker must not trip after ${attempt} overrun(s)`);
       }
-    }
-    if (tripped) {
+      finalizeProof(baseInput({ env: SHADOW_ENV }));
+      assert.strictEqual(proofSelfDisabled(), true, `the breaker must trip on overrun ${PROOF_OVERRUN_LIMIT}`);
+
       const after = finalizeProof(baseInput({ env: SHADOW_ENV }));
       assert.strictEqual(after.digest, null, "a tripped breaker must do no digest work");
       assert.match(after.degradedReason!, /self-disabled/);
       assert.strictEqual(after.mayAlterDelivery, false);
-    } else {
-      // Fast machine: the budget was never exceeded. That is a pass for the budget
-      // itself, and the inert-shape behavior is covered by the off-mode cases.
-      assert.strictEqual(proofSelfDisabled(), false);
+      assert.strictEqual(after.elapsedMs, 0, "a tripped breaker must not even measure elapsed time");
+    } finally {
+      __setProofClockForTests();
+      __resetProofBudgetStateForTests();
     }
+  });
+
+  check("one in-budget call resets the consecutive-overrun count", () => {
     __resetProofBudgetStateForTests();
+    let step = PROOF_BUDGET_MS + 1;
+    let t = 1_000_000;
+    __setProofClockForTests(() => (t += step));
+    try {
+      for (let attempt = 1; attempt < PROOF_OVERRUN_LIMIT; attempt++) finalizeProof(baseInput({ env: SHADOW_ENV }));
+      step = 1;
+      finalizeProof(baseInput({ env: SHADOW_ENV }));
+      step = PROOF_BUDGET_MS + 1;
+      for (let attempt = 1; attempt < PROOF_OVERRUN_LIMIT; attempt++) finalizeProof(baseInput({ env: SHADOW_ENV }));
+      assert.strictEqual(proofSelfDisabled(), false, "overruns separated by an in-budget call are not consecutive");
+    } finally {
+      __setProofClockForTests();
+      __resetProofBudgetStateForTests();
+    }
+  });
+
+  check("restoring the clock returns the budget to real time", () => {
+    __setProofClockForTests();
+    const finalization = finalizeProof(baseInput({ env: SHADOW_ENV }));
+    assert.strictEqual(typeof finalization.elapsedMs, "number");
+    assert.ok(Number.isFinite(finalization.elapsedMs), "a real-clock elapsed time is a finite number");
   });
 
   check("the breaker resets for tests and starts clean", () => {
@@ -611,10 +664,13 @@ console.log("\ndelivery decision accounting");
   });
 
   check("the intended terminal action is preserved for non-factual exits", () => {
-    for (const action of ["clarify", "decline_capability", "decline_data", "decline_source_health"] as const) {
-      const finalization = finalizeProof(baseInput({ env: SHADOW_ENV, intendedAction: action, rows: [], columns: [] }));
+    for (const outcome of [OUTCOMES.geography_ambiguous, OUTCOMES.guardrail_block,
+                           OUTCOMES.no_rows_in_source, OUTCOMES.required_component_unavailable] as const) {
+      const action = outcome.action;
+      const finalization = finalizeProof(baseInput({ env: SHADOW_ENV, outcome, rows: [], columns: [] }));
       assert.strictEqual(finalization.decision.action, action);
-      assert.strictEqual(proofLogFields(finalization).delivery_action, action);
+      assert.strictEqual(finalization.decision.reason, outcome.reason, "the reason must survive finalization");
+      assert.strictEqual(outcomeLogFields(decisionRecord(finalization)).delivery_action, action);
     }
   });
 

@@ -112,7 +112,7 @@ console.log("\n5 - placement in the Historical route");
   check(route.includes("if (historicalCityChange && baltimoreDefault) historicalCityChange.explanation = withBaltimoreDisclosure("),
     "the Historical change/peer/ranking exit delivers it");
   check(route.includes("if (baltimoreDefault) claude.explanation = withBaltimoreDisclosure(claude.explanation || \"\", baltimoreDefault);")
-    && route.indexOf("if (baltimoreDefault) claude.explanation = withBaltimoreDisclosure(") < route.indexOf("const finalization = finalizeExit({\n          intendedAction: \"answer\","),
+    && route.indexOf("if (baltimoreDefault) claude.explanation = withBaltimoreDisclosure(") < route.indexOf("const finalization = finalizeExit({\n          outcome: OUTCOMES.model_sql_validated,"),
     "the model path's first factual event carries it, before proof finalization");
   check(route.includes("postExplanation = withReliabilityNote(postExplanation);\n          postExplanation = withBaltimoreDisclosure(postExplanation, baltimoreDefault);")
     && route.includes("retryExplanation = withReliabilityNote(retryExplanation);\n            retryExplanation = withBaltimoreDisclosure(retryExplanation, baltimoreDefault);"),
