@@ -37,6 +37,8 @@ import { detectFollowupTransform } from "@/lib/followup-transform";
 import { applyGeoCorrection, geoCorrectionHint } from "@/lib/geo-correction";
 import { applyChartCustomizations } from "@/lib/chart-customization";
 import { planShrCityRanking, runShrCityRanking, SHR_CITY_RANKING_GUARDRAIL, type ValidatedStatement } from "@/lib/city-ranking-shr";
+import { rankingValidationContract } from "@/lib/city-ranking";
+import type { QueryContract } from "@/lib/query-contract";
 import { loadShrTypeEvidence } from "@/lib/shr-agency-classification";
 import { CITY_RANKING_FAILURE_TEXT } from "@/lib/city-ranking-nibrs";
 import { SHR_DATA_CUTOFF } from "@/lib/dynamic-facts";
@@ -366,12 +368,13 @@ export async function POST(req: NextRequest) {
      * SQL a DETERMINISTIC compiler assembled from a template. Legacy validation, unchanged: neither
      * evaluated parser accepts the column-listed VALUES CTE these plans use.
      */
-    const runDeterministicPlanValidation = (inputSql: string): DeterministicShrPlanValidation => {
+    const runDeterministicPlanValidation = (inputSql: string, contract: QueryContract | null = null): DeterministicShrPlanValidation => {
       const contractResult = validateDeterministicShrPlanSql({
         question: guardrailQuestion,
         sql: inputSql,
         routingMeta,
         scope: shrCountyScope,
+        contract,
       });
       recordContractValidation(contractResult);
       return contractResult;
@@ -966,8 +969,10 @@ const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind 
       // Every answer statement the flow runs is validated here first; a refusal ends the flow with the
       // route's ordinary contract-failure reply, never the model path.
       let refusedContract: DeterministicShrPlanValidation | null = null;
+      // A stated nationwide scope validates against its assembled scope, not the raw national reading.
+      const rankingContract = rankingValidationContract(guardrailQuestion, "shr");
       const validateRankingStatement = (statement: string): ValidatedStatement | null => {
-        const contract = runDeterministicPlanValidation(statement);
+        const contract = runDeterministicPlanValidation(statement, rankingContract);
         if (queryContractFailureMessage(contract)) { refusedContract = contract; return null; }
         return { sql: contract.sql, rows: () => normalizeShrDisplayRows(rankingDb.prepare(contract.sql).all() as Record<string, unknown>[]) };
       };

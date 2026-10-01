@@ -91,8 +91,9 @@ check("the deterministic plans stay on their own bounded path", () => {
     "the deterministic murder plan no longer uses the deterministic validator");
   // GC-064 adds the application-built city ranking: its victim join and any murder filter are literal
   // in the builder's template, which is what this path is for (lib/shr-authority.ts). Named, so an
-  // unnamed extra caller still fails the count.
-  assert.match(source, /const validateRankingStatement = \(statement: string\): ValidatedStatement \| null => \{\s*const contract = runDeterministicPlanValidation\(statement\)/,
+  // unnamed extra caller still fails the count. It passes the ranking's assembled validation contract
+  // (a stated nationwide scope; lib/city-ranking.ts rankingValidationContract), still on this validator.
+  assert.match(source, /const validateRankingStatement = \(statement: string\): ValidatedStatement \| null => \{\s*const contract = runDeterministicPlanValidation\(statement, rankingContract\)/,
     "the SHR city ranking no longer uses the deterministic validator");
   const deterministic = [...source.matchAll(/runDeterministicPlanValidation\(/g)].length;
   assert.strictEqual(deterministic, 3,

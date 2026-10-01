@@ -26,7 +26,7 @@ import fs from "node:fs";
 import path from "node:path";
 import Database from "better-sqlite3";
 import {
-  recognizeCityRanking, statedPopulationCondition, statedCountThreshold, scanNumbers, offenseToken,
+  recognizeCityRanking, rankingValidationContract, statedPopulationCondition, statedCountThreshold, scanNumbers, offenseToken,
   DEFAULT_RESULT_COUNT, MAX_RESULT_COUNT, SUPPORTED_RATE_BASIS, FILLER_RULES,
   type CityRankingRequest, type CityRankingSource,
 } from "../lib/city-ranking";
@@ -1079,6 +1079,105 @@ check("the narrow helpers read the same clauses the accounting does", () => {
   assert.equal(threshold!.token, "shoplifting");
   assert.equal(statedCountThreshold("with at least 100 offenses")!.token, null);
   assert.equal(offenseToken("Rank cities by murder rate in 2025"), "murder");
+});
+
+/* ------------------------------------------------------------------ *
+ * National scope (Codex national-ranking ruling, 2026-10-01). A STATED nationwide scope is its own
+ * production: it reaches the same ranking as the unqualified request, with a truthful origin, and
+ * competing or different meanings of the same words are not broadened into a nationwide ranking.
+ * ------------------------------------------------------------------ */
+
+const NATIONAL_FORMS: [string, (measure: string) => string][] = [
+  ["U.S.", (m) => `Which U.S. cities have the highest ${m} rates in 2025?`],
+  ["US", (m) => `Which US cities have the highest ${m} rates in 2025?`],
+  ["United States", (m) => `What cities in the United States had the highest ${m} rates in 2025?`],
+  ["American", (m) => `Which American cities have the highest ${m} rates in 2025?`],
+  ["nationwide", (m) => `Which cities nationwide had the highest ${m} rates in 2025?`],
+];
+const scopeOrigin = (plan: CityRankingRequest) => plan.origins.find((o) => o.field === "scope");
+
+for (const [source, db, measure, label] of [
+  ["current", current, "rape", "Current"],
+  ["nibrs", nibrs, "murder", "NIBRS"],
+] as const) {
+  check(`NATIONAL (${label}) — every stated national form delivers the unqualified ranking, non-empty`, () => {
+    const base = run(db, `What cities had the highest ${measure} rates in 2025?`, source);
+    assert.ok(base.rows.length > 0, "the fixture answer must be non-empty, or equality proves nothing");
+    assert.deepEqual(base.plan.scope, { kind: "nationwide" });
+    assert.equal(scopeOrigin(base.plan)?.from, "declared-default", "an unqualified request is a genuine omission");
+    for (const [form, ask] of NATIONAL_FORMS) {
+      const qualified = run(db, ask(measure), source);
+      assert.deepEqual(qualified.plan.scope, { kind: "nationwide" }, `${form}: scope`);
+      assert.equal(scopeOrigin(qualified.plan)?.from, "production", `${form}: a stated scope is a production, not the omission default`);
+      assert.match(scopeOrigin(qualified.plan)!.detail, /^nationwide \(stated: /, `${form}: origin names what was stated`);
+      assert.equal(qualified.built.sql, base.built.sql, `${form}: the same statement`);
+      assert.deepEqual(qualified.rows, base.rows, `${form}: the same rows`);
+      assert.equal(qualified.built.title, base.built.title, `${form}: the same title`);
+      assert.deepEqual(qualified.built.caveats, base.built.caveats, `${form}: the same disclosures`);
+    }
+  });
+}
+
+check("NATIONAL — a state control is unchanged: the state stays a state", () => {
+  const colorado = run(current, "Which cities in Colorado have the highest rape rates in 2025?", "current");
+  assert.deepEqual(colorado.plan.scope, { kind: "state", code: "CO", name: "Colorado" });
+  assert.deepEqual(colorado.names, ["DENVER"]);
+  const texas = run(nibrs, "Which cities in Texas have the highest murder rates in 2025?", "nibrs");
+  assert.equal(texas.plan.scope.kind, "state");
+  assert.ok(texas.rows.length > 0 && texas.names.every((n) => n !== "ALBUQUERQUE"), "only Texas cities");
+});
+
+check("NATIONAL — competing or different meanings are not broadened into a nationwide ranking", () => {
+  for (const source of ["current", "nibrs"] as const) {
+    // national plus a state, in either form
+    declined("Which American cities in Texas have the highest murder rates in 2025?", source, "national-and-state");
+    declined("Which U.S. cities in Texas have the highest murder rates in 2025?", source);
+    declined("Which cities nationwide and in Texas have the highest murder rates in 2025?", source);
+    // the pronoun, an agency name, a territory and an exclusion are not the country
+    declined("Show us the cities with the highest murder rates in 2025", source, "unaccounted-request");
+    declined("Which US Marshals cities have the highest murder rates in 2025?", source, "unaccounted-request");
+    declined("Which cities in the U.S. Virgin Islands have the highest murder rates in 2025?", source, "unaccounted-request");
+    declined("Which cities outside the US have the highest murder rates in 2025?", source, "unaccounted-request");
+    const samoa = recognizeCityRanking("Which cities in American Samoa have the highest murder rates in 2025?", source);
+    assert.ok(!samoa || samoa.kind !== "ranking", "American Samoa is not the United States");
+  }
+});
+
+check("NATIONAL — accepted ranking constraints still apply to a national request", () => {
+  // NIBRS reporting-jurisdiction limitation (GC-057) is unchanged by a national qualifier.
+  declined("Which US jurisdictions had the highest murder rates in 2025?", "nibrs", "jurisdiction-unavailable-nibrs");
+  // population eligibility, size and the population-selected-set decline are unchanged.
+  const floor = run(nibrs, "Top 10 U.S. cities with at least 250000 people by murder rate in 2025", "nibrs");
+  assert.deepEqual(floor.plan.eligibility, [{ kind: "population", comparison: ">=", value: 250000 }]);
+  assert.equal(floor.plan.resultCount, 10);
+  declined("the 20 largest U.S. cities ranked by 2025 homicide rate", "current");
+});
+
+check("NATIONAL — the route's structural proof accepts a stated national scope through its assembled scope", () => {
+  // The routes validate an owned ranking against rankingValidationContract (the question less its
+  // claimed national words), not the raw question, whose "U.S." reads as national row level.
+  let rawRefusals = 0;
+  for (const [source, db, measure] of [["current", current, "rape"], ["nibrs", nibrs, "murder"]] as const) {
+    assert.equal(rankingValidationContract(`What cities had the highest ${measure} rates in 2025?`, source), null,
+      "an unqualified request keeps the question's own contract");
+    assert.equal(rankingValidationContract("Which cities in Texas have the highest murder rates in 2025?", source), null,
+      "a state request keeps the question's own contract");
+    assert.equal(rankingValidationContract("Which American cities in Texas have the highest murder rates in 2025?", source), null,
+      "a declined request gets no contract");
+    for (const [form, ask] of NATIONAL_FORMS) {
+      const question = ask(measure);
+      const contract = rankingValidationContract(question, source);
+      assert.ok(contract, `${form}: a stated national ranking has an assembled validation contract`);
+      const { built } = run(db, question, source);
+      const statements = [built.sql, ...(built.completeness ? [built.completeness.candidatesSql] : [])];
+      for (const sql of statements) {
+        assert.equal(deterministicPlanRefusal({ question, source, sql, contract }), null,
+          `${form} (${source}): accepted with the assembled scope`);
+        if (deterministicPlanRefusal({ question, source, sql })) rawRefusals++;
+      }
+    }
+  }
+  assert.ok(rawRefusals > 0, "the raw-question contract refuses at least one national form, so this check discriminates the plumbing");
 });
 
 nibrs.close();

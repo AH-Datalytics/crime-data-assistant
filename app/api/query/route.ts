@@ -61,7 +61,7 @@ import { fetchHistoricalPeerCandidates, resolveHistoricalSubjectPopulation } fro
 import { buildMultiCityTrendPlan, relativePeriodShortfallNote } from "@/lib/multi-city-deterministic";
 import { historicalBaltimoreComparisonDefault, withBaltimoreDisclosure, withoutBaltimoreDisclosure } from "@/lib/historical-baltimore-comparison";
 import { buildCurrentIndexedStatePlan } from "@/lib/current-indexed-state-deterministic";
-import { recognizeCityRanking } from "@/lib/city-ranking";
+import { recognizeCityRanking, rankingValidationContract } from "@/lib/city-ranking";
 import { buildCityRanking } from "@/lib/city-ranking-builder";
 import { completenessOf, decideCandidates } from "@/lib/city-ranking-completeness";
 import { RTCI_DATA_CUTOFF } from "@/lib/dynamic-facts";
@@ -1105,8 +1105,10 @@ export async function POST(req: NextRequest) {
      * A reporting-jurisdiction ranking (GC-057) has no completeness plan and is unchanged.
      */
     const cityRankingEvidence = built.completeness ? { sql: built.completeness.candidatesSql } : null;
+    // A stated nationwide scope validates against its assembled scope, not the raw national reading.
+    const cityRankingContract = rankingValidationContract(question, "current");
     const cityRankingEvidenceRefusal = cityRankingEvidence
-      ? deterministicPlanRefusal({ question, source: tab, sql: cityRankingEvidence.sql })
+      ? deterministicPlanRefusal({ question, source: tab, sql: cityRankingEvidence.sql, contract: cityRankingContract })
       : null;
     let cityRankingDecision: ReturnType<typeof decideCandidates> | null = null;
     let failure: string | null = cityRankingEvidenceRefusal ? "structural-refusal" : null;
@@ -1128,7 +1130,7 @@ export async function POST(req: NextRequest) {
     const cityRankingPlan: NonNullable<typeof built> = excludedAgencies.length > 0 && built.completeness
       ? { ...built, sql: built.completeness.ranked(excludedAgencies) }
       : built;
-    const cityRankingRefusal = deterministicPlanRefusal({ question, source: tab, sql: cityRankingPlan.sql });
+    const cityRankingRefusal = deterministicPlanRefusal({ question, source: tab, sql: cityRankingPlan.sql, contract: cityRankingContract });
     let rows: Record<string, unknown>[] = [];
     let columns: string[] = cityRankingPlan.columns;
     if (!failure && cityRankingRefusal) failure = "structural-refusal";

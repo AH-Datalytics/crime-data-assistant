@@ -26,6 +26,7 @@
 import { proveShrVictimLicence, shrRequestedMeasure, SHR_MEASURE_CONFLICT_MESSAGE, type ShrVictimMeasure } from "./shr-murder-licence";
 import { shrScopeViolation, SHR_SCOPE_GUARDRAIL, type ShrScopeBinding } from "./shr-county-scope";
 import { validateQueryContractSql, type QueryContractSqlValidation } from "./query-contract-validator";
+import type { QueryContract } from "./query-contract";
 import { compiledShrCountIssue, type CompiledShrCount } from "./shr-count-plan";
 import type { RoutingLogMeta } from "./routing-log-meta";
 
@@ -216,12 +217,15 @@ export function validateDeterministicShrPlanSql(opts: {
   routingMeta?: RoutingLogMeta | null;
   /** GC-080: the county scope bound for this plan, enforced on its statement. */
   scope?: ShrScopeBinding | null;
+  /** An owned plan's validation contract, when it differs from the question's (lib/city-ranking.ts rankingValidationContract). */
+  contract?: QueryContract | null;
 }): DeterministicShrPlanValidation {
   const raw = validateQueryContractSql({
     question: opts.question,
     source: "shr",
     sql: opts.sql,
     routingMeta: opts.routingMeta ?? null,
+    contract: opts.contract ?? null,
   });
   // Legacy validation is unchanged for murder plans. An explicit all-homicide request (GC-080)
   // cannot carry the legacy murder-only row-count rule, so for that measure only the rule is

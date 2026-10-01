@@ -148,6 +148,9 @@ export type Production =
   | { field: "unit"; quantity: RankingQuantity }
   | { field: "denominator"; basis: number }
   | { field: "geography"; name: string }
+  // A STATED nationwide scope ("U.S. cities", "in the United States", "nationwide"). Distinct from a
+  // state name and from an omitted geography: assembly records it as a production, never a default.
+  | { field: "geography"; name: string; national: true }
   | { field: "period"; year: number }
   // "currently", "right now": the request names the latest period rather than omitting one (GC-064).
   | { field: "recency"; latest: true }
@@ -508,6 +511,26 @@ export function offenseToken(text: string): string | null {
 }
 
 const ENTITY_NOUN = /\b(?:cit(?:y|ies)|jurisdictions?|towns?)\b/gi;
+/*
+ * A STATED NATIONWIDE SCOPE, claimed only in its geographic role (Codex national-ranking ruling,
+ * 2026-10-01). Each form is context-bound so that it cannot swallow a different meaning:
+ *  - as a modifier of the ranked noun: "U.S. cities", "US jurisdictions", "United States towns",
+ *    "American cities". "US" must be upper case, so the pronoun in "show us the cities" is never read
+ *    as the country; "US Marshals", "U.S. Virgin Islands" and "American Samoa" do not precede a
+ *    ranked noun and are not claimed.
+ *  - as a place phrase: "in/across/throughout the U.S. / US / United States", but not when another
+ *    capitalised word follows ("in the U.S. Virgin Islands") and never after other prepositions
+ *    ("outside the US" stays unclaimed and declines).
+ *  - the adverb "nationwide".
+ * The request contract's national shortcut is not the authority: it also reads "show us" and
+ * "U.S. Virgin Islands" as national, and does not read "American". These words are claimed here.
+ */
+const ENTITY_FOLLOWS = String.raw`(?=\s+(?:cit(?:y|ies)|jurisdictions?|towns?)\b)`;
+const NATIONAL_MODIFIER_CASED = new RegExp(String.raw`(?<![A-Za-z.])(?:U\.S\.|US)` + ENTITY_FOLLOWS, "g");
+const NATIONAL_MODIFIER_WORDS = new RegExp(String.raw`\b(?:United\s+States|American)` + ENTITY_FOLLOWS, "gi");
+// Case-sensitive on purpose: the "no capitalised word follows" guard must not be case-folded.
+const NATIONAL_PLACE_CASED = /\b(?:[Ii]n|[Aa]cross|[Tt]hroughout)\s+the\s+(?:U\.S\.|US|United\s+States|united\s+states)(?![A-Za-z.])(?!\s+[A-Z])/g;
+const NATIONAL_ADVERB = /\bnationwide\b/gi;
 /*
  * `largest` and `smallest` are deliberately NOT direction words. They describe the cities, not the
  * measure: in "top 10 largest cities by murder rate" the superlative orders population and the
@@ -1292,6 +1315,12 @@ export function recognizeCityRanking(question: string, source: CityRankingSource
   claimWords(ledger, question, COUNT_WORD, "unit-count", () => ({ field: "unit", quantity: "count" }), ["unit"]);
   claimWords(ledger, question, RECENCY_WORD, "latest-period", () => ({ field: "recency", latest: true }), ["period"]);
 
+  // A stated nationwide scope: its own production, carried to assembly (see NATIONAL_* above).
+  for (const pattern of [NATIONAL_MODIFIER_CASED, NATIONAL_MODIFIER_WORDS, NATIONAL_PLACE_CASED, NATIONAL_ADVERB]) {
+    claimWords(ledger, question, pattern, "national-scope",
+      (text) => ({ field: "geography", name: text.trim(), national: true }), ["geography"]);
+  }
+
   const stateGeos = contract.geographies.filter((geo) => geo.kind === "state");
   for (const geo of stateGeos) {
     for (const name of [geo.canonicalName, geo.name, geo.state]) {
@@ -1603,8 +1632,27 @@ function assemble(
       "Ask for one of them, or for the ranking nationwide, and I can build it.");
   }
   const geographyClaims = ledger.of("geography");
+  const isNational = (claim: Claim) => claim.produces.field === "geography" && "national" in claim.produces;
+  const nationalClaims = geographyClaims.filter(isNational);
+  const stateClaims = geographyClaims.filter((claim) => !isNational(claim));
   let scope: CityRankingRequest["scope"];
-  if (geographyClaims.length > 0) {
+  if (nationalClaims.length > 0) {
+    // STATED nationwide: a production, never the omission default. A competing state or any other
+    // place in the same request is a different scope, so it declines rather than being broadened.
+    if (stateClaims.length > 0) {
+      return decline("national-and-state",
+        "That request asks for cities nationwide and within a state at once. I can rank cities " +
+        "nationwide or within one state; ask for one of them and I can build the ranking.");
+    }
+    const places = resolveGeoPlaces(question);
+    if (places.requiresClarification || places.mentions.length > 0) {
+      return decline("national-and-place",
+        "That request names the whole country and another place, and I won't choose between them. Ask " +
+        "for the ranking nationwide or within one state and I can build it.");
+    }
+    scope = { kind: "nationwide" };
+    origins.push({ field: "scope", from: "production", detail: `nationwide (stated: ${nationalClaims.map((c) => c.text.trim()).join(", ")})` });
+  } else if (stateClaims.length > 0) {
     const geo = contract.geographies.find((g) => g.kind === "state");
     const code = geo?.state ?? null;
     if (!code) {
@@ -1710,6 +1758,32 @@ const STATED_FIELD_LABEL: Record<StatedField, string> = {
   population: "population limit",
   count: "minimum number of offenses",
 };
+
+/**
+ * The contract an owned ranking's statements are VALIDATED against, when that differs from the raw
+ * question's (Codex national-ranking ruling, 2026-10-01).
+ *
+ * The validators infer the requested row level from the contract's geography. For "U.S. cities ..."
+ * the contract reads the geography as national, so they judge the ranking's city rows as a national
+ * (or state-population) rate and refuse them -- although the recognizer has assembled a nationwide
+ * ranking of CITY rows whose statement is identical to the unqualified request's. So, for a STATED
+ * nationwide scope only, the statements are validated against the contract of the same request with
+ * just the claimed national words removed: exactly the contract the unqualified ranking already
+ * validates under. Every check still runs. The stated scope itself stays recorded in the ranking's
+ * accounting and origins; it is not turned into an omission there. Any other request returns null and
+ * validation is unchanged.
+ */
+export function rankingValidationContract(question: string, source: CityRankingSource): ReturnType<typeof buildQueryContract> | null {
+  const recognized = recognizeCityRanking(question, source);
+  if (!recognized || recognized.kind !== "ranking" || recognized.scope.kind !== "nationwide") return null;
+  const national = recognized.accounting
+    .filter((claim) => claim.produces.field === "geography" && "national" in claim.produces)
+    .sort((a, b) => b.span[0] - a.span[0]);
+  if (national.length === 0) return null;
+  let text = question;
+  for (const claim of national) text = text.slice(0, claim.span[0]) + " " + text.slice(claim.span[1]);
+  return buildQueryContract(text.replace(/\s+/g, " ").trim(), source);
+}
 
 const stateCount = (contract: NonNullable<ReturnType<typeof buildQueryContract>>): number =>
   contract.geographies.filter((geo) => geo.kind === "state").length;
